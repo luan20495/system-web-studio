@@ -4,87 +4,226 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>System Web Studio</title>
-<style>
-:root{--bg:#0b0f14;--panel:#11161d;--line:#27303a;--text:#f6f8fb;--muted:#95a1b1;--accent:#20c997;--blue:#2c7cff}
-*{box-sizing:border-box}html,body{height:100%}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
-button,textarea,input,select{font:inherit}button{cursor:pointer}.app{height:100vh;display:grid;grid-template-rows:58px 1fr}
-.top{display:flex;align-items:center;justify-content:space-between;padding:0 18px;border-bottom:1px solid var(--line);background:#0b0f14}.brand{display:flex;gap:12px;align-items:center}.logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--accent));display:grid;place-items:center;font-weight:900}.title{font-weight:800}.sub{font-size:12px;color:var(--muted);margin-top:2px}.actions{display:flex;gap:8px;align-items:center}
-.btn{height:36px;border:1px solid var(--line);border-radius:10px;background:#131a22;color:white;padding:0 12px}.btn.primary{background:white;color:#10151b;border-color:white;font-weight:800}.saved{font-size:12px;color:#9aefd5;border:1px solid rgba(32,201,151,.3);background:rgba(32,201,151,.08);border-radius:999px;padding:6px 10px}
-.main{min-height:0;display:grid;grid-template-columns:minmax(330px,38%) 1fr}.chat{min-height:0;display:grid;grid-template-rows:1fr auto;border-right:1px solid var(--line);background:var(--panel)}.scroll{overflow:auto;padding:22px 20px}.intro h1{font-size:24px;margin:0 0 6px}.intro p{margin:0 0 20px;color:var(--muted);font-size:14px;line-height:1.55}
-.msg{display:flex;margin:14px 0}.msg.user{justify-content:flex-end}.bubble{max-width:88%;padding:12px 14px;border-radius:16px;font-size:14px;line-height:1.5}.msg.ai .bubble{background:#151c25;border:1px solid #222d39}.msg.user .bubble{background:#223043;border:1px solid #2e4259}.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}.chip{font-size:11px;border:1px solid #2d3946;border-radius:999px;padding:4px 7px;color:#cbd7e3}
-.composer{padding:14px;border-top:1px solid var(--line);background:#0f141b}.box{border:1px solid #2d3742;border-radius:15px;background:#111820;padding:10px}.box:focus-within{border-color:#536b83}.box textarea{width:100%;min-height:76px;resize:none;border:0;outline:0;background:transparent;color:white;line-height:1.5}.row{display:flex;justify-content:space-between;align-items:center;gap:10px}.hint{font-size:11px;color:#758193}
-.preview{min-height:0;display:grid;grid-template-rows:44px 1fr;background:#0a0e13}.toolbar{display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-bottom:1px solid var(--line);background:#0e1319}.group{display:flex;gap:8px;align-items:center}.label{font-size:12px;color:#8190a1}.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}.seg button{height:30px;border:0;border-right:1px solid var(--line);background:#111820;color:#8794a4;padding:0 10px}.seg button:last-child{border-right:0}.seg button.active{background:#202936;color:white}.small{height:30px;border:1px solid var(--line);background:#111820;color:#dce6ef;border-radius:9px;padding:0 10px;font-size:12px}
-.canvasWrap{overflow:auto;padding:18px}.canvas{width:min(1180px,100%);margin:auto;background:white;color:#13212e;border-radius:14px;overflow:hidden;box-shadow:0 22px 60px rgba(0,0,0,.28);transition:.2s}.canvas.tablet{width:820px}.canvas.mobile{width:390px}
-.nav{height:66px;padding:0 36px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #edf1f4}.siteLogo{font-weight:900;color:#0f5047}.menu{display:flex;gap:24px;color:#556575;font-size:14px}.hero{min-height:450px;padding:70px 58px;display:grid;grid-template-columns:1.06fr .94fr;gap:40px;align-items:center;background:radial-gradient(circle at 85% 15%,rgba(255,255,255,.22),transparent 22%),linear-gradient(135deg,#0b6b5f,#0e4559 68%,#133b63);color:white}.eyebrow{font-size:12px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#9ee8dc}.hero h2{font-size:52px;line-height:1.03;letter-spacing:-.035em;margin:8px 0 0}.hero p{font-size:18px;line-height:1.6;color:#dff8f3}.cta{display:inline-block;margin-top:20px;padding:12px 18px;border-radius:11px;background:white;color:#0b5c51;font-weight:800}
-.visual{display:flex;justify-content:center}.machine{width:230px;height:325px;border-radius:26px;background:linear-gradient(160deg,#fff,#cfe3ed);box-shadow:0 30px 60px rgba(1,24,38,.34);position:relative}.machine:before{content:"";position:absolute;width:84px;height:84px;border-radius:50%;background:#17364b;left:50%;top:48px;transform:translateX(-50%)}
-.section{padding:58px 52px}.alt{background:#f7fafc}.section h3{font-size:34px;letter-spacing:-.025em;margin:8px 0 24px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.card{border:1px solid #e3e9ef;border-radius:16px;background:white;overflow:hidden}.img{height:180px;background:linear-gradient(135deg,#e6f0f6,#bdd9e5);position:relative}.img:after{content:"";position:absolute;width:84px;height:126px;border-radius:14px;left:50%;top:26px;transform:translateX(-50%);background:linear-gradient(160deg,#fff,#d5e3ea);box-shadow:0 14px 26px rgba(33,58,75,.14)}.body{padding:16px}.body span{display:block;margin-top:6px;color:#708090;font-size:13px;line-height:1.45}.quotes{display:grid;grid-template-columns:1fr 1fr;gap:18px}.quote{border:1px solid #e3e9ef;border-radius:16px;padding:22px;background:white}.stars{color:#f6b91a}.quote p{color:#4c5d6e;line-height:1.65}.contact{display:grid;grid-template-columns:.8fr 1.2fr;gap:36px}.form{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{border:1px solid #dfe6ec;border-radius:11px;padding:13px;color:#7b8997;font-size:13px}.wide{grid-column:1/-1}.footer{padding:28px 52px;background:#0d2637;color:#d9eef7;display:flex;justify-content:space-between;font-size:13px}
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.44);z-index:50;display:none}.overlay.show{display:block}.drawer{position:absolute;right:0;top:0;bottom:0;width:min(460px,94vw);background:#0f151c;border-left:1px solid var(--line);padding:20px;overflow:auto}.drawer h2{margin:0}.setting{padding:16px 0;border-top:1px solid var(--line)}.setting label{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0;font-size:13px;color:#cbd7e3}.setting input,.setting select{width:210px;max-width:52%;background:#121a22;color:white;border:1px solid #2d3742;border-radius:9px;padding:9px}
-.modalWrap{display:none;align-items:center;justify-content:center}.modalWrap.show{display:flex}.modal{width:min(520px,92vw);background:#111820;border:1px solid var(--line);border-radius:18px;padding:20px}.choice{width:100%;text-align:left;border:1px solid var(--line);background:#121922;color:white;border-radius:12px;padding:13px;margin:8px 0}.choice.selected{border-color:#4a87c8;background:#15243a}.toast{position:fixed;right:20px;bottom:20px;background:#111820;border:1px solid #314154;color:white;border-radius:12px;padding:12px 14px;display:none;z-index:70}
-.mobile .menu{display:none}.mobile .nav{padding:0 18px}.mobile .hero{grid-template-columns:1fr;padding:44px 24px}.mobile .hero h2{font-size:38px}.mobile .section{padding:40px 22px}.mobile .grid,.mobile .quotes,.mobile .contact,.mobile .form{grid-template-columns:1fr}.mobile .footer{padding:24px 22px;flex-direction:column;gap:10px}
-@media(max-width:900px){body{overflow:auto}.app{height:auto}.main{grid-template-columns:1fr}.chat{min-height:56vh;border-right:0;border-bottom:1px solid var(--line)}.preview{min-height:85vh}}
-</style>
+<link rel="stylesheet" href="assets/studio.css"/>
 </head>
 <body>
 <div class="app">
-<header class="top">
-  <div class="brand"><div class="logo">✦</div><div><div class="title">System Web Studio</div><div class="sub">Water Purifier Website • main • Mock API</div></div></div>
-  <div class="actions"><span class="saved" id="saved">✓ Saved</span><button class="btn" onclick="historyOpen()">History</button><button class="btn primary" onclick="publishOpen()">Publish</button><button class="btn" onclick="settingsOpen()">⚙</button></div>
+<header class="topbar">
+  <div class="brandArea">
+    <div class="brandMark">✦</div>
+    <div class="brandText">
+      <button class="projectButton" id="projectSwitcher" onclick="toggleProjectMenu()">
+        <div><strong id="projectName">System Web Studio</strong><div class="meta" id="projectMeta"></div></div>
+        <span>⌄</span>
+      </button>
+    </div>
+  </div>
+  <div class="topActions">
+    <span class="status" id="saveState">✓ Saved</span>
+    <button class="iconBtn optional" id="undoBtn" onclick="undoChange()" title="Undo (Ctrl/Cmd+Z)">↶</button>
+    <button class="iconBtn optional" id="redoBtn" onclick="redoChange()" title="Redo">↷</button>
+    <button class="btn optional" onclick="historyOpen()">History</button>
+    <button class="btn primary" id="publishBtn" onclick="publishOpen()">Publish</button>
+    <button class="iconBtn" onclick="settingsOpen()" aria-label="Settings">⚙</button>
+  </div>
 </header>
-<main class="main">
-<section class="chat"><div class="scroll" id="chat">
-  <div class="intro"><h1>What do you want to build?</h1><p>Frontend-only production preview. UI uses a mock API adapter so the backend can be plugged in later.</p></div>
-  <div class="msg user"><div class="bubble">Tạo website bán máy lọc nước hiện đại, có hero, sản phẩm, đánh giá khách hàng và form liên hệ.</div></div>
-  <div class="msg ai"><div class="bubble">Đã tạo bản nháp. Registry reuse hiện tại là <b>94%</b>.<div class="chips"><span class="chip">Navbar</span><span class="chip">Hero</span><span class="chip">ProductGrid</span><span class="chip">Testimonials</span><span class="chip">ContactForm</span></div></div></div>
-</div><div class="composer"><div class="box"><textarea id="prompt" placeholder="Ví dụ: Thêm bảng so sánh 3 sản phẩm trước phần đánh giá…"></textarea><div class="row"><span class="hint">Enter để gửi • Shift+Enter xuống dòng</span><button class="btn primary" onclick="sendPrompt()">Send ↑</button></div></div></div></section>
-<section class="preview">
-  <div class="toolbar"><div class="group"><span class="label">Preview</span><div class="seg"><button class="active" onclick="device('desktop',this)">Desktop</button><button onclick="device('tablet',this)">Tablet</button><button onclick="device('mobile',this)">Mobile</button></div></div><div class="group"><span class="saved">Mock API</span><button class="small" onclick="settingsOpen()">Project settings</button></div></div>
-  <div class="canvasWrap"><div class="canvas" id="canvas">
-    <nav class="nav"><div class="siteLogo">KAROFI</div><div class="menu"><span>Sản phẩm</span><span>Công nghệ</span><span>Đánh giá</span><span>Liên hệ</span></div></nav>
-    <section class="hero"><div><div class="eyebrow">Pure living • smart water</div><h2 id="heroTitle">Nước sạch mỗi ngày, sống khỏe mỗi ngày.</h2><p>Giải pháp lọc nước hiện đại cho gia đình Việt — thiết kế tinh gọn, vận hành thông minh và trải nghiệm chăm sóc an tâm.</p><span class="cta">Khám phá sản phẩm</span></div><div class="visual"><div class="machine"></div></div></section>
-    <section class="section"><div class="eyebrow" style="color:#0c8c77">Sản phẩm nổi bật</div><h3>Chọn giải pháp phù hợp với gia đình bạn</h3><div class="grid" id="products">
-      <article class="card"><div class="img"></div><div class="body"><b>K-Series Pure</b><span>Thiết kế tối giản • 10 lõi lọc • Gia đình 2–4 người</span></div></article>
-      <article class="card"><div class="img"></div><div class="body"><b>Smart RO Max</b><span>RO thông minh • Theo dõi chất lượng nước</span></div></article>
-      <article class="card"><div class="img"></div><div class="body"><b>Eco Compact</b><span>Nhỏ gọn • Tiết kiệm điện • Không gian hiện đại</span></div></article>
-    </div></section>
-    <section class="section alt" id="testimonials"><div class="eyebrow" style="color:#0c8c77">Khách hàng</div><h3>Trải nghiệm thực tế</h3><div class="quotes"><div class="quote"><div class="stars">★★★★★</div><p>“Thiết kế đẹp, nước uống ngon và trải nghiệm sử dụng tiện.”</p><b>Nguyễn Mai • Hà Nội</b></div><div class="quote"><div class="stars">★★★★★</div><p>“Lắp đặt nhanh và sản phẩm phù hợp căn hộ nhỏ.”</p><b>Trần Hoàng • Hải Phòng</b></div></div></section>
-    <section class="section"><div class="contact"><div><div class="eyebrow" style="color:#0c8c77">Tư vấn sản phẩm</div><h3>Để lại thông tin, chúng tôi sẽ liên hệ.</h3><p style="color:#6d7c8b;line-height:1.65">Nhận tư vấn theo nhu cầu sử dụng, không gian và ngân sách.</p></div><div class="form"><div class="field">Họ và tên</div><div class="field">Số điện thoại</div><div class="field">Tỉnh / Thành phố</div><div class="field">Sản phẩm quan tâm</div><div class="field wide">Nội dung cần tư vấn</div></div></div></section>
-    <footer class="footer"><div><b>KAROFI</b><br/>Pure water • better living</div><div>Generated with System Web Studio</div></footer>
-  </div></div>
+
+<div class="projectMenu" id="projectMenu"></div>
+
+<main class="workspace">
+<section class="chatPane">
+  <div class="chatScroll">
+    <div class="intro">
+      <h1>What do you want to build?</h1>
+      <p>Frontend chạy độc lập với dummy/local data. Backend và AI thật được để sau qua adapter.</p>
+    </div>
+    <div class="integrationNote">
+      <span class="tag">Frontend: ready</span>
+      <span class="tag">Backend: stub</span>
+      <span class="tag">AI: mock adapter</span>
+    </div>
+    <div id="chatMessages"></div>
+  </div>
+  <div class="composer">
+    <div class="composerBox">
+      <textarea id="prompt" placeholder="Ví dụ: Thêm bảng so sánh 3 sản phẩm trước phần đánh giá…"></textarea>
+      <div class="composerFooter">
+        <span class="hint">Enter gửi • Shift+Enter xuống dòng</span>
+        <button class="btn primary" id="sendBtn" onclick="sendPrompt()">Send ↑</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="previewPane">
+  <div class="previewToolbar">
+    <div class="toolbarGroup">
+      <span class="toolbarLabel">Preview</span>
+      <div class="segmented">
+        <button data-device="desktop" onclick="setDevice('desktop')">Desktop</button>
+        <button data-device="tablet" onclick="setDevice('tablet')">Tablet</button>
+        <button data-device="mobile" onclick="setDevice('mobile')">Mobile</button>
+      </div>
+    </div>
+    <div class="toolbarGroup">
+      <span class="status" id="envBadge">Frontend only</span>
+      <button class="smallBtn" onclick="settingsOpen()">Project settings</button>
+    </div>
+  </div>
+
+  <div class="canvasViewport">
+    <div class="canvas" id="canvas">
+      <nav class="previewNav">
+        <div class="previewLogo">KAROFI</div>
+        <div class="previewMenu">
+          <button onclick="scrollPreview('productsSection')">Sản phẩm</button>
+          <button onclick="scrollPreview('technologySection')">Công nghệ</button>
+          <button onclick="scrollPreview('testimonialsSection')">Đánh giá</button>
+          <button onclick="scrollPreview('contactSection')">Liên hệ</button>
+        </div>
+      </nav>
+
+      <section class="hero">
+        <div>
+          <div class="eyebrow" id="heroEyebrow"></div>
+          <h2 id="heroTitle"></h2>
+          <p id="heroDescription"></p>
+          <div class="ctaRow">
+            <button class="siteBtn" onclick="scrollPreview('productsSection')">Khám phá sản phẩm</button>
+            <button class="siteBtn secondary" onclick="scrollPreview('contactSection')">Nhận tư vấn</button>
+          </div>
+        </div>
+        <div class="visual"><div class="machine"></div></div>
+      </section>
+
+      <section class="siteSection" id="productsSection">
+        <div class="eyebrow" style="color:#0c8c77">Sản phẩm nổi bật</div>
+        <h3>Chọn giải pháp phù hợp với gia đình bạn</h3>
+        <div class="productGrid" id="products"></div>
+      </section>
+
+      <section class="siteSection alt" id="technologySection">
+        <div class="eyebrow" style="color:#0c8c77">Công nghệ</div>
+        <h3>Nền tảng lọc nước thông minh</h3>
+        <div class="techGrid">
+          <article class="techCard"><b>Smart RO</b><span>Giám sát chất lượng nước và trạng thái lõi lọc.</span></article>
+          <article class="techCard"><b>Pure Flow</b><span>Tối ưu lưu lượng và hiệu suất sử dụng hàng ngày.</span></article>
+          <article class="techCard"><b>Safe Guard</b><span>Cảnh báo vận hành và bảo trì theo vòng đời thiết bị.</span></article>
+        </div>
+      </section>
+
+      <section class="siteSection alt hidden" id="comparisonSection">
+        <div class="eyebrow" style="color:#0c8c77">So sánh nhanh</div>
+        <h3>Chọn model phù hợp với nhu cầu</h3>
+        <div class="productGrid" id="compareGrid"></div>
+      </section>
+
+      <section class="siteSection" id="testimonialsSection">
+        <div class="eyebrow" style="color:#0c8c77">Khách hàng</div>
+        <h3>Trải nghiệm thực tế</h3>
+        <div class="quoteGrid">
+          <article class="quoteCard"><div class="stars">★★★★★</div><p>“Thiết kế đẹp, nước uống ngon và trải nghiệm sử dụng tiện.”</p><b>Nguyễn Mai • Hà Nội</b></article>
+          <article class="quoteCard"><div class="stars">★★★★★</div><p>“Lắp đặt nhanh và sản phẩm phù hợp căn hộ nhỏ.”</p><b>Trần Hoàng • Hải Phòng</b></article>
+        </div>
+      </section>
+
+      <section class="siteSection alt" id="contactSection">
+        <div class="contactLayout">
+          <div><div class="eyebrow" style="color:#0c8c77">Tư vấn sản phẩm</div><h3>Để lại thông tin, chúng tôi sẽ liên hệ.</h3><p style="color:#6d7c8b;line-height:1.65">Form này hoạt động bằng dummy/local flow; sau này chỉ nối API lead thật.</p></div>
+          <form class="contactForm" onsubmit="submitLead(event)">
+            <input name="leadName" placeholder="Họ và tên" required/>
+            <input name="leadPhone" placeholder="Số điện thoại" required/>
+            <select name="leadCity"><option>Hà Nội</option><option>TP. Hồ Chí Minh</option><option>Đà Nẵng</option></select>
+            <select name="leadProduct"><option>K-Series Pure</option><option>Smart RO Max</option><option>Eco Compact</option></select>
+            <textarea class="wide" name="leadNote" placeholder="Nội dung cần tư vấn"></textarea>
+            <div class="wide"><button class="siteBtn" type="submit">Gửi yêu cầu</button></div>
+          </form>
+        </div>
+      </section>
+
+      <footer class="siteFooter"><div><b>KAROFI</b><br/>Pure water • better living</div><div>Generated with System Web Studio</div></footer>
+    </div>
+  </div>
 </section>
 </main>
 </div>
 
-<div class="overlay" id="settings"><aside class="drawer"><div class="row"><div><h2>Project Settings</h2><div class="sub">Technical controls hidden from main workspace</div></div><button class="btn" onclick="closeOverlay('settings')">✕</button></div>
-<div class="setting"><h3>General</h3><label><span>Project name</span><input value="Water Purifier Website"/></label><label><span>Framework</span><input value="Next.js + React"/></label></div>
-<div class="setting"><h3>Access</h3><label><span>Visibility</span><select><option>Private</option><option>Public</option></select></label><label><span>Authentication</span><select><option>SSO</option><option>User / Password</option><option>Public</option></select></label></div>
-<div class="setting"><h3>Domain</h3><label><span>Preview domain</span><input value="web42.apps.company.vn"/></label><label><span>Custom domain</span><input placeholder="example.com"/></label></div>
-<div class="setting"><h3>Source & Deployment</h3><label><span>Repository</span><input value="luan20495/system-web-studio"/></label><label><span>Target</span><select><option>Self-host</option><option>AWS</option><option>Azure</option><option>GCP</option></select></label></div>
-</aside></div>
+<div class="overlay" id="settings">
+  <aside class="drawer">
+    <div class="drawerHeader"><div><h2>Project Settings</h2><p>Phần kỹ thuật được gom vào đây, không làm nặng workspace chính.</p></div><button class="iconBtn" onclick="closeOverlay('settings')">✕</button></div>
 
-<div class="overlay" id="history"><aside class="drawer"><div class="row"><div><h2>Version History</h2><div class="sub">Mock data today, Git-backed later</div></div><button class="btn" onclick="closeOverlay('history')">✕</button></div><div class="setting"><p>v5 • Current preview • 8fa21c</p><p>v4 • Update hero copy • 7bc19e</p><p>v3 • Add testimonials • 4aa102</p><p>v1 • Initial website • 028ec7</p></div></aside></div>
+    <section class="settingGroup"><h3>General</h3>
+      <label class="settingField"><span>Project name</span><input id="set_name"/></label>
+      <label class="settingField"><span>Framework</span><input id="set_framework"/></label>
+      <label class="settingField"><span>Repository</span><input id="set_repository"/></label>
+    </section>
 
-<div class="overlay modalWrap" id="publish"><div class="modal"><h2>Publish website</h2><p class="sub">Production-shaped frontend flow. Backend endpoint can replace the mock adapter later.</p><button class="choice selected" onclick="selectChoice(this)">Private<br><span class="sub">Authenticated users only.</span></button><button class="choice" onclick="selectChoice(this)">Public<br><span class="sub">Accessible from the Internet.</span></button><div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn" onclick="closeOverlay('publish')">Cancel</button><button class="btn primary" onclick="publishNow()">Publish</button></div></div></div>
+    <section class="settingGroup"><h3>Access</h3>
+      <label class="settingField"><span>Visibility</span><select id="set_visibility"><option value="private">Private</option><option value="public">Public</option></select></label>
+      <label class="settingField"><span>Authentication</span><select id="set_authMode"><option value="sso">SSO</option><option value="password">User / Password</option><option value="public">Public</option></select></label>
+    </section>
+
+    <section class="settingGroup"><h3>Domain</h3>
+      <label class="settingField"><span>Preview domain</span><input id="set_domain"/></label>
+      <label class="settingField"><span>Custom domain</span><input id="set_customDomain" placeholder="example.com"/></label>
+    </section>
+
+    <section class="settingGroup"><h3>Deployment</h3>
+      <label class="settingField"><span>Mode</span><select id="set_deploymentMode"><option value="static">Static</option><option value="dynamic">Dynamic</option><option value="auto">Auto</option></select></label>
+      <label class="settingField"><span>Target</span><select id="set_deploymentTarget"><option value="self-host">Self-host</option><option value="aws">AWS</option><option value="azure">Azure</option><option value="gcp">GCP</option></select></label>
+    </section>
+
+    <section class="settingGroup"><h3>Integrations</h3>
+      <label class="settingField"><span>Backend API</span><span class="status" id="backendStatus">Not connected</span></label>
+      <label class="settingField"><span>AI / LLM</span><span class="status warn" id="aiStatus">Mock adapter</span></label>
+      <p class="meta">Hai phần này cố ý để stub. UI và state phía web vẫn chạy đầy đủ.</p>
+    </section>
+
+    <section class="settingGroup"><h3>Demo data</h3>
+      <button class="btn danger" onclick="resetDemo()">Reset local demo</button>
+    </section>
+
+    <div class="drawerActions"><button class="btn" onclick="closeOverlay('settings')">Cancel</button><button class="btn primary" onclick="saveSettings()">Save changes</button></div>
+  </aside>
+</div>
+
+<div class="overlay" id="history">
+  <aside class="drawer">
+    <div class="drawerHeader"><div><h2>Version History</h2><p>Restore chạy thật ở frontend. Git thật sẽ nối backend sau.</p></div><button class="iconBtn" onclick="closeOverlay('history')">✕</button></div>
+    <div id="versionList"></div>
+  </aside>
+</div>
+
+<div class="overlay modalWrap" id="publish">
+  <div class="modal">
+    <h2>Publish website</h2>
+    <p id="publishSummary"></p>
+    <button class="choice publishChoice" data-value="private" onclick="selectPublish('private')"><b>Private</b><span>Chỉ người có quyền truy cập.</span></button>
+    <button class="choice publishChoice" data-value="public" onclick="selectPublish('public')"><b>Public</b><span>Công khai trên Internet.</span></button>
+    <div class="modalActions"><button class="btn" onclick="closeOverlay('publish')">Cancel</button><button class="btn primary" id="confirmPublish" onclick="publishNow()">Publish</button></div>
+  </div>
+</div>
+
+<div class="overlay modalWrap" id="newProject">
+  <div class="modal">
+    <h2>Create project</h2>
+    <p>Tạo project mới từ starter template, toàn bộ lưu ở local state.</p>
+    <label class="settingField"><span>Project name</span><input id="newProjectName" placeholder="New internal website"/></label>
+    <div class="modalActions"><button class="btn" onclick="closeOverlay('newProject')">Cancel</button><button class="btn primary" onclick="createProject()">Create</button></div>
+  </div>
+</div>
+
+<div class="overlay modalWrap" id="productEditor">
+  <div class="modal">
+    <h2>Edit product</h2>
+    <p>Click product card trong preview để chỉnh trực tiếp.</p>
+    <label class="settingField"><span>Name</span><input id="editProductName"/></label>
+    <label class="settingField"><span>Description</span><input id="editProductDescription"/></label>
+    <div class="modalActions"><button class="btn danger" onclick="deleteProduct()">Delete</button><span style="flex:1"></span><button class="btn" onclick="closeOverlay('productEditor')">Cancel</button><button class="btn primary" onclick="saveProduct()">Save</button></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
-
-<script>
-const mockApi={
-  async prompt(text){await new Promise(r=>setTimeout(r,420));return {ok:true,text}},
-  async publish(){await new Promise(r=>setTimeout(r,520));return {ok:true,url:location.href}}
-};
-document.getElementById('prompt').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendPrompt()}});
-function addMessage(type,html){const w=document.createElement('div');w.className='msg '+type;w.innerHTML='<div class="bubble">'+html+'</div>';const c=document.getElementById('chat');c.appendChild(w);c.scrollTop=c.scrollHeight}
-async function sendPrompt(){const box=document.getElementById('prompt');const text=box.value.trim();if(!text)return;addMessage('user',text);box.value='';document.getElementById('saved').textContent='Saving…';await mockApi.prompt(text);let out='Đã cập nhật website.';
-const t=text.toLowerCase();
-if((t.includes('so sánh')||t.includes('compare'))&&!document.getElementById('compare')){const s=document.createElement('section');s.id='compare';s.className='section alt';s.innerHTML='<div class="eyebrow" style="color:#0c8c77">So sánh nhanh</div><h3>Chọn model phù hợp với nhu cầu</h3><div class="grid"><article class="card"><div class="body"><b>K-Series Pure</b><span>Gia đình 2–4 người</span></div></article><article class="card"><div class="body"><b>Smart RO Max</b><span>Tính năng thông minh</span></div></article><article class="card"><div class="body"><b>Eco Compact</b><span>Không gian nhỏ</span></div></article></div>';document.getElementById('testimonials').before(s);out='Đã thêm ComparisonBlock từ registry.'}
-if(t.includes('thêm')&&t.includes('sản phẩm')){document.getElementById('products').insertAdjacentHTML('beforeend','<article class="card"><div class="img"></div><div class="body"><b>Ultra Fresh</b><span>Thiết kế mới • khoáng tự nhiên</span></div></article>');out='Đã thêm ProductCard mới.'}
-if((t.includes('bỏ')||t.includes('xóa'))&&t.includes('đánh giá')){document.getElementById('testimonials')?.remove();out='Đã bỏ Testimonials.'}
-if(t.includes('rút gọn')&&t.includes('hero')){document.getElementById('heroTitle').textContent='Nước sạch. Sống khỏe.';out='Đã rút gọn hero.'}
-document.getElementById('saved').textContent='✓ Saved';addMessage('ai',out+'<div class="chips"><span class="chip">mock API</span><span class="chip">preview updated</span><span class="chip">API-ready</span></div>')}
-function device(type,b){document.querySelectorAll('.seg button').forEach(x=>x.classList.remove('active'));b.classList.add('active');const c=document.getElementById('canvas');c.classList.remove('tablet','mobile');if(type!=='desktop')c.classList.add(type)}
-function settingsOpen(){openOverlay('settings')}function historyOpen(){openOverlay('history')}function publishOpen(){openOverlay('publish')}function openOverlay(id){document.getElementById(id).classList.add('show')}function closeOverlay(id){document.getElementById(id).classList.remove('show')}
-function selectChoice(el){document.querySelectorAll('.choice').forEach(x=>x.classList.remove('selected'));el.classList.add('selected')}
-async function publishNow(){await mockApi.publish();closeOverlay('publish');showToast('Publish flow completed in mock mode.')}
-function showToast(text){const t=document.getElementById('toast');t.textContent=text;t.style.display='block';setTimeout(()=>t.style.display='none',2600)}
-</script>
+<script src="assets/studio.js"></script>
 </body>
 </html>
