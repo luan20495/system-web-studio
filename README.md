@@ -109,4 +109,17 @@ docs/
 
 ## Current scope
 
-Frontend only. No real authentication, Git commit service, deployment service, LLM orchestration or persistence backend is included yet. Those capabilities are represented by API-ready UI flows and dummy data.
+Frontend-only, but the demo interactions are functional with local/mock state:
+
+- project switcher and create project
+- settings save
+- version history + restore
+- undo / redo
+- publish private/public mock flow
+- direct product-card edit/delete
+- working preview navigation and CTAs
+- working lead form mock submit
+- desktop auto-layout for the Studio shell
+- localStorage persistence across refreshes
+
+Only the **real backend services** and **real AI/LLM orchestration** are intentionally left for later integration. The frontend keeps those behind adapters so they can be replaced without redesigning the UI.
