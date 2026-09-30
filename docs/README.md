@@ -1,0 +1,1 @@
+# GitHub Pages static preview\n\nThis folder is a prebuilt frontend-only preview for branch-based GitHub Pages. No GitHub Actions are required.\n
