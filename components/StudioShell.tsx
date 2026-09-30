@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { studioApi } from "@/lib/api-client";
 import type { ChatMessage, DeviceMode, PageContent, Project, StudioSnapshot, Visibility } from "@/lib/types";
 
@@ -325,11 +325,11 @@ function SettingsDrawer({ project, busy, onClose, onSave }: {
   );
 }
 
-function Setting({ title, children }: { title: string; children: React.ReactNode }) {
+function Setting({ title, children }: { title: string; children: ReactNode }) {
   return <section className="settingGroup"><h3>{title}</h3>{children}</section>;
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return <label className="settingField"><span>{label}</span>{children}</label>;
 }
 
