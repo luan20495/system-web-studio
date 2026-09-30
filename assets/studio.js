@@ -228,7 +228,11 @@ window.setDevice=function(type){
  state.device=type;persist();renderPreview();
 };
 window.scrollPreview=function(target){
- var el=document.getElementById(target);if(el)el.scrollIntoView({behavior:"smooth",block:"start"});
+ var el=document.getElementById(target);
+ var viewport=document.querySelector(".canvasViewport");
+ if(!el||!viewport)return;
+ var delta=el.getBoundingClientRect().top-viewport.getBoundingClientRect().top;
+ viewport.scrollTo({top:Math.max(0,viewport.scrollTop+delta-16),behavior:"smooth"});
 };
 window.openProductEditor=function(productId){
  editingProductId=productId;var prod=project().content.products.find(function(x){return x.id===productId});if(!prod)return;
@@ -308,5 +312,7 @@ document.addEventListener("click",function(e){
 });
 document.getElementById("prompt").addEventListener("keydown",function(e){if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendPrompt()}});
 document.querySelectorAll(".overlay").forEach(function(o){o.addEventListener("mousedown",function(e){if(e.target===o)closeOverlay(o.id)})});
+window.scrollTo(0,0);
 renderAll();
+requestAnimationFrame(function(){window.scrollTo(0,0)});
 })();
