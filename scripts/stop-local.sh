@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Stop the API and UI started by run-local.sh. Add --infra to also stop containers (data volumes are kept).
+. "$(dirname "$0")/_env.sh"
+for n in frontend backend; do
+  if [ -f ".run/$n.pid" ]; then kill "$(cat ".run/$n.pid")" 2>/dev/null || true; rm -f ".run/$n.pid"; fi
+done
+pkill -f "system-web-studio.*bootRun" 2>/dev/null || true
+lsof -ti tcp:8080 | xargs kill 2>/dev/null || true
+lsof -ti tcp:"$FRONTEND_PORT" | xargs kill 2>/dev/null || true
+[ "${1:-}" = "--infra" ] && docker compose stop
+echo stopped
