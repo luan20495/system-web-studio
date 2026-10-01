@@ -1,0 +1,11 @@
+.authCard{width:min(420px,calc(100vw - 32px));display:grid;gap:14px;padding:28px;border:1px solid #dfe9ec;border-radius:12px;background:#fff;box-shadow:0 10px 30px #17394a14}
+.authCard.wide{width:min(640px,calc(100vw - 32px))}.authCard h1{margin:0;font-size:22px}.authCard p{margin:0;color:#58717a}
+.listPage{align-items:flex-start;padding-top:8vh}.listHeader{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.projectList{list-style:none;margin:0;padding:0;display:grid;gap:8px}.projectList button{width:100%;display:grid;gap:2px;text-align:left;padding:12px 14px;border:1px solid #dfe9ec;border-radius:8px;background:#fff;cursor:pointer;font:inherit}
+.projectList button:hover{border-color:#087d70}.projectList span{color:#58717a;font-size:13px}
+.inlineForm{display:flex;gap:8px}.inlineForm input,.itemEditor input,.plainArea,.authCard input{flex:1;min-width:0;min-height:40px;padding:0 12px;border:1px solid #cbd8dc;border-radius:6px;font:inherit}
+.plainArea{min-height:84px;padding:10px 12px;resize:vertical}.formError{color:#b3261e!important;font-size:14px}.hint{color:#58717a;font-size:13px}
+.itemEditor{display:grid;grid-template-columns:1fr 1.4fr auto;gap:8px;margin-bottom:8px}.smallButton.danger{color:#b3261e}
+.uploadBox{display:grid;place-items:center;min-height:84px;border:2px dashed #9bb6bb;border-radius:8px;cursor:pointer;color:#087d70;font-weight:700}.uploadBox input{display:none}
+.assetThumb{max-width:100%;max-height:140px;border-radius:6px;object-fit:contain}.deployBox{display:grid;gap:8px;padding:12px;border:1px solid #dfe9ec;border-radius:8px}.deployBox ol{margin:0;padding-left:20px;color:#58717a;font-size:14px}.deployBox code{word-break:break-all}
+@media(max-width:700px){.itemEditor{grid-template-columns:1fr}}

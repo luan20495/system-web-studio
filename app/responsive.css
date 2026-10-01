@@ -1,0 +1,288 @@
+.studio {
+  height: 100dvh;
+  grid-template-rows: 58px minmax(0, 1fr);
+}
+
+.workspace {
+  grid-template-columns: minmax(320px, clamp(320px, 28vw, 480px)) minmax(0, 1fr);
+}
+
+.promptPane,
+.previewPane {
+  min-width: 0;
+  min-height: 0;
+}
+
+.previewPane {
+  grid-template-rows: 44px minmax(0, 1fr);
+}
+
+.canvasViewport {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  justify-content: center;
+  align-items: flex-start;
+  overflow: auto;
+  padding: 12px;
+}
+
+.previewFrame {
+  display: block;
+  flex: none;
+  width: 100%;
+  max-width: 1440px;
+  height: 100%;
+  min-height: 100%;
+  border: 0;
+  background: #fff;
+}
+
+.viewport-tablet {
+  justify-content: flex-start;
+}
+
+.viewport-tablet .previewFrame {
+  width: 768px;
+}
+
+.viewport-mobile {
+  justify-content: flex-start;
+}
+
+.viewport-mobile .previewFrame {
+  width: 390px;
+}
+
+.mobilePaneTabs,
+.mobileMore {
+  display: none;
+}
+
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible,
+textarea:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid #67b8ff;
+  outline-offset: 2px;
+}
+
+.drawer {
+  width: min(480px, 100%);
+  max-height: 100dvh;
+}
+
+.modal {
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+}
+
+@media (min-width: 1920px) {
+  .workspace {
+    grid-template-columns: minmax(320px, 480px) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1279px) and (min-width: 1024px) {
+  .workspace {
+    grid-template-columns: minmax(320px, 360px) minmax(0, 1fr);
+  }
+
+  .previewToolbar .environmentBadge {
+    display: none;
+  }
+}
+
+@media (max-width: 1023px) {
+  body {
+    overflow: hidden;
+  }
+
+  .studio {
+    grid-template-rows: 56px 48px minmax(0, 1fr);
+  }
+
+  .topbar {
+    min-width: 0;
+    padding-inline: 14px;
+  }
+
+  .mobilePaneTabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+  }
+
+  .mobilePaneTabs button {
+    min-width: 0;
+    min-height: 36px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #111820;
+    color: var(--muted);
+  }
+
+  .mobilePaneTabs button.active {
+    border-color: #46617a;
+    background: #223043;
+    color: var(--text);
+  }
+
+  .workspace {
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .workspace.pane-conversation .previewPane,
+  .workspace.pane-preview .promptPane {
+    display: none;
+  }
+
+  .promptPane,
+  .previewPane {
+    min-height: 0;
+    border: 0;
+  }
+
+  .canvasViewport {
+    padding: 8px;
+  }
+}
+
+@media (max-width: 767px) {
+  .topbar {
+    gap: 6px;
+    padding-inline: 10px;
+  }
+
+  .brand {
+    min-width: 0;
+    gap: 7px;
+  }
+
+  .brandMark {
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+  }
+
+  .projectName {
+    max-width: 132px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+  }
+
+  .projectMeta,
+  .topActions > .button.ghost,
+  .topActions > .button.icon {
+    display: none;
+  }
+
+  .topActions {
+    min-width: 0;
+    gap: 6px;
+  }
+
+  .savedPill {
+    padding: 5px 7px;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+
+  .topActions > .button.primary {
+    height: 34px;
+    padding-inline: 10px;
+    font-size: 12px;
+  }
+
+  .mobileMore {
+    position: relative;
+    display: block;
+  }
+
+  .mobileMore summary {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #131a22;
+    color: var(--text);
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .mobileMore summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .mobileMoreMenu {
+    position: absolute;
+    z-index: 40;
+    top: 42px;
+    right: 0;
+    display: grid;
+    width: 150px;
+    padding: 5px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel);
+    box-shadow: var(--shadow);
+  }
+
+  .mobileMoreMenu button {
+    min-height: 40px;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--text);
+    text-align: left;
+  }
+
+  .mobileMoreMenu button:hover {
+    background: var(--panel2);
+  }
+
+  .previewPane {
+    grid-template-rows: 42px minmax(0, 1fr);
+  }
+
+  .previewToolbar {
+    min-width: 0;
+    padding-inline: 8px;
+  }
+
+  .previewToolbar .toolbarLabel,
+  .previewToolbar .environmentBadge,
+  .previewToolbar .smallButton {
+    display: none;
+  }
+
+  .segmented button {
+    min-height: 32px;
+    padding-inline: 8px;
+  }
+
+  .composer textarea {
+    max-height: 25dvh;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

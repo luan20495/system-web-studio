@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./responsive.css";
+import "./http.css";
 
 export const metadata: Metadata = {
   title: "System Web Studio",
