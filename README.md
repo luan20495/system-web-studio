@@ -1,125 +1,36 @@
 # System Web Studio
 
-Production-shaped **frontend-only** AI Web Studio for internal company use.
+An AI-assisted web studio: describe a change in chat, the backend turns it into validated, versioned page-schema operations, the UI previews the result, and a publish pipeline deploys it (to a **mock** provider locally).
 
-The current repository intentionally uses dummy/mock data, but the UI is already connected through a typed API layer. To connect a real backend later, switch the API mode and implement the documented endpoints — the UI does not need to be rewritten.
+Two ways to run it:
 
-## Product UX
+| Mode | What it is | Needs |
+| --- | --- | --- |
+| **mock** (default) | Static demo. All state is in memory; nothing is saved, published or sent. This is what GitHub Pages serves: https://luan20495.github.io/system-web-studio/ | Node only |
+| **http** | Real full stack: Next.js UI → Kotlin/Spring API → PostgreSQL, Redis (sessions), MinIO (assets), RabbitMQ (publish jobs) | Docker, Node, JDK 21 |
 
-The main workspace intentionally stays minimal:
-
-- **Left:** AI prompt / conversation
-- **Right:** live website preview
-- **Settings:** project, auth, domain, source and deployment configuration
-- **History:** Git-style version history
-- **Publish:** private/public release flow
-- Desktop / tablet / mobile preview
-
-This follows the product principle: **prompt → preview → publish**, with technical controls progressively disclosed only when needed.
-
-## Stack
-
-- Next.js
-- React
-- TypeScript
-- App Router
-- Responsive CSS
-- Typed domain models
-- API client abstraction
-- Mock adapter for frontend-only development
-
-## Run locally
-
+## Quick start (full stack)
 ```bash
-npm install
-cp .env.example .env.local
-npm run dev
+cp .env.example .env         # set LOCAL_ADMIN_PASSWORD (14+ chars)
+npm ci
+./scripts/run-local.sh       # containers + API + UI → http://localhost:3100  (login: local.admin)
+./scripts/smoke-test.sh
+./scripts/stop-local.sh
+```
+Mock demo only: `npm ci && npm run dev` → http://localhost:3000.
+
+## What works in http mode
+Login/logout with Redis-backed sessions · workspaces and projects with role-based access (admin, editor, publisher, viewer) · prompts → mock-LLM operations validated against the component registry · every change is an immutable version (history, restore as a new version, direct editing through the same validated endpoint) · project settings · asset upload to MinIO via presigned URLs · publish through RabbitMQ with idempotency and a visible state machine · append-only audit log · optimistic-concurrency conflicts (409) surfaced in the UI.
+
+## What is mocked or missing
+The LLM is a deterministic keyword planner, the deploy provider returns a labelled mock URL, and there is no Git export. There is no CSP, MFA/SSO, member-management UI or backup automation; see [docs/SECURITY.md](docs/SECURITY.md) and [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md). This is a development/internal-demo build, **not production-ready**.
+
+## Verify
+```bash
+./scripts/check.sh                 # typecheck, both UI builds, backend tests (Testcontainers), npm audit
+node e2e/full-flow.mjs             # browser E2E against the running stack
+./scripts/backup-restore-drill.sh  # backup restore proof
 ```
 
-Open:
-
-```text
-http://localhost:3000
-```
-
-## API modes
-
-### Mock mode — current default
-
-```env
-NEXT_PUBLIC_API_MODE=mock
-```
-
-All screens work without a backend.
-
-### HTTP mode — future backend
-
-```env
-NEXT_PUBLIC_API_MODE=http
-NEXT_PUBLIC_API_BASE_URL=https://your-api.example.com
-```
-
-The frontend will then call the backend through `lib/api-client.ts`.
-
-## Backend-ready endpoints
-
-The expected API contract is documented in:
-
-```text
-docs/API_CONTRACT.md
-```
-
-Core endpoints:
-
-- `GET /v1/studio`
-- `POST /v1/projects/:projectId/prompts`
-- `PUT /v1/projects/:projectId`
-- `POST /v1/projects/:projectId/publish`
-
-## Project structure
-
-```text
-app/
-  layout.tsx
-  page.tsx
-  globals.css
-
-components/
-  StudioShell.tsx
-
-lib/
-  api-client.ts
-  mock-data.ts
-  types.ts
-
-docs/
-  API_CONTRACT.md
-```
-
-## Architecture direction
-
-**Hybrid Schema-Driven + Source Code**
-
-1. Reuse registered components first.
-2. Generate custom code only when a registry component cannot satisfy the prompt.
-3. Render preview from structured page state/schema.
-4. Store versions in Git.
-5. Run a security gate before publish.
-6. Deploy static websites cheaply and dynamic workloads only when required.
-
-## Current scope
-
-Frontend-only, but the demo interactions are functional with local/mock state:
-
-- project switcher and create project
-- settings save
-- version history + restore
-- undo / redo
-- publish private/public mock flow
-- direct product-card edit/delete
-- working preview navigation and CTAs
-- working lead form mock submit
-- desktop auto-layout for the Studio shell
-- localStorage persistence across refreshes
-
-Only the **real backend services** and **real AI/LLM orchestration** are intentionally left for later integration. The frontend keeps those behind adapters so they can be replaced without redesigning the UI.
+## Docs
+[LOCAL_DEVELOPMENT](docs/LOCAL_DEVELOPMENT.md) · [ARCHITECTURE](docs/ARCHITECTURE.md) · [API_CONTRACT](docs/API_CONTRACT.md) · [SECURITY](docs/SECURITY.md) · [DEPLOYMENT](docs/DEPLOYMENT.md) · [BACKUP_DR](docs/BACKUP_DR.md) · [IMPLEMENTATION_STATUS](docs/IMPLEMENTATION_STATUS.md)
