@@ -1,0 +1,78 @@
+# Local development infrastructure. Every port is bound to loopback only.
+# Credentials below are LOCAL-ONLY defaults; override them through .env. Never reuse them anywhere else.
+services:
+  postgres:
+    image: postgres:17.6
+    environment:
+      POSTGRES_DB: system_web_studio
+      POSTGRES_USER: studio
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-studio-local-only}
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-15432}:5432"
+    volumes:
+      - studio-postgres:/var/lib/postgresql/data
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U studio -d system_web_studio"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  redis:
+    image: redis:8.2.1-alpine
+    # Sessions and rate limits live here: never evict keys silently.
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction"]
+    ports:
+      - "127.0.0.1:${REDIS_HOST_PORT:-16379}:6379"
+    volumes:
+      - studio-redis:/data
+    mem_limit: 384m
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  # The official minio/minio images are no longer pullable from Docker Hub/Quay, so the last
+  # publicly available pinned S3-compatible build is used for LOCAL development only.
+  minio:
+    image: bitnamilegacy/minio:2025.7.23-debian-12-r5
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-studio-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-studio-local-only}
+      MINIO_DEFAULT_BUCKETS: ${MINIO_BUCKET:-studio-assets}
+    ports:
+      - "127.0.0.1:${MINIO_API_PORT:-19000}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-19001}:9001"
+    volumes:
+      - studio-minio:/bitnami/minio/data
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9000/minio/health/live || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-studio}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-studio-local-only}
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbit vm_memory_high_watermark 0.6"
+    ports:
+      - "127.0.0.1:${RABBITMQ_AMQP_PORT:-15674}:5672"
+      - "127.0.0.1:${RABBITMQ_MGMT_PORT:-15675}:15672"
+    volumes:
+      - studio-rabbitmq:/var/lib/rabbitmq
+    mem_limit: 768m
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  studio-postgres:
+  studio-redis:
+  studio-minio:
+  studio-rabbitmq:

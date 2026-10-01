@@ -1,0 +1,158 @@
+package com.systemwebstudio.project
+
+import com.systemwebstudio.access.AccessService
+import com.systemwebstudio.access.Permission
+import com.systemwebstudio.audit.AuditService
+import com.systemwebstudio.common.ApiException
+import com.systemwebstudio.identity.StudioUserDetails
+import jakarta.validation.Valid
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.NotNull
+import jakarta.validation.constraints.Pattern
+import jakarta.validation.constraints.Size
+import org.springframework.http.HttpStatus
+import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.transaction.annotation.Transactional
+import org.springframework.web.bind.annotation.*
+import java.time.Instant
+import java.util.UUID
+
+private const val HOSTNAME = "^(?=.{1,253}$)([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)*[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$"
+
+data class CreateProjectRequest(
+    @field:NotBlank @field:Size(max = 160) val name: String,
+    @field:Size(max = 1000) val description: String? = null,
+    @field:Pattern(regexp = "nextjs|react|static") val framework: String? = null
+)
+
+data class UpdateProjectRequest(
+    @field:NotNull val expectedRevision: Long?,
+    @field:Size(min = 1, max = 160) val name: String? = null,
+    @field:Size(max = 1000) val description: String? = null,
+    @field:Pattern(regexp = "nextjs|react|static") val framework: String? = null,
+    @field:Pattern(regexp = "PRIVATE|PUBLIC") val siteVisibility: String? = null,
+    @field:Pattern(regexp = "NONE|LOCAL|OIDC") val authMode: String? = null,
+    @field:Pattern(regexp = HOSTNAME) val domain: String? = null,
+    @field:Pattern(regexp = HOSTNAME) val customDomain: String? = null,
+    @field:Pattern(regexp = "MOCK|SELF_HOSTED|CLOUD") val deploymentMode: String? = null,
+    @field:Size(max = 120) val deploymentTarget: String? = null
+)
+
+data class ProjectResponse(
+    val id: UUID, val workspaceId: UUID, val name: String, val description: String?, val ownerUserId: UUID,
+    val framework: String, val projectAccessPolicy: String, val siteVisibility: String, val authMode: String,
+    val domain: String?, val customDomain: String?, val deploymentMode: String, val deploymentTarget: String?,
+    val status: String, val revision: Long, val createdAt: Instant, val updatedAt: Instant,
+    val permissions: List<String> = emptyList()
+)
+
+fun ProjectEntity.toResponse(permissions: Collection<Permission> = emptyList()) = ProjectResponse(
+    id, workspaceId, name, description, ownerUserId, framework, projectAccessPolicy, siteVisibility, authMode,
+    domain, customDomain, deploymentMode, deploymentTarget, if (active) "ACTIVE" else "DELETED",
+    revision, createdAt, updatedAt, permissions.map { it.name }.sorted()
+)
+
+@RestController
+@RequestMapping("/api/v1/workspaces/{workspaceId}/projects")
+class ProjectController(
+    private val access: AccessService,
+    private val projects: ProjectRepository,
+    private val projectMembers: ProjectMemberRepository,
+    private val audit: AuditService,
+    private val schemas: com.systemwebstudio.schema.SchemaService
+) {
+    @GetMapping
+    @Transactional(readOnly = true)
+    fun list(@PathVariable workspaceId: UUID, @AuthenticationPrincipal me: StudioUserDetails): List<ProjectResponse> {
+        val ctx = access.forWorkspace(me.userId, workspaceId)
+        val found = if (ctx.seesAllProjects) projects.findAllByWorkspaceIdAndActiveTrueOrderByUpdatedAtDescIdAsc(workspaceId)
+        else projects.findVisibleProjects(workspaceId, me.userId)
+        return found.map { it.toResponse() }
+    }
+
+    @PostMapping
+    @Transactional
+    @ResponseStatus(HttpStatus.CREATED)
+    fun create(
+        @PathVariable workspaceId: UUID, @Valid @RequestBody request: CreateProjectRequest,
+        @AuthenticationPrincipal me: StudioUserDetails
+    ): ProjectResponse {
+        val ctx = access.forWorkspace(me.userId, workspaceId)
+        ctx.require(Permission.PROJECT_CREATE)
+        val now = Instant.now()
+        val project = projects.saveAndFlush(
+            ProjectEntity(
+                workspaceId = workspaceId, name = request.name.trim(), ownerUserId = me.userId,
+                description = request.description?.trim()?.ifEmpty { null },
+                framework = request.framework ?: "nextjs", createdAt = now, updatedAt = now
+            )
+        )
+        projectMembers.save(ProjectMemberEntity(workspaceId = workspaceId, projectId = project.id, userId = me.userId, role = "OWNER"))
+        schemas.ensureInitialized(project, me.userId)
+        audit.record("CREATE_PROJECT", "PROJECT", project.id, workspaceId, project.id, newValue = mapOf("name" to project.name))
+        return project.toResponse()
+    }
+
+    @GetMapping("/{projectId}")
+    @Transactional(readOnly = true)
+    fun get(@PathVariable workspaceId: UUID, @PathVariable projectId: UUID, @AuthenticationPrincipal me: StudioUserDetails): ProjectResponse {
+        val ctx = access.forProject(me.userId, workspaceId, projectId)
+        return ctx.project!!.toResponse(ctx.permissions)
+    }
+
+    @PatchMapping("/{projectId}")
+    @Transactional
+    fun update(
+        @PathVariable workspaceId: UUID, @PathVariable projectId: UUID,
+        @Valid @RequestBody request: UpdateProjectRequest, @AuthenticationPrincipal me: StudioUserDetails
+    ): ProjectResponse {
+        val ctx = access.forProject(me.userId, workspaceId, projectId)
+        ctx.require(Permission.PROJECT_SETTINGS)
+        val project = ctx.project!!
+        if (project.revision != request.expectedRevision) {
+            throw ApiException.conflict("REVISION_CONFLICT", "Project revision changed; reload before saving.", mapOf("currentRevision" to project.revision))
+        }
+        val before = snapshot(project)
+        request.name?.let { project.name = it.trim().ifEmpty { throw ApiException.badRequest("VALIDATION_FAILED", "name must not be blank") } }
+        request.description?.let { project.description = it.trim().ifEmpty { null } }
+        request.framework?.let { project.framework = it }
+        request.siteVisibility?.let { project.siteVisibility = it }
+        request.authMode?.let { project.authMode = it }
+        request.domain?.let { project.domain = it.lowercase() }
+        request.customDomain?.let { project.customDomain = it.lowercase() }
+        request.deploymentMode?.let { project.deploymentMode = it }
+        request.deploymentTarget?.let { project.deploymentTarget = it.trim().ifEmpty { null } }
+        project.updatedAt = Instant.now()
+        val saved = projects.saveAndFlush(project)
+        val after = snapshot(saved)
+        val changed = after.filter { (k, v) -> before[k] != v }
+        audit.record("UPDATE_PROJECT", "PROJECT", saved.id, workspaceId, saved.id,
+            oldValue = before.filterKeys { it in changed }, newValue = changed)
+        return saved.toResponse(ctx.permissions)
+    }
+
+    @DeleteMapping("/{projectId}")
+    @Transactional
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun delete(
+        @PathVariable workspaceId: UUID, @PathVariable projectId: UUID,
+        @RequestParam expectedRevision: Long, @AuthenticationPrincipal me: StudioUserDetails
+    ) {
+        val ctx = access.forProject(me.userId, workspaceId, projectId)
+        ctx.require(Permission.PROJECT_DELETE)
+        val project = ctx.project!!
+        if (project.revision != expectedRevision) {
+            throw ApiException.conflict("REVISION_CONFLICT", "Project revision changed; reload before deleting.", mapOf("currentRevision" to project.revision))
+        }
+        project.active = false
+        project.updatedAt = Instant.now()
+        projects.saveAndFlush(project)
+        audit.record("DELETE_PROJECT", "PROJECT", project.id, workspaceId, project.id, oldValue = mapOf("name" to project.name))
+    }
+
+    private fun snapshot(p: ProjectEntity): Map<String, Any?> = linkedMapOf(
+        "name" to p.name, "description" to p.description, "framework" to p.framework,
+        "siteVisibility" to p.siteVisibility, "authMode" to p.authMode, "domain" to p.domain,
+        "customDomain" to p.customDomain, "deploymentMode" to p.deploymentMode, "deploymentTarget" to p.deploymentTarget
+    )
+}

@@ -1,0 +1,11 @@
+# Local development only: Swagger UI and slower mock deploy steps so the UI can show each state.
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+app:
+  deploy:
+    step-delay-ms: 700
