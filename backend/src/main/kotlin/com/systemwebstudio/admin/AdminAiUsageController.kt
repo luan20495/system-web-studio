@@ -28,7 +28,9 @@ data class AiUsageReport(
 data class AiCallRow(
     val id: UUID, val createdAt: Instant, val userId: UUID, val user: String?, val workspaceId: UUID, val workspace: String?,
     val projectId: UUID, val project: String?, val promptId: UUID?, val provider: String, val model: String, val outcome: String,
-    val httpStatus: Int?, val promptTokens: Int?, val completionTokens: Int?, val totalTokens: Int?, val costUsd: BigDecimal?, val latencyMs: Int
+    val httpStatus: Int?, val promptTokens: Int?, val completionTokens: Int?, val totalTokens: Int?, val costUsd: BigDecimal?, val latencyMs: Int,
+    /** PROVIDER (reported) or CATALOG (pricing row); null = unknown */
+    val costSource: String? = null, val requestId: String? = null
 )
 
 /** AI usage accounting for the Admin Console. Everything is read from ai_calls (provider-reported usage), nothing is estimated. */
@@ -82,13 +84,13 @@ class AdminAiUsageController(
         workspaceId?.let { where.append(" AND c.workspace_id = ?"); args += it }
         val total = jdbc.queryForObject("SELECT count(*) FROM ai_calls c$where", Long::class.java, *args.toTypedArray()) ?: 0
         val items = jdbc.query("""SELECT c.id, c.created_at, c.user_id, coalesce(u.display_name, u.username), c.workspace_id, w.name, c.project_id, pr.name,
-                c.prompt_id, c.provider, c.model, c.outcome, c.http_status, c.prompt_tokens, c.completion_tokens, c.total_tokens, c.cost_usd, c.latency_ms
+                c.prompt_id, c.provider, c.model, c.outcome, c.http_status, c.prompt_tokens, c.completion_tokens, c.total_tokens, c.cost_usd, c.latency_ms, c.cost_source, c.request_id
             FROM ai_calls c LEFT JOIN users u ON u.id = c.user_id LEFT JOIN workspaces w ON w.id = c.workspace_id LEFT JOIN projects pr ON pr.id = c.project_id
             $where ORDER BY c.created_at DESC, c.id LIMIT $s OFFSET ${p.toLong() * s}""", { rs, _ ->
             fun int(i: Int) = rs.getObject(i)?.let { (it as Number).toInt() }
             AiCallRow(rs.getObject(1, UUID::class.java), rs.getTimestamp(2).toInstant(), rs.getObject(3, UUID::class.java), rs.getString(4),
                 rs.getObject(5, UUID::class.java), rs.getString(6), rs.getObject(7, UUID::class.java), rs.getString(8), rs.getObject(9, UUID::class.java),
-                rs.getString(10), rs.getString(11), rs.getString(12), int(13), int(14), int(15), int(16), rs.getBigDecimal(17), rs.getInt(18))
+                rs.getString(10), rs.getString(11), rs.getString(12), int(13), int(14), int(15), int(16), rs.getBigDecimal(17), rs.getInt(18), rs.getString(19), rs.getString(20))
         }, *args.toTypedArray())
         return PageDto(items, total, p, s)
     }

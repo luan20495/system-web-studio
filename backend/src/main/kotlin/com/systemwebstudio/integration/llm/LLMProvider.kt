@@ -15,7 +15,11 @@ data class LLMResponse(
 )
 
 /** One upstream model call. outcome: OK | BAD_OUTPUT (answered, unusable) | ERROR (no usable answer, e.g. HTTP 429/timeout). */
-data class AiCall(val provider: String, val model: String, val outcome: String, val httpStatus: Int?, val usage: ChatUsage?, val latencyMs: Long)
+data class AiCall(
+    val provider: String, val model: String, val outcome: String, val httpStatus: Int?, val usage: ChatUsage?, val latencyMs: Long,
+    /** set by AiUsageService.price: PROVIDER (reported) or CATALOG (tokens × pricing row `pricingId`); null = cost unknown */
+    val costSource: String? = null, val pricingId: java.util.UUID? = null
+)
 
 /** Port for any model backend (mock, OpenAI, Claude, Gemini, local). Core code depends only on this. */
 interface LLMProvider {

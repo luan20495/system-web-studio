@@ -118,8 +118,9 @@ class PromptController(
         val versions = registry.versions()
         val plan = llm.plan(LLMRequest(text, current,
             registry.list().filter { it.status == "ACTIVE" }.map { ComponentInfo(it.id, it.category, it.latestVersion, versions["${it.id}@${it.latestVersion}"]?.dto?.propsSchema) }, request.model))
-        usage.record(plan.calls, promptId, workspaceId, projectId, me.userId)
-        val promptUsage = usage.summarize(plan.calls)
+        val calls = usage.price(plan.calls)
+        usage.record(calls, promptId, workspaceId, projectId, me.userId)
+        val promptUsage = usage.summarize(calls)
 
         return tx.execute { apply(ctx, request, text, promptId, current, plan, promptUsage) }!!
     }

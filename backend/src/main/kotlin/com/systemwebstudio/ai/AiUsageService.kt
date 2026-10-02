@@ -36,15 +36,32 @@ class AiUsageService(
      */
     fun record(calls: List<AiCall>, promptId: UUID?, workspaceId: UUID, projectId: UUID, userId: UUID) {
         if (calls.isEmpty()) return
+        val requestId = com.systemwebstudio.common.RequestIdFilter.current()?.take(64)
         jdbc.batchUpdate(
             """INSERT INTO ai_calls (id, prompt_id, workspace_id, project_id, user_id, provider, model, outcome, http_status,
-               prompt_tokens, completion_tokens, total_tokens, cost_usd, latency_ms, generation_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+               prompt_tokens, completion_tokens, total_tokens, cost_usd, latency_ms, generation_id, cost_source, pricing_id, request_id)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             calls.map { c ->
                 arrayOf<Any?>(UUID.randomUUID(), promptId, workspaceId, projectId, userId, c.provider.take(32), c.model.take(160), c.outcome, c.httpStatus,
                     c.usage?.promptTokens, c.usage?.completionTokens, c.usage?.totalTokens, c.usage?.costUsd,
-                    c.latencyMs.coerceIn(0, Int.MAX_VALUE.toLong()).toInt(), c.usage?.generationId)
+                    c.latencyMs.coerceIn(0, Int.MAX_VALUE.toLong()).toInt(), c.usage?.generationId, c.costSource, c.pricingId, requestId)
             }
         )
+    }
+
+    /**
+     * Cost per call, reproducibly: the provider-reported cost if there is one (OpenRouter); otherwise reported tokens × the pricing-catalog
+     * row in force now (immutable rows, so the same inputs always give the same cost). No row or no token counts → cost stays unknown.
+     */
+    fun price(calls: List<AiCall>): List<AiCall> = calls.map { c ->
+        val u = c.usage ?: return@map c
+        if (u.costUsd != null) return@map c.copy(costSource = "PROVIDER")
+        val input = u.promptTokens ?: return@map c; val output = u.completionTokens ?: return@map c
+        val row = jdbc.query("""SELECT id, input_usd_per_mtok, output_usd_per_mtok FROM ai_model_pricing WHERE model_id = ? AND effective_from <= now()
+            ORDER BY effective_from DESC, created_at DESC LIMIT 1""", { rs, _ -> Triple(rs.getObject(1, UUID::class.java), rs.getBigDecimal(2), rs.getBigDecimal(3)) }, c.model).firstOrNull()
+            ?: return@map c
+        val cost = (row.second * BigDecimal(input) + row.third * BigDecimal(output)).divide(BigDecimal(1_000_000), 10, java.math.RoundingMode.HALF_UP)
+        c.copy(usage = u.copy(costUsd = cost), costSource = "CATALOG", pricingId = row.first)
     }
 
     fun summarize(calls: List<AiCall>): PromptUsage? {

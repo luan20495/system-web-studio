@@ -184,6 +184,13 @@ app:
     max-page-chars: 24000
     model-allowlist: ${OPENROUTER_MODEL_ALLOWLIST:}            # optional comma list to restrict the free models offered
   ai:
+    # Other providers (ADR 0007). Each needs a key (local: optional) and an EXPLICIT model list; every model starts disabled until a
+    # system admin enables it in Admin Console → AI Control. Keys are read from the environment only.
+    providers:
+      openai: { api-key: "${OPENAI_API_KEY:}", base-url: "${OPENAI_BASE_URL:https://api.openai.com/v1}", models: "${OPENAI_MODELS:}" }
+      anthropic: { api-key: "${ANTHROPIC_API_KEY:}", base-url: "${ANTHROPIC_BASE_URL:https://api.anthropic.com}", models: "${ANTHROPIC_MODELS:}" }
+      gemini: { api-key: "${GEMINI_API_KEY:}", base-url: "${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta/openai}", models: "${GEMINI_MODELS:}" }
+      local: { api-key: "${LOCAL_LLM_API_KEY:}", base-url: "${LOCAL_LLM_BASE_URL:}", models: "${LOCAL_LLM_MODELS:}" }
     # Token budgets from provider-reported usage (ai_calls); 0 = off. Checked before each real-AI prompt.
     daily-token-limit-per-user: ${AI_DAILY_TOKEN_LIMIT_PER_USER:0}
     monthly-token-limit-per-workspace: ${AI_MONTHLY_TOKEN_LIMIT_PER_WORKSPACE:0}

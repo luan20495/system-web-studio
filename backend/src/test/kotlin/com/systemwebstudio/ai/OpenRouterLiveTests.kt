@@ -20,7 +20,9 @@ class OpenRouterLiveTests {
 
     @Test
     fun `the real model list parses and only free text models are offered`() {
-        val ai = AiService(client("sk-or-invalid-key-for-listing"), "auto", 30, 4, 50, "")
+        // freeModels() needs neither other providers nor the database
+        val ai = AiService(client("sk-or-invalid-key-for-listing"), com.systemwebstudio.integration.llm.AiProviderRegistry(org.springframework.mock.env.MockEnvironment(), json),
+            org.springframework.jdbc.core.JdbcTemplate(), "auto", 30, 4, 50, "")
         val models = ai.freeModels()
         println("LIVE free text models offered (${models.size}): " + models.joinToString { it.id })
         assertThat(models).isNotEmpty

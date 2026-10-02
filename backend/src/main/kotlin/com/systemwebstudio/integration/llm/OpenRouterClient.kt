@@ -10,8 +10,9 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
 
-/** `usage` is set when the provider answered (and so may have billed) even though the answer was unusable. */
-class OpenRouterException(message: String, val status: Int = 0, val fatal: Boolean = false, val usage: ChatUsage? = null) : RuntimeException(message)
+/** Any provider's failure. `fatal` = another attempt cannot help (bad key, no credit); `usage` is set when the provider answered (and so may have billed) although the answer was unusable. */
+open class AiProviderException(message: String, val status: Int = 0, val fatal: Boolean = false, val usage: ChatUsage? = null) : RuntimeException(message)
+typealias OpenRouterException = AiProviderException
 
 /** Exactly what the provider reported in `usage`; a null field means "not reported", never an estimate. */
 data class ChatUsage(val promptTokens: Int?, val completionTokens: Int?, val totalTokens: Int?, val costUsd: java.math.BigDecimal?, val generationId: String?)
@@ -77,13 +78,16 @@ class OpenRouterClient(
         return ChatResult(content, usage)
     }
 
-    internal fun usage(root: JsonNode): ChatUsage? {
-        val u = root.get("usage")?.takeIf { it.isObject } ?: return null
-        fun tokens(name: String) = u.get(name)?.takeIf { it.isIntegralNumber }?.asLong()?.takeIf { it in 0..Int.MAX_VALUE }?.toInt()
-        val cost = u.get("cost")?.takeIf { it.isNumber }?.let { runCatching { java.math.BigDecimal(it.asString()) }.getOrNull() }?.takeIf { it.signum() >= 0 }
-        val prompt = tokens("prompt_tokens"); val completion = tokens("completion_tokens")
-        val total = tokens("total_tokens") ?: if (prompt != null && completion != null) prompt + completion else null
-        val id = root.get("id")?.takeIf { it.isString }?.asString()?.take(160)
-        return ChatUsage(prompt, completion, total, cost, id)
-    }
+    internal fun usage(root: JsonNode): ChatUsage? = openAiUsage(root)
+}
+
+/** `usage` of an OpenAI-style chat completion (OpenRouter adds `cost`). Only reported values; nothing is estimated. */
+fun openAiUsage(root: JsonNode): ChatUsage? {
+    val u = root.get("usage")?.takeIf { it.isObject } ?: return null
+    fun tokens(name: String) = u.get(name)?.takeIf { it.isIntegralNumber }?.asLong()?.takeIf { it in 0..Int.MAX_VALUE }?.toInt()
+    val cost = u.get("cost")?.takeIf { it.isNumber }?.let { runCatching { java.math.BigDecimal(it.asString()) }.getOrNull() }?.takeIf { it.signum() >= 0 }
+    val prompt = tokens("prompt_tokens"); val completion = tokens("completion_tokens")
+    val total = tokens("total_tokens") ?: if (prompt != null && completion != null) prompt + completion else null
+    val id = root.get("id")?.takeIf { it.isString }?.asString()?.take(160)
+    return ChatUsage(prompt, completion, total, cost, id)
 }

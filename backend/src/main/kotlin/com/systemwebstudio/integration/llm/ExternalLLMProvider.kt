@@ -10,7 +10,8 @@ import tools.jackson.databind.json.JsonMapper
 import tools.jackson.databind.node.ObjectNode
 
 /**
- * Turns a user's sentence into schema operations with a free OpenRouter model.
+ * Turns a user's sentence into schema operations with an external model: OpenRouter free models ("auto" fails over between them)
+ * or one explicitly chosen model of another provider ("provider:model", ADR 0007; never replaced by another model).
  *
  * Trust boundary: the model's output is untrusted DATA. It is parsed into the same declarative operations the mock uses and
  * then goes through SchemaPatchEngine + PageSchemaValidator (registry, lengths, ids) exactly like a hand-written edit; it can
@@ -18,13 +19,24 @@ import tools.jackson.databind.node.ObjectNode
  * request, not as instructions. What is sent to OpenRouter: the user's sentence, the current page JSON and the component list.
  */
 @Component
-class OpenRouterLLMProvider(
+class ExternalLLMProvider(
     private val client: OpenRouterClient,
+    private val providers: AiProviderRegistry,
     private val ai: AiService,
     private val json: JsonMapper,
     @Value("\${app.openrouter.max-page-chars:24000}") private val maxPageChars: Int
 ) : LLMProvider {
     override val name = "openrouter"
+
+    /** OpenRouter wrapped as a [ChatProvider]; its model ids are the bare OpenRouter ids. */
+    private val openRouter = object : ChatProvider {
+        override val id = "openrouter"; override val displayName = "OpenRouter"
+        override val configured get() = client.configured
+        override val models get() = ai.freeModels().map { it.id }
+        override val endpointHost: String? = null; override val paid = false
+        override fun chat(model: String, system: String, user: String, maxTokens: Int) = client.chat(model, system, user, maxTokens)
+        override fun probe() = "${client.listModels().size} models listed"
+    }
     private val log = LoggerFactory.getLogger(javaClass)
 
     override fun plan(request: LLMRequest): LLMResponse {
@@ -32,36 +44,41 @@ class OpenRouterLLMProvider(
         if (page.length > maxPageChars) return failure("Trang quá lớn để gửi cho AI (${page.length} ký tự, tối đa $maxPageChars).", null)
         val system = systemPrompt(request.components)
         val user = "<current_page>\n$page\n</current_page>\n<user_request>\n${request.prompt.take(2000)}\n</user_request>"
-        val candidates = if (request.model == null || request.model == "auto") ai.autoCandidates() else listOf(request.model)
+        // (provider, bare model sent to it, id recorded and shown)
+        val candidates: List<Triple<ChatProvider, String, String>> = when {
+            request.model == null || request.model == "auto" -> ai.autoCandidates().map { Triple(openRouter, it, it) }
+            else -> providers.split(request.model)?.let { (p, bare) -> listOf(Triple(p, bare, request.model)) } ?: listOf(Triple(openRouter, request.model, request.model))
+        }
         var last: String? = null
         var lastError = "không có model khả dụng"
         val calls = mutableListOf<AiCall>()
-        for (model in candidates) {
-            last = model
+        var lastProvider = name
+        for ((provider, bare, model) in candidates) {
+            last = model; lastProvider = provider.id
             val t0 = System.nanoTime()
             fun elapsed() = (System.nanoTime() - t0) / 1_000_000
             var usage: ChatUsage? = null
             try {
-                val answer = client.chat(model, system, user)
+                val answer = provider.chat(bare, system, user)
                 usage = answer.usage
                 val parsed = parse(answer.content, model)
                 ai.markOk(model)
-                calls += AiCall(name, model, "OK", 200, usage, elapsed())
-                return parsed.copy(calls = calls)
-            } catch (e: OpenRouterException) {
-                calls += AiCall(name, model, if (e.usage != null) "BAD_OUTPUT" else "ERROR", e.status.takeIf { it > 0 }, e.usage, elapsed())
+                calls += AiCall(provider.id, model, "OK", 200, usage, elapsed())
+                return parsed.copy(provider = provider.id, calls = calls)
+            } catch (e: AiProviderException) {
+                calls += AiCall(provider.id, model, if (e.usage != null) "BAD_OUTPUT" else "ERROR", e.status.takeIf { it > 0 }, e.usage, elapsed())
                 lastError = e.message ?: "lỗi"
-                log.warn("OpenRouter model {} failed: {}", model, e.message)
+                log.warn("AI model {} failed: {}", model, e.message)
                 if (e.fatal) break                                   // bad key / no credit: other models will not help
                 ai.markFailed(model)
             } catch (e: BadModelOutput) {
-                calls += AiCall(name, model, "BAD_OUTPUT", 200, usage, elapsed())
+                calls += AiCall(provider.id, model, "BAD_OUTPUT", 200, usage, elapsed())
                 lastError = "model trả về định dạng không hợp lệ"
-                log.warn("OpenRouter model {} returned unusable output: {}", model, e.message)
+                log.warn("AI model {} returned unusable output: {}", model, e.message)
                 ai.markFailed(model)
             }
         }
-        return failure("AI chưa thể xử lý yêu cầu ($lastError). Hãy thử lại hoặc chọn model khác.", last).copy(calls = calls)
+        return failure("AI chưa thể xử lý yêu cầu ($lastError). Hãy thử lại hoặc chọn model khác.", last).copy(provider = lastProvider, calls = calls)
     }
 
     private fun failure(message: String, model: String?) = LLMResponse("UNSUPPORTED", emptyList(), message, name, model)

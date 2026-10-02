@@ -43,6 +43,7 @@ class ApiSession(private val mvc: MockMvc, private val json: JsonMapper) {
     fun get(path: String): MvcResult = perform(B.get(path))
     fun post(path: String, body: String = "{}", vararg headers: Pair<String, String>): MvcResult =
         perform(B.post(path).contentType(MediaType.APPLICATION_JSON).content(body).also { b -> headers.forEach { b.header(it.first, it.second) } })
+    fun put(path: String, body: String): MvcResult = perform(B.put(path).contentType(MediaType.APPLICATION_JSON).content(body))
     fun patch(path: String, body: String): MvcResult = perform(B.patch(path).contentType(MediaType.APPLICATION_JSON).content(body))
     fun delete(path: String): MvcResult = perform(B.delete(path))
 
