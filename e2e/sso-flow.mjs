@@ -16,7 +16,8 @@ async function ssoLogin(username) {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await ctx.newPage();
   await page.goto(BASE);
-  await page.getByRole("link", { name: "Đăng nhập bằng SSO" }).click();
+  await page.getByRole("radio", { name: /Builder Studio/ }).check();
+  await page.getByRole("link", { name: "Tiếp tục với SSO công ty" }).click();
   await page.waitForURL(/18080/);
   await page.locator("#username").fill(username);
   await page.locator("#password").fill(sso.SSO_TEST_PASSWORD);
@@ -32,6 +33,10 @@ async function adminApi() {
   return { call };
 }
 
+// start from fresh SSO identities (previous runs granted them access); dev database only
+for (const q of ["delete from project_members where user_id in (select id from users where auth_source='OIDC')",
+                 "delete from workspace_members where user_id in (select id from users where auth_source='OIDC')",
+                 "delete from external_identities", "delete from users where auth_source='OIDC'"]) sql(q);
 // a LOCAL account that owns the same verified email: SSO must never inherit it
 sql("delete from project_members where user_id in (select id from users where username='local.emailtwin')");
 sql("delete from workspace_members where user_id in (select id from users where username='local.emailtwin')");
@@ -42,7 +47,7 @@ sql(`insert into workspace_members (workspace_id, user_id, role, active) select 
 let user;
 await check("SSO button is offered and the Keycloak round trip logs the user in", async () => {
   user = await ssoLogin(sso.SSO_TEST_USER);
-  await user.page.getByText("Tài khoản chưa thuộc workspace nào").waitFor({ timeout: 15000 });
+  await user.page.getByText("Bạn chưa thuộc workspace nào").first().waitFor({ timeout: 15000 });
 });
 await check("a new SSO identity gets its own account with NO access (verified email did not link to the local twin)", async () => {
   const n = sql("select count(*) from external_identities");
@@ -56,7 +61,7 @@ await check("a new SSO identity gets its own account with NO access (verified em
 await check("the SSO session cookie is HttpOnly and survives reload", async () => {
   const c = (await user.ctx.cookies()).find((x) => x.name === "STUDIO_SESSION");
   expect(c?.httpOnly === true, "session cookie must be HttpOnly");
-  await user.page.reload(); await user.page.getByText("Tài khoản chưa thuộc workspace nào").waitFor();
+  await user.page.reload(); await user.page.getByText("Bạn chưa thuộc workspace nào").first().waitFor();
 });
 await check("password login is impossible for an SSO account", async () => {
   const name = sql("select username from users where auth_source='OIDC' order by created_at desc limit 1");
@@ -69,12 +74,12 @@ await check("an admin grants access through internal RBAC (add to workspace + pr
   const uname = sql("select username from users where auth_source='OIDC' order by created_at desc limit 1");
   expect((await admin.call("POST", `/workspaces/${WS}/members`, { username: uname, role: "VIEWER" })).status() === 201, "workspace add failed");
   expect((await admin.call("POST", `/workspaces/${WS}/projects/${DEMO}/members`, { username: uname, role: "VIEWER" })).status() === 201, "project add failed");
-  await user.page.reload();
-  await user.page.getByRole("button", { name: /Water Purifier Website/ }).waitFor({ timeout: 10000 });
-  await user.page.getByRole("button", { name: /Water Purifier Website/ }).click();
-  await user.page.waitForSelector("iframe.previewFrame");
+  await user.page.goto(BASE + "/");                                   // resolver now finds a workspace -> Builder Studio
+  await user.page.waitForURL(/\/studio/);
+  await user.page.goto(`${BASE}/studio/projects/${DEMO}/ai`);
+  await user.page.waitForSelector("iframe.previewFrame", { state: "attached" });
   expect(await user.page.getByRole("button", { name: "Xuất bản" }).first().isDisabled(), "viewer must not publish");
-  expect(await user.page.getByRole("button", { name: "Thành viên" }).count() === 0, "viewer must not see member management");
+  expect(await user.page.getByRole("button", { name: "Chia sẻ" }).count() === 0, "viewer must not see member management");
 });
 await check("disabling the SSO account at runtime ends access without another login", async () => {
   const uname = sql("select username from users where auth_source='OIDC' order by created_at desc limit 1");
@@ -86,7 +91,7 @@ await check("disabling the SSO account at runtime ends access without another lo
 });
 await check("an IdP user with an UNVERIFIED email is provisioned without email and without access", async () => {
   const u2 = await ssoLogin(sso.SSO_TEST_USER_UNVERIFIED);
-  await u2.page.getByText("Tài khoản chưa thuộc workspace nào").waitFor({ timeout: 15000 });
+  await u2.page.getByText("Bạn chưa thuộc workspace nào").first().waitFor({ timeout: 15000 });
   const row = sql("select coalesce(u.email,'null') from external_identities e join users u on u.id=e.user_id order by e.created_at desc limit 1");
   expect(row === "null", `unverified email must not be stored, got ${row}`);
 });
