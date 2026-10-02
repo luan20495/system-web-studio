@@ -50,6 +50,20 @@ services:
     restart: unless-stopped
     healthcheck: { test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"], interval: 10s, timeout: 10s, retries: 12 }
 
+  # Sites gateway (ADR 0009): https://<SITES_HOST>/<slug>/ -> API /sites/<slug>/ (GET/HEAD only). Published through the tunnel.
+  sites-gateway:
+    image: nginxinc/nginx-unprivileged:1.29-alpine
+    environment:
+      API_UPSTREAM: host.docker.internal:${API_PORT:-18081}
+    ports: ["127.0.0.1:${SITES_GATEWAY_PORT:-28088}:8080"]
+    volumes: ["./infra/sites-gateway/default.conf.template:/etc/nginx/templates/default.conf.template:ro"]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    read_only: true
+    tmpfs: ["/tmp", "/etc/nginx/conf.d:uid=101,gid=101,mode=0755"]
+    mem_limit: 128m
+    restart: unless-stopped
+    healthcheck: { test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"], interval: 10s, timeout: 3s, retries: 6 }
+
 volumes:
   pub-postgres:
   pub-redis:

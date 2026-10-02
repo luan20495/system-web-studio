@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Stop the API and UI started by run-local.sh. Add --infra to also stop containers (data volumes are kept).
 . "$(dirname "$0")/_env.sh"
-for n in frontend backend; do
+for n in frontend backend render; do
   if [ -f ".run/$n.pid" ]; then kill "$(cat ".run/$n.pid")" 2>/dev/null || true; rm -f ".run/$n.pid"; fi
 done
 pkill -f "system-web-studio.*bootRun" 2>/dev/null || true

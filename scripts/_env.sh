@@ -27,3 +27,10 @@ export PATH="$JAVA_HOME/bin:$PATH"
 FRONTEND_PORT="${FRONTEND_PORT:-3100}"
 export CORS_ALLOWED_ORIGINS="${CORS_ALLOWED_ORIGINS:-http://localhost:${FRONTEND_PORT},http://127.0.0.1:${FRONTEND_PORT}}"
 mkdir -p "$ROOT/.run"
+# Real static sites (ADR 0009): render worker + sites gateway (compose service sites-gateway on 127.0.0.1:18088)
+export DEPLOY_PROVIDER="${DEPLOY_PROVIDER:-static}"
+export SITES_ORIGIN="${SITES_ORIGIN:-http://127.0.0.1:18088}"
+export STUDIO_ORIGIN="${STUDIO_ORIGIN:-http://127.0.0.1:${FRONTEND_PORT}}"
+export RENDER_PORT="${RENDER_PORT:-18095}" RENDER_URL="${RENDER_URL:-http://127.0.0.1:18095}"
+[ -f "$ROOT/.run/render.token" ] || (umask 077; openssl rand -hex 24 > "$ROOT/.run/render.token")
+export RENDER_TOKEN="${RENDER_TOKEN:-$(cat "$ROOT/.run/render.token")}"

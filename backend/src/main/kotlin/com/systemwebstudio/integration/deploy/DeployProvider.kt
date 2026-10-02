@@ -6,13 +6,16 @@ import java.util.UUID
 
 data class DeployRequest(
     val deploymentId: UUID, val projectName: String, val versionNumber: Int, val visibility: String,
-    val deploymentTarget: String?, val artifactHash: String
+    val deploymentTarget: String?, val artifactHash: String,
+    val projectId: UUID? = null, val artifactId: UUID? = null
 )
 data class DeployResult(val url: String?, val error: String?)
 
 /** Port for whatever actually serves the site (self-host, AWS, Azure, GCP). */
 interface DeployProvider {
     val name: String
+    /** true: BUILDING produces a real artifact (StaticSiteBuilder) that DEPLOYING serves; false: the mock hash only */
+    val buildsArtifacts: Boolean get() = false
     fun deploy(request: DeployRequest): DeployResult
 }
 
@@ -21,6 +24,7 @@ interface DeployProvider {
  * (deploymentTarget = "fail") so the failure path can be exercised.
  */
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = ["app.deploy.provider"], havingValue = "mock", matchIfMissing = true)
 class MockDeployProvider(@Value("\${app.deploy.mock.base-url}") private val baseUrl: String) : DeployProvider {
     override val name = "mock"
     override fun deploy(request: DeployRequest): DeployResult {

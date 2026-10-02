@@ -4,6 +4,12 @@
 # Optional SSO settings written by scripts/sso-up.sh
 if [ -f .run/sso.env ]; then set -a; . .run/sso.env; set +a; fi
 docker compose up -d --wait
+# render worker: the Studio preview renderer as a local process (127.0.0.1 only, token-protected); built with the repo's TypeScript
+if ! curl -fsS "http://127.0.0.1:${RENDER_PORT}/health" >/dev/null 2>&1; then
+  npx tsc -p workers/render/tsconfig.json
+  nohup node workers/render/dist/workers/render/server.js > .run/render.log 2>&1 < /dev/null & echo $! > .run/render.pid
+  for _ in $(seq 1 20); do curl -fsS "http://127.0.0.1:${RENDER_PORT}/health" >/dev/null 2>&1 && break; sleep 0.5; done
+fi
 if ! curl -fsS http://127.0.0.1:8080/actuator/health/liveness >/dev/null 2>&1; then
   (cd backend && nohup ./gradlew bootRun --console=plain > "$ROOT/.run/backend.log" 2>&1 & echo $! > "$ROOT/.run/backend.pid")
 fi
@@ -20,5 +26,6 @@ if ! curl -fsS "http://127.0.0.1:${FRONTEND_PORT}/" >/dev/null 2>&1; then
 fi
 echo "UI:      http://localhost:${FRONTEND_PORT}"
 echo "API:     http://127.0.0.1:8080  (Swagger UI: /swagger-ui.html, profile local)"
+echo "Sites:   ${SITES_ORIGIN}/<slug>/  (published sites, gateway)   Render worker: 127.0.0.1:${RENDER_PORT}"
 echo "MinIO:   http://127.0.0.1:19001   RabbitMQ: http://127.0.0.1:15675"
 echo "Login:   local.admin / (LOCAL_ADMIN_PASSWORD from .env)"

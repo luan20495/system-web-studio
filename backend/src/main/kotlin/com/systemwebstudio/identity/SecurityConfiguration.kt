@@ -61,6 +61,25 @@ class SecurityConfiguration {
         return UrlBasedCorsConfigurationSource().apply { registerCorsConfiguration("/**", cors) }
     }
 
+    /**
+     * Published sites (ADR 0009), reached only through the sites gateway on their own origin: anonymous or a site session handled by
+     * SiteServingController, never the Studio session; GET only; no CSRF (nothing changes state); headers set per response.
+     */
+    @Bean
+    @org.springframework.core.annotation.Order(1)
+    fun sitesFilterChain(http: HttpSecurity): SecurityFilterChain {
+        http.securityMatcher("/sites/**")
+            .csrf { it.disable() }
+            .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
+            .requestCache { it.disable() }
+            .securityContext { it.disable() }
+            .headers { it.disable() }
+            .authorizeHttpRequests { it.requestMatchers(HttpMethod.GET, "/sites/**").permitAll().requestMatchers(HttpMethod.HEAD, "/sites/**").permitAll().anyRequest().denyAll() }
+            .formLogin { it.disable() }
+            .httpBasic { it.disable() }
+        return http.build()
+    }
+
     @Bean
     fun securityFilterChain(
         http: HttpSecurity,

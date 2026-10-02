@@ -183,6 +183,15 @@ app:
     daily-limit-per-user: ${AI_DAILY_LIMIT_PER_USER:50}        # the free tier quota is shared by all users of the key
     max-page-chars: 24000
     model-allowlist: ${OPENROUTER_MODEL_ALLOWLIST:}            # optional comma list to restrict the free models offered
+  sites:
+    origin: ${SITES_ORIGIN:http://127.0.0.1:18088}               # public address of the sites gateway (separate host from the Studio)
+    studio-origin: ${STUDIO_ORIGIN:http://localhost:3100}          # where private-site visitors are sent to sign in
+    cookie-name: site_session
+    cookie-secure: ${SITES_COOKIE_SECURE:false}
+    session-hours: 8
+  render:
+    url: ${RENDER_URL:http://127.0.0.1:18095}                     # workers/render (same renderer as the Studio preview)
+    token: ${RENDER_TOKEN:}
   ai:
     # Other providers (ADR 0007). Each needs a key (local: optional) and an EXPLICIT model list; every model starts disabled until a
     # system admin enables it in Admin Console → AI Control. Keys are read from the environment only.
@@ -205,6 +214,7 @@ app:
     admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:}
   storage:
     bucket: ${MINIO_BUCKET:studio-assets}
+    artifacts-bucket: ${MINIO_ARTIFACTS_BUCKET:studio-artifacts}     # private; sites are served through the API behind the sites gateway
     endpoint: ${MINIO_ENDPOINT:http://127.0.0.1:19000}
     public-endpoint: ${MINIO_PUBLIC_ENDPOINT:${MINIO_ENDPOINT:http://127.0.0.1:19000}}
     access-key: ${MINIO_ROOT_USER:}
@@ -213,7 +223,8 @@ app:
     max-image-bytes: 10485760
     max-document-bytes: 20971520
   deploy:
-    provider: mock
+    # mock = nothing is served ("Demo deployment"); static = real static sites (ADR 0009: render worker + artifacts + sites gateway)
+    provider: ${DEPLOY_PROVIDER:mock}
     step-delay-ms: 0
     recovery-interval-ms: 30000
     mock:

@@ -2,7 +2,8 @@
 # Run the whole app on this machine and publish it through a dedicated Cloudflare tunnel.
 #   internet -> Cloudflare -> tunnel (hbl-studio) -> UI server 127.0.0.1:$UI_PORT  -> /api,/oauth2 -> API 127.0.0.1:$API_PORT
 #                                                  -> storage host -> MinIO 127.0.0.1:$MINIO_PORT_PUBLIC (presigned URLs only)
-# Only two public hostnames; the API, Postgres, Redis and RabbitMQ are never exposed. Secrets are generated once into
+#                                                  -> sites host -> sites gateway 127.0.0.1:$SITES_GATEWAY_PORT -> API /sites/** only
+# Three public hostnames; the API, Postgres, Redis and RabbitMQ are never exposed. Secrets are generated once into
 # .run/public/public.env (mode 600, git-ignored). Re-running is safe: it starts whatever is not running.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"; cd "$ROOT"
@@ -47,6 +48,8 @@ OPENROUTER_API_KEY=
 ENV
   )
 fi
+# Real static sites (ADR 0009) — added to existing public.env files without touching other values
+grep -q '^SITES_HOST=' "$ENVF" || ( umask 077; { echo "# Published sites (gateway) — separate host from the Studio"; echo "SITES_HOST=sites.toolsmcp.uk"; echo "SITES_GATEWAY_PORT=28088"; echo "RENDER_PORT_PUBLIC=28095"; echo "RENDER_TOKEN=$(gen)"; } >> "$ENVF" )
 set -a; . "$ENVF"; set +a
 PUBLIC_ORIGIN="https://$PUBLIC_HOST"
 
@@ -57,6 +60,12 @@ say "data services (compose project hblpub)"
 docker compose -f compose.public.yml --env-file "$ENVF" up -d --wait
 
 alive() { curl -fsS -m3 "$1" >/dev/null 2>&1; }
+if ! alive "http://127.0.0.1:$RENDER_PORT_PUBLIC/health"; then
+  say "starting the render worker (127.0.0.1:$RENDER_PORT_PUBLIC, token-protected)"
+  npx tsc -p workers/render/tsconfig.json
+  ( nohup env RENDER_PORT="$RENDER_PORT_PUBLIC" RENDER_TOKEN="$RENDER_TOKEN" node workers/render/dist/workers/render/server.js > "$RUN/render.log" 2>&1 < /dev/null & echo $! > "$RUN/render.pid" )
+  for _ in $(seq 1 20); do alive "http://127.0.0.1:$RENDER_PORT_PUBLIC/health" && break; sleep 0.5; done
+fi
 if ! alive "http://127.0.0.1:$API_PORT/actuator/health/liveness"; then
   say "building the API jar"
   (cd backend && ./gradlew bootJar -x test --console=plain -q)
@@ -68,6 +77,8 @@ if ! alive "http://127.0.0.1:$API_PORT/actuator/health/liveness"; then
       REDIS_HOST=127.0.0.1 REDIS_PORT="$REDIS_PORT_PUBLIC"  \
       RABBITMQ_HOST=127.0.0.1 RABBITMQ_PORT="$RABBITMQ_PORT_PUBLIC" RABBITMQ_USER=studio  \
       MINIO_ENDPOINT="http://127.0.0.1:$MINIO_PORT_PUBLIC" MINIO_PUBLIC_ENDPOINT="https://$PUBLIC_FILES_HOST"    \
+      DEPLOY_PROVIDER=static SITES_ORIGIN="https://$SITES_HOST" STUDIO_ORIGIN="$PUBLIC_ORIGIN" SITES_COOKIE_SECURE=true \
+      RENDER_URL="http://127.0.0.1:$RENDER_PORT_PUBLIC" RENDER_TOKEN="$RENDER_TOKEN" \
       CORS_ALLOWED_ORIGINS="$PUBLIC_ORIGIN" TRUST_PROXY=true TRUSTED_PROXY_CIDRS="127.0.0.1/32,::1/128" \
       APP_DEPLOY_MOCK_BASE_URL="$PUBLIC_ORIGIN/mock-deployments" OPENROUTER_REFERER="$PUBLIC_ORIGIN" \
             \
@@ -80,7 +91,7 @@ fi
 if ! alive "http://127.0.0.1:$UI_PORT/"; then
   say "building the UI (http mode)"
   export NEXT_PUBLIC_API_MODE=http NEXT_DIST_DIR=.next-public API_PROXY_TARGET="http://127.0.0.1:$API_PORT"
-  if [ ! -f .next-public/BUILD_ID ] || [ -n "$(find app components lib next.config.ts proxy.ts package.json -newer .next-public/BUILD_ID -type f 2>/dev/null | head -1)" ]; then
+  if [ ! -f .next-public/BUILD_ID ] || [ -n "$(find app components features lib next.config.ts proxy.ts package.json -newer .next-public/BUILD_ID -type f 2>/dev/null | head -1)" ]; then
     npx next build > "$RUN/ui-build.log" 2>&1 || { tail -20 "$RUN/ui-build.log" >&2; exit 1; }
   fi
   say "starting the UI server"
@@ -111,9 +122,11 @@ ingress:
     service: http://127.0.0.1:$UI_PORT
   - hostname: $PUBLIC_FILES_HOST
     service: http://127.0.0.1:$MINIO_PORT_PUBLIC
+  - hostname: $SITES_HOST
+    service: http://127.0.0.1:$SITES_GATEWAY_PORT
   - service: http_status:404
 YML
-for h in "$PUBLIC_HOST" "$PUBLIC_FILES_HOST"; do
+for h in "$PUBLIC_HOST" "$PUBLIC_FILES_HOST" "$SITES_HOST"; do
   cloudflared tunnel --config "$CFG" route dns --overwrite-dns "$TUNNEL_ID" "$h" > "$RUN/route-$h.log" 2>&1 || { echo "DNS route for $h failed:" >&2; cat "$RUN/route-$h.log" >&2; exit 1; }
   grep -q "tunnelID=$TUNNEL_ID" "$RUN/route-$h.log" || { echo "DNS for $h was not attached to tunnel $TUNNEL_ID:" >&2; cat "$RUN/route-$h.log" >&2; exit 1; }
 done

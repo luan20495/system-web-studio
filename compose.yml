@@ -71,6 +71,28 @@ services:
       timeout: 5s
       retries: 12
 
+  # Sites gateway (ADR 0009): serves every published site from the API's /sites endpoint (artifacts in MinIO). Unprivileged, read-only.
+  sites-gateway:
+    image: nginxinc/nginx-unprivileged:1.29-alpine
+    environment:
+      API_UPSTREAM: ${SITES_API_UPSTREAM:-host.docker.internal:8080}
+    ports:
+      - "127.0.0.1:${SITES_GATEWAY_PORT:-18088}:8080"
+    volumes:
+      - ./infra/sites-gateway/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /etc/nginx/conf.d:uid=101,gid=101,mode=0755
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+
   # Optional local identity provider for exercising OIDC/SSO: docker compose --profile sso up -d keycloak (see scripts/sso-up.sh).
   # Not part of the default stack (it needs ~700 MB RAM). Credentials and the realm are generated at run time, never committed.
   keycloak:

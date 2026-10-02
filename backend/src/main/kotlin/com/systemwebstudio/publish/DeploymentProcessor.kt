@@ -26,6 +26,7 @@ class DeploymentProcessor(
     private val jdbc: JdbcTemplate,
     private val audit: AuditService,
     private val json: JsonMapper,
+    private val builder: StaticSiteBuilder,
     @Value("\${app.deploy.step-delay-ms:0}") private val stepDelayMs: Long
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -58,11 +59,20 @@ class DeploymentProcessor(
                     DeploymentStatus.BUILDING -> { artifactHash = build(d); null }
                     DeploymentStatus.DEPLOYING -> {
                         val project = jdbc.queryForMap("SELECT name, deployment_target FROM projects WHERE id = ?", d.projectId)
-                        val result = provider.deploy(DeployRequest(d.id, project["name"] as String, d.versionNumber, d.visibility, project["deployment_target"] as String?, artifactHash.ifEmpty { build(d) }))
-                        url = result.url; result.error
+                        // read back from the row so a resumed job deploys the artifact the BUILDING step recorded
+                        val artifactId = jdbc.queryForObject("SELECT artifact_id FROM deployments WHERE id = ?", UUID::class.java, d.id)
+                        if (provider.buildsArtifacts && artifactId == null) "No artifact was built"
+                        else {
+                            val result = provider.deploy(DeployRequest(d.id, project["name"] as String, d.versionNumber, d.visibility, project["deployment_target"] as String?,
+                                artifactHash.ifEmpty { artifactId?.let { a -> jdbc.queryForObject("SELECT sha256 FROM artifacts WHERE id = ?", String::class.java, a) } ?: build(d, record = false) },
+                                d.projectId, artifactId))
+                            url = result.url; result.error
+                        }
                     }
                     else -> "Unexpected state $current"
                 }
+            } catch (e: BuildFailure) {
+                e.message ?: "Build failed"
             } catch (e: Exception) {
                 log.error("Deployment {} crashed in {}", id, current, e)
                 "Internal error during $current"
@@ -77,8 +87,8 @@ class DeploymentProcessor(
 
     private fun label(s: String) = when (s) {
         DeploymentStatus.SECURITY_CHECK -> "Running security checks"
-        DeploymentStatus.BUILDING -> "Building artifact (mock)"
-        DeploymentStatus.DEPLOYING -> "Deploying through the mock provider"
+        DeploymentStatus.BUILDING -> if (provider.buildsArtifacts) "Building the static site" else "Building artifact (mock)"
+        DeploymentStatus.DEPLOYING -> if (provider.buildsArtifacts) "Switching the site to the new artifact" else "Deploying through the mock provider"
         else -> s
     }
 
@@ -106,8 +116,13 @@ class DeploymentProcessor(
         return null
     }
 
-    private fun build(d: DeploymentDto): String =
-        MessageDigest.getInstance("SHA-256").digest(snapshot(d).toByteArray()).joinToString("") { "%02x".format(it) }
+    /** Real provider: render + store the artifact and record it on the deployment. Mock: a hash of the page, nothing is built. */
+    private fun build(d: DeploymentDto, record: Boolean = true): String {
+        if (!provider.buildsArtifacts) return MessageDigest.getInstance("SHA-256").digest(snapshot(d).toByteArray()).joinToString("") { "%02x".format(it) }
+        val artifactId = builder.build(d.projectId, d.versionId, snapshot(d))
+        if (record) jdbc.update("UPDATE deployments SET artifact_id = ? WHERE id = ?", artifactId, d.id)
+        return jdbc.queryForObject("SELECT sha256 FROM artifacts WHERE id = ?", String::class.java, artifactId)!!
+    }
 
     private fun pause() { if (stepDelayMs > 0) Thread.sleep(stepDelayMs) }
 
