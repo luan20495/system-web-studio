@@ -24,7 +24,7 @@ await p.goto(BASE + "/login"); await p.getByLabel("Tên đăng nhập").waitFor(
 await p.goto(BASE + "/auth/session-expired?next=/studio"); await scan(p, "session expired");
 await p.goto(BASE + "/login"); await p.getByRole("radio", { name: /Admin Console/ }).check();
 await p.getByLabel("Tên đăng nhập").fill(USER); await p.getByLabel("Mật khẩu").fill(PASSWORD); await p.getByRole("button", { name: "Đăng nhập", exact: true }).click(); await p.waitForURL(/\/admin/);
-for (const path of ["/admin", "/admin/users", "/admin/workspaces", "/admin/applications", "/admin/ai", "/admin/components", "/admin/audit", "/admin/system", "/admin/settings"]) { await p.goto(BASE + path); await p.locator("h1").first().waitFor(); await scan(p, path); }
+for (const path of ["/admin", "/admin/users", "/admin/workspaces", "/admin/applications", "/admin/ai", "/admin/components", "/admin/templates", "/admin/audit", "/admin/system", "/admin/settings"]) { await p.goto(BASE + path); await p.locator("h1").first().waitFor(); await scan(p, path); }
 await p.goto(BASE + "/admin/users"); await p.locator(".clickRow").first().click(); await p.locator("h1").first().waitFor(); await scan(p, "/admin/users/{id}");
 await p.goto(BASE + "/admin/applications"); await p.locator(".clickRow").first().click(); await p.locator("h1").first().waitFor(); await scan(p, "/admin/applications/{id}");
 for (const path of ["/studio", "/studio/projects", "/studio/new", "/studio/templates", "/studio/components", "/studio/activity"]) { await p.goto(BASE + path); await p.locator("h1").first().waitFor(); await scan(p, path); }

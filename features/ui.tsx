@@ -59,7 +59,8 @@ export function Pager({ page, size, total, onPage }: { page: number; size: numbe
 const TONE: Record<string, string> = {
   HEALTHY: "ok", OK: "ok", ERROR: "bad", BAD_OUTPUT: "warn", RUNNING: "ok", ACTIVE: "ok", UPDATED: "ok", READY: "ok", true: "ok", PUBLIC: "info",
   DEGRADED: "warn", QUEUED: "warn", POLICY_CHECK: "warn", SECURITY_CHECK: "warn", BUILDING: "warn", DEPLOYING: "warn", NO_CHANGE: "muted", PRIVATE: "muted",
-  UNAVAILABLE: "bad", FAILED: "bad", DISABLED: "bad", false: "bad", UNSUPPORTED: "warn", NOT_CONFIGURED: "muted", UNKNOWN: "muted", NOT_IMPLEMENTED: "muted", COMING_SOON: "muted"
+  UNAVAILABLE: "bad", FAILED: "bad", DISABLED: "bad", false: "bad", UNSUPPORTED: "warn", NOT_CONFIGURED: "muted", UNKNOWN: "muted", NOT_IMPLEMENTED: "muted", COMING_SOON: "muted",
+  REVIEW: "warn", APPROVED: "ok", DEPRECATED: "bad", DRAFT: "muted", REJECTED: "bad", SUPERSEDED: "muted", COMPANY: "info", ARCHIVED: "muted"
 };
 export function Pill({ value, label }: { value: string; label?: string }) { return <span className={`pill pill-${TONE[value] ?? "muted"}`}>{label ?? value}</span>; }
 export function Kpi({ label, value, hint }: { label: string; value: ReactNode; hint?: ReactNode }) {
@@ -78,6 +79,9 @@ export const ACTION_LABEL: Record<string, string> = {
   LOGIN_SUCCESS: "Đăng nhập", LOGIN_FAILURE: "Đăng nhập thất bại", LOGOUT: "Đăng xuất", CREATE_PROJECT: "Tạo ứng dụng", UPDATE_PROJECT: "Sửa cài đặt", DELETE_PROJECT: "Xóa ứng dụng",
   RUN_PROMPT: "Chạy prompt", CREATE_VERSION: "Tạo phiên bản", RESTORE_VERSION: "Khôi phục phiên bản", UPLOAD_ASSET: "Tải tệp lên", DELETE_ASSET: "Xóa tệp", PUBLISH: "Xuất bản",
   DEPLOY_STATUS_CHANGE: "Trạng thái triển khai", ADD_MEMBER: "Thêm thành viên", CHANGE_PERMISSION: "Đổi quyền", REMOVE_MEMBER: "Gỡ thành viên", REGISTER: "Đăng ký",
-  PROVISION_USER: "Tạo tài khoản SSO", USER_DISABLED: "Vô hiệu hóa người dùng", USER_ENABLED: "Kích hoạt người dùng", REVOKE_SESSIONS: "Thu hồi phiên", TRANSFER_OWNERSHIP: "Chuyển chủ sở hữu", CLEANUP: "Dọn dữ liệu"
+  PROVISION_USER: "Tạo tài khoản SSO", USER_DISABLED: "Vô hiệu hóa người dùng", USER_ENABLED: "Kích hoạt người dùng", REVOKE_SESSIONS: "Thu hồi phiên", TRANSFER_OWNERSHIP: "Chuyển chủ sở hữu", CLEANUP: "Dọn dữ liệu",
+  CREATE_TEMPLATE: "Tạo mẫu", UPDATE_TEMPLATE: "Sửa mẫu", ARCHIVE_TEMPLATE: "Lưu trữ mẫu", RESTORE_TEMPLATE: "Khôi phục mẫu", TEMPLATE_VISIBILITY: "Đổi phạm vi mẫu",
+  CREATE_BLOCK: "Tạo khối", UPDATE_BLOCK: "Sửa khối", SUBMIT_BLOCK: "Gửi duyệt khối", WITHDRAW_BLOCK: "Rút khối", DELETE_BLOCK: "Xóa khối",
+  APPROVE_BLOCK: "Duyệt khối", REJECT_BLOCK: "Từ chối khối", DEPRECATE_BLOCK: "Ngừng dùng khối", RESTORE_BLOCK: "Khôi phục khối"
 };
 export const actionLabel = (a: string) => ACTION_LABEL[a] ?? a;

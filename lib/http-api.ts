@@ -1,5 +1,5 @@
 import type {
-  AdminAi, AiCallRow, AiUsageReport, AdminApp, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
+  AdminAi, AiCallRow, AiUsageReport, AdminApp, BlockDto, CheckResult, TemplateDto, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
   AiStatus, ApiProject, AuthConfig, Member, RegistryComponent, AssetDto, Deployment, Me, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
 } from "./http-types";
 
@@ -111,10 +111,33 @@ export const api = {
     aiUsage: (days: number) => call<AiUsageReport>(`/admin/ai/usage${qs({ days })}`),
     aiCalls: (params: { page: number; outcome?: string; model?: string; userId?: string; workspaceId?: string }) => call<Page<AiCallRow>>(`/admin/ai/calls${qs({ size: 25, ...params })}`),
     components: () => call<AdminComponent[]>("/admin/components"),
+    blocks: (status: string, page: number) => call<{ page: Page<BlockDto>; counts: Record<string, number> }>(`/admin/component-packages${qs({ status, page, size: 25 })}`),
+    block: (id: string) => call<BlockDto>(`/admin/component-packages/${id}`),
+    reviewBlock: (id: string, decision: "APPROVE" | "REJECT", version: number, comment?: string) =>
+      call<BlockDto>(`/admin/component-packages/${id}/review`, { method: "POST", body: json({ decision, version, comment }) }),
+    deprecateBlock: (id: string, comment?: string) => call<BlockDto>(`/admin/component-packages/${id}/deprecate`, { method: "POST", body: json({ comment }) }),
+    restoreBlock: (id: string) => call<BlockDto>(`/admin/component-packages/${id}/restore`, { method: "POST" }),
+    templates: (params: { page: number; visibility?: string; status?: string; q?: string }) => call<Page<TemplateDto>>(`/admin/templates${qs({ size: 25, ...params })}`),
+    templateVisibility: (id: string, visibility: "PRIVATE" | "COMPANY") => call<TemplateDto>(`/admin/templates/${id}/visibility`, { method: "POST", body: json({ visibility }) }),
+    templateStatus: (id: string, status: "ACTIVE" | "ARCHIVED") => call<TemplateDto>(`/admin/templates/${id}/status`, { method: "POST", body: json({ status }) }),
     health: () => call<PlatformHealth>("/admin/system/health"),
     settings: () => call<Record<string, Record<string, unknown>>>("/admin/settings")
   },
-  createProject: (w: string, name: string, description?: string) => call<ApiProject>(`/workspaces/${w}/projects`, { method: "POST", body: json({ name, description }) }),
+  createProject: (w: string, name: string, description?: string, templateId?: string) =>
+    call<ApiProject>(`/workspaces/${w}/projects`, { method: "POST", body: json({ name, description, ...(templateId ? { templateId } : {}) }) }),
+  templates: (scope: "company" | "mine") => call<TemplateDto[]>(`/templates${qs({ scope })}`),
+  saveTemplate: (w: string, p: string, body: { name: string; description?: string; templateId?: string }) =>
+    call<{ template: TemplateDto; removedImages: number }>(`${P(w, p)}/templates`, { method: "POST", body: json(body) }),
+  updateTemplate: (id: string, body: { name?: string; description?: string }) => call<TemplateDto>(`/templates/${id}`, { method: "PATCH", body: json(body) }),
+  archiveTemplate: (id: string) => call<void>(`/templates/${id}`, { method: "DELETE" }),
+  blocks: (scope: "company" | "mine") => call<BlockDto[]>(`/component-packages${qs({ scope })}`),
+  block: (id: string) => call<BlockDto>(`/component-packages/${id}`),
+  saveBlock: (w: string, p: string, body: { sectionId: string; name: string; description?: string; packageId?: string }) =>
+    call<{ block: BlockDto; removedImages: number }>(`${P(w, p)}/component-packages`, { method: "POST", body: json(body) }),
+  updateBlock: (id: string, body: { name?: string; description?: string }) => call<BlockDto>(`/component-packages/${id}`, { method: "PATCH", body: json(body) }),
+  submitBlock: (id: string) => call<{ block: BlockDto; passed: boolean; checks: CheckResult[] }>(`/component-packages/${id}/submit`, { method: "POST" }),
+  withdrawBlock: (id: string) => call<BlockDto>(`/component-packages/${id}/withdraw`, { method: "POST" }),
+  deleteBlock: (id: string) => call<void>(`/component-packages/${id}`, { method: "DELETE" }),
   getProject: (w: string, p: string) => call<ApiProject>(P(w, p)),
   lookupProject: (p: string) => call<ApiProject>(`/projects/${p}`),
   updateProject: (w: string, p: string, expectedRevision: number, patch: Partial<ApiProject>) =>

@@ -126,3 +126,24 @@
 .bars .bar span{display:block;width:100%;min-height:1px;background:var(--f-accent);border-radius:3px 3px 0 0;opacity:.85}
 .usageMeta{font-size:11px;opacity:.75;margin-top:4px}
 .barsFig{margin:8px 0 0}.barsAxis{display:flex;justify-content:space-between;font-size:11px;color:var(--f-muted);margin-top:4px}
+/* Phase 5: templates & blocks */
+.thumb{position:relative;height:170px;overflow:hidden;border-radius:10px;border:1px solid var(--f-line);background:#fff}
+.thumb.tall{height:260px}
+.thumb iframe{position:absolute;inset:0 auto auto 0;width:1280px;height:900px;border:0;transform:scale(.3);transform-origin:0 0;pointer-events:none}
+.thumb.tall iframe{transform:scale(.42)}
+.libCard{background:#fff;border:1px solid var(--f-line);border-radius:12px;padding:12px;display:grid;gap:8px;align-content:start}
+.libCard h2{margin:0;font-size:15px}.libCard p{margin:0;color:var(--f-muted);font-size:13px}
+.libCard .meta{font-size:12px;color:var(--f-muted)}
+.libCard .actions{display:flex;gap:6px;flex-wrap:wrap}
+.checkList{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.checkList li{display:grid;grid-template-columns:18px 180px 1fr;gap:6px;font-size:13px;align-items:baseline}
+.checkList li.ok span{color:var(--f-ok)}.checkList li.bad span{color:var(--f-bad)}.checkList li small{color:var(--f-muted)}
+.timeline{margin:0;padding-left:18px;display:grid;gap:6px;font-size:13px}.timeline p{margin:2px 0 0;color:var(--f-muted)}
+.pickList{display:grid;gap:6px;max-height:280px;overflow:auto;margin-bottom:12px}
+.pickList label{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border:1px solid var(--f-line);border-radius:10px;cursor:pointer}
+.pickList label:has(input:checked){border-color:var(--f-accent);background:var(--f-accent-soft)}
+.pickList small{display:block;color:var(--f-muted)}
+.inlineForm{display:grid;gap:8px}.inlineForm input,.inlineForm textarea,.inlineForm select{width:100%}
+.thumb.placeholder{display:grid;place-items:center;color:var(--f-muted);font-weight:600;background:linear-gradient(135deg,#eef4ff,#f4fbf7)}
+.inspectorTools{display:flex;justify-content:flex-end;padding:8px 12px 0}
+.subHead{font-size:13px;margin:12px 0 6px;text-transform:uppercase;letter-spacing:.03em;color:var(--f-muted)}

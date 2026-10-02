@@ -42,7 +42,7 @@ export function Field({ label, children }: { label: string; children: ReactNode 
   return <label className="settingField"><span>{label}</span>{children}</label>;
 }
 
-export function SettingsDrawer({ project, busy, onClose, onSave }: { project: ApiProject; busy: boolean; onClose: () => void; onSave: (patch: Partial<ApiProject>) => Promise<void> }) {
+export function SettingsDrawer({ project, busy, onClose, onSave, extra }: { project: ApiProject; busy: boolean; onClose: () => void; onSave: (patch: Partial<ApiProject>) => Promise<void>; extra?: ReactNode }) {
   const [d, setD] = useState({ name: project.name, description: project.description ?? "", authMode: project.authMode, domain: project.domain ?? "", customDomain: project.customDomain ?? "", deploymentMode: project.deploymentMode, deploymentTarget: project.deploymentTarget ?? "" });
   const save = () => onSave({
     name: d.name.trim(), description: d.description, authMode: d.authMode, deploymentMode: d.deploymentMode,
@@ -64,6 +64,7 @@ export function SettingsDrawer({ project, busy, onClose, onSave }: { project: Ap
         <Field label="Chế độ"><select value={d.deploymentMode} onChange={(e) => setD({ ...d, deploymentMode: e.target.value as ApiProject["deploymentMode"] })}><option value="MOCK">Mock (cục bộ)</option><option value="SELF_HOSTED">Self-host</option><option value="CLOUD">Cloud</option></select></Field>
         <Field label="Đích triển khai"><input maxLength={120} value={d.deploymentTarget} onChange={(e) => setD({ ...d, deploymentTarget: e.target.value })}/></Field></section>
       <div className="drawerActions"><button className="button ghost" onClick={onClose}>Hủy</button><button className="button primary" disabled={busy || !d.name.trim()} onClick={() => void save()}>{busy ? "Đang lưu…" : "Lưu thay đổi"}</button></div>
+      {extra}
     </Drawer>
   );
 }

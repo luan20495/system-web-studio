@@ -7,12 +7,14 @@ import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalList
 import { CSS } from "@dnd-kit/utilities";
 import { api, ApiError } from "@/lib/http-api";
 import { renderSchemaDocument } from "@/lib/schema-preview";
-import type { AiStatus, ApiProject, AssetDto, PageSchema, PromptHistoryItem, RegistryComponent, SchemaOperation, Section, VersionSummary } from "@/lib/http-types";
+import type { AiStatus, ApiProject, AssetDto, BlockDto, PageSchema, PromptHistoryItem, RegistryComponent, SchemaOperation, Section, VersionSummary } from "@/lib/http-types";
 import type { DeviceMode } from "@/lib/types";
 import { SectionInspector, sectionLabel, sectionSummary } from "@/components/SectionInspector";
 import { useSession } from "../session";
 import { ErrorState, errText, fmtDate, StateView, tok, usd } from "../ui";
 import { AssetsDrawer, DeviceIcon, Drawer, MembersDrawer, PublishModal, SettingsDrawer, suggestions } from "./drawers";
+import { SaveBlockDrawer, SaveTemplateSection } from "./libraryPanels";
+import { insertable } from "../library";
 
 type Mode = "ai" | "design" | "code";
 type PanelName = "members" | "versions" | "assets" | "publish" | "settings";
@@ -55,6 +57,8 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const [versions, setVersions] = useState<VersionSummary[]>([]);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [registry, setRegistry] = useState<RegistryComponent[]>([]);
+  const [blocks, setBlocks] = useState<{ company: BlockDto[]; mine: BlockDto[] }>({ company: [], mine: [] });
+  const [savingBlock, setSavingBlock] = useState(false);
   const [assets, setAssets] = useState<AssetDto[]>([]);
   const [ai, setAi] = useState<AiStatus | null>(null);
   const [loadError, setLoadError] = useState<unknown>(null);
@@ -77,6 +81,9 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
       meta: [p.outcome, ...(p.model ? [p.model === "mock" ? "mô phỏng" : p.model] : []), usageChip(p.aiCalls ?? 0, p.totalTokens ?? null, p.costUsd ?? null)] }
   ]);
   const loadAssets = useCallback((w: string) => api.listAssets(w, projectId).then(setAssets).catch(() => undefined), [projectId]);
+  const loadBlocks = useCallback(() => {
+    Promise.all([api.blocks("company"), api.blocks("mine")]).then(([company, mine]) => setBlocks({ company, mine })).catch(() => undefined);
+  }, []);
   const reload = useCallback(async () => {
     const p = await api.lookupProject(projectId);
     const [s, v, h] = await Promise.all([api.getSchema(p.workspaceId, projectId), api.listVersions(p.workspaceId, projectId), api.listPrompts(p.workspaceId, projectId)]);
@@ -84,7 +91,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
     setSave((x) => (x.at ? x : { state: "saved", at: new Date(p.updatedAt) }));
     void loadAssets(p.workspaceId);
   }, [projectId, loadAssets]);
-  useEffect(() => { reload().catch(setLoadError); api.components().then(setRegistry).catch(() => undefined); api.aiStatus().then(setAi).catch(() => undefined); }, [reload]);
+  useEffect(() => { reload().catch(setLoadError); api.components().then(setRegistry).catch(() => undefined); loadBlocks(); api.aiStatus().then(setAi).catch(() => undefined); }, [reload]);
   // signed download URLs expire after 10 minutes: refresh the asset map before that
   useEffect(() => { if (!ws) return; const t = setInterval(() => void loadAssets(ws), 8 * 60_000); return () => clearInterval(t); }, [ws, loadAssets]);
   useEffect(() => { try { localStorage.setItem("studio-ai-model", model); } catch { /* ignore */ } }, [model]);
@@ -144,6 +151,15 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
     const p = await run("settings", () => api.updateProject(ws, projectId, revision, patch), "Không lưu được cài đặt.");
     if (p) { setProject(p); setRevision(p.revision); go(mode); setNotice("Đã lưu cài đặt."); }
   }
+  /** A block inserts an ordinary section of its approved base component with the block's props (validated like any edit). */
+  async function addBlock(b: BlockDto) {
+    if (!schema || !b.current) return;
+    const id = `${b.baseComponent.toLowerCase()}-${Math.random().toString(36).slice(2, 7)}`;
+    const footer = schema.sections.find((s) => s.type === "Footer");
+    const props = JSON.parse(JSON.stringify(b.current.props)) as Record<string, unknown>;
+    const ok = await applyOps([{ type: "ADD_SECTION", sectionType: b.baseComponent, sectionId: id, props, ...(footer && b.baseComponent !== "Footer" ? { beforeSectionId: footer.id } : {}) }], `Thêm khối ${b.name}`);
+    if (ok) setSelectedId(id);
+  }
   async function addSection(c: RegistryComponent) {
     if (!schema) return;
     const id = `${c.id.toLowerCase()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -179,6 +195,9 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
 
   if (loadError) return <div className="wsError"><ErrorState error={loadError} retry={() => { setLoadError(null); reload().catch(setLoadError); }}/><p><a className="btn" href="/studio/projects">← Danh sách ứng dụng</a></p></div>;
   if (!project || !schema) return <div className="wsError"><StateView kind="loading" title="Đang mở ứng dụng…"/></div>;
+  // company blocks, then my own drafts (an approved block of mine is already in the company list)
+  const blockOptions = [...blocks.company.map((b) => ({ b, who: "Công ty" })), ...blocks.mine.filter((b) => b.approvedVersion == null || b.status !== "APPROVED").map((b) => ({ b, who: "Của tôi" }))]
+    .filter(({ b }) => insertable(b, registry, NOT_RENDERED));
   const selected = schema.sections.find((s) => s.id === selectedId) ?? null;
   const latest = versions[0]?.versionNumber;
 
@@ -276,6 +295,12 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
                   <ul className="libList">{registry.filter((c) => c.status === "ACTIVE").map((c) => (
                     <li key={c.id}><button type="button" disabled={busy !== null || NOT_RENDERED.has(c.id)} onClick={() => void addSection(c)} title={NOT_RENDERED.has(c.id) ? "Chưa có renderer cho component này" : `Thêm ${label(c.id)}`}>
                       <b>+ {label(c.id)}</b><span>{c.category}{NOT_RENDERED.has(c.id) ? " · chưa hỗ trợ xem trước" : ""}</span></button></li>))}</ul>
+                  <h2>Khối dựng sẵn</h2>
+                  <p className="hint">Cấu hình sẵn của component đã duyệt. “Công ty” đã được phê duyệt; “Của tôi” là khối riêng của bạn.</p>
+                  {blockOptions.length === 0 ? <p className="hint">Chưa có khối nào. Chọn một mục rồi bấm “Lưu thành khối”.</p> : (
+                    <ul className="libList">{blockOptions.map(({ b, who }) => (
+                      <li key={`${who}-${b.id}`}><button type="button" disabled={busy !== null} onClick={() => void addBlock(b)} title={`Thêm khối ${b.name}`}>
+                        <b>+ {b.name}</b><span>{who} · {label(b.baseComponent)}</span></button></li>))}</ul>)}
                 </div>
               ) : null}
             </section>
@@ -296,6 +321,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
 
           {mode === "design" ? (
             <aside className="inspectorPane" aria-label="Thuộc tính">
+              {selected && !readOnly ? <div className="inspectorTools"><button type="button" className="btn sm" onClick={() => setSavingBlock(true)}>Lưu thành khối…</button></div> : null}
               {selected ? (
                 <SectionInspector key={`${selected.id}:${JSON.stringify(selected.props)}`} section={selected} component={registry.find((c) => c.id === selected.type)}
                   index={schema.sections.indexOf(selected)} count={schema.sections.length} readOnly={readOnly} busy={busy === "edit"} assets={assets}
@@ -317,7 +343,10 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
             {v.restorable && can("PROJECT_EDIT") ? <button className="smallButton" disabled={busy !== null} onClick={() => void restore(v)}>{busy === "restore" ? "Đang khôi phục…" : "Khôi phục"}</button> : null}
           </article>))}</div>
       </Drawer> : null}
-      {panel === "settings" ? <SettingsDrawer project={project} busy={busy === "settings"} onClose={() => go(mode)} onSave={saveSettings}/> : null}
+      {panel === "settings" ? <SettingsDrawer project={project} busy={busy === "settings"} onClose={() => go(mode)} onSave={saveSettings}
+        extra={!readOnly ? <SaveTemplateSection workspaceId={ws} projectId={projectId} projectName={project.name}/> : undefined}/> : null}
+      {savingBlock && selected ? <SaveBlockDrawer workspaceId={ws} projectId={projectId} section={selected} title={label(selected.type)}
+        onClose={() => setSavingBlock(false)} onSaved={(m) => { setSavingBlock(false); setNotice(m); loadBlocks(); }}/> : null}
       {panel === "assets" ? <AssetsDrawer workspaceId={ws} projectId={projectId} canEdit={can("PROJECT_EDIT")} onClose={() => { void loadAssets(ws); go(mode); }} onError={(e) => setNotice(errText(e, "Thao tác tệp thất bại."))}/> : null}
       {panel === "members" && me ? <MembersDrawer workspaceId={ws} projectId={projectId} me={me} onClose={() => go(mode)} onError={(e) => setNotice(errText(e, "Thao tác thành viên thất bại."))}/> : null}
       {panel === "publish" ? <PublishModal workspaceId={ws} projectId={projectId} revision={revision} current={project.siteVisibility} versionNumber={latest}

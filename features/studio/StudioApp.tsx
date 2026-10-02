@@ -4,13 +4,14 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createContext, useContext, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { api } from "@/lib/http-api";
-import type { ApiProject } from "@/lib/http-types";
+import type { ApiProject, BlockDto, TemplateDto } from "@/lib/http-types";
 import { sectionLabel } from "@/components/SectionInspector";
 import { useSession } from "../session";
 import { rememberPortal } from "../routing";
 import { useLoad } from "../useLoad";
-import { actionLabel, ago, Card, ComingSoon, ErrorState, errText, NavLink, num, Pager, Pill, StateView, usd } from "../ui";
+import { actionLabel, ago, Card, ErrorState, errText, NavLink, num, Pager, Pill, StateView, usd } from "../ui";
 import { ProjectWorkspace } from "./ProjectWorkspace";
+import { BlockStatus, blockPage, CheckList, ReviewTimeline, SchemaThumb } from "../library";
 
 type StudioCtx = { workspaceId: string; setWorkspaceId: (id: string) => void };
 const Ctx = createContext<StudioCtx | null>(null);
@@ -160,16 +161,29 @@ function Projects() {
 }
 
 // ------------------------------------------------------------------ create
+function useCanCreate() {
+  const { me } = useSession(); const { workspaceId } = useStudio();
+  const role = me!.workspaces.find((w) => w.id === workspaceId)?.role;
+  return role === "WORKSPACE_ADMIN" || role === "EDITOR" || role === "ADMIN" || !!me!.systemAdmin;
+}
+
 function NewApp() {
   const router = useRouter(); const { workspaceId } = useStudio();
+  const params = useSearchParams();
+  const company = useLoad(() => api.templates("company"), []); const mine = useLoad(() => api.templates("mine"), []);
+  const [templateId, setTemplateId] = useState<string>(params.get("template") ?? "");
   const [name, setName] = useState(""); const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null);
   const types: [string, string, string, boolean][] = [["website", "Website", "Trang giới thiệu/landing một trang từ component đã duyệt.", true],
     ["dashboard", "Dashboard", "Biểu đồ và số liệu từ hệ thống nội bộ.", false], ["internal", "Internal Tool", "Công cụ nội bộ có biểu mẫu và bảng dữ liệu.", false],
     ["workflow", "Workflow", "Quy trình phê duyệt nhiều bước.", false]];
   async function create(e: FormEvent) {
     e.preventDefault(); if (!name.trim()) return; setBusy(true); setErr(null);
-    try { const p = await api.createProject(workspaceId, name.trim()); router.push(`/studio/projects/${p.id}/ai`); } catch (x) { setErr(errText(x, "Không tạo được ứng dụng.")); setBusy(false); }
+    try { const p = await api.createProject(workspaceId, name.trim(), undefined, templateId || undefined); router.push(`/studio/projects/${p.id}/ai`); }
+    catch (x) { setErr(errText(x, "Không tạo được ứng dụng.")); setBusy(false); }
   }
+  const options: [string, string, string][] = [["", "Trang mặc định", "Có sẵn trong hệ thống: thanh điều hướng, Hero, sản phẩm, đánh giá, liên hệ."],
+    ...(company.data ?? []).map((t): [string, string, string] => [t.id, t.name, `Mẫu công ty · ${t.sections} mục · v${t.version}`]),
+    ...(mine.data ?? []).map((t): [string, string, string] => [t.id, t.name, `Mẫu của tôi · ${t.sections} mục · v${t.version}`])];
   return (<>
     <div className="pageHead"><div><h1>Tạo ứng dụng</h1><p>Chọn loại ứng dụng. Hiện chỉ Website hoạt động; các loại khác cần kiến trúc sinh mã (chưa triển khai).</p></div></div>
     <div className="typeGrid" role="radiogroup" aria-label="Loại ứng dụng">{types.map(([k, t, d, on]) => (
@@ -177,26 +191,90 @@ function NewApp() {
         <div className="row between"><b>{t}</b>{on ? <Pill value="ACTIVE" label="Sẵn sàng"/> : <Pill value="COMING_SOON" label="Sắp có"/>}</div><p>{d}</p>
       </div>))}</div>
     <Card title="Website mới">
-      <form className="filters" onSubmit={(e) => void create(e)}>
-        <input aria-label="Tên ứng dụng" placeholder="Tên ứng dụng" maxLength={160} value={name} onChange={(e) => setName(e.target.value)} autoFocus/>
-        <button className="btn primary" disabled={busy || !name.trim()}>{busy ? "Đang tạo…" : "Tạo website"}</button>
+      <form onSubmit={(e) => void create(e)}>
+        <fieldset className="pickList" aria-label="Bắt đầu từ mẫu"><legend className="hint">Bắt đầu từ</legend>
+          {options.map(([id, label, sub]) => <label key={id || "default"}><input type="radio" name="template" value={id} checked={templateId === id} onChange={() => setTemplateId(id)}/>
+            <span><b>{label}</b><small>{sub}</small></span></label>)}
+        </fieldset>
+        <div className="filters">
+          <input aria-label="Tên ứng dụng" placeholder="Tên ứng dụng" maxLength={160} value={name} onChange={(e) => setName(e.target.value)} autoFocus/>
+          <button className="btn primary" disabled={busy || !name.trim()}>{busy ? "Đang tạo…" : "Tạo website"}</button>
+        </div>
       </form>
-      <p className="hint">Bắt đầu từ trang mẫu mặc định (Hero, sản phẩm, đánh giá, liên hệ). Thư viện template riêng của công ty chưa có.</p>
       {err ? <p className="formError" role="alert">{err}</p> : null}
     </Card>
   </>);
 }
 
+function TemplateCard({ t, onUse, onChanged }: { t: TemplateDto; onUse?: (t: TemplateDto) => void; onChanged: () => void }) {
+  const [editing, setEditing] = useState(false); const [name, setName] = useState(t.name); const [desc, setDesc] = useState(t.description);
+  const [err, setErr] = useState<string | null>(null);
+  async function act(fn: () => Promise<unknown>) { setErr(null); try { await fn(); setEditing(false); onChanged(); } catch (x) { setErr(errText(x, "Không thực hiện được.")); } }
+  return <article className="libCard">
+    <SchemaThumb schema={t.schema} title={`Xem trước mẫu ${t.name}`}/>
+    <div className="row between"><h2>{t.name}</h2>{t.visibility === "COMPANY" ? <Pill value="COMPANY" label="Công ty"/> : <Pill value="PRIVATE" label="Riêng tư"/>}</div>
+    {t.description ? <p>{t.description}</p> : null}
+    <div className="meta">{t.sections} mục · v{t.version} · {t.author ?? "—"} · cập nhật {ago(t.updatedAt)}</div>
+    {editing ? <form className="inlineForm" onSubmit={(e) => { e.preventDefault(); void act(() => api.updateTemplate(t.id, { name: name.trim(), description: desc.trim() })); }}>
+      <input aria-label="Tên mẫu" value={name} maxLength={120} onChange={(e) => setName(e.target.value)}/>
+      <textarea aria-label="Mô tả mẫu" value={desc} maxLength={500} rows={2} onChange={(e) => setDesc(e.target.value)}/>
+      <div className="actions"><button className="btn sm primary" disabled={!name.trim()}>Lưu</button><button type="button" className="btn sm" onClick={() => setEditing(false)}>Hủy</button></div>
+    </form> : <div className="actions">
+      {onUse ? <button className="btn sm primary" onClick={() => onUse(t)}>Dùng mẫu này</button> : null}
+      {t.canEdit ? <><button className="btn sm" onClick={() => setEditing(true)}>Đổi tên</button>
+        <button className="btn sm ghost" onClick={() => { if (confirm(`Lưu trữ mẫu “${t.name}”? Ứng dụng đã tạo từ mẫu không bị ảnh hưởng.`)) void act(() => api.archiveTemplate(t.id)); }}>Lưu trữ</button></> : null}
+    </div>}
+    {err ? <p className="formError" role="alert">{err}</p> : null}
+  </article>;
+}
+
 function Templates() {
+  const router = useRouter(); const canCreate = useCanCreate();
+  const [scope, setScope] = useState<"company" | "mine">("company");
+  const { data, error, loading, reload } = useLoad(() => api.templates(scope), [scope]);
+  const use = canCreate ? (t: TemplateDto) => router.push(`/studio/new?template=${t.id}`) : undefined;
   return (<>
-    <div className="pageHead"><div><h1>Templates</h1><p>Mẫu khởi đầu cho ứng dụng.</p></div></div>
-    <div className="grid2">
-      <Card title="Trang mẫu mặc định"><p>Website một trang: thanh điều hướng, Hero, danh sách sản phẩm, công nghệ, đánh giá, form liên hệ, chân trang. Mọi website mới hiện bắt đầu từ mẫu này.</p><Link className="btn primary" href="/studio/new">Dùng mẫu này</Link></Card>
-      <Card title="Company Templates & My Templates"><ComingSoon title="Thư viện template">Lưu một trang thành template, chia sẻ cho công ty và duyệt template sẽ có ở Phase 5 (template là Page Schema JSON, không phải mã nguồn).</ComingSoon></Card>
-    </div>
+    <div className="pageHead"><div><h1>Templates</h1><p>Mẫu khởi đầu cho website. Một mẫu là cấu trúc trang (Page Schema) từ component đã duyệt, không phải mã nguồn; ảnh không đi kèm mẫu.</p></div></div>
+    <div className="tabs" role="tablist">{([["company", "Mẫu của công ty"], ["mine", "Mẫu của tôi"]] as const).map(([k, l]) =>
+      <button key={k} role="tab" aria-selected={scope === k} className={scope === k ? "active" : ""} onClick={() => setScope(k)}>{l}</button>)}</div>
+    {error ? <ErrorState error={error} retry={reload}/> : loading && !data ? <StateView kind="loading"/> : (
+      <div className="compGrid">
+        {scope === "company" ? <article className="libCard"><div className="thumb placeholder"><span>Trang mặc định</span></div><h2>Trang mặc định</h2>
+          <p>Có sẵn trong hệ thống: thanh điều hướng, Hero, sản phẩm, công nghệ, đánh giá, form liên hệ, chân trang.</p>
+          {canCreate ? <div className="actions"><Link className="btn sm primary" href="/studio/new">Dùng mẫu này</Link></div> : null}</article> : null}
+        {data!.map((t) => <TemplateCard key={t.id} t={t} onUse={use} onChanged={reload}/>)}
+        {data!.length === 0 ? <StateView kind="empty" title={scope === "mine" ? "Bạn chưa lưu mẫu nào" : "Chưa có mẫu công ty"}
+          detail={<p>{scope === "mine" ? "Mở một ứng dụng → Cài đặt → “Lưu trang thành mẫu”." : "Quản trị viên chọn mẫu để chia sẻ cho toàn công ty trong Admin Console."}</p>}/> : null}
+      </div>)}
   </>);
 }
 
+function BlockCard({ b, mine, onChanged }: { b: BlockDto; mine: boolean; onChanged: () => void }) {
+  const [open, setOpen] = useState(false); const [err, setErr] = useState<string | null>(null); const [info, setInfo] = useState<string | null>(null);
+  const page = blockPage(b);
+  async function act(fn: () => Promise<unknown>, ok?: string) { setErr(null); setInfo(null); try { await fn(); if (ok) setInfo(ok); onChanged(); } catch (x) { setErr(errText(x, "Không thực hiện được.")); } }
+  const latest = b.versions.find((v) => v.version === b.latestVersion);
+  const lastDecision = [...b.reviews].reverse().find((r) => r.decision === "REJECT" || r.decision === "APPROVE" || r.decision === "VALIDATION_FAILED");
+  return <article className="libCard">
+    {page ? <SchemaThumb schema={page} title={`Xem trước khối ${b.name}`}/> : null}
+    <div className="row between"><h2>{b.name}</h2>{mine ? <BlockStatus status={b.status}/> : <Pill value="APPROVED" label="Đã duyệt"/>}</div>
+    {b.description ? <p>{b.description}</p> : null}
+    <div className="meta">Dựa trên <span className="code">{b.baseComponent}</span> · {mine ? `phiên bản ${b.latestVersion}${b.approvedVersion ? ` · đang dùng trong công ty: v${b.approvedVersion}` : ""}` : `v${b.approvedVersion} · ${b.owner ?? "—"}`}</div>
+    {mine && lastDecision && b.status === "PRIVATE" && lastDecision.decision !== "APPROVE" ? <p className="notice">{lastDecision.decision === "REJECT" ? `Bị từ chối: ${lastDecision.comment}` : "Kiểm tra tự động không đạt — xem chi tiết."}</p> : null}
+    {mine ? <div className="actions">
+      {b.status === "PRIVATE" ? <button className="btn sm primary" onClick={() => void act(async () => { const r = await api.submitBlock(b.id); if (!r.passed) { setOpen(true); throw new Error("Kiểm tra tự động không đạt; xem danh sách bên dưới."); } }, "Đã gửi duyệt.")}>Gửi duyệt</button> : null}
+      {b.status === "REVIEW" ? <button className="btn sm" onClick={() => void act(() => api.withdrawBlock(b.id), "Đã rút lại.")}>Rút lại</button> : null}
+      {b.approvedVersion == null && b.status !== "REVIEW" ? <button className="btn sm ghost" onClick={() => { if (confirm(`Xóa khối “${b.name}”?`)) void act(() => api.deleteBlock(b.id)); }}>Xóa</button> : null}
+      <button className="btn sm ghost" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? "Ẩn chi tiết" : "Chi tiết"}</button>
+    </div> : null}
+    {open && mine ? <div>
+      {latest?.validation ? <><h3 className="subHead">Kiểm tra tự động (v{latest.version})</h3><CheckList checks={latest.validation}/></> : <p className="muted">Chưa kiểm tra: bấm “Gửi duyệt”.</p>}
+      <h3 className="subHead">Lịch sử</h3><ReviewTimeline reviews={b.reviews}/>
+    </div> : null}
+    {info ? <p className="hint" role="status">{info}</p> : null}
+    {err ? <p className="formError" role="alert">{err}</p> : null}
+  </article>;
+}
 function Components() {
   const { data, error, loading, reload } = useLoad(() => api.components(), []);
   const [open, setOpen] = useState<string | null>(null);
@@ -215,7 +293,23 @@ function Components() {
           </article>);
       })}</div>
     )}
-    <Card title="Đóng góp component"><ComingSoon title="Gửi component để duyệt">Quy trình đóng góp (riêng tư → gửi duyệt → kiểm tra → phê duyệt) chưa triển khai. Không có ảnh chụp hay đánh giá vì hệ thống chưa lưu.</ComingSoon></Card>
+    <BlocksSection/>
+  </>);
+}
+
+function BlocksSection() {
+  const company = useLoad(() => api.blocks("company"), []); const mine = useLoad(() => api.blocks("mine"), []);
+  return (<>
+    <Card title="Khối dựng sẵn của công ty">
+      <p className="hint">Khối là một cấu hình sẵn (nội dung, bố cục) của một component đã duyệt, được nhân viên đóng góp và quản trị viên phê duyệt. Khối không chứa mã: khi chèn vào trang, nó là một mục bình thường của component gốc. Chưa đo số lần sử dụng khối.</p>
+      {company.error ? <ErrorState error={company.error} retry={company.reload}/> : !company.data ? <StateView kind="loading"/> : company.data.length === 0
+        ? <StateView kind="empty" title="Chưa có khối nào được duyệt"/> : <div className="compGrid">{company.data.map((b) => <BlockCard key={b.id} b={b} mine={false} onChanged={company.reload}/>)}</div>}
+    </Card>
+    <Card title="Khối của tôi">
+      <p className="hint">Tạo khối: mở một ứng dụng ở chế độ Design, chọn một mục rồi bấm “Lưu thành khối”. Khối riêng tư chỉ bạn dùng được; gửi duyệt để kiểm tra tự động rồi chờ quản trị viên (người khác bạn) phê duyệt.</p>
+      {mine.error ? <ErrorState error={mine.error} retry={mine.reload}/> : !mine.data ? <StateView kind="loading"/> : mine.data.length === 0
+        ? <StateView kind="empty" title="Bạn chưa có khối nào"/> : <div className="compGrid">{mine.data.map((b) => <BlockCard key={b.id} b={b} mine onChanged={() => { mine.reload(); company.reload(); }}/>)}</div>}
+    </Card>
   </>);
 }
 

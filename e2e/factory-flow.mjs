@@ -128,6 +128,44 @@ await check("Publish: pipeline reaches RUNNING and is labelled Demo deployment",
   await admin.p.getByText("Đang chạy", { exact: true }).waitFor({ timeout: 30000 }); await admin.p.getByText("Demo deployment").waitFor();
 });
 
+// ---------------------------------------------------------------- Phase 5: templates & contributed blocks
+const TNAME = `Mẫu E2E ${Date.now().toString(36)}`, BNAME = `Khối E2E ${Date.now().toString(36)}`; let EPID = "";
+await check("Templates: save the page as a template, an admin shares it company-wide, another employee starts a website from it", async () => {
+  await admin.p.goto(`${BASE}/studio/projects/${PID}/settings`);
+  const sec = admin.p.getByRole("region", { name: "Lưu trang thành mẫu" });
+  await sec.getByLabel("Tên mẫu").fill(TNAME); await sec.getByRole("button", { name: "Lưu thành mẫu" }).click(); await sec.getByText(/Đã lưu mẫu/).waitFor();
+  expect(sql(`select visibility from templates where name='${TNAME}'`) === "PRIVATE", "template not stored as PRIVATE");
+  expect(sql(`select count(*) from templates where name='${TNAME}' and schema::text like '%asset://%'`) === "0", "template kept an image reference");
+  await admin.p.goto(`${BASE}/admin/templates`); await admin.p.getByLabel("Tìm mẫu").fill(TNAME); await admin.p.getByRole("button", { name: "Lọc" }).click();
+  const row = admin.p.locator("tr", { hasText: TNAME }); await row.getByRole("button", { name: "Chia sẻ toàn công ty" }).click(); await row.getByRole("button", { name: "Thu hồi về riêng tư" }).waitFor();
+  await editor.p.goto(`${BASE}/studio/templates`); const card = editor.p.locator("article.libCard", { hasText: TNAME }); await card.getByRole("button", { name: "Dùng mẫu này" }).click();
+  await editor.p.waitForURL(/\/studio\/new\?template=/); expect(await editor.p.getByRole("radio", { name: new RegExp(TNAME) }).isChecked(), "template not preselected");
+  await editor.p.getByLabel("Tên ứng dụng").fill(`Từ ${TNAME}`); await editor.p.getByRole("button", { name: "Tạo website" }).click();
+  await editor.p.waitForURL(/\/studio\/projects\/[0-9a-f-]{36}\/ai/); EPID = editor.p.url().match(/projects\/([0-9a-f-]{36})/)[1];
+  expect(sql(`select summary from project_versions where project_id='${EPID}' and version_number=1`).includes(TNAME), "first version does not name the template");
+  expect(sql(`select jsonb_array_length(schema->'sections') from page_schemas where project_id='${EPID}'`) === sql(`select jsonb_array_length(schema->'sections') from templates where name='${TNAME}'`), "page differs from template");
+});
+await check("Blocks: an employee saves a section as a block and submits it; automated checks pass; an admin approves; it inserts as an ordinary section", async () => {
+  await editor.p.goto(`${BASE}/studio/projects/${EPID}/design`);
+  const insp = editor.p.getByRole("region", { name: /Chỉnh sửa Đầu trang/ });
+  for (let i = 0; i < 6 && !(await insp.isVisible()); i++) { await editor.p.waitForTimeout(600); await (await frameOf(editor.p)).click("section.hero").catch(() => undefined); }
+  await editor.p.getByRole("button", { name: "Lưu thành khối…" }).click();
+  const dlg = editor.p.getByRole("dialog", { name: "Lưu thành khối" }); await dlg.getByLabel("Tên khối").fill(BNAME); await dlg.getByRole("button", { name: "Lưu khối" }).click();
+  await editor.p.getByText(/Đã lưu khối/).waitFor();
+  await editor.p.goto(`${BASE}/studio/components`); const mine = editor.p.locator("article.libCard", { hasText: BNAME });
+  await mine.getByRole("button", { name: "Gửi duyệt" }).click(); await mine.getByText("Chờ duyệt").waitFor();
+  expect(sql(`select status from component_packages where name='${BNAME}'`) === "REVIEW", "not in review");
+  await admin.p.goto(`${BASE}/admin/components`); await admin.p.getByRole("tab", { name: "Khối đóng góp" }).click();
+  await admin.p.locator("tr", { hasText: BNAME }).getByRole("button", { name: "Xem xét" }).click();
+  await admin.p.getByText("Thuộc tính hợp lệ", { exact: true }).waitFor(); await admin.p.getByRole("button", { name: "Phê duyệt v1" }).click();
+  for (let i = 0; i < 20 && sql(`select status from component_packages where name='${BNAME}'`) !== "APPROVED"; i++) await admin.p.waitForTimeout(250);
+  expect(sql(`select status from component_packages where name='${BNAME}'`) === "APPROVED", "not approved");
+  const before = Number(sql(`select jsonb_array_length(schema->'sections') from page_schemas where project_id='${PID}'`));
+  await admin.p.goto(`${BASE}/studio/projects/${PID}/design`); await admin.p.getByRole("button", { name: new RegExp(`^\\+ ${BNAME}`) }).click(); await admin.p.waitForTimeout(1000);
+  expect(Number(sql(`select jsonb_array_length(schema->'sections') from page_schemas where project_id='${PID}'`)) === before + 1, "block not inserted");
+  expect(sql(`select count(*) from page_schemas, jsonb_array_elements(schema->'sections') s where project_id='${PID}' and s->>'type'='Hero'`) === "2", "inserted section is not an ordinary Hero");
+});
+
 // ---------------------------------------------------------------- RBAC / security
 const viewer = await ctx();
 await check("viewer: Design is read-only (no library, no drag handles, preview without scripts)", async () => {

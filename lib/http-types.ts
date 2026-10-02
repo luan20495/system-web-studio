@@ -95,3 +95,15 @@ export type AiUsageReport = { days: number; since: string; totals: UsageTotals; 
 export type AiCallRow = { id: string; createdAt: string; userId: string; user: string | null; workspaceId: string; workspace: string | null; projectId: string; project: string | null;
   promptId: string | null; provider: string; model: string; outcome: "OK" | "BAD_OUTPUT" | "ERROR"; httpStatus: number | null; promptTokens: number | null;
   completionTokens: number | null; totalTokens: number | null; costUsd: number | null; latencyMs: number };
+
+// ---- Phase 5: templates (page schema JSON, never source code) and contributed blocks (reviewed presets of approved components)
+export type TemplateDto = { id: string; name: string; description: string; visibility: "PRIVATE" | "COMPANY"; status: "ACTIVE" | "ARCHIVED"; version: number;
+  authorId: string; author: string | null; sourceProjectId: string | null; createdAt: string; updatedAt: string; sections: number; componentTypes: string[];
+  schema: PageSchema; canEdit: boolean };
+export type CheckResult = { check: string; ok: boolean; message: string };
+export type BlockVersion = { version: number; baseComponentVersion: string; props: Record<string, unknown>; status: "DRAFT" | "REVIEW" | "APPROVED" | "REJECTED" | "SUPERSEDED";
+  validation: CheckResult[] | null; sourceProjectId: string | null; createdAt: string; submittedAt: string | null; decidedAt: string | null };
+export type BlockReview = { id: string; version: number; actorId: string | null; actor: string | null; decision: string; comment: string; createdAt: string };
+export type BlockDto = { id: string; name: string; description: string; baseComponent: string; ownerId: string; owner: string | null;
+  status: "PRIVATE" | "SUBMITTED" | "VALIDATING" | "REVIEW" | "APPROVED" | "DEPRECATED"; latestVersion: number; approvedVersion: number | null;
+  createdAt: string; updatedAt: string; current: BlockVersion | null; versions: BlockVersion[]; reviews: BlockReview[]; canEdit: boolean; canReview: boolean };
