@@ -1,11 +1,24 @@
-.authCard{width:min(420px,calc(100vw - 32px));display:grid;gap:14px;padding:28px;border:1px solid #dfe9ec;border-radius:12px;background:#fff;box-shadow:0 10px 30px #17394a14}
-.authCard.wide{width:min(640px,calc(100vw - 32px))}.authCard h1{margin:0;font-size:22px}.authCard p{margin:0;color:#58717a}
+/* http-mode screens; uses the Studio theme variables (the Studio is dark-only) */
+.authCard{width:min(420px,calc(100vw - 32px));display:grid;gap:14px;padding:28px;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--text);box-shadow:var(--shadow)}
+.authCard.wide{width:min(640px,calc(100vw - 32px))}.authCard h1{margin:0;font-size:22px;color:var(--text)}.authCard p{margin:0;color:var(--muted)}
 .listPage{align-items:flex-start;padding-top:8vh}.listHeader{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-.projectList{list-style:none;margin:0;padding:0;display:grid;gap:8px}.projectList button{width:100%;display:grid;gap:2px;text-align:left;padding:12px 14px;border:1px solid #dfe9ec;border-radius:8px;background:#fff;cursor:pointer;font:inherit}
-.projectList button:hover{border-color:#087d70}.projectList span{color:#58717a;font-size:13px}
-.inlineForm{display:flex;gap:8px}.inlineForm input,.itemEditor input,.plainArea,.authCard input{flex:1;min-width:0;min-height:40px;padding:0 12px;border:1px solid #cbd8dc;border-radius:6px;font:inherit}
-.plainArea{min-height:84px;padding:10px 12px;resize:vertical}.formError{color:#b3261e!important;font-size:14px}.hint{color:#58717a;font-size:13px}
-.itemEditor{display:grid;grid-template-columns:1fr 1.4fr auto;gap:8px;margin-bottom:8px}.smallButton.danger{color:#b3261e}
-.uploadBox{display:grid;place-items:center;min-height:84px;border:2px dashed #9bb6bb;border-radius:8px;cursor:pointer;color:#087d70;font-weight:700}.uploadBox input{display:none}
-.assetThumb{max-width:100%;max-height:140px;border-radius:6px;object-fit:contain}.deployBox{display:grid;gap:8px;padding:12px;border:1px solid #dfe9ec;border-radius:8px}.deployBox ol{margin:0;padding-left:20px;color:#58717a;font-size:14px}.deployBox code{word-break:break-all}
+.projectList{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.projectList button{width:100%;display:grid;gap:2px;text-align:left;padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);color:var(--text);cursor:pointer;font:inherit}
+.projectList button:hover{border-color:var(--accent)}.projectList span{color:var(--muted);font-size:13px}
+.inlineForm{display:flex;gap:8px}
+.inlineForm input,.itemEditor input,.plainArea,.authCard input,.memberTable select,.inlineForm select{min-width:0;min-height:40px;padding:0 12px;border:1px solid #3a4655;border-radius:6px;background:var(--panel2);color:var(--text);font:inherit}
+.inlineForm input,.itemEditor input,.authCard input{flex:1}.memberTable select,.inlineForm select{min-height:36px;padding:0 8px}
+.plainArea{min-height:84px;padding:10px 12px;resize:vertical}.formError{color:#ff9a92!important;font-size:14px}.hint{color:var(--muted);font-size:13px}
+.itemEditor{display:grid;grid-template-columns:1fr 1.4fr auto;gap:8px;margin-bottom:8px}.smallButton.danger{color:#ff9a92}
+.uploadBox{display:grid;place-items:center;min-height:84px;border:2px dashed #4b5a6b;border-radius:8px;cursor:pointer;color:var(--accent);font-weight:700}.uploadBox input{display:none}
+.uploadBox:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.assetThumb{max-width:100%;max-height:140px;border-radius:6px;object-fit:contain}
+.deployBox{display:grid;gap:8px;padding:12px;border:1px solid var(--line);border-radius:8px}.deployBox ol{margin:0;padding-left:20px;color:var(--muted);font-size:14px}.deployBox code{word-break:break-all}
+.srOnly{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.ssoButton{display:inline-flex;justify-content:center;align-items:center;text-decoration:none}
+.memberTable{width:100%;border-collapse:collapse;margin-bottom:10px}.memberTable th,.memberTable td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left;font-size:14px;vertical-align:middle}
+.memberTable th{color:var(--muted);font-weight:600}.memberTable td small{display:block;color:var(--muted)}
+:where(a,button,input,select,textarea,summary,[tabindex]):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media(max-width:700px){.itemEditor{grid-template-columns:1fr}}
+.aiPicker select{max-width:min(320px,52vw);min-height:32px;border:1px solid #3a4655;border-radius:6px;background:var(--panel2);color:var(--text);font:inherit;font-size:12px;padding:0 6px}
+.aiNotice{margin:6px 2px 0;color:var(--muted);font-size:11px;line-height:1.4}

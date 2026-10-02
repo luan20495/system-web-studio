@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { isDemoMode, studioApi } from "@/lib/api-client";
 import { renderPreviewDocument } from "@/lib/preview-document";
+import { useDialog } from "./useDialog";
 import type { ChatMessage, DeviceMode, PageContent, Project, StudioSnapshot, Visibility } from "@/lib/types";
 
 const initialContent: PageContent = {
@@ -240,11 +241,12 @@ function SettingsDrawer({ project, busy, onClose, onSave }: {
   onSave: (project: Project) => Promise<void>;
 }) {
   const [draft, setDraft] = useState(project);
+  const dialog = useDialog("Cài đặt project", onClose);
 
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <aside className="drawer">
-        <div className="drawerHeader"><div><h2>Cài đặt project</h2><p>Thông tin kỹ thuật và quyền truy cập.</p></div><button className="button icon" aria-label="Đóng" onClick={onClose}>✕</button></div>
+      <div className="drawer" {...dialog.props}>
+        <div className="drawerHeader"><div><h2 id={dialog.titleId}>Cài đặt project</h2><p>Thông tin kỹ thuật và quyền truy cập.</p></div><button className="button icon" aria-label="Đóng" onClick={onClose}>✕</button></div>
 
         <Setting title="Chung">
           <Field label="Tên project"><input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })}/></Field>
@@ -267,7 +269,7 @@ function SettingsDrawer({ project, busy, onClose, onSave }: {
         </Setting>
 
         <div className="drawerActions"><button className="button ghost" onClick={onClose}>Hủy</button><button className="button primary" disabled={busy} onClick={() => void onSave(draft)}>{busy ? "Đang lưu…" : "Lưu thay đổi"}</button></div>
-      </aside>
+      </div>
     </div>
   );
 }
@@ -281,12 +283,13 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 }
 
 function HistoryDrawer({ versions, onClose }: { versions: StudioSnapshot["versions"]; onClose: () => void }) {
+  const dialog = useDialog("Lịch sử phiên bản", onClose);
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <aside className="drawer">
-        <div className="drawerHeader"><div><h2>Lịch sử phiên bản</h2><p>{isDemoMode ? "Bản ghi demo; chưa có Git hoặc chức năng khôi phục." : "Các phiên bản schema của project."}</p></div><button className="button icon" aria-label="Đóng" onClick={onClose}>✕</button></div>
+      <div className="drawer" {...dialog.props}>
+        <div className="drawerHeader"><div><h2 id={dialog.titleId}>Lịch sử phiên bản</h2><p>{isDemoMode ? "Bản ghi demo; chưa có Git hoặc chức năng khôi phục." : "Các phiên bản schema của project."}</p></div><button className="button icon" aria-label="Đóng" onClick={onClose}>✕</button></div>
         <div className="versionList">{versions.map((version) => <article className="versionItem" key={version.id}><div><b>{version.label}</b><span>{new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(version.createdAt))}</span></div><p>{version.summary}</p>{version.sourceRevision ? <code>{version.sourceRevision}</code> : <small>Chưa có bản xuất mã nguồn</small>}</article>)}</div>
-      </aside>
+      </div>
     </div>
   );
 }
@@ -298,10 +301,11 @@ function PublishModal({ visibility, busy, onVisibility, onClose, onPublish }: {
   onClose: () => void;
   onPublish: () => Promise<void>;
 }) {
+  const dialog = useDialog("Xuất bản website", busy ? null : onClose);
   return (
     <div className="overlay modalOverlay">
-      <div className="modal">
-        <h2>Xuất bản website</h2>
+      <div className="modal" {...dialog.props}>
+        <h2 id={dialog.titleId}>Xuất bản website</h2>
         <p>{isDemoMode ? "Bản demo không triển khai website và không thay đổi quyền truy cập." : "Backend sẽ kiểm tra quyền và xuất bản phiên bản project đã chọn."}</p>
         {(["private", "public"] as Visibility[]).map((value) => (
           <button className={`publishChoice ${visibility === value ? "selected" : ""}`} key={value} onClick={() => onVisibility(value)}>

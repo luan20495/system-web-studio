@@ -19,7 +19,7 @@ export type VersionSummary = {
 export type SchemaResponse = { schema: PageSchema; revision: number; version: VersionSummary | null };
 export type PromptResponse = {
   promptId: string; outcome: "UPDATED" | "NO_CHANGE" | "UNSUPPORTED"; message: { role: string; content: string };
-  schemaPatch: SchemaOperation[]; pageSchema: PageSchema; revision: number; version: VersionSummary | null; registryReuse: number;
+  schemaPatch: SchemaOperation[]; pageSchema: PageSchema; revision: number; version: VersionSummary | null; registryReuse: number; provider?: string; model?: string | null;
 };
 export type PromptHistoryItem = { id: string; text: string; createdAt: string; outcome: string; assistantMessage: string; versionId: string | null; registryReuse: number | null };
 
@@ -36,3 +36,10 @@ export type Deployment = {
   id: string; versionNumber: number; visibility: "PRIVATE" | "PUBLIC"; status: DeploymentStatus; url: string | null; error: string | null;
   provider: string; mock: boolean; createdAt: string; finishedAt: string | null; events: { status: string; message: string | null; createdAt: string }[];
 };
+
+export type AuthConfig = { localLogin: boolean; oidc: boolean; oidcLoginUrl: string; signup?: boolean; signupInviteRequired?: boolean };
+export type AiModel = { id: string; name: string; contextLength: number };
+export type AiStatus = { provider: "openrouter" | "mock"; configured: boolean; defaultModel: string; dailyLimitPerUser: number; models: AiModel[]; dataNotice: string };
+export type Member = { userId: string; username: string; displayName: string | null; email: string | null; role: string; joinedAt: string };
+export const WORKSPACE_ROLES = ["WORKSPACE_ADMIN", "EDITOR", "PUBLISHER", "VIEWER"] as const;
+export const PROJECT_ROLES = ["OWNER", "EDITOR", "PUBLISHER", "VIEWER"] as const;

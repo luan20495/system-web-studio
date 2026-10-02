@@ -37,7 +37,9 @@
     ".next-http/types/**/*.ts",
     ".next-http/dev/types/**/*.ts",
     ".next-check-http/types/**/*.ts",
-    ".next-check-http/dev/types/**/*.ts"
+    ".next-check-http/dev/types/**/*.ts",
+    ".next-public/types/**/*.ts",
+    ".next-public/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

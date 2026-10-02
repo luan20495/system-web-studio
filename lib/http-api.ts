@@ -1,5 +1,5 @@
 import type {
-  ApiProject, AssetDto, Deployment, Me, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
+  AiStatus, ApiProject, AuthConfig, Member, AssetDto, Deployment, Me, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
 } from "./http-types";
 
 /** Error with the backend's stable {code, message, requestId, details} contract. */
@@ -66,6 +66,10 @@ export const api = {
     return call<Me>("/auth/me");
   },
   me: () => call<Me>("/auth/me"),
+  authConfig: () => call<AuthConfig>("/auth/config"),
+  register: (username: string, password: string, displayName: string, inviteCode?: string) =>
+    call<{ username: string }>("/auth/register", { method: "POST", body: json({ username, password, displayName: displayName || undefined, inviteCode: inviteCode || undefined }) }),
+  aiStatus: () => call<AiStatus>("/ai/status"),
   async logout() { await call<void>("/auth/logout", { method: "POST" }).finally(resetCsrf); },
 
   listProjects: (w: string) => call<ApiProject[]>(`/workspaces/${w}/projects`),
@@ -74,11 +78,21 @@ export const api = {
   updateProject: (w: string, p: string, expectedRevision: number, patch: Partial<ApiProject>) =>
     call<ApiProject>(P(w, p), { method: "PATCH", body: json({ ...patch, expectedRevision }) }),
 
+  listWorkspaceMembers: (w: string) => call<Member[]>(`/workspaces/${w}/members`),
+  addWorkspaceMember: (w: string, who: { username?: string; email?: string }, role: string) => call<Member>(`/workspaces/${w}/members`, { method: "POST", body: json({ ...who, role }) }),
+  changeWorkspaceMember: (w: string, userId: string, role: string) => call<Member>(`/workspaces/${w}/members/${userId}`, { method: "PATCH", body: json({ role }) }),
+  removeWorkspaceMember: (w: string, userId: string) => call<void>(`/workspaces/${w}/members/${userId}`, { method: "DELETE" }),
+  listProjectMembers: (w: string, p: string) => call<Member[]>(`${P(w, p)}/members`),
+  addProjectMember: (w: string, p: string, who: { username?: string; email?: string }, role: string) => call<Member>(`${P(w, p)}/members`, { method: "POST", body: json({ ...who, role }) }),
+  changeProjectMember: (w: string, p: string, userId: string, role: string) => call<Member>(`${P(w, p)}/members/${userId}`, { method: "PATCH", body: json({ role }) }),
+  removeProjectMember: (w: string, p: string, userId: string) => call<void>(`${P(w, p)}/members/${userId}`, { method: "DELETE" }),
+
   getSchema: (w: string, p: string) => call<SchemaResponse>(`${P(w, p)}/schema`),
   patchSchema: (w: string, p: string, expectedRevision: number, operations: SchemaOperation[], summary?: string) =>
     call<SchemaResponse>(`${P(w, p)}/schema`, { method: "PATCH", body: json({ expectedRevision, operations, summary }) }),
-  sendPrompt: (w: string, p: string, prompt: string, expectedRevision: number) =>
-    call<PromptResponse>(`${P(w, p)}/prompts`, { method: "POST", body: json({ prompt, expectedRevision }) }),
+  sendPrompt: (w: string, p: string, prompt: string, expectedRevision: number, model?: string) =>
+    // AI calls can take a while when the first free model is busy and the server fails over to the next one
+    call<PromptResponse>(`${P(w, p)}/prompts`, { method: "POST", body: json({ prompt, expectedRevision, ...(model ? { model } : {}) }), signal: AbortSignal.timeout(130_000) }),
   listPrompts: (w: string, p: string) => call<PromptHistoryItem[]>(`${P(w, p)}/prompts`),
 
   listVersions: (w: string, p: string) => call<VersionSummary[]>(`${P(w, p)}/versions`),

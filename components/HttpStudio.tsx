@@ -1,15 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { api, ApiError } from "@/lib/http-api";
 import { renderSchemaDocument } from "@/lib/schema-preview";
 import type {
-  ApiProject, AssetDto, Deployment, Me, PageSchema, PromptHistoryItem, SchemaOperation, Section, VersionSummary
+  AiStatus, ApiProject, AssetDto, AuthConfig, Member, Deployment, Me, PageSchema, PromptHistoryItem, SchemaOperation, Section, VersionSummary
 } from "@/lib/http-types";
+import { PROJECT_ROLES, WORKSPACE_ROLES } from "@/lib/http-types";
 import type { DeviceMode } from "@/lib/types";
+import { useDialog } from "./useDialog";
 
 const fmt = (iso: string) => new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
 const errText = (e: unknown, fallback: string) => (e instanceof ApiError ? `${e.message}${e.requestId ? ` (mã ${e.requestId})` : ""}` : e instanceof Error ? e.message : fallback);
+const SSO_ERRORS: Record<string, string> = {
+  not_provisioned: "Tài khoản SSO của bạn chưa được cấp quyền. Hãy liên hệ quản trị viên.",
+  disabled: "Tài khoản đã bị vô hiệu hóa.", failed: "Đăng nhập SSO thất bại. Hãy thử lại.", no_identity: "Nhà cung cấp SSO không trả về danh tính hợp lệ."
+};
 const TERMINAL = ["RUNNING", "FAILED", "ROLLED_BACK"];
 
 export default function HttpStudio() {
@@ -45,27 +51,43 @@ function LoginScreen({ onLoggedIn, initialError }: { onLoggedIn: (me: Me) => voi
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(initialError);
+  const ssoError = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("sso_error") : null;
+  const [error, setError] = useState<string | null>(initialError ?? (ssoError ? SSO_ERRORS[ssoError] ?? "Đăng nhập SSO thất bại." : null));
+  const [config, setConfig] = useState<AuthConfig>({ localLogin: true, oidc: false, oidcLoginUrl: "/oauth2/authorization/oidc" });
+  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [displayName, setDisplayName] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
+  useEffect(() => { api.authConfig().then(setConfig).catch(() => undefined); }, []);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     setBusy(true); setError(null);
-    try { onLoggedIn(await api.login(username.trim(), password)); }
-    catch (e) { setError(e instanceof ApiError && e.status === 401 ? "Sai tên đăng nhập hoặc mật khẩu." : errText(e, "Đăng nhập thất bại.")); setPassword(""); }
+    try {
+      if (mode === "signup") await api.register(username.trim().toLowerCase(), password, displayName.trim(), inviteCode.trim());
+      onLoggedIn(await api.login(mode === "signup" ? username.trim().toLowerCase() : username.trim(), password));
+    }
+    catch (e) { setError(e instanceof ApiError && e.status === 401 ? "Sai tên đăng nhập hoặc mật khẩu." : errText(e, mode === "signup" ? "Đăng ký thất bại." : "Đăng nhập thất bại.")); setPassword(""); }
     finally { setBusy(false); }
   }
 
   return (
-    <div className="boot">
+    <main className="boot">
       <form className="authCard" onSubmit={(e) => void submit(e)}>
         <h1>System Web Studio</h1>
-        <p>Đăng nhập để tiếp tục.</p>
+        <p>{mode === "signup" ? "Tạo tài khoản mới. Mỗi tài khoản có workspace riêng." : "Đăng nhập để tiếp tục."}</p>
+        {config.oidc ? <a className="button primary ssoButton" href={config.oidcLoginUrl}>Đăng nhập bằng SSO</a> : null}
+        {config.localLogin ? <>
         <Field label="Tên đăng nhập"><input autoFocus autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required/></Field>
-        <Field label="Mật khẩu"><input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required/></Field>
+        {mode === "signup" ? <Field label="Tên hiển thị"><input autoComplete="name" maxLength={80} value={displayName} onChange={(e) => setDisplayName(e.target.value)}/></Field> : null}
+        <Field label="Mật khẩu"><input type="password" autoComplete={mode === "signup" ? "new-password" : "current-password"} minLength={mode === "signup" ? 12 : undefined} value={password} onChange={(e) => setPassword(e.target.value)} required/></Field>
+        {mode === "signup" ? <p className="hint">Tên đăng nhập 3–40 ký tự (a–z, 0–9, . _ -). Mật khẩu tối thiểu 12 ký tự.</p> : null}
+        {mode === "signup" && config.signupInviteRequired ? <Field label="Mã mời"><input autoComplete="off" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} required/></Field> : null}
         {error ? <p className="formError" role="alert">{error}</p> : null}
-        <button className="button primary" disabled={busy || !username || !password}>{busy ? "Đang đăng nhập…" : "Đăng nhập"}</button>
+        <button className="button primary" disabled={busy || !username || !password}>{busy ? (mode === "signup" ? "Đang tạo tài khoản…" : "Đang đăng nhập…") : (mode === "signup" ? "Tạo tài khoản" : "Đăng nhập")}</button>
+        {config.signup ? <button type="button" className="button ghost" onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(null); }}>{mode === "login" ? "Chưa có tài khoản? Đăng ký" : "Đã có tài khoản? Đăng nhập"}</button> : null}
+        </> : (error ? <p className="formError" role="alert">{error}</p> : null)}
       </form>
-    </div>
+    </main>
   );
 }
 
@@ -93,7 +115,7 @@ function ProjectList({ me, workspaceId, onOpen, onLogout, onUnauthorized }: {
   }
 
   return (
-    <div className="boot listPage">
+    <main className="boot listPage">
       <div className="authCard wide">
         <div className="listHeader"><h1>Project</h1><div><span className="savedPill">{me.displayName}</span> <button className="button ghost" onClick={() => void onLogout()}>Đăng xuất</button></div></div>
         {error ? <p className="formError" role="alert">{error}</p> : null}
@@ -109,11 +131,11 @@ function ProjectList({ me, workspaceId, onOpen, onLogout, onUnauthorized }: {
           </form>
         ) : null}
       </div>
-    </div>
+    </main>
   );
 }
 
-type Panel = null | "history" | "settings" | "content" | "assets" | "publish";
+type Panel = null | "history" | "settings" | "content" | "assets" | "publish" | "members";
 type Msg = { id: string; role: "user" | "assistant"; content: string; meta?: string[] };
 
 function StudioView({ me, workspaceId, projectId, onBack, onLogout, onUnauthorized }: {
@@ -131,6 +153,8 @@ function StudioView({ me, workspaceId, projectId, onBack, onLogout, onUnauthoriz
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [ai, setAi] = useState<AiStatus | null>(null);
+  const [model, setModel] = useState<string>(() => { try { return localStorage.getItem("studio-ai-model") ?? "auto"; } catch { return "auto"; } });
 
   const can = (permission: string) => project?.permissions.includes(permission) ?? false;
   const guard = useCallback((e: unknown, fallback: string) => {
@@ -147,6 +171,11 @@ function StudioView({ me, workspaceId, projectId, onBack, onLogout, onUnauthoriz
     const [p, s, v, h] = await Promise.all([api.getProject(workspaceId, projectId), api.getSchema(workspaceId, projectId), api.listVersions(workspaceId, projectId), api.listPrompts(workspaceId, projectId)]);
     setProject(p); setSchema(s.schema); setRevision(s.revision); setVersions(v); setMessages(toMessages(h));
   }, [workspaceId, projectId]);
+
+  useEffect(() => { api.aiStatus().then(setAi).catch(() => undefined); }, []);
+  useEffect(() => { try { localStorage.setItem("studio-ai-model", model); } catch { /* per-viewer convenience only */ } }, [model]);
+  // a remembered model that is no longer offered falls back to "auto"
+  const effectiveModel = ai?.configured ? (model === "auto" || model === "mock" || ai.models.some((m) => m.id === model) ? model : "auto") : "mock";
 
   useEffect(() => {
     reload().catch((e: unknown) => {
@@ -172,10 +201,10 @@ function StudioView({ me, workspaceId, projectId, onBack, onLogout, onUnauthoriz
     if (!text || busy || !can("PROJECT_EDIT")) return;
     setMessages((m) => [...m, { id: `local-${Date.now()}`, role: "user", content: text }]);
     setPrompt("");
-    const r = await run("prompt", () => api.sendPrompt(workspaceId, projectId, text, revision), "Không thể cập nhật website.");
+    const r = await run("prompt", () => api.sendPrompt(workspaceId, projectId, text, revision, ai?.configured ? effectiveModel : undefined), "Không thể cập nhật website.");
     if (!r) return;
     setSchema(r.pageSchema); setRevision(r.revision);
-    setMessages((m) => [...m, { id: r.promptId, role: "assistant", content: r.message.content, meta: [r.outcome, `Tái sử dụng registry ${r.registryReuse}%`] }]);
+    setMessages((m) => [...m, { id: r.promptId, role: "assistant", content: r.message.content, meta: [r.outcome, ...(r.model && r.model !== "mock" ? [r.model] : r.provider === "mock" ? ["mô phỏng"] : [])] }]);
     if (r.version) setVersions(await api.listVersions(workspaceId, projectId).catch(() => versions));
   }
 
@@ -220,6 +249,7 @@ function StudioView({ me, workspaceId, projectId, onBack, onLogout, onUnauthoriz
           <button className="button ghost" onClick={() => setPanel("history")}>Lịch sử</button>
           <button className="button ghost" disabled={readOnly} onClick={() => setPanel("content")}>Chỉnh sửa</button>
           <button className="button ghost" onClick={() => setPanel("assets")}>Tệp</button>
+          {can("PROJECT_MEMBERS") ? <button className="button ghost" onClick={() => setPanel("members")}>Thành viên</button> : null}
           <button className="button primary" disabled={!can("PROJECT_PUBLISH") || busy !== null} title={can("PROJECT_PUBLISH") ? undefined : "Bạn không có quyền xuất bản"} onClick={() => setPanel("publish")}>Xuất bản</button>
           <button className="button icon" aria-label="Cài đặt" disabled={!can("PROJECT_SETTINGS")} onClick={() => setPanel("settings")}>⚙</button>
           <button className="button ghost" onClick={() => void onLogout()}>Đăng xuất</button>
@@ -245,8 +275,17 @@ function StudioView({ me, workspaceId, projectId, onBack, onLogout, onUnauthoriz
             <textarea value={prompt} disabled={readOnly} onChange={(e) => setPrompt(e.target.value)} maxLength={2000}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void submitPrompt(); } }}
               placeholder={readOnly ? "Bạn chỉ có quyền xem project này." : "Ví dụ: Thêm bảng so sánh 3 sản phẩm…"}/>
-            <div className="composerFooter"><span>Backend · mock LLM</span>
+            <div className="composerFooter">
+              {ai?.configured ? (
+                <label className="aiPicker"><span className="srOnly">Model AI</span>
+                  <select aria-label="Model AI" value={effectiveModel} onChange={(e) => setModel(e.target.value)} disabled={busy !== null}>
+                    <option value="auto">AI · tự động (các model miễn phí)</option>
+                    {ai.models.map((m) => <option key={m.id} value={m.id}>{m.name} — {m.id}</option>)}
+                    <option value="mock">Mô phỏng (không gọi AI)</option>
+                  </select></label>
+              ) : <span title={ai?.dataNotice}>AI: mô phỏng (chưa có key OpenRouter)</span>}
               <button className="sendButton" disabled={busy !== null || !prompt.trim() || readOnly} onClick={() => void submitPrompt()}>{busy === "prompt" ? "Đang xử lý…" : "Gửi ↑"}</button></div>
+            {ai?.configured && effectiveModel !== "mock" ? <p className="aiNotice">{ai.dataNotice} Giới hạn {ai.dailyLimitPerUser} lượt AI/ngày/người dùng.</p> : null}
           </div></div>
         </section>
 
@@ -275,18 +314,20 @@ function StudioView({ me, workspaceId, projectId, onBack, onLogout, onUnauthoriz
       {panel === "content" ? <ContentDrawer schema={schema} busy={busy === "edit"} onClose={() => setPanel(null)} onApply={applyOps}/> : null}
       {panel === "settings" ? <SettingsDrawer project={project} busy={busy === "settings"} onClose={() => setPanel(null)} onSave={saveSettings}/> : null}
       {panel === "assets" ? <AssetsDrawer workspaceId={workspaceId} projectId={projectId} canEdit={can("PROJECT_EDIT")} onClose={() => setPanel(null)} onError={(e) => guard(e, "Thao tác tệp thất bại.")}/> : null}
+      {panel === "members" ? <MembersDrawer workspaceId={workspaceId} projectId={projectId} me={me} onClose={() => setPanel(null)} onError={(e) => guard(e, "Thao tác thành viên thất bại.")}/> : null}
       {panel === "publish" ? <PublishModal workspaceId={workspaceId} projectId={projectId} revision={revision} current={project.siteVisibility} onClose={() => { setPanel(null); void reload().catch(() => undefined); }} onUnauthorized={onUnauthorized}/> : null}
     </div>
   );
 }
 
 function Drawer({ title, sub, onClose, children }: { title: string; sub?: string; onClose: () => void; children: ReactNode }) {
+  const dialog = useDialog(title, onClose);
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <aside className="drawer" role="dialog" aria-label={title}>
-        <div className="drawerHeader"><div><h2>{title}</h2>{sub ? <p>{sub}</p> : null}</div><button className="button icon" aria-label="Đóng" onClick={onClose}>✕</button></div>
+      <div className="drawer" {...dialog.props}>
+        <div className="drawerHeader"><div><h2 id={dialog.titleId}>{title}</h2>{sub ? <p>{sub}</p> : null}</div><button className="button icon" aria-label="Đóng" onClick={onClose}>✕</button></div>
         {children}
-      </aside>
+      </div>
     </div>
   );
 }
@@ -423,6 +464,7 @@ function PublishModal({ workspaceId, projectId, revision, current, onClose, onUn
   // One key per dialog: clicking twice or retrying after a network error can never create a second deployment.
   const key = useRef<string>(`ui-${crypto.randomUUID()}`);
   const running = deployment !== null && !TERMINAL.includes(deployment.status);
+  const dialog = useDialog("Xuất bản website", running ? null : onClose);        // cannot be dismissed with Escape mid-publish
 
   useEffect(() => {
     if (!deployment || TERMINAL.includes(deployment.status)) return;
@@ -444,8 +486,8 @@ function PublishModal({ workspaceId, projectId, revision, current, onClose, onUn
   }
 
   return (
-    <div className="overlay modalOverlay"><div className="modal" role="dialog" aria-label="Xuất bản website">
-      <h2>Xuất bản website</h2>
+    <div className="overlay modalOverlay"><div className="modal" {...dialog.props}>
+      <h2 id={dialog.titleId}>Xuất bản website</h2>
       <p>Phiên bản hiện tại sẽ được đưa qua kiểm tra chính sách, bảo mật, build và triển khai.</p>
       {!deployment ? (["PRIVATE", "PUBLIC"] as const).map((v) => (
         <button className={`publishChoice ${visibility === v ? "selected" : ""}`} key={v} onClick={() => setVisibility(v)}>
@@ -464,5 +506,77 @@ function PublishModal({ workspaceId, projectId, revision, current, onClose, onUn
         {!deployment ? <button className="button primary" disabled={submitting} onClick={() => void start()}>{submitting ? "Đang gửi…" : "Xuất bản"}</button> : running ? <button className="button primary" disabled>Đang xử lý…</button> : null}
       </div>
     </div></div>
+  );
+}
+
+function roleLabel(role: string) {
+  return ({ WORKSPACE_ADMIN: "Quản trị workspace", OWNER: "Chủ sở hữu", EDITOR: "Biên tập", PUBLISHER: "Xuất bản", VIEWER: "Chỉ xem" } as Record<string, string>)[role] ?? role;
+}
+
+function MemberTable({ title, members, roles, currentUserId, onChange, onRemove, onAdd, busy, error }: {
+  title: string; members: Member[] | null; roles: readonly string[]; currentUserId: string; busy: boolean; error: string | null;
+  onChange: (m: Member, role: string) => void; onRemove: (m: Member) => void; onAdd: (who: string, role: string) => Promise<boolean>;
+}) {
+  const [who, setWho] = useState("");
+  const [role, setRole] = useState(roles[roles.length - 1]);
+  const id = useId();
+  return (
+    <section className="settingGroup" aria-labelledby={`${id}-h`}>
+      <h3 id={`${id}-h`}>{title}</h3>
+      {members === null ? <div role="status">Đang tải…</div> : (
+        <table className="memberTable">
+          <caption className="srOnly">{title}</caption>
+          <thead><tr><th scope="col">Người dùng</th><th scope="col">Vai trò</th><th scope="col"><span className="srOnly">Thao tác</span></th></tr></thead>
+          <tbody>{members.map((m) => (
+            <tr key={m.userId}>
+              <td><b>{m.displayName ?? m.username}</b><small>{m.username}{m.email ? ` · ${m.email}` : ""}</small></td>
+              <td><select aria-label={`Vai trò của ${m.username}`} value={m.role} disabled={busy || m.userId === currentUserId} onChange={(e) => onChange(m, e.target.value)}>
+                {roles.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}</select></td>
+              <td><button className="smallButton danger" disabled={busy} onClick={() => onRemove(m)} aria-label={`Xóa ${m.username}`}>{m.userId === currentUserId ? "Rời" : "Xóa"}</button></td>
+            </tr>))}</tbody>
+        </table>)}
+      <form className="inlineForm" onSubmit={(e) => { e.preventDefault(); void onAdd(who, role).then((ok) => { if (ok) setWho(""); }); }}>
+        <input aria-label={`Tên đăng nhập hoặc email để thêm vào: ${title}`} placeholder="Tên đăng nhập hoặc email" value={who} onChange={(e) => setWho(e.target.value)} maxLength={254}/>
+        <select aria-label="Vai trò khi thêm" value={role} onChange={(e) => setRole(e.target.value)}>{roles.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}</select>
+        <button className="button" disabled={busy || !who.trim()}>Thêm</button>
+      </form>
+      {error ? <p className="formError" role="alert">{error}</p> : null}
+    </section>
+  );
+}
+
+function MembersDrawer({ workspaceId, projectId, me, onClose, onError }: { workspaceId: string; projectId: string; me: Me; onClose: () => void; onError: (e: unknown) => void }) {
+  const wsRole = me.workspaces.find((w) => w.id === workspaceId)?.role;
+  const wsAdmin = wsRole === "WORKSPACE_ADMIN" || wsRole === "ADMIN" || me.roles.includes("ADMIN");
+  const [project, setProject] = useState<Member[] | null>(null);
+  const [workspace, setWorkspace] = useState<Member[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [errors, setErrors] = useState<{ project: string | null; workspace: string | null }>({ project: null, workspace: null });
+
+  const load = useCallback(() => {
+    api.listProjectMembers(workspaceId, projectId).then(setProject).catch(onError);
+    if (wsAdmin) api.listWorkspaceMembers(workspaceId).then(setWorkspace).catch(onError);
+  }, [workspaceId, projectId, wsAdmin, onError]);
+  useEffect(() => { load(); }, [load]);
+
+  const who = (v: string) => (v.includes("@") ? { email: v.trim() } : { username: v.trim() });
+  async function act(scope: "project" | "workspace", fn: () => Promise<unknown>): Promise<boolean> {
+    setBusy(true); setErrors((e) => ({ ...e, [scope]: null }));
+    try { await fn(); load(); return true; }
+    catch (e) { if (e instanceof ApiError && e.status !== 401) setErrors((x) => ({ ...x, [scope]: errText(e, "Thao tác thất bại.") })); else onError(e); return false; }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <Drawer title="Thành viên và quyền" sub="Quyền được kiểm tra ở máy chủ; thay đổi được ghi vào nhật ký kiểm toán." onClose={onClose}>
+      <MemberTable title="Thành viên project" members={project} roles={PROJECT_ROLES} currentUserId={me.id} busy={busy} error={errors.project}
+        onChange={(m, r) => void act("project", () => api.changeProjectMember(workspaceId, projectId, m.userId, r))}
+        onRemove={(m) => { if (window.confirm(`Xóa ${m.username} khỏi project?`)) void act("project", () => api.removeProjectMember(workspaceId, projectId, m.userId)); }}
+        onAdd={(v, r) => act("project", () => api.addProjectMember(workspaceId, projectId, who(v), r))}/>
+      {wsAdmin ? <MemberTable title="Thành viên workspace" members={workspace} roles={WORKSPACE_ROLES} currentUserId={me.id} busy={busy} error={errors.workspace}
+        onChange={(m, r) => void act("workspace", () => api.changeWorkspaceMember(workspaceId, m.userId, r))}
+        onRemove={(m) => { if (window.confirm(`Xóa ${m.username} khỏi workspace? Họ cũng mất quyền ở mọi project.`)) void act("workspace", () => api.removeWorkspaceMember(workspaceId, m.userId)); }}
+        onAdd={(v, r) => act("workspace", () => api.addWorkspaceMember(workspaceId, who(v), r))}/> : null}
+    </Drawer>
   );
 }
