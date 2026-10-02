@@ -153,3 +153,5 @@
 .providerItem small{display:block;color:var(--f-muted);font-size:12px;margin-top:2px}
 .providerItem .pill{margin-left:8px}
 .switch{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.siteBox{border:1px solid var(--line,#2a3446);border-radius:10px;padding:10px 12px;margin:8px 0}.siteHistory{margin:8px 0}.siteHistory ul{list-style:none;padding:0;margin:8px 0;display:grid;gap:6px}.siteHistory li{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.siteHistory li button{white-space:nowrap;flex:none}

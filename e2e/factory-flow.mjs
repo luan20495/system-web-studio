@@ -122,12 +122,40 @@ await check("Members: share with a workspace member as Viewer; Reviewer role is 
   expect(sql(`select m.role from project_members m join users u on u.id=m.user_id where m.project_id='${PID}' and u.username='local.viewer'`) === "VIEWER", "viewer not added in DB");
   await admin.p.keyboard.press("Escape");
 });
-await check("Publish: pipeline reaches RUNNING and is labelled Demo deployment", async () => {
-  await admin.p.goto(`${BASE}/studio/projects/${PID}/publish`); await admin.p.getByRole("dialog", { name: "Xuất bản website" }).waitFor();
-  await admin.p.getByRole("button", { name: /Công khai/ }).click(); await admin.p.getByRole("button", { name: "Xuất bản" }).last().click();
-  await admin.p.getByText("Đang chạy", { exact: true }).waitFor({ timeout: 30000 }); await admin.p.getByText("Demo deployment").waitFor();
+const SITES = process.env.E2E_SITES ?? "http://127.0.0.1:18088"; let SITE_URL = "";
+const heroTitle = () => sql(`select s->'props'->>'title' from page_schemas, jsonb_array_elements(schema->'sections') s where project_id='${PID}' and s->>'type'='Hero' limit 1`);
+async function publishVia(p, label) {
+  await p.goto(`${BASE}/studio/projects/${PID}/publish`); const dlg = p.getByRole("dialog", { name: "Xuất bản website" }); await dlg.waitFor();
+  await dlg.getByRole("button", { name: label }).click(); await dlg.getByRole("button", { name: "Xuất bản", exact: true }).click();
+  await dlg.getByText("Đang chạy", { exact: true }).waitFor({ timeout: 30000 });
+  return dlg.getByRole("link", { name: /^http/ }).getAttribute("href");
+}
+await check("Publish: a real static site is built and served by the sites gateway (preview markup, strict headers, no scripts)", async () => {
+  SITE_URL = await publishVia(admin.p, /Công khai/);
+  expect(SITE_URL.startsWith(SITES + "/"), `site url ${SITE_URL}`);
+  const r = await fetch(SITE_URL); const html = await r.text();
+  expect(r.status === 200, `site ${r.status}`); expect(html.includes(heroTitle()), "published page does not show the current hero title");
+  expect(!/<script/i.test(html), "published page contains a script"); expect(!r.headers.get("set-cookie"), "visitor got a cookie");
+  expect((r.headers.get("content-security-policy") ?? "").includes("default-src 'none'"), "missing CSP"); expect(r.headers.get("x-content-type-options") === "nosniff", "missing nosniff");
+  expect((await fetch(SITES + "/api/v1/auth/config")).status === 404, "gateway must not expose the API");
+  expect(sql(`select provider from deployments where project_id='${PID}' order by created_at desc limit 1`) === "static", "provider not static");
 });
-
+await check("Private site: visitors are sent to sign in, a member gets in with a single-use ticket, a non-member is refused; rollback and unpublish", async () => {
+  expect(await publishVia(admin.p, /Riêng tư/) === SITE_URL, "slug must stay the same");
+  const anon = await fetch(SITE_URL, { redirect: "manual" });
+  expect(anon.status === 302 && (anon.headers.get("location") ?? "").includes("/studio/site-access?site="), `anonymous got ${anon.status}`);
+  await admin.p.goto(SITE_URL); await admin.p.waitForURL(SITE_URL, { timeout: 15000 }); await admin.p.getByText(heroTitle()).first().waitFor();
+  await editor.p.goto(SITE_URL); await editor.p.getByText("Không mở được trang").waitFor({ timeout: 15000 });
+  // serve the earlier public deployment again (no rebuild), then take the site offline
+  await admin.p.goto(`${BASE}/studio/projects/${PID}/publish`); const dlg = admin.p.getByRole("dialog", { name: "Xuất bản website" });
+  await dlg.getByText(/Các lần xuất bản/).click(); await dlg.locator("li", { hasText: "công khai" }).getByRole("button", { name: "Phục vụ lại bản này" }).first().click();
+  for (let i = 0; i < 20 && (await fetch(SITE_URL, { redirect: "manual" })).status !== 200; i++) await admin.p.waitForTimeout(300);
+  expect((await fetch(SITE_URL, { redirect: "manual" })).status === 200, "rollback to the public deployment did not take effect");
+  await dlg.getByRole("button", { name: "Gỡ trang xuống" }).click();
+  for (let i = 0; i < 20 && (await fetch(SITE_URL + "?v=" + i)).status !== 404; i++) await admin.p.waitForTimeout(300);
+  expect((await fetch(SITE_URL + "?after-unpublish")).status === 404, "unpublished site still served");
+  expect(sql(`select count(*) from audit_events where project_id='${PID}' and action in ('SITE_ROLLBACK','SITE_UNPUBLISHED')`) === "2", "site actions not audited");
+});
 // ---------------------------------------------------------------- Phase 5: templates & contributed blocks
 const TNAME = `Mẫu E2E ${Date.now().toString(36)}`, BNAME = `Khối E2E ${Date.now().toString(36)}`; let EPID = "";
 await check("Templates: save the page as a template, an admin shares it company-wide, another employee starts a website from it", async () => {
@@ -212,9 +240,9 @@ await check("expired session: user is sent to sign in and comes back to the same
   await editor.p.reload(); await editor.p.waitForURL(/\/login\?next=/);
   await login(editor.p, "local.editor", "builder"); await editor.p.waitForURL(new RegExp(`/studio/projects/${DEMO}/design$`));
 });
-await check("inventory lists the new app; detail shows versions, AI activity and Demo deployment history", async () => {
+await check("inventory lists the new app; detail shows versions, AI activity and the real deployment history", async () => {
   await admin.p.goto(BASE + "/admin/applications"); await admin.p.getByLabel("Tìm ứng dụng").fill(NAME); await admin.p.getByRole("button", { name: "Tìm" }).click();
-  await admin.p.getByRole("link", { name: NAME }).click(); await admin.p.getByRole("tab", { name: "Xuất bản" }).click(); await admin.p.getByText("Demo deployment (mô phỏng)").first().waitFor();
+  await admin.p.getByRole("link", { name: NAME }).click(); await admin.p.getByRole("tab", { name: "Xuất bản" }).click(); await admin.p.getByText("Trang tĩnh (thật)").first().waitFor();
   await admin.p.getByRole("tab", { name: "Hoạt động AI" }).click(); await admin.p.getByText("Thêm bảng so sánh 3 sản phẩm").waitFor();
 });
 await check("audit log filters by action and shows request ids", async () => {

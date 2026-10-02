@@ -10,14 +10,15 @@ export type RenderOptions = {
   selectedId?: string | null;
   /** Adds the click-to-select script (design mode). Needs the page's CSP nonce because srcdoc inherits the parent policy. */
   interactive?: boolean; nonce?: string;
-  /** asset id -> short-lived signed URL, for this project's assets only. Unknown references render without an image. */
+  /** asset id -> short-lived signed URL (preview) or "assets/<id>.<ext>" (published artifact). Unknown references render without an image. */
   assets?: Record<string, string>;
 };
 let ctx: RenderOptions = {};
 const img = (v: unknown): string | null => {
   if (typeof v !== "string" || !v.startsWith("asset://")) return null;
   const url = ctx.assets?.[v.slice("asset://".length)];
-  return url && /^https?:\/\//.test(url) ? url : null;
+  // signed http(s) URLs in the preview; relative files inside a published artifact (ADR 0009)
+  return url && (/^https?:\/\//.test(url) || /^assets\/[0-9a-f-]{36}\.[a-z0-9]{2,5}$/.test(url)) ? url : null;
 };
 
 function render(s: Section): string {

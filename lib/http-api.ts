@@ -1,6 +1,6 @@
 import type {
   AdminAi, AiCallRow, AiPrice, AiProbe, AiProviderInfo, AiUsageReport, AdminApp, BlockDto, CheckResult, TemplateDto, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
-  AiStatus, ApiProject, AuthConfig, Member, RegistryComponent, AssetDto, Deployment, Me, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
+  AiStatus, ApiProject, AuthConfig, Member, SiteInfo, RegistryComponent, AssetDto, Deployment, Me, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
 } from "./http-types";
 
 /** Error with the backend's stable {code, message, requestId, details} contract. */
@@ -181,5 +181,9 @@ export const api = {
   publish: (w: string, p: string, visibility: "PRIVATE" | "PUBLIC", expectedRevision: number, idempotencyKey: string) =>
     call<Deployment>(`${P(w, p)}/publish`, { method: "POST", body: json({ visibility, expectedRevision }), idempotencyKey }),
   getDeployment: (w: string, p: string, id: string) => call<Deployment>(`${P(w, p)}/deployments/${id}`),
-  listDeployments: (w: string, p: string) => call<Deployment[]>(`${P(w, p)}/deployments`)
+  listDeployments: (w: string, p: string) => call<Deployment[]>(`${P(w, p)}/deployments`),
+  site: (w: string, p: string) => call<SiteInfo>(`${P(w, p)}/site`),
+  rollbackSite: (w: string, p: string, deploymentId: string) => call<SiteInfo>(`${P(w, p)}/site/rollback`, { method: "POST", body: json({ deploymentId }) }),
+  unpublishSite: (w: string, p: string) => call<SiteInfo>(`${P(w, p)}/site`, { method: "DELETE" }),
+  siteAccessTicket: (slug: string, path: string) => call<{ redirect: string }>(`/sites/${encodeURIComponent(slug)}/access-ticket`, { method: "POST", body: json({ path }) })
 };

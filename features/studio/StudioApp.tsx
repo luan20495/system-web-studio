@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createContext, useContext, useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { api } from "@/lib/http-api";
+import { api, ApiError } from "@/lib/http-api";
 import type { ApiProject, BlockDto, TemplateDto } from "@/lib/http-types";
 import { sectionLabel } from "@/components/SectionInspector";
 import { useSession } from "../session";
@@ -44,6 +44,7 @@ function route(seg: string[]): ReactNode {
     case "templates": return <Templates/>;
     case "components": return <Components/>;
     case "activity": return <Activity/>;
+    case "site-access": return <SiteAccess/>;
     default: return <StateView kind="notfound"/>;
   }
 }
@@ -311,6 +312,23 @@ function BlocksSection() {
         ? <StateView kind="empty" title="Bạn chưa có khối nào"/> : <div className="compGrid">{mine.data.map((b) => <BlockCard key={b.id} b={b} mine onChanged={() => { mine.reload(); company.reload(); }}/>)}</div>}
     </Card>
   </>);
+}
+
+/**
+ * A private published site sends visitors here (ADR 0009). Signed in on the Studio, a member gets a single-use ticket that the sites
+ * host exchanges for its own session; the Studio cookie never leaves this origin. Only the server-built redirect is followed.
+ */
+function SiteAccess() {
+  const params = useSearchParams();
+  const site = params.get("site") ?? ""; const path = params.get("path") ?? "/";
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    if (!/^[a-z0-9][a-z0-9-]{1,79}$/.test(site)) { setErr("Liên kết không hợp lệ."); return; }
+    api.siteAccessTicket(site, path).then((r) => { window.location.assign(r.redirect); })
+      .catch((x: unknown) => setErr(x instanceof ApiError && x.status === 404 ? "Bạn không có quyền xem trang riêng tư này, hoặc trang không còn tồn tại." : errText(x, "Không mở được trang.")));
+  }, [site, path]);
+  return err ? <StateView kind="forbidden" title="Không mở được trang" detail={<p>{err}</p>} action={<Link className="btn" href="/studio">Về Studio</Link>}/>
+    : <StateView kind="loading" title="Đang mở trang riêng tư…"/>;
 }
 
 function Activity() {

@@ -114,3 +114,7 @@ export type BlockReview = { id: string; version: number; actorId: string | null;
 export type BlockDto = { id: string; name: string; description: string; baseComponent: string; ownerId: string; owner: string | null;
   status: "PRIVATE" | "SUBMITTED" | "VALIDATING" | "REVIEW" | "APPROVED" | "DEPRECATED"; latestVersion: number; approvedVersion: number | null;
   createdAt: string; updatedAt: string; current: BlockVersion | null; versions: BlockVersion[]; reviews: BlockReview[]; canEdit: boolean; canReview: boolean };
+
+// ---- Phase 7.1: real static sites (ADR 0009)
+export type SiteInfo = { slug: string | null; url: string | null; online: boolean; visibility: "PRIVATE" | "PUBLIC" | null; currentDeploymentId: string | null;
+  currentVersionNumber: number | null; provider: string; updatedAt: string | null };
