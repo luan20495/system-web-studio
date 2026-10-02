@@ -14,6 +14,22 @@ class PageSchemaValidator(private val registry: ComponentRegistry, private val j
         val SECTION_ID = Regex("^[a-z0-9][a-z0-9-]{0,63}$")
         const val MAX_BYTES = 256 * 1024
         const val MAX_SECTIONS = 50
+        val ASSET_REF = Regex("^asset://[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+
+        /** Every asset id referenced anywhere in a page schema. */
+        fun assetRefs(node: JsonNode?): Set<java.util.UUID> {
+            val out = HashSet<java.util.UUID>()
+            fun walk(n: JsonNode?) {
+                when {
+                    n == null -> {}
+                    n.isString -> n.asString().takeIf { ASSET_REF.matches(it) }?.let { out += java.util.UUID.fromString(it.removePrefix("asset://")) }
+                    n.isArray -> n.forEach { walk(it) }
+                    n.isObject -> n.propertyNames().forEach { walk(n.get(it)) }
+                }
+            }
+            walk(node)
+            return out
+        }
     }
 
     fun validate(schema: JsonNode): List<Violation> {
@@ -75,6 +91,7 @@ class PageSchemaValidator(private val registry: ComponentRegistry, private val j
                 if (!value.isString) { out += Violation(at, "must be a string"); return }
                 def.get("maxLength")?.let { if (value.asString().length > it.asInt()) out += Violation(at, "longer than ${it.asInt()} characters") }
                 def.get("enum")?.let { e -> if (e.none { it.asString() == value.asString() }) out += Violation(at, "must be one of ${e.joinToString { it.asString() }}") }
+                if (def.get("format")?.asString() == "asset" && value.asString().isNotEmpty() && !ASSET_REF.matches(value.asString())) out += Violation(at, "must be an asset reference asset://<id>")
             }
             "number" -> if (!value.isNumber) out += Violation(at, "must be a number")
             "boolean" -> if (!value.isBoolean) out += Violation(at, "must be a boolean")

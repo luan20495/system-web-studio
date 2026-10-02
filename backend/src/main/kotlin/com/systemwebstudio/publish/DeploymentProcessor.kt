@@ -88,8 +88,16 @@ class DeploymentProcessor(
     private fun policy(d: DeploymentDto): String? {
         val active = jdbc.queryForObject("SELECT active FROM projects WHERE id = ?", Boolean::class.java, d.projectId)
         if (active != true) return "Project no longer exists"
-        val problems = validator.validate(json.readTree(snapshot(d)))
-        return if (problems.isEmpty()) null else "Page schema violates the registry: " + problems.first().let { "${it.path} ${it.message}" }
+        val page = json.readTree(snapshot(d))
+        val problems = validator.validate(page)
+        if (problems.isNotEmpty()) return "Page schema violates the registry: " + problems.first().let { "${it.path} ${it.message}" }
+        val refs = com.systemwebstudio.schema.PageSchemaValidator.assetRefs(page)
+        if (refs.isNotEmpty()) {
+            val ready = jdbc.queryForObject("SELECT count(*) FROM assets WHERE project_id = ? AND status = 'READY' AND id::text = ANY(string_to_array(?, ','))", Long::class.java,
+                d.projectId, refs.joinToString(","))
+            if (ready != refs.size.toLong()) return "The page references files that no longer exist in this project"
+        }
+        return null
     }
 
     private fun security(d: DeploymentDto): String? {

@@ -16,7 +16,9 @@ data class ComponentVersionDto(
 
 data class ComponentDto(
     val id: String, val name: String, val category: String, val description: String,
-    val latestVersion: String, val status: String, val versions: List<ComponentVersionDto> = emptyList()
+    val latestVersion: String, val status: String, val versions: List<ComponentVersionDto> = emptyList(),
+    /** Company-wide reuse: how many live projects currently use this component (aggregate count only). */
+    val usedInProjects: Long? = null
 )
 
 /** Read side of the approved component registry; the only source of component types the schema may use. */
@@ -29,7 +31,9 @@ class ComponentRegistry(private val jdbc: JdbcTemplate, private val json: JsonMa
     /** Every component with its versions (props schemas); one query pair instead of one call per component. */
     fun listDetailed(): List<ComponentDto> {
         val byComponent = versions().values.groupBy { it.componentId }
-        return list().map { it.copy(versions = byComponent[it.id].orEmpty().map { e -> e.dto }) }
+        val usage = jdbc.query("""SELECT e->>'type', count(DISTINCT s.project_id) FROM page_schemas s JOIN projects p ON p.id = s.project_id AND p.active,
+            jsonb_array_elements(s.schema->'sections') e GROUP BY 1""") { rs, _ -> rs.getString(1) to rs.getLong(2) }.toMap()
+        return list().map { it.copy(versions = byComponent[it.id].orEmpty().map { e -> e.dto }, usedInProjects = usage[it.id] ?: 0) }
     }
 
     fun get(id: String): ComponentDto {

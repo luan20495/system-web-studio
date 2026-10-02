@@ -27,8 +27,11 @@ spring:
     enabled: true
   session:
     timeout: 20m
-    redis:
-      namespace: spring:session
+    data:
+      redis:
+        namespace: spring:session
+        # indexed: sessions can be found (and revoked) by user name — needed by the admin "revoke sessions" action
+        repository-type: indexed
   data:
     redis:
       host: ${REDIS_HOST:127.0.0.1}
@@ -180,7 +183,8 @@ app:
     max-page-chars: 24000
     model-allowlist: ${OPENROUTER_MODEL_ALLOWLIST:}            # optional comma list to restrict the free models offered
   signup:
-    enabled: ${SIGNUP_ENABLED:false}
+    # Internal company platform: public self-registration is off unless explicitly enabled.
+    enabled: ${PUBLIC_SIGNUP_ENABLED:${SIGNUP_ENABLED:false}}
     invite-code: ${SIGNUP_INVITE_CODE:}
     max-users: ${SIGNUP_MAX_USERS:500}
     ip-max-per-hour: ${SIGNUP_IP_MAX_PER_HOUR:5}

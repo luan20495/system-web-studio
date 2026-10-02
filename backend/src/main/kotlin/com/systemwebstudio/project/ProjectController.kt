@@ -63,13 +63,31 @@ class ProjectController(
     private val jdbc: org.springframework.jdbc.core.JdbcTemplate,
     @org.springframework.beans.factory.annotation.Value("\${app.limits.max-projects-per-workspace:1000}") private val maxProjects: Long
 ) {
+    /**
+     * Projects the caller can see. Optional server-side paging: `page` (0-based), `size` (≤100), `q` (name search),
+     * `scope` = all | owned | shared. The total is returned in `X-Total-Count`. Without `page` the full list is returned
+     * (backwards compatible).
+     */
     @GetMapping
     @Transactional(readOnly = true)
-    fun list(@PathVariable workspaceId: UUID, @AuthenticationPrincipal me: StudioUserDetails): List<ProjectResponse> {
+    fun list(
+        @PathVariable workspaceId: UUID, @AuthenticationPrincipal me: StudioUserDetails,
+        @RequestParam(required = false) page: Int?, @RequestParam(defaultValue = "20") size: Int,
+        @RequestParam(required = false) q: String?, @RequestParam(defaultValue = "all") scope: String,
+        response: jakarta.servlet.http.HttpServletResponse
+    ): List<ProjectResponse> {
         val ctx = access.forWorkspace(me.userId, workspaceId)
-        val found = if (ctx.seesAllProjects) projects.findAllByWorkspaceIdAndActiveTrueOrderByUpdatedAtDescIdAsc(workspaceId)
-        else projects.findVisibleProjects(workspaceId, me.userId)
-        return found.map { it.toResponse() }
+        val where = StringBuilder("p.workspace_id = ? AND p.active")
+        val args = mutableListOf<Any>(workspaceId)
+        if (!ctx.seesAllProjects) { where.append(" AND EXISTS (SELECT 1 FROM project_members m WHERE m.project_id = p.id AND m.user_id = ? AND m.active)"); args += me.userId }
+        when (scope) { "owned" -> { where.append(" AND p.owner_user_id = ?"); args += me.userId }; "shared" -> { where.append(" AND p.owner_user_id <> ?"); args += me.userId } }
+        q?.trim()?.takeIf { it.isNotEmpty() }?.let { where.append(" AND p.name ILIKE ?"); args += "%" + it.replace("%", "\\%").replace("_", "\\_") + "%" }
+        val total = jdbc.queryForObject("SELECT count(*) FROM projects p WHERE $where", Long::class.java, *args.toTypedArray())!!
+        response.setHeader("X-Total-Count", total.toString())
+        val paging = if (page != null) " LIMIT ${size.coerceIn(1, 100)} OFFSET ${page.coerceAtLeast(0).toLong() * size.coerceIn(1, 100)}" else ""
+        val ids = jdbc.query("SELECT p.id FROM projects p WHERE $where ORDER BY p.updated_at DESC, p.id$paging", { rs, _ -> rs.getObject(1, UUID::class.java) }, *args.toTypedArray())
+        val byId = projects.findAllById(ids).associateBy { it.id }
+        return ids.mapNotNull { byId[it]?.toResponse() }
     }
 
     @PostMapping

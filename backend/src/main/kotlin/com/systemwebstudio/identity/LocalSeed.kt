@@ -55,6 +55,8 @@ class LocalSeed {
                 if (!passwordEncoder.matches(password, u.passwordHash)) { u.passwordHash = requireNotNull(passwordEncoder.encode(password)); users.save(u) }
             }
         }
+        // local.admin is the dev system administrator (accounts created before the flag existed are upgraded). Local profile only.
+        users.findByUsername("local.admin")?.takeIf { !it.systemAdmin }?.let { it.systemAdmin = true; users.save(it) }
         // Demo accounts (same dev password) so every role can be exercised in the browser. Local profile only.
         val demoProjectId = UUID.fromString("00000000-0000-0000-0000-0000000000d1")
         val admin = requireNotNull(users.findByUsername("local.admin"))

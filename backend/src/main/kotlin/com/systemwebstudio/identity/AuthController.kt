@@ -31,7 +31,8 @@ data class LoginRequest(@field:NotBlank @field:Size(max = 120) val username: Str
 data class WorkspaceSummary(val id: UUID, val name: String, val role: String)
 data class MeResponse(
     val id: UUID, val username: String, val displayName: String,
-    val roles: List<String>, val workspaces: List<WorkspaceSummary>
+    val roles: List<String>, val workspaces: List<WorkspaceSummary>,
+    val systemAdmin: Boolean = false
 )
 
 @RestController
@@ -106,7 +107,8 @@ class AuthController(
             )
         }
         val roles = principal.authorities.mapNotNull { it.authority?.removePrefix("ROLE_") }
-        return MeResponse(principal.userId, principal.username, principal.displayName ?: principal.username, roles, workspaces)
+        val systemAdmin = jdbc.queryForObject("SELECT system_admin FROM users WHERE id = ?", Boolean::class.java, principal.userId) == true    // live value, not the login-time snapshot
+        return MeResponse(principal.userId, principal.username, principal.displayName ?: principal.username, roles, workspaces, systemAdmin)
     }
 
     @PostMapping("/logout")

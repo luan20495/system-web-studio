@@ -14,6 +14,7 @@ import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Size
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.*
 import tools.jackson.databind.JsonNode
 import java.time.Instant
@@ -78,10 +79,11 @@ class SchemaVersionController(
 
     @GetMapping("/versions")
     @Transactional(readOnly = true)
-    fun versions(@PathVariable workspaceId: UUID, @PathVariable projectId: UUID, @AuthenticationPrincipal me: StudioUserDetails): List<VersionSummary> {
+    fun versions(@PathVariable workspaceId: UUID, @PathVariable projectId: UUID, @RequestParam(defaultValue = "100") limit: Int,
+                 @AuthenticationPrincipal me: StudioUserDetails): List<VersionSummary> {
         access.forProject(me.userId, workspaceId, projectId)
-        val rows = repo.versions(projectId)
-        val latest = rows.firstOrNull()?.versionNumber ?: 0
+        val rows = repo.versions(projectId, limit.coerceIn(1, 500))
+        val latest = repo.latest(projectId)?.versionNumber ?: 0
         return rows.map { it.toSummary(latest) }
     }
 

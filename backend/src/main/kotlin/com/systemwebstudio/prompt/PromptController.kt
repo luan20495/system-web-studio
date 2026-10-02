@@ -135,12 +135,14 @@ class PromptController(
 
     @GetMapping
     @Transactional(readOnly = true)
-    fun history(@PathVariable workspaceId: UUID, @PathVariable projectId: UUID, @AuthenticationPrincipal me: StudioUserDetails): List<PromptHistoryItem> {
+    fun history(@PathVariable workspaceId: UUID, @PathVariable projectId: UUID, @RequestParam(defaultValue = "100") limit: Int,
+                @AuthenticationPrincipal me: StudioUserDetails): List<PromptHistoryItem> {
         access.forProject(me.userId, workspaceId, projectId)
+        // newest first (the previous ASC LIMIT returned the OLDEST 200 and hid recent prompts on long projects)
         return jdbc.query(
             """SELECT p.id, p.text, p.created_at, r.status, r.assistant_message, r.version_id, r.registry_reuse
-               FROM prompts p JOIN prompt_runs r ON r.prompt_id = p.id WHERE p.project_id = ? ORDER BY p.created_at ASC LIMIT 200""",
+               FROM prompts p JOIN prompt_runs r ON r.prompt_id = p.id WHERE p.project_id = ? ORDER BY p.created_at DESC, p.id DESC LIMIT ?""",
             { rs, _ -> PromptHistoryItem(rs.getObject(1, UUID::class.java), rs.getString(2), rs.getTimestamp(3).toInstant(), rs.getString(4), rs.getString(5),
-                rs.getObject(6, UUID::class.java), rs.getObject(7) as Int?) }, projectId)
+                rs.getObject(6, UUID::class.java), rs.getObject(7) as Int?) }, projectId, limit.coerceIn(1, 500))
     }
 }

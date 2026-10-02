@@ -33,6 +33,14 @@ class SchemaCommitService(
     ): CommitResult {
         validator.requireValid(schema)
         val project = ctx.project!!
+        // asset://<id> may only point at READY files of this very project (no cross-project or cross-tenant references)
+        val refs = com.systemwebstudio.schema.PageSchemaValidator.assetRefs(schema)
+        if (refs.isNotEmpty()) {
+            val owned = jdbc.queryForList("SELECT id FROM assets WHERE project_id = ? AND status = 'READY' AND id::text = ANY(string_to_array(?, ','))",
+                java.util.UUID::class.java, project.id, refs.joinToString(",")).toSet()
+            val missing = refs - owned
+            if (missing.isNotEmpty()) throw ApiException.badRequest("ASSET_NOT_FOUND", "The page references files that do not exist in this project", mapOf("assets" to missing))
+        }
         val updated = jdbc.update(
             "UPDATE projects SET revision = revision + 1, updated_at = now() WHERE id = ? AND revision = ? AND active",
             project.id, expectedRevision
