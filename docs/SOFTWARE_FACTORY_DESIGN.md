@@ -1,6 +1,6 @@
 # Software Factory — design proposal (Phase 7)
 
-Status: **PROPOSED — design only, nothing in this document is implemented.** Approval is required before any work starts.
+Status: **7.1 IMPLEMENTED (2026-10-02); 7.2–7.5 PROPOSED, not implemented.**
 Decisions are recorded in ADR 0008–0012; this page is the overview and the plan.
 
 ## 1. Where we are (verified in code, 2026-10-02)
@@ -64,7 +64,17 @@ execution surface, and every later increment reuses its artifact store and gatew
 * `build_jobs` (id, project_id, commit_sha, status, runner_id, limits jsonb, started_at, finished_at, exit_code, log_key, artifact_id).
 * `code_changes` (id, project_id, prompt_id, branch, base_sha, head_sha, status `PROPOSED|BUILDING|READY|MERGED|REJECTED|FAILED`).
 
-## 6. Decisions needed from you
+## 6. Decisions (answered by the owner on 2026-10-02)
+| # | Question | Decision |
+| --- | --- | --- |
+| 1 | Approve 7.1 | Yes — implemented (ADR 0009). |
+| 2 | Domains | `toolsmcp.uk` (existing Cloudflare zone, dedicated tunnel `hbl-studio`). Sites: **`https://sites.toolsmcp.uk/<slug>/`** (one host, path per site: Cloudflare's free certificate covers only one wildcard level, no wildcard DNS record is needed, and the host differs from `studio.toolsmcp.uk` so Studio cookies never reach sites). Previews of generated code (7.4) must get their own host (e.g. `preview.toolsmcp.uk`, still under the same registrable domain — see the note in ADR 0012). |
+| 3 | Build host | This machine for now, extended later. On macOS the sandbox runs inside Docker Desktop's Linux VM (ADR 0010 note); a dedicated Linux build host is the upgrade path. |
+| 4 | Git | Self-hosted Forgejo on this machine for generated code projects (ADR 0011). The platform's own source stays on GitHub (`luan20495/system-web-studio`). |
+| 5 | First code app type | React + Vite static build from a company scaffold (ADR 0012 note) — simplest pure static output, no server runtime. |
+| 6 | Package policy | Allowlist-only npm through a local mirror (Verdaccio), `--ignore-scripts`, lockfile required (ADR 0010). |
+
+## 6b. Original questions
 1. **Approve 7.1** (real static runtime) as the next implementation step? (Recommended.)
 2. **Domains:** a domain for sites (e.g. `*.sites.<company>.vn`) and a *separate* one for previews; DNS/TLS through the existing
    Cloudflare account or another provider.

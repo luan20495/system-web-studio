@@ -39,6 +39,15 @@ network policy. Generated code must **never** execute inside the Spring Boot JVM
 * **Dev on macOS:** Docker Desktop's VM is acceptable for development only; gVisor requires Linux, so production builds run only on the
   build host.
 
+## Note — owner decision 2026-10-02: build on this machine first
+The first build host is this macOS machine. gVisor needs a Linux kernel, so here each job runs in a hardened container inside Docker
+Desktop's Linux VM (non-root, read-only root, all capabilities dropped, no-new-privileges, seccomp default, no Docker socket, no host
+mounts, network `none` for build/test and an internal network reaching only the package mirror for install, CPU/memory/pid limits).
+The VM boundary separates jobs from macOS, but jobs share the VM kernel with the other containers on this machine (the platform's
+own databases run there too): this is weaker than the target design and acceptable only while code projects are internal and
+limited to trusted employees. Moving the runner to a dedicated Linux host with gVisor/Firecracker is the planned extension and needs
+no change to the job protocol.
+
 ## Acceptance criteria for 7.3
 A job cannot reach anything but the mirror in stage 1 and nothing in stage 2 (tested with outbound attempts); cannot read host files,
 environment secrets or instance metadata (tested); limits enforced (fork bomb, memory hog, infinite loop, huge output — each FAILED

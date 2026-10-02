@@ -37,9 +37,10 @@ Development Ready: **YES** · Internal Demo Ready: **YES** · Production Ready: 
 | Pagination | REAL for projects, users, workspaces, inventory, audit; versions/prompts limited (100) | |
 | Members & roles (Owner/Editor/Publisher/Viewer) | REAL | no Reviewer role (does not exist) |
 | Versions & restore | REAL | restore creates a new version |
-| Publish pipeline | REAL queue + state machine | deployment provider MOCK, labelled "Demo deployment" |
-| Git, code generation, sandbox build, runtime hosting, connectors, secrets per project | NOT IMPLEMENTED | Phase 7 **design proposed** (docs/SOFTWARE_FACTORY_DESIGN.md, ADR 0008–0012), awaiting approval; no code written |
+| Publish pipeline | REAL queue + state machine | |
+| Static site hosting (Phase 7.1) | REAL (`DEPLOY_PROVIDER=static`, used by run-local and the public deployment) | immutable artifacts in MinIO, sites gateway, `sites.toolsmcp.uk/<slug>/`, private sites through company sign-in, rollback, unpublish; contact forms, custom domains, edge caching, artifact retention: NOT IMPLEMENTED. `mock` provider remains for tests and labels itself "Demo deployment" |
+| Git, code generation, sandbox build, dynamic hosting, connectors, secrets per project | NOT IMPLEMENTED | Phase 7.2–7.5 designed (docs/SOFTWARE_FACTORY_DESIGN.md, ADR 0008, 0010–0012) with the owner's decisions recorded; no code yet |
 
 ## Verification (this machine)
-Backend `./gradlew test` on 2026-10-02 (after Phase 6): 124 tests, 0 failures, 3 skipped (OpenRouterLiveTests — need a real OPENROUTER_API_KEY), browser E2E `e2e/factory-flow.mjs` 33/33, `e2e/sso-flow.mjs` 9/9 (Keycloak), `e2e/providers-flow.mjs` 6/6 (local OpenAI-compatible stub),
+Backend `./gradlew test` on 2026-10-02 (after Phase 7.1): 128 tests, 0 failures, 3 skipped (OpenRouterLiveTests — need a real OPENROUTER_API_KEY), browser E2E `e2e/factory-flow.mjs` 34/34, `e2e/sso-flow.mjs` 9/9 (Keycloak), `e2e/providers-flow.mjs` 6/6 (local OpenAI-compatible stub),
 `e2e/a11y.mjs` 28/28 screens without serious/critical axe violations, `e2e/pages-mock.mjs` 6/6, typecheck and both builds (http + static mock).

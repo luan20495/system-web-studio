@@ -28,6 +28,13 @@ prompt ─► planner (LLM, structured JSON plan) ─► registry retrieval (app
 * **Accounting:** planner/generator calls go through the existing providers and `ai_calls` (tokens, cost, budgets); build minutes are
   accounted per job.
 
+## Note — owner decisions 2026-10-02
+* Scaffold: **React + Vite** static build (TypeScript), company UI package, no server runtime — the simplest pure static output.
+* Only one domain (`toolsmcp.uk`) is available: previews of generated code get their own host (e.g. `preview.toolsmcp.uk`). Because that is
+  the same registrable domain as the Studio, the Studio's cookies must stay host-only (they are: no `Domain` attribute) and preview content
+  must never be served from `studio.toolsmcp.uk`; a separate registrable domain remains the recommended hardening before external users
+  can create code projects.
+
 ## Not in scope
 Server-side code, databases, secrets inside apps, connectors to company systems, mobile apps — they belong to `DYNAMIC_APP` (separate
 approval).

@@ -25,6 +25,10 @@ Status: **proposed** (2026-10-02) — design only, not implemented. Increment 7.
 * **UI:** the existing Versions panel lists real commits on `main` (with SHA, author, AI trailers) for code projects — taken from the Git
   server, not invented; each merge also writes a `project_versions` row pointing at the SHA so the existing APIs keep working.
 
+## Note — owner decision 2026-10-02
+Forgejo runs on this machine (Docker, bound to 127.0.0.1, data volume included in backups); it hosts only generated code projects.
+The platform's own source code stays on GitHub (`luan20495/system-web-studio`) and is not mixed with project repositories.
+
 ## Consequences
 New infrastructure (Git server) to operate and back up; the API needs a bot token (SecretProvider) and issues per-job read-only tokens
 for the build plane.

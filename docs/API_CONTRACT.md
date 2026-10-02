@@ -32,6 +32,16 @@ Base path `/api/v1`, JSON, session cookie auth. The live OpenAPI document is at 
 | GET | …/{p}/deployments, …/deployments/{id} | read | status + ordered events; `mock:true` when the provider is the mock |
 | GET | /workspaces/{w}/audit-events | AUDIT_READ (workspace admin) | filters `projectId`, `action`, `limit` ≤ 200 |
 
+## Added in Phase 7.1 — real static sites (2026-10-02, ADR 0009)
+| Method | Path | Permission | Notes |
+| --- | --- | --- | --- |
+| POST | …/{p}/publish | PROJECT_PUBLISH | unchanged contract; with `DEPLOY_PROVIDER=static` BUILDING renders a real artifact and RUNNING means the site serves it; `provider = static`, `mock = false`, `url = <sites origin>/<slug>/` |
+| GET | …/{p}/site | read | `{slug, url, online, visibility, currentDeploymentId, currentVersionNumber, provider, updatedAt}` |
+| POST | …/{p}/site/rollback | PROJECT_PUBLISH | `{deploymentId}` of a RUNNING deployment with an artifact → served again, no rebuild; `400 DEPLOYMENT_NOT_RESTORABLE`; audited `SITE_ROLLBACK` |
+| DELETE | …/{p}/site | PROJECT_PUBLISH | take the site offline (deployments and artifacts kept); audited `SITE_UNPUBLISHED` |
+| POST | /sites/{slug}/access-ticket | member with PROJECT_READ | `{path?}` → `{redirect}` to the sites host with a single-use 60 s ticket; 404 for non-members |
+| GET | (sites host) /{slug}/{file} | public, or private-site session | served by the gateway from `/sites/**`; private without session → 302 to `<studio>/studio/site-access`; non-member → 403 page; `/_access?ticket=` sets the host-only `site_session` cookie |
+
 ## Added in Phase 6 — multiple AI providers (2026-10-02, ADR 0007)
 | Method | Path | Permission | Notes |
 | --- | --- | --- | --- |

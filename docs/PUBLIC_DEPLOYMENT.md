@@ -5,7 +5,7 @@ Internet ──HTTPS──► Cloudflare ──tunnel hbl-studio──► 127.0.
                                                   └─► 127.0.0.1:29000  MinIO (presigned URLs only, host studio-files.*)
                                       Docker (compose project hblpub, all on 127.0.0.1): Postgres 25432 · Redis 26379 · RabbitMQ 25674 · MinIO 29000
 ```
-Two public hostnames only (defaults `studio.toolsmcp.uk`, `studio-files.toolsmcp.uk`; change `PUBLIC_HOST`/`PUBLIC_FILES_HOST` in `.run/public/public.env` before the first run). The API, the database, Redis and RabbitMQ are never published. A **dedicated** tunnel `hbl-studio` is used; the existing `gemma` tunnel and `~/.cloudflared/config.yml` are not touched.
+Three public hostnames (defaults `studio.toolsmcp.uk`, `studio-files.toolsmcp.uk` and, since Phase 7.1, `sites.toolsmcp.uk` for published sites → sites gateway 127.0.0.1:28088 → API `/sites/**` only; a render worker runs on 127.0.0.1:28095; change `PUBLIC_HOST`/`PUBLIC_FILES_HOST` in `.run/public/public.env` before the first run). The API, the database, Redis and RabbitMQ are never published. A **dedicated** tunnel `hbl-studio` is used; the existing `gemma` tunnel and `~/.cloudflared/config.yml` are not touched.
 
 ## Commands
 ```bash
@@ -25,7 +25,7 @@ Anyone can **sign up** (own workspace, no email stored), create up to `MAX_PROJE
 
 ## Limits you must know about
 * **It only works while this Mac is on, awake, online and Docker/the processes run.** `public-up.sh` starts `caffeinate -i -s` (no sleep on AC power); closing the lid on battery still sleeps it. Nothing restarts automatically after a reboot (no LaunchAgent is installed).
-* **Publish is still simulated.** A "published" page gets a URL under `…/mock-deployments/…` that nothing serves; the UI labels it as simulated. A real hosting target is the next feature to build.
+* **Publish is real (Phase 7.1):** a published page is served at `https://sites.toolsmcp.uk/<slug>/` from an immutable artifact; private sites require signing in on the Studio as a member. It is served from this Mac like everything else.
 * All traffic and all users' data live on one laptop disk: schedule `scripts/backup-postgres.sh` and `scripts/backup-minio.sh` (not scheduled by default).
 * Public sign-up on a free AI quota can be abused: watch `audit_events`, lower `AI_DAILY_LIMIT_PER_USER`, add an invite code, or put Cloudflare Turnstile/Access in front.
 * Single node, no HA; the first request after a long idle may be slow while the JVM warms up.

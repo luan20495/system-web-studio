@@ -1,5 +1,5 @@
 # ADR 0009 — Runtime plane: immutable static artifacts in object storage behind a gateway
-Status: **proposed** (2026-10-02) — design only, not implemented. Increment 7.1.
+Status: **accepted and implemented** (2026-10-02). Increment 7.1.
 
 ## Context
 `MockDeployProvider` serves nothing; the UI correctly says "Demo deployment". The spec asks for a first real target of
@@ -37,3 +37,23 @@ Status: **proposed** (2026-10-02) — design only, not implemented. Increment 7.
 Published site reachable on its hostname with the exact preview markup; private site requires SSO + membership (tested both ways);
 rollback switches content without a rebuild; artifacts immutable and hash-verified; CSP and headers asserted in E2E; a deleted
 asset fails the policy check (as today); the UI drops the "Demo deployment" label only when this provider is active.
+
+## Implementation (2026-10-02)
+* Sites host: `https://sites.toolsmcp.uk/<slug>/` (path per site, see SOFTWARE_FACTORY_DESIGN §6); locally `http://127.0.0.1:18088/<slug>/`.
+* `workers/render/server.ts` — render worker (Node, 127.0.0.1, `X-Render-Token`), compiled with the repo's TypeScript; uses `lib/schema-preview.ts`,
+  which now also accepts artifact-relative image paths `assets/<uuid>.<ext>`.
+* `publish/StaticSites.kt` — `StaticSiteBuilder` (index.html + referenced images, manifest with SHA-256, artifact id = SHA-256 of the manifest,
+  write-once keys in the private `studio-artifacts` bucket via `integration/storage/ArtifactStore.kt`; a rendered `<script>` fails the build).
+* `publish/SiteService.kt` — slugs, the `sites` pointer, `StaticSiteDeployProvider` (`DEPLOY_PROVIDER=static`; `mock` stays the default for
+  tests/other setups and keeps the "Demo deployment" label); private-site access: single-use 60 s ticket (Redis) issued by
+  `POST /api/v1/sites/{slug}/access-ticket` to a member signed in on the Studio, redeemed at `/_access` on the sites host for a host-only
+  `site_session` cookie (HttpOnly, SameSite=Lax, Secure in production, 8 h); membership is re-checked on every request.
+* `publish/SiteControllers.kt` — serving (`/sites/**`, own stateless security chain, GET/HEAD only, strict CSP `default-src 'none'` without
+  scripts, `nosniff`, ETag/304, integrity check of every file against the manifest), rollback, unpublish, site info.
+* **Caching decision:** responses are `public, no-cache` (revalidated each time, ETag → 304) or `private, no-store`. An E2E run showed that
+  time-based caching let the public copy of a site that had just been switched to private keep being served; correctness first.
+* `infra/sites-gateway/default.conf.template` — nginx-unprivileged, read-only container (`sites-gateway` in `compose.yml` and
+  `compose.public.yml`), only slug paths, rewritten under `/sites/`, rate-limited; the API is not reachable through it.
+* Migration V13 (`artifacts`, `sites`, `deployments.artifact_id`). Tests: `StaticSiteTests` (4), `e2e/factory-flow.mjs` (public site served by
+  the gateway with headers, private site sign-in through the Studio, non-member refused, rollback, unpublish).
+* Not done in 7.1: contact-form submissions, custom domains, purge-based edge caching, artifact retention/cleanup job.
