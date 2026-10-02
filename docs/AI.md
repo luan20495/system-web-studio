@@ -1,4 +1,15 @@
-# AI (OpenRouter, free models)
+# AI providers (OpenRouter free models + optional OpenAI, Anthropic, Gemini, internal models)
+
+> Phase 6 (ADR 0007): besides OpenRouter, the API can call **OpenAI**, **Anthropic**, **Google Gemini** (OpenAI-compatible endpoint) and an
+> **internal/local OpenAI-compatible server** (Ollama, vLLM, LM Studio, or a gateway such as LiteLLM). Each is configured only through the
+> environment: `<P>_API_KEY` (local: optional), `<P>_BASE_URL`, `<P>_MODELS` (explicit comma list) with `<P>` = `OPENAI`, `ANTHROPIC`,
+> `GEMINI`, `LOCAL_LLM`. Users see these models as `provider:model`. **Every model of these providers is disabled until a system admin
+> enables it** (Admin Console → AI Control → Nhà cung cấp AI); "Tự động" still means OpenRouter free models only, and an explicitly chosen
+> model is never replaced. Cost: OpenRouter's reported cost, otherwise reported tokens × the admin-maintained **pricing catalog**
+> (USD per million tokens, immutable rows applied from the moment they are added; no built-in prices — without a row the cost is unknown).
+> Each call stores `cost_source` (PROVIDER/CATALOG), `pricing_id` and `request_id`. "Kiểm tra kết nối" lists the provider's models (no tokens).
+> Tested only against local stubs; no real call to these providers has been made.
+
 
 The LLM sits behind the `LLMProvider` port. `LLMRouter` uses **OpenRouter** when `OPENROUTER_API_KEY` is set, otherwise the built-in keyword simulator, so the app works end to end before a key exists.
 

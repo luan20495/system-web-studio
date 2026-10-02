@@ -32,6 +32,17 @@ Base path `/api/v1`, JSON, session cookie auth. The live OpenAPI document is at 
 | GET | …/{p}/deployments, …/deployments/{id} | read | status + ordered events; `mock:true` when the provider is the mock |
 | GET | /workspaces/{w}/audit-events | AUDIT_READ (workspace admin) | filters `projectId`, `action`, `limit` ≤ 200 |
 
+## Added in Phase 6 — multiple AI providers (2026-10-02, ADR 0007)
+| Method | Path | Permission | Notes |
+| --- | --- | --- | --- |
+| GET | /ai/status | session | adds `providers[] {id, name, paid, models[], dataNotice}`; `models[]` items add `provider`, `paid`; `provider` may be `providers` (no OpenRouter, other providers enabled) |
+| POST | …/{p}/prompts | PROJECT_EDIT | `model` may be `provider:model` (`openai:`, `anthropic:`, `gemini:`, `local:`); `400 MODEL_NOT_ALLOWED` unless configured, listed and enabled; response `provider` is the provider id |
+| GET | /admin/ai/providers | system admin | every provider: `configured`, `paid`, `endpointHost` (no key), `defaultPolicy`, models with `enabled` and current `price`, `configHint` (env variable names) |
+| POST | /admin/ai/providers/{id}/probe | system admin | live model listing → `{ok, latencyMs, detail}`; `409 NOT_CONFIGURED`, `404 PROVIDER_NOT_FOUND` |
+| PUT | /admin/ai/models/policy | system admin | `{modelId, enabled}`; `404 MODEL_NOT_FOUND` for models that are not listed for a configured provider; audited `AI_MODEL_POLICY` |
+| GET / POST | /admin/ai/pricing | system admin | catalog rows; POST `{modelId, inputUsdPerMTok, outputUsdPerMTok, note?}` (0–10000) applies from now; rows cannot be edited; audited `AI_PRICING_ADDED` |
+| GET | /admin/ai/calls | system admin | rows add `costSource`, `requestId` |
+
 ## Added in Phase 5 — templates and contributed blocks (2026-10-02, ADR 0006)
 | Method | Path | Permission | Notes |
 | --- | --- | --- | --- |

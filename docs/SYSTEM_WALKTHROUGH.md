@@ -24,7 +24,9 @@
 > * **Phase 5 — templates & blocks:** `template/Templates.kt`, `component/ComponentPackages.kt`, `admin/AdminGovernanceController.kt`
 >   (migration V11). Studio: Templates, New app (template picker), Components (blocks), editor library + “Lưu thành khối”, Settings
 >   “Lưu trang thành mẫu”. Admin: Components → “Khối đóng góp” review queue, Templates. ADR 0006.
-> * **Decisions:** docs/adr/0001–0006. Status matrix: IMPLEMENTATION_STATUS.md.
+> * **Phase 6 — multiple AI providers:** `integration/llm/ChatProviders.kt`, `ExternalLLMProvider` (was `OpenRouterLLMProvider`),
+>   `AiService` policies/catalog, `AiUsageService.price`, `admin/AdminAiProvidersController.kt` (migration V12). ADR 0007.
+> * **Decisions:** docs/adr/0001–0007. Status matrix: IMPLEMENTATION_STATUS.md.
 
 Source of truth: the code on branch `feat/production-hardening` and the stack that was running on 2026-10-01 (API :8080, UI :3100, Docker services). Where README or docs disagree with the code, the code is used. Labels: **REAL** = runs against real components, **MOCK** = simulated, **PARTIAL**, **NOT IMPLEMENTED**. Nothing in this task changed code; the one write to the dev database was a sample project named "Walkthrough sample".
 

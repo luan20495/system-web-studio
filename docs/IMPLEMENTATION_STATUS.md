@@ -16,7 +16,9 @@ Development Ready: **YES** · Internal Demo Ready: **YES** · Production Ready: 
 | Workspaces: list/detail | REAL | |
 | Application inventory + detail (members, versions, AI activity, deployments, audit) | REAL | AI/hosting cost, risk score: NOT IMPLEMENTED |
 | Transfer ownership, delete, restore version (admin) | REAL | archive: NOT IMPLEMENTED |
-| AI Control | PARTIAL | OpenRouter free models + simulator, limits, counts; multi-provider and per-model permissions: NOT IMPLEMENTED |
+| AI Control | REAL | providers, per-model enable/disable, pricing catalog, live connection check, usage report |
+| Multiple AI providers (Phase 6) | REAL, stub-verified | OpenAI, Anthropic, Gemini (OpenAI-compatible), internal OpenAI-compatible; paid models off until enabled; never used by "auto"; **no real call made to these providers yet**; per-workspace/role model permissions, streaming, tool calling: NOT IMPLEMENTED |
+| AI cost | REAL | provider-reported (OpenRouter) or explicit pricing catalog × reported tokens; unknown otherwise; budgets in money (not tokens), alerts: NOT IMPLEMENTED |
 | AI usage accounting (Phase 4) | REAL | every upstream call in `ai_calls` with provider-reported tokens/cost (null = not reported, never estimated); admin report by model/user/workspace/day + call log; my usage on Studio Home; tokens/cost per AI answer |
 | AI token budgets | REAL, off by default | per user per 24 h and per workspace per month, checked before the model call (`429 AI_TOKEN_LIMIT`); alerts, per-model budgets, own price table, chargeback: NOT IMPLEMENTED |
 | Component registry (admin + studio) | REAL (fixed approved set) | new base component types need a renderer in code (by design, ADR 0006) |
@@ -39,5 +41,5 @@ Development Ready: **YES** · Internal Demo Ready: **YES** · Production Ready: 
 | Git, code generation, sandbox build, runtime hosting, connectors, secrets per project | NOT IMPLEMENTED | separate phase, needs approval |
 
 ## Verification (this machine)
-Backend `./gradlew test` on 2026-10-02 (after Phase 5): 119 tests, 0 failures, 3 skipped (OpenRouterLiveTests — need a real OPENROUTER_API_KEY), browser E2E `e2e/factory-flow.mjs` 33/33, `e2e/sso-flow.mjs` 9/9 (Keycloak),
+Backend `./gradlew test` on 2026-10-02 (after Phase 6): 124 tests, 0 failures, 3 skipped (OpenRouterLiveTests — need a real OPENROUTER_API_KEY), browser E2E `e2e/factory-flow.mjs` 33/33, `e2e/sso-flow.mjs` 9/9 (Keycloak), `e2e/providers-flow.mjs` 6/6 (local OpenAI-compatible stub),
 `e2e/a11y.mjs` 28/28 screens without serious/critical axe violations, `e2e/pages-mock.mjs` 6/6, typecheck and both builds (http + static mock).
