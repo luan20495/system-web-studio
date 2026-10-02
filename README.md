@@ -19,6 +19,9 @@ npm ci
 ```
 Mock demo only: `npm ci && npm run dev` → http://localhost:3000.
 
+## AI and going public
+AI uses **OpenRouter free models** (pick one or "auto"); until `OPENROUTER_API_KEY` is set the built-in simulator answers — see [docs/AI.md](docs/AI.md). `./scripts/public-up.sh` publishes the app from this machine through a dedicated Cloudflare tunnel — see [docs/PUBLIC_DEPLOYMENT.md](docs/PUBLIC_DEPLOYMENT.md).
+
 ## What works in http mode
 Login/logout with Redis-backed sessions · workspaces and projects with role-based access (admin, editor, publisher, viewer) · prompts → mock-LLM operations validated against the component registry · every change is an immutable version (history, restore as a new version, direct editing through the same validated endpoint) · project settings · asset upload to MinIO via presigned URLs · publish through RabbitMQ with idempotency and a visible state machine · append-only audit log · optimistic-concurrency conflicts (409) surfaced in the UI.
 
@@ -33,4 +36,4 @@ node e2e/full-flow.mjs             # browser E2E against the running stack
 ```
 
 ## Docs
-[LOCAL_DEVELOPMENT](docs/LOCAL_DEVELOPMENT.md) · [ARCHITECTURE](docs/ARCHITECTURE.md) · [API_CONTRACT](docs/API_CONTRACT.md) · [SECURITY](docs/SECURITY.md) · [DEPLOYMENT](docs/DEPLOYMENT.md) · [BACKUP_DR](docs/BACKUP_DR.md) · [IMPLEMENTATION_STATUS](docs/IMPLEMENTATION_STATUS.md)
+[AI](docs/AI.md) · [PUBLIC_DEPLOYMENT](docs/PUBLIC_DEPLOYMENT.md) · [SYSTEM_WALKTHROUGH](docs/SYSTEM_WALKTHROUGH.md) · [LOCAL_DEVELOPMENT](docs/LOCAL_DEVELOPMENT.md) · [ARCHITECTURE](docs/ARCHITECTURE.md) · [API_CONTRACT](docs/API_CONTRACT.md) · [SECURITY](docs/SECURITY.md) · [DEPLOYMENT](docs/DEPLOYMENT.md) · [BACKUP_DR](docs/BACKUP_DR.md) · [IMPLEMENTATION_STATUS](docs/IMPLEMENTATION_STATUS.md)

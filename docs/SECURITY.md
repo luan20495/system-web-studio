@@ -28,3 +28,9 @@
 - Dev compose uses well-known local-only passwords (`studio-local-only`); ports are loopback-only. Never reuse them.
 - Login throttling is keyed on `remoteAddr`; behind a proxy `server.forward-headers-strategy` and a trusted-proxy list must be configured.
 - No malware scanning of uploaded files; no per-workspace quotas.
+
+## Public deployment and AI (added 2026-10-02)
+* The published instance runs the `prod` profile (validator refuses dev defaults), behind a Cloudflare tunnel; only the UI server and the storage host are public (see `PUBLIC_DEPLOYMENT.md`). The API is bound to 127.0.0.1 and trusts `X-Forwarded-For` only from `127.0.0.1` (verified: audit rows hold real client IPs).
+* Self-service sign-up is rate limited per IP, optionally invite-gated, capped in total, never stores an email (an unverified email could otherwise be used with "add member by email" to claim an address) and gives each user an isolated workspace. Per-workspace caps on projects and assets bound storage abuse.
+* AI output is untrusted data: validated against the component registry before anything is stored; only free OpenRouter models can be selected; each user has a daily AI allowance; the API key never leaves the server. Prompts and page content are sent to a third party when a key is set (see `AI.md`).
+* Argon2 verification concurrency is capped (`LOGIN_MAX_CONCURRENT_HASHES`), after a 100-user login burst froze the API during load testing.
