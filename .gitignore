@@ -17,3 +17,8 @@ next-env.d.ts
 .run/
 .next-check*/
 .next-pages/
+
+# PostgreSQL / MinIO backups (contain production data; never commit)
+backups/
+infra/keycloak/.generated/
+.next-public/

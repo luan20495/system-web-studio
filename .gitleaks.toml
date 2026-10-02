@@ -1,0 +1,9 @@
+title = "System Web Studio"
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Documented, loopback-only development placeholders (never valid outside a developer laptop)"
+regexes = ['''studio-local-only''', '''studio-minio''']
+# Test fixtures: passwords for throwaway Testcontainers that exist only for the duration of a test run.
+paths = ['''backend/src/test/''', '''(^|/)node_modules/''', '''(^|/)\.next[^/]*/''', '''(^|/)build/''', '''(^|/)\.gradle/''', '''gradle\.lockfile''', '''package-lock\.json''']

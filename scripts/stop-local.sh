@@ -7,5 +7,9 @@ done
 pkill -f "system-web-studio.*bootRun" 2>/dev/null || true
 lsof -ti tcp:8080 | xargs kill 2>/dev/null || true
 lsof -ti tcp:"$FRONTEND_PORT" | xargs kill 2>/dev/null || true
+# graceful shutdown lets in-flight requests finish: wait until the ports are really free before returning
+for port in 8080 "$FRONTEND_PORT"; do
+  for _ in $(seq 1 60); do lsof -ti tcp:"$port" -sTCP:LISTEN >/dev/null 2>&1 || break; sleep 1; done
+done
 [ "${1:-}" = "--infra" ] && docker compose stop
 echo stopped

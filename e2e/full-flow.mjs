@@ -133,7 +133,7 @@ await check("invalid domain is rejected by the server and shown to the user", as
   await admin.getByRole("button", { name: "Lưu thay đổi" }).click();
   await admin.locator(".toast").waitFor({ timeout: 10000 });
   expect(sql(`select domain from projects where id='${PID}'`) === "e2e.example.com", "invalid domain stored");
-  await admin.keyboard.press("Escape"); await admin.getByRole("button", { name: "Đóng" }).click();
+  await admin.keyboard.press("Escape"); await admin.getByRole("dialog").waitFor({ state: "detached" });   // Escape closes the dialog
 });
 await check("asset upload (presigned MinIO), list and delete", async () => {
   const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");

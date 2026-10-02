@@ -1,0 +1,42 @@
+{
+  "realm": "studio",
+  "enabled": true,
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "sslRequired": "none",
+  "clients": [
+    {
+      "clientId": "studio-web",
+      "name": "System Web Studio (local dev)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "__CLIENT_SECRET__",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["http://127.0.0.1:3100/login/oauth2/code/oidc", "http://localhost:3100/login/oauth2/code/oidc"],
+      "webOrigins": ["http://127.0.0.1:3100", "http://localhost:3100"],
+      "attributes": { "pkce.code.challenge.method": "S256" }
+    }
+  ],
+  "users": [
+    {
+      "username": "sso.user",
+      "email": "sso.user@example.test",
+      "emailVerified": true,
+      "firstName": "Sso",
+      "lastName": "User",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "__USER_PASSWORD__", "temporary": false }]
+    },
+    {
+      "username": "sso.unverified",
+      "email": "sso.unverified@example.test",
+      "emailVerified": false,
+      "firstName": "Unverified",
+      "lastName": "User",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "__USER_PASSWORD__", "temporary": false }]
+    }
+  ]
+}

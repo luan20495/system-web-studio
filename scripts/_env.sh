@@ -17,6 +17,7 @@ export MINIO_ROOT_USER="${MINIO_ROOT_USER:-studio-minio}" MINIO_ROOT_PASSWORD="$
 export RABBITMQ_PASSWORD="${RABBITMQ_PASSWORD:-studio-local-only}"
 # Local runs are plain http; production must keep the default (Secure cookies).
 export COOKIE_SECURE="${COOKIE_SECURE:-false}"
+export MINIO_ENDPOINT="${MINIO_ENDPOINT:-http://127.0.0.1:19000}"   # also read by the UI server to allow presigned URLs in its CSP
 export SPRING_PROFILES_ACTIVE="${SPRING_PROFILES_ACTIVE:-local}"
 # The build needs JDK 17+ (21 recommended). Prefer Homebrew's 21 when present, else keep the caller's JAVA_HOME.
 [ -d /opt/homebrew/opt/openjdk@21 ] && export JAVA_HOME=/opt/homebrew/opt/openjdk@21

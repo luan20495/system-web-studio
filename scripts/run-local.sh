@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Start infrastructure (docker compose), the Kotlin API and the Next.js UI in http mode.
 . "$(dirname "$0")/_env.sh"
+# Optional SSO settings written by scripts/sso-up.sh
+if [ -f .run/sso.env ]; then set -a; . .run/sso.env; set +a; fi
 docker compose up -d --wait
 if ! curl -fsS http://127.0.0.1:8080/actuator/health/liveness >/dev/null 2>&1; then
   (cd backend && nohup ./gradlew bootRun --console=plain > "$ROOT/.run/backend.log" 2>&1 & echo $! > "$ROOT/.run/backend.pid")
