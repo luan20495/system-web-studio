@@ -3,9 +3,10 @@ import { connection } from "next/server";
 import "./globals.css";
 import "./responsive.css";
 import "./http.css";
+import "./factory.css";
 
 export const metadata: Metadata = {
-  title: "System Web Studio",
+  title: "AI Software Factory",
   description: "AI-first web studio prototype",
 };
 

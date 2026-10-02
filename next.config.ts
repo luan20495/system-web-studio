@@ -32,12 +32,13 @@ const nextConfig: NextConfig = {
       { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" }
     ] }];
   } } : {}),
-  ...(httpMode ? { async rewrites() { return [
+  // beforeFiles: these must win over the app's catch-all route (e.g. /login/oauth2/code/oidc is the OIDC callback, not a page)
+  ...(httpMode ? { async rewrites() { return { beforeFiles: [
       { source: "/api/:path*", destination: `${apiTarget}/api/:path*` },
       // OIDC: the browser is redirected to these backend endpoints, so they must be reachable on the UI origin too
       { source: "/oauth2/:path*", destination: `${apiTarget}/oauth2/:path*` },
       { source: "/login/oauth2/:path*", destination: `${apiTarget}/login/oauth2/:path*` }
-    ]; } } : {}),
+    ], afterFiles: [], fallback: [] }; } } : {}),
 };
 
 export default nextConfig;

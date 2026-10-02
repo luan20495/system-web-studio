@@ -1,4 +1,5 @@
 import type {
+  AdminAi, AdminApp, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
   AiStatus, ApiProject, AuthConfig, Member, RegistryComponent, AssetDto, Deployment, Me, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
 } from "./http-types";
 
@@ -27,7 +28,12 @@ async function csrf(): Promise<string> {
 /** Forget the cached CSRF token (it is bound to the session, so login/logout rotate it). */
 export const resetCsrf = () => { csrfRequest = undefined; };
 
-async function call<T>(path: string, init: RequestInit & { idempotencyKey?: string } = {}, retry = true): Promise<T> {
+/** One place decides what an expired session means for the UI (the router sends the user to /auth/session-expired). */
+let unauthorizedHandler: ((code: string) => void) | null = null;
+export const onUnauthorized = (fn: ((code: string) => void) | null) => { unauthorizedHandler = fn; };
+
+
+async function call<T>(path: string, init: RequestInit & { idempotencyKey?: string; onTotal?: (n: number) => void } = {}, retry = true): Promise<T> {
   const method = (init.method ?? "GET").toUpperCase();
   const mutating = !["GET", "HEAD", "OPTIONS"].includes(method);
   const token = mutating ? await csrf() : undefined;
@@ -48,15 +54,21 @@ async function call<T>(path: string, init: RequestInit & { idempotencyKey?: stri
   if (!response.ok) {
     const body = await response.json().catch(() => null) as { code?: string; message?: string; requestId?: string; details?: unknown } | null;
     if (response.status === 403 && body?.code === "CSRF_INVALID" && retry) { resetCsrf(); return call<T>(path, init, false); }
+    if (response.status === 401 && !path.startsWith("/auth/")) unauthorizedHandler?.(body?.code ?? "AUTHENTICATION_REQUIRED");
     const retryAfter = response.headers.get("Retry-After");
     const message = response.status === 429 && retryAfter ? `${body?.message ?? "Quá nhiều yêu cầu"} Thử lại sau ${retryAfter}s.` : body?.message ?? `Lỗi ${response.status}`;
     throw new ApiError(response.status, body?.code ?? `HTTP_${response.status}`, message, body?.requestId, body?.details);
   }
+  init.onTotal?.(Number(response.headers.get("X-Total-Count") ?? "0"));
   if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
 }
 
 const json = (body: unknown) => JSON.stringify(body);
+const qs = (params: Record<string, string | number | undefined | null>) => {
+  const p = new URLSearchParams(); Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null && v !== "") p.set(k, String(v)); });
+  const t = p.toString(); return t ? `?${t}` : "";
+};
 const P = (w: string, p: string) => `/workspaces/${w}/projects/${p}`;
 
 export const api = {
@@ -74,8 +86,35 @@ export const api = {
   async logout() { await call<void>("/auth/logout", { method: "POST" }).finally(resetCsrf); },
 
   listProjects: (w: string) => call<ApiProject[]>(`/workspaces/${w}/projects`),
+  async projectsPage(w: string, page: number, size: number, q?: string, scope?: "all" | "owned" | "shared"): Promise<Page<ApiProject>> {
+    let total = 0;
+    const items = await call<ApiProject[]>(`/workspaces/${w}/projects${qs({ page, size, q, scope })}`, { onTotal: (n) => { total = n; } });
+    return { items, total, page, size };
+  },
+  deleteProject: (w: string, p: string, expectedRevision: number) => call<void>(`${P(w, p)}${qs({ expectedRevision })}`, { method: "DELETE" }),
+  myUsage: () => call<MyUsage>("/me/usage"),
+  myActivity: (limit = 30) => call<AuditRow[]>(`/me/activity${qs({ limit })}`),
+  admin: {
+    overview: () => call<AdminOverview>("/admin/overview"),
+    users: (page: number, q?: string, status?: string) => call<Page<AdminUser>>(`/admin/users${qs({ page, size: 25, q, status })}`),
+    user: (id: string) => call<AdminUserDetail>(`/admin/users/${id}`),
+    setUserStatus: (id: string, enabled: boolean) => call<AdminUser>(`/admin/users/${id}/status`, { method: "PATCH", body: json({ enabled }) }),
+    revokeSessions: (id: string) => call<{ revoked: number }>(`/admin/users/${id}/revoke-sessions`, { method: "POST" }),
+    workspaces: (page: number, q?: string) => call<Page<AdminWorkspace>>(`/admin/workspaces${qs({ page, size: 25, q })}`),
+    workspace: (id: string) => call<AdminWorkspaceDetail>(`/admin/workspaces/${id}`),
+    applications: (params: { page: number; q?: string; visibility?: string; status?: string; workspaceId?: string }) => call<Page<AdminApp>>(`/admin/applications${qs({ size: 25, ...params })}`),
+    application: (id: string) => call<AdminAppDetail>(`/admin/applications/${id}`),
+    transferOwnership: (id: string, userId: string) => call<AdminApp>(`/admin/applications/${id}/transfer-ownership`, { method: "POST", body: json({ userId }) }),
+    audit: (params: Record<string, string | number | undefined>) => call<Page<AuditRow>>(`/admin/audit${qs({ size: 50, ...params })}`),
+    auditActions: () => call<string[]>("/admin/audit/actions"),
+    ai: () => call<AdminAi>("/admin/ai"),
+    components: () => call<AdminComponent[]>("/admin/components"),
+    health: () => call<PlatformHealth>("/admin/system/health"),
+    settings: () => call<Record<string, Record<string, unknown>>>("/admin/settings")
+  },
   createProject: (w: string, name: string, description?: string) => call<ApiProject>(`/workspaces/${w}/projects`, { method: "POST", body: json({ name, description }) }),
   getProject: (w: string, p: string) => call<ApiProject>(P(w, p)),
+  lookupProject: (p: string) => call<ApiProject>(`/projects/${p}`),
   updateProject: (w: string, p: string, expectedRevision: number, patch: Partial<ApiProject>) =>
     call<ApiProject>(P(w, p), { method: "PATCH", body: json({ ...patch, expectedRevision }) }),
 
@@ -94,9 +133,9 @@ export const api = {
   sendPrompt: (w: string, p: string, prompt: string, expectedRevision: number, model?: string) =>
     // AI calls can take a while when the first free model is busy and the server fails over to the next one
     call<PromptResponse>(`${P(w, p)}/prompts`, { method: "POST", body: json({ prompt, expectedRevision, ...(model ? { model } : {}) }), signal: AbortSignal.timeout(130_000) }),
-  listPrompts: (w: string, p: string) => call<PromptHistoryItem[]>(`${P(w, p)}/prompts`),
+  listPrompts: (w: string, p: string) => call<PromptHistoryItem[]>(`${P(w, p)}/prompts?limit=100`),   // newest first
 
-  listVersions: (w: string, p: string) => call<VersionSummary[]>(`${P(w, p)}/versions`),
+  listVersions: (w: string, p: string) => call<VersionSummary[]>(`${P(w, p)}/versions?limit=100`),
   restoreVersion: (w: string, p: string, versionId: string, expectedRevision: number) =>
     call<{ version: VersionSummary; schema: SchemaResponse["schema"]; revision: number }>(`${P(w, p)}/versions/${versionId}/restore`, { method: "POST", body: json({ expectedRevision }) }),
 

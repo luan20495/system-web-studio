@@ -1,12 +1,12 @@
 "use client";
 
 import { useId, useMemo, useState } from "react";
-import type { PropDef, RegistryComponent, SchemaOperation, Section } from "@/lib/http-types";
+import type { AssetDto, PropDef, RegistryComponent, SchemaOperation, Section } from "@/lib/http-types";
 
 const LABELS: Record<string, string> = {
   title: "Tiêu đề", eyebrow: "Dòng nhỏ phía trên", description: "Mô tả", ctaLabel: "Chữ trên nút", heading: "Tiêu đề mục", name: "Tên",
   body: "Nội dung", brand: "Thương hiệu", visible: "Hiển thị mục này", quote: "Trích dẫn", author: "Tác giả", location: "Địa điểm",
-  rating: "Số sao (0–5)", label: "Nhãn", values: "Giá trị (mỗi dòng một giá trị)", columns: "Tên các cột (mỗi dòng một cột)",
+  rating: "Số sao (0–5)", image: "Ảnh", label: "Nhãn", values: "Giá trị (mỗi dòng một giá trị)", columns: "Tên các cột (mỗi dòng một cột)",
   submitLabel: "Chữ trên nút gửi", text: "Nội dung", theme: "Giao diện", items: "Danh sách", rows: "Các dòng", links: "Liên kết"
 };
 const label = (k: string) => LABELS[k] ?? k;
@@ -29,8 +29,8 @@ export function sectionSummary(s: Section): string {
 }
 
 /** Form generated from the component registry (props schema), compiled to the same schema operations the AI uses. */
-export function SectionInspector({ section, component, index, count, readOnly, busy, onApply, onClose }: {
-  section: Section; component?: RegistryComponent; index: number; count: number; readOnly: boolean; busy: boolean;
+export function SectionInspector({ section, component, index, count, readOnly, busy, onApply, onClose, assets = [] }: {
+  section: Section; component?: RegistryComponent; index: number; count: number; readOnly: boolean; busy: boolean; assets?: AssetDto[];
   onApply: (ops: SchemaOperation[], summary: string) => Promise<boolean>; onClose: () => void;
 }) {
   const uid = useId();
@@ -63,6 +63,13 @@ export function SectionInspector({ section, component, index, count, readOnly, b
   function field(key: string, def: PropDef, value: Json, onChange: (v: Json) => void, name: string) {
     const id = `${uid}-${name}`;
     const common = { id, disabled: readOnly || busy };
+    if (def.format === "asset") {
+      const images = assets.filter((a) => a.status === "READY" && a.contentType.startsWith("image/"));
+      return <div className="insField" key={name}><label htmlFor={id}>{label(key)}</label>
+        <select {...common} value={typeof value === "string" ? value : ""} onChange={(e) => onChange(e.target.value)}>
+          <option value="">Không có ảnh</option>{images.map((a) => <option key={a.id} value={`asset://${a.id}`}>{a.name}</option>)}
+        </select>{images.length === 0 ? <small className="hint">Tải ảnh lên ở mục “Tệp” để dùng tại đây.</small> : null}</div>;
+    }
     if (def.type === "boolean") return <label className="checkRow" key={name}><input type="checkbox" {...common} checked={value !== false} onChange={(e) => onChange(e.target.checked)}/><span>{label(key)}</span></label>;
     if (def.enum) return <div className="insField" key={name}><label htmlFor={id}>{label(key)}</label><select {...common} value={String(value ?? def.enum[0])} onChange={(e) => onChange(e.target.value)}>{def.enum.map((o) => <option key={o} value={o}>{o}</option>)}</select></div>;
     if (def.type === "number") return <div className="insField" key={name}><label htmlFor={id}>{label(key)}</label><input {...common} type="number" min={0} max={5} value={typeof value === "number" ? value : ""} onChange={(e) => onChange(e.target.value === "" ? undefined : Number(e.target.value))}/></div>;
