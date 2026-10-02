@@ -32,6 +32,28 @@ Base path `/api/v1`, JSON, session cookie auth. The live OpenAPI document is at 
 | GET | …/{p}/deployments, …/deployments/{id} | read | status + ordered events; `mock:true` when the provider is the mock |
 | GET | /workspaces/{w}/audit-events | AUDIT_READ (workspace admin) | filters `projectId`, `action`, `limit` ≤ 200 |
 
+## Added in Phase 5 — templates and contributed blocks (2026-10-02, ADR 0006)
+| Method | Path | Permission | Notes |
+| --- | --- | --- | --- |
+| GET | /templates?scope=company\|mine&q | session | active templates (company, or mine), each with `schema`, `sections`, `componentTypes`, `version`, `canEdit` |
+| GET | /templates/{id} | visible | 404 `TEMPLATE_NOT_FOUND` when not visible (private of someone else) |
+| POST | /workspaces/{w}/projects/{p}/templates | PROJECT_EDIT | `{name, description?, templateId?}` → `{template, removedImages}`; copies the SAVED page, clears `asset://` refs; with `templateId` = new version (author while private, or admin; else 403) |
+| PATCH / DELETE | /templates/{id} | author (private) or admin | rename / archive; COMPANY templates: admin only |
+| POST | /workspaces/{w}/projects | PROJECT_CREATE | body adds optional `templateId`; 404 if not visible, `422 TEMPLATE_OUTDATED` if it no longer validates (nothing is created) |
+| GET | /component-packages?scope=company\|mine | session | company = approved and not deprecated (`current` = approved version, no history); mine = all my blocks with versions and review history |
+| GET | /component-packages/{id} | owner, admin, or listed | 404 `BLOCK_NOT_FOUND` otherwise |
+| POST | /workspaces/{w}/projects/{p}/component-packages | PROJECT_EDIT | `{sectionId, name, description?, packageId?}` → `{block, removedImages}`; props are read from the SAVED section; only ACTIVE base components (`422 COMPONENT_NOT_ELIGIBLE`); `packageId`: same base (`422 BASE_MISMATCH`), not in review (`409 IN_REVIEW`) or deprecated |
+| PATCH | /component-packages/{id} | owner (not in review) or admin | rename |
+| POST | /component-packages/{id}/submit | owner, status PRIVATE | runs automated checks → `{block, passed, checks[]}`; passed → REVIEW |
+| POST | /component-packages/{id}/withdraw | owner, status REVIEW | back to PRIVATE |
+| DELETE | /component-packages/{id} | owner | only if never approved and not in review (`409 NOT_DELETABLE`) |
+| GET | /admin/component-packages?status=REVIEW\|APPROVED\|PRIVATE\|DEPRECATED\|ALL&page | system admin | `{page, counts}` |
+| GET | /admin/component-packages/{id} | system admin | versions, validation reports, review history |
+| POST | /admin/component-packages/{id}/review | system admin, not the owner | `{decision: APPROVE\|REJECT, version?, comment?}`; `403 SELF_REVIEW`, `409 NOT_IN_REVIEW`, `409 STALE_REVIEW`, `409 VALIDATION_FAILED` (re-check at approval), `400 COMMENT_REQUIRED` for reject |
+| POST | /admin/component-packages/{id}/deprecate, /restore | system admin | deprecate hides from the library; pages are not changed |
+| GET | /admin/templates?visibility&status&q&page | system admin | all templates |
+| POST | /admin/templates/{id}/visibility, /status | system admin | `{visibility: PRIVATE\|COMPANY}`, `{status: ACTIVE\|ARCHIVED}` |
+
 ## Added in Phase 4 — AI usage accounting (2026-10-02)
 | Method | Path | Permission | Notes |
 | --- | --- | --- | --- |
