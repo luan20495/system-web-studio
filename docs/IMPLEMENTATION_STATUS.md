@@ -38,7 +38,7 @@ Development Ready: **YES** · Internal Demo Ready: **YES** · Production Ready: 
 | Members & roles (Owner/Editor/Publisher/Viewer) | REAL | no Reviewer role (does not exist) |
 | Versions & restore | REAL | restore creates a new version |
 | Publish pipeline | REAL queue + state machine | deployment provider MOCK, labelled "Demo deployment" |
-| Git, code generation, sandbox build, runtime hosting, connectors, secrets per project | NOT IMPLEMENTED | separate phase, needs approval |
+| Git, code generation, sandbox build, runtime hosting, connectors, secrets per project | NOT IMPLEMENTED | Phase 7 **design proposed** (docs/SOFTWARE_FACTORY_DESIGN.md, ADR 0008–0012), awaiting approval; no code written |
 
 ## Verification (this machine)
 Backend `./gradlew test` on 2026-10-02 (after Phase 6): 124 tests, 0 failures, 3 skipped (OpenRouterLiveTests — need a real OPENROUTER_API_KEY), browser E2E `e2e/factory-flow.mjs` 33/33, `e2e/sso-flow.mjs` 9/9 (Keycloak), `e2e/providers-flow.mjs` 6/6 (local OpenAI-compatible stub),

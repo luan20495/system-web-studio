@@ -4,7 +4,7 @@ Internal platform with two areas behind one login: **Admin Console** (`/admin`: 
 component registry, audit, platform health) and **Company Builder Studio** (`/studio`: create websites with AI or the visual Design mode
 from the company's approved components, versions, assets, members, publish). The login screen's portal choice is only navigation;
 access is decided by the server. See [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) for what is real and what is not yet
-(code generation, Git, sandbox build and real hosting are a separate, unapproved phase — [ADR 0005](docs/adr/0005-software-factory-boundary.md)).
+(code generation, Git, sandbox build and real hosting are a separate, unapproved phase — design proposal in [docs/SOFTWARE_FACTORY_DESIGN.md](docs/SOFTWARE_FACTORY_DESIGN.md), ADR 0008–0012).
 
 
 An AI-assisted web studio: describe a change in chat, the backend turns it into validated, versioned page-schema operations, the UI previews the result, and a publish pipeline deploys it (to a **mock** provider locally).

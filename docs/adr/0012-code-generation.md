@@ -1,0 +1,38 @@
+# ADR 0012 — Code generation for STATIC_APP projects: spec first, patches on branches, validated by builds
+Status: **proposed** (2026-10-02) — design only, not implemented. Increment 7.4. Depends on ADR 0008–0011.
+
+## Pipeline
+```
+prompt ─► planner (LLM, structured JSON plan) ─► registry retrieval (approved code components) ─► project spec (JSON, stored)
+       ─► generator (LLM, file patches for allowlisted paths) ─► API validation (text only, nothing executed)
+       ─► commit on ai/<change> ─► build job (sandbox: typecheck, lint, tests, build, scans) ─► preview artifact (preview domain)
+       ─► user accepts ─► squash-merge to main ─► publish (ADR 0009)
+```
+* **Scaffold:** a company-owned template (recommended: React/Next.js static export with the company design system), pinned versions,
+  CSP-friendly, no server code, a smoke test. Every new `STATIC_APP` starts from it (ADR 0011 initial commit).
+* **Registry for code:** the approved components become a versioned internal package (e.g. `@company/ui`) published to the build mirror;
+  the generator must use it rather than inventing UI. Contributed blocks (ADR 0006) map to component usages with preset props. This keeps
+  "reuse approved components" true for code projects too.
+* **Project spec:** pages, routes, component usages, static content — stored per code change, so a change can be explained, reviewed
+  and regenerated.
+* **Generator output rules (enforced by the API before committing):** only `src/**`, `public/**`, tests and allowlisted config files;
+  dependency changes only to mirror-allowlisted packages; max files and bytes per change; text files only; no secrets (scan); no network
+  calls to non-allowlisted origins (lint + CSP `connect-src 'none'` by default); no server code.
+* **Prompt-injection stance:** user text, repository content and component docs are untrusted input to the model; model output is
+  untrusted data. It is applied as text patches by the API and executed only inside the sandbox; the served result is static and runs under
+  a strict CSP on a separate domain.
+* **Code Mode:** file tree and editor showing the real repository at a SHA (from the Git server through the API), diff view of AI changes
+  before merge, edits saved as commits on an edit branch, then the same build → preview → merge path. No terminal for users in v1.
+* **Preview of generated code:** served from the preview domain (separate registrable domain), iframe `sandbox="allow-scripts"` without
+  `allow-same-origin`; never on the Studio origin.
+* **Accounting:** planner/generator calls go through the existing providers and `ai_calls` (tokens, cost, budgets); build minutes are
+  accounted per job.
+
+## Not in scope
+Server-side code, databases, secrets inside apps, connectors to company systems, mobile apps — they belong to `DYNAMIC_APP` (separate
+approval).
+
+## Acceptance criteria for 7.4
+A prompt produces a branch, a passing build and a preview; a malicious patch (path outside allowlist, unapproved dependency, secret,
+network call) is rejected before commit or fails the build; merge only after green build; Code Mode shows the same files as the Git
+server; every AI change is traceable to prompt, model, tokens and commit.

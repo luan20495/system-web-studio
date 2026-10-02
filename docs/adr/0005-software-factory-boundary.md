@@ -1,5 +1,5 @@
 # ADR 0005 — Code generation, Git, sandbox and runtime are a separate, unapproved phase
-Status: proposed — NOT implemented, needs approval before any work
+Status: proposed — NOT implemented, needs approval before any work. **Detailed by ADR 0008–0012 and docs/SOFTWARE_FACTORY_DESIGN.md (2026-10-02).**
 
 Today: Prompt → SchemaPatch → Page Schema JSON → registry validation → renderer. No source code, repository, build or runtime exists;
 Code Mode shows an honest "not available" screen and Publish is labelled *Demo deployment*.
