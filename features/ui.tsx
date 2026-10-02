@@ -12,6 +12,10 @@ export function ago(iso?: string | null): string {
   if (s < 86400 * 30) return `${Math.floor(s / 86400)} ngày trước`; return fmtDate(iso);
 }
 export const num = (n?: number | null) => (n ?? 0).toLocaleString("vi-VN");
+/** Provider-reported USD. null = not reported (shown as "—", never as $0). Free models report exactly 0. */
+export const usd = (n?: number | null) => (n == null ? "—" : n === 0 ? "$0" : `$${n < 0.01 ? n.toPrecision(2) : n.toLocaleString("en-US", { maximumFractionDigits: 4 })}`);
+/** Token count; null = not reported. */
+export const tok = (n?: number | null) => (n == null ? "—" : n.toLocaleString("vi-VN"));
 export const errText = (e: unknown, fallback: string) => (e instanceof ApiError ? `${e.message}${e.requestId ? ` (mã ${e.requestId})` : ""}` : e instanceof Error ? e.message : fallback);
 
 export type StateKind = "loading" | "empty" | "forbidden" | "notfound" | "error" | "network" | "conflict" | "expired" | "ai-unavailable" | "publish-failed";
@@ -53,7 +57,7 @@ export function Pager({ page, size, total, onPage }: { page: number; size: numbe
 }
 
 const TONE: Record<string, string> = {
-  HEALTHY: "ok", RUNNING: "ok", ACTIVE: "ok", UPDATED: "ok", READY: "ok", true: "ok", PUBLIC: "info",
+  HEALTHY: "ok", OK: "ok", ERROR: "bad", BAD_OUTPUT: "warn", RUNNING: "ok", ACTIVE: "ok", UPDATED: "ok", READY: "ok", true: "ok", PUBLIC: "info",
   DEGRADED: "warn", QUEUED: "warn", POLICY_CHECK: "warn", SECURITY_CHECK: "warn", BUILDING: "warn", DEPLOYING: "warn", NO_CHANGE: "muted", PRIVATE: "muted",
   UNAVAILABLE: "bad", FAILED: "bad", DISABLED: "bad", false: "bad", UNSUPPORTED: "warn", NOT_CONFIGURED: "muted", UNKNOWN: "muted", NOT_IMPLEMENTED: "muted", COMING_SOON: "muted"
 };

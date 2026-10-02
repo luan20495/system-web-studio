@@ -66,6 +66,8 @@ await check("AI prompt (simulator) updates the page; response shows real metadat
   const [r] = await Promise.all([admin.p.waitForResponse((x) => x.url().endsWith("/prompts") && x.request().method() === "POST"), admin.p.getByRole("button", { name: /Gửi/ }).click()]);
   expect(r.status() === 200, `prompt ${r.status()}`); await frameHas(admin.p, "So sánh sản phẩm");
   await admin.p.getByText(/Đã đổi: Bảng so sánh/).waitFor(); await admin.p.getByText("Phiên bản 2", { exact: true }).waitFor();
+  // the simulator calls no model: no tokens are shown or invented
+  expect((await r.json()).usage == null, "simulator reported usage"); await admin.p.getByText("không tính token").last().waitFor();
 });
 await check("deep link refresh stays inside the project and mode", async () => {
   await admin.p.goto(`${BASE}/studio/projects/${PID}/design`); await admin.p.reload();
@@ -180,6 +182,23 @@ await check("inventory lists the new app; detail shows versions, AI activity and
 await check("audit log filters by action and shows request ids", async () => {
   await admin.p.goto(BASE + "/admin/audit"); await admin.p.getByLabel("Hành động").selectOption("USER_DISABLED"); await admin.p.getByRole("button", { name: "Lọc" }).click();
   await admin.p.locator(".table").getByText("Vô hiệu hóa người dùng").first().waitFor();
+});
+await check("AI Control: usage report and call log come from ai_calls (provider-reported tokens; unknown is not zero)", async () => {
+  // no network model in this run: two call rows are written directly, as the server records them after an upstream call
+  const uid = sql(`select id from users where username='local.admin'`), ws = sql(`select workspace_id from projects where id='${PID}'`);
+  sql(`insert into ai_calls (id, prompt_id, workspace_id, project_id, user_id, provider, model, outcome, http_status, prompt_tokens, completion_tokens, total_tokens, cost_usd, latency_ms)
+       values (gen_random_uuid(), null, '${ws}', '${PID}', '${uid}', 'openrouter', 'e2e/stub:free', 'OK', 200, 1000, 234, 1234, 0, 900),
+              (gen_random_uuid(), null, '${ws}', '${PID}', '${uid}', 'openrouter', 'e2e/stub:free', 'ERROR', 429, null, null, null, null, 300)`);
+  try {
+    await admin.p.goto(BASE + "/admin/ai"); await admin.p.getByRole("heading", { name: "Mức sử dụng model" }).waitFor();
+    await admin.p.getByRole("button", { name: "Hôm nay" }).click();
+    const byModel = admin.p.locator(".card", { has: admin.p.getByRole("heading", { name: "Theo model", exact: true }) });
+    await byModel.getByText("e2e/stub:free").first().waitFor(); await byModel.getByText("1 lượt không có số liệu").waitFor();
+    const log = admin.p.locator(".card", { has: admin.p.getByRole("heading", { name: "Nhật ký lượt gọi model" }) });
+    await log.getByLabel("Model").selectOption("e2e/stub:free");
+    await log.getByText("HTTP 429").waitFor(); await log.getByText("không báo").waitFor(); await log.getByText("1.000 / 234").waitFor();
+    await admin.p.goto(BASE + "/studio"); await admin.p.getByText(/Token AI 24 giờ qua/).waitFor(); await admin.p.getByText(/30 ngày: .*token/).waitFor();
+  } finally { sql(`delete from ai_calls where model='e2e/stub:free'`); }
 });
 await check("component registry shows usage; platform health shows real probes", async () => {
   await admin.p.goto(BASE + "/admin/components"); await admin.p.getByText("Hero", { exact: true }).first().waitFor();

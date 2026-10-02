@@ -119,3 +119,10 @@
 /* dark editor: light-theme helpers must not leak in */
 .studio .hint,.studio .muted{color:var(--muted)}.studio a{color:#9cc3ff}.studio .formError{color:#ff9a92!important}
 .page:focus{outline:none}.page:focus-visible{outline:2px solid var(--f-accent);outline-offset:-2px}
+/* Phase 4: AI usage */
+.seg{display:flex;gap:4px;flex-wrap:wrap}
+.bars{display:flex;align-items:flex-end;gap:2px;height:96px;padding:8px 0;border-bottom:1px solid var(--f-line)}
+.bars .bar{flex:1;min-width:2px;height:100%;display:flex;align-items:flex-end}
+.bars .bar span{display:block;width:100%;min-height:1px;background:var(--f-accent);border-radius:3px 3px 0 0;opacity:.85}
+.usageMeta{font-size:11px;opacity:.75;margin-top:4px}
+.barsFig{margin:8px 0 0}.barsAxis{display:flex;justify-content:space-between;font-size:11px;color:var(--f-muted);margin-top:4px}

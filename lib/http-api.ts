@@ -1,5 +1,5 @@
 import type {
-  AdminAi, AdminApp, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
+  AdminAi, AiCallRow, AiUsageReport, AdminApp, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
   AiStatus, ApiProject, AuthConfig, Member, RegistryComponent, AssetDto, Deployment, Me, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
 } from "./http-types";
 
@@ -108,6 +108,8 @@ export const api = {
     audit: (params: Record<string, string | number | undefined>) => call<Page<AuditRow>>(`/admin/audit${qs({ size: 50, ...params })}`),
     auditActions: () => call<string[]>("/admin/audit/actions"),
     ai: () => call<AdminAi>("/admin/ai"),
+    aiUsage: (days: number) => call<AiUsageReport>(`/admin/ai/usage${qs({ days })}`),
+    aiCalls: (params: { page: number; outcome?: string; model?: string; userId?: string; workspaceId?: string }) => call<Page<AiCallRow>>(`/admin/ai/calls${qs({ size: 25, ...params })}`),
     components: () => call<AdminComponent[]>("/admin/components"),
     health: () => call<PlatformHealth>("/admin/system/health"),
     settings: () => call<Record<string, Record<string, unknown>>>("/admin/settings")

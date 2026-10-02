@@ -11,13 +11,19 @@ import type { AiStatus, ApiProject, AssetDto, PageSchema, PromptHistoryItem, Reg
 import type { DeviceMode } from "@/lib/types";
 import { SectionInspector, sectionLabel, sectionSummary } from "@/components/SectionInspector";
 import { useSession } from "../session";
-import { ErrorState, errText, fmtDate, StateView } from "../ui";
+import { ErrorState, errText, fmtDate, StateView, tok, usd } from "../ui";
 import { AssetsDrawer, DeviceIcon, Drawer, MembersDrawer, PublishModal, SettingsDrawer, suggestions } from "./drawers";
 
 type Mode = "ai" | "design" | "code";
 type PanelName = "members" | "versions" | "assets" | "publish" | "settings";
 const MODES: Mode[] = ["ai", "design", "code"];
 const PANELS: PanelName[] = ["members", "versions", "assets", "publish", "settings"];
+/** Provider-reported usage of one prompt. The simulator makes no model call, so it has no tokens to show. */
+function usageChip(calls: number, tokens: number | null, cost: number | null): string {
+  if (!calls) return "không tính token";
+  return [tokens == null ? "token: nhà cung cấp không báo" : `${tok(tokens)} token`, ...(cost == null ? [] : [usd(cost)]), ...(calls > 1 ? [`${calls} lượt gọi model`] : [])].join(" · ");
+}
+
 type Msg = { id: string; role: "user" | "assistant"; content: string; meta?: string[]; detail?: string };
 const NOT_RENDERED = new Set(["LandingTemplate", "ProductCard"]);    // in the registry but the preview has no renderer for them yet
 const DEFAULT_TEXT: Record<string, string> = { heading: "Tiêu đề mục mới", title: "Tiêu đề mới", brand: "Thương hiệu", text: "© Công ty", body: "Nội dung mới" };
@@ -67,7 +73,8 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
 
   const toMessages = (items: PromptHistoryItem[]): Msg[] => [...items].reverse().flatMap((p) => [
     { id: `${p.id}-u`, role: "user" as const, content: p.text },
-    { id: `${p.id}-a`, role: "assistant" as const, content: p.assistantMessage, meta: [p.outcome] }
+    { id: `${p.id}-a`, role: "assistant" as const, content: p.assistantMessage,
+      meta: [p.outcome, ...(p.model ? [p.model === "mock" ? "mô phỏng" : p.model] : []), usageChip(p.aiCalls ?? 0, p.totalTokens ?? null, p.costUsd ?? null)] }
   ]);
   const loadAssets = useCallback((w: string) => api.listAssets(w, projectId).then(setAssets).catch(() => undefined), [projectId]);
   const reload = useCallback(async () => {
@@ -89,6 +96,10 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
     catch (e) {
       setSave((x) => ({ ...x, state: "error" }));
       if (e instanceof ApiError && e.code === "REVISION_CONFLICT") { setNotice("Project vừa được thay đổi ở nơi khác. Đã tải lại bản mới nhất, hãy thử lại."); await reload().catch(() => undefined); }
+      else if (e instanceof ApiError && e.code === "AI_TOKEN_LIMIT") {
+        const d = e.details as { scope?: string; used?: number; limit?: number } | undefined;
+        setNotice(`${d?.scope === "workspace" ? "Workspace đã dùng hết ngân sách token AI của tháng" : "Bạn đã dùng hết hạn mức token AI trong 24 giờ"}${d?.limit ? ` (${tok(d.used ?? 0)} / ${tok(d.limit)} token)` : ""}. Có thể chọn “Mô phỏng” để tiếp tục chỉnh sửa.`);
+      }
       else if (!(e instanceof ApiError && e.status === 401)) setNotice(errText(e, fallback));
       return undefined;
     } finally { setBusy(null); }
@@ -104,7 +115,8 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
     setSchema(r.pageSchema); setRevision(r.revision);
     const changed = Array.from(new Set(r.schemaPatch.map((op) => op.sectionType ?? r.pageSchema.sections.find((s) => s.id === op.sectionId)?.type ?? schema?.sections.find((s) => s.id === op.sectionId)?.type).filter(Boolean) as string[]));
     const used = Array.from(new Set(r.pageSchema.sections.map((s) => s.type)));
-    const meta = [r.outcome, r.model && r.model !== "mock" ? r.model : "mô phỏng", ...(r.version ? [`Phiên bản ${r.version.versionNumber}`] : [])];
+    const meta = [r.outcome, r.model && r.model !== "mock" ? r.model : "mô phỏng", ...(r.version ? [`Phiên bản ${r.version.versionNumber}`] : []),
+      usageChip(r.usage?.attempts ?? 0, r.usage?.totalTokens ?? null, r.usage?.costUsd ?? null)];
     const detail = r.outcome === "UPDATED" ? `Đã đổi: ${changed.map(label).join(", ") || "—"} · Component đang dùng: ${used.map(label).join(", ")}` : undefined;
     setMessages((m) => [...m, { id: r.promptId, role: "assistant", content: r.message.content, meta, detail }]);
     if (r.version) void refreshVersions();

@@ -20,8 +20,12 @@ export type SchemaResponse = { schema: PageSchema; revision: number; version: Ve
 export type PromptResponse = {
   promptId: string; outcome: "UPDATED" | "NO_CHANGE" | "UNSUPPORTED"; message: { role: string; content: string };
   schemaPatch: SchemaOperation[]; pageSchema: PageSchema; revision: number; version: VersionSummary | null; registryReuse: number; provider?: string; model?: string | null;
+  /** null for the simulator; token/cost fields are null when the provider did not report them */
+  usage?: PromptUsage | null;
 };
-export type PromptHistoryItem = { id: string; text: string; createdAt: string; outcome: string; assistantMessage: string; versionId: string | null; registryReuse: number | null };
+export type PromptUsage = { attempts: number; promptTokens: number | null; completionTokens: number | null; totalTokens: number | null; costUsd: number | null; latencyMs: number };
+export type PromptHistoryItem = { id: string; text: string; createdAt: string; outcome: string; assistantMessage: string; versionId: string | null; registryReuse: number | null;
+  provider?: string | null; model?: string | null; aiCalls?: number; totalTokens?: number | null; costUsd?: number | null };
 
 export type SchemaOperation = {
   type: "ADD_SECTION" | "REMOVE_SECTION" | "MOVE_SECTION" | "UPDATE_SECTION" | "UPDATE_PROP" | "ADD_ITEM" | "REMOVE_ITEM";
@@ -79,4 +83,15 @@ export type AdminComponent = { id: string; name: string; category: string; descr
 export type HealthItem = { name: string; status: "HEALTHY" | "DEGRADED" | "UNAVAILABLE" | "UNKNOWN" | "NOT_CONFIGURED"; latencyMs: number | null; detail: string | null };
 export type PlatformHealth = { checkedAt: string; items: HealthItem[]; uptimeSeconds: number; javaVersion: string; schemaVersion: string | null; profiles: string[];
   publishQueueDepth: number | null; deadLetterDepth: number | null };
-export type MyUsage = { aiConfigured: boolean; aiRequestsUsed: number; aiRequestsLimit: number; aiWindowResetsInSeconds: number | null; promptsPerMinute: number; promptsToday: number };
+export type MyUsage = { aiConfigured: boolean; aiRequestsUsed: number; aiRequestsLimit: number; aiWindowResetsInSeconds: number | null; promptsPerMinute: number; promptsToday: number;
+  tokensLast24h: number; tokensLimitPerDay: number | null; usageLast30Days: UsageTotals | null };
+/** Provider-reported totals over ai_calls. callsWithoutUsage / costReportedCalls tell how complete the sums are. */
+export type UsageTotals = { calls: number; failedCalls: number; callsWithoutUsage: number; promptTokens: number; completionTokens: number; totalTokens: number;
+  costUsd: number | null; costReportedCalls: number; avgLatencyMs: number | null };
+export type UsageBucket = { key: string; label: string | null; totals: UsageTotals };
+export type AiUsageReport = { days: number; since: string; totals: UsageTotals; byModel: UsageBucket[]; byUser: UsageBucket[]; byWorkspace: UsageBucket[];
+  daily: { day: string; calls: number; failedCalls: number; totalTokens: number; costUsd: number | null }[];
+  limits: { dailyRequestsPerUser: number; dailyTokensPerUser: number | null; monthlyTokensPerWorkspace: number | null }; tokenSource: string; costSource: string };
+export type AiCallRow = { id: string; createdAt: string; userId: string; user: string | null; workspaceId: string; workspace: string | null; projectId: string; project: string | null;
+  promptId: string | null; provider: string; model: string; outcome: "OK" | "BAD_OUTPUT" | "ERROR"; httpStatus: number | null; promptTokens: number | null;
+  completionTokens: number | null; totalTokens: number | null; costUsd: number | null; latencyMs: number };

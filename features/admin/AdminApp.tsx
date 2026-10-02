@@ -4,11 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { api } from "@/lib/http-api";
-import type { AdminApp as App, AuditRow, HealthItem } from "@/lib/http-types";
+import type { AdminApp as App, AiUsageReport, AuditRow, HealthItem, UsageBucket, UsageTotals } from "@/lib/http-types";
 import { useSession } from "../session";
 import { rememberPortal } from "../routing";
 import { useLoad } from "../useLoad";
-import { actionLabel, ago, Card, ComingSoon, ErrorState, errText, fmtDate, Kpi, NavLink, num, Pager, Pill, StateView } from "../ui";
+import { actionLabel, ago, Card, ComingSoon, ErrorState, errText, fmtDate, Kpi, NavLink, num, Pager, Pill, StateView, tok, usd } from "../ui";
 
 const NAV: [string, string, string][] = [
   ["", "Tổng quan", "▦"], ["users", "Người dùng & Workspace", "◎"], ["applications", "Ứng dụng", "▤"], ["ai", "AI Control", "✦"],
@@ -304,29 +304,103 @@ function AppDetail({ id }: { id: string }) {
 }
 
 // ------------------------------------------------------------------ AI control
+const OUTCOME_LABEL: Record<string, string> = { OK: "Thành công", BAD_OUTPUT: "Trả lời không dùng được", ERROR: "Lỗi (không có trả lời)" };
+
+/** How complete a provider-reported total is: calls with no reported usage are counted, never estimated. */
+function coverage(t: UsageTotals) {
+  if (!t.calls) return "Chưa có lượt gọi model nào";
+  return `${num(t.calls - t.callsWithoutUsage)}/${num(t.calls)} lượt gọi có số token do nhà cung cấp báo`;
+}
+
+function UsageTable({ rows, keyLabel }: { rows: UsageBucket[]; keyLabel: string }) {
+  if (!rows.length) return <StateView kind="empty" title="Chưa có dữ liệu" detail="Chưa có lượt gọi model thật nào trong khoảng thời gian này."/>;
+  return <table className="table"><thead><tr><th>{keyLabel}</th><th>Lượt gọi</th><th>Lỗi</th><th>Token vào / ra</th><th>Tổng token</th><th>Chi phí</th></tr></thead>
+    <tbody>{rows.map((r) => <tr key={r.key}><td>{r.label ? <><b>{r.label}</b>{r.label !== r.key ? <small className="code">{r.key}</small> : null}</> : <span className="code">{r.key}</span>}</td>
+      <td>{num(r.totals.calls)}</td><td>{num(r.totals.failedCalls)}</td><td>{num(r.totals.promptTokens)} / {num(r.totals.completionTokens)}</td>
+      <td><b>{num(r.totals.totalTokens)}</b>{r.totals.callsWithoutUsage ? <small>{num(r.totals.callsWithoutUsage)} lượt không có số liệu</small> : null}</td>
+      <td>{usd(r.totals.costUsd)}</td></tr>)}</tbody></table>;
+}
+
+function DailyBars({ daily }: { daily: AiUsageReport["daily"] }) {
+  const max = Math.max(1, ...daily.map((d) => d.totalTokens));
+  const day = (iso: string) => new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit" }).format(new Date(`${iso}T00:00:00`));
+  return <figure className="barsFig">
+    <div className="bars" role="img" aria-label={`Token theo ngày từ ${day(daily[0]?.day ?? "")} đến hôm nay, cao nhất ${num(max)} token`}>
+      {daily.map((d) => <div key={d.day} className="bar" title={`${day(d.day)}: ${num(d.totalTokens)} token, ${num(d.calls)} lượt gọi${d.failedCalls ? `, ${num(d.failedCalls)} lỗi` : ""}`}>
+        <span style={{ height: `${Math.round((d.totalTokens / max) * 100)}%` }}/></div>)}
+    </div>
+    <figcaption className="barsAxis"><span>{daily.length ? day(daily[0].day) : ""}</span><span>Token mỗi ngày · cao nhất {num(max === 1 && !daily.some((d) => d.totalTokens) ? 0 : max)}</span><span>Hôm nay</span></figcaption>
+  </figure>;
+}
+
+function AiCallsLog({ models }: { models: string[] }) {
+  const [page, setPage] = useState(0);
+  const [outcome, setOutcome] = useState(""); const [model, setModel] = useState("");
+  const params = useMemo(() => ({ page, outcome: outcome || undefined, model: model || undefined }), [page, outcome, model]);
+  const { data, error, loading, reload } = useLoad(() => api.admin.aiCalls(params), [params]);
+  return <Card title="Nhật ký lượt gọi model">
+    <div className="filters">
+      <select aria-label="Kết quả" value={outcome} onChange={(e) => { setPage(0); setOutcome(e.target.value); }}><option value="">Mọi kết quả</option>{Object.entries(OUTCOME_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
+      <select aria-label="Model" value={model} onChange={(e) => { setPage(0); setModel(e.target.value); }}><option value="">Mọi model</option>{models.map((m) => <option key={m} value={m}>{m}</option>)}</select>
+    </div>
+    {error ? <ErrorState error={error} retry={reload}/> : loading && !data ? <StateView kind="loading"/> : !data!.total ? <StateView kind="empty" title="Chưa có lượt gọi" detail="Bộ mô phỏng không gọi model nên không có dòng nào ở đây."/> : <>
+      <table className="table"><thead><tr><th>Thời gian</th><th>Người dùng</th><th>Ứng dụng</th><th>Model</th><th>Kết quả</th><th>Token vào / ra</th><th>Chi phí</th><th>Thời gian chạy</th></tr></thead>
+        <tbody>{data!.items.map((c) => <tr key={c.id}><td>{ago(c.createdAt)}<small>{fmtDate(c.createdAt)}</small></td>
+          <td><Link href={`/admin/users/${c.userId}`}>{c.user ?? c.userId.slice(0, 8)}</Link></td>
+          <td><Link href={`/admin/applications/${c.projectId}`}>{c.project ?? "—"}</Link><small>{c.workspace}</small></td>
+          <td className="code">{c.model}</td><td><Pill value={c.outcome} label={OUTCOME_LABEL[c.outcome]}/>{c.httpStatus && c.httpStatus !== 200 ? <small>HTTP {c.httpStatus}</small> : null}</td>
+          <td>{c.totalTokens == null ? <span className="muted">không báo</span> : <>{tok(c.promptTokens)} / {tok(c.completionTokens)}</>}</td>
+          <td>{usd(c.costUsd)}</td><td>{(c.latencyMs / 1000).toFixed(1)} s</td></tr>)}</tbody></table>
+      <Pager page={page} size={data!.size} total={data!.total} onPage={setPage}/></>}
+  </Card>;
+}
+
 function AiPage() {
   const { data, error, loading, reload } = useLoad(() => api.admin.ai(), []);
+  const [days, setDays] = useState(30);
+  const usage = useLoad(() => api.admin.aiUsage(days), [days]);
   if (loading && !data) return <StateView kind="loading"/>;
   if (error) return <ErrorState error={error} retry={reload}/>;
   const a = data!;
+  const u = usage.data;
+  const t = u?.totals;
   return (<>
-    <PageHead title="AI Control" sub="Mọi yêu cầu AI đi qua máy chủ; nhân viên không giữ API key."/>
+    <PageHead title="AI Control" sub="Mọi yêu cầu AI đi qua máy chủ; nhân viên không giữ API key. Token và chi phí lấy đúng từ số liệu nhà cung cấp trả về, không ước lượng."/>
     <div className="kpiGrid">
       <Kpi label="Nhà cung cấp" value={a.provider === "openrouter" ? "OpenRouter" : "Mô phỏng"} hint={a.configured ? "Đã cấu hình key" : "Chưa có OPENROUTER_API_KEY"}/>
-      <Kpi label="Chế độ" value={a.mode === "auto" ? "Tự động (model miễn phí)" : "Mô phỏng"}/>
-      <Kpi label="Lượt AI hôm nay" value={num(a.requestsToday)} hint={`${num(a.externalToday)} qua OpenRouter`}/>
-      <Kpi label="Lượt AI trong tháng" value={num(a.requestsMonth)}/>
-      <Kpi label="Giới hạn" value={`${a.dailyLimitPerUser}/ngày/người`} hint={`${a.promptsPerMinute} prompt/phút`}/>
+      <Kpi label="Lượt AI hôm nay" value={num(a.requestsToday)} hint={`${num(a.externalToday)} qua OpenRouter · ${num(a.requestsMonth)} trong tháng`}/>
+      <Kpi label="Giới hạn" value={`${a.dailyLimitPerUser} lượt/ngày/người`}
+        hint={u ? [u.limits.dailyTokensPerUser ? `${num(u.limits.dailyTokensPerUser)} token/ngày/người` : "Không giới hạn token/người",
+          u.limits.monthlyTokensPerWorkspace ? `${num(u.limits.monthlyTokensPerWorkspace)} token/tháng/workspace` : "không giới hạn token/workspace"].join(" · ") : `${a.promptsPerMinute} prompt/phút`}/>
     </div>
+
+    <Card title="Mức sử dụng model" actions={<div className="seg" role="group" aria-label="Khoảng thời gian">{[1, 7, 30, 90].map((d) =>
+      <button key={d} className={`btn sm ${d === days ? "primary" : ""}`} aria-pressed={d === days} onClick={() => setDays(d)}>{d === 1 ? "Hôm nay" : `${d} ngày`}</button>)}</div>}>
+      {usage.error ? <ErrorState error={usage.error} retry={usage.reload}/> : !u || !t ? <StateView kind="loading"/> : <>
+        <div className="kpiGrid">
+          <Kpi label="Lượt gọi model" value={num(t.calls)} hint={t.calls ? `${num(t.failedCalls)} lỗi / không dùng được (gồm lượt thử lại)` : "Chưa có"}/>
+          <Kpi label="Tổng token" value={num(t.totalTokens)} hint={`${num(t.promptTokens)} vào · ${num(t.completionTokens)} ra`}/>
+          <Kpi label="Chi phí (nhà cung cấp báo)" value={usd(t.costUsd)} hint={t.calls ? `${num(t.costReportedCalls)}/${num(t.calls)} lượt có báo chi phí` : "Model miễn phí báo $0"}/>
+          <Kpi label="Thời gian trả lời TB" value={t.avgLatencyMs == null ? "—" : `${(t.avgLatencyMs / 1000).toFixed(1)} s`}/>
+        </div>
+        <p className="hint">{coverage(t)}. Lượt lỗi (HTTP 429, hết thời gian chờ) không có số token và không được tính là 0 ước lượng. Bộ mô phỏng không gọi model nên không xuất hiện ở đây.</p>
+        <DailyBars daily={u.daily}/>
+      </>}
+    </Card>
+    {u ? <>
+      <Card title="Theo model"><UsageTable rows={u.byModel} keyLabel="Model"/></Card>
+      <div className="grid2">
+        <Card title="Theo người dùng (top 20)"><UsageTable rows={u.byUser} keyLabel="Người dùng"/></Card>
+        <Card title="Theo workspace (top 20)"><UsageTable rows={u.byWorkspace} keyLabel="Workspace"/></Card>
+      </div>
+      <AiCallsLog models={u.byModel.map((m) => m.key)}/>
+    </> : null}
+
     <div className="grid2">
-      <Card title="Theo model (tháng này)">{a.byModelMonth.length ? <table className="table"><thead><tr><th>Nhà cung cấp</th><th>Model</th><th>Kết quả</th><th>Số lượt</th></tr></thead><tbody>{a.byModelMonth.map((m, i) => <tr key={i}><td>{m.provider}</td><td className="code">{m.model ?? "—"}</td><td><Pill value={m.outcome}/></td><td>{num(m.count)}</td></tr>)}</tbody></table> : <StateView kind="empty"/>}</Card>
       <Card title={`Model được phép (${a.models.length})`}>{a.models.length ? <ul className="plainList">{a.models.map((m) => <li key={m.id}><b>{m.name}</b><small className="code">{m.id}</small></li>)}</ul> : <p className="muted">Không có model ngoài: đang dùng bộ mô phỏng.</p>}</Card>
-    </div>
-    <div className="grid2">
-      <Card title="Ghi nhận token & chi phí"><ComingSoon title="Chưa ghi nhận token/chi phí">Bảng ai_usage_events và bảng giá model sẽ được thêm ở Phase 4. Không hiển thị số ước lượng.</ComingSoon></Card>
       <Card title="Nhiều nhà cung cấp & quyền theo model"><ComingSoon title="OpenAI, Anthropic, Gemini, model nội bộ">Chưa tích hợp. Kiến trúc hiện có port LLMProvider và AiService để mở rộng (Phase 6).</ComingSoon></Card>
     </div>
-    <Card title="Lượt AI gần đây"><table className="table"><thead><tr><th>Thời gian</th><th>Người dùng</th><th>Prompt</th><th>Model</th><th>Kết quả</th></tr></thead><tbody>{a.recent.map((p) => <tr key={p.id}><td>{ago(p.createdAt)}</td><td>{p.user ?? "—"}</td><td>{p.text}</td><td className="code">{p.model ?? p.provider}</td><td>{p.outcome ? <Pill value={p.outcome}/> : "—"}</td></tr>)}</tbody></table></Card>
+    <Card title="Prompt gần đây"><table className="table"><thead><tr><th>Thời gian</th><th>Người dùng</th><th>Prompt</th><th>Model</th><th>Kết quả</th></tr></thead><tbody>{a.recent.map((p) => <tr key={p.id}><td>{ago(p.createdAt)}</td><td>{p.user ?? "—"}</td><td>{p.text}</td><td className="code">{p.model ?? p.provider}</td><td>{p.outcome ? <Pill value={p.outcome}/> : "—"}</td></tr>)}</tbody></table></Card>
   </>);
 }
 
