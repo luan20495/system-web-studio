@@ -42,5 +42,5 @@ Development Ready: **YES** · Internal Demo Ready: **YES** · Production Ready: 
 | Git, code generation, sandbox build, dynamic hosting, connectors, secrets per project | NOT IMPLEMENTED | Phase 7.2–7.5 designed (docs/SOFTWARE_FACTORY_DESIGN.md, ADR 0008, 0010–0012) with the owner's decisions recorded; no code yet |
 
 ## Verification (this machine)
-Backend `./gradlew test` on 2026-10-02 (after Phase 7.1): 128 tests, 0 failures, 3 skipped (OpenRouterLiveTests — need a real OPENROUTER_API_KEY), browser E2E `e2e/factory-flow.mjs` 34/34, `e2e/sso-flow.mjs` 9/9 (Keycloak), `e2e/providers-flow.mjs` 6/6 (local OpenAI-compatible stub),
+Backend `./gradlew test` on 2026-10-02 (after Phase 7.1): 129 tests, 0 failures, 3 skipped (OpenRouterLiveTests — need a real OPENROUTER_API_KEY), browser E2E `e2e/factory-flow.mjs` 34/34, `e2e/sso-flow.mjs` 9/9 (Keycloak), `e2e/providers-flow.mjs` 6/6 (local OpenAI-compatible stub), `e2e/public-flow.mjs` 12/13 on the live public deployment (13th fixed, see PUBLIC_DEPLOYMENT.md),
 `e2e/a11y.mjs` 28/28 screens without serious/critical axe violations, `e2e/pages-mock.mjs` 6/6, typecheck and both builds (http + static mock).

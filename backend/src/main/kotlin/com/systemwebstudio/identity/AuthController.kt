@@ -95,9 +95,11 @@ class AuthController(
     @GetMapping("/me")
     fun me(@AuthenticationPrincipal principal: StudioUserDetails): MeResponse {
         val workspaces = if (principal.systemAdmin) {
-            jdbc.query("SELECT id, name FROM workspaces ORDER BY name") { rs, _ ->
-                WorkspaceSummary(rs.getObject("id", UUID::class.java), rs.getString("name"), "ADMIN")
-            }
+            // every workspace is visible to a system admin; the role is the real membership role, or ADMIN when not a member
+            jdbc.query("""SELECT w.id, w.name, coalesce(m.role, 'ADMIN') AS role FROM workspaces w
+                LEFT JOIN workspace_members m ON m.workspace_id = w.id AND m.user_id = ? AND m.active ORDER BY w.name""", { rs, _ ->
+                WorkspaceSummary(rs.getObject("id", UUID::class.java), rs.getString("name"), rs.getString("role"))
+            }, principal.userId)
         } else {
             jdbc.query(
                 """SELECT w.id, w.name, m.role FROM workspace_members m JOIN workspaces w ON w.id = m.workspace_id

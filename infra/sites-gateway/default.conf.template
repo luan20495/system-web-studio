@@ -12,6 +12,8 @@ server {
     server_tokens off;
     client_max_body_size 1k;
 
+    # browsers ask every host for /favicon.ico; sites have none at the root
+    location = /favicon.ico { access_log off; log_not_found off; return 204; }
     location = /healthz { access_log off; default_type text/plain; return 200 "ok\n"; }
 
     location ~ "^/(_access|[a-z0-9][a-z0-9-]{1,79})(/.*)?$" {

@@ -50,6 +50,8 @@ asset fails the policy check (as today); the UI drops the "Demo deployment" labe
   `site_session` cookie (HttpOnly, SameSite=Lax, Secure in production, 8 h); membership is re-checked on every request.
 * `publish/SiteControllers.kt` — serving (`/sites/**`, own stateless security chain, GET/HEAD only, strict CSP `default-src 'none'` without
   scripts, `nosniff`, ETag/304, integrity check of every file against the manifest), rollback, unpublish, site info.
+* **`no-transform`:** on the public deployment Cloudflare injected its analytics beacon `<script>` into site pages (blocked by the CSP, seen in
+  the public E2E); every site response now carries `no-transform`, after which no script is injected (verified on a live 200 page).
 * **Caching decision:** responses are `public, no-cache` (revalidated each time, ETag → 304) or `private, no-store`. An E2E run showed that
   time-based caching let the public copy of a site that had just been switched to private keep being served; correctness first.
 * `infra/sites-gateway/default.conf.template` — nginx-unprivileged, read-only container (`sites-gateway` in `compose.yml` and

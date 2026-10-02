@@ -102,6 +102,9 @@ class ProjectController(
     ): ProjectResponse {
         val ctx = access.forWorkspace(me.userId, workspaceId)
         ctx.require(Permission.PROJECT_CREATE)
+        // the creator becomes the project OWNER, which requires workspace membership; a system admin who is not a member gets a clear
+        // answer instead of a constraint violation (membership is never added silently)
+        if (ctx.workspaceRole == null) throw ApiException.conflict("ADMIN_NOT_MEMBER", "Join this workspace as a member before creating applications in it")
         val existing = jdbc.queryForObject("SELECT count(*) FROM projects WHERE workspace_id = ? AND active", Long::class.java, workspaceId)!!
         if (existing >= maxProjects) throw ApiException.conflict("PROJECT_LIMIT", "This workspace reached its limit of $maxProjects projects", mapOf("limit" to maxProjects))
         // resolved before anything is stored: an invisible or outdated template leaves no half-created project behind

@@ -82,13 +82,13 @@ class StaticSiteTests : IntegrationTestBase() {
         assertThat(page.response.contentAsString).contains("<h1>Trang thật</h1>").contains("assets/$asset.png")
         assertThat(page.response.getHeader("Content-Security-Policy")).contains("default-src 'none'").contains("form-action 'none'").doesNotContain("script-src 'self'")
         assertThat(page.response.getHeader("X-Content-Type-Options")).isEqualTo("nosniff")
-        assertThat(page.response.getHeader("Cache-Control")).isEqualTo("public, no-cache")          // always revalidated: visibility changes apply at once
+        assertThat(page.response.getHeader("Cache-Control")).isEqualTo("public, no-cache, no-transform")          // always revalidated: visibility changes apply at once
         assertThat(page.response.getHeader("Set-Cookie")).isNull()                                   // no session for visitors
         val etag = page.response.getHeader("ETag")!!
         assertThat(v.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/sites/$slug/").header("If-None-Match", etag)).response.status).isEqualTo(304)
         val img = v.get("/sites/$slug/assets/$asset.png")
         assertThat(img.response.status).isEqualTo(200); assertThat(img.response.contentAsByteArray).isEqualTo(png)
-        assertThat(img.response.contentType).isEqualTo("image/png"); assertThat(img.response.getHeader("Cache-Control")).isEqualTo("public, no-cache")
+        assertThat(img.response.contentType).isEqualTo("image/png"); assertThat(img.response.getHeader("Cache-Control")).isEqualTo("public, no-cache, no-transform")
         assertThat(v.get("/sites/$slug").response.getHeader("Location")).isEqualTo("/$slug/")
         assertThat(v.get("/sites/$slug/missing.html").response.status).isEqualTo(404)
         assertThat(v.get("/sites/$slug/..%2F..%2Fetc%2Fpasswd").response.status).isIn(400, 404)
@@ -123,7 +123,7 @@ class StaticSiteTests : IntegrationTestBase() {
         assertThat(redeem.response.getHeader("Set-Cookie")).startsWith("site_session=").contains("HttpOnly").contains("SameSite=Lax")
         assertThat(v.get("/sites/_access?ticket=$ticket").response.status).isEqualTo(400)              // single use
         val ok = v.get("/sites/$slug/")
-        assertThat(ok.response.status).isEqualTo(200); assertThat(ok.response.getHeader("Cache-Control")).isEqualTo("private, no-store")
+        assertThat(ok.response.status).isEqualTo(200); assertThat(ok.response.getHeader("Cache-Control")).isEqualTo("private, no-store, no-transform")
 
         fx.disable(sc.user.id)                                                                           // access ends on the next request
         assertThat(v.get("/sites/$slug/").response.status).isEqualTo(403)

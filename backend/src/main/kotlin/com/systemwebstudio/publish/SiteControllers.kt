@@ -49,7 +49,7 @@ class SiteServingController(
         common(response)
         response.status = status
         response.contentType = "text/html; charset=utf-8"
-        response.setHeader("Cache-Control", "no-store")
+        response.setHeader("Cache-Control", "no-store, no-transform")
         response.writer.write("""<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>$title</title>
             <style>body{font:16px system-ui,sans-serif;margin:0;display:grid;place-items:center;min-height:100vh;background:#f6f7f9;color:#1d2433}main{max-width:460px;padding:24px;text-align:center}</style></head>
             <body><main><h1>$title</h1><p>$text</p></main></body></html>""")
@@ -94,7 +94,8 @@ class SiteServingController(
         response.setHeader("ETag", "\"${file.sha256}\"")
         // Revalidate every time (cheap: ETag → 304) instead of caching for a while: a site can switch to private, roll back or go offline,
         // and no gateway/CDN/browser copy may keep serving the old content after that. (Purge-based edge caching is a later optimisation.)
-        response.setHeader("Cache-Control", if (private) "private, no-store" else "public, no-cache")
+        // no-transform: intermediaries (e.g. Cloudflare's analytics beacon injection) must not add scripts to a script-free site
+        response.setHeader("Cache-Control", if (private) "private, no-store, no-transform" else "public, no-cache, no-transform")
         if (request.getHeader("If-None-Match") == "\"${file.sha256}\"") { response.status = 304; return }
         val bytes = store.get("${site.prefix}/$path") ?: return page(response, 404, "Không tìm thấy", "")
         // integrity: serve only bytes that match the manifest recorded at build time

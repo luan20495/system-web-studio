@@ -23,6 +23,15 @@ Anyone can **sign up** (own workspace, no email stored), create up to `MAX_PROJE
 ## What is verified (2026-10-02)
 `node e2e/public-flow.mjs` through Cloudflare: HTTPS + HSTS + nonce CSP, sign-up and login, Secure/HttpOnly cookies, project, prompt, image upload straight to the public storage host (presigned URL + CORS) and download, publish to RUNNING, reload keeps the session, audit rows store the real client IP (not 127.0.0.1), a second user cannot see the first user's workspace (404), actuator/OpenAPI/Swagger return 404, the bucket is not listable. (Two checks needed `curl --resolve` because this Mac cached a negative DNS answer; they passed that way.)
 
+## Verified after Phase 7.1 (2026-10-02)
+`node e2e/public-flow.mjs` (rewritten for the new UI) through Cloudflare: 12/13 — sign-up, Secure/HttpOnly cookies, website creation, prompt,
+Design-mode edit, upload via the storage host, **real site at `https://sites.toolsmcp.uk/<slug>/`** (content, CSP, no cookie), **private site**
+(anonymous → Studio sign-in redirect, member enters with a Secure host-only `site_session`, another user refused), foreign workspace 404,
+real client IPs in audit, no operational endpoint reachable. The 13th check failed because Cloudflare injected its analytics script into
+the site page (blocked by the CSP); fixed with `Cache-Control: no-transform` and re-verified on a live page. A full re-run was not repeated
+in the same hour because of the public sign-up limit (5 per IP per hour). Database backup taken before the V8–V13 migrations:
+`backups/public/studio-20261002T105043Z.dump`.
+
 ## Limits you must know about
 * **It only works while this Mac is on, awake, online and Docker/the processes run.** `public-up.sh` starts `caffeinate -i -s` (no sleep on AC power); closing the lid on battery still sleeps it. Nothing restarts automatically after a reboot (no LaunchAgent is installed).
 * **Publish is real (Phase 7.1):** a published page is served at `https://sites.toolsmcp.uk/<slug>/` from an immutable artifact; private sites require signing in on the Studio as a member. It is served from this Mac like everything else.

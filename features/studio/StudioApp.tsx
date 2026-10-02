@@ -96,7 +96,8 @@ function Home() {
   const usage = useLoad(() => api.myUsage(), []);
   const comps = useLoad(() => api.components(), []);
   const role = me!.workspaces.find((w) => w.id === workspaceId)?.role;
-  const canCreate = role === "WORKSPACE_ADMIN" || role === "EDITOR" || role === "ADMIN";
+  // creating makes you the project owner, which needs workspace membership; "ADMIN" = system admin viewing a workspace without membership
+  const canCreate = role === "WORKSPACE_ADMIN" || role === "EDITOR";
   const [idea, setIdea] = useState(""); const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null);
   async function start(e: FormEvent) {
     e.preventDefault(); const text = idea.trim(); if (!text) return;
@@ -118,7 +119,7 @@ function Home() {
           <div className="row between"><small className="muted">Hiện hỗ trợ loại ứng dụng: Website (một trang). Ctrl/⌘ + Enter để tạo.</small><button className="btn primary" disabled={busy || !idea.trim()}>{busy ? "Đang tạo…" : "Tạo bằng AI"}</button></div>
           {err ? <p className="formError" role="alert">{err}</p> : null}
         </form>
-      ) : <p className="notice">Vai trò của bạn trong workspace này không cho phép tạo ứng dụng mới.</p>}
+      ) : <p className="notice">{role === "ADMIN" ? "Bạn đang xem workspace này với quyền quản trị hệ thống nhưng không phải thành viên, nên không tạo ứng dụng ở đây được. Chọn workspace của bạn hoặc nhờ quản trị workspace thêm bạn." : "Vai trò của bạn trong workspace này không cho phép tạo ứng dụng mới."}</p>}
     </section>
     <div className="kpiGrid">
       <div className="kpi"><div className="kpiLabel">Lượt AI hôm nay</div>
@@ -165,7 +166,7 @@ function Projects() {
 function useCanCreate() {
   const { me } = useSession(); const { workspaceId } = useStudio();
   const role = me!.workspaces.find((w) => w.id === workspaceId)?.role;
-  return role === "WORKSPACE_ADMIN" || role === "EDITOR" || role === "ADMIN" || !!me!.systemAdmin;
+  return role === "WORKSPACE_ADMIN" || role === "EDITOR";
 }
 
 function NewApp() {

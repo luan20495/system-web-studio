@@ -24,6 +24,21 @@ class AdminApiTests : IntegrationTestBase() {
     }
 
     @Test
+    fun `a system admin who is not a workspace member gets a clear 409 instead of a server error, and sees the real role in me`() {
+        val ws = fx.workspace(); val owner = fx.user("wsown"); fx.member(ws, owner, "WORKSPACE_ADMIN")
+        val adminUser = fx.user("nonmember", systemAdmin = true); val a = sessionFor(adminUser.username)
+        val before = jdbc.queryForObject("SELECT count(*) FROM projects WHERE workspace_id = ?", Long::class.java, ws)
+        val r = a.post(api(ws), """{"name":"Không được tạo"}""")
+        assertThat(r.response.status).isEqualTo(409); assertThat(a.body(r).get("code").asString()).isEqualTo("ADMIN_NOT_MEMBER")
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM projects WHERE workspace_id = ?", Long::class.java, ws)).isEqualTo(before)
+        val role = a.body(a.get("/api/v1/auth/me")).get("workspaces").toList().single { it.get("id").asString() == ws.toString() }.get("role").asString()
+        assertThat(role).isEqualTo("ADMIN")
+        fx.member(ws, adminUser, "EDITOR")                                                   // once a member, creation works and the role is real
+        assertThat(a.post(api(ws), """{"name":"Được tạo"}""").response.status).isEqualTo(201)
+        assertThat(a.body(a.get("/api/v1/auth/me")).get("workspaces").toList().single { it.get("id").asString() == ws.toString() }.get("role").asString()).isEqualTo("EDITOR")
+    }
+
+    @Test
     fun `revoking system admin in the database takes effect immediately (no stale session privilege)`() {
         val u = fx.user("tmpadm", systemAdmin = true); val s = sessionFor(u.username)
         assertThat(s.get("/api/v1/admin/overview").response.status).isEqualTo(200)
