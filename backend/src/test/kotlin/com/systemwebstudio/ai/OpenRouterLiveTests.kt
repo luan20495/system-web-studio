@@ -37,7 +37,8 @@ class OpenRouterLiveTests {
     @Test
     @EnabledIfEnvironmentVariable(named = "OR_LIVE_KEY", matches = ".{20,}")
     fun `a real key answers through the free router`() {
-        val text = client(System.getenv("OR_LIVE_KEY")).chat("openrouter/free", "Reply with the single word OK.", "ping", 20)
-        assertThat(text).isNotBlank()
+        val answer = client(System.getenv("OR_LIVE_KEY")).chat("openrouter/free", "Reply with the single word OK.", "ping", 20)
+        assertThat(answer.content).isNotBlank()
+        assertThat(answer.usage?.totalTokens).isNotNull().isPositive()      // usage accounting is returned by the real API
     }
 }

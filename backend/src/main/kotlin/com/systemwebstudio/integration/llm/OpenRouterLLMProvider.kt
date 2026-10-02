@@ -35,24 +35,33 @@ class OpenRouterLLMProvider(
         val candidates = if (request.model == null || request.model == "auto") ai.autoCandidates() else listOf(request.model)
         var last: String? = null
         var lastError = "không có model khả dụng"
+        val calls = mutableListOf<AiCall>()
         for (model in candidates) {
             last = model
+            val t0 = System.nanoTime()
+            fun elapsed() = (System.nanoTime() - t0) / 1_000_000
+            var usage: ChatUsage? = null
             try {
-                val parsed = parse(client.chat(model, system, user), model)
+                val answer = client.chat(model, system, user)
+                usage = answer.usage
+                val parsed = parse(answer.content, model)
                 ai.markOk(model)
-                return parsed
+                calls += AiCall(name, model, "OK", 200, usage, elapsed())
+                return parsed.copy(calls = calls)
             } catch (e: OpenRouterException) {
+                calls += AiCall(name, model, if (e.usage != null) "BAD_OUTPUT" else "ERROR", e.status.takeIf { it > 0 }, e.usage, elapsed())
                 lastError = e.message ?: "lỗi"
                 log.warn("OpenRouter model {} failed: {}", model, e.message)
                 if (e.fatal) break                                   // bad key / no credit: other models will not help
                 ai.markFailed(model)
             } catch (e: BadModelOutput) {
+                calls += AiCall(name, model, "BAD_OUTPUT", 200, usage, elapsed())
                 lastError = "model trả về định dạng không hợp lệ"
                 log.warn("OpenRouter model {} returned unusable output: {}", model, e.message)
                 ai.markFailed(model)
             }
         }
-        return failure("AI chưa thể xử lý yêu cầu ($lastError). Hãy thử lại hoặc chọn model khác.", last)
+        return failure("AI chưa thể xử lý yêu cầu ($lastError). Hãy thử lại hoặc chọn model khác.", last).copy(calls = calls)
     }
 
     private fun failure(message: String, model: String?) = LLMResponse("UNSUPPORTED", emptyList(), message, name, model)

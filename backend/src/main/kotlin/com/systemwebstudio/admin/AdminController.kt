@@ -238,7 +238,8 @@ class AdminController(
             requestsMonth = count("SELECT count(*) FROM prompt_runs WHERE created_at >= date_trunc('month', now())"),
             externalToday = count("SELECT count(*) FROM prompt_runs WHERE provider <> 'mock' AND created_at >= date_trunc('day', now())"),
             byModelMonth = byModel, recent = recent,
-            tokenAccounting = "NOT_IMPLEMENTED", costAccounting = "NOT_IMPLEMENTED"
+            // details: GET /api/v1/admin/ai/usage and /ai/calls (AdminAiUsageController), from ai_calls
+            tokenAccounting = "PROVIDER_REPORTED", costAccounting = "PROVIDER_REPORTED"
         )
     }
 

@@ -9,8 +9,8 @@ import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import org.springframework.transaction.support.TransactionTemplate
 
-data class CleanupResult(val dryRun: Boolean, val abandonedUploads: Int, val deletedAssetRows: Int, val idempotencyKeys: Int, val failedDeployments: Int) {
-    val total get() = abandonedUploads + deletedAssetRows + idempotencyKeys + failedDeployments
+data class CleanupResult(val dryRun: Boolean, val abandonedUploads: Int, val deletedAssetRows: Int, val idempotencyKeys: Int, val failedDeployments: Int, val aiCalls: Int = 0) {
+    val total get() = abandonedUploads + deletedAssetRows + idempotencyKeys + failedDeployments + aiCalls
 }
 
 /**
@@ -29,7 +29,9 @@ class CleanupService(
     @Value("\${app.cleanup.abandoned-upload-hours:24}") private val abandonedHours: Long,
     @Value("\${app.cleanup.deleted-asset-days:7}") private val deletedAssetDays: Long,
     @Value("\${app.cleanup.idempotency-key-days:7}") private val idempotencyDays: Long,
-    @Value("\${app.cleanup.failed-deployment-days:30}") private val failedDeploymentDays: Long
+    @Value("\${app.cleanup.failed-deployment-days:30}") private val failedDeploymentDays: Long,
+    /** AI usage rows (accounting): kept for more than a year by default so monthly and yearly totals stay complete */
+    @Value("\${app.cleanup.ai-call-days:400}") private val aiCallDays: Long
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -52,20 +54,22 @@ class CleanupService(
         val deleted = jdbc.queryForList("SELECT id, storage_key FROM assets WHERE status = 'DELETED' AND created_at < now() - make_interval(days => ?)", deletedAssetDays.toInt())
         val keys = jdbc.queryForObject("SELECT count(*) FROM idempotency_keys WHERE created_at < now() - make_interval(days => ?)", Int::class.java, idempotencyDays.toInt())!!
         val failed = jdbc.queryForList("SELECT id FROM deployments WHERE status = 'FAILED' AND finished_at < now() - make_interval(days => ?)", failedDeploymentDays.toInt())
+        val aiCalls = jdbc.queryForObject("SELECT count(*) FROM ai_calls WHERE created_at < now() - make_interval(days => ?)", Int::class.java, aiCallDays.toInt())!!
 
         if (!dryRun) {
             (abandoned + deleted).forEach { runCatching { storage.delete(it["storage_key"] as String) }.onFailure { e -> log.warn("Could not delete object {}: {}", it["storage_key"], e.message) } }
             tx.executeWithoutResult {
                 (abandoned + deleted).forEach { jdbc.update("DELETE FROM assets WHERE id = ? AND status IN ('PENDING','DELETED')", it["id"]) }
                 jdbc.update("DELETE FROM idempotency_keys WHERE created_at < now() - make_interval(days => ?)", idempotencyDays.toInt())
+                jdbc.update("DELETE FROM ai_calls WHERE created_at < now() - make_interval(days => ?)", aiCallDays.toInt())
                 failed.forEach {
                     jdbc.update("DELETE FROM deployment_events WHERE deployment_id = ?", it["id"])
                     jdbc.update("DELETE FROM deployments WHERE id = ? AND status = 'FAILED'", it["id"])
                 }
             }
         }
-        val result = CleanupResult(dryRun, abandoned.size, deleted.size, keys, failed.size)
-        log.info("cleanup dry_run={} abandoned_uploads={} deleted_assets={} idempotency_keys={} failed_deployments={}", dryRun, result.abandonedUploads, result.deletedAssetRows, result.idempotencyKeys, result.failedDeployments)
+        val result = CleanupResult(dryRun, abandoned.size, deleted.size, keys, failed.size, aiCalls)
+        log.info("cleanup dry_run={} abandoned_uploads={} deleted_assets={} idempotency_keys={} failed_deployments={} ai_calls={}", dryRun, result.abandonedUploads, result.deletedAssetRows, result.idempotencyKeys, result.failedDeployments, result.aiCalls)
         if (!dryRun && result.total > 0) audit.record("CLEANUP", "SYSTEM", null, actorId = null, newValue = result)
         return result
     }

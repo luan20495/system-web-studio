@@ -8,7 +8,7 @@ import java.util.UUID
 class AdminApiTests : IntegrationTestBase() {
     private fun admin() = sessionFor(fx.user("sysadm", systemAdmin = true).username)
     private val endpoints = listOf("/api/v1/admin/overview", "/api/v1/admin/users", "/api/v1/admin/workspaces", "/api/v1/admin/applications",
-        "/api/v1/admin/audit", "/api/v1/admin/ai", "/api/v1/admin/components", "/api/v1/admin/system/health", "/api/v1/admin/settings")
+        "/api/v1/admin/audit", "/api/v1/admin/ai", "/api/v1/admin/ai/usage", "/api/v1/admin/ai/calls", "/api/v1/admin/components", "/api/v1/admin/system/health", "/api/v1/admin/settings")
 
     @Test
     fun `only system admins reach the admin API - workspace admins and anonymous users do not`() {
@@ -96,7 +96,7 @@ class AdminApiTests : IntegrationTestBase() {
         assertThat(a.body(a.get("/api/v1/admin/audit?requestId=$rid")).get("total").asLong()).isGreaterThanOrEqualTo(1L)
 
         val ai = a.body(a.get("/api/v1/admin/ai"))
-        assertThat(ai.get("provider").asString()).isEqualTo("mock"); assertThat(ai.get("tokenAccounting").asString()).isEqualTo("NOT_IMPLEMENTED")
+        assertThat(ai.get("provider").asString()).isEqualTo("mock"); assertThat(ai.get("tokenAccounting").asString()).isEqualTo("PROVIDER_REPORTED")
         assertThat(ai.get("requestsToday").asLong()).isGreaterThanOrEqualTo(1L)
 
         val comps = a.body(a.get("/api/v1/admin/components")).toList()

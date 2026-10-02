@@ -157,6 +157,7 @@ app:
     deleted-asset-days: ${CLEANUP_DELETED_ASSET_DAYS:7}
     idempotency-key-days: ${CLEANUP_IDEMPOTENCY_DAYS:7}
     failed-deployment-days: ${CLEANUP_FAILED_DEPLOYMENT_DAYS:30}
+    ai-call-days: ${CLEANUP_AI_CALL_DAYS:400}              # AI usage accounting rows
     # audit_events are never deleted by the application.
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000}
@@ -182,6 +183,10 @@ app:
     daily-limit-per-user: ${AI_DAILY_LIMIT_PER_USER:50}        # the free tier quota is shared by all users of the key
     max-page-chars: 24000
     model-allowlist: ${OPENROUTER_MODEL_ALLOWLIST:}            # optional comma list to restrict the free models offered
+  ai:
+    # Token budgets from provider-reported usage (ai_calls); 0 = off. Checked before each real-AI prompt.
+    daily-token-limit-per-user: ${AI_DAILY_TOKEN_LIMIT_PER_USER:0}
+    monthly-token-limit-per-workspace: ${AI_MONTHLY_TOKEN_LIMIT_PER_WORKSPACE:0}
   signup:
     # Internal company platform: public self-registration is off unless explicitly enabled.
     enabled: ${PUBLIC_SIGNUP_ENABLED:${SIGNUP_ENABLED:false}}

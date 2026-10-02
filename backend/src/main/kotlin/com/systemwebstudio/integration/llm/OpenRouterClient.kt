@@ -10,7 +10,12 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
 
-class OpenRouterException(message: String, val status: Int = 0, val fatal: Boolean = false) : RuntimeException(message)
+/** `usage` is set when the provider answered (and so may have billed) even though the answer was unusable. */
+class OpenRouterException(message: String, val status: Int = 0, val fatal: Boolean = false, val usage: ChatUsage? = null) : RuntimeException(message)
+
+/** Exactly what the provider reported in `usage`; a null field means "not reported", never an estimate. */
+data class ChatUsage(val promptTokens: Int?, val completionTokens: Int?, val totalTokens: Int?, val costUsd: java.math.BigDecimal?, val generationId: String?)
+data class ChatResult(val content: String, val usage: ChatUsage?)
 
 data class OrModel(val id: String, val name: String, val contextLength: Int, val promptPrice: String?, val completionPrice: String?, val outputText: Boolean)
 
@@ -45,11 +50,12 @@ class OpenRouterClient(
         }
     }
 
-    /** Returns the assistant message text. Throws [OpenRouterException]; `fatal` means retrying another model cannot help (bad key, no credit). */
-    fun chat(model: String, system: String, user: String, maxTokens: Int = 2500): String {
+    /** Returns the assistant message text and the reported usage. Throws [OpenRouterException]; `fatal` means retrying another model cannot help (bad key, no credit). */
+    fun chat(model: String, system: String, user: String, maxTokens: Int = 2500): ChatResult {
         if (!configured) throw OpenRouterException("OpenRouter API key is not configured", fatal = true)
         val body = json.writeValueAsString(mapOf(
             "model" to model, "temperature" to 0.2, "max_tokens" to maxTokens, "stream" to false,
+            "usage" to mapOf("include" to true),                       // OpenRouter usage accounting: tokens + cost in the response
             "messages" to listOf(mapOf("role" to "system", "content" to system), mapOf("role" to "user", "content" to user))
         ))
         val builder = HttpRequest.newBuilder(URI("$baseUrl/chat/completions")).timeout(Duration.ofSeconds(timeoutSeconds))
@@ -64,7 +70,20 @@ class OpenRouterClient(
         if (status == 402) throw OpenRouterException("OpenRouter reports insufficient credit (HTTP 402)", status, fatal = true)
         if (status != 200) throw OpenRouterException("HTTP $status", status)
         val root: JsonNode = try { json.readTree(response.body()) } catch (e: Exception) { throw OpenRouterException("unreadable response") }
-        if (root.has("error")) throw OpenRouterException("provider error", root.get("error")?.get("code")?.asInt(0) ?: 0)
-        return root.get("choices")?.get(0)?.get("message")?.get("content")?.asString()?.takeIf { it.isNotBlank() } ?: throw OpenRouterException("empty completion")
+        val usage = usage(root)
+        if (root.has("error")) throw OpenRouterException("provider error", root.get("error")?.get("code")?.asInt(0) ?: 0, usage = usage)
+        val content = root.get("choices")?.get(0)?.get("message")?.get("content")?.asString()?.takeIf { it.isNotBlank() }
+            ?: throw OpenRouterException("empty completion", usage = usage)
+        return ChatResult(content, usage)
+    }
+
+    internal fun usage(root: JsonNode): ChatUsage? {
+        val u = root.get("usage")?.takeIf { it.isObject } ?: return null
+        fun tokens(name: String) = u.get(name)?.takeIf { it.isIntegralNumber }?.asLong()?.takeIf { it in 0..Int.MAX_VALUE }?.toInt()
+        val cost = u.get("cost")?.takeIf { it.isNumber }?.let { runCatching { java.math.BigDecimal(it.asString()) }.getOrNull() }?.takeIf { it.signum() >= 0 }
+        val prompt = tokens("prompt_tokens"); val completion = tokens("completion_tokens")
+        val total = tokens("total_tokens") ?: if (prompt != null && completion != null) prompt + completion else null
+        val id = root.get("id")?.takeIf { it.isString }?.asString()?.take(160)
+        return ChatUsage(prompt, completion, total, cost, id)
     }
 }
