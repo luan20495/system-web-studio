@@ -46,11 +46,27 @@ await check("create project, AI status shows the simulator while no key is set",
   if (!keyed) await page.getByText(/AI: mô phỏng/).waitFor({ timeout: 10000 }); else await page.getByLabel("Model AI").waitFor({ timeout: 15000 });
 });
 await check("prompt through Cloudflare updates the page and survives a reload", async () => {
-  await page.getByPlaceholder(/Ví dụ/).fill("Thêm bảng so sánh 3 sản phẩm");
+  await page.getByPlaceholder(/Mô tả thay đổi/).fill("Thêm bảng so sánh 3 sản phẩm");
   const [resp] = await Promise.all([page.waitForResponse((r) => r.url().endsWith("/prompts") && r.request().method() === "POST", { timeout: 150000 }), page.getByRole("button", { name: /Gửi/ }).click()]);
   expect(resp.status() === 200, `prompt status ${resp.status()}`);
   await frameHas("So sánh sản phẩm");
   await page.reload(); await page.getByRole("button", { name: /Public E2E site/ }).click(); await frameHas("So sánh sản phẩm");
+});
+await check("header shows plain-language status (no internal revision), save state and visibility", async () => {
+  const meta = await page.locator(".projectMeta").innerText();
+  expect(/Phiên bản \d+/.test(meta) && /Riêng tư|Công khai/.test(meta) && !/\br\d+\b/.test(meta), `meta: ${meta}`);
+  await page.getByText(/Đã lưu/).first().waitFor({ timeout: 5000 });
+});
+await check("structure tab: pick a section, it is outlined in the preview, edit a field through the inspector and it persists", async () => {
+  await page.getByRole("button", { name: "Chỉnh sửa", exact: true }).click();
+  await page.getByRole("button", { name: /Đầu trang \(Hero\)/ }).click();
+  const frame = await (await page.waitForSelector("iframe.previewFrame", { state: "attached" })).contentFrame();
+  await frame.waitForSelector(".__sel", { timeout: 10000 });
+  const insp = page.getByRole("region", { name: /Chỉnh sửa Đầu trang/ });
+  await insp.getByLabel("Tiêu đề", { exact: true }).fill("Tiêu đề chỉnh bằng inspector");
+  await insp.getByRole("button", { name: "Lưu thay đổi" }).click();
+  await frameHas("Tiêu đề chỉnh bằng inspector");
+  await page.reload(); await page.getByRole("button", { name: /Public E2E site/ }).click(); await frameHas("Tiêu đề chỉnh bằng inspector");
 });
 await check("asset upload goes browser -> public MinIO host (presigned, CORS) and the image loads back", async () => {
   const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64"); writeFileSync(OUT + "px.png", png);

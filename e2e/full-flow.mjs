@@ -42,7 +42,7 @@ async function frameHas(page, text, present = true) {
   throw new Error(`preview ${present ? "missing" : "still has"} "${text}"`);
 }
 async function sendPrompt(page, text) {
-  await page.getByPlaceholder(/Ví dụ/).fill(text);
+  await page.getByPlaceholder(/Mô tả thay đổi/).fill(text);
   const [resp] = await Promise.all([page.waitForResponse((r) => r.url().endsWith("/prompts") && r.request().method() === "POST"), page.getByRole("button", { name: /Gửi/ }).click()]);
   return resp.status();
 }
@@ -110,15 +110,17 @@ await check("history lists versions and restore creates a NEW version with the o
   await admin.reload(); await openProject(admin);
   await frameHas(admin, "Khách hàng nói gì"); await frameHas(admin, "So sánh sản phẩm", false);
 });
-await check("direct edit of a product is validated, versioned and persists", async () => {
-  await admin.getByRole("button", { name: "Chỉnh sửa" }).click();
-  const name = admin.getByLabel("Tên sản phẩm").first();
-  await name.fill("K-Series Pure E2E");
-  await admin.getByRole("button", { name: "Lưu thay đổi" }).click();
-  await admin.getByText("Đã lưu thay đổi và tạo phiên bản mới.").waitFor({ timeout: 10000 });
+await check("direct edit through the registry-driven inspector is validated, versioned and persists", async () => {
+  await admin.getByRole("button", { name: "Chỉnh sửa", exact: true }).click();
+  await admin.getByRole("button", { name: /Danh sách sản phẩm/ }).click();
+  const inspector = admin.getByRole("region", { name: /Chỉnh sửa Danh sách sản phẩm/ });
+  await inspector.getByLabel("Tên", { exact: true }).first().fill("K-Series Pure E2E");
+  await inspector.getByRole("button", { name: "Lưu thay đổi" }).click();
+  await admin.getByText(/Đã lưu/).first().waitFor({ timeout: 10000 });
+  await frameHas(admin, "K-Series Pure E2E");
   await admin.reload(); await openProject(admin);
   await frameHas(admin, "K-Series Pure E2E");
-  expect(sql(`select count(*) from project_versions where project_id='${PID}' and kind='EDIT' and summary like 'Chỉnh sửa nội dung trực tiếp%'`) !== "0", "direct edit not stored as its own version");
+  expect(sql(`select count(*) from project_versions where project_id='${PID}' and kind='EDIT' and summary like 'Chỉnh sửa %'`) !== "0", "inspector edit not stored as its own version");
 });
 await check("settings save to the backend and persist", async () => {
   await admin.getByRole("button", { name: "Cài đặt" }).first().click();
@@ -192,7 +194,7 @@ await check("disabled user loses access at runtime without logging in again", as
   await login(ed, "local.editor"); await openDemo(ed);
   sql("update users set enabled=false where username='local.editor'");
   try {
-    await ed.getByPlaceholder(/Ví dụ/).fill("hiện đánh giá");
+    await ed.getByPlaceholder(/Mô tả thay đổi/).fill("hiện đánh giá");
     await ed.getByRole("button", { name: /Gửi/ }).click();
     await ed.getByRole("button", { name: "Đăng nhập" }).waitFor({ timeout: 10000 });
   } finally { sql("update users set enabled=true where username='local.editor'"); }
@@ -210,9 +212,9 @@ await check("stale revision from a second tab yields a conflict message and relo
   const a = await newPage(), b = await newPage();
   await login(a.page, "local.admin"); await openProject(a.page);
   await login(b.page, "local.admin"); await openProject(b.page);
-  await a.page.getByPlaceholder(/Ví dụ/).fill("thêm sản phẩm"); await a.page.getByRole("button", { name: /Gửi/ }).click();
+  await a.page.getByPlaceholder(/Mô tả thay đổi/).fill("thêm sản phẩm"); await a.page.getByRole("button", { name: /Gửi/ }).click();
   await a.page.getByText(/Đã thêm sản phẩm/).waitFor({ timeout: 10000 });
-  await b.page.getByPlaceholder(/Ví dụ/).fill("rút gọn hero"); await b.page.getByRole("button", { name: /Gửi/ }).click();
+  await b.page.getByPlaceholder(/Mô tả thay đổi/).fill("rút gọn hero"); await b.page.getByRole("button", { name: /Gửi/ }).click();
   await b.page.getByText(/vừa được thay đổi ở nơi khác/).waitFor({ timeout: 10000 });
 });
 

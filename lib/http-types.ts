@@ -26,6 +26,7 @@ export type PromptHistoryItem = { id: string; text: string; createdAt: string; o
 export type SchemaOperation = {
   type: "ADD_SECTION" | "REMOVE_SECTION" | "MOVE_SECTION" | "UPDATE_SECTION" | "UPDATE_PROP" | "ADD_ITEM" | "REMOVE_ITEM";
   sectionId?: string; sectionType?: string; itemId?: string; arrayPath?: string; path?: string; value?: unknown; item?: unknown; props?: unknown;
+  beforeSectionId?: string; afterSectionId?: string; index?: number;
 };
 
 export type AssetDto = { id: string; name: string; contentType: string; size: number; status: string; createdAt: string; downloadUrl: string | null };
@@ -43,3 +44,10 @@ export type AiStatus = { provider: "openrouter" | "mock"; configured: boolean; d
 export type Member = { userId: string; username: string; displayName: string | null; email: string | null; role: string; joinedAt: string };
 export const WORKSPACE_ROLES = ["WORKSPACE_ADMIN", "EDITOR", "PUBLISHER", "VIEWER"] as const;
 export const PROJECT_ROLES = ["OWNER", "EDITOR", "PUBLISHER", "VIEWER"] as const;
+
+export type PropDef = { type?: string; enum?: string[]; maxLength?: number; maxItems?: number; itemRequired?: string[]; itemProperties?: Record<string, PropDef> };
+export type PropsSchema = { required?: string[]; properties?: Record<string, PropDef> };
+export type RegistryComponent = {
+  id: string; name: string; category: string; description: string; latestVersion: string; status: string;
+  versions: { version: string; status: string; propsSchema: PropsSchema }[];
+};

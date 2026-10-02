@@ -12,7 +12,7 @@ function render(s: Section): string {
     case "Navbar":
       return `<nav class="nav"><a class="logo" href="#top">${e(str(p.brand))}</a><div class="links">${arr(p.links).map((l) => `<a href="${href(l.href)}">${e(str(l.label))}</a>`).join("")}</div></nav>`;
     case "Hero":
-      return `<section class="hero" id="top"><div class="hero-copy"><p class="eyebrow">${e(str(p.eyebrow))}</p><h1>${e(str(p.title))}</h1><p>${e(str(p.description))}</p>${p.ctaLabel ? `<a class="cta" href="#products">${e(str(p.ctaLabel))}</a>` : ""}</div><div class="visual" aria-hidden="true"><div class="machine"></div></div></section>`;
+      return `<section class="hero" id="top"><div class="hero-copy"><p class="eyebrow">${e(str(p.eyebrow))}</p><h1>${e(str(p.title))}</h1><p>${e(str(p.description))}</p>${p.ctaLabel ? `<a class="cta" href="#products">${e(str(p.ctaLabel))}</a><a class="cta ghost" href="#contact">Nhận tư vấn</a>` : ""}</div><div class="visual" aria-hidden="true"><div class="machine"></div></div></section>`;
     case "ProductGrid":
       return `<section class="section" id="products"><h2>${e(str(p.heading))}</h2><div class="product-grid">${arr(p.items).map((i) => `<article class="product-card"><div class="product-art" aria-hidden="true"><span></span></div><div class="product-copy"><h3>${e(str(i.name))}</h3><p>${e(str(i.description))}</p></div></article>`).join("")}</div></section>`;
     case "TechnologySection":
@@ -33,7 +33,7 @@ function render(s: Section): string {
   }
 }
 
-export function renderSchemaDocument(schema: PageSchema): string {
+export function renderSchemaDocument(schema: PageSchema, selectedId?: string | null): string {
   const hero = schema.sections.find((s) => s.type === "Hero");
-  return `<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(str(hero?.props.title) || "Preview")}</title><style>${previewStyles}.cmp{overflow-x:auto}.cmp table{width:100%;border-collapse:collapse;background:#fff}.cmp th,.cmp td{padding:12px;border:1px solid #dfe9ec;text-align:left;font-size:14px}</style></head><body><main class="site">${schema.sections.map(render).join("")}</main></body></html>`;
+  return `<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(str(hero?.props.title) || "Preview")}</title><style>${previewStyles}.__sel{outline:2px solid #2c7cff;outline-offset:-2px;position:relative}.__sel:before{content:"Đang chỉnh sửa";position:absolute;z-index:3;top:8px;left:8px;background:#2c7cff;color:#fff;font:600 11px system-ui;padding:3px 8px;border-radius:999px}.cmp{overflow-x:auto}.cmp table{width:100%;border-collapse:collapse;background:#fff}.cmp th,.cmp td{padding:12px;border:1px solid #dfe9ec;text-align:left;font-size:14px}</style></head><body><main class="site">${schema.sections.map((sec) => { const html = render(sec); return html ? `<div class="__sec${sec.id === selectedId ? " __sel" : ""}" data-sid="${e(sec.id)}">${html}</div>` : ""; }).join("")}</main></body></html>`;
 }

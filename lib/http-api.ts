@@ -1,5 +1,5 @@
 import type {
-  AiStatus, ApiProject, AuthConfig, Member, AssetDto, Deployment, Me, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
+  AiStatus, ApiProject, AuthConfig, Member, RegistryComponent, AssetDto, Deployment, Me, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
 } from "./http-types";
 
 /** Error with the backend's stable {code, message, requestId, details} contract. */
@@ -70,6 +70,7 @@ export const api = {
   register: (username: string, password: string, displayName: string, inviteCode?: string) =>
     call<{ username: string }>("/auth/register", { method: "POST", body: json({ username, password, displayName: displayName || undefined, inviteCode: inviteCode || undefined }) }),
   aiStatus: () => call<AiStatus>("/ai/status"),
+  components: () => call<RegistryComponent[]>("/components?details=true"),
   async logout() { await call<void>("/auth/logout", { method: "POST" }).finally(resetCsrf); },
 
   listProjects: (w: string) => call<ApiProject[]>(`/workspaces/${w}/projects`),

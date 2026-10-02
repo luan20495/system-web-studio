@@ -26,6 +26,12 @@ class ComponentRegistry(private val jdbc: JdbcTemplate, private val json: JsonMa
         "SELECT id, name, category, description, latest_version, status FROM components ORDER BY category, id"
     ) { rs, _ -> ComponentDto(rs.getString(1), rs.getString(2), rs.getString(3), rs.getString(4), rs.getString(5), rs.getString(6)) }
 
+    /** Every component with its versions (props schemas); one query pair instead of one call per component. */
+    fun listDetailed(): List<ComponentDto> {
+        val byComponent = versions().values.groupBy { it.componentId }
+        return list().map { it.copy(versions = byComponent[it.id].orEmpty().map { e -> e.dto }) }
+    }
+
     fun get(id: String): ComponentDto {
         val base = list().firstOrNull { it.id == id } ?: throw ApiException.notFound("COMPONENT_NOT_FOUND", "Component not found")
         return base.copy(versions = versions().values.filter { it.componentId == id }.map { it.dto })
@@ -46,7 +52,8 @@ class ComponentRegistry(private val jdbc: JdbcTemplate, private val json: JsonMa
 @RequestMapping("/api/v1/components")
 class ComponentController(private val registry: ComponentRegistry) {
     @GetMapping
-    fun list(): List<ComponentDto> = registry.list()
+    fun list(@org.springframework.web.bind.annotation.RequestParam(defaultValue = "false") details: Boolean): List<ComponentDto> =
+        if (details) registry.listDetailed() else registry.list()
 
     @GetMapping("/{id}")
     fun get(@PathVariable id: String): ComponentDto = registry.get(id)

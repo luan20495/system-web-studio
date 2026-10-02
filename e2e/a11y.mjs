@@ -5,8 +5,12 @@ import { createRequire } from "node:module";
 const axeSource = readFileSync(createRequire(import.meta.url).resolve("axe-core/axe.min.js"), "utf8");
 const env = Object.fromEntries(readFileSync(new URL("../.env", import.meta.url), "utf8").split("\n").filter((l) => l.includes("=") && !l.startsWith("#")).map((l) => [l.slice(0, l.indexOf("=")), l.slice(l.indexOf("=") + 1)]));
 const BASE = process.env.E2E_BASE ?? "http://127.0.0.1:3100";
+// Credentials: A11Y_USER/A11Y_PASSWORD, else the local dev admin.
+const USER = process.env.A11Y_USER ?? "local.admin", PASSWORD = process.env.A11Y_PASSWORD ?? env.LOCAL_ADMIN_PASSWORD;
+const PROJECT = new RegExp(process.env.A11Y_PROJECT ?? "Water Purifier Website");
+const launchArgs = process.env.E2E_RESOLVE_IP ? [`--host-resolver-rules=MAP ${new URL(BASE).hostname} ${process.env.E2E_RESOLVE_IP}`] : [];
 const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"];
-const browser = await chromium.launch({ executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", headless: true });
+const browser = await chromium.launch({ executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", headless: true, args: launchArgs });
 let failed = false; const report = [];
 const pass = (n) => { console.log("PASS", n); }; const fail = (n, m) => { failed = true; console.log("FAIL", n, "-", m); };
 
@@ -24,18 +28,24 @@ for (const width of [1280, 1440, 1920, 2560]) {
   const ctx = await browser.newContext({ viewport: { width, height: 1000 } }); const page = await ctx.newPage();
   await page.goto(BASE); await page.getByLabel("Tên đăng nhập").waitFor();
   await scan(page, `login @${width}`);
-  await page.getByLabel("Tên đăng nhập").fill("local.admin"); await page.getByLabel("Mật khẩu").fill(env.LOCAL_ADMIN_PASSWORD);
+  await page.getByLabel("Tên đăng nhập").fill(USER); await page.getByLabel("Mật khẩu").fill(PASSWORD);
   await page.getByRole("button", { name: "Đăng nhập" }).click();
-  await page.getByRole("button", { name: /Water Purifier Website/ }).waitFor();
+  await page.getByRole("button", { name: /Tạo project|Đăng xuất/ }).first().waitFor(); await page.waitForTimeout(500);
   await scan(page, `project list @${width}`);
-  await page.getByRole("button", { name: /Water Purifier Website/ }).click(); await page.waitForSelector("iframe.previewFrame");
+  if (await page.locator(".projectList button").count() > 0) await page.locator(".projectList button").filter({ hasText: PROJECT }).first().click();
+  else { await page.getByPlaceholder("Tên project mới").fill("A11y check " + width); await page.getByRole("button", { name: "Tạo project" }).click(); }
+  await page.waitForSelector("iframe.previewFrame", { state: "attached" });
   await scan(page, `studio @${width}`);
   if (width === 1440) {
-    for (const [btn, title] of [["Lịch sử", "Lịch sử phiên bản"], ["Chỉnh sửa", "Chỉnh sửa nội dung"], ["Tệp", "Tệp của project"], ["Thành viên", "Thành viên và quyền"]]) {
+    for (const [btn, title] of [["Lịch sử", "Lịch sử phiên bản"], ["Tệp", "Tệp của project"], ["Thành viên", "Thành viên và quyền"]]) {
       await page.getByRole("button", { name: btn, exact: true }).click(); await page.getByRole("dialog", { name: title }).waitFor();
       await scan(page, `dialog "${title}"`);
       await page.keyboard.press("Escape"); await page.getByRole("dialog").waitFor({ state: "detached" });
     }
+    // structure tab + registry-driven inspector (not a dialog)
+    await page.getByRole("button", { name: "Chỉnh sửa", exact: true }).click(); await page.getByRole("tab", { name: "Cấu trúc trang", selected: true }).waitFor();
+    await page.getByRole("button", { name: /Danh sách sản phẩm/ }).click(); await page.getByRole("region", { name: /Chỉnh sửa Danh sách sản phẩm/ }).waitFor();
+    await scan(page, "structure tab + inspector"); await page.getByRole("tab", { name: /Hỏi AI/ }).click(); await scan(page, "ask-AI tab");
     await page.getByRole("button", { name: "Cài đặt" }).first().click(); await page.getByRole("dialog", { name: "Cài đặt project" }).waitFor();
     await scan(page, 'dialog "Cài đặt project"'); await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "Xuất bản" }).first().click(); await page.getByRole("dialog", { name: "Xuất bản website" }).waitFor();

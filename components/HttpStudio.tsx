@@ -4,11 +4,12 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEven
 import { api, ApiError } from "@/lib/http-api";
 import { renderSchemaDocument } from "@/lib/schema-preview";
 import type {
-  AiStatus, ApiProject, AssetDto, AuthConfig, Member, Deployment, Me, PageSchema, PromptHistoryItem, SchemaOperation, Section, VersionSummary
+  RegistryComponent, AiStatus, ApiProject, AssetDto, AuthConfig, Member, Deployment, Me, PageSchema, PromptHistoryItem, SchemaOperation, Section, VersionSummary
 } from "@/lib/http-types";
 import { PROJECT_ROLES, WORKSPACE_ROLES } from "@/lib/http-types";
 import type { DeviceMode } from "@/lib/types";
 import { useDialog } from "./useDialog";
+import { SectionInspector, sectionLabel, sectionSummary } from "./SectionInspector";
 
 const fmt = (iso: string) => new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
 const errText = (e: unknown, fallback: string) => (e instanceof ApiError ? `${e.message}${e.requestId ? ` (mã ${e.requestId})` : ""}` : e instanceof Error ? e.message : fallback);
@@ -117,9 +118,11 @@ function ProjectList({ me, workspaceId, onOpen, onLogout, onUnauthorized }: {
   return (
     <main className="boot listPage">
       <div className="authCard wide">
-        <div className="listHeader"><h1>Project</h1><div><span className="savedPill">{me.displayName}</span> <button className="button ghost" onClick={() => void onLogout()}>Đăng xuất</button></div></div>
+        <div className="listHeader"><h1>Website của bạn</h1><div><span className="savedPill">{me.displayName}</span> <button className="button ghost" onClick={() => void onLogout()}>Đăng xuất</button></div></div>
         {error ? <p className="formError" role="alert">{error}</p> : null}
-        {projects === null ? <div role="status">Đang tải…</div> : projects.length === 0 ? <p>Chưa có project nào{canCreate ? ". Hãy tạo project đầu tiên." : "."}</p> : (
+        {projects === null ? <div role="status">Đang tải…</div> : projects.length === 0 ? (canCreate
+          ? <div className="emptyState"><h2>Tạo website đầu tiên của bạn</h2><p>Bắt đầu từ một trang mẫu, sau đó nhờ AI chỉnh theo ý hoặc tự sửa từng phần.</p></div>
+          : <p>Chưa có project nào.</p>) : (
           <ul className="projectList">{projects.map((p) => (
             <li key={p.id}><button onClick={() => onOpen(p.id)}><b>{p.name}</b><span>{p.siteVisibility === "PUBLIC" ? "Công khai" : "Riêng tư"} · cập nhật {fmt(p.updatedAt)}</span></button></li>
           ))}</ul>
@@ -135,7 +138,7 @@ function ProjectList({ me, workspaceId, onOpen, onLogout, onUnauthorized }: {
   );
 }
 
-type Panel = null | "history" | "settings" | "content" | "assets" | "publish" | "members";
+type Panel = null | "history" | "settings" | "assets" | "publish" | "members";
 type Msg = { id: string; role: "user" | "assistant"; content: string; meta?: string[] };
 
 function StudioView({ me, workspaceId, projectId, onBack, onLogout, onUnauthorized }: {
@@ -154,6 +157,11 @@ function StudioView({ me, workspaceId, projectId, onBack, onLogout, onUnauthoriz
   const [notice, setNotice] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [ai, setAi] = useState<AiStatus | null>(null);
+  const promptRef = useRef<HTMLTextAreaElement>(null);
+  const [leftTab, setLeftTab] = useState<"ai" | "edit">("ai");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [registry, setRegistry] = useState<RegistryComponent[]>([]);
+  const [save, setSave] = useState<{ state: "saved" | "saving" | "error"; at: Date | null }>({ state: "saved", at: null });
   const [model, setModel] = useState<string>(() => { try { return localStorage.getItem("studio-ai-model") ?? "auto"; } catch { return "auto"; } });
 
   const can = (permission: string) => project?.permissions.includes(permission) ?? false;
@@ -172,7 +180,7 @@ function StudioView({ me, workspaceId, projectId, onBack, onLogout, onUnauthoriz
     setProject(p); setSchema(s.schema); setRevision(s.revision); setVersions(v); setMessages(toMessages(h));
   }, [workspaceId, projectId]);
 
-  useEffect(() => { api.aiStatus().then(setAi).catch(() => undefined); }, []);
+  useEffect(() => { api.aiStatus().then(setAi).catch(() => undefined); api.components().then(setRegistry).catch(() => undefined); }, []);
   useEffect(() => { try { localStorage.setItem("studio-ai-model", model); } catch { /* per-viewer convenience only */ } }, [model]);
   // a remembered model that is no longer offered falls back to "auto"
   const effectiveModel = ai?.configured ? (model === "auto" || model === "mock" || ai.models.some((m) => m.id === model) ? model : "auto") : "mock";
@@ -185,9 +193,10 @@ function StudioView({ me, workspaceId, projectId, onBack, onLogout, onUnauthoriz
 
   /** Conflicts mean someone else changed the project: show the server's state instead of overwriting it. */
   async function run<T>(label: string, fn: () => Promise<T>, fallback: string): Promise<T | undefined> {
-    setBusy(label);
-    try { return await fn(); }
+    setBusy(label); setSave((x) => ({ ...x, state: "saving" }));
+    try { const out = await fn(); setSave({ state: "saved", at: new Date() }); return out; }
     catch (e) {
+      setSave((x) => ({ ...x, state: "error" }));
       if (e instanceof ApiError && e.isConflict && e.code === "REVISION_CONFLICT") {
         setNotice("Project vừa được thay đổi ở nơi khác. Đã tải lại bản mới nhất, hãy thử lại thao tác.");
         await reload().catch(() => undefined);
@@ -232,7 +241,9 @@ function StudioView({ me, workspaceId, projectId, onBack, onLogout, onUnauthoriz
     setProject(p); setRevision(p.revision); setPanel(null); setNotice("Đã lưu cài đặt project.");
   }
 
-  const previewDocument = useMemo(() => (schema ? renderSchemaDocument(schema) : ""), [schema]);
+  const previewDocument = useMemo(() => (schema ? renderSchemaDocument(schema, leftTab === "edit" ? selectedId : null) : ""), [schema, selectedId, leftTab]);
+  const selected = schema?.sections.find((x) => x.id === selectedId) ?? null;
+  const componentOf = (type: string) => registry.find((c) => c.id === type);
 
   if (loadError) return <div className="boot" role="alert"><p>{loadError}</p><button className="button" onClick={onBack}>Quay lại danh sách</button></div>;
   if (!project || !schema) return <div className="boot" role="status"><div className="spinner"/><div>Đang tải project…</div></div>;
@@ -242,16 +253,25 @@ function StudioView({ me, workspaceId, projectId, onBack, onLogout, onUnauthoriz
     <div className="studio">
       <header className="topbar">
         <div className="brand">
-          <button className="button icon" aria-label="Danh sách project" onClick={onBack}>←</button>
-          <div><div className="projectName">{project.name}</div><div className="projectMeta">r{revision} • {me.displayName}{readOnly ? " • chỉ xem" : ""}</div></div>
+          <button className="button icon" aria-label="Danh sách project" title="Danh sách project" onClick={onBack}>←</button>
+          <div>
+            <div className="projectName">{project.name}</div>
+            <div className="projectMeta" title={`Bản sửa nội bộ r${revision}`}>
+              {versions[0] ? `Phiên bản ${versions[0].versionNumber}` : "Chưa có phiên bản"} · {project.siteVisibility === "PUBLIC" ? "Công khai" : "Riêng tư"} · {me.displayName}{readOnly ? " · chỉ xem" : ""}
+            </div>
+          </div>
+          <span className={`saveState ${save.state}`} role="status" aria-live="polite">
+            {save.state === "saving" ? "Đang lưu…" : save.state === "error" ? "Lưu thất bại" : `✓ Đã lưu${save.at ? ` ${save.at.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}` : ""}`}
+          </span>
         </div>
         <div className="topActions">
           <button className="button ghost" onClick={() => setPanel("history")}>Lịch sử</button>
-          <button className="button ghost" disabled={readOnly} onClick={() => setPanel("content")}>Chỉnh sửa</button>
+          <button className={`button ghost ${leftTab === "edit" ? "on" : ""}`} aria-pressed={leftTab === "edit"} disabled={readOnly} title={readOnly ? "Bạn chỉ có quyền xem" : "Chỉnh sửa từng phần của trang"}
+            onClick={() => { setLeftTab(leftTab === "edit" ? "ai" : "edit"); setPane("conversation"); }}>Chỉnh sửa</button>
           <button className="button ghost" onClick={() => setPanel("assets")}>Tệp</button>
           {can("PROJECT_MEMBERS") ? <button className="button ghost" onClick={() => setPanel("members")}>Thành viên</button> : null}
-          <button className="button primary" disabled={!can("PROJECT_PUBLISH") || busy !== null} title={can("PROJECT_PUBLISH") ? undefined : "Bạn không có quyền xuất bản"} onClick={() => setPanel("publish")}>Xuất bản</button>
-          <button className="button icon" aria-label="Cài đặt" disabled={!can("PROJECT_SETTINGS")} onClick={() => setPanel("settings")}>⚙</button>
+          <button className="button primary" disabled={!can("PROJECT_PUBLISH") || busy !== null} title={can("PROJECT_PUBLISH") ? "Xuất bản phiên bản hiện tại" : "Bạn không có quyền xuất bản"} onClick={() => setPanel("publish")}>Xuất bản</button>
+          <button className="button icon" aria-label="Cài đặt project" title={can("PROJECT_SETTINGS") ? "Cài đặt project" : "Bạn không có quyền đổi cài đặt"} disabled={!can("PROJECT_SETTINGS")} onClick={() => setPanel("settings")}>⚙</button>
           <button className="button ghost" onClick={() => void onLogout()}>Đăng xuất</button>
         </div>
       </header>
@@ -263,38 +283,67 @@ function StudioView({ me, workspaceId, projectId, onBack, onLogout, onUnauthoriz
 
       <main className={`workspace pane-${pane}`}>
         <section className="promptPane">
+          <div className="paneTabs" role="tablist" aria-label="Khu làm việc">
+            <button role="tab" aria-selected={leftTab === "ai"} className={leftTab === "ai" ? "active" : ""} onClick={() => setLeftTab("ai")}>✦ Hỏi AI</button>
+            <button role="tab" aria-selected={leftTab === "edit"} className={leftTab === "edit" ? "active" : ""} disabled={readOnly} onClick={() => setLeftTab("edit")}>Cấu trúc trang</button>
+          </div>
+          {leftTab === "ai" ? (<>
           <div className="conversation">
-            <div className="intro"><h1>Bạn muốn thay đổi điều gì?</h1><p>Mỗi thay đổi được kiểm tra theo registry và lưu thành một phiên bản.</p></div>
+            {messages.length === 0 ? (
+              <div className="intro"><h1>Bạn muốn website thay đổi thế nào?</h1><p>Mô tả bằng lời; thay đổi được kiểm tra rồi lưu thành một phiên bản bạn có thể khôi phục.</p>
+                {!readOnly ? <div className="starterList" aria-label="Gợi ý để bắt đầu">{suggestions(ai?.configured === true).map((t) => (
+                  <button type="button" key={t} className="starter" disabled={busy !== null} onClick={() => { setPrompt(t); promptRef.current?.focus(); }}><span aria-hidden="true">✦</span>{t}</button>))}</div> : null}</div>
+            ) : null}
             {messages.map((m) => (
               <div className={`message ${m.role}`} key={m.id}><div className="bubble"><div>{m.content}</div>
                 {m.meta?.length ? <div className="chips">{m.meta.map((x) => <span className="chip" key={x}>{x}</span>)}</div> : null}</div></div>
             ))}
-            {busy === "prompt" ? <div className="message assistant"><div className="bubble typing" role="status">Đang cập nhật bản xem trước…</div></div> : null}
+            {busy === "prompt" ? <div className="message assistant"><div className="bubble typing" role="status"><span className="dots" aria-hidden="true"><i/><i/><i/></span> Đang phân tích yêu cầu{ai?.configured && effectiveModel !== "mock" ? " với AI…" : "…"}</div></div> : null}
           </div>
-          <div className="composer"><div className="composerBox">
-            <textarea value={prompt} disabled={readOnly} onChange={(e) => setPrompt(e.target.value)} maxLength={2000}
-              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void submitPrompt(); } }}
-              placeholder={readOnly ? "Bạn chỉ có quyền xem project này." : "Ví dụ: Thêm bảng so sánh 3 sản phẩm…"}/>
-            <div className="composerFooter">
-              {ai?.configured ? (
-                <label className="aiPicker"><span className="srOnly">Model AI</span>
-                  <select aria-label="Model AI" value={effectiveModel} onChange={(e) => setModel(e.target.value)} disabled={busy !== null}>
-                    <option value="auto">AI · tự động (các model miễn phí)</option>
-                    {ai.models.map((m) => <option key={m.id} value={m.id}>{m.name} — {m.id}</option>)}
-                    <option value="mock">Mô phỏng (không gọi AI)</option>
-                  </select></label>
-              ) : <span title={ai?.dataNotice}>AI: mô phỏng (chưa có key OpenRouter)</span>}
-              <button className="sendButton" disabled={busy !== null || !prompt.trim() || readOnly} onClick={() => void submitPrompt()}>{busy === "prompt" ? "Đang xử lý…" : "Gửi ↑"}</button></div>
-            {ai?.configured && effectiveModel !== "mock" ? <p className="aiNotice">{ai.dataNotice} Giới hạn {ai.dailyLimitPerUser} lượt AI/ngày/người dùng.</p> : null}
-          </div></div>
+          <div className="composer">
+            {!readOnly && messages.length > 0 ? <div className="suggestions" aria-label="Gợi ý">{suggestions(ai?.configured === true).map((t) => (
+              <button type="button" key={t} className="suggestion" disabled={busy !== null} onClick={() => { setPrompt(t); promptRef.current?.focus(); }}>+ {t}</button>))}</div> : null}
+            <div className="composerBox">
+              <textarea ref={promptRef} value={prompt} disabled={readOnly} onChange={(e) => setPrompt(e.target.value)} maxLength={2000} aria-label="Mô tả thay đổi"
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void submitPrompt(); } }}
+                placeholder={readOnly ? "Bạn chỉ có quyền xem project này." : "Mô tả thay đổi bạn muốn tạo…"}/>
+              <div className="composerFooter">
+                {ai?.configured ? (
+                  <label className="aiPicker"><span className="srOnly">Model AI</span>
+                    <select aria-label="Model AI" value={effectiveModel} onChange={(e) => setModel(e.target.value)} disabled={busy !== null}>
+                      <option value="auto">AI · tự động (các model miễn phí)</option>
+                      {ai.models.map((m) => <option key={m.id} value={m.id}>{m.name} — {m.id}</option>)}
+                      <option value="mock">Mô phỏng (không gọi AI)</option>
+                    </select></label>
+                ) : <span title={ai?.dataNotice}>AI: mô phỏng (chưa có key OpenRouter)</span>}
+                <button className="sendButton" disabled={busy !== null || !prompt.trim() || readOnly} onClick={() => void submitPrompt()}>{busy === "prompt" ? "Đang xử lý…" : "Gửi ↑"}</button></div>
+              {ai?.configured && effectiveModel !== "mock" ? <p className="aiNotice">{ai.dataNotice} Giới hạn {ai.dailyLimitPerUser} lượt AI/ngày/người dùng.</p> : null}
+            </div>
+          </div>
+          </>) : (
+          <div className="conversation">
+            <div className="intro"><h1>Cấu trúc trang</h1><p>Chọn một mục để sửa nội dung, đổi thứ tự hoặc xóa. Mục đang chọn được viền xanh trong bản xem trước.</p></div>
+            <ol className="outline">{schema.sections.map((sec, i) => (
+              <li key={sec.id}>
+                <button type="button" className={sec.id === selectedId ? "active" : ""} aria-pressed={sec.id === selectedId} onClick={() => setSelectedId(sec.id === selectedId ? null : sec.id)}>
+                  <b>{sectionLabel(sec.type, componentOf(sec.type)?.name)}</b><span>{sectionSummary(sec) || sec.id}</span>
+                </button>
+                {sec.id === selectedId && selected ? (
+                  <SectionInspector key={`${selected.id}:${JSON.stringify(selected.props)}`} section={selected} component={componentOf(selected.type)} index={i} count={schema.sections.length}
+                    readOnly={readOnly} busy={busy === "edit"} onClose={() => setSelectedId(null)}
+                    onApply={async (ops, summary) => { const ok = await applyOps(ops, summary); if (ok && ops.some((o) => o.type === "REMOVE_SECTION")) setSelectedId(null); return ok; }}/>
+                ) : null}
+              </li>))}</ol>
+            <p className="hint">Muốn thêm mục mới (ví dụ bảng so sánh)? Quay lại “Hỏi AI” và mô tả.</p>
+          </div>)}
         </section>
 
         <section className="previewPane">
           <div className="previewToolbar">
             <div className="toolbarGroup"><span className="toolbarLabel">Xem trước</span>
               <div className="segmented">{(["desktop", "tablet", "mobile"] as DeviceMode[]).map((m) => (
-                <button key={m} className={device === m ? "active" : ""} onClick={() => setDevice(m)}>{m === "desktop" ? "Máy tính" : m === "tablet" ? "Máy tính bảng" : "Điện thoại"}</button>))}</div></div>
-            <div className="toolbarGroup"><span className="environmentBadge">Backend</span></div>
+                <button key={m} className={device === m ? "active" : ""} aria-pressed={device === m} onClick={() => setDevice(m)}><DeviceIcon kind={m}/>{m === "desktop" ? "Máy tính" : m === "tablet" ? "Máy tính bảng" : "Điện thoại"}</button>))}</div></div>
+            <div className="toolbarGroup"><span className="environmentBadge" title="Quyền truy cập của website khi xuất bản">{project.siteVisibility === "PUBLIC" ? "Công khai" : "Riêng tư"}</span></div>
           </div>
           <div className={`canvasViewport viewport-${device}`}><iframe className="previewFrame" title="Website preview" sandbox="" srcDoc={previewDocument}/></div>
         </section>
@@ -311,20 +360,30 @@ function StudioView({ me, workspaceId, projectId, onBack, onLogout, onUnauthoriz
           </article>))}</div>
       </Drawer> : null}
 
-      {panel === "content" ? <ContentDrawer schema={schema} busy={busy === "edit"} onClose={() => setPanel(null)} onApply={applyOps}/> : null}
       {panel === "settings" ? <SettingsDrawer project={project} busy={busy === "settings"} onClose={() => setPanel(null)} onSave={saveSettings}/> : null}
       {panel === "assets" ? <AssetsDrawer workspaceId={workspaceId} projectId={projectId} canEdit={can("PROJECT_EDIT")} onClose={() => setPanel(null)} onError={(e) => guard(e, "Thao tác tệp thất bại.")}/> : null}
       {panel === "members" ? <MembersDrawer workspaceId={workspaceId} projectId={projectId} me={me} onClose={() => setPanel(null)} onError={(e) => guard(e, "Thao tác thành viên thất bại.")}/> : null}
-      {panel === "publish" ? <PublishModal workspaceId={workspaceId} projectId={projectId} revision={revision} current={project.siteVisibility} onClose={() => { setPanel(null); void reload().catch(() => undefined); }} onUnauthorized={onUnauthorized}/> : null}
+      {panel === "publish" ? <PublishModal workspaceId={workspaceId} projectId={projectId} revision={revision} current={project.siteVisibility} versionNumber={versions[0]?.versionNumber} onClose={() => { setPanel(null); void reload().catch(() => undefined); }} onUnauthorized={onUnauthorized}/> : null}
     </div>
   );
 }
 
-function Drawer({ title, sub, onClose, children }: { title: string; sub?: string; onClose: () => void; children: ReactNode }) {
+const suggestions = (ai: boolean) => ai
+  ? ["Thêm bảng so sánh sản phẩm", "Viết lại tiêu đề hero hấp dẫn hơn", "Ẩn phần đánh giá", "Thêm một sản phẩm mới", "Rút gọn nội dung hero"]
+  : ["Thêm bảng so sánh sản phẩm", "Ẩn phần đánh giá", "Thêm một sản phẩm mới", "Rút gọn tiêu đề hero"];
+
+function DeviceIcon({ kind }: { kind: DeviceMode }) {
+  const common = { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true };
+  if (kind === "desktop") return <svg {...common}><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>;
+  if (kind === "tablet") return <svg {...common}><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M11 18h2"/></svg>;
+  return <svg {...common}><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>;
+}
+
+function Drawer({ title, sub, onClose, children, wide }: { title: string; sub?: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
   const dialog = useDialog(title, onClose);
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="drawer" {...dialog.props}>
+      <div className={`drawer${wide ? " wide" : ""}`} {...dialog.props}>
         <div className="drawerHeader"><div><h2 id={dialog.titleId}>{title}</h2>{sub ? <p>{sub}</p> : null}</div><button className="button icon" aria-label="Đóng" onClick={onClose}>✕</button></div>
         {children}
       </div>
@@ -334,64 +393,6 @@ function Drawer({ title, sub, onClose, children }: { title: string; sub?: string
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return <label className="settingField"><span>{label}</span>{children}</label>;
-}
-
-const section = (schema: PageSchema, type: string): Section | undefined => schema.sections.find((s) => s.type === type);
-type Item = { id: string; name: string; description: string };
-
-/** Direct edit: same PATCH /schema endpoint as the AI path, so it is validated, versioned and audited identically. */
-function ContentDrawer({ schema, busy, onClose, onApply }: {
-  schema: PageSchema; busy: boolean; onClose: () => void; onApply: (ops: SchemaOperation[], summary: string) => Promise<boolean>;
-}) {
-  const hero = section(schema, "Hero");
-  const grid = section(schema, "ProductGrid");
-  const items = (grid?.props.items as Item[] | undefined) ?? [];
-  const [title, setTitle] = useState(String(hero?.props.title ?? ""));
-  const [description, setDescription] = useState(String(hero?.props.description ?? ""));
-  const [drafts, setDrafts] = useState<Item[]>(items.map((i) => ({ ...i })));
-  const [newName, setNewName] = useState("");
-
-  async function save() {
-    const ops: SchemaOperation[] = [];
-    if (hero && title !== hero.props.title) ops.push({ type: "UPDATE_PROP", sectionId: hero.id, path: "title", value: title });
-    if (hero && description !== hero.props.description) ops.push({ type: "UPDATE_PROP", sectionId: hero.id, path: "description", value: description });
-    if (grid) {
-      drafts.forEach((d) => {
-        const o = items.find((i) => i.id === d.id);
-        if (!o) return;
-        (["name", "description"] as const).forEach((k) => { if (o[k] !== d[k]) ops.push({ type: "UPDATE_PROP", sectionId: grid.id, itemId: d.id, path: k, value: d[k] }); });
-      });
-      items.filter((o) => !drafts.some((d) => d.id === o.id)).forEach((o) => ops.push({ type: "REMOVE_ITEM", sectionId: grid.id, itemId: o.id }));
-      drafts.filter((d) => !items.some((o) => o.id === d.id)).forEach((d) => ops.push({ type: "ADD_ITEM", sectionId: grid.id, item: d }));
-    }
-    if (!ops.length) { onClose(); return; }
-    if (await onApply(ops, "Chỉnh sửa nội dung trực tiếp")) onClose();
-  }
-
-  function add() {
-    const name = newName.trim();
-    if (!name) return;
-    const id = `p${Date.now().toString(36)}`;
-    setDrafts([...drafts, { id, name, description: "" }]); setNewName("");
-  }
-
-  return (
-    <Drawer title="Chỉnh sửa nội dung" sub="Thay đổi được kiểm tra và lưu thành một phiên bản." onClose={onClose}>
-      {hero ? <section className="settingGroup"><h3>Hero</h3>
-        <Field label="Tiêu đề"><input maxLength={200} value={title} onChange={(e) => setTitle(e.target.value)}/></Field>
-        <Field label="Mô tả"><textarea className="plainArea" maxLength={600} value={description} onChange={(e) => setDescription(e.target.value)}/></Field></section> : null}
-      {grid ? <section className="settingGroup"><h3>Sản phẩm</h3>
-        {drafts.map((d, i) => (
-          <div className="itemEditor" key={d.id}>
-            <input aria-label="Tên sản phẩm" maxLength={120} value={d.name} onChange={(e) => setDrafts(drafts.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))}/>
-            <input aria-label="Mô tả sản phẩm" maxLength={400} value={d.description} onChange={(e) => setDrafts(drafts.map((x, j) => (j === i ? { ...x, description: e.target.value } : x)))}/>
-            <button className="smallButton danger" onClick={() => setDrafts(drafts.filter((_, j) => j !== i))}>Xóa</button>
-          </div>))}
-        <div className="inlineForm"><input placeholder="Tên sản phẩm mới" maxLength={120} value={newName} onChange={(e) => setNewName(e.target.value)}/><button className="button" onClick={add} disabled={!newName.trim()}>Thêm</button></div>
-      </section> : null}
-      <div className="drawerActions"><button className="button ghost" onClick={onClose}>Hủy</button><button className="button primary" disabled={busy || drafts.some((d) => !d.name.trim())} onClick={() => void save()}>{busy ? "Đang lưu…" : "Lưu thay đổi"}</button></div>
-    </Drawer>
-  );
 }
 
 function SettingsDrawer({ project, busy, onClose, onSave }: { project: ApiProject; busy: boolean; onClose: () => void; onSave: (patch: Partial<ApiProject>) => Promise<void> }) {
@@ -454,8 +455,8 @@ const STATUS_LABEL: Record<string, string> = {
   DEPLOYING: "Đang triển khai", RUNNING: "Đang chạy", FAILED: "Thất bại", ROLLED_BACK: "Đã hoàn tác"
 };
 
-function PublishModal({ workspaceId, projectId, revision, current, onClose, onUnauthorized }: {
-  workspaceId: string; projectId: string; revision: number; current: "PRIVATE" | "PUBLIC"; onClose: () => void; onUnauthorized: () => void;
+function PublishModal({ workspaceId, projectId, revision, current, versionNumber, onClose, onUnauthorized }: {
+  workspaceId: string; projectId: string; revision: number; current: "PRIVATE" | "PUBLIC"; versionNumber?: number; onClose: () => void; onUnauthorized: () => void;
 }) {
   const [visibility, setVisibility] = useState<"PRIVATE" | "PUBLIC">(current);
   const [deployment, setDeployment] = useState<Deployment | null>(null);
@@ -488,7 +489,8 @@ function PublishModal({ workspaceId, projectId, revision, current, onClose, onUn
   return (
     <div className="overlay modalOverlay"><div className="modal" {...dialog.props}>
       <h2 id={dialog.titleId}>Xuất bản website</h2>
-      <p>Phiên bản hiện tại sẽ được đưa qua kiểm tra chính sách, bảo mật, build và triển khai.</p>
+      <p>{versionNumber ? `Phiên bản ${versionNumber}` : "Phiên bản hiện tại"} sẽ được đưa qua kiểm tra chính sách, bảo mật, build và triển khai.</p>
+      {!deployment ? <p className="hint">Hiện tại môi trường xuất bản là <b>mô phỏng</b>: hệ thống tạo URL thử nghiệm, chưa có website thật nào được phục vụ.</p> : null}
       {!deployment ? (["PRIVATE", "PUBLIC"] as const).map((v) => (
         <button className={`publishChoice ${visibility === v ? "selected" : ""}`} key={v} onClick={() => setVisibility(v)}>
           <b>{v === "PRIVATE" ? "Riêng tư" : "Công khai"}</b><span>{v === "PRIVATE" ? "Chỉ thành viên được cấp quyền." : "Mọi người có thể truy cập."}</span></button>
@@ -529,7 +531,7 @@ function MemberTable({ title, members, roles, currentUserId, onChange, onRemove,
           <thead><tr><th scope="col">Người dùng</th><th scope="col">Vai trò</th><th scope="col"><span className="srOnly">Thao tác</span></th></tr></thead>
           <tbody>{members.map((m) => (
             <tr key={m.userId}>
-              <td><b>{m.displayName ?? m.username}</b><small>{m.username}{m.email ? ` · ${m.email}` : ""}</small></td>
+              <td><b>{m.displayName ?? m.username}{m.userId === currentUserId ? <em className="you">Bạn</em> : null}</b><small>{m.username}{m.email ? ` · ${m.email}` : ""}</small></td>
               <td><select aria-label={`Vai trò của ${m.username}`} value={m.role} disabled={busy || m.userId === currentUserId} onChange={(e) => onChange(m, e.target.value)}>
                 {roles.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}</select></td>
               <td><button className="smallButton danger" disabled={busy} onClick={() => onRemove(m)} aria-label={`Xóa ${m.username}`}>{m.userId === currentUserId ? "Rời" : "Xóa"}</button></td>
@@ -568,7 +570,7 @@ function MembersDrawer({ workspaceId, projectId, me, onClose, onError }: { works
   }
 
   return (
-    <Drawer title="Thành viên và quyền" sub="Quyền được kiểm tra ở máy chủ; thay đổi được ghi vào nhật ký kiểm toán." onClose={onClose}>
+    <Drawer wide title="Thành viên và quyền" sub="Quyền được kiểm tra ở máy chủ; thay đổi được ghi vào nhật ký kiểm toán." onClose={onClose}>
       <MemberTable title="Thành viên project" members={project} roles={PROJECT_ROLES} currentUserId={me.id} busy={busy} error={errors.project}
         onChange={(m, r) => void act("project", () => api.changeProjectMember(workspaceId, projectId, m.userId, r))}
         onRemove={(m) => { if (window.confirm(`Xóa ${m.username} khỏi project?`)) void act("project", () => api.removeProjectMember(workspaceId, projectId, m.userId)); }}
