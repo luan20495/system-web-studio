@@ -59,7 +59,9 @@ class ProjectController(
     private val projects: ProjectRepository,
     private val projectMembers: ProjectMemberRepository,
     private val audit: AuditService,
-    private val schemas: com.systemwebstudio.schema.SchemaService
+    private val schemas: com.systemwebstudio.schema.SchemaService,
+    private val jdbc: org.springframework.jdbc.core.JdbcTemplate,
+    @org.springframework.beans.factory.annotation.Value("\${app.limits.max-projects-per-workspace:1000}") private val maxProjects: Long
 ) {
     @GetMapping
     @Transactional(readOnly = true)
@@ -79,6 +81,8 @@ class ProjectController(
     ): ProjectResponse {
         val ctx = access.forWorkspace(me.userId, workspaceId)
         ctx.require(Permission.PROJECT_CREATE)
+        val existing = jdbc.queryForObject("SELECT count(*) FROM projects WHERE workspace_id = ? AND active", Long::class.java, workspaceId)!!
+        if (existing >= maxProjects) throw ApiException.conflict("PROJECT_LIMIT", "This workspace reached its limit of $maxProjects projects", mapOf("limit" to maxProjects))
         val now = Instant.now()
         val project = projects.saveAndFlush(
             ProjectEntity(

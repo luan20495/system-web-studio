@@ -9,6 +9,16 @@ spring:
     url: ${DATABASE_URL:jdbc:postgresql://127.0.0.1:15432/system_web_studio}
     username: ${DATABASE_USER:studio}
     password: ${DATABASE_PASSWORD:}
+    hikari:
+      # Small on purpose (dev laptop); raise with DB_POOL_MAX after measuring. Keep sum over all instances < Postgres max_connections.
+      maximum-pool-size: ${DB_POOL_MAX:10}
+      minimum-idle: ${DB_POOL_MIN:2}
+      connection-timeout: 5000
+      validation-timeout: 3000
+      max-lifetime: 1500000
+      leak-detection-threshold: ${DB_LEAK_DETECTION_MS:0}
+  lifecycle:
+    timeout-per-shutdown-phase: ${SHUTDOWN_TIMEOUT:30s}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -34,6 +44,10 @@ spring:
     listener:
       simple:
         default-requeue-rejected: false      # failed jobs go to the dead-letter queue, not an endless loop
+        concurrency: ${PUBLISH_WORKER_CONCURRENCY:2}
+        max-concurrency: ${PUBLISH_WORKER_CONCURRENCY:2}
+        prefetch: 1                          # a worker holds at most one unacked job; a crash re-queues just that one
+        acknowledge-mode: auto
         retry:
           enabled: true
           max-attempts: 3
@@ -42,7 +56,15 @@ spring:
 server:
   address: ${SERVER_ADDRESS:127.0.0.1}
   port: ${SERVER_PORT:8080}
+  shutdown: graceful          # stop accepting, let in-flight requests finish (SHUTDOWN_TIMEOUT)
+  max-http-request-header-size: 16KB
   tomcat:
+    threads:
+      max: ${TOMCAT_MAX_THREADS:64}
+      min-spare: 8
+    accept-count: ${TOMCAT_ACCEPT_COUNT:100}
+    max-connections: ${TOMCAT_MAX_CONNECTIONS:2048}
+    connection-timeout: 10s
     # Longer than a reverse proxy's idle reuse, otherwise the proxy hits half-closed sockets (ECONNRESET).
     keep-alive-timeout: 120s
   error:
@@ -65,6 +87,12 @@ springdoc:
     enabled: false
 
 management:
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING:0.0}     # 0 = traces off. Set e.g. 0.1 plus the OTLP endpoint below to export.
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:http://127.0.0.1:4318/v1/traces}
   endpoints:
     web:
       exposure:
@@ -84,18 +112,81 @@ management:
     rabbit:
       enabled: true
 
+logging:
+  pattern:
+    level: "%5p [%X{requestId:-}]"
+  level:
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+
 app:
+  proxy:
+    # X-Forwarded-* is ignored unless TRUST_PROXY=true AND the TCP peer is inside TRUSTED_PROXY_CIDRS.
+    trust: ${TRUST_PROXY:false}
+    trusted-cidrs: ${TRUSTED_PROXY_CIDRS:}
+  limits:
+    max-request-bytes: ${MAX_REQUEST_BYTES:1048576}   # JSON API only; uploads go straight to object storage
+    max-projects-per-workspace: ${MAX_PROJECTS_PER_WORKSPACE:1000}
+    max-assets-per-project: ${MAX_ASSETS_PER_PROJECT:200}
+  login:
+    max-concurrent-hashes: ${LOGIN_MAX_CONCURRENT_HASHES:4}
+    queue-wait-ms: ${LOGIN_QUEUE_WAIT_MS:5000}
+  local-login:
+    enabled: ${LOCAL_LOGIN_ENABLED:true}
+  oidc:
+    enabled: ${OIDC_ENABLED:false}
+    issuer-uri: ${OIDC_ISSUER_URI:}
+    client-id: ${OIDC_CLIENT_ID:}
+    client-secret: ${OIDC_CLIENT_SECRET:}
+    scopes: ${OIDC_SCOPES:openid,profile,email}
+    redirect-uri: ${OIDC_REDIRECT_URI:}   # empty = {baseUrl}/login/oauth2/code/oidc
+    success-url: ${OIDC_SUCCESS_URL:/}
+    # Unknown external identities get an account with NO access until an admin adds them; email is never trusted for authorization.
+    auto-provision: ${OIDC_AUTO_PROVISION:true}
+    link-by-verified-email: ${OIDC_LINK_BY_VERIFIED_EMAIL:false}
+  metrics:
+    token: ${METRICS_TOKEN:}
+  cleanup:
+    enabled: ${CLEANUP_ENABLED:true}
+    dry-run: ${CLEANUP_DRY_RUN:false}
+    interval-ms: ${CLEANUP_INTERVAL_MS:3600000}
+    abandoned-upload-hours: ${CLEANUP_ABANDONED_UPLOAD_HOURS:24}
+    deleted-asset-days: ${CLEANUP_DELETED_ASSET_DAYS:7}
+    idempotency-key-days: ${CLEANUP_IDEMPOTENCY_DAYS:7}
+    failed-deployment-days: ${CLEANUP_FAILED_DEPLOYMENT_DAYS:30}
+    # audit_events are never deleted by the application.
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000}
   rate-limit:
     login-user-max: 5
     login-ip-max: 50
     login-window-seconds: 900
-    prompt-max: 30
-    publish-max: 10
-    upload-max: 60
+    # Env-tunable so a load test can lift them; production keeps the defaults.
+    prompt-max: ${RATE_LIMIT_PROMPT_MAX:30}
+    publish-max: ${RATE_LIMIT_PUBLISH_MAX:10}
+    upload-max: ${RATE_LIMIT_UPLOAD_MAX:60}
   llm:
-    provider: mock
+    # auto = OpenRouter when OPENROUTER_API_KEY is set, otherwise the built-in simulator; mock = always the simulator
+    provider: ${LLM_PROVIDER:auto}
+  openrouter:
+    api-key: ${OPENROUTER_API_KEY:}
+    base-url: ${OPENROUTER_BASE_URL:https://openrouter.ai/api/v1}
+    referer: ${OPENROUTER_REFERER:}
+    title: System Web Studio
+    timeout-seconds: ${OPENROUTER_TIMEOUT_SECONDS:45}
+    max-attempts: ${OPENROUTER_MAX_ATTEMPTS:4}                 # free models tried in turn for "auto"
+    models-cache-minutes: 30
+    daily-limit-per-user: ${AI_DAILY_LIMIT_PER_USER:50}        # the free tier quota is shared by all users of the key
+    max-page-chars: 24000
+    model-allowlist: ${OPENROUTER_MODEL_ALLOWLIST:}            # optional comma list to restrict the free models offered
+  signup:
+    enabled: ${SIGNUP_ENABLED:false}
+    invite-code: ${SIGNUP_INVITE_CODE:}
+    max-users: ${SIGNUP_MAX_USERS:500}
+    ip-max-per-hour: ${SIGNUP_IP_MAX_PER_HOUR:5}
+  bootstrap:
+    admin-username: ${BOOTSTRAP_ADMIN_USERNAME:}
+    admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:}
   storage:
     bucket: ${MINIO_BUCKET:studio-assets}
     endpoint: ${MINIO_ENDPOINT:http://127.0.0.1:19000}

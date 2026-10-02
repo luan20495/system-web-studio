@@ -28,11 +28,15 @@ import tools.jackson.databind.json.JsonMapper
 import java.time.Instant
 import java.util.UUID
 
-data class PromptRequest(@field:NotBlank @field:Size(max = 2000) val prompt: String, @field:NotNull val expectedRevision: Long?)
+data class PromptRequest(
+    @field:NotBlank @field:Size(max = 2000) val prompt: String, @field:NotNull val expectedRevision: Long?,
+    @field:jakarta.validation.constraints.Pattern(regexp = "^[A-Za-z0-9._:/-]{1,120}$") val model: String? = null
+)
 data class AssistantMessage(val role: String, val content: String)
 data class PromptResponse(
     val promptId: UUID, val outcome: String, val message: AssistantMessage, val schemaPatch: List<SchemaOperation>,
-    val pageSchema: JsonNode, val revision: Long, val version: VersionSummary?, val registryReuse: Int
+    val pageSchema: JsonNode, val revision: Long, val version: VersionSummary?, val registryReuse: Int,
+    val provider: String? = null, val model: String? = null
 )
 data class PromptHistoryItem(
     val id: UUID, val text: String, val createdAt: Instant, val outcome: String, val assistantMessage: String,
@@ -44,9 +48,11 @@ data class PromptHistoryItem(
 class PromptController(
     private val access: AccessService,
     private val llm: LLMProvider,
+    private val ai: com.systemwebstudio.integration.llm.AiService,
     private val registry: ComponentRegistry,
     private val schemas: SchemaService,
     private val patcher: SchemaPatchEngine,
+    private val validator: com.systemwebstudio.schema.PageSchemaValidator,
     private val commits: SchemaCommitService,
     private val repo: SchemaRepository,
     private val limiter: RateLimiter,
@@ -76,6 +82,9 @@ class PromptController(
         val ctx = access.forProject(me.userId, workspaceId, projectId)
         ctx.require(Permission.PROJECT_EDIT)
         limiter.require("prompt:${me.userId}", promptMax, 60, "prompt")
+        ai.requireAllowed(request.model)
+        // Free-tier quotas are shared by everyone using the key, so each user gets a daily allowance of real-AI prompts.
+        if (ai.isExternal(request.model)) limiter.require("ai:${me.userId}", ai.dailyLimitPerUser, 86_400, "ai-daily")
         val project = ctx.project!!
         if (project.revision != request.expectedRevision) {
             throw ApiException.conflict("REVISION_CONFLICT", "Project changed elsewhere; reload and retry.", mapOf("currentRevision" to project.revision))
@@ -85,14 +94,27 @@ class PromptController(
         jdbc.update("INSERT INTO prompts (id, workspace_id, project_id, created_by, text) VALUES (?,?,?,?,?)",
             promptId, workspaceId, projectId, me.userId, request.prompt.trim())
 
-        val plan = llm.plan(LLMRequest(request.prompt.trim(), current, registry.list().filter { it.status == "ACTIVE" }.map { ComponentInfo(it.id, it.category, it.latestVersion) }))
+        val versions = registry.versions()
+        val plan = llm.plan(LLMRequest(request.prompt.trim(), current,
+            registry.list().filter { it.status == "ACTIVE" }.map { ComponentInfo(it.id, it.category, it.latestVersion, versions["${it.id}@${it.latestVersion}"]?.dto?.propsSchema) }, request.model))
         var next = current
         var version: VersionSummary? = null
         var revision = project.revision
         var outcome = if (plan.intent == "UNSUPPORTED") "UNSUPPORTED" else "NO_CHANGE"
         var versionId: UUID? = null
+        var planMessage = plan.message
         if (plan.operations.isNotEmpty()) {
-            next = patcher.apply(current, plan.operations)
+            // An external model can propose rubbish. That is "the AI failed", not a client error: nothing is stored and the user
+            // is told so. (For the built-in simulator an invalid plan is a server bug and still surfaces as 400.)
+            val external = (plan.provider ?: llm.name) != "mock"
+            next = try { patcher.apply(current, plan.operations) } catch (e: ApiException) {
+                if (!external) throw e
+                planMessage = "AI đề xuất thay đổi không hợp lệ (${e.message}); nội dung không đổi."; outcome = "UNSUPPORTED"; current
+            }
+            val violations = if (next != current) validator.validate(next) else emptyList()
+            if (external && violations.isNotEmpty()) {
+                planMessage = "AI đề xuất nội dung không hợp lệ (${violations.first().path}: ${violations.first().message}); nội dung không đổi."; outcome = "UNSUPPORTED"; next = current
+            }
             if (next != current) {
                 val result = commits.commit(ctx, request.expectedRevision!!, next, "PROMPT", request.prompt.trim().take(120), promptId = promptId)
                 outcome = "UPDATED"; revision = result.revision; versionId = result.versionId
@@ -102,13 +124,13 @@ class PromptController(
         val reuse = reuse(next)
         jdbc.update(
             """INSERT INTO prompt_runs (id, prompt_id, workspace_id, project_id, provider, intent, status, schema_patch, assistant_message,
-               version_id, registry_reuse, expected_revision) VALUES (?,?,?,?,?,?,?,CAST(? AS jsonb),?,?,?,?)""",
-            UUID.randomUUID(), promptId, workspaceId, projectId, llm.name, plan.intent, outcome, json.writeValueAsString(plan.operations),
-            plan.message.take(2000), versionId, reuse, request.expectedRevision
+               version_id, registry_reuse, expected_revision, model) VALUES (?,?,?,?,?,?,?,CAST(? AS jsonb),?,?,?,?,?)""",
+            UUID.randomUUID(), promptId, workspaceId, projectId, plan.provider ?: llm.name, plan.intent, outcome, json.writeValueAsString(plan.operations),
+            planMessage.take(2000), versionId, reuse, request.expectedRevision, plan.model
         )
         audit.record("RUN_PROMPT", "PROMPT", promptId, workspaceId, projectId,
-            newValue = mapOf("outcome" to outcome, "intent" to plan.intent, "provider" to llm.name, "operations" to plan.operations.size))
-        return PromptResponse(promptId, outcome, AssistantMessage("assistant", plan.message), plan.operations, next, revision, version, reuse)
+            newValue = mapOf("outcome" to outcome, "intent" to plan.intent, "provider" to (plan.provider ?: llm.name), "model" to plan.model, "operations" to plan.operations.size))
+        return PromptResponse(promptId, outcome, AssistantMessage("assistant", planMessage), plan.operations, next, revision, version, reuse, plan.provider ?: llm.name, plan.model)
     }
 
     @GetMapping

@@ -40,6 +40,10 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql")
     implementation("org.bouncycastle:bcprov-jdk18on:1.83")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("org.springframework.boot:spring-boot-starter-security-oauth2-client")   // generic OIDC; inert unless OIDC_ENABLED=true
+    implementation("io.micrometer:micrometer-registry-prometheus")
+    implementation("io.micrometer:micrometer-tracing-bridge-otel")                           // traceId in logs; export is opt-in (OTLP endpoint)
+    implementation("io.opentelemetry:opentelemetry-exporter-otlp")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
     runtimeOnly("org.postgresql:postgresql")

@@ -2,7 +2,7 @@ package com.systemwebstudio.access
 
 enum class Permission {
     PROJECT_READ, PROJECT_EDIT, PROJECT_SETTINGS, PROJECT_DELETE, PROJECT_PUBLISH,
-    PROJECT_CREATE, MEMBER_MANAGE, AUDIT_READ, REGISTRY_WRITE
+    PROJECT_CREATE, PROJECT_MEMBERS, MEMBER_MANAGE, AUDIT_READ, REGISTRY_WRITE
 }
 
 /**
@@ -12,7 +12,7 @@ enum class Permission {
  *   VIEWER     read
  *   EDITOR     read, edit schema/prompts/assets/restore, settings
  *   PUBLISHER  read, publish
- *   OWNER      read, edit, settings, delete, publish
+ *   OWNER      read, edit, settings, delete, publish, manage project members
  * Workspace roles (workspace_members.role):
  *   WORKSPACE_ADMIN  every project permission on every project of the workspace, create, manage members, read audit
  *   EDITOR           may create projects (project permissions still come from project membership)
@@ -22,7 +22,7 @@ enum class Permission {
 object PermissionMatrix {
     private val projectAll = setOf(
         Permission.PROJECT_READ, Permission.PROJECT_EDIT, Permission.PROJECT_SETTINGS,
-        Permission.PROJECT_DELETE, Permission.PROJECT_PUBLISH
+        Permission.PROJECT_DELETE, Permission.PROJECT_PUBLISH, Permission.PROJECT_MEMBERS
     )
 
     val projectRoles: Map<String, Set<Permission>> = mapOf(

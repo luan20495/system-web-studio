@@ -39,9 +39,14 @@ data class MeResponse(
 class AuthController(
     private val authenticationManager: AuthenticationManager,
     private val securityContextRepository: SecurityContextRepository,
+    private val hashGate: PasswordHashGate,
     private val rateLimiter: RateLimiter,
     private val audit: AuditService,
     private val jdbc: JdbcTemplate,
+    @Value("\${app.local-login.enabled:true}") private val localLogin: Boolean,
+    @Value("\${app.oidc.enabled:false}") private val oidc: Boolean,
+    @Value("\${app.signup.enabled:false}") private val signup: Boolean,
+    @Value("\${app.signup.invite-code:}") private val inviteCode: String,
     @Value("\${app.rate-limit.login-user-max:5}") private val userMax: Long,
     @Value("\${app.rate-limit.login-ip-max:50}") private val ipMax: Long,
     @Value("\${app.rate-limit.login-window-seconds:900}") private val windowSeconds: Long
@@ -49,8 +54,13 @@ class AuthController(
     @GetMapping("/csrf")
     fun csrf(token: CsrfToken): Map<String, String> = mapOf("token" to token.token)
 
+    /** Lets the UI show the right sign-in options without hard-coding the deployment's identity strategy. */
+    @GetMapping("/config")
+    fun config(): Map<String, Any> = mapOf("localLogin" to localLogin, "oidc" to oidc, "oidcLoginUrl" to "/oauth2/authorization/oidc", "signup" to signup, "signupInviteRequired" to inviteCode.isNotBlank())
+
     @PostMapping("/login")
     fun login(@Valid @RequestBody body: LoginRequest, request: HttpServletRequest, response: HttpServletResponse): MeResponse {
+        if (!localLogin) throw ApiException.notFound("LOCAL_LOGIN_DISABLED", "Password login is disabled; sign in with SSO")
         val username = body.username.trim()
         val userKey = "login:fail:u:${username.lowercase()}"
         val ipKey = "login:fail:ip:${request.remoteAddr}"
@@ -62,7 +72,7 @@ class AuthController(
             throw ApiException.tooManyRequests("Too many failed login attempts; retry later.", maxOf(byUser.retryAfterSeconds, byIp.retryAfterSeconds))
         }
         val authentication = try {
-            authenticationManager.authenticate(UsernamePasswordAuthenticationToken.unauthenticated(username, body.password))
+            hashGate.run { authenticationManager.authenticate(UsernamePasswordAuthenticationToken.unauthenticated(username, body.password)) }
         } catch (_: AuthenticationException) {
             rateLimiter.hit(userKey, userMax, windowSeconds)
             rateLimiter.hit(ipKey, ipMax, windowSeconds)

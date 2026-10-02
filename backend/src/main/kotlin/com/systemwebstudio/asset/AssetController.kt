@@ -44,7 +44,8 @@ class AssetController(
     @Value("\${app.storage.presign-minutes:10}") private val presignMinutes: Long,
     @Value("\${app.storage.max-image-bytes}") private val maxImage: Long,
     @Value("\${app.storage.max-document-bytes}") private val maxDocument: Long,
-    @Value("\${app.rate-limit.upload-max:60}") private val uploadMax: Long
+    @Value("\${app.rate-limit.upload-max:60}") private val uploadMax: Long,
+    @Value("\${app.limits.max-assets-per-project:200}") private val maxAssets: Long
 ) {
     private val imageTypes = setOf("image/png", "image/jpeg", "image/webp", "image/gif")
     private val documentTypes = setOf("application/pdf")      // SVG/HTML are rejected: they can carry active content
@@ -76,6 +77,8 @@ class AssetController(
         val ctx = access.forProject(me.userId, workspaceId, projectId)
         ctx.require(Permission.PROJECT_EDIT)
         limiter.require("upload:${me.userId}", uploadMax, 60, "upload")
+        val held = jdbc.queryForObject("SELECT count(*) FROM assets WHERE project_id = ? AND status <> 'DELETED'", Long::class.java, projectId)!!
+        if (held >= maxAssets) throw ApiException.conflict("ASSET_LIMIT", "This project reached its limit of $maxAssets files", mapOf("limit" to maxAssets))
         val type = request.contentType.trim().lowercase()
         val limit = when (type) { in imageTypes -> maxImage; in documentTypes -> maxDocument
             else -> throw ApiException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "UNSUPPORTED_MEDIA_TYPE", "File type '$type' is not allowed") }

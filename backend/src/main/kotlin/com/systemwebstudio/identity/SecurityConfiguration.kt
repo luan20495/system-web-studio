@@ -68,10 +68,16 @@ class SecurityConfiguration {
         securityContextRepository: SecurityContextRepository,
         users: UserRepository,
         errors: ApiErrorWriter,
-        @Value("\${springdoc.api-docs.enabled:false}") openApiPublic: Boolean
+        @Value("\${springdoc.api-docs.enabled:false}") openApiPublic: Boolean,
+        @Value("\${server.servlet.session.cookie.secure:true}") cookieSecure: Boolean,
+        @Value("\${app.oidc.enabled:false}") oidcEnabled: Boolean,
+        @Value("\${app.metrics.token:}") metricsToken: String,
+        oidcSuccess: org.springframework.beans.factory.ObjectProvider<com.systemwebstudio.identity.oidc.OidcLoginSuccessHandler>,
+        oidcFailure: org.springframework.beans.factory.ObjectProvider<com.systemwebstudio.identity.oidc.OidcLoginFailureHandler>
     ): SecurityFilterChain {
         val publicPaths = buildList {
-            add("/api/v1/auth/csrf"); add("/api/v1/auth/login")
+            add("/api/v1/auth/csrf"); add("/api/v1/auth/login"); add("/api/v1/auth/config"); add("/api/v1/auth/register")
+            if (oidcEnabled) { add("/oauth2/**"); add("/login/oauth2/**") }
             add("/actuator/health"); add("/actuator/health/**")
             if (openApiPublic) { add("/v3/api-docs"); add("/v3/api-docs/**"); add("/swagger-ui.html"); add("/swagger-ui/**") }
         }.toTypedArray()
@@ -83,10 +89,18 @@ class SecurityConfiguration {
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED) }
             .requestCache { it.disable() }
             .csrf { it.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()) }
+            .headers { h ->
+                // API responses are JSON: nothing may be framed, scripted or embedded. (Swagger UI, local profile only, needs scripts.)
+                if (!openApiPublic) h.contentSecurityPolicy { it.policyDirectives("default-src 'none'; frame-ancestors 'none'; base-uri 'none'") }
+                h.referrerPolicy { it.policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER) }
+                h.permissionsPolicyHeader { it.policy("camera=(), microphone=(), geolocation=(), payment=()") }
+                h.httpStrictTransportSecurity { it.includeSubDomains(true).maxAgeInSeconds(63_072_000) }   // only emitted on requests the container sees as HTTPS
+            }
             .authorizeHttpRequests {
                 it.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     .requestMatchers(*publicPaths).permitAll()
+                    .requestMatchers("/actuator/prometheus").hasRole("METRICS")
                     .anyRequest().authenticated()
             }
             .exceptionHandling {
@@ -99,6 +113,8 @@ class SecurityConfiguration {
                 }
             }
             .addFilterAfter(ActiveUserFilter(users, errors), SecurityContextHolderFilter::class.java)
+            .addFilterAfter(MetricsTokenFilter(metricsToken), ActiveUserFilter::class.java)
+            .also { if (oidcEnabled) it.oauth2Login { o -> o.successHandler(oidcSuccess.getObject()).failureHandler(oidcFailure.getObject()) } }
             .formLogin { it.disable() }
             .httpBasic { it.disable() }
         return http.build()
