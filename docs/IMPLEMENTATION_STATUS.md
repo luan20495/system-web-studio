@@ -1,31 +1,40 @@
-# Implementation status
+# Implementation status — AI Software Factory (2026-10-02)
 
-Honest status of this repository. Levels: **Development Ready: YES · Internal Demo Ready: YES · Production Ready: NO.**
+Development Ready: **YES** · Internal Demo Ready: **YES** · Production Ready: **NO** (see "Not implemented").
 
-| Area | Status | Evidence |
+## REAL / PARTIAL / MOCK / NOT IMPLEMENTED
+| Area | Status | Notes |
 | --- | --- | --- |
-| Sessions in Redis | Done | 52 backend tests incl. `SessionRestartTests` (two app contexts, same Redis) and `RedisOutageTests`; browser E2E restarts the API and the session survives; Redis container restart keeps sessions (AOF) |
-| Auth, CSRF, CORS, throttling | Done | `AuthSecurityTests`; failures audited without password |
-| RBAC + tenant isolation | Done | `ProjectApiTests`, `AuditApiTests`, E2E viewer/editor/publisher/disabled-user checks |
-| Projects + settings | Done | CRUD, PATCH with revision CAS, validation, audit |
-| Component registry, schema, patch engine | Done | `SchemaApiTests`; 10 components seeded |
-| Prompts (mock LLM) | Done, LLM mocked | `PromptApiTests`; unsupported prompts create no version |
-| Versions, restore, direct edit | Done | `VersionApiTests`; E2E verifies persistence across reload |
-| Assets (MinIO presigned) | Done | `AssetApiTests` against a real MinIO container; E2E upload/delete |
-| Publish (RabbitMQ state machine) | Done, provider mocked | `PublishApiTests` (idempotency, concurrent duplicates, failure path, content scan, RBAC) |
-| Audit log | Done | append-only trigger tested; read API for workspace admins |
-| Frontend http mode | Done | login, project list, studio, history/restore, edit, settings, assets, publish with polling |
-| GitHub Pages (mock) | Unchanged behaviour | `e2e/pages-mock.mjs` 6/6 on the static export under `/system-web-studio/`; live URL returned 200 (it serves the previously deployed build until you push) |
-| Backup/restore | Procedure proven, not automated | `scripts/backup-restore-drill.sh` passed |
-| Ops (scripts, compose, health) | Done for local | `run-local.sh`, `smoke-test.sh`, `check.sh` |
+| Login gateway with portal choice (Admin / Builder) | REAL | portal is navigation intent only (ADR 0002) |
+| Password login, Redis sessions, CSRF, throttling | REAL | sessions now in the *indexed* repository (revocable) |
+| SSO / OIDC | REAL (Keycloak-verified) | SAML, SCIM: NOT IMPLEMENTED |
+| Public sign-up | REAL, off by default | `PUBLIC_SIGNUP_ENABLED` (falls back to `SIGNUP_ENABLED`) |
+| Auth screens (signing-in, no-access, no-workspace, session-expired) + return to original route | REAL | E2E-tested |
+| Admin Console shell | REAL | 8 sections |
+| Admin overview | REAL | DB counts; AI cost/token: NOT IMPLEMENTED (shown as such) |
+| Users: list/search/detail/enable/disable/revoke sessions | REAL | no departments/HR model |
+| Workspaces: list/detail | REAL | |
+| Application inventory + detail (members, versions, AI activity, deployments, audit) | REAL | AI/hosting cost, risk score: NOT IMPLEMENTED |
+| Transfer ownership, delete, restore version (admin) | REAL | archive: NOT IMPLEMENTED |
+| AI Control | PARTIAL | OpenRouter free models + simulator, limits, counts; multi-provider, per-model permissions, tokens, cost, budgets: NOT IMPLEMENTED |
+| Component registry (admin + studio) | REAL (fixed approved set) | contribution/review workflow: NOT IMPLEMENTED |
+| Audit log (org-wide, filters, request id) | REAL | append-only in the database |
+| Platform health | REAL | live probes, no invented percentages |
+| Settings | REAL (read-only) | changes via environment |
+| Studio shell: Home, Projects (paged, mine/shared), Activity | REAL | |
+| Create application | PARTIAL | Website REAL; Dashboard / Internal Tool / Workflow: COMING SOON |
+| Templates | PARTIAL | default page only; template library: NOT IMPLEMENTED |
+| AI workspace (chat, model, changed components, version) | REAL | LLM = OpenRouter free models or simulator |
+| Design mode: structure, drag/drop reorder, component library, click-to-select in preview, inspector | REAL | schema-driven; multi-page: NOT IMPLEMENTED |
+| Images in components (`asset://`) | REAL | Hero and product images |
+| Code mode | NOT IMPLEMENTED | honest screen; ADR 0005 |
+| Deep links `/studio/projects/{id}/{ai|design|code|members|versions|assets|publish|settings}` | REAL | refresh stays in place |
+| Pagination | REAL for projects, users, workspaces, inventory, audit; versions/prompts limited (100) | |
+| Members & roles (Owner/Editor/Publisher/Viewer) | REAL | no Reviewer role (does not exist) |
+| Versions & restore | REAL | restore creates a new version |
+| Publish pipeline | REAL queue + state machine | deployment provider MOCK, labelled "Demo deployment" |
+| Git, code generation, sandbox build, runtime hosting, connectors, secrets per project | NOT IMPLEMENTED | separate phase, needs approval |
 
-## Evidence summary (this machine, 2026-10-01)
-- Backend: 52 tests, 0 failures (Testcontainers Postgres 17.6, Redis 8.2.1, MinIO, RabbitMQ 4).
-- `./scripts/check.sh`: typecheck, mock build, http build, backend tests, `npm audit --omit=dev` (0 vulnerabilities) all passed.
-- Browser E2E (`e2e/full-flow.mjs`, Chrome, real stack): login/logout, create project, prompts, history/restore, direct edit, settings, assets, publish to RUNNING, backend restart, RBAC, disabled user, stale-revision conflict, layouts at 390/1280/1440/1920/2560 px with no horizontal overflow.
-- Real Redis restart: sessions preserved. Real Redis stop: the pre-fix build returned 500; fixed to a structured 503 and covered by a test.
-
-## Remaining (not blockers for local/demo, blockers for production)
-Medium: no CSP on the UI; no MFA/SSO/password reset; no member-management API/UI; no retention for audit/idempotency/deployment-event tables; rate limiting keys on `remoteAddr` (needs trusted-proxy config); no upload malware scanning; no backup automation, PITR or timed recovery drill; no load or accessibility (WCAG) testing; single-node only.
-Low: dev compose uses well-known local-only passwords (loopback-bound); `bitnamilegacy/minio` is a frozen local-only image; `registryReuse` is a V1 constant; no real Git provider; no rollback/unpublish; e2e/smoke scripts target macOS + Chrome.
-Mocked by design: LLM, cloud deploy provider, external Git provider.
+## Verification (this machine)
+Backend `./gradlew test` on 2026-10-02: 105 tests, 0 failures, 3 skipped (OpenRouterLiveTests — need a real OPENROUTER_API_KEY), browser E2E `e2e/factory-flow.mjs` 30/30, `e2e/sso-flow.mjs` 9/9 (Keycloak),
+`e2e/a11y.mjs` 27/27 screens without serious/critical axe violations, `e2e/pages-mock.mjs` 6/6, typecheck and both builds (http + static mock).

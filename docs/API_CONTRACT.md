@@ -32,8 +32,32 @@ Base path `/api/v1`, JSON, session cookie auth. The live OpenAPI document is at 
 | GET | …/{p}/deployments, …/deployments/{id} | read | status + ordered events; `mock:true` when the provider is the mock |
 | GET | /workspaces/{w}/audit-events | AUDIT_READ (workspace admin) | filters `projectId`, `action`, `limit` ≤ 200 |
 
+## Added for the AI Software Factory (2026-10-02)
+| Method | Path | Permission | Notes |
+| --- | --- | --- | --- |
+| GET | /auth/me | session | now includes `systemAdmin` (live value) |
+| GET | /projects/{id} | read | resolves the workspace for deep links; 404 when not visible |
+| GET | /workspaces/{w}/projects?page&size&q&scope | member | optional server paging (size ≤ 100), `scope=all|owned|shared`, total in `X-Total-Count`; without `page` the full list (backwards compatible) |
+| GET | …/versions?limit, …/prompts?limit | read | default 100, max 500; prompts are now **newest first** |
+| GET | /components?details=true | session | includes props schemas and `usedInProjects` (company-wide count) |
+| GET | /me/usage | session | real AI quota from the enforcing Redis counter, prompts today |
+| GET | /me/activity?limit | session | the caller's own audit events |
+| GET | /admin/overview | system admin | counts from the database (no cost/token figures) |
+| GET | /admin/users?page&q&status, /admin/users/{id} | system admin | status = all|active|disabled|admin; detail has memberships, projects, active sessions, recent activity |
+| PATCH | /admin/users/{id}/status `{enabled}` | system admin | disabling also revokes every session; `409 CANNOT_DISABLE_SELF`, `409 LAST_SYSTEM_ADMIN` |
+| POST | /admin/users/{id}/revoke-sessions | system admin | `{revoked}`; uses the indexed Redis session repository |
+| GET | /admin/workspaces?page&q, /admin/workspaces/{id} | system admin | members, projects, activity |
+| GET | /admin/applications?page&q&visibility&status&workspaceId, /admin/applications/{id} | system admin | inventory: owner, members, visibility, revision, latest version, last publish; detail: members, versions, prompts (model/outcome), deployments, audit |
+| POST | /admin/applications/{id}/transfer-ownership `{userId}` | system admin | new owner must be an enabled workspace member (422 otherwise); old owner becomes EDITOR |
+| GET | /admin/audit?page&actor&action&workspaceId&projectId&requestId&from&to, /admin/audit/actions | system admin | organisation-wide, paged |
+| GET | /admin/ai | system admin | provider, models, limits, counts by model/outcome, recent runs; `tokenAccounting`/`costAccounting` = NOT_IMPLEMENTED |
+| GET | /admin/components | system admin | registry + usage (projects, sections) + props schema |
+| GET | /admin/system/health | system admin | live probes: API, PostgreSQL, Redis, RabbitMQ, MinIO, OpenRouter, OIDC → HEALTHY / DEGRADED / UNAVAILABLE / NOT_CONFIGURED; uptime, schema version, queue depths |
+| GET | /admin/settings | system admin | effective configuration, read-only, no secrets |
+Non-admins get `403 ADMIN_REQUIRED` on every `/admin/**` call. Asset references: component props with `format: "asset"` accept only `asset://<uuid>` of a READY asset of the same project (`422 SCHEMA_INVALID` / `400 ASSET_NOT_FOUND`).
+
 ## Schema operations
-`{type, sectionId?, sectionType?, itemId?, arrayPath?, path?, value?, item?, props?, beforeSectionId?, afterSectionId?, index?}` with `type` ∈ `ADD_SECTION, REMOVE_SECTION, MOVE_SECTION, UPDATE_SECTION, UPDATE_PROP, ADD_ITEM, REMOVE_ITEM`. Invalid operations or a result that violates the registry → `400 SCHEMA_INVALID`/`INVALID_OPERATION`; nothing is stored.
+`{type, sectionId?, sectionType?, itemId?, arrayPath?, path?, value?, item?, props?, beforeSectionId?, afterSectionId?, index?}` with `type` ∈ `ADD_SECTION, REMOVE_SECTION, MOVE_SECTION, UPDATE_SECTION, UPDATE_PROP, ADD_ITEM, REMOVE_ITEM`. Invalid operations or a result that violates the registry → `422 SCHEMA_INVALID` (result violates the registry) / `400 INVALID_OPERATION` (operation cannot be applied); nothing is stored.
 
 ## Deployment states
 `QUEUED → POLICY_CHECK → SECURITY_CHECK → BUILDING → DEPLOYING → RUNNING`, or `FAILED` from any non-terminal state. Terminal: RUNNING, FAILED, ROLLED_BACK (reserved; no rollback is implemented).

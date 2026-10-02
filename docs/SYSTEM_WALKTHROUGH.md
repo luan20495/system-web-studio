@@ -1,5 +1,25 @@
 # System Web Studio — technical walkthrough / handover
 
+> **Update 2026-10-02 — AI Software Factory (phases 1–3).** The product is now one frontend with two areas. Sections below written
+> before this update still describe the backend correctly; where they mention the old single-screen UI, this block wins.
+> * **Routing:** `app/[[...slug]]/page.tsx` + `components/app/AppEntry.tsx` (client router). Routes: `/login`, `/auth/{signing-in,no-access,no-workspace,session-expired}`,
+>   `/admin`, `/admin/{users,users/{id},workspaces,workspaces/{id},applications,applications/{id},ai,components,audit,system,settings}`,
+>   `/studio`, `/studio/{projects,new,templates,components,activity}`, `/studio/projects/{id}/{ai|design|code|members|versions|assets|publish|settings}`.
+>   Refresh keeps the route; an expired session returns to the same route after sign-in. Static export (mock / Pages) still builds.
+> * **Login gateway:** portal cards (Admin Console / Builder Studio) are navigation intent only; `resolvePostLogin()` in `features/routing.ts`.
+>   Admin needs live `system_admin` (`AdminGuard`, every `/api/v1/admin/**` call). Public sign-up is off unless `PUBLIC_SIGNUP_ENABLED=true`.
+> * **Admin Console** (`features/admin/AdminApp.tsx`, backend `admin/`): overview, users (enable/disable/revoke sessions), workspaces,
+>   application inventory (+ transfer ownership, delete, restore), AI control (counts, models, limits; tokens/cost NOT IMPLEMENTED),
+>   components (registry + usage), org-wide audit with filters, live platform health, read-only settings.
+> * **Builder Studio** (`features/studio/`): home with a big prompt (creates a Website and sends the prompt), paged projects (mine/shared),
+>   create (Website active; other types coming soon), templates (default only), components (registry + usage), activity.
+>   Project editor modes: **AI** (chat with real metadata: model, version, changed components), **Design** (structure with drag/drop
+>   reorder, component library, click-to-select in the preview via postMessage, registry-driven inspector incl. images), **Code** (honest
+>   "not available": schema-driven, no source repository — ADR 0005).
+> * **New/changed APIs:** see API_CONTRACT.md "Added for the AI Software Factory". DB migrations V8 (admin indexes), V9 (asset image props).
+>   Sessions moved to the indexed Redis repository (needed for revocation; existing sessions were invalidated once).
+> * **Decisions:** docs/adr/0001–0005. Status matrix: IMPLEMENTATION_STATUS.md.
+
 Source of truth: the code on branch `feat/production-hardening` and the stack that was running on 2026-10-01 (API :8080, UI :3100, Docker services). Where README or docs disagree with the code, the code is used. Labels: **REAL** = runs against real components, **MOCK** = simulated, **PARTIAL**, **NOT IMPLEMENTED**. Nothing in this task changed code; the one write to the dev database was a sample project named "Walkthrough sample".
 
 ---
