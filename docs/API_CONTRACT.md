@@ -32,6 +32,16 @@ Base path `/api/v1`, JSON, session cookie auth. The live OpenAPI document is at 
 | GET | …/{p}/deployments, …/deployments/{id} | read | status + ordered events; `mock:true` when the provider is the mock |
 | GET | /workspaces/{w}/audit-events | AUDIT_READ (workspace admin) | filters `projectId`, `action`, `limit` ≤ 200 |
 
+## Added in Phase 4 — AI usage accounting (2026-10-02)
+| Method | Path | Permission | Notes |
+| --- | --- | --- | --- |
+| POST | …/{p}/prompts | PROJECT_EDIT | response adds `usage: {attempts, promptTokens, completionTokens, totalTokens, costUsd, latencyMs}`; `null` for the simulator; token/cost fields `null` when the provider reported none. New error `429 AI_TOKEN_LIMIT` with `details {scope: user|workspace, used, limit}` when a token budget is used up (checked before calling the model) |
+| GET | …/{p}/prompts | read | items add `provider`, `model`, `aiCalls`, `totalTokens`, `costUsd` |
+| GET | /admin/ai/usage?days=1..366 | system admin | `{days, since, totals, byModel[], byUser[], byWorkspace[], daily[], limits, tokenSource, costSource}`; totals = `UsageTotals {calls, failedCalls, callsWithoutUsage, promptTokens, completionTokens, totalTokens, costUsd, costReportedCalls, avgLatencyMs}`; `days=1` = today |
+| GET | /admin/ai/calls?page&size&outcome&model&userId&workspaceId | system admin | one row per upstream model call (fail-over attempts included): user, workspace, project, model, `outcome OK|BAD_OUTPUT|ERROR`, HTTP status, tokens, cost, latency |
+
+Source of truth: table `ai_calls` (V10). Values are copied from OpenRouter's `usage` object (the request sets `usage.include=true`); nothing is estimated and an unreported value stays `null`.
+
 ## Added for the AI Software Factory (2026-10-02)
 | Method | Path | Permission | Notes |
 | --- | --- | --- | --- |
@@ -40,7 +50,7 @@ Base path `/api/v1`, JSON, session cookie auth. The live OpenAPI document is at 
 | GET | /workspaces/{w}/projects?page&size&q&scope | member | optional server paging (size ≤ 100), `scope=all|owned|shared`, total in `X-Total-Count`; without `page` the full list (backwards compatible) |
 | GET | …/versions?limit, …/prompts?limit | read | default 100, max 500; prompts are now **newest first** |
 | GET | /components?details=true | session | includes props schemas and `usedInProjects` (company-wide count) |
-| GET | /me/usage | session | real AI quota from the enforcing Redis counter, prompts today |
+| GET | /me/usage | session | real AI quota from the enforcing Redis counter, prompts today; `tokensLast24h`, `tokensLimitPerDay` (null = off), `usageLast30Days` (UsageTotals) |
 | GET | /me/activity?limit | session | the caller's own audit events |
 | GET | /admin/overview | system admin | counts from the database (no cost/token figures) |
 | GET | /admin/users?page&q&status, /admin/users/{id} | system admin | status = all|active|disabled|admin; detail has memberships, projects, active sessions, recent activity |
@@ -50,7 +60,7 @@ Base path `/api/v1`, JSON, session cookie auth. The live OpenAPI document is at 
 | GET | /admin/applications?page&q&visibility&status&workspaceId, /admin/applications/{id} | system admin | inventory: owner, members, visibility, revision, latest version, last publish; detail: members, versions, prompts (model/outcome), deployments, audit |
 | POST | /admin/applications/{id}/transfer-ownership `{userId}` | system admin | new owner must be an enabled workspace member (422 otherwise); old owner becomes EDITOR |
 | GET | /admin/audit?page&actor&action&workspaceId&projectId&requestId&from&to, /admin/audit/actions | system admin | organisation-wide, paged |
-| GET | /admin/ai | system admin | provider, models, limits, counts by model/outcome, recent runs; `tokenAccounting`/`costAccounting` = NOT_IMPLEMENTED |
+| GET | /admin/ai | system admin | provider, models, limits, counts by model/outcome, recent runs; `tokenAccounting`/`costAccounting` = `PROVIDER_REPORTED` |
 | GET | /admin/components | system admin | registry + usage (projects, sections) + props schema |
 | GET | /admin/system/health | system admin | live probes: API, PostgreSQL, Redis, RabbitMQ, MinIO, OpenRouter, OIDC → HEALTHY / DEGRADED / UNAVAILABLE / NOT_CONFIGURED; uptime, schema version, queue depths |
 | GET | /admin/settings | system admin | effective configuration, read-only, no secrets |

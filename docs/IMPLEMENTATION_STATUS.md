@@ -11,12 +11,14 @@ Development Ready: **YES** · Internal Demo Ready: **YES** · Production Ready: 
 | Public sign-up | REAL, off by default | `PUBLIC_SIGNUP_ENABLED` (falls back to `SIGNUP_ENABLED`) |
 | Auth screens (signing-in, no-access, no-workspace, session-expired) + return to original route | REAL | E2E-tested |
 | Admin Console shell | REAL | 8 sections |
-| Admin overview | REAL | DB counts; AI cost/token: NOT IMPLEMENTED (shown as such) |
+| Admin overview | REAL | DB counts (AI tokens/cost are on the AI Control page) |
 | Users: list/search/detail/enable/disable/revoke sessions | REAL | no departments/HR model |
 | Workspaces: list/detail | REAL | |
 | Application inventory + detail (members, versions, AI activity, deployments, audit) | REAL | AI/hosting cost, risk score: NOT IMPLEMENTED |
 | Transfer ownership, delete, restore version (admin) | REAL | archive: NOT IMPLEMENTED |
-| AI Control | PARTIAL | OpenRouter free models + simulator, limits, counts; multi-provider, per-model permissions, tokens, cost, budgets: NOT IMPLEMENTED |
+| AI Control | PARTIAL | OpenRouter free models + simulator, limits, counts; multi-provider and per-model permissions: NOT IMPLEMENTED |
+| AI usage accounting (Phase 4) | REAL | every upstream call in `ai_calls` with provider-reported tokens/cost (null = not reported, never estimated); admin report by model/user/workspace/day + call log; my usage on Studio Home; tokens/cost per AI answer |
+| AI token budgets | REAL, off by default | per user per 24 h and per workspace per month, checked before the model call (`429 AI_TOKEN_LIMIT`); alerts, per-model budgets, own price table, chargeback: NOT IMPLEMENTED |
 | Component registry (admin + studio) | REAL (fixed approved set) | contribution/review workflow: NOT IMPLEMENTED |
 | Audit log (org-wide, filters, request id) | REAL | append-only in the database |
 | Platform health | REAL | live probes, no invented percentages |
@@ -36,5 +38,5 @@ Development Ready: **YES** · Internal Demo Ready: **YES** · Production Ready: 
 | Git, code generation, sandbox build, runtime hosting, connectors, secrets per project | NOT IMPLEMENTED | separate phase, needs approval |
 
 ## Verification (this machine)
-Backend `./gradlew test` on 2026-10-02: 105 tests, 0 failures, 3 skipped (OpenRouterLiveTests — need a real OPENROUTER_API_KEY), browser E2E `e2e/factory-flow.mjs` 30/30, `e2e/sso-flow.mjs` 9/9 (Keycloak),
+Backend `./gradlew test` on 2026-10-02 (after Phase 4): 111 tests, 0 failures, 3 skipped (OpenRouterLiveTests — need a real OPENROUTER_API_KEY), browser E2E `e2e/factory-flow.mjs` 31/31, `e2e/sso-flow.mjs` 9/9 (Keycloak),
 `e2e/a11y.mjs` 27/27 screens without serious/critical axe violations, `e2e/pages-mock.mjs` 6/6, typecheck and both builds (http + static mock).

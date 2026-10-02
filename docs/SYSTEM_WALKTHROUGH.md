@@ -18,6 +18,9 @@
 >   "not available": schema-driven, no source repository — ADR 0005).
 > * **New/changed APIs:** see API_CONTRACT.md "Added for the AI Software Factory". DB migrations V8 (admin indexes), V9 (asset image props).
 >   Sessions moved to the indexed Redis repository (needed for revocation; existing sessions were invalidated once).
+> * **Phase 4 — AI usage accounting:** `ai_calls` (V10) records every upstream model call with OpenRouter-reported tokens/cost
+>   (`AiUsageService`, `AdminAiUsageController`). `PromptController.run` now calls the model outside the DB transaction (short tx before,
+>   commit tx after). Optional token budgets `AI_DAILY_TOKEN_LIMIT_PER_USER` / `AI_MONTHLY_TOKEN_LIMIT_PER_WORKSPACE`. See docs/AI.md.
 > * **Decisions:** docs/adr/0001–0005. Status matrix: IMPLEMENTATION_STATUS.md.
 
 Source of truth: the code on branch `feat/production-hardening` and the stack that was running on 2026-10-01 (API :8080, UI :3100, Docker services). Where README or docs disagree with the code, the code is used. Labels: **REAL** = runs against real components, **MOCK** = simulated, **PARTIAL**, **NOT IMPLEMENTED**. Nothing in this task changed code; the one write to the dev database was a sample project named "Walkthrough sample".
