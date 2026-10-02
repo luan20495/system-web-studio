@@ -1,5 +1,5 @@
 import type {
-  AdminAi, AiCallRow, AiUsageReport, AdminApp, BlockDto, CheckResult, TemplateDto, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
+  AdminAi, AiCallRow, AiPrice, AiProbe, AiProviderInfo, AiUsageReport, AdminApp, BlockDto, CheckResult, TemplateDto, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
   AiStatus, ApiProject, AuthConfig, Member, RegistryComponent, AssetDto, Deployment, Me, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
 } from "./http-types";
 
@@ -108,6 +108,11 @@ export const api = {
     audit: (params: Record<string, string | number | undefined>) => call<Page<AuditRow>>(`/admin/audit${qs({ size: 50, ...params })}`),
     auditActions: () => call<string[]>("/admin/audit/actions"),
     ai: () => call<AdminAi>("/admin/ai"),
+    aiProviders: () => call<AiProviderInfo[]>("/admin/ai/providers"),
+    aiProbe: (id: string) => call<AiProbe>(`/admin/ai/providers/${id}/probe`, { method: "POST" }),
+    aiModelPolicy: (modelId: string, enabled: boolean) => call<unknown>("/admin/ai/models/policy", { method: "PUT", body: json({ modelId, enabled }) }),
+    aiPricing: () => call<AiPrice[]>("/admin/ai/pricing"),
+    aiAddPrice: (body: { modelId: string; inputUsdPerMTok: number; outputUsdPerMTok: number; note?: string }) => call<AiPrice>("/admin/ai/pricing", { method: "POST", body: json(body) }),
     aiUsage: (days: number) => call<AiUsageReport>(`/admin/ai/usage${qs({ days })}`),
     aiCalls: (params: { page: number; outcome?: string; model?: string; userId?: string; workspaceId?: string }) => call<Page<AiCallRow>>(`/admin/ai/calls${qs({ size: 25, ...params })}`),
     components: () => call<AdminComponent[]>("/admin/components"),

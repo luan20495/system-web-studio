@@ -43,8 +43,15 @@ export type Deployment = {
 };
 
 export type AuthConfig = { localLogin: boolean; oidc: boolean; oidcLoginUrl: string; signup?: boolean; signupInviteRequired?: boolean };
-export type AiModel = { id: string; name: string; contextLength: number };
-export type AiStatus = { provider: "openrouter" | "mock"; configured: boolean; defaultModel: string; dailyLimitPerUser: number; models: AiModel[]; dataNotice: string };
+export type AiModel = { id: string; name: string; contextLength: number; provider?: string; paid?: boolean };
+export type AiProviderStatus = { id: string; name: string; paid: boolean; models: AiModel[]; dataNotice: string };
+export type AiStatus = { provider: "openrouter" | "providers" | "mock"; configured: boolean; defaultModel: string; dailyLimitPerUser: number; models: AiModel[]; dataNotice: string;
+  providers?: AiProviderStatus[] };
+// ---- Phase 6: providers, model policy, pricing catalog (admin)
+export type AiPrice = { id: string; provider: string; modelId: string; inputUsdPerMTok: number; outputUsdPerMTok: number; effectiveFrom: string; note: string; createdBy: string | null; createdAt: string };
+export type AiProviderInfo = { id: string; name: string; configured: boolean; paid: boolean; endpointHost: string | null; defaultPolicy: "ENABLED_UNLESS_DISABLED" | "DISABLED_UNLESS_ENABLED";
+  models: { id: string; name: string; enabled: boolean; paid: boolean; price: AiPrice | null }[]; configHint: string };
+export type AiProbe = { id: string; ok: boolean; latencyMs: number; detail: string };
 export type Member = { userId: string; username: string; displayName: string | null; email: string | null; role: string; joinedAt: string };
 export const WORKSPACE_ROLES = ["WORKSPACE_ADMIN", "EDITOR", "PUBLISHER", "VIEWER"] as const;
 export const PROJECT_ROLES = ["OWNER", "EDITOR", "PUBLISHER", "VIEWER"] as const;
@@ -94,7 +101,7 @@ export type AiUsageReport = { days: number; since: string; totals: UsageTotals; 
   limits: { dailyRequestsPerUser: number; dailyTokensPerUser: number | null; monthlyTokensPerWorkspace: number | null }; tokenSource: string; costSource: string };
 export type AiCallRow = { id: string; createdAt: string; userId: string; user: string | null; workspaceId: string; workspace: string | null; projectId: string; project: string | null;
   promptId: string | null; provider: string; model: string; outcome: "OK" | "BAD_OUTPUT" | "ERROR"; httpStatus: number | null; promptTokens: number | null;
-  completionTokens: number | null; totalTokens: number | null; costUsd: number | null; latencyMs: number };
+  completionTokens: number | null; totalTokens: number | null; costUsd: number | null; latencyMs: number; costSource?: "PROVIDER" | "CATALOG" | null; requestId?: string | null };
 
 // ---- Phase 5: templates (page schema JSON, never source code) and contributed blocks (reviewed presets of approved components)
 export type TemplateDto = { id: string; name: string; description: string; visibility: "PRIVATE" | "COMPANY"; status: "ACTIVE" | "ARCHIVED"; version: number;

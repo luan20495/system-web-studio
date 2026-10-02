@@ -147,3 +147,9 @@
 .thumb.placeholder{display:grid;place-items:center;color:var(--f-muted);font-weight:600;background:linear-gradient(135deg,#eef4ff,#f4fbf7)}
 .inspectorTools{display:flex;justify-content:flex-end;padding:8px 12px 0}
 .subHead{font-size:13px;margin:12px 0 6px;text-transform:uppercase;letter-spacing:.03em;color:var(--f-muted)}
+/* Phase 6: providers */
+.providerList{display:grid;gap:12px}
+.providerItem{border:1px solid var(--f-line);border-radius:12px;padding:12px}
+.providerItem small{display:block;color:var(--f-muted);font-size:12px;margin-top:2px}
+.providerItem .pill{margin-left:8px}
+.switch{display:inline-flex;align-items:center;gap:6px;cursor:pointer}

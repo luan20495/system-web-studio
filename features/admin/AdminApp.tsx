@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Fragment, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { api } from "@/lib/http-api";
-import type { AdminApp as App, BlockDto, TemplateDto, AiUsageReport, AuditRow, HealthItem, UsageBucket, UsageTotals } from "@/lib/http-types";
+import type { AdminApp as App, AiProbe, BlockDto, TemplateDto, AiUsageReport, AuditRow, HealthItem, UsageBucket, UsageTotals } from "@/lib/http-types";
 import { useSession } from "../session";
 import { rememberPortal } from "../routing";
 import { useLoad } from "../useLoad";
@@ -111,9 +111,7 @@ function Overview() {
     </div>
     <div className="grid2">
       <Card title="Hoạt động gần đây" actions={<Link className="btn sm" href="/admin/audit">Xem tất cả</Link>}><AuditTable rows={o.recentActivity} compact/></Card>
-      <Card title="Chi phí AI">
-        <ComingSoon title="Token, chi phí và ngân sách AI">Hệ thống chưa ghi nhận số token và giá model, nên chưa hiển thị chi phí. Sẽ có sau khi triển khai ghi nhận sử dụng AI (Phase 4).</ComingSoon>
-      </Card>
+      <AiMonthCard/>
     </div>
   </>);
 }
@@ -352,8 +350,80 @@ function AiCallsLog({ models }: { models: string[] }) {
           <td><Link href={`/admin/applications/${c.projectId}`}>{c.project ?? "—"}</Link><small>{c.workspace}</small></td>
           <td className="code">{c.model}</td><td><Pill value={c.outcome} label={OUTCOME_LABEL[c.outcome]}/>{c.httpStatus && c.httpStatus !== 200 ? <small>HTTP {c.httpStatus}</small> : null}</td>
           <td>{c.totalTokens == null ? <span className="muted">không báo</span> : <>{tok(c.promptTokens)} / {tok(c.completionTokens)}</>}</td>
-          <td>{usd(c.costUsd)}</td><td>{(c.latencyMs / 1000).toFixed(1)} s</td></tr>)}</tbody></table>
+          <td>{usd(c.costUsd)}{c.costSource ? <small>{c.costSource === "CATALOG" ? "theo bảng giá" : "nhà cung cấp báo"}</small> : null}</td><td>{(c.latencyMs / 1000).toFixed(1)} s{c.requestId ? <small className="code">{c.requestId.slice(0, 8)}</small> : null}</td></tr>)}</tbody></table>
       <Pager page={page} size={data!.size} total={data!.total} onPage={setPage}/></>}
+  </Card>;
+}
+
+/** Configured providers and per-model switches. "Configured" = key + model list present; reachability only after a live check. */
+/** Overview: this month's provider-reported AI usage (same source as AI Control). */
+function AiMonthCard() {
+  const { data, error, reload } = useLoad(() => api.admin.aiUsage(new Date().getDate()), []);
+  const t = data?.totals;
+  return <Card title="AI tháng này" actions={<Link className="btn sm" href="/admin/ai">AI Control</Link>}>
+    {error ? <ErrorState error={error} retry={reload}/> : !t ? <StateView kind="loading"/> : <div className="kpiGrid">
+      <Kpi label="Lượt gọi model" value={num(t.calls)} hint={`${num(t.failedCalls)} lỗi`}/>
+      <Kpi label="Token" value={num(t.totalTokens)} hint={t.callsWithoutUsage ? `${num(t.callsWithoutUsage)} lượt không có số liệu` : "số liệu nhà cung cấp"}/>
+      <Kpi label="Chi phí" value={usd(t.costUsd)} hint={t.calls ? `${num(t.costReportedCalls)}/${num(t.calls)} lượt có chi phí` : "Chưa có lượt gọi"}/>
+    </div>}
+    <p className="hint">Ngân sách theo tổ chức/dự án và ngưỡng cảnh báo: chưa triển khai (đang có giới hạn token theo người dùng và workspace).</p>
+  </Card>;
+}
+
+function ProvidersCard() {
+  const { data, error, loading, reload } = useLoad(() => api.admin.aiProviders(), []);
+  const [probes, setProbes] = useState<Record<string, AiProbe | "running">>({}); const [err, setErr] = useState<string | null>(null);
+  async function probe(id: string) { setProbes((p) => ({ ...p, [id]: "running" })); try { const r = await api.admin.aiProbe(id); setProbes((p) => ({ ...p, [id]: r })); } catch (x) { setErr(errText(x, "Không kiểm tra được.")); setProbes((p) => { const n = { ...p }; delete n[id]; return n; }); } }
+  // optimistic: the switch moves at once and is put back if the server refuses
+  const [over, setOver] = useState<Record<string, boolean>>({});
+  async function toggle(modelId: string, enabled: boolean) {
+    setErr(null); setOver((o) => ({ ...o, [modelId]: enabled }));
+    try { await api.admin.aiModelPolicy(modelId, enabled); } catch (x) { setErr(errText(x, "Không đổi được.")); setOver((o) => { const n = { ...o }; delete n[modelId]; return n; }); }
+  }
+  return <Card title="Nhà cung cấp AI">
+    <p className="hint">Khóa API chỉ đọc từ biến môi trường của máy chủ, không bao giờ hiển thị. Model của nhà cung cấp tính phí mặc định TẮT cho tới khi quản trị viên bật; “Tự động” chỉ dùng model miễn phí của OpenRouter. Chi phí: số nhà cung cấp báo, hoặc tính từ bảng giá bên dưới.</p>
+    {err ? <p className="formError" role="alert">{err}</p> : null}
+    {error ? <ErrorState error={error} retry={reload}/> : loading && !data ? <StateView kind="loading"/> : <div className="providerList">{data!.map((p) => {
+      const pr = probes[p.id];
+      return <section key={p.id} className="providerItem" aria-label={p.name}>
+        <div className="row between"><div><b>{p.name}</b>{p.paid ? <Pill value="UNKNOWN" label="Tính phí"/> : <Pill value="ACTIVE" label="Không tính phí"/>}
+          <small>{p.configured ? `Đã cấu hình${p.endpointHost ? ` · ${p.endpointHost}` : ""}` : `Chưa cấu hình — ${p.configHint}`}</small></div>
+          <div className="row">{pr && pr !== "running" ? <Pill value={pr.ok ? "HEALTHY" : "UNAVAILABLE"} label={pr.ok ? `Kết nối được · ${pr.latencyMs} ms · ${pr.detail}` : `Lỗi: ${pr.detail}`}/> : null}
+            {p.configured ? <button className="btn sm" disabled={pr === "running"} onClick={() => void probe(p.id)}>{pr === "running" ? "Đang kiểm tra…" : "Kiểm tra kết nối"}</button> : null}</div></div>
+        {p.models.length ? <table className="table"><thead><tr><th>Model</th><th>Giá hiện hành (USD / 1 triệu token)</th><th>Cho phép dùng</th></tr></thead>
+          <tbody>{p.models.map((m) => <tr key={m.id}><td><b>{m.name}</b>{m.name !== m.id ? <small className="code">{m.id}</small> : null}</td>
+            <td>{m.price ? `vào ${m.price.inputUsdPerMTok} · ra ${m.price.outputUsdPerMTok}` : <span className="muted">{p.id === "openrouter" ? "OpenRouter báo chi phí" : "Chưa có giá — chi phí sẽ là “không rõ”"}</span>}</td>
+            <td><label className="switch"><input type="checkbox" checked={over[m.id] ?? m.enabled} onChange={(e) => void toggle(m.id, e.target.checked)} aria-label={`Cho phép ${m.id}`}/> {(over[m.id] ?? m.enabled) ? "Bật" : "Tắt"}</label></td></tr>)}</tbody></table> : null}
+      </section>;
+    })}</div>}
+  </Card>;
+}
+
+/** Explicit prices, never built in. Rows are immutable: a change is a new row from now on, so past costs stay reproducible. */
+function PricingCard() {
+  const providers = useLoad(() => api.admin.aiProviders(), []);
+  const { data, error, loading, reload } = useLoad(() => api.admin.aiPricing(), []);
+  const [f, setF] = useState({ modelId: "", input: "", output: "", note: "" }); const [err, setErr] = useState<string | null>(null); const [ok, setOk] = useState<string | null>(null);
+  const models = (providers.data ?? []).flatMap((p) => p.models.map((m) => m.id));
+  async function add(e: FormEvent) {
+    e.preventDefault(); setErr(null); setOk(null);
+    try { await api.admin.aiAddPrice({ modelId: f.modelId, inputUsdPerMTok: Number(f.input), outputUsdPerMTok: Number(f.output), note: f.note.trim() || undefined });
+      setOk(`Đã thêm giá cho ${f.modelId}, áp dụng từ bây giờ.`); setF({ modelId: "", input: "", output: "", note: "" }); reload(); }
+    catch (x) { setErr(errText(x, "Không thêm được giá.")); }
+  }
+  return <Card title="Bảng giá model">
+    <p className="hint">Dùng để tính chi phí khi nhà cung cấp không báo (OpenAI, Anthropic, Gemini, model nội bộ). Hệ thống không có sẵn giá nào. Giá không sửa được: thay đổi = thêm dòng mới áp dụng từ thời điểm thêm; chi phí đã ghi không bị tính lại.</p>
+    <form className="filters wrap" onSubmit={(e) => void add(e)}>
+      <select aria-label="Model" value={f.modelId} onChange={(e) => setF({ ...f, modelId: e.target.value })} required><option value="">Chọn model</option>{models.map((m) => <option key={m} value={m}>{m}</option>)}</select>
+      <input aria-label="Giá token vào (USD / 1 triệu)" type="number" min="0" max="10000" step="0.000001" placeholder="Vào USD/1M" value={f.input} onChange={(e) => setF({ ...f, input: e.target.value })} required/>
+      <input aria-label="Giá token ra (USD / 1 triệu)" type="number" min="0" max="10000" step="0.000001" placeholder="Ra USD/1M" value={f.output} onChange={(e) => setF({ ...f, output: e.target.value })} required/>
+      <input aria-label="Ghi chú (nguồn giá)" placeholder="Ghi chú, ví dụ: theo hợp đồng 2026" maxLength={200} value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })}/>
+      <button className="btn primary" disabled={!f.modelId}>Thêm giá</button>
+    </form>
+    {ok ? <p className="hint" role="status">{ok}</p> : null}{err ? <p className="formError" role="alert">{err}</p> : null}
+    {error ? <ErrorState error={error} retry={reload}/> : loading && !data ? <StateView kind="loading"/> : !data!.length ? <StateView kind="empty" title="Chưa có giá nào" detail="Chi phí của model trả phí sẽ hiển thị “không rõ” cho tới khi có giá."/> :
+      <table className="table"><thead><tr><th>Model</th><th>Vào / Ra (USD / 1M token)</th><th>Áp dụng từ</th><th>Ghi chú</th><th>Người thêm</th></tr></thead>
+        <tbody>{data!.map((r) => <tr key={r.id}><td className="code">{r.modelId}</td><td>{r.inputUsdPerMTok} / {r.outputUsdPerMTok}</td><td>{fmtDate(r.effectiveFrom)}</td><td>{r.note || "—"}</td><td>{r.createdBy ?? "—"}</td></tr>)}</tbody></table>}
   </Card>;
 }
 
@@ -398,10 +468,8 @@ function AiPage() {
       <AiCallsLog models={u.byModel.map((m) => m.key)}/>
     </> : null}
 
-    <div className="grid2">
-      <Card title={`Model được phép (${a.models.length})`}>{a.models.length ? <ul className="plainList">{a.models.map((m) => <li key={m.id}><b>{m.name}</b><small className="code">{m.id}</small></li>)}</ul> : <p className="muted">Không có model ngoài: đang dùng bộ mô phỏng.</p>}</Card>
-      <Card title="Nhiều nhà cung cấp & quyền theo model"><ComingSoon title="OpenAI, Anthropic, Gemini, model nội bộ">Chưa tích hợp. Kiến trúc hiện có port LLMProvider và AiService để mở rộng (Phase 6).</ComingSoon></Card>
-    </div>
+    <ProvidersCard/>
+    <PricingCard/>
     <Card title="Prompt gần đây"><table className="table"><thead><tr><th>Thời gian</th><th>Người dùng</th><th>Prompt</th><th>Model</th><th>Kết quả</th></tr></thead><tbody>{a.recent.map((p) => <tr key={p.id}><td>{ago(p.createdAt)}</td><td>{p.user ?? "—"}</td><td>{p.text}</td><td className="code">{p.model ?? p.provider}</td><td>{p.outcome ? <Pill value={p.outcome}/> : "—"}</td></tr>)}</tbody></table></Card>
   </>);
 }

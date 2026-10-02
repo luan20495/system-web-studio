@@ -264,14 +264,15 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
                     {ai?.configured ? (
                       <label className="aiPicker"><span className="srOnly">Model AI</span>
                         <select aria-label="Model AI" value={effectiveModel} onChange={(e) => setModel(e.target.value)} disabled={busy !== null}>
-                          <option value="auto">AI · tự động (các model miễn phí)</option>
-                          {ai.models.map((m) => <option key={m.id} value={m.id}>{m.name} — {m.id}</option>)}
+                          <option value="auto">{ai.provider === "openrouter" ? "AI · tự động (các model miễn phí)" : "Tự động (bộ mô phỏng)"}</option>
+                          {(ai.providers ?? []).map((g) => <optgroup key={g.id} label={`${g.name}${g.paid ? " · tính phí" : ""}`}>
+                            {g.models.map((m) => <option key={m.id} value={m.id}>{m.name}{m.name !== m.id ? ` — ${m.id}` : ""}</option>)}</optgroup>)}
                           <option value="mock">Mô phỏng (không gọi AI)</option>
                         </select></label>
-                    ) : <span title={ai?.dataNotice}>AI: mô phỏng (chưa có key OpenRouter)</span>}
+                    ) : <span title={ai?.dataNotice}>AI: mô phỏng (chưa cấu hình nhà cung cấp AI)</span>}
                     <button className="sendButton" disabled={busy !== null || !prompt.trim() || readOnly} onClick={() => void submitPrompt()}>{busy === "prompt" ? "Đang xử lý…" : "Gửi ↑"}</button>
                   </div>
-                  {ai?.configured && effectiveModel !== "mock" ? <p className="aiNotice">{ai.dataNotice} Giới hạn {ai.dailyLimitPerUser} lượt AI/ngày/người dùng.</p> : null}
+                  {ai?.configured && effectiveModel !== "mock" ? <p className="aiNotice">{(ai.providers ?? []).find((g) => g.models.some((m) => m.id === effectiveModel))?.dataNotice ?? ai.dataNotice} Giới hạn {ai.dailyLimitPerUser} lượt AI/ngày/người dùng.</p> : null}
                 </div>
               </div>
             </section>
