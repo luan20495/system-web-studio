@@ -12,20 +12,20 @@ import java.util.UUID
 ])
 class RegistrationAndLimitsTests : IntegrationTestBase() {
     private fun name() = "reg" + UUID.randomUUID().toString().take(8)
-    private fun register(user: String, password: String = "correct-horse-battery", invite: String? = "let-me-in-please") =
+    private fun register(user: String, password: String = "correct-horse-battery9", invite: String? = "let-me-in-please") =
         session().also { it.initCsrf() }.let { s -> s.post("/api/v1/auth/register", """{"username":"$user","password":"$password","displayName":"Tester"${invite?.let { ""","inviteCode":"$it"""" } ?: ""}}""") }
 
     @Test
     fun `sign-up creates an isolated account with its own workspace and the user can log in`() {
         val u = name()
         assertThat(register(u).response.status).isEqualTo(201)
-        val s = session(); assertThat(s.login(u, "correct-horse-battery").response.status).isEqualTo(200)
+        val s = session(); assertThat(s.login(u, "correct-horse-battery9").response.status).isEqualTo(200)
         val me = s.body(s.get("/api/v1/auth/me"))
         assertThat(me.get("workspaces").size()).isEqualTo(1); assertThat(me.get("workspaces").get(0).get("role").asString()).isEqualTo("WORKSPACE_ADMIN")
         assertThat(jdbc.queryForObject("SELECT email FROM users WHERE username=?", String::class.java, u)).isNull()        // never store an unverified email
         assertThat(jdbc.queryForObject("SELECT count(*) FROM audit_events WHERE action='REGISTER' AND actor_id=(SELECT id FROM users WHERE username=?)", Long::class.java, u)).isEqualTo(1L)
         // isolation: another sign-up cannot see or touch the first one's workspace
-        val other = name(); register(other); val s2 = session(); s2.login(other, "correct-horse-battery")
+        val other = name(); register(other); val s2 = session(); s2.login(other, "correct-horse-battery9")
         val ws = me.get("workspaces").get(0).get("id").asString()
         assertThat(s2.get("/api/v1/workspaces/$ws/projects").response.status).isEqualTo(404)
         assertThat(s2.get("/api/v1/workspaces/$ws/members").response.status).isEqualTo(404)
@@ -39,10 +39,13 @@ class RegistrationAndLimitsTests : IntegrationTestBase() {
         assertThat(register(u.uppercase()).response.status).isEqualTo(409)                                   // names are case-insensitive
         assertThat(register(name(), invite = "wrong").response.status).isEqualTo(403)
         assertThat(register(name(), invite = null).response.status).isEqualTo(403)
-        assertThat(register(name(), password = "short").response.status).isEqualTo(400)
-        assertThat(register(name(), password = "aaaaaaaaaaaaaaaa").response.status).isEqualTo(400)
-        assertThat(register("bad name!", "correct-horse-battery").response.status).isEqualTo(400)
-        val x = name(); assertThat(register(x, password = "xx${x}xxxxxxx").response.status).isEqualTo(400)    // contains the username
+        assertThat(register(name(), password = "ab12").response.status).isEqualTo(400)          // shorter than 6
+        assertThat(register(name(), password = "abcdefgh").response.status).isEqualTo(400)      // letters only
+        assertThat(register(name(), password = "12345678").response.status).isEqualTo(400)      // digits only
+        assertThat(register(name(), password = "aaaa11").response.status).isEqualTo(400)        // too repetitive (2 distinct characters)
+        assertThat(register(name(), password = "abc123").response.status).isEqualTo(201)        // 6 characters, letters + digits: allowed
+        assertThat(register("bad name!", "correct-horse-battery9").response.status).isEqualTo(400)
+        val x = name(); assertThat(register(x, password = "1${x}2").response.status).isEqualTo(400)    // contains the username
     }
 
     @Test
@@ -57,14 +60,14 @@ class RegistrationAndLimitsTests : IntegrationTestBase() {
         val ip = "198.51.100.${(1..250).random()}"           // unique per run: the counters live in the shared Redis for an hour
         fun attempt(): Int = session().also { it.initCsrf() }.perform(
             org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/auth/register").contentType("application/json")
-                .content("""{"username":"${name()}","password":"correct-horse-battery","inviteCode":"wrong"}""").with { it.remoteAddr = ip; it }).response.status
+                .content("""{"username":"${name()}","password":"correct-horse-battery9","inviteCode":"wrong"}""").with { it.remoteAddr = ip; it }).response.status
         // limit is 1000 in this class, so use the key is the client IP (a distinct IP has its own budget)
         val first = attempt(); assertThat(first).isEqualTo(403)
     }
 
     @Test
     fun `project and asset caps per workspace are enforced`() {
-        val u = name(); register(u); val s = session(); s.login(u, "correct-horse-battery")
+        val u = name(); register(u); val s = session(); s.login(u, "correct-horse-battery9")
         val ws = s.body(s.get("/api/v1/auth/me")).get("workspaces").get(0).get("id").asString()
         assertThat(s.post("/api/v1/workspaces/$ws/projects", """{"name":"one"}""").response.status).isEqualTo(201)
         val second = s.post("/api/v1/workspaces/$ws/projects", """{"name":"two"}""")

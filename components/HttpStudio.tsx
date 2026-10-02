@@ -79,8 +79,8 @@ function LoginScreen({ onLoggedIn, initialError }: { onLoggedIn: (me: Me) => voi
         {config.localLogin ? <>
         <Field label="Tên đăng nhập"><input autoFocus autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required/></Field>
         {mode === "signup" ? <Field label="Tên hiển thị"><input autoComplete="name" maxLength={80} value={displayName} onChange={(e) => setDisplayName(e.target.value)}/></Field> : null}
-        <Field label="Mật khẩu"><input type="password" autoComplete={mode === "signup" ? "new-password" : "current-password"} minLength={mode === "signup" ? 12 : undefined} value={password} onChange={(e) => setPassword(e.target.value)} required/></Field>
-        {mode === "signup" ? <p className="hint">Tên đăng nhập 3–40 ký tự (a–z, 0–9, . _ -). Mật khẩu tối thiểu 12 ký tự.</p> : null}
+        <Field label="Mật khẩu"><input type="password" autoComplete={mode === "signup" ? "new-password" : "current-password"} minLength={mode === "signup" ? 6 : undefined} value={password} onChange={(e) => setPassword(e.target.value)} required/></Field>
+        {mode === "signup" ? <p className="hint">Tên đăng nhập 3–40 ký tự (a–z, 0–9, . _ -). Mật khẩu tối thiểu 6 ký tự, gồm cả chữ và số.</p> : null}
         {mode === "signup" && config.signupInviteRequired ? <Field label="Mã mời"><input autoComplete="off" value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} required/></Field> : null}
         {error ? <p className="formError" role="alert">{error}</p> : null}
         <button className="button primary" disabled={busy || !username || !password}>{busy ? (mode === "signup" ? "Đang tạo tài khoản…" : "Đang đăng nhập…") : (mode === "signup" ? "Tạo tài khoản" : "Đăng nhập")}</button>

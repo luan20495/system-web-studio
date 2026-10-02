@@ -11,7 +11,7 @@ import java.util.UUID
 class SignupRateLimitTests : IntegrationTestBase() {
     private fun attempt(ip: String) = session().also { it.initCsrf() }.perform(
         B.post("/api/v1/auth/register").contentType("application/json")
-            .content("""{"username":"rl${UUID.randomUUID().toString().take(8)}","password":"correct-horse-battery"}""").with { it.remoteAddr = ip; it }).response.status
+            .content("""{"username":"rl${UUID.randomUUID().toString().take(8)}","password":"correct-horse-battery9"}""").with { it.remoteAddr = ip; it }).response.status
 
     @Test
     fun `the 4th sign-up from one IP in an hour is refused, another IP is unaffected`() {

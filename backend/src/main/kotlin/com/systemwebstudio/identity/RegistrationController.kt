@@ -21,7 +21,7 @@ import java.util.UUID
 
 data class RegisterRequest(
     @field:NotBlank @field:Size(min = 3, max = 40) val username: String,
-    @field:NotBlank @field:Size(min = 12, max = 128) val password: String,
+    @field:NotBlank @field:Size(min = 6, max = 128) val password: String,
     @field:Size(max = 80) val displayName: String? = null,
     @field:Size(max = 100) val inviteCode: String? = null
 )
@@ -30,7 +30,7 @@ data class RegisterRequest(
  * Self-service sign-up for a public deployment (off unless SIGNUP_ENABLED=true). Every account gets its own workspace and is
  * its WORKSPACE_ADMIN, so users are isolated from each other by the normal RBAC. Deliberately no email field: an unverified
  * email stored here could later be used by "add member by email" to claim someone else's address.
- * Abuse limits: per-IP rate limit, optional invite code, total user cap, hashing concurrency gate, strong-password length.
+ * Abuse limits: per-IP rate limit, optional invite code, total user cap, hashing concurrency gate. Password policy (product decision): at least 6 characters with both letters and digits; online guessing is bounded by the login throttle.
  */
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -58,7 +58,8 @@ class RegistrationController(
         val username = body.username.trim().lowercase()
         if (!usernamePattern.matches(username)) throw ApiException.badRequest("INVALID_USERNAME", "Username: 3-40 characters a-z 0-9 . _ - and must start with a letter or digit")
         if (body.password.lowercase().contains(username)) throw ApiException.badRequest("WEAK_PASSWORD", "Password must not contain the username")
-        if (body.password.toSet().size < 6) throw ApiException.badRequest("WEAK_PASSWORD", "Password is too repetitive")
+        if (!body.password.any { it.isLetter() } || !body.password.any { it.isDigit() }) throw ApiException.badRequest("WEAK_PASSWORD", "Password must contain both letters and digits")
+        if (body.password.toSet().size < 4) throw ApiException.badRequest("WEAK_PASSWORD", "Password is too repetitive")
         if (jdbc.queryForObject("SELECT count(*) FROM users", Long::class.java)!! >= maxUsers) throw ApiException(HttpStatus.SERVICE_UNAVAILABLE, "SIGNUP_FULL", "Sign-up is temporarily closed")
         val hash = hashGate.run { requireNotNull(encoder.encode(body.password)) }
         create(username, hash, body.displayName?.trim()?.ifEmpty { null } ?: username)
