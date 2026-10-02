@@ -14,9 +14,11 @@ data class PageDto<T>(val items: List<T>, val total: Long, val page: Int, val si
  */
 @Component
 class AdminGuard(private val jdbc: JdbcTemplate) {
+    fun isAdmin(userId: UUID): Boolean =
+        jdbc.queryForList("SELECT system_admin AND enabled AS ok FROM users WHERE id = ?", userId).firstOrNull()?.get("ok") == true
+
     fun require(userId: UUID) {
-        val ok = jdbc.queryForList("SELECT system_admin AND enabled AS ok FROM users WHERE id = ?", userId).firstOrNull()?.get("ok") == true
-        if (!ok) throw ApiException(HttpStatus.FORBIDDEN, "ADMIN_REQUIRED", "Admin Console requires a system administrator account")
+        if (!isAdmin(userId)) throw ApiException(HttpStatus.FORBIDDEN, "ADMIN_REQUIRED", "Admin Console requires a system administrator account")
     }
 }
 

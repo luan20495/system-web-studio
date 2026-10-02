@@ -22,7 +22,9 @@ private const val HOSTNAME = "^(?=.{1,253}$)([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA
 data class CreateProjectRequest(
     @field:NotBlank @field:Size(max = 160) val name: String,
     @field:Size(max = 1000) val description: String? = null,
-    @field:Pattern(regexp = "nextjs|react|static") val framework: String? = null
+    @field:Pattern(regexp = "nextjs|react|static") val framework: String? = null,
+    /** start from this template (company, or one of the caller's own) instead of the default page */
+    val templateId: UUID? = null
 )
 
 data class UpdateProjectRequest(
@@ -61,6 +63,7 @@ class ProjectController(
     private val audit: AuditService,
     private val schemas: com.systemwebstudio.schema.SchemaService,
     private val jdbc: org.springframework.jdbc.core.JdbcTemplate,
+    private val templates: com.systemwebstudio.template.TemplateService,
     @org.springframework.beans.factory.annotation.Value("\${app.limits.max-projects-per-workspace:1000}") private val maxProjects: Long
 ) {
     /**
@@ -101,6 +104,8 @@ class ProjectController(
         ctx.require(Permission.PROJECT_CREATE)
         val existing = jdbc.queryForObject("SELECT count(*) FROM projects WHERE workspace_id = ? AND active", Long::class.java, workspaceId)!!
         if (existing >= maxProjects) throw ApiException.conflict("PROJECT_LIMIT", "This workspace reached its limit of $maxProjects projects", mapOf("limit" to maxProjects))
+        // resolved before anything is stored: an invisible or outdated template leaves no half-created project behind
+        val template = request.templateId?.let { templates.forUse(me.userId, it) }
         val now = Instant.now()
         val project = projects.saveAndFlush(
             ProjectEntity(
@@ -110,8 +115,10 @@ class ProjectController(
             )
         )
         projectMembers.save(ProjectMemberEntity(workspaceId = workspaceId, projectId = project.id, userId = me.userId, role = "OWNER"))
-        schemas.ensureInitialized(project, me.userId)
-        audit.record("CREATE_PROJECT", "PROJECT", project.id, workspaceId, project.id, newValue = mapOf("name" to project.name))
+        if (template == null) schemas.ensureInitialized(project, me.userId)
+        else schemas.ensureInitialized(project, me.userId, template.second, "Tạo từ mẫu “${template.first.name.take(80)}” (v${template.first.version})")
+        audit.record("CREATE_PROJECT", "PROJECT", project.id, workspaceId, project.id,
+            newValue = mapOf("name" to project.name, "templateId" to template?.first?.id, "templateVersion" to template?.first?.version))
         return project.toResponse()
     }
 

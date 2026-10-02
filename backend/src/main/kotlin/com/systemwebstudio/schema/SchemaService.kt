@@ -16,12 +16,12 @@ class SchemaService(
 ) {
     /** Creates the page and version 1 for a project that has none yet (new project or one created before schemas existed). */
     @Transactional
-    fun ensureInitialized(project: ProjectEntity, actorId: java.util.UUID): JsonNode {
+    fun ensureInitialized(project: ProjectEntity, actorId: java.util.UUID, initial: JsonNode? = null, summary: String = "Phiên bản khởi tạo"): JsonNode {
         repo.currentSchema(project.id)?.let { return it }
-        val schema = defaults.create(project.name.take(60))
+        val schema = initial ?: defaults.create(project.name.take(60))
         validator.requireValid(schema)
         repo.upsertSchema(project.id, project.workspaceId, schema)
-        val versionId = repo.insertVersion(project.workspaceId, project.id, repo.nextVersionNumber(project.id), schema, "INITIAL", "Phiên bản khởi tạo", null, null, null, actorId)
+        val versionId = repo.insertVersion(project.workspaceId, project.id, repo.nextVersionNumber(project.id), schema, "INITIAL", summary, null, null, null, actorId)
         repo.insertUsage(versionId, project.id, schema)
         return schema
     }
