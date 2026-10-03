@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Fragment, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { api } from "@/lib/http-api";
-import type { AdminApp as App, AiProbe, RepoRow, SettingView, BlockDto, TemplateDto, AiUsageReport, AuditRow, HealthItem, UsageBucket, UsageTotals } from "@/lib/http-types";
+import type { AdminApp as App, AiProbe, PackageView, RepoRow, SettingView, BlockDto, TemplateDto, AiUsageReport, AuditRow, HealthItem, UsageBucket, UsageTotals } from "@/lib/http-types";
 import { useSession } from "../session";
 import { rememberPortal } from "../routing";
 import { useLoad } from "../useLoad";
@@ -13,7 +13,7 @@ import { actionLabel, ago, Card, ComingSoon, ErrorState, errText, fmtDate, Kpi, 
 
 const NAV: [string, string, string][] = [
   ["", "Tổng quan", "▦"], ["users", "Người dùng & Workspace", "◎"], ["applications", "Ứng dụng", "▤"], ["ai", "AI Control", "✦"],
-  ["components", "Components", "◇"], ["templates", "Templates", "▧"], ["audit", "Nhật ký kiểm toán", "≡"], ["builds", "Build & lưu trữ", "⬢"], ["system", "Sức khỏe hệ thống", "♥"], ["settings", "Cài đặt", "⚙"]
+  ["components", "Components", "◇"], ["templates", "Templates", "▧"], ["audit", "Nhật ký kiểm toán", "≡"], ["builds", "Build & lưu trữ", "⬢"], ["packages", "Packages", "▣"], ["system", "Sức khỏe hệ thống", "♥"], ["settings", "Cài đặt", "⚙"]
 ];
 
 export function AdminApp({ seg }: { seg: string[] }) {
@@ -40,6 +40,7 @@ function route(seg: string[]): ReactNode {
     case "components": return <ComponentsPage/>;
     case "templates": return <TemplatesAdmin/>;
     case "builds": return <BuildsPage/>;
+    case "packages": return <PackagesPage/>;
     case "audit": return <AuditPage/>;
     case "system": return <HealthPage/>;
     case "settings": return <SettingsPage/>;
@@ -689,6 +690,49 @@ function BuildsPage() {
           <td><Pill value={r.state === "ACTIVE" ? "ACTIVE" : r.state === "DELETED" ? "DISABLED" : "UNKNOWN"} label={{ ACTIVE: "Đang dùng", ARCHIVED: "Đã lưu trữ", PENDING_DELETE: "Chờ xoá", DELETED: "Đã xoá" }[r.state]}/></td>
           <td>{mib(r.sizeBytes)}</td><td>{r.deleteAfter ? fmtDate(r.deleteAfter) : "—"}</td>
           <td>{r.state === "PENDING_DELETE" ? <button className="btn sm danger" onClick={() => void hardDelete(r)}>Xoá vĩnh viễn</button> : null}</td></tr>)}</tbody></table>}</Card>
+  </>);
+}
+
+const PKG_STATUS: Record<string, [string, string]> = { PENDING: ["UNKNOWN", "Chờ duyệt"], RESOLVING: ["QUEUED", "Đang kiểm tra"], ALLOWED: ["ACTIVE", "Cho phép"], DENIED: ["DISABLED", "Từ chối"] };
+/** Approved npm package catalog (ADR 0013): approve → closure resolved in the sandbox + OSV scan; HIGH/CRITICAL denied unless the risk is accepted. */
+function PackagesPage() {
+  const { data, error, loading, reload } = useLoad(() => api.admin.packages(), []);
+  const [f, setF] = useState({ name: "", range: "", pin: "", note: "" }); const [err, setErr] = useState<string | null>(null); const [msg, setMsg] = useState<string | null>(null);
+  useEffect(() => { if (!data?.some((p) => p.status === "RESOLVING")) return; const t = setInterval(reload, 3000); return () => clearInterval(t); }, [data, reload]);
+  async function approve(name: string, range?: string, pin?: string, note?: string) {
+    setErr(null); setMsg(null);
+    try { await api.admin.approvePackage({ name, versionRange: range || undefined, pinnedVersion: pin || undefined, note: note || undefined }); setMsg(`Đang kiểm tra ${name} (giải phụ thuộc trong sandbox + quét OSV).`); setF({ name: "", range: "", pin: "", note: "" }); reload(); }
+    catch (x) { setErr(errText(x, "Không gửi được.")); }
+  }
+  async function decide(p: PackageView, status: "ALLOWED" | "DENIED") {
+    setErr(null);
+    const risky = (p.findings ?? []).some((x) => x.severity === "HIGH" || x.severity === "CRITICAL");
+    let accept = false, note: string | undefined;
+    if (status === "ALLOWED" && risky) { note = window.prompt("Package có lỗ hổng HIGH/CRITICAL. Ghi lý do chấp nhận rủi ro (bắt buộc):") ?? ""; if (!note.trim()) return; accept = true; }
+    try { await api.admin.decidePackage(p.name, status, accept, note); reload(); } catch (x) { setErr(errText(x, "Không đổi được.")); }
+  }
+  return (<>
+    <PageHead title="Packages" sub="Chỉ package trong danh mục mới vào được mirror và lockfile của ứng dụng mã nguồn. Duyệt = giải cây phụ thuộc (không chạy mã package) + quét lỗ hổng OSV."/>
+    <Card title="Duyệt package">
+      <form className="filters wrap" onSubmit={(e) => { e.preventDefault(); if (f.name.trim()) void approve(f.name.trim(), f.range.trim(), f.pin.trim(), f.note.trim()); }}>
+        <input aria-label="Tên package" placeholder="Tên (ví dụ date-fns)" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })}/>
+        <input aria-label="Khoảng phiên bản" placeholder="Khoảng phiên bản (^3.0.0)" value={f.range} onChange={(e) => setF({ ...f, range: e.target.value })}/>
+        <input aria-label="Ghim phiên bản" placeholder="Hoặc ghim (3.6.0)" value={f.pin} onChange={(e) => setF({ ...f, pin: e.target.value })}/>
+        <input aria-label="Ghi chú" placeholder="Ghi chú" value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })}/>
+        <button className="btn primary" disabled={!f.name.trim()}>Kiểm tra & duyệt</button>
+      </form>
+      {msg ? <p className="hint" role="status">{msg}</p> : null}{err ? <p className="formError" role="alert">{err}</p> : null}
+    </Card>
+    <Card title="Danh mục">{error ? <ErrorState error={error} retry={reload}/> : loading && !data ? <StateView kind="loading"/> : !data!.length ? <StateView kind="empty" title="Chưa có package nào ngoài khung mẫu"/> :
+      <table className="table"><thead><tr><th>Package</th><th>Phiên bản</th><th>Trạng thái</th><th>Phụ thuộc</th><th>Lỗ hổng</th><th>Người yêu cầu / quyết định</th><th><span className="srOnly">Thao tác</span></th></tr></thead>
+        <tbody>{data!.map((p) => { const sev = (p.findings ?? []).reduce<Record<string, number>>((a, x) => { a[x.severity] = (a[x.severity] ?? 0) + 1; return a; }, {});
+          return <tr key={p.name}><td className="code">{p.name}{p.note ? <small>{p.note}</small> : null}</td><td>{p.pinnedVersion ?? p.versionRange}</td>
+            <td><Pill value={PKG_STATUS[p.status][0]} label={PKG_STATUS[p.status][1]}/>{p.riskAccepted ? <small>rủi ro đã chấp nhận</small> : null}</td>
+            <td>{p.dependencies ?? "—"}</td><td>{p.findings == null ? "—" : Object.keys(sev).length ? Object.entries(sev).map(([k, v]) => `${v} ${k}`).join(", ") : "0"}</td>
+            <td>{p.requestedBy ?? "—"}<small>{p.decidedBy ? `${p.decidedBy} · ${p.decidedAt ? ago(p.decidedAt) : ""}` : ""}</small></td>
+            <td><div className="row">{p.status === "PENDING" ? <button className="btn sm primary" onClick={() => void approve(p.name)}>Kiểm tra & duyệt</button> : null}
+              {p.status === "DENIED" && p.dependencies != null ? <button className="btn sm" onClick={() => void decide(p, "ALLOWED")}>Cho phép</button> : null}
+              {p.status === "ALLOWED" ? <button className="btn sm ghost" onClick={() => void decide(p, "DENIED")}>Từ chối</button> : null}</div></td></tr>; })}</tbody></table>}</Card>
   </>);
 }
 

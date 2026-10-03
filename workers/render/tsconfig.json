@@ -3,5 +3,5 @@
     "target": "ES2022", "module": "commonjs", "moduleResolution": "node", "strict": true, "esModuleInterop": true,
     "skipLibCheck": true, "rootDir": "../..", "outDir": "dist", "types": ["node"]
   },
-  "files": ["server.ts"]
+  "files": ["server.ts", "ast.ts"]
 }

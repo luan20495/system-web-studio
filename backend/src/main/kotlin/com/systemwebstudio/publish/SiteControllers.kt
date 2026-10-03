@@ -28,7 +28,7 @@ import java.util.UUID
  */
 @RestController
 class SiteServingController(
-    private val sites: SiteService, private val store: ArtifactStore,
+    private val sites: SiteService, private val store: ArtifactStore, private val json: tools.jackson.databind.json.JsonMapper,
     @Value("\${app.sites.cookie-name:site_session}") private val cookieName: String,
     @Value("\${app.sites.cookie-secure:false}") private val cookieSecure: Boolean
 ) {
@@ -77,6 +77,7 @@ class SiteServingController(
     fun preview(@PathVariable token: String, request: HttpServletRequest, response: HttpServletResponse) {
         val (prefix, files) = sites.preview(token) ?: return page(response, 404, "Bản xem trước không còn", "Liên kết đã hết hạn hoặc thay đổi đã bị huỷ.")
         val raw = request.requestURI.substringAfter("/sites/_preview/$token/", "")
+        if (raw == "__factory/config.json") return runtimeConfig(response, sites.runtimeConfig(sites.previewProject(token)!!, "preview", "PUBLIC", null))
         serveFile(prefix, files, raw, private = false, app = true, frameAncestors = sites.studioOrigin, preview = true, request, response)
     }
 
@@ -86,7 +87,9 @@ class SiteServingController(
         val (user, slug) = sites.appToken(token) ?: return page(response, 404, "Phiên đã hết hạn", "Hãy mở lại ứng dụng từ địa chỉ của nó.")
         val site = sites.live(slug)?.takeIf { it.visibility == "PRIVATE" && it.kind == "STATIC_APP" } ?: return page(response, 404, "Không tìm thấy", "")
         if (!sites.canRead(user, site)) return page(response, 403, "Bạn không có quyền xem ứng dụng này", "")
-        serveFile(site.prefix, site.files, request.requestURI.substringAfter("/sites/_app/$token/", ""), private = true, app = true, frameAncestors = null, preview = false, request, response)
+        val raw = request.requestURI.substringAfter("/sites/_app/$token/", "")
+        if (raw == "__factory/config.json") return runtimeConfig(response, sites.runtimeConfig(site.projectId, "production", "PRIVATE", user))
+        serveFile(site.prefix, site.files, raw, private = true, app = true, frameAncestors = null, preview = false, request, response)
     }
 
     @GetMapping("/sites/{slug}")
@@ -114,7 +117,14 @@ class SiteServingController(
                 response.setHeader("Location", "/_app/${sites.openAppToken(user, slug)}/$raw"); return
             }
         }
+        if (app && raw == "__factory/config.json") return runtimeConfig(response, sites.runtimeConfig(site.projectId, "production", site.visibility, null))
         serveFile(site.prefix, site.files, raw, private, app, null, preview = false, request, response)
+    }
+
+    private fun runtimeConfig(response: HttpServletResponse, cfg: Map<String, Any?>) {
+        common(response)
+        response.setHeader("Access-Control-Allow-Origin", "*"); response.setHeader("Cache-Control", "no-store, no-transform")
+        response.contentType = "application/json"; response.writer.write(json.writeValueAsString(cfg))
     }
 
     private fun serveFile(prefix: String, files: Map<String, ManifestFile>, raw: String, private: Boolean, app: Boolean, frameAncestors: String?, preview: Boolean,

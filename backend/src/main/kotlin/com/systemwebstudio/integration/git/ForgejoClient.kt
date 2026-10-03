@@ -1,5 +1,6 @@
 package com.systemwebstudio.integration.git
 
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import tools.jackson.databind.JsonNode
@@ -18,7 +19,8 @@ class GitServerException(message: String, val status: Int = 0) : RuntimeExceptio
 data class GitFileChange(val path: String, val content: ByteArray?)      // null = delete
 data class GitAuthor(val name: String, val email: String)
 data class GitTreeEntry(val path: String, val size: Long, val sha: String)
-data class GitCommitInfo(val sha: String, val message: String, val authorName: String, val authorEmail: String, val committerName: String, val date: Instant)
+data class GitCommitInfo(val sha: String, val message: String, val authorName: String, val authorEmail: String, val committerName: String, val date: Instant,
+                         val verified: Boolean = false, val signer: String? = null)
 
 /**
  * Forgejo/Gitea REST client for platform-owned code repositories (ADR 0011). The bot token comes from the environment only and is
@@ -115,7 +117,8 @@ class ForgejoClient(
         return ok(r, "Read commits").toList().map { c ->
             val m = c.get("commit")
             GitCommitInfo(c.get("sha").asString(), m.get("message").asString(), m.get("author").get("name").asString(), m.get("author").get("email").asString(),
-                m.get("committer").get("name").asString(), Instant.parse(m.get("author").get("date").asString()))
+                m.get("committer").get("name").asString(), Instant.parse(m.get("author").get("date").asString()),
+                m.get("verification")?.get("verified")?.asBoolean() == true, m.get("verification")?.get("signer")?.get("name")?.asString())
         }
     }
 
@@ -125,6 +128,7 @@ class ForgejoClient(
         val number = pr.get("number").asInt()
         val r = send("POST", "/repos/${enc(org)}/${enc(repo)}/pulls/$number/merge", mapOf("Do" to "fast-forward-only", "delete_branch_after_merge" to true), 60)
         if (r.statusCode() !in 200..299) {
+            LoggerFactory.getLogger(javaClass).warn("Fast-forward of {} into main refused: HTTP {} {}", branch, r.statusCode(), String(r.body()).take(200))
             send("PATCH", "/repos/${enc(org)}/${enc(repo)}/pulls/$number", mapOf("state" to "closed"))
             throw GitServerException("Main has moved; rebuild the change from the latest version", 409)
         }

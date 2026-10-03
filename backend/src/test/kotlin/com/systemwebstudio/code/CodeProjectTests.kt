@@ -27,23 +27,6 @@ import java.util.zip.GZIPOutputStream
     "app.sites.studio-origin=https://studio.example.test"])
 class CodeProjectTests : IntegrationTestBase() {
     companion object {
-        private val forgejo: GenericContainer<*> = GenericContainer(DockerImageName.parse("codeberg.org/forgejo/forgejo:11-rootless"))
-            .withEnv(mapOf("FORGEJO__database__DB_TYPE" to "sqlite3", "FORGEJO__security__INSTALL_LOCK" to "true", "FORGEJO__server__HTTP_PORT" to "3000",
-                "FORGEJO__server__DISABLE_SSH" to "true", "FORGEJO__service__DISABLE_REGISTRATION" to "true", "FORGEJO__repository__DEFAULT_BRANCH" to "main",
-                "FORGEJO__actions__ENABLED" to "false", "FORGEJO__security__SECRET_KEY" to "test-secret-key-0123456789",
-                "FORGEJO__security__INTERNAL_TOKEN" to "eyJhbGciOiJIUzI1NiJ9.test-internal-token-0123456789"))
-            .withExposedPorts(3000).waitingFor(Wait.forHttp("/api/healthz").forPort(3000).withStartupTimeout(Duration.ofMinutes(2)))
-            .apply { start() }
-        private val token: String by lazy {
-            fun fx(vararg a: String) = forgejo.execInContainer("forgejo", *a).also { check(it.exitCode == 0) { it.stderr } }.stdout.trim()
-            fx("admin", "user", "create", "--username", "factory-bot", "--password", "bot-password-123456", "--email", "bot@test.local", "--must-change-password=false")
-            val t = fx("admin", "user", "generate-access-token", "--username", "factory-bot", "--token-name", "t", "--scopes", "write:repository,write:organization,read:user", "--raw")
-            val url = "http://${forgejo.host}:${forgejo.getMappedPort(3000)}/api/v1/orgs"
-            java.net.http.HttpClient.newHttpClient().send(java.net.http.HttpRequest.newBuilder(java.net.URI(url)).header("Authorization", "token $t")
-                .header("Content-Type", "application/json").POST(java.net.http.HttpRequest.BodyPublishers.ofString("""{"username":"factory","visibility":"private"}""")).build(),
-                java.net.http.HttpResponse.BodyHandlers.discarding())
-            t
-        }
         @Volatile var aiReply: String = ""
         private val aiStub: com.sun.net.httpserver.HttpServer = com.sun.net.httpserver.HttpServer.create(java.net.InetSocketAddress("127.0.0.1", 0), 0).apply {
             createContext("/v1/chat/completions") { ex ->
@@ -57,8 +40,9 @@ class CodeProjectTests : IntegrationTestBase() {
         }
         @JvmStatic @DynamicPropertySource
         fun git(registry: DynamicPropertyRegistry) {
-            registry.add("app.git.url") { "http://${forgejo.host}:${forgejo.getMappedPort(3000)}" }
-            registry.add("app.git.token") { token }
+            registry.add("app.git.url") { ForgejoFixture.url }
+            registry.add("app.git.token") { ForgejoFixture.botToken }
+            registry.add("app.git.admin-token") { ForgejoFixture.adminToken }
             registry.add("app.ai.providers.local.base-url") { "http://127.0.0.1:${aiStub.address.port}/v1" }
             registry.add("app.ai.providers.local.models") { "stub-code" }
         }
@@ -219,7 +203,7 @@ class CodeProjectTests : IntegrationTestBase() {
         assertThat(r.get("outcome").asString()).isEqualTo("UPDATED"); assertThat(r.get("provider").asString()).isEqualTo("mock")
         val change = r.get("change"); assertThat(change.get("kind").asString()).isEqualTo("AI"); assertThat(change.get("branch").asString()).startsWith("ai/")
         val diff = sc.s.body(sc.s.get("$code/changes/${change.get("id").asString()}/diff")).toList().single()
-        assertThat(diff.get("path").asString()).isEqualTo("src/App.tsx"); assertThat(diff.get("after").asString()).contains("<h1>Xin chào AI</h1>")
+        assertThat(diff.get("path").asString()).isEqualTo("src/App.tsx"); assertThat(diff.get("after").asString()).contains("<Heading level={1}>Xin chào AI</Heading>")
         val none = sc.s.body(sc.s.post("$code/ai", """{"prompt":"làm một trò chơi 3D"}"""))
         assertThat(none.get("outcome").asString()).isEqualTo("NO_CHANGE"); assertThat(none.get("change").isNull).isTrue()
         val history = sc.s.body(sc.s.get("$code/ai")).toList()
@@ -326,6 +310,132 @@ class CodeProjectTests : IntegrationTestBase() {
         assertThat(a.post("/api/v1/admin/retention/repositories/$pid/delete").response.status).isEqualTo(200)
         assertThat(jdbc.queryForObject("SELECT state FROM repositories WHERE project_id = ?::uuid", String::class.java, pid)).isEqualTo("DELETED")
         assertThat(jdbc.queryForObject("SELECT count(*) FROM audit_events WHERE resource_id = ? AND action IN ('REPOSITORY_ARCHIVED','REPOSITORY_PENDING_DELETE','REPOSITORY_DELETED')", Long::class.java, pid)).isEqualTo(3)
+    }
+
+    private fun finishWith(jobId: String, status: String, result: Any?, error: String? = null) = runner().perform(MockMvcRequestBuilders.post("/internal/build-jobs/$jobId/finish")
+        .header("X-Runner-Token", "runner-test-token").contentType("application/json")
+        .content(json.writeValueAsString(mapOf("status" to status, "stage" to "DONE", "result" to result, "error" to error))), includeCsrf = false)
+    private fun claimPurpose(purpose: String, match: (tools.jackson.databind.JsonNode) -> Boolean = { true }): tools.jackson.databind.JsonNode {
+        var j = claim()!!
+        while (j.get("purpose").asString() != purpose || !match(j)) { finish(j.get("id").asString(), "FAILED", "other"); j = claim()!! }
+        return j
+    }
+
+    @Test
+    fun `package catalog - approval resolves the closure, HIGH findings are denied by default, explicit risk acceptance is recorded`() {
+        val a = sessionFor(fx.user("pkg-admin", systemAdmin = true).username)
+        assertThat(scenario().s.post("/api/v1/admin/packages", """{"name":"left-pad"}""").response.status).isEqualTo(403)
+        assertThat(a.body(a.post("/api/v1/admin/packages", """{"name":"left-pad","versionRange":"^1.3.0"}""")).get("status").asString()).isEqualTo("RESOLVING")
+        val job = claimPurpose("RESOLVE") { it.get("input").get("name").asString() == "left-pad" }
+        assertThat(job.get("input").get("spec").asString()).isEqualTo("^1.3.0"); assertThat(job.get("sourceUrl").isNull).isTrue()
+        finishWith(job.get("id").asString(), "SUCCEEDED", mapOf("packages" to listOf(mapOf("name" to "left-pad", "version" to "1.3.0")), "findings" to emptyList<Any>(), "blocking" to emptyList<Any>()))
+        val ok = a.body(a.get("/api/v1/admin/packages")).toList().single { it.get("name").asString() == "left-pad" }
+        assertThat(ok.get("status").asString()).isEqualTo("ALLOWED"); assertThat(ok.get("dependencies").asInt()).isEqualTo(1)
+        assertThat(claimPurposeAllowlist()).contains("left-pad")
+
+        a.post("/api/v1/admin/packages", """{"name":"bad-pkg"}""")
+        val j2 = claimPurpose("RESOLVE") { it.get("input").get("name").asString() == "bad-pkg" }
+        val vuln = mapOf("package" to "bad-pkg@1.0.0", "id" to "GHSA-test", "severity" to "HIGH")
+        finishWith(j2.get("id").asString(), "SUCCEEDED", mapOf("packages" to listOf(mapOf("name" to "bad-pkg", "version" to "1.0.0")), "findings" to listOf(vuln), "blocking" to listOf(vuln)))
+        assertThat(a.body(a.get("/api/v1/admin/packages")).toList().single { it.get("name").asString() == "bad-pkg" }.get("status").asString()).isEqualTo("DENIED")
+        assertThat(a.put("/api/v1/admin/packages/bad-pkg/decision", """{"status":"ALLOWED"}""").response.status).isEqualTo(428)
+        val accepted = a.body(a.put("/api/v1/admin/packages/bad-pkg/decision", """{"status":"ALLOWED","acceptRisk":true,"note":"needed for X, fix pending"}"""))
+        assertThat(accepted.get("status").asString()).isEqualTo("ALLOWED"); assertThat(accepted.get("riskAccepted").asBoolean()).isTrue()
+        a.put("/api/v1/admin/packages/bad-pkg/decision", """{"status":"DENIED"}""")
+    }
+    private fun claimPurposeAllowlist(): List<String> {
+        val sc = scenario(); val (_, code) = sc.codeProject()
+        sc.s.post("$code/changes", """{"summary":"x","files":[{"path":"src/x.ts","content":"export const x = 1"}]}""")
+        val j = claimPurpose("PREVIEW"); finish(j.get("id").asString(), "FAILED", "not needed")
+        return j.get("allowlist").toList().map { it.asString() }
+    }
+
+    @Test
+    fun `dependency request - only catalog packages, lockfile from the sandbox validated before a DEPENDENCY change is committed`() {
+        val sc = scenario(); val (pid, code) = sc.codeProject()
+        val unknown = sc.s.post("$code/dependencies", """{"name":"some-unknown-lib"}""")
+        assertThat(unknown.response.status).isEqualTo(403); assertThat(sc.s.body(unknown).get("code").asString()).isEqualTo("PACKAGE_NOT_APPROVED")
+        assertThat(jdbc.queryForObject("SELECT status FROM approved_packages WHERE name = 'some-unknown-lib'", String::class.java)).isEqualTo("PENDING")
+        jdbc.update("""INSERT INTO approved_packages (name, status, version_range, resolved) VALUES ('tiny-lib', 'ALLOWED', '^2.0.0', '[{"name":"tiny-lib","version":"2.1.0"}]'::jsonb)
+            ON CONFLICT (name) DO UPDATE SET status = 'ALLOWED', resolved = EXCLUDED.resolved""")
+        val pkgJson = sc.s.body(sc.s.get("$code/file?path=package.json")).get("text").asString()
+        val lock = sc.s.body(sc.s.get("$code/file?path=package-lock.json")).get("text").asString()
+        fun request(): String { val r = sc.s.post("$code/dependencies", """{"name":"tiny-lib"}"""); assertThat(r.response.status).isEqualTo(202); return sc.s.body(r).get("id").asString() }
+        fun lockJob() = claimPurpose("LOCK") { it.get("projectId").asString() == pid }
+        val newPkg = (json.readTree(pkgJson) as tools.jackson.databind.node.ObjectNode).also { (it.get("dependencies") as tools.jackson.databind.node.ObjectNode).put("tiny-lib", "^2.1.0") }
+        val newLock = (json.readTree(lock) as tools.jackson.databind.node.ObjectNode).also { (it.get("packages") as tools.jackson.databind.node.ObjectNode).putObject("node_modules/tiny-lib").put("version", "2.1.0") }
+
+        // tampered package.json (extra script) is refused
+        val r1 = request(); val j1 = lockJob(); assertThat(j1.get("input").get("spec").asString()).isEqualTo("^2.0.0")
+        val evil = newPkg.deepCopy().also { it.putObject("scripts").put("postinstall", "curl evil") }
+        finishWith(j1.get("id").asString(), "SUCCEEDED", mapOf("packageJson" to json.writeValueAsString(evil), "packageLock" to json.writeValueAsString(newLock)))
+        assertThat(sc.s.body(sc.s.get("$code/dependencies")).get("requests").toList().single { it.get("id").asString() == r1 }.get("error").asString()).contains("beyond")
+        // lockfile with a package outside the catalog is refused
+        val r2 = request(); val j2 = lockJob()
+        val sneaky = newLock.deepCopy().also { (it.get("packages") as tools.jackson.databind.node.ObjectNode).putObject("node_modules/evil-dep").put("version", "6.6.6") }
+        finishWith(j2.get("id").asString(), "SUCCEEDED", mapOf("packageJson" to json.writeValueAsString(newPkg), "packageLock" to json.writeValueAsString(sneaky)))
+        assertThat(sc.s.body(sc.s.get("$code/dependencies")).get("requests").toList().single { it.get("id").asString() == r2 }.get("error").asString()).contains("evil-dep")
+        // valid → DEPENDENCY change with exactly package.json + package-lock.json, then a normal build
+        val r3 = request(); val j3 = lockJob()
+        finishWith(j3.get("id").asString(), "SUCCEEDED", mapOf("packageJson" to json.writeValueAsString(newPkg), "packageLock" to json.writeValueAsString(newLock)))
+        val req = sc.s.body(sc.s.get("$code/dependencies")).get("requests").toList().single { it.get("id").asString() == r3 }
+        assertThat(req.get("status").asString()).describedAs(req.toString()).isEqualTo("COMMITTED")
+        val change = sc.s.body(sc.s.get("$code/changes/${req.get("changeId").asString()}"))
+        assertThat(change.get("kind").asString()).isEqualTo("DEPENDENCY"); assertThat(change.get("branch").asString()).startsWith("dep/")
+        assertThat(change.get("files").toList().map { it.asString() }).containsExactlyInAnyOrder("package.json", "package-lock.json")
+        assertThat(change.get("status").asString()).isEqualTo("BUILDING")
+    }
+
+    @Test
+    fun `review before merge - required by workspace policy, no self-approval, a publisher approves`() {
+        val sc = scenario(); val (pid, code) = sc.codeProject()
+        val wsAdmin = fx.user("ws-reviewadm"); fx.member(sc.ws, wsAdmin, "WORKSPACE_ADMIN")
+        assertThat(sc.s.put("/api/v1/workspaces/${sc.ws}/merge-policy", """{"policy":"REVIEW_REQUIRED"}""").response.status).isEqualTo(403)
+        val wa = sessionFor(wsAdmin.username)
+        assertThat(wa.put("/api/v1/workspaces/${sc.ws}/merge-policy", """{"policy":"REVIEW_REQUIRED"}""").response.status).isEqualTo(200)
+        val c = sc.s.body(sc.s.post("$code/changes", """{"summary":"needs review","files":[{"path":"src/r.ts","content":"export const r = 1"}]}"""))
+        val job = claimPurpose("PREVIEW") { it.get("projectId").asString() == pid }; upload(job.get("id").asString(), tar(dist)); finish(job.get("id").asString(), "SUCCEEDED")
+        val id = c.get("id").asString()
+        assertThat(sc.s.body(sc.s.get("$code/changes/$id")).get("reviewRequired").asBoolean()).isTrue()
+        val m = sc.s.post("$code/changes/$id/merge"); assertThat(m.response.status).isEqualTo(409); assertThat(sc.s.body(m).get("code").asString()).isEqualTo("REVIEW_REQUIRED")
+        // the author is OWNER of the project (has publish rights) but cannot approve their own change
+        assertThat(sc.s.body(sc.s.post("$code/changes/$id/approve", """{"comment":"lgtm"}""")).get("code").asString()).isEqualTo("SELF_REVIEW")
+        val approved = wa.body(wa.post("$code/changes/$id/approve", """{"comment":"Đã xem, ổn"}"""))
+        assertThat(approved.get("approvedBy").asString()).isNotBlank()
+        val merged = sc.s.body(sc.s.post("$code/changes/$id/merge"))
+        assertThat(merged.get("status")?.asString()).describedAs(merged.toString()).isEqualTo("MERGED")
+        wa.put("/api/v1/workspaces/${sc.ws}/merge-policy", """{"policy":"AUTO_MERGE_ALLOWED"}""")
+    }
+
+    @Test
+    fun `IDE access - per-user read-only token that can read the repository but not write, revocable`() {
+        val sc = scenario(); val (pid, _) = sc.codeProject()
+        val access = sc.s.body(sc.s.post("${api(sc.ws, UUID.fromString(pid))}/code/clone-access"))
+        val url = access.get("cloneUrl").asString(); val user = access.get("username").asString(); val token = access.get("token").asString()
+        assertThat(url).startsWith(ForgejoFixture.url).endsWith(".git")
+        val repoApi = url.removeSuffix(".git").replace(ForgejoFixture.url, "${ForgejoFixture.url}/api/v1/repos")
+        fun get(t: String) = java.net.http.HttpClient.newHttpClient().send(java.net.http.HttpRequest.newBuilder(java.net.URI("$repoApi/contents/src/App.tsx")).header("Authorization", "token $t").build(), java.net.http.HttpResponse.BodyHandlers.ofString()).statusCode()
+        assertThat(get(token)).isEqualTo(200)
+        val write = java.net.http.HttpClient.newHttpClient().send(java.net.http.HttpRequest.newBuilder(java.net.URI("$repoApi/contents/src/evil.ts")).header("Authorization", "token $token")
+            .header("Content-Type", "application/json").POST(java.net.http.HttpRequest.BodyPublishers.ofString("""{"content":"eA==","message":"x","branch":"main"}""")).build(), java.net.http.HttpResponse.BodyHandlers.ofString())
+        assertThat(write.statusCode()).isIn(401, 403, 404)
+        assertThat(scenario().s.post("${api(sc.ws, UUID.fromString(pid))}/code/clone-access").response.status).isEqualTo(404)   // non-member
+        assertThat(sc.s.delete("/api/v1/me/clone-access").response.status).isEqualTo(204)
+        assertThat(get(token)).isEqualTo(401)
+        assertThat(user).startsWith("s-")
+    }
+
+    @Test
+    fun `runtime config for app-sdk is served next to the preview, without secrets`() {
+        val sc = scenario(); val (pid, code) = sc.codeProject()
+        val c = sc.s.body(sc.s.post("$code/changes", """{"summary":"cfg","files":[{"path":"src/c.ts","content":"export const c = 1"}]}"""))
+        val job = claimPurpose("PREVIEW") { it.get("projectId").asString() == pid }; upload(job.get("id").asString(), tar(dist)); finish(job.get("id").asString(), "SUCCEEDED")
+        val token = sc.s.body(sc.s.get("$code/changes/${c.get("id").asString()}")).get("previewUrl").asString().substringAfter("/_preview/").trimEnd('/')
+        val r = session().get("/sites/_preview/$token/__factory/config.json")
+        assertThat(r.response.status).isEqualTo(200)
+        val cfg = session().body(r)
+        assertThat(cfg.get("appId").asString()).isEqualTo(pid); assertThat(cfg.get("environment").asString()).isEqualTo("preview"); assertThat(cfg.get("user").isNull).isTrue()
+        assertThat(r.response.getHeader("Access-Control-Allow-Origin")).isEqualTo("*")
     }
 }
 

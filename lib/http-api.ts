@@ -1,6 +1,6 @@
 import type {
   AdminAi, AiCallRow, SettingView, BuildPolicyReport, CleanupResult, RepoRow, AiPrice, AiProbe, AiProviderInfo, AiUsageReport, AdminApp, BlockDto, CheckResult, TemplateDto, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
-  AiStatus, ApiProject, AuthConfig, Member, SiteInfo, TreeFile, CodeFile, CodeCommit, CodeChange, DiffFile, CodeAiResponse, CodeAiHistoryItem, RegistryComponent, AssetDto, Deployment, Me, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
+  AiStatus, ApiProject, AuthConfig, Member, SiteInfo, DesignNode, DependencyRequest, PackageView, CloneAccess, TreeFile, CodeFile, CodeCommit, CodeChange, DiffFile, CodeAiResponse, CodeAiHistoryItem, RegistryComponent, AssetDto, Deployment, Me, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
 } from "./http-types";
 
 /** Error with the backend's stable {code, message, requestId, details} contract. */
@@ -134,6 +134,10 @@ export const api = {
     retentionPreview: () => call<CleanupResult>("/admin/retention/preview"),
     retentionRun: () => call<CleanupResult>("/admin/retention/run", { method: "POST" }),
     repositories: () => call<RepoRow[]>("/admin/retention/repositories"),
+    packages: () => call<PackageView[]>("/admin/packages"),
+    approvePackage: (body: { name: string; versionRange?: string; pinnedVersion?: string; note?: string }) => call<PackageView>("/admin/packages", { method: "POST", body: json(body) }),
+    decidePackage: (name: string, status: "ALLOWED" | "DENIED", acceptRisk?: boolean, note?: string) =>
+      call<PackageView>(`/admin/packages/${encodeURIComponent(name)}/decision`, { method: "PUT", body: json({ status, acceptRisk, note }) }),
     deleteRepository: (projectId: string) => call<{ state: string }>(`/admin/retention/repositories/${projectId}/delete`, { method: "POST" })
   },
   createProject: (w: string, name: string, description?: string, templateId?: string, appType?: "PAGE_SCHEMA" | "STATIC_APP") =>
@@ -151,7 +155,16 @@ export const api = {
     discard: (w: string, p: string, id: string) => call<CodeChange>(`${P(w, p)}/code/changes/${id}/discard`, { method: "POST" }),
     ai: (w: string, p: string, prompt: string, model?: string) =>
       call<CodeAiResponse>(`${P(w, p)}/code/ai`, { method: "POST", body: json({ prompt, ...(model ? { model } : {}) }), signal: AbortSignal.timeout(130_000) }),
-    aiHistory: (w: string, p: string) => call<CodeAiHistoryItem[]>(`${P(w, p)}/code/ai`)
+    aiHistory: (w: string, p: string) => call<CodeAiHistoryItem[]>(`${P(w, p)}/code/ai`),
+    design: (w: string, p: string, path = "src/App.tsx") => call<{ ok: boolean; nodes: DesignNode[] }>(`${P(w, p)}/code/design${qs({ path })}`),
+    designEdit: (w: string, p: string, body: { path: string; nodeId: string; text?: string; hidden?: boolean; props?: Record<string, string | null>; summary?: string }) =>
+      call<CodeChange>(`${P(w, p)}/code/design/edit`, { method: "POST", body: json(body) }),
+    dependencies: (w: string, p: string) => call<{ requests: DependencyRequest[]; approved: { name: string; spec: string }[] }>(`${P(w, p)}/code/dependencies`),
+    requestDependency: (w: string, p: string, name: string) => call<DependencyRequest>(`${P(w, p)}/code/dependencies`, { method: "POST", body: json({ name }) }),
+    approve: (w: string, p: string, id: string, comment?: string) => call<CodeChange>(`${P(w, p)}/code/changes/${id}/approve`, { method: "POST", body: json({ comment }) }),
+    mergePolicy: (w: string, p: string, policy: "AUTO_MERGE_ALLOWED" | "REVIEW_REQUIRED" | null) => call<{ effective: string; project: string }>(`${P(w, p)}/code/merge-policy`, { method: "PUT", body: json({ policy }) }),
+    cloneAccess: (w: string, p: string) => call<CloneAccess>(`${P(w, p)}/code/clone-access`, { method: "POST" }),
+    revokeCloneAccess: () => call<void>("/me/clone-access", { method: "DELETE" })
   },
   templates: (scope: "company" | "mine") => call<TemplateDto[]>(`/templates${qs({ scope })}`),
   saveTemplate: (w: string, p: string, body: { name: string; description?: string; templateId?: string }) =>

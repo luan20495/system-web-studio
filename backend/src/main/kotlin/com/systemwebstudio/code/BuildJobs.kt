@@ -22,11 +22,17 @@ import java.security.MessageDigest
 import java.util.UUID
 import java.util.zip.GZIPInputStream
 
-data class ClaimedJob(val id: UUID, val projectId: UUID, val commitSha: String, val purpose: String, val sourceUrl: String,
-                      val limits: Map<String, Any>, val image: String)
+data class ClaimedJob(val id: UUID, val projectId: UUID?, val commitSha: String?, val purpose: String, val sourceUrl: String?,
+                      val limits: Map<String, Any>, val image: String, val input: JsonNode? = null,
+                      /** package names the mirror may serve (ADR 0013); the runner syncs the mirror config when the hash changes */
+                      val allowlist: List<String> = emptyList(), val allowlistHash: String = "")
+/** Completion of a LOCK or RESOLVE job (handled by the package services after the job row is committed). */
+data class ToolJobFinished(val jobId: UUID, val purpose: String, val input: JsonNode?, val result: JsonNode?, val error: String?)
 data class FinishRequest(val status: String = "FAILED", val stage: String? = null, val log: String? = null, val error: String? = null, val scans: JsonNode? = null,
                          /** measured by the runner: wall clock and container cgroup CPU (cpu.stat usage_usec) */
-                         val durationMs: Long? = null, val cpuMs: Long? = null, val sourceBytes: Long? = null)
+                         val durationMs: Long? = null, val cpuMs: Long? = null, val sourceBytes: Long? = null,
+                         /** LOCK: {packageJson, packageLock}; RESOLVE: {packages, findings, blocking} — data only, validated by the API */
+                         val result: JsonNode? = null)
 
 /** Reads a build output tar.gz as DATA (nothing is executed): regular files only, no links/devices, normalised paths, size limits. */
 object SafeTar {
@@ -79,6 +85,7 @@ object SafeTar {
 class BuildJobService(
     private val jdbc: JdbcTemplate, private val json: JsonMapper, private val store: ArtifactStore, private val code: CodeProjectService,
     private val queue: JobQueue, private val policy: BuildPolicyService, private val settings: com.systemwebstudio.settings.SettingsService,
+    private val catalog: PackageCatalogService, private val events: org.springframework.context.ApplicationEventPublisher,
     @Value("\${app.build.image:node:22-alpine}") private val image: String,
     @Value("\${app.build.preview-days:7}") private val previewDays: Long
 ) {
@@ -97,16 +104,26 @@ class BuildJobService(
         return id
     }
 
+    /** LOCK / RESOLVE work (no build). RESOLVE has no project. */
+    fun enqueueTool(purpose: String, projectId: UUID?, input: Map<String, Any?>, requestedBy: UUID?, commitSha: String? = null): UUID {
+        val id = UUID.randomUUID()
+        val ws = projectId?.let { jdbc.queryForObject("SELECT workspace_id FROM projects WHERE id = ?", UUID::class.java, it) }
+        jdbc.update("INSERT INTO build_jobs (id, project_id, purpose, commit_sha, workspace_id, requested_by, input) VALUES (?,?,?,?,?,?,CAST(? AS jsonb))",
+            id, projectId, purpose, commitSha, ws, requestedBy, json.writeValueAsString(input))
+        return id
+    }
+
     /** Oldest queued job, or a RUNNING one whose runner stopped reporting (claim expired). SKIP LOCKED: several runners are safe. */
     @Transactional
     fun claim(runner: String, sourceBase: String): ClaimedJob? {
-        val row = jdbc.query("""SELECT id, project_id, commit_sha, purpose FROM build_jobs WHERE status = 'QUEUED' OR (status = 'RUNNING' AND claimed_until < now())
-            ORDER BY queued_at LIMIT 1 FOR UPDATE SKIP LOCKED""", { rs, _ -> listOf(rs.getObject(1), rs.getObject(2), rs.getString(3), rs.getString(4)) }).firstOrNull() ?: return null
+        val row = jdbc.query("""SELECT id, project_id, commit_sha, purpose, input::text FROM build_jobs WHERE status = 'QUEUED' OR (status = 'RUNNING' AND claimed_until < now())
+            ORDER BY queued_at LIMIT 1 FOR UPDATE SKIP LOCKED""", { rs, _ -> listOf(rs.getObject(1), rs.getObject(2), rs.getString(3), rs.getString(4), rs.getString(5)) }).firstOrNull() ?: return null
         val id = row[0] as UUID
         jdbc.update("UPDATE build_jobs SET status = 'RUNNING', runner = ?, stage = 'CLAIMED', started_at = now(), claimed_until = now() + interval '25 minutes' WHERE id = ?", runner.take(64), id)
-        return ClaimedJob(id, row[1] as UUID, row[2] as String, row[3] as String, "$sourceBase/internal/build-jobs/$id/source",
+        val allow = catalog.allowlist()
+        return ClaimedJob(id, row[1] as UUID?, row[2] as String?, row[3] as String, if (row[2] != null) "$sourceBase/internal/build-jobs/$id/source" else null,
             mapOf("cpus" to 2, "memory" to "2g", "pids" to 512, "installSeconds" to 300, "buildSeconds" to policy.maxDurationSeconds(),
-                "outputMiB" to policy.maxArtifactBytes() / 1048576), image)
+                "outputMiB" to policy.maxArtifactBytes() / 1048576), image, (row[4] as String?)?.let { json.readTree(it) }, allow.sorted(), catalog.allowlistHash(allow))
     }
 
     fun running(id: UUID): Map<String, Any?> = jdbc.queryForList("SELECT * FROM build_jobs WHERE id = ? AND status = 'RUNNING'", id).firstOrNull()
@@ -114,7 +131,7 @@ class BuildJobService(
 
     fun source(id: UUID): ByteArray {
         val job = running(id)
-        val repo = code.repo(job["project_id"] as UUID)
+        val repo = code.repo(job["project_id"] as UUID? ?: throw ApiException.notFound("NO_SOURCE", "This job has no source"))
         return code.client.archive(repo.name, job["commit_sha"] as String)
     }
 
@@ -161,6 +178,15 @@ class BuildJobService(
     @Transactional
     fun finish(id: UUID, req: FinishRequest) {
         val job = running(id)
+        val purpose = job["purpose"] as String
+        if (purpose == "LOCK" || purpose == "RESOLVE") {
+            val ok = req.status == "SUCCEEDED" && req.result != null
+            jdbc.update("""UPDATE build_jobs SET status = ?, stage = ?, log = ?, error = ?, result = CAST(? AS jsonb), scans = CAST(? AS jsonb), finished_at = now(), claimed_until = NULL,
+                duration_ms = ?, cpu_ms = ? WHERE id = ?""", if (ok) "SUCCEEDED" else "FAILED", req.stage?.take(16), req.log?.takeLast(64_000), if (ok) null else (req.error ?: "failed").take(1000),
+                req.result?.let { json.writeValueAsString(it) }, req.scans?.let { json.writeValueAsString(it) }, req.durationMs, req.cpuMs, id)
+            events.publishEvent(ToolJobFinished(id, purpose, job["input"]?.toString()?.let { json.readTree(it) }, if (ok) req.result else null, req.error))
+            return
+        }
         val ok = req.status == "SUCCEEDED" && job["artifact_id"] != null
         val error = if (ok) null else (req.error ?: if (req.status == "SUCCEEDED") "No output was uploaded" else "Build failed").take(1000)
         jdbc.update("""UPDATE build_jobs SET status = ?, stage = ?, log = ?, error = ?, scans = CAST(? AS jsonb), finished_at = now(), claimed_until = NULL,

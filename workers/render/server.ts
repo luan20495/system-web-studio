@@ -4,6 +4,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { timingSafeEqual } from "node:crypto";
 import { renderSchemaDocument } from "../../lib/schema-preview";
 import type { PageSchema } from "../../lib/http-types";
+import { edit as astEdit, tree as astTree } from "./ast";
 
 const PORT = Number(process.env.RENDER_PORT ?? 18095);
 const HOST = process.env.RENDER_HOST ?? "127.0.0.1";
@@ -23,14 +24,20 @@ function send(res: ServerResponse, status: number, body: string, type = "text/pl
 
 createServer((req, res) => {
   if (req.method === "GET" && req.url === "/health") return send(res, 200, "ok");
-  if (req.method !== "POST" || req.url !== "/render") return send(res, 404, "not found");
+  if (req.method !== "POST" || !["/render", "/ast/tree", "/ast/edit"].includes(req.url ?? "")) return send(res, 404, "not found");
   if (!authorized(req)) return send(res, 401, "unauthorized");
   const chunks: Buffer[] = []; let size = 0;
   req.on("data", (c: Buffer) => { size += c.length; if (size > MAX_BODY) { send(res, 413, "too large"); req.destroy(); } else chunks.push(c); });
   req.on("end", () => {
     if (res.headersSent) return;
     try {
-      const body = JSON.parse(Buffer.concat(chunks).toString("utf8")) as { schema?: PageSchema; assets?: Record<string, string> };
+      const raw = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+      if (req.url === "/ast/tree") return send(res, 200, JSON.stringify(astTree(String(raw.source ?? ""))), "application/json");
+      if (req.url === "/ast/edit") {
+        try { return send(res, 200, JSON.stringify({ source: astEdit(String(raw.source ?? ""), raw.edit) }), "application/json"); }
+        catch (e) { return send(res, 422, JSON.stringify({ error: (e as Error).message }), "application/json"); }
+      }
+      const body = raw as { schema?: PageSchema; assets?: Record<string, string> };
       if (!body.schema || !Array.isArray(body.schema.sections)) return send(res, 400, "schema required");
       const assets: Record<string, string> = {};
       // only relative paths inside the artifact are accepted as image URLs

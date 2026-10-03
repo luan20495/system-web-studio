@@ -133,6 +133,8 @@ services:
       - ./infra/verdaccio/config.yaml:/verdaccio/conf/config.yaml:ro
       - studio-verdaccio:/verdaccio/storage
     networks: [default, build]
+    ports:
+      - "127.0.0.1:${VERDACCIO_PORT:-14873}:4873"   # operator only (publishing @company packages, generating approved lockfiles)
     mem_limit: 384m
 
   # Optional local identity provider for exercising OIDC/SSO: docker compose --profile sso up -d keycloak (see scripts/sso-up.sh).

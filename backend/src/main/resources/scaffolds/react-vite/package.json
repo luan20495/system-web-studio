@@ -8,6 +8,8 @@
     "build": "vite build"
   },
   "dependencies": {
+    "@company/app-sdk": "1.0.0",
+    "@company/ui": "1.0.0",
     "react": "19.1.1",
     "react-dom": "19.1.1"
   },

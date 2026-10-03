@@ -25,11 +25,12 @@ import java.util.UUID
 data class FileEdit(@field:NotBlank @field:Size(max = 200) val path: String, val content: String? = null, val delete: Boolean? = null)
 data class ChangeRequest(@field:NotBlank @field:Size(max = 300) val summary: String, @field:Valid val files: List<FileEdit> = emptyList())
 data class TreeFile(val path: String, val size: Long)
-data class CommitDto(val sha: String, val message: String, val author: String, val committer: String, val date: Instant)
+data class CommitDto(val sha: String, val message: String, val author: String, val committer: String, val date: Instant, val verified: Boolean = false, val signer: String? = null)
 data class CodeChangeDto(
     val id: UUID, val kind: String, val status: String, val summary: String, val files: List<String>, val branch: String, val baseSha: String, val headSha: String,
     val promptId: UUID?, val error: String?, val createdBy: String?, val createdAt: Instant, val updatedAt: Instant,
-    val previewUrl: String?, val previewExpiresAt: Instant?, val build: BuildInfo?
+    val previewUrl: String?, val previewExpiresAt: Instant?, val build: BuildInfo?,
+    val reviewRequired: Boolean = false, val approvedBy: String? = null, val approvedAt: Instant? = null, val reviewComment: String? = null
 )
 data class BuildInfo(val id: UUID, val status: String, val stage: String?, val error: String?, val log: String?, val scans: tools.jackson.databind.JsonNode?,
                      val queuedAt: Instant, val startedAt: Instant?, val finishedAt: Instant?)
@@ -45,8 +46,13 @@ class CodeChangeService(
     fun requireCode(ctx: AccessContext) { if (ctx.project!!.appType != "STATIC_APP") throw ApiException.conflict("NOT_A_CODE_PROJECT", "This project is page-schema based") }
 
     @Transactional
-    fun propose(ctx: AccessContext, userId: UUID, summary: String, changes: List<GitFileChange>, kind: String, promptId: UUID? = null): CodeChangeDto {
-        CodeChangePolicy.check(changes)
+    /**
+     * [serverManaged] = files written by the platform itself after validation (package.json + package-lock.json of an approved dependency
+     * request); they bypass the user path policy, never user content.
+     */
+    fun propose(ctx: AccessContext, userId: UUID, summary: String, changes: List<GitFileChange>, kind: String, promptId: UUID? = null,
+                serverManaged: Boolean = false): CodeChangeDto {
+        if (!serverManaged) CodeChangePolicy.check(changes)
         val project = ctx.project!!
         val repo = code.repo(project.id)
         policy.requireCapacity(project.id, ctx.workspaceId, userId)
@@ -57,7 +63,7 @@ class CodeChangeService(
         val newSize = tree.values.sum()
         policy.requireRepoSize(project.id, ctx.workspaceId, userId, newSize)
         val id = UUID.randomUUID()
-        val branch = "${if (kind == "AI") "ai" else "edit"}/${id.toString().take(8)}"
+        val branch = "${when (kind) { "AI" -> "ai"; "DEPENDENCY" -> "dep"; "DESIGN" -> "design"; else -> "edit" }}/${id.toString().take(8)}"
         val message = "${summary.trim().take(200)}\n\nCode-Change-Id: $id\n${promptId?.let { "Prompt-Id: $it\n" } ?: ""}Studio-User: $userId"
         val head = code.git { code.client.commit(repo.name, "main", branch, changes, message, code.author(userId)) }
         val job = jobs.enqueue(project.id, head, "PREVIEW", codeChangeId = null, workspaceId = ctx.workspaceId, requestedBy = userId)
@@ -74,8 +80,8 @@ class CodeChangeService(
         jdbc.queryForList("SELECT id FROM code_changes WHERE project_id = ? ORDER BY created_at DESC LIMIT ?", UUID::class.java, projectId, limit).map { get(projectId, it) }
 
     fun get(projectId: UUID, id: UUID): CodeChangeDto {
-        val r = jdbc.queryForList("""SELECT c.*, coalesce(u.display_name, u.username) AS creator FROM code_changes c LEFT JOIN users u ON u.id = c.created_by
-            WHERE c.id = ? AND c.project_id = ?""", id, projectId).firstOrNull() ?: throw ApiException.notFound("CHANGE_NOT_FOUND", "Change not found")
+        val r = jdbc.queryForList("""SELECT c.*, coalesce(u.display_name, u.username) AS creator, coalesce(a.display_name, a.username) AS approver FROM code_changes c
+            LEFT JOIN users u ON u.id = c.created_by LEFT JOIN users a ON a.id = c.approved_by WHERE c.id = ? AND c.project_id = ?""", id, projectId).firstOrNull() ?: throw ApiException.notFound("CHANGE_NOT_FOUND", "Change not found")
         val build = (r["build_job_id"] as UUID?)?.let { b -> jdbc.queryForList("SELECT * FROM build_jobs WHERE id = ?", b).firstOrNull()?.let { j ->
             BuildInfo(b, j["status"] as String, j["stage"] as String?, j["error"] as String?, j["log"] as String?, (j["scans"])?.toString()?.let { json.readTree(it) },
                 (j["queued_at"] as java.sql.Timestamp).toInstant(), (j["started_at"] as java.sql.Timestamp?)?.toInstant(), (j["finished_at"] as java.sql.Timestamp?)?.toInstant())
@@ -85,7 +91,8 @@ class CodeChangeService(
         return CodeChangeDto(id, r["kind"] as String, r["status"] as String, r["summary"] as String, json.readTree(r["files"].toString()).toList().map { it.asString() },
             r["branch"] as String, r["base_sha"] as String, r["head_sha"] as String, r["prompt_id"] as UUID?, r["error"] as String?, r["creator"] as String?,
             (r["created_at"] as java.sql.Timestamp).toInstant(), (r["updated_at"] as java.sql.Timestamp).toInstant(),
-            if (live) "${sitesOrigin.trimEnd('/')}/_preview/$token/" else null, if (live) expires else null, build)
+            if (live) "${sitesOrigin.trimEnd('/')}/_preview/$token/" else null, if (live) expires else null, build,
+            mergePolicy(projectId) == "REVIEW_REQUIRED", r["approver"] as String?, (r["approved_at"] as java.sql.Timestamp?)?.toInstant(), r["review_comment"] as String?)
     }
 
     fun diff(projectId: UUID, id: UUID): List<DiffFile> {
@@ -94,12 +101,30 @@ class CodeChangeService(
         return c.files.map { p -> DiffFile(p, code.git { text(code.client.raw(repo.name, p, c.baseSha)) }, code.git { text(code.client.raw(repo.name, p, c.headSha)) }) }
     }
 
+    /** Effective policy: the project's own value, else its workspace's. */
+    fun mergePolicy(projectId: UUID): String = jdbc.queryForObject("""SELECT coalesce(p.merge_policy, w.merge_policy) FROM projects p JOIN workspaces w ON w.id = p.workspace_id WHERE p.id = ?""",
+        String::class.java, projectId) ?: "AUTO_MERGE_ALLOWED"
+
+    /** Review: a member with publish rights who did not make the change approves the exact built head commit. */
+    @Transactional
+    fun approve(ctx: AccessContext, userId: UUID, id: UUID, comment: String?): CodeChangeDto {
+        val project = ctx.project!!
+        ctx.require(com.systemwebstudio.access.Permission.PROJECT_PUBLISH)
+        val c = jdbc.queryForMap("SELECT status, created_by FROM code_changes WHERE id = ? AND project_id = ?", id, project.id)
+        if (c["status"] != "READY") throw ApiException.conflict("CHANGE_NOT_READY", "Only a change with a successful build can be approved")
+        if (c["created_by"] == userId) throw ApiException(HttpStatus.FORBIDDEN, "SELF_REVIEW", "You cannot approve your own change")
+        jdbc.update("UPDATE code_changes SET approved_by = ?, approved_at = now(), review_comment = ?, updated_at = now() WHERE id = ?", userId, comment?.trim()?.take(1000), id)
+        audit.record("APPROVE_CODE_CHANGE", "CODE_CHANGE", id, ctx.workspaceId, project.id, newValue = mapOf("comment" to comment?.take(200)))
+        return get(project.id, id)
+    }
+
     /** Only a change whose exact head commit built green can reach main; fast-forward keeps the commit and its author. */
     @Transactional
     fun merge(ctx: AccessContext, userId: UUID, id: UUID): CodeChangeDto {
         val project = ctx.project!!
         val c = get(project.id, id)
         if (c.status != "READY") throw ApiException.conflict("CHANGE_NOT_READY", "Only a change with a successful build can be merged (status ${c.status})")
+        if (c.reviewRequired && c.approvedBy == null) throw ApiException.conflict("REVIEW_REQUIRED", "This project requires an approval by another member before merging")
         val repo = code.repo(project.id)
         val main = code.git { code.client.fastForward(repo.name, c.branch, c.summary) }
         if (main != c.headSha) throw ApiException(HttpStatus.CONFLICT, "MERGE_MISMATCH", "main does not point at the built commit")
@@ -128,7 +153,8 @@ class CodeChangeService(
 
 @RestController
 @RequestMapping("/api/v1/workspaces/{workspaceId}/projects/{projectId}/code")
-class CodeController(private val access: AccessService, private val code: CodeProjectService, private val changes: CodeChangeService) {
+class CodeController(private val access: AccessService, private val code: CodeProjectService, private val changes: CodeChangeService,
+                     private val jdbc: JdbcTemplate, private val audit: AuditService) {
     private fun ctx(me: StudioUserDetails, w: UUID, p: UUID) = access.forProject(me.userId, w, p).also { changes.requireCode(it) }
 
     @GetMapping("/tree")
@@ -152,7 +178,7 @@ class CodeController(private val access: AccessService, private val code: CodePr
     @GetMapping("/commits")
     fun commits(@PathVariable workspaceId: UUID, @PathVariable projectId: UUID, @AuthenticationPrincipal me: StudioUserDetails): List<CommitDto> {
         ctx(me, workspaceId, projectId)
-        return code.git { code.client.commits(code.repo(projectId).name, "main", 50) }.map { CommitDto(it.sha, it.message, it.authorName, it.committerName, it.date) }
+        return code.git { code.client.commits(code.repo(projectId).name, "main", 50) }.map { CommitDto(it.sha, it.message, it.authorName, it.committerName, it.date, it.verified, it.signer) }
     }
 
     @GetMapping("/changes")
@@ -183,8 +209,78 @@ class CodeController(private val access: AccessService, private val code: CodePr
         val c = ctx(me, workspaceId, projectId); c.require(Permission.PROJECT_EDIT); return changes.merge(c, me.userId, id)
     }
 
+    @PostMapping("/changes/{id}/approve")
+    fun approve(@PathVariable workspaceId: UUID, @PathVariable projectId: UUID, @PathVariable id: UUID, @RequestBody(required = false) body: Map<String, String?>?,
+                @AuthenticationPrincipal me: StudioUserDetails): CodeChangeDto {
+        val c = ctx(me, workspaceId, projectId); return changes.approve(c, me.userId, id, body?.get("comment"))
+    }
+
+    /** Merge policy of this project (null = inherit the workspace's). PROJECT_SETTINGS to change. */
+    @PutMapping("/merge-policy")
+    fun mergePolicy(@PathVariable workspaceId: UUID, @PathVariable projectId: UUID, @RequestBody body: Map<String, String?>, @AuthenticationPrincipal me: StudioUserDetails): Map<String, String> {
+        val c = ctx(me, workspaceId, projectId); c.require(Permission.PROJECT_SETTINGS)
+        val v = body["policy"]?.takeIf { it in setOf("AUTO_MERGE_ALLOWED", "REVIEW_REQUIRED") }
+        if (body["policy"] != null && v == null) throw ApiException.badRequest("INVALID_POLICY", "AUTO_MERGE_ALLOWED or REVIEW_REQUIRED")
+        jdbc.update("UPDATE projects SET merge_policy = ? WHERE id = ?", v, projectId)
+        audit.record("MERGE_POLICY_CHANGED", "PROJECT", projectId, workspaceId, projectId, newValue = mapOf("policy" to (v ?: "INHERIT")))
+        return mapOf("effective" to changes.mergePolicy(projectId), "project" to (v ?: "INHERIT"))
+    }
+
     @PostMapping("/changes/{id}/discard")
     fun discard(@PathVariable workspaceId: UUID, @PathVariable projectId: UUID, @PathVariable id: UUID, @AuthenticationPrincipal me: StudioUserDetails): CodeChangeDto {
         val c = ctx(me, workspaceId, projectId); c.require(Permission.PROJECT_EDIT); return changes.discard(c, id)
+    }
+}
+
+/** Workspace default merge policy for code projects (workspace admins). */
+@RestController
+@RequestMapping("/api/v1/workspaces/{workspaceId}/merge-policy")
+class WorkspaceMergePolicyController(private val access: AccessService, private val jdbc: JdbcTemplate, private val audit: AuditService) {
+    @GetMapping
+    fun get(@PathVariable workspaceId: UUID, @AuthenticationPrincipal me: StudioUserDetails): Map<String, String> {
+        access.forWorkspace(me.userId, workspaceId)
+        return mapOf("policy" to jdbc.queryForObject("SELECT merge_policy FROM workspaces WHERE id = ?", String::class.java, workspaceId)!!)
+    }
+
+    @PutMapping
+    fun set(@PathVariable workspaceId: UUID, @RequestBody body: Map<String, String?>, @AuthenticationPrincipal me: StudioUserDetails): Map<String, String> {
+        access.forWorkspace(me.userId, workspaceId).require(Permission.MEMBER_MANAGE)
+        val v = body["policy"]?.takeIf { it in setOf("AUTO_MERGE_ALLOWED", "REVIEW_REQUIRED") } ?: throw ApiException.badRequest("INVALID_POLICY", "AUTO_MERGE_ALLOWED or REVIEW_REQUIRED")
+        jdbc.update("UPDATE workspaces SET merge_policy = ? WHERE id = ?", v, workspaceId)
+        audit.record("MERGE_POLICY_CHANGED", "WORKSPACE", workspaceId, workspaceId, newValue = mapOf("policy" to v))
+        return mapOf("policy" to v)
+    }
+}
+
+data class DesignEditRequest(@field:NotBlank val path: String, @field:NotBlank val nodeId: String, val text: String? = null, val hidden: Boolean? = null,
+                             val props: Map<String, String?>? = null, @field:Size(max = 300) val summary: String? = null)
+
+/** Design mode for code projects (V1): element tree of a TSX file and safe AST edits that become a normal DESIGN change (branch → build → preview → merge). */
+@RestController
+@RequestMapping("/api/v1/workspaces/{workspaceId}/projects/{projectId}/code/design")
+class CodeDesignController(private val access: AccessService, private val code: CodeProjectService, private val changes: CodeChangeService,
+                           private val ast: com.systemwebstudio.publish.AstClient) {
+    private val editable = Regex("^src/[A-Za-z0-9._/-]+\\.tsx$")
+
+    @GetMapping
+    fun tree(@PathVariable workspaceId: UUID, @PathVariable projectId: UUID, @RequestParam(defaultValue = "src/App.tsx") path: String,
+             @AuthenticationPrincipal me: StudioUserDetails): tools.jackson.databind.JsonNode {
+        val c = access.forProject(me.userId, workspaceId, projectId); changes.requireCode(c)
+        if (!editable.matches(path) || ".." in path) throw ApiException.badRequest("INVALID_PATH", "Design mode works on src/*.tsx files")
+        val src = code.git { code.client.raw(code.repo(projectId).name, path, "main") } ?: throw ApiException.notFound("FILE_NOT_FOUND", "File not found")
+        return ast.post("/ast/tree", mapOf("source" to src.toString(Charsets.UTF_8))).second
+    }
+
+    @PostMapping("/edit")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun edit(@PathVariable workspaceId: UUID, @PathVariable projectId: UUID, @Valid @RequestBody body: DesignEditRequest, @AuthenticationPrincipal me: StudioUserDetails): CodeChangeDto {
+        val c = access.forProject(me.userId, workspaceId, projectId); changes.requireCode(c); c.require(Permission.PROJECT_EDIT)
+        if (!editable.matches(body.path) || ".." in body.path) throw ApiException.badRequest("INVALID_PATH", "Design mode works on src/*.tsx files")
+        val src = code.git { code.client.raw(code.repo(projectId).name, body.path, "main") } ?: throw ApiException.notFound("FILE_NOT_FOUND", "File not found")
+        val (status, res) = ast.post("/ast/edit", mapOf("source" to src.toString(Charsets.UTF_8),
+            "edit" to mapOf("nodeId" to body.nodeId, "text" to body.text, "hidden" to body.hidden, "props" to body.props).filterValues { it != null }))
+        if (status != 200) throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "DESIGN_EDIT_REFUSED", res.get("error")?.asString() ?: "Edit refused")
+        return changes.propose(c, me.userId, body.summary?.trim()?.ifEmpty { null } ?: "Chỉnh giao diện (${body.path})",
+            listOf(GitFileChange(body.path, res.get("source").asString().toByteArray(Charsets.UTF_8))), "DESIGN")
     }
 }

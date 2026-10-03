@@ -40,6 +40,18 @@ class RenderClient(
 
 class BuildFailure(message: String) : RuntimeException(message)
 
+/** AST service of the same worker (Design mode for code apps): parse-only, nothing executed. */
+@Component
+class AstClient(private val json: JsonMapper, @Value("\${app.render.url:http://127.0.0.1:18095}") private val url: String, @Value("\${app.render.token:}") private val token: String) {
+    private val http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
+    fun post(path: String, body: Any): Pair<Int, JsonNode> {
+        val r = try { http.send(HttpRequest.newBuilder(URI("${url.trimEnd('/')}$path")).timeout(Duration.ofSeconds(20)).header("Content-Type", "application/json")
+            .header("X-Render-Token", token).POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(body))).build(), HttpResponse.BodyHandlers.ofString()) }
+            catch (e: Exception) { throw com.systemwebstudio.common.ApiException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE, "AST_UNAVAILABLE", "Design service is not reachable") }
+        return r.statusCode() to json.readTree(r.body())
+    }
+}
+
 data class ManifestFile(val path: String, val size: Int, val sha256: String, val contentType: String)
 
 /**

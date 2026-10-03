@@ -66,6 +66,17 @@ class SiteService(
         }, slug).firstOrNull()
 
     /** A code change preview by its unguessable token (expires; revoked on discard). */
+    fun previewProject(token: String): UUID? = jdbc.query("SELECT project_id FROM code_changes WHERE preview_token = ?", { rs, _ -> rs.getObject(1, UUID::class.java) }, token).firstOrNull()
+
+    /** `__factory/config.json` for @company/app-sdk: identity of the app, environment, visibility, and the viewer of a PRIVATE app. No secrets. */
+    fun runtimeConfig(projectId: UUID, environment: String, visibility: String, userId: UUID?): Map<String, Any?> {
+        val p = jdbc.queryForMap("SELECT name FROM projects WHERE id = ?", projectId)
+        val version = jdbc.query("SELECT max(version_number) FROM project_versions WHERE project_id = ?", { rs, _ -> rs.getObject(1)?.toString() }, projectId).firstOrNull()
+        val user = userId?.let { jdbc.query("SELECT coalesce(display_name, username) FROM users WHERE id = ?", { rs, _ -> rs.getString(1) }, it).firstOrNull() }
+        return mapOf("appId" to projectId.toString(), "appName" to p["name"], "environment" to environment, "visibility" to visibility, "version" to version,
+            "user" to user?.let { mapOf("displayName" to it) }, "flags" to emptyMap<String, Boolean>(), "apiBase" to null, "generatedAt" to java.time.Instant.now().toString())
+    }
+
     fun preview(token: String): Pair<String, Map<String, ManifestFile>>? {
         if (!Regex("^[A-Za-z0-9_-]{20,64}$").matches(token)) return null
         return jdbc.query("""SELECT a.storage_prefix, a.manifest::text FROM code_changes c JOIN artifacts a ON a.id = c.preview_artifact_id AND a.deleted_at IS NULL

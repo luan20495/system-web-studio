@@ -8,6 +8,7 @@ import type { AiStatus, ApiProject, AuthConfig, CodeAiHistoryItem, CodeChange, C
 import { useSession } from "../session";
 import { ago, ErrorState, errText, fmtDate, StateView, tok, usd } from "../ui";
 import { Drawer, MembersDrawer, PublishModal } from "./drawers";
+import { DesignPane, IdeDrawer, PackagesDrawer } from "./CodePanels";
 
 const STATUS: Record<CodeChange["status"], string> = { BUILDING: "Đang build", READY: "Sẵn sàng", FAILED: "Build lỗi", MERGED: "Đã hợp nhất", DISCARDED: "Đã huỷ" };
 const STAGE: Record<string, string> = { CLAIMED: "đã nhận", SOURCE: "lấy mã", SCAN_SOURCE: "quét mã", PREPARE: "chuẩn bị", INSTALL: "cài gói", BUILD: "build",
@@ -38,8 +39,8 @@ function DiffView({ files }: { files: DiffFile[] }) {
 export function CodeWorkspace({ project, view, onProject }: { project: ApiProject; view?: string; onProject: (p: ApiProject) => void }) {
   const router = useRouter(); const { me } = useSession();
   const ws = project.workspaceId, pid = project.id, base = `/studio/projects/${pid}`;
-  const mode: "ai" | "code" = view === "code" ? "code" : "ai";
-  const panel = ["members", "publish", "versions"].includes(view ?? "") ? view : null;
+  const mode: "ai" | "code" | "design" = view === "code" ? "code" : view === "design" ? "design" : "ai";
+  const panel = ["members", "publish", "versions", "packages", "ide"].includes(view ?? "") ? view : null;
   const go = (to: string) => router.push(`${base}/${to}`);
   const canEdit = project.permissions.includes("PROJECT_EDIT");
   const [tree, setTree] = useState<TreeFile[] | null>(null);
@@ -101,6 +102,10 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
     const m = await act("merge", () => api.code.merge(ws, pid, c.id), "Không hợp nhất được.");
     if (m) { void loadChanges(); setOriginal({}); void loadTree(); api.lookupProject(pid).then(onProject).catch(() => undefined); setNotice("Đã hợp nhất vào main. Có thể xuất bản."); }
   }
+  async function approve(c: CodeChange) {
+    const comment = window.prompt("Nhận xét khi duyệt (tuỳ chọn):") ?? undefined;
+    if (await act("approve", () => api.code.approve(ws, pid, c.id, comment), "Không duyệt được.")) void loadChanges();
+  }
   async function discard(c: CodeChange) { if (await act("discard", () => api.code.discard(ws, pid, c.id), "Không huỷ được.")) void loadChanges(); }
 
   if (error) return <div className="wsError"><ErrorState error={error} retry={() => { setError(null); void loadTree(); }}/></div>;
@@ -115,18 +120,19 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
           </div>
         </div>
         <nav className="modeTabs" aria-label="Chế độ">
-          {(["ai", "code"] as const).map((m) => <button key={m} className={mode === m && !panel ? "active" : ""} aria-pressed={mode === m} onClick={() => go(m)}>{m === "ai" ? "✦ AI" : "Code"}</button>)}
-          <button disabled title="Design mode chỉ có cho Website dạng trang (component đã duyệt)">Design</button>
+          {(["ai", "design", "code"] as const).map((m) => <button key={m} className={mode === m && !panel ? "active" : ""} aria-pressed={mode === m} onClick={() => go(m)}>{m === "ai" ? "✦ AI" : m === "design" ? "Design" : "Code"}</button>)}
         </nav>
         <div className="topActions">
           <button className="button ghost" onClick={() => go("versions")}>Lịch sử</button>
+          <button className="button ghost" onClick={() => go("packages")}>Thư viện</button>
+          <button className="button ghost" onClick={() => go("ide")}>IDE</button>
           {project.permissions.includes("PROJECT_MEMBERS") ? <button className="button ghost" onClick={() => go("members")}>Chia sẻ</button> : null}
           <button className="button primary" disabled={!project.permissions.includes("PROJECT_PUBLISH")} onClick={() => go("publish")}>Xuất bản</button>
         </div>
       </header>
       <main className="codeBody">
-        <section className="codeLeft" aria-label={mode === "ai" ? "AI" : "Mã nguồn"}>
-          {mode === "ai" ? (<>
+        <section className="codeLeft" aria-label={mode === "ai" ? "AI" : mode === "design" ? "Thiết kế" : "Mã nguồn"}>
+          {mode === "design" ? <DesignPane ws={ws} pid={pid} canEdit={canEdit} onChange={(c) => { setSelected(c.id); setTab("preview"); void loadChanges(); setNotice("Đã tạo thay đổi giao diện; đang build trong sandbox."); }}/> : mode === "ai" ? (<>
             <div className="chatScroll">
               {history.length === 0 ? <div className="hint chatEmpty">Mô tả thay đổi bạn muốn. AI chỉ sửa src/, public/ và index.html; mỗi thay đổi được build trong sandbox và cần bạn hợp nhất.
                 {!ai?.configured ? <> Hiện chưa cấu hình nhà cung cấp AI: bộ <b>mô phỏng</b> hiểu vài yêu cầu như “đổi tiêu đề thành “…”” hoặc “đổi màu nền vàng”.</> : null}</div> : null}
@@ -183,10 +189,14 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
               <div className="tabs" role="tablist">{(["preview", "diff", "log"] as const).map((t) => <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? "active" : ""} onClick={() => setTab(t)}>
                 {t === "preview" ? "Xem trước" : t === "diff" ? "Mã thay đổi" : "Build & quét"}</button>)}</div>
               <div className="row">
-                {canEdit && change.status === "READY" ? <button className="button primary" disabled={busy !== null} onClick={() => void merge(change)}>{busy === "merge" ? "Đang hợp nhất…" : "Hợp nhất vào main"}</button> : null}
+                {change.status === "READY" && change.reviewRequired && !change.approvedBy && me && change.createdBy !== me.displayName && project.permissions.includes("PROJECT_PUBLISH")
+                  ? <button className="button ghost" disabled={busy !== null} onClick={() => void approve(change)}>Duyệt</button> : null}
+                {canEdit && change.status === "READY" ? <button className="button primary" disabled={busy !== null || (!!change.reviewRequired && !change.approvedBy)}
+                  title={change.reviewRequired && !change.approvedBy ? "Cần một thành viên khác duyệt trước" : undefined} onClick={() => void merge(change)}>{busy === "merge" ? "Đang hợp nhất…" : "Hợp nhất vào main"}</button> : null}
                 {canEdit && ["BUILDING", "READY", "FAILED"].includes(change.status) ? <button className="button ghost" disabled={busy !== null} onClick={() => void discard(change)}>Huỷ</button> : null}
               </div>
             </div>
+            {change.reviewRequired ? <p className="hint">{change.approvedBy ? `Đã duyệt bởi ${change.approvedBy}${change.reviewComment ? ` — “${change.reviewComment}”` : ""}` : "Dự án yêu cầu duyệt: một thành viên có quyền xuất bản (không phải người tạo) cần duyệt trước khi hợp nhất."}</p> : null}
             {tab === "preview" ? (change.previewUrl
               ? <><iframe className="appPreview" title="Bản xem trước ứng dụng" sandbox="allow-scripts" src={change.previewUrl}/>
                 <p className="hint">Chạy cách ly (không cookie/lưu trữ), liên kết hết hạn {change.previewExpiresAt ? fmtDate(change.previewExpiresAt) : ""}. <a href={change.previewUrl} target="_blank" rel="noopener noreferrer">Mở trong tab mới</a></p></>
@@ -214,8 +224,14 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
         onUnauthorized={() => setNotice("Phiên đăng nhập đã hết hạn.")}/> : null}
       {panel === "versions" ? <Drawer title="Lịch sử (commit trên main)" sub="Lấy trực tiếp từ kho Git của nền tảng." onClose={() => go(mode)}>
         {commits == null ? <StateView kind="loading"/> : <ol className="commitList">{commits.map((c) => <li key={c.sha}><b>{c.message.split("\n")[0]}</b>
-          <small className="code">{c.sha.slice(0, 10)}</small><small>Tác giả {c.author} · commit bởi {c.committer} · {fmtDate(c.date)}</small></li>)}</ol>}
+          <small className="code">{c.sha.slice(0, 10)} {c.verified ? <span className="pill pill-ok">Đã ký · {c.signer}</span> : <span className="pill pill-muted">Chưa ký</span>}</small>
+          <small>Tác giả {c.author} · commit bởi {c.committer} · {fmtDate(c.date)}</small></li>)}</ol>}
+        {project.permissions.includes("PROJECT_SETTINGS") ? <section className="settingGroup"><h3>Chính sách hợp nhất</h3>
+          <select aria-label="Chính sách hợp nhất" defaultValue="" onChange={(e) => void act("policy", () => api.code.mergePolicy(ws, pid, (e.target.value || null) as "AUTO_MERGE_ALLOWED" | "REVIEW_REQUIRED" | null), "Không đổi được.").then((r) => { if (r) { setNotice(`Chính sách hiện hành: ${r.effective === "REVIEW_REQUIRED" ? "cần duyệt" : "hợp nhất trực tiếp"}`); void loadChanges(); } })}>
+            <option value="">Theo workspace</option><option value="AUTO_MERGE_ALLOWED">Hợp nhất trực tiếp sau khi build xanh</option><option value="REVIEW_REQUIRED">Cần người khác duyệt</option></select></section> : null}
       </Drawer> : null}
+      {panel === "packages" ? <PackagesDrawer ws={ws} pid={pid} canEdit={canEdit} onClose={() => go(mode)} onChange={(id) => { setSelected(id); go(mode); void loadChanges(); }}/> : null}
+      {panel === "ide" ? <IdeDrawer ws={ws} pid={pid} onClose={() => go(mode)}/> : null}
     </div>
   );
 }

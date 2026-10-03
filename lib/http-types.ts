@@ -126,13 +126,14 @@ export type SiteInfo = { slug: string | null; url: string | null; online: boolea
 // ---- Phase 7.2–7.4: code projects
 export type TreeFile = { path: string; size: number };
 export type CodeFile = { path: string; ref: string; size: number; text: string | null; editable: boolean };
-export type CodeCommit = { sha: string; message: string; author: string; committer: string; date: string };
+export type CodeCommit = { sha: string; message: string; author: string; committer: string; date: string; verified?: boolean; signer?: string | null };
 export type BuildInfo = { id: string; status: "QUEUED" | "RUNNING" | "SUCCEEDED" | "FAILED"; stage: string | null; error: string | null; log: string | null;
   scans: { dependencies?: { tool: string; packages: number; findings: { package: string; id: string; severity: string }[] }; sourceSecrets?: { findings: unknown[] };
     outputSecrets?: { findings: unknown[] }; sbom?: { name: string; version: string }[] } | null; queuedAt: string; startedAt: string | null; finishedAt: string | null };
 export type CodeChange = { id: string; kind: "AI" | "EDIT"; status: "BUILDING" | "READY" | "FAILED" | "MERGED" | "DISCARDED"; summary: string; files: string[];
   branch: string; baseSha: string; headSha: string; promptId: string | null; error: string | null; createdBy: string | null; createdAt: string; updatedAt: string;
-  previewUrl: string | null; previewExpiresAt: string | null; build: BuildInfo | null };
+  previewUrl: string | null; previewExpiresAt: string | null; build: BuildInfo | null;
+  reviewRequired?: boolean; approvedBy?: string | null; approvedAt?: string | null; reviewComment?: string | null };
 export type DiffFile = { path: string; before: string | null; after: string | null };
 export type CodeAiResponse = { promptId: string; outcome: "UPDATED" | "NO_CHANGE" | "UNSUPPORTED"; message: string; change: CodeChange | null; provider: string; model: string | null;
   usage: PromptUsage | null };
@@ -147,3 +148,12 @@ export type BuildPolicyReport = { days: number; totals: BuildUsageRow; byWorkspa
 export type RetentionResult = { previewsExpired: number; artifactsDeleted: number; artifactBytesFreed: number; failedBuildLogsCleared: number; repositoriesPendingDelete: number };
 export type CleanupResult = { dryRun: boolean; abandonedUploads: number; deletedAssetRows: number; idempotencyKeys: number; failedDeployments: number; aiCalls: number; retention: RetentionResult | null };
 export type RepoRow = { projectId: string; project: string | null; name: string; state: "ACTIVE" | "ARCHIVED" | "PENDING_DELETE" | "DELETED"; sizeBytes: number | null; archivedAt: string | null; deleteAfter: string | null };
+
+// ---- source-app completion
+export type DesignProp = { name: string; kind: "string" | "number" | "boolean" | "expression" | "absent"; value: string | null; allowed: string[] | null };
+export type DesignNode = { id: string; tag: string; line: number; depth: number; company: boolean; text: string | null; textEditable: boolean; hidden: boolean;
+  hiddenEditable: boolean; props: DesignProp[]; codeOnly: string | null };
+export type DependencyRequest = { id: string; packageName: string; spec: string; status: "LOCKING" | "COMMITTED" | "REJECTED" | "FAILED"; changeId: string | null; error: string | null; createdAt: string };
+export type PackageView = { name: string; status: "PENDING" | "RESOLVING" | "ALLOWED" | "DENIED"; versionRange: string; pinnedVersion: string | null; note: string; riskAccepted: boolean;
+  dependencies: number | null; findings: { package: string; id: string; severity: string }[] | null; requestedBy: string | null; decidedBy: string | null; decidedAt: string | null; updatedAt: string };
+export type CloneAccess = { cloneUrl: string; username: string; token: string | null; note: string };

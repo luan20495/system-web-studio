@@ -48,3 +48,23 @@
 * **Isolation of generated code (by design):** code previews/apps run under CSP `sandbox allow-scripts` (opaque origin, verified: no cookies or
   storage); builds run in hardened containers with no network (install: mirror only). On macOS the containers share the Docker Desktop VM kernel
   with the platform's own containers — acceptable only while code projects are internal (ADR 0010 note).
+
+## Host security review (2026-10-03, best effort, read-only)
+Triggered by the one-time execution of `rollup@4.64.0` on this Mac outside the sandbox (2026-10-03 ≈ 09:11 local). No credentials were rotated or deleted.
+
+| Area | Result | Notes |
+| --- | --- | --- |
+| Running processes | CHECKED · CLEAN | processes started after the incident are the user's apps (Chrome, VS Code, Cursor, Docker) and this project's services |
+| LaunchAgents / LaunchDaemons | CHECKED · CLEAN | none created or modified in the last 3 days; existing user agents (openclaw, fb-xin-jd, githuball, ollama, Google, Zoom, Microsoft, Docker) pre-date the incident by months |
+| Shell startup files, crontab | CHECKED · CLEAN | `.zshrc` (Sep 5), `.zprofile` (Sep 26) unchanged; one pre-existing cron job (android-keep-screen-on) |
+| npm global packages | CHECKED · CLEAN | only npm + corepack (Sep 26 / Jun 23) |
+| npm cache | CHECKED · CLEAN | `rollup-4.64.0.tgz` and the registry metadata of `@napi-rs/lzma-linux-x64-gnu` are cached; the lzma **tarball was never downloaded** (Linux-only optional package) |
+| Package content | CHECKED · NO EVIDENCE OF MALICE | 4.64.0 vs 4.62.0: no new child_process/network/eval/env/home-dir usage; native.js only adds a coverage-flush export; `package.json` documents the lzma entry as a napi cross-build fix (#6461); darwin binary same signing type, no instrumentation. The ~100× slowdown cause stays **UNKNOWN** (likely a regression), so the pin to 4.62.0 stays |
+| Network listeners | CHECKED · 1 FINDING (fixed) | the dev UI (`next start`, :3100) listened on all interfaces → now `-H 127.0.0.1`. `*:5432/*:6379` belong to the unrelated `factory-*` containers (not touched); macOS services (ARD, ControlCenter, rapportd) are system |
+| Files/executables created in the incident window | CHECKED · CLEAN | only a CPU profile written by the diagnosis itself (deleted) |
+| Project files | CHECKED · CLEAN | `git status` clean apart from intended changes |
+| SSH keys / config (metadata only) | CHECKED · CLEAN | keys and config dated Jan 2026; no `authorized_keys` |
+| Git credential config | CHECKED · CLEAN | no credential helper or URL rewrites in global config |
+| Environment files | CHECKED · 1 FINDING (fixed) | `.env` was mode 644 → 600; `.run/*.env`/tokens already 600; none tracked by git |
+| Docker configuration | CHECKED · CLEAN | credsStore `desktop`, one ECR registry login (pre-existing) |
+| Full home scan of the incident window | UNKNOWN | a whole-home `find` exceeded the time limit; narrowed scans (autostart/bin/tmp locations) found nothing |

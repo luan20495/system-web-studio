@@ -201,6 +201,8 @@ app:
   git:
     url: ${FORGEJO_URL:}                                         # empty = code projects unavailable (scripts/forgejo-setup.sh)
     token: ${FORGEJO_TOKEN:}
+    admin-token: ${FORGEJO_ADMIN_TOKEN:}                      # optional: per-user read-only clone access for IDEs
+    public-url: ${FORGEJO_PUBLIC_URL:${FORGEJO_URL:}}            # clone URL shown to developers
     org: ${FORGEJO_ORG:factory}
     bot-name: ${FORGEJO_BOT:factory-bot}
   build:

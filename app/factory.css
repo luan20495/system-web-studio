@@ -196,3 +196,10 @@
 .studio .linkChip{background:rgba(124,140,255,.22);color:#eef0ff}
 .studio .stateView h2{color:#e6edf3}.studio .stateView p,.studio .stateView .stateDetail{color:#b8c2d6}
 .settingsTable td{vertical-align:top}.settingsTable small{display:block}.settingCtl{white-space:nowrap}.settingCtl input[type=number]{width:110px}
+.designCode{flex:1;min-height:0;display:flex;flex-direction:column}
+.designSplit{flex:1;min-height:0;display:grid;grid-template-columns:minmax(200px,45%) 1fr}
+.designTree{list-style:none;margin:0;padding:6px;overflow:auto;border-right:1px solid var(--line)}
+.designTree button{display:block;width:100%;text-align:left;background:none;border:0;color:inherit;padding:4px 8px;border-radius:6px;font:12px/1.4 ui-monospace,Menlo,monospace;cursor:pointer}
+.designTree button.active{background:rgba(124,140,255,.22)}.designTree button.codeOnly{opacity:.6}.designTree small{color:var(--muted)}
+.designProps{padding:12px;overflow:auto}.designProps label{display:grid;gap:4px;font-size:13px}
+.linkButton{background:none;border:0;color:#9cc3ff;cursor:pointer;padding:0;font:inherit;text-decoration:underline}.breakAll{word-break:break-all}

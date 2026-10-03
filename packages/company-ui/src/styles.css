@@ -1,0 +1,29 @@
+/* @company/ui 1.0.0 — CSP-friendly (no inline scripts, no external fonts). */
+:root{--cu-bg:#f5f8fb;--cu-surface:#fff;--cu-text:#10233a;--cu-muted:#5b6b7f;--cu-line:#dfe7ef;--cu-primary:#1f4fd8;--cu-success:#0f7a5a;--cu-warning:#9a6200;--cu-danger:#c62828;--cu-neutral:#3b4a5c;--cu-radius:12px}
+.cu-layout{min-height:100vh;display:grid;grid-template-rows:auto 1fr;background:var(--cu-bg);color:var(--cu-text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.cu-layout-side{grid-template-columns:220px 1fr}.cu-layout-side .cu-layout-header{grid-column:1/-1}
+.cu-navbar{display:flex;align-items:center;gap:16px;padding:12px 20px;background:var(--cu-surface);border-bottom:1px solid var(--cu-line)}
+.cu-brand{font-weight:700}.cu-nav-items{display:flex;gap:12px;list-style:none;margin:0;padding:0;flex:1}.cu-nav-items a,.cu-sidebar a{color:inherit;text-decoration:none}
+.cu-nav-items a[aria-current],.cu-sidebar a[aria-current]{color:var(--cu-primary);font-weight:600}
+.cu-sidebar{background:var(--cu-surface);border-right:1px solid var(--cu-line);padding:16px}.cu-sidebar ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}.cu-sidebar-title{font-size:12px;text-transform:uppercase;color:var(--cu-muted)}
+.cu-btn{border-radius:999px;font-weight:600;cursor:pointer;border:1px solid transparent;font:inherit}.cu-btn:focus-visible,.cu-tabs [role=tab]:focus-visible{outline:3px solid #8fb0ff;outline-offset:2px}
+.cu-size-sm{padding:6px 12px;font-size:13px}.cu-size-md{padding:9px 16px}.cu-size-lg{padding:12px 22px;font-size:17px}
+.cu-btn-solid.cu-tone-primary{background:var(--cu-primary);color:#fff}.cu-btn-solid.cu-tone-danger{background:var(--cu-danger);color:#fff}.cu-btn-solid.cu-tone-success{background:var(--cu-success);color:#fff}
+.cu-btn-solid.cu-tone-neutral{background:var(--cu-neutral);color:#fff}.cu-btn-solid.cu-tone-warning{background:var(--cu-warning);color:#fff}
+.cu-btn-outline{background:transparent;border-color:currentColor}.cu-btn-ghost{background:transparent}.cu-btn-outline.cu-tone-primary,.cu-btn-ghost.cu-tone-primary{color:var(--cu-primary)}
+.cu-btn:disabled{opacity:.55;cursor:not-allowed}
+.cu-card{background:var(--cu-surface);border:1px solid var(--cu-line);border-radius:var(--cu-radius)}.cu-card-title{margin:0 0 8px;font-size:18px}.cu-card-footer{margin-top:12px;display:flex;gap:8px;justify-content:flex-end}
+.cu-field{display:grid;gap:4px}.cu-field label{font-weight:600;font-size:14px}.cu-field input,.cu-field select{padding:9px 10px;border:1px solid var(--cu-line);border-radius:8px;font:inherit;background:#fff}
+.cu-field small{color:var(--cu-muted)}.cu-field-error small{color:var(--cu-danger)}.cu-field-error input{border-color:var(--cu-danger)}
+.cu-check{display:flex;gap:8px;align-items:center}
+.cu-table-wrap{overflow-x:auto}.cu-table{width:100%;border-collapse:collapse;background:#fff}.cu-table caption{text-align:left;font-weight:600;padding:8px 0}
+.cu-table th,.cu-table td{padding:10px;border-bottom:1px solid var(--cu-line);text-align:left}.cu-table th{font-size:13px;color:var(--cu-muted)}
+.cu-tabs [role=tablist]{display:flex;gap:4px;border-bottom:1px solid var(--cu-line)}.cu-tabs [role=tab]{background:none;border:0;padding:9px 12px;font:inherit;cursor:pointer;border-bottom:2px solid transparent}
+.cu-tabs [role=tab][aria-selected=true]{border-bottom-color:var(--cu-primary);color:var(--cu-primary);font-weight:600}.cu-tabs [role=tabpanel]{padding:12px 0}
+.cu-backdrop{position:fixed;inset:0;background:rgba(10,20,35,.45);display:grid;place-items:center;padding:16px}
+.cu-dialog{background:#fff;border-radius:16px;max-width:520px;width:100%;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.25)}.cu-dialog h2{margin:0 0 8px}.cu-dialog-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.cu-toasts{position:fixed;right:16px;bottom:16px;display:grid;gap:8px}.cu-toast{background:var(--cu-text);color:#fff;padding:10px 14px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.cu-toast.cu-tone-danger{background:var(--cu-danger)}.cu-toast.cu-tone-success{background:var(--cu-success)}
+.cu-h1{font-size:32px;margin:0 0 12px}.cu-h2{font-size:24px;margin:0 0 10px}.cu-h3{font-size:18px;margin:0 0 8px}.cu-text{margin:0 0 8px;line-height:1.55}.cu-muted{color:var(--cu-muted)}
+[hidden]{display:none!important}
+@media (max-width:720px){.cu-layout-side{grid-template-columns:1fr}.cu-layout-sidebar{display:none}}

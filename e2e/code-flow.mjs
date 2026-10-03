@@ -57,8 +57,49 @@ await check("Code mode: configuration is read-only; an edit becomes a change tha
   await p.getByRole("button", { name: "Tạo thay đổi & build" }).click(); await waitChange("Nền E2E");
   expect(await p.locator(".changeItem", { hasText: "Nền E2E" }).getByText("Sẵn sàng").isVisible(), "edit did not build");
 });
+await check("Design mode (code): element tree from the AST, a text edit becomes a DESIGN change that builds", async () => {
+  await p.goto(PROJECT_URL + "/design"); await p.getByRole("button", { name: /<Heading>/ }).click();
+  const box = p.getByLabel("Văn bản"); await box.fill("Tiêu đề từ Design"); await p.getByRole("button", { name: "Tạo thay đổi & build" }).click();
+  await waitChange("Chỉnh Heading");
+  expect(sql(`select kind||':'||left(branch,7) from code_changes where project_id='${PID}' and summary like 'Chỉnh Heading%'`) === "DESIGN:design/", "design change row");
+  await p.frameLocator("iframe.appPreview").getByText("Tiêu đề từ Design").waitFor({ timeout: 20000 });
+  expect(await p.getByRole("button", { name: /<Navbar>/ }).isVisible(), "tree lists Navbar");
+});
+await check("approved package: admin approves clsx (closure resolved in the sandbox + OSV), the app requests it, a DEPENDENCY change builds", async () => {
+  const admin = await session("local.admin");
+  await admin.p.goto(BASE + "/admin/packages"); await admin.p.getByLabel("Tên package").fill("clsx"); await admin.p.getByLabel("Khoảng phiên bản").fill("^2.1.0");
+  await admin.p.getByRole("button", { name: "Kiểm tra & duyệt" }).first().click();
+  for (let i = 0; i < 60 && sql("select status from approved_packages where name='clsx'") !== "ALLOWED"; i++) await p.waitForTimeout(1000);
+  expect(sql("select status from approved_packages where name='clsx'") === "ALLOWED", "clsx not allowed: " + sql("select status||' '||note from approved_packages where name='clsx'"));
+  await admin.c.close();
+  await p.goto(PROJECT_URL + "/packages"); const dlg = p.getByRole("dialog", { name: "Thư viện (package)" });
+  await dlg.locator("li", { hasText: "clsx" }).getByRole("button", { name: "Thêm" }).click(); await dlg.getByText("Đã tạo thay đổi").waitFor({ timeout: 90000 });
+  await p.keyboard.press("Escape"); await waitChange("Thêm thư viện clsx");
+  expect(await p.locator(".changeItem", { hasText: "Thêm thư viện clsx" }).getByText("Sẵn sàng").isVisible(), "dependency change did not build");
+});
+await check("review policy: with REVIEW_REQUIRED the author cannot merge alone; another member with publish rights approves", async () => {
+  sql(`update projects set merge_policy='REVIEW_REQUIRED' where id='${PID}'`);
+  await p.goto(PROJECT_URL + "/ai"); await p.locator(".changeItem", { hasText: "Thêm thư viện clsx" }).click();
+  expect(await p.getByRole("button", { name: "Hợp nhất vào main" }).isDisabled(), "merge must wait for approval");
+  const admin = await session("local.admin"); await admin.p.goto(PROJECT_URL + "/ai");
+  admin.p.removeAllListeners("dialog"); admin.p.on("dialog", (d) => d.accept("Đã xem")); await admin.p.locator(".changeItem", { hasText: "Thêm thư viện clsx" }).click();
+  await admin.p.getByRole("button", { name: "Duyệt", exact: true }).click(); await admin.p.getByText(/Đã duyệt bởi/).waitFor(); await admin.c.close();
+  await p.reload(); await p.locator(".changeItem", { hasText: "Thêm thư viện clsx" }).click();
+  await p.getByRole("button", { name: "Hợp nhất vào main" }).click(); await p.getByText(/Đã hợp nhất vào main/).waitFor({ timeout: 30000 });
+  sql(`update projects set merge_policy=NULL where id='${PID}'`);
+});
+await check("bot commits are signed; IDE access gives a read-only token that clones with real git", async () => {
+  await p.goto(PROJECT_URL + "/versions"); await p.getByText(/Đã ký · factory-bot/).first().waitFor();
+  await p.goto(PROJECT_URL + "/ide"); await p.getByRole("button", { name: "Tạo token clone" }).click();
+  const cmd = (await p.locator("pre.buildLog").innerText()).trim(); expect(cmd.startsWith("git clone http"), cmd);
+  const dir = execSync("mktemp -d").toString().trim();
+  execSync(`${cmd} ${dir}/repo`, { stdio: "pipe" }); expect(execSync(`ls ${dir}/repo/src`).toString().includes("App.tsx"), "clone missing files");
+  let pushed = true; try { execSync(`cd ${dir}/repo && git -c user.email=x@y -c user.name=x commit --allow-empty -qm x && git push -q origin HEAD:refs/heads/evil`, { stdio: "pipe" }); } catch { pushed = false; }
+  execSync(`rm -rf ${dir}`); expect(!pushed, "read-only token must not push");
+  await p.getByRole("button", { name: "Thu hồi token" }).click();
+});
 await check("a type error fails the build in the sandbox and cannot be merged", async () => {
-  await p.getByRole("button", { name: "src/App.tsx" }).click(); const box = p.getByLabel("Nội dung src/App.tsx"); await box.waitFor();
+  await p.goto(PROJECT_URL + "/code"); await p.getByRole("button", { name: "src/App.tsx", exact: true }).click(); const box = p.getByLabel("Nội dung src/App.tsx"); await box.waitFor();
   await box.fill((await box.inputValue()) + "\nexport const broken: number = \"not a number\";\n"); await p.getByLabel("Mô tả thay đổi").fill("Lỗi kiểu E2E");
   await p.getByRole("button", { name: "Tạo thay đổi & build" }).click(); await waitChange("Lỗi kiểu E2E");
   await p.locator(".changeItem", { hasText: "Lỗi kiểu E2E" }).click(); await p.getByText("Build không thành công").waitFor();

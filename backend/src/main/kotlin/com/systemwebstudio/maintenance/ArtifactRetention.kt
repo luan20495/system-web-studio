@@ -19,6 +19,7 @@ data class RetentionResult(val previewsExpired: Int, val artifactsDeleted: Int, 
  */
 @Service
 class ArtifactRetentionService(
+    private val gitAccess: org.springframework.beans.factory.ObjectProvider<com.systemwebstudio.code.GitAccessService>,
     private val jdbc: JdbcTemplate, private val json: JsonMapper, private val store: ArtifactStore, private val git: ForgejoClient,
     private val settings: SettingsService, private val audit: AuditService
 ) {
@@ -61,6 +62,7 @@ class ArtifactRetentionService(
             jdbc.update("UPDATE repositories SET state = 'PENDING_DELETE', updated_at = now() WHERE project_id = ? AND state = 'ARCHIVED'", it["project_id"])
             audit.record("REPOSITORY_PENDING_DELETE", "REPOSITORY", it["project_id"], projectId = it["project_id"] as UUID, actorId = null, newValue = mapOf("name" to it["name"]))
         }
+        if (!dryRun) runCatching { gitAccess.ifAvailable?.syncCollaborators() }.onFailure { log.warn("Git access sync failed: {}", it.message) }
         return RetentionResult(expired, if (dryRun) drop.size else deleted, if (dryRun) drop.sumOf { (it["total_bytes"] as Number).toLong() } else freed, logs, due.size)
     }
 

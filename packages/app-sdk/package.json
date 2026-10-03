@@ -1,0 +1,12 @@
+{
+  "name": "@company/app-sdk",
+  "version": "1.0.0",
+  "description": "Runtime SDK for source-code apps of the AI Software Factory: runtime config, user context, API client, logging, feature flags, assets.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "files": ["dist", "README.md"],
+  "peerDependencies": { "react": ">=19" },
+  "license": "UNLICENSED"
+}

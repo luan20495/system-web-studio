@@ -8,7 +8,10 @@
 import { spawn } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync, readFileSync, readdirSync, existsSync } from "node:fs";
 import { tmpdir, hostname } from "node:os";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import { createHash } from "node:crypto";
+import { verdaccioConfig } from "./verdaccio-config.mjs";
 
 const API = process.env.RUNNER_API ?? "http://127.0.0.1:8080";
 const TOKEN = process.env.BUILD_RUNNER_TOKEN ?? "";
@@ -17,6 +20,9 @@ const NAME = process.env.RUNNER_NAME ?? `runner-${hostname()}`;
 const POLL = Number(process.env.RUNNER_POLL_MS ?? 3000);
 const OSV = process.env.OSV_URL ?? "https://api.osv.dev";
 if (!TOKEN) { console.error("BUILD_RUNNER_TOKEN is required"); process.exit(1); }
+const MIRROR_CONFIG = process.env.MIRROR_CONFIG ?? join(dirname(fileURLToPath(import.meta.url)), "../../infra/verdaccio/config.yaml");
+const MIRROR_CONTAINER = process.env.MIRROR_CONTAINER ?? "hbl-verdaccio-1";
+let mirrorHash = "";
 
 const headers = { "X-Runner-Token": TOKEN };
 const log = (...a) => console.log(new Date().toISOString(), ...a);
@@ -68,6 +74,72 @@ async function api(method, path, body, type = "application/json") {
   return fetch(`${API}${path}`, { method, headers: { ...headers, ...(body ? { "Content-Type": type } : {}) }, body, signal: AbortSignal.timeout(120_000) });
 }
 
+/** Keep the mirror's allowlist equal to the API's (approved catalog). The runner is the build-plane operator, so it may restart the mirror. */
+async function syncMirror(job) {
+  if (!job.allowlistHash || job.allowlistHash === mirrorHash) return;
+  const want = verdaccioConfig(job.allowlist ?? []);
+  let have = ""; try { have = readFileSync(MIRROR_CONFIG, "utf8"); } catch { /* first run */ }
+  if (createHash("sha256").update(have).digest("hex") !== createHash("sha256").update(want).digest("hex")) {
+    writeFileSync(MIRROR_CONFIG, want); log(`mirror allowlist updated (${job.allowlist.length} names); restarting ${MIRROR_CONTAINER}`);
+    await run("docker", ["restart", MIRROR_CONTAINER], { timeoutMs: 60_000 });
+    for (let i = 0; i < 30; i++) { const p = await run("docker", ["exec", MIRROR_CONTAINER, "wget", "-qO-", "http://127.0.0.1:4873/-/ping"], { timeoutMs: 5000 }); if (p.code === 0) break; await new Promise((s) => setTimeout(s, 1000)); }
+  }
+  mirrorHash = job.allowlistHash;
+}
+
+const lockNames = (lock) => Object.keys(lock.packages ?? {}).filter(Boolean).map((k) => k.slice(k.lastIndexOf("node_modules/") + 13));
+const SPLIT = "__FACTORY_SPLIT__";
+
+/** LOCK: lockfile for an approved dependency, made by npm inside the sandbox (mirror only, scripts off). Output is validated by the API. */
+async function processLock(job) {
+  const t0 = Date.now(); const L = []; let stage = "SOURCE";
+  const done = (status, error, result) => api("POST", `/internal/build-jobs/${job.id}/finish`, JSON.stringify({ status, stage, error, result, log: redact(L.join("\n")).slice(-30_000), durationMs: Date.now() - t0 }));
+  const tmp = mkdtempSync(join(tmpdir(), `factory-lock-`)); const vol = `factory-lock-${job.id.slice(0, 8)}`;
+  try {
+    const src = await fetch(job.sourceUrl, { headers, signal: AbortSignal.timeout(120_000) }); if (!src.ok) throw new Error(`source HTTP ${src.status}`);
+    writeFileSync(join(tmp, "src.tgz"), Buffer.from(await src.arrayBuffer())); await run("tar", ["-xzf", join(tmp, "src.tgz"), "-C", tmp]);
+    const dir = join(tmp, readdirSync(tmp).find((n) => n !== "src.tgz"));
+    await run("docker", ["volume", "create", vol]);
+    const c = (await run("docker", ["create", "--network", "none", "-v", `${vol}:/work`, job.image, "true"])).out.trim();
+    for (const f of ["package.json", "package-lock.json"]) await run("docker", ["cp", join(dir, f), `${c}:/work/${f}`]);
+    await run("docker", ["rm", c]);
+    await run("docker", ["run", "--rm", "--network", "none", "--cap-drop", "ALL", "--cap-add", "CHOWN", "-v", `${vol}:/work`, job.image, "chown", "-R", "1000:1000", "/work"]);
+    stage = "LOCK";
+    const spec = `${job.input.name}@${job.input.spec}`;
+    const r = await run("docker", ["run", "--rm", "--name", `${vol}-l`, "--network", NETWORK, ...HARDEN(job.limits), "-v", `${vol}:/work`, "-w", "/work", "-e", "npm_config_cache=/tmp/npm",
+      job.image, "sh", "-c", `npm install '${spec.replace(/'/g, "")}' ${job.input.exact ? "--save-exact" : ""} --package-lock-only --ignore-scripts --no-audit --no-fund --replace-registry-host=always --registry http://verdaccio:4873/ >&2 && cat package.json && echo ${SPLIT} && cat package-lock.json`],
+      { timeoutMs: 180_000, container: `${vol}-l` });
+    L.push(r.err.slice(-8000));
+    if (r.code !== 0) throw new Error(r.timedOut ? "lock timed out" : "npm could not resolve the package from the approved mirror");
+    const [packageJson, packageLock] = r.out.split(SPLIT).map((s) => s.trim());
+    JSON.parse(packageJson); JSON.parse(packageLock);
+    stage = "DONE"; await done("SUCCEEDED", null, { packageJson: packageJson + "\n", packageLock: packageLock + "\n" });
+  } catch (e) { L.push(`ERROR: ${e.message}`); await done("FAILED", `${stage}: ${e.message}`); }
+  finally { await run("docker", ["rm", "-f", `${vol}-l`]); await run("docker", ["volume", "rm", "-f", vol]); rmSync(tmp, { recursive: true, force: true }); }
+}
+
+/**
+ * RESOLVE (admin approval of a package): dependency closure from the public registry. No user code is present and install scripts are
+ * off — npm only reads metadata — so this one step may use the default bridge network. Then the closure is scanned with OSV.
+ */
+async function processResolve(job) {
+  const t0 = Date.now(); const L = []; let stage = "RESOLVE";
+  const done = (status, error, result) => api("POST", `/internal/build-jobs/${job.id}/finish`, JSON.stringify({ status, stage, error, result, log: redact(L.join("\n")).slice(-30_000), durationMs: Date.now() - t0 }));
+  try {
+    const spec = `${job.input.name}@${job.input.spec}`.replace(/'/g, "");
+    const r = await run("docker", ["run", "--rm", "--name", `factory-resolve-${job.id.slice(0, 8)}`, "--network", "bridge", ...HARDEN(job.limits), "-e", "npm_config_cache=/tmp/npm",
+      job.image, "sh", "-c", `mkdir -p /tmp/r && cd /tmp/r && echo '{"name":"resolve","private":true}' > package.json && npm install '${spec}' --package-lock-only --ignore-scripts --no-audit --no-fund --registry https://registry.npmjs.org/ >&2 && cat package-lock.json`],
+      { timeoutMs: 180_000, container: `factory-resolve-${job.id.slice(0, 8)}` });
+    L.push(r.err.slice(-8000));
+    if (r.code !== 0) throw new Error(r.timedOut ? "resolve timed out" : "package not found or not resolvable");
+    const lock = JSON.parse(r.out);
+    stage = "SCAN"; const scan = await osvScan(lock);
+    const packages = Object.entries(lock.packages ?? {}).filter(([k]) => k).map(([k, v]) => ({ name: k.slice(k.lastIndexOf("node_modules/") + 13), version: v.version }));
+    L.push(`${packages.length} packages, ${scan.findings.length} advisories (${scan.blocking.length} high/critical)`);
+    stage = "DONE"; await done("SUCCEEDED", null, { packages, findings: scan.findings, blocking: scan.blocking });
+  } catch (e) { L.push(`ERROR: ${e.message}`); await done("FAILED", `${stage}: ${e.message}`); }
+}
+
 async function processJob(job) {
   const id8 = job.id.slice(0, 8), vol = `factory-job-${id8}`, tmp = mkdtempSync(join(tmpdir(), `factory-${id8}-`));
   const L = []; const step = (s) => { L.push(`\n== ${s}`); log(job.id, s); };
@@ -95,6 +167,9 @@ async function processJob(job) {
     if (scans.sourceSecrets.findings.length) throw new Error(`secret scan: ${scans.sourceSecrets.findings.length} finding(s) in source`);
     step("dependency scan (OSV)");
     const lock = JSON.parse(readFileSync(join(srcDir, "package-lock.json"), "utf8"));
+    const allowed = new Set(job.allowlist ?? []);
+    const outside = lockNames(lock).filter((n) => !allowed.has(n) && !n.startsWith("@company/"));
+    if (allowed.size && outside.length) throw new Error(`lockfile contains packages outside the approved catalog: ${outside.slice(0, 8).join(", ")}`);
     scans.dependencies = await osvScan(lock);
     scans.sbom = Object.entries(lock.packages ?? {}).filter(([k]) => k).map(([k, v]) => ({ name: k.slice(k.lastIndexOf("node_modules/") + 13), version: v.version, integrity: v.integrity }));
     L.push(`${scans.dependencies.packages} packages, ${scans.dependencies.findings.length} advisories (${scans.dependencies.blocking.length} high/critical)`);
@@ -110,7 +185,7 @@ async function processJob(job) {
 
     stage = "INSTALL"; step("install (mirror only, scripts disabled)");
     const inst = await run("docker", ["run", "--rm", "--name", `${vol}-i`, "--network", NETWORK, ...HARDEN(job.limits), "-v", `${vol}:/work`, "-w", "/work",
-      "-e", "npm_config_cache=/tmp/npm", job.image, "sh", "-c", "npm ci --ignore-scripts --no-audit --no-fund --registry http://verdaccio:4873/" + CPU],
+      "-e", "npm_config_cache=/tmp/npm", job.image, "sh", "-c", "npm ci --ignore-scripts --no-audit --no-fund --replace-registry-host=always --registry http://verdaccio:4873/" + CPU],
       { timeoutMs: (job.limits.installSeconds ?? 300) * 1000, container: `${vol}-i` }); takeCpu(inst);
     L.push(inst.out.slice(-8000), inst.err.slice(-8000));
     if (inst.code !== 0) throw new Error(inst.timedOut ? "install timed out" : `install failed (exit ${inst.code}) — packages outside the approved list are refused`);
@@ -150,7 +225,11 @@ log(`runner ${NAME} polling ${API} (network ${NETWORK})`);
 for (;;) {
   try {
     const r = await api("POST", `/internal/build-jobs/claim?runner=${encodeURIComponent(NAME)}`);
-    if (r.status === 200) { await processJob(await r.json()); continue; }
+    if (r.status === 200) {
+      const job = await r.json(); await syncMirror(job).catch((e) => log("mirror sync failed:", e.message));
+      if (job.purpose === "LOCK") await processLock(job); else if (job.purpose === "RESOLVE") await processResolve(job); else await processJob(job);
+      continue;
+    }
     if (r.status !== 204) log("claim answered", r.status);
   } catch (e) { log("poll error:", e.message); }
   await new Promise((s) => setTimeout(s, POLL));
