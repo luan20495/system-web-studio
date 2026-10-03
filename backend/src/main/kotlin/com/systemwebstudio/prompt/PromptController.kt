@@ -96,6 +96,7 @@ class PromptController(
     ): PromptResponse {
         val ctx = access.forProject(me.userId, workspaceId, projectId)
         ctx.require(Permission.PROJECT_EDIT)
+        if (ctx.project!!.appType == "STATIC_APP") throw ApiException.conflict("CODE_PROJECT", "Code projects are edited through /code/ai and /code/changes")
         limiter.require("prompt:${me.userId}", promptMax, 60, "prompt")
         ai.requireAllowed(request.model)
         if (ai.isExternal(request.model)) {

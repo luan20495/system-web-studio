@@ -44,10 +44,23 @@ class CodeProjectTests : IntegrationTestBase() {
                 java.net.http.HttpResponse.BodyHandlers.discarding())
             t
         }
+        @Volatile var aiReply: String = ""
+        private val aiStub: com.sun.net.httpserver.HttpServer = com.sun.net.httpserver.HttpServer.create(java.net.InetSocketAddress("127.0.0.1", 0), 0).apply {
+            createContext("/v1/chat/completions") { ex ->
+                ex.requestBody.readBytes()
+                val body = tools.jackson.databind.json.JsonMapper.builder().build().writeValueAsString(mapOf("id" to "c1",
+                    "choices" to listOf(mapOf("message" to mapOf("role" to "assistant", "content" to aiReply))),
+                    "usage" to mapOf("prompt_tokens" to 900, "completion_tokens" to 300, "total_tokens" to 1200))).toByteArray()
+                ex.sendResponseHeaders(200, body.size.toLong()); ex.responseBody.use { it.write(body) }
+            }
+            start()
+        }
         @JvmStatic @DynamicPropertySource
         fun git(registry: DynamicPropertyRegistry) {
             registry.add("app.git.url") { "http://${forgejo.host}:${forgejo.getMappedPort(3000)}" }
             registry.add("app.git.token") { token }
+            registry.add("app.ai.providers.local.base-url") { "http://127.0.0.1:${aiStub.address.port}/v1" }
+            registry.add("app.ai.providers.local.models") { "stub-code" }
         }
 
     }
@@ -199,4 +212,41 @@ class CodeProjectTests : IntegrationTestBase() {
         assertThat(sc.s.body(sc.s.post("$code/changes/${c.get("id").asString()}/discard")).get("status").asString()).isEqualTo("DISCARDED")
         assertThat(sc.s.body(sc.s.get("$code/commits")).size()).isEqualTo(1)                                      // main untouched
     }
+
+    @Test
+    fun `AI for code - the simulator makes a real change on an ai branch, unknown requests change nothing`() {
+        val sc = scenario(); val (_, code) = sc.codeProject()
+        val r = sc.s.body(sc.s.post("$code/ai", """{"prompt":"Đổi tiêu đề thành \"Xin chào AI\""}"""))
+        assertThat(r.get("outcome").asString()).isEqualTo("UPDATED"); assertThat(r.get("provider").asString()).isEqualTo("mock")
+        val change = r.get("change"); assertThat(change.get("kind").asString()).isEqualTo("AI"); assertThat(change.get("branch").asString()).startsWith("ai/")
+        val diff = sc.s.body(sc.s.get("$code/changes/${change.get("id").asString()}/diff")).toList().single()
+        assertThat(diff.get("path").asString()).isEqualTo("src/App.tsx"); assertThat(diff.get("after").asString()).contains("<h1>Xin chào AI</h1>")
+        val none = sc.s.body(sc.s.post("$code/ai", """{"prompt":"làm một trò chơi 3D"}"""))
+        assertThat(none.get("outcome").asString()).isEqualTo("NO_CHANGE"); assertThat(none.get("change").isNull).isTrue()
+        val history = sc.s.body(sc.s.get("$code/ai")).toList()
+        assertThat(history).hasSize(2); assertThat(history.last().get("changeId").asString()).isEqualTo(change.get("id").asString())
+    }
+
+    @Test
+    fun `AI for code - a model answer is data - valid files become an ai change with usage recorded, forbidden files are refused`() {
+        val a = sessionFor(fx.user("codeai-admin", systemAdmin = true).username)
+        assertThat(a.put("/api/v1/admin/ai/models/policy", """{"modelId":"local:stub-code","enabled":true}""").response.status).isEqualTo(200)
+        val sc = scenario(); val (pid, code) = sc.codeProject()
+        aiReply = json.writeValueAsString(mapOf("message" to "Đã thêm phần giới thiệu", "files" to listOf(mapOf("path" to "src/Intro.tsx", "content" to "export const Intro = () => <p>Giới thiệu</p>;"))))
+        val ok = sc.s.body(sc.s.post("$code/ai", """{"prompt":"thêm phần giới thiệu","model":"local:stub-code"}"""))
+        assertThat(ok.get("outcome").asString()).isEqualTo("UPDATED"); assertThat(ok.get("provider").asString()).isEqualTo("local")
+        assertThat(ok.get("usage").get("totalTokens").asLong()).isEqualTo(1200)
+        assertThat(ok.get("change").get("files").toList().map { it.asString() }).containsExactly("src/Intro.tsx")
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM ai_calls WHERE project_id = ?::uuid", Long::class.java, pid)).isEqualTo(1)
+        val head = ok.get("change").get("headSha").asString()
+        aiReply = json.writeValueAsString(mapOf("message" to "x", "files" to listOf(mapOf("path" to "package.json", "content" to "{\"dependencies\":{\"evil\":\"1\"}}"))))
+        val refused = sc.s.body(sc.s.post("$code/ai", """{"prompt":"thêm thư viện","model":"local:stub-code"}"""))
+        assertThat(refused.get("outcome").asString()).isEqualTo("UNSUPPORTED"); assertThat(refused.get("change").isNull).isTrue()
+        aiReply = "I cannot help with that"
+        assertThat(sc.s.body(sc.s.post("$code/ai", """{"prompt":"x","model":"local:stub-code"}""")).get("outcome").asString()).isEqualTo("NO_CHANGE")
+        assertThat(sc.s.body(sc.s.get("$code/changes")).toList().map { it.get("headSha").asString() }).containsExactly(head)   // only the valid change exists
+        // page-schema prompt endpoint refuses code projects
+        assertThat(sc.s.post("${api(sc.ws, UUID.fromString(pid))}/prompts", """{"prompt":"x","expectedRevision":0}""").response.status).isEqualTo(409)
+    }
 }
+

@@ -39,6 +39,37 @@ class ExternalLLMProvider(
     }
     private val log = LoggerFactory.getLogger(javaClass)
 
+    data class Completion<T>(val result: T?, val provider: String, val model: String?, val calls: List<AiCall>, val error: String?)
+
+    /**
+     * Generic call with the same model choice, fail-over and accounting rules as [plan] ("auto" = OpenRouter free models in turn; an
+     * explicit model is never replaced). [parse] turns the answer into a result or throws [BadModelOutput] (counted as BAD_OUTPUT).
+     */
+    fun <T> complete(model: String?, system: String, user: String, maxTokens: Int, parse: (String) -> T): Completion<T> {
+        val candidates: List<Triple<ChatProvider, String, String>> = when {
+            model == null || model == "auto" -> ai.autoCandidates().map { Triple(openRouter, it, it) }
+            else -> providers.split(model)?.let { (p, bare) -> listOf(Triple(p, bare, model)) } ?: listOf(Triple(openRouter, model, model))
+        }
+        val calls = mutableListOf<AiCall>(); var last: String? = null; var lastProvider = name; var lastError = "không có model khả dụng"
+        for ((provider, bare, id) in candidates) {
+            last = id; lastProvider = provider.id
+            val t0 = System.nanoTime(); fun elapsed() = (System.nanoTime() - t0) / 1_000_000
+            var usage: ChatUsage? = null
+            try {
+                val answer = provider.chat(bare, system, user, maxTokens); usage = answer.usage
+                val result = parse(answer.content)
+                ai.markOk(id); calls += AiCall(provider.id, id, "OK", 200, usage, elapsed())
+                return Completion(result, provider.id, id, calls, null)
+            } catch (e: AiProviderException) {
+                calls += AiCall(provider.id, id, if (e.usage != null) "BAD_OUTPUT" else "ERROR", e.status.takeIf { it > 0 }, e.usage, elapsed())
+                lastError = e.message ?: "lỗi"; if (e.fatal) break; ai.markFailed(id)
+            } catch (e: BadModelOutput) {
+                calls += AiCall(provider.id, id, "BAD_OUTPUT", 200, usage, elapsed()); lastError = e.message ?: "định dạng không hợp lệ"; ai.markFailed(id)
+            }
+        }
+        return Completion(null, lastProvider, last, calls, lastError)
+    }
+
     override fun plan(request: LLMRequest): LLMResponse {
         val page = json.writeValueAsString(request.pageSchema)
         if (page.length > maxPageChars) return failure("Trang quá lớn để gửi cho AI (${page.length} ký tự, tối đa $maxPageChars).", null)

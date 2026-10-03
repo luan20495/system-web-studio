@@ -70,6 +70,7 @@ class SchemaVersionController(
     ): SchemaResponse {
         val ctx = access.forProject(me.userId, workspaceId, projectId)
         ctx.require(Permission.PROJECT_EDIT)
+        if (ctx.project!!.appType == "STATIC_APP") throw ApiException.conflict("CODE_PROJECT", "Code projects have no page schema; use /code/changes")
         val current = schemas.ensureInitialized(ctx.project!!, me.userId)
         val next = patcher.apply(current, request.operations!!)
         if (next == current) throw ApiException.badRequest("NO_CHANGE", "The operations did not change the page")

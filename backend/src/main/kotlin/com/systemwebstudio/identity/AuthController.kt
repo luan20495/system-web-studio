@@ -44,6 +44,7 @@ class AuthController(
     private val rateLimiter: RateLimiter,
     private val audit: AuditService,
     private val jdbc: JdbcTemplate,
+    private val codeProjects: com.systemwebstudio.code.CodeProjectService,
     @Value("\${app.local-login.enabled:true}") private val localLogin: Boolean,
     @Value("\${app.oidc.enabled:false}") private val oidc: Boolean,
     @Value("\${app.signup.enabled:false}") private val signup: Boolean,
@@ -57,7 +58,8 @@ class AuthController(
 
     /** Lets the UI show the right sign-in options without hard-coding the deployment's identity strategy. */
     @GetMapping("/config")
-    fun config(): Map<String, Any> = mapOf("localLogin" to localLogin, "oidc" to oidc, "oidcLoginUrl" to "/oauth2/authorization/oidc", "signup" to signup, "signupInviteRequired" to inviteCode.isNotBlank())
+    fun config(): Map<String, Any> = mapOf("localLogin" to localLogin, "oidc" to oidc, "oidcLoginUrl" to "/oauth2/authorization/oidc", "signup" to signup, "signupInviteRequired" to inviteCode.isNotBlank(),
+        "codeProjects" to codeProjects.available)
 
     @PostMapping("/login")
     fun login(@Valid @RequestBody body: LoginRequest, request: HttpServletRequest, response: HttpServletResponse): MeResponse {
