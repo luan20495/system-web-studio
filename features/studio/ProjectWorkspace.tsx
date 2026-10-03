@@ -62,6 +62,8 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const [savingBlock, setSavingBlock] = useState(false);
   const [assets, setAssets] = useState<AssetDto[]>([]);
   const [ai, setAi] = useState<AiStatus | null>(null);
+  /** a streamed AI answer in progress: stream id (for cancel), raw output so far, last status */
+  const [live, setLive] = useState<{ id: string | null; text: string; status: string } | null>(null);
   const [publicPublish, setPublicPublish] = useState<boolean | undefined>(undefined);
   useEffect(() => { api.authConfig().then((c) => setPublicPublish(c.publicPublish)).catch(() => undefined); }, []);
   const [loadError, setLoadError] = useState<unknown>(null);
@@ -96,7 +98,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
     setSave((x) => (x.at ? x : { state: "saved", at: new Date(p.updatedAt) }));
     void loadAssets(p.workspaceId);
   }, [projectId, loadAssets]);
-  useEffect(() => { reload().catch(setLoadError); api.components().then(setRegistry).catch(() => undefined); loadBlocks(); api.aiStatus().then(setAi).catch(() => undefined); }, [reload]);
+  useEffect(() => { reload().catch(setLoadError); api.components().then(setRegistry).catch(() => undefined); loadBlocks(); api.aiStatus(ws).then(setAi).catch(() => undefined); }, [reload]); // eslint-disable-line react-hooks/exhaustive-deps
   // signed download URLs expire after 10 minutes: refresh the asset map before that
   useEffect(() => { if (!ws) return; const t = setInterval(() => void loadAssets(ws), 8 * 60_000); return () => clearInterval(t); }, [ws, loadAssets]);
   useEffect(() => { try { localStorage.setItem("studio-ai-model", model); } catch { /* ignore */ } }, [model]);
@@ -122,13 +124,22 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   async function submitPrompt(text = prompt.trim()) {
     if (!text || busy || readOnly || !project) return;
     setMessages((m) => [...m, { id: `local-${Date.now()}`, role: "user", content: text }]); setPrompt("");
-    const r = await run("prompt", () => api.sendPrompt(ws, projectId, text, revision, ai?.configured ? effectiveModel : undefined), "Không thể cập nhật website.");
+    const real = ai?.configured === true && effectiveModel !== "mock";
+    // real models stream (partial output, cancel, deadline); the simulator answers at once
+    const r = await run("prompt", () => real
+      ? api.streamPrompt(ws, projectId, text, revision, effectiveModel, {
+          onStart: (id) => setLive({ id, text: "", status: "" }),
+          onDelta: (t) => setLive((l) => l ? { ...l, text: l.text + t } : l),
+          onStatus: (st) => setLive((l) => l ? { ...l, status: st } : l) }).finally(() => setLive(null))
+      : api.sendPrompt(ws, projectId, text, revision, ai?.configured ? effectiveModel : undefined), "Không thể cập nhật website.");
     if (!r) return;
     setSchema(r.pageSchema); setRevision(r.revision);
     const changed = Array.from(new Set(r.schemaPatch.map((op) => op.sectionType ?? r.pageSchema.sections.find((s) => s.id === op.sectionId)?.type ?? schema?.sections.find((s) => s.id === op.sectionId)?.type).filter(Boolean) as string[]));
     const used = Array.from(new Set(r.pageSchema.sections.map((s) => s.type)));
+    const reuse = r.reuseSources;
     const meta = [r.outcome, r.model && r.model !== "mock" ? r.model : "mô phỏng", ...(r.version ? [`Phiên bản ${r.version.versionNumber}`] : []),
-      usageChip(r.usage?.attempts ?? 0, r.usage?.totalTokens ?? null, r.usage?.costUsd ?? null)];
+      usageChip(r.usage?.attempts ?? 0, r.usage?.totalTokens ?? null, r.usage?.costUsd ?? null),
+      ...(reuse && (reuse.blocks.length || reuse.templates.length) ? [`Tái sử dụng: ${reuse.blocks.length} khối, ${reuse.templates.length} template`] : [])];
     const detail = r.outcome === "UPDATED" ? `Đã đổi: ${changed.map(label).join(", ") || "—"} · Component đang dùng: ${used.map(label).join(", ")}` : undefined;
     setMessages((m) => [...m, { id: r.promptId, role: "assistant", content: r.message.content, meta, detail }]);
     if (r.version) void refreshVersions();
@@ -257,7 +268,11 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
                     {m.detail ? <div className="msgDetail">{m.detail}</div> : null}
                     {m.meta?.length ? <div className="chips">{m.meta.map((x) => <span className="chip" key={x}>{x}</span>)}</div> : null}</div></div>
                 ))}
-                {busy === "prompt" ? <div className="message assistant"><div className="bubble typing" role="status"><span className="dots" aria-hidden="true"><i/><i/><i/></span> Đang phân tích yêu cầu{ai?.configured && effectiveModel !== "mock" ? " với AI…" : "…"}</div></div> : null}
+                {busy === "prompt" && live ? <div className="message assistant"><div className="bubble typing liveStream" role="status">
+                    <div><span className="dots" aria-hidden="true"><i/><i/><i/></span> {live.status.startsWith("tool:") ? `AI đang tra cứu (${live.status.slice(5)})…` : live.text ? `Đang nhận câu trả lời… ${live.text.length} ký tự` : "Đang chờ AI…"}</div>
+                    {live.text ? <pre className="streamTail" aria-hidden="true">{live.text.slice(-240)}</pre> : null}
+                    {live.id ? <button type="button" className="smallButton" onClick={() => { void api.cancelStream(live.id!).catch(() => undefined); }}>Huỷ</button> : null}</div></div>
+                  : busy === "prompt" ? <div className="message assistant"><div className="bubble typing" role="status"><span className="dots" aria-hidden="true"><i/><i/><i/></span> Đang phân tích yêu cầu{ai?.configured && effectiveModel !== "mock" ? " với AI…" : "…"}</div></div> : null}
               </div>
               <div className="composer">
                 {!readOnly && messages.length > 0 ? <div className="suggestions" aria-label="Gợi ý">{suggestions(ai?.configured === true).map((t) => (

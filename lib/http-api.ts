@@ -1,5 +1,6 @@
 import type {
   AdminAi, AiCallRow, SettingView, BuildPolicyReport, CleanupResult, RepoRow, AiPrice, AiProbe, AiProviderInfo, AiUsageReport, AdminApp, BlockDto, CheckResult, TemplateDto, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
+  AccessRule, EffectiveModel, AiBudget, AdminAlert, StreamHandlers,
   AiStatus, ApiProject, AuthConfig, Member, SiteInfo, DesignNode, DependencyRequest, PackageView, CloneAccess, TreeFile, CodeFile, CodeCommit, CodeChange, DiffFile, CodeAiResponse, CodeAiHistoryItem, RegistryComponent, AssetDto, Deployment, Me, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
 } from "./http-types";
 
@@ -64,6 +65,45 @@ async function call<T>(path: string, init: RequestInit & { idempotencyKey?: stri
   return response.json() as Promise<T>;
 }
 
+/**
+ * POST that answers with server-sent events (AI streaming): start → delta* / status* → result | error. Resolves with the `result` body.
+ * Refusals before the stream starts (quota, budget, model access) arrive as ordinary JSON errors.
+ */
+async function stream<T>(path: string, body: unknown, h: StreamHandlers): Promise<T> {
+  const token = await csrf();
+  let response: Response;
+  try {
+    response = await fetch(`/api/v1${path}`, { method: "POST", credentials: "include", cache: "no-store",
+      headers: { "Content-Type": "application/json", Accept: "text/event-stream", "X-XSRF-TOKEN": token }, body: JSON.stringify(body) });
+  } catch { throw new ApiError(0, "NETWORK", "Không kết nối được tới máy chủ. Kiểm tra backend rồi thử lại."); }
+  if (!response.ok || !response.body) {
+    const b = await response.json().catch(() => null) as { code?: string; message?: string; requestId?: string; details?: unknown } | null;
+    if (response.status === 403 && b?.code === "CSRF_INVALID") resetCsrf();
+    throw new ApiError(response.status, b?.code ?? `HTTP_${response.status}`, b?.message ?? `Lỗi ${response.status}`, b?.requestId, b?.details);
+  }
+  const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+  let buf = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += value;
+    let i: number;
+    while ((i = buf.indexOf("\n\n")) >= 0) {
+      const block = buf.slice(0, i); buf = buf.slice(i + 2);
+      const event = /^event:(.*)$/m.exec(block)?.[1]?.trim() ?? "message";
+      const data = block.split("\n").filter((l) => l.startsWith("data:")).map((l) => l.slice(5)).join("\n");
+      if (!data) continue;
+      const parsed = JSON.parse(data) as Record<string, unknown>;
+      if (event === "start") h.onStart?.(String(parsed.streamId));
+      else if (event === "delta") h.onDelta?.(String(parsed.text ?? ""));
+      else if (event === "status") h.onStatus?.(String(parsed.text ?? ""));
+      else if (event === "result") return parsed as T;
+      else if (event === "error") throw new ApiError(500, String(parsed.code ?? "AI_STREAM_FAILED"), String(parsed.message ?? "AI request failed"));
+    }
+  }
+  throw new ApiError(0, "STREAM_ENDED", "Kết nối AI bị ngắt trước khi có kết quả.");
+}
+
 const json = (body: unknown) => JSON.stringify(body);
 const qs = (params: Record<string, string | number | undefined | null>) => {
   const p = new URLSearchParams(); Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null && v !== "") p.set(k, String(v)); });
@@ -81,7 +121,8 @@ export const api = {
   authConfig: () => call<AuthConfig>("/auth/config"),
   register: (username: string, password: string, displayName: string, inviteCode?: string) =>
     call<{ username: string }>("/auth/register", { method: "POST", body: json({ username, password, displayName: displayName || undefined, inviteCode: inviteCode || undefined }) }),
-  aiStatus: () => call<AiStatus>("/ai/status"),
+  aiStatus: (workspaceId?: string) => call<AiStatus>(`/ai/status${qs({ workspaceId })}`),
+  cancelStream: (id: string) => call<{ cancelled: boolean }>(`/ai/streams/${id}/cancel`, { method: "POST" }),
   components: () => call<RegistryComponent[]>("/components?details=true"),
   async logout() { await call<void>("/auth/logout", { method: "POST" }).finally(resetCsrf); },
 
@@ -138,6 +179,16 @@ export const api = {
     approvePackage: (body: { name: string; versionRange?: string; pinnedVersion?: string; note?: string }) => call<PackageView>("/admin/packages", { method: "POST", body: json(body) }),
     decidePackage: (name: string, status: "ALLOWED" | "DENIED", acceptRisk?: boolean, note?: string) =>
       call<PackageView>(`/admin/packages/${encodeURIComponent(name)}/decision`, { method: "PUT", body: json({ status, acceptRisk, note }) }),
+    accessRules: () => call<AccessRule[]>("/admin/ai/access"),
+    addAccessRule: (body: { scopeType: string; scopeId?: string; modelId: string }) => call<{ id: string }>("/admin/ai/access", { method: "POST", body: json(body) }),
+    deleteAccessRule: (id: string) => call<void>(`/admin/ai/access/${id}`, { method: "DELETE" }),
+    effectiveModels: (userId: string, workspaceId?: string) => call<EffectiveModel[]>(`/admin/ai/access/effective${qs({ userId, workspaceId })}`),
+    budgets: () => call<AiBudget[]>("/admin/ai/budgets"),
+    setBudget: (body: { scopeType: string; scopeId?: string; period: string; amount: number; currency: string; usdPerUnit?: number; softPercent: number; hard: boolean }) =>
+      call<AiBudget[]>("/admin/ai/budgets", { method: "PUT", body: json(body) }),
+    deleteBudget: (id: string) => call<void>(`/admin/ai/budgets/${id}`, { method: "DELETE" }),
+    alerts: (all = false) => call<{ open: number; items: AdminAlert[] }>(`/admin/alerts${qs({ all: all ? "true" : undefined })}`),
+    ackAlert: (id: string) => call<{ ok: boolean }>(`/admin/alerts/${id}/acknowledge`, { method: "POST" }),
     deleteRepository: (projectId: string) => call<{ state: string }>(`/admin/retention/repositories/${projectId}/delete`, { method: "POST" })
   },
   createProject: (w: string, name: string, description?: string, templateId?: string, appType?: "PAGE_SCHEMA" | "STATIC_APP") =>
@@ -155,6 +206,8 @@ export const api = {
     discard: (w: string, p: string, id: string) => call<CodeChange>(`${P(w, p)}/code/changes/${id}/discard`, { method: "POST" }),
     ai: (w: string, p: string, prompt: string, model?: string) =>
       call<CodeAiResponse>(`${P(w, p)}/code/ai`, { method: "POST", body: json({ prompt, ...(model ? { model } : {}) }), signal: AbortSignal.timeout(130_000) }),
+    aiStream: (w: string, p: string, prompt: string, model: string | undefined, h: StreamHandlers) =>
+      stream<CodeAiResponse>(`${P(w, p)}/code/ai/stream`, { prompt, ...(model ? { model } : {}) }, h),
     aiHistory: (w: string, p: string) => call<CodeAiHistoryItem[]>(`${P(w, p)}/code/ai`),
     design: (w: string, p: string, path = "src/App.tsx") => call<{ ok: boolean; nodes: DesignNode[] }>(`${P(w, p)}/code/design${qs({ path })}`),
     designEdit: (w: string, p: string, body: { path: string; nodeId: string; text?: string; hidden?: boolean; props?: Record<string, string | null>; summary?: string }) =>
@@ -199,6 +252,8 @@ export const api = {
   sendPrompt: (w: string, p: string, prompt: string, expectedRevision: number, model?: string) =>
     // AI calls can take a while when the first free model is busy and the server fails over to the next one
     call<PromptResponse>(`${P(w, p)}/prompts`, { method: "POST", body: json({ prompt, expectedRevision, ...(model ? { model } : {}) }), signal: AbortSignal.timeout(130_000) }),
+  streamPrompt: (w: string, p: string, prompt: string, expectedRevision: number, model: string | undefined, h: StreamHandlers) =>
+    stream<PromptResponse>(`${P(w, p)}/prompts/stream`, { prompt, expectedRevision, ...(model ? { model } : {}) }, h),
   listPrompts: (w: string, p: string) => call<PromptHistoryItem[]>(`${P(w, p)}/prompts?limit=100`),   // newest first
 
   listVersions: (w: string, p: string) => call<VersionSummary[]>(`${P(w, p)}/versions?limit=100`),

@@ -40,7 +40,11 @@ data class AssistantMessage(val role: String, val content: String)
 data class PromptResponse(
     val promptId: UUID, val outcome: String, val message: AssistantMessage, val schemaPatch: List<SchemaOperation>,
     val pageSchema: JsonNode, val revision: Long, val version: VersionSummary?, val registryReuse: Int,
-    val provider: String? = null, val model: String? = null, val usage: PromptUsage? = null
+    val provider: String? = null, val model: String? = null, val usage: PromptUsage? = null,
+    /** CANCELLED | TIMEOUT for a streamed prompt that ended early; `partial` = model output received until then */
+    val stopped: String? = null, val partial: String? = null,
+    /** where the result came from (registry components, approved blocks, templates, newly written sections) */
+    val reuseSources: Map<String, Any>? = null
 )
 data class PromptHistoryItem(
     val id: UUID, val text: String, val createdAt: Instant, val outcome: String, val assistantMessage: String,
@@ -66,6 +70,9 @@ class PromptController(
     private val jdbc: JdbcTemplate,
     private val json: JsonMapper,
     private val usage: AiUsageService,
+    private val gate: com.systemwebstudio.ai.AiGate,
+    private val toolbox: com.systemwebstudio.ai.AiToolbox,
+    private val streams: com.systemwebstudio.ai.AiStreams,
     txManager: PlatformTransactionManager,
     @Value("\${app.rate-limit.prompt-max:30}") private val promptMax: Long
 ) {
@@ -89,21 +96,16 @@ class PromptController(
      * upstream call is recorded at once, so spent tokens are accounted for even if (3) fails; (3) validate + commit + prompt run
      * in one transaction. A concurrent edit during (2) is caught by the revision compare-and-swap in SchemaCommitService.
      */
-    @PostMapping
-    fun run(
-        @PathVariable workspaceId: UUID, @PathVariable projectId: UUID,
-        @Valid @RequestBody request: PromptRequest, @AuthenticationPrincipal me: StudioUserDetails
-    ): PromptResponse {
+    private class Prepared(val ctx: com.systemwebstudio.access.AccessContext, val request: PromptRequest, val text: String, val promptId: UUID,
+                           val current: JsonNode, val decision: com.systemwebstudio.ai.AiGate.Decision)
+
+    /** step (1) plus every check: access, rate limit, model enabled + access rules, token/money budgets, AI quota */
+    private fun prepare(workspaceId: UUID, projectId: UUID, request: PromptRequest, me: StudioUserDetails): Prepared {
         val ctx = access.forProject(me.userId, workspaceId, projectId)
         ctx.require(Permission.PROJECT_EDIT)
         if (ctx.project!!.appType == "STATIC_APP") throw ApiException.conflict("CODE_PROJECT", "Code projects are edited through /code/ai and /code/changes")
         limiter.require("prompt:${me.userId}", promptMax, 60, "prompt")
-        ai.requireAllowed(request.model)
-        if (ai.isExternal(request.model)) {
-            usage.requireBudget(me.userId, workspaceId)
-            // Free-tier quotas are shared by everyone using the key, so each user gets a daily allowance of real-AI prompts.
-            limiter.require("ai:${me.userId}", ai.dailyLimitPerUser, 86_400, "ai-daily")
-        }
+        val decision = gate.authorize(ctx, request.model, projectId)
         val project = ctx.project!!
         if (project.revision != request.expectedRevision) {
             throw ApiException.conflict("REVISION_CONFLICT", "Project changed elsewhere; reload and retry.", mapOf("currentRevision" to project.revision))
@@ -115,27 +117,80 @@ class PromptController(
                 jdbc.update("INSERT INTO prompts (id, workspace_id, project_id, created_by, text) VALUES (?,?,?,?,?)", promptId, workspaceId, projectId, me.userId, text)
             }
         }!!
+        return Prepared(ctx, request, text, promptId, current, decision)
+    }
 
+    /** steps (2) and (3); [sink] is set for a streamed prompt */
+    private fun finish(p: Prepared, sink: com.systemwebstudio.integration.llm.StreamSink?): PromptResponse {
+        val projectId = p.ctx.project!!.id
         val versions = registry.versions()
-        val plan = llm.plan(LLMRequest(text, current,
-            registry.list().filter { it.status == "ACTIVE" }.map { ComponentInfo(it.id, it.category, it.latestVersion, versions["${it.id}@${it.latestVersion}"]?.dto?.propsSchema) }, request.model))
-        val calls = usage.price(plan.calls)
-        usage.record(calls, promptId, workspaceId, projectId, me.userId)
+        val session = com.systemwebstudio.ai.AiToolbox.Session()
+        val blocks = if (p.decision.external) toolbox.approvedBlocks() else emptyList()
+        val tools = if (p.decision.external) toolbox.forPage(p.ctx, p.promptId, p.current, session) else null
+        val plan = llm.plan(LLMRequest(p.text, p.current,
+            registry.list().filter { it.status == "ACTIVE" }.map { ComponentInfo(it.id, it.category, it.latestVersion, versions["${it.id}@${it.latestVersion}"]?.dto?.propsSchema) },
+            p.request.model, p.decision.exclude, sink, tools, blocks))
+        val calls = gate.after(plan.calls, p.promptId, p.ctx, projectId)
         val promptUsage = usage.summarize(calls)
+        val sources = reuseSources(plan, blocks, session)
+        return tx.execute { apply(p.ctx, p.request, p.text, p.promptId, p.current, plan, promptUsage, sources) }!!
+    }
 
-        return tx.execute { apply(ctx, request, text, promptId, current, plan, promptUsage) }!!
+    /**
+     * Retrieval tracking (6.7), verified rather than trusted: a block counts when an added section uses its component with at least half
+     * of its props unchanged; a template counts only if the model retrieved it with a tool AND names it; the rest of the added sections are
+     * "generated".
+     */
+    private fun reuseSources(plan: com.systemwebstudio.integration.llm.LLMResponse, blocks: List<com.systemwebstudio.integration.llm.BlockInfo>,
+                             session: com.systemwebstudio.ai.AiToolbox.Session): Map<String, Any> {
+        val adds = plan.operations.filter { it.type == "ADD_SECTION" }
+        val usedBlocks = mutableSetOf<String>(); var generated = 0
+        for (op in adds) {
+            val props = op.props
+            val match = blocks.firstOrNull { b ->
+                b.baseComponent == op.sectionType && props != null && b.props.isObject && b.props.size() > 0 &&
+                    b.props.propertyNames().count { k -> props.get(k) == b.props.get(k) } * 2 >= b.props.size()
+            }
+            if (match != null) usedBlocks += match.id else generated++
+        }
+        val templates = plan.claimedSources?.get("templates").orEmpty().filter { it in session.templates }
+        return mapOf("components" to adds.mapNotNull { it.sectionType }.distinct(), "blocks" to usedBlocks.toList(), "templates" to templates, "generated" to generated)
+    }
+
+    /**
+     * Three steps, deliberately NOT one transaction: (1) a short transaction makes sure the page exists and records the prompt;
+     * (2) the model call runs with no transaction or DB connection held (it can take tens of seconds per attempt) and every
+     * upstream call is recorded at once, so spent tokens are accounted for even if (3) fails; (3) validate + commit + prompt run
+     * in one transaction. A concurrent edit during (2) is caught by the revision compare-and-swap in SchemaCommitService.
+     */
+    @PostMapping
+    fun run(
+        @PathVariable workspaceId: UUID, @PathVariable projectId: UUID,
+        @Valid @RequestBody request: PromptRequest, @AuthenticationPrincipal me: StudioUserDetails
+    ): PromptResponse = finish(prepare(workspaceId, projectId, request, me), null)
+
+    /** Same as [run] as server-sent events: partial model output while it arrives, cancel, deadline, final usage (see AiStreams). */
+    @PostMapping("/stream", produces = [org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE])
+    fun stream(
+        @PathVariable workspaceId: UUID, @PathVariable projectId: UUID,
+        @Valid @RequestBody request: PromptRequest, @AuthenticationPrincipal me: StudioUserDetails
+    ): org.springframework.web.servlet.mvc.method.annotation.SseEmitter {
+        val p = prepare(workspaceId, projectId, request, me)
+        return streams.start(me.userId, { sink -> finish(p, sink) }) { e ->
+            if (e is ApiException) mapOf("code" to e.code, "message" to e.message) else mapOf("code" to "AI_STREAM_FAILED", "message" to "AI request failed")
+        }
     }
 
     private fun apply(
         ctx: com.systemwebstudio.access.AccessContext, request: PromptRequest, text: String, promptId: UUID, current: JsonNode,
-        plan: com.systemwebstudio.integration.llm.LLMResponse, promptUsage: PromptUsage?
+        plan: com.systemwebstudio.integration.llm.LLMResponse, promptUsage: PromptUsage?, sources: Map<String, Any>
     ): PromptResponse {
         val project = ctx.project!!
         val workspaceId = ctx.workspaceId; val projectId = project.id
         var next = current
         var version: VersionSummary? = null
         var revision = project.revision
-        var outcome = if (plan.intent == "UNSUPPORTED") "UNSUPPORTED" else "NO_CHANGE"
+        var outcome = plan.stopped ?: if (plan.intent == "UNSUPPORTED") "UNSUPPORTED" else "NO_CHANGE"
         var versionId: UUID? = null
         var planMessage = plan.message
         if (plan.operations.isNotEmpty()) {
@@ -159,15 +214,15 @@ class PromptController(
         val reuse = reuse(next)
         jdbc.update(
             """INSERT INTO prompt_runs (id, prompt_id, workspace_id, project_id, provider, intent, status, schema_patch, assistant_message,
-               version_id, registry_reuse, expected_revision, model) VALUES (?,?,?,?,?,?,?,CAST(? AS jsonb),?,?,?,?,?)""",
+               version_id, registry_reuse, expected_revision, model, reuse_sources) VALUES (?,?,?,?,?,?,?,CAST(? AS jsonb),?,?,?,?,?,CAST(? AS jsonb))""",
             UUID.randomUUID(), promptId, workspaceId, projectId, plan.provider ?: llm.name, plan.intent, outcome, json.writeValueAsString(plan.operations),
-            planMessage.take(2000), versionId, reuse, request.expectedRevision, plan.model
+            planMessage.take(2000), versionId, reuse, request.expectedRevision, plan.model, json.writeValueAsString(sources)
         )
         audit.record("RUN_PROMPT", "PROMPT", promptId, workspaceId, projectId,
             newValue = mapOf("outcome" to outcome, "intent" to plan.intent, "provider" to (plan.provider ?: llm.name), "model" to plan.model,
-                "operations" to plan.operations.size, "aiCalls" to plan.calls.size, "totalTokens" to promptUsage?.totalTokens))
+                "operations" to plan.operations.size, "aiCalls" to plan.calls.size, "totalTokens" to promptUsage?.totalTokens, "reuse" to sources))
         return PromptResponse(promptId, outcome, AssistantMessage("assistant", planMessage), plan.operations, next, revision, version, reuse,
-            plan.provider ?: llm.name, plan.model, promptUsage)
+            plan.provider ?: llm.name, plan.model, promptUsage, plan.stopped, plan.partial?.take(4000), sources)
     }
 
     @GetMapping

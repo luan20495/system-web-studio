@@ -78,6 +78,19 @@ class OpenRouterClient(
         return ChatResult(content, usage)
     }
 
+    /** Streamed chat; OpenRouter sends usage (tokens + cost) in the last chunk when usage.include is set. */
+    fun chatStream(model: String, system: String, user: String, maxTokens: Int, sink: StreamSink): ChatResult {
+        if (!configured) throw OpenRouterException("OpenRouter API key is not configured", fatal = true)
+        val body = json.writeValueAsString(mapOf(
+            "model" to model, "temperature" to 0.2, "max_tokens" to maxTokens, "stream" to true, "usage" to mapOf("include" to true),
+            "messages" to listOf(mapOf("role" to "system", "content" to system), mapOf("role" to "user", "content" to user))
+        ))
+        val builder = HttpRequest.newBuilder(URI("$baseUrl/chat/completions")).timeout(Duration.ofSeconds(timeoutSeconds))
+            .header("Authorization", "Bearer $apiKey").header("Content-Type", "application/json").header("Accept", "text/event-stream").header("X-Title", title)
+        if (referer.isNotBlank()) builder.header("HTTP-Referer", referer)
+        return streamSse(builder.POST(HttpRequest.BodyPublishers.ofString(body)).build(), "OpenRouter", sink, json) { node, setUsage -> openAiChunk("OpenRouter", node, setUsage) }
+    }
+
     internal fun usage(root: JsonNode): ChatUsage? = openAiUsage(root)
 }
 

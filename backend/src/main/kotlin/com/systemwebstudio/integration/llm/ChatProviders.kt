@@ -26,6 +26,9 @@ interface ChatProvider {
     /** true when calls may be billed (shown to users; models of such providers start disabled) */
     val paid: Boolean
     fun chat(model: String, system: String, user: String, maxTokens: Int = 2500): ChatResult
+    /** streamed variant; providers without streaming answer in one piece */
+    fun chatStream(model: String, system: String, user: String, maxTokens: Int, sink: StreamSink): ChatResult =
+        chat(model, system, user, maxTokens).also { sink.delta(it.content) }
     /** lists models on the provider (no tokens spent); throws [AiProviderException] when unreachable or the key is rejected */
     fun probe(): String
 }
@@ -45,6 +48,48 @@ private val http: HttpClient = HttpClient.newBuilder().connectTimeout(Duration.o
 private fun send(request: HttpRequest, name: String): HttpResponse<String> = try { http.send(request, HttpResponse.BodyHandlers.ofString()) }
     catch (e: java.net.http.HttpTimeoutException) { throw AiProviderException("$name: timeout") }
     catch (e: Exception) { throw AiProviderException("$name: network error ${e.javaClass.simpleName}") }
+
+/**
+ * Reads a server-sent-events body line by line. [onData] gets each `data:` payload (parsed JSON) and returns text to append (or null).
+ * Cancel/deadline: checked per line; a read blocked between chunks is woken by the controller interrupting the worker thread.
+ * The error body of a failed request is never read into messages (it can echo the prompt).
+ */
+internal fun streamSse(request: HttpRequest, name: String, sink: StreamSink, json: JsonMapper, onData: (JsonNode, (ChatUsage?) -> Unit) -> String?): ChatResult {
+    val text = StringBuilder(); var usage: ChatUsage? = null
+    sink.stopReason()?.let { throw AiStopped(it, "", null) }
+    sink.inModelCall = true
+    try {
+        val response = try { http.send(request, HttpResponse.BodyHandlers.ofInputStream()) }
+            catch (e: java.net.http.HttpTimeoutException) { throw AiProviderException("$name: timeout") }
+            catch (e: Exception) { sink.stopReason()?.let { throw AiStopped(it, "", null) }; throw AiProviderException("$name: network error ${e.javaClass.simpleName}") }
+        response.body().use { body ->
+            if (response.statusCode() !in 200..299) failOn(response.statusCode(), name)
+            val reader = body.bufferedReader(Charsets.UTF_8)
+            while (true) {
+                sink.stopReason()?.let { throw AiStopped(it, text.toString(), usage) }
+                val line = try { reader.readLine() } catch (e: java.io.IOException) {
+                    sink.stopReason()?.let { throw AiStopped(it, text.toString(), usage) }; throw AiProviderException("$name: stream interrupted", usage = usage)
+                } ?: break
+                if (!line.startsWith("data:")) continue
+                val data = line.removePrefix("data:").trim()
+                if (data == "[DONE]") break
+                val node = runCatching { json.readTree(data) }.getOrNull() ?: continue
+                val piece = onData(node) { u -> if (u != null) usage = u }
+                if (!piece.isNullOrEmpty()) { text.append(piece); sink.delta(piece) }
+            }
+        }
+    } finally { sink.inModelCall = false; Thread.interrupted() }
+    sink.stopReason()?.let { throw AiStopped(it, text.toString(), usage) }
+    if (text.isBlank()) throw AiProviderException("$name: empty completion", usage = usage)
+    return ChatResult(text.toString(), usage)
+}
+
+/** one chunk of an OpenAI-style stream: delta text; usage arrives in the last chunk (stream_options.include_usage / OpenRouter usage.include) */
+internal fun openAiChunk(name: String, node: JsonNode, setUsage: (ChatUsage?) -> Unit): String? {
+    val u = openAiUsage(node); if (u != null && (u.totalTokens != null || u.costUsd != null)) setUsage(u)
+    if (node.has("error")) throw AiProviderException("$name: provider error", usage = u)
+    return node.get("choices")?.get(0)?.get("delta")?.get("content")?.takeIf { it.isString }?.asString()
+}
 
 private fun failOn(status: Int, name: String) {
     if (status == 401 || status == 403) throw AiProviderException("$name rejected the API key (HTTP $status)", status, fatal = true)
@@ -81,6 +126,16 @@ class OpenAiCompatibleProvider(private val slot: ProviderSlot, private val json:
         return ChatResult(content, usage)
     }
 
+    override fun chatStream(model: String, system: String, user: String, maxTokens: Int, sink: StreamSink): ChatResult {
+        if (!configured) throw AiProviderException("$displayName is not configured", fatal = true)
+        val body = linkedMapOf<String, Any>("model" to model, "stream" to true, "stream_options" to mapOf("include_usage" to true), slot.tokenParam to maxTokens,
+            "messages" to listOf(mapOf("role" to "system", "content" to system), mapOf("role" to "user", "content" to user)))
+        if (slot.sendTemperature) body["temperature"] = 0.2
+        val request = builder("/chat/completions", slot.timeoutSeconds).header("Content-Type", "application/json").header("Accept", "text/event-stream")
+            .POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(body))).build()
+        return streamSse(request, displayName, sink, json) { node, setUsage -> openAiChunk(displayName, node, setUsage) }
+    }
+
     override fun probe(): String {
         val response = send(builder("/models", 15).GET().build(), displayName)
         failOn(response.statusCode(), displayName)
@@ -115,6 +170,29 @@ class AnthropicProvider(private val slot: ProviderSlot, private val json: JsonMa
         val text = root.get("content")?.toList().orEmpty().filter { it.get("type")?.asString() == "text" }.joinToString("") { it.get("text")?.asString().orEmpty() }
         if (text.isBlank()) throw AiProviderException("$displayName: empty completion", usage = usage)
         return ChatResult(text, usage)
+    }
+
+    /** Messages API stream: message_start carries input usage, content_block_delta the text, message_delta the output usage. */
+    override fun chatStream(model: String, system: String, user: String, maxTokens: Int, sink: StreamSink): ChatResult {
+        if (!configured) throw AiProviderException("$displayName is not configured", fatal = true)
+        val body = mapOf("model" to model, "max_tokens" to maxTokens, "temperature" to 0.2, "system" to system, "stream" to true,
+            "messages" to listOf(mapOf("role" to "user", "content" to user)))
+        val request = builder("/v1/messages", slot.timeoutSeconds).header("Content-Type", "application/json").header("Accept", "text/event-stream")
+            .POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(body))).build()
+        var start: ChatUsage? = null; var id: String? = null
+        return streamSse(request, displayName, sink, json) { node, setUsage ->
+            when (node.get("type")?.asString()) {
+                "message_start" -> { val m = node.get("message"); id = m?.get("id")?.asString(); start = m?.let { usage(it) }; setUsage(start); null }
+                "content_block_delta" -> node.get("delta")?.takeIf { it.get("type")?.asString() == "text_delta" }?.get("text")?.asString()
+                "message_delta" -> {
+                    val out = node.get("usage")?.get("output_tokens")?.takeIf { it.isIntegralNumber }?.asInt()
+                    val p = start?.promptTokens
+                    setUsage(ChatUsage(p, out, if (p != null && out != null) p + out else null, null, id?.take(160))); null
+                }
+                "error" -> throw AiProviderException("$displayName: provider error", usage = start)
+                else -> null
+            }
+        }
     }
 
     internal fun usage(root: JsonNode): ChatUsage? {

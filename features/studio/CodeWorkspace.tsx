@@ -57,13 +57,14 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
   const [model, setModel] = useState<string>(() => { try { return localStorage.getItem("studio-ai-model") ?? "auto"; } catch { return "auto"; } });
   const [busy, setBusy] = useState<string | null>(null); const [notice, setNotice] = useState<string | null>(null); const [error, setError] = useState<unknown>(null);
   const [commits, setCommits] = useState<CodeCommit[] | null>(null);
+  const [live, setLive] = useState<{ id: string | null; chars: number; status: string } | null>(null);
   const [cfg, setCfg] = useState<AuthConfig | null>(null);
   useEffect(() => { api.authConfig().then(setCfg).catch(() => undefined); }, []);
 
   const loadTree = useCallback(() => api.code.tree(ws, pid).then(setTree).catch(setError), [ws, pid]);
   const loadChanges = useCallback(() => api.code.changes(ws, pid).then((c) => { setChanges(c); setSelected((s) => s ?? c.find((x) => x.status !== "DISCARDED")?.id ?? null); }).catch(() => undefined), [ws, pid]);
   const loadHistory = useCallback(() => api.code.aiHistory(ws, pid).then(setHistory).catch(() => undefined), [ws, pid]);
-  useEffect(() => { void loadTree(); void loadChanges(); void loadHistory(); api.aiStatus().then(setAi).catch(() => undefined); }, [loadTree, loadChanges, loadHistory]);
+  useEffect(() => { void loadTree(); void loadChanges(); void loadHistory(); api.aiStatus(ws).then(setAi).catch(() => undefined); }, [loadTree, loadChanges, loadHistory]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { try { localStorage.setItem("studio-ai-model", model); } catch { /* ignore */ } }, [model]);
   // while something builds, refresh every 2.5 s
   useEffect(() => { if (!changes.some((c) => c.status === "BUILDING")) return; const t = setInterval(() => void loadChanges(), 2500); return () => clearInterval(t); }, [changes, loadChanges]);
@@ -91,7 +92,13 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
   }
   async function sendPrompt() {
     const text = prompt.trim(); if (!text) return;
-    const r = await act("ai", () => api.code.ai(ws, pid, text, ai?.configured ? effectiveModel : undefined), "AI không xử lý được.");
+    const real = ai?.configured === true && effectiveModel !== "mock";
+    const r = await act("ai", () => real
+      ? api.code.aiStream(ws, pid, text, effectiveModel, {
+          onStart: (id) => setLive({ id, chars: 0, status: "" }),
+          onDelta: (t) => setLive((l) => l ? { ...l, chars: l.chars + t.length } : l),
+          onStatus: (st) => setLive((l) => l ? { ...l, status: st } : l) }).finally(() => setLive(null))
+      : api.code.ai(ws, pid, text, ai?.configured ? effectiveModel : undefined), "AI không xử lý được.");
     if (r) {
       setPrompt(""); void loadHistory();
       if (r.change) { setSelected(r.change.id); setTab("preview"); void loadChanges(); }
@@ -151,6 +158,8 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
                   <option value="auto">{ai.provider === "openrouter" ? "AI · tự động (model miễn phí)" : "Tự động (bộ mô phỏng)"}</option>
                   {(ai.providers ?? []).map((g) => <optgroup key={g.id} label={`${g.name}${g.paid ? " · tính phí" : ""}`}>{g.models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</optgroup>)}
                   <option value="mock">Mô phỏng (không gọi AI)</option></select> : <span className="hint">AI: mô phỏng</span>}
+                {live ? <span className="hint" role="status">{live.status.startsWith("tool:") ? `AI đang dùng ${live.status.slice(5)}…` : `Đang nhận… ${live.chars} ký tự`}
+                  {live.id ? <button type="button" className="smallButton" onClick={() => { void api.cancelStream(live.id!).catch(() => undefined); }}>Huỷ</button> : null}</span> : null}
                 <button className="sendButton" disabled={busy !== null || !prompt.trim()} onClick={() => void sendPrompt()}>{busy === "ai" ? "Đang tạo…" : "Gửi ↑"}</button>
               </div>
             </div> : <p className="hint">Bạn chỉ có quyền xem.</p>}

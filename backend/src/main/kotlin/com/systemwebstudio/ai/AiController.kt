@@ -19,10 +19,12 @@ data class AiStatus(
 /** Tells the UI which AI is active and which models may be chosen. Never exposes a key, only whether one is set. */
 @RestController
 @RequestMapping("/api/v1/ai")
-class AiController(private val ai: AiService, private val registry: AiProviderRegistry) {
+class AiController(private val ai: AiService, private val registry: AiProviderRegistry, private val access: ModelAccessService) {
+    /** with a workspace, the list is narrowed by the model access rules that apply to the caller there */
     @GetMapping("/status")
-    fun status(): AiStatus {
-        val models = ai.catalog()
+    fun status(@org.springframework.security.core.annotation.AuthenticationPrincipal me: com.systemwebstudio.identity.StudioUserDetails?,
+               @org.springframework.web.bind.annotation.RequestParam(required = false) workspaceId: java.util.UUID?): AiStatus {
+        val models = ai.catalog().let { if (me != null) access.filter(me.userId, workspaceId, it) else it }
         val sent = "Yêu cầu của bạn, nội dung trang hiện tại và danh sách component"
         val providers = models.groupBy { it.provider }.map { (id, list) ->
             val name = if (id == "openrouter") "OpenRouter (model miễn phí)" else registry.providers[id]?.displayName ?: id

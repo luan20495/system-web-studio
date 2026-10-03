@@ -35,6 +35,7 @@ object SettingCatalog {
         SettingDef("ai.daily-requests-per-user", "AI", SettingType.INT, "app.openrouter.daily-limit-per-user", "50", "Lượt AI thật / người / 24 giờ", min = 0, max = 100000),
         SettingDef("ai.daily-tokens-per-user", "AI", SettingType.INT, "app.ai.daily-token-limit-per-user", "0", "Token / người / 24 giờ (0 = tắt)", min = 0, max = 1_000_000_000),
         SettingDef("ai.monthly-tokens-per-workspace", "AI", SettingType.INT, "app.ai.monthly-token-limit-per-workspace", "0", "Token / workspace / tháng (0 = tắt)", min = 0, max = 10_000_000_000),
+        SettingDef("ai.stream-timeout-seconds", "AI", SettingType.INT, "app.ai.stream-timeout-seconds", "120", "Thời gian tối đa một yêu cầu AI dạng streaming (giây)", min = 10, max = 900),
         // source-code apps
         SettingDef("source-apps.enabled", "Ứng dụng mã nguồn", SettingType.BOOL, "app.source-apps.enabled", "true", "Cho phép tạo ứng dụng mã nguồn"),
         SettingDef("source-apps.build-enabled", "Ứng dụng mã nguồn", SettingType.BOOL, "app.source-apps.build-enabled", "true", "Cho phép build trong sandbox", Risk.HIGH),

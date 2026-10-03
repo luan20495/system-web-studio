@@ -26,7 +26,8 @@ import java.util.UUID
 
 data class CodeAiRequest(@field:NotBlank @field:Size(max = 2000) val prompt: String,
                          @field:Pattern(regexp = "^[A-Za-z0-9._:/-]{1,120}$") val model: String? = null)
-data class CodeAiResponse(val promptId: UUID, val outcome: String, val message: String, val change: CodeChangeDto?, val provider: String, val model: String?, val usage: PromptUsage?)
+data class CodeAiResponse(val promptId: UUID, val outcome: String, val message: String, val change: CodeChangeDto?, val provider: String, val model: String?, val usage: PromptUsage?,
+                          val stopped: String? = null, val partial: String? = null)
 data class CodeAiHistoryItem(val promptId: UUID, val text: String, val createdAt: Instant, val outcome: String, val message: String, val model: String?,
                              val changeId: UUID?, val changeStatus: String?)
 data class GeneratedFiles(val message: String, val files: List<GitFileChange>, val dependencies: List<String> = emptyList())
@@ -39,18 +40,26 @@ data class GeneratedFiles(val message: String, val files: List<GitFileChange>, v
 @Service
 class CodeAiService(
     private val code: CodeProjectService, private val changes: CodeChangeService, private val llm: ExternalLLMProvider, private val ai: AiService,
-    private val usage: AiUsageService, private val limiter: RateLimiter, private val catalog: PackageCatalogService, private val deps: DependencyService, private val audit: AuditService, private val jdbc: JdbcTemplate, private val json: JsonMapper,
+    private val usage: AiUsageService, private val limiter: RateLimiter, private val gate: com.systemwebstudio.ai.AiGate, private val toolbox: com.systemwebstudio.ai.AiToolbox, private val catalog: PackageCatalogService, private val deps: DependencyService, private val audit: AuditService, private val jdbc: JdbcTemplate, private val json: JsonMapper,
     @Value("\${app.rate-limit.prompt-max:30}") private val promptMax: Long,
     @Value("\${app.code.max-context-chars:40000}") private val maxContext: Int
 ) {
     private val textExt = setOf("ts", "tsx", "css", "json", "html", "md", "svg", "txt", "js", "jsx")
 
-    fun run(ctx: com.systemwebstudio.access.AccessContext, userId: UUID, req: CodeAiRequest): CodeAiResponse {
-        val project = ctx.project!!
+    class Prepared(val ctx: com.systemwebstudio.access.AccessContext, val userId: UUID, val req: CodeAiRequest, val decision: com.systemwebstudio.ai.AiGate.Decision)
+
+    /** every check before the model is called (access was checked by the controller) */
+    fun prepare(ctx: com.systemwebstudio.access.AccessContext, userId: UUID, req: CodeAiRequest): Prepared {
         limiter.require("prompt:$userId", promptMax, 60, "prompt")
-        ai.requireAllowed(req.model)
-        val external = ai.isExternal(req.model)
-        if (external) { usage.requireBudget(userId, ctx.workspaceId); limiter.require("ai:$userId", ai.dailyLimitPerUser, 86_400, "ai-daily") }
+        return Prepared(ctx, userId, req, gate.authorize(ctx, req.model, ctx.project!!.id))
+    }
+
+    fun run(ctx: com.systemwebstudio.access.AccessContext, userId: UUID, req: CodeAiRequest): CodeAiResponse = finish(prepare(ctx, userId, req), null)
+
+    fun finish(p: Prepared, sink: com.systemwebstudio.integration.llm.StreamSink?): CodeAiResponse {
+        val ctx = p.ctx; val userId = p.userId; val req = p.req
+        val project = ctx.project!!
+        val external = p.decision.external
         val repo = code.repo(project.id)
         val files = code.git { code.client.tree(repo.name, "main") }
         val sources = linkedMapOf<String, String>()
@@ -65,18 +74,23 @@ class CodeAiService(
         val promptId = UUID.randomUUID()
         jdbc.update("INSERT INTO prompts (id, workspace_id, project_id, created_by, text) VALUES (?,?,?,?,?)", promptId, ctx.workspaceId, project.id, userId, text)
 
-        var provider = "mock"; var model: String? = "mock"; var promptUsage: PromptUsage? = null
+        var provider = "mock"; var model: String? = "mock"; var promptUsage: PromptUsage? = null; var stopped: String? = null; var partial: String? = null
         val generated: GeneratedFiles? = if (external) {
             val installed = runCatching { json.readTree(sources["package.json"] ?: code.client.raw(repo.name, "package.json", "main")?.toString(Charsets.UTF_8) ?: "{}")
                 .get("dependencies")?.propertyNames()?.toList().orEmpty() }.getOrDefault(emptyList())
             val requestable = catalog.list().filter { it.status == "ALLOWED" }.map { it.name }.filter { it !in installed }
-            val c = llm.complete(req.model, systemPrompt(files.map { it.path }, installed, requestable), userPrompt(sources, text), 8000) { parse(it) }
-            val priced = usage.price(c.calls); usage.record(priced, promptId, ctx.workspaceId, project.id, userId); promptUsage = usage.summarize(priced)
-            provider = c.provider; model = c.model
-            c.result ?: GeneratedFiles("AI chưa tạo được thay đổi (${c.error}). Hãy thử lại hoặc chọn model khác.", emptyList()).also { provider = c.provider }
+            val session = com.systemwebstudio.ai.AiToolbox.Session()
+            val c = llm.complete(req.model, systemPrompt(files.map { it.path }, installed, requestable), userPrompt(sources, text), 8000, p.decision.exclude, sink,
+                toolbox.forCode(ctx, promptId, session)) { parse(it) }
+            val priced = gate.after(c.calls, promptId, ctx, project.id); promptUsage = usage.summarize(priced)
+            provider = c.provider; model = c.model; stopped = c.stopped; partial = c.partial?.take(4000)
+            // files staged with propose_file_change join the final answer (the answer's own version of a path wins)
+            c.result?.let { r -> r.copy(files = (session.proposed.filter { s -> r.files.none { it.path == s.path } } + r.files).take(10)) }
+                ?: GeneratedFiles(when (c.stopped) { "CANCELLED" -> "Đã huỷ yêu cầu AI; không có gì được lưu."; "TIMEOUT" -> "AI trả lời quá thời gian cho phép; không có gì được lưu."
+                    else -> "AI chưa tạo được thay đổi (${c.error}). Hãy thử lại hoặc chọn model khác." }, emptyList())
         } else simulate(sources, text)
 
-        var outcome = if (generated == null || generated.files.isEmpty()) "NO_CHANGE" else "UPDATED"
+        var outcome = stopped ?: if (generated == null || generated.files.isEmpty()) "NO_CHANGE" else "UPDATED"
         var message = generated?.message ?: "Không có thay đổi."
         var change: CodeChangeDto? = null
         // packages the model asked for go through the normal dependency flow (catalog only, lockfile made in the sandbox)
@@ -93,9 +107,9 @@ class CodeAiService(
         }
         jdbc.update("""INSERT INTO prompt_runs (id, prompt_id, workspace_id, project_id, provider, intent, status, assistant_message, model)
             VALUES (?,?,?,?,?,'CODE_CHANGE',?,?,?)""", UUID.randomUUID(), promptId, ctx.workspaceId, project.id, provider.take(32),
-            if (outcome == "UPDATED") "UPDATED" else if (outcome == "UNSUPPORTED") "UNSUPPORTED" else "NO_CHANGE", message.take(2000), model)
+            if (outcome in setOf("UPDATED", "UNSUPPORTED", "CANCELLED", "TIMEOUT")) outcome else "NO_CHANGE", message.take(2000), model)
         audit.record("RUN_PROMPT", "PROMPT", promptId, ctx.workspaceId, project.id, newValue = mapOf("kind" to "CODE", "outcome" to outcome, "provider" to provider, "model" to model, "changeId" to change?.id))
-        return CodeAiResponse(promptId, outcome, message, change, provider, model, promptUsage)
+        return CodeAiResponse(promptId, outcome, message, change, provider, model, promptUsage, stopped, partial)
     }
 
     fun history(projectId: UUID): List<CodeAiHistoryItem> = jdbc.query("""SELECT p.id, p.text, p.created_at, r.status, r.assistant_message, r.model, c.id, c.status
@@ -180,11 +194,20 @@ Existing files: ${paths.joinToString(", ")}
 
 @RestController
 @RequestMapping("/api/v1/workspaces/{workspaceId}/projects/{projectId}/code/ai")
-class CodeAiController(private val access: AccessService, private val changes: CodeChangeService, private val codeAi: CodeAiService) {
+class CodeAiController(private val access: AccessService, private val changes: CodeChangeService, private val codeAi: CodeAiService, private val streams: com.systemwebstudio.ai.AiStreams) {
     @PostMapping
     fun run(@PathVariable workspaceId: UUID, @PathVariable projectId: UUID, @Valid @RequestBody request: CodeAiRequest, @AuthenticationPrincipal me: StudioUserDetails): CodeAiResponse {
         val ctx = access.forProject(me.userId, workspaceId, projectId); changes.requireCode(ctx); ctx.require(Permission.PROJECT_EDIT)
         return codeAi.run(ctx, me.userId, request)
+    }
+
+    @PostMapping("/stream", produces = [org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE])
+    fun stream(@PathVariable workspaceId: UUID, @PathVariable projectId: UUID, @Valid @RequestBody request: CodeAiRequest, @AuthenticationPrincipal me: StudioUserDetails): org.springframework.web.servlet.mvc.method.annotation.SseEmitter {
+        val ctx = access.forProject(me.userId, workspaceId, projectId); changes.requireCode(ctx); ctx.require(Permission.PROJECT_EDIT)
+        val p = codeAi.prepare(ctx, me.userId, request)
+        return streams.start(me.userId, { sink -> codeAi.finish(p, sink) }) { e ->
+            if (e is ApiException) mapOf("code" to e.code, "message" to e.message) else mapOf("code" to "AI_STREAM_FAILED", "message" to "AI request failed")
+        }
     }
 
     @GetMapping

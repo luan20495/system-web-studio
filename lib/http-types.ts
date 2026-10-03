@@ -20,11 +20,14 @@ export type VersionSummary = {
 };
 export type SchemaResponse = { schema: PageSchema; revision: number; version: VersionSummary | null };
 export type PromptResponse = {
-  promptId: string; outcome: "UPDATED" | "NO_CHANGE" | "UNSUPPORTED"; message: { role: string; content: string };
+  promptId: string; outcome: "UPDATED" | "NO_CHANGE" | "UNSUPPORTED" | "CANCELLED" | "TIMEOUT"; message: { role: string; content: string };
   schemaPatch: SchemaOperation[]; pageSchema: PageSchema; revision: number; version: VersionSummary | null; registryReuse: number; provider?: string; model?: string | null;
   /** null for the simulator; token/cost fields are null when the provider did not report them */
   usage?: PromptUsage | null;
+  stopped?: "CANCELLED" | "TIMEOUT" | null; partial?: string | null; reuseSources?: ReuseSources | null;
 };
+export type ReuseSources = { components: string[]; blocks: string[]; templates: string[]; generated: number };
+export type StreamHandlers = { onStart?: (streamId: string) => void; onDelta?: (text: string) => void; onStatus?: (text: string) => void };
 export type PromptUsage = { attempts: number; promptTokens: number | null; completionTokens: number | null; totalTokens: number | null; costUsd: number | null; latencyMs: number };
 export type PromptHistoryItem = { id: string; text: string; createdAt: string; outcome: string; assistantMessage: string; versionId: string | null; registryReuse: number | null;
   provider?: string | null; model?: string | null; aiCalls?: number; totalTokens?: number | null; costUsd?: number | null };
@@ -135,8 +138,8 @@ export type CodeChange = { id: string; kind: "AI" | "EDIT"; status: "BUILDING" |
   previewUrl: string | null; previewExpiresAt: string | null; build: BuildInfo | null;
   reviewRequired?: boolean; approvedBy?: string | null; approvedAt?: string | null; reviewComment?: string | null };
 export type DiffFile = { path: string; before: string | null; after: string | null };
-export type CodeAiResponse = { promptId: string; outcome: "UPDATED" | "NO_CHANGE" | "UNSUPPORTED"; message: string; change: CodeChange | null; provider: string; model: string | null;
-  usage: PromptUsage | null };
+export type CodeAiResponse = { promptId: string; outcome: "UPDATED" | "NO_CHANGE" | "UNSUPPORTED" | "CANCELLED" | "TIMEOUT"; message: string; change: CodeChange | null; provider: string; model: string | null;
+  usage: PromptUsage | null; stopped?: "CANCELLED" | "TIMEOUT" | null; partial?: string | null };
 export type CodeAiHistoryItem = { promptId: string; text: string; createdAt: string; outcome: string; message: string; model: string | null; changeId: string | null; changeStatus: string | null };
 
 // ---- Lockdown, settings, build policy, retention
@@ -157,3 +160,11 @@ export type DependencyRequest = { id: string; packageName: string; spec: string;
 export type PackageView = { name: string; status: "PENDING" | "RESOLVING" | "ALLOWED" | "DENIED"; versionRange: string; pinnedVersion: string | null; note: string; riskAccepted: boolean;
   dependencies: number | null; findings: { package: string; id: string; severity: string }[] | null; requestedBy: string | null; decidedBy: string | null; decidedAt: string | null; updatedAt: string };
 export type CloneAccess = { cloneUrl: string; username: string; token: string | null; note: string };
+
+// ---- Stage E: AI governance
+export type AccessRule = { id: string; scopeType: "ORG" | "WORKSPACE" | "ROLE" | "USER"; scopeId: string; scopeLabel: string | null; modelId: string; createdAt: string };
+export type EffectiveModel = { id: string; provider: string; paid: boolean; allowed: boolean; reason: string };
+export type AiBudget = { id: string; scopeType: "ORG" | "WORKSPACE" | "USER" | "PROJECT"; scopeId: string; scopeLabel: string | null; period: "DAILY" | "MONTHLY"; amount: number; currency: string;
+  usdPerUnit: number; softPercent: number; hard: boolean; spent: number; spentUsd: number; unknownCostCalls: number; percent: number; periodStart: string };
+export type AdminAlert = { id: string; kind: string; severity: "INFO" | "WARNING" | "CRITICAL"; scopeType: string | null; scopeId: string | null; message: string; data: Record<string, unknown>;
+  createdAt: string; acknowledgedBy: string | null; acknowledgedAt: string | null };
