@@ -32,6 +32,21 @@ Base path `/api/v1`, JSON, session cookie auth. The live OpenAPI document is at 
 | GET | …/{p}/deployments, …/deployments/{id} | read | status + ordered events; `mock:true` when the provider is the mock |
 | GET | /workspaces/{w}/audit-events | AUDIT_READ (workspace admin) | filters `projectId`, `action`, `limit` ≤ 200 |
 
+## Added in Phase 7.2–7.4 — code projects (2026-10-03, ADR 0010–0012)
+| Method | Path | Permission | Notes |
+| --- | --- | --- | --- |
+| POST | /workspaces/{w}/projects | PROJECT_CREATE | `appType: STATIC_APP` → repository + scaffold commit; `409 CODE_PROJECTS_UNAVAILABLE` without the Git server; templates not allowed |
+| GET | /auth/config | public | adds `codeProjects` (Git server + runner configured) |
+| GET | …/{p}/code/tree?ref, /code/file?path&ref, /code/commits | read | real repository content (Forgejo); `editable` per file |
+| GET / POST | …/{p}/code/changes | read / PROJECT_EDIT | POST `{summary, files:[{path, content \| delete}]}` → commit on `edit/<id>` + build job; `422` PATH_NOT_ALLOWED, FILE_TYPE_NOT_ALLOWED, SECRET_DETECTED, FILE_TOO_LARGE, TOO_MANY_FILES, NOT_TEXT |
+| GET | …/{p}/code/changes/{id}, /diff | read | status BUILDING/READY/FAILED/MERGED/DISCARDED, build (stage, log, scans, SBOM), `previewUrl` (capability URL, 7 days) |
+| POST | …/{p}/code/changes/{id}/merge, /discard | PROJECT_EDIT | merge only READY (`409 CHANGE_NOT_READY`, `409 MAIN_MOVED`); fast-forward |
+| POST / GET | …/{p}/code/ai | PROJECT_EDIT / read | `{prompt, model?}` → `{outcome, message, change, provider, model, usage}`; history |
+| POST | …/{p}/publish | PROJECT_PUBLISH | code apps: PUBLIC only (`400 CODE_APP_PUBLIC_ONLY`); BUILDING runs a sandbox build of the version's commit |
+| POST | /internal/build-jobs/claim · GET /{id}/source · PUT /{id}/artifact · POST /{id}/finish | runner token | loopback only; not proxied by the UI or gateway; 404 without a valid token |
+| GET | (sites host) /_preview/{token}/… | capability | sandboxed preview of a change |
+| POST | …/{p}/prompts, PATCH …/{p}/schema | | `409 CODE_PROJECT` for code projects |
+
 ## Added in Phase 7.1 — real static sites (2026-10-02, ADR 0009)
 | Method | Path | Permission | Notes |
 | --- | --- | --- | --- |

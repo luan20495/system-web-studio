@@ -1,6 +1,6 @@
 # Software Factory — design proposal (Phase 7)
 
-Status: **7.1 IMPLEMENTED (2026-10-02); 7.2–7.5 PROPOSED, not implemented.**
+Status: **7.1 implemented and public (2026-10-02); 7.2–7.4 implemented on the local stack (2026-10-03, not enabled on the public deployment); 7.5 (dynamic apps) not implemented.**
 Decisions are recorded in ADR 0008–0012; this page is the overview and the plan.
 
 ## 1. Where we are (verified in code, 2026-10-02)

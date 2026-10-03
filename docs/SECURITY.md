@@ -34,3 +34,17 @@
 * Self-service sign-up (password: at least 6 characters, letters and digits — a product decision; online guessing is bounded by the login throttle, 5 failures per 15 min per username) is rate limited per IP, optionally invite-gated, capped in total, never stores an email (an unverified email could otherwise be used with "add member by email" to claim an address) and gives each user an isolated workspace. Per-workspace caps on projects and assets bound storage abuse.
 * AI output is untrusted data: validated against the component registry before anything is stored; only free OpenRouter models can be selected; each user has a daily AI allowance; the API key never leaves the server. Prompts and page content are sent to a third party when a key is set (see `AI.md`).
 * Argon2 verification concurrency is capped (`LOGIN_MAX_CONCURRENT_HASHES`), after a 100-user login burst froze the API during load testing.
+
+## Findings during Phase 7 (2026-10-02 / 2026-10-03)
+* **Cache leak on visibility change (fixed):** time-based caching let a site's public copy keep being served after it was switched to private;
+  site responses are now `public, no-cache` (ETag revalidation) or `private, no-store`.
+* **CDN script injection (fixed):** Cloudflare injected its analytics `<script>` into script-free sites (blocked by CSP); responses carry `no-transform`.
+* **500 for system admins outside their workspaces (fixed):** now `409 ADMIN_NOT_MEMBER`, nothing half-created, no silent membership.
+* **Suspicious npm package version (mitigated):** `rollup@4.64.0`/`4.63.0` carry an unexpected optional dependency (`@napi-rs/lzma-linux-x64-gnu`) and
+  burned ~170 s of CPU for a trivial build. Pinned to `rollup@4.62.0`, purged from the mirror. Note: it was executed once on this Mac outside
+  the sandbox while diagnosing (a plain `vite build`), before the anomaly was understood.
+* **Operational script killed Docker Desktop (fixed):** `stop-local.sh` killed every process with a TCP connection to :8080, which included
+  Docker Desktop's network proxy (the sites gateway keeps connections to the API); it now kills listeners only.
+* **Isolation of generated code (by design):** code previews/apps run under CSP `sandbox allow-scripts` (opaque origin, verified: no cookies or
+  storage); builds run in hardened containers with no network (install: mirror only). On macOS the containers share the Docker Desktop VM kernel
+  with the platform's own containers — acceptable only while code projects are internal (ADR 0010 note).

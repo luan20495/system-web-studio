@@ -32,6 +32,10 @@ the site page (blocked by the CSP); fixed with `Cache-Control: no-transform` and
 in the same hour because of the public sign-up limit (5 per IP per hour). Database backup taken before the V8–V13 migrations:
 `backups/public/studio-20261002T105043Z.dump`.
 
+## Code projects (Phase 7.2–7.4) are not enabled here
+The public instance has no Git server or build runner configured, so "Ứng dụng web (mã nguồn)" shows "Chưa bật". Enabling it would let any
+signed-up internet user run sandboxed builds on this Mac; decide sign-up policy first.
+
 ## Limits you must know about
 * **It only works while this Mac is on, awake, online and Docker/the processes run.** `public-up.sh` starts `caffeinate -i -s` (no sleep on AC power); closing the lid on battery still sleeps it. Nothing restarts automatically after a reboot (no LaunchAgent is installed).
 * **Publish is real (Phase 7.1):** a published page is served at `https://sites.toolsmcp.uk/<slug>/` from an immutable artifact; private sites require signing in on the Studio as a member. It is served from this Mac like everything else.

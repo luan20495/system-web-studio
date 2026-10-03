@@ -28,6 +28,8 @@
 >   `AiService` policies/catalog, `AiUsageService.price`, `admin/AdminAiProvidersController.kt` (migration V12). ADR 0007.
 > * **Phase 7.1 — real static sites:** `workers/render`, `publish/StaticSites.kt`, `publish/SiteService.kt`, `publish/SiteControllers.kt`,
 >   `integration/storage/ArtifactStore.kt`, `infra/sites-gateway`, migration V13; `DEPLOY_PROVIDER=static`. ADR 0009; 7.2–7.5 designed (ADR 0008–0012).
+> * **Phase 7.2–7.4 — code projects:** `code/` (CodeProjects, CodeChangeController, BuildJobs, CodeAi), `integration/git/ForgejoClient.kt`,
+>   `workers/runner/runner.mjs`, `infra/verdaccio`, `scaffolds/react-vite` (resources), migration V14, `features/studio/CodeWorkspace.tsx`.
 > * **Decisions:** docs/adr/0001–0012. Status matrix: IMPLEMENTATION_STATUS.md.
 
 Source of truth: the code on branch `feat/production-hardening` and the stack that was running on 2026-10-01 (API :8080, UI :3100, Docker services). Where README or docs disagree with the code, the code is used. Labels: **REAL** = runs against real components, **MOCK** = simulated, **PARTIAL**, **NOT IMPLEMENTED**. Nothing in this task changed code; the one write to the dev database was a sample project named "Walkthrough sample".

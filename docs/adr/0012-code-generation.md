@@ -1,5 +1,5 @@
 # ADR 0012 — Code generation for STATIC_APP projects: spec first, patches on branches, validated by builds
-Status: **proposed** (2026-10-02) — design only, not implemented. Increment 7.4. Depends on ADR 0008–0011.
+Status: **accepted; implemented locally** (2026-10-03). Increment 7.4. Depends on ADR 0008–0011.
 
 ## Pipeline
 ```
@@ -43,3 +43,15 @@ approval).
 A prompt produces a branch, a passing build and a preview; a malicious patch (path outside allowlist, unapproved dependency, secret,
 network call) is rejected before commit or fails the build; merge only after green build; Code Mode shows the same files as the Git
 server; every AI change is traceable to prompt, model, tokens and commit.
+
+## Implementation (2026-10-03)
+* `code/CodeAi.kt` — `POST …/code/ai`: the current editable source files (≤ 40 000 chars) and the request go to the chosen model as delimited data
+  (`ExternalLLMProvider.complete`, same fail-over/accounting as page prompts, tokens in `ai_calls`); the answer must be JSON with complete
+  file contents (≤ 10 files); `CodeChangePolicy` (src/, public/, index.html; text only; size limits; credential patterns) is applied before a
+  commit on `ai/<id>`; then the normal build → preview → merge path. Without a provider a **simulator** makes small real edits (title, button
+  text, background) and says so. No project-spec layer and no company UI package yet (v1: plain React).
+* Previews and published code apps are served by the sites gateway with **CSP `sandbox allow-scripts`** (opaque origin: no cookies, storage or
+  same-origin access to sites/Studio — verified in the browser), assets with `Access-Control-Allow-Origin: *`; previews are unguessable,
+  expiring capability URLs (`/_preview/<token>/`, revoked on discard) framed by the Studio only. **Private code apps are not supported** yet.
+* UI: `features/studio/CodeWorkspace.tsx` (AI and Code modes, file tree + editor, changes with preview/diff/build & scan report, merge/discard,
+  commit history, publish public).

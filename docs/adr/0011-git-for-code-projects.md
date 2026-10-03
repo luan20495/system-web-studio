@@ -1,5 +1,5 @@
 # ADR 0011 — Git for code projects: platform-owned repositories on a self-hosted server
-Status: **proposed** (2026-10-02) — design only, not implemented. Increment 7.2. Applies to `STATIC_APP` projects only;
+Status: **accepted; implemented locally** (2026-10-03). Increment 7.2. Applies to `STATIC_APP` projects only;
 `PAGE_SCHEMA` projects keep `project_versions` (the existing `DatabaseBackedGitProvider`) and never get a fake history.
 
 ## Decisions requested by the spec
@@ -32,3 +32,13 @@ The platform's own source code stays on GitHub (`luan20495/system-web-studio`) a
 ## Consequences
 New infrastructure (Git server) to operate and back up; the API needs a bot token (SecretProvider) and issues per-job read-only tokens
 for the build plane.
+
+## Implementation (2026-10-03)
+* Forgejo 11 rootless in `compose.yml` (127.0.0.1:13000, SQLite, no SSH, no sign-up, Actions/packages off); `scripts/forgejo-setup.sh` creates
+  server secrets, an admin, the bot `factory-bot`, the organisation `factory` and the bot token (`.run/forgejo*.env`, mode 600).
+* `integration/git/ForgejoClient.kt`; `code/CodeProjects.kt` creates `factory/<name>-<id>` with the scaffold as first commit (author = user,
+  committer = bot), protects `main` (push only by the bot, no force push) and records version 1 with the commit sha.
+* Changes: one commit on `edit/<id>` or `ai/<id>` with trailers `Code-Change-Id`, `Prompt-Id`, `Studio-User`; merged by **fast-forward** only
+  after the exact head commit built green (keeps the commit and its author; a moved main → `409 MAIN_MOVED`); each merge adds a
+  `project_versions` row (`kind COMMIT`, `commit_sha`) and bumps the project revision. The Versions drawer lists real commits from Forgejo.
+* Not done: read-only tokens for external IDEs, archiving/deleting repositories when a project is deleted, bot commit signing, review-before-merge policy.

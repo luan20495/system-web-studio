@@ -1,5 +1,5 @@
 # ADR 0010 — Build plane: per-job sandboxes on a separate Linux host
-Status: **proposed** (2026-10-02) — design only, not implemented. Increment 7.3. Needed only for `STATIC_APP` (code) projects.
+Status: **accepted; implemented locally** (2026-10-03). Increment 7.3. Needed only for `STATIC_APP` (code) projects.
 
 ## Requirements (from the spec)
 Isolated sandbox, dependency install, build, tests, secret scan, dependency scan, artifact creation, resource limits, timeout,
@@ -52,3 +52,27 @@ no change to the job protocol.
 A job cannot reach anything but the mirror in stage 1 and nothing in stage 2 (tested with outbound attempts); cannot read host files,
 environment secrets or instance metadata (tested); limits enforced (fork bomb, memory hog, infinite loop, huge output — each FAILED
 with the right reason); a planted secret and a vulnerable dependency each fail the build; artifact hash recorded and verified at deploy.
+
+## Implementation (2026-10-03)
+* `workers/runner/runner.mjs` — host process (Node), started by `scripts/run-local.sh`. **Protocol changed from RabbitMQ to HTTP polling**:
+  the runner claims jobs at `/internal/build-jobs/claim` with its own `X-Runner-Token` (`FOR UPDATE SKIP LOCKED`, claim expiry → re-claim),
+  downloads the source (the API streams the Forgejo archive; the runner never gets a Git credential), uploads the output tar.gz and reports.
+  Reason: no AMQP client dependency in the runner and nothing broker-specific to secure; the API stays the single owner of job state.
+* Per job (all `docker run --rm`, image `node:22-alpine` pinned by digest): copy source into a per-job volume (no bind mounts), chown in a
+  capability-limited helper; **install** on the internal `hbl_build` network (only `verdaccio:4873` reachable — verified: internet, host and raw IPs
+  blocked) with `npm ci --ignore-scripts`; **typecheck + build** with `--network none`; collect `dist` as tar.gz; hardening on every step:
+  `--read-only`, tmpfs `/tmp`, `--cap-drop ALL`, `no-new-privileges`, `--pids-limit 512`, `--memory 2g`, `--cpus 2`, `--user 1000:1000`,
+  install 300 s / build 600 s timeouts (container killed), output ≤ 100 MiB.
+* Scans: gitleaks on source and on output; **OSV** (osv.dev batch query of the lockfile's name@version, from the runner, nothing executed) —
+  HIGH/CRITICAL advisories fail the build (`npm audit` through the mirror hung and was replaced); SBOM (name, version, integrity) from the
+  lockfile stored with the job. The API re-checks the output for credential patterns and reads the tar with `SafeTar` (regular files only,
+  no links/devices/traversal, size and count limits) — as data, never executed.
+* Package mirror: `verdaccio` (compose) proxies only names in the scaffold lockfile + `infra/verdaccio/extra-packages.txt`
+  (`scripts/build-plane-allowlist.mjs`); exact versions come from the projects' lockfiles; in v1 users and the AI cannot change
+  package.json/package-lock.json at all.
+* **Finding while building the scaffold:** `rollup@4.64.0` (and 4.63.0) declare an unexpected optional dependency `@napi-rs/lzma-linux-x64-gnu`
+  and made a trivial Vite build take ~171 s of CPU on the host (1.5 s with 4.50.2). Not proven malicious, but treated as suspicious: the scaffold pins
+  `rollup@4.62.0` via `overrides` (also clean in OSV), cached 4.64.0 tarballs were deleted from the mirror. The OSV scan later blocked
+  `rollup@4.50.2`/`vite@7.1.5` for HIGH advisories, so the scaffold uses `vite@7.3.6` + `rollup@4.62.0` (0 advisories on 2026-10-03).
+* Verified: backend `CodeProjectTests` (fake runner against a real Forgejo container), browser `e2e/code-flow.mjs` with the real runner/sandbox
+  (build ≈ 15 s). Not done: gVisor/Firecracker (macOS host), per-user build quotas, artifact retention.
