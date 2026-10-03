@@ -251,6 +251,8 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
         </div>
       </header>
 
+      {project.status === "ARCHIVED" ? <div className="archivedBanner" role="status">Ứng dụng đã được lưu trữ: chỉ xem, website đang ngoại tuyến.
+        <button className="smallButton" onClick={() => void run("settings", () => api.restoreProject(ws, projectId), "Không khôi phục được (cần quyền chủ sở hữu hoặc quản trị).").then((r) => { if (r) void reload(); })}>Khôi phục</button></div> : null}
       {mode === "code" ? (
         <main className="codeMode">
           <div className="codeCard">
@@ -377,7 +379,11 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
       {panel === "site" ? <SiteDrawer schema={schema} ws={ws} pid={projectId} pageId={pageId} onPage={(id) => { setPageId(id); setSelectedId(null); }} canEdit={!readOnly}
         canPublish={can("PROJECT_PUBLISH")} apply={applyOps} onClose={() => go(mode)}/> : null}
       {panel === "settings" ? <SettingsDrawer project={project} busy={busy === "settings"} onClose={() => go(mode)} onSave={saveSettings}
-        extra={!readOnly ? <SaveTemplateSection workspaceId={ws} projectId={projectId} projectName={project.name}/> : undefined}/> : null}
+        extra={<>{!readOnly ? <SaveTemplateSection workspaceId={ws} projectId={projectId} projectName={project.name}/> : null}
+          {can("PROJECT_DELETE") && project.status !== "ARCHIVED" ? <section className="settingGroup"><h3>Lưu trữ ứng dụng</h3>
+            <p className="hint">Ứng dụng chỉ còn xem được, website bị gỡ khỏi mạng. Dữ liệu và phiên bản được giữ; có thể khôi phục.</p>
+            <button className="button ghost" onClick={() => { if (confirm(`Lưu trữ “${project.name}”?`)) void run("settings", () => api.archiveProject(ws, projectId), "Không lưu trữ được.").then((r) => { if (r) { go(mode); void reload(); } }); }}>Lưu trữ</button>
+          </section> : null}</>}/> : null}
       {savingBlock && selected ? <SaveBlockDrawer workspaceId={ws} projectId={projectId} section={selected} title={label(selected.type)}
         onClose={() => setSavingBlock(false)} onSaved={(m) => { setSavingBlock(false); setNotice(m); loadBlocks(); }}/> : null}
       {panel === "assets" ? <AssetsDrawer workspaceId={ws} projectId={projectId} canEdit={can("PROJECT_EDIT")} onClose={() => { void loadAssets(ws); go(mode); }} onError={(e) => setNotice(errText(e, "Thao tác tệp thất bại."))}/> : null}

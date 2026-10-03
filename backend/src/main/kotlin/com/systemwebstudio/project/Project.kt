@@ -90,6 +90,9 @@ class ProjectEntity(
     var revision: Long = 0,
     @Column(nullable = false)
     var active: Boolean = true,
+    /** ACTIVE | ARCHIVED (read-only and offline; stage H) */
+    @Column(nullable = false, length = 16)
+    var lifecycle: String = "ACTIVE",
     @Column(name = "created_at", nullable = false)
     var createdAt: Instant = Instant.now(),
     @Column(name = "updated_at", nullable = false)

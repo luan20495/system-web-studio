@@ -34,7 +34,7 @@ data class WorkspaceMember(val userId: UUID, val username: String, val displayNa
 data class AppRow(
     val id: UUID, val name: String, val workspaceId: UUID, val workspaceName: String, val ownerId: UUID, val owner: String, val members: Int,
     val visibility: String, val revision: Long, val latestVersion: Int?, val createdAt: Instant, val updatedAt: Instant, val active: Boolean,
-    val publishStatus: String?, val publishedAt: Instant?
+    val publishStatus: String?, val publishedAt: Instant?, val lifecycle: String = "ACTIVE", val appType: String = "PAGE_SCHEMA"
 )
 data class WorkspaceDetail(val workspace: WorkspaceRow, val members: List<WorkspaceMember>, val projects: List<AppRow>, val recentActivity: List<AuditRow>)
 data class VersionRowDto(val id: UUID, val versionNumber: Int, val kind: String, val summary: String, val createdBy: String?, val createdAt: Instant)
@@ -123,12 +123,12 @@ class AdminController(
     private val appSelect = """SELECT p.id, p.name, p.workspace_id, w.name, p.owner_user_id, coalesce(u.display_name, u.username),
         (SELECT count(*) FROM project_members pm WHERE pm.project_id = p.id AND pm.active), p.site_visibility, p.revision,
         (SELECT max(v.version_number) FROM project_versions v WHERE v.project_id = p.id), p.created_at, p.updated_at, p.active,
-        d.status, d.created_at
+        d.status, d.created_at, p.lifecycle, p.app_type
         FROM projects p JOIN workspaces w ON w.id = p.workspace_id JOIN users u ON u.id = p.owner_user_id
         LEFT JOIN LATERAL (SELECT status, created_at FROM deployments d WHERE d.project_id = p.id ORDER BY d.created_at DESC LIMIT 1) d ON TRUE"""
     private fun appRow(rs: java.sql.ResultSet) = AppRow(rs.getObject(1, UUID::class.java), rs.getString(2), rs.getObject(3, UUID::class.java), rs.getString(4),
         rs.getObject(5, UUID::class.java), rs.getString(6), rs.getInt(7), rs.getString(8), rs.getLong(9), rs.getObject(10) as Int?, rs.getTimestamp(11).toInstant(),
-        rs.getTimestamp(12).toInstant(), rs.getBoolean(13), rs.getString(14), rs.getTimestamp(15)?.toInstant())
+        rs.getTimestamp(12).toInstant(), rs.getBoolean(13), rs.getString(14), rs.getTimestamp(15)?.toInstant(), rs.getString(16), rs.getString(17))
 
     private fun apps(extra: String, args: Array<Any>, page: Int, size: Int): PageDto<AppRow> {
         val (p, s) = pageArgs(page, size)
@@ -144,7 +144,8 @@ class AdminController(
                      @RequestParam(defaultValue = "active") status: String, @AuthenticationPrincipal me: StudioUserDetails): PageDto<AppRow> {
         guard.require(me.userId)
         val extra = StringBuilder(); val args = mutableListOf<Any>()
-        when (status) { "active" -> extra.append(" AND p.active"); "deleted" -> extra.append(" AND NOT p.active") }
+        when (status) { "active" -> extra.append(" AND p.active AND p.lifecycle = 'ACTIVE'"); "archived" -> extra.append(" AND p.active AND p.lifecycle = 'ARCHIVED'")
+            "deleted" -> extra.append(" AND NOT p.active") }
         like(q)?.let { extra.append(" AND (p.name ILIKE ? OR u.username ILIKE ?)"); args += it; args += it }
         workspaceId?.let { extra.append(" AND p.workspace_id = ?"); args += it }
         visibility?.takeIf { it == "PUBLIC" || it == "PRIVATE" }?.let { extra.append(" AND p.site_visibility = ?"); args += it }

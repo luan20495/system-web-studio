@@ -57,7 +57,7 @@ class SiteService(
     /** The artifact currently served for a slug, or null (unknown slug, offline, deleted project). */
     fun live(slug: String): LiveSite? = jdbc.query(
         """SELECT s.project_id, p.workspace_id, s.slug, d.id, d.visibility, a.storage_prefix, a.manifest::text, a.kind
-           FROM sites s JOIN projects p ON p.id = s.project_id AND p.active
+           FROM sites s JOIN projects p ON p.id = s.project_id AND p.active AND p.lifecycle = 'ACTIVE'
            JOIN deployments d ON d.id = s.current_deployment_id AND d.status IN ('DEPLOYING', 'RUNNING')
            JOIN artifacts a ON a.id = d.artifact_id AND a.deleted_at IS NULL WHERE s.slug = ?""", { rs, _ ->
             val files = json.readTree(rs.getString(7)).toList().map { json.treeToValue(it, ManifestFile::class.java) }.associateBy { it.path }

@@ -52,7 +52,7 @@ data class ProjectResponse(
 
 fun ProjectEntity.toResponse(permissions: Collection<Permission> = emptyList()) = ProjectResponse(
     id, workspaceId, name, description, ownerUserId, framework, projectAccessPolicy, siteVisibility, authMode,
-    domain, customDomain, deploymentMode, deploymentTarget, if (active) "ACTIVE" else "DELETED",
+    domain, customDomain, deploymentMode, deploymentTarget, if (!active) "DELETED" else lifecycle,
     revision, createdAt, updatedAt, permissions.map { it.name }.sorted(), appType
 )
 

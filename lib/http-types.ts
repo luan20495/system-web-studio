@@ -92,7 +92,8 @@ export type AdminUserDetail = { user: AdminUser; workspaces: AdminMembership[]; 
 export type AdminWorkspace = { id: string; name: string; slug: string; createdAt: string; members: number; projects: number; lastActivityAt: string | null };
 export type AdminMember = { userId: string; username: string; displayName: string | null; role: string; enabled: boolean };
 export type AdminApp = { id: string; name: string; workspaceId: string; workspaceName: string; ownerId: string; owner: string; members: number; visibility: string;
-  revision: number; latestVersion: number | null; createdAt: string; updatedAt: string; active: boolean; publishStatus: string | null; publishedAt: string | null };
+  revision: number; latestVersion: number | null; createdAt: string; updatedAt: string; active: boolean; publishStatus: string | null; publishedAt: string | null;
+  lifecycle?: "ACTIVE" | "ARCHIVED"; appType?: string };
 export type AdminWorkspaceDetail = { workspace: AdminWorkspace; members: AdminMember[]; projects: AdminApp[]; recentActivity: AuditRow[] };
 export type AdminAppDetail = { app: AdminApp; members: AdminMember[];
   versions: { id: string; versionNumber: number; kind: string; summary: string; createdBy: string | null; createdAt: string }[];
@@ -182,3 +183,13 @@ export type AiBudget = { id: string; scopeType: "ORG" | "WORKSPACE" | "USER" | "
   usdPerUnit: number; softPercent: number; hard: boolean; spent: number; spentUsd: number; unknownCostCalls: number; percent: number; periodStart: string };
 export type AdminAlert = { id: string; kind: string; severity: "INFO" | "WARNING" | "CRITICAL"; scopeType: string | null; scopeId: string | null; message: string; data: Record<string, unknown>;
   createdAt: string; acknowledgedBy: string | null; acknowledgedAt: string | null };
+
+// ---- Stage H: organisation, costs, security findings
+export type Department = { id: string; name: string; kind: "DEPARTMENT" | "TEAM"; parentId: string | null; users: number; workspaces: number; createdAt: string };
+export type CostPrice = { id: string; item: string; unitPrice: number; currency: string; usdPerUnit: number; note: string; effectiveFrom: string; createdBy: string | null };
+export type CostLine = { key: string; label: string | null; storageBytes: number; buildCpuMs: number; buildMs: number; aiUsd: number; aiUnknownCalls: number;
+  storageUsd: number | null; cpuUsd: number | null; buildUsd: number | null; totalKnownUsd: number; complete: boolean };
+export type CostReport = { days: number; prices: CostPrice[]; missingPrices: string[]; egress: string; total: CostLine; byDepartment: CostLine[]; byWorkspace: CostLine[]; byApplication: CostLine[] };
+export type SecurityFinding = { severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFO"; source: string; title: string; detail: string; resourceType: string | null; resourceId: string | null;
+  resourceName: string | null; detectedAt: string | null };
+export type SecurityReport = { counts: Record<string, number>; findings: SecurityFinding[]; note: string };

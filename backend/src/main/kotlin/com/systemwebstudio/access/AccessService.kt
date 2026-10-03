@@ -45,13 +45,15 @@ class AccessService(
         return AccessContext(user, workspaceId, member?.role, null, permissions, null)
     }
 
-    fun forProject(userId: UUID, workspaceId: UUID, projectId: UUID): AccessContext {
+    /** An ARCHIVED application keeps only read access (and audit reading); [ignoreArchive] is for archive/restore itself. */
+    fun forProject(userId: UUID, workspaceId: UUID, projectId: UUID, ignoreArchive: Boolean = false): AccessContext {
         val ws = forWorkspace(userId, workspaceId)
         val project = projects.findByIdAndWorkspaceIdAndActiveTrue(projectId, workspaceId)
             ?: throw ApiException.notFound("PROJECT_NOT_FOUND", "Project not found")
         val projectRole = projectMembers.findByProjectIdAndUserIdAndActiveTrue(projectId, userId)?.role
-        val permissions = ws.permissions + PermissionMatrix.projectRoles[projectRole].orEmpty()
+        var permissions = ws.permissions + PermissionMatrix.projectRoles[projectRole].orEmpty()
         if (Permission.PROJECT_READ !in permissions) throw ApiException.notFound("PROJECT_NOT_FOUND", "Project not found")
+        if (project.lifecycle == "ARCHIVED" && !ignoreArchive) permissions = permissions.intersect(setOf(Permission.PROJECT_READ, Permission.AUDIT_READ))
         return AccessContext(ws.user, workspaceId, ws.workspaceRole, projectRole, permissions, project)
     }
 }

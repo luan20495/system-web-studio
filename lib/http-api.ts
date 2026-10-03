@@ -1,6 +1,6 @@
 import type {
   AdminAi, AiCallRow, SettingView, BuildPolicyReport, CleanupResult, RepoRow, AiPrice, AiProbe, AiProviderInfo, AiUsageReport, AdminApp, BlockDto, CheckResult, TemplateDto, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
-  FormSubmission, SiteDomain, TemplateReview, LibraryCategories, AccessRule, EffectiveModel, AiBudget, AdminAlert, StreamHandlers,
+  Department, CostPrice, CostReport, SecurityReport, FormSubmission, SiteDomain, TemplateReview, LibraryCategories, AccessRule, EffectiveModel, AiBudget, AdminAlert, StreamHandlers,
   AiStatus, ApiProject, AuthConfig, Member, SiteInfo, DesignNode, DependencyRequest, PackageView, CloneAccess, TreeFile, CodeFile, CodeCommit, CodeChange, DiffFile, CodeAiResponse, CodeAiHistoryItem, RegistryComponent, AssetDto, Deployment, Me, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
 } from "./http-types";
 
@@ -132,6 +132,8 @@ export const api = {
     const items = await call<ApiProject[]>(`/workspaces/${w}/projects${qs({ page, size, q, scope })}`, { onTotal: (n) => { total = n; } });
     return { items, total, page, size };
   },
+  archiveProject: (w: string, p: string) => call<unknown>(`${P(w, p)}/archive`, { method: "POST" }),
+  restoreProject: (w: string, p: string) => call<unknown>(`${P(w, p)}/restore`, { method: "POST" }),
   deleteProject: (w: string, p: string, expectedRevision: number) => call<void>(`${P(w, p)}${qs({ expectedRevision })}`, { method: "DELETE" }),
   myUsage: () => call<MyUsage>("/me/usage"),
   myActivity: (limit = 30) => call<AuditRow[]>(`/me/activity${qs({ limit })}`),
@@ -182,6 +184,17 @@ export const api = {
     approvePackage: (body: { name: string; versionRange?: string; pinnedVersion?: string; note?: string }) => call<PackageView>("/admin/packages", { method: "POST", body: json(body) }),
     decidePackage: (name: string, status: "ALLOWED" | "DENIED", acceptRisk?: boolean, note?: string) =>
       call<PackageView>(`/admin/packages/${encodeURIComponent(name)}/decision`, { method: "PUT", body: json({ status, acceptRisk, note }) }),
+    departments: () => call<Department[]>("/admin/departments"),
+    createDepartment: (body: { name: string; kind: "DEPARTMENT" | "TEAM"; parentId?: string }) => call<Department[]>("/admin/departments", { method: "POST", body: json(body) }),
+    renameDepartment: (id: string, body: { name: string; parentId?: string | null }) => call<Department[]>(`/admin/departments/${id}`, { method: "PATCH", body: json(body) }),
+    deleteDepartment: (id: string) => call<Department[]>(`/admin/departments/${id}`, { method: "DELETE" }),
+    assignUserDepartment: (userId: string, departmentId: string | null) => call<unknown>(`/admin/departments/assign/users/${userId}`, { method: "PUT", body: json({ departmentId }) }),
+    assignWorkspaceDepartment: (workspaceId: string, departmentId: string | null) => call<unknown>(`/admin/departments/assign/workspaces/${workspaceId}`, { method: "PUT", body: json({ departmentId }) }),
+    costs: (days: number) => call<CostReport>(`/admin/costs${qs({ days })}`),
+    addCostPrice: (body: { item: string; unitPrice: number; currency: string; usdPerUnit?: number; note?: string }) => call<CostPrice[]>("/admin/costs/prices", { method: "POST", body: json(body) }),
+    securityFindings: () => call<SecurityReport>("/admin/security/findings"),
+    archiveApp: (id: string) => call<unknown>(`/admin/applications/${id}/archive`, { method: "POST" }),
+    restoreApp: (id: string) => call<unknown>(`/admin/applications/${id}/restore`, { method: "POST" }),
     accessRules: () => call<AccessRule[]>("/admin/ai/access"),
     addAccessRule: (body: { scopeType: string; scopeId?: string; modelId: string }) => call<{ id: string }>("/admin/ai/access", { method: "POST", body: json(body) }),
     deleteAccessRule: (id: string) => call<void>(`/admin/ai/access/${id}`, { method: "DELETE" }),

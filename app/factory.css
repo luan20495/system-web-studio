@@ -219,3 +219,6 @@
 .submission,.domainRow{padding:10px 0;border-top:1px solid rgba(127,127,127,.2)}.submission p{margin:6px 0;white-space:pre-wrap}
 .linkButton.active{font-weight:700;text-decoration:underline}
 @media(max-width:700px){.navRow{grid-template-columns:1fr 1fr}}
+.kpiButton{text-align:left;cursor:pointer;border:1px solid transparent}.kpiButton.active{border-color:currentColor}
+.deptRow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 0}.plainList.nested{margin-left:22px}
+.archivedBanner{display:flex;gap:12px;align-items:center;justify-content:center;padding:8px 14px;background:#fff4d6;color:#5c4400;font-size:13px;border-bottom:1px solid #f0d58a}

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { api } from "@/lib/http-api";
-import type { AccessRule, AiBudget, AdminAlert, EffectiveModel, AdminApp as App, AiProbe, PackageView, RepoRow, SettingView, BlockDto, TemplateDto, AiUsageReport, AuditRow, HealthItem, UsageBucket, UsageTotals } from "@/lib/http-types";
+import type { CostLine, Department, SecurityFinding, AccessRule, AiBudget, AdminAlert, EffectiveModel, AdminApp as App, AiProbe, PackageView, RepoRow, SettingView, BlockDto, TemplateDto, AiUsageReport, AuditRow, HealthItem, UsageBucket, UsageTotals } from "@/lib/http-types";
 import { useSession } from "../session";
 import { rememberPortal } from "../routing";
 import { useLoad } from "../useLoad";
@@ -12,7 +12,7 @@ import { BlockStatus, blockPage, CheckList, ReviewTimeline, SchemaThumb } from "
 import { actionLabel, ago, Card, ComingSoon, ErrorState, errText, fmtDate, Kpi, NavLink, num, Pager, Pill, StateView, tok, usd } from "../ui";
 
 const NAV: [string, string, string][] = [
-  ["", "Tổng quan", "▦"], ["users", "Người dùng & Workspace", "◎"], ["applications", "Ứng dụng", "▤"], ["ai", "AI Control", "✦"], ["ai-governance", "Quản trị AI", "⚖"], ["alerts", "Cảnh báo", "!"],
+  ["", "Tổng quan", "▦"], ["users", "Người dùng & Workspace", "◎"], ["applications", "Ứng dụng", "▤"], ["ai", "AI Control", "✦"], ["ai-governance", "Quản trị AI", "⚖"], ["alerts", "Cảnh báo", "!"], ["security", "Bảo mật", "⛨"], ["costs", "Chi phí", "$"], ["departments", "Phòng ban", "⌘"],
   ["components", "Components", "◇"], ["templates", "Templates", "▧"], ["audit", "Nhật ký kiểm toán", "≡"], ["builds", "Build & lưu trữ", "⬢"], ["packages", "Packages", "▣"], ["system", "Sức khỏe hệ thống", "♥"], ["settings", "Cài đặt", "⚙"]
 ];
 
@@ -39,6 +39,9 @@ function route(seg: string[]): ReactNode {
     case "ai": return <AiPage/>;
     case "ai-governance": return <AiGovernancePage/>;
     case "alerts": return <AlertsPage/>;
+    case "security": return <SecurityPage/>;
+    case "costs": return <CostsPage/>;
+    case "departments": return <DepartmentsPage/>;
     case "components": return <ComponentsPage/>;
     case "templates": return <TemplatesAdmin/>;
     case "builds": return <BuildsPage/>;
@@ -254,7 +257,7 @@ function AppsPage() {
       <form className="filters" onSubmit={(e) => { e.preventDefault(); setPage(0); setQuery(q); }}>
         <input aria-label="Tìm ứng dụng" placeholder="Tìm theo tên ứng dụng hoặc chủ sở hữu" value={q} onChange={(e) => setQ(e.target.value)}/>
         <select aria-label="Quyền truy cập" value={visibility} onChange={(e) => { setPage(0); setVisibility(e.target.value); }}><option value="">Mọi quyền truy cập</option><option value="PRIVATE">Riêng tư</option><option value="PUBLIC">Công khai</option></select>
-        <select aria-label="Trạng thái" value={status} onChange={(e) => { setPage(0); setStatus(e.target.value); }}><option value="active">Đang hoạt động</option><option value="deleted">Đã xóa</option><option value="all">Tất cả</option></select>
+        <select aria-label="Trạng thái" value={status} onChange={(e) => { setPage(0); setStatus(e.target.value); }}><option value="active">Đang hoạt động</option><option value="archived">Đã lưu trữ</option><option value="deleted">Đã xóa</option><option value="all">Tất cả</option></select>
         <button className="btn">Tìm</button>
       </form>
       {error ? <ErrorState error={error} retry={reload}/> : loading && !data ? <StateView kind="loading"/> : (<><AppTable rows={data!.items}/><Pager page={page} size={data!.size} total={data!.total} onPage={setPage}/></>)}
@@ -274,8 +277,11 @@ function AppDetail({ id }: { id: string }) {
   async function act(fn: () => Promise<unknown>, ok: string) { setBusy(true); setMsg(null); try { await fn(); setMsg(ok); reload(); } catch (e) { setMsg(errText(e, "Thao tác thất bại.")); } finally { setBusy(false); } }
   const tabs: [typeof tab, string][] = [["overview", "Tổng quan"], ["members", `Thành viên (${d.members.length})`], ["versions", "Phiên bản"], ["prompts", "Hoạt động AI"], ["deployments", "Xuất bản"], ["audit", "Nhật ký"]];
   return (<>
-    <PageHead title={a.name} sub={`${a.workspaceName} · chủ sở hữu ${a.owner} · ${a.active ? "đang hoạt động" : "đã xóa"}`}
-      actions={a.active ? <button className="btn danger" disabled={busy} onClick={() => { if (window.confirm(`Xóa ứng dụng "${a.name}"? (xóa mềm, có ghi nhật ký)`)) void act(() => api.deleteProject(a.workspaceId, a.id, a.revision), "Đã xóa ứng dụng."); }}>Xóa</button> : undefined}/>
+    <PageHead title={a.name} sub={`${a.workspaceName} · chủ sở hữu ${a.owner} · ${!a.active ? "đã xóa" : a.lifecycle === "ARCHIVED" ? "đã lưu trữ (chỉ xem, ngoại tuyến)" : "đang hoạt động"}`}
+      actions={a.active ? <div className="row">
+        {a.lifecycle === "ARCHIVED" ? <button className="btn" disabled={busy} onClick={() => void act(() => api.admin.restoreApp(a.id), "Đã khôi phục ứng dụng (website vẫn ngoại tuyến tới khi xuất bản lại).")}>Khôi phục</button>
+          : <button className="btn" disabled={busy} onClick={() => { if (window.confirm(`Lưu trữ "${a.name}"? Ứng dụng chỉ còn xem được và website bị gỡ khỏi mạng.`)) void act(() => api.admin.archiveApp(a.id), "Đã lưu trữ ứng dụng."); }}>Lưu trữ</button>}
+        <button className="btn danger" disabled={busy} onClick={() => { if (window.confirm(`Xóa ứng dụng "${a.name}"? (xóa mềm, có ghi nhật ký)`)) void act(() => api.deleteProject(a.workspaceId, a.id, a.revision), "Đã xóa ứng dụng."); }}>Xóa</button></div> : undefined}/>
     {msg ? <p className="notice" role="status">{msg}</p> : null}
     <div className="tabs" role="tablist">{tabs.map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? "active" : ""} onClick={() => setTab(k)}>{l}</button>)}</div>
     {tab === "overview" ? (<>
@@ -902,5 +908,108 @@ function AlertsPage() {
         <tbody>{data.items.map((a) => <tr key={a.id} className={`alertRow ${a.severity}`}><td><Pill value={a.severity === "CRITICAL" ? "DISABLED" : a.severity === "WARNING" ? "UNKNOWN" : "ACTIVE"} label={a.severity}/></td>
           <td>{ALERT_KIND[a.kind] ?? a.kind}</td><td>{a.message}</td><td>{ago(a.createdAt)}</td>
           <td>{a.acknowledgedAt ? <small>{a.acknowledgedBy ?? "—"} · {ago(a.acknowledgedAt)}</small> : <button className="btn sm" onClick={() => void ack(a)}>Đã xử lý</button>}</td></tr>)}</tbody></table>}</Card>
+  </>);
+}
+
+// ---------------------------------------------------------------- Stage H: security findings, hosting cost, departments
+
+const SEV_TONE: Record<string, string> = { CRITICAL: "DISABLED", HIGH: "DISABLED", MEDIUM: "UNKNOWN", LOW: "QUEUED", INFO: "ACTIVE" };
+const SOURCE_LABEL: Record<string, string> = { DEPENDENCY: "Phụ thuộc (OSV)", SECRET: "Quét bí mật", PACKAGE: "Danh mục package", CONFIG: "Cấu hình" };
+function SecurityPage() {
+  const { data, error, reload } = useLoad(() => api.admin.securityFindings(), []);
+  const [sev, setSev] = useState("");
+  const rows: SecurityFinding[] = (data?.findings ?? []).filter((f) => !sev || f.severity === sev);
+  return (<>
+    <PageHead title="Phát hiện bảo mật" sub="Từ dữ liệu thật: quét phụ thuộc và bí mật của bản build gần nhất mỗi ứng dụng mã nguồn, rủi ro package đã chấp nhận, cấu hình nguy cơ. Không có điểm bảo mật tổng hợp."/>
+    {error ? <ErrorState error={error} retry={reload}/> : !data ? <StateView kind="loading"/> : <>
+      <div className="kpiGrid">{["CRITICAL", "HIGH", "MEDIUM", "LOW"].map((k) => <button key={k} className={`kpi kpiButton${sev === k ? " active" : ""}`} onClick={() => setSev(sev === k ? "" : k)} aria-pressed={sev === k}>
+        <div className="kpiLabel">{k}</div><div className="kpiValue">{num(data.counts[k] ?? 0)}</div></button>)}</div>
+      <Card title={sev ? `Mức ${sev}` : "Tất cả phát hiện"}>{rows.length === 0 ? <StateView kind="empty" title="Không có phát hiện"/> :
+        <table className="table"><thead><tr><th>Mức</th><th>Nguồn</th><th>Phát hiện</th><th>Đối tượng</th><th>Thời điểm</th></tr></thead>
+          <tbody>{rows.map((f, i) => <tr key={i}><td><Pill value={SEV_TONE[f.severity] ?? "UNKNOWN"} label={f.severity}/></td><td>{SOURCE_LABEL[f.source] ?? f.source}</td>
+            <td><b>{f.title}</b><small>{f.detail}</small></td>
+            <td>{f.resourceType === "PROJECT" && f.resourceId ? <Link href={`/admin/applications/${f.resourceId}`}>{f.resourceName ?? f.resourceId}</Link> : <span className="code">{f.resourceName ?? f.resourceId ?? "—"}</span>}</td>
+            <td>{f.detectedAt ? ago(f.detectedAt) : "hiện tại"}</td></tr>)}</tbody></table>}</Card>
+      <p className="hint">{data.note}</p></>}
+  </>);
+}
+
+const COST_ITEM: Record<string, string> = { STORAGE_GIB_MONTH: "Lưu trữ (GiB · tháng)", BUILD_CPU_HOUR: "CPU build (giờ)", BUILD_MINUTE: "Thời gian build (phút)", EGRESS_GIB: "Băng thông ra (GiB, chưa đo)" };
+const gib = (b: number) => `${(b / 1073741824).toFixed(b >= 1073741824 ? 1 : 3)} GiB`;
+const money = (v: number | null) => (v == null ? "chưa có giá" : usd(v));
+function CostTable({ rows, first }: { rows: CostLine[]; first: string }) {
+  if (!rows.length) return <StateView kind="empty" title="Chưa có số liệu"/>;
+  return <table className="table"><thead><tr><th>{first}</th><th>Lưu trữ</th><th>CPU build</th><th>Thời gian build</th><th>AI</th><th>Tổng đã biết</th></tr></thead>
+    <tbody>{rows.map((r) => <tr key={r.key}><td>{r.label ?? r.key}{r.complete ? null : <small>chưa đủ giá → tổng chưa đầy đủ</small>}</td>
+      <td>{gib(r.storageBytes)}<small>{money(r.storageUsd)}</small></td><td>{(r.buildCpuMs / 3600000).toFixed(2)} h<small>{money(r.cpuUsd)}</small></td>
+      <td>{(r.buildMs / 60000).toFixed(1)} phút<small>{money(r.buildUsd)}</small></td><td>{usd(r.aiUsd)}{r.aiUnknownCalls ? <small>{r.aiUnknownCalls} lượt chưa rõ chi phí</small> : null}</td>
+      <td><b>{usd(r.totalKnownUsd)}</b></td></tr>)}</tbody></table>;
+}
+function CostsPage() {
+  const [days, setDays] = useState(30);
+  const { data, error, reload } = useLoad(() => api.admin.costs(days), [days]);
+  const [f, setF] = useState({ item: "STORAGE_GIB_MONTH", price: "", currency: "USD", rate: "", note: "" }); const [err, setErr] = useState<string | null>(null);
+  async function add(e: FormEvent) {
+    e.preventDefault(); setErr(null);
+    try { await api.admin.addCostPrice({ item: f.item, unitPrice: Number(f.price), currency: f.currency.toUpperCase(), usdPerUnit: f.currency.toUpperCase() === "USD" ? undefined : Number(f.rate), note: f.note || undefined }); setF({ ...f, price: "", note: "" }); reload(); }
+    catch (x) { setErr(errText(x, "Không lưu được.")); }
+  }
+  return (<>
+    <PageHead title="Chi phí hosting" sub="Số đo thật × đơn giá do quản trị viên nhập. Thiếu đơn giá thì hiện “chưa có giá”, không ước đoán. Băng thông ra chưa được đo."
+      actions={<select aria-label="Khoảng thời gian" value={days} onChange={(e) => setDays(Number(e.target.value))}><option value={7}>7 ngày</option><option value={30}>30 ngày</option><option value={90}>90 ngày</option></select>}/>
+    <Card title="Đơn giá">
+      <form className="filters wrap" onSubmit={(e) => void add(e)}>
+        <select aria-label="Hạng mục" value={f.item} onChange={(e) => setF({ ...f, item: e.target.value })}>{Object.entries(COST_ITEM).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
+        <input aria-label="Đơn giá" type="number" min="0" step="any" placeholder="Đơn giá" value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })}/>
+        <input aria-label="Tiền tệ" maxLength={3} value={f.currency} onChange={(e) => setF({ ...f, currency: e.target.value })} style={{ width: 70 }}/>
+        {f.currency.toUpperCase() !== "USD" ? <input aria-label="USD cho 1 đơn vị tiền" type="number" step="any" placeholder="USD / 1 đơn vị" value={f.rate} onChange={(e) => setF({ ...f, rate: e.target.value })}/> : null}
+        <input aria-label="Ghi chú" placeholder="Nguồn giá (hợp đồng, bảng giá…)" value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })}/>
+        <button className="btn primary" disabled={!f.price}>Thêm đơn giá</button>
+      </form>
+      {err ? <p className="formError" role="alert">{err}</p> : null}
+      {data ? <ul className="plainList">{data.prices.map((p) => <li key={p.id}>{COST_ITEM[p.item] ?? p.item}: {p.unitPrice} {p.currency}{p.currency !== "USD" ? ` (×${p.usdPerUnit} USD)` : ""} · từ {fmtDate(p.effectiveFrom)}{p.note ? ` · ${p.note}` : ""}</li>)}
+        {data.missingPrices.map((m) => <li key={m} className="hint">{COST_ITEM[m]}: chưa có đơn giá</li>)}</ul> : null}
+    </Card>
+    {error ? <ErrorState error={error} retry={reload}/> : !data ? <StateView kind="loading"/> : <>
+      <div className="kpiGrid"><Kpi label={`Tổng đã biết (${data.days} ngày)`} value={usd(data.total.totalKnownUsd)} hint={data.total.complete ? "đủ đơn giá" : "chưa đầy đủ: thiếu đơn giá hoặc AI chưa rõ chi phí"}/>
+        <Kpi label="Lưu trữ hiện tại" value={gib(data.total.storageBytes)}/><Kpi label="CPU build" value={`${(data.total.buildCpuMs / 3600000).toFixed(2)} h`}/><Kpi label="AI" value={usd(data.total.aiUsd)}/></div>
+      <Card title="Theo phòng ban"><CostTable rows={data.byDepartment} first="Phòng ban"/></Card>
+      <Card title="Theo workspace"><CostTable rows={data.byWorkspace} first="Workspace"/></Card>
+      <Card title="Theo ứng dụng"><CostTable rows={data.byApplication} first="Ứng dụng"/></Card>
+      <p className="hint">{data.egress}</p></>}
+  </>);
+}
+
+function DepartmentsPage() {
+  const { data, error, reload } = useLoad(() => api.admin.departments(), []);
+  const [name, setName] = useState(""); const [parent, setParent] = useState(""); const [err, setErr] = useState<string | null>(null); const [msg, setMsg] = useState<string | null>(null);
+  const [who, setWho] = useState({ type: "USER", id: "" }); const [target, setTarget] = useState("");
+  async function act(fn: () => Promise<unknown>, ok?: string) { setErr(null); setMsg(null); try { await fn(); if (ok) setMsg(ok); reload(); } catch (x) { setErr(errText(x, "Không thực hiện được.")); } }
+  const deps = (data ?? []).filter((d) => d.kind === "DEPARTMENT");
+  const teamsOf = (id: string) => (data ?? []).filter((d) => d.parentId === id);
+  function row(d: Department) {
+    return <li key={d.id} className="deptRow"><b>{d.name}</b> <small>{d.kind === "TEAM" ? "nhóm" : "phòng ban"} · {d.users} người · {d.workspaces} workspace</small>
+      <button className="btn sm ghost" onClick={() => { const n = window.prompt("Tên mới:", d.name)?.trim(); if (n) void act(() => api.admin.renameDepartment(d.id, { name: n })); }}>Đổi tên</button>
+      <button className="btn sm ghost" onClick={() => { if (confirm(`Xoá “${d.name}”?`)) void act(() => api.admin.deleteDepartment(d.id)); }}>Xoá</button></li>;
+  }
+  return (<>
+    <PageHead title="Phòng ban & nhóm" sub="Nhóm tổ chức để báo cáo chi phí và sử dụng. Không cấp quyền: quyền truy cập vẫn theo thành viên workspace/ứng dụng."/>
+    {err ? <p className="formError" role="alert">{err}</p> : null}{msg ? <p className="hint" role="status">{msg}</p> : null}
+    <Card title="Thêm">
+      <form className="filters wrap" onSubmit={(e) => { e.preventDefault(); if (name.trim()) void act(() => api.admin.createDepartment({ name: name.trim(), kind: parent ? "TEAM" : "DEPARTMENT", parentId: parent || undefined }).then(() => setName(""))); }}>
+        <input aria-label="Tên" placeholder="Tên phòng ban hoặc nhóm" maxLength={120} value={name} onChange={(e) => setName(e.target.value)}/>
+        <select aria-label="Thuộc phòng ban" value={parent} onChange={(e) => setParent(e.target.value)}><option value="">— phòng ban cấp cao nhất —</option>{deps.map((d) => <option key={d.id} value={d.id}>Nhóm trong: {d.name}</option>)}</select>
+        <button className="btn primary" disabled={!name.trim()}>Thêm</button>
+      </form>
+    </Card>
+    <Card title="Cơ cấu">{error ? <ErrorState error={error} retry={reload}/> : !data ? <StateView kind="loading"/> : deps.length === 0 ? <StateView kind="empty" title="Chưa có phòng ban"/> :
+      <ul className="plainList">{deps.map((d) => <Fragment key={d.id}>{row(d)}{teamsOf(d.id).length ? <ul className="plainList nested">{teamsOf(d.id).map(row)}</ul> : null}</Fragment>)}</ul>}</Card>
+    <Card title="Gán người dùng hoặc workspace">
+      <form className="filters wrap" onSubmit={(e) => { e.preventDefault(); if (who.id) void act(() => who.type === "USER" ? api.admin.assignUserDepartment(who.id, target || null) : api.admin.assignWorkspaceDepartment(who.id, target || null), "Đã gán."); }}>
+        <ScopePicker types={["USER", "WORKSPACE"]} value={who} onChange={setWho}/>
+        <select aria-label="Phòng ban / nhóm" value={target} onChange={(e) => setTarget(e.target.value)}><option value="">— bỏ gán —</option>{(data ?? []).map((d) => <option key={d.id} value={d.id}>{d.kind === "TEAM" ? "  · " : ""}{d.name}</option>)}</select>
+        <button className="btn primary" disabled={!who.id}>Gán</button>
+      </form>
+    </Card>
   </>);
 }
