@@ -26,7 +26,8 @@ export function proxy(request: NextRequest) {
     `img-src 'self' data: blob: ${storage}`.trim(),
     `connect-src 'self' ${[storage, ...extraConnect].filter(Boolean).join(" ")}${dev ? " ws:" : ""}`.replace(/\s+$/, ""),
     "font-src 'self'",
-    "frame-src 'self' about:",
+    // previews of code apps are framed from the sites origin (sandboxed there with CSP "sandbox allow-scripts")
+    `frame-src 'self' about: ${origin(process.env.SITES_ORIGIN)}`.trim(),
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

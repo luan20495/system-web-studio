@@ -14,6 +14,7 @@ import { useSession } from "../session";
 import { ErrorState, errText, fmtDate, StateView, tok, usd } from "../ui";
 import { AssetsDrawer, DeviceIcon, Drawer, MembersDrawer, PublishModal, SettingsDrawer, suggestions } from "./drawers";
 import { SaveBlockDrawer, SaveTemplateSection } from "./libraryPanels";
+import { CodeWorkspace } from "./CodeWorkspace";
 import { insertable } from "../library";
 
 type Mode = "ai" | "design" | "code";
@@ -86,6 +87,8 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   }, []);
   const reload = useCallback(async () => {
     const p = await api.lookupProject(projectId);
+    // code projects have no page schema: CodeWorkspace loads its own data
+    if (p.appType === "STATIC_APP") { setProject(p); return; }
     const [s, v, h] = await Promise.all([api.getSchema(p.workspaceId, projectId), api.listVersions(p.workspaceId, projectId), api.listPrompts(p.workspaceId, projectId)]);
     setProject(p); setSchema(s.schema); setRevision(s.revision); setVersions(v); setMessages(toMessages(h));
     setSave((x) => (x.at ? x : { state: "saved", at: new Date(p.updatedAt) }));
@@ -194,6 +197,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   }
 
   if (loadError) return <div className="wsError"><ErrorState error={loadError} retry={() => { setLoadError(null); reload().catch(setLoadError); }}/><p><a className="btn" href="/studio/projects">← Danh sách ứng dụng</a></p></div>;
+  if (project?.appType === "STATIC_APP") return <CodeWorkspace project={project} view={view} onProject={setProject}/>;
   if (!project || !schema) return <div className="wsError"><StateView kind="loading" title="Đang mở ứng dụng…"/></div>;
   // company blocks, then my own drafts (an approved block of mine is already in the company list)
   const blockOptions = [...blocks.company.map((b) => ({ b, who: "Công ty" })), ...blocks.mine.filter((b) => b.approvedVersion == null || b.status !== "APPROVED").map((b) => ({ b, who: "Của tôi" }))]

@@ -1,6 +1,6 @@
 import type {
   AdminAi, AiCallRow, AiPrice, AiProbe, AiProviderInfo, AiUsageReport, AdminApp, BlockDto, CheckResult, TemplateDto, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
-  AiStatus, ApiProject, AuthConfig, Member, SiteInfo, RegistryComponent, AssetDto, Deployment, Me, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
+  AiStatus, ApiProject, AuthConfig, Member, SiteInfo, TreeFile, CodeFile, CodeCommit, CodeChange, DiffFile, CodeAiResponse, CodeAiHistoryItem, RegistryComponent, AssetDto, Deployment, Me, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
 } from "./http-types";
 
 /** Error with the backend's stable {code, message, requestId, details} contract. */
@@ -128,8 +128,23 @@ export const api = {
     health: () => call<PlatformHealth>("/admin/system/health"),
     settings: () => call<Record<string, Record<string, unknown>>>("/admin/settings")
   },
-  createProject: (w: string, name: string, description?: string, templateId?: string) =>
-    call<ApiProject>(`/workspaces/${w}/projects`, { method: "POST", body: json({ name, description, ...(templateId ? { templateId } : {}) }) }),
+  createProject: (w: string, name: string, description?: string, templateId?: string, appType?: "PAGE_SCHEMA" | "STATIC_APP") =>
+    call<ApiProject>(`/workspaces/${w}/projects`, { method: "POST", body: json({ name, description, ...(templateId ? { templateId } : {}), ...(appType ? { appType } : {}) }) }),
+  code: {
+    tree: (w: string, p: string, ref = "main") => call<TreeFile[]>(`${P(w, p)}/code/tree${qs({ ref })}`),
+    file: (w: string, p: string, path: string, ref = "main") => call<CodeFile>(`${P(w, p)}/code/file${qs({ path, ref })}`),
+    commits: (w: string, p: string) => call<CodeCommit[]>(`${P(w, p)}/code/commits`),
+    changes: (w: string, p: string) => call<CodeChange[]>(`${P(w, p)}/code/changes`),
+    change: (w: string, p: string, id: string) => call<CodeChange>(`${P(w, p)}/code/changes/${id}`),
+    propose: (w: string, p: string, summary: string, files: { path: string; content?: string; delete?: boolean }[]) =>
+      call<CodeChange>(`${P(w, p)}/code/changes`, { method: "POST", body: json({ summary, files }) }),
+    diff: (w: string, p: string, id: string) => call<DiffFile[]>(`${P(w, p)}/code/changes/${id}/diff`),
+    merge: (w: string, p: string, id: string) => call<CodeChange>(`${P(w, p)}/code/changes/${id}/merge`, { method: "POST" }),
+    discard: (w: string, p: string, id: string) => call<CodeChange>(`${P(w, p)}/code/changes/${id}/discard`, { method: "POST" }),
+    ai: (w: string, p: string, prompt: string, model?: string) =>
+      call<CodeAiResponse>(`${P(w, p)}/code/ai`, { method: "POST", body: json({ prompt, ...(model ? { model } : {}) }), signal: AbortSignal.timeout(130_000) }),
+    aiHistory: (w: string, p: string) => call<CodeAiHistoryItem[]>(`${P(w, p)}/code/ai`)
+  },
   templates: (scope: "company" | "mine") => call<TemplateDto[]>(`/templates${qs({ scope })}`),
   saveTemplate: (w: string, p: string, body: { name: string; description?: string; templateId?: string }) =>
     call<{ template: TemplateDto; removedImages: number }>(`${P(w, p)}/templates`, { method: "POST", body: json(body) }),

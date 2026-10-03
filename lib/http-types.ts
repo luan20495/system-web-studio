@@ -10,6 +10,8 @@ export type ApiProject = {
   siteVisibility: "PRIVATE" | "PUBLIC"; authMode: "NONE" | "LOCAL" | "OIDC"; domain: string | null; customDomain: string | null;
   deploymentMode: "MOCK" | "SELF_HOSTED" | "CLOUD"; deploymentTarget: string | null; status: string; revision: number;
   createdAt: string; updatedAt: string; permissions: string[];
+  /** PAGE_SCHEMA (website from approved components) or STATIC_APP (code project with a Git repository) */
+  appType?: "PAGE_SCHEMA" | "STATIC_APP";
 };
 
 export type VersionSummary = {
@@ -42,7 +44,9 @@ export type Deployment = {
   provider: string; mock: boolean; createdAt: string; finishedAt: string | null; events: { status: string; message: string | null; createdAt: string }[];
 };
 
-export type AuthConfig = { localLogin: boolean; oidc: boolean; oidcLoginUrl: string; signup?: boolean; signupInviteRequired?: boolean };
+export type AuthConfig = { localLogin: boolean; oidc: boolean; oidcLoginUrl: string; signup?: boolean; signupInviteRequired?: boolean;
+  /** this server has the Git server + build runner configured for code projects */
+  codeProjects?: boolean };
 export type AiModel = { id: string; name: string; contextLength: number; provider?: string; paid?: boolean };
 export type AiProviderStatus = { id: string; name: string; paid: boolean; models: AiModel[]; dataNotice: string };
 export type AiStatus = { provider: "openrouter" | "providers" | "mock"; configured: boolean; defaultModel: string; dailyLimitPerUser: number; models: AiModel[]; dataNotice: string;
@@ -118,3 +122,18 @@ export type BlockDto = { id: string; name: string; description: string; baseComp
 // ---- Phase 7.1: real static sites (ADR 0009)
 export type SiteInfo = { slug: string | null; url: string | null; online: boolean; visibility: "PRIVATE" | "PUBLIC" | null; currentDeploymentId: string | null;
   currentVersionNumber: number | null; provider: string; updatedAt: string | null };
+
+// ---- Phase 7.2–7.4: code projects
+export type TreeFile = { path: string; size: number };
+export type CodeFile = { path: string; ref: string; size: number; text: string | null; editable: boolean };
+export type CodeCommit = { sha: string; message: string; author: string; committer: string; date: string };
+export type BuildInfo = { id: string; status: "QUEUED" | "RUNNING" | "SUCCEEDED" | "FAILED"; stage: string | null; error: string | null; log: string | null;
+  scans: { dependencies?: { tool: string; packages: number; findings: { package: string; id: string; severity: string }[] }; sourceSecrets?: { findings: unknown[] };
+    outputSecrets?: { findings: unknown[] }; sbom?: { name: string; version: string }[] } | null; queuedAt: string; startedAt: string | null; finishedAt: string | null };
+export type CodeChange = { id: string; kind: "AI" | "EDIT"; status: "BUILDING" | "READY" | "FAILED" | "MERGED" | "DISCARDED"; summary: string; files: string[];
+  branch: string; baseSha: string; headSha: string; promptId: string | null; error: string | null; createdBy: string | null; createdAt: string; updatedAt: string;
+  previewUrl: string | null; previewExpiresAt: string | null; build: BuildInfo | null };
+export type DiffFile = { path: string; before: string | null; after: string | null };
+export type CodeAiResponse = { promptId: string; outcome: "UPDATED" | "NO_CHANGE" | "UNSUPPORTED"; message: string; change: CodeChange | null; provider: string; model: string | null;
+  usage: PromptUsage | null };
+export type CodeAiHistoryItem = { promptId: string; text: string; createdAt: string; outcome: string; message: string; model: string | null; changeId: string | null; changeStatus: string | null };

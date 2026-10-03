@@ -155,3 +155,43 @@
 .switch{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
 .siteBox{border:1px solid var(--line,#2a3446);border-radius:10px;padding:10px 12px;margin:8px 0}.siteHistory{margin:8px 0}.siteHistory ul{list-style:none;padding:0;margin:8px 0;display:grid;gap:6px}.siteHistory li{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .siteHistory li button{white-space:nowrap;flex:none}
+/* Phase 7.4: code projects (dark editor tokens: --panel, --line, --muted) */
+.codeStudio{height:100vh;display:grid;grid-template-rows:auto 1fr}
+.codeBody{min-height:0;display:grid;grid-template-columns:minmax(380px,44%) minmax(0,1fr)}
+.codeLeft{min-height:0;display:flex;flex-direction:column;background:var(--panel);border-right:1px solid var(--line)}
+.codeLeft .chatScroll{flex:1;overflow:auto;padding:14px;display:grid;gap:10px;align-content:start}
+.codeLeft .chatEmpty{padding:12px;border:1px dashed var(--line);border-radius:10px;line-height:1.5}
+.codeLeft .composer{border-top:1px solid var(--line);padding:10px;display:grid;gap:8px}
+.codeLeft .composer textarea{min-height:80px;resize:vertical}
+.linkChip{cursor:pointer;border:0;font:inherit}
+.codeFiles{flex:1;min-height:0;display:grid;grid-template-columns:190px minmax(0,1fr)}
+.fileTree{list-style:none;margin:0;padding:8px;overflow:auto;border-right:1px solid var(--line)}
+.fileTree button{display:block;width:100%;text-align:left;background:none;border:0;color:inherit;padding:5px 6px;border-radius:6px;font:12px/1.3 ui-monospace,Menlo,monospace;cursor:pointer;word-break:break-all}
+.fileTree button:hover{background:rgba(255,255,255,.06)}.fileTree button.active{background:rgba(124,140,255,.22)}.fileTree button.dirty{color:#ffd479}
+.editorPane{min-height:0;display:flex;flex-direction:column}
+.editorHead{display:flex;justify-content:space-between;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line);font-size:12px}
+.codeEditor{flex:1;min-height:200px;width:100%;resize:none;background:#0b1220;color:#e6edf3;border:0;padding:12px;font:13px/1.55 ui-monospace,Menlo,monospace;tab-size:2;outline:none}
+.codeEditor[readonly]{color:#9fb0c3}
+.draftBar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 10px;border-top:1px solid var(--line);font-size:13px}
+.draftBar input{flex:1;min-width:140px}
+.codeRight{min-height:0;overflow:auto;padding:14px;display:grid;gap:14px;align-content:start}
+.changeList h2{font-size:13px;text-transform:uppercase;letter-spacing:.04em;margin:0 0 8px;color:var(--muted)}
+.changeList ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.changeItem{display:grid;gap:2px;width:100%;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;color:inherit;cursor:pointer}
+.changeItem.active{border-color:#7c8cff}.changeItem small{color:var(--muted)}
+.state{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+.state.s-building{color:#ffd479}.state.s-ready{color:#5ee0a0}.state.s-failed{color:#ff8a80}.state.s-merged{color:#9cc3ff}
+.changeDetail{display:grid;gap:10px}
+.appPreview{width:100%;height:62vh;border:1px solid var(--line);border-radius:10px;background:#fff}
+.diffView{display:grid;gap:12px}.diffView h4{margin:0 0 4px;font:600 12px ui-monospace,Menlo,monospace}
+.diffView pre{margin:0;background:#0b1220;border-radius:8px;padding:8px;overflow:auto;font:12px/1.45 ui-monospace,Menlo,monospace}
+.dl{white-space:pre}.dl.add{background:rgba(46,160,67,.25)}.dl.del{background:rgba(248,81,73,.25)}.dl.gap{color:var(--muted)}
+.buildLog{max-height:42vh;overflow:auto;background:#0b1220;color:#cfd8e3;border-radius:8px;padding:10px;font:12px/1.45 ui-monospace,Menlo,monospace;white-space:pre-wrap}
+.commitList{margin:0;padding-left:18px;display:grid;gap:10px}.commitList small{display:block;color:var(--muted)}
+@media (max-width:900px){.codeBody{grid-template-columns:1fr}.codeFiles{grid-template-columns:1fr}.fileTree{max-height:160px;border-right:0;border-bottom:1px solid var(--line)}}
+/* dark editor: tabs and link chips need their own contrast (the light-theme .tabs colours are too dark here) */
+.studio .tabs{border-bottom-color:var(--line)}
+.studio .tabs>*{color:#b8c2d6}
+.studio .tabs>.active{color:#c3cbff;border-bottom-color:#c3cbff}
+.studio .linkChip{background:rgba(124,140,255,.22);color:#eef0ff}
+.studio .stateView h2{color:#e6edf3}.studio .stateView p,.studio .stateView .stateDetail{color:#b8c2d6}

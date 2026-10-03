@@ -103,8 +103,10 @@ const STATUS_LABEL: Record<string, string> = {
   DEPLOYING: "Đang triển khai", RUNNING: "Đang chạy", FAILED: "Thất bại", ROLLED_BACK: "Đã hoàn tác"
 };
 
-export function PublishModal({ workspaceId, projectId, revision, current, versionNumber, onClose, onUnauthorized }: {
+export function PublishModal({ workspaceId, projectId, revision, current, versionNumber, onClose, onUnauthorized, publicOnly }: {
   workspaceId: string; projectId: string; revision: number; current: "PRIVATE" | "PUBLIC"; versionNumber?: number; onClose: () => void; onUnauthorized: () => void;
+  /** code apps: only public publishing exists for now */
+  publicOnly?: boolean;
 }) {
   const [visibility, setVisibility] = useState<"PRIVATE" | "PUBLIC">(current);
   const [deployment, setDeployment] = useState<Deployment | null>(null);
@@ -157,7 +159,8 @@ export function PublishModal({ workspaceId, projectId, revision, current, versio
         ? <p>Đang phục vụ phiên bản {site!.currentVersionNumber ?? "—"} ({site!.visibility === "PRIVATE" ? "riêng tư — chỉ thành viên, đăng nhập bằng tài khoản công ty" : "công khai"}) tại{" "}
             <a href={site!.url} target="_blank" rel="noopener noreferrer">{site!.url}</a></p>
         : <p className="hint">{site!.slug ? "Trang đang được gỡ xuống." : "Chưa xuất bản lần nào."} Xuất bản sẽ tạo một trang tĩnh thật trên máy chủ.</p>}</div> : null}
-      {!deployment ? (["PRIVATE", "PUBLIC"] as const).map((v) => (
+      {publicOnly && !deployment ? <p className="hint">Ứng dụng mã nguồn được build từ commit mới nhất trên main trong sandbox, rồi xuất bản <b>công khai</b> (riêng tư chưa hỗ trợ).</p> : null}
+      {!deployment ? (publicOnly ? (["PUBLIC"] as const) : (["PRIVATE", "PUBLIC"] as const)).map((v) => (
         <button className={`publishChoice ${visibility === v ? "selected" : ""}`} key={v} onClick={() => setVisibility(v)}>
           <b>{v === "PRIVATE" ? "Riêng tư" : "Công khai"}</b><span>{v === "PRIVATE" ? "Chỉ thành viên được cấp quyền." : "Mọi người có thể truy cập."}</span></button>
       )) : (

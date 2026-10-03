@@ -95,7 +95,7 @@ if ! alive "http://127.0.0.1:$UI_PORT/"; then
     npx next build > "$RUN/ui-build.log" 2>&1 || { tail -20 "$RUN/ui-build.log" >&2; exit 1; }
   fi
   say "starting the UI server"
-  ( nohup env NODE_ENV=production STUDIO_HSTS=true MINIO_PUBLIC_ENDPOINT="https://$PUBLIC_FILES_HOST" \
+  ( nohup env NODE_ENV=production STUDIO_HSTS=true MINIO_PUBLIC_ENDPOINT="https://$PUBLIC_FILES_HOST" SITES_ORIGIN="https://$SITES_HOST" \
       npx next start -H 127.0.0.1 -p "$UI_PORT" > "$RUN/ui.log" 2>&1 < /dev/null & echo $! > "$RUN/ui.pid" )
   for _ in $(seq 1 60); do alive "http://127.0.0.1:$UI_PORT/" && break; sleep 1; done
   alive "http://127.0.0.1:$UI_PORT/" || { echo "UI did not start; see $RUN/ui.log" >&2; exit 1; }

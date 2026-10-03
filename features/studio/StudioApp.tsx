@@ -175,12 +175,20 @@ function NewApp() {
   const company = useLoad(() => api.templates("company"), []); const mine = useLoad(() => api.templates("mine"), []);
   const [templateId, setTemplateId] = useState<string>(params.get("template") ?? "");
   const [name, setName] = useState(""); const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null);
+  const [kind, setKind] = useState<"website" | "code">(params.get("type") === "code" ? "code" : "website");
+  const authConfig = useLoad(() => api.authConfig(), []);
+  const codeOn = authConfig.data?.codeProjects === true;
   const types: [string, string, string, boolean][] = [["website", "Website", "Trang giới thiệu/landing một trang từ component đã duyệt.", true],
-    ["dashboard", "Dashboard", "Biểu đồ và số liệu từ hệ thống nội bộ.", false], ["internal", "Internal Tool", "Công cụ nội bộ có biểu mẫu và bảng dữ liệu.", false],
-    ["workflow", "Workflow", "Quy trình phê duyệt nhiều bước.", false]];
+    ["code", "Ứng dụng web (mã nguồn)", codeOn ? "Ứng dụng React chạy trên trình duyệt: sửa bằng AI hoặc trực tiếp mã nguồn, mỗi thay đổi được build trong sandbox."
+      : "Chưa bật trên máy chủ này (cần kho Git và máy build).", codeOn],
+    ["dashboard", "Dashboard", "Biểu đồ và số liệu từ hệ thống nội bộ (cần kết nối dữ liệu).", false], ["internal", "Internal Tool", "Công cụ nội bộ có biểu mẫu và bảng dữ liệu (cần máy chủ).", false]];
   async function create(e: FormEvent) {
     e.preventDefault(); if (!name.trim()) return; setBusy(true); setErr(null);
-    try { const p = await api.createProject(workspaceId, name.trim(), undefined, templateId || undefined); router.push(`/studio/projects/${p.id}/ai`); }
+    try {
+      const p = kind === "code" ? await api.createProject(workspaceId, name.trim(), undefined, undefined, "STATIC_APP")
+        : await api.createProject(workspaceId, name.trim(), undefined, templateId || undefined);
+      router.push(`/studio/projects/${p.id}/ai`);
+    }
     catch (x) { setErr(errText(x, "Không tạo được ứng dụng.")); setBusy(false); }
   }
   const options: [string, string, string][] = [["", "Trang mặc định", "Có sẵn trong hệ thống: thanh điều hướng, Hero, sản phẩm, đánh giá, liên hệ."],
@@ -189,18 +197,19 @@ function NewApp() {
   return (<>
     <div className="pageHead"><div><h1>Tạo ứng dụng</h1><p>Chọn loại ứng dụng. Hiện chỉ Website hoạt động; các loại khác cần kiến trúc sinh mã (chưa triển khai).</p></div></div>
     <div className="typeGrid" role="radiogroup" aria-label="Loại ứng dụng">{types.map(([k, t, d, on]) => (
-      <div key={k} role="radio" aria-checked={k === "website"} aria-disabled={!on} className={`typeCard${k === "website" ? " selected" : ""}${on ? "" : " disabled"}`}>
-        <div className="row between"><b>{t}</b>{on ? <Pill value="ACTIVE" label="Sẵn sàng"/> : <Pill value="COMING_SOON" label="Sắp có"/>}</div><p>{d}</p>
+      <div key={k} role="radio" tabIndex={on ? 0 : -1} aria-checked={kind === k} aria-disabled={!on} className={`typeCard${kind === k ? " selected" : ""}${on ? "" : " disabled"}`}
+        onClick={() => { if (on) setKind(k as "website" | "code"); }} onKeyDown={(e) => { if (on && (e.key === " " || e.key === "Enter")) { e.preventDefault(); setKind(k as "website" | "code"); } }}>
+        <div className="row between"><b>{t}</b>{on ? <Pill value="ACTIVE" label="Sẵn sàng"/> : <Pill value="COMING_SOON" label={k === "code" ? "Chưa bật" : "Sắp có"}/>}</div><p>{d}</p>
       </div>))}</div>
-    <Card title="Website mới">
+    <Card title={kind === "code" ? "Ứng dụng web mới (mã nguồn)" : "Website mới"}>
       <form onSubmit={(e) => void create(e)}>
-        <fieldset className="pickList" aria-label="Bắt đầu từ mẫu"><legend className="hint">Bắt đầu từ</legend>
+        {kind === "website" ? <fieldset className="pickList" aria-label="Bắt đầu từ mẫu"><legend className="hint">Bắt đầu từ</legend>
           {options.map(([id, label, sub]) => <label key={id || "default"}><input type="radio" name="template" value={id} checked={templateId === id} onChange={() => setTemplateId(id)}/>
             <span><b>{label}</b><small>{sub}</small></span></label>)}
-        </fieldset>
+        </fieldset> : <p className="hint">Bắt đầu từ khung React + Vite + TypeScript đã duyệt. Mã nguồn nằm trong kho Git của nền tảng; thư viện chỉ gồm các gói đã duyệt (React). Ứng dụng chạy cách ly trong trình duyệt (không có cookie/localStorage) và chỉ xuất bản công khai ở phiên bản này.</p>}
         <div className="filters">
           <input aria-label="Tên ứng dụng" placeholder="Tên ứng dụng" maxLength={160} value={name} onChange={(e) => setName(e.target.value)} autoFocus/>
-          <button className="btn primary" disabled={busy || !name.trim()}>{busy ? "Đang tạo…" : "Tạo website"}</button>
+          <button className="btn primary" disabled={busy || !name.trim()}>{busy ? "Đang tạo…" : kind === "code" ? "Tạo ứng dụng" : "Tạo website"}</button>
         </div>
       </form>
       {err ? <p className="formError" role="alert">{err}</p> : null}
