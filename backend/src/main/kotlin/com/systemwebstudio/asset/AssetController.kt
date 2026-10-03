@@ -45,7 +45,8 @@ class AssetController(
     @Value("\${app.storage.max-image-bytes}") private val maxImage: Long,
     @Value("\${app.storage.max-document-bytes}") private val maxDocument: Long,
     @Value("\${app.rate-limit.upload-max:60}") private val uploadMax: Long,
-    @Value("\${app.limits.max-assets-per-project:200}") private val maxAssets: Long
+    @Value("\${app.limits.max-assets-per-project:200}") private val maxAssets: Long,
+    private val settings: com.systemwebstudio.settings.SettingsService
 ) {
     private val imageTypes = setOf("image/png", "image/jpeg", "image/webp", "image/gif")
     private val documentTypes = setOf("application/pdf")      // SVG/HTML are rejected: they can carry active content
@@ -83,6 +84,11 @@ class AssetController(
         val limit = when (type) { in imageTypes -> maxImage; in documentTypes -> maxDocument
             else -> throw ApiException(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "UNSUPPORTED_MEDIA_TYPE", "File type '$type' is not allowed") }
         val size = request.size!!
+        // storage quota per project (READY and still-pending uploads count; deleted files do not)
+        val usedBytes = jdbc.queryForObject("SELECT coalesce(sum(size_bytes), 0) FROM assets WHERE project_id = ? AND status <> 'DELETED'", Long::class.java, projectId)!!
+        val quota = settings.long("storage.max-assets-mib-per-project") * 1024 * 1024
+        if (usedBytes + size > quota) throw ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "STORAGE_QUOTA", "This project's file storage is full (${usedBytes / 1048576} of ${quota / 1048576} MiB)",
+            mapOf("usedBytes" to usedBytes, "quotaBytes" to quota))
         if (size <= 0 || size > limit) throw ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "FILE_TOO_LARGE", "File must be between 1 byte and $limit bytes", mapOf("maxBytes" to limit))
         val id = UUID.randomUUID()
         val name = safeName(request.fileName)

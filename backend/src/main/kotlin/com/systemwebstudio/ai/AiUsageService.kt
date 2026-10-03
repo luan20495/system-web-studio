@@ -26,10 +26,11 @@ data class PromptUsage(val attempts: Int, val promptTokens: Long?, val completio
 class AiUsageService(
     private val jdbc: JdbcTemplate,
     /** 0 = off. Rolling 24 h per user, counted from reported tokens. */
-    @Value("\${app.ai.daily-token-limit-per-user:0}") val dailyTokenLimitPerUser: Long,
+    private val settings: com.systemwebstudio.settings.SettingsService,
     /** 0 = off. Calendar month (database time zone) per workspace. */
-    @Value("\${app.ai.monthly-token-limit-per-workspace:0}") val monthlyTokenLimitPerWorkspace: Long
 ) {
+    val dailyTokenLimitPerUser: Long get() = settings.long("ai.daily-tokens-per-user")
+    val monthlyTokenLimitPerWorkspace: Long get() = settings.long("ai.monthly-tokens-per-workspace")
     /**
      * Must be called OUTSIDE the prompt's transaction (each insert auto-commits), so tokens that were spent stay on record even
      * if the edit is rolled back afterwards.

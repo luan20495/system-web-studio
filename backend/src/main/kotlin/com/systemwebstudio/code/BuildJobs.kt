@@ -8,6 +8,7 @@ import com.systemwebstudio.publish.StaticSiteBuilder
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.LoggerFactory
+import org.springframework.http.HttpStatus
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Service
@@ -23,7 +24,9 @@ import java.util.zip.GZIPInputStream
 
 data class ClaimedJob(val id: UUID, val projectId: UUID, val commitSha: String, val purpose: String, val sourceUrl: String,
                       val limits: Map<String, Any>, val image: String)
-data class FinishRequest(val status: String = "FAILED", val stage: String? = null, val log: String? = null, val error: String? = null, val scans: JsonNode? = null)
+data class FinishRequest(val status: String = "FAILED", val stage: String? = null, val log: String? = null, val error: String? = null, val scans: JsonNode? = null,
+                         /** measured by the runner: wall clock and container cgroup CPU (cpu.stat usage_usec) */
+                         val durationMs: Long? = null, val cpuMs: Long? = null, val sourceBytes: Long? = null)
 
 /** Reads a build output tar.gz as DATA (nothing is executed): regular files only, no links/devices, normalised paths, size limits. */
 object SafeTar {
@@ -75,7 +78,7 @@ object SafeTar {
 @Service
 class BuildJobService(
     private val jdbc: JdbcTemplate, private val json: JsonMapper, private val store: ArtifactStore, private val code: CodeProjectService,
-    private val queue: JobQueue,
+    private val queue: JobQueue, private val policy: BuildPolicyService, private val settings: com.systemwebstudio.settings.SettingsService,
     @Value("\${app.build.image:node:22-alpine}") private val image: String,
     @Value("\${app.build.preview-days:7}") private val previewDays: Long
 ) {
@@ -85,10 +88,12 @@ class BuildJobService(
         "jpeg" to "image/jpeg", "gif" to "image/gif", "webp" to "image/webp", "ico" to "image/x-icon", "txt" to "text/plain; charset=utf-8",
         "woff" to "font/woff", "woff2" to "font/woff2", "map" to "application/json", "webmanifest" to "application/manifest+json")
 
-    fun enqueue(projectId: UUID, commitSha: String, purpose: String, codeChangeId: UUID? = null, deploymentId: UUID? = null): UUID {
+    fun enqueue(projectId: UUID, commitSha: String, purpose: String, codeChangeId: UUID? = null, deploymentId: UUID? = null,
+                workspaceId: UUID? = null, requestedBy: UUID? = null): UUID {
         val id = UUID.randomUUID()
-        jdbc.update("INSERT INTO build_jobs (id, project_id, purpose, code_change_id, deployment_id, commit_sha) VALUES (?,?,?,?,?,?)",
-            id, projectId, purpose, codeChangeId, deploymentId, commitSha)
+        val ws = workspaceId ?: jdbc.queryForObject("SELECT workspace_id FROM projects WHERE id = ?", UUID::class.java, projectId)
+        jdbc.update("INSERT INTO build_jobs (id, project_id, purpose, code_change_id, deployment_id, commit_sha, workspace_id, requested_by) VALUES (?,?,?,?,?,?,?,?)",
+            id, projectId, purpose, codeChangeId, deploymentId, commitSha, ws, requestedBy)
         return id
     }
 
@@ -100,7 +105,8 @@ class BuildJobService(
         val id = row[0] as UUID
         jdbc.update("UPDATE build_jobs SET status = 'RUNNING', runner = ?, stage = 'CLAIMED', started_at = now(), claimed_until = now() + interval '25 minutes' WHERE id = ?", runner.take(64), id)
         return ClaimedJob(id, row[1] as UUID, row[2] as String, row[3] as String, "$sourceBase/internal/build-jobs/$id/source",
-            mapOf("cpus" to 2, "memory" to "2g", "pids" to 512, "installSeconds" to 300, "buildSeconds" to 600, "outputMiB" to 100), image)
+            mapOf("cpus" to 2, "memory" to "2g", "pids" to 512, "installSeconds" to 300, "buildSeconds" to policy.maxDurationSeconds(),
+                "outputMiB" to policy.maxArtifactBytes() / 1048576), image)
     }
 
     fun running(id: UUID): Map<String, Any?> = jdbc.queryForList("SELECT * FROM build_jobs WHERE id = ? AND status = 'RUNNING'", id).firstOrNull()
@@ -118,6 +124,14 @@ class BuildJobService(
         val projectId = job["project_id"] as UUID
         val files = try { SafeTar.read(gz) } catch (e: Exception) { throw ApiException.badRequest("UNSAFE_OUTPUT", e.message ?: "Unreadable build output") }
         if ("index.html" !in files) throw ApiException.badRequest("NO_INDEX", "The build produced no index.html")
+        val outBytes = files.values.sumOf { it.size.toLong() }
+        if (outBytes > policy.maxArtifactBytes()) throw ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "ARTIFACT_TOO_LARGE", "Build output exceeds ${policy.maxArtifactBytes() / 1048576} MiB")
+        val held = jdbc.queryForObject("SELECT coalesce(sum(total_bytes), 0) FROM artifacts WHERE project_id = ? AND deleted_at IS NULL", Long::class.java, projectId)!!
+        val quota = settings.long("storage.max-artifacts-mib-per-project") * 1024 * 1024
+        if (held + outBytes > quota) {
+            policy.recordRejection(projectId, job["workspace_id"] as UUID?, job["requested_by"] as UUID?, "ARTIFACT_STORAGE_QUOTA", "Artifacts would use ${(held + outBytes) / 1048576} of ${quota / 1048576} MiB")
+            throw ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "ARTIFACT_STORAGE_QUOTA", "This project's artifact storage is full; old previews are removed by the cleanup job")
+        }
         for ((path, bytes) in files) {
             val ext = path.substringAfterLast('.', "").lowercase()
             if (ext in setOf("html", "js", "mjs", "css", "json", "txt", "svg", "map")) {
@@ -149,8 +163,10 @@ class BuildJobService(
         val job = running(id)
         val ok = req.status == "SUCCEEDED" && job["artifact_id"] != null
         val error = if (ok) null else (req.error ?: if (req.status == "SUCCEEDED") "No output was uploaded" else "Build failed").take(1000)
-        jdbc.update("""UPDATE build_jobs SET status = ?, stage = ?, log = ?, error = ?, scans = CAST(? AS jsonb), finished_at = now(), claimed_until = NULL WHERE id = ?""",
-            if (ok) "SUCCEEDED" else "FAILED", req.stage?.take(16), req.log?.takeLast(64_000), error, req.scans?.let { json.writeValueAsString(it) }, id)
+        jdbc.update("""UPDATE build_jobs SET status = ?, stage = ?, log = ?, error = ?, scans = CAST(? AS jsonb), finished_at = now(), claimed_until = NULL,
+            duration_ms = ?, cpu_ms = ?, source_bytes = ?, artifact_bytes = (SELECT total_bytes FROM artifacts WHERE id = build_jobs.artifact_id) WHERE id = ?""",
+            if (ok) "SUCCEEDED" else "FAILED", req.stage?.take(16), req.log?.takeLast(64_000), error, req.scans?.let { json.writeValueAsString(it) },
+            req.durationMs?.coerceAtLeast(0), req.cpuMs?.coerceAtLeast(0), req.sourceBytes?.coerceAtLeast(0), id)
         (job["code_change_id"] as UUID?)?.let { change ->
             if (ok) jdbc.update("""UPDATE code_changes SET status = 'READY', preview_artifact_id = ?, preview_token = ?, preview_expires_at = now() + make_interval(days => ?),
                 updated_at = now() WHERE id = ? AND status = 'BUILDING'""", job["artifact_id"], code.newPreviewToken(), previewDays.toInt(), change)

@@ -9,8 +9,10 @@ import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import org.springframework.transaction.support.TransactionTemplate
 
-data class CleanupResult(val dryRun: Boolean, val abandonedUploads: Int, val deletedAssetRows: Int, val idempotencyKeys: Int, val failedDeployments: Int, val aiCalls: Int = 0) {
-    val total get() = abandonedUploads + deletedAssetRows + idempotencyKeys + failedDeployments + aiCalls
+data class CleanupResult(val dryRun: Boolean, val abandonedUploads: Int, val deletedAssetRows: Int, val idempotencyKeys: Int, val failedDeployments: Int, val aiCalls: Int = 0,
+                         val retention: RetentionResult? = null) {
+    val total get() = abandonedUploads + deletedAssetRows + idempotencyKeys + failedDeployments + aiCalls +
+        (retention?.let { it.previewsExpired + it.artifactsDeleted + it.failedBuildLogsCleared + it.repositoriesPendingDelete } ?: 0)
 }
 
 /**
@@ -24,6 +26,7 @@ class CleanupService(
     private val storage: StorageProvider,
     private val audit: AuditService,
     private val tx: TransactionTemplate,
+    private val retention: ArtifactRetentionService,
     @Value("\${app.cleanup.enabled:true}") private val enabled: Boolean,
     @Value("\${app.cleanup.dry-run:false}") private val defaultDryRun: Boolean,
     @Value("\${app.cleanup.abandoned-upload-hours:24}") private val abandonedHours: Long,
@@ -63,12 +66,14 @@ class CleanupService(
                 jdbc.update("DELETE FROM idempotency_keys WHERE created_at < now() - make_interval(days => ?)", idempotencyDays.toInt())
                 jdbc.update("DELETE FROM ai_calls WHERE created_at < now() - make_interval(days => ?)", aiCallDays.toInt())
                 failed.forEach {
+                    jdbc.update("UPDATE build_jobs SET deployment_id = NULL WHERE deployment_id = ?", it["id"])
                     jdbc.update("DELETE FROM deployment_events WHERE deployment_id = ?", it["id"])
                     jdbc.update("DELETE FROM deployments WHERE id = ? AND status = 'FAILED'", it["id"])
                 }
             }
         }
-        val result = CleanupResult(dryRun, abandoned.size, deleted.size, keys, failed.size, aiCalls)
+        val ret = runCatching { retention.run(dryRun) }.onFailure { log.warn("Artifact retention failed: {}", it.message) }.getOrNull()
+        val result = CleanupResult(dryRun, abandoned.size, deleted.size, keys, failed.size, aiCalls, ret)
         log.info("cleanup dry_run={} abandoned_uploads={} deleted_assets={} idempotency_keys={} failed_deployments={} ai_calls={}", dryRun, result.abandonedUploads, result.deletedAssetRows, result.idempotencyKeys, result.failedDeployments, result.aiCalls)
         if (!dryRun && result.total > 0) audit.record("CLEANUP", "SYSTEM", null, actorId = null, newValue = result)
         return result

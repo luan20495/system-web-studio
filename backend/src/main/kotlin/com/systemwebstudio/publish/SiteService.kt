@@ -59,7 +59,7 @@ class SiteService(
         """SELECT s.project_id, p.workspace_id, s.slug, d.id, d.visibility, a.storage_prefix, a.manifest::text, a.kind
            FROM sites s JOIN projects p ON p.id = s.project_id AND p.active
            JOIN deployments d ON d.id = s.current_deployment_id AND d.status IN ('DEPLOYING', 'RUNNING')
-           JOIN artifacts a ON a.id = d.artifact_id WHERE s.slug = ?""", { rs, _ ->
+           JOIN artifacts a ON a.id = d.artifact_id AND a.deleted_at IS NULL WHERE s.slug = ?""", { rs, _ ->
             val files = json.readTree(rs.getString(7)).toList().map { json.treeToValue(it, ManifestFile::class.java) }.associateBy { it.path }
             LiveSite(rs.getObject(1, UUID::class.java), rs.getObject(2, UUID::class.java), rs.getString(3), rs.getObject(4, UUID::class.java),
                 rs.getString(5), rs.getString(6), files, rs.getString(8))
@@ -68,7 +68,7 @@ class SiteService(
     /** A code change preview by its unguessable token (expires; revoked on discard). */
     fun preview(token: String): Pair<String, Map<String, ManifestFile>>? {
         if (!Regex("^[A-Za-z0-9_-]{20,64}$").matches(token)) return null
-        return jdbc.query("""SELECT a.storage_prefix, a.manifest::text FROM code_changes c JOIN artifacts a ON a.id = c.preview_artifact_id
+        return jdbc.query("""SELECT a.storage_prefix, a.manifest::text FROM code_changes c JOIN artifacts a ON a.id = c.preview_artifact_id AND a.deleted_at IS NULL
             JOIN projects p ON p.id = c.project_id AND p.active WHERE c.preview_token = ? AND c.preview_expires_at > now() AND c.status IN ('READY', 'MERGED')""", { rs, _ ->
             rs.getString(1) to json.readTree(rs.getString(2)).toList().map { json.treeToValue(it, ManifestFile::class.java) }.associateBy { it.path }
         }, token).firstOrNull()
@@ -108,6 +108,19 @@ class SiteService(
 
     fun openSession(userId: UUID): String = token().also { redis.opsForValue().set("site-session:$it", userId.toString(), Duration.ofHours(sessionHours)) }
     val sessionSeconds get() = sessionHours * 3600
+
+    /**
+     * Private code apps run in an opaque (sandboxed) origin that cannot send cookies, so after the cookie check at the entry URL the
+     * member gets a per-session capability path `/_app/<token>/`; membership is still re-checked on every request for that token.
+     */
+    fun openAppToken(userId: UUID, slug: String): String =
+        token().also { redis.opsForValue().set("site-app:$it", "$userId|$slug", Duration.ofHours(sessionHours)) }
+
+    fun appToken(value: String): Pair<UUID, String>? {
+        if (!Regex("^[A-Za-z0-9_-]{20,100}$").matches(value)) return null
+        val v = redis.opsForValue().get("site-app:$value") ?: return null
+        return runCatching { UUID.fromString(v.substringBefore('|')) to v.substringAfter('|') }.getOrNull()
+    }
 
     fun sessionUser(value: String?): UUID? {
         if (value == null || !Regex("^[A-Za-z0-9_-]{20,100}$").matches(value)) return null

@@ -62,6 +62,8 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const [savingBlock, setSavingBlock] = useState(false);
   const [assets, setAssets] = useState<AssetDto[]>([]);
   const [ai, setAi] = useState<AiStatus | null>(null);
+  const [publicPublish, setPublicPublish] = useState<boolean | undefined>(undefined);
+  useEffect(() => { api.authConfig().then((c) => setPublicPublish(c.publicPublish)).catch(() => undefined); }, []);
   const [loadError, setLoadError] = useState<unknown>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -355,6 +357,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
       {panel === "assets" ? <AssetsDrawer workspaceId={ws} projectId={projectId} canEdit={can("PROJECT_EDIT")} onClose={() => { void loadAssets(ws); go(mode); }} onError={(e) => setNotice(errText(e, "Thao tác tệp thất bại."))}/> : null}
       {panel === "members" && me ? <MembersDrawer workspaceId={ws} projectId={projectId} me={me} onClose={() => go(mode)} onError={(e) => setNotice(errText(e, "Thao tác thành viên thất bại."))}/> : null}
       {panel === "publish" ? <PublishModal workspaceId={ws} projectId={projectId} revision={revision} current={project.siteVisibility} versionNumber={latest}
+        allowed={publicPublish === false ? ["PRIVATE"] : ["PRIVATE", "PUBLIC"]}
         onClose={() => { go(mode); void reload().catch(() => undefined); }} onUnauthorized={() => undefined}/> : null}
     </div>
   );

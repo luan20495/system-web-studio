@@ -54,6 +54,9 @@ class ArtifactStore(
         ensureBucket(); client.getObject(GetObjectArgs.builder().bucket(bucket).`object`(key).build()).use { it.readAllBytes() }
     } catch (e: ErrorResponseException) { if (e.errorResponse().code() == "NoSuchKey") null else throw e }
 
+    /** Retention only (cleanup job); keys are content-addressed per project, so a key is never shared across artifact rows. */
+    fun delete(key: String) { ensureBucket(); client.removeObject(io.minio.RemoveObjectArgs.builder().bucket(bucket).`object`(key).build()) }
+
     /** An uploaded project file (assets bucket), to copy into an artifact. */
     fun readAsset(storageKey: String): ByteArray =
         client.getObject(GetObjectArgs.builder().bucket(assetsBucket).`object`(storageKey).build()).use { it.readAllBytes() }

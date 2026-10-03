@@ -34,6 +34,8 @@ data class PublishRequest(
 @RestController
 @RequestMapping("/api/v1/workspaces/{workspaceId}/projects/{projectId}")
 class PublishController(
+    private val settings: com.systemwebstudio.settings.SettingsService,
+    private val buildPolicy: com.systemwebstudio.code.BuildPolicyService,
     private val access: AccessService,
     private val deployments: DeploymentRepository,
     private val schemas: SchemaService,
@@ -76,8 +78,12 @@ class PublishController(
         if (project.revision != request.expectedRevision) {
             throw ApiException.conflict("REVISION_CONFLICT", "Project changed elsewhere; reload and retry.", mapOf("currentRevision" to project.revision))
         }
+        if (request.visibility == "PUBLIC" && !settings.bool("publish.public-enabled"))
+            throw ApiException.forbidden("Public publishing is disabled by the administrator", "PUBLIC_PUBLISH_DISABLED")
         if (project.appType == "STATIC_APP") {
-            if (request.visibility != "PUBLIC") throw ApiException.badRequest("CODE_APP_PUBLIC_ONLY", "Code apps can only be published publicly for now")
+            if (request.visibility == "PUBLIC" && !settings.bool("source-apps.public-publish-enabled"))
+                throw ApiException.forbidden("Public publishing of code apps is disabled by the administrator; publish privately", "CODE_APP_PUBLIC_DISABLED")
+            buildPolicy.requireCapacity(projectId, workspaceId, me.userId)
         } else schemas.ensureInitialized(project, me.userId)
         val version = versions.latest(projectId) ?: throw ApiException.conflict("NO_VERSION", "Project has no version to publish")
         deployments.insert(deploymentId, workspaceId, projectId, version.id, me.userId, request.visibility!!, provider.name)

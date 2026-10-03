@@ -67,6 +67,7 @@ class ProjectController(
     private val jdbc: org.springframework.jdbc.core.JdbcTemplate,
     private val templates: com.systemwebstudio.template.TemplateService,
     private val codeProjects: com.systemwebstudio.code.CodeProjectService,
+    private val retention: com.systemwebstudio.maintenance.ArtifactRetentionService,
     private val versionRepo: com.systemwebstudio.version.SchemaRepository,
     private val json: tools.jackson.databind.json.JsonMapper,
     @org.springframework.beans.factory.annotation.Value("\${app.limits.max-projects-per-workspace:1000}") private val maxProjects: Long
@@ -194,6 +195,7 @@ class ProjectController(
         project.active = false
         project.updatedAt = Instant.now()
         projects.saveAndFlush(project)
+        retention.onProjectDeleted(project.id)
         audit.record("DELETE_PROJECT", "PROJECT", project.id, workspaceId, project.id, oldValue = mapOf("name" to project.name))
     }
 

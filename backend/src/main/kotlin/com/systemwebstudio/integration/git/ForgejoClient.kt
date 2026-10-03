@@ -140,6 +140,12 @@ class ForgejoClient(
         return r.body()
     }
 
+    /** Hard delete (admin action after the retention period). 404 = already gone. */
+    fun deleteRepository(repo: String) {
+        val r = send("DELETE", "/repos/${enc(org)}/${enc(repo)}")
+        if (r.statusCode() != 204 && r.statusCode() != 404) throw GitServerException("Delete repository failed (HTTP ${r.statusCode()})", r.statusCode())
+    }
+
     fun setArchived(repo: String, archived: Boolean) {
         ok(send("PATCH", "/repos/${enc(org)}/${enc(repo)}", mapOf("archived" to archived)), "Archive repository")
     }

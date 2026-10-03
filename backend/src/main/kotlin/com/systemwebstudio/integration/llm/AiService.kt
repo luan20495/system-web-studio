@@ -22,9 +22,12 @@ class AiService(
     @Value("\${app.llm.provider:auto}") private val providerSetting: String,
     @Value("\${app.openrouter.models-cache-minutes:30}") private val cacheMinutes: Long,
     @Value("\${app.openrouter.max-attempts:4}") val maxAttempts: Int,
-    @Value("\${app.openrouter.daily-limit-per-user:50}") val dailyLimitPerUser: Long,
-    @Value("\${app.openrouter.model-allowlist:}") allowlist: String
+    @Value("\${app.openrouter.daily-limit-per-user:50}") private val configuredDailyLimit: Long,
+    @Value("\${app.openrouter.model-allowlist:}") allowlist: String,
+    private val settings: com.systemwebstudio.settings.SettingsService? = null
 ) {
+    /** admin-editable (Settings → AI), default from configuration */
+    val dailyLimitPerUser: Long get() = settings?.long("ai.daily-requests-per-user") ?: configuredDailyLimit
     private val log = LoggerFactory.getLogger(javaClass)
     private val allow = allowlist.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
     @Volatile private var cache: Pair<Instant, List<AiModel>>? = null

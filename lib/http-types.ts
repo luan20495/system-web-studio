@@ -46,7 +46,7 @@ export type Deployment = {
 
 export type AuthConfig = { localLogin: boolean; oidc: boolean; oidcLoginUrl: string; signup?: boolean; signupInviteRequired?: boolean;
   /** this server has the Git server + build runner configured for code projects */
-  codeProjects?: boolean };
+  codeProjects?: boolean; codeAppPublicPublish?: boolean; publicPublish?: boolean };
 export type AiModel = { id: string; name: string; contextLength: number; provider?: string; paid?: boolean };
 export type AiProviderStatus = { id: string; name: string; paid: boolean; models: AiModel[]; dataNotice: string };
 export type AiStatus = { provider: "openrouter" | "providers" | "mock"; configured: boolean; defaultModel: string; dailyLimitPerUser: number; models: AiModel[]; dataNotice: string;
@@ -137,3 +137,13 @@ export type DiffFile = { path: string; before: string | null; after: string | nu
 export type CodeAiResponse = { promptId: string; outcome: "UPDATED" | "NO_CHANGE" | "UNSUPPORTED"; message: string; change: CodeChange | null; provider: string; model: string | null;
   usage: PromptUsage | null };
 export type CodeAiHistoryItem = { promptId: string; text: string; createdAt: string; outcome: string; message: string; model: string | null; changeId: string | null; changeStatus: string | null };
+
+// ---- Lockdown, settings, build policy, retention
+export type SettingView = { key: string; group: string; type: "BOOL" | "INT" | "DECIMAL"; label: string; risk: "LOW" | "HIGH"; min: number; max: number; unit: string;
+  value: string; defaultValue: string; overridden: boolean; updatedBy: string | null; updatedAt: string | null };
+export type BuildUsageRow = { key: string; label: string | null; builds: number; succeeded: number; failed: number; cpuMs: number; durationMs: number; artifactBytes: number };
+export type BuildPolicyReport = { days: number; totals: BuildUsageRow; byWorkspace: BuildUsageRow[]; byUser: BuildUsageRow[]; byProject: BuildUsageRow[]; running: number; queued: number;
+  rejections: { createdAt: string; user: string | null; project: string | null; reason: string; detail: string }[]; storage: Record<string, number> };
+export type RetentionResult = { previewsExpired: number; artifactsDeleted: number; artifactBytesFreed: number; failedBuildLogsCleared: number; repositoriesPendingDelete: number };
+export type CleanupResult = { dryRun: boolean; abandonedUploads: number; deletedAssetRows: number; idempotencyKeys: number; failedDeployments: number; aiCalls: number; retention: RetentionResult | null };
+export type RepoRow = { projectId: string; project: string | null; name: string; state: "ACTIVE" | "ARCHIVED" | "PENDING_DELETE" | "DELETED"; sizeBytes: number | null; archivedAt: string | null; deleteAfter: string | null };

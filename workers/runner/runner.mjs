@@ -71,16 +71,20 @@ async function api(method, path, body, type = "application/json") {
 async function processJob(job) {
   const id8 = job.id.slice(0, 8), vol = `factory-job-${id8}`, tmp = mkdtempSync(join(tmpdir(), `factory-${id8}-`));
   const L = []; const step = (s) => { L.push(`\n== ${s}`); log(job.id, s); };
-  const scans = {}; let stage = "SOURCE";
+  const scans = {}; let stage = "SOURCE"; const t0 = Date.now(); let cpuMs = 0; let sourceBytes = 0;
+  // CPU actually used by a sandbox step: the container's own cgroup counter (cgroup v2 cpu.stat usage_usec), printed as the last line
+  const CPU = "; s=$?; awk '/usage_usec/{print \"__CPU__\" $2}' /sys/fs/cgroup/cpu.stat; exit $s";
+  const takeCpu = (r) => { const m = r.out.match(/__CPU__(\d+)/); if (m) cpuMs += Math.round(Number(m[1]) / 1000); r.out = r.out.replace(/__CPU__\d+\n?/, ""); return r; };
   const finish = async (status, error) => {
-    const r = await api("POST", `/internal/build-jobs/${job.id}/finish`, JSON.stringify({ status, stage, error, log: redact(L.join("\n")).slice(-60_000), scans }));
+    const r = await api("POST", `/internal/build-jobs/${job.id}/finish`, JSON.stringify({ status, stage, error, log: redact(L.join("\n")).slice(-60_000), scans,
+      durationMs: Date.now() - t0, cpuMs, sourceBytes }));
     log(job.id, status, error ?? "", `(finish ${r.status})`);
   };
   try {
     step(`source ${job.commitSha.slice(0, 12)}`);
     const src = await fetch(job.sourceUrl, { headers, signal: AbortSignal.timeout(120_000) });
     if (!src.ok) throw new Error(`source download HTTP ${src.status}`);
-    writeFileSync(join(tmp, "src.tgz"), Buffer.from(await src.arrayBuffer()));
+    const srcBuf = Buffer.from(await src.arrayBuffer()); sourceBytes = srcBuf.length; writeFileSync(join(tmp, "src.tgz"), srcBuf);
     const x = await run("tar", ["-xzf", join(tmp, "src.tgz"), "-C", tmp], { timeoutMs: 60_000 });
     if (x.code !== 0) throw new Error("source archive could not be extracted");
     const top = readdirSync(tmp).find((n) => n !== "src.tgz"); const srcDir = join(tmp, top);
@@ -106,14 +110,14 @@ async function processJob(job) {
 
     stage = "INSTALL"; step("install (mirror only, scripts disabled)");
     const inst = await run("docker", ["run", "--rm", "--name", `${vol}-i`, "--network", NETWORK, ...HARDEN(job.limits), "-v", `${vol}:/work`, "-w", "/work",
-      "-e", "npm_config_cache=/tmp/npm", job.image, "npm", "ci", "--ignore-scripts", "--no-audit", "--no-fund", "--registry", "http://verdaccio:4873/"],
-      { timeoutMs: (job.limits.installSeconds ?? 300) * 1000, container: `${vol}-i` });
+      "-e", "npm_config_cache=/tmp/npm", job.image, "sh", "-c", "npm ci --ignore-scripts --no-audit --no-fund --registry http://verdaccio:4873/" + CPU],
+      { timeoutMs: (job.limits.installSeconds ?? 300) * 1000, container: `${vol}-i` }); takeCpu(inst);
     L.push(inst.out.slice(-8000), inst.err.slice(-8000));
     if (inst.code !== 0) throw new Error(inst.timedOut ? "install timed out" : `install failed (exit ${inst.code}) — packages outside the approved list are refused`);
 
     stage = "BUILD"; step("typecheck + build (no network)");
     const b = await run("docker", ["run", "--rm", "--name", `${vol}-b`, "--network", "none", ...HARDEN(job.limits), "-v", `${vol}:/work`, "-w", "/work",
-      job.image, "sh", "-c", "npm run -s typecheck && npm run -s build"], { timeoutMs: (job.limits.buildSeconds ?? 600) * 1000, container: `${vol}-b` });
+      job.image, "sh", "-c", "(npm run -s typecheck && npm run -s build)" + CPU], { timeoutMs: (job.limits.buildSeconds ?? 600) * 1000, container: `${vol}-b` }); takeCpu(b);
     L.push(b.out.slice(-12000), b.err.slice(-12000));
     if (b.code !== 0) throw new Error(b.timedOut ? "build timed out" : `build failed (exit ${b.code})`);
 

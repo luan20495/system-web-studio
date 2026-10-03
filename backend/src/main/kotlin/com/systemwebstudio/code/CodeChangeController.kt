@@ -39,7 +39,7 @@ data class DiffFile(val path: String, val before: String?, val after: String?)
 @Service
 class CodeChangeService(
     private val code: CodeProjectService, private val jobs: BuildJobService, private val jdbc: JdbcTemplate, private val json: JsonMapper,
-    private val versions: SchemaRepository, private val audit: AuditService,
+    private val versions: SchemaRepository, private val audit: AuditService, private val policy: BuildPolicyService,
     @Value("\${app.sites.origin:http://127.0.0.1:18088}") private val sitesOrigin: String
 ) {
     fun requireCode(ctx: AccessContext) { if (ctx.project!!.appType != "STATIC_APP") throw ApiException.conflict("NOT_A_CODE_PROJECT", "This project is page-schema based") }
@@ -49,12 +49,19 @@ class CodeChangeService(
         CodeChangePolicy.check(changes)
         val project = ctx.project!!
         val repo = code.repo(project.id)
+        policy.requireCapacity(project.id, ctx.workspaceId, userId)
         val base = code.git { code.client.branchSha(repo.name, "main") } ?: throw ApiException.conflict("EMPTY_REPOSITORY", "Repository has no main branch")
+        // repository size after this change (tree of main with changed files replaced)
+        val tree = code.git { code.client.tree(repo.name, base) }.associate { it.path to it.size }.toMutableMap()
+        changes.forEach { c -> if (c.content == null) tree.remove(c.path) else tree[c.path] = c.content.size.toLong() }
+        val newSize = tree.values.sum()
+        policy.requireRepoSize(project.id, ctx.workspaceId, userId, newSize)
         val id = UUID.randomUUID()
         val branch = "${if (kind == "AI") "ai" else "edit"}/${id.toString().take(8)}"
         val message = "${summary.trim().take(200)}\n\nCode-Change-Id: $id\n${promptId?.let { "Prompt-Id: $it\n" } ?: ""}Studio-User: $userId"
         val head = code.git { code.client.commit(repo.name, "main", branch, changes, message, code.author(userId)) }
-        val job = jobs.enqueue(project.id, head, "PREVIEW", codeChangeId = null)
+        val job = jobs.enqueue(project.id, head, "PREVIEW", codeChangeId = null, workspaceId = ctx.workspaceId, requestedBy = userId)
+        jdbc.update("UPDATE repositories SET size_bytes = ?, updated_at = now() WHERE project_id = ?", newSize, project.id)
         jdbc.update("""INSERT INTO code_changes (id, project_id, kind, prompt_id, branch, base_sha, head_sha, status, summary, files, build_job_id, created_by)
             VALUES (?,?,?,?,?,?,?,'BUILDING',?,CAST(? AS jsonb),?,?)""", id, project.id, kind, promptId, branch, base, head, summary.trim().take(500),
             json.writeValueAsString(changes.map { it.path }), job, userId)

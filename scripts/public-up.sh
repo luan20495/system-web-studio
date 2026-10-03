@@ -35,8 +35,8 @@ MINIO_BUCKET=studio-assets
 # Operator account created on first start (system admin). Change or delete after first login if you like.
 BOOTSTRAP_ADMIN_USERNAME=operator
 BOOTSTRAP_ADMIN_PASSWORD=$(gen)
-# Public sign-up: anyone can create an account with its own workspace. Set SIGNUP_INVITE_CODE to require a code.
-SIGNUP_ENABLED=true
+# Public sign-up is OFF for the internal pilot (accounts come from the operator or SSO). Set true only for a deliberate demo.
+SIGNUP_ENABLED=false
 SIGNUP_INVITE_CODE=
 SIGNUP_MAX_USERS=500
 SIGNUP_IP_MAX_PER_HOUR=5
@@ -49,6 +49,8 @@ ENV
   )
 fi
 # Real static sites (ADR 0009) — added to existing public.env files without touching other values
+# Internal pilot policy (2026-10-03): no public sign-up, source apps for signed-in users only, code apps not published publicly by default
+grep -q '^SOURCE_APP_PUBLIC_PUBLISH_ENABLED=' "$ENVF" || ( umask 077; { echo "# Source-code apps (needs FORGEJO_* + runner); public publishing of code apps off for the pilot"; echo "SOURCE_APPS_ENABLED=true"; echo "SOURCE_APP_BUILD_ENABLED=true"; echo "SOURCE_APP_PUBLIC_PUBLISH_ENABLED=false"; } >> "$ENVF" )
 grep -q '^SITES_HOST=' "$ENVF" || ( umask 077; { echo "# Published sites (gateway) — separate host from the Studio"; echo "SITES_HOST=sites.toolsmcp.uk"; echo "SITES_GATEWAY_PORT=28088"; echo "RENDER_PORT_PUBLIC=28095"; echo "RENDER_TOKEN=$(gen)"; } >> "$ENVF" )
 set -a; . "$ENVF"; set +a
 PUBLIC_ORIGIN="https://$PUBLIC_HOST"

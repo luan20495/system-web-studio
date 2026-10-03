@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { api } from "@/lib/http-api";
-import type { AdminApp as App, AiProbe, BlockDto, TemplateDto, AiUsageReport, AuditRow, HealthItem, UsageBucket, UsageTotals } from "@/lib/http-types";
+import type { AdminApp as App, AiProbe, RepoRow, SettingView, BlockDto, TemplateDto, AiUsageReport, AuditRow, HealthItem, UsageBucket, UsageTotals } from "@/lib/http-types";
 import { useSession } from "../session";
 import { rememberPortal } from "../routing";
 import { useLoad } from "../useLoad";
@@ -13,7 +13,7 @@ import { actionLabel, ago, Card, ComingSoon, ErrorState, errText, fmtDate, Kpi, 
 
 const NAV: [string, string, string][] = [
   ["", "Tổng quan", "▦"], ["users", "Người dùng & Workspace", "◎"], ["applications", "Ứng dụng", "▤"], ["ai", "AI Control", "✦"],
-  ["components", "Components", "◇"], ["templates", "Templates", "▧"], ["audit", "Nhật ký kiểm toán", "≡"], ["system", "Sức khỏe hệ thống", "♥"], ["settings", "Cài đặt", "⚙"]
+  ["components", "Components", "◇"], ["templates", "Templates", "▧"], ["audit", "Nhật ký kiểm toán", "≡"], ["builds", "Build & lưu trữ", "⬢"], ["system", "Sức khỏe hệ thống", "♥"], ["settings", "Cài đặt", "⚙"]
 ];
 
 export function AdminApp({ seg }: { seg: string[] }) {
@@ -39,6 +39,7 @@ function route(seg: string[]): ReactNode {
     case "ai": return <AiPage/>;
     case "components": return <ComponentsPage/>;
     case "templates": return <TemplatesAdmin/>;
+    case "builds": return <BuildsPage/>;
     case "audit": return <AuditPage/>;
     case "system": return <HealthPage/>;
     case "settings": return <SettingsPage/>;
@@ -643,14 +644,85 @@ function HealthPage() {
 
 // ------------------------------------------------------------------ settings (read-only)
 const SETTING_GROUP: Record<string, string> = { authentication: "Xác thực", limits: "Giới hạn", ai: "AI", retention: "Lưu trữ & dọn dẹp", deployment: "Triển khai", network: "Mạng" };
+const mib = (b?: number | null) => (b == null ? "—" : b < 1048576 ? `${(b / 1024).toFixed(0)} KiB` : `${(b / 1048576).toFixed(1)} MiB`);
+const secs = (ms: number) => (ms / 1000).toFixed(ms < 10000 ? 1 : 0) + " s";
+
+function UsageRows({ rows, label }: { rows: { key: string; label: string | null; builds: number; succeeded: number; failed: number; cpuMs: number; durationMs: number; artifactBytes: number }[]; label: string }) {
+  if (!rows.length) return <StateView kind="empty" title="Chưa có build"/>;
+  return <table className="table"><thead><tr><th>{label}</th><th>Build</th><th>Thành công</th><th>Lỗi</th><th>CPU</th><th>Thời gian</th><th>Kết quả</th></tr></thead>
+    <tbody>{rows.map((r) => <tr key={r.key}><td>{r.label ?? <span className="code">{r.key.slice(0, 8)}</span>}</td><td>{num(r.builds)}</td><td>{num(r.succeeded)}</td><td>{num(r.failed)}</td>
+      <td>{secs(r.cpuMs)}</td><td>{secs(r.durationMs)}</td><td>{mib(r.artifactBytes)}</td></tr>)}</tbody></table>;
+}
+
+/** Build quotas and storage: measured usage (runner cgroup CPU, wall clock, artifact bytes), refusals, retention preview, repository lifecycle. */
+function BuildsPage() {
+  const rep = useLoad(() => api.admin.builds(), []);
+  const preview = useLoad(() => api.admin.retentionPreview(), []);
+  const repos = useLoad(() => api.admin.repositories(), []);
+  const [msg, setMsg] = useState<string | null>(null); const [err, setErr] = useState<string | null>(null); const [busy, setBusy] = useState(false);
+  async function runCleanup() { setBusy(true); setErr(null); try { const r = await api.admin.retentionRun(); setMsg(`Đã dọn: ${r.retention?.artifactsDeleted ?? 0} artifact (${mib(r.retention?.artifactBytesFreed)}), ${r.retention?.previewsExpired ?? 0} bản xem trước hết hạn.`); preview.reload(); rep.reload(); repos.reload(); } catch (x) { setErr(errText(x, "Không dọn được.")); } finally { setBusy(false); } }
+  async function hardDelete(r: RepoRow) { if (!confirm(`Xoá vĩnh viễn kho mã “${r.name}”? Không thể hoàn tác.`)) return; setErr(null); try { await api.admin.deleteRepository(r.projectId); repos.reload(); } catch (x) { setErr(errText(x, "Không xoá được.")); } }
+  const d = rep.data; const p = preview.data;
+  return (<>
+    <PageHead title="Build & lưu trữ" sub="Số liệu đo thật từ runner (CPU của container, thời gian, kích thước kết quả). Giới hạn chỉnh trong Cài đặt → Build / Lưu trữ / Lưu giữ."/>
+    {rep.error ? <ErrorState error={rep.error} retry={rep.reload}/> : !d ? <StateView kind="loading"/> : <>
+      <div className="kpiGrid">
+        <Kpi label="Build 30 ngày" value={num(d.totals.builds)} hint={`${num(d.totals.succeeded)} thành công · ${num(d.totals.failed)} lỗi`}/>
+        <Kpi label="CPU đã dùng" value={secs(d.totals.cpuMs)} hint={`thời gian chạy ${secs(d.totals.durationMs)}`}/>
+        <Kpi label="Đang chạy / chờ" value={`${num(d.running)} / ${num(d.queued)}`}/>
+        <Kpi label="Lưu trữ" value={mib(d.storage.artifactsBytes)} hint={`${num(d.storage.artifactsCount)} artifact · repo ${mib(d.storage.repositoriesBytes)} · tệp ${mib(d.storage.assetsBytes)}`}/>
+      </div>
+      <div className="grid2"><Card title="Theo workspace"><UsageRows rows={d.byWorkspace} label="Workspace"/></Card><Card title="Theo người dùng"><UsageRows rows={d.byUser} label="Người dùng"/></Card></div>
+      <Card title="Theo ứng dụng"><UsageRows rows={d.byProject} label="Ứng dụng"/></Card>
+      <Card title="Build bị từ chối">{d.rejections.length ? <table className="table"><thead><tr><th>Thời gian</th><th>Người</th><th>Ứng dụng</th><th>Lý do</th><th>Chi tiết</th></tr></thead>
+        <tbody>{d.rejections.map((r, i) => <tr key={i}><td>{ago(r.createdAt)}</td><td>{r.user ?? "—"}</td><td>{r.project ?? "—"}</td><td className="code">{r.reason}</td><td>{r.detail}</td></tr>)}</tbody></table> : <StateView kind="empty" title="Không có build nào bị từ chối"/>}</Card>
+    </>}
+    <Card title="Dọn dẹp (lưu giữ)" actions={<button className="btn sm primary" disabled={busy} onClick={() => void runCleanup()}>{busy ? "Đang dọn…" : "Chạy dọn dẹp ngay"}</button>}>
+      <p className="hint">Luôn giữ: bản đang phục vụ, N bản xuất bản gần nhất để quay lại, bản xem trước còn hạn, build đang chạy. Job tự chạy mỗi giờ; mỗi lần xoá đều ghi audit.</p>
+      {p ? <ul className="plainList"><li>Sẽ xoá {num(p.retention?.artifactsDeleted ?? 0)} artifact ({mib(p.retention?.artifactBytesFreed)})</li><li>{num(p.retention?.previewsExpired ?? 0)} bản xem trước đã hết hạn</li>
+        <li>{num(p.retention?.failedBuildLogsCleared ?? 0)} log build lỗi cũ</li><li>{num(p.retention?.repositoriesPendingDelete ?? 0)} kho mã hết hạn lưu trữ</li></ul> : <StateView kind="loading"/>}
+      {msg ? <p className="hint" role="status">{msg}</p> : null}{err ? <p className="formError" role="alert">{err}</p> : null}
+    </Card>
+    <Card title="Kho mã nguồn">{!repos.data ? <StateView kind="loading"/> : repos.data.length === 0 ? <StateView kind="empty" title="Chưa có kho mã"/> :
+      <table className="table"><thead><tr><th>Kho</th><th>Ứng dụng</th><th>Trạng thái</th><th>Kích thước</th><th>Lưu trữ đến</th><th><span className="srOnly">Thao tác</span></th></tr></thead>
+        <tbody>{repos.data.map((r) => <tr key={r.projectId}><td className="code">{r.name}</td><td>{r.project ?? "—"}</td>
+          <td><Pill value={r.state === "ACTIVE" ? "ACTIVE" : r.state === "DELETED" ? "DISABLED" : "UNKNOWN"} label={{ ACTIVE: "Đang dùng", ARCHIVED: "Đã lưu trữ", PENDING_DELETE: "Chờ xoá", DELETED: "Đã xoá" }[r.state]}/></td>
+          <td>{mib(r.sizeBytes)}</td><td>{r.deleteAfter ? fmtDate(r.deleteAfter) : "—"}</td>
+          <td>{r.state === "PENDING_DELETE" ? <button className="btn sm danger" onClick={() => void hardDelete(r)}>Xoá vĩnh viễn</button> : null}</td></tr>)}</tbody></table>}</Card>
+  </>);
+}
+
+/** Editable policies (audited; high-risk ones ask for confirmation) above the read-only effective configuration. */
 function SettingsPage() {
   const { data, error, loading, reload } = useLoad(() => api.admin.settings(), []);
-  if (loading && !data) return <StateView kind="loading"/>;
-  if (error) return <ErrorState error={error} retry={reload}/>;
+  const pol = useLoad(() => api.admin.policies(), []);
+  const [draft, setDraft] = useState<Record<string, string>>({}); const [err, setErr] = useState<string | null>(null); const [ok, setOk] = useState<string | null>(null);
+  async function save(s: SettingView, value: string) {
+    setErr(null); setOk(null);
+    if (s.risk === "HIGH" && !confirm(`“${s.label}” là cài đặt rủi ro cao. Đổi thành ${value}?`)) return;
+    try { await api.admin.setPolicy(s.key, value, s.risk === "HIGH"); setOk(`Đã lưu: ${s.label}`); setDraft((d) => { const n = { ...d }; delete n[s.key]; return n; }); pol.reload(); }
+    catch (x) { setErr(errText(x, "Không lưu được.")); }
+  }
+  async function reset(s: SettingView) { setErr(null); try { await api.admin.resetPolicy(s.key); pol.reload(); } catch (x) { setErr(errText(x, "Không đặt lại được.")); } }
+  const groups = (pol.data ?? []).reduce<Record<string, SettingView[]>>((acc, s) => { (acc[s.group] ??= []).push(s); return acc; }, {});
   return (<>
-    <PageHead title="Cài đặt" sub="Cấu hình đang hiệu lực (chỉ xem). Thay đổi bằng biến môi trường rồi khởi động lại; không hiển thị secret."/>
-    <div className="grid2">{Object.entries(data!).map(([group, values]) => (
-      <Card key={group} title={SETTING_GROUP[group] ?? group}><dl className="kv">{Object.entries(values).map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v === null || v === undefined ? "—" : String(v)}</dd></div>)}</dl></Card>
-    ))}</div>
+    <PageHead title="Cài đặt" sub="Chính sách chỉnh được (ghi audit; mục rủi ro cao cần xác nhận). Giá trị mặc định lấy từ cấu hình máy chủ."/>
+    {err ? <p className="formError" role="alert">{err}</p> : null}{ok ? <p className="hint" role="status">{ok}</p> : null}
+    {pol.error ? <ErrorState error={pol.error} retry={pol.reload}/> : !pol.data ? <StateView kind="loading"/> : <div className="grid2">{Object.entries(groups).map(([g, items]) =>
+      <Card key={g} title={g}><table className="table settingsTable"><tbody>{items.map((s) => {
+        const v = draft[s.key] ?? s.value;
+        return <tr key={s.key}><td><b>{s.label}</b>{s.risk === "HIGH" ? <Pill value="UNKNOWN" label="Rủi ro cao"/> : null}<small className="code">{s.key}</small>
+          <small>{s.overridden ? `Đã đổi bởi ${s.updatedBy ?? "—"} ${s.updatedAt ? ago(s.updatedAt) : ""} · mặc định ${s.defaultValue}` : "Mặc định từ cấu hình"}</small></td>
+          <td className="settingCtl">{s.type === "BOOL"
+            ? <label className="switch"><input type="checkbox" checked={s.value === "true"} aria-label={s.label} onChange={(e) => void save(s, String(e.target.checked))}/> {s.value === "true" ? "Bật" : "Tắt"}</label>
+            : <form className="row" onSubmit={(e) => { e.preventDefault(); void save(s, v); }}><input aria-label={s.label} type="number" min={s.min} max={s.max} value={v} onChange={(e) => setDraft((d) => ({ ...d, [s.key]: e.target.value }))}/>
+              <span className="hint">{s.unit}</span>{draft[s.key] !== undefined && draft[s.key] !== s.value ? <button className="btn sm primary">Lưu</button> : null}</form>}
+            {s.overridden ? <button className="btn sm ghost" onClick={() => void reset(s)}>Mặc định</button> : null}</td></tr>;
+      })}</tbody></table></Card>)}</div>}
+    <h2 className="subHead">Cấu hình đang hiệu lực (chỉ xem)</h2>
+    {loading && !data ? <StateView kind="loading"/> : error ? <ErrorState error={error} retry={reload}/> :
+      <div className="grid2">{Object.entries(data!).map(([group, values]) => (
+        <Card key={group} title={SETTING_GROUP[group] ?? group}><dl className="kv">{Object.entries(values).map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v === null || v === undefined ? "—" : String(v)}</dd></div>)}</dl></Card>
+      ))}</div>}
   </>);
 }

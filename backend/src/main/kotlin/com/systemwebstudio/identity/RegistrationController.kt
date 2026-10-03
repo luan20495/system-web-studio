@@ -41,7 +41,7 @@ class RegistrationController(
     private val limiter: RateLimiter,
     private val audit: AuditService,
     private val tx: org.springframework.transaction.support.TransactionTemplate,
-    @Value("\${app.signup.enabled:false}") private val enabled: Boolean,
+    private val settings: com.systemwebstudio.settings.SettingsService,
     @Value("\${app.signup.invite-code:}") private val inviteCode: String,
     @Value("\${app.signup.max-users:500}") private val maxUsers: Long,
     @Value("\${app.signup.ip-max-per-hour:5}") private val ipMax: Long
@@ -51,7 +51,7 @@ class RegistrationController(
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     fun register(@Valid @RequestBody body: RegisterRequest, request: HttpServletRequest): Map<String, String> {
-        if (!enabled) throw ApiException.notFound("SIGNUP_DISABLED", "Sign-up is not available")
+        if (!settings.bool("signup.enabled")) throw ApiException.notFound("SIGNUP_DISABLED", "Sign-up is not available")
         limiter.require("signup:ip:${request.remoteAddr}", ipMax, 3600, "signup")
         if (inviteCode.isNotBlank() && !MessageDigest.isEqual((body.inviteCode ?: "").toByteArray(), inviteCode.toByteArray()))
             throw ApiException.forbidden("Invalid invite code", "INVALID_INVITE_CODE")

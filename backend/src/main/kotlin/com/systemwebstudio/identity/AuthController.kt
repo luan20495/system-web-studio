@@ -47,7 +47,7 @@ class AuthController(
     private val codeProjects: com.systemwebstudio.code.CodeProjectService,
     @Value("\${app.local-login.enabled:true}") private val localLogin: Boolean,
     @Value("\${app.oidc.enabled:false}") private val oidc: Boolean,
-    @Value("\${app.signup.enabled:false}") private val signup: Boolean,
+    private val settings: com.systemwebstudio.settings.SettingsService,
     @Value("\${app.signup.invite-code:}") private val inviteCode: String,
     @Value("\${app.rate-limit.login-user-max:5}") private val userMax: Long,
     @Value("\${app.rate-limit.login-ip-max:50}") private val ipMax: Long,
@@ -58,8 +58,9 @@ class AuthController(
 
     /** Lets the UI show the right sign-in options without hard-coding the deployment's identity strategy. */
     @GetMapping("/config")
-    fun config(): Map<String, Any> = mapOf("localLogin" to localLogin, "oidc" to oidc, "oidcLoginUrl" to "/oauth2/authorization/oidc", "signup" to signup, "signupInviteRequired" to inviteCode.isNotBlank(),
-        "codeProjects" to codeProjects.available)
+    fun config(): Map<String, Any> = mapOf("localLogin" to localLogin, "oidc" to oidc, "oidcLoginUrl" to "/oauth2/authorization/oidc", "signup" to settings.bool("signup.enabled"), "signupInviteRequired" to inviteCode.isNotBlank(),
+        "codeProjects" to codeProjects.available,
+        "codeAppPublicPublish" to settings.bool("source-apps.public-publish-enabled"), "publicPublish" to settings.bool("publish.public-enabled"))
 
     @PostMapping("/login")
     fun login(@Valid @RequestBody body: LoginRequest, request: HttpServletRequest, response: HttpServletResponse): MeResponse {
@@ -83,7 +84,7 @@ class AuthController(
             throw ApiException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS", "Invalid username or password")
         }
         rateLimiter.reset(userKey)
-        request.getSession(true)
+        request.getSession(true).maxInactiveInterval = settings.int("session.timeout-minutes") * 60
         request.changeSessionId()
         val context = SecurityContextHolder.createEmptyContext()
         context.authentication = authentication

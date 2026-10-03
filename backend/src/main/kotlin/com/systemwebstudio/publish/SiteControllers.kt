@@ -80,6 +80,15 @@ class SiteServingController(
         serveFile(prefix, files, raw, private = false, app = true, frameAncestors = sites.studioOrigin, preview = true, request, response)
     }
 
+    /** Private code app content (see SiteService.openAppToken): token → user, membership re-checked, never cached. */
+    @GetMapping("/sites/_app/{token}/**")
+    fun privateApp(@PathVariable token: String, request: HttpServletRequest, response: HttpServletResponse) {
+        val (user, slug) = sites.appToken(token) ?: return page(response, 404, "Phiên đã hết hạn", "Hãy mở lại ứng dụng từ địa chỉ của nó.")
+        val site = sites.live(slug)?.takeIf { it.visibility == "PRIVATE" && it.kind == "STATIC_APP" } ?: return page(response, 404, "Không tìm thấy", "")
+        if (!sites.canRead(user, site)) return page(response, 403, "Bạn không có quyền xem ứng dụng này", "")
+        serveFile(site.prefix, site.files, request.requestURI.substringAfter("/sites/_app/$token/", ""), private = true, app = true, frameAncestors = null, preview = false, request, response)
+    }
+
     @GetMapping("/sites/{slug}")
     fun noSlash(@PathVariable slug: String, response: HttpServletResponse) {
         response.status = 301; response.setHeader("Location", "/$slug/")
@@ -92,7 +101,6 @@ class SiteServingController(
         val raw = request.requestURI.substringAfter("/sites/$slug/", "")
         val private = site.visibility == "PRIVATE"
         val app = site.kind == "STATIC_APP"
-        if (private && app) return page(response, 403, "Chưa hỗ trợ", "Ứng dụng mã nguồn riêng tư chưa được hỗ trợ.")
         if (private) {
             val user = sites.sessionUser(cookie)
             if (user == null) {
@@ -101,6 +109,10 @@ class SiteServingController(
                 return
             }
             if (!sites.canRead(user, site)) return page(response, 403, "Bạn không có quyền xem trang này", "Trang riêng tư chỉ dành cho thành viên của ứng dụng.")
+            if (app) {
+                response.setHeader("Cache-Control", "no-store"); response.setHeader("Referrer-Policy", "no-referrer"); response.status = 302
+                response.setHeader("Location", "/_app/${sites.openAppToken(user, slug)}/$raw"); return
+            }
         }
         serveFile(site.prefix, site.files, raw, private, app, null, preview = false, request, response)
     }
@@ -171,7 +183,7 @@ class SiteManagementController(
     fun rollback(@PathVariable workspaceId: UUID, @PathVariable projectId: UUID, @Valid @RequestBody request: RollbackRequest,
                  @AuthenticationPrincipal me: StudioUserDetails): SiteInfo {
         access.forProject(me.userId, workspaceId, projectId).require(Permission.PROJECT_PUBLISH)
-        val ok = jdbc.queryForObject("SELECT count(*) FROM deployments WHERE id = ? AND project_id = ? AND status = 'RUNNING' AND artifact_id IS NOT NULL",
+        val ok = jdbc.queryForObject("SELECT count(*) FROM deployments d JOIN artifacts a ON a.id = d.artifact_id AND a.deleted_at IS NULL WHERE d.id = ? AND d.project_id = ? AND d.status = 'RUNNING'",
             Long::class.java, request.deploymentId, projectId)!! > 0
         if (!ok) throw ApiException.badRequest("DEPLOYMENT_NOT_RESTORABLE", "Only a successful deployment with an artifact can be served again")
         if (jdbc.queryForObject("SELECT count(*) FROM sites WHERE project_id = ?", Long::class.java, projectId)!! == 0L) throw ApiException.notFound("SITE_NOT_FOUND", "This project has no site")

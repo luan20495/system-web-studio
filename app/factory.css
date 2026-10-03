@@ -195,3 +195,4 @@
 .studio .tabs>.active{color:#c3cbff;border-bottom-color:#c3cbff}
 .studio .linkChip{background:rgba(124,140,255,.22);color:#eef0ff}
 .studio .stateView h2{color:#e6edf3}.studio .stateView p,.studio .stateView .stateDetail{color:#b8c2d6}
+.settingsTable td{vertical-align:top}.settingsTable small{display:block}.settingCtl{white-space:nowrap}.settingCtl input[type=number]{width:110px}

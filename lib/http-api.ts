@@ -1,5 +1,5 @@
 import type {
-  AdminAi, AiCallRow, AiPrice, AiProbe, AiProviderInfo, AiUsageReport, AdminApp, BlockDto, CheckResult, TemplateDto, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
+  AdminAi, AiCallRow, SettingView, BuildPolicyReport, CleanupResult, RepoRow, AiPrice, AiProbe, AiProviderInfo, AiUsageReport, AdminApp, BlockDto, CheckResult, TemplateDto, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
   AiStatus, ApiProject, AuthConfig, Member, SiteInfo, TreeFile, CodeFile, CodeCommit, CodeChange, DiffFile, CodeAiResponse, CodeAiHistoryItem, RegistryComponent, AssetDto, Deployment, Me, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
 } from "./http-types";
 
@@ -126,7 +126,15 @@ export const api = {
     templateVisibility: (id: string, visibility: "PRIVATE" | "COMPANY") => call<TemplateDto>(`/admin/templates/${id}/visibility`, { method: "POST", body: json({ visibility }) }),
     templateStatus: (id: string, status: "ACTIVE" | "ARCHIVED") => call<TemplateDto>(`/admin/templates/${id}/status`, { method: "POST", body: json({ status }) }),
     health: () => call<PlatformHealth>("/admin/system/health"),
-    settings: () => call<Record<string, Record<string, unknown>>>("/admin/settings")
+    settings: () => call<Record<string, Record<string, unknown>>>("/admin/settings"),
+    policies: () => call<SettingView[]>("/admin/settings/policies"),
+    setPolicy: (key: string, value: string, confirm?: boolean) => call<SettingView>(`/admin/settings/policies/${key}`, { method: "PUT", body: json({ value, confirm }) }),
+    resetPolicy: (key: string) => call<SettingView>(`/admin/settings/policies/${key}`, { method: "DELETE" }),
+    builds: () => call<BuildPolicyReport>("/admin/builds"),
+    retentionPreview: () => call<CleanupResult>("/admin/retention/preview"),
+    retentionRun: () => call<CleanupResult>("/admin/retention/run", { method: "POST" }),
+    repositories: () => call<RepoRow[]>("/admin/retention/repositories"),
+    deleteRepository: (projectId: string) => call<{ state: string }>(`/admin/retention/repositories/${projectId}/delete`, { method: "POST" })
   },
   createProject: (w: string, name: string, description?: string, templateId?: string, appType?: "PAGE_SCHEMA" | "STATIC_APP") =>
     call<ApiProject>(`/workspaces/${w}/projects`, { method: "POST", body: json({ name, description, ...(templateId ? { templateId } : {}), ...(appType ? { appType } : {}) }) }),

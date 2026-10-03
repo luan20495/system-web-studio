@@ -39,6 +39,7 @@ class OidcLoginSuccessHandler(
     private val encoder: PasswordEncoder,
     private val contexts: SecurityContextRepository,
     private val audit: AuditService,
+    private val settings: com.systemwebstudio.settings.SettingsService,
     @Value("\${app.oidc.auto-provision:true}") private val autoProvision: Boolean,
     @Value("\${app.oidc.link-by-verified-email:false}") private val linkByEmail: Boolean,
     @Value("\${app.oidc.success-url:/}") private val successUrl: String
@@ -63,7 +64,7 @@ class OidcLoginSuccessHandler(
 
         jdbc.update("UPDATE external_identities SET last_login_at = now(), email = COALESCE(?, email) WHERE issuer = ? AND subject = ?", email, issuer, subject)
         val details = users.loadUserByUsername(row["username"] as String)
-        request.getSession(true); request.changeSessionId()
+        request.getSession(true).maxInactiveInterval = settings.int("session.timeout-minutes") * 60; request.changeSessionId()
         val context = SecurityContextHolder.createEmptyContext()
         context.authentication = UsernamePasswordAuthenticationToken.authenticated(details, null, details.authorities)
         SecurityContextHolder.setContext(context)

@@ -108,7 +108,8 @@ class DeploymentProcessor(
         val job = jdbc.queryForList("SELECT id, status, artifact_id, error, commit_sha FROM build_jobs WHERE deployment_id = ? ORDER BY queued_at DESC LIMIT 1", d.id).firstOrNull()
         if (job == null) {
             val commit = json.readTree(snapshot(d)).get("commit")?.asString() ?: return "ERR:This version has no commit"
-            buildJobs.enqueue(d.projectId, commit, "PUBLISH", deploymentId = d.id)
+            buildJobs.enqueue(d.projectId, commit, "PUBLISH", deploymentId = d.id,
+                requestedBy = jdbc.queryForObject("SELECT requested_by FROM deployments WHERE id = ?", UUID::class.java, d.id))
             return null
         }
         return when (job["status"]) {
@@ -125,7 +126,6 @@ class DeploymentProcessor(
         val active = jdbc.queryForObject("SELECT active FROM projects WHERE id = ?", Boolean::class.java, d.projectId)
         if (active != true) return "Project no longer exists"
         if (isCodeApp(d)) {
-            if (d.visibility != "PUBLIC") return "Code apps can only be published publicly for now"
             val repo = jdbc.queryForObject("SELECT count(*) FROM repositories WHERE project_id = ? AND state = 'ACTIVE'", Long::class.java, d.projectId)
             return if (repo == 0L) "The project has no code repository" else null
         }

@@ -183,11 +183,10 @@ class CodeProjectTests : IntegrationTestBase() {
         // publish: private is refused for code apps; public builds the merged commit and serves it with the sandbox policy
         val base = api(sc.ws, UUID.fromString(pid))
         val rev = sc.s.body(sc.s.get(base)).get("revision").asLong()
-        assertThat(sc.s.post("$base/publish", """{"visibility":"PRIVATE","expectedRevision":$rev}""", "Idempotency-Key" to "code-priv-1").response.status).isEqualTo(400)
         val dep = sc.s.body(sc.s.post("$base/publish", """{"visibility":"PUBLIC","expectedRevision":$rev}""", "Idempotency-Key" to "code-pub-1")).get("id").asString()
         await().atMost(Duration.ofSeconds(30)).until { jdbc.queryForObject("SELECT count(*) FROM build_jobs WHERE deployment_id = ?::uuid", Long::class.java, dep)!! > 0 }
         var pj = claim()!!
-        while (pj.get("purpose").asString() != "PUBLISH") { finish(pj.get("id").asString(), "FAILED", "other"); pj = claim()!! }
+        while (pj.get("purpose").asString() != "PUBLISH" || pj.get("projectId").asString() != pid) { finish(pj.get("id").asString(), "FAILED", "other"); pj = claim()!! }
         assertThat(pj.get("commitSha").asString()).isEqualTo(head.get("sha").asString())
         upload(pj.get("id").asString(), tar(dist)); finish(pj.get("id").asString(), "SUCCEEDED")
         await().atMost(Duration.ofSeconds(30)).until { sc.s.body(sc.s.get("$base/deployments/$dep")).get("status").asString() in setOf("RUNNING", "FAILED") }
@@ -247,6 +246,86 @@ class CodeProjectTests : IntegrationTestBase() {
         assertThat(sc.s.body(sc.s.get("$code/changes")).toList().map { it.get("headSha").asString() }).containsExactly(head)   // only the valid change exists
         // page-schema prompt endpoint refuses code projects
         assertThat(sc.s.post("${api(sc.ws, UUID.fromString(pid))}/prompts", """{"prompt":"x","expectedRevision":0}""").response.status).isEqualTo(409)
+    }
+
+    private fun setting(key: String, value: String) { jdbc.update("INSERT INTO system_settings (key, value) VALUES (?,?) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", key, value); settingsSvc.invalidate() }
+    @org.springframework.beans.factory.annotation.Autowired lateinit var settingsSvc: com.systemwebstudio.settings.SettingsService
+    @org.junit.jupiter.api.AfterEach fun resetSettings() { jdbc.update("DELETE FROM system_settings"); settingsSvc.invalidate() }
+
+    @Test
+    fun `policy - source apps can be disabled, builds can be disabled, daily build quota and repo size are enforced and recorded`() {
+        setting("source-apps.enabled", "false")
+        val sc = scenario()
+        assertThat(sc.s.post(api(sc.ws), """{"name":"x","appType":"STATIC_APP"}""").response.status).isEqualTo(409)
+        assertThat(sc.s.body(sc.s.get("/api/v1/auth/config")).get("codeProjects").asBoolean()).isFalse()
+        setting("source-apps.enabled", "true")
+        val (pid, code) = sc.codeProject()
+        val body = """{"summary":"q","files":[{"path":"src/q.ts","content":"export const q = 1"}]}"""
+        setting("source-apps.build-enabled", "false")
+        assertThat(sc.s.body(sc.s.post("$code/changes", body)).get("code").asString()).isEqualTo("BUILDS_DISABLED")
+        setting("source-apps.build-enabled", "true")
+        setting("build.max-per-user-per-day", "1")
+        assertThat(sc.s.post("$code/changes", body).response.status).isEqualTo(201)
+        val r = sc.s.post("$code/changes", body)
+        assertThat(r.response.status).isEqualTo(429); assertThat(sc.s.body(r).get("code").asString()).isEqualTo("BUILD_QUOTA_USER_DAILY")
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM build_rejections WHERE project_id = ?::uuid AND reason_code = 'BUILD_QUOTA_USER_DAILY'", Long::class.java, pid)).isEqualTo(1)
+        assertThat(sc.s.body(sc.s.get("$code/commits")).size()).isEqualTo(1)        // refused before anything was committed
+        setting("build.max-per-user-per-day", "100"); setting("build.max-concurrent-per-user", "10"); setting("build.max-repo-mib", "1")
+        val big = sc.s.post("$code/changes", """{"summary":"big","files":[{"path":"src/big.ts","content":"${"x".repeat(190_000)}"},{"path":"src/big2.ts","content":"${"y".repeat(190_000)}"},{"path":"src/big3.ts","content":"${"z".repeat(190_000)}"},{"path":"src/big4.ts","content":"${"w".repeat(190_000)}"},{"path":"src/big5.ts","content":"${"v".repeat(190_000)}"},{"path":"src/big6.ts","content":"${"u".repeat(190_000)}"}]}""")
+        assertThat(big.response.status).isIn(413, 422)
+        val a = sessionFor(fx.user("bp-admin", systemAdmin = true).username)
+        val rep = a.body(a.get("/api/v1/admin/builds"))
+        assertThat(rep.get("rejections").toList().map { it.get("reason").asString() }).contains("BUILD_QUOTA_USER_DAILY", "BUILDS_DISABLED")
+        assertThat(sc.s.get("/api/v1/admin/builds").response.status).isEqualTo(403)
+    }
+
+    @Test
+    fun `private code app - entry needs the site session, content is served from a per-session capability path, membership re-checked`() {
+        setting("source-apps.public-publish-enabled", "false")
+        val sc = scenario(); val (pid, _) = sc.codeProject()
+        val base = api(sc.ws, UUID.fromString(pid))
+        val rev = sc.s.body(sc.s.get(base)).get("revision").asLong()
+        val pub = sc.s.post("$base/publish", """{"visibility":"PUBLIC","expectedRevision":$rev}""", "Idempotency-Key" to "code-pub-off")
+        assertThat(pub.response.status).isEqualTo(403); assertThat(sc.s.body(pub).get("code").asString()).isEqualTo("CODE_APP_PUBLIC_DISABLED")
+        val dep = sc.s.body(sc.s.post("$base/publish", """{"visibility":"PRIVATE","expectedRevision":$rev}""", "Idempotency-Key" to "code-priv-ok")).get("id").asString()
+        await().atMost(Duration.ofSeconds(30)).until { jdbc.queryForObject("SELECT count(*) FROM build_jobs WHERE deployment_id = ?::uuid", Long::class.java, dep)!! > 0 }
+        var pj = claim()!!
+        while (pj.get("purpose").asString() != "PUBLISH" || pj.get("projectId").asString() != pid) { finish(pj.get("id").asString(), "FAILED", "other"); pj = claim()!! }
+        upload(pj.get("id").asString(), tar(dist)); finish(pj.get("id").asString(), "SUCCEEDED")
+        await().atMost(Duration.ofSeconds(30)).until { sc.s.body(sc.s.get("$base/deployments/$dep")).get("status").asString() == "RUNNING" }
+        val slug = sc.s.body(sc.s.get("$base/deployments/$dep")).get("url").asString().removePrefix("https://sites.example.test/").trimEnd('/')
+        assertThat(session().get("/sites/$slug/").response.status).isEqualTo(302)                       // → Studio sign-in
+        val ticket = sc.s.body(sc.s.post("/api/v1/sites/$slug/access-ticket", """{"path":"/"}""")).get("redirect").asString().substringAfter("ticket=")
+        val v = session()
+        val cookie = v.get("/sites/_access?ticket=$ticket").response.getHeader("Set-Cookie")!!.substringBefore(';').substringAfter('=')
+        fun withCookie(path: String) = v.perform(MockMvcRequestBuilders.get(path).cookie(jakarta.servlet.http.Cookie("site_session", cookie)), includeCsrf = false)
+        val entry = withCookie("/sites/$slug/")
+        assertThat(entry.response.status).isEqualTo(302)
+        val appPath = entry.response.getHeader("Location")!!; assertThat(appPath).startsWith("/_app/")
+        val token = appPath.removePrefix("/_app/").substringBefore('/')
+        val html = session().get("/sites/_app/$token/")                                                   // no cookie needed (opaque origin)
+        assertThat(html.response.status).isEqualTo(200); assertThat(html.response.getHeader("Content-Security-Policy")).startsWith("sandbox allow-scripts")
+        assertThat(html.response.getHeader("Cache-Control")).contains("no-store")
+        fx.disable(sc.user.id)
+        assertThat(session().get("/sites/_app/$token/").response.status).isEqualTo(403)
+        assertThat(session().get("/sites/_app/notarealtoken00000000000/").response.status).isEqualTo(404)
+    }
+
+    @Test
+    fun `deleting a code project archives its repository, hard delete only after retention by an admin`() {
+        val sc = scenario(); val (pid, _) = sc.codeProject()
+        val base = api(sc.ws, UUID.fromString(pid))
+        val rev = sc.s.body(sc.s.get(base)).get("revision").asLong()
+        assertThat(sc.s.delete("$base?expectedRevision=$rev").response.status).isEqualTo(204)
+        assertThat(jdbc.queryForObject("SELECT state FROM repositories WHERE project_id = ?::uuid", String::class.java, pid)).isEqualTo("ARCHIVED")
+        val a = sessionFor(fx.user("repo-admin", systemAdmin = true).username)
+        assertThat(a.post("/api/v1/admin/retention/repositories/$pid/delete").response.status).isEqualTo(409)   // still within retention
+        jdbc.update("UPDATE repositories SET delete_after = now() - interval '1 minute' WHERE project_id = ?::uuid", pid)
+        a.post("/api/v1/admin/retention/run")
+        assertThat(jdbc.queryForObject("SELECT state FROM repositories WHERE project_id = ?::uuid", String::class.java, pid)).isEqualTo("PENDING_DELETE")
+        assertThat(a.post("/api/v1/admin/retention/repositories/$pid/delete").response.status).isEqualTo(200)
+        assertThat(jdbc.queryForObject("SELECT state FROM repositories WHERE project_id = ?::uuid", String::class.java, pid)).isEqualTo("DELETED")
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM audit_events WHERE resource_id = ? AND action IN ('REPOSITORY_ARCHIVED','REPOSITORY_PENDING_DELETE','REPOSITORY_DELETED')", Long::class.java, pid)).isEqualTo(3)
     }
 }
 

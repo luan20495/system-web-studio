@@ -57,9 +57,12 @@ object CodeChangePolicy {
 }
 
 @Service
-class CodeProjectService(private val git: ForgejoClient, private val jdbc: JdbcTemplate, private val json: JsonMapper) {
+class CodeProjectService(private val git: ForgejoClient, private val jdbc: JdbcTemplate, private val json: JsonMapper,
+                         private val settings: com.systemwebstudio.settings.SettingsService) {
     private val random = SecureRandom()
-    val available: Boolean get() = git.configured
+    /** Git server configured AND enabled by policy (Settings → Ứng dụng mã nguồn) */
+    val available: Boolean get() = git.configured && settings.bool("source-apps.enabled")
+    val configured: Boolean get() = git.configured
 
     /** The approved scaffold (React + Vite, ADR 0012), read from the application's resources. */
     fun scaffold(): List<GitFileChange> {
@@ -82,13 +85,14 @@ class CodeProjectService(private val git: ForgejoClient, private val jdbc: JdbcT
 
     /** Creates the platform-owned repository with the scaffold as its first commit on a protected main. Returns the commit sha. */
     fun initialize(project: ProjectEntity, userId: UUID): String {
-        if (!git.configured) throw ApiException.conflict("CODE_PROJECTS_UNAVAILABLE", "Code projects need the Git server (scripts/forgejo-setup.sh)")
+        if (!available) throw ApiException.conflict("CODE_PROJECTS_UNAVAILABLE", "Code projects are not available (Git server not configured or disabled by policy)")
         val name = repoName(project)
         try {
             git.createRepository(name, "Studio project ${project.id}")
             val sha = git.commit(name, "main", "main", scaffold(), "Khởi tạo từ khung React + Vite\n\nStudio-Project: ${project.id}\nStudio-User: $userId", author(userId), emptyRepo = true)
             git.protectMain(name)
-            jdbc.update("INSERT INTO repositories (project_id, provider, owner, name, head_sha) VALUES (?, 'forgejo', ?, ?, ?)", project.id, git.org, name, sha)
+            jdbc.update("INSERT INTO repositories (project_id, provider, owner, name, head_sha, size_bytes) VALUES (?, 'forgejo', ?, ?, ?, ?)", project.id, git.org, name, sha,
+                scaffold().sumOf { (it.content?.size ?: 0).toLong() })
             return sha
         } catch (e: GitServerException) { throw ApiException(HttpStatus.BAD_GATEWAY, "GIT_SERVER_ERROR", e.message ?: "Git server error") }
     }

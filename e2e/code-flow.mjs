@@ -67,13 +67,21 @@ await check("a type error fails the build in the sandbox and cannot be merged", 
 });
 await check("publish: the merged commit is built in the sandbox and served by the sites gateway with the sandbox policy", async () => {
   await p.goto(PROJECT_URL + "/publish"); const dlg = p.getByRole("dialog", { name: "Xuất bản website" }); await dlg.waitFor();
-  expect(!(await dlg.getByRole("button", { name: /Riêng tư/ }).isVisible()), "private must not be offered for code apps");
   await dlg.getByRole("button", { name: /Công khai/ }).click(); await dlg.getByRole("button", { name: "Xuất bản", exact: true }).click();
   await dlg.getByText("Đang chạy", { exact: true }).waitFor({ timeout: 180000 });
   const url = await dlg.getByRole("link", { name: /^http/ }).getAttribute("href"); expect(url.startsWith(SITES + "/"), url);
   const r = await fetch(url); expect(r.status === 200, `site ${r.status}`);
   expect((r.headers.get("content-security-policy") ?? "").startsWith("sandbox allow-scripts"), "site must be sandboxed");
   const v = await browser.newContext(); const vp = await v.newPage(); await vp.goto(url); await vp.getByText("Chào từ E2E").waitFor({ timeout: 15000 }); await v.close();
+});
+await check("private code app: anonymous visitors are sent to sign in; the member's browser runs the app from a per-session capability path", async () => {
+  await p.goto(PROJECT_URL + "/publish"); const dlg = p.getByRole("dialog", { name: "Xuất bản website" }); await dlg.waitFor();
+  await dlg.getByRole("button", { name: /Riêng tư/ }).click(); await dlg.getByRole("button", { name: "Xuất bản", exact: true }).click();
+  await dlg.getByText("Đang chạy", { exact: true }).waitFor({ timeout: 180000 });
+  const url = await dlg.getByRole("link", { name: /^http/ }).getAttribute("href");
+  const anon = await fetch(url, { redirect: "manual" }); expect(anon.status === 302 && (anon.headers.get("location") ?? "").includes("/studio/site-access"), `anonymous ${anon.status}`);
+  await p.goto(url); await p.waitForURL(/\/_app\//, { timeout: 20000 }); await p.getByText("Chào từ E2E").waitFor({ timeout: 15000 });
+  expect(await p.evaluate(() => self.origin) === "null", "private app must also run sandboxed");
 });
 await check("access: a non-member gets 404 on the code API; runner endpoints are not reachable through the UI or the gateway", async () => {
   const other = await session("local.viewer");
