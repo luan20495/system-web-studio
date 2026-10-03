@@ -76,7 +76,9 @@ class PublishController(
         if (project.revision != request.expectedRevision) {
             throw ApiException.conflict("REVISION_CONFLICT", "Project changed elsewhere; reload and retry.", mapOf("currentRevision" to project.revision))
         }
-        schemas.ensureInitialized(project, me.userId)
+        if (project.appType == "STATIC_APP") {
+            if (request.visibility != "PUBLIC") throw ApiException.badRequest("CODE_APP_PUBLIC_ONLY", "Code apps can only be published publicly for now")
+        } else schemas.ensureInitialized(project, me.userId)
         val version = versions.latest(projectId) ?: throw ApiException.conflict("NO_VERSION", "Project has no version to publish")
         deployments.insert(deploymentId, workspaceId, projectId, version.id, me.userId, request.visibility!!, provider.name)
         audit.record("PUBLISH", "DEPLOYMENT", deploymentId, workspaceId, projectId,

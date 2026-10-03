@@ -69,12 +69,29 @@ class SecurityConfiguration {
     @org.springframework.core.annotation.Order(1)
     fun sitesFilterChain(http: HttpSecurity): SecurityFilterChain {
         http.securityMatcher("/sites/**")
+            // the Studio's CORS policy does not apply here: sandboxed apps (origin "null") load their own assets, answered by the controller
+            .cors { it.disable() }
             .csrf { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .requestCache { it.disable() }
             .securityContext { it.disable() }
             .headers { it.disable() }
             .authorizeHttpRequests { it.requestMatchers(HttpMethod.GET, "/sites/**").permitAll().requestMatchers(HttpMethod.HEAD, "/sites/**").permitAll().anyRequest().denyAll() }
+            .formLogin { it.disable() }
+            .httpBasic { it.disable() }
+        return http.build()
+    }
+
+    /** Build runner endpoints (loopback process with its own token, checked in BuildRunnerController). Never proxied by the UI or gateway. */
+    @Bean
+    @org.springframework.core.annotation.Order(2)
+    fun internalFilterChain(http: HttpSecurity): SecurityFilterChain {
+        http.securityMatcher("/internal/**")
+            .csrf { it.disable() }
+            .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
+            .requestCache { it.disable() }
+            .securityContext { it.disable() }
+            .authorizeHttpRequests { it.anyRequest().permitAll() }
             .formLogin { it.disable() }
             .httpBasic { it.disable() }
         return http.build()

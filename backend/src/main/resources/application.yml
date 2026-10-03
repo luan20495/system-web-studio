@@ -189,6 +189,16 @@ app:
     cookie-name: site_session
     cookie-secure: ${SITES_COOKIE_SECURE:false}
     session-hours: 8
+  git:
+    url: ${FORGEJO_URL:}                                         # empty = code projects unavailable (scripts/forgejo-setup.sh)
+    token: ${FORGEJO_TOKEN:}
+    org: ${FORGEJO_ORG:factory}
+    bot-name: ${FORGEJO_BOT:factory-bot}
+  build:
+    runner-token: ${BUILD_RUNNER_TOKEN:}                         # empty = runner endpoints disabled
+    api-base: ${BUILD_API_BASE:http://127.0.0.1:8080}             # how the runner reaches this API (loopback)
+    image: ${BUILD_IMAGE:node@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402}   # node:22-alpine, pinned by digest
+    preview-days: 7
   render:
     url: ${RENDER_URL:http://127.0.0.1:18095}                     # workers/render (same renderer as the Studio preview)
     token: ${RENDER_TOKEN:}

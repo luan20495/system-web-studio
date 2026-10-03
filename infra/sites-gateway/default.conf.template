@@ -16,7 +16,7 @@ server {
     location = /favicon.ico { access_log off; log_not_found off; return 204; }
     location = /healthz { access_log off; default_type text/plain; return 200 "ok\n"; }
 
-    location ~ "^/(_access|[a-z0-9][a-z0-9-]{1,79})(/.*)?$" {
+    location ~ "^/(_access|_preview|[a-z0-9][a-z0-9-]{1,79})(/.*)?$" {
         limit_except GET HEAD { deny all; }
         limit_req zone=sites_rl burst=60 nodelay;
         rewrite ^/(.*)$ /sites/$1 break;

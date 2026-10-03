@@ -27,6 +27,7 @@ class DeploymentProcessor(
     private val audit: AuditService,
     private val json: JsonMapper,
     private val builder: StaticSiteBuilder,
+    private val buildJobs: com.systemwebstudio.code.BuildJobService,
     @Value("\${app.deploy.step-delay-ms:0}") private val stepDelayMs: Long
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
@@ -56,7 +57,10 @@ class DeploymentProcessor(
                 when (current) {
                     DeploymentStatus.POLICY_CHECK -> policy(d)
                     DeploymentStatus.SECURITY_CHECK -> security(d)
-                    DeploymentStatus.BUILDING -> { artifactHash = build(d); null }
+                    DeploymentStatus.BUILDING -> if (isCodeApp(d)) {
+                        // code project: the sandbox runner builds it; the job's completion re-queues this deployment
+                        when (val r = codeBuild(d)) { null -> return; else -> { if (r.startsWith("ERR:")) r.removePrefix("ERR:") else { artifactHash = r; null } } }
+                    } else { artifactHash = build(d); null }
                     DeploymentStatus.DEPLOYING -> {
                         val project = jdbc.queryForMap("SELECT name, deployment_target FROM projects WHERE id = ?", d.projectId)
                         // read back from the row so a resumed job deploys the artifact the BUILDING step recorded
@@ -87,7 +91,7 @@ class DeploymentProcessor(
 
     private fun label(s: String) = when (s) {
         DeploymentStatus.SECURITY_CHECK -> "Running security checks"
-        DeploymentStatus.BUILDING -> if (provider.buildsArtifacts) "Building the static site" else "Building artifact (mock)"
+        DeploymentStatus.BUILDING -> if (provider.buildsArtifacts) "Building (static site, or sandbox build for code apps)" else "Building artifact (mock)"
         DeploymentStatus.DEPLOYING -> if (provider.buildsArtifacts) "Switching the site to the new artifact" else "Deploying through the mock provider"
         else -> s
     }
@@ -95,9 +99,36 @@ class DeploymentProcessor(
     private fun snapshot(d: DeploymentDto) =
         jdbc.queryForObject("SELECT schema_snapshot::text FROM project_versions WHERE id = ?", String::class.java, d.versionId)!!
 
+    private fun isCodeApp(d: DeploymentDto) =
+        jdbc.queryForObject("SELECT app_type FROM projects WHERE id = ?", String::class.java, d.projectId) == "STATIC_APP"
+
+    /** null = still building (pause); "ERR:<message>" = failed; otherwise the artifact sha. Idempotent: re-runs only look at the job. */
+    private fun codeBuild(d: DeploymentDto): String? {
+        if (!provider.buildsArtifacts) return "ERR:Code apps need the static site provider (DEPLOY_PROVIDER=static)"
+        val job = jdbc.queryForList("SELECT id, status, artifact_id, error, commit_sha FROM build_jobs WHERE deployment_id = ? ORDER BY queued_at DESC LIMIT 1", d.id).firstOrNull()
+        if (job == null) {
+            val commit = json.readTree(snapshot(d)).get("commit")?.asString() ?: return "ERR:This version has no commit"
+            buildJobs.enqueue(d.projectId, commit, "PUBLISH", deploymentId = d.id)
+            return null
+        }
+        return when (job["status"]) {
+            "SUCCEEDED" -> {
+                jdbc.update("UPDATE deployments SET artifact_id = ?, commit_sha = ? WHERE id = ?", job["artifact_id"], job["commit_sha"], d.id)
+                jdbc.queryForObject("SELECT sha256 FROM artifacts WHERE id = ?", String::class.java, job["artifact_id"])
+            }
+            "FAILED" -> "ERR:Build failed: ${job["error"] ?: "see build log"}"
+            else -> null
+        }
+    }
+
     private fun policy(d: DeploymentDto): String? {
         val active = jdbc.queryForObject("SELECT active FROM projects WHERE id = ?", Boolean::class.java, d.projectId)
         if (active != true) return "Project no longer exists"
+        if (isCodeApp(d)) {
+            if (d.visibility != "PUBLIC") return "Code apps can only be published publicly for now"
+            val repo = jdbc.queryForObject("SELECT count(*) FROM repositories WHERE project_id = ? AND state = 'ACTIVE'", Long::class.java, d.projectId)
+            return if (repo == 0L) "The project has no code repository" else null
+        }
         val page = json.readTree(snapshot(d))
         val problems = validator.validate(page)
         if (problems.isNotEmpty()) return "Page schema violates the registry: " + problems.first().let { "${it.path} ${it.message}" }
@@ -111,6 +142,7 @@ class DeploymentProcessor(
     }
 
     private fun security(d: DeploymentDto): String? {
+        if (isCodeApp(d)) return null      // code is scanned in the build sandbox (secrets, dependencies) and again when the output is stored
         val text = snapshot(d).lowercase()
         forbidden.firstOrNull { it in text }?.let { return "Security check failed: forbidden content '$it' found in the page" }
         return null

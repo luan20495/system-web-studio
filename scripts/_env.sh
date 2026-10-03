@@ -34,3 +34,8 @@ export STUDIO_ORIGIN="${STUDIO_ORIGIN:-http://127.0.0.1:${FRONTEND_PORT}}"
 export RENDER_PORT="${RENDER_PORT:-18095}" RENDER_URL="${RENDER_URL:-http://127.0.0.1:18095}"
 [ -f "$ROOT/.run/render.token" ] || (umask 077; openssl rand -hex 24 > "$ROOT/.run/render.token")
 export RENDER_TOKEN="${RENDER_TOKEN:-$(cat "$ROOT/.run/render.token")}"
+# Code projects (ADR 0010/0011): local Forgejo (scripts/forgejo-setup.sh writes .run/forgejo.env) and the build runner token
+if [ -f "$ROOT/.run/forgejo.env" ]; then set -a; . "$ROOT/.run/forgejo.env"; set +a; fi
+[ -f "$ROOT/.run/runner.token" ] || (umask 077; openssl rand -hex 24 > "$ROOT/.run/runner.token")
+export BUILD_RUNNER_TOKEN="${BUILD_RUNNER_TOKEN:-$(cat "$ROOT/.run/runner.token")}"
+export BUILD_API_BASE="${BUILD_API_BASE:-http://127.0.0.1:8080}"

@@ -93,6 +93,48 @@ services:
       timeout: 3s
       retries: 6
 
+  # Git server for generated code projects (ADR 0011): platform-owned repositories, loopback only, no SSH, no sign-up, no Actions.
+  # Secrets/bot token are created by scripts/forgejo-setup.sh into .run/forgejo-server.env (git-ignored).
+  forgejo:
+    image: codeberg.org/forgejo/forgejo:11-rootless
+    env_file:
+      - path: .run/forgejo-server.env
+        required: false
+    environment:
+      FORGEJO__database__DB_TYPE: sqlite3
+      FORGEJO__security__INSTALL_LOCK: "true"
+      FORGEJO__server__ROOT_URL: http://127.0.0.1:${FORGEJO_PORT:-13000}/
+      FORGEJO__server__HTTP_PORT: "3000"
+      FORGEJO__server__DISABLE_SSH: "true"
+      FORGEJO__service__DISABLE_REGISTRATION: "true"
+      FORGEJO__service__REQUIRE_SIGNIN_VIEW: "true"
+      FORGEJO__repository__DEFAULT_PRIVATE: private
+      FORGEJO__repository__DEFAULT_BRANCH: main
+      FORGEJO__actions__ENABLED: "false"
+      FORGEJO__packages__ENABLED: "false"
+      FORGEJO__log__LEVEL: Warn
+    ports:
+      - "127.0.0.1:${FORGEJO_PORT:-13000}:3000"
+    volumes:
+      - studio-forgejo-data:/var/lib/gitea
+      - studio-forgejo-conf:/etc/gitea
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/healthz >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+
+  # Package mirror for build sandboxes (ADR 0010): allowlist-only proxy of npm. Reachable by sandboxes ONLY through the internal
+  # "build" network (no internet there); the mirror itself uses the default network to fetch allowlisted packages.
+  verdaccio:
+    image: verdaccio/verdaccio:6
+    volumes:
+      - ./infra/verdaccio/config.yaml:/verdaccio/conf/config.yaml:ro
+      - studio-verdaccio:/verdaccio/storage
+    networks: [default, build]
+    mem_limit: 384m
+
   # Optional local identity provider for exercising OIDC/SSO: docker compose --profile sso up -d keycloak (see scripts/sso-up.sh).
   # Not part of the default stack (it needs ~700 MB RAM). Credentials and the realm are generated at run time, never committed.
   keycloak:
@@ -110,7 +152,15 @@ services:
       - ./infra/keycloak/.generated:/opt/keycloak/data/import:ro
     mem_limit: 1g
 
+networks:
+  default: {}
+  build:
+    internal: true          # build sandboxes: no route to the internet, the host or other networks
+
 volumes:
+  studio-verdaccio:
+  studio-forgejo-data:
+  studio-forgejo-conf:
   studio-postgres:
   studio-redis:
   studio-minio:

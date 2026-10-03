@@ -66,6 +66,20 @@ class SiteServingController(
         response.setHeader("Location", "/$slug$path")
     }
 
+    @GetMapping("/sites/_preview/{token}")
+    fun previewNoSlash(@PathVariable token: String, response: HttpServletResponse) { response.status = 301; response.setHeader("Location", "/_preview/$token/") }
+
+    /**
+     * Preview of a code change (generated JavaScript). Capability URL (unguessable, expiring) and CSP `sandbox allow-scripts`:
+     * the browser runs the app in an opaque origin, so it cannot read cookies, storage or pages of the sites host or the Studio.
+     */
+    @GetMapping("/sites/_preview/{token}/**")
+    fun preview(@PathVariable token: String, request: HttpServletRequest, response: HttpServletResponse) {
+        val (prefix, files) = sites.preview(token) ?: return page(response, 404, "Bản xem trước không còn", "Liên kết đã hết hạn hoặc thay đổi đã bị huỷ.")
+        val raw = request.requestURI.substringAfter("/sites/_preview/$token/", "")
+        serveFile(prefix, files, raw, private = false, app = true, frameAncestors = sites.studioOrigin, preview = true, request, response)
+    }
+
     @GetMapping("/sites/{slug}")
     fun noSlash(@PathVariable slug: String, response: HttpServletResponse) {
         response.status = 301; response.setHeader("Location", "/$slug/")
@@ -76,10 +90,9 @@ class SiteServingController(
               @CookieValue(name = "\${app.sites.cookie-name:site_session}", required = false) cookie: String?) {
         val site = sites.live(slug) ?: return page(response, 404, "Không tìm thấy trang", "Trang này không tồn tại hoặc đã được gỡ xuống.")
         val raw = request.requestURI.substringAfter("/sites/$slug/", "")
-        val path = runCatching { URLDecoder.decode(raw, Charsets.UTF_8) }.getOrNull()?.ifEmpty { "index.html" }
-            ?: return page(response, 400, "Đường dẫn không hợp lệ", "")
-        if (".." in path || path.startsWith("/") || path.any { it == '\\' || it.isISOControl() }) return page(response, 400, "Đường dẫn không hợp lệ", "")
         val private = site.visibility == "PRIVATE"
+        val app = site.kind == "STATIC_APP"
+        if (private && app) return page(response, 403, "Chưa hỗ trợ", "Ứng dụng mã nguồn riêng tư chưa được hỗ trợ.")
         if (private) {
             val user = sites.sessionUser(cookie)
             if (user == null) {
@@ -89,15 +102,33 @@ class SiteServingController(
             }
             if (!sites.canRead(user, site)) return page(response, 403, "Bạn không có quyền xem trang này", "Trang riêng tư chỉ dành cho thành viên của ứng dụng.")
         }
-        val file = site.files[path] ?: return page(response, 404, "Không tìm thấy", "Tệp này không có trong trang đã xuất bản.")
+        serveFile(site.prefix, site.files, raw, private, app, null, preview = false, request, response)
+    }
+
+    private fun serveFile(prefix: String, files: Map<String, ManifestFile>, raw: String, private: Boolean, app: Boolean, frameAncestors: String?, preview: Boolean,
+                          request: HttpServletRequest, response: HttpServletResponse) {
+        val path = runCatching { URLDecoder.decode(raw, Charsets.UTF_8) }.getOrNull()?.ifEmpty { "index.html" }
+            ?: return page(response, 400, "Đường dẫn không hợp lệ", "")
+        if (".." in path || path.startsWith("/") || path.any { it == '\\' || it.isISOControl() }) return page(response, 400, "Đường dẫn không hợp lệ", "")
+        val file = files[path] ?: return page(response, 404, "Không tìm thấy", "Tệp này không có trong bản đã xuất bản.")
         common(response)
+        if (app) {
+            val o = sites.sitesOrigin.trimEnd('/')
+            response.setHeader("Content-Security-Policy", "sandbox allow-scripts; default-src 'none'; script-src 'self' $o; style-src 'self' $o 'unsafe-inline'; " +
+                "img-src 'self' $o data: blob:; font-src 'self' $o; connect-src 'self' $o; base-uri 'none'; form-action 'none'; frame-ancestors ${frameAncestors ?: "'none'"}")
+            // the sandboxed (opaque-origin) document loads its scripts/styles with CORS and without credentials
+            response.setHeader("Access-Control-Allow-Origin", "*")
+            response.setHeader("Cross-Origin-Resource-Policy", "cross-origin")
+            response.setHeader("Cross-Origin-Opener-Policy", "unsafe-none")
+        }
+        if (preview) response.setHeader("X-Robots-Tag", "noindex, nofollow")
         response.setHeader("ETag", "\"${file.sha256}\"")
         // Revalidate every time (cheap: ETag → 304) instead of caching for a while: a site can switch to private, roll back or go offline,
         // and no gateway/CDN/browser copy may keep serving the old content after that. (Purge-based edge caching is a later optimisation.)
         // no-transform: intermediaries (e.g. Cloudflare's analytics beacon injection) must not add scripts to a script-free site
-        response.setHeader("Cache-Control", if (private) "private, no-store, no-transform" else "public, no-cache, no-transform")
+        response.setHeader("Cache-Control", if (private || preview) "private, no-store, no-transform" else "public, no-cache, no-transform")
         if (request.getHeader("If-None-Match") == "\"${file.sha256}\"") { response.status = 304; return }
-        val bytes = store.get("${site.prefix}/$path") ?: return page(response, 404, "Không tìm thấy", "")
+        val bytes = store.get("$prefix/$path") ?: return page(response, 404, "Không tìm thấy", "")
         // integrity: serve only bytes that match the manifest recorded at build time
         if (StaticSiteBuilder.sha256(bytes) != file.sha256) return page(response, 500, "Trang bị lỗi", "Nội dung không khớp bản đã xuất bản.")
         response.contentType = file.contentType

@@ -21,7 +21,7 @@ import java.util.UUID
 
 data class LiveSite(
     val projectId: UUID, val workspaceId: UUID, val slug: String, val deploymentId: UUID, val visibility: String,
-    val prefix: String, val files: Map<String, ManifestFile>
+    val prefix: String, val files: Map<String, ManifestFile>, val kind: String = "STATIC_SITE"
 )
 
 /**
@@ -56,14 +56,23 @@ class SiteService(
 
     /** The artifact currently served for a slug, or null (unknown slug, offline, deleted project). */
     fun live(slug: String): LiveSite? = jdbc.query(
-        """SELECT s.project_id, p.workspace_id, s.slug, d.id, d.visibility, a.storage_prefix, a.manifest::text
+        """SELECT s.project_id, p.workspace_id, s.slug, d.id, d.visibility, a.storage_prefix, a.manifest::text, a.kind
            FROM sites s JOIN projects p ON p.id = s.project_id AND p.active
            JOIN deployments d ON d.id = s.current_deployment_id AND d.status IN ('DEPLOYING', 'RUNNING')
            JOIN artifacts a ON a.id = d.artifact_id WHERE s.slug = ?""", { rs, _ ->
             val files = json.readTree(rs.getString(7)).toList().map { json.treeToValue(it, ManifestFile::class.java) }.associateBy { it.path }
             LiveSite(rs.getObject(1, UUID::class.java), rs.getObject(2, UUID::class.java), rs.getString(3), rs.getObject(4, UUID::class.java),
-                rs.getString(5), rs.getString(6), files)
+                rs.getString(5), rs.getString(6), files, rs.getString(8))
         }, slug).firstOrNull()
+
+    /** A code change preview by its unguessable token (expires; revoked on discard). */
+    fun preview(token: String): Pair<String, Map<String, ManifestFile>>? {
+        if (!Regex("^[A-Za-z0-9_-]{20,64}$").matches(token)) return null
+        return jdbc.query("""SELECT a.storage_prefix, a.manifest::text FROM code_changes c JOIN artifacts a ON a.id = c.preview_artifact_id
+            JOIN projects p ON p.id = c.project_id AND p.active WHERE c.preview_token = ? AND c.preview_expires_at > now() AND c.status IN ('READY', 'MERGED')""", { rs, _ ->
+            rs.getString(1) to json.readTree(rs.getString(2)).toList().map { json.treeToValue(it, ManifestFile::class.java) }.associateBy { it.path }
+        }, token).firstOrNull()
+    }
 
     fun projectBySlug(slug: String): Pair<UUID, UUID>? = jdbc.query(
         "SELECT s.project_id, p.workspace_id FROM sites s JOIN projects p ON p.id = s.project_id AND p.active WHERE s.slug = ?",

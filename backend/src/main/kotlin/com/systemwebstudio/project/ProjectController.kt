@@ -24,7 +24,9 @@ data class CreateProjectRequest(
     @field:Size(max = 1000) val description: String? = null,
     @field:Pattern(regexp = "nextjs|react|static") val framework: String? = null,
     /** start from this template (company, or one of the caller's own) instead of the default page */
-    val templateId: UUID? = null
+    val templateId: UUID? = null,
+    /** PAGE_SCHEMA (default) or STATIC_APP (code project, needs the Git server) */
+    @field:Pattern(regexp = "PAGE_SCHEMA|STATIC_APP") val appType: String? = null
 )
 
 data class UpdateProjectRequest(
@@ -45,13 +47,13 @@ data class ProjectResponse(
     val framework: String, val projectAccessPolicy: String, val siteVisibility: String, val authMode: String,
     val domain: String?, val customDomain: String?, val deploymentMode: String, val deploymentTarget: String?,
     val status: String, val revision: Long, val createdAt: Instant, val updatedAt: Instant,
-    val permissions: List<String> = emptyList()
+    val permissions: List<String> = emptyList(), val appType: String = "PAGE_SCHEMA"
 )
 
 fun ProjectEntity.toResponse(permissions: Collection<Permission> = emptyList()) = ProjectResponse(
     id, workspaceId, name, description, ownerUserId, framework, projectAccessPolicy, siteVisibility, authMode,
     domain, customDomain, deploymentMode, deploymentTarget, if (active) "ACTIVE" else "DELETED",
-    revision, createdAt, updatedAt, permissions.map { it.name }.sorted()
+    revision, createdAt, updatedAt, permissions.map { it.name }.sorted(), appType
 )
 
 @RestController
@@ -64,6 +66,9 @@ class ProjectController(
     private val schemas: com.systemwebstudio.schema.SchemaService,
     private val jdbc: org.springframework.jdbc.core.JdbcTemplate,
     private val templates: com.systemwebstudio.template.TemplateService,
+    private val codeProjects: com.systemwebstudio.code.CodeProjectService,
+    private val versionRepo: com.systemwebstudio.version.SchemaRepository,
+    private val json: tools.jackson.databind.json.JsonMapper,
     @org.springframework.beans.factory.annotation.Value("\${app.limits.max-projects-per-workspace:1000}") private val maxProjects: Long
 ) {
     /**
@@ -107,6 +112,9 @@ class ProjectController(
         if (ctx.workspaceRole == null) throw ApiException.conflict("ADMIN_NOT_MEMBER", "Join this workspace as a member before creating applications in it")
         val existing = jdbc.queryForObject("SELECT count(*) FROM projects WHERE workspace_id = ? AND active", Long::class.java, workspaceId)!!
         if (existing >= maxProjects) throw ApiException.conflict("PROJECT_LIMIT", "This workspace reached its limit of $maxProjects projects", mapOf("limit" to maxProjects))
+        val code = request.appType == "STATIC_APP"
+        if (code && request.templateId != null) throw ApiException.badRequest("TEMPLATE_NOT_FOR_CODE", "Templates are page schemas; code projects start from the approved scaffold")
+        if (code && !codeProjects.available) throw ApiException.conflict("CODE_PROJECTS_UNAVAILABLE", "Code projects need the Git server")
         // resolved before anything is stored: an invisible or outdated template leaves no half-created project behind
         val template = request.templateId?.let { templates.forUse(me.userId, it) }
         val now = Instant.now()
@@ -114,14 +122,21 @@ class ProjectController(
             ProjectEntity(
                 workspaceId = workspaceId, name = request.name.trim(), ownerUserId = me.userId,
                 description = request.description?.trim()?.ifEmpty { null },
-                framework = request.framework ?: "nextjs", createdAt = now, updatedAt = now
+                framework = if (code) "react" else request.framework ?: "nextjs", createdAt = now, updatedAt = now,
+                appType = if (code) "STATIC_APP" else "PAGE_SCHEMA"
             )
         )
         projectMembers.save(ProjectMemberEntity(workspaceId = workspaceId, projectId = project.id, userId = me.userId, role = "OWNER"))
-        if (template == null) schemas.ensureInitialized(project, me.userId)
+        if (code) {
+            // platform-owned repository with the scaffold as first commit; version 1 points at that commit (ADR 0011)
+            val sha = codeProjects.initialize(project, me.userId)
+            val versionId = versionRepo.insertVersion(workspaceId, project.id, 1, json.createObjectNode().put("appType", "STATIC_APP").put("commit", sha),
+                "INITIAL", "Khởi tạo từ khung React + Vite", null, null, null, me.userId)
+            jdbc.update("UPDATE project_versions SET commit_sha = ? WHERE id = ?", sha, versionId)
+        } else if (template == null) schemas.ensureInitialized(project, me.userId)
         else schemas.ensureInitialized(project, me.userId, template.second, "Tạo từ mẫu “${template.first.name.take(80)}” (v${template.first.version})")
         audit.record("CREATE_PROJECT", "PROJECT", project.id, workspaceId, project.id,
-            newValue = mapOf("name" to project.name, "templateId" to template?.first?.id, "templateVersion" to template?.first?.version))
+            newValue = mapOf("name" to project.name, "appType" to project.appType, "templateId" to template?.first?.id, "templateVersion" to template?.first?.version))
         return project.toResponse()
     }
 

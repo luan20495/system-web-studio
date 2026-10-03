@@ -82,6 +82,9 @@ class ProjectEntity(
     var deploymentMode: String = "MOCK",
     @Column(name = "deployment_target", length = 120)
     var deploymentTarget: String? = null,
+    /** PAGE_SCHEMA (page schema + registry) or STATIC_APP (code project with a Git repository); fixed at creation (ADR 0008) */
+    @Column(name = "app_type", nullable = false, length = 16)
+    var appType: String = "PAGE_SCHEMA",
     @Version
     @Column(nullable = false)
     var revision: Long = 0,
