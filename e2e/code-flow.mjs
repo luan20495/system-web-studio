@@ -19,6 +19,10 @@ async function session(user) {
   await p.getByLabel("Tên đăng nhập").fill(user); await p.getByLabel("Mật khẩu").fill(PW); await p.getByRole("button", { name: "Đăng nhập", exact: true }).click();
   await p.waitForURL((u) => u.pathname.startsWith("/studio")); return { c, p };
 }
+// repeated local runs exceed the real per-user daily build quota (60); the run lifts it for itself and restores the previous value at the end
+const prevQuota = sql("select value from system_settings where key='build.max-per-user-per-day'");
+sql("insert into system_settings (key, value) values ('build.max-per-user-per-day', '1000') on conflict (key) do update set value = excluded.value");
+await new Promise((r) => setTimeout(r, 5500));                     // settings cache (5 s)
 const ed = await session("local.editor"); const p = ed.p;
 const NAME = `Code E2E ${Date.now().toString(36)}`; let PID = "", PROJECT_URL = "";
 const waitChange = async (text) => { await p.locator(".changeItem", { hasText: text }).getByText(/Sẵn sàng|Build lỗi/).waitFor({ timeout: 180000 }); };
@@ -138,5 +142,6 @@ await check("no unexpected console errors", async () => {
   const bad = consoleErrors.filter((e) => !/401|403|404|409|Failed to load resource/.test(e)); expect(bad.length === 0, bad.slice(0, 3).join(" | "));
 });
 await browser.close();
+sql(prevQuota ? `update system_settings set value='${prevQuota}' where key='build.max-per-user-per-day'` : "delete from system_settings where key='build.max-per-user-per-day'");
 console.log(`\n${results.filter(Boolean).length}/${results.length} passed`);
 process.exit(failed ? 1 : 0);

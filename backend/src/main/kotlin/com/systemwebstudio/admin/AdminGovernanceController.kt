@@ -118,6 +118,7 @@ class AdminGovernanceController(
         val where = StringBuilder(" WHERE TRUE"); val args = mutableListOf<Any>()
         visibility?.uppercase()?.takeIf { it in setOf("PRIVATE", "COMPANY") }?.let { where.append(" AND t.visibility = ?"); args += it }
         status?.uppercase()?.takeIf { it in setOf("ACTIVE", "ARCHIVED") }?.let { where.append(" AND t.status = ?"); args += it }
+        status?.uppercase()?.takeIf { it in setOf("PRIVATE", "SUBMITTED", "REVIEW", "APPROVED") }?.let { where.append(" AND t.review_status = ?"); args += it }
         like(q)?.let { where.append(" AND t.name ILIKE ?"); args += it }
         val total = jdbc.queryForObject("SELECT count(*) FROM templates t$where", Long::class.java, *args.toTypedArray()) ?: 0
         val items = jdbc.query("${templates.select}$where ORDER BY t.updated_at DESC LIMIT $s OFFSET ${p.toLong() * s}", { rs, _ -> templates.row(rs, me.userId, true) }, *args.toTypedArray())
@@ -130,7 +131,10 @@ class AdminGovernanceController(
         guard.require(me.userId)
         val t = templates.visible(me.userId, id)
         if (request.visibility == "COMPANY" && t.status != "ACTIVE") throw ApiException.conflict("TEMPLATE_ARCHIVED", "Restore the template before sharing it")
-        jdbc.update("UPDATE templates SET visibility = ?, updated_at = now() WHERE id = ?", request.visibility, id)
+        // the review lifecycle follows: sharing directly = approval by this admin, unsharing = back to a private draft
+        jdbc.update("""UPDATE templates SET visibility = ?, review_status = CASE WHEN ? = 'COMPANY' THEN 'APPROVED' ELSE 'PRIVATE' END,
+            reviewed_by = CASE WHEN ? = 'COMPANY' THEN ? ELSE reviewed_by END, reviewed_at = CASE WHEN ? = 'COMPANY' THEN now() ELSE reviewed_at END, updated_at = now() WHERE id = ?""",
+            request.visibility, request.visibility, request.visibility, me.userId, request.visibility, id)
         audit.record("TEMPLATE_VISIBILITY", "TEMPLATE", id, oldValue = mapOf("visibility" to t.visibility), newValue = mapOf("visibility" to request.visibility))
         return templates.visible(me.userId, id)
     }
@@ -140,7 +144,8 @@ class AdminGovernanceController(
     fun templateStatus(@PathVariable id: UUID, @Valid @RequestBody request: TemplateStatusRequest, @AuthenticationPrincipal me: StudioUserDetails): TemplateDto {
         guard.require(me.userId)
         val t = templates.visible(me.userId, id)
-        jdbc.update("UPDATE templates SET status = ?, updated_at = now() WHERE id = ?", request.status, id)
+        jdbc.update("""UPDATE templates SET status = ?, review_status = CASE WHEN ? = 'ARCHIVED' THEN 'ARCHIVED' WHEN visibility = 'COMPANY' THEN 'APPROVED' ELSE 'PRIVATE' END,
+            updated_at = now() WHERE id = ?""", request.status, request.status, id)
         audit.record(if (request.status == "ARCHIVED") "ARCHIVE_TEMPLATE" else "RESTORE_TEMPLATE", "TEMPLATE", id, oldValue = mapOf("status" to t.status))
         return templates.visible(me.userId, id)
     }

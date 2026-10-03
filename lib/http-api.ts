@@ -1,6 +1,6 @@
 import type {
   AdminAi, AiCallRow, SettingView, BuildPolicyReport, CleanupResult, RepoRow, AiPrice, AiProbe, AiProviderInfo, AiUsageReport, AdminApp, BlockDto, CheckResult, TemplateDto, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
-  AccessRule, EffectiveModel, AiBudget, AdminAlert, StreamHandlers,
+  TemplateReview, LibraryCategories, AccessRule, EffectiveModel, AiBudget, AdminAlert, StreamHandlers,
   AiStatus, ApiProject, AuthConfig, Member, SiteInfo, DesignNode, DependencyRequest, PackageView, CloneAccess, TreeFile, CodeFile, CodeCommit, CodeChange, DiffFile, CodeAiResponse, CodeAiHistoryItem, RegistryComponent, AssetDto, Deployment, Me, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
 } from "./http-types";
 
@@ -165,6 +165,9 @@ export const api = {
     restoreBlock: (id: string) => call<BlockDto>(`/admin/component-packages/${id}/restore`, { method: "POST" }),
     templates: (params: { page: number; visibility?: string; status?: string; q?: string }) => call<Page<TemplateDto>>(`/admin/templates${qs({ size: 25, ...params })}`),
     templateVisibility: (id: string, visibility: "PRIVATE" | "COMPANY") => call<TemplateDto>(`/admin/templates/${id}/visibility`, { method: "POST", body: json({ visibility }) }),
+    reviewTemplate: (id: string, decision: "APPROVE" | "REJECT", comment?: string) => call<TemplateDto>(`/admin/templates/${id}/review`, { method: "POST", body: json({ decision, comment }) }),
+    templatePreview: (id: string) => call<{ previewStatus: string }>(`/admin/templates/${id}/preview`, { method: "POST" }),
+    blockPreview: (id: string) => call<{ previewStatus: string }>(`/admin/component-packages/${id}/preview`, { method: "POST" }),
     templateStatus: (id: string, status: "ACTIVE" | "ARCHIVED") => call<TemplateDto>(`/admin/templates/${id}/status`, { method: "POST", body: json({ status }) }),
     health: () => call<PlatformHealth>("/admin/system/health"),
     settings: () => call<Record<string, Record<string, unknown>>>("/admin/settings"),
@@ -219,7 +222,13 @@ export const api = {
     cloneAccess: (w: string, p: string) => call<CloneAccess>(`${P(w, p)}/code/clone-access`, { method: "POST" }),
     revokeCloneAccess: () => call<void>("/me/clone-access", { method: "DELETE" })
   },
-  templates: (scope: "company" | "mine") => call<TemplateDto[]>(`/templates${qs({ scope })}`),
+  templates: (scope: "company" | "mine", f: { category?: string; tag?: string; sort?: "recent" | "popular"; q?: string } = {}) => call<TemplateDto[]>(`/templates${qs({ scope, ...f })}`),
+  libraryCategories: () => call<LibraryCategories>("/library/categories"),
+  templateCatalog: (id: string, body: { category?: string; tags?: string[] }) => call<TemplateDto>(`/templates/${id}/catalog`, { method: "PATCH", body: json(body) }),
+  submitTemplate: (id: string) => call<{ template: TemplateDto; passed: boolean; checks: CheckResult[] }>(`/templates/${id}/submit`, { method: "POST" }),
+  withdrawTemplate: (id: string) => call<TemplateDto>(`/templates/${id}/withdraw`, { method: "POST" }),
+  templateReviews: (id: string) => call<TemplateReview[]>(`/templates/${id}/reviews`),
+  blockCatalog: (id: string, body: { category?: string; tags?: string[] }) => call<unknown>(`/component-packages/${id}/catalog`, { method: "PATCH", body: json(body) }),
   saveTemplate: (w: string, p: string, body: { name: string; description?: string; templateId?: string }) =>
     call<{ template: TemplateDto; removedImages: number }>(`${P(w, p)}/templates`, { method: "POST", body: json(body) }),
   updateTemplate: (id: string, body: { name?: string; description?: string }) => call<TemplateDto>(`/templates/${id}`, { method: "PATCH", body: json(body) }),
@@ -247,8 +256,8 @@ export const api = {
   removeProjectMember: (w: string, p: string, userId: string) => call<void>(`${P(w, p)}/members/${userId}`, { method: "DELETE" }),
 
   getSchema: (w: string, p: string) => call<SchemaResponse>(`${P(w, p)}/schema`),
-  patchSchema: (w: string, p: string, expectedRevision: number, operations: SchemaOperation[], summary?: string) =>
-    call<SchemaResponse>(`${P(w, p)}/schema`, { method: "PATCH", body: json({ expectedRevision, operations, summary }) }),
+  patchSchema: (w: string, p: string, expectedRevision: number, operations: SchemaOperation[], summary?: string, blockId?: string) =>
+    call<SchemaResponse>(`${P(w, p)}/schema`, { method: "PATCH", body: json({ expectedRevision, operations, summary, ...(blockId ? { blockId } : {}) }) }),
   sendPrompt: (w: string, p: string, prompt: string, expectedRevision: number, model?: string) =>
     // AI calls can take a while when the first free model is busy and the server fails over to the next one
     call<PromptResponse>(`${P(w, p)}/prompts`, { method: "POST", body: json({ prompt, expectedRevision, ...(model ? { model } : {}) }), signal: AbortSignal.timeout(130_000) }),

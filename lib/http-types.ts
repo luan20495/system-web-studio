@@ -113,14 +113,19 @@ export type AiCallRow = { id: string; createdAt: string; userId: string; user: s
 // ---- Phase 5: templates (page schema JSON, never source code) and contributed blocks (reviewed presets of approved components)
 export type TemplateDto = { id: string; name: string; description: string; visibility: "PRIVATE" | "COMPANY"; status: "ACTIVE" | "ARCHIVED"; version: number;
   authorId: string; author: string | null; sourceProjectId: string | null; createdAt: string; updatedAt: string; sections: number; componentTypes: string[];
-  schema: PageSchema; canEdit: boolean };
+  schema: PageSchema; canEdit: boolean;
+  category: string; tags: string[]; reviewStatus: "PRIVATE" | "SUBMITTED" | "REVIEW" | "APPROVED" | "ARCHIVED"; usageCount: number;
+  previewStatus: "NONE" | "READY" | "FAILED" | "UNAVAILABLE"; submittedAt: string | null; reviewedBy: string | null; reviewedAt: string | null; reviewComment: string | null; canReview: boolean };
+export type TemplateReview = { id: string; version: number; actor: string | null; decision: string; comment: string; checks: CheckResult[] | null; createdAt: string };
+export type LibraryCategories = { templates: Record<string, string>; blocks: Record<string, string> };
 export type CheckResult = { check: string; ok: boolean; message: string };
 export type BlockVersion = { version: number; baseComponentVersion: string; props: Record<string, unknown>; status: "DRAFT" | "REVIEW" | "APPROVED" | "REJECTED" | "SUPERSEDED";
   validation: CheckResult[] | null; sourceProjectId: string | null; createdAt: string; submittedAt: string | null; decidedAt: string | null };
 export type BlockReview = { id: string; version: number; actorId: string | null; actor: string | null; decision: string; comment: string; createdAt: string };
 export type BlockDto = { id: string; name: string; description: string; baseComponent: string; ownerId: string; owner: string | null;
   status: "PRIVATE" | "SUBMITTED" | "VALIDATING" | "REVIEW" | "APPROVED" | "DEPRECATED"; latestVersion: number; approvedVersion: number | null;
-  createdAt: string; updatedAt: string; current: BlockVersion | null; versions: BlockVersion[]; reviews: BlockReview[]; canEdit: boolean; canReview: boolean };
+  createdAt: string; updatedAt: string; current: BlockVersion | null; versions: BlockVersion[]; reviews: BlockReview[]; canEdit: boolean; canReview: boolean;
+  category?: string; tags?: string[]; usageCount?: number; previewStatus?: "NONE" | "READY" | "FAILED" | "UNAVAILABLE" };
 
 // ---- Phase 7.1: real static sites (ADR 0009)
 export type SiteInfo = { slug: string | null; url: string | null; online: boolean; visibility: "PRIVATE" | "PUBLIC" | null; currentDeploymentId: string | null;

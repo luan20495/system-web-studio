@@ -152,8 +152,8 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params, project, schema]);
 
-  async function applyOps(ops: SchemaOperation[], summary: string): Promise<boolean> {
-    const r = await run("edit", () => api.patchSchema(ws, projectId, revision, ops, summary), "Không lưu được thay đổi.");
+  async function applyOps(ops: SchemaOperation[], summary: string, blockId?: string): Promise<boolean> {
+    const r = await run("edit", () => api.patchSchema(ws, projectId, revision, ops, summary, blockId), "Không lưu được thay đổi.");
     if (!r) return false;
     setSchema(r.schema); setRevision(r.revision); void refreshVersions(); return true;
   }
@@ -173,7 +173,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
     const id = `${b.baseComponent.toLowerCase()}-${Math.random().toString(36).slice(2, 7)}`;
     const footer = schema.sections.find((s) => s.type === "Footer");
     const props = JSON.parse(JSON.stringify(b.current.props)) as Record<string, unknown>;
-    const ok = await applyOps([{ type: "ADD_SECTION", sectionType: b.baseComponent, sectionId: id, props, ...(footer && b.baseComponent !== "Footer" ? { beforeSectionId: footer.id } : {}) }], `Thêm khối ${b.name}`);
+    const ok = await applyOps([{ type: "ADD_SECTION", sectionType: b.baseComponent, sectionId: id, props, ...(footer && b.baseComponent !== "Footer" ? { beforeSectionId: footer.id } : {}) }], `Thêm khối ${b.name}`, b.id);
     if (ok) setSelectedId(id);
   }
   async function addSection(c: RegistryComponent) {

@@ -35,7 +35,9 @@ data class PackageDto(
     /** the props to insert: the approved version in the company library, the latest version for the owner and reviewers */
     val current: PackageVersionDto?,
     val versions: List<PackageVersionDto> = emptyList(), val reviews: List<PackageReviewDto> = emptyList(),
-    val canEdit: Boolean = false, val canReview: Boolean = false
+    val canEdit: Boolean = false, val canReview: Boolean = false,
+    /** catalog (stage F); usageCount = inserts through the Studio (counted server-side on a successful page edit) */
+    val category: String = "general", val tags: List<String> = emptyList(), val usageCount: Int = 0, val previewStatus: String = "NONE"
 )
 data class CheckResult(val check: String, val ok: Boolean, val message: String)
 data class SubmitResult(val block: PackageDto, val passed: Boolean, val checks: List<CheckResult>)
@@ -65,12 +67,15 @@ class ComponentPackageService(
     private val validator: PageSchemaValidator, private val guard: AdminGuard, private val audit: AuditService
 ) {
     class Row(val id: UUID, val name: String, val description: String, val base: String, val ownerId: UUID, val owner: String?, val status: String,
-              val latest: Int, val approved: Int?, val createdAt: Instant, val updatedAt: Instant)
+              val latest: Int, val approved: Int?, val createdAt: Instant, val updatedAt: Instant,
+              val category: String = "general", val tags: List<String> = emptyList(), val usage: Int = 0, val preview: String = "NONE")
 
     private val select = """SELECT p.id, p.name, p.description, p.base_component, p.owner_id, coalesce(u.display_name, u.username), p.status,
-        p.latest_version, p.approved_version, p.created_at, p.updated_at FROM component_packages p LEFT JOIN users u ON u.id = p.owner_id"""
+        p.latest_version, p.approved_version, p.created_at, p.updated_at, p.category, array_to_string(p.tags, ','), p.usage_count, p.preview_status
+        FROM component_packages p LEFT JOIN users u ON u.id = p.owner_id"""
     private fun row(rs: java.sql.ResultSet) = Row(rs.getObject(1, UUID::class.java), rs.getString(2), rs.getString(3), rs.getString(4), rs.getObject(5, UUID::class.java),
-        rs.getString(6), rs.getString(7), rs.getInt(8), rs.getObject(9)?.let { (it as Number).toInt() }, rs.getTimestamp(10).toInstant(), rs.getTimestamp(11).toInstant())
+        rs.getString(6), rs.getString(7), rs.getInt(8), rs.getObject(9)?.let { (it as Number).toInt() }, rs.getTimestamp(10).toInstant(), rs.getTimestamp(11).toInstant(),
+        rs.getString(12), rs.getString(13).split(',').filter { it.isNotEmpty() }, rs.getInt(14), rs.getString(15))
 
     fun rows(where: String, vararg args: Any?): List<Row> = jdbc.query("$select $where", { rs, _ -> row(rs) }, *args)
     fun load(id: UUID): Row? = rows("WHERE p.id = ? ", id).firstOrNull()
@@ -98,7 +103,8 @@ class ComponentPackageService(
         val full = detailed && (owner || admin)
         return PackageDto(r.id, r.name, r.description, r.base, r.ownerId, r.owner, r.status, r.latest, r.approved, r.createdAt, r.updatedAt, current,
             if (full) all else emptyList(), if (full) reviews(r.id) else emptyList(),
-            canEdit = owner && r.status != "REVIEW" && r.status != "DEPRECATED", canReview = admin && !owner && r.status == "REVIEW")
+            canEdit = owner && r.status != "REVIEW" && r.status != "DEPRECATED", canReview = admin && !owner && r.status == "REVIEW",
+            category = r.category, tags = r.tags, usageCount = r.usage, previewStatus = r.preview)
     }
 
     /** Owner, admin, or anyone once it is in the company library; otherwise 404 so private block ids are not confirmed. */
@@ -153,7 +159,7 @@ class ComponentPackageService(
 class ComponentPackageController(
     private val svc: ComponentPackageService, private val access: AccessService, private val repo: SchemaRepository,
     private val registry: ComponentRegistry, private val guard: AdminGuard, private val audit: AuditService,
-    private val jdbc: JdbcTemplate, private val json: JsonMapper
+    private val jdbc: JdbcTemplate, private val json: JsonMapper, private val previews: com.systemwebstudio.template.PreviewService
 ) {
     @GetMapping("/api/v1/component-packages")
     @Transactional(readOnly = true)
@@ -242,6 +248,7 @@ class ComponentPackageController(
             jdbc.update("UPDATE component_package_versions SET status = 'REVIEW', validation = CAST(? AS jsonb), submitted_at = now() WHERE package_id = ? AND version = ?", report, id, r.latest)
             jdbc.update("UPDATE component_packages SET status = 'REVIEW', updated_at = now() WHERE id = ?", id)
             svc.record(id, r.latest, null, "VALIDATION_PASSED")
+            svc.versions(id).firstOrNull { it.version == r.latest }?.let { v -> previews.generate("block", id, previews.blockPage(r.base, v.baseComponentVersion, v.props)) }
         } else {
             jdbc.update("UPDATE component_package_versions SET status = 'DRAFT', validation = CAST(? AS jsonb) WHERE package_id = ? AND version = ?", report, id, r.latest)
             svc.record(id, r.latest, null, "VALIDATION_FAILED", checks.filter { !it.ok }.joinToString("; ") { "${it.check}: ${it.message}" })

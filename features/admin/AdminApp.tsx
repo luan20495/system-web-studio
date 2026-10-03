@@ -568,31 +568,39 @@ function TemplatesAdmin() {
   const { data, error, loading, reload } = useLoad(() => api.admin.templates(params), [params]);
   async function act(fn: () => Promise<TemplateDto>) { setErr(null); try { await fn(); reload(); } catch (x) { setErr(errText(x, "Không thực hiện được.")); } }
   return (<>
-    <PageHead title="Templates" sub="Mẫu là cấu trúc trang (Page Schema) do nhân viên lưu từ ứng dụng. Chỉ quản trị viên chia sẻ một mẫu cho toàn công ty; sau đó chỉ quản trị viên được sửa nó."/>
+    <PageHead title="Templates" sub="Mẫu là cấu trúc trang (Page Schema) do nhân viên lưu từ ứng dụng. Tác giả gửi duyệt → kiểm tra tự động (component, nội dung, render an toàn) → quản trị viên khác tác giả duyệt hoặc từ chối."/>
     <Card>
       <form className="filters" onSubmit={(e) => { e.preventDefault(); setPage(0); setApplied(q.trim()); }}>
         <input aria-label="Tìm mẫu" placeholder="Tìm theo tên" value={q} onChange={(e) => setQ(e.target.value)}/>
         <select aria-label="Phạm vi" value={visibility} onChange={(e) => { setPage(0); setVisibility(e.target.value); }}><option value="">Mọi phạm vi</option><option value="COMPANY">Công ty</option><option value="PRIVATE">Riêng tư</option></select>
-        <select aria-label="Trạng thái" value={status} onChange={(e) => { setPage(0); setStatus(e.target.value); }}><option value="">Mọi trạng thái</option><option value="ACTIVE">Đang dùng</option><option value="ARCHIVED">Đã lưu trữ</option></select>
+        <select aria-label="Trạng thái" value={status} onChange={(e) => { setPage(0); setStatus(e.target.value); }}><option value="">Mọi trạng thái</option><option value="REVIEW">Chờ duyệt</option>
+          <option value="ACTIVE">Đang dùng</option><option value="APPROVED">Đã duyệt</option><option value="PRIVATE">Riêng tư</option><option value="ARCHIVED">Đã lưu trữ</option></select>
         <button className="btn primary">Lọc</button>
       </form>
       {err ? <p className="formError" role="alert">{err}</p> : null}
       {error ? <ErrorState error={error} retry={reload}/> : loading && !data ? <StateView kind="loading"/> : data!.items.length === 0 ? <StateView kind="empty" title="Không có mẫu"/> : <>
-        <table className="table"><thead><tr><th>Mẫu</th><th>Tác giả</th><th>Phạm vi</th><th>Trạng thái</th><th>Mục</th><th>Cập nhật</th><th><span className="srOnly">Thao tác</span></th></tr></thead>
+        <table className="table"><thead><tr><th>Mẫu</th><th>Tác giả</th><th>Duyệt</th><th>Trạng thái</th><th>Mục · lượt dùng</th><th>Cập nhật</th><th><span className="srOnly">Thao tác</span></th></tr></thead>
           <tbody>{data!.items.map((t) => <Fragment key={t.id}>
             <tr><td><b>{t.name}</b><small>v{t.version}{t.description ? ` · ${t.description}` : ""}</small></td><td>{t.author ?? "—"}</td>
-              <td>{t.visibility === "COMPANY" ? <Pill value="COMPANY" label="Công ty"/> : <Pill value="PRIVATE" label="Riêng tư"/>}</td>
-              <td>{t.status === "ACTIVE" ? <Pill value="ACTIVE" label="Đang dùng"/> : <Pill value="ARCHIVED" label="Đã lưu trữ"/>}</td><td>{t.sections}</td><td>{ago(t.updatedAt)}</td>
+              <td><Pill value={{ PRIVATE: "PRIVATE", SUBMITTED: "QUEUED", REVIEW: "UNKNOWN", APPROVED: "COMPANY", ARCHIVED: "ARCHIVED" }[t.reviewStatus]}
+                label={{ PRIVATE: "Riêng tư", SUBMITTED: "Đang kiểm tra", REVIEW: "Chờ duyệt", APPROVED: "Đã duyệt (công ty)", ARCHIVED: "Đã lưu trữ" }[t.reviewStatus]}/></td>
+              <td>{t.status === "ACTIVE" ? <Pill value="ACTIVE" label="Đang dùng"/> : <Pill value="ARCHIVED" label="Đã lưu trữ"/>}</td><td>{t.sections} · {t.usageCount}</td><td>{ago(t.updatedAt)}</td>
               <td><div className="row">
                 <button className="btn sm" aria-expanded={open === t.id} onClick={() => setOpen(open === t.id ? null : t.id)}>Xem</button>
-                {t.status === "ACTIVE" ? (t.visibility === "PRIVATE"
+                {t.canReview ? <><button className="btn sm primary" onClick={() => void act(() => api.admin.reviewTemplate(t.id, "APPROVE"))}>Duyệt</button>
+                  <button className="btn sm" onClick={() => { const c = window.prompt("Lý do từ chối (gửi cho tác giả):")?.trim(); if (c) void act(() => api.admin.reviewTemplate(t.id, "REJECT", c)); }}>Từ chối</button></> : null}
+                {t.status === "ACTIVE" && t.reviewStatus !== "REVIEW" ? (t.visibility === "PRIVATE"
                   ? <button className="btn sm primary" onClick={() => void act(() => api.admin.templateVisibility(t.id, "COMPANY"))}>Chia sẻ toàn công ty</button>
                   : <button className="btn sm" onClick={() => void act(() => api.admin.templateVisibility(t.id, "PRIVATE"))}>Thu hồi về riêng tư</button>) : null}
                 {t.status === "ACTIVE" ? <button className="btn sm ghost" onClick={() => { if (confirm(`Lưu trữ mẫu “${t.name}”?`)) void act(() => api.admin.templateStatus(t.id, "ARCHIVED")); }}>Lưu trữ</button>
                   : <button className="btn sm" onClick={() => void act(() => api.admin.templateStatus(t.id, "ACTIVE"))}>Khôi phục</button>}
               </div></td></tr>
-            {open === t.id ? <tr className="detailRow"><td colSpan={7}><div className="grid2"><SchemaThumb schema={t.schema} title={`Xem trước mẫu ${t.name}`} tall/>
-              <div><p>Component: {t.componentTypes.map((c) => <span key={c} className="tag code">{c}</span>)}</p>{t.sourceProjectId ? <p><Link href={`/admin/applications/${t.sourceProjectId}`}>Ứng dụng nguồn</Link></p> : null}</div></div></td></tr> : null}
+            {open === t.id ? <tr className="detailRow"><td colSpan={7}><div className="grid2">{t.previewStatus === "READY"
+                ? <img className="previewImg" src={`/api/v1/templates/${t.id}/preview`} alt={`Ảnh xem trước mẫu ${t.name}`}/> : <SchemaThumb schema={t.schema} title={`Xem trước mẫu ${t.name}`} tall/>}
+              <div><p>Component: {t.componentTypes.map((c) => <span key={c} className="tag code">{c}</span>)}</p>
+                <p>Danh mục: {t.category}{t.tags.length ? ` · ${t.tags.map((x) => `#${x}`).join(" ")}` : ""} · ảnh xem trước: {t.previewStatus}
+                  {" "}<button className="btn sm ghost" onClick={() => void act(async () => { await api.admin.templatePreview(t.id); return t; })}>Tạo lại ảnh</button></p>
+                {t.reviewComment ? <p>Nhận xét duyệt: {t.reviewComment}{t.reviewedBy ? ` — ${t.reviewedBy}` : ""}</p> : null}{t.sourceProjectId ? <p><Link href={`/admin/applications/${t.sourceProjectId}`}>Ứng dụng nguồn</Link></p> : null}</div></div></td></tr> : null}
           </Fragment>)}</tbody></table>
         <Pager page={page} size={data!.size} total={data!.total} onPage={setPage}/></>}
     </Card>

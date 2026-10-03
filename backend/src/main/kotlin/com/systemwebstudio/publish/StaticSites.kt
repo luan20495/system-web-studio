@@ -36,9 +36,24 @@ class RenderClient(
         if (response.statusCode() != 200) throw BuildFailure("Render worker answered HTTP ${response.statusCode()}")
         return response.body()
     }
+
+    /** Screenshot of the static render (worker: JavaScript disabled, network blocked). */
+    fun preview(schema: JsonNode): PreviewResult {
+        val request = HttpRequest.newBuilder(URI("${url.trimEnd('/')}/preview")).timeout(Duration.ofSeconds(30))
+            .header("Content-Type", "application/json").header("X-Render-Token", token).POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(mapOf("schema" to schema)))).build()
+        val response = try { http.send(request, HttpResponse.BodyHandlers.ofByteArray()) } catch (e: Exception) { return PreviewResult.Failed("render worker not reachable") }
+        return when (response.statusCode()) {
+            200 -> response.body().takeIf { it.size in 100..5_000_000 && it[1] == 'P'.code.toByte() }?.let { PreviewResult.Png(it) } ?: PreviewResult.Failed("not a PNG")
+            501 -> PreviewResult.Unavailable
+            else -> PreviewResult.Failed("HTTP ${response.statusCode()}")
+        }
+    }
 }
 
 class BuildFailure(message: String) : RuntimeException(message)
+
+/** Result of a safe-render preview: PNG bytes, or why there is none (UNAVAILABLE = no browser configured on the worker). */
+sealed interface PreviewResult { class Png(val bytes: ByteArray) : PreviewResult; object Unavailable : PreviewResult; class Failed(val reason: String) : PreviewResult }
 
 /** AST service of the same worker (Design mode for code apps): parse-only, nothing executed. */
 @Component

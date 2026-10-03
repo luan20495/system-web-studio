@@ -28,7 +28,12 @@ import java.util.UUID
 data class TemplateDto(
     val id: UUID, val name: String, val description: String, val visibility: String, val status: String, val version: Int,
     val authorId: UUID, val author: String?, val sourceProjectId: UUID?, val createdAt: Instant, val updatedAt: Instant,
-    val sections: Int, val componentTypes: List<String>, val schema: JsonNode, val canEdit: Boolean = false
+    val sections: Int, val componentTypes: List<String>, val schema: JsonNode, val canEdit: Boolean = false,
+    /** catalog (stage F) */
+    val category: String = "general", val tags: List<String> = emptyList(), val reviewStatus: String = "PRIVATE", val usageCount: Int = 0,
+    /** NONE | READY | FAILED | UNAVAILABLE; when READY the image is served by GET /api/v1/templates/{id}/preview */
+    val previewStatus: String = "NONE", val submittedAt: Instant? = null, val reviewedBy: String? = null, val reviewedAt: Instant? = null,
+    val reviewComment: String? = null, val canReview: Boolean = false
 )
 data class SaveTemplateRequest(
     @field:NotBlank @field:Size(max = 120) val name: String,
@@ -47,18 +52,24 @@ data class UpdateTemplateRequest(@field:Size(min = 1, max = 120) val name: Strin
 @Service
 class TemplateService(private val jdbc: JdbcTemplate, private val json: JsonMapper, private val validator: PageSchemaValidator, private val guard: AdminGuard) {
     val select = """SELECT t.id, t.name, t.description, t.visibility, t.status, t.version, t.author_id, coalesce(u.display_name, u.username),
-        t.source_project_id, t.created_at, t.updated_at, t.schema::text FROM templates t LEFT JOIN users u ON u.id = t.author_id"""
+        t.source_project_id, t.created_at, t.updated_at, t.schema::text, t.category, array_to_string(t.tags, ','), t.review_status, t.usage_count,
+        t.preview_status, t.submitted_at, coalesce(r.display_name, r.username), t.reviewed_at, t.review_comment
+        FROM templates t LEFT JOIN users u ON u.id = t.author_id LEFT JOIN users r ON r.id = t.reviewed_by"""
 
     fun row(rs: ResultSet, viewer: UUID?, admin: Boolean): TemplateDto {
         val schema = json.readTree(rs.getString(12))
         val sections = schema.get("sections")?.toList().orEmpty()
         val t = TemplateDto(rs.getObject(1, UUID::class.java), rs.getString(2), rs.getString(3), rs.getString(4), rs.getString(5), rs.getInt(6),
             rs.getObject(7, UUID::class.java), rs.getString(8), rs.getObject(9, UUID::class.java), rs.getTimestamp(10).toInstant(), rs.getTimestamp(11).toInstant(),
-            sections.size, sections.mapNotNull { it.get("type")?.asString() }.distinct(), schema)
-        return t.copy(canEdit = viewer != null && canEdit(viewer, admin, t))
+            sections.size, sections.mapNotNull { it.get("type")?.asString() }.distinct(), schema,
+            category = rs.getString(13), tags = rs.getString(14).split(',').filter { it.isNotEmpty() }, reviewStatus = rs.getString(15), usageCount = rs.getInt(16),
+            previewStatus = rs.getString(17), submittedAt = rs.getTimestamp(18)?.toInstant(), reviewedBy = rs.getString(19), reviewedAt = rs.getTimestamp(20)?.toInstant(),
+            reviewComment = rs.getString(21))
+        return t.copy(canEdit = viewer != null && canEdit(viewer, admin, t), canReview = viewer != null && admin && t.authorId != viewer && t.reviewStatus == "REVIEW")
     }
 
-    fun canEdit(userId: UUID, admin: Boolean, t: TemplateDto) = admin || (t.authorId == userId && t.visibility == "PRIVATE" && t.status == "ACTIVE")
+    /** the author only while the template is a private draft (not during review, not once approved); a system admin always */
+    fun canEdit(userId: UUID, admin: Boolean, t: TemplateDto) = admin || (t.authorId == userId && t.reviewStatus == "PRIVATE" && t.status == "ACTIVE")
 
     /** 404 (not 403) for templates the caller may not see, so ids of private templates are not confirmed. */
     fun visible(userId: UUID, id: UUID): TemplateDto {
@@ -75,6 +86,8 @@ class TemplateService(private val jdbc: JdbcTemplate, private val json: JsonMapp
         val violations = validator.validate(t.schema)
         if (violations.isNotEmpty()) throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "TEMPLATE_OUTDATED",
             "This template no longer matches the approved components", mapOf("violations" to violations.take(10).map { mapOf("path" to it.path, "message" to it.message) }))
+        // counted when a project is created from it (same transaction as the project, so a failed creation does not count)
+        jdbc.update("UPDATE templates SET usage_count = usage_count + 1 WHERE id = ?", id)
         return t to t.schema
     }
 
@@ -109,12 +122,17 @@ class TemplateController(
 ) {
     @GetMapping("/api/v1/templates")
     @Transactional(readOnly = true)
-    fun list(@RequestParam(defaultValue = "company") scope: String, @RequestParam(required = false) q: String?, @AuthenticationPrincipal me: StudioUserDetails): List<TemplateDto> {
+    fun list(@RequestParam(defaultValue = "company") scope: String, @RequestParam(required = false) q: String?,
+             @RequestParam(required = false) category: String?, @RequestParam(required = false) tag: String?, @RequestParam(defaultValue = "recent") sort: String,
+             @AuthenticationPrincipal me: StudioUserDetails): List<TemplateDto> {
         val admin = guard.isAdmin(me.userId)
         val where = StringBuilder(" WHERE t.status = 'ACTIVE'"); val args = mutableListOf<Any>()
         if (scope == "mine") { where.append(" AND t.author_id = ?"); args += me.userId } else where.append(" AND t.visibility = 'COMPANY'")
-        com.systemwebstudio.admin.like(q)?.let { where.append(" AND t.name ILIKE ?"); args += it }
-        return jdbc.query("${templates.select}$where ORDER BY t.updated_at DESC LIMIT 100", { rs, _ -> templates.row(rs, me.userId, admin) }, *args.toTypedArray())
+        com.systemwebstudio.admin.like(q)?.let { where.append(" AND (t.name ILIKE ? OR t.description ILIKE ?)"); args += it; args += it }
+        category?.takeIf { Regex("^[a-z0-9-]{1,40}$").matches(it) }?.let { where.append(" AND t.category = ?"); args += it }
+        tag?.lowercase()?.takeIf { Regex("^[a-z0-9-]{1,24}$").matches(it) }?.let { where.append(" AND ? = ANY(t.tags)"); args += it }
+        val order = if (sort == "popular") "t.usage_count DESC, t.updated_at DESC" else "t.updated_at DESC"
+        return jdbc.query("${templates.select}$where ORDER BY $order LIMIT 100", { rs, _ -> templates.row(rs, me.userId, admin) }, *args.toTypedArray())
     }
 
     @GetMapping("/api/v1/templates/{id}")
@@ -167,7 +185,7 @@ class TemplateController(
     fun archive(@PathVariable id: UUID, @AuthenticationPrincipal me: StudioUserDetails) {
         val t = templates.visible(me.userId, id)
         if (!t.canEdit) throw ApiException.forbidden("Only the author (while private) or a system admin can archive this template")
-        jdbc.update("UPDATE templates SET status = 'ARCHIVED', updated_at = now() WHERE id = ?", id)
+        jdbc.update("UPDATE templates SET status = 'ARCHIVED', review_status = 'ARCHIVED', updated_at = now() WHERE id = ?", id)
         audit.record("ARCHIVE_TEMPLATE", "TEMPLATE", id, newValue = mapOf("name" to t.name))
     }
 }

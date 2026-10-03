@@ -23,7 +23,9 @@ import java.util.UUID
 data class PatchSchemaRequest(
     @field:NotNull val expectedRevision: Long?,
     @field:NotEmpty @field:Size(max = 50) val operations: List<SchemaOperation>?,
-    @field:Size(max = 300) val summary: String? = null
+    @field:Size(max = 300) val summary: String? = null,
+    /** set when the edit inserts a company block: counted (server-side) as one use of that block */
+    val blockId: UUID? = null
 )
 data class RestoreRequest(@field:NotNull val expectedRevision: Long?)
 
@@ -47,7 +49,8 @@ class SchemaVersionController(
     private val patcher: SchemaPatchEngine,
     private val commits: SchemaCommitService,
     private val audit: AuditService,
-    private val validator: com.systemwebstudio.schema.PageSchemaValidator
+    private val validator: com.systemwebstudio.schema.PageSchemaValidator,
+    private val jdbc: org.springframework.jdbc.core.JdbcTemplate
 ) {
     private fun response(ctx: com.systemwebstudio.access.AccessContext, schema: JsonNode, revision: Long): SchemaResponse {
         val latest = repo.latest(ctx.project!!.id)
@@ -75,6 +78,13 @@ class SchemaVersionController(
         val next = patcher.apply(current, request.operations!!)
         if (next == current) throw ApiException.badRequest("NO_CHANGE", "The operations did not change the page")
         val result = commits.commit(ctx, request.expectedRevision!!, next, "EDIT", request.summary?.ifBlank { null } ?: "Chỉnh sửa nội dung")
+        request.blockId?.let { blockId ->
+            // only a real insert of a block the user may see counts: an ADD_SECTION of the block's base component in this edit
+            val base = jdbc.query("""SELECT base_component FROM component_packages WHERE id = ? AND status <> 'DEPRECATED'
+                AND (approved_version IS NOT NULL OR owner_id = ?)""", { rs, _ -> rs.getString(1) }, blockId, me.userId).firstOrNull()
+            if (base != null && request.operations!!.any { it.type == "ADD_SECTION" && it.sectionType == base })
+                jdbc.update("UPDATE component_packages SET usage_count = usage_count + 1 WHERE id = ?", blockId)
+        }
         return response(ctx, next, result.revision)
     }
 

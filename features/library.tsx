@@ -1,6 +1,6 @@
 "use client";
 // Shared pieces for templates and contributed blocks (Studio and Admin Console).
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { BlockDto, BlockReview, CheckResult, PageSchema, RegistryComponent } from "@/lib/http-types";
 import { renderSchemaDocument } from "@/lib/schema-preview";
 import { fmtDate, Pill } from "./ui";
@@ -9,6 +9,14 @@ import { fmtDate, Pill } from "./ui";
 export function SchemaThumb({ schema, title, tall }: { schema: PageSchema; title: string; tall?: boolean }) {
   const doc = useMemo(() => renderSchemaDocument(schema, null), [schema]);
   return <div className={`thumb${tall ? " tall" : ""}`}><iframe title={title} sandbox="" srcDoc={doc} loading="lazy" tabIndex={-1} aria-hidden="true"/></div>;
+}
+
+/** Server preview image (JS-free screenshot) when ready, otherwise the client-side schema thumbnail. */
+export function BlockThumb({ b, tall }: { b: BlockDto; tall?: boolean }) {
+  const [broken, setBroken] = useState(false);
+  const page = blockPage(b);
+  if (b.previewStatus === "READY" && !broken) return <img className="thumb previewImg" src={`/api/v1/component-packages/${b.id}/preview`} alt={`Ảnh xem trước khối ${b.name}`} loading="lazy" onError={() => setBroken(true)}/>;
+  return page ? <SchemaThumb schema={page} title={`Xem trước khối ${b.name}`} tall={tall}/> : null;
 }
 
 export const blockPage = (b: BlockDto): PageSchema | null => (b.current ? {
@@ -22,7 +30,7 @@ export const BLOCK_STATUS: Record<string, string> = {
 export const BlockStatus = ({ status }: { status: string }) => <Pill value={status} label={BLOCK_STATUS[status] ?? status}/>;
 
 const CHECK_LABEL: Record<string, string> = {
-  registry: "Component gốc đã duyệt", props: "Thuộc tính hợp lệ", "no-files": "Không gắn tệp của dự án", size: "Kích thước", "text-safety": "Không có mã nhúng", name: "Tên không trùng", version: "Phiên bản"
+  registry: "Component gốc đã duyệt", props: "Thuộc tính hợp lệ", "no-files": "Không gắn tệp của dự án", size: "Kích thước", "text-safety": "Không có mã nhúng", name: "Tên không trùng", version: "Phiên bản", render: "Render tĩnh an toàn"
 };
 export function CheckList({ checks }: { checks: CheckResult[] }) {
   return <ul className="checkList" aria-label="Kết quả kiểm tra tự động">{checks.map((c) =>

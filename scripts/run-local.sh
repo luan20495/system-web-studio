@@ -9,6 +9,8 @@ if [ ! -f .run/forgejo.env ] || ! grep -q '^FORGEJO_TOKEN=' .run/forgejo.env; th
 # render worker: the Studio preview renderer as a local process (127.0.0.1 only, token-protected); built with the repo's TypeScript
 if ! curl -fsS "http://127.0.0.1:${RENDER_PORT}/health" >/dev/null 2>&1; then
   npx tsc -p workers/render/tsconfig.json
+  # safe-render previews (stage F) use the local Chrome if present: JavaScript disabled, all network requests blocked
+  [ -x "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" ] && export PREVIEW_CHROME_PATH="${PREVIEW_CHROME_PATH:-/Applications/Google Chrome.app/Contents/MacOS/Google Chrome}"
   nohup node workers/render/dist/workers/render/server.js > .run/render.log 2>&1 < /dev/null & echo $! > .run/render.pid
   for _ in $(seq 1 20); do curl -fsS "http://127.0.0.1:${RENDER_PORT}/health" >/dev/null 2>&1 && break; sleep 0.5; done
 fi
