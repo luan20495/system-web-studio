@@ -1,4 +1,4 @@
-# Implementation status — AI Software Factory (2026-10-02)
+# Implementation status — AI Software Factory (2026-10-03)
 
 Development Ready: **YES** · Internal Demo Ready: **YES** · Production Ready: **NO** (see "Not implemented").
 
@@ -27,12 +27,12 @@ Development Ready: **YES** · Internal Demo Ready: **YES** · Production Ready: 
 | Platform health | REAL | live probes, no invented percentages |
 | Settings | REAL (read-only) | changes via environment |
 | Studio shell: Home, Projects (paged, mine/shared), Activity | REAL | |
-| Create application | PARTIAL | Website REAL; Dashboard / Internal Tool / Workflow: COMING SOON |
+| Create application | PARTIAL | Website REAL; Web app (code, STATIC_APP) REAL where the Git server + runner are configured (local); Dashboard / Internal Tool: COMING SOON |
 | Templates (Phase 5) | REAL | Company / My templates as page schema (no code, images not carried over); save from a project, versions, start a project from a template; only admins share company-wide; no template review queue, no categories/screenshots |
 | AI workspace (chat, model, changed components, version) | REAL | LLM = OpenRouter free models or simulator |
 | Design mode: structure, drag/drop reorder, component library, click-to-select in preview, inspector | REAL | schema-driven; multi-page: NOT IMPLEMENTED |
 | Images in components (`asset://`) | REAL | Hero and product images |
-| Code mode | NOT IMPLEMENTED | honest screen; ADR 0005 |
+| Code mode | REAL for code projects (7.4); honest "not available" screen for page-schema websites | |
 | Deep links `/studio/projects/{id}/{ai|design|code|members|versions|assets|publish|settings}` | REAL | refresh stays in place |
 | Pagination | REAL for projects, users, workspaces, inventory, audit; versions/prompts limited (100) | |
 | Members & roles (Owner/Editor/Publisher/Viewer) | REAL | no Reviewer role (does not exist) |
