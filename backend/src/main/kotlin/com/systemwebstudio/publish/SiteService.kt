@@ -65,6 +65,11 @@ class SiteService(
                 rs.getString(5), rs.getString(6), files, rs.getString(8))
         }, slug).firstOrNull()
 
+    /** slug of a page of the schema version a deployment serves (for links back from server pages) */
+    fun pageSlug(deploymentId: UUID, pageId: String): String? = jdbc.query("""SELECT p->>'slug' FROM deployments d JOIN project_versions v ON v.id = d.version_id,
+        jsonb_array_elements(coalesce(v.schema_snapshot->'pages', '[]'::jsonb)) p WHERE d.id = ? AND p->>'id' = ?""", { rs, _ -> rs.getString(1) }, deploymentId, pageId)
+        .firstOrNull()?.takeIf { Regex("^[a-z0-9]+(-[a-z0-9]+)*$").matches(it) }
+
     /** A code change preview by its unguessable token (expires; revoked on discard). */
     fun previewProject(token: String): UUID? = jdbc.query("SELECT project_id FROM code_changes WHERE preview_token = ?", { rs, _ -> rs.getObject(1, UUID::class.java) }, token).firstOrNull()
 

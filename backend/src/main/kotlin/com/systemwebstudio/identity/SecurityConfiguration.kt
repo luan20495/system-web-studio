@@ -76,7 +76,9 @@ class SecurityConfiguration {
             .requestCache { it.disable() }
             .securityContext { it.disable() }
             .headers { it.disable() }
-            .authorizeHttpRequests { it.requestMatchers(HttpMethod.GET, "/sites/**").permitAll().requestMatchers(HttpMethod.HEAD, "/sites/**").permitAll().anyRequest().denyAll() }
+            // the only POST: anonymous website form submissions (no cookie is used, so there is nothing to forge; Origin is checked)
+            .authorizeHttpRequests { it.requestMatchers(HttpMethod.GET, "/sites/**").permitAll().requestMatchers(HttpMethod.HEAD, "/sites/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/sites/*/_forms/*").permitAll().anyRequest().denyAll() }
             .formLogin { it.disable() }
             .httpBasic { it.disable() }
         return http.build()

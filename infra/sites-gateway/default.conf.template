@@ -1,20 +1,40 @@
 # Sites gateway (ADR 0009). https://<sites-host>/<slug>/<file>  ->  API /sites/<slug>/<file>
-# One gateway for every published site (no container per site). Only GET/HEAD on slug paths reach the API; everything else is 404.
-# The API sends "public, no-cache" (revalidate: visibility changes, rollbacks and unpublishing apply immediately) or
-# "private, no-store"; nginx therefore does not keep site content. The cache zone stays configured for a later purge-based setup.
+# One gateway for every published site (no container per site). Only GET/HEAD on slug paths reach the API, plus the POST of website forms
+# (small body, rate limited); everything else is 404.
+# The API sends "public, no-cache" for pages (revalidate: visibility changes, rollbacks and unpublishing apply immediately),
+# "public, max-age=31536000, immutable" for assets/ (content never changes for an asset id) and "private, no-store" for private sites.
 upstream studio_api { server ${API_UPSTREAM}; keepalive 16; }
 proxy_cache_path /tmp/sites-cache levels=1:2 keys_zone=sites:10m max_size=512m inactive=30m use_temp_path=off;
 limit_req_zone $binary_remote_addr zone=sites_rl:10m rate=30r/s;
+limit_req_zone $binary_remote_addr zone=forms_rl:10m rate=6r/m;
 map $http_x_forwarded_proto $fwd_proto { default $http_x_forwarded_proto; "" $scheme; }
 
+# --- the company sites host: /<slug>/...
 server {
     listen 8080;
+    server_name ${SITES_HOST} localhost 127.0.0.1;
     server_tokens off;
     client_max_body_size 1k;
 
     # browsers ask every host for /favicon.ico; sites have none at the root
     location = /favicon.ico { access_log off; log_not_found off; return 204; }
     location = /healthz { access_log off; default_type text/plain; return 200 "ok\n"; }
+
+    # website forms: a plain HTML POST (urlencoded, at most 16 KiB), a few per minute per visitor
+    location ~ "^/[a-z0-9][a-z0-9-]{1,79}/_forms/[a-z0-9][a-z0-9-]{0,63}$" {
+        limit_except POST { deny all; }
+        limit_req zone=forms_rl burst=5 nodelay;
+        client_max_body_size 16k;
+        rewrite ^/(.*)$ /sites/$1 break;
+        proxy_pass http://studio_api;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $fwd_proto;
+        proxy_no_cache 1;
+        proxy_cache_bypass 1;
+    }
 
     location ~ "^/(_access|_preview|_app|[a-z0-9][a-z0-9-]{1,79})(/.*)?$" {
         limit_except GET HEAD { deny all; }
@@ -38,4 +58,48 @@ server {
     }
 
     location / { default_type text/plain; return 404 "not found\n"; }
+}
+
+# --- verified custom domains (any other Host): the whole path belongs to one public website; the API decides from Host
+server {
+    listen 8080 default_server;
+    server_name _;
+    server_tokens off;
+    client_max_body_size 1k;
+
+    location = /healthz { access_log off; default_type text/plain; return 200 "ok\n"; }
+
+    location ~ "^/_forms/[a-z0-9][a-z0-9-]{0,63}$" {
+        limit_except POST { deny all; }
+        limit_req zone=forms_rl burst=5 nodelay;
+        client_max_body_size 16k;
+        rewrite ^/(.*)$ /sites/_host/$1 break;
+        proxy_pass http://studio_api;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $fwd_proto;
+        proxy_no_cache 1;
+        proxy_cache_bypass 1;
+    }
+
+    location / {
+        limit_except GET HEAD { deny all; }
+        limit_req zone=sites_rl burst=60 nodelay;
+        rewrite ^/(.*)$ /sites/_host/$1 break;
+        proxy_pass http://studio_api;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $fwd_proto;
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+        proxy_cache sites;
+        proxy_cache_key $host$request_uri;
+        proxy_cache_lock on;
+        proxy_cache_use_stale error timeout updating;
+        add_header X-Cache $upstream_cache_status always;
+    }
 }

@@ -9,9 +9,14 @@ import tools.jackson.databind.json.JsonMapper
 data class Violation(val path: String, val message: String)
 
 @Service
-class PageSchemaValidator(private val registry: ComponentRegistry, private val json: JsonMapper) {
+class PageSchemaValidator(private val registry: ComponentRegistry, private val json: JsonMapper,
+                          private val settings: com.systemwebstudio.settings.SettingsService? = null) {
     companion object {
         val SECTION_ID = Regex("^[a-z0-9][a-z0-9-]{0,63}$")
+        val SLUG = Regex("^[a-z0-9]+(-[a-z0-9]+)*$")
+        val RESERVED_SLUGS = setOf("assets", "api", "sites", "_app", "_preview", "_access", "_forms", "__factory", "404", "index", "home", "static")
+        const val MAX_PAGES = 20
+        const val MAX_NAV = 12
         const val MAX_BYTES = 256 * 1024
         const val MAX_SECTIONS = 50
         val ASSET_REF = Regex("^asset://[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
@@ -40,11 +45,111 @@ class PageSchemaValidator(private val registry: ComponentRegistry, private val j
         if (page == null || !page.isString || page.asString().isBlank() || page.asString().length > 64) out += Violation("page", "page must be a non-empty string up to 64 chars")
         val sections = schema.get("sections")
         if (sections == null || !sections.isArray) return out + Violation("sections", "sections must be an array")
-        if (sections.size() > MAX_SECTIONS) out += Violation("sections", "at most $MAX_SECTIONS sections")
         val versions = registry.versions()
         val seen = HashSet<String>()
+        checkSections(sections, "sections", versions, seen, out)
+        // multi-page site (stage G): extra pages, navigation, SEO and the 404 page; the root page above is the home page
+        val pageIds = mutableSetOf("home")
+        schema.get("pages")?.let { pages ->
+            if (!pages.isArray) { out += Violation("pages", "pages must be an array"); return@let }
+            if (pages.size() > MAX_PAGES) out += Violation("pages", "at most $MAX_PAGES pages")
+            val slugs = HashSet<String>()
+            pages.forEachIndexed { i, pg ->
+                val at = "pages[$i]"
+                if (!pg.isObject) { out += Violation(at, "page must be an object"); return@forEachIndexed }
+                pg.propertyNames().filter { it !in setOf("id", "slug", "title", "seo", "sections") }.forEach { out += Violation("$at.$it", "unknown page field '$it'") }
+                val id = pg.get("id")?.takeIf { it.isString }?.asString()
+                if (id == null || !SECTION_ID.matches(id) || id == "home") out += Violation("$at.id", "page id must match ${SECTION_ID.pattern} and not be 'home'")
+                else if (!pageIds.add(id)) out += Violation("$at.id", "duplicate page id '$id'")
+                val slug = pg.get("slug")?.takeIf { it.isString }?.asString()
+                if (slug == null || slug.length > 60 || !SLUG.matches(slug)) out += Violation("$at.slug", "slug: lowercase letters, digits and single dashes, up to 60 characters")
+                else if (slug in RESERVED_SLUGS) out += Violation("$at.slug", "slug '$slug' is reserved")
+                else if (!slugs.add(slug)) out += Violation("$at.slug", "duplicate slug '$slug'")
+                text(pg.get("title"), "$at.title", 80, out, required = true)
+                pg.get("seo")?.let { checkSeo(it, "$at.seo", out) }
+                val secs = pg.get("sections")
+                if (secs == null || !secs.isArray) out += Violation("$at.sections", "sections must be an array") else checkSections(secs, "$at.sections", versions, seen, out)
+            }
+        }
+        schema.get("site")?.let { site ->
+            if (!site.isObject) { out += Violation("site", "site must be an object"); return@let }
+            site.propertyNames().filter { it !in setOf("title", "home", "navigation", "notFound") }.forEach { out += Violation("site.$it", "unknown site field '$it'") }
+            text(site.get("title"), "site.title", 80, out)
+            site.get("home")?.let { h ->
+                if (!h.isObject) { out += Violation("site.home", "must be an object"); return@let }
+                h.propertyNames().filter { it !in setOf("title", "seo") }.forEach { out += Violation("site.home.$it", "unknown field '$it'") }
+                text(h.get("title"), "site.home.title", 80, out); h.get("seo")?.let { checkSeo(it, "site.home.seo", out) }
+            }
+            site.get("notFound")?.let { nf ->
+                if (!nf.isObject) { out += Violation("site.notFound", "must be an object"); return@let }
+                nf.propertyNames().filter { it !in setOf("title", "message") }.forEach { out += Violation("site.notFound.$it", "unknown field '$it'") }
+                text(nf.get("title"), "site.notFound.title", 80, out); text(nf.get("message"), "site.notFound.message", 300, out)
+            }
+            site.get("navigation")?.let { nav -> checkNavigation(nav, pageIds, out) }
+        }
+        return out
+    }
+
+    private fun text(v: JsonNode?, at: String, max: Int, out: MutableList<Violation>, required: Boolean = false) {
+        if (v == null || v.isNull) { if (required) out += Violation(at, "is required"); return }
+        if (!v.isString) { out += Violation(at, "must be a string"); return }
+        if (required && v.asString().isBlank()) out += Violation(at, "must not be empty")
+        if (v.asString().length > max) out += Violation(at, "longer than $max characters")
+    }
+
+    private fun checkSeo(seo: JsonNode, at: String, out: MutableList<Violation>) {
+        if (!seo.isObject) { out += Violation(at, "must be an object"); return }
+        seo.propertyNames().filter { it !in setOf("title", "description", "noindex") }.forEach { out += Violation("$at.$it", "unknown SEO field '$it'") }
+        text(seo.get("title"), "$at.title", 70, out); text(seo.get("description"), "$at.description", 160, out)
+        seo.get("noindex")?.let { if (!it.isBoolean) out += Violation("$at.noindex", "must be a boolean") }
+    }
+
+    /** external navigation URLs whose host is not (or no longer) on the approved list */
+    fun unapprovedLinks(schema: JsonNode): List<String> {
+        val hosts = externalHosts()
+        return schema.get("site")?.get("navigation")?.toList().orEmpty().mapNotNull { l -> l.get("url")?.takeIf { it.isString }?.asString() }.filter { url ->
+            val host = runCatching { java.net.URI(url).host?.lowercase() }.getOrNull()
+            host == null || hosts.none { host == it || host.endsWith(".$it") }
+        }
+    }
+
+    /** approved external link hosts (Admin → Settings → site.external-link-domains); empty = no external links */
+    fun externalHosts(): Set<String> = settings?.raw("site.external-link-domains").orEmpty().split(',').map { it.trim().lowercase() }.filter { it.isNotEmpty() }.toSet()
+
+    /** Navigation links point at a page of this site, an anchor on the page, or an https URL on an approved host; nothing else (no javascript:, data:, http:). */
+    private fun checkNavigation(nav: JsonNode, pageIds: Set<String>, out: MutableList<Violation>) {
+        if (!nav.isArray) { out += Violation("site.navigation", "must be an array"); return }
+        if (nav.size() > MAX_NAV) out += Violation("site.navigation", "at most $MAX_NAV links")
+        val ids = HashSet<String>()
+        nav.forEachIndexed { i, l ->
+            val at = "site.navigation[$i]"
+            if (!l.isObject) { out += Violation(at, "link must be an object"); return@forEachIndexed }
+            l.propertyNames().filter { it !in setOf("id", "label", "pageId", "url", "anchor") }.forEach { out += Violation("$at.$it", "unknown link field '$it'") }
+            val id = l.get("id")?.takeIf { it.isString }?.asString()
+            if (id == null || !SECTION_ID.matches(id)) out += Violation("$at.id", "id must match ${SECTION_ID.pattern}") else if (!ids.add(id)) out += Violation("$at.id", "duplicate link id '$id'")
+            text(l.get("label"), "$at.label", 40, out, required = true)
+            val targets = listOf("pageId", "url", "anchor").filter { l.get(it) != null && !l.get(it).isNull }
+            if (targets.size != 1) { out += Violation(at, "a link needs exactly one of pageId, url, anchor"); return@forEachIndexed }
+            val v = l.get(targets[0]).takeIf { it.isString }?.asString() ?: run { out += Violation("$at.${targets[0]}", "must be a string"); return@forEachIndexed }
+            when (targets[0]) {
+                "pageId" -> if (v !in pageIds) out += Violation("$at.pageId", "page '$v' does not exist")
+                "anchor" -> if (!Regex("^#[a-z0-9][a-z0-9-]{0,63}$").matches(v)) out += Violation("$at.anchor", "anchor must look like #section-id")
+                "url" -> {
+                    val uri = runCatching { java.net.URI(v) }.getOrNull()
+                    val host = uri?.host?.lowercase()
+                    // the approved-host list is enforced when a link is added and at publish time (SchemaCommitService, DeploymentProcessor), not
+                    // here, so removing a host from the list does not make every later edit of a site fail
+                    if (uri == null || uri.scheme != "https" || host == null || uri.userInfo != null || v.length > 500 || v.any { it.isWhitespace() || it.isISOControl() })
+                        out += Violation("$at.url", "external links must be plain https:// URLs")
+                }
+            }
+        }
+    }
+
+    private fun checkSections(sections: JsonNode, prefix: String, versions: Map<String, com.systemwebstudio.component.ComponentRegistry.Entry>, seen: MutableSet<String>, out: MutableList<Violation>) {
+        if (sections.size() > MAX_SECTIONS) out += Violation(prefix, "at most $MAX_SECTIONS sections")
         sections.forEachIndexed { i, s ->
-            val at = "sections[$i]"
+            val at = "$prefix[$i]"
             if (!s.isObject) { out += Violation(at, "section must be an object"); return@forEachIndexed }
             val id = s.get("id")?.takeIf { it.isString }?.asString()
             if (id == null || !SECTION_ID.matches(id)) out += Violation("$at.id", "id must match ${SECTION_ID.pattern}")
@@ -60,7 +165,6 @@ class PageSchemaValidator(private val registry: ComponentRegistry, private val j
             if (props == null || !props.isObject) { out += Violation("$at.props", "props must be an object"); return@forEachIndexed }
             checkProps(props, entry.dto.propsSchema, "$at.props", out)
         }
-        return out
     }
 
     fun requireValid(schema: JsonNode) {

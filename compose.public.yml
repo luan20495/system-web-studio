@@ -55,6 +55,7 @@ services:
     image: nginxinc/nginx-unprivileged:1.29-alpine
     environment:
       API_UPSTREAM: host.docker.internal:${API_PORT:-18081}
+      SITES_HOST: ${SITES_HOST:-sites.localhost}
     ports: ["127.0.0.1:${SITES_GATEWAY_PORT:-28088}:8080"]
     volumes: ["./infra/sites-gateway/default.conf.template:/etc/nginx/templates/default.conf.template:ro"]
     extra_hosts: ["host.docker.internal:host-gateway"]

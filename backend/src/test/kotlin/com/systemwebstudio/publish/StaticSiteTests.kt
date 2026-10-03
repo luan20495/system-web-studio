@@ -23,11 +23,30 @@ import java.time.Duration
     "app.render.token=render-test-token"
 ])
 class StaticSiteTests : IntegrationTestBase() {
+    @org.springframework.test.context.bean.override.mockito.MockitoBean lateinit var dnsLookup: DnsLookup
+    @org.springframework.test.context.bean.override.mockito.MockitoBean lateinit var tlsProbe: TlsProbe
+    @org.springframework.beans.factory.annotation.Autowired lateinit var settingsSvc: com.systemwebstudio.settings.SettingsService
     companion object {
         @Volatile var mode = "ok"
         @Volatile var lastToken: String? = null
         private val mapper = tools.jackson.databind.json.JsonMapper.builder().build()
         val server: HttpServer = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
+            // multi-page renderer (stage G): one HTML per page + 404.html, as JSON
+            createContext("/render-site") { ex ->
+                lastToken = ex.requestHeaders.getFirst("X-Render-Token")
+                val body = mapper.readTree(ex.requestBody.readBytes())
+                fun page(secs: tools.jackson.databind.JsonNode?): String {
+                    val title = secs?.firstOrNull { it.get("type").asString() == "Hero" }?.get("props")?.get("title")?.asString() ?: ""
+                    val imgs = body.get("assets").propertyNames().joinToString("") { "<img src=\"${body.get("assets").get(it).asString()}\">" }
+                    val forms = secs?.filter { it.get("type").asString() == "ContactForm" }?.joinToString("") { "<form method=\"post\" action=\"./_forms/${it.get("id").asString()}\"></form>" } ?: ""
+                    return when (mode) { "script" -> "<html><body><script>alert(1)</script></body></html>"; else -> "<!doctype html><html><body><h1>$title</h1>$imgs$forms</body></html>" }
+                }
+                val files = linkedMapOf("index.html" to page(body.get("schema").get("sections")))
+                body.get("schema").get("pages")?.forEach { files["${it.get("slug").asString()}/index.html"] = page(it.get("sections")) }
+                files["404.html"] = "<!doctype html><html><body><h1>404</h1><a href=\"__SITE_ROOT__\">home</a></body></html>"
+                val bytes = mapper.writeValueAsBytes(mapOf("files" to files)); val status = if (mode == "down") 503 else 200
+                ex.sendResponseHeaders(status, bytes.size.toLong()); ex.responseBody.use { it.write(bytes) }
+            }
             createContext("/render") { ex ->
                 lastToken = ex.requestHeaders.getFirst("X-Render-Token")
                 val body = mapper.readTree(ex.requestBody.readBytes())
@@ -80,7 +99,7 @@ class StaticSiteTests : IntegrationTestBase() {
         val page = v.get("/sites/$slug/")
         assertThat(page.response.status).isEqualTo(200)
         assertThat(page.response.contentAsString).contains("<h1>Trang thật</h1>").contains("assets/$asset.png")
-        assertThat(page.response.getHeader("Content-Security-Policy")).contains("default-src 'none'").contains("form-action 'none'").doesNotContain("script-src 'self'")
+        assertThat(page.response.getHeader("Content-Security-Policy")).contains("default-src 'none'").contains("form-action 'self'").doesNotContain("script-src 'self'")
         assertThat(page.response.getHeader("X-Content-Type-Options")).isEqualTo("nosniff")
         assertThat(page.response.getHeader("Cache-Control")).isEqualTo("public, no-cache, no-transform")          // always revalidated: visibility changes apply at once
         assertThat(page.response.getHeader("Set-Cookie")).isNull()                                   // no session for visitors
@@ -88,15 +107,17 @@ class StaticSiteTests : IntegrationTestBase() {
         assertThat(v.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/sites/$slug/").header("If-None-Match", etag)).response.status).isEqualTo(304)
         val img = v.get("/sites/$slug/assets/$asset.png")
         assertThat(img.response.status).isEqualTo(200); assertThat(img.response.contentAsByteArray).isEqualTo(png)
-        assertThat(img.response.contentType).isEqualTo("image/png"); assertThat(img.response.getHeader("Cache-Control")).isEqualTo("public, no-cache, no-transform")
+        assertThat(img.response.contentType).isEqualTo("image/png")
+        assertThat(img.response.getHeader("Cache-Control")).isEqualTo("public, max-age=31536000, immutable, no-transform")   // CDN: asset ids never change content
         assertThat(v.get("/sites/$slug").response.getHeader("Location")).isEqualTo("/$slug/")
-        assertThat(v.get("/sites/$slug/missing.html").response.status).isEqualTo(404)
+        val missing = v.get("/sites/$slug/missing.html")
+        assertThat(missing.response.status).isEqualTo(404); assertThat(missing.response.contentAsString).contains("href=\"/$slug/\"")   // the site's own 404 page
         assertThat(v.get("/sites/$slug/..%2F..%2Fetc%2Fpasswd").response.status).isIn(400, 404)
         assertThat(v.get("/sites/no-such-site-x1/").response.status).isEqualTo(404)
         assertThat(v.post("/sites/$slug/", "{}").response.status).isIn(403, 405)                    // GET/HEAD only
 
         val artifact = jdbc.queryForMap("SELECT a.* FROM artifacts a JOIN deployments d ON d.artifact_id = a.id WHERE d.id = ?", java.util.UUID.fromString(d.get("id").asString()))
-        assertThat(artifact["file_count"]).isEqualTo(2); assertThat((artifact["sha256"] as String)).hasSize(64)
+        assertThat(artifact["file_count"]).isEqualTo(3);                                              // index.html, 404.html, the image assertThat((artifact["sha256"] as String)).hasSize(64)
         // republishing the same content reuses the same artifact (content-addressed)
         val again = sc.publish()
         assertThat(jdbc.queryForObject("SELECT artifact_id FROM deployments WHERE id = ?", java.util.UUID::class.java, java.util.UUID.fromString(again.get("id").asString())))
@@ -164,6 +185,108 @@ class StaticSiteTests : IntegrationTestBase() {
         assertThat(sc.s.delete("${sc.base}/site").response.status).isEqualTo(200)
         assertThat(visitor().get("/sites/$slug/").response.status).isEqualTo(404)
         assertThat(sc.s.body(sc.s.get("${sc.base}/site")).get("online").asBoolean()).isFalse()
+    }
+
+    private fun Scenario.ops(vararg ops: String) = s.patch("$base/schema", """{"expectedRevision":${revision()},"operations":[${ops.joinToString(",")}]}""")
+
+    @Test
+    fun `multi-page site - pages, navigation and SEO are validated, every page is in one atomic artifact, directory URLs and 404 work`() {
+        val sc = scenario()
+        assertThat(sc.ops("""{"type":"ADD_PAGE","pageId":"about","props":{"slug":"gioi-thieu","title":"Giới thiệu","seo":{"title":"Về chúng tôi","description":"Công ty"}}}""").response.status).isEqualTo(200)
+        assertThat(sc.ops("""{"type":"ADD_SECTION","pageId":"about","sectionType":"Hero","sectionId":"hero-about","props":{"title":"Trang giới thiệu"}}""").response.status).isEqualTo(200)
+        // section ids are unique across the whole site; slugs are checked
+        assertThat(sc.ops("""{"type":"ADD_SECTION","pageId":"about","sectionType":"Hero","sectionId":"hero-1","props":{"title":"x"}}""").response.status).isEqualTo(400)
+        assertThat(sc.ops("""{"type":"ADD_PAGE","pageId":"bad","props":{"slug":"Bad Slug","title":"x"}}""").response.status).isEqualTo(422)
+        assertThat(sc.ops("""{"type":"ADD_PAGE","pageId":"res","props":{"slug":"assets","title":"x"}}""").response.status).isEqualTo(422)
+        // navigation: page links and anchors are fine; javascript: and unapproved hosts are not
+        assertThat(sc.ops("""{"type":"SET_NAVIGATION","value":[{"id":"n1","label":"Trang chủ","pageId":"home"},{"id":"n2","label":"Giới thiệu","pageId":"about"},{"id":"n3","label":"Liên hệ","anchor":"#contact"}]}""").response.status).isEqualTo(200)
+        assertThat(sc.ops("""{"type":"SET_NAVIGATION","value":[{"id":"x","label":"X","url":"javascript:alert(1)"}]}""").response.status).isEqualTo(422)
+        assertThat(sc.ops("""{"type":"SET_NAVIGATION","value":[{"id":"x","label":"X","url":"https://evil.example/"}]}""").response.status).isEqualTo(422)
+        assertThat(sc.ops("""{"type":"SET_NAVIGATION","value":[{"id":"x","label":"X","pageId":"nope"}]}""").response.status).isEqualTo(422)
+        jdbc.update("INSERT INTO system_settings (key, value) VALUES ('site.external-link-domains', 'example.com') ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value")
+        settingsSvc.invalidate()
+        try { assertThat(sc.ops("""{"type":"SET_NAVIGATION","value":[{"id":"n1","label":"Đối tác","url":"https://docs.example.com/a"},{"id":"n2","label":"Giới thiệu","pageId":"about"}]}""").response.status).isEqualTo(200) }
+        finally { jdbc.update("DELETE FROM system_settings WHERE key = 'site.external-link-domains'"); settingsSvc.invalidate() }
+        // the host is no longer approved: editing still works (the existing link stays), publishing refuses until the link is fixed
+        assertThat(sc.ops("""{"type":"UPDATE_SITE","props":{"title":"Shop"}}""").response.status).isEqualTo(200)
+        assertThat(sc.publish(expect = "FAILED").get("error").asString()).contains("not approved")
+        assertThat(sc.ops("""{"type":"SET_NAVIGATION","value":[{"id":"n1","label":"Trang chủ","pageId":"home"},{"id":"n2","label":"Giới thiệu","pageId":"about"},{"id":"n3","label":"Liên hệ","anchor":"#contact"}]}""").response.status).isEqualTo(200)
+        assertThat(sc.ops("""{"type":"UPDATE_SITE","props":{"notFound":{"title":"Lạc đường rồi","message":"Trang không có"}}}""").response.status).isEqualTo(200)
+        assertThat(sc.ops("""{"type":"UPDATE_PAGE","pageId":"home","props":{"seo":{"title":"Trang chủ","description":"Mô tả","noindex":false}}}""").response.status).isEqualTo(200)
+        assertThat(sc.ops("""{"type":"UPDATE_PAGE","pageId":"home","props":{"slug":"x"}}""").response.status).isEqualTo(400)
+
+        val d = sc.publish(); val slug = slugOf(d.get("url").asString()); val v = visitor()
+        val manifest = jdbc.queryForObject("SELECT a.manifest::text FROM artifacts a JOIN deployments d ON d.artifact_id = a.id WHERE d.id = ?", String::class.java, java.util.UUID.fromString(d.get("id").asString()))
+        assertThat(manifest).contains("\"index.html\"").contains("\"gioi-thieu/index.html\"").contains("\"404.html\"")
+        assertThat(v.get("/sites/$slug/gioi-thieu/").response.contentAsString).contains("<h1>Trang giới thiệu</h1>")
+        assertThat(v.get("/sites/$slug/gioi-thieu").response.getHeader("Location")).isEqualTo("gioi-thieu/")
+        assertThat(v.get("/sites/$slug/khong-co/").response.status).isEqualTo(404)
+        // removing a page also removes navigation links to it (the schema stays valid)
+        assertThat(sc.ops("""{"type":"REMOVE_PAGE","pageId":"about"}""").response.status).isEqualTo(200)
+        assertThat(sc.schema().get("site").get("navigation").toList().map { it.get("id").asString() }).containsExactly("n1", "n3")
+    }
+
+    @Test
+    fun `website forms - validated, spam dropped silently, rate limited, origin checked, editors read and export, viewers cannot`() {
+        val sc = scenario()
+        sc.ops("""{"type":"ADD_SECTION","sectionType":"ContactForm","sectionId":"lien-he","props":{"heading":"Liên hệ"}}""")
+        val d = sc.publish(); val slug = slugOf(d.get("url").asString()); val v = visitor()
+        fun post(form: String, origin: String? = "https://sites.example.test", id: String = "lien-he", ip: String = "10.1.2.${(1..250).random()}") = v.perform(
+            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/sites/$slug/_forms/$id").contentType(org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED)
+                .content(form).also { b -> origin?.let { b.header("Origin", it) } }.with { it.remoteAddr = ip; it }, includeCsrf = false)
+        val ok = post("name=Lan&email=lan%40example.com&phone=0901&message=Xin+t%C6%B0+v%E1%BA%A5n&_page=home")
+        assertThat(ok.response.status).isEqualTo(200); assertThat(ok.response.contentAsString).contains("Cảm ơn")
+        assertThat(ok.response.getHeader("Content-Security-Policy")).contains("default-src 'none'")
+        assertThat(post("name=&email=lan%40example.com&message=hi").response.status).isEqualTo(400)
+        assertThat(post("name=A&email=not-an-email&message=hi").response.status).isEqualTo(400)
+        assertThat(post("name=Bot&email=b%40example.com&message=hi&website=http%3A%2F%2Fspam").response.status).isEqualTo(200)     // honeypot: dropped, same page
+        assertThat(post("name=A&email=a%40example.com&message=hi", origin = "https://evil.example").response.status).isEqualTo(403)
+        assertThat(post("name=A&email=a%40example.com&message=hi", id = "hero-1").response.status).isEqualTo(400)                 // not a ContactForm
+        val same = "10.9.9.9"; repeat(5) { post("name=R&email=r%40example.com&message=m", ip = same) }
+        assertThat(post("name=R&email=r%40example.com&message=m", ip = same).response.status).isEqualTo(429)
+
+        val list = sc.s.body(sc.s.get("${sc.base}/form-submissions"))
+        assertThat(list.get("items").toList().map { it.get("data").get("name").asString() }).contains("Lan").doesNotContain("Bot")
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM form_submissions WHERE project_id = ? AND ip_hash LIKE '10.%'", Long::class.java, sc.projectId)).isEqualTo(0)  // IPs hashed
+        val csv = sc.s.get("${sc.base}/form-submissions/export")
+        assertThat(csv.response.status).isEqualTo(200); assertThat(csv.response.getContentAsString(Charsets.UTF_8)).contains("\"Lan\"").contains("lan@example.com")
+        val viewer = fx.user("formviewer"); fx.member(sc.ws, viewer, "VIEWER")
+        val p = jdbc.queryForObject("SELECT workspace_id FROM projects WHERE id = ?", java.util.UUID::class.java, sc.projectId)
+        jdbc.update("INSERT INTO project_members (workspace_id, project_id, user_id, role) VALUES (?,?,?, 'VIEWER')", p, sc.projectId, viewer.id)
+        assertThat(sessionFor(viewer.username).get("${sc.base}/form-submissions").response.status).isEqualTo(403)
+        val id = list.get("items")[0].get("id").asString()
+        assertThat(sc.s.delete("${sc.base}/form-submissions/$id").response.status).isEqualTo(204)
+        assertThat(sc.auditCount("FORM_SUBMISSIONS_EXPORTED")).isEqualTo(1); assertThat(sc.auditCount("FORM_SUBMISSION_DELETED")).isEqualTo(1)
+    }
+
+    @Test
+    fun `custom domains - TXT verification, real TLS probe result, served only for verified public sites, no reserved hosts`() {
+        val sc = scenario()
+        val d = sc.publish(); val v = visitor()
+        assertThat(sc.s.post("${sc.base}/domains", """{"hostname":"x.sites.example.test"}""").response.status).isEqualTo(400)       // platform host
+        assertThat(sc.s.post("${sc.base}/domains", """{"hostname":"not a host"}""").response.status).isEqualTo(400)
+        val host = "www.shop-${java.util.UUID.randomUUID().toString().take(6)}.example"
+        val dom = sc.s.body(sc.s.post("${sc.base}/domains", """{"hostname":"$host"}"""))
+        assertThat(dom.get("status").asString()).isEqualTo("PENDING"); assertThat(dom.get("txtName").asString()).isEqualTo("_hbl-verify.$host")
+        val id = dom.get("id").asString(); val token = dom.get("txtValue").asString()
+        // not verified yet: the host serves nothing
+        assertThat(v.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/sites/_host/").header("Host", host)).response.status).isEqualTo(404)
+        org.mockito.Mockito.`when`(dnsLookup.txt("_hbl-verify.$host")).thenReturn(listOf("other-value"))
+        assertThat(sc.s.body(sc.s.post("${sc.base}/domains/$id/verify")).get("status").asString()).isEqualTo("FAILED")
+        org.mockito.Mockito.`when`(dnsLookup.txt("_hbl-verify.$host")).thenReturn(listOf(token))
+        org.mockito.Mockito.`when`(tlsProbe.check(host)).thenReturn("PENDING" to "not reachable")
+        val verified = sc.s.body(sc.s.post("${sc.base}/domains/$id/verify"))
+        assertThat(verified.get("status").asString()).isEqualTo("VERIFIED"); assertThat(verified.get("tlsStatus").asString()).isEqualTo("PENDING")
+        org.mockito.Mockito.`when`(tlsProbe.check(host)).thenReturn("ACTIVE" to null)
+        assertThat(sc.s.body(sc.s.post("${sc.base}/domains/$id/check-tls")).get("tlsStatus").asString()).isEqualTo("ACTIVE")
+        val page = v.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/sites/_host/").header("Host", host))
+        assertThat(page.response.status).isEqualTo(200); assertThat(page.response.contentAsString).contains("<h1>")
+        // the same host cannot be claimed twice; a private site is not served on a custom domain
+        assertThat(scenario().let { o -> o.s.post("${o.base}/domains", """{"hostname":"$host"}""").response.status }).isEqualTo(409)
+        sc.publish("PRIVATE")
+        assertThat(v.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/sites/_host/").header("Host", host)).response.status).isEqualTo(404)
+        assertThat(sc.s.delete("${sc.base}/domains/$id").response.status).isEqualTo(204)
+        assertThat(sc.auditCount("DOMAIN_VERIFIED")).isEqualTo(1)
     }
 
     @Test

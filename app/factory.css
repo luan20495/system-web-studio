@@ -212,3 +212,10 @@
 .budgetBar>i{display:block;height:100%;background:#20c997}
 .budgetBar.warn>i{background:#f5a524}.budgetBar.over>i{background:#e5484d}
 .previewImg{width:100%;aspect-ratio:3/2;object-fit:cover;object-position:top;border-radius:10px;border:1px solid rgba(127,127,127,.25);background:#fff}
+/* website structure (stage G) */
+.pageBar{display:flex;gap:6px;align-items:center;margin:6px 0 10px}.pageBar select{flex:1;min-width:0}
+.navRow{display:grid;grid-template-columns:1.2fr 1fr 1.4fr auto;gap:6px;align-items:center;margin:6px 0}
+.navRow input,.navRow select{min-width:0}
+.submission,.domainRow{padding:10px 0;border-top:1px solid rgba(127,127,127,.2)}.submission p{margin:6px 0;white-space:pre-wrap}
+.linkButton.active{font-weight:700;text-decoration:underline}
+@media(max-width:700px){.navRow{grid-template-columns:1fr 1fr}}

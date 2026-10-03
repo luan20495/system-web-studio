@@ -1,6 +1,11 @@
 /** Shapes returned by the real backend (docs/API_CONTRACT.md). Independent from the mock-mode types. */
 export type Section = { id: string; type: string; componentVersion?: string; props: Record<string, unknown> };
-export type PageSchema = { page: string; sections: Section[] };
+export type Seo = { title?: string; description?: string; noindex?: boolean };
+export type NavLink = { id: string; label: string; pageId?: string; url?: string; anchor?: string };
+export type SitePage = { id: string; slug: string; title: string; seo?: Seo; sections: Section[] };
+export type SiteMeta = { title?: string; home?: { title?: string; seo?: Seo }; navigation?: NavLink[]; notFound?: { title?: string; message?: string } };
+/** The root page is the home page; `pages` are the other pages of a multi-page site (stage G). */
+export type PageSchema = { page: string; sections: Section[]; site?: SiteMeta; pages?: SitePage[] };
 
 export type WorkspaceSummary = { id: string; name: string; role: string };
 export type Me = { id: string; username: string; displayName: string; roles: string[]; workspaces: WorkspaceSummary[]; systemAdmin?: boolean };
@@ -33,10 +38,14 @@ export type PromptHistoryItem = { id: string; text: string; createdAt: string; o
   provider?: string | null; model?: string | null; aiCalls?: number; totalTokens?: number | null; costUsd?: number | null };
 
 export type SchemaOperation = {
-  type: "ADD_SECTION" | "REMOVE_SECTION" | "MOVE_SECTION" | "UPDATE_SECTION" | "UPDATE_PROP" | "ADD_ITEM" | "REMOVE_ITEM";
+  type: "ADD_SECTION" | "REMOVE_SECTION" | "MOVE_SECTION" | "UPDATE_SECTION" | "UPDATE_PROP" | "ADD_ITEM" | "REMOVE_ITEM"
+    | "ADD_PAGE" | "UPDATE_PAGE" | "REMOVE_PAGE" | "SET_NAVIGATION" | "UPDATE_SITE";
   sectionId?: string; sectionType?: string; itemId?: string; arrayPath?: string; path?: string; value?: unknown; item?: unknown; props?: unknown;
-  beforeSectionId?: string; afterSectionId?: string; index?: number;
+  beforeSectionId?: string; afterSectionId?: string; index?: number; pageId?: string;
 };
+export type FormSubmission = { id: string; formId: string; pageId: string; data: Record<string, string>; createdAt: string };
+export type SiteDomain = { id: string; hostname: string; status: "PENDING" | "VERIFIED" | "FAILED"; tlsStatus: "UNKNOWN" | "PENDING" | "ACTIVE" | "ERROR"; lastError: string | null;
+  verifiedAt: string | null; lastCheckedAt: string | null; createdAt: string; txtName: string; txtValue: string; cnameTarget: string };
 
 export type AssetDto = { id: string; name: string; contentType: string; size: number; status: string; createdAt: string; downloadUrl: string | null };
 export type UploadUrl = { assetId: string; uploadUrl: string; method: string; headers: Record<string, string>; expiresInSeconds: number };
@@ -148,7 +157,7 @@ export type CodeAiResponse = { promptId: string; outcome: "UPDATED" | "NO_CHANGE
 export type CodeAiHistoryItem = { promptId: string; text: string; createdAt: string; outcome: string; message: string; model: string | null; changeId: string | null; changeStatus: string | null };
 
 // ---- Lockdown, settings, build policy, retention
-export type SettingView = { key: string; group: string; type: "BOOL" | "INT" | "DECIMAL"; label: string; risk: "LOW" | "HIGH"; min: number; max: number; unit: string;
+export type SettingView = { key: string; group: string; type: "BOOL" | "INT" | "DECIMAL" | "DOMAINS"; label: string; risk: "LOW" | "HIGH"; min: number; max: number; unit: string;
   value: string; defaultValue: string; overridden: boolean; updatedBy: string | null; updatedAt: string | null };
 export type BuildUsageRow = { key: string; label: string | null; builds: number; succeeded: number; failed: number; cpuMs: number; durationMs: number; artifactBytes: number };
 export type BuildPolicyReport = { days: number; totals: BuildUsageRow; byWorkspace: BuildUsageRow[]; byUser: BuildUsageRow[]; byProject: BuildUsageRow[]; running: number; queued: number;

@@ -37,6 +37,17 @@ class RenderClient(
         return response.body()
     }
 
+    /** Every page of a (multi-page) site: index.html, <slug>/index.html, 404.html. */
+    fun renderSite(schema: JsonNode, assets: Map<String, String>): Map<String, String> {
+        val body = json.writeValueAsString(mapOf("schema" to schema, "assets" to assets))
+        val request = HttpRequest.newBuilder(URI("${url.trimEnd('/')}/render-site")).timeout(Duration.ofSeconds(30))
+            .header("Content-Type", "application/json").header("X-Render-Token", token).POST(HttpRequest.BodyPublishers.ofString(body)).build()
+        val response = try { http.send(request, HttpResponse.BodyHandlers.ofString()) } catch (e: Exception) { throw BuildFailure("Render worker is not reachable") }
+        if (response.statusCode() != 200) throw BuildFailure("Render worker answered HTTP ${response.statusCode()}")
+        val files = json.readTree(response.body()).get("files") ?: throw BuildFailure("Render worker returned no files")
+        return files.propertyNames().associateWith { files.get(it).asString() }
+    }
+
     /** Screenshot of the static render (worker: JavaScript disabled, network blocked). */
     fun preview(schema: JsonNode): PreviewResult {
         val request = HttpRequest.newBuilder(URI("${url.trimEnd('/')}/preview")).timeout(Duration.ofSeconds(30))
@@ -92,10 +103,15 @@ class StaticSiteBuilder(private val jdbc: JdbcTemplate, private val json: JsonMa
                 urls[id.toString()] = path
             }
         }
-        val html = render.render(schema, urls)
-        // the renderer never emits scripts for a published page; anything else means the input or renderer is wrong
-        if (Regex("<\\s*script", RegexOption.IGNORE_CASE).containsMatchIn(html)) throw BuildFailure("Rendered page contains a script")
-        files["index.html"] = html.toByteArray(Charsets.UTF_8) to "text/html; charset=utf-8"
+        // every page of the site from one schema version: the deployment is an atomic snapshot of all pages
+        val pages = render.renderSite(schema, urls)
+        if ("index.html" !in pages) throw BuildFailure("Render worker returned no home page")
+        pages.forEach { (path, html) ->
+            if (!PAGE_PATH.matches(path)) throw BuildFailure("Unexpected page path from the renderer")
+            // the renderer never emits scripts for a published page; anything else means the input or renderer is wrong
+            if (Regex("<\\s*script", RegexOption.IGNORE_CASE).containsMatchIn(html)) throw BuildFailure("Rendered page contains a script")
+            files[path] = html.toByteArray(Charsets.UTF_8) to "text/html; charset=utf-8"
+        }
         val manifest = files.map { (path, f) -> ManifestFile(path, f.first.size, sha256(f.first), f.second) }
         val manifestJson = json.writeValueAsString(manifest)
         val sha = sha256(manifestJson.toByteArray())
@@ -112,6 +128,7 @@ class StaticSiteBuilder(private val jdbc: JdbcTemplate, private val json: JsonMa
         jdbc.query("SELECT id FROM artifacts WHERE project_id = ? AND sha256 = ?", { rs, _ -> rs.getObject(1, UUID::class.java) }, projectId, sha).firstOrNull()
 
     companion object {
+        val PAGE_PATH = Regex("^(index\\.html|404\\.html|[a-z0-9]+(-[a-z0-9]+)*/index\\.html)$")
         fun sha256(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     }
 }

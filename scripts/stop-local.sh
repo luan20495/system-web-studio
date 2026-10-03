@@ -9,6 +9,8 @@ pkill -f "system-web-studio.*bootRun" 2>/dev/null || true
 # connections to :8080 through it) and killed com.docker.backend, taking Docker Desktop down.
 lsof -ti tcp:8080 -sTCP:LISTEN | xargs kill 2>/dev/null || true
 lsof -ti tcp:"$FRONTEND_PORT" -sTCP:LISTEN | xargs kill 2>/dev/null || true
+# the render worker too (a stale worker would keep serving an old renderer after an update)
+lsof -ti tcp:"${RENDER_PORT:-18095}" -sTCP:LISTEN | xargs kill 2>/dev/null || true
 # graceful shutdown lets in-flight requests finish: wait until the ports are really free before returning
 for port in 8080 "$FRONTEND_PORT"; do
   for _ in $(seq 1 60); do lsof -ti tcp:"$port" -sTCP:LISTEN >/dev/null 2>&1 || break; sleep 1; done

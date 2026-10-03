@@ -29,12 +29,13 @@ import java.util.UUID
 @RestController
 class SiteServingController(
     private val sites: SiteService, private val store: ArtifactStore, private val json: tools.jackson.databind.json.JsonMapper,
+    private val domains: SiteDomainService,
     @Value("\${app.sites.cookie-name:site_session}") private val cookieName: String,
     @Value("\${app.sites.cookie-secure:false}") private val cookieSecure: Boolean
 ) {
     companion object {
-        /** Page-schema sites contain no scripts: nothing may run, be framed, post forms or load from elsewhere. */
-        const val SITE_CSP = "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+        /** Page-schema sites contain no scripts: nothing may run, be framed or load from elsewhere; forms may only post to the site itself. */
+        const val SITE_CSP = "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; font-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
     }
 
     private fun common(response: HttpServletResponse) {
@@ -92,6 +93,15 @@ class SiteServingController(
         serveFile(site.prefix, site.files, raw, private = true, app = true, frameAncestors = null, preview = false, request, response)
     }
 
+    /** A verified custom domain (gateway: any Host other than the sites host → /sites/_host/<path>). Public websites only. */
+    @GetMapping("/sites/_host/**")
+    fun serveHost(request: HttpServletRequest, response: HttpServletResponse) {
+        val host = domains.requestHost(request)
+        val site = host?.let { domains.liveFor(it) }
+        if (site == null || site.kind == "STATIC_APP" || site.visibility != "PUBLIC") return page(response, 404, "Không tìm thấy trang", "Tên miền này chưa được kết nối với website nào.")
+        serveFile(site.prefix, site.files, request.requestURI.substringAfter("/sites/_host/", ""), false, false, null, preview = false, request, response, root = "/")
+    }
+
     @GetMapping("/sites/{slug}")
     fun noSlash(@PathVariable slug: String, response: HttpServletResponse) {
         response.status = 301; response.setHeader("Location", "/$slug/")
@@ -118,7 +128,19 @@ class SiteServingController(
             }
         }
         if (app && raw == "__factory/config.json") return runtimeConfig(response, sites.runtimeConfig(site.projectId, "production", site.visibility, null))
-        serveFile(site.prefix, site.files, raw, private, app, null, preview = false, request, response)
+        serveFile(site.prefix, site.files, raw, private, app, null, preview = false, request, response, root = "/$slug/")
+    }
+
+    /** The site's own 404 page when it has one (website, not app), with its link to the home page pointed at this site's root. */
+    private fun notFound(prefix: String, files: Map<String, ManifestFile>, app: Boolean, root: String?, request: HttpServletRequest, response: HttpServletResponse) {
+        val nf = files["404.html"]
+        val bytes = if (!app && nf != null && root != null) store.get("$prefix/404.html")?.takeIf { StaticSiteBuilder.sha256(it) == nf.sha256 } else null
+        if (bytes == null) return page(response, 404, "Không tìm thấy", "Tệp này không có trong bản đã xuất bản.")
+        common(response)
+        response.status = 404; response.contentType = "text/html; charset=utf-8"; response.setHeader("Cache-Control", "no-store")
+        // verified bytes; the only change is the fixed token → the site's root path (computed here, never from the request)
+        val html = bytes.toString(Charsets.UTF_8).replace("__SITE_ROOT__", root!!.replace("\"", ""))
+        if (request.method != "HEAD") response.writer.write(html)
     }
 
     private fun runtimeConfig(response: HttpServletResponse, cfg: Map<String, Any?>) {
@@ -128,11 +150,17 @@ class SiteServingController(
     }
 
     private fun serveFile(prefix: String, files: Map<String, ManifestFile>, raw: String, private: Boolean, app: Boolean, frameAncestors: String?, preview: Boolean,
-                          request: HttpServletRequest, response: HttpServletResponse) {
-        val path = runCatching { URLDecoder.decode(raw, Charsets.UTF_8) }.getOrNull()?.ifEmpty { "index.html" }
-            ?: return page(response, 400, "Đường dẫn không hợp lệ", "")
-        if (".." in path || path.startsWith("/") || path.any { it == '\\' || it.isISOControl() }) return page(response, 400, "Đường dẫn không hợp lệ", "")
-        val file = files[path] ?: return page(response, 404, "Không tìm thấy", "Tệp này không có trong bản đã xuất bản.")
+                          request: HttpServletRequest, response: HttpServletResponse, root: String? = null) {
+        val decoded = runCatching { URLDecoder.decode(raw, Charsets.UTF_8) }.getOrNull() ?: return page(response, 400, "Đường dẫn không hợp lệ", "")
+        if (".." in decoded || decoded.startsWith("/") || decoded.any { it == '\\' || it.isISOControl() }) return page(response, 400, "Đường dẫn không hợp lệ", "")
+        // directory URLs of a multi-page site: "" → index.html, "about/" → about/index.html, "about" → redirect to "about/"
+        val path = when {
+            decoded.isEmpty() -> "index.html"
+            decoded.endsWith("/") -> "${decoded}index.html"
+            files[decoded] == null && files["$decoded/index.html"] != null -> { response.status = 301; response.setHeader("Location", "${decoded.substringAfterLast('/')}/"); return }
+            else -> decoded
+        }
+        val file = files[path] ?: return notFound(prefix, files, app, root, request, response)
         common(response)
         if (app) {
             val o = sites.sitesOrigin.trimEnd('/')
@@ -148,7 +176,13 @@ class SiteServingController(
         // Revalidate every time (cheap: ETag → 304) instead of caching for a while: a site can switch to private, roll back or go offline,
         // and no gateway/CDN/browser copy may keep serving the old content after that. (Purge-based edge caching is a later optimisation.)
         // no-transform: intermediaries (e.g. Cloudflare's analytics beacon injection) must not add scripts to a script-free site
-        response.setHeader("Cache-Control", if (private || preview) "private, no-store, no-transform" else "public, no-cache, no-transform")
+        // CDN: files under assets/ are addressed by an asset id whose bytes never change → cacheable for a year at every layer (still
+        // only for public sites); pages keep revalidating so unpublish / rollback / visibility changes apply at once
+        response.setHeader("Cache-Control", when {
+            private || preview -> "private, no-store, no-transform"
+            path.startsWith("assets/") && !app -> "public, max-age=31536000, immutable, no-transform"
+            else -> "public, no-cache, no-transform"
+        })
         if (request.getHeader("If-None-Match") == "\"${file.sha256}\"") { response.status = 304; return }
         val bytes = store.get("$prefix/$path") ?: return page(response, 404, "Không tìm thấy", "")
         // integrity: serve only bytes that match the manifest recorded at build time

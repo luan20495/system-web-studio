@@ -23,13 +23,69 @@ class SchemaPatchEngine(private val registry: ComponentRegistry, private val jso
         if (ops.isEmpty()) bad("at least one operation is required")
         if (ops.size > MAX_OPERATIONS) bad("at most $MAX_OPERATIONS operations per request")
         val copy = schema.deepCopy() as ObjectNode
-        val sections = copy.get("sections") as? ArrayNode ?: bad("schema has no sections array")
+        copy.get("sections") as? ArrayNode ?: bad("schema has no sections array")
         ops.forEachIndexed { i, op ->
-            try { applyOne(sections, op) } catch (e: ApiException) {
+            try {
+                if (op.type in OperationTypes.site) applySite(copy, op)
+                else applyOne(sectionsFor(copy, op), op, allSections(copy))
+            } catch (e: ApiException) {
                 throw ApiException.badRequest("INVALID_OPERATION", "operation[$i] ${op.type}: ${e.message}", mapOf("operationIndex" to i))
             }
         }
         return copy
+    }
+
+    /** home sections first, then each extra page's sections (section ids are unique across the whole site) */
+    private fun allSections(root: ObjectNode): List<ArrayNode> =
+        listOf(root.get("sections") as ArrayNode) + (root.get("pages") as? ArrayNode)?.mapNotNull { it.get("sections") as? ArrayNode }.orEmpty()
+
+    private fun page(root: ObjectNode, id: String?): ObjectNode? =
+        (root.get("pages") as? ArrayNode)?.firstOrNull { it.get("id")?.asString() == id } as? ObjectNode
+
+    /** the sections array an operation works on: ADD_SECTION → its page (default home); others → the page that holds sectionId */
+    private fun sectionsFor(root: ObjectNode, op: SchemaOperation): ArrayNode {
+        if (op.type == "ADD_SECTION") {
+            if (op.pageId == null || op.pageId == "home") return root.get("sections") as ArrayNode
+            return page(root, op.pageId)?.get("sections") as? ArrayNode ?: bad("page '${op.pageId}' not found")
+        }
+        val id = op.sectionId ?: bad("sectionId is required")
+        return allSections(root).firstOrNull { arr -> arr.any { it.get("id")?.asString() == id } } ?: bad("section '$id' not found")
+    }
+
+    private fun applySite(root: ObjectNode, op: SchemaOperation) {
+        val site = (root.get("site") as? ObjectNode) ?: json.createObjectNode().also { root.set("site", it) }
+        when (op.type) {
+            "ADD_PAGE" -> {
+                val pages = (root.get("pages") as? ArrayNode) ?: json.createArrayNode().also { root.set("pages", it) }
+                val id = op.pageId ?: bad("pageId is required")
+                if (id == "home" || pages.any { it.get("id")?.asString() == id }) bad("page '$id' already exists")
+                val p = op.props?.takeIf { it.isObject } ?: bad("props {slug, title} are required")
+                val node = json.createObjectNode().put("id", id)
+                listOf("slug", "title", "seo").forEach { k -> p.get(k)?.let { node.set(k, it.deepCopy()) } }
+                node.set("sections", json.createArrayNode())
+                pages.add(node)
+            }
+            "UPDATE_PAGE" -> {
+                val p = op.props?.takeIf { it.isObject } ?: bad("props object is required")
+                val target = if (op.pageId == null || op.pageId == "home") (site.get("home") as? ObjectNode ?: json.createObjectNode().also { site.set("home", it) })
+                    else page(root, op.pageId) ?: bad("page '${op.pageId}' not found")
+                val allowed = if (op.pageId == null || op.pageId == "home") setOf("title", "seo") else setOf("slug", "title", "seo")
+                p.propertyNames().forEach { k -> if (k !in allowed) bad("'$k' cannot be changed on this page"); target.set(k, p.get(k).deepCopy()) }
+            }
+            "REMOVE_PAGE" -> {
+                val pages = root.get("pages") as? ArrayNode ?: bad("page '${op.pageId}' not found")
+                val i = pages.indexOfFirst { it.get("id")?.asString() == op.pageId }
+                if (i < 0) bad("page '${op.pageId}' not found")
+                pages.remove(i)
+                // links to the removed page go too
+                (site.get("navigation") as? ArrayNode)?.let { nav -> nav.indexOfFirst { it.get("pageId")?.asString() == op.pageId }.takeIf { it >= 0 }?.let { nav.remove(it) } }
+            }
+            "SET_NAVIGATION" -> site.set("navigation", op.value?.takeIf { it.isArray }?.deepCopy() ?: bad("value must be an array of links"))
+            "UPDATE_SITE" -> {
+                val p = op.props?.takeIf { it.isObject } ?: bad("props object is required")
+                p.propertyNames().forEach { k -> if (k !in setOf("title", "notFound")) bad("'$k' cannot be changed here"); site.set(k, p.get(k).deepCopy()) }
+            }
+        }
     }
 
     private fun indexOf(sections: ArrayNode, id: String?): Int {
@@ -46,14 +102,14 @@ class SchemaPatchEngine(private val registry: ComponentRegistry, private val jso
         else -> sections.size()
     }
 
-    private fun applyOne(sections: ArrayNode, op: SchemaOperation) {
+    private fun applyOne(sections: ArrayNode, op: SchemaOperation, all: List<ArrayNode>) {
         if (op.type !in OperationTypes.all) bad("unsupported operation type '${op.type}'")
         when (op.type) {
             "ADD_SECTION" -> {
                 val type = op.sectionType ?: bad("sectionType is required")
                 val component = registry.list().firstOrNull { it.id == type && it.status == "ACTIVE" } ?: bad("component '$type' is not in the registry")
-                val id = op.sectionId ?: generateId(sections, type)
-                if (sections.any { it.get("id")?.asString() == id }) bad("section id '$id' already exists")
+                val id = op.sectionId ?: generateId(all, type)
+                if (all.any { arr -> arr.any { it.get("id")?.asString() == id } }) bad("section id '$id' already exists")
                 val section = json.createObjectNode()
                 section.put("id", id); section.put("type", type); section.put("componentVersion", component.latestVersion)
                 section.set("props", op.props?.takeIf { it.isObject }?.deepCopy() ?: json.createObjectNode())
@@ -121,10 +177,10 @@ class SchemaPatchEngine(private val registry: ComponentRegistry, private val jso
         node.set(parts.last(), value)
     }
 
-    private fun generateId(sections: ArrayNode, type: String): String {
+    private fun generateId(all: List<ArrayNode>, type: String): String {
         val base = type.lowercase().replace(Regex("[^a-z0-9]"), "")
         var n = 1
-        while (sections.any { it.get("id")?.asString() == "$base-$n" }) n++
+        while (all.any { arr -> arr.any { it.get("id")?.asString() == "$base-$n" } }) n++
         return "$base-$n"
     }
 }

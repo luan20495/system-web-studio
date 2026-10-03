@@ -33,6 +33,10 @@ class SchemaCommitService(
     ): CommitResult {
         validator.requireValid(schema)
         val project = ctx.project!!
+        // external navigation links may only be ADDED for approved hosts (links already in the site keep working until edited)
+        val newLinks = validator.unapprovedLinks(schema) - repo.currentSchema(project.id)?.let { validator.unapprovedLinks(it) }.orEmpty().toSet()
+        if (newLinks.isNotEmpty()) throw ApiException(org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY, "LINK_DOMAIN_NOT_APPROVED",
+            "External links are allowed only to domains approved by an administrator", mapOf("urls" to newLinks.take(5)))
         // asset://<id> may only point at READY files of this very project (no cross-project or cross-tenant references)
         val refs = com.systemwebstudio.schema.PageSchemaValidator.assetRefs(schema)
         if (refs.isNotEmpty()) {

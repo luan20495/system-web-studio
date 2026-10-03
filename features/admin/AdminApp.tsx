@@ -769,7 +769,8 @@ function SettingsPage() {
           <small>{s.overridden ? `Đã đổi bởi ${s.updatedBy ?? "—"} ${s.updatedAt ? ago(s.updatedAt) : ""} · mặc định ${s.defaultValue}` : "Mặc định từ cấu hình"}</small></td>
           <td className="settingCtl">{s.type === "BOOL"
             ? <label className="switch"><input type="checkbox" checked={s.value === "true"} aria-label={s.label} onChange={(e) => void save(s, String(e.target.checked))}/> {s.value === "true" ? "Bật" : "Tắt"}</label>
-            : <form className="row" onSubmit={(e) => { e.preventDefault(); void save(s, v); }}><input aria-label={s.label} type="number" min={s.min} max={s.max} value={v} onChange={(e) => setDraft((d) => ({ ...d, [s.key]: e.target.value }))}/>
+            : <form className="row" onSubmit={(e) => { e.preventDefault(); void save(s, v); }}>{s.type === "DOMAINS" ? <input aria-label={s.label} type="text" placeholder="example.com, docs.example.org" value={v} onChange={(e) => setDraft((d) => ({ ...d, [s.key]: e.target.value }))}/>
+              : <input aria-label={s.label} type="number" min={s.min} max={s.max} value={v} onChange={(e) => setDraft((d) => ({ ...d, [s.key]: e.target.value }))}/>}
               <span className="hint">{s.unit}</span>{draft[s.key] !== undefined && draft[s.key] !== s.value ? <button className="btn sm primary">Lưu</button> : null}</form>}
             {s.overridden ? <button className="btn sm ghost" onClick={() => void reset(s)}>Mặc định</button> : null}</td></tr>;
       })}</tbody></table></Card>)}</div>}

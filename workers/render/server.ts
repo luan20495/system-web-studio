@@ -2,7 +2,7 @@
 // preview (lib/schema-preview.ts). Pure function over data; listens on 127.0.0.1 only; the API calls it during the BUILDING step.
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { timingSafeEqual } from "node:crypto";
-import { renderSchemaDocument } from "../../lib/schema-preview";
+import { renderSchemaDocument, renderSitePages } from "../../lib/schema-preview";
 import type { PageSchema } from "../../lib/http-types";
 import { edit as astEdit, tree as astTree } from "./ast";
 import { previewAvailable, screenshot } from "./preview";
@@ -25,7 +25,7 @@ function send(res: ServerResponse, status: number, body: string, type = "text/pl
 
 createServer((req, res) => {
   if (req.method === "GET" && req.url === "/health") return send(res, 200, "ok");
-  if (req.method !== "POST" || !["/render", "/preview", "/ast/tree", "/ast/edit"].includes(req.url ?? "")) return send(res, 404, "not found");
+  if (req.method !== "POST" || !["/render", "/render-site", "/preview", "/ast/tree", "/ast/edit"].includes(req.url ?? "")) return send(res, 404, "not found");
   if (!authorized(req)) return send(res, 401, "unauthorized");
   const chunks: Buffer[] = []; let size = 0;
   req.on("data", (c: Buffer) => { size += c.length; if (size > MAX_BODY) { send(res, 413, "too large"); req.destroy(); } else chunks.push(c); });
@@ -52,6 +52,7 @@ createServer((req, res) => {
       const assets: Record<string, string> = {};
       // only relative paths inside the artifact are accepted as image URLs
       for (const [id, path] of Object.entries(body.assets ?? {})) if (/^assets\/[0-9a-f-]{36}\.[a-z0-9]{2,5}$/.test(path)) assets[id] = path;
+      if (req.url === "/render-site") return send(res, 200, JSON.stringify({ files: renderSitePages(body.schema, assets) }), "application/json");
       send(res, 200, renderSchemaDocument(body.schema, { selectedId: null, interactive: false, assets }), "text/html; charset=utf-8");
     } catch {
       send(res, 400, "invalid request");

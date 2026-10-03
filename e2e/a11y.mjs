@@ -32,7 +32,7 @@ for (const path of ["/studio", "/studio/projects", "/studio/new", "/studio/templ
 // a page-schema website for the editor screens (the newest card may be a code project)
 const pageId = execSync(`docker exec hbl-postgres-1 psql -U studio -d system_web_studio -tAc "select p.id from projects p join workspace_members m on m.workspace_id = p.workspace_id join users u on u.id = m.user_id and u.username = 'local.admin' where p.app_type='PAGE_SCHEMA' and p.active order by p.updated_at desc limit 1"`).toString().trim();
 const href = `/studio/projects/${pageId}`;
-for (const v of ["ai", "design", "code", "versions", "assets", "members", "settings", "publish"]) { await p.goto(BASE + href + "/" + v); await p.waitForSelector(".topbar"); await p.waitForTimeout(600); await scan(p, `project/${v}`); }
+for (const v of ["ai", "design", "code", "versions", "assets", "members", "settings", "publish", "site"]) { await p.goto(BASE + href + "/" + v); await p.waitForSelector(".topbar"); await p.waitForTimeout(600); await scan(p, `project/${v}`); }
 // code project (STATIC_APP), if one exists locally (created by e2e/code-flow.mjs)
 const codeId = (() => { try { return execSync(`docker exec hbl-postgres-1 psql -U studio -d system_web_studio -tAc "select id from projects where app_type='STATIC_APP' and active order by created_at desc limit 1"`).toString().trim(); } catch { return ""; } })();
 if (codeId) for (const v of ["ai", "code"]) { await p.goto(`${BASE}/studio/projects/${codeId}/${v}`); await p.waitForSelector(".codeStudio"); await p.waitForTimeout(1500); await scan(p, `code-project/${v}`); }

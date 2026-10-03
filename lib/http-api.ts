@@ -1,6 +1,6 @@
 import type {
   AdminAi, AiCallRow, SettingView, BuildPolicyReport, CleanupResult, RepoRow, AiPrice, AiProbe, AiProviderInfo, AiUsageReport, AdminApp, BlockDto, CheckResult, TemplateDto, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
-  TemplateReview, LibraryCategories, AccessRule, EffectiveModel, AiBudget, AdminAlert, StreamHandlers,
+  FormSubmission, SiteDomain, TemplateReview, LibraryCategories, AccessRule, EffectiveModel, AiBudget, AdminAlert, StreamHandlers,
   AiStatus, ApiProject, AuthConfig, Member, SiteInfo, DesignNode, DependencyRequest, PackageView, CloneAccess, TreeFile, CodeFile, CodeCommit, CodeChange, DiffFile, CodeAiResponse, CodeAiHistoryItem, RegistryComponent, AssetDto, Deployment, Me, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
 } from "./http-types";
 
@@ -283,6 +283,14 @@ export const api = {
   getDeployment: (w: string, p: string, id: string) => call<Deployment>(`${P(w, p)}/deployments/${id}`),
   listDeployments: (w: string, p: string) => call<Deployment[]>(`${P(w, p)}/deployments`),
   site: (w: string, p: string) => call<SiteInfo>(`${P(w, p)}/site`),
+  formSubmissions: (w: string, p: string, page = 0) => call<{ items: FormSubmission[]; total: number; page: number; size: number }>(`${P(w, p)}/form-submissions${qs({ page })}`),
+  deleteFormSubmission: (w: string, p: string, id: string) => call<void>(`${P(w, p)}/form-submissions/${id}`, { method: "DELETE" }),
+  formExportUrl: (w: string, p: string) => `/api/v1${P(w, p)}/form-submissions/export`,
+  domains: (w: string, p: string) => call<SiteDomain[]>(`${P(w, p)}/domains`),
+  addDomain: (w: string, p: string, hostname: string) => call<SiteDomain>(`${P(w, p)}/domains`, { method: "POST", body: json({ hostname }) }),
+  verifyDomain: (w: string, p: string, id: string) => call<SiteDomain>(`${P(w, p)}/domains/${id}/verify`, { method: "POST" }),
+  checkDomainTls: (w: string, p: string, id: string) => call<SiteDomain>(`${P(w, p)}/domains/${id}/check-tls`, { method: "POST" }),
+  removeDomain: (w: string, p: string, id: string) => call<void>(`${P(w, p)}/domains/${id}`, { method: "DELETE" }),
   rollbackSite: (w: string, p: string, deploymentId: string) => call<SiteInfo>(`${P(w, p)}/site/rollback`, { method: "POST", body: json({ deploymentId }) }),
   unpublishSite: (w: string, p: string) => call<SiteInfo>(`${P(w, p)}/site`, { method: "DELETE" }),
   siteAccessTicket: (slug: string, path: string) => call<{ redirect: string }>(`/sites/${encodeURIComponent(slug)}/access-ticket`, { method: "POST", body: json({ path }) })

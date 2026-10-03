@@ -189,6 +189,7 @@ app:
     cookie-name: site_session
     cookie-secure: ${SITES_COOKIE_SECURE:false}
     session-hours: 8
+    external-link-domains: ${SITE_EXTERNAL_LINK_DOMAINS:}         # default for Admin → Settings → Website (approved external nav hosts)
   # Policy defaults (admin-editable at runtime in Admin → Cài đặt; see settings/Settings.kt for the full list)
   source-apps:
     enabled: ${SOURCE_APPS_ENABLED:true}

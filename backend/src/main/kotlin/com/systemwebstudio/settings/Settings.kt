@@ -17,7 +17,8 @@ import java.math.BigDecimal
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicReference
 
-enum class SettingType { BOOL, INT, DECIMAL }
+/** DOMAINS = comma-separated host names (lowercase letters, digits, dots, dashes) */
+enum class SettingType { BOOL, INT, DECIMAL, DOMAINS }
 enum class Risk { LOW, HIGH }
 
 /** One editable policy value. The default comes from configuration (environment), never from a constant buried in code. */
@@ -36,6 +37,8 @@ object SettingCatalog {
         SettingDef("ai.daily-tokens-per-user", "AI", SettingType.INT, "app.ai.daily-token-limit-per-user", "0", "Token / người / 24 giờ (0 = tắt)", min = 0, max = 1_000_000_000),
         SettingDef("ai.monthly-tokens-per-workspace", "AI", SettingType.INT, "app.ai.monthly-token-limit-per-workspace", "0", "Token / workspace / tháng (0 = tắt)", min = 0, max = 10_000_000_000),
         SettingDef("ai.stream-timeout-seconds", "AI", SettingType.INT, "app.ai.stream-timeout-seconds", "120", "Thời gian tối đa một yêu cầu AI dạng streaming (giây)", min = 10, max = 900),
+        // websites
+        SettingDef("site.external-link-domains", "Website", SettingType.DOMAINS, "app.sites.external-link-domains", "", "Tên miền ngoài được phép làm liên kết điều hướng (phân tách bằng dấu phẩy)"),
         // source-code apps
         SettingDef("source-apps.enabled", "Ứng dụng mã nguồn", SettingType.BOOL, "app.source-apps.enabled", "true", "Cho phép tạo ứng dụng mã nguồn"),
         SettingDef("source-apps.build-enabled", "Ứng dụng mã nguồn", SettingType.BOOL, "app.source-apps.build-enabled", "true", "Cho phép build trong sandbox", Risk.HIGH),
@@ -107,6 +110,10 @@ class SettingsService(private val jdbc: JdbcTemplate, private val env: Environme
             SettingType.INT -> (v.toLongOrNull() ?: throw ApiException.badRequest("INVALID_VALUE", "Expected a whole number")).also {
                 if (it < d.min || it > d.max) throw ApiException.badRequest("OUT_OF_RANGE", "Allowed range ${d.min}–${d.max}")
             }.toString()
+            SettingType.DOMAINS -> v.lowercase().split(',').map { it.trim() }.filter { it.isNotEmpty() }.distinct().also { list ->
+                if (list.size > 50) throw ApiException.badRequest("OUT_OF_RANGE", "At most 50 domains")
+                list.firstOrNull { !Regex("^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$").matches(it) }?.let { throw ApiException.badRequest("INVALID_VALUE", "Not a host name: $it") }
+            }.joinToString(",")
             SettingType.DECIMAL -> (v.toBigDecimalOrNull() ?: throw ApiException.badRequest("INVALID_VALUE", "Expected a number")).also {
                 if (it < BigDecimal(d.min) || it > BigDecimal(d.max)) throw ApiException.badRequest("OUT_OF_RANGE", "Allowed range ${d.min}–${d.max}")
             }.toPlainString()

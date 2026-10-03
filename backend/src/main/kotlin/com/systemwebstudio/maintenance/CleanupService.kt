@@ -10,8 +10,8 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.support.TransactionTemplate
 
 data class CleanupResult(val dryRun: Boolean, val abandonedUploads: Int, val deletedAssetRows: Int, val idempotencyKeys: Int, val failedDeployments: Int, val aiCalls: Int = 0,
-                         val retention: RetentionResult? = null) {
-    val total get() = abandonedUploads + deletedAssetRows + idempotencyKeys + failedDeployments + aiCalls +
+                         val retention: RetentionResult? = null, val formSubmissions: Int = 0) {
+    val total get() = abandonedUploads + deletedAssetRows + idempotencyKeys + failedDeployments + aiCalls + formSubmissions +
         (retention?.let { it.previewsExpired + it.artifactsDeleted + it.failedBuildLogsCleared + it.repositoriesPendingDelete } ?: 0)
 }
 
@@ -27,6 +27,7 @@ class CleanupService(
     private val audit: AuditService,
     private val tx: TransactionTemplate,
     private val retention: ArtifactRetentionService,
+    private val settings: com.systemwebstudio.settings.SettingsService,
     @Value("\${app.cleanup.enabled:true}") private val enabled: Boolean,
     @Value("\${app.cleanup.dry-run:false}") private val defaultDryRun: Boolean,
     @Value("\${app.cleanup.abandoned-upload-hours:24}") private val abandonedHours: Long,
@@ -58,6 +59,9 @@ class CleanupService(
         val keys = jdbc.queryForObject("SELECT count(*) FROM idempotency_keys WHERE created_at < now() - make_interval(days => ?)", Int::class.java, idempotencyDays.toInt())!!
         val failed = jdbc.queryForList("SELECT id FROM deployments WHERE status = 'FAILED' AND finished_at < now() - make_interval(days => ?)", failedDeploymentDays.toInt())
         val aiCalls = jdbc.queryForObject("SELECT count(*) FROM ai_calls WHERE created_at < now() - make_interval(days => ?)", Int::class.java, aiCallDays.toInt())!!
+        // website form submissions (personal data) past the retention period set by the admin
+        val formDays = settings.long("retention.form-submission-days").toInt()
+        val forms = jdbc.queryForObject("SELECT count(*) FROM form_submissions WHERE created_at < now() - make_interval(days => ?)", Int::class.java, formDays)!!
 
         if (!dryRun) {
             (abandoned + deleted).forEach { runCatching { storage.delete(it["storage_key"] as String) }.onFailure { e -> log.warn("Could not delete object {}: {}", it["storage_key"], e.message) } }
@@ -65,6 +69,7 @@ class CleanupService(
                 (abandoned + deleted).forEach { jdbc.update("DELETE FROM assets WHERE id = ? AND status IN ('PENDING','DELETED')", it["id"]) }
                 jdbc.update("DELETE FROM idempotency_keys WHERE created_at < now() - make_interval(days => ?)", idempotencyDays.toInt())
                 jdbc.update("DELETE FROM ai_calls WHERE created_at < now() - make_interval(days => ?)", aiCallDays.toInt())
+                jdbc.update("DELETE FROM form_submissions WHERE created_at < now() - make_interval(days => ?)", formDays)
                 failed.forEach {
                     jdbc.update("UPDATE build_jobs SET deployment_id = NULL WHERE deployment_id = ?", it["id"])
                     jdbc.update("DELETE FROM deployment_events WHERE deployment_id = ?", it["id"])
@@ -73,7 +78,7 @@ class CleanupService(
             }
         }
         val ret = runCatching { retention.run(dryRun) }.onFailure { log.warn("Artifact retention failed: {}", it.message) }.getOrNull()
-        val result = CleanupResult(dryRun, abandoned.size, deleted.size, keys, failed.size, aiCalls, ret)
+        val result = CleanupResult(dryRun, abandoned.size, deleted.size, keys, failed.size, aiCalls, ret, forms)
         log.info("cleanup dry_run={} abandoned_uploads={} deleted_assets={} idempotency_keys={} failed_deployments={} ai_calls={}", dryRun, result.abandonedUploads, result.deletedAssetRows, result.idempotencyKeys, result.failedDeployments, result.aiCalls)
         if (!dryRun && result.total > 0) audit.record("CLEANUP", "SYSTEM", null, actorId = null, newValue = result)
         return result

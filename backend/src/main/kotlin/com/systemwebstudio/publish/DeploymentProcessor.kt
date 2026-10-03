@@ -132,6 +132,7 @@ class DeploymentProcessor(
         val page = json.readTree(snapshot(d))
         val problems = validator.validate(page)
         if (problems.isNotEmpty()) return "Page schema violates the registry: " + problems.first().let { "${it.path} ${it.message}" }
+        validator.unapprovedLinks(page).firstOrNull()?.let { return "Navigation links to a domain that is not approved: $it" }
         val refs = com.systemwebstudio.schema.PageSchemaValidator.assetRefs(page)
         if (refs.isNotEmpty()) {
             val ready = jdbc.queryForObject("SELECT count(*) FROM assets WHERE project_id = ? AND status = 'READY' AND id::text = ANY(string_to_array(?, ','))", Long::class.java,
