@@ -108,6 +108,32 @@ await check("tampered callback (bad state) is rejected and audited as failure, n
   expect(me.status() === 401, "no session may exist after a forged callback");
   expect(Number(sql("select count(*) from audit_events where action='LOGIN_FAILURE' and new_value::text like '%OIDC%'")) >= before, "audit check");
 });
+await check("RP-initiated logout: signing out also ends the Keycloak session, the browser comes back to /login, the next SSO click asks for the password again", async () => {
+  const u = await ssoLogin(sso.SSO_TEST_USER);
+  await u.page.getByText(/Bạn chưa thuộc workspace nào|Builder Studio|Ứng dụng/).first().waitFor({ timeout: 15000 });
+  const resp = await u.ctx.request.post(`${BASE}/api/v1/auth/logout`, { headers: { "X-XSRF-TOKEN": (await (await u.ctx.request.get(`${BASE}/api/v1/auth/csrf`)).json()).token } });
+  const body = await resp.json();
+  expect(typeof body.redirect === "string" && body.redirect.includes("/protocol/openid-connect/logout") && body.redirect.includes("id_token_hint="), `no end-session redirect: ${JSON.stringify(body)}`);
+  await u.page.goto(body.redirect);
+  await u.page.waitForURL(/127\.0\.0\.1:3100\/login/, { timeout: 20000 });
+  await u.page.getByRole("radio", { name: /Builder Studio/ }).check();
+  await u.page.getByRole("link", { name: "Tiếp tục với SSO công ty" }).click();
+  await u.page.waitForURL(/18080/);
+  expect(await u.page.locator("#password").count() === 1, "Keycloak session should have ended (password prompt expected)");
+  await u.ctx.close();
+});
+if (process.env.SAML_ENABLED === "true") await check("SAML through Keycloak identity brokering: the SAML button goes to the corp SAML IdP, the user comes back signed in with a new account and no access", async () => {
+  const ctx = await browser.newContext(); const page = await ctx.newPage();
+  await page.goto(BASE); await page.getByRole("radio", { name: /Builder Studio/ }).check();
+  await page.getByRole("link", { name: /SAML/ }).click();
+  await page.waitForURL(/\/realms\/corp\/protocol\/saml|\/realms\/corp\//, { timeout: 20000 });
+  await page.locator("#username").fill(sso.SAML_TEST_USER); await page.locator("#password").fill(sso.SSO_TEST_PASSWORD); await page.locator("#kc-login").click();
+  await page.waitForURL(/127\.0\.0\.1:3100/, { timeout: 30000 });
+  await page.getByText("Bạn chưa thuộc workspace nào").first().waitFor({ timeout: 15000 });
+  const n = sql("select count(*) from external_identities e join users u on u.id = e.user_id where e.email = 'saml.user@corp.example.test'");
+  expect(Number(n) === 1, `expected one brokered identity, got ${n}`);
+  await ctx.close();
+});
 sql("delete from workspace_members where user_id in (select id from users where username='local.emailtwin')");
 sql("delete from users where username='local.emailtwin'");
 await browser.close();

@@ -147,6 +147,17 @@ app:
     # Unknown external identities get an account with NO access until an admin adds them; email is never trusted for authorization.
     auto-provision: ${OIDC_AUTO_PROVISION:true}
     link-by-verified-email: ${OIDC_LINK_BY_VERIFIED_EMAIL:false}
+    # RP-initiated logout: where the IdP sends the browser after ending its session (must be registered at the IdP); empty = Studio /login
+    post-logout-redirect-uri: ${OIDC_POST_LOGOUT_REDIRECT_URI:}
+  # SAML IdPs are federated through the OIDC provider (Keycloak identity brokering); the app stays an OIDC client. Off by default.
+  saml:
+    enabled: ${SAML_ENABLED:false}
+    idp-hint: ${SAML_IDP_HINT:}                # Keycloak identity-provider alias, sent as kc_idp_hint
+    label: ${SAML_LABEL:Đăng nhập SAML của công ty}
+  # SCIM 2.0 provisioning (RFC 7643/7644) for an IdP; off by default; bearer token compared in constant time; never grants system admin
+  scim:
+    enabled: ${SCIM_ENABLED:false}
+    token: ${SCIM_TOKEN:}
   metrics:
     token: ${METRICS_TOKEN:}
   cleanup:

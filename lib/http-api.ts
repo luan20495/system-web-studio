@@ -124,7 +124,15 @@ export const api = {
   aiStatus: (workspaceId?: string) => call<AiStatus>(`/ai/status${qs({ workspaceId })}`),
   cancelStream: (id: string) => call<{ cancelled: boolean }>(`/ai/streams/${id}/cancel`, { method: "POST" }),
   components: () => call<RegistryComponent[]>("/components?details=true"),
-  async logout() { await call<void>("/auth/logout", { method: "POST" }).finally(resetCsrf); },
+  /** returns the identity provider's end-session URL when the user signed in with SSO (RP-initiated logout) */
+  async logout(): Promise<string | null> {
+    const r = await call<{ status: string; redirect?: string }>("/auth/logout", { method: "POST" }).finally(resetCsrf);
+    return r?.redirect && /^https?:\/\//.test(r.redirect) ? r.redirect : null;
+  },
+  adminScim: () => call<{ enabled: boolean; users: number; groups: { id: string; displayName: string; members: number }[];
+    mappings: { id: string; group: string; workspace: string; role: string; groupId: string; workspaceId: string }[] }>("/admin/scim"),
+  addScimMapping: (groupId: string, workspaceId: string, role: string) => call<unknown>("/admin/scim/mappings", { method: "POST", body: json({ groupId, workspaceId, role }) }),
+  deleteScimMapping: (id: string) => call<unknown>(`/admin/scim/mappings/${id}`, { method: "DELETE" }),
 
   listProjects: (w: string) => call<ApiProject[]>(`/workspaces/${w}/projects`),
   async projectsPage(w: string, page: number, size: number, q?: string, scope?: "all" | "owned" | "shared"): Promise<Page<ApiProject>> {

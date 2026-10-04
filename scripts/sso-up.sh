@@ -5,13 +5,14 @@
 G=infra/keycloak/.generated; mkdir -p "$G"
 rnd() { openssl rand -base64 24 | tr -d '/+=' | cut -c1-24; }
 CLIENT_SECRET="$(rnd)"; USER_PASSWORD="$(rnd)"; KEYCLOAK_ADMIN_PASSWORD="$(rnd)"
-python3 - "$CLIENT_SECRET" "$USER_PASSWORD" <<'PY'
-import sys
-t=open("infra/keycloak/realm.template.json").read().replace("__CLIENT_SECRET__",sys.argv[1]).replace("__USER_PASSWORD__",sys.argv[2])
-open("infra/keycloak/.generated/studio-realm.json","w").write(t)
-PY
-chmod 600 "$G/studio-realm.json"
 PORT="${KEYCLOAK_PORT:-18080}"
+python3 - "$CLIENT_SECRET" "$USER_PASSWORD" "$PORT" <<'PY'
+import sys
+for src, dst in (("realm.template.json", "studio-realm.json"), ("corp-saml-realm.template.json", "corp-realm.json")):
+    t = open("infra/keycloak/" + src).read().replace("__CLIENT_SECRET__", sys.argv[1]).replace("__USER_PASSWORD__", sys.argv[2]).replace("__KC_PORT__", sys.argv[3])
+    open("infra/keycloak/.generated/" + dst, "w").write(t)
+PY
+chmod 600 "$G/studio-realm.json" "$G/corp-realm.json"
 umask 077
 cat > .run/sso.env <<ENV
 OIDC_ENABLED=true
@@ -23,6 +24,9 @@ OIDC_SUCCESS_URL=http://127.0.0.1:${FRONTEND_PORT}/
 SSO_TEST_USER=sso.user
 SSO_TEST_USER_UNVERIFIED=sso.unverified
 SSO_TEST_PASSWORD=$USER_PASSWORD
+# SAML through Keycloak identity brokering (stage I): the "corp" realm acts as the company SAML IdP; off unless SAML_ENABLED=true
+SAML_IDP_HINT=corp-saml
+SAML_TEST_USER=saml.user
 ENV
 KEYCLOAK_ADMIN_PASSWORD="$KEYCLOAK_ADMIN_PASSWORD" docker compose --profile sso up -d --force-recreate keycloak
 echo "Waiting for Keycloak…"

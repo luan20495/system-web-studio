@@ -58,7 +58,9 @@ export type Deployment = {
 
 export type AuthConfig = { localLogin: boolean; oidc: boolean; oidcLoginUrl: string; signup?: boolean; signupInviteRequired?: boolean;
   /** this server has the Git server + build runner configured for code projects */
-  codeProjects?: boolean; codeAppPublicPublish?: boolean; publicPublish?: boolean };
+  codeProjects?: boolean; codeAppPublicPublish?: boolean; publicPublish?: boolean;
+  /** SAML through the OIDC provider's identity brokering (stage I) */
+  saml?: boolean; samlLabel?: string; samlLoginUrl?: string; mfa?: "IDP" };
 export type AiModel = { id: string; name: string; contextLength: number; provider?: string; paid?: boolean };
 export type AiProviderStatus = { id: string; name: string; paid: boolean; models: AiModel[]; dataNotice: string };
 export type AiStatus = { provider: "openrouter" | "providers" | "mock"; configured: boolean; defaultModel: string; dailyLimitPerUser: number; models: AiModel[]; dataNotice: string;

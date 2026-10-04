@@ -33,7 +33,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => onUnauthorized(null);
   }, [router, pathname]);
 
-  const logout = useCallback(async () => { await api.logout().catch(() => undefined); setMe(null); router.replace("/login"); }, [router]);
+  // SSO users are also signed out at the identity provider (RP-initiated logout), which then sends them back to /login
+  const logout = useCallback(async () => {
+    const idp = await api.logout().catch(() => null); setMe(null);
+    if (idp) window.location.assign(idp); else router.replace("/login");
+  }, [router]);
   const value = useMemo(() => ({ me, loading, disabled, refresh, logout, setMe }), [me, loading, disabled, refresh, logout]);
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

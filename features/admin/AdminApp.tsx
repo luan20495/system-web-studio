@@ -12,7 +12,7 @@ import { BlockStatus, blockPage, CheckList, ReviewTimeline, SchemaThumb } from "
 import { actionLabel, ago, Card, ComingSoon, ErrorState, errText, fmtDate, Kpi, NavLink, num, Pager, Pill, StateView, tok, usd } from "../ui";
 
 const NAV: [string, string, string][] = [
-  ["", "Tổng quan", "▦"], ["users", "Người dùng & Workspace", "◎"], ["applications", "Ứng dụng", "▤"], ["ai", "AI Control", "✦"], ["ai-governance", "Quản trị AI", "⚖"], ["alerts", "Cảnh báo", "!"], ["security", "Bảo mật", "⛨"], ["costs", "Chi phí", "$"], ["departments", "Phòng ban", "⌘"],
+  ["", "Tổng quan", "▦"], ["users", "Người dùng & Workspace", "◎"], ["applications", "Ứng dụng", "▤"], ["ai", "AI Control", "✦"], ["ai-governance", "Quản trị AI", "⚖"], ["alerts", "Cảnh báo", "!"], ["security", "Bảo mật", "⛨"], ["costs", "Chi phí", "$"], ["departments", "Phòng ban", "⌘"], ["identity", "Định danh (SSO/SCIM)", "⚿"],
   ["components", "Components", "◇"], ["templates", "Templates", "▧"], ["audit", "Nhật ký kiểm toán", "≡"], ["builds", "Build & lưu trữ", "⬢"], ["packages", "Packages", "▣"], ["system", "Sức khỏe hệ thống", "♥"], ["settings", "Cài đặt", "⚙"]
 ];
 
@@ -42,6 +42,7 @@ function route(seg: string[]): ReactNode {
     case "security": return <SecurityPage/>;
     case "costs": return <CostsPage/>;
     case "departments": return <DepartmentsPage/>;
+    case "identity": return <IdentityPage/>;
     case "components": return <ComponentsPage/>;
     case "templates": return <TemplatesAdmin/>;
     case "builds": return <BuildsPage/>;
@@ -153,7 +154,7 @@ function UserList() {
           <thead><tr><th>Người dùng</th><th>Vai trò hệ thống</th><th>Workspace</th><th>Ứng dụng</th><th>Đăng nhập gần nhất</th><th>Trạng thái</th></tr></thead>
           <tbody>{data!.items.map((u) => (
             <tr key={u.id} className="clickRow" onClick={() => router.push(`/admin/users/${u.id}`)}>
-              <td><Link href={`/admin/users/${u.id}`}><b>{u.displayName ?? u.username}</b></Link><small>{u.username}{u.email ? ` · ${u.email}` : ""} · {u.authSource === "OIDC" ? "SSO" : "Mật khẩu"}</small></td>
+              <td><Link href={`/admin/users/${u.id}`}><b>{u.displayName ?? u.username}</b></Link><small>{u.username}{u.email ? ` · ${u.email}` : ""} · {u.authSource === "OIDC" ? "SSO" : u.authSource === "SCIM" ? "SCIM" : "Mật khẩu"}</small></td>
               <td>{u.systemAdmin ? <Pill value="PUBLIC" label="System admin"/> : <span className="muted">Thành viên</span>}</td>
               <td>{u.workspaces}</td><td>{u.projects}</td><td>{ago(u.lastLoginAt)}</td>
               <td>{u.enabled ? <Pill value="ACTIVE" label="Hoạt động"/> : <Pill value="DISABLED" label="Bị khóa"/>}</td>
@@ -191,7 +192,8 @@ function UserDetail({ id }: { id: string }) {
     <div className="kpiGrid">
       <Kpi label="Trạng thái" value={u.enabled ? <Pill value="ACTIVE" label="Hoạt động"/> : <Pill value="DISABLED" label="Bị khóa"/>}/>
       <Kpi label="Vai trò hệ thống" value={u.systemAdmin ? "System admin" : "Thành viên"}/>
-      <Kpi label="Đăng nhập" value={u.authSource === "OIDC" ? "SSO" : "Mật khẩu"} hint={`Gần nhất: ${ago(u.lastLoginAt)}`}/>
+      <Kpi label="Đăng nhập" value={u.authSource === "OIDC" ? "SSO" : u.authSource === "SCIM" ? "SSO (cấp qua SCIM)" : "Mật khẩu"} hint={`Gần nhất: ${ago(u.lastLoginAt)}`}/>
+      <Kpi label="MFA" value={u.authSource === "LOCAL" ? "Không áp dụng" : "Do IdP quản lý"} hint={u.authSource === "LOCAL" ? "Tài khoản cục bộ: dùng cho quản trị khẩn cấp / môi trường thử" : "MFA managed by Identity Provider"}/>
       <Kpi label="Phiên đang mở" value={num(d.activeSessions)}/>
     </div>
     <div className="grid2">
@@ -1010,6 +1012,38 @@ function DepartmentsPage() {
         <select aria-label="Phòng ban / nhóm" value={target} onChange={(e) => setTarget(e.target.value)}><option value="">— bỏ gán —</option>{(data ?? []).map((d) => <option key={d.id} value={d.id}>{d.kind === "TEAM" ? "  · " : ""}{d.name}</option>)}</select>
         <button className="btn primary" disabled={!who.id}>Gán</button>
       </form>
+    </Card>
+  </>);
+}
+
+/** SSO / SAML / SCIM status and SCIM group → workspace role mappings (never system admin). */
+function IdentityPage() {
+  const cfg = useLoad(() => api.authConfig(), []);
+  const scim = useLoad(() => api.adminScim(), []);
+  const [m, setM] = useState({ groupId: "", ws: { type: "WORKSPACE", id: "" }, role: "VIEWER" }); const [err, setErr] = useState<string | null>(null);
+  async function act(fn: () => Promise<unknown>) { setErr(null); try { await fn(); scim.reload(); } catch (x) { setErr(errText(x, "Không thực hiện được.")); } }
+  const c = cfg.data; const s = scim.data;
+  return (<>
+    <PageHead title="Định danh" sub="Đăng nhập một lần (OIDC), SAML qua nhà cung cấp OIDC (identity brokering), cấp tài khoản tự động (SCIM 2.0). MFA do nhà cung cấp danh tính quản lý."/>
+    {err ? <p className="formError" role="alert">{err}</p> : null}
+    <div className="kpiGrid">
+      <Kpi label="OIDC (SSO)" value={c ? (c.oidc ? "Bật" : "Tắt") : "…"} hint="OIDC_ENABLED · đăng xuất cũng kết thúc phiên ở IdP"/>
+      <Kpi label="SAML" value={c ? (c.saml ? "Bật (qua IdP broker)" : "Tắt") : "…"} hint="SAML_ENABLED + SAML_IDP_HINT"/>
+      <Kpi label="SCIM 2.0" value={s ? (s.enabled ? "Bật" : "Tắt") : "…"} hint={s ? `${s.users} tài khoản do SCIM cấp · SCIM_ENABLED + SCIM_TOKEN` : ""}/>
+      <Kpi label="MFA" value="Do IdP quản lý" hint="MFA managed by Identity Provider"/>
+    </div>
+    <Card title="Nhóm SCIM → quyền workspace">
+      <p className="hint">Nhóm từ IdP chỉ tạo quyền khi được ánh xạ ở đây; không có ánh xạ nào tới quản trị hệ thống. Thành viên do SCIM thêm sẽ được SCIM gỡ; thành viên thêm tay không bị đụng tới.</p>
+      {!s ? <StateView kind="loading"/> : <>
+        <form className="filters wrap" onSubmit={(e) => { e.preventDefault(); if (m.groupId && m.ws.id) void act(() => api.addScimMapping(m.groupId, m.ws.id, m.role)); }}>
+          <select aria-label="Nhóm SCIM" value={m.groupId} onChange={(e) => setM({ ...m, groupId: e.target.value })}><option value="">— nhóm —</option>{s.groups.map((g) => <option key={g.id} value={g.id}>{g.displayName} ({g.members})</option>)}</select>
+          <ScopePicker types={["WORKSPACE"]} value={m.ws} onChange={(v) => setM({ ...m, ws: v })}/>
+          <select aria-label="Vai trò" value={m.role} onChange={(e) => setM({ ...m, role: e.target.value })}>{["VIEWER", "PUBLISHER", "EDITOR", "WORKSPACE_ADMIN"].map((r) => <option key={r} value={r}>{r}</option>)}</select>
+          <button className="btn primary" disabled={!m.groupId || !m.ws.id}>Ánh xạ</button>
+        </form>
+        {s.mappings.length === 0 ? <StateView kind="empty" title="Chưa có ánh xạ"/> : <table className="table"><thead><tr><th>Nhóm</th><th>Workspace</th><th>Vai trò</th><th><span className="srOnly">Thao tác</span></th></tr></thead>
+          <tbody>{s.mappings.map((x) => <tr key={x.id}><td>{x.group}</td><td>{x.workspace}</td><td className="code">{x.role}</td><td><button className="btn sm ghost" onClick={() => void act(() => api.deleteScimMapping(x.id))}>Gỡ</button></td></tr>)}</tbody></table>}
+      </>}
     </Card>
   </>);
 }

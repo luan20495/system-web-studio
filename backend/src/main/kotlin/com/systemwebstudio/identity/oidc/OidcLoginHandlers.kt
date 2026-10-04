@@ -54,7 +54,7 @@ class OidcLoginSuccessHandler(
         val email = oidc.email?.trim()?.lowercase()?.takeIf { it.isNotEmpty() && it.length <= 254 }
         val verified = oidc.emailVerified == true
 
-        val userId = findByIdentity(issuer, subject) ?: when {
+        val userId = findByIdentity(issuer, subject) ?: findScim(subject)?.let { link(issuer, subject, email, it) } ?: when {
             linkByEmail && verified && email != null && findByEmail(email) != null -> link(issuer, subject, email, findByEmail(email)!!)
             autoProvision -> provision(issuer, subject, email.takeIf { verified }, oidc.fullName ?: oidc.preferredUsername)
             else -> return deny(request, response, "not_provisioned")
@@ -65,6 +65,8 @@ class OidcLoginSuccessHandler(
         jdbc.update("UPDATE external_identities SET last_login_at = now(), email = COALESCE(?, email) WHERE issuer = ? AND subject = ?", email, issuer, subject)
         val details = users.loadUserByUsername(row["username"] as String)
         request.getSession(true).maxInactiveInterval = settings.int("session.timeout-minutes") * 60; request.changeSessionId()
+        // kept server-side (Redis session) for RP-initiated logout (id_token_hint); never sent to the UI except inside the logout redirect
+        request.getSession(false)?.setAttribute(ID_TOKEN_ATTR, oidc.idToken.tokenValue)
         val context = SecurityContextHolder.createEmptyContext()
         context.authentication = UsernamePasswordAuthenticationToken.authenticated(details, null, details.authorities)
         SecurityContextHolder.setContext(context)
@@ -76,10 +78,14 @@ class OidcLoginSuccessHandler(
     private fun findByIdentity(issuer: String, subject: String): UUID? =
         jdbc.queryForList("SELECT user_id FROM external_identities WHERE issuer = ? AND subject = ?", issuer, subject).firstOrNull()?.get("user_id") as UUID?
 
+    /** an account provisioned through SCIM whose externalId is this subject (the IdP's user id) */
+    private fun findScim(subject: String): UUID? =
+        jdbc.queryForList("SELECT id FROM users WHERE auth_source = 'SCIM' AND scim_external_id = ?", subject).firstOrNull()?.get("id") as UUID?
+
     private fun findByEmail(email: String): UUID? =
         jdbc.queryForList("SELECT id FROM users WHERE lower(email) = ?", email).firstOrNull()?.get("id") as UUID?
 
-    private fun link(issuer: String, subject: String, email: String, userId: UUID): UUID {
+    private fun link(issuer: String, subject: String, email: String?, userId: UUID): UUID {
         jdbc.update("INSERT INTO external_identities (issuer, subject, user_id, email) VALUES (?,?,?,?) ON CONFLICT DO NOTHING", issuer, subject, userId, email)
         audit.record("LINK_IDENTITY", "USER", userId, actorId = userId, newValue = mapOf("issuer" to issuer))
         return userId
@@ -119,3 +125,5 @@ class OidcLoginFailureHandler(private val audit: AuditService) : AuthenticationF
         response.sendRedirect("/?sso_error=failed")
     }
 }
+
+const val ID_TOKEN_ATTR = "studio.oidc.id_token"

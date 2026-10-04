@@ -99,6 +99,19 @@ class SecurityConfiguration {
         return http.build()
     }
 
+    /** SCIM 2.0 (stage I): stateless, no session, no CSRF (no cookies are used); the controller checks the bearer token and the enable flag. */
+    @Bean
+    @org.springframework.core.annotation.Order(2)
+    fun scimFilterChain(http: HttpSecurity): SecurityFilterChain {
+        http.securityMatcher("/scim/v2/**")
+            .cors { it.disable() }.csrf { it.disable() }
+            .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
+            .requestCache { it.disable() }.securityContext { it.disable() }
+            .authorizeHttpRequests { it.anyRequest().permitAll() }
+            .formLogin { it.disable() }.httpBasic { it.disable() }
+        return http.build()
+    }
+
     @Bean
     fun securityFilterChain(
         http: HttpSecurity,
@@ -111,7 +124,10 @@ class SecurityConfiguration {
         @Value("\${app.oidc.enabled:false}") oidcEnabled: Boolean,
         @Value("\${app.metrics.token:}") metricsToken: String,
         oidcSuccess: org.springframework.beans.factory.ObjectProvider<com.systemwebstudio.identity.oidc.OidcLoginSuccessHandler>,
-        oidcFailure: org.springframework.beans.factory.ObjectProvider<com.systemwebstudio.identity.oidc.OidcLoginFailureHandler>
+        oidcFailure: org.springframework.beans.factory.ObjectProvider<com.systemwebstudio.identity.oidc.OidcLoginFailureHandler>,
+        registrations: org.springframework.beans.factory.ObjectProvider<org.springframework.security.oauth2.client.registration.ClientRegistrationRepository>,
+        @Value("\${app.saml.enabled:false}") samlEnabled: Boolean,
+        @Value("\${app.saml.idp-hint:}") samlHint: String
     ): SecurityFilterChain {
         val publicPaths = buildList {
             add("/api/v1/auth/csrf"); add("/api/v1/auth/login"); add("/api/v1/auth/config"); add("/api/v1/auth/register")
@@ -152,7 +168,18 @@ class SecurityConfiguration {
             }
             .addFilterAfter(ActiveUserFilter(users, errors), SecurityContextHolderFilter::class.java)
             .addFilterAfter(MetricsTokenFilter(metricsToken), ActiveUserFilter::class.java)
-            .also { if (oidcEnabled) it.oauth2Login { o -> o.successHandler(oidcSuccess.getObject()).failureHandler(oidcFailure.getObject()) } }
+            .also { if (oidcEnabled) it.oauth2Login { o ->
+                o.successHandler(oidcSuccess.getObject()).failureHandler(oidcFailure.getObject())
+                // "?idp=saml" sends the user straight to the SAML IdP brokered by the OIDC provider (Keycloak kc_idp_hint); only the configured alias
+                if (samlEnabled && samlHint.isNotBlank()) o.authorizationEndpoint { a ->
+                    val resolver = org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver(registrations.getObject(), "/oauth2/authorization")
+                    resolver.setAuthorizationRequestCustomizer { b ->
+                        val req = (org.springframework.web.context.request.RequestContextHolder.getRequestAttributes() as? org.springframework.web.context.request.ServletRequestAttributes)?.request
+                        if (req?.getParameter("idp") == "saml") b.additionalParameters { it["kc_idp_hint"] = samlHint }
+                    }
+                    a.authorizationRequestResolver(resolver)
+                }
+            } }
             .formLogin { it.disable() }
             .httpBasic { it.disable() }
         return http.build()

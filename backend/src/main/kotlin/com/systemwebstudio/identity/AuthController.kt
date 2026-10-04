@@ -51,7 +51,13 @@ class AuthController(
     @Value("\${app.signup.invite-code:}") private val inviteCode: String,
     @Value("\${app.rate-limit.login-user-max:5}") private val userMax: Long,
     @Value("\${app.rate-limit.login-ip-max:50}") private val ipMax: Long,
-    @Value("\${app.rate-limit.login-window-seconds:900}") private val windowSeconds: Long
+    @Value("\${app.rate-limit.login-window-seconds:900}") private val windowSeconds: Long,
+    private val registrations: org.springframework.beans.factory.ObjectProvider<org.springframework.security.oauth2.client.registration.ClientRegistrationRepository>,
+    @Value("\${app.oidc.post-logout-redirect-uri:}") private val postLogoutRedirect: String,
+    @Value("\${app.sites.studio-origin:http://localhost:3100}") private val studioOrigin: String,
+    @Value("\${app.saml.enabled:false}") private val samlEnabled: Boolean,
+    @Value("\${app.saml.idp-hint:}") private val samlHint: String,
+    @Value("\${app.saml.label:}") private val samlLabel: String
 ) {
     @GetMapping("/csrf")
     fun csrf(token: CsrfToken): Map<String, String> = mapOf("token" to token.token)
@@ -60,7 +66,9 @@ class AuthController(
     @GetMapping("/config")
     fun config(): Map<String, Any> = mapOf("localLogin" to localLogin, "oidc" to oidc, "oidcLoginUrl" to "/oauth2/authorization/oidc", "signup" to settings.bool("signup.enabled"), "signupInviteRequired" to inviteCode.isNotBlank(),
         "codeProjects" to codeProjects.available,
-        "codeAppPublicPublish" to settings.bool("source-apps.public-publish-enabled"), "publicPublish" to settings.bool("publish.public-enabled"))
+        "codeAppPublicPublish" to settings.bool("source-apps.public-publish-enabled"), "publicPublish" to settings.bool("publish.public-enabled"),
+        // SAML is offered only through the OIDC provider's identity brokering (kc_idp_hint); MFA is enforced by the identity provider
+        "saml" to (oidc && samlEnabled && samlHint.isNotBlank()), "samlLabel" to samlLabel, "samlLoginUrl" to "/oauth2/authorization/oidc?idp=saml", "mfa" to "IDP")
 
     @PostMapping("/login")
     fun login(@Valid @RequestBody body: LoginRequest, request: HttpServletRequest, response: HttpServletResponse): MeResponse {
@@ -119,7 +127,18 @@ class AuthController(
     @PostMapping("/logout")
     fun logout(request: HttpServletRequest, response: HttpServletResponse, authentication: Authentication?): Map<String, String> {
         audit.record("LOGOUT", "USER", AuditService.currentActorId())
+        val idToken = request.getSession(false)?.getAttribute(com.systemwebstudio.identity.oidc.ID_TOKEN_ATTR) as? String
         SecurityContextLogoutHandler().logout(request, response, authentication)
-        return mapOf("status" to "logged_out")
+        // RP-initiated logout (OpenID Connect RP-Initiated Logout 1.0): end the IdP session too, then come back to the Studio login
+        val endSession = if (idToken != null) endSessionUrl(idToken) else null
+        return if (endSession != null) mapOf("status" to "logged_out", "redirect" to endSession) else mapOf("status" to "logged_out")
+    }
+
+    private fun endSessionUrl(idToken: String): String? {
+        val reg = runCatching { registrations.ifAvailable?.findByRegistrationId(com.systemwebstudio.identity.oidc.OidcConfiguration.REGISTRATION_ID) }.getOrNull() ?: return null
+        val endpoint = reg.providerDetails.configurationMetadata["end_session_endpoint"]?.toString()?.takeIf { it.startsWith("https://") || it.startsWith("http://") } ?: return null
+        val back = postLogoutRedirect.ifBlank { "${studioOrigin.trimEnd('/')}/login" }
+        fun enc(s: String) = java.net.URLEncoder.encode(s, Charsets.UTF_8)
+        return "$endpoint${if ('?' in endpoint) "&" else "?"}id_token_hint=${enc(idToken)}&post_logout_redirect_uri=${enc(back)}&client_id=${enc(reg.clientId)}"
     }
 }

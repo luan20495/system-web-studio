@@ -70,6 +70,8 @@ export function LoginPage() {
         <p className="hint">Lựa chọn này chỉ là nơi bạn muốn đến; quyền truy cập do hệ thống quyết định.</p>
       </fieldset>
       {config?.oidc ? <a className="btn primary block" href={config.oidcLoginUrl} onClick={() => rememberPortal(portal)}>Tiếp tục với SSO công ty</a> : null}
+      {config?.saml && config.samlLoginUrl ? <a className="btn block" href={config.samlLoginUrl} onClick={() => rememberPortal(portal)}>{config.samlLabel || "Đăng nhập SAML của công ty"}</a> : null}
+      {config?.oidc ? <p className="hint center">Xác thực nhiều lớp (MFA) do nhà cung cấp danh tính của công ty quản lý.</p> : null}
       {config?.oidc && config.localLogin ? <div className="divider"><span>hoặc</span></div> : null}
       {config?.localLogin !== false ? (
         <form className="authForm" onSubmit={(e) => void submit(e)}>

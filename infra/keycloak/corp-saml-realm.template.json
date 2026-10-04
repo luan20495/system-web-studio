@@ -1,0 +1,77 @@
+{
+  "realm": "corp",
+  "enabled": true,
+  "registrationAllowed": false,
+  "sslRequired": "none",
+  "clients": [
+    {
+      "clientId": "http://127.0.0.1:__KC_PORT__/realms/studio",
+      "name": "Studio realm (SAML SP)",
+      "protocol": "saml",
+      "enabled": true,
+      "redirectUris": [
+        "http://127.0.0.1:__KC_PORT__/realms/studio/broker/corp-saml/endpoint*"
+      ],
+      "frontchannelLogout": true,
+      "attributes": {
+        "saml.server.signature": "true",
+        "saml.client.signature": "false",
+        "saml.assertion.signature": "false",
+        "saml.force.name.id.format": "true",
+        "saml_name_id_format": "email",
+        "saml_force_name_id_format": "true",
+        "saml.authnstatement": "true",
+        "saml_assertion_consumer_url_post": "http://127.0.0.1:__KC_PORT__/realms/studio/broker/corp-saml/endpoint"
+      },
+      "protocolMappers": [
+        {
+          "name": "email",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "config": {
+            "user.attribute": "email",
+            "attribute.name": "email",
+            "attribute.nameformat": "Basic"
+          }
+        },
+        {
+          "name": "firstName",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "config": {
+            "user.attribute": "firstName",
+            "attribute.name": "firstName",
+            "attribute.nameformat": "Basic"
+          }
+        },
+        {
+          "name": "lastName",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "config": {
+            "user.attribute": "lastName",
+            "attribute.name": "lastName",
+            "attribute.nameformat": "Basic"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "saml.user",
+      "email": "saml.user@corp.example.test",
+      "emailVerified": true,
+      "firstName": "Saml",
+      "lastName": "User",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "__USER_PASSWORD__",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}
