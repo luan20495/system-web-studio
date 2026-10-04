@@ -54,7 +54,8 @@ private fun send(request: HttpRequest, name: String): HttpResponse<String> = try
  * Cancel/deadline: checked per line; a read blocked between chunks is woken by the controller interrupting the worker thread.
  * The error body of a failed request is never read into messages (it can echo the prompt).
  */
-internal fun streamSse(request: HttpRequest, name: String, sink: StreamSink, json: JsonMapper, onData: (JsonNode, (ChatUsage?) -> Unit) -> String?): ChatResult {
+internal fun streamSse(request: HttpRequest, name: String, sink: StreamSink, json: JsonMapper, whole: ((JsonNode) -> ChatResult)? = null,
+                       onData: (JsonNode, (ChatUsage?) -> Unit) -> String?): ChatResult {
     val text = StringBuilder(); var usage: ChatUsage? = null
     sink.stopReason()?.let { throw AiStopped(it, "", null) }
     sink.inModelCall = true
@@ -64,6 +65,11 @@ internal fun streamSse(request: HttpRequest, name: String, sink: StreamSink, jso
             catch (e: Exception) { sink.stopReason()?.let { throw AiStopped(it, "", null) }; throw AiProviderException("$name: network error ${e.javaClass.simpleName}") }
         response.body().use { body ->
             if (response.statusCode() !in 200..299) failOn(response.statusCode(), name)
+            // a server that ignores "stream": true answers one JSON document: use it as a normal (non-streamed) answer
+            if (whole != null && response.headers().firstValue("Content-Type").orElse("").startsWith("application/json")) {
+                val root = try { json.readTree(body.readNBytes(5_000_000)) } catch (e: Exception) { throw AiProviderException("$name: unreadable response") }
+                return whole(root).also { sink.delta(it.content) }
+            }
             val reader = body.bufferedReader(Charsets.UTF_8)
             while (true) {
                 sink.stopReason()?.let { throw AiStopped(it, text.toString(), usage) }
@@ -133,7 +139,12 @@ class OpenAiCompatibleProvider(private val slot: ProviderSlot, private val json:
         if (slot.sendTemperature) body["temperature"] = 0.2
         val request = builder("/chat/completions", slot.timeoutSeconds).header("Content-Type", "application/json").header("Accept", "text/event-stream")
             .POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(body))).build()
-        return streamSse(request, displayName, sink, json) { node, setUsage -> openAiChunk(displayName, node, setUsage) }
+        return streamSse(request, displayName, sink, json, whole = { root ->
+            val usage = openAiUsage(root)
+            if (root.has("error")) throw AiProviderException("$displayName: provider error", usage = usage)
+            ChatResult(root.get("choices")?.get(0)?.get("message")?.get("content")?.takeIf { it.isString }?.asString()?.takeIf { it.isNotBlank() }
+                ?: throw AiProviderException("$displayName: empty completion", usage = usage), usage)
+        }) { node, setUsage -> openAiChunk(displayName, node, setUsage) }
     }
 
     override fun probe(): String {

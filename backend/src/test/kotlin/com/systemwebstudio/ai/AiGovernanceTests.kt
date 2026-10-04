@@ -34,6 +34,8 @@ class AiGovernanceTests : IntegrationTestBase() {
         val userMessages = CopyOnWriteArrayList<String>()
         @Volatile var chunkDelayMs = 0L
         @Volatile var chunks = 0
+        /** behave like a server that ignores "stream": true and answers one JSON document */
+        @Volatile var ignoreStream = false
 
         const val OPS = """{"message":"xong","operations":[{"type":"UPDATE_PROP","sectionId":"hero-1","path":"title","value":"Tiêu đề mới"}]}"""
 
@@ -47,7 +49,7 @@ class AiGovernanceTests : IntegrationTestBase() {
                 val q = answers[model]
                 val content = q?.poll()?.also { lastAnswer[model] = it } ?: lastAnswer[model] ?: OPS
                 val usage = mapOf("prompt_tokens" to 100, "completion_tokens" to 20, "total_tokens" to 120)
-                if (body.get("stream")?.asBoolean() == true) {
+                if (body.get("stream")?.asBoolean() == true && !ignoreStream) {
                     ex.responseHeaders.add("Content-Type", "text/event-stream"); ex.sendResponseHeaders(200, 0)
                     try {
                         ex.responseBody.use { out ->
@@ -79,7 +81,7 @@ class AiGovernanceTests : IntegrationTestBase() {
     }
 
     @BeforeEach fun reset() {
-        answers.clear(); lastAnswer.clear(); userMessages.clear(); chunkDelayMs = 0; chunks = 0
+        answers.clear(); lastAnswer.clear(); userMessages.clear(); chunkDelayMs = 0; chunks = 0; ignoreStream = false
         listOf("ai_calls", "ai_model_policies", "ai_model_access", "ai_budgets", "admin_alerts", "ai_model_pricing", "system_settings").forEach { jdbc.update("DELETE FROM $it") }
     }
     @AfterEach fun clean() { jdbc.update("DELETE FROM system_settings") }
@@ -204,6 +206,15 @@ class AiGovernanceTests : IntegrationTestBase() {
         // refusals happen before the stream starts, as plain HTTP errors
         val bad = stream(sc, "openai:gpt-test")
         assertThat(bad.response.status).isEqualTo(400)
+    }
+
+    @Test
+    fun `SSE streaming - a provider that ignores stream and answers JSON still works (one delta, usage kept)`() {
+        val a = admin(); enable(a, "local:llama-test")
+        val sc = scenario(); ignoreStream = true
+        val ev = events(stream(sc, "local:llama-test"))
+        assertThat(ev.last().first).isEqualTo("result"); assertThat(ev.last().second.get("outcome").asString()).isEqualTo("UPDATED")
+        assertThat(ev.last().second.get("usage").get("totalTokens").asLong()).isEqualTo(120)
     }
 
     @Test
