@@ -34,7 +34,7 @@ await check("public URL serves the app over HTTPS with HSTS and a nonce CSP", as
 });
 await check("public sign-up is closed (internal pilot); a company account signs in to the Studio", async () => {
   const anon = await browser.newContext(); const t = (await (await anon.request.get(`${BASE}/api/v1/auth/csrf`)).json()).token;
-  const reg = await anon.request.post(`${BASE}/api/v1/auth/register`, { headers: { "X-XSRF-TOKEN": t, "Content-Type": "application/json" }, data: { username: "nobody-" + Date.now(), password: "abc123def456" }, failOnStatusCode: false });
+  const reg = await anon.request.post(`${BASE}/api/v1/auth/register`, { headers: { "X-XSRF-TOKEN": t, "Content-Type": "application/json" }, data: { username: "nobody-" + Date.now(), password: "Pw" + Math.random().toString(36).slice(2) + "9z" }, failOnStatusCode: false });
   expect(reg.status() === 404 && (await reg.json()).code === "SIGNUP_DISABLED", `register answered ${reg.status()}`); await anon.close();
   expect(await page.getByRole("button", { name: /Chưa có tài khoản/ }).count() === 0, "sign-up button must not be offered");
   await page.getByRole("radio", { name: /Builder Studio/ }).check();
