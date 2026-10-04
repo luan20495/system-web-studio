@@ -1,0 +1,9 @@
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Approval workflow", "version": "0.1.0" },
+  "paths": {
+    "/api/requests": { "get": { "summary": "List requests" }, "post": { "summary": "Submit a request" } },
+    "/api/requests/{id}/decision": { "post": { "summary": "Approve or reject" } },
+    "/api/requests/{id}/history": { "get": { "summary": "Steps of a request" } }
+  }
+}

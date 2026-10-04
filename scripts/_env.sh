@@ -39,3 +39,8 @@ if [ -f "$ROOT/.run/forgejo.env" ]; then set -a; . "$ROOT/.run/forgejo.env"; set
 [ -f "$ROOT/.run/runner.token" ] || (umask 077; openssl rand -hex 24 > "$ROOT/.run/runner.token")
 export BUILD_RUNNER_TOKEN="${BUILD_RUNNER_TOKEN:-$(cat "$ROOT/.run/runner.token")}"
 export BUILD_API_BASE="${BUILD_API_BASE:-http://127.0.0.1:8080}"
+# Server apps (stage J): apps DB admin, gateway token, secrets master key (all generated once, git-ignored, mode 600)
+if [ ! -f "$ROOT/.run/appdb.env" ]; then (umask 077; { echo "APPDB_ADMIN_PASSWORD=$(openssl rand -hex 24)"; echo "APPS_GATEWAY_TOKEN=$(openssl rand -hex 24)";
+  echo "SECRETS_MASTER_KEY=$(openssl rand -base64 32)"; } > "$ROOT/.run/appdb.env"); fi
+set -a; . "$ROOT/.run/appdb.env"; set +a
+export APPDB_URL="${APPDB_URL:-jdbc:postgresql://127.0.0.1:15434/appdb}" APPS_GATEWAY_URL="${APPS_GATEWAY_URL:-http://127.0.0.1:18090}"

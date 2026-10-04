@@ -2,7 +2,7 @@
 // Code-project panels: Design mode (safe AST edits), approved packages, IDE clone access.
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/http-api";
-import type { CloneAccess, CodeChange, DependencyRequest, DesignNode } from "@/lib/http-types";
+import type { CloneAccess, CodeChange, DependencyRequest, DesignNode, RuntimeStatus } from "@/lib/http-types";
 import { ago, errText, StateView } from "../ui";
 import { Drawer } from "./drawers";
 
@@ -108,5 +108,45 @@ export function IdeDrawer({ ws, pid, onClose }: { ws: string; pid: string; onClo
         <button className="button ghost" onClick={() => void revoke()}>Thu hồi token</button></>}
       {err ? <p className="formError" role="alert">{err}</p> : null}
     </section>
+  </Drawer>;
+}
+
+const SD_LABEL: Record<string, string> = { PENDING: "Chờ khởi động", STARTING: "Đang khởi động", RUNNING: "Đang chạy", FAILED: "Lỗi", SUPERSEDED: "Đã thay thế", STOPPED: "Đã dừng" };
+/** Server runtime of a server app (ADR 0017): deployments (blue/green, rollback without rebuild), write-only secrets, recent logs. */
+export function RuntimeDrawer({ ws, pid, canPublish, canSettings, onClose }: { ws: string; pid: string; canPublish: boolean; canSettings: boolean; onClose: () => void }) {
+  const [rt, setRt] = useState<RuntimeStatus | null>(null); const [err, setErr] = useState<string | null>(null);
+  const [name, setName] = useState(""); const [value, setValue] = useState("");
+  const load = useCallback(() => api.runtime(ws, pid).then(setRt).catch((e) => setErr(errText(e, "Không tải được."))), [ws, pid]);
+  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { if (!rt || !(rt.desiredDeploymentId || rt.deployments.some((d) => d.status === "PENDING" || d.status === "STARTING"))) return; const t = setInterval(() => void load(), 3000); return () => clearInterval(t); }, [rt, load]);
+  async function act(fn: () => Promise<RuntimeStatus>) { setErr(null); try { setRt(await fn()); } catch (e) { setErr(e instanceof ApiError ? e.message : errText(e, "Không thực hiện được.")); } }
+  return <Drawer title="Máy chủ của ứng dụng" sub="Mỗi lần xuất bản: build trong sandbox → container mới được kiểm tra sức khỏe → chuyển lưu lượng (bản cũ phục vụ tới khi bản mới khỏe)." onClose={onClose} wide>
+    {!rt ? (err ? <p className="formError" role="alert">{err}</p> : <StateView kind="loading"/>) : <>
+      <p className="hint">{rt.notice}{rt.database ? <> Cơ sở dữ liệu riêng: <code>{rt.database}</code> (mật khẩu không bao giờ hiển thị).</> : null}</p>
+      {err ? <p className="formError" role="alert">{err}</p> : null}
+      <section className="settingGroup"><h3>Các lần triển khai</h3>
+        {rt.deployments.length === 0 ? <p className="hint">Chưa triển khai. Bấm “Xuất bản” để build và chạy máy chủ.</p> :
+          <ul className="plainList">{rt.deployments.map((d) => <li key={d.id} className="row between">
+            <span><b>v{d.version}</b> {SD_LABEL[d.status] ?? d.status}{d.current ? " · đang phục vụ" : ""}{d.rollbackOf ? " · khôi phục" : ""} <small>{ago(d.createdAt)} · {d.routes} đường dẫn{d.commitSha ? ` · ${d.commitSha.slice(0, 8)}` : ""}</small>
+              {d.error ? <small className="formError">{d.error}</small> : null}</span>
+            {canPublish && !d.current && (d.status === "SUPERSEDED" || d.status === "STOPPED") ? <button className="smallButton" onClick={() => void act(() => api.runtimeRollback(ws, pid, d.id))}>Khôi phục bản này</button> : null}
+          </li>)}</ul>}
+        {canPublish && rt.currentDeploymentId ? <button className="button ghost" onClick={() => { if (confirm("Dừng máy chủ của ứng dụng? API sẽ ngừng trả lời tới khi xuất bản lại.")) void act(() => api.runtimeStop(ws, pid)); }}>Dừng máy chủ</button> : null}
+      </section>
+      <section className="settingGroup"><h3>Bí mật (biến môi trường)</h3>
+        <p className="hint">Giá trị được mã hóa, chỉ ghi: không bao giờ hiển thị lại, không vào kho mã và không gửi cho AI. Áp dụng ở lần triển khai tiếp theo.</p>
+        {rt.secrets.length ? <ul className="plainList">{rt.secrets.map((s) => <li key={s.name} className="row between"><span className="code">{s.name}</span><small>{s.updatedBy ?? "—"} · {ago(s.updatedAt)}</small>
+          {canSettings ? <button className="smallButton" onClick={() => void act(() => api.deleteSecret(ws, pid, s.name))}>Xoá</button> : null}</li>)}</ul> : <p className="hint">Chưa có bí mật.</p>}
+        {canSettings ? <form className="row" onSubmit={(e) => { e.preventDefault(); void act(() => api.setSecret(ws, pid, name.trim(), value)).then(() => { setName(""); setValue(""); }); }}>
+          <input aria-label="Tên biến" placeholder="TEN_BIEN" value={name} onChange={(e) => setName(e.target.value.toUpperCase())} maxLength={64}/>
+          <input aria-label="Giá trị" type="password" autoComplete="off" placeholder="Giá trị" value={value} onChange={(e) => setValue(e.target.value)} maxLength={4000}/>
+          <button className="button" disabled={!/^[A-Z][A-Z0-9_]{1,63}$/.test(name.trim()) || !value}>Lưu</button></form> : null}
+      </section>
+      <section className="settingGroup"><h3>Connector được cấp</h3>
+        {rt.connectors.length ? <p>{rt.connectors.map((c) => <code key={c} className="tag">{c}</code>)}</p> : <p className="hint">Chưa có. Quản trị viên cấp connector đã duyệt cho ứng dụng (Admin → Connector).</p>}
+      </section>
+      <section className="settingGroup"><h3>Nhật ký gần đây</h3>
+        {rt.logs ? <><small className="hint">{rt.logsAt ? ago(rt.logsAt) : ""} · đã che thông tin nhạy cảm</small><pre className="buildLog">{rt.logs}</pre></> : <p className="hint">Chưa có nhật ký.</p>}
+      </section></>}
   </Drawer>;
 }

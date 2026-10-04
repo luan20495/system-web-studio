@@ -14,7 +14,7 @@ export type ApiProject = {
   id: string; workspaceId: string; name: string; description: string | null; ownerUserId: string; framework: string;
   siteVisibility: "PRIVATE" | "PUBLIC"; authMode: "NONE" | "LOCAL" | "OIDC"; domain: string | null; customDomain: string | null;
   deploymentMode: "MOCK" | "SELF_HOSTED" | "CLOUD"; deploymentTarget: string | null; status: string; revision: number;
-  createdAt: string; updatedAt: string; permissions: string[];
+  createdAt: string; updatedAt: string; permissions: string[]; appKind?: AppKind;
   /** PAGE_SCHEMA (website from approved components) or STATIC_APP (code project with a Git repository) */
   appType?: "PAGE_SCHEMA" | "STATIC_APP";
 };
@@ -60,7 +60,9 @@ export type AuthConfig = { localLogin: boolean; oidc: boolean; oidcLoginUrl: str
   /** this server has the Git server + build runner configured for code projects */
   codeProjects?: boolean; codeAppPublicPublish?: boolean; publicPublish?: boolean;
   /** SAML through the OIDC provider's identity brokering (stage I) */
-  saml?: boolean; samlLabel?: string; samlLoginUrl?: string; mfa?: "IDP" };
+  saml?: boolean; samlLabel?: string; samlLoginUrl?: string; mfa?: "IDP";
+  /** server apps: policy on and the isolated runtime configured (stage J) */
+  serverApps?: boolean };
 export type AiModel = { id: string; name: string; contextLength: number; provider?: string; paid?: boolean };
 export type AiProviderStatus = { id: string; name: string; paid: boolean; models: AiModel[]; dataNotice: string };
 export type AiStatus = { provider: "openrouter" | "providers" | "mock"; configured: boolean; defaultModel: string; dailyLimitPerUser: number; models: AiModel[]; dataNotice: string;
@@ -195,3 +197,13 @@ export type CostReport = { days: number; prices: CostPrice[]; missingPrices: str
 export type SecurityFinding = { severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFO"; source: string; title: string; detail: string; resourceType: string | null; resourceId: string | null;
   resourceName: string | null; detectedAt: string | null };
 export type SecurityReport = { counts: Record<string, number>; findings: SecurityFinding[]; note: string };
+
+// ---- Stage J/K: app kinds, server runtime, connectors
+export type AppKind = "WEBSITE_STATIC" | "SOURCE_WEB_APP" | "DASHBOARD" | "INTERNAL_TOOL" | "WORKFLOW" | "SERVER_APP";
+export const SERVER_KINDS: AppKind[] = ["SERVER_APP", "INTERNAL_TOOL", "WORKFLOW"];
+export type ServerDeployment = { id: string; version: number; status: "PENDING" | "STARTING" | "RUNNING" | "FAILED" | "SUPERSEDED" | "STOPPED"; error: string | null;
+  commitSha: string | null; routes: number; createdAt: string; startedAt: string | null; requestedBy: string | null; rollbackOf: string | null; current: boolean };
+export type RuntimeStatus = { available: boolean; provisioned: boolean; database: string | null; currentDeploymentId: string | null; desiredDeploymentId: string | null;
+  deployments: ServerDeployment[]; secrets: { name: string; updatedAt: string; updatedBy: string | null }[]; connectors: string[]; logs: string | null; logsAt: string | null; notice: string };
+export type Connector = { key: string; name: string; description: string; baseUrl: string; authHeader: string | null; hasSecret: boolean;
+  operations: { method: string; path: string }[]; status: "APPROVED" | "DISABLED"; grants: number; createdAt: string };

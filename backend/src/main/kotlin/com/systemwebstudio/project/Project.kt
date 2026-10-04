@@ -85,6 +85,9 @@ class ProjectEntity(
     /** PAGE_SCHEMA (page schema + registry) or STATIC_APP (code project with a Git repository); fixed at creation (ADR 0008) */
     @Column(name = "app_type", nullable = false, length = 16)
     var appType: String = "PAGE_SCHEMA",
+    /** WEBSITE_STATIC | SOURCE_WEB_APP | DASHBOARD | INTERNAL_TOOL | WORKFLOW | SERVER_APP (stage J/K); fixed at creation */
+    @Column(name = "app_kind", nullable = false, length = 24)
+    var appKind: String = "WEBSITE_STATIC",
     @Version
     @Column(nullable = false)
     var revision: Long = 0,

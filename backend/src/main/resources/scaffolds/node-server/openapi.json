@@ -1,0 +1,16 @@
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Factory server app", "version": "0.1.0" },
+  "paths": {
+    "/api/items": {
+      "get": { "summary": "List items", "responses": { "200": { "description": "Items" } } },
+      "post": { "summary": "Create an item", "responses": { "201": { "description": "Created" } } }
+    },
+    "/api/items/{id}": {
+      "delete": { "summary": "Delete an item", "responses": { "204": { "description": "Deleted" } } }
+    },
+    "/api/me": {
+      "get": { "summary": "Who is calling (private apps)", "responses": { "200": { "description": "User" } } }
+    }
+  }
+}

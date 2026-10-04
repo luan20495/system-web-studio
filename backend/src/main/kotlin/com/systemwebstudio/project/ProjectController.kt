@@ -26,7 +26,9 @@ data class CreateProjectRequest(
     /** start from this template (company, or one of the caller's own) instead of the default page */
     val templateId: UUID? = null,
     /** PAGE_SCHEMA (default) or STATIC_APP (code project, needs the Git server) */
-    @field:Pattern(regexp = "PAGE_SCHEMA|STATIC_APP") val appType: String? = null
+    @field:Pattern(regexp = "PAGE_SCHEMA|STATIC_APP") val appType: String? = null,
+    /** stage J/K: SOURCE_WEB_APP | DASHBOARD | INTERNAL_TOOL | WORKFLOW | SERVER_APP (code projects); websites are WEBSITE_STATIC */
+    @field:Pattern(regexp = "WEBSITE_STATIC|SOURCE_WEB_APP|DASHBOARD|INTERNAL_TOOL|WORKFLOW|SERVER_APP") val appKind: String? = null
 )
 
 data class UpdateProjectRequest(
@@ -47,13 +49,13 @@ data class ProjectResponse(
     val framework: String, val projectAccessPolicy: String, val siteVisibility: String, val authMode: String,
     val domain: String?, val customDomain: String?, val deploymentMode: String, val deploymentTarget: String?,
     val status: String, val revision: Long, val createdAt: Instant, val updatedAt: Instant,
-    val permissions: List<String> = emptyList(), val appType: String = "PAGE_SCHEMA"
+    val permissions: List<String> = emptyList(), val appType: String = "PAGE_SCHEMA", val appKind: String = "WEBSITE_STATIC"
 )
 
 fun ProjectEntity.toResponse(permissions: Collection<Permission> = emptyList()) = ProjectResponse(
     id, workspaceId, name, description, ownerUserId, framework, projectAccessPolicy, siteVisibility, authMode,
     domain, customDomain, deploymentMode, deploymentTarget, if (!active) "DELETED" else lifecycle,
-    revision, createdAt, updatedAt, permissions.map { it.name }.sorted(), appType
+    revision, createdAt, updatedAt, permissions.map { it.name }.sorted(), appType, appKind
 )
 
 @RestController
@@ -70,6 +72,7 @@ class ProjectController(
     private val retention: com.systemwebstudio.maintenance.ArtifactRetentionService,
     private val versionRepo: com.systemwebstudio.version.SchemaRepository,
     private val json: tools.jackson.databind.json.JsonMapper,
+    private val runtime: com.systemwebstudio.runtime.ServerRuntimeService,
     @org.springframework.beans.factory.annotation.Value("\${app.limits.max-projects-per-workspace:1000}") private val maxProjects: Long
 ) {
     /**
@@ -113,7 +116,11 @@ class ProjectController(
         if (ctx.workspaceRole == null) throw ApiException.conflict("ADMIN_NOT_MEMBER", "Join this workspace as a member before creating applications in it")
         val existing = jdbc.queryForObject("SELECT count(*) FROM projects WHERE workspace_id = ? AND active", Long::class.java, workspaceId)!!
         if (existing >= maxProjects) throw ApiException.conflict("PROJECT_LIMIT", "This workspace reached its limit of $maxProjects projects", mapOf("limit" to maxProjects))
-        val code = request.appType == "STATIC_APP"
+        val kind = request.appKind ?: if (request.appType == "STATIC_APP") "SOURCE_WEB_APP" else "WEBSITE_STATIC"
+        val code = kind != "WEBSITE_STATIC"
+        // server apps run generated server code: only when the policy allows it AND the isolated runtime is configured (ADR 0017)
+        if (kind in com.systemwebstudio.code.CodeProjectService.SERVER_KINDS && !runtime.available)
+            throw ApiException.conflict("SERVER_APPS_UNAVAILABLE", "Server apps are disabled by policy or the isolated runtime is not configured on this server")
         if (code && request.templateId != null) throw ApiException.badRequest("TEMPLATE_NOT_FOR_CODE", "Templates are page schemas; code projects start from the approved scaffold")
         if (code && !codeProjects.available) throw ApiException.conflict("CODE_PROJECTS_UNAVAILABLE", "Code projects need the Git server")
         // resolved before anything is stored: an invisible or outdated template leaves no half-created project behind
@@ -124,13 +131,14 @@ class ProjectController(
                 workspaceId = workspaceId, name = request.name.trim(), ownerUserId = me.userId,
                 description = request.description?.trim()?.ifEmpty { null },
                 framework = if (code) "react" else request.framework ?: "nextjs", createdAt = now, updatedAt = now,
-                appType = if (code) "STATIC_APP" else "PAGE_SCHEMA"
+                appType = if (code) "STATIC_APP" else "PAGE_SCHEMA", appKind = kind
             )
         )
         projectMembers.save(ProjectMemberEntity(workspaceId = workspaceId, projectId = project.id, userId = me.userId, role = "OWNER"))
         if (code) {
             // platform-owned repository with the scaffold as first commit; version 1 points at that commit (ADR 0011)
-            val sha = codeProjects.initialize(project, me.userId)
+            val sha = codeProjects.initialize(project, me.userId, kind)
+            if (kind in com.systemwebstudio.code.CodeProjectService.SERVER_KINDS) runtime.provision(project.id)
             val versionId = versionRepo.insertVersion(workspaceId, project.id, 1, json.createObjectNode().put("appType", "STATIC_APP").put("commit", sha),
                 "INITIAL", "Khởi tạo từ khung React + Vite", null, null, null, me.userId)
             jdbc.update("UPDATE project_versions SET commit_sha = ? WHERE id = ?", sha, versionId)
@@ -196,6 +204,7 @@ class ProjectController(
         project.updatedAt = Instant.now()
         projects.saveAndFlush(project)
         retention.onProjectDeleted(project.id)
+        runtime.stop(project.id, me.userId)
         audit.record("DELETE_PROJECT", "PROJECT", project.id, workspaceId, project.id, oldValue = mapOf("name" to project.name))
     }
 

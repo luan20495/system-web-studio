@@ -45,6 +45,7 @@ class AuthController(
     private val audit: AuditService,
     private val jdbc: JdbcTemplate,
     private val codeProjects: com.systemwebstudio.code.CodeProjectService,
+    private val runtime: com.systemwebstudio.runtime.ServerRuntimeService,
     @Value("\${app.local-login.enabled:true}") private val localLogin: Boolean,
     @Value("\${app.oidc.enabled:false}") private val oidc: Boolean,
     private val settings: com.systemwebstudio.settings.SettingsService,
@@ -65,7 +66,7 @@ class AuthController(
     /** Lets the UI show the right sign-in options without hard-coding the deployment's identity strategy. */
     @GetMapping("/config")
     fun config(): Map<String, Any> = mapOf("localLogin" to localLogin, "oidc" to oidc, "oidcLoginUrl" to "/oauth2/authorization/oidc", "signup" to settings.bool("signup.enabled"), "signupInviteRequired" to inviteCode.isNotBlank(),
-        "codeProjects" to codeProjects.available,
+        "codeProjects" to codeProjects.available, "serverApps" to (codeProjects.available && runtime.available),
         "codeAppPublicPublish" to settings.bool("source-apps.public-publish-enabled"), "publicPublish" to settings.bool("publish.public-enabled"),
         // SAML is offered only through the OIDC provider's identity brokering (kc_idp_hint); MFA is enforced by the identity provider
         "saml" to (oidc && samlEnabled && samlHint.isNotBlank()), "samlLabel" to samlLabel, "samlLoginUrl" to "/oauth2/authorization/oidc?idp=saml", "mfa" to "IDP")

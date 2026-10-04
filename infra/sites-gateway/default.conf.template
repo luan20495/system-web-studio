@@ -36,6 +36,21 @@ server {
         proxy_cache_bypass 1;
     }
 
+    # server app APIs (stage J): every method, small bodies; the API checks the app's declared routes and passes them to the isolated runtime
+    location ~ "^/(_app/[A-Za-z0-9_-]{20,100}|[a-z0-9][a-z0-9-]{1,79})/api(/.*)?$" {
+        limit_req zone=sites_rl burst=60 nodelay;
+        client_max_body_size 1m;
+        rewrite ^/(.*)$ /sites/$1 break;
+        proxy_pass http://studio_api;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $fwd_proto;
+        proxy_no_cache 1;
+        proxy_cache_bypass 1;
+    }
+
     location ~ "^/(_access|_preview|_app|[a-z0-9][a-z0-9-]{1,79})(/.*)?$" {
         limit_except GET HEAD { deny all; }
         limit_req zone=sites_rl burst=60 nodelay;

@@ -42,9 +42,12 @@ data class DependencyRequestView(val id: UUID, val packageName: String, val spec
  */
 @Service
 class PackageCatalogService(private val jdbc: JdbcTemplate, private val json: JsonMapper, private val audit: AuditService) {
+    /** every approved scaffold's lockfile (static web app and server app) */
     private val scaffoldNames: Set<String> by lazy {
-        val lock = json.readTree(ClassPathResource("scaffolds/react-vite/package-lock.json").inputStream)
-        lock.get("packages")?.propertyNames()?.filter { it.isNotEmpty() }?.map { it.substringAfterLast("node_modules/") }?.toSet().orEmpty()
+        CodeProjectService.SCAFFOLDS.values.distinct().flatMap { s ->
+            val lock = json.readTree(ClassPathResource("scaffolds/$s/package-lock.json").inputStream)
+            lock.get("packages")?.propertyNames()?.filter { it.isNotEmpty() }?.map { it.substringAfterLast("node_modules/") }.orEmpty()
+        }.toSet()
     }
 
     fun allowlist(): Set<String> {

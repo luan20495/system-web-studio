@@ -221,8 +221,84 @@ async function processJob(job) {
   }
 }
 
+// ---------------------------------------------------------------- server app runtime (stage J, ADR 0017)
+// Desired state comes from the API; the runner makes Docker match it. App containers: image built from the server bundle with no network,
+// non-root, read-only rootfs, all capabilities dropped, no-new-privileges, CPU/memory/pid limits, network "apps" (internal: only the apps DB
+// and the apps gateway), env from a 0600 temp file (never on the command line), a health check; optional OCI runtime (e.g. gVisor runsc).
+const RUNTIME_NETWORK = process.env.RUNTIME_NETWORK ?? "hbl_apps";
+const RUNTIME_IMAGE = process.env.RUNTIME_IMAGE ?? "node@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402";
+const RUNTIME_OCI = process.env.RUNTIME_OCI ?? "";            // e.g. "runsc" on a Linux host with gVisor installed
+const starting = new Set(); let lastLogs = 0;
+async function report(id, state, error, logs) {
+  const r = await api("POST", `/internal/runtime/${id}/report`, JSON.stringify({ state, error, logs })); if (!r.ok) log("runtime report", id, r.status);
+}
+async function inspect(name) {
+  const r = await run("docker", ["inspect", "-f", "{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{end}}", name], { timeoutMs: 15_000 });
+  return r.code === 0 ? r.out.trim() : null;
+}
+const logsOf = async (name) => { const r = await run("docker", ["logs", "--tail", "200", name], { timeoutMs: 15_000 }); return (r.out + r.err).slice(-20_000); };
+async function startContainer(c) {
+  const tmp = mkdtempSync(join(tmpdir(), "factory-app-"));
+  try {
+    await report(c.deploymentId, "STARTING");
+    const res = await fetch(c.artifactUrl, { headers, signal: AbortSignal.timeout(60_000) });
+    if (!res.ok) throw new Error(`bundle download HTTP ${res.status}`);
+    const ctx = join(tmp, "ctx"), app = join(ctx, "app"); await run("mkdir", ["-p", app]);
+    writeFileSync(join(tmp, "b.tgz"), Buffer.from(await res.arrayBuffer()));
+    if ((await run("tar", ["-xzf", join(tmp, "b.tgz"), "-C", app], { timeoutMs: 60_000 })).code !== 0) throw new Error("bundle could not be extracted");
+    if (!existsSync(join(app, "server.cjs"))) throw new Error("server.cjs missing in the bundle");
+    writeFileSync(join(ctx, "Dockerfile"), `FROM ${RUNTIME_IMAGE}\nWORKDIR /app\nCOPY app/ /app/\nUSER 10001:10001\nEXPOSE 8080\nCMD ["node", "/app/server.cjs"]\n`);
+    const tag = `factory-app:${c.deploymentId.slice(0, 12)}`;
+    const tar = await run("tar", ["-C", ctx, "-cf", "-", "."], { binary: true, timeoutMs: 60_000 });
+    const b = await run("docker", ["build", "--network", "none", "-q", "-t", tag, "-"], { input: tar.out, timeoutMs: 300_000 });
+    if (b.code !== 0) throw new Error(`image build failed: ${b.err.slice(-300)}`);
+    const envFile = join(tmp, "env"); writeFileSync(envFile, Object.entries(c.env).map(([k, v]) => `${k}=${String(v).replace(/\n/g, " ")}`).join("\n") + "\n", { mode: 0o600 });
+    await run("docker", ["rm", "-f", c.container], { timeoutMs: 30_000 });
+    const r = await run("docker", ["run", "-d", "--name", c.container, "--label", "factory.app=1", "--label", `factory.deployment=${c.deploymentId}`,
+      "--network", RUNTIME_NETWORK, ...(RUNTIME_OCI ? ["--runtime", RUNTIME_OCI] : []),
+      "--read-only", "--tmpfs", "/tmp:rw,noexec,nosuid,size=32m", "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
+      "--pids-limit", String(c.limits.pids ?? 128), "--memory", String(c.limits.memory ?? "256m"), "--cpus", String(c.limits.cpus ?? 0.5),
+      "--user", "10001:10001", "--restart", "on-failure:5", "--env-file", envFile,
+      "--health-cmd", "wget -qO- http://127.0.0.1:8080/health >/dev/null || exit 1", "--health-interval", "3s", "--health-retries", "3", "--health-start-period", "3s", tag],
+      { timeoutMs: 60_000 });
+    rmSync(envFile, { force: true });
+    if (r.code !== 0) throw new Error(`container did not start: ${r.err.slice(-300)}`);
+    for (let i = 0; i < 40; i++) {
+      const st = await inspect(c.container);
+      if (st?.endsWith("healthy") && !st.endsWith("unhealthy")) { await report(c.deploymentId, "RUNNING", null, await logsOf(c.container)); log("app running", c.container); return; }
+      if (!st || st.startsWith("exited") || st.startsWith("dead")) break;
+      await new Promise((s) => setTimeout(s, 1500));
+    }
+    const logs = await logsOf(c.container);
+    await run("docker", ["rm", "-f", c.container], { timeoutMs: 30_000 });
+    await report(c.deploymentId, "FAILED", "health check did not pass within 60 s", logs);
+  } catch (e) {
+    log("app start failed", c.container, e.message);
+    await report(c.deploymentId, "FAILED", e.message);
+  } finally { rmSync(tmp, { recursive: true, force: true }); starting.delete(c.container); }
+}
+async function reconcile() {
+  const r = await api("GET", "/internal/runtime/desired"); if (!r.ok) return;
+  const desired = (await r.json()).flatMap((a) => a.containers);
+  const want = new Set(desired.map((c) => c.container));
+  for (const c of desired) {
+    if (starting.has(c.container)) continue;
+    const st = await inspect(c.container);
+    if (!st) { starting.add(c.container); void startContainer(c); continue; }
+    if (st.startsWith("exited") || st.startsWith("dead")) { await report(c.deploymentId, "FAILED", `container ${st}`, await logsOf(c.container)); await run("docker", ["rm", "-f", c.container]); }
+  }
+  if (Date.now() - lastLogs > 30_000) {
+    lastLogs = Date.now();
+    for (const c of desired.filter((x) => x.role === "current" && !starting.has(x.container))) await report(c.deploymentId, "RUNNING", null, await logsOf(c.container));
+  }
+  const ps = await run("docker", ["ps", "-a", "--filter", "label=factory.app=1", "--format", "{{.Names}}"], { timeoutMs: 15_000 });
+  for (const name of ps.out.split("\n").map((x) => x.trim()).filter(Boolean)) if (!want.has(name) && !starting.has(name)) { log("removing app container", name); await run("docker", ["rm", "-f", name], { timeoutMs: 30_000 }); }
+}
+let lastReconcile = 0;
+
 log(`runner ${NAME} polling ${API} (network ${NETWORK})`);
 for (;;) {
+  if (Date.now() - lastReconcile > 5000) { lastReconcile = Date.now(); await reconcile().catch((e) => log("runtime reconcile error:", e.message)); }
   try {
     const r = await api("POST", `/internal/build-jobs/claim?runner=${encodeURIComponent(NAME)}`);
     if (r.status === 200) {

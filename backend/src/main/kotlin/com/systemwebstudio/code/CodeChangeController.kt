@@ -52,7 +52,7 @@ class CodeChangeService(
      */
     fun propose(ctx: AccessContext, userId: UUID, summary: String, changes: List<GitFileChange>, kind: String, promptId: UUID? = null,
                 serverManaged: Boolean = false): CodeChangeDto {
-        if (!serverManaged) CodeChangePolicy.check(changes)
+        if (!serverManaged) CodeChangePolicy.check(changes, server = ctx.project!!.appKind in CodeProjectService.SERVER_KINDS)
         val project = ctx.project!!
         val repo = code.repo(project.id)
         policy.requireCapacity(project.id, ctx.workspaceId, userId)
@@ -167,12 +167,12 @@ class CodeController(private val access: AccessService, private val code: CodePr
     @GetMapping("/file")
     fun file(@PathVariable workspaceId: UUID, @PathVariable projectId: UUID, @RequestParam path: String, @RequestParam(defaultValue = "main") ref: String,
              @AuthenticationPrincipal me: StudioUserDetails): Map<String, Any?> {
-        ctx(me, workspaceId, projectId)
+        val c = ctx(me, workspaceId, projectId)
         if (".." in path || path.startsWith("/") || path.length > 200 || !Regex("^[A-Za-z0-9._/-]{1,120}$").matches(ref)) throw ApiException.badRequest("INVALID_PATH", "Invalid path")
         val bytes = code.git { code.client.raw(code.repo(projectId).name, path, ref) } ?: throw ApiException.notFound("FILE_NOT_FOUND", "File not found")
         val text = runCatching { Charsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(bytes)).toString() }.getOrNull()
         return mapOf("path" to path, "ref" to ref, "size" to bytes.size, "text" to (if (text != null && bytes.size <= 500_000) text else null),
-            "editable" to runCatching { CodeChangePolicy.check(listOf(GitFileChange(path, "x".toByteArray()))); true }.getOrDefault(false))
+            "editable" to runCatching { CodeChangePolicy.check(listOf(GitFileChange(path, "x".toByteArray())), server = c.project!!.appKind in CodeProjectService.SERVER_KINDS); true }.getOrDefault(false))
     }
 
     @GetMapping("/commits")

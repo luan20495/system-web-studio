@@ -1,6 +1,6 @@
 import type {
   AdminAi, AiCallRow, SettingView, BuildPolicyReport, CleanupResult, RepoRow, AiPrice, AiProbe, AiProviderInfo, AiUsageReport, AdminApp, BlockDto, CheckResult, TemplateDto, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
-  Department, CostPrice, CostReport, SecurityReport, FormSubmission, SiteDomain, TemplateReview, LibraryCategories, AccessRule, EffectiveModel, AiBudget, AdminAlert, StreamHandlers,
+  AppKind, RuntimeStatus, Connector, Department, CostPrice, CostReport, SecurityReport, FormSubmission, SiteDomain, TemplateReview, LibraryCategories, AccessRule, EffectiveModel, AiBudget, AdminAlert, StreamHandlers,
   AiStatus, ApiProject, AuthConfig, Member, SiteInfo, DesignNode, DependencyRequest, PackageView, CloneAccess, TreeFile, CodeFile, CodeCommit, CodeChange, DiffFile, CodeAiResponse, CodeAiHistoryItem, RegistryComponent, AssetDto, Deployment, Me, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
 } from "./http-types";
 
@@ -192,6 +192,11 @@ export const api = {
     approvePackage: (body: { name: string; versionRange?: string; pinnedVersion?: string; note?: string }) => call<PackageView>("/admin/packages", { method: "POST", body: json(body) }),
     decidePackage: (name: string, status: "ALLOWED" | "DENIED", acceptRisk?: boolean, note?: string) =>
       call<PackageView>(`/admin/packages/${encodeURIComponent(name)}/decision`, { method: "PUT", body: json({ status, acceptRisk, note }) }),
+    connectors: () => call<Connector[]>("/admin/connectors"),
+    saveConnector: (body: { key: string; name: string; description?: string; baseUrl: string; authHeader?: string; authValue?: string; operations: { method: string; path: string }[] }) =>
+      call<Connector[]>("/admin/connectors", { method: "PUT", body: json(body) }),
+    connectorStatus: (key: string, status: "APPROVED" | "DISABLED") => call<Connector[]>(`/admin/connectors/${key}/status${qs({ status })}`, { method: "POST" }),
+    grantConnector: (key: string, projectId: string) => call<Connector[]>(`/admin/connectors/${key}/grants`, { method: "POST", body: json({ projectId }) }),
     departments: () => call<Department[]>("/admin/departments"),
     createDepartment: (body: { name: string; kind: "DEPARTMENT" | "TEAM"; parentId?: string }) => call<Department[]>("/admin/departments", { method: "POST", body: json(body) }),
     renameDepartment: (id: string, body: { name: string; parentId?: string | null }) => call<Department[]>(`/admin/departments/${id}`, { method: "PATCH", body: json(body) }),
@@ -215,8 +220,13 @@ export const api = {
     ackAlert: (id: string) => call<{ ok: boolean }>(`/admin/alerts/${id}/acknowledge`, { method: "POST" }),
     deleteRepository: (projectId: string) => call<{ state: string }>(`/admin/retention/repositories/${projectId}/delete`, { method: "POST" })
   },
-  createProject: (w: string, name: string, description?: string, templateId?: string, appType?: "PAGE_SCHEMA" | "STATIC_APP") =>
-    call<ApiProject>(`/workspaces/${w}/projects`, { method: "POST", body: json({ name, description, ...(templateId ? { templateId } : {}), ...(appType ? { appType } : {}) }) }),
+  createProject: (w: string, name: string, description?: string, templateId?: string, appType?: "PAGE_SCHEMA" | "STATIC_APP", appKind?: AppKind) =>
+    call<ApiProject>(`/workspaces/${w}/projects`, { method: "POST", body: json({ name, description, ...(templateId ? { templateId } : {}), ...(appType ? { appType } : {}), ...(appKind ? { appKind } : {}) }) }),
+  runtime: (w: string, p: string) => call<RuntimeStatus>(`${P(w, p)}/runtime`),
+  runtimeRollback: (w: string, p: string, deploymentId: string) => call<RuntimeStatus>(`${P(w, p)}/runtime/rollback`, { method: "POST", body: json({ deploymentId }) }),
+  runtimeStop: (w: string, p: string) => call<RuntimeStatus>(`${P(w, p)}/runtime/stop`, { method: "POST" }),
+  setSecret: (w: string, p: string, name: string, value: string) => call<RuntimeStatus>(`${P(w, p)}/runtime/secrets`, { method: "PUT", body: json({ name, value }) }),
+  deleteSecret: (w: string, p: string, name: string) => call<RuntimeStatus>(`${P(w, p)}/runtime/secrets/${encodeURIComponent(name)}`, { method: "DELETE" }),
   code: {
     tree: (w: string, p: string, ref = "main") => call<TreeFile[]>(`${P(w, p)}/code/tree${qs({ ref })}`),
     file: (w: string, p: string, path: string, ref = "main") => call<CodeFile>(`${P(w, p)}/code/file${qs({ path, ref })}`),

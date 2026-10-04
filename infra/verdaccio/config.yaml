@@ -1,4 +1,4 @@
-# GENERATED — do not edit by hand (119 allowlisted packages).
+# GENERATED — do not edit by hand (136 allowlisted packages).
 storage: /verdaccio/storage/data
 auth:
   htpasswd:
@@ -336,6 +336,14 @@ packages:
     access: $all
     publish: $nobody
     proxy: npmjs
+  '@types/node':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@types/pg':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
   '@types/react':
     access: $all
     publish: $nobody
@@ -428,6 +436,38 @@ packages:
     access: $all
     publish: $nobody
     proxy: npmjs
+  'pg':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'pg-cloudflare':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'pg-connection-string':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'pg-int8':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'pg-pool':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'pg-protocol':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'pg-types':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'pgpass':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
   'picocolors':
     access: $all
     publish: $nobody
@@ -437,6 +477,22 @@ packages:
     publish: $nobody
     proxy: npmjs
   'postcss':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'postgres-array':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'postgres-bytea':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'postgres-date':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'postgres-interval':
     access: $all
     publish: $nobody
     proxy: npmjs
@@ -468,6 +524,10 @@ packages:
     access: $all
     publish: $nobody
     proxy: npmjs
+  'split2':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
   'tinyglobby':
     access: $all
     publish: $nobody
@@ -476,11 +536,19 @@ packages:
     access: $all
     publish: $nobody
     proxy: npmjs
+  'undici-types':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
   'update-browserslist-db':
     access: $all
     publish: $nobody
     proxy: npmjs
   'vite':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'xtend':
     access: $all
     publish: $nobody
     proxy: npmjs

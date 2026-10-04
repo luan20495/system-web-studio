@@ -78,7 +78,9 @@ class SecurityConfiguration {
             .headers { it.disable() }
             // the only POST: anonymous website form submissions (no cookie is used, so there is nothing to forge; Origin is checked)
             .authorizeHttpRequests { it.requestMatchers(HttpMethod.GET, "/sites/**").permitAll().requestMatchers(HttpMethod.HEAD, "/sites/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/sites/*/_forms/*").permitAll().anyRequest().denyAll() }
+                .requestMatchers(HttpMethod.POST, "/sites/*/_forms/*").permitAll()
+                // server app APIs (stage J): every method, checked by AppGatewayController against the app's declared routes
+                .requestMatchers("/sites/*/api/**", "/sites/_app/*/api/**").permitAll().anyRequest().denyAll() }
             .formLogin { it.disable() }
             .httpBasic { it.disable() }
         return http.build()

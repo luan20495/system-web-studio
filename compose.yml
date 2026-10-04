@@ -138,6 +138,49 @@ services:
       - "127.0.0.1:${VERDACCIO_PORT:-14873}:4873"   # operator only (publishing @company packages, generating approved lockfiles)
     mem_limit: 384m
 
+  # Server apps (stage J, ADR 0017/0018): a database server ONLY for generated apps (one database + role per app); the platform
+  # database is a different server on a different network. Admin credentials are generated into .run/appdb.env (git-ignored).
+  appdb:
+    image: postgres:17.6
+    environment:
+      POSTGRES_USER: appdb_admin
+      POSTGRES_PASSWORD: ${APPDB_ADMIN_PASSWORD:-set-by-run-local}
+      POSTGRES_DB: appdb
+    networks: [default, apps]
+    ports:
+      - "127.0.0.1:${APPDB_HOST_PORT:-15434}:5432"
+    volumes:
+      - studio-appdb:/var/lib/postgresql/data
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appdb_admin -d appdb"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  apps-gateway:
+    image: nginxinc/nginx-unprivileged:1.29-alpine
+    environment:
+      APPS_GATEWAY_TOKEN: ${APPS_GATEWAY_TOKEN:-set-by-run-local}
+      API_UPSTREAM: ${SITES_API_UPSTREAM:-host.docker.internal:8080}
+    networks: [default, apps]
+    ports:
+      - "127.0.0.1:${APPS_GATEWAY_PORT:-18090}:8080"
+    volumes:
+      - ./infra/apps-gateway/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /etc/nginx/conf.d:uid=101,gid=101,mode=0755
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+
   # Optional local identity provider for exercising OIDC/SSO: docker compose --profile sso up -d keycloak (see scripts/sso-up.sh).
   # Not part of the default stack (it needs ~700 MB RAM). Credentials and the realm are generated at run time, never committed.
   keycloak:
@@ -159,8 +202,11 @@ networks:
   default: {}
   build:
     internal: true          # build sandboxes: no route to the internet, the host or other networks
+  apps:
+    internal: true          # server app containers (stage J): only the apps DB and the apps gateway are reachable
 
 volumes:
+  studio-appdb:
   studio-verdaccio:
   studio-forgejo-data:
   studio-forgejo-conf:

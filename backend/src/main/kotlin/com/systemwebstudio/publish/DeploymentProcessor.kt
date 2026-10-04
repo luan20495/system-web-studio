@@ -27,6 +27,7 @@ class DeploymentProcessor(
     private val audit: AuditService,
     private val json: JsonMapper,
     private val builder: StaticSiteBuilder,
+    private val runtime: com.systemwebstudio.runtime.ServerRuntimeService,
     private val buildJobs: com.systemwebstudio.code.BuildJobService,
     @Value("\${app.deploy.step-delay-ms:0}") private val stepDelayMs: Long
 ) {
@@ -70,7 +71,13 @@ class DeploymentProcessor(
                             val result = provider.deploy(DeployRequest(d.id, project["name"] as String, d.versionNumber, d.visibility, project["deployment_target"] as String?,
                                 artifactHash.ifEmpty { artifactId?.let { a -> jdbc.queryForObject("SELECT sha256 FROM artifacts WHERE id = ?", String::class.java, a) } ?: build(d, record = false) },
                                 d.projectId, artifactId))
-                            url = result.url; result.error
+                            url = result.url
+                            // server apps: the same build's server part now goes to the isolated runtime (blue/green, health-checked)
+                            if (result.error == null && artifactId != null && isServerApp(d)) {
+                                val commit = jdbc.queryForObject("SELECT commit_sha FROM project_versions WHERE id = ?", String::class.java, d.versionId)
+                                runtime.deploy(d.projectId, artifactId, commit, jdbc.queryForObject("SELECT requested_by FROM deployments WHERE id = ?", UUID::class.java, d.id))
+                            }
+                            result.error
                         }
                     }
                     else -> "Unexpected state $current"
@@ -98,6 +105,9 @@ class DeploymentProcessor(
 
     private fun snapshot(d: DeploymentDto) =
         jdbc.queryForObject("SELECT schema_snapshot::text FROM project_versions WHERE id = ?", String::class.java, d.versionId)!!
+
+    private fun isServerApp(d: DeploymentDto) =
+        jdbc.queryForObject("SELECT app_kind FROM projects WHERE id = ?", String::class.java, d.projectId) in com.systemwebstudio.code.CodeProjectService.SERVER_KINDS
 
     private fun isCodeApp(d: DeploymentDto) =
         jdbc.queryForObject("SELECT app_type FROM projects WHERE id = ?", String::class.java, d.projectId) == "STATIC_APP"

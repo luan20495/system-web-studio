@@ -28,6 +28,8 @@ object CodeChangePolicy {
     const val MAX_FILE_BYTES = 200_000
     const val MAX_TOTAL_BYTES = 1_000_000
     private val PATH = Regex("^(index\\.html|src/[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*|public/[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*)$")
+    /** server apps (ADR 0017) may also change their server code and the declared routes; server/tsconfig.json stays fixed */
+    private val SERVER_PATH = Regex("^(openapi\\.json|server/(?!tsconfig\\.json$)[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*)$")
     private val TEXT_EXT = setOf("ts", "tsx", "js", "jsx", "css", "json", "md", "txt", "svg", "html")
     /** credential shapes that must never be committed (the build also scans with gitleaks) */
     val SECRET_PATTERNS = listOf(
@@ -35,7 +37,7 @@ object CodeChangePolicy {
         Regex("\\bghp_[A-Za-z0-9]{30,}\\b"), Regex("\\bxox[abpr]-[A-Za-z0-9-]{10,}"), Regex("\\bAIza[0-9A-Za-z_-]{35}\\b")
     )
 
-    fun check(changes: List<GitFileChange>) {
+    fun check(changes: List<GitFileChange>, server: Boolean = false) {
         fun bad(code: String, msg: String): Nothing = throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, code, msg)
         if (changes.isEmpty()) bad("NO_CHANGES", "The change contains no files")
         if (changes.size > MAX_FILES) bad("TOO_MANY_FILES", "At most $MAX_FILES files per change")
@@ -43,7 +45,8 @@ object CodeChangePolicy {
         var total = 0
         for (c in changes) {
             val p = c.path
-            if (".." in p || p.startsWith("/") || !PATH.matches(p)) bad("PATH_NOT_ALLOWED", "Not allowed: $p (only src/, public/ and index.html; configuration and dependencies are fixed)")
+            if (".." in p || p.startsWith("/") || !(PATH.matches(p) || (server && SERVER_PATH.matches(p))))
+                bad("PATH_NOT_ALLOWED", "Not allowed: $p (only src/, public/, index.html${if (server) ", server/ and openapi.json" else ""}; configuration and dependencies are fixed)")
             if (p.substringAfterLast('.', "").lowercase() !in TEXT_EXT) bad("FILE_TYPE_NOT_ALLOWED", "Only text source files can be changed: $p")
             val bytes = c.content ?: continue
             if (bytes.size > MAX_FILE_BYTES) bad("FILE_TOO_LARGE", "$p is larger than $MAX_FILE_BYTES bytes")
@@ -59,17 +62,27 @@ object CodeChangePolicy {
 @Service
 class CodeProjectService(private val git: ForgejoClient, private val jdbc: JdbcTemplate, private val json: JsonMapper,
                          private val settings: com.systemwebstudio.settings.SettingsService) {
+    companion object {
+        /** app kind → approved scaffold directory (resources/scaffolds/…) */
+        val SCAFFOLDS = mapOf("SOURCE_WEB_APP" to "react-vite", "DASHBOARD" to "react-vite", "SERVER_APP" to "node-server", "INTERNAL_TOOL" to "node-server", "WORKFLOW" to "node-server")
+        /** stage K: kind-specific files laid over the base scaffold (same dependencies, so the lockfile and package allowlist stay the base's) */
+        val VARIANTS = mapOf("DASHBOARD" to "dashboard", "INTERNAL_TOOL" to "internal-tool", "WORKFLOW" to "workflow")
+        /** kinds with a server part that runs in the isolated runtime (ADR 0017) */
+        val SERVER_KINDS = setOf("SERVER_APP", "INTERNAL_TOOL", "WORKFLOW")
+    }
+
     private val random = SecureRandom()
     /** Git server configured AND enabled by policy (Settings → Ứng dụng mã nguồn) */
     val available: Boolean get() = git.configured && settings.bool("source-apps.enabled")
     val configured: Boolean get() = git.configured
 
-    /** The approved scaffold (React + Vite, ADR 0012), read from the application's resources. */
-    fun scaffold(): List<GitFileChange> {
-        val base = "scaffolds/react-vite/"
-        return PathMatchingResourcePatternResolver().getResources("classpath*:$base**").filter { it.isReadable && !it.uri.toString().endsWith("/") }
+    /** The approved scaffold for an app kind (ADR 0012 / 0017), read from the application's resources. */
+    fun scaffold(kind: String = "SOURCE_WEB_APP"): List<GitFileChange> {
+        fun read(base: String) = PathMatchingResourcePatternResolver().getResources("classpath*:$base**").filter { it.isReadable && !it.uri.toString().endsWith("/") }
             .mapNotNull { r -> val u = r.uri.toString(); val rel = u.substring(u.lastIndexOf(base) + base.length); if (rel.isEmpty()) null else GitFileChange(rel, r.inputStream.use { it.readAllBytes() }) }
-            .sortedBy { it.path }
+        val files = read("scaffolds/${SCAFFOLDS[kind] ?: "react-vite"}/").associateBy { it.path }.toMutableMap()
+        VARIANTS[kind]?.let { v -> read("scaffolds/variants/$v/").forEach { files[it.path] = it } }
+        return files.values.sortedBy { it.path }
     }
 
     fun repoName(project: ProjectEntity): String {
@@ -84,15 +97,16 @@ class CodeProjectService(private val git: ForgejoClient, private val jdbc: JdbcT
     }
 
     /** Creates the platform-owned repository with the scaffold as its first commit on a protected main. Returns the commit sha. */
-    fun initialize(project: ProjectEntity, userId: UUID): String {
+    fun initialize(project: ProjectEntity, userId: UUID, kind: String = "SOURCE_WEB_APP"): String {
         if (!available) throw ApiException.conflict("CODE_PROJECTS_UNAVAILABLE", "Code projects are not available (Git server not configured or disabled by policy)")
         val name = repoName(project)
         try {
             git.createRepository(name, "Studio project ${project.id}")
-            val sha = git.commit(name, "main", "main", scaffold(), "Khởi tạo từ khung React + Vite\n\nStudio-Project: ${project.id}\nStudio-User: $userId", author(userId), emptyRepo = true)
+            val files = scaffold(kind)
+            val sha = git.commit(name, "main", "main", files, "Khởi tạo từ khung ${if (kind in SERVER_KINDS) "React + Node (máy chủ)" else "React + Vite"}\n\nStudio-Project: ${project.id}\nStudio-User: $userId", author(userId), emptyRepo = true)
             git.protectMain(name)
             jdbc.update("INSERT INTO repositories (project_id, provider, owner, name, head_sha, size_bytes) VALUES (?, 'forgejo', ?, ?, ?, ?)", project.id, git.org, name, sha,
-                scaffold().sumOf { (it.content?.size ?: 0).toLong() })
+                files.sumOf { (it.content?.size ?: 0).toLong() })
             return sha
         } catch (e: GitServerException) { throw ApiException(HttpStatus.BAD_GATEWAY, "GIT_SERVER_ERROR", e.message ?: "Git server error") }
     }

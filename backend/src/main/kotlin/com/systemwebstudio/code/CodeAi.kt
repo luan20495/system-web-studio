@@ -65,7 +65,7 @@ class CodeAiService(
         val sources = linkedMapOf<String, String>()
         var budget = maxContext
         for (f in files.sortedBy { it.path }) {
-            val editable = runCatching { CodeChangePolicy.check(listOf(GitFileChange(f.path, "x".toByteArray()))); true }.getOrDefault(false)
+            val editable = runCatching { CodeChangePolicy.check(listOf(GitFileChange(f.path, "x".toByteArray())), server = project.appKind in CodeProjectService.SERVER_KINDS); true }.getOrDefault(false)
             if (!editable || f.path.substringAfterLast('.').lowercase() !in textExt || f.size > budget) continue
             val text = code.git { code.client.raw(repo.name, f.path, "main") }?.toString(Charsets.UTF_8) ?: continue
             sources[f.path] = text; budget -= text.length

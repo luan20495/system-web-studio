@@ -4,11 +4,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/http-api";
-import type { AiStatus, ApiProject, AuthConfig, CodeAiHistoryItem, CodeChange, CodeCommit, DiffFile, TreeFile } from "@/lib/http-types";
+import { SERVER_KINDS, type AiStatus, type ApiProject, type AuthConfig, type CodeAiHistoryItem, type CodeChange, type CodeCommit, type DiffFile, type TreeFile } from "@/lib/http-types";
 import { useSession } from "../session";
 import { ago, ErrorState, errText, fmtDate, StateView, tok, usd } from "../ui";
 import { Drawer, MembersDrawer, PublishModal } from "./drawers";
-import { DesignPane, IdeDrawer, PackagesDrawer } from "./CodePanels";
+import { DesignPane, IdeDrawer, PackagesDrawer, RuntimeDrawer } from "./CodePanels";
 
 const STATUS: Record<CodeChange["status"], string> = { BUILDING: "Đang build", READY: "Sẵn sàng", FAILED: "Build lỗi", MERGED: "Đã hợp nhất", DISCARDED: "Đã huỷ" };
 const STAGE: Record<string, string> = { CLAIMED: "đã nhận", SOURCE: "lấy mã", SCAN_SOURCE: "quét mã", PREPARE: "chuẩn bị", INSTALL: "cài gói", BUILD: "build",
@@ -40,7 +40,8 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
   const router = useRouter(); const { me } = useSession();
   const ws = project.workspaceId, pid = project.id, base = `/studio/projects/${pid}`;
   const mode: "ai" | "code" | "design" = view === "code" ? "code" : view === "design" ? "design" : "ai";
-  const panel = ["members", "publish", "versions", "packages", "ide"].includes(view ?? "") ? view : null;
+  const panel = ["members", "publish", "versions", "packages", "ide", "runtime"].includes(view ?? "") ? view : null;
+  const isServer = SERVER_KINDS.includes(project.appKind ?? "SOURCE_WEB_APP");
   const go = (to: string) => router.push(`${base}/${to}`);
   const canEdit = project.permissions.includes("PROJECT_EDIT");
   const [tree, setTree] = useState<TreeFile[] | null>(null);
@@ -133,6 +134,7 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
           <button className="button ghost" onClick={() => go("versions")}>Lịch sử</button>
           <button className="button ghost" onClick={() => go("packages")}>Thư viện</button>
           <button className="button ghost" onClick={() => go("ide")}>IDE</button>
+          {isServer ? <button className="button ghost" onClick={() => go("runtime")}>Máy chủ</button> : null}
           {project.permissions.includes("PROJECT_MEMBERS") ? <button className="button ghost" onClick={() => go("members")}>Chia sẻ</button> : null}
           <button className="button primary" disabled={!project.permissions.includes("PROJECT_PUBLISH")} onClick={() => go("publish")}>Xuất bản</button>
         </div>
@@ -241,6 +243,7 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
       </Drawer> : null}
       {panel === "packages" ? <PackagesDrawer ws={ws} pid={pid} canEdit={canEdit} onClose={() => go(mode)} onChange={(id) => { setSelected(id); go(mode); void loadChanges(); }}/> : null}
       {panel === "ide" ? <IdeDrawer ws={ws} pid={pid} onClose={() => go(mode)}/> : null}
+      {panel === "runtime" && isServer ? <RuntimeDrawer ws={ws} pid={pid} canPublish={project.permissions.includes("PROJECT_PUBLISH")} canSettings={project.permissions.includes("PROJECT_SETTINGS")} onClose={() => go(mode)}/> : null}
     </div>
   );
 }

@@ -124,7 +124,7 @@ class AiToolbox(private val jdbc: JdbcTemplate, private val json: JsonMapper, pr
                 "propose_file_change" -> {
                     val path = str(args, "path", 200)!!.trim(); val content = str(args, "content", CodeChangePolicy.MAX_FILE_BYTES)!!
                     val change = GitFileChange(path, content.toByteArray(Charsets.UTF_8))
-                    try { CodeChangePolicy.check(listOf(change)) } catch (e: Exception) { throw ToolRefused("DENIED", e.message ?: "not allowed") }
+                    try { CodeChangePolicy.check(listOf(change), server = ctx.project!!.appKind in com.systemwebstudio.code.CodeProjectService.SERVER_KINDS) } catch (e: Exception) { throw ToolRefused("DENIED", e.message ?: "not allowed") }
                     if (s.proposed.size >= 10) throw ToolRefused("DENIED", "at most 10 files per answer")
                     s.proposed.removeIf { it.path == path }; s.proposed += change
                     "staged $path (${content.length} chars); it will be built and checked like any change" to mapOf("path" to path, "chars" to content.length)

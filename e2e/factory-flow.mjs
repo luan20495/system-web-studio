@@ -55,8 +55,9 @@ await check("portal choice is not authority: forging the remembered portal does 
 // ---------------------------------------------------------------- project lifecycle in the Studio
 let PID = "";
 const NAME = `Factory E2E ${Date.now().toString(36)}`;
-await check("create a Website from /studio/new (other app types are marked coming soon)", async () => {
-  await admin.p.goto(BASE + "/studio/new"); await admin.p.getByText("Sắp có").first().waitFor();
+await check("create a Website from /studio/new (every app type is listed; unavailable ones say why)", async () => {
+  await admin.p.goto(BASE + "/studio/new"); await admin.p.getByRole("radio", { name: /Ứng dụng có máy chủ/ }).waitFor();
+  expect(await admin.p.getByRole("radiogroup", { name: "Loại ứng dụng" }).getByRole("radio").count() === 6, "six app types expected");
   await admin.p.getByLabel("Tên ứng dụng").fill(NAME); await admin.p.getByRole("button", { name: "Tạo website" }).click();
   await admin.p.waitForURL(/\/studio\/projects\/[0-9a-f-]{36}\/ai/); PID = admin.p.url().match(/projects\/([0-9a-f-]{36})/)[1];
   expect(sql(`select name from projects where id='${PID}'`) === NAME, "project not stored");

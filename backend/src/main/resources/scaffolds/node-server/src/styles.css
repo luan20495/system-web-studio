@@ -1,0 +1,3 @@
+/* App-specific styles. Company components come from @company/ui (styles imported in main.tsx). */
+:root { background: #f5f8fb; }
+body { margin: 0; }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { api } from "@/lib/http-api";
-import type { CostLine, Department, SecurityFinding, AccessRule, AiBudget, AdminAlert, EffectiveModel, AdminApp as App, AiProbe, PackageView, RepoRow, SettingView, BlockDto, TemplateDto, AiUsageReport, AuditRow, HealthItem, UsageBucket, UsageTotals } from "@/lib/http-types";
+import type { Connector, CostLine, Department, SecurityFinding, AccessRule, AiBudget, AdminAlert, EffectiveModel, AdminApp as App, AiProbe, PackageView, RepoRow, SettingView, BlockDto, TemplateDto, AiUsageReport, AuditRow, HealthItem, UsageBucket, UsageTotals } from "@/lib/http-types";
 import { useSession } from "../session";
 import { rememberPortal } from "../routing";
 import { useLoad } from "../useLoad";
@@ -12,7 +12,7 @@ import { BlockStatus, blockPage, CheckList, ReviewTimeline, SchemaThumb } from "
 import { actionLabel, ago, Card, ComingSoon, ErrorState, errText, fmtDate, Kpi, NavLink, num, Pager, Pill, StateView, tok, usd } from "../ui";
 
 const NAV: [string, string, string][] = [
-  ["", "Tổng quan", "▦"], ["users", "Người dùng & Workspace", "◎"], ["applications", "Ứng dụng", "▤"], ["ai", "AI Control", "✦"], ["ai-governance", "Quản trị AI", "⚖"], ["alerts", "Cảnh báo", "!"], ["security", "Bảo mật", "⛨"], ["costs", "Chi phí", "$"], ["departments", "Phòng ban", "⌘"], ["identity", "Định danh (SSO/SCIM)", "⚿"],
+  ["", "Tổng quan", "▦"], ["users", "Người dùng & Workspace", "◎"], ["applications", "Ứng dụng", "▤"], ["ai", "AI Control", "✦"], ["ai-governance", "Quản trị AI", "⚖"], ["alerts", "Cảnh báo", "!"], ["security", "Bảo mật", "⛨"], ["costs", "Chi phí", "$"], ["departments", "Phòng ban", "⌘"], ["identity", "Định danh (SSO/SCIM)", "⚿"], ["connectors", "Connector", "⇄"],
   ["components", "Components", "◇"], ["templates", "Templates", "▧"], ["audit", "Nhật ký kiểm toán", "≡"], ["builds", "Build & lưu trữ", "⬢"], ["packages", "Packages", "▣"], ["system", "Sức khỏe hệ thống", "♥"], ["settings", "Cài đặt", "⚙"]
 ];
 
@@ -43,6 +43,7 @@ function route(seg: string[]): ReactNode {
     case "costs": return <CostsPage/>;
     case "departments": return <DepartmentsPage/>;
     case "identity": return <IdentityPage/>;
+    case "connectors": return <ConnectorsPage/>;
     case "components": return <ComponentsPage/>;
     case "templates": return <TemplatesAdmin/>;
     case "builds": return <BuildsPage/>;
@@ -1045,5 +1046,45 @@ function IdentityPage() {
           <tbody>{s.mappings.map((x) => <tr key={x.id}><td>{x.group}</td><td>{x.workspace}</td><td className="code">{x.role}</td><td><button className="btn sm ghost" onClick={() => void act(() => api.deleteScimMapping(x.id))}>Gỡ</button></td></tr>)}</tbody></table>}
       </>}
     </Card>
+  </>);
+}
+
+/** Approved HTTPS connectors for server apps: the credential is stored encrypted and added by the platform; apps never see it. */
+function ConnectorsPage() {
+  const { data, error, reload } = useLoad(() => api.admin.connectors(), []);
+  const [f, setF] = useState({ key: "", name: "", description: "", baseUrl: "https://", authHeader: "", authValue: "", ops: "GET /items" });
+  const [grant, setGrant] = useState<{ key: string; app: { type: string; id: string } } | null>(null);
+  const [err, setErr] = useState<string | null>(null); const [msg, setMsg] = useState<string | null>(null);
+  async function act(fn: () => Promise<unknown>, ok?: string) { setErr(null); setMsg(null); try { await fn(); if (ok) setMsg(ok); reload(); } catch (x) { setErr(errText(x, "Không lưu được.")); } }
+  function edit(c: Connector) { setF({ key: c.key, name: c.name, description: c.description, baseUrl: c.baseUrl, authHeader: c.authHeader ?? "", authValue: "", ops: c.operations.map((o) => `${o.method} ${o.path}`).join("\n") }); }
+  const operations = f.ops.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => { const [m, ...p] = l.split(/\s+/); return { method: (m ?? "").toUpperCase(), path: p.join("") }; });
+  return (<>
+    <PageHead title="Connector" sub="API HTTPS đã duyệt mà ứng dụng có máy chủ được gọi qua cổng runtime. Thông tin xác thực mã hóa, chỉ ghi; ứng dụng và AI không bao giờ thấy."/>
+    {err ? <p className="formError" role="alert">{err}</p> : null}{msg ? <p className="hint" role="status">{msg}</p> : null}
+    <Card title="Thêm / sửa connector">
+      <form className="filters wrap" onSubmit={(e) => { e.preventDefault(); void act(() => api.admin.saveConnector({ key: f.key.trim(), name: f.name.trim(), description: f.description.trim() || undefined, baseUrl: f.baseUrl.trim(),
+        authHeader: f.authHeader.trim() || undefined, authValue: f.authValue || undefined, operations }), "Đã lưu connector."); }}>
+        <input aria-label="Mã" placeholder="ma-connector" value={f.key} onChange={(e) => setF({ ...f, key: e.target.value.toLowerCase() })}/>
+        <input aria-label="Tên" placeholder="Tên" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })}/>
+        <input aria-label="Base URL" placeholder="https://api.example.com/v1" value={f.baseUrl} onChange={(e) => setF({ ...f, baseUrl: e.target.value })}/>
+        <input aria-label="Header xác thực" placeholder="Authorization" value={f.authHeader} onChange={(e) => setF({ ...f, authHeader: e.target.value })}/>
+        <input aria-label="Giá trị xác thực" type="password" autoComplete="off" placeholder="Giá trị (để trống = giữ nguyên)" value={f.authValue} onChange={(e) => setF({ ...f, authValue: e.target.value })}/>
+        <input aria-label="Mô tả" placeholder="Mô tả (AI đọc được)" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })}/>
+        <textarea aria-label="Thao tác cho phép" rows={3} placeholder={"GET /contacts\nPOST /contacts"} value={f.ops} onChange={(e) => setF({ ...f, ops: e.target.value })}/>
+        <button className="btn primary" disabled={!f.key || !f.name || !f.baseUrl}>Lưu</button>
+      </form>
+    </Card>
+    <Card title="Danh mục">{error ? <ErrorState error={error} retry={reload}/> : !data ? <StateView kind="loading"/> : data.length === 0 ? <StateView kind="empty" title="Chưa có connector"/> :
+      <table className="table"><thead><tr><th>Connector</th><th>Base URL</th><th>Thao tác</th><th>Xác thực</th><th>Ứng dụng</th><th>Trạng thái</th><th><span className="srOnly">Thao tác</span></th></tr></thead>
+        <tbody>{data.map((c) => <tr key={c.key}><td><b>{c.name}</b><small className="code">{c.key}</small></td><td className="code">{c.baseUrl}</td>
+          <td>{c.operations.map((o) => <small key={o.method + o.path} className="code">{o.method} {o.path}</small>)}</td><td>{c.hasSecret ? `${c.authHeader ?? "—"}: ••••` : "không"}</td><td>{c.grants}</td>
+          <td><Pill value={c.status === "APPROVED" ? "ACTIVE" : "DISABLED"} label={c.status === "APPROVED" ? "Đã duyệt" : "Tắt"}/></td>
+          <td><div className="row"><button className="btn sm" onClick={() => edit(c)}>Sửa</button>
+            <button className="btn sm ghost" onClick={() => void act(() => api.admin.connectorStatus(c.key, c.status === "APPROVED" ? "DISABLED" : "APPROVED"))}>{c.status === "APPROVED" ? "Tắt" : "Bật"}</button>
+            <button className="btn sm ghost" onClick={() => setGrant({ key: c.key, app: { type: "PROJECT", id: "" } })}>Cấp cho ứng dụng</button></div></td></tr>)}</tbody></table>}</Card>
+    {grant ? <Card title={`Cấp “${grant.key}” cho ứng dụng có máy chủ`}>
+      <form className="filters wrap" onSubmit={(e) => { e.preventDefault(); if (grant.app.id) void act(() => api.admin.grantConnector(grant.key, grant.app.id), "Đã cấp.").then(() => setGrant(null)); }}>
+        <ScopePicker types={["PROJECT"]} value={grant.app} onChange={(v) => setGrant({ ...grant, app: v })}/><button className="btn primary" disabled={!grant.app.id}>Cấp</button>
+        <button type="button" className="btn ghost" onClick={() => setGrant(null)}>Đóng</button></form></Card> : null}
   </>);
 }

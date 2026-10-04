@@ -37,6 +37,8 @@ object SettingCatalog {
         SettingDef("ai.daily-tokens-per-user", "AI", SettingType.INT, "app.ai.daily-token-limit-per-user", "0", "Token / người / 24 giờ (0 = tắt)", min = 0, max = 1_000_000_000),
         SettingDef("ai.monthly-tokens-per-workspace", "AI", SettingType.INT, "app.ai.monthly-token-limit-per-workspace", "0", "Token / workspace / tháng (0 = tắt)", min = 0, max = 10_000_000_000),
         SettingDef("ai.stream-timeout-seconds", "AI", SettingType.INT, "app.ai.stream-timeout-seconds", "120", "Thời gian tối đa một yêu cầu AI dạng streaming (giây)", min = 10, max = 900),
+        // server apps (stage J): generated server code running in the isolated runtime
+        SettingDef("server-apps.enabled", "Ứng dụng có máy chủ", SettingType.BOOL, "app.runtime.enabled", "false", "Cho phép tạo và chạy ứng dụng có máy chủ (runtime cô lập)", Risk.HIGH),
         // websites
         SettingDef("site.external-link-domains", "Website", SettingType.DOMAINS, "app.sites.external-link-domains", "", "Tên miền ngoài được phép làm liên kết điều hướng (phân tách bằng dấu phẩy)"),
         // source-code apps

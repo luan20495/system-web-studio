@@ -217,6 +217,18 @@ app:
     public-url: ${FORGEJO_PUBLIC_URL:${FORGEJO_URL:}}            # clone URL shown to developers
     org: ${FORGEJO_ORG:factory}
     bot-name: ${FORGEJO_BOT:factory-bot}
+  # Server apps (stage J, ADR 0017/0018). Off by policy by default (Admin → Settings → server-apps.enabled) and unavailable unless all of
+  # these are configured. Secrets of every kind are encrypted with SECRETS_MASTER_KEY (base64, 32 bytes) and never returned or sent to AI.
+  secrets:
+    master-key: ${SECRETS_MASTER_KEY:}
+  runtime:
+    appdb-url: ${APPDB_URL:}
+    appdb-admin-user: ${APPDB_ADMIN_USER:appdb_admin}
+    appdb-admin-password: ${APPDB_ADMIN_PASSWORD:}
+    appdb-host-for-apps: ${APPDB_HOST_FOR_APPS:appdb:5432}
+    gateway-url: ${APPS_GATEWAY_URL:}
+    gateway-token: ${APPS_GATEWAY_TOKEN:}
+    enabled: ${SERVER_APPS_ENABLED:false}
   build:
     runner-token: ${BUILD_RUNNER_TOKEN:}                         # empty = runner endpoints disabled
     api-base: ${BUILD_API_BASE:http://127.0.0.1:8080}             # how the runner reaches this API (loopback)

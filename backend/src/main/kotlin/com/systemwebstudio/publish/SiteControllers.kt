@@ -160,6 +160,8 @@ class SiteServingController(
             files[decoded] == null && files["$decoded/index.html"] != null -> { response.status = 301; response.setHeader("Location", "${decoded.substringAfterLast('/')}/"); return }
             else -> decoded
         }
+        // the server part of a server app (bundle, routes) is for the runtime only, never served as a file
+        if (app && (path.startsWith("server/") || path == "openapi.json")) return page(response, 404, "Không tìm thấy", "")
         val file = files[path] ?: return notFound(prefix, files, app, root, request, response)
         common(response)
         if (app) {
