@@ -160,6 +160,11 @@ app:
     token: ${SCIM_TOKEN:}
   metrics:
     token: ${METRICS_TOKEN:}
+  # Website forms (stage G): salt for the visitor-IP hash (stable across restarts when set), rate limits
+  forms:
+    ip-salt: ${FORMS_IP_SALT:}
+    max-per-visitor: ${FORMS_MAX_PER_VISITOR:5}
+    max-per-site-per-hour: ${FORMS_MAX_PER_SITE_PER_HOUR:200}
   # Backup monitoring (stage L): <environment>:<dir> pairs of scripts/backup-all.sh output; alerts when stale/failed
   backup:
     status-dirs: ${BACKUP_STATUS_DIRS:}

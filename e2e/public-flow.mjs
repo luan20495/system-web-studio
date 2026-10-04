@@ -14,7 +14,9 @@ const browser = await chromium.launch({ executablePath: "/Applications/Google Ch
 const results = []; let failed = false; const consoleErrors = [];
 const check = async (name, fn) => { try { await fn(); results.push(1); console.log("PASS", name); } catch (e) { failed = true; results.push(0); console.log("FAIL", name, "-", String(e.message).split("\n")[0]); } };
 const expect = (c, m) => { if (!c) throw new Error(m); };
-const user = "pub" + Math.random().toString(36).slice(2, 9), pw = "Correct-Horse-9-" + Math.random().toString(36).slice(2, 8);
+// the pilot is locked down (no public sign-up): the test signs in with the operator-created demo accounts (.run/public/demo-accounts.txt)
+const demo = Object.fromEntries(readFileSync(new URL("../.run/public/demo-accounts.txt", import.meta.url), "utf8").split("\n").map((l) => l.trim().split(/\s+/)).filter((p) => p.length >= 2 && /^demo/.test(p[0])));
+const [user, u3] = Object.keys(demo); const pw = demo[user];
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
 const page = await ctx.newPage();
 page.on("console", (m) => { if (m.type() === "error") consoleErrors.push(m.text()); });
@@ -22,7 +24,7 @@ page.on("pageerror", (e) => consoleErrors.push("pageerror " + e.message));
 const frameText = async () => (await (await page.waitForSelector("iframe.previewFrame", { state: "attached" })).contentFrame()).evaluate(() => document.body.innerText);
 const frameHas = async (t, present = true) => { for (let i = 0; i < 40; i++) { if ((await frameText()).includes(t) === present) return; await page.waitForTimeout(250); } throw new Error(`preview ${present ? "missing" : "still has"} ${t}`); };
 
-let PID = "", SITE = "", otherCtx = null; const u3 = "pub" + Math.random().toString(36).slice(2, 9);
+let PID = "", SITE = "", otherCtx = null;
 const frameEl = async () => (await page.waitForSelector("iframe.previewFrame", { state: "attached" })).contentFrame();
 await check("public URL serves the app over HTTPS with HSTS and a nonce CSP", async () => {
   const r = await page.goto(BASE + "/login"); expect(r.status() === 200, `status ${r.status()}`);
@@ -30,12 +32,14 @@ await check("public URL serves the app over HTTPS with HSTS and a nonce CSP", as
   expect(/script-src 'self' 'nonce-/.test(h["content-security-policy"] ?? ""), "CSP nonce missing");
   await page.getByLabel("Tên đăng nhập").waitFor();
 });
-await check("sign-up (Builder portal) creates the account and lands in the Studio", async () => {
+await check("public sign-up is closed (internal pilot); a company account signs in to the Studio", async () => {
+  const anon = await browser.newContext(); const t = (await (await anon.request.get(`${BASE}/api/v1/auth/csrf`)).json()).token;
+  const reg = await anon.request.post(`${BASE}/api/v1/auth/register`, { headers: { "X-XSRF-TOKEN": t, "Content-Type": "application/json" }, data: { username: "nobody-" + Date.now(), password: "abc123def456" }, failOnStatusCode: false });
+  expect(reg.status() === 404 && (await reg.json()).code === "SIGNUP_DISABLED", `register answered ${reg.status()}`); await anon.close();
+  expect(await page.getByRole("button", { name: /Chưa có tài khoản/ }).count() === 0, "sign-up button must not be offered");
   await page.getByRole("radio", { name: /Builder Studio/ }).check();
-  await page.getByRole("button", { name: /Chưa có tài khoản/ }).click();
-  await page.getByLabel("Tên đăng nhập").fill(user); await page.getByLabel("Tên hiển thị").fill("Public E2E");
-  await page.getByLabel("Mật khẩu").fill(pw);
-  await page.getByRole("button", { name: "Tạo tài khoản", exact: true }).click();
+  await page.getByLabel("Tên đăng nhập").fill(user); await page.getByLabel("Mật khẩu").fill(pw);
+  await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
   await page.waitForURL((u) => u.pathname.startsWith("/studio"), { timeout: 20000 });
 });
 await check("cookies: session is HttpOnly + Secure, CSRF cookie Secure", async () => {
@@ -92,8 +96,8 @@ await check("private site over real HTTPS: anonymous -> sign in redirect; the me
   const sc = (await ctx.cookies(`https://${SITES}`)).find((c) => c.name === "site_session");
   expect(sc?.secure && sc?.httpOnly && !sc.domain.startsWith("."), `site cookie ${JSON.stringify(sc)}`);
   const other = await browser.newContext(); otherCtx = other; const op = await other.newPage();
-  await op.goto(BASE + "/login"); await op.getByRole("radio", { name: /Builder Studio/ }).check(); await op.getByRole("button", { name: /Chưa có tài khoản/ }).click();
-  await op.getByLabel("Tên đăng nhập").fill(u3); await op.getByLabel("Mật khẩu").fill(pw); await op.getByRole("button", { name: "Tạo tài khoản", exact: true }).click(); await op.waitForURL((u) => u.pathname.startsWith("/studio"));
+  await op.goto(BASE + "/login"); await op.getByRole("radio", { name: /Builder Studio/ }).check();
+  await op.getByLabel("Tên đăng nhập").fill(u3); await op.getByLabel("Mật khẩu").fill(demo[u3]); await op.getByRole("button", { name: "Đăng nhập", exact: true }).click(); await op.waitForURL((u) => u.pathname.startsWith("/studio"));
   await op.goto(SITE); await op.getByText("Không mở được trang").waitFor({ timeout: 20000 });
 });
 await check("a second public user cannot see the first user's workspace or project", async () => {
@@ -104,7 +108,7 @@ await check("a second public user cannot see the first user's workspace or proje
   expect((await otherCtx.request.get(`${BASE}/api/v1/projects/${PID}`)).status() === 404, "foreign project must be 404");
 });
 await check("audit rows carry the REAL client IP (trusted-proxy chain), not 127.0.0.1", async () => {
-  const ips = sql(`select distinct ip_address from audit_events where action in ('LOGIN_SUCCESS','REGISTER','CREATE_PROJECT') and created_at > now() - interval '15 minutes'`).split("\n").filter(Boolean);
+  const ips = sql(`select distinct ip_address from audit_events where action in ('LOGIN_SUCCESS','CREATE_PROJECT') and created_at > now() - interval '15 minutes'`).split("\n").filter(Boolean);
   expect(ips.length > 0 && !ips.includes("127.0.0.1") && !ips.includes("0:0:0:0:0:0:0:1"), `audit IPs: ${ips.join(",")}`);
 });
 await check("operational endpoints are not reachable from the internet", async () => {
