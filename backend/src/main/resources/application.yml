@@ -160,6 +160,10 @@ app:
     token: ${SCIM_TOKEN:}
   metrics:
     token: ${METRICS_TOKEN:}
+  # Backup monitoring (stage L): <environment>:<dir> pairs of scripts/backup-all.sh output; alerts when stale/failed
+  backup:
+    status-dirs: ${BACKUP_STATUS_DIRS:}
+    max-age-hours: ${BACKUP_MAX_AGE_HOURS:26}
   cleanup:
     enabled: ${CLEANUP_ENABLED:true}
     dry-run: ${CLEANUP_DRY_RUN:false}

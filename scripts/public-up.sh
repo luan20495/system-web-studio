@@ -138,6 +138,9 @@ fi
 if [ "${KEEP_AWAKE:-true}" = true ] && ! { [ -f "$RUN/awake.pid" ] && kill -0 "$(cat "$RUN/awake.pid")" 2>/dev/null; }; then
   ( nohup caffeinate -i -s > /dev/null 2>&1 < /dev/null & echo $! > "$RUN/awake.pid" )     # no idle/AC sleep while published
 fi
+# scheduled backups (daily + weekly restore drill) and the process watchdog (stage L); both idempotent and detached
+if [ "${BACKUP_DAEMON:-true}" = true ]; then perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV' "$ROOT/scripts/backup-daemon.sh" public > /dev/null 2>&1 < /dev/null & fi
+if [ "${WATCHDOG:-true}" = true ]; then perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV' "$ROOT/scripts/watchdog.sh" public > /dev/null 2>&1 < /dev/null & fi
 say "waiting for the public URL"
 for _ in $(seq 1 60); do curl -fsS -m8 "$PUBLIC_ORIGIN/api/v1/auth/config" >/dev/null 2>&1 && break; sleep 2; done
 "$ROOT/scripts/public-status.sh" || true

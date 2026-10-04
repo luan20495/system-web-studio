@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Stop the API and UI started by run-local.sh. Add --infra to also stop containers (data volumes are kept).
 . "$(dirname "$0")/_env.sh"
+# stop the watchdog and backup daemon first: an intentional stop must not be "repaired" by the watchdog
+for f in .run/watchdog-local.pid .run/backup-daemon-local.pid; do [ -f "$f" ] && { kill "$(cat "$f")" 2>/dev/null || true; rm -f "$f"; }; done
 for n in frontend backend render runner; do
   if [ -f ".run/$n.pid" ]; then kill "$(cat ".run/$n.pid")" 2>/dev/null || true; rm -f ".run/$n.pid"; fi
 done

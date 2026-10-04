@@ -2,6 +2,7 @@
 # Credentials below are LOCAL-ONLY defaults; override them through .env. Never reuse them anywhere else.
 services:
   postgres:
+    restart: unless-stopped
     image: postgres:17.6
     environment:
       POSTGRES_DB: system_web_studio
@@ -19,6 +20,7 @@ services:
       retries: 12
 
   redis:
+    restart: unless-stopped
     image: redis:8.2.1-alpine
     # Sessions and rate limits live here: never evict keys silently.
     command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction"]
@@ -36,6 +38,7 @@ services:
   # The official minio/minio images are no longer pullable from Docker Hub/Quay, so the last
   # publicly available pinned S3-compatible build is used for LOCAL development only.
   minio:
+    restart: unless-stopped
     image: bitnamilegacy/minio:2025.7.23-debian-12-r5
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-studio-minio}
@@ -54,6 +57,7 @@ services:
       retries: 12
 
   rabbitmq:
+    restart: unless-stopped
     image: rabbitmq:4-management-alpine
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-studio}
@@ -73,6 +77,7 @@ services:
 
   # Sites gateway (ADR 0009): serves every published site from the API's /sites endpoint (artifacts in MinIO). Unprivileged, read-only.
   sites-gateway:
+    restart: unless-stopped
     image: nginxinc/nginx-unprivileged:1.29-alpine
     environment:
       API_UPSTREAM: ${SITES_API_UPSTREAM:-host.docker.internal:8080}
@@ -97,6 +102,8 @@ services:
   # Git server for generated code projects (ADR 0011): platform-owned repositories, loopback only, no SSH, no sign-up, no Actions.
   # Secrets/bot token are created by scripts/forgejo-setup.sh into .run/forgejo-server.env (git-ignored).
   forgejo:
+    restart: unless-stopped
+    profiles: ["medium", "full"]   # LEAN/MEDIUM/FULL stack profiles (ADR 0020)
     image: codeberg.org/forgejo/forgejo:11-rootless
     env_file:
       - path: .run/forgejo-server.env
@@ -129,6 +136,8 @@ services:
   # Package mirror for build sandboxes (ADR 0010): allowlist-only proxy of npm. Reachable by sandboxes ONLY through the internal
   # "build" network (no internet there); the mirror itself uses the default network to fetch allowlisted packages.
   verdaccio:
+    restart: unless-stopped
+    profiles: ["medium", "full"]   # LEAN/MEDIUM/FULL stack profiles (ADR 0020)
     image: verdaccio/verdaccio:6
     volumes:
       - ./infra/verdaccio/config.yaml:/verdaccio/conf/config.yaml:ro
@@ -141,6 +150,8 @@ services:
   # Server apps (stage J, ADR 0017/0018): a database server ONLY for generated apps (one database + role per app); the platform
   # database is a different server on a different network. Admin credentials are generated into .run/appdb.env (git-ignored).
   appdb:
+    restart: unless-stopped
+    profiles: ["full"]
     image: postgres:17.6
     environment:
       POSTGRES_USER: appdb_admin
@@ -159,6 +170,8 @@ services:
       retries: 12
 
   apps-gateway:
+    restart: unless-stopped
+    profiles: ["full"]
     image: nginxinc/nginx-unprivileged:1.29-alpine
     environment:
       APPS_GATEWAY_TOKEN: ${APPS_GATEWAY_TOKEN:-set-by-run-local}

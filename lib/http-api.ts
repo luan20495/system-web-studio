@@ -1,6 +1,6 @@
 import type {
   AdminAi, AiCallRow, SettingView, BuildPolicyReport, CleanupResult, RepoRow, AiPrice, AiProbe, AiProviderInfo, AiUsageReport, AdminApp, BlockDto, CheckResult, TemplateDto, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
-  AppKind, RuntimeStatus, Connector, Department, CostPrice, CostReport, SecurityReport, FormSubmission, SiteDomain, TemplateReview, LibraryCategories, AccessRule, EffectiveModel, AiBudget, AdminAlert, StreamHandlers,
+  BackupEnvironment, AppKind, RuntimeStatus, Connector, Department, CostPrice, CostReport, SecurityReport, FormSubmission, SiteDomain, TemplateReview, LibraryCategories, AccessRule, EffectiveModel, AiBudget, AdminAlert, StreamHandlers,
   AiStatus, ApiProject, AuthConfig, Member, SiteInfo, DesignNode, DependencyRequest, PackageView, CloneAccess, TreeFile, CodeFile, CodeCommit, CodeChange, DiffFile, CodeAiResponse, CodeAiHistoryItem, RegistryComponent, AssetDto, Deployment, Me, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
 } from "./http-types";
 
@@ -192,6 +192,7 @@ export const api = {
     approvePackage: (body: { name: string; versionRange?: string; pinnedVersion?: string; note?: string }) => call<PackageView>("/admin/packages", { method: "POST", body: json(body) }),
     decidePackage: (name: string, status: "ALLOWED" | "DENIED", acceptRisk?: boolean, note?: string) =>
       call<PackageView>(`/admin/packages/${encodeURIComponent(name)}/decision`, { method: "PUT", body: json({ status, acceptRisk, note }) }),
+    backups: () => call<BackupEnvironment[]>("/admin/backups"),
     connectors: () => call<Connector[]>("/admin/connectors"),
     saveConnector: (body: { key: string; name: string; description?: string; baseUrl: string; authHeader?: string; authValue?: string; operations: { method: string; path: string }[] }) =>
       call<Connector[]>("/admin/connectors", { method: "PUT", body: json(body) }),

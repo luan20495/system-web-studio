@@ -12,7 +12,7 @@ import { BlockStatus, blockPage, CheckList, ReviewTimeline, SchemaThumb } from "
 import { actionLabel, ago, Card, ComingSoon, ErrorState, errText, fmtDate, Kpi, NavLink, num, Pager, Pill, StateView, tok, usd } from "../ui";
 
 const NAV: [string, string, string][] = [
-  ["", "Tổng quan", "▦"], ["users", "Người dùng & Workspace", "◎"], ["applications", "Ứng dụng", "▤"], ["ai", "AI Control", "✦"], ["ai-governance", "Quản trị AI", "⚖"], ["alerts", "Cảnh báo", "!"], ["security", "Bảo mật", "⛨"], ["costs", "Chi phí", "$"], ["departments", "Phòng ban", "⌘"], ["identity", "Định danh (SSO/SCIM)", "⚿"], ["connectors", "Connector", "⇄"],
+  ["", "Tổng quan", "▦"], ["users", "Người dùng & Workspace", "◎"], ["applications", "Ứng dụng", "▤"], ["ai", "AI Control", "✦"], ["ai-governance", "Quản trị AI", "⚖"], ["alerts", "Cảnh báo", "!"], ["security", "Bảo mật", "⛨"], ["costs", "Chi phí", "$"], ["departments", "Phòng ban", "⌘"], ["identity", "Định danh (SSO/SCIM)", "⚿"], ["connectors", "Connector", "⇄"], ["backups", "Sao lưu", "⛁"],
   ["components", "Components", "◇"], ["templates", "Templates", "▧"], ["audit", "Nhật ký kiểm toán", "≡"], ["builds", "Build & lưu trữ", "⬢"], ["packages", "Packages", "▣"], ["system", "Sức khỏe hệ thống", "♥"], ["settings", "Cài đặt", "⚙"]
 ];
 
@@ -44,6 +44,7 @@ function route(seg: string[]): ReactNode {
     case "departments": return <DepartmentsPage/>;
     case "identity": return <IdentityPage/>;
     case "connectors": return <ConnectorsPage/>;
+    case "backups": return <BackupsPage/>;
     case "components": return <ComponentsPage/>;
     case "templates": return <TemplatesAdmin/>;
     case "builds": return <BuildsPage/>;
@@ -1086,5 +1087,25 @@ function ConnectorsPage() {
       <form className="filters wrap" onSubmit={(e) => { e.preventDefault(); if (grant.app.id) void act(() => api.admin.grantConnector(grant.key, grant.app.id), "Đã cấp.").then(() => setGrant(null)); }}>
         <ScopePicker types={["PROJECT"]} value={grant.app} onChange={(v) => setGrant({ ...grant, app: v })}/><button className="btn primary" disabled={!grant.app.id}>Cấp</button>
         <button type="button" className="btn ghost" onClick={() => setGrant(null)}>Đóng</button></form></Card> : null}
+  </>);
+}
+
+const BK_NAME: Record<string, string> = { postgres: "CSDL nền tảng (PostgreSQL)", appdb: "CSDL của ứng dụng có máy chủ", minio: "Tệp & artifact (MinIO)", forgejo: "Kho mã (Forgejo)" };
+/** Backup monitoring: last successful backup per component, the latest restore drill, problems (also raised as alerts). */
+function BackupsPage() {
+  const { data, error, reload } = useLoad(() => api.admin.backups(), []);
+  const size = (b: number | null) => (b == null ? "—" : b > 1048576 ? `${(b / 1048576).toFixed(1)} MiB` : `${Math.round(b / 1024)} KiB`);
+  return (<>
+    <PageHead title="Sao lưu" sub="Lịch: hằng ngày (scripts/backup-daemon.sh), diễn tập khôi phục hằng tuần từ chính file sao lưu vào máy chủ tạm. Cảnh báo khi bản sao lưu quá 26 giờ, lỗi hoặc diễn tập không đạt."/>
+    {error ? <ErrorState error={error} retry={reload}/> : !data ? <StateView kind="loading"/> : data.length === 0 ? <StateView kind="empty" title="Chưa cấu hình thư mục sao lưu (BACKUP_STATUS_DIRS)"/> :
+      data.map((e) => <Card key={e.environment} title={`Môi trường: ${e.environment}`} actions={<Pill value={e.healthy ? "ACTIVE" : "DISABLED"} label={e.healthy ? "Ổn" : "Có vấn đề"}/>}>
+        {e.problems.length ? <ul className="plainList">{e.problems.map((p) => <li key={p} className="formError">{p}</li>)}</ul> : null}
+        <table className="table"><thead><tr><th>Thành phần</th><th>Lần thành công gần nhất</th><th>Kích thước</th><th>Lần chạy gần nhất</th></tr></thead>
+          <tbody>{e.components.map((c) => <tr key={c.name}><td>{BK_NAME[c.name] ?? c.name}</td>
+            <td>{c.lastSuccess ? <>{ago(c.lastSuccess)} {c.stale ? <Pill value="DISABLED" label="quá hạn"/> : null}</> : c.state === "SKIPPED" ? "không triển khai ở đây" : "chưa có"}</td>
+            <td>{size(c.sizeBytes)}</td><td>{c.state}{c.error ? <small className="formError">{c.error}</small> : null}</td></tr>)}</tbody></table>
+        <h3 className="subHead">Diễn tập khôi phục {e.drillAt ? `· ${ago(e.drillAt)}` : ""}</h3>
+        {e.drill.length === 0 ? <p className="hint">Chưa diễn tập.</p> : <ul className="plainList">{e.drill.map((d) => <li key={d.component}><Pill value={d.result === "PASS" ? "ACTIVE" : d.result === "SKIPPED" ? "UNKNOWN" : "DISABLED"} label={d.result}/> {BK_NAME[d.component] ?? d.component}: {d.detail}</li>)}</ul>}
+      </Card>)}
   </>);
 }

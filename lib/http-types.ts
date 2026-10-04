@@ -207,3 +207,8 @@ export type RuntimeStatus = { available: boolean; provisioned: boolean; database
   deployments: ServerDeployment[]; secrets: { name: string; updatedAt: string; updatedBy: string | null }[]; connectors: string[]; logs: string | null; logsAt: string | null; notice: string };
 export type Connector = { key: string; name: string; description: string; baseUrl: string; authHeader: string | null; hasSecret: boolean;
   operations: { method: string; path: string }[]; status: "APPROVED" | "DISABLED"; grants: number; createdAt: string };
+
+// ---- Stage L: backups
+export type BackupComponent = { name: string; state: string; lastSuccess: string | null; lastRun: string | null; ageHours: number | null; sizeBytes: number | null; error: string | null; stale: boolean };
+export type BackupEnvironment = { environment: string; components: BackupComponent[]; drillAt: string | null; drillPassed: boolean | null;
+  drill: { component: string; result: string; detail: string }[]; healthy: boolean; problems: string[] };

@@ -3,9 +3,16 @@
 . "$(dirname "$0")/_env.sh"
 # Optional SSO settings written by scripts/sso-up.sh
 if [ -f .run/sso.env ]; then set -a; . .run/sso.env; set +a; fi
-docker compose up -d --wait
+# Stack profile (ADR 0020): lean = websites only (no Git server, mirror, runner, server runtime); medium = + source-code apps;
+# full (default) = + server apps (apps DB, apps gateway). Features whose services are not started are reported unavailable by the API.
+STACK_PROFILE="${STACK_PROFILE:-full}"
+case "$STACK_PROFILE" in lean|medium|full) ;; *) echo "STACK_PROFILE must be lean, medium or full" >&2; exit 1 ;; esac
+[ "$STACK_PROFILE" = lean ] && unset FORGEJO_URL FORGEJO_TOKEN FORGEJO_ADMIN_TOKEN
+[ "$STACK_PROFILE" = full ] || unset APPDB_URL APPS_GATEWAY_URL
+export BACKUP_STATUS_DIRS="${BACKUP_STATUS_DIRS:-local:$ROOT/backups/local,public:$ROOT/backups/public}"
+docker compose --profile "$STACK_PROFILE" up -d --wait
 # Git server for code projects: one-time setup creates the bot/org/token (idempotent)
-if [ ! -f .run/forgejo.env ] || ! grep -q '^FORGEJO_TOKEN=' .run/forgejo.env; then ./scripts/forgejo-setup.sh; set -a; . .run/forgejo.env; set +a; fi
+if [ "$STACK_PROFILE" != lean ] && { [ ! -f .run/forgejo.env ] || ! grep -q '^FORGEJO_TOKEN=' .run/forgejo.env; }; then ./scripts/forgejo-setup.sh; set -a; . .run/forgejo.env; set +a; fi
 # render worker: the Studio preview renderer as a local process (127.0.0.1 only, token-protected); built with the repo's TypeScript
 if ! curl -fsS "http://127.0.0.1:${RENDER_PORT}/health" >/dev/null 2>&1; then
   npx tsc -p workers/render/tsconfig.json
@@ -29,9 +36,13 @@ if ! curl -fsS "http://127.0.0.1:${FRONTEND_PORT}/" >/dev/null 2>&1; then
   for _ in $(seq 1 60); do curl -fsS "http://127.0.0.1:${FRONTEND_PORT}/" >/dev/null 2>&1 && break; sleep 1; done
 fi
 # build runner (sandboxed builds of code projects in Docker; never inside the API)
-if ! { [ -f .run/runner.pid ] && kill -0 "$(cat .run/runner.pid)" 2>/dev/null; }; then
+if [ "$STACK_PROFILE" != lean ] && ! { [ -f .run/runner.pid ] && kill -0 "$(cat .run/runner.pid)" 2>/dev/null; }; then
   nohup env RUNNER_API="$BUILD_API_BASE" BUILD_RUNNER_TOKEN="$BUILD_RUNNER_TOKEN" BUILD_NETWORK=hbl_build node workers/runner/runner.mjs > .run/runner.log 2>&1 < /dev/null & echo $! > .run/runner.pid
 fi
+# optional: scheduled backups (BACKUP_DAEMON=true) and a watchdog that restarts stopped processes (WATCHDOG=true)
+[ "${BACKUP_DAEMON:-false}" = true ] && { perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV' scripts/backup-daemon.sh local > /dev/null 2>&1 < /dev/null & }
+[ "${WATCHDOG:-false}" = true ] && { perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV' scripts/watchdog.sh local > /dev/null 2>&1 < /dev/null & }
+echo "Profile: $STACK_PROFILE"
 echo "UI:      http://localhost:${FRONTEND_PORT}"
 echo "API:     http://127.0.0.1:8080  (Swagger UI: /swagger-ui.html, profile local)"
 echo "Sites:   ${SITES_ORIGIN}/<slug>/  (published sites, gateway)   Render worker: 127.0.0.1:${RENDER_PORT}"
