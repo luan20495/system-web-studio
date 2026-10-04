@@ -97,9 +97,12 @@ class OidcLoginSuccessHandler(
         val secret = ByteArray(48).also { SecureRandom().nextBytes(it) }
         val unusable = requireNotNull(encoder.encode(Base64.getEncoder().encodeToString(secret)))     // nobody knows it: password login is impossible
         val emailFree = verifiedEmail != null && findByEmail(verifiedEmail) == null
-        jdbc.update("INSERT INTO users (id, username, password_hash, enabled, display_name, email, auth_source) VALUES (?,?,?,TRUE,?,?, 'OIDC') ON CONFLICT (username) DO NOTHING",
+        val inserted = jdbc.update("INSERT INTO users (id, username, password_hash, enabled, display_name, email, auth_source) VALUES (?,?,?,TRUE,?,?, 'OIDC') ON CONFLICT (username) DO NOTHING",
             id, username, unusable, name?.take(160), if (emailFree) verifiedEmail else null)
+        // never attach a new identity to an account that already holds this generated name (it must be the same OIDC identity, or nothing)
         val userId = jdbc.queryForObject("SELECT id FROM users WHERE username = ?", UUID::class.java, username)!!
+        if (inserted == 0 && jdbc.queryForObject("SELECT auth_source FROM users WHERE id = ?", String::class.java, userId) != "OIDC")
+            throw IllegalStateException("generated OIDC username is held by a non-OIDC account")
         jdbc.update("INSERT INTO external_identities (issuer, subject, user_id, email) VALUES (?,?,?,?) ON CONFLICT DO NOTHING", issuer, subject, userId, verifiedEmail)
         audit.record("PROVISION_USER", "USER", userId, actorId = userId, newValue = mapOf("source" to "OIDC", "issuer" to issuer))
         return userId

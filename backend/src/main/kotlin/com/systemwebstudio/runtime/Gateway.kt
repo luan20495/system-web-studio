@@ -28,10 +28,24 @@ import java.security.MessageDigest
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
+import java.net.InetAddress
 
 private val http: HttpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).followRedirects(HttpClient.Redirect.NEVER).build()
 private const val MAX_BODY = 1_000_000
 private const val MAX_RESPONSE = 5_000_000
+
+/** Outbound requests the platform makes for users (connectors, TLS checks) may only reach public internet addresses. */
+object PublicAddress {
+    fun isPublic(host: String): Boolean {
+        val addrs = runCatching { InetAddress.getAllByName(host) }.getOrNull() ?: return false
+        return addrs.isNotEmpty() && addrs.none { a ->
+            a.isLoopbackAddress || a.isSiteLocalAddress || a.isLinkLocalAddress || a.isAnyLocalAddress || a.isMulticastAddress ||
+                (a is java.net.Inet6Address && (a.address[0].toInt() and 0xfe) == 0xfc) ||                       // fc00::/7 unique local
+                a.hostAddress.startsWith("100.") && a.address[1].toInt().and(0xff) in 64..127 ||                  // 100.64.0.0/10 carrier-grade NAT
+                a.hostAddress == "169.254.169.254" || a.hostAddress.startsWith("0.")
+        }
+    }
+}
 
 /** "/api/items/{id}" matches "/api/items/42": literal segments exactly, {param} = one non-empty segment */
 internal fun templateMatches(template: String, path: String): Boolean {
@@ -102,7 +116,10 @@ class AppGatewayController(private val sites: SiteService, private val runtime: 
         request.getHeader("Content-Type")?.let { b.header("Content-Type", it.take(200)) }
         if (user != null) {
             val u = jdbc.queryForMap("SELECT id, username, coalesce(display_name, username) AS name, email FROM users WHERE id = ?", user)
-            b.header("X-Factory-User", json.writeValueAsString(mapOf("id" to u["id"].toString(), "username" to u["username"], "displayName" to u["name"], "email" to u["email"])))
+            val value = json.writeValueAsString(mapOf("id" to u["id"].toString(), "username" to u["username"], "displayName" to u["name"], "email" to u["email"]))
+            // signed with the app's own APP_TOKEN so the app can reject a forged header (scaffolds verify it: t=<epoch s>,sig=HMAC-SHA256(t + "." + value))
+            val t = Instant.now().epochSecond
+            b.header("X-Factory-User", value).header("X-Factory-Signature", "t=$t,sig=${runtime.signUser(site.projectId, "$t.$value")}")
         }
         val res = try { http.send(b.method(method, if (body.isEmpty()) HttpRequest.BodyPublishers.noBody() else HttpRequest.BodyPublishers.ofByteArray(body)).build(), HttpResponse.BodyHandlers.ofInputStream()) }
             catch (e: Exception) { return error(response, 502, "the app did not answer") }
@@ -181,6 +198,7 @@ class ConnectorProxyController(private val jdbc: JdbcTemplate, private val crypt
         val base = URI(c["base_url"] as String)
         val target = URI((c["base_url"] as String).trimEnd('/') + rest + (request.queryString?.let { "?$it" } ?: ""))
         if (target.scheme != "https" || target.host != base.host) return fail(400, "target outside the connector")
+        if (!PublicAddress.isPublic(target.host)) return fail(403, "connector host resolves to a non-public address")
         val body = if (method in setOf("POST", "PUT", "PATCH", "DELETE")) readBody(request) else ByteArray(0)
         val b = HttpRequest.newBuilder(target).timeout(Duration.ofSeconds(20)).header("Accept", request.getHeader("Accept") ?: "application/json")
         request.getHeader("Content-Type")?.let { b.header("Content-Type", it.take(200)) }

@@ -50,7 +50,7 @@ class DnsLookup {
 class TlsProbe {
     private val http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(6)).followRedirects(HttpClient.Redirect.NEVER).build()
     /** (status, detail) with status ACTIVE | ERROR | PENDING */
-    fun check(host: String): Pair<String, String?> = try {
+    fun check(host: String): Pair<String, String?> = if (!com.systemwebstudio.runtime.PublicAddress.isPublic(host)) "ERROR" to "Tên miền trỏ tới địa chỉ không công khai" else try {
         http.send(HttpRequest.newBuilder(URI("https://$host/")).timeout(Duration.ofSeconds(8)).method("HEAD", HttpRequest.BodyPublishers.noBody()).build(), HttpResponse.BodyHandlers.discarding())
         "ACTIVE" to null
     } catch (e: javax.net.ssl.SSLException) { "ERROR" to "Chứng chỉ TLS không hợp lệ cho tên miền này" }
@@ -86,10 +86,13 @@ class SiteDomainService(private val jdbc: JdbcTemplate, private val sites: SiteS
         val own = listOf(sitesHost, studioHost).filter { it.isNotBlank() }
         if (own.any { host == it || host.endsWith(".$it") }) throw ApiException.badRequest("RESERVED_HOSTNAME", "This host belongs to the platform")
         if (jdbc.queryForObject("SELECT count(*) FROM site_domains WHERE project_id = ?", Long::class.java, projectId)!! >= 5) throw ApiException.conflict("TOO_MANY_DOMAINS", "At most 5 domains per website")
+        // a VERIFIED host belongs to one website; pending claims do not block anyone (the first to prove ownership wins)
+        if (jdbc.queryForObject("SELECT count(*) FROM site_domains WHERE hostname = ? AND status = 'VERIFIED'", Long::class.java, host)!! > 0)
+            throw ApiException.conflict("DOMAIN_TAKEN", "This domain is already connected to a website")
         val token = "hbl-" + ByteArray(18).also(random::nextBytes).joinToString("") { "%02x".format(it) }
         val id = UUID.randomUUID()
         try { jdbc.update("INSERT INTO site_domains (id, project_id, hostname, verification_token, created_by) VALUES (?,?,?,?,?)", id, projectId, host, token, userId) }
-        catch (e: org.springframework.dao.DuplicateKeyException) { throw ApiException.conflict("DOMAIN_TAKEN", "This domain is already connected to a website") }
+        catch (e: org.springframework.dao.DuplicateKeyException) { throw ApiException.conflict("DOMAIN_EXISTS", "This website already has this domain") }
         audit.record("DOMAIN_ADDED", "SITE_DOMAIN", id, workspaceId, projectId, newValue = mapOf("hostname" to host))
         return one(projectId, id)
     }
@@ -98,10 +101,15 @@ class SiteDomainService(private val jdbc: JdbcTemplate, private val sites: SiteS
         val d = one(projectId, id)
         val found = dns.txt(d.txtName)
         val ok = d.txtValue in found
+        if (ok && jdbc.queryForObject("SELECT count(*) FROM site_domains WHERE hostname = ? AND status = 'VERIFIED' AND id <> ?", Long::class.java, d.hostname, id)!! > 0)
+            throw ApiException.conflict("DOMAIN_TAKEN", "Another website proved ownership of this domain first")
         jdbc.update("""UPDATE site_domains SET status = ?, last_error = ?, last_checked_at = now(), verified_at = CASE WHEN ? THEN coalesce(verified_at, now()) ELSE verified_at END WHERE id = ?""",
-            if (ok) "VERIFIED" else if (d.status == "VERIFIED") "VERIFIED" else "FAILED",
+            if (ok) "VERIFIED" else "FAILED",
             if (ok) null else "Không tìm thấy bản ghi TXT ${d.txtName} = ${d.txtValue}" + if (found.isNotEmpty()) " (đang có ${found.size} giá trị khác)" else "", ok, id)
-        if (ok) audit.record("DOMAIN_VERIFIED", "SITE_DOMAIN", id, workspaceId, projectId, newValue = mapOf("hostname" to d.hostname))
+        if (ok) {
+            audit.record("DOMAIN_VERIFIED", "SITE_DOMAIN", id, workspaceId, projectId, newValue = mapOf("hostname" to d.hostname))
+            jdbc.update("DELETE FROM site_domains WHERE hostname = ? AND id <> ? AND status <> 'VERIFIED'", d.hostname, id)   // other claims are void now
+        }
         if (ok) checkTls(projectId, id)
         return one(projectId, id)
     }
@@ -118,6 +126,21 @@ class SiteDomainService(private val jdbc: JdbcTemplate, private val sites: SiteS
         val d = one(projectId, id)
         jdbc.update("DELETE FROM site_domains WHERE id = ?", id)
         audit.record("DOMAIN_REMOVED", "SITE_DOMAIN", id, workspaceId, projectId, oldValue = mapOf("hostname" to d.hostname))
+    }
+
+    /**
+     * Daily: verified domains are re-checked (TXT removed → FAILED, no longer served; a stale ownership must not keep serving), pending
+     * claims older than 7 days are deleted.
+     */
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelayString = "\${app.domains.recheck-interval-ms:86400000}", initialDelayString = "\${app.domains.recheck-initial-delay-ms:600000}")
+    fun recheck() {
+        jdbc.update("DELETE FROM site_domains WHERE status <> 'VERIFIED' AND created_at < now() - interval '7 days'")
+        jdbc.queryForList("SELECT id, project_id, hostname, verification_token FROM site_domains WHERE status = 'VERIFIED'").forEach { r ->
+            if ((r["verification_token"] as String) !in dns.txt("_hbl-verify.${r["hostname"]}")) {
+                jdbc.update("UPDATE site_domains SET status = 'FAILED', last_error = ?, last_checked_at = now() WHERE id = ?", "Bản ghi TXT xác minh đã bị gỡ; tên miền ngừng phục vụ", r["id"])
+                audit.record("DOMAIN_UNVERIFIED", "SITE_DOMAIN", r["id"], projectId = r["project_id"] as UUID, actorId = null, newValue = mapOf("hostname" to r["hostname"]))
+            } else jdbc.update("UPDATE site_domains SET last_checked_at = now() WHERE id = ?", r["id"])
+        }
     }
 
     /** Host the visitor asked for (the gateway passes Host through); lowercase, without port */

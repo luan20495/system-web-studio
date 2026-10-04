@@ -26,6 +26,7 @@ class StaticSiteTests : IntegrationTestBase() {
     @org.springframework.test.context.bean.override.mockito.MockitoBean lateinit var dnsLookup: DnsLookup
     @org.springframework.test.context.bean.override.mockito.MockitoBean lateinit var tlsProbe: TlsProbe
     @org.springframework.beans.factory.annotation.Autowired lateinit var settingsSvc: com.systemwebstudio.settings.SettingsService
+    @org.springframework.beans.factory.annotation.Autowired lateinit var domainService: SiteDomainService
     companion object {
         @Volatile var mode = "ok"
         @Volatile var lastToken: String? = null
@@ -281,12 +282,25 @@ class StaticSiteTests : IntegrationTestBase() {
         assertThat(sc.s.body(sc.s.post("${sc.base}/domains/$id/check-tls")).get("tlsStatus").asString()).isEqualTo("ACTIVE")
         val page = v.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/sites/_host/").header("Host", host))
         assertThat(page.response.status).isEqualTo(200); assertThat(page.response.contentAsString).contains("<h1>")
-        // the same host cannot be claimed twice; a private site is not served on a custom domain
+        // a verified host cannot be claimed again; a private site is not served on a custom domain
         assertThat(scenario().let { o -> o.s.post("${o.base}/domains", """{"hostname":"$host"}""").response.status }).isEqualTo(409)
+        // a pending claim never blocks the real owner: two websites may claim; the first to prove ownership wins, other claims are void
+        val h2 = "shop2-${java.util.UUID.randomUUID().toString().take(6)}.example"
+        val squatter = scenario(); squatter.publish()
+        val s1 = squatter.s.body(squatter.s.post("${squatter.base}/domains", """{"hostname":"$h2"}"""))
+        val o2 = sc.s.body(sc.s.post("${sc.base}/domains", """{"hostname":"$h2"}"""))
+        org.mockito.Mockito.`when`(dnsLookup.txt("_hbl-verify.$h2")).thenReturn(listOf(o2.get("txtValue").asString()))
+        org.mockito.Mockito.`when`(tlsProbe.check(h2)).thenReturn("PENDING" to "not reachable")
+        assertThat(sc.s.body(sc.s.post("${sc.base}/domains/${o2.get("id").asString()}/verify")).get("status").asString()).isEqualTo("VERIFIED")
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM site_domains WHERE id = ?::uuid", Long::class.java, s1.get("id").asString())).isEqualTo(0)
+        // the daily re-check unverifies a domain whose TXT record is gone
+        org.mockito.Mockito.`when`(dnsLookup.txt("_hbl-verify.$h2")).thenReturn(emptyList())
+        domainService.recheck()
+        assertThat(jdbc.queryForObject("SELECT status FROM site_domains WHERE id = ?::uuid", String::class.java, o2.get("id").asString())).isEqualTo("FAILED")
         sc.publish("PRIVATE")
         assertThat(v.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/sites/_host/").header("Host", host)).response.status).isEqualTo(404)
         assertThat(sc.s.delete("${sc.base}/domains/$id").response.status).isEqualTo(204)
-        assertThat(sc.auditCount("DOMAIN_VERIFIED")).isEqualTo(1)
+        assertThat(sc.auditCount("DOMAIN_VERIFIED")).isEqualTo(2)
     }
 
     @Test

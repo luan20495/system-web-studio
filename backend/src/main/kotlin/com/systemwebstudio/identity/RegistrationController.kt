@@ -57,6 +57,8 @@ class RegistrationController(
             throw ApiException.forbidden("Invalid invite code", "INVALID_INVITE_CODE")
         val username = body.username.trim().lowercase()
         if (!usernamePattern.matches(username)) throw ApiException.badRequest("INVALID_USERNAME", "Username: 3-40 characters a-z 0-9 . _ - and must start with a letter or digit")
+        // reserved for accounts the platform generates for SSO identities
+        if (username.startsWith("oidc-")) throw ApiException.badRequest("RESERVED_USERNAME", "Usernames starting with oidc- are reserved")
         if (body.password.lowercase().contains(username)) throw ApiException.badRequest("WEAK_PASSWORD", "Password must not contain the username")
         if (!body.password.any { it.isLetter() } || !body.password.any { it.isDigit() }) throw ApiException.badRequest("WEAK_PASSWORD", "Password must contain both letters and digits")
         if (body.password.toSet().size < 4) throw ApiException.badRequest("WEAK_PASSWORD", "Password is too repetitive")

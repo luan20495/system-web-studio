@@ -45,6 +45,8 @@ class AiStreams(private val settings: SettingsService) {
     }
 
     fun <T : Any> start(userId: UUID, work: (StreamSink) -> T, errorBody: (Exception) -> Map<String, Any?>): SseEmitter {
+        // at most 2 concurrent streams per user so one person cannot hold the whole pool
+        if (active.values.count { it.userId == userId } >= 2) throw ApiException(HttpStatus.TOO_MANY_REQUESTS, "AI_STREAMS_PER_USER", "You already have 2 AI requests running; wait for one to finish or cancel it.")
         val timeout = settings.long("ai.stream-timeout-seconds").coerceIn(10, 900)
         val emitter = SseEmitter((timeout + 30) * 1000)
         val job = Job(UUID.randomUUID(), userId, Instant.now().plusSeconds(timeout), emitter)

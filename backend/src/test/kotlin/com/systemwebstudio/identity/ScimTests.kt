@@ -34,6 +34,7 @@ class ScimTests : IntegrationTestBase() {
         val id = j(created).get("id").asString()
         assertThat(j(created).get("displayName").asString()).isEqualTo("Alice Nguyen")
         assertThat(jdbc.queryForObject("SELECT system_admin FROM users WHERE id = ?::uuid", Boolean::class.java, id)).isFalse()       // roles never grant anything
+        assertThat(scim("POST", "/Users", """{"userName":"oidc-0123456789abcdef"}""").response.status).isEqualTo(400)   // reserved for SSO identities
         val dup = scim("POST", "/Users", """{"userName":"$name"}""")
         assertThat(dup.response.status).isEqualTo(409); assertThat(j(dup).get("scimType").asString()).isEqualTo("uniqueness")
         fun filtered(f: String) = mvc.perform(B.get("/scim/v2/Users").param("filter", f).header("Authorization", "Bearer $token")).andReturn()

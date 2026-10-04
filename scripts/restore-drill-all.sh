@@ -12,9 +12,11 @@ cleanup() { docker rm -f "$C" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 check_sum() { [ -f "$1.sha256" ] && [ "$(shasum -a 256 "$1" | cut -d' ' -f1)" = "$(cut -d' ' -f1 < "$1.sha256")" ]; }
 PW="$(openssl rand -hex 16)"
-docker run -d --name "$C" --network none -e POSTGRES_PASSWORD="$PW" postgres:17.6 >/dev/null
+POSTGRES_PASSWORD="$PW" docker run -d --name "$C" --network none -e POSTGRES_PASSWORD postgres:17.6 >/dev/null
 for _ in $(seq 1 60); do docker exec "$C" pg_isready -U postgres >/dev/null 2>&1 && break; sleep 1; done
 q() { docker exec "$C" psql -U postgres -tAc "$2" -d "$1"; }
+# app dumps are app-controlled content: restore them as an unprivileged role so functions inside cannot act as superuser
+q postgres "create role drill_restore nosuperuser nocreatedb nocreaterole login" >/dev/null
 
 f=$(ls -1t "$OUT"/postgres/*.dump 2>/dev/null | head -1)
 if [ -z "$f" ]; then add postgres SKIPPED "no backup file"
@@ -33,7 +35,7 @@ else
   n=0; bad=0
   for db in $dumps; do
     f=$(ls -1t "$OUT"/appdb/"$db"-*.dump | head -1)
-    if check_sum "$f" && q postgres "create database $db" >/dev/null && docker exec -i "$C" pg_restore -U postgres -d "$db" --no-owner < "$f" 2>/dev/null; then n=$((n + 1)); else bad=$((bad + 1)); fi
+    if check_sum "$f" && q postgres "create database $db owner drill_restore" >/dev/null && docker exec -i "$C" pg_restore -U postgres --role=drill_restore -d "$db" --no-owner --no-privileges < "$f" 2>/dev/null; then n=$((n + 1)); else bad=$((bad + 1)); fi
   done
   [ "$bad" = 0 ] && add appdb PASS "$n app database(s) restored" || add appdb FAIL "$bad of $((n + bad)) app databases did not restore"
 fi

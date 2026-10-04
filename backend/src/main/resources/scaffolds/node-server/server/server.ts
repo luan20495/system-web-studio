@@ -1,9 +1,24 @@
 // Server part of a factory server app (ADR 0017). Runs ONLY in the platform's isolated runtime container: non-root, read-only
 // filesystem, no internet. It gets its own database (DATABASE_URL, a role that owns only this app's database) and may call approved
 // connectors through the runtime gateway (CONNECTOR_URL + APP_TOKEN). Every public route must be declared in openapi.json:
-// the gateway refuses anything else. The platform passes the signed-in user of a private app in X-Factory-User (JSON).
+// the gateway refuses anything else. The platform passes the signed-in user of a private app in X-Factory-User, signed (see verifiedUser).
 import http from "node:http";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { Pool } from "pg";
+
+/**
+ * The signed-in member of a private app, as signed by the platform (X-Factory-Signature: t=<epoch s>,sig=hex HMAC-SHA256(APP_TOKEN, t + "." + user)).
+ * Unsigned, wrongly signed or stale (> 5 min) values are ignored, so nothing but the platform can claim to be a user.
+ */
+function verifiedUser(req: http.IncomingMessage): { id?: string; username?: string; displayName?: string; email?: string } | null {
+  const raw = req.headers["x-factory-user"]; const sig = req.headers["x-factory-signature"]; const key = process.env.APP_TOKEN;
+  if (typeof raw !== "string" || typeof sig !== "string" || !key) return null;
+  const m = /^t=(\d+),sig=([0-9a-f]{64})$/.exec(sig);
+  if (!m || Math.abs(Date.now() / 1000 - Number(m[1])) > 300) return null;
+  const want = createHmac("sha256", key).update(`${m[1]}.${raw}`).digest();
+  if (!timingSafeEqual(want, Buffer.from(m[2], "hex"))) return null;
+  try { return JSON.parse(raw) as { id?: string; username?: string; displayName?: string; email?: string }; } catch { return null; }
+}
 
 const pool = process.env.DATABASE_URL ? new Pool({ connectionString: process.env.DATABASE_URL, max: 5, idleTimeoutMillis: 30_000 }) : null;
 let ready: Promise<void> | null = null;
@@ -40,10 +55,7 @@ route("DELETE", "/api/items/{id}", async (_req, _b, p) => {
   await pool.query("DELETE FROM items WHERE id = $1", [Number(p.id) || 0]);
   return [204, null];
 });
-route("GET", "/api/me", async (req) => {
-  const raw = req.headers["x-factory-user"];
-  return [200, typeof raw === "string" ? JSON.parse(raw) : { anonymous: true }];
-});
+route("GET", "/api/me", async (req) => [200, verifiedUser(req) ?? { anonymous: true }]);
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", "http://app");

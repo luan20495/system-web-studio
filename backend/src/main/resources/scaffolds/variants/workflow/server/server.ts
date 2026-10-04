@@ -2,7 +2,22 @@
 // APPROVERS secret (comma-separated usernames). Optional: on approval, call an approved connector (NOTIFY_CONNECTOR = "<key>/<path>") through
 // the runtime gateway — the credential is added by the platform, this app never sees it. Runs only in the isolated runtime (ADR 0017).
 import http from "node:http";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { Pool } from "pg";
+
+/**
+ * The signed-in member of a private app, as signed by the platform (X-Factory-Signature: t=<epoch s>,sig=hex HMAC-SHA256(APP_TOKEN, t + "." + user)).
+ * Unsigned, wrongly signed or stale (> 5 min) values are ignored, so nothing but the platform can claim to be a user.
+ */
+function verifiedUser(req: http.IncomingMessage): { id?: string; username?: string; displayName?: string; email?: string } | null {
+  const raw = req.headers["x-factory-user"]; const sig = req.headers["x-factory-signature"]; const key = process.env.APP_TOKEN;
+  if (typeof raw !== "string" || typeof sig !== "string" || !key) return null;
+  const m = /^t=(\d+),sig=([0-9a-f]{64})$/.exec(sig);
+  if (!m || Math.abs(Date.now() / 1000 - Number(m[1])) > 300) return null;
+  const want = createHmac("sha256", key).update(`${m[1]}.${raw}`).digest();
+  if (!timingSafeEqual(want, Buffer.from(m[2], "hex"))) return null;
+  try { return JSON.parse(raw) as { id?: string; username?: string; displayName?: string; email?: string }; } catch { return null; }
+}
 
 const pool = process.env.DATABASE_URL ? new Pool({ connectionString: process.env.DATABASE_URL, max: 5 }) : null;
 const approvers = new Set((process.env.APPROVERS ?? "").split(",").map((s) => s.trim()).filter(Boolean));
@@ -11,7 +26,7 @@ const migrate = () => (ready ??= pool!.query(`CREATE TABLE IF NOT EXISTS request
   amount NUMERIC(14,2) NOT NULL DEFAULT 0 CHECK (amount >= 0), state TEXT NOT NULL DEFAULT 'SUBMITTED' CHECK (state IN ('SUBMITTED','APPROVED','REJECTED')),
   requested_by TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT now());
   CREATE TABLE IF NOT EXISTS steps (id SERIAL PRIMARY KEY, request_id INT NOT NULL REFERENCES requests(id) ON DELETE CASCADE, action TEXT NOT NULL, actor TEXT, comment TEXT, at TIMESTAMPTZ NOT NULL DEFAULT now());`));
-const userOf = (req: http.IncomingMessage): string => { try { return (JSON.parse(String(req.headers["x-factory-user"] ?? "null")) as { username?: string } | null)?.username ?? "anonymous"; } catch { return "anonymous"; } };
+const userOf = (req: http.IncomingMessage): string => verifiedUser(req)?.username ?? "anonymous";
 
 async function notify(requestId: number) {
   const target = process.env.NOTIFY_CONNECTOR; if (!target || !process.env.CONNECTOR_URL) return "none";

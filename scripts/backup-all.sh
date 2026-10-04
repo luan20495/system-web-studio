@@ -54,11 +54,11 @@ else record postgres SKIPPED "" 0 "container $P-postgres-1 not running" 0; fi
 t0=$(date +%s); mkdir -p "$OUT/appdb"
 if running "$P-appdb-1"; then
   ok=1; total=0; n=0
-  dbs=$(docker exec -e PGPASSWORD="$APPDB_ADMIN_PASSWORD" "$P-appdb-1" psql -U appdb_admin -d appdb -tAc "select datname from pg_database where datname like 'app\_%' order by 1") || ok=0
-  docker exec -e PGPASSWORD="$APPDB_ADMIN_PASSWORD" "$P-appdb-1" pg_dumpall -U appdb_admin --roles-only > "$OUT/appdb/roles-$TS.sql" 2>>"$OUT/backup.log" || ok=0
+  dbs=$(PGPASSWORD="$APPDB_ADMIN_PASSWORD" docker exec -e PGPASSWORD "$P-appdb-1" psql -U appdb_admin -d appdb -tAc "select datname from pg_database where datname like 'app\_%' order by 1") || ok=0
+  PGPASSWORD="$APPDB_ADMIN_PASSWORD" docker exec -e PGPASSWORD "$P-appdb-1" pg_dumpall -U appdb_admin --roles-only > "$OUT/appdb/roles-$TS.sql" 2>>"$OUT/backup.log" || ok=0
   for db in $dbs; do
     f="$OUT/appdb/$db-$TS.dump"
-    if docker exec -e PGPASSWORD="$APPDB_ADMIN_PASSWORD" "$P-appdb-1" pg_dump -U appdb_admin -Fc "$db" > "$f.tmp" 2>>"$OUT/backup.log" && [ -s "$f.tmp" ]; then
+    if PGPASSWORD="$APPDB_ADMIN_PASSWORD" docker exec -e PGPASSWORD "$P-appdb-1" pg_dump -U appdb_admin -Fc "$db" > "$f.tmp" 2>>"$OUT/backup.log" && [ -s "$f.tmp" ]; then
       mv "$f.tmp" "$f"; echo "$(sha "$f")  $(basename "$f")" > "$f.sha256"; total=$((total + $(wc -c < "$f" | tr -d ' '))); n=$((n + 1))
     else rm -f "$f.tmp"; ok=0; fi
     prune "$OUT/appdb" "$db-*.dump"

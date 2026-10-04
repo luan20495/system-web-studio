@@ -99,7 +99,7 @@ class ScimService(
     @Transactional
     fun createUser(b: JsonNode, base: String): Map<String, Any?> {
         val name = b.get("userName")?.asString()?.trim()?.lowercase() ?: throw ScimException(HttpStatus.BAD_REQUEST, "invalidValue", "userName is required")
-        if (!userName.matches(name)) throw ScimException(HttpStatus.BAD_REQUEST, "invalidValue", "userName: letters, digits, . _ @ -")
+        if (!userName.matches(name) || name.startsWith("oidc-")) throw ScimException(HttpStatus.BAD_REQUEST, "invalidValue", "userName: letters, digits, . _ @ - (oidc- is reserved)")
         if (jdbc.queryForObject("SELECT count(*) FROM users WHERE lower(username) = ?", Long::class.java, name)!! > 0) throw ScimException(HttpStatus.CONFLICT, "uniqueness", "userName already exists")
         val ext = b.get("externalId")?.asString()?.take(255)
         if (ext != null && jdbc.queryForObject("SELECT count(*) FROM users WHERE scim_external_id = ?", Long::class.java, ext)!! > 0) throw ScimException(HttpStatus.CONFLICT, "uniqueness", "externalId already exists")

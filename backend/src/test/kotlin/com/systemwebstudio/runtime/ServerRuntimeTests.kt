@@ -111,6 +111,14 @@ class ServerRuntimeTests : IntegrationTestBase() {
         val viewer = fx.user("rtviewer"); fx.member(sc.ws, viewer, "VIEWER")
         jdbc.update("INSERT INTO project_members (workspace_id, project_id, user_id, role) VALUES (?,?,?, 'VIEWER')", sc.ws, sc.projectId, viewer.id)
         assertThat(sessionFor(viewer.username).put("${sc.base}/runtime/secrets", """{"name":"X_KEY","value":"y"}""").response.status).isEqualTo(403)
+        // viewers do not see container logs
+        jdbc.update("UPDATE app_runtimes SET last_logs = 'stdout line' WHERE project_id = ?", sc.projectId)
+        assertThat(sessionFor(viewer.username).body(sessionFor(viewer.username).get("${sc.base}/runtime")).get("logs").isNull).isTrue()
+        assertThat(sc.s.body(sc.s.get("${sc.base}/runtime")).get("logs").asString()).isEqualTo("stdout line")
+        // the member header is signed with the app's own token (the scaffolds reject anything else)
+        val appToken = crypto.decrypt(jdbc.queryForObject("SELECT app_token_enc FROM app_runtimes WHERE project_id = ?", String::class.java, sc.projectId)!!)
+        val mac = javax.crypto.Mac.getInstance("HmacSHA256").apply { init(javax.crypto.spec.SecretKeySpec(appToken.toByteArray(), "HmacSHA256")) }
+        assertThat(runtime.signUser(sc.projectId, "1.{}")).isEqualTo(mac.doFinal("1.{}".toByteArray()).joinToString("") { "%02x".format(it) })
     }
 
     @Test
@@ -194,6 +202,8 @@ class ServerRuntimeTests : IntegrationTestBase() {
         assertThat(admin.post("/api/v1/admin/connectors/$key/grants", """{"projectId":"${sc.projectId}"}""").response.status).isEqualTo(200)
         assertThat(call("/internal/connectors/$key/contacts", method = "POST").response.status).isEqualTo(403)   // operation not declared
         assertThat(call("/internal/connectors/$key/../admin").response.status).isIn(400, 403, 404)
+        // outbound calls only reach public internet addresses (no internal services, no cloud metadata)
+        listOf("localhost", "127.0.0.1", "10.1.2.3", "192.168.1.1", "169.254.169.254", "::1").forEach { assertThat(PublicAddress.isPublic(it)).describedAs(it).isFalse() }
         val search = jdbc.queryForObject("SELECT count(*) FROM connectors WHERE key = ? AND auth_value_enc NOT LIKE '%crm-secret%'", Long::class.java, key)
         assertThat(search).isEqualTo(1)
     }

@@ -225,9 +225,25 @@ async function processJob(job) {
 // Desired state comes from the API; the runner makes Docker match it. App containers: image built from the server bundle with no network,
 // non-root, read-only rootfs, all capabilities dropped, no-new-privileges, CPU/memory/pid limits, network "apps" (internal: only the apps DB
 // and the apps gateway), env from a 0600 temp file (never on the command line), a health check; optional OCI runtime (e.g. gVisor runsc).
-const RUNTIME_NETWORK = process.env.RUNTIME_NETWORK ?? "hbl_apps";
 const RUNTIME_IMAGE = process.env.RUNTIME_IMAGE ?? "node@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402";
 const RUNTIME_OCI = process.env.RUNTIME_OCI ?? "";            // e.g. "runsc" on a Linux host with gVisor installed
+// every app gets its OWN internal network holding only itself, the apps DB server and the apps gateway (apps cannot reach each other)
+const APPDB_CONTAINER = process.env.RUNTIME_APPDB_CONTAINER ?? "hbl-appdb-1";
+const GATEWAY_CONTAINER = process.env.RUNTIME_GATEWAY_CONTAINER ?? "hbl-apps-gateway-1";
+const appNetwork = (container) => `factory-net-${container.split("-")[1]}`;   // app-<project8>-<deployment8> -> one network per project
+async function ensureAppNetwork(net) {
+  if ((await run("docker", ["network", "inspect", net], { timeoutMs: 15_000 })).code !== 0) {
+    const c = await run("docker", ["network", "create", "--internal", "--label", "factory.app=1", net], { timeoutMs: 30_000 });
+    if (c.code !== 0 && !c.err.includes("already exists")) throw new Error(`network create failed: ${c.err.slice(-200)}`);
+  }
+  for (const [ctr, alias] of [[APPDB_CONTAINER, "appdb"], [GATEWAY_CONTAINER, "apps-gateway"]]) {
+    const on = await run("docker", ["inspect", "-f", `{{if index .NetworkSettings.Networks "${net}"}}yes{{end}}`, ctr], { timeoutMs: 15_000 });
+    if (on.out.trim() !== "yes") {
+      const r = await run("docker", ["network", "connect", "--alias", alias, net, ctr], { timeoutMs: 30_000 });
+      if (r.code !== 0 && !r.err.includes("already exists")) throw new Error(`cannot attach ${alias} to ${net}: ${r.err.slice(-200)}`);
+    }
+  }
+}
 const starting = new Set(); let lastLogs = 0;
 async function report(id, state, error, logs) {
   const r = await api("POST", `/internal/runtime/${id}/report`, JSON.stringify({ state, error, logs })); if (!r.ok) log("runtime report", id, r.status);
@@ -254,8 +270,9 @@ async function startContainer(c) {
     if (b.code !== 0) throw new Error(`image build failed: ${b.err.slice(-300)}`);
     const envFile = join(tmp, "env"); writeFileSync(envFile, Object.entries(c.env).map(([k, v]) => `${k}=${String(v).replace(/\n/g, " ")}`).join("\n") + "\n", { mode: 0o600 });
     await run("docker", ["rm", "-f", c.container], { timeoutMs: 30_000 });
+    const net = appNetwork(c.container); await ensureAppNetwork(net);
     const r = await run("docker", ["run", "-d", "--name", c.container, "--label", "factory.app=1", "--label", `factory.deployment=${c.deploymentId}`,
-      "--network", RUNTIME_NETWORK, ...(RUNTIME_OCI ? ["--runtime", RUNTIME_OCI] : []),
+      "--network", net, ...(RUNTIME_OCI ? ["--runtime", RUNTIME_OCI] : []),
       "--read-only", "--tmpfs", "/tmp:rw,noexec,nosuid,size=32m", "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
       "--pids-limit", String(c.limits.pids ?? 128), "--memory", String(c.limits.memory ?? "256m"), "--cpus", String(c.limits.cpus ?? 0.5),
       "--user", "10001:10001", "--restart", "on-failure:5", "--env-file", envFile,
@@ -281,6 +298,8 @@ async function reconcile() {
   const r = await api("GET", "/internal/runtime/desired"); if (!r.ok) return;
   const desired = (await r.json()).flatMap((a) => a.containers);
   const want = new Set(desired.map((c) => c.container));
+  // the apps DB / gateway may have been recreated by compose: re-attach them to every running app's network
+  for (const c of desired) if (!starting.has(c.container)) await ensureAppNetwork(appNetwork(c.container)).catch((e) => log("app network:", e.message));
   for (const c of desired) {
     if (starting.has(c.container)) continue;
     const st = await inspect(c.container);
@@ -293,6 +312,16 @@ async function reconcile() {
   }
   const ps = await run("docker", ["ps", "-a", "--filter", "label=factory.app=1", "--format", "{{.Names}}"], { timeoutMs: 15_000 });
   for (const name of ps.out.split("\n").map((x) => x.trim()).filter(Boolean)) if (!want.has(name) && !starting.has(name)) { log("removing app container", name); await run("docker", ["rm", "-f", name], { timeoutMs: 30_000 }); }
+  // networks of apps that no longer run, and images of deployments no longer desired (a rollback rebuilds the image from its artifact)
+  const nets = new Set(desired.map((c) => appNetwork(c.container)));
+  const ls = await run("docker", ["network", "ls", "--filter", "label=factory.app=1", "--format", "{{.Name}}"], { timeoutMs: 15_000 });
+  for (const n of ls.out.split("\n").map((x) => x.trim()).filter(Boolean)) if (!nets.has(n) && ![...starting].some((c) => appNetwork(c) === n)) {
+    for (const ctr of [APPDB_CONTAINER, GATEWAY_CONTAINER]) await run("docker", ["network", "disconnect", "-f", n, ctr], { timeoutMs: 15_000 });
+    await run("docker", ["network", "rm", n], { timeoutMs: 15_000 });
+  }
+  const keepTags = new Set(desired.map((c) => `factory-app:${c.deploymentId.slice(0, 12)}`));
+  const imgs = await run("docker", ["images", "factory-app", "--format", "{{.Repository}}:{{.Tag}}"], { timeoutMs: 15_000 });
+  for (const t of imgs.out.split("\n").map((x) => x.trim()).filter(Boolean)) if (!keepTags.has(t) && starting.size === 0) await run("docker", ["rmi", t], { timeoutMs: 30_000 });
 }
 let lastReconcile = 0;
 

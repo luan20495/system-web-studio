@@ -76,6 +76,13 @@ class ServerRuntimeService(
         audit.record("SERVER_APP_PROVISIONED", "PROJECT", projectId, projectId = projectId, newValue = mapOf("database" to name))
     }
 
+    /** HMAC-SHA256 with the app's APP_TOKEN (hex), for headers the app must be able to trust */
+    fun signUser(projectId: UUID, payload: String): String {
+        val token = crypto.decrypt(jdbc.queryForObject("SELECT app_token_enc FROM app_runtimes WHERE project_id = ?", String::class.java, projectId)!!)
+        val mac = javax.crypto.Mac.getInstance("HmacSHA256").apply { init(javax.crypto.spec.SecretKeySpec(token.toByteArray(), "HmacSHA256")) }
+        return mac.doFinal(payload.toByteArray()).joinToString("") { "%02x".format(it) }
+    }
+
     private fun sha256(s: String) = MessageDigest.getInstance("SHA-256").digest(s.toByteArray()).joinToString("") { "%02x".format(it) }
 
     private fun files(artifactId: UUID): Pair<String, Map<String, ManifestFile>> {
@@ -104,6 +111,8 @@ class ServerRuntimeService(
     fun deploy(projectId: UUID, artifactId: UUID, commitSha: String?, userId: UUID?, rollbackOf: UUID? = null): UUID {
         if (!available) throw ApiException.conflict("SERVER_APPS_UNAVAILABLE", "Server apps are disabled by policy or the runtime is not configured")
         if (jdbc.queryForObject("SELECT count(*) FROM app_runtimes WHERE project_id = ?", Long::class.java, projectId)!! == 0L) provision(projectId)
+        // one deploy at a time per app (versions stay unique, pointers consistent)
+        jdbc.queryForObject("SELECT project_id FROM app_runtimes WHERE project_id = ? FOR UPDATE", UUID::class.java, projectId)
         val routes = routesOf(artifactId)
         val id = UUID.randomUUID()
         val version = (jdbc.queryForObject("SELECT coalesce(max(version), 0) FROM server_deployments WHERE project_id = ?", Int::class.java, projectId) ?: 0) + 1
@@ -115,6 +124,7 @@ class ServerRuntimeService(
         return id
     }
 
+    @Transactional
     fun rollback(projectId: UUID, to: UUID, userId: UUID): UUID {
         val row = jdbc.queryForList("SELECT artifact_id, commit_sha, status FROM server_deployments WHERE id = ? AND project_id = ?", to, projectId).firstOrNull()
             ?: throw ApiException.notFound("DEPLOYMENT_NOT_FOUND", "Deployment not found")
@@ -196,7 +206,7 @@ class ServerRuntimeService(
     fun liveRoutes(projectId: UUID): Pair<UUID, List<AppRoute>>? = jdbc.query("""SELECT d.id, d.routes::text FROM app_runtimes r JOIN server_deployments d ON d.id = r.current_deployment_id
         WHERE r.project_id = ? AND d.status = 'RUNNING'""", { rs, _ -> rs.getObject(1, UUID::class.java) to json.readValue(rs.getString(2), Array<AppRoute>::class.java).toList() }, projectId).firstOrNull()
 
-    fun status(projectId: UUID): RuntimeDto {
+    fun status(projectId: UUID, canSeeLogs: Boolean = true): RuntimeDto {
         val r = jdbc.queryForList("SELECT db_name, current_deployment_id, desired_deployment_id, last_logs, logs_at FROM app_runtimes WHERE project_id = ?", projectId).firstOrNull()
         val deps = jdbc.query("""SELECT d.id, d.version, d.status, d.error, d.commit_sha, jsonb_array_length(d.routes), d.created_at, d.started_at, coalesce(u.display_name, u.username), d.rollback_of
             FROM server_deployments d LEFT JOIN users u ON u.id = d.requested_by WHERE d.project_id = ? ORDER BY d.version DESC LIMIT 30""", { rs, _ ->
@@ -207,7 +217,7 @@ class ServerRuntimeService(
             { rs, _ -> SecretDto(rs.getString(1), rs.getTimestamp(2).toInstant(), rs.getString(3)) }, projectId)
         val connectors = jdbc.queryForList("SELECT connector_key FROM project_connectors WHERE project_id = ? ORDER BY 1", String::class.java, projectId)
         return RuntimeDto(available, r != null, r?.get("db_name") as String?, r?.get("current_deployment_id") as UUID?, r?.get("desired_deployment_id") as UUID?, deps, secrets, connectors,
-            r?.get("last_logs") as String?, (r?.get("logs_at") as java.sql.Timestamp?)?.toInstant(),
+            if (canSeeLogs) r?.get("last_logs") as String? else null, (r?.get("logs_at") as java.sql.Timestamp?)?.toInstant(),
             if (available) "Máy chủ của ứng dụng chạy trong container cô lập (không Internet, CSDL riêng)." else "Ứng dụng có máy chủ đang tắt theo chính sách hoặc máy chủ này chưa có runtime cô lập.")
     }
 
@@ -234,7 +244,11 @@ class ServerRuntimeController(private val access: AccessService, private val run
     }
 
     @GetMapping
-    fun get(@PathVariable workspaceId: UUID, @PathVariable projectId: UUID, @AuthenticationPrincipal me: StudioUserDetails): RuntimeDto { ctx(me, workspaceId, projectId); return runtime.status(projectId) }
+    fun get(@PathVariable workspaceId: UUID, @PathVariable projectId: UUID, @AuthenticationPrincipal me: StudioUserDetails): RuntimeDto {
+        // container logs can contain data the app printed: only people who deploy or configure the app see them
+        val c = ctx(me, workspaceId, projectId)
+        return runtime.status(projectId, Permission.PROJECT_PUBLISH in c.permissions || Permission.PROJECT_SETTINGS in c.permissions)
+    }
 
     @PostMapping("/rollback")
     fun rollback(@PathVariable workspaceId: UUID, @PathVariable projectId: UUID, @Valid @RequestBody r: RollbackServerRequest, @AuthenticationPrincipal me: StudioUserDetails): RuntimeDto {

@@ -2,7 +2,22 @@
 // its own database (DATABASE_URL), no internet. Publish it PRIVATE so only members of the app can use it; the platform passes the member in
 // X-Factory-User. Every public route must be declared in openapi.json.
 import http from "node:http";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { Pool } from "pg";
+
+/**
+ * The signed-in member of a private app, as signed by the platform (X-Factory-Signature: t=<epoch s>,sig=hex HMAC-SHA256(APP_TOKEN, t + "." + user)).
+ * Unsigned, wrongly signed or stale (> 5 min) values are ignored, so nothing but the platform can claim to be a user.
+ */
+function verifiedUser(req: http.IncomingMessage): { id?: string; username?: string; displayName?: string; email?: string } | null {
+  const raw = req.headers["x-factory-user"]; const sig = req.headers["x-factory-signature"]; const key = process.env.APP_TOKEN;
+  if (typeof raw !== "string" || typeof sig !== "string" || !key) return null;
+  const m = /^t=(\d+),sig=([0-9a-f]{64})$/.exec(sig);
+  if (!m || Math.abs(Date.now() / 1000 - Number(m[1])) > 300) return null;
+  const want = createHmac("sha256", key).update(`${m[1]}.${raw}`).digest();
+  if (!timingSafeEqual(want, Buffer.from(m[2], "hex"))) return null;
+  try { return JSON.parse(raw) as { id?: string; username?: string; displayName?: string; email?: string }; } catch { return null; }
+}
 
 const pool = process.env.DATABASE_URL ? new Pool({ connectionString: process.env.DATABASE_URL, max: 5 }) : null;
 let ready: Promise<unknown> | null = null;
@@ -11,8 +26,7 @@ const migrate = () => (ready ??= pool!.query(`CREATE TABLE IF NOT EXISTS records
   created_by TEXT, updated_by TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now());
   CREATE TABLE IF NOT EXISTS record_history (id SERIAL PRIMARY KEY, record_id INT NOT NULL, actor TEXT, change JSONB NOT NULL, at TIMESTAMPTZ NOT NULL DEFAULT now());`));
 
-type User = { id?: string; username?: string; displayName?: string } | null;
-const userOf = (req: http.IncomingMessage): User => { const raw = req.headers["x-factory-user"]; try { return typeof raw === "string" ? JSON.parse(raw) as User : null; } catch { return null; } };
+const userOf = verifiedUser;
 const STATUSES = ["OPEN", "IN_PROGRESS", "DONE"];
 
 async function handle(req: http.IncomingMessage, path: string, body: Record<string, unknown> | null): Promise<[number, unknown]> {
