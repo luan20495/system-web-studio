@@ -20,14 +20,13 @@
 | Actuator | only `health` exposed by default, no details; `metrics` is opt-in; Swagger/OpenAPI disabled outside the `local` profile |
 | Secrets | no secrets in git; `.env` is ignored; production values come from the environment through `SecretProvider` |
 
-## Known gaps (not production-ready)
-- No Content-Security-Policy on the UI (Next.js inline scripts need a nonce setup); basic headers only.
-- No MFA, SSO/OIDC, password reset, or member management API (members are seeded/SQL in local).
-- The published-site gateway, TLS termination, WAF and real deploy provider are out of scope here.
-- `idempotency_keys`, `deployment_events` and `audit_events` have no retention job.
+## Known gaps (updated 2026-10-04)
+- Builds and server apps run in hardened containers (level 2, ADR 0019) on Docker Desktop; gVisor/Kata/Firecracker need a Linux host.
+- Backups live on the same machine until the owner configures an off-host target (ADR 0020).
+- No malware scanning of uploaded files (MIME allowlist and size limits only).
+- Native SAML SP not implemented (brokered through the OIDC provider instead, ADR 0016).
 - Dev compose uses well-known local-only passwords (`studio-local-only`); ports are loopback-only. Never reuse them.
-- Login throttling is keyed on `remoteAddr`; behind a proxy `server.forward-headers-strategy` and a trusted-proxy list must be configured.
-- No malware scanning of uploaded files; no per-workspace quotas.
+- Real AI providers and real connector endpoints have not been exercised (no keys / no approved external API on this server).
 
 ## Public deployment and AI (added 2026-10-02)
 * The published instance runs the `prod` profile (validator refuses dev defaults), behind a Cloudflare tunnel; only the UI server and the storage host are public (see `PUBLIC_DEPLOYMENT.md`). The API is bound to 127.0.0.1 and trusts `X-Forwarded-For` only from `127.0.0.1` (verified: audit rows hold real client IPs).
@@ -68,3 +67,29 @@ Triggered by the one-time execution of `rollup@4.64.0` on this Mac outside the s
 | Environment files | CHECKED · 1 FINDING (fixed) | `.env` was mode 644 → 600; `.run/*.env`/tokens already 600; none tracked by git |
 | Docker configuration | CHECKED · CLEAN | credsStore `desktop`, one ECR registry login (pre-existing) |
 | Full home scan of the incident window | UNKNOWN | a whole-home `find` exceeded the time limit; narrowed scans (autostart/bin/tmp locations) found nothing |
+
+## Stage M audit (2026-10-04)
+**Secret scan** (gitleaks, all 74 commits + working tree): clean. **npm audit** (app): 0 vulnerabilities. **OSV** (backend runtime classpath,
+both scaffold lockfiles, 461 packages): 7 Maven artifacts had advisories → patched in commit `4c28d09` (Tomcat 11.0.26 — 3 CRITICAL authenticator
+advisories, not reachable here because Spring Security does authentication, patched anyway; Jackson 3.1.7/2.21.7 — HIGH DoS; amqp-client 5.37.0;
+BouncyCastle 1.86). Re-check: 208 runtime artifacts, 0 advisories. (`bcprov 1.80.2` remains only on the Kotlin compiler's own build classpath.)
+**Headers** verified live on the pilot: HSTS (2 years, subdomains), nonce CSP with `strict-dynamic`, `frame-ancestors 'none'`, nosniff, referrer
+and permissions policies; API responses `no-store`. **Listening ports**: all project services on 127.0.0.1; `*:5432/*:6379` belong to unrelated
+`factory-*` containers (not touched); Testcontainers bind random ports on all interfaces only while the test suite runs (LOW, dev only).
+
+**Independent code review** (separate reviewer, read-only, stages E–L) — all findings fixed in `b559fa9` and re-verified:
+| # | Severity | Finding | Fix / verification |
+|---|---|---|---|
+| H1 | HIGH | server apps shared one Docker network: an app could call another app's container directly, bypassing the route allowlist and forging `X-Factory-User` | one internal network per app (only itself, apps DB, apps gateway); the member header is HMAC-signed with the app's token and verified by the scaffolds. Live: app A → app B by name and IP unreachable; gateway without token 403 |
+| M1 | MEDIUM | a pending custom-domain claim blocked the real owner; verified domains were never re-checked | first verified claim wins (partial unique index), others deleted, pending claims expire after 7 days, daily TXT re-check unverifies |
+| L1 | LOW | TLS probe could reach internal addresses | only public addresses (loopback/private/link-local/CGNAT/metadata refused) |
+| L2 | LOW | connector host checked by name only | resolved and checked for public addresses on every call (pinning not possible with the JDK client: residual DNS-rebinding window, admin-approved hosts only) |
+| L3 | LOW | first SSO login could attach to a pre-existing `oidc-…` account | insert result checked; `oidc-` reserved for sign-up and SCIM |
+| L4 | LOW | viewers could read server-app logs | logs only for PROJECT_PUBLISH / PROJECT_SETTINGS |
+| L5 | LOW | one user could hold all AI stream slots | 2 concurrent streams per user |
+| L6 | LOW | backup scripts put the apps-DB password on a command line; restore drill ran app dumps as superuser | password via inherited environment; app dumps restored with an unprivileged role |
+| L7 | LOW | old app images never removed | pruned by the runner |
+| L8 | LOW | rollback not transactional, concurrent deploys could share a version | `@Transactional` + row lock per app |
+| — | config | sites gateway appended the Docker hop to X-Forwarded-For (all visitors looked the same to rate limits) | X-Forwarded-For passed through from the tunnel |
+Checked and fine (reviewer): authorization scoping of all new controllers, SQL parameterization, SCIM privilege boundaries, renderer escaping,
+CSRF model per security chain, secret handling, gateway path handling (Spring's StrictHttpFirewall), CSV formula injection.

@@ -1,7 +1,25 @@
 # Software Factory — design proposal (Phase 7)
 
-Status: **7.1 implemented and public (2026-10-02); 7.2–7.4 implemented on the local stack (2026-10-03, not enabled on the public deployment); 7.5 (dynamic apps) not implemented.**
-Decisions are recorded in ADR 0008–0012; this page is the overview and the plan.
+Status (2026-10-04): **7.1 implemented and public; 7.2–7.5 implemented on the local stack** (source-code apps, sandbox builds, AI code
+generation, server runtime with per-app databases). The public pilot runs websites only (no Git server / runtime there). Decisions: ADR 0008–0020.
+Section 0 is the current architecture; sections 1–7 are the original proposal, kept for history.
+
+## 0. Current architecture (2026-10-04)
+```
+Browser ──► Studio UI (Next.js, nonce CSP) ──► API (Spring Boot, modular monolith) ──► PostgreSQL · Redis · MinIO · RabbitMQ
+                                                 │  control plane: identity (password/OIDC/SAML-brokered/SCIM), RBAC, audit, AI gateway
+                                                 │  (model access, budgets, alerts, streaming, tools), templates/blocks review, settings
+          Visitors ──► Sites gateway (nginx) ──► API /sites/** ── static artifacts (MinIO, content-addressed, atomic per publish)
+                                                 │                └ server app APIs /<slug>/api/** (declared routes only)
+                                                 ▼
+                                   Apps gateway (token) ──► one internal network per app: app container ◄─► apps DB (own DB/role)
+                                                 ▲                                        └─► connectors via the API proxy (credential injected)
+          Build plane: runner (host process, Docker) ── sandbox containers: mirror-only install, no-network build, OSV, gitleaks, SBOM
+                                                    └── runtime: image from the server bundle, hardened container, blue/green, health checks
+          Git plane: Forgejo (platform-owned repos, protected main, signed bot commits, read-only IDE tokens)
+          Render worker: page schema → static HTML (same renderer as the Studio preview), JS-free screenshot previews, AST service
+```
+Isolation levels and the production path (gVisor on a Linux host): ADR 0019. Backups, drills, profiles: ADR 0020.
 
 ## 1. Where we are (verified in code, 2026-10-02)
 * A project is a **page schema** (JSON) validated against an approved component registry and rendered by fixed code

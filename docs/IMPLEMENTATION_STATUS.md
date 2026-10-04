@@ -1,50 +1,77 @@
-# Implementation status — AI Software Factory (2026-10-03)
+# Implementation status — AI Software Factory (2026-10-04)
 
-Development Ready: **YES** · Internal Demo Ready: **YES** · Production Ready: **NO** (see "Not implemented").
+**Development Ready: YES · Internal Pilot Ready: YES (websites, AI, admin) · Production Ready: NO** — production needs a Linux runtime host,
+off-host backups, real provider keys and an owner decision on the items in "Required decisions" (see the readiness report).
 
-## REAL / PARTIAL / MOCK / NOT IMPLEMENTED
+Legend: **REAL** = implemented and verified end to end on this machine · **PARTIAL** = real but with a stated gap · **MOCK** = simulator /
+stand-in, labelled as such · **BLOCKED_EXTERNAL_INPUT** = needs something only the owner can provide · **NOT IMPLEMENTED**.
+
+## Platform, identity, admin
 | Area | Status | Notes |
-| --- | --- | --- |
-| Login gateway with portal choice (Admin / Builder) | REAL | portal is navigation intent only (ADR 0002) |
-| Password login, Redis sessions, CSRF, throttling | REAL | sessions now in the *indexed* repository (revocable) |
-| SSO / OIDC | REAL (Keycloak-verified) | SAML, SCIM: NOT IMPLEMENTED |
-| Public sign-up | REAL, off by default | `PUBLIC_SIGNUP_ENABLED` (falls back to `SIGNUP_ENABLED`) |
-| Auth screens (signing-in, no-access, no-workspace, session-expired) + return to original route | REAL | E2E-tested |
-| Admin Console shell | REAL | 8 sections |
-| Admin overview | REAL | DB counts (AI tokens/cost are on the AI Control page) |
-| Users: list/search/detail/enable/disable/revoke sessions | REAL | no departments/HR model |
-| Workspaces: list/detail | REAL | |
-| Application inventory + detail (members, versions, AI activity, deployments, audit) | REAL | AI/hosting cost, risk score: NOT IMPLEMENTED |
-| Transfer ownership, delete, restore version (admin) | REAL | archive: NOT IMPLEMENTED |
-| AI Control | REAL | providers, per-model enable/disable, pricing catalog, live connection check, usage report |
-| Multiple AI providers (Phase 6) | REAL, stub-verified | OpenAI, Anthropic, Gemini (OpenAI-compatible), internal OpenAI-compatible; paid models off until enabled; never used by "auto"; **no real call made to these providers yet**; per-workspace/role model permissions, streaming, tool calling: NOT IMPLEMENTED |
-| AI cost | REAL | provider-reported (OpenRouter) or explicit pricing catalog × reported tokens; unknown otherwise; budgets in money (not tokens), alerts: NOT IMPLEMENTED |
-| AI usage accounting (Phase 4) | REAL | every upstream call in `ai_calls` with provider-reported tokens/cost (null = not reported, never estimated); admin report by model/user/workspace/day + call log; my usage on Studio Home; tokens/cost per AI answer |
-| AI token budgets | REAL, off by default | per user per 24 h and per workspace per month, checked before the model call (`429 AI_TOKEN_LIMIT`); alerts, per-model budgets, own price table, chargeback: NOT IMPLEMENTED |
-| Component registry (admin + studio) | REAL (fixed approved set) | new base component types need a renderer in code (by design, ADR 0006) |
-| Contributed blocks (Phase 5) | REAL | presets of approved components; draft → automated checks → admin review (no self-approval) → library → deprecate/restore; versioned; usage of blocks NOT MEASURED; AI does not use blocks yet |
-| Audit log (org-wide, filters, request id) | REAL | append-only in the database |
-| Platform health | REAL | live probes, no invented percentages |
-| Settings | REAL (read-only) | changes via environment |
-| Studio shell: Home, Projects (paged, mine/shared), Activity | REAL | |
-| Create application | PARTIAL | Website REAL; Web app (code, STATIC_APP) REAL where the Git server + runner are configured (local); Dashboard / Internal Tool: COMING SOON |
-| Templates (Phase 5) | REAL | Company / My templates as page schema (no code, images not carried over); save from a project, versions, start a project from a template; only admins share company-wide; no template review queue, no categories/screenshots |
-| AI workspace (chat, model, changed components, version) | REAL | LLM = OpenRouter free models or simulator |
-| Design mode: structure, drag/drop reorder, component library, click-to-select in preview, inspector | REAL | schema-driven; multi-page: NOT IMPLEMENTED |
-| Images in components (`asset://`) | REAL | Hero and product images |
-| Code mode | REAL for code projects (7.4); honest "not available" screen for page-schema websites | |
-| Deep links `/studio/projects/{id}/{ai|design|code|members|versions|assets|publish|settings}` | REAL | refresh stays in place |
-| Pagination | REAL for projects, users, workspaces, inventory, audit; versions/prompts limited (100) | |
-| Members & roles (Owner/Editor/Publisher/Viewer) | REAL | no Reviewer role (does not exist) |
-| Versions & restore | REAL | restore creates a new version |
-| Publish pipeline | REAL queue + state machine | |
-| Static site hosting (Phase 7.1) | REAL (`DEPLOY_PROVIDER=static`, used by run-local and the public deployment) | immutable artifacts in MinIO, sites gateway, `sites.toolsmcp.uk/<slug>/`, private sites through company sign-in, rollback, unpublish; contact forms, custom domains, edge caching, artifact retention: NOT IMPLEMENTED. `mock` provider remains for tests and labels itself "Demo deployment" |
-| Code projects: Git repositories (7.2) | REAL (local stack) | Forgejo on this machine, platform-owned repos, protected main, fast-forward merges, real history; external IDE access, repo archiving on delete: NOT IMPLEMENTED |
-| Sandbox builds (7.3) | REAL (local stack) | Docker sandbox (non-root, read-only, no caps, limits), mirror-only install, no-network build, gitleaks + OSV + SBOM; gVisor/microVM, build quotas: NOT IMPLEMENTED |
-| AI code generation + Code mode (7.4) | REAL (local stack) | AI/simulator edits as validated file changes, Code-mode editor, previews (sandbox CSP, capability URL), merge, public publish; dependency changes, private code apps, company UI package for code, visual design for code: NOT IMPLEMENTED |
-| Code projects on the public deployment | NOT ENABLED | needs the owner's decision (public sign-up is open; builds run on this Mac) |
-| Dynamic apps (7.5), connectors, secrets per project | NOT IMPLEMENTED | separate decision |
+|---|---|---|
+| Login gateway (Admin / Builder portal), password login, Redis sessions, CSRF, throttling | REAL | |
+| Public sign-up | REAL, **off** (HIGH-risk setting, audited) | pilot: `SIGNUP_DISABLED` verified through Cloudflare |
+| OIDC SSO | REAL (Keycloak E2E 11/11) | RP-initiated logout ends the IdP session (verified) |
+| SAML | PARTIAL | through the OIDC provider's identity brokering (`kc_idp_hint`), behind `SAML_ENABLED=false`; verified with a local SAML realm. Native SAML SP: NOT IMPLEMENTED (needs OpenSAML 5 from the Shibboleth repository — owner decision) |
+| SCIM 2.0 (Users, Groups, discovery) | REAL, **off** (`SCIM_ENABLED`) | never maps to system admin; workspace roles only via explicit group mappings; tested with RFC-style payloads (no real IdP connected: BLOCKED_EXTERNAL_INPUT for an Entra/Okta tenant) |
+| MFA | REAL by delegation | shown as "MFA managed by Identity Provider"; local accounts have no MFA (emergency/demo) |
+| Admin console | REAL | users, workspaces, departments/teams, applications (archive/restore), AI control, AI governance, alerts, security findings, costs, components, templates, packages, builds & storage, connectors, backups, identity, audit, health, editable settings (HIGH-risk confirmation + audit) |
+| Departments / teams | REAL | reporting only, grants no permission |
+| Application archive | REAL | read-only + site offline + server app stopped; restore |
+| Hosting cost | PARTIAL | measured storage, build CPU (cgroup), build time, known AI cost × explicit admin prices; **egress not measured** (shown as such); unknown without a price |
+| Security findings | REAL | from build scans (OSV, gitleaks), accepted package risks, risky settings; no score by design |
+| Audit log | REAL | append-only |
 
-## Verification (this machine)
-Backend `./gradlew test` on 2026-10-03 (after Phase 7.4): 136 tests, 0 failures, 3 skipped (OpenRouterLiveTests — need a real OPENROUTER_API_KEY), browser E2E `e2e/factory-flow.mjs` 34/34, `e2e/sso-flow.mjs` 9/9 (Keycloak), `e2e/providers-flow.mjs` 6/6 (local OpenAI-compatible stub), `e2e/public-flow.mjs` 12/13 on the live public deployment (13th fixed, see PUBLIC_DEPLOYMENT.md),
-`e2e/code-flow.mjs` 9/9 (real runner, sandbox, Forgejo), `e2e/a11y.mjs` 30/30 screens without serious/critical axe violations, `e2e/pages-mock.mjs` 6/6, typecheck and both builds (http + static mock).
+## AI
+| Area | Status | Notes |
+|---|---|---|
+| AI page editing, code generation, simulator | REAL / MOCK | simulator labelled "mô phỏng" when no provider is configured |
+| Real provider calls (OpenRouter, OpenAI, Anthropic, Gemini) | **BLOCKED_EXTERNAL_INPUT** | no keys on this server; integrations verified against local stubs only; `OpenRouterLiveTests` skipped |
+| Model access (org → workspace → role → user, most restrictive wins) | REAL | Admin → Quản trị AI, effective-permission check |
+| Money budgets (org/workspace/user/project, daily/monthly, soft/hard, currency with explicit rate) | REAL | unknown-cost calls counted, never estimated; paid model without a price refused under a hard budget |
+| Alerts | REAL | budgets, provider key/credit failures, backups |
+| SSE streaming, cancel, timeout, partial output, final usage | REAL (stub-verified) | native formats for OpenAI-compatible/OpenRouter/Anthropic; JSON fallback for servers that ignore `stream`; ≤ 2 streams per user |
+| Controlled tool calling | REAL (stub-verified) | 6 tools, authorized with the user's permissions, audited in `ai_tool_calls` |
+| Retrieval priority + reuse tracking | REAL | registry → approved blocks → templates → generated; verified (not trusted) in `prompt_runs.reuse_sources` |
+
+## Websites, templates, blocks
+| Area | Status | Notes |
+|---|---|---|
+| Multi-page sites (pages, slugs, home, 404, SEO, navigation) | REAL | one atomic artifact per publish; external links only to admin-approved https hosts |
+| Functional forms | REAL | script-free POST, validation, honeypot, rate limits, origin check, hashed IPs, editor-only view/CSV/delete, retention |
+| Custom domains | PARTIAL | DNS TXT verification, real TLS probe, host-based serving, daily re-check — verified locally; serving on the pilot needs the owner's DNS + a tunnel/CDN route per domain (BLOCKED_EXTERNAL_INPUT) |
+| CDN caching | REAL | immutable assets, revalidated pages |
+| Templates | REAL | review workflow PRIVATE→SUBMITTED→REVIEW→APPROVED/ARCHIVED, categories, tags, usage counts, JS-free screenshot previews (UNAVAILABLE without a browser on the worker) |
+| Contributed blocks | REAL | + category, tags, preview, usage counted on real inserts |
+
+## Source-code apps and server apps (local stack; off on the pilot)
+| Area | Status | Notes |
+|---|---|---|
+| Git (Forgejo), sandbox builds (non-root, read-only, no caps, mirror-only install, no-network build, OSV, gitleaks, SBOM) | REAL | |
+| Approved package catalog, `@company/ui`, `@company/app-sdk`, Design mode via AST, review before merge, IDE read-only access, signed bot commits, repository lifecycle, private code apps, build/storage quotas | REAL | |
+| App kinds (Website, Web app, Dashboard, Internal tool, Workflow, Server app) | REAL | scaffolds per kind; all built through the real sandbox |
+| Server runtime (Phase 7.5) | REAL on this Mac (Docker Desktop Linux VM) | isolated container per app, one internal network per app, blue/green with health checks (0 failed requests during a switch), rollback without rebuild |
+| Per-app database isolation | REAL | separate Postgres server, database + role per app; cross-database connect denied (verified) |
+| Project secrets | REAL | AES-GCM, write-only, never in repos or AI context |
+| Connector catalog + proxy | PARTIAL | grants, operation allowlist, credential injection, public-address check — tested with refusals; **no real outbound connector call exercised** (no approved external API) |
+| Linux production runtime host, gVisor | NOT IMPLEMENTED | runner supports `RUNTIME_OCI=runsc`; needs a Linux host (owner decision) |
+| Source/server apps on the public pilot | NOT ENABLED | pilot has no Git server / runtime; server apps stay off until a Linux runner exists |
+
+## Infrastructure
+| Area | Status | Notes |
+|---|---|---|
+| Backups (platform DB, app DBs, MinIO, Forgejo), retention | REAL | daily daemon on the pilot |
+| Restore drill (from the latest backup files) | REAL | local + public PASS (2026-10-04) |
+| Backup monitoring + alerts | REAL | Admin → Sao lưu |
+| Off-host backup copy | **BLOCKED_EXTERNAL_INPUT** | needs an S3/MinIO target or synced storage from the owner |
+| Auto restart | REAL | Docker `unless-stopped` + host watchdog; systemd recommended on Linux |
+| LEAN / MEDIUM / FULL profiles | REAL | measured idle memory 1.3 / 1.6 / 1.7 GiB |
+| Kubernetes, GitHub Actions | NOT IMPLEMENTED (by instruction) | |
+
+## Verification (2026-10-04, this machine)
+Backend `./gradlew test`: **175 tests, 0 failures, 3 skipped** (OpenRouter live tests need a key). Browser E2E: `factory-flow` 34/34, `code-flow` 14/14,
+`a11y` 41/41 screens (no serious/critical axe violations), `providers-flow` 6/6, `pages-mock` 6/6 (GitHub Pages static build), `sso-flow` 11/11
+(Keycloak, incl. RP logout + SAML brokering), `public-flow` 13/13 (live pilot through Cloudflare, after the V23 redeploy). Live smoke tests:
+server app create → sandbox build → isolated runtime → API → own DB; blue/green switch; Dashboard / Internal tool / Workflow; app-to-app and
+platform-DB isolation; multi-page site, 404, forms through the real gateway; backup + restore drill. Secret scan (history + tree): clean.
+OSV: runtime classpath 208 artifacts and scaffold lockfiles — no known advisories after the patch commit.

@@ -1,46 +1,50 @@
 # AI Software Factory (System Web Studio)
 
-Internal platform with two areas behind one login: **Admin Console** (`/admin`: users, workspaces, application inventory, AI control,
-component registry, audit, platform health) and **Company Builder Studio** (`/studio`: create websites with AI or the visual Design mode
-from the company's approved components, versions, assets, members, publish). The login screen's portal choice is only navigation;
-access is decided by the server. See [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) for what is real and what is not yet
-(code generation, Git, sandbox build and real hosting are a separate, unapproved phase — design proposal in [docs/SOFTWARE_FACTORY_DESIGN.md](docs/SOFTWARE_FACTORY_DESIGN.md), ADR 0008–0012).
+An internal platform where employees build company software with AI under governance: one login, two areas.
 
+* **Builder Studio** (`/studio`) — create **websites** (multi-page, forms, custom domains) from approved components with AI or the visual
+  Design mode; **web apps and dashboards** (React source in a platform Git repository, sandbox builds, approved packages, AST Design mode,
+  review before merge); **server apps, internal tools and workflows** (React + Node.js running in an isolated container with their own
+  database, write-only secrets and approved connectors). Templates and contributed blocks with review workflows.
+* **Admin Console** (`/admin`) — users, departments, workspaces, application inventory (archive), AI control and governance (model access,
+  money budgets, alerts), security findings, hosting cost, packages, connectors, builds & storage, backups, identity (SSO/SAML/SCIM),
+  editable policies with audit.
 
-An AI-assisted web studio: describe a change in chat, the backend turns it into validated, versioned page-schema operations, the UI previews the result, and a publish pipeline deploys it (to a **mock** provider locally).
+What is real and what is not: **[docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md)** (REAL / PARTIAL / MOCK / BLOCKED_EXTERNAL_INPUT /
+NOT IMPLEMENTED). Security: [docs/SECURITY.md](docs/SECURITY.md). Architecture decisions: [docs/adr](docs/adr) (0001–0020).
 
-Two ways to run it:
+## Run it
 
 | Mode | What it is | Needs |
 | --- | --- | --- |
-| **mock** (default) | Static demo. All state is in memory; nothing is saved, published or sent. This is what GitHub Pages serves: https://luan20495.github.io/system-web-studio/ | Node only |
-| **http** | Real full stack: Next.js UI → Kotlin/Spring API → PostgreSQL, Redis (sessions), MinIO (assets), RabbitMQ (publish jobs) | Docker, Node, JDK 21 |
+| **mock** | Static demo, all state in memory — what GitHub Pages serves: https://luan20495.github.io/system-web-studio/ | Node |
+| **http** | Full stack: Next.js UI → Kotlin/Spring API → PostgreSQL, Redis, MinIO, RabbitMQ (+ Forgejo, package mirror, build runner, apps DB, runtime gateway depending on the profile) | Docker, Node, JDK 21 |
 
-## Quick start (full stack)
 ```bash
-cp .env.example .env         # set LOCAL_ADMIN_PASSWORD (14+ chars)
+cp .env.example .env               # set LOCAL_ADMIN_PASSWORD (14+ chars)
 npm ci
-./scripts/run-local.sh       # containers + API + UI → http://localhost:3100  (login: local.admin)
-./scripts/smoke-test.sh
+STACK_PROFILE=full ./scripts/run-local.sh   # lean | medium | full (default) → http://localhost:3100, login local.admin
 ./scripts/stop-local.sh
 ```
-Mock demo only: `npm ci && npm run dev` → http://localhost:3000.
+Profiles (ADR 0020): **lean** = websites, templates, AI, admin (≈ 1.3 GiB idle) · **medium** = + source-code apps and dashboards
+(Forgejo, mirror, sandbox runner, ≈ 1.6 GiB + builds) · **full** = + server apps / internal tools / workflows (apps DB, runtime gateway,
+≈ 1.7 GiB + apps). Server apps are additionally off by policy until an admin enables `server-apps.enabled`.
 
-## AI and going public
-AI uses **OpenRouter free models** (pick one or "auto"); until `OPENROUTER_API_KEY` is set the built-in simulator answers — see [docs/AI.md](docs/AI.md). `./scripts/public-up.sh` publishes the app from this machine through a dedicated Cloudflare tunnel — see [docs/PUBLIC_DEPLOYMENT.md](docs/PUBLIC_DEPLOYMENT.md).
-
-## What works in http mode
-Login/logout with Redis-backed sessions · workspaces and projects with role-based access (admin, editor, publisher, viewer) · prompts → mock-LLM operations validated against the component registry · every change is an immutable version (history, restore as a new version, direct editing through the same validated endpoint) · project settings · asset upload to MinIO via presigned URLs · publish through RabbitMQ with idempotency and a visible state machine · append-only audit log · optimistic-concurrency conflicts (409) surfaced in the UI.
-
-## What is mocked or missing
-The LLM is a deterministic keyword planner, the deploy provider returns a labelled mock URL, and there is no Git export. There is no CSP, MFA/SSO, member-management UI or backup automation; see [docs/SECURITY.md](docs/SECURITY.md) and [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md). This is a development/internal-demo build, **not production-ready**.
+AI: until a provider key is configured a labelled simulator answers ([docs/AI.md](docs/AI.md)); keys are read from the environment only.
+Publishing from this machine: `./scripts/public-up.sh` (internal pilot behind a Cloudflare tunnel, [docs/PUBLIC_DEPLOYMENT.md](docs/PUBLIC_DEPLOYMENT.md)).
 
 ## Verify
 ```bash
-./scripts/check.sh                 # typecheck, both UI builds, backend tests (Testcontainers), npm audit
-node e2e/full-flow.mjs             # browser E2E against the running stack
-./scripts/backup-restore-drill.sh  # backup restore proof
+cd backend && ./gradlew test                 # 175 tests (Testcontainers; JDK 21)
+npx tsc --noEmit -p tsconfig.json            # UI typecheck
+node e2e/factory-flow.mjs                    # browser E2E: websites, AI, design, publish, templates, blocks, admin
+node e2e/code-flow.mjs                       # code apps: sandbox build, packages, design via AST, review, signed commits, IDE access
+node e2e/a11y.mjs                            # axe on 41 screens
+./scripts/secret-scan.sh                     # gitleaks, history + tree
+./scripts/backup-all.sh local && ./scripts/restore-drill-all.sh local
 ```
 
 ## Docs
-[AI](docs/AI.md) · [PUBLIC_DEPLOYMENT](docs/PUBLIC_DEPLOYMENT.md) · [SYSTEM_WALKTHROUGH](docs/SYSTEM_WALKTHROUGH.md) · [LOCAL_DEVELOPMENT](docs/LOCAL_DEVELOPMENT.md) · [ARCHITECTURE](docs/ARCHITECTURE.md) · [API_CONTRACT](docs/API_CONTRACT.md) · [SECURITY](docs/SECURITY.md) · [DEPLOYMENT](docs/DEPLOYMENT.md) · [BACKUP_DR](docs/BACKUP_DR.md) · [IMPLEMENTATION_STATUS](docs/IMPLEMENTATION_STATUS.md)
+[IMPLEMENTATION_STATUS](docs/IMPLEMENTATION_STATUS.md) · [SOFTWARE_FACTORY_DESIGN](docs/SOFTWARE_FACTORY_DESIGN.md) · [SECURITY](docs/SECURITY.md) ·
+[AI](docs/AI.md) · [PUBLIC_DEPLOYMENT](docs/PUBLIC_DEPLOYMENT.md) · [LOCAL_DEVELOPMENT](docs/LOCAL_DEVELOPMENT.md) · [ARCHITECTURE](docs/ARCHITECTURE.md) ·
+[API_CONTRACT](docs/API_CONTRACT.md) · [BACKUP_DR](docs/BACKUP_DR.md) · [TIEN_DO (tiếng Việt)](docs/TIEN_DO.md)
