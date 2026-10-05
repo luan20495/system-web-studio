@@ -1,5 +1,5 @@
 import type {
-  AdminAi, AiCallRow, SettingView, BuildPolicyReport, CleanupResult, RepoRow, AiPrice, AiProbe, AiProviderInfo, AiUsageReport, AdminApp, BlockDto, CheckResult, TemplateDto, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, ActivationLink, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
+  AdminAi, AiCallRow, SettingView, BuildPolicyReport, CleanupResult, RepoRow, AiPrice, AiProbe, AiProviderInfo, AiProviderForm, AiDiscover, AiLimitsView, AiLimitDefaults, AiUserView, AiUsageReport, AdminApp, BlockDto, CheckResult, TemplateDto, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, ActivationLink, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
   BackupEnvironment, AppKind, RuntimeStatus, Connector, Department, CostPrice, CostReport, SecurityReport, FormSubmission, SiteDomain, TemplateReview, LibraryCategories, AccessRule, EffectiveModel, AiBudget, AdminAlert, StreamHandlers,
   AiStatus, ApiProject, AuthConfig, Member, SiteInfo, DesignNode, DependencyRequest, PackageView, CloneAccess, TreeFile, CodeFile, CodeCommit, CodeChange, DiffFile, CodeAiResponse, CodeAiHistoryItem, RegistryComponent, AssetDto, Deployment, Me, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
 } from "./http-types";
@@ -166,6 +166,16 @@ export const api = {
     auditActions: () => call<string[]>("/admin/audit/actions"),
     ai: () => call<AdminAi>("/admin/ai"),
     aiProviders: () => call<AiProviderInfo[]>("/admin/ai/providers"),
+    addAiProvider: (b: AiProviderForm) => call<AiProviderInfo>("/admin/ai/providers", { method: "POST", body: json(b) }),
+    updateAiProvider: (id: string, b: AiProviderForm) => call<AiProviderInfo>(`/admin/ai/providers/${id}`, { method: "PUT", body: json(b) }),
+    deleteAiProvider: (id: string) => call<void>(`/admin/ai/providers/${id}`, { method: "DELETE" }),
+    discoverAiModels: (id: string) => call<AiDiscover>(`/admin/ai/providers/${id}/discover`, { method: "POST" }),
+    aiLimits: () => call<AiLimitsView>("/admin/ai/limits"),
+    setAiDefaults: (b: Partial<AiLimitDefaults>) => call<AiLimitsView>("/admin/ai/limits/defaults", { method: "PUT", body: json(b) }),
+    setAiOverride: (b: { scopeType: string; scopeId: string; requestsPerDay?: number | null; tokensPerDay?: number | null; tokensPerMonth?: number | null; paidBudgetMonth?: number | null }) =>
+      call<AiLimitsView>("/admin/ai/limits/overrides", { method: "PUT", body: json(b) }),
+    deleteAiOverride: (id: string) => call<AiLimitsView>(`/admin/ai/limits/overrides/${id}`, { method: "DELETE" }),
+    aiUserView: (userId: string, workspaceId?: string) => call<AiUserView>(`/admin/ai/limits/users/${userId}${qs({ workspaceId })}`),
     aiProbe: (id: string) => call<AiProbe>(`/admin/ai/providers/${id}/probe`, { method: "POST" }),
     aiModelPolicy: (modelId: string, enabled: boolean) => call<unknown>("/admin/ai/models/policy", { method: "PUT", body: json({ modelId, enabled }) }),
     aiPricing: () => call<AiPrice[]>("/admin/ai/pricing"),

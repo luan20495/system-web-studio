@@ -124,11 +124,11 @@ function Home() {
     </section>
     <div className="kpiGrid">
       <div className="kpi"><div className="kpiLabel">Lượt AI hôm nay</div>
-        <div className="kpiValue">{u ? (u.aiConfigured ? `${num(u.aiRequestsUsed)} / ${num(u.aiRequestsLimit)}` : "Mô phỏng") : "…"}</div>
-        <div className="kpiHint">{u ? (u.aiConfigured ? (u.aiWindowResetsInSeconds ? `Làm mới sau ${Math.ceil(u.aiWindowResetsInSeconds / 3600)} giờ` : "Chưa dùng lượt nào") : "Chưa cấu hình AI thật, không tính lượt") : ""}</div></div>
+        <div className="kpiValue">{u ? (u.aiConfigured ? (u.aiRequestsLimit > 0 ? `${num(u.aiRequestsUsed)} / ${num(u.aiRequestsLimit)}` : `${num(u.aiRequestsUsed)} (không giới hạn)`) : "Chế độ thử nghiệm") : "…"}</div>
+        <div className="kpiHint">{u ? (u.aiConfigured ? (u.aiWindowResetsInSeconds ? `Làm mới sau ${Math.ceil(u.aiWindowResetsInSeconds / 3600)} giờ` : "Chưa dùng lượt nào") : "AI hiện chưa được quản trị viên bật") : ""}</div></div>
       <div className="kpi"><div className="kpiLabel">Token AI 24 giờ qua</div>
         <div className="kpiValue">{u ? (u.aiConfigured || u.tokensLast24h ? `${num(u.tokensLast24h)}${u.tokensLimitPerDay ? ` / ${num(u.tokensLimitPerDay)}` : ""}` : "—") : "…"}</div>
-        <div className="kpiHint">{u ? (u.usageLast30Days?.calls ? `30 ngày: ${num(u.usageLast30Days.totalTokens)} token · ${usd(u.usageLast30Days.costUsd)} (số liệu nhà cung cấp)` : "Chưa gọi model thật nào; bộ mô phỏng không tính token") : ""}</div></div>
+        <div className="kpiHint">{u ? (u.usageLast30Days?.calls ? `30 ngày: ${num(u.usageLast30Days.totalTokens)} token · ${usd(u.usageLast30Days.costUsd)} (số liệu nhà cung cấp)` : "Chưa gọi model thật nào; Chế độ thử nghiệm không tính token") : ""}</div></div>
       <div className="kpi"><div className="kpiLabel">Prompt hôm nay</div><div className="kpiValue">{u ? num(u.promptsToday) : "…"}</div><div className="kpiHint">{u ? `Tối đa ${u.promptsPerMinute}/phút` : ""}</div></div>
       <div className="kpi"><div className="kpiLabel">Ứng dụng trong workspace</div><div className="kpiValue">{recent.data ? num(recent.data.total) : "…"}</div></div>
       <div className="kpi"><div className="kpiLabel">Component của công ty</div><div className="kpiValue">{comps.data ? comps.data.length : "…"}</div></div>

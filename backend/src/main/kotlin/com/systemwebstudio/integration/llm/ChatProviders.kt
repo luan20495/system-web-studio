@@ -31,15 +31,24 @@ interface ChatProvider {
         chat(model, system, user, maxTokens).also { sink.delta(it.content) }
     /** lists models on the provider (no tokens spent); throws [AiProviderException] when unreachable or the key is rejected */
     fun probe(): String
+    /** address and key (when required) are present, so a connection test makes sense even before any model is listed */
+    val connectable: Boolean get() = configured
+    /** model ids the provider reports (no tokens spent); empty when the provider cannot list them */
+    fun listModels(): List<String> = emptyList()
+    /** per-model price class; most providers are all-or-nothing */
+    fun isPaid(model: String): Boolean = paid
 }
 
 data class ProviderSlot(
     val id: String, val displayName: String, val apiKey: String, val baseUrl: String, val models: List<String>, val keyRequired: Boolean,
     val paid: Boolean, val timeoutSeconds: Long,
     /** OpenAI's current API wants max_completion_tokens; most compatible servers accept max_tokens */
-    val tokenParam: String = "max_tokens", val sendTemperature: Boolean = true
+    val tokenParam: String = "max_tokens", val sendTemperature: Boolean = true,
+    /** added on the web (true) or configured in the environment (false) */
+    val fromWeb: Boolean = false, val enabled: Boolean = true
 ) {
-    val configured get() = baseUrl.isNotBlank() && models.isNotEmpty() && (!keyRequired || apiKey.isNotBlank())
+    val configured get() = enabled && connectable && models.isNotEmpty()
+    val connectable get() = baseUrl.isNotBlank() && (!keyRequired || apiKey.isNotBlank())
     val host: String? get() = runCatching { URI(baseUrl).let { "${it.scheme}://${it.host}${if (it.port > 0) ":${it.port}" else ""}" } }.getOrNull()
 }
 
@@ -108,6 +117,7 @@ class OpenAiCompatibleProvider(private val slot: ProviderSlot, private val json:
     override val id = slot.id
     override val displayName = slot.displayName
     override val configured get() = slot.configured
+    override val connectable get() = slot.connectable
     override val models get() = slot.models
     override val endpointHost get() = slot.host
     override val paid get() = slot.paid
@@ -153,13 +163,25 @@ class OpenAiCompatibleProvider(private val slot: ProviderSlot, private val json:
         val n = runCatching { json.readTree(response.body()).get("data")?.size() }.getOrNull()
         return if (n != null) "$n models listed" else "reachable"
     }
+
+    override fun listModels(): List<String> {
+        val response = send(builder("/models", 15).GET().build(), displayName)
+        failOn(response.statusCode(), displayName)
+        return parseModelIds(json, response.body())
+    }
 }
+
+/** model ids of an OpenAI/Anthropic-style `{"data":[{"id":..}]}` list (Gemini prefixes ids with "models/"), only ids the registry accepts */
+internal fun parseModelIds(json: JsonMapper, body: String): List<String> =
+    runCatching { json.readTree(body).get("data")?.toList().orEmpty().mapNotNull { it.get("id")?.asString()?.removePrefix("models/") } }
+        .getOrDefault(emptyList()).filter { AiProviderRegistry.MODEL.matches(it) }.distinct().sorted().take(500)
 
 /** Anthropic Messages API (https://docs.anthropic.com/en/api/messages). */
 class AnthropicProvider(private val slot: ProviderSlot, private val json: JsonMapper) : ChatProvider {
     override val id = slot.id
     override val displayName = slot.displayName
     override val configured get() = slot.configured
+    override val connectable get() = slot.connectable
     override val models get() = slot.models
     override val endpointHost get() = slot.host
     override val paid get() = slot.paid
@@ -223,6 +245,12 @@ class AnthropicProvider(private val slot: ProviderSlot, private val json: JsonMa
         val n = runCatching { json.readTree(response.body()).get("data")?.size() }.getOrNull()
         return if (n != null) "$n models listed" else "reachable"
     }
+
+    override fun listModels(): List<String> {
+        val response = send(builder("/v1/models?limit=200".let { if (this is OpenAiCompatibleProvider) "/models" else it }, 15).GET().build(), displayName)
+        failOn(response.statusCode(), displayName)
+        return parseModelIds(json, response.body())
+    }
 }
 
 /**
@@ -231,7 +259,7 @@ class AnthropicProvider(private val slot: ProviderSlot, private val json: JsonMa
  * Configuration (environment only): <PREFIX>_API_KEY, <PREFIX>_BASE_URL, <PREFIX>_MODELS (comma list) for OPENAI, ANTHROPIC, GEMINI, LOCAL_LLM.
  */
 @Component
-class AiProviderRegistry(private val env: Environment, json: JsonMapper) {
+class AiProviderRegistry(private val env: Environment, private val json: JsonMapper, private val store: ProviderStore) {
     private fun slot(id: String, name: String, defaultBase: String, keyRequired: Boolean, paid: Boolean, tokenParam: String = "max_tokens", temperature: Boolean = true) =
         ProviderSlot(id, name,
             env.getProperty("app.ai.providers.$id.api-key", "").trim(),
@@ -239,12 +267,35 @@ class AiProviderRegistry(private val env: Environment, json: JsonMapper) {
             env.getProperty("app.ai.providers.$id.models", "").split(",").map { it.trim() }.filter { MODEL.matches(it) }.distinct(),
             keyRequired, paid, env.getProperty("app.ai.providers.$id.timeout-seconds", Long::class.java, 60L), tokenParam, temperature)
 
-    val providers: Map<String, ChatProvider> = listOf(
+    /** configured by the operator (environment): always wins over a provider with the same id added on the web */
+    private val fromEnvironment: Map<String, ChatProvider> = listOf(
         OpenAiCompatibleProvider(slot("openai", "OpenAI", "https://api.openai.com/v1", true, true, "max_completion_tokens", false), json),
         AnthropicProvider(slot("anthropic", "Anthropic", "https://api.anthropic.com", true, true), json),
         OpenAiCompatibleProvider(slot("gemini", "Google Gemini", "https://generativelanguage.googleapis.com/v1beta/openai", true, true), json),
         OpenAiCompatibleProvider(slot("local", "Model nội bộ (OpenAI-compatible)", "", false, false), json)
     ).associateBy { it.id }
+
+    @Volatile private var cache: Pair<Long, Map<String, ChatProvider>>? = null
+    fun invalidate() { cache = null; store.invalidate() }
+
+    /** environment providers plus the ones an admin added on the web (OpenRouter's key is handled by [OpenRouterClient]) */
+    val providers: Map<String, ChatProvider> get() {
+        cache?.takeIf { System.currentTimeMillis() - it.first < 5000 }?.let { return it.second }
+        val fromWeb = store.all().filter { it.kind != "OPENROUTER" && fromEnvironment[it.slug]?.configured != true }.associate { it.slug to build(it) }
+        val all = fromEnvironment.filterKeys { it !in fromWeb } + fromWeb
+        cache = System.currentTimeMillis() to all
+        return all
+    }
+
+    private fun build(p: StoredProvider): ChatProvider {
+        val s = ProviderSlot(p.slug, p.name, p.apiKey.orEmpty(), p.baseUrl.ifBlank { defaultBase(p.kind) }, p.models.filter { MODEL.matches(it) },
+            keyRequired = p.kind in setOf("OPENAI", "ANTHROPIC", "GEMINI"), paid = p.paid, timeoutSeconds = 60,
+            tokenParam = if (p.kind == "OPENAI") "max_completion_tokens" else "max_tokens", sendTemperature = p.kind != "OPENAI", fromWeb = true, enabled = p.enabled)
+        return if (p.kind == "ANTHROPIC") AnthropicProvider(s, json) else OpenAiCompatibleProvider(s, json)
+    }
+
+    /** true when this provider's settings come from the environment (shown to admins as managed by the system) */
+    fun managedBySystem(id: String) = fromEnvironment[id]?.let { it.configured && providers[id] === it } ?: false
 
     fun configured(): List<ChatProvider> = providers.values.filter { it.configured }
 
@@ -256,5 +307,11 @@ class AiProviderRegistry(private val env: Environment, json: JsonMapper) {
         return p to modelId.substring(i + 1)
     }
 
-    companion object { val MODEL = Regex("^[A-Za-z0-9._/:@-]{1,100}$") }
+    companion object {
+        val MODEL = Regex("^[A-Za-z0-9._/:@-]{1,100}$")
+        fun defaultBase(kind: String) = when (kind) {
+            "OPENAI" -> "https://api.openai.com/v1"; "ANTHROPIC" -> "https://api.anthropic.com"
+            "GEMINI" -> "https://generativelanguage.googleapis.com/v1beta/openai"; "OPENROUTER" -> "https://openrouter.ai/api/v1"; else -> ""
+        }
+    }
 }

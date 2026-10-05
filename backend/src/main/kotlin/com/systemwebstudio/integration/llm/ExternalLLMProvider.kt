@@ -51,9 +51,10 @@ class ExternalLLMProvider(
      */
     fun <T> complete(model: String?, system: String, user: String, maxTokens: Int, exclude: Set<String> = emptySet(), sink: StreamSink? = null,
                      tools: AiTools? = null, parse: (String) -> T): Completion<T> {
+        val chosen = ai.effectiveModel(model)
         val candidates: List<Triple<ChatProvider, String, String>> = when {
-            model == null || model == "auto" -> ai.autoCandidates().filter { it !in exclude }.map { Triple(openRouter, it, it) }
-            else -> providers.split(model)?.let { (p, bare) -> listOf(Triple(p, bare, model)) } ?: listOf(Triple(openRouter, model, model))
+            chosen == null || chosen == "auto" -> ai.autoCandidates().filter { it !in exclude }.map { Triple(openRouter, it, it) }
+            else -> providers.split(chosen)?.let { (p, bare) -> listOf(Triple(p, bare, chosen)) } ?: listOf(Triple(openRouter, chosen, chosen))
         }
         val sys = if (tools == null) system else "$system\n\n${toolProtocol(tools)}"
         val calls = mutableListOf<AiCall>(); var last: String? = null; var lastProvider = name; var lastError = "không có model khả dụng"

@@ -13,7 +13,8 @@ import org.springframework.stereotype.Component
 class LLMRouter(private val mock: MockLLMProvider, private val external: ExternalLLMProvider, private val ai: AiService) : LLMProvider {
     override val name: String get() = if (ai.externalEnabled) "openrouter" else "mock"
 
-    override fun plan(request: LLMRequest): LLMResponse {
+    override fun plan(asked: LLMRequest): LLMResponse {
+        val request = asked.copy(model = ai.effectiveModel(asked.model))
         if (!ai.isExternal(request.model)) return mock.plan(request).let { it.copy(provider = "mock", model = "mock") }
         return external.plan(request)
     }

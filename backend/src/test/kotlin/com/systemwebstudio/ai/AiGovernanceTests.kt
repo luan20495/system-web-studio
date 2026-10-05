@@ -83,6 +83,7 @@ class AiGovernanceTests : IntegrationTestBase() {
     @BeforeEach fun reset() {
         answers.clear(); lastAnswer.clear(); userMessages.clear(); chunkDelayMs = 0; chunks = 0; ignoreStream = false
         listOf("ai_calls", "ai_model_policies", "ai_model_access", "ai_budgets", "admin_alerts", "ai_model_pricing", "system_settings").forEach { jdbc.update("DELETE FROM $it") }
+        grantPaidBudgets()
     }
     @AfterEach fun clean() { jdbc.update("DELETE FROM system_settings") }
 
@@ -97,6 +98,7 @@ class AiGovernanceTests : IntegrationTestBase() {
     @Test
     fun `model access - deny rules at user, workspace and role level restrict models (most restrictive wins), audited, admin only`() {
         val a = admin(); enable(a, "openai:gpt-test", "local:llama-test")
+        a.post("/api/v1/admin/ai/pricing", """{"modelId":"openai:gpt-test","inputUsdPerMTok":10,"outputUsdPerMTok":30}""")
         val sc = scenario()
         assertThat(sc.ask("openai:gpt-test").response.status).isEqualTo(200)
 

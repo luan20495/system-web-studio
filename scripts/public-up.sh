@@ -51,6 +51,8 @@ fi
 # Real static sites (ADR 0009) — added to existing public.env files without touching other values
 # Internal pilot policy (2026-10-03): no public sign-up, source apps for signed-in users only, code apps not published publicly by default
 # website forms: a stable salt for hashing visitor IPs (stage G); server apps stay off on the pilot (no apps DB / runtime here)
+# AI provider keys entered in the Admin Console are encrypted with this key (generated once, never printed; losing it makes saved keys unreadable)
+grep -q '^SECRETS_MASTER_KEY=' "$ENVF" || ( umask 077; echo "SECRETS_MASTER_KEY=$(openssl rand -base64 32)" >> "$ENVF" )
 grep -q '^FORMS_IP_SALT=' "$ENVF" || ( umask 077; echo "FORMS_IP_SALT=$(gen)" >> "$ENVF" )
 grep -q '^SOURCE_APP_PUBLIC_PUBLISH_ENABLED=' "$ENVF" || ( umask 077; { echo "# Source-code apps (needs FORGEJO_* + runner); public publishing of code apps off for the pilot"; echo "SOURCE_APPS_ENABLED=true"; echo "SOURCE_APP_BUILD_ENABLED=true"; echo "SOURCE_APP_PUBLIC_PUBLISH_ENABLED=false"; } >> "$ENVF" )
 grep -q '^SITES_HOST=' "$ENVF" || ( umask 077; { echo "# Published sites (gateway) — separate host from the Studio"; echo "SITES_HOST=sites.toolsmcp.uk"; echo "SITES_GATEWAY_PORT=28088"; echo "RENDER_PORT_PUBLIC=28095"; echo "RENDER_TOKEN=$(gen)"; } >> "$ENVF" )

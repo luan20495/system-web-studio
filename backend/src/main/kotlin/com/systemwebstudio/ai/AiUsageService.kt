@@ -26,8 +26,7 @@ data class PromptUsage(val attempts: Int, val promptTokens: Long?, val completio
 class AiUsageService(
     private val jdbc: JdbcTemplate,
     /** 0 = off. Rolling 24 h per user, counted from reported tokens. */
-    private val settings: com.systemwebstudio.settings.SettingsService,
-    /** 0 = off. Calendar month (database time zone) per workspace. */
+    private val settings: com.systemwebstudio.settings.SettingsService
 ) {
     val dailyTokenLimitPerUser: Long get() = settings.long("ai.daily-tokens-per-user")
     val monthlyTokenLimitPerWorkspace: Long get() = settings.long("ai.monthly-tokens-per-workspace")
@@ -79,17 +78,24 @@ class AiUsageService(
     fun workspaceTokensThisMonth(workspaceId: UUID): Long =
         jdbc.queryForObject("SELECT coalesce(sum(total_tokens), 0) FROM ai_calls WHERE workspace_id = ? AND created_at >= date_trunc('month', now())", Long::class.java, workspaceId) ?: 0
 
-    /** Checked before a real-AI prompt. A single answer can overshoot a little: the size of the next answer is unknown in advance. */
-    fun requireBudget(userId: UUID, workspaceId: UUID) {
-        if (dailyTokenLimitPerUser > 0) {
+    /** Checked before a real-AI prompt. A single answer can overshoot a little: the size of the next answer is unknown in advance. 0 = unlimited. */
+    fun requireBudget(userId: UUID, workspaceId: UUID, limits: EffectiveLimits, projectId: UUID? = null, appTokensPerMonth: Long? = null) {
+        val daily = limits.tokensPerDay.long
+        if (daily > 0) {
             val used = userTokensLast24h(userId)
-            if (used >= dailyTokenLimitPerUser) throw ApiException(HttpStatus.TOO_MANY_REQUESTS, "AI_TOKEN_LIMIT",
-                "Daily AI token allowance used up; try again later or use the simulator.", mapOf("scope" to "user", "used" to used, "limit" to dailyTokenLimitPerUser))
+            if (used >= daily) throw ApiException(HttpStatus.TOO_MANY_REQUESTS, "AI_TOKEN_LIMIT",
+                "Bạn đã dùng hết lượng AI (token) cho hôm nay. Hãy thử lại vào ngày mai hoặc nhờ quản trị viên tăng hạn mức.", mapOf("scope" to "user", "used" to used, "limit" to daily))
         }
-        if (monthlyTokenLimitPerWorkspace > 0) {
+        val monthly = limits.tokensPerMonthWorkspace.long
+        if (monthly > 0) {
             val used = workspaceTokensThisMonth(workspaceId)
-            if (used >= monthlyTokenLimitPerWorkspace) throw ApiException(HttpStatus.TOO_MANY_REQUESTS, "AI_TOKEN_LIMIT",
-                "This workspace has used its monthly AI token budget.", mapOf("scope" to "workspace", "used" to used, "limit" to monthlyTokenLimitPerWorkspace))
+            if (used >= monthly) throw ApiException(HttpStatus.TOO_MANY_REQUESTS, "AI_TOKEN_LIMIT",
+                "Không gian làm việc này đã dùng hết lượng AI (token) của tháng. Hãy nhờ quản trị viên tăng hạn mức.", mapOf("scope" to "workspace", "used" to used, "limit" to monthly))
+        }
+        if (projectId != null && appTokensPerMonth != null && appTokensPerMonth > 0) {
+            val used = jdbc.queryForObject("SELECT coalesce(sum(total_tokens), 0) FROM ai_calls WHERE project_id = ? AND created_at >= date_trunc('month', now())", Long::class.java, projectId) ?: 0
+            if (used >= appTokensPerMonth) throw ApiException(HttpStatus.TOO_MANY_REQUESTS, "AI_TOKEN_LIMIT",
+                "Website/ứng dụng này đã dùng hết lượng AI (token) của tháng. Hãy nhờ quản trị viên tăng hạn mức.", mapOf("scope" to "project", "used" to used, "limit" to appTokensPerMonth))
         }
     }
 

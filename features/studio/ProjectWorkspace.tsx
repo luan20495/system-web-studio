@@ -76,7 +76,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const [prompt, setPrompt] = useState("");
   const [device, setDevice] = useState<DeviceMode>("desktop");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [model, setModel] = useState<string>(() => { try { return localStorage.getItem("studio-ai-model") ?? "auto"; } catch { return "auto"; } });
+  const [model, setModel] = useState<string>(() => { try { return localStorage.getItem("studio-ai-model") ?? ""; } catch { return ""; } });
   const promptRef = useRef<HTMLTextAreaElement>(null);
   const frameRef = useRef<HTMLIFrameElement>(null);
   const ws = project?.workspaceId ?? "";
@@ -86,7 +86,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const toMessages = (items: PromptHistoryItem[]): Msg[] => [...items].reverse().flatMap((p) => [
     { id: `${p.id}-u`, role: "user" as const, content: p.text },
     { id: `${p.id}-a`, role: "assistant" as const, content: p.assistantMessage,
-      meta: [p.outcome, ...(p.model ? [p.model === "mock" ? "mô phỏng" : p.model] : []), usageChip(p.aiCalls ?? 0, p.totalTokens ?? null, p.costUsd ?? null)] }
+      meta: [p.outcome, ...(p.model ? [p.model === "mock" ? "Chế độ thử nghiệm" : p.model] : []), usageChip(p.aiCalls ?? 0, p.totalTokens ?? null, p.costUsd ?? null)] }
   ]);
   const loadAssets = useCallback((w: string) => api.listAssets(w, projectId).then(setAssets).catch(() => undefined), [projectId]);
   const loadBlocks = useCallback(() => {
@@ -105,7 +105,8 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   // signed download URLs expire after 10 minutes: refresh the asset map before that
   useEffect(() => { if (!ws) return; const t = setInterval(() => void loadAssets(ws), 8 * 60_000); return () => clearInterval(t); }, [ws, loadAssets]);
   useEffect(() => { try { localStorage.setItem("studio-ai-model", model); } catch { /* ignore */ } }, [model]);
-  const effectiveModel = ai?.configured ? (model === "auto" || model === "mock" || ai.models.some((m) => m.id === model) ? model : "auto") : "mock";
+  const valid = (m: string) => m === "auto" || m === "mock" || (ai?.models ?? []).some((x) => x.id === m);
+  const effectiveModel = ai?.configured ? (model && valid(model) ? model : valid(ai.defaultModel) ? ai.defaultModel : "auto") : "mock";
 
   async function run<T>(label: string, fn: () => Promise<T>, fallback: string): Promise<T | undefined> {
     setBusy(label); setSave((x) => ({ ...x, state: "saving" }));
@@ -140,7 +141,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
     const changed = Array.from(new Set(r.schemaPatch.map((op) => op.sectionType ?? r.pageSchema.sections.find((s) => s.id === op.sectionId)?.type ?? schema?.sections.find((s) => s.id === op.sectionId)?.type).filter(Boolean) as string[]));
     const used = Array.from(new Set(r.pageSchema.sections.map((s) => s.type)));
     const reuse = r.reuseSources;
-    const meta = [r.outcome, r.model && r.model !== "mock" ? r.model : "mô phỏng", ...(r.version ? [`Phiên bản ${r.version.versionNumber}`] : []),
+    const meta = [r.outcome, r.model && r.model !== "mock" ? r.model : "Chế độ thử nghiệm", ...(r.version ? [`Phiên bản ${r.version.versionNumber}`] : []),
       usageChip(r.usage?.attempts ?? 0, r.usage?.totalTokens ?? null, r.usage?.costUsd ?? null),
       ...(reuse && (reuse.blocks.length || reuse.templates.length) ? [`Tái sử dụng: ${reuse.blocks.length} khối, ${reuse.templates.length} template`] : [])];
     const detail = r.outcome === "UPDATED" ? `Đã đổi: ${changed.map(label).join(", ") || "—"} · Component đang dùng: ${used.map(label).join(", ")}` : undefined;
@@ -295,15 +296,15 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
                     {ai?.configured ? (
                       <label className="aiPicker"><span className="srOnly">Model AI</span>
                         <select aria-label="Model AI" value={effectiveModel} onChange={(e) => setModel(e.target.value)} disabled={busy !== null}>
-                          <option value="auto">{ai.provider === "openrouter" ? "AI · tự động (các model miễn phí)" : "Tự động (bộ mô phỏng)"}</option>
+                          <option value="auto">Tự động</option>
                           {(ai.providers ?? []).map((g) => <optgroup key={g.id} label={`${g.name}${g.paid ? " · tính phí" : ""}`}>
                             {g.models.map((m) => <option key={m.id} value={m.id}>{m.name}{m.name !== m.id ? ` — ${m.id}` : ""}</option>)}</optgroup>)}
-                          <option value="mock">Mô phỏng (không gọi AI)</option>
+                          <option value="mock">Chế độ thử nghiệm (không dùng AI thật)</option>
                         </select></label>
-                    ) : <span title={ai?.dataNotice}>AI: mô phỏng (chưa cấu hình nhà cung cấp AI)</span>}
+                    ) : <span title={ai?.dataNotice}>AI hiện chưa được quản trị viên bật (Chế độ thử nghiệm).</span>}
                     <button className="sendButton" disabled={busy !== null || !prompt.trim() || readOnly} onClick={() => void submitPrompt()}>{busy === "prompt" ? "Đang xử lý…" : "Gửi ↑"}</button>
                   </div>
-                  {ai?.configured && effectiveModel !== "mock" ? <p className="aiNotice">{(ai.providers ?? []).find((g) => g.models.some((m) => m.id === effectiveModel))?.dataNotice ?? ai.dataNotice} Giới hạn {ai.dailyLimitPerUser} lượt AI/ngày/người dùng.</p> : null}
+                  {ai?.configured && effectiveModel !== "mock" ? <p className="aiNotice">{(ai.providers ?? []).find((g) => g.models.some((m) => m.id === effectiveModel))?.dataNotice ?? ai.dataNotice} {ai.dailyLimitPerUser > 0 ? `Giới hạn ${ai.dailyLimitPerUser} lượt AI mỗi ngày cho mỗi người.` : "Không giới hạn số lượt AI mỗi ngày."}</p> : null}
                 </div>
               </div>
             </section>

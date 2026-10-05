@@ -55,7 +55,7 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
   const [diff, setDiff] = useState<DiffFile[] | null>(null);
   const [history, setHistory] = useState<CodeAiHistoryItem[]>([]);
   const [prompt, setPrompt] = useState(""); const [ai, setAi] = useState<AiStatus | null>(null);
-  const [model, setModel] = useState<string>(() => { try { return localStorage.getItem("studio-ai-model") ?? "auto"; } catch { return "auto"; } });
+  const [model, setModel] = useState<string>(() => { try { return localStorage.getItem("studio-ai-model") ?? ""; } catch { return ""; } });
   const [busy, setBusy] = useState<string | null>(null); const [notice, setNotice] = useState<string | null>(null); const [error, setError] = useState<unknown>(null);
   const [commits, setCommits] = useState<CodeCommit[] | null>(null);
   const [live, setLive] = useState<{ id: string | null; chars: number; status: string } | null>(null);
@@ -77,7 +77,8 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
   useEffect(() => { setDiff(null); if (change && tab === "diff") api.code.diff(ws, pid, change.id).then(setDiff).catch(() => undefined); }, [change?.id, tab, ws, pid]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (panel === "versions") api.code.commits(ws, pid).then(setCommits).catch(() => setCommits([])); }, [panel, ws, pid]);
 
-  const effectiveModel = ai?.configured ? (model === "auto" || model === "mock" || ai.models.some((m) => m.id === model) ? model : "auto") : "mock";
+  const valid = (m: string) => m === "auto" || m === "mock" || (ai?.models ?? []).some((x) => x.id === m);
+  const effectiveModel = ai?.configured ? (model && valid(model) ? model : valid(ai.defaultModel) ? ai.defaultModel : "auto") : "mock";
   const dirty = Object.keys(drafts).filter((p) => drafts[p] !== original[p]?.text);
   const current = drafts[path] ?? original[path]?.text ?? "";
   const editable = canEdit && !!original[path]?.editable;
@@ -144,11 +145,11 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
           {mode === "design" ? <DesignPane ws={ws} pid={pid} canEdit={canEdit} onChange={(c) => { setSelected(c.id); setTab("preview"); void loadChanges(); setNotice("Đã tạo thay đổi giao diện; đang build trong sandbox."); }}/> : mode === "ai" ? (<>
             <div className="chatScroll">
               {history.length === 0 ? <div className="hint chatEmpty">Mô tả thay đổi bạn muốn. AI chỉ sửa src/, public/ và index.html; mỗi thay đổi được build trong sandbox và cần bạn hợp nhất.
-                {!ai?.configured ? <> Hiện chưa cấu hình nhà cung cấp AI: bộ <b>mô phỏng</b> hiểu vài yêu cầu như “đổi tiêu đề thành “…”” hoặc “đổi màu nền vàng”.</> : null}</div> : null}
+                {!ai?.configured ? <> AI hiện chưa được quản trị viên bật. <b>Chế độ thử nghiệm</b> hiểu vài yêu cầu như “đổi tiêu đề thành “…”” hoặc “đổi màu nền vàng”.</> : null}</div> : null}
               {[...history].reverse().map((h) => <div key={h.promptId} className="codeMsg">
                 <div className="message user"><div className="bubble">{h.text}</div></div>
                 <div className="message assistant"><div className="bubble">{h.message}
-                  <div className="chips"><span className="chip">{h.model === "mock" ? "mô phỏng" : h.model ?? "—"}</span>
+                  <div className="chips"><span className="chip">{h.model === "mock" ? "Chế độ thử nghiệm" : h.model ?? "—"}</span>
                     {h.changeId ? <button className="chip linkChip" onClick={() => { setSelected(h.changeId); setTab("preview"); }}>{STATUS[(changes.find((c) => c.id === h.changeId)?.status ?? h.changeStatus ?? "BUILDING") as CodeChange["status"]]} · xem</button> : <span className="chip">không đổi</span>}</div></div></div>
               </div>)}
             </div>
@@ -157,9 +158,9 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
                 onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void sendPrompt(); }}/>
               <div className="composerFooter">
                 {ai?.configured ? <select aria-label="Model AI" value={effectiveModel} onChange={(e) => setModel(e.target.value)}>
-                  <option value="auto">{ai.provider === "openrouter" ? "AI · tự động (model miễn phí)" : "Tự động (bộ mô phỏng)"}</option>
+                  <option value="auto">Tự động</option>
                   {(ai.providers ?? []).map((g) => <optgroup key={g.id} label={`${g.name}${g.paid ? " · tính phí" : ""}`}>{g.models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</optgroup>)}
-                  <option value="mock">Mô phỏng (không gọi AI)</option></select> : <span className="hint">AI: mô phỏng</span>}
+                  <option value="mock">Chế độ thử nghiệm (không dùng AI thật)</option></select> : <span className="hint">AI hiện chưa được quản trị viên bật (Chế độ thử nghiệm).</span>}
                 {live ? <span className="hint" role="status">{live.status.startsWith("tool:") ? `AI đang dùng ${live.status.slice(5)}…` : `Đang nhận… ${live.chars} ký tự`}
                   {live.id ? <button type="button" className="smallButton" onClick={() => { void api.cancelStream(live.id!).catch(() => undefined); }}>Huỷ</button> : null}</span> : null}
                 <button className="sendButton" disabled={busy !== null || !prompt.trim()} onClick={() => void sendPrompt()}>{busy === "ai" ? "Đang tạo…" : "Gửi ↑"}</button>

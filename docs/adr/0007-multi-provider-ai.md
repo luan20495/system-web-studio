@@ -48,5 +48,5 @@ Rules kept from earlier phases:
   `MODEL_NOT_ALLOWED` for anything not configured, listed and enabled.
 * `AiUsageService.price`: PROVIDER or CATALOG cost per call, `pricing_id` and `request_id` stored in `ai_calls` (migration V12).
 * Admin: `GET /admin/ai/providers`, `POST /admin/ai/providers/{id}/probe`, `PUT /admin/ai/models/policy`, `GET/POST /admin/ai/pricing`.
-* Verified only against local stubs (backend `MultiProviderTests`, browser `e2e/providers-flow.mjs`). **No real OpenAI, Anthropic, Gemini
+* Verified only against local stubs (backend `MultiProviderTests`, browser `e2e/admin-setup-flow.mjs`, `AiConfigWebTests`). **No real OpenAI, Anthropic, Gemini
   or local model has been called**; parameter names follow the providers' public documentation as of 2026-10.

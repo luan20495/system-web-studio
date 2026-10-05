@@ -18,7 +18,7 @@ import java.time.Instant
 import java.util.concurrent.atomic.AtomicReference
 
 /** DOMAINS = comma-separated host names (lowercase letters, digits, dots, dashes) */
-enum class SettingType { BOOL, INT, DECIMAL, DOMAINS }
+enum class SettingType { BOOL, INT, DECIMAL, DOMAINS, TEXT }
 enum class Risk { LOW, HIGH }
 
 /** One editable policy value. The default comes from configuration (environment), never from a constant buried in code. */
@@ -33,9 +33,12 @@ object SettingCatalog {
         SettingDef("signup.enabled", "Đăng nhập", SettingType.BOOL, "app.signup.enabled", "false", "Cho phép tự đăng ký tài khoản (Internet)", Risk.HIGH),
         SettingDef("session.timeout-minutes", "Đăng nhập", SettingType.INT, "app.session.timeout-minutes", "480", "Phiên hết hạn sau khi không hoạt động", min = 5, max = 1440, unit = "phút"),
         // AI
-        SettingDef("ai.daily-requests-per-user", "AI", SettingType.INT, "app.openrouter.daily-limit-per-user", "50", "Lượt AI thật / người / 24 giờ", min = 0, max = 100000),
+        SettingDef("ai.daily-requests-per-user", "AI", SettingType.INT, "app.openrouter.daily-limit-per-user", "50", "Lượt AI / người / ngày (0 = không giới hạn)", min = 0, max = 100000),
         SettingDef("ai.daily-tokens-per-user", "AI", SettingType.INT, "app.ai.daily-token-limit-per-user", "0", "Token / người / 24 giờ (0 = tắt)", min = 0, max = 1_000_000_000),
         SettingDef("ai.monthly-tokens-per-workspace", "AI", SettingType.INT, "app.ai.monthly-token-limit-per-workspace", "0", "Token / workspace / tháng (0 = tắt)", min = 0, max = 10_000_000_000),
+        SettingDef("ai.default-model", "AI", SettingType.TEXT, "app.ai.default-model", "auto", "Mô hình AI mặc định (auto = Tự động)"),
+        SettingDef("ai.paid-budget-per-user-month", "AI", SettingType.DECIMAL, "app.ai.paid-budget-per-user-month", "0", "Ngân sách AI trả phí / người / tháng (USD; 0 = chưa cấp)", min = 0, max = 1_000_000),
+        SettingDef("ai.paid-budget-per-workspace-month", "AI", SettingType.DECIMAL, "app.ai.paid-budget-per-workspace-month", "0", "Ngân sách AI trả phí / không gian làm việc / tháng (USD; 0 = chưa cấp)", min = 0, max = 10_000_000),
         SettingDef("ai.stream-timeout-seconds", "AI", SettingType.INT, "app.ai.stream-timeout-seconds", "120", "Thời gian tối đa một yêu cầu AI dạng streaming (giây)", min = 10, max = 900),
         // server apps (stage J): generated server code running in the isolated runtime
         SettingDef("server-apps.enabled", "Ứng dụng có máy chủ", SettingType.BOOL, "app.runtime.enabled", "false", "Cho phép tạo và chạy ứng dụng có máy chủ (runtime cô lập)", Risk.HIGH),
@@ -92,6 +95,7 @@ class SettingsService(private val jdbc: JdbcTemplate, private val env: Environme
 
     fun raw(key: String): String { val d = SettingCatalog.all[key] ?: error("unknown setting $key"); return overrides()[key] ?: defaultOf(d) }
     fun bool(key: String) = raw(key).equals("true", ignoreCase = true)
+    fun decimal(key: String): BigDecimal = raw(key).toBigDecimalOrNull() ?: BigDecimal(defaultOf(SettingCatalog.all[key]!!))
     fun long(key: String) = raw(key).toLongOrNull() ?: defaultOf(SettingCatalog.all[key]!!).toLong()
     fun int(key: String) = long(key).coerceIn(Int.MIN_VALUE.toLong(), Int.MAX_VALUE.toLong()).toInt()
 
@@ -116,6 +120,7 @@ class SettingsService(private val jdbc: JdbcTemplate, private val env: Environme
                 if (list.size > 50) throw ApiException.badRequest("OUT_OF_RANGE", "At most 50 domains")
                 list.firstOrNull { !Regex("^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$").matches(it) }?.let { throw ApiException.badRequest("INVALID_VALUE", "Not a host name: $it") }
             }.joinToString(",")
+            SettingType.TEXT -> v.also { if (!Regex("^(auto|[A-Za-z0-9._/:@-]{1,100})$").matches(it)) throw ApiException.badRequest("INVALID_VALUE", "Mã mô hình không hợp lệ") }
             SettingType.DECIMAL -> (v.toBigDecimalOrNull() ?: throw ApiException.badRequest("INVALID_VALUE", "Expected a number")).also {
                 if (it < BigDecimal(d.min) || it > BigDecimal(d.max)) throw ApiException.badRequest("OUT_OF_RANGE", "Allowed range ${d.min}–${d.max}")
             }.toPlainString()

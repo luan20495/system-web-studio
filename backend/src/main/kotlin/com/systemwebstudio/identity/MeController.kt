@@ -25,15 +25,18 @@ data class MyUsage(val aiConfigured: Boolean, val aiRequestsUsed: Long, val aiRe
 @RequestMapping("/api/v1/me")
 class MeController(
     private val limiter: RateLimiter, private val ai: AiService, private val jdbc: JdbcTemplate, private val aiUsage: AiUsageService,
+    private val limits: com.systemwebstudio.ai.AiLimitService,
     @Value("\${app.rate-limit.prompt-max:30}") private val promptMax: Long
 ) {
     /** Real quota: the same Redis counter that enforces the daily AI allowance (a rolling 24 h window from the first AI request). */
     @GetMapping("/usage")
     fun usage(@AuthenticationPrincipal me: StudioUserDetails): MyUsage {
-        val d = limiter.peek("ai:${me.userId}", ai.dailyLimitPerUser)
-        return MyUsage(ai.externalEnabled, d.count, ai.dailyLimitPerUser, if (d.count > 0) d.retryAfterSeconds else null, promptMax,
+        val lim = limits.effective(me.userId, null)
+        val perDay = lim.requestsPerDay.long            // 0 = unlimited
+        val d = limiter.peek("ai:${me.userId}", if (perDay > 0) perDay else Long.MAX_VALUE)
+        return MyUsage(ai.externalEnabled, d.count, perDay, if (d.count > 0) d.retryAfterSeconds else null, promptMax,
             jdbc.queryForObject("SELECT count(*) FROM prompts WHERE created_by = ? AND created_at >= date_trunc('day', now())", Long::class.java, me.userId) ?: 0,
-            aiUsage.userTokensLast24h(me.userId), aiUsage.dailyTokenLimitPerUser.takeIf { it > 0 },
+            aiUsage.userTokensLast24h(me.userId), lim.tokensPerDay.long.takeIf { it > 0 },
             aiUsage.totals("user_id = ? AND created_at >= now() - interval '30 days'", me.userId))
     }
 

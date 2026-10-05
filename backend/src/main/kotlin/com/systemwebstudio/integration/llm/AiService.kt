@@ -46,6 +46,18 @@ class AiService(
         return externalEnabled
     }
 
+    /**
+     * What a request without an explicit model means: the company default model (Admin → AI → Hạn mức) when it is a model an admin enabled
+     * and that is still configured, otherwise "Tự động" (null). An explicit choice is never changed.
+     */
+    fun effectiveModel(requested: String?): String? {
+        if (!requested.isNullOrBlank()) return requested
+        val d = settings?.raw("ai.default-model") ?: "auto"
+        if (d == "auto") return null
+        val (p, bare) = registry.split(d) ?: return null
+        return if (p.configured && bare in p.models && policies()[d] == true) d else null
+    }
+
     /** Admin decisions per model id. Paid-provider models are OFF unless enabled; OpenRouter free models are ON unless disabled. */
     fun policies(): Map<String, Boolean> = jdbc.query("SELECT model_id, enabled FROM ai_model_policies") { rs, _ -> rs.getString(1) to rs.getBoolean(2) }.toMap()
 

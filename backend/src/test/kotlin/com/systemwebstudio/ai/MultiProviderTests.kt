@@ -63,7 +63,8 @@ class MultiProviderTests : IntegrationTestBase() {
         }
     }
 
-    @BeforeEach fun reset() { requests.clear(); replies.clear(); jdbc.update("DELETE FROM ai_model_policies") }
+    private fun price(a: com.systemwebstudio.support.ApiSession, model: String) { a.post("/api/v1/admin/ai/pricing", """{"modelId":"$model","inputUsdPerMTok":1,"outputUsdPerMTok":1}""") }
+    @BeforeEach fun reset() { requests.clear(); replies.clear(); jdbc.update("DELETE FROM ai_model_policies"); jdbc.update("DELETE FROM ai_calls"); jdbc.update("DELETE FROM ai_model_pricing"); grantPaidBudgets() }
 
     private fun admin() = sessionFor(fx.user("aiprov", systemAdmin = true).username)
     private fun enable(a: com.systemwebstudio.support.ApiSession, model: String, on: Boolean = true) =
@@ -103,19 +104,9 @@ class MultiProviderTests : IntegrationTestBase() {
     fun `an enabled OpenAI-compatible model gets the key only in the header, usage is recorded, cost comes from the pricing catalog`() {
         val sc = scenario(); val a = admin()
         enable(a, "openai:gpt-test")
-        val r = sc.promptWith("openai:gpt-test"); assertThat(r.response.status).isEqualTo(200)
-        val b = sc.s.body(r)
-        assertThat(b.get("outcome").asString()).isEqualTo("UPDATED"); assertThat(b.get("provider").asString()).isEqualTo("openai")
-        assertThat(b.get("model").asString()).isEqualTo("openai:gpt-test")
-        assertThat(b.get("usage").get("totalTokens").asLong()).isEqualTo(120); assertThat(b.get("usage").get("costUsd").isNull).isTrue()   // no price yet: unknown
-        val call = chatCalls().single()
-        assertThat(call.path).isEqualTo("/openai/chat/completions")
-        assertThat(call.headers["Authorization"]).isEqualTo("Bearer sk-test-openai-123456")
-        assertThat(call.body!!.get("model").asString()).isEqualTo("gpt-test")                                   // bare name to the provider
-        assertThat(call.body.has("max_completion_tokens")).isTrue(); assertThat(call.body.has("temperature")).isFalse()
-        val row = jdbc.queryForMap("SELECT * FROM ai_calls WHERE project_id = ? ORDER BY created_at DESC LIMIT 1", sc.projectId)
-        assertThat(row["provider"]).isEqualTo("openai"); assertThat(row["model"]).isEqualTo("openai:gpt-test"); assertThat(row["total_tokens"]).isEqualTo(120)
-        assertThat(row["cost_usd"]).isNull(); assertThat(row["cost_source"]).isNull(); assertThat(row["request_id"]).isNotNull()
+        // budgets are granted but this paid model has no price: spending cannot be controlled, so it is refused with a clear message
+        val refused = sc.promptWith("openai:gpt-test"); assertThat(refused.response.status).isEqualTo(409)
+        assertThat(sc.s.body(refused).get("message").asString()).contains("chưa có giá"); assertThat(chatCalls()).isEmpty()
 
         // pricing catalog: explicit, validated, applied from now on
         assertThat(a.post("/api/v1/admin/ai/pricing", """{"modelId":"openai:gpt-test","inputUsdPerMTok":-1,"outputUsdPerMTok":1}""").response.status).isEqualTo(400)
@@ -123,7 +114,15 @@ class MultiProviderTests : IntegrationTestBase() {
         assertThat(sc.s.post("/api/v1/admin/ai/pricing", """{"modelId":"openai:gpt-test","inputUsdPerMTok":1,"outputUsdPerMTok":1}""").response.status).isEqualTo(403)
         val price = a.post("/api/v1/admin/ai/pricing", """{"modelId":"openai:gpt-test","inputUsdPerMTok":2.5,"outputUsdPerMTok":10,"note":"bảng giá thử"}""")
         assertThat(price.response.status).isEqualTo(201)
-        val priced = sc.s.body(sc.promptWith("openai:gpt-test"))
+        val r = sc.promptWith("openai:gpt-test"); assertThat(r.response.status).isEqualTo(200)
+        val priced = sc.s.body(r)
+        assertThat(priced.get("outcome").asString()).isEqualTo("UPDATED"); assertThat(priced.get("provider").asString()).isEqualTo("openai"); assertThat(priced.get("model").asString()).isEqualTo("openai:gpt-test")
+        assertThat(priced.get("usage").get("totalTokens").asLong()).isEqualTo(120)
+        val call = chatCalls().single()
+        assertThat(call.path).isEqualTo("/openai/chat/completions")
+        assertThat(call.headers["Authorization"]).isEqualTo("Bearer sk-test-openai-123456")
+        assertThat(call.body!!.get("model").asString()).isEqualTo("gpt-test")                                   // bare name to the provider
+        assertThat(call.body.has("max_completion_tokens")).isTrue(); assertThat(call.body.has("temperature")).isFalse()
         assertThat(BigDecimal(priced.get("usage").get("costUsd").asString())).isEqualByComparingTo("0.00045")   // (100×2.5 + 20×10) / 1e6
         val pricedRow = jdbc.queryForMap("SELECT cost_usd, cost_source, pricing_id FROM ai_calls WHERE project_id = ? ORDER BY created_at DESC LIMIT 1", sc.projectId)
         assertThat(pricedRow["cost_source"]).isEqualTo("CATALOG"); assertThat(pricedRow["pricing_id"].toString()).isEqualTo(a.body(price).get("id").asString())
@@ -138,7 +137,7 @@ class MultiProviderTests : IntegrationTestBase() {
     @Test
     fun `Anthropic - x-api-key and version headers, separate system prompt, input and cached tokens counted, a rejected key is fatal and nothing leaks`() {
         val sc = scenario(); val a = admin()
-        enable(a, "anthropic:claude-test")
+        enable(a, "anthropic:claude-test"); price(a, "anthropic:claude-test")
         val b = sc.s.body(sc.promptWith("anthropic:claude-test"))
         assertThat(b.get("outcome").asString()).isEqualTo("UPDATED"); assertThat(b.get("provider").asString()).isEqualTo("anthropic")
         val call = chatCalls().single()
@@ -158,7 +157,7 @@ class MultiProviderTests : IntegrationTestBase() {
     @Test
     fun `an explicit model is never replaced, auto never reaches a paid provider, a local model gets no key`() {
         val sc = scenario(); val a = admin()
-        enable(a, "openai:gpt-test"); enable(a, "openai:gpt-other"); enable(a, "local:llama-test")
+        enable(a, "openai:gpt-test"); enable(a, "openai:gpt-other"); enable(a, "local:llama-test"); price(a, "openai:gpt-test")
         replies["/openai/chat/completions"] = 500 to "{}"
         val b = sc.s.body(sc.promptWith("openai:gpt-test"))
         assertThat(b.get("outcome").asString()).isEqualTo("UNSUPPORTED"); assertThat(chatCalls()).hasSize(1)            // no fail-over to gpt-other or others
@@ -179,15 +178,15 @@ class MultiProviderTests : IntegrationTestBase() {
         val r = a.get("/api/v1/admin/ai/providers"); assertThat(r.response.status).isEqualTo(200)
         assertThat(r.response.contentAsString).doesNotContain("sk-test-openai").doesNotContain("sk-ant-test")
         val list = a.body(r).toList().associateBy { it.get("id").asString() }
-        assertThat(list.keys).containsExactly("openrouter", "openai", "anthropic", "gemini", "local")
-        assertThat(list["openai"]!!.get("configured").asBoolean()).isTrue(); assertThat(list["gemini"]!!.get("configured").asBoolean()).isFalse()
+        assertThat(list.keys).containsExactly("openai", "anthropic", "local")
+        assertThat(list["openai"]!!.get("configured").asBoolean()).isTrue(); assertThat(list["local"]!!.get("managedBySystem").asBoolean()).isTrue()
         assertThat(list["openai"]!!.get("models").toList().map { it.get("id").asString() to it.get("enabled").asBoolean() })
             .containsExactly("openai:gpt-test" to false, "openai:gpt-other" to false)
         assertThat(list["local"]!!.get("paid").asBoolean()).isFalse()
         assertThat(list["openai"]!!.get("endpointHost").asString()).startsWith("http://127.0.0.1:")
 
         val ok = a.body(a.post("/api/v1/admin/ai/providers/openai/probe"))
-        assertThat(ok.get("ok").asBoolean()).isTrue(); assertThat(ok.get("detail").asString()).isEqualTo("2 models listed")
+        assertThat(ok.get("ok").asBoolean()).isTrue(); assertThat(ok.get("detail").asString()).contains("2 mô hình")
         assertThat(requests.single { it.path == "/openai/models" }.headers["Authorization"]).isEqualTo("Bearer sk-test-openai-123456")
         replies["/anthropic/v1/models"] = 401 to "{}"
         assertThat(a.body(a.post("/api/v1/admin/ai/providers/anthropic/probe")).get("ok").asBoolean()).isFalse()

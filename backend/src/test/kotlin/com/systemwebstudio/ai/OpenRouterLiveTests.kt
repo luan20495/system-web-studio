@@ -16,12 +16,13 @@ import tools.jackson.databind.json.JsonMapper
 @EnabledIfEnvironmentVariable(named = "OR_LIVE", matches = "1")
 class OpenRouterLiveTests {
     private val json = JsonMapper.builder().build()
-    private fun client(key: String) = OpenRouterClient(json, key, "https://openrouter.ai/api/v1", "", "System Web Studio tests", 30)
+    private val store = com.systemwebstudio.integration.llm.ProviderStore(org.springframework.jdbc.core.JdbcTemplate(), com.systemwebstudio.runtime.SecretsCrypto(""), json)
+    private fun client(key: String) = OpenRouterClient(json, key, store, "https://openrouter.ai/api/v1", "", "System Web Studio tests", 30)
 
     @Test
     fun `the real model list parses and only free text models are offered`() {
         // freeModels() needs neither other providers nor the database
-        val ai = AiService(client("sk-or-invalid-key-for-listing"), com.systemwebstudio.integration.llm.AiProviderRegistry(org.springframework.mock.env.MockEnvironment(), json),
+        val ai = AiService(client("sk-or-invalid-key-for-listing"), com.systemwebstudio.integration.llm.AiProviderRegistry(org.springframework.mock.env.MockEnvironment(), json, store),
             org.springframework.jdbc.core.JdbcTemplate(), "auto", 30, 4, 50, "")
         val models = ai.freeModels()
         println("LIVE free text models offered (${models.size}): " + models.joinToString { it.id })

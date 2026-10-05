@@ -6,6 +6,7 @@ import { Fragment, useEffect, useMemo, useState, type FormEvent, type ReactNode 
 import { api } from "@/lib/http-api";
 import type { Connector, CostLine, Department, SecurityFinding, AccessRule, AiBudget, AdminAlert, EffectiveModel, AdminApp as App, AiProbe, PackageView, RepoRow, SettingView, BlockDto, TemplateDto, AiUsageReport, AuditRow, HealthItem, UsageBucket, UsageTotals } from "@/lib/http-types";
 import { CreateUserDialog, LinkBox } from "./UserDialogs";
+import { AiAdmin, UserAiCard } from "./AiSetup";
 import type { ActivationLink } from "@/lib/http-types";
 import { useSession } from "../session";
 import { rememberPortal } from "../routing";
@@ -14,7 +15,7 @@ import { BlockStatus, blockPage, CheckList, ReviewTimeline, SchemaThumb } from "
 import { actionLabel, ago, Card, ComingSoon, ErrorState, errText, fmtDate, Kpi, NavLink, num, Pager, Pill, StateView, tok, usd } from "../ui";
 
 const NAV: [string, string, string][] = [
-  ["", "Tổng quan", "▦"], ["users", "Người dùng & Workspace", "◎"], ["applications", "Ứng dụng", "▤"], ["ai", "AI Control", "✦"], ["ai-governance", "Quản trị AI", "⚖"], ["alerts", "Cảnh báo", "!"], ["security", "Bảo mật", "⛨"], ["costs", "Chi phí", "$"], ["departments", "Phòng ban", "⌘"], ["identity", "Định danh (SSO/SCIM)", "⚿"], ["connectors", "Connector", "⇄"], ["backups", "Sao lưu", "⛁"],
+  ["", "Tổng quan", "▦"], ["users", "Người dùng & Workspace", "◎"], ["applications", "Ứng dụng", "▤"], ["ai", "AI", "✦"], ["ai-governance", "Quyền & ngân sách AI", "⚖"], ["alerts", "Cảnh báo", "!"], ["security", "Bảo mật", "⛨"], ["costs", "Chi phí", "$"], ["departments", "Phòng ban", "⌘"], ["identity", "Định danh (SSO/SCIM)", "⚿"], ["connectors", "Connector", "⇄"], ["backups", "Sao lưu", "⛁"],
   ["components", "Components", "◇"], ["templates", "Templates", "▧"], ["audit", "Nhật ký kiểm toán", "≡"], ["builds", "Build & lưu trữ", "⬢"], ["packages", "Packages", "▣"], ["system", "Sức khỏe hệ thống", "♥"], ["settings", "Cài đặt", "⚙"]
 ];
 
@@ -38,7 +39,7 @@ function route(seg: string[]): ReactNode {
     case "users": return seg[1] ? <UserDetail id={seg[1]}/> : <UsersPage/>;
     case "workspaces": return seg[1] ? <WorkspaceDetail id={seg[1]}/> : <UsersPage tab="workspaces"/>;
     case "applications": return seg[1] ? <AppDetail id={seg[1]}/> : <AppsPage/>;
-    case "ai": return <AiPage/>;
+    case "ai": return <AiAdmin tab={seg[1]} usage={<AiPage/>} pricing={<PricingCard/>}/>;
     case "ai-governance": return <AiGovernancePage/>;
     case "alerts": return <AlertsPage/>;
     case "security": return <SecurityPage/>;
@@ -113,6 +114,7 @@ function Overview() {
   const o = data!;
   return (<>
     <PageHead title="Tổng quan" sub="Số liệu thật từ cơ sở dữ liệu của nền tảng."/>
+    <SetupChecklist users={o.users} projects={o.projects}/>
     <div className="kpiGrid">
       <Kpi label="Người dùng" value={num(o.users)} hint={`${num(o.activeUsers)} đang hoạt động · ${num(o.disabledUsers)} bị khóa`}/>
       <Kpi label="Đăng nhập 30 ngày" value={num(o.usersLoggedIn30d)}/>
@@ -126,6 +128,30 @@ function Overview() {
       <AiMonthCard/>
     </div>
   </>);
+}
+
+/** "Thiết lập ban đầu": what a new company admin does first, each step linking to the exact screen. Hidden once everything is done. */
+function SetupChecklist({ users, projects }: { users: number; projects: number }) {
+  const providers = useLoad(() => api.admin.aiProviders(), []);
+  const limits = useLoad(() => api.admin.aiLimits(), []);
+  if (!providers.data || !limits.data) return null;
+  const items: { done: boolean; label: string; href: string; action: string }[] = [
+    { done: true, label: "Tài khoản quản trị", href: "/admin/users", action: "Xem" },
+    { done: providers.data.some((p) => p.configured), label: "Thêm nhà cung cấp AI", href: "/admin/ai/providers", action: "Thêm nhà cung cấp" },
+    { done: providers.data.some((p) => p.models.some((m) => m.enabled)), label: "Chọn mô hình mặc định", href: "/admin/ai/models", action: "Chọn mô hình" },
+    { done: limits.data.customized, label: "Thiết lập hạn mức AI", href: "/admin/ai/limits", action: "Thiết lập" },
+    { done: users > 1, label: "Thêm người dùng", href: "/admin/users", action: "Thêm người dùng" },
+    { done: projects > 0, label: "Tạo website đầu tiên", href: "/studio", action: "Mở Builder Studio" }
+  ];
+  if (items.every((i) => i.done)) return null;
+  return (
+    <Card title="Thiết lập ban đầu">
+      <p className="hint">Hoàn thành các bước sau để công ty bắt đầu dùng được AI Software Factory.</p>
+      <ol className="checklist">{items.map((i) => (
+        <li key={i.label} className={i.done ? "done" : ""}><span aria-hidden="true">{i.done ? "✓" : "○"}</span> <b>{i.label}</b>{" "}
+          {i.done ? <small className="muted">Đã xong</small> : <Link className="btn sm" href={i.href}>{i.action}</Link>}</li>))}</ol>
+    </Card>
+  );
 }
 
 // ------------------------------------------------------------------ users & workspaces
@@ -190,9 +216,9 @@ function UserDetail({ id }: { id: string }) {
     try { await api.admin.setSystemAdmin(u.id, grant); setMsg(grant ? "Đã cấp quyền Quản trị hệ thống." : "Đã gỡ quyền Quản trị hệ thống."); reload(); } catch (e) { setMsg(errText(e, "Chưa đổi được quyền.")); } finally { setBusy(false); }
   }
   async function toggle() {
-    if (!window.confirm(u.enabled ? `Vô hiệu hóa ${u.username}? Mọi phiên đăng nhập của người này sẽ bị thu hồi ngay.` : `Kích hoạt lại ${u.username}?`)) return;
+    if (!window.confirm(u.enabled ? `Khóa tài khoản ${u.username}? Mọi phiên đăng nhập của người này sẽ bị thu hồi ngay.` : `Mở khóa tài khoản ${u.username}?`)) return;
     setBusy(true); setMsg(null);
-    try { await api.admin.setUserStatus(u.id, !u.enabled); setMsg(u.enabled ? "Đã vô hiệu hóa và thu hồi phiên." : "Đã kích hoạt lại."); reload(); } catch (e) { setMsg(errText(e, "Không đổi được trạng thái.")); } finally { setBusy(false); }
+    try { await api.admin.setUserStatus(u.id, !u.enabled); setMsg(u.enabled ? "Đã khóa tài khoản và thu hồi phiên." : "Đã mở khóa tài khoản."); reload(); } catch (e) { setMsg(errText(e, "Không đổi được trạng thái.")); } finally { setBusy(false); }
   }
   async function revoke() {
     if (!window.confirm(`Thu hồi mọi phiên đăng nhập của ${u.username}?`)) return;
@@ -219,6 +245,7 @@ function UserDetail({ id }: { id: string }) {
       <Card title={`Workspace (${d.workspaces.length})`}>{d.workspaces.length ? <table className="table"><tbody>{d.workspaces.map((w) => <tr key={w.id}><td><Link href={`/admin/workspaces/${w.id}`}>{w.name}</Link></td><td><Pill value="PRIVATE" label={w.role}/></td></tr>)}</tbody></table> : <StateView kind="empty" title="Không thuộc workspace nào"/>}</Card>
       <Card title={`Ứng dụng (${d.projects.length})`}>{d.projects.length ? <table className="table"><tbody>{d.projects.map((p) => <tr key={p.id}><td><Link href={`/admin/applications/${p.id}`}>{p.name}</Link><small>{p.workspaceName}</small></td><td>{p.owner ? <Pill value="ACTIVE" label="Chủ sở hữu"/> : <Pill value="PRIVATE" label={p.role}/>}</td></tr>)}</tbody></table> : <StateView kind="empty" title="Chưa tham gia ứng dụng nào"/>}</Card>
     </div>
+    <UserAiCard userId={u.id} name={u.displayName ?? u.username}/>
     <Card title="Hoạt động gần đây"><AuditTable rows={d.recentActivity} compact/></Card>
   </>);
 }
@@ -401,35 +428,6 @@ function AiMonthCard() {
   </Card>;
 }
 
-function ProvidersCard() {
-  const { data, error, loading, reload } = useLoad(() => api.admin.aiProviders(), []);
-  const [probes, setProbes] = useState<Record<string, AiProbe | "running">>({}); const [err, setErr] = useState<string | null>(null);
-  async function probe(id: string) { setProbes((p) => ({ ...p, [id]: "running" })); try { const r = await api.admin.aiProbe(id); setProbes((p) => ({ ...p, [id]: r })); } catch (x) { setErr(errText(x, "Không kiểm tra được.")); setProbes((p) => { const n = { ...p }; delete n[id]; return n; }); } }
-  // optimistic: the switch moves at once and is put back if the server refuses
-  const [over, setOver] = useState<Record<string, boolean>>({});
-  async function toggle(modelId: string, enabled: boolean) {
-    setErr(null); setOver((o) => ({ ...o, [modelId]: enabled }));
-    try { await api.admin.aiModelPolicy(modelId, enabled); } catch (x) { setErr(errText(x, "Không đổi được.")); setOver((o) => { const n = { ...o }; delete n[modelId]; return n; }); }
-  }
-  return <Card title="Nhà cung cấp AI">
-    <p className="hint">Khóa API chỉ đọc từ biến môi trường của máy chủ, không bao giờ hiển thị. Model của nhà cung cấp tính phí mặc định TẮT cho tới khi quản trị viên bật; “Tự động” chỉ dùng model miễn phí của OpenRouter. Chi phí: số nhà cung cấp báo, hoặc tính từ bảng giá bên dưới.</p>
-    {err ? <p className="formError" role="alert">{err}</p> : null}
-    {error ? <ErrorState error={error} retry={reload}/> : loading && !data ? <StateView kind="loading"/> : <div className="providerList">{data!.map((p) => {
-      const pr = probes[p.id];
-      return <section key={p.id} className="providerItem" aria-label={p.name}>
-        <div className="row between"><div><b>{p.name}</b>{p.paid ? <Pill value="UNKNOWN" label="Tính phí"/> : <Pill value="ACTIVE" label="Không tính phí"/>}
-          <small>{p.configured ? `Đã cấu hình${p.endpointHost ? ` · ${p.endpointHost}` : ""}` : `Chưa cấu hình — ${p.configHint}`}</small></div>
-          <div className="row">{pr && pr !== "running" ? <Pill value={pr.ok ? "HEALTHY" : "UNAVAILABLE"} label={pr.ok ? `Kết nối được · ${pr.latencyMs} ms · ${pr.detail}` : `Lỗi: ${pr.detail}`}/> : null}
-            {p.configured ? <button className="btn sm" disabled={pr === "running"} onClick={() => void probe(p.id)}>{pr === "running" ? "Đang kiểm tra…" : "Kiểm tra kết nối"}</button> : null}</div></div>
-        {p.models.length ? <table className="table"><thead><tr><th>Model</th><th>Giá hiện hành (USD / 1 triệu token)</th><th>Cho phép dùng</th></tr></thead>
-          <tbody>{p.models.map((m) => <tr key={m.id}><td><b>{m.name}</b>{m.name !== m.id ? <small className="code">{m.id}</small> : null}</td>
-            <td>{m.price ? `vào ${m.price.inputUsdPerMTok} · ra ${m.price.outputUsdPerMTok}` : <span className="muted">{p.id === "openrouter" ? "OpenRouter báo chi phí" : "Chưa có giá — chi phí sẽ là “không rõ”"}</span>}</td>
-            <td><label className="switch"><input type="checkbox" checked={over[m.id] ?? m.enabled} onChange={(e) => void toggle(m.id, e.target.checked)} aria-label={`Cho phép ${m.id}`}/> {(over[m.id] ?? m.enabled) ? "Bật" : "Tắt"}</label></td></tr>)}</tbody></table> : null}
-      </section>;
-    })}</div>}
-  </Card>;
-}
-
 /** Explicit prices, never built in. Rows are immutable: a change is a new row from now on, so past costs stay reproducible. */
 function PricingCard() {
   const providers = useLoad(() => api.admin.aiProviders(), []);
@@ -468,7 +466,6 @@ function AiPage() {
   const u = usage.data;
   const t = u?.totals;
   return (<>
-    <PageHead title="AI Control" sub="Mọi yêu cầu AI đi qua máy chủ; nhân viên không giữ API key. Token và chi phí lấy đúng từ số liệu nhà cung cấp trả về, không ước lượng."/>
     <div className="kpiGrid">
       <Kpi label="Nhà cung cấp" value={a.provider === "openrouter" ? "OpenRouter" : "Mô phỏng"} hint={a.configured ? "Đã cấu hình key" : "Chưa có OPENROUTER_API_KEY"}/>
       <Kpi label="Lượt AI hôm nay" value={num(a.requestsToday)} hint={`${num(a.externalToday)} qua OpenRouter · ${num(a.requestsMonth)} trong tháng`}/>
@@ -499,8 +496,6 @@ function AiPage() {
       <AiCallsLog models={u.byModel.map((m) => m.key)}/>
     </> : null}
 
-    <ProvidersCard/>
-    <PricingCard/>
     <Card title="Prompt gần đây"><table className="table"><thead><tr><th>Thời gian</th><th>Người dùng</th><th>Prompt</th><th>Model</th><th>Kết quả</th></tr></thead><tbody>{a.recent.map((p) => <tr key={p.id}><td>{ago(p.createdAt)}</td><td>{p.user ?? "—"}</td><td>{p.text}</td><td className="code">{p.model ?? p.provider}</td><td>{p.outcome ? <Pill value={p.outcome}/> : "—"}</td></tr>)}</tbody></table></Card>
   </>);
 }

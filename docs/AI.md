@@ -54,3 +54,14 @@ OpenRouter free models have their own rate limits (about 20 requests/min and a d
 
 ## Verification status
 Tested with a local stub of OpenRouter (success, fenced JSON, failover over 429/garbage, all-fail, invalid proposals, model allowlist, daily limit, usage accounting incl. failed attempts, missing usage, rollback after a concurrent edit, user and workspace token budgets, admin report and call log) and against the **real** OpenRouter without a key (live model list parsing; invalid key → fatal error). **A real completion with a valid key has not been run** (`OR_LIVE=1 OR_LIVE_KEY=… ./gradlew test --tests '*OpenRouterLiveTests'` does it).
+
+## Cấu hình AI trên web (Admin → AI)
+Quản trị viên cấu hình AI hoàn toàn trên giao diện, không cần biến môi trường:
+* **Nhà cung cấp** — "+ Thêm nhà cung cấp": OpenRouter, OpenAI, Anthropic, Google Gemini, Tương thích OpenAI, AI nội bộ (Local). Khóa kết nối được mã hóa AES-GCM
+  (`SECRETS_MASTER_KEY`, tự sinh bởi `scripts/public-up.sh`/`_env.sh`) và **chỉ ghi**: không API nào trả khóa về, không ghi log, không vào nhật ký hoạt động.
+  Nhà cung cấp cấu hình bằng biến môi trường hiển thị "Được quản lý bởi hệ thống" và luôn thắng cấu hình trên web cùng id.
+  "Kiểm tra kết nối" và "Tải danh sách mô hình" chỉ gọi endpoint liệt kê mô hình / kiểm tra khóa, không tiêu token.
+* **Mô hình** — bật/tắt từng mô hình, Miễn phí/Trả phí, nhập giá cho mô hình trả phí, đặt mô hình mặc định. Nhân viên chỉ thấy mô hình đang bật.
+* **Hạn mức** — mặc định an toàn: mô hình "Tự động", mô hình trả phí tắt, ngân sách trả phí 0 (chưa cấp, chặn mọi lần dùng mô hình trả phí), 50 lượt AI/người/ngày,
+  token không giới hạn. Ghi đè theo người dùng / không gian làm việc / ứng dụng; trang chi tiết người dùng hiển thị hạn mức hiệu lực và nguồn của nó.
+  Số 0 luôn hiển thị là "Không giới hạn" (lượt, token) hoặc "Chưa cấp ngân sách" (ngân sách trả phí).

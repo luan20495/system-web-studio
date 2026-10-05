@@ -27,14 +27,18 @@ data class OrModel(val id: String, val name: String, val contextLength: Int, val
 @Component
 class OpenRouterClient(
     private val json: JsonMapper,
-    @Value("\${app.openrouter.api-key:}") private val apiKey: String,
+    @Value("\${app.openrouter.api-key:}") private val envKey: String,
+    private val store: ProviderStore,
     @Value("\${app.openrouter.base-url:https://openrouter.ai/api/v1}") private val baseUrl: String,
     @Value("\${app.openrouter.referer:}") private val referer: String,
     @Value("\${app.openrouter.title:System Web Studio}") private val title: String,
     @Value("\${app.openrouter.timeout-seconds:45}") private val timeoutSeconds: Long
 ) {
     private val http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build()
+    /** the environment (managed by the operator) wins; otherwise the key an admin saved on the web */
+    private val apiKey: String get() = envKey.ifBlank { store.openRouterKey().orEmpty() }
     val configured: Boolean get() = apiKey.isNotBlank()
+    val managedByEnvironment: Boolean get() = envKey.isNotBlank()
 
     /** Public endpoint, no key needed. */
     fun listModels(): List<OrModel> {
@@ -49,6 +53,16 @@ class OpenRouterClient(
             OrModel(id, m.get("name")?.asString() ?: id, m.get("context_length")?.asInt(0) ?: 0,
                 m.get("pricing")?.get("prompt")?.asString(), m.get("pricing")?.get("completion")?.asString(), outputs == listOf("text"))
         }
+    }
+
+    /** Free check of the key (no tokens): OpenRouter's key endpoint answers 200 for a valid key and 401 otherwise. */
+    fun checkKey() {
+        if (!configured) throw OpenRouterException("OpenRouter API key is not configured", fatal = true)
+        val request = HttpRequest.newBuilder(URI("$baseUrl/key")).timeout(Duration.ofSeconds(15)).header("Authorization", "Bearer $apiKey").header("Accept", "application/json").GET().build()
+        val response = try { http.send(request, HttpResponse.BodyHandlers.discarding()) }
+            catch (e: java.net.http.HttpTimeoutException) { throw OpenRouterException("timeout") } catch (e: Exception) { throw OpenRouterException("network error: ${e.javaClass.simpleName}") }
+        if (response.statusCode() in setOf(401, 403)) throw OpenRouterException("OpenRouter rejected the API key (HTTP ${response.statusCode()})", response.statusCode(), fatal = true)
+        if (response.statusCode() != 200) throw OpenRouterException("HTTP ${response.statusCode()}", response.statusCode())
     }
 
     /** Returns the assistant message text and the reported usage. Throws [OpenRouterException]; `fatal` means retrying another model cannot help (bad key, no credit). */

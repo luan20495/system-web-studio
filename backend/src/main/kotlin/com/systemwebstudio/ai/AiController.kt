@@ -30,7 +30,7 @@ class AiController(private val ai: AiService, private val registry: AiProviderRe
             val name = if (id == "openrouter") "OpenRouter (model miễn phí)" else registry.providers[id]?.displayName ?: id
             ProviderStatus(id, name, list.any { it.paid }, list, when (id) {
                 "openrouter" -> "$sent được gửi tới OpenRouter và nhà cung cấp model miễn phí đã chọn."
-                "local" -> "$sent được gửi tới máy chủ model nội bộ ${registry.providers[id]?.endpointHost ?: ""}."
+                "local" -> "$sent được gửi tới máy chủ AI nội bộ của công ty."
                 else -> "$sent được gửi tới $name (tính phí theo hợp đồng của công ty)."
             })
         }
@@ -38,7 +38,7 @@ class AiController(private val ai: AiService, private val registry: AiProviderRe
         return AiStatus(
             provider = if (ai.externalEnabled) "openrouter" else if (any) "providers" else "mock",
             configured = any,
-            defaultModel = if (ai.externalEnabled) "auto" else "mock",
+            defaultModel = ai.effectiveModel(null) ?: if (ai.externalEnabled) "auto" else "mock",
             dailyLimitPerUser = ai.dailyLimitPerUser,
             models = models,
             dataNotice = when {

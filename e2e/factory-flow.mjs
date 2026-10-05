@@ -228,11 +228,11 @@ await check("revision conflict from a second tab is reported and server state re
 await check("admin users: search, disable (sessions revoked, login blocked), enable again", async () => {
   const pub = await ctx(); await login(pub.p, "local.publisher", "builder"); await pub.p.waitForURL(/studio/);
   await admin.p.goto(BASE + "/admin/users"); await admin.p.getByLabel("Tìm người dùng").fill("local.publisher"); await admin.p.getByRole("button", { name: "Tìm" }).click();
-  await admin.p.getByRole("link", { name: "Publisher" }).click(); await admin.p.getByRole("button", { name: "Vô hiệu hóa" }).click();
-  await admin.p.getByText("Đã vô hiệu hóa và thu hồi phiên.").waitFor();
+  await admin.p.getByRole("link", { name: "Publisher" }).click(); await admin.p.getByRole("button", { name: "Khóa tài khoản" }).click();
+  await admin.p.getByText("Đã khóa tài khoản và thu hồi phiên.").waitFor();
   expect((await pub.c.request.get(`${BASE}/api/v1/auth/me`)).status() === 401, "publisher session must be revoked");
   const t = await ctx(); await login(t.p, "local.publisher", "builder"); await t.p.getByText("Sai tên đăng nhập hoặc mật khẩu.").waitFor(); await t.c.close();
-  await admin.p.getByRole("button", { name: "Kích hoạt" }).click(); await admin.p.getByText("Đã kích hoạt lại.").waitFor(); await pub.c.close();
+  await admin.p.getByRole("button", { name: "Mở khóa" }).click(); await admin.p.getByText("Đã mở khóa tài khoản.").waitFor(); await pub.c.close();
 });
 await check("expired session: user is sent to sign in and comes back to the same project route", async () => {
   await editor.p.goto(`${BASE}/studio/projects/${DEMO}/design`); await editor.p.getByRole("heading", { name: "Cấu trúc trang" }).waitFor();
@@ -250,14 +250,14 @@ await check("audit log filters by action and shows request ids", async () => {
   await admin.p.goto(BASE + "/admin/audit"); await admin.p.getByLabel("Hành động").selectOption("USER_DISABLED"); await admin.p.getByRole("button", { name: "Lọc" }).click();
   await admin.p.locator(".table").getByText("Vô hiệu hóa người dùng").first().waitFor();
 });
-await check("AI Control: usage report and call log come from ai_calls (provider-reported tokens; unknown is not zero)", async () => {
+await check("AI usage: report and call log come from ai_calls (provider-reported tokens; unknown is not zero)", async () => {
   // no network model in this run: two call rows are written directly, as the server records them after an upstream call
   const uid = sql(`select id from users where username='local.admin'`), ws = sql(`select workspace_id from projects where id='${PID}'`);
   sql(`insert into ai_calls (id, prompt_id, workspace_id, project_id, user_id, provider, model, outcome, http_status, prompt_tokens, completion_tokens, total_tokens, cost_usd, latency_ms)
        values (gen_random_uuid(), null, '${ws}', '${PID}', '${uid}', 'openrouter', 'e2e/stub:free', 'OK', 200, 1000, 234, 1234, 0, 900),
               (gen_random_uuid(), null, '${ws}', '${PID}', '${uid}', 'openrouter', 'e2e/stub:free', 'ERROR', 429, null, null, null, null, 300)`);
   try {
-    await admin.p.goto(BASE + "/admin/ai"); await admin.p.getByRole("heading", { name: "Mức sử dụng model" }).waitFor();
+    await admin.p.goto(BASE + "/admin/ai/usage"); await admin.p.getByRole("heading", { name: "Mức sử dụng model" }).waitFor();
     await admin.p.getByRole("button", { name: "Hôm nay" }).click();
     const byModel = admin.p.locator(".card", { has: admin.p.getByRole("heading", { name: "Theo model", exact: true }) });
     await byModel.getByText("e2e/stub:free").first().waitFor(); await byModel.getByText("1 lượt không có số liệu").first().waitFor();

@@ -24,7 +24,7 @@ REAL means a working backend flow **and** an automated test. Where a feature has
 | Components registry | REAL | `ComponentApiTests` | new base component types need renderer code (by design) |
 | Source apps (Git, sandbox, packages, review, signing) | REAL (local stack) | `CodeProjectTests` (15), code-flow 14/14, live sandbox flag capture | pilot has no Git/runner (policy: off) |
 | AI code generation | PARTIAL | simulator + stub-model tests; **no real provider** | provider key (BLOCKED_EXTERNAL_INPUT) |
-| AI governance (access, budgets, alerts, streaming, tools) | REAL (stub-verified) | `AiGovernanceTests`, providers-flow 6/6 | real provider calls not exercised |
+| AI governance (access, budgets, alerts, streaming, tools) | REAL (stub-verified) | `AiGovernanceTests`, `AiConfigWebTests`, `admin-setup-flow` 12/12 | real provider calls not exercised |
 | Quotas (AI, build, storage) | REAL | `QuotaEnforcementTests`, `LockdownSettingsTests`, `AiGovernanceTests`; rejections visible in admin | — |
 | Server runtime | REAL (Docker Desktop) | `ServerRuntimeTests`, runtime-flow 8/8 (hardening, isolation, blue/green, archive) | Linux host + gVisor (not production isolation on a Mac) |
 | App DB isolation, secrets, signed identity | REAL | runtime-flow (role cannot open other DBs; forged header ignored), `ServerRuntimeTests` | — |
@@ -99,7 +99,7 @@ REAL means a working backend flow **and** an automated test. Where a feature has
 
 ## Verification (2026-10-04, this machine)
 Backend `./gradlew test`: **185 tests, 0 failures, 3 skipped** (OpenRouter live tests need a key). Browser E2E: `factory-flow` 34/34, `code-flow` 14/14, `runtime-flow` 8/8,
-`a11y` 41/41 screens (no serious/critical axe violations), `providers-flow` 6/6, `pages-mock` 6/6 (GitHub Pages static build), `sso-flow` 11/11
+`a11y` 41/41 screens (no serious/critical axe violations), `admin-setup-flow` 12/12 (AI configured entirely on the web), `pages-mock` 6/6 (GitHub Pages static build), `sso-flow` 11/11
 (Keycloak, incl. RP logout + SAML brokering), `public-flow` 13/13 (live pilot through Cloudflare, after the V23 redeploy). Live smoke tests:
 server app create → sandbox build → isolated runtime → API → own DB; blue/green switch; Dashboard / Internal tool / Workflow; app-to-app and
 platform-DB isolation; multi-page site, 404, forms through the real gateway; backup + restore drill. Secret scan (history + tree): clean.

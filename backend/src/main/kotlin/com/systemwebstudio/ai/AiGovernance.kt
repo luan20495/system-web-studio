@@ -205,7 +205,7 @@ data class BudgetRequest(@field:NotBlank @field:Pattern(regexp = "ORG|WORKSPACE|
  * model without a price row cannot be budget-checked, so it is refused while a hard budget applies.
  */
 @Service
-class AiBudgetService(private val jdbc: JdbcTemplate, private val alerts: AlertService, private val access: ModelAccessService) {
+class AiBudgetService(private val jdbc: JdbcTemplate, private val alerts: AlertService, private val access: ModelAccessService, private val limits: AiLimitService) {
     private data class Row(val id: UUID, val scopeType: String, val scopeId: String, val period: String, val amount: BigDecimal, val currency: String,
                            val usdPerUnit: BigDecimal, val soft: Int, val hard: Boolean)
 
@@ -232,8 +232,17 @@ class AiBudgetService(private val jdbc: JdbcTemplate, private val alerts: AlertS
     private fun hasPrice(model: String) = jdbc.queryForObject("SELECT count(*) FROM ai_model_pricing WHERE model_id = ? AND effective_from <= now()", Long::class.java, model)!! > 0
 
     /** Before a call. Free models ("auto", OpenRouter :free, the simulator) are never blocked by money budgets. */
-    fun require(userId: UUID, workspaceId: UUID, projectId: UUID?, model: String?) {
+    fun require(userId: UUID, workspaceId: UUID, projectId: UUID?, model: String?, lim: EffectiveLimits) {
         if (model == null || model == "auto" || model == "mock" || !access.paid(model)) return
+        // company default: paid models cannot spend anything until an administrator grants a budget (0 = no budget granted)
+        val userBudget = lim.paidBudgetUserMonth.value; val wsBudget = lim.paidBudgetWorkspaceMonth.value
+        if (userBudget.signum() == 0 || wsBudget.signum() == 0) throw ApiException(HttpStatus.PAYMENT_REQUIRED, "AI_NO_PAID_BUDGET",
+            "Mô hình trả phí này chưa được cấp ngân sách. Hãy chọn mô hình miễn phí hoặc nhờ quản trị viên cấp ngân sách AI trả phí.")
+        if (!hasPrice(model)) throw ApiException.conflict("AI_COST_UNKNOWN", "Mô hình trả phí này chưa có giá nên chưa kiểm soát được chi phí. Hãy nhờ quản trị viên nhập giá.")
+        if (limits.paidSpentUserMonth(userId) >= userBudget) throw ApiException(HttpStatus.TOO_MANY_REQUESTS, "AI_BUDGET_EXCEEDED",
+            "Bạn đã dùng hết ngân sách AI trả phí của tháng này. Mô hình miễn phí vẫn dùng được.", mapOf("scope" to "USER", "period" to "MONTHLY"))
+        if (limits.paidSpentWorkspaceMonth(workspaceId) >= wsBudget) throw ApiException(HttpStatus.TOO_MANY_REQUESTS, "AI_BUDGET_EXCEEDED",
+            "Không gian làm việc đã dùng hết ngân sách AI trả phí của tháng này. Mô hình miễn phí vẫn dùng được.", mapOf("scope" to "WORKSPACE", "period" to "MONTHLY"))
         val list = applicable(userId, workspaceId, projectId); if (list.isEmpty()) return
         if (list.any { it.hard } && !hasPrice(model)) throw ApiException.conflict("AI_COST_UNKNOWN",
             "This paid model has no price in the AI pricing catalog, so the spending budget cannot be checked. Ask an administrator to add its price.")
@@ -318,18 +327,32 @@ class AdminBudgetController(private val guard: AdminGuard, private val jdbc: Jdb
  */
 @Service
 class AiGate(private val ai: AiService, private val access: ModelAccessService, private val usage: AiUsageService, private val budgets: AiBudgetService,
-             private val alerts: AlertService, private val limiter: RateLimiter) {
+             private val alerts: AlertService, private val limiter: RateLimiter, private val limits: AiLimitService) {
     data class Decision(val external: Boolean, val exclude: Set<String>)
 
-    fun authorize(ctx: AccessContext, model: String?, projectId: UUID?): Decision {
+    fun authorize(ctx: AccessContext, requested: String?, projectId: UUID?): Decision {
+        val model = ai.effectiveModel(requested)
         ai.requireAllowed(model)
         val external = ai.isExternal(model)
         if (!external) return Decision(false, emptySet())
         access.require(ctx.userId, ctx.workspaceId, model ?: "auto")
-        usage.requireBudget(ctx.userId, ctx.workspaceId)
-        budgets.require(ctx.userId, ctx.workspaceId, projectId, model)
-        // free-tier quotas are shared by everyone using the key, so each user gets a daily allowance of real-AI prompts
-        limiter.require("ai:${ctx.userId}", ai.dailyLimitPerUser, 86_400, "ai-daily")
+        val lim = limits.effective(ctx.userId, ctx.workspaceId)
+        val app = projectId?.let { limits.find("PROJECT", it) }
+        usage.requireBudget(ctx.userId, ctx.workspaceId, lim, projectId, app?.tokensPerMonth)
+        budgets.require(ctx.userId, ctx.workspaceId, projectId, model, lim)
+        // free-tier quotas are shared by everyone using the key, so each user gets a daily allowance of real-AI prompts (0 = unlimited)
+        val perDay = lim.requestsPerDay.long
+        if (perDay > 0) {
+            val d = limiter.hit("ai:${ctx.userId}", perDay, 86_400)
+            if (!d.allowed) throw ApiException(HttpStatus.TOO_MANY_REQUESTS, "AI_DAILY_LIMIT",
+                "Bạn đã dùng hết $perDay lượt AI hôm nay. Hạn mức được làm mới sau khoảng ${(d.retryAfterSeconds + 3599) / 3600} giờ; hoặc nhờ quản trị viên tăng hạn mức.",
+                mapOf("retryAfterSeconds" to d.retryAfterSeconds, "limit" to perDay), mapOf("Retry-After" to d.retryAfterSeconds.toString()))
+        }
+        app?.requestsPerDay?.takeIf { it > 0 }?.let { n ->
+            val d = limiter.hit("ai-app:$projectId", n.toLong(), 86_400)
+            if (!d.allowed) throw ApiException(HttpStatus.TOO_MANY_REQUESTS, "AI_DAILY_LIMIT", "Website/ứng dụng này đã dùng hết $n lượt AI hôm nay.",
+                mapOf("retryAfterSeconds" to d.retryAfterSeconds, "limit" to n), mapOf("Retry-After" to d.retryAfterSeconds.toString()))
+        }
         return Decision(true, if (model == null || model == "auto") access.autoExclusions(ctx.userId, ctx.workspaceId) else emptySet())
     }
 

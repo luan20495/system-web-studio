@@ -71,8 +71,21 @@ export type AiStatus = { provider: "openrouter" | "providers" | "mock"; configur
   providers?: AiProviderStatus[] };
 // ---- Phase 6: providers, model policy, pricing catalog (admin)
 export type AiPrice = { id: string; provider: string; modelId: string; inputUsdPerMTok: number; outputUsdPerMTok: number; effectiveFrom: string; note: string; createdBy: string | null; createdAt: string };
+export type AiProviderKind = "OPENROUTER" | "OPENAI" | "ANTHROPIC" | "GEMINI" | "OPENAI_COMPATIBLE" | "LOCAL";
+export type AiProviderModel = { id: string; name: string; enabled: boolean; paid: boolean; price: AiPrice | null; default: boolean };
 export type AiProviderInfo = { id: string; name: string; configured: boolean; paid: boolean; endpointHost: string | null; defaultPolicy: "ENABLED_UNLESS_DISABLED" | "DISABLED_UNLESS_ENABLED";
-  models: { id: string; name: string; enabled: boolean; paid: boolean; price: AiPrice | null }[]; configHint: string };
+  models: AiProviderModel[]; kind: AiProviderKind | ""; enabled: boolean;
+  /** settings come from the operator: shown as "Được quản lý bởi hệ thống" and not editable on the web */
+  managedBySystem: boolean; keySet: boolean; baseUrl: string | null; defaultModel: string | null; savedModels: string[] };
+export type AiProviderForm = { name?: string; kind?: AiProviderKind; baseUrl?: string; /** write-only */ apiKey?: string; models?: string[]; defaultModel?: string; paid?: boolean; enabled?: boolean; removeKey?: boolean };
+export type AiDiscover = { id: string; ok: boolean; models: string[]; detail: string };
+export type AiLimitDefaults = { defaultModel: string; requestsPerUserDay: number; tokensPerUserDay: number; tokensPerWorkspaceMonth: number; paidBudgetPerUserMonth: number; paidBudgetPerWorkspaceMonth: number };
+export type AiOverride = { id: string; scopeType: "USER" | "WORKSPACE" | "PROJECT"; scopeId: string; scopeLabel: string | null; requestsPerDay: number | null; tokensPerDay: number | null; tokensPerMonth: number | null; paidBudgetMonth: number | null };
+export type AiLimitsView = { defaults: AiLimitDefaults; overrides: AiOverride[]; customized: boolean };
+export type AiLimitLine = { value: number; source: "DEFAULT" | "WORKSPACE" | "USER" };
+export type AiUserView = { workspaceId: string | null; workspaces: { id: string; name: string }[]; allowedModels: { id: string; name: string; provider: string; paid: boolean }[];
+  effectiveDefaultModel: string; requestsToday: number; tokensToday: number; tokensThisMonth: number; paidSpentThisMonthUsd: number;
+  limits: Record<"requestsPerDay" | "tokensPerDay" | "tokensPerMonthWorkspace" | "paidBudgetUserMonth" | "paidBudgetWorkspaceMonth", AiLimitLine>; override: AiOverride | null };
 export type AiProbe = { id: string; ok: boolean; latencyMs: number; detail: string };
 export type Member = { userId: string; username: string; displayName: string | null; email: string | null; role: string; joinedAt: string };
 export const WORKSPACE_ROLES = ["WORKSPACE_ADMIN", "EDITOR", "PUBLISHER", "VIEWER"] as const;

@@ -27,6 +27,13 @@ abstract class IntegrationTestBase {
     @Autowired lateinit var json: JsonMapper
     @Autowired lateinit var fx: TestFixtures
     @Autowired lateinit var jdbc: JdbcTemplate
+    @Autowired lateinit var settingsService: com.systemwebstudio.settings.SettingsService
+
+    /** the administrator has granted AI budgets for paid models (company default is 0 = none) */
+    fun grantPaidBudgets(user: Int = 1000, workspace: Int = 10000) {
+        jdbc.update("INSERT INTO system_settings (key, value) VALUES ('ai.paid-budget-per-user-month', ?), ('ai.paid-budget-per-workspace-month', ?) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", user.toString(), workspace.toString())
+        settingsService.invalidate()
+    }
 
     fun session() = ApiSession(mvc, json)
     fun sessionFor(username: String): ApiSession = session().also { it.login(username) }
