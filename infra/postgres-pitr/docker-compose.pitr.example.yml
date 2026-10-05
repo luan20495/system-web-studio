@@ -1,0 +1,25 @@
+# Example: PostgreSQL 17 with WAL archiving to a mounted volume (dev/pilot). Run next to, not instead of, compose.yml:
+#   docker compose -f infra/postgres-pitr/docker-compose.pitr.example.yml up -d
+# In production prefer WAL shipping to object storage (wal-g / pgBackRest), see README.md.
+services:
+  pitr-init:                     # one-shot: make the archive/backup volumes writable by the postgres user (uid 999)
+    image: postgres:17.6
+    user: root
+    command: ["chown", "-R", "postgres:postgres", "/wal-archive", "/base-backups"]
+    volumes: [wal-archive:/wal-archive, base-backups:/base-backups]
+  postgres-pitr:
+    image: postgres:17.6
+    depends_on: { pitr-init: { condition: service_completed_successfully } }
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: system_web_studio
+      POSTGRES_USER: studio
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?set DATABASE_PASSWORD}
+    command: ["postgres", "-c", "config_file=/etc/postgresql/pitr.conf"]
+    ports: ["127.0.0.1:${POSTGRES_PITR_HOST_PORT:-15433}:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - wal-archive:/wal-archive
+      - base-backups:/base-backups
+      - ./postgresql.pitr.conf:/etc/postgresql/pitr.conf:ro
+volumes: { pgdata: {}, wal-archive: {}, base-backups: {} }

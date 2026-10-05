@@ -1,0 +1,2 @@
+# Packages approved in addition to the scaffold lockfile (one npm name per line). Changes need review; then run
+#   node scripts/build-plane-allowlist.mjs && docker compose restart verdaccio

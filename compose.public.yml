@@ -1,0 +1,72 @@
+# Data services for the PUBLIC deployment (scripts/public-up.sh). Separate compose project (hblpub) with its own volumes and
+# ports, so it never touches the development stack. Every password comes from the generated, git-ignored .run/public/public.env.
+# Bound to 127.0.0.1 only: the internet reaches the app solely through the Cloudflare tunnel -> UI server -> API.
+name: hblpub
+
+services:
+  postgres:
+    image: postgres:17.6
+    environment:
+      POSTGRES_DB: studio
+      POSTGRES_USER: ${DATABASE_USER:?}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?}
+    ports: ["127.0.0.1:${PG_PORT:-25432}:5432"]
+    volumes: [pub-postgres:/var/lib/postgresql/data]
+    mem_limit: 1g
+    restart: unless-stopped
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d studio"], interval: 5s, timeout: 3s, retries: 20 }
+
+  redis:
+    image: redis:8.2.1-alpine
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:?}", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction"]
+    ports: ["127.0.0.1:${REDIS_PORT_PUBLIC:-26379}:6379"]
+    volumes: [pub-redis:/data]
+    mem_limit: 384m
+    restart: unless-stopped
+    healthcheck: { test: ["CMD-SHELL", "redis-cli -a $${REDIS_PASSWORD} ping | grep -q PONG"], interval: 5s, timeout: 3s, retries: 20 }
+    environment: { REDIS_PASSWORD: "${REDIS_PASSWORD:?}" }
+
+  minio:
+    image: bitnamilegacy/minio:2025.7.23-debian-12-r5
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?}
+      MINIO_DEFAULT_BUCKETS: ${MINIO_BUCKET:-studio-assets}
+      MINIO_API_CORS_ALLOW_ORIGIN: ${PUBLIC_ORIGIN:?}      # browsers upload straight to MinIO with presigned URLs, only from our origin
+    ports: ["127.0.0.1:${MINIO_PORT_PUBLIC:-29000}:9000"]   # the console (9001) is intentionally not published
+    volumes: [pub-minio:/bitnami/minio/data]
+    mem_limit: 512m
+    restart: unless-stopped
+    healthcheck: { test: ["CMD-SHELL", "curl -fsS http://localhost:9000/minio/health/live || exit 1"], interval: 5s, timeout: 3s, retries: 12 }
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: studio
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?}
+    ports: ["127.0.0.1:${RABBITMQ_PORT_PUBLIC:-25674}:5672"]   # management UI is not published
+    volumes: [pub-rabbitmq:/var/lib/rabbitmq]
+    mem_limit: 768m
+    restart: unless-stopped
+    healthcheck: { test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"], interval: 10s, timeout: 10s, retries: 12 }
+
+  # Sites gateway (ADR 0009): https://<SITES_HOST>/<slug>/ -> API /sites/<slug>/ (GET/HEAD only). Published through the tunnel.
+  sites-gateway:
+    image: nginxinc/nginx-unprivileged:1.29-alpine
+    environment:
+      API_UPSTREAM: host.docker.internal:${API_PORT:-18081}
+      SITES_HOST: ${SITES_HOST:-sites.localhost}
+    ports: ["127.0.0.1:${SITES_GATEWAY_PORT:-28088}:8080"]
+    volumes: ["./infra/sites-gateway/default.conf.template:/etc/nginx/templates/default.conf.template:ro"]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    read_only: true
+    tmpfs: ["/tmp", "/etc/nginx/conf.d:uid=101,gid=101,mode=0755"]
+    mem_limit: 128m
+    restart: unless-stopped
+    healthcheck: { test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"], interval: 10s, timeout: 3s, retries: 6 }
+
+volumes:
+  pub-postgres:
+  pub-redis:
+  pub-minio:
+  pub-rabbitmq:

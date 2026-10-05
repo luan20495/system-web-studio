@@ -1,0 +1,78 @@
+# ADR 0010 — Build plane: per-job sandboxes on a separate Linux host
+Status: **accepted; implemented locally** (2026-10-03). Increment 7.3. Needed only for `STATIC_APP` (code) projects.
+
+## Requirements (from the spec)
+Isolated sandbox, dependency install, build, tests, secret scan, dependency scan, artifact creation, resource limits, timeout,
+network policy. Generated code must **never** execute inside the Spring Boot JVM — nor on the host that runs the control plane.
+
+## Isolation options
+| Option | Isolation | Ops cost | Fit |
+| --- | --- | --- | --- |
+| Plain Docker (runc) + hardening | shared host kernel; one kernel bug = escape | low | not enough for untrusted code on its own |
+| **Docker + gVisor (`runsc`)** | user-space kernel intercepts syscalls; strong practical isolation | low–medium (Linux only, some build slowdown) | **chosen for v1** |
+| Firecracker / Kata (micro-VM) | hardware virtualisation per job | medium–high (KVM host, images, networking) | upgrade path if the threat level rises |
+| Hosted sandbox service | vendor-managed | low ops, but source code and prompts leave company infrastructure | rejected for now (data residency, dependency) |
+| Kubernetes Jobs | depends on runtime class | high; excluded by project constraint "no Kubernetes" | rejected |
+
+## Decision
+* **Placement:** a dedicated Linux VM/server ("build host"), not this macOS machine and not the control-plane host. It holds **no**
+  platform database credentials, no AI keys, no user sessions.
+* **Runner agent** (separate small process on the build host) consumes `build.requested` from RabbitMQ (dedicated vhost/user with
+  publish/consume rights on build queues only) and replies `build.finished`. One job at a time per slot; slots configurable.
+* **Two-stage sandbox per job** (fresh container from an image pinned by digest, run with `runsc`, non-root, read-only root filesystem,
+  `no-new-privileges`, all capabilities dropped, no Docker socket, no host mounts, private tmpfs workspace with a size quota):
+  1. *install* — network allowed **only** to the internal package mirror; `npm ci --ignore-scripts` from a lockfile with integrity
+     hashes (packages that genuinely need install scripts are allowlisted individually);
+  2. *build & test* — **no network at all**; typecheck, lint, tests, build (static export).
+* **Inputs/outputs move outside the sandbox:** the runner fetches the exact commit with a short-lived read-only token scoped to that
+  repository and copies a tarball in; it copies the output directory out, then uploads it with a presigned, single-object PUT. The
+  sandbox never sees a credential.
+* **Limits (defaults, per job):** 2 vCPU, 4 GiB RAM, 512 pids, 5 GiB disk, install 5 min, build+test 10 min, output 100 MiB,
+  log 10 MiB. Exceeding any limit = FAILED with the reason. Per-user and per-workspace build quotas recorded like AI usage.
+* **Scans (fail the build on findings above the configured threshold):** secret scan of source and output (gitleaks), dependency
+  vulnerabilities from the lockfile (OSV-Scanner), SBOM (syft, stored next to the artifact), static checks for forbidden patterns in
+  output (e.g. inline `<script>` from untrusted origins, `eval`), a CSP-compatible output check.
+* **Package mirror:** Verdaccio (or equivalent) on the build network with an allowlist of packages/versions; no direct access to the public
+  registry from sandboxes. Mirror updates are an admin task.
+* **Logs:** streamed by the runner (not the sandbox) to MinIO, redacted of tokens; shown in Studio as build output.
+* **Cleanup:** container and workspace destroyed after every job; the runner host is rebuilt from an image periodically.
+* **Dev on macOS:** Docker Desktop's VM is acceptable for development only; gVisor requires Linux, so production builds run only on the
+  build host.
+
+## Note — owner decision 2026-10-02: build on this machine first
+The first build host is this macOS machine. gVisor needs a Linux kernel, so here each job runs in a hardened container inside Docker
+Desktop's Linux VM (non-root, read-only root, all capabilities dropped, no-new-privileges, seccomp default, no Docker socket, no host
+mounts, network `none` for build/test and an internal network reaching only the package mirror for install, CPU/memory/pid limits).
+The VM boundary separates jobs from macOS, but jobs share the VM kernel with the other containers on this machine (the platform's
+own databases run there too): this is weaker than the target design and acceptable only while code projects are internal and
+limited to trusted employees. Moving the runner to a dedicated Linux host with gVisor/Firecracker is the planned extension and needs
+no change to the job protocol.
+
+## Acceptance criteria for 7.3
+A job cannot reach anything but the mirror in stage 1 and nothing in stage 2 (tested with outbound attempts); cannot read host files,
+environment secrets or instance metadata (tested); limits enforced (fork bomb, memory hog, infinite loop, huge output — each FAILED
+with the right reason); a planted secret and a vulnerable dependency each fail the build; artifact hash recorded and verified at deploy.
+
+## Implementation (2026-10-03)
+* `workers/runner/runner.mjs` — host process (Node), started by `scripts/run-local.sh`. **Protocol changed from RabbitMQ to HTTP polling**:
+  the runner claims jobs at `/internal/build-jobs/claim` with its own `X-Runner-Token` (`FOR UPDATE SKIP LOCKED`, claim expiry → re-claim),
+  downloads the source (the API streams the Forgejo archive; the runner never gets a Git credential), uploads the output tar.gz and reports.
+  Reason: no AMQP client dependency in the runner and nothing broker-specific to secure; the API stays the single owner of job state.
+* Per job (all `docker run --rm`, image `node:22-alpine` pinned by digest): copy source into a per-job volume (no bind mounts), chown in a
+  capability-limited helper; **install** on the internal `hbl_build` network (only `verdaccio:4873` reachable — verified: internet, host and raw IPs
+  blocked) with `npm ci --ignore-scripts`; **typecheck + build** with `--network none`; collect `dist` as tar.gz; hardening on every step:
+  `--read-only`, tmpfs `/tmp`, `--cap-drop ALL`, `no-new-privileges`, `--pids-limit 512`, `--memory 2g`, `--cpus 2`, `--user 1000:1000`,
+  install 300 s / build 600 s timeouts (container killed), output ≤ 100 MiB.
+* Scans: gitleaks on source and on output; **OSV** (osv.dev batch query of the lockfile's name@version, from the runner, nothing executed) —
+  HIGH/CRITICAL advisories fail the build (`npm audit` through the mirror hung and was replaced); SBOM (name, version, integrity) from the
+  lockfile stored with the job. The API re-checks the output for credential patterns and reads the tar with `SafeTar` (regular files only,
+  no links/devices/traversal, size and count limits) — as data, never executed.
+* Package mirror: `verdaccio` (compose) proxies only names in the scaffold lockfile + `infra/verdaccio/extra-packages.txt`
+  (`scripts/build-plane-allowlist.mjs`); exact versions come from the projects' lockfiles; in v1 users and the AI cannot change
+  package.json/package-lock.json at all.
+* **Finding while building the scaffold:** `rollup@4.64.0` (and 4.63.0) declare an unexpected optional dependency `@napi-rs/lzma-linux-x64-gnu`
+  and made a trivial Vite build take ~171 s of CPU on the host (1.5 s with 4.50.2). Not proven malicious, but treated as suspicious: the scaffold pins
+  `rollup@4.62.0` via `overrides` (also clean in OSV), cached 4.64.0 tarballs were deleted from the mirror. The OSV scan later blocked
+  `rollup@4.50.2`/`vite@7.1.5` for HIGH advisories, so the scaffold uses `vite@7.3.6` + `rollup@4.62.0` (0 advisories on 2026-10-03).
+* Verified: backend `CodeProjectTests` (fake runner against a real Forgejo container), browser `e2e/code-flow.mjs` with the real runner/sandbox
+  (build ≈ 15 s). Not done: gVisor/Firecracker (macOS host), per-user build quotas, artifact retention.

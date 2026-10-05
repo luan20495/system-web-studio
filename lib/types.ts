@@ -51,7 +51,7 @@ export type Version = {
   label: string;
   createdAt: string;
   summary: string;
-  commitSha: string;
+  sourceRevision?: string | null;
 };
 
 export type StudioSnapshot = {
@@ -59,18 +59,15 @@ export type StudioSnapshot = {
   content: PageContent;
   messages: ChatMessage[];
   versions: Version[];
-  registryReuse: number;
 };
 
 export type PromptResult = {
   content: PageContent;
   message: ChatMessage;
-  version: Version;
-  registryReuse: number;
+  outcome: "updated" | "no-change" | "unsupported";
+  version?: Version;
 };
 
-export type PublishResult = {
-  status: "success";
-  visibility: Visibility;
-  url: string;
-};
+export type PublishResult =
+  | { status: "demo"; visibility: Visibility }
+  | { status: "success"; visibility: Visibility; url: string };

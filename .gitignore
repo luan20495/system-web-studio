@@ -2,6 +2,8 @@
 node_modules/
 out/
 dist/
+**/.gradle/
+**/build/
 .env
 .env.local
 .env.*.local
@@ -9,3 +11,16 @@ npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
 .DS_Store
+*.tsbuildinfo
+next-env.d.ts
+.next-http/
+.run/
+.next-check*/
+.next-pages/
+
+# PostgreSQL / MinIO backups (contain production data; never commit)
+backups/
+infra/keycloak/.generated/
+.next-public/
+packages/*/dist/
+.run/verdaccio-publish.env

@@ -1,0 +1,41 @@
+# Runtime gateway for server apps (stage J, ADR 0017). Two listeners:
+#  :8080  published on 127.0.0.1 for the API only (requests must carry the API's gateway token): /<container>/<path> -> that app container
+#  :8081  reachable by app containers on the internal apps network: /_connectors/<key>/<path> -> API connector proxy (secrets added there)
+# App containers have no other route anywhere (network "apps" is internal: no internet, no host, no platform services).
+resolver 127.0.0.11 valid=10s ipv6=off;
+map $http_x_forwarded_proto $fwd_proto { default $http_x_forwarded_proto; "" $scheme; }
+
+server {
+    listen 8080;
+    server_tokens off;
+    client_max_body_size 1m;
+    location = /healthz { access_log off; default_type text/plain; return 200 "ok\n"; }
+    location ~ "^/(app-[a-z0-9][a-z0-9-]{1,90})/(.*)$" {
+        if ($http_x_gateway_token != "${APPS_GATEWAY_TOKEN}") { return 403; }
+        set $target $1; set $rest $2;
+        proxy_pass http://$target:8080/$rest$is_args$args;
+        proxy_http_version 1.1;
+        proxy_set_header Host $target;
+        proxy_set_header X-Gateway-Token "";
+        proxy_set_header Connection "";
+        proxy_connect_timeout 3s;
+        proxy_read_timeout 20s;
+        proxy_buffering off;
+    }
+    location / { return 404; }
+}
+
+server {
+    listen 8081;
+    server_tokens off;
+    client_max_body_size 1m;
+    location ~ "^/_connectors/([a-z0-9][a-z0-9-]{1,40})/(.*)$" {
+        proxy_pass http://${API_UPSTREAM}/internal/connectors/$1/$2$is_args$args;
+        proxy_http_version 1.1;
+        proxy_set_header Host localhost;
+        proxy_set_header X-Gateway-Token "${APPS_GATEWAY_TOKEN}";
+        proxy_connect_timeout 3s;
+        proxy_read_timeout 30s;
+    }
+    location / { return 404; }
+}

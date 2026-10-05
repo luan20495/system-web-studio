@@ -1,0 +1,13 @@
+{
+  "name": "@company/ui",
+  "version": "1.0.0",
+  "description": "Company UI components for source-code apps built in the AI Software Factory (React 19, accessible, design tokens).",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }, "./styles.css": "./dist/styles.css" },
+  "files": ["dist", "README.md"],
+  "sideEffects": ["*.css"],
+  "peerDependencies": { "react": ">=19", "react-dom": ">=19" },
+  "license": "UNLICENSED"
+}

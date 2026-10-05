@@ -1,0 +1,229 @@
+# Local development infrastructure. Every port is bound to loopback only.
+# Credentials below are LOCAL-ONLY defaults; override them through .env. Never reuse them anywhere else.
+services:
+  postgres:
+    restart: unless-stopped
+    image: postgres:17.6
+    environment:
+      POSTGRES_DB: system_web_studio
+      POSTGRES_USER: studio
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-studio-local-only}
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-15432}:5432"
+    volumes:
+      - studio-postgres:/var/lib/postgresql/data
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U studio -d system_web_studio"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  redis:
+    restart: unless-stopped
+    image: redis:8.2.1-alpine
+    # Sessions and rate limits live here: never evict keys silently.
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction"]
+    ports:
+      - "127.0.0.1:${REDIS_HOST_PORT:-16379}:6379"
+    volumes:
+      - studio-redis:/data
+    mem_limit: 384m
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  # The official minio/minio images are no longer pullable from Docker Hub/Quay, so the last
+  # publicly available pinned S3-compatible build is used for LOCAL development only.
+  minio:
+    restart: unless-stopped
+    image: bitnamilegacy/minio:2025.7.23-debian-12-r5
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-studio-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-studio-local-only}
+      MINIO_DEFAULT_BUCKETS: ${MINIO_BUCKET:-studio-assets}
+    ports:
+      - "127.0.0.1:${MINIO_API_PORT:-19000}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-19001}:9001"
+    volumes:
+      - studio-minio:/bitnami/minio/data
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9000/minio/health/live || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  rabbitmq:
+    restart: unless-stopped
+    image: rabbitmq:4-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-studio}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-studio-local-only}
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbit vm_memory_high_watermark 0.6"
+    ports:
+      - "127.0.0.1:${RABBITMQ_AMQP_PORT:-15674}:5672"
+      - "127.0.0.1:${RABBITMQ_MGMT_PORT:-15675}:15672"
+    volumes:
+      - studio-rabbitmq:/var/lib/rabbitmq
+    mem_limit: 768m
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  # Sites gateway (ADR 0009): serves every published site from the API's /sites endpoint (artifacts in MinIO). Unprivileged, read-only.
+  sites-gateway:
+    restart: unless-stopped
+    image: nginxinc/nginx-unprivileged:1.29-alpine
+    environment:
+      API_UPSTREAM: ${SITES_API_UPSTREAM:-host.docker.internal:8080}
+      SITES_HOST: ${SITES_HOST:-sites.localhost}
+    ports:
+      - "127.0.0.1:${SITES_GATEWAY_PORT:-18088}:8080"
+    volumes:
+      - ./infra/sites-gateway/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /etc/nginx/conf.d:uid=101,gid=101,mode=0755
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+
+  # Git server for generated code projects (ADR 0011): platform-owned repositories, loopback only, no SSH, no sign-up, no Actions.
+  # Secrets/bot token are created by scripts/forgejo-setup.sh into .run/forgejo-server.env (git-ignored).
+  forgejo:
+    restart: unless-stopped
+    profiles: ["medium", "full"]   # LEAN/MEDIUM/FULL stack profiles (ADR 0020)
+    image: codeberg.org/forgejo/forgejo:11-rootless
+    env_file:
+      - path: .run/forgejo-server.env
+        required: false
+    environment:
+      FORGEJO__database__DB_TYPE: sqlite3
+      FORGEJO__security__INSTALL_LOCK: "true"
+      FORGEJO__server__ROOT_URL: http://127.0.0.1:${FORGEJO_PORT:-13000}/
+      FORGEJO__server__HTTP_PORT: "3000"
+      FORGEJO__server__DISABLE_SSH: "true"
+      FORGEJO__service__DISABLE_REGISTRATION: "true"
+      FORGEJO__service__REQUIRE_SIGNIN_VIEW: "true"
+      FORGEJO__repository__DEFAULT_PRIVATE: private
+      FORGEJO__repository__DEFAULT_BRANCH: main
+      FORGEJO__actions__ENABLED: "false"
+      FORGEJO__packages__ENABLED: "false"
+      FORGEJO__log__LEVEL: Warn
+    ports:
+      - "127.0.0.1:${FORGEJO_PORT:-13000}:3000"
+    volumes:
+      - studio-forgejo-data:/var/lib/gitea
+      - studio-forgejo-conf:/etc/gitea
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/healthz >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+
+  # Package mirror for build sandboxes (ADR 0010): allowlist-only proxy of npm. Reachable by sandboxes ONLY through the internal
+  # "build" network (no internet there); the mirror itself uses the default network to fetch allowlisted packages.
+  verdaccio:
+    restart: unless-stopped
+    profiles: ["medium", "full"]   # LEAN/MEDIUM/FULL stack profiles (ADR 0020)
+    image: verdaccio/verdaccio:6
+    volumes:
+      - ./infra/verdaccio/config.yaml:/verdaccio/conf/config.yaml:ro
+      - studio-verdaccio:/verdaccio/storage
+    networks: [default, build]
+    ports:
+      - "127.0.0.1:${VERDACCIO_PORT:-14873}:4873"   # operator only (publishing @company packages, generating approved lockfiles)
+    mem_limit: 384m
+
+  # Server apps (stage J, ADR 0017/0018): a database server ONLY for generated apps (one database + role per app); the platform
+  # database is a different server on a different network. Admin credentials are generated into .run/appdb.env (git-ignored).
+  appdb:
+    restart: unless-stopped
+    profiles: ["full"]
+    image: postgres:17.6
+    environment:
+      POSTGRES_USER: appdb_admin
+      POSTGRES_PASSWORD: ${APPDB_ADMIN_PASSWORD:-set-by-run-local}
+      POSTGRES_DB: appdb
+    networks: [default, apps]
+    ports:
+      - "127.0.0.1:${APPDB_HOST_PORT:-15434}:5432"
+    volumes:
+      - studio-appdb:/var/lib/postgresql/data
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appdb_admin -d appdb"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  apps-gateway:
+    restart: unless-stopped
+    profiles: ["full"]
+    image: nginxinc/nginx-unprivileged:1.29-alpine
+    environment:
+      APPS_GATEWAY_TOKEN: ${APPS_GATEWAY_TOKEN:-set-by-run-local}
+      API_UPSTREAM: ${SITES_API_UPSTREAM:-host.docker.internal:8080}
+    networks: [default, apps]
+    ports:
+      - "127.0.0.1:${APPS_GATEWAY_PORT:-18090}:8080"
+    volumes:
+      - ./infra/apps-gateway/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /etc/nginx/conf.d:uid=101,gid=101,mode=0755
+    mem_limit: 128m
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+
+  # Optional local identity provider for exercising OIDC/SSO: docker compose --profile sso up -d keycloak (see scripts/sso-up.sh).
+  # Not part of the default stack (it needs ~700 MB RAM). Credentials and the realm are generated at run time, never committed.
+  keycloak:
+    profiles: ["sso"]
+    image: quay.io/keycloak/keycloak:26.4
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-set-by-scripts-sso-up}
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME_STRICT: "false"
+    ports:
+      - "127.0.0.1:${KEYCLOAK_PORT:-18080}:8080"
+    volumes:
+      - ./infra/keycloak/.generated:/opt/keycloak/data/import:ro
+    mem_limit: 1g
+
+networks:
+  default: {}
+  build:
+    internal: true          # build sandboxes: no route to the internet, the host or other networks
+  apps:
+    internal: true          # server app containers (stage J): only the apps DB and the apps gateway are reachable
+
+volumes:
+  studio-appdb:
+  studio-verdaccio:
+  studio-forgejo-data:
+  studio-forgejo-conf:
+  studio-postgres:
+  studio-redis:
+  studio-minio:
+  studio-rabbitmq:

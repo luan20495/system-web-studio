@@ -1,0 +1,564 @@
+# GENERATED — do not edit by hand (136 allowlisted packages).
+storage: /verdaccio/storage/data
+auth:
+  htpasswd:
+    file: /verdaccio/storage/htpasswd
+    max_users: -1            # nobody can register; the operator account is created by scripts/publish-company-packages.sh
+uplinks:
+  npmjs:
+    url: https://registry.npmjs.org/
+    timeout: 60s
+packages:
+  '@company/*':
+    access: $all
+    publish: $authenticated   # company packages: private, never proxied
+  '@babel/code-frame':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@babel/compat-data':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@babel/core':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@babel/generator':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@babel/helper-compilation-targets':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@babel/helper-globals':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@babel/helper-module-imports':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@babel/helper-module-transforms':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@babel/helper-plugin-utils':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@babel/helper-string-parser':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@babel/helper-validator-identifier':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@babel/helper-validator-option':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@babel/helpers':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@babel/parser':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@babel/plugin-transform-react-jsx-self':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@babel/plugin-transform-react-jsx-source':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@babel/template':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@babel/traverse':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@babel/types':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@esbuild/aix-ppc64':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@esbuild/android-arm':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@esbuild/android-arm64':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@esbuild/android-x64':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@esbuild/darwin-arm64':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@esbuild/darwin-x64':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@esbuild/freebsd-arm64':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@esbuild/freebsd-x64':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@esbuild/linux-arm':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@esbuild/linux-arm64':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@esbuild/linux-ia32':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@esbuild/linux-loong64':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@esbuild/linux-mips64el':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@esbuild/linux-ppc64':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@esbuild/linux-riscv64':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@esbuild/linux-s390x':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@esbuild/linux-x64':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@esbuild/netbsd-arm64':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@esbuild/netbsd-x64':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@esbuild/openbsd-arm64':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@esbuild/openbsd-x64':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@esbuild/openharmony-arm64':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@esbuild/sunos-x64':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@esbuild/win32-arm64':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@esbuild/win32-ia32':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@esbuild/win32-x64':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@jridgewell/gen-mapping':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@jridgewell/remapping':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@jridgewell/resolve-uri':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@jridgewell/sourcemap-codec':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@jridgewell/trace-mapping':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@rolldown/pluginutils':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@rollup/rollup-android-arm-eabi':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@rollup/rollup-android-arm64':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@rollup/rollup-darwin-arm64':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@rollup/rollup-darwin-x64':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@rollup/rollup-freebsd-arm64':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@rollup/rollup-freebsd-x64':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@rollup/rollup-linux-arm-gnueabihf':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@rollup/rollup-linux-arm-musleabihf':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@rollup/rollup-linux-arm64-gnu':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@rollup/rollup-linux-arm64-musl':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@rollup/rollup-linux-loong64-gnu':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@rollup/rollup-linux-loong64-musl':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@rollup/rollup-linux-ppc64-gnu':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@rollup/rollup-linux-ppc64-musl':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@rollup/rollup-linux-riscv64-gnu':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@rollup/rollup-linux-riscv64-musl':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@rollup/rollup-linux-s390x-gnu':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@rollup/rollup-linux-x64-gnu':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@rollup/rollup-linux-x64-musl':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@rollup/rollup-openbsd-x64':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@rollup/rollup-openharmony-arm64':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@rollup/rollup-win32-arm64-msvc':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@rollup/rollup-win32-ia32-msvc':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@rollup/rollup-win32-x64-gnu':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@rollup/rollup-win32-x64-msvc':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@types/babel__core':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@types/babel__generator':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@types/babel__template':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@types/babel__traverse':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@types/estree':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@types/node':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@types/pg':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@types/react':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@types/react-dom':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '@vitejs/plugin-react':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'baseline-browser-mapping':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'browserslist':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'caniuse-lite':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'clsx':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'convert-source-map':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'csstype':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'debug':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'electron-to-chromium':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'esbuild':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'escalade':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'fdir':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'fsevents':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'gensync':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'js-tokens':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'jsesc':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'json5':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'lru-cache':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'ms':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'nanoid':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'node-releases':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'pg':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'pg-cloudflare':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'pg-connection-string':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'pg-int8':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'pg-pool':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'pg-protocol':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'pg-types':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'pgpass':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'picocolors':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'picomatch':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'postcss':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'postgres-array':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'postgres-bytea':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'postgres-date':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'postgres-interval':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'react':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'react-dom':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'react-refresh':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'rollup':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'scheduler':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'semver':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'source-map-js':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'split2':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'tinyglobby':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'typescript':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'undici-types':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'update-browserslist-db':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'vite':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'xtend':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  'yallist':
+    access: $all
+    publish: $nobody
+    proxy: npmjs
+  '**':
+    access: $nobody           # not on the allowlist
+    publish: $nobody
+server:
+  keepAliveTimeout: 60
+log: { type: stdout, format: pretty, level: warn }

@@ -1,0 +1,120 @@
+{
+  "realm": "studio",
+  "enabled": true,
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "sslRequired": "none",
+  "clients": [
+    {
+      "clientId": "studio-web",
+      "name": "System Web Studio (local dev)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "__CLIENT_SECRET__",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "http://127.0.0.1:3100/login/oauth2/code/oidc",
+        "http://localhost:3100/login/oauth2/code/oidc"
+      ],
+      "webOrigins": [
+        "http://127.0.0.1:3100",
+        "http://localhost:3100"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://127.0.0.1:3100/login##http://localhost:3100/login"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "sso.user",
+      "email": "sso.user@example.test",
+      "emailVerified": true,
+      "firstName": "Sso",
+      "lastName": "User",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "__USER_PASSWORD__",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "sso.unverified",
+      "email": "sso.unverified@example.test",
+      "emailVerified": false,
+      "firstName": "Unverified",
+      "lastName": "User",
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "__USER_PASSWORD__",
+          "temporary": false
+        }
+      ]
+    }
+  ],
+  "identityProviders": [
+    {
+      "alias": "corp-saml",
+      "displayName": "Corp SAML (local test IdP)",
+      "providerId": "saml",
+      "enabled": true,
+      "trustEmail": true,
+      "storeToken": false,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "config": {
+        "singleSignOnServiceUrl": "http://127.0.0.1:__KC_PORT__/realms/corp/protocol/saml",
+        "singleLogoutServiceUrl": "http://127.0.0.1:__KC_PORT__/realms/corp/protocol/saml",
+        "nameIDPolicyFormat": "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
+        "principalType": "SUBJECT",
+        "postBindingResponse": "true",
+        "postBindingAuthnRequest": "true",
+        "postBindingLogout": "true",
+        "validateSignature": "false",
+        "wantAuthnRequestsSigned": "false",
+        "wantAssertionsSigned": "false",
+        "syncMode": "IMPORT",
+        "entityId": "http://127.0.0.1:__KC_PORT__/realms/studio"
+      }
+    }
+  ],
+  "identityProviderMappers": [
+    {
+      "name": "email",
+      "identityProviderAlias": "corp-saml",
+      "identityProviderMapper": "saml-user-attribute-idp-mapper",
+      "config": {
+        "syncMode": "INHERIT",
+        "attribute.name": "email",
+        "user.attribute": "email"
+      }
+    },
+    {
+      "name": "firstName",
+      "identityProviderAlias": "corp-saml",
+      "identityProviderMapper": "saml-user-attribute-idp-mapper",
+      "config": {
+        "syncMode": "INHERIT",
+        "attribute.name": "firstName",
+        "user.attribute": "firstName"
+      }
+    },
+    {
+      "name": "lastName",
+      "identityProviderAlias": "corp-saml",
+      "identityProviderMapper": "saml-user-attribute-idp-mapper",
+      "config": {
+        "syncMode": "INHERIT",
+        "attribute.name": "lastName",
+        "user.attribute": "lastName"
+      }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Internal tool", "version": "0.1.0" },
+  "paths": {
+    "/api/records": { "get": { "summary": "List records" }, "post": { "summary": "Create a record" } },
+    "/api/records/{id}": { "patch": { "summary": "Update a record" }, "delete": { "summary": "Delete a record" } },
+    "/api/me": { "get": { "summary": "Signed-in member (private app)" } }
+  }
+}

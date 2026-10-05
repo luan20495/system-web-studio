@@ -1,0 +1,2 @@
+# false positive: dummy password of a refused sign-up attempt in the public E2E (replaced by a random value afterwards)
+22852d42f344a06cbdcc967bdb078b632d8b56f0:e2e/public-flow.mjs:generic-api-key:37

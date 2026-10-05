@@ -31,13 +31,12 @@ export const mockSnapshot: StudioSnapshot = {
   },
   messages: [
     { id: "m1", role: "user", content: "Tạo website bán máy lọc nước hiện đại, có hero, sản phẩm, đánh giá khách hàng và form liên hệ." },
-    { id: "m2", role: "assistant", content: "Đã tạo bản nháp. Registry reuse hiện tại là 94%.", meta: ["Navbar", "Hero", "ProductGrid", "Testimonials", "ContactForm"] }
+    { id: "m2", role: "assistant", content: "Bản xem trước demo dùng các section đã kiểm duyệt.", meta: ["Navigation", "Hero", "ProductGrid", "Testimonials", "ContactForm"] }
   ],
   versions: [
-    { id: "v5", label: "v5", createdAt: "just now", summary: "Current preview", commitSha: "8fa21c" },
-    { id: "v4", label: "v4", createdAt: "15 min ago", summary: "Update hero copy", commitSha: "7bc19e" },
-    { id: "v3", label: "v3", createdAt: "today", summary: "Add testimonials", commitSha: "4aa102" },
-    { id: "v1", label: "v1", createdAt: "today", summary: "Initial website", commitSha: "028ec7" }
-  ],
-  registryReuse: 94
+    { id: "demo-v5", label: "Demo snapshot", createdAt: "2026-09-30T08:15:00.000Z", summary: "Current preview", sourceRevision: null },
+    { id: "demo-v4", label: "Demo snapshot", createdAt: "2026-09-30T08:00:00.000Z", summary: "Update hero copy", sourceRevision: null },
+    { id: "demo-v3", label: "Demo snapshot", createdAt: "2026-09-30T07:45:00.000Z", summary: "Add testimonials", sourceRevision: null },
+    { id: "demo-v1", label: "Demo snapshot", createdAt: "2026-09-30T07:30:00.000Z", summary: "Initial website", sourceRevision: null }
+  ]
 };

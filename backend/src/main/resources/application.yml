@@ -1,0 +1,286 @@
+spring:
+  application:
+    name: system-web-studio-api
+  profiles:
+    active: ${APP_PROFILE:default}
+  config:
+    import: optional:file:../.env[.properties]
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://127.0.0.1:15432/system_web_studio}
+    username: ${DATABASE_USER:studio}
+    password: ${DATABASE_PASSWORD:}
+    hikari:
+      # Small on purpose (dev laptop); raise with DB_POOL_MAX after measuring. Keep sum over all instances < Postgres max_connections.
+      maximum-pool-size: ${DB_POOL_MAX:10}
+      minimum-idle: ${DB_POOL_MIN:2}
+      connection-timeout: 5000
+      validation-timeout: 3000
+      max-lifetime: 1500000
+      leak-detection-threshold: ${DB_LEAK_DETECTION_MS:0}
+  lifecycle:
+    timeout-per-shutdown-phase: ${SHUTDOWN_TIMEOUT:30s}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+  session:
+    timeout: 20m
+    data:
+      redis:
+        namespace: spring:session
+        # indexed: sessions can be found (and revoked) by user name — needed by the admin "revoke sessions" action
+        repository-type: indexed
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:16379}
+      # Fail fast: with Redis down every request needs it (sessions), so waiting 60s helps nobody.
+      timeout: 2s
+      connect-timeout: 2s
+  rabbitmq:
+    host: ${RABBITMQ_HOST:127.0.0.1}
+    port: ${RABBITMQ_PORT:15674}
+    username: ${RABBITMQ_USER:studio}
+    password: ${RABBITMQ_PASSWORD:}
+    listener:
+      simple:
+        default-requeue-rejected: false      # failed jobs go to the dead-letter queue, not an endless loop
+        concurrency: ${PUBLISH_WORKER_CONCURRENCY:2}
+        max-concurrency: ${PUBLISH_WORKER_CONCURRENCY:2}
+        prefetch: 1                          # a worker holds at most one unacked job; a crash re-queues just that one
+        acknowledge-mode: auto
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1s
+          multiplier: 2.0
+server:
+  address: ${SERVER_ADDRESS:127.0.0.1}
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful          # stop accepting, let in-flight requests finish (SHUTDOWN_TIMEOUT)
+  max-http-request-header-size: 16KB
+  tomcat:
+    threads:
+      max: ${TOMCAT_MAX_THREADS:64}
+      min-spare: 8
+    accept-count: ${TOMCAT_ACCEPT_COUNT:100}
+    max-connections: ${TOMCAT_MAX_CONNECTIONS:2048}
+    connection-timeout: 10s
+    # Longer than a reverse proxy's idle reuse, otherwise the proxy hits half-closed sockets (ECONNRESET).
+    keep-alive-timeout: 120s
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+  servlet:
+    session:
+      timeout: 20m
+      cookie:
+        name: ${SESSION_COOKIE_NAME:STUDIO_SESSION}
+        http-only: true
+        secure: ${COOKIE_SECURE:true}
+        same-site: lax
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+management:
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING:0.0}     # 0 = traces off. Set e.g. 0.1 plus the OTLP endpoint below to export.
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:http://127.0.0.1:4318/v1/traces}
+  endpoints:
+    web:
+      exposure:
+        # metrics is opt-in (MANAGEMENT_ENDPOINTS=health,metrics): any logged-in user could read it otherwise
+        include: ${MANAGEMENT_ENDPOINTS:health}
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,db,redis,rabbit,minio
+        liveness:
+          include: livenessState
+  health:
+    rabbit:
+      enabled: true
+
+logging:
+  pattern:
+    level: "%5p [%X{requestId:-}]"
+  level:
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+
+app:
+  proxy:
+    # X-Forwarded-* is ignored unless TRUST_PROXY=true AND the TCP peer is inside TRUSTED_PROXY_CIDRS.
+    trust: ${TRUST_PROXY:false}
+    trusted-cidrs: ${TRUSTED_PROXY_CIDRS:}
+  limits:
+    max-request-bytes: ${MAX_REQUEST_BYTES:1048576}   # JSON API only; uploads go straight to object storage
+    max-projects-per-workspace: ${MAX_PROJECTS_PER_WORKSPACE:1000}
+    max-assets-per-project: ${MAX_ASSETS_PER_PROJECT:200}
+  login:
+    max-concurrent-hashes: ${LOGIN_MAX_CONCURRENT_HASHES:4}
+    queue-wait-ms: ${LOGIN_QUEUE_WAIT_MS:5000}
+  local-login:
+    enabled: ${LOCAL_LOGIN_ENABLED:true}
+  oidc:
+    enabled: ${OIDC_ENABLED:false}
+    issuer-uri: ${OIDC_ISSUER_URI:}
+    client-id: ${OIDC_CLIENT_ID:}
+    client-secret: ${OIDC_CLIENT_SECRET:}
+    scopes: ${OIDC_SCOPES:openid,profile,email}
+    redirect-uri: ${OIDC_REDIRECT_URI:}   # empty = {baseUrl}/login/oauth2/code/oidc
+    success-url: ${OIDC_SUCCESS_URL:/}
+    # Unknown external identities get an account with NO access until an admin adds them; email is never trusted for authorization.
+    auto-provision: ${OIDC_AUTO_PROVISION:true}
+    link-by-verified-email: ${OIDC_LINK_BY_VERIFIED_EMAIL:false}
+    # RP-initiated logout: where the IdP sends the browser after ending its session (must be registered at the IdP); empty = Studio /login
+    post-logout-redirect-uri: ${OIDC_POST_LOGOUT_REDIRECT_URI:}
+  # SAML IdPs are federated through the OIDC provider (Keycloak identity brokering); the app stays an OIDC client. Off by default.
+  saml:
+    enabled: ${SAML_ENABLED:false}
+    idp-hint: ${SAML_IDP_HINT:}                # Keycloak identity-provider alias, sent as kc_idp_hint
+    label: ${SAML_LABEL:Đăng nhập SAML của công ty}
+  # SCIM 2.0 provisioning (RFC 7643/7644) for an IdP; off by default; bearer token compared in constant time; never grants system admin
+  scim:
+    enabled: ${SCIM_ENABLED:false}
+    token: ${SCIM_TOKEN:}
+  metrics:
+    token: ${METRICS_TOKEN:}
+  # Website forms (stage G): salt for the visitor-IP hash (stable across restarts when set), rate limits
+  forms:
+    ip-salt: ${FORMS_IP_SALT:}
+    max-per-visitor: ${FORMS_MAX_PER_VISITOR:5}
+    max-per-site-per-hour: ${FORMS_MAX_PER_SITE_PER_HOUR:200}
+  # Backup monitoring (stage L): <environment>:<dir> pairs of scripts/backup-all.sh output; alerts when stale/failed
+  backup:
+    status-dirs: ${BACKUP_STATUS_DIRS:}
+    max-age-hours: ${BACKUP_MAX_AGE_HOURS:26}
+  cleanup:
+    enabled: ${CLEANUP_ENABLED:true}
+    dry-run: ${CLEANUP_DRY_RUN:false}
+    interval-ms: ${CLEANUP_INTERVAL_MS:3600000}
+    abandoned-upload-hours: ${CLEANUP_ABANDONED_UPLOAD_HOURS:24}
+    deleted-asset-days: ${CLEANUP_DELETED_ASSET_DAYS:7}
+    idempotency-key-days: ${CLEANUP_IDEMPOTENCY_DAYS:7}
+    failed-deployment-days: ${CLEANUP_FAILED_DEPLOYMENT_DAYS:30}
+    ai-call-days: ${CLEANUP_AI_CALL_DAYS:400}              # AI usage accounting rows
+    # audit_events are never deleted by the application.
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000}
+  rate-limit:
+    login-user-max: 5
+    login-ip-max: 50
+    login-window-seconds: 900
+    # Env-tunable so a load test can lift them; production keeps the defaults.
+    prompt-max: ${RATE_LIMIT_PROMPT_MAX:30}
+    publish-max: ${RATE_LIMIT_PUBLISH_MAX:10}
+    upload-max: ${RATE_LIMIT_UPLOAD_MAX:60}
+  llm:
+    # auto = OpenRouter when OPENROUTER_API_KEY is set, otherwise the built-in simulator; mock = always the simulator
+    provider: ${LLM_PROVIDER:auto}
+  openrouter:
+    api-key: ${OPENROUTER_API_KEY:}
+    base-url: ${OPENROUTER_BASE_URL:https://openrouter.ai/api/v1}
+    referer: ${OPENROUTER_REFERER:}
+    title: System Web Studio
+    timeout-seconds: ${OPENROUTER_TIMEOUT_SECONDS:45}
+    max-attempts: ${OPENROUTER_MAX_ATTEMPTS:4}                 # free models tried in turn for "auto"
+    models-cache-minutes: 30
+    daily-limit-per-user: ${AI_DAILY_LIMIT_PER_USER:50}        # the free tier quota is shared by all users of the key
+    max-page-chars: 24000
+    model-allowlist: ${OPENROUTER_MODEL_ALLOWLIST:}            # optional comma list to restrict the free models offered
+  sites:
+    origin: ${SITES_ORIGIN:http://127.0.0.1:18088}               # public address of the sites gateway (separate host from the Studio)
+    studio-origin: ${STUDIO_ORIGIN:http://localhost:3100}          # where private-site visitors are sent to sign in
+    cookie-name: site_session
+    cookie-secure: ${SITES_COOKIE_SECURE:false}
+    session-hours: 8
+    external-link-domains: ${SITE_EXTERNAL_LINK_DOMAINS:}         # default for Admin → Settings → Website (approved external nav hosts)
+  # Policy defaults (admin-editable at runtime in Admin → Cài đặt; see settings/Settings.kt for the full list)
+  source-apps:
+    enabled: ${SOURCE_APPS_ENABLED:true}
+    build-enabled: ${SOURCE_APP_BUILD_ENABLED:true}
+    public-publish-enabled: ${SOURCE_APP_PUBLIC_PUBLISH_ENABLED:true}
+  publish:
+    public-enabled: ${PUBLIC_PUBLISH_ENABLED:true}
+  session:
+    timeout-minutes: ${SESSION_TIMEOUT_MINUTES:480}
+  git:
+    url: ${FORGEJO_URL:}                                         # empty = code projects unavailable (scripts/forgejo-setup.sh)
+    token: ${FORGEJO_TOKEN:}
+    admin-token: ${FORGEJO_ADMIN_TOKEN:}                      # optional: per-user read-only clone access for IDEs
+    public-url: ${FORGEJO_PUBLIC_URL:${FORGEJO_URL:}}            # clone URL shown to developers
+    org: ${FORGEJO_ORG:factory}
+    bot-name: ${FORGEJO_BOT:factory-bot}
+  # Server apps (stage J, ADR 0017/0018). Off by policy by default (Admin → Settings → server-apps.enabled) and unavailable unless all of
+  # these are configured. Secrets of every kind are encrypted with SECRETS_MASTER_KEY (base64, 32 bytes) and never returned or sent to AI.
+  secrets:
+    master-key: ${SECRETS_MASTER_KEY:}
+  runtime:
+    appdb-url: ${APPDB_URL:}
+    appdb-admin-user: ${APPDB_ADMIN_USER:appdb_admin}
+    appdb-admin-password: ${APPDB_ADMIN_PASSWORD:}
+    appdb-host-for-apps: ${APPDB_HOST_FOR_APPS:appdb:5432}
+    gateway-url: ${APPS_GATEWAY_URL:}
+    gateway-token: ${APPS_GATEWAY_TOKEN:}
+    enabled: ${SERVER_APPS_ENABLED:false}
+  build:
+    runner-token: ${BUILD_RUNNER_TOKEN:}                         # empty = runner endpoints disabled
+    api-base: ${BUILD_API_BASE:http://127.0.0.1:8080}             # how the runner reaches this API (loopback)
+    image: ${BUILD_IMAGE:node@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402}   # node:22-alpine, pinned by digest
+    preview-days: 7
+  render:
+    url: ${RENDER_URL:http://127.0.0.1:18095}                     # workers/render (same renderer as the Studio preview)
+    token: ${RENDER_TOKEN:}
+  ai:
+    # Other providers (ADR 0007). Each needs a key (local: optional) and an EXPLICIT model list; every model starts disabled until a
+    # system admin enables it in Admin Console → AI Control. Keys are read from the environment only.
+    providers:
+      openai: { api-key: "${OPENAI_API_KEY:}", base-url: "${OPENAI_BASE_URL:https://api.openai.com/v1}", models: "${OPENAI_MODELS:}" }
+      anthropic: { api-key: "${ANTHROPIC_API_KEY:}", base-url: "${ANTHROPIC_BASE_URL:https://api.anthropic.com}", models: "${ANTHROPIC_MODELS:}" }
+      gemini: { api-key: "${GEMINI_API_KEY:}", base-url: "${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta/openai}", models: "${GEMINI_MODELS:}" }
+      local: { api-key: "${LOCAL_LLM_API_KEY:}", base-url: "${LOCAL_LLM_BASE_URL:}", models: "${LOCAL_LLM_MODELS:}" }
+    # Token budgets from provider-reported usage (ai_calls); 0 = off. Checked before each real-AI prompt.
+    daily-token-limit-per-user: ${AI_DAILY_TOKEN_LIMIT_PER_USER:0}
+    monthly-token-limit-per-workspace: ${AI_MONTHLY_TOKEN_LIMIT_PER_WORKSPACE:0}
+  signup:
+    # Internal company platform: public self-registration is off unless explicitly enabled.
+    enabled: ${PUBLIC_SIGNUP_ENABLED:${SIGNUP_ENABLED:false}}
+    allow-in-prod: ${SIGNUP_ALLOW_IN_PROD:false}      # the prod profile refuses to start with sign-up on unless this acknowledges it
+    invite-code: ${SIGNUP_INVITE_CODE:}
+    max-users: ${SIGNUP_MAX_USERS:500}
+    ip-max-per-hour: ${SIGNUP_IP_MAX_PER_HOUR:5}
+  bootstrap:
+    admin-username: ${BOOTSTRAP_ADMIN_USERNAME:}
+    admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:}
+  storage:
+    bucket: ${MINIO_BUCKET:studio-assets}
+    artifacts-bucket: ${MINIO_ARTIFACTS_BUCKET:studio-artifacts}     # private; sites are served through the API behind the sites gateway
+    endpoint: ${MINIO_ENDPOINT:http://127.0.0.1:19000}
+    public-endpoint: ${MINIO_PUBLIC_ENDPOINT:${MINIO_ENDPOINT:http://127.0.0.1:19000}}
+    access-key: ${MINIO_ROOT_USER:}
+    secret-key: ${MINIO_ROOT_PASSWORD:}
+    presign-minutes: 10
+    max-image-bytes: 10485760
+    max-document-bytes: 20971520
+  deploy:
+    # mock = nothing is served ("Demo deployment"); static = real static sites (ADR 0009: render worker + artifacts + sites gateway)
+    provider: ${DEPLOY_PROVIDER:mock}
+    step-delay-ms: 0
+    recovery-interval-ms: 30000
+    mock:
+      base-url: http://localhost:3000/mock-deployments
