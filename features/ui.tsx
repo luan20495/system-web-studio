@@ -57,6 +57,7 @@ export function Pager({ page, size, total, onPage }: { page: number; size: numbe
 }
 
 const TONE: Record<string, string> = {
+  PENDING: "warn",
   HEALTHY: "ok", OK: "ok", ERROR: "bad", BAD_OUTPUT: "warn", RUNNING: "ok", ACTIVE: "ok", UPDATED: "ok", READY: "ok", true: "ok", PUBLIC: "info",
   DEGRADED: "warn", QUEUED: "warn", POLICY_CHECK: "warn", SECURITY_CHECK: "warn", BUILDING: "warn", DEPLOYING: "warn", NO_CHANGE: "muted", PRIVATE: "muted",
   UNAVAILABLE: "bad", FAILED: "bad", DISABLED: "bad", false: "bad", UNSUPPORTED: "warn", NOT_CONFIGURED: "muted", UNKNOWN: "muted", NOT_IMPLEMENTED: "muted", COMING_SOON: "muted",

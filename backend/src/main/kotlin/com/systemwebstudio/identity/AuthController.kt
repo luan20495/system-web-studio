@@ -69,6 +69,7 @@ class AuthController(
         "codeProjects" to codeProjects.available, "serverApps" to (codeProjects.available && runtime.available),
         "codeAppPublicPublish" to settings.bool("source-apps.public-publish-enabled"), "publicPublish" to settings.bool("publish.public-enabled"),
         // SAML is offered only through the OIDC provider's identity brokering (kc_idp_hint); MFA is enforced by the identity provider
+        "needsSetup" to (jdbc.queryForObject("SELECT count(*) FROM users WHERE system_admin AND enabled", Long::class.java) == 0L),
         "saml" to (oidc && samlEnabled && samlHint.isNotBlank()), "samlLabel" to samlLabel, "samlLoginUrl" to "/oauth2/authorization/oidc?idp=saml", "mfa" to "IDP")
 
     @PostMapping("/login")

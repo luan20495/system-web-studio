@@ -6,7 +6,7 @@ import StudioShell from "@/components/StudioShell";
 import { isDemoMode } from "@/lib/api-client";
 import { SessionProvider, useSession } from "@/features/session";
 import { hasWorkspace, isAdmin, rememberedPortal, resolvePostLogin, segments } from "@/features/routing";
-import { LoginPage, NoAccess, NoWorkspace, SessionExpired, SigningIn } from "@/features/auth/AuthPages";
+import { ActivatePage, LoginPage, NoAccess, NoWorkspace, SessionExpired, SigningIn } from "@/features/auth/AuthPages";
 import { AdminApp } from "@/features/admin/AdminApp";
 import { StudioApp } from "@/features/studio/StudioApp";
 import { StateView } from "@/features/ui";
@@ -31,6 +31,7 @@ function Router() {
 
   if (seg[0] === "login") return <LoginPage/>;
   if (seg[0] === "auth") {
+    if (seg[1] === "activate") return <ActivatePage/>;
     if (seg[1] === "signing-in") return <SigningIn/>;
     if (seg[1] === "no-access") return <NoAccess/>;
     if (seg[1] === "no-workspace") return <NoWorkspace/>;

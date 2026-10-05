@@ -1,5 +1,5 @@
 import type {
-  AdminAi, AiCallRow, SettingView, BuildPolicyReport, CleanupResult, RepoRow, AiPrice, AiProbe, AiProviderInfo, AiUsageReport, AdminApp, BlockDto, CheckResult, TemplateDto, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
+  AdminAi, AiCallRow, SettingView, BuildPolicyReport, CleanupResult, RepoRow, AiPrice, AiProbe, AiProviderInfo, AiUsageReport, AdminApp, BlockDto, CheckResult, TemplateDto, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, ActivationLink, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
   BackupEnvironment, AppKind, RuntimeStatus, Connector, Department, CostPrice, CostReport, SecurityReport, FormSubmission, SiteDomain, TemplateReview, LibraryCategories, AccessRule, EffectiveModel, AiBudget, AdminAlert, StreamHandlers,
   AiStatus, ApiProject, AuthConfig, Member, SiteInfo, DesignNode, DependencyRequest, PackageView, CloneAccess, TreeFile, CodeFile, CodeCommit, CodeChange, DiffFile, CodeAiResponse, CodeAiHistoryItem, RegistryComponent, AssetDto, Deployment, Me, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
 } from "./http-types";
@@ -121,6 +121,8 @@ export const api = {
   authConfig: () => call<AuthConfig>("/auth/config"),
   register: (username: string, password: string, displayName: string, inviteCode?: string) =>
     call<{ username: string }>("/auth/register", { method: "POST", body: json({ username, password, displayName: displayName || undefined, inviteCode: inviteCode || undefined }) }),
+  inspectActivation: (token: string) => call<{ username: string; displayName: string; purpose: "ACTIVATION" | "RESET" }>("/auth/activation/inspect", { method: "POST", body: json({ token }) }),
+  completeActivation: (token: string, password: string) => call<{ status: string }>("/auth/activation/complete", { method: "POST", body: json({ token, password }) }),
   aiStatus: (workspaceId?: string) => call<AiStatus>(`/ai/status${qs({ workspaceId })}`),
   cancelStream: (id: string) => call<{ cancelled: boolean }>(`/ai/streams/${id}/cancel`, { method: "POST" }),
   components: () => call<RegistryComponent[]>("/components?details=true"),
@@ -151,6 +153,10 @@ export const api = {
     user: (id: string) => call<AdminUserDetail>(`/admin/users/${id}`),
     setUserStatus: (id: string, enabled: boolean) => call<AdminUser>(`/admin/users/${id}/status`, { method: "PATCH", body: json({ enabled }) }),
     revokeSessions: (id: string) => call<{ revoked: number }>(`/admin/users/${id}/revoke-sessions`, { method: "POST" }),
+    createUser: (b: { username: string; displayName: string; email?: string; workspaceId: string; role: string }) => call<ActivationLink>("/admin/users", { method: "POST", body: json(b) }),
+    activationLink: (id: string) => call<ActivationLink>(`/admin/users/${id}/activation-link`, { method: "POST" }),
+    setSystemAdmin: (id: string, grant: boolean) => call<{ systemAdmin: boolean }>(`/admin/users/${id}/system-admin`, { method: "POST", body: json({ grant, confirm: true }) }),
+    createWorkspace: (name: string) => call<{ id: string; name: string }>("/admin/workspaces", { method: "POST", body: json({ name }) }),
     workspaces: (page: number, q?: string) => call<Page<AdminWorkspace>>(`/admin/workspaces${qs({ page, size: 25, q })}`),
     workspace: (id: string) => call<AdminWorkspaceDetail>(`/admin/workspaces/${id}`),
     applications: (params: { page: number; q?: string; visibility?: string; status?: string; workspaceId?: string }) => call<Page<AdminApp>>(`/admin/applications${qs({ size: 25, ...params })}`),

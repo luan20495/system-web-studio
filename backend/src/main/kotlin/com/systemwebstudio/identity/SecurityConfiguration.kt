@@ -132,7 +132,7 @@ class SecurityConfiguration {
         @Value("\${app.saml.idp-hint:}") samlHint: String
     ): SecurityFilterChain {
         val publicPaths = buildList {
-            add("/api/v1/auth/csrf"); add("/api/v1/auth/login"); add("/api/v1/auth/config"); add("/api/v1/auth/register")
+            add("/api/v1/auth/csrf"); add("/api/v1/auth/login"); add("/api/v1/auth/config"); add("/api/v1/auth/register"); add("/api/v1/auth/activation/**")
             if (oidcEnabled) { add("/oauth2/**"); add("/login/oauth2/**") }
             add("/actuator/health"); add("/actuator/health/**")
             if (openApiPublic) { add("/v3/api-docs"); add("/v3/api-docs/**"); add("/swagger-ui.html"); add("/swagger-ui/**") }

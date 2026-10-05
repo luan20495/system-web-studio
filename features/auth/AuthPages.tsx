@@ -26,6 +26,39 @@ function AuthFrame({ children, wide }: { children: React.ReactNode; wide?: boole
   );
 }
 
+/** The employee opens the one-time link (token in the URL fragment, never sent to a server log) and chooses a password. */
+export function ActivatePage() {
+  const router = useRouter();
+  const [token] = useState(() => (typeof window === "undefined" ? "" : window.location.hash.replace(/^#/, "")));
+  const [info, setInfo] = useState<{ username: string; displayName: string; purpose: string } | null>(null);
+  const [bad, setBad] = useState(false); const [password, setPassword] = useState(""); const [again, setAgain] = useState("");
+  const [busy, setBusy] = useState(false); const [error, setError] = useState<string | null>(null); const [done, setDone] = useState(false);
+  useEffect(() => { if (!token) { setBad(true); return; } api.inspectActivation(token).then(setInfo).catch(() => setBad(true)); }, [token]);
+  async function submit(e: FormEvent) {
+    e.preventDefault(); setError(null);
+    if (password !== again) { setError("Hai mật khẩu chưa giống nhau."); return; }
+    setBusy(true);
+    try { await api.completeActivation(token, password); window.history.replaceState(null, "", window.location.pathname); setDone(true); }
+    catch (err) { setError(errText(err, "Chưa đặt được mật khẩu.")); } finally { setBusy(false); }
+  }
+  if (bad) return <AuthFrame><div className="authCenter"><h1>Liên kết không dùng được</h1><p className="authLead">Liên kết đã hết hạn, đã được dùng hoặc không đúng. Hãy nhờ quản trị viên tạo liên kết mới.</p><Link className="btn" href="/login">Về trang đăng nhập</Link></div></AuthFrame>;
+  if (done) return <AuthFrame><div className="authCenter"><h1>Đã đặt mật khẩu</h1><p className="authLead">Bây giờ bạn có thể đăng nhập bằng tên đăng nhập <b>{info?.username}</b>.</p><button className="btn primary" onClick={() => router.replace("/login")}>Đăng nhập</button></div></AuthFrame>;
+  if (!info) return <AuthFrame><div className="authCenter" role="status"><div className="spinner"/></div></AuthFrame>;
+  return (
+    <AuthFrame>
+      <h1>{info.purpose === "RESET" ? "Đặt lại mật khẩu" : `Chào ${info.displayName}`}</h1>
+      <p className="authLead">{info.purpose === "RESET" ? "Chọn mật khẩu mới cho" : "Chọn mật khẩu để kích hoạt tài khoản"} <b>{info.username}</b>.</p>
+      <form className="authForm" onSubmit={(e) => void submit(e)}>
+        <label className="field"><span>Mật khẩu</span><input type="password" autoComplete="new-password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} required/></label>
+        <label className="field"><span>Nhập lại mật khẩu</span><input type="password" autoComplete="new-password" value={again} onChange={(e) => setAgain(e.target.value)} required/></label>
+        <p className="hint">Tối thiểu 8 ký tự, gồm cả chữ và số.</p>
+        {error ? <p className="formError" role="alert">{error}</p> : null}
+        <button className="btn primary block" disabled={busy || !password}>{busy ? "Đang xử lý…" : "Lưu mật khẩu"}</button>
+      </form>
+    </AuthFrame>
+  );
+}
+
 export function LoginPage() {
   const router = useRouter(); const params = useSearchParams(); const { setMe } = useSession();
   const next = safeNext(params.get("next"));
@@ -69,6 +102,7 @@ export function LoginPage() {
         ))}
         <p className="hint">Lựa chọn này chỉ là nơi bạn muốn đến; quyền truy cập do hệ thống quyết định.</p>
       </fieldset>
+      {config?.needsSetup ? <p className="notice" role="status">Chưa có tài khoản quản trị. Vui lòng liên hệ người vận hành hệ thống để khởi tạo.</p> : null}
       {config?.oidc ? <a className="btn primary block" href={config.oidcLoginUrl} onClick={() => rememberPortal(portal)}>Tiếp tục với SSO công ty</a> : null}
       {config?.saml && config.samlLoginUrl ? <a className="btn block" href={config.samlLoginUrl} onClick={() => rememberPortal(portal)}>{config.samlLabel || "Đăng nhập SAML của công ty"}</a> : null}
       {config?.oidc ? <p className="hint center">Xác thực nhiều lớp (MFA) do nhà cung cấp danh tính của công ty quản lý.</p> : null}

@@ -222,3 +222,8 @@
 .kpiButton{text-align:left;cursor:pointer;border:1px solid transparent}.kpiButton.active{border-color:currentColor}
 .deptRow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 0}.plainList.nested{margin-left:22px}
 .archivedBanner{display:flex;gap:12px;align-items:center;justify-content:center;padding:8px 14px;background:#fff4d6;color:#5c4400;font-size:13px;border-bottom:1px solid #f0d58a}
+
+/* modal dialogs (admin) */
+.modal{position:fixed;inset:0;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modalBody{background:var(--surface,#fff);color:inherit;border-radius:12px;padding:24px;width:min(520px,100%);max-height:90vh;overflow:auto;display:grid;gap:12px}
+.modalBody h2{margin:0}

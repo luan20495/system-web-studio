@@ -13,7 +13,9 @@ import java.util.UUID
 
 data class AdminUserRow(
     val id: UUID, val username: String, val displayName: String?, val email: String?, val enabled: Boolean, val systemAdmin: Boolean,
-    val authSource: String, val createdAt: Instant, val workspaces: Int, val projects: Int, val lastLoginAt: Instant?
+    val authSource: String, val createdAt: Instant, val workspaces: Int, val projects: Int, val lastLoginAt: Instant?,
+    /** true until the account has a usable password (activation link not used yet) */
+    val pending: Boolean = false, val departmentId: UUID? = null
 )
 data class Membership(val id: UUID, val name: String, val role: String, val workspaceId: UUID? = null, val workspaceName: String? = null, val owner: Boolean = false)
 data class AuditRow(
@@ -38,9 +40,9 @@ class AdminUserController(
     private val select = """SELECT u.id, u.username, u.display_name, u.email, u.enabled, u.system_admin, u.auth_source, u.created_at,
         (SELECT count(*) FROM workspace_members m WHERE m.user_id = u.id AND m.active),
         (SELECT count(*) FROM project_members pm JOIN projects p ON p.id = pm.project_id AND p.active WHERE pm.user_id = u.id AND pm.active),
-        (SELECT max(a.created_at) FROM audit_events a WHERE a.actor_id = u.id AND a.action = 'LOGIN_SUCCESS') FROM users u"""
+        (SELECT max(a.created_at) FROM audit_events a WHERE a.actor_id = u.id AND a.action = 'LOGIN_SUCCESS'), u.activated_at IS NULL, u.department_id FROM users u"""
     private fun row(rs: java.sql.ResultSet) = AdminUserRow(rs.getObject(1, UUID::class.java), rs.getString(2), rs.getString(3), rs.getString(4), rs.getBoolean(5),
-        rs.getBoolean(6), rs.getString(7), rs.getTimestamp(8).toInstant(), rs.getInt(9), rs.getInt(10), rs.getTimestamp(11)?.toInstant())
+        rs.getBoolean(6), rs.getString(7), rs.getTimestamp(8).toInstant(), rs.getInt(9), rs.getInt(10), rs.getTimestamp(11)?.toInstant(), rs.getBoolean(12), rs.getObject(13, UUID::class.java))
 
     @GetMapping
     @Transactional(readOnly = true)

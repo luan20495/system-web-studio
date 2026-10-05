@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { api } from "@/lib/http-api";
 import type { Connector, CostLine, Department, SecurityFinding, AccessRule, AiBudget, AdminAlert, EffectiveModel, AdminApp as App, AiProbe, PackageView, RepoRow, SettingView, BlockDto, TemplateDto, AiUsageReport, AuditRow, HealthItem, UsageBucket, UsageTotals } from "@/lib/http-types";
+import { CreateUserDialog, LinkBox } from "./UserDialogs";
+import type { ActivationLink } from "@/lib/http-types";
 import { useSession } from "../session";
 import { rememberPortal } from "../routing";
 import { useLoad } from "../useLoad";
@@ -142,12 +144,14 @@ function UserList() {
   const router = useRouter();
   const [page, setPage] = useState(0); const [q, setQ] = useState(""); const [query, setQuery] = useState(""); const [status, setStatus] = useState("all");
   const { data, error, loading, reload } = useLoad(() => api.admin.users(page, query, status), [page, query, status]);
+  const [adding, setAdding] = useState(false);
   return (
-    <Card>
+    <Card actions={<button className="btn primary" onClick={() => setAdding(true)}>+ Thêm người dùng</button>}>
+      {adding ? <CreateUserDialog onClose={() => setAdding(false)} onCreated={reload}/> : null}
       <form className="filters" onSubmit={(e) => { e.preventDefault(); setPage(0); setQuery(q); }}>
         <input aria-label="Tìm người dùng" placeholder="Tìm theo tên, tên đăng nhập, email" value={q} onChange={(e) => setQ(e.target.value)}/>
         <select aria-label="Trạng thái" value={status} onChange={(e) => { setPage(0); setStatus(e.target.value); }}>
-          <option value="all">Tất cả</option><option value="active">Đang hoạt động</option><option value="disabled">Bị khóa</option><option value="admin">System admin</option>
+          <option value="all">Tất cả</option><option value="active">Đang hoạt động</option><option value="disabled">Bị khóa</option><option value="admin">Quản trị hệ thống</option>
         </select>
         <button className="btn">Tìm</button>
       </form>
@@ -157,9 +161,9 @@ function UserList() {
           <tbody>{data!.items.map((u) => (
             <tr key={u.id} className="clickRow" onClick={() => router.push(`/admin/users/${u.id}`)}>
               <td><Link href={`/admin/users/${u.id}`}><b>{u.displayName ?? u.username}</b></Link><small>{u.username}{u.email ? ` · ${u.email}` : ""} · {u.authSource === "OIDC" ? "SSO" : u.authSource === "SCIM" ? "SCIM" : "Mật khẩu"}</small></td>
-              <td>{u.systemAdmin ? <Pill value="PUBLIC" label="System admin"/> : <span className="muted">Thành viên</span>}</td>
+              <td>{u.systemAdmin ? <Pill value="PUBLIC" label="Quản trị hệ thống"/> : <span className="muted">Thành viên</span>}</td>
               <td>{u.workspaces}</td><td>{u.projects}</td><td>{ago(u.lastLoginAt)}</td>
-              <td>{u.enabled ? <Pill value="ACTIVE" label="Hoạt động"/> : <Pill value="DISABLED" label="Bị khóa"/>}</td>
+              <td>{!u.enabled ? <Pill value="DISABLED" label="Bị khóa"/> : u.pending ? <Pill value="PENDING" label="Chờ kích hoạt"/> : <Pill value="ACTIVE" label="Hoạt động"/>}</td>
             </tr>))}</tbody>
         </table>
         <Pager page={page} size={data!.size} total={data!.total} onPage={setPage}/>
@@ -171,10 +175,20 @@ function UserList() {
 function UserDetail({ id }: { id: string }) {
   const { me } = useSession();
   const { data, error, loading, reload, setData } = useLoad(() => api.admin.user(id), [id]);
-  const [busy, setBusy] = useState(false); const [msg, setMsg] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false); const [msg, setMsg] = useState<string | null>(null); const [link, setLink] = useState<ActivationLink | null>(null);
   if (loading && !data) return <StateView kind="loading"/>;
   if (error) return <ErrorState error={error} retry={reload}/>;
   const d = data!; const u = d.user; const self = me?.id === u.id;
+  async function newLink() {
+    setBusy(true); setMsg(null);
+    try { setLink(await api.admin.activationLink(u.id)); } catch (e) { setMsg(errText(e, "Chưa tạo được liên kết.")); } finally { setBusy(false); }
+  }
+  async function grantAdmin() {
+    const grant = !u.systemAdmin;
+    if (!window.confirm(grant ? `Cấp quyền Quản trị hệ thống cho ${u.username}? Người này sẽ quản lý được toàn bộ người dùng, AI và cài đặt của công ty.` : `Gỡ quyền Quản trị hệ thống của ${u.username}?`)) return;
+    setBusy(true); setMsg(null);
+    try { await api.admin.setSystemAdmin(u.id, grant); setMsg(grant ? "Đã cấp quyền Quản trị hệ thống." : "Đã gỡ quyền Quản trị hệ thống."); reload(); } catch (e) { setMsg(errText(e, "Chưa đổi được quyền.")); } finally { setBusy(false); }
+  }
   async function toggle() {
     if (!window.confirm(u.enabled ? `Vô hiệu hóa ${u.username}? Mọi phiên đăng nhập của người này sẽ bị thu hồi ngay.` : `Kích hoạt lại ${u.username}?`)) return;
     setBusy(true); setMsg(null);
@@ -187,13 +201,16 @@ function UserDetail({ id }: { id: string }) {
   return (<>
     <PageHead title={u.displayName ?? u.username} sub={`${u.username}${u.email ? ` · ${u.email}` : ""} · tạo ${fmtDate(u.createdAt)}`}
       actions={<div className="row">
+        {u.authSource === "LOCAL" && u.enabled ? <button className="btn" disabled={busy} onClick={() => void newLink()}>{u.pending ? "Tạo lại liên kết kích hoạt" : "Đặt lại mật khẩu"}</button> : null}
+        {!self && u.enabled && !u.pending ? <button className="btn" disabled={busy} onClick={() => void grantAdmin()}>{u.systemAdmin ? "Gỡ quyền Quản trị hệ thống" : "Cấp quyền Quản trị hệ thống"}</button> : null}
         <button className="btn" disabled={busy || d.activeSessions === 0} onClick={() => void revoke()}>Thu hồi phiên ({d.activeSessions})</button>
-        <button className={`btn ${u.enabled ? "danger" : "primary"}`} disabled={busy || self} title={self ? "Bạn không thể tự khóa tài khoản của mình" : undefined} onClick={() => void toggle()}>{u.enabled ? "Vô hiệu hóa" : "Kích hoạt"}</button>
+        <button className={`btn ${u.enabled ? "danger" : "primary"}`} disabled={busy || self} title={self ? "Bạn không thể tự khóa tài khoản của mình" : undefined} onClick={() => void toggle()}>{u.enabled ? "Khóa tài khoản" : "Mở khóa"}</button>
       </div>}/>
     {msg ? <p className="notice" role="status">{msg}</p> : null}
+    {link ? <LinkBox link={link} onClose={() => { setLink(null); reload(); }}/> : null}
     <div className="kpiGrid">
-      <Kpi label="Trạng thái" value={u.enabled ? <Pill value="ACTIVE" label="Hoạt động"/> : <Pill value="DISABLED" label="Bị khóa"/>}/>
-      <Kpi label="Vai trò hệ thống" value={u.systemAdmin ? "System admin" : "Thành viên"}/>
+      <Kpi label="Trạng thái" value={u.pending ? <Pill value="PENDING" label="Chờ kích hoạt"/> : u.enabled ? <Pill value="ACTIVE" label="Hoạt động"/> : <Pill value="DISABLED" label="Bị khóa"/>}/>
+      <Kpi label="Vai trò hệ thống" value={u.systemAdmin ? "Quản trị hệ thống" : "Thành viên"}/>
       <Kpi label="Đăng nhập" value={u.authSource === "OIDC" ? "SSO" : u.authSource === "SCIM" ? "SSO (cấp qua SCIM)" : "Mật khẩu"} hint={`Gần nhất: ${ago(u.lastLoginAt)}`}/>
       <Kpi label="MFA" value={u.authSource === "LOCAL" ? "Không áp dụng" : "Do IdP quản lý"} hint={u.authSource === "LOCAL" ? "Tài khoản cục bộ: dùng cho quản trị khẩn cấp / môi trường thử" : "MFA managed by Identity Provider"}/>
       <Kpi label="Phiên đang mở" value={num(d.activeSessions)}/>

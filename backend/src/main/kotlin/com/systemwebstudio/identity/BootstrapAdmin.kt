@@ -30,6 +30,8 @@ class BootstrapAdmin {
         require(username.matches(Regex("^[a-z0-9][a-z0-9._-]{2,39}$"))) { "BOOTSTRAP_ADMIN_USERNAME must be 3-40 chars a-z 0-9 . _ -" }
         require(password.length >= 14) { "BOOTSTRAP_ADMIN_PASSWORD must be at least 14 characters" }
         if (jdbc.queryForObject("SELECT count(*) FROM users WHERE username = ?", Long::class.java, username)!! > 0) return@ApplicationRunner
+        // first administrator only: once an enabled system administrator exists the bootstrap values are ignored (no accidental second admin)
+        if (jdbc.queryForObject("SELECT count(*) FROM users WHERE system_admin AND enabled", Long::class.java)!! > 0) { log.info("Bootstrap admin skipped: a system administrator already exists"); return@ApplicationRunner }
         val userId = UUID.randomUUID(); val workspaceId = UUID.randomUUID()
         jdbc.update("INSERT INTO users (id, username, password_hash, enabled, display_name, system_admin) VALUES (?,?,?,TRUE,?,TRUE)", userId, username, requireNotNull(encoder.encode(password)), "Operator")
         jdbc.update("INSERT INTO workspaces (id, name, slug) VALUES (?,?,?)", workspaceId, "Operations", "ops-" + workspaceId.toString().take(8))

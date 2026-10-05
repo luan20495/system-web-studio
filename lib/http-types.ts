@@ -62,7 +62,9 @@ export type AuthConfig = { localLogin: boolean; oidc: boolean; oidcLoginUrl: str
   /** SAML through the OIDC provider's identity brokering (stage I) */
   saml?: boolean; samlLabel?: string; samlLoginUrl?: string; mfa?: "IDP";
   /** server apps: policy on and the isolated runtime configured (stage J) */
-  serverApps?: boolean };
+  serverApps?: boolean;
+  /** no enabled system administrator exists yet: the operator must create the first one */
+  needsSetup?: boolean };
 export type AiModel = { id: string; name: string; contextLength: number; provider?: string; paid?: boolean };
 export type AiProviderStatus = { id: string; name: string; paid: boolean; models: AiModel[]; dataNotice: string };
 export type AiStatus = { provider: "openrouter" | "providers" | "mock"; configured: boolean; defaultModel: string; dailyLimitPerUser: number; models: AiModel[]; dataNotice: string;
@@ -90,7 +92,8 @@ export type AuditRow = { id: string; createdAt: string; action: string; resource
 export type AdminOverview = { users: number; activeUsers: number; disabledUsers: number; usersLoggedIn30d: number; workspaces: number; projects: number;
   publishedProjects: number; aiRequestsToday: number; aiRequestsMonth: number; versionsToday: number; recentActivity: AuditRow[] };
 export type AdminUser = { id: string; username: string; displayName: string | null; email: string | null; enabled: boolean; systemAdmin: boolean; authSource: string;
-  createdAt: string; workspaces: number; projects: number; lastLoginAt: string | null };
+  createdAt: string; workspaces: number; projects: number; lastLoginAt: string | null; pending?: boolean };
+export type ActivationLink = { userId: string; username: string; displayName: string; purpose: "ACTIVATION" | "RESET"; token: string; expiresAt: string };
 export type AdminMembership = { id: string; name: string; role: string; workspaceId: string | null; workspaceName: string | null; owner: boolean };
 export type AdminUserDetail = { user: AdminUser; workspaces: AdminMembership[]; projects: AdminMembership[]; activeSessions: number; recentActivity: AuditRow[] };
 export type AdminWorkspace = { id: string; name: string; slug: string; createdAt: string; members: number; projects: number; lastActivityAt: string | null };
