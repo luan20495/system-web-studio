@@ -1,5 +1,7 @@
 # Contract — AppDefinitionV2 & AppDefinitionValidator
 
+> **SUPERSEDED (2026-10-05, C0)** by `docs/contracts/v2/app-definition.md`. This file is the Phase 0 draft, kept for history only; do not implement from it.
+
 Owner: **C2**. Trạng thái: DESIGN. Package mới: `com.systemwebstudio.app.definition`. Hot: `AppDefinition*`, `SchemaOperation`, `PageSchemaValidator`.
 
 ## Hiện trạng cần bảo toàn

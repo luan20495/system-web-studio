@@ -1,5 +1,7 @@
 # Contract — Permission model (AccessContext / AccessService)
 
+> **SUPERSEDED (2026-10-05, C0)** by `docs/contracts/v2/tenant-permission.md`. This file is the Phase 0 draft, kept for history only; do not implement from it.
+
 Owner: **C1**. Trạng thái: DESIGN. Hot file: `access/AccessService.kt`, `access/Permission.kt`.
 
 ## Hiện trạng (code thật)

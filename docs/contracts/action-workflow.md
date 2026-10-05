@@ -1,5 +1,7 @@
 # Contract — ActionRuntime & WorkflowRuntime
 
+> **SUPERSEDED (2026-10-05, C0)** by `docs/contracts/v2/action-workflow.md`. This file is the Phase 0 draft, kept for history only; do not implement from it.
+
 Owner: **C4**. Trạng thái: DESIGN. Package mới: `com.systemwebstudio.logic.{action,workflow,scheduler}`.
 
 ## Hiện trạng
