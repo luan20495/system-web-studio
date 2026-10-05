@@ -182,10 +182,11 @@ class ApprovalService(
     fun inbox(ctx: ActionContext, limit: Int = 50): List<Approval> = store.pendingFor(ctx.tenantId, ctx.actor.userId, limit.coerceIn(1, 200))
 
     /** Sweeper entry point (called by a scheduled job of the platform): expires everything due. */
-    fun expireDue(limit: Int = 100): Int {
+    fun expireDue(limit: Int = 100, perTenant: Int = 25): Int {
         var n = 0
-        for (a in store.dueForExpiry(clock.instant(), limit)) {
-            if (finish(a, ApprovalStatus.EXPIRED, clock.instant())) n++
+        for (a in store.dueForExpiry(clock.instant(), limit, perTenant)) {
+            // One approval that cannot be finished (store/audit hiccup) must not stop the others, nor be retried in a hot loop: it stays due and is tried again next pass.
+            try { if (finish(a, ApprovalStatus.EXPIRED, clock.instant())) n++ } catch (e: Exception) { log.log(System.Logger.Level.WARNING, "Expiring an approval failed: ${e.javaClass.simpleName}") }
         }
         return n
     }

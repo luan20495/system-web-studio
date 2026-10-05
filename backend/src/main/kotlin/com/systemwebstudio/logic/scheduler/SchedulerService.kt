@@ -61,8 +61,11 @@ class SchedulerService(
     private val maxInputBytes: Int = 16 * 1024,
     /** Per-tenant limit on fires handed to the workflow runtime ([RateScope.SCHEDULER_ENQUEUE]). */
     private val limiter: TenantRateLimiter = InMemoryTenantRateLimiter(clock = clock),
-    /** At most this many due schedules of one tenant are looked at per tick, so one tenant's backlog cannot crowd out the others. */
-    private val maxPerTenantPerTick: Int = 25
+    /**
+     * Cap on due schedules of one tenant per tick. Selection is round-robin across tenants in any case (every tenant with due schedules gets an
+     * equal share of the batch, a lone tenant gets all of it); the cap additionally bounds a single tenant's share when that is wanted.
+     */
+    private val maxPerTenantPerTick: Int = Int.MAX_VALUE
 ) {
     private val log = System.getLogger(SchedulerService::class.java.name)
 

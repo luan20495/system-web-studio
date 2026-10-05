@@ -35,6 +35,12 @@ class FakeWorkflowDefs(vararg defs: WorkflowDefinition) : WorkflowDefinitionProv
 /** Run store that can be told to fail, to exercise redelivery and the dead-letter path. */
 class FlakyRunStore(private val delegate: WorkflowRunStore) : WorkflowRunStore by delegate {
     @Volatile var failGet = false
+    /** Runs whose step claim (the write that marks a step RUNNING) throws: a "poison" run that makes the worker fail, as opposed to an outage. */
+    val poison: MutableSet<UUID> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    override fun compareAndSet(expected: WorkflowRun, next: WorkflowRun): Boolean {
+        if (expected.runId in poison && next.status == WorkflowRunStatus.RUNNING) error("poison run")
+        return delegate.compareAndSet(expected, next)
+    }
     override fun get(tenantId: UUID, runId: UUID): WorkflowRun? { if (failGet) error("db down"); return delegate.get(tenantId, runId) }
 }
 
@@ -53,7 +59,13 @@ class WorkflowRig(
         groups = mapOf("finance" to setOf(Fx.user2)), roles = mapOf("approvers" to setOf(Fx.user2)), managers = mapOf("own" to Fx.user2)
     ),
     /** Pass one to share it with a limiter (or any other component) built before the rig. */
-    val clock: TestClock = TestClock()
+    val clock: TestClock = TestClock(),
+    maxProcessFailures: Int = 5,
+    failureBackoff: Duration = Duration.ofSeconds(10),
+    maxFailureBackoff: Duration = Duration.ofMinutes(10),
+    sweepPerTenant: Int = Int.MAX_VALUE,
+    sweepMinInterval: Duration = Duration.ofSeconds(5),
+    sweepApprovalInterval: Duration = Duration.ofSeconds(60)
 ) {
     val access = FakeAccess()
     val tenants = FakeTenants()
@@ -77,7 +89,8 @@ class WorkflowRig(
     val approvals = ApprovalService(
         Fx.json, approvalStore, principals, tenants, audit, null, if (wireApprovalListener) ApprovalListener { engineRef?.onFinal(it) } else null, clock = clock
     )
-    val engine = WorkflowEngine(Fx.json, defs, actionRig.runtime, runStore, queue, access, tenants, audit, approvals, ceiling, clock, staleAfter, limiter).also { engineRef = it }
+    val engine = WorkflowEngine(Fx.json, defs, actionRig.runtime, runStore, queue, access, tenants, audit, approvals, ceiling, clock, staleAfter, limiter,
+        maxProcessFailures, failureBackoff, maxFailureBackoff, sweepPerTenant, sweepMinInterval, sweepApprovalInterval).also { engineRef = it }
     val worker = WorkflowWorker(engine, queue)
 
     fun ctx(userId: UUID = Fx.user, tenant: UUID = Fx.tenantA) = Fx.ctx(tenant = tenant, userId = userId)

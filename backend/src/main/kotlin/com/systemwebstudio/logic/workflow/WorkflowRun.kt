@@ -3,7 +3,9 @@ package com.systemwebstudio.logic.workflow
 import com.systemwebstudio.logic.action.ActionActor
 import com.systemwebstudio.logic.action.DryRunLevel
 import com.systemwebstudio.logic.action.ExecutionMode
+import com.systemwebstudio.logic.limits.FairSelection
 import tools.jackson.databind.JsonNode
+import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -71,6 +73,17 @@ data class WorkflowRun(
     val createdAt: Instant,
     val updatedAt: Instant,
     val finishedAt: Instant? = null,
+    /**
+     * Consecutive failures **attributed to this run** while a worker processed one of its messages (an exception, not an infrastructure outage).
+     * Reset when the run makes progress. At `maxProcessFailures` the run is failed (DEAD_LETTERED) - the only way a bad run reaches the DLQ path.
+     */
+    val processFailures: Int = 0,
+    /** Consecutive sweeper passes that could not move this run (publish failed, contention, exception). Only drives the backoff, never fails the run. */
+    val sweepFailures: Int = 0,
+    /** Backoff: neither a worker nor the sweeper touches the run before this instant. */
+    val notBefore: Instant? = null,
+    /** Rotation cursor of the sweeper: the run was last examined (claimed) at this instant. Oldest cursor is served first. */
+    val lastSweptAt: Instant? = null,
     val version: Long = 0
 ) {
     val currentStep: StepState? get() = currentStepId?.let { steps[it] }
@@ -91,14 +104,35 @@ interface WorkflowRunStore {
     fun get(tenantId: UUID, runId: UUID): WorkflowRun?
     /** Succeeds only if the stored version equals [expected].version; the stored row gets version + 1. */
     fun compareAndSet(expected: WorkflowRun, next: WorkflowRun): Boolean
-    /** Current step is WAITING (timer) or RETRY_WAIT with wakeAt <= [now]. */
-    fun dueTimers(now: Instant, limit: Int): List<WorkflowRun>
-    /** Current step is WAITING for an approval. */
-    fun waitingApprovals(limit: Int): List<WorkflowRun>
-    /** Not finished (or compensation still IN_PROGRESS) and untouched since [updatedBefore]: lost job, crashed worker, stuck compensation. */
-    fun stale(updatedBefore: Instant, limit: Int): List<WorkflowRun>
+    /**
+     * **Fair, bounded claim for the sweeper** (replaces the three "first N by updatedAt" queries that let long-waiting runs fill every slot).
+     * Eligible = [needsSweep] (a timer/retry is due, an approval is awaited, or the run is stale) and `notBefore` is null or passed and the run was
+     * not claimed within the last [minInterval]. Among the eligible, order by rotation cursor (`lastSweptAt`, never-examined first) then `updatedAt` -
+     * oldest eligible first - then take at most [perTenant] per tenant round-robin and [limit] in total, and stamp `lastSweptAt = now` on exactly
+     * the returned runs in the same atomic step, so a second sweeper node does not receive them and every eligible run is examined within
+     * `ceil(eligible / limit)` passes whatever the others do. Stamping bumps `version` (a worker's compare-and-set simply re-reads).
+     * A run that is *only* waiting for an approval (nothing due, not stale: the callback normally resumes it, polling is a fallback) is re-examined
+     * at most every [approvalInterval], so long-waiting approvals do not take sweeper slots from runs that need action.
+     * SQL equivalent: `WHERE <needsSweep> AND (not_before IS NULL OR not_before <= :now) AND (last_swept_at IS NULL OR last_swept_at <= :now - :minInterval)`
+     * ordered by `last_swept_at NULLS FIRST, updated_at`, with `row_number() OVER (PARTITION BY tenant_id …) <= :perTenant`, `FOR UPDATE SKIP LOCKED`.
+     */
+    fun claimForSweep(now: Instant, limit: Int, perTenant: Int, minInterval: Duration, staleBefore: Instant, approvalInterval: Duration = minInterval): List<WorkflowRun>
+    /** A worker failed while processing a message of this run: count it and push the run back until [notBefore]. @return the new count, or -1 if the run does not exist. */
+    fun recordProcessFailure(tenantId: UUID, runId: UUID, notBefore: Instant): Int
+    /** Outcome of examining a claimed run: [failed] backs it off until [notBefore] and counts; success clears the sweep failure count. */
+    fun recordSweepResult(tenantId: UUID, runId: UUID, failed: Boolean, notBefore: Instant?)
     fun list(tenantId: UUID, appId: UUID?, limit: Int): List<WorkflowRun>
 }
+
+/** The current step waits on a timer or a retry backoff that has come due. */
+fun WorkflowRun.isTimerDue(now: Instant): Boolean = !status.terminal && currentStep.let { s ->
+    s != null && s.approvalId == null && (s.status == StepStatus.WAITING || s.status == StepStatus.RETRY_WAIT) && s.wakeAt != null && !s.wakeAt.isAfter(now)
+}
+/** The current step waits for an approval decision (the sweeper reconciles a decision whose callback was lost). */
+fun WorkflowRun.isAwaitingApproval(): Boolean = !status.terminal && currentStep.let { it != null && it.status == StepStatus.WAITING && it.approvalId != null }
+/** Not finished (or compensation still IN_PROGRESS) and untouched since [staleBefore]: lost job, crashed worker, stuck compensation, overdue run. */
+fun WorkflowRun.isStale(staleBefore: Instant): Boolean = (!status.terminal || compensation == CompensationState.IN_PROGRESS) && updatedAt.isBefore(staleBefore)
+fun WorkflowRun.needsSweep(now: Instant, staleBefore: Instant): Boolean = isTimerDue(now) || isAwaitingApproval() || isStale(staleBefore)
 
 class InMemoryWorkflowRunStore : WorkflowRunStore {
     private val rows = ConcurrentHashMap<Pair<UUID, UUID>, WorkflowRun>()
@@ -124,19 +158,39 @@ class InMemoryWorkflowRunStore : WorkflowRunStore {
         return ok
     }
 
-    override fun dueTimers(now: Instant, limit: Int) = rows.values.filter { r ->
-        !r.status.terminal && r.currentStep.let { s ->
-            s != null && s.approvalId == null && (s.status == StepStatus.WAITING || s.status == StepStatus.RETRY_WAIT) && s.wakeAt != null && !s.wakeAt.isAfter(now)
+    @Synchronized
+    override fun claimForSweep(now: Instant, limit: Int, perTenant: Int, minInterval: Duration, staleBefore: Instant, approvalInterval: Duration): List<WorkflowRun> {
+        val eligible = rows.values.filter { r ->
+            val interval = if (r.isAwaitingApproval() && !r.isTimerDue(now) && !r.isStale(staleBefore)) approvalInterval else minInterval
+            r.needsSweep(now, staleBefore) && (r.notBefore == null || !r.notBefore.isAfter(now)) && (r.lastSweptAt == null || !r.lastSweptAt.isAfter(now.minus(interval)))
+        }.sortedWith(compareBy<WorkflowRun, Instant?>(nullsFirst()) { it.lastSweptAt }.thenBy { it.updatedAt }.thenBy { it.runId })
+        val chosen = FairSelection.pick(eligible, limit, perTenant) { it.tenantId }
+        val out = ArrayList<WorkflowRun>(chosen.size)
+        for (r in chosen) {
+            // compute() makes the stamp atomic with respect to a concurrent compareAndSet; a run that changed under us is simply skipped this pass
+            var stamped: WorkflowRun? = null
+            rows.computeIfPresent(r.tenantId to r.runId) { _, cur -> if (cur.version == r.version) cur.copy(lastSweptAt = now, version = cur.version + 1).also { stamped = it } else cur }
+            stamped?.let { out += it }
         }
-    }.sortedBy { it.updatedAt }.take(limit)
+        return out
+    }
 
-    override fun waitingApprovals(limit: Int) = rows.values.filter { r ->
-        !r.status.terminal && r.currentStep.let { it != null && it.status == StepStatus.WAITING && it.approvalId != null }
-    }.sortedBy { it.updatedAt }.take(limit)
+    override fun recordProcessFailure(tenantId: UUID, runId: UUID, notBefore: Instant): Int {
+        var n = -1
+        rows.computeIfPresent(tenantId to runId) { _, r -> n = r.processFailures + 1; r.copy(processFailures = n, notBefore = notBefore, version = r.version + 1) }
+        return n
+    }
 
-    override fun stale(updatedBefore: Instant, limit: Int) = rows.values.filter {
-        (!it.status.terminal || it.compensation == CompensationState.IN_PROGRESS) && it.updatedAt.isBefore(updatedBefore)
-    }.sortedBy { it.updatedAt }.take(limit)
+    override fun recordSweepResult(tenantId: UUID, runId: UUID, failed: Boolean, notBefore: Instant?) {
+        rows.computeIfPresent(tenantId to runId) { _, r ->
+            when {
+                failed -> r.copy(sweepFailures = r.sweepFailures + 1, notBefore = notBefore, version = r.version + 1)
+                r.sweepFailures == 0 -> r
+                // the backoff was the sweeper's own: lift it; a process-failure backoff stays until it expires
+                else -> r.copy(sweepFailures = 0, notBefore = if (r.processFailures == 0) null else r.notBefore, version = r.version + 1)
+            }
+        }
+    }
 
     override fun list(tenantId: UUID, appId: UUID?, limit: Int) =
         rows.values.filter { it.tenantId == tenantId && (appId == null || it.appId == appId) }.sortedByDescending { it.createdAt }.take(limit)

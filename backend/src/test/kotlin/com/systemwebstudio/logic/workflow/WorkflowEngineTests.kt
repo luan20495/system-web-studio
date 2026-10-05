@@ -291,18 +291,21 @@ class WorkflowEngineTests {
         assertEquals(1, r.writes("w1"))
     }
 
-    @Test fun `a message that keeps failing lands in the dead letter queue and the run is failed from there`() {
+    @Test fun `an outage does not dead-letter anything and the sweeper recovers the run afterwards`() {
         val r = rig(two, maxDeliveries = 3)
         val id = r.startOk("two")
         r.runStore.failGet = true
         r.drain()
-        assertEquals(1, r.queue.deadLetterBodies().size)
+        assertEquals(0, r.queue.deadLetterBodies().size)             // outage != poison
+        assertEquals(0, r.queue.readyCount())                        // acked, not hot-requeued
         r.runStore.failGet = false
         assertEquals(WorkflowRunStatus.PENDING, r.view(id).status)
-        assertEquals(1, r.worker.drainDeadLetters())
-        assertEquals(WorkflowRunStatus.FAILED, r.view(id).status)
-        assertEquals("DEAD_LETTERED", r.view(id).errorCode)
-        assertEquals(0, r.data.writes.size)
+        assertEquals(0, r.stored(id).processFailures)                // an outage is not the run's fault
+        r.advance(Duration.ofMinutes(3))
+        assertEquals(1, r.engine.sweep().republished)
+        r.drain()
+        assertEquals(WorkflowRunStatus.SUCCEEDED, r.view(id).status)
+        assertEquals(1, r.writes("w1")); assertEquals(1, r.writes("w2"))
     }
 
     @Test fun `a malformed message is rejected straight to the dead letter queue and cannot touch a run`() {

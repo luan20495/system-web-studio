@@ -51,8 +51,20 @@ enum class ProcessOutcome { DONE, RETRY }
 
 data class SweepReport(
     val timersCompleted: Int = 0, val retriesPublished: Int = 0, val approvalsReconciled: Int = 0, val republished: Int = 0,
-    val timedOut: Int = 0, val compensationsResumed: Int = 0, val approvalsExpired: Int = 0
+    val timedOut: Int = 0, val compensationsResumed: Int = 0, val approvalsExpired: Int = 0,
+    /** Runs the sweeper claimed but could not move this pass (publish failed, contention, exception); they are backed off, never retried in a hot loop. */
+    val failed: Int = 0,
+    /** Runs claimed in total (bounded by the batch size). */
+    val examined: Int = 0
 )
+
+/** What a worker should do with the message it just handled. */
+enum class MessageDisposition {
+    /** Done, or deferred: the run's state is saved and the sweeper owns the redelivery (with backoff). Never requeued immediately. */
+    ACK,
+    /** This message is poison for its run (the run hit its failure budget): reject it to the dead-letter queue, and only it. */
+    DEAD_LETTER
+}
 
 /**
  * The workflow engine: starts runs, executes one step per queue message, retries with backoff, waits, asks for approvals, compensates, and
@@ -64,8 +76,13 @@ data class SweepReport(
  *  - A terminal step failure → the step's `onError` target if it has one, else the run FAILS (and compensates in reverse order).
  *  - A crashed worker leaves the step RUNNING; the sweeper puts it back and re-publishes. The action's idempotency key `wf:<run>:<step>`
  *    makes re-executing a step that actually finished a replay, not a second effect.
- *  - A message that cannot be processed [maxDeliveries] times lands in the dead-letter queue; [failFromDeadLetter] then fails its run so
- *    it never hangs silently.
+ *  - A worker that **throws** on a run's message counts one process failure for that run ([recordProcessFailure]): the run is backed off
+ *    (exponential, floor 1 s, cap [maxFailureBackoff]) and the sweeper re-publishes it afterwards; after [maxProcessFailures] the run is failed
+ *    with DEAD_LETTERED and exactly that message is rejected to the dead-letter queue. An outage (store/tenant gate unavailable) is not a run
+ *    failure: the message is acked and the sweeper recovers the run, so healthy runs are never dead-lettered by someone else's poison or by an outage.
+ *    A broker dead letter ([failFromDeadLetter]) counts as one process failure of its run, never as an immediate kill.
+ *  - The sweeper claims a bounded, fair batch ([WorkflowRunStore.claimForSweep]: oldest eligible first, round-robin across tenants, a run at
+ *    most once per interval) and backs off any run it cannot move, so failing runs neither hog it nor starve the others.
  *
  * Permission model: the run acts as the user who started it. Every ACTION step goes through the ActionRuntime, which re-checks the tenant
  * gate and that user's permissions at that moment.
@@ -85,10 +102,26 @@ class WorkflowEngine(
     /** A run untouched for this long while it should be progressing is considered lost and nudged again. */
     private val staleAfter: Duration = Duration.ofMinutes(2),
     /** Per-tenant limit on workflow starts ([RateScope.WORKFLOW_START]); scheduled fires are limited by the scheduler's own scope instead. */
-    private val limiter: TenantRateLimiter = InMemoryTenantRateLimiter(clock = clock)
+    private val limiter: TenantRateLimiter = InMemoryTenantRateLimiter(clock = clock),
+    /** A run that makes a worker fail this many times in a row (exceptions attributed to the run, not outages) is failed with DEAD_LETTERED. Explicit, not unbounded. */
+    private val maxProcessFailures: Int = 5,
+    /** Backoff after the n-th process failure of a run: `base * 2^(n-1)`, floor [RetryPolicy.MIN_BACKOFF], cap [maxFailureBackoff]. */
+    private val failureBackoff: Duration = Duration.ofSeconds(10),
+    private val maxFailureBackoff: Duration = Duration.ofMinutes(10),
+    /** Sweeper: cap on runs of one tenant per claim. Default: none beyond the round-robin itself (every tenant with eligible runs gets an equal share of the batch, a lone tenant gets all of it). */
+    private val sweepPerTenant: Int = Int.MAX_VALUE,
+    /** Sweeper: a run is examined at most once per this interval, however many passes run. */
+    private val sweepMinInterval: Duration = Duration.ofSeconds(5),
+    /** Sweeper: a run that is only waiting for an approval (the callback normally resumes it) is polled at most this often. */
+    private val sweepApprovalInterval: Duration = Duration.ofSeconds(60)
 ) : WorkflowRuntime, WorkflowStarterPort, ScheduledRunEnqueuer, ApprovalListener {
 
     private val log = System.getLogger(WorkflowEngine::class.java.name)
+
+    init {
+        require(maxProcessFailures >= 1) { "maxProcessFailures must be at least 1" }
+        require(sweepPerTenant >= 1) { "sweepPerTenant must be at least 1" }
+    }
 
     // ───────────────────────────── start / status / cancel ─────────────────────────────
 
@@ -220,6 +253,9 @@ class WorkflowEngine(
     fun process(job: WorkflowJob): ProcessOutcome {
         val tenantOn = try { tenants.isEnabled(job.tenantId) } catch (e: Exception) { return ProcessOutcome.RETRY }
         val run0 = try { runs.get(job.tenantId, job.runId) } catch (e: Exception) { return ProcessOutcome.RETRY } ?: return ProcessOutcome.DONE
+
+        // A run that is backing off (it made a worker fail, or the sweeper could not move it) is not touched before its time: the sweeper nudges it after.
+        if (!run0.status.terminal && run0.notBefore?.isAfter(clock.instant()) == true) return ProcessOutcome.DONE
 
         if (run0.status.terminal) {
             if (job.stepId == WorkflowJob.COMPENSATE && run0.compensation == CompensationState.IN_PROGRESS && tenantOn) runCompensation(run0)
@@ -462,6 +498,7 @@ class WorkflowEngine(
         // entering a step always starts a fresh visit (a loop may come back to a step that already succeeded once)
         val moved = cur.copy(
             status = WorkflowRunStatus.PENDING, currentStepId = next, stepExecutions = cur.stepExecutions + 1, updatedAt = now,
+            processFailures = 0, sweepFailures = 0, notBefore = null,
             steps = cur.steps + (next to StepState(next, StepStatus.PENDING, visit = (cur.steps[next]?.visit ?: 0) + 1))
         )
         return Transition(moved, next, false, null)
@@ -567,13 +604,40 @@ class WorkflowEngine(
 
     // ───────────────────────────── dead letters and sweeper ─────────────────────────────
 
-    /** Fails the run behind a dead-lettered message so it does not hang. Returns true if the message can be acked. */
+    /**
+     * A worker failed (an exception) while processing [job]: attribute it to the run, back the run off, and when it has used up its budget fail
+     * it. **Only this run and this message are affected**: healthy runs are never touched, and nothing is requeued immediately (the old
+     * `nack(requeue=true)` loop burned the whole delivery budget in milliseconds and, during an outage, dead-lettered healthy runs).
+     * @return [MessageDisposition.DEAD_LETTER] when the run was failed (reject exactly this message), else [MessageDisposition.ACK] (the sweeper redelivers after the backoff).
+     */
+    fun recordProcessFailure(job: WorkflowJob): MessageDisposition {
+        val now = clock.instant()
+        val run = load(job.tenantId, job.runId) ?: return MessageDisposition.ACK
+        if (run.status.terminal) return MessageDisposition.ACK
+        val count = try { runs.recordProcessFailure(job.tenantId, job.runId, now.plus(failureBackoffFor(run.processFailures + 1))) } catch (e: Exception) { return MessageDisposition.ACK }
+        if (count < maxProcessFailures) return MessageDisposition.ACK
+        val t = try {
+            mutate(job.tenantId, job.runId) { cur -> if (cur.status.terminal) null else fail(cur, WorkflowErrorCodes.DEAD_LETTERED, "The run failed $maxProcessFailures times while being processed and was dead-lettered") }
+        } catch (e: ContendedException) { return MessageDisposition.ACK } // the next failure/sweep decides again
+        t?.let { afterTransition(it) }
+        return MessageDisposition.DEAD_LETTER
+    }
+
+    private fun failureBackoffFor(n: Int): Duration {
+        var millis = failureBackoff.toMillis().coerceAtLeast(RetryPolicy.MIN_BACKOFF.toMillis()).toDouble()
+        repeat((n - 1).coerceIn(0, 30)) { millis = minOf(millis * 2, maxFailureBackoff.toMillis().toDouble()) }
+        return Duration.ofMillis(minOf(millis.toLong(), maxFailureBackoff.toMillis()).coerceAtLeast(RetryPolicy.MIN_BACKOFF.toMillis()))
+    }
+
+    /**
+     * The dead-letter consumer's decision for one dead-lettered message. A message the broker gave up on (consumer crashes, redelivery limit)
+     * says nothing against a healthy run, so it counts as **one process failure of that run** instead of failing it outright: the run is
+     * failed only after [maxProcessFailures] of them, which bounds a crash-looping poison message without letting an outage kill healthy runs.
+     * Returns true when the dead letter can be acked.
+     */
     fun failFromDeadLetter(body: String): Boolean {
         val job = WorkflowJob.decode(body) ?: run { log.log(System.Logger.Level.ERROR, "Dead-lettered message is not a valid job"); return true }
-        val t = try {
-            mutate(job.tenantId, job.runId) { cur -> if (cur.status.terminal) null else fail(cur, WorkflowErrorCodes.DEAD_LETTERED, "The job could not be processed and was dead-lettered") }
-        } catch (e: ContendedException) { return false }
-        t?.let { afterTransition(it) }
+        recordProcessFailure(job)
         return true
     }
 
@@ -584,60 +648,80 @@ class WorkflowEngine(
      */
     fun sweep(limit: Int = 100): SweepReport {
         val now = clock.instant()
-        var timers = 0; var retries = 0; var reconciled = 0; var republished = 0; var timedOut = 0; var comp = 0
+        var timers = 0; var retries = 0; var reconciled = 0; var republished = 0; var timedOut = 0; var comp = 0; var failed = 0; var examined = 0
 
-        for (r in runs.dueTimers(now, limit)) {
-            val st = r.currentStep ?: continue
-            val step = r.definition.step(st.stepId) ?: continue
-            if (st.status == StepStatus.RETRY_WAIT) { if (publish(r.tenantId, r.runId, st.stepId)) retries++; continue }
-            val t = try {
-                mutate(r.tenantId, r.runId) { cur ->
-                    val s = cur.currentStep
-                    if (cur.status.terminal || s == null || s.stepId != st.stepId || s.status != StepStatus.WAITING || s.approvalId != null || s.wakeAt?.isAfter(now) != false) return@mutate null
-                    advance(cur.withStep(s.copy(status = StepStatus.SUCCEEDED, output = json.createObjectNode().put("waitedUntil", s.wakeAt.toString()), finishedAt = now)), nextOf(cur, step), now)
-                }
-            } catch (e: ContendedException) { null }
-            if (t != null) { afterTransition(t); timers++ }
+        /**
+         * Examines one claimed run. [body] returns false when it could not move the run (publish failed, contention); an exception counts the same.
+         * Either way the run is **backed off** (exponential, capped) and the pass goes on with the next run: a failing run neither aborts the
+         * batch nor comes back first next time, and a healthy run behind it is not delayed.
+         */
+        fun examine(r: WorkflowRun, body: () -> Boolean) {
+            examined++
+            val ok = try { body() } catch (e: Exception) { log.log(System.Logger.Level.WARNING, "Sweeping a run failed: ${e.javaClass.simpleName}"); false }
+            if (!ok) failed++
+            try { runs.recordSweepResult(r.tenantId, r.runId, !ok, if (ok) null else now.plus(failureBackoffFor(r.sweepFailures + 1))) } catch (e: Exception) { /* the next pass tries again */ }
         }
 
-        approvals?.let { svc ->
-            for (r in runs.waitingApprovals(limit)) {
-                val id = r.currentStep?.approvalId ?: continue
-                val a = svc.find(r.tenantId, id) ?: continue
-                if (a.status.terminal) { resumeFromApproval(a); reconciled++ }
+        val staleBefore = now.minus(staleAfter)
+        for (r in runs.claimForSweep(now, limit, sweepPerTenant, sweepMinInterval, staleBefore, sweepApprovalInterval)) examine(r) {
+            var ok = true
+            if (r.isTimerDue(now)) ok = sweepTimer(r, now, { timers++ }, { retries++ })
+            else if (r.isAwaitingApproval()) approvals?.let { svc ->
+                val a = r.currentStep?.approvalId?.let { svc.find(r.tenantId, it) }
+                if (a != null && a.status.terminal) { resumeFromApproval(a); reconciled++ }
             }
+            if (r.isStale(staleBefore)) ok = sweepStale(r, now, { republished++ }, { timedOut++ }, { comp++ }) && ok
+            ok
         }
-        val expired = approvals?.expireDue(limit) ?: 0
+        val expired = approvals?.expireDue(limit, sweepPerTenant) ?: 0
+        return SweepReport(timers, retries, reconciled, republished, timedOut, comp, expired, failed, examined)
+    }
 
-        for (r in runs.stale(now.minus(staleAfter), limit)) {
-            if (r.status.terminal) {
-                if (r.compensation == CompensationState.IN_PROGRESS && publish(r.tenantId, r.runId, WorkflowJob.COMPENSATE)) comp++
-                continue
+    /** A due WAIT timer completes (the run moves on); a due retry backoff is re-published. @return false when it could not be done this pass. */
+    private fun sweepTimer(r: WorkflowRun, now: Instant, onTimer: () -> Unit, onRetry: () -> Unit): Boolean {
+        val st = r.currentStep ?: return true
+        val step = r.definition.step(st.stepId) ?: return true
+        if (st.status == StepStatus.RETRY_WAIT) { val ok = publish(r.tenantId, r.runId, st.stepId); if (ok) onRetry(); return ok }
+        val t = try {
+            mutate(r.tenantId, r.runId) { cur ->
+                val s = cur.currentStep
+                if (cur.status.terminal || s == null || s.stepId != st.stepId || s.status != StepStatus.WAITING || s.approvalId != null || s.wakeAt?.isAfter(now) != false) return@mutate null
+                advance(cur.withStep(s.copy(status = StepStatus.SUCCEEDED, output = json.createObjectNode().put("waitedUntil", s.wakeAt.toString()), finishedAt = now)), nextOf(cur, step), now)
             }
-            val limits = r.definition.limits.coerceAtMost(ceiling)
-            if (now.isAfter(r.createdAt.plus(limits.maxDuration))) {
-                val t = try { mutate(r.tenantId, r.runId) { cur -> if (cur.status.terminal) null else fail(cur, WorkflowErrorCodes.TIMEOUT, "Workflow exceeded ${limits.maxDuration}") } } catch (e: ContendedException) { null }
-                if (t != null) { afterTransition(t); timedOut++ }
-                continue
-            }
-            val st = r.currentStep ?: continue
-            when (st.status) {
-                StepStatus.PENDING -> if (publish(r.tenantId, r.runId, st.stepId)) republished++
-                StepStatus.RUNNING -> {
-                    // the worker died mid-step: back to PENDING (attempt kept) and nudge; the action's idempotency key prevents a second effect
-                    val t = try {
-                        mutate(r.tenantId, r.runId) { cur ->
-                            val s = cur.currentStep
-                            if (cur.status.terminal || s == null || s.stepId != st.stepId || s.status != StepStatus.RUNNING || s.attempt != st.attempt) null
-                            else Transition(cur.withStep(s.copy(status = StepStatus.RETRY_WAIT, wakeAt = now)).copy(status = WorkflowRunStatus.WAITING, updatedAt = now), st.stepId, false, null)
-                        }
-                    } catch (e: ContendedException) { null }
-                    if (t != null) { afterTransition(t); republished++ }
-                }
-                else -> Unit // WAITING / RETRY_WAIT are handled by their timers above
-            }
+        } catch (e: ContendedException) { return false }
+        if (t != null) { afterTransition(t); onTimer() }
+        return true
+    }
+
+    /** Lost message, crashed worker, stuck compensation or overdue run. @return false when it could not be done this pass. */
+    private fun sweepStale(r: WorkflowRun, now: Instant, onRepublish: () -> Unit, onTimeout: () -> Unit, onCompensation: () -> Unit): Boolean {
+        if (r.status.terminal) {
+            if (r.compensation == CompensationState.IN_PROGRESS) { val ok = publish(r.tenantId, r.runId, WorkflowJob.COMPENSATE); if (ok) onCompensation(); return ok }
+            return true
         }
-        return SweepReport(timers, retries, reconciled, republished, timedOut, comp, expired)
+        val limits = r.definition.limits.coerceAtMost(ceiling)
+        if (now.isAfter(r.createdAt.plus(limits.maxDuration))) {
+            val t = try { mutate(r.tenantId, r.runId) { cur -> if (cur.status.terminal) null else fail(cur, WorkflowErrorCodes.TIMEOUT, "Workflow exceeded ${limits.maxDuration}") } } catch (e: ContendedException) { return false }
+            if (t != null) { afterTransition(t); onTimeout() }
+            return true
+        }
+        val st = r.currentStep ?: return true
+        return when (st.status) {
+            StepStatus.PENDING -> { val ok = publish(r.tenantId, r.runId, st.stepId); if (ok) onRepublish(); ok }
+            StepStatus.RUNNING -> {
+                // the worker died mid-step: back to RETRY_WAIT (attempt kept) and nudge; the action's idempotency key prevents a second effect
+                val t = try {
+                    mutate(r.tenantId, r.runId) { cur ->
+                        val s = cur.currentStep
+                        if (cur.status.terminal || s == null || s.stepId != st.stepId || s.status != StepStatus.RUNNING || s.attempt != st.attempt) null
+                        else Transition(cur.withStep(s.copy(status = StepStatus.RETRY_WAIT, wakeAt = now)).copy(status = WorkflowRunStatus.WAITING, updatedAt = now), st.stepId, false, null)
+                    }
+                } catch (e: ContendedException) { return false }
+                if (t != null) { afterTransition(t); onRepublish() }
+                true
+            }
+            else -> true // WAITING / RETRY_WAIT are handled by their timers
+        }
     }
 
     // ───────────────────────────── helpers ─────────────────────────────
@@ -713,7 +797,17 @@ class WorkflowEngine(
     companion object { private val KEY = Regex("^[A-Za-z0-9._:-]{1,128}$") }
 }
 
-/** Pulls messages from the queue and hands them to the engine. Run one or more of these per node (virtual threads / a Spring listener). */
+/**
+ * Pulls messages from the queue and hands them to the engine. Run one or more of these per node (virtual threads / a Spring listener).
+ *
+ * Acknowledgement policy - the reason a poison message cannot hurt healthy runs:
+ *  - a **malformed** message is rejected to the dead-letter queue (`requeue=false`): it names no run, so nothing else is affected;
+ *  - a message the engine handled, **or could not handle because of an outage** (store/tenant gate unavailable, contention), is **acked**. The
+ *    queue is only a nudge; the run's state is already saved and the sweeper re-publishes it after a backoff floor. Nothing is ever requeued
+ *    immediately, so an outage can neither spin the consumer nor burn the broker's delivery budget;
+ *  - a message whose processing **throws** counts as a failure of that run ([WorkflowEngine.recordProcessFailure]): the run is backed off, and
+ *    only when it has used its explicit budget is it failed and that one message rejected to the dead-letter queue.
+ */
 class WorkflowWorker(private val engine: WorkflowEngine, private val queue: WorkflowQueue) {
     private val log = System.getLogger(WorkflowWorker::class.java.name)
 
@@ -726,11 +820,16 @@ class WorkflowWorker(private val engine: WorkflowEngine, private val queue: Work
             queue.nack(lease, requeue = false)
             return true
         }
-        val outcome = try { engine.process(job) } catch (e: Exception) {
+        val disposition = try {
+            when (engine.process(job)) {
+                ProcessOutcome.DONE -> MessageDisposition.ACK
+                ProcessOutcome.RETRY -> MessageDisposition.ACK // outage: state is saved, the sweeper redelivers with backoff (see class doc)
+            }
+        } catch (e: Exception) {
             log.log(System.Logger.Level.ERROR, "Unexpected failure while processing a job: ${e.javaClass.name}")
-            ProcessOutcome.RETRY
+            try { engine.recordProcessFailure(job) } catch (e2: Exception) { MessageDisposition.ACK }
         }
-        if (outcome == ProcessOutcome.DONE) queue.ack(lease) else queue.nack(lease, requeue = true)
+        if (disposition == MessageDisposition.ACK) queue.ack(lease) else queue.nack(lease, requeue = false)
         return true
     }
 
@@ -741,7 +840,7 @@ class WorkflowWorker(private val engine: WorkflowEngine, private val queue: Work
         return n
     }
 
-    /** Dead-letter consumer: fails the runs of messages that could not be processed. */
+    /** Dead-letter consumer: counts each dead letter against its run (see [WorkflowEngine.failFromDeadLetter]). */
     fun drainDeadLetters(max: Int = 1000): Int {
         var n = 0
         while (n < max) {

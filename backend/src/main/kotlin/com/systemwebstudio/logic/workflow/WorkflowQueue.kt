@@ -39,7 +39,10 @@ data class QueueLease(val id: String, val body: String, val deliveryCount: Int)
 /**
  * The broker port. A RabbitMQ adapter (C0, `integration/queue`) maps it as: durable queue `xweb.workflow.jobs` with a dead-letter exchange
  * to `xweb.workflow.jobs.dlq`; `publish` = persistent message with publisher confirms; `poll` = basic.get/consumer with manual ack;
- * `nack(requeue=true)` = redelivery with an incremented counter; `nack(requeue=false)` or counter above the limit = dead-letter.
+ * `nack(requeue=false)` = dead-letter exactly this message. The workflow runtime **never requeues immediately** (a hot redelivery loop burns
+ * the delivery budget in milliseconds and, in an outage, dead-letters healthy runs): a handled or outage-affected message is acked and the
+ * sweeper re-publishes after a backoff; only a malformed message or a run's last poison message is nacked without requeue.
+ * `nack(requeue=true)` stays on the port for other consumers (redelivery with an incremented counter, dead-letter above the limit).
  * Delayed work is **not** a broker feature here: timers live in the run store and the sweeper publishes when they are due.
  */
 interface WorkflowQueue {

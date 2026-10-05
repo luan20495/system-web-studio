@@ -84,7 +84,8 @@ interface ApprovalStore {
     /** Succeeds only if the stored version equals [expected].version; the stored row gets version + 1. */
     fun compareAndSet(expected: Approval, next: Approval): Boolean
     fun pendingFor(tenantId: UUID, userId: UUID, limit: Int): List<Approval>
-    fun dueForExpiry(now: Instant, limit: Int): List<Approval>
+    /** Oldest expiry first, at most [limit] in total and [perTenant] per tenant (round-robin, see FairSelection). */
+    fun dueForExpiry(now: Instant, limit: Int, perTenant: Int = Int.MAX_VALUE): List<Approval>
 }
 
 class InMemoryApprovalStore : ApprovalStore {
@@ -113,6 +114,6 @@ class InMemoryApprovalStore : ApprovalStore {
     override fun pendingFor(tenantId: UUID, userId: UUID, limit: Int) =
         rows.values.filter { it.tenantId == tenantId && it.status == ApprovalStatus.PENDING && userId in it.approvers }.sortedBy { it.requestedAt }.take(limit)
 
-    override fun dueForExpiry(now: Instant, limit: Int) =
-        rows.values.filter { it.status == ApprovalStatus.PENDING && !it.expiresAt.isAfter(now) }.sortedBy { it.expiresAt }.take(limit)
+    override fun dueForExpiry(now: Instant, limit: Int, perTenant: Int) =
+        com.systemwebstudio.logic.limits.FairSelection.pick(rows.values.filter { it.status == ApprovalStatus.PENDING && !it.expiresAt.isAfter(now) }.sortedBy { it.expiresAt }, limit, perTenant) { it.tenantId }
 }
