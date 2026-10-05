@@ -127,6 +127,8 @@ interface ScheduleStore {
     fun execution(tenantId: UUID, scheduleId: UUID, fireAt: Instant): ScheduleExecution?
     /** Newest first. */
     fun executions(tenantId: UUID, scheduleId: UUID, limit: Int): List<ScheduleExecution>
+    /** Retention: deletes ledger rows in a **final** status (never CLAIMED) last updated before [olderThan], oldest first, at most [limit]. @return rows deleted */
+    fun purgeExecutions(olderThan: Instant, limit: Int): Int
 }
 
 class InMemoryScheduleStore : ScheduleStore {
@@ -164,6 +166,13 @@ class InMemoryScheduleStore : ScheduleStore {
         ledger.computeIfPresent(Triple(tenantId, scheduleId, fireAt)) { _, cur ->
             if (cur.status.final) cur else cur.copy(status = status, attempts = attempts, runRef = runRef ?: cur.runRef, errorCode = errorCode, updatedAt = now)
         }
+
+    override fun purgeExecutions(olderThan: Instant, limit: Int): Int {
+        val victims = ledger.values.filter { it.status.final && it.updatedAt.isBefore(olderThan) }.sortedBy { it.updatedAt }.take(limit.coerceAtLeast(0))
+        var n = 0
+        for (v in victims) if (ledger.remove(Triple(v.tenantId, v.scheduleId, v.fireAt), v)) n++
+        return n
+    }
 
     override fun execution(tenantId: UUID, scheduleId: UUID, fireAt: Instant) = ledger[Triple(tenantId, scheduleId, fireAt)]
     override fun executions(tenantId: UUID, scheduleId: UUID, limit: Int) =

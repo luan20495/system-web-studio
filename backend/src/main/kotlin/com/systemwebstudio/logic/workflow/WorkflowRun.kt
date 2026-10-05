@@ -84,6 +84,8 @@ data class WorkflowRun(
     val notBefore: Instant? = null,
     /** Rotation cursor of the sweeper: the run was last examined (claimed) at this instant. Oldest cursor is served first. */
     val lastSweptAt: Instant? = null,
+    /** Retention stage 1 happened: [input] and the steps' payloads were replaced by a placeholder. The row (status, timings, error codes) stays. */
+    val redactedAt: Instant? = null,
     val version: Long = 0
 ) {
     val currentStep: StepState? get() = currentStepId?.let { steps[it] }
@@ -122,7 +124,25 @@ interface WorkflowRunStore {
     /** Outcome of examining a claimed run: [failed] backs it off until [notBefore] and counts; success clears the sweep failure count. */
     fun recordSweepResult(tenantId: UUID, runId: UUID, failed: Boolean, notBefore: Instant?)
     fun list(tenantId: UUID, appId: UUID?, limit: Int): List<WorkflowRun>
+
+    /**
+     * Retention stage 1: replaces `input` with [placeholder] and every step's input/output with null on **finished** runs ([isRetentionEligible]) that finished
+     * before [olderThan] and are not redacted yet, oldest first, at most [limit]; sets `redactedAt`. The row stays.
+     * SQL: `UPDATE workflow_runs SET input = :placeholder, redacted_at = :now WHERE id IN (...) AND status IN (terminal) AND compensation <> 'IN_PROGRESS' AND redacted_at IS NULL AND finished_at < :olderThan`
+     * (+ the same for `workflow_run_steps.input/output`). @return rows redacted
+     */
+    fun redactFinished(olderThan: Instant, limit: Int, placeholder: JsonNode, now: Instant): Int
+    /**
+     * Retention stage 2: deletes **finished** runs ([isRetentionEligible]) that finished before [olderThan], oldest first, at most [limit]. A PENDING / RUNNING /
+     * WAITING run, a run whose compensation is IN_PROGRESS, and a run the sweeper is still repairing are never deleted, however old.
+     * @return rows deleted (steps go with their run)
+     */
+    fun purgeFinished(olderThan: Instant, limit: Int): Int
 }
+
+/** The only rows retention may touch: terminal and not in the middle of compensating. Everything else is active or in flight. */
+fun WorkflowRun.isRetentionEligible(olderThan: Instant): Boolean =
+    status.terminal && compensation != CompensationState.IN_PROGRESS && (finishedAt ?: updatedAt).isBefore(olderThan)
 
 /** The current step waits on a timer or a retry backoff that has come due. */
 fun WorkflowRun.isTimerDue(now: Instant): Boolean = !status.terminal && currentStep.let { s ->
@@ -194,6 +214,26 @@ class InMemoryWorkflowRunStore : WorkflowRunStore {
 
     override fun list(tenantId: UUID, appId: UUID?, limit: Int) =
         rows.values.filter { it.tenantId == tenantId && (appId == null || it.appId == appId) }.sortedByDescending { it.createdAt }.take(limit)
+
+    override fun redactFinished(olderThan: Instant, limit: Int, placeholder: JsonNode, now: Instant): Int {
+        val victims = rows.values.filter { it.redactedAt == null && it.isRetentionEligible(olderThan) }.sortedBy { it.finishedAt ?: it.updatedAt }.take(limit.coerceAtLeast(0))
+        var n = 0
+        for (v in victims) rows.computeIfPresent(v.tenantId to v.runId) { _, cur ->
+            // re-check under the row lock: a run that changed meanwhile is left alone
+            if (cur.redactedAt == null && cur.isRetentionEligible(olderThan)) {
+                n++
+                cur.copy(input = placeholder, steps = cur.steps.mapValues { (_, st) -> st.copy(input = null, output = null) }, redactedAt = now, version = cur.version + 1)
+            } else cur
+        }
+        return n
+    }
+
+    override fun purgeFinished(olderThan: Instant, limit: Int): Int {
+        val victims = rows.values.filter { it.isRetentionEligible(olderThan) }.sortedBy { it.finishedAt ?: it.updatedAt }.take(limit.coerceAtLeast(0))
+        var n = 0
+        for (v in victims) rows.computeIfPresent(v.tenantId to v.runId) { _, cur -> if (cur.isRetentionEligible(olderThan)) { n++; null } else cur }
+        return n
+    }
 }
 
 /** Read model returned to callers: no definition snapshot, no internals. */

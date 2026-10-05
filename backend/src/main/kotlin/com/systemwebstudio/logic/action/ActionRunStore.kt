@@ -53,6 +53,14 @@ interface ActionRunStore {
     fun find(key: RunKey): ActionRunRecord?
     /** Sweeper hook: turns RUNNING runs untouched since [staleBefore] into retryable FAILED. Returns how many. */
     fun sweepStale(staleBefore: Instant, now: Instant): Int
+    /**
+     * Retention: deletes **finished** records (SUCCEEDED / FAILED) that finished before [olderThan], oldest first, at most [limit]. A RUNNING record is
+     * never deleted, however old (the sweeper turns an abandoned one into FAILED first, which then ages like any other). Deleting a record ends
+     * the replay guarantee of its idempotency key, so the horizon must exceed every client's retry window (RetentionPolicy enforces a minimum).
+     * SQL: `DELETE FROM action_runs WHERE id IN (SELECT id FROM action_runs WHERE status <> 'RUNNING' AND finished_at < :olderThan ORDER BY finished_at LIMIT :limit)`.
+     * @return the number of rows deleted
+     */
+    fun purgeFinished(olderThan: Instant, limit: Int): Int
 }
 
 class InMemoryActionRunStore : ActionRunStore {
@@ -100,6 +108,14 @@ class InMemoryActionRunStore : ActionRunStore {
                 } else r
             }
         }
+        return n
+    }
+
+    override fun purgeFinished(olderThan: Instant, limit: Int): Int {
+        val victims = runs.values.filter { it.status != RunStatus.RUNNING && (it.finishedAt ?: it.updatedAt).isBefore(olderThan) }
+            .sortedBy { it.finishedAt ?: it.updatedAt }.take(limit.coerceAtLeast(0))
+        var n = 0
+        for (v in victims) if (runs.remove(v.key, v)) n++     // remove(key, value): a record that changed meanwhile (restarted retry) is kept
         return n
     }
 

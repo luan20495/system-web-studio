@@ -86,6 +86,11 @@ interface ApprovalStore {
     fun pendingFor(tenantId: UUID, userId: UUID, limit: Int): List<Approval>
     /** Oldest expiry first, at most [limit] in total and [perTenant] per tenant (round-robin, see FairSelection). */
     fun dueForExpiry(now: Instant, limit: Int, perTenant: Int = Int.MAX_VALUE): List<Approval>
+    /**
+     * Retention: deletes approvals in a **final** status (never PENDING) that finished before [olderThan], oldest first, at most [limit], except those [keep]
+     * says to keep (the retention service keeps an approval whose workflow run is still active). @return rows deleted
+     */
+    fun purgeFinal(olderThan: Instant, limit: Int, keep: (Approval) -> Boolean = { false }): Int
 }
 
 class InMemoryApprovalStore : ApprovalStore {
@@ -113,6 +118,14 @@ class InMemoryApprovalStore : ApprovalStore {
 
     override fun pendingFor(tenantId: UUID, userId: UUID, limit: Int) =
         rows.values.filter { it.tenantId == tenantId && it.status == ApprovalStatus.PENDING && userId in it.approvers }.sortedBy { it.requestedAt }.take(limit)
+
+    override fun purgeFinal(olderThan: Instant, limit: Int, keep: (Approval) -> Boolean): Int {
+        val victims = rows.values.filter { it.status.terminal && (it.finishedAt ?: it.requestedAt).isBefore(olderThan) && !keep(it) }
+            .sortedBy { it.finishedAt ?: it.requestedAt }.take(limit.coerceAtLeast(0))
+        var n = 0
+        for (v in victims) rows.computeIfPresent(v.tenantId to v.id) { _, cur -> if (cur.status.terminal && cur.version == v.version) { n++; null } else cur }
+        return n
+    }
 
     override fun dueForExpiry(now: Instant, limit: Int, perTenant: Int) =
         com.systemwebstudio.logic.limits.FairSelection.pick(rows.values.filter { it.status == ApprovalStatus.PENDING && !it.expiresAt.isAfter(now) }.sortedBy { it.expiresAt }, limit, perTenant) { it.tenantId }
