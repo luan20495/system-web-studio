@@ -104,14 +104,39 @@ class ActionDefinitionValidatorTests {
     @Test fun `handler specific rules are applied and a mismatching handler is reported`() {
         val data = FakeDataPort()
         val missing = Fx.mutation(ActionType.UPDATE_RECORD, inputs = emptyList())
-        assertEquals(listOf("inputs.recordId"), issues(missing, MutationActionHandler(ActionType.UPDATE_RECORD, data)))
-        assertEquals(listOf("type"), issues(Fx.navigate(), MutationActionHandler(ActionType.CREATE_RECORD, data)))
+        assertEquals(listOf("inputs.recordId"), issues(missing, MutationActionHandler(ActionType.UPDATE_RECORD, json, data)))
+        assertEquals(listOf("type"), issues(Fx.navigate(), MutationActionHandler(ActionType.CREATE_RECORD, json, data)))
+    }
+
+    @Test fun `a state changing action can never opt out of idempotency`() {
+        for (t in ActionType.entries.filter { it.mutatesState }) {
+            val d = ActionDefinition("x", Fx.tenantA, t, idempotency = IdempotencyPolicy.NONE)
+            assertTrue("idempotency" in issues(d), "$t must reject NONE")
+        }
+        assertEquals(emptyList<String>(), issues(Fx.navigate().copy(idempotency = IdempotencyPolicy.NONE)))
+        assertEquals(IdempotencyPolicy.REQUIRED, Fx.mutation(ActionType.CREATE_RECORD).idempotency)   // the default for writes
+        assertEquals(IdempotencyPolicy.NONE, Fx.navigate().idempotency)
+    }
+
+    @Test fun `input mapping must target declared inputs and use plain dotted paths`() {
+        val base = Fx.navigate(inputs = listOf(InputSpec("a")))
+        assertEquals(emptyList<String>(), issues(base.copy(inputMapping = mapOf("a" to InputSource.FormField("email")))))
+        assertEquals(listOf("inputMapping.zzz"), issues(base.copy(inputMapping = mapOf("zzz" to InputSource.FormField("email")))))
+        assertEquals(listOf("inputMapping.a"), issues(base.copy(inputMapping = mapOf("a" to InputSource.ViewModelField("rows[0].name")))))
+        assertEquals(listOf("inputMapping.a"), issues(base.copy(inputMapping = mapOf("a" to InputSource.ComponentState("a..b")))))
+        assertEquals(listOf("inputMapping.a"), issues(base.copy(inputMapping = mapOf("a" to InputSource.FormField("1; drop")))))
+    }
+
+    @Test fun `chains are bounded and cannot point at themselves`() {
+        assertEquals(listOf("onSuccess[0]"), issues(Fx.navigate().copy(onSuccess = listOf("go-home"))))
+        assertEquals(listOf("onError"), issues(Fx.navigate().copy(onError = (1..9).map { "a$it" })))
+        assertEquals(listOf("onSuccess[0]"), issues(Fx.navigate().copy(onSuccess = listOf("http://x"))))
     }
 }
 
 class ActionRunStoreTests {
     private val store = InMemoryActionRunStore()
-    private val key = RunKey(Fx.tenantA, "a1", "k1")
+    private val key = RunKey(Fx.tenantA, Fx.appA, "a1", Fx.user, "k1")
 
     @Test fun `first begin starts, same input while running is in progress, different input is key reuse`() {
         val s = assertInstanceOf(RunBegin.Started::class.java, store.begin(key, "f1", Fx.now))
@@ -120,11 +145,12 @@ class ActionRunStoreTests {
         assertEquals(RunBegin.KeyReused, store.begin(key, "other", Fx.now))
     }
 
-    @Test fun `success is replayed`() {
+    @Test fun `success is replayed and the finish time is recorded`() {
         val s = store.begin(key, "f1", Fx.now) as RunBegin.Started
         val ok = ActionResult.Ok(str("done"))
-        assertTrue(store.complete(key, s.runId, ok, Fx.now))
+        assertTrue(store.complete(key, s.runId, ok, Fx.now.plusSeconds(2)))
         assertEquals(ok, (store.begin(key, "f1", Fx.now) as RunBegin.Replay).result)
+        assertEquals(Fx.now.plusSeconds(2), store.find(key)!!.finishedAt)
     }
 
     @Test fun `retryable failure restarts with a new attempt, non retryable failure is replayed`() {
@@ -146,10 +172,13 @@ class ActionRunStoreTests {
         assertEquals(RunStatus.FAILED, store.find(key)!!.status)
     }
 
-    @Test fun `keys are scoped by tenant and action`() {
+    @Test fun `keys are scoped by tenant, app, action and user`() {
         store.begin(key, "f1", Fx.now)
         assertInstanceOf(RunBegin.Started::class.java, store.begin(key.copy(tenantId = Fx.tenantB), "f1", Fx.now))
+        assertInstanceOf(RunBegin.Started::class.java, store.begin(key.copy(appId = Fx.appB), "f1", Fx.now))
         assertInstanceOf(RunBegin.Started::class.java, store.begin(key.copy(actionId = "a2"), "f1", Fx.now))
+        assertInstanceOf(RunBegin.Started::class.java, store.begin(key.copy(userId = Fx.user2), "f1", Fx.now))
+        assertInstanceOf(RunBegin.InProgress::class.java, store.begin(key, "f1", Fx.now))
     }
 
     @Test fun `concurrent begins on one key yield exactly one Started`() {
@@ -169,5 +198,69 @@ class ActionRunStoreTests {
         val wild = ActionLimits(timeout = Duration.ofHours(1), maxInputBytes = 1_000_000, maxInputDepth = 99, maxCallDepth = 99)
         assertEquals(ceiling, wild.coerceAtMost(ceiling))
         assertEquals(Duration.ofSeconds(1), ActionLimits(timeout = Duration.ofSeconds(1)).coerceAtMost(ceiling).timeout)
+    }
+}
+
+class InputResolverTests {
+    private val resolver = InputResolver(json)
+    private val ctx = Fx.ctx()
+    private fun def(vararg m: Pair<String, InputSource>, inputs: List<String> = m.map { it.first }) =
+        Fx.navigate(inputs = inputs.map { InputSpec(it) }).copy(inputMapping = m.toMap())
+    private fun ok(d: ActionDefinition, r: ActionRequest) = assertInstanceOf(ResolveResult.Resolved::class.java, resolver.resolve(d, r, ctx, Fx.now)).values
+    private fun payload(
+        cs: Map<String, JsonNode> = emptyMap(), rp: Map<String, JsonNode> = emptyMap(), form: Map<String, JsonNode> = emptyMap(), vm: Map<String, JsonNode> = emptyMap()
+    ) = EventPayload(cs, rp, form, vm)
+
+    @Test fun `every client source is read from its own bucket of the payload`() {
+        val d = def("c" to InputSource.ComponentState("box.value"), "r" to InputSource.RouteParam("id"), "f" to InputSource.FormField("email"), "v" to InputSource.ViewModelField("rows.1.name"))
+        val p = payload(
+            cs = mapOf("box" to Fx.obj("value" to str("cs"))), rp = mapOf("id" to str("route")), form = mapOf("email" to str("a@b.c")),
+            vm = mapOf("rows" to json.createArrayNode().add(Fx.obj("name" to str("zero"))).add(Fx.obj("name" to str("one"))))
+        )
+        val out = ok(d, ActionRequest("go-home", payload = p))
+        assertEquals("cs", out["c"]!!.asString()); assertEquals("route", out["r"]!!.asString())
+        assertEquals("a@b.c", out["f"]!!.asString()); assertEquals("one", out["v"]!!.asString())
+    }
+
+    @Test fun `a form field is not readable through the route or state buckets`() {
+        val d = def("f" to InputSource.FormField("secret"))
+        val out = ok(d, ActionRequest("go-home", payload = payload(cs = mapOf("secret" to str("x")), rp = mapOf("secret" to str("y")))))
+        assertTrue(out.isEmpty())
+    }
+
+    @Test fun `missing paths and wrong shapes resolve to absent, never throw`() {
+        val d = def("a" to InputSource.ComponentState("x.y.z"), "b" to InputSource.ViewModelField("list.9"), "c" to InputSource.PreviousResult("nope"))
+        val out = ok(d, ActionRequest("go-home", payload = payload(cs = mapOf("x" to str("scalar")), vm = mapOf("list" to json.createArrayNode().add("only"))), previousResult = Fx.obj()))
+        assertTrue(out.isEmpty())
+    }
+
+    @Test fun `literal and previous result sources`() {
+        val d = def("l" to InputSource.Literal(str("fixed")), "p" to InputSource.PreviousResult("id"), "all" to InputSource.PreviousResult(""))
+        val prev = Fx.obj("id" to str("rec-7"))
+        val out = ok(d, ActionRequest("go-home", previousResult = prev))
+        assertEquals("fixed", out["l"]!!.asString()); assertEquals("rec-7", out["p"]!!.asString()); assertEquals(prev, out["all"])
+    }
+
+    @Test fun `context values come from the server side context`() {
+        val d = def(
+            "u" to InputSource.Context(ContextKey.USER_ID), "t" to InputSource.Context(ContextKey.TENANT_ID), "a" to InputSource.Context(ContextKey.APP_ID),
+            "q" to InputSource.Context(ContextKey.REQUEST_ID), "n" to InputSource.Context(ContextKey.NOW), "w" to InputSource.Context(ContextKey.WORKSPACE_ID)
+        )
+        val out = ok(d, ActionRequest("go-home"))
+        assertEquals(Fx.user.toString(), out["u"]!!.asString()); assertEquals(Fx.tenantA.toString(), out["t"]!!.asString())
+        assertEquals(Fx.appA.toString(), out["a"]!!.asString()); assertEquals("req-1", out["q"]!!.asString())
+        assertEquals(Fx.now.toString(), out["n"]!!.asString()); assertEquals(ctx.workspaceId.toString(), out["w"]!!.asString())
+    }
+
+    @Test fun `a caller cannot supply an input the server derives from the context`() {
+        val d = def("u" to InputSource.Context(ContextKey.USER_ID), "title" to InputSource.FormField("t"))
+        val r = assertInstanceOf(ResolveResult.Rejected::class.java, resolver.resolve(d, ActionRequest("go-home", mapOf("u" to str("someone-else"))), ctx, Fx.now))
+        assertEquals(ActionErrorCodes.INVALID_INPUT, r.failure.code); assertTrue(r.failure.details.containsKey("u"))
+    }
+
+    @Test fun `explicit inputs override event mapped values for non context sources`() {
+        val d = def("f" to InputSource.FormField("email"))
+        val out = ok(d, ActionRequest("go-home", mapOf("f" to str("explicit")), payload = payload(form = mapOf("email" to str("from-form")))))
+        assertEquals("explicit", out["f"]!!.asString())
     }
 }

@@ -4,11 +4,15 @@ import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
-/** Idempotency scope: one key is unique per tenant *and* action. */
-data class RunKey(val tenantId: UUID, val actionId: String, val idempotencyKey: String)
+/**
+ * Idempotency scope: a key is unique per tenant, app, action **and acting user**. The user is part of the scope on purpose: user B can neither
+ * replay user A's recorded result (information leak) nor block A's key (denial of service).
+ */
+data class RunKey(val tenantId: UUID, val appId: UUID?, val actionId: String, val userId: UUID, val idempotencyKey: String)
 
 enum class RunStatus { RUNNING, SUCCEEDED, FAILED }
 
+/** One row of the future `action_runs` table (proposed DDL: docs/parallel/audit/FINAL-C4-runtime-design.md, migration request in BOARD.md). */
 data class ActionRunRecord(
     val key: RunKey,
     val runId: String,
@@ -17,6 +21,7 @@ data class ActionRunRecord(
     val attempt: Int,
     val result: ActionResult?,
     val startedAt: Instant,
+    val finishedAt: Instant?,
     val updatedAt: Instant
 )
 
@@ -33,11 +38,13 @@ sealed interface RunBegin {
 
 /**
  * Run state + idempotency, with the compare-and-set discipline of the publish pipeline: `begin` is atomic and `complete`
- * only succeeds for the run that still owns the RUNNING state. A persistent implementation needs a table
- * (migration request, see BOARD.md); until C0 grants a version only [InMemoryActionRunStore] exists.
+ * only succeeds for the run that still owns the RUNNING state. A persistent implementation needs a table with a unique index on
+ * (tenant_id, app_id, action_id, user_id, idempotency_key); until C0 grants a migration only [InMemoryActionRunStore] exists.
  *
  * Retry rule: a previous FAILED run with `retryable = true` may be restarted with the same key (attempt + 1);
- * SUCCEEDED and non-retryable FAILED are replayed as-is.
+ * SUCCEEDED and non-retryable FAILED are replayed as-is — so a retry can never create a second business record.
+ *
+ * TEST-mode requests never reach this store (they have no side effect, so there is nothing to de-duplicate).
  */
 interface ActionRunStore {
     fun begin(key: RunKey, fingerprint: String, now: Instant): RunBegin
@@ -72,7 +79,7 @@ class InMemoryActionRunStore : ActionRunStore {
         runs.computeIfPresent(key) { _, r ->
             if (r.runId == runId && r.status == RunStatus.RUNNING) {
                 done = true
-                r.copy(status = if (result is ActionResult.Ok) RunStatus.SUCCEEDED else RunStatus.FAILED, result = result, updatedAt = now)
+                r.copy(status = if (result is ActionResult.Ok) RunStatus.SUCCEEDED else RunStatus.FAILED, result = result, finishedAt = now, updatedAt = now)
             } else r
         }
         return done
@@ -87,7 +94,7 @@ class InMemoryActionRunStore : ActionRunStore {
                 if (r.status == RunStatus.RUNNING && r.updatedAt.isBefore(staleBefore)) {
                     n++
                     r.copy(
-                        status = RunStatus.FAILED, updatedAt = now,
+                        status = RunStatus.FAILED, finishedAt = now, updatedAt = now,
                         result = failed(ActionErrorCodes.TIMEOUT, "Run was abandoned and swept", retryable = true)
                     )
                 } else r
@@ -96,6 +103,9 @@ class InMemoryActionRunStore : ActionRunStore {
         return n
     }
 
+    /** Test helper: number of stored runs. */
+    fun size(): Int = runs.size
+
     private fun newRun(key: RunKey, fingerprint: String, attempt: Int, now: Instant) =
-        ActionRunRecord(key, UUID.randomUUID().toString(), fingerprint, RunStatus.RUNNING, attempt, null, now, now)
+        ActionRunRecord(key, UUID.randomUUID().toString(), fingerprint, RunStatus.RUNNING, attempt, null, now, null, now)
 }

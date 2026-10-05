@@ -6,9 +6,9 @@ data class DefinitionIssue(val path: String, val message: String)
 
 /**
  * Executes one [ActionType]. By the time [execute] is called the runtime has already: resolved the definition within
- * the caller's tenant, authorized the caller, validated the definition ([validate]) and bound/limited the input.
- * A handler therefore only translates a validated, typed action into one port call and returns a typed result.
- * It must not read global state, spawn work that outlives the call, or execute user-supplied code.
+ * the caller's tenant and app, checked the tenant gate and the caller's permissions, validated the definition ([validate]) and
+ * resolved/bound/limited the input. A handler therefore only translates a validated, typed action into one port call and returns a typed
+ * result. It must not read global state, spawn work that outlives the call, or execute user-supplied code.
  */
 interface ActionHandler {
     val type: ActionType
@@ -17,6 +17,13 @@ interface ActionHandler {
     fun validate(definition: ActionDefinition): List<DefinitionIssue> = emptyList()
 
     fun execute(ctx: ActionContext, definition: ActionDefinition, input: ActionInput, run: ActionRun): ActionResult
+
+    /**
+     * TEST mode. **Must have no side effect**: no write, no notification, no workflow start. Returns [ActionResult.WouldRun] saying what
+     * would run — or a [ActionResult.Failed] when it would fail. It may ask a downstream system to validate/sandbox *only* through an
+     * explicit dry-run capability of that system; otherwise it answers [DryRunLevel.NOT_EXECUTED] (it never pretends).
+     */
+    fun preview(ctx: ActionContext, definition: ActionDefinition, input: ActionInput, run: ActionRun): ActionResult
 }
 
 /** Immutable once built; one handler per type. Unknown type ⇒ the runtime answers UNSUPPORTED_ACTION_TYPE. */

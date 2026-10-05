@@ -7,8 +7,9 @@ import tools.jackson.databind.JsonNode
  * (defense in depth, every execute) and is meant to be called by C2's `AppDefinitionValidator` when it checks that
  * `actions[]` point at well-formed actions (that call is made from an adapter, not from `logic.action`).
  *
- * "Declarative, typed, no raw code" is enforced here: config may not contain keys that denote code, SQL or URLs, and
- * every reference must be a plain id ([REF_ID]).
+ * "Declarative, typed, no raw code" is enforced here: config may not contain keys that denote code, SQL or URLs, every
+ * reference must be a plain id ([REF_ID]), input mappings are typed lookups with plain dotted paths, and a state-mutating
+ * action cannot opt out of idempotency.
  */
 object ActionDefinitionValidator {
     /** Plain identifier: no scheme (`:`), no path (`/`), no whitespace. */
@@ -17,6 +18,7 @@ object ActionDefinitionValidator {
     const val MAX_INPUTS = 64
     const val MAX_CONFIG_BYTES = 16 * 1024
     const val MAX_CONFIG_DEPTH = 6
+    const val MAX_CHAIN = 8
 
     /** Case-insensitive property names that may never appear (at any depth) in `config`. */
     val FORBIDDEN_CONFIG_KEYS = setOf(
@@ -38,6 +40,37 @@ object ActionDefinitionValidator {
             }
         }
 
+        // Writes are never "fire and forget": a retry must not create a second record.
+        if (definition.type.mutatesState && definition.idempotency == IdempotencyPolicy.NONE) {
+            issues += DefinitionIssue("idempotency", "${definition.type} changes state, so idempotency cannot be NONE")
+        }
+        if (definition.type == ActionType.START_WORKFLOW && definition.idempotency != IdempotencyPolicy.REQUIRED) {
+            issues += DefinitionIssue("idempotency", "START_WORKFLOW requires IdempotencyPolicy.REQUIRED")
+        }
+
+        definition.inputMapping.forEach { (name, source) ->
+            if (name !in seen) issues += DefinitionIssue("inputMapping.$name", "maps to an input that is not declared")
+            val pathProblem = when (source) {
+                is InputSource.ComponentState -> pathIssue(source.path, false)
+                is InputSource.ViewModelField -> pathIssue(source.path, false)
+                is InputSource.PreviousResult -> pathIssue(source.path, true)
+                is InputSource.RouteParam -> if (!INPUT_NAME.matches(source.name)) "name must match ${INPUT_NAME.pattern}" else null
+                is InputSource.FormField -> if (!INPUT_NAME.matches(source.name)) "name must match ${INPUT_NAME.pattern}" else null
+                is InputSource.Literal, is InputSource.Context -> null
+            }
+            if (pathProblem != null) issues += DefinitionIssue("inputMapping.$name", pathProblem)
+        }
+
+        definition.requiredPermission?.let { if (!REF_ID.matches(it)) issues += DefinitionIssue("requiredPermission", "must be a plain permission code") }
+
+        for ((field, ids) in listOf("onSuccess" to definition.onSuccess, "onError" to definition.onError)) {
+            if (ids.size > MAX_CHAIN) issues += DefinitionIssue(field, "at most $MAX_CHAIN chained actions")
+            ids.forEachIndexed { i, id ->
+                if (!REF_ID.matches(id)) issues += DefinitionIssue("$field[$i]", "must be a plain action id")
+                if (id == definition.id) issues += DefinitionIssue("$field[$i]", "an action cannot chain to itself")
+            }
+        }
+
         var configBytes = 0
         for ((key, value) in definition.config) {
             configBytes += key.length + value.toString().length
@@ -52,6 +85,9 @@ object ActionDefinitionValidator {
         }
         return issues
     }
+
+    private fun pathIssue(path: String, allowEmpty: Boolean): String? =
+        if (InputResolver.isValidPath(path, allowEmpty)) null else "path must be dotted plain segments (max ${InputResolver.MAX_PATH_SEGMENTS}), no expressions"
 
     private fun forbiddenNested(node: JsonNode, path: String, depth: Int, out: MutableList<DefinitionIssue>) {
         if (depth > MAX_CONFIG_DEPTH) {
