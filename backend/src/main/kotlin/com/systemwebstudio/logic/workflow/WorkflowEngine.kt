@@ -23,6 +23,10 @@ import com.systemwebstudio.logic.action.TenantGate
 import com.systemwebstudio.logic.action.TriggerInfo
 import com.systemwebstudio.logic.action.TriggerKind
 import com.systemwebstudio.logic.action.WorkflowStarterPort
+import com.systemwebstudio.logic.limits.InMemoryTenantRateLimiter
+import com.systemwebstudio.logic.limits.RateDecision
+import com.systemwebstudio.logic.limits.RateScope
+import com.systemwebstudio.logic.limits.TenantRateLimiter
 import com.systemwebstudio.logic.approval.Approval
 import com.systemwebstudio.logic.approval.ApprovalListener
 import com.systemwebstudio.logic.approval.ApprovalRequest
@@ -79,14 +83,18 @@ class WorkflowEngine(
     private val ceiling: WorkflowLimits = WorkflowLimits(),
     private val clock: Clock = Clock.systemUTC(),
     /** A run untouched for this long while it should be progressing is considered lost and nudged again. */
-    private val staleAfter: Duration = Duration.ofMinutes(2)
+    private val staleAfter: Duration = Duration.ofMinutes(2),
+    /** Per-tenant limit on workflow starts ([RateScope.WORKFLOW_START]); scheduled fires are limited by the scheduler's own scope instead. */
+    private val limiter: TenantRateLimiter = InMemoryTenantRateLimiter(clock = clock)
 ) : WorkflowRuntime, WorkflowStarterPort, ScheduledRunEnqueuer, ApprovalListener {
 
     private val log = System.getLogger(WorkflowEngine::class.java.name)
 
     // ───────────────────────────── start / status / cancel ─────────────────────────────
 
-    override fun start(ctx: ActionContext, request: WorkflowStartRequest): WorkflowResult<WorkflowRunView> {
+    override fun start(ctx: ActionContext, request: WorkflowStartRequest): WorkflowResult<WorkflowRunView> = start(ctx, request, countStart = true)
+
+    private fun start(ctx: ActionContext, request: WorkflowStartRequest, countStart: Boolean): WorkflowResult<WorkflowRunView> {
         val appId = ctx.projectId ?: return fail(WorkflowErrorCodes.INVALID_INPUT, "Application context is required")
         gate(ctx)?.let { return it }
         if (!KEY.matches(request.idempotencyKey)) return fail(WorkflowErrorCodes.KEY_INVALID, "Idempotency key must be 1-128 chars of [A-Za-z0-9._:-]")
@@ -102,6 +110,9 @@ class WorkflowEngine(
             AccessRequest(LogicPermissions.APP_USE, ResourceKind.APP, appId.toString(), appId, request.mode),
             AccessRequest(LogicPermissions.WORKFLOW_EXECUTE, ResourceKind.WORKFLOW, def.id, appId, request.mode)
         )) deny(ctx, check)?.let { return it }
+
+        // After authorization (the unauthorized cannot spend the tenant's budget), before the run exists.
+        if (countStart) rateLimit(ctx.tenantId, RateScope.WORKFLOW_START)?.let { return it }
 
         return startInternal(ctx, appId, def, request.input, request.idempotencyKey, request.mode, request.callDepth)
     }
@@ -178,7 +189,7 @@ class WorkflowEngine(
     override fun enqueue(request: ScheduledRunRequest): EnqueueOutcome {
         val ctx = ActionContext(request.tenantId, ActionActor(request.actorUserId, ActorKind.USER), null, request.appId, "sched:${request.scheduleId}")
         val result = when (val t = request.target) {
-            is ScheduleTarget.Workflow -> start(ctx, WorkflowStartRequest(t.workflowRef, request.input ?: json.createObjectNode(), request.idempotencyKey))
+            is ScheduleTarget.Workflow -> start(ctx, WorkflowStartRequest(t.workflowRef, request.input ?: json.createObjectNode(), request.idempotencyKey), countStart = false)
             is ScheduleTarget.Action -> startScheduledAction(ctx, t.actionRef, request.input, request.idempotencyKey)
         }
         return when (result) {
@@ -273,7 +284,8 @@ class WorkflowEngine(
 
     private sealed interface StepOutcome {
         data class Advance(val output: JsonNode, val next: String?, val simulated: Boolean = false, val level: DryRunLevel? = null) : StepOutcome
-        data class Retry(val delay: Duration, val code: String, val message: String?) : StepOutcome
+        /** [consumesAttempt] false for a rate-limit pushback: the step did not fail, it was told to wait, so it keeps its attempt budget. */
+        data class Retry(val delay: Duration, val code: String, val message: String?, val consumesAttempt: Boolean = true) : StepOutcome
         data class Fail(val code: String, val message: String?) : StepOutcome
         data class Wait(val wakeAt: Instant) : StepOutcome
         data class WaitApproval(val approvalId: UUID) : StepOutcome
@@ -333,7 +345,11 @@ class WorkflowEngine(
                     is ActionResult.Ok -> StepOutcome.Advance(res.output, nextOf(run, step))
                     is ActionResult.WouldRun -> StepOutcome.Advance(wouldRunOutput(res), nextOf(run, step), simulated = true, level = res.level)
                     is ActionResult.Failed ->
-                        if (res.retryable && attempt < step.retry.maxAttempts) StepOutcome.Retry(step.retry.backoffAfter(attempt), res.code, res.message)
+                        // A rate limit is pushback, not a failure: wait as long as asked (never less than the backoff floor); the run's maximum duration still bounds it.
+                        if (res.code == ActionErrorCodes.RATE_LIMITED) StepOutcome.Retry(
+                            maxOf(RetryPolicy.MIN_BACKOFF, Duration.ofMillis(res.details["retryAfterMillis"]?.toLongOrNull()?.coerceIn(0, 300_000) ?: 0)), res.code, res.message, consumesAttempt = false
+                        )
+                        else if (res.retryable && attempt < step.retry.maxAttempts) StepOutcome.Retry(step.retry.backoffAfter(attempt), res.code, res.message)
                         else StepOutcome.Fail(res.code, res.message)
                 }
             }
@@ -413,7 +429,10 @@ class WorkflowEngine(
                 advance(cur.withStep(done), null, now)
             }
             is StepOutcome.Retry -> {
-                val w = st.copy(status = StepStatus.RETRY_WAIT, input = inputNode, errorCode = outcome.code, errorMessage = outcome.message?.take(300), wakeAt = now.plus(outcome.delay))
+                val w = st.copy(
+                    status = StepStatus.RETRY_WAIT, input = inputNode, errorCode = outcome.code, errorMessage = outcome.message?.take(300), wakeAt = now.plus(outcome.delay),
+                    attempt = if (outcome.consumesAttempt) st.attempt else (st.attempt - 1).coerceAtLeast(0)
+                )
                 Transition(cur.withStep(w).copy(status = WorkflowRunStatus.WAITING, updatedAt = now), null, false, "STEP_RETRY")
             }
             is StepOutcome.Wait -> {
@@ -646,6 +665,13 @@ class WorkflowEngine(
         val d = try { access.check(ctx, AccessRequest(LogicPermissions.WORKFLOW_MANAGE, ResourceKind.WORKFLOW_RUN, run.runId.toString(), run.appId, run.mode)) } catch (e: Exception) { null }
         return d is AuthorizationDecision.Allowed
     }
+
+    private fun rateLimit(tenantId: UUID, scope: RateScope): WorkflowResult.Failed? =
+        when (val d = try { limiter.tryAcquire(tenantId, scope) } catch (e: Exception) { null }) {
+            is RateDecision.Allowed -> null
+            is RateDecision.Limited -> WorkflowResult.Failed(WorkflowErrorCodes.RATE_LIMITED, "Too many workflow starts for this tenant, retry in ${d.retryAfter.toMillis()} ms", true)
+            null -> WorkflowResult.Failed(WorkflowErrorCodes.DEPENDENCY_UNAVAILABLE, "Rate limiter is unavailable", true)
+        }
 
     private fun gate(ctx: ActionContext): WorkflowResult.Failed? = when (try { tenants.isEnabled(ctx.tenantId) } catch (e: Exception) { null }) {
         true -> null

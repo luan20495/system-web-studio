@@ -174,13 +174,15 @@ class ActionRig(
             clock: Clock = Fx.clock,
             maxChain: Int = 16,
             /** true (default): every definition without a trigger gets a UI trigger, so tests exercise the pipeline; false: definitions are used as given. */
-            bindTriggers: Boolean = true
+            bindTriggers: Boolean = true,
+            /** Rigs are unlimited unless a test is about rate limiting. */
+            limiter: com.systemwebstudio.logic.limits.TenantRateLimiter = com.systemwebstudio.logic.limits.TenantRateLimiter.UNLIMITED
         ): ActionRig {
             val bound = if (bindTriggers) defs.map { if (it.trigger == null) it.copy(trigger = Fx.uiTrigger) else it }.toTypedArray() else defs
             val d = FakeDefinitions(*bound)
             val data = FakeDataPort(); val notify = FakeNotifyPort(); val wf = FakeWorkflowPort(); val runs = InMemoryActionRunStore()
             val reg = registry?.invoke(data, notify, wf) ?: com.systemwebstudio.logic.action.handlers.DefaultActionHandlers.registry(Fx.json, ActionPorts(data, notify, wf))
-            val rt = DefaultActionRuntime(d, reg, access, tenants, runs, audit, InputResolver(Fx.json), bindings, ceiling, clock, executor, maxChain)
+            val rt = DefaultActionRuntime(d, reg, access, tenants, runs, audit, InputResolver(Fx.json), bindings, ceiling, clock, executor, maxChain, limiter)
             return ActionRig(d, data, notify, wf, access, tenants, audit, runs, rt)
         }
     }

@@ -12,6 +12,10 @@ import com.systemwebstudio.logic.action.LogicAuditRecord
 import com.systemwebstudio.logic.action.LogicPermissions
 import com.systemwebstudio.logic.action.ResourceKind
 import com.systemwebstudio.logic.action.TenantGate
+import com.systemwebstudio.logic.limits.InMemoryTenantRateLimiter
+import com.systemwebstudio.logic.limits.RateDecision
+import com.systemwebstudio.logic.limits.RateScope
+import com.systemwebstudio.logic.limits.TenantRateLimiter
 import tools.jackson.databind.JsonNode
 import java.time.Clock
 import java.time.Duration
@@ -35,7 +39,7 @@ sealed interface ScheduleResult<out T> {
     data class Failed(val code: String, val message: String, val retryable: Boolean = false) : ScheduleResult<Nothing>
 }
 
-data class TickReport(val fired: Int = 0, val skippedMisfire: Int = 0, val skippedTenant: Int = 0, val enqueueFailed: Int = 0, val retried: Int = 0)
+data class TickReport(val fired: Int = 0, val skippedMisfire: Int = 0, val skippedTenant: Int = 0, val enqueueFailed: Int = 0, val retried: Int = 0, val rateLimited: Int = 0)
 
 /**
  * Schedules. **The scheduler only enqueues**: a tick claims due schedules (compare-and-set, so only one node wins) and hands a
@@ -54,7 +58,11 @@ class SchedulerService(
     /** A claimed-but-unconfirmed fire is re-enqueued after this long. */
     private val pendingRetryAfter: Duration = Duration.ofSeconds(30),
     private val maxSchedulesPerApp: Int = 100,
-    private val maxInputBytes: Int = 16 * 1024
+    private val maxInputBytes: Int = 16 * 1024,
+    /** Per-tenant limit on fires handed to the workflow runtime ([RateScope.SCHEDULER_ENQUEUE]). */
+    private val limiter: TenantRateLimiter = InMemoryTenantRateLimiter(clock = clock),
+    /** At most this many due schedules of one tenant are looked at per tick, so one tenant's backlog cannot crowd out the others. */
+    private val maxPerTenantPerTick: Int = 25
 ) {
     private val log = System.getLogger(SchedulerService::class.java.name)
 
@@ -104,9 +112,9 @@ class SchedulerService(
      */
     fun tick(limit: Int = 100): TickReport {
         val now = clock.instant()
-        var fired = 0; var misfire = 0; var tenantSkip = 0; var failed = 0; var retried = 0
+        var fired = 0; var misfire = 0; var tenantSkip = 0; var failed = 0; var retried = 0; var limited = 0
 
-        for (s in store.pending(now.minus(pendingRetryAfter), limit)) {
+        for (s in store.pending(now.minus(pendingRetryAfter), limit, maxPerTenantPerTick)) {
             when (enqueue(s, s.pendingFireAt!!)) {
                 true -> { confirm(s, "FIRED"); retried++ }
                 false -> failed++
@@ -114,7 +122,7 @@ class SchedulerService(
             }
         }
 
-        for (s in store.due(now, limit)) {
+        for (s in store.due(now, limit, maxPerTenantPerTick)) {
             val fireAt = s.nextRunAt ?: continue
             val zone = ZoneId.of(s.timezone)
             val cron = CronExpression.parse(s.cron)
@@ -125,6 +133,14 @@ class SchedulerService(
 
             val skip = !tenantOn || (missed && s.misfirePolicy == MisfirePolicy.SKIP)
             val status = when { !tenantOn -> "SKIPPED_TENANT_DISABLED"; missed && skip -> "SKIPPED_MISFIRE"; else -> null }
+            if (!skip) {
+                // Over the tenant's budget: leave the schedule due (nothing is claimed or lost) and try again on a later tick.
+                when (try { limiter.tryAcquire(s.tenantId, RateScope.SCHEDULER_ENQUEUE) } catch (e: Exception) { null }) {
+                    is RateDecision.Allowed -> Unit
+                    is RateDecision.Limited -> { limited++; continue }
+                    null -> continue
+                }
+            }
             val upd = s.copy(
                 nextRunAt = nextAfter, updatedAt = now,
                 lastRunAt = if (skip) s.lastRunAt else fireAt, lastRunStatus = status ?: "CLAIMED",
@@ -143,7 +159,7 @@ class SchedulerService(
                 null -> Unit
             }
         }
-        return TickReport(fired, misfire, tenantSkip, failed, retried)
+        return TickReport(fired, misfire, tenantSkip, failed, retried, limited)
     }
 
     /** true = confirmed, false = failed (retry later), null = nothing to do. */

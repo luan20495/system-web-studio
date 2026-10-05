@@ -32,11 +32,19 @@ data class RetryPolicy(
         require(multiplier >= 1.0 && multiplier <= 10.0) { "multiplier must be between 1 and 10" }
     }
 
-    /** Delay before attempt `failedAttempt + 1` (exponential, capped). [failedAttempt] is 1-based. */
+    /**
+     * Delay before attempt `failedAttempt + 1` (exponential, capped). [failedAttempt] is 1-based. **Never below [MIN_BACKOFF]**: a definition that
+     * says 0 ms (or a cap below the floor) still waits the floor, so a failing step cannot spin against its dependency or the queue.
+     */
     fun backoffAfter(failedAttempt: Int): Duration {
         var millis = initialBackoff.toMillis().toDouble()
         repeat((failedAttempt - 1).coerceAtLeast(0)) { millis = minOf(millis * multiplier, maxBackoff.toMillis().toDouble()) }
-        return Duration.ofMillis(minOf(millis.toLong(), maxBackoff.toMillis()))
+        return maxOf(MIN_BACKOFF, Duration.ofMillis(minOf(millis.toLong(), maxBackoff.toMillis())))
+    }
+
+    companion object {
+        /** The floor of every retry/backoff delay in the runtime. */
+        val MIN_BACKOFF: Duration = Duration.ofSeconds(1)
     }
 }
 

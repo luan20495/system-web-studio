@@ -1,5 +1,6 @@
 package com.systemwebstudio.logic.scheduler
 
+import com.systemwebstudio.logic.limits.FairSelection
 import tools.jackson.databind.JsonNode
 import java.time.Instant
 import java.util.UUID
@@ -69,9 +70,10 @@ interface ScheduleStore {
     fun compareAndSet(expected: Schedule, next: Schedule): Boolean
     fun delete(tenantId: UUID, id: UUID): Boolean
     fun list(tenantId: UUID, appId: UUID?): List<Schedule>
-    fun due(now: Instant, limit: Int): List<Schedule>
-    /** Claimed but unconfirmed fires older than [olderThan]. */
-    fun pending(olderThan: Instant, limit: Int): List<Schedule>
+    /** Due schedules, oldest fire time first, at most [limit] in total and [perTenant] per tenant (round-robin across tenants, see [com.systemwebstudio.logic.limits.FairSelection]). */
+    fun due(now: Instant, limit: Int, perTenant: Int = Int.MAX_VALUE): List<Schedule>
+    /** Claimed but unconfirmed fires older than [olderThan], with the same fairness rule as [due]. */
+    fun pending(olderThan: Instant, limit: Int, perTenant: Int = Int.MAX_VALUE): List<Schedule>
 }
 
 class InMemoryScheduleStore : ScheduleStore {
@@ -85,8 +87,10 @@ class InMemoryScheduleStore : ScheduleStore {
     }
     override fun delete(tenantId: UUID, id: UUID) = rows.remove(tenantId to id) != null
     override fun list(tenantId: UUID, appId: UUID?) = rows.values.filter { it.tenantId == tenantId && (appId == null || it.appId == appId) }.sortedBy { it.createdAt }
-    override fun due(now: Instant, limit: Int) =
-        rows.values.filter { it.enabled && it.pendingFireAt == null && it.nextRunAt != null && !it.nextRunAt.isAfter(now) }.sortedBy { it.nextRunAt }.take(limit)
-    override fun pending(olderThan: Instant, limit: Int) =
-        rows.values.filter { it.pendingFireAt != null && it.updatedAt.isBefore(olderThan) }.sortedBy { it.updatedAt }.take(limit)
+    override fun due(now: Instant, limit: Int, perTenant: Int) = FairSelection.pick(
+        rows.values.filter { it.enabled && it.pendingFireAt == null && it.nextRunAt != null && !it.nextRunAt.isAfter(now) }.sortedBy { it.nextRunAt }, limit, perTenant
+    ) { it.tenantId }
+    override fun pending(olderThan: Instant, limit: Int, perTenant: Int) = FairSelection.pick(
+        rows.values.filter { it.pendingFireAt != null && it.updatedAt.isBefore(olderThan) }.sortedBy { it.updatedAt }, limit, perTenant
+    ) { it.tenantId }
 }

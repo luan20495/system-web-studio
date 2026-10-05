@@ -31,7 +31,7 @@ class SchedulerServiceTests {
         val access = FakeAccess()
         val tenants = FakeTenants()
         val audit = RecordingLogicAudit()
-        val svc = SchedulerService(store, enq, access, tenants, audit, clock)
+        val svc = SchedulerService(store, enq, access, tenants, audit, clock, limiter = com.systemwebstudio.logic.limits.TenantRateLimiter.UNLIMITED)
         fun create(cron: String = "* * * * *", tz: String = "UTC", enabled: Boolean = true, misfire: MisfirePolicy = MisfirePolicy.SKIP, target: ScheduleTarget = ScheduleTarget.Workflow("nightly")) =
             (svc.create(Fx.ctx(), ScheduleSpec(Fx.appA, "job", cron, tz, target, null, enabled, misfire)) as ScheduleResult.Ok).value
     }

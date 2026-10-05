@@ -1,5 +1,9 @@
 package com.systemwebstudio.logic.action
 
+import com.systemwebstudio.logic.limits.InMemoryTenantRateLimiter
+import com.systemwebstudio.logic.limits.RateDecision
+import com.systemwebstudio.logic.limits.RateScope
+import com.systemwebstudio.logic.limits.TenantRateLimiter
 import java.security.MessageDigest
 import java.time.Clock
 import java.time.Duration
@@ -54,6 +58,7 @@ interface ActionRuntime {
  *  3. tenant- and app-scoped definition → UNKNOWN_ACTION (also for other tenants'/apps' ids and disabled actions)
  *  3b. UI-bound runs need a declared trigger (workflow-invoked actions do not) → UNKNOWN_ACTION
  *  4. authorization (APP_USE, ACTION_EXECUTE, DATA_MUTATE for data types, declared permission, WORKFLOW_EXECUTE for START_WORKFLOW) → FORBIDDEN (default deny, audited)
+ *  4b. per-tenant rate limit            → RATE_LIMITED (retryable, after authorization so the unauthorized cannot burn the budget)
  *  5. handler for the type              → UNSUPPORTED_ACTION_TYPE
  *  6. call depth / definition valid     → LIMIT_EXCEEDED / INVALID_DEFINITION
  *  7. resolve + bind input              → LIMIT_EXCEEDED / INVALID_INPUT
@@ -79,7 +84,9 @@ class DefaultActionRuntime(
     private val clock: Clock = Clock.systemUTC(),
     private val executor: ExecutorService = Executors.newVirtualThreadPerTaskExecutor(),
     /** Max number of actions started by `onSuccess`/`onError` chaining per [run]. */
-    private val maxChainActions: Int = 16
+    private val maxChainActions: Int = 16,
+    /** Per-tenant limit on executions ([RateScope.ACTION_EXECUTE]). Default: in-memory per node; C0 may supply a cluster-wide implementation. */
+    private val limiter: TenantRateLimiter = InMemoryTenantRateLimiter(clock = clock)
 ) : ActionRuntime {
 
     private val log = System.getLogger(DefaultActionRuntime::class.java.name)
@@ -166,6 +173,16 @@ class DefaultActionRuntime(
                 }
                 null -> return Outcome(failed(ActionErrorCodes.DEPENDENCY_UNAVAILABLE, "Authorization could not be evaluated", retryable = true), null)
             }
+        }
+
+        // Per-tenant rate limit, after authorization so a caller without permission cannot spend the tenant's budget, before any state or side effect.
+        when (val d = safely { limiter.tryAcquire(ctx.tenantId, RateScope.ACTION_EXECUTE) }) {
+            is RateDecision.Allowed -> Unit
+            is RateDecision.Limited -> return Outcome(
+                reject(ctx, request, null, failed(ActionErrorCodes.RATE_LIMITED, "Too many actions for this tenant, retry later", retryable = true, details = mapOf("retryAfterMillis" to d.retryAfter.toMillis().toString()))),
+                null
+            )
+            null -> return Outcome(failed(ActionErrorCodes.DEPENDENCY_UNAVAILABLE, "Rate limiter is unavailable", retryable = true), null)
         }
 
         val handler = handlers[def.type]
@@ -344,7 +361,7 @@ class DefaultActionRuntime(
             ActionErrorCodes.UNKNOWN_ACTION, ActionErrorCodes.UNSUPPORTED_ACTION_TYPE, ActionErrorCodes.FORBIDDEN, ActionErrorCodes.TENANT_DISABLED,
             ActionErrorCodes.INVALID_DEFINITION, ActionErrorCodes.LIMIT_EXCEEDED, ActionErrorCodes.IDEMPOTENCY_KEY_REQUIRED,
             ActionErrorCodes.IDEMPOTENCY_KEY_INVALID, ActionErrorCodes.IDEMPOTENCY_KEY_REUSED, ActionErrorCodes.ACTION_IN_PROGRESS,
-            ActionErrorCodes.DEPENDENCY_UNAVAILABLE, ActionErrorCodes.AUDIT_UNAVAILABLE
+            ActionErrorCodes.DEPENDENCY_UNAVAILABLE, ActionErrorCodes.AUDIT_UNAVAILABLE, ActionErrorCodes.RATE_LIMITED
         )
 
         /** A client-supplied id becomes part of an idempotency key: keep it if it is plain, otherwise replace it by a digest. */

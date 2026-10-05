@@ -200,4 +200,14 @@ class WorkflowModelTests {
             assertTrue(WorkflowJob.decode(bad) == null, "accepted: $bad")
         }
     }
+
+    @Test fun `no retry ever waits less than the backoff floor`() {
+        val zero = RetryPolicy(maxAttempts = 5, initialBackoff = java.time.Duration.ZERO, maxBackoff = java.time.Duration.ZERO)
+        for (a in 1..6) assertEquals(RetryPolicy.MIN_BACKOFF, zero.backoffAfter(a))
+        val tiny = RetryPolicy(maxAttempts = 5, initialBackoff = java.time.Duration.ofMillis(1), multiplier = 1.0)
+        assertEquals(RetryPolicy.MIN_BACKOFF, tiny.backoffAfter(1))
+        val normal = RetryPolicy(maxAttempts = 5, initialBackoff = java.time.Duration.ofSeconds(2), maxBackoff = java.time.Duration.ofSeconds(10))
+        assertEquals(java.time.Duration.ofSeconds(2), normal.backoffAfter(1)); assertEquals(java.time.Duration.ofSeconds(4), normal.backoffAfter(2))
+        assertEquals(java.time.Duration.ofSeconds(10), normal.backoffAfter(30))
+    }
 }

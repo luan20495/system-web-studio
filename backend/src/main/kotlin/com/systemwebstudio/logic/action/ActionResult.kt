@@ -44,7 +44,7 @@ sealed interface ActionResult {
  * "unknown → 404, known-but-no-permission → 403":
  * UNKNOWN_ACTION 404 · FORBIDDEN / TENANT_DISABLED 403 · INVALID_INPUT / INVALID_DEFINITION / IDEMPOTENCY_KEY_REQUIRED 400/422 ·
  * LIMIT_EXCEEDED 413/422 · IDEMPOTENCY_KEY_REUSED / ACTION_IN_PROGRESS 409 · NOT_IMPLEMENTED 501 ·
- * TIMEOUT 504 · DEPENDENCY_UNAVAILABLE / AUDIT_UNAVAILABLE 503 · HANDLER_ERROR 500.
+ * TIMEOUT 504 · DEPENDENCY_UNAVAILABLE / AUDIT_UNAVAILABLE 503 · HANDLER_ERROR 500 · RATE_LIMITED 429 (with `details.retryAfterMillis`).
  */
 object ActionErrorCodes {
     const val UNKNOWN_ACTION = "UNKNOWN_ACTION"
@@ -64,6 +64,8 @@ object ActionErrorCodes {
     const val DEPENDENCY_UNAVAILABLE = "DEPENDENCY_UNAVAILABLE"
     const val AUDIT_UNAVAILABLE = "AUDIT_UNAVAILABLE"
     const val HANDLER_ERROR = "HANDLER_ERROR"
+    /** The tenant exceeded its action rate. Always retryable; `details["retryAfterMillis"]` says when. */
+    const val RATE_LIMITED = "RATE_LIMITED"
 }
 
 internal fun failed(code: String, message: String, retryable: Boolean = false, details: Map<String, String> = emptyMap()) =

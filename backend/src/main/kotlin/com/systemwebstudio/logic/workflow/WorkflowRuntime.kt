@@ -38,6 +38,7 @@ object WorkflowErrorCodes {
     const val APPROVAL_REJECTED = "APPROVAL_REJECTED"
     const val APPROVAL_EXPIRED = "APPROVAL_EXPIRED"
     const val NOT_IMPLEMENTED = "NOT_IMPLEMENTED"
+    const val RATE_LIMITED = "RATE_LIMITED"
 }
 
 sealed interface WorkflowResult<out T> {

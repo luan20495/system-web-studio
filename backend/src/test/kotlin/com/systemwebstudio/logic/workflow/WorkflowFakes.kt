@@ -47,11 +47,14 @@ class WorkflowRig(
     ceiling: WorkflowLimits = WorkflowLimits(),
     staleAfter: Duration = Duration.ofMinutes(2),
     maxDeliveries: Int = 3,
+    limiter: com.systemwebstudio.logic.limits.TenantRateLimiter = com.systemwebstudio.logic.limits.TenantRateLimiter.UNLIMITED,
+    actionLimiter: com.systemwebstudio.logic.limits.TenantRateLimiter = com.systemwebstudio.logic.limits.TenantRateLimiter.UNLIMITED,
     principals: FakePrincipals = FakePrincipals(
         groups = mapOf("finance" to setOf(Fx.user2)), roles = mapOf("approvers" to setOf(Fx.user2)), managers = mapOf("own" to Fx.user2)
-    )
+    ),
+    /** Pass one to share it with a limiter (or any other component) built before the rig. */
+    val clock: TestClock = TestClock()
 ) {
-    val clock = TestClock()
     val access = FakeAccess()
     val tenants = FakeTenants()
     val actionAudit = RecordingAudit()
@@ -62,7 +65,7 @@ class WorkflowRig(
         override fun start(ctx: ActionContext, request: StartWorkflowRequest): PortOutcome = engineRef!!.start(ctx, request)
     }
     val actionRig = ActionRig.build(
-        *actions.toTypedArray(), audit = actionAudit, access = access, tenants = tenants, executor = executor, clock = clock,
+        *actions.toTypedArray(), audit = actionAudit, access = access, tenants = tenants, executor = executor, clock = clock, limiter = actionLimiter,
         registry = { d, n, _ -> DefaultActionHandlers.registry(Fx.json, ActionPorts(d, n, starter)) }
     )
     val data get() = actionRig.data
@@ -74,7 +77,7 @@ class WorkflowRig(
     val approvals = ApprovalService(
         Fx.json, approvalStore, principals, tenants, audit, null, if (wireApprovalListener) ApprovalListener { engineRef?.onFinal(it) } else null, clock = clock
     )
-    val engine = WorkflowEngine(Fx.json, defs, actionRig.runtime, runStore, queue, access, tenants, audit, approvals, ceiling, clock, staleAfter).also { engineRef = it }
+    val engine = WorkflowEngine(Fx.json, defs, actionRig.runtime, runStore, queue, access, tenants, audit, approvals, ceiling, clock, staleAfter, limiter).also { engineRef = it }
     val worker = WorkflowWorker(engine, queue)
 
     fun ctx(userId: UUID = Fx.user, tenant: UUID = Fx.tenantA) = Fx.ctx(tenant = tenant, userId = userId)
