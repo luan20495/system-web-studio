@@ -46,4 +46,4 @@ interface DataGateway {                          // cổng duy nhất UI/Action 
 4. Mọi truy cập cô lập theo `tenantId` (`tenant-context.md`).
 5. Connector proxy hiện có tiếp tục hoạt động nguyên trạng (backward compatible); hợp nhất vào Data Platform là quyết định riêng (D-003).
 
-Migration range C3: **V40–V49**. Phụ thuộc: C1 (`TenantContext`, permission), C2 (binding trong AppDefinition tham chiếu `queryId`).
+Migration: không tự chọn version; ghi request vào `docs/parallel/BOARD.md`, C0 cấp version (xem `OWNERSHIP.md §6`). Phụ thuộc: C1 (`TenantContext`, permission), C2 (binding trong AppDefinition tham chiếu `queryId`).

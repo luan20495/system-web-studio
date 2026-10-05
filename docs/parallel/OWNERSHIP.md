@@ -89,7 +89,7 @@ Flyway **không** bật `outOfOrder`, nên migration có version thấp merge sa
 
 Quy tắc:
 1. **Chỉ C0 được cấp số Flyway migration.** Agent không tự chọn số.
-2. Agent cần migration → ghi **request** trong `BOARD.md` (mục *Migration requests*) hoặc `BLOCKERS.md` (loại `needs-migration`): task, mô tả ngắn thay đổi schema.
+2. Agent cần migration → ghi **request** trong `BOARD.md` (mục *Migration requests*): task, mô tả ngắn thay đổi schema.
 3. C0 cấp **next available version** theo thứ tự: V26, V27, V28, … và ghi vào bảng cấp số ở `BOARD.md`.
 4. **Một version chỉ thuộc một task.** Không dùng lại, không chia sẻ số giữa task.
 5. Agent chỉ tạo file `V<số được cấp>__<mô_tả>.sql` sau khi C0 cấp; không tạo trước.

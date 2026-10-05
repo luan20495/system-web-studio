@@ -39,4 +39,4 @@ Action loại khai báo (không code tùy ý): `RUN_QUERY`, `WRITE_DATA` (qua Ga
 4. Audit mọi run (bắt đầu/kết thúc/lỗi) qua `AuditService` (append-only).
 5. Scheduler: cron khai báo trong định nghĩa, chạy một lần mỗi lịch (khóa phân tán qua DB/Redis), tôn trọng tenant bị disable.
 
-Migration range C4: **V50–V59**. Phụ thuộc: C1 (tenant, permission), C3 (`DataGateway`), C2 (`ActionRef` trong AppDefinition).
+Migration: không tự chọn version; ghi request vào `docs/parallel/BOARD.md`, C0 cấp version (xem `OWNERSHIP.md §6`). Phụ thuộc: C1 (tenant, permission), C3 (`DataGateway`), C2 (`ActionRef` trong AppDefinition).

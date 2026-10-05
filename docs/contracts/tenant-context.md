@@ -31,4 +31,4 @@ enum class ActorKind { USER, SYSTEM, APP_TOKEN, SERVICE }
 7. Cô lập dữ liệu giữa tenant là yêu cầu bảo mật: cần test "cross-tenant → 404/403".
 
 ## Không làm trong Phase 0
-Bảng `tenants`, backfill, đổi API, đổi tên bảng — thuộc T1/T2 (C1), migration V26–V34.
+Bảng `tenants`, backfill, đổi API, đổi tên bảng — thuộc T1/T2 (C1). Migration: không tự chọn version; ghi request vào `docs/parallel/BOARD.md`, C0 cấp version (xem `OWNERSHIP.md §6`).

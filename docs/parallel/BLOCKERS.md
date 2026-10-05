@@ -6,6 +6,6 @@ Loại: `needs-hot-file` · `needs-shared-file` · `needs-contract-change` · `n
 
 | ID | Ngày | Từ | Cần từ | Loại | Mô tả | Trạng thái |
 |---|---|---|---|---|---|---|
-| B-001 | 2026-10-05 | C0 | C0 | needs-migration | Flyway không bật `outOfOrder`. Các range V26–V59 gián đoạn: nếu DB dev đã áp dụng V35 rồi nhánh khác merge V30, Flyway sẽ báo lỗi validate. Merge theo thứ tự tăng dần hoặc dùng DB dev mới; không tự bật `outOfOrder`. | OPEN |
+| B-001 | 2026-10-05 | C0 | C0 | needs-migration | Risk: migration version coordination is centralized through C0. Flyway không bật `outOfOrder`, nên version phải được C0 cấp tuần tự (request ở `BOARD.md`), gắn một task, và merge theo thứ tự tăng dần; không bật `outOfOrder=true`. Vấn đề phân vùng số cũ đã được thay thế (D-006 → D-007). | MITIGATED |
 | B-002 | 2026-10-05 | C3 | C0 | needs-shared-file | Connector proxy/SSRF guard nằm trong `runtime/Gateway.kt` (xem D-003). | OPEN |
 | B-003 | 2026-10-05 | C1–C5 | C0 | needs-shared-file | Backend test dùng `support/IntegrationTestBase.kt` (Testcontainers) dùng chung; mở rộng → xin C0. | OPEN |

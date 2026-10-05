@@ -49,4 +49,4 @@ Trách nhiệm: delegate phần page/section cho `PageSchemaValidator` (không n
 
 ## Phụ thuộc
 Tenant: `tenant-context.md`. Query/Action: `data-connector.md`, `action-workflow.md` (C2 chỉ giữ **tham chiếu ID**, không giữ logic).
-Migration range C2: **V35–V39**.
+Migration: không tự chọn version; ghi request vào `docs/parallel/BOARD.md`, C0 cấp version (xem `OWNERSHIP.md §6`).

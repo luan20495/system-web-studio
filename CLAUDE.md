@@ -6,7 +6,7 @@ Nền tảng nội bộ "AI Software Factory": **Modular Monolith** Kotlin/Sprin
 - Modular Monolith. **Không** tự chuyển microservices.
 - **Đọc `docs/parallel/OWNERSHIP.md` trước khi sửa code.** Biết mình là C1–C5 nào (theo branch `agent/cN-*`).
 - **Không sửa file của owner khác** (đặc biệt HOT FILES). Cần thay đổi → ghi `docs/parallel/BLOCKERS.md` / cột Depends ở `BOARD.md`.
-- **Chỉ C0 được cấp số Flyway migration.** Không tự chọn số, không tự tạo migration: ghi request trong `docs/parallel/BOARD.md` (mục *Migration requests*) hoặc `BLOCKERS.md`, chờ C0 cấp version tiếp theo (V26, V27, …; một version thuộc một task). Integration branch merge migration theo thứ tự tăng dần. **Không bật `outOfOrder=true`.** Không sửa migration đã tồn tại.
+- **Chỉ C0 được cấp số Flyway migration.** Không tự chọn số, không tự tạo migration: ghi request trong `docs/parallel/BOARD.md` (mục *Migration requests*), chờ C0 cấp version tiếp theo (V26, V27, …; một version thuộc một task). Integration branch merge migration theo thứ tự tăng dần. **Không bật `outOfOrder=true`.** Không sửa migration đã tồn tại.
 - **Không đổi contract chung** (`docs/contracts/**`) nếu chưa ghi `docs/parallel/DECISIONS.md`.
 - Giữ **backward compatibility**: API hiện tại, bảng `projects`, Page Schema, `STATIC_APP`. **Không xóa feature cũ** để làm V2.
 - Bất biến phải bảo toàn: Page Schema + `SchemaPatchEngine` + `PageSchemaValidator`; component registry/version; immutable project versions; AI Gateway; Connector Proxy + SSRF guard + credential chỉ ở server; Audit append-only; publish pipeline; render/build/runtime planes.
