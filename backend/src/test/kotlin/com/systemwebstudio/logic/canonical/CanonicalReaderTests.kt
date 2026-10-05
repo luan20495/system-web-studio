@@ -47,7 +47,7 @@ class CanonicalReaderTests {
 
     private fun doc(s: String): JsonNode = Fx.json.readTree(s)
 
-    /** A document shaped like C2's AppDefinition: provisional action types on purpose (RUN_QUERY, WRITE_DATA, ...). */
+    /** A document shaped like C2's AppDefinition with the canonical v2 action types; `setv` carries a name that is not canonical on purpose. */
     private val c2 = doc("""
     {
       "queries": [ {"id":"orders.list","mode":"READ"}, {"id":"orders.create","mode":"WRITE"} ],
@@ -56,12 +56,12 @@ class CanonicalReaderTests {
                        {"id":"p-other","resourceType":"PAGE","resourceRef":"submit","permission":"x.y"} ],
       "workflows": [ {"id":"onboarding","trigger":"MANUAL","steps":[{"id":"s1","actionRef":"submit","next":"s2"},{"id":"s2","actionRef":"lookup"}]} ],
       "actions": [
-        {"id":"refresh","type":"RUN_QUERY","queryRef":"orders.list"},
-        {"id":"submit","type":"WRITE_DATA","queryRef":"orders.create","permissionRef":"p-submit",
+        {"id":"refresh","type":"REFRESH_QUERY","queryRef":"orders.list"},
+        {"id":"submit","type":"SUBMIT_FORM","queryRef":"orders.create","permissionRef":"p-submit",
          "inputs":[{"name":"title","type":"STRING","required":true}],
          "inputMapping":{"title":{"source":"FORM_FIELD","name":"title"}},
          "trigger":{"sectionId":"form1","event":"onSubmit"}},
-        {"id":"lookup","type":"CALL_CONNECTOR_OPERATION","dataSourceRef":"crm","operationKey":"getCustomer","inputs":[{"name":"q","type":"STRING"}]},
+        {"id":"lookup","type":"CALL_API","dataSourceRef":"crm","operationKey":"getCustomer","inputs":[{"name":"q","type":"STRING"}]},
         {"id":"go","type":"NAVIGATE","pageRef":"home"},
         {"id":"start","type":"START_WORKFLOW","workflowRef":"onboarding","inputs":[{"name":"who","type":"STRING"}]},
         {"id":"setv","type":"SET_VALUE"}
@@ -72,7 +72,11 @@ class CanonicalReaderTests {
 
     // ---- action types and references -------------------------------------------------------------------------------
 
-    @Test fun `C2's provisional action types map to the finalized ones`() {
+    @Test fun `the canonical types are exactly the nine and each is read as itself`() {
+        assertEquals(
+            setOf("NAVIGATE", "REFRESH_QUERY", "SUBMIT_FORM", "CREATE_RECORD", "UPDATE_RECORD", "DELETE_RECORD", "CALL_API", "NOTIFY", "START_WORKFLOW"),
+            ActionType.entries.map { it.name }.toSet()
+        )
         val p = parse()
         assertEquals(ActionType.REFRESH_QUERY, p.actions["refresh"]!!.type)
         assertEquals(ActionType.SUBMIT_FORM, p.actions["submit"]!!.type)
@@ -81,10 +85,40 @@ class CanonicalReaderTests {
         assertEquals(ActionType.START_WORKFLOW, p.actions["start"]!!.type)
     }
 
-    @Test fun `SET_VALUE is client side state and is not offered as a server action`() {
-        val p = parse()
-        assertFalse(p.actions.containsKey("setv"))
-        assertTrue(p.issues["setv"]!!.single().message.contains("client-only"))
+    @Test fun `there is no alias map - draft names and anything non canonical are rejected`() {
+        val aliases = listOf("RUN_QUERY", "WRITE_DATA", "CALL_CONNECTOR_OPERATION", "SET_VALUE", "run_query", "Navigate", "refresh_query", "", "NAVIGATE ")
+        for (alias in aliases) {
+            val d = doc("""{"queries":[{"id":"r","mode":"READ"}],"dataSources":[{"id":"crm"}],"actions":[{"id":"x","type":"$alias","queryRef":"r","pageRef":"home","dataSourceRef":"crm","operationKey":"op"}]}""")
+            val p = parse(d)
+            assertTrue(p.actions.isEmpty(), "'$alias' must not become an action")
+            assertTrue(p.issues["x"]!!.single().message.contains("is not one of"), "'$alias'")
+        }
+        assertFalse(parse().actions.containsKey("setv"))
+        assertNull(CanonicalActionReader.actionType("RUN_QUERY"))
+        assertNull(CanonicalActionReader.actionType("WRITE_DATA"))
+        assertNull(CanonicalActionReader.actionType("CALL_CONNECTOR_OPERATION"))
+    }
+
+    @Test fun `trigger is optional on the definition and does not make a workflow-only action invalid`() {
+        val d = doc("""{"queries":[{"id":"w","mode":"WRITE"}],"actions":[
+            {"id":"wfOnly","type":"CREATE_RECORD","queryRef":"w","inputs":[{"name":"t","type":"STRING"}]},
+            {"id":"ui","type":"CREATE_RECORD","queryRef":"w","inputs":[{"name":"t","type":"STRING"}],"trigger":{"sectionId":"btn","event":"onClick"}}]}""")
+        val p = parse(d)
+        assertEquals(setOf("wfOnly", "ui"), p.actions.keys)
+        assertNull(p.actions["wfOnly"]!!.trigger)
+        assertEquals("btn", p.actions["ui"]!!.trigger!!.sectionId)
+        assertEquals(listOf("ui"), p.refs.map { it.actionId })                         // only the UI-bound one is an event binding
+        assertTrue(p.issues.isEmpty())
+    }
+
+    @Test fun `a trigger that is present but malformed makes the action unusable`() {
+        for (t in listOf("""{"sectionId":"s","event":"onHover"}""", """{"event":"onClick"}""", """{"sectionId":"s"}""", "\"onClick\"", """{"sectionId":"a b","event":"onClick"}""")) {
+            val d = doc("""{"queries":[{"id":"r","mode":"READ"}],"actions":[{"id":"a","type":"REFRESH_QUERY","queryRef":"r","trigger":$t}]}""")
+            val p = parse(d)
+            assertTrue(p.actions.isEmpty(), "offered with trigger $t")
+            assertTrue(p.issues["a"]!!.any { it.path == "trigger" })
+            assertTrue(p.refs.isEmpty())
+        }
     }
 
     @Test fun `finalized names and C4's additive fields are accepted`() {
@@ -100,11 +134,11 @@ class CanonicalReaderTests {
 
     @Test fun `references are resolved inside the document and dangling ones are not offered`() {
         val d = doc("""{"queries":[{"id":"r","mode":"READ"},{"id":"w","mode":"WRITE"}],"dataSources":[{"id":"crm"}],"actions":[
-            {"id":"a1","type":"RUN_QUERY","queryRef":"missing"},
-            {"id":"a2","type":"WRITE_DATA","queryRef":"r"},
-            {"id":"a3","type":"RUN_QUERY","queryRef":"w"},
-            {"id":"a4","type":"CALL_CONNECTOR_OPERATION","dataSourceRef":"ghost","operationKey":"op"},
-            {"id":"a5","type":"CALL_CONNECTOR_OPERATION","dataSourceRef":"crm"},
+            {"id":"a1","type":"REFRESH_QUERY","queryRef":"missing"},
+            {"id":"a2","type":"SUBMIT_FORM","queryRef":"r"},
+            {"id":"a3","type":"REFRESH_QUERY","queryRef":"w"},
+            {"id":"a4","type":"CALL_API","dataSourceRef":"ghost","operationKey":"op"},
+            {"id":"a5","type":"CALL_API","dataSourceRef":"crm"},
             {"id":"a6","type":"START_WORKFLOW","workflowRef":"nope"},
             {"id":"a7","type":"NAVIGATE"}]}""")
         val p = parse(d)
@@ -113,7 +147,7 @@ class CanonicalReaderTests {
     }
 
     @Test fun `CALL_API is an approved operation and a raw url never becomes an action`() {
-        val d = doc("""{"dataSources":[{"id":"crm"}],"actions":[{"id":"x","type":"CALL_CONNECTOR_OPERATION","dataSourceRef":"crm","url":"https://evil.example/steal","headers":{"Authorization":"x"}}]}""")
+        val d = doc("""{"dataSources":[{"id":"crm"}],"actions":[{"id":"x","type":"CALL_API","dataSourceRef":"crm","url":"https://evil.example/steal","headers":{"Authorization":"x"}}]}""")
         val p = parse(d)
         assertFalse(p.actions.containsKey("x"))
         assertTrue(p.issues["x"]!!.any { it.path == "operationKey" })
@@ -121,7 +155,7 @@ class CanonicalReaderTests {
 
     @Test fun `permissionRef must point at an ACTION permission of the same action`() {
         assertEquals("orders.write", parse().actions["submit"]!!.requiredPermission)
-        val d = doc("""{"queries":[{"id":"w","mode":"WRITE"}],"permissions":[{"id":"p","resourceType":"PAGE","resourceRef":"a","permission":"x"}],"actions":[{"id":"a","type":"WRITE_DATA","queryRef":"w","permissionRef":"p"}]}""")
+        val d = doc("""{"queries":[{"id":"w","mode":"WRITE"}],"permissions":[{"id":"p","resourceType":"PAGE","resourceRef":"a","permission":"x"}],"actions":[{"id":"a","type":"SUBMIT_FORM","queryRef":"w","permissionRef":"p"}]}""")
         val p = parse(d)
         assertFalse(p.actions.containsKey("a")); assertTrue(p.issues["a"]!!.any { it.path == "permissionRef" })
     }
@@ -129,7 +163,7 @@ class CanonicalReaderTests {
     @Test fun `inputMapping reads typed sources and rejects anything else`() {
         val m = parse().actions["submit"]!!.inputMapping
         assertEquals(InputSource.FormField("title"), m["title"])
-        val d = doc("""{"queries":[{"id":"w","mode":"WRITE"}],"actions":[{"id":"a","type":"WRITE_DATA","queryRef":"w","inputs":[{"name":"t","type":"STRING"}],"inputMapping":{"t":{"source":"EVAL","code":"alert(1)"}}}]}""")
+        val d = doc("""{"queries":[{"id":"w","mode":"WRITE"}],"actions":[{"id":"a","type":"SUBMIT_FORM","queryRef":"w","inputs":[{"name":"t","type":"STRING"}],"inputMapping":{"t":{"source":"EVAL","code":"alert(1)"}}}]}""")
         val p = parse(d)
         assertFalse(p.actions.containsKey("a")); assertTrue(p.issues["a"]!!.any { it.path == "inputMapping.t" })
     }
@@ -137,7 +171,7 @@ class CanonicalReaderTests {
     @Test fun `writes default to REQUIRED idempotency and cannot opt out`() {
         assertEquals(IdempotencyPolicy.REQUIRED, parse().actions["submit"]!!.idempotency)
         assertEquals(IdempotencyPolicy.NONE, parse().actions["go"]!!.idempotency)
-        val d = doc("""{"queries":[{"id":"w","mode":"WRITE"}],"actions":[{"id":"a","type":"WRITE_DATA","queryRef":"w","idempotency":"NONE"},{"id":"b","type":"WRITE_DATA","queryRef":"w","idempotency":"MAYBE"}]}""")
+        val d = doc("""{"queries":[{"id":"w","mode":"WRITE"}],"actions":[{"id":"a","type":"SUBMIT_FORM","queryRef":"w","idempotency":"NONE"},{"id":"b","type":"SUBMIT_FORM","queryRef":"w","idempotency":"MAYBE"}]}""")
         val p = parse(d)
         assertTrue(p.actions.isEmpty())
         assertTrue(p.issues["a"]!!.any { it.path == "idempotency" }); assertTrue(p.issues["b"]!!.any { it.path == "idempotency" })
@@ -145,9 +179,9 @@ class CanonicalReaderTests {
 
     @Test fun `an action whose chain dangles is not offered, and neither is one that chains to it`() {
         val d = doc("""{"queries":[{"id":"r","mode":"READ"}],"actions":[
-            {"id":"a","type":"RUN_QUERY","queryRef":"r","onSuccess":["ghost"],"trigger":{"sectionId":"s","event":"onClick"}},
-            {"id":"b","type":"RUN_QUERY","queryRef":"r","onError":["a"]},
-            {"id":"c","type":"RUN_QUERY","queryRef":"r"}]}""")
+            {"id":"a","type":"REFRESH_QUERY","queryRef":"r","onSuccess":["ghost"],"trigger":{"sectionId":"s","event":"onClick"}},
+            {"id":"b","type":"REFRESH_QUERY","queryRef":"r","onError":["a"]},
+            {"id":"c","type":"REFRESH_QUERY","queryRef":"r"}]}""")
         val p = parse(d)
         assertEquals(setOf("c"), p.actions.keys)
         assertTrue(p.refs.isEmpty())
@@ -158,7 +192,7 @@ class CanonicalReaderTests {
         val p = parse()
         val ref = p.refs.single()
         assertEquals("submit", ref.actionId); assertEquals("form1", ref.sectionId); assertEquals(EventType.ON_SUBMIT, ref.event)
-        val d = doc("""{"queries":[{"id":"r","mode":"READ"}],"actions":[{"id":"a","type":"RUN_QUERY","queryRef":"r","trigger":{"sectionId":"s","event":"onHover"}}]}""")
+        val d = doc("""{"queries":[{"id":"r","mode":"READ"}],"actions":[{"id":"a","type":"REFRESH_QUERY","queryRef":"r","trigger":{"sectionId":"s","event":"onHover"}}]}""")
         assertTrue(parse(d).refs.isEmpty())
         assertTrue(parse(d).issues["a"]!!.any { it.path == "trigger" })
     }
@@ -189,7 +223,7 @@ class CanonicalReaderTests {
     }
 
     @Test fun `TEST reads the draft and LIVE reads the published version`() {
-        val draft = doc("""{"queries":[{"id":"r","mode":"READ"}],"actions":[{"id":"onlyInDraft","type":"RUN_QUERY","queryRef":"r"}]}""")
+        val draft = doc("""{"queries":[{"id":"r","mode":"READ"}],"actions":[{"id":"onlyInDraft","type":"REFRESH_QUERY","queryRef":"r"}]}""")
         val cat = CanonicalActionCatalog(Source(Fx.tenantA, Fx.appA, c2, draft))
         assertNull(cat.find(Fx.tenantA, Fx.appA, "onlyInDraft", ExecutionMode.LIVE))
         assertEquals("onlyInDraft", cat.find(Fx.tenantA, Fx.appA, "onlyInDraft", ExecutionMode.TEST)!!.id)

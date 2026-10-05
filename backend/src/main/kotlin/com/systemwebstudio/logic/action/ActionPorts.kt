@@ -43,6 +43,8 @@ sealed interface AuthorizationDecision {
 object LogicPermissions {
     const val APP_USE = "APP_USE"
     const val ACTION_EXECUTE = "ACTION_EXECUTE"
+    /** Canonical code for the write side (`tenant-permission.md` §5); required for every data-mutating action type, in addition to ACTION_EXECUTE. */
+    const val DATA_MUTATE = "DATA_MUTATE"
     const val WORKFLOW_EXECUTE = "WORKFLOW_EXECUTE"
     /** Cancel/inspect runs started by someone else, manage schedules. */
     const val WORKFLOW_MANAGE = "WORKFLOW_MANAGE"
@@ -157,14 +159,39 @@ sealed interface PortOutcome {
 enum class WriteKind { CREATE, UPDATE, DELETE, SUBMIT }
 
 /**
- * A write expressed as a reference to a **WRITE query declared in the AppDefinition** (`QueryDef.mode = WRITE`, `queryRef`), which the data
- * platform resolves to an approved definition of the same tenant — never a table name, SQL or URL. [params] are the validated action inputs;
- * binding them is the connector's job. [idempotencyKey] is forwarded so the downstream write de-duplicates as well.
+ * A write expressed as a reference to a **WRITE query declared in the AppDefinition** (`QueryDef.mode = WRITE`, `queryRef`), which the C0 adapter
+ * (`ActionDataPortAdapter` + C2's `AppDataBindingResolver`) turns into a C3 `GatewayMutation`: `queryRef (local id) → QueryDef → dataSourceRef →
+ * DataSourceDef.sourceRef + QueryDef.operationKey` — never a table name, SQL or URL. [params] are the validated action inputs.
+ *
+ * Canonical v2 fields (`docs/contracts/v2/action-workflow.md` §4):
+ *  - [appId] and [mode]: the resolver reads the *published* version for LIVE and the *draft* for TEST; both are explicit so the adapter never guesses.
+ *  - [idempotencyKey]: **always the derived key** ([IdempotencyKeys.derive]) and never null — a mutating call without a key is not expressible, and
+ *    the raw client key cannot be passed because this class has no field for it. It is 43 characters of base64url, which satisfies C3's `^[A-Za-z0-9_-]{8,128}$`.
  */
-data class WriteRequest(val queryRef: String, val kind: WriteKind, val params: Map<String, JsonNode>, val idempotencyKey: String?)
+data class WriteRequest(
+    val appId: UUID,
+    val mode: ExecutionMode,
+    val queryRef: String,
+    val kind: WriteKind,
+    val params: Map<String, JsonNode>,
+    val idempotencyKey: String
+) {
+    init { require(IdempotencyKeys.DERIVED_KEY.matches(idempotencyKey)) { "idempotencyKey must be a derived key" } }
+    override fun toString() = "WriteRequest(appId=$appId, mode=$mode, queryRef=$queryRef, kind=$kind, params=${params.keys}, idempotencyKey=${IdempotencyKeys.redact(idempotencyKey)})"
+}
 
-/** Call of an approved operation of a registered data source (`ActionDef.dataSourceRef` + `operationKey`). No URL, header or credential. */
-data class OperationRequest(val dataSourceRef: String, val operationKey: String, val params: Map<String, JsonNode>, val idempotencyKey: String?)
+/** Call of an approved operation of a registered data source (`ActionDef.dataSourceRef` + `operationKey`). No URL, header or credential. Same canonical fields as [WriteRequest]. */
+data class OperationRequest(
+    val appId: UUID,
+    val mode: ExecutionMode,
+    val dataSourceRef: String,
+    val operationKey: String,
+    val params: Map<String, JsonNode>,
+    val idempotencyKey: String
+) {
+    init { require(IdempotencyKeys.DERIVED_KEY.matches(idempotencyKey)) { "idempotencyKey must be a derived key" } }
+    override fun toString() = "OperationRequest(appId=$appId, mode=$mode, dataSourceRef=$dataSourceRef, operationKey=$operationKey, params=${params.keys}, idempotencyKey=${IdempotencyKeys.redact(idempotencyKey)})"
+}
 
 /** What a data system says about a TEST-mode request. [Unsupported] is the honest default: the runtime then reports NOT_EXECUTED. */
 sealed interface DryRunOutcome {
@@ -176,7 +203,13 @@ sealed interface DryRunOutcome {
     data class Failure(val code: String, val retryable: Boolean, val message: String? = null) : DryRunOutcome
 }
 
-/** C3 side. All methods must run the caller's own authorization/tenant checks and the connector safety rules (SSRF guard, limits). */
+/**
+ * **The only door from the Action layer to data** (`DataPath`): `ActionRuntime → ActionDataPort → [C0 adapter + AppDataBindingResolver] → DataGateway`.
+ * No handler, workflow step or scheduler touches a repository, a connector, JDBC or HTTP; the architecture test `ActionDataPathTests` enforces it.
+ * The C0 adapter (`wiring.ActionDataPortAdapter`, not written here) builds `GatewayContext` from [ActionContext], resolves the refs through the
+ * AppDefinition of ([ActionContext.tenantId], [WriteRequest.appId], [WriteRequest.mode]) and calls `DataGateway.mutate`/operation. C4 implements none of that.
+ *
+ * C3 side. All methods must run the caller's own authorization/tenant checks and the connector safety rules (SSRF guard, limits). */
 interface ActionDataPort {
     fun write(ctx: ActionContext, request: WriteRequest): PortOutcome
     fun callOperation(ctx: ActionContext, request: OperationRequest): PortOutcome

@@ -14,8 +14,9 @@ import tools.jackson.databind.JsonNode
 import java.util.UUID
 
 class ActionHandlerTests {
-    private val run = ActionRun("run-1", "idem-1", TriggerInfo(TriggerKind.UI_EVENT), 0, Fx.now)
-    private val testRun = run.copy(idempotencyKey = null, mode = ExecutionMode.TEST)
+    private val derived = IdempotencyKeys.derive(Fx.tenantA, Fx.appA, Fx.user, "m1", "client-1")
+    private val run = ActionRun("run-1", derived, TriggerInfo(TriggerKind.UI_EVENT), 0, Fx.now, ExecutionMode.LIVE, Fx.appA)
+    private val testRun = run.copy(mode = ExecutionMode.TEST)
     private val ctx = Fx.ctx()
 
     @Test fun `registry rejects duplicates and exposes lookup`() {
@@ -70,7 +71,7 @@ class ActionHandlerTests {
             reg[t]!!.execute(ctx, Fx.mutation(t, inputs = inputs), input, run)
         }
         assertEquals(listOf(WriteKind.CREATE, WriteKind.UPDATE, WriteKind.DELETE, WriteKind.SUBMIT), data.writes.map { it.second.kind })
-        assertTrue(data.writes.all { it.second.queryRef == "orders.create" && it.second.idempotencyKey == "idem-1" })
+        assertTrue(data.writes.all { it.second.queryRef == "orders.create" && it.second.idempotencyKey == derived && it.second.appId == Fx.appA && it.second.mode == ExecutionMode.LIVE })
     }
 
     @Test fun `CALL_API takes an approved datasource operation, never a url`() {
@@ -87,7 +88,7 @@ class ActionHandlerTests {
 
         h.execute(ctx, def, ActionInput(mapOf("q" to str("x"))), run)
         val (_, req) = data.operations.single()
-        assertEquals("crm", req.dataSourceRef); assertEquals("lookup", req.operationKey); assertEquals("idem-1", req.idempotencyKey)
+        assertEquals("crm", req.dataSourceRef); assertEquals("lookup", req.operationKey); assertEquals(derived, req.idempotencyKey)
     }
 
     @Test fun `NOTIFY validates channel template recipients and endpoint and sends to the port`() {
@@ -118,7 +119,7 @@ class ActionHandlerTests {
         assertEquals("idempotency", h.validate(def.copy(idempotency = IdempotencyPolicy.OPTIONAL)).single().path)
         h.execute(ctx, def, ActionInput(mapOf("who" to str("x"))), run.copy(callDepth = 2))
         val req = port.started.single()
-        assertEquals("onboarding", req.workflowRef); assertEquals("idem-1", req.idempotencyKey); assertEquals("x", req.input.get("who").asString()); assertEquals(2, req.callDepth)
+        assertEquals("onboarding", req.workflowRef); assertEquals(derived, req.idempotencyKey); assertEquals("x", req.input.get("who").asString()); assertEquals(2, req.callDepth)
         val noKey = h.execute(ctx, def, ActionInput.EMPTY, run.copy(idempotencyKey = null))
         assertEquals(ActionErrorCodes.IDEMPOTENCY_KEY_REQUIRED, (noKey as ActionResult.Failed).code)
     }

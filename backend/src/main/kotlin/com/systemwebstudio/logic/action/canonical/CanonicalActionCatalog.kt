@@ -6,6 +6,7 @@ import com.systemwebstudio.logic.action.ActionDefinitionProvider
 import com.systemwebstudio.logic.action.ActionDefinitionValidator
 import com.systemwebstudio.logic.action.ActionLimits
 import com.systemwebstudio.logic.action.ActionRef
+import com.systemwebstudio.logic.action.ActionTrigger
 import com.systemwebstudio.logic.action.ActionType
 import com.systemwebstudio.logic.action.ContextKey
 import com.systemwebstudio.logic.action.DefinitionIssue
@@ -39,13 +40,12 @@ class ParsedActions(
 /**
  * Reads `actions[]` of an AppDefinition into [ActionDefinition]s and `ActionDef.trigger` into [ActionRef]s.
  *
- * Reconciliation with C2 (see DECISIONS D-C4-01 / BLOCKERS B-C4-02):
- *  - C2's provisional `ActionType` (RUN_QUERY, WRITE_DATA, CALL_CONNECTOR_OPERATION, START_WORKFLOW, NOTIFY, SET_VALUE) is mapped to the
- *    finalized C4 set: RUN_QUERY→REFRESH_QUERY, WRITE_DATA→SUBMIT_FORM, CALL_CONNECTOR_OPERATION→CALL_API. SET_VALUE is client-side state
- *    and has no server action (it is skipped, not executed).
- *  - The finalized names (NAVIGATE, SUBMIT_FORM, CREATE_RECORD, UPDATE_RECORD, DELETE_RECORD, CALL_API, REFRESH_QUERY) and the additive fields
- *    `pageRef, channel, templateRef, endpointRef, recipients, inputMapping, idempotency, onSuccess, onError, limits` are what C4 asks C2 to add;
- *    this reader accepts them when present. C2's validator remains the gatekeeper for unknown fields.
+ * Canonical v2 (`docs/contracts/v2/action-workflow.md` §1–2): the type set is **exactly** the nine [ActionType] values. There is no alias map:
+ * `RUN_QUERY`, `WRITE_DATA`, `CALL_CONNECTOR_OPERATION`, `SET_VALUE` (and anything else) never existed in stored data and are rejected with an
+ * issue, so such an action is not offered. `trigger{sectionId,event}` is **optional**: an action without one is a workflow/chain-only action
+ * (it is simply not bound to a UI event); a trigger that is present but malformed makes the action unusable (fail closed). The additive fields
+ * `pageRef, channel, templateRef, endpointRef, recipients, inputMapping, idempotency, onSuccess, onError, limits` are read when present;
+ * C2's validator remains the gatekeeper for unknown fields.
  *  - Every reference must resolve inside the same document (queryRef → queries[] of the right mode, dataSourceRef → dataSources[],
  *    workflowRef → workflows[], permissionRef → permissions[]); an action with a dangling reference is **not offered** (fail closed).
  */
@@ -64,9 +64,9 @@ object CanonicalActionReader {
         for (node in doc.array("actions")) {
             val id = node.text("id") ?: continue
             val problems = mutableListOf<DefinitionIssue>()
-            val type = mapType(node.text("type"))
+            val type = actionType(node.text("type"))
             if (type == null) {
-                problems += DefinitionIssue("type", "'${node.text("type")}' has no server-side action (client-only or unknown)")
+                problems += DefinitionIssue("type", "'${node.text("type")}' is not one of ${ActionType.entries.joinToString { it.name }}")
                 issues[id] = problems
                 continue
             }
@@ -125,24 +125,28 @@ object CanonicalActionReader {
                 if (ms > 0) ActionLimits(timeout = Duration.ofMillis(ms)) else { problems += DefinitionIssue("limits.timeoutMillis", "must be positive"); null }
             } ?: ActionLimits()
 
+            var trigger: ActionTrigger? = null
+            node.get("trigger")?.takeIf { !it.isNull }?.let { t ->
+                val section = if (t.isObject) t.text("sectionId") else null
+                val event = if (t.isObject) EventType.fromWire(t.text("event")) else null
+                if (section != null && ActionDefinitionValidator.REF_ID.matches(section) && event != null) trigger = ActionTrigger(section, event)
+                else problems += DefinitionIssue("trigger", "needs sectionId and a known event (${EventType.entries.joinToString { it.wire }})")
+            }
+
             val def = ActionDefinition(
                 id = id, tenantId = tenantId, type = type, name = node.text("name") ?: id, inputs = inputs, config = config,
                 idempotency = idem ?: if (type.mutatesState) IdempotencyPolicy.REQUIRED else IdempotencyPolicy.NONE,
                 limits = limits, enabled = node.get("enabled")?.asBoolean(true) ?: true, appId = appId, inputMapping = mapping,
                 requiredPermission = requiredPermission,
                 onSuccess = node.array("onSuccess").mapNotNull { it.takeIf { n -> n.isString }?.asString() },
-                onError = node.array("onError").mapNotNull { it.takeIf { n -> n.isString }?.asString() }
+                onError = node.array("onError").mapNotNull { it.takeIf { n -> n.isString }?.asString() },
+                trigger = trigger
             )
             problems += ActionDefinitionValidator.validate(def)
             if (problems.isNotEmpty()) { issues[id] = problems; continue }
             actions[id] = def
 
-            node.get("trigger")?.takeIf { it.isObject }?.let { t ->
-                val section = t.text("sectionId")
-                val event = EventType.fromWire(t.text("event"))
-                if (section != null && event != null) refs += ActionRef("$section.${event.wire}.$id", section, event, id)
-                else issues[id] = (issues[id] ?: emptyList()) + DefinitionIssue("trigger", "needs sectionId and a known event (${EventType.entries.joinToString { it.wire }})")
-            }
+            trigger?.let { refs += ActionRef("${it.sectionId}.${it.event.wire}.$id", it.sectionId, it.event, id) }
         }
         // Chained ids must exist, otherwise the chain would silently do nothing. An action whose chain dangles is not offered (fail closed);
         // removing it can orphan another chain, so repeat until nothing changes.
@@ -159,13 +163,8 @@ object CanonicalActionReader {
         return ParsedActions(actions, issues, refs)
     }
 
-    internal fun mapType(wire: String?): ActionType? = when (wire) {
-        null -> null
-        "RUN_QUERY" -> ActionType.REFRESH_QUERY
-        "WRITE_DATA" -> ActionType.SUBMIT_FORM
-        "CALL_CONNECTOR_OPERATION" -> ActionType.CALL_API
-        else -> ActionType.entries.firstOrNull { it.name == wire }
-    }
+    /** Exact match on the canonical wire name; no aliases, no case folding. */
+    fun actionType(wire: String?): ActionType? = ActionType.entries.firstOrNull { it.name == wire }
 
     private fun inputType(wire: String?) = when (wire) {
         "STRING", "DATE" -> InputType.STRING

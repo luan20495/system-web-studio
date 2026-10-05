@@ -47,6 +47,20 @@ private fun requiredRef(def: ActionDefinition, key: String): DefinitionIssue? {
     }
 }
 
+/**
+ * Canonical call identity for the data path: the app, the mode and the **derived** key. A mutating call that lacks any of them cannot be built, so
+ * the handler answers a typed failure instead of sending an unkeyed or unscoped request downstream.
+ */
+private class DataCall(val appId: java.util.UUID, val mode: com.systemwebstudio.logic.action.ExecutionMode, val key: String)
+
+private fun dataCall(run: ActionRun): DataCall? {
+    val app = run.appId ?: return null
+    val key = run.idempotencyKey ?: return null
+    return DataCall(app, run.mode, key)
+}
+
+private val NO_CALL = failed(ActionErrorCodes.IDEMPOTENCY_KEY_REQUIRED, "A data call needs the app and a derived idempotency key")
+
 /** What would run, derived from the definition and the bound input *names* only (values may be sensitive). */
 private fun plan(json: JsonMapper, def: ActionDefinition, input: ActionInput, vararg targets: Pair<String, String?>): ObjectNode {
     val p = json.createObjectNode().put("actionId", def.id).put("type", def.type.name)
@@ -167,14 +181,16 @@ class MutationActionHandler(override val type: ActionType, private val json: Jso
         return issues
     }
 
-    private fun request(definition: ActionDefinition, input: ActionInput, run: ActionRun) =
-        WriteRequest(definition.configString("queryRef")!!, kind, input.values, run.idempotencyKey)
+    private fun request(definition: ActionDefinition, input: ActionInput, run: ActionRun): WriteRequest? =
+        dataCall(run)?.let { WriteRequest(it.appId, it.mode, definition.configString("queryRef")!!, kind, input.values, it.key) }
 
-    override fun execute(ctx: ActionContext, definition: ActionDefinition, input: ActionInput, run: ActionRun): ActionResult =
-        data.write(ctx, request(definition, input, run)).toResult()
+    override fun execute(ctx: ActionContext, definition: ActionDefinition, input: ActionInput, run: ActionRun): ActionResult {
+        val req = request(definition, input, run) ?: return NO_CALL
+        return data.write(ctx, req).toResult()
+    }
 
     override fun preview(ctx: ActionContext, definition: ActionDefinition, input: ActionInput, run: ActionRun): ActionResult {
-        val req = request(definition, input, run)
+        val req = request(definition, input, run) ?: return NO_CALL
         val p = plan(json, definition, input, "queryRef" to req.queryRef, "writeKind" to kind.name)
         return when (val d = data.dryRunWrite(ctx, req)) {
             DryRunOutcome.Unsupported -> ActionResult.WouldRun(
@@ -194,14 +210,16 @@ class CallApiActionHandler(private val json: JsonMapper, private val data: Actio
 
     override fun validate(definition: ActionDefinition) = listOfNotNull(requiredRef(definition, "dataSourceRef"), requiredRef(definition, "operationKey"))
 
-    private fun request(definition: ActionDefinition, input: ActionInput, run: ActionRun) =
-        OperationRequest(definition.configString("dataSourceRef")!!, definition.configString("operationKey")!!, input.values, run.idempotencyKey)
+    private fun request(definition: ActionDefinition, input: ActionInput, run: ActionRun): OperationRequest? =
+        dataCall(run)?.let { OperationRequest(it.appId, it.mode, definition.configString("dataSourceRef")!!, definition.configString("operationKey")!!, input.values, it.key) }
 
-    override fun execute(ctx: ActionContext, definition: ActionDefinition, input: ActionInput, run: ActionRun): ActionResult =
-        data.callOperation(ctx, request(definition, input, run)).toResult()
+    override fun execute(ctx: ActionContext, definition: ActionDefinition, input: ActionInput, run: ActionRun): ActionResult {
+        val req = request(definition, input, run) ?: return NO_CALL
+        return data.callOperation(ctx, req).toResult()
+    }
 
     override fun preview(ctx: ActionContext, definition: ActionDefinition, input: ActionInput, run: ActionRun): ActionResult {
-        val req = request(definition, input, run)
+        val req = request(definition, input, run) ?: return NO_CALL
         val p = plan(json, definition, input, "dataSourceRef" to req.dataSourceRef, "operationKey" to req.operationKey)
         return when (val d = data.dryRunOperation(ctx, req)) {
             DryRunOutcome.Unsupported -> ActionResult.WouldRun(

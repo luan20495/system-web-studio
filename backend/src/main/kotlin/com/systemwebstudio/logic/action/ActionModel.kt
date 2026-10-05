@@ -94,6 +94,9 @@ data class Event(
     fun trigger() = TriggerInfo(TriggerKind.UI_EVENT, name, id)
 }
 
+/** `ActionDef.trigger` of the AppDefinition: the UI event an action is bound to. Optional on a definition (see [ActionDefinition.trigger]). */
+data class ActionTrigger(val sectionId: String, val event: EventType)
+
 /** "When [event] happens on [sectionId], run [actionId]" — derived from `ActionDef.trigger` of the canonical AppDefinition. */
 data class ActionRef(val id: String, val sectionId: String, val event: EventType, val actionId: String)
 
@@ -117,6 +120,10 @@ data class ActionRequest(
     val actionId: String,
     /** Explicit inputs (API callers, workflow steps). Anything mapped from [InputSource.Context] cannot be supplied here. */
     val inputs: Map<String, JsonNode> = emptyMap(),
+    /**
+     * The **client** key. It is only an input: the runtime derives the key it stores, audits and forwards ([IdempotencyKeys.derive]) and never
+     * passes this raw value to a downstream port or a log.
+     */
     val idempotencyKey: String? = null,
     val trigger: TriggerInfo = TriggerInfo(TriggerKind.UI_EVENT),
     /** 0 for a top-level call; chains and workflow engines pass their own nesting depth so loops are bounded. */
@@ -132,11 +139,14 @@ data class ActionRequest(
 /** Per-run facts the runtime hands to a handler (separate from the caller identity in [ActionContext]). */
 data class ActionRun(
     val runId: String,
+    /** The **derived** key ([IdempotencyKeys.derive]); never the client's raw key. Non-null for every state-mutating type (also in TEST mode). */
     val idempotencyKey: String?,
     val trigger: TriggerInfo,
     val callDepth: Int,
     val startedAt: Instant,
-    val mode: ExecutionMode = ExecutionMode.LIVE
+    val mode: ExecutionMode = ExecutionMode.LIVE,
+    /** The application the action runs in (= [ActionContext.projectId]); restated so adapters of the data path need not read the context. */
+    val appId: UUID? = null
 )
 
 enum class IdempotencyPolicy {
@@ -207,5 +217,11 @@ data class ActionDefinition(
     val requiredPermission: String? = null,
     /** Action ids to run after this one succeeded / failed (chained with callDepth + 1, bounded by [ActionLimits.maxCallDepth]). */
     val onSuccess: List<String> = emptyList(),
-    val onError: List<String> = emptyList()
+    val onError: List<String> = emptyList(),
+    /**
+     * The UI event that fires this action (`ActionDef.trigger`). **Optional**: an action that only a workflow step (or a chain) invokes has no UI
+     * trigger. It is required only for UI-bound execution: a run whose trigger is a top-level UI event (not a workflow step, a schedule or a
+     * chain) is rejected as UNKNOWN_ACTION when the definition declares none (D-C4-10).
+     */
+    val trigger: ActionTrigger? = null
 )

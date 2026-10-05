@@ -24,6 +24,10 @@ object Fx {
     fun ctx(tenant: UUID = tenantA, app: UUID? = appA, userId: UUID = user, kind: ActorKind = ActorKind.USER) =
         ActionContext(tenant, ActionActor(userId, kind), workspaceId = UUID.randomUUID(), projectId = app, requestId = "req-1")
 
+    val uiTrigger = ActionTrigger("btn", EventType.ON_CLICK)
+    /** The key C4 derives for a client key (what stores and ports see). */
+    fun dk(action: String, clientKey: String, tenant: UUID = tenantA, app: UUID = appA, userId: UUID = user) = IdempotencyKeys.derive(tenant, app, userId, action, clientKey)
+
     fun str(s: String): JsonNode = json.createObjectNode().put("v", s).get("v")
     fun num(n: Int): JsonNode = json.createObjectNode().put("v", n).get("v")
     fun bool(b: Boolean): JsonNode = json.createObjectNode().put("v", b).get("v")
@@ -168,9 +172,12 @@ class ActionRig(
             ceiling: ActionLimits = ActionLimits(),
             executor: java.util.concurrent.ExecutorService,
             clock: Clock = Fx.clock,
-            maxChain: Int = 16
+            maxChain: Int = 16,
+            /** true (default): every definition without a trigger gets a UI trigger, so tests exercise the pipeline; false: definitions are used as given. */
+            bindTriggers: Boolean = true
         ): ActionRig {
-            val d = FakeDefinitions(*defs)
+            val bound = if (bindTriggers) defs.map { if (it.trigger == null) it.copy(trigger = Fx.uiTrigger) else it }.toTypedArray() else defs
+            val d = FakeDefinitions(*bound)
             val data = FakeDataPort(); val notify = FakeNotifyPort(); val wf = FakeWorkflowPort(); val runs = InMemoryActionRunStore()
             val reg = registry?.invoke(data, notify, wf) ?: com.systemwebstudio.logic.action.handlers.DefaultActionHandlers.registry(Fx.json, ActionPorts(data, notify, wf))
             val rt = DefaultActionRuntime(d, reg, access, tenants, runs, audit, InputResolver(Fx.json), bindings, ceiling, clock, executor, maxChain)

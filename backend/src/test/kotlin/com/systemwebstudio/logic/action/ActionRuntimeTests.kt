@@ -58,7 +58,7 @@ class ActionRuntimeTests {
             assertInstanceOf(ActionResult.Ok::class.java, res)
             val (ctx, req) = r.data.writes.single()
             assertEquals(kind, req.kind); assertEquals("orders.create", req.queryRef)
-            assertEquals("hello", req.params["title"]!!.asString()); assertEquals("k-$type", req.idempotencyKey)
+            assertEquals("hello", req.params["title"]!!.asString()); assertEquals(Fx.dk("m1", "k-$type"), req.idempotencyKey)
             assertEquals(Fx.tenantA, ctx.tenantId)
         }
         val u = rig(Fx.mutation(ActionType.UPDATE_RECORD, inputs = listOf(InputSpec("recordId", InputType.STRING, required = true))))
@@ -94,7 +94,7 @@ class ActionRuntimeTests {
         val r = rig(Fx.notify())
         assertInstanceOf(ActionResult.Ok::class.java, r.runtime.execute(Fx.ctx(), ActionRequest("n1", mapOf("name" to str("Ann")), idempotencyKey = "k-n")))
         val sent = r.notify.sent.single()
-        assertEquals(NotifyChannel.IN_APP, sent.channel); assertEquals("welcome", sent.templateRef); assertEquals("k-n", sent.idempotencyKey)
+        assertEquals(NotifyChannel.IN_APP, sent.channel); assertEquals("welcome", sent.templateRef); assertEquals(Fx.dk("n1", "k-n"), sent.idempotencyKey)
     }
 
     @Test fun `START_WORKFLOW needs WORKFLOW_EXECUTE and a key, then starts one run with the caller depth`() {
@@ -208,7 +208,7 @@ class ActionRuntimeTests {
     }
 
     @Test fun `tenant isolation - two tenants with the same action id and key never see each other`() {
-        val a = Fx.mutation(ActionType.CREATE_RECORD)
+        val a = Fx.mutation(ActionType.CREATE_RECORD).copy(trigger = Fx.uiTrigger)
         val b = a.copy(tenantId = Fx.tenantB)
         val r = rig(a)
         val rtB = DefaultActionRuntime(FakeDefinitions(b), DefaultActionHandlers.registry(json, ActionPorts(r.data)), FakeAccess(), FakeTenants(), r.runs, RecordingAudit(), InputResolver(json), clock = Fx.clock, executor = executor)
@@ -261,7 +261,7 @@ class ActionRuntimeTests {
 
     @Test fun `port not wired gives a typed non retryable NOT_IMPLEMENTED`() {
         val rt = DefaultActionRuntime(
-            FakeDefinitions(Fx.mutation(ActionType.CREATE_RECORD)), DefaultActionHandlers.registry(json, ActionPorts()), FakeAccess(), FakeTenants(),
+            FakeDefinitions(Fx.mutation(ActionType.CREATE_RECORD).copy(trigger = Fx.uiTrigger)), DefaultActionHandlers.registry(json, ActionPorts()), FakeAccess(), FakeTenants(),
             InMemoryActionRunStore(), RecordingAudit(), InputResolver(json), clock = Fx.clock, executor = executor
         )
         val f = failure(rt.execute(Fx.ctx(), createReq()))
@@ -393,7 +393,7 @@ class ActionRuntimeTests {
         val f = failure(r.runtime.execute(Fx.ctx(), createReq("key-1")))
         assertEquals(ActionErrorCodes.AUDIT_UNAVAILABLE, f.code); assertTrue(f.retryable)
         assertTrue(r.data.writes.isEmpty())
-        assertEquals(RunStatus.FAILED, r.runs.find(RunKey(Fx.tenantA, Fx.appA, "m1", Fx.user, "key-1"))!!.status)
+        assertEquals(RunStatus.FAILED, r.runs.find(RunKey(Fx.tenantA, Fx.appA, "m1", Fx.user, Fx.dk("m1", "key-1")))!!.status)
     }
 
     @Test fun `audit failure after the action ran does not hide the result`() {
@@ -451,7 +451,7 @@ class ActionRuntimeTests {
         val req = ActionRequest("first", idempotencyKey = "root")
         r.runtime.run(Fx.ctx(), req); r.runtime.run(Fx.ctx(), req)
         assertEquals(1, r.data.writes.size)
-        assertEquals("root:s:m1", r.data.writes.single().second.idempotencyKey)
+        assertEquals(Fx.dk("m1", "root:s:m1"), r.data.writes.single().second.idempotencyKey)
         // a chained write without any root key cannot be made safe, so it is refused instead of run unprotected
         val noKey = r.runtime.run(Fx.ctx(), ActionRequest("first"))
         assertEquals(ActionErrorCodes.IDEMPOTENCY_KEY_REQUIRED, (noKey.followUps.single().result as ActionResult.Failed).code)
@@ -499,7 +499,7 @@ class ActionRuntimeTests {
         assertInstanceOf(ActionResult.Ok::class.java, out[1].result)
         assertEquals(ActionErrorCodes.UNKNOWN_ACTION, failure(out[2].result).code)         // one failure does not stop the others
         assertEquals(setOf("title"), r.data.writes.single().second.params.keys)           // "leak" is not mapped ⇒ never forwarded
-        assertEquals("evt:evt-1:r2", r.data.writes.single().second.idempotencyKey)
+        assertEquals(Fx.dk("m1", "evt:evt-1:r2"), r.data.writes.single().second.idempotencyKey)
         assertEquals(TriggerInfo(TriggerKind.UI_EVENT, "btn.onClick", "evt-1"), r.audit.entries.first { it.phase == AuditPhase.STARTED }.trigger)
 
         r.runtime.dispatch(Fx.ctx(), event)                                                // redelivery
@@ -520,8 +520,8 @@ class ActionRuntimeTests {
         val weird = ev(id = "evt with spaces & ünïcode " + "x".repeat(300))
         val out = r.runtime.dispatch(Fx.ctx(), weird)
         assertInstanceOf(ActionResult.Ok::class.java, out.single().result)
-        val key = r.data.writes.single().second.idempotencyKey!!
-        assertTrue(key.length <= 128 && key.matches(Regex("^[A-Za-z0-9._:-]+$")))
+        val key = r.data.writes.single().second.idempotencyKey
+        assertTrue(IdempotencyKeys.PORT_KEY.matches(key))
         r.runtime.dispatch(Fx.ctx(), weird)
         assertEquals(1, r.data.writes.size)                                                // still de-duplicated
     }

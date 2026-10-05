@@ -52,12 +52,13 @@ interface ActionRuntime {
  *  1. idempotency-key shape
  *  2. tenant gate                       → TENANT_DISABLED
  *  3. tenant- and app-scoped definition → UNKNOWN_ACTION (also for other tenants'/apps' ids and disabled actions)
- *  4. authorization (APP_USE, ACTION_EXECUTE, declared permission, WORKFLOW_EXECUTE for START_WORKFLOW) → FORBIDDEN (default deny, audited)
+ *  3b. UI-bound runs need a declared trigger (workflow-invoked actions do not) → UNKNOWN_ACTION
+ *  4. authorization (APP_USE, ACTION_EXECUTE, DATA_MUTATE for data types, declared permission, WORKFLOW_EXECUTE for START_WORKFLOW) → FORBIDDEN (default deny, audited)
  *  5. handler for the type              → UNSUPPORTED_ACTION_TYPE
  *  6. call depth / definition valid     → LIMIT_EXCEEDED / INVALID_DEFINITION
  *  7. resolve + bind input              → LIMIT_EXCEEDED / INVALID_INPUT
  *  8. TEST mode: preview (no run state, no idempotency, no side effect) → WouldRun
- *  9. idempotency begin (CAS)           → replay / ACTION_IN_PROGRESS / IDEMPOTENCY_KEY_REUSED
+ *  9. idempotency begin (CAS) on the **derived** key → replay / ACTION_IN_PROGRESS / IDEMPOTENCY_KEY_REUSED
  * 10. audit STARTED (fail closed)       → AUDIT_UNAVAILABLE (retryable)
  * 11. handler with timeout              → TIMEOUT / HANDLER_ERROR / handler result
  * 12. complete run state, audit terminal phase (best effort: the action already happened)
@@ -127,7 +128,7 @@ class DefaultActionRuntime(
         val started = clock.instant()
         val mode = request.mode
         val key = request.idempotencyKey
-        if (key != null && !IDEMPOTENCY_KEY.matches(key)) {
+        if (key != null && !IdempotencyKeys.isValidClientKey(key)) {
             return Outcome(reject(ctx, request, null, failed(ActionErrorCodes.IDEMPOTENCY_KEY_INVALID, "Idempotency key must be 1-128 chars of [A-Za-z0-9._:-]")), null)
         }
 
@@ -145,6 +146,16 @@ class DefaultActionRuntime(
         val def = lookup.orElse(null)
             ?.takeIf { it.tenantId == ctx.tenantId && it.enabled && it.id == request.actionId && (it.appId == null || it.appId == appId) }
             ?: return Outcome(reject(ctx, request, null, failed(ActionErrorCodes.UNKNOWN_ACTION, "Action not found")), null)
+
+        // UI-bound execution needs a declared trigger; actions only a workflow step or a chain invokes have none (D-C4-10).
+        if (request.trigger.kind == TriggerKind.UI_EVENT && request.callDepth == 0 && def.trigger == null) {
+            return Outcome(reject(ctx, request, def, failed(ActionErrorCodes.UNKNOWN_ACTION, "Action not found")), null)
+        }
+        if (request.trigger.kind == TriggerKind.UI_EVENT && request.trigger.eventName != null && def.trigger != null &&
+            request.trigger.eventName != "${def.trigger.sectionId}.${def.trigger.event.wire}" && request.callDepth == 0
+        ) {
+            return Outcome(reject(ctx, request, def, failed(ActionErrorCodes.UNKNOWN_ACTION, "Action not found")), null)
+        }
 
         for (check in accessChecks(def, appId, mode)) {
             when (val decision = safely { access.check(ctx, check) }) {
@@ -183,8 +194,11 @@ class DefaultActionRuntime(
         val timeout = request.timeout?.takeIf { !it.isNegative && !it.isZero && it < limits.timeout } ?: limits.timeout
 
         if (mode == ExecutionMode.TEST) {
-            val run = ActionRun(UUID.randomUUID().toString(), null, request.trigger, request.callDepth, started, ExecutionMode.TEST)
-            val result = runWithTimeout(def, run, timeout) { handler.preview(ctx, def, input, run) }
+            val testRunId = UUID.randomUUID().toString()
+            // A dry-run still carries a derived key (never the raw one) so the data port's request is well-formed; it is not stored and reserves nothing.
+            val testKey = if (def.type.mutatesState) IdempotencyKeys.derive(ctx.tenantId, appId, ctx.actor.userId, def.id, key ?: "test:$testRunId") else null
+            val run = ActionRun(testRunId, testKey, request.trigger, request.callDepth, started, ExecutionMode.TEST, appId)
+            val result = runWithTimeout(def, run, timeout, dedupes = false) { handler.preview(ctx, def, input, run) }
             recordBestEffort(
                 entry(AuditPhase.PREVIEWED, ctx, request, def, run, result as? ActionResult.Failed, durationMillis = Duration.between(started, clock.instant()).toMillis())
             )
@@ -194,7 +208,10 @@ class DefaultActionRuntime(
         if (key == null && def.idempotency == IdempotencyPolicy.REQUIRED) {
             return Outcome(reject(ctx, request, def, failed(ActionErrorCodes.IDEMPOTENCY_KEY_REQUIRED, "This action requires an idempotency key")), def)
         }
-        val effectiveKey = key?.takeIf { def.idempotency != IdempotencyPolicy.NONE }
+        // Only the derived key is stored, audited or forwarded. Without a client key (OPTIONAL/NONE) the run gets a one-shot key: unique, so it
+        // de-duplicates nothing, but every mutating call downstream still carries a well-formed derived key.
+        val derived = key?.let { IdempotencyKeys.derive(ctx.tenantId, appId, ctx.actor.userId, def.id, it) }
+        val effectiveKey = derived?.takeIf { def.idempotency != IdempotencyPolicy.NONE }
 
         val runKey = effectiveKey?.let { RunKey(ctx.tenantId, appId, def.id, ctx.actor.userId, it) }
         val runId = if (runKey != null) {
@@ -212,7 +229,8 @@ class DefaultActionRuntime(
             }
         } else UUID.randomUUID().toString()
 
-        val run = ActionRun(runId, effectiveKey, request.trigger, request.callDepth, started, ExecutionMode.LIVE)
+        val callKey = effectiveKey ?: if (def.type.mutatesState) IdempotencyKeys.forFreshRun(ctx.tenantId, appId, ctx.actor.userId, def.id, runId) else null
+        val run = ActionRun(runId, callKey, request.trigger, request.callDepth, started, ExecutionMode.LIVE, appId)
 
         if (safely { audit.record(entry(AuditPhase.STARTED, ctx, request, def, run)) } == null) {
             // Fail closed: no un-audited side effects. Nothing ran, so the same key may be retried.
@@ -221,7 +239,7 @@ class DefaultActionRuntime(
             return Outcome(failure, def)
         }
 
-        val result = runWithTimeout(def, run, timeout) { handler.execute(ctx, def, input, run) }
+        val result = runWithTimeout(def, run, timeout, dedupes = runKey != null) { handler.execute(ctx, def, input, run) }
 
         if (runKey != null) {
             val owned = safely { runs.complete(runKey, runId, result, clock.instant()) }
@@ -255,13 +273,15 @@ class DefaultActionRuntime(
     private fun accessChecks(def: ActionDefinition, appId: UUID, mode: ExecutionMode): List<AccessRequest> = buildList {
         add(AccessRequest(LogicPermissions.APP_USE, ResourceKind.APP, appId.toString(), appId, mode))
         add(AccessRequest(LogicPermissions.ACTION_EXECUTE, ResourceKind.ACTION, def.id, appId, mode))
+        if (def.type in DATA_MUTATING) add(AccessRequest(LogicPermissions.DATA_MUTATE, ResourceKind.ACTION, def.id, appId, mode))
         def.requiredPermission?.let { add(AccessRequest(it, ResourceKind.ACTION, def.id, appId, mode)) }
         if (def.type == ActionType.START_WORKFLOW) {
             def.configString("workflowRef")?.let { add(AccessRequest(LogicPermissions.WORKFLOW_EXECUTE, ResourceKind.WORKFLOW, it, appId, mode)) }
         }
     }
 
-    private fun runWithTimeout(def: ActionDefinition, run: ActionRun, timeout: Duration, block: () -> ActionResult): ActionResult {
+    /** [dedupes]: a client key reserved this run, so repeating it cannot create a second effect (a one-shot fresh-run key does not count). */
+    private fun runWithTimeout(def: ActionDefinition, run: ActionRun, timeout: Duration, dedupes: Boolean, block: () -> ActionResult): ActionResult {
         val future = try {
             executor.submit(Callable { block() })
         } catch (e: RejectedExecutionException) {
@@ -272,11 +292,11 @@ class DefaultActionRuntime(
         } catch (e: TimeoutException) {
             future.cancel(true)
             // The side effect may or may not have happened: repeating is only safe when a key de-duplicates it.
-            failed(ActionErrorCodes.TIMEOUT, "Action timed out after ${timeout.toMillis()} ms", retryable = !def.type.mutatesState || run.idempotencyKey != null)
+            failed(ActionErrorCodes.TIMEOUT, "Action timed out after ${timeout.toMillis()} ms", retryable = !def.type.mutatesState || dedupes)
         } catch (e: InterruptedException) {
             future.cancel(true)
             Thread.currentThread().interrupt()
-            failed(ActionErrorCodes.INTERRUPTED, "Action was interrupted", retryable = !def.type.mutatesState || run.idempotencyKey != null)
+            failed(ActionErrorCodes.INTERRUPTED, "Action was interrupted", retryable = !def.type.mutatesState || dedupes)
         } catch (e: CancellationException) {
             failed(ActionErrorCodes.INTERRUPTED, "Action was cancelled", retryable = false)
         } catch (e: ExecutionException) {
@@ -314,7 +334,9 @@ class DefaultActionRuntime(
     }
 
     companion object {
-        private val IDEMPOTENCY_KEY = Regex("^[A-Za-z0-9._:-]{1,128}$")
+        private val IDEMPOTENCY_KEY = IdempotencyKeys.CLIENT_KEY
+        /** Types that go through the data path and therefore need DATA_MUTATE (`tenant-permission.md` §5). */
+        private val DATA_MUTATING = setOf(ActionType.SUBMIT_FORM, ActionType.CREATE_RECORD, ActionType.UPDATE_RECORD, ActionType.DELETE_RECORD, ActionType.CALL_API)
         private val SAFE_SEGMENT = Regex("^[A-Za-z0-9._-]{1,64}$")
 
         /** Failures that mean "the action did not get to run" — they must not trigger `onError` actions. */
