@@ -22,3 +22,12 @@ Quyết định ban đầu (phân vùng số migration cố định theo agent) 
 
 ## D-007 — C0 cấp số Flyway migration · ACCEPTED · 2026-10-05 · C0
 Agent không tự chọn Flyway migration version. Khi cần migration, agent ghi request vào `docs/parallel/BOARD.md` (mục *Migration requests*); C0 cấp next available version (V26, V27, …). Một version gắn với đúng một task. Migration được merge theo thứ tự tăng dần. Không bật `outOfOrder=true`. Chi tiết: `OWNERSHIP.md §6`.
+
+## D-C5-01 — Builder tách Edit và Test; Test không ghi AppDefinition · PROPOSED · 2026-10-05 · C5
+Edit chỉnh định nghĩa và chỉ ghi qua operation → validator → version bất biến (`applyOps`). Test ("Dùng thử") là mode riêng (`/studio/projects/:id/test`), chạy Query/Action qua `DataGateway`/`ActionRuntime` bằng quyền của chính người dùng, kết quả chỉ ở React state, không vào `schema`, version, prompt, storage trình duyệt; không nhớ mode `test` trong `sessionStorage`. Action có tác dụng phụ không chạy ở Test cho tới khi C4 có dry-run (B-C5-04). Hệ quả: không cần đổi contract hiện có; chỉ C4 bổ sung cờ test. Chi tiết: `audit/PREP-T12-builder-architecture.md` §6.
+
+## D-C5-02 — Đường dẫn API Data/Action/Workflow theo project; tenant do server suy ra · PROPOSED · 2026-10-05 · C5
+Endpoint mới theo mẫu hiện có `/api/v1/workspaces/{workspaceId}/projects/{projectId}/…`; client không bao giờ gửi `tenantId` (khớp `tenant-context.md` quy tắc 1). Request Query chỉ gồm `queryId`, `params`, `page` (khớp `QueryRequest`). Client frontend mới đặt ở `lib/api/data.ts`, `lib/api/actions.ts`, `lib/api/workflows.ts` trên lõi `lib/api/core.ts` (C5 tách từ `http-api.ts`, không đổi hành vi). Cần C2/C3/C4 xác nhận hoặc đề xuất đường dẫn khác (B-C5-02).
+
+## D-C5-03 — Dữ liệu trên site xuất bản: chụp lúc publish, không gọi lúc chạy · PROPOSED · 2026-10-05 · C5
+Site xuất bản là HTML tĩnh không script (ADR 0009, CSP). Đề xuất: khi BUILDING, API lấy `ViewModelData` qua `DataGateway` và truyền `data` cho render worker (cùng renderer với preview/Test); không dùng script gọi dữ liệu lúc truy cập. Cần chính sách chống rò rỉ dữ liệu riêng tư vào site `PUBLIC` (chỉ site `PRIVATE`, hoặc binding được duyệt công khai được) và loại binding/action khỏi Template/Block COMPANY (B-C5-07). Cần C0 sửa `workers/render/server.ts` và `publish/**` (B-C5-06). Không ảnh hưởng site hiện có (không `data` ⇒ đầu ra không đổi).
