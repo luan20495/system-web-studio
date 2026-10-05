@@ -1,5 +1,7 @@
 # PREP-T13 — ActionRuntime: thiết kế + scaffold
 
+> **Đã được thay thế một phần bởi [`FINAL-C4-runtime-design.md`](FINAL-C4-runtime-design.md)** (Phase 2). Giữ lại làm lịch sử. Khác biệt chính: `ActionAuthorizer` → `AccessPort`/`TenantGate`/`PrincipalResolver`; `mutationId/operationId/templateId/workflowId` → `queryRef`, `dataSourceRef`+`operationKey`, `templateRef`, `workflowRef`; thêm `REFRESH_QUERY`; không còn bảng `action_definitions` (D-C4-03); phạm vi idempotency có thêm `app` và `user`. ID cũ B-004…B-008 / D-008…D-010 đã đổi thành B-C4-xx / D-C4-xx.
+
 Owner: **C4** · Branch `agent/c4-workflow` · Base `d3c7065d3b6963dc625be5d0725922f5004fb818` · Trạng thái: scaffold xong, **chưa nối** với C1/C2/C3.
 Liên quan: `docs/contracts/action-workflow.md`, `data-connector.md`, `permission-model.md`, `tenant-context.md`, `app-definition-v2.md`.
 
@@ -51,7 +53,7 @@ Chiều phụ thuộc: `logic.workflow → logic.action`, không ngược lại 
 | `Event`, `ActionRef`, `TriggerInfo` | Sự kiện UI/workflow/lịch; `ActionRef` phản chiếu `ActionRef(id, trigger, actionId)` của C2 |
 | `ActionRun` | Dữ kiện mỗi lần chạy cho handler: `runId, idempotencyKey, trigger, callDepth` |
 
-`ActionRuntime.execute` nhận `ActionContext` thay vì `(AccessContext, TenantContext)` như contract — xem **D-008**.
+`ActionRuntime.execute` nhận `ActionContext` thay vì `(AccessContext, TenantContext)` như contract — xem **D-C4-02**.
 
 ## 4. Pipeline của `DefaultActionRuntime.execute`
 
@@ -98,7 +100,7 @@ Thứ tự cố ý: kiểm tra rẻ và ít tiết lộ trước, side effect sa
 
 Quyết định đáng chú ý:
 
-- **Ghi dữ liệu = tham chiếu `mutationId`** (đối xứng với `queryId` của `data-connector.md`), không phải tên bảng/SQL/URL. Contract của C3 hiện chưa có phía ghi; đây là điều C4 cần C3 xác nhận (**B-006**). `recordId` của UPDATE/DELETE đi như một param thường, connector tự bind.
+- **Ghi dữ liệu = tham chiếu `mutationId`** (đối xứng với `queryId` của `data-connector.md`), không phải tên bảng/SQL/URL. Contract của C3 hiện chưa có phía ghi; đây là điều C4 cần C3 xác nhận (**B-C4-04**). `recordId` của UPDATE/DELETE đi như một param thường, connector tự bind.
 - `recipientUserIds` nằm trong **definition**, không nhận từ input lúc chạy, để action NOTIFY không bị dùng làm công cụ spam người khác.
 - Port chưa nối → `DefaultActionHandlers.registry` vẫn đăng ký đủ 8 type, loại thiếu port là `NotImplementedActionHandler` (`NOT_IMPLEMENTED`, không retry).
 
@@ -126,7 +128,7 @@ Retry/backoff/DLQ là việc của **worker/workflow engine** (T13 đầy đủ)
 ## 8. Quyền, tenant, giới hạn
 
 - Tenant: mọi lookup mang `tenantId`; key idempotency scope theo `(tenantId, actionId, key)`; test chéo tenant có (`another tenant's action…`, `the same key in two tenants…`).
-- Quyền: `ActionAuthorizer` default-deny. Cần C1 thêm `ACTION_EXECUTE` (+ `WORKFLOW_MANAGE`, `ResourceType.ACTION`) — **B-004**. Worker không tin payload về quyền: dựng lại `ActionContext` từ `tenantId` + `actorUserId` rồi gọi lại authorizer.
+- Quyền: `ActionAuthorizer` default-deny. Cần C1 thêm `ACTION_EXECUTE` (+ `WORKFLOW_MANAGE`, `ResourceType.ACTION`) — **B-C4-01**. Worker không tin payload về quyền: dựng lại `ActionContext` từ `tenantId` + `actorUserId` rồi gọi lại authorizer.
 - Giới hạn (`ActionLimits`): `timeout` 30s, `maxInputBytes` 64 KiB, `maxInputDepth` 8, `maxCallDepth` 5 — là **trần** của runtime, definition chỉ được hạ thấp. Rate limit theo tenant **chưa làm** (cần state dùng chung; thuộc bước tích hợp, có thể dùng `common/RateLimiter` — C0).
 - Không thực thi code: không có `eval`, script, SQL hay URL thô ở bất kỳ đâu trong model.
 
@@ -134,12 +136,12 @@ Retry/backoff/DLQ là việc của **worker/workflow engine** (T13 đầy đủ)
 
 `ActionRunStore` và `ActionDefinitionProvider` hiện chỉ có in-memory/fake. Để chạy thật cần (đã ghi request trong `BOARD.md`, **không** tự chọn version):
 
-- `action_definitions(id, tenant_id, type, name, inputs jsonb, config jsonb, idempotency, limits jsonb, enabled, …)` — hoặc C2 lưu trong `AppDefinitionV2.extensions` và C4 chỉ đọc (cần C0/C2 chốt, **D-010**).
+- `action_definitions(id, tenant_id, type, name, inputs jsonb, config jsonb, idempotency, limits jsonb, enabled, …)` — hoặc C2 lưu trong `AppDefinitionV2.extensions` và C4 chỉ đọc (cần C0/C2 chốt, **D-C4-03**).
 - `action_runs(tenant_id, action_id, idempotency_key, run_id, fingerprint, status, attempt, result jsonb, started_at, updated_at)` với unique `(tenant_id, action_id, idempotency_key)`; `begin` = `INSERT … ON CONFLICT` / `UPDATE … WHERE status = 'FAILED' AND retryable` (CAS); sweeper cho run `RUNNING` quá hạn — cùng kiểu với `publish/PublishWorker`.
 
 ## 10. Thứ tự tích hợp đề xuất
 
-1. **C0** duyệt D-008…D-010, cấp số migration (nếu đồng ý).
+1. **C0** duyệt D-C4-01…D-C4-03, cấp số migration (nếu đồng ý).
 2. **C1** công bố `TenantContext` + permission `ACTION_EXECUTE` → viết `ActionAuthorizer` adapter và `ActionContextFactory(AccessContext, TenantContext)`.
 3. **C2** chốt shape `ActionRef` + nơi lưu definition → `ActionBindingPort`, `ActionDefinitionProvider`; gọi `ActionDefinitionValidator` từ `AppDefinitionValidator`.
 4. **C3** công bố cổng ghi (`mutationId`) và `callApi` → `ActionDataPort` adapter.

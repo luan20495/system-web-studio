@@ -23,11 +23,29 @@ Quyết định ban đầu (phân vùng số migration cố định theo agent) 
 ## D-007 — C0 cấp số Flyway migration · ACCEPTED · 2026-10-05 · C0
 Agent không tự chọn Flyway migration version. Khi cần migration, agent ghi request vào `docs/parallel/BOARD.md` (mục *Migration requests*); C0 cấp next available version (V26, V27, …). Một version gắn với đúng một task. Migration được merge theo thứ tự tăng dần. Không bật `outOfOrder=true`. Chi tiết: `OWNERSHIP.md §6`.
 
-## D-008 — ActionRuntime nhận `ActionContext` của C4, không nhận `AccessContext`+`TenantContext` · PROPOSED · 2026-10-05 · C4
-Contract `action-workflow.md` ghi `execute(ctx: AccessContext, tenant: TenantContext, req)`. Đề xuất: `ActionRuntime.execute(ctx: ActionContext, req: ActionRequest)` với `ActionContext(tenantId, actor, workspaceId?, projectId?, requestId?)` do C4 sở hữu, dựng ở adapter từ `AccessContext`+`TenantContext` (HTTP) hoặc từ message queue (`tenantId`+`actorUserId`). Lý do: `logic.action` không import `access/**` (C1) nên biên dịch/test độc lập; context tường minh phù hợp thực thi bất đồng bộ (không ThreadLocal). Quyền vẫn do C1 quyết qua `ActionAuthorizer`. Hệ quả: C0 cập nhật contract nếu đồng ý; không đổi hành vi hiện có.
+## D-C4-01 — Danh sách ActionType chốt (đóng kín) · PROPOSED · 2026-10-05 · C4
+Thay D-009. `NAVIGATE, REFRESH_QUERY, SUBMIT_FORM, CREATE_RECORD, UPDATE_RECORD, DELETE_RECORD, CALL_API, NOTIFY, START_WORKFLOW`. Map từ tên tạm của C2: `RUN_QUERY→REFRESH_QUERY`, `WRITE_DATA→SUBMIT_FORM`, `CALL_CONNECTOR_OPERATION→CALL_API`; `SET_VALUE` là trạng thái client, không có action phía server. Ghi dữ liệu = tham chiếu `queryRef` (query `mode=WRITE` đã khai báo trong AppDefinition, không SQL/URL/tên bảng); `CALL_API` = `dataSourceRef` + `operationKey` đã duyệt (không URL thô). `DOWNLOAD_FILE`/`OPEN_URL` chưa làm vì chưa có security model. Thêm loại mới = đổi contract, phải qua file này. Hệ quả: B-C4-02, B-C4-04.
 
-## D-009 — Danh sách ActionType chốt cho T13 · PROPOSED · 2026-10-05 · C4
-`NAVIGATE, SUBMIT_FORM, CREATE_RECORD, UPDATE_RECORD, DELETE_RECORD, CALL_API, NOTIFY, START_WORKFLOW` (thay danh sách minh hoạ `RUN_QUERY/WRITE_DATA/CALL_CONNECTOR_OPERATION/SET_VALUE` trong contract). Đọc dữ liệu **không** là Action: UI đi qua `DataBinding → queryId → DataGateway.runQuery`. Ghi dữ liệu là tham chiếu `mutationId` đã khai báo (không SQL/URL/tên bảng). Thêm loại mới = đổi contract, phải qua file này. Hệ quả: C3 cần định nghĩa mutation đã khai báo (B-006).
+## D-C4-02 — ActionContext của C4 + port thay cho AccessContext/ActionAuthorizer · PROPOSED · 2026-10-05 · C4
+Thay D-008. `ActionRuntime.execute(ctx: ActionContext, req)`; `ActionContext(tenantId, actor, workspaceId?, projectId?, requestId?)` do server dựng (HTTP: từ `AccessContext`+`TenantContext`; worker: từ run đã lưu). Quyền đi qua `AccessPort.check(AccessRequest(permission, resourceKind, resourceId, appId, mode))`, tenant qua `TenantGate`, người nhận/approver qua `PrincipalResolver`; cả ba do C1 cấp adapter (B-C4-01). `logic.*` không import `access/**`. Hệ quả: contract `action-workflow.md` cần cập nhật chữ ký nếu đồng ý.
 
-## D-010 — Nơi lưu ActionDefinition và run state · PROPOSED · 2026-10-05 · C4
-Câu hỏi cho C0/C2: `ActionDefinition` (có `tenantId`, inputs, config tham chiếu id, limits) được (a) lưu trong bảng riêng của C4 `action_definitions` (cần migration) hay (b) nằm trong `AppDefinitionV2.extensions` do C2 sở hữu và C4 chỉ đọc qua `ActionDefinitionProvider`. Khuyến nghị của C4: (a) cho action dùng chung nhiều app/workflow, (b) nếu action luôn gắn một app. Run state/idempotency (`action_runs`) luôn là bảng của C4. Chưa có migration; PREP chỉ dùng in-memory/fake.
+## D-C4-03 — Định nghĩa action/workflow đọc từ AppDefinition canonical · PROPOSED · 2026-10-05 · C4
+Thay D-010. C4 **không** có bảng `action_definitions`; `ActionDefinition`/`WorkflowDefinition` được đọc từ JSON AppDefinition của C2 qua `AppDefinitionSource` (lớp `*.canonical`), theo tenant + app + mode (LIVE=bản publish, TEST=bản nháp). Tham chiếu không giải quyết được (query/dataSource/workflow/permission/action nối chuỗi) → action/workflow **không được cung cấp** (fail closed). C4 chỉ sở hữu bảng trạng thái chạy (B-C4-05).
+
+## D-C4-04 — Mô hình thực thi workflow · PROPOSED · 2026-10-05 · C4
+Trạng thái nằm trong DB (CAS trên dòng run), RabbitMQ chỉ mang tín hiệu `v1|jobId|tenantId|runId|stepId` (không actor/quyền/payload). Timer, retry/backoff, job mất, worker chết, approval bị lỡ callback do **sweeper** xử lý (không cần delayed delivery của broker). Poison/quá `maxDeliveries` → DLQ → run `FAILED/DEAD_LETTERED`. Run chạy như người tạo, quyền kiểm lại ở **từng step**. Định nghĩa được snapshot vào run. `start` không chặn HTTP.
+
+## D-C4-05 — Phạm vi idempotency · PROPOSED · 2026-10-05 · C4
+Action: `(tenant, app, action, user, key)`; workflow start: `(tenant, app, workflow, creator, mode, key)`; TEST và LIVE là hai phạm vi riêng. Key của step workflow: `wf:<runId>:<stepId>` (lượt thứ n≥2 của vòng lặp: `…:v<n>`). Write action bắt buộc `REQUIRED`; `NONE` trên action đổi state bị validator từ chối.
+
+## D-C4-06 — Ngữ nghĩa TEST mode · PROPOSED · 2026-10-05 · C4
+TEST không commit mutation, không gửi thông báo thật, không start workflow/approval thật, không tạo run state. Phản hồi là `WouldRun(level, plan, reason)` với `level` = `NOT_EXECUTED` (mặc định) / `VALIDATED` / `SANDBOX` — chỉ nâng cấp khi downstream có dry-run tường minh (`dryRunWrite/dryRunOperation`); không giả vờ. Plan chỉ chứa tên input, không chứa giá trị.
+
+## D-C4-07 — Ngữ nghĩa Approval · PROPOSED · 2026-10-05 · C4
+Approver được resolve và snapshot lúc tạo; người yêu cầu bị loại trừ mặc định; quorum `requiredApprovals`; một từ chối là từ chối cả yêu cầu; cross-tenant bị từ chối trừ khi chính sách của C1 cho phép (`CrossTenantApprovalPolicy`, mặc định DENY_ALL).
+
+## D-C4-08 — Scheduler chỉ enqueue · PROPOSED · 2026-10-05 · C4
+Scheduler không gọi action/connector/notification; tick claim bằng CAS rồi giao `ScheduledRunRequest` (key `sched:<id>:<fireEpochMilli>`) cho `ScheduledRunEnqueuer` (do `WorkflowEngine` implement). Misfire: `SKIP` hoặc `FIRE_ONCE`, không bao giờ bù từng lần bị lỡ. Run lịch chạy như owner của schedule.
+
+## D-C4-09 — Notification là port, không vendor · PROPOSED · 2026-10-05 · C4
+Nội dung = template đã duyệt (`templateRef`) + tham số có kiểu; webhook chỉ tới `endpointRef` đã đăng ký; vendor email/SMS là một `ChannelSender` do bên tích hợp viết. Giao hàng at-least-once khi có crash, trừ khi provider khử trùng theo `deliveryKey`.
