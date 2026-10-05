@@ -11,7 +11,7 @@ An internal platform where employees build company software with AI under govern
   editable policies with audit.
 
 What is real and what is not: **[docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md)** (REAL / PARTIAL / MOCK / BLOCKED_EXTERNAL_INPUT /
-NOT IMPLEMENTED). Security: [docs/SECURITY.md](docs/SECURITY.md). Architecture decisions: [docs/adr](docs/adr) (0001–0020).
+NOT IMPLEMENTED). Security: [docs/SECURITY.md](docs/SECURITY.md). Architecture decisions: [docs/adr](docs/adr) (0001–0021).
 
 ## Run it
 
@@ -35,10 +35,11 @@ Publishing from this machine: `./scripts/public-up.sh` (internal pilot behind a 
 
 ## Verify
 ```bash
-cd backend && ./gradlew test                 # 175 tests (Testcontainers; JDK 21)
+cd backend && ./gradlew test                 # 185 tests (Testcontainers; JDK 21)
 npx tsc --noEmit -p tsconfig.json            # UI typecheck
 node e2e/factory-flow.mjs                    # browser E2E: websites, AI, design, publish, templates, blocks, admin
 node e2e/code-flow.mjs                       # code apps: sandbox build, packages, design via AST, review, signed commits, IDE access
+node e2e/runtime-flow.mjs                    # server apps: isolation, blue/green, dashboard, internal tool, workflow (full stack)
 node e2e/a11y.mjs                            # axe on 41 screens
 ./scripts/secret-scan.sh                     # gitleaks, history + tree
 ./scripts/backup-all.sh local && ./scripts/restore-drill-all.sh local

@@ -1,10 +1,39 @@
 # Implementation status — AI Software Factory (2026-10-04)
 
-**Development Ready: YES · Internal Pilot Ready: YES (websites, AI, admin) · Production Ready: NO** — production needs a Linux runtime host,
+**Development Ready: YES · Internal Pilot Ready: YES · Production Ready: NO** — production needs a Linux runtime host,
 off-host backups, real provider keys and an owner decision on the items in "Required decisions" (see the readiness report).
 
 Legend: **REAL** = implemented and verified end to end on this machine · **PARTIAL** = real but with a stated gap · **MOCK** = simulator /
 stand-in, labelled as such · **BLOCKED_EXTERNAL_INPUT** = needs something only the owner can provide · **NOT IMPLEMENTED**.
+
+## Evidence matrix (what is REAL and why) — 2026-10-05
+REAL means a working backend flow **and** an automated test. Where a feature has code and UI but a weaker test, it is marked PARTIAL here even if older text below says REAL.
+
+| Feature | Status | Evidence | Production blocker |
+|---|---|---|---|
+| Auth (password, sessions, CSRF, throttling) | REAL | `AuthIntegrationTests`, `HardeningTests`, factory-flow | — |
+| OIDC SSO + RP logout | REAL | `sso-flow` 11/11 (Keycloak) | real company IdP not tested (BLOCKED_EXTERNAL_INPUT) |
+| SAML | PARTIAL | `sso-flow` SAML brokering via Keycloak (ADR 0021) | real tenant; native SAML intentionally not added |
+| SCIM 2.0 | REAL (protocol) | `ScimTests`, `ScimDisabledTests` | real Entra/Okta tenant (BLOCKED_EXTERNAL_INPUT) |
+| Admin Console (users, apps, AI, costs, security, backups, health, settings) | REAL | factory-flow, a11y 41 screens, `AdminOrgTests`, `HealthProbesTests` | — |
+| Platform health | REAL | `HealthProbesTests`; five states, UNKNOWN when nothing to base a claim on | — |
+| Builder: website (multi-page, nav, SEO, 404) | REAL | `StaticSiteTests`, factory-flow, public-flow | — |
+| Forms | REAL | `StaticSiteTests` (validation, spam, limits, export) | — |
+| Custom domains | PARTIAL | `StaticSiteTests` (TXT, TLS probe stubbed, re-check, squatting) | real DNS + tunnel route (BLOCKED_EXTERNAL_INPUT) |
+| Templates / blocks / previews | REAL | `TemplateAndBlockTests`, `LibraryCatalogTests` | — |
+| Components registry | REAL | `ComponentApiTests` | new base component types need renderer code (by design) |
+| Source apps (Git, sandbox, packages, review, signing) | REAL (local stack) | `CodeProjectTests` (15), code-flow 14/14, live sandbox flag capture | pilot has no Git/runner (policy: off) |
+| AI code generation | PARTIAL | simulator + stub-model tests; **no real provider** | provider key (BLOCKED_EXTERNAL_INPUT) |
+| AI governance (access, budgets, alerts, streaming, tools) | REAL (stub-verified) | `AiGovernanceTests`, providers-flow 6/6 | real provider calls not exercised |
+| Quotas (AI, build, storage) | REAL | `QuotaEnforcementTests`, `LockdownSettingsTests`, `AiGovernanceTests`; rejections visible in admin | — |
+| Server runtime | REAL (Docker Desktop) | `ServerRuntimeTests`, runtime-flow 8/8 (hardening, isolation, blue/green, archive) | Linux host + gVisor (not production isolation on a Mac) |
+| App DB isolation, secrets, signed identity | REAL | runtime-flow (role cannot open other DBs; forged header ignored), `ServerRuntimeTests` | — |
+| Connectors | PARTIAL | `ServerRuntimeTests` refusals, workflow NOTIFY path | no approved external API yet; real call untested |
+| Dashboard | PARTIAL | runtime-flow builds and publishes it; sample data / JSON URL only, no data-source UI | pilot use case needed |
+| Internal tool / Workflow | REAL (scaffold level) | runtime-flow (private, signed identity, approvers, history) | AI-generated server code untested with a real model |
+| Backups + restore drill | LOCAL_BACKUP_REAL | `backup-all.sh`, `restore-drill-all.sh`, `BackupMonitorTests`; local+public drills PASS | **off-host copy** (BLOCKED_EXTERNAL_INPUT) |
+| Auto restart | REAL | Docker restart policies, watchdog (pilot) | systemd on Linux |
+| Public pilot posture | REAL | public-flow 13/13: sign-up closed, code/server apps off, V23, HSTS/CSP | — |
 
 ## Platform, identity, admin
 | Area | Status | Notes |
@@ -69,7 +98,7 @@ stand-in, labelled as such · **BLOCKED_EXTERNAL_INPUT** = needs something only 
 | Kubernetes, GitHub Actions | NOT IMPLEMENTED (by instruction) | |
 
 ## Verification (2026-10-04, this machine)
-Backend `./gradlew test`: **175 tests, 0 failures, 3 skipped** (OpenRouter live tests need a key). Browser E2E: `factory-flow` 34/34, `code-flow` 14/14,
+Backend `./gradlew test`: **185 tests, 0 failures, 3 skipped** (OpenRouter live tests need a key). Browser E2E: `factory-flow` 34/34, `code-flow` 14/14, `runtime-flow` 8/8,
 `a11y` 41/41 screens (no serious/critical axe violations), `providers-flow` 6/6, `pages-mock` 6/6 (GitHub Pages static build), `sso-flow` 11/11
 (Keycloak, incl. RP logout + SAML brokering), `public-flow` 13/13 (live pilot through Cloudflare, after the V23 redeploy). Live smoke tests:
 server app create → sandbox build → isolated runtime → API → own DB; blue/green switch; Dashboard / Internal tool / Workflow; app-to-app and

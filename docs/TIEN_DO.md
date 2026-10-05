@@ -19,7 +19,7 @@ Toàn bộ nằm trên nhánh `feat/production-hardening` (chưa hợp nhất v�
 | K | Dashboard / Công cụ nội bộ / Workflow | Xong (local) |
 | L | Sao lưu hằng ngày, diễn tập khôi phục, giám sát sao lưu, tự khởi động lại, profile LEAN/MEDIUM/FULL | Xong |
 | M | Kiểm tra bảo mật: quét secret, OSV (đã vá Tomcat/Jackson/RabbitMQ/BouncyCastle), soát mã độc lập (1 HIGH, 1 MEDIUM, 8 LOW — đã sửa hết) | Xong |
-| N | Hồi quy: backend 175 test; E2E factory 34/34, code 14/14, a11y 41/41, providers 6/6, pages 6/6, SSO 11/11, public 13/13 | Xong |
+| N | Hồi quy: backend 185 test; E2E factory 34/34, code 14/14, a11y 41/41, providers 6/6, pages 6/6, SSO 11/11, public 13/13 | Xong |
 
 ## Chưa làm / cần bạn quyết định
 * **Khoá API nhà cung cấp AI** (OpenRouter/OpenAI/Anthropic/Gemini): chưa có → AI thật chưa chạy (BLOCKED_EXTERNAL_INPUT).

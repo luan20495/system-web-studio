@@ -93,3 +93,22 @@ and permissions policies; API responses `no-store`. **Listening ports**: all pro
 | — | config | sites gateway appended the Docker hop to X-Forwarded-For (all visitors looked the same to rate limits) | X-Forwarded-For passed through from the tunnel |
 Checked and fine (reviewer): authorization scoping of all new controllers, SQL parameterization, SCIM privilege boundaries, renderer escaping,
 CSRF model per security chain, secret handling, gateway path handling (Spring's StrictHttpFirewall), CSV formula injection.
+
+## Final verification before the pull request (2026-10-05)
+* **Git account:** `gh` switched to `luan20495` (ADMIN on the repository); commit authorship unchanged.
+* **Secrets:** gitleaks on the working tree, the whole history and `origin/main..HEAD`: clean. **Dependencies:** `npm audit` 0; OSV over 527 packages (backend runtime
+  classpath, both scaffold lockfiles, root lockfile): 0 advisories.
+* **Build sandbox (captured live from running containers during a real build):** install step `net=hbl_build` (internal, package mirror only), build step `net=none`;
+  user 1000, read-only rootfs, `cap-drop ALL`, `no-new-privileges`, 2 GiB / 2 CPU / 512 pids, named volume only, no host bind mounts, no Docker socket, not privileged;
+  install and build timeouts from policy; approved-package mirror enforced.
+* **Server runtime (runtime-flow, repeatable):** user 10001, read-only rootfs, caps dropped, limits set, no mounts/socket; no internet, no platform database, no host access;
+  app A cannot reach app B (own internal network per app); the per-app database role cannot connect to `appdb`, `postgres` or `template1` and has no privileges; a forged
+  identity header sent straight to a (new-scaffold) app is ignored (HMAC), and secrets/DB URLs never appear in API responses or audit rows.
+  *Note:* apps created before the HMAC fix (only local smoke-test apps) keep the old scaffold code until their repository is updated; they are unreachable except through the gateway.
+* **Host after the rollup incident (best effort, metadata only):** LaunchAgents/Daemons — no recent changes (CLEAN); shell startup files unchanged since Sep 5/26 (CLEAN);
+  crontab has one pre-existing job (EXPECTED); npm globals only corepack + npm (CLEAN); git/ssh/docker configuration contains no URL rewrites or helpers beyond the
+  Docker Desktop credential store (EXPECTED); non-loopback listeners are macOS services and the unrelated `factory-*` containers (EXPECTED); two outbound `ssh` sessions
+  were the user's own `githuball` agent fetching `oxiitek/FW_K365` (EXPECTED); no unexpected executables in the home directory in the last 7 days (CLEAN). The cause of the
+  `rollup@4.64.0` slowdown remains **UNKNOWN**; the pin to 4.62.0 stays. This is not a proof of absence of malware.
+* **Fixed in this pass:** Forgejo merge race (`405 try again later` was reported as `MAIN_MOVED`); production start now refuses public sign-up, mock deploy, weak bootstrap admin, missing
+  forms salt, SCIM/SAML/runtime misconfiguration; platform health no longer omits Git, render worker, runner, runtime and backups.
