@@ -45,6 +45,7 @@
   ],
   "exclude": [
     "backend",
+    "apps",
     "node_modules",
     "packages",
     "workers"

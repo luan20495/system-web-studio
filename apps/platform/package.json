@@ -1,0 +1,19 @@
+{
+  "name": "@xweb/app-platform",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start -p 3001",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@xweb/api-client": "*",
+    "@xweb/auth": "*",
+    "@xweb/i18n": "*",
+    "@xweb/permissions": "*",
+    "@xweb/types": "*",
+    "@xweb/ui": "*"
+  }
+}
