@@ -8,16 +8,18 @@ import { SERVER_KINDS, type AppKind, type ApiProject, type BlockDto, type Templa
 import { sectionLabel } from "@/components/SectionInspector";
 import { useSession } from "../session";
 import { rememberPortal } from "../routing";
+import { PortalSwitcher } from "@xweb/ui";
 import { useLoad } from "../useLoad";
 import { actionLabel, ago, Card, ErrorState, errText, NavLink, num, Pager, Pill, StateView, usd } from "../ui";
 import { ProjectWorkspace } from "./ProjectWorkspace";
 import { BlockStatus, BlockThumb, blockPage, CheckList, ReviewTimeline, SchemaThumb } from "../library";
 
-type StudioCtx = { workspaceId: string; setWorkspaceId: (id: string) => void };
+type StudioCtx = { workspaceId: string; setWorkspaceId: (id: string) => void; dedicated: boolean };
 const Ctx = createContext<StudioCtx | null>(null);
 const useStudio = () => useContext(Ctx)!;
 
-export function StudioApp({ seg }: { seg: string[] }) {
+/** `dedicated` = rendered by the Studio web app (app.xweb.vn); links to the other consoles then go through the portal switcher. */
+export function StudioApp({ seg, dedicated = false }: { seg: string[]; dedicated?: boolean }) {
   const { me } = useSession();
   const [workspaceId, setWs] = useState(() => {
     try { const saved = localStorage.getItem("studio-ws"); if (saved && me!.workspaces.some((w) => w.id === saved)) return saved; } catch { /* ignore */ }
@@ -27,7 +29,7 @@ export function StudioApp({ seg }: { seg: string[] }) {
   // the project workspace is a full-screen editor; everything else lives in the Studio shell
   if (seg[0] === "projects" && seg[1]) return <ProjectWorkspace projectId={seg[1]} view={seg[2]}/>;
   return (
-    <Ctx.Provider value={{ workspaceId, setWorkspaceId }}>
+    <Ctx.Provider value={{ workspaceId, setWorkspaceId, dedicated }}>
       <div className="shell studio-shell">
         <StudioSidebar active={seg[0] ?? ""}/>
         <div className="shellMain"><StudioHeader/><main className="page" id="main" tabIndex={0}>{route(seg)}</main></div>
@@ -61,7 +63,7 @@ function StudioSidebar({ active }: { active: string }) {
 }
 
 function StudioHeader() {
-  const { me, logout } = useSession(); const { workspaceId, setWorkspaceId } = useStudio(); const router = useRouter();
+  const { me, logout } = useSession(); const { workspaceId, setWorkspaceId, dedicated } = useStudio(); const router = useRouter();
   const [q, setQ] = useState("");
   return (
     <header className="topHeader">
@@ -71,7 +73,7 @@ function StudioHeader() {
       <div className="row">
         {me!.workspaces.length > 1 ? <select aria-label="Workspace" value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)}>{me!.workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select>
           : <span className="muted">{me!.workspaces[0].name}</span>}
-        {me!.systemAdmin ? <Link className="btn sm" href="/admin" onClick={() => rememberPortal("admin")}>Admin Console</Link> : null}
+        {dedicated ? <PortalSwitcher me={me} current="studio"/> : me!.systemAdmin ? <Link className="btn sm" href="/admin" onClick={() => rememberPortal("admin")}>Admin Console</Link> : null}
         <span className="avatar" title={me!.displayName} aria-label={`Tài khoản: ${me!.displayName}`}>{me!.displayName.slice(0, 2).toUpperCase()}</span>
         <button className="btn sm ghost" onClick={() => void logout()}>Đăng xuất</button>
       </div>

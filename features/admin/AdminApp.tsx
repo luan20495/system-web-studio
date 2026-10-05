@@ -9,7 +9,9 @@ import { CreateUserDialog, LinkBox } from "./UserDialogs";
 import { AiAdmin, UserAiCard } from "./AiSetup";
 import type { ActivationLink } from "@/lib/http-types";
 import { useSession } from "../session";
-import { rememberPortal } from "../routing";
+import { PORTAL_LABEL, rememberPortal, type PortalId } from "@xweb/permissions";
+import { PortalSwitcher } from "@xweb/ui";
+import { A, adminPortal, otherConsoleHref, owns, setAdminPortal, type AdminPortal } from "./base";
 import { useLoad } from "../useLoad";
 import { BlockStatus, blockPage, CheckList, ReviewTimeline, SchemaThumb } from "../library";
 import { actionLabel, ago, Card, ComingSoon, ErrorState, errText, fmtDate, Kpi, NavLink, num, Pager, Pill, StateView, tok, usd } from "../ui";
@@ -19,7 +21,26 @@ const NAV: [string, string, string][] = [
   ["components", "Components", "◇"], ["templates", "Templates", "▧"], ["audit", "Nhật ký kiểm toán", "≡"], ["builds", "Build & lưu trữ", "⬢"], ["packages", "Packages", "▣"], ["system", "Sức khỏe hệ thống", "♥"], ["settings", "Cài đặt", "⚙"]
 ];
 
-export function AdminApp({ seg }: { seg: string[] }) {
+/** Sections whose backend does not exist yet: the screen says so plainly instead of showing invented data. */
+const COMING: Record<string, { title: string; icon: string; why: string; needs: string }> = {
+  tenants: { title: "Công ty (tenant)", icon: "▥", why: "Danh sách công ty, tạo/khóa/mở công ty, gói dịch vụ và hạn mức theo công ty.", needs: "Cần bảng và API tenant của nền tảng (T2). Hiện hệ thống chỉ có một tổ chức." },
+  groups: { title: "Nhóm", icon: "☰", why: "Nhóm người dùng để cấp quyền và chia sẻ ứng dụng hàng loạt.", needs: "Cần mô hình nhóm và vai trò theo tổ chức (T3)." },
+  sharing: { title: "Chia sẻ", icon: "⇆", why: "Chia sẻ ứng dụng cho người dùng, nhóm, phòng ban, cả công ty hoặc công ty khác.", needs: "Cần API chia sẻ và phê duyệt chia sẻ giữa các công ty." },
+  "data-sources": { title: "Nguồn dữ liệu", icon: "⛁", why: "Kết nối và quản lý nguồn dữ liệu của công ty.", needs: "Cần API nguồn dữ liệu và connector (T8). Khóa kết nối chỉ nằm ở máy chủ, không bao giờ gửi xuống trình duyệt." },
+  byok: { title: "AI riêng của công ty", icon: "✧", why: "Dùng AI mặc định của Xweb hoặc tự đưa khóa AI của công ty (BYOK).", needs: "Cần API cấu hình AI theo công ty. Khóa chỉ ghi, không đọc lại." },
+};
+const NAV_COMING: Record<AdminPortal, string[]> = { all: [], platform: ["tenants"], admin: ["groups", "sharing", "data-sources", "byok"] };
+
+function navFor(p: AdminPortal): [string, string, string][] {
+  const real = NAV.filter(([k]) => owns(k, p));
+  const soon = NAV_COMING[p].map((k): [string, string, string] => [k, COMING[k].title, COMING[k].icon]);
+  return p === "platform" ? [real[0], ...soon, ...real.slice(1)] : [...real, ...soon];
+}
+
+const CONSOLE_NAME: Record<AdminPortal, string> = { all: "Admin Console", platform: "Xweb Platform", admin: "Quản trị công ty" };
+
+export function AdminApp({ seg, portal = "all" }: { seg: string[]; portal?: AdminPortal }) {
+  setAdminPortal(portal);
   const section = seg[0] ?? "";
   const active = section === "workspaces" ? "users" : section;
   return (
@@ -34,7 +55,10 @@ export function AdminApp({ seg }: { seg: string[] }) {
 }
 
 function route(seg: string[]): ReactNode {
-  switch (seg[0] ?? "") {
+  const key = seg[0] ?? "";
+  if (COMING[key] && NAV_COMING[adminPortal()].includes(key)) return <ComingSection id={key}/>;
+  if (!owns(key)) return <ElsewhereNote section={key}/>;
+  switch (key) {
     case "": return <Overview/>;
     case "users": return seg[1] ? <UserDetail id={seg[1]}/> : <UsersPage/>;
     case "workspaces": return seg[1] ? <WorkspaceDetail id={seg[1]}/> : <UsersPage tab="workspaces"/>;
@@ -59,13 +83,27 @@ function route(seg: string[]): ReactNode {
   }
 }
 
+function ComingSection({ id }: { id: string }) {
+  const c = COMING[id];
+  return (<>
+    <PageHead title={c.title} sub={c.why}/>
+    <Card title="Chưa sẵn sàng"><ComingSoon title={c.title}>{c.needs} Màn hình này sẽ hiển thị dữ liệu thật ngay khi phần máy chủ có mặt; hiện tại không có dữ liệu giả.</ComingSoon></Card>
+  </>);
+}
+
+/** A section that exists, but in the other console. */
+function ElsewhereNote({ section }: { section: string }) {
+  const other: PortalId = adminPortal() === "platform" ? "admin" : "platform";
+  return <StateView kind="notfound" title="Mục này nằm ở trang khác" detail={<p>Mục này thuộc {PORTAL_LABEL[other]}.</p>} action={<a className="btn" href={otherConsoleHref(other, `/${section}`)}>Mở {PORTAL_LABEL[other]}</a>}/>;
+}
+
 function AdminSidebar({ active }: { active: string }) {
   const { me } = useSession();
   return (
     <aside className="sidebar dark" aria-label="Điều hướng quản trị">
-      <div className="sideBrand"><span className="logoMark" aria-hidden="true">◆</span><div><b>AI Software Factory</b><small>Admin Console</small></div></div>
-      <nav>{NAV.map(([key, label, icon]) => <NavLink key={key} href={`/admin${key ? `/${key}` : ""}`} active={active === key} icon={icon}>{label}</NavLink>)}</nav>
-      <div className="sideFoot"><div className="avatar" aria-hidden="true">{(me?.displayName ?? "?").slice(0, 2).toUpperCase()}</div><div><b>{me?.displayName}</b><small>System admin</small></div></div>
+      <div className="sideBrand"><span className="logoMark" aria-hidden="true">◆</span><div><b>AI Software Factory</b><small>{CONSOLE_NAME[adminPortal()]}</small></div></div>
+      <nav>{navFor(adminPortal()).map(([key, label, icon]) => <NavLink key={key} href={A(key ? `/${key}` : "")} active={active === key} icon={icon}>{label}</NavLink>)}</nav>
+      <div className="sideFoot"><div className="avatar" aria-hidden="true">{(me?.displayName ?? "?").slice(0, 2).toUpperCase()}</div><div><b>{me?.displayName}</b><small>{adminPortal() === "platform" ? "Quản trị nền tảng" : "Quản trị viên"}</small></div></div>
     </aside>
   );
 }
@@ -74,9 +112,11 @@ function AdminHeader() {
   const { me, logout } = useSession();
   return (
     <header className="topHeader">
-      <div className="crumb">Admin Console</div>
+      <div className="crumb">{CONSOLE_NAME[adminPortal()]}</div>
       <div className="row">
-        {me && me.workspaces.length > 0 ? <Link className="btn sm" href="/studio" onClick={() => rememberPortal("builder")}>Mở Builder Studio</Link> : null}
+        {adminPortal() === "all"
+          ? (me && me.workspaces.length > 0 ? <Link className="btn sm" href="/studio" onClick={() => rememberPortal("builder")}>Mở Builder Studio</Link> : null)
+          : <PortalSwitcher me={me} current={adminPortal() as PortalId}/>}
         <button className="btn sm ghost" onClick={() => void logout()}>Đăng xuất</button>
       </div>
     </header>
@@ -97,7 +137,7 @@ function AuditTable({ rows, compact }: { rows: AuditRow[]; compact?: boolean }) 
         <tr className="clickRow" onClick={() => setOpen(open === r.id ? null : r.id)}>
           <td title={fmtDate(r.createdAt)}>{ago(r.createdAt)}</td><td>{r.actor ?? (r.actorId ? r.actorId.slice(0, 8) : <span className="muted">Hệ thống</span>)}</td>
           <td><b>{actionLabel(r.action)}</b><small className="code">{r.action}</small></td>
-          <td>{r.projectId ? <Link href={`/admin/applications/${r.projectId}`} onClick={(e) => e.stopPropagation()}>{r.resourceType}</Link> : r.resourceType}</td>
+          <td>{r.projectId ? <Link href={A(`/applications/${r.projectId}`)} onClick={(e) => e.stopPropagation()}>{r.resourceType}</Link> : r.resourceType}</td>
           {compact ? null : <><td>{r.ipAddress ?? "—"}</td><td className="code">{r.requestId ?? "—"}</td></>}
         </tr>
         {open === r.id ? <tr className="detailRow"><td colSpan={compact ? 4 : 6}><pre>{JSON.stringify({ resourceId: r.resourceId, old: r.oldValue && JSON.parse(r.oldValue), new: r.newValue && JSON.parse(r.newValue) }, null, 2)}</pre></td></tr> : null}
@@ -114,7 +154,7 @@ function Overview() {
   const o = data!;
   return (<>
     <PageHead title="Tổng quan" sub="Số liệu thật từ cơ sở dữ liệu của nền tảng."/>
-    <SetupChecklist users={o.users} projects={o.projects}/>
+    {owns("ai") ? <SetupChecklist users={o.users} projects={o.projects}/> : null}
     <div className="kpiGrid">
       <Kpi label="Người dùng" value={num(o.users)} hint={`${num(o.activeUsers)} đang hoạt động · ${num(o.disabledUsers)} bị khóa`}/>
       <Kpi label="Đăng nhập 30 ngày" value={num(o.usersLoggedIn30d)}/>
@@ -124,8 +164,8 @@ function Overview() {
       <Kpi label="Phiên bản tạo hôm nay" value={num(o.versionsToday)}/>
     </div>
     <div className="grid2">
-      <Card title="Hoạt động gần đây" actions={<Link className="btn sm" href="/admin/audit">Xem tất cả</Link>}><AuditTable rows={o.recentActivity} compact/></Card>
-      <AiMonthCard/>
+      <Card title="Hoạt động gần đây" actions={<Link className="btn sm" href={A("/audit")}>Xem tất cả</Link>}><AuditTable rows={o.recentActivity} compact/></Card>
+      {owns("ai") ? <AiMonthCard/> : null}
     </div>
   </>);
 }
@@ -136,11 +176,11 @@ function SetupChecklist({ users, projects }: { users: number; projects: number }
   const limits = useLoad(() => api.admin.aiLimits(), []);
   if (!providers.data || !limits.data) return null;
   const items: { done: boolean; label: string; href: string; action: string }[] = [
-    { done: true, label: "Tài khoản quản trị", href: "/admin/users", action: "Xem" },
-    { done: providers.data.some((p) => p.configured), label: "Thêm nhà cung cấp AI", href: "/admin/ai/providers", action: "Thêm nhà cung cấp" },
-    { done: providers.data.some((p) => p.models.some((m) => m.enabled)), label: "Chọn mô hình mặc định", href: "/admin/ai/models", action: "Chọn mô hình" },
-    { done: limits.data.customized, label: "Thiết lập hạn mức AI", href: "/admin/ai/limits", action: "Thiết lập" },
-    { done: users > 1, label: "Thêm người dùng", href: "/admin/users", action: "Thêm người dùng" },
+    { done: true, label: "Tài khoản quản trị", href: A("/users"), action: "Xem" },
+    { done: providers.data.some((p) => p.configured), label: "Thêm nhà cung cấp AI", href: A("/ai/providers"), action: "Thêm nhà cung cấp" },
+    { done: providers.data.some((p) => p.models.some((m) => m.enabled)), label: "Chọn mô hình mặc định", href: A("/ai/models"), action: "Chọn mô hình" },
+    { done: limits.data.customized, label: "Thiết lập hạn mức AI", href: A("/ai/limits"), action: "Thiết lập" },
+    { done: users > 1, label: "Thêm người dùng", href: A("/users"), action: "Thêm người dùng" },
     { done: projects > 0, label: "Tạo website đầu tiên", href: "/studio", action: "Mở Builder Studio" }
   ];
   if (items.every((i) => i.done)) return null;
@@ -159,8 +199,8 @@ function UsersPage({ tab = "users" }: { tab?: "users" | "workspaces" }) {
   return (<>
     <PageHead title="Người dùng & Workspace" sub="Workspace là đơn vị tổ chức hiện tại (chưa có phòng ban/đồng bộ HR)."/>
     <div className="tabs" role="tablist">
-      <Link role="tab" aria-selected={tab === "users"} className={tab === "users" ? "active" : ""} href="/admin/users">Người dùng</Link>
-      <Link role="tab" aria-selected={tab === "workspaces"} className={tab === "workspaces" ? "active" : ""} href="/admin/workspaces">Workspace</Link>
+      <Link role="tab" aria-selected={tab === "users"} className={tab === "users" ? "active" : ""} href={A("/users")}>Người dùng</Link>
+      <Link role="tab" aria-selected={tab === "workspaces"} className={tab === "workspaces" ? "active" : ""} href={A("/workspaces")}>Workspace</Link>
     </div>
     {tab === "users" ? <UserList/> : <WorkspaceList/>}
   </>);
@@ -185,8 +225,8 @@ function UserList() {
         <table className="table">
           <thead><tr><th>Người dùng</th><th>Vai trò hệ thống</th><th>Workspace</th><th>Ứng dụng</th><th>Đăng nhập gần nhất</th><th>Trạng thái</th></tr></thead>
           <tbody>{data!.items.map((u) => (
-            <tr key={u.id} className="clickRow" onClick={() => router.push(`/admin/users/${u.id}`)}>
-              <td><Link href={`/admin/users/${u.id}`}><b>{u.displayName ?? u.username}</b></Link><small>{u.username}{u.email ? ` · ${u.email}` : ""} · {u.authSource === "OIDC" ? "SSO" : u.authSource === "SCIM" ? "SCIM" : "Mật khẩu"}</small></td>
+            <tr key={u.id} className="clickRow" onClick={() => router.push(A(`/users/${u.id}`))}>
+              <td><Link href={A(`/users/${u.id}`)}><b>{u.displayName ?? u.username}</b></Link><small>{u.username}{u.email ? ` · ${u.email}` : ""} · {u.authSource === "OIDC" ? "SSO" : u.authSource === "SCIM" ? "SCIM" : "Mật khẩu"}</small></td>
               <td>{u.systemAdmin ? <Pill value="PUBLIC" label="Quản trị hệ thống"/> : <span className="muted">Thành viên</span>}</td>
               <td>{u.workspaces}</td><td>{u.projects}</td><td>{ago(u.lastLoginAt)}</td>
               <td>{!u.enabled ? <Pill value="DISABLED" label="Bị khóa"/> : u.pending ? <Pill value="PENDING" label="Chờ kích hoạt"/> : <Pill value="ACTIVE" label="Hoạt động"/>}</td>
@@ -242,8 +282,8 @@ function UserDetail({ id }: { id: string }) {
       <Kpi label="Phiên đang mở" value={num(d.activeSessions)}/>
     </div>
     <div className="grid2">
-      <Card title={`Workspace (${d.workspaces.length})`}>{d.workspaces.length ? <table className="table"><tbody>{d.workspaces.map((w) => <tr key={w.id}><td><Link href={`/admin/workspaces/${w.id}`}>{w.name}</Link></td><td><Pill value="PRIVATE" label={w.role}/></td></tr>)}</tbody></table> : <StateView kind="empty" title="Không thuộc workspace nào"/>}</Card>
-      <Card title={`Ứng dụng (${d.projects.length})`}>{d.projects.length ? <table className="table"><tbody>{d.projects.map((p) => <tr key={p.id}><td><Link href={`/admin/applications/${p.id}`}>{p.name}</Link><small>{p.workspaceName}</small></td><td>{p.owner ? <Pill value="ACTIVE" label="Chủ sở hữu"/> : <Pill value="PRIVATE" label={p.role}/>}</td></tr>)}</tbody></table> : <StateView kind="empty" title="Chưa tham gia ứng dụng nào"/>}</Card>
+      <Card title={`Workspace (${d.workspaces.length})`}>{d.workspaces.length ? <table className="table"><tbody>{d.workspaces.map((w) => <tr key={w.id}><td><Link href={A(`/workspaces/${w.id}`)}>{w.name}</Link></td><td><Pill value="PRIVATE" label={w.role}/></td></tr>)}</tbody></table> : <StateView kind="empty" title="Không thuộc workspace nào"/>}</Card>
+      <Card title={`Ứng dụng (${d.projects.length})`}>{d.projects.length ? <table className="table"><tbody>{d.projects.map((p) => <tr key={p.id}><td><Link href={A(`/applications/${p.id}`)}>{p.name}</Link><small>{p.workspaceName}</small></td><td>{p.owner ? <Pill value="ACTIVE" label="Chủ sở hữu"/> : <Pill value="PRIVATE" label={p.role}/>}</td></tr>)}</tbody></table> : <StateView kind="empty" title="Chưa tham gia ứng dụng nào"/>}</Card>
     </div>
     <UserAiCard userId={u.id} name={u.displayName ?? u.username}/>
     <Card title="Hoạt động gần đây"><AuditTable rows={d.recentActivity} compact/></Card>
@@ -258,7 +298,7 @@ function WorkspaceList() {
       <form className="filters" onSubmit={(e) => { e.preventDefault(); setPage(0); setQuery(q); }}><input aria-label="Tìm workspace" placeholder="Tìm workspace" value={q} onChange={(e) => setQ(e.target.value)}/><button className="btn">Tìm</button></form>
       {error ? <ErrorState error={error} retry={reload}/> : loading && !data ? <StateView kind="loading"/> : data!.items.length === 0 ? <StateView kind="empty"/> : (<>
         <table className="table"><thead><tr><th>Workspace</th><th>Thành viên</th><th>Ứng dụng</th><th>Tạo</th><th>Hoạt động gần nhất</th></tr></thead>
-          <tbody>{data!.items.map((w) => <tr key={w.id} className="clickRow" onClick={() => router.push(`/admin/workspaces/${w.id}`)}><td><Link href={`/admin/workspaces/${w.id}`}><b>{w.name}</b></Link><small>{w.slug}</small></td><td>{w.members}</td><td>{w.projects}</td><td>{fmtDate(w.createdAt)}</td><td>{ago(w.lastActivityAt)}</td></tr>)}</tbody></table>
+          <tbody>{data!.items.map((w) => <tr key={w.id} className="clickRow" onClick={() => router.push(A(`/workspaces/${w.id}`))}><td><Link href={A(`/workspaces/${w.id}`)}><b>{w.name}</b></Link><small>{w.slug}</small></td><td>{w.members}</td><td>{w.projects}</td><td>{fmtDate(w.createdAt)}</td><td>{ago(w.lastActivityAt)}</td></tr>)}</tbody></table>
         <Pager page={page} size={data!.size} total={data!.total} onPage={setPage}/>
       </>)}
     </Card>
@@ -273,7 +313,7 @@ function WorkspaceDetail({ id }: { id: string }) {
   return (<>
     <PageHead title={d.workspace.name} sub={`${d.workspace.slug} · tạo ${fmtDate(d.workspace.createdAt)}`}/>
     <div className="grid2">
-      <Card title={`Thành viên (${d.members.length})`}><table className="table"><thead><tr><th>Người dùng</th><th>Vai trò</th><th>Trạng thái</th></tr></thead><tbody>{d.members.map((m) => <tr key={m.userId}><td><Link href={`/admin/users/${m.userId}`}>{m.displayName ?? m.username}</Link><small>{m.username}</small></td><td>{m.role}</td><td>{m.enabled ? <Pill value="ACTIVE" label="Hoạt động"/> : <Pill value="DISABLED" label="Bị khóa"/>}</td></tr>)}</tbody></table></Card>
+      <Card title={`Thành viên (${d.members.length})`}><table className="table"><thead><tr><th>Người dùng</th><th>Vai trò</th><th>Trạng thái</th></tr></thead><tbody>{d.members.map((m) => <tr key={m.userId}><td><Link href={A(`/users/${m.userId}`)}>{m.displayName ?? m.username}</Link><small>{m.username}</small></td><td>{m.role}</td><td>{m.enabled ? <Pill value="ACTIVE" label="Hoạt động"/> : <Pill value="DISABLED" label="Bị khóa"/>}</td></tr>)}</tbody></table></Card>
       <Card title={`Ứng dụng (${d.projects.length})`}><AppTable rows={d.projects}/></Card>
     </div>
     <Card title="Hoạt động"><AuditTable rows={d.recentActivity} compact/></Card>
@@ -290,8 +330,8 @@ function AppTable({ rows }: { rows: App[] }) {
   if (!rows.length) return <StateView kind="empty" title="Chưa có ứng dụng"/>;
   return (
     <table className="table"><thead><tr><th>Ứng dụng</th><th>Chủ sở hữu</th><th>Thành viên</th><th>Truy cập</th><th>Phiên bản</th><th>Cập nhật</th><th>Xuất bản</th></tr></thead>
-      <tbody>{rows.map((a) => <tr key={a.id} className="clickRow" onClick={() => router.push(`/admin/applications/${a.id}`)}>
-        <td><Link href={`/admin/applications/${a.id}`}><b>{a.name}</b></Link><small>{a.workspaceName}{a.active ? "" : " · đã xóa"}</small></td><td>{a.owner}</td><td>{a.members}</td>
+      <tbody>{rows.map((a) => <tr key={a.id} className="clickRow" onClick={() => router.push(A(`/applications/${a.id}`))}>
+        <td><Link href={A(`/applications/${a.id}`)}><b>{a.name}</b></Link><small>{a.workspaceName}{a.active ? "" : " · đã xóa"}</small></td><td>{a.owner}</td><td>{a.members}</td>
         <td><Pill value={a.visibility} label={a.visibility === "PUBLIC" ? "Công khai" : "Riêng tư"}/></td><td>v{a.latestVersion ?? "—"} <small className="muted">r{a.revision}</small></td><td>{ago(a.updatedAt)}</td><td>{publishPill(a)}</td></tr>)}</tbody></table>
   );
 }
@@ -351,13 +391,13 @@ function AppDetail({ id }: { id: string }) {
         <Card title="Chưa triển khai"><ComingSoon title="Lưu trữ (archive), chặn xuất bản công khai, chi phí, điểm bảo mật">Các chức năng này cần dữ liệu và chính sách chưa có trong hệ thống.</ComingSoon></Card>
       </div>
     </>) : null}
-    {tab === "members" ? <Card><table className="table"><thead><tr><th>Người dùng</th><th>Vai trò</th><th>Trạng thái</th></tr></thead><tbody>{d.members.map((m) => <tr key={m.userId}><td><Link href={`/admin/users/${m.userId}`}>{m.displayName ?? m.username}</Link><small>{m.username}</small></td><td>{m.role}</td><td>{m.enabled ? <Pill value="ACTIVE" label="Hoạt động"/> : <Pill value="DISABLED" label="Bị khóa"/>}</td></tr>)}</tbody></table></Card> : null}
+    {tab === "members" ? <Card><table className="table"><thead><tr><th>Người dùng</th><th>Vai trò</th><th>Trạng thái</th></tr></thead><tbody>{d.members.map((m) => <tr key={m.userId}><td><Link href={A(`/users/${m.userId}`)}>{m.displayName ?? m.username}</Link><small>{m.username}</small></td><td>{m.role}</td><td>{m.enabled ? <Pill value="ACTIVE" label="Hoạt động"/> : <Pill value="DISABLED" label="Bị khóa"/>}</td></tr>)}</tbody></table></Card> : null}
     {tab === "versions" ? <Card><table className="table"><thead><tr><th>Phiên bản</th><th>Loại</th><th>Mô tả</th><th>Tác giả</th><th>Thời gian</th><th/></tr></thead><tbody>{d.versions.map((v, i) => <tr key={v.id}><td><b>v{v.versionNumber}</b>{i === 0 ? <small>hiện tại</small> : null}</td><td>{v.kind}</td><td>{v.summary}</td><td>{v.createdBy ?? "—"}</td><td>{fmtDate(v.createdAt)}</td>
       <td>{i > 0 && a.active ? <button className="btn sm" disabled={busy} onClick={() => { if (window.confirm(`Khôi phục v${v.versionNumber}? Một phiên bản mới sẽ được tạo.`)) void act(() => api.restoreVersion(a.workspaceId, a.id, v.id, a.revision), `Đã khôi phục v${v.versionNumber}.`); }}>Khôi phục</button> : null}</td></tr>)}</tbody></table></Card> : null}
     {tab === "prompts" ? <Card>{d.prompts.length ? <table className="table"><thead><tr><th>Thời gian</th><th>Người dùng</th><th>Prompt</th><th>Model</th><th>Kết quả</th></tr></thead><tbody>{d.prompts.map((p) => <tr key={p.id}><td>{ago(p.createdAt)}</td><td>{p.user ?? "—"}</td><td>{p.text}</td><td className="code">{p.model ?? p.provider ?? "—"}</td><td>{p.outcome ? <Pill value={p.outcome}/> : "—"}</td></tr>)}</tbody></table> : <StateView kind="empty" title="Chưa có prompt"/>}</Card> : null}
     {tab === "deployments" ? <Card>{d.deployments.length ? <table className="table"><thead><tr><th>Thời gian</th><th>Phiên bản</th><th>Truy cập</th><th>Trạng thái</th><th>Môi trường</th><th>Lỗi</th></tr></thead><tbody>{d.deployments.map((x) => <tr key={x.id}><td>{fmtDate(x.createdAt)}</td><td>v{x.versionNumber ?? "—"}</td><td>{x.visibility}</td><td><Pill value={x.status}/></td><td>{x.provider === "mock" ? "Demo deployment (mô phỏng)" : x.provider === "static" ? "Trang tĩnh (thật)" : x.provider}</td><td>{x.error ?? "—"}</td></tr>)}</tbody></table> : <StateView kind="empty" title="Chưa xuất bản lần nào"/>}</Card> : null}
     {tab === "audit" ? <Card><AuditTable rows={d.audit}/></Card> : null}
-    <p><button className="btn ghost" onClick={() => router.push("/admin/applications")}>← Danh sách ứng dụng</button></p>
+    <p><button className="btn ghost" onClick={() => router.push(A("/applications"))}>← Danh sách ứng dụng</button></p>
   </>);
 }
 
@@ -404,8 +444,8 @@ function AiCallsLog({ models }: { models: string[] }) {
     {error ? <ErrorState error={error} retry={reload}/> : loading && !data ? <StateView kind="loading"/> : !data!.total ? <StateView kind="empty" title="Chưa có lượt gọi" detail="Bộ mô phỏng không gọi model nên không có dòng nào ở đây."/> : <>
       <table className="table"><thead><tr><th>Thời gian</th><th>Người dùng</th><th>Ứng dụng</th><th>Model</th><th>Kết quả</th><th>Token vào / ra</th><th>Chi phí</th><th>Thời gian chạy</th></tr></thead>
         <tbody>{data!.items.map((c) => <tr key={c.id}><td>{ago(c.createdAt)}<small>{fmtDate(c.createdAt)}</small></td>
-          <td><Link href={`/admin/users/${c.userId}`}>{c.user ?? c.userId.slice(0, 8)}</Link></td>
-          <td><Link href={`/admin/applications/${c.projectId}`}>{c.project ?? "—"}</Link><small>{c.workspace}</small></td>
+          <td><Link href={A(`/users/${c.userId}`)}>{c.user ?? c.userId.slice(0, 8)}</Link></td>
+          <td><Link href={A(`/applications/${c.projectId}`)}>{c.project ?? "—"}</Link><small>{c.workspace}</small></td>
           <td className="code">{c.model}</td><td><Pill value={c.outcome} label={OUTCOME_LABEL[c.outcome]}/>{c.httpStatus && c.httpStatus !== 200 ? <small>HTTP {c.httpStatus}</small> : null}</td>
           <td>{c.totalTokens == null ? <span className="muted">không báo</span> : <>{tok(c.promptTokens)} / {tok(c.completionTokens)}</>}</td>
           <td>{usd(c.costUsd)}{c.costSource ? <small>{c.costSource === "CATALOG" ? "theo bảng giá" : "nhà cung cấp báo"}</small> : null}</td><td>{(c.latencyMs / 1000).toFixed(1)} s{c.requestId ? <small className="code">{c.requestId.slice(0, 8)}</small> : null}</td></tr>)}</tbody></table>
@@ -418,7 +458,7 @@ function AiCallsLog({ models }: { models: string[] }) {
 function AiMonthCard() {
   const { data, error, reload } = useLoad(() => api.admin.aiUsage(new Date().getDate()), []);
   const t = data?.totals;
-  return <Card title="AI tháng này" actions={<Link className="btn sm" href="/admin/ai">AI Control</Link>}>
+  return <Card title="AI tháng này" actions={<Link className="btn sm" href={A("/ai")}>AI Control</Link>}>
     {error ? <ErrorState error={error} retry={reload}/> : !t ? <StateView kind="loading"/> : <div className="kpiGrid">
       <Kpi label="Lượt gọi model" value={num(t.calls)} hint={`${num(t.failedCalls)} lỗi`}/>
       <Kpi label="Token" value={num(t.totalTokens)} hint={t.callsWithoutUsage ? `${num(t.callsWithoutUsage)} lượt không có số liệu` : "số liệu nhà cung cấp"}/>
@@ -622,7 +662,7 @@ function TemplatesAdmin() {
               <div><p>Component: {t.componentTypes.map((c) => <span key={c} className="tag code">{c}</span>)}</p>
                 <p>Danh mục: {t.category}{t.tags.length ? ` · ${t.tags.map((x) => `#${x}`).join(" ")}` : ""} · ảnh xem trước: {t.previewStatus}
                   {" "}<button className="btn sm ghost" onClick={() => void act(async () => { await api.admin.templatePreview(t.id); return t; })}>Tạo lại ảnh</button></p>
-                {t.reviewComment ? <p>Nhận xét duyệt: {t.reviewComment}{t.reviewedBy ? ` — ${t.reviewedBy}` : ""}</p> : null}{t.sourceProjectId ? <p><Link href={`/admin/applications/${t.sourceProjectId}`}>Ứng dụng nguồn</Link></p> : null}</div></div></td></tr> : null}
+                {t.reviewComment ? <p>Nhận xét duyệt: {t.reviewComment}{t.reviewedBy ? ` — ${t.reviewedBy}` : ""}</p> : null}{t.sourceProjectId ? <p><Link href={A(`/applications/${t.sourceProjectId}`)}>Ứng dụng nguồn</Link></p> : null}</div></div></td></tr> : null}
           </Fragment>)}</tbody></table>
         <Pager page={page} size={data!.size} total={data!.total} onPage={setPage}/></>}
     </Card>
@@ -944,7 +984,7 @@ function SecurityPage() {
         <table className="table"><thead><tr><th>Mức</th><th>Nguồn</th><th>Phát hiện</th><th>Đối tượng</th><th>Thời điểm</th></tr></thead>
           <tbody>{rows.map((f, i) => <tr key={i}><td><Pill value={SEV_TONE[f.severity] ?? "UNKNOWN"} label={f.severity}/></td><td>{SOURCE_LABEL[f.source] ?? f.source}</td>
             <td><b>{f.title}</b><small>{f.detail}</small></td>
-            <td>{f.resourceType === "PROJECT" && f.resourceId ? <Link href={`/admin/applications/${f.resourceId}`}>{f.resourceName ?? f.resourceId}</Link> : <span className="code">{f.resourceName ?? f.resourceId ?? "—"}</span>}</td>
+            <td>{f.resourceType === "PROJECT" && f.resourceId ? <Link href={A(`/applications/${f.resourceId}`)}>{f.resourceName ?? f.resourceId}</Link> : <span className="code">{f.resourceName ?? f.resourceId ?? "—"}</span>}</td>
             <td>{f.detectedAt ? ago(f.detectedAt) : "hiện tại"}</td></tr>)}</tbody></table>}</Card>
       <p className="hint">{data.note}</p></>}
   </>);
