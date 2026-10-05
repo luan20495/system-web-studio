@@ -126,7 +126,14 @@ class ForgejoClient(
     fun fastForward(repo: String, branch: String, title: String): String {
         val pr = ok(send("POST", "/repos/${enc(org)}/${enc(repo)}/pulls", mapOf("head" to branch, "base" to "main", "title" to title.take(200))), "Open merge request")
         val number = pr.get("number").asInt()
-        val r = send("POST", "/repos/${enc(org)}/${enc(repo)}/pulls/$number/merge", mapOf("Do" to "fast-forward-only", "delete_branch_after_merge" to true), 60)
+        // Forgejo checks mergeability of a new pull request asynchronously and answers 405 "Please try again later" until it is done:
+        // retry briefly instead of reporting a moved main (a real conflict stays 405/409 with another message after the check finished)
+        var r = send("POST", "/repos/${enc(org)}/${enc(repo)}/pulls/$number/merge", mapOf("Do" to "fast-forward-only", "delete_branch_after_merge" to true), 60)
+        var attempts = 0
+        while (r.statusCode() == 405 && String(r.body()).contains("try again later", ignoreCase = true) && attempts++ < 20) {
+            Thread.sleep(500)
+            r = send("POST", "/repos/${enc(org)}/${enc(repo)}/pulls/$number/merge", mapOf("Do" to "fast-forward-only", "delete_branch_after_merge" to true), 60)
+        }
         if (r.statusCode() !in 200..299) {
             LoggerFactory.getLogger(javaClass).warn("Fast-forward of {} into main refused: HTTP {} {}", branch, r.statusCode(), String(r.body()).take(200))
             send("PATCH", "/repos/${enc(org)}/${enc(repo)}/pulls/$number", mapOf("state" to "closed"))

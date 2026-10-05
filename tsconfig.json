@@ -39,7 +39,9 @@
     ".next-check-http/types/**/*.ts",
     ".next-check-http/dev/types/**/*.ts",
     ".next-public/types/**/*.ts",
-    ".next-public/dev/types/**/*.ts"
+    ".next-public/dev/types/**/*.ts",
+    ".next-final/types/**/*.ts",
+    ".next-final/dev/types/**/*.ts"
   ],
   "exclude": [
     "backend",

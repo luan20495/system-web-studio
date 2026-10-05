@@ -260,10 +260,10 @@ await check("AI Control: usage report and call log come from ai_calls (provider-
     await admin.p.goto(BASE + "/admin/ai"); await admin.p.getByRole("heading", { name: "Mức sử dụng model" }).waitFor();
     await admin.p.getByRole("button", { name: "Hôm nay" }).click();
     const byModel = admin.p.locator(".card", { has: admin.p.getByRole("heading", { name: "Theo model", exact: true }) });
-    await byModel.getByText("e2e/stub:free").first().waitFor(); await byModel.getByText("1 lượt không có số liệu").waitFor();
+    await byModel.getByText("e2e/stub:free").first().waitFor(); await byModel.getByText("1 lượt không có số liệu").first().waitFor();
     const log = admin.p.locator(".card", { has: admin.p.getByRole("heading", { name: "Nhật ký lượt gọi model" }) });
     await log.getByLabel("Model").selectOption("e2e/stub:free");
-    await log.getByText("HTTP 429").waitFor(); await log.getByText("không báo").waitFor(); await log.getByText("1.000 / 234").waitFor();
+    await log.getByText("HTTP 429").first().waitFor(); await log.getByText("không báo").first().waitFor(); await log.getByText("1.000 / 234").first().waitFor();
     await admin.p.goto(BASE + "/studio"); await admin.p.getByText(/Token AI 24 giờ qua/).waitFor(); await admin.p.getByText(/30 ngày: .*token/).waitFor();
   } finally { sql(`delete from ai_calls where model='e2e/stub:free'`); }
 });

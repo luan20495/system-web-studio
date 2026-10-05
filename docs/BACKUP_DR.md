@@ -76,3 +76,15 @@ Restore PostgreSQL and MinIO to *compatible* points in time; assets uploaded aft
 * No timed full-stack recovery rehearsal (empty host -> DB + objects + API + UI) and no RPO/RTO measured at realistic data sizes.
 * Only macOS/Docker was used; scripts target bash 3.2+ and GNU/BSD tools but were not run on Linux. Host-installed `pg_dump`/`pg_restore` mode (without Docker) was not exercised (the machine has no PostgreSQL client); container and client-container modes were.
 * Retention uses file mtime; restoring files from another backup system with new mtimes will reset their age.
+
+## Update 2026-10-04/05 — whole-platform backup, restore drill, off-host copy
+* `scripts/backup-all.sh <local|public>` backs up **platform PostgreSQL, every server-app database (+ roles), MinIO (assets + artifacts) and Forgejo** (repositories + its
+  database), verifies each (checksums, `pg_restore --list`, manifest, `tar -t`), prunes by `BACKUP_RETENTION_DAYS` (14) never below `BACKUP_KEEP_MIN` (3), and writes
+  `backups/<env>/status.json`. Status: **LOCAL_BACKUP_REAL**.
+* `scripts/restore-drill-all.sh` restores the **latest backup files** into a throwaway `postgres:17.6` container with no network (app dumps as an unprivileged role) and
+  checks schema version, row counts, archive content and manifests → `drill.json`. Run daily/weekly by `scripts/backup-daemon.sh`. Last results: local and public PASS.
+* Admin → Sao lưu and Sức khỏe hệ thống show the last success per component and raise alerts when stale (> 26 h), failed, or the drill fails / is > 8 days old.
+* **Off-host copy (required for production DR — currently BLOCKED_EXTERNAL_INPUT):** set `OFFSITE_S3_URL`, `OFFSITE_S3_ACCESS_KEY`, `OFFSITE_S3_SECRET_KEY`,
+  `OFFSITE_S3_BUCKET` (write-only credentials recommended) in the environment of the backup daemon; `backup-all.sh` then mirrors `backups/<env>/` there after each run
+  (never deleting remote objects) and reports an `offsite` component. Until configured, the admin console shows "CHƯA CẤU HÌNH — sao lưu chỉ nằm trên máy này".
+  Nothing in this repository creates cloud resources. RPO today = 24 h (daily); RTO = restore script time (seconds for the pilot's data volume) plus provisioning a host.

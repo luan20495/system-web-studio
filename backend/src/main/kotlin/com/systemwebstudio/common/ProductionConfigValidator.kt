@@ -31,6 +31,23 @@ class ProductionConfigValidator(env: Environment) {
             if (value("app.oidc.client-secret").length < 12) problems += "OIDC_CLIENT_SECRET missing or too short"
             if (!value("app.oidc.issuer-uri").startsWith("https://")) problems += "OIDC_ISSUER_URI must be https"
         }
+        // --- features added in stages A–L: unsafe values must stop a production start, off-by-default features must stay safe when switched on
+        if (value("app.signup.enabled") == "true" && value("app.signup.allow-in-prod") != "true")
+            problems += "public sign-up is enabled: set it off (PUBLIC_SIGNUP_ENABLED=false) or acknowledge it explicitly with SIGNUP_ALLOW_IN_PROD=true"
+        if (value("app.deploy.provider") == "mock") problems += "DEPLOY_PROVIDER=mock must not be used in production (labelled demo deployments only)"
+        if (value("app.bootstrap.admin-username").isNotBlank()) {
+            val pw = value("app.bootstrap.admin-password")
+            if (pw.length < 14 || pw.contains("local") || pw.contains("changeme") || pw.lowercase() == pw || pw.uppercase() == pw) problems += "BOOTSTRAP_ADMIN_PASSWORD is weak (14+ characters, mixed case)"
+        }
+        if (value("app.forms.ip-salt").isBlank()) problems += "FORMS_IP_SALT must be set (visitor IP hashes must stay stable across restarts)"
+        if (value("app.scim.enabled") == "true" && value("app.scim.token").length < 32) problems += "SCIM_ENABLED=true requires SCIM_TOKEN of at least 32 characters"
+        if (value("app.saml.enabled") == "true" && value("app.oidc.enabled") != "true") problems += "SAML_ENABLED=true needs OIDC_ENABLED=true (SAML is brokered by the OIDC provider)"
+        if (value("app.runtime.enabled") == "true") {
+            if (runCatching { java.util.Base64.getDecoder().decode(value("app.secrets.master-key").trim()).size }.getOrDefault(0) != 32) problems += "SERVER_APPS_ENABLED=true requires SECRETS_MASTER_KEY (base64 of 32 bytes)"
+            if (value("app.runtime.gateway-token").length < 32) problems += "SERVER_APPS_ENABLED=true requires APPS_GATEWAY_TOKEN of at least 32 characters"
+            if (value("app.runtime.appdb-admin-password").length < 16) problems += "SERVER_APPS_ENABLED=true requires APPDB_ADMIN_PASSWORD of at least 16 characters"
+        }
+        if (value("app.build.runner-token").isNotBlank() && value("app.build.runner-token").length < 24) problems += "BUILD_RUNNER_TOKEN must be at least 24 characters"
         if (problems.isNotEmpty()) throw IllegalStateException("Unsafe production configuration:\n - " + problems.joinToString("\n - "))
     }
 }

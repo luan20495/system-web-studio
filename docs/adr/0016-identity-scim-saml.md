@@ -9,7 +9,7 @@ users, returns the IdP `end_session_endpoint` URL (from discovery) with `id_toke
 
 ## SAML
 Native SAML SP support in Spring Security 7 needs OpenSAML 5, which is published only in the Shibboleth repository, not Maven Central.
-Adding a new artifact repository is a supply-chain decision left to the owner (see readiness report). Implemented instead: SAML IdPs are
+Adding a new artifact repository is a supply-chain decision; it was evaluated and declined in ADR 0021. Implemented instead: SAML IdPs are
 federated by the OIDC provider (Keycloak identity brokering); with `SAML_ENABLED=true` and `SAML_IDP_HINT=<alias>` the login page offers a
 SAML button that adds `kc_idp_hint` to the OIDC authorization request. The app remains an OIDC client; identity ≠ authorization still holds.
 Verified with a local "corp" realm acting as SAML IdP. Default: off.

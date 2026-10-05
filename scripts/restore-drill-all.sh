@@ -10,7 +10,8 @@ log() { printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >&2; }
 add() { RESULTS+=("$1|$2|$3"); [ "$2" = PASS ] || [ "$2" = SKIPPED ] || OK=0; log "$1: $2 $3"; }
 cleanup() { docker rm -f "$C" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
-check_sum() { [ -f "$1.sha256" ] && [ "$(shasum -a 256 "$1" | cut -d' ' -f1)" = "$(cut -d' ' -f1 < "$1.sha256")" ]; }
+sha() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | cut -d' ' -f1; else shasum -a 256 "$1" | cut -d' ' -f1; fi; }
+check_sum() { [ -f "$1.sha256" ] && [ "$(sha "$1")" = "$(cut -d' ' -f1 < "$1.sha256")" ]; }
 PW="$(openssl rand -hex 16)"
 POSTGRES_PASSWORD="$PW" docker run -d --name "$C" --network none -e POSTGRES_PASSWORD postgres:17.6 >/dev/null
 for _ in $(seq 1 60); do docker exec "$C" pg_isready -U postgres >/dev/null 2>&1 && break; sleep 1; done

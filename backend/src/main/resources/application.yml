@@ -260,6 +260,7 @@ app:
   signup:
     # Internal company platform: public self-registration is off unless explicitly enabled.
     enabled: ${PUBLIC_SIGNUP_ENABLED:${SIGNUP_ENABLED:false}}
+    allow-in-prod: ${SIGNUP_ALLOW_IN_PROD:false}      # the prod profile refuses to start with sign-up on unless this acknowledges it
     invite-code: ${SIGNUP_INVITE_CODE:}
     max-users: ${SIGNUP_MAX_USERS:500}
     ip-max-per-hour: ${SIGNUP_IP_MAX_PER_HOUR:5}

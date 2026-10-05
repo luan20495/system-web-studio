@@ -63,6 +63,7 @@ data class PlatformHealth(val checkedAt: Instant, val items: List<HealthItem>, v
 class AdminController(
     private val guard: AdminGuard, private val jdbc: JdbcTemplate, private val audit: AuditService, private val ai: AiService,
     private val storage: StorageProvider, private val redis: RedisConnectionFactory, private val rabbit: ConnectionFactory, private val env: Environment,
+    private val healthProbes: HealthProbes,
     @Value("\${app.rate-limit.prompt-max:30}") private val promptMax: Long
 ) {
     private fun count(sql: String, vararg args: Any): Long = jdbc.queryForObject(sql, Long::class.java, *args) ?: 0L
@@ -283,6 +284,7 @@ class AdminController(
                 .send(HttpRequest.newBuilder(URI("${oidcIssuer.trimEnd('/')}/.well-known/openid-configuration")).timeout(Duration.ofSeconds(4)).GET().build(), HttpResponse.BodyHandlers.discarding())
             if (r.statusCode() != 200) error("HTTP ${r.statusCode()}"); null
         }
+        items += healthProbes.items()
         val admin = runCatching { RabbitAdmin(rabbit) }.getOrNull()
         return PlatformHealth(Instant.now(), items, ManagementFactory.getRuntimeMXBean().uptime / 1000, System.getProperty("java.version"),
             runCatching { jdbc.queryForObject("SELECT max(version) FROM flyway_schema_history WHERE success", String::class.java) }.getOrNull(),

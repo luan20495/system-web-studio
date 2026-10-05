@@ -77,6 +77,9 @@ class AppDbProvisioner(
         withAdmin(name) { st -> st.execute("REVOKE ALL ON SCHEMA public FROM PUBLIC"); st.execute("ALTER SCHEMA public OWNER TO $name") }
     }
 
+    /** reachability of the apps DB server with the admin credential (health probe) */
+    fun ping() { withAdmin { st -> st.executeQuery("SELECT 1").use { it.next() } } }
+
     /** which databases a role may connect to (used by tests and the admin view to prove isolation) */
     fun connectableDatabases(role: String): List<String> = withAdmin { st ->
         require(ident.matches(role))

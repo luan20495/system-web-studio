@@ -1090,7 +1090,7 @@ function ConnectorsPage() {
   </>);
 }
 
-const BK_NAME: Record<string, string> = { postgres: "CSDL nền tảng (PostgreSQL)", appdb: "CSDL của ứng dụng có máy chủ", minio: "Tệp & artifact (MinIO)", forgejo: "Kho mã (Forgejo)" };
+const BK_NAME: Record<string, string> = { postgres: "CSDL nền tảng (PostgreSQL)", appdb: "CSDL của ứng dụng có máy chủ", minio: "Tệp & artifact (MinIO)", forgejo: "Kho mã (Forgejo)", offsite: "Bản sao ngoài máy (S3)" };
 /** Backup monitoring: last successful backup per component, the latest restore drill, problems (also raised as alerts). */
 function BackupsPage() {
   const { data, error, reload } = useLoad(() => api.admin.backups(), []);
@@ -1102,7 +1102,7 @@ function BackupsPage() {
         {e.problems.length ? <ul className="plainList">{e.problems.map((p) => <li key={p} className="formError">{p}</li>)}</ul> : null}
         <table className="table"><thead><tr><th>Thành phần</th><th>Lần thành công gần nhất</th><th>Kích thước</th><th>Lần chạy gần nhất</th></tr></thead>
           <tbody>{e.components.map((c) => <tr key={c.name}><td>{BK_NAME[c.name] ?? c.name}</td>
-            <td>{c.lastSuccess ? <>{ago(c.lastSuccess)} {c.stale ? <Pill value="DISABLED" label="quá hạn"/> : null}</> : c.state === "SKIPPED" ? "không triển khai ở đây" : "chưa có"}</td>
+            <td>{c.lastSuccess ? <>{ago(c.lastSuccess)} {c.stale ? <Pill value="DISABLED" label="quá hạn"/> : null}</> : c.state === "SKIPPED" ? (c.name === "offsite" ? "CHƯA CẤU HÌNH — sao lưu chỉ nằm trên máy này" : "không triển khai ở đây") : "chưa có"}</td>
             <td>{size(c.sizeBytes)}</td><td>{c.state}{c.error ? <small className="formError">{c.error}</small> : null}</td></tr>)}</tbody></table>
         <h3 className="subHead">Diễn tập khôi phục {e.drillAt ? `· ${ago(e.drillAt)}` : ""}</h3>
         {e.drill.length === 0 ? <p className="hint">Chưa diễn tập.</p> : <ul className="plainList">{e.drill.map((d) => <li key={d.component}><Pill value={d.result === "PASS" ? "ACTIVE" : d.result === "SKIPPED" ? "UNKNOWN" : "DISABLED"} label={d.result}/> {BK_NAME[d.component] ?? d.component}: {d.detail}</li>)}</ul>}

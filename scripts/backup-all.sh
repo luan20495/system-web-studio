@@ -37,7 +37,7 @@ prune() { # dir glob — delete files older than DAYS but keep the newest KEEP
   local dir="$1" pat="$2"; local all; all=$(ls -1t "$dir"/$pat 2>/dev/null | grep -v '\.sha256$' || true)
   echo "$all" | tail -n +$((KEEP + 1)) | while read -r f; do [ -n "$f" ] && [ -n "$(find "$f" -mtime +"$DAYS" -print 2>/dev/null)" ] && { rm -f "$f" "$f.sha256"; log "pruned $f"; }; done
 }
-sha() { shasum -a 256 "$1" | cut -d' ' -f1; }
+sha() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | cut -d' ' -f1; else shasum -a 256 "$1" | cut -d' ' -f1; fi; }
 TS="$(date -u +%Y%m%dT%H%M%SZ)"; FAILED=0
 umask 077
 
@@ -87,6 +87,18 @@ if running "$P-forgejo-1"; then
   else rm -f "$f"; record forgejo FAILED "" 0 "forgejo dump failed" $(( $(date +%s) - t0 )); FAILED=1; fi
   prune "$OUT/forgejo" "forgejo-*.tar.gz"
 else record forgejo SKIPPED "" 0 "no Git server in this environment" 0; fi
+
+# 5. off-host copy (optional): mirror this environment's backup directory to an S3-compatible bucket you provide. Nothing is created in any cloud
+#    account by this script; without OFFSITE_S3_URL the component stays SKIPPED and Admin → Sao lưu says so (production DR needs it).
+#    OFFSITE_S3_URL=https://s3.example.com  OFFSITE_S3_ACCESS_KEY=…  OFFSITE_S3_SECRET_KEY=…  OFFSITE_S3_BUCKET=studio-backups (write-only credentials recommended)
+t0=$(date +%s)
+if [ -n "${OFFSITE_S3_URL:-}" ] && [ -n "${OFFSITE_S3_ACCESS_KEY:-}" ] && [ -n "${OFFSITE_S3_SECRET_KEY:-}" ] && [ -n "${OFFSITE_S3_BUCKET:-}" ]; then
+  . "$ROOT/scripts/_minio_common.sh"
+  if MC_HOST_dst="$(mn_alias_url "$OFFSITE_S3_URL" "$OFFSITE_S3_ACCESS_KEY" "$OFFSITE_S3_SECRET_KEY")" docker run --rm -e MC_HOST_dst -v "$OUT":/data:ro "${MC_IMAGE:-bitnamilegacy/minio:2025.7.23-debian-12-r5}" \
+       mc mirror --overwrite --exclude "*.tmp" --exclude ".*" /data "dst/$OFFSITE_S3_BUCKET/$ENVN" >>"$OUT/backup.log" 2>&1; then
+    record offsite OK "s3://$OFFSITE_S3_BUCKET/$ENVN" "$(du -sk "$OUT" | cut -f1 | awk '{print $1*1024}')" "" $(( $(date +%s) - t0 ))
+  else record offsite FAILED "" 0 "off-host mirror failed (see backup.log)" $(( $(date +%s) - t0 )); FAILED=1; fi
+else record offsite SKIPPED "" 0 "no off-host target configured (OFFSITE_S3_URL): backups exist only on this machine" 0; fi
 
 log "backup-all ($ENVN) finished, failures=$FAILED"
 exit "$FAILED"

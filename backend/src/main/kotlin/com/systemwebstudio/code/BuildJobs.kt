@@ -209,7 +209,7 @@ class BuildJobService(
 @RestController
 @RequestMapping("/internal/build-jobs")
 class BuildRunnerController(
-    private val jobs: BuildJobService,
+    private val jobs: BuildJobService, private val heartbeat: com.systemwebstudio.admin.RunnerHeartbeat,
     @Value("\${app.build.runner-token:}") private val token: String,
     @Value("\${app.build.api-base:http://127.0.0.1:8080}") private val apiBase: String
 ) {
@@ -221,6 +221,7 @@ class BuildRunnerController(
     @PostMapping("/claim")
     fun claim(@RequestParam(defaultValue = "runner") runner: String, request: HttpServletRequest, response: HttpServletResponse): ClaimedJob? {
         auth(request)
+        heartbeat.seen()
         return jobs.claim(runner, apiBase) ?: run { response.status = 204; null }
     }
 

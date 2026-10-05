@@ -29,7 +29,7 @@ data class BackupEnvironment(val environment: String, val components: List<Backu
 @Service
 class BackupMonitor(private val json: JsonMapper, private val alerts: AlertService,
                     @Value("\${app.backup.status-dirs:}") private val dirs: String, @Value("\${app.backup.max-age-hours:26}") private val maxAge: Long) {
-    private val components = listOf("postgres", "appdb", "minio", "forgejo")
+    private val components = listOf("postgres", "appdb", "minio", "forgejo", "offsite")
 
     fun report(): List<BackupEnvironment> = dirs.split(',').map { it.trim() }.filter { it.contains(':') }.map { entry ->
         val env = entry.substringBefore(':'); val dir = File(entry.substringAfter(':'))
@@ -41,7 +41,9 @@ class BackupMonitor(private val json: JsonMapper, private val alerts: AlertServi
             val age = ok?.let { Duration.between(it, now).toHours() }
             val state = n?.get("lastState")?.asString() ?: "NEVER"
             BackupComponent(c, state, ok, n?.get("lastRun")?.asString()?.let { Instant.parse(it) }, age, n?.get("sizeBytes")?.takeIf { it.isNumber }?.asLong(),
-                n?.get("lastError")?.takeIf { it.isString }?.asString(), state != "SKIPPED" && (ok == null || (age ?: 0) >= maxAge || state == "FAILED"))
+                n?.get("lastError")?.takeIf { it.isString }?.asString(),
+                // the off-host copy is optional until production: only a failing configured target is a problem here (its absence is shown, not alerted)
+                if (c == "offsite") state == "FAILED" || (state == "OK" && (age ?: 0) >= maxAge) else state != "SKIPPED" && (ok == null || (age ?: 0) >= maxAge || state == "FAILED"))
         }
         val drill = File(dir, "drill.json").takeIf { it.isFile }?.let { runCatching { json.readTree(it) }.getOrNull() }
         val drillAt = drill?.get("at")?.asString()?.let { Instant.parse(it) }
