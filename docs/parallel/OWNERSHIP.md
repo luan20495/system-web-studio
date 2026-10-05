@@ -30,24 +30,24 @@ Nếu C1–C5 cần thêm config key/dependency → ghi `BLOCKERS.md` (loại *n
 
 ### C1 — Tenant / Identity / Permission / Sharing
 `identity/**`, `access/**`, `member/**`*, `tenancy/**` NEW, `organization/**` NEW, `sharing/**` NEW.
-Migration **V26–V34**.
+Migration: xin C0 cấp số (xem §6).
 
 ### C2 — App Definition / Schema / Version / Component
 `project/**`, `schema/**`, `version/**`, `component/**`, `template/**`, `app/definition/**` NEW (`com.systemwebstudio.app.definition`), `prompt/**`*, `ai/**`*, `asset/**`*.
-Migration **V35–V39**.
+Migration: xin C0 cấp số (xem §6).
 
 ### C3 — Data Platform
 `data/datasource/**`, `data/discovery/**`, `data/query/**`, `data/mapping/**`, `data/gateway/**` (tất cả NEW, `com.systemwebstudio.data.*`) và code connector liên quan dữ liệu.
 Lưu ý: connector hiện tại (`ConnectorProxyController`, `AdminConnectorController`, `PublicAddress` SSRF guard) nằm trong `runtime/Gateway.kt` — xem §5 (không được sửa tại chỗ).
-Migration **V40–V49**.
+Migration: xin C0 cấp số (xem §6).
 
 ### C4 — Action / Workflow
 `logic/action/**`, `logic/workflow/**`, `logic/scheduler/**` (NEW, `com.systemwebstudio.logic.*`), tích hợp RabbitMQ cho workflow (class mới; không sửa `integration/queue/**` và `publish/**`).
-Migration **V50–V59**.
+Migration: xin C0 cấp số (xem §6).
 
 ### C5 — Web Builder / Admin UI / E2E
 Frontend (root repo): `features/**`, `components/**`, `app/**`, `lib/schema-preview*`, `lib/preview-document.ts`, `lib/app-definition/**` NEW, `e2e/**`.
-**Không tạo migration.**
+**Không tạo migration** (không được cấp số).
 
 (*) = gán mặc định của C0 cho module không được nêu trong yêu cầu gốc; xem `DECISIONS.md` D-002. Chờ chủ dự án xác nhận.
 
@@ -83,18 +83,21 @@ Agent khác cần đổi hot file → **không tự sửa**; ghi dependency (c�
 Page Schema + `SchemaPatchEngine` + `PageSchemaValidator`; component registry/version; immutable project versions; AI Gateway (`ai/**`, `integration/llm/**`); Connector Proxy + SSRF guard (`PublicAddress`) + credential chỉ ở server (`SecretsCrypto`); Audit append-only (trigger DB); publish pipeline; render/build/runtime planes; `PAGE_SCHEMA` và `STATIC_APP`.
 Code mới tái dùng thông qua interface; **không** copy-paste/fork logic SSRF. C3 muốn dùng SSRF guard: dùng `PublicAddress` hiện có (read-only) hoặc đề xuất C0 trích xuất sang `common/` (D-003).
 
-## 6. Migration ownership (Flyway — hiện tới V25)
+## 6. Migration — C0 cấp số (Flyway — hiện tới V25)
 
-| Owner | Range | Dùng cho |
-|---|---|---|
-| C1 | **V26–V34** | Tenant / Permission / Sharing |
-| C2 | **V35–V39** | App Definition |
-| C3 | **V40–V49** | Data Platform |
-| C4 | **V50–V59** | Action / Workflow |
-| C5 | — | Không tạo migration |
-| C0 | V60+ | Dự phòng / hợp nhất / sửa chữa |
+Flyway **không** bật `outOfOrder`, nên migration có version thấp merge sau version cao có thể làm lỗi validate/migrate. Vì vậy **không có range cố định theo agent**; số migration được cấp tuần tự bởi C0.
 
-Quy tắc: không dùng số ngoài range; **không sửa migration đã tồn tại (V1–V25)** và không sửa migration đã merge; mỗi file `V<n>__<mô_tả>.sql`; không bắt buộc dùng hết range, số không liên tục là bình thường (xem rủi ro out-of-order trong `BASELINE.md`/`BLOCKERS.md`). Đổi tên bảng `projects` **bị cấm** trong giai đoạn này.
+Quy tắc:
+1. **Chỉ C0 được cấp số Flyway migration.** Agent không tự chọn số.
+2. Agent cần migration → ghi **request** trong `BOARD.md` (mục *Migration requests*) hoặc `BLOCKERS.md` (loại `needs-migration`): task, mô tả ngắn thay đổi schema.
+3. C0 cấp **next available version** theo thứ tự: V26, V27, V28, … và ghi vào bảng cấp số ở `BOARD.md`.
+4. **Một version chỉ thuộc một task.** Không dùng lại, không chia sẻ số giữa task.
+5. Agent chỉ tạo file `V<số được cấp>__<mô_tả>.sql` sau khi C0 cấp; không tạo trước.
+6. **Integration branch chỉ merge migration theo thứ tự tăng dần** (C0 thực hiện). Nếu migration của nhánh nào chưa tới lượt, chờ.
+7. **Không bật `outOfOrder=true`** để giải quyết vấn đề này.
+8. Không sửa migration đã tồn tại (V1–V25) hay đã merge; đổi tên bảng `projects` bị cấm trong giai đoạn này.
+
+C5 không tạo migration.
 
 ## 7. Test ownership
 Test nằm cùng module với code. Test tích hợp dùng chung `support/IntegrationTestBase.kt`, `TestFixtures.kt`, `ApiSession.kt` (C0-owned; cần mở rộng → BLOCKERS). E2E (`e2e/*.mjs`) do C5 sở hữu; agent khác đề xuất kịch bản trong BOARD.

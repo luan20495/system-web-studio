@@ -14,3 +14,11 @@ Status: `NOT_STARTED` · `IN_PROGRESS` · `BLOCKED` · `REVIEW` · `DONE`.
 
 Ghi chú: T1/T2/T6/T8/T13/T12 là nhãn task theo kế hoạch tổng; Phase 0 **không** bắt đầu task nào.
 Mỗi task: test + commit riêng; report cuối task theo `CLAUDE.md`.
+
+## Migration requests (Flyway — chỉ C0 cấp số)
+
+Agent ghi request ở đây (hoặc `BLOCKERS.md`, loại `needs-migration`); **C0 điền cột Version** theo thứ tự V26, V27, V28, … Một version chỉ thuộc một task. Agent không tự chọn số và chỉ tạo file migration sau khi có số. Integration branch merge migration theo thứ tự tăng dần. Không bật `outOfOrder=true`. Hiện tại DB tới V25; next available = **V26**.
+
+| Version | Task | Requester | Mô tả thay đổi schema | Status |
+|---|---|---|---|---|
+| V26 | — | — | (chưa cấp) | AVAILABLE |
