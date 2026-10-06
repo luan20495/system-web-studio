@@ -233,7 +233,6 @@ class SiteManagementController(
      * noRollbackFor: the failure record must survive the error response.
      */
     @PostMapping("/api/v1/workspaces/{workspaceId}/projects/{projectId}/site/rollback")
-    @Transactional(noRollbackFor = [ApiException::class])
     fun rollback(@PathVariable workspaceId: UUID, @PathVariable projectId: UUID, @Valid @RequestBody request: RollbackRequest,
                  @AuthenticationPrincipal me: StudioUserDetails): SiteInfo {
         access.forProject(me.userId, workspaceId, projectId).require(Permission.PROJECT_PUBLISH)
@@ -242,7 +241,7 @@ class SiteManagementController(
         if (!ok) throw ApiException.badRequest("DEPLOYMENT_NOT_RESTORABLE", "Only a successful deployment with an artifact can be served again")
         if (jdbc.queryForObject("SELECT count(*) FROM sites WHERE project_id = ?", Long::class.java, projectId)!! == 0L) throw ApiException.notFound("SITE_NOT_FOUND", "This project has no site")
         val before = info(projectId)
-        when (val result = releases.rollback(ReleaseScope(workspaceId, projectId), request.deploymentId!!)) {
+        when (val result = releases.rollback(releases.scopeOf(projectId), request.deploymentId!!)) {
             is RollbackResult.AlreadyActive -> return before
             is RollbackResult.Failed -> throw ApiException.conflict("ROLLBACK_FAILED", "The release could not be restored: ${result.reason}")
             else -> audit.record("SITE_ROLLBACK", "SITE", projectId, workspaceId, projectId, oldValue = mapOf("deploymentId" to before.currentDeploymentId), newValue = mapOf("deploymentId" to request.deploymentId))
@@ -252,11 +251,10 @@ class SiteManagementController(
 
     /** Take the site offline; deployments and artifacts are kept, so it can be served again with rollback. */
     @DeleteMapping("/api/v1/workspaces/{workspaceId}/projects/{projectId}/site")
-    @Transactional
     fun unpublish(@PathVariable workspaceId: UUID, @PathVariable projectId: UUID, @AuthenticationPrincipal me: StudioUserDetails): SiteInfo {
         access.forProject(me.userId, workspaceId, projectId).require(Permission.PROJECT_PUBLISH)
         val before = info(projectId)
-        releases.unpublish(ReleaseScope(workspaceId, projectId)) { sites.point(projectId, null) }
+        releases.unpublish(releases.scopeOf(projectId)) { sites.point(projectId, null) }
         audit.record("SITE_UNPUBLISHED", "SITE", projectId, workspaceId, projectId, oldValue = mapOf("deploymentId" to before.currentDeploymentId))
         return info(projectId)
     }

@@ -44,6 +44,8 @@ sealed interface RollbackResult {
 sealed interface DeployOutcome {
     data class Live(val url: String) : DeployOutcome
     data class Failed(val failure: StepFailure, val rollback: RollbackResult) : DeployOutcome
+    /** another operation owns the release scope: nothing was done, the publish goes back to the queue and waits */
+    data class Busy(val holder: ScopeHolder?) : DeployOutcome
 }
 
 /**

@@ -4,10 +4,31 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.util.UUID
 
+/**
+ * The authority to move the active pointer, issued to the one operation that holds the release scope. The pointer is only ever changed through
+ * [commit], a compare-and-set that also proves the writer still holds its lease with its own fencing token: a writer that lost the scope (stalled,
+ * lease expired, someone took over) cannot move the pointer, whatever it was doing.
+ */
+interface PointerFence {
+    /** identity of the operation this fence belongs to (publish = the deployment id) */
+    val operationId: UUID
+    /** true once a commit was refused or the lease was found lost: the owner must stop writing */
+    val fencedOut: Boolean
+    /**
+     * Point the site at [deploymentId] (null = serve nothing). true = committed; false = refused and NOTHING was written (the lease is lost or the
+     * pointer moved since it was read). [inSameTransaction] runs only on success and in the same transaction as the pointer change.
+     */
+    fun commit(deploymentId: UUID?, inSameTransaction: (() -> Unit)? = null): Boolean
+    /** a one-shot step that [commit] runs, in the same transaction, together with the next successful pointer change (for example the status of the release left behind) */
+    fun withNextCommit(step: () -> Unit)
+}
+
 data class DeployRequest(
     val deploymentId: UUID, val projectName: String, val versionNumber: Int, val visibility: String,
     val deploymentTarget: String?, val artifactHash: String,
-    val projectId: UUID? = null, val artifactId: UUID? = null
+    val projectId: UUID? = null, val artifactId: UUID? = null,
+    /** set by the release scope guard: the only way a provider may move the active pointer. null = unguarded (tests, the mock) */
+    val fence: PointerFence? = null
 )
 data class DeployResult(val url: String?, val error: String?)
 
@@ -48,6 +69,11 @@ interface DeployProvider {
     /** Default is UNKNOWN on purpose: a provider that cannot verify must say so, never imply success. */
     fun verify(request: DeployRequest): DeployVerification = DeployVerification.unknown("Provider ${name} does not implement post-deploy verification")
     fun restore(projectId: UUID, previousDeploymentId: UUID?): DeployResult = DeployResult(null, "Provider ${name} does not support rollback")
+    /**
+     * [restore] under a fence. A provider that moves the platform's active pointer MUST do it through [PointerFence.commit]. The default delegates to the
+     * unfenced [restore] so existing providers keep working; one that can fence must override it.
+     */
+    fun restore(projectId: UUID, previousDeploymentId: UUID?, fence: PointerFence?): DeployResult = restore(projectId, previousDeploymentId)
 }
 
 /**

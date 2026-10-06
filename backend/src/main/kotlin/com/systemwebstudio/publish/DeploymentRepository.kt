@@ -50,6 +50,15 @@ class DeploymentRepository(private val jdbc: JdbcTemplate) {
         return n == 1
     }
 
+    /** when the first event with this status was written (null = never), e.g. when a publish first had to wait for the release scope */
+    fun firstEventAt(id: UUID, status: String): java.time.Instant? =
+        jdbc.query("SELECT min(created_at) FROM deployment_events WHERE deployment_id = ? AND status = ?", { rs, _ -> rs.getTimestamp(1)?.toInstant() }, id, status).firstOrNull()
+
+    /** keeps an in-progress deployment fresh so the recovery sweeper does not re-publish it while it is deliberately waiting */
+    fun touch(id: UUID) { jdbc.update("UPDATE deployments SET updated_at = now() WHERE id = ?", id) }
+
+    fun activationSeq(id: UUID): Long = jdbc.queryForObject("SELECT activation_seq FROM deployments WHERE id = ?", Long::class.java, id)!!
+
     /** how many times the given step was already retried for this deployment (survives a worker restart: it is read from the history) */
     fun retries(id: UUID, step: String): Int =
         jdbc.queryForObject("SELECT count(*) FROM deployment_events WHERE deployment_id = ? AND status = ? AND message LIKE 'Retry %'", Int::class.java, id, step) ?: 0

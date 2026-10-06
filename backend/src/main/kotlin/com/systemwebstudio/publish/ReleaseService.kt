@@ -82,23 +82,46 @@ class StoredArtifactVerifier(private val jdbc: JdbcTemplate, private val json: J
 
 /**
  * One place that deploys a release, verifies it and goes back to an earlier one: used by the deployment processor and the rollback / unpublish
- * endpoints. Each operation runs inside [ReleaseScopeGuard], so publish, rollback and unpublish of one app are one family of operations.
+ * endpoints. Every operation takes the release scope first ([ReleaseScopeGuard]), so publish, rollback and unpublish of one app never run at the
+ * same time and the pointer is only moved by whoever holds it.
  */
 @Service
 class ReleaseService(
-    provider: DeployProvider, releases: ReleaseStore, verifier: ArtifactVerifier, runtime: RuntimePlane, private val guard: ReleaseScopeGuard,
+    provider: DeployProvider, releases: ReleaseStore, verifier: ArtifactVerifier, runtime: RuntimePlane,
+    private val guard: ReleaseScopeGuard, private val sites: SiteService, private val jdbc: JdbcTemplate,
     @Value("\${app.deploy.deploy-timeout-seconds:120}") deploySeconds: Long,
     @Value("\${app.deploy.verify-timeout-seconds:60}") verifySeconds: Long
 ) {
     val deployer = ReleaseDeployer(provider, releases, verifier, StepRunner(), deploySeconds * 1000, verifySeconds * 1000, runtime)
 
-    fun publish(scope: ReleaseScope, request: DeployRequest): DeployOutcome =
-        guard.run(scope, ReleaseOperation.PUBLISH) { deployer.deploy(request) }
+    /** (tenant, app, PRODUCTION): the tenant is the project's own, never taken from a request */
+    fun scopeOf(projectId: UUID): ReleaseScope =
+        ReleaseScope(jdbc.queryForObject("SELECT tenant_id FROM projects WHERE id = ?", UUID::class.java, projectId)!!, projectId)
 
-    fun rollback(scope: ReleaseScope, target: UUID): RollbackResult =
-        guard.run(scope, ReleaseOperation.ROLLBACK) { deployer.restoreRelease(scope.appId, target) }
+    /**
+     * Publish = the DEPLOYING step of [request.deploymentId], whose activation number is [seq]. The scope row exists first (the first publish creates
+     * the site). Busy is not a failure ([DeployOutcome.Busy]); an overtaken publish fails explicitly as STALE_PUBLISH.
+     */
+    fun publish(scope: ReleaseScope, request: DeployRequest, seq: Long): DeployOutcome {
+        sites.ensureSlug(scope.appId, request.projectName)
+        return when (val a = guard.acquire(ScopeRequest(scope, ReleaseOperation.PUBLISH, request.deploymentId, request.deploymentId, seq))) {
+            is ScopeAcquisition.Busy -> DeployOutcome.Busy(a.holder)
+            is ScopeAcquisition.Stale -> DeployOutcome.Failed(StepFailure(FailureCode.STALE_PUBLISH, a.reason), RollbackResult.NotSwitched)
+            is ScopeAcquisition.Acquired -> try { deployer.deploy(request) } finally { a.lease.release() }
+        }
+    }
 
-    /** [takeOffline] is the actual change (pointing the site at nothing); it is only run while the scope is held. */
-    fun <T> unpublish(scope: ReleaseScope, takeOffline: () -> T): T =
-        guard.run(scope, ReleaseOperation.UNPUBLISH) { takeOffline() }
+    /** Manual rollback: never waits. A busy scope is `409 SCOPE_BUSY`, an overtaken one `409 ROLLBACK_STALE`. */
+    fun rollback(scope: ReleaseScope, target: UUID, operationId: UUID = UUID.randomUUID()): RollbackResult =
+        hold(ScopeRequest(scope, ReleaseOperation.ROLLBACK, operationId)) { deployer.restoreRelease(scope.appId, target) }
+
+    /** [takeOffline] is the actual change (pointing the site at nothing); it only runs while the scope is held. */
+    fun <T> unpublish(scope: ReleaseScope, operationId: UUID = UUID.randomUUID(), takeOffline: () -> T): T =
+        hold(ScopeRequest(scope, ReleaseOperation.UNPUBLISH, operationId)) { takeOffline() }
+
+    private fun <T> hold(request: ScopeRequest, body: (ScopeLease) -> T): T = when (val a = guard.acquire(request)) {
+        is ScopeAcquisition.Busy -> throw ReleaseScopeGuard.busy(request.scope, a.holder)
+        is ScopeAcquisition.Stale -> throw com.systemwebstudio.common.ApiException.conflict("ROLLBACK_STALE", a.reason)
+        is ScopeAcquisition.Acquired -> try { body(a.lease) } finally { a.lease.release() }
+    }
 }

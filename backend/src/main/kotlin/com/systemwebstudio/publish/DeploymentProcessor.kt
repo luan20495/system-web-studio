@@ -3,6 +3,8 @@ package com.systemwebstudio.publish
 import com.systemwebstudio.audit.AuditService
 import com.systemwebstudio.integration.deploy.DeployProvider
 import com.systemwebstudio.integration.deploy.DeployRequest
+import com.systemwebstudio.integration.queue.JobQueue
+import com.systemwebstudio.integration.queue.Queues
 import com.systemwebstudio.schema.PageSchemaValidator
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
@@ -38,15 +40,20 @@ class DeploymentProcessor(
     private val builder: StaticSiteBuilder,
     private val buildJobs: com.systemwebstudio.code.BuildJobService,
     private val releases: ReleaseService,
+    private val queue: JobQueue,
     @Value("\${app.deploy.step-delay-ms:0}") private val stepDelayMs: Long,
     @Value("\${app.deploy.step-max-attempts:3}") maxAttempts: Int,
     @Value("\${app.deploy.retry-backoff-ms:500}") backoffMs: Long,
-    @Value("\${app.deploy.build-timeout-seconds:300}") buildSeconds: Long
+    @Value("\${app.deploy.build-timeout-seconds:300}") buildSeconds: Long,
+    @Value("\${app.deploy.scope-wait-seconds:300}") scopeWaitSeconds: Long,
+    @Value("\${app.deploy.scope-retry-ms:2000}") private val scopeRetryMs: Long
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val retry = RetryPolicy(maxAttempts.coerceAtLeast(1), backoffMs)
     private val buildTimeoutMs = buildSeconds * 1000
+    private val scopeWait = java.time.Duration.ofSeconds(scopeWaitSeconds)
     private val runner = StepRunner()
+    private val retryLater = java.util.concurrent.Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "deploy-scope-retry").apply { isDaemon = true } }
 
     private val forbidden = listOf("<script", "javascript:", "onerror=", "onload=", "data:text/html")
 
@@ -135,10 +142,25 @@ class DeploymentProcessor(
         if (provider.buildsArtifacts && artifactId == null) return StepResult.Fail(StepFailure(FailureCode.ARTIFACT_MISSING, "No artifact was built for this deployment"))
         val hash = state.artifactHash.ifEmpty { artifactId?.let { a -> jdbc.queryForObject("SELECT sha256 FROM artifacts WHERE id = ?", String::class.java, a) } ?: build(d, record = false) }
         val request = DeployRequest(d.id, project["name"] as String, d.versionNumber, d.visibility, project["deployment_target"] as String?, hash, d.projectId, artifactId)
-        return when (val outcome = releases.publish(ReleaseScope(workspaceOf(d), d.projectId), request)) {
+        return when (val outcome = releases.publish(releases.scopeOf(d.projectId), request, deployments.activationSeq(d.id))) {
             is DeployOutcome.Live -> { state.url = outcome.url; StepResult.Advance }
             is DeployOutcome.Failed -> StepResult.Fail(outcome.failure, outcome.rollback)
+            is DeployOutcome.Busy -> waitForScope(d, outcome.holder)
         }
+    }
+
+    /**
+     * Another release operation owns the scope. This is not a failure and it does not hold a worker: the deployment goes back to the queue (a short
+     * delay, and the recovery sweeper as the safety net) and is retried, until [scopeWait] has passed since it first had to wait; then it ends FAILED / SCOPE_BUSY.
+     */
+    private fun waitForScope(d: DeploymentDto, holder: ScopeHolder?): StepResult {
+        val first = deployments.firstEventAt(d.id, "SCOPE_BUSY")
+        if (first == null) deployments.event(d.id, "SCOPE_BUSY", "Waiting: another release operation" + (holder?.let { " (${it.kind})" } ?: "") + " owns the release scope of this app")
+        else if (java.time.Duration.between(first, java.time.Instant.now()) > scopeWait)
+            return StepResult.Fail(StepFailure(FailureCode.SCOPE_BUSY, "Another release operation owned the scope for more than ${scopeWait.seconds} s"))
+        deployments.touch(d.id)
+        retryLater.schedule({ runCatching { queue.publish(Queues.PUBLISH, d.id.toString()) }.onFailure { log.warn("Could not re-queue waiting deployment {}: {}", d.id, it.message) } }, scopeRetryMs, java.util.concurrent.TimeUnit.MILLISECONDS)
+        return StepResult.Wait
     }
 
     private fun label(s: String) = when (s) {
@@ -231,6 +253,7 @@ class DeploymentProcessor(
     private fun fail(d: DeploymentDto, from: String, failure: StepFailure, attempts: Int, rollback: RollbackResult?) {
         val rolledBack = rollback?.takeUnless { it is RollbackResult.NotSwitched }
         val error = (failure.reason(attempts) + (rolledBack?.let { " | rollback: ${it.summary}" } ?: "")).take(StepFailure.MAX_LENGTH)
+        if (failure.code == FailureCode.STALE_PUBLISH) deployments.event(d.id, "STALE_PUBLISH", failure.message)
         if (deployments.transition(d.id, from, DeploymentStatus.FAILED, null, error = error)) {
             audit.record("DEPLOY_STATUS_CHANGE", "DEPLOYMENT", d.id, workspaceOf(d), d.projectId, actorId = null,
                 oldValue = mapOf("status" to from), newValue = mapOf("status" to DeploymentStatus.FAILED, "error" to error, "code" to failure.code.name))

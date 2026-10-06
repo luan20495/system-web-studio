@@ -10,6 +10,10 @@ enum class FailureCode {
     POLICY_REJECTED, SECURITY_REJECTED, BUILD_FAILED, ARTIFACT_MISSING,
     RENDER_UNAVAILABLE, ARTIFACT_STORE_UNAVAILABLE, DATABASE_UNAVAILABLE, STEP_TIMEOUT,
     DEPLOY_FAILED, DEPLOY_TIMEOUT, DEPLOY_STATE_UNKNOWN, VERIFICATION_FAILED, RUNTIME_DEPLOY_FAILED,
+    /** a newer release operation already moved the active release (or took the scope while this one was working): this publish must not activate */
+    STALE_PUBLISH,
+    /** another release operation owned the scope for longer than the publish may wait */
+    SCOPE_BUSY,
     INTERNAL_ERROR
 }
 
