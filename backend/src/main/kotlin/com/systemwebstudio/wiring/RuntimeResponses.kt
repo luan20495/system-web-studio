@@ -62,13 +62,13 @@ class RuntimeResponses(private val json: JsonMapper) {
         o.put("actionId", actionId)
         o.put("mode", mode.name)
         when (r) {
-            is ActionResult.Ok -> { o.put("status", "OK"); o.set<JsonNode>("output", r.output) }
+            is ActionResult.Ok -> { o.put("status", "OK"); o.set("output", r.output) }
             is ActionResult.WouldRun -> {
                 o.put("status", "WOULD_RUN")
                 o.put("type", r.type.name)
                 o.put("level", r.level.name)
-                o.set<JsonNode>("plan", r.plan)
-                r.output?.let { out -> o.set<JsonNode>("output", out) }
+                o.set("plan", r.plan)
+                r.output?.let { out -> o.set("output", out) }
                 r.reason?.let { reason -> o.put("reason", reason) }
             }
             is ActionResult.Failed -> {
@@ -101,7 +101,7 @@ class RuntimeResponses(private val json: JsonMapper) {
             so.put("stepId", s.stepId)
             so.put("status", s.status.name)
             so.put("attempt", s.attempt)
-            if (s.output != null) so.set<JsonNode>("output", s.output) else so.putNull("output")
+            if (s.output != null) so.set("output", s.output) else so.putNull("output")
             if (s.errorCode != null) so.put("errorCode", s.errorCode) else so.putNull("errorCode")
             if (s.errorMessage != null) so.put("errorMessage", s.errorMessage) else so.putNull("errorMessage")
             if (s.startedAt != null) so.put("startedAt", s.startedAt.toString()) else so.putNull("startedAt")

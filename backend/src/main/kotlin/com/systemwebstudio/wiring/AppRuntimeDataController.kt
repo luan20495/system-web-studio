@@ -88,7 +88,7 @@ class AppRuntimeDataController(
             out.put("queryId", queryId)
             out.put("mode", req.mode.name)
             out.put("cache", r.cache.name)
-            out.set<JsonNode>("result", ViewModelDataJson.toNode(r.data))
+            out.set("result", ViewModelDataJson.toNode(r.data))
             ResponseEntity.ok(out as JsonNode)
         } catch (e: ConnectorFailure) {
             val p = GatewayProblems.of(e)
