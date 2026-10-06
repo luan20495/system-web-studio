@@ -1,6 +1,6 @@
 # C0 — Persistence design for real LIVE E2E (removes B-C0-W-01)
 
-Status: **ACCEPTED 2026-10-06 (D-C0-21, decisions D1–D7 in §7).** V28 and V29 are allocated in `MIGRATION_LEDGER.md`. V28 and the C3 adapters are implemented on branch `wire/c3-persistence`; V29 starts only after the V28 Mac gate is green.
+Status: **ACCEPTED 2026-10-06 (D-C0-21, decisions D1–D7 in §7).** V28 and V29 are allocated in `MIGRATION_LEDGER.md`. V28 and the C3 adapters are implemented on branch `wire/c3-persistence`. **V28 status (2026-10-06): implementation complete; real Mac gate GREEN @ `3a6f084`** (compileKotlin, compileTestKotlin, targeted `DataRuntimeLiveApiTests`, full `clean test --no-daemon --rerun-tasks` 6m07s). Branch only, not imported into `integration/v2`; not production-ready (no management API B-C0-W-03, production connectors read-only B-C0-W-04). **V29 is not started** and stays OPEN (B-C0-W-01).
 Base: `integration/v2 @ e7307fd`.
 
 ## 1. Audit result

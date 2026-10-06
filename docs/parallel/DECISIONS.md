@@ -279,4 +279,5 @@ Runtime resolution of a data source requires tenant **and** workspace, default d
 - V28 (not yet imported or released, edited in place): `data_sources` gets `UNIQUE (id, tenant_id, workspace_id)`; `data_source_bindings_source_fk` is `(data_source_id, tenant_id, workspace_id) -> data_sources(id, tenant_id, workspace_id)`. With `project_fk` (workspace, project) and `workspace_tenant_fk` the database itself guarantees project, binding and source agree on tenant and workspace; a source without a workspace cannot be bound.
 - The binding reader also joins `projects` and `data_sources` on workspace + tenant (defence in depth); the binding writer refuses a project outside the stated workspace/tenant and any source not owned by that workspace.
 - Not changed here: `DataSourceAdminService` (no route uses it yet) must be workspace-scoped when the management API is built (B-C0-W-03).
+- Status 2026-10-06: **verified by the real Mac gate @ `3a6f084`; B-C0-W-05 CLOSED.**
 
