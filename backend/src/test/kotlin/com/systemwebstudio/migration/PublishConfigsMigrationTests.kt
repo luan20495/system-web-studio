@@ -11,7 +11,9 @@ import java.util.UUID
 class PublishConfigsMigrationTests : IntegrationTestBase() {
     private fun project(ws: UUID): UUID {
         val owner = fx.user(); val id = UUID.randomUUID()
-        jdbc.update("INSERT INTO projects (id, workspace_id, name, owner_user_id) VALUES (?, ?, 'pc', ?)", id, ws, owner.id)
+        // tenant_id is written explicitly, read from the parent workspace (never guessed): TenantInsertPathsGrepTest forbids new inserts that rely on the V26 compatibility default
+        val tenant = jdbc.queryForObject("SELECT tenant_id FROM workspaces WHERE id = ?", UUID::class.java, ws)
+        jdbc.update("INSERT INTO projects (id, workspace_id, name, owner_user_id, tenant_id) VALUES (?, ?, 'pc', ?, ?)", id, ws, owner.id, tenant)
         return id
     }
 
