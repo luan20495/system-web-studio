@@ -1,0 +1,282 @@
+// Real-browser checks of the Builder (pointer + keyboard) against tests/browser/harness.tsx. TEST-ONLY harness: NOT a backend E2E.
+// Run: node tests/browser/build-harness.mjs && (cd .test-build/browser && python3 -m http.server 4000 --bind 127.0.0.1 &) && node tests/browser/builder.spec.mjs
+import { createRequire } from "node:module";
+import { mkdirSync } from "node:fs";
+const require = createRequire(new URL("../../package.json", import.meta.url).pathname);
+const { chromium } = require("playwright-core");
+const URL_ = process.env.HARNESS_URL ?? "http://127.0.0.1:4000/index.html";
+const shots = process.env.SHOTS ?? "/tmp/shots"; mkdirSync(shots, { recursive: true });
+const results = [];
+const check = (name, ok, detail = "") => { results.push({ name, ok: !!ok, detail }); console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  — " + detail : ""}`); };
+
+const browser = await chromium.launch({ executablePath: process.env.CHROME ?? "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
+async function fresh() {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  page.errors = []; page.on("pageerror", (e) => page.errors.push(e.message)); page.on("console", (m) => { if (m.type() === "error" && !/favicon|404/.test(m.text())) page.errors.push(m.text()); });
+  await page.goto(URL_); await page.waitForSelector("iframe"); await page.waitForTimeout(700);
+  return page;
+}
+const ops = (p) => p.evaluate(() => window.__ops);
+const treeLabels = (p) => p.evaluate(() => [...document.querySelectorAll("[role=treeitem]")].slice(1).map((e) => (e.querySelector("b,strong,span")?.textContent ?? e.textContent ?? "").trim()));
+const center = async (loc) => { const b = await loc.boundingBox(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; };
+async function dragTo(page, from, to, { steps = 14, hold } = {}) {
+  await page.mouse.move(from.x, from.y); await page.mouse.down();
+  await page.mouse.move(from.x + 12, from.y + 12, { steps: 4 });
+  await page.mouse.move(to.x, to.y, { steps });
+  if (hold) await hold();
+  await page.mouse.up(); await page.waitForTimeout(400);
+}
+
+// ---------- 1. library -> canvas (pointer) ----------
+{
+  const p = await fresh();
+  await p.getByRole("tab", { name: "Thành phần" }).click();
+  const handle = p.getByRole("button", { name: "Kéo Form liên hệ vào trang" });
+  const from = await center(handle);
+  const cv = await p.locator(".bx-frame").boundingBox();
+  const heroBox = await p.frameLocator("iframe").locator("section").first().boundingBox(); // Hero: drop just below it => slot between Hero and Testimonials
+  let indicatorSeen = false, indicatorTop = null, shieldOn = false;
+  await dragTo(p, from, { x: cv.x + 300, y: heroBox.y + heroBox.height + 10 }, { hold: async () => {
+    await p.waitForTimeout(250);
+    indicatorSeen = (await p.locator(".bx-insert").count()) > 0;
+    shieldOn = (await p.locator(".bx-shield.on").count()) > 0;
+    if (indicatorSeen) indicatorTop = (await p.locator(".bx-insert").boundingBox()).y;
+    await p.screenshot({ path: `${shots}/dnd-lib-dragging.png` });
+  } });
+  check("DnD library→canvas: drop shield appears only while dragging", shieldOn && (await p.locator(".bx-shield.on").count()) === 0);
+  check("DnD library→canvas: insert indicator shown while dragging", indicatorSeen, `y=${indicatorTop}`);
+  const o = await ops(p);
+  const add = o.flatMap((x) => x.ops).find((x) => x.type === "ADD_SECTION");
+  check("DnD library→canvas: emits one ADD_SECTION for the registry component", o.length === 1 && add?.sectionType === "ContactForm", JSON.stringify(add));
+  check("DnD library→canvas: inserted between Hero and Testimonials (index 2)", add?.index === 2, `index=${add?.index}`);
+  await p.getByRole("tab", { name: "Trang" }).click(); await p.waitForTimeout(200);
+  const labels = await treeLabels(p);
+  check("DnD library→canvas: new section appears in the page tree at that slot", labels.length === 5 && /Form liên hệ/.test(labels[2] ?? ""), labels.join(" | "));
+  check("DnD library→canvas: no page errors", p.errors.length === 0, p.errors.join(" ; "));
+  await p.screenshot({ path: `${shots}/dnd-lib-after.png` });
+  await p.close();
+}
+
+// ---------- 2. reorder in the tree (pointer) ----------
+{
+  const p = await fresh();
+  const hero = p.locator(".bx-left-panel").getByRole("button", { name: "Kéo để di chuyển Đầu trang (Hero)" });
+  const test = p.locator(".bx-left-panel").getByRole("button", { name: "Kéo để di chuyển Đánh giá khách hàng" });
+  const a = await center(hero), b = await center(test);
+  await dragTo(p, a, { x: b.x, y: b.y + 30 });
+  const o = await ops(p); const mv = o.flatMap((x) => x.ops).find((x) => x.type === "MOVE_SECTION");
+  check("Reorder (tree handle, pointer): emits MOVE_SECTION for the dragged section", mv?.sectionId === "s-hero", JSON.stringify(mv));
+  const labels = await treeLabels(p);
+  check("Reorder (tree handle, pointer): Hero now after Testimonials", /Đầu trang/.test(labels[2] ?? "") && /Đánh giá/.test(labels[1] ?? ""), labels.join(" | "));
+  check("Reorder: no page errors", p.errors.length === 0, p.errors.join(" ; "));
+  await p.close();
+}
+
+// ---------- 3. canvas section drag (reorder on the canvas) ----------
+{
+  // Regression: handles used to overlay the sandboxed iframe, and 15-45% of presses were routed into the iframe. Repeat to prove it is stable.
+  let ok = 0; const RUNS = Number(process.env.DRAG_RUNS ?? 12); let indicatorOk = true;
+  for (let i = 0; i < RUNS; i++) {
+    const p = await fresh();
+    await p.frameLocator("iframe").locator("section").nth(0).hover({ position: { x: 100, y: 100 } }); await p.waitForTimeout(300);
+    const handles = p.locator(".bx-handle");
+    if ((await handles.count()) < 3) { await p.close(); continue; }
+    const a = await center(handles.nth(1)); const cv = await p.locator(".bx-frame").boundingBox();
+    await dragTo(p, a, { x: cv.x + 300, y: cv.y + 630 }, { hold: async () => { await p.waitForTimeout(120); if ((await p.locator(".bx-insert").count()) === 0) indicatorOk = false; } });
+    const mv = (await ops(p)).flatMap((x) => x.ops).find((x) => x.type === "MOVE_SECTION");
+    if (mv?.sectionId === "s-hero") ok++;
+    await p.close();
+  }
+  check(`Canvas section drag (handle in the gutter beside the preview): MOVE_SECTION emitted ${ok}/${RUNS}`, ok === RUNS);
+  check("Canvas section drag: insert indicator visible during every drag", indicatorOk);
+  const p = await fresh();
+  const gut = await p.locator(".bx-gutter").boundingBox(); const fr = await p.locator(".bx-frame").boundingBox();
+  check("Canvas: handles sit beside the iframe, not over it", gut.x >= fr.x + fr.width - 1, `frame right=${Math.round(fr.x + fr.width)} gutter left=${Math.round(gut.x)}`);
+  const op = await p.locator(".bx-handle").first().evaluate((e) => getComputedStyle(e).opacity);
+  check("Canvas: handles are visible at rest (not opacity 0)", Number(op) >= 0.5, `opacity=${op}`);
+  await p.close();
+}
+
+// ---------- 4. select + inspector edit ----------
+{
+  const p = await fresh();
+  const fr = p.frameLocator("iframe");
+  await fr.locator("section").first().click({ position: { x: 30, y: 30 } });
+  await p.waitForTimeout(500);
+  const hdr = await p.locator(".bx-right").innerText();
+  check("Select: clicking a section on the canvas opens the inspector for it", /Đầu trang|Hero/.test(hdr), hdr.split("\n")[0]);
+  const tabs = await p.locator(".bx-right [role=tab]").allInnerTexts();
+  check("Inspector: has Content/Design/Data/Action/Permission/Advanced tabs", ["Nội dung", "Thiết kế", "Dữ liệu", "Hành động", "Quyền", "Nâng cao"].every((t) => tabs.some((x) => x.startsWith(t))), tabs.join(" | "));
+  const title = p.locator(".bx-right input").first();
+  await title.fill("Tiêu đề mới từ test");
+  await p.getByRole("button", { name: /Lưu thay đổi/ }).click(); await p.waitForTimeout(500);
+  const o = (await ops(p)).flatMap((x) => x.ops);
+  check("Inspector edit: Save emits a typed prop operation", o.some((x) => ["UPDATE_PROP", "UPDATE_SECTION"].includes(x.type)), JSON.stringify(o.slice(-1)));
+  const txt = await fr.locator("body").innerText();
+  check("Inspector edit: canvas re-renders with the new title", /Tiêu đề mới từ test/.test(txt));
+  // Advanced = read-only
+  await p.getByRole("tab", { name: /Nâng cao/ }).click();
+  const adv = await p.locator(".bx-right").innerHTML();
+  check("Advanced tab is read-only (no editable inputs)", !/<input(?![^>]*readonly)(?![^>]*disabled)/i.test(adv) && !/<textarea(?![^>]*readonly)(?![^>]*disabled)/i.test(adv));
+  // Data tab: NOT_READY with reason, no fake data
+  await p.getByRole("tab", { name: /^Dữ liệu/ }).last().click();
+  const dt = await p.locator(".bx-right").innerText();
+  check("Inspector Data tab says Chưa sẵn sàng with a reason", /Chưa sẵn sàng/.test(dt), dt.replace(/\n/g, " ").slice(0, 140));
+  await p.screenshot({ path: `${shots}/inspector-data.png` });
+  await p.close();
+}
+
+// ---------- 5. keyboard fallback ----------
+{
+  const p = await fresh();
+  await p.getByRole("tab", { name: "Thành phần" }).click();
+  await p.getByRole("button", { name: "Thêm Đầu trang (Hero) vào trang" }).focus();
+  await p.keyboard.press("Enter"); await p.waitForTimeout(400);
+  let add = (await ops(p)).flatMap((x) => x.ops).find((x) => x.type === "ADD_SECTION");
+  check("Click/keyboard add (Thêm button via Enter): emits ADD_SECTION without a pointer", add?.sectionType === "Hero", JSON.stringify(add));
+  await p.getByRole("tab", { name: "Trang" }).click();
+  const before = (await ops(p)).length;
+  check("Footer stays last: its Lên/Xuống buttons are disabled instead of silently doing nothing",
+    (await p.getByRole("button", { name: "Đưa Chân trang lên" }).isDisabled()) && (await p.getByRole("button", { name: "Đưa Chân trang xuống" }).isDisabled()));
+  await p.getByRole("button", { name: "Đưa Đánh giá khách hàng lên" }).focus(); await p.keyboard.press("Enter"); await p.waitForTimeout(400);
+  const mv = (await ops(p)).slice(before).flatMap((x) => x.ops).find((x) => x.type === "MOVE_SECTION");
+  check("Keyboard reorder (Lên/Xuống buttons): emits MOVE_SECTION", mv?.sectionId === "s-test", JSON.stringify(mv));
+  // keyboard sensor on the handle: Space, ArrowDown, Space
+  const h = p.locator(".bx-left-panel").getByRole("button", { name: "Kéo để di chuyển Thanh điều hướng" });
+  await h.focus(); const b2 = (await ops(p)).length;
+  await p.keyboard.press("Space"); await p.waitForTimeout(150);
+  const live = await p.evaluate(() => [...document.querySelectorAll("[aria-live]")].map((e) => e.textContent).join(" "));
+  await p.keyboard.press("ArrowDown"); await p.waitForTimeout(150); await p.keyboard.press("Space"); await p.waitForTimeout(400);
+  const kb = (await ops(p)).slice(b2).flatMap((x) => x.ops).find((x) => x.type === "MOVE_SECTION");
+  check("Keyboard DnD on handle (Space, ArrowDown, Space): emits MOVE_SECTION", kb?.sectionId === "s-nav", JSON.stringify(kb));
+  check("Keyboard DnD announces in Vietnamese via live region", /Đã nhấc|Đang ở|Đã thả/.test(live), live.slice(0, 100));
+  // Esc cancels a keyboard drag
+  const b3 = (await ops(p)).length;
+  await h.focus(); await p.keyboard.press("Space"); await p.keyboard.press("ArrowDown"); await p.keyboard.press("Escape"); await p.waitForTimeout(300);
+  check("Esc cancels a keyboard drag (no operation emitted)", (await ops(p)).length === b3);
+  await p.close();
+}
+
+// ---------- 6. dialogs, tabs, focus, accessible names ----------
+{
+  const p = await fresh();
+  await p.frameLocator("iframe").locator("section").first().click({ position: { x: 30, y: 30 } }); await p.waitForTimeout(400);
+  const publish = p.getByRole("button", { name: "Xóa mục" });
+  await publish.focus(); await publish.click(); await p.waitForTimeout(500);
+  const dlg = p.getByRole("dialog");
+  check("Dialog: delete-section confirmation opens role=dialog aria-modal with a name", (await dlg.count()) === 1 && (await dlg.getAttribute("aria-modal")) === "true" && !!(await dlg.getAttribute("aria-labelledby")));
+  const inside = await p.evaluate(() => !!document.activeElement?.closest("[role=dialog]"));
+  check("Dialog: focus moves inside on open", inside);
+  for (let i = 0; i < 12; i++) await p.keyboard.press("Tab");
+  check("Dialog: Tab is trapped inside after 12 presses", await p.evaluate(() => !!document.activeElement?.closest("[role=dialog]")));
+  await p.screenshot({ path: `${shots}/dialog-publish.png` });
+  await p.keyboard.press("Escape"); await p.waitForTimeout(300);
+  check("Dialog: Esc closes", (await p.getByRole("dialog").count()) === 0);
+  check("Dialog: focus returns to the opener", await p.evaluate(() => /Xóa mục/.test(document.activeElement?.textContent ?? "")));
+  // tabs: roving tabindex + arrow keys
+  const first = p.getByRole("tab", { name: "Trang" }); await first.focus();
+  await p.keyboard.press("ArrowDown"); await p.waitForTimeout(150);
+  const sel = await p.evaluate(() => [...document.querySelectorAll(".bx-left [role=tab]")].map((e) => e.getAttribute("aria-selected") + "/" + e.getAttribute("tabindex")).join(","));
+  check("Tabs: Arrow key moves focus/selection (roving tabindex)", /true\/0/.test(sel) && (sel.match(/\/0/g) ?? []).length === 1, sel);
+  // accessible names
+  const unnamed = await p.evaluate(() => [...document.querySelectorAll("button,[role=button],input,select,textarea,[role=tab]")].filter((e) => {
+    const name = (e.getAttribute("aria-label") || e.getAttribute("aria-labelledby") || e.textContent || e.getAttribute("title") || e.getAttribute("placeholder") || "").trim();
+    const lab = e.id && document.querySelector(`label[for="${e.id}"]`); const wrapped = e.closest("label");
+    return !name && !lab && !wrapped; }).map((e) => e.outerHTML.slice(0, 100)));
+  check("A11y: every button/input/tab has an accessible name", unnamed.length === 0, unnamed.slice(0, 3).join(" ; "));
+  // Edit vs Test
+  await p.getByRole("button", { name: "Dùng thử" }).click(); await p.waitForTimeout(400);
+  const t = await p.locator(".bx-body").innerText();
+  check("Test mode is a separate mode and says Chưa sẵn sàng instead of faking a run", /Chưa sẵn sàng/.test(t) && !/THÀNH CÔNG|SUCCESS/.test(t), t.replace(/\n/g, " ").slice(0, 160));
+  await p.screenshot({ path: `${shots}/test-mode.png` });
+  await p.close();
+}
+
+// ---------- 7. Data / Action / Workflow panels: NOT_READY, no fake data ----------
+{
+  const p = await fresh();
+  for (const [tab, re] of [["Dữ liệu", /Chưa sẵn sàng/], ["Hành động", /Chưa sẵn sàng|REFRESH_QUERY|Làm mới/], ["Workflow", /Chưa sẵn sàng|Workflow/]]) {
+    await p.locator(".bx-left").getByRole("tab", { name: tab }).click(); await p.waitForTimeout(300);
+    const t = await p.locator(".bx-left-panel").innerText();
+    check(`Panel ${tab}: renders and states readiness honestly`, re.test(t), t.replace(/\n/g, " ").slice(0, 150));
+    await p.screenshot({ path: `${shots}/panel-${tab}.png` });
+  }
+  await p.close();
+}
+
+// ---------- 8. Page builder ----------
+{
+  const p = await fresh();
+  const panel = p.locator(".bx-left-panel");
+  const lastOps = async () => (await ops(p)).slice(-1)[0]?.ops ?? [];
+  // create
+  await panel.getByRole("button", { name: /＋ Trang/ }).click();
+  await p.getByRole("dialog").getByRole("textbox").fill("Giới thiệu");
+  check("Page: create dialog previews the route", /\/gioi-thieu/.test(await p.getByRole("dialog").innerText()), (await p.getByRole("dialog").innerText()).replace(/\n/g, " "));
+  await p.getByRole("dialog").getByRole("button", { name: "Thêm trang" }).click(); await p.waitForTimeout(500);
+  let add = (await lastOps())[0];
+  check("Page: create emits ADD_PAGE with a unique slug", add?.type === "ADD_PAGE" && add.props?.slug === "gioi-thieu" && add.props?.title === "Giới thiệu", JSON.stringify(add));
+  check("Page: new page appears in the tree and becomes editable", (await panel.getByRole("treeitem").allInnerTexts()).some((t) => /Giới thiệu/.test(t)));
+  // select the new page (tree row) then rename
+  await panel.getByRole("treeitem", { name: /Giới thiệu/ }).first().click(); await p.waitForTimeout(300);
+  await panel.getByRole("button", { name: "Đổi tên / đường dẫn" }).click();
+  const dlg = p.getByRole("dialog");
+  const boxes = dlg.getByRole("textbox");
+  await boxes.nth(0).fill("Về chúng tôi");
+  if ((await boxes.count()) > 1) { await boxes.nth(1).fill("api"); await p.waitForTimeout(200);
+    const t = await dlg.innerText(); check("Page: reserved/invalid route is rejected with a reason and Save is disabled", /(không|đã|dành|trùng|hợp lệ)/i.test(t) && (await dlg.getByRole("button", { name: "Lưu" }).isDisabled()), t.replace(/\n/g, " ").slice(0, 160));
+    await boxes.nth(1).fill("ve-chung-toi"); }
+  await dlg.getByRole("button", { name: "Lưu" }).click(); await p.waitForTimeout(500);
+  const up = (await lastOps())[0];
+  check("Page: rename/route emits UPDATE_PAGE", up?.type === "UPDATE_PAGE" && up.props?.title === "Về chúng tôi", JSON.stringify(up));
+  // menu
+  const sel = panel.locator("select").first();
+  await sel.selectOption({ label: "Về chúng tôi" }); await p.waitForTimeout(200);
+  await panel.getByRole("button", { name: "Lưu menu" }).click(); await p.waitForTimeout(500);
+  const nav = (await lastOps())[0];
+  check("Menu: adding a page to the menu emits SET_NAVIGATION with that page", nav?.type === "SET_NAVIGATION" && nav.value?.length === 1 && nav.value[0].label === "Về chúng tôi" && !!nav.value[0].pageId, JSON.stringify(nav));
+  // 404
+  await panel.getByRole("textbox", { name: "Tiêu đề" }).fill("Lạc đường rồi");
+  await panel.getByRole("textbox", { name: "Lời nhắn" }).fill("Trang này không tồn tại.");
+  await panel.getByRole("button", { name: "Lưu trang 404" }).click(); await p.waitForTimeout(500);
+  const nf = (await lastOps())[0];
+  check("404: saving emits UPDATE_SITE with notFound title and message", nf?.type === "UPDATE_SITE" && nf.props?.notFound?.title === "Lạc đường rồi", JSON.stringify(nf));
+  // set-home / reorder stay NOT_READY
+  const ptxt = await panel.innerText();
+  check("Set-home and page reorder are NOT_READY with a reason (no fake control)", /Chưa sẵn sàng/.test(ptxt) && await panel.getByRole("button", { name: /đặt làm trang chủ/i }).evaluateAll((els) => els.every((e) => e.disabled)), ptxt.replace(/\n/g, " ").slice(ptxt.indexOf("Chưa sẵn sàng") - 20, ptxt.indexOf("Chưa sẵn sàng") + 100));
+  // delete: home cannot be deleted; another page shows its impact
+  await panel.getByRole("treeitem", { name: /Trang chủ/ }).first().click(); await p.waitForTimeout(200);
+  check("Page: the home page cannot be deleted (button disabled)", await panel.getByRole("button", { name: "Xóa trang" }).isDisabled());
+  await panel.getByRole("treeitem", { name: /Về chúng tôi/ }).first().click(); await p.waitForTimeout(200);
+  await panel.getByRole("button", { name: "Xóa trang" }).click(); await p.waitForTimeout(300);
+  const imp = await p.getByRole("dialog").innerText();
+  check("Page: delete confirmation states what will be removed (menu link)", /liên kết trong menu|Xoá trang|Xóa trang/.test(imp) && /menu/.test(imp), imp.replace(/\n/g, " ").slice(0, 180));
+  await p.getByRole("dialog").getByRole("button", { name: /^Xóa|^Xoá/ }).last().click(); await p.waitForTimeout(500);
+  const rm = (await lastOps())[0];
+  check("Page: delete emits REMOVE_PAGE", rm?.type === "REMOVE_PAGE", JSON.stringify(rm));
+  check("Page: no page errors", p.errors.length === 0, p.errors.join(" ; "));
+  await p.screenshot({ path: `${shots}/pages.png` });
+  await p.close();
+}
+
+// ---------- 9. broken-route preflight blocks Publish ----------
+{
+  const bad = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await bad.goto(URL_ + "?broken=1"); await bad.waitForSelector("iframe"); await bad.waitForTimeout(600);
+  await bad.getByRole("button", { name: "Xuất bản" }).click(); await bad.waitForTimeout(500);
+  const d = bad.getByRole("dialog");
+  const t = (await d.count()) ? await d.innerText() : "";
+  check("Preflight: Publish with a menu link to a missing page opens a blocking dialog", (await d.count()) === 1 && /(hỏng|không còn tồn tại|không tồn tại|không tìm thấy|đường dẫn)/i.test(t), t.replace(/\n/g, " ").slice(0, 200));
+  check("Preflight: the publish flow was NOT started", (await bad.evaluate(() => window.__published)) === 0);
+  await bad.screenshot({ path: `${shots}/preflight-blocked.png` });
+  await bad.keyboard.press("Escape"); await bad.close();
+  const ok = await fresh();
+  await ok.getByRole("button", { name: "Xuất bản" }).click(); await ok.waitForTimeout(400);
+  check("Preflight: a clean document goes straight to the publish flow", (await ok.evaluate(() => window.__published)) === 1 && (await ok.getByRole("dialog").count()) === 0);
+  await ok.close();
+}
+
+await browser.close();
+const failed = results.filter((r) => !r.ok);
+console.log(`\n${results.length - failed.length}/${results.length} passed`);
+process.exit(failed.length ? 1 : 0);
