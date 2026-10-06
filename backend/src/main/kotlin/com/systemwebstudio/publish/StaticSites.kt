@@ -116,8 +116,8 @@ class StaticSiteBuilder(private val jdbc: JdbcTemplate, private val json: JsonMa
         val manifest = files.map { (path, f) -> ManifestFile(path, f.first.size, sha256(f.first), f.second) }
         val manifestJson = json.writeValueAsString(manifest)
         val sha = sha256(manifestJson.toByteArray())
-        existing(projectId, sha)?.let { return it }
         val prefix = "$projectId/$sha"
+        reuseOrRevive(jdbc, store, projectId, sha, files.mapKeys { "$prefix/${it.key}" })?.let { return it }
         files.forEach { (path, f) -> store.putOnce("$prefix/$path", f.first, f.second) }
         jdbc.update("""INSERT INTO artifacts (id, project_id, version_id, sha256, storage_prefix, file_count, total_bytes, manifest)
             VALUES (?,?,?,?,?,?,?,CAST(? AS jsonb)) ON CONFLICT (project_id, sha256) DO NOTHING""",
@@ -129,6 +129,23 @@ class StaticSiteBuilder(private val jdbc: JdbcTemplate, private val json: JsonMa
         jdbc.query("SELECT id FROM artifacts WHERE project_id = ? AND sha256 = ?", { rs, _ -> rs.getObject(1, UUID::class.java) }, projectId, sha).firstOrNull()
 
     companion object {
+        /**
+         * The artifact of this content if one is already recorded, else null (the caller builds it). Content-addressed, so the same content
+         * is the same artifact, but a row that retention already removed has no files any more: handing it back would give a release
+         * that cannot be served. Such a row is brought back instead: its files are written again (write-once, keyed by content) and the row
+         * is live again with a fresh `created_at`, which puts it back inside retention's one-hour grace so a cleanup that is running right now
+         * cannot take it again.
+         * [objects]: full store key -> bytes and content type.
+         */
+        fun reuseOrRevive(jdbc: JdbcTemplate, store: ArtifactStore, projectId: UUID, sha: String, objects: Map<String, Pair<ByteArray, String>>): UUID? {
+            val row = jdbc.query("SELECT id, deleted_at IS NOT NULL FROM artifacts WHERE project_id = ? AND sha256 = ?",
+                { rs, _ -> rs.getObject(1, UUID::class.java) to rs.getBoolean(2) }, projectId, sha).firstOrNull() ?: return null
+            if (!row.second) return row.first
+            objects.forEach { (key, f) -> store.putOnce(key, f.first, f.second) }
+            jdbc.update("UPDATE artifacts SET deleted_at = NULL, created_at = now() WHERE id = ?", row.first)
+            return row.first
+        }
+
         val PAGE_PATH = Regex("^(index\\.html|404\\.html|[a-z0-9]+(-[a-z0-9]+)*/index\\.html)$")
         fun sha256(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     }

@@ -3,6 +3,7 @@ package com.systemwebstudio.integration.storage
 import com.systemwebstudio.integration.secrets.SecretProvider
 import io.minio.BucketExistsArgs
 import io.minio.GetObjectArgs
+import io.minio.ListObjectsArgs
 import io.minio.MakeBucketArgs
 import io.minio.MinioClient
 import io.minio.PutObjectArgs
@@ -11,6 +12,10 @@ import io.minio.errors.ErrorResponseException
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
+import java.time.Instant
+
+/** One object of the artifacts bucket as listed by the store (not its content). */
+data class ArtifactObject(val key: String, val size: Long, val lastModified: Instant?)
 
 /**
  * Object storage for build artifacts (ADR 0009), in its own private bucket. Keys are content-addressed
@@ -52,6 +57,13 @@ class ArtifactStore(
         ensureBucket()
         if (exists(key)) return
         client.putObject(PutObjectArgs.builder().bucket(bucket).`object`(key).data(bytes, bytes.size).contentType(contentType).build())
+    }
+
+    /** Every object under [prefix] (all of the bucket by default), lazily: used to reconcile the store with the artifact records. */
+    fun list(prefix: String = ""): Sequence<ArtifactObject> {
+        ensureBucket()
+        return client.listObjects(ListObjectsArgs.builder().bucket(bucket).prefix(prefix).recursive(true).build()).asSequence()
+            .map { it.get() }.filter { !it.isDir }.map { ArtifactObject(it.objectName(), it.size(), it.lastModified()?.toInstant()) }
     }
 
     fun get(key: String): ByteArray? = try {
