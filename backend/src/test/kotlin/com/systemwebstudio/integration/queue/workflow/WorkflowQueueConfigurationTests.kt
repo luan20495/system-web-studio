@@ -15,7 +15,7 @@ import java.util.UUID
  * broker, which is unreachable on purpose, and refuses to start).
  */
 class WorkflowQueueConfigurationTests {
-    private val runner = ApplicationContextRunner().withUserConfiguration(WorkflowQueueConfiguration::class.java)
+    private val runner = ApplicationContextRunner().withUserConfiguration(WorkflowQueueConfiguration::class.java).withPropertyValues("app.workflow.enabled=true")
     private val noBroker = arrayOf("spring.rabbitmq.host=127.0.0.1", "spring.rabbitmq.port=1")
 
     @Test fun `memory selects exactly one working in-memory queue`() {
@@ -67,5 +67,13 @@ class WorkflowQueueConfigurationTests {
             assertNotNull(failure)
             assertTrue(generateSequence<Throwable>(failure) { it.cause }.any { it.message?.contains("rabbit") == true }, failure.toString())
         }
+    }
+
+    @Test fun `with the workflow runtime off there is no queue bean and no broker connection, even in production`() {
+        ApplicationContextRunner().withUserConfiguration(WorkflowQueueConfiguration::class.java)
+            .withPropertyValues("spring.profiles.active=prod", *noBroker).run { ctx ->
+                assertEquals(null, ctx.startupFailure)
+                assertEquals(0, ctx.getBeansOfType(WorkflowQueue::class.java).size)
+            }
     }
 }
