@@ -216,11 +216,14 @@ app:
     run-store: ${WORKFLOW_RUN_STORE:jdbc}
     # D-C0-20: only meaningful with run-store=memory. LIVE mutating actions / workflow starts then answer 503 RUNTIME_STORES_VOLATILE unless this is true (dev / E2E only).
     allow-volatile-stores: ${WORKFLOW_ALLOW_VOLATILE_STORES:false}
-    # Lease of a RUNNING workflow run (its updatedAt is the heartbeat): a run untouched for this long is treated as abandoned and recovered by the sweeper. Min PT30S.
+    # Lease of a RUNNING workflow step (C4 H-3): workflow_runs.lease_until = claim time + this, renewed by the owner every third of it; a run whose lease ran out is abandoned and
+    # recovered by the sweeper (a run without a lease falls back to updated_at older than this). Min PT30S.
     stale-after: ${WORKFLOW_STALE_AFTER:PT2M}
     # Lease of a RUNNING action run. Must be longer than the longest action timeout; min PT1M.
     action-run-stale-after: ${WORKFLOW_ACTION_RUN_STALE_AFTER:PT10M}
     action-run-sweep-delay-ms: ${WORKFLOW_ACTION_RUN_SWEEP_DELAY_MS:30000}
+    # identity of this node in workflow_runs.lease_owner; empty = generated per process (node-<8 hex>). At most 64 characters.
+    worker-id: ${WORKFLOW_WORKER_ID:}
     worker-delay-ms: ${WORKFLOW_WORKER_DELAY_MS:500}
   rate-limit:
     login-user-max: 5

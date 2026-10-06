@@ -126,12 +126,16 @@ class AppRuntimeConfiguration {
         gateways: ObjectProvider<DataGateway>,
         @Value("\${app.workflow.allow-volatile-stores:false}") allowVolatile: Boolean,
         @Value("\${app.workflow.run-store:jdbc}") runStore: String,
-        @Value("\${app.workflow.stale-after:PT2M}") staleAfter: String
+        @Value("\${app.workflow.stale-after:PT2M}") staleAfter: String,
+        @Value("\${app.workflow.worker-id:}") workerIdProperty: String
     ): AppRuntime {
         require(runStore == "jdbc" || runStore == "memory") { "app.workflow.run-store must be 'jdbc' or 'memory'" }
         val durable = runStore == "jdbc"
         val leaseAfter = Duration.parse(staleAfter)
         require(!leaseAfter.isNegative && leaseAfter >= Duration.ofSeconds(30)) { "app.workflow.stale-after must be at least 30 seconds" }
+        // identity of this node in workflow_runs.lease_owner (VARCHAR(64)): one per process, diagnostics and ownership checks only (C4 H-3)
+        val workerId = workerIdProperty.ifBlank { "node-" + java.util.UUID.randomUUID().toString().take(8) }
+        require(workerId.length <= 64) { "app.workflow.worker-id must be at most 64 characters" }
         val catalog = CanonicalActionCatalog(source)
         // START_WORKFLOW reaches the engine, which is built after the action runtime: a forwarding port closes the loop.
         var engineRef: WorkflowEngine? = null
@@ -150,7 +154,7 @@ class AppRuntimeConfiguration {
             resolver = InputResolver(json),
             bindings = catalog
         )
-        val engine = WorkflowEngine(json, CanonicalWorkflowCatalog(source), runtime, workflowRuns, queue, access, tenants, logicAudit, staleAfter = leaseAfter)
+        val engine = WorkflowEngine(json, CanonicalWorkflowCatalog(source), runtime, workflowRuns, queue, access, tenants, logicAudit, staleAfter = leaseAfter, workerId = workerId)
         engineRef = engine
         return AppRuntime(
             actions = VolatileActionGuard(runtime, catalog, access, allowVolatile || durable),
@@ -184,9 +188,10 @@ class WorkflowWorkerRunner(private val runtime: AppRuntime) {
 
 /**
  * Recovery of action runs (V29). A worker that dies between `begin` and `complete` leaves a RUNNING row, which would answer `ACTION_IN_PROGRESS` for ever. The sweep
- * turns a RUNNING run untouched for [staleAfter] into a retryable FAILED `TIMEOUT` (the `ActionRunStore.sweepStale` contract). Safe for writes: a retry re-enters the
- * data layer with the SAME derived key, whose own record answers Replay / OutcomeUnknown - an ambiguous write is never executed again. [staleAfter] must be longer
- * than the longest action timeout (default PT10M); it is the lease of a RUNNING action run: a run that has not finished within it is treated as abandoned.
+ * fails a RUNNING run untouched for [staleAfter] (the `ActionRunStore.sweepStale` contract, C4 A-1, D-C0-24): a MUTATING action's run may already have written, so it becomes
+ * `IDEMPOTENCY_OUTCOME_UNKNOWN`, `retryable = false` (replayed as it is: no automatic retry, no `onError` chain, the workflow step is not retried); a non-mutating action's run
+ * becomes a retryable `TIMEOUT`. [staleAfter] must be longer than the longest action timeout (default PT10M); it is the lease of a RUNNING action run: a run that has
+ * not finished within it is treated as abandoned.
  */
 @Component
 @ConditionalOnProperty(prefix = "app.workflow", name = ["enabled"], havingValue = "true")
@@ -203,7 +208,7 @@ class ActionRunRecovery(
         try {
             val now = clock.instant()
             val n = actionRuns.sweepStale(now.minus(lease), now)
-            if (n > 0) log.log(System.Logger.Level.WARNING, "Action run recovery: $n abandoned run(s) failed as retryable TIMEOUT")
+            if (n > 0) log.log(System.Logger.Level.WARNING, "Action run recovery: $n abandoned run(s) failed (mutating: IDEMPOTENCY_OUTCOME_UNKNOWN, otherwise retryable TIMEOUT)")
         } catch (e: Exception) {
             log.log(System.Logger.Level.ERROR, "Action run recovery failed: ${e.javaClass.name}")
         }

@@ -34,8 +34,10 @@ import java.util.UUID
  *  - **compare-and-set**: one transaction = `UPDATE workflow_runs .. WHERE tenant_id AND run_id AND version = expected.version` (+1) and an upsert of the steps that
  *    changed; 0 rows = the CAS lost and nothing was written. A step is never visible without the run state that produced it.
  *  - **create** is idempotent on (tenant, app, workflow, creator, mode, idempotencyKey): the same key and fingerprint is `Existing`, another fingerprint `KeyReused`.
- *  - **sweeper claim** (`claimForSweep`): eligible = timer due / approval awaited / stale (the same predicates as `WorkflowRun.needsSweep`, evaluated on the denormalised
- *    `cur_*` columns), not backing off, not claimed within the interval; ordered by rotation cursor then age, at most `perTenant` per tenant; each chosen run is stamped
+ *  - **step lease** (C4 H-3): `lease_owner` / `lease_until` are part of the run row, so the claim of a step and its lease are ONE compare-and-set; a renewal is a compare-and-set
+ *    too, and every transition that leaves RUNNING clears both. A run whose lease ran out is abandoned; a run without a lease falls back to `updated_at`.
+ *  - **sweeper claim** (`claimForSweep`): eligible = timer due / approval awaited / abandoned (the same predicates as `WorkflowRun.needsSweep`, evaluated on the denormalised
+ *    `cur_*` and lease columns), not backing off, not claimed within the interval; ordered by rotation cursor then age, at most `perTenant` per tenant; each chosen run is stamped
  *    (`last_swept_at = now`, version + 1) by a version-guarded UPDATE, so two sweeper nodes never both receive the same run.
  *  - **retention**: redaction replaces `input` and the step payloads on finished runs only; purge deletes finished runs only (steps cascade). Active, in-flight and
  *    compensating runs are never touched, however old.
@@ -56,8 +58,8 @@ class JdbcWorkflowRunStore(
         val inserted = jdbc.update(
             """INSERT INTO workflow_runs (run_id, tenant_id, workspace_id, app_id, workflow_id, mode, status, created_by, actor_kind, idempotency_key, fingerprint, input, definition,
                    current_step_id, compensable, step_executions, depth, error_code, error_message, compensation, cur_step_status, cur_wake_at, cur_approval_id,
-                   process_failures, sweep_failures, not_before, last_swept_at, redacted_at, created_at, updated_at, finished_at, version)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), CAST(? AS jsonb), ?, CAST(? AS jsonb), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                   process_failures, sweep_failures, not_before, last_swept_at, redacted_at, created_at, updated_at, finished_at, version, lease_owner, lease_until)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb), CAST(? AS jsonb), ?, CAST(? AS jsonb), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT (tenant_id, app_id, workflow_id, created_by, mode, idempotency_key) DO NOTHING""",
             run.runId, run.tenantId, run.workspaceId, run.appId, run.workflowId, run.mode.name, run.status.name, run.createdBy.userId, run.createdBy.kind.name,
             run.idempotencyKey, run.fingerprint, json.writeValueAsString(run.input), definitions.encode(run.definition),
@@ -65,7 +67,8 @@ class JdbcWorkflowRunStore(
             RunStoreSupport.cap(run.errorCode, 64), RunStoreSupport.cap(run.errorMessage, 1000), run.compensation.name,
             run.currentStep?.status?.name, run.currentStep?.wakeAt?.let { ts(it) }, run.currentStep?.approvalId,
             run.processFailures, run.sweepFailures, run.notBefore?.let { ts(it) }, run.lastSweptAt?.let { ts(it) }, run.redactedAt?.let { ts(it) },
-            ts(run.createdAt), ts(run.updatedAt), run.finishedAt?.let { ts(it) }, run.version
+            ts(run.createdAt), ts(run.updatedAt), run.finishedAt?.let { ts(it) }, run.version,
+            RunStoreSupport.cap(run.leaseOwner, 64), run.leaseUntil?.let { ts(it) }
         )
         if (inserted == 1) {
             upsertSteps(run.runId, run.tenantId, run.definition, run.steps.values)
@@ -101,12 +104,13 @@ class JdbcWorkflowRunStore(
             val n = jdbc.update(
                 """UPDATE workflow_runs SET status = ?, current_step_id = ?, compensable = CAST(? AS jsonb), step_executions = ?, depth = ?, error_code = ?, error_message = ?,
                        compensation = ?, cur_step_status = ?, cur_wake_at = ?, cur_approval_id = ?, process_failures = ?, sweep_failures = ?, not_before = ?, last_swept_at = ?,
-                       redacted_at = ?, updated_at = ?, finished_at = ?, version = version + 1
+                       redacted_at = ?, updated_at = ?, finished_at = ?, lease_owner = ?, lease_until = ?, version = version + 1
                    WHERE tenant_id = ? AND run_id = ? AND version = ?""",
                 next.status.name, next.currentStepId, json.writeValueAsString(json.createArrayNode().also { a -> next.compensable.forEach { a.add(it) } }), next.stepExecutions, next.depth,
                 RunStoreSupport.cap(next.errorCode, 64), RunStoreSupport.cap(next.errorMessage, 1000), next.compensation.name,
                 cur?.status?.name, cur?.wakeAt?.let { ts(it) }, cur?.approvalId, next.processFailures, next.sweepFailures, next.notBefore?.let { ts(it) },
                 next.lastSweptAt?.let { ts(it) }, next.redactedAt?.let { ts(it) }, ts(next.updatedAt), next.finishedAt?.let { ts(it) },
+                RunStoreSupport.cap(next.leaseOwner, 64), next.leaseUntil?.let { ts(it) },
                 expected.tenantId, expected.runId, expected.version
             )
             if (n == 0) false
@@ -131,7 +135,9 @@ class JdbcWorkflowRunStore(
                            (r.status NOT IN ('SUCCEEDED', 'FAILED', 'CANCELLED') AND r.cur_step_status IN ('WAITING', 'RETRY_WAIT') AND r.cur_approval_id IS NULL
                               AND r.cur_wake_at IS NOT NULL AND r.cur_wake_at <= ?)
                         OR (r.status NOT IN ('SUCCEEDED', 'FAILED', 'CANCELLED') AND r.cur_step_status = 'WAITING' AND r.cur_approval_id IS NOT NULL)
-                        OR ((r.status NOT IN ('SUCCEEDED', 'FAILED', 'CANCELLED') OR r.compensation = 'IN_PROGRESS') AND r.updated_at < ?)
+                        OR (r.status NOT IN ('SUCCEEDED', 'FAILED', 'CANCELLED') AND r.lease_until IS NOT NULL AND r.lease_until <= ?)
+                        OR ((r.lease_until IS NULL OR r.status IN ('SUCCEEDED', 'FAILED', 'CANCELLED'))
+                              AND (r.status NOT IN ('SUCCEEDED', 'FAILED', 'CANCELLED') OR r.compensation = 'IN_PROGRESS') AND r.updated_at < ?)
                          )
                      AND (r.not_before IS NULL OR r.not_before <= ?)
                      AND (r.last_swept_at IS NULL OR r.last_swept_at <= CAST(? AS timestamptz) - make_interval(secs => CASE
@@ -139,7 +145,7 @@ class JdbcWorkflowRunStore(
                             ELSE ?::double precision END))
                ) x WHERE x.rn <= ? ORDER BY x.last_swept_at NULLS FIRST, x.updated_at, x.run_id LIMIT ?""",
             { rs, _ -> mapRun(rs) },
-            ts(now), ts(staleBefore), ts(now), ts(now), ts(staleBefore), seconds(approvalInterval), seconds(minInterval), perTenant.coerceAtMost(MAX_LIST), cap
+            ts(now), ts(now), ts(staleBefore), ts(now), ts(now), ts(staleBefore), seconds(approvalInterval), seconds(minInterval), perTenant.coerceAtMost(MAX_LIST), cap
         )
         if (candidates.isEmpty()) return emptyList()
         // the fair interleaving across tenants is the reference semantics of the in-memory store (FairSelection); the stamp below is the atomic claim
@@ -268,7 +274,8 @@ class JdbcWorkflowRunStore(
         stepExecutions = rs.getInt("step_executions"), depth = rs.getInt("depth"), errorCode = rs.getString("error_code"), errorMessage = rs.getString("error_message"),
         compensation = CompensationState.valueOf(rs.getString("compensation")), createdAt = rs.instant("created_at"), updatedAt = rs.instant("updated_at"),
         finishedAt = rs.instantOrNull("finished_at"), processFailures = rs.getInt("process_failures"), sweepFailures = rs.getInt("sweep_failures"),
-        notBefore = rs.instantOrNull("not_before"), lastSweptAt = rs.instantOrNull("last_swept_at"), redactedAt = rs.instantOrNull("redacted_at"), version = rs.getLong("version")
+        notBefore = rs.instantOrNull("not_before"), lastSweptAt = rs.instantOrNull("last_swept_at"), redactedAt = rs.instantOrNull("redacted_at"), version = rs.getLong("version"),
+        leaseOwner = rs.getString("lease_owner"), leaseUntil = rs.instantOrNull("lease_until")
     )
 
     private fun requireProjectOfTenant(tenantId: UUID, appId: UUID) {
@@ -284,7 +291,7 @@ class JdbcWorkflowRunStore(
         private const val MAX_LIST = 1_000_000
         private const val RUN_COLUMNS = "run_id, tenant_id, workspace_id, app_id, workflow_id, mode, status, created_by, actor_kind, idempotency_key, fingerprint, input::text AS input, definition::text AS definition, " +
             "current_step_id, compensable::text AS compensable, step_executions, depth, error_code, error_message, compensation, process_failures, sweep_failures, not_before, last_swept_at, " +
-            "redacted_at, created_at, updated_at, finished_at, version"
+            "redacted_at, created_at, updated_at, finished_at, version, lease_owner, lease_until"
         private val SELECT_RUN = "SELECT $RUN_COLUMNS FROM workflow_runs"
     }
 }

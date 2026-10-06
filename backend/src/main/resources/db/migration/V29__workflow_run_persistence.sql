@@ -8,6 +8,8 @@
 -- tenant's workspace or at a project of another workspace. The JDBC adapters additionally insert only for an application that belongs to the tenant
 -- (default deny). Steps hang off their run with (run_id, tenant_id) -> workflow_runs(run_id, tenant_id). No client idempotency key is stored: action_runs
 -- keeps the derived key only (C4 IdempotencyKeys.derive); workflow_runs keeps the key the caller gave to start() (the run's own idempotency scope; step keys of a run are derived from the run id). Additive only: no existing table is touched.
+-- C4 contract (audit/C4-V29-readiness-and-queue-contract.md section 9, D-C0-24): action_runs.mutating (A-1) and workflow_runs.lease_owner / lease_until (H-3) are part of V29
+-- itself: V29 is not on integration/v2 yet, so no later migration is allocated for them.
 -- Undo: docs/parallel/c0/undo/U29__workflow_run_persistence.sql (guarded). The code behind it is selected by app.workflow.run-store (jdbc is the default) and
 -- gated by app.workflow.enabled (default false).
 
@@ -29,6 +31,9 @@ CREATE TABLE action_runs (
     attempt INTEGER NOT NULL,
     result JSONB,
     worker_id VARCHAR(64),
+    -- the action changes state (ActionType.mutatesState), decided by the caller at begin(). It decides what an ABANDONED run becomes (AbandonedRuns): a mutating one may have
+    -- written something, so the sweep records IDEMPOTENCY_OUTCOME_UNKNOWN (retryable = false); a non-mutating one becomes a retryable TIMEOUT. DEFAULT TRUE = the safe side.
+    mutating BOOLEAN NOT NULL DEFAULT TRUE,
     started_at TIMESTAMPTZ NOT NULL,
     finished_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL,
@@ -87,6 +92,10 @@ CREATE TABLE workflow_runs (
     sweep_failures INTEGER NOT NULL DEFAULT 0,
     not_before TIMESTAMPTZ,
     last_swept_at TIMESTAMPTZ,
+    -- durable step lease (C4 H-3): who claimed the RUNNING step and until when. Written by the same compare-and-set as the claim; both NULL whenever no step is RUNNING.
+    -- A lease that ran out marks the run abandoned for the sweeper; without a lease the old rule (updated_at older than the stale threshold) applies.
+    lease_owner VARCHAR(64),
+    lease_until TIMESTAMPTZ,
     -- retention stage 1: input and step payloads were replaced by a placeholder
     redacted_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL,
@@ -103,6 +112,8 @@ CREATE TABLE workflow_runs (
     CONSTRAINT workflow_runs_payload_check CHECK (octet_length(input::text) <= 1048576 AND octet_length(definition::text) <= 1048576),
     -- only a finished run has an end time (every terminal transition of the engine sets it; retention falls back to updated_at if one ever does not)
     CONSTRAINT workflow_runs_finished_check CHECK (finished_at IS NULL OR status IN ('SUCCEEDED', 'FAILED', 'CANCELLED')),
+    -- owner and expiry always come together
+    CONSTRAINT workflow_runs_lease_check CHECK ((lease_owner IS NULL) = (lease_until IS NULL)),
     CONSTRAINT workflow_runs_run_tenant_unique UNIQUE (run_id, tenant_id),
     CONSTRAINT workflow_runs_workspace_tenant_fk FOREIGN KEY (workspace_id, tenant_id) REFERENCES workspaces (id, tenant_id),
     CONSTRAINT workflow_runs_project_fk FOREIGN KEY (workspace_id, app_id) REFERENCES projects (workspace_id, id),
@@ -114,6 +125,8 @@ CREATE INDEX workflow_runs_timers_idx ON workflow_runs (cur_wake_at) WHERE cur_s
 CREATE INDEX workflow_runs_approval_idx ON workflow_runs (cur_approval_id) WHERE cur_approval_id IS NOT NULL;
 -- the fair claim of the sweeper: ORDER BY last_swept_at NULLS FIRST, updated_at ... FOR UPDATE SKIP LOCKED
 CREATE INDEX workflow_runs_sweep_idx ON workflow_runs (last_swept_at NULLS FIRST, updated_at) WHERE status NOT IN ('SUCCEEDED', 'FAILED', 'CANCELLED') OR compensation = 'IN_PROGRESS';
+-- runs whose step lease can expire (the lease predicate of the sweeper)
+CREATE INDEX workflow_runs_lease_idx ON workflow_runs (lease_until) WHERE lease_until IS NOT NULL;
 CREATE INDEX workflow_runs_retention_idx ON workflow_runs (finished_at) WHERE status IN ('SUCCEEDED', 'FAILED', 'CANCELLED') AND compensation <> 'IN_PROGRESS';
 CREATE INDEX workflow_runs_redact_idx ON workflow_runs (finished_at) WHERE redacted_at IS NULL AND status IN ('SUCCEEDED', 'FAILED', 'CANCELLED') AND compensation <> 'IN_PROGRESS';
 
