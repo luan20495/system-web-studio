@@ -65,7 +65,9 @@ class WorkflowRig(
     maxFailureBackoff: Duration = Duration.ofMinutes(10),
     sweepPerTenant: Int = Int.MAX_VALUE,
     sweepMinInterval: Duration = Duration.ofSeconds(5),
-    sweepApprovalInterval: Duration = Duration.ofSeconds(60)
+    sweepApprovalInterval: Duration = Duration.ofSeconds(60),
+    /** The run store behind the engine; the in-memory one unless a test is about a durable store (V29 restart tests pass a JDBC one). */
+    store: WorkflowRunStore = InMemoryWorkflowRunStore()
 ) {
     val access = FakeAccess()
     val tenants = FakeTenants()
@@ -82,7 +84,7 @@ class WorkflowRig(
     )
     val data get() = actionRig.data
     val defs = FakeWorkflowDefs(*workflows.toTypedArray())
-    val baseStore = InMemoryWorkflowRunStore()
+    val baseStore: WorkflowRunStore = store
     val runStore = FlakyRunStore(baseStore)
     val queue = InMemoryWorkflowQueue(maxDeliveries)
     val approvalStore = InMemoryApprovalStore()
