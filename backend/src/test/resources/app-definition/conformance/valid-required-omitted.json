@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 2,
+  "kind": "PAGE_SCHEMA",
+  "page": "required-default",
+  "sections": [{"id": "hero-1", "type": "Hero", "componentVersion": "1.0.0", "props": {"title": "Mặc định"}}],
+  "dataSources": [{"id": "erp-db", "type": "postgres"}],
+  "queries": [
+    {"id": "orders-list", "dataSourceRef": "erp-db", "operationKey": "orders.list",
+     "params": [{"name": "status", "type": "STRING"}, {"name": "note", "type": "STRING", "required": false}]}
+  ]
+}

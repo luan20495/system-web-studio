@@ -1,0 +1,122 @@
+{
+  "description": "C2 conformance fixtures for the V2 AppDefinition (docs/contracts/v2/app-definition.md). VALID: no violation and, when roundTrip is true, codec.toJson(codec.fromJson(doc)) equals doc exactly. INVALID: every listed path is reported by the validator.",
+  "fixtures": [
+    {
+      "file": "legacy-single-page.json",
+      "expect": "VALID",
+      "roundTrip": true,
+      "covers": "legacy schema without any V2 key"
+    },
+    {
+      "file": "valid-v2-full.json",
+      "expect": "VALID",
+      "roundTrip": true,
+      "covers": "complete V2 document: all persisted keys, legacy pages/site/seo"
+    },
+    {
+      "file": "valid-action-refresh-query.json",
+      "expect": "VALID",
+      "roundTrip": true,
+      "covers": "ActionType REFRESH_QUERY"
+    },
+    {
+      "file": "valid-param-date.json",
+      "expect": "VALID",
+      "roundTrip": true,
+      "covers": "ParamType DATE"
+    },
+    {
+      "file": "valid-required-omitted.json",
+      "expect": "VALID",
+      "roundTrip": true,
+      "covers": "ParamDef.required omitted means true"
+    },
+    {
+      "file": "valid-unknown-fields-roundtrip.json",
+      "expect": "VALID",
+      "roundTrip": true,
+      "covers": "fields not owned by C2 survive read then write"
+    },
+    {
+      "file": "valid-action-def-full.json",
+      "expect": "VALID",
+      "roundTrip": true,
+      "covers": "ActionDef with every canonical C4 member"
+    },
+    {
+      "file": "valid-workflow-def-full.json",
+      "expect": "VALID",
+      "roundTrip": true,
+      "covers": "WorkflowDef with every canonical C4 member"
+    },
+    {
+      "file": "valid-mapping-def-full.json",
+      "expect": "VALID",
+      "roundTrip": true,
+      "covers": "MappingDef with every canonical C3 member"
+    },
+    {
+      "file": "invalid-permission-code.json",
+      "expect": "INVALID",
+      "paths": [
+        "permissions[0].permission",
+        "permissions[1].permission"
+      ],
+      "covers": "only canonical permission codes"
+    },
+    {
+      "file": "invalid-reference.json",
+      "expect": "INVALID",
+      "paths": [
+        "queries[0].dataSourceRef",
+        "actions[0].queryRef",
+        "actions[0].trigger.sectionId",
+        "dataBindings[0].viewModelRef"
+      ],
+      "covers": "dangling local references"
+    },
+    {
+      "file": "invalid-action-run-query-alias.json",
+      "expect": "INVALID",
+      "paths": [
+        "actions[0].type",
+        "actions[1].type",
+        "actions[2].type",
+        "actions[3].type"
+      ],
+      "covers": "aliases RUN_QUERY / WRITE_DATA / CALL_CONNECTOR_OPERATION / SET_VALUE are rejected"
+    },
+    {
+      "file": "invalid-unknown-definition-field.json",
+      "expect": "INVALID",
+      "paths": [
+        "queries[0].rawSql",
+        "mappings[0].fields[0].expression",
+        "actions[0].url",
+        "futureTopLevelKey"
+      ],
+      "covers": "unknown members inside definitions and unknown top-level keys of a V2 document"
+    },
+    {
+      "file": "valid-mapping-transforms.json",
+      "expect": "VALID",
+      "roundTrip": true,
+      "covers": "canonical transforms[]: single, multiple (ordered) and mixed transforms, field without transforms"
+    },
+    {
+      "file": "valid-mapping-legacy-transform.json",
+      "expect": "VALID",
+      "roundTrip": false,
+      "normalizesTo": "valid-mapping-transforms.json",
+      "covers": "legacy C3 key 'transform' (object or array) is accepted and normalised to transforms[] on write; nothing is dropped"
+    },
+    {
+      "file": "invalid-mapping-transform-both.json",
+      "expect": "INVALID",
+      "paths": [
+        "mappings[0].fields[5].transform"
+      ],
+      "covers": "transform and transforms together are ambiguous"
+    }
+  ]
+}

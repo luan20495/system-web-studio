@@ -37,6 +37,8 @@ data class TemplateDecision(@field:NotBlank @field:Pattern(regexp = "APPROVE|REJ
 object LibraryCatalog {
     val templateCategories = linkedMapOf("general" to "Chung", "landing" to "Trang giới thiệu", "ecommerce" to "Bán hàng", "corporate" to "Doanh nghiệp",
         "event" to "Sự kiện", "portfolio" to "Hồ sơ năng lực", "internal" to "Nội bộ")
+        // the 13 business categories of Template V2 (D-C2-09); an existing key keeps its position and takes the business label
+        .also { m -> BusinessTemplates.categories.forEach { (k, v) -> m[k] = v } }
     val blockCategories = linkedMapOf("general" to "Chung", "hero" to "Banner", "content" to "Nội dung", "product" to "Sản phẩm", "social-proof" to "Đánh giá",
         "contact" to "Liên hệ", "navigation" to "Điều hướng", "footer" to "Chân trang")
 
@@ -93,6 +95,7 @@ class PreviewService(private val render: RenderClient, private val store: Artifa
 @Service
 class TemplateWorkflowService(private val jdbc: JdbcTemplate, private val json: JsonMapper, private val templates: TemplateService, private val validator: PageSchemaValidator,
                               private val render: RenderClient, private val previews: PreviewService, private val audit: AuditService) {
+    private val sanitizer = TemplateSanitizer(json)
     private val unsafeText = Regex("""<\s*/?\s*(script|iframe|object|embed|style|link|meta)\b|javascript\s*:|vbscript\s*:|data\s*:\s*text/html|\bon[a-z]+\s*=""", RegexOption.IGNORE_CASE)
 
     fun record(id: UUID, version: Int, actor: UUID?, decision: String, comment: String = "", checks: List<CheckResult>? = null) {
@@ -116,15 +119,23 @@ class TemplateWorkflowService(private val jdbc: JdbcTemplate, private val json: 
         val renderOk = rendered?.isSuccess == true && !Regex("<\\s*script", RegexOption.IGNORE_CASE).containsMatchIn(rendered.getOrThrow())
         out += CheckResult("render", renderOk, when { rendered == null -> "Bỏ qua vì schema chưa hợp lệ"; rendered.isFailure -> "Không render được: ${rendered.exceptionOrNull()?.message}"
             renderOk -> "Render tĩnh an toàn (không có script)"; else -> "Kết quả render chứa script" })
+        // a company-wide (SYSTEM) template carries no tenant / project data: no connector id, no operation key, no publish draft (D-C2-09)
+        val leaks = sanitizer.issues(t.schema, TemplateScope.SYSTEM)
+        out += CheckResult("tenant-data", leaks.isEmpty(), if (leaks.isEmpty()) "Không chứa dữ liệu riêng của dự án hay tenant" else "Chứa dữ liệu riêng: ${leaks.take(3).joinToString("; ")}")
         val dup = jdbc.queryForObject("SELECT count(*) FROM templates WHERE lower(name) = lower(?) AND id <> ? AND review_status = 'APPROVED'", Long::class.java, t.name, t.id)!! > 0
         out += CheckResult("name", !dup, if (dup) "Đã có template khác của công ty cùng tên" else "Tên chưa trùng trong thư viện công ty")
         return out
     }
 
     fun submit(me: UUID, id: UUID): TemplateSubmitResult {
-        val t = templates.visible(me, id)
-        if (t.authorId != me) throw ApiException.notFound("TEMPLATE_NOT_FOUND", "Template not found")
-        if (t.reviewStatus != "PRIVATE" || t.status != "ACTIVE") throw ApiException.conflict("NOT_SUBMITTABLE", "Only a private draft can be submitted (status ${t.reviewStatus})")
+        val own = templates.visible(me, id)
+        if (own.authorId != me) throw ApiException.notFound("TEMPLATE_NOT_FOUND", "Template not found")
+        if (own.reviewStatus != "PRIVATE" || own.status != "ACTIVE") throw ApiException.conflict("NOT_SUBMITTABLE", "Only a private draft can be submitted (status ${own.reviewStatus})")
+        // submitting means offering it to the whole company: drop what belongs to the author's tenant / project before anything is checked or shown
+        val portable = sanitizer.sanitize(own.schema, TemplateScope.SYSTEM)
+        val t = if (portable.removed.isEmpty()) own else own.copy(schema = portable.schema).also {
+            jdbc.update("UPDATE templates SET schema = CAST(? AS jsonb), updated_at = now() WHERE id = ?", json.writeValueAsString(portable.schema), id)
+        }
         jdbc.update("UPDATE templates SET review_status = 'SUBMITTED', submitted_at = now(), updated_at = now() WHERE id = ?", id)
         record(id, t.version, me, "SUBMITTED")
         val checks = checks(t); val passed = checks.all { it.ok }
@@ -136,7 +147,7 @@ class TemplateWorkflowService(private val jdbc: JdbcTemplate, private val json: 
             jdbc.update("UPDATE templates SET review_status = 'PRIVATE', submitted_at = NULL WHERE id = ?", id)
             record(id, t.version, null, "CHECKS_FAILED", checks.filter { !it.ok }.joinToString("; ") { "${it.check}: ${it.message}" }, checks)
         }
-        audit.record("SUBMIT_TEMPLATE", "TEMPLATE", id, newValue = mapOf("version" to t.version, "passed" to passed))
+        audit.record("SUBMIT_TEMPLATE", "TEMPLATE", id, newValue = mapOf("version" to t.version, "passed" to passed, "removedPrivateData" to portable.removed.size))
         return TemplateSubmitResult(templates.visible(me, id), passed, checks)
     }
 
@@ -231,6 +242,7 @@ class LibraryController(
     fun regenerateTemplate(@PathVariable id: UUID, @AuthenticationPrincipal me: StudioUserDetails): Map<String, String> {
         guard.require(me.userId)
         val t = templates.visible(me.userId, id)
+        if (t.builtIn) throw ApiException.conflict("BUILT_IN_TEMPLATE", "Built-in templates have no stored preview")
         return mapOf("previewStatus" to previews.generate("template", id, t.schema))
     }
 

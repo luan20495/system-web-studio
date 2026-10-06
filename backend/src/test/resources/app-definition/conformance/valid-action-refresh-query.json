@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 2,
+  "kind": "PAGE_SCHEMA",
+  "page": "refresh",
+  "sections": [
+    {"id": "hero-1", "type": "Hero", "componentVersion": "1.0.0", "props": {"title": "Danh sách", "ctaLabel": "Làm mới"}},
+    {"id": "products-1", "type": "ProductGrid", "componentVersion": "1.0.0", "props": {"heading": "Sản phẩm", "items": []}}
+  ],
+  "dataSources": [{"id": "erp-db", "type": "postgres"}],
+  "queries": [{"id": "orders-list", "dataSourceRef": "erp-db", "operationKey": "orders.list"}],
+  "actions": [
+    {"id": "refresh-orders", "type": "REFRESH_QUERY", "queryRef": "orders-list", "trigger": {"sectionId": "hero-1", "event": "onClick"}}
+  ]
+}

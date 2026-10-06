@@ -1,0 +1,9 @@
+{
+  "page": "home",
+  "seo": {"title": "Trang chủ", "description": "Legacy single page, no V2 key"},
+  "sections": [
+    {"id": "navbar-1", "type": "Navbar", "componentVersion": "1.0.0", "props": {"brand": "Xweb"}},
+    {"id": "hero-1", "type": "Hero", "componentVersion": "1.0.0", "props": {"title": "Xin chào", "ctaLabel": "Bắt đầu"}},
+    {"id": "footer-1", "type": "Footer", "componentVersion": "1.0.0", "props": {"text": "© Xweb"}}
+  ]
+}

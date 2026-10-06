@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 2,
+  "kind": "PAGE_SCHEMA",
+  "page": "orders-app",
+  "seo": {"title": "Orders"},
+  "sections": [
+    {"id": "navbar-1", "type": "Navbar", "componentVersion": "1.0.0", "props": {"brand": "Orders"}},
+    {"id": "hero-1", "type": "Hero", "componentVersion": "1.0.0", "props": {"title": "Đơn hàng", "ctaLabel": "Làm mới"}},
+    {"id": "products-1", "type": "ProductGrid", "componentVersion": "1.0.0", "props": {"heading": "Gần đây", "items": []}},
+    {"id": "contact-1", "type": "ContactForm", "componentVersion": "1.0.0", "props": {"heading": "Tạo đơn", "submitLabel": "Gửi"}}
+  ],
+  "pages": [
+    {"id": "about", "slug": "about", "title": "Giới thiệu",
+     "sections": [{"id": "footer-1", "type": "Footer", "componentVersion": "1.0.0", "props": {"text": "© Orders"}}]}
+  ],
+  "site": {"title": "Orders", "navigation": [{"id": "n1", "label": "Giới thiệu", "pageId": "about"}]},
+  "theme": {"colors": {"primary": "#1A73E8", "background": "#FFFFFF"}, "fontFamily": "SYSTEM", "radius": "MD"},
+  "dataSources": [
+    {"id": "crm", "name": "CRM", "type": "rest", "sourceRef": "0b8f2a3e-5c1d-4b7a-9e2f-3d4c5b6a7e80"},
+    {"id": "erp-db", "name": "ERP", "type": "postgres"}
+  ],
+  "queries": [
+    {"id": "orders-list", "name": "Orders", "dataSourceRef": "erp-db", "operationKey": "orders.list",
+     "params": [{"name": "status", "type": "STRING", "default": "open"}, {"name": "since", "type": "TIMESTAMP", "required": false}], "maxRows": 200},
+    {"id": "order-create", "dataSourceRef": "erp-db", "mode": "WRITE", "operationKey": "orders.create",
+     "params": [{"name": "customer", "type": "STRING"}, {"name": "amount", "type": "NUMBER"}]}
+  ],
+  "mappings": [
+    {"id": "orders-map", "queryRef": "orders-list", "fields": [{"from": "order_no", "to": "name"}, {"from": "customer.name", "to": "description"}]}
+  ],
+  "viewModels": [
+    {"id": "orders-vm", "name": "Orders", "queryRef": "orders-list", "mappingRef": "orders-map",
+     "fields": [{"name": "name"}, {"name": "description", "label": "Khách hàng"}]}
+  ],
+  "dataBindings": [
+    {"id": "bind-orders", "sectionId": "products-1", "prop": "items", "viewModelRef": "orders-vm"}
+  ],
+  "actions": [
+    {"id": "go-home", "type": "NAVIGATE", "pageRef": "about", "trigger": {"sectionId": "hero-1", "event": "onClick"}},
+    {"id": "create-order", "type": "CREATE_RECORD", "queryRef": "order-create", "trigger": {"sectionId": "contact-1", "event": "onSubmit"},
+     "permissionRef": "perm-create", "inputs": [{"name": "customer", "type": "STRING", "required": true}]},
+    {"id": "notify-team", "type": "NOTIFY", "channel": "IN_APP", "templateRef": "tpl-order-created"},
+    {"id": "start-notify", "type": "START_WORKFLOW", "workflowRef": "notify-flow", "idempotency": "REQUIRED"}
+  ],
+  "workflows": [
+    {"id": "notify-flow", "name": "Notify", "trigger": "ACTION",
+     "steps": [{"id": "s1", "actionRef": "notify-team", "next": "s2"}, {"id": "s2", "actionRef": "create-order"}]}
+  ],
+  "permissions": [
+    {"id": "perm-create", "permission": "ACTION_EXECUTE", "resourceType": "ACTION", "resourceRef": "create-order"},
+    {"id": "perm-list", "permission": "QUERY_EXECUTE", "resourceType": "QUERY", "resourceRef": "orders-list"}
+  ],
+  "publishConfig": {"mode": "DYNAMIC", "visibility": "TENANT", "requiresAuth": true, "cacheSeconds": 60},
+  "extensions": {"acme.crm": {"segment": "smb"}}
+}

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 2,
+  "kind": "PAGE_SCHEMA",
+  "page": "bad-alias",
+  "sections": [{"id": "hero-1", "type": "Hero", "componentVersion": "1.0.0", "props": {"title": "T"}}],
+  "dataSources": [{"id": "erp-db", "type": "postgres"}],
+  "queries": [{"id": "orders-list", "dataSourceRef": "erp-db", "operationKey": "orders.list"}],
+  "actions": [
+    {"id": "run", "type": "RUN_QUERY", "queryRef": "orders-list"},
+    {"id": "write", "type": "WRITE_DATA", "queryRef": "orders-list"},
+    {"id": "call", "type": "CALL_CONNECTOR_OPERATION", "dataSourceRef": "erp-db", "operationKey": "x"},
+    {"id": "set", "type": "SET_VALUE"}
+  ]
+}

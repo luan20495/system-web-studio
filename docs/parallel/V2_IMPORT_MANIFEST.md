@@ -37,7 +37,7 @@ Frozen 2026-10-06 on `integration/v2`. **Nothing in this file has been executed*
 | **After import C0 adds** | `wiring/RequestContexts` (W-01), `C1PortAdapters` (W-02/03) once C3/C4 exist |
 
 ## 3. C2 — AppDefinition V2, planner, tenant AI, publish config, templates
-**Source:** `fix/c2-v2` @ `99d8169` · **Import step:** checklist 6 (tests: 7). Needs C1 imported first (it imports `access.*`; Permission constants).
+**Source:** `fix/c2-v2` @ `bb11241` (was `99d8169`; + 4 test-only fixes: `fd8ad36` type inference, `2ffa7a3` explicit Jackson-3 `JsonNode` iteration (member `map(Function)` shadows Kotlin `Iterable.map`), `d314d8e` Mockito null-safe matchers, `bb11241` stub render worker in `TemplateV2IntegrationTests`; reviewed by C0: no assertion weakened, no main code touched, no harness/shim file on the branch) · **IMPORTED 2026-10-06** · **Import step:** checklist 6 (tests: 7). Needs C1 imported first (it imports `access.*`; Permission constants).
 
 | | |
 |---|---|

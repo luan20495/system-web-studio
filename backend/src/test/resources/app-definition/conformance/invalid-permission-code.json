@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 2,
+  "kind": "PAGE_SCHEMA",
+  "page": "bad-permission",
+  "sections": [{"id": "hero-1", "type": "Hero", "componentVersion": "1.0.0", "props": {"title": "T"}}],
+  "dataSources": [{"id": "erp-db", "type": "postgres"}],
+  "queries": [{"id": "orders-list", "dataSourceRef": "erp-db", "operationKey": "orders.list"}],
+  "permissions": [
+    {"id": "legacy-code", "permission": "PROJECT_EDIT", "resourceType": "QUERY", "resourceRef": "orders-list"},
+    {"id": "invented-code", "permission": "RUN_QUERY", "resourceType": "QUERY", "resourceRef": "orders-list"}
+  ]
+}

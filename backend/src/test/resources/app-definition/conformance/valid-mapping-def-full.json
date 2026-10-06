@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 2,
+  "kind": "PAGE_SCHEMA",
+  "page": "mappings",
+  "sections": [{"id": "products-1", "type": "ProductGrid", "componentVersion": "1.0.0", "props": {"heading": "Đơn hàng", "items": []}}],
+  "dataSources": [{"id": "erp-db", "type": "postgres"}],
+  "queries": [{"id": "orders-list", "dataSourceRef": "erp-db", "operationKey": "orders.list"}],
+  "mappings": [
+    {"id": "orders-min", "queryRef": "orders-list", "fields": [{"from": "order_no", "to": "orderNo"}]},
+    {
+      "id": "orders-full",
+      "name": "Orders mapping",
+      "description": "Every canonical mapping member",
+      "queryRef": "orders-list",
+      "errorPolicy": "SKIP_ROW",
+      "version": 3,
+      "fields": [
+        {"from": "order_no", "to": "orderNo", "transforms": [{"type": "trim"}], "validation": {"minLength": 1, "maxLength": 20}, "description": "Mã đơn"},
+        {"from": "total", "to": "total", "transforms": [{"type": "toNumber"}], "nullable": false, "default": 0, "validation": {"min": 0, "max": 1000000}},
+        {"from": "status", "to": "status", "transforms": [{"type": "enumMap", "map": {"O": "open", "C": "closed"}, "default": "unknown"}],
+         "validation": {"oneOf": ["open", "closed", "unknown"]}},
+        {"from": "created", "to": "createdAt", "transforms": [{"type": "date", "output": "iso", "zone": "UTC"}], "validation": {"format": "DATETIME"}},
+        {"to": "fullName", "transforms": [{"type": "join", "fields": ["first", "last"], "separator": " "}]},
+        {"to": "source", "default": "erp"},
+        {"from": "email", "to": "email", "validation": {"format": "EMAIL"}}
+      ]
+    }
+  ],
+  "viewModels": [
+    {"id": "orders-vm", "name": "Orders", "description": "View model", "queryRef": "orders-list", "mappingRef": "orders-min", "cardinality": "SINGLE",
+     "fields": [{"name": "orderNo", "label": "Mã", "description": "Mã đơn"}]}
+  ]
+}

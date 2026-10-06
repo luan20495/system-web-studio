@@ -1,0 +1,19 @@
+{
+  "page": "site",
+  "seo": {"title": "Top-level seo is carried verbatim", "noindex": false},
+  "sections": [
+    {"id": "hero-1", "type": "Hero", "componentVersion": "1.0.0", "props": {"title": "Home", "image": "asset://11111111-2222-3333-4444-555555555555"}},
+    {"id": "products-1", "type": "ProductGrid", "componentVersion": "1.0.0", "props": {"heading": "Products", "items": [{"id": "p1", "name": "One"}]}}
+  ],
+  "pages": [
+    {"id": "about", "slug": "about", "title": "Giới thiệu", "seo": {"title": "About", "description": "About us"},
+     "sections": [{"id": "footer-1", "type": "Footer", "componentVersion": "1.0.0", "props": {"text": "© Example"}}]}
+  ],
+  "site": {
+    "title": "Example",
+    "home": {"title": "Home", "seo": {"title": "Home", "description": "Welcome"}},
+    "navigation": [{"id": "n1", "label": "About", "pageId": "about"}, {"id": "n2", "label": "Products", "anchor": "#products-1"}],
+    "notFound": {"title": "404", "message": "Not found"}
+  },
+  "legacyUnknownKey": {"kept": true}
+}
