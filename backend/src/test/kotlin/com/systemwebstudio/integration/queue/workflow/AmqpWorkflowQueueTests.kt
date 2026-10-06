@@ -36,8 +36,8 @@ import java.util.concurrent.Executors
  * with its channel - and finally the real engine and worker on the real broker (duplicate delivery, consumer death before the ack, a poison run to the
  * dead-letter queue).
  *
- * Needs Docker, like the other integration tests of the backend. STATUS: written against the real API but NOT YET RUN (no Docker / Gradle where it was written):
- * it is part of gate G2 and counts only once it has passed on the Mac.
+ * Needs Docker, like the other integration tests of the backend. STATUS: VERIFIED on macOS (JDK 21, Docker Desktop, Gradle 9.8) against rabbitmq:4-management-alpine
+ * via Testcontainers, 14/14 pass. That is gate G2 for the C4 adapter; the integrated runtime (C0 wiring of the one `WorkflowQueue` bean) is a separate step.
  */
 class AmqpWorkflowQueueTests : WorkflowQueueContract() {
     companion object {
@@ -124,8 +124,15 @@ class AmqpWorkflowQueueTests : WorkflowQueueContract() {
         } finally { ch.close() }
         val q = AmqpWorkflowQueue({ connection() }, t).also { opened += it }
         q.publish(WorkflowJob.forStep(UUID.randomUUID(), UUID.randomUUID(), "a"))
-        assertThrows(Exception::class.java) { q.publish(WorkflowJob.forStep(UUID.randomUUID(), UUID.randomUUID(), "b")) }
-        val first = q.poll()!!; q.ack(first)
+        // a quorum queue enforces x-max-length softly (it may take one message over the limit before it starts to nack), so publish until the broker refuses
+        var accepted = 1
+        var refused: Exception? = null
+        while (refused == null && accepted < 10) {
+            try { q.publish(WorkflowJob.forStep(UUID.randomUUID(), UUID.randomUUID(), "b$accepted")); accepted++ } catch (e: Exception) { refused = e }
+        }
+        assertNotNull(refused, "the broker's basic.nack must surface as a failed publish, never as a silent success")
+        assertTrue(accepted <= 3, "refused soon after the limit of 1, accepted $accepted")
+        repeat(accepted) { q.ack(q.poll()!!) }
         // the failed publish left no half-open state behind: after room was made, publishing works again
         q.publish(WorkflowJob.forStep(UUID.randomUUID(), UUID.randomUUID(), "c"))
         assertNotNull(eventually { q.poll() })

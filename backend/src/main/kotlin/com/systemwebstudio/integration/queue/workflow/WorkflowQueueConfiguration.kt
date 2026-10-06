@@ -4,10 +4,10 @@ import com.rabbitmq.client.ConnectionFactory
 import com.systemwebstudio.logic.workflow.InMemoryWorkflowQueue
 import com.systemwebstudio.logic.workflow.WorkflowQueue
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.convert.DurationStyle
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.env.Environment
-import java.time.Duration
 
 /**
  * Provides the one [WorkflowQueue] bean (H-5). The runtime wiring injects `WorkflowQueue` and must not construct a queue itself.
@@ -34,7 +34,7 @@ class WorkflowQueueConfiguration {
         @Value("\${app.workflow.amqp.dead-letter-queue:xweb.workflow.jobs.dlq}") deadLetterQueue: String,
         @Value("\${app.workflow.amqp.dead-letter-exchange:xweb.workflow.dlx}") deadLetterExchange: String,
         @Value("\${app.workflow.amqp.delivery-limit:5}") deliveryLimit: Int,
-        @Value("\${app.workflow.amqp.confirm-timeout:PT5S}") confirmTimeout: Duration
+        @Value("\${app.workflow.amqp.confirm-timeout:PT5S}") confirmTimeout: String
     ): WorkflowQueue = when (WorkflowQueueSelection.resolve(configured, env.activeProfiles.toList())) {
         WorkflowQueueMode.MEMORY -> OwnedWorkflowQueue(InMemoryWorkflowQueue(deliveryLimit)) { }
         WorkflowQueueMode.AMQP -> {
@@ -43,7 +43,7 @@ class WorkflowQueueConfiguration {
                 setAutomaticRecoveryEnabled(true); setConnectionTimeout(5_000)
             }
             val connection = CachedBrokerConnection { factory.newConnection("xweb-workflow") }
-            val amqp = AmqpWorkflowQueue(connection, WorkflowQueueTopology(queue, deadLetterQueue, deadLetterExchange, deliveryLimit, confirmTimeout))
+            val amqp = AmqpWorkflowQueue(connection, WorkflowQueueTopology(queue, deadLetterQueue, deadLetterExchange, deliveryLimit, DurationStyle.detectAndParse(confirmTimeout)))
             try {
                 amqp.declareTopology()
             } catch (e: Exception) {
