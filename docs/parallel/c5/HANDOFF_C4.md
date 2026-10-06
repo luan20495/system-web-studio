@@ -20,3 +20,6 @@ From C5 (Studio/Frontend), baseline `integration/v2 @ f894cc6`. C5 changed nothi
 - **C5 workaround:** UI handles 503/network/timeouts generically with retry and reconnect; flows BLOCKED with hooks ready (`E2E_*_RABBIT_CMD`, `E2E_RESTART_BACKEND_CMD`).
 - **Blocked test IDs:** E2E-12, E2E-14
 
+## No new request (this round)
+
+C4 reported the AMQP adapter coded, durable queue wiring partial and the real broker not verified. C5 changed nothing for it: E2E-12 and E2E-14 stay **BLOCKED** (not faked, not PASS). H-C4-01 above is unchanged. Client rule that does not depend on C4: an ambiguous mutation or workflow start is `IDEMPOTENCY_OUTCOME_UNKNOWN`, `retryable=false`, never auto-retried, never shown as success.

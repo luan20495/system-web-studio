@@ -9,7 +9,8 @@ From C5 (Studio/Frontend), baseline `integration/v2 @ f894cc6`. C5 changed nothi
 - **Severity:** P1
 - **Flow:** Configure DataSource / Query / binding from Studio
 - **Frontend expectation:** Studio can create or pick a data source, define a query and bind it (TEST, later LIVE) through an HTTP management API.
-- **Actual backend behavior:** No controller creates data sources, credentials, queries or source bindings; V28 stores credentials as SecretsCrypto ciphertext that only the server key can produce; typed AppDefinition ops cannot add a source (it is granted, not created).
+- **Update (C5 re-audit, `API_AUDIT_F894CC6.md` §4):** C3 reports route code for sources, credentials, test-connection and bindings (`agent/c3-data-prod @ e606465`, `docs/parallel/c3/MANAGEMENT_API.md`). The Studio client and panel are built against it. It is **not in `integration/v2`**, C3 states Spring compile / route tests / live backend are NOT verified, and there is still **no query or mutation management endpoint** and no AppDefinition op to declare a slot (H-C3-03, H-C2-02). This item stays open for those parts.
+- **Actual backend behavior (on f894cc6):** No controller creates data sources, credentials, queries or source bindings; V28 stores credentials as SecretsCrypto ciphertext that only the server key can produce; typed AppDefinition ops cannot add a source (it is granted, not created).
 - **Endpoint/event:** (missing) e.g. `/api/v1/workspaces/{w}/data-sources`, `…/projects/{p}/queries`, `…/bindings`
 - **Request:** n/a
 - **Response/status:** n/a (route does not exist)
@@ -74,3 +75,19 @@ From C5 (Studio/Frontend), baseline `integration/v2 @ f894cc6`. C5 changed nothi
 - **C5 workaround:** 404 without code or `HTTP_404`/501 ⇒ NOT_READY "flag off".
 - **Blocked test IDs:** none (heuristic works)
 
+## H-C0-05 — what C5 needs from C0 to run the real-backend suite (the only requests)
+
+- **ID:** H-C0-05
+- **Owner:** C0
+- **Severity:** P1
+- **Flow:** every real-backend flow (PASS is 0/14 only because there is no stack)
+- **Frontend expectation:** a stack that C5/C6 can point `E2E_STUDIO_URL` at.
+- **Requests (nothing else):**
+  1. the **official staging/backend base URL** (none exists yet; C0 reports no official host);
+  2. an **integration-ready baseline/branch** that contains, together: C3's Management API (`agent/c3-data-prod @ e606465` or its successor, compiled and route-tested by C3) and the V29 run stores (`wire/v29-run-persistence @ 4b1d4aa`, targeted gate green, full regression NOT green, not integrated into `integration/v2`);
+  3. the **finalised runtime topology**: which origin serves the published app's `/runtime-config.json`, which origin serves the Data API, and the CORS/cookie model between them (C2's runtime-config proposal is unverified);
+  4. the **auth/session assumptions for E2E**: local login enabled on the test stack, a system-admin account supplied through the environment, the Studio same-origin `/api` proxy target, `app.data-platform.enabled=true`, `app.workflow.enabled=true`, `app.workflow.run-store=jdbc`.
+- **Evidence:** `docs/C5_REAL_BACKEND_E2E_RUNBOOK.md` §3–4; `tests/e2e-real/run.mjs` guard.
+- **Impact:** without 1–4 the suite exits 2 (NOT RUN) and the C5 status cannot go beyond "implementation ready / backend integration pending".
+- **C5 workaround:** none that is honest; no fake backend is used anywhere.
+- **Blocked test IDs:** all 14 (real-backend result)

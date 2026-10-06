@@ -18,7 +18,7 @@ Method: read `docs/contracts/v2/runtime-api.md` (frozen) and the f894cc6 control
 
 ## 2. Backend facts that cap what the UI can do
 
-`B-C0-W-01` V29 run stores not integrated (LIVE mutating actions / workflow starts → 503 `RUNTIME_STORES_VOLATILE`) · `B-C0-W-03` no management API for data sources, credentials, queries, bindings · `B-C0-W-04` production connectors read-only (`MUTATION_UNSUPPORTED`) · `B-C4-05/06` C4 queue and run stores in memory, no RabbitMQ dependency · `B-C5-06` the published app has no data runtime host · `B-C5-09`/Q-1 Admin stays platform-only · `B-C0-WEB-01` one OIDC redirect URI. Handoffs: `HANDOFF_C0.md` … `HANDOFF_C4.md`.
+`B-C0-W-01` V29 run stores not integrated (LIVE mutating actions / workflow starts → 503 `RUNTIME_STORES_VOLATILE`) · `B-C0-W-03` no management API for data sources, credentials, queries, bindings **on `f894cc6`** (route code now exists on C3's branch — see §4 — but it is neither compiled nor tested by C3 and not integrated) · `B-C0-W-04` production connectors read-only (`MUTATION_UNSUPPORTED`) · `B-C4-05/06` C4 queue and run stores in memory, no RabbitMQ dependency · `B-C5-06` the published app has no data runtime host · `B-C5-09`/Q-1 Admin stays platform-only · `B-C0-WEB-01` one OIDC redirect URI. Handoffs: `HANDOFF_C0.md` … `HANDOFF_C4.md`.
 
 ## 3. UX-state audit (spec item 6)
 
@@ -40,3 +40,64 @@ Method: read `docs/contracts/v2/runtime-api.md` (frozen) and the f894cc6 control
 | no white screen / no unhandled rejection | error boundaries; E2E flows assert zero page errors | existing; real-backend part NOT RUN |
 
 **Remaining (not fixed, with reason):** no real-backend evidence yet for any of the above (stack missing); the LIVE-mode UI does not exist in Studio on purpose (Test panel is TEST-only; LIVE needs a published app with a data host — `B-C5-06`); slow-network behaviour is only unit/SSR-checked.
+
+## 4. Management API audit (C3, `agent/c3-data-prod @ e606465`) — added after the baseline audit
+
+Method: read `docs/parallel/c3/MANAGEMENT_API.md` and `wiring/DataManagementControllers.kt` / `data/gateway/ManagementHttp.kt` from that commit (`git show`, read only). **Status stated by C3: Spring compile NOT verified, route test NOT verified, live backend NOT verified, production ready NO.** C5 could not run any of it either (no JDK in the sandbox). The client mirrors the document and the controller; nothing was added that neither contains. `MANAGEMENT_API_SOURCE.verifiedAgainstBackend` is `false` in `packages/types/src/contract/v2/management.ts`.
+
+### 4.1 Contract as extracted (base `/api/v1/workspaces/{workspaceId}`, mounted only with `app.data-platform.enabled=true`, session cookie + `X-XSRF-TOKEN`)
+
+| Route | Body | Answer | Frontend (`api.dataManagement.*`) |
+|---|---|---|---|
+| `GET /data-sources/connectors` | – | `{items: ConnectorDescriptor[]}` | `connectors` — the create form is built from this catalogue (AVAILABLE vs PLANNED), not hard-coded |
+| `GET /data-sources` | – | `{items: DataSourceView[]}` | `list` |
+| `POST /data-sources` | `{name,type,config?,credential?}` | 201 view | `create` (name checked locally first) |
+| `GET/PATCH/DELETE /data-sources/{id}` | PATCH: any of `name`, `config` (replaces ALL), `status` | 200 / 200 / 204 (409 while bound) | `get`, `update` (empty change refused locally), `remove` |
+| `GET /data-sources/{id}/credential` | – | `{configured,type,keys[],updatedAt,updatedBy}` — names only | `credential` |
+| `PUT /data-sources/{id}/credential` | `{credential:{…}}` (1–8 text keys) | metadata (write-only body) | `setCredential` |
+| `DELETE /data-sources/{id}/credential` | – | 204 | `removeCredential` |
+| `POST /data-sources/{id}/test` | none | **always 200**: `{ok:true,latencyMs,warnings[]}` or `{ok:false,code,message}`; 409 `DISABLED`, 404, 403, 429 are real errors | `testConnection` (30 s signal) |
+| `GET /projects/{p}/data-bindings` | – | `{items:[{mode,slotId,dataSourceId,updatedAt}]}` | `listBindings` |
+| `PUT /projects/{p}/data-bindings/{mode}/{slotId}` | `{dataSourceId}` | 200 binding (mode LIVE/TEST, case-insensitive) | `bind` (mode upper-cased, slot checked against `^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$`) |
+| `DELETE …/{mode}/{slotId}` | – | 204 (404 if none) | `unbind` |
+
+Rules mirrored client-side only to save a round trip (the server stays the authority): name `^[A-Za-z0-9][A-Za-z0-9 ._-]{0,79}$`; config ≤ 30 keys; credential 1–8 text keys; bodies carry **only** contract fields (the server refuses `tenantId`, `workspaceId`, `credentialRef`, `id`, `createdBy` with 400 `INVALID_PARAMS`); ids are `encodeURIComponent`-encoded. Permissions: reads `DATA_SOURCE_VIEW`, changes `DATA_SOURCE_MANAGE` (WORKSPACE_ADMIN only today); bindings additionally need `PROJECT_EDIT`, also for the list. Foreign, unknown and other-tenant ids all answer the same 404 `NOT_FOUND` — the UI shows one text for all three. Admin changes: 60 per 60 s per tenant (429 `RATE_LIMITED`).
+
+### 4.2 Error mapping (`core/errors.ts`, `core/dataManagement.ts`)
+
+| Answer | UI kind | Retry |
+|---|---|---|
+| network / timeout on a **write** | `unknown-outcome` / `timeout` — "reload the list to check before retrying" | **never automatic**; list and bindings are re-read |
+| 400 `INVALID_*`, `INVALID_CONFIG`, `INVALID_PARAMS`, 422, `UNSUPPORTED_TYPE` | `invalid` (field named when known) | after editing |
+| 401, 403 `PERMISSION_DENIED` / `FORBIDDEN` | `forbidden` | no |
+| 404 with a code | `not-found` (same text for foreign/unknown) | no |
+| 404 / 501 **without** a code (reads) | NOT_READY "management not mounted (flag off)" | – |
+| 409 `DISABLED` | `unavailable` ("source is switched off") | after enabling |
+| 409 other | `conflict` (delete of a bound source says "unbind first") | no |
+| 429 | `rate-limited` | after the wait |
+| ≥ 500 on a **write** | `unknown-outcome`, `retrySafe=false` | reload first |
+| ≥ 500 on a read | `error` | yes |
+| `AUTH_REJECTED` (test result or error) | "the source rejected the credentials" | – |
+| `MUTATION_REJECTED`, `IDEMPOTENCY_OUTCOME_UNKNOWN`, `READ_ONLY_VIOLATION`, `DISABLED` (runtime) | as before in `errors.ts`; `IDEMPOTENCY_OUTCOME_UNKNOWN` is `retryable=false`, no auto-retry, no success shown | – |
+
+A failed connection test is **not** an error: it is a FAILED result (HTTP 200, `ok:false`) with its code (`AUTH_REJECTED`, `CONNECT_FAILED`, `HOST_UNRESOLVED`, `ADDRESS_BLOCKED`, `TLS_FAILED`, `TIMEOUT`, `ROLE_TOO_PRIVILEGED`, `INVALID_CREDENTIAL`, `NOT_IMPLEMENTED`, `INTERNAL`) and a plain-language reason; warnings turn an OK result amber and are shown next to it.
+
+### 4.3 Documentation vs controller — observations (none silently normalised; sent to C3 as H-C3-02/03)
+
+| # | Observation | Effect on the frontend |
+|---|---|---|
+| O1 | the error table of the doc omits `INVALID_CREDENTIAL` (400) and `SECRETS_UNAVAILABLE` (`GatewayProblems.status` maps it to 500 by default) | `INVALID_*` is handled generically; `SECRETS_UNAVAILABLE` is shown as a server error with an unknown-outcome rule on writes |
+| O2 | PATCH applies name/config first and status second — not atomic | after any PATCH error the list is re-read; the UI never assumes a partial result |
+| O3 | the bindings list silently filters entries by per-source read permission | a user may see fewer bindings than exist; the UI says nothing about hidden ones (it cannot know) |
+| O4 | the runtime routes answer `FORBIDDEN`, the management routes `PERMISSION_DENIED` | both map to `forbidden` |
+| O5 | precedence between `dataSources[].sourceRef` in the document and the `data_source_bindings` table is unspecified | the UI shows the bindings table and the document's declared slots side by side and does not claim which wins |
+| O6 | **no approved-query / mutation management endpoint** (doc §5: seeded through repositories) | the Studio can neither create nor edit a query on the server; E2E-07 needs an operator-seeded project |
+| O7 | **AppDefinition V2 has no typed operation for `dataSources[]`** (slots are "granted, not created"; queries must reference a declared `dataSourceRef`, validated in `definition.ts`) | the Studio can bind an existing slot but cannot declare one; a project without slots cannot be bound — the UI says so (`no-slots`, `slot-empty`) instead of inventing a slot (C2 H-C2-02) |
+
+### 4.4 Public runtime config (C2 proposal; frontend ready, host not decided)
+
+A published app loads `GET /runtime-config.json` = `{DATA_API_BASE_URL, ENVIRONMENT?, RELEASE_ID?, VERSION?}` **before** it creates a Data API client (`packages/api-client/src/runtimeConfig.ts`). Fail-closed rules, all unit-tested (`tests/builder/runtimeconfig.test.ts`): `DATA_API_BASE_URL` required, absolute `https:` (plain `http:` only for a loopback host in development), no credentials/query/fragment; a loopback host is refused in production or when `ENVIRONMENT=production`; broken JSON, a missing URL or a 5xx **never** fall back; the only fallback is development mode with an explicit valid `devFallback` when the file is unreachable, times out or answers 404; the failure is rendered visibly (`renderRuntimeConfigFailure`, `textContent` only); `dataApiUrl` refuses anything that could change the host. No host is hard-coded anywhere. **Not verified:** the public publish host, who serves the file, CORS/cookie model between the published origin and the Data API (C0/C2/C3).
+
+### 4.5 Test evidence for this section (all class-tagged; none is real-backend)
+
+`tests/builder/management-client.test.ts` (mock: exact method/path/body, CSRF, no identity fields, credential metadata only, 404 shapes, network vs timeout) · `management.test.tsx` (unit: texts per failure code, warnings, credential view, form checks, error classes, unknown-outcome reload, bindings/slots, SSR of the panel and wizard) · `runtimeconfig.test.ts` (mock: the cases above) · `tests/browser/datasources.spec.mjs` (harness, 47 checks: states, locks, secret handling, TEST/LIVE binding, read-only, a11y names). `window.__secretsSeenInDom()` is false after every credential/create submit.
