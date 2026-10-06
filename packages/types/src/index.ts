@@ -228,3 +228,6 @@ export type Connector = { key: string; name: string; description: string; baseUr
 export type BackupComponent = { name: string; state: string; lastSuccess: string | null; lastRun: string | null; ageHours: number | null; sizeBytes: number | null; error: string | null; stale: boolean };
 export type BackupEnvironment = { environment: string; components: BackupComponent[]; drillAt: string | null; drillPassed: boolean | null;
   drill: { component: string; result: string; detail: string }[]; healthy: boolean; problems: string[] };
+
+/** Canonical v2 contract mirror (AppDefinition, data, actions, workflows, permissions). See ./contract/v2/meta.ts for the source and version. */
+export * from "./contract/v2";

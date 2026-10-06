@@ -1,7 +1,7 @@
 import type {
   AdminAi, AiCallRow, SettingView, BuildPolicyReport, CleanupResult, RepoRow, AiPrice, AiProbe, AiProviderInfo, AiProviderForm, AiDiscover, AiLimitsView, AiLimitDefaults, AiUserView, AiUsageReport, AdminApp, BlockDto, CheckResult, TemplateDto, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, ActivationLink, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
   BackupEnvironment, AppKind, RuntimeStatus, Connector, Department, CostPrice, CostReport, SecurityReport, FormSubmission, SiteDomain, TemplateReview, LibraryCategories, AccessRule, EffectiveModel, AiBudget, AdminAlert, StreamHandlers,
-  AiStatus, ApiProject, AuthConfig, Member, SiteInfo, DesignNode, DependencyRequest, PackageView, CloneAccess, TreeFile, CodeFile, CodeCommit, CodeChange, DiffFile, CodeAiResponse, CodeAiHistoryItem, RegistryComponent, AssetDto, Deployment, Me, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
+  AiStatus, ApiProject, AuthConfig, Member, SiteInfo, DesignNode, DependencyRequest, PackageView, CloneAccess, TreeFile, CodeFile, CodeCommit, CodeChange, DiffFile, CodeAiResponse, CodeAiHistoryItem, RegistryComponent, ComponentMetadataV2, DefinitionOperation, AssetDto, Deployment, Me, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
 } from "@xweb/types";
 import { ApiError, call, json, qs, resetCsrf, stream } from "./core";
 
@@ -22,6 +22,8 @@ export const api = {
   aiStatus: (workspaceId?: string) => call<AiStatus>(`/ai/status${qs({ workspaceId })}`),
   cancelStream: (id: string) => call<{ cancelled: boolean }>(`/ai/streams/${id}/cancel`, { method: "POST" }),
   components: () => call<RegistryComponent[]>("/components?details=true"),
+  /** ComponentMetadataV2 (bindable props, events, supported actions). Exists in the v2 contract (C2); a server without it answers 404, which the Builder shows as "Chưa sẵn sàng". */
+  componentMetadata: () => call<ComponentMetadataV2[]>("/component-metadata"),
   /** returns the identity provider's end-session URL when the user signed in with SSO (RP-initiated logout) */
   async logout(): Promise<string | null> {
     const r = await call<{ status: string; redirect?: string }>("/auth/logout", { method: "POST" }).finally(resetCsrf);
@@ -200,7 +202,7 @@ export const api = {
   removeProjectMember: (w: string, p: string, userId: string) => call<void>(`${P(w, p)}/members/${userId}`, { method: "DELETE" }),
 
   getSchema: (w: string, p: string) => call<SchemaResponse>(`${P(w, p)}/schema`),
-  patchSchema: (w: string, p: string, expectedRevision: number, operations: SchemaOperation[], summary?: string, blockId?: string) =>
+  patchSchema: (w: string, p: string, expectedRevision: number, operations: (SchemaOperation | DefinitionOperation)[], summary?: string, blockId?: string) =>
     call<SchemaResponse>(`${P(w, p)}/schema`, { method: "PATCH", body: json({ expectedRevision, operations, summary, ...(blockId ? { blockId } : {}) }) }),
   sendPrompt: (w: string, p: string, prompt: string, expectedRevision: number, model?: string) =>
     // AI calls can take a while when the first free model is busy and the server fails over to the next one
