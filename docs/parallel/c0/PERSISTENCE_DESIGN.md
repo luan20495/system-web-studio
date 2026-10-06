@@ -1,0 +1,183 @@
+# C0 — Persistence design for real LIVE E2E (removes B-C0-W-01) — PROPOSAL, NOT ALLOCATED
+
+Status: **PROPOSED 2026-10-06 (C0). No migration file exists, no number is allocated in `MIGRATION_LEDGER.md`, no code was written.**
+Base: `integration/v2 @ e7307fd`. Needs the owner's acceptance of §7 before anything is created.
+
+## 1. Audit result
+
+| Fact | Evidence |
+|---|---|
+| Highest migration is **V27** (`V27__publish_configs.sql`); V1…V27 contiguous; no V28+ file on `integration/v2`, `agent/c3-data` or `agent/c4-workflow` | `db/migration/`, `MIGRATION_LEDGER.md` §1 ("V27 is the last number allocated") |
+| No table exists for data sources, credentials, queries, mutations, data idempotency, source schemas, sync, webhooks, action runs, workflow runs/steps, approvals, schedules, notifications | table list of V1…V27 |
+| Look-alikes that must NOT be reused | `connectors`/`project_connectors` (V22: platform-wide approved HTTP connectors for generated server apps, no tenant column), `idempotency_keys` (V4: `scope_key`/`request_hash`/`resource_id`, no state, no lease, no result), `build_jobs` (V14), `app_runtimes` (V22) |
+| Prerequisites present | V26: `tenants`, `workspaces UNIQUE (id, tenant_id)`; V27 relies on `projects UNIQUE (workspace_id, id)`; Redis + AMQP starters, `RabbitTemplate`, `integration/queue/JobQueue.kt`, Testcontainers Postgres 17.6 / Redis / RabbitMQ in `IntegrationTestBase` |
+| Ports with only in-memory implementations | C3: `DataSourceRepository`, `CredentialStore`, `QueryCatalog`, `MutationCatalog`, `IdempotencyStore`, `SourceSchemaStore`, `SyncJobStore`, `WebhookEndpointStore`. C4: `ActionRunStore`, `WorkflowRunStore`, `WorkflowQueue`, `ApprovalStore`, `ScheduleStore`, `DeliveryStore` |
+| Existing infra usable without new components | `RedisCacheBackend` (query cache), `InMemoryDataEventBus` (realtime; ephemeral by nature), `RedisRateLimitGate`, `SecretsCrypto` |
+| `DefaultDataGateway` constructor needs | `GatewayGuard`✔, `DataSourceService` (repository, vault, registry, limits, audit), `QueryCatalog`, `MutationCatalog`, `MappingCatalog`✔ (wired), `DiscoveryService` (→ `SourceSchemaStore`), `QueryCache`, `IdempotencyStore`, `DataChangeListener`, `DataAuditSink`, `RateLimitGate` |
+| C3 idempotency TTL | `IDEMPOTENCY_TTL_SECONDS = 24 h` (gateway constant) vs C4 `action_runs` retention 30 d: safe because C4 replays the recorded result before C3 is reached, but both numbers must be asserted in a test |
+| Ledger order | `MIGRATION_LEDGER.md` §2 orders: tenant resources → data foundation (C3) → sharing/groups → C4 persistence → RLS … Items 1 and 3 are NOT prerequisites of the minimal tables below (see §6) |
+
+## 2. Minimal durable design
+
+| Need | Durable state (PostgreSQL) | Not durable (by design) |
+|---|---|---|
+| LIVE query | `data_sources`, `data_credentials`, `data_queries`, `data_source_bindings` | query cache (Redis, already there), realtime bus (in memory, re-subscribe on restart) |
+| LIVE mutation via actions | + `data_mutations`, `data_idempotency` (RESERVED/DONE/UNKNOWN + lease) | — |
+| Action runs / idempotency | `action_runs` (derived 43-char key) | — |
+| Workflow runs / steps / restart safety | `workflow_runs` (+ sweeper/DLQ/retention columns), `workflow_run_steps` | — |
+| Workflow queue | **the run row is the durable queue state** (PENDING / timer / stale ⇒ the sweeper re-publishes). Broker = RabbitMQ per D-C4-13 | message bodies carry no payload (job id, tenant, run, step) |
+
+Correctness never depends on the broker: a lost message leaves a PENDING/stale run that `claimForSweep` finds again. Therefore a persistent store with the existing in-memory queue is already restart-safe for a single node (latency = stale threshold). RabbitMQ is needed for multi-node fan-out, prompt delivery and the DLQ, and is Phase 2.
+
+Deliberately deferred (each needs its own accepted request): `source_schemas` (use an in-memory, rebuildable `SourceSchemaStore`; masked snapshots are derived data), `sync_jobs`/`sync_state`, `webhook_endpoints`/`webhook_replay` (W-07), `approvals`, `schedules`, `schedule_executions`, `notification_deliveries`, `in_app_notifications`, RLS.
+
+## 3. Proposed V28 — data runtime foundation (C3 minimal + C0 binding)
+
+All tables: `tenant_id uuid NOT NULL REFERENCES tenants(id)`; workspace-scoped rows use the composite FK `(workspace_id, tenant_id) → workspaces(id, tenant_id)`; children use `(data_source_id, tenant_id) → data_sources(id, tenant_id)`; additive only; no data migration; no backfill.
+
+```sql
+CREATE TABLE data_sources (
+    id               UUID PRIMARY KEY,
+    tenant_id        UUID NOT NULL REFERENCES tenants (id),
+    workspace_id     UUID,
+    type             VARCHAR(32)  NOT NULL,
+    name             VARCHAR(120) NOT NULL,
+    status           VARCHAR(16)  NOT NULL,
+    config_nonsecret JSONB        NOT NULL DEFAULT '{}'::jsonb,
+    credential_ref   VARCHAR(80),
+    created_by       UUID REFERENCES users (id),
+    created_at       TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    version          BIGINT       NOT NULL DEFAULT 1,
+    CONSTRAINT data_sources_status_check CHECK (status IN ('ACTIVE', 'DISABLED')),
+    CONSTRAINT data_sources_config_object CHECK (jsonb_typeof(config_nonsecret) = 'object'),
+    CONSTRAINT data_sources_tenant_name_unique UNIQUE (tenant_id, name),
+    CONSTRAINT data_sources_id_tenant_unique UNIQUE (id, tenant_id),
+    CONSTRAINT data_sources_workspace_tenant_fk FOREIGN KEY (workspace_id, tenant_id) REFERENCES workspaces (id, tenant_id)
+);
+CREATE INDEX data_sources_tenant_idx ON data_sources (tenant_id, created_at);
+
+CREATE TABLE data_credentials (            -- ciphertext only (SecretsCrypto "v1:"); never selected by list queries
+    tenant_id  UUID NOT NULL REFERENCES tenants (id),
+    ref        VARCHAR(80) NOT NULL,
+    ciphertext TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (tenant_id, ref),
+    CONSTRAINT data_credentials_ciphertext_check CHECK (ciphertext LIKE 'v1:%')
+);
+-- data_sources.credential_ref is deliberately not a FK: webhook secrets share this table and rotation discards the old ref after the source row moved on.
+
+CREATE TABLE data_queries (
+    tenant_id      UUID NOT NULL REFERENCES tenants (id),
+    data_source_id UUID NOT NULL,
+    query_id       VARCHAR(64) NOT NULL,
+    kind           VARCHAR(16) NOT NULL,            -- sql | rest (closed set, enforced by the codec)
+    definition     JSONB NOT NULL,                  -- re-validated by QueryDefinition init{} on every load
+    status         VARCHAR(16) NOT NULL DEFAULT 'ACTIVE',
+    version        BIGINT NOT NULL DEFAULT 1,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (tenant_id, data_source_id, query_id),
+    CONSTRAINT data_queries_status_check CHECK (status IN ('ACTIVE', 'DISABLED')),
+    CONSTRAINT data_queries_source_fk FOREIGN KEY (data_source_id, tenant_id) REFERENCES data_sources (id, tenant_id)
+);
+
+CREATE TABLE data_mutations (
+    tenant_id      UUID NOT NULL REFERENCES tenants (id),
+    data_source_id UUID NOT NULL,
+    mutation_id    VARCHAR(64) NOT NULL,
+    kind           VARCHAR(16) NOT NULL,            -- CREATE | UPDATE | DELETE | CALL
+    definition     JSONB NOT NULL,                  -- target, params, entity, invalidates
+    status         VARCHAR(16) NOT NULL DEFAULT 'ACTIVE',
+    version        BIGINT NOT NULL DEFAULT 1,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (tenant_id, data_source_id, mutation_id),
+    CONSTRAINT data_mutations_status_check CHECK (status IN ('ACTIVE', 'DISABLED')),
+    CONSTRAINT data_mutations_source_fk FOREIGN KEY (data_source_id, tenant_id) REFERENCES data_sources (id, tenant_id)
+);
+
+CREATE TABLE data_idempotency (            -- key = C4's derived key (43-char base64url); the client's raw key is never stored
+    tenant_id      UUID NOT NULL REFERENCES tenants (id),
+    data_source_id UUID NOT NULL,
+    mutation_id    VARCHAR(64) NOT NULL,
+    idem_key       VARCHAR(128) NOT NULL,
+    fingerprint    VARCHAR(128) NOT NULL,
+    state          VARCHAR(16) NOT NULL,
+    affected       BIGINT,
+    output_json    JSONB,                           -- only when DONE; bounded by the gateway; no secrets, no request parameters
+    completed_at   TIMESTAMPTZ,
+    lease_until    TIMESTAMPTZ NOT NULL,
+    expires_at     TIMESTAMPTZ NOT NULL,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (tenant_id, data_source_id, mutation_id, idem_key),
+    CONSTRAINT data_idempotency_state_check CHECK (state IN ('RESERVED', 'DONE', 'UNKNOWN')),
+    CONSTRAINT data_idempotency_key_check CHECK (idem_key ~ '^[A-Za-z0-9_-]{8,128}$'),
+    CONSTRAINT data_idempotency_source_fk FOREIGN KEY (data_source_id, tenant_id) REFERENCES data_sources (id, tenant_id)
+);
+CREATE INDEX data_idempotency_expiry_idx ON data_idempotency (expires_at);
+
+CREATE TABLE data_source_bindings (        -- C0: AppDefinition local data-source id -> registered source. Runtime ids are never written into an AppDefinition.
+    tenant_id      UUID NOT NULL REFERENCES tenants (id),
+    workspace_id   UUID NOT NULL,
+    project_id     UUID NOT NULL,
+    mode           VARCHAR(8)  NOT NULL,
+    slot_id        VARCHAR(64) NOT NULL,
+    data_source_id UUID NOT NULL,
+    created_by     UUID REFERENCES users (id),
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at     TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (project_id, mode, slot_id),
+    CONSTRAINT data_source_bindings_mode_check CHECK (mode IN ('LIVE', 'TEST')),
+    CONSTRAINT data_source_bindings_workspace_tenant_fk FOREIGN KEY (workspace_id, tenant_id) REFERENCES workspaces (id, tenant_id),
+    CONSTRAINT data_source_bindings_project_fk FOREIGN KEY (workspace_id, project_id) REFERENCES projects (workspace_id, id),
+    CONSTRAINT data_source_bindings_source_fk FOREIGN KEY (data_source_id, tenant_id) REFERENCES data_sources (id, tenant_id)
+);
+CREATE INDEX data_source_bindings_source_idx ON data_source_bindings (tenant_id, data_source_id);
+```
+
+Rules the adapters enforce (not expressible as FK): a workspace-scoped source may only be bound inside its own workspace; DISABLED queries/mutations/sources resolve to "not found"; every statement filters on `tenant_id`.
+Retention: `data_idempotency` rows are purged only when `expires_at < now()` (RESERVED/UNKNOWN rows are never purged earlier); nothing else expires.
+Undo story: `docs/parallel/c0/undo/U28__data_runtime_foundation.sql` (guarded `DROP TABLE IF EXISTS` in reverse order), same pattern as U26/U27. Tests: `DataRuntimeMigrationTests` (tables, constraints, cross-tenant FK rejection, ciphertext check).
+
+## 4. Proposed V29 — action / workflow run stores (C4 minimal)
+
+Taken from `audit/FINAL-C4-runtime-design.md` §10 **unchanged except**: (a) `workspace_id` gets the composite tenant FK, (b) `action_runs.run_id` stays `uuid` and the adapter maps the port's string form, (c) approvals/schedules/notifications are NOT included. Tables: `action_runs`, `workflow_runs`, `workflow_run_steps` with the unique keys and the partial indexes listed there (`action_runs_stale`, `action_runs_retention`, `workflow_runs_timers`, `workflow_runs_approval`, `workflow_runs_sweep`, `workflow_runs_retention`, `workflow_runs_redact`, `workflow_run_steps_tenant`). `app_id` = the project id, **no FK** (history must outlive a deleted project; tenant integrity comes from the workspace FK).
+Open point for C4/C0 review before creation: `RunKey.appId` is `UUID?` in the port while `action_runs.app_id` is `NOT NULL`; the HTTP path always has a project id, so the adapter rejects a null `appId` as a definite pre-execution failure.
+Retention: unchanged (D-C4-16), driven by `RetentionService.runOnce()` on a timer that C0 adds.
+
+## 5. Adapters to implement (all in `wiring/` or the owning module's `persistence` package, JDBC via `NamedParameterJdbcTemplate`, every query tenant-filtered)
+
+1. `JdbcDataSourceRepository`, `JdbcCredentialStore`, `JdbcQueryCatalog`, `JdbcMutationCatalog` (+ a strict `QueryDefinitionCodec` / `MutationDefinitionCodec`; unknown `kind` ⇒ not found).
+2. `JdbcIdempotencyStore` — `begin` is one transaction: `INSERT … ON CONFLICT DO NOTHING`, then `SELECT … FOR UPDATE` of the winner and the in-memory store's decision table (expired ⇒ new RESERVED; fingerprint mismatch ⇒ Conflict; DONE ⇒ Replay; UNKNOWN ⇒ OutcomeUnknown; lease passed ⇒ mark UNKNOWN; else InProgress). `release` only deletes a RESERVED row.
+3. `JdbcDataSourceSlotBindings` (implements the existing `DataSourceSlotBindings`).
+4. `DataRuntimeConfiguration` completion: `DataGateway` bean (`DefaultDataGateway`) + `DataSourceService` + `DataConnectorRegistry` (postgres, rest connectors already imported) + `DiscoveryService` over an in-memory `SourceSchemaStore` + `QueryCache(RedisCacheBackend)` + `DataChangeNotifier` + `RedisRateLimitGate` + `AuditServiceSink`.
+5. `JdbcActionRunStore`, `JdbcWorkflowRunStore` (CAS on `version`, `FOR UPDATE SKIP LOCKED` claim with per-tenant fairness, retention stage 1/2), `ActionResultCodec` (JSON of `ActionResult` incl. `Failed.details`).
+6. Wiring changes: `actionRunStore`/`workflowRunStore` beans become JDBC; `app.workflow.allow-volatile-stores` remains but only for the queue (see §6); timers for `engine.sweep()`, `ActionRunStore.sweepStale`, `RetentionService.runOnce`, `data_idempotency` purge; a Redis-less test profile keeps the in-memory fallbacks.
+7. Management path for E2E: **no new HTTP route.** Fixtures seed sources/queries/mutations/bindings through the repositories / `DataSourceAdminService` in test code. A production management API needs its own contract (B-C0-W-02a, Q-1 stays: admin portal platform-only).
+
+## 6. RabbitMQ work (Phase 2, after V29 stores are green)
+
+* `RabbitWorkflowQueue : WorkflowQueue` in `integration/queue/` (shared file, C0): quorum queue `xweb.workflow.jobs` (`x-delivery-limit` = maxDeliveries, DLX → `xweb.workflow.jobs.dlq`), publisher confirms (`spring.rabbitmq.publisher-confirm-type: correlated`, `publish` throws when not confirmed), manual ack, `poll()` via `basicGet` on a **dedicated channel per lease** (ack/nack must use the same channel), `x-delivery-count` → `QueueLease.deliveryCount`, DLQ consumer → `WorkflowWorker.drainDeadLetters`.
+* Declarations added next to the existing `QueueConfiguration`; no new infrastructure (RabbitMQ, starter and Testcontainers rabbit already exist).
+* Tests: Testcontainers RabbitMQ — publish/confirm, redelivery count, nack(requeue=false) → DLQ, consumer death → redelivery, broker down → publish throws and the run stays PENDING.
+* Until then `app.workflow.queue=memory` (single node). The volatile guard keeps refusing LIVE mutating workflows in any multi-node profile.
+
+## 7. Decisions needed from the owner (C0 will record them in DECISIONS before any file is created)
+
+1. **Number split and order:** V28 = data runtime foundation (§3), V29 = run stores (§4); one number per task per ledger; ledger items 1 (tenant resources) and 3 (sharing/groups) are re-ordered after them because neither is a prerequisite of these tables. Alternative: one combined V28 (fewer Mac cycles, breaks "one number = one task").
+2. `source_schemas` deferred (in-memory store) — or include it in V28.
+3. TEST-mode bindings stored in the same table (`mode` column) — or LIVE only.
+4. C3 idempotency TTL stays 24 h (vs C4 30 d) — or raise it to the C4 horizon.
+5. Approvals/schedules/notifications persistence stays out; LIVE workflows containing an `APPROVAL` step must stay refused until their tables exist.
+
+## 8. Implementation order
+
+1. Owner accepts §7 → C0 writes DECISIONS + ledger rows (V28, then V29) and nothing else.
+2. V28 file + undo + `DataRuntimeMigrationTests` → Mac Gradle → apply on PG verified.
+3. C3 JDBC adapters + `DataGateway` bean + bindings + fixtures; flip `DATA_RUNTIME_UNAVAILABLE` tests to real LIVE query/mutation tests → Mac Gradle.
+4. V29 file + undo + migration test → Mac Gradle.
+5. `JdbcActionRunStore`/`JdbcWorkflowRunStore` + codec + timers; restart-safety test (kill the runtime mid-run, new context resumes); retire the volatile guard for actions → Mac Gradle.
+6. `RabbitWorkflowQueue` + queue profile switch → Mac Gradle with Testcontainers.
+7. C5 Phase 3 E2E against the real stack.
