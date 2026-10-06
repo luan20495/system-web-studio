@@ -6,7 +6,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.test.context.TestPropertySource
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
@@ -18,8 +17,7 @@ import kotlin.concurrent.thread
  * expects (409 ROLLBACK_STALE) and an Idempotency-Key whose retries converge on one effect. Releases are real (artifact objects in MinIO, verified by the
  * real verifier); only the render worker is absent because nothing here builds.
  */
-@TestPropertySource(properties = ["app.deploy.provider=static", "app.render.url=http://127.0.0.1:9", "app.deploy.scope-duplicate-wait-seconds=3"])
-class SiteOperationApiTests : IntegrationTestBase() {
+class SiteOperationApiTests : ScopeIntegrationTestBase() {
     @Autowired lateinit var guard: JdbcScopeGuard
     @Autowired lateinit var releases: ReleaseService
     @Autowired lateinit var sites: SiteService

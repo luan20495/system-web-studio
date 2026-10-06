@@ -1,16 +1,10 @@
 package com.systemwebstudio.publish
 
-import com.sun.net.httpserver.HttpServer
-import com.systemwebstudio.support.IntegrationTestBase
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.test.context.DynamicPropertyRegistry
-import org.springframework.test.context.DynamicPropertySource
-import org.springframework.test.context.TestPropertySource
-import java.net.InetSocketAddress
 import java.time.Duration
 import java.util.UUID
 
@@ -19,28 +13,10 @@ import java.util.UUID
  * a publish overtaken by a newer intent fails explicitly, a worker that died mid-DEPLOYING is taken over, and publishes that race end in order.
  * Real PostgreSQL, MinIO and RabbitMQ; only the render worker is stubbed.
  */
-@TestPropertySource(properties = [
-    "app.deploy.provider=static", "app.sites.origin=https://sites.example.test", "app.sites.studio-origin=https://studio.example.test", "app.render.token=render-test-token",
-    "app.deploy.scope-wait-seconds=4", "app.deploy.scope-retry-ms=200", "app.deploy.recovery-interval-ms=600000"
-])
-class PublishScopeScenarioTests : IntegrationTestBase() {
+class PublishScopeScenarioTests : ScopeIntegrationTestBase() {
     @Autowired lateinit var guard: JdbcScopeGuard
     @Autowired lateinit var releases: ReleaseService
     @Autowired lateinit var processor: DeploymentProcessor
-
-    companion object {
-        private val mapper = tools.jackson.databind.json.JsonMapper.builder().build()
-        val server: HttpServer = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
-            createContext("/render-site") { ex ->
-                val body = mapper.readTree(ex.requestBody.readBytes())
-                val title = body.get("schema").get("sections").firstOrNull { it.get("type").asString() == "Hero" }?.get("props")?.get("title")?.asString() ?: ""
-                val bytes = mapper.writeValueAsBytes(mapOf("files" to linkedMapOf("index.html" to "<!doctype html><html><body><h1>$title</h1></body></html>", "404.html" to "<!doctype html><title>404</title>")))
-                ex.sendResponseHeaders(200, bytes.size.toLong()); ex.responseBody.use { it.write(bytes) }
-            }
-            start()
-        }
-        @JvmStatic @DynamicPropertySource fun render(registry: DynamicPropertyRegistry) { registry.add("app.render.url") { "http://127.0.0.1:${server.address.port}" } }
-    }
 
     private val held = mutableListOf<ScopeLease>()
     @AfterEach fun tidy() { held.forEach { it.release() }; held.clear() }

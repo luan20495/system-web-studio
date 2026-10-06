@@ -1,18 +1,15 @@
 package com.systemwebstudio.publish
 
-import com.systemwebstudio.support.IntegrationTestBase
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.test.context.TestPropertySource
 import java.util.UUID
 
 /**
  * `app.sites.data-api-base`: where a published app finds the Data Runtime API. It is environment configuration read at request time, never baked into an
  * artifact, so one artifact serves DEV / STAGING / PROD against different hosts and a rollback needs no rebuild.
  */
-@TestPropertySource(properties = ["app.deploy.provider=static", "app.render.url=http://127.0.0.1:9", "app.sites.data-api-base=https://data.dev.example.test/api/v1"])
-class SiteRuntimeConfigTests : IntegrationTestBase() {
+class SiteRuntimeConfigTests : ScopeIntegrationTestBase() {
     @Autowired lateinit var sites: SiteService
 
     @Test

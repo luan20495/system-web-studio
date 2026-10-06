@@ -216,7 +216,10 @@ class ReleaseCasTests : IntegrationTestBase() {
         val f = fx(); val older = dep(f); val newer = dep(f); point(f, newer)
         val op = UUID.randomUUID()
         val l1 = (guard.acquire(ScopeRequest(f.scope, ReleaseOperation.ROLLBACK, op)) as ScopeAcquisition.Acquired).lease.also { held += it }
-        val l2 = (guard.acquire(ScopeRequest(f.scope, ReleaseOperation.ROLLBACK, op)) as ScopeAcquisition.Acquired).lease.also { held += it }     // the retry takes the same operation again
+        // a live lease of a rollback is not re-entered (a duplicate waits); once it has expired the retry takes the same operation over
+        assertThat(guard.acquire(ScopeRequest(f.scope, ReleaseOperation.ROLLBACK, op))).isInstanceOf(ScopeAcquisition.Busy::class.java)
+        expire(f)
+        val l2 = (guard.acquire(ScopeRequest(f.scope, ReleaseOperation.ROLLBACK, op)) as ScopeAcquisition.Acquired).lease.also { held += it }
         assertThat(l2.fenceToken).isGreaterThan(l1.fenceToken)
         assertThat(deployer().restoreRelease(f.sc.projectId, older.id, l2)).isInstanceOf(RollbackResult.Restored::class.java)
         assertThat(deployer().restoreRelease(f.sc.projectId, older.id, l1)).isInstanceOf(RollbackResult.AlreadyActive::class.java)   // the first thread of it: fenced, but the goal is reached
