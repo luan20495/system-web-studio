@@ -209,7 +209,7 @@ test("forms + theme panels: NOT_READY gates, no CSS/URL inputs for the theme", (
 });
 
 const noRt = { runQuery: async () => ({}) as never, runAction: async () => ({}) as never, startWorkflow: async () => ({}) as never, getRun: async () => ({}) as never, cancelRun: async () => ({}) as never, newKey: () => "k" };
-const rtDoc = () => baseDoc({ actions: [{ id: "n", name: "Báo", type: "NOTIFY", channel: "IN_APP", templateRef: "t" }] } as never);
+const rtDoc = () => baseDoc({ actions: [{ id: "n", name: "Báo", type: "NOTIFY", channel: "IN_APP", templateRef: "t", trigger: { sectionId: "s1", event: "onClick" } }] } as never);
 
 test("test panel with a runtime: runs need APP_EDIT, unsaved changes block runs, an editor can run (no fake result is rendered)", () => {
   const viewer = renderToStaticMarkup(<TestPanel doc={rtDoc()} rawPermissions={["APP_VIEW", "ACTION_EXECUTE"]} runtime={noRt}/>);
@@ -221,6 +221,14 @@ test("test panel with a runtime: runs need APP_EDIT, unsaved changes block runs,
   assert.doesNotMatch(ok, /data-outcome="SUCCESS"/); assert.doesNotMatch(ok, /Chưa kết nối máy chủ/);
   assert.match(renderToStaticMarkup(<TestPanel doc={rtDoc()} rawPermissions={["APP_VIEW", "APP_EDIT", "ACTION_EXECUTE"]}/>), /Chưa kết nối máy chủ/);
   assert.deepEqual(a11yProblems(ok), []);
+});
+
+test("test panel: an action without a UI trigger is not runnable from the browser route (the server answers UNKNOWN_ACTION, D-C4-10)", () => {
+  const noTrigger = baseDoc({ actions: [{ id: "n", name: "Báo", type: "NOTIFY", channel: "IN_APP", templateRef: "t" }] } as never);
+  const html = renderToStaticMarkup(<TestPanel doc={noTrigger} rawPermissions={["APP_VIEW", "APP_EDIT", "ACTION_EXECUTE"]} runtime={noRt}/>);
+  assert.match(html, /data-testid="no-trigger:n"/); assert.match(html, /chỉ chạy từ workflow hoặc hành động khác/);
+  assert.match(html, /disabled=""[^>]*data-testid="run-action:n"|data-testid="run-action:n"[^>]*disabled=""/);
+  assert.deepEqual(a11yProblems(html), []);
 });
 
 test("top bar: the retry button appears only for a failed save that has a retry handler", () => {

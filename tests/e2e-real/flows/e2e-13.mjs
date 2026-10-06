@@ -36,8 +36,12 @@ export async function run({ cfg, fx, browser, check }) {
     const resp = await visitor.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 }).catch((e) => ({ status: () => 0, err: String(e) }));
     check.ok("anonymous visitor: the public page answers 200", resp?.status?.() === 200, `status=${resp?.status?.()} ${resp?.err ?? ""}`);
     const body = await bodyText(visitor);
-    check.ok("the published page is the saved content (contains the text saved in E2E-02, or is non-empty)", fx.notes.marker ? body.includes(fx.notes.marker) : body.length > 20, body.slice(0, 100));
+    check.ok("the published page is the saved content (contains the text saved in E2E-02 — compared case-insensitively, the eyebrow is rendered with CSS uppercase — or is non-empty)", fx.notes.marker ? body.toLowerCase().includes(fx.notes.marker.toLowerCase()) : body.length > 20, body.slice(0, 100));
     check.ok("no Studio chrome leaks into the public page", !/Chế độ dùng thử|Lưu thay đổi/.test(body));
+    // a FACT for the report, not a check: does the published site serve /runtime-config.json (the published-runtime contract)? C0/C2 own the answer (B-C5-06)
+    const rc = await fetch(new URL("runtime-config.json", url.endsWith("/") ? url : `${url}/`), { signal: AbortSignal.timeout(8000) }).catch((e) => ({ status: 0, err: String(e) }));
+    fx.notes.publishedRuntimeConfig = { url: new URL("runtime-config.json", url.endsWith("/") ? url : `${url}/`).pathname, status: rc.status };
+    console.log(`    [fact] published site GET runtime-config.json → ${rc.status}`);
     await visitor.context().close();
   }
   check.ok("no unhandled page errors in Studio", pageProblems(page).length === 0, pageProblems(page).join(" | "));

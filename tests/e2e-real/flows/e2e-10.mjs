@@ -2,6 +2,7 @@
 import { Blocked } from "../lib/report.mjs";
 import { openTestPanel, settledOutcome, flagOff } from "../lib/testpanel.mjs";
 import { newPage, pageProblems } from "../lib/ui.mjs";
+import { e2eActionDefinition } from "../lib/fixtures.mjs";
 export const id = "E2E-10", title = "Mutation/action failure: real backend error, UI error state, no fake success";
 export const blocker = { owner: "C2", ref: "definition ops", reason: "the fixture action could not be added (typed V2 definition operations were refused by the backend)" };
 export async function run({ cfg, fx, browser, check }) {
@@ -28,5 +29,5 @@ export async function run({ cfg, fx, browser, check }) {
 }
 async function restore(A, w, p, fx) {
   const cur = (await A.get(`/workspaces/${w}/projects/${p}/schema`)).body;
-  await A.patch(`/workspaces/${w}/projects/${p}/schema`, { expectedRevision: cur.revision, operations: [{ type: "ADD_ACTION", definition: { id: fx.ids.actionId, name: "E2E thông báo", type: "NOTIFY", channel: "IN_APP", templateRef: "e2e-template" } }], summary: "e2e: restore action" });
+  await A.patch(`/workspaces/${w}/projects/${p}/schema`, { expectedRevision: cur.revision, operations: [{ type: "ADD_ACTION", definition: e2eActionDefinition(fx.ids.sectionId) }], summary: "e2e: restore action" });
 }

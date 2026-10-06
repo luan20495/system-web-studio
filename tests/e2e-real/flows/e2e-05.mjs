@@ -1,5 +1,7 @@
 // @class: real-backend
+import { Blocked } from "../lib/report.mjs";
 import { loginUi, newPage, openBuilder, bodyText, pageProblems } from "../lib/ui.mjs";
+import { deniedWriteProbe } from "../lib/fixtures.mjs";
 export const id = "E2E-05", title = "Forbidden path UX, no data leak";
 export async function run({ cfg, fx, browser, check }) {
   // (a) a user of ANOTHER workspace opens A's project by URL
@@ -19,22 +21,28 @@ export async function run({ cfg, fx, browser, check }) {
   // (b) a VIEWER of A cannot change A
   const w = fx.workspaces.A, p = fx.projects.A.id;
   const rev = (await fx.sessions.adminA.get(`/workspaces/${w}/projects/${p}`)).body.revision;
-  const write = await fx.sessions.viewerA.patch(`/workspaces/${w}/projects/${p}/schema`, { expectedRevision: rev, operations: [], summary: "viewer probe" });
+  const write = await fx.sessions.viewerA.patch(`/workspaces/${w}/projects/${p}/schema`, { expectedRevision: rev, ...deniedWriteProbe("viewer probe") });
   check.ok("viewer: PATCH …/schema → 403", write.status === 403, `status=${write.status} code=${write.body?.code}`);
   check.ok("viewer: A's revision is unchanged", (await fx.sessions.adminA.get(`/workspaces/${w}/projects/${p}`)).body.revision === rev);
-  const v = await newPage(browser);
+  const v = await newPage(browser); const vbodies = [];
+  v.on("response", async (r) => { if (/\/api\/v1\//.test(r.url())) { try { vbodies.push(await r.text()); } catch { /* aborted */ } } });
   await loginUi(v, cfg, fx.users.viewerA.username, fx.users.viewerA.password);
-  await openBuilder(v, cfg, p);
-  const edit = v.getByRole("button", { name: /Lưu thay đổi/ });
+  const { canvas } = await openBuilder(v, cfg, p);
+  await v.waitForTimeout(800);
   const vt = await bodyText(v);
+  const gated = /no-access/.test(v.url());
+  fx.notes.viewerGate = { url: new URL(v.url()).pathname, canvas };
+  // whatever the viewer is shown, it must not be an editable Builder and must not leak project data
+  check.ok("viewer: no editable save control", (await v.getByRole("button", { name: /Lưu thay đổi/ }).count()) === 0);
+  check.ok("viewer: no project data on screen", !vt.includes(fx.projects.A.name) && !vt.includes(`secret-description-${fx.runId}`));
+  check.ok("viewer: no unhandled page errors", pageProblems(v).length === 0, pageProblems(v).join(" | "));
+  if (gated) { await v.context().close(); throw new Blocked("C1", "a workspace VIEWER holds permissions [] (GET /auth/me), so the Studio portal gate sends the viewer to /auth/no-access even though the project lists them as a member: the read-only Builder / Test-mode-disabled UX for a viewer cannot be observed. Decision needed from C1: should a project member without workspace permissions reach Studio read-only?", "viewer portal access"); }
   check.ok("viewer: read-only notice shown", vt.includes("Bạn chỉ có quyền xem"));
-  check.ok("viewer: no save control is enabled", (await edit.count()) === 0 || (await edit.evaluateAll((els) => els.every((e) => e.disabled))));
   if (fx.notes.definitionOps?.ok) {
     await v.getByRole("button", { name: "Dùng thử" }).click();
     await v.waitForSelector('[data-testid="test-panel"]');
     const run = v.getByTestId(`run-action:${fx.ids.actionId}`);
     check.ok("viewer: Test mode 'Chạy thử' is disabled with a reason", (await run.count()) === 1 && await run.isDisabled() && !!(await run.getAttribute("title")), await run.getAttribute("title"));
   }
-  check.ok("viewer: no unhandled page errors", pageProblems(v).length === 0, pageProblems(v).join(" | "));
   await v.context().close();
 }

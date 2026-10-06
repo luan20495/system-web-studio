@@ -161,12 +161,15 @@ export function TestPanel({ doc, rawPermissions, runtime, dirty = false }: {
           const st = featureState("actions");
           const lacks = noEdit ?? (((need === "DATA_MUTATE" || need === "ACTION_EXECUTE") && !cap.canRunActions) ? "Bạn chưa có quyền chạy hành động." : need === "WORKFLOW_EXECUTE" && !cap.canStartWorkflows ? "Bạn chưa có quyền chạy workflow." : need === "APP_USE" && !cap.canView ? "Bạn chưa có quyền dùng ứng dụng." : null);
           const busy = pending.has(key);
+          // the browser route always runs an action as a UI event; the server answers UNKNOWN_ACTION for one without a declared trigger (D-C4-10: workflow/chain-only actions)
+          const noTrigger = a.trigger ? null : "Hành động này không gắn với sự kiện nào trên giao diện nên chỉ chạy từ workflow hoặc hành động khác; chạy trực tiếp sẽ bị máy chủ từ chối.";
           return (
             <li key={a.id} className="bx-test-row" data-testid={`action-row:${a.id}`}>
               <div><b>{a.name || a.id}</b><small>{ACTION_LABEL[a.type]} · cần quyền “{permissionLabel[need]}”</small><OutcomeView outcome={results[key] ?? eff}/>
+                {noTrigger ? <p className="hint" data-testid={`no-trigger:${a.id}`}>{noTrigger}</p> : null}
                 {locked.has(key) ? <p className="hint"><button type="button" className="smallButton" data-testid={`unlock:${key}`} onClick={() => unlock(key)}>Tôi đã kiểm tra dữ liệu, cho phép chạy lại</button></p> : null}</div>
-              <button type="button" className="smallButton" data-testid={`run-action:${a.id}`} disabled={st.state !== "AVAILABLE" || !!lacks || busy || locked.has(key)} aria-busy={busy}
-                title={reason("actions") ?? lacks ?? (locked.has(key) ? "Kết quả lần chạy trước chưa rõ." : undefined)} onClick={() => void runAction(a.id)}>{busy ? "Đang chạy…" : "Chạy thử"}</button>
+              <button type="button" className="smallButton" data-testid={`run-action:${a.id}`} disabled={st.state !== "AVAILABLE" || !!lacks || !!noTrigger || busy || locked.has(key)} aria-busy={busy}
+                title={reason("actions") ?? lacks ?? noTrigger ?? (locked.has(key) ? "Kết quả lần chạy trước chưa rõ." : undefined)} onClick={() => void runAction(a.id)}>{busy ? "Đang chạy…" : "Chạy thử"}</button>
             </li>);
         })}</ul>)}
 

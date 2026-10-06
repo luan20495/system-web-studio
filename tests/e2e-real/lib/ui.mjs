@@ -28,10 +28,11 @@ export async function loginUi(page, cfg, username, password) {
 
 export const projectUrl = (cfg, projectId) => `${cfg.studio}${cfg.studioPrefix}/projects/${projectId}`;
 
-/** open the Builder of a project by direct URL and wait until the canvas exists (or return what the user sees instead) */
+/** open the Builder of a project by direct URL and wait until the canvas exists (or return what the user sees instead).
+ *  `/projects/<id>` alone opens the AI mode (or the session's last mode); the Builder is the `design` view (ProjectWorkspace MODES). */
 export async function openBuilder(page, cfg, projectId) {
   const resp = page.waitForResponse((r) => /\/schema$/.test(new URL(r.url()).pathname), { timeout: 20_000 }).catch(() => null);
-  await page.goto(projectUrl(cfg, projectId), { waitUntil: "domcontentloaded" });
+  await page.goto(`${projectUrl(cfg, projectId)}/design`, { waitUntil: "domcontentloaded" });
   const schemaResponse = await resp;
   const canvas = await page.waitForSelector("iframe", { timeout: 15_000 }).then(() => true).catch(() => false);
   return { schemaResponse, canvas };

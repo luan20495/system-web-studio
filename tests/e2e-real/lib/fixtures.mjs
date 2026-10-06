@@ -11,6 +11,14 @@ import { Session, randomSecret } from "./api.mjs";
 
 const need = (r, what) => { if (r.status < 200 || r.status >= 300) throw new Error(`fixture: ${what} failed (${r.status} ${r.body?.code ?? r.error ?? ""})`); return r.body; };
 
+export const E2E_ACTION_ID = "e2e-start-wf";
+/** the fixture action: starts the fixture workflow from a click on the first section (a mutating type, so TEST must answer WOULD_RUN and never write) */
+export const e2eActionDefinition = (sectionId) => ({ id: E2E_ACTION_ID, name: "E2E khởi chạy workflow", type: "START_WORKFLOW", workflowRef: "e2e-wf", idempotency: "REQUIRED", ...(sectionId ? { trigger: { sectionId, event: "onClick" } } : {}) });
+
+/** A schema write that is VALID for the server (an empty `operations` list is rejected by bean validation with 400 before any permission check, which would test nothing).
+ *  Used only against callers who must be refused: if the server ever accepted it, the revision check that follows each probe would fail. */
+export const deniedWriteProbe = (summary) => ({ operations: [{ type: "ADD_ACTION", definition: { id: "e2e-denied-probe", name: "denied probe", type: "NOTIFY", channel: "IN_APP", templateRef: "e2e-template" } }], summary });
+
 export async function createFixtures(cfg, log = () => {}) {
   const runId = cfg.runId, name = (s) => `e2e-${runId}-${s}`;
   const fx = { runId, created: { users: [], projects: [], workspaces: [], dataSources: [], bindings: [] }, sessions: {}, users: {}, workspaces: {}, projects: {}, ids: {}, notes: {} };
@@ -46,16 +54,20 @@ export async function createFixtures(cfg, log = () => {}) {
   const pb = need(await fx.sessions.adminB.post(`/workspaces/${fx.workspaces.B}/projects`, { name: name("proj-B"), appType: "PAGE_SCHEMA" }), "create project B");
   fx.projects.B = pb; fx.created.projects.push({ workspaceId: fx.workspaces.B, projectId: pb.id, owner: "adminB" });
 
-  // definition: one NOTIFY action and one END-only workflow (typed V2 operations). If the server refuses them, that exact answer is kept: flows that need them are BLOCKED with it.
   const schema = need(await A.get(`/workspaces/${wa}/projects/${pa.id}/schema`), "read schema A");
   fx.notes.initialRevision = schema.revision;
+  // definition: one START_WORKFLOW action and one END-only workflow (typed V2 operations). NOTIFY is not used: ActionNotifyPort is not wired (501 NOT_IMPLEMENTED even in TEST).
+  // If the server refuses the operations, that exact answer is kept: flows that need them are BLOCKED with it.
+  // A UI-bound run needs a declared trigger (D-C4-10): the browser route always runs an action as a UI event, otherwise UNKNOWN_ACTION.
+  const sectionId = schema.schema?.sections?.[0]?.id ?? schema.schema?.pages?.[0]?.sections?.[0]?.id;
+  fx.ids.sectionId = sectionId;
   const ops = [
-    { type: "ADD_ACTION", definition: { id: "e2e-notify", name: "E2E thông báo", type: "NOTIFY", channel: "IN_APP", templateRef: "e2e-template" } },
     { type: "ADD_WORKFLOW_REF", definition: { id: "e2e-wf", name: "E2E workflow", trigger: "MANUAL", steps: [{ id: "end", kind: "END" }] } },
+    { type: "ADD_ACTION", definition: e2eActionDefinition(sectionId) },
   ];
   const patched = await A.patch(`/workspaces/${wa}/projects/${pa.id}/schema`, { expectedRevision: schema.revision, operations: ops, summary: "e2e fixture: action + workflow" });
   fx.notes.definitionOps = patched.status === 200 ? { ok: true } : { ok: false, status: patched.status, code: patched.body?.code ?? null, message: patched.body?.message ?? null };
-  fx.ids = { actionId: "e2e-notify", workflowId: "e2e-wf" };
+  fx.ids = { ...fx.ids, actionId: E2E_ACTION_ID, workflowId: "e2e-wf" };
   return fx;
 }
 

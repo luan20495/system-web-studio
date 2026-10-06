@@ -93,7 +93,7 @@ export async function run({ cfg, fx, browser, check }) {
   await loginUi(page, cfg, fx.users.adminA.username, fx.users.adminA.password);
   const opened = await openBuilder(page, cfg, pA);
   stage("ui", "the Builder opens by direct URL", opened.canvas);
-  await page.getByRole("button", { name: /Dữ liệu/ }).first().click();
+  await page.locator(".bx-left").getByRole("tab", { name: "Dữ liệu" }).click();
   const panel = await page.waitForSelector('[data-testid="ds-panel"]', { timeout: 20_000 }).then(() => true).catch(() => false);
   stage("ui", "the Data panel shows the source-management panel (not 'Chưa sẵn sàng')", panel, (await bodyText(page)).slice(0, 160));
   if (panel) {

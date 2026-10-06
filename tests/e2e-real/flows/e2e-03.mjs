@@ -1,5 +1,6 @@
 // @class: real-backend
 import { loginUi, newPage, bodyText, pageProblems } from "../lib/ui.mjs";
+import { deniedWriteProbe } from "../lib/fixtures.mjs";
 export const id = "E2E-03", title = "Workspace isolation A/B";
 export async function run({ cfg, fx, browser, check }) {
   const nameA = fx.projects.A.name, nameB = fx.projects.B.name;
@@ -21,7 +22,7 @@ export async function run({ cfg, fx, browser, check }) {
   check.ok("the 404 body does not carry A's data", !JSON.stringify(direct.body ?? {}).includes(fx.projects.A.name) && !JSON.stringify(direct.body ?? {}).includes(`secret-description-${fx.runId}`));
   const list = await B.get(`/workspaces/${wa}/projects`);
   check.ok("B lists A's workspace → refused (403/404), no rows", [403, 404].includes(list.status), `status=${list.status}`);
-  const write = await B.patch(`/workspaces/${wa}/projects/${pa}/schema`, { expectedRevision: rev, operations: [], summary: "isolation probe" });
+  const write = await B.patch(`/workspaces/${wa}/projects/${pa}/schema`, { expectedRevision: rev, ...deniedWriteProbe("isolation probe") });
   check.ok("B cannot write into A's project (403/404)", [403, 404].includes(write.status), `status=${write.status}`);
   check.ok("A's project revision is unchanged by the attempts", (await fx.sessions.adminA.get(`/workspaces/${wa}/projects/${pa}`)).body.revision === rev);
   const wrongWs = await fx.sessions.adminA.get(`/workspaces/${fx.workspaces.B}/projects/${fx.projects.B.id}`);
