@@ -1,6 +1,5 @@
 package com.systemwebstudio.integration.queue.workflow
 
-import com.rabbitmq.client.Channel
 import com.rabbitmq.client.Connection
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
@@ -45,28 +44,45 @@ class WorkflowQueueSelectionTests {
 
     // ------------------------------------------------------------------------------------------------ the shared connection
 
-    private class FakeConn : Connection {
-        @Volatile var open = true; val closed = AtomicInteger()
-        override fun createChannel(): Channel = throw UnsupportedOperationException()
-        override fun isOpen() = open
-        override fun close() { open = false; closed.incrementAndGet() }
+    /** A [Connection] that only knows `isOpen` and `close` (the rest of the interface differs between amqp-client versions, so it is a proxy, not a hand-written class). */
+    private class FakeConn(private val onClose: () -> Unit = {}) {
+        @Volatile var open = true
+        val closed = AtomicInteger()
+        val connection: Connection = proxy { name ->
+            when (name) {
+                "isOpen" -> open
+                "close" -> { open = false; closed.incrementAndGet(); onClose(); null }
+                else -> throw UnsupportedOperationException(name)
+            }
+        }
+    }
+
+    private companion object {
+        fun proxy(handle: (String) -> Any?): Connection = Proxy.newProxyInstance(Connection::class.java.classLoader, arrayOf(Connection::class.java)) { self, m, _ ->
+            when (m.name) {
+                "hashCode" -> System.identityHashCode(self)
+                "equals" -> false
+                "toString" -> "FakeConnection"
+                else -> handle(m.name)
+            }
+        } as Connection
     }
 
     @Test fun `an open connection is reused, a closed one is replaced`() {
         val made = mutableListOf<FakeConn>()
-        val cached = CachedBrokerConnection { FakeConn().also { made += it } }
+        val cached = CachedBrokerConnection { FakeConn().also { made += it }.connection }
         val first = cached()
         assertSame(first, cached())
         assertEquals(1, made.size)
         made[0].open = false
         val second = cached()
         assertEquals(2, made.size)
-        assertSame(made[1], second)
+        assertSame(made[1].connection, second)
     }
 
     @Test fun `close closes the current connection once and the next call opens a new one`() {
         val made = mutableListOf<FakeConn>()
-        val cached = CachedBrokerConnection { FakeConn().also { made += it } }
+        val cached = CachedBrokerConnection { FakeConn().also { made += it }.connection }
         cached()
         cached.close(); cached.close()
         assertEquals(1, made[0].closed.get())
@@ -75,11 +91,7 @@ class WorkflowQueueSelectionTests {
     }
 
     @Test fun `a failing close does not escape`() {
-        val cached = CachedBrokerConnection { object : Connection {
-            override fun createChannel(): Channel = throw UnsupportedOperationException()
-            override fun isOpen() = true
-            override fun close() { throw java.io.IOException("boom") }
-        } }
+        val cached = CachedBrokerConnection { proxy { name -> if (name == "isOpen") true else if (name == "close") throw java.io.IOException("boom") else throw UnsupportedOperationException(name) } }
         cached()
         cached.close()
     }
