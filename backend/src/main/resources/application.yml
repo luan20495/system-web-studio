@@ -212,6 +212,12 @@ app:
     # C0 transport limit of the Management API request body (contract management-api.md section 1): larger => 413 PAYLOAD_TOO_LARGE before parsing. 1024..1048576.
     management:
       max-body-bytes: ${DATA_MANAGEMENT_MAX_BODY_BYTES:65536}
+    # C0 / B-C0-W-06 / D-C0-31: where a PostgreSQL data source may point. Default = public addresses only; the platform and apps databases are always denied.
+    # allowed-private: comma-separated EXACT host:port endpoints that an operator exposes (no wildcard / CIDR / host-wide entry). EMPTY here and in prod; only the
+    # `local` profile (application-local.yml) names the V1 local data target. denied: extra host or host:port refused even if allowed (deny wins).
+    postgres-targets:
+      allowed-private: ${DATA_PLATFORM_POSTGRES_ALLOWED_PRIVATE:}
+      denied: ${DATA_PLATFORM_POSTGRES_DENIED:}
   workflow:
     enabled: ${WORKFLOW_ENABLED:false}              # C4. Reserved name, read only by wiring/**; gates action/workflow/approval endpoints and the scheduler
     # V29 / D-C0-23: where action / workflow run state lives. jdbc (default) = PostgreSQL, restart-safe, the only production choice. memory = explicit dev / test override, lost on restart.

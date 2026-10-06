@@ -94,19 +94,19 @@ class PostgresConnectorTests {
 
     @Test fun `a denied host stays denied even when it is public or allow-listed, and aliases of it are caught by address`() {
         val resolver = FixedResolver(mapOf("platform-db.example.com" to listOf("93.184.216.34"), "alias.example.com" to listOf("93.184.216.34"), "replica.corp.example.com" to listOf("10.1.1.1")))
-        val policy = PostgresTargetPolicy(allowedPrivateHosts = setOf("platform-db.example.com", "replica.corp.example.com"), deniedHosts = setOf("platform-db.example.com"))
-        assertThat(failure { policy.resolve("platform-db.example.com", resolver) }.code).isEqualTo(FailureCodes.ADDRESS_BLOCKED)
-        assertThat(failure { policy.resolve("alias.example.com", resolver) }.code).isEqualTo(FailureCodes.ADDRESS_BLOCKED)      // same address as a denied host
-        assertThat(failure { policy.checkSyntax("platform-db.example.com") }.code).isEqualTo(FailureCodes.INVALID_CONFIG)
+        val policy = PostgresTargetPolicy(allowedPrivateHosts = setOf("platform-db.example.com:5432", "replica.corp.example.com:5432"), deniedHosts = setOf("platform-db.example.com"))
+        assertThat(failure { policy.resolve("platform-db.example.com", 5432, resolver) }.code).isEqualTo(FailureCodes.ADDRESS_BLOCKED)
+        assertThat(failure { policy.resolve("alias.example.com", 5432, resolver) }.code).isEqualTo(FailureCodes.ADDRESS_BLOCKED)      // same address as a denied host
+        assertThat(failure { policy.checkSyntax("platform-db.example.com", 5432) }.code).isEqualTo(FailureCodes.INVALID_CONFIG)
     }
 
     @Test fun `a private host is reachable only through the explicit server-side allow-list`() {
         val resolver = FixedResolver(mapOf("replica.corp.example.com" to listOf("10.1.1.1"), "other.corp.example.com" to listOf("10.1.1.2")))
-        val policy = PostgresTargetPolicy(allowedPrivateHosts = setOf("replica.corp.example.com"))
-        assertThat(policy.resolve("replica.corp.example.com", resolver).map { it.hostAddress }).containsExactly("10.1.1.1")
-        assertThat(failure { policy.resolve("other.corp.example.com", resolver) }.code).isEqualTo(FailureCodes.ADDRESS_BLOCKED)
-        policy.checkSyntax("replica.corp.example.com")
-        assertThat(PostgresTargetPolicy().let { p -> failure { p.resolve("replica.corp.example.com", resolver) }.code }).isEqualTo(FailureCodes.ADDRESS_BLOCKED)   // no allow-list by default
+        val policy = PostgresTargetPolicy(allowedPrivateHosts = setOf("replica.corp.example.com:5432"))
+        assertThat(policy.resolve("replica.corp.example.com", 5432, resolver).map { it.hostAddress }).containsExactly("10.1.1.1")
+        assertThat(failure { policy.resolve("other.corp.example.com", 5432, resolver) }.code).isEqualTo(FailureCodes.ADDRESS_BLOCKED)
+        policy.checkSyntax("replica.corp.example.com", 5432)
+        assertThat(PostgresTargetPolicy().let { p -> failure { p.resolve("replica.corp.example.com", 5432, resolver) }.code }).isEqualTo(FailureCodes.ADDRESS_BLOCKED)   // no allow-list by default
     }
 
     @Test fun `the platform's own JDBC URLs yield the hosts to deny`() {

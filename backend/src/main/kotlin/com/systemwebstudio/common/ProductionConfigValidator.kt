@@ -34,6 +34,9 @@ class ProductionConfigValidator(env: Environment) {
         // --- features added in stages A–L: unsafe values must stop a production start, off-by-default features must stay safe when switched on
         if (value("app.signup.enabled") == "true" && value("app.signup.allow-in-prod") != "true")
             problems += "public sign-up is enabled: set it off (PUBLIC_SIGNUP_ENABLED=false) or acknowledge it explicitly with SIGNUP_ALLOW_IN_PROD=true"
+        value("app.data-platform.postgres-targets.allowed-private").split(',').map { it.trim().lowercase() }.filter { it.isNotEmpty() }.forEach {
+            if (it.startsWith("127.") || it.startsWith("localhost") || it.startsWith("[::1]") || it.startsWith("::1") || it.startsWith("0.")) problems += "app.data-platform.postgres-targets.allowed-private must not allow a loopback address in production"
+        }
         if (value("app.deploy.provider") == "mock") problems += "DEPLOY_PROVIDER=mock must not be used in production (labelled demo deployments only)"
         if (value("app.bootstrap.admin-username").isNotBlank()) {
             val pw = value("app.bootstrap.admin-password")

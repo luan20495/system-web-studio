@@ -109,10 +109,13 @@ class DataRuntimeConfiguration {
         queries: QueryCatalog,
         @Value("\${spring.datasource.url:}") platformUrl: String,
         @Value("\${app.runtime.appdb-url:}") appDbUrl: String,
+        @Value("\${app.data-platform.postgres-targets.allowed-private:}") allowedPrivate: List<String>,
+        @Value("\${app.data-platform.postgres-targets.denied:}") extraDenied: List<String>,
         extra: ObjectProvider<DataConnector>
     ): DataConnectorRegistry {
-        // the platform's own databases are never a valid target of a data source (fail closed: without a readable platform URL the application does not start)
-        val policy = PostgresTargetPolicy.denyingPlatformDatabases(*listOfNotNull(platformUrl.takeIf { it.isNotBlank() }, appDbUrl.takeIf { it.isNotBlank() }).toTypedArray())
+        // the platform's own databases are never a valid target of a data source (fail closed: without a readable platform URL the application does not start);
+        // a private target is reachable only when it is named, exactly (host:port), in configuration (B-C0-W-06, D-C0-31)
+        val policy = PostgresTargetPolicies.fromConfig(platformUrl, appDbUrl, allowedPrivate, extraDenied)
         val connectors = ArrayList<DataConnector>()
         connectors.add(PostgresConnector(queries, policy))
         connectors.add(RestConnector(queries))

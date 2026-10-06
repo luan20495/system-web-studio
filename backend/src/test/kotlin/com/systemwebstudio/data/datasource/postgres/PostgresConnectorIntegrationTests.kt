@@ -71,7 +71,7 @@ class PostgresConnectorIntegrationTests {
     private fun config(extra: Map<String, String> = emptyMap()) =
         mapOf("host" to pg.host, "port" to pg.getMappedPort(5432).toString(), "database" to pg.databaseName, "schemas" to "shop") + extra
     private fun ref(extra: Map<String, String> = emptyMap()) = DataSourceRef(dsId, tenant, DataSourceTypes.POSTGRES, config(extra))
-    private val allowContainerHost get() = PostgresTargetPolicy(allowedPrivateHosts = setOf(pg.host.lowercase()))
+    private val allowContainerHost get() = PostgresTargetPolicy(allowedPrivateHosts = setOf("${pg.host.lowercase()}:${pg.getMappedPort(5432)}"))
     private fun connector(vararg defs: SqlQueryDefinition) = PostgresConnector(InMemoryQueryCatalog(*defs), allowContainerHost, SystemHostResolver, JdbcPgConnectionFactory(enforceTls = false))
     private fun req(id: String, params: Map<String, Any> = emptyMap(), page: PageSpec? = null) =
         QueryRequest(id, params.mapValues { DataJson.toNode(it.value) }, page, TenantContext(tenant, null))

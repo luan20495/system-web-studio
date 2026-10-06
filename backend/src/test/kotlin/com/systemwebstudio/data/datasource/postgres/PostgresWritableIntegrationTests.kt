@@ -81,7 +81,9 @@ class PostgresWritableIntegrationTests {
     private fun config(extra: Map<String, String> = emptyMap()) =
         mapOf("host" to pg.host, "port" to pg.getMappedPort(5432).toString(), "database" to pg.databaseName, "schemas" to "shop", "writable" to "true") + extra
     private fun ref(extra: Map<String, String> = emptyMap()) = DataSourceRef(dsId, tenant, DataSourceTypes.POSTGRES, config(extra))
-    private val allowContainerHost get() = PostgresTargetPolicy(allowedPrivateHosts = setOf(pg.host.lowercase()))
+    /** B-C0-W-06: the allow-list names exact endpoints, so another port of the same host is NOT reachable unless a test names it here */
+    private val extraAllowedPorts = mutableSetOf<Int>()
+    private val allowContainerHost get() = PostgresTargetPolicy(allowedPrivateHosts = (setOf(pg.getMappedPort(5432)) + extraAllowedPorts).map { "${pg.host.lowercase()}:$it" }.toSet())
     private fun connector() = PostgresConnector(InMemoryQueryCatalog(), allowContainerHost, SystemHostResolver, JdbcPgConnectionFactory(enforceTls = false))
     private fun failure(block: () -> Unit): ConnectorFailure { try { block() } catch (e: ConnectorFailure) { return e }; throw AssertionError("expected a ConnectorFailure") }
     private fun uniq(p: String) = p + "-" + UUID.randomUUID().toString().take(8)
@@ -310,11 +312,15 @@ class PostgresWritableIntegrationTests {
 
     @Test fun `an unreachable database is CONNECT_FAILED and carries no address or credential`() {
         val closed = ServerSocket(0).use { it.localPort }
+        // another port of the allow-listed host is not allow-listed: refused before any connection (the allow-list is host:port, not host)
+        assertThat(failure { run(insertCustomer, mapOf("email" to uniq("c") + "@example.com", "name" to "n"), cfg = mapOf("port" to closed.toString())) }.code).isEqualTo(FailureCodes.ADDRESS_BLOCKED)
+        extraAllowedPorts += closed
         LogCapture().use { logs ->
             val f = failure { run(insertCustomer, mapOf("email" to uniq("c") + "@example.com", "name" to "n"), cfg = mapOf("port" to closed.toString())) }
             assertThat(f.code).isEqualTo(FailureCodes.CONNECT_FAILED)
             for (text in listOf(f.safeMessage, f.toString(), logs.text)) assertThat(text).doesNotContain("TOPSECRET").doesNotContain("rw_user").doesNotContain(":$closed")
         }
+        extraAllowedPorts.clear()
     }
 
     @Test fun `a statement that runs past the time limit is TIMEOUT, is stopped by the server, and the outcome is treated as unknown`() {

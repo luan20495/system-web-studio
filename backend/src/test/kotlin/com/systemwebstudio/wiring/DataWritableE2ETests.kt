@@ -102,7 +102,7 @@ class DataWritableE2ETests : IntegrationTestBase() {
         /** the REAL PostgreSQL connector (not a fake), pointed at the second container */
         @Bean @Primary
         fun shopConnectorRegistry(queries: QueryCatalog): DataConnectorRegistry = DataConnectorRegistry(listOf(
-            PostgresConnector(queries, PostgresTargetPolicy(allowedPrivateHosts = setOf(ShopDb.container.host.lowercase())), SystemHostResolver, JdbcPgConnectionFactory(enforceTls = false))
+            PostgresConnector(queries, PostgresTargetPolicy(allowedPrivateHosts = setOf("${ShopDb.container.host.lowercase()}:${ShopDb.container.getMappedPort(5432)}")), SystemHostResolver, JdbcPgConnectionFactory(enforceTls = false))
         ))
     }
 

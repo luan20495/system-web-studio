@@ -232,7 +232,7 @@ internal class PgSessions(private val policy: PostgresTargetPolicy, private val 
     fun <T> withConnection(ds: DataSourceRef, cred: ResolvedCredential, block: (Connection, PostgresConnectorConfig) -> T): T {
         val cfg = PostgresConnectorConfig.parse(ds.configNonSecret)
         val (user, password) = PostgresConnectorConfig.credentialOf(cred)
-        val addresses = policy.resolve(cfg.host, resolver)                               // refuses before any connection exists
+        val addresses = policy.resolve(cfg.host, cfg.port, resolver)                               // refuses before any connection exists
         val conn = try { factory.open(PgTarget(cfg, addresses, user, password)) }
             catch (e: SQLException) { throw PgErrors.map(e) }
             catch (e: ConnectorFailure) { throw e }
@@ -263,7 +263,7 @@ internal class PgSessions(private val policy: PostgresTargetPolicy, private val 
         val cfg = PostgresConnectorConfig.parse(ds.configNonSecret)
         if (!cfg.writable) throw ConnectorFailure(FailureCodes.READ_ONLY_VIOLATION, "this PostgreSQL data source is read-only")
         val (user, password) = PostgresConnectorConfig.credentialOf(cred)
-        val addresses = policy.resolve(cfg.host, resolver)
+        val addresses = policy.resolve(cfg.host, cfg.port, resolver)
         val conn = try { factory.open(PgTarget(cfg, addresses, user, password, writable = true)) }
             catch (e: SQLException) { throw PgErrors.map(e) }                            // nothing was sent: the connect-time mapping is exact
             catch (e: ConnectorFailure) { throw e }
@@ -309,7 +309,7 @@ class PostgresConnector(
 
     override fun validateConfig(config: Map<String, String>) {
         val cfg = PostgresConnectorConfig.parse(config)
-        policy.checkSyntax(cfg.host)
+        policy.checkSyntax(cfg.host, cfg.port)
     }
     /** only SQL, in the shape [SqlGuard] accepts, with every `:name` placeholder declared (the same checks the executor repeats before each run) */
     override fun validateQueryDefinition(def: com.systemwebstudio.data.query.QueryDefinition, config: Map<String, String>) {

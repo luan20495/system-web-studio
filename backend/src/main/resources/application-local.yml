@@ -9,3 +9,8 @@ springdoc:
 app:
   deploy:
     step-delay-ms: 700
+  data-platform:
+    # B-C0-W-06: the ONE private target a local V1 data source may reach: the dedicated local data database (TLS, verify-full against the JVM trust store).
+    # It is neither the platform DB (127.0.0.1:15432) nor the apps DB (127.0.0.1:15434), which stay denied. Override with the environment variable.
+    postgres-targets:
+      allowed-private: ${DATA_PLATFORM_POSTGRES_ALLOWED_PRIVATE:127.0.0.1:15440}
