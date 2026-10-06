@@ -31,3 +31,20 @@ C0 applied its own shared patches (PublicAddress canonical policy, single-route 
 
 ## D-C0-12 — Frontend monorepo, three deployments (ADR 0022) · ACCEPTED · 2026-10-06 · C0
 Records C5's replacement of ADR 0001/0002: one monorepo, three frontend deployments (platform/admin/studio), shared packages, one modular-monolith backend, no microservices. C5 code import follows the backend gate (checklist S17b).
+## D-C1-11 — SYSTEM_ADMIN là platform scope; business-data bypass chỉ sau cờ · ACCEPTED (C0) · 2026-10-05 · C1
+Mặc định (`app.tenancy.system-admin-business-access=false`): SYSTEM_ADMIN không có quyền business-data của workspace mà nó không là thành viên. Ở workspace không là member nó giữ `PermissionMatrix.platformScope` = `MEMBER_MANAGE`, `PROJECT_CREATE` (chỉ để giữ 409 `ADMIN_NOT_MEMBER`), `TENANT_MANAGE`, `TENANT_MEMBERS`. Là member thì chỉ có quyền của role member. Cờ `true` khôi phục hành vi cũ (mọi quyền). Nơi còn bypass: `docs/parallel/c1/T2-tenant-foundation.md` §4. Cờ phải khai báo `false` trong `application.yml` (C0).
+
+## D-C1-12 — `tenant_members` là source of truth cho tenant role · ACCEPTED (C0) · 2026-10-05 · C1
+TENANT_ADMIN/MEMBER ở `tenant_members`, không ở `workspace_members`; một user có thể thuộc nhiều tenant. TENANT_ADMIN chỉ có `TENANT_MANAGE`/`TENANT_MEMBERS` trên tenant của mình, không có quyền business implicit. Trigger giữ bất biến "workspace member active ⇒ tenant member (MEMBER)" (insert, kích hoạt lại, đổi workspace, đổi tenant của workspace); hàng tenant_members đã bị tắt không bao giờ bị bật lại tự động. Không có hàng ⇒ coi như MEMBER (fail-open có chủ đích cho rollout).
+
+## D-C1-13 — Compatibility V26 có kế hoạch gỡ · ACCEPTED · 2026-10-06 · C1
+`DEFAULT` của `workspaces.tenant_id` và 3 trigger `*_tenant_fill` chỉ là scaffolding. Trigger **từ chối** `tenant_id` khác tenant của workspace (không ghi đè im lặng), chỉ điền khi NULL. Gỡ bằng migration `tenant_compat_removal` (BOARD, chưa có số) khi `TenantInsertPathsGrepTest` hết PENDING. Runbook §4.
+
+## D-C1-14 — Ma trận quyền canonical (default deny) · PROPOSED (C0 gộp vào contract) · 2026-10-06 · C1
+Role matrix thực thi trong `Permission.kt` (`docs/parallel/c1/permission-matrix-v2.md`): `APP_USE`/`DATA_SOURCE_VIEW`/`QUERY_EXECUTE`/`ACTION_EXECUTE` cho project EDITOR/OWNER (VIEWER/PUBLISHER chỉ `APP_USE`); `DATA_SOURCE_MANAGE`/`DATA_MUTATE`/`WORKFLOW_EXECUTE`/`WORKFLOW_MANAGE` chỉ WORKSPACE_ADMIN (chưa có cơ chế grant tường minh trước T15). VIEWER không có `QUERY_EXECUTE` (cần trạng thái published). `APP_SHARE` tạm = `PROJECT_MEMBERS`. Mã ngoài `PermissionCodes.CANONICAL` bị từ chối ở biên.
+
+## D-C1-15 — Không ai tự cấp quyền cho mình (đóng R-08) · ACCEPTED · 2026-10-06 · C1
+Thêm chính mình vào workspace/project/tenant, hoặc đổi role của chính mình, bị từ chối với 403 `SELF_GRANT_FORBIDDEN` cho MỌI caller (kể cả SYSTEM_ADMIN, TENANT_ADMIN, WORKSPACE_ADMIN); tự rời vẫn được. Người khác (admin khác) vẫn cấp được. Việc ngoài ownership C1: `admin/AdminController.transfer-ownership` (B-C1-13).
+
+## D-C1-16 — Adapter C1 là lõi policy thuần, C0 nối bằng `wiring.*Adapter` · ACCEPTED · 2026-10-06 · C1
+`access/adapters/{GatewayAuthorizer,AccessPort,TenantGate,PrincipalResolver}` nhận kiểu thuần (`Principal`, id, tên operation dạng string), không import `data.*`/`logic.*` (layering). Default deny: chỉ actor USER được phép; SYSTEM/SERVICE/APP_TOKEN bị từ chối cho tới khi C0/C4 quyết định (B-C1-17). Tenant luôn được suy ra từ workspace và so với tenant caller khai.

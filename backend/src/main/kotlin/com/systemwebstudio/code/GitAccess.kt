@@ -61,8 +61,8 @@ class GitAccessService(
     }
 
     fun issue(me: StudioUserDetails, workspaceId: UUID, projectId: UUID): CloneAccess {
+        val ctx = access.forProject(me.userId, workspaceId, projectId)      // authorise FIRST: an outsider gets 404 whatever the server configuration is
         if (!available) throw ApiException.conflict("IDE_ACCESS_UNAVAILABLE", "IDE access is not configured on this server")
-        val ctx = access.forProject(me.userId, workspaceId, projectId)
         if (ctx.project!!.appType != "STATIC_APP") throw ApiException.conflict("NOT_A_CODE_PROJECT", "This project has no repository")
         val repo = code.repo(projectId)
         val user = account(me.userId)

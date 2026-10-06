@@ -22,11 +22,12 @@ Frozen 2026-10-06 on `integration/v2`. **Nothing in this file has been executed*
 6. After each import: `grep -rn "TODO(\"W-" backend/src/main` must be empty (wiring skeleton TODOs live only in `backend/src/wiring-skeleton`).
 
 ## 2. C1 — tenancy / access / V26
-**Source:** `fix/c1-v2` @ `0d7a527` · **Import step:** checklist 4 (tests: 5; migration verify: 8).
+**Source:** `fix/c1-v2` @ `32c5922` (was `0d7a527`; + `e606370` test-comment compile fix inside the imported test path, + `32c5922` authorise-before-feature-check in `code/GitAccess.kt`) · **IMPORTED 2026-10-06** · **Import step:** checklist 4 (tests: 5; migration verify: 8).
 
 | | |
 |---|---|
 | **Import (paths)** | `backend/src/main/kotlin/com/systemwebstudio/tenancy/` · `…/access/` (incl. `adapters/`, `MeTenancy.kt`; modified `AccessService.kt`, `Permission.kt`) · `…/identity/AuthController.kt` (exposes tenancy in `MeResponse`) · `…/member/MemberController.kt` (self-grant rule) · `backend/src/main/resources/db/migration/V26__tenant_foundation.sql` · `backend/src/test/kotlin/com/systemwebstudio/tenancy/` · `…/isolation/IsolationApiTests.kt` · `docs/parallel/audit/T1-isolation-audit.md` · `docs/parallel/c1/` (design, runbook, `undo/`, `verification/`, permission matrix, B-C1-13) |
+| **C0-reviewed exception (adopted)** | `code/GitAccess.kt` (C0-gated path): only the one-line reorder in `GitAccessService.issue` — `access.forProject(...)` now runs BEFORE the `!available` (IDE_ACCESS_UNAVAILABLE) check, so an outsider/foreign project gets fail-closed 404 instead of a leaking 409; authorised callers still get 409 when git is not configured. Diff vs `c59604b` was exactly that one moved line; `integration/v2` had no C0 change to the file. |
 | **Never import** | `docs/contracts/**` and `docs/parallel/INTEGRATION_V2.md` (C0 owns; the branch carries older copies) · `admin/AdminController.kt` (C0 patched B-C1-13 already) · `identity/SecurityConfiguration.kt` · `application*.yml` · `backend/src/test/**/support/**` · any `V27+` file · frontend |
 | **Merge by hand** | `docs/parallel/{BOARD,BLOCKERS,DECISIONS}.md` (C1 adds D-C1-11…16, B-C1-13…18). Review the diff of the four **base** files it modifies before accepting them: `access/AccessService.kt`, `access/Permission.kt` (hot, 56 call sites), `identity/AuthController.kt`, `member/MemberController.kt` |
 | **Check command** | `git diff --cached --name-only \| grep -v -E '^(backend/src/(main/kotlin/com/systemwebstudio/(tenancy\|access)/\|main/kotlin/com/systemwebstudio/identity/AuthController.kt\|main/kotlin/com/systemwebstudio/member/MemberController.kt\|main/resources/db/migration/V26__tenant_foundation.sql\|test/kotlin/com/systemwebstudio/(tenancy\|isolation)/)\|docs/parallel/(audit/T1-isolation-audit.md\|c1/))'` → empty |

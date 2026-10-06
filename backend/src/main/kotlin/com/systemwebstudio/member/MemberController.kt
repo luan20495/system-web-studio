@@ -27,7 +27,8 @@ private val PROJECT_ROLES = setOf("OWNER", "EDITOR", "PUBLISHER", "VIEWER")
  * Membership management. Rules enforced here (and covered by tests):
  *  - only holders of MEMBER_MANAGE (workspace admin / system admin) manage workspace members; only PROJECT_MEMBERS holders
  *    (project owner, workspace admin, system admin) manage project members; viewer/editor/publisher can do neither;
- *  - nobody changes their own role (no self-escalation); leaving is allowed;
+ *  - nobody grants themselves anything: adding yourself to a workspace/project and changing your own role are rejected for EVERY caller
+ *    (including a SYSTEM_ADMIN holding MEMBER_MANAGE on the platform scope) with 403 SELF_GRANT_FORBIDDEN; leaving is allowed;
  *  - a workspace never loses its last WORKSPACE_ADMIN and a project never loses its last OWNER (rows are locked while counting);
  *  - the system-admin flag is not reachable through this API;
  *  - project members must already be active workspace members; removing a workspace member also removes their project access;
@@ -45,6 +46,12 @@ class MemberController(private val access: AccessService, private val jdbc: Jdbc
         val row = rows.firstOrNull() ?: throw ApiException.notFound("USER_NOT_FOUND", "No such user. The person must sign in once (or be created by an administrator) first.")
         if (row["enabled"] != true) throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "USER_DISABLED", "That account is disabled")
         return Triple(row["id"] as UUID, row["username"] as String, e)
+    }
+
+
+    /** No principal may create or raise its own membership: someone else must grant it (separation of duties). */
+    private fun rejectSelfGrant(me: StudioUserDetails, target: UUID) {
+        if (target == me.userId) throw ApiException.forbidden("You cannot grant yourself access or change your own role", "SELF_GRANT_FORBIDDEN")
     }
 
     private val memberSql = """SELECT u.id, u.username, u.display_name, u.email, m.role, m.created_at FROM %s m JOIN users u ON u.id = m.user_id WHERE %s AND m.active ORDER BY u.username"""
@@ -65,6 +72,7 @@ class MemberController(private val access: AccessService, private val jdbc: Jdbc
         access.forWorkspace(me.userId, w).require(Permission.MEMBER_MANAGE)
         if (body.role !in WORKSPACE_ROLES) throw ApiException.badRequest("INVALID_ROLE", "Role must be one of $WORKSPACE_ROLES")
         val (userId, _, _) = resolveUser(body.username, body.email)
+        rejectSelfGrant(me, userId)
         val existing = jdbc.queryForList("SELECT active, role FROM workspace_members WHERE workspace_id = ? AND user_id = ? FOR UPDATE", w, userId).firstOrNull()
         if (existing?.get("active") == true) throw ApiException.conflict("ALREADY_MEMBER", "User is already a member of this workspace")
         if (existing == null) jdbc.update("INSERT INTO workspace_members (workspace_id, user_id, role, active) VALUES (?,?,?,TRUE)", w, userId, body.role)
@@ -83,10 +91,9 @@ class MemberController(private val access: AccessService, private val jdbc: Jdbc
     @PatchMapping("/api/v1/workspaces/{w}/members/{userId}")
     @Transactional
     fun changeWorkspace(@PathVariable w: UUID, @PathVariable userId: UUID, @Valid @RequestBody body: ChangeRoleRequest, @AuthenticationPrincipal me: StudioUserDetails): MemberDto {
-        val ctx = access.forWorkspace(me.userId, w)
-        ctx.require(Permission.MEMBER_MANAGE)
+        access.forWorkspace(me.userId, w).require(Permission.MEMBER_MANAGE)
         if (body.role !in WORKSPACE_ROLES) throw ApiException.badRequest("INVALID_ROLE", "Role must be one of $WORKSPACE_ROLES")
-        if (userId == me.userId && !ctx.user.systemAdmin) throw ApiException.forbidden("You cannot change your own role")
+        rejectSelfGrant(me, userId)
         val admins = lockWorkspaceAdmins(w)
         val old = workspaceMember(w, userId)["role"] as String
         if (old == body.role) return jdbc.query(memberSql.format("workspace_members", "m.workspace_id = ? AND m.user_id = ?"), { rs, _ -> mapper(rs) }, w, userId).first()
@@ -124,6 +131,7 @@ class MemberController(private val access: AccessService, private val jdbc: Jdbc
         access.forProject(me.userId, w, p).require(Permission.PROJECT_MEMBERS)
         if (body.role !in PROJECT_ROLES) throw ApiException.badRequest("INVALID_ROLE", "Role must be one of $PROJECT_ROLES")
         val (userId, _, _) = resolveUser(body.username, body.email)
+        rejectSelfGrant(me, userId)
         val inWorkspace = jdbc.queryForObject("SELECT count(*) FROM workspace_members WHERE workspace_id = ? AND user_id = ? AND active", Long::class.java, w, userId)!!
         if (inWorkspace == 0L) throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "NOT_WORKSPACE_MEMBER", "Add the user to the workspace first")
         val existing = jdbc.queryForList("SELECT active FROM project_members WHERE project_id = ? AND user_id = ? FOR UPDATE", p, userId).firstOrNull()
@@ -144,10 +152,9 @@ class MemberController(private val access: AccessService, private val jdbc: Jdbc
     @PatchMapping("/api/v1/workspaces/{w}/projects/{p}/members/{userId}")
     @Transactional
     fun changeProject(@PathVariable w: UUID, @PathVariable p: UUID, @PathVariable userId: UUID, @Valid @RequestBody body: ChangeRoleRequest, @AuthenticationPrincipal me: StudioUserDetails): MemberDto {
-        val ctx = access.forProject(me.userId, w, p)
-        ctx.require(Permission.PROJECT_MEMBERS)
+        access.forProject(me.userId, w, p).require(Permission.PROJECT_MEMBERS)
         if (body.role !in PROJECT_ROLES) throw ApiException.badRequest("INVALID_ROLE", "Role must be one of $PROJECT_ROLES")
-        if (userId == me.userId && !ctx.user.systemAdmin) throw ApiException.forbidden("You cannot change your own role")
+        rejectSelfGrant(me, userId)
         val owners = lockProjectOwners(p)
         val old = projectMember(p, userId)
         if (old != body.role) {
