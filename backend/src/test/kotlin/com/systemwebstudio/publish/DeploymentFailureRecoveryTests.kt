@@ -11,6 +11,7 @@ import org.mockito.Mockito
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.context.TestPropertySource
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import java.io.IOException
 import java.net.InetSocketAddress
@@ -29,6 +30,8 @@ import java.util.concurrent.atomic.AtomicInteger
 ])
 class DeploymentFailureRecoveryTests : IntegrationTestBase() {
     @MockitoSpyBean lateinit var store: ArtifactStore
+    /** the real probe needs a public host; here it is a test double that is not configured unless a test says so */
+    @MockitoBean lateinit var probe: ReleaseHealthProbe
 
     companion object {
         /** ok | down (503, transient) | bad (400, permanent) | flaky (503 for the first [flakyFailures] calls, then ok) */
@@ -221,5 +224,43 @@ class DeploymentFailureRecoveryTests : IntegrationTestBase() {
         val failed = jdbc.queryForObject("SELECT id FROM deployments WHERE id = ?", UUID::class.java, id(ok))!!
         jdbc.update("UPDATE deployments SET status = 'FAILED', error = '[DEPLOY_FAILED] test' WHERE id = ?", failed)
         assertThat(sc.s.body(sc.s.get("${sc.base}/site")).get("online").asBoolean()).isFalse()
+    }
+
+    // ------------------------------------------------------------------ health probe of the public address (test double)
+
+    private fun probeAnswers(answer: com.systemwebstudio.integration.deploy.DeployVerification) {
+        Mockito.`when`(probe.configured).thenReturn(true)
+        Mockito.`when`(probe.probe(Mockito.anyString(), Mockito.anyBoolean())).thenReturn(answer)
+    }
+
+    @Test
+    fun `without a public host to probe the release is verified by its pointer and artifact and the detail says the probe did not run`() {
+        val sc = scenario(); val d = sc.publish()
+        Mockito.verify(probe, Mockito.never()).probe(Mockito.anyString(), Mockito.anyBoolean())
+        assertThat(pointer(sc)).isEqualTo(id(d))
+    }
+
+    @Test
+    fun `an address that answers 5xx after the switch is not RUNNING - the previous release is restored`() {
+        val sc = scenario(); sc.setHero("Bản một")
+        val first = sc.publish(); val slug = slugOf(first)
+        sc.setHero("Bản hai")
+        probeAnswers(com.systemwebstudio.integration.deploy.DeployVerification.unhealthy("the address answers HTTP 503"))
+        val d = sc.publish(expect = "FAILED")
+        assertThat(d.get("error").asString()).startsWith("[VERIFICATION_FAILED]").contains("HTTP 503").contains("rollback:")
+        assertThat(pointer(sc)).isEqualTo(id(first))
+        assertThat(served(slug).response.contentAsString).contains("Bản một")
+        assertThat(events(id(d), "ROLLBACK_OK")).isEqualTo(1)
+    }
+
+    @Test
+    fun `an address that cannot be reached is UNKNOWN, which is not success`() {
+        val sc = scenario(); sc.setHero("Bản một")
+        val first = sc.publish()
+        sc.setHero("Bản hai")
+        probeAnswers(com.systemwebstudio.integration.deploy.DeployVerification.unknown("the address did not answer: ConnectException"))
+        val d = sc.publish(expect = "FAILED")
+        assertThat(d.get("error").asString()).startsWith("[DEPLOY_STATE_UNKNOWN]")
+        assertThat(pointer(sc)).isEqualTo(id(first))
     }
 }

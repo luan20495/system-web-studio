@@ -162,7 +162,7 @@ class SiteService(
 /** Real static hosting (ADR 0009): the artifact built in BUILDING becomes what the site's address serves. */
 @Component
 @ConditionalOnProperty(name = ["app.deploy.provider"], havingValue = "static")
-class StaticSiteDeployProvider(private val sites: SiteService, private val verifier: ArtifactVerifier) : DeployProvider {
+class StaticSiteDeployProvider(private val sites: SiteService, private val verifier: ArtifactVerifier, private val probe: ReleaseHealthProbe) : DeployProvider {
     override val name = "static"
     override val buildsArtifacts = true
     override fun deploy(request: DeployRequest): DeployResult {
@@ -175,13 +175,25 @@ class StaticSiteDeployProvider(private val sites: SiteService, private val verif
         return DeployResult(sites.url(slug), null)
     }
 
-    /** Post-deploy check: the address really points at this release, and everything it serves is in the artifact store. */
+    /**
+     * Confirmation after the switch: the address points at this release, everything it serves is in the artifact store, and, when a real public host
+     * is configured, the address really answers. Without one the answer says that the HTTP probe did not run.
+     */
     override fun verify(request: DeployRequest): DeployVerification {
         val projectId = request.projectId ?: return DeployVerification.unhealthy("missing project")
         val artifactId = request.artifactId ?: return DeployVerification.unhealthy("no artifact was built")
         if (sites.pointer(projectId) != request.deploymentId) return DeployVerification.unhealthy("the site does not point at this release")
         val check = verifier.verify(artifactId)
-        return if (check.ok) DeployVerification.healthy("the site points at this release and all its files are present") else DeployVerification.unhealthy("the artifact cannot be served: ${check.reason}")
+        if (!check.ok) return DeployVerification.unhealthy("the artifact cannot be served: ${check.reason}")
+        val base = "the site points at this release and all its files are present"
+        if (!probe.configured) return DeployVerification.healthy("$base (HTTP probe of the public address: not configured)")
+        val url = sites.url(sites.ensureSlug(projectId, request.projectName))
+        val answer = probe.probe(url, protectedSite = request.visibility != "PUBLIC")
+        return when (answer.state) {
+            DeployVerification.State.HEALTHY -> DeployVerification.healthy("$base; ${answer.detail}")
+            DeployVerification.State.UNHEALTHY -> DeployVerification.unhealthy(answer.detail ?: "the public address is not healthy")
+            DeployVerification.State.UNKNOWN -> DeployVerification.unknown(answer.detail ?: "the public address could not be checked")
+        }
     }
 
     override fun restore(projectId: UUID, previousDeploymentId: UUID?): DeployResult {
