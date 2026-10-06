@@ -17,6 +17,6 @@ When the owner's code has been imported and the Mac gate for that step is green 
 
 Domain models are never copied here: if a type appears in a skeleton it is imported from its owner's package.
 
-**Implemented on `wire/c3-c4-runtime` (2026-10-06, Mac verification pending):** `RequestContexts` -> `wiring/RuntimeContexts.kt` + `ActorKinds.kt` (W-01, D-C0-14), `C1PortAdapters` -> `wiring/C1PortAdapters.kt` (W-02/03),
+**Implemented on `wire/c3-c4-runtime` (2026-10-06, MAC VERIFIED / GREEN @ `59e9368`: compileKotlin, compileTestKotlin, clean test on JDK 21):** `RequestContexts` -> `wiring/RuntimeContexts.kt` + `ActorKinds.kt` (W-01, D-C0-14), `C1PortAdapters` -> `wiring/C1PortAdapters.kt` (W-02/03),
 `AppDefinitionSourceAdapter` -> `wiring/RuntimeAppDefinitions.kt` (W-04), `ActionDataPortAdapter` -> `wiring/ActionDataPortAdapter.kt` + `DataWriteErrors.kt` (W-05, D-C0-15). The skeleton files were removed (`git rm`).
 Still skeletons: W-06 `AiDataCatalogAdapter`, W-07 `DataWebhookController`.
