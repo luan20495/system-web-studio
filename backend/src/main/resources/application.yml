@@ -206,6 +206,9 @@ app:
   data-platform:
     enabled: ${DATA_PLATFORM_ENABLED:false}         # C3. Reserved name, read only by wiring/**; gates every data-source / query / mutation endpoint
     webhooks-enabled: ${DATA_PLATFORM_WEBHOOKS_ENABLED:false}   # C3. The anonymous ingest route is always declared in security; this switch decides whether a handler exists
+    # V28 / D-C0-21 (D4): how long a mutation idempotency record is kept (ISO-8601 duration). Never below P7D: the store refuses a smaller value and the application does not start.
+    idempotency-retention: ${DATA_PLATFORM_IDEMPOTENCY_RETENTION:P30D}
+    idempotency-purge-delay-ms: ${DATA_PLATFORM_IDEMPOTENCY_PURGE_DELAY_MS:3600000}
   workflow:
     enabled: ${WORKFLOW_ENABLED:false}              # C4. Reserved name, read only by wiring/**; gates action/workflow/approval endpoints and the scheduler
     # D-C0-20: C4 run state is in memory until a reviewed persistence migration exists. LIVE mutating actions / workflow starts answer 503 RUNTIME_STORES_VOLATILE unless this is true (dev / E2E only).
