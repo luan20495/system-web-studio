@@ -195,6 +195,9 @@ class SiteServingController(
     }
 }
 
+/** deployment states the sites gateway serves (same rule as SiteService.live): a pointer at a FAILED deployment is not online */
+private val SERVED_STATUSES = setOf("DEPLOYING", "RUNNING")
+
 data class SiteInfo(val slug: String?, val url: String?, val online: Boolean, val visibility: String?, val currentDeploymentId: UUID?,
                     val currentVersionNumber: Int?, val provider: String, val updatedAt: Instant?)
 data class AccessTicketRequest(@field:Size(max = 512) val path: String? = null)
@@ -204,16 +207,16 @@ data class RollbackRequest(@field:NotNull val deploymentId: UUID?)
 @RestController
 class SiteManagementController(
     private val sites: SiteService, private val access: AccessService, private val audit: AuditService, private val jdbc: JdbcTemplate,
-    private val provider: com.systemwebstudio.integration.deploy.DeployProvider
+    private val provider: com.systemwebstudio.integration.deploy.DeployProvider, private val releases: ReleaseService
 ) {
     private fun info(projectId: UUID): SiteInfo {
-        val row = jdbc.query("""SELECT s.slug, s.current_deployment_id, d.visibility, d.version_id, s.updated_at FROM sites s
+        val row = jdbc.query("""SELECT s.slug, s.current_deployment_id, d.visibility, d.version_id, s.updated_at, d.status FROM sites s
             LEFT JOIN deployments d ON d.id = s.current_deployment_id WHERE s.project_id = ?""", { rs, _ ->
-            listOf(rs.getString(1), rs.getObject(2, UUID::class.java), rs.getString(3), rs.getObject(4, UUID::class.java), rs.getTimestamp(5)?.toInstant())
+            listOf(rs.getString(1), rs.getObject(2, UUID::class.java), rs.getString(3), rs.getObject(4, UUID::class.java), rs.getTimestamp(5)?.toInstant(), rs.getString(6))
         }, projectId).firstOrNull()
         val slug = row?.get(0) as String?; val current = row?.get(1) as UUID?
         val version = (row?.get(3) as UUID?)?.let { jdbc.queryForObject("SELECT version_number FROM project_versions WHERE id = ?", Int::class.java, it) }
-        return SiteInfo(slug, slug?.let { sites.url(it) }, current != null, row?.get(2) as String?, current, version, provider.name, row?.get(4) as Instant?)
+        return SiteInfo(slug, slug?.let { sites.url(it) }, current != null && (row?.get(5) as String?) in SERVED_STATUSES, row?.get(2) as String?, current, version, provider.name, row?.get(4) as Instant?)
     }
 
     @GetMapping("/api/v1/workspaces/{workspaceId}/projects/{projectId}/site")
@@ -223,9 +226,14 @@ class SiteManagementController(
         return info(projectId)
     }
 
-    /** Serve an earlier successful deployment again (no rebuild; its artifact is immutable). */
+    /**
+     * Serve an earlier successful deployment again (no rebuild; its artifact is immutable). The artifact is verified first (record, checksum,
+     * every file in the store); if it cannot be served the site is left untouched and the answer is 409 ROLLBACK_FAILED with the reason, which is
+     * also kept in the deployment's history. Repeating a rollback to the release that is already active changes nothing.
+     * noRollbackFor: the failure record must survive the error response.
+     */
     @PostMapping("/api/v1/workspaces/{workspaceId}/projects/{projectId}/site/rollback")
-    @Transactional
+    @Transactional(noRollbackFor = [ApiException::class])
     fun rollback(@PathVariable workspaceId: UUID, @PathVariable projectId: UUID, @Valid @RequestBody request: RollbackRequest,
                  @AuthenticationPrincipal me: StudioUserDetails): SiteInfo {
         access.forProject(me.userId, workspaceId, projectId).require(Permission.PROJECT_PUBLISH)
@@ -234,9 +242,11 @@ class SiteManagementController(
         if (!ok) throw ApiException.badRequest("DEPLOYMENT_NOT_RESTORABLE", "Only a successful deployment with an artifact can be served again")
         if (jdbc.queryForObject("SELECT count(*) FROM sites WHERE project_id = ?", Long::class.java, projectId)!! == 0L) throw ApiException.notFound("SITE_NOT_FOUND", "This project has no site")
         val before = info(projectId)
-        sites.point(projectId, request.deploymentId)
-        jdbc.update("UPDATE projects SET site_visibility = (SELECT visibility FROM deployments WHERE id = ?) WHERE id = ?", request.deploymentId, projectId)
-        audit.record("SITE_ROLLBACK", "SITE", projectId, workspaceId, projectId, oldValue = mapOf("deploymentId" to before.currentDeploymentId), newValue = mapOf("deploymentId" to request.deploymentId))
+        when (val result = releases.deployer.restoreRelease(projectId, request.deploymentId!!)) {
+            is RollbackResult.AlreadyActive -> return before
+            is RollbackResult.Failed -> throw ApiException.conflict("ROLLBACK_FAILED", "The release could not be restored: ${result.reason}")
+            else -> audit.record("SITE_ROLLBACK", "SITE", projectId, workspaceId, projectId, oldValue = mapOf("deploymentId" to before.currentDeploymentId), newValue = mapOf("deploymentId" to request.deploymentId))
+        }
         return info(projectId)
     }
 

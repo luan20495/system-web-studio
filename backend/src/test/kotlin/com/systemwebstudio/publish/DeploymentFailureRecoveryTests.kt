@@ -1,0 +1,221 @@
+package com.systemwebstudio.publish
+
+import com.sun.net.httpserver.HttpServer
+import com.systemwebstudio.integration.storage.ArtifactStore
+import com.systemwebstudio.support.IntegrationTestBase
+import org.assertj.core.api.Assertions.assertThat
+import org.awaitility.Awaitility.await
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.mockito.Mockito
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
+import org.springframework.test.context.TestPropertySource
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+import java.io.IOException
+import java.net.InetSocketAddress
+import java.time.Duration
+import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
+
+/**
+ * C2 production-readiness: failure, retry, verification and rollback of the real static pipeline (real Postgres, MinIO and RabbitMQ
+ * through Testcontainers; only the render worker is stubbed because it is a separate service).
+ * Pure decision logic lives in DeploymentFailureTests / ReleaseDeployerTests; this class proves the same behaviour end to end.
+ */
+@TestPropertySource(properties = [
+    "app.deploy.provider=static", "app.sites.origin=https://sites.example.test", "app.sites.studio-origin=https://studio.example.test",
+    "app.render.token=render-test-token", "app.deploy.step-max-attempts=3", "app.deploy.retry-backoff-ms=10"
+])
+class DeploymentFailureRecoveryTests : IntegrationTestBase() {
+    @MockitoSpyBean lateinit var store: ArtifactStore
+
+    companion object {
+        /** ok | down (503, transient) | bad (400, permanent) | flaky (503 for the first [flakyFailures] calls, then ok) */
+        @Volatile var mode = "ok"
+        @Volatile var flakyFailures = 0
+        val renderCalls = AtomicInteger()
+        private val mapper = tools.jackson.databind.json.JsonMapper.builder().build()
+        val server: HttpServer = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
+            createContext("/render-site") { ex ->
+                val n = renderCalls.incrementAndGet()
+                val body = mapper.readTree(ex.requestBody.readBytes())
+                val title = body.get("schema").get("sections").firstOrNull { it.get("type").asString() == "Hero" }?.get("props")?.get("title")?.asString() ?: ""
+                val status = when (mode) { "down" -> 503; "bad" -> 400; "flaky" -> if (n <= flakyFailures) 503 else 200; else -> 200 }
+                val files = linkedMapOf("index.html" to "<!doctype html><html><body><h1>$title</h1></body></html>",
+                    "404.html" to "<!doctype html><html><body><h1>404</h1></body></html>")
+                val bytes = mapper.writeValueAsBytes(mapOf("files" to files))
+                ex.sendResponseHeaders(status, bytes.size.toLong()); ex.responseBody.use { it.write(bytes) }
+            }
+            start()
+        }
+        @JvmStatic @DynamicPropertySource
+        fun render(registry: DynamicPropertyRegistry) { registry.add("app.render.url") { "http://127.0.0.1:${server.address.port}" } }
+    }
+
+    @BeforeEach fun reset() { mode = "ok"; flakyFailures = 0; renderCalls.set(0) }
+
+    private var key = 0
+    private fun Scenario.setHero(value: String) =
+        s.patch("$base/schema", """{"expectedRevision":${revision()},"operations":[{"type":"UPDATE_PROP","sectionId":"hero-1","path":"title","value":"$value"}]}""")
+
+    private fun Scenario.publishRaw(idempotencyKey: String = "c2-failure-${System.nanoTime()}-${key++}") =
+        s.post("$base/publish", """{"visibility":"PUBLIC","expectedRevision":${revision()}}""", "Idempotency-Key" to idempotencyKey)
+
+    private fun Scenario.settle(id: String): tools.jackson.databind.JsonNode {
+        await().atMost(Duration.ofSeconds(30)).until { s.body(s.get("$base/deployments/$id")).get("status").asString() in setOf("RUNNING", "FAILED") }
+        return s.body(s.get("$base/deployments/$id"))
+    }
+    private fun Scenario.publish(expect: String = "RUNNING"): tools.jackson.databind.JsonNode {
+        val d = settle(s.body(publishRaw()).get("id").asString())
+        assertThat(d.get("status").asString()).describedAs(d.toString()).isEqualTo(expect)
+        return d
+    }
+
+    private fun id(d: tools.jackson.databind.JsonNode) = UUID.fromString(d.get("id").asString())
+    private fun events(deployment: UUID, status: String) =
+        jdbc.queryForObject("SELECT count(*) FROM deployment_events WHERE deployment_id = ? AND status = ?", Int::class.java, deployment, status)!!
+    private fun eventMessages(deployment: UUID, status: String): List<String> =
+        jdbc.queryForList("SELECT message FROM deployment_events WHERE deployment_id = ? AND status = ? ORDER BY created_at", String::class.java, deployment, status)
+    private fun pointer(sc: Scenario): UUID? =
+        jdbc.queryForList("SELECT current_deployment_id FROM sites WHERE project_id = ?", UUID::class.java, sc.projectId).firstOrNull()
+    private fun artifacts(sc: Scenario) = jdbc.queryForObject("SELECT count(*) FROM artifacts WHERE project_id = ?", Int::class.java, sc.projectId)!!
+    private fun sha(deployment: UUID) = jdbc.queryForObject("SELECT a.sha256 FROM artifacts a JOIN deployments d ON d.artifact_id = a.id WHERE d.id = ?", String::class.java, deployment)!!
+    private fun slugOf(d: tools.jackson.databind.JsonNode) = d.get("url").asString().removePrefix("https://sites.example.test/").trimEnd('/')
+    private fun served(slug: String) = session().get("/sites/$slug/")
+
+    /** After this call [store] can only "see" objects of the given artifact hashes: everything else looks missing to size(). */
+    private fun onlyVisible(vararg hashes: String) {
+        Mockito.doAnswer { inv ->
+            val k = inv.getArgument<String>(0)
+            if (hashes.any { k.contains("/$it/") }) inv.callRealMethod() else null
+        }.`when`(store).size(Mockito.anyString())
+    }
+
+    @Test
+    fun `a permanent render failure fails once with its reason, is not retried and publishes nothing`() {
+        val sc = scenario(); mode = "bad"
+        val d = sc.publish(expect = "FAILED")
+        assertThat(d.get("error").asString()).startsWith("[BUILD_FAILED]")
+        assertThat(renderCalls.get()).isEqualTo(1)
+        assertThat(eventMessages(id(d), "BUILDING").filter { it.startsWith("Retry") }).isEmpty()
+        assertThat(pointer(sc)).isNull()
+        assertThat(artifacts(sc)).isZero()
+    }
+
+    @Test
+    fun `a transient render outage is retried a bounded number of times, then fails with the reason and the attempt count`() {
+        val sc = scenario(); mode = "down"
+        val d = sc.publish(expect = "FAILED")
+        assertThat(d.get("error").asString()).startsWith("[RENDER_UNAVAILABLE]").contains("3 attempts")
+        assertThat(renderCalls.get()).isEqualTo(3)
+        assertThat(eventMessages(id(d), "BUILDING").filter { it.startsWith("Retry") }).hasSize(2)
+        assertThat(pointer(sc)).isNull()
+    }
+
+    @Test
+    fun `a transient failure that goes away is retried to success with exactly one artifact and one active release`() {
+        val sc = scenario(); mode = "flaky"; flakyFailures = 1
+        val d = sc.publish()
+        assertThat(renderCalls.get()).isEqualTo(2)
+        assertThat(eventMessages(id(d), "BUILDING").filter { it.startsWith("Retry") }).hasSize(1)
+        assertThat(artifacts(sc)).isEqualTo(1)
+        assertThat(pointer(sc)).isEqualTo(id(d))
+        assertThat(served(slugOf(d)).response.status).isEqualTo(200)
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM deployments WHERE project_id = ? AND status = 'RUNNING'", Int::class.java, sc.projectId)).isEqualTo(1)
+    }
+
+    @Test
+    fun `a failed artifact store write fails the build with ARTIFACT_STORE_UNAVAILABLE and leaves the previous release serving`() {
+        val sc = scenario(); sc.setHero("Bản một")
+        val first = sc.publish(); val slug = slugOf(first)
+        sc.setHero("Bản hai")
+        Mockito.doThrow(IOException("storage offline")).`when`(store).putOnce(Mockito.anyString(), Mockito.any(ByteArray::class.java) ?: ByteArray(0), Mockito.anyString())
+        val d = sc.publish(expect = "FAILED")
+        assertThat(d.get("error").asString()).startsWith("[ARTIFACT_STORE_UNAVAILABLE]")
+        assertThat(pointer(sc)).isEqualTo(id(first))
+        assertThat(served(slug).response.contentAsString).contains("Bản một")
+        assertThat(jdbc.queryForObject("SELECT status FROM deployments WHERE id = ?", String::class.java, id(first))).isEqualTo("RUNNING")
+    }
+
+    @Test
+    fun `a release whose artifact cannot be verified after the switch is never RUNNING and the previous release is restored without a rebuild`() {
+        val sc = scenario(); sc.setHero("Bản một")
+        val first = sc.publish(); val slug = slugOf(first)
+        sc.setHero("Bản hai")
+        onlyVisible(sha(id(first)))                    // the new artifact is written, but cannot be read back: verification must fail
+        val before = artifacts(sc)
+        val d = sc.publish(expect = "FAILED")
+        assertThat(d.get("error").asString()).startsWith("[VERIFICATION_FAILED]").contains("rollback:")
+        assertThat(pointer(sc)).isEqualTo(id(first))                                   // release N is active again
+        assertThat(served(slug).response.contentAsString).contains("Bản một")
+        assertThat(artifacts(sc)).isEqualTo(before + 1)                                // N+1 was built once; the rollback did not build anything
+        assertThat(events(id(d), "ROLLBACK_OK")).isEqualTo(1)
+        assertThat(jdbc.queryForObject("SELECT status FROM deployments WHERE id = ?", String::class.java, id(first))).isEqualTo("RUNNING")
+        assertThat(sc.s.body(sc.s.get("${sc.base}/site")).get("currentDeploymentId").asString()).isEqualTo(id(first).toString())
+    }
+
+    @Test
+    fun `a first release that fails verification takes the site offline instead of serving something unverified`() {
+        val sc = scenario()
+        onlyVisible("nothing-is-visible")
+        val d = sc.publish(expect = "FAILED")
+        assertThat(d.get("error").asString()).startsWith("[VERIFICATION_FAILED]")
+        assertThat(events(id(d), "ROLLBACK_OFFLINE")).isEqualTo(1)
+        assertThat(pointer(sc)).isNull()
+        assertThat(sc.s.body(sc.s.get("${sc.base}/site")).get("online").asBoolean()).isFalse()
+    }
+
+    @Test
+    fun `manual rollback to a release whose artifact is gone is refused, recorded, and changes nothing`() {
+        val sc = scenario(); sc.setHero("Bản một")
+        val first = sc.publish(); val slug = slugOf(first)
+        sc.setHero("Bản hai")
+        val second = sc.publish()
+        onlyVisible(sha(id(second)))                   // release one's files are gone from the store
+
+        val refused = sc.s.post("${sc.base}/site/rollback", """{"deploymentId":"${id(first)}"}""")
+        assertThat(refused.response.status).isEqualTo(409)
+        assertThat(refused.response.contentAsString).contains("ROLLBACK_FAILED")
+        assertThat(pointer(sc)).isEqualTo(id(second))
+        assertThat(served(slug).response.contentAsString).contains("Bản hai")
+        assertThat(events(id(first), "ROLLBACK_FAILED")).isEqualTo(1)                  // the failure has its own recorded state
+        assertThat(sc.auditCount("SITE_ROLLBACK")).isZero()
+    }
+
+    @Test
+    fun `manual rollback is idempotent - repeating it neither rebuilds nor duplicates history nor audit`() {
+        val sc = scenario(); sc.setHero("Bản một")
+        val first = sc.publish(); val slug = slugOf(first)
+        sc.setHero("Bản hai")
+        sc.publish()
+        val builds = artifacts(sc)
+        repeat(3) { assertThat(sc.s.post("${sc.base}/site/rollback", """{"deploymentId":"${id(first)}"}""").response.status).isEqualTo(200) }
+        assertThat(pointer(sc)).isEqualTo(id(first))
+        assertThat(served(slug).response.contentAsString).contains("Bản một")
+        assertThat(artifacts(sc)).isEqualTo(builds)
+        assertThat(events(id(first), "ROLLBACK_OK")).isEqualTo(1)
+        assertThat(sc.auditCount("SITE_ROLLBACK")).isEqualTo(1)
+    }
+
+    @Test
+    fun `publishing again with the same Idempotency-Key creates no second deployment and no second build`() {
+        val sc = scenario()
+        val k = "c2-duplicate-${System.nanoTime()}"
+        val a = sc.s.body(sc.publishRaw(k)).get("id").asString()
+        val b = sc.s.body(sc.publishRaw(k)).get("id").asString()
+        assertThat(b).isEqualTo(a)
+        sc.settle(a)
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM deployments WHERE project_id = ?", Int::class.java, sc.projectId)).isEqualTo(1)
+        assertThat(renderCalls.get()).isEqualTo(1)
+    }
+
+    @Test
+    fun `an active pointer at a failed deployment is reported offline, never online`() {
+        val sc = scenario()
+        val ok = sc.publish()
+        val failed = jdbc.queryForObject("SELECT id FROM deployments WHERE id = ?", UUID::class.java, id(ok))!!
+        jdbc.update("UPDATE deployments SET status = 'FAILED', error = '[DEPLOY_FAILED] test' WHERE id = ?", failed)
+        assertThat(sc.s.body(sc.s.get("${sc.base}/site")).get("online").asBoolean()).isFalse()
+    }
+}

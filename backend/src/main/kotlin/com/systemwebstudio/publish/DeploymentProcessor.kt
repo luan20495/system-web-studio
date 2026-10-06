@@ -15,8 +15,15 @@ import java.util.UUID
 
 /**
  * Runs one deployment through POLICY_CHECK -> SECURITY_CHECK -> BUILDING -> DEPLOYING -> RUNNING.
- * Each step is a compare-and-set on the status column, so a duplicate or redelivered message cannot
- * run the same step twice, and a crashed worker is resumed from the status it left behind.
+ * Each step is a compare-and-set on the status column, so a duplicate or redelivered message cannot run the same step twice, and a crashed
+ * worker is resumed from the status it left behind.
+ *
+ * Failure handling (the final state is always deterministic and always says why):
+ *  - every failure is classified ([FailureClassifier]): a stable code + the real reason are stored in `deployments.error`, never a generic text;
+ *  - transient failures (render worker / storage / database blip) retry the same step a bounded number of times with backoff; the retry count
+ *    is read from the history, so a restart does not reset it. Permanent failures and ambiguous ones (a deploy that timed out) are never retried;
+ *  - DEPLOYING goes through [ReleaseDeployer]: switch, run the server runtime step, verify. If anything fails after the switch was attempted the
+ *    previous release is made active again from its immutable artifact. A deployment is RUNNING only after verification said HEALTHY.
  */
 @Service
 class DeploymentProcessor(
@@ -29,11 +36,29 @@ class DeploymentProcessor(
     private val builder: StaticSiteBuilder,
     private val runtime: com.systemwebstudio.runtime.ServerRuntimeService,
     private val buildJobs: com.systemwebstudio.code.BuildJobService,
-    @Value("\${app.deploy.step-delay-ms:0}") private val stepDelayMs: Long
+    private val releases: ReleaseService,
+    @Value("\${app.deploy.step-delay-ms:0}") private val stepDelayMs: Long,
+    @Value("\${app.deploy.step-max-attempts:3}") maxAttempts: Int,
+    @Value("\${app.deploy.retry-backoff-ms:500}") backoffMs: Long,
+    @Value("\${app.deploy.build-timeout-seconds:300}") buildSeconds: Long
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
+    private val retry = RetryPolicy(maxAttempts.coerceAtLeast(1), backoffMs)
+    private val buildTimeoutMs = buildSeconds * 1000
+    private val runner = StepRunner()
 
     private val forbidden = listOf("<script", "javascript:", "onerror=", "onload=", "data:text/html")
+
+    /** what one step of one run produced */
+    private sealed interface StepResult {
+        data object Advance : StepResult
+        /** a code build is still running: stop now, its completion re-queues this deployment */
+        data object Wait : StepResult
+        data class Fail(val failure: StepFailure, val rollback: RollbackResult? = null) : StepResult
+    }
+
+    /** values carried from one step of a run to the next */
+    private class RunState(var artifactHash: String = "", var url: String? = null)
 
     fun process(deploymentId: UUID) {
         MDC.put("requestId", "job_" + deploymentId.toString().replace("-", "").take(16))
@@ -50,50 +75,81 @@ class DeploymentProcessor(
         var current = d.status
         if (current == DeploymentStatus.QUEUED && !move(d, current, DeploymentStatus.POLICY_CHECK, "Checking policy")) return
         current = if (current == DeploymentStatus.QUEUED) DeploymentStatus.POLICY_CHECK else current
-        var artifactHash = ""
-        var url: String? = null
+        val state = RunState()
         while (current != DeploymentStatus.RUNNING) {
             pause()
-            val error: String? = try {
-                when (current) {
-                    DeploymentStatus.POLICY_CHECK -> policy(d)
-                    DeploymentStatus.SECURITY_CHECK -> security(d)
-                    DeploymentStatus.BUILDING -> if (isCodeApp(d)) {
-                        // code project: the sandbox runner builds it; the job's completion re-queues this deployment
-                        when (val r = codeBuild(d)) { null -> return; else -> { if (r.startsWith("ERR:")) r.removePrefix("ERR:") else { artifactHash = r; null } } }
-                    } else { artifactHash = build(d); null }
-                    DeploymentStatus.DEPLOYING -> {
-                        val project = jdbc.queryForMap("SELECT name, deployment_target FROM projects WHERE id = ?", d.projectId)
-                        // read back from the row so a resumed job deploys the artifact the BUILDING step recorded
-                        val artifactId = jdbc.queryForObject("SELECT artifact_id FROM deployments WHERE id = ?", UUID::class.java, d.id)
-                        if (provider.buildsArtifacts && artifactId == null) "No artifact was built"
-                        else {
-                            val result = provider.deploy(DeployRequest(d.id, project["name"] as String, d.versionNumber, d.visibility, project["deployment_target"] as String?,
-                                artifactHash.ifEmpty { artifactId?.let { a -> jdbc.queryForObject("SELECT sha256 FROM artifacts WHERE id = ?", String::class.java, a) } ?: build(d, record = false) },
-                                d.projectId, artifactId))
-                            url = result.url
-                            // server apps: the same build's server part now goes to the isolated runtime (blue/green, health-checked)
-                            if (result.error == null && artifactId != null && isServerApp(d)) {
-                                val commit = jdbc.queryForObject("SELECT commit_sha FROM project_versions WHERE id = ?", String::class.java, d.versionId)
-                                runtime.deploy(d.projectId, artifactId, commit, jdbc.queryForObject("SELECT requested_by FROM deployments WHERE id = ?", UUID::class.java, d.id))
-                            }
-                            result.error
-                        }
+            when (val result = step(d, current, state)) {
+                is StepResult.Wait -> return
+                is StepResult.Fail -> {
+                    val attemptsMade = deployments.retries(d.id, current) + 1
+                    if (retry.canRetry(result.failure, attemptsMade)) {
+                        deployments.event(d.id, current, "Retry $attemptsMade/${retry.maxAttempts}: ${result.failure.reason()}")
+                        log.warn("Deployment {} step {} failed transiently (attempt {}): {}", id, current, attemptsMade, result.failure.message)
+                        sleep(retry.delayBefore(attemptsMade + 1))
+                        continue
                     }
-                    else -> "Unexpected state $current"
+                    fail(d, current, result.failure, attemptsMade, result.rollback)
+                    return
                 }
-            } catch (e: BuildFailure) {
-                e.message ?: "Build failed"
-            } catch (e: Exception) {
-                log.error("Deployment {} crashed in {}", id, current, e)
-                "Internal error during $current"
+                is StepResult.Advance -> {
+                    val next = DeploymentStatus.pipeline[DeploymentStatus.pipeline.indexOf(current) + 1]
+                    val ok = if (next == DeploymentStatus.RUNNING) finish(d, current, state.url!!) else move(d, current, next, label(next))
+                    if (!ok) return
+                    current = next
+                }
             }
-            if (error != null) { fail(d, current, error); return }
-            val next = DeploymentStatus.pipeline[DeploymentStatus.pipeline.indexOf(current) + 1]
-            val ok = if (next == DeploymentStatus.RUNNING) finish(d, current, url!!) else move(d, current, next, label(next))
-            if (!ok) return
-            current = next
         }
+    }
+
+    /** One attempt of one step. Never throws: whatever goes wrong becomes a classified [StepResult.Fail]. */
+    private fun step(d: DeploymentDto, current: String, state: RunState): StepResult = try {
+        when (current) {
+            DeploymentStatus.POLICY_CHECK -> policy(d)?.let { StepResult.Fail(StepFailure(FailureCode.POLICY_REJECTED, it)) } ?: StepResult.Advance
+            DeploymentStatus.SECURITY_CHECK -> security(d)?.let { StepResult.Fail(StepFailure(FailureCode.SECURITY_REJECTED, it)) } ?: StepResult.Advance
+            DeploymentStatus.BUILDING -> buildStep(d, state)
+            DeploymentStatus.DEPLOYING -> deployStep(d, state)
+            else -> StepResult.Fail(StepFailure(FailureCode.INTERNAL_ERROR, "Unexpected state $current"))
+        }
+    } catch (e: Exception) {
+        log.error("Deployment {} crashed in {}", d.id, current, e)
+        StepResult.Fail(FailureClassifier.classify(current, e))
+    }
+
+    private fun buildStep(d: DeploymentDto, state: RunState): StepResult {
+        if (isCodeApp(d)) {
+            // code project: the sandbox runner builds it; the job's completion re-queues this deployment
+            val r = codeBuild(d) ?: return StepResult.Wait
+            if (r.startsWith("ERR:")) return StepResult.Fail(StepFailure(FailureCode.BUILD_FAILED, FailureClassifier.safe(r.removePrefix("ERR:"))))
+            state.artifactHash = r
+            return StepResult.Advance
+        }
+        state.artifactHash = runner.bounded(buildTimeoutMs) { build(d) }
+        return StepResult.Advance
+    }
+
+    private fun deployStep(d: DeploymentDto, state: RunState): StepResult {
+        val project = jdbc.queryForMap("SELECT name, deployment_target FROM projects WHERE id = ?", d.projectId)
+        // read back from the row so a resumed job deploys the artifact the BUILDING step recorded
+        val artifactId = jdbc.queryForObject("SELECT artifact_id FROM deployments WHERE id = ?", UUID::class.java, d.id)
+        if (provider.buildsArtifacts && artifactId == null) return StepResult.Fail(StepFailure(FailureCode.ARTIFACT_MISSING, "No artifact was built for this deployment"))
+        val hash = state.artifactHash.ifEmpty { artifactId?.let { a -> jdbc.queryForObject("SELECT sha256 FROM artifacts WHERE id = ?", String::class.java, a) } ?: build(d, record = false) }
+        val request = DeployRequest(d.id, project["name"] as String, d.versionNumber, d.visibility, project["deployment_target"] as String?, hash, d.projectId, artifactId)
+        // server apps: the same build's server part goes to the isolated runtime (blue/green, health-checked) right after the site switch
+        val serverStep: (() -> Unit)? = if (artifactId != null && isServerApp(d)) ({ deployServerRuntime(d, artifactId) }) else null
+        return when (val outcome = releases.deployer.deploy(request, serverStep)) {
+            is DeployOutcome.Live -> { state.url = outcome.url; StepResult.Advance }
+            is DeployOutcome.Failed -> StepResult.Fail(outcome.failure, outcome.rollback)
+        }
+    }
+
+    /** Idempotent: when a worker died after handing the artifact to the runtime, the re-run does not create a second server deployment. */
+    private fun deployServerRuntime(d: DeploymentDto, artifactId: UUID) {
+        val already = jdbc.queryForObject(
+            "SELECT count(*) FROM server_deployments sd, deployments dep WHERE dep.id = ? AND sd.project_id = ? AND sd.artifact_id = ? AND sd.rollback_of IS NULL AND sd.created_at >= dep.created_at",
+            Long::class.java, d.id, d.projectId, artifactId) ?: 0L
+        if (already > 0) return
+        val commit = jdbc.queryForObject("SELECT commit_sha FROM project_versions WHERE id = ?", String::class.java, d.versionId)
+        runtime.deploy(d.projectId, artifactId, commit, jdbc.queryForObject("SELECT requested_by FROM deployments WHERE id = ?", UUID::class.java, d.id))
     }
 
     private fun label(s: String) = when (s) {
@@ -168,6 +224,7 @@ class DeploymentProcessor(
     }
 
     private fun pause() { if (stepDelayMs > 0) Thread.sleep(stepDelayMs) }
+    private fun sleep(ms: Long) { if (ms > 0) Thread.sleep(ms) }
 
     private fun move(d: DeploymentDto, from: String, to: String, message: String): Boolean {
         val ok = deployments.transition(d.id, from, to, message)
@@ -185,10 +242,12 @@ class DeploymentProcessor(
         return ok
     }
 
-    private fun fail(d: DeploymentDto, from: String, error: String) {
+    private fun fail(d: DeploymentDto, from: String, failure: StepFailure, attempts: Int, rollback: RollbackResult?) {
+        val rolledBack = rollback?.takeUnless { it is RollbackResult.NotSwitched }
+        val error = (failure.reason(attempts) + (rolledBack?.let { " | rollback: ${it.summary}" } ?: "")).take(StepFailure.MAX_LENGTH)
         if (deployments.transition(d.id, from, DeploymentStatus.FAILED, null, error = error)) {
             audit.record("DEPLOY_STATUS_CHANGE", "DEPLOYMENT", d.id, workspaceOf(d), d.projectId, actorId = null,
-                oldValue = mapOf("status" to from), newValue = mapOf("status" to DeploymentStatus.FAILED, "error" to error))
+                oldValue = mapOf("status" to from), newValue = mapOf("status" to DeploymentStatus.FAILED, "error" to error, "code" to failure.code.name))
         }
     }
 
