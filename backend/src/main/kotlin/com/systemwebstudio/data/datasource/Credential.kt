@@ -34,6 +34,13 @@ interface CredentialStore {
     fun find(tenantId: java.util.UUID, ref: String): String?
     fun put(tenantId: java.util.UUID, ref: String, ciphertext: String)
     fun remove(tenantId: java.util.UUID, ref: String)
+    /** when the stored credential was last written (metadata only; nothing of the material). null = unknown to this store */
+    fun updatedAt(tenantId: java.util.UUID, ref: String): java.time.Instant? = null
+}
+
+/** Who last set or replaced the credential of a data source, taken from the audit trail (the credential row itself carries no actor). null = unknown. */
+fun interface CredentialActorLookup {
+    fun lastActor(tenantId: java.util.UUID, dataSourceId: java.util.UUID): java.util.UUID?
 }
 
 /** Seals and opens credentials. The ciphertext is the only form that is ever stored. */
@@ -48,6 +55,8 @@ interface CredentialVault {
     fun store(tenantId: java.util.UUID, values: Map<String, String>): String
     /** drop a credential that is no longer referenced (after rotation or deletion) */
     fun discard(tenantId: java.util.UUID, ref: String?)
+    /** when the credential behind [ref] was last written (metadata only, never the material); null = unknown */
+    fun updatedAt(tenantId: java.util.UUID, ref: String): java.time.Instant? = null
 }
 
 /**
@@ -69,6 +78,8 @@ class SecretsCryptoCredentialVault(private val crypto: SecretsCrypto, private va
     }
 
     override fun discard(tenantId: java.util.UUID, ref: String?) { if (ref != null) store.remove(tenantId, ref) }
+
+    override fun updatedAt(tenantId: java.util.UUID, ref: String): java.time.Instant? = store.updatedAt(tenantId, ref)
 
     override fun open(ds: DataSource): ResolvedCredential {
         val ref = ds.credentialRef ?: return ResolvedCredential.NONE

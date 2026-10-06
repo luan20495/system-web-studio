@@ -28,13 +28,16 @@ class InMemoryDataSourceRepository : DataSourceRepository {
     override fun find(tenantId: UUID, id: UUID): DataSource? = rows[id]?.takeIf { it.tenantId == tenantId }
     override fun list(tenantId: UUID): List<DataSource> = rows.values.filter { it.tenantId == tenantId }
     override fun save(dataSource: DataSource): DataSource = dataSource.also { rows[it.id] = it }
+    override fun delete(tenantId: UUID, id: UUID): Boolean = rows[id]?.takeIf { it.tenantId == tenantId }?.let { rows.remove(id); true } ?: false
 }
 
-class InMemoryCredentialStore : CredentialStore {
+class InMemoryCredentialStore(private val now: () -> java.time.Instant = { java.time.Instant.now() }) : CredentialStore {
     private val rows = ConcurrentHashMap<Pair<UUID, String>, String>()
+    private val written = ConcurrentHashMap<Pair<UUID, String>, java.time.Instant>()
     override fun find(tenantId: UUID, ref: String): String? = rows[tenantId to ref]
-    override fun put(tenantId: UUID, ref: String, ciphertext: String) { rows[tenantId to ref] = ciphertext }
-    override fun remove(tenantId: UUID, ref: String) { rows.remove(tenantId to ref) }
+    override fun put(tenantId: UUID, ref: String, ciphertext: String) { rows[tenantId to ref] = ciphertext; written[tenantId to ref] = now() }
+    override fun remove(tenantId: UUID, ref: String) { rows.remove(tenantId to ref); written.remove(tenantId to ref) }
+    override fun updatedAt(tenantId: UUID, ref: String): java.time.Instant? = written[tenantId to ref]
     val size get() = rows.size
 }
 

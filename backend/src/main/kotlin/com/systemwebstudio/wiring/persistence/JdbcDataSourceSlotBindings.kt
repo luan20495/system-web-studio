@@ -47,6 +47,24 @@ class DataSourceBindingWriter(private val jdbc: JdbcTemplate) {
         return true
     }
 
+    class Row(val mode: String, val slotId: String, val dataSourceId: UUID, val updatedAt: java.time.Instant)
+
+    /** B-C0-W-03: the bindings of one project (both modes), with the same read-side ownership join as the runtime reader */
+    fun list(tenantId: UUID, projectId: UUID): List<Row> =
+        jdbc.query(
+            """SELECT b.mode, b.slot_id, b.data_source_id, b.updated_at FROM data_source_bindings b
+               JOIN projects p ON p.id = b.project_id AND p.workspace_id = b.workspace_id AND p.tenant_id = b.tenant_id
+               JOIN data_sources s ON s.id = b.data_source_id AND s.tenant_id = b.tenant_id AND s.workspace_id = b.workspace_id
+               WHERE b.tenant_id = ? AND b.project_id = ? ORDER BY b.mode, b.slot_id""",
+            { rs, _ -> Row(rs.getString("mode"), rs.getString("slot_id"), rs.uuid("data_source_id"), rs.getTimestamp("updated_at").toInstant()) },
+            tenantId, projectId
+        )
+
+    /** the data source a slot is bound to, or null */
+    fun find(tenantId: UUID, projectId: UUID, mode: ExecutionMode, slotId: String): UUID? =
+        jdbc.query("SELECT data_source_id FROM data_source_bindings WHERE tenant_id = ? AND project_id = ? AND mode = ? AND slot_id = ?", { rs, _ -> rs.uuid("data_source_id") },
+            tenantId, projectId, mode.name, slotId).firstOrNull()
+
     fun unbind(tenantId: UUID, projectId: UUID, mode: ExecutionMode, slotId: String): Boolean =
         jdbc.update("DELETE FROM data_source_bindings WHERE tenant_id = ? AND project_id = ? AND mode = ? AND slot_id = ?", tenantId, projectId, mode.name, slotId) > 0
 }

@@ -28,6 +28,10 @@ class JdbcDataSourceRepository(private val jdbc: JdbcTemplate) : DataSourceRepos
     override fun findInWorkspace(tenantId: UUID, workspaceId: UUID, id: UUID): DataSource? =
         jdbc.query("SELECT $COLUMNS FROM data_sources WHERE tenant_id = ? AND workspace_id = ? AND id = ?", { rs, _ -> map(rs) }, tenantId, workspaceId, id).firstOrNull()
 
+    /** B-C0-W-03: the workspace filter is part of the query */
+    override fun listInWorkspace(tenantId: UUID, workspaceId: UUID): List<DataSource> =
+        jdbc.query("SELECT $COLUMNS FROM data_sources WHERE tenant_id = ? AND workspace_id = ? ORDER BY created_at, id LIMIT $MAX_LIST", { rs, _ -> map(rs) }, tenantId, workspaceId)
+
     override fun list(tenantId: UUID): List<DataSource> =
         jdbc.query("SELECT $COLUMNS FROM data_sources WHERE tenant_id = ? ORDER BY created_at, id LIMIT $MAX_LIST", { rs, _ -> map(rs) }, tenantId)
 
@@ -46,6 +50,34 @@ class JdbcDataSourceRepository(private val jdbc: JdbcTemplate) : DataSourceRepos
         } catch (e: DuplicateKeyException) { throw JdbcSupport.conflict("a data source with this name already exists") }
         if (changed == 0) throw JdbcSupport.conflict("the data source changed concurrently")
         return dataSource
+    }
+
+    /**
+     * One transaction (its own connection, so it does not depend on an ambient Spring transaction): refuse while a binding uses the source, then remove the
+     * rows that only exist for it, then the source itself. Every statement carries the tenant. The credential row is not touched here.
+     */
+    override fun delete(tenantId: UUID, id: UUID): Boolean {
+        val dataSource = jdbc.dataSource ?: throw IllegalStateException("no data source")
+        dataSource.connection.use { c ->
+            c.autoCommit = false
+            try {
+                fun count(sql: String): Long = c.prepareStatement(sql).use { ps -> ps.setObject(1, tenantId); ps.setObject(2, id); ps.executeQuery().use { rs -> rs.next(); rs.getLong(1) } }
+                fun remove(sql: String): Int = c.prepareStatement(sql).use { ps -> ps.setObject(1, tenantId); ps.setObject(2, id); ps.executeUpdate() }
+                if (count("SELECT count(*) FROM data_sources WHERE tenant_id = ? AND id = ?") == 0L) { c.rollback(); return false }
+                if (count("SELECT count(*) FROM data_source_bindings WHERE tenant_id = ? AND data_source_id = ?") > 0L) { c.rollback(); throw JdbcSupport.conflict("the data source is still bound to an application; remove the bindings first") }
+                remove("DELETE FROM data_idempotency WHERE tenant_id = ? AND data_source_id = ?")
+                remove("DELETE FROM source_schemas WHERE tenant_id = ? AND data_source_id = ?")
+                remove("DELETE FROM data_queries WHERE tenant_id = ? AND data_source_id = ?")
+                remove("DELETE FROM data_mutations WHERE tenant_id = ? AND data_source_id = ?")
+                val removed = remove("DELETE FROM data_sources WHERE tenant_id = ? AND id = ?")
+                c.commit()
+                return removed > 0
+            } catch (e: Exception) {
+                runCatching { c.rollback() }
+                if (e is org.springframework.dao.DataAccessException || e is java.sql.SQLException) throw JdbcSupport.conflict("the data source could not be removed; it may still be in use")
+                throw e
+            }
+        }
     }
 
     private fun map(rs: ResultSet): DataSource {

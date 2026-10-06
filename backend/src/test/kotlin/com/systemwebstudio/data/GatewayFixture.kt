@@ -115,7 +115,7 @@ class GatewayFixture {
     val secret = "sk-live-TOPSECRET-9f8e7d"
     val clock = MutableClock()
     val repo = InMemoryDataSourceRepository()
-    val credentialStore = InMemoryCredentialStore()
+    val credentialStore = InMemoryCredentialStore { clock.instant() }
     val vault = SecretsCryptoCredentialVault(SecretsCrypto(Base64.getEncoder().encodeToString(ByteArray(32) { (it + 5).toByte() })), credentialStore)
     val audit = RecordingAuditSink()
     val authorizer = ScriptedAuthorizer()

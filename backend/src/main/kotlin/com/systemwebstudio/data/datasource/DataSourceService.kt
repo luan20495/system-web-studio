@@ -24,6 +24,17 @@ interface DataSourceRepository {
      * filters in SQL; the default derives it from [find] so in-memory test doubles keep working.
      */
     fun findInWorkspace(tenantId: UUID, workspaceId: UUID, id: UUID): DataSource? = find(tenantId, id)?.takeIf { it.workspaceId == workspaceId }
+
+    /** B-C0-W-03: the data sources of one workspace of the tenant (a source without a workspace is never listed here). */
+    fun listInWorkspace(tenantId: UUID, workspaceId: UUID): List<DataSource> = list(tenantId).filter { it.workspaceId == workspaceId }
+
+    /**
+     * B-C0-W-03: removes the data source together with the rows that only exist for it (schema snapshots, approved queries and mutations, idempotency
+     * records) in ONE transaction. The credential material is not touched here (the service discards it through the vault).
+     * @return false when the data source does not exist for the tenant
+     * @throws ConnectorFailure(CONFLICT) while an application binding still points at it: unbind first, nothing is removed
+     */
+    fun delete(tenantId: UUID, id: UUID): Boolean = throw ConnectorFailure(FailureCodes.NOT_IMPLEMENTED, "this store cannot delete data sources")
 }
 
 /**
@@ -71,6 +82,9 @@ object DataAuditActions {
     const val CREATED = "DATASOURCE_CREATED"
     const val UPDATED = "DATASOURCE_UPDATED"
     const val CREDENTIAL_ROTATED = "DATASOURCE_CREDENTIAL_ROTATED"
+    const val CREDENTIAL_REMOVED = "DATASOURCE_CREDENTIAL_REMOVED"
+    const val DELETED = "DATASOURCE_DELETED"
+    const val BINDING_CHANGED = "DATASOURCE_BINDING_CHANGED"
     const val STATUS_CHANGED = "DATASOURCE_STATUS_CHANGED"
     const val SCHEMA_REFRESHED = "DATASOURCE_SCHEMA_REFRESHED"
     const val QUERY_SERVED = "DATA_QUERY_SERVED"
