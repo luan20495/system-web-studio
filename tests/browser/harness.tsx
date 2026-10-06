@@ -21,6 +21,10 @@ type Ops = (SchemaOperation | DefinitionOperation)[];
 declare global { interface Window { __ops: { summary: string; ops: Ops }[]; __published: number; } }
 window.__ops = []; window.__published = 0;
 const BROKEN = new URLSearchParams(location.search).has("broken");
+// ?v2=1 : harness-only switch that behaves like a backend whose component-metadata endpoint exists, so the typed V2 editors unlock. It adds NO data source
+// operations (none exist) and no query results; the seeded definitions below are a fixture of the DOCUMENT, not data.
+const V2 = new URLSearchParams(location.search).has("v2");
+const V2_SEED = V2 ? { dataSources: [{ id: "ds1", name: "Kho đơn hàng", type: "CONNECTOR" }], queries: [{ id: "q-orders", name: "Danh sách đơn", dataSourceRef: "ds1", operationKey: "orders.list", params: [] }] } : {};
 
 const comp = (id: string, name: string, category: string, required: string[], properties: RegistryComponent["versions"][number]["propsSchema"]["properties"]): RegistryComponent =>
   ({ id, name, category, description: name, latestVersion: "1.0.0", status: "ACTIVE", versions: [{ version: "1.0.0", status: "ACTIVE", propsSchema: { required, properties } }] });
@@ -67,12 +71,12 @@ function Host() {
   const [doc, setDoc] = useState<AppDefinitionV2>({ page: "Trang chủ", sections: [
     { id: "s-nav", type: "Navbar", props: { brand: "Harness" } }, { id: "s-hero", type: "Hero", props: { title: "Xin chào", subtitle: "Mô tả" } },
     { id: "s-test", type: "Testimonials", props: { heading: "Khách hàng" } }, { id: "s-foot", type: "Footer", props: { text: "© Harness" } },
-  ], pages: [], ...(BROKEN ? { site: { navigation: [{ id: "n1", label: "Trang đã mất", pageId: "ghost" }] } } : {}) } as unknown as AppDefinitionV2);
+  ], pages: [], ...V2_SEED, ...(BROKEN ? { site: { navigation: [{ id: "n1", label: "Trang đã mất", pageId: "ghost" }] } } : {}) } as unknown as AppDefinitionV2);
   const [revision, setRevision] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pageId, setPageId] = useState("home");
   const [device, setDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
-  const backend = useMemo(() => backendFrom({ status: "error", error: { status: 404, message: "Not Found" } }), []);
+  const backend = useMemo(() => backendFrom(V2 ? { status: "ok", metadata: [] } : { status: "error", error: { status: 404, message: "Not Found" } }), []);
   return <div className="studio workspace3 bx-root"><BuilderWorkspace
     project={project} doc={doc} revision={revision} registry={registry} assets={[]} blocks={[]} backend={backend} pageId={pageId} onPage={(id) => { setPageId(id); setSelectedId(null); }}
     selectedId={selectedId} onSelect={setSelectedId} device={device} onDevice={setDevice} busy={false} save={{ state: "saved", at: null }} readOnly={false} latest={1}

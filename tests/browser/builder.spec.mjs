@@ -276,6 +276,65 @@ async function dragTo(page, from, to, { steps = 14, hold } = {}) {
   await ok.close();
 }
 
+// ---------- 10. Action / Workflow editors on the V2 contract (harness with component-metadata available) ----------
+{
+  const p = await browser.newPage({ viewport: { width: 1440, height: 1000 } }); p.errors = []; p.on("pageerror", (e) => p.errors.push(e.message));
+  await p.goto(URL_ + "?v2=1"); await p.waitForSelector("iframe"); await p.waitForTimeout(700);
+  const left = p.locator(".bx-left-panel");
+  await p.locator(".bx-left").getByRole("tab", { name: "Hành động" }).click();
+  await p.getByRole("button", { name: /＋ Hành động/ }).click(); await p.waitForTimeout(300);
+  const typeSel = left.locator("select").first();
+  const values = await typeSel.locator("option").evaluateAll((os) => os.map((o) => o.value));
+  check("Action: exactly the 9 canonical types are offered (REFRESH_QUERY present, no RUN_QUERY/WRITE_DATA/SET_VALUE)",
+    values.length === 9 && values.includes("REFRESH_QUERY") && !values.some((v) => /RUN_QUERY|WRITE_DATA|SET_VALUE|CALL_CONNECTOR_OPERATION/.test(v)), values.join(","));
+  await typeSel.selectOption("REFRESH_QUERY"); await p.waitForTimeout(200);
+  const txt = await left.innerText();
+  check("Action: REFRESH_QUERY asks for a query of the document (Danh sách đơn), not a free-form field", /Danh sách đơn/.test(txt) || (await left.locator("select option").allInnerTexts()).some((t) => /Danh sách đơn/.test(t)));
+  const noFree = await left.locator("textarea").count();
+  check("Action editor has no free-text/code box (no arbitrary JS)", noFree === 0);
+  await left.locator("select").filter({ has: p.locator('option:text("Danh sách đơn")') }).first().selectOption({ label: "Danh sách đơn" }).catch(() => {});
+  await p.getByRole("button", { name: "Lưu hành động" }).click(); await p.waitForTimeout(500);
+  const o = (await ops(p)).flatMap((x) => x.ops).find((x) => x.type === "ADD_ACTION");
+  check("Action: saving emits ADD_ACTION with type REFRESH_QUERY + queryRef (canonical definition)", o?.definition?.type === "REFRESH_QUERY" && o.definition.queryRef === "q-orders", JSON.stringify(o));
+  check("Action: a child/unattached action carries no trigger", !!o && !("trigger" in (o.definition ?? {})) , JSON.stringify(o?.definition));
+  // workflow
+  await p.locator(".bx-left").getByRole("tab", { name: "Workflow" }).click(); await p.waitForTimeout(300);
+  const wtxt = await left.innerText();
+  check("Workflow panel is available with the V2 backend and offers a new workflow", /Workflow/.test(wtxt) && (await left.getByRole("button", { name: /＋ Workflow/ }).count()) >= 1, wtxt.replace(/\n/g, " ").slice(0, 120));
+  await left.getByRole("button", { name: /＋ Workflow/ }).click(); await p.waitForTimeout(300);
+  const wopts = await left.evaluate((el) => [...el.querySelectorAll("select option")].map((o) => o.value).join(","));
+  await p.screenshot({ path: `${shots}/workflow-editor.png` });
+  check("Workflow editor opens (steps ACTION/WAIT/APPROVAL/BRANCH/END, no BPMN canvas)", (await left.locator("canvas, svg[role=graphics-document]").count()) === 0 && /END|Kết thúc/.test(await left.innerText()), wopts.slice(0, 120));
+  check("Action/Workflow: no page errors", p.errors.length === 0, p.errors.join(" ; "));
+  // Data wizard: data sources are NOT_READY, so no fake source, query or mapping can be created
+  await p.locator(".bx-left").getByRole("tab", { name: "Dữ liệu" }).click(); await p.waitForTimeout(300);
+  const dt = await left.innerText();
+  // Query step: DATE is a param type; `required` defaults to true (absent key means required)
+  await left.getByRole("tab", { name: "Truy vấn" }).click(); await p.waitForTimeout(300);
+  await left.getByLabel("Tên truy vấn").fill("Đơn theo ngày"); await left.getByLabel(/Mã thao tác đã duyệt/).fill("orders.byDate");
+  await left.getByRole("button", { name: "+ Thêm tham số" }).click(); await p.waitForTimeout(150);
+  const ptypes = await left.getByLabel("Kiểu tham số 1").locator("option").evaluateAll((os) => os.map((o) => o.value));
+  check("Query: param types are the contract's six, including DATE", ["STRING", "INTEGER", "NUMBER", "BOOLEAN", "TIMESTAMP", "DATE"].every((t) => ptypes.includes(t)) && ptypes.length === 6, ptypes.join(","));
+  await left.getByLabel("Tên tham số 1").fill("tu_ngay"); await left.getByLabel("Kiểu tham số 1").selectOption("DATE");
+  await left.getByRole("button", { name: /Lưu truy vấn/ }).click(); await p.waitForTimeout(500);
+  const qo = (await ops(p)).flatMap((x) => x.ops).find((x) => x.type === "ADD_QUERY");
+  const prm = qo?.definition?.params?.[0];
+  check("Query: saving emits ADD_QUERY with a DATE param, required by default (no `required:false` unless the author unticked it)", prm?.type === "DATE" && prm.required !== false && qo.definition.dataSourceRef === "ds1" && qo.definition.operationKey === "orders.byDate", JSON.stringify(qo?.definition));
+  // Mapping step: transforms[] is the only transform shape; DATE is a real transform; no legacy `transform` key is ever written
+  await left.getByRole("tab", { name: "Ánh xạ" }).click(); await p.waitForTimeout(300);
+  await left.getByLabel("Cột nguồn của trường 1").fill("order_date"); await left.getByLabel("Tên trường 1").fill("ngay");
+  const tsel = left.getByLabel("Thêm biến đổi cho trường ngay");
+  const topts = await tsel.locator("option").evaluateAll((os) => os.map((o) => o.value).filter(Boolean));
+  check("Mapping: the transform picker offers canonical C3 transform types only, nothing legacy", topts.length >= 3 && topts.every((t) => ["toString", "toNumber", "trim", "lower", "upper", "toBoolean", "date", "enumMap", "join", "split", "formula"].includes(t)), topts.join(","));
+  await tsel.selectOption("trim"); await p.waitForTimeout(200);
+  await left.getByRole("button", { name: "Lưu ánh xạ" }).click(); await p.waitForTimeout(500);
+  const mp = (await ops(p)).flatMap((x) => x.ops).find((x) => x.type === "ADD_MAPPING");
+  const f0 = mp?.definition?.fields?.[0];
+  check("Mapping: saving emits ADD_MAPPING with fields[].transforms[] (type trim) and no legacy `transform` key", Array.isArray(f0?.transforms) && f0.transforms[0]?.type === "trim" && !("transform" in f0) && mp.definition.queryRef === "q1", JSON.stringify(mp?.definition?.fields));
+  check("Data: the wizard says Chưa sẵn sàng for sources/discovery/preview even with the V2 backend (no operation creates a source)", /Chưa sẵn sàng/.test(dt) && /Nguồn dữ liệu/.test(dt), dt.replace(/\n/g, " ").slice(0, 160));
+  await p.close();
+}
+
 await browser.close();
 const failed = results.filter((r) => !r.ok);
 console.log(`\n${results.length - failed.length}/${results.length} passed`);
