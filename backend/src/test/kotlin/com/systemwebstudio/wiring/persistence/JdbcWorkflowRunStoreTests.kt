@@ -268,6 +268,80 @@ class JdbcWorkflowRunStoreTests : DataRuntimeJdbcTestBase() {
         assertThat(claim(now.plusSeconds(6)).map { it.runId }).contains(stale.runId)               // after it
     }
 
+    // ---- C4 H-3: durable step lease --------------------------------------------------------------------------------
+
+    private fun running(r: WorkflowRun, owner: String?, until: Instant?, updatedAt: Instant) = move(r) {
+        it.copy(status = WorkflowRunStatus.RUNNING, updatedAt = updatedAt, leaseOwner = owner, leaseUntil = until,
+            steps = it.steps + ("a" to it.steps["a"]!!.copy(status = StepStatus.RUNNING, attempt = 1, startedAt = updatedAt)))
+    }
+
+    @Test
+    fun `the lease is written by the claim, read back, renewed and cleared by compare-and-set, and survives a restart`() {
+        val r = created()
+        val claimed = running(r, "node-a", at.plus(Duration.ofMinutes(2)), at)
+        assertThat(claimed.leaseOwner).isEqualTo("node-a")
+        assertThat(claimed.leaseUntil).isEqualTo(at.plus(Duration.ofMinutes(2)))
+        assertThat(jdbc.queryForMap("SELECT lease_owner, lease_until IS NOT NULL AS has FROM workflow_runs WHERE run_id = ?", r.runId)["lease_owner"]).isEqualTo("node-a")
+        assertThat(reload(r, newStore())).isEqualTo(claimed)                                        // the new process sees the same owner and expiry
+        val renewed = move(r) { it.copy(leaseUntil = at.plus(Duration.ofMinutes(4)), updatedAt = at.plusSeconds(40)) }
+        assertThat(renewed.leaseUntil).isEqualTo(at.plus(Duration.ofMinutes(4)))
+        assertThat(renewed.version).isEqualTo(claimed.version + 1)                                    // a renewal is a compare-and-set like any other
+        val released = move(r) { it.copy(status = WorkflowRunStatus.WAITING, leaseOwner = null, leaseUntil = null, updatedAt = at.plusSeconds(60)) }
+        assertThat(released.leaseOwner).isNull(); assertThat(released.leaseUntil).isNull()
+    }
+
+    @Test
+    fun `a renewal from a stale version loses and does not extend the lease`() {
+        val r = created()
+        running(r, "node-a", at.plus(Duration.ofMinutes(2)), at)
+        val seen = reload(r)
+        move(r) { it.copy(updatedAt = at.plusSeconds(1)) }                                            // someone else moved the run
+        assertThat(store.compareAndSet(seen, seen.copy(leaseUntil = at.plus(Duration.ofHours(1))))).isFalse()
+        assertThat(reload(r).leaseUntil).isEqualTo(at.plus(Duration.ofMinutes(2)))
+    }
+
+    @Test
+    fun `a RUNNING run whose lease ran out is claimed even though it was updated recently`() {
+        val r = created()
+        running(r, "node-dead", at.plus(Duration.ofMinutes(5)), at.plus(Duration.ofMinutes(9)))      // updated_at is fresh: only the lease says it is abandoned
+        assertThat(claim(at.plus(Duration.ofMinutes(10))).map { it.runId }).contains(r.runId)
+    }
+
+    @Test
+    fun `a RUNNING run with a valid lease is left alone however old its updated_at is`() {
+        val r = created()
+        running(r, "node-a", at.plus(Duration.ofHours(2)), at)                                        // untouched for 10 minutes, but its owner holds the lease
+        assertThat(claim(at.plus(Duration.ofMinutes(10))).map { it.runId }).doesNotContain(r.runId)
+        assertThat(claim(at.plus(Duration.ofHours(2)).plusSeconds(1)).map { it.runId }).contains(r.runId)   // and the moment the lease runs out it is abandoned
+    }
+
+    @Test
+    fun `a lease that expires exactly now counts as expired (lease_until is not after now)`() {
+        val r = created()
+        val until = at.plus(Duration.ofMinutes(5))
+        running(r, "node-a", until, at.plus(Duration.ofMinutes(4)))
+        assertThat(claim(until.minusSeconds(1)).map { it.runId }).doesNotContain(r.runId)
+        assertThat(claim(until).map { it.runId }).contains(r.runId)
+    }
+
+    @Test
+    fun `a run without a lease still falls back to the updated_at rule`() {
+        val noLease = created(); val fresh = created()
+        running(noLease, null, null, at)
+        running(fresh, null, null, at.plus(Duration.ofMinutes(9)))
+        val ids = claim(at.plus(Duration.ofMinutes(10))).map { it.runId }
+        assertThat(ids).contains(noLease.runId).doesNotContain(fresh.runId)
+    }
+
+    @Test
+    fun `a finished run never carries a lease claim and a finished compensating run is still found by the stale rule`() {
+        val r = created()
+        running(r, "node-a", at.plus(Duration.ofHours(1)), at)
+        val done = move(r) { it.copy(status = WorkflowRunStatus.FAILED, finishedAt = at.plusSeconds(1), updatedAt = at.plusSeconds(1), compensation = CompensationState.IN_PROGRESS, leaseOwner = null, leaseUntil = null, currentStepId = null) }
+        assertThat(done.leaseUntil).isNull()
+        assertThat(claim(at.plus(Duration.ofMinutes(10))).map { it.runId }).contains(r.runId)
+    }
+
     @Test
     fun `a run that was just updated is not stale and is left alone`() {
         val fresh = created(run(createdAt = at.plus(Duration.ofMinutes(9))))

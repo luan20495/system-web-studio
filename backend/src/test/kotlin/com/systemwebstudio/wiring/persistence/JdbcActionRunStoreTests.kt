@@ -1,5 +1,6 @@
 package com.systemwebstudio.wiring.persistence
 
+import com.systemwebstudio.logic.action.AbandonedRuns
 import com.systemwebstudio.logic.action.ActionErrorCodes
 import com.systemwebstudio.logic.action.ActionResult
 import com.systemwebstudio.logic.action.RunBegin
@@ -137,10 +138,10 @@ class JdbcActionRunStoreTests : DataRuntimeJdbcTestBase() {
     // ---- recovery of abandoned runs -------------------------------------------------------------------------------
 
     @Test
-    fun `an abandoned RUNNING run is turned into a retryable timeout, a fresh one is left alone`() {
+    fun `an abandoned RUNNING NON-mutating run is turned into a retryable timeout, a fresh one is left alone`() {
         val abandoned = key(); val fresh = key()
-        val old = started(store.begin(abandoned, "fp", at))
-        val young = started(store.begin(fresh, "fp", at.plus(Duration.ofHours(1))))
+        val old = started(store.begin(abandoned, "fp", at, mutating = false))
+        val young = started(store.begin(fresh, "fp", at.plus(Duration.ofHours(1)), mutating = false))
         assertThat(store.sweepStale(at.plus(Duration.ofMinutes(30)), at.plus(Duration.ofHours(1)))).isGreaterThanOrEqualTo(1)
         val swept = store.find(abandoned)!!
         assertThat(swept.status).isEqualTo(RunStatus.FAILED)
@@ -149,9 +150,62 @@ class JdbcActionRunStoreTests : DataRuntimeJdbcTestBase() {
         assertThat(failure.retryable).isTrue()
         assertThat(store.find(fresh)!!.status).isEqualTo(RunStatus.RUNNING)
         assertThat(store.complete(abandoned, old.runId, ok("zombie"), at.plus(Duration.ofHours(2)))).isFalse()   // the crashed worker cannot overwrite the sweep
-        val retry = started(store.begin(abandoned, "fp", at.plus(Duration.ofHours(2))))              // a retry is a new attempt of the SAME key (the data layer dedupes the write)
+        val retry = started(store.begin(abandoned, "fp", at.plus(Duration.ofHours(2)), mutating = false))   // a retry of a read is a new attempt of the SAME key
         assertThat(retry.attempt).isEqualTo(2)
         assertThat(young.attempt).isEqualTo(1)
+    }
+
+    // ---- A-1: an abandoned MUTATING run is an unknown outcome ------------------------------------------------------
+
+    @Test
+    fun `mutating is stored with the run, survives a restart and defaults to true when the caller does not say`() {
+        val read = key(); val write = key(); val unsaid = key()
+        started(store.begin(read, "fp", at, mutating = false))
+        started(store.begin(write, "fp", at, mutating = true))
+        started(store.begin(unsaid, "fp", at))                                                      // the 3-argument begin of the interface: the safe side
+        val restarted = newStore()
+        assertThat(restarted.find(read)!!.mutating).isFalse()
+        assertThat(restarted.find(write)!!.mutating).isTrue()
+        assertThat(restarted.find(unsaid)!!.mutating).isTrue()
+        assertThat(jdbc.queryForObject("SELECT mutating FROM action_runs WHERE tenant_id = ? AND idempotency_key = ?", Boolean::class.java, tenant, unsaid.idempotencyKey)).isTrue()
+    }
+
+    @Test
+    fun `an abandoned MUTATING run becomes IDEMPOTENCY_OUTCOME_UNKNOWN, never retryable, and is replayed as it is after a restart`() {
+        val k = key()
+        val run = started(store.begin(k, "fp", at, mutating = true))
+        assertThat(store.sweepStale(at.plus(Duration.ofMinutes(30)), at.plus(Duration.ofHours(1)))).isGreaterThanOrEqualTo(1)
+        val swept = store.find(k)!!
+        assertThat(swept.status).isEqualTo(RunStatus.FAILED)
+        assertThat(swept.mutating).isTrue()
+        val failure = swept.result as ActionResult.Failed
+        assertThat(failure.code).isEqualTo(ActionErrorCodes.IDEMPOTENCY_OUTCOME_UNKNOWN)
+        assertThat(failure.retryable).isFalse()
+        assertThat(failure).isEqualTo(AbandonedRuns.result(true))                                   // the one definition shared with InMemoryActionRunStore
+        assertThat(store.complete(k, run.runId, ok("zombie"), at.plus(Duration.ofHours(2)))).isFalse()
+        assertThat(newStore().begin(k, "fp", at.plus(Duration.ofHours(2)), mutating = true)).isEqualTo(RunBegin.Replay(failure))   // no new attempt: the write is not run again
+        assertThat(store.find(k)!!.attempt).isEqualTo(1)
+    }
+
+    @Test
+    fun `one sweep treats a mutating and a non-mutating abandoned run each by its own flag`() {
+        val write = key(); val read = key()
+        started(store.begin(write, "fp", at, mutating = true))
+        started(store.begin(read, "fp", at, mutating = false))
+        store.sweepStale(at.plusSeconds(1), at.plusSeconds(2))
+        assertThat((store.find(write)!!.result as ActionResult.Failed).code).isEqualTo(ActionErrorCodes.IDEMPOTENCY_OUTCOME_UNKNOWN)
+        assertThat((store.find(read)!!.result as ActionResult.Failed).code).isEqualTo(ActionErrorCodes.TIMEOUT)
+        assertThat((store.find(read)!!.result as ActionResult.Failed).retryable).isTrue()
+    }
+
+    @Test
+    fun `a retry after a retryable failure records the mutating flag of the new attempt`() {
+        val k = key()
+        val first = started(store.begin(k, "fp", at, mutating = false))
+        store.complete(k, first.runId, ActionResult.Failed(ActionErrorCodes.TIMEOUT, retryable = true, message = "slow"), at)
+        val second = started(store.begin(k, "fp", at.plusSeconds(5), mutating = true))
+        assertThat(second.attempt).isEqualTo(2)
+        assertThat(store.find(k)!!.mutating).isTrue()
     }
 
     @Test

@@ -21,12 +21,12 @@ class ActionRunRecoveryTests {
     private val store = InMemoryActionRunStore()
     private val key = RunKey(Fx.tenantA, Fx.appA, "create", Fx.user, "k1")
 
-    private fun started() = store.begin(key, "fp", clock.instant()) as RunBegin.Started
+    private fun started(mutating: Boolean = false) = store.begin(key, "fp", clock.instant(), mutating) as RunBegin.Started
 
     @Test
-    fun `a run inside its lease is left alone, an abandoned one becomes a retryable timeout`() {
+    fun `a run inside its lease is left alone, an abandoned NON-mutating one becomes a retryable timeout`() {
         val recovery = ActionRunRecovery(store, "PT10M", clock)
-        val run = started()
+        val run = started(mutating = false)
         clock.advance(Duration.ofMinutes(9))
         recovery.tick()
         assertThat(store.find(key)!!.status).isEqualTo(RunStatus.RUNNING)
@@ -39,6 +39,22 @@ class ActionRunRecoveryTests {
         assertThat(failure.retryable).isTrue()
         assertThat(store.complete(key, run.runId, ActionResult.Ok(Fx.obj()), clock.instant())).isFalse()   // a late result from the dead worker is refused
         assertThat((store.begin(key, "fp", clock.instant()) as RunBegin.Started).attempt).isEqualTo(2)
+    }
+
+    @Test
+    fun `an abandoned MUTATING run is an unknown outcome - not retryable, replayed as it is, never started again (A-1)`() {
+        val recovery = ActionRunRecovery(store, "PT10M", clock)
+        val run = started(mutating = true)
+        clock.advance(Duration.ofMinutes(11))
+        recovery.tick()
+        val swept = store.find(key)!!
+        assertThat(swept.status).isEqualTo(RunStatus.FAILED)
+        assertThat(swept.mutating).isTrue()
+        val failure = swept.result as ActionResult.Failed
+        assertThat(failure.code).isEqualTo(ActionErrorCodes.IDEMPOTENCY_OUTCOME_UNKNOWN)
+        assertThat(failure.retryable).isFalse()
+        assertThat(store.complete(key, run.runId, ActionResult.Ok(Fx.obj()), clock.instant())).isFalse()   // a late result from the dead worker is refused
+        assertThat(store.begin(key, "fp", clock.instant(), mutating = true)).isEqualTo(RunBegin.Replay(failure))   // the second caller is told, the handler does not run again
     }
 
     @Test

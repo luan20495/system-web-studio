@@ -155,6 +155,32 @@ class WorkflowRunPersistenceMigrationTests : IntegrationTestBase() {
     }
 
     @Test
+    fun `C4 contract columns are part of V29 - action_runs mutating defaults to TRUE and is mandatory, the workflow lease is nullable and paired`() {
+        fun column(table: String, name: String) = jdbc.queryForMap(
+            "SELECT is_nullable, data_type, column_default, character_maximum_length FROM information_schema.columns WHERE table_name = ? AND column_name = ?", table, name)
+        val mutating = column("action_runs", "mutating")
+        assertThat(mutating["is_nullable"]).isEqualTo("NO")
+        assertThat(mutating["data_type"]).isEqualTo("boolean")
+        assertThat(mutating["column_default"].toString()).isEqualTo("true")
+        val owner = column("workflow_runs", "lease_owner")
+        assertThat(owner["is_nullable"]).isEqualTo("YES"); assertThat(owner["character_maximum_length"]).isEqualTo(64)
+        assertThat(column("workflow_runs", "lease_until")["data_type"]).isEqualTo("timestamp with time zone")
+        assertThat(column("workflow_runs", "lease_until")["is_nullable"]).isEqualTo("YES")
+
+        val t = newTenant(); val ws = workspaceOf(t); val app = projectIn(ws, t)
+        // a row that does not say anything about `mutating` is treated as mutating (the safe side for an abandoned run)
+        val legacy = actionRun(t)
+        assertThat(jdbc.queryForObject("SELECT mutating FROM action_runs WHERE run_id = ?", Boolean::class.java, legacy)).isTrue()
+        // owner and expiry come together
+        val run = workflowRun(t, ws, app, status = "RUNNING")
+        assertThat(jdbc.queryForList("SELECT 1 FROM workflow_runs WHERE run_id = ? AND lease_owner IS NULL AND lease_until IS NULL", Int::class.java, run)).hasSize(1)
+        assertThatThrownBy { jdbc.update("UPDATE workflow_runs SET lease_owner = 'node-1' WHERE run_id = ?", run) }.hasMessageContaining("workflow_runs_lease_check")
+        assertThatThrownBy { jdbc.update("UPDATE workflow_runs SET lease_until = now() WHERE run_id = ?", run) }.hasMessageContaining("workflow_runs_lease_check")
+        assertThat(jdbc.update("UPDATE workflow_runs SET lease_owner = 'node-1', lease_until = now() + interval '2 minutes' WHERE run_id = ?", run)).isEqualTo(1)
+        assertThat(jdbc.update("UPDATE workflow_runs SET lease_owner = NULL, lease_until = NULL WHERE run_id = ?", run)).isEqualTo(1)
+    }
+
+    @Test
     fun `steps belong to a run of the same tenant and go with their run`() {
         val a = newTenant(); val aWs = workspaceOf(a); val aApp = projectIn(aWs, a)
         val b = newTenant()

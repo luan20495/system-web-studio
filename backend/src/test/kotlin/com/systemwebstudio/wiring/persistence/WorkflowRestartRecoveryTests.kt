@@ -121,6 +121,28 @@ class WorkflowRestartRecoveryTests : DataRuntimeJdbcTestBase() {
     }
 
     @Test
+    fun `a step whose dead owner still holds a valid lease is left alone, and is taken over as a new attempt once the lease ran out (C4 H-3)`() {
+        val before = process(wf("cr", act("a", "w1"), act("b", "w2")))
+        val id = before.startOk("cr", ctx = ctx)
+        val pending = before.stored(id)
+        before.queue.poll()                                                           // the job is gone with the dead worker
+        val leased = pending.withStep(pending.steps["a"]!!.copy(status = StepStatus.RUNNING, attempt = 1))
+            .copy(status = WorkflowRunStatus.RUNNING, leaseOwner = "node-dead", leaseUntil = pending.updatedAt.plus(Duration.ofMinutes(10)))
+        assertThat(before.baseStore.compareAndSet(pending, leased)).isTrue()
+        assertThat(jdbc.queryForObject("SELECT lease_owner FROM workflow_runs WHERE tenant_id = ? AND run_id = ?", String::class.java, Fx.tenantA, id)).isEqualTo("node-dead")
+
+        val after = process(wf("cr", act("a", "w1"), act("b", "w2")))
+        after.advance(Duration.ofMinutes(3))                                          // the updated_at rule alone would call it lost by now
+        assertThat(after.engine.sweep().republished).isZero()
+        after.advance(Duration.ofMinutes(8))                                          // 11 minutes: the lease (10) has run out
+        assertThat(after.engine.sweep().republished).isEqualTo(1)
+        after.drain()
+        assertThat(after.view(id).status).isEqualTo(WorkflowRunStatus.SUCCEEDED)
+        assertThat(after.step(id, "a")!!.attempt).isEqualTo(2)
+        assertThat(jdbc.queryForObject("SELECT lease_owner FROM workflow_runs WHERE tenant_id = ? AND run_id = ?", String::class.java, Fx.tenantA, id)).isNull()   // released with the run
+    }
+
+    @Test
     fun `a WAIT timer survives the restart and fires once`() {
         val def = wf("w", WorkflowStep("pause", StepKind.WAIT, wait = Duration.ofHours(1)), act("b", "w2"))
         val before = process(def)
