@@ -139,7 +139,7 @@ C6 must not mock RabbitMQ or the stores for G4.
 | G1 Durable persistence | **PARTIAL / WAITING V29 integration gate** | V29 (`wire/v29-run-persistence`) carries `action_runs.mutating`, `workflow_runs.lease_owner/lease_until` and the JDBC stores (H-1, H-3 handled by C0); not on `integration/v2` yet, no durable adapter wired, C4 has not run it |
 | G2-C4 RabbitMQ + DLQ (the adapter) | **GREEN** | `AmqpWorkflowQueueTests` 14/14 on a real RabbitMQ 4 (Testcontainers, macOS, JDK 21, Gradle 9.8); see section 10 |
 | G2-INTEGRATED RabbitMQ + DLQ in the running application | **BLOCKED BY C0 H-5** | the wiring still creates `InMemoryWorkflowQueue` itself (`AppRuntimeConfiguration.workflowQueue()`), a second bean named `workflowQueue` next to C4's; see section 10 |
-| G3 Restart / recovery | **NOT DONE** | unit-level scenarios VERIFIED; durable (PostgreSQL) + broker restart scenarios of 9.4 not written against real stores yet; need G1 and G2-INTEGRATED |
+| G3 Restart / recovery | **PARTIAL (8 scenarios GREEN on `verify/c4-g3`, not integrated)** | 8 tests on PostgreSQL (V29, `Jdbc*RunStore`) + RabbitMQ 4 + real engine/worker pass (section 11.3); broker restart, full application restart and the remaining scenarios of 9.4 are not written yet; nothing of this is on `integration/v2` |
 | G4 Real full-stack workflow E2E | **NOT DONE** | needs G1 + G2-INTEGRATED and a real wired stack |
 | G5 C6 regression | **NOT DONE** | handoff above |
 
@@ -215,3 +215,57 @@ Semantics impact: none. No queue, engine or action semantics changed; the frozen
 
 ### 10.4 V29 status (read from `wire/v29-run-persistence`, `5f28adc`)
 Present: `action_runs.mutating` (default TRUE), `workflow_runs.lease_owner/lease_until` (+ check that they come together, index for the lease predicate), `JdbcActionRunStore.begin(..., mutating)` and a `sweepStale` that applies `AbandonedRuns.result(mutating)`, lease mapping in `get/insert/compareAndSet`, sweep predicate on `lease_until`. A-1 and H-3 reached V29 as cherry-picks (`c0e4173`, `4095c30`), not the original C4 SHAs. H-1 and H-3 are therefore handled by C0; the remaining blocker is **H-5 wiring**, then **real restart/recovery verification (G3)** with PostgreSQL and RabbitMQ Testcontainers and no mocked persistence or broker (plan: 9.4 and the 12 scenarios of the C4 batch).
+
+## 11. Batch 5 - H-5 status, V29 compatibility, G3 preparation
+
+### 11.1 H-5 status (read on 2026-10-06, refs `integration/v2` `8e91172`, `wire/v29-run-persistence`, every other local ref): **still OPEN**
+`AppRuntimeConfiguration.kt:111` still declares `@Bean fun workflowQueue(): WorkflowQueue = InMemoryWorkflowQueue()`, and `integration/v2` does not contain the C4 queue sources yet (`integration/queue/workflow/*`, the `requeueInFlight` change in `logic/workflow/WorkflowQueue.kt`, the queue tests). `B-C4-11` stays OPEN, G2-INTEGRATED stays BLOCKED.
+
+Evidence for the exact C0 change (done only in the local verification branch `verify/c4-g3`, never in a C0 branch): `integration/v2` + the C4 queue files + C0's `AppRuntimeApiTests` (`app.workflow.enabled=true`):
+- **without** the C0 change: 10/10 tests fail at context start with `BeanDefinitionOverrideException: Invalid bean definition with name 'workflowQueue' defined in ... AppRuntimeConfiguration ... A bean with that name has already been defined in ... WorkflowQueueConfiguration`;
+- **with** the one-bean removal below: `AppRuntimeApiTests` 10/10, `RunStoreConfigurationTests` 6/6, and the new `WorkflowQueueWiringTests` 1/1 (`app.workflow.queue=amqp`: exactly one `WorkflowQueue`, its topology exists on the broker, publish / poll / ack round-trips).
+
+C0 change (`AppRuntimeConfiguration.kt`): delete
+```kotlin
+    @Bean
+    fun workflowQueue(): WorkflowQueue = InMemoryWorkflowQueue()
+```
+(and the then unused `InMemoryWorkflowQueue` import). `appRuntime(..., queue: WorkflowQueue, ...)` keeps injecting the interface. Nothing else in the wiring changes.
+
+C0 must import from `agent/c4-workflow` (HEAD `dfeb6fc` or later), byte for byte:
+- main: `integration/queue/workflow/{AmqpWorkflowQueue,WorkflowQueueConfiguration,WorkflowQueueSelection}.kt`, `logic/workflow/WorkflowQueue.kt` (only the `requeueInFlight` delta);
+- test: `integration/queue/workflow/{AmqpWorkflowQueueTests,WorkflowQueueConfigurationTests,WorkflowQueueSelectionTests}.kt`, `logic/workflow/{WorkflowQueueContract,InMemoryWorkflowQueueContractTests,WorkflowQueueDisciplineTests}.kt`;
+- no new dependency: `spring-boot-starter-amqp` (amqp-client 5.37.0) and `testcontainers-rabbitmq` are already in `build.gradle.kts`; `WorkflowFakes.kt` of `integration/v2` (with the `store` parameter) is the right one, do not take the C4 copy.
+
+### 11.2 Production configuration (audit of `application.yml`, `application-prod.yml`, `.env.example`, `compose*.yml`)
+The project already names the broker settings `RABBITMQ_HOST`, `RABBITMQ_PORT`, `RABBITMQ_USER`, `RABBITMQ_PASSWORD` (bound to `spring.rabbitmq.host|port|username|password`; `application-prod.yml` has no defaults, so a missing one stops start-up). C4's configuration reads exactly those `spring.rabbitmq.*` keys, so **nothing new is needed and the names `RABBITMQ_USERNAME` / `RABBITMQ_VHOST` must not be introduced**: the virtual host is `spring.rabbitmq.virtual-host`, default `/`. No credential is hard-coded in C4 (the code defaults `guest/guest` only apply when nothing at all is configured, which production cannot be).
+C0 should add (optional, readable intent): `app.workflow.queue: ${WORKFLOW_QUEUE:}` in `application.yml` and `queue: amqp` in `application-prod.yml`; unset + `prod` profile already means amqp, `memory` in prod is a start-up error. `app.workflow.amqp.*` (queue names, `delivery-limit`, `confirm-timeout` as `PT5S` or `5s`) keep their defaults.
+Known limit: C4's connection does not read `spring.rabbitmq.ssl.*` / `addresses` (none are used by the project today). A TLS broker needs a small C4 change first.
+Since commit `dfeb6fc` the configuration exists only with `app.workflow.enabled=true`, like the rest of the runtime.
+
+### 11.3 V29 compatibility (audit of `integration/v2`, `V29__workflow_run_persistence.sql`, `Jdbc{Action,Workflow}RunStore`, and the C0 tests)
+The C4 interfaces are identical on both sides: `ActionRunStore.kt`, `ActionRuntime.kt`, `WorkflowRun.kt`, `WorkflowEngine.kt` do not differ between `agent/c4-workflow` and `integration/v2` (only `WorkflowQueue.kt` does).
+- `action_runs.mutating BOOLEAN NOT NULL DEFAULT TRUE`; `JdbcActionRunStore.begin(..., mutating)` persists it (also on a retry attempt); `sweepStale` runs one statement per flag with `AbandonedRuns.result(mutating)`: mutating => `IDEMPOTENCY_OUTCOME_UNKNOWN`, `retryable=false`; non-mutating => retryable `TIMEOUT` (`JdbcActionRunStoreTests`).
+- `workflow_runs.lease_owner/lease_until` (check: both or neither), inserted, read and written by the same CAS as the claim; `claimForSweep` takes a run whose lease ran out (`lease_until <= now`), leaves a valid lease alone however old `updated_at` is, and falls back to `updated_at` without a lease (`JdbcWorkflowRunStoreTests`).
+- CAS from a stale version fails and writes nothing, not even the steps; of several concurrent CAS exactly one wins (`JdbcWorkflowRunStoreTests`). The engine-level ownership rules (stale reader cannot update, an old owner cannot commit or renew after the reclaim) are proved on the real stores by G3-04 and G3-03 (second test).
+No mismatch found: no signature, column or predicate differs from the C4 contract.
+
+G3 tests written and run (branch `verify/c4-g3`, class `wiring/persistence/WorkflowG3RecoveryTests`; real PostgreSQL via the V29 stores, real RabbitMQ 4 via `AmqpWorkflowQueue`, real `WorkflowEngine` / `WorkflowWorker` / `DefaultActionRuntime`; the only fake is the effect sink standing for C3): 8/8 pass.
+| Test | What it proves |
+|---|---|
+| G3-01 (2 tests) | step SUCCEEDED persisted, consumer dies before the ack => the broker redelivers (`deliveryCount` 2 observed), a new worker finds the persisted state, effect count stays 1, row untouched (version unchanged) for a finished run, queue and DLQ empty |
+| G3-02 | the same job 4x, also consumed by two workers at once, then again after the run ended => one effect per step, no write to a finished row |
+| G3-03 (2 tests) | mutation sent and cut off => `IDEMPOTENCY_OUTCOME_UNKNOWN` (persisted in `action_runs` too), no retry, no `onError` route, ambiguous step not compensated, earlier steps compensated; and the worker-dies variant: lease expiry + action-run recovery, the survivor never resends, the old worker's late return changes nothing |
+| G3-04 | worker dies after the claim and before execution: valid lease respected, expired lease taken over as attempt 2, one effect, the old owner's late return is dropped |
+| G3-05 / G3-06 | cancel while queued (never executes) and cancel while running (lease released, the step already running is compensated, nothing after it starts) |
+Mutation check (production code temporarily broken in the verification branch, then restored; each run = the whole class): abandoned mutating run => retryable TIMEOUT: G3-03 (worker-dies) fails; `onError` also for UNKNOWN: both G3-03 tests fail; step claim without state / current-step check: G3-02 fails; lease not released when a run leaves RUNNING: G3-01 (first), G3-04 and G3-06 fail; no compensation for a step that finishes after cancel: G3-06 fails. G3-05 was not mutated.
+Not covered yet: broker restart together with run state (needs its own fixed-port container; the shared test broker must not be restarted), whole-application restart through Spring, DLQ consumer (`drainDeadLetters` is called by nobody in the wiring), `ACTION_IN_PROGRESS` retry ordering against the action-run sweeper.
+
+### 11.4 Why the G3 tests are not on the C4 branch
+They need `JdbcActionRunStore`, `JdbcWorkflowRunStore`, `DataRuntimeJdbcTestBase` and the Flyway migration V29, which exist on `integration/v2` and not on `agent/c4-workflow`; a copy would be a handwritten fake, which is forbidden for G3. They live in the local branch `verify/c4-g3` (worktree `/Users/hoangluan/code/xweb-c4-g3`, `integration/v2` + C4 queue overlay + G3 tests, commits separate so C0 can take them one by one). They are C4-authored tests for C0 / C6 to import after H-5.
+
+### 11.5 Health and observability (audit of `integration/v2`)
+- Exists: Actuator `health` with `readiness = readinessState, db, redis, rabbit, minio` (`application.yml`), `rabbit` is Spring's own connection (broker reachable, **not** C4's channels), `db` is the datasource, `MinioHealth` is the only custom indicator. `show-details: never`.
+- Missing, nothing in `wiring/**` or `logic/**`: a workflow worker indicator (last successful `WorkflowWorkerRunner.tick`, last sweep), queue depth / DLQ depth, any `MeterRegistry` metric. The worker polls with `basic.get`, so the broker shows **no consumer** for the queue: "worker consumer active" cannot be read from RabbitMQ and must come from the application.
+- Handoff (not coded: outside `logic/**` and C0-owned): C0 adds a `HealthIndicator` for the workflow runtime (broker reachable through the workflow connection, last tick age below a threshold) and a DLQ consumer calling `WorkflowWorker.drainDeadLetters` (otherwise dead letters pile up unseen); C4 can supply `queueDepth()` / `deadLetterDepth()` on `AmqpWorkflowQueue` when C0 asks.
+- Evidence a G3 run must keep: `workflow_runs` / `workflow_run_steps` / `action_runs` rows (status, attempt, lease, version), queue and DLQ message counts from the management API (`:15672`), and the worker logs with the run id (`WorkflowJob.correlationId` = run id, `messageId` = job id).
