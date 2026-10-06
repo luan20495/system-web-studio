@@ -24,6 +24,10 @@ class JdbcDataSourceRepository(private val jdbc: JdbcTemplate) : DataSourceRepos
     override fun find(tenantId: UUID, id: UUID): DataSource? =
         jdbc.query("SELECT $COLUMNS FROM data_sources WHERE tenant_id = ? AND id = ?", { rs, _ -> map(rs) }, tenantId, id).firstOrNull()
 
+    /** B-C0-W-05: ownership is part of the query; a source of another workspace (or one without a workspace) is simply not found */
+    override fun findInWorkspace(tenantId: UUID, workspaceId: UUID, id: UUID): DataSource? =
+        jdbc.query("SELECT $COLUMNS FROM data_sources WHERE tenant_id = ? AND workspace_id = ? AND id = ?", { rs, _ -> map(rs) }, tenantId, workspaceId, id).firstOrNull()
+
     override fun list(tenantId: UUID): List<DataSource> =
         jdbc.query("SELECT $COLUMNS FROM data_sources WHERE tenant_id = ? ORDER BY created_at, id LIMIT $MAX_LIST", { rs, _ -> map(rs) }, tenantId)
 

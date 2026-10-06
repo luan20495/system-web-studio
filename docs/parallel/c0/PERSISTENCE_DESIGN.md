@@ -53,6 +53,7 @@ CREATE TABLE data_sources (
     CONSTRAINT data_sources_config_object CHECK (jsonb_typeof(config_nonsecret) = 'object'),
     CONSTRAINT data_sources_tenant_name_unique UNIQUE (tenant_id, name),
     CONSTRAINT data_sources_id_tenant_unique UNIQUE (id, tenant_id),
+    CONSTRAINT data_sources_id_tenant_workspace_unique UNIQUE (id, tenant_id, workspace_id),
     CONSTRAINT data_sources_workspace_tenant_fk FOREIGN KEY (workspace_id, tenant_id) REFERENCES workspaces (id, tenant_id)
 );
 CREATE INDEX data_sources_tenant_idx ON data_sources (tenant_id, created_at);
@@ -147,7 +148,7 @@ CREATE TABLE data_source_bindings (        -- C0: AppDefinition local data-sourc
     CONSTRAINT data_source_bindings_mode_check CHECK (mode IN ('LIVE', 'TEST')),
     CONSTRAINT data_source_bindings_workspace_tenant_fk FOREIGN KEY (workspace_id, tenant_id) REFERENCES workspaces (id, tenant_id),
     CONSTRAINT data_source_bindings_project_fk FOREIGN KEY (workspace_id, project_id) REFERENCES projects (workspace_id, id),
-    CONSTRAINT data_source_bindings_source_fk FOREIGN KEY (data_source_id, tenant_id) REFERENCES data_sources (id, tenant_id)
+    CONSTRAINT data_source_bindings_source_fk FOREIGN KEY (data_source_id, tenant_id, workspace_id) REFERENCES data_sources (id, tenant_id, workspace_id)
 );
 CREATE INDEX data_source_bindings_source_idx ON data_source_bindings (tenant_id, data_source_id);
 ```

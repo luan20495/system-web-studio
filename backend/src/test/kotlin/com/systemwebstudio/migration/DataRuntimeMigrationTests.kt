@@ -116,7 +116,7 @@ class DataRuntimeMigrationTests : IntegrationTestBase() {
 
     @Test
     fun `a binding is per project and mode, never crosses tenants or workspaces`() {
-        val ws = fx.workspace(); val p = projectIn(ws, TenantIds.DEFAULT); val s = source(TenantIds.DEFAULT)
+        val ws = fx.workspace(); val p = projectIn(ws, TenantIds.DEFAULT); val s = source(TenantIds.DEFAULT, ws)
         val insert = "INSERT INTO data_source_bindings (tenant_id, workspace_id, project_id, mode, slot_id, data_source_id) VALUES (?, ?, ?, ?, ?, ?)"
         jdbc.update(insert, TenantIds.DEFAULT, ws, p, "LIVE", "erp-db", s)
         jdbc.update(insert, TenantIds.DEFAULT, ws, p, "TEST", "erp-db", s)                                                                    // the same slot may be bound once per mode
@@ -125,9 +125,29 @@ class DataRuntimeMigrationTests : IntegrationTestBase() {
         val other = newTenant()
         assertThatThrownBy { jdbc.update(insert, TenantIds.DEFAULT, ws, p, "LIVE", "crm", source(other)) }.hasMessageContaining("data_source_bindings_source_fk")
         val otherWs = fx.workspace()
-        assertThatThrownBy { jdbc.update(insert, TenantIds.DEFAULT, otherWs, p, "LIVE", "crm", s) }.hasMessageContaining("data_source_bindings_project_fk")
-        val foreignWs = workspaceOf(other); val foreignProject = projectIn(foreignWs, other)          // the project really is in that workspace: only the tenant link is wrong
-        assertThatThrownBy { jdbc.update(insert, TenantIds.DEFAULT, foreignWs, foreignProject, "LIVE", "crm", s) }.hasMessageContaining("data_source_bindings_workspace_tenant_fk")
+        // the project is not in that workspace; the source is (so only the project link is wrong)
+        assertThatThrownBy { jdbc.update(insert, TenantIds.DEFAULT, otherWs, p, "LIVE", "crm", source(TenantIds.DEFAULT, otherWs)) }.hasMessageContaining("data_source_bindings_project_fk")
+        // a project and workspace that agree with each other, but in another tenant than the binding says: refused (the source cannot match either, so any of the FKs may speak first)
+        val foreignWs = workspaceOf(other); val foreignProject = projectIn(foreignWs, other)
+        assertThatThrownBy { jdbc.update(insert, TenantIds.DEFAULT, foreignWs, foreignProject, "LIVE", "crm", s) }.hasMessageContaining("violates foreign key constraint")
+    }
+
+    @Test
+    fun `a binding can only name a data source owned by the project's own workspace (B-C0-W-05)`() {
+        val ws = fx.workspace(); val p = projectIn(ws, TenantIds.DEFAULT)
+        val insert = "INSERT INTO data_source_bindings (tenant_id, workspace_id, project_id, mode, slot_id, data_source_id) VALUES (?, ?, ?, ?, ?, ?)"
+        // same tenant, another workspace
+        assertThatThrownBy { jdbc.update(insert, TenantIds.DEFAULT, ws, p, "LIVE", "erp-db", source(TenantIds.DEFAULT, fx.workspace())) }.hasMessageContaining("data_source_bindings_source_fk")
+        // same tenant, a tenant-level source (no workspace): never bindable
+        assertThatThrownBy { jdbc.update(insert, TenantIds.DEFAULT, ws, p, "TEST", "erp-db", source(TenantIds.DEFAULT)) }.hasMessageContaining("data_source_bindings_source_fk")
+        // another tenant's source, even one owned by a workspace
+        val other = newTenant()
+        assertThatThrownBy { jdbc.update(insert, TenantIds.DEFAULT, ws, p, "LIVE", "erp-db", source(other, workspaceOf(other))) }.hasMessageContaining("data_source_bindings_source_fk")
+        // and the right one still works
+        jdbc.update(insert, TenantIds.DEFAULT, ws, p, "LIVE", "erp-db", source(TenantIds.DEFAULT, ws))
+        // the rule is also true of an update: re-pointing an existing binding at another workspace's source is refused
+        val foreign = source(TenantIds.DEFAULT, fx.workspace())
+        assertThatThrownBy { jdbc.update("UPDATE data_source_bindings SET data_source_id = ? WHERE project_id = ? AND mode = 'LIVE'", foreign, p) }.hasMessageContaining("data_source_bindings_source_fk")
     }
 
     @Test

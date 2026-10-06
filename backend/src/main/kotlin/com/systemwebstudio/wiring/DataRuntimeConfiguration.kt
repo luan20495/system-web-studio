@@ -15,6 +15,7 @@ import com.systemwebstudio.data.datasource.DataAuditSink
 import com.systemwebstudio.data.datasource.DataConnector
 import com.systemwebstudio.data.datasource.DataConnectorRegistry
 import com.systemwebstudio.data.datasource.DataSourceRepository
+import com.systemwebstudio.data.datasource.DataSourceScope
 import com.systemwebstudio.data.datasource.DataSourceService
 import com.systemwebstudio.data.datasource.PlannedConnectors
 import com.systemwebstudio.data.datasource.RateLimitGate
@@ -116,7 +117,7 @@ class DataRuntimeConfiguration {
 
     @Bean
     fun c3DataSourceService(repository: DataSourceRepository, vault: CredentialVault, registry: DataConnectorRegistry, limits: RateLimitGate, audit: DataAuditSink) =
-        DataSourceService(repository, vault, registry, limits, audit)
+        DataSourceService(repository, vault, registry, limits, audit, DataSourceScope.WORKSPACE)      // B-C0-W-05: tenant + workspace, default deny
 
     @Bean fun c3QueryCache(redis: StringRedisTemplate): QueryCache = QueryCache(RedisCacheBackend(redis))
     @Bean fun c3EventBus(): DataEventBus = InMemoryDataEventBus()

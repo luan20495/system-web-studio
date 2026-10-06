@@ -105,6 +105,19 @@ class JdbcPersistenceTests : DataRuntimeJdbcTestBase() {
         assertThat(failureCode { repo.save(dataSource(a, name = "crm")) }).isEqualTo(FailureCodes.CONFLICT)
     }
 
+    @Test
+    fun `a workspace-scoped lookup finds only the source of that tenant and workspace`() {
+        val tenant = newTenant(); val ws = workspaceOf(tenant); val otherWs = workspaceOf(tenant); val otherTenant = newTenant()
+        val owned = dataSource(tenant, ws); val tenantLevel = dataSource(tenant)
+        repo.save(owned); repo.save(tenantLevel)
+        assertThat(repo.findInWorkspace(tenant, ws, owned.id)!!.id).isEqualTo(owned.id)
+        assertThat(repo.findInWorkspace(tenant, otherWs, owned.id)).isNull()                   // another workspace of the same tenant
+        assertThat(repo.findInWorkspace(otherTenant, ws, owned.id)).isNull()                   // another tenant
+        assertThat(repo.findInWorkspace(tenant, ws, tenantLevel.id)).isNull()                  // a tenant-level source belongs to no workspace
+        assertThat(repo.findInWorkspace(tenant, ws, UUID.randomUUID())).isNull()
+        assertThat(repo.find(tenant, tenantLevel.id)).isNotNull()                              // the tenant-scoped lookup is unchanged
+    }
+
     // ---------------------------------------------------------------------------------------------- credentials
 
     @Test
@@ -271,6 +284,23 @@ class JdbcPersistenceTests : DataRuntimeJdbcTestBase() {
         assertThat(writer.unbind(tenant, project, ExecutionMode.LIVE, "erp-db")).isTrue()
         assertThat(reader.bindings(tenant, project, ExecutionMode.LIVE)).isEmpty()
         assertThat(reader.bindings(tenant, project, ExecutionMode.TEST)).isNotEmpty()
+    }
+
+    @Test
+    fun `the binding reader only answers for a project whose workspace owns the project and the source`() {
+        val tenant = newTenant(); val ws = workspaceOf(tenant); val project = projectIn(ws, tenant)
+        val ds = dataSource(tenant, ws); repo.save(ds)
+        DataSourceBindingWriter(jdbc).bind(tenant, ws, project, ExecutionMode.LIVE, "erp-db", ds.id, null)
+        val reader = JdbcDataSourceSlotBindings(jdbc)
+        assertThat(reader.bindings(tenant, project, ExecutionMode.LIVE)).isEqualTo(mapOf("erp-db" to ds.id))
+        // a forged tenant or project id finds nothing, and a binding of one project is invisible to another
+        assertThat(reader.bindings(newTenant(), project, ExecutionMode.LIVE)).isEmpty()
+        assertThat(reader.bindings(tenant, projectIn(ws, tenant), ExecutionMode.LIVE)).isEmpty()
+        // the writer refuses a project that is not in the workspace it is told, and a tenant that does not own the workspace
+        val elsewhere = workspaceOf(tenant)
+        val own = dataSource(tenant, elsewhere); repo.save(own)
+        assertThat(DataSourceBindingWriter(jdbc).bind(tenant, elsewhere, project, ExecutionMode.LIVE, "x", own.id, null)).isFalse()
+        assertThat(DataSourceBindingWriter(jdbc).bind(newTenant(), ws, project, ExecutionMode.LIVE, "x", ds.id, null)).isFalse()
     }
 
     @Test

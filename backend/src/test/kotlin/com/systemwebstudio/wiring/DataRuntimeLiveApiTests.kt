@@ -10,6 +10,7 @@ import com.systemwebstudio.data.datasource.DataSourceRepository
 import com.systemwebstudio.data.datasource.DataSourceStatus
 import com.systemwebstudio.data.datasource.FailureCodes
 import com.systemwebstudio.data.gateway.DataGateway
+import com.systemwebstudio.data.query.DataJson
 import com.systemwebstudio.data.query.MutationDefinition
 import com.systemwebstudio.data.query.MutationKind
 import com.systemwebstudio.data.query.ParamType
@@ -30,6 +31,7 @@ import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.test.context.TestPropertySource
 import tools.jackson.databind.JsonNode
+import tools.jackson.databind.node.ObjectNode
 import java.time.Instant
 import java.util.UUID
 
@@ -73,22 +75,35 @@ class DataRuntimeLiveApiTests : IntegrationTestBase() {
     private class App(val sc: Scenario, val tenant: UUID, val source: DataSource)
 
     private fun rt(app: App, path: String) = "${app.sc.base}/app-runtime/$path"
-    private fun admin(sc: Scenario) = sessionFor(fx.user("wsadmin").also { fx.member(sc.ws, it, "WORKSPACE_ADMIN") }.username)
+    private fun adminUser(sc: Scenario) = fx.user("wsadmin").also { fx.member(sc.ws, it, "WORKSPACE_ADMIN") }
+    private fun admin(sc: Scenario) = sessionFor(adminUser(sc).username)
 
-    /** an application whose AppDefinition is both the working draft (TEST) and the published version (LIVE), with one registered source and approved operations */
-    private fun app(credentialRef: String? = null, bindLive: Boolean = true): App {
+    /** the AppDefinition with `erp-db` pointing straight at a registered source (a `sourceRef`), instead of being resolved through a binding */
+    private fun definitionWithSourceRef(sourceId: UUID): JsonNode {
+        val copy = sample.deepCopy<JsonNode>()
+        val erp = DataJson.elements(copy.get("dataSources")).first { it.get("id").asString() == "erp-db" } as ObjectNode
+        erp.put("sourceRef", sourceId.toString())
+        return copy
+    }
+
+    /**
+     * An application whose AppDefinition is both the working draft (TEST) and the published version (LIVE), with one registered source and approved operations.
+     * [sourceRef] = the AppDefinition names that source directly (no binding is made); otherwise `erp-db` is bound for LIVE to a source of the application's workspace.
+     */
+    private fun app(credentialRef: String? = null, bindLive: Boolean = true, sourceRef: ((Scenario, UUID) -> DataSource)? = null): App {
         val sc = scenario()
         val tenant = jdbc.queryForObject("SELECT tenant_id FROM workspaces WHERE id = ?", UUID::class.java, sc.ws)!!
-        schemas.upsertSchema(sc.projectId, sc.ws, sample)
-        val versionId = schemas.insertVersion(sc.ws, sc.projectId, 1, sample, "INITIAL", "published", null, null, null, sc.user.id)
+        val ds = sourceRef?.invoke(sc, tenant) ?: source(tenant, sc.ws, credentialRef)
+        val document = if (sourceRef != null) definitionWithSourceRef(ds.id) else sample
+        schemas.upsertSchema(sc.projectId, sc.ws, document)
+        val versionId = schemas.insertVersion(sc.ws, sc.projectId, 1, document, "INITIAL", "published", null, null, null, sc.user.id)
         jdbc.update("INSERT INTO deployments (id, workspace_id, project_id, version_id, requested_by, visibility, status, provider) VALUES (?, ?, ?, ?, ?, 'PRIVATE', 'RUNNING', 'mock')",
             UUID.randomUUID(), sc.ws, sc.projectId, versionId, sc.user.id)
-        val ds = source(tenant, sc.ws, credentialRef)
-        if (bindLive) bindings.bind(tenant, sc.ws, sc.projectId, ExecutionMode.LIVE, "erp-db", ds.id, sc.user.id)
+        if (sourceRef == null && bindLive) bindings.bind(tenant, sc.ws, sc.projectId, ExecutionMode.LIVE, "erp-db", ds.id, sc.user.id)
         return App(sc, tenant, ds)
     }
 
-    private fun source(tenant: UUID, ws: UUID, credentialRef: String? = null): DataSource {
+    private fun source(tenant: UUID, ws: UUID?, credentialRef: String? = null): DataSource {
         val now = Instant.now()
         val ds = DataSource(DataSourceRef(UUID.randomUUID(), tenant, "fake", emptyMap()), "erp-" + UUID.randomUUID().toString().take(8), credentialRef = credentialRef, workspaceId = ws, createdAt = now, updatedAt = now)
         repository.save(ds)
@@ -274,4 +289,132 @@ class DataRuntimeLiveApiTests : IntegrationTestBase() {
         assertThat(connector.queryCalls.get()).isZero()
         assertThat(connector.mutationCalls.get()).isZero()
     }
+
+    // ------------------------------------------------------------------------------------------------ B-C0-W-05: tenant + workspace + project ownership
+
+    private fun otherTenantWorkspace(): Pair<UUID, UUID> {
+        val tenant = UUID.randomUUID()
+        jdbc.update("INSERT INTO tenants (id, slug, name) VALUES (?, ?, 'T')", tenant, "t-" + tenant.toString().take(8))
+        val ws = UUID.randomUUID()
+        jdbc.update("INSERT INTO workspaces (id, name, slug, tenant_id) VALUES (?, 'x', ?, ?)", ws, "w-" + ws.toString().take(8), tenant)
+        return tenant to ws
+    }
+
+    /** a source that was never registered: the reference answer for "does not exist" */
+    private fun nowhere(tenant: UUID, ws: UUID) = DataSource(DataSourceRef(UUID.randomUUID(), tenant, "fake", emptyMap()), "ghost", workspaceId = ws)
+
+    private fun gatewayContext(app: App, workspaceId: UUID, user: com.systemwebstudio.identity.UserEntity) = com.systemwebstudio.data.gateway.GatewayContext(
+        tenant = com.systemwebstudio.tenancy.TenantContext(app.tenant, null, com.systemwebstudio.tenancy.TenantStatus.ACTIVE, false),
+        actorUserId = user.id, workspaceId = workspaceId, projectId = app.sc.projectId
+    )
+
+    private fun runList(app: App) = admin(app.sc).let { a -> a.post(rt(app, "queries/orders-list/run"), "{}").let { Triple(it.response.status, a.body(it).get("code")?.asString(), it.response.contentAsString) } }
+
+    @Test
+    fun `same tenant, same workspace, a directly referenced source of that workspace is allowed`() {
+        val app = app(sourceRef = { sc, tenant -> source(tenant, sc.ws) })
+        connector.rowsFor[app.source.id] = listOf(order("SO-OWN", "Own Co"))
+        val (status, _, body) = runList(app)
+        assertThat(status).describedAs(body).isEqualTo(200)
+        assertThat(body).contains("SO-OWN")
+        assertThat(connector.queryCalls.get()).isEqualTo(1)
+    }
+
+    @Test
+    fun `same tenant, another workspace, a direct sourceRef is refused exactly like a source that does not exist`() {
+        val foreign = app()                                                                  // workspace B of the same tenant, with its own source and data
+        connector.rowsFor[foreign.source.id] = listOf(order("SECRET-B", "Workspace B Customer"))
+        val intruder = app(sourceRef = { _, _ -> foreign.source })
+        val ghost = app(sourceRef = { sc, tenant -> nowhere(tenant, sc.ws) })
+        assertThat(intruder.tenant).isEqualTo(foreign.tenant)
+
+        val denied = runList(intruder); val missing = runList(ghost)
+        assertThat(denied.first).isEqualTo(404)
+        assertThat(denied.second).isEqualTo(FailureCodes.NOT_FOUND)
+        assertThat(denied.first).describedAs("no existence oracle: status").isEqualTo(missing.first)
+        assertThat(denied.second).describedAs("no existence oracle: code").isEqualTo(missing.second)
+        assertThat(denied.third).doesNotContain("SECRET-B").doesNotContain("Workspace B Customer")
+        assertThat(connector.queryCalls.get()).isZero()
+    }
+
+    @Test
+    fun `same tenant, another workspace, a direct sourceRef cannot write either, and nothing is reserved`() {
+        val foreign = app()
+        val intruder = app(sourceRef = { _, _ -> foreign.source })
+        val ghost = app(sourceRef = { sc, tenant -> nowhere(tenant, sc.ws) })
+        val (_, denied) = create(intruder, "order-intrusion")
+        val (_, missing) = create(ghost, "order-ghost-key")
+        assertThat(denied.response.status).isNotEqualTo(200)
+        assertThat(denied.response.status).isEqualTo(missing.response.status)
+        assertThat(connector.mutationCalls.get()).isZero()
+        assertThat(idempotencyRows(foreign)).isEmpty()
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM data_idempotency WHERE tenant_id = ? AND data_source_id = ?", Long::class.java, foreign.tenant, foreign.source.id)).isZero()
+    }
+
+    @Test
+    fun `a tenant-level source without a workspace is not reachable at run time, by sourceRef or by binding`() {
+        val app = app(bindLive = false)
+        val tenantLevel = source(app.tenant, null)
+        assertThat(bindings.bind(app.tenant, app.sc.ws, app.sc.projectId, ExecutionMode.LIVE, "erp-db", tenantLevel.id, null)).isFalse()
+        val direct = app(sourceRef = { _, _ -> tenantLevel })
+        assertThat(runList(direct).first).isEqualTo(404)
+        assertThat(runList(app).first).isEqualTo(422)
+        assertThat(connector.queryCalls.get()).isZero()
+    }
+
+    @Test
+    fun `same tenant, another workspace, a binding is refused by the writer and by the database, and the slot stays unbound`() {
+        val foreign = app()
+        val app = app(bindLive = false)
+        assertThat(bindings.bind(app.tenant, app.sc.ws, app.sc.projectId, ExecutionMode.LIVE, "erp-db", foreign.source.id, null)).isFalse()
+        assertThat(bindings.bind(app.tenant, app.sc.ws, app.sc.projectId, ExecutionMode.TEST, "erp-db", foreign.source.id, null)).isFalse()
+        val failed = try {
+            jdbc.update("INSERT INTO data_source_bindings (tenant_id, workspace_id, project_id, mode, slot_id, data_source_id) VALUES (?, ?, ?, 'LIVE', 'erp-db', ?)", app.tenant, app.sc.ws, app.sc.projectId, foreign.source.id)
+            false
+        } catch (e: org.springframework.dao.DataIntegrityViolationException) { true }
+        assertThat(failed).describedAs("the database itself refuses a cross-workspace binding").isTrue()
+        val (status, code, _) = runList(app)
+        assertThat(status).isEqualTo(422)
+        assertThat(code).isEqualTo("DATA_SOURCE_UNBOUND")
+        assertThat(connector.queryCalls.get()).isZero()
+    }
+
+    @Test
+    fun `a different tenant is refused by sourceRef and by binding`() {
+        val (otherTenant, otherWs) = otherTenantWorkspace()
+        val foreignSource = source(otherTenant, otherWs)
+        connector.rowsFor[foreignSource.id] = listOf(order("SECRET-T2", "Other Tenant"))
+        val intruder = app(sourceRef = { _, _ -> foreignSource })
+        val denied = runList(intruder)
+        assertThat(denied.first).isEqualTo(404)
+        assertThat(denied.second).isEqualTo(FailureCodes.NOT_FOUND)
+        assertThat(denied.third).doesNotContain("SECRET-T2")
+        val app = app(bindLive = false)
+        assertThat(bindings.bind(app.tenant, app.sc.ws, app.sc.projectId, ExecutionMode.LIVE, "erp-db", foreignSource.id, null)).isFalse()
+        assertThat(connector.queryCalls.get()).isZero()
+    }
+
+    @Test
+    fun `a forged workspace and project combination is denied, over HTTP and at the gateway`() {
+        val a = app(); val b = app()
+        connector.rowsFor[b.source.id] = listOf(order("SECRET-B", "B"))
+        val adminA = adminUser(a.sc); val sessionA = sessionFor(adminA.username)
+        // HTTP: workspace B in the path with the project of A (and the reverse); the caller is only a member of A
+        val forgedPath = "/api/v1/workspaces/${b.sc.ws}/projects/${a.sc.projectId}/app-runtime/queries/orders-list/run"
+        assertThat(sessionA.post(forgedPath, "{}").response.status).isEqualTo(404)
+        val forgedPath2 = "/api/v1/workspaces/${a.sc.ws}/projects/${b.sc.projectId}/app-runtime/queries/orders-list/run"
+        assertThat(sessionA.post(forgedPath2, "{}").response.status).isEqualTo(404)
+        // gateway: a context that claims workspace B for the project of A and a source of B
+        val forged = gatewayContext(a, b.sc.ws, adminA)
+        val query = com.systemwebstudio.data.gateway.GatewayQuery(b.source.id, "orders.list", emptyMap(), null, "orders-map")
+        assertThat(failureCode { gateway.runQuery(forged, query) }).isEqualTo(FailureCodes.PERMISSION_DENIED)
+        // an honest context of A asking for the source of B: ownership, not permission, refuses (and says nothing about B)
+        val honest = gatewayContext(a, a.sc.ws, adminA)
+        assertThat(failureCode { gateway.runQuery(honest, query) }).isEqualTo(FailureCodes.NOT_FOUND)
+        assertThat(failureCode { gateway.mutate(honest, com.systemwebstudio.data.gateway.GatewayMutation(b.source.id, "orders.create", emptyMap(), "k".repeat(43))) }).isEqualTo(FailureCodes.NOT_FOUND)
+        assertThat(connector.queryCalls.get()).isZero()
+        assertThat(connector.mutationCalls.get()).isZero()
+    }
+
+    private fun failureCode(block: () -> Unit): String? = try { block(); null } catch (e: ConnectorFailure) { e.code }
 }
