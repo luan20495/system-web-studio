@@ -60,7 +60,8 @@ import com.systemwebstudio.access.adapters.GatewayAuthorizer as C1GatewayAuthori
  *
  * What is durable (V28, plain JDBC): data sources, credentials (ciphertext only), schema snapshots, approved queries / mutations, idempotency
  * records and the slot bindings. What stays in memory by design: the query cache lives in Redis, the realtime event bus is per instance.
- * Production connectors (postgres, rest) are read-only; a writable connector is a separate decision (BLOCKERS B-C0-W-04). The registry also takes
+ * The `rest` connector is read-only; the `postgres` connector is read-only unless a data source is configured `writable=true`, in which case its approved
+ * mutations run as parameter-bound INSERT/UPDATE/DELETE transactions (B-C0-W-04, docs/parallel/c3/WRITABLE_POSTGRES.md). The registry also takes
  * every other `DataConnector` bean, which is how tests plug in a writable test connector.
  */
 @Configuration

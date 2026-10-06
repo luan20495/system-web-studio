@@ -81,6 +81,10 @@ class ManagementHttpTests {
 
         val b = ManagementResponses.binding("LIVE", "main", id, now)
         assertThat(DataJson.keys(b)).containsExactlyInAnyOrder("mode", "slotId", "dataSourceId", "updatedAt")
+        val tested = GatewayResponses.connection(com.systemwebstudio.data.datasource.ConnectionTestResult.Ok(7, listOf("writable is enabled but the database role has no write privilege on the configured schemas")))
+        assertThat(DataJson.keys(tested)).containsExactlyInAnyOrder("ok", "latencyMs", "warnings")
+        assertThat(DataJson.elements(tested.get("warnings")).map { it.asString() }).containsExactly("writable is enabled but the database role has no write privilege on the configured schemas")
+        assertThat(DataJson.elements(GatewayResponses.connection(com.systemwebstudio.data.datasource.ConnectionTestResult.Ok(1)).get("warnings"))).isEmpty()
         val catalog = ManagementResponses.connectors(listOf(ConnectorDescriptor("postgres", "PostgreSQL", ConnectorStatus.AVAILABLE, setOf(ConnectorCapability.QUERY, ConnectorCapability.MUTATION), credentialKeys = listOf("user", "password"))))
         assertThat(DataJson.elements(catalog.get("items"))[0].get("capabilities").toString()).contains("MUTATION")
     }

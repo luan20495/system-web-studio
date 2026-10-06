@@ -107,7 +107,7 @@ object GatewayResponses {
         DataJson.toNode(linkedMapOf("operation" to r.operation, "kind" to r.kind.name, "affected" to r.affected, "replayed" to r.replayed, "output" to r.output))
 
     fun connection(r: ConnectionTestResult): JsonNode = when (r) {
-        is ConnectionTestResult.Ok -> DataJson.toNode(linkedMapOf("ok" to true, "latencyMs" to r.latencyMillis))
+        is ConnectionTestResult.Ok -> DataJson.toNode(linkedMapOf("ok" to true, "latencyMs" to r.latencyMillis, "warnings" to r.warnings))      // fixed-text advisories (B-C0-W-04: "no write privilege")
         is ConnectionTestResult.Failed -> DataJson.toNode(linkedMapOf("ok" to false, "code" to r.code, "message" to r.message))
     }
 

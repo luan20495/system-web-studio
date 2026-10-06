@@ -53,7 +53,8 @@ class MutationOutcome(val affected: Long?, val output: JsonNode?) {
 
 /**
  * Write side of a connector (BLOCKERS B-C3-03 / C4 `ActionDataPort.mutate`). Optional: a connector that returns null from
- * [DataConnector.mutator] is read-only, which is what the REST and PostgreSQL drivers of this phase are by design.
+ * [DataConnector.mutator] is read-only (the REST driver is). The PostgreSQL driver always has an executor, but only a data source configured `writable=true`
+ * can use it; any other answers `READ_ONLY_VIOLATION` before a connection is opened (B-C0-W-04).
  */
 interface MutationExecutor {
     fun execute(req: MutationExecRequest, ds: DataSourceRef, cred: ResolvedCredential): MutationOutcome

@@ -210,6 +210,7 @@ class DataWritableE2ETests : IntegrationTestBase() {
             // -- the REAL connector reaches the REAL database with the stored credential
             val test = keep(e.admin.post("${e.source}/test", "{}"))
             assertThat(status(test)).isEqualTo(200); assertThat(e.admin.body(test).get("ok").asBoolean()).describedAs(test.response.contentAsString).isTrue()
+            assertThat(DataJson.elements(e.admin.body(test).get("warnings"))).describedAs("the role can write: no advisory").isEmpty()
             assertThat(e.admin.body(keep(e.admin.get("${e.bindings}"))).get("items").size()).isEqualTo(1)
 
             // -- LIVE INSERT: a real row, the runtime says OK, the idempotency record is DONE and holds a derived key and the count only
