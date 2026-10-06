@@ -29,10 +29,18 @@ interface DataSourceRepository {
     fun listInWorkspace(tenantId: UUID, workspaceId: UUID): List<DataSource> = list(tenantId).filter { it.workspaceId == workspaceId }
 
     /**
-     * B-C0-W-03: removes the data source together with the rows that only exist for it (schema snapshots, approved queries and mutations, idempotency
-     * records) in ONE transaction. The credential material is not touched here (the service discards it through the vault).
+     * Like [findInWorkspace], and inside an open [DataTransactions] unit it also locks the row until the unit ends, so two management calls (patch,
+     * delete, credential change) on one data source run one after the other and a concurrent writer cannot slip between a check and the write.
+     * The default is the plain lookup (in-memory test doubles have nothing to lock).
+     */
+    fun findInWorkspaceForUpdate(tenantId: UUID, workspaceId: UUID, id: UUID): DataSource? = findInWorkspace(tenantId, workspaceId, id)
+
+    /**
+     * B-C0-W-03: removes the data source together with the rows that only exist for it (schema snapshots, approved queries and mutations, FINISHED
+     * idempotency records) in the caller's unit of work. The credential material is not touched here (the service discards it through the vault).
      * @return false when the data source does not exist for the tenant
-     * @throws ConnectorFailure(CONFLICT) while an application binding still points at it: unbind first, nothing is removed
+     * @throws ConnectorFailure(CONFLICT) while an application binding (TEST or LIVE) still points at it, or while a mutation idempotency record is
+     *   `RESERVED` or `UNKNOWN` (the evidence of a possibly applied write is never destroyed): nothing is removed
      */
     fun delete(tenantId: UUID, id: UUID): Boolean = throw ConnectorFailure(FailureCodes.NOT_IMPLEMENTED, "this store cannot delete data sources")
 }
@@ -84,6 +92,8 @@ object DataAuditActions {
     const val CREDENTIAL_ROTATED = "DATASOURCE_CREDENTIAL_ROTATED"
     const val CREDENTIAL_REMOVED = "DATASOURCE_CREDENTIAL_REMOVED"
     const val DELETED = "DATASOURCE_DELETED"
+    const val QUERY_DEFINITION_CHANGED = "DATA_QUERY_DEFINITION_CHANGED"
+    const val MUTATION_DEFINITION_CHANGED = "DATA_MUTATION_DEFINITION_CHANGED"
     const val BINDING_CHANGED = "DATASOURCE_BINDING_CHANGED"
     const val STATUS_CHANGED = "DATASOURCE_STATUS_CHANGED"
     const val SCHEMA_REFRESHED = "DATASOURCE_SCHEMA_REFRESHED"

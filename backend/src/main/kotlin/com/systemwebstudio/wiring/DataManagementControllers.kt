@@ -12,6 +12,8 @@ import com.systemwebstudio.data.datasource.DataConnectorRegistry
 import com.systemwebstudio.data.datasource.DataSourceAdminService
 import com.systemwebstudio.data.datasource.DataSourceRepository
 import com.systemwebstudio.data.datasource.DataSourceScope
+import com.systemwebstudio.data.datasource.DataTransactions
+import com.systemwebstudio.data.datasource.NoTransactions
 import com.systemwebstudio.data.datasource.FailureCodes
 import com.systemwebstudio.data.cache.DataChangeListener
 import com.systemwebstudio.data.datasource.RateLimitGate
@@ -74,12 +76,23 @@ internal fun problem(e: ConnectorFailure): ResponseEntity<JsonNode> {
     return b.body(p.toJson(RequestIdFilter.current()))
 }
 
-/** Application bindings: slot -> registered data source, per project and mode (V28 `data_source_bindings`). */
+/** runs a route body; a [ConnectorFailure] becomes its fixed-text problem answer, null = an empty body with [status] */
+internal fun managementReply(status: Int = 200, block: () -> JsonNode?): ResponseEntity<JsonNode> = try {
+    val body = block()
+    if (body == null) ResponseEntity.status(status).build<JsonNode>() else ResponseEntity.status(status).body(body)
+} catch (e: ConnectorFailure) { problem(e) }
+
+/**
+ * Application bindings: slot -> registered data source, per project and mode (V28 `data_source_bindings`).
+ * TEST and LIVE are separate rows and never stand in for each other. Every change is one [DataTransactions] unit with its audit row, and the source row is
+ * locked while the binding is written, so a concurrent delete of the source either sees the binding or waits for it.
+ */
 class DataBindingService(
     private val repository: DataSourceRepository,
     private val writer: DataSourceBindingWriter,
     private val guard: GatewayGuard,
-    private val audit: DataAuditSink
+    private val audit: DataAuditSink,
+    private val tx: DataTransactions = NoTransactions
 ) {
     class Binding(val mode: ExecutionMode, val slotId: String, val dataSourceId: UUID, val updatedAt: Instant)
 
@@ -95,18 +108,22 @@ class DataBindingService(
         guard.require(ctx, GatewayOperation.DATASOURCE_MANAGE, dataSourceId)
         val workspace = ctx.workspaceId ?: throw notFound()
         val project = ctx.projectId ?: throw notFound()
-        val ds = repository.findInWorkspace(ctx.tenantId, workspace, dataSourceId) ?: throw notFound()
-        if (!writer.bind(ctx.tenantId, workspace, project, mode, slotId, ds.id, ctx.actorUserId)) throw notFound()
-        audit.record(DataAuditActions.BINDING_CHANGED, ctx.tenantId, ds.id, mapOf("mode" to mode.name, "slot" to slotId, "change" to "bind", "project" to project.toString()) + fields(ctx))
-        return Binding(mode, slotId, ds.id, Instant.now())
+        return tx.run {
+            val ds = repository.findInWorkspaceForUpdate(ctx.tenantId, workspace, dataSourceId) ?: throw notFound()
+            if (!writer.bind(ctx.tenantId, workspace, project, mode, slotId, ds.id, ctx.actorUserId)) throw notFound()
+            audit.record(DataAuditActions.BINDING_CHANGED, ctx.tenantId, ds.id, mapOf("mode" to mode.name, "slot" to slotId, "change" to "bind", "project" to project.toString()) + fields(ctx))
+            Binding(mode, slotId, ds.id, Instant.now())
+        }
     }
 
     fun unbind(ctx: GatewayContext, mode: ExecutionMode, slotId: String) {
         guard.require(ctx, GatewayOperation.DATASOURCE_MANAGE, null)
         val project = ctx.projectId ?: throw notFound()
-        val current = writer.find(ctx.tenantId, project, mode, slotId) ?: throw notFound()
-        if (!writer.unbind(ctx.tenantId, project, mode, slotId)) throw notFound()
-        audit.record(DataAuditActions.BINDING_CHANGED, ctx.tenantId, current, mapOf("mode" to mode.name, "slot" to slotId, "change" to "unbind", "project" to project.toString()) + fields(ctx))
+        tx.run {
+            val current = writer.find(ctx.tenantId, project, mode, slotId) ?: throw notFound()
+            if (!writer.unbind(ctx.tenantId, project, mode, slotId)) throw notFound()
+            audit.record(DataAuditActions.BINDING_CHANGED, ctx.tenantId, current, mapOf("mode" to mode.name, "slot" to slotId, "change" to "unbind", "project" to project.toString()) + fields(ctx))
+        }
     }
 
     private fun fields(ctx: GatewayContext) = mapOf("actor" to ctx.actorUserId?.toString(), "workspace" to ctx.workspaceId?.toString(), "request" to ctx.requestId)
@@ -116,16 +133,16 @@ class DataBindingService(
 @Configuration
 @ConditionalOnProperty(prefix = "app.data-platform", name = ["enabled"], havingValue = "true")
 class DataManagementConfiguration {
-    /** workspace-scoped (B-C0-W-03 / D-C0-22): tenant AND workspace, default deny */
+    /** workspace-scoped (B-C0-W-03 / D-C0-22): tenant AND workspace, default deny; every change is one unit of work with its audit row */
     @Bean
     fun c3DataSourceAdminService(
         repository: DataSourceRepository, vault: CredentialVault, registry: DataConnectorRegistry, guard: GatewayGuard, limits: RateLimitGate,
-        audit: DataAuditSink, listener: DataChangeListener, jdbc: JdbcTemplate
-    ) = DataSourceAdminService(repository, vault, registry, guard, limits, audit, listener, scope = DataSourceScope.WORKSPACE, credentialActors = JdbcCredentialActorLookup(jdbc))
+        audit: DataAuditSink, listener: DataChangeListener, jdbc: JdbcTemplate, tx: DataTransactions
+    ) = DataSourceAdminService(repository, vault, registry, guard, limits, audit, listener, scope = DataSourceScope.WORKSPACE, credentialActors = JdbcCredentialActorLookup(jdbc), tx = tx)
 
     @Bean
-    fun c3DataBindingService(repository: DataSourceRepository, writer: DataSourceBindingWriter, guard: GatewayGuard, audit: DataAuditSink) =
-        DataBindingService(repository, writer, guard, audit)
+    fun c3DataBindingService(repository: DataSourceRepository, writer: DataSourceBindingWriter, guard: GatewayGuard, audit: DataAuditSink, tx: DataTransactions) =
+        DataBindingService(repository, writer, guard, audit, tx)
 }
 
 @RestController
@@ -139,10 +156,7 @@ class DataSourceManagementController(
     private fun ctx(me: StudioUserDetails, workspaceId: UUID): GatewayContext =
         ManagementContexts.workspace(access.forWorkspace(me.userId, workspaceId), RequestIdFilter.current())      // 404 for a non-member / another tenant
 
-    private fun reply(status: Int = 200, block: () -> JsonNode?): ResponseEntity<JsonNode> = try {
-        val body = block()
-        if (body == null) ResponseEntity.status(status).build<JsonNode>() else ResponseEntity.status(status).body(body)
-    } catch (e: ConnectorFailure) { problem(e) }
+    private fun reply(status: Int = 200, block: () -> JsonNode?): ResponseEntity<JsonNode> = managementReply(status, block)
 
     /** the connector types a data source can have: available and planned, fixed text */
     @GetMapping("/connectors")
@@ -169,17 +183,13 @@ class DataSourceManagementController(
         return reply { ManagementResponses.dataSource(admin.get(c, ManagementRequests.id(id))) }
     }
 
-    /** name, config and status; each given field is applied, the answer is the data source as it is afterwards */
+    /** name, config and status in ONE transaction and ONE new version; `expectedVersion` makes it an optimistic update (409 on a mismatch); the answer is the data source as it is afterwards */
     @PatchMapping("/{id}")
     fun update(@PathVariable workspaceId: UUID, @PathVariable id: String, @RequestBody(required = false) body: JsonNode?, @AuthenticationPrincipal me: StudioUserDetails): ResponseEntity<JsonNode> {
         val c = ctx(me, workspaceId)
         return reply {
             val change = ManagementRequests.update(body)
-            val dsId = ManagementRequests.id(id)
-            var view = admin.get(c, dsId)
-            if (change.name != null || change.config != null) view = admin.update(c, dsId, change.name, change.config)
-            if (change.status != null) view = admin.setStatus(c, dsId, change.status)
-            ManagementResponses.dataSource(view)
+            ManagementResponses.dataSource(admin.patch(c, ManagementRequests.id(id), change))
         }
     }
 
@@ -234,16 +244,10 @@ class DataBindingController(
         return RuntimeContexts.gateway(a, projectId, RequestIdFilter.current(), null)
     }
 
-    private fun mode(raw: String): ExecutionMode = when (raw.uppercase()) {
-        "LIVE" -> ExecutionMode.LIVE
-        "TEST" -> ExecutionMode.TEST
-        else -> throw ConnectorFailure(FailureCodes.INVALID_PARAMS, "mode must be LIVE or TEST")
-    }
+    /** `TEST` or `LIVE`, upper case, nothing else: no normalisation and no fallback from one to the other */
+    private fun mode(raw: String): ExecutionMode = ExecutionMode.valueOf(ManagementRequests.bindingMode(raw))
 
-    private fun reply(status: Int = 200, block: () -> JsonNode?): ResponseEntity<JsonNode> = try {
-        val body = block()
-        if (body == null) ResponseEntity.status(status).build<JsonNode>() else ResponseEntity.status(status).body(body)
-    } catch (e: ConnectorFailure) { problem(e) }
+    private fun reply(status: Int = 200, block: () -> JsonNode?): ResponseEntity<JsonNode> = managementReply(status, block)
 
     @GetMapping
     fun list(@PathVariable workspaceId: UUID, @PathVariable projectId: UUID, @AuthenticationPrincipal me: StudioUserDetails): ResponseEntity<JsonNode> {

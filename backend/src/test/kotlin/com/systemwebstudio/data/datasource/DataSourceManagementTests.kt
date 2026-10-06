@@ -163,4 +163,70 @@ class DataSourceManagementTests {
         }
         assertThat(f.audit.text).doesNotContain(secret)
     }
+
+    // ------------------------------------------------------------------------------------------------ PATCH (one unit, one version) and credential keys
+
+    @Test fun `patch applies every given field in one version, audits each kind of change and flushes the cache once`() {
+        val svc = admin(); val v = svc.create(ctx(a), spec()); changes.clear(); f.audit.events.clear()
+        val p = svc.patch(ctx(a), v.id, DataSourcePatch(name = "renamed", config = mapOf("host" to "other.example.com"), status = DataSourceStatus.DISABLED, expectedVersion = 1))
+        assertThat(p.version).isEqualTo(2L); assertThat(p.name).isEqualTo("renamed"); assertThat(p.config).containsEntry("host", "other.example.com"); assertThat(p.status).isEqualTo(DataSourceStatus.DISABLED)
+        assertThat(f.audit.actions()).containsExactly("DATASOURCE_UPDATED", "DATASOURCE_STATUS_CHANGED")
+        assertThat(changes).hasSize(1)
+        assertThat(f.repo.find(a.tenantId, v.id)!!.version).isEqualTo(2L)
+    }
+
+    @Test fun `patch with a wrong expectedVersion is a CONFLICT and nothing is written, audited or flushed`() {
+        val svc = admin(); val v = svc.create(ctx(a), spec()); svc.update(ctx(a), v.id, name = "second"); changes.clear(); f.audit.events.clear()
+        val e = f.failure { svc.patch(ctx(a), v.id, DataSourcePatch(name = "stale", status = DataSourceStatus.DISABLED, expectedVersion = 1)) }
+        assertThat(e.code).isEqualTo(FailureCodes.CONFLICT)
+        val stored = f.repo.find(a.tenantId, v.id)!!
+        assertThat(stored.name).isEqualTo("second"); assertThat(stored.status).isEqualTo(DataSourceStatus.ACTIVE); assertThat(stored.version).isEqualTo(2L)
+        assertThat(f.audit.events).isEmpty(); assertThat(changes).isEmpty()
+    }
+
+    @Test fun `patch validates every field before it writes - a bad config or a taken name leaves the source as it was`() {
+        val svc = admin(); val v = svc.create(ctx(a), spec()); svc.create(ctx(a), spec("taken", null)); changes.clear(); f.audit.events.clear()
+        assertThat(f.failure { svc.patch(ctx(a), v.id, DataSourcePatch(name = "valid", config = mapOf("password" to "x"), status = DataSourceStatus.DISABLED)) }.code).isEqualTo(FailureCodes.INVALID_CONFIG)
+        assertThat(f.failure { svc.patch(ctx(a), v.id, DataSourcePatch(name = "TAKEN", status = DataSourceStatus.DISABLED)) }.code).isEqualTo(FailureCodes.CONFLICT)
+        assertThat(f.failure { svc.patch(ctx(a), v.id, DataSourcePatch(name = "bad;name")) }.code).isEqualTo(FailureCodes.INVALID_CONFIG)
+        val stored = f.repo.find(a.tenantId, v.id)!!
+        assertThat(stored.name).isEqualTo("billing"); assertThat(stored.status).isEqualTo(DataSourceStatus.ACTIVE); assertThat(stored.version).isEqualTo(1L)
+        assertThat(f.audit.events).isEmpty(); assertThat(changes).isEmpty()
+    }
+
+    @Test fun `patch that changes nothing is no new version and no audit row`() {
+        val svc = admin(); val v = svc.create(ctx(a), spec()); changes.clear(); f.audit.events.clear()
+        assertThat(svc.patch(ctx(a), v.id, DataSourcePatch(status = DataSourceStatus.ACTIVE)).version).isEqualTo(1L)
+        assertThat(svc.patch(ctx(a), v.id, DataSourcePatch()).version).isEqualTo(1L)
+        assertThat(f.audit.events).isEmpty(); assertThat(changes).isEmpty()
+    }
+
+    @Test fun `a connector that names its credential entries accepts nothing else`() {
+        val svc = admin()
+        assertThat(f.failure { svc.create(ctx(a), spec("c1", mapOf("apiKey" to secret))) }.code).isEqualTo(FailureCodes.INVALID_CREDENTIAL)
+        val v = svc.create(ctx(a), spec("c2", null))
+        assertThat(f.failure { svc.rotateCredential(ctx(a), v.id, mapOf("authValue" to "ok", "extra" to secret)) }.code).isEqualTo(FailureCodes.INVALID_CREDENTIAL)
+        assertThat(f.credentialStore.size).isZero()
+        assertThat(svc.rotateCredential(ctx(a), v.id, mapOf("authValue" to secret)).hasCredential).isTrue()
+    }
+
+    @Test fun `the unit of work wraps every change - a failure inside it surfaces unchanged and side effects wait for the end`() {
+        val tx = Recording(); val inside = mutableListOf<Int>()
+        val svc = DataSourceAdminService(f.repo, f.vault, registry, f.guard, f.limiter, RecordingInside(f.audit, tx, inside), DataChangeListener { inside += -tx.depth; changes += it }, f.clock, scope = DataSourceScope.WORKSPACE, tx = tx)
+        val v = svc.create(ctx(a), spec()); svc.patch(ctx(a), v.id, DataSourcePatch(name = "n2", status = DataSourceStatus.DISABLED)); svc.rotateCredential(ctx(a), v.id, mapOf("authValue" to "x")); svc.removeCredential(ctx(a), v.id); svc.delete(ctx(a), v.id)
+        assertThat(tx.opened).describedAs("create, patch, rotate, remove, delete").isEqualTo(5)
+        assertThat(inside.filter { it > 0 }).describedAs("every audit row is written inside the unit").isNotEmpty().allMatch { it >= 1 }
+        assertThat(inside.filter { it <= 0 }).describedAs("every cache flush happens after the unit ended").isNotEmpty().allMatch { it == 0 }
+    }
+
+    /** counts how many units were opened and how deep the current one is */
+    private class Recording : DataTransactions {
+        var depth = 0; var opened = 0
+        override fun <T> run(block: () -> T): T { opened++; depth++; try { return block() } finally { depth-- } }
+    }
+
+    /** remembers the unit depth at which each audit row is written */
+    private class RecordingInside(private val real: DataAuditSink, private val tx: Recording, private val inside: MutableList<Int>) : DataAuditSink {
+        override fun record(action: String, tenantId: UUID, dataSourceId: UUID?, details: Map<String, Any?>) { inside += tx.depth; real.record(action, tenantId, dataSourceId, details) }
+    }
 }

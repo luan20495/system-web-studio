@@ -16,6 +16,14 @@ class DataSourceSpec(val name: String, val type: String, val config: Map<String,
     override fun toString() = "DataSourceSpec(name=$name, type=$type)"
 }
 
+/**
+ * The accepted fields of one PATCH (at least one of [name], [config], [status]). [expectedVersion], when given, must equal the stored version or nothing
+ * changes (`CONFLICT`). Applied all together or not at all ([DataSourceAdminService.patch]).
+ */
+class DataSourcePatch(val name: String? = null, val config: Map<String, String>? = null, val status: DataSourceStatus? = null, val expectedVersion: Long? = null) {
+    override fun toString() = "DataSourcePatch(name=${name != null}, config=${config != null}, status=$status, expectedVersion=$expectedVersion)"
+}
+
 /** The safe projection of a [DataSource] for any API response: no credential, no credential reference — only whether one is set. */
 data class DataSourceView(
     val id: UUID, val tenantId: UUID, val workspaceId: UUID?, val name: String, val connectorType: String, val config: Map<String, String>,
@@ -52,7 +60,8 @@ class DataSourceAdminService(
     private val clock: Clock = Clock.systemUTC(),
     private val newId: () -> UUID = UUID::randomUUID,
     private val scope: DataSourceScope = DataSourceScope.TENANT,
-    private val credentialActors: CredentialActorLookup = CredentialActorLookup { _, _ -> null }
+    private val credentialActors: CredentialActorLookup = CredentialActorLookup { _, _ -> null },
+    private val tx: DataTransactions = NoTransactions
 ) {
     fun create(ctx: GatewayContext, spec: DataSourceSpec): DataSourceView {
         guard.require(ctx, GatewayOperation.DATASOURCE_MANAGE, null)
@@ -62,54 +71,90 @@ class DataSourceAdminService(
         val connector = registry.require(spec.type)
         val config = ConfigSafety.check(spec.config)
         connector.validateConfig(config)
-        if (repository.list(ctx.tenantId).any { it.name.equals(name, ignoreCase = true) }) throw ConnectorFailure(FailureCodes.CONFLICT, "a data source with this name already exists")
-        val credentialRef = spec.credential?.let { vault.store(ctx.tenantId, it) }
-        val now = clock.instant()
-        val ds = DataSource(DataSourceRef(newId(), ctx.tenantId, spec.type, config), name, DataSourceStatus.ACTIVE, credentialRef, ctx.workspaceId, ctx.actorUserId, now, now, 1)
-        try { repository.save(ds) } catch (e: RuntimeException) { vault.discard(ctx.tenantId, credentialRef); throw e }       // no orphaned credential
-        audit.record(DataAuditActions.CREATED, ds.tenantId, ds.id, mapOf("type" to ds.connectorType, "hasCredential" to ds.hasCredential) + ctx.auditFields())
+        spec.credential?.let { checkCredentialKeys(connector, it) }
+        val ds = tx.run {
+            if (repository.list(ctx.tenantId).any { it.name.equals(name, ignoreCase = true) }) throw ConnectorFailure(FailureCodes.CONFLICT, "a data source with this name already exists")
+            val credentialRef = spec.credential?.let { vault.store(ctx.tenantId, it) }
+            val now = clock.instant()
+            val created = DataSource(DataSourceRef(newId(), ctx.tenantId, spec.type, config), name, DataSourceStatus.ACTIVE, credentialRef, ctx.workspaceId, ctx.actorUserId, now, now, 1)
+            try {
+                repository.save(created)
+                audit.record(DataAuditActions.CREATED, created.tenantId, created.id, mapOf("type" to created.connectorType, "hasCredential" to created.hasCredential) + ctx.auditFields())
+            } catch (e: RuntimeException) { runCatching { vault.discard(ctx.tenantId, credentialRef) }; throw e }       // no orphaned credential, whatever the vault is
+            created
+        }
         return ds.toView()
     }
 
-    /** Only the arguments given change. Nothing given = nothing to do: no new version, no cache flush. */
-    fun update(ctx: GatewayContext, id: UUID, name: String? = null, config: Map<String, String>? = null): DataSourceView {
+    /**
+     * Name, configuration and status in ONE unit of work and ONE new version (Management API contract §3.1): every given field is validated before any is
+     * applied, a wrong [DataSourcePatch.expectedVersion] is a `CONFLICT` that changes nothing, and the audit rows are written in the same transaction, so a
+     * failure at any step (a later field, the audit sink) leaves the data source exactly as it was. Nothing to change (only a status that is already set) is
+     * not a new version and is not audited.
+     */
+    fun patch(ctx: GatewayContext, id: UUID, change: DataSourcePatch): DataSourceView {
         guard.require(ctx, GatewayOperation.DATASOURCE_MANAGE, id)
         throttle(ctx)
-        val current = load(ctx, id)
-        if (name == null && config == null) return current.toView()
-        val newName = name?.let { checkName(it) } ?: current.name
-        if (newName != current.name && repository.list(ctx.tenantId).any { it.id != id && it.name.equals(newName, ignoreCase = true) }) throw ConnectorFailure(FailureCodes.CONFLICT, "a data source with this name already exists")
-        val newConfig = config?.let { ConfigSafety.check(it).also { c -> registry.require(current.connectorType).validateConfig(c) } } ?: current.ref.configNonSecret
-        val revised = repository.save(current.revised(clock.instant(), name = newName, config = newConfig))
-        audit.record(DataAuditActions.UPDATED, ctx.tenantId, id, mapOf("configChanged" to (config != null), "renamed" to (newName != current.name), "version" to revised.version) + ctx.auditFields())
-        listener.onChange(DataChange(ctx.tenantId, id, ChangeCause.DATASOURCE_UPDATED))
-        return revised.toView()
+        var changed = false
+        val view = tx.run {
+            val current = load(ctx, id, lock = true)
+            if (change.expectedVersion != null && change.expectedVersion != current.version) throw ConnectorFailure(FailureCodes.CONFLICT, "the data source changed; reload it and try again")
+            val newName = change.name?.let { checkName(it) }
+            if (newName != null && newName != current.name && repository.list(ctx.tenantId).any { it.id != id && it.name.equals(newName, ignoreCase = true) })
+                throw ConnectorFailure(FailureCodes.CONFLICT, "a data source with this name already exists")
+            val newConfig = change.config?.let { ConfigSafety.check(it).also { c -> registry.require(current.connectorType).validateConfig(c) } }
+            val statusChanged = change.status != null && change.status != current.status
+            if (newName == null && newConfig == null && !statusChanged) return@run current.toView()
+            val revised = repository.save(current.revised(clock.instant(), name = newName ?: current.name, config = newConfig ?: current.ref.configNonSecret, status = change.status ?: current.status))
+            if (newName != null || newConfig != null)
+                audit.record(DataAuditActions.UPDATED, ctx.tenantId, id, mapOf("configChanged" to (newConfig != null), "renamed" to (newName != null && newName != current.name), "version" to revised.version) + ctx.auditFields())
+            if (statusChanged)
+                audit.record(DataAuditActions.STATUS_CHANGED, ctx.tenantId, id, mapOf("status" to revised.status.name, "version" to revised.version) + ctx.auditFields())
+            changed = true
+            revised.toView()
+        }
+        if (changed) listener.onChange(DataChange(ctx.tenantId, id, ChangeCause.DATASOURCE_UPDATED))      // after the commit: a rolled-back change must not flush the cache
+        return view
     }
+
+    /** Only the arguments given change. Nothing given = nothing to do: no new version, no cache flush. */
+    fun update(ctx: GatewayContext, id: UUID, name: String? = null, config: Map<String, String>? = null): DataSourceView = patch(ctx, id, DataSourcePatch(name = name, config = config))
 
     /** Replaces the credential. The old one is destroyed only after the data source points at the new one; the old secret is never read. */
     fun rotateCredential(ctx: GatewayContext, id: UUID, credential: Map<String, String>): DataSourceView {
         guard.require(ctx, GatewayOperation.DATASOURCE_MANAGE, id)
         throttle(ctx)
-        val current = load(ctx, id)
-        val newRef = vault.store(ctx.tenantId, credential)
-        val revised = try { repository.save(current.revised(clock.instant(), credentialRef = newRef)) } catch (e: RuntimeException) { vault.discard(ctx.tenantId, newRef); throw e }
-        vault.discard(ctx.tenantId, current.credentialRef)
-        audit.record(DataAuditActions.CREDENTIAL_ROTATED, ctx.tenantId, id, mapOf("version" to revised.version) + ctx.auditFields())
+        val view = tx.run {
+            val current = load(ctx, id, lock = true)
+            checkCredentialKeys(registry.require(current.connectorType), credential)
+            val newRef = vault.store(ctx.tenantId, credential)
+            try {
+                val revised = repository.save(current.revised(clock.instant(), credentialRef = newRef))
+                audit.record(DataAuditActions.CREDENTIAL_ROTATED, ctx.tenantId, id, mapOf("version" to revised.version) + ctx.auditFields())
+                vault.discard(ctx.tenantId, current.credentialRef)                         // last: whatever fails before this leaves the old credential in place
+                revised
+            } catch (e: RuntimeException) { runCatching { vault.discard(ctx.tenantId, newRef) }; throw e }
+        }
         listener.onChange(DataChange(ctx.tenantId, id, ChangeCause.DATASOURCE_UPDATED))
-        return revised.toView()
+        return view.toView()
     }
 
     /** Detaches and destroys the credential. A data source without one stays registered (its connector will answer INVALID_CREDENTIAL until one is set again). */
     fun removeCredential(ctx: GatewayContext, id: UUID): DataSourceView {
         guard.require(ctx, GatewayOperation.DATASOURCE_MANAGE, id)
         throttle(ctx)
-        val current = load(ctx, id)
-        if (current.credentialRef == null) return current.toView()
-        val revised = repository.save(current.revised(clock.instant(), credentialRef = null))
-        vault.discard(ctx.tenantId, current.credentialRef)
-        audit.record(DataAuditActions.CREDENTIAL_REMOVED, ctx.tenantId, id, mapOf("version" to revised.version) + ctx.auditFields())
-        listener.onChange(DataChange(ctx.tenantId, id, ChangeCause.DATASOURCE_UPDATED))
-        return revised.toView()
+        var changed = false
+        val view = tx.run {
+            val current = load(ctx, id, lock = true)
+            if (current.credentialRef == null) return@run current.toView()
+            val revised = repository.save(current.revised(clock.instant(), credentialRef = null))
+            audit.record(DataAuditActions.CREDENTIAL_REMOVED, ctx.tenantId, id, mapOf("version" to revised.version) + ctx.auditFields())
+            vault.discard(ctx.tenantId, current.credentialRef)                              // last, inside the unit: a failure here keeps the data source and its credential
+            changed = true
+            revised.toView()
+        }
+        if (changed) listener.onChange(DataChange(ctx.tenantId, id, ChangeCause.DATASOURCE_UPDATED))
+        return view
     }
 
     /** Metadata of the credential: whether there is one, for which connector, since when and by whom. Never the material (the vault is not even opened). */
@@ -122,28 +167,23 @@ class DataSourceAdminService(
         return CredentialInfo(true, ds.connectorType, credentialKeys(ds), updatedAt, updatedBy)
     }
 
-    fun setStatus(ctx: GatewayContext, id: UUID, status: DataSourceStatus): DataSourceView {
-        guard.require(ctx, GatewayOperation.DATASOURCE_MANAGE, id)
-        throttle(ctx)
-        val current = load(ctx, id)
-        if (current.status == status) return current.toView()
-        val revised = repository.save(current.revised(clock.instant(), status = status))
-        audit.record(DataAuditActions.STATUS_CHANGED, ctx.tenantId, id, mapOf("status" to status.name, "version" to revised.version) + ctx.auditFields())
-        listener.onChange(DataChange(ctx.tenantId, id, ChangeCause.DATASOURCE_UPDATED))
-        return revised.toView()
-    }
+    fun setStatus(ctx: GatewayContext, id: UUID, status: DataSourceStatus): DataSourceView = patch(ctx, id, DataSourcePatch(status = status))
 
     /**
-     * Removes the data source: its approved queries, mutations, schema snapshots and idempotency records go with it, the credential is destroyed, cached
-     * results are dropped. Refused with CONFLICT while an application binding still uses it (unbind first) — a LIVE app must never lose its source silently.
+     * Removes the data source (Management API contract §3.1) in ONE unit of work: the source with its approved queries and mutations, schema snapshots and
+     * finished idempotency rows, the audit row and the credential. Refused with CONFLICT, and nothing changes, while an application binding (TEST or LIVE)
+     * uses it or while a mutation idempotency row is RESERVED / UNKNOWN. The credential is discarded last: if the vault cannot do it the whole delete is
+     * rolled back, so the data source never disappears while its credential is still stored (and never the reverse).
      */
     fun delete(ctx: GatewayContext, id: UUID) {
         guard.require(ctx, GatewayOperation.DATASOURCE_MANAGE, id)
         throttle(ctx)
-        val current = load(ctx, id)
-        if (!repository.delete(ctx.tenantId, id)) throw notFound()
-        vault.discard(ctx.tenantId, current.credentialRef)
-        audit.record(DataAuditActions.DELETED, ctx.tenantId, id, mapOf("type" to current.connectorType, "version" to current.version) + ctx.auditFields())
+        tx.run {
+            val current = load(ctx, id, lock = true)
+            if (!repository.delete(ctx.tenantId, id)) throw notFound()
+            audit.record(DataAuditActions.DELETED, ctx.tenantId, id, mapOf("type" to current.connectorType, "version" to current.version) + ctx.auditFields())
+            vault.discard(ctx.tenantId, current.credentialRef)
+        }
         listener.onChange(DataChange(ctx.tenantId, id, ChangeCause.DATASOURCE_UPDATED))
     }
 
@@ -172,14 +212,20 @@ class DataSourceAdminService(
     }
 
     /** Same answer for "missing", "another tenant's" and (with [DataSourceScope.WORKSPACE]) "another workspace's": nothing leaks. */
-    private fun load(ctx: GatewayContext, id: UUID): DataSource {
+    private fun load(ctx: GatewayContext, id: UUID, lock: Boolean = false): DataSource {
         val ds = when (scope) {
             DataSourceScope.TENANT -> repository.find(ctx.tenantId, id)
-            DataSourceScope.WORKSPACE -> repository.findInWorkspace(ctx.tenantId, ctx.workspaceId ?: throw notFound(), id)
+            DataSourceScope.WORKSPACE -> (ctx.workspaceId ?: throw notFound()).let { w -> if (lock) repository.findInWorkspaceForUpdate(ctx.tenantId, w, id) else repository.findInWorkspace(ctx.tenantId, w, id) }
         }
         if (ds == null || ds.tenantId != ctx.tenantId) throw notFound()
         if (scope == DataSourceScope.WORKSPACE && ds.workspaceId != ctx.workspaceId) throw notFound()      // a repository bug must not cross workspaces
         return ds
+    }
+
+    /** a connector that names the credential entries it reads (`credentialKeys`) accepts nothing else; one that names none accepts any well-formed entry */
+    private fun checkCredentialKeys(connector: DataConnector, credential: Map<String, String>) {
+        val allowed = connector.descriptor.credentialKeys
+        if (allowed.isNotEmpty() && credential.keys.any { it !in allowed }) throw ConnectorFailure(FailureCodes.INVALID_CREDENTIAL, "credential keys do not fit this connector")
     }
 
     private fun credentialKeys(ds: DataSource): List<String> = registry.descriptors().firstOrNull { it.type == ds.connectorType }?.credentialKeys ?: emptyList()

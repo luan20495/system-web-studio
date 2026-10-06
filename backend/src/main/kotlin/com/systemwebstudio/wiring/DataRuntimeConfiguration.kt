@@ -17,6 +17,7 @@ import com.systemwebstudio.data.datasource.DataConnectorRegistry
 import com.systemwebstudio.data.datasource.DataSourceRepository
 import com.systemwebstudio.data.datasource.DataSourceScope
 import com.systemwebstudio.data.datasource.DataSourceService
+import com.systemwebstudio.data.datasource.DataTransactions
 import com.systemwebstudio.data.datasource.PlannedConnectors
 import com.systemwebstudio.data.datasource.RateLimitGate
 import com.systemwebstudio.data.datasource.RedisRateLimitGate
@@ -44,6 +45,7 @@ import com.systemwebstudio.wiring.persistence.JdbcIdempotencyStore
 import com.systemwebstudio.wiring.persistence.JdbcMutationCatalog
 import com.systemwebstudio.wiring.persistence.JdbcQueryCatalog
 import com.systemwebstudio.wiring.persistence.JdbcSourceSchemaStore
+import com.systemwebstudio.wiring.persistence.SpringDataTransactions
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
@@ -51,6 +53,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.transaction.PlatformTransactionManager
 import java.time.Duration
 import com.systemwebstudio.access.adapters.GatewayAuthorizer as C1GatewayAuthorizer
 
@@ -75,7 +78,9 @@ class DataRuntimeConfiguration {
 
     // ---- persistence (V28)
 
-    @Bean fun c3DataSourceRepository(jdbc: JdbcTemplate): DataSourceRepository = JdbcDataSourceRepository(jdbc)
+    /** one unit of work for a management call: the domain rows, the credential and the audit row commit together or not at all */
+    @Bean fun c3DataTransactions(manager: PlatformTransactionManager): DataTransactions = SpringDataTransactions(manager)
+    @Bean fun c3DataSourceRepository(jdbc: JdbcTemplate, tx: DataTransactions): DataSourceRepository = JdbcDataSourceRepository(jdbc, tx)
     @Bean fun c3CredentialStore(jdbc: JdbcTemplate): CredentialStore = JdbcCredentialStore(jdbc)
     @Bean fun c3QueryCatalog(jdbc: JdbcTemplate): QueryCatalog = JdbcQueryCatalog(jdbc)
     @Bean fun c3MutationCatalog(jdbc: JdbcTemplate): MutationCatalog = JdbcMutationCatalog(jdbc)
@@ -126,8 +131,8 @@ class DataRuntimeConfiguration {
     @Bean fun c3GatewayGuard(authorizer: GatewayAuthorizer, audit: DataAuditSink) = GatewayGuard(authorizer, audit)
 
     @Bean
-    fun c3DiscoveryService(service: DataSourceService, store: SourceSchemaStore, guard: GatewayGuard, limits: RateLimitGate, audit: DataAuditSink) =
-        DiscoveryService(service, store, guard, limits, audit)
+    fun c3DiscoveryService(service: DataSourceService, store: SourceSchemaStore, guard: GatewayGuard, limits: RateLimitGate, audit: DataAuditSink, tx: DataTransactions) =
+        DiscoveryService(service, store, guard, limits, audit, tx = tx)
 
     /** The one `DataGateway`: R1 (the app-runtime query route) and the Action data port ask for it through `ObjectProvider<DataGateway>`. */
     @Bean

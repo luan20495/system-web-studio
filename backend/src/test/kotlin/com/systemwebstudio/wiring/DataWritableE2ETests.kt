@@ -310,6 +310,15 @@ class DataWritableE2ETests : IntegrationTestBase() {
             assertThat(status(unbound)).isNotEqualTo(200); assertThat(ShopDb.orders("UNBOUNDCO")).isEmpty()
             assertThat(ShopDb.rows("SELECT count(*) AS n FROM shop.orders").single()["n"]).isEqualTo(total)
 
+            // -- the timed-out write above left an UNKNOWN idempotency record: a write that may have been applied. Its evidence is never destroyed, so the data source
+            //    cannot be deleted while it exists (Management API contract §3.1); once its retention ends and the purge removed it, the delete goes through
+            val blockedByUnknown = keep(e.admin.delete(e.source))
+            assertThat(status(blockedByUnknown)).isEqualTo(409); assertThat(e.admin.body(blockedByUnknown).get("code").asString()).isEqualTo("CONFLICT")
+            assertThat(status(keep(e.admin.get(e.source)))).describedAs("the refused delete removed nothing").isEqualTo(200)
+            assertThat(idem(e).count { it["state"] == "UNKNOWN" }).isEqualTo(1)
+            jdbc.update("UPDATE data_idempotency SET expires_at = now() - interval '1 minute' WHERE tenant_id = ? AND data_source_id = ? AND state = 'UNKNOWN'", e.tenant, e.dsId)
+            assertThat(com.systemwebstudio.wiring.persistence.JdbcIdempotencyStore(jdbc).purgeExpired()).isGreaterThanOrEqualTo(1)
+
             // -- delete: the registration, its operations, credential and idempotency records go; the customer's business data stays
             assertThat(status(keep(e.admin.delete(e.source)))).isEqualTo(204)
             assertThat(status(keep(e.admin.get(e.source)))).isEqualTo(404)

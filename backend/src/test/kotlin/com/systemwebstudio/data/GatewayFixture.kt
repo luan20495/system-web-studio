@@ -93,7 +93,18 @@ class FakeDataConnector : DataConnector {
 
     override fun validateConfig(config: Map<String, String>) {}
     override fun test(ds: DataSourceRef, cred: ResolvedCredential): ConnectionTestResult { credentialsSeen += cred; return ConnectionTestResult.Ok(3) }
-    override fun discovery() = object : SchemaDiscovery { override fun discover(ds: DataSourceRef, cred: ResolvedCredential) = DiscoveredSchema(emptyList()) }
+    /** what discovery finds (empty by default); [discoveredSample] is returned, per entity, only when the caller asks for samples */
+    @Volatile var discovered: DiscoveredSchema = DiscoveredSchema(emptyList())
+    @Volatile var discoveredSample: List<Map<String, Any?>> = emptyList()
+    val discoveries = AtomicInteger()
+    override fun discovery() = object : SchemaDiscovery {
+        override fun discover(ds: DataSourceRef, cred: ResolvedCredential): DiscoveredSchema { discoveries.incrementAndGet(); return discovered }
+        override fun discover(ds: DataSourceRef, cred: ResolvedCredential, options: com.systemwebstudio.data.discovery.DiscoveryOptions): DiscoveredSchema {
+            val schema = discover(ds, cred)
+            return if (options.sampleRows == 0) schema
+            else schema.copy(entities = schema.entities.map { e -> e.copy(sample = discoveredSample.take(options.sampleRows).map { row -> row.mapValues { DataJson.toNode(it.value) } }) })
+        }
+    }
     override fun executor() = object : QueryExecutor {
         override fun execute(req: QueryRequest, ds: DataSourceRef, cred: ResolvedCredential): QueryResult {
             queryCalls.incrementAndGet(); credentialsSeen += cred

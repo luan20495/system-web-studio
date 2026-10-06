@@ -354,7 +354,8 @@ class DataManagementApiTests : IntegrationTestBase() {
         assertThat(status(l)).describedAs(l.response.contentAsString).isEqualTo(200)
         val lb = p.admin.body(l)
         assertThat(lb.get("mode").asString()).isEqualTo("LIVE"); assertThat(lb.get("slotId").asString()).isEqualTo("erp-db"); assertThat(lb.get("dataSourceId").asString()).isEqualTo(live.id.toString())
-        assertThat(status(put(p, "test", "erp-db", test.id))).describedAs("the mode is case-insensitive").isEqualTo(200)
+        assertThat(status(put(p, "test", "erp-db", test.id))).describedAs("the mode is exactly TEST or LIVE: no normalisation (contract §3.6)").isEqualTo(400)
+        assertThat(status(put(p, "TEST", "erp-db", test.id))).isEqualTo(200)
         assertThat(bindingRows(p).map { it["mode"] to it["data_source_id"] }).containsExactlyInAnyOrder("LIVE" to live.id, "TEST" to test.id)
 
         val list = p.admin.get(p.bindings)

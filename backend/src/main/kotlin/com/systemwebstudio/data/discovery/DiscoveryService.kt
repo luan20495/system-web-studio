@@ -4,6 +4,8 @@ import com.systemwebstudio.data.datasource.ConnectorFailure
 import com.systemwebstudio.data.datasource.DataAuditActions
 import com.systemwebstudio.data.datasource.DataAuditSink
 import com.systemwebstudio.data.datasource.DataSourceService
+import com.systemwebstudio.data.datasource.DataTransactions
+import com.systemwebstudio.data.datasource.NoTransactions
 import com.systemwebstudio.data.datasource.FailureCodes
 import com.systemwebstudio.data.datasource.RateLimitGate
 import com.systemwebstudio.data.gateway.auditFields
@@ -26,7 +28,8 @@ class DiscoveryService(
     private val limits: RateLimitGate,
     private val audit: DataAuditSink,
     private val clock: Clock = Clock.systemUTC(),
-    private val newId: () -> UUID = UUID::randomUUID
+    private val newId: () -> UUID = UUID::randomUUID,
+    private val tx: DataTransactions = NoTransactions
 ) {
     data class RefreshResult(val snapshot: SchemaSnapshot, val changed: Boolean, val diff: SchemaDiff?)
 
@@ -45,7 +48,16 @@ class DiscoveryService(
             if (saved != null) return@repeat
             val snapshot = SchemaSnapshot(newId(), ctx.tenantId, ds.id, (previous?.version ?: 0) + 1, clock.instant(), SchemaFingerprint.of(schema), ds.version,
                 ctx.actorUserId, includeSamples, schema)
-            try { store.save(snapshot); saved = snapshot }
+            val changed = previous == null || previous!!.fingerprint != snapshot.fingerprint
+            try {
+                // the snapshot and its audit row are one unit: a refresh that cannot be audited is not stored
+                tx.run {
+                    store.save(snapshot)
+                    audit.record(DataAuditActions.SCHEMA_REFRESHED, ctx.tenantId, ds.id, mapOf("version" to snapshot.version, "changed" to changed,
+                        "entities" to schema.entities.size, "samples" to includeSamples, "truncated" to schema.truncated, "fingerprint" to snapshot.fingerprint) + ctx.auditFields())
+                }
+                saved = snapshot
+            }
             catch (e: ConnectorFailure) {
                 if (e.code != FailureCodes.CONFLICT || attempt == 1) throw e
                 previous = store.latest(ctx.tenantId, ds.id)                                  // a concurrent refresh won the version: take the next one
@@ -54,13 +66,21 @@ class DiscoveryService(
         val snapshot = saved ?: throw ConnectorFailure(FailureCodes.CONFLICT, "schema was refreshed concurrently; retry")
         val changed = previous == null || previous!!.fingerprint != snapshot.fingerprint
         val diff = previous?.let { SchemaDiffer.diff(it.schema, snapshot.schema) }
-        audit.record(DataAuditActions.SCHEMA_REFRESHED, ctx.tenantId, ds.id, mapOf("version" to snapshot.version, "changed" to changed,
-            "entities" to schema.entities.size, "samples" to includeSamples, "truncated" to schema.truncated) + ctx.auditFields())
         return RefreshResult(snapshot, changed, diff)
     }
 
     fun latest(ctx: GatewayContext, dataSourceId: UUID): SchemaSnapshot? {
         guard.require(ctx, GatewayOperation.DATASOURCE_READ, dataSourceId)
+        service.resolve(ctx, dataSourceId)
+        return store.latest(ctx.tenantId, dataSourceId)
+    }
+
+    /**
+     * Management API contract §3.4: the latest stored snapshot for an operator who may manage the data source (`SCHEMA_DISCOVER`, i.e. DATA_SOURCE_MANAGE;
+     * default deny). Null before the first discovery. [latest] is the gateway's own, wider-read form (DATASOURCE_READ) and is unchanged.
+     */
+    fun stored(ctx: GatewayContext, dataSourceId: UUID): SchemaSnapshot? {
+        guard.require(ctx, GatewayOperation.SCHEMA_DISCOVER, dataSourceId)
         service.resolve(ctx, dataSourceId)
         return store.latest(ctx.tenantId, dataSourceId)
     }

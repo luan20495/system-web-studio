@@ -3,6 +3,7 @@ package com.systemwebstudio.data.gateway
 import com.systemwebstudio.data.datasource.ConnectorDescriptor
 import com.systemwebstudio.data.datasource.ConnectorFailure
 import com.systemwebstudio.data.datasource.CredentialInfo
+import com.systemwebstudio.data.datasource.DataSourcePatch
 import com.systemwebstudio.data.datasource.DataSourceSpec
 import com.systemwebstudio.data.datasource.DataSourceStatus
 import com.systemwebstudio.data.datasource.DataSourceView
@@ -21,13 +22,10 @@ import java.util.UUID
  */
 object ManagementRequests {
     private val CREATE_KEYS = setOf("name", "type", "config", "credential")
-    private val UPDATE_KEYS = setOf("name", "config", "status")
+    private val UPDATE_KEYS = setOf("name", "config", "status", "expectedVersion")
     private val CREDENTIAL_KEYS = setOf("credential")
     private val BINDING_KEYS = setOf("dataSourceId")
     private val SLOT = Regex("^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
-
-    /** the accepted fields of a PATCH; at least one is present */
-    class DataSourceChange(val name: String?, val config: Map<String, String>?, val status: DataSourceStatus?)
 
     fun create(n: JsonNode?): DataSourceSpec {
         strict(n, CREATE_KEYS)
@@ -36,7 +34,8 @@ object ManagementRequests {
             node.get("credential")?.takeUnless { it.isNull }?.let { credentialMap(it) })
     }
 
-    fun update(n: JsonNode?): DataSourceChange {
+    /** PATCH of a data source: at least one of `name`, `config`, `status`; `expectedVersion` is optional and never counts as a change */
+    fun update(n: JsonNode?): DataSourcePatch {
         strict(n, UPDATE_KEYS)
         val node = n!!
         val name = node.get("name")?.let { if (it.isNull) throw bad("name must be text") else textOf(it, "name") }
@@ -44,8 +43,17 @@ object ManagementRequests {
         val status = node.get("status")?.let {
             when (textOf(it, "status")) { "ACTIVE" -> DataSourceStatus.ACTIVE; "DISABLED" -> DataSourceStatus.DISABLED; else -> throw bad("status must be ACTIVE or DISABLED") }
         }
+        val expected = expectedVersion(node)
         if (name == null && config == null && status == null) throw bad("nothing to change")
-        return DataSourceChange(name, config, status)
+        return DataSourcePatch(name, config, status, expected)
+    }
+
+    /** `TEST` or `LIVE`, exactly: the mode of a binding is never normalised (`live`, `Test` are refused) and never falls back to the other one */
+    fun bindingMode(raw: String): String = raw.takeIf { it == "TEST" || it == "LIVE" } ?: throw bad("mode must be LIVE or TEST")
+
+    private fun expectedVersion(n: JsonNode): Long? = n.get("expectedVersion")?.let {
+        if (!it.isIntegralNumber || !it.canConvertToLong() || it.asLong() < 1) throw bad("expectedVersion must be a positive whole number")
+        it.asLong()
     }
 
     /** `{"credential": {...}}` — write-only: it is the one place a secret enters, and it goes straight into the vault */
