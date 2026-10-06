@@ -1,5 +1,5 @@
 // @class: real-backend
-import { loginUi, newPage, openBuilder, pageProblems } from "../lib/ui.mjs";
+import { loginUi, newPage, openBuilder, pageProblems, selectFirstSection, containsText, rememberMarker } from "../lib/ui.mjs";
 export const id = "E2E-02", title = "Edit component/page → save → reload → persists";
 export async function run({ cfg, fx, browser, check }) {
   const w = fx.workspaces.A, p = fx.projects.A.id, A = fx.sessions.adminA;
@@ -7,16 +7,10 @@ export async function run({ cfg, fx, browser, check }) {
   const page = await newPage(browser);
   await loginUi(page, cfg, fx.users.adminA.username, fx.users.adminA.password);
   await openBuilder(page, cfg, p);
-  const fr = page.frameLocator("iframe");
-  // the canvas iframe can exist before the Builder has attached its selection listener (seen right after a backend restart): retry the click a bounded number of times, then fail
-  let selected = false;
-  for (let attempt = 0; attempt < 4 && !selected; attempt++) {
-    await fr.locator("section").first().click({ position: { x: 30, y: 30 } });
-    selected = await page.waitForSelector(".bx-right input", { timeout: 5_000 }).then(() => true).catch(() => false);
-  }
-  check.ok("clicking a section on the canvas opens its properties", selected);
-  if (!selected) { await page.context().close(); return; }
-  const marker = `E2E-${fx.runId}-${Date.now().toString(36)}`; fx.notes.marker = marker;
+  const sel = await selectFirstSection(page);
+  check.ok("clicking a section on the canvas opens its properties", sel.ok, `attempts=${sel.attempts}`);
+  if (!sel.ok) { await page.context().close(); return; }
+  const marker = rememberMarker(fx, `E2E-${fx.runId}-${Date.now().toString(36)}`); fx.notes.marker = marker;
   await page.locator(".bx-right input").first().fill(marker);
   const [patch] = await Promise.all([
     page.waitForResponse((r) => r.request().method() === "PATCH" && /\/schema$/.test(new URL(r.url()).pathname), { timeout: 20_000 }),
@@ -33,7 +27,7 @@ export async function run({ cfg, fx, browser, check }) {
   await page.waitForTimeout(800);
   const text = await page.frameLocator("iframe").locator("body").innerText();
   // the first input is the hero eyebrow, which the template renders with CSS text-transform: uppercase (innerText returns the transformed text)
-  check.ok("after a full reload the canvas shows the saved text", text.toLowerCase().includes(marker.toLowerCase()), text.slice(0, 100));
+  check.ok("after a full reload the canvas shows the saved text", containsText(text, marker), text.slice(0, 100));
   check.ok("a new version row exists for the edit", (await A.get(`/workspaces/${w}/projects/${p}/versions?limit=5`)).body?.length > 0);
   check.ok("no unhandled page errors / serious console errors", pageProblems(page).length === 0, pageProblems(page).join(" | "));
   await page.context().close();

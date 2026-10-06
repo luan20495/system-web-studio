@@ -6,7 +6,7 @@ import { openTestPanel, settledOutcome } from "../lib/testpanel.mjs";
 import { newPage } from "../lib/ui.mjs";
 const sh = promisify(exec);
 export const id = "E2E-14", title = "RabbitMQ (or another dependency) down → correct failure → recovery/retry";
-export const blocker = { owner: "C4", ref: "B-C4-06 / B-C0-W-01", reason: "No RabbitMQ consumer or queue adapter is wired on integration/v2 (f894cc6): C4 workflow queue and run stores are in memory (B-C4-05, B-C4-06). There is no dependency whose outage can change a workflow start." };
+export const blocker = { owner: "C4", ref: "H-C4-02", reason: "No RabbitMQ workflow queue is selectable on integration/v2: the AMQP adapter and the app.workflow.queue=memory|amqp selection exist only on agent/c4-workflow (5712ac5, 7e3c7c3), unintegrated and, by C4's own commit message, never run with Gradle or a real broker. Run stores are durable (V29), but there is no dependency whose outage can change a workflow start." };
 export async function run({ cfg, fx, browser, check }) {
   if (!cfg.rabbitWired) throw new Blocked(blocker.owner, `${blocker.reason} Set E2E_RABBITMQ_WIRED=1 only for a stack that has the queue adapter.`, blocker.ref);
   if (!cfg.stopRabbitCmd || !cfg.startRabbitCmd) throw new Blocked("C0", "no dependency hooks: set E2E_STOP_RABBIT_CMD and E2E_START_RABBIT_CMD (the suite never guesses how to stop a service)", "E2E_*_RABBIT_CMD");

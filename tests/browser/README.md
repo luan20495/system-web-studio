@@ -32,3 +32,9 @@ Covers only what needs no session (redirect to /login with `next`, labels, CSP/h
 Login, session, portal switching, OIDC and CORS need the real backend and are NOT covered here.
 
 In the Builder harness the Test panel gets **no runtime** and the Data wizard gets **no management calls**, so both must show "Chưa sẵn sàng" (not connected) — the spec asserts that. The Test panel with a runtime is exercised by `tests/builder/{apiclient,errors,components}.test.ts(x)` and, against a real server, by E2E-10/11/S1.
+
+## Sanity (`sanity.spec.mjs`) — component harness, no backend, NOT a performance project
+Opens/closes the rail panels, inspector tabs and the Test panel 40 times in real Chromium and asserts: DOM nodes and JS listeners do not grow (round 10 → last), JS heap after GC stays within 30 % / 15 MB, no console error or warning (React warnings included), no uncaught exception, **no network request after load**. `HARNESS_NODE_ENV=production node tests/browser/build-harness.mjs` builds the production React bundle into `.test-build/browser-prod` (serve it and pass `HARNESS_URL`); both bundles pass.
+Pitfall found while writing it: `page.waitForSelector` returns an `ElementHandle` that the DevTools protocol keeps alive, which looks exactly like a DOM leak (+50 detached nodes per Test-panel open, retainer "DevTools console / Global handles"). Use `locator.waitFor()` in anything that measures memory.
+
+    CHROME=... node tests/browser/sanity.spec.mjs        # SANITY_ROUNDS=40 by default

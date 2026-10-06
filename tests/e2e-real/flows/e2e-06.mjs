@@ -14,7 +14,7 @@ import { Blocked } from "../lib/report.mjs";
 import { newPage, loginUi, openBuilder, bodyText, pageProblems } from "../lib/ui.mjs";
 import { management, bogusConfigFor, randomCredentialFor, notMounted, TEST_FAILURE_CODES } from "../lib/management.mjs";
 export const id = "E2E-06", title = "Configure DataSource (+ Query) and query via the real backend";
-export const blocker = { owner: "C2", ref: "H-C2-02 + B-C0-W-03(queries)", reason: "Source, credential, test-connection and binding management exist (C3 e606465) and are exercised above, but the QUERY half cannot be configured: the AppDefinition has no operation to declare a data slot (dataSources[] is 'granted, not created' — C2 H-C2-02) and C3 has no approved-query management endpoint (MANAGEMENT_API.md §5). Use E2E-07 with an operator-seeded project for the query." };
+export const blocker = { owner: "C2", ref: "H-C2-02 + H-C0-07", reason: "Source, credential, test-connection, binding AND query/mutation definition management exist on integration/v2 (C3, management-api.md) and are exercised above, but a project cannot USE them: the AppDefinition has no operation to declare a data slot (dataSources[] is \"granted, not created\", C2 H-C2-02), and a local stack has no reachable source (the SSRF guard refuses loopback/private addresses; the connection test can only succeed against a public host). Use E2E-07 with an operator-seeded project for the query." };
 
 export async function run({ cfg, fx, browser, check }) {
   const A = management(fx, "adminA", "A"), B = management(fx, "adminB", "B"), V = management(fx, "viewerA", "A");
@@ -23,7 +23,7 @@ export async function run({ cfg, fx, browser, check }) {
 
   // ---- [api] is the Management API there at all? --------------------------------------------------------------------------------------------------
   const cat = await A.connectors();
-  if (notMounted(cat)) throw new Blocked("C0", `Management API not mounted: GET …/data-sources/connectors → 404 without a code (app.data-platform.enabled=false, or this build predates C3's commit e606465, which is not in integration/v2)`, "app.data-platform.enabled / V2 integration");
+  if (notMounted(cat)) throw new Blocked("C0", `Management API not mounted: GET …/data-sources/connectors → 404 without a code (app.data-platform.enabled=false, or this build predates the C3 Management API import, integration/v2 3333aa7)`, "app.data-platform.enabled / V2 integration");
   stage("api", "connector catalogue answers 200 with items", cat.status === 200 && Array.isArray(cat.body?.items), `status=${cat.status} code=${cat.body?.code ?? ""}`);
   const pg = (cat.body?.items ?? []).find((c) => c.type === "postgres");
   stage("api", "postgres is AVAILABLE and the planned connectors are not", pg?.status === "AVAILABLE" && (cat.body.items.filter((c) => c.status === "PLANNED").length >= 1), JSON.stringify((cat.body?.items ?? []).map((c) => `${c.type}:${c.status}`)));
@@ -87,6 +87,33 @@ export async function run({ cfg, fx, browser, check }) {
   stage("api", "permission: a project VIEWER cannot list/alter bindings (403)", vb.status === 403, `status=${vb.status}`);
   const delBound = await A.remove(dsId);
   stage("api", "deleting a BOUND source → 409 CONFLICT and it still exists", delBound.status === 409 && (await A.get(dsId)).status === 200, `status=${delBound.status} code=${delBound.body?.code ?? ""}`);
+
+  // ---- [api] query / mutation DEFINITIONS (management-api.md §3.5, scoped by data source; on integration/v2 >= 3333aa7) ------------------------------------------------
+  {
+    const w = fx.workspaces.A, base = `/workspaces/${w}/data-sources/${dsId}`, S = fx.sessions.adminA;
+    const qid = `e2e-q-${fx.runId}`.slice(0, 60);
+    const probe = await S.get(`${base}/queries`);
+    if (probe.status === 404 && !probe.body?.code) stage("api", "query definition routes are NOT mounted on this build (404 without a code) — skipped", true, "build older than C3 7c78128");
+    else {
+      stage("api", "list definitions → 200 {items:[]}", probe.status === 200 && Array.isArray(probe.body?.items), `status=${probe.status} code=${probe.body?.code ?? ""}`);
+      const q = await S.post(`${base}/queries`, { queryId: qid, kind: "SQL", definition: { sql: "SELECT 1" } });
+      stage("api", "create a query definition → 201 with its id", q.status === 201 && q.body?.queryId === qid, `status=${q.status} code=${q.body?.code ?? ""}`);
+      const got = await S.get(`${base}/queries/${qid}`);
+      stage("api", "read it back (200, same id)", got.status === 200 && got.body?.queryId === qid, `status=${got.status}`);
+      const bad = await S.post(`${base}/queries`, { queryId: `${qid}-bad`, kind: "SQL", definition: { sql: "DROP TABLE users" } });
+      stage("api", "a definition the gateway would refuse is refused at write time (400 INVALID_QUERY)", bad.status === 400 && bad.body?.code === "INVALID_QUERY", `status=${bad.status} code=${bad.body?.code ?? ""}`);
+      const auth = await S.post(`${base}/queries`, { queryId: `${qid}-t`, kind: "SQL", definition: { sql: "SELECT 1" }, tenantId: "someone-else" });
+      stage("api", "an authority key in the body → 400 INVALID_PARAMS", auth.status === 400 && auth.body?.code === "INVALID_PARAMS", `status=${auth.status} code=${auth.body?.code ?? ""}`);
+      const mut = await S.post(`${base}/mutations`, { mutationId: `e2e-m-${fx.runId}`.slice(0, 60), kind: "CREATE", definition: { target: "shop.orders", params: [{ name: "a", type: "STRING" }] } });
+      stage("api", "a mutation against a source that is not writable → 422 READ_ONLY_VIOLATION", mut.status === 422 && mut.body?.code === "READ_ONLY_VIOLATION", `status=${mut.status} code=${mut.body?.code ?? ""}`);
+      const foreignQ = await fx.sessions.adminB.get(`/workspaces/${fx.workspaces.B}/data-sources/${dsId}/queries/${qid}`);
+      stage("api", "isolation: workspace B cannot read A's definition (404)", foreignQ.status === 404, `status=${foreignQ.status}`);
+      const vq = await fx.sessions.viewerA.post(`${base}/queries`, { queryId: `${qid}-v`, kind: "SQL", definition: { sql: "SELECT 1" } });
+      stage("api", "permission: a VIEWER cannot create a definition (403)", vq.status === 403, `status=${vq.status} code=${vq.body?.code ?? ""}`);
+      const del = await S.del(`${base}/queries/${qid}`);
+      stage("api", "delete the definition → 204", del.status === 204, `status=${del.status}`);
+    }
+  }
 
   // ---- [ui] Studio browser steps -------------------------------------------------------------------------------------------------------------------
   const page = await newPage(browser);

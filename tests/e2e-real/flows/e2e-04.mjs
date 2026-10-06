@@ -1,5 +1,6 @@
 // @class: real-backend
 import { Blocked } from "../lib/report.mjs";
+import { viewerGate, VIEWER_BLOCKER } from "../lib/viewer.mjs";
 import { loginUi, newPage, openBuilder, bodyText, pageProblems } from "../lib/ui.mjs";
 export const id = "E2E-04", title = "Authorized user reaches a valid Studio resource";
 export async function run({ cfg, fx, browser, check }) {
@@ -7,15 +8,19 @@ export async function run({ cfg, fx, browser, check }) {
   for (const [who, expectEdit] of [["adminA", true], ["viewerA", false]]) {
     const page = await newPage(browser);
     await loginUi(page, cfg, fx.users[who].username, fx.users[who].password);
-    if (!expectEdit && /no-access/.test(page.url())) {
-      // observed contract: GET /auth/me gives a workspace VIEWER permissions [] → the portal gate refuses Studio. Not a pass for the read-only UX: BLOCKED after the evidence below.
-      const t0 = await bodyText(page);
-      check.ok("viewerA: the refusal page does not show project data", !t0.includes(fx.projects.A.name));
-      const api = await fx.sessions.viewerA.get(`/workspaces/${fx.workspaces.A}/projects/${fx.projects.A.id}/schema`);
-      fx.notes.viewerSchemaViaApi = api.status;
-      check.ok("viewerA: the API itself still lets a project member READ the schema (200)", api.status === 200, `status=${api.status}`);
-      await page.context().close();
-      throw new Blocked("C1", "a workspace VIEWER holds permissions [] (GET /auth/me) so the Studio portal gate sends the viewer to /auth/no-access although the project lists them as a member; the read-only Builder cannot be observed. Decision needed from C1: should a project member without workspace permissions reach Studio read-only?", "viewer portal access");
+    if (!expectEdit) {
+      const gated = /no-access/.test(page.url());
+      const next = viewerGate(cfg, gated, check, page.url());
+      if (gated) {
+        // observed: GET /auth/me gives a workspace VIEWER permissions [] → the portal gate refuses Studio
+        check.ok("viewerA: the refusal page does not show project data", !(await bodyText(page)).includes(fx.projects.A.name));
+        const api = await fx.sessions.viewerA.get(`/workspaces/${fx.workspaces.A}/projects/${fx.projects.A.id}/schema`);
+        fx.notes.viewerSchemaViaApi = api.status;
+        check.ok("viewerA: the API itself still lets a project member READ the schema (200)", api.status === 200, `status=${api.status}`);
+        await page.context().close();
+        if (next === "blocked") throw new Blocked("C1", VIEWER_BLOCKER, "viewer portal access");
+        continue;
+      }
     }
     check.ok(`${who}: after login the Studio shell is reachable (not sent to /auth/no-access)`, !/no-access/.test(page.url()), page.url());
     const { schemaResponse, canvas } = await openBuilder(page, cfg, fx.projects.A.id);   // direct URL, no click-through

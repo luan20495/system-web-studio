@@ -3,8 +3,9 @@
 // Exit codes:  0 = every flow that could run PASSED (BLOCKED/SKIP flows are listed, never counted as PASS)
 //              1 = at least one flow FAILED
 //              2 = NOT RUN: no backend configured/reachable, or the fixtures could not be created. This is never a pass.
-import { loadConfig, REQUIRED, EXIT } from "./lib/env.mjs";
-import { Check, Blocked, Skip, printTable, summarise, writeReport } from "./lib/report.mjs";
+import { loadConfig, REQUIRED, EXIT, shuffled } from "./lib/env.mjs";
+import { execFileSync } from "node:child_process";
+import { Check, Blocked, Skip, printTable, summarise, writeReport, writeEvidence } from "./lib/report.mjs";
 import { createFixtures, cleanup } from "./lib/fixtures.mjs";
 import { launch } from "./lib/ui.mjs";
 
@@ -25,10 +26,12 @@ try {
 } catch (e) { notRun(`cannot reach ${cfg.studio}: ${e?.message ?? e}`); }
 if (!authConfig.localLogin) notRun("local login is disabled on this stack; the fixtures need local accounts (SSO-only stacks are out of scope for this suite)");
 
-const ORDER = ["e2e-01", "e2e-02", "e2e-03", "e2e-04", "e2e-05", "e2e-06", "e2e-07", "e2e-08", "e2e-09", "e2e-s1", "e2e-10", "e2e-11", "e2e-12", "e2e-13", "e2e-14", "e2e-s2"];
+const ORDER = ["e2e-01", "e2e-02", "e2e-03", "e2e-04", "e2e-05", "e2e-06", "e2e-07", "e2e-08", "e2e-09", "e2e-s1", "e2e-10", "e2e-11", "e2e-12", "e2e-13", "e2e-14", "e2e-s2", "e2e-s3", "e2e-s4", "e2e-s5", "e2e-s8", "e2e-s9", "e2e-s7", "e2e-s6"];
 const flows = [];
 for (const f of ORDER) flows.push(await import(`./flows/${f}.mjs`));
-const selected = flows.filter((f) => !cfg.only.length || cfg.only.some((o) => o.toLowerCase() === f.id.toLowerCase()));
+const picked = flows.filter((f) => !cfg.only.length || cfg.only.some((o) => o.toLowerCase() === f.id.toLowerCase()));
+const selected = cfg.shuffleSeed === null ? picked : shuffled(picked, cfg.shuffleSeed);
+if (cfg.shuffleSeed !== null) console.log(`shuffled order (seed ${cfg.shuffleSeed}): ${selected.map((f) => f.id).join(" ")}`);
 
 console.log(`REAL BACKEND suite · studio=${cfg.studio} · run=${cfg.runId} · ${selected.length} flow(s)`);
 let fx;
@@ -49,7 +52,7 @@ const browser = await launch(cfg);
 const results = [];
 for (const f of selected) {
   console.log(`\n${f.id} — ${f.title}`);
-  const check = new Check(); let status = "PASS", owner = null, reason = null, ref = null;
+  const check = new Check(); let status = "PASS", owner = null, reason = null, ref = null; const start = new Date().toISOString();
   try { await f.run({ cfg, fx, browser, check }); }
   catch (e) {
     if (e instanceof Blocked) { status = "BLOCKED"; owner = e.owner; reason = e.message; ref = e.ref; console.log(`    ⛔ BLOCKED (${owner}${ref ? ` · ${ref}` : ""}): ${reason}`); }
@@ -59,12 +62,15 @@ for (const f of selected) {
   // a failed check always wins: a BLOCKED flow whose evidence checks fail is a FAIL, a PASS needs zero failed checks and at least one check
   if (check.failed.length) status = "FAIL";
   else if (status === "PASS" && check.items.length === 0) { status = "FAIL"; reason = "the flow made no assertions"; }
-  results.push({ id: f.id, title: f.title, status, owner, ref, reason, checks: check.items, failed: check.failed });
+  results.push({ id: f.id, title: f.title, status, owner, ref, reason, start, end: new Date().toISOString(), workspace: fx.workspaces?.A, project: fx.projects?.A?.id, checks: check.items, failed: check.failed });
 }
 await browser.close();
 const problems = await cleanup(fx, (m) => console.log(`  [cleanup] ${m}`));
 printTable(results);
-const file = writeReport(cfg.outDir, { studio: cfg.studio, runId: cfg.runId, facts, cleanup: problems, node: process.version }, results);
-console.log(`report: ${file}`);
+const frontendHead = (() => { try { return execFileSync("git", ["rev-parse", "--short", "HEAD"], { encoding: "utf8", cwd: new URL("../..", import.meta.url).pathname }).trim(); } catch { return "unknown"; } })();
+// informational only (the suite talks to the Studio origin): the operator says which backend build and URL sit behind it
+const meta = { studio: cfg.studio, runId: cfg.runId, frontendHead, backend: { url: process.env.E2E_BACKEND_URL ?? null, head: process.env.E2E_BACKEND_HEAD ?? null }, facts, cleanup: problems, node: process.version };
+const file = writeReport(cfg.outDir, meta, results);
+console.log(`report: ${file}\nevidence: ${writeEvidence(cfg.outDir, meta, results)}`);
 const s = summarise(results);
 process.exit(s.FAIL ? EXIT.FAIL : s.PASS === 0 ? EXIT.NOT_RUN : EXIT.OK);

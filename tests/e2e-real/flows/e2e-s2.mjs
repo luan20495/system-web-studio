@@ -1,5 +1,5 @@
 // @class: real-backend — supplementary: a save that fails because the NETWORK is down (link-level emulation only) can be retried safely against the real backend.
-import { loginUi, newPage, openBuilder, pageProblems } from "../lib/ui.mjs";
+import { loginUi, newPage, openBuilder, pageProblems, selectFirstSection, rememberMarker } from "../lib/ui.mjs";
 export const id = "E2E-S2", title = "(supplementary) Save fails offline, retry after reconnect saves exactly once";
 export async function run({ cfg, fx, browser, check }) {
   const w = fx.workspaces.A, p = fx.projects.A.id, A = fx.sessions.adminA;
@@ -7,9 +7,10 @@ export async function run({ cfg, fx, browser, check }) {
   await loginUi(page, cfg, fx.users.adminA.username, fx.users.adminA.password);
   await openBuilder(page, cfg, p);
   const rev0 = (await A.get(`/workspaces/${w}/projects/${p}`)).body.revision;
-  await page.frameLocator("iframe").locator("section").first().click({ position: { x: 30, y: 30 } });
-  await page.waitForSelector(".bx-right input");
-  const marker = `E2E-OFFLINE-${fx.runId}`;
+  const sel = await selectFirstSection(page);
+  check.ok("clicking a section on the canvas opens its properties", sel.ok, `attempts=${sel.attempts}`);
+  if (!sel.ok) { await page.context().close(); return; }
+  const marker = rememberMarker(fx, `E2E-OFFLINE-${fx.runId}`);
   await page.locator(".bx-right input").first().fill(marker);
   await page.context().setOffline(true);                                       // the link drops; every answer the backend would give is still the real one
   await page.getByRole("button", { name: /Lưu thay đổi/ }).click();

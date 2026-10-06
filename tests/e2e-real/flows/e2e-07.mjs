@@ -7,7 +7,7 @@ import { Session } from "../lib/api.mjs";
 import { openTestPanel, settledOutcome, flagOff } from "../lib/testpanel.mjs";
 import { newPage, pageProblems } from "../lib/ui.mjs";
 export const id = "E2E-07", title = "TEST-binding query runs and shows results";
-export const blocker = { owner: "C3", ref: "MANAGEMENT_API.md §5 + H-C2-02", reason: "Sources and TEST bindings can be created (C3 e606465, not yet in integration/v2), but no route creates an approved query and the document cannot declare a data slot (C2 H-C2-02). Set E2E_DATA_WORKSPACE_ID, E2E_DATA_PROJECT_ID, E2E_DATA_QUERY_ID, E2E_DATA_USER, E2E_DATA_PASSWORD for a project the operator seeded (source + slot + TEST binding + query; user needs PROJECT_EDIT + QUERY_EXECUTE)." };
+export const blocker = { owner: "C3", ref: "H-C2-02 + H-C0-07", reason: "Sources, TEST bindings and query definitions can be created over HTTP (management-api.md §3.5/§3.6), but (1) the document cannot declare the data slot a binding names (C2 H-C2-02) and (2) a local stack has no source the gateway may reach (public address required, H-C0-07). Set E2E_DATA_WORKSPACE_ID, E2E_DATA_PROJECT_ID, E2E_DATA_QUERY_ID, E2E_DATA_USER, E2E_DATA_PASSWORD for a project the operator seeded (source + slot + TEST binding + query; user needs PROJECT_EDIT + QUERY_EXECUTE)." };
 export async function run({ cfg, browser, check }) {
   const s = cfg.preseeded;
   if (![s.workspaceId, s.projectId, s.queryId, s.user, s.password].every(Boolean)) throw new Blocked(blocker.owner, blocker.reason, blocker.ref);

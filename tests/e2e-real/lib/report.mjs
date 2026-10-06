@@ -7,9 +7,18 @@ export class Blocked extends Error { constructor(owner, reason, ref = "") { supe
 /** thrown when the operator did not provide an optional input; not a defect of the product */
 export class Skip extends Error {}
 
+/** what a check is evidence OF. Explicit `kind` wins; otherwise inferred from the check name (flows were written before kinds existed). */
+export function kindOf(name, kind) {
+  if (kind) return kind;
+  if (/after the (backend )?(restart|outage|reconnect)|reachable again|reconnect|still readable|survives|completes after|recover/i.test(name)) return "recovery";
+  if (/^\(setup\)|^\[api\]|→ ?\d{3}|\(\d{3}\)|\b(PATCH|POST|GET|PUT|DELETE)\b|answered|status|HTTP|idempotency|Idempotency-Key|accepted/i.test(name)) return "http";
+  if (/persist|read back|revision|version row|server state|row exists|on the server|\[backend\]|unchanged|separate (call|session)|second session|agrees/i.test(name)) return "persistence";
+  return "ui";
+}
+
 export class Check {
   constructor() { this.items = []; }
-  ok(name, cond, detail = "") { this.items.push({ name, ok: !!cond, detail: String(detail).slice(0, 300) }); console.log(`    ${cond ? "✓" : "✗"} ${name}${!cond && detail ? `  — ${String(detail).slice(0, 200)}` : ""}`); return !!cond; }
+  ok(name, cond, detail = "", kind) { this.items.push({ name, ok: !!cond, detail: String(detail).slice(0, 300), kind: kindOf(name, kind) }); console.log(`    ${cond ? "✓" : "✗"} ${name}${!cond && detail ? `  — ${String(detail).slice(0, 200)}` : ""}`); return !!cond; }
   get failed() { return this.items.filter((i) => !i.ok); }
 }
 
@@ -30,5 +39,35 @@ export function writeReport(outDir, meta, results) {
   const file = join(outDir, `report-${new Date().toISOString().replace(/[:.]/g, "-")}.json`);
   // meta never contains credentials: only the studio origin, run id, and server facts that were observed
   writeFileSync(file, JSON.stringify({ ...meta, summary: summarise(results), results }, null, 2));
+  return file;
+}
+
+/** The per-flow evidence block C6 asks for (one reporter, no second framework). `meta`: frontendHead, backend{url,head}, studio; `r`: a result of run.mjs. */
+export function formatEvidence(meta, r) {
+  const by = (k) => (r.checks ?? []).filter((c) => c.kind === k).map((c) => `${c.ok ? "ok " : "FAIL "}${c.name}${c.ok || !c.detail ? "" : ` (${c.detail.slice(0, 120)})`}`);
+  const list = (a) => (a.length ? "\n  - " + a.join("\n  - ") : " none recorded");
+  const rec = by("recovery");
+  return [
+    `FLOW: ${r.id} — ${r.title}`,
+    `RESULT: ${r.status}`,
+    `START: ${r.start ?? ""}`,
+    `END: ${r.end ?? ""}`,
+    `FRONTEND_HEAD: ${meta.frontendHead ?? "unknown"}`,
+    `BACKEND_HEAD: ${meta.backend?.head ?? "not given (E2E_BACKEND_HEAD)"}`,
+    `BACKEND_URL: ${meta.backend?.url ?? "not given (E2E_BACKEND_URL); studio proxy " + meta.studio}`,
+    `PROJECT: ${r.project ?? "n/a"}`,
+    `WORKSPACE: ${r.workspace ?? "n/a"}`,
+    `HTTP EVIDENCE:${list(by("http"))}`,
+    `UI ASSERTION:${list(by("ui"))}`,
+    `PERSISTENCE ASSERTION:${list(by("persistence"))}`,
+    `RESTART/RECOVERY:${rec.length ? list(rec) : " not applicable to this flow"}`,
+    `BLOCKER: ${r.status === "BLOCKED" || r.status === "FAIL" ? (r.reason ?? (r.failed?.length ? r.failed.map((f) => f.name).join("; ") : "")).replace(/\s+/g, " ").slice(0, 400) : "none"}`,
+    `OWNER: ${r.owner ?? (r.status === "FAIL" ? "unassigned (triage)" : "n/a")}${r.ref ? ` · ref ${r.ref}` : ""}`,
+  ].join("\n");
+}
+export function writeEvidence(outDir, meta, results) {
+  mkdirSync(outDir, { recursive: true });
+  const file = join(outDir, `evidence-${new Date().toISOString().replace(/[:.]/g, "-")}.txt`);
+  writeFileSync(file, results.map((r) => formatEvidence(meta, r)).join("\n\n---\n\n") + "\n");
   return file;
 }

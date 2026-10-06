@@ -2,6 +2,7 @@
 import { Blocked } from "../lib/report.mjs";
 import { loginUi, newPage, openBuilder, bodyText, pageProblems } from "../lib/ui.mjs";
 import { deniedWriteProbe } from "../lib/fixtures.mjs";
+import { viewerGate, VIEWER_BLOCKER } from "../lib/viewer.mjs";
 export const id = "E2E-05", title = "Forbidden path UX, no data leak";
 export async function run({ cfg, fx, browser, check }) {
   // (a) a user of ANOTHER workspace opens A's project by URL
@@ -36,7 +37,8 @@ export async function run({ cfg, fx, browser, check }) {
   check.ok("viewer: no editable save control", (await v.getByRole("button", { name: /Lưu thay đổi/ }).count()) === 0);
   check.ok("viewer: no project data on screen", !vt.includes(fx.projects.A.name) && !vt.includes(`secret-description-${fx.runId}`));
   check.ok("viewer: no unhandled page errors", pageProblems(v).length === 0, pageProblems(v).join(" | "));
-  if (gated) { await v.context().close(); throw new Blocked("C1", "a workspace VIEWER holds permissions [] (GET /auth/me), so the Studio portal gate sends the viewer to /auth/no-access even though the project lists them as a member: the read-only Builder / Test-mode-disabled UX for a viewer cannot be observed. Decision needed from C1: should a project member without workspace permissions reach Studio read-only?", "viewer portal access"); }
+  const next = viewerGate(cfg, gated, check, v.url());
+  if (gated) { await v.context().close(); if (next === "blocked") throw new Blocked("C1", VIEWER_BLOCKER, "viewer portal access"); return; }
   check.ok("viewer: read-only notice shown", vt.includes("Bạn chỉ có quyền xem"));
   if (fx.notes.definitionOps?.ok) {
     await v.getByRole("button", { name: "Dùng thử" }).click();

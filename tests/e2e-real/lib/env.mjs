@@ -19,6 +19,9 @@ export function loadDataSourceFacts(env = process.env) {
   return { provided: true, type, config: c.v, credential: k.v, error };
 }
 
+/** C1's decision about a workspace VIEWER and Studio, supplied by the operator once C1 has decided (C5 never decides it): `app-view` = a viewer reaches Studio read-only, `no-studio` = a viewer is refused. Unset = undecided → E2E-04/05 stay BLOCKED. */
+export const viewerPolicyOf = (env = process.env) => (["app-view", "no-studio"].includes(env.E2E_VIEWER_POLICY) ? env.E2E_VIEWER_POLICY : null);
+
 export function loadConfig(env = process.env) {
   const missing = REQUIRED.filter(([k]) => !env[k]);
   const studio = (env.E2E_STUDIO_URL ?? "").replace(/\/+$/, "");
@@ -39,8 +42,21 @@ export function loadConfig(env = process.env) {
     publicBase: env.E2E_PUBLIC_BASE,
     dataSource: loadDataSourceFacts(env),
     restartBackendCmd: env.E2E_RESTART_BACKEND_CMD,
+    pauseBackendCmd: env.E2E_PAUSE_BACKEND_CMD, resumeBackendCmd: env.E2E_RESUME_BACKEND_CMD,
+    stopBackendCmd: env.E2E_STOP_BACKEND_CMD, startBackendCmd: env.E2E_START_BACKEND_CMD,
     stopRabbitCmd: env.E2E_STOP_RABBIT_CMD, startRabbitCmd: env.E2E_START_RABBIT_CMD,
+    viewerPolicy: viewerPolicyOf(env),
+    /** stability runs: a number shuffles the order of the selected flows (deterministic per seed) to expose order dependencies and state leaks between flows */
+    shuffleSeed: /^\d+$/.test(env.E2E_SHUFFLE_SEED ?? "") ? Number(env.E2E_SHUFFLE_SEED) : null,
     durableRunStores: env.E2E_DURABLE_RUN_STORES === "1",
     rabbitWired: env.E2E_RABBITMQ_WIRED === "1",
   };
+}
+
+/** deterministic shuffle (mulberry32): the same seed always gives the same order */
+export function shuffled(items, seed) {
+  const a = [...items]; let t = seed >>> 0;
+  const rnd = () => { t += 0x6d2b79f5; let x = Math.imul(t ^ (t >>> 15), 1 | t); x ^= x + Math.imul(x ^ (x >>> 7), 61 | x); return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
 }
