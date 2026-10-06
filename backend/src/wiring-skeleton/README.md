@@ -12,11 +12,11 @@ When the owner's code has been imported and the Mac gate for that step is green 
 
 | File | Moves at | Adapts | Needs |
 |---|---|---|---|
-| `RequestContexts.kt.skel` | checklist step 4 (import C1) | HTTP session → `Principal` → `TenantContext` → `GatewayContext` / `ActionContext` | C1 |
-| `C1PortAdapters.kt.skel` | steps 4 / 11 / 14 (C1, then C3 and C4 imports) | C1 policy cores → C3 `GatewayAuthorizer`, C4 `AccessPort` / `TenantGate` / `PrincipalResolver` | C1, C3, C4 |
-| `AppDefinitionSourceAdapter.kt.skel` | step 6 (import C2) | C4 `AppDefinitionSource` ← committed AppDefinition (LIVE = published, TEST = draft) | C2, C4 |
-| `ActionDataPortAdapter.kt.skel` | step 14 (import C4) | C4 `ActionDataPort` → C2 `AppDataBindingResolver` → C3 `DataGateway` | C2, C3, C4 |
 | `AiDataCatalogAdapter.kt.skel` | step 11 (import C3) | C3 `AiDataCatalogProvider` → C2 `ai.planner.AiDataCatalog` | C1, C2, C3 |
 | `DataWebhookController.kt.skel` | step 11 (import C3) | `POST /api/v1/webhooks/data/{endpointId}` → C3 `WebhookIngress` | C3 |
 
 Domain models are never copied here: if a type appears in a skeleton it is imported from its owner's package.
+
+**Implemented on `wire/c3-c4-runtime` (2026-10-06, Mac verification pending):** `RequestContexts` -> `wiring/RuntimeContexts.kt` + `ActorKinds.kt` (W-01, D-C0-14), `C1PortAdapters` -> `wiring/C1PortAdapters.kt` (W-02/03),
+`AppDefinitionSourceAdapter` -> `wiring/RuntimeAppDefinitions.kt` (W-04), `ActionDataPortAdapter` -> `wiring/ActionDataPortAdapter.kt` + `DataWriteErrors.kt` (W-05, D-C0-15). The skeleton files were removed (`git rm`).
+Still skeletons: W-06 `AiDataCatalogAdapter`, W-07 `DataWebhookController`.

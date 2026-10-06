@@ -23,7 +23,7 @@ Anything not listed here does not exist; a new route needs a new DECISIONS entry
 * The caller is always `ActorKind.USER`. The wiring converts `logic.action.ActorKind` ⇄ `tenancy.ActorKind` by name (D-C0-14); C1 policy denies every non-USER actor (TEMPORARY V2 POLICY).
 * `mode`: `LIVE` (default; the published version = the project's latest `RUNNING` deployment) or `TEST` (the working draft; needs `APP_EDIT`; no side effect; C4 answers `WouldRun`).
 * Default deny: an unknown permission code, mode, actor kind or missing wiring answers with an error, never with data.
-* Error body for every non-2xx response that is not an action/workflow result: `{"code","message","requestId","details"}` (`ApiError`).
+* Error body for every non-2xx response that is not an action result envelope: `{"code","message","requestId","retryable","details"}` (`ApiError` plus `retryable`, always `false` unless C4/C3 say otherwise). Errors raised by `AccessService` (404 `PROJECT_NOT_FOUND`, 403 `FORBIDDEN`) use the standard `ApiError`.
 * Feature flags (all **false** by default; a disabled flag means the controller bean does not exist → 404): `app.data-platform.enabled` → R1; `app.workflow.enabled` → R2, R3 and the C4 runtime beans (+ worker).
 * No runtime ids are persisted or returned: the derived `dataSourceId`/`appVersionId` UUIDs exist only inside one call.
 
@@ -31,7 +31,7 @@ Anything not listed here does not exist; a new route needs a new DECISIONS entry
 
 `POST {B}/queries/{queryId}/run`   (flag `app.data-platform.enabled`)
 
-Request: `{"mode":"LIVE|TEST" (opt), "params":{…} (opt, ≤ 64 entries), "page":{"limit":1..10000,"offset":0..1000000} (opt), "mappingRef":"<local mapping id>" (opt)}`.
+Request: `{"mode":"LIVE|TEST" (opt), "params":{…} (opt, ≤ 40 plain values — the gateway limit), "page":{"limit":1..10000,"offset":0..1000000} (opt), "mappingRef":"<local mapping id>" (opt)}`.
 `queryId` is the LOCAL id of a `queries[]` entry with `mode: READ`. `mappingRef`, when absent, is the single mapping whose `queryRef == queryId`; zero or several → `422 MAPPING_REF_REQUIRED`.
 
 Response `200`: `{"queryId","mode","cache":"HIT|MISS|BYPASS","result":{<ViewModelData: viewModelId, cardinality, fields, rows, truncated, warnings, skippedRows>}}`.

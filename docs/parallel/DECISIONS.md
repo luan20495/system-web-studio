@@ -222,8 +222,6 @@ unallocated), harness/shims, any C1/C2/C3 copy. Frozen contracts re-checked stat
 audit/runtime/integration/wiring or Spring in `logic/**`, `ActionDataPort` only under `logic/action`. **Not yet "integrated green":** that needs the full Gradle run of
 `integration/v2` after this import.
 
-<<<<<<< HEAD
-
 ## D-C5-01 — Builder tách Edit và Test; Test không ghi AppDefinition · PROPOSED · 2026-10-05 · C5
 Edit chỉnh định nghĩa và chỉ ghi qua operation → validator → version bất biến (`applyOps`). Test ("Dùng thử") là mode riêng (`/studio/projects/:id/test`), chạy Query/Action qua `DataGateway`/`ActionRuntime` bằng quyền của chính người dùng, kết quả chỉ ở React state, không vào `schema`, version, prompt, storage trình duyệt; không nhớ mode `test` trong `sessionStorage`. Action có tác dụng phụ không chạy ở Test cho tới khi C4 có dry-run (B-C5-04). Hệ quả: không cần đổi contract hiện có; chỉ C4 bổ sung cờ test. Chi tiết: `audit/PREP-T12-builder-architecture.md` §6.
 
@@ -241,7 +239,7 @@ Site xuất bản là HTML tĩnh không script (ADR 0009, CSP). Đề xuất: kh
 
 ## D-C5-06 — Link portal theo cấu hình; dev server bind loopback · PROPOSED · 2026-10-06 · C5
 Không còn `/admin` `/studio` viết cứng trong UI: trong app dùng `portalPath`/`S()`/`A()`, sang portal khác dùng `portalHref` với `NEXT_PUBLIC_PORTAL_URL_{PLATFORM,ADMIN,STUDIO}` (rỗng = cùng origin). `dev`/`start` của các app Next bind `127.0.0.1`. Chi tiết và cấu hình: `docs/parallel/agents/C5_PHASE2_PORTALS.md`. D-C5-05 vẫn **TEMPORARY**: gỡ khi C1 giao TenantContext/permission canonical; chỉ sửa `capabilitiesOf()`.
-=======
+
 ## D-C0-17 — Runtime API route family: project-scoped `/app-runtime`; no competing family · ACCEPTED · 2026-10-06 · C0
 - Audit (2026-10-06): no canonical browser route for data/action/workflow existed. C3's framework-free `DataRoutes` (`/api/v1/data/**`, runtime `dataSourceId`, browser-callable `/mutate`) and C4's proposal B-C4-09 (`/api/apps/{appId}/…`) were proposals, not mounted routes.
 - Decision: the only browser family is `/api/v1/workspaces/{workspaceId}/projects/{projectId}/app-runtime/…` (C5 D-C5-02 accepted with that segment): R1 `queries/{queryId}/run`, R2 `actions/{actionId}/execute`, R3 `workflows/{workflowId}/runs`, `workflow-runs/{runId}`, `workflow-runs/{runId}/cancel`. Full contract: `docs/contracts/v2/runtime-api.md`.
@@ -262,4 +260,3 @@ Không còn `/admin` `/studio` viết cứng trong UI: trong app dùng `portalPa
   2. C4 uses `InMemoryActionRunStore` / `InMemoryWorkflowRunStore` / `InMemoryWorkflowQueue` (single node, lost on restart): idempotency replay and workflow state are volatile. LIVE actions of mutating types and LIVE workflow starts answer `503 RUNTIME_STORES_VOLATILE` unless `app.workflow.allow-volatile-stores=true` (default **false**, for dev/E2E only). TEST/WouldRun and non-mutating actions are always available;
   3. a data-source slot binding store does not exist: local data source ids resolve only through a `sourceRef` in the AppDefinition or a `DataSourceSlotBindings` bean (default: none → `422 DATA_SOURCE_UNBOUND`).
 - Lifted by a reviewed persistence migration + a decision; not by this change.
->>>>>>> 6b37e87 (docs(c0): freeze runtime API route contract and wiring decisions (D-C0-17..20))

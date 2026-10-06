@@ -20,6 +20,7 @@ Status: `NOT_STARTED` · `READY` (brief sẵn sàng, chưa bắt đầu) · `IN_
 | Scheduler | C4 | IMPORTED (452f467 logic/**; official Mac run pending) | agent/c4-workflow | T14 | `20b5175`, `da3b1ba` dedupe ledger (branch agent/c4-workflow; nhập bằng path vào integration/v2) |
 | Notification ports | C4 | IMPORTED (452f467 logic/**; official Mac run pending) | agent/c4-workflow | — | `b633f97` (branch agent/c4-workflow; nhập bằng path vào integration/v2) |
 | T12 — Builder data binding | C5 | NOT_STARTED | agent/c5-web | T6 (AppDefinition ViewModel), T8 (Query API), PREP-T12 | — |
+| C0 — C3/C4 runtime wiring + API contract | C0 | REVIEW (branch only; Mac Gradle NOT RUN; not imported) | wire/c3-c4-runtime | C3 + C4 imported; contract `docs/contracts/v2/runtime-api.md`; D-C0-17…20 | docs `6b37e87`; code commit on the branch |
 | PREP-T13 — ActionRuntime architecture + scaffold | C4 | DONE | agent/c4-workflow | contract `action-workflow.md` | `d3b661f`; thiết kế cuối: `docs/parallel/audit/FINAL-C4-runtime-design.md` (đã nhập 2026-10-06) |
 | PREP-T12 — Builder/data binding architecture audit | C5 | DONE | agent/c5-web | contracts `app-definition-v2.md`, `data-connector.md`, `action-workflow.md`; audit: `audit/PREP-T12-builder-architecture.md`; T12 vẫn chờ T6, T8, T10, T11 và B-C5-01…07 | — |
 | PHASE 2 — Builder frontend trên contract V2 (frozen `integration/v2 @ c59604b`) | C5 | READY_FOR_REVIEW | agent/c5-web | backend C1–C4 chưa tích hợp: UI báo "Chưa sẵn sàng" (không fake); chi tiết `agents/C5_PHASE2_PORTALS.md`, D-C5-06, B-C5-08 | — |

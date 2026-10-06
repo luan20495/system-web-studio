@@ -208,6 +208,9 @@ app:
     webhooks-enabled: ${DATA_PLATFORM_WEBHOOKS_ENABLED:false}   # C3. The anonymous ingest route is always declared in security; this switch decides whether a handler exists
   workflow:
     enabled: ${WORKFLOW_ENABLED:false}              # C4. Reserved name, read only by wiring/**; gates action/workflow/approval endpoints and the scheduler
+    # D-C0-20: C4 run state is in memory until a reviewed persistence migration exists. LIVE mutating actions / workflow starts answer 503 RUNTIME_STORES_VOLATILE unless this is true (dev / E2E only).
+    allow-volatile-stores: ${WORKFLOW_ALLOW_VOLATILE_STORES:false}
+    worker-delay-ms: ${WORKFLOW_WORKER_DELAY_MS:500}
   rate-limit:
     login-user-max: 5
     login-ip-max: 50
