@@ -24,9 +24,20 @@ class JdbcReleaseStore(private val jdbc: JdbcTemplate, private val deployments: 
     override fun activeDeployment(projectId: UUID): UUID? =
         jdbc.query("SELECT current_deployment_id FROM sites WHERE project_id = ?", { rs, _ -> rs.getObject(1, UUID::class.java) }, projectId).firstOrNull()
 
-    override fun recordedPrevious(deploymentId: UUID): UUID? =
-        jdbc.query("SELECT message FROM deployment_events WHERE deployment_id = ? AND status = 'SWITCH' ORDER BY created_at, id LIMIT 1",
-            { rs, _ -> rs.getString(1) }, deploymentId).firstOrNull()?.let { uuid.find(it)?.groupValues?.get(1) }?.let { UUID.fromString(it) }
+    /**
+     * The release that was active when this deployment started switching. There is no typed column for it (a migration C0 has not reserved), so
+     * it is read back from the SWITCH event the switch wrote. Text is not trusted: the id is accepted only when it is another deployment of the
+     * SAME project, otherwise it is ignored and the deployer falls back to the site's own pointer.
+     */
+    override fun recordedPrevious(deploymentId: UUID): UUID? {
+        val parsed = jdbc.query("SELECT message FROM deployment_events WHERE deployment_id = ? AND status = 'SWITCH' ORDER BY created_at, id LIMIT 1",
+            { rs, _ -> rs.getString(1) }, deploymentId).firstOrNull()?.let { uuid.find(it)?.groupValues?.get(1) }?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+            ?: return null
+        if (parsed == deploymentId) return null
+        val sameProject = jdbc.queryForObject("SELECT count(*) FROM deployments p JOIN deployments d ON d.project_id = p.project_id WHERE p.id = ? AND d.id = ?",
+            Long::class.java, parsed, deploymentId)!! > 0
+        return parsed.takeIf { sameProject }
+    }
 
     override fun recordPrevious(deploymentId: UUID, previous: UUID) =
         deployments.event(deploymentId, "SWITCH", "Replacing release ${label(previous)} [$previous]")
