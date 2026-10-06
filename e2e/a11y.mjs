@@ -1,3 +1,5 @@
+// @class: real-backend — real browser -> real backend
+// @legacy: pre-V2 single-origin root app (:3100) + scripts/run-local.sh; NOT run against integration/v2; some steps seed via SQL or stub the AI provider
 // Accessibility: axe-core (WCAG 2.0/2.1/2.2 A+AA + best practice) on the login, Admin Console, Studio shell and project editor,
 // plus keyboard checks. Needs the running stack; credentials A11Y_USER/A11Y_PASSWORD (system admin) or the local dev admin.
 import { chromium } from "playwright-core";

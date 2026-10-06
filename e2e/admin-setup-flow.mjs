@@ -1,3 +1,5 @@
+// @class: real-backend — real browser -> real backend
+// @legacy: pre-V2 single-origin root app (:3100) + scripts/run-local.sh; NOT run against integration/v2; some steps seed via SQL or stub the AI provider
 // Core product E2E: a company admin sets everything up on the web, an employee then uses it. No manual DB edits, no ENV names.
 //   admin login → create employee (activation link) → add a provider → key is stored write-only → test connection → discover/add models →
 //   enable → default model → default limit → user-specific limit → user detail shows the effective policy → employee activates the account,

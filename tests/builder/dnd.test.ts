@@ -1,3 +1,4 @@
+// @class: unit — pure logic / server-side render of components; no browser, no network
 import test from "node:test";
 import assert from "node:assert/strict";
 import * as D from "../../features/studio/builder/core/dnd";

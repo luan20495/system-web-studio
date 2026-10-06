@@ -1,3 +1,4 @@
+// @class: unit — pure logic / server-side render of components; no browser, no network
 /**
  * Conformance against the SINGLE shared fixture set owned by C2 (docs/contracts/v2/integration-contract.md, decision 2026-10-06):
  * integration/v2 backend/src/test/resources/app-definition/conformance/ (+ manifest.json). That directory is NOT copied into this repo (one copy, no mirror).

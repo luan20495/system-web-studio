@@ -1,3 +1,4 @@
+// @class: harness — real Chromium on a test-only host (fake host / no API behind it); NOT a backend E2E
 // Real-browser checks of the three portals WITHOUT a backend: everything that does not need a session.
 // Needs the three apps running: platform 127.0.0.1:3001, admin 127.0.0.1:3002, studio 127.0.0.1:3003 (npm run build:<app> && cd apps/<app> && npx next start -H 127.0.0.1 -p <port>).
 // With no API behind the same-origin /api proxy the browser sees 500s; the UI must still show the login form. It does NOT test login, session, OIDC or cookies after sign-in.

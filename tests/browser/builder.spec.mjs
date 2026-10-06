@@ -1,3 +1,4 @@
+// @class: harness — real Chromium on a test-only host (fake host / no API behind it); NOT a backend E2E
 // Real-browser checks of the Builder (pointer + keyboard) against tests/browser/harness.tsx. TEST-ONLY harness: NOT a backend E2E.
 // Run: node tests/browser/build-harness.mjs && (cd .test-build/browser && python3 -m http.server 4000 --bind 127.0.0.1 &) && node tests/browser/builder.spec.mjs
 import { createRequire } from "node:module";

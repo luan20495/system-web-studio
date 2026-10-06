@@ -1,7 +1,9 @@
+// @class: unit — pure logic / server-side render of components; no browser, no network
 import test from "node:test";
 import assert from "node:assert/strict";
 import { explainError, violationsOf } from "../../features/studio/builder/core/errors";
-import { outcomeFromError, outcomeFromServer, describeTestEffect, publishInTest } from "../../features/studio/builder/core/testMode";
+import { outcomeFromError, outcomeFromServer, outcomeFromRun, isRunFinished, describeTestEffect, publishInTest } from "../../features/studio/builder/core/testMode";
+import { runtimeReadinessFromError } from "../../features/studio/builder/core/readiness";
 
 test("409 IDEMPOTENCY_OUTCOME_UNKNOWN: ambiguous, retry NOT safe, says check the data first", () => {
   const m = explainError({ status: 409, code: "IDEMPOTENCY_OUTCOME_UNKNOWN" });
@@ -96,7 +98,9 @@ test("a 500/502/504/network failure of a WRITE is 'outcome unknown' and not retr
   for (const status of [500, 502, 504, 0]) {
     const w = explainError({ status, code: "TIMEOUT" }, { write: true });
     assert.equal(w.kind, "unknown-outcome", String(status)); assert.equal(w.retrySafe, false, String(status));
-    assert.equal(explainError({ status, code: "TIMEOUT" }).kind, "error", String(status));
+    // a READ that timed out is a plain, retry-safe timeout: never "outcome unknown" (nothing was written)
+    const r = explainError({ status, code: "TIMEOUT" });
+    assert.equal(r.kind, "timeout", String(status)); assert.equal(r.retrySafe, true, String(status));
   }
   assert.equal(outcomeFromError({ status: 504, code: "TIMEOUT" }, { write: true }).state, "UNKNOWN");
   assert.equal(outcomeFromError({ status: 504, code: "TIMEOUT" }).state, "ERROR");
@@ -125,4 +129,49 @@ test("a C4 TEST-mode WouldRun answer is shown as 'would run' at every level and 
     assert.match((o as { note: string }).note, /theo máy chủ/);
   }
   assert.equal(outcomeFromServer({ level: "SOMETHING_NEW" }).state, "NOT_READY");
+});
+
+// ---- runtime-api.md (frozen, f894cc6): R1/R2/R3 answers --------------------------------------------------------------------------------------
+
+test("R2 envelope: OK is SUCCESS only because the server said OK; WOULD_RUN is never SUCCESS; FAILED goes through the error mapping", () => {
+  assert.equal(outcomeFromServer({ status: "OK", actionId: "a", mode: "LIVE", output: {} }).state, "SUCCESS");
+  assert.equal(outcomeFromServer({ status: "WOULD_RUN", actionId: "a", mode: "TEST", level: "VALIDATED" }).state, "WOULD_RUN");
+  assert.equal(outcomeFromServer({ status: "WOULD_RUN", actionId: "a", mode: "TEST" }).state, "NOT_READY"); // no level: not recognised, not promoted
+  const f = outcomeFromServer({ status: "FAILED", actionId: "a", mode: "LIVE", error: { code: "IDEMPOTENCY_OUTCOME_UNKNOWN", retryable: false } });
+  assert.equal(f.state, "UNKNOWN");
+  assert.equal(outcomeFromServer({ status: "FAILED", actionId: "a", mode: "LIVE", error: { code: "MUTATION_REJECTED", message: "Giá phải >= 0" } }).state, "REJECTED");
+  const partial = outcomeFromServer({ status: "OK", actionId: "a", mode: "LIVE", followUps: [{ actionId: "b", on: "SUCCESS", status: "FAILED" }] });
+  assert.equal(partial.state, "SUCCESS"); assert.match((partial as { note: string }).note, /1 hành động nối tiếp thất bại/);
+});
+
+test("runtime error codes: missing id, not executable, volatile stores, invalid request, retryable:false is honoured", () => {
+  assert.equal(explainError({ status: 404, code: "QUERY_NOT_FOUND" }).kind, "not-found");
+  assert.equal(explainError({ status: 404, code: "UNKNOWN_ACTION" }, { write: true }).kind, "not-found");
+  for (const code of ["MAPPING_REF_REQUIRED", "WRONG_MODE", "DATA_SOURCE_UNBOUND", "UNSUPPORTED_ACTION_TYPE"]) assert.equal(explainError({ status: 422, code }).kind, "not-executable", code);
+  const v = explainError({ status: 503, code: "RUNTIME_STORES_VOLATILE" }, { write: true });
+  assert.equal(v.kind, "unavailable"); assert.equal(v.retrySafe, false);
+  assert.equal(explainError({ status: 400, code: "INVALID_REQUEST" }).kind, "invalid");
+  assert.equal(explainError({ status: 500, code: "X", retryable: false }).retrySafe, false);
+  assert.equal(outcomeFromError({ status: 503, code: "DATA_RUNTIME_UNAVAILABLE" }).state, "NOT_READY");
+});
+
+test("flag-off detection: 404 WITHOUT a domain code is NOT_READY; 404 WITH one is a missing id", () => {
+  assert.equal(runtimeReadinessFromError({ status: 404, code: "HTTP_404" }, "actions")?.state, "NOT_READY");
+  assert.equal(runtimeReadinessFromError({ status: 404 }, "queries")?.state, "NOT_READY");
+  assert.equal(runtimeReadinessFromError({ status: 404, code: "QUERY_NOT_FOUND" }, "queries"), null);
+  assert.equal(runtimeReadinessFromError({ status: 503, code: "DATA_RUNTIME_UNAVAILABLE" }, "queries")?.state, "NOT_READY");
+  assert.equal(runtimeReadinessFromError({ status: 500 }, "workflows"), null);
+});
+
+test("workflow run view -> outcome: running is RUNNING, TEST/simulated is WOULD_RUN, LIVE success is SUCCESS, failure keeps the code", () => {
+  const base = { runId: "r", workflowId: "w", steps: [] as never[] };
+  assert.equal(outcomeFromRun({ ...base, mode: "LIVE", status: "RUNNING" }).state, "RUNNING");
+  assert.equal(outcomeFromRun({ ...base, mode: "TEST", status: "SUCCEEDED" }).state, "WOULD_RUN");
+  assert.equal(outcomeFromRun({ ...base, mode: "LIVE", status: "SUCCEEDED", steps: [{ stepId: "s", status: "OK", simulated: true }] }).state, "WOULD_RUN");
+  assert.equal(outcomeFromRun({ ...base, mode: "LIVE", status: "SUCCEEDED" }).state, "SUCCESS");
+  assert.equal(outcomeFromRun({ ...base, mode: "LIVE", status: "FAILED", errorCode: "IDEMPOTENCY_OUTCOME_UNKNOWN" }).state, "UNKNOWN");
+  assert.equal(outcomeFromRun({ ...base, mode: "LIVE", status: "FAILED", errorCode: "MUTATION_REJECTED" }).state, "REJECTED");
+  assert.equal(outcomeFromRun({ ...base, mode: "LIVE", status: "CANCELLED" }).state, "NOT_RUN");
+  assert.equal(isRunFinished({ status: "PENDING" }), false);
+  assert.equal(isRunFinished({ status: "failed" }), true);
 });

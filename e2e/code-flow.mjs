@@ -1,3 +1,5 @@
+// @class: real-backend — real browser -> real backend
+// @legacy: pre-V2 single-origin root app (:3100) + scripts/run-local.sh; NOT run against integration/v2; some steps seed via SQL or stub the AI provider
 // Code projects end to end (Phase 7.2–7.4) with the REAL build runner, Docker sandbox and Forgejo: create, AI (simulator) change,
 // sandboxed preview, diff, merge, Code-mode edit, failing build, publish to the sites gateway, isolation and access checks.
 // Needs the local stack (scripts/run-local.sh), which also starts Forgejo, the package mirror and the runner.

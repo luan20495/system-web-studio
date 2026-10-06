@@ -1,3 +1,4 @@
+// @class: unit — pure logic / server-side render of components; no browser, no network
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { accessiblePortals, capabilitiesOf, hasPermission, hasWorkspace, isAdmin, portalHref, portalOfPath, portalPath, PORTAL_PREFIX, resolvePortalPostLogin, resolvePostLogin, safeNext } from "../../packages/permissions/src/index";

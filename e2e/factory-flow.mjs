@@ -1,3 +1,5 @@
+// @class: real-backend — real browser -> real backend
+// @legacy: pre-V2 single-origin root app (:3100) + scripts/run-local.sh; NOT run against integration/v2; some steps seed via SQL or stub the AI provider
 // AI Software Factory — real-browser E2E against the local stack (scripts/run-local.sh, profile local seed users).
 import { chromium } from "playwright-core";
 import { execSync } from "node:child_process";

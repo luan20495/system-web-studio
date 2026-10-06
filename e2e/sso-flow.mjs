@@ -1,3 +1,5 @@
+// @class: real-backend — real browser -> real backend
+// @legacy: pre-V2 single-origin root app (:3100) + scripts/run-local.sh; NOT run against integration/v2; some steps seed via SQL or stub the AI provider
 // OIDC/SSO against a real Keycloak (scripts/sso-up.sh, then restart the API). Verifies that identity != authorization.
 import { chromium } from "playwright-core";
 import { execSync } from "node:child_process";
