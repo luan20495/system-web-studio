@@ -18,6 +18,7 @@ import com.systemwebstudio.data.query.QueryParamSpec
 import com.systemwebstudio.data.query.SqlQueryDefinition
 import com.systemwebstudio.data.datasource.MutationOutcome
 import com.systemwebstudio.logic.action.ExecutionMode
+import com.systemwebstudio.support.ApiSession
 import com.systemwebstudio.support.IntegrationTestBase
 import com.systemwebstudio.version.SchemaRepository
 import com.systemwebstudio.wiring.persistence.DataSourceBindingWriter
@@ -76,7 +77,12 @@ class DataRuntimeLiveApiTests : IntegrationTestBase() {
 
     private fun rt(app: App, path: String) = "${app.sc.base}/app-runtime/$path"
     private fun adminUser(sc: Scenario) = fx.user("wsadmin").also { fx.member(sc.ws, it, "WORKSPACE_ADMIN") }
-    private fun admin(sc: Scenario) = sessionFor(adminUser(sc).username)
+    /**
+     * ONE administrator (one user, one session) per application: C4 derives the idempotency key from tenant, app, USER, action and the client key,
+     * so a "retry with the same key" must come from the same user - a new user per call would be a different key by design.
+     */
+    private val admins = HashMap<UUID, ApiSession>()
+    private fun admin(sc: Scenario): ApiSession = admins.getOrPut(sc.projectId) { sessionFor(adminUser(sc).username) }
 
     /** the AppDefinition with `erp-db` pointing straight at a registered source (a `sourceRef`), instead of being resolved through a binding */
     private fun definitionWithSourceRef(sourceId: UUID): JsonNode {
