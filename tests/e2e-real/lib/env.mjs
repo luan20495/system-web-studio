@@ -8,6 +8,17 @@ export const REQUIRED = [
   ["E2E_ADMIN_PASSWORD", "its password, from the stack's own secret source (never from the repo)"],
 ];
 
+/** Operator-supplied REACHABLE data source for the "connection test succeeds" checks (E2E-06). All three come from the environment only, never from a file in the repo.
+ *  A malformed value is recorded as `error` (a short reason, never the value) and the success checks are then skipped with that reason. */
+export function loadDataSourceFacts(env = process.env) {
+  const type = env.E2E_DS_TYPE?.trim() || "";
+  if (!type) return { provided: false, error: null };
+  const parse = (name) => { const raw = env[name]; if (!raw) return { v: undefined }; try { const v = JSON.parse(raw); return v && typeof v === "object" && !Array.isArray(v) ? { v } : { error: `${name} must be a JSON object` }; } catch { return { error: `${name} is not valid JSON` }; } };
+  const c = parse("E2E_DS_CONFIG_JSON"), k = parse("E2E_DS_CREDENTIAL_JSON");
+  const error = c.error ?? k.error ?? (!c.v ? "E2E_DS_CONFIG_JSON is required with E2E_DS_TYPE" : null);
+  return { provided: true, type, config: c.v, credential: k.v, error };
+}
+
 export function loadConfig(env = process.env) {
   const missing = REQUIRED.filter(([k]) => !env[k]);
   const studio = (env.E2E_STUDIO_URL ?? "").replace(/\/+$/, "");
@@ -26,6 +37,7 @@ export function loadConfig(env = process.env) {
       user: env.E2E_DATA_USER, password: env.E2E_DATA_PASSWORD,
     },
     publicBase: env.E2E_PUBLIC_BASE,
+    dataSource: loadDataSourceFacts(env),
     restartBackendCmd: env.E2E_RESTART_BACKEND_CMD,
     stopRabbitCmd: env.E2E_STOP_RABBIT_CMD, startRabbitCmd: env.E2E_START_RABBIT_CMD,
     durableRunStores: env.E2E_DURABLE_RUN_STORES === "1",

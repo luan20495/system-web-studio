@@ -10,7 +10,7 @@ import { join, relative } from "node:path";
 
 const root = new URL("..", import.meta.url).pathname;
 const CLASSES = ["unit", "mock", "harness", "real-backend"];
-const HELPERS = new Set(["tests/builder/a11y.ts", "tests/builder/fixtures.ts", "tests/browser/harness.tsx", "tests/browser/build-harness.mjs", "tests/tsconfig.json", "tests/browser/README.md", "tests/e2e-real/README.md"]);
+const HELPERS = new Set(["tests/builder/a11y.ts", "tests/builder/fixtures.ts", "tests/browser/harness.tsx", "tests/browser/ds-harness.tsx", "tests/browser/build-harness.mjs", "tests/tsconfig.json", "tests/browser/README.md", "tests/e2e-real/README.md"]);
 const files = [];
 (function walk(dir) {
   for (const n of readdirSync(dir)) {

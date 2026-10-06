@@ -3,6 +3,7 @@
 import { execFile } from "node:child_process";
 import { createServer } from "node:http";
 import { summarise } from "./lib/report.mjs";
+import { loadDataSourceFacts } from "./lib/env.mjs";
 
 // async on purpose: the throw-away servers live in THIS process and must keep answering while the suite runs
 const run = (env) => new Promise((res) => execFile(process.execPath, [new URL("./run.mjs", import.meta.url).pathname], { env: { PATH: process.env.PATH, ...env }, encoding: "utf8", timeout: 60_000 }, (err, stdout, stderr) => res({ status: err ? (typeof err.code === "number" ? err.code : 99) : 0, stdout, stderr })));
@@ -24,4 +25,9 @@ s = await serve((req, res) => { res.statusCode = req.url.includes("auth/config")
 r = await run({ ...creds, E2E_STUDIO_URL: `http://127.0.0.1:${s.address().port}` });
 check("platform-like server but admin login refused → exit 2 (setup failed), never 0", r.status === 2 && /fixtures could not be created/.test(r.stderr), `status=${r.status} ${r.stderr.slice(0, 160)}`); s.close();
 check("summary counts BLOCKED/SKIP separately from PASS", JSON.stringify(summarise([{ status: "PASS" }, { status: "BLOCKED" }, { status: "SKIP" }, { status: "FAIL" }])) === '{"total":4,"PASS":1,"FAIL":1,"BLOCKED":1,"SKIP":1}');
+check("E2E_DS_* absent → not provided", loadDataSourceFacts({}).provided === false);
+check("E2E_DS_* needs a JSON-object config", loadDataSourceFacts({ E2E_DS_TYPE: "postgres" }).error === "E2E_DS_CONFIG_JSON is required with E2E_DS_TYPE");
+check("malformed E2E_DS_CONFIG_JSON → an error that does NOT contain the value", (() => { const f = loadDataSourceFacts({ E2E_DS_TYPE: "postgres", E2E_DS_CONFIG_JSON: "{host: secret-host" }); return f.error === "E2E_DS_CONFIG_JSON is not valid JSON" && !JSON.stringify(f).includes("secret-host"); })());
+check("malformed credential JSON → a reason without the value", (() => { const f = loadDataSourceFacts({ E2E_DS_TYPE: "postgres", E2E_DS_CONFIG_JSON: "{}", E2E_DS_CREDENTIAL_JSON: "[1]" }); return f.error === "E2E_DS_CREDENTIAL_JSON must be a JSON object"; })());
+check("valid E2E_DS_* → provided with parsed values", (() => { const f = loadDataSourceFacts({ E2E_DS_TYPE: "postgres", E2E_DS_CONFIG_JSON: '{"host":"h"}', E2E_DS_CREDENTIAL_JSON: '{"username":"u"}' }); return f.provided && !f.error && f.config.host === "h" && f.credential.username === "u"; })());
 const bad = results.filter((x) => !x).length; console.log(`\n${results.length - bad}/${results.length} passed`); process.exit(bad ? 1 : 0);

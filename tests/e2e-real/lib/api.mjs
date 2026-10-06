@@ -22,6 +22,7 @@ export class Session {
   async refreshCsrf() { const r = await this.request("GET", "/auth/csrf"); this.csrf = r.body?.token ?? null; return this.csrf; }
   get = (p, x) => this.request("GET", p, undefined, x);
   post = (p, b, x) => this.request("POST", p, b ?? {}, x);
+  put = (p, b, x) => this.request("PUT", p, b, x);
   patch = (p, b, x) => this.request("PATCH", p, b, x);
   del = (p, x) => this.request("DELETE", p, undefined, x);
   async login(username, password) {

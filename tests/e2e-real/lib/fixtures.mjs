@@ -3,7 +3,8 @@
 //   workspace A / B   : POST /admin/workspaces
 //   users             : adminA (WORKSPACE_ADMIN in A), adminB (WORKSPACE_ADMIN in B), viewerA (VIEWER in A); activated with a RANDOM per-run password kept in memory
 //   project / page / component / action / workflow : created as adminA through the normal routes (PATCH /schema operations)
-//   datasource / TEST binding / LIVE binding / query / mutation : NOT creatable over HTTP (BLOCKERS B-C0-W-03) → only used when the operator pre-seeded them (E2E_DATA_*)
+//   datasource / credential / TEST|LIVE binding : created through C3's Management API (docs/parallel/c3/MANAGEMENT_API.md) by the flows that exercise it (tracked in created.dataSources / created.bindings and removed by cleanup())
+//   query / mutation / declared slot             : NOT creatable over HTTP (no management endpoint for queries, no AppDefinition op for dataSources[]) → only used when the operator pre-seeded them (E2E_DATA_*)
 //   publish config    : PATCH /schema UPDATE_PUBLISH_CONFIG is attempted by the publish flow only
 // Every created thing is named `e2e-<runId>-…` and removed/disabled by cleanup(). No production data is read or written.
 import { Session, randomSecret } from "./api.mjs";
@@ -12,7 +13,7 @@ const need = (r, what) => { if (r.status < 200 || r.status >= 300) throw new Err
 
 export async function createFixtures(cfg, log = () => {}) {
   const runId = cfg.runId, name = (s) => `e2e-${runId}-${s}`;
-  const fx = { runId, created: { users: [], projects: [], workspaces: [] }, sessions: {}, users: {}, workspaces: {}, projects: {}, ids: {}, notes: {} };
+  const fx = { runId, created: { users: [], projects: [], workspaces: [], dataSources: [], bindings: [] }, sessions: {}, users: {}, workspaces: {}, projects: {}, ids: {}, notes: {} };
 
   const admin = new Session(cfg.studio, "admin");
   fx.me = await admin.login(cfg.adminUser, cfg.adminPassword);
@@ -62,6 +63,17 @@ export async function createFixtures(cfg, log = () => {}) {
 export async function cleanup(fx, log = () => {}) {
   const problems = [];
   if (!fx) return problems;
+  // bindings first (a bound source cannot be deleted: 409), then sources, then the projects they belong to
+  for (const b of [...(fx.created.bindings ?? [])].reverse()) {
+    const s = fx.sessions[b.owner]; if (!s) continue;
+    const r = await s.del(`/workspaces/${b.workspaceId}/projects/${b.projectId}/data-bindings/${b.mode}/${encodeURIComponent(b.slotId)}`);
+    if (r.status >= 300 && r.status !== 404) problems.push(`unbind ${b.mode}/${b.slotId}: ${r.status} ${r.body?.code ?? ""}`);
+  }
+  for (const d of [...(fx.created.dataSources ?? [])].reverse()) {
+    const s = fx.sessions[d.owner]; if (!s) continue;
+    const r = await s.del(`/workspaces/${d.workspaceId}/data-sources/${encodeURIComponent(d.id)}`);
+    if (r.status >= 300 && r.status !== 404) problems.push(`delete data source ${d.id}: ${r.status} ${r.body?.code ?? ""}`);
+  }
   for (const p of [...fx.created.projects].reverse()) {
     const s = fx.sessions[p.owner]; if (!s) continue;
     const cur = await s.get(`/workspaces/${p.workspaceId}/projects/${p.projectId}`);

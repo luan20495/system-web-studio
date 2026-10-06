@@ -9,3 +9,5 @@ Exit codes: `0` runnable flows passed · `1` a flow failed · `2` NOT RUN (never
 
 Layout: `run.mjs` (guard, fixtures, flows, cleanup, report) · `lib/` (env, API session with CSRF, fixtures, report, UI helpers) · `flows/e2e-NN.mjs` (one per matrix id, plus `e2e-s1`, `e2e-s2`).
 Fixtures are created through the product API with random per-run passwords and removed afterwards; workspaces cannot be deleted by any route and are reported as left behind.
+
+Data-management flows (E2E-06…09): each flow is split into `[fixture]` / `[api]` / `[ui]` / `[backend]` / `[cleanup]` stages (check names carry the stage). E2E-06 drives C3's Management API and the Studio "Dữ liệu" panel (sources, credential metadata, test connection, bindings, isolation, permissions) and then ends BLOCKED on the part no route can do (query + declared slot). Created sources/bindings are tracked and removed by cleanup. `E2E_DS_*` (optional) supplies a reachable source for the success path; values come from the environment only and are never printed.
