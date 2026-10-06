@@ -1,6 +1,6 @@
 # Management API v2 — data sources, credentials, schema, query / mutation definitions, TEST/LIVE bindings (FROZEN by D-C0-28)
 
-Status: **contract FROZEN 2026-10-06 (C0). Implementation status: NOT INTEGRATED. No route below is mounted on `integration/v2`, none may be advertised to C5 as READY, and none may be called by a frontend until C0 reports it integrated and tested** (see `docs/parallel/c0/MANAGEMENT_API_REVIEW.md` §5).
+Status: **contract FROZEN 2026-10-06 (C0, D-C0-28). INTEGRATED on `integration/v2 @ b557a0d` (D-C0-30): the C3 branch is imported, the Spring routes are mounted behind `app.data-platform.enabled`, and the gates below are green. Management API READY_TO_CONSUME for C5.** The text of the contract below is unchanged by the import; D-C0-30 records the one clarification (a non-UUID data-source id answers 404 `NOT_FOUND`).
 Owners: **C3** (domain, services, repositories, connector semantics, strict request parsers, safe projections) · **C0** (Spring controllers and routing, server-derived context, integration tests, this contract) · **C1** (authorization policy; no change here) · **C5** (consumer only).
 This file never overrides `tenant-permission.md`, `data-runtime.md` (section 4b mutation semantics), `action-workflow.md` or `runtime-api.md`. Anything not listed here does not exist; a new route needs a new DECISIONS entry first.
 

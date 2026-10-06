@@ -44,3 +44,11 @@ Evidence reported for the branch (not re-run by C0): `compileKotlin` / `compileT
 ## 5. C5 status
 
 **Management API: NOT READY. C5 browser production API: BLOCKED.** C5 may write client adapters and types **against `docs/contracts/v2/management-api.md`**, behind the `NOT_READY` panels, with no call to a route; it may not invent a route, mock the API and call the result a real E2E, send a `tenantId`, or call any raw DataGateway mutation. The contract file is a target, not an advertisement.
+
+## 6. Result (D-C0-30, 2026-10-06)
+
+C3 reported `READY_FOR_C0_IMPORT`. Imported (10 commits, see D-C0-30 item 1 for why not 3), transport completed by C0 (`b557a0d`), full regression and a live smoke are green. **Management API READY_TO_CONSUME.** Items 1-8 of section 2 are resolved (R8 stays "current C1 policy"); the one clarification is D-C0-30 item 4. Open: B-C0-W-06 (local target allow-list), see D-C0-30 item 7.
+
+**C5 rules** (unchanged contract): never send `tenantId`; `TEST` / `LIVE` upper case; query and mutation definitions are data-source scoped, bindings are project scoped; never call a raw mutation route (there is none); a data-source id that is not a UUID is a 404; at workspace level only `WORKSPACE_ADMIN` holds `DATA_SOURCE_VIEW` / `DATA_SOURCE_MANAGE` today, so hide the data panels for other roles instead of showing a 403; a connection test answers 200 with `ok:false` and a stable code, and a target on a loopback / private address is refused until B-C0-W-06 lands; every non-2xx body is the envelope `{code,message,requestId,retryable,details}`.
+
+**C6 scope now:** Management API, security, TEST / LIVE binding, schema, query / mutation definition, runtime mutation through C4, tenant / workspace isolation, credential / secret redaction, regression. Not the final V1 QA.
