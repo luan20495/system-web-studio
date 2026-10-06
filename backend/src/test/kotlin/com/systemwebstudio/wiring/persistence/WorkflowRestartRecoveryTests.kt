@@ -39,15 +39,28 @@ class WorkflowRestartRecoveryTests : DataRuntimeJdbcTestBase() {
 
     @BeforeEach
     fun fixtures() {
-        // the C4 fixtures use fixed ids: make them real rows (idempotent), and start every test from an empty run table of that tenant
+        // the C4 fixtures use fixed ids: make them real rows (idempotent)
         jdbc.update("INSERT INTO tenants (id, slug, name) VALUES (?, 'fx-tenant-a', 'A') ON CONFLICT DO NOTHING", Fx.tenantA)
         jdbc.update("INSERT INTO workspaces (id, name, slug, tenant_id) VALUES (?, 'x', 'fx-ws-a', ?) ON CONFLICT DO NOTHING", workspace, Fx.tenantA)
         jdbc.update("INSERT INTO projects (id, workspace_id, name, owner_user_id, tenant_id) VALUES (?, ?, 'p', ?, ?) ON CONFLICT DO NOTHING", Fx.appA, workspace, fx.user().id, Fx.tenantA)
-        jdbc.update("DELETE FROM workflow_runs WHERE tenant_id = ?", Fx.tenantA)
+        clearUnfinishedRuns()
     }
 
     @AfterEach
-    fun stop() { executor.shutdownNow() }
+    fun stop() {
+        executor.shutdownNow()
+        clearUnfinishedRuns()
+    }
+
+    /**
+     * The sweeper claims across the whole table, exactly like in production, so a run that an earlier test class left unfinished (with another tenant's fixed or
+     * random ids) would be re-driven by THIS test's engine and fakes. Every test therefore starts - and leaves - with no unfinished run, and none of this tenant.
+     */
+    private fun clearUnfinishedRuns() {
+        jdbc.update(
+            "DELETE FROM workflow_runs WHERE tenant_id = ? OR status NOT IN ('SUCCEEDED', 'FAILED', 'CANCELLED') OR compensation = 'IN_PROGRESS'", Fx.tenantA
+        )
+    }
 
     /** a process: its own engine, queue and action runtime over the shared database */
     private fun process(vararg w: WorkflowDefinition) = WorkflowRig(w.toList(), actions, executor, store = JdbcWorkflowRunStore(jdbc, json))

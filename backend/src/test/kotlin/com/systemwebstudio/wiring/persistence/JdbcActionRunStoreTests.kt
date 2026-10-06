@@ -155,6 +155,16 @@ class JdbcActionRunStoreTests : DataRuntimeJdbcTestBase() {
     }
 
     @Test
+    fun `the sweeper never turns a recorded ambiguous write into a retryable run`() {
+        val k = key()
+        val unknown = ActionResult.Failed(ActionErrorCodes.IDEMPOTENCY_OUTCOME_UNKNOWN, retryable = false, message = "outcome unknown")
+        store.complete(k, started(store.begin(k, "fp", at)).runId, unknown, at)
+        store.sweepStale(at.plus(Duration.ofDays(1)), at.plus(Duration.ofDays(1)))
+        assertThat(newStore().begin(k, "fp", at.plus(Duration.ofDays(2)))).isEqualTo(RunBegin.Replay(unknown))
+        assertThat(store.find(k)!!.attempt).isEqualTo(1)
+    }
+
+    @Test
     fun `sweeping twice does not touch a run that is already finished`() {
         val k = key()
         started(store.begin(k, "fp", at))
