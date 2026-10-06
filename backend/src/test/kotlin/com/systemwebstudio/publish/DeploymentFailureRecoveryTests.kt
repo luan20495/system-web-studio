@@ -130,7 +130,8 @@ class DeploymentFailureRecoveryTests : IntegrationTestBase() {
         val sc = scenario(); sc.setHero("Bản một")
         val first = sc.publish(); val slug = slugOf(first)
         sc.setHero("Bản hai")
-        Mockito.doThrow(IOException("storage offline")).`when`(store).putOnce(Mockito.anyString(), Mockito.any(ByteArray::class.java) ?: ByteArray(0), Mockito.anyString())
+        // Kotlin declares no checked exceptions, so doThrow(IOException) is rejected by Mockito; the real MinIO client does throw it at runtime.
+        Mockito.doAnswer { throw IOException("storage offline") }.`when`(store).putOnce(Mockito.anyString(), Mockito.any(ByteArray::class.java) ?: ByteArray(0), Mockito.anyString())
         val d = sc.publish(expect = "FAILED")
         assertThat(d.get("error").asString()).startsWith("[ARTIFACT_STORE_UNAVAILABLE]")
         assertThat(pointer(sc)).isEqualTo(id(first))
