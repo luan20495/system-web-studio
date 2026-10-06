@@ -51,24 +51,26 @@ class WorkflowShapeTests {
 
     private val actions = listOf("w1").map { Fx.write(it) }
 
-    @Test fun `a step timeout fails a slow action, and with no attempts left the run ends FAILED with TIMEOUT`() {
+    @Test fun `a step timeout on a write is an unknown outcome and fails the run with that code`() {
         val r = WorkflowRig(listOf(wf("slow", act("a", "w1", timeout = Duration.ofMillis(150), retry = RetryPolicy(maxAttempts = 1)))), actions, executor)
         r.data.onWrite = { Thread.sleep(800) }
         val id = r.startOk("slow"); r.drain()
         assertEquals(WorkflowRunStatus.FAILED, r.view(id).status)
-        assertEquals("TIMEOUT", r.view(id).errorCode)
+        assertEquals("IDEMPOTENCY_OUTCOME_UNKNOWN", r.view(id).errorCode)
     }
 
-    @Test fun `a timed out step is retried with backoff and the run can still succeed`() {
-        val r = WorkflowRig(listOf(wf("slow", act("a", "w1", timeout = Duration.ofMillis(150), retry = RetryPolicy(maxAttempts = 3)))), actions, executor)
-        var slow = true
-        r.data.onWrite = { if (slow) Thread.sleep(800) }
+    @Test fun `a timed out write step is not retried and does not route to onError even when attempts and a handler exist`() {
+        val r = WorkflowRig(
+            listOf(wf("slow", act("a", "w1", timeout = Duration.ofMillis(150), retry = RetryPolicy(maxAttempts = 3), next = "z", onError = "h"), act("h", "w1", next = "z"), WorkflowStep("z", StepKind.END))),
+            actions, executor
+        )
+        r.data.onWrite = { Thread.sleep(800) }
         val id = r.startOk("slow"); r.drain()
-        assertEquals(WorkflowRunStatus.WAITING, r.view(id).status)                     // RETRY_WAIT, not failed
-        assertEquals(StepStatus.RETRY_WAIT, r.step(id, "a")!!.status)
-        slow = false
+        assertEquals(WorkflowRunStatus.FAILED, r.view(id).status)                      // not WAITING/RETRY_WAIT, not SUCCEEDED through the error branch
+        assertEquals("IDEMPOTENCY_OUTCOME_UNKNOWN", r.view(id).errorCode)
         r.advance(Duration.ofMinutes(1)); r.engine.sweep(); r.drain()
-        assertEquals(WorkflowRunStatus.SUCCEEDED, r.view(id).status)
+        assertEquals(WorkflowRunStatus.FAILED, r.view(id).status)
+        assertEquals(1, r.data.writes.size)                                            // one attempt only: nothing was repeated, "h" never ran
     }
 
     // ---- conditions are read element by element (Jackson 3's JsonNode.map is a member that would shadow Iterable.map) ----------------

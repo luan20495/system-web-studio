@@ -71,7 +71,8 @@ object ActionErrorCodes {
     /**
      * Data-mutation contract (`docs/contracts/v2/data-runtime.md` §4b), HTTP 409. An earlier attempt with this key ended **ambiguously**: the write
      * may or may not have been applied. Never retryable with the same key (the data layer will never run it again), never "compensated as not done",
-     * and a workflow does not route it to `onError` (the run FAILS with this code). A person checks the data source and starts a new operation.
+     * a workflow does not route it to `onError` (the run FAILS with this code), and a UI action does not run its `onError` chain. A person checks the data source and starts a new operation.
+     * The runtime also reports it for a **mutating** action whose execution ended with `TIMEOUT` / `INTERRUPTED` (the handler may still have committed); `details["cause"]` holds the original code.
      */
     const val IDEMPOTENCY_OUTCOME_UNKNOWN = "IDEMPOTENCY_OUTCOME_UNKNOWN"
 

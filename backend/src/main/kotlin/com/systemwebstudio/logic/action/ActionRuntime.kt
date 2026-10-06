@@ -256,7 +256,7 @@ class DefaultActionRuntime(
             return Outcome(failure, def)
         }
 
-        val result = runWithTimeout(def, run, timeout, dedupes = runKey != null) { handler.execute(ctx, def, input, run) }
+        val result = normalizeAmbiguous(def, runWithTimeout(def, run, timeout, dedupes = runKey != null) { handler.execute(ctx, def, input, run) })
 
         if (runKey != null) {
             val owned = safely { runs.complete(runKey, runId, result, clock.instant()) }
@@ -323,6 +323,23 @@ class DefaultActionRuntime(
         }
     }
 
+    /**
+     * The one place where an ambiguous execution of a **mutating** action becomes `IDEMPOTENCY_OUTCOME_UNKNOWN` (D-C4-17).
+     *
+     * A `TIMEOUT` / `INTERRUPTED` means the handler was cut off, not that it did nothing: the write may have been committed. For an action type that
+     * changes state ([ActionType.mutatesState]) that is exactly the data layer's "unknown outcome" (`data-runtime.md` §4b), so it gets the same code and the
+     * same rules — never retryable with the same key, no UI `onError` chain ([NO_CHAIN_CODES]), no workflow `onError` route, no compensation of that step.
+     * A non-mutating action keeps `TIMEOUT` / `INTERRUPTED` and their retry flag unchanged. Only the LIVE path calls this: a TEST preview wrote nothing.
+     * The original code is kept in `details["cause"]`.
+     */
+    private fun normalizeAmbiguous(def: ActionDefinition, result: ActionResult): ActionResult {
+        if (!def.type.mutatesState || result !is ActionResult.Failed || result.code !in AMBIGUOUS_EXECUTION_CODES) return result
+        return failed(
+            ActionErrorCodes.IDEMPOTENCY_OUTCOME_UNKNOWN, "The action did not finish and may have been applied; check before trying again with a new request",
+            retryable = false, details = mapOf("cause" to result.code)
+        )
+    }
+
     private fun reject(ctx: ActionContext, request: ActionRequest, def: ActionDefinition?, failure: ActionResult.Failed): ActionResult.Failed {
         recordBestEffort(entry(AuditPhase.REJECTED, ctx, request, def, null, failure))
         return failure
@@ -354,14 +371,22 @@ class DefaultActionRuntime(
         private val IDEMPOTENCY_KEY = IdempotencyKeys.CLIENT_KEY
         /** Types that go through the data path and therefore need DATA_MUTATE (`tenant-permission.md` §5). */
         private val DATA_MUTATING = setOf(ActionType.SUBMIT_FORM, ActionType.CREATE_RECORD, ActionType.UPDATE_RECORD, ActionType.DELETE_RECORD, ActionType.CALL_API)
+        /** Executor-level outcomes that say "cut off", not "did nothing": see [normalizeAmbiguous]. */
+        private val AMBIGUOUS_EXECUTION_CODES = setOf(ActionErrorCodes.TIMEOUT, ActionErrorCodes.INTERRUPTED)
         private val SAFE_SEGMENT = Regex("^[A-Za-z0-9._-]{1,64}$")
 
-        /** Failures that mean "the action did not get to run" — they must not trigger `onError` actions. */
+        /**
+         * Failures that must not trigger `onError` actions: either "the action did not get to run", or (IDEMPOTENCY_OUTCOME_UNKNOWN) "the write may
+         * have been applied". An `onError` chain assumes the action had no effect; after an ambiguous write it could add a second, conflicting side
+         * effect, so the chain is skipped exactly as a workflow skips a step's `onError` (D-C0-C4-UI-ONERROR). MUTATION_REJECTED is a definite
+         * "nothing applied" and keeps its `onError` chain.
+         */
         private val NO_CHAIN_CODES = setOf(
             ActionErrorCodes.UNKNOWN_ACTION, ActionErrorCodes.UNSUPPORTED_ACTION_TYPE, ActionErrorCodes.FORBIDDEN, ActionErrorCodes.TENANT_DISABLED,
             ActionErrorCodes.INVALID_DEFINITION, ActionErrorCodes.LIMIT_EXCEEDED, ActionErrorCodes.IDEMPOTENCY_KEY_REQUIRED,
             ActionErrorCodes.IDEMPOTENCY_KEY_INVALID, ActionErrorCodes.IDEMPOTENCY_KEY_REUSED, ActionErrorCodes.ACTION_IN_PROGRESS,
-            ActionErrorCodes.DEPENDENCY_UNAVAILABLE, ActionErrorCodes.AUDIT_UNAVAILABLE, ActionErrorCodes.RATE_LIMITED
+            ActionErrorCodes.DEPENDENCY_UNAVAILABLE, ActionErrorCodes.AUDIT_UNAVAILABLE, ActionErrorCodes.RATE_LIMITED,
+            ActionErrorCodes.IDEMPOTENCY_OUTCOME_UNKNOWN
         )
 
         /** A client-supplied id becomes part of an idempotency key: keep it if it is plain, otherwise replace it by a digest. */

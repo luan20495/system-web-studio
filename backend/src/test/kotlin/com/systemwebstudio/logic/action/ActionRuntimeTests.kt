@@ -314,20 +314,97 @@ class ActionRuntimeTests {
         assertEquals(AuditPhase.FAILED, r.audit.phases.last())
     }
 
-    @Test fun `timeout cancels the handler, and a mutating action is retryable only with an idempotency key`() {
-        val slow = object : ActionHandler {
-            override val type = ActionType.CREATE_RECORD
-            override fun execute(ctx: ActionContext, definition: ActionDefinition, input: ActionInput, run: ActionRun): ActionResult {
-                Thread.sleep(5_000); return ActionResult.Ok(str("late"))
-            }
-            override fun preview(ctx: ActionContext, definition: ActionDefinition, input: ActionInput, run: ActionRun): ActionResult = execute(ctx, definition, input, run)
+    // ---- ambiguous execution of a mutating action (D-C4-17) ---------------------------------------------------------------------
+
+    /** Sleeps in [execute] (and counts runs) for the action [slowId]; any other action (the `onError` child) is answered like a NAVIGATE. */
+    private class SlowHandler(override val type: ActionType, private val slowId: String, private val millis: Long, private val started: java.util.concurrent.CountDownLatch? = null) : ActionHandler {
+        val runs = java.util.concurrent.atomic.AtomicInteger()
+        private val nav = NavigateActionHandler(json)
+        override fun execute(ctx: ActionContext, definition: ActionDefinition, input: ActionInput, run: ActionRun): ActionResult {
+            if (definition.id != slowId) return nav.execute(ctx, definition, input, run)
+            runs.incrementAndGet(); started?.countDown(); Thread.sleep(millis); return ActionResult.Ok(str("late"))
         }
-        val def = Fx.mutation(ActionType.CREATE_RECORD).copy(limits = ActionLimits(timeout = Duration.ofMillis(100)), idempotency = IdempotencyPolicy.OPTIONAL)
-        val r = rig(def, registry = { _, _, _ -> ActionHandlerRegistry.of(slow) })
-        val noKey = failure(r.runtime.execute(Fx.ctx(), createReq(key = null)))
-        assertEquals(ActionErrorCodes.TIMEOUT, noKey.code); assertEquals(false, noKey.retryable)
-        val withKey = failure(r.runtime.execute(Fx.ctx(), createReq(key = "k1")))
-        assertEquals(ActionErrorCodes.TIMEOUT, withKey.code); assertTrue(withKey.retryable)
+        override fun preview(ctx: ActionContext, definition: ActionDefinition, input: ActionInput, run: ActionRun): ActionResult = execute(ctx, definition, input, run)
+    }
+
+    private val shortLimits = ActionLimits(timeout = Duration.ofMillis(100))
+    private fun slowWrite() = Fx.mutation(ActionType.CREATE_RECORD).copy(limits = shortLimits, idempotency = IdempotencyPolicy.OPTIONAL, onError = listOf("oops"))
+    private fun slowRead() = Fx.navigate("slow").copy(limits = shortLimits, onError = listOf("oops"))
+    private fun slowRig(def: ActionDefinition, slow: SlowHandler) =
+        rig(def, Fx.navigate("oops"), registry = { _, _, _ -> if (def.type == ActionType.NAVIGATE) ActionHandlerRegistry.of(slow) else ActionHandlerRegistry.of(slow, NavigateActionHandler(json)) })
+
+    /** Runs [request] on its own thread and interrupts that thread once the handler has started: the executor-level INTERRUPTED path. */
+    private fun runInterrupted(runtime: ActionRuntime, request: ActionRequest, started: java.util.concurrent.CountDownLatch): ActionExecution {
+        val out = java.util.concurrent.atomic.AtomicReference<ActionExecution>()
+        val t = Thread { out.set(runtime.run(Fx.ctx(), request)) }
+        t.start()
+        assertTrue(started.await(5, java.util.concurrent.TimeUnit.SECONDS), "the handler never started")
+        t.interrupt(); t.join(10_000)
+        return out.get() ?: throw AssertionError("the interrupted run did not finish")
+    }
+
+    @Test fun `a mutating action that times out is an unknown outcome, never retryable, and runs no onError chain`() {
+        val slow = SlowHandler(ActionType.CREATE_RECORD, "m1", 5_000)
+        val r = slowRig(slowWrite(), slow)
+        val ex = r.runtime.run(Fx.ctx(), createReq(key = "k-t"))
+        val f = failure(ex.result)
+        assertEquals(ActionErrorCodes.IDEMPOTENCY_OUTCOME_UNKNOWN, f.code); assertFalse(f.retryable); assertEquals("TIMEOUT", f.details["cause"])
+        assertTrue(ex.followUps.isEmpty())                                                           // "oops" assumes nothing happened: it must not run
+        assertEquals(ActionErrorCodes.IDEMPOTENCY_OUTCOME_UNKNOWN, r.audit.entries.last().errorCode)
+        val noKey = failure(r.runtime.execute(Fx.ctx(), createReq(key = null)))                      // without a key it is just as ambiguous
+        assertEquals(ActionErrorCodes.IDEMPOTENCY_OUTCOME_UNKNOWN, noKey.code); assertFalse(noKey.retryable)
+    }
+
+    @Test fun `a mutating action that is interrupted is an unknown outcome, never retryable, and runs no onError chain`() {
+        val started = java.util.concurrent.CountDownLatch(1)
+        val slow = SlowHandler(ActionType.CREATE_RECORD, "m1", 30_000, started)
+        val r = slowRig(slowWrite().copy(limits = ActionLimits(timeout = Duration.ofSeconds(60))), slow)
+        val ex = runInterrupted(r.runtime, createReq(key = "k-i"), started)
+        val f = failure(ex.result)
+        assertEquals(ActionErrorCodes.IDEMPOTENCY_OUTCOME_UNKNOWN, f.code); assertFalse(f.retryable); assertEquals("INTERRUPTED", f.details["cause"])
+        assertTrue(ex.followUps.isEmpty())
+    }
+
+    @Test fun `a non-mutating action that times out keeps TIMEOUT, stays retryable and still runs onError`() {
+        val r = slowRig(slowRead(), SlowHandler(ActionType.NAVIGATE, "slow", 5_000))
+        val ex = r.runtime.run(Fx.ctx(), ActionRequest("slow"))
+        val f = failure(ex.result)
+        assertEquals(ActionErrorCodes.TIMEOUT, f.code); assertTrue(f.retryable); assertTrue(f.details.isEmpty())
+        assertEquals(ChainOn.ERROR, ex.followUps.single().on); assertEquals("oops", ex.followUps.single().actionId)
+    }
+
+    @Test fun `a non-mutating action that is interrupted keeps INTERRUPTED, stays retryable and still runs onError`() {
+        val started = java.util.concurrent.CountDownLatch(1)
+        val r = slowRig(slowRead().copy(limits = ActionLimits(timeout = Duration.ofSeconds(60))), SlowHandler(ActionType.NAVIGATE, "slow", 30_000, started))
+        val ex = runInterrupted(r.runtime, ActionRequest("slow"), started)
+        val f = failure(ex.result)
+        assertEquals(ActionErrorCodes.INTERRUPTED, f.code); assertTrue(f.retryable); assertTrue(f.details.isEmpty())
+        assertEquals(ChainOn.ERROR, ex.followUps.single().on)
+    }
+
+    @Test fun `a replay of a normalized unknown outcome is the same failure, runs no handler and no onError chain`() {
+        val slow = SlowHandler(ActionType.CREATE_RECORD, "m1", 5_000)
+        val r = slowRig(slowWrite(), slow)
+        assertEquals(ActionErrorCodes.IDEMPOTENCY_OUTCOME_UNKNOWN, failure(r.runtime.run(Fx.ctx(), createReq(key = "k-r")).result).code)
+        val replay = r.runtime.run(Fx.ctx(), createReq(key = "k-r"))
+        assertEquals(ActionErrorCodes.IDEMPOTENCY_OUTCOME_UNKNOWN, failure(replay.result).code); assertFalse(failure(replay.result).retryable)
+        assertTrue(replay.followUps.isEmpty())
+        assertEquals(1, slow.runs.get())                                                             // the stored outcome was replayed, the write was not attempted again
+    }
+
+    @Test fun `a rejected write stays a definite failure, is not retryable even if an adapter says so, and may run onError`() {
+        val r = chainRig()
+        r.data.outcome = PortOutcome.Failure(ActionErrorCodes.MUTATION_REJECTED, true, "refused")
+        val ex = r.runtime.run(Fx.ctx(), createReq("k-rej2"))
+        val f = failure(ex.result)
+        assertEquals(ActionErrorCodes.MUTATION_REJECTED, f.code); assertFalse(f.retryable)
+        assertEquals(ChainOn.ERROR, ex.followUps.single().on)
+    }
+
+    @Test fun `a TEST preview that times out is not an unknown outcome because nothing was written`() {
+        val r = slowRig(slowWrite(), SlowHandler(ActionType.CREATE_RECORD, "m1", 5_000))
+        val f = failure(r.runtime.execute(Fx.ctx(), createReq(key = "k-p").copy(mode = ExecutionMode.TEST)))
+        assertEquals(ActionErrorCodes.TIMEOUT, f.code)
     }
 
     @Test fun `a request can shorten the timeout but never lengthen it`() {
@@ -464,6 +541,24 @@ class ActionRuntimeTests {
         assertEquals(ChainOn.ERROR, badInput.runtime.run(Fx.ctx(), ActionRequest("m1", emptyMap(), idempotencyKey = "k-i")).followUps.single().on)
         val replayGate = rig(Fx.mutation(ActionType.CREATE_RECORD).copy(onError = listOf("oops")), Fx.navigate("oops"))
         assertTrue(replayGate.runtime.run(Fx.ctx(), createReq(null)).followUps.isEmpty())          // missing key is a gate failure, not an action failure
+    }
+
+    @Test fun `an unknown-outcome write does not run the UI onError chain, a rejected one does`() {
+        val r = chainRig()
+        r.data.outcome = PortOutcome.Failure(ActionErrorCodes.IDEMPOTENCY_OUTCOME_UNKNOWN, false, "ambiguous")
+        val unknown = r.runtime.run(Fx.ctx(), createReq("k-unk"))
+        assertEquals(ActionErrorCodes.IDEMPOTENCY_OUTCOME_UNKNOWN, failure(unknown.result).code)
+        assertTrue(unknown.followUps.isEmpty())                                                     // the write may have committed: no second, conflicting side effect
+        val replay = r.runtime.run(Fx.ctx(), createReq("k-unk"))                                    // the stored ambiguous run is replayed, still no chain
+        assertEquals(ActionErrorCodes.IDEMPOTENCY_OUTCOME_UNKNOWN, failure(replay.result).code)
+        assertTrue(replay.followUps.isEmpty())
+        assertEquals(1, r.data.writes.size)
+
+        val rejected = chainRig()
+        rejected.data.outcome = PortOutcome.Failure(ActionErrorCodes.MUTATION_REJECTED, false, "refused")
+        val ex = rejected.runtime.run(Fx.ctx(), createReq("k-rej"))
+        assertEquals(ActionErrorCodes.MUTATION_REJECTED, failure(ex.result).code)
+        assertEquals(ChainOn.ERROR, ex.followUps.single().on)                                       // definitely not applied: onError is safe
     }
 
     @Test fun `chained writes get derived keys so re-running the chain is idempotent`() {
