@@ -1,6 +1,7 @@
 package com.systemwebstudio.publish
 
 import com.systemwebstudio.integration.deploy.DeployProvider
+import com.systemwebstudio.integration.deploy.DeployRequest
 import com.systemwebstudio.integration.storage.ArtifactStore
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.jdbc.core.JdbcTemplate
@@ -68,12 +69,25 @@ class StoredArtifactVerifier(private val jdbc: JdbcTemplate, private val json: J
     }
 }
 
-/** One place that deploys a release, verifies it and goes back to an earlier one: used by the deployment processor and the rollback endpoint. */
+/**
+ * One place that deploys a release, verifies it and goes back to an earlier one: used by the deployment processor and the rollback / unpublish
+ * endpoints. Each operation runs inside [ReleaseScopeGuard], so publish, rollback and unpublish of one app are one family of operations.
+ */
 @Service
 class ReleaseService(
-    provider: DeployProvider, releases: JdbcReleaseStore, verifier: StoredArtifactVerifier,
+    provider: DeployProvider, releases: ReleaseStore, verifier: ArtifactVerifier, private val guard: ReleaseScopeGuard,
     @Value("\${app.deploy.deploy-timeout-seconds:120}") deploySeconds: Long,
     @Value("\${app.deploy.verify-timeout-seconds:60}") verifySeconds: Long
 ) {
     val deployer = ReleaseDeployer(provider, releases, verifier, StepRunner(), deploySeconds * 1000, verifySeconds * 1000)
+
+    fun publish(scope: ReleaseScope, request: DeployRequest, afterSwitch: (() -> Unit)? = null): DeployOutcome =
+        guard.run(scope, ReleaseOperation.PUBLISH) { deployer.deploy(request, afterSwitch) }
+
+    fun rollback(scope: ReleaseScope, target: UUID): RollbackResult =
+        guard.run(scope, ReleaseOperation.ROLLBACK) { deployer.restoreRelease(scope.appId, target) }
+
+    /** [takeOffline] is the actual change (pointing the site at nothing); it is only run while the scope is held. */
+    fun <T> unpublish(scope: ReleaseScope, takeOffline: () -> T): T =
+        guard.run(scope, ReleaseOperation.UNPUBLISH) { takeOffline() }
 }

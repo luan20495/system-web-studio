@@ -136,7 +136,7 @@ class DeploymentProcessor(
         val request = DeployRequest(d.id, project["name"] as String, d.versionNumber, d.visibility, project["deployment_target"] as String?, hash, d.projectId, artifactId)
         // server apps: the same build's server part goes to the isolated runtime (blue/green, health-checked) right after the site switch
         val serverStep: (() -> Unit)? = if (artifactId != null && isServerApp(d)) ({ deployServerRuntime(d, artifactId) }) else null
-        return when (val outcome = releases.deployer.deploy(request, serverStep)) {
+        return when (val outcome = releases.publish(ReleaseScope(workspaceOf(d), d.projectId), request, serverStep)) {
             is DeployOutcome.Live -> { state.url = outcome.url; StepResult.Advance }
             is DeployOutcome.Failed -> StepResult.Fail(outcome.failure, outcome.rollback)
         }
