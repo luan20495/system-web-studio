@@ -24,14 +24,35 @@ Branch `fix/c2-v3`. No migration was created or chosen. Written for C0 (integrat
 - Manual rollback / unpublish audit actor for the server-runtime redeploy is the system (the controller still audits `SITE_ROLLBACK` with the user).
 - `project/ProjectLifecycle` still takes a site offline directly (`sites.point(projectId, null)`); it is not behind the guard (not a C2 file).
 
-## 3. Concurrency contract — what is needed from C0 (not implemented)
+## 3. Concurrency contract — implemented with V30 (C2_DEPLOY_CONTRACT.md, D-C0-24 / D-C0-27)
 
-Scope `(tenantId, appId, PRODUCTION)`. Contract from C0: lease + fencing token, CAS on the active pointer, stale publish → FAILED / STALE_PUBLISH, publish waits ≤ 300 s, rollback/unpublish busy → 409 SCOPE_BUSY, TTL 90 s, heartbeat 30 s, max lease 900 s, same Idempotency-Key converges, a dead worker's lease is taken over.
+Scope `(tenantId = projects.tenant_id, appId = projects.id, PRODUCTION)` = the `sites` row. `V30__deployment_rollback_and_scope_lease.sql` + `c2/undo/U30__…` (refuses while a deployment is `ROLLING_BACK` or a lease is held).
 
-Code is ready for it: implement `ReleaseScopeGuard` (replace `PassThroughScopeGuard`), pass `lease.fencingToken` into the pointer update (`SiteService.point`) as a CAS condition. Schema needed (one version, tenant-scoped like V26):
+| Contract item | Where |
+|---|---|
+| lease row, TTL 90 s, heartbeat 30 s, max 900 s, takeover of an expired lease | `publish/JdbcScopeGuard.kt` (every statement is its own `REQUIRES_NEW` transaction) |
+| fencing token | `sites.fence_counter` / `lease_fence`: every acquisition draws the next value (a takeover, and also the same operation taking the scope again); heartbeat, release and pointer commit check the token the scope currently holds |
+| active pointer CAS | `PointerFence.commit` (pointer_version + lease + token + order of intents); `StaticSiteDeployProvider` moves the pointer only through it and refuses without a fence; `SiteService.point` (unfenced, used by the project-archive path) bumps `pointer_version` so any operation in flight is fenced out |
+| publish busy → wait ≤ 300 s | `DeployOutcome.Busy` → one `SCOPE_BUSY` event, re-queued after `app.deploy.scope-retry-ms` (2 s) with the recovery sweeper as safety net (no worker is held), then FAILED `SCOPE_BUSY` |
+| stale publish | FAILED `STALE_PUBLISH` + event |
+| rollback / unpublish busy | `409 SCOPE_BUSY` + `Retry-After`; `expectedActiveDeploymentId` → `409 ROLLBACK_STALE`; `Idempotency-Key` (`idempotency_keys`, `SITE_OPERATION`); `SiteInfo.pointerVersion` / `operation` |
+| `ROLLING_BACK`, `ROLLED_BACK`, typed previous release | `DeploymentStatus.allowed`, `JdbcReleaseStore` (`deployments.previous_deployment_id`, `markRolledBackIfNewer` in the pointer's transaction), processor resumes a crashed `ROLLING_BACK` |
 
-- a lease table keyed by the scope (holder, fencing token, expiry, operation, idempotency key);
-- a fencing column next to `sites.current_deployment_id`;
-- `deployments.previous_deployment_id` (typed replacement for the `SWITCH` event text).
+### Clarifications decided with C0 (R2) and where this implementation goes beyond the contract text
 
-Requested in `BOARD.md` (Migration requests) without a number.
+1. **R2 is not `activation_seq <= active_seq ⇒ stale`.** `seq < active_seq` = `STALE_PUBLISH`; `seq > active_seq` = may go on if lease, fencing token and CAS are valid; `seq == active_seq` = resumes only for the SAME operation (`sites.active_operation_id` = the operation id), otherwise refused. Same-operation takeover keeps the activation number and gets a NEW fencing token. For this V30 adds `sites.active_operation_id` and `sites.fence_counter` / `lease_fence` (the contract text only has `pointer_version`, `active_seq`, `lease_*`). `ScopeOrdering` (pure) and `ReleaseScopeLeaseTests` pin it.
+2. **Rollback / unpublish do not re-enter a LIVE lease of their own operation** (a publish may, as the contract says for redelivery). A duplicate request of the same Idempotency-Key waits (≤ `app.deploy.scope-duplicate-wait-seconds`, default 60) for the first, then runs as the retry that finds the work done (`AlreadyActive`). An expired lease is taken over at once by anyone.
+3. **Fail-closed rollback writes two events** (`ROLLBACK_FAILED` then `ROLLBACK_OFFLINE`), as contract §3.1 step 4; the deployment ends `FAILED`, pointer NULL.
+4. **A worker that lost the scope stops writing**: the same operation took over → silent (`DeployOutcome.Lost`), another operation → `FAILED / STALE_PUBLISH`.
+5. Config keys (code defaults, no `application.yml` edit — that file is C0's): `app.deploy.scope-lease-seconds=90` (min 30), `app.deploy.scope-lease-max-seconds=900`, `app.deploy.scope-wait-seconds=300`, `app.deploy.scope-retry-ms=2000`, `app.deploy.scope-duplicate-wait-seconds=60`.
+
+### Runtime config key (asked by C0)
+
+`app.sites.data-api-base` → `apiBase` in `__factory/config.json`, together with `releaseId`. Read at request time from the environment, never baked into an artifact; blank / relative / non-http(s) / credentials / fragment ⇒ `null` (no address is invented). **Deviation from the proposed payload:** `environment` stays `"preview" | "production"` (lower case) because `@company/app-sdk` types it so; the scope's `PRODUCTION` is internal. Real HTTP probing stays BLOCKED (no public host).
+
+### Known limits of the concurrency work
+
+- A lease lost AFTER the server runtime was moved but before the site pointer was written is not compensated by the loser (the new owner of the scope owns the reconciliation; `RuntimePlane.serve` is idempotent by artifact so its next runtime step converges).
+- A publish that lost the scope after its pointer CAS succeeded ends FAILED / STALE_PUBLISH while the pointer may still name it until the new owner moves it; `live()` serves `DEPLOYING` and `RUNNING` only, so a FAILED deployment is not served.
+- `ProjectLifecycle` (not a C2 file) still takes the site offline with the unfenced `SiteService.point`; it fences operations out but is not itself behind the guard.
+- LIM-1 (C0 F-8, a release is served while `DEPLOYING` until verified) is unchanged for the post-switch confirmation; the pre-switch verification is the Batch 2 mitigation. The candidate-pointer flip is Batch 3.
