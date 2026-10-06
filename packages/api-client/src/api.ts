@@ -3,6 +3,10 @@ import type {
   BackupEnvironment, AppKind, RuntimeStatus, Connector, Department, CostPrice, CostReport, SecurityReport, FormSubmission, SiteDomain, TemplateReview, LibraryCategories, AccessRule, EffectiveModel, AiBudget, AdminAlert, StreamHandlers,
   AiStatus, ApiProject, AuthConfig, Member, SiteInfo, DesignNode, DependencyRequest, PackageView, CloneAccess, TreeFile, CodeFile, CodeCommit, CodeChange, DiffFile, CodeAiResponse, CodeAiHistoryItem, RegistryComponent, ComponentMetadataV2, DefinitionOperation, AssetDto, Deployment, Me, RunQueryRequest, RunQueryResponse, ExecuteActionRequest, ActionEnvelope, StartWorkflowRequest, WorkflowRunView, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
 } from "@xweb/types";
+import type {
+  ConnectorList, DataSourceView, DataSourceList, CreateDataSourceRequest, UpdateDataSourceRequest, CredentialMetadata, SetCredentialRequest,
+  ConnectionTestResult, DataBinding, DataBindingList, BindingMode,
+} from "@xweb/types";
 import { ApiError, call, json, qs, resetCsrf, stream } from "./core";
 
 const P = (w: string, p: string) => `/workspaces/${w}/projects/${p}`;
@@ -14,6 +18,17 @@ function badKey(): never { throw new ApiError(400, "IDEMPOTENCY_KEY_INVALID", "K
 /** same pattern as IDEMPOTENCY_KEY_PATTERN in the contract mirror (kept local: this module must load under plain node in the unit tests) */
 const KEY = /^[A-Za-z0-9._:-]{1,128}$/;
 const checkKey = (k: string | undefined) => { if (k !== undefined && !KEY.test(k)) badKey(); };
+
+
+/** same patterns as DATA_SOURCE_NAME_PATTERN / SLOT_ID_PATTERN in the management mirror (local copies: this module must load under plain node in the unit tests) */
+const DS_NAME = /^[A-Za-z0-9][A-Za-z0-9 ._-]{0,79}$/;
+const SLOT = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+const WS = (w: string) => `/workspaces/${seg(w)}/data-sources`;
+/** a refusal before anything is sent: same shape as the server's 400 (nothing was written) */
+function invalid(message: string): never { throw new ApiError(400, "INVALID_PARAMS", message); }
+const bindingMode = (m: string): BindingMode => { const u = m.toUpperCase(); if (u !== "LIVE" && u !== "TEST") invalid("Chế độ liên kết phải là TEST hoặc LIVE."); return u as BindingMode; };
+/** the secret-bearing request body must never be echoed anywhere: errors thrown here carry fixed text only */
+const MGMT_TEST_TIMEOUT_MS = 30_000;
 
 /** A fresh idempotency key. One per user intent: reuse it only to retry the SAME intent, never to repeat it. */
 export function newIdempotencyKey(prefix = "ui"): string {
@@ -221,6 +236,45 @@ export const api = {
     },
     workflowRun: (w: string, p: string, runId: string) => call<WorkflowRunView>(`${RT(w, p)}/workflow-runs/${seg(runId)}`),
     cancelWorkflowRun: (w: string, p: string, runId: string) => call<WorkflowRunView>(`${RT(w, p)}/workflow-runs/${seg(runId)}/cancel`, { method: "POST" }),
+  },
+  /**
+   * Data Source Management API (C3, MANAGEMENT_API.md @ e606465; routes exist in C3's code, NOT verified against a running backend). Flag: `app.data-platform.enabled`
+   * (off = controller not mounted = 404 WITHOUT a domain code). Tenant is derived by the server from the workspace in the path; the client never sends tenant/workspace/credentialRef/id in a body.
+   * No call here ever returns or logs a secret: `credential` bodies are write-only and the only answer about a credential is CredentialMetadata (key names).
+   */
+  dataManagement: {
+    connectors: (w: string) => call<ConnectorList>(`${WS(w)}/connectors`),
+    list: (w: string) => call<DataSourceList>(WS(w)),
+    get: (w: string, id: string) => call<DataSourceView>(`${WS(w)}/${seg(id)}`),
+    create: async (w: string, body: CreateDataSourceRequest) => {
+      if (!DS_NAME.test(body.name)) invalid("Tên nguồn dữ liệu không hợp lệ (chữ/số, khoảng trắng . _ -, tối đa 80 ký tự, bắt đầu bằng chữ hoặc số).");
+      return call<DataSourceView>(WS(w), { method: "POST", body: json({ name: body.name, type: body.type, ...(body.config ? { config: body.config } : {}), ...(body.credential ? { credential: body.credential } : {}) }) });
+    },
+    /** `config` REPLACES the whole configuration (send every key to keep). The server applies name/config first and status second, not atomically: after any error, re-read. */
+    update: async (w: string, id: string, body: UpdateDataSourceRequest) => {
+      if (body.name === undefined && body.config === undefined && body.status === undefined) invalid("Không có gì để thay đổi.");
+      if (body.name !== undefined && !DS_NAME.test(body.name)) invalid("Tên nguồn dữ liệu không hợp lệ.");
+      return call<DataSourceView>(`${WS(w)}/${seg(id)}`, { method: "PATCH", body: json({ ...(body.name !== undefined ? { name: body.name } : {}), ...(body.config !== undefined ? { config: body.config } : {}), ...(body.status !== undefined ? { status: body.status } : {}) }) });
+    },
+    remove: (w: string, id: string) => call<void>(`${WS(w)}/${seg(id)}`, { method: "DELETE" }),
+    credential: (w: string, id: string) => call<CredentialMetadata>(`${WS(w)}/${seg(id)}/credential`),
+    setCredential: async (w: string, id: string, credential: SetCredentialRequest["credential"]) => {
+      const keys = Object.keys(credential);
+      if (keys.length < 1 || keys.length > 8) invalid("Khóa kết nối phải có từ 1 đến 8 trường.");
+      return call<CredentialMetadata>(`${WS(w)}/${seg(id)}/credential`, { method: "PUT", body: json({ credential }) });
+    },
+    removeCredential: (w: string, id: string) => call<void>(`${WS(w)}/${seg(id)}/credential`, { method: "DELETE" }),
+    /** HTTP 200 means "the test ran"; read `ok`. Non-200: 404 / 409 DISABLED / 403 / 429. */
+    testConnection: (w: string, id: string) => call<ConnectionTestResult>(`${WS(w)}/${seg(id)}/test`, { method: "POST", signal: AbortSignal.timeout(MGMT_TEST_TIMEOUT_MS) }),
+    listBindings: (w: string, p: string) => call<DataBindingList>(`${P(w, p)}/data-bindings`),
+    bind: async (w: string, p: string, mode: string, slotId: string, dataSourceId: string) => {
+      const m = bindingMode(mode); if (!SLOT.test(slotId)) invalid("Mã khe dữ liệu không hợp lệ.");
+      return call<DataBinding>(`${P(w, p)}/data-bindings/${m}/${seg(slotId)}`, { method: "PUT", body: json({ dataSourceId }) });
+    },
+    unbind: async (w: string, p: string, mode: string, slotId: string) => {
+      const m = bindingMode(mode); if (!SLOT.test(slotId)) invalid("Mã khe dữ liệu không hợp lệ.");
+      return call<void>(`${P(w, p)}/data-bindings/${m}/${seg(slotId)}`, { method: "DELETE" });
+    },
   },
   lookupProject: (p: string) => call<ApiProject>(`/projects/${p}`),
   updateProject: (w: string, p: string, expectedRevision: number, patch: Partial<ApiProject>) =>

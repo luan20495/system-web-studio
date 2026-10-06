@@ -26,9 +26,9 @@ export const DATA_STEPS: readonly { id: DataStepId; label: string; help: string 
 ];
 
 /** readiness per step: the document can only describe the flow; sources/discovery/preview need the Data Platform to be wired to HTTP */
-export function stepReadiness(step: DataStepId, definitionOps: Readiness): Readiness {
+export function stepReadiness(step: DataStepId, definitionOps: Readiness, managementAvailable = false): Readiness {
   switch (step) {
-    case "source": return staticReadiness("DATA_SOURCES");
+    case "source": return managementAvailable ? { state: "AVAILABLE" } : staticReadiness("DATA_SOURCES");
     case "discovery": return staticReadiness("SCHEMA_DISCOVERY");
     default: return definitionOps;
   }

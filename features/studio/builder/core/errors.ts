@@ -62,6 +62,19 @@ export function explainError(e: unknown, opts: { write?: boolean } = {}): UserMe
   if ((NOT_EXECUTABLE_CODES as readonly string[]).includes(code ?? "")) {
     return { kind: "not-executable", title: "Thao tác không thực hiện được với cấu hình hiện tại", detail: "Không có dữ liệu nào bị thay đổi. Sửa cấu hình truy vấn/ánh xạ của ứng dụng rồi thử lại.", retrySafe: false };
   }
+  // C3 data-layer codes surfaced by the runtime routes (data-runtime.md §4b / FailureCodes): definite refusals, nothing was written (READ_ONLY_VIOLATION is in NOT_EXECUTABLE_CODES above)
+  if (code === "AUTH_REJECTED") {
+    return { kind: "unavailable", title: "Nguồn dữ liệu từ chối thông tin đăng nhập", detail: "Khóa kết nối của nguồn không còn hợp lệ. Quản trị viên cần cập nhật khóa kết nối, sau đó kiểm tra lại kết nối.", retrySafe: false };
+  }
+  if (code === "DISABLED") {
+    return { kind: "unavailable", title: "Nguồn dữ liệu đang tắt", detail: "Quản trị viên cần bật lại nguồn dữ liệu này.", retrySafe: false };
+  }
+  if (code === "PERMISSION_DENIED" || code === "FORBIDDEN") {
+    return { kind: "forbidden", title: "Bạn không có quyền thực hiện thao tác này", detail: "Quyền được kiểm tra ở máy chủ. Liên hệ quản trị viên nếu cần.", retrySafe: false };
+  }
+  if (/^INVALID_[A-Z_]+$/.test(code ?? "")) {
+    return { kind: "invalid", title: "Cấu hình hoặc dữ liệu gửi đi chưa hợp lệ", detail: x?.message || "Kiểm tra lại giá trị rồi thử lại. Không có dữ liệu nào bị thay đổi.", retrySafe: true };
+  }
   if (x?.status === 429 || code === API_ERROR.RATE_LIMITED) {
     return { kind: "rate-limited", title: "Thao tác quá nhanh", detail: x?.message || "Đợi một chút rồi thử lại.", retrySafe: true };
   }

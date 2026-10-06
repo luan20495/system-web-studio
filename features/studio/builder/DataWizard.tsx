@@ -14,6 +14,7 @@ import {
 import { allSections, defOps, usersOf } from "./core/definition";
 import { bindableProps } from "./core/inspector";
 import { staticReadiness } from "./core/readiness";
+import { DataSourcesPanel } from "./DataSourcesPanel";
 import { Dialog, Field, Gate, StateBox, Tabs, tabPanelProps } from "./ui/primitives";
 import type { DefCtx } from "./ctx";
 
@@ -36,7 +37,7 @@ export function DataWizard({ ctx, focus }: { ctx: DefCtx; focus?: { sectionId?: 
   const [bProp, setBProp] = useState("");
   const [removing, setRemoving] = useState<{ collection: "queries" | "mappings" | "viewModels" | "dataBindings"; id: string; name: string } | null>(null);
   const disabled = !ctx.canEdit || ctx.busy;
-  const ready = (s: DataStepId) => stepReadiness(s, ctx.readiness);
+  const ready = (s: DataStepId) => stepReadiness(s, ctx.readiness, !!ctx.dataManagement);
   const prefix = "data-wizard";
 
   const queries = doc.queries ?? [], mappings = doc.mappings ?? [], vms = doc.viewModels ?? [], bindings = doc.dataBindings ?? [];
@@ -90,17 +91,17 @@ export function DataWizard({ ctx, focus }: { ctx: DefCtx; focus?: { sectionId?: 
         <p className="hint">{cur.help}</p>
 
         {step === "source" ? (<>
-          <StateBox state={staticReadiness("DATA_SOURCES")}/>
-          <h3 className="bx-h3">Nguồn dữ liệu đã có trong ứng dụng</h3>
-          {(doc.dataSources ?? []).length ? <ul className="bx-list">{(doc.dataSources ?? []).map((d) => <li key={d.id}><b>{d.name || d.id}</b><small>{d.type}{d.sourceRef ? "" : " · chưa được nối"}</small></li>)}</ul>
-            : <p className="hint">Chưa có nguồn nào. Nguồn dữ liệu do quản trị viên tạo và cấp quyền; tài liệu ứng dụng chỉ tham chiếu tới nguồn đã cấp.</p>}
+          <DataSourcesPanel doc={doc} calls={ctx.dataManagement} canManage={ctx.canManageData ?? false} manageReason={ctx.manageDataReason ?? "Bạn chưa được cấp quyền quản lý nguồn dữ liệu."}/>
+          <h3 className="bx-h3">Khe dữ liệu đã khai báo trong ứng dụng</h3>
+          {(doc.dataSources ?? []).length ? <ul className="bx-list">{(doc.dataSources ?? []).map((d) => <li key={d.id}><b>{d.name || d.id}</b><small>{d.type}{d.sourceRef ? "" : " · chưa gắn nguồn trong tài liệu"}</small></li>)}</ul>
+            : <p className="hint">Chưa có khe nào. Khe dữ liệu nằm trong tài liệu ứng dụng; Studio chưa có thao tác để thêm khe.</p>}
         </>) : null}
 
         {step === "discovery" ? <StateBox state={ready("discovery")}/> : null}
 
         {step === "query" ? (
           <Gate state={ready("query")}>
-            {!(doc.dataSources ?? []).length ? <StateBox state={staticReadiness("DATA_SOURCES")} compact/> : (
+            {!(doc.dataSources ?? []).length ? <p className="hint" data-testid="no-slots">Ứng dụng chưa khai báo khe dữ liệu (dataSources[]), nên chưa tạo được truy vấn. Studio chưa có thao tác để thêm khe.</p> : (
               <form className="bx-form" onSubmit={(e) => { e.preventDefault(); void saveQuery(); }}>
                 <Field label="Tên truy vấn">{(id) => <input id={id} disabled={disabled} value={qd.name} onChange={(e) => setQd({ ...qd, name: e.target.value })}/>}</Field>
                 <Field label="Nguồn dữ liệu">{(id) => <select id={id} disabled={disabled} value={qd.dataSourceRef} onChange={(e) => setQd({ ...qd, dataSourceRef: e.target.value })}>

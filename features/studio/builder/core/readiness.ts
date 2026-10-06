@@ -37,7 +37,7 @@ export type FeatureKey =
  */
 export const STATIC_NOT_READY: Partial<Record<FeatureKey, string>> = {
   DEFINITION_OPERATIONS: "Máy chủ chưa nhận thao tác dữ liệu/hành động (ADD_QUERY, ADD_ACTION…): AppDefinition V2 của C2 chưa được tích hợp.",
-  DATA_SOURCES: "Chưa có API liệt kê nguồn dữ liệu đã được cấp quyền cho ứng dụng (Data Platform của C3 chưa nối vào máy chủ).",
+  DATA_SOURCES: "Chưa kết nối máy chủ để quản lý nguồn dữ liệu (không có nguồn nào được giả lập ở trình duyệt).",
   SCHEMA_DISCOVERY: "Chưa có API khám phá cấu trúc dữ liệu (DataGateway.discoverSchema chưa có đường HTTP).",
   QUERY_PREVIEW: "Xem trước dữ liệu ngay trong trình soạn chưa được nối. Dùng chế độ “Dùng thử” → Truy vấn để chạy truy vấn thật qua máy chủ; dữ liệu mẫu không được tạo ở trình duyệt.",
   SHARING: "Chưa có API chia sẻ (T15). Chia sẻ khác với Xuất bản.",

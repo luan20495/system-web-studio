@@ -15,6 +15,7 @@ import { Inspector } from "./Inspector";
 import { LeftRail, type RailId } from "./LeftRail";
 import { BuilderTopBar } from "./BuilderTopBar";
 import { TestPanel, type RuntimeCalls } from "./TestPanel";
+import type { DataManagementCalls } from "./core/dataManagement";
 import { DataWizard } from "./DataWizard";
 import { ComponentsPanel, type BlockOption } from "./panels/ComponentsPanel";
 import { PagesPanel } from "./panels/PagesPanel";
@@ -59,7 +60,7 @@ export function BuilderWorkspace(props: {
   renderPreview: (o: { selectedId: string | null; interactive: boolean; pageId: string }) => string;
   labelOf: (type: string) => string; summaryOf: (s: Section) => string;
   leading?: ReactNode; modeTabs?: ReactNode; trailing?: ReactNode;
-  runtime?: RuntimeCalls; onRetrySave?: () => void; goAi: () => void; openSite: () => void; openMembers: () => void; openPublish: () => void; saveBlock: () => void;
+  runtime?: RuntimeCalls; dataManagement?: DataManagementCalls; onRetrySave?: () => void; goAi: () => void; openSite: () => void; openMembers: () => void; openPublish: () => void; saveBlock: () => void;
 }) {
   const { doc, registry, backend, pageId, selectedId, readOnly, busy } = props;
   const cap = capabilitiesFor(props.project.permissions);
@@ -83,9 +84,10 @@ export function BuilderWorkspace(props: {
 
   const ctx: DefCtx = useMemo(() => ({
     doc, readiness: backend.definitionOps as Readiness, canEdit: cap.canEdit && interactive, busy, metadata: backend.metadata, registry, labelOf: props.labelOf,
+    dataManagement: props.dataManagement, canManageData: cap.canManageDataSources, manageDataReason: whyNot("canManageDataSources"),
     commit: (ops, summary) => props.applyOps(ops, summary),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [doc, backend, cap.canEdit, interactive, busy, registry, props.labelOf, props.applyOps]);
+  }), [doc, backend, cap.canEdit, cap.canManageDataSources, interactive, busy, registry, props.labelOf, props.applyOps, props.dataManagement]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
   const collision: CollisionDetection = useCallback((args) => {

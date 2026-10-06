@@ -10,6 +10,7 @@ import { sectionLabel, sectionSummary } from "@/components/SectionInspector";
 import type { AppDefinitionV2, DefinitionOperation } from "@xweb/types";
 import { BuilderWorkspace } from "./builder/BuilderWorkspace";
 import type { RuntimeCalls } from "./builder/TestPanel";
+import type { DataManagementCalls } from "./builder/core/dataManagement";
 import { backendFrom, type ProbeState } from "./builder/core/backend";
 import { explainError } from "./builder/core/errors";
 import { NOT_RENDERED } from "./builder/core/library";
@@ -209,6 +210,22 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
     newKey: () => newIdempotencyKey("test"),
   }), [ws, projectId]);
 
+  /** C3 Management API (MANAGEMENT_API.md): tenant is derived by the server from the workspace in the path; nothing but contract fields is sent. */
+  const dataManagement = useMemo<DataManagementCalls | undefined>(() => !ws || !projectId ? undefined : ({
+    connectors: async () => (await api.dataManagement.connectors(ws)).items,
+    list: async () => (await api.dataManagement.list(ws)).items,
+    create: (b) => api.dataManagement.create(ws, b),
+    update: (id, b) => api.dataManagement.update(ws, id, b),
+    remove: (id) => api.dataManagement.remove(ws, id),
+    credential: (id) => api.dataManagement.credential(ws, id),
+    setCredential: (id, c) => api.dataManagement.setCredential(ws, id, c),
+    removeCredential: (id) => api.dataManagement.removeCredential(ws, id),
+    test: (id) => api.dataManagement.testConnection(ws, id),
+    listBindings: async () => (await api.dataManagement.listBindings(ws, projectId)).items,
+    bind: (m, slot, id) => api.dataManagement.bind(ws, projectId, m, slot, id),
+    unbind: (m, slot) => api.dataManagement.unbind(ws, projectId, m, slot),
+  }), [ws, projectId]);
+
   if (loadError) return <div className="wsError"><ErrorState error={loadError} retry={() => { setLoadError(null); reload().catch(setLoadError); }}/><p><a className="btn" href={S("/projects")}>← Danh sách ứng dụng</a></p></div>;
   if (project?.appType === "STATIC_APP") return <CodeWorkspace project={project} view={view} onProject={setProject}/>;
   if (!project || !schema) return <div className="wsError"><StateView kind="loading" title="Đang mở ứng dụng…"/></div>;
@@ -230,7 +247,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
       {mode === "design" ? <BuilderWorkspace
         project={project} doc={schema as AppDefinitionV2} revision={revision} registry={registry} assets={assets} backend={backend} pageId={pageId} onPage={(id) => { setPageId(id); setSelectedId(null); }}
         selectedId={selectedId} onSelect={setSelectedId} device={device} onDevice={setDevice} busy={busy !== null} save={save} readOnly={readOnly} latest={latest}
-        runtime={runtime} onRetrySave={failedEdit ? retrySave : undefined} blocks={blockOptions.map(({ b, who }): BlockOption => ({ id: b.id, name: b.name, who, baseLabel: label(b.baseComponent) }))}
+        runtime={runtime} dataManagement={dataManagement} onRetrySave={failedEdit ? retrySave : undefined} blocks={blockOptions.map(({ b, who }): BlockOption => ({ id: b.id, name: b.name, who, baseLabel: label(b.baseComponent) }))}
         applyOps={applyOps} addBlock={(id) => { const o = blockOptions.find(({ b }) => b.id === id); if (o) void addBlock(o.b); }}
         renderPreview={renderPreview} labelOf={label} summaryOf={sectionSummary}
         leading={<button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}>←</button>}
