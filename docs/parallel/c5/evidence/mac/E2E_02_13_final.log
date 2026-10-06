@@ -1,0 +1,42 @@
+
+> system-web-studio@0.2.0 test:e2e:real
+> node tests/e2e-real/run.mjs
+
+REAL BACKEND suite · studio=http://127.0.0.1:3003 · run=muwrfasq · 2 flow(s)
+  [fixture] workspace A created
+  [fixture] workspace B created
+  [fixture] user adminA (WORKSPACE_ADMIN) ready
+  [fixture] user adminB (WORKSPACE_ADMIN) ready
+  [fixture] user viewerA (VIEWER) ready
+  [probe] queries route → 404 QUERY_NOT_FOUND · actions route → 404 UNKNOWN_ACTION  (404 without a code = flag off)
+
+E2E-02 — Edit component/page → save → reload → persists
+    ✓ clicking a section on the canvas opens its properties
+    ✓ PATCH …/schema answered 200 by the real backend
+    ✓ the top bar says saved
+    ✓ server revision increased
+    ✓ the new text is in the persisted schema (read back through a separate session)
+    ✓ after a full reload the canvas shows the saved text
+    ✓ a new version row exists for the edit
+    ✓ no unhandled page errors / serious console errors
+
+E2E-13 — Publish → real artifact/runtime state → public page reachable
+    ✓ POST …/publish accepted by the backend (2xx) with a deployment id
+    ✓ the publish request carried an Idempotency-Key
+    ✓ the dialog reports the site is up (RUNNING)
+    ✓ the deployment is RUNNING on the server
+    ✓ the deployment has a URL
+    ✓ anonymous visitor: the public page answers 200
+    ✓ the published page is the saved content (contains the text saved in E2E-02 — compared case-insensitively, the eyebrow is rendered with CSS uppercase — or is non-empty)
+    ✓ no Studio chrome leaks into the public page
+    [fact] published site GET runtime-config.json → 404
+    ✓ no unhandled page errors in Studio
+  [cleanup] cleanup notes: left behind (no delete route): workspaces 88410269-3815-4abf-aab3-dc855cc4af4b, b762259f-e74c-4726-bdc1-7c4cffcbc734 named e2e-muwrfasq-*
+
+| ID | Status | Owner | Detail |
+|---|---|---|---|
+| E2E-02 | PASS |  |  |
+| E2E-13 | PASS |  |  |
+
+REAL BACKEND: PASS 2/2 · FAIL 0/2 · BLOCKED 0/2 · SKIP 0/2
+report: docs/parallel/c5/evidence/mac/e2e-real/report-2026-10-06T14-14-34-925Z.json

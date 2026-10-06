@@ -37,3 +37,17 @@ From C5 (Studio/Frontend), baseline `integration/v2 @ f894cc6`. C5 changed nothi
 ## H-C2-03 — runtime-config contract: frontend support confirmed (no request)
 
 C5 supports the C2 proposal on the client side: a published app loads `GET /runtime-config.json` = `{DATA_API_BASE_URL, ENVIRONMENT?, RELEASE_ID?, VERSION?}` **before** any Data API client is created (`packages/api-client/src/runtimeConfig.ts`; `loadRuntimeConfig`, `initDataApi`, `dataApiUrl`, `describeRuntimeConfigError`, `renderRuntimeConfigFailure`). Fail-closed: https required (http only for loopback in development), loopback refused in production, no silent default, a visible error otherwise; development mode may use an explicit `devFallback` only when the file is unreachable/404. Unit-tested (`tests/builder/runtimeconfig.test.ts`). **C5 is not asking C2 to choose a production host**: that is C0's topology decision (H-C0-05). C5 has not wired the loader into `workers/render` / the published page because that artifact is C2's; the module is ready to import.
+
+## H-C2-04 — a statically published site does not serve `/runtime-config.json` (live evidence, 2026-10-06)
+
+- **ID:** H-C2-04
+- **Owner:** C2 (C0 topology)
+- **Severity:** P1 for E2E-08/09, info otherwise
+- **Flow:** E2E-13 (PASS) → E2E-08/09
+- **Frontend expectation:** the published page loads `GET /runtime-config.json` next to the artifact (`{DATA_API_BASE_URL, ENVIRONMENT, RELEASE_ID, VERSION}`) and fails closed otherwise.
+- **Actual backend behavior:** with `DEPLOY_PROVIDER=static`, publish works end to end (RUNNING, `mock=false`, anonymous visitor 200 with the saved content) but `GET <site>/runtime-config.json` answers **404**.
+- **Endpoint/event:** `GET <deployment.url>runtime-config.json`
+- **Reproduction:** `E2E_ONLY=E2E-02,E2E-13 npm run test:e2e:real`; the run prints `[fact] published site GET runtime-config.json → 404` and records it in the report (`fixtureNotes.publishedRuntimeConfig`).
+- **Impact:** a published app cannot learn its Data API host; the frontend loader is ready and tested (11 unit tests) but has nothing to load.
+- **Suggested contract/fix:** C2/C0 decide who writes the file at publish time and which Data API host/CORS/cookie model it names.
+- **Blocked test IDs:** E2E-08, E2E-09

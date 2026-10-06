@@ -38,3 +38,20 @@ From C5 (Studio/Frontend), baseline `integration/v2 @ f894cc6`. C5 changed nothi
 - **C5 workaround:** Platform-only gate.
 - **Blocked test IDs:** none
 
+
+## H-C1-03 — a workspace VIEWER cannot open Studio at all (decision needed; seen on a live backend, 2026-10-06)
+
+- **ID:** H-C1-03
+- **Owner:** C1
+- **Severity:** P2 (a decision, not a defect report)
+- **Flow:** E2E-04 / E2E-05 viewer part
+- **Frontend expectation:** a person who is a project member with role VIEWER opens the project read-only in Studio ("Bạn chỉ có quyền xem", save and run controls disabled with a reason).
+- **Actual backend behavior:** `GET /auth/me` for a workspace VIEWER returns `permissions: []` and `workspaces[].permissions: []`. The C5 portal gate (`capabilitiesOf`, "some workspace gives a non-tenant-level permission") therefore refuses Studio and the browser lands on `/auth/no-access?portal=studio`. The API itself is consistent with the project membership: `GET …/schema` → 200, `PATCH …/schema` → 403 `FORBIDDEN "Missing permission: PROJECT_EDIT"`, `GET …/data-sources` → 403.
+- **Endpoint/event:** `GET /api/v1/auth/me`
+- **Request:** log in as a user created with `POST /admin/users {workspaceId, role:"VIEWER"}` and added with `POST …/projects/{p}/members {role:"VIEWER"}`
+- **Response/status:** 200, `permissions: []`
+- **Reproduction:** `E2E_ONLY=E2E-04 npm run test:e2e:real` (evidence: `docs/parallel/c5/evidence/mac/E2E_ALL_final.log`, fact `viewerGate` and `viewerSchemaViaApi=200` in the report).
+- **Impact:** the read-only viewer UX cannot be reached or tested; project members with a VIEWER role get a "no access" page.
+- **Suggested contract/fix:** C1 decides: (a) a VIEWER role carries `APP_VIEW` (then the gate opens Studio read-only with no C5 change), or (b) viewers are intentionally not Studio users (then project VIEWER membership is meaningless for Studio and C5 keeps the gate; the E2E-04/05 viewer part becomes "refused", which C5 will then assert as PASS).
+- **C5 workaround:** none; the gate is not loosened without a contract.
+- **Blocked test IDs:** E2E-04, E2E-05 (viewer part only)

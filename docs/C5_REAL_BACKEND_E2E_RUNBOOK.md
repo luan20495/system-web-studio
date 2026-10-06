@@ -46,17 +46,21 @@ Build and start `integration/v2` (JDK 21, PostgreSQL, Redis, MinIO; Docker for T
 | `app.workflow.allow-volatile-stores=true` | only for LIVE mutating actions / workflow starts on a stack without V29 | otherwise 503 `RUNTIME_STORES_VOLATILE`; do not use for E2E-12 |
 | `app.publish-configs.enabled=true` + a SELF_HOSTED deployment provider | E2E-13 | a MOCK provider only produces a demo URL → BLOCKED |
 | `app.tenancy.system-admin-business-access=false` (default) | all | keep |
+| `SECRETS_MASTER_KEY` (base64, 32 bytes) | E2E-06 (credentials) | without it `POST …/data-sources` with a credential answers 500 `SECRETS_UNAVAILABLE` |
+| `DEPLOY_PROVIDER=static` + `SITES_ORIGIN`, `RENDER_URL`, `RENDER_TOKEN` + a running render worker and sites gateway | E2E-13 | the default `mock` provider only produces a demo URL → BLOCKED. Gateway: `infra/sites-gateway/default.conf.template` with `API_UPSTREAM` = the API |
+| `app.workflow.run-store=jdbc` (default on a build with V29) | E2E-12 | `memory` or a build without V29 loses runs on restart |
+| `E2E_RESTART_BACKEND_CMD` | E2E-12 | must kill ONLY the API process (never `kill` by name) and start it again; the suite waits up to 150 s |
 
 Local login must be on (`/api/v1/auth/config` → `localLogin: true`). CORS must allow the Studio origin exactly (`app.web.origins.studio`).
 
 ### 3.2 Studio app
 
 ```
-npm run build:studio
-cd apps/studio && API_PROXY_TARGET=http://127.0.0.1:8080 npx next start -H 127.0.0.1 -p 3003
+API_PROXY_TARGET=http://127.0.0.1:8080 npm run build:studio          # the proxy target is BAKED IN AT BUILD TIME (rewrites are evaluated by `next build`)
+cd apps/studio && npx next start -H 127.0.0.1 -p 3003               # setting API_PROXY_TARGET only here has no effect: every /api call answers 500 ECONNREFUSED :8080
 ```
 
-The Studio's same-origin `/api` is rewritten to `API_PROXY_TARGET`. Platform (:3001) and Admin (:3002) are not needed by the suite.
+(Found on the Mac run 2026-10-06; an earlier version of this runbook said to set it at `next start`.) The Studio's same-origin `/api` is rewritten to the target given at build. Platform (:3001) and Admin (:3002) are not needed by the suite. The Builder is the `design` view: `/studio/projects/<id>/design` (`/studio/projects/<id>` opens the AI mode or the session's last mode).
 
 ### 3.3 Environment (no secrets in the repo; see `tests/e2e-real/.env.example`)
 

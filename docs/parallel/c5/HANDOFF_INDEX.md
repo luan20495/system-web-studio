@@ -15,8 +15,13 @@
 | H-C3-01 production connectors read-only (B-C0-W-04) | C3 | P1 | E2E-09 |
 | H-C3-02 Management API doc vs controller (error table, non-atomic PATCH, filtered binding list, FORBIDDEN vs PERMISSION_DENIED, sourceRef vs bindings, flag-off shape); compile/route tests not verified | C3 | P2 | E2E-06, 07, 08 |
 | H-C3-03 no approved-query / mutation management endpoint | C3 | P1 | E2E-06*, 07, 09 |
-| H-C4-01 no RabbitMQ / in-memory run stores (B-C4-05/06) | C4 | P1 | E2E-12, 14 |
+| H-C4-01 no RabbitMQ / in-memory run stores (B-C4-05/06) | C4 | P1 | E2E-12 (now PASS on a V29 stack), 14 |
+| H-C0-06 the Mac run needed V29 + C3 merged onto integration/v2 (conflict-free); env notes | C0 | P1 | - |
+| H-C1-03 workspace VIEWER holds `permissions: []` → Studio gate refuses (decision) | C1 | P2 | E2E-04, 05 (viewer part) |
+| H-C2-04 published static site answers 404 for `/runtime-config.json` | C2 | P1 | E2E-08, 09 |
+| H-C3-04 Management API live-verified (23 api + 9 ui checks, 0 failed) | C3 | info | - |
+| H-C4-02 NOTIFY 501 `ActionNotifyPort` not wired; AMQP adapter only on `agent/c4-workflow` | C4 | P2 | E2E-14 |
 
-`*` = the query half only. C4: no new request this round.
+`*` = the query half only. Live results of 2026-10-06: `MAC_RUN_2026-10-06.md`.
 
 Files: `HANDOFF_C0.md` … `HANDOFF_C4.md`. C6 retest: `docs/C5_REAL_BACKEND_E2E_RUNBOOK.md`. Audit: `API_AUDIT_F894CC6.md`.

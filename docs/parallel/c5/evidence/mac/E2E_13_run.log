@@ -1,0 +1,34 @@
+
+> system-web-studio@0.2.0 test:e2e:real
+> node tests/e2e-real/run.mjs
+
+REAL BACKEND suite · studio=http://127.0.0.1:3003 · run=muwr5zgi · 2 flow(s)
+  [fixture] workspace A created
+  [fixture] workspace B created
+  [fixture] user adminA (WORKSPACE_ADMIN) ready
+  [fixture] user adminB (WORKSPACE_ADMIN) ready
+  [fixture] user viewerA (VIEWER) ready
+  [probe] queries route → 404 QUERY_NOT_FOUND · actions route → 404 UNKNOWN_ACTION  (404 without a code = flag off)
+
+E2E-02 — Edit component/page → save → reload → persists
+    ✗ exception: page.waitForSelector: Timeout 10000ms exceeded. ⏎ Call log: ⏎   - waiting for locator('.bx-right input') to be visible
+
+E2E-13 — Publish → real artifact/runtime state → public page reachable
+    ✓ POST …/publish accepted by the backend (2xx) with a deployment id
+    ✓ the publish request carried an Idempotency-Key
+    ✓ the dialog reports the site is up (RUNNING)
+    ✓ the deployment is RUNNING on the server
+    ✓ the deployment has a URL
+    ✓ anonymous visitor: the public page answers 200
+    ✓ the published page is the saved content (contains the text saved in E2E-02, or is non-empty)
+    ✓ no Studio chrome leaks into the public page
+    ✓ no unhandled page errors in Studio
+  [cleanup] cleanup notes: left behind (no delete route): workspaces 30b3169f-f1b2-4c76-b372-c76dbf457d28, c4cc1200-906b-4e0a-8d37-f86c7722bf86 named e2e-muwr5zgi-*
+
+| ID | Status | Owner | Detail |
+|---|---|---|---|
+| E2E-02 | FAIL |  | exception: page.waitForSelector: Timeout 10000ms exceeded. ⏎ Call log: ⏎   - waiting for locator('.bx-right input') to be visible |
+| E2E-13 | PASS |  |  |
+
+REAL BACKEND: PASS 1/2 · FAIL 1/2 · BLOCKED 0/2 · SKIP 0/2
+report: docs/parallel/c5/evidence/mac/e2e-real/report-2026-10-06T14-07-31-020Z.json

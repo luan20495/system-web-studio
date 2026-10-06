@@ -91,3 +91,14 @@ From C5 (Studio/Frontend), baseline `integration/v2 @ f894cc6`. C5 changed nothi
 - **Impact:** without 1–4 the suite exits 2 (NOT RUN) and the C5 status cannot go beyond "implementation ready / backend integration pending".
 - **C5 workaround:** none that is honest; no fake backend is used anywhere.
 - **Blocked test IDs:** all 14 (real-backend result)
+
+## H-C0-06 — what the Mac run needed beyond `integration/v2` (live evidence, 2026-10-06)
+
+- **ID:** H-C0-06
+- **Owner:** C0
+- **Severity:** P1 (integration)
+- **Flow:** all
+- **Actual backend behavior:** `integration/v2 @ f894cc6` alone cannot run E2E-06/12 (no C3 Management routes, in-memory run stores). A detached local merge of `wire/v29-run-persistence 5f28adc` + `agent/c3-data-prod e5e69c0` onto it is conflict-free (no common file, no extra migration), applies V1–V29, starts in ~24 s and passes: E2E-01/02/03/10/11/12/13/S1/S2 (Management API: 23 `[api]` + 9 `[ui]` checks of E2E-06). E2E-12 (kill and restart the API, a 45 s WAIT run survives and completes) is the first live proof of V29 restart safety through the product API.
+- **Needs from C0 (nothing new beyond H-C0-05):** integrate V29 and C3 Management into the baseline C5/C6 test; document `SECRETS_MASTER_KEY` (without it a credential write is 500 `SECRETS_UNAVAILABLE`) and the static provider env (`DEPLOY_PROVIDER`, `SITES_ORIGIN`, `RENDER_URL`, `RENDER_TOKEN`) in the local-stack docs; Gradle/Kotlin heap (`-Xmx3g`) for a clean `bootRun` on a 16 GB Mac.
+- **Evidence:** `docs/parallel/c5/MAC_RUN_2026-10-06.md` §2–§3, `docs/parallel/c5/evidence/mac/`.
+- **Blocked test IDs:** none new.

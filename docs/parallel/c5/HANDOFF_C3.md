@@ -50,3 +50,12 @@ From C5 (Studio/Frontend), baseline `integration/v2 @ f894cc6`. C5 changed nothi
 - **Suggested fix:** a route family `…/queries`, `…/mutations` (read-only SQL checked server-side, parameter schema, `dataSourceRef`), or an explicit decision that queries are never authored over HTTP.
 - **C5 workaround:** none; the wizard's query step says no slot is declared and does not fabricate a query.
 - **Blocked test IDs:** E2E-06 (query half), E2E-07, E2E-09
+
+## H-C3-04 — Management API live verification (positive result, 2026-10-06)
+
+- **ID:** H-C3-04
+- **Owner:** C3
+- **Severity:** info
+- **Result:** on a detached merge `integration/v2 f894cc6` + `wire/v29-run-persistence 5f28adc` + `agent/c3-data-prod e5e69c0` (`app.data-platform.enabled=true`, `SECRETS_MASTER_KEY` set), Spring started, all Management routes mounted (`/v3/api-docs`), and E2E-06 ran **23 `[api]` and 9 `[ui]` checks, 0 failed**: connector catalogue (postgres AVAILABLE, planned ones not), create → 201 with no secret and no credential reference in the view, credential metadata = key names only, duplicate name 409, secret in config 400, identity field 400 `INVALID_PARAMS`, planned connector 501, unknown type 422, tenant isolation (B reads A's id → 404, foreign and unknown answers identical, B lists A's workspace refused), VIEWER create/patch 403 and nothing changed, test connection of an unreachable host → 200 `ok:false` with a documented code and no credential in the text, DISABLED 409, TEST binding put/list, project VIEWER 403 on bindings, delete-while-bound 409, Studio panel (source listed, credential "Đã cấu hình", test result FAILED + code, no secret anywhere in the DOM).
+- **Not exercised:** "connection test succeeds" (needs a reachable public PostgreSQL with a valid certificate; the local database is correctly refused as `ADDRESS_BLOCKED`), LIVE binding, writable PostgreSQL through HTTP, queries, mutations (H-C3-03 stands).
+- **Evidence:** `docs/parallel/c5/evidence/mac/E2E_ALL_final.log`, `e2e-real/report-2026-10-06T14-14-09-556Z.json`.

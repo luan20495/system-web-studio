@@ -1,0 +1,86 @@
+
+> system-web-studio@0.2.0 test:e2e:real
+> node tests/e2e-real/run.mjs
+
+REAL BACKEND suite · studio=http://127.0.0.1:3003 · run=muwqcqxk · 8 flow(s)
+  [fixture] workspace A created
+  [fixture] workspace B created
+  [fixture] user adminA (WORKSPACE_ADMIN) ready
+  [fixture] user adminB (WORKSPACE_ADMIN) ready
+  [fixture] user viewerA (VIEWER) ready
+  [probe] queries route → 404 QUERY_NOT_FOUND · actions route → 404 UNKNOWN_ACTION  (404 without a code = flag off)
+
+E2E-01 — Load project/page from the real backend
+    ✓ GET …/projects/{id}/schema answered 200 by the real backend
+    ✓ the Builder canvas rendered (preview iframe present)
+    ✓ the project name stored in the backend is on screen
+    ✓ the canvas shows the persisted first section (page content comes from the server, not a fixture in the browser)
+    ✓ no unhandled page errors / serious console errors
+
+E2E-02 — Edit component/page → save → reload → persists
+    ✗ exception: page.waitForSelector: Timeout 10000ms exceeded. ⏎ Call log: ⏎   - waiting for locator('.bx-right input') to be visible
+
+E2E-03 — Workspace isolation A/B
+    ✓ adminA: the project list shows their own project
+    ✓ adminA: the project list does NOT show the other workspace's project
+    ✓ adminA: no unhandled page errors
+    ✓ adminB: the project list shows their own project
+    ✓ adminB: the project list does NOT show the other workspace's project
+    ✓ adminB: no unhandled page errors
+    ✓ B reads A's project by id → 404 (existence not disclosed)
+    ✓ the 404 body does not carry A's data
+    ✓ B lists A's workspace → refused (403/404), no rows
+    ✗ B cannot write into A's project (403/404)  — status=400
+    ✓ A's project revision is unchanged by the attempts
+    ✓ A reads B's project through B's workspace → 404
+    ✓ a project id of B under A's workspace path → 404 (no cross-workspace lookup)
+
+E2E-04 — Authorized user reaches a valid Studio resource
+    ✓ adminA: after login the Studio shell is reachable (not sent to /auth/no-access)
+    ✓ adminA: direct URL → schema 200
+    ✓ adminA: direct URL → Builder canvas
+    ✓ adminA: editor is not read-only
+    ✓ adminA: refresh keeps the project open
+    ✓ adminA: no unhandled page errors
+    ✗ viewerA: after login the Studio shell is reachable (not sent to /auth/no-access)  — http://127.0.0.1:3003/auth/no-access?portal=studio
+    ✗ viewerA: direct URL → schema 200  — status=undefined
+    ✗ viewerA: direct URL → Builder canvas
+    ✗ viewerA: viewer sees the read-only notice  — ◆ AI Software Factory ⛔ Không có quyền truy cập Bạn không có quyền truy cập Xweb Studio. Đăng xuất N
+    ✗ viewerA: refresh keeps the project open
+    ✓ viewerA: no unhandled page errors
+
+E2E-05 — Forbidden path UX, no data leak
+    ✓ outsider: no Builder canvas is shown
+    ✓ outsider: the page says something went wrong / not found (not a blank screen)
+    ✓ outsider: A's project name is nowhere on screen
+    ✓ outsider: no API response of that page load contains A's project name or description
+    ✓ outsider: no unhandled page errors
+    ✗ viewer: PATCH …/schema → 403  — status=400 code=VALIDATION_FAILED
+    ✓ viewer: A's revision is unchanged
+    ✗ viewer: read-only notice shown
+    ✓ viewer: no save control is enabled
+    ✗ exception: locator.click: Timeout 30000ms exceeded. ⏎ Call log: ⏎   - waiting for getByRole('button', { name: 'Dùng thử' })
+
+E2E-10 — Mutation/action failure: real backend error, UI error state, no fake success
+    ✗ exception: locator.click: Timeout 30000ms exceeded. ⏎ Call log: ⏎   - waiting for getByRole('button', { name: 'Dùng thử' })
+
+E2E-11 — Workflow start from Studio, backend executes, UI reads state/result
+    ✗ exception: locator.click: Timeout 30000ms exceeded. ⏎ Call log: ⏎   - waiting for getByRole('button', { name: 'Dùng thử' })
+
+E2E-13 — Publish → real artifact/runtime state → public page reachable
+    ✗ exception: locator.click: Timeout 30000ms exceeded. ⏎ Call log: ⏎   - waiting for locator('header.bx-top').getByRole('button', { name: /^Xuất bản/ })
+  [cleanup] cleanup notes: left behind (no delete route): workspaces e28c79f0-37fb-4d37-854c-b03cfcd25a92, 48fa55c8-ce65-41b0-ade2-2c414b3d0a73 named e2e-muwqcqxk-*
+
+| ID | Status | Owner | Detail |
+|---|---|---|---|
+| E2E-01 | PASS |  |  |
+| E2E-02 | FAIL |  | exception: page.waitForSelector: Timeout 10000ms exceeded. ⏎ Call log: ⏎   - waiting for locator('.bx-right input') to be visible |
+| E2E-03 | FAIL |  | 1 check(s) failed: B cannot write into A's project (403/404) |
+| E2E-04 | FAIL |  | 5 check(s) failed: viewerA: after login the Studio shell is reachable (not sent to /auth/no-access); viewerA: direct URL → schema 200; viewerA: direct URL → Builder canvas; viewerA: viewer sees the re |
+| E2E-05 | FAIL |  | exception: locator.click: Timeout 30000ms exceeded. ⏎ Call log: ⏎   - waiting for getByRole('button', { name: 'Dùng thử' }) |
+| E2E-10 | FAIL |  | exception: locator.click: Timeout 30000ms exceeded. ⏎ Call log: ⏎   - waiting for getByRole('button', { name: 'Dùng thử' }) |
+| E2E-11 | FAIL |  | exception: locator.click: Timeout 30000ms exceeded. ⏎ Call log: ⏎   - waiting for getByRole('button', { name: 'Dùng thử' }) |
+| E2E-13 | FAIL |  | exception: locator.click: Timeout 30000ms exceeded. ⏎ Call log: ⏎   - waiting for locator('header.bx-top').getByRole('button', { name: /^Xuất bản/ }) |
+
+REAL BACKEND: PASS 1/8 · FAIL 7/8 · BLOCKED 0/8 · SKIP 0/8
+report: docs/parallel/c5/evidence/mac/e2e-real/report-2026-10-06T13-50-09-945Z.json

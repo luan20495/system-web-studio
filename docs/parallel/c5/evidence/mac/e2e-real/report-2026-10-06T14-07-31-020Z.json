@@ -1,0 +1,107 @@
+{
+  "studio": "http://127.0.0.1:3003",
+  "runId": "muwr5zgi",
+  "facts": {
+    "authConfig": {
+      "localLogin": true,
+      "oidc": false,
+      "publicPublish": true
+    },
+    "fixtureNotes": {
+      "viewerOnProject": "member",
+      "initialRevision": 0,
+      "definitionOps": {
+        "ok": true
+      }
+    },
+    "routes": {
+      "queries": {
+        "status": 404,
+        "code": "QUERY_NOT_FOUND"
+      },
+      "actions": {
+        "status": 404,
+        "code": "UNKNOWN_ACTION"
+      }
+    }
+  },
+  "cleanup": [
+    "left behind (no delete route): workspaces 30b3169f-f1b2-4c76-b372-c76dbf457d28, c4cc1200-906b-4e0a-8d37-f86c7722bf86 named e2e-muwr5zgi-*"
+  ],
+  "node": "v22.23.1",
+  "summary": {
+    "total": 2,
+    "PASS": 1,
+    "FAIL": 1,
+    "BLOCKED": 0,
+    "SKIP": 0
+  },
+  "results": [
+    {
+      "id": "E2E-02",
+      "title": "Edit component/page → save → reload → persists",
+      "status": "FAIL",
+      "owner": null,
+      "ref": null,
+      "reason": "exception: page.waitForSelector: Timeout 10000ms exceeded. ⏎ Call log: ⏎   - waiting for locator('.bx-right input') to be visible",
+      "checks": [],
+      "failed": []
+    },
+    {
+      "id": "E2E-13",
+      "title": "Publish → real artifact/runtime state → public page reachable",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "checks": [
+        {
+          "name": "POST …/publish accepted by the backend (2xx) with a deployment id",
+          "ok": true,
+          "detail": "status=202 code=undefined"
+        },
+        {
+          "name": "the publish request carried an Idempotency-Key",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "the dialog reports the site is up (RUNNING)",
+          "ok": true,
+          "detail": "Xuất bản website Phiên bản 2 sẽ được đưa qua kiểm tra chính sách, bảo mật, build và triển khai. Đang chạy Đang chờ — Deployment queued Kiểm tra chính sách — Checking policy Kiểm tra bảo mật — Running "
+        },
+        {
+          "name": "the deployment is RUNNING on the server",
+          "ok": true,
+          "detail": "status=RUNNING mock=false"
+        },
+        {
+          "name": "the deployment has a URL",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "anonymous visitor: the public page answers 200",
+          "ok": true,
+          "detail": "status=200 "
+        },
+        {
+          "name": "the published page is the saved content (contains the text saved in E2E-02, or is non-empty)",
+          "ok": true,
+          "detail": "e2e-muwr5zgi-proj-A Sản phẩm Liên hệ PURE LIVING • SMART WATER Nước sạch mỗi ngày, sống khỏe mỗi ngà"
+        },
+        {
+          "name": "no Studio chrome leaks into the public page",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "no unhandled page errors in Studio",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "failed": []
+    }
+  ]
+}

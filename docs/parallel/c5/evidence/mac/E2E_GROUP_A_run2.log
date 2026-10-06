@@ -1,0 +1,111 @@
+
+> system-web-studio@0.2.0 test:e2e:real
+> node tests/e2e-real/run.mjs
+
+REAL BACKEND suite · studio=http://127.0.0.1:3003 · run=muwqp6zb · 8 flow(s)
+  [fixture] workspace A created
+  [fixture] workspace B created
+  [fixture] user adminA (WORKSPACE_ADMIN) ready
+  [fixture] user adminB (WORKSPACE_ADMIN) ready
+  [fixture] user viewerA (VIEWER) ready
+  [probe] queries route → 404 QUERY_NOT_FOUND · actions route → 404 UNKNOWN_ACTION  (404 without a code = flag off)
+
+E2E-01 — Load project/page from the real backend
+    ✓ GET …/projects/{id}/schema answered 200 by the real backend
+    ✓ the Builder canvas rendered (preview iframe present)
+    ✓ the project name stored in the backend is on screen
+    ✓ the canvas shows the persisted first section (page content comes from the server, not a fixture in the browser)
+    ✓ no unhandled page errors / serious console errors
+
+E2E-02 — Edit component/page → save → reload → persists
+    ✓ PATCH …/schema answered 200 by the real backend
+    ✓ the top bar says saved
+    ✓ server revision increased
+    ✓ the new text is in the persisted schema (read back through a separate session)
+    ✗ after a full reload the canvas shows the saved text  — e2e-muwqp6zb-proj-A
+Sản phẩm
+Liên hệ
+
+E2E-MUWQP6ZB-MUWQPND6
+
+Nước sạch mỗi ngày, sống khỏe mỗi ngày.
+    ✓ a new version row exists for the edit
+    ✓ no unhandled page errors / serious console errors
+
+E2E-03 — Workspace isolation A/B
+    ✓ adminA: the project list shows their own project
+    ✓ adminA: the project list does NOT show the other workspace's project
+    ✓ adminA: no unhandled page errors
+    ✓ adminB: the project list shows their own project
+    ✓ adminB: the project list does NOT show the other workspace's project
+    ✓ adminB: no unhandled page errors
+    ✓ B reads A's project by id → 404 (existence not disclosed)
+    ✓ the 404 body does not carry A's data
+    ✓ B lists A's workspace → refused (403/404), no rows
+    ✓ B cannot write into A's project (403/404)
+    ✓ A's project revision is unchanged by the attempts
+    ✓ A reads B's project through B's workspace → 404
+    ✓ a project id of B under A's workspace path → 404 (no cross-workspace lookup)
+
+E2E-04 — Authorized user reaches a valid Studio resource
+    ✓ adminA: after login the Studio shell is reachable (not sent to /auth/no-access)
+    ✓ adminA: direct URL → schema 200
+    ✓ adminA: direct URL → Builder canvas
+    ✓ adminA: editor is not read-only
+    ✓ adminA: refresh keeps the project open
+    ✓ adminA: no unhandled page errors
+    ✓ viewerA: the refusal page does not show project data
+    ✓ viewerA: the API itself still lets a project member READ the schema (200)
+    ⛔ BLOCKED (C1 · viewer portal access): a workspace VIEWER holds permissions [] (GET /auth/me) so the Studio portal gate sends the viewer to /auth/no-access although the project lists them as a member; the read-only Builder cannot be observed. Decision needed from C1: should a project member without workspace permissions reach Studio read-only?
+
+E2E-05 — Forbidden path UX, no data leak
+    ✓ outsider: no Builder canvas is shown
+    ✓ outsider: the page says something went wrong / not found (not a blank screen)
+    ✓ outsider: A's project name is nowhere on screen
+    ✓ outsider: no API response of that page load contains A's project name or description
+    ✓ outsider: no unhandled page errors
+    ✓ viewer: PATCH …/schema → 403
+    ✓ viewer: A's revision is unchanged
+    ✓ viewer: no editable save control
+    ✓ viewer: no project data on screen
+    ✓ viewer: no unhandled page errors
+    ⛔ BLOCKED (C1 · viewer portal access): a workspace VIEWER holds permissions [] (GET /auth/me), so the Studio portal gate sends the viewer to /auth/no-access even though the project lists them as a member: the read-only Builder / Test-mode-disabled UX for a viewer cannot be observed. Decision needed from C1: should a project member without workspace permissions reach Studio read-only?
+
+E2E-10 — Mutation/action failure: real backend error, UI error state, no fake success
+    ✓ the action is listed and runnable for a workspace admin
+    ✓ (setup) the action was removed on the server
+    ✓ the UI shows an ERROR state for the real backend failure
+    ✓ the message says the item was not found, in plain language (no raw status line)
+    ✓ NO success is displayed anywhere in the row
+    ✓ the run button is usable again (not stuck in 'Đang chạy…')
+    ✓ no unhandled page errors
+
+E2E-11 — Workflow start from Studio, backend executes, UI reads state/result
+    ✓ the workflow is listed and startable for a workspace admin
+    ✓ POST …/workflows/{id}/runs answered 202 with a run id
+    ✓ the start request carried an idempotencyKey (required by the contract)
+    ✓ the UI shows the run id and a status read from the server
+    ✓ the run finished as a simulated (TEST) run: 'would run', not a real success
+    ✓ the run view read through a separate session agrees (terminal status)
+    ✓ the run belongs to the TEST mode
+    ✓ no unhandled page errors
+
+E2E-13 — Publish → real artifact/runtime state → public page reachable
+    ✓ POST …/publish accepted by the backend (2xx) with a deployment id
+    ✓ the publish request carried an Idempotency-Key
+    ⛔ BLOCKED (C2 · deployment provider): the deployment provider is MOCK: a demo URL is shown but no real artifact is served (configure a SELF_HOSTED provider for this flow)
+  [cleanup] cleanup notes: left behind (no delete route): workspaces 53deb5c2-e0a2-4ede-a1ac-65ace7b2a09b, 06a1e2ff-98ac-46a3-840d-028eae101444 named e2e-muwqp6zb-*
+
+| ID | Status | Owner | Detail |
+|---|---|---|---|
+| E2E-01 | PASS |  |  |
+| E2E-02 | FAIL |  | 1 check(s) failed: after a full reload the canvas shows the saved text |
+| E2E-03 | PASS |  |  |
+| E2E-04 | BLOCKED | C1 | a workspace VIEWER holds permissions [] (GET /auth/me) so the Studio portal gate sends the viewer to /auth/no-access although the project lists them as a member; the read-only Builder cannot be observ |
+| E2E-05 | BLOCKED | C1 | a workspace VIEWER holds permissions [] (GET /auth/me), so the Studio portal gate sends the viewer to /auth/no-access even though the project lists them as a member: the read-only Builder / Test-mode- |
+| E2E-10 | PASS |  |  |
+| E2E-11 | PASS |  |  |
+| E2E-13 | BLOCKED | C2 | the deployment provider is MOCK: a demo URL is shown but no real artifact is served (configure a SELF_HOSTED provider for this flow) |
+
+REAL BACKEND: PASS 4/8 · FAIL 1/8 · BLOCKED 3/8 · SKIP 0/8
+report: docs/parallel/c5/evidence/mac/e2e-real/report-2026-10-06T13-56-11-863Z.json

@@ -1,0 +1,91 @@
+
+> system-web-studio@0.2.0 build:apps
+> npm run build:platform && npm run build:admin && npm run build:studio
+
+
+> system-web-studio@0.2.0 build:platform
+> npm run build -w @xweb/app-platform
+
+
+> @xweb/app-platform@0.0.0 build
+> next build
+
+▲ Next.js 16.3.8 (Turbopack)
+✓ Running next.config.ts took 1358ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 1146ms
+  Running TypeScript ...
+  Finished TypeScript in 4.6s ...
+  Collecting page data using 4 workers ...
+  Generating static pages using 4 workers (0/2) ...
+✓ Generating static pages using 4 workers (2/2) in 490ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /_not-found
+└ ƒ /[[...slug]]
+
+
+ƒ Proxy (Middleware)
+
+ƒ  (Dynamic)  server-rendered on demand
+
+
+> system-web-studio@0.2.0 build:admin
+> npm run build -w @xweb/app-admin
+
+
+> @xweb/app-admin@0.0.0 build
+> next build
+
+▲ Next.js 16.3.8 (Turbopack)
+✓ Running next.config.ts took 37ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 989ms
+  Running TypeScript ...
+  Finished TypeScript in 4.9s ...
+  Collecting page data using 4 workers ...
+  Generating static pages using 4 workers (0/2) ...
+✓ Generating static pages using 4 workers (2/2) in 447ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /_not-found
+└ ƒ /[[...slug]]
+
+
+ƒ Proxy (Middleware)
+
+ƒ  (Dynamic)  server-rendered on demand
+
+
+> system-web-studio@0.2.0 build:studio
+> npm run build -w @xweb/app-studio
+
+
+> @xweb/app-studio@0.0.0 build
+> next build
+
+▲ Next.js 16.3.8 (Turbopack)
+✓ Running next.config.ts took 35ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 1706ms
+  Running TypeScript ...
+  Finished TypeScript in 7.0s ...
+  Collecting page data using 4 workers ...
+  Generating static pages using 4 workers (0/2) ...
+✓ Generating static pages using 4 workers (2/2) in 352ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /_not-found
+└ ƒ /[[...slug]]
+
+
+ƒ Proxy (Middleware)
+
+ƒ  (Dynamic)  server-rendered on demand
+

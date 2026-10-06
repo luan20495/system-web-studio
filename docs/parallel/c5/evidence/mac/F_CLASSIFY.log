@@ -1,0 +1,6 @@
+
+> system-web-studio@0.2.0 test:classify
+> node scripts/test-classify.mjs
+
+test classification: 51 files · unit 12 · mock 5 · harness 3 · real-backend 31
+OK: every test file is classified and no mock/harness test claims to be a backend E2E

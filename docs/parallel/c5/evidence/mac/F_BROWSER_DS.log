@@ -1,0 +1,49 @@
+PASS  no host: 'Chưa sẵn sàng', nothing is simulated, no source list  — Chưa sẵn sàng Chưa kết nối máy chủ để quản lý nguồn dữ liệu. Không có nguồn nào
+PASS  flag off (404 without a code): NOT_READY naming the flag, no controls  — Chưa sẵn sàng Máy chủ chưa bật quản lý nguồn dữ liệu (app.data-platform.enabled đang tắt hoặc chưa được nối).
+PASS  403: an error state with the permission message and a retry button, no controls  — Bạn không có quyền quản lý nguồn dữ liệu Cần quyền quản lý nguồn dữ liệu của không gian làm việc (quản trị viên). Quyền
+PASS  500 on load: error state, role=alert
+PASS  retry reloads and the panel opens (connectors asked twice)
+PASS  source list shows the existing source
+PASS  credential: 'configured', key NAMES, 'hidden' — and nothing else  — Đã cấu hình (username, password). Giá trị được giấu và không thể xem lại; nhập lại để thay thế.
+PASS  no password input is prefilled
+PASS  test connection: double click sends ONE request
+PASS  test connection OK is shown as a result
+PASS  no page errors
+PASS  test connection running: the button says so, is disabled and aria-busy
+PASS  …and is usable again afterwards
+PASS  test OK with a warning: amber result AND the warning text next to it
+PASS  failed test (HTTP 200, ok:false) is a FAILED result with its code and a plain-language reason, as an alert
+PASS  409 DISABLED on test is an error note (not a result)
+PASS  planned connectors are listed but disabled
+PASS  missing required config is refused with reasons and sends nothing  — Thiếu cấu hình bắt buộc: host. Thiếu cấu hình bắt buộc: database. Thiếu trường khóa kết nối: username. Thiếu trường khóa kết nối: password.
+PASS  create: while saving the button is disabled and says so
+PASS  double submit creates ONCE  — 1
+PASS  the request carries only contract fields (name,type,config,credential)
+PASS  the secret was sent but is nowhere in the page afterwards (inputs cleared, no text)
+PASS  the form is reset after success
+PASS  success is announced
+PASS  no page errors
+PASS  409 CONFLICT on create: conflict message, button usable, password input cleared
+PASS  network failure on create: 'unknown outcome' text, no automatic retry (create called once)  — Mất kết nối khi đang lưu. Chưa rõ thay đổi đã được ghi hay chưa. Hãy tải lại danh sách để kiểm tra trước khi thử lại.
+PASS  the list was reloaded and shows what the server really has (the ambiguous create DID land)
+PASS  the password is gone from the page
+PASS  credential replace: one request with the typed keys; the answer is metadata and the page keeps no secret
+PASS  an incomplete credential is refused locally (nothing sent)
+PASS  credential removal updates the state to 'no credential'
+PASS  both slots of the document are listed with TEST and LIVE rows
+PASS  LIVE-unbound warning lists the slots
+PASS  bind TEST: ONE request (mode, slot, data source) even on double click  — [{"name":"bind","args":["TEST","erp-db","ds-1"]}]
+PASS  the TEST binding shows the source name; LIVE is still unbound
+PASS  binding every LIVE slot removes the LIVE-unbound warning
+PASS  deleting a bound source: 409 explained ('unbind first'), the source stays
+PASS  unbind removes the binding
+PASS  no page errors
+PASS  a document with no slots says so honestly (and nothing can be bound)
+PASS  without DATA_SOURCE_MANAGE every write control is disabled  — []
+PASS  …and the reason is on screen
+PASS  reads still work (the list is visible)
+PASS  empty list: explanatory text + the create form
+PASS  every input/select/button has an accessible name
+PASS  keyboard focus enters the panel
+
+47/47 passed

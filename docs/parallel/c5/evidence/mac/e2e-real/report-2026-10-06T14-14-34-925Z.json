@@ -1,0 +1,153 @@
+{
+  "studio": "http://127.0.0.1:3003",
+  "runId": "muwrfasq",
+  "facts": {
+    "authConfig": {
+      "localLogin": true,
+      "oidc": false,
+      "publicPublish": true
+    },
+    "fixtureNotes": {
+      "viewerOnProject": "member",
+      "initialRevision": 0,
+      "definitionOps": {
+        "ok": true
+      },
+      "marker": "E2E-muwrfasq-muwrffqm",
+      "publishedRuntimeConfig": {
+        "url": "/e2e-muwrfasq-proj-a-1a688d/runtime-config.json",
+        "status": 404
+      }
+    },
+    "routes": {
+      "queries": {
+        "status": 404,
+        "code": "QUERY_NOT_FOUND"
+      },
+      "actions": {
+        "status": 404,
+        "code": "UNKNOWN_ACTION"
+      }
+    }
+  },
+  "cleanup": [
+    "left behind (no delete route): workspaces 88410269-3815-4abf-aab3-dc855cc4af4b, b762259f-e74c-4726-bdc1-7c4cffcbc734 named e2e-muwrfasq-*"
+  ],
+  "node": "v22.23.1",
+  "summary": {
+    "total": 2,
+    "PASS": 2,
+    "FAIL": 0,
+    "BLOCKED": 0,
+    "SKIP": 0
+  },
+  "results": [
+    {
+      "id": "E2E-02",
+      "title": "Edit component/page → save → reload → persists",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "checks": [
+        {
+          "name": "clicking a section on the canvas opens its properties",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "PATCH …/schema answered 200 by the real backend",
+          "ok": true,
+          "detail": "status=200"
+        },
+        {
+          "name": "the top bar says saved",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "server revision increased",
+          "ok": true,
+          "detail": "1 → 2"
+        },
+        {
+          "name": "the new text is in the persisted schema (read back through a separate session)",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "after a full reload the canvas shows the saved text",
+          "ok": true,
+          "detail": "e2e-muwrfasq-proj-A\nSản phẩm\nLiên hệ\n\nE2E-MUWRFASQ-MUWRFFQM\n\nNước sạch mỗi ngày, sống khỏe mỗi ngày."
+        },
+        {
+          "name": "a new version row exists for the edit",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "no unhandled page errors / serious console errors",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-13",
+      "title": "Publish → real artifact/runtime state → public page reachable",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "checks": [
+        {
+          "name": "POST …/publish accepted by the backend (2xx) with a deployment id",
+          "ok": true,
+          "detail": "status=202 code=undefined"
+        },
+        {
+          "name": "the publish request carried an Idempotency-Key",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "the dialog reports the site is up (RUNNING)",
+          "ok": true,
+          "detail": "Xuất bản website Phiên bản 3 sẽ được đưa qua kiểm tra chính sách, bảo mật, build và triển khai. Đang chạy Đang chờ — Deployment queued Kiểm tra chính sách — Checking policy Kiểm tra bảo mật — Running "
+        },
+        {
+          "name": "the deployment is RUNNING on the server",
+          "ok": true,
+          "detail": "status=RUNNING mock=false"
+        },
+        {
+          "name": "the deployment has a URL",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "anonymous visitor: the public page answers 200",
+          "ok": true,
+          "detail": "status=200 "
+        },
+        {
+          "name": "the published page is the saved content (contains the text saved in E2E-02 — compared case-insensitively, the eyebrow is rendered with CSS uppercase — or is non-empty)",
+          "ok": true,
+          "detail": "e2e-muwrfasq-proj-A Sản phẩm Liên hệ E2E-MUWRFASQ-MUWRFFQM Nước sạch mỗi ngày, sống khỏe mỗi ngày. G"
+        },
+        {
+          "name": "no Studio chrome leaks into the public page",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "no unhandled page errors in Studio",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "failed": []
+    }
+  ]
+}

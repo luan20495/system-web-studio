@@ -23,3 +23,21 @@ From C5 (Studio/Frontend), baseline `integration/v2 @ f894cc6`. C5 changed nothi
 ## No new request (this round)
 
 C4 reported the AMQP adapter coded, durable queue wiring partial and the real broker not verified. C5 changed nothing for it: E2E-12 and E2E-14 stay **BLOCKED** (not faked, not PASS). H-C4-01 above is unchanged. Client rule that does not depend on C4: an ambiguous mutation or workflow start is `IDEMPOTENCY_OUTCOME_UNKNOWN`, `retryable=false`, never auto-retried, never shown as success.
+
+## H-C4-02 — NOTIFY is not executable; AMQP adapter not integrated (live evidence, 2026-10-06)
+
+- **ID:** H-C4-02
+- **Owner:** C4 (C0 wires)
+- **Severity:** P2
+- **Flow:** E2E-S1 / E2E-14
+- **Frontend expectation:** an action of a declared type runs in TEST and answers `WOULD_RUN`; a workflow start survives a broker outage with a correct error and recovers.
+- **Actual backend behavior:** (1) a `NOTIFY` action answers **501 `NOT_IMPLEMENTED` "NOTIFY is not available: ActionNotifyPort is not wired"** even in TEST. `START_WORKFLOW` answers `WOULD_RUN` correctly. (2) An action with no `trigger` is refused as 404 `UNKNOWN_ACTION` by the browser route (D-C4-10, as designed; C5 now disables that button with the reason). (3) The AMQP adapter and `app.workflow.queue=memory|amqp` selection exist only on `agent/c4-workflow` (`5712ac5`, `7e3c7c3`); that branch is 32 commits behind `integration/v2` and C4's own commit says "Not run with Gradle/Testcontainers". Nothing selects a queue on the tested stack.
+- **Endpoint/event:** `POST …/app-runtime/actions/{id}/execute`
+- **Request:** `{mode:"TEST", idempotencyKey}` on a NOTIFY action
+- **Response/status:** 501 `{"status":"FAILED","error":{"code":"NOT_IMPLEMENTED",…}}`
+- **Reproduction:** add `{type:"ADD_ACTION", definition:{id, type:"NOTIFY", channel:"IN_APP", templateRef, trigger:{sectionId, event:"onClick"}}}` then execute in TEST.
+- **Evidence:** `docs/parallel/c5/evidence/mac/` (debug during E2E-S1; fixture comment in `tests/e2e-real/lib/fixtures.mjs`).
+- **Impact:** NOTIFY cannot be tested end to end; E2E-14 stays BLOCKED.
+- **Suggested contract/fix:** wire `ActionNotifyPort` (or hide NOTIFY from the contract until it is); rebase/merge the queue adapter onto the integration baseline, run it under Gradle + a real RabbitMQ, then C0 wires the selection.
+- **C5 workaround:** fixture uses `START_WORKFLOW`; E2E-14 BLOCKED with `E2E_RABBITMQ_WIRED` / `E2E_STOP_RABBIT_CMD` / `E2E_START_RABBIT_CMD` hooks ready.
+- **Blocked test IDs:** E2E-14 (NOTIFY has no flow of its own)
