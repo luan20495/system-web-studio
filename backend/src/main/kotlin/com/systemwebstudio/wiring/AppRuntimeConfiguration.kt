@@ -28,14 +28,19 @@ import com.systemwebstudio.logic.workflow.WorkflowRunStore
 import com.systemwebstudio.logic.workflow.WorkflowRuntime
 import com.systemwebstudio.logic.workflow.WorkflowWorker
 import com.systemwebstudio.logic.workflow.canonical.CanonicalWorkflowCatalog
+import com.systemwebstudio.wiring.persistence.JdbcActionRunStore
+import com.systemwebstudio.wiring.persistence.JdbcWorkflowRunStore
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.scheduling.annotation.Scheduled
+import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Component
 import tools.jackson.databind.json.JsonMapper
+import java.time.Clock
+import java.time.Duration
 import com.systemwebstudio.access.adapters.AccessPort as C1AccessPort
 import com.systemwebstudio.access.adapters.TenantGate as C1TenantGate
 
@@ -50,8 +55,13 @@ class AppRuntime(
 
 /**
  * C0 · wires C4's runtime to C1 (access, tenant gate), C2 (AppDefinition, resolver) and C3 (data gateway, when it exists). Everything is behind
- * `app.workflow.enabled` (default false): with the flag off none of these beans exists and no route is mounted. State is in memory (D-C0-20).
- * `ActionRunStore`/`WorkflowRunStore`/`WorkflowQueue` are the seams a persistent implementation replaces after a reviewed migration.
+ * `app.workflow.enabled` (default false): with the flag off none of these beans exists and no route is mounted.
+ *
+ * Run state (V29, D-C0-23): `app.workflow.run-store` selects the `ActionRunStore` / `WorkflowRunStore` - `jdbc` (the default: durable, restart-safe, the only
+ * choice for production) or `memory` (explicit dev / test choice, single node, lost on restart; LIVE changes are then refused with `RUNTIME_STORES_VOLATILE`
+ * unless `app.workflow.allow-volatile-stores=true`). Any other value leaves the beans undefined and the application does not start: there is no silent fallback to
+ * volatile stores. The `WorkflowQueue` is still in memory until the RabbitMQ phase; a lost job is not lost work, the sweeper re-publishes every run whose
+ * job vanished (a PENDING / stale run), so a restart only delays - it never drops - a run.
  */
 @Configuration
 @ConditionalOnProperty(prefix = "app.workflow", name = ["enabled"], havingValue = "true")
@@ -73,10 +83,20 @@ class AppRuntimeConfiguration {
     fun logicAuditPort(audit: AuditService): LogicAuditPort = LogicAuditAdapter(audit)
 
     @Bean
-    fun actionRunStore(): ActionRunStore = InMemoryActionRunStore()
+    @ConditionalOnProperty(prefix = "app.workflow", name = ["run-store"], havingValue = "jdbc", matchIfMissing = true)
+    fun durableActionRunStore(jdbc: JdbcTemplate, json: JsonMapper): ActionRunStore = JdbcActionRunStore(jdbc, json)
 
     @Bean
-    fun workflowRunStore(): WorkflowRunStore = InMemoryWorkflowRunStore()
+    @ConditionalOnProperty(prefix = "app.workflow", name = ["run-store"], havingValue = "jdbc", matchIfMissing = true)
+    fun durableWorkflowRunStore(jdbc: JdbcTemplate, json: JsonMapper): WorkflowRunStore = JdbcWorkflowRunStore(jdbc, json)
+
+    @Bean
+    @ConditionalOnProperty(prefix = "app.workflow", name = ["run-store"], havingValue = "memory")
+    fun volatileActionRunStore(): ActionRunStore = InMemoryActionRunStore()
+
+    @Bean
+    @ConditionalOnProperty(prefix = "app.workflow", name = ["run-store"], havingValue = "memory")
+    fun volatileWorkflowRunStore(): WorkflowRunStore = InMemoryWorkflowRunStore()
 
     @Bean
     fun workflowQueue(): WorkflowQueue = InMemoryWorkflowQueue()
@@ -95,8 +115,14 @@ class AppRuntimeConfiguration {
         workflowRuns: WorkflowRunStore,
         queue: WorkflowQueue,
         gateways: ObjectProvider<DataGateway>,
-        @Value("\${app.workflow.allow-volatile-stores:false}") allowVolatile: Boolean
+        @Value("\${app.workflow.allow-volatile-stores:false}") allowVolatile: Boolean,
+        @Value("\${app.workflow.run-store:jdbc}") runStore: String,
+        @Value("\${app.workflow.stale-after:PT2M}") staleAfter: String
     ): AppRuntime {
+        require(runStore == "jdbc" || runStore == "memory") { "app.workflow.run-store must be 'jdbc' or 'memory'" }
+        val durable = runStore == "jdbc"
+        val leaseAfter = Duration.parse(staleAfter)
+        require(!leaseAfter.isNegative && leaseAfter >= Duration.ofSeconds(30)) { "app.workflow.stale-after must be at least 30 seconds" }
         val catalog = CanonicalActionCatalog(source)
         // START_WORKFLOW reaches the engine, which is built after the action runtime: a forwarding port closes the loop.
         var engineRef: WorkflowEngine? = null
@@ -115,11 +141,11 @@ class AppRuntimeConfiguration {
             resolver = InputResolver(json),
             bindings = catalog
         )
-        val engine = WorkflowEngine(json, CanonicalWorkflowCatalog(source), runtime, workflowRuns, queue, access, tenants, logicAudit)
+        val engine = WorkflowEngine(json, CanonicalWorkflowCatalog(source), runtime, workflowRuns, queue, access, tenants, logicAudit, staleAfter = leaseAfter)
         engineRef = engine
         return AppRuntime(
-            actions = VolatileActionGuard(runtime, catalog, access, allowVolatile),
-            workflows = VolatileWorkflowGuard(engine, access, allowVolatile),
+            actions = VolatileActionGuard(runtime, catalog, access, allowVolatile || durable),
+            workflows = VolatileWorkflowGuard(engine, access, allowVolatile || durable),
             definitions = catalog,
             engine = engine,
             worker = WorkflowWorker(engine, queue)
@@ -145,4 +171,32 @@ class WorkflowWorkerRunner(private val runtime: AppRuntime) {
     }
 
     companion object { const val MAX_PER_TICK = 50 }
+}
+
+/**
+ * Recovery of action runs (V29). A worker that dies between `begin` and `complete` leaves a RUNNING row, which would answer `ACTION_IN_PROGRESS` for ever. The sweep
+ * turns a RUNNING run untouched for [staleAfter] into a retryable FAILED `TIMEOUT` (the `ActionRunStore.sweepStale` contract). Safe for writes: a retry re-enters the
+ * data layer with the SAME derived key, whose own record answers Replay / OutcomeUnknown - an ambiguous write is never executed again. [staleAfter] must be longer
+ * than the longest action timeout (default PT10M); it is the lease of a RUNNING action run: a run that has not finished within it is treated as abandoned.
+ */
+@Component
+@ConditionalOnProperty(prefix = "app.workflow", name = ["enabled"], havingValue = "true")
+class ActionRunRecovery(
+    private val actionRuns: ActionRunStore,
+    @Value("\${app.workflow.action-run-stale-after:PT10M}") staleAfter: String,
+    private val clock: Clock = Clock.systemUTC()
+) {
+    private val log = System.getLogger(ActionRunRecovery::class.java.name)
+    private val lease: Duration = Duration.parse(staleAfter).also { require(it >= Duration.ofMinutes(1)) { "app.workflow.action-run-stale-after must be at least 1 minute" } }
+
+    @Scheduled(fixedDelayString = "\${app.workflow.action-run-sweep-delay-ms:30000}")
+    fun tick() {
+        try {
+            val now = clock.instant()
+            val n = actionRuns.sweepStale(now.minus(lease), now)
+            if (n > 0) log.log(System.Logger.Level.WARNING, "Action run recovery: $n abandoned run(s) failed as retryable TIMEOUT")
+        } catch (e: Exception) {
+            log.log(System.Logger.Level.ERROR, "Action run recovery failed: ${e.javaClass.name}")
+        }
+    }
 }

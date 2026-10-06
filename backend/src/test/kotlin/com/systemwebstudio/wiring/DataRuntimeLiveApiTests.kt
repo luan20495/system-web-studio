@@ -41,12 +41,12 @@ import java.util.UUID
  * HTTP -> access checks -> published AppDefinition (RUNNING deployment) -> V28 bindings -> `DefaultDataGateway` -> V28 data sources / queries /
  * mutations / credentials / idempotency (all JDBC) -> a writable test connector (the production connectors are read-only by design, B-C0-W-04).
  *
- * Flags: data platform and workflow on; `allow-volatile-stores=true` only because C4's run stores stay in memory until V29 (this is the dev/E2E switch of D-C0-20).
+ * Flags: data platform and workflow on; run stores are the durable JDBC ones of V29 (the default `app.workflow.run-store=jdbc`), so no volatile override is needed.
  * The management API for data sources / queries / bindings does not exist yet (B-C0-W-03): fixtures write the rows through the adapters.
  */
 @TestPropertySource(
     properties = [
-        "app.workflow.enabled=true", "app.data-platform.enabled=true", "app.workflow.allow-volatile-stores=true", "app.workflow.worker-delay-ms=3600000",
+        "app.workflow.enabled=true", "app.data-platform.enabled=true", "app.workflow.worker-delay-ms=3600000", "app.workflow.action-run-sweep-delay-ms=3600000",
         "app.secrets.master-key=MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="        // base64 of 32 test bytes, only for this test context
     ]
 )

@@ -17,7 +17,7 @@ import java.util.UUID
  * [DataRuntimeLiveApiTests].
  * The AppDefinition is the C2 sample document written as the project's working draft; nothing is published, so LIVE finds no definition.
  */
-@TestPropertySource(properties = ["app.workflow.enabled=true", "app.data-platform.enabled=true", "app.workflow.allow-volatile-stores=false", "app.workflow.worker-delay-ms=3600000"])
+@TestPropertySource(properties = ["app.workflow.enabled=true", "app.data-platform.enabled=true", "app.workflow.run-store=memory", "app.workflow.allow-volatile-stores=false", "app.workflow.worker-delay-ms=3600000", "app.workflow.action-run-sweep-delay-ms=3600000"])
 class AppRuntimeApiTests : IntegrationTestBase() {
     @Autowired lateinit var schemas: SchemaRepository
 

@@ -211,8 +211,16 @@ app:
     idempotency-purge-delay-ms: ${DATA_PLATFORM_IDEMPOTENCY_PURGE_DELAY_MS:3600000}
   workflow:
     enabled: ${WORKFLOW_ENABLED:false}              # C4. Reserved name, read only by wiring/**; gates action/workflow/approval endpoints and the scheduler
-    # D-C0-20: C4 run state is in memory until a reviewed persistence migration exists. LIVE mutating actions / workflow starts answer 503 RUNTIME_STORES_VOLATILE unless this is true (dev / E2E only).
+    # V29 / D-C0-23: where action / workflow run state lives. jdbc (default) = PostgreSQL, restart-safe, the only production choice. memory = explicit dev / test override, lost on restart.
+    # Any other value: the application does not start (no silent fallback to volatile stores).
+    run-store: ${WORKFLOW_RUN_STORE:jdbc}
+    # D-C0-20: only meaningful with run-store=memory. LIVE mutating actions / workflow starts then answer 503 RUNTIME_STORES_VOLATILE unless this is true (dev / E2E only).
     allow-volatile-stores: ${WORKFLOW_ALLOW_VOLATILE_STORES:false}
+    # Lease of a RUNNING workflow run (its updatedAt is the heartbeat): a run untouched for this long is treated as abandoned and recovered by the sweeper. Min PT30S.
+    stale-after: ${WORKFLOW_STALE_AFTER:PT2M}
+    # Lease of a RUNNING action run. Must be longer than the longest action timeout; min PT1M.
+    action-run-stale-after: ${WORKFLOW_ACTION_RUN_STALE_AFTER:PT10M}
+    action-run-sweep-delay-ms: ${WORKFLOW_ACTION_RUN_SWEEP_DELAY_MS:30000}
     worker-delay-ms: ${WORKFLOW_WORKER_DELAY_MS:500}
   rate-limit:
     login-user-max: 5
