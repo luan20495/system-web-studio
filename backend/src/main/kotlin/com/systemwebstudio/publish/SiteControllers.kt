@@ -89,7 +89,7 @@ class SiteServingController(
         val site = sites.live(slug)?.takeIf { it.visibility == "PRIVATE" && it.kind == "STATIC_APP" } ?: return page(response, 404, "Không tìm thấy", "")
         if (!sites.canRead(user, site)) return page(response, 403, "Bạn không có quyền xem ứng dụng này", "")
         val raw = request.requestURI.substringAfter("/sites/_app/$token/", "")
-        if (raw == "__factory/config.json") return runtimeConfig(response, sites.runtimeConfig(site.projectId, "production", "PRIVATE", user))
+        if (raw == "__factory/config.json") return runtimeConfig(response, sites.runtimeConfig(site.projectId, "production", "PRIVATE", user, site.deploymentId))
         serveFile(site.prefix, site.files, raw, private = true, app = true, frameAncestors = null, preview = false, request, response)
     }
 
@@ -127,7 +127,7 @@ class SiteServingController(
                 response.setHeader("Location", "/_app/${sites.openAppToken(user, slug)}/$raw"); return
             }
         }
-        if (app && raw == "__factory/config.json") return runtimeConfig(response, sites.runtimeConfig(site.projectId, "production", site.visibility, null))
+        if (app && raw == "__factory/config.json") return runtimeConfig(response, sites.runtimeConfig(site.projectId, "production", site.visibility, null, site.deploymentId))
         serveFile(site.prefix, site.files, raw, private, app, null, preview = false, request, response, root = "/$slug/")
     }
 

@@ -36,9 +36,15 @@ class SiteService(
     private val jdbc: JdbcTemplate, private val json: JsonMapper, private val access: AccessService, private val redis: StringRedisTemplate,
     @Value("\${app.sites.origin:http://127.0.0.1:18088}") val sitesOrigin: String,
     @Value("\${app.sites.studio-origin:http://localhost:3100}") val studioOrigin: String,
-    @Value("\${app.sites.session-hours:8}") private val sessionHours: Long
+    @Value("\${app.sites.session-hours:8}") private val sessionHours: Long,
+    /**
+     * Where a published app finds the Data Runtime API (`app.sites.data-api-base`). It is RUNTIME configuration of the environment, never part of an
+     * artifact: the same artifact runs in DEV / STAGING / PROD against different hosts, and a rollback needs no rebuild. Blank = not configured.
+     */
+    @Value("\${app.sites.data-api-base:}") dataApiBaseRaw: String = ""
 ) {
     private val random = SecureRandom()
+    private val dataApiBase: String? = resolveDataApiBase(dataApiBaseRaw)
 
     fun url(slug: String) = "${sitesOrigin.trimEnd('/')}/$slug/"
 
@@ -93,12 +99,27 @@ class SiteService(
     fun previewProject(token: String): UUID? = jdbc.query("SELECT project_id FROM code_changes WHERE preview_token = ?", { rs, _ -> rs.getObject(1, UUID::class.java) }, token).firstOrNull()
 
     /** `__factory/config.json` for @company/app-sdk: identity of the app, environment, visibility, and the viewer of a PRIVATE app. No secrets. */
-    fun runtimeConfig(projectId: UUID, environment: String, visibility: String, userId: UUID?): Map<String, Any?> {
+    fun runtimeConfig(projectId: UUID, environment: String, visibility: String, userId: UUID?, releaseId: UUID? = null): Map<String, Any?> {
         val p = jdbc.queryForMap("SELECT name FROM projects WHERE id = ?", projectId)
         val version = jdbc.query("SELECT max(version_number) FROM project_versions WHERE project_id = ?", { rs, _ -> rs.getObject(1)?.toString() }, projectId).firstOrNull()
         val user = userId?.let { jdbc.query("SELECT coalesce(display_name, username) FROM users WHERE id = ?", { rs, _ -> rs.getString(1) }, it).firstOrNull() }
         return mapOf("appId" to projectId.toString(), "appName" to p["name"], "environment" to environment, "visibility" to visibility, "version" to version,
-            "user" to user?.let { mapOf("displayName" to it) }, "flags" to emptyMap<String, Boolean>(), "apiBase" to null, "generatedAt" to java.time.Instant.now().toString())
+            "user" to user?.let { mapOf("displayName" to it) }, "flags" to emptyMap<String, Boolean>(), "apiBase" to dataApiBase,
+            "releaseId" to releaseId?.toString(), "generatedAt" to java.time.Instant.now().toString())
+    }
+
+    companion object {
+        /**
+         * The configured Data Runtime API base, or null when nothing usable is configured: blank, not an absolute http(s) URL, no host, or carrying
+         * credentials. Nothing is invented: an unusable value is "not configured", never a guess.
+         */
+        fun resolveDataApiBase(raw: String?): String? {
+            val v = raw?.trim().orEmpty()
+            if (v.isEmpty()) return null
+            val uri = runCatching { java.net.URI(v) }.getOrNull() ?: return null
+            if (uri.scheme?.lowercase() !in setOf("http", "https") || uri.host.isNullOrBlank() || uri.userInfo != null || uri.fragment != null) return null
+            return v
+        }
     }
 
     fun preview(token: String): Pair<String, Map<String, ManifestFile>>? {
