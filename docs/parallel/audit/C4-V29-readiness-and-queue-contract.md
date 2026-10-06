@@ -139,7 +139,7 @@ C6 must not mock RabbitMQ or the stores for G4.
 | G1 Durable persistence | **PARTIAL / WAITING V29 integration gate** | V29 (`wire/v29-run-persistence`) carries `action_runs.mutating`, `workflow_runs.lease_owner/lease_until` and the JDBC stores (H-1, H-3 handled by C0); not on `integration/v2` yet, no durable adapter wired, C4 has not run it |
 | G2-C4 RabbitMQ + DLQ (the adapter) | **GREEN** | `AmqpWorkflowQueueTests` 14/14 on a real RabbitMQ 4 (Testcontainers, macOS, JDK 21, Gradle 9.8); see section 10 |
 | G2-INTEGRATED RabbitMQ + DLQ in the running application | **BLOCKED BY C0 H-5** | the wiring still creates `InMemoryWorkflowQueue` itself (`AppRuntimeConfiguration.workflowQueue()`), a second bean named `workflowQueue` next to C4's; see section 10 |
-| G3 Restart / recovery | **PARTIAL (8 scenarios GREEN on `verify/c4-g3`, not integrated)** | 8 tests on PostgreSQL (V29, `Jdbc*RunStore`) + RabbitMQ 4 + real engine/worker pass (section 11.3); broker restart, full application restart and the remaining scenarios of 9.4 are not written yet; nothing of this is on `integration/v2` |
+| G3 Restart / recovery | **PARTIAL (all 12 criteria have a passing test on `verify/c4-g3`; NOT integrated, so not GREEN)** | 21 tests on PostgreSQL 17.6 (V29 stores) + RabbitMQ 4 + real engine/worker, run 5x in a row 21/21 (section 12); they run on a verification branch because the stores and V29 are not on the C4 branch, and `integration/v2` still lacks H-5; G3 turns GREEN when the same tests pass on `integration/v2` after H-5 |
 | G4 Real full-stack workflow E2E | **NOT DONE** | needs G1 + G2-INTEGRATED and a real wired stack |
 | G5 C6 regression | **NOT DONE** | handoff above |
 
@@ -250,7 +250,7 @@ The C4 interfaces are identical on both sides: `ActionRunStore.kt`, `ActionRunti
 - CAS from a stale version fails and writes nothing, not even the steps; of several concurrent CAS exactly one wins (`JdbcWorkflowRunStoreTests`). The engine-level ownership rules (stale reader cannot update, an old owner cannot commit or renew after the reclaim) are proved on the real stores by G3-04 and G3-03 (second test).
 No mismatch found: no signature, column or predicate differs from the C4 contract.
 
-G3 tests written and run (branch `verify/c4-g3`, class `wiring/persistence/WorkflowG3RecoveryTests`; real PostgreSQL via the V29 stores, real RabbitMQ 4 via `AmqpWorkflowQueue`, real `WorkflowEngine` / `WorkflowWorker` / `DefaultActionRuntime`; the only fake is the effect sink standing for C3): 8/8 pass.
+G3 tests written and run (first batch; completed to 21 tests in section 12) (branch `verify/c4-g3`, class `wiring/persistence/WorkflowG3RecoveryTests`; real PostgreSQL via the V29 stores, real RabbitMQ 4 via `AmqpWorkflowQueue`, real `WorkflowEngine` / `WorkflowWorker` / `DefaultActionRuntime`; the only fake is the effect sink standing for C3): 8/8 pass.
 | Test | What it proves |
 |---|---|
 | G3-01 (2 tests) | step SUCCEEDED persisted, consumer dies before the ack => the broker redelivers (`deliveryCount` 2 observed), a new worker finds the persisted state, effect count stays 1, row untouched (version unchanged) for a finished run, queue and DLQ empty |
@@ -270,3 +270,45 @@ Branch `verify/c4-g3` @ `568fd45` (base `integration/v2` `8e91172`): `e1c00aa` q
 - Missing, nothing in `wiring/**` or `logic/**`: a workflow worker indicator (last successful `WorkflowWorkerRunner.tick`, last sweep), queue depth / DLQ depth, any `MeterRegistry` metric. The worker polls with `basic.get`, so the broker shows **no consumer** for the queue: "worker consumer active" cannot be read from RabbitMQ and must come from the application.
 - Handoff (not coded: outside `logic/**` and C0-owned): C0 adds a `HealthIndicator` for the workflow runtime (broker reachable through the workflow connection, last tick age below a threshold) and a DLQ consumer calling `WorkflowWorker.drainDeadLetters` (otherwise dead letters pile up unseen); C4 can supply `queueDepth()` / `deadLetterDepth()` on `AmqpWorkflowQueue` when C0 asks.
 - Evidence a G3 run must keep: `workflow_runs` / `workflow_run_steps` / `action_runs` rows (status, attempt, lease, version), queue and DLQ message counts from the management API (`:15672`), and the worker logs with the run id (`WorkflowJob.correlationId` = run id, `messageId` = job id).
+
+## 12. Batch 6 - G3 recovery suite completed on the verification branch, observability contract
+
+### 12.1 What exists (branch `verify/c4-g3`, base `integration/v2`; classes in `wiring/persistence/`, shared base `G3Support.kt`)
+Real infrastructure: PostgreSQL 17.6 (Testcontainers, Flyway V1..V29), RabbitMQ 4 (`rabbitmq:4-management-alpine`, Testcontainers; the restart class has a container of its own with a fixed host port, the broker of the other classes is never restarted), `JdbcActionRunStore`, `JdbcWorkflowRunStore`, `AmqpWorkflowQueue`, real `WorkflowEngine` / `WorkflowWorker` / `DefaultActionRuntime`. Only the effect sink (the C3 side) is a recorder. No in-memory store, no fake broker, no `Thread.sleep` for an expected event (bounded polling `await`).
+
+| Class | Tests | Scenarios |
+|---|---|---|
+| `WorkflowG3RecoveryTests` | 8 | 01 persisted success before the ack (2), 02 duplicate delivery + two workers, 03 ambiguous mutation (sync timeout; worker death with lease expiry), 04 crash after claim, 05 cancel queued, 06 cancel running |
+| `WorkflowG3SweeperRaceTests` | 8 | 09 ACTION_IN_PROGRESS vs the action-run sweeper (mutating; budget-exhausted characterization; non-mutating), 10 three workers x 5 rounds racing for an expired lease, 11 malformed message to the DLQ, broker delivery limit -> one process failure -> recovery, real poison run -> `DEAD_LETTERED`, 12 cancel after a worker death (compensation) |
+| `WorkflowG3BrokerRestartTests` | 2 | 07A job in the durable queue across a broker restart, same worker reconnects; 07B SUCCEEDED persisted + ack never sent + broker restart -> redelivered, no repeated effect |
+| `WorkflowG3SpringRestartTests` | 3 | 08A application restart while a step is RUNNING (real context close, new context, new worker id, lease reclaim, attempt 2, the old engine can no longer renew or write), 08B restart after persisted success before the ack, 12 cancel while queued survives a restart |
+The Spring contexts contain the production `RunStoreConfiguration`, `WorkflowQueueConfiguration` (`app.workflow.queue=amqp`: topology declared at start-up, channels and connection closed at shutdown) and `WorkflowWorkerRunner` (`@Scheduled`) over an `AppRuntime` built from the same engine/worker; not the whole application (no HTTP, no published AppDefinition): the full-application variant needs H-5 and belongs to G4.
+
+### 12.2 Findings
+- **Isolation (fixed, guarded)**: the stale sweeps are table-wide, so one test's sweep touched rows left by another class (G3-03 once counted 2 instead of 1). `G3TestBase` now cleans every unfinished workflow run and every RUNNING action run before and after each test, asserts that none exists at the start of a test (regression guard), waits for "crashed" worker threads in teardown, and uses unique queue names; sweep counts are exact again.
+- **A dead letter is ONE process failure of its run, not a verdict** (`failFromDeadLetter`): a message the broker dead-lettered after its delivery limit leaves the durable state untouched (no attempt, no effect, no retry created by redelivery); the DLQ consumer adds one `processFailures` + backoff, the sweeper republishes and the run completes. Only `maxProcessFailures` of them fail the run (`DEAD_LETTERED`, persisted).
+- **ACTION_IN_PROGRESS vs the sweeper (semantics unchanged, one imprecision to decide)**: while the dead worker's action run is RUNNING a retry meets `ACTION_IN_PROGRESS` (retryable) and waits in backoff, bounded by the step's attempt budget; after the action-run sweep the mutating run is `IDEMPOTENCY_OUTCOME_UNKNOWN` and the next attempt ends the run there with no second send. If the budget ends **before** the sweeper ran, the run fails with `ACTION_IN_PROGRESS`, not `UNKNOWN`: nothing is resent and the step is not compensated, but the code understates "the write may have been applied". Pinned by a characterization test; changing it (fail with UNKNOWN when the last attempt meets IN_PROGRESS of a mutating action) is a semantic decision for the C4 owner / C0, not made here. Also: a non-mutating NAVIGATE has no run row at all unless a definition sets `idempotency` to OPTIONAL/REQUIRED, so ACTION_IN_PROGRESS cannot occur for it by default.
+- **A cancelled run is not interrupted**: a step already running when the run is cancelled finishes its effect; `compensateOnCancel` then compensates it (G3 06), and nothing after it starts.
+- **No flaky timing found**: 5 consecutive runs of the 21 G3 tests, 21/21 each; broker restart waits are bounded polling. The broad set (G3 21, queue classes, wiring, `AppRuntimeApiTests`, `RunStoreConfigurationTests`, `Jdbc{Workflow,Action}RunStoreTests`, `WorkflowRestartRecoveryTests`, `ActionRunRecoveryTests`, `WorkflowEngineTests` 65, `WorkflowSweeperTests` 13, lease / abandonment) at `verify/c4-g3` `ebe6fae`: 235/235, 0 failed, 0 skipped, `--rerun-tasks`.
+
+### 12.3 G3 criteria (all on PostgreSQL/JDBC + RabbitMQ, real)
+persisted success before ACK: 01, 07B, 08B; duplicate delivery: 02; ambiguous mutation recovery: 03 (x2), 09; crash after claim: 04, 08A; lease expiry / reclaim: 03, 04, 08A, 10; cancel queued / running: 05, 06, 12 (x2); RabbitMQ restart: 07A, 07B; Spring restart: 08A, 08B, 12; ACTION_IN_PROGRESS + sweeper: 09; multi-worker reclaim race: 10; DLQ terminal handling: 11 (x3); cancel survives restart: 12.
+Mutation check (production code broken in the verification branch, restored afterwards): an abandoned run that is RUNNING is started again instead of ACTION_IN_PROGRESS -> 3 G3-09 tests fail; step claim without state check -> G3-09 fails (and G3-02 earlier); a dead letter not counted against its run -> G3-11 fails; and the earlier set (abandoned mutating -> TIMEOUT, onError for UNKNOWN, lease not released, no compensation after cancel).
+
+### 12.4 Health and observability contract (design; no production code in this batch)
+Facts: Actuator `readiness` = `readinessState, db, redis, rabbit, minio`; `rabbit` is Spring's own connection, not C4's channels; the worker polls with `basic.get`, so **`consumer_count = 0` is the normal state of a healthy worker and says nothing about it** - never use it as health evidence. Unacked messages (`messages_unacknowledged`) held for long = a stuck lease, a better signal.
+Signals (names are the contract; the HealthIndicator / Micrometer binding live in `wiring/**` and `application*.yml`, C0-owned; the counters sit in `WorkflowWorker` / `AmqpWorkflowQueue`, C4-owned, to be added when C0 asks):
+| Signal | Meaning | Needed before the full-stack E2E (G4) |
+|---|---|---|
+| `workflowQueue.connection` UP/DOWN | the workflow's own connection is open and the topology exists (passive declare) | required, readiness |
+| `workflowWorker.running` | the runner is scheduled and its last tick finished | required, liveness |
+| `workflowWorker.lastPollAt` / `lastSuccessfulPollAt` | updated by every tick, also when the queue is empty (idle is not dead); stale if older than max(30 s, 10 x `worker-delay-ms`) | required |
+| `workflowWorker.lastSweepAt` (+ last report) | the lost-job / lease recovery is alive | required |
+| `workflowQueue.deadLetterMessages` | alert when > 0; E2E asserts 0 | required |
+| `workflowQueue.readyMessages` | backlog (unacked not included) | recommended |
+| `workflowWorker.lastJobAt`, `lastAckAt`, `lastErrorAt` | activity / failure trail | optional |
+| counters: jobs processed, redeliveries seen (`deliveryCount` > 1), process failures, sweeps republished | trend | optional |
+Evidence a G3/G4 run keeps: the `workflow_runs` / `workflow_run_steps` / `action_runs` rows (status, attempt, lease, version), queue and DLQ counts from the management API (`:15672`), worker logs by run id.
+
+### 12.5 C6 handoff delta
+Use the 21 tests as the scenario list for the real-stack suite (no mock of the stores or the broker): the asserts that matter are persisted rows + effect counts + queue/DLQ depth. New in this batch: scenarios 09 (ACTION_IN_PROGRESS then UNKNOWN), 10 (reclaim race), 11 (DLQ joined to workflow state), 07 (broker restart needs its own container), 08 (restart through real context close). Do not restart the shared test broker.
