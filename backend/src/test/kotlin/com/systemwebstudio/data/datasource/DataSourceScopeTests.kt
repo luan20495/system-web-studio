@@ -74,7 +74,7 @@ class DataSourceScopeTests {
     }
 
     @Test
-    fun `default deny: no workspace in the context, or no workspace on the source, reaches nothing`() {
+    fun `default deny - no workspace in the context, or no workspace on the source, reaches nothing`() {
         val owned = register(tenant, wsA); val tenantLevel = register(tenant, null); val s = service(DataSourceScope.WORKSPACE)
         val noWorkspace = tenant.context().copy(workspaceId = null)
         assertThat(code { s.resolve(noWorkspace, owned.id) }).isEqualTo(FailureCodes.NOT_FOUND)

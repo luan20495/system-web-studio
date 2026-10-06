@@ -80,7 +80,7 @@ class DataRuntimeLiveApiTests : IntegrationTestBase() {
 
     /** the AppDefinition with `erp-db` pointing straight at a registered source (a `sourceRef`), instead of being resolved through a binding */
     private fun definitionWithSourceRef(sourceId: UUID): JsonNode {
-        val copy = sample.deepCopy<JsonNode>()
+        val copy: JsonNode = sample.deepCopy()
         val erp = DataJson.elements(copy.get("dataSources")).first { it.get("id").asString() == "erp-db" } as ObjectNode
         erp.put("sourceRef", sourceId.toString())
         return copy
@@ -145,7 +145,7 @@ class DataRuntimeLiveApiTests : IntegrationTestBase() {
     }
 
     @Test
-    fun `LIVE needs a LIVE binding: a TEST-only binding leaves LIVE unbound`() {
+    fun `LIVE needs a LIVE binding - a TEST-only binding leaves LIVE unbound`() {
         val app = app(bindLive = false)
         bindings.bind(app.tenant, app.sc.ws, app.sc.projectId, ExecutionMode.TEST, "erp-db", app.source.id, null)
         connector.rowsFor[app.source.id] = listOf(order("SO-1", "X"))
@@ -258,7 +258,7 @@ class DataRuntimeLiveApiTests : IntegrationTestBase() {
     }
 
     @Test
-    fun `a TEST action is only previewed: no connector call, no idempotency row`() {
+    fun `a TEST action is only previewed - no connector call, no idempotency row`() {
         val app = app()
         val a = admin(app.sc)
         val r = a.post(rt(app, "actions/create-order/execute"), """{"mode":"TEST","inputs":{"customer":"ACME"},"trigger":{"eventName":"contact-1.onSubmit"}}""")

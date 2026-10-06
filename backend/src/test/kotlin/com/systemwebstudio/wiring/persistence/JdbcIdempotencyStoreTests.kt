@@ -92,7 +92,7 @@ class JdbcIdempotencyStoreTests : DataRuntimeJdbcTestBase() {
     }
 
     @Test
-    fun `a holder that vanished is not retried: after the lease the key is unknown`() {
+    fun `a holder that vanished is not retried - after the lease the key is unknown`() {
         assertThat(begin()).isEqualTo(IdempotencyDecision.Run)
         clock.advanceSeconds(JdbcIdempotencyStore.DEFAULT_LEASE_SECONDS - 1)
         assertThat(begin()).isEqualTo(IdempotencyDecision.InProgress)
@@ -179,7 +179,7 @@ class JdbcIdempotencyStoreTests : DataRuntimeJdbcTestBase() {
     }
 
     @Test
-    fun `concurrent callers with one key: exactly one runs`() {
+    fun `concurrent callers with one key - exactly one runs`() {
         val threads = 16
         val pool = Executors.newFixedThreadPool(threads)
         val ready = CountDownLatch(threads); val go = CountDownLatch(1)
