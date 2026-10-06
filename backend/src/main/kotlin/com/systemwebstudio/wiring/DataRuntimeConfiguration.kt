@@ -128,7 +128,7 @@ class DataRuntimeConfiguration {
     fun c3DiscoveryService(service: DataSourceService, store: SourceSchemaStore, guard: GatewayGuard, limits: RateLimitGate, audit: DataAuditSink) =
         DiscoveryService(service, store, guard, limits, audit)
 
-    /** The one `DataGateway`: R1 (`/api/runtime/**` query route) and the Action data port ask for it through `ObjectProvider<DataGateway>`. */
+    /** The one `DataGateway`: R1 (the app-runtime query route) and the Action data port ask for it through `ObjectProvider<DataGateway>`. */
     @Bean
     fun c3DataGateway(
         guard: GatewayGuard, service: DataSourceService, queries: QueryCatalog, mutations: MutationCatalog, mappings: MappingCatalog,
