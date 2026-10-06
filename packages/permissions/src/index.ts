@@ -8,8 +8,8 @@ import type { Me } from "@xweb/types";
 export type PortalId = "platform" | "admin" | "studio";
 export const PORTAL_IDS: readonly PortalId[] = ["platform", "admin", "studio"];
 
-/** What a person can do at the portal level. Kept coarse on purpose: finer permissions come from the server (`ApiProject.permissions`). */
-export type Capability = "platform.operate" | "tenant.administer" | "studio.build";
+/** What a person can do at the portal level. Kept coarse on purpose: finer permissions come from the server (`ApiProject.permissions`, `Me.permissions`). */
+export type Capability = "platform.operate" | "tenant.administer" | "tenant.members" | "studio.build";
 
 export const PORTAL_REQUIRES: Record<PortalId, Capability> = {
   platform: "platform.operate",
@@ -19,17 +19,31 @@ export const PORTAL_REQUIRES: Record<PortalId, Capability> = {
 export const PORTAL_PREFIX: Record<PortalId, string> = { platform: "/platform", admin: "/admin", studio: "/studio" };
 export const PORTAL_LABEL: Record<PortalId, string> = { platform: "Xweb Platform", admin: "Quản trị công ty", studio: "Xweb Studio" };
 
+/** Codes that only describe the tenant/platform level (tenant-permission.md §5). A workspace whose only codes are these gives no business-data access. */
+const TENANT_LEVEL_CODES: ReadonlySet<string> = new Set(["TENANT_MANAGE", "TENANT_MEMBERS"]);
+
+/** True when the server listed `code` among the person's canonical permissions (platform + primary tenant). Display only; the server decides. */
+export const hasPermission = (me: Me | null | undefined, code: string): boolean => !!me?.permissions?.includes(code);
+
 /**
- * Interim mapping, to be replaced when tenancy lands (T2/T3):
- *  - there is no tenant yet, and `/admin/*` APIs are guarded server-side by `users.system_admin`, so both "platform.operate" and
- *    "tenant.administer" follow `systemAdmin`. When C1 adds TENANT_ADMIN, only this function changes.
- *  - "studio.build" = member of at least one workspace.
+ * Portal gate, derived from what `/auth/me` says (integration/v2 8b944cc..4884be3). Display only: every call is authorised again by the server.
+ *  - platform.operate  = `platformScope` (SYSTEM_ADMIN). Falls back to `systemAdmin` when the backend predates the tenancy fields.
+ *  - tenant.administer = same as platform.operate FOR NOW: every `/api/v1/admin/**` page this app has is guarded by AdminGuard (system admin) on the
+ *    server (T1 audit, 96/96). A TENANT_ADMIN would open the Admin portal and get 403 on every screen. It opens to TENANT_ADMIN only when a
+ *    tenant-scoped admin API exists AND an Admin screen uses it (the only one today is `/admin/tenants/{id}/members`, TENANT_MEMBERS, with no UI).
+ *    See docs/parallel/c5/PHASE3_AUDIT.md M-05; the one-line change is in this function.
+ *  - tenant.members    = TENANT_MEMBERS (the tenant's own TENANT_ADMIN, or platform scope). Not used by a portal gate yet.
+ *  - studio.build      = some workspace gives business-data permissions. A platform-only SYSTEM_ADMIN (role "ADMIN", businessAccess=false) is listed in
+ *    `workspaces` but only holds tenant-level codes there, so Studio is not offered. Without per-workspace `permissions` (older backend): any workspace.
  */
 export function capabilitiesOf(me: Me | null | undefined): ReadonlySet<Capability> {
   const out = new Set<Capability>();
   if (!me) return out;
-  if (me.systemAdmin === true) { out.add("platform.operate"); out.add("tenant.administer"); }
-  if (me.workspaces.length > 0) out.add("studio.build");
+  const platform = me.platformScope ?? me.systemAdmin === true;
+  if (platform) { out.add("platform.operate"); out.add("tenant.administer"); }
+  if (platform || me.tenantRole === "TENANT_ADMIN" || hasPermission(me, "TENANT_MEMBERS")) out.add("tenant.members");
+  const builds = me.workspaces.some((w) => !w.permissions || w.permissions.some((c) => !TENANT_LEVEL_CODES.has(c)));
+  if (builds) out.add("studio.build");
   return out;
 }
 export const canAccessPortal = (me: Me | null | undefined, portal: PortalId) => capabilitiesOf(me).has(PORTAL_REQUIRES[portal]);
@@ -85,8 +99,10 @@ export function safeNext(next: string | null | undefined): string | null {
   return portalOfPath(next) && /^\/[a-z]+(\/|$|\?|#)/.test(next) ? next : null;
 }
 
-export const isAdmin = (me: Me) => me.systemAdmin === true;
-export const hasWorkspace = (me: Me) => me.workspaces.length > 0;
+/** Admin-console gate (see capabilitiesOf). */
+export const isAdmin = (me: Me) => capabilitiesOf(me).has("tenant.administer");
+/** "May use Studio": some workspace gives business-data permissions (a workspace list alone is not enough for a platform-only admin). */
+export const hasWorkspace = (me: Me) => capabilitiesOf(me).has("studio.build");
 
 /**
  * Where a signed-in (or not) user goes. Pure function: the backend still authorises every request, so a wrong answer here can

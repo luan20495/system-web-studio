@@ -70,8 +70,8 @@ export function describeWorkflowTest(wf: WorkflowDef, doc: AppDefinitionV2): { s
 }
 
 /** a server failure -> the outcome the panel shows. 409 IDEMPOTENCY_OUTCOME_UNKNOWN and 422 MUTATION_REJECTED get their own states. */
-export function outcomeFromError(e: unknown): TestOutcome {
-  const message = explainError(e);
+export function outcomeFromError(e: unknown, opts: { write?: boolean } = {}): TestOutcome {
+  const message = explainError(e, opts);
   if (message.kind === "unknown-outcome") return { state: "UNKNOWN", message };
   if (message.kind === "rejected") return { state: "REJECTED", message };
   if (message.kind === "unavailable") return { state: "NOT_READY", note: message.detail };
@@ -80,7 +80,14 @@ export function outcomeFromError(e: unknown): TestOutcome {
 
 /** a server answer -> outcome. SUCCESS needs an explicit success marker in the answer; anything else is shown as received, never promoted. */
 export function outcomeFromServer(result: unknown): TestOutcome {
-  const r = result as { status?: unknown; outcome?: unknown; dryRun?: unknown } | null;
+  const r = result as { status?: unknown; outcome?: unknown; dryRun?: unknown; level?: unknown; reason?: unknown } | null;
+  // C4 `ActionResult.WouldRun` (B-C4-09: "TEST response is WouldRun, C5 shows level/reason"). It is NEVER a success: nothing was written in any level.
+  if (typeof r?.level === "string") {
+    const why = typeof r.reason === "string" && r.reason ? ` ${r.reason}` : "";
+    if (r.level === "NOT_EXECUTED") return { state: "WOULD_RUN", note: `Chưa gửi tới nguồn dữ liệu nào; kế hoạch chỉ suy ra từ định nghĩa và dữ liệu nhập (theo máy chủ).${why}` };
+    if (r.level === "VALIDATED") return { state: "WOULD_RUN", note: `Nguồn dữ liệu đã kiểm tra yêu cầu hợp lệ, không có tác dụng phụ (theo máy chủ).${why}` };
+    if (r.level === "SANDBOX") return { state: "WOULD_RUN", note: `Đã chạy trên môi trường thử do nguồn dữ liệu cung cấp, dữ liệu thật không đổi (theo máy chủ).${why}` };
+  }
   const status = typeof r?.status === "string" ? r.status.toUpperCase() : typeof r?.outcome === "string" ? r.outcome.toUpperCase() : "";
   if (status === "SUCCESS" || status === "SUCCEEDED") return { state: "SUCCESS", note: r?.dryRun === true ? "Chạy thử thành công (dry-run, theo máy chủ)." : "Máy chủ báo thành công.", fromServer: true };
   if (status === "UNSUPPORTED" || status === "DRY_RUN_UNSUPPORTED") return { state: "UNSUPPORTED", note: "Máy chủ báo nguồn dữ liệu không hỗ trợ chạy thử." };

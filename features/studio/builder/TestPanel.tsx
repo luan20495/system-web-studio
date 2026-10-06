@@ -38,7 +38,7 @@ export function TestPanel({ doc, rawPermissions, runAction, runWorkflow }: {
   async function run(key: string, fn: () => Promise<unknown>) {
     setResults((r) => ({ ...r, [key]: { state: "NOT_READY", note: "Đang chạy…" } }));
     try { const out = await fn(); setResults((r) => ({ ...r, [key]: outcomeFromServer(out) })); }
-    catch (e) { setResults((r) => ({ ...r, [key]: outcomeFromError(e) })); }
+    catch (e) { setResults((r) => ({ ...r, [key]: outcomeFromError(e, { write: true }) })); }
   }
   const allowed = (k: keyof BuilderCapabilities) => cap[k];
 

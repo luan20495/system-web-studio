@@ -112,7 +112,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
         const d = e.details as { scope?: string; used?: number; limit?: number } | undefined;
         setNotice(`${d?.scope === "workspace" ? "Workspace đã dùng hết ngân sách token AI của tháng" : "Bạn đã dùng hết hạn mức token AI trong 24 giờ"}${d?.limit ? ` (${tok(d.used ?? 0)} / ${tok(d.limit)} token)` : ""}. Có thể chọn “Mô phỏng” để tiếp tục chỉnh sửa.`);
       }
-      else if (e instanceof ApiError && (e.status === 409 || e.status === 422 || e.code === "TENANT_SUSPENDED")) { const m = explainError(e); setNotice(`${m.title}. ${m.detail}`); }
+      else if (e instanceof ApiError && (e.status === 409 || e.status === 422 || e.status === 429 || e.code === "TENANT_SUSPENDED")) { const m = explainError(e); setNotice(`${m.title}. ${m.detail}`); }
       else if (!(e instanceof ApiError && e.status === 401)) setNotice(errText(e, fallback));
       return undefined;
     } finally { setBusy(null); }

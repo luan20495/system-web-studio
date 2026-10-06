@@ -5,7 +5,9 @@ import { staticReadiness } from "../../features/studio/builder/core/readiness";
 
 test("contract mirror is versioned and pinned to integration/v2", () => {
   assert.equal(C.CONTRACT_VERSION, "v2");
-  assert.match(C.CONTRACT_SOURCE.commit, /^c59604b/);
+  assert.match(C.CONTRACT_SOURCE.commit, /^8b944cc/);
+  assert.match(C.CONTRACT_SOURCE.firstMirroredAt, /^c59604b/);
+  assert.match(C.CONTRACT_SOURCE.verifiedAgainst, /^4884be3/);
   assert.equal(C.CONTRACT_SOURCE.branch, "integration/v2");
 });
 

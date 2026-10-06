@@ -1,4 +1,4 @@
-/** MIRROR of docs/contracts/v2/tenant-permission.md @ c59604b — manual. See meta.ts. */
+/** MIRROR of docs/contracts/v2/tenant-permission.md @ 8b944cc — manual. See meta.ts. */
 
 /** §5: the one permission vocabulary shared by C1–C5. A code that is not here is not allowed in `PermissionDef.permission`. */
 export const PERMISSION_CODES = [
@@ -34,7 +34,8 @@ export type ActorKind = (typeof ACTOR_KINDS)[number];
 /**
  * §2 TenantContext (server-side shape, documented here so UI code can talk about it). It is resolved by the server from the workspace in the
  * path: THE CLIENT NEVER SENDS A TENANT ID and no request type in this package has a tenant field.
- * `MeResponse` does not carry tenant memberships yet (§6, C5 B-C5-05): until C1 exposes them the portal gate stays TEMPORARY (D-C5-05).
+ * `MeResponse` now carries tenantId/tenantRole/platformScope/businessAccess/tenants[]/permissions[] (integration/v2 @ 4884be3; see Me in ../../index.ts); the
+ * portal gate (packages/permissions capabilitiesOf) reads them and falls back to `systemAdmin` against an older backend (closes B-C5-05; D-C5-05 stays for tenant.administer, M-05).
  */
 export type TenantContextShape = { tenantId: string; tenantRole: TenantRole | null; status: TenantStatus; platformScope: boolean };
 
@@ -46,5 +47,16 @@ export const API_ERROR = {
   IDEMPOTENCY_OUTCOME_UNKNOWN: "IDEMPOTENCY_OUTCOME_UNKNOWN", // 409, an ambiguous failure: the write may or may not have happened
   MUTATION_REJECTED: "MUTATION_REJECTED",             // 422, the data source refused the write
   TENANT_SUSPENDED: "TENANT_SUSPENDED",               // 403
+  // data-runtime.md §4b (frozen 2026-10-06): the rest of the write-path table
+  IDEMPOTENCY_IN_PROGRESS: "IDEMPOTENCY_IN_PROGRESS", // 409, another request with this key is still running: retry after a short wait
+  IDEMPOTENCY_CONFLICT: "IDEMPOTENCY_CONFLICT",       // 409, the key was reused with different parameters (client bug): never retry
+  MUTATION_UNSUPPORTED: "MUTATION_UNSUPPORTED",       // 422 family: well-formed but not executable here (nothing applied, not retryable)
+  READ_ONLY_VIOLATION: "READ_ONLY_VIOLATION",
+  INVALID_MAPPING: "INVALID_MAPPING",
+  MAPPING_FAILED: "MAPPING_FAILED",
+  UNSUPPORTED_TYPE: "UNSUPPORTED_TYPE",
+  RATE_LIMITED: "RATE_LIMITED",                       // 429, retry with backoff (Retry-After)
 } as const;
+/** §4b: 422 codes that certainly applied nothing and will fail again with the same input. */
+export const NOT_EXECUTABLE_CODES = ["MUTATION_UNSUPPORTED", "READ_ONLY_VIOLATION", "INVALID_MAPPING", "MAPPING_FAILED", "UNSUPPORTED_TYPE"] as const;
 export type ApiErrorCode = (typeof API_ERROR)[keyof typeof API_ERROR];

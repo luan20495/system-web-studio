@@ -1,5 +1,5 @@
 /**
- * MIRROR of docs/contracts/v2/app-definition.md (+ data-runtime.md §2, action-workflow.md §2–3) @ c59604b — manual. See meta.ts.
+ * MIRROR of docs/contracts/v2/app-definition.md (+ data-runtime.md §2, action-workflow.md §2–3) @ 8b944cc — manual. See meta.ts.
  *
  * The stored document is the legacy Page Schema (`page`, `sections`, `pages[]`, `site`, `seo` — typed in ../../index.ts as PageSchema) PLUS the
  * optional V2 keys below. `pages`, `components` and `navigation` of the "target list" are derived read views, not stored keys.

@@ -8,6 +8,7 @@ import { SERVER_KINDS, type AppKind, type ApiProject, type BlockDto, type Templa
 import { sectionLabel } from "@/components/SectionInspector";
 import { useSession } from "../session";
 import { rememberPortal } from "../routing";
+import { canAccessPortal } from "@xweb/permissions";
 import { PortalSwitcher } from "@xweb/ui";
 import { useLoad } from "../useLoad";
 import { actionLabel, ago, Card, ErrorState, errText, NavLink, num, Pager, Pill, StateView, usd } from "../ui";
@@ -74,7 +75,7 @@ function StudioHeader() {
       <div className="row">
         {me!.workspaces.length > 1 ? <select aria-label="Workspace" value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)}>{me!.workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select>
           : <span className="muted">{me!.workspaces[0].name}</span>}
-        {dedicated ? <PortalSwitcher me={me} current="studio"/> : me!.systemAdmin ? <Link className="btn sm" href={consoleHref()} onClick={() => rememberPortal("admin")}>Admin Console</Link> : null}
+        {dedicated ? <PortalSwitcher me={me} current="studio"/> : canAccessPortal(me, "admin") ? <Link className="btn sm" href={consoleHref()} onClick={() => rememberPortal("admin")}>Admin Console</Link> : null}
         <span className="avatar" title={me!.displayName} aria-label={`Tài khoản: ${me!.displayName}`}>{me!.displayName.slice(0, 2).toUpperCase()}</span>
         <button className="btn sm ghost" onClick={() => void logout()}>Đăng xuất</button>
       </div>

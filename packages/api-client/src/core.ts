@@ -75,6 +75,7 @@ export async function stream<T>(path: string, body: unknown, h: StreamHandlers):
   if (!response.ok || !response.body) {
     const b = await response.json().catch(() => null) as { code?: string; message?: string; requestId?: string; details?: unknown } | null;
     if (response.status === 403 && b?.code === "CSRF_INVALID") resetCsrf();
+    if (response.status === 401) unauthorizedHandler?.(b?.code ?? "AUTHENTICATION_REQUIRED"); // same expired-session path as call()
     throw new ApiError(response.status, b?.code ?? `HTTP_${response.status}`, b?.message ?? `Lỗi ${response.status}`, b?.requestId, b?.details);
   }
   const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();

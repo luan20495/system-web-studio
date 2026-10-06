@@ -70,3 +70,59 @@ test("backend probe: 404 -> definition operations NOT_READY with reason; ok -> A
   const ok = backendFrom({ status: "ok", metadata: [{ id: "Hero" } as never] });
   assert.equal(ok.definitionOps.state, "AVAILABLE"); assert.ok(ok.metadata.has("Hero"));
 });
+
+// ---- Phase 3 prep: the rest of the data-runtime.md §4b write-path table (frozen 2026-10-06) ---------------------------------
+test("409 IDEMPOTENCY_IN_PROGRESS is 'wait', not 'the app changed elsewhere'; IDEMPOTENCY_CONFLICT is a non-retryable client bug", () => {
+  const p = explainError({ status: 409, code: "IDEMPOTENCY_IN_PROGRESS" });
+  assert.equal(p.kind, "in-progress"); assert.equal(p.retrySafe, true);
+  const c = explainError({ status: 409, code: "IDEMPOTENCY_CONFLICT" });
+  assert.equal(c.kind, "key-conflict"); assert.equal(c.retrySafe, false);
+  assert.notEqual(p.kind, "conflict"); assert.notEqual(c.kind, "conflict");
+});
+
+test("422 MUTATION_UNSUPPORTED / READ_ONLY_VIOLATION / INVALID_MAPPING / MAPPING_FAILED / UNSUPPORTED_TYPE: nothing applied, not retryable, not 'schema invalid'", () => {
+  for (const code of ["MUTATION_UNSUPPORTED", "READ_ONLY_VIOLATION", "INVALID_MAPPING", "MAPPING_FAILED", "UNSUPPORTED_TYPE"]) {
+    const m = explainError({ status: 422, code });
+    assert.equal(m.kind, "not-executable", code); assert.equal(m.retrySafe, false, code);
+  }
+});
+
+test("429 RATE_LIMITED is retryable with backoff", () => {
+  assert.equal(explainError({ status: 429, code: "RATE_LIMITED" }).kind, "rate-limited");
+  assert.equal(explainError({ status: 429 }).retrySafe, true);
+});
+
+test("a 500/502/504/network failure of a WRITE is 'outcome unknown' and not retry-safe; the same failure of a read stays a plain error", () => {
+  for (const status of [500, 502, 504, 0]) {
+    const w = explainError({ status, code: "TIMEOUT" }, { write: true });
+    assert.equal(w.kind, "unknown-outcome", String(status)); assert.equal(w.retrySafe, false, String(status));
+    assert.equal(explainError({ status, code: "TIMEOUT" }).kind, "error", String(status));
+  }
+  assert.equal(outcomeFromError({ status: 504, code: "TIMEOUT" }, { write: true }).state, "UNKNOWN");
+  assert.equal(outcomeFromError({ status: 504, code: "TIMEOUT" }).state, "ERROR");
+});
+
+test("4xx permission/validation answers of a write are NOT treated as unknown outcome", () => {
+  assert.equal(explainError({ status: 403, code: "PERMISSION_DENIED" }, { write: true }).kind, "forbidden");
+  assert.equal(explainError({ status: 422, code: "MUTATION_REJECTED" }, { write: true }).kind, "rejected");
+});
+
+test("C4 action runtime codes map to the same user classes (ActionErrorCodes)", () => {
+  assert.equal(explainError({ status: 409, code: "ACTION_IN_PROGRESS" }).kind, "in-progress");
+  assert.equal(explainError({ status: 409, code: "IDEMPOTENCY_KEY_REUSED" }).kind, "key-conflict");
+  assert.equal(explainError({ status: 400, code: "IDEMPOTENCY_KEY_REQUIRED" }).retrySafe, false);
+  assert.equal(explainError({ status: 403, code: "TENANT_DISABLED" }).kind, "suspended");
+  assert.equal(explainError({ status: 503, code: "DEPENDENCY_UNAVAILABLE" }).kind, "unavailable");
+  assert.equal(explainError({ status: 503, code: "DEPENDENCY_UNAVAILABLE" }, { write: true }).retrySafe, false);
+  assert.equal(explainError({ status: 422, code: "INVALID_INPUT" }).kind, "invalid");
+  assert.equal(explainError({ status: 200, code: "IDEMPOTENCY_OUTCOME_UNKNOWN" }).kind, "unknown-outcome");
+});
+
+test("a C4 TEST-mode WouldRun answer is shown as 'would run' at every level and is never a success", () => {
+  for (const level of ["NOT_EXECUTED", "VALIDATED", "SANDBOX"]) {
+    const o = outcomeFromServer({ actionId: "a1", type: "CREATE_RECORD", level, plan: {}, reason: "không hỗ trợ dry-run" });
+    assert.equal(o.state, "WOULD_RUN", level);
+    assert.match((o as { note: string }).note, /theo máy chủ/);
+  }
+  assert.equal(outcomeFromServer({ level: "SOMETHING_NEW" }).state, "NOT_READY");
+});

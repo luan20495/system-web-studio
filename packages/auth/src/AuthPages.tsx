@@ -6,7 +6,7 @@ import Link from "next/link";
 import { api, ApiError } from "@xweb/api-client";
 import type { AuthConfig } from "@xweb/types";
 import { useSession } from "./session";
-import { accessiblePortals, portalHref, portalOfPath, PORTAL_LABEL, PORTAL_PREFIX, rememberPortal, rememberedPortal, resolvePortalPostLogin, resolvePostLogin, safeNext, type Portal, type PortalId } from "@xweb/permissions";
+import { accessiblePortals, canAccessPortal, portalHref, portalOfPath, PORTAL_LABEL, PORTAL_PREFIX, rememberPortal, rememberedPortal, resolvePortalPostLogin, resolvePostLogin, safeNext, type Portal, type PortalId } from "@xweb/permissions";
 import { errText } from "@xweb/ui";
 
 const SSO_ERRORS: Record<string, string> = {
@@ -161,7 +161,7 @@ export function NoWorkspace() {
         <h1>Bạn chưa thuộc workspace nào</h1>
         <p className="authLead">Nhờ quản trị viên thêm bạn vào một workspace để bắt đầu tạo ứng dụng.</p>
         <div className="row">
-          {me?.systemAdmin ? <Link className="btn primary" href={portalHref("admin")} onClick={() => rememberPortal("admin")}>Vào Admin Console</Link> : null}
+          {canAccessPortal(me, "admin") ? <Link className="btn primary" href={portalHref("admin")} onClick={() => rememberPortal("admin")}>Vào Admin Console</Link> : null}
           <button className="btn" onClick={() => void logout()}>Đăng xuất</button>
         </div>
       </div>

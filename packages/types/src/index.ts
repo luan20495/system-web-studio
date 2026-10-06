@@ -7,8 +7,22 @@ export type SiteMeta = { title?: string; home?: { title?: string; seo?: Seo }; n
 /** The root page is the home page; `pages` are the other pages of a multi-page site (stage G). */
 export type PageSchema = { page: string; sections: Section[]; site?: SiteMeta; pages?: SitePage[] };
 
-export type WorkspaceSummary = { id: string; name: string; role: string };
-export type Me = { id: string; username: string; displayName: string; roles: string[]; workspaces: WorkspaceSummary[]; systemAdmin?: boolean };
+/** MIRROR of identity/AuthController.kt `WorkspaceSummary` + `MeResponse` and access/MeTenancy.kt @ integration/v2 8b944cc.. 4884be3 — manual.
+ *  The tenancy fields are OPTIONAL on purpose: an older backend (and the legacy mock) does not send them, and every gate below falls back to `systemAdmin`.
+ *  The client NEVER sends a tenant id back: the server derives it from the workspace in the URL (tenant-permission.md §2). */
+export type TenantRoleName = "TENANT_ADMIN" | "MEMBER";
+export type TenantMembershipSummary = { id: string; slug: string; name: string; status: string; role: TenantRoleName | string };
+export type WorkspaceSummary = { id: string; name: string; role: string; tenantId?: string | null; permissions?: string[] };
+export type Me = {
+  id: string; username: string; displayName: string; roles: string[]; workspaces: WorkspaceSummary[]; systemAdmin?: boolean;
+  /** primary tenant; null = no tenant membership (a pure platform operator) */
+  tenantId?: string | null; tenantRole?: TenantRoleName | null;
+  /** SYSTEM_ADMIN acts on the platform scope; says nothing about business data (see businessAccess) */
+  platformScope?: boolean; businessAccess?: boolean;
+  tenants?: TenantMembershipSummary[];
+  /** platform + primary-tenant permissions as the 14 canonical codes (never legacy storage constants) */
+  permissions?: string[];
+};
 
 export type ApiProject = {
   id: string; workspaceId: string; name: string; description: string | null; ownerUserId: string; framework: string;

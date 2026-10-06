@@ -65,6 +65,11 @@ export function validateDefinition(doc: AppDefinitionV2): RefIssue[] {
   list(doc.mappings).forEach((m, i) => {
     known(m.queryRef, queries, `mappings[${i}].queryRef`, "truy vấn");
     for (const d of dupes(m.fields.map((f) => f.to))) add(`mappings[${i}].fields`, `Trường đích “${d}” bị trùng.`);
+    // app-definition.md §3 (frozen 2026-10-06): `fields[].transforms[]` is canonical; the legacy `transform` is read-only, and both on one field is rejected.
+    m.fields.forEach((f, j) => {
+      const legacy = (f as unknown as { transform?: unknown }).transform;
+      if (legacy !== undefined && (f as { transforms?: unknown }).transforms !== undefined) add(`mappings[${i}].fields[${j}].transform`, "Trường ánh xạ không được có đồng thời “transform” (cũ) và “transforms”.");
+    });
   });
   list(doc.viewModels).forEach((vm, i) => {
     const at = `viewModels[${i}]`;
@@ -78,6 +83,8 @@ export function validateDefinition(doc: AppDefinitionV2): RefIssue[] {
 
   list(doc.actions).forEach((a, i) => {
     const at = `actions[${i}]`;
+    // action-workflow.md §2: only the 9 canonical types; RUN_QUERY / WRITE_DATA / CALL_CONNECTOR_OPERATION / SET_VALUE are aliases the server rejects.
+    if (!(ACTION_TYPES as readonly string[]).includes(a.type)) add(`${at}.type`, `Loại hành động “${a.type}” không thuộc danh sách chuẩn.`);
     const qk = a.queryRef !== undefined && known(a.queryRef, queries, `${at}.queryRef`, "truy vấn");
     if (a.viewModelRef !== undefined) known(a.viewModelRef, viewModels, `${at}.viewModelRef`, "ViewModel");
     if (a.workflowRef !== undefined) known(a.workflowRef, workflows, `${at}.workflowRef`, "workflow");
