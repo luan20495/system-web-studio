@@ -1,6 +1,6 @@
 # C0 — Persistence design for real LIVE E2E (removes B-C0-W-01)
 
-Status: **ACCEPTED 2026-10-06 (D-C0-21, decisions D1–D7 in §7).** V28 and V29 are allocated in `MIGRATION_LEDGER.md`. V28 and the C3 adapters are implemented on branch `wire/c3-persistence`. **V28 status (2026-10-06): implementation complete; real Mac gate GREEN @ `3a6f084`** (compileKotlin, compileTestKotlin, targeted `DataRuntimeLiveApiTests`, full `clean test --no-daemon --rerun-tasks` 6m07s). Branch only, not imported into `integration/v2`; not production-ready (no management API B-C0-W-03, production connectors read-only B-C0-W-04). **V29 is not started** and stays OPEN (B-C0-W-01).
+Status: **ACCEPTED 2026-10-06 (D-C0-21, decisions D1–D7 in §7).** V28 and V29 are allocated in `MIGRATION_LEDGER.md`. V28 and the C3 adapters are implemented on branch `wire/c3-persistence`. **V28 status (2026-10-06): implementation complete; real Mac gate GREEN @ `3a6f084`** (compileKotlin, compileTestKotlin, targeted `DataRuntimeLiveApiTests`, full `clean test --no-daemon --rerun-tasks` 6m07s). Branch only, not imported into `integration/v2`; not production-ready (no management API B-C0-W-03, production connectors read-only B-C0-W-04). **V29 status (2026-10-06): implementation written on `wire/v29-run-persistence` (base `integration/v2 @ f894cc6`), NOT yet verified on the Mac** — B-C0-W-01 stays OPEN until that gate is green (see §4a).
 Base: `integration/v2 @ e7307fd`.
 
 ## 1. Audit result
@@ -163,6 +163,14 @@ Taken from `audit/FINAL-C4-runtime-design.md` §10 **unchanged except**: (a) `wo
 D6: `RunKey.appId` is `UUID?` in the port, so `action_runs.app_id` is **nullable** (not stricter than the domain contract). The natural unique key `(tenant_id, app_id, action_id, user_id, idempotency_key)` would let two NULL-app rows coexist, so V29 uses a null-safe unique index (`COALESCE(app_id, '00000000-0000-0000-0000-000000000000')`) and a partial index for rows without an app; the adapter treats a null `appId` as its own scope.
 Retention: unchanged (D-C4-16), driven by `RetentionService.runOnce()` on a timer that C0 adds.
 
+## 4a. V29 as implemented (D-C0-23) — supersedes the proposal above where they differ
+
+* **Schema** (`V29__workflow_run_persistence.sql`): see `MIGRATION_LEDGER.md` for the exact tables, keys and FKs. Differences from §4: `app_id` has a composite FK to `projects` (repository pattern; projects are not hard-deleted) instead of "no FK"; `workflow_run_steps.step_order` instead of `position`; the pinned `definition` is stored as lossless JSON on the run; `cur_step_status / cur_wake_at / cur_approval_id` are denormalised so the sweeper never reads steps.
+* **Adapters** (`wiring/persistence`): `JdbcActionRunStore` (one transaction per `begin`: `INSERT ... ON CONFLICT DO NOTHING`, then `SELECT ... FOR UPDATE`; `complete` is guarded by run id + key + `status = RUNNING`), `JdbcWorkflowRunStore` (CAS on `version`; the run row and the changed step rows are written in ONE transaction, a CAS loser writes nothing; `claimForSweep` = candidate query + `FairSelection` + version-guarded stamp), `ActionResultCodec`, `WorkflowDefinitionCodec`, `RunStoreSupport`.
+* **Wiring**: `app.workflow.run-store` (`jdbc` default, `memory` explicit), `app.workflow.stale-after`, `app.workflow.action-run-stale-after`, `app.workflow.action-run-sweep-delay-ms`; `ActionRunRecovery` scheduled component.
+* **Restart algorithm** (nothing is replayed, only re-driven): (1) the process starts with an empty in-memory queue; (2) the first `engine.sweep()` after `staleAfter` claims every unfinished run whose heartbeat is older than the lease, plus every due timer / retry; (3) PENDING -> job republished; RUNNING step -> RETRY_WAIT (attempt kept) + job; WAITING / RETRY_WAIT -> left to their timer; stuck compensation -> COMPENSATE job; (4) a re-driven step re-enters the action runtime with the SAME `wf:<runId>:<stepId>[:vN]` key; V28 answers Replay / OutcomeUnknown instead of writing twice; (5) terminal runs, `compensated` steps and ambiguous (UNKNOWN) steps are never executed again.
+* **Still volatile / not done**: `WorkflowQueue` (RabbitMQ phase), `RetentionService` scheduling, approvals / schedules / notifications, management API (B-C0-W-03), writable production connectors (B-C0-W-04).
+
 ## 5. Adapters to implement (all in `wiring/` or the owning module's `persistence` package, JDBC via `NamedParameterJdbcTemplate`, every query tenant-filtered)
 
 1. `JdbcDataSourceRepository`, `JdbcCredentialStore`, `JdbcQueryCatalog`, `JdbcMutationCatalog` (+ a strict `QueryDefinitionCodec` / `MutationDefinitionCodec`; unknown `kind` ⇒ not found).
@@ -195,7 +203,7 @@ Retention: unchanged (D-C4-16), driven by `RetentionService.runOnce()` on a time
 1. Owner accepts §7 → C0 writes DECISIONS + ledger rows (V28, then V29) and nothing else.
 2. V28 file + undo + `DataRuntimeMigrationTests` → Mac Gradle → apply on PG verified.
 3. C3 JDBC adapters + `DataGateway` bean + bindings + fixtures; flip `DATA_RUNTIME_UNAVAILABLE` tests to real LIVE query/mutation tests → Mac Gradle.
-4. V29 file + undo + migration test → Mac Gradle.
-5. `JdbcActionRunStore`/`JdbcWorkflowRunStore` + codec + timers; restart-safety test (kill the runtime mid-run, new context resumes); retire the volatile guard for actions → Mac Gradle.
+4. V29 file + undo + migration test → Mac Gradle. **(written 2026-10-06 on `wire/v29-run-persistence`; Mac gate pending)**
+5. **(written, Mac gate pending)** `JdbcActionRunStore`/`JdbcWorkflowRunStore` + codec + timers; restart-safety test (kill the runtime mid-run, new context resumes); retire the volatile guard for actions → Mac Gradle.
 6. `RabbitWorkflowQueue` + queue profile switch → Mac Gradle with Testcontainers.
 7. C5 Phase 3 E2E against the real stack.
