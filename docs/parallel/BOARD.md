@@ -8,12 +8,12 @@ Status: `NOT_STARTED` · `READY` (brief sẵn sàng, chưa bắt đầu) · `IN_
 | T1 — Isolation/API audit | C1 | READY | agent/c1-tenancy | — | — |
 | T2 — Tenant foundation (V26 fix round) | C1 | REVIEW | fix/c1-v2 | T1; V26 | Gradle NOT RUN (Maven blocked in C1 env) · V26 verified with psql on PostgreSQL 16 · see `docs/parallel/c1/T2-tenant-foundation.md` |
 | T6 — App Definition V2 | C2 | READY | agent/c2-app-model | contract `app-definition-v2.md` | — |
-| T8 — DataConnector foundation + DataSource | C3 | IMPORTED (92fa67f; official Mac run pending) | agent/c3-data | contract `data-connector.md`; T2 (TenantContext) cho scoping | 2bc8d6f, b704a2d, 8ec3c51, 1c5e74e (branch agent/c3-data, chưa merge) |
-| T9 — Schema discovery | C3 | IMPORTED (92fa67f; official Mac run pending) | agent/c3-data | T8 | cb1f551 |
-| T10 — ViewModel + Mapping/Transform | C3 | IMPORTED (92fa67f; official Mac run pending) | agent/c3-data | T8; hình dạng C2 (T6) | 621c566 (commit này gồm cả T10 mapping lẫn T11 gateway/cache; message chỉ ghi T11) |
-| T11 — DataGateway (+ Cache + Realtime events) | C3 | IMPORTED (92fa67f; official Mac run pending) | agent/c3-data | T8–T10; C1 permission (B-C3-01) | 621c566 |
-| C3 Sync V1 (one-way pull) | C3 | IMPORTED (92fa67f; official Mac run pending) | agent/c3-data | T11 | c59aa44 |
-| C3 Webhook ingest | C3 | IMPORTED (92fa67f; official Mac run pending) | agent/c3-data | T11, Sync; B-C3-07 | ba3936c |
+| T8 — DataConnector foundation + DataSource | C3 | IMPORTED (92fa67f; official Mac gate on integration/v2 GREEN) | agent/c3-data | contract `data-connector.md`; T2 (TenantContext) cho scoping | 2bc8d6f, b704a2d, 8ec3c51, 1c5e74e (branch agent/c3-data, chưa merge) |
+| T9 — Schema discovery | C3 | IMPORTED (92fa67f; official Mac gate on integration/v2 GREEN) | agent/c3-data | T8 | cb1f551 |
+| T10 — ViewModel + Mapping/Transform | C3 | IMPORTED (92fa67f; official Mac gate on integration/v2 GREEN) | agent/c3-data | T8; hình dạng C2 (T6) | 621c566 (commit này gồm cả T10 mapping lẫn T11 gateway/cache; message chỉ ghi T11) |
+| T11 — DataGateway (+ Cache + Realtime events) | C3 | IMPORTED (92fa67f; official Mac gate on integration/v2 GREEN) | agent/c3-data | T8–T10; C1 permission (B-C3-01) | 621c566 |
+| C3 Sync V1 (one-way pull) | C3 | IMPORTED (92fa67f; official Mac gate on integration/v2 GREEN) | agent/c3-data | T11 | c59aa44 |
+| C3 Webhook ingest | C3 | IMPORTED (92fa67f; official Mac gate on integration/v2 GREEN) | agent/c3-data | T11, Sync; B-C3-07 | ba3936c |
 | T13 — ActionRuntime | C4 | IMPORTED (452f467 logic/**; full Mac gate on integration/v2 GREEN) | agent/c4-workflow | contract `action-workflow.md`; port tới T2/T6/T8 (B-C4-01/02/04) | `67e472e`, `9089447` V2 alignment, `3e587e3` rate limit (branch agent/c4-workflow; nhập bằng path vào integration/v2) |
 | T14 — Workflow engine (queue worker, retry/DLQ, compensation, TEST) | C4 | IMPORTED (452f467 logic/**; full Mac gate on integration/v2 GREEN) | agent/c4-workflow | T13; RabbitMQ/JDBC adapter (B-C4-05/06/07) | `3340897`, `3227437` sweeper/DLQ, `e91cf20` retention, `8b222d0` shape/timeout tests (branch agent/c4-workflow; nhập bằng path vào integration/v2) |
 | Approval | C4 | IMPORTED (452f467 logic/**; full Mac gate on integration/v2 GREEN) | agent/c4-workflow | C1 principal resolver (B-C4-01) | `17c2fe4` (branch agent/c4-workflow; nhập bằng path vào integration/v2) |
