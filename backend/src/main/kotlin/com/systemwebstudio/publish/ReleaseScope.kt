@@ -24,7 +24,13 @@ data class ReleaseScope(val tenantId: UUID, val appId: UUID, val environment: St
  */
 data class ScopeRequest(
     val scope: ReleaseScope, val operation: ReleaseOperation, val operationId: UUID,
-    val deploymentId: UUID? = null, val seq: Long? = null
+    val deploymentId: UUID? = null, val seq: Long? = null,
+    /**
+     * May the same operation take the scope again while its lease is still alive? A publish may (a redelivered message continues instead of colliding
+     * with itself). A rollback / unpublish may not: a duplicate request of the same Idempotency-Key must wait for the first, not run beside it.
+     * An EXPIRED lease can always be taken, by anyone, including the same operation.
+     */
+    val allowReentry: Boolean = operation == ReleaseOperation.PUBLISH
 ) {
     init { require((operation == ReleaseOperation.PUBLISH) == (deploymentId != null && seq != null)) { "a publish names its deployment and activation number; other operations do not" } }
 }
@@ -107,6 +113,8 @@ class NoFence(override val operationId: UUID) : PointerFence {
  */
 interface ReleaseScopeGuard {
     fun acquire(request: ScopeRequest): ScopeAcquisition
+    /** who owns the scope now (a live lease), null = free */
+    fun holder(scope: ReleaseScope): ScopeHolder? = null
 
     companion object {
         fun busy(scope: ReleaseScope, holder: ScopeHolder? = null) = ApiException.conflict("SCOPE_BUSY",

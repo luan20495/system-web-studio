@@ -93,8 +93,10 @@ class ReleaseService(
     provider: DeployProvider, releases: ReleaseStore, verifier: ArtifactVerifier, runtime: RuntimePlane,
     private val guard: ReleaseScopeGuard, private val sites: SiteService, private val jdbc: JdbcTemplate,
     @Value("\${app.deploy.deploy-timeout-seconds:120}") deploySeconds: Long,
-    @Value("\${app.deploy.verify-timeout-seconds:60}") verifySeconds: Long
+    @Value("\${app.deploy.verify-timeout-seconds:60}") verifySeconds: Long,
+    @Value("\${app.deploy.scope-duplicate-wait-seconds:60}") duplicateWaitSeconds: Long
 ) {
+    private val duplicateWaitNanos = duplicateWaitSeconds * 1_000_000_000L
     val deployer = ReleaseDeployer(provider, releases, verifier, StepRunner(), deploySeconds * 1000, verifySeconds * 1000, runtime)
 
     /** (tenant, app, PRODUCTION): the tenant is the project's own, never taken from a request */
@@ -125,17 +127,69 @@ class ReleaseService(
             is ScopeAcquisition.Acquired -> try { deployer.resumeRollback(request, a.lease) } finally { a.lease.release() }
         }
 
-    /** Manual rollback: never waits. A busy scope is `409 SCOPE_BUSY`, an overtaken one `409 ROLLBACK_STALE`. */
-    fun rollback(scope: ReleaseScope, target: UUID, operationId: UUID = UUID.randomUUID()): RollbackResult =
-        hold(ScopeRequest(scope, ReleaseOperation.ROLLBACK, operationId)) { lease -> deployer.restoreRelease(scope.appId, target, lease) }
+    /**
+     * Manual rollback: never waits for ANOTHER operation (a busy scope is `409 SCOPE_BUSY`, an overtaken one `409 ROLLBACK_STALE`). A duplicate of
+     * the same operation (same Idempotency-Key) does wait for its original, then finds the work done: that is how retries converge.
+     * [expectedActive] (optional): the release the client believes is active; a different one is `409 ROLLBACK_STALE` and nothing changes, unless
+     * the target already is the active release (a retry after success).
+     */
+    fun rollback(scope: ReleaseScope, target: UUID, operationId: UUID = UUID.randomUUID(), expectedActive: UUID? = null): RollbackResult =
+        hold(ScopeRequest(scope, ReleaseOperation.ROLLBACK, operationId)) { lease ->
+            staleCheck(lease, expectedActive, alreadyDone = lease.activeDeploymentId == target)
+            deployer.restoreRelease(scope.appId, target, lease)
+        }
 
-    /** [takeOffline] is the actual change; it only runs while the scope is held and must move the pointer through the lease's fence. */
-    fun <T> unpublish(scope: ReleaseScope, operationId: UUID = UUID.randomUUID(), takeOffline: (ScopeLease) -> T): T =
-        hold(ScopeRequest(scope, ReleaseOperation.UNPUBLISH, operationId), takeOffline)
+    /** What an unpublish did: [changed] = false when the site was already offline (a retry, or nothing to do). */
+    data class Unpublished(val changed: Boolean, val previous: UUID?)
 
-    private fun <T> hold(request: ScopeRequest, body: (ScopeLease) -> T): T = when (val a = guard.acquire(request)) {
-        is ScopeAcquisition.Busy -> throw ReleaseScopeGuard.busy(request.scope, a.holder)
-        is ScopeAcquisition.Stale -> throw com.systemwebstudio.common.ApiException.conflict("ROLLBACK_STALE", a.reason)
-        is ScopeAcquisition.Acquired -> try { body(a.lease) } finally { a.lease.release() }
+    /**
+     * Unpublish: the pointer goes to NULL through the fence of the scope this request holds. Already offline = nothing to do, nothing written.
+     * Same rules as rollback for a busy scope, [expectedActive] and a duplicate of the same operation.
+     */
+    fun unpublish(scope: ReleaseScope, operationId: UUID = UUID.randomUUID(), expectedActive: UUID? = null): Unpublished =
+        hold(ScopeRequest(scope, ReleaseOperation.UNPUBLISH, operationId)) { lease ->
+            val active = lease.activeDeploymentId
+            if (active == null) return@hold Unpublished(false, null)
+            staleCheck(lease, expectedActive, alreadyDone = false)
+            if (!lease.fence.commit(null)) throw ReleaseScopeGuard.busy(scope, guard.holder(scope))
+            Unpublished(true, active)
+        }
+
+    private fun staleCheck(lease: ScopeLease, expectedActive: UUID?, alreadyDone: Boolean) {
+        if (expectedActive != null && !alreadyDone && lease.activeDeploymentId != expectedActive)
+            throw com.systemwebstudio.common.ApiException.conflict("ROLLBACK_STALE", "The active release is not the one this request expected; reload and decide again",
+                mapOf("activeDeploymentId" to lease.activeDeploymentId, "expectedActiveDeploymentId" to expectedActive))
     }
+
+    /**
+     * The identity of a rollback / unpublish. Without an Idempotency-Key every request is its own operation. With one, the identity is derived from
+     * (kind, app, user, key): the same key is the same operation however often and from wherever it is sent, and the same key with another body is refused.
+     */
+    fun operationId(kind: ReleaseOperation, projectId: UUID, userId: UUID, key: String?, body: String): UUID {
+        if (key == null) return UUID.randomUUID()
+        if (!KEY.matches(key)) throw com.systemwebstudio.common.ApiException.badRequest("INVALID_IDEMPOTENCY_KEY", "Idempotency-Key must be 8-120 characters of A-Z a-z 0-9 _ . : -")
+        val scopeKey = "site-op:$kind:$projectId:$userId:$key"
+        val id = UUID.nameUUIDFromBytes(scopeKey.toByteArray())
+        val hash = java.security.MessageDigest.getInstance("SHA-256").digest(body.toByteArray()).joinToString("") { "%02x".format(it) }
+        jdbc.update("INSERT INTO idempotency_keys (scope_key, request_hash, resource_type, resource_id) VALUES (?,?,'SITE_OPERATION',?) ON CONFLICT DO NOTHING", scopeKey, hash, id)
+        val stored = jdbc.queryForObject("SELECT request_hash FROM idempotency_keys WHERE scope_key = ?", String::class.java, scopeKey)
+        if (stored != hash) throw com.systemwebstudio.common.ApiException.conflict("IDEMPOTENCY_KEY_REUSED", "This Idempotency-Key was already used with a different request")
+        return id
+    }
+
+    private fun <T> hold(request: ScopeRequest, body: (ScopeLease) -> T): T {
+        var a = guard.acquire(request)
+        // the same operation (a duplicate request) still running: wait for it to finish, then run as the retry that finds its work done
+        val deadline = System.nanoTime() + duplicateWaitNanos
+        while (a is ScopeAcquisition.Busy && a.holder?.operationId == request.operationId && System.nanoTime() < deadline) {
+            Thread.sleep(150); a = guard.acquire(request)
+        }
+        return when (a) {
+            is ScopeAcquisition.Busy -> throw ReleaseScopeGuard.busy(request.scope, a.holder)
+            is ScopeAcquisition.Stale -> throw com.systemwebstudio.common.ApiException.conflict("ROLLBACK_STALE", a.reason)
+            is ScopeAcquisition.Acquired -> try { body(a.lease) } finally { a.lease.release() }
+        }
+    }
+
+    private companion object { val KEY = Regex("^[A-Za-z0-9_.:-]{8,120}$") }
 }

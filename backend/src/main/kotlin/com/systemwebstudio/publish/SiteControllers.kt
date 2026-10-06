@@ -198,10 +198,16 @@ class SiteServingController(
 /** deployment states the sites gateway serves (same rule as SiteService.live): a pointer at a FAILED deployment is not online */
 private val SERVED_STATUSES = setOf("DEPLOYING", "RUNNING")
 
+/** the release operation that owns the site's scope right now (additive field of [SiteInfo]) */
+data class SiteOperation(val kind: String, val deploymentId: UUID?, val since: Instant, val leaseUntil: Instant)
+
 data class SiteInfo(val slug: String?, val url: String?, val online: Boolean, val visibility: String?, val currentDeploymentId: UUID?,
-                    val currentVersionNumber: Int?, val provider: String, val updatedAt: Instant?)
+                    val currentVersionNumber: Int?, val provider: String, val updatedAt: Instant?,
+                    /** version of the active pointer: it moves by one on every change (additive) */
+                    val pointerVersion: Long = 0, /** the operation that holds the scope now, null = none (additive) */ val operation: SiteOperation? = null)
 data class AccessTicketRequest(@field:Size(max = 512) val path: String? = null)
-data class RollbackRequest(@field:NotNull val deploymentId: UUID?)
+/** [expectedActiveDeploymentId] (optional, additive): the release the client believes is active; another one answers 409 ROLLBACK_STALE and changes nothing */
+data class RollbackRequest(@field:NotNull val deploymentId: UUID?, val expectedActiveDeploymentId: UUID? = null)
 
 /** Studio-side site management and private-site access tickets (Studio origin, normal session + CSRF). */
 @RestController
@@ -210,13 +216,17 @@ class SiteManagementController(
     private val provider: com.systemwebstudio.integration.deploy.DeployProvider, private val releases: ReleaseService
 ) {
     private fun info(projectId: UUID): SiteInfo {
-        val row = jdbc.query("""SELECT s.slug, s.current_deployment_id, d.visibility, d.version_id, s.updated_at, d.status FROM sites s
-            LEFT JOIN deployments d ON d.id = s.current_deployment_id WHERE s.project_id = ?""", { rs, _ ->
-            listOf(rs.getString(1), rs.getObject(2, UUID::class.java), rs.getString(3), rs.getObject(4, UUID::class.java), rs.getTimestamp(5)?.toInstant(), rs.getString(6))
+        val row = jdbc.query("""SELECT s.slug, s.current_deployment_id, d.visibility, d.version_id, s.updated_at, d.status, s.pointer_version,
+                   CASE WHEN s.lease_until > now() THEN s.lease_kind END, s.lease_deployment_id, s.lease_started_at, s.lease_until
+            FROM sites s LEFT JOIN deployments d ON d.id = s.current_deployment_id WHERE s.project_id = ?""", { rs, _ ->
+            listOf(rs.getString(1), rs.getObject(2, UUID::class.java), rs.getString(3), rs.getObject(4, UUID::class.java), rs.getTimestamp(5)?.toInstant(), rs.getString(6),
+                rs.getLong(7), rs.getString(8), rs.getObject(9, UUID::class.java), rs.getTimestamp(10)?.toInstant(), rs.getTimestamp(11)?.toInstant())
         }, projectId).firstOrNull()
         val slug = row?.get(0) as String?; val current = row?.get(1) as UUID?
         val version = (row?.get(3) as UUID?)?.let { jdbc.queryForObject("SELECT version_number FROM project_versions WHERE id = ?", Int::class.java, it) }
-        return SiteInfo(slug, slug?.let { sites.url(it) }, current != null && (row?.get(5) as String?) in SERVED_STATUSES, row?.get(2) as String?, current, version, provider.name, row?.get(4) as Instant?)
+        val operation = (row?.get(7) as String?)?.let { SiteOperation(it, row?.get(8) as UUID?, row?.get(9) as Instant, row?.get(10) as Instant) }
+        return SiteInfo(slug, slug?.let { sites.url(it) }, current != null && (row?.get(5) as String?) in SERVED_STATUSES, row?.get(2) as String?, current, version, provider.name,
+            row?.get(4) as Instant?, (row?.get(6) as Long?) ?: 0, operation)
     }
 
     @GetMapping("/api/v1/workspaces/{workspaceId}/projects/{projectId}/site")
@@ -234,14 +244,16 @@ class SiteManagementController(
      */
     @PostMapping("/api/v1/workspaces/{workspaceId}/projects/{projectId}/site/rollback")
     fun rollback(@PathVariable workspaceId: UUID, @PathVariable projectId: UUID, @Valid @RequestBody request: RollbackRequest,
-                 @AuthenticationPrincipal me: StudioUserDetails): SiteInfo {
+                 @RequestHeader("Idempotency-Key", required = false) idempotencyKey: String?, @AuthenticationPrincipal me: StudioUserDetails): SiteInfo {
         access.forProject(me.userId, workspaceId, projectId).require(Permission.PROJECT_PUBLISH)
+        // the key is judged first: the same key with another request is refused whatever state the site is in now
+        val operation = releases.operationId(ReleaseOperation.ROLLBACK, projectId, me.userId, idempotencyKey, "ROLLBACK|${request.deploymentId}|${request.expectedActiveDeploymentId}")
         val ok = jdbc.queryForObject("SELECT count(*) FROM deployments d JOIN artifacts a ON a.id = d.artifact_id AND a.deleted_at IS NULL WHERE d.id = ? AND d.project_id = ? AND d.status = 'RUNNING'",
             Long::class.java, request.deploymentId, projectId)!! > 0
         if (!ok) throw ApiException.badRequest("DEPLOYMENT_NOT_RESTORABLE", "Only a successful deployment with an artifact can be served again")
         if (jdbc.queryForObject("SELECT count(*) FROM sites WHERE project_id = ?", Long::class.java, projectId)!! == 0L) throw ApiException.notFound("SITE_NOT_FOUND", "This project has no site")
         val before = info(projectId)
-        when (val result = releases.rollback(releases.scopeOf(projectId), request.deploymentId!!)) {
+        when (val result = releases.rollback(releases.scopeOf(projectId), request.deploymentId!!, operation, request.expectedActiveDeploymentId)) {
             is RollbackResult.AlreadyActive -> return before
             is RollbackResult.Failed -> throw ApiException.conflict("ROLLBACK_FAILED", "The release could not be restored: ${result.reason}")
             is RollbackResult.ScopeLost -> throw ReleaseScopeGuard.busy(releases.scopeOf(projectId))
@@ -250,16 +262,18 @@ class SiteManagementController(
         return info(projectId)
     }
 
-    /** Take the site offline; deployments and artifacts are kept, so it can be served again with rollback. */
+    /**
+     * Take the site offline; deployments and artifacts are kept, so it can be served again with rollback. Same scope rules as rollback: a busy
+     * scope is 409 SCOPE_BUSY; optional `expectedActiveDeploymentId` (409 ROLLBACK_STALE) and `Idempotency-Key`; already offline changes nothing.
+     */
     @DeleteMapping("/api/v1/workspaces/{workspaceId}/projects/{projectId}/site")
-    fun unpublish(@PathVariable workspaceId: UUID, @PathVariable projectId: UUID, @AuthenticationPrincipal me: StudioUserDetails): SiteInfo {
+    fun unpublish(@PathVariable workspaceId: UUID, @PathVariable projectId: UUID, @RequestParam(required = false) expectedActiveDeploymentId: UUID?,
+                  @RequestHeader("Idempotency-Key", required = false) idempotencyKey: String?, @AuthenticationPrincipal me: StudioUserDetails): SiteInfo {
         access.forProject(me.userId, workspaceId, projectId).require(Permission.PROJECT_PUBLISH)
-        val before = info(projectId)
-        releases.unpublish(releases.scopeOf(projectId)) { lease ->
-            // the pointer moves only through the fence of the scope this request holds (compare-and-set); a refusal means the scope was lost meanwhile
-            if (!lease.fence.commit(null)) throw ReleaseScopeGuard.busy(lease.scope)
-        }
-        audit.record("SITE_UNPUBLISHED", "SITE", projectId, workspaceId, projectId, oldValue = mapOf("deploymentId" to before.currentDeploymentId))
+        if (jdbc.queryForObject("SELECT count(*) FROM sites WHERE project_id = ?", Long::class.java, projectId)!! == 0L) return info(projectId)      // no site, nothing to take offline
+        val operation = releases.operationId(ReleaseOperation.UNPUBLISH, projectId, me.userId, idempotencyKey, "UNPUBLISH|$expectedActiveDeploymentId")
+        val result = releases.unpublish(releases.scopeOf(projectId), operation, expectedActiveDeploymentId)
+        if (result.changed) audit.record("SITE_UNPUBLISHED", "SITE", projectId, workspaceId, projectId, oldValue = mapOf("deploymentId" to result.previous))
         return info(projectId)
     }
 

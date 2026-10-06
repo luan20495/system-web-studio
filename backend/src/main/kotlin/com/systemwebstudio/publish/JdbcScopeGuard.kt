@@ -46,7 +46,7 @@ class JdbcScopeGuard(
         val taken = tx.execute {
             jdbc.query(ACQUIRE, { rs, _ -> Taken(rs.getLong(1), rs.getObject(2, UUID::class.java), rs.getLong(3), rs.getObject(4, UUID::class.java), rs.getLong(5), rs.getLong(6), rs.getBoolean(7)) },
                 request.operationId, request.operation.name, request.deploymentId, request.operationId, request.seq, worker, request.operationId, secs(leaseTtl),
-                project, request.scope.tenantId, request.operationId, request.operationId, secs(leaseMax)).firstOrNull()
+                project, request.scope.tenantId, request.operationId, request.allowReentry, request.operationId, secs(leaseMax)).firstOrNull()
         } ?: return ScopeAcquisition.Busy(holder(project))
         val fence = LeaseFence(project, request.operationId, taken.fence, taken.seq, taken.pointerVersion)
         val order = ScopeOrdering.of(taken.seq, request.operationId, taken.activeSeq, taken.activeOperationId)
@@ -64,6 +64,8 @@ class JdbcScopeGuard(
     }
 
     private class Taken(val pointerVersion: Long, val activeDeployment: UUID?, val activeSeq: Long, val activeOperationId: UUID?, val seq: Long, val fence: Long, val resumed: Boolean)
+
+    override fun holder(scope: ReleaseScope): ScopeHolder? = holder(scope.appId)
 
     private fun holder(project: UUID): ScopeHolder? = jdbc.query(
         "SELECT lease_kind, lease_operation_id, lease_deployment_id, lease_started_at, lease_until FROM sites WHERE project_id = ? AND lease_operation_id IS NOT NULL AND lease_until > now()",
@@ -128,7 +130,7 @@ class JdbcScopeGuard(
                    lease_until = now() + make_interval(secs => CAST(? AS DOUBLE PRECISION))
              WHERE s.project_id = ?
                AND EXISTS (SELECT 1 FROM projects p WHERE p.id = s.project_id AND p.tenant_id = ?)
-               AND (s.lease_operation_id IS NULL OR s.lease_until <= now() OR s.lease_operation_id = ?)
+               AND (s.lease_operation_id IS NULL OR s.lease_until <= now() OR (s.lease_operation_id = ? AND CAST(? AS BOOLEAN)))
                AND (s.lease_operation_id IS DISTINCT FROM ? OR now() < s.lease_started_at + make_interval(secs => CAST(? AS DOUBLE PRECISION)))
             RETURNING s.pointer_version, s.current_deployment_id, s.active_seq, s.active_operation_id, s.lease_seq, s.lease_fence,
                       (s.lease_started_at < now()) AS resumed"""
