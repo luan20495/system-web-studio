@@ -1,11 +1,25 @@
 import type {
   AdminAi, AiCallRow, SettingView, BuildPolicyReport, CleanupResult, RepoRow, AiPrice, AiProbe, AiProviderInfo, AiProviderForm, AiDiscover, AiLimitsView, AiLimitDefaults, AiUserView, AiUsageReport, AdminApp, BlockDto, CheckResult, TemplateDto, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, ActivationLink, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
   BackupEnvironment, AppKind, RuntimeStatus, Connector, Department, CostPrice, CostReport, SecurityReport, FormSubmission, SiteDomain, TemplateReview, LibraryCategories, AccessRule, EffectiveModel, AiBudget, AdminAlert, StreamHandlers,
-  AiStatus, ApiProject, AuthConfig, Member, SiteInfo, DesignNode, DependencyRequest, PackageView, CloneAccess, TreeFile, CodeFile, CodeCommit, CodeChange, DiffFile, CodeAiResponse, CodeAiHistoryItem, RegistryComponent, ComponentMetadataV2, DefinitionOperation, AssetDto, Deployment, Me, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
+  AiStatus, ApiProject, AuthConfig, Member, SiteInfo, DesignNode, DependencyRequest, PackageView, CloneAccess, TreeFile, CodeFile, CodeCommit, CodeChange, DiffFile, CodeAiResponse, CodeAiHistoryItem, RegistryComponent, ComponentMetadataV2, DefinitionOperation, AssetDto, Deployment, Me, RunQueryRequest, RunQueryResponse, ExecuteActionRequest, ActionEnvelope, StartWorkflowRequest, WorkflowRunView, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
 } from "@xweb/types";
 import { ApiError, call, json, qs, resetCsrf, stream } from "./core";
 
 const P = (w: string, p: string) => `/workspaces/${w}/projects/${p}`;
+const RT = (w: string, p: string) => `${P(w, p)}/app-runtime`;
+const seg = encodeURIComponent;
+
+/** a client-side refusal before anything is sent: same shape as a server 400, so the UI treats it as "nothing was written" */
+function badKey(): never { throw new ApiError(400, "IDEMPOTENCY_KEY_INVALID", "Khóa chống ghi trùng không hợp lệ (1–128 ký tự A–Z a–z 0–9 . _ : -)."); }
+/** same pattern as IDEMPOTENCY_KEY_PATTERN in the contract mirror (kept local: this module must load under plain node in the unit tests) */
+const KEY = /^[A-Za-z0-9._:-]{1,128}$/;
+const checkKey = (k: string | undefined) => { if (k !== undefined && !KEY.test(k)) badKey(); };
+
+/** A fresh idempotency key. One per user intent: reuse it only to retry the SAME intent, never to repeat it. */
+export function newIdempotencyKey(prefix = "ui"): string {
+  const id = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  return `${prefix}:${id}`.slice(0, 128);
+}
 
 export const api = {
   async login(username: string, password: string): Promise<Me> {
@@ -188,6 +202,26 @@ export const api = {
   withdrawBlock: (id: string) => call<BlockDto>(`/component-packages/${id}/withdraw`, { method: "POST" }),
   deleteBlock: (id: string) => call<void>(`/component-packages/${id}`, { method: "DELETE" }),
   getProject: (w: string, p: string) => call<ApiProject>(P(w, p)),
+  /**
+   * Browser-facing runtime routes (api.appRuntime; `api.runtime` is the unrelated deployment-status call) (docs/contracts/v2/runtime-api.md, FROZEN). Flags: `app.data-platform.enabled` (queries), `app.workflow.enabled`
+   * (actions, workflows). A disabled flag = the controller does not exist = a 404 WITHOUT a domain code (see readiness.runtimeReadinessFromError).
+   * Bodies carry only the fields of the contract; the server rejects anything else (400 INVALID_REQUEST).
+   */
+  appRuntime: {
+    runQuery: (w: string, p: string, queryId: string, body: RunQueryRequest = {}) =>
+      call<RunQueryResponse>(`${RT(w, p)}/queries/${seg(queryId)}/run`, { method: "POST", body: json(body) }),
+    executeAction: async (w: string, p: string, actionId: string, body: ExecuteActionRequest = {}) => {
+      checkKey(body.idempotencyKey);
+      return call<ActionEnvelope>(`${RT(w, p)}/actions/${seg(actionId)}/execute`, { method: "POST", body: json(body) });
+    },
+    startWorkflow: async (w: string, p: string, workflowId: string, body: StartWorkflowRequest) => { // async: a refusal is a rejected promise, never a synchronous throw
+      checkKey(body.idempotencyKey); // required by the contract
+      if (!body.idempotencyKey) badKey();
+      return call<WorkflowRunView>(`${RT(w, p)}/workflows/${seg(workflowId)}/runs`, { method: "POST", body: json(body) });
+    },
+    workflowRun: (w: string, p: string, runId: string) => call<WorkflowRunView>(`${RT(w, p)}/workflow-runs/${seg(runId)}`),
+    cancelWorkflowRun: (w: string, p: string, runId: string) => call<WorkflowRunView>(`${RT(w, p)}/workflow-runs/${seg(runId)}/cancel`, { method: "POST" }),
+  },
   lookupProject: (p: string) => call<ApiProject>(`/projects/${p}`),
   updateProject: (w: string, p: string, expectedRevision: number, patch: Partial<ApiProject>) =>
     call<ApiProject>(P(w, p), { method: "PATCH", body: json({ ...patch, expectedRevision }) }),

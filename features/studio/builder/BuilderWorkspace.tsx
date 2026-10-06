@@ -14,7 +14,7 @@ import { Canvas, DragChip } from "./Canvas";
 import { Inspector } from "./Inspector";
 import { LeftRail, type RailId } from "./LeftRail";
 import { BuilderTopBar } from "./BuilderTopBar";
-import { TestPanel } from "./TestPanel";
+import { TestPanel, type RuntimeCalls } from "./TestPanel";
 import { DataWizard } from "./DataWizard";
 import { ComponentsPanel, type BlockOption } from "./panels/ComponentsPanel";
 import { PagesPanel } from "./panels/PagesPanel";
@@ -59,7 +59,7 @@ export function BuilderWorkspace(props: {
   renderPreview: (o: { selectedId: string | null; interactive: boolean; pageId: string }) => string;
   labelOf: (type: string) => string; summaryOf: (s: Section) => string;
   leading?: ReactNode; modeTabs?: ReactNode; trailing?: ReactNode;
-  goAi: () => void; openSite: () => void; openMembers: () => void; openPublish: () => void; saveBlock: () => void;
+  runtime?: RuntimeCalls; onRetrySave?: () => void; goAi: () => void; openSite: () => void; openMembers: () => void; openPublish: () => void; saveBlock: () => void;
 }) {
   const { doc, registry, backend, pageId, selectedId, readOnly, busy } = props;
   const cap = capabilitiesFor(props.project.permissions);
@@ -173,7 +173,7 @@ export function BuilderWorkspace(props: {
     <DndContext sensors={sensors} collisionDetection={collision} accessibility={{ announcements, screenReaderInstructions }} onDragStart={onDragStart} onDragMove={onDragMove} onDragEnd={(e) => void onDragEnd(e)} onDragCancel={() => { setDrag(null); setSlot(null); }}>
       <BuilderTopBar name={props.project.name} meta={meta} save={props.save} appMode={appMode} onAppMode={setAppMode} device={props.device} onDevice={props.onDevice}
         leading={props.leading} modeTabs={props.modeTabs} trailing={props.trailing}
-        canShare={cap.canShare} shareReason={shareReason} onShare={props.openMembers} canPublish={cap.canPublish} publishReason={publishReason} publishBusy={busy} issues={counts} onPublish={publish}/>
+        canShare={cap.canShare} shareReason={shareReason} onShare={props.openMembers} canPublish={cap.canPublish && props.save.state !== "error"} publishReason={props.save.state === "error" ? "Có thay đổi chưa lưu được. Thử lưu lại trước khi xuất bản." : publishReason} publishBusy={busy} issues={counts} onPublish={publish} onRetrySave={props.onRetrySave}/>
       <main className="bx-body">
         <LeftRail value={rail} onChange={setRail}>{leftPanel}</LeftRail>
         <section className="bx-center" aria-label="Bản xem trước ứng dụng">
@@ -182,7 +182,7 @@ export function BuilderWorkspace(props: {
             device={props.device} labelOf={props.labelOf} frameRef={frameRef} title="Bản xem trước ứng dụng"/>
         </section>
         <aside className="bx-right" aria-label="Thuộc tính">
-          {!edit ? <TestPanel doc={doc} rawPermissions={props.project.permissions}/>
+          {!edit ? <TestPanel doc={doc} rawPermissions={props.project.permissions} runtime={props.runtime} dirty={props.save.state !== "saved" || busy}/>
             : selected ? (
               <Inspector ctx={ctx} section={selected} component={registry.find((c) => c.id === selected.type)} meta={backend.metadata.get(selected.type)} index={sections.indexOf(selected)} canUp={canStep(sections, selected.id, -1)} canDown={canStep(sections, selected.id, 1)} count={sections.length}
                 readOnly={!interactive} busy={busy} assets={props.assets} rawPermissions={props.project.permissions} onApply={(ops, summary) => props.applyOps(ops, summary)} onClose={() => select(null)}

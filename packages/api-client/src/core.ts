@@ -2,7 +2,7 @@ import type { StreamHandlers } from "@xweb/types";
 
 /** Error with the backend's stable {code, message, requestId, details} contract. */
 export class ApiError extends Error {
-  constructor(readonly status: number, readonly code: string, message: string, readonly requestId?: string, readonly details?: unknown) {
+  constructor(readonly status: number, readonly code: string, message: string, readonly requestId?: string, readonly details?: unknown, readonly retryable?: boolean) {
     super(message);
   }
   get isConflict() { return this.status === 409; }
@@ -30,6 +30,18 @@ let unauthorizedHandler: ((code: string) => void) | null = null;
 export const onUnauthorized = (fn: ((code: string) => void) | null) => { unauthorizedHandler = fn; };
 
 
+/**
+ * Two error shapes exist on the wire (runtime-api.md §1/§3): the standard `{code,message,requestId,retryable,details}` and the action-result
+ * envelope `{status:"FAILED", actionId, error:{code,message,retryable,details}}` (HTTP 4xx/5xx). Both end up as the same ApiError.
+ */
+type ErrorBody = { code?: string; message?: string; requestId?: string; details?: unknown; retryable?: boolean; status?: string; error?: { code?: string; message?: string; retryable?: boolean; details?: unknown } };
+export function normaliseError(b: ErrorBody | null): Omit<ErrorBody, "status" | "error"> | null {
+  if (!b) return null;
+  const inner = b.error && typeof b.error === "object" ? b.error : undefined;
+  if (!b.code && inner?.code) return { code: inner.code, message: inner.message ?? b.message, requestId: b.requestId, details: inner.details ?? b.details, retryable: inner.retryable };
+  return { code: b.code, message: b.message, requestId: b.requestId, details: b.details, retryable: b.retryable };
+}
+
 export async function call<T>(path: string, init: RequestInit & { idempotencyKey?: string; onTotal?: (n: number) => void } = {}, retry = true): Promise<T> {
   const method = (init.method ?? "GET").toUpperCase();
   const mutating = !["GET", "HEAD", "OPTIONS"].includes(method);
@@ -45,16 +57,19 @@ export async function call<T>(path: string, init: RequestInit & { idempotencyKey
         ...(init.headers ?? {})
       }
     });
-  } catch {
+  } catch (e) {
+    // AbortSignal.timeout → TimeoutError. Same status 0 as a dropped connection (the outcome of a write is unknown either way), different code for the UI.
+    if (e instanceof DOMException && e.name === "TimeoutError") throw new ApiError(0, "TIMEOUT", "Máy chủ không phản hồi kịp (quá 15 giây).");
     throw new ApiError(0, "NETWORK", "Không kết nối được tới máy chủ. Kiểm tra backend rồi thử lại.");
   }
   if (!response.ok) {
-    const body = await response.json().catch(() => null) as { code?: string; message?: string; requestId?: string; details?: unknown } | null;
+    const raw = await response.json().catch(() => null) as ErrorBody | null;
+    const body = normaliseError(raw);
     if (response.status === 403 && body?.code === "CSRF_INVALID" && retry) { resetCsrf(); return call<T>(path, init, false); }
     if (response.status === 401 && !path.startsWith("/auth/")) unauthorizedHandler?.(body?.code ?? "AUTHENTICATION_REQUIRED");
     const retryAfter = response.headers.get("Retry-After");
     const message = response.status === 429 && retryAfter ? `${body?.message ?? "Quá nhiều yêu cầu"} Thử lại sau ${retryAfter}s.` : body?.message ?? `Lỗi ${response.status}`;
-    throw new ApiError(response.status, body?.code ?? `HTTP_${response.status}`, message, body?.requestId, body?.details);
+    throw new ApiError(response.status, body?.code ?? `HTTP_${response.status}`, message, body?.requestId, body?.details, body?.retryable);
   }
   init.onTotal?.(Number(response.headers.get("X-Total-Count") ?? "0"));
   if (response.status === 204) return undefined as T;

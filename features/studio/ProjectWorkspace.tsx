@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { api, ApiError } from "@/lib/http-api";
+import { api, ApiError, newIdempotencyKey } from "@/lib/http-api";
 import { renderSchemaDocument } from "@/lib/schema-preview";
 import type { AiStatus, ApiProject, AssetDto, BlockDto, PageSchema, PromptHistoryItem, RegistryComponent, SchemaOperation, VersionSummary } from "@/lib/http-types";
 import type { DeviceMode } from "@/lib/types";
 import { sectionLabel, sectionSummary } from "@/components/SectionInspector";
 import type { AppDefinitionV2, DefinitionOperation } from "@xweb/types";
 import { BuilderWorkspace } from "./builder/BuilderWorkspace";
+import type { RuntimeCalls } from "./builder/TestPanel";
 import { backendFrom, type ProbeState } from "./builder/core/backend";
 import { explainError } from "./builder/core/errors";
 import { NOT_RENDERED } from "./builder/core/library";
@@ -102,11 +103,16 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const valid = (m: string) => m === "auto" || m === "mock" || (ai?.models ?? []).some((x) => x.id === m);
   const effectiveModel = ai?.configured ? (model && valid(model) ? model : valid(ai.defaultModel) ? ai.defaultModel : "auto") : "mock";
 
+  const saveFailureRef = useRef<"none" | "retryable">("none");
   async function run<T>(label: string, fn: () => Promise<T>, fallback: string): Promise<T | undefined> {
     setBusy(label); setSave((x) => ({ ...x, state: "saving" }));
+    saveFailureRef.current = "none";
     try { const out = await fn(); setSave({ state: "saved", at: new Date() }); return out; }
     catch (e) {
       setSave((x) => ({ ...x, state: "error" }));
+      // retryable = nothing definite was decided by the server (no answer, 5xx, 429); conflict/validation/permission failures are final: retrying the same edit cannot succeed
+      const st = e instanceof ApiError ? e.status : 0;
+      saveFailureRef.current = st === 0 || st >= 500 || st === 429 ? "retryable" : "none";
       if (e instanceof ApiError && e.code === "REVISION_CONFLICT") { setNotice("Project vừa được thay đổi ở nơi khác. Đã tải lại bản mới nhất, hãy thử lại."); await reload().catch(() => undefined); }
       else if (e instanceof ApiError && e.code === "AI_TOKEN_LIMIT") {
         const d = e.details as { scope?: string; used?: number; limit?: number } | undefined;
@@ -151,11 +157,20 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params, project, schema]);
 
+  /** the last edit that could not be saved (network/5xx/timeout), kept so the user can retry it instead of redoing the work */
+  const [failedEdit, setFailedEdit] = useState<{ ops: (SchemaOperation | DefinitionOperation)[]; summary: string; blockId?: string } | null>(null);
   async function applyOps(ops: (SchemaOperation | DefinitionOperation)[], summary: string, blockId?: string): Promise<boolean> {
     const r = await run("edit", () => api.patchSchema(ws, projectId, revision, ops, summary, blockId), "Không lưu được thay đổi.");
-    if (!r) return false;
-    setSchema(r.schema); setRevision(r.revision); void refreshVersions(); return true;
+    if (!r) { setFailedEdit(saveFailureRef.current === "retryable" ? { ops, summary, blockId } : null); return false; }
+    setFailedEdit(null); setSchema(r.schema); setRevision(r.revision); void refreshVersions(); return true;
   }
+  const retrySave = () => { if (failedEdit) void applyOps(failedEdit.ops, failedEdit.summary, failedEdit.blockId); };
+  // leaving while an edit is in flight or failed would lose it silently
+  useEffect(() => {
+    if (busy !== "edit" && !failedEdit) return;
+    const h = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", h); return () => window.removeEventListener("beforeunload", h);
+  }, [busy, failedEdit]);
   async function restore(v: VersionSummary) {
     if (!window.confirm(`Khôi phục phiên bản ${v.versionNumber}? Một phiên bản mới sẽ được tạo; lịch sử cũ giữ nguyên.`)) return;
     const r = await run("restore", () => api.restoreVersion(ws, projectId, v.id, revision), "Không khôi phục được phiên bản.");
@@ -184,6 +199,16 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
     selectedId: null, interactive: false, nonce: nonceOfPage(), assets: assetUrls, pageId
   }) : ""), [schema, assetUrls, pageId]);
 
+  /** Test mode talks to the real backend: TEST = the saved draft, no side effects, key per click (runtime-api.md). Rebuilt only when the project changes. */
+  const runtime = useMemo<RuntimeCalls | undefined>(() => !ws || !projectId ? undefined : ({
+    runQuery: (q) => api.appRuntime.runQuery(ws, projectId, q, { mode: "TEST" }),
+    runAction: (a, key) => api.appRuntime.executeAction(ws, projectId, a, { mode: "TEST", idempotencyKey: key }),
+    startWorkflow: (w, key) => api.appRuntime.startWorkflow(ws, projectId, w, { mode: "TEST", idempotencyKey: key }),
+    getRun: (r) => api.appRuntime.workflowRun(ws, projectId, r),
+    cancelRun: (r) => api.appRuntime.cancelWorkflowRun(ws, projectId, r),
+    newKey: () => newIdempotencyKey("test"),
+  }), [ws, projectId]);
+
   if (loadError) return <div className="wsError"><ErrorState error={loadError} retry={() => { setLoadError(null); reload().catch(setLoadError); }}/><p><a className="btn" href={S("/projects")}>← Danh sách ứng dụng</a></p></div>;
   if (project?.appType === "STATIC_APP") return <CodeWorkspace project={project} view={view} onProject={setProject}/>;
   if (!project || !schema) return <div className="wsError"><StateView kind="loading" title="Đang mở ứng dụng…"/></div>;
@@ -205,7 +230,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
       {mode === "design" ? <BuilderWorkspace
         project={project} doc={schema as AppDefinitionV2} revision={revision} registry={registry} assets={assets} backend={backend} pageId={pageId} onPage={(id) => { setPageId(id); setSelectedId(null); }}
         selectedId={selectedId} onSelect={setSelectedId} device={device} onDevice={setDevice} busy={busy !== null} save={save} readOnly={readOnly} latest={latest}
-        blocks={blockOptions.map(({ b, who }): BlockOption => ({ id: b.id, name: b.name, who, baseLabel: label(b.baseComponent) }))}
+        runtime={runtime} onRetrySave={failedEdit ? retrySave : undefined} blocks={blockOptions.map(({ b, who }): BlockOption => ({ id: b.id, name: b.name, who, baseLabel: label(b.baseComponent) }))}
         applyOps={applyOps} addBlock={(id) => { const o = blockOptions.find(({ b }) => b.id === id); if (o) void addBlock(o.b); }}
         renderPreview={renderPreview} labelOf={label} summaryOf={sectionSummary}
         leading={<button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}>←</button>}

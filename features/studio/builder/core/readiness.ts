@@ -28,8 +28,8 @@ export function readinessFromError(e: unknown, notReadyReason: string): Readines
 }
 
 export type FeatureKey =
-  | "COMPONENT_METADATA" | "DEFINITION_OPERATIONS" | "DATA_SOURCES" | "SCHEMA_DISCOVERY" | "QUERY_PREVIEW" | "ACTION_RUNTIME"
-  | "WORKFLOW_RUNTIME" | "TEST_MODE" | "SHARING" | "PAGE_REORDER" | "SET_HOME_PAGE";
+  | "COMPONENT_METADATA" | "DEFINITION_OPERATIONS" | "DATA_SOURCES" | "SCHEMA_DISCOVERY" | "QUERY_PREVIEW"
+  | "SHARING" | "PAGE_REORDER" | "SET_HOME_PAGE";
 
 /**
  * Features that have NO endpoint or operation in the frozen contract / the current backend. The reason names what is missing so the user (and C0)
@@ -39,14 +39,25 @@ export const STATIC_NOT_READY: Partial<Record<FeatureKey, string>> = {
   DEFINITION_OPERATIONS: "Máy chủ chưa nhận thao tác dữ liệu/hành động (ADD_QUERY, ADD_ACTION…): AppDefinition V2 của C2 chưa được tích hợp.",
   DATA_SOURCES: "Chưa có API liệt kê nguồn dữ liệu đã được cấp quyền cho ứng dụng (Data Platform của C3 chưa nối vào máy chủ).",
   SCHEMA_DISCOVERY: "Chưa có API khám phá cấu trúc dữ liệu (DataGateway.discoverSchema chưa có đường HTTP).",
-  QUERY_PREVIEW: "Chưa có API chạy thử truy vấn. Dữ liệu mẫu không được tạo ở trình duyệt.",
-  ACTION_RUNTIME: "Chưa có adapter chạy hành động (ActionDataPort của C4 chưa được nối vào máy chủ).",
-  WORKFLOW_RUNTIME: "Chưa có API khởi chạy và theo dõi workflow (WorkflowRuntime của C4 chưa nối vào máy chủ).",
-  TEST_MODE: "Chưa có API Test Mode. “Dùng thử” sẽ chạy thật qua máy chủ, không giả lập thành công ở trình duyệt.",
+  QUERY_PREVIEW: "Xem trước dữ liệu ngay trong trình soạn chưa được nối. Dùng chế độ “Dùng thử” → Truy vấn để chạy truy vấn thật qua máy chủ; dữ liệu mẫu không được tạo ở trình duyệt.",
   SHARING: "Chưa có API chia sẻ (T15). Chia sẻ khác với Xuất bản.",
   PAGE_REORDER: "Máy chủ chưa có thao tác đổi thứ tự trang. Thứ tự menu điều hướng thì đổi được.",
   SET_HOME_PAGE: "Máy chủ chưa có thao tác đặt trang chủ (trang chủ là phần gốc của tài liệu).",
 };
+
+/**
+ * R1–R3 (docs/contracts/v2/runtime-api.md) sit behind server flags. A flag that is OFF means the controller is not mounted: 404 with NO domain code.
+ * A 404 WITH a domain code (QUERY_NOT_FOUND, UNKNOWN_ACTION…) is a missing id, not a missing feature. 503 DATA_RUNTIME_UNAVAILABLE is "wired off".
+ */
+export function runtimeReadinessFromError(e: unknown, feature: "queries" | "actions" | "workflows"): Readiness | null {
+  const x = e as ErrLike;
+  const code = x?.code ?? "";
+  const flag = feature === "queries" ? "app.data-platform.enabled" : "app.workflow.enabled";
+  const noDomainCode = code === "" || /^HTTP_\d+$/.test(code);
+  if ((x?.status === 404 && noDomainCode) || x?.status === 501) return notReady(`Máy chủ chưa bật tính năng này (${flag} đang tắt hoặc chưa được nối).`);
+  if (code === "DATA_RUNTIME_UNAVAILABLE") return notReady("Máy chủ chưa có DataGateway cho môi trường này (DATA_RUNTIME_UNAVAILABLE).");
+  return null;
+}
 
 export function staticReadiness(key: FeatureKey): Readiness {
   const reason = STATIC_NOT_READY[key];

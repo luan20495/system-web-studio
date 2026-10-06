@@ -103,6 +103,7 @@ const STATUS_LABEL: Record<string, string> = {
   DEPLOYING: "Đang triển khai", RUNNING: "Đang chạy", FAILED: "Thất bại", ROLLED_BACK: "Đã hoàn tác"
 };
 
+const MAX_POLL_FAILURES = 5;
 export function PublishModal({ workspaceId, projectId, revision, current, versionNumber, onClose, onUnauthorized, allowed = ["PRIVATE", "PUBLIC"] }: {
   workspaceId: string; projectId: string; revision: number; current: "PRIVATE" | "PUBLIC"; versionNumber?: number; onClose: () => void; onUnauthorized: () => void;
   /** visibilities this project may be published with (policy); default both */
@@ -125,15 +126,21 @@ export function PublishModal({ workspaceId, projectId, revision, current, versio
   const running = deployment !== null && !TERMINAL.includes(deployment.status);
   const dialog = useDialog("Xuất bản website", running ? null : onClose);        // cannot be dismissed with Escape mid-publish
 
+  // Poll the deployment until it ends. A failed poll says nothing about the deployment itself (it keeps running on the server): retry with backoff, and after
+  // MAX_POLL_FAILURES stop and offer a manual "Kiểm tra lại" instead of leaving the dialog stuck on "Đang xử lý…" with no way forward.
+  const [pollFailures, setPollFailures] = useState(0);
   useEffect(() => {
-    if (!deployment || TERMINAL.includes(deployment.status)) return;
+    if (!deployment || TERMINAL.includes(deployment.status) || pollFailures >= MAX_POLL_FAILURES) return;
     const t = setTimeout(() => {
-      api.getDeployment(workspaceId, projectId, deployment.id).then(setDeployment).catch((e: unknown) => {
-        if (e instanceof ApiError && e.status === 401) onUnauthorized(); else setError(errText(e, "Không đọc được trạng thái triển khai."));
+      api.getDeployment(workspaceId, projectId, deployment.id).then((d) => { setError(null); setPollFailures(0); setDeployment(d); }).catch((e: unknown) => {
+        if (e instanceof ApiError && e.status === 401) { onUnauthorized(); return; }
+        const next = pollFailures + 1;
+        setPollFailures(next);
+        setError(errText(e, "Không đọc được trạng thái triển khai.") + (next >= MAX_POLL_FAILURES ? " Triển khai có thể vẫn đang chạy trên máy chủ; bấm “Kiểm tra lại”." : " Đang thử lại…"));
       });
-    }, 800);
+    }, 800 * (1 + pollFailures * 2));
     return () => clearTimeout(t);
-  }, [deployment, workspaceId, projectId, onUnauthorized]);
+  }, [deployment, pollFailures, workspaceId, projectId, onUnauthorized]);
   useEffect(() => { if (deployment && TERMINAL.includes(deployment.status)) loadSite(); }, [deployment, loadSite]);
   const real = site ? site.provider !== "mock" : false;
   async function siteAction(fn: () => Promise<SiteInfo>) {
@@ -181,7 +188,9 @@ export function PublishModal({ workspaceId, projectId, revision, current, versio
       <div className="modalActions">
         {!deployment && real && site?.online ? <button className="button ghost" disabled={siteBusy} onClick={() => { if (confirm("Gỡ trang xuống? Địa chỉ sẽ báo không tìm thấy cho tới khi xuất bản lại hoặc phục vụ lại một bản cũ.")) void siteAction(() => api.unpublishSite(workspaceId, projectId)); }}>Gỡ trang xuống</button> : null}
         <button className="button ghost" onClick={onClose}>{deployment ? "Đóng" : "Hủy"}</button>
-        {!deployment ? <button className="button primary" disabled={submitting} onClick={() => void start()}>{submitting ? "Đang gửi…" : "Xuất bản"}</button> : running ? <button className="button primary" disabled>Đang xử lý…</button> : null}
+        {!deployment ? <button className="button primary" disabled={submitting} onClick={() => void start()}>{submitting ? "Đang gửi…" : "Xuất bản"}</button>
+          : running && pollFailures >= MAX_POLL_FAILURES ? <button className="button primary" data-testid="publish-recheck" onClick={() => { setError(null); setPollFailures(0); }}>Kiểm tra lại</button>
+          : running ? <button className="button primary" disabled>Đang xử lý…</button> : null}
       </div>
     </div></div>
   );
