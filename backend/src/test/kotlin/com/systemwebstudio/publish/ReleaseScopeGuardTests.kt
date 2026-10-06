@@ -47,9 +47,15 @@ class ReleaseScopeGuardTests {
         }
     }
 
+    private val noRuntime = object : RuntimePlane {
+        override fun applies(projectId: UUID) = false
+        override fun currentArtifact(projectId: UUID): UUID? = null
+        override fun serve(projectId: UUID, artifactId: UUID, deploymentId: UUID) {}
+        override fun stop(projectId: UUID) {}
+    }
     private val releases = Releases().also { it.active = releaseN }
     private val provider = Provider(releases)
-    private fun service(guard: ReleaseScopeGuard) = ReleaseService(provider, releases, { ArtifactCheck(true) }, guard, 5, 5)
+    private fun service(guard: ReleaseScopeGuard) = ReleaseService(provider, releases, { ArtifactCheck(true) }, noRuntime, guard, 5, 5)
     private fun request() = DeployRequest(releaseN1, "Demo", 2, "PUBLIC", null, "sha", app, UUID.randomUUID())
 
     @Test

@@ -22,8 +22,10 @@ import java.util.UUID
  *  - every failure is classified ([FailureClassifier]): a stable code + the real reason are stored in `deployments.error`, never a generic text;
  *  - transient failures (render worker / storage / database blip) retry the same step a bounded number of times with backoff; the retry count
  *    is read from the history, so a restart does not reset it. Permanent failures and ambiguous ones (a deploy that timed out) are never retried;
- *  - DEPLOYING goes through [ReleaseDeployer]: switch, run the server runtime step, verify. If anything fails after the switch was attempted the
- *    previous release is made active again from its immutable artifact. A deployment is RUNNING only after verification said HEALTHY.
+ *  - DEPLOYING goes through [ReleaseDeployer]: verify the artifact, stage, bring the server runtime (server apps) to the same release, switch the
+ *    site, confirm. Nothing is switched in before it was verified; if anything fails after the switch the previous release is made active again
+ *    from its immutable artifact (site and server runtime together) or, if that is impossible, the site is taken offline. A deployment is
+ *    RUNNING only after verification said HEALTHY.
  */
 @Service
 class DeploymentProcessor(
@@ -34,7 +36,6 @@ class DeploymentProcessor(
     private val audit: AuditService,
     private val json: JsonMapper,
     private val builder: StaticSiteBuilder,
-    private val runtime: com.systemwebstudio.runtime.ServerRuntimeService,
     private val buildJobs: com.systemwebstudio.code.BuildJobService,
     private val releases: ReleaseService,
     @Value("\${app.deploy.step-delay-ms:0}") private val stepDelayMs: Long,
@@ -134,22 +135,10 @@ class DeploymentProcessor(
         if (provider.buildsArtifacts && artifactId == null) return StepResult.Fail(StepFailure(FailureCode.ARTIFACT_MISSING, "No artifact was built for this deployment"))
         val hash = state.artifactHash.ifEmpty { artifactId?.let { a -> jdbc.queryForObject("SELECT sha256 FROM artifacts WHERE id = ?", String::class.java, a) } ?: build(d, record = false) }
         val request = DeployRequest(d.id, project["name"] as String, d.versionNumber, d.visibility, project["deployment_target"] as String?, hash, d.projectId, artifactId)
-        // server apps: the same build's server part goes to the isolated runtime (blue/green, health-checked) right after the site switch
-        val serverStep: (() -> Unit)? = if (artifactId != null && isServerApp(d)) ({ deployServerRuntime(d, artifactId) }) else null
-        return when (val outcome = releases.publish(ReleaseScope(workspaceOf(d), d.projectId), request, serverStep)) {
+        return when (val outcome = releases.publish(ReleaseScope(workspaceOf(d), d.projectId), request)) {
             is DeployOutcome.Live -> { state.url = outcome.url; StepResult.Advance }
             is DeployOutcome.Failed -> StepResult.Fail(outcome.failure, outcome.rollback)
         }
-    }
-
-    /** Idempotent: when a worker died after handing the artifact to the runtime, the re-run does not create a second server deployment. */
-    private fun deployServerRuntime(d: DeploymentDto, artifactId: UUID) {
-        val already = jdbc.queryForObject(
-            "SELECT count(*) FROM server_deployments sd, deployments dep WHERE dep.id = ? AND sd.project_id = ? AND sd.artifact_id = ? AND sd.rollback_of IS NULL AND sd.created_at >= dep.created_at",
-            Long::class.java, d.id, d.projectId, artifactId) ?: 0L
-        if (already > 0) return
-        val commit = jdbc.queryForObject("SELECT commit_sha FROM project_versions WHERE id = ?", String::class.java, d.versionId)
-        runtime.deploy(d.projectId, artifactId, commit, jdbc.queryForObject("SELECT requested_by FROM deployments WHERE id = ?", UUID::class.java, d.id))
     }
 
     private fun label(s: String) = when (s) {
@@ -161,9 +150,6 @@ class DeploymentProcessor(
 
     private fun snapshot(d: DeploymentDto) =
         jdbc.queryForObject("SELECT schema_snapshot::text FROM project_versions WHERE id = ?", String::class.java, d.versionId)!!
-
-    private fun isServerApp(d: DeploymentDto) =
-        jdbc.queryForObject("SELECT app_kind FROM projects WHERE id = ?", String::class.java, d.projectId) in com.systemwebstudio.code.CodeProjectService.SERVER_KINDS
 
     private fun isCodeApp(d: DeploymentDto) =
         jdbc.queryForObject("SELECT app_type FROM projects WHERE id = ?", String::class.java, d.projectId) == "STATIC_APP"

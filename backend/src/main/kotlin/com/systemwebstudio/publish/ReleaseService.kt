@@ -75,14 +75,14 @@ class StoredArtifactVerifier(private val jdbc: JdbcTemplate, private val json: J
  */
 @Service
 class ReleaseService(
-    provider: DeployProvider, releases: ReleaseStore, verifier: ArtifactVerifier, private val guard: ReleaseScopeGuard,
+    provider: DeployProvider, releases: ReleaseStore, verifier: ArtifactVerifier, runtime: RuntimePlane, private val guard: ReleaseScopeGuard,
     @Value("\${app.deploy.deploy-timeout-seconds:120}") deploySeconds: Long,
     @Value("\${app.deploy.verify-timeout-seconds:60}") verifySeconds: Long
 ) {
-    val deployer = ReleaseDeployer(provider, releases, verifier, StepRunner(), deploySeconds * 1000, verifySeconds * 1000)
+    val deployer = ReleaseDeployer(provider, releases, verifier, StepRunner(), deploySeconds * 1000, verifySeconds * 1000, runtime)
 
-    fun publish(scope: ReleaseScope, request: DeployRequest, afterSwitch: (() -> Unit)? = null): DeployOutcome =
-        guard.run(scope, ReleaseOperation.PUBLISH) { deployer.deploy(request, afterSwitch) }
+    fun publish(scope: ReleaseScope, request: DeployRequest): DeployOutcome =
+        guard.run(scope, ReleaseOperation.PUBLISH) { deployer.deploy(request) }
 
     fun rollback(scope: ReleaseScope, target: UUID): RollbackResult =
         guard.run(scope, ReleaseOperation.ROLLBACK) { deployer.restoreRelease(scope.appId, target) }

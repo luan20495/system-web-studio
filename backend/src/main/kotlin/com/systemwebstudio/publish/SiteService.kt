@@ -55,6 +55,9 @@ class SiteService(
         jdbc.update("UPDATE sites SET current_deployment_id = ?, updated_at = now() WHERE project_id = ?", deploymentId, projectId)
     }
 
+    fun artifactOf(deploymentId: UUID): UUID? =
+        jdbc.query("SELECT artifact_id FROM deployments WHERE id = ?", { rs, _ -> rs.getObject(1, UUID::class.java) }, deploymentId).firstOrNull()
+
     /** the deployment the site points at, null = offline / no site */
     fun pointer(projectId: UUID): UUID? =
         jdbc.query("SELECT current_deployment_id FROM sites WHERE project_id = ?", { rs, _ -> rs.getObject(1, UUID::class.java) }, projectId).firstOrNull()
@@ -164,8 +167,10 @@ class StaticSiteDeployProvider(private val sites: SiteService, private val verif
     override val buildsArtifacts = true
     override fun deploy(request: DeployRequest): DeployResult {
         val projectId = request.projectId ?: return DeployResult(null, "Missing project")
-        if (request.artifactId == null) return DeployResult(null, "No artifact was built")
+        val artifactId = request.artifactId ?: return DeployResult(null, "No artifact was built")
         val slug = sites.ensureSlug(projectId, request.projectName)
+        // the last look before the pointer moves: the files can disappear between the release check and this switch
+        verifier.verify(artifactId).let { if (!it.ok) return DeployResult(null, "the artifact cannot be served: ${it.reason}") }
         sites.point(projectId, request.deploymentId)
         return DeployResult(sites.url(slug), null)
     }
@@ -180,6 +185,10 @@ class StaticSiteDeployProvider(private val sites: SiteService, private val verif
     }
 
     override fun restore(projectId: UUID, previousDeploymentId: UUID?): DeployResult {
+        previousDeploymentId?.let { target ->
+            val artifactId = sites.artifactOf(target) ?: return DeployResult(null, "release has no artifact")
+            verifier.verify(artifactId).let { if (!it.ok) return DeployResult(null, "the artifact cannot be served: ${it.reason}") }
+        }
         sites.restore(projectId, previousDeploymentId)
         return DeployResult(null, null)
     }

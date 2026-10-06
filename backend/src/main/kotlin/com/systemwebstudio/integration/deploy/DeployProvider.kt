@@ -27,7 +27,12 @@ data class DeployVerification(val state: State, val detail: String? = null) {
 /**
  * Port for whatever actually serves the site (self-host, AWS, Azure, GCP).
  *
+ * Order of a release (the caller enforces it): artifact verified -> [stage] -> (server runtime healthy) -> [deploy] = the switch that makes it
+ * serve -> [verify] as the confirmation after the switch. A release is never switched in before it was verified.
+ *
  * Contract (production providers MUST honour it):
+ *  - [stage] prepares the release WITHOUT serving it (provision, upload, warm up). Default: nothing to prepare. Anything it leaves behind on
+ *    failure must be harmless, because the previous release keeps serving.
  *  - [deploy] is idempotent: calling it again for the same deploymentId converges on the same state. A non-null `error` means the new
  *    release is not (or not fully) active; the caller still asks for [restore], which only acts if the provider points at this deployment.
  *  - [verify] is the post-deploy health / readiness check. A deployment becomes RUNNING only after HEALTHY.
@@ -37,6 +42,8 @@ interface DeployProvider {
     val name: String
     /** true: BUILDING produces a real artifact (StaticSiteBuilder) that DEPLOYING serves; false: the mock hash only */
     val buildsArtifacts: Boolean get() = false
+    fun stage(request: DeployRequest): DeployResult = DeployResult(null, null)
+    /** The switch: after this the release is what the address serves. Only called for a release that was verified and staged. */
     fun deploy(request: DeployRequest): DeployResult
     /** Default is UNKNOWN on purpose: a provider that cannot verify must say so, never imply success. */
     fun verify(request: DeployRequest): DeployVerification = DeployVerification.unknown("Provider ${name} does not implement post-deploy verification")

@@ -132,6 +132,38 @@ class ServerRuntimeService(
         return deploy(projectId, row["artifact_id"] as UUID, row["commit_sha"] as String?, userId, rollbackOf = to)
     }
 
+    /** the artifact of the server release that is serving now, null = none */
+    fun currentArtifact(projectId: UUID): UUID? = jdbc.query(
+        "SELECT sd.artifact_id FROM app_runtimes r JOIN server_deployments sd ON sd.id = r.current_deployment_id WHERE r.project_id = ?",
+        { rs, _ -> rs.getObject(1, UUID::class.java) }, projectId).firstOrNull()
+
+    /** the server release being started (asked for, not reported running yet): its id and artifact */
+    fun desiredRelease(projectId: UUID): Pair<UUID, UUID>? = jdbc.query(
+        "SELECT sd.id, sd.artifact_id FROM app_runtimes r JOIN server_deployments sd ON sd.id = r.desired_deployment_id WHERE r.project_id = ?",
+        { rs, _ -> rs.getObject(1, UUID::class.java) to rs.getObject(2, UUID::class.java) }, projectId).firstOrNull()
+
+    /** state of one server deployment and the error the runner reported */
+    fun deploymentState(id: UUID): Pair<String, String?>? = jdbc.query("SELECT status, error FROM server_deployments WHERE id = ?",
+        { rs, _ -> rs.getString(1) to rs.getString(2) }, id).firstOrNull()
+
+    /** the most recent earlier server deployment of this artifact, so a restore can say what it is a rollback of */
+    fun lastDeploymentOf(projectId: UUID, artifactId: UUID): UUID? = jdbc.query(
+        "SELECT id FROM server_deployments WHERE project_id = ? AND artifact_id = ? AND status IN ('RUNNING','SUPERSEDED','STOPPED') ORDER BY created_at DESC LIMIT 1",
+        { rs, _ -> rs.getObject(1, UUID::class.java) }, projectId, artifactId).firstOrNull()
+
+    /**
+     * Give up on a server deployment that never became healthy (timeout): it is FAILED and no longer desired, so a runner that is late cannot
+     * bring it up behind the platform's back. The serving release is untouched.
+     */
+    @Transactional
+    fun abandon(deploymentId: UUID, reason: String) {
+        val row = jdbc.queryForList("SELECT project_id FROM server_deployments WHERE id = ? AND status IN ('PENDING','STARTING')", deploymentId).firstOrNull() ?: return
+        val pid = row["project_id"] as UUID
+        jdbc.update("UPDATE server_deployments SET status = 'FAILED', error = ? WHERE id = ?", reason.take(1000), deploymentId)
+        jdbc.update("UPDATE app_runtimes SET desired_deployment_id = NULL WHERE project_id = ? AND desired_deployment_id = ?", pid, deploymentId)
+        audit.record("SERVER_APP_FAILED", "SERVER_DEPLOYMENT", deploymentId, projectId = pid, actorId = null, newValue = mapOf("error" to reason.take(300)))
+    }
+
     /** stop serving (archive, delete, or by request): nothing desired, the runner removes the containers */
     fun stop(projectId: UUID, userId: UUID?) {
         jdbc.update("UPDATE server_deployments SET status = 'STOPPED', stopped_at = now() WHERE project_id = ? AND status IN ('PENDING', 'STARTING', 'RUNNING')", projectId)

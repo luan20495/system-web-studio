@@ -139,30 +139,33 @@ class DeploymentFailureRecoveryTests : IntegrationTestBase() {
         assertThat(jdbc.queryForObject("SELECT status FROM deployments WHERE id = ?", String::class.java, id(first))).isEqualTo("RUNNING")
     }
 
+    private fun siteUpdatedAt(sc: Scenario) = jdbc.queryForObject("SELECT updated_at FROM sites WHERE project_id = ?", java.sql.Timestamp::class.java, sc.projectId)
+
     @Test
-    fun `a release whose artifact cannot be verified after the switch is never RUNNING and the previous release is restored without a rebuild`() {
+    fun `a release whose artifact cannot be verified is never switched in - the previous release keeps serving and the pointer is never touched`() {
         val sc = scenario(); sc.setHero("Bản một")
         val first = sc.publish(); val slug = slugOf(first)
         sc.setHero("Bản hai")
-        onlyVisible(sha(id(first)))                    // the new artifact is written, but cannot be read back: verification must fail
-        val before = artifacts(sc)
+        onlyVisible(sha(id(first)))                    // the new artifact is written, but cannot be read back: verification must fail BEFORE the switch
+        val before = artifacts(sc); val touched = siteUpdatedAt(sc)
         val d = sc.publish(expect = "FAILED")
-        assertThat(d.get("error").asString()).startsWith("[VERIFICATION_FAILED]").contains("rollback:")
-        assertThat(pointer(sc)).isEqualTo(id(first))                                   // release N is active again
+        assertThat(d.get("error").asString()).startsWith("[VERIFICATION_FAILED]").doesNotContain("rollback:")      // nothing was switched, so nothing was rolled back
+        assertThat(pointer(sc)).isEqualTo(id(first))
+        assertThat(siteUpdatedAt(sc)).isEqualTo(touched)                               // the site row was not written at all: the new release never served a request
         assertThat(served(slug).response.contentAsString).contains("Bản một")
-        assertThat(artifacts(sc)).isEqualTo(before + 1)                                // N+1 was built once; the rollback did not build anything
-        assertThat(events(id(d), "ROLLBACK_OK")).isEqualTo(1)
+        assertThat(artifacts(sc)).isEqualTo(before + 1)                                // N+1 was built once, nothing was rebuilt
+        assertThat(events(id(d), "SWITCH")).isZero(); assertThat(events(id(d), "ROLLBACK_OK")).isZero(); assertThat(events(id(d), "ROLLBACK_FAILED")).isZero()
         assertThat(jdbc.queryForObject("SELECT status FROM deployments WHERE id = ?", String::class.java, id(first))).isEqualTo("RUNNING")
         assertThat(sc.s.body(sc.s.get("${sc.base}/site")).get("currentDeploymentId").asString()).isEqualTo(id(first).toString())
     }
 
     @Test
-    fun `a first release that fails verification takes the site offline instead of serving something unverified`() {
+    fun `a first release that fails verification never serves anything - the site stays without a pointer`() {
         val sc = scenario()
         onlyVisible("nothing-is-visible")
         val d = sc.publish(expect = "FAILED")
         assertThat(d.get("error").asString()).startsWith("[VERIFICATION_FAILED]")
-        assertThat(events(id(d), "ROLLBACK_OFFLINE")).isEqualTo(1)
+        assertThat(events(id(d), "SWITCH")).isZero(); assertThat(events(id(d), "ROLLBACK_OFFLINE")).isZero()      // never switched, so nothing to take offline
         assertThat(pointer(sc)).isNull()
         assertThat(sc.s.body(sc.s.get("${sc.base}/site")).get("online").asBoolean()).isFalse()
     }
