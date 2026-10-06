@@ -48,6 +48,6 @@ export function ReviewTimeline({ reviews }: { reviews: BlockReview[] }) {
 }
 
 /** Blocks can only be inserted when their base component is still approved and has a preview renderer. */
-export function insertable(b: BlockDto, registry: RegistryComponent[], notRendered: Set<string>) {
+export function insertable(b: BlockDto, registry: RegistryComponent[], notRendered: ReadonlySet<string>) {
   return !!b.current && b.status !== "DEPRECATED" && registry.some((c) => c.id === b.baseComponent && c.status === "ACTIVE") && !notRendered.has(b.baseComponent);
 }

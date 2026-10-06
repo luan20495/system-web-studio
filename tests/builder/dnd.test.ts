@@ -57,3 +57,14 @@ test("click-to-add fallback: after the selection, else at the end before the Foo
   assert.equal(D.slotForClickAdd(list(), null, "TextBlock"), 3);
   assert.equal(D.slotForClickAdd([], null, "Hero"), 0);
 });
+
+test("slot over rendered rectangles maps back to a section index even when a section has no renderer", () => {
+  const sections = [sec("a", "Hero"), sec("x", "ProductCard"), sec("b", "TextBlock")];
+  const rects = [{ id: "a", top: 0, height: 100 }, { id: "b", top: 100, height: 100 }];
+  assert.equal(D.sectionIndexForSlot(sections, rects, 0), 0);
+  assert.equal(D.sectionIndexForSlot(sections, rects, 1), 2);
+  assert.equal(D.sectionIndexForSlot(sections, rects, 2), 3);
+  assert.equal(D.sectionIndexForSlot(sections, [], 0), 3);
+  assert.equal(D.indicatorY(rects, 1), 100);
+  assert.equal(D.indicatorY(rects, 2), 200);
+});

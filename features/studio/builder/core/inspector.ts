@@ -21,6 +21,9 @@ export const VISIBILITY_PROP = "visible";
 
 const isDesign = (name: string, def: PropDef) => DESIGN_PROP_NAMES.has(name) && def.type !== "array";
 
+/** the props map of a registry component (empty when unknown) */
+export const propsSchemaOfRegistry = (c: RegistryComponent | undefined): Record<string, PropDef> => (propsSchemaOf(c).properties ?? {}) as Record<string, PropDef>;
+
 export type PropGroups = { content: [string, PropDef][]; design: [string, PropDef][]; visibility: [string, PropDef] | null };
 export function groupProps(component: RegistryComponent | undefined): PropGroups {
   const defs = (propsSchemaOf(component).properties ?? {}) as Record<string, PropDef>;

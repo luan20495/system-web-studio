@@ -69,3 +69,24 @@ export function slotForClickAdd(sections: Section[], selectedId: string | null, 
 export function slotNeighbours(sections: Section[], slot: number): { before: Section | null; after: Section | null } {
   return { before: sections[slot - 1] ?? null, after: sections[slot] ?? null };
 }
+
+/**
+ * A slot counted over the RENDERED rectangles (what the pointer sees) back to an index in the section list. Sections the preview has no
+ * renderer for have no rectangle, so the two lists can differ.
+ */
+export function sectionIndexForSlot(sections: Section[], rects: SectionRect[], slot: number): number {
+  const sorted = rects.slice().sort((a, b) => a.top - b.top);
+  if (!sorted.length) return sections.length;
+  if (slot < sorted.length) { const i = sections.findIndex((s) => s.id === sorted[slot].id); return i < 0 ? sections.length : i; }
+  const last = sections.findIndex((s) => s.id === sorted[sorted.length - 1].id);
+  return last < 0 ? sections.length : last + 1;
+}
+
+/** y (px, inside the preview) where the insertion line is drawn for a rendered-rectangle slot */
+export function indicatorY(rects: SectionRect[], slot: number): number {
+  const sorted = rects.slice().sort((a, b) => a.top - b.top);
+  if (!sorted.length) return 16;
+  if (slot < sorted.length) return Math.max(0, sorted[slot].top);
+  const last = sorted[sorted.length - 1];
+  return last.top + last.height;
+}

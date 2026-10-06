@@ -58,3 +58,15 @@ test("test mode rules per action kind", () => {
   assert.match((describeTestEffect(a("START_WORKFLOW")) as { note: string }).note, /workflow_run/);
   assert.equal(publishInTest().state, "NOT_RUN");
 });
+
+import { backendFrom } from "../../features/studio/builder/core/backend";
+
+test("backend probe: 404 -> definition operations NOT_READY with reason; ok -> AVAILABLE; 500 -> ERROR; loading -> LOADING", () => {
+  assert.equal(backendFrom({ status: "loading" }).definitionOps.state, "LOADING");
+  const nf = backendFrom({ status: "error", error: { status: 404 } });
+  assert.equal(nf.definitionOps.state, "NOT_READY");
+  assert.ok(nf.definitionOps.state === "NOT_READY" && nf.definitionOps.reason.length > 10);
+  assert.equal(backendFrom({ status: "error", error: { status: 500, message: "boom" } }).definitionOps.state, "ERROR");
+  const ok = backendFrom({ status: "ok", metadata: [{ id: "Hero" } as never] });
+  assert.equal(ok.definitionOps.state, "AVAILABLE"); assert.ok(ok.metadata.has("Hero"));
+});
