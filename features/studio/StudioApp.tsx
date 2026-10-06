@@ -12,6 +12,7 @@ import { PortalSwitcher } from "@xweb/ui";
 import { useLoad } from "../useLoad";
 import { actionLabel, ago, Card, ErrorState, errText, NavLink, num, Pager, Pill, StateView, usd } from "../ui";
 import { ProjectWorkspace } from "./ProjectWorkspace";
+import { consoleHref, S } from "./base";
 import { BlockStatus, BlockThumb, blockPage, CheckList, ReviewTimeline, SchemaThumb } from "../library";
 
 type StudioCtx = { workspaceId: string; setWorkspaceId: (id: string) => void; dedicated: boolean };
@@ -56,8 +57,8 @@ function StudioSidebar({ active }: { active: string }) {
   return (
     <aside className="sidebar" aria-label="Điều hướng Studio">
       <div className="sideBrand"><span className="logoMark" aria-hidden="true">◆</span><div><b>Company Builder Studio</b><small>AI Software Factory</small></div></div>
-      <Link className="btn primary block" href="/studio/new">+ Tạo ứng dụng</Link>
-      <nav>{nav.map(([k, l, i]) => <NavLink key={k} href={`/studio${k ? `/${k}` : ""}`} active={active === k} icon={i}>{l}</NavLink>)}</nav>
+      <Link className="btn primary block" href={S("/new")}>+ Tạo ứng dụng</Link>
+      <nav>{nav.map(([k, l, i]) => <NavLink key={k} href={S(k ? `/${k}` : "")} active={active === k} icon={i}>{l}</NavLink>)}</nav>
     </aside>
   );
 }
@@ -67,13 +68,13 @@ function StudioHeader() {
   const [q, setQ] = useState("");
   return (
     <header className="topHeader">
-      <form className="search" role="search" onSubmit={(e) => { e.preventDefault(); router.push(`/studio/projects?q=${encodeURIComponent(q)}`); }}>
+      <form className="search" role="search" onSubmit={(e) => { e.preventDefault(); router.push(S(`/projects?q=${encodeURIComponent(q)}`)); }}>
         <input aria-label="Tìm ứng dụng" placeholder="Tìm ứng dụng…" value={q} onChange={(e) => setQ(e.target.value)}/>
       </form>
       <div className="row">
         {me!.workspaces.length > 1 ? <select aria-label="Workspace" value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)}>{me!.workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select>
           : <span className="muted">{me!.workspaces[0].name}</span>}
-        {dedicated ? <PortalSwitcher me={me} current="studio"/> : me!.systemAdmin ? <Link className="btn sm" href="/admin" onClick={() => rememberPortal("admin")}>Admin Console</Link> : null}
+        {dedicated ? <PortalSwitcher me={me} current="studio"/> : me!.systemAdmin ? <Link className="btn sm" href={consoleHref()} onClick={() => rememberPortal("admin")}>Admin Console</Link> : null}
         <span className="avatar" title={me!.displayName} aria-label={`Tài khoản: ${me!.displayName}`}>{me!.displayName.slice(0, 2).toUpperCase()}</span>
         <button className="btn sm ghost" onClick={() => void logout()}>Đăng xuất</button>
       </div>
@@ -83,7 +84,7 @@ function StudioHeader() {
 
 function ProjectCard({ p, mine }: { p: ApiProject; mine: boolean }) {
   return (
-    <Link className="projectCard" href={`/studio/projects/${p.id}`}>
+    <Link className="projectCard" href={S(`/projects/${p.id}`)}>
       <div className="projectThumb" aria-hidden="true"><span/></div>
       <div className="projectInfo"><b>{p.name}</b><small>{p.siteVisibility === "PUBLIC" ? "Công khai" : "Riêng tư"} · cập nhật {ago(p.updatedAt)}</small>
         <div className="row">{mine ? <Pill value="ACTIVE" label="Của tôi"/> : <Pill value="PRIVATE" label="Được chia sẻ"/>}<Pill value="PRIVATE" label="Website"/>
@@ -107,7 +108,7 @@ function Home() {
     setBusy(true); setErr(null);
     try {
       const p = await api.createProject(workspaceId, text.length > 60 ? `${text.slice(0, 57)}…` : text);
-      router.push(`/studio/projects/${p.id}/ai?prompt=${encodeURIComponent(text)}`);
+      router.push(S(`/projects/${p.id}/ai?prompt=${encodeURIComponent(text)}`));
     } catch (x) { setErr(errText(x, "Không tạo được ứng dụng.")); setBusy(false); }
   }
   const u = usage.data;
@@ -135,12 +136,12 @@ function Home() {
       <div className="kpi"><div className="kpiLabel">Ứng dụng trong workspace</div><div className="kpiValue">{recent.data ? num(recent.data.total) : "…"}</div></div>
       <div className="kpi"><div className="kpiLabel">Component của công ty</div><div className="kpiValue">{comps.data ? comps.data.length : "…"}</div></div>
     </div>
-    <Card title="Ứng dụng gần đây" actions={<Link className="btn sm" href="/studio/projects">Xem tất cả</Link>}>
+    <Card title="Ứng dụng gần đây" actions={<Link className="btn sm" href={S("/projects")}>Xem tất cả</Link>}>
       {recent.error ? <ErrorState error={recent.error} retry={recent.reload}/> : !recent.data ? <StateView kind="loading"/> : recent.data.items.length === 0
-        ? <StateView kind="empty" title="Chưa có ứng dụng nào" detail={<p>Bắt đầu bằng ô mô tả phía trên hoặc <Link href="/studio/new">tạo ứng dụng</Link>.</p>}/>
+        ? <StateView kind="empty" title="Chưa có ứng dụng nào" detail={<p>Bắt đầu bằng ô mô tả phía trên hoặc <Link href={S("/new")}>tạo ứng dụng</Link>.</p>}/>
         : <div className="projectGrid">{recent.data.items.map((p) => <ProjectCard key={p.id} p={p} mine={p.ownerUserId === me!.id}/>)}</div>}
     </Card>
-    <Card title="Component dùng chung" actions={<Link className="btn sm" href="/studio/components">Thư viện</Link>}>
+    <Card title="Component dùng chung" actions={<Link className="btn sm" href={S("/components")}>Thư viện</Link>}>
       {comps.data ? <div className="chipRow">{comps.data.filter((c) => c.status === "ACTIVE").map((c) => <span key={c.id} className="tag">{sectionLabel(c.id, c.name)} <small>{num(c.usedInProjects ?? 0)} ứng dụng</small></span>)}</div> : <StateView kind="loading"/>}
     </Card>
   </>);
@@ -154,13 +155,13 @@ function Projects() {
   useEffect(() => { const v = params.get("q") ?? ""; setQ(v); setQuery(v); setPage(0); }, [params]);
   const { data, error, loading, reload } = useLoad(() => api.projectsPage(workspaceId, page, 12, query, scope), [workspaceId, page, query, scope]);
   return (<>
-    <div className="pageHead"><div><h1>Ứng dụng</h1><p>Ứng dụng trong workspace hiện tại mà bạn có quyền xem.</p></div><Link className="btn primary" href="/studio/new">+ Tạo ứng dụng</Link></div>
+    <div className="pageHead"><div><h1>Ứng dụng</h1><p>Ứng dụng trong workspace hiện tại mà bạn có quyền xem.</p></div><Link className="btn primary" href={S("/new")}>+ Tạo ứng dụng</Link></div>
     <div className="row between wrap">
       <div className="tabs" role="tablist">{([["all", "Tất cả"], ["owned", "Của tôi"], ["shared", "Được chia sẻ với tôi"]] as const).map(([k, l]) => <button key={k} role="tab" aria-selected={scope === k} className={scope === k ? "active" : ""} onClick={() => { setScope(k); setPage(0); }}>{l}</button>)}</div>
       <form className="filters" onSubmit={(e) => { e.preventDefault(); setPage(0); setQuery(q); }}><input aria-label="Tìm theo tên" placeholder="Tìm theo tên" value={q} onChange={(e) => setQ(e.target.value)}/><button className="btn">Tìm</button></form>
     </div>
     {error ? <ErrorState error={error} retry={reload}/> : loading && !data ? <StateView kind="loading"/> : data!.items.length === 0
-      ? <StateView kind="empty" title={query ? "Không có ứng dụng phù hợp" : "Chưa có ứng dụng"} action={<Link className="btn primary" href="/studio/new">Tạo ứng dụng</Link>}/>
+      ? <StateView kind="empty" title={query ? "Không có ứng dụng phù hợp" : "Chưa có ứng dụng"} action={<Link className="btn primary" href={S("/new")}>Tạo ứng dụng</Link>}/>
       : (<><div className="projectGrid">{data!.items.map((p) => <ProjectCard key={p.id} p={p} mine={p.ownerUserId === me!.id}/>)}</div><Pager page={page} size={12} total={data!.total} onPage={setPage}/></>)}
   </>);
 }
@@ -194,7 +195,7 @@ function NewApp() {
     try {
       const p = kind !== "WEBSITE_STATIC" ? await api.createProject(workspaceId, name.trim(), undefined, undefined, "STATIC_APP", kind)
         : await api.createProject(workspaceId, name.trim(), undefined, templateId || undefined);
-      router.push(`/studio/projects/${p.id}/ai`);
+      router.push(S(`/projects/${p.id}/ai`));
     }
     catch (x) { setErr(errText(x, "Không tạo được ứng dụng.")); setBusy(false); }
   }
@@ -278,7 +279,7 @@ function Templates() {
   const [category, setCategory] = useState(""); const [sort, setSort] = useState<"recent" | "popular">("recent");
   const cats = useLoad(() => api.libraryCategories(), []);
   const { data, error, loading, reload } = useLoad(() => api.templates(scope, { category: category || undefined, sort }), [scope, category, sort]);
-  const use = canCreate ? (t: TemplateDto) => router.push(`/studio/new?template=${t.id}`) : undefined;
+  const use = canCreate ? (t: TemplateDto) => router.push(S(`/new?template=${t.id}`)) : undefined;
   return (<>
     <div className="pageHead"><div><h1>Templates</h1><p>Mẫu khởi đầu cho website. Một mẫu là cấu trúc trang (Page Schema) từ component đã duyệt, không phải mã nguồn; ảnh không đi kèm mẫu.</p></div></div>
     <div className="tabs" role="tablist">{([["company", "Mẫu của công ty"], ["mine", "Mẫu của tôi"]] as const).map(([k, l]) =>
@@ -292,7 +293,7 @@ function Templates() {
       <div className="compGrid">
         {scope === "company" ? <article className="libCard"><div className="thumb placeholder"><span>Trang mặc định</span></div><h2>Trang mặc định</h2>
           <p>Có sẵn trong hệ thống: thanh điều hướng, Hero, sản phẩm, công nghệ, đánh giá, form liên hệ, chân trang.</p>
-          {canCreate ? <div className="actions"><Link className="btn sm primary" href="/studio/new">Dùng mẫu này</Link></div> : null}</article> : null}
+          {canCreate ? <div className="actions"><Link className="btn sm primary" href={S("/new")}>Dùng mẫu này</Link></div> : null}</article> : null}
         {data!.map((t) => <TemplateCard key={t.id} t={t} onUse={use} onChanged={reload} categories={cats.data?.templates ?? {}} mine={scope === "mine"}/>)}
         {data!.length === 0 ? <StateView kind="empty" title={scope === "mine" ? "Bạn chưa lưu mẫu nào" : "Chưa có mẫu công ty"}
           detail={<p>{scope === "mine" ? "Mở một ứng dụng → Cài đặt → “Lưu trang thành mẫu”." : "Tác giả gửi mẫu đi duyệt; quản trị viên duyệt để đưa vào thư viện công ty."}</p>}/> : null}
@@ -377,7 +378,7 @@ function SiteAccess() {
     api.siteAccessTicket(site, path).then((r) => { window.location.assign(r.redirect); })
       .catch((x: unknown) => setErr(x instanceof ApiError && x.status === 404 ? "Bạn không có quyền xem trang riêng tư này, hoặc trang không còn tồn tại." : errText(x, "Không mở được trang.")));
   }, [site, path]);
-  return err ? <StateView kind="forbidden" title="Không mở được trang" detail={<p>{err}</p>} action={<Link className="btn" href="/studio">Về Studio</Link>}/>
+  return err ? <StateView kind="forbidden" title="Không mở được trang" detail={<p>{err}</p>} action={<Link className="btn" href={S()}>Về Studio</Link>}/>
     : <StateView kind="loading" title="Đang mở trang riêng tư…"/>;
 }
 
@@ -386,7 +387,7 @@ function Activity() {
   return (<>
     <div className="pageHead"><div><h1>Hoạt động của tôi</h1><p>Lấy từ nhật ký kiểm toán của hệ thống.</p></div></div>
     <Card>{error ? <ErrorState error={error} retry={reload}/> : loading && !data ? <StateView kind="loading"/> : data!.length === 0 ? <StateView kind="empty" title="Chưa có hoạt động"/> : (
-      <ul className="activityList">{data!.map((a) => <li key={a.id}><span className="muted">{ago(a.createdAt)}</span><b>{actionLabel(a.action)}</b>{a.projectId ? <Link href={`/studio/projects/${a.projectId}`}>mở ứng dụng</Link> : null}</li>)}</ul>
+      <ul className="activityList">{data!.map((a) => <li key={a.id}><span className="muted">{ago(a.createdAt)}</span><b>{actionLabel(a.action)}</b>{a.projectId ? <Link href={S(`/projects/${a.projectId}`)}>mở ứng dụng</Link> : null}</li>)}</ul>
     )}</Card>
   </>);
 }

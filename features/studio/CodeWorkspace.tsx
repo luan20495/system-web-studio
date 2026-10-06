@@ -9,6 +9,7 @@ import { useSession } from "../session";
 import { ago, ErrorState, errText, fmtDate, StateView, tok, usd } from "../ui";
 import { Drawer, MembersDrawer, PublishModal } from "./drawers";
 import { DesignPane, IdeDrawer, PackagesDrawer, RuntimeDrawer } from "./CodePanels";
+import { projectBase, S } from "./base";
 
 const STATUS: Record<CodeChange["status"], string> = { BUILDING: "Đang build", READY: "Sẵn sàng", FAILED: "Build lỗi", MERGED: "Đã hợp nhất", DISCARDED: "Đã huỷ" };
 const STAGE: Record<string, string> = { CLAIMED: "đã nhận", SOURCE: "lấy mã", SCAN_SOURCE: "quét mã", PREPARE: "chuẩn bị", INSTALL: "cài gói", BUILD: "build",
@@ -38,7 +39,7 @@ function DiffView({ files }: { files: DiffFile[] }) {
 
 export function CodeWorkspace({ project, view, onProject }: { project: ApiProject; view?: string; onProject: (p: ApiProject) => void }) {
   const router = useRouter(); const { me } = useSession();
-  const ws = project.workspaceId, pid = project.id, base = `/studio/projects/${pid}`;
+  const ws = project.workspaceId, pid = project.id, base = projectBase(pid);
   const mode: "ai" | "code" | "design" = view === "code" ? "code" : view === "design" ? "design" : "ai";
   const panel = ["members", "publish", "versions", "packages", "ide", "runtime"].includes(view ?? "") ? view : null;
   const isServer = SERVER_KINDS.includes(project.appKind ?? "SOURCE_WEB_APP");
@@ -122,7 +123,7 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
     <div className="studio codeStudio">
       <header className="topbar">
         <div className="brand">
-          <button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push("/studio/projects")}>←</button>
+          <button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}>←</button>
           <div>
             <div className="projectName">{project.name}</div>
             <div className="projectMeta">Ứng dụng web (mã nguồn) · React + Vite · revision {project.revision}{canEdit ? "" : " · chỉ xem"}</div>

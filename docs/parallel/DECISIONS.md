@@ -37,3 +37,6 @@ Site xuất bản là HTML tĩnh không script (ADR 0009, CSP). Đề xuất: kh
 
 ## D-C5-05 — Quyền vào portal (tạm) bám `me.systemAdmin`; ẩn UI không thay thế kiểm quyền server · PROPOSED · 2026-10-05 · C5
 `platform.operate` và `tenant.administer` hiện đều theo `systemAdmin` vì backend chỉ có `/admin/*` cho system_admin và chưa có TENANT_ADMIN (T3) / bảng tenant (T2); `studio.build` cần ≥1 workspace. Khi T2/T3 có API, chỉ sửa `capabilitiesOf()` trong `packages/permissions`. Backend chưa tách tenant nên Admin web hiện hiển thị dữ liệu toàn nền tảng cho system admin; các mục chưa có backend (Công ty, Nhóm, Chia sẻ, Nguồn dữ liệu, AI riêng/BYOK) hiện thông báo "Chưa sẵn sàng", không có dữ liệu giả.
+
+## D-C5-06 — Link portal theo cấu hình; dev server bind loopback · PROPOSED · 2026-10-06 · C5
+Không còn `/admin` `/studio` viết cứng trong UI: trong app dùng `portalPath`/`S()`/`A()`, sang portal khác dùng `portalHref` với `NEXT_PUBLIC_PORTAL_URL_{PLATFORM,ADMIN,STUDIO}` (rỗng = cùng origin). `dev`/`start` của các app Next bind `127.0.0.1`. Chi tiết và cấu hình: `docs/parallel/agents/C5_PHASE2_PORTALS.md`. D-C5-05 vẫn **TEMPORARY**: gỡ khi C1 giao TenantContext/permission canonical; chỉ sửa `capabilitiesOf()`.

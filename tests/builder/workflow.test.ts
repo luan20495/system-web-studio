@@ -49,7 +49,7 @@ test("move step swaps neighbours and clears a stale explicit next", () => {
 });
 
 test("conditions read in Vietnamese incl. nested all/any/not/exists", () => {
-  const c = { all: [{ op: "GT", left: { from: "INPUT", path: "amount" }, right: { from: "LITERAL", value: 100 } }, { not: { exists: { from: "STEP_OUTPUT", stepId: "s1", path: "ok" } } }] } as never;
+  const c = { all: [{ op: "GT", left: { from: "INPUT", path: "amount" }, right: { from: "LITERAL", value: 100 } }, { not: { exists: { from: "STEP", stepId: "s1", path: "ok" } } }] } as never;
   const text = W.describeCondition(c);
   assert.match(text, /đầu vào amount lớn hơn 100/); assert.match(text, /không/); assert.match(text, / và /);
 });

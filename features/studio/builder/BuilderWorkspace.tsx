@@ -29,7 +29,6 @@ import { defaultProps, typeLabel } from "./core/library";
 import { sectionsOf } from "./core/pages";
 import { capabilitiesFor, whyNot } from "./core/permissions";
 import { blockers, preflight, type PreflightIssue } from "./core/preflight";
-import { available, staticReadiness } from "./core/readiness";
 import type { Readiness } from "./core/readiness";
 
 type Device = "desktop" | "tablet" | "mobile";
@@ -212,4 +211,3 @@ export function BuilderWorkspace(props: {
   );
 }
 
-export { available, staticReadiness };

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api, ApiError } from "@/lib/http-api";
 import { renderSchemaDocument } from "@/lib/schema-preview";
-import type { AiStatus, ApiProject, AssetDto, BlockDto, PageSchema, PromptHistoryItem, RegistryComponent, SchemaOperation, Section, VersionSummary } from "@/lib/http-types";
+import type { AiStatus, ApiProject, AssetDto, BlockDto, PageSchema, PromptHistoryItem, RegistryComponent, SchemaOperation, VersionSummary } from "@/lib/http-types";
 import type { DeviceMode } from "@/lib/types";
 import { sectionLabel, sectionSummary } from "@/components/SectionInspector";
 import type { AppDefinitionV2, DefinitionOperation } from "@xweb/types";
@@ -20,6 +20,7 @@ import { SaveBlockDrawer, SaveTemplateSection } from "./libraryPanels";
 import { CodeWorkspace } from "./CodeWorkspace";
 import { SiteDrawer } from "./SitePanels";
 import { insertable } from "../library";
+import { projectBase, S } from "./base";
 
 type Mode = "ai" | "design" | "code";
 type PanelName = "members" | "versions" | "assets" | "publish" | "settings" | "site";
@@ -36,7 +37,7 @@ const nonceOfPage = () => (typeof document === "undefined" ? undefined : (docume
 
 export function ProjectWorkspace({ projectId, view }: { projectId: string; view?: string }) {
   const router = useRouter(); const params = useSearchParams(); const { me } = useSession();
-  const base = `/studio/projects/${projectId}`;
+  const base = projectBase(projectId);
   const lastModeKey = `ws-mode-${projectId}`;
   const mode: Mode = MODES.includes(view as Mode) ? (view as Mode) : ((() => { try { const m = sessionStorage.getItem(lastModeKey); return MODES.includes(m as Mode) ? (m as Mode) : "ai"; } catch { return "ai"; } })());
   const panel: PanelName | null = PANELS.includes(view as PanelName) ? (view as PanelName) : null;
@@ -183,7 +184,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
     selectedId: null, interactive: false, nonce: nonceOfPage(), assets: assetUrls, pageId
   }) : ""), [schema, assetUrls, pageId]);
 
-  if (loadError) return <div className="wsError"><ErrorState error={loadError} retry={() => { setLoadError(null); reload().catch(setLoadError); }}/><p><a className="btn" href="/studio/projects">← Danh sách ứng dụng</a></p></div>;
+  if (loadError) return <div className="wsError"><ErrorState error={loadError} retry={() => { setLoadError(null); reload().catch(setLoadError); }}/><p><a className="btn" href={S("/projects")}>← Danh sách ứng dụng</a></p></div>;
   if (project?.appType === "STATIC_APP") return <CodeWorkspace project={project} view={view} onProject={setProject}/>;
   if (!project || !schema) return <div className="wsError"><StateView kind="loading" title="Đang mở ứng dụng…"/></div>;
   // company blocks, then my own drafts (an approved block of mine is already in the company list)
@@ -207,7 +208,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
         blocks={blockOptions.map(({ b, who }): BlockOption => ({ id: b.id, name: b.name, who, baseLabel: label(b.baseComponent) }))}
         applyOps={applyOps} addBlock={(id) => { const o = blockOptions.find(({ b }) => b.id === id); if (o) void addBlock(o.b); }}
         renderPreview={renderPreview} labelOf={label} summaryOf={sectionSummary}
-        leading={<button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push("/studio/projects")}>←</button>}
+        leading={<button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}>←</button>}
         modeTabs={modeTabs}
         trailing={<>
           <button className="button ghost" onClick={() => go("site")}>Website</button>
@@ -217,7 +218,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
         goAi={() => go("ai")} openSite={() => go("site")} openMembers={() => go("members")} openPublish={() => go("publish")} saveBlock={() => setSavingBlock(true)}/> : (
       <header className="topbar">
         <div className="brand">
-          <button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push("/studio/projects")}>←</button>
+          <button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}>←</button>
           <div>
             <div className="projectName">{project.name}</div>
             <div className="projectMeta">{latest ? `Phiên bản ${latest}` : "Chưa có phiên bản"} · revision {revision} · {project.siteVisibility === "PUBLIC" ? "Công khai" : "Riêng tư"}{readOnly ? " · chỉ xem" : ""}</div>

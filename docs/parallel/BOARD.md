@@ -13,6 +13,7 @@ Status: `NOT_STARTED` · `READY` (brief sẵn sàng, chưa bắt đầu) · `IN_
 | T12 — Builder data binding | C5 | NOT_STARTED | agent/c5-web | T6 (AppDefinition ViewModel), T8 (Query API), PREP-T12 | — |
 | PREP-T13 — ActionRuntime architecture + scaffold | C4 | READY | agent/c4-workflow | contract `action-workflow.md` | — |
 | PREP-T12 — Builder/data binding architecture audit | C5 | DONE | agent/c5-web | contracts `app-definition-v2.md`, `data-connector.md`, `action-workflow.md`; audit: `audit/PREP-T12-builder-architecture.md`; T12 vẫn chờ T6, T8, T10, T11 và B-C5-01…07 | — |
+| PHASE 2 — Builder frontend trên contract V2 (frozen `integration/v2 @ c59604b`) | C5 | READY_FOR_REVIEW | agent/c5-web | backend C1–C4 chưa tích hợp: UI báo "Chưa sẵn sàng" (không fake); chi tiết `agents/C5_PHASE2_PORTALS.md`, D-C5-06, B-C5-08 | — |
 
 Ghi chú: T1/T2/T6/T8/T13/T12 là nhãn task theo kế hoạch tổng. Brief từng agent: `docs/parallel/agents/` (`C1_T1`, `C2_T6`, `C3_T8`, `C4_PREP_T13`, `C5_PREP_T12`). T13 và T12 đầy đủ chưa bắt đầu; C4 và C5 làm bước PREP trước.
 Mỗi task: test + commit riêng; report cuối task theo `CLAUDE.md`.

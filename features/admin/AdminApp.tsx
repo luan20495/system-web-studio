@@ -9,7 +9,7 @@ import { CreateUserDialog, LinkBox } from "./UserDialogs";
 import { AiAdmin, UserAiCard } from "./AiSetup";
 import type { ActivationLink } from "@/lib/http-types";
 import { useSession } from "../session";
-import { PORTAL_LABEL, rememberPortal, type PortalId } from "@xweb/permissions";
+import { PORTAL_LABEL, portalHref, rememberPortal, type PortalId } from "@xweb/permissions";
 import { PortalSwitcher } from "@xweb/ui";
 import { A, adminPortal, otherConsoleHref, owns, setAdminPortal, type AdminPortal } from "./base";
 import { useLoad } from "../useLoad";
@@ -115,7 +115,7 @@ function AdminHeader() {
       <div className="crumb">{CONSOLE_NAME[adminPortal()]}</div>
       <div className="row">
         {adminPortal() === "all"
-          ? (me && me.workspaces.length > 0 ? <Link className="btn sm" href="/studio" onClick={() => rememberPortal("builder")}>Mở Builder Studio</Link> : null)
+          ? (me && me.workspaces.length > 0 ? <Link className="btn sm" href={portalHref("studio")} onClick={() => rememberPortal("builder")}>Mở Builder Studio</Link> : null)
           : <PortalSwitcher me={me} current={adminPortal() as PortalId}/>}
         <button className="btn sm ghost" onClick={() => void logout()}>Đăng xuất</button>
       </div>
@@ -181,7 +181,7 @@ function SetupChecklist({ users, projects }: { users: number; projects: number }
     { done: providers.data.some((p) => p.models.some((m) => m.enabled)), label: "Chọn mô hình mặc định", href: A("/ai/models"), action: "Chọn mô hình" },
     { done: limits.data.customized, label: "Thiết lập hạn mức AI", href: A("/ai/limits"), action: "Thiết lập" },
     { done: users > 1, label: "Thêm người dùng", href: A("/users"), action: "Thêm người dùng" },
-    { done: projects > 0, label: "Tạo website đầu tiên", href: "/studio", action: "Mở Builder Studio" }
+    { done: projects > 0, label: "Tạo website đầu tiên", href: portalHref("studio"), action: "Mở Builder Studio" }
   ];
   if (items.every((i) => i.done)) return null;
   return (

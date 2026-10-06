@@ -56,6 +56,18 @@ export function portalHref(portal: PortalId, path = ""): string {
   const origin = PORTAL_ORIGIN[portal].replace(/\/+$/, "");
   return `${origin}${PORTAL_PREFIX[portal]}${path}`;
 }
+/** Origin configured for a portal ("" = same origin). */
+export const portalOrigin = (portal: PortalId): string => PORTAL_ORIGIN[portal].replace(/\/+$/, "");
+/**
+ * In-app path inside a portal (no origin): portalPath("studio", "/projects/1") -> "/studio/projects/1".
+ * Use it for navigation INSIDE the current web app (router.push, <Link>); use portalHref for links that leave to another portal.
+ */
+export const portalPath = (portal: PortalId, path = ""): string => `${PORTAL_PREFIX[portal]}${path}`;
+/** Which portal an in-app path belongs to, from its first segment ("/studio/x" -> "studio"); null when it is not a portal path. */
+export function portalOfPath(path: string | null | undefined): PortalId | null {
+  const first = (path ?? "").split(/[?#]/)[0].split("/").filter(Boolean)[0];
+  return PORTAL_IDS.find((p) => PORTAL_PREFIX[p] === `/${first}`) ?? null;
+}
 
 // ---- legacy single-app helpers (the combined root app still uses them) -------------------------------------------------------
 export type Portal = "admin" | "builder";
@@ -70,7 +82,7 @@ export function rememberedPortal(): Portal | null {
 /** Only same-app paths are accepted as a post-login destination (no open redirects, no protocol-relative URLs). */
 export function safeNext(next: string | null | undefined): string | null {
   if (!next || !next.startsWith("/") || next.startsWith("//") || next.includes("\\")) return null;
-  return /^\/(platform|admin|studio)(\/|$|\?)/.test(next) ? next : null;
+  return portalOfPath(next) && /^\/[a-z]+(\/|$|\?|#)/.test(next) ? next : null;
 }
 
 export const isAdmin = (me: Me) => me.systemAdmin === true;
@@ -86,15 +98,16 @@ export function resolvePostLogin(input: { me: Me | null; disabled?: boolean; por
   if (disabled) return "/auth/no-access?reason=disabled";
   if (!me) return "/login" + (next ? `?next=${encodeURIComponent(next)}` : "");
   if (next) {
-    if (next.startsWith("/platform")) return canAccessPortal(me, "platform") ? next : "/auth/no-access";
-    if (next.startsWith("/admin")) return isAdmin(me) ? next : "/auth/no-access";
+    const target = portalOfPath(next);
+    if (target === "platform") return canAccessPortal(me, "platform") ? next : "/auth/no-access";
+    if (target === "admin") return isAdmin(me) ? next : "/auth/no-access";
     return hasWorkspace(me) ? next : "/auth/no-workspace";
   }
-  if (portal === "admin") return isAdmin(me) ? "/admin" : "/auth/no-access";
-  if (portal === "builder") return hasWorkspace(me) ? "/studio" : "/auth/no-workspace";
+  if (portal === "admin") return isAdmin(me) ? portalPath("admin") : "/auth/no-access";
+  if (portal === "builder") return hasWorkspace(me) ? portalPath("studio") : "/auth/no-workspace";
   // no explicit choice: employees go to the Studio; an admin without any workspace goes to the console
-  if (hasWorkspace(me)) return "/studio";
-  return isAdmin(me) ? "/admin" : "/auth/no-workspace";
+  if (hasWorkspace(me)) return portalPath("studio");
+  return isAdmin(me) ? portalPath("admin") : "/auth/no-workspace";
 }
 
 /**
