@@ -22,3 +22,12 @@ Quyết định ban đầu (phân vùng số migration cố định theo agent) 
 
 ## D-007 — C0 cấp số Flyway migration · ACCEPTED · 2026-10-05 · C0
 Agent không tự chọn Flyway migration version. Khi cần migration, agent ghi request vào `docs/parallel/BOARD.md` (mục *Migration requests*); C0 cấp next available version (V26, V27, …). Một version gắn với đúng một task. Migration được merge theo thứ tự tăng dần. Không bật `outOfOrder=true`. Chi tiết: `OWNERSHIP.md §6`.
+
+## D-C0-10 — Web-only V2 preparation applied on integration/v2 (uncompiled) · ACCEPTED · 2026-10-06 · C0
+C0 applied its own shared patches (PublicAddress canonical policy, single-route webhook security, exact-origin CORS guard, explicit OFF flags, `transfer-ownership` self-grant 403) and froze contract updates A–D (`ActionDef.trigger?`, mapping `transforms[]` canonical, 14 permission codes kept, data-mutation 409 `IDEMPOTENCY_OUTCOME_UNKNOWN` / 422 `MUTATION_REJECTED`). No C1–C4 code imported; no migration added. Nothing compiled or run: verification = `MAC_INTEGRATION_CHECKLIST.md`.
+
+## D-C0-11 — Wiring skeleton is non-compiled until the agent code is imported · ACCEPTED · 2026-10-06 · C0
+`backend/src/wiring-skeleton/*.kt.skel` is not a source set and holds typed TODO adapters only (no fake implementations). It moves to `backend/src/main/kotlin/com/systemwebstudio/wiring/` as separate commits after the import steps S4–S16 are green. Only `wiring/WebOrigins.kt` is live.
+
+## D-C0-12 — Frontend monorepo, three deployments (ADR 0022) · ACCEPTED · 2026-10-06 · C0
+Records C5's replacement of ADR 0001/0002: one monorepo, three frontend deployments (platform/admin/studio), shared packages, one modular-monolith backend, no microservices. C5 code import follows the backend gate (checklist S17b).

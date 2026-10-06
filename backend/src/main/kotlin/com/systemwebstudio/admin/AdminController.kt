@@ -184,6 +184,8 @@ class AdminController(
             ?: throw ApiException.notFound("PROJECT_NOT_FOUND", "Application not found")
         val ws = row["workspace_id"] as UUID; val previous = row["owner_user_id"] as UUID
         if (previous == target) return jdbc.query("$appSelect WHERE p.id = ?", { rs, _ -> appRow(rs) }, id).first()
+        // B-C1-13 / R-08: nobody raises its own authority; someone else must hand over the ownership
+        if (target == me.userId) throw ApiException(HttpStatus.FORBIDDEN, "SELF_GRANT_FORBIDDEN", "You cannot make yourself the owner of an application")
         val eligible = count("SELECT count(*) FROM workspace_members m JOIN users u ON u.id = m.user_id WHERE m.workspace_id = ? AND m.user_id = ? AND m.active AND u.enabled", ws, target)
         if (eligible == 0L) throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "NOT_WORKSPACE_MEMBER", "The new owner must be an enabled member of the workspace")
         jdbc.update("UPDATE projects SET owner_user_id = ?, updated_at = now() WHERE id = ?", target, id)

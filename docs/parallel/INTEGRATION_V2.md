@@ -58,7 +58,7 @@ Branch: `integration/v2`, created from the commit that carries this document (sa
 | 8 | **Full tests**: Gradle suite incl. Testcontainers, 14 PG tests, npm builds, E2E (`factory-flow`, `public-flow`, `a11y`) | – | recorded in `BASELINE.md`; only then discuss merge to `feat/production-hardening` |
 
 ## 6. Migration order
-V26 (C1/T2) → V27 (C2/T7 `publish_configs`) only after V26 is integrated and verified → nothing else until requested one by one, in the dependency order of `integration-contract.md` §5. No bulk assignment. `outOfOrder` stays off. BOARD currently shows requests from several agents with no number; they stay unnumbered.
+V26 (C1/T2) → V27 (C2/T7 `publish_configs`) only after V26 is integrated and verified → nothing else until requested one by one, in the dependency order of `integration-contract.md` §5. No bulk assignment. `outOfOrder` stays off. BOARD currently shows requests from several agents with no number; they stay unnumbered. **Authoritative ledger: `MIGRATION_LEDGER.md` (2026-10-06).**
 
 ## 7. Review of V26 (`V26__tenant_foundation.sql`) — C0 findings
 Verified correct: order (create → DEFAULT tenant → nullable columns → backfill → verification block → NOT NULL/FK/UNIQUE/composite FK/indexes → triggers); duplicate slugs impossible; composite FKs `(workspace_id, tenant_id)→workspaces(id, tenant_id)` make child tenant ≡ workspace tenant; every base INSERT into the four tables omits `tenant_id` and is filled by the DEFAULT/trigger (base code keeps working); triggers fire only on `UPDATE OF workspace_id`.
@@ -71,7 +71,7 @@ Defects (all must be fixed or recorded before acceptance):
 6. **Untested on rows** — `TenantFoundationMigrationTests` runs on an empty DB (V2 removed the seed workspace). Add a test that migrates from V25 with seeded users/workspaces/projects/members.
 7. Minor: pin `search_path` in plpgsql functions; `tenants.updated_at` maintenance; slug reserved words; `assertNotLastAdmin` race; slug race → 409.
 
-## 8. `PublicAddress` — canonical patch (C0 to apply to `runtime/Gateway.kt`, step 5)
+## 8. `PublicAddress` — canonical patch (APPLIED 2026-10-06 to `runtime/Gateway.kt`; **not compiled, not run** — Mac step S1 verifies it; tests in `PublicAddressTests`)
 Verified in the base: `isPublic` blocks only loopback/site-local/link-local/any-local/multicast/fc00::/7/100.64/10/169.254.169.254/0.* and treats as **public**: 240.0.0.0/4, 192.0.0.0/24, 198.18.0.0/15, TEST-NETs and 192.88.99/24; IPv6 `::a.b.c.d`, NAT64 `64:ff9b::/96` and `64:ff9b:1::/48`, 6to4 `2002::/16`, Teredo `2001::/32`, `2001:db8::/32`, `100::/64`, SIIT. C3 stop-gap `SupplementaryRanges` covers part. Proposed (written by C3's reviewer, mirrored and probed in Java on JDK 21; **not compiled as Kotlin** — compile and test it before use):
 ```kotlin
 object PublicAddress {

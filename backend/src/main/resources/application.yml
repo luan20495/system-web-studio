@@ -180,7 +180,34 @@ app:
     ai-call-days: ${CLEANUP_AI_CALL_DAYS:400}              # AI usage accounting rows
     # audit_events are never deleted by the application.
   cors:
+    # Exact origins only (scheme://host[:port]): credentials are allowed, so no "*", no path (SecurityConfiguration.requireExactOrigins enforces it).
+    # The default still serves the legacy single UI (:3000). When the three portals are imported (C5, import step 6) this default becomes the three
+    # origins below and AuthSecurityTests follows; production has no default (application-prod.yml). See docs/parallel/WEB_SECURITY_CONFIG.md §2.
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000}
+  # The three frontend deployments (ADR 0022). Declared here as the single source of truth for documentation and the C0 wiring (`wiring/web/WebOrigins`);
+  # nothing reads them for CORS or OIDC yet. Each is one exact origin. A portal reaches the API only through its own same-origin /api proxy.
+  web:
+    origins:
+      platform: ${WEB_ORIGIN_PLATFORM:http://localhost:3001}   # SYSTEM_ADMIN (platform scope)
+      admin: ${WEB_ORIGIN_ADMIN:http://localhost:3002}         # TENANT_ADMIN and scoped managers
+      studio: ${WEB_ORIGIN_STUDIO:http://localhost:3003}       # tenant members: build, run, publish
+  # --- V2 feature switches (C0-owned, frozen). EVERY ONE IS OFF. Turning one on is a decision recorded in docs/parallel/DECISIONS.md, not a config tweak:
+  # the conditions are in docs/contracts/v2/integration-contract.md §6 and docs/parallel/V2_IMPORT_MANIFEST.md. The environment override exists for tests
+  # and for the day the condition is met; prod must not set any of them before then.
+  tenancy:
+    # false = a SYSTEM_ADMIN is platform scope only (no tenant business data: apps, schemas, data, workflows). true restores the legacy "god mode".
+    system-admin-business-access: ${TENANCY_SYSTEM_ADMIN_BUSINESS_ACCESS:false}
+  ai-planner:
+    enabled: ${AI_PLANNER_ENABLED:false}            # C2. ON only after C1 permissions + C3 AiDataCatalog + canonical AppDefinition are integrated and wired
+  tenant-ai:
+    enabled: ${TENANT_AI_ENABLED:false}             # C2. ON only after the outbound call re-checks the address with PublicAddress at call time (DNS rebinding)
+  publish-configs:
+    enabled: ${PUBLISH_CONFIGS_ENABLED:false}       # C2. Needs V27 (publish_configs) applied and verified
+  data-platform:
+    enabled: ${DATA_PLATFORM_ENABLED:false}         # C3. Reserved name, read only by wiring/**; gates every data-source / query / mutation endpoint
+    webhooks-enabled: ${DATA_PLATFORM_WEBHOOKS_ENABLED:false}   # C3. The anonymous ingest route is always declared in security; this switch decides whether a handler exists
+  workflow:
+    enabled: ${WORKFLOW_ENABLED:false}              # C4. Reserved name, read only by wiring/**; gates action/workflow/approval endpoints and the scheduler
   rate-limit:
     login-user-max: 5
     login-ip-max: 50

@@ -19,8 +19,10 @@ Mỗi task: test + commit riêng; report cuối task theo `CLAUDE.md`.
 
 ## Migration requests (Flyway — chỉ C0 cấp số)
 
-Agent ghi request ở đây; **C0 điền cột Version** theo thứ tự V26, V27, V28, … Một version chỉ thuộc một task. Agent không tự chọn số và chỉ tạo file migration sau khi có số. Integration branch merge migration theo thứ tự tăng dần. Không bật `outOfOrder=true`. Hiện tại DB tới V25; next available = **V26**.
+Agent ghi request ở đây; **C0 điền cột Version** theo thứ tự V26, V27, V28, … Một version chỉ thuộc một task. Agent không tự chọn số và chỉ tạo file migration sau khi có số. Integration branch merge migration theo thứ tự tăng dần. Không bật `outOfOrder=true`. Hiện tại DB tới V25. **V26 và V27 đã cấp** (bảng dưới); **không cấp thêm số nào** cho tới khi C0 duyệt từng request theo thứ tự trong [`MIGRATION_LEDGER.md`](MIGRATION_LEDGER.md) — số kế tiếp sẽ là V28 nhưng CHƯA được cấp, không ai được tự chọn.
 
 | Version | Task | Requester | Mô tả thay đổi schema | Status |
 |---|---|---|---|---|
-| V26 | — | — | (chưa cấp) | AVAILABLE |
+| V26 | T2 | C1 | `V26__tenant_foundation.sql` — tenants, tenant_members, tenant_id + backfill + FK, guarded fill trigger. Bản đã sửa ở `fix/c1-v2`. | ASSIGNED (2026-10-06) — chưa import vào `integration/v2`; chỉ áp dụng sau Gradle xanh |
+| V27 | T7 | C2 | `V27__publish_configs.sql` — bảng `publish_configs` (policy bền vững của publish). | ASSIGNED, **có điều kiện**: C2 chỉ tạo file sau khi V26 đã tích hợp **và** verify trên Mac (checklist bước 8); cờ `app.publish-configs.enabled` vẫn OFF |
+| (không cấp) | các request khác | C1 / C2 / C3 / C4 | Thứ tự phụ thuộc: tenant resources → data foundation (C3, MỘT request gộp) → sharing/departments/groups (C1) → action/workflow persistence (C4) → RLS → audit hardening → compat removal. Chi tiết, điều kiện và blocker: `MIGRATION_LEDGER.md` §2. | UNNUMBERED — không ai tự chọn số |
