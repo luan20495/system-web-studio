@@ -41,3 +41,7 @@ C4 reported the AMQP adapter coded, durable queue wiring partial and the real br
 - **Suggested contract/fix:** wire `ActionNotifyPort` (or hide NOTIFY from the contract until it is); rebase/merge the queue adapter onto the integration baseline, run it under Gradle + a real RabbitMQ, then C0 wires the selection.
 - **C5 workaround:** fixture uses `START_WORKFLOW`; E2E-14 BLOCKED with `E2E_RABBITMQ_WIRED` / `E2E_STOP_RABBIT_CMD` / `E2E_START_RABBIT_CMD` hooks ready.
 - **Blocked test IDs:** E2E-14 (NOTIFY has no flow of its own)
+
+## H-C4-01 — UPDATE 2026-10-07
+
+Run stores are durable on `integration/v2 @ 3333aa7` (V29, `app.workflow.run-store=jdbc` default). E2E-12 (rewritten: a **LIVE** WAIT-only run proven in flight, two backend restarts, same run id, idempotent replay returns the same run, SUCCEEDED after recovery) passes 7/7 repeated runs. What still blocks E2E-14 is only the unintegrated AMQP queue (H-C4-02).

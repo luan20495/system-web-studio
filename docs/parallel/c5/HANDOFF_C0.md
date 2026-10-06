@@ -102,3 +102,22 @@ From C5 (Studio/Frontend), baseline `integration/v2 @ f894cc6`. C5 changed nothi
 - **Needs from C0 (nothing new beyond H-C0-05):** integrate V29 and C3 Management into the baseline C5/C6 test; document `SECRETS_MASTER_KEY` (without it a credential write is 500 `SECRETS_UNAVAILABLE`) and the static provider env (`DEPLOY_PROVIDER`, `SITES_ORIGIN`, `RENDER_URL`, `RENDER_TOKEN`) in the local-stack docs; Gradle/Kotlin heap (`-Xmx3g`) for a clean `bootRun` on a 16 GB Mac.
 - **Evidence:** `docs/parallel/c5/MAC_RUN_2026-10-06.md` §2–§3, `docs/parallel/c5/evidence/mac/`.
 - **Blocked test IDs:** none new.
+
+## H-C0-06 — UPDATE 2026-10-07: integration/v2 @ 3333aa7 alone is now sufficient
+
+Verified: `integration/v2 @ 3333aa7` (no merge, `docs/parallel/c5/e2e-stack.sh`) passes every runnable flow (E2E-01/02/03/10/11/12/13 and S1–S9; E2E-06 with 32 `[api]` + 9 `[ui]` checks incl. query/mutation definitions). The manual merge described above is obsolete; the "needs" about `SECRETS_MASTER_KEY`, static provider env and Gradle heap stand.
+
+## H-C0-07 — a local stack cannot reach any data source (new, 2026-10-07)
+
+- **ID:** H-C0-07
+- **Owner:** C0 (C3 owns the policy class)
+- **Severity:** P2 for the V1 local macOS target (`docs/parallel/V1_LOCAL_TARGET.md`)
+- **Flow:** E2E-07 / 08 / 09 (and the "connection test succeeds" path of E2E-06)
+- **Actual backend behavior:** every connector target goes through `PublicAddressPolicy` (`PostgresTargetPolicy`, `Gateway.kt:254`): loopback and private addresses are refused (`ADDRESS_BLOCKED` on test, 403 on run) and there is no configuration switch. A Mac running the platform locally has no public PostgreSQL to point at.
+- **Impact:** the data runtime cannot be exercised end to end on the local target; E2E-07/08/09 need either a public test database or a deliberate, off-by-default, never-in-production dev allow-list.
+- **Suggested contract/fix:** C0 decides: (a) provide a documented public test source, or (b) add an explicit dev-only allow-list (e.g. `app.data-platform.dev-allow-addresses`, refused by `ProductionConfigValidator` in prod) with tests that prove prod still refuses. C5 does not propose how.
+- **Blocked test IDs:** E2E-07, 08, 09
+
+## H-C0-08 — C0's own handoff item H3 for C5 (acknowledged, not done in this batch)
+
+Portal URLs and the API mode are `NEXT_PUBLIC_*` build-time values and `nextConfig.ts` falls back to `http://127.0.0.1:8080` for `API_PROXY_TARGET`: one build per environment. C5 owns the fix (runtime config, no loopback fallback in the shipped build) but it is a feature, not part of the stability batch. Listed in NEXT.

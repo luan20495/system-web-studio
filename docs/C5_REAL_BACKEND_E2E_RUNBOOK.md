@@ -41,7 +41,7 @@ Build and start `integration/v2` (JDK 21, PostgreSQL, Redis, MinIO; Docker for T
 
 | Property | Needed by | Note |
 |---|---|---|
-| `app.data-platform.enabled=true` | E2E-06 (C3 Management routes), E2E-07 (queries route) — both mounted only with it | without it `…/app-runtime/queries/*` and `…/data-sources*` answer 404 with no code → UI shows NOT_READY "flag off"; E2E-06 reports BLOCKED (C0) "not mounted". The Management routes also need a build that contains C3 `e606465` (**not in `integration/v2`**) |
+| `app.data-platform.enabled=true` | E2E-06 (C3 Management routes), E2E-07 (queries route) — both mounted only with it | without it `…/app-runtime/queries/*` and `…/data-sources*` answer 404 with no code → UI shows NOT_READY "flag off"; E2E-06 reports BLOCKED (C0) "not mounted". The Management routes need a build that contains the C3 Management API (integrated in `integration/v2 >= 3333aa7`; before that only on `agent/c3-data-prod`) |
 | `app.workflow.enabled=true` | E2E-10, E2E-11, E2E-S1 (actions/workflows routes) | same 404-without-code behaviour |
 | `app.workflow.allow-volatile-stores=true` | only for LIVE mutating actions / workflow starts on a stack without V29 | otherwise 503 `RUNTIME_STORES_VOLATILE`; do not use for E2E-12 |
 | `app.publish-configs.enabled=true` + a SELF_HOSTED deployment provider | E2E-13 | a MOCK provider only produces a demo URL → BLOCKED |
@@ -77,10 +77,17 @@ cd apps/studio && npx next start -H 127.0.0.1 -p 3003               # setting AP
 | `E2E_DATA_WORKSPACE_ID`, `_PROJECT_ID`, `_QUERY_ID`, `_USER`, `_PASSWORD` | no | operator-seeded project with a TEST query; user needs APP_EDIT + QUERY_EXECUTE. Absent → E2E-07/08 BLOCKED |
 | `E2E_DS_TYPE`, `E2E_DS_CONFIG_JSON`, `E2E_DS_CREDENTIAL_JSON` | no | a **reachable** source (public host, valid certificate; the platform's own DB is refused) for E2E-06's "connection test succeeds" check. Environment only; never printed; a malformed value is reported without its content. Absent → only the failing-test path (a host that cannot exist) runs |
 | `E2E_PUBLIC_BASE` | no | origin of the public site if different from Studio (E2E-13); E2E-08 reports what `<origin>/runtime-config.json` answers |
-| `E2E_RESTART_BACKEND_CMD`, `E2E_DURABLE_RUN_STORES=1` | no | E2E-12 only: command that restarts the backend; assert durable stores exist (V29) |
+| `E2E_RESTART_BACKEND_CMD`, `E2E_DURABLE_RUN_STORES=1` | no | E2E-12 only: command that restarts the backend (twice per run); assert durable stores exist (V29). E2E-12 publishes the project and starts a **LIVE** WAIT-only run: the engine simulates every step in TEST mode, so a TEST run is already terminal before any restart |
+| `E2E_STOP_BACKEND_CMD`, `E2E_START_BACKEND_CMD` | no | E2E-S6, S7: stop / start ONLY the API (the start hook must return once the process is launched; the flows wait for the API) |
+| `E2E_PAUSE_BACKEND_CMD`, `E2E_RESUME_BACKEND_CMD` | no | E2E-S9: `SIGSTOP` / `SIGCONT` of ONLY the API process (a hang, not an outage) |
+| `E2E_VIEWER_POLICY` | no | `app-view` or `no-studio`, **only once C1 has decided** (H-C1-03). Unset = undecided: E2E-04/05 end BLOCKED(C1). `no-studio`: a refused viewer is the expected, passing behaviour. `app-view`: a refused viewer is a failed check |
+| `E2E_SHUFFLE_SEED=<n>` | no | shuffles the order of the selected flows (deterministic per seed): exposes order dependencies and state leaks between flows |
+| `E2E_BACKEND_URL`, `E2E_BACKEND_HEAD` | no | informational: written into every evidence block (the suite only talks to the Studio origin) |
 | `E2E_STOP_RABBIT_CMD`, `E2E_START_RABBIT_CMD`, `E2E_RABBITMQ_WIRED=1` | no | E2E-14 only |
 
-The suite never guesses how to stop a service: without the hooks E2E-12/14 stay BLOCKED.
+The suite never guesses how to stop a service: without the hooks E2E-12, S6, S7, S9 and 14 stay BLOCKED. `docs/parallel/c5/e2e-stack.sh` wires all of them for the local Mac stack.
+
+Per run the reporter writes, next to `report-*.json`, an `evidence-*.txt` with one block per flow (FLOW, RESULT, START, END, FRONTEND_HEAD, BACKEND_HEAD, BACKEND_URL, PROJECT, WORKSPACE, HTTP EVIDENCE, UI ASSERTION, PERSISTENCE ASSERTION, RESTART/RECOVERY, BLOCKER, OWNER). The kind of each check is inferred from its name (`kindOf` in `lib/report.mjs`) unless the flow passes one.
 
 ### 3.4 Run
 

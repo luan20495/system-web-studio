@@ -51,3 +51,14 @@ C5 supports the C2 proposal on the client side: a published app loads `GET /runt
 - **Impact:** a published app cannot learn its Data API host; the frontend loader is ready and tested (11 unit tests) but has nothing to load.
 - **Suggested contract/fix:** C2/C0 decide who writes the file at publish time and which Data API host/CORS/cookie model it names.
 - **Blocked test IDs:** E2E-08, E2E-09
+
+## H-C2-04 — CORRECTION 2026-10-07 (supersedes the first text)
+
+The first text said a statically published site "does not serve `/runtime-config.json`" (404). That path is C2's **proposal**, not a contract. C0's handoff names a different file: `__factory/config.json` with `apiBase` (null until a data host exists), produced by `SiteService.runtimeConfig` and served for **code apps and previews only** (`SiteControllers.kt:81,92,130`). A page-schema site answers 404 for both paths, which is by design today.
+
+- **What C2/C0 must decide (one contract):** `GET <site>/__factory/config.json → {apiBase}` (existing, code apps) vs `GET /runtime-config.json → {DATA_API_BASE_URL, ENVIRONMENT, RELEASE_ID, VERSION}` (what C5's loader and unit tests implement). C5 will align its loader to whichever is chosen; until then neither is served for page-schema sites. Evidence: every E2E-13 run prints both probes (`[fact] published site GET … → 404`) and stores them in the report (`fixtureNotes.publishedRuntimeConfig`).
+- **Blocked test IDs:** E2E-08, 09
+
+## H-C2-05 — published page: ETag present, conditional GET not honoured (P3)
+
+`GET <site>/<slug>/` answers `200` with `Cache-Control: public, no-cache, no-transform` and an `ETag`, but a repeat request with `If-None-Match: <that ETag>` answers `200` again, not `304`. Revalidation therefore re-downloads the page. Not a contract promise (so not a failing check); recorded as a fact in every E2E-13 run (`fixtureNotes.publicPageCache`).

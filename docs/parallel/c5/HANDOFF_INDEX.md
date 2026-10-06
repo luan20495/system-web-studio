@@ -18,8 +18,11 @@
 | H-C4-01 no RabbitMQ / in-memory run stores (B-C4-05/06) | C4 | P1 | E2E-12 (now PASS on a V29 stack), 14 |
 | H-C0-06 the Mac run needed V29 + C3 merged onto integration/v2 (conflict-free); env notes | C0 | P1 | - |
 | H-C1-03 workspace VIEWER holds `permissions: []` → Studio gate refuses (decision) | C1 | P2 | E2E-04, 05 (viewer part) |
-| H-C2-04 published static site answers 404 for `/runtime-config.json` | C2 | P1 | E2E-08, 09 |
+| H-C2-04 (corrected) two runtime-config contracts: `__factory/config.json {apiBase}` (C0, code apps only) vs `/runtime-config.json {DATA_API_BASE_URL}` (C2 proposal, C5 loader); neither served for page-schema sites | C2/C0 | P1 | E2E-08, 09 |
 | H-C3-04 Management API live-verified (23 api + 9 ui checks, 0 failed) | C3 | info | - |
+| H-C0-07 a local stack cannot reach any data source (public-address-only policy, no dev switch) | C0 | P2 | E2E-07, 08, 09 |
+| H-C0-08 portal URLs / API mode are build-time, loopback fallback for API_PROXY_TARGET (C0's H3 for C5) | C5 (C0 asked) | P3 | - |
+| H-C2-05 ETag present but If-None-Match answers 200 | C2 | P3 | - |
 | H-C4-02 NOTIFY 501 `ActionNotifyPort` not wired; AMQP adapter only on `agent/c4-workflow` | C4 | P2 | E2E-14 |
 
 `*` = the query half only. Live results of 2026-10-06: `MAC_RUN_2026-10-06.md`.
