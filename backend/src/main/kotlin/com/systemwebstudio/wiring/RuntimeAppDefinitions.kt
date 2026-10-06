@@ -13,6 +13,7 @@ import com.systemwebstudio.version.SchemaRepository
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Component
 import tools.jackson.databind.JsonNode
+import tools.jackson.databind.node.ObjectNode
 import java.util.UUID
 
 /** One AppDefinition document and where it came from: [versionId] is the published `project_versions.id` for LIVE and null for the working draft. */
@@ -71,7 +72,14 @@ class RuntimeAppDefinitionSource(private val definitions: DefinitionLoader) : Ap
     override fun load(tenantId: UUID, appId: UUID, mode: ExecutionMode): JsonNode? = definitions.load(tenantId, appId, mode)?.document
 }
 
-/** C3's view: `mappings` / `viewModels` of the AppDefinition version named by the scope (no version = the working draft). */
+/**
+ * C3's view: `mappings` / `viewModels` of the AppDefinition version named by the scope (no version = the working draft).
+ *
+ * The document stores the LOCAL query id in `queryRef` (`orders-list`), while C3's gateway compares `mapping.queryRef` with the id of the approved query in its
+ * catalog, which is the query's `operationKey` (`orders.list`) - `docs/contracts/v2/data-runtime.md` ("the resolver must translate"). It is translated here, on a COPY
+ * of the node (the stored document is never touched), so the gateway's "this mapping belongs to this query" check keeps its meaning: a mapping of another local query
+ * still names another operation and is refused. A `queryRef` that names no local query is left as it is and therefore matches nothing.
+ */
 class RuntimeMappingCatalog(private val definitions: DefinitionLoader) : MappingCatalog {
     override fun findMapping(scope: AppScope, ref: String): MappingDefinition? = find(scope, "mappings", ref)?.let { MappingJson.mapping(it) }
 
@@ -81,14 +89,29 @@ class RuntimeMappingCatalog(private val definitions: DefinitionLoader) : Mapping
         val projectId = scope.projectId ?: return null
         val versionId = scope.appVersionId
         val loaded = if (versionId == null) definitions.load(scope.tenantId, projectId, ExecutionMode.TEST) else definitions.loadVersion(scope.tenantId, projectId, versionId)
-        val array = loaded?.document?.get(key) ?: return null
+        val document = loaded?.document ?: return null
+        val array = document.get(key) ?: return null
         if (!array.isArray) return null
         for (i in 0 until array.size()) {
             val item = array.get(i) ?: continue
             val id = item.get("id")
-            if (id != null && id.isString && id.asString() == ref) return item
+            if (id != null && id.isString && id.asString() == ref) return withOperationKey(document, item)
         }
         return null
+    }
+
+    private fun withOperationKey(document: JsonNode, item: JsonNode): JsonNode {
+        val queryRef = item.get("queryRef")?.takeIf { it.isString }?.asString() ?: return item
+        val queries = document.get("queries")?.takeIf { it.isArray } ?: return item
+        for (i in 0 until queries.size()) {
+            val q = queries.get(i) ?: continue
+            if (q.get("id")?.takeIf { it.isString }?.asString() != queryRef) continue
+            val operationKey = q.get("operationKey")?.takeIf { it.isString }?.asString() ?: return item
+            val copy: JsonNode = item.deepCopy()
+            (copy as? ObjectNode)?.put("queryRef", operationKey)
+            return copy
+        }
+        return item
     }
 }
 
