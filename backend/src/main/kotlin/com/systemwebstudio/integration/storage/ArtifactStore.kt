@@ -43,6 +43,10 @@ class ArtifactStore(
     fun exists(key: String): Boolean = try { ensureBucket(); client.statObject(StatObjectArgs.builder().bucket(bucket).`object`(key).build()); true }
         catch (e: ErrorResponseException) { if (e.errorResponse().code() == "NoSuchKey") false else throw e }
 
+    /** Size in bytes of a stored object, or null when it does not exist (used to verify an artifact before it is served again). */
+    fun size(key: String): Long? = try { ensureBucket(); client.statObject(StatObjectArgs.builder().bucket(bucket).`object`(key).build()).size() }
+        catch (e: ErrorResponseException) { if (e.errorResponse().code() == "NoSuchKey") null else throw e }
+
     /** Write-once: an existing key is left untouched (same key = same content, because keys contain the content hash). */
     fun putOnce(key: String, bytes: ByteArray, contentType: String) {
         ensureBucket()

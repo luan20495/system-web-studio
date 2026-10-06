@@ -6,6 +6,7 @@ import com.systemwebstudio.common.ApiException
 import com.systemwebstudio.integration.deploy.DeployProvider
 import com.systemwebstudio.integration.deploy.DeployRequest
 import com.systemwebstudio.integration.deploy.DeployResult
+import com.systemwebstudio.integration.deploy.DeployVerification
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.data.redis.core.StringRedisTemplate
@@ -52,6 +53,17 @@ class SiteService(
 
     fun point(projectId: UUID, deploymentId: UUID?) {
         jdbc.update("UPDATE sites SET current_deployment_id = ?, updated_at = now() WHERE project_id = ?", deploymentId, projectId)
+    }
+
+    /** the deployment the site points at, null = offline / no site */
+    fun pointer(projectId: UUID): UUID? =
+        jdbc.query("SELECT current_deployment_id FROM sites WHERE project_id = ?", { rs, _ -> rs.getObject(1, UUID::class.java) }, projectId).firstOrNull()
+
+    /** Serve an earlier release again (null = serve nothing): the pointer and the visibility that release was published with, in one transaction. */
+    @org.springframework.transaction.annotation.Transactional
+    fun restore(projectId: UUID, deploymentId: UUID?) {
+        point(projectId, deploymentId)
+        if (deploymentId != null) jdbc.update("UPDATE projects SET site_visibility = (SELECT visibility FROM deployments WHERE id = ?) WHERE id = ?", deploymentId, projectId)
     }
 
     /** The artifact currently served for a slug, or null (unknown slug, offline, deleted project). */
@@ -147,7 +159,7 @@ class SiteService(
 /** Real static hosting (ADR 0009): the artifact built in BUILDING becomes what the site's address serves. */
 @Component
 @ConditionalOnProperty(name = ["app.deploy.provider"], havingValue = "static")
-class StaticSiteDeployProvider(private val sites: SiteService) : DeployProvider {
+class StaticSiteDeployProvider(private val sites: SiteService, private val verifier: ArtifactVerifier) : DeployProvider {
     override val name = "static"
     override val buildsArtifacts = true
     override fun deploy(request: DeployRequest): DeployResult {
@@ -156,5 +168,19 @@ class StaticSiteDeployProvider(private val sites: SiteService) : DeployProvider 
         val slug = sites.ensureSlug(projectId, request.projectName)
         sites.point(projectId, request.deploymentId)
         return DeployResult(sites.url(slug), null)
+    }
+
+    /** Post-deploy check: the address really points at this release, and everything it serves is in the artifact store. */
+    override fun verify(request: DeployRequest): DeployVerification {
+        val projectId = request.projectId ?: return DeployVerification.unhealthy("missing project")
+        val artifactId = request.artifactId ?: return DeployVerification.unhealthy("no artifact was built")
+        if (sites.pointer(projectId) != request.deploymentId) return DeployVerification.unhealthy("the site does not point at this release")
+        val check = verifier.verify(artifactId)
+        return if (check.ok) DeployVerification.healthy("the site points at this release and all its files are present") else DeployVerification.unhealthy("the artifact cannot be served: ${check.reason}")
+    }
+
+    override fun restore(projectId: UUID, previousDeploymentId: UUID?): DeployResult {
+        sites.restore(projectId, previousDeploymentId)
+        return DeployResult(null, null)
     }
 }
