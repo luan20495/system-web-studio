@@ -17,6 +17,7 @@ import com.systemwebstudio.data.datasource.NoTransactions
 import com.systemwebstudio.data.datasource.FailureCodes
 import com.systemwebstudio.data.cache.DataChangeListener
 import com.systemwebstudio.data.datasource.RateLimitGate
+import com.systemwebstudio.data.discovery.DiscoveryService
 import com.systemwebstudio.data.gateway.DataGateway
 import com.systemwebstudio.data.gateway.GatewayContext
 import com.systemwebstudio.data.gateway.GatewayGuard
@@ -29,7 +30,12 @@ import com.systemwebstudio.identity.StudioUserDetails
 import com.systemwebstudio.logic.action.ExecutionMode
 import com.systemwebstudio.tenancy.TenantContext
 import com.systemwebstudio.tenancy.TenantStatus
+import com.systemwebstudio.data.query.DefinitionAdminService
+import com.systemwebstudio.data.query.MutationDefinitionStore
+import com.systemwebstudio.data.query.QueryDefinitionStore
 import com.systemwebstudio.wiring.persistence.DataSourceBindingWriter
+import com.systemwebstudio.wiring.persistence.JdbcMutationDefinitionStore
+import com.systemwebstudio.wiring.persistence.JdbcQueryDefinitionStore
 import com.systemwebstudio.wiring.persistence.JdbcCredentialActorLookup
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
@@ -143,6 +149,15 @@ class DataManagementConfiguration {
     @Bean
     fun c3DataBindingService(repository: DataSourceRepository, writer: DataSourceBindingWriter, guard: GatewayGuard, audit: DataAuditSink, tx: DataTransactions) =
         DataBindingService(repository, writer, guard, audit, tx)
+
+    @Bean fun c3QueryDefinitionStore(jdbc: JdbcTemplate): QueryDefinitionStore = JdbcQueryDefinitionStore(jdbc)
+    @Bean fun c3MutationDefinitionStore(jdbc: JdbcTemplate): MutationDefinitionStore = JdbcMutationDefinitionStore(jdbc)
+
+    @Bean
+    fun c3DefinitionAdminService(
+        repository: DataSourceRepository, registry: DataConnectorRegistry, guard: GatewayGuard, limits: RateLimitGate, audit: DataAuditSink,
+        queries: QueryDefinitionStore, mutations: MutationDefinitionStore, listener: DataChangeListener, tx: DataTransactions
+    ) = DefinitionAdminService(repository, registry, guard, limits, audit, queries, mutations, listener, DataSourceScope.WORKSPACE, tx)
 }
 
 @RestController
@@ -151,7 +166,8 @@ class DataManagementConfiguration {
 class DataSourceManagementController(
     private val access: AccessService,
     private val admin: DataSourceAdminService,
-    private val gateway: DataGateway
+    private val gateway: DataGateway,
+    private val discovery: DiscoveryService
 ) {
     private fun ctx(me: StudioUserDetails, workspaceId: UUID): GatewayContext =
         ManagementContexts.workspace(access.forWorkspace(me.userId, workspaceId), RequestIdFilter.current())      // 404 for a non-member / another tenant
@@ -228,6 +244,92 @@ class DataSourceManagementController(
     fun test(@PathVariable workspaceId: UUID, @PathVariable id: String, @AuthenticationPrincipal me: StudioUserDetails): ResponseEntity<JsonNode> {
         val c = ctx(me, workspaceId)
         return reply { GatewayResponses.connection(gateway.testConnection(c, ManagementRequests.id(id))) }
+    }
+
+    /** discovers the structure of the data source and stores it as a new snapshot version; `{"includeSamples":true}` additionally needs QUERY_EXECUTE (C1) and is masked */
+    @PostMapping("/{id}/schema/discover")
+    fun discover(@PathVariable workspaceId: UUID, @PathVariable id: String, @RequestBody(required = false) body: JsonNode?, @AuthenticationPrincipal me: StudioUserDetails): ResponseEntity<JsonNode> {
+        val c = ctx(me, workspaceId)
+        return reply { ManagementResponses.schemaSummary(discovery.refresh(c, ManagementRequests.id(id), ManagementRequests.discover(body))) }
+    }
+
+    /** the latest stored snapshot; 404 while none was discovered */
+    @GetMapping("/{id}/schema")
+    fun schema(@PathVariable workspaceId: UUID, @PathVariable id: String, @AuthenticationPrincipal me: StudioUserDetails): ResponseEntity<JsonNode> {
+        val c = ctx(me, workspaceId)
+        return reply { ManagementResponses.schemaSnapshot(discovery.stored(c, ManagementRequests.id(id)) ?: throw ConnectorFailure(FailureCodes.NOT_FOUND, "no schema has been discovered yet")) }
+    }
+}
+
+/** Approved query and mutation definitions, scoped by data source (contract §3.5); the project-scoped form is not approved and does not exist. */
+@RestController
+@RequestMapping("/api/v1/workspaces/{workspaceId}/data-sources/{id}")
+@ConditionalOnProperty(prefix = "app.data-platform", name = ["enabled"], havingValue = "true")
+class DataDefinitionController(
+    private val access: AccessService,
+    private val definitions: DefinitionAdminService
+) {
+    private fun ctx(me: StudioUserDetails, workspaceId: UUID): GatewayContext =
+        ManagementContexts.workspace(access.forWorkspace(me.userId, workspaceId), RequestIdFilter.current())
+
+    @GetMapping("/queries")
+    fun listQueries(@PathVariable workspaceId: UUID, @PathVariable id: String, @AuthenticationPrincipal me: StudioUserDetails): ResponseEntity<JsonNode> {
+        val c = ctx(me, workspaceId)
+        return managementReply { ManagementResponses.querySummaries(definitions.listQueries(c, ManagementRequests.id(id))) }
+    }
+
+    @PostMapping("/queries")
+    fun createQuery(@PathVariable workspaceId: UUID, @PathVariable id: String, @RequestBody(required = false) body: JsonNode?, @AuthenticationPrincipal me: StudioUserDetails): ResponseEntity<JsonNode> {
+        val c = ctx(me, workspaceId)
+        return managementReply(201) { ManagementResponses.queryDefinition(definitions.createQuery(c, ManagementRequests.id(id), ManagementRequests.queryCreate(body))) }
+    }
+
+    @GetMapping("/queries/{queryId}")
+    fun getQuery(@PathVariable workspaceId: UUID, @PathVariable id: String, @PathVariable queryId: String, @AuthenticationPrincipal me: StudioUserDetails): ResponseEntity<JsonNode> {
+        val c = ctx(me, workspaceId)
+        return managementReply { ManagementResponses.queryDefinition(definitions.getQuery(c, ManagementRequests.id(id), ManagementRequests.definitionId(queryId))) }
+    }
+
+    @PatchMapping("/queries/{queryId}")
+    fun updateQuery(@PathVariable workspaceId: UUID, @PathVariable id: String, @PathVariable queryId: String, @RequestBody(required = false) body: JsonNode?, @AuthenticationPrincipal me: StudioUserDetails): ResponseEntity<JsonNode> {
+        val c = ctx(me, workspaceId)
+        return managementReply { ManagementResponses.queryDefinition(definitions.updateQuery(c, ManagementRequests.id(id), ManagementRequests.definitionId(queryId), ManagementRequests.definitionPatch(body))) }
+    }
+
+    @DeleteMapping("/queries/{queryId}")
+    fun deleteQuery(@PathVariable workspaceId: UUID, @PathVariable id: String, @PathVariable queryId: String, @AuthenticationPrincipal me: StudioUserDetails): ResponseEntity<JsonNode> {
+        val c = ctx(me, workspaceId)
+        return managementReply(204) { definitions.deleteQuery(c, ManagementRequests.id(id), ManagementRequests.definitionId(queryId)); null }
+    }
+
+    @GetMapping("/mutations")
+    fun listMutations(@PathVariable workspaceId: UUID, @PathVariable id: String, @AuthenticationPrincipal me: StudioUserDetails): ResponseEntity<JsonNode> {
+        val c = ctx(me, workspaceId)
+        return managementReply { ManagementResponses.mutationSummaries(definitions.listMutations(c, ManagementRequests.id(id))) }
+    }
+
+    @PostMapping("/mutations")
+    fun createMutation(@PathVariable workspaceId: UUID, @PathVariable id: String, @RequestBody(required = false) body: JsonNode?, @AuthenticationPrincipal me: StudioUserDetails): ResponseEntity<JsonNode> {
+        val c = ctx(me, workspaceId)
+        return managementReply(201) { ManagementResponses.mutationDefinition(definitions.createMutation(c, ManagementRequests.id(id), ManagementRequests.mutationCreate(body))) }
+    }
+
+    @GetMapping("/mutations/{mutationId}")
+    fun getMutation(@PathVariable workspaceId: UUID, @PathVariable id: String, @PathVariable mutationId: String, @AuthenticationPrincipal me: StudioUserDetails): ResponseEntity<JsonNode> {
+        val c = ctx(me, workspaceId)
+        return managementReply { ManagementResponses.mutationDefinition(definitions.getMutation(c, ManagementRequests.id(id), ManagementRequests.definitionId(mutationId))) }
+    }
+
+    @PatchMapping("/mutations/{mutationId}")
+    fun updateMutation(@PathVariable workspaceId: UUID, @PathVariable id: String, @PathVariable mutationId: String, @RequestBody(required = false) body: JsonNode?, @AuthenticationPrincipal me: StudioUserDetails): ResponseEntity<JsonNode> {
+        val c = ctx(me, workspaceId)
+        return managementReply { ManagementResponses.mutationDefinition(definitions.updateMutation(c, ManagementRequests.id(id), ManagementRequests.definitionId(mutationId), ManagementRequests.definitionPatch(body))) }
+    }
+
+    @DeleteMapping("/mutations/{mutationId}")
+    fun deleteMutation(@PathVariable workspaceId: UUID, @PathVariable id: String, @PathVariable mutationId: String, @AuthenticationPrincipal me: StudioUserDetails): ResponseEntity<JsonNode> {
+        val c = ctx(me, workspaceId)
+        return managementReply(204) { definitions.deleteMutation(c, ManagementRequests.id(id), ManagementRequests.definitionId(mutationId)); null }
     }
 }
 

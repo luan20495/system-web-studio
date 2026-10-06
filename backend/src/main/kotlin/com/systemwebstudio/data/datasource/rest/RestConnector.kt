@@ -45,6 +45,9 @@ class RestConnector(
     private val discovery = RestSchemaDiscovery(catalog, exec)
 
     override fun validateConfig(config: Map<String, String>) { RestConnectorConfig.parse(config) }
+    override fun validateQueryDefinition(def: com.systemwebstudio.data.query.QueryDefinition, config: Map<String, String>) {
+        if (def !is RestQueryDefinition) throw ConnectorFailure(FailureCodes.INVALID_QUERY, "a REST data source takes REST queries")
+    }
     override fun discovery(): SchemaDiscovery = discovery
     override fun executor(): QueryExecutor = exec
 

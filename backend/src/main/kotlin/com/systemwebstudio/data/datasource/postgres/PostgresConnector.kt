@@ -311,6 +311,26 @@ class PostgresConnector(
         val cfg = PostgresConnectorConfig.parse(config)
         policy.checkSyntax(cfg.host)
     }
+    /** only SQL, in the shape [SqlGuard] accepts, with every `:name` placeholder declared (the same checks the executor repeats before each run) */
+    override fun validateQueryDefinition(def: com.systemwebstudio.data.query.QueryDefinition, config: Map<String, String>) {
+        val sql = def as? SqlQueryDefinition ?: throw ConnectorFailure(FailureCodes.INVALID_QUERY, "a PostgreSQL data source takes SQL queries")
+        val compiled = try { SqlGuard.compile(sql.sql) } catch (e: ConnectorFailure) { throw ConnectorFailure(FailureCodes.INVALID_QUERY, "the query text is not accepted") }
+        val declared = sql.params.map { it.name }.toSet()
+        if (compiled.paramNames.any { it !in declared }) throw ConnectorFailure(FailureCodes.INVALID_QUERY, "query uses an undeclared parameter")
+    }
+
+    /** a read-only data source (`writable` not `true`) takes no mutation definition; the target must parse and the statement must be expressible for the kind */
+    override fun validateMutationDefinition(def: com.systemwebstudio.data.query.MutationDefinition, config: Map<String, String>) {
+        val cfg = PostgresConnectorConfig.parse(config)
+        if (!cfg.writable) throw ConnectorFailure(FailureCodes.READ_ONLY_VIOLATION, "this PostgreSQL data source is read-only")
+        val target = PgMutationTarget.parse(def.target, cfg)
+        try { PgMutationSql.plan(def, target, def.params.associate { it.name to (it.default?.let { d -> DataJson.toJava(d) } ?: "x") as Any }) }
+        catch (e: ConnectorFailure) {
+            // "this kind cannot be a statement" (SUBMIT) and "no value to write" are problems of the DEFINITION: the Management API answers them 400, never as a run-time code
+            throw if (e.code == FailureCodes.INVALID_PARAMS || e.code == FailureCodes.MUTATION_UNSUPPORTED) ConnectorFailure(FailureCodes.INVALID_QUERY, "the mutation does not describe a statement") else e
+        }
+    }
+
     override fun discovery(): SchemaDiscovery = discovery
     override fun executor(): QueryExecutor = exec
     /** always present; a data source that is not configured `writable=true` answers `READ_ONLY_VIOLATION` (nothing executed) */

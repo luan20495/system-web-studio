@@ -8,7 +8,17 @@ import com.systemwebstudio.data.datasource.DataSourceSpec
 import com.systemwebstudio.data.datasource.DataSourceStatus
 import com.systemwebstudio.data.datasource.DataSourceView
 import com.systemwebstudio.data.datasource.FailureCodes
+import com.systemwebstudio.data.discovery.DiscoveryService
+import com.systemwebstudio.data.discovery.SchemaSnapshot
 import com.systemwebstudio.data.query.DataJson
+import com.systemwebstudio.data.query.DefinitionDocuments
+import com.systemwebstudio.data.query.DefinitionPatch
+import com.systemwebstudio.data.query.DefinitionStatus
+import com.systemwebstudio.data.query.MutationDefinitionCreate
+import com.systemwebstudio.data.query.MutationKind
+import com.systemwebstudio.data.query.QueryDefinitionCreate
+import com.systemwebstudio.data.query.StoredMutationDefinition
+import com.systemwebstudio.data.query.StoredQueryDefinition
 import tools.jackson.databind.JsonNode
 import java.util.UUID
 
@@ -23,9 +33,14 @@ import java.util.UUID
 object ManagementRequests {
     private val CREATE_KEYS = setOf("name", "type", "config", "credential")
     private val UPDATE_KEYS = setOf("name", "config", "status", "expectedVersion")
+    private val DISCOVER_KEYS = setOf("includeSamples")
+    private val QUERY_CREATE_KEYS = setOf("queryId", "kind", "definition", "status")
+    private val MUTATION_CREATE_KEYS = setOf("mutationId", "kind", "definition", "status")
+    private val DEFINITION_PATCH_KEYS = setOf("definition", "status", "expectedVersion")
     private val CREDENTIAL_KEYS = setOf("credential")
     private val BINDING_KEYS = setOf("dataSourceId")
     private val SLOT = Regex("^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+    private val SQL_ID = Regex("^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 
     fun create(n: JsonNode?): DataSourceSpec {
         strict(n, CREATE_KEYS)
@@ -48,13 +63,54 @@ object ManagementRequests {
         return DataSourcePatch(name, config, status, expected)
     }
 
-    /** `TEST` or `LIVE`, exactly: the mode of a binding is never normalised (`live`, `Test` are refused) and never falls back to the other one */
-    fun bindingMode(raw: String): String = raw.takeIf { it == "TEST" || it == "LIVE" } ?: throw bad("mode must be LIVE or TEST")
+    /** `POST …/schema/discover`: the body may be absent or `{}`; `includeSamples` is the only key */
+    fun discover(n: JsonNode?): Boolean {
+        if (n == null || n.isNull || (n.isObject && n.size() == 0)) return false
+        strict(n, DISCOVER_KEYS)
+        val v = n.get("includeSamples") ?: return false
+        if (!v.isBoolean) throw bad("includeSamples must be true or false")
+        return v.asBoolean()
+    }
 
+    fun queryCreate(n: JsonNode?): QueryDefinitionCreate {
+        strict(n, QUERY_CREATE_KEYS)
+        val node = n!!
+        val kind = text(node, "kind").also { if (it != DefinitionDocuments.KIND_SQL && it != DefinitionDocuments.KIND_REST) throw bad("kind must be SQL or REST") }
+        return QueryDefinitionCreate(definitionId(node, "queryId"), kind, definition(node), definitionStatus(node) ?: DefinitionStatus.ACTIVE)
+    }
+
+    fun mutationCreate(n: JsonNode?): MutationDefinitionCreate {
+        strict(n, MUTATION_CREATE_KEYS)
+        val node = n!!
+        val kind = try { MutationKind.valueOf(text(node, "kind")) } catch (e: IllegalArgumentException) { throw bad("kind must be CREATE, UPDATE, DELETE or SUBMIT") }
+        return MutationDefinitionCreate(definitionId(node, "mutationId"), kind, definition(node), definitionStatus(node) ?: DefinitionStatus.ACTIVE)
+    }
+
+    /** PATCH of a query or mutation definition: `definition` (replaces the whole document) and/or `status`, plus the optional `expectedVersion` */
+    fun definitionPatch(n: JsonNode?): DefinitionPatch {
+        strict(n, DEFINITION_PATCH_KEYS)
+        val node = n!!
+        val doc = node.get("definition")?.also { if (!it.isObject) throw bad("definition must be an object") }
+        val status = definitionStatus(node)
+        if (doc == null && status == null) throw bad("nothing to change")
+        return DefinitionPatch(doc, status, expectedVersion(node))
+    }
+
+    /** the id of a query / mutation definition in a route */
+    fun definitionId(raw: String): String = raw.takeIf { SQL_ID.matches(it) } ?: throw bad("invalid definition id")
+
+    private fun definitionId(n: JsonNode, key: String): String = text(n, key).also { if (!SQL_ID.matches(it)) throw bad("invalid definition id") }
+    private fun definition(n: JsonNode): JsonNode = n.get("definition")?.takeIf { it.isObject } ?: throw bad("definition must be an object")
+    private fun definitionStatus(n: JsonNode): DefinitionStatus? = n.get("status")?.let {
+        when (textOf(it, "status")) { "ACTIVE" -> DefinitionStatus.ACTIVE; "DISABLED" -> DefinitionStatus.DISABLED; else -> throw bad("status must be ACTIVE or DISABLED") }
+    }
     private fun expectedVersion(n: JsonNode): Long? = n.get("expectedVersion")?.let {
         if (!it.isIntegralNumber || !it.canConvertToLong() || it.asLong() < 1) throw bad("expectedVersion must be a positive whole number")
         it.asLong()
     }
+
+    /** `TEST` or `LIVE`, exactly: the mode of a binding is never normalised (`live`, `Test` are refused) and never falls back to the other one */
+    fun bindingMode(raw: String): String = raw.takeIf { it == "TEST" || it == "LIVE" } ?: throw bad("mode must be LIVE or TEST")
 
     /** `{"credential": {...}}` — write-only: it is the one place a secret enters, and it goes straight into the vault */
     fun credential(n: JsonNode?): Map<String, String> {
@@ -129,4 +185,36 @@ object ManagementResponses {
 
     fun binding(mode: String, slotId: String, dataSourceId: UUID, updatedAt: java.time.Instant?): JsonNode =
         DataJson.toNode(linkedMapOf("mode" to mode, "slotId" to slotId, "dataSourceId" to dataSourceId.toString(), "updatedAt" to updatedAt?.toString()))
+
+    /** `POST …/schema/discover`: what the run found, without the entities (read them with `GET …/schema`) */
+    fun schemaSummary(r: DiscoveryService.RefreshResult): JsonNode = DataJson.toNode(linkedMapOf(
+        "version" to r.snapshot.version, "discoveredAt" to r.snapshot.discoveredAt.toString(), "changed" to r.changed, "fingerprint" to r.snapshot.fingerprint,
+        "includesSamples" to r.snapshot.includesSamples, "truncated" to r.snapshot.schema.truncated, "entityCount" to r.snapshot.schema.entities.size,
+        "fieldCount" to r.snapshot.schema.entities.sumOf { it.fields.size }, "warnings" to r.snapshot.schema.warnings
+    ))
+
+    /** `GET …/schema`: the latest stored snapshot (structure, plus samples only when they were asked for and masked); no configuration, host or credential */
+    fun schemaSnapshot(s: SchemaSnapshot): JsonNode = DataJson.toNode(linkedMapOf(
+        "version" to s.version, "discoveredAt" to s.discoveredAt.toString(), "fingerprint" to s.fingerprint, "dataSourceVersion" to s.dataSourceVersion,
+        "includesSamples" to s.includesSamples, "truncated" to s.schema.truncated, "warnings" to s.schema.warnings, "entities" to s.schema.entities.map(GatewayResponses::entity)
+    ))
+
+    /** id, kind, status, version, parameter NAMES: no SQL, no template (that is `GET …/queries/{id}`, which needs DATA_SOURCE_MANAGE) */
+    fun querySummaries(list: List<StoredQueryDefinition>): JsonNode = DataJson.toNode(linkedMapOf("items" to list.map {
+        linkedMapOf("queryId" to it.definition.id, "kind" to DefinitionDocuments.kindOf(it.definition), "status" to it.status.name, "version" to it.definition.version, "params" to it.definition.params.map { p -> p.name })
+    }))
+
+    fun queryDefinition(s: StoredQueryDefinition): JsonNode = DataJson.toNode(linkedMapOf(
+        "queryId" to s.definition.id, "kind" to DefinitionDocuments.kindOf(s.definition), "status" to s.status.name, "version" to s.definition.version,
+        "definition" to DefinitionDocuments.queryDocument(s.definition), "createdAt" to s.createdAt.toString(), "updatedAt" to s.updatedAt.toString()
+    ))
+
+    fun mutationSummaries(list: List<StoredMutationDefinition>): JsonNode = DataJson.toNode(linkedMapOf("items" to list.map {
+        linkedMapOf("mutationId" to it.definition.id, "kind" to it.definition.kind.name, "status" to it.status.name, "version" to it.definition.version, "params" to it.definition.params.map { p -> p.name })
+    }))
+
+    fun mutationDefinition(s: StoredMutationDefinition): JsonNode = DataJson.toNode(linkedMapOf(
+        "mutationId" to s.definition.id, "kind" to s.definition.kind.name, "status" to s.status.name, "version" to s.definition.version,
+        "definition" to DefinitionDocuments.mutationDocument(s.definition), "createdAt" to s.createdAt.toString(), "updatedAt" to s.updatedAt.toString()
+    ))
 }

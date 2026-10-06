@@ -120,7 +120,7 @@ object GatewayResponses {
         ))
     }
 
-    private fun entity(e: DiscoveredEntity) = linkedMapOf(
+    internal fun entity(e: DiscoveredEntity) = linkedMapOf(
         "name" to e.name, "schema" to e.schema, "kind" to e.kind.name, "primaryKey" to e.primaryKey, "metadata" to e.metadata,
         "fields" to e.fields.map { linkedMapOf("name" to it.name, "type" to it.type.name, "nullable" to it.nullable, "primaryKey" to it.primaryKey, "sourceType" to it.sourceType) },
         "relations" to e.relations.map { linkedMapOf("name" to it.name, "from" to it.fromFields, "toEntity" to it.toEntity, "toSchema" to it.toSchema, "to" to it.toFields) },

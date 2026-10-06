@@ -1,6 +1,8 @@
 package com.systemwebstudio.data.datasource
 
 import com.systemwebstudio.data.discovery.SchemaDiscovery
+import com.systemwebstudio.data.query.MutationDefinition
+import com.systemwebstudio.data.query.QueryDefinition
 import com.systemwebstudio.data.query.QueryExecutor
 
 /** Result of a connection test: typed, fixed-text, no host/IP/connection string/credential. */
@@ -25,6 +27,23 @@ interface DataConnector {
     fun mutator(): MutationExecutor? = null
     /** @throws ConnectorFailure(INVALID_CONFIG) with a fixed message naming the field, never its value */
     fun validateConfig(config: Map<String, String>)
+
+    /**
+     * Management API: checked when an approved query is created or edited, so a definition this connector could never run is refused up front (the same checks run
+     * again before every execution). [config] is the data source's non-secret configuration. Default: accept (the definition types already validated themselves).
+     * @throws ConnectorFailure(INVALID_QUERY) with a fixed message, never the offending text
+     */
+    fun validateQueryDefinition(def: QueryDefinition, config: Map<String, String>) {}
+
+    /**
+     * Management API: checked when an approved mutation is created or edited. Default: a read-only connector ([mutator] is null) refuses with
+     * `READ_ONLY_VIOLATION`; a connector that writes also checks the shape of [MutationDefinition.target] and whether this data source may write at all.
+     * @throws ConnectorFailure(READ_ONLY_VIOLATION | INVALID_CONFIG | INVALID_QUERY) with a fixed message
+     */
+    fun validateMutationDefinition(def: MutationDefinition, config: Map<String, String>) {
+        if (mutator() == null) throw ConnectorFailure(FailureCodes.READ_ONLY_VIOLATION, "this data source is read-only")
+    }
+
     fun test(ds: DataSourceRef, cred: ResolvedCredential): ConnectionTestResult
     fun discovery(): SchemaDiscovery
     fun executor(): QueryExecutor
