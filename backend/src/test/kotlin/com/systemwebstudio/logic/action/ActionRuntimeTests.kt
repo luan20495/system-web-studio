@@ -279,6 +279,27 @@ class ActionRuntimeTests {
         assertEquals("QUERY_TIMEOUT", r.audit.entries.last().errorCode)
     }
 
+    @Test fun `an unknown-outcome write stays failed and is never sent downstream again with the same key`() {
+        val r = rig(Fx.mutation(ActionType.CREATE_RECORD))
+        r.data.outcome = PortOutcome.Failure(ActionErrorCodes.IDEMPOTENCY_OUTCOME_UNKNOWN, true, "unknown")   // an adapter claiming retryable is overruled
+        val first = failure(r.runtime.execute(Fx.ctx(), createReq("k-u")))
+        assertEquals(ActionErrorCodes.IDEMPOTENCY_OUTCOME_UNKNOWN, first.code); assertFalse(first.retryable)
+        val again = failure(r.runtime.execute(Fx.ctx(), createReq("k-u")))
+        assertEquals(ActionErrorCodes.IDEMPOTENCY_OUTCOME_UNKNOWN, again.code)
+        assertEquals(1, r.data.writes.size)                                                                  // replayed from the run store, not re-sent
+        r.data.outcome = PortOutcome.Success(Fx.json.createObjectNode().put("id", "rec-2"))
+        assertInstanceOf(ActionResult.Ok::class.java, r.runtime.execute(Fx.ctx(), createReq("k-new")))      // a new client key is a new operation
+        assertEquals(2, r.data.writes.size)
+    }
+
+    @Test fun `a rejected mutation keeps its code and is not retryable`() {
+        val r = rig(Fx.mutation(ActionType.CREATE_RECORD))
+        r.data.outcome = PortOutcome.Failure(ActionErrorCodes.MUTATION_REJECTED, false, "rejected")
+        val f = failure(r.runtime.execute(Fx.ctx(), createReq("k-r")))
+        assertEquals(ActionErrorCodes.MUTATION_REJECTED, f.code); assertFalse(f.retryable)
+        assertEquals(ActionErrorCodes.MUTATION_REJECTED, r.audit.entries.last().errorCode)
+    }
+
     @Test fun `a throwing handler becomes HANDLER_ERROR without leaking the message`() {
         val throwing = object : ActionHandler {
             override val type = ActionType.NAVIGATE

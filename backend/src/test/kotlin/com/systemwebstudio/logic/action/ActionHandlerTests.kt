@@ -124,6 +124,17 @@ class ActionHandlerTests {
         assertEquals(ActionErrorCodes.IDEMPOTENCY_KEY_REQUIRED, (noKey as ActionResult.Failed).code)
     }
 
+    @Test fun `data mutation codes are frozen and never retryable even if an adapter says so`() {
+        assertEquals("IDEMPOTENCY_OUTCOME_UNKNOWN", ActionErrorCodes.IDEMPOTENCY_OUTCOME_UNKNOWN)   // wire values of data-runtime.md 4b
+        assertEquals("MUTATION_REJECTED", ActionErrorCodes.MUTATION_REJECTED)
+        for (code in listOf(ActionErrorCodes.IDEMPOTENCY_OUTCOME_UNKNOWN, ActionErrorCodes.MUTATION_REJECTED)) {
+            val f = PortOutcome.Failure(code, retryable = true, message = "m").toResult() as ActionResult.Failed
+            assertEquals(code, f.code); assertFalse(f.retryable); assertEquals("m", f.message)
+        }
+        assertTrue((PortOutcome.Failure("QUERY_TIMEOUT", true).toResult() as ActionResult.Failed).retryable)      // other codes keep the adapter's flag
+        assertTrue(ActionErrorCodes.isOutcomeUnknown(ActionErrorCodes.IDEMPOTENCY_OUTCOME_UNKNOWN)); assertFalse(ActionErrorCodes.isOutcomeUnknown(ActionErrorCodes.MUTATION_REJECTED))
+    }
+
     @Test fun `port failure and success map one to one`() {
         assertEquals(ActionResult.Failed("X", true, "m"), PortOutcome.Failure("X", true, "m").toResult())
         val ok = json.createObjectNode().put("a", 1)

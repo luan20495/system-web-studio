@@ -1,6 +1,7 @@
 package com.systemwebstudio.logic.workflow
 
 import com.systemwebstudio.logic.action.ActionDefinition
+import com.systemwebstudio.logic.action.ActionErrorCodes
 import com.systemwebstudio.logic.action.ActionRequest
 import com.systemwebstudio.logic.action.ActionResult
 import com.systemwebstudio.logic.action.AuditDomains
@@ -259,6 +260,34 @@ class WorkflowEngineTests {
         assertEquals(StepStatus.FAILED, r.step(id, "a")!!.status)
         assertEquals("BOOM", r.step(id, "a")!!.errorCode)
         assertEquals(listOf("w1", "wErr"), r.writeOrder)
+    }
+
+    @Test fun `an unknown write outcome fails the run with that code and skips onError and retries`() {
+        val r = rig(wf("uk", act("a", "w1", next = "z", onError = "h", retry = RetryPolicy(maxAttempts = 5)), act("h", "wErr", next = "z"), WorkflowStep("z", StepKind.END)))
+        r.data.script("w1", PortOutcome.Failure(ActionErrorCodes.IDEMPOTENCY_OUTCOME_UNKNOWN, true))   // even a retryable claim is overruled
+        val id = r.startOk("uk"); r.drain()
+        assertEquals(WorkflowRunStatus.FAILED, r.view(id).status)
+        assertEquals(ActionErrorCodes.IDEMPOTENCY_OUTCOME_UNKNOWN, r.view(id).errorCode)
+        assertEquals(listOf("w1"), r.writeOrder)                                                       // one attempt, error branch not entered
+        assertEquals(StepStatus.FAILED, r.step(id, "a")!!.status)
+    }
+
+    @Test fun `a rejected write is a definite failure that onError may handle and is not retried`() {
+        val r = rig(wf("rj", act("a", "w1", next = "z", onError = "h", retry = RetryPolicy(maxAttempts = 5)), act("h", "wErr", next = "z"), WorkflowStep("z", StepKind.END)))
+        r.data.script("w1", PortOutcome.Failure(ActionErrorCodes.MUTATION_REJECTED, true))
+        val id = r.startOk("rj"); r.drain()
+        assertEquals(WorkflowRunStatus.SUCCEEDED, r.view(id).status)
+        assertEquals(ActionErrorCodes.MUTATION_REJECTED, r.step(id, "a")!!.errorCode)
+        assertEquals(listOf("w1", "wErr"), r.writeOrder)
+    }
+
+    @Test fun `a step with an unknown outcome is never compensated but earlier finished steps still are`() {
+        val r = rig(wf("sagaU", act("s1", "w1", comp = "c1"), act("s2", "w2", comp = "c2"), act("s3", "w3", comp = "c3")))
+        r.data.script("w3", PortOutcome.Failure(ActionErrorCodes.IDEMPOTENCY_OUTCOME_UNKNOWN, false))
+        val id = r.startOk("sagaU"); r.drain()
+        assertEquals(ActionErrorCodes.IDEMPOTENCY_OUTCOME_UNKNOWN, r.view(id).errorCode)
+        assertEquals(listOf("w1", "w2", "w3", "c2", "c1"), r.writeOrder)                               // no "c3": it must not assume w3 was not applied
+        assertEquals(0, r.writes("c3"))
     }
 
     @Test fun `a thrown exception inside a step becomes a failed step not a lost run`() {

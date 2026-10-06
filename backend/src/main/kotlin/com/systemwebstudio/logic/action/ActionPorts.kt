@@ -152,7 +152,8 @@ sealed interface PortOutcome {
 
     fun toResult(): ActionResult = when (this) {
         is Success -> ActionResult.Ok(output)
-        is Failure -> ActionResult.Failed(code, retryable, message)
+        // An adapter can never make an unknown-outcome or definitely-rejected write retryable (data-runtime.md §4b).
+        is Failure -> ActionResult.Failed(code, retryable && !ActionErrorCodes.isNeverRetryable(code), message)
     }
 }
 

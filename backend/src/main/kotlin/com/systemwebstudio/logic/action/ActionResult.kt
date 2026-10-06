@@ -44,7 +44,8 @@ sealed interface ActionResult {
  * "unknown → 404, known-but-no-permission → 403":
  * UNKNOWN_ACTION 404 · FORBIDDEN / TENANT_DISABLED 403 · INVALID_INPUT / INVALID_DEFINITION / IDEMPOTENCY_KEY_REQUIRED 400/422 ·
  * LIMIT_EXCEEDED 413/422 · IDEMPOTENCY_KEY_REUSED / ACTION_IN_PROGRESS 409 · NOT_IMPLEMENTED 501 ·
- * TIMEOUT 504 · DEPENDENCY_UNAVAILABLE / AUDIT_UNAVAILABLE 503 · HANDLER_ERROR 500 · RATE_LIMITED 429 (with `details.retryAfterMillis`).
+ * TIMEOUT 504 · DEPENDENCY_UNAVAILABLE / AUDIT_UNAVAILABLE 503 · HANDLER_ERROR 500 · RATE_LIMITED 429 (with `details.retryAfterMillis`) ·
+ * IDEMPOTENCY_OUTCOME_UNKNOWN 409 · MUTATION_REJECTED 422 (both from the data layer, `data-runtime.md` §4b).
  */
 object ActionErrorCodes {
     const val UNKNOWN_ACTION = "UNKNOWN_ACTION"
@@ -66,6 +67,22 @@ object ActionErrorCodes {
     const val HANDLER_ERROR = "HANDLER_ERROR"
     /** The tenant exceeded its action rate. Always retryable; `details["retryAfterMillis"]` says when. */
     const val RATE_LIMITED = "RATE_LIMITED"
+
+    /**
+     * Data-mutation contract (`docs/contracts/v2/data-runtime.md` §4b), HTTP 409. An earlier attempt with this key ended **ambiguously**: the write
+     * may or may not have been applied. Never retryable with the same key (the data layer will never run it again), never "compensated as not done",
+     * and a workflow does not route it to `onError` (the run FAILS with this code). A person checks the data source and starts a new operation.
+     */
+    const val IDEMPOTENCY_OUTCOME_UNKNOWN = "IDEMPOTENCY_OUTCOME_UNKNOWN"
+
+    /** Data-mutation contract §4b, HTTP 422. The data source refused the change and **certainly applied nothing**. Not retryable with the same input; safe to treat as "not done". */
+    const val MUTATION_REJECTED = "MUTATION_REJECTED"
+
+    /** Codes that can never be made retryable, whatever a downstream port claims. */
+    private val NEVER_RETRYABLE = setOf(IDEMPOTENCY_OUTCOME_UNKNOWN, MUTATION_REJECTED)
+    fun isNeverRetryable(code: String): Boolean = code in NEVER_RETRYABLE
+    /** True when the effect of the write is unknown (it may have been applied). */
+    fun isOutcomeUnknown(code: String): Boolean = code == IDEMPOTENCY_OUTCOME_UNKNOWN
 }
 
 internal fun failed(code: String, message: String, retryable: Boolean = false, details: Map<String, String> = emptyMap()) =

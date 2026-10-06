@@ -385,7 +385,7 @@ class WorkflowEngine(
                         if (res.code == ActionErrorCodes.RATE_LIMITED) StepOutcome.Retry(
                             maxOf(RetryPolicy.MIN_BACKOFF, Duration.ofMillis(res.details["retryAfterMillis"]?.toLongOrNull()?.coerceIn(0, 300_000) ?: 0)), res.code, res.message, consumesAttempt = false
                         )
-                        else if (res.retryable && attempt < step.retry.maxAttempts) StepOutcome.Retry(step.retry.backoffAfter(attempt), res.code, res.message)
+                        else if (res.retryable && !ActionErrorCodes.isNeverRetryable(res.code) && attempt < step.retry.maxAttempts) StepOutcome.Retry(step.retry.backoffAfter(attempt), res.code, res.message)
                         else StepOutcome.Fail(res.code, res.message)
                 }
             }
@@ -487,7 +487,9 @@ class WorkflowEngine(
     private fun failStep(cur: WorkflowRun, step: WorkflowStep, st: StepState, input: JsonNode, code: String, message: String?, now: Instant): Transition {
         val failedState = st.copy(status = StepStatus.FAILED, input = input, errorCode = code, errorMessage = message?.take(300), finishedAt = now)
         val withStep = cur.withStep(failedState)
-        return if (step.onError != null) advance(withStep, step.onError, now).let { Transition(it.run, it.publishStep, it.publishCompensation, "STEP_FAILED_ROUTED") }
+        // A write whose outcome is unknown must not be routed to an error branch that assumes "not applied": the run fails with this code
+        // (data-runtime.md §4b). The step is not in `compensable`, so it is never compensated either.
+        return if (step.onError != null && !ActionErrorCodes.isOutcomeUnknown(code)) advance(withStep, step.onError, now).let { Transition(it.run, it.publishStep, it.publishCompensation, "STEP_FAILED_ROUTED") }
         else fail(withStep, code, message ?: "Step ${step.id} failed")
     }
 

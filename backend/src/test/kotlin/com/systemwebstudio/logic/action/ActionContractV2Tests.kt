@@ -259,6 +259,19 @@ class ActionContractV2Tests {
         assertInstanceOf(ActionResult.Ok::class.java, r.runtime.execute(Fx.ctx(), req(trigger = right)))
     }
 
+    // ---- names that other agents' code is compiled against (pinned so drift is a test failure, not a wiring surprise) ----------------
+
+    @Test fun `ActorKind keeps the four names of tenancy ActorKind so the C0 adapter can convert by name`() {
+        assertEquals(listOf("USER", "SYSTEM", "APP_TOKEN", "SERVICE"), ActorKind.entries.map { it.name })
+    }
+
+    @Test fun `permission codes are the five canonical codes of tenant-permission 5`() {
+        assertEquals(
+            listOf("APP_USE", "ACTION_EXECUTE", "DATA_MUTATE", "WORKFLOW_EXECUTE", "WORKFLOW_MANAGE"),
+            listOf(LogicPermissions.APP_USE, LogicPermissions.ACTION_EXECUTE, LogicPermissions.DATA_MUTATE, LogicPermissions.WORKFLOW_EXECUTE, LogicPermissions.WORKFLOW_MANAGE)
+        )
+    }
+
     // ---- the data path is the only one -------------------------------------------------------------------------------------
 
     private fun logicSources(): List<Path> {
