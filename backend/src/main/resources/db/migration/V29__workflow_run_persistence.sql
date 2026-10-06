@@ -8,7 +8,7 @@
 -- tenant's workspace or at a project of another workspace. The JDBC adapters additionally insert only for an application that belongs to the tenant
 -- (default deny). Steps hang off their run with (run_id, tenant_id) -> workflow_runs(run_id, tenant_id). No client idempotency key is stored: action_runs
 -- keeps the derived key only (C4 IdempotencyKeys.derive); workflow_runs keeps the key the caller gave to start() (the run's own idempotency scope; step keys of a run are derived from the run id). Additive only: no existing table is touched.
--- C4 contract (audit/C4-V29-readiness-and-queue-contract.md section 9, D-C0-24): action_runs.mutating (A-1) and workflow_runs.lease_owner / lease_until (H-3) are part of V29
+-- C4 contract (audit/C4-V29-readiness-and-queue-contract.md section 9, D-C0-25): action_runs.mutating (A-1) and workflow_runs.lease_owner / lease_until (H-3) are part of V29
 -- itself: V29 is not on integration/v2 yet, so no later migration is allocated for them.
 -- Undo: docs/parallel/c0/undo/U29__workflow_run_persistence.sql (guarded). The code behind it is selected by app.workflow.run-store (jdbc is the default) and
 -- gated by app.workflow.enabled (default false).

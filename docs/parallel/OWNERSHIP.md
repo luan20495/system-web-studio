@@ -59,7 +59,7 @@ Mặc định: **C0-gated** — mọi thay đổi phải có task trong BOARD v�
 | `member/**` | thành viên workspace/project | C1 |
 | `prompt/**`, `ai/**`, `integration/llm/**` | AI Gateway | C2 (ranh giới: không đổi AI Gateway governance, chỉ nối Structured Operation → AppDefinition) |
 | `asset/**` | tài sản dự án | C2 |
-| `publish/**`, `integration/deploy/**`, `integration/storage/**` | publish pipeline: Build / Publish / Deploy / Artifact / Rollback | **C2** (delegated, D-C0-25; C0 reviews and imports; no migration, no contract change of C1/C3/C4/C5 without a handoff) |
+| `publish/**`, `integration/deploy/**`, `integration/storage/**` | publish pipeline: Build / Publish / Deploy / Artifact / Rollback | **C2** (delegated, D-C0-26; C0 reviews and imports; no migration, no contract change of C1/C3/C4/C5 without a handoff) |
 | `runtime/**` (trừ connector), `code/**`, `integration/{git,queue,secrets}/**` | render/build/runtime planes, `STATIC_APP` | **C0-gated** |
 | `audit/**` | append-only | **C0-gated** (chỉ gọi `AuditService.record`, không đổi bảng/trigger) |
 | `admin/**`, `settings/**`, `maintenance/**` | admin console backend | **C0-gated** |

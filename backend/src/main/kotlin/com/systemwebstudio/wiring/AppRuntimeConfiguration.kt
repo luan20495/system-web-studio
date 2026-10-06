@@ -188,7 +188,7 @@ class WorkflowWorkerRunner(private val runtime: AppRuntime) {
 
 /**
  * Recovery of action runs (V29). A worker that dies between `begin` and `complete` leaves a RUNNING row, which would answer `ACTION_IN_PROGRESS` for ever. The sweep
- * fails a RUNNING run untouched for [staleAfter] (the `ActionRunStore.sweepStale` contract, C4 A-1, D-C0-24): a MUTATING action's run may already have written, so it becomes
+ * fails a RUNNING run untouched for [staleAfter] (the `ActionRunStore.sweepStale` contract, C4 A-1, D-C0-25): a MUTATING action's run may already have written, so it becomes
  * `IDEMPOTENCY_OUTCOME_UNKNOWN`, `retryable = false` (replayed as it is: no automatic retry, no `onError` chain, the workflow step is not retried); a non-mutating action's run
  * becomes a retryable `TIMEOUT`. [staleAfter] must be longer than the longest action timeout (default PT10M); it is the lease of a RUNNING action run: a run that has
  * not finished within it is treated as abandoned.
