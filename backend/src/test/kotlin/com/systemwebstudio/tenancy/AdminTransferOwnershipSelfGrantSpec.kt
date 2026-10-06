@@ -2,16 +2,14 @@ package com.systemwebstudio.tenancy
 
 import com.systemwebstudio.support.IntegrationTestBase
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 
 /**
- * C1 · B-C1-13 SPEC (disabled on purpose). `admin/AdminController.transfer` is NOT a C1 file, so C1 does not patch it and this test is
- * disabled: it fails against today's code (the hole is real) and must stay out of the C0 Gradle run until C0 applies the patch in
- * docs/parallel/c1/B-C1-13-admin-transfer-ownership.md. C0: apply the patch, delete the @Disabled line, run the class.
+ * C1 · B-C1-13 — ENABLED by C0. `admin/AdminController.transfer` refuses to make the caller itself the owner (403 SELF_GRANT_FORBIDDEN): the C0 patch
+ * from docs/parallel/c1/B-C1-13-admin-transfer-ownership.md was applied in 8b944cc. The test was written by C1 as a spec while the hole was open;
+ * its assertions are unchanged.
  */
 class AdminTransferOwnershipSelfGrantSpec : IntegrationTestBase() {
-    @Disabled("B-C1-13: needs the C0 patch in docs/parallel/c1/B-C1-13-admin-transfer-ownership.md — then remove this line")
     @Test
     fun `a system admin who is only a workspace member cannot make itself the owner of an application`() {
         val sc = scenario(); val sys = fx.user("xfer-sys", systemAdmin = true); fx.member(sc.ws, sys, "VIEWER"); val s = sessionFor(sys.username)
