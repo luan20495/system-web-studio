@@ -54,6 +54,9 @@ class DeploymentRepository(private val jdbc: JdbcTemplate) {
     fun firstEventAt(id: UUID, status: String): java.time.Instant? =
         jdbc.query("SELECT min(created_at) FROM deployment_events WHERE deployment_id = ? AND status = ?", { rs, _ -> rs.getTimestamp(1)?.toInstant() }, id, status).firstOrNull()
 
+    fun lastEventMessage(id: UUID, status: String): String? =
+        jdbc.query("SELECT message FROM deployment_events WHERE deployment_id = ? AND status = ? ORDER BY created_at DESC, id DESC LIMIT 1", { rs, _ -> rs.getString(1) }, id, status).firstOrNull()
+
     /** keeps an in-progress deployment fresh so the recovery sweeper does not re-publish it while it is deliberately waiting */
     fun touch(id: UUID) { jdbc.update("UPDATE deployments SET updated_at = now() WHERE id = ?", id) }
 
@@ -65,6 +68,6 @@ class DeploymentRepository(private val jdbc: JdbcTemplate) {
 
     fun staleIds(queuedOlderThanSeconds: Long, inProgressOlderThanSeconds: Long): List<UUID> = jdbc.query(
         """SELECT id FROM deployments WHERE (status = 'QUEUED' AND updated_at < now() - make_interval(secs => ?))
-           OR (status IN ('POLICY_CHECK','SECURITY_CHECK','BUILDING','DEPLOYING') AND updated_at < now() - make_interval(secs => ?))""",
+           OR (status IN ('POLICY_CHECK','SECURITY_CHECK','BUILDING','DEPLOYING','ROLLING_BACK') AND updated_at < now() - make_interval(secs => ?))""",
         { rs, _ -> rs.getObject(1, UUID::class.java) }, queuedOlderThanSeconds.toDouble(), inProgressOlderThanSeconds.toDouble())
 }

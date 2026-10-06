@@ -10,6 +10,10 @@ import java.util.UUID
  * lease expired, someone took over) cannot move the pointer, whatever it was doing.
  */
 interface PointerFence {
+    companion object {
+        /** what a provider answers when [commit] was refused: the pointer was NOT changed because the operation lost its scope */
+        const val REFUSED = "the release scope was lost: the active release was not changed"
+    }
     /** identity of the operation this fence belongs to (publish = the deployment id) */
     val operationId: UUID
     /** true once a commit was refused or the lease was found lost: the owner must stop writing */

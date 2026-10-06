@@ -30,6 +30,8 @@ import java.util.concurrent.atomic.AtomicInteger
 ])
 class DeploymentFailureRecoveryTests : IntegrationTestBase() {
     @MockitoSpyBean lateinit var store: ArtifactStore
+    @org.springframework.beans.factory.annotation.Autowired lateinit var processor: DeploymentProcessor
+    @org.springframework.beans.factory.annotation.Autowired lateinit var repo: DeploymentRepository
     /** the real probe needs a public host; here it is a test double that is not configured unless a test says so */
     @MockitoBean lateinit var probe: ReleaseHealthProbe
 
@@ -262,5 +264,117 @@ class DeploymentFailureRecoveryTests : IntegrationTestBase() {
         val d = sc.publish(expect = "FAILED")
         assertThat(d.get("error").asString()).startsWith("[DEPLOY_STATE_UNKNOWN]")
         assertThat(pointer(sc)).isEqualTo(id(first))
+    }
+
+    // ------------------------------------------------------------------ ROLLING_BACK, fail-closed, ROLLED_BACK (C2_DEPLOY_CONTRACT.md §1.1 / §3)
+
+    private fun statuses(deployment: UUID) = jdbc.queryForList("SELECT status FROM deployment_events WHERE deployment_id = ? ORDER BY created_at, id", String::class.java, deployment)
+    private fun statusOf(deployment: UUID) = jdbc.queryForObject("SELECT status FROM deployments WHERE id = ?", String::class.java, deployment)!!
+
+    /** every file of the artifact with this hash looks missing to the store; everything else is real */
+    private fun hide(sha: String) {
+        Mockito.doAnswer { inv -> if (inv.getArgument<String>(0).contains("/$sha/")) null else inv.callRealMethod() }.`when`(store).size(Mockito.anyString())
+    }
+
+    @Test
+    fun `an unhealthy release is ROLLING_BACK before it is FAILED and never RUNNING - the previous release is back`() {
+        val sc = scenario(); sc.setHero("Bản một")
+        val first = sc.publish(); sc.setHero("Bản hai")
+        probeAnswers(com.systemwebstudio.integration.deploy.DeployVerification.unhealthy("the address answers HTTP 503"))
+        val d = sc.publish(expect = "FAILED")
+        assertThat(statuses(id(d))).containsSubsequence("DEPLOYING", "SWITCH", "ROLLING_BACK", "ROLLBACK_OK", "FAILED")
+        assertThat(statuses(id(d))).doesNotContain("RUNNING")
+        assertThat(jdbc.queryForObject("SELECT previous_deployment_id FROM deployments WHERE id = ?", UUID::class.java, id(d))).isEqualTo(id(first))     // typed state
+        assertThat(pointer(sc)).isEqualTo(id(first)); assertThat(statusOf(id(first))).isEqualTo("RUNNING")
+    }
+
+    @Test
+    fun `automatic rollback that cannot restore fails closed - pointer NULL, deployment FAILED, ROLLBACK_FAILED then ROLLBACK_OFFLINE, nothing served`() {
+        val sc = scenario(); sc.setHero("Bản một")
+        val first = sc.publish(); val slug = slugOf(first); val firstSha = sha(id(first))
+        sc.setHero("Bản hai")
+        probeAnswers(com.systemwebstudio.integration.deploy.DeployVerification.unhealthy("the address answers HTTP 503"))
+        hide(firstSha)                                                                  // the release to go back to has lost its files
+        val d = sc.publish(expect = "FAILED")
+        assertThat(d.get("error").asString()).startsWith("[VERIFICATION_FAILED]").contains("rollback:").contains("taken offline")
+        assertThat(pointer(sc)).isNull()
+        assertThat(statuses(id(d))).containsSubsequence("ROLLING_BACK", "ROLLBACK_FAILED", "ROLLBACK_OFFLINE", "FAILED")
+        assertThat(statusOf(id(d))).isEqualTo("FAILED")
+        assertThat(served(slug).response.status).isEqualTo(404)                         // not the failed release, not the one that cannot be served
+        assertThat(sc.s.body(sc.s.get("${sc.base}/site")).get("online").asBoolean()).isFalse()
+    }
+
+    /** a deployment that was ROLLING_BACK when its worker died: the pointer is still on it */
+    private fun crashedRollingBack(sc: Scenario, previous: UUID?): UUID {
+        val template = previous ?: jdbc.queryForObject("SELECT id FROM deployments WHERE project_id = ? LIMIT 1", UUID::class.java, sc.projectId)!!
+        val id = UUID.randomUUID()
+        jdbc.update("""INSERT INTO deployments (id, workspace_id, project_id, version_id, requested_by, visibility, status, provider, artifact_id, previous_deployment_id)
+            SELECT ?, workspace_id, project_id, version_id, requested_by, visibility, 'ROLLING_BACK', provider, artifact_id, ? FROM deployments WHERE id = ?""", id, previous, template)
+        jdbc.update("INSERT INTO deployment_events (id, deployment_id, status, message) VALUES (?,?,'ROLLING_BACK','Rolling back: [VERIFICATION_FAILED] The new release is unhealthy: HTTP 503')", UUID.randomUUID(), id)
+        jdbc.update("UPDATE sites SET current_deployment_id = ?, pointer_version = pointer_version + 1, active_seq = (SELECT activation_seq FROM deployments WHERE id = ?), active_operation_id = ? WHERE project_id = ?", id, id, id, sc.projectId)
+        return id
+    }
+
+    @Test
+    fun `a crash in ROLLING_BACK is resumed - the previous release comes back, the deployment ends FAILED, it never rolls forward`() {
+        val sc = scenario(); sc.setHero("Bản một")
+        val first = sc.publish(); val slug = slugOf(first)
+        val crashed = crashedRollingBack(sc, id(first))
+        assertThat(pointer(sc)).isEqualTo(crashed)
+        processor.process(crashed)                                                       // the sweeper re-delivers it
+        assertThat(statusOf(crashed)).isEqualTo("FAILED")
+        assertThat(jdbc.queryForObject("SELECT error FROM deployments WHERE id = ?", String::class.java, crashed)).startsWith("[VERIFICATION_FAILED]").contains("rollback: restored")
+        assertThat(pointer(sc)).isEqualTo(id(first))
+        assertThat(served(slug).response.contentAsString).contains("Bản một")
+        assertThat(statuses(crashed)).containsSubsequence("ROLLING_BACK", "ROLLBACK_OK", "FAILED").doesNotContain("RUNNING", "DEPLOYING")
+        processor.process(crashed)                                                       // a second delivery of the same message: nothing changes
+        assertThat(statusOf(crashed)).isEqualTo("FAILED"); assertThat(statuses(crashed).count { it == "ROLLBACK_OK" }).isEqualTo(1)
+    }
+
+    @Test
+    fun `a crash in ROLLING_BACK of a first release ends with the site offline`() {
+        val sc = scenario()
+        val first = sc.publish()
+        jdbc.update("UPDATE deployments SET status = 'FAILED' WHERE id = ?", id(first))      // keep it as a source of artifact and version only
+        jdbc.update("UPDATE sites SET current_deployment_id = NULL WHERE project_id = ?", sc.projectId)
+        val crashed = crashedRollingBack(sc, null)
+        processor.process(crashed)
+        assertThat(statusOf(crashed)).isEqualTo("FAILED"); assertThat(pointer(sc)).isNull()
+        assertThat(statuses(crashed)).containsSubsequence("ROLLING_BACK", "ROLLBACK_OFFLINE", "FAILED")
+    }
+
+    @Test
+    fun `the recovery sweeper picks up a deployment that stopped in ROLLING_BACK`() {
+        val sc = scenario(); val first = sc.publish()
+        val crashed = crashedRollingBack(sc, id(first))
+        jdbc.update("UPDATE deployments SET updated_at = now() - interval '10 minutes' WHERE id = ?", crashed)
+        assertThat(repo.staleIds(30, 120)).contains(crashed)
+        processor.process(crashed)
+    }
+
+    @Test
+    fun `a manual rollback marks the newer release ROLLED_BACK, which is terminal and no longer restorable - roll forward means publishing again`() {
+        val sc = scenario(); sc.setHero("Bản một")
+        val first = sc.publish(); val slug = slugOf(first)
+        sc.setHero("Bản hai"); val second = sc.publish()
+        assertThat(sc.s.post("${sc.base}/site/rollback", """{"deploymentId":"${id(first)}"}""").response.status).isEqualTo(200)
+        assertThat(statusOf(id(second))).isEqualTo("ROLLED_BACK"); assertThat(statusOf(id(first))).isEqualTo("RUNNING")
+        assertThat(pointer(sc)).isEqualTo(id(first)); assertThat(served(slug).response.contentAsString).contains("Bản một")
+        assertThat(statuses(id(second))).contains("ROLLED_BACK")
+        assertThat(sc.s.post("${sc.base}/site/rollback", """{"deploymentId":"${id(second)}"}""").response.status).isEqualTo(400)      // not restorable
+        assertThat(sc.s.body(sc.s.get("${sc.base}/deployments/${id(second)}")).get("status").asString()).isEqualTo("ROLLED_BACK")
+        // pollers treat ROLLED_BACK as terminal: the list endpoint still serves it
+        assertThat(sc.s.body(sc.s.get("${sc.base}/deployments")).toList().map { it.get("status").asString() }).contains("ROLLED_BACK")
+    }
+
+    @Test
+    fun `unpublish moves the pointer through the scope, bumps its version and leaves every deployment status alone`() {
+        val sc = scenario(); val first = sc.publish()
+        val before = jdbc.queryForObject("SELECT pointer_version FROM sites WHERE project_id = ?", Long::class.java, sc.projectId)!!
+        assertThat(sc.s.delete("${sc.base}/site").response.status).isEqualTo(200)
+        assertThat(pointer(sc)).isNull()
+        assertThat(jdbc.queryForObject("SELECT pointer_version FROM sites WHERE project_id = ?", Long::class.java, sc.projectId)).isEqualTo(before + 1)
+        assertThat(statusOf(id(first))).isEqualTo("RUNNING")
+        assertThat(jdbc.queryForObject("SELECT lease_operation_id FROM sites WHERE project_id = ?", UUID::class.java, sc.projectId)).isNull()      // the scope is free again
     }
 }

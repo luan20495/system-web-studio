@@ -230,7 +230,7 @@ class SiteManagementController(
      * Serve an earlier successful deployment again (no rebuild; its artifact is immutable). The artifact is verified first (record, checksum,
      * every file in the store); if it cannot be served the site is left untouched and the answer is 409 ROLLBACK_FAILED with the reason, which is
      * also kept in the deployment's history. Repeating a rollback to the release that is already active changes nothing.
-     * noRollbackFor: the failure record must survive the error response.
+     * Runs under the release scope: a busy scope is 409 SCOPE_BUSY, and the pointer moves only by compare-and-set through the scope's fence.
      */
     @PostMapping("/api/v1/workspaces/{workspaceId}/projects/{projectId}/site/rollback")
     fun rollback(@PathVariable workspaceId: UUID, @PathVariable projectId: UUID, @Valid @RequestBody request: RollbackRequest,
@@ -244,6 +244,7 @@ class SiteManagementController(
         when (val result = releases.rollback(releases.scopeOf(projectId), request.deploymentId!!)) {
             is RollbackResult.AlreadyActive -> return before
             is RollbackResult.Failed -> throw ApiException.conflict("ROLLBACK_FAILED", "The release could not be restored: ${result.reason}")
+            is RollbackResult.ScopeLost -> throw ReleaseScopeGuard.busy(releases.scopeOf(projectId))
             else -> audit.record("SITE_ROLLBACK", "SITE", projectId, workspaceId, projectId, oldValue = mapOf("deploymentId" to before.currentDeploymentId), newValue = mapOf("deploymentId" to request.deploymentId))
         }
         return info(projectId)
@@ -254,7 +255,10 @@ class SiteManagementController(
     fun unpublish(@PathVariable workspaceId: UUID, @PathVariable projectId: UUID, @AuthenticationPrincipal me: StudioUserDetails): SiteInfo {
         access.forProject(me.userId, workspaceId, projectId).require(Permission.PROJECT_PUBLISH)
         val before = info(projectId)
-        releases.unpublish(releases.scopeOf(projectId)) { sites.point(projectId, null) }
+        releases.unpublish(releases.scopeOf(projectId)) { lease ->
+            // the pointer moves only through the fence of the scope this request holds (compare-and-set); a refusal means the scope was lost meanwhile
+            if (!lease.fence.commit(null)) throw ReleaseScopeGuard.busy(lease.scope)
+        }
         audit.record("SITE_UNPUBLISHED", "SITE", projectId, workspaceId, projectId, oldValue = mapOf("deploymentId" to before.currentDeploymentId))
         return info(projectId)
     }

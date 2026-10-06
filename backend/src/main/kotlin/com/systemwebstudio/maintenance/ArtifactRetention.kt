@@ -47,7 +47,10 @@ class ArtifactRetentionService(
                    WHERE r.rn <= ? AND (p.active OR p.updated_at > now() - make_interval(days => CAST(? AS int)))
             UNION SELECT preview_artifact_id FROM code_changes WHERE preview_artifact_id IS NOT NULL AND status IN ('READY','MERGED') AND preview_expires_at > now()
             UNION SELECT artifact_id FROM build_jobs WHERE artifact_id IS NOT NULL AND status IN ('QUEUED','RUNNING')
-            UNION SELECT artifact_id FROM deployments WHERE artifact_id IS NOT NULL AND status IN ('QUEUED','POLICY_CHECK','SECURITY_CHECK','BUILDING','DEPLOYING')
+            UNION SELECT artifact_id FROM deployments WHERE artifact_id IS NOT NULL AND status IN ('QUEUED','POLICY_CHECK','SECURITY_CHECK','BUILDING','DEPLOYING','ROLLING_BACK')
+            UNION SELECT p.artifact_id FROM deployments d JOIN deployments p ON p.id = d.previous_deployment_id
+                   WHERE p.artifact_id IS NOT NULL AND d.status IN ('QUEUED','POLICY_CHECK','SECURITY_CHECK','BUILDING','DEPLOYING','ROLLING_BACK')
+            UNION SELECT p.artifact_id FROM sites s JOIN deployments d ON d.id = s.current_deployment_id JOIN deployments p ON p.id = d.previous_deployment_id WHERE p.artifact_id IS NOT NULL
             UNION SELECT sd.artifact_id FROM server_deployments sd JOIN app_runtimes r ON sd.id IN (r.current_deployment_id, r.desired_deployment_id)
             UNION SELECT (SELECT p.artifact_id FROM deployments p WHERE p.project_id = d.project_id AND p.status = 'RUNNING' AND p.artifact_id IS NOT NULL
                           AND p.created_at < d.created_at ORDER BY p.created_at DESC LIMIT 1)

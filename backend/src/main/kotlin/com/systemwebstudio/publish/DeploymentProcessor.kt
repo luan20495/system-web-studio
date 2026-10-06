@@ -62,7 +62,10 @@ class DeploymentProcessor(
         data object Advance : StepResult
         /** a code build is still running: stop now, its completion re-queues this deployment */
         data object Wait : StepResult
-        data class Fail(val failure: StepFailure, val rollback: RollbackResult? = null) : StepResult
+        /** this run lost the release scope to the same operation (a redelivery): the resumed run decides, this one writes nothing */
+        data object Lost : StepResult
+        /** [rollingBack]: the deployment is ROLLING_BACK, so it leaves that state to FAILED and is never retried (it must not roll forward) */
+        data class Fail(val failure: StepFailure, val rollback: RollbackResult? = null, val rollingBack: Boolean = false) : StepResult
     }
 
     /** values carried from one step of a run to the next */
@@ -81,22 +84,23 @@ class DeploymentProcessor(
         val d = deployments.find(id) ?: run { log.warn("Deployment {} not found", id); return }
         if (d.status in DeploymentStatus.terminal) return
         var current = d.status
+        if (current == DeploymentStatus.ROLLING_BACK) { resumeRollingBack(d); return }
         if (current == DeploymentStatus.QUEUED && !move(d, current, DeploymentStatus.POLICY_CHECK, "Checking policy")) return
         current = if (current == DeploymentStatus.QUEUED) DeploymentStatus.POLICY_CHECK else current
         val state = RunState()
         while (current != DeploymentStatus.RUNNING) {
             pause()
             when (val result = step(d, current, state)) {
-                is StepResult.Wait -> return
+                is StepResult.Wait, is StepResult.Lost -> return
                 is StepResult.Fail -> {
                     val attemptsMade = deployments.retries(d.id, current) + 1
-                    if (retry.canRetry(result.failure, attemptsMade)) {
+                    if (!result.rollingBack && retry.canRetry(result.failure, attemptsMade)) {
                         deployments.event(d.id, current, "Retry $attemptsMade/${retry.maxAttempts}: ${result.failure.reason()}")
                         log.warn("Deployment {} step {} failed transiently (attempt {}): {}", id, current, attemptsMade, result.failure.message)
                         sleep(retry.delayBefore(attemptsMade + 1))
                         continue
                     }
-                    fail(d, current, result.failure, attemptsMade, result.rollback)
+                    fail(d, if (result.rollingBack) DeploymentStatus.ROLLING_BACK else current, result.failure, attemptsMade, result.rollback)
                     return
                 }
                 is StepResult.Advance -> {
@@ -136,17 +140,35 @@ class DeploymentProcessor(
     }
 
     private fun deployStep(d: DeploymentDto, state: RunState): StepResult {
-        val project = jdbc.queryForMap("SELECT name, deployment_target FROM projects WHERE id = ?", d.projectId)
-        // read back from the row so a resumed job deploys the artifact the BUILDING step recorded
-        val artifactId = jdbc.queryForObject("SELECT artifact_id FROM deployments WHERE id = ?", UUID::class.java, d.id)
-        if (provider.buildsArtifacts && artifactId == null) return StepResult.Fail(StepFailure(FailureCode.ARTIFACT_MISSING, "No artifact was built for this deployment"))
-        val hash = state.artifactHash.ifEmpty { artifactId?.let { a -> jdbc.queryForObject("SELECT sha256 FROM artifacts WHERE id = ?", String::class.java, a) } ?: build(d, record = false) }
-        val request = DeployRequest(d.id, project["name"] as String, d.versionNumber, d.visibility, project["deployment_target"] as String?, hash, d.projectId, artifactId)
+        val request = deployRequest(d, state.artifactHash) ?: return StepResult.Fail(StepFailure(FailureCode.ARTIFACT_MISSING, "No artifact was built for this deployment"))
         return when (val outcome = releases.publish(releases.scopeOf(d.projectId), request, deployments.activationSeq(d.id))) {
             is DeployOutcome.Live -> { state.url = outcome.url; StepResult.Advance }
-            is DeployOutcome.Failed -> StepResult.Fail(outcome.failure, outcome.rollback)
+            is DeployOutcome.Failed -> StepResult.Fail(outcome.failure, outcome.rollback, outcome.rollingBack)
+            is DeployOutcome.Lost -> StepResult.Lost
             is DeployOutcome.Busy -> waitForScope(d, outcome.holder)
         }
+    }
+
+    /** what the provider is asked to deploy; null = the provider builds artifacts and none was recorded. Read back from the row so a resumed job deploys what BUILDING recorded. */
+    private fun deployRequest(d: DeploymentDto, knownHash: String = ""): DeployRequest? {
+        val project = jdbc.queryForMap("SELECT name, deployment_target FROM projects WHERE id = ?", d.projectId)
+        val artifactId = jdbc.queryForObject("SELECT artifact_id FROM deployments WHERE id = ?", UUID::class.java, d.id)
+        if (provider.buildsArtifacts && artifactId == null) return null
+        val hash = knownHash.ifEmpty { artifactId?.let { a -> jdbc.queryForObject("SELECT sha256 FROM artifacts WHERE id = ?", String::class.java, a) } ?: build(d, record = false) }
+        return DeployRequest(d.id, project["name"] as String, d.versionNumber, d.visibility, project["deployment_target"] as String?, hash, d.projectId, artifactId)
+    }
+
+    /**
+     * A crashed undo: the deployment was ROLLING_BACK. Finish it under the scope (previous release restored, or the site taken offline, the
+     * server runtime following) and end FAILED. It never re-verifies the failed release and never rolls forward.
+     */
+    private fun resumeRollingBack(d: DeploymentDto) {
+        val request = deployRequest(d) ?: run { fail(d, DeploymentStatus.ROLLING_BACK, StepFailure(FailureCode.ARTIFACT_MISSING, "No artifact was built for this deployment"), 1, null); return }
+        val rollback = releases.resumeRollback(releases.scopeOf(d.projectId), request, deployments.activationSeq(d.id))
+        if (rollback == null) { waitForScope(d, null).let { if (it is StepResult.Fail) fail(d, DeploymentStatus.ROLLING_BACK, it.failure, 1, null) }; return }
+        val reason = deployments.lastEventMessage(d.id, DeploymentStatus.ROLLING_BACK)?.removePrefix("Rolling back: ")
+        val code = StepFailure.codeOf(reason) ?: FailureCode.INTERNAL_ERROR
+        fail(d, DeploymentStatus.ROLLING_BACK, StepFailure(code, reason?.replace(Regex("^\\[[A-Z_]+] "), "") ?: "The release was being rolled back when the worker stopped"), 1, rollback)
     }
 
     /**
@@ -253,8 +275,8 @@ class DeploymentProcessor(
     private fun fail(d: DeploymentDto, from: String, failure: StepFailure, attempts: Int, rollback: RollbackResult?) {
         val rolledBack = rollback?.takeUnless { it is RollbackResult.NotSwitched }
         val error = (failure.reason(attempts) + (rolledBack?.let { " | rollback: ${it.summary}" } ?: "")).take(StepFailure.MAX_LENGTH)
-        if (failure.code == FailureCode.STALE_PUBLISH) deployments.event(d.id, "STALE_PUBLISH", failure.message)
         if (deployments.transition(d.id, from, DeploymentStatus.FAILED, null, error = error)) {
+            if (failure.code == FailureCode.STALE_PUBLISH) deployments.event(d.id, "STALE_PUBLISH", failure.message)
             audit.record("DEPLOY_STATUS_CHANGE", "DEPLOYMENT", d.id, workspaceOf(d), d.projectId, actorId = null,
                 oldValue = mapOf("status" to from), newValue = mapOf("status" to DeploymentStatus.FAILED, "error" to error, "code" to failure.code.name))
         }

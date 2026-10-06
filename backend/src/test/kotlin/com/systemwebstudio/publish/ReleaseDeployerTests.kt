@@ -174,8 +174,8 @@ class ReleaseDeployerTests {
         assertThat(rb.reason).contains("cannot be served again").contains("index.html").contains("taken offline")
         assertThat(store.active).isNull()
         assertThat(provider.calls.filter { it == "restore" }).hasSize(1)             // the only restore is "serve nothing", never a switch to N
-        assertThat(store.statuses(releaseN1)).containsExactly("ROLLBACK_FAILED")
-        assertThat(store.events.single().second).contains("ROLLBACK FAILED")
+        assertThat(store.statuses(releaseN1)).containsExactly("ROLLBACK_FAILED", "ROLLBACK_OFFLINE")        // the failed restore, then the pointer that ended up NULL
+        assertThat(store.events.first().second).contains("ROLLBACK FAILED")
     }
 
     @Test
@@ -312,7 +312,7 @@ class ReleaseDeployerTests {
         val rb = failed(deployer().deploy(request())).rollback as RollbackResult.Failed
         assertThat(rb.reason).contains("found after the switch").contains("taken offline")
         assertThat(store.active).isNull()
-        assertThat(store.statuses(releaseN1)).containsExactly("ROLLBACK_FAILED")
+        assertThat(store.statuses(releaseN1)).containsExactly("ROLLBACK_FAILED", "ROLLBACK_OFFLINE")
     }
 
     @Test
@@ -383,7 +383,7 @@ class ReleaseDeployerTests {
         val rb = f.rollback as RollbackResult.Failed
         assertThat(rb.inconsistent).isTrue(); assertThat(rb.reason).contains("server runtime could not be put back").contains("taken offline")
         assertThat(store.active).isNull()
-        assertThat(store.statuses(releaseN1)).containsExactly("ROLLBACK_FAILED")
+        assertThat(store.statuses(releaseN1)).containsExactly("ROLLBACK_FAILED", "ROLLBACK_OFFLINE")
     }
 
     @Test
@@ -421,7 +421,7 @@ class ReleaseDeployerTests {
         val rb = deployer(runtime = plane).restoreRelease(project, releaseN) as RollbackResult.Failed
         assertThat(rb.inconsistent).isTrue()
         assertThat(store.active).isNull()
-        assertThat(store.statuses(releaseN)).containsExactly("ROLLBACK_FAILED")
+        assertThat(store.statuses(releaseN)).containsExactly("ROLLBACK_FAILED", "ROLLBACK_OFFLINE")
     }
 
     @Test

@@ -19,28 +19,31 @@ import java.util.UUID
  */
 @Component
 class JdbcReleaseStore(private val jdbc: JdbcTemplate, private val deployments: DeploymentRepository) : ReleaseStore {
-    private val uuid = Regex("\\[([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})]")
-
     override fun activeDeployment(projectId: UUID): UUID? =
         jdbc.query("SELECT current_deployment_id FROM sites WHERE project_id = ?", { rs, _ -> rs.getObject(1, UUID::class.java) }, projectId).firstOrNull()
 
-    /**
-     * The release that was active when this deployment started switching. There is no typed column for it (a migration C0 has not reserved), so
-     * it is read back from the SWITCH event the switch wrote. Text is not trusted: the id is accepted only when it is another deployment of the
-     * SAME project, otherwise it is ignored and the deployer falls back to the site's own pointer.
-     */
-    override fun recordedPrevious(deploymentId: UUID): UUID? {
-        val parsed = jdbc.query("SELECT message FROM deployment_events WHERE deployment_id = ? AND status = 'SWITCH' ORDER BY created_at, id LIMIT 1",
-            { rs, _ -> rs.getString(1) }, deploymentId).firstOrNull()?.let { uuid.find(it)?.groupValues?.get(1) }?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-            ?: return null
-        if (parsed == deploymentId) return null
-        val sameProject = jdbc.queryForObject("SELECT count(*) FROM deployments p JOIN deployments d ON d.project_id = p.project_id WHERE p.id = ? AND d.id = ?",
-            Long::class.java, parsed, deploymentId)!! > 0
-        return parsed.takeIf { sameProject }
+    /** the release that was active when this deployment started switching: a typed column (V30), written once, always another deployment of the same app */
+    override fun recordedPrevious(deploymentId: UUID): UUID? =
+        jdbc.query("SELECT previous_deployment_id FROM deployments WHERE id = ?", { rs, _ -> rs.getObject(1, UUID::class.java) }, deploymentId).firstOrNull()
+
+    override fun recordPrevious(deploymentId: UUID, previous: UUID) {
+        val written = jdbc.update("""UPDATE deployments d SET previous_deployment_id = ? WHERE d.id = ? AND d.previous_deployment_id IS NULL AND d.id <> ?
+            AND EXISTS (SELECT 1 FROM deployments p WHERE p.id = ? AND p.project_id = d.project_id)""", previous, deploymentId, previous, previous)
+        if (written == 1) deployments.event(deploymentId, "SWITCH", "Replacing release ${label(previous)} [$previous]")      // the text is for people, the column is the state
     }
 
-    override fun recordPrevious(deploymentId: UUID, previous: UUID) =
-        deployments.event(deploymentId, "SWITCH", "Replacing release ${label(previous)} [$previous]")
+    override fun beginRollback(deploymentId: UUID, reason: String): Boolean =
+        deployments.transition(deploymentId, DeploymentStatus.DEPLOYING, DeploymentStatus.ROLLING_BACK, "Rolling back: $reason") ||
+            jdbc.queryForObject("SELECT status FROM deployments WHERE id = ?", String::class.java, deploymentId) == DeploymentStatus.ROLLING_BACK
+
+    override fun markRolledBackIfNewer(left: UUID, target: UUID) {
+        val n = jdbc.update("""UPDATE deployments l SET status = 'ROLLED_BACK', updated_at = now()
+            WHERE l.id = ? AND l.status = 'RUNNING' AND l.activation_seq > (SELECT t.activation_seq FROM deployments t WHERE t.id = ?)""", left, target)
+        if (n == 1) deployments.event(left, DeploymentStatus.ROLLED_BACK, "Rolled back to release ${label(target)}")
+    }
+
+    override fun leaseOperation(projectId: UUID): UUID? =
+        jdbc.query("SELECT lease_operation_id FROM sites WHERE project_id = ?", { rs, _ -> rs.getObject(1, UUID::class.java) }, projectId).firstOrNull()
 
     override fun artifactOf(deploymentId: UUID): UUID? =
         jdbc.query("SELECT artifact_id FROM deployments WHERE id = ?", { rs, _ -> rs.getObject(1, UUID::class.java) }, deploymentId).firstOrNull()
@@ -107,17 +110,28 @@ class ReleaseService(
         return when (val a = guard.acquire(ScopeRequest(scope, ReleaseOperation.PUBLISH, request.deploymentId, request.deploymentId, seq))) {
             is ScopeAcquisition.Busy -> DeployOutcome.Busy(a.holder)
             is ScopeAcquisition.Stale -> DeployOutcome.Failed(StepFailure(FailureCode.STALE_PUBLISH, a.reason), RollbackResult.NotSwitched)
-            is ScopeAcquisition.Acquired -> try { deployer.deploy(request) } finally { a.lease.release() }
+            is ScopeAcquisition.Acquired -> try { deployer.deploy(request, a.lease) } finally { a.lease.release() }
         }
     }
 
+    /**
+     * A deployment that is ROLLING_BACK after a crash: finish the undo under the scope. null = the scope is busy (try again later); a newer
+     * operation having moved the pointer means there is nothing of this deployment left to undo.
+     */
+    fun resumeRollback(scope: ReleaseScope, request: DeployRequest, seq: Long): RollbackResult? =
+        when (val a = guard.acquire(ScopeRequest(scope, ReleaseOperation.PUBLISH, request.deploymentId, request.deploymentId, seq))) {
+            is ScopeAcquisition.Busy -> null
+            is ScopeAcquisition.Stale -> RollbackResult.NotSwitched
+            is ScopeAcquisition.Acquired -> try { deployer.resumeRollback(request, a.lease) } finally { a.lease.release() }
+        }
+
     /** Manual rollback: never waits. A busy scope is `409 SCOPE_BUSY`, an overtaken one `409 ROLLBACK_STALE`. */
     fun rollback(scope: ReleaseScope, target: UUID, operationId: UUID = UUID.randomUUID()): RollbackResult =
-        hold(ScopeRequest(scope, ReleaseOperation.ROLLBACK, operationId)) { deployer.restoreRelease(scope.appId, target) }
+        hold(ScopeRequest(scope, ReleaseOperation.ROLLBACK, operationId)) { lease -> deployer.restoreRelease(scope.appId, target, lease) }
 
-    /** [takeOffline] is the actual change (pointing the site at nothing); it only runs while the scope is held. */
-    fun <T> unpublish(scope: ReleaseScope, operationId: UUID = UUID.randomUUID(), takeOffline: () -> T): T =
-        hold(ScopeRequest(scope, ReleaseOperation.UNPUBLISH, operationId)) { takeOffline() }
+    /** [takeOffline] is the actual change; it only runs while the scope is held and must move the pointer through the lease's fence. */
+    fun <T> unpublish(scope: ReleaseScope, operationId: UUID = UUID.randomUUID(), takeOffline: (ScopeLease) -> T): T =
+        hold(ScopeRequest(scope, ReleaseOperation.UNPUBLISH, operationId), takeOffline)
 
     private fun <T> hold(request: ScopeRequest, body: (ScopeLease) -> T): T = when (val a = guard.acquire(request)) {
         is ScopeAcquisition.Busy -> throw ReleaseScopeGuard.busy(request.scope, a.holder)

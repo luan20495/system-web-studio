@@ -5,6 +5,7 @@ import com.systemwebstudio.access.Permission
 import com.systemwebstudio.common.ApiException
 import com.systemwebstudio.integration.deploy.DeployProvider
 import com.systemwebstudio.integration.deploy.DeployRequest
+import com.systemwebstudio.integration.deploy.PointerFence
 import com.systemwebstudio.integration.deploy.DeployResult
 import com.systemwebstudio.integration.deploy.DeployVerification
 import org.springframework.beans.factory.annotation.Value
@@ -51,8 +52,18 @@ class SiteService(
         return jdbc.queryForObject("SELECT slug FROM sites WHERE project_id = ?", String::class.java, projectId)!!
     }
 
+    /**
+     * An UNFENCED pointer write, kept for the one caller that is not a release operation (a project being archived takes its site offline). It
+     * moves pointer_version, so any release operation that is mid-flight is fenced out at its next commit instead of overwriting this. Release
+     * operations never use it: they move the pointer through the fence of the scope they hold.
+     */
     fun point(projectId: UUID, deploymentId: UUID?) {
-        jdbc.update("UPDATE sites SET current_deployment_id = ?, updated_at = now() WHERE project_id = ?", deploymentId, projectId)
+        jdbc.update("UPDATE sites SET current_deployment_id = ?, pointer_version = pointer_version + 1, updated_at = now() WHERE project_id = ?", deploymentId, projectId)
+    }
+
+    /** the visibility a release was published with becomes the project's again (runs inside the pointer commit's transaction) */
+    fun copyVisibilityOf(projectId: UUID, deploymentId: UUID) {
+        jdbc.update("UPDATE projects SET site_visibility = (SELECT visibility FROM deployments WHERE id = ?) WHERE id = ?", deploymentId, projectId)
     }
 
     fun artifactOf(deploymentId: UUID): UUID? =
@@ -61,13 +72,6 @@ class SiteService(
     /** the deployment the site points at, null = offline / no site */
     fun pointer(projectId: UUID): UUID? =
         jdbc.query("SELECT current_deployment_id FROM sites WHERE project_id = ?", { rs, _ -> rs.getObject(1, UUID::class.java) }, projectId).firstOrNull()
-
-    /** Serve an earlier release again (null = serve nothing): the pointer and the visibility that release was published with, in one transaction. */
-    @org.springframework.transaction.annotation.Transactional
-    fun restore(projectId: UUID, deploymentId: UUID?) {
-        point(projectId, deploymentId)
-        if (deploymentId != null) jdbc.update("UPDATE projects SET site_visibility = (SELECT visibility FROM deployments WHERE id = ?) WHERE id = ?", deploymentId, projectId)
-    }
 
     /** The artifact currently served for a slug, or null (unknown slug, offline, deleted project). */
     fun live(slug: String): LiveSite? = jdbc.query(
@@ -168,10 +172,11 @@ class StaticSiteDeployProvider(private val sites: SiteService, private val verif
     override fun deploy(request: DeployRequest): DeployResult {
         val projectId = request.projectId ?: return DeployResult(null, "Missing project")
         val artifactId = request.artifactId ?: return DeployResult(null, "No artifact was built")
+        val fence = request.fence ?: return DeployResult(null, "The release scope fence is missing: the pointer is only moved by the operation that holds the scope")
         val slug = sites.ensureSlug(projectId, request.projectName)
         // the last look before the pointer moves: the files can disappear between the release check and this switch
         verifier.verify(artifactId).let { if (!it.ok) return DeployResult(null, "the artifact cannot be served: ${it.reason}") }
-        sites.point(projectId, request.deploymentId)
+        if (!fence.commit(request.deploymentId)) return DeployResult(null, PointerFence.REFUSED)
         return DeployResult(sites.url(slug), null)
     }
 
@@ -196,12 +201,19 @@ class StaticSiteDeployProvider(private val sites: SiteService, private val verif
         }
     }
 
-    override fun restore(projectId: UUID, previousDeploymentId: UUID?): DeployResult {
+    override fun restore(projectId: UUID, previousDeploymentId: UUID?): DeployResult =
+        DeployResult(null, "The release scope fence is missing: the pointer is only moved by the operation that holds the scope")
+
+    /** The pointer and the visibility that release was published with move together, in the one transaction of the compare-and-set. */
+    override fun restore(projectId: UUID, previousDeploymentId: UUID?, fence: PointerFence?): DeployResult {
+        if (fence == null) return restore(projectId, previousDeploymentId)
         previousDeploymentId?.let { target ->
             val artifactId = sites.artifactOf(target) ?: return DeployResult(null, "release has no artifact")
             verifier.verify(artifactId).let { if (!it.ok) return DeployResult(null, "the artifact cannot be served: ${it.reason}") }
         }
-        sites.restore(projectId, previousDeploymentId)
-        return DeployResult(null, null)
+        val committed = fence.commit(previousDeploymentId) {
+            if (previousDeploymentId != null) sites.copyVisibilityOf(projectId, previousDeploymentId)
+        }
+        return if (committed) DeployResult(null, null) else DeployResult(null, PointerFence.REFUSED)
     }
 }
