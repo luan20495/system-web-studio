@@ -50,7 +50,7 @@ Frozen 2026-10-06 on `integration/v2`. **Nothing in this file has been executed*
 | **Blockers** | Tenant AI has no call-time address check yet (stays OFF — needs canonical `PublicAddress` at call time, C0 patch applied but uncompiled) · planner needs `AiDataCatalogAdapter` (W-06) and C1 permissions · `ActionDef.trigger` is optional (contract updated 2026-10-06: confirm C2's validator does not require it) · `required` default true and `DATE` param added (conformance fixtures cover) · V27 file now on `integration/v2` (C0-corrected DDL, see ledger; unverified) · `PublishConfig` visibility `TENANT`/`PRIVATE_LINK` need the deployments check migration (C0, unnumbered) |
 
 ## 4. C3 — data platform (inert library)
-**Source:** `agent/c3-data` @ `02fe1d1` · **Import step:** checklist 11 (tests: 12). Needs **C1 imported and green** (it uses `tenancy.TenantContext` / `tenancy.ActorKind`) and the C0 `PublicAddress` patch (it calls `PublicAddress.isPublic`; its `AddressRangeSpecTests` fail by design on the old object).
+**Source:** `agent/c3-data` @ `f434f01` (was `02fe1d1`; + `07d802b` Jackson 3 alignment, `234e351` test compatibility incl. `RedisServerDouble` test helper, `f434f01` Postgres discovery sample-masking fix) · **IMPORTED 2026-10-06** (`92fa67f`; byte-identical to `verify/c3-overlay`, which was green on the Mac: compileKotlin, compileTestKotlin, targeted Postgres tests, full clean test) · official `integration/v2` full run pending · **Import step:** checklist 11 (tests: 12). Needs **C1 imported and green** (it uses `tenancy.TenantContext` / `tenancy.ActorKind`) and the C0 `PublicAddress` patch (it calls `PublicAddress.isPublic`; its `AddressRangeSpecTests` fail by design on the old object).
 
 | | |
 |---|---|
