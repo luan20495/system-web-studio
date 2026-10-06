@@ -96,7 +96,9 @@ class DataRuntimeLiveApiTests : IntegrationTestBase() {
         val ds = sourceRef?.invoke(sc, tenant) ?: source(tenant, sc.ws, credentialRef)
         val document = if (sourceRef != null) definitionWithSourceRef(ds.id) else sample
         schemas.upsertSchema(sc.projectId, sc.ws, document)
-        val versionId = schemas.insertVersion(sc.ws, sc.projectId, 1, document, "INITIAL", "published", null, null, null, sc.user.id)
+        // scenario() creates the project through the API, which already wrote version 1 (INITIAL); a second row with number 1 would violate
+        // project_versions_unique (project_id, version_number) - the published document is the NEXT version of the project
+        val versionId = schemas.insertVersion(sc.ws, sc.projectId, schemas.nextVersionNumber(sc.projectId), document, "EDIT", "published", null, null, null, sc.user.id)
         jdbc.update("INSERT INTO deployments (id, workspace_id, project_id, version_id, requested_by, visibility, status, provider) VALUES (?, ?, ?, ?, ?, 'PRIVATE', 'RUNNING', 'mock')",
             UUID.randomUUID(), sc.ws, sc.projectId, versionId, sc.user.id)
         if (sourceRef == null && bindLive) bindings.bind(tenant, sc.ws, sc.projectId, ExecutionMode.LIVE, "erp-db", ds.id, sc.user.id)
