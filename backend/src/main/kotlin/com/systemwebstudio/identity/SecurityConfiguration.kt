@@ -31,7 +31,7 @@ class SecurityConfiguration {
     companion object {
         /**
          * The ONE anonymous, CSRF-exempt route of the data platform (C3, docs/contracts/v2/data-runtime.md §6): exactly POST on a single path segment.
-         * Not a wildcard: /api/v1/webhooks/** stays authenticated and CSRF-protected. The signature / replay check is NOT here; it is done in C3's
+         * Not a wildcard: every other path under /api/v1/webhooks stays authenticated and CSRF-protected. The signature / replay check is NOT here; it is done in C3's
          * webhook handler before anything is parsed (docs/parallel/WEB_SECURITY_CONFIG.md §1). No controller exists until C3 is imported (then 404).
          */
         val DATA_WEBHOOK_INGEST: org.springframework.security.web.util.matcher.RequestMatcher =
