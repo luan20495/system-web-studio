@@ -66,12 +66,12 @@ private fun plan(json: JsonMapper, def: ActionDefinition, input: ActionInput, va
     val p = json.createObjectNode().put("actionId", def.id).put("type", def.type.name)
     val t = json.createObjectNode()
     targets.forEach { (k, v) -> if (v != null) t.put(k, v) }
-    p.set<JsonNode>("target", t)
+    p.set("target", t)
     val names = json.createArrayNode()
     input.names.sorted().forEach { names.add(it) }
-    p.set<JsonNode>("inputNames", names)
-    if (def.onSuccess.isNotEmpty()) { val a = json.createArrayNode(); def.onSuccess.forEach { a.add(it) }; p.set<JsonNode>("onSuccess", a) }
-    if (def.onError.isNotEmpty()) { val a = json.createArrayNode(); def.onError.forEach { a.add(it) }; p.set<JsonNode>("onError", a) }
+    p.set("inputNames", names)
+    if (def.onSuccess.isNotEmpty()) { val a = json.createArrayNode(); def.onSuccess.forEach { a.add(it) }; p.set("onSuccess", a) }
+    if (def.onError.isNotEmpty()) { val a = json.createArrayNode(); def.onError.forEach { a.add(it) }; p.set("onError", a) }
     return p
 }
 
@@ -87,9 +87,9 @@ class NavigateActionHandler(private val json: JsonMapper) : ActionHandler {
 
     private fun instruction(definition: ActionDefinition, input: ActionInput): ObjectNode {
         val params = json.createObjectNode()
-        input.values.forEach { (k, v) -> params.set<JsonNode>(k, v) }
+        input.values.forEach { (k, v) -> params.set(k, v) }
         val out = json.createObjectNode().put("action", "NAVIGATE").put("pageId", definition.configString("pageId"))
-        out.set<JsonNode>("params", params)
+        out.set("params", params)
         return out
     }
 
@@ -249,7 +249,7 @@ class StartWorkflowActionHandler(private val json: JsonMapper, private val workf
     override fun execute(ctx: ActionContext, definition: ActionDefinition, input: ActionInput, run: ActionRun): ActionResult {
         val key = run.idempotencyKey ?: return failed(ActionErrorCodes.IDEMPOTENCY_KEY_REQUIRED, "START_WORKFLOW needs an idempotency key")
         val body = json.createObjectNode()
-        input.values.forEach { (k, v) -> body.set<JsonNode>(k, v) }
+        input.values.forEach { (k, v) -> body.set(k, v) }
         return workflows.start(ctx, StartWorkflowRequest(definition.configString("workflowRef")!!, body, key, run.callDepth)).toResult()
     }
 

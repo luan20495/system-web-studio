@@ -4,6 +4,7 @@ import com.systemwebstudio.logic.action.ActionDefinitionValidator
 import com.systemwebstudio.logic.action.DefinitionIssue
 import com.systemwebstudio.logic.action.InputResolver
 import com.systemwebstudio.logic.action.PrincipalSpec
+import com.systemwebstudio.logic.arrayItems
 import tools.jackson.databind.JsonNode
 import java.math.BigDecimal
 import java.time.Duration
@@ -274,9 +275,9 @@ object ConditionEvaluator {
         CompareOp.GTE -> order(l, r)?.let { it >= 0 } ?: false
         CompareOp.LT -> order(l, r)?.let { it < 0 } ?: false
         CompareOp.LTE -> order(l, r)?.let { it <= 0 } ?: false
-        CompareOp.IN -> r.isArray && r.any { equal(l, it) }
+        CompareOp.IN -> r.isArray && r.arrayItems().any { equal(l, it) }
         CompareOp.CONTAINS -> when {
-            l.isArray -> l.any { equal(it, r) }
+            l.isArray -> l.arrayItems().any { equal(it, r) }
             l.isString && r.isString -> l.asString().contains(r.asString())
             else -> false
         }

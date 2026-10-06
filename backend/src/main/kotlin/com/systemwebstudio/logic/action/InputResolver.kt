@@ -1,5 +1,6 @@
 package com.systemwebstudio.logic.action
 
+import com.systemwebstudio.logic.arrayItems
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.json.JsonMapper
 import java.time.Instant
@@ -127,7 +128,7 @@ object PrincipalSpecs {
         if (node == null) return emptyList()
         if (!node.isArray) { issues += DefinitionIssue(path, "must be an array"); return emptyList() }
         val out = mutableListOf<PrincipalSpec>()
-        node.forEachIndexed { i, n ->
+        node.arrayItems().forEachIndexed { i, n ->
             val (spec, problem) = parse(n)
             if (spec != null) out += spec else issues += DefinitionIssue("$path[$i]", problem ?: "invalid")
         }

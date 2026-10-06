@@ -31,7 +31,7 @@ object Fx {
     fun str(s: String): JsonNode = json.createObjectNode().put("v", s).get("v")
     fun num(n: Int): JsonNode = json.createObjectNode().put("v", n).get("v")
     fun bool(b: Boolean): JsonNode = json.createObjectNode().put("v", b).get("v")
-    fun obj(vararg pairs: Pair<String, JsonNode>): JsonNode = json.createObjectNode().also { o -> pairs.forEach { o.set<JsonNode>(it.first, it.second) } }
+    fun obj(vararg pairs: Pair<String, JsonNode>): JsonNode = json.createObjectNode().also { o -> pairs.forEach { o.set(it.first, it.second) } }
     fun cfg(vararg pairs: Pair<String, String>): Map<String, JsonNode> = pairs.associate { it.first to str(it.second) }
 
     fun navigate(id: String = "go-home", tenant: UUID = tenantA, inputs: List<InputSpec> = emptyList()) =

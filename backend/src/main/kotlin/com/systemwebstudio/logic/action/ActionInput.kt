@@ -1,5 +1,6 @@
 package com.systemwebstudio.logic.action
 
+import com.systemwebstudio.logic.arrayItems
 import tools.jackson.databind.JsonNode
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
@@ -66,7 +67,7 @@ object ActionInputBinder {
     internal fun exceedsDepth(node: JsonNode, max: Int, depth: Int): Boolean {
         if (depth > max) return true
         if (node.isObject) return node.propertyNames().any { exceedsDepth(node.get(it), max, depth + 1) }
-        if (node.isArray) return node.any { exceedsDepth(it, max, depth + 1) }
+        if (node.isArray) return node.arrayItems().any { exceedsDepth(it, max, depth + 1) }
         return false
     }
 
@@ -86,7 +87,7 @@ object ActionInputBinder {
 
     private fun canonical(n: JsonNode): String = when {
         n.isObject -> n.propertyNames().sorted().joinToString(",", "{", "}") { "${it.length}:$it=${canonical(n.get(it))}" }
-        n.isArray -> n.joinToString(",", "[", "]") { canonical(it) }
+        n.isArray -> n.arrayItems().joinToString(",", "[", "]") { canonical(it) }
         else -> n.toString()
     }
 }

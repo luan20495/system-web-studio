@@ -23,6 +23,7 @@ import com.systemwebstudio.logic.action.TenantGate
 import com.systemwebstudio.logic.action.TriggerInfo
 import com.systemwebstudio.logic.action.TriggerKind
 import com.systemwebstudio.logic.action.WorkflowStarterPort
+import com.systemwebstudio.logic.arrayItems
 import com.systemwebstudio.logic.limits.InMemoryTenantRateLimiter
 import com.systemwebstudio.logic.limits.RateDecision
 import com.systemwebstudio.logic.limits.RateScope
@@ -395,8 +396,8 @@ class WorkflowEngine(
     private fun wouldRunOutput(r: ActionResult.WouldRun): JsonNode {
         val o = json.createObjectNode().put("simulated", true).put("level", r.level.name).put("actionId", r.actionId).put("type", r.type.name)
         r.reason?.let { o.put("reason", it) }
-        o.set<JsonNode>("plan", r.plan)
-        r.output?.let { o.set<JsonNode>("output", it) }
+        o.set("plan", r.plan)
+        r.output?.let { o.set("output", it) }
         return o
     }
 
@@ -448,7 +449,7 @@ class WorkflowEngine(
         val st = cur.steps[step.id] ?: return null
         if (cur.currentStepId != step.id || st.status != StepStatus.RUNNING || st.attempt != attempt) return null // superseded (sweeper reset, cancel, timeout)
         val limits = cur.definition.limits.coerceAtMost(ceiling)
-        val inputNode: JsonNode = json.createObjectNode().also { o -> inputs.forEach { (k, v) -> o.set<JsonNode>(k, v) } }
+        val inputNode: JsonNode = json.createObjectNode().also { o -> inputs.forEach { (k, v) -> o.set(k, v) } }
 
         return when (outcome) {
             is StepOutcome.Advance -> {
@@ -586,7 +587,7 @@ class WorkflowEngine(
 
     private fun compensateOne(run: WorkflowRun, step: WorkflowStep, inputs: Map<String, JsonNode>) {
         val ctx = ActionContext(run.tenantId, run.createdBy, run.workspaceId, run.appId, "wf:${run.runId}:comp")
-        val st = StepState(step.id, StepStatus.SUCCEEDED, input = json.createObjectNode().also { o -> inputs.forEach { (k, v) -> o.set<JsonNode>(k, v) } })
+        val st = StepState(step.id, StepStatus.SUCCEEDED, input = json.createObjectNode().also { o -> inputs.forEach { (k, v) -> o.set(k, v) } })
         compensateStep(ctx, run, step, st)
     }
 
@@ -790,7 +791,7 @@ class WorkflowEngine(
 
     private fun canonical(n: JsonNode): String = when {
         n.isObject -> n.propertyNames().sorted().joinToString(",", "{", "}") { "${it.length}:$it=${canonical(n.get(it))}" }
-        n.isArray -> n.joinToString(",", "[", "]") { canonical(it) }
+        n.isArray -> n.arrayItems().joinToString(",", "[", "]") { canonical(it) }
         else -> n.toString()
     }
 

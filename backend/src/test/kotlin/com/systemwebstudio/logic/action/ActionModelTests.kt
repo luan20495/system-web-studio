@@ -61,7 +61,7 @@ class ActionInputBinderTests {
 
     @Test fun `deep nesting hits the depth limit`() {
         var node: JsonNode = str("leaf")
-        repeat(20) { node = json.createObjectNode().apply { set<JsonNode>("n", node) } }
+        repeat(20) { node = json.createObjectNode().apply { set("n", node) } }
         val f = rejected(mapOf("name" to str("a"), "obj" to node), ActionLimits(maxInputDepth = 5))
         assertEquals(ActionErrorCodes.LIMIT_EXCEEDED, f.code)
     }
@@ -87,7 +87,7 @@ class ActionDefinitionValidatorTests {
     }
 
     @Test fun `config may not carry code sql or urls at any depth`() {
-        val nested = json.createObjectNode().apply { set<JsonNode>("inner", json.createObjectNode().put("Script", "alert(1)")) }
+        val nested = json.createObjectNode().apply { set("inner", json.createObjectNode().put("Script", "alert(1)")) }
         val d = Fx.navigate().copy(config = Fx.cfg("pageId" to "home", "sql" to "select 1") + mapOf("opts" to nested))
         assertEquals(setOf("config.sql", "config.opts.inner.Script"), issues(d).toSet())
     }

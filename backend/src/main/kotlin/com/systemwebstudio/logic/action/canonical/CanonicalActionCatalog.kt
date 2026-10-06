@@ -16,6 +16,7 @@ import com.systemwebstudio.logic.action.IdempotencyPolicy
 import com.systemwebstudio.logic.action.InputSource
 import com.systemwebstudio.logic.action.InputSpec
 import com.systemwebstudio.logic.action.InputType
+import com.systemwebstudio.logic.arrayItems
 import tools.jackson.databind.JsonNode
 import java.time.Duration
 import java.util.UUID
@@ -190,7 +191,7 @@ object CanonicalActionReader {
 }
 
 internal fun JsonNode.text(name: String): String? = get(name)?.takeIf { it.isString }?.asString()
-internal fun JsonNode.array(name: String): List<JsonNode> = get(name)?.takeIf { it.isArray }?.toList().orEmpty()
+internal fun JsonNode.array(name: String): List<JsonNode> = get(name)?.takeIf { it.isArray }?.arrayItems().orEmpty()
 
 /** Serves the runtime's two lookups from the AppDefinition of the app. The document is loaded per call; cache in the adapter if needed. */
 class CanonicalActionCatalog(private val source: AppDefinitionSource) : ActionDefinitionProvider, ActionBindingPort {

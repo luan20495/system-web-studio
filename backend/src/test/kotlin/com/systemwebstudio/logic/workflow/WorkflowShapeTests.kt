@@ -70,4 +70,33 @@ class WorkflowShapeTests {
         r.advance(Duration.ofMinutes(1)); r.engine.sweep(); r.drain()
         assertEquals(WorkflowRunStatus.SUCCEEDED, r.view(id).status)
     }
+
+    // ---- conditions are read element by element (Jackson 3's JsonNode.map is a member that would shadow Iterable.map) ----------------
+
+    /** Parses a one-branch workflow whose condition is [condition]; null when the workflow is not offered (invalid condition). */
+    private fun cond(condition: String): Condition? =
+        parse("""{"actions":[{"id":"go","type":"NAVIGATE","pageRef":"home"}],"workflows":[{"id":"w","steps":[
+            {"id":"br","kind":"BRANCH","branches":[{"condition":$condition,"next":"fin"}],"defaultNext":"fin"},{"id":"fin","kind":"END"}]}]}""")
+            .workflows["w"]?.step("br")?.branches?.single()?.condition
+    private val eq = """{"op":"EQ","left":{"from":"LITERAL","value":1},"right":{"from":"LITERAL","value":1}}"""
+
+    @Test fun `all and any read every element in order`() {
+        val all = cond("""{"all":[$eq,{"exists":{"from":"INPUT","path":"a"}}]}""") as Condition.AllOf
+        assertEquals(2, all.items.size); assertTrue(all.items[0] is Condition.Compare); assertTrue(all.items[1] is Condition.Exists)
+        val any = cond("""{"any":[{"not":$eq},$eq,$eq]}""") as Condition.AnyOf
+        assertEquals(3, any.items.size); assertTrue(any.items[0] is Condition.Not)
+    }
+
+    @Test fun `one invalid element anywhere makes the whole condition invalid and the workflow is not offered`() {
+        val bad = """{"op":"NOPE","left":{"from":"LITERAL","value":1},"right":{"from":"LITERAL","value":1}}"""
+        assertEquals(null, cond("""{"all":[$eq,{"op":"EVAL"}]}"""))
+        assertEquals(null, cond("""{"any":[{"all":[$eq,$bad]},$eq]}"""))
+        assertEquals(null, cond("""{"all":[$eq,"not-an-object"]}"""))
+        assertEquals(null, cond("""{"all":"not-an-array"}"""))
+    }
+
+    @Test fun `an empty all array is read but rejected by the validator`() {
+        val p = parse("""{"actions":[],"workflows":[{"id":"w","steps":[{"id":"br","kind":"BRANCH","branches":[{"condition":{"all":[]},"next":"fin"}],"defaultNext":"fin"},{"id":"fin","kind":"END"}]}]}""")
+        assertTrue(p.workflows.isEmpty()); assertEquals(setOf("w"), p.issues.keys)
+    }
 }

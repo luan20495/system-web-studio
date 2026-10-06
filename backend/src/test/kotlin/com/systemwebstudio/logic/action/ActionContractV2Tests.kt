@@ -296,6 +296,13 @@ class ActionContractV2Tests {
         assertTrue(offenders.isEmpty(), "forbidden imports in logic.*: $offenders")
     }
 
+    @Test fun `logic sources use the Jackson 3 form of ObjectNode set and never the Jackson 2 generic one`() {
+        val sources = logicSources()
+        assertTrue(sources.size > 10)
+        val offenders = sources.filter { f -> Files.readAllLines(f).any { Regex("""\bset<""").containsMatchIn(it) } }.map { it.fileName.toString() }
+        assertTrue(offenders.isEmpty(), "set<T>(…) is Jackson 2; Jackson 3's ObjectNode.set is not generic: $offenders")
+    }
+
     @Test fun `only the data port and the handlers' package talk to data, and handlers use nothing else for it`() {
         val sources = logicSources()
         assertTrue(sources.size > 10)

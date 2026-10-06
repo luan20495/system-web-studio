@@ -7,6 +7,7 @@ import com.systemwebstudio.logic.action.canonical.AppDefinitionSource
 import com.systemwebstudio.logic.action.canonical.CanonicalActionReader
 import com.systemwebstudio.logic.action.canonical.array
 import com.systemwebstudio.logic.action.canonical.text
+import com.systemwebstudio.logic.arrayItems
 import com.systemwebstudio.logic.scheduler.CronExpression
 import com.systemwebstudio.logic.workflow.ApprovalSpec
 import com.systemwebstudio.logic.workflow.Branch
@@ -142,11 +143,18 @@ object CanonicalWorkflowReader {
         }
     }
 
+    /** Every element of a JSON array parsed as a condition; null as soon as one is invalid (all-or-nothing, as before). */
+    private fun conditions(array: JsonNode, depth: Int): List<Condition>? {
+        val items = ArrayList<Condition>()
+        for (element in array.arrayItems()) items += condition(element, depth + 1) ?: return null
+        return items
+    }
+
     /** `{ "op": "EQ", "left": ref, "right": ref }`, `{ "all": [..] }`, `{ "any": [..] }`, `{ "not": cond }`, `{ "exists": ref }`. Depth-limited while parsing. */
     internal fun condition(n: JsonNode, depth: Int): Condition? {
         if (depth > WorkflowDefinitionValidator.MAX_CONDITION_DEPTH || !n.isObject) return null
-        n.get("all")?.takeIf { it.isArray }?.let { a -> val items = a.map { condition(it, depth + 1) ?: return null }; return Condition.AllOf(items) }
-        n.get("any")?.takeIf { it.isArray }?.let { a -> val items = a.map { condition(it, depth + 1) ?: return null }; return Condition.AnyOf(items) }
+        n.get("all")?.takeIf { it.isArray }?.let { a -> return conditions(a, depth)?.let { items -> Condition.AllOf(items) } }
+        n.get("any")?.takeIf { it.isArray }?.let { a -> return conditions(a, depth)?.let { items -> Condition.AnyOf(items) } }
         n.get("not")?.let { return condition(it, depth + 1)?.let { c -> Condition.Not(c) } }
         n.get("exists")?.let { return valueRef(it)?.let { r -> Condition.Exists(r) } }
         val op = n.text("op")?.let { o -> CompareOp.entries.firstOrNull { it.name == o } } ?: return null

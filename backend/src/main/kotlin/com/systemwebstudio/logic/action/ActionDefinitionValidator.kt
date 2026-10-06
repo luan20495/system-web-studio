@@ -1,5 +1,6 @@
 package com.systemwebstudio.logic.action
 
+import com.systemwebstudio.logic.arrayItems
 import tools.jackson.databind.JsonNode
 
 /**
@@ -100,7 +101,7 @@ object ActionDefinitionValidator {
                 forbiddenNested(node.get(name), "$path.$name", depth + 1, out)
             }
         } else if (node.isArray) {
-            node.forEachIndexed { i, child -> forbiddenNested(child, "$path[$i]", depth + 1, out) }
+            node.arrayItems().forEachIndexed { i, child -> forbiddenNested(child, "$path[$i]", depth + 1, out) }
         }
     }
 }
