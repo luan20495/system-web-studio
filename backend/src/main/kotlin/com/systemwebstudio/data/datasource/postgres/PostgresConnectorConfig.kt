@@ -16,15 +16,20 @@ import com.systemwebstudio.data.query.QueryLimits
  * | `sslmode` | only `verify-full` (also the default): TLS with certificate-chain **and host-name** verification against `host`. `require`/`verify-ca` (no host-name check, or no check at all), `prefer`, `allow` and `disable` are rejected: there is no way to weaken or turn TLS off |
  * | `schemas` | comma-separated schemas schema discovery may list (default `public`) |
  * | `timeoutMs`, `maxRows`, `maxResponseBytes` | per-call limits, clamped to [QueryLimits] ceilings |
+ * | `writable` | `true` lets the approved mutations of this data source INSERT/UPDATE/DELETE (B-C0-W-04); default `false` = read-only, exactly as before. Queries and discovery always run in a read-only session, whatever this says |
+ * | `maxAffectedRows` | most rows one mutation may change (default 1000, at most 100000); a statement that would change more is rolled back and refused |
  *
  * The role name and password are **credential** (`username`, `password`), never configuration.
  */
 class PostgresConnectorConfig private constructor(
     val host: String, val port: Int, val database: String, val sslMode: String, val schemas: List<String>,
-    val timeoutMillis: Int, val maxRows: Int, val maxResponseBytes: Int
+    val timeoutMillis: Int, val maxRows: Int, val maxResponseBytes: Int,
+    val writable: Boolean = false, val maxAffectedRows: Int = DEFAULT_MAX_AFFECTED
 ) {
     companion object {
-        private val KEYS = setOf("host", "port", "database", "sslmode", "schemas", "timeoutMs", "maxRows", "maxResponseBytes")
+        const val DEFAULT_MAX_AFFECTED = 1_000
+        const val MAX_AFFECTED = 100_000
+        private val KEYS = setOf("host", "port", "database", "sslmode", "schemas", "timeoutMs", "maxRows", "maxResponseBytes", "writable", "maxAffectedRows")
         private val DB = Regex("^[A-Za-z0-9_.-]{1,63}$")
         private val SCHEMA = Regex("^[A-Za-z_][A-Za-z0-9_]{0,62}$")
         private val SSL_MODES = setOf("verify-full")
@@ -45,7 +50,9 @@ class PostgresConnectorConfig private constructor(
                 host, port, db, ssl, schemas.distinct(),
                 int(config, "timeoutMs", QueryLimits.DEFAULT_TIMEOUT_MS, QueryLimits.MIN_TIMEOUT_MS, QueryLimits.MAX_TIMEOUT_MS),
                 int(config, "maxRows", QueryLimits.DEFAULT_ROWS, 1, QueryLimits.MAX_ROWS),
-                int(config, "maxResponseBytes", QueryLimits.DEFAULT_RESPONSE_BYTES, 1_000, QueryLimits.MAX_RESPONSE_BYTES)
+                int(config, "maxResponseBytes", QueryLimits.DEFAULT_RESPONSE_BYTES, 1_000, QueryLimits.MAX_RESPONSE_BYTES),
+                when (config["writable"]) { null, "false" -> false; "true" -> true; else -> bad("writable") },
+                int(config, "maxAffectedRows", DEFAULT_MAX_AFFECTED, 1, MAX_AFFECTED)
             )
         }
 

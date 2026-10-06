@@ -32,6 +32,12 @@ class FakePg(private val answer: (String) -> FakeRows = { FakeRows.EMPTY }) {
     @Volatile var maxRows = -1
     @Volatile var queryTimeout = -1
     @Volatile var fetchSize = -1
+    /** B-C0-W-04 failure injection: a statement whose SQL this returns an exception for fails when executed (queries and updates alike) */
+    @Volatile var failure: (String) -> Throwable? = { null }
+    /** when set, COMMIT throws it (the statement already succeeded) */
+    @Volatile var commitFailure: Throwable? = null
+    /** what executeUpdate/executeLargeUpdate report */
+    @Volatile var updateCount = 1L
 
     val connection: Connection = proxy(Connection::class.java) { _, m, a ->
         when (m.name) {
@@ -39,6 +45,7 @@ class FakePg(private val answer: (String) -> FakeRows = { FakeRows.EMPTY }) {
             "setReadOnly" -> { events += "readOnly=${a!![0]}"; null }
             "createStatement" -> statement(null)
             "prepareStatement" -> statement(a!![0] as String)
+            "commit" -> { events += "commit"; commitFailure?.let { throw it }; null }
             "rollback" -> { events += "rollback"; null }
             "close" -> { events += "close"; null }
             "setSavepoint" -> proxy(java.sql.Savepoint::class.java) { _, _, _ -> null }
@@ -53,8 +60,11 @@ class FakePg(private val answer: (String) -> FakeRows = { FakeRows.EMPTY }) {
             "executeQuery" -> {
                 val sql = prepared ?: a!![0] as String
                 executed += sql
+                failure(sql)?.let { throw it }
                 resultSet(answer(sql))
             }
+            "executeLargeUpdate" -> { val sql = prepared!!; executed += sql; failure(sql)?.let { throw it }; updateCount }
+            "executeUpdate" -> { val sql = prepared!!; executed += sql; failure(sql)?.let { throw it }; updateCount.toInt() }
             "setString", "setInt", "setLong", "setObject", "setBigDecimal", "setBoolean", "setArray" -> { params += a!![1]; null }
             "setNull" -> { params += null; null }
             "setMaxRows" -> { maxRows = a!![0] as Int; null }

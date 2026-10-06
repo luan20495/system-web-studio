@@ -1,12 +1,17 @@
 package com.systemwebstudio.data.datasource.postgres
 
+import com.systemwebstudio.data.datasource.ConfigKeySpec
 import com.systemwebstudio.data.datasource.ConnectionTestResult
+import com.systemwebstudio.data.datasource.ConnectorCapability
+import com.systemwebstudio.data.datasource.ConnectorDescriptor
 import com.systemwebstudio.data.datasource.ConnectorFailure
+import com.systemwebstudio.data.datasource.ConnectorStatus
 import com.systemwebstudio.data.datasource.DataConnector
 import com.systemwebstudio.data.datasource.DataSourceRef
 import com.systemwebstudio.data.datasource.DataSourceTypes
 import com.systemwebstudio.data.datasource.FailureCodes
 import com.systemwebstudio.data.datasource.HostResolver
+import com.systemwebstudio.data.datasource.MutationExecutor
 import com.systemwebstudio.data.datasource.ResolvedCredential
 import com.systemwebstudio.data.datasource.SystemHostResolver
 import com.systemwebstudio.data.discovery.DiscoveredEntity
@@ -39,8 +44,11 @@ import java.util.Base64
 import java.util.Properties
 import javax.net.ssl.SSLException
 
-/** Everything needed to open one connection. No readable `toString`: it holds the password. */
-class PgTarget(val config: PostgresConnectorConfig, val addresses: List<InetAddress>, val user: String, val password: String) {
+/**
+ * Everything needed to open one connection. No readable `toString`: it holds the password. [writable] is true only for the session of an approved
+ * mutation of a data source configured `writable=true`; every other session (query, discovery, sampling, connection test) is read-only.
+ */
+class PgTarget(val config: PostgresConnectorConfig, val addresses: List<InetAddress>, val user: String, val password: String, val writable: Boolean = false) {
     override fun toString() = "PgTarget(***)"
 }
 
@@ -57,7 +65,7 @@ fun interface PgConnectionFactory {
  *   address) with `sslfactory=DefaultJavaSSLFactory` (the JVM's trust store; a tenant cannot supply a CA file path). `require` is never produced: it
  *   encrypts without verifying anything, so a man-in-the-middle with any certificate would be accepted. The only other value is `disable`, and only
  *   when a test explicitly builds the factory without TLS.
- * - session: read-only transactions, `statement_timeout`, `lock_timeout`, `idle_in_transaction_session_timeout`; connect/login/socket timeouts.
+ * - session: read-only transactions (read-write only for a [PgTarget.writable] mutation session), `statement_timeout`, `lock_timeout`, `idle_in_transaction_session_timeout`; connect/login/socket timeouts.
  * - credentials are driver properties, never part of the URL; the socket is pinned to the already-checked addresses.
  */
 internal object PgConnectionProperties {
@@ -74,7 +82,7 @@ internal object PgConnectionProperties {
                 setProperty("sslfactory", "org.postgresql.ssl.DefaultJavaSSLFactory")
             } else setProperty("sslmode", "disable")
             setProperty("connectTimeout", seconds); setProperty("loginTimeout", seconds); setProperty("socketTimeout", seconds)
-            setProperty("options", "-c default_transaction_read_only=on -c statement_timeout=${cfg.timeoutMillis} -c lock_timeout=2000 -c idle_in_transaction_session_timeout=${cfg.timeoutMillis}")
+            setProperty("options", "-c default_transaction_read_only=${if (target.writable) "off" else "on"} -c statement_timeout=${cfg.timeoutMillis} -c lock_timeout=2000 -c idle_in_transaction_session_timeout=${cfg.timeoutMillis}")
             setProperty("ApplicationName", "xweb-data-connector")
             setProperty("stringtype", "unspecified")          // string parameters adopt the column type (uuid, enum, …) instead of failing
             setProperty("gssEncMode", "disable")
@@ -123,6 +131,62 @@ internal object PgErrors {
     }
 }
 
+/** where in a mutation the failure happened: [EXECUTE] = the statement was (or may have been) sent, [COMMIT] = the transaction end was (or may have been) sent */
+internal enum class PgWritePhase { EXECUTE, COMMIT }
+
+/**
+ * B-C0-W-04 · SQLSTATE → the FROZEN mutation outcome (`data-runtime.md` §4b); nothing here adds a wire code. The rule that matters: **only a failure the
+ * server itself reported on a statement or on COMMIT proves that nothing was applied** (the server rolls the transaction back); everything where the
+ * answer may simply have been lost — a timeout, a broken or reset connection, a TLS error mid-stream — leaves the outcome unknown.
+ *
+ * | situation | code | applied? | idempotency key |
+ * |---|---|---|---|
+ * | constraint violation (class 23) | `MUTATION_REJECTED` | no | released |
+ * | value does not fit the column (class 22) | `INVALID_PARAMS` | no | released |
+ * | privilege missing (42501) | `PERMISSION_DENIED` | no | released |
+ * | table/column/type does not match (class 42, 0A) | `MUTATION_REJECTED` | no | released |
+ * | read-only session/replica (25006) | `READ_ONLY_VIOLATION` | no | released |
+ * | serialization failure, deadlock, lock timeout, resources (40001, 40P01, 55P03, 55006, 53xxx) | `MUTATION_REJECTED` ("transient") | no | released |
+ * | timeout (socket or `statement_timeout` 57014) | `TIMEOUT` | **unknown** | kept as UNKNOWN |
+ * | connection lost / reset / shutdown (08xxx, 57Pxx, I/O or TLS error after the statement was sent) | `CONNECT_FAILED` | **unknown** | kept as UNKNOWN |
+ * | anything else the server answered | `QUERY_FAILED` | **unknown** (conservative) | kept as UNKNOWN |
+ *
+ * Messages are fixed text: the driver's message (it quotes SQL, values, constraint and table names) is never used.
+ */
+internal object PgWriteErrors {
+    private val log = LoggerFactory.getLogger(PgWriteErrors::class.java)
+
+    fun map(e: SQLException, phase: PgWritePhase): ConnectorFailure {
+        val chain = generateSequence<Throwable>(e) { it.cause }.take(8).toList()
+        val state = e.sqlState ?: ""
+        log.debug("postgres write failure: phase={} state={} type={}", phase, state, e.javaClass.simpleName)
+        val unknown = "it may or may not have been applied"
+        return when {
+            chain.any { it is SocketTimeoutException } -> ConnectorFailure(FailureCodes.TIMEOUT, "the database did not answer in time; $unknown")
+            state == "57014" -> ConnectorFailure(FailureCodes.TIMEOUT, "the change exceeded the time limit; $unknown")
+            state.startsWith("08") || state.startsWith("57P") || chain.any { it is java.io.IOException || it is SSLException } ->
+                ConnectorFailure(FailureCodes.CONNECT_FAILED, "the connection to the database was lost" + (if (phase == PgWritePhase.COMMIT) " while committing" else " while the change was running") + "; $unknown")
+            state.startsWith("23") -> ConnectorFailure(FailureCodes.MUTATION_REJECTED, "the database rejected the change: ${constraint(state)}; nothing was applied")
+            state.startsWith("22") -> ConnectorFailure(FailureCodes.INVALID_PARAMS, "a value does not fit the target column; nothing was applied")
+            state == "42501" -> ConnectorFailure(FailureCodes.PERMISSION_DENIED, "the database role is not allowed to make that change; nothing was applied")
+            state.startsWith("42") || state.startsWith("0A") -> ConnectorFailure(FailureCodes.MUTATION_REJECTED, "the mutation does not match the database schema; nothing was applied")
+            state == "25006" -> ConnectorFailure(FailureCodes.READ_ONLY_VIOLATION, "the database session is read-only; nothing was applied")
+            state == "40001" || state == "40P01" || state == "55P03" || state == "55006" || state.startsWith("53") ->
+                ConnectorFailure(FailureCodes.MUTATION_REJECTED, "the database could not run the change right now (transient conflict, lock or resource limit); nothing was applied, it can be submitted again")
+            else -> ConnectorFailure(FailureCodes.QUERY_FAILED, "the change could not be completed; $unknown")
+        }
+    }
+
+    private fun constraint(state: String) = when (state) {
+        "23505" -> "a unique constraint would be violated"
+        "23503" -> "a foreign key constraint would be violated"
+        "23502" -> "a required value (NOT NULL) is missing"
+        "23514" -> "a check constraint would be violated"
+        "23P01" -> "an exclusion constraint would be violated"
+        else -> "an integrity constraint would be violated"
+    }
+}
+
 /**
  * What must be true of *this* session before anything the caller supplied runs on it. Run for **every** connection a [PgSessions] hands out — query,
  * discovery, sampling and connection test alike — and never cached across connections: a role can be altered (made superuser, added to
@@ -144,10 +208,12 @@ internal object PgSessionPreflight {
         EXISTS (SELECT 1 FROM pg_roles g WHERE left(g.rolname, 3) = 'pg_' AND pg_has_role(current_user, g.oid, 'MEMBER'))
         FROM pg_roles r WHERE r.rolname = current_user"""
 
-    fun verify(conn: Connection) {
+    /** [writable] = the session of an approved mutation: the transaction must be READ WRITE (anything else is `READ_ONLY_VIOLATION`); the role checks below are identical */
+    fun verify(conn: Connection, writable: Boolean = false) {
         conn.createStatement().use { st -> st.executeQuery(SQL).use { rs ->
             if (!rs.next()) throw tooPrivileged("the database role could not be verified")
-            if (rs.getString(1) != "on") throw ConnectorFailure(FailureCodes.READ_ONLY_VIOLATION, "could not enforce a read-only session")
+            if (rs.getString(1) != (if (writable) "off" else "on"))
+                throw ConnectorFailure(FailureCodes.READ_ONLY_VIOLATION, if (writable) "the database session is read-only; a change cannot run here" else "could not enforce a read-only session")
             if (rs.getString(2) != "on") throw ConnectorFailure(FailureCodes.READ_ONLY_VIOLATION, "the session does not use standard string literals")
             if (rs.getString(3) != "off" || rs.getBoolean(4) || rs.getBoolean(9)) throw tooPrivileged("the database role must not be a superuser")
             if (rs.getBoolean(10)) throw tooPrivileged("the database role must not be a member of a predefined administrative role")
@@ -186,6 +252,34 @@ internal class PgSessions(private val policy: PostgresTargetPolicy, private val 
             runCatching { conn.close() }
         }
     }
+
+    /**
+     * B-C0-W-04 · the session of ONE approved mutation: same resolve → policy → TLS connect → role preflight as [withConnection], but READ WRITE and with
+     * explicit transaction control — [block] runs the statement and commits itself and must turn every `SQLException` into a [ConnectorFailure] with
+     * [PgWriteErrors] (it knows whether the statement was already sent). Whatever is left uncommitted is rolled back before the connection is closed, so a
+     * failure between the statement and the commit never leaves anything applied. Only reachable for a data source configured `writable=true`.
+     */
+    fun <T> withWritableConnection(ds: DataSourceRef, cred: ResolvedCredential, block: (Connection, PostgresConnectorConfig) -> T): T {
+        val cfg = PostgresConnectorConfig.parse(ds.configNonSecret)
+        if (!cfg.writable) throw ConnectorFailure(FailureCodes.READ_ONLY_VIOLATION, "this PostgreSQL data source is read-only")
+        val (user, password) = PostgresConnectorConfig.credentialOf(cred)
+        val addresses = policy.resolve(cfg.host, resolver)
+        val conn = try { factory.open(PgTarget(cfg, addresses, user, password, writable = true)) }
+            catch (e: SQLException) { throw PgErrors.map(e) }                            // nothing was sent: the connect-time mapping is exact
+            catch (e: ConnectorFailure) { throw e }
+            catch (e: Exception) { log.debug("connect failure: {}", e.javaClass.simpleName); throw ConnectorFailure(FailureCodes.CONNECT_FAILED, "the database could not be reached") }
+        try {
+            conn.autoCommit = false                                                      // one explicit transaction per mutation
+            conn.isReadOnly = false
+            PgSessionPreflight.verify(conn, writable = true)                             // EVERY write session, before the caller's statement
+            return block(conn, cfg)
+        } catch (e: SQLException) {
+            throw PgErrors.map(e)                                                        // only setup/preflight statements can get here: nothing of the caller's was sent
+        } finally {
+            runCatching { conn.rollback() }                                              // a no-op after a commit; undoes everything otherwise
+            runCatching { conn.close() }
+        }
+    }
 }
 
 class PostgresConnector(
@@ -198,6 +292,20 @@ class PostgresConnector(
     private val sessions = PgSessions(policy, resolver, connections)
     private val exec = PostgresQueryExecutor(catalog, sessions)
     private val discovery = PostgresSchemaDiscovery(sessions)
+    private val mutation = PostgresMutationExecutor(sessions)
+
+    override val descriptor = ConnectorDescriptor(type, "PostgreSQL", ConnectorStatus.AVAILABLE,
+        setOf(ConnectorCapability.DISCOVERY, ConnectorCapability.QUERY, ConnectorCapability.MUTATION),
+        configKeys = listOf(
+            ConfigKeySpec("host", true, "public DNS name of the server"), ConfigKeySpec("port", false, "default 5432"), ConfigKeySpec("database", true, "database name"),
+            ConfigKeySpec("sslmode", false, "only verify-full (the default): TLS with certificate and host name verification is mandatory"),
+            ConfigKeySpec("schemas", false, "comma-separated schemas that discovery lists and mutations may target; default public"),
+            ConfigKeySpec("timeoutMs", false, "per-call time limit in milliseconds"), ConfigKeySpec("maxRows", false, "most rows a query returns"),
+            ConfigKeySpec("maxResponseBytes", false, "most bytes a query returns"),
+            ConfigKeySpec("writable", false, "true lets approved mutations INSERT/UPDATE/DELETE; default false (read-only)"),
+            ConfigKeySpec("maxAffectedRows", false, "most rows one mutation may change (default 1000); more is rolled back and refused")),
+        credentialKeys = listOf("username", "password"),
+        notes = "Queries run in a read-only session. With writable=true the approved mutations run as one transaction each (parameter-bound INSERT/UPDATE/DELETE, committed once); use a role limited to INSERT/UPDATE/DELETE on the tables concerned.")
 
     override fun validateConfig(config: Map<String, String>) {
         val cfg = PostgresConnectorConfig.parse(config)
@@ -205,15 +313,27 @@ class PostgresConnector(
     }
     override fun discovery(): SchemaDiscovery = discovery
     override fun executor(): QueryExecutor = exec
+    /** always present; a data source that is not configured `writable=true` answers `READ_ONLY_VIOLATION` (nothing executed) */
+    override fun mutator(): MutationExecutor = mutation
 
     override fun test(ds: DataSourceRef, cred: ResolvedCredential): ConnectionTestResult = try {
         val started = System.nanoTime()
-        val warnings = sessions.withConnection(ds, cred) { conn, cfg ->
-            // the read-only / role checks already ran in PgSessions for this very connection
-            val writable = conn.prepareStatement(WRITABLE_TABLES).use { ps ->
+        val configured = PostgresConnectorConfig.parse(ds.configNonSecret)
+        // the read-only / role checks already ran in PgSessions for this very connection; the test itself never changes anything (it is rolled back)
+        val countWritable = { conn: Connection, cfg: PostgresConnectorConfig ->
+            conn.prepareStatement(WRITABLE_TABLES).use { ps ->
                 ps.setArray(1, conn.createArrayOf("text", cfg.schemas.toTypedArray()))
                 ps.executeQuery().use { rs -> if (rs.next()) rs.getInt(1) else 0 }
             }
+        }
+        val warnings = if (configured.writable)
+            // a writable data source is tested through a READ WRITE session, so "can it write at all" is part of the answer
+            sessions.withWritableConnection(ds, cred) { conn, cfg ->
+                try { if (countWritable(conn, cfg) == 0) listOf("writable is enabled but the database role has no write privilege on the configured schemas") else emptyList() }
+                catch (e: SQLException) { throw PgErrors.map(e) }
+            }
+        else sessions.withConnection(ds, cred) { conn, cfg ->
+            val writable = countWritable(conn, cfg)
             if (writable > 0) listOf("the database role can write to $writable table(s); use a SELECT-only role") else emptyList()
         }
         ConnectionTestResult.Ok((System.nanoTime() - started) / 1_000_000, warnings)
@@ -247,23 +367,10 @@ class PostgresQueryExecutor internal constructor(private val catalog: QueryCatal
                 st.maxRows = limit + 1
                 st.fetchSize = minOf(limit + 1, 500)
                 var i = 1
-                for (name in compiled.paramNames) bind(st, i++, bound[name])
+                for (name in compiled.paramNames) PgParams.bind(st, i++, bound[name])
                 st.setInt(i++, limit + 1); st.setInt(i, offset)
                 st.executeQuery().use { rs -> PgRows.read(rs, limit, cfg.maxResponseBytes) }
             }
-        }
-    }
-
-    private fun bind(st: java.sql.PreparedStatement, i: Int, v: Any?) {
-        when (v) {
-            null -> st.setNull(i, Types.NULL)
-            is String -> st.setString(i, v)
-            is Long -> st.setLong(i, v)
-            is java.math.BigDecimal -> st.setBigDecimal(i, v)
-            is Boolean -> st.setBoolean(i, v)
-            is java.time.OffsetDateTime -> st.setObject(i, v)
-            is java.time.LocalDate -> st.setObject(i, v)
-            else -> throw ConnectorFailure(FailureCodes.INVALID_PARAMS, "unsupported parameter type")
         }
     }
 
@@ -280,6 +387,22 @@ class PostgresQueryExecutor internal constructor(private val catalog: QueryCatal
             sqlType in setOf(Types.CHAR, Types.VARCHAR, Types.LONGVARCHAR, Types.NCHAR, Types.NVARCHAR, Types.LONGNVARCHAR) -> NormalizedType.STRING
             typeName != null && typeName.equals("uuid", true) -> NormalizedType.STRING
             else -> NormalizedType.OTHER
+        }
+    }
+}
+
+/** The one place a Java value becomes a JDBC parameter (queries and mutations alike): a value is ALWAYS bound, never written into SQL text. */
+internal object PgParams {
+    fun bind(st: java.sql.PreparedStatement, i: Int, v: Any?) {
+        when (v) {
+            null -> st.setNull(i, Types.NULL)
+            is String -> st.setString(i, v)
+            is Long -> st.setLong(i, v)
+            is java.math.BigDecimal -> st.setBigDecimal(i, v)
+            is Boolean -> st.setBoolean(i, v)
+            is java.time.OffsetDateTime -> st.setObject(i, v)
+            is java.time.LocalDate -> st.setObject(i, v)
+            else -> throw ConnectorFailure(FailureCodes.INVALID_PARAMS, "unsupported parameter type")
         }
     }
 }
@@ -305,7 +428,7 @@ internal object PgRows {
         return QueryResult(names.indices.map { Column(names[it], types[it]) }, rows, truncated)
     }
 
-    private fun cell(rs: ResultSet, i: Int, sqlType: Int): Pair<JsonNode, Int> {
+    internal fun cell(rs: ResultSet, i: Int, sqlType: Int): Pair<JsonNode, Int> {
         val value: Any? = when (sqlType) {
             Types.BIT, Types.BOOLEAN -> rs.getBoolean(i)
             Types.TINYINT, Types.SMALLINT, Types.INTEGER, Types.BIGINT -> rs.getLong(i)
