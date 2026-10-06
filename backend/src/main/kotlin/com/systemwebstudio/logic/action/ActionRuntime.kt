@@ -232,7 +232,7 @@ class DefaultActionRuntime(
 
         val runKey = effectiveKey?.let { RunKey(ctx.tenantId, appId, def.id, ctx.actor.userId, it) }
         val runId = if (runKey != null) {
-            when (val begin = safely { runs.begin(runKey, ActionInputBinder.fingerprint(def.id, input), clock.instant()) }) {
+            when (val begin = safely { runs.begin(runKey, ActionInputBinder.fingerprint(def.id, input), clock.instant(), mutating = def.type.mutatesState) }) {
                 is RunBegin.Started -> begin.runId
                 is RunBegin.Replay -> {
                     recordBestEffort(entry(AuditPhase.REPLAYED, ctx, request, def, null))

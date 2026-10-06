@@ -22,8 +22,26 @@ data class ActionRunRecord(
     val result: ActionResult?,
     val startedAt: Instant,
     val finishedAt: Instant?,
-    val updatedAt: Instant
+    val updatedAt: Instant,
+    /** The action changes state ([ActionType.mutatesState]). Decides what an abandoned run becomes: see [AbandonedRuns]. Conservative default: true. */
+    val mutating: Boolean = true
 )
+
+/**
+ * What a run that was left RUNNING (its worker died or was cut off) becomes when it is swept - one definition for every [ActionRunStore] implementation.
+ *
+ * A **mutating** action may already have changed something, so its outcome is *unknown*: `IDEMPOTENCY_OUTCOME_UNKNOWN`, **never retryable**. It is replayed as is
+ * (the handler is not run again), the UI `onError[]` chain is not executed and a workflow neither retries nor routes nor compensates that step - the same rules as
+ * any other unknown outcome (data-runtime.md section 4b, D-C4-17). A **non-mutating** action cannot have changed anything, so it becomes a retryable `TIMEOUT`.
+ */
+object AbandonedRuns {
+    fun result(mutating: Boolean): ActionResult.Failed =
+        if (mutating) failed(
+            ActionErrorCodes.IDEMPOTENCY_OUTCOME_UNKNOWN, "The action was interrupted and may have been applied; check before trying again with a new request",
+            retryable = false, details = mapOf("cause" to "ABANDONED")
+        )
+        else failed(ActionErrorCodes.TIMEOUT, "Run was abandoned and swept", retryable = true)
+}
 
 sealed interface RunBegin {
     /** This caller owns the run and must call [ActionRunStore.complete]. */
@@ -47,11 +65,20 @@ sealed interface RunBegin {
  * TEST-mode requests never reach this store (they have no side effect, so there is nothing to de-duplicate).
  */
 interface ActionRunStore {
-    fun begin(key: RunKey, fingerprint: String, now: Instant): RunBegin
+    /**
+     * @param mutating whether the action changes state ([ActionType.mutatesState]); stored with the run so that [sweepStale] can tell an abandoned
+     * write (unknown outcome, never retryable) from an abandoned read (retryable timeout) - see [AbandonedRuns]. A store **must** persist it.
+     */
+    fun begin(key: RunKey, fingerprint: String, now: Instant, mutating: Boolean): RunBegin
+    /** For callers that do not know: assumed mutating, the safe side. */
+    fun begin(key: RunKey, fingerprint: String, now: Instant): RunBegin = begin(key, fingerprint, now, mutating = true)
     /** @return false when [runId] no longer owns the RUNNING state (e.g. the sweeper already failed it). */
     fun complete(key: RunKey, runId: String, result: ActionResult, now: Instant): Boolean
     fun find(key: RunKey): ActionRunRecord?
-    /** Sweeper hook: turns RUNNING runs untouched since [staleBefore] into retryable FAILED. Returns how many. */
+    /**
+     * Sweeper hook: turns RUNNING runs untouched since [staleBefore] into FAILED with [AbandonedRuns.result] of the run's own `mutating` flag
+     * (a mutating run: `IDEMPOTENCY_OUTCOME_UNKNOWN`, not retryable; otherwise a retryable `TIMEOUT`). Returns how many.
+     */
     fun sweepStale(staleBefore: Instant, now: Instant): Int
     /**
      * Retention: deletes **finished** records (SUCCEEDED / FAILED) that finished before [olderThan], oldest first, at most [limit]. A RUNNING record is
@@ -66,16 +93,16 @@ interface ActionRunStore {
 class InMemoryActionRunStore : ActionRunStore {
     private val runs = ConcurrentHashMap<RunKey, ActionRunRecord>()
 
-    override fun begin(key: RunKey, fingerprint: String, now: Instant): RunBegin {
+    override fun begin(key: RunKey, fingerprint: String, now: Instant, mutating: Boolean): RunBegin {
         var outcome: RunBegin = RunBegin.KeyReused
         runs.compute(key) { _, existing ->
             when {
-                existing == null -> newRun(key, fingerprint, 1, now).also { outcome = RunBegin.Started(it.runId, 1) }
+                existing == null -> newRun(key, fingerprint, 1, now, mutating).also { outcome = RunBegin.Started(it.runId, 1) }
                 existing.fingerprint != fingerprint -> existing.also { outcome = RunBegin.KeyReused }
                 existing.status == RunStatus.RUNNING -> existing.also { outcome = RunBegin.InProgress(it.runId) }
                 existing.status == RunStatus.SUCCEEDED -> existing.also { outcome = RunBegin.Replay(it.result!!) }
                 (existing.result as? ActionResult.Failed)?.retryable == true ->
-                    newRun(key, fingerprint, existing.attempt + 1, now).also { outcome = RunBegin.Started(it.runId, it.attempt) }
+                    newRun(key, fingerprint, existing.attempt + 1, now, mutating).also { outcome = RunBegin.Started(it.runId, it.attempt) }
                 else -> existing.also { outcome = RunBegin.Replay(it.result!!) }
             }
         }
@@ -103,7 +130,7 @@ class InMemoryActionRunStore : ActionRunStore {
                     n++
                     r.copy(
                         status = RunStatus.FAILED, finishedAt = now, updatedAt = now,
-                        result = failed(ActionErrorCodes.TIMEOUT, "Run was abandoned and swept", retryable = true)
+                        result = AbandonedRuns.result(r.mutating)
                     )
                 } else r
             }
@@ -122,6 +149,6 @@ class InMemoryActionRunStore : ActionRunStore {
     /** Test helper: number of stored runs. */
     fun size(): Int = runs.size
 
-    private fun newRun(key: RunKey, fingerprint: String, attempt: Int, now: Instant) =
-        ActionRunRecord(key, UUID.randomUUID().toString(), fingerprint, RunStatus.RUNNING, attempt, null, now, null, now)
+    private fun newRun(key: RunKey, fingerprint: String, attempt: Int, now: Instant, mutating: Boolean) =
+        ActionRunRecord(key, UUID.randomUUID().toString(), fingerprint, RunStatus.RUNNING, attempt, null, now, null, now, mutating)
 }
