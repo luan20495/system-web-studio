@@ -196,6 +196,7 @@ class DataWritableE2ETests : IntegrationTestBase() {
         Logs().use { logs ->
             val e = env()
             val before = ShopDb.rows("SELECT count(*) AS n FROM shop.orders").single()["n"] as Long
+            val credentialRows = count("SELECT count(*) FROM data_credentials WHERE tenant_id = ?", e.tenant)      // this source's own row plus any source another test left in the shared tenant
 
             // -- the data source is registered with metadata only
             val got = keep(e.admin.get(e.source)); val ds = e.admin.body(got)
@@ -283,7 +284,7 @@ class DataWritableE2ETests : IntegrationTestBase() {
             keep(e.admin.put("${e.source}/credential", """{"credential":{"username":"shop_writer","password":"${ShopDb.PASSWORD}"}}"""))
             assertThat(e.admin.body(keep(e.admin.post("${e.source}/test", "{}"))).get("ok").asBoolean()).isTrue()
             assertThat(status(act(e, "order-e2e-0003", "Initech"))).isEqualTo(200); assertThat(ShopDb.orders("Initech")).hasSize(1)
-            assertThat(count("SELECT count(*) FROM data_credentials WHERE tenant_id = ?", e.tenant)).describedAs("replaced credentials are destroyed").isEqualTo(1L)
+            assertThat(count("SELECT count(*) FROM data_credentials WHERE tenant_id = ?", e.tenant)).describedAs("replaced credentials are destroyed, not accumulated").isEqualTo(credentialRows)
 
             // -- disabling the data source stops writes (DISABLED, nothing sent); enabling resumes
             assertThat(status(keep(e.admin.patch(e.source, """{"status":"DISABLED"}""")))).isEqualTo(200)
@@ -314,7 +315,7 @@ class DataWritableE2ETests : IntegrationTestBase() {
             assertThat(status(keep(e.admin.get(e.source)))).isEqualTo(404)
             for (table in listOf("data_sources" to "id", "data_mutations" to "data_source_id", "data_idempotency" to "data_source_id", "data_source_bindings" to "data_source_id"))
                 assertThat(count("SELECT count(*) FROM ${table.first} WHERE ${table.second} = ?", e.dsId)).describedAs(table.first).isZero()
-            assertThat(count("SELECT count(*) FROM data_credentials WHERE tenant_id = ?", e.tenant)).isZero()
+            assertThat(count("SELECT count(*) FROM data_credentials WHERE tenant_id = ?", e.tenant)).describedAs("the deleted source takes its credential with it").isEqualTo(credentialRows - 1)
             assertThat(ShopDb.orders("ACME")).hasSize(1)
             val mine = ShopDb.rows("SELECT count(*) AS n FROM shop.orders WHERE customer IN ('ACME','RACE','Globex','Initech','Umbrella','Wayne')").single()["n"] as Long
             assertThat(mine).isEqualTo(6L)

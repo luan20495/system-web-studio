@@ -204,7 +204,7 @@ class DataManagementApiTests : IntegrationTestBase() {
         assertThat(connector.credentialsSeen.last().require("authValue")).isEqualTo("second-$secret")
         for (bad in listOf("{}", """{"credential":{}}""", """{"credential":"x"}""", """{"credential":{"a":1}}""", """{"credential":{"a":"b"},"extra":1}""", """{"authValue":"x"}"""))
             assertThat(status(w.s.put("${w.base}/$id/credential", bad))).describedAs(bad).isEqualTo(400)
-        assertThat(connector.credentialsSeen.size).isEqualTo(2)
+        assertThat(connector.credentialsSeen.size).describedAs("the refused bodies never reached the connector: only the one test connection did").isEqualTo(1)
         val del = w.s.delete("${w.base}/$id/credential")
         assertThat(status(del)).isEqualTo(204)
         assertThat(w.s.body(w.s.get("${w.base}/$id/credential")).get("configured").asBoolean()).isFalse()
