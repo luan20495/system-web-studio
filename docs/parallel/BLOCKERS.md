@@ -4,6 +4,8 @@ Thêm dòng khi bạn cần thay đổi file của owner khác hoặc bị chặ
 
 Loại: `needs-hot-file` · `needs-shared-file` · `needs-contract-change` · `needs-migration` · `external`.
 
+**Phân loại theo release (D-C0-29, 2026-10-06):** mỗi dòng dưới đây thuộc `V1_BLOCKER` / `V2_ONLY` / `DEFERRED` / `CLOSE` theo bảng ở `docs/parallel/V1_LOCAL_TARGET.md` §6. Dòng `CLOSE` sẽ được đóng khi đụng tới; blocker chỉ cho cloud / scale không chặn V1.
+
 | ID | Ngày | Từ | Cần từ | Loại | Mô tả | Trạng thái |
 |---|---|---|---|---|---|---|
 | B-001 | 2026-10-05 | C0 | C0 | needs-migration | Risk: migration version coordination is centralized through C0. Flyway không bật `outOfOrder`, nên version phải được C0 cấp tuần tự (request ở `BOARD.md`), gắn một task, và merge theo thứ tự tăng dần; không bật `outOfOrder=true`. Vấn đề phân vùng số cũ đã được thay thế (D-006 → D-007). | MITIGATED |
