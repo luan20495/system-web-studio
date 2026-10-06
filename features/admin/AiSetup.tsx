@@ -1,4 +1,5 @@
 "use client";
+import { A } from "./base";
 import Link from "next/link";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { api } from "@/lib/http-api";
@@ -33,7 +34,7 @@ export function AiAdmin({ tab, usage, pricing }: { tab?: string; usage: ReactNod
   const active = TABS.some(([k]) => k === tab) ? tab! : "providers";
   return (<>
     <Head title="AI" sub="Cấu hình AI cho cả công ty: nhà cung cấp, mô hình được dùng và hạn mức. Nhân viên không bao giờ thấy khóa kết nối."/>
-    <div className="tabs" role="tablist">{TABS.map(([k, l]) => <Link key={k} role="tab" aria-selected={active === k} className={active === k ? "active" : ""} href={`/admin/ai/${k}`}>{l}</Link>)}</div>
+    <div className="tabs" role="tablist">{TABS.map(([k, l]) => <Link key={k} role="tab" aria-selected={active === k} className={active === k ? "active" : ""} href={A(`/ai/${k}`)}>{l}</Link>)}</div>
     {active === "providers" ? <ProvidersTab/> : active === "models" ? <ModelsTab pricing={pricing}/> : active === "limits" ? <LimitsTab/> : usage}
   </>);
 }
@@ -183,7 +184,7 @@ function ModelsTab({ pricing }: { pricing: ReactNode }) {
       <p className="hint">“Tự động” dùng các mô hình miễn phí của OpenRouter khi đã cấu hình, nếu không thì dùng chế độ thử nghiệm. Mô hình trả phí mặc định TẮT; muốn dùng cần bật, nhập giá và cấp ngân sách ở tab Hạn mức. Nhân viên chỉ thấy mô hình đang bật.</p>
       {msg ? <p className="notice" role="status">{msg}</p> : null}
       {error ? <ErrorState error={error} retry={reload}/> : loading && !data ? <StateView kind="loading"/> : rows.length === 0 ? (
-        <StateView kind="empty" title="Chưa có mô hình nào" detail={<p>Thêm nhà cung cấp rồi chọn mô hình ở tab Nhà cung cấp.</p>} action={<Link className="btn primary" href="/admin/ai/providers">Đến Nhà cung cấp</Link>}/>
+        <StateView kind="empty" title="Chưa có mô hình nào" detail={<p>Thêm nhà cung cấp rồi chọn mô hình ở tab Nhà cung cấp.</p>} action={<Link className="btn primary" href={A("/ai/providers")}>Đến Nhà cung cấp</Link>}/>
       ) : <table className="table"><thead><tr><th>Mô hình</th><th>Nhà cung cấp</th><th>Loại</th><th>Giá (USD / 1 triệu token)</th><th>Được phép dùng</th><th>Mặc định</th></tr></thead>
         <tbody>{rows.map(({ p, m }) => <tr key={m.id}>
           <td><b>{m.name}</b></td><td>{p.name}</td>

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import "./globals.css";
-import "./responsive.css";
-import "./http.css";
-import "./factory.css";
+import "../packages/ui/src/styles/globals.css";
+import "../packages/ui/src/styles/responsive.css";
+import "../packages/ui/src/styles/http.css";
+import "../packages/ui/src/styles/factory.css";
+import "../packages/ui/src/styles/builder.css";
 
 export const metadata: Metadata = {
   title: "AI Software Factory",

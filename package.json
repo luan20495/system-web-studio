@@ -3,10 +3,21 @@
   "version": "0.2.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -H 127.0.0.1",
     "build": "next build",
-    "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "start": "next start -H 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "dev:platform": "npm run dev -w @xweb/app-platform",
+    "dev:admin": "npm run dev -w @xweb/app-admin",
+    "dev:studio": "npm run dev -w @xweb/app-studio",
+    "build:platform": "npm run build -w @xweb/app-platform",
+    "build:admin": "npm run build -w @xweb/app-admin",
+    "build:studio": "npm run build -w @xweb/app-studio",
+    "build:apps": "npm run build:platform && npm run build:admin && npm run build:studio",
+    "typecheck:apps": "npm run typecheck -w @xweb/app-platform -w @xweb/app-admin -w @xweb/app-studio",
+    "typecheck:packages": "npm run typecheck --workspaces --if-present --include-workspace-root=false",
+    "typecheck:all": "npm run typecheck:packages",
+    "test:unit": "node scripts/test-unit.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -23,5 +34,16 @@
     "axe-core": "^4.13.0",
     "playwright-core": "^1.63.0",
     "typescript": "^5.8.0"
-  }
+  },
+  "workspaces": [
+    "apps/platform",
+    "apps/admin",
+    "apps/studio",
+    "packages/api-client",
+    "packages/auth",
+    "packages/i18n",
+    "packages/permissions",
+    "packages/types",
+    "packages/ui"
+  ]
 }

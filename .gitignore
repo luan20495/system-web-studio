@@ -24,3 +24,4 @@ infra/keycloak/.generated/
 .next-public/
 packages/*/dist/
 .run/verdaccio-publish.env
+.test-build/

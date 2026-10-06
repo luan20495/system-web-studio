@@ -2,21 +2,25 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
-import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { api, ApiError } from "@/lib/http-api";
 import { renderSchemaDocument } from "@/lib/schema-preview";
-import type { AiStatus, ApiProject, AssetDto, BlockDto, PageSchema, PromptHistoryItem, RegistryComponent, SchemaOperation, Section, VersionSummary } from "@/lib/http-types";
+import type { AiStatus, ApiProject, AssetDto, BlockDto, PageSchema, PromptHistoryItem, RegistryComponent, SchemaOperation, VersionSummary } from "@/lib/http-types";
 import type { DeviceMode } from "@/lib/types";
-import { SectionInspector, sectionLabel, sectionSummary } from "@/components/SectionInspector";
+import { sectionLabel, sectionSummary } from "@/components/SectionInspector";
+import type { AppDefinitionV2, DefinitionOperation } from "@xweb/types";
+import { BuilderWorkspace } from "./builder/BuilderWorkspace";
+import { backendFrom, type ProbeState } from "./builder/core/backend";
+import { explainError } from "./builder/core/errors";
+import { NOT_RENDERED } from "./builder/core/library";
+import type { BlockOption } from "./builder/panels/ComponentsPanel";
 import { useSession } from "../session";
 import { ErrorState, errText, fmtDate, StateView, tok, usd } from "../ui";
 import { AssetsDrawer, DeviceIcon, Drawer, MembersDrawer, PublishModal, SettingsDrawer, suggestions } from "./drawers";
 import { SaveBlockDrawer, SaveTemplateSection } from "./libraryPanels";
 import { CodeWorkspace } from "./CodeWorkspace";
-import { PageBar, SiteDrawer } from "./SitePanels";
+import { SiteDrawer } from "./SitePanels";
 import { insertable } from "../library";
+import { projectBase, S } from "./base";
 
 type Mode = "ai" | "design" | "code";
 type PanelName = "members" | "versions" | "assets" | "publish" | "settings" | "site";
@@ -29,24 +33,11 @@ function usageChip(calls: number, tokens: number | null, cost: number | null): s
 }
 
 type Msg = { id: string; role: "user" | "assistant"; content: string; meta?: string[]; detail?: string };
-const NOT_RENDERED = new Set(["LandingTemplate", "ProductCard"]);    // in the registry but the preview has no renderer for them yet
-const DEFAULT_TEXT: Record<string, string> = { heading: "Tiêu đề mục mới", title: "Tiêu đề mới", brand: "Thương hiệu", text: "© Công ty", body: "Nội dung mới" };
-
-function defaultProps(c: RegistryComponent): Record<string, unknown> {
-  const schema = c.versions.find((v) => v.version === c.latestVersion)?.propsSchema ?? {};
-  const out: Record<string, unknown> = {};
-  for (const r of schema.required ?? []) {
-    const d = schema.properties?.[r] ?? {};
-    out[r] = d.type === "array" ? [] : d.type === "boolean" ? true : d.type === "number" ? 0 : DEFAULT_TEXT[r] ?? "Nội dung mới";
-  }
-  if (schema.properties?.visible) out.visible = true;
-  return out;
-}
 const nonceOfPage = () => (typeof document === "undefined" ? undefined : (document.querySelector("script[nonce]") as HTMLScriptElement | null)?.nonce || undefined);
 
 export function ProjectWorkspace({ projectId, view }: { projectId: string; view?: string }) {
   const router = useRouter(); const params = useSearchParams(); const { me } = useSession();
-  const base = `/studio/projects/${projectId}`;
+  const base = projectBase(projectId);
   const lastModeKey = `ws-mode-${projectId}`;
   const mode: Mode = MODES.includes(view as Mode) ? (view as Mode) : ((() => { try { const m = sessionStorage.getItem(lastModeKey); return MODES.includes(m as Mode) ? (m as Mode) : "ai"; } catch { return "ai"; } })());
   const panel: PanelName | null = PANELS.includes(view as PanelName) ? (view as PanelName) : null;
@@ -69,6 +60,10 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const [pageId, setPageId] = useState("home");
   const [publicPublish, setPublicPublish] = useState<boolean | undefined>(undefined);
   useEffect(() => { api.authConfig().then((c) => setPublicPublish(c.publicPublish)).catch(() => undefined); }, []);
+  /** one probe tells the Builder whether the V2 core (component-metadata, typed definition ops) is integrated on this server */
+  const [probe, setProbe] = useState<ProbeState>({ status: "loading" });
+  useEffect(() => { api.componentMetadata().then((metadata) => setProbe({ status: "ok", metadata })).catch((error) => setProbe({ status: "error", error })); }, []);
+  const backend = useMemo(() => backendFrom(probe), [probe]);
   const [loadError, setLoadError] = useState<unknown>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -78,7 +73,6 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [model, setModel] = useState<string>(() => { try { return localStorage.getItem("studio-ai-model") ?? ""; } catch { return ""; } });
   const promptRef = useRef<HTMLTextAreaElement>(null);
-  const frameRef = useRef<HTMLIFrameElement>(null);
   const ws = project?.workspaceId ?? "";
   const can = (p: string) => project?.permissions.includes(p) ?? false;
   const readOnly = !can("PROJECT_EDIT");
@@ -118,6 +112,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
         const d = e.details as { scope?: string; used?: number; limit?: number } | undefined;
         setNotice(`${d?.scope === "workspace" ? "Workspace đã dùng hết ngân sách token AI của tháng" : "Bạn đã dùng hết hạn mức token AI trong 24 giờ"}${d?.limit ? ` (${tok(d.used ?? 0)} / ${tok(d.limit)} token)` : ""}. Có thể chọn “Mô phỏng” để tiếp tục chỉnh sửa.`);
       }
+      else if (e instanceof ApiError && (e.status === 409 || e.status === 422 || e.status === 429 || e.code === "TENANT_SUSPENDED")) { const m = explainError(e); setNotice(`${m.title}. ${m.detail}`); }
       else if (!(e instanceof ApiError && e.status === 401)) setNotice(errText(e, fallback));
       return undefined;
     } finally { setBusy(null); }
@@ -156,7 +151,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params, project, schema]);
 
-  async function applyOps(ops: SchemaOperation[], summary: string, blockId?: string): Promise<boolean> {
+  async function applyOps(ops: (SchemaOperation | DefinitionOperation)[], summary: string, blockId?: string): Promise<boolean> {
     const r = await run("edit", () => api.patchSchema(ws, projectId, revision, ops, summary, blockId), "Không lưu được thay đổi.");
     if (!r) return false;
     setSchema(r.schema); setRevision(r.revision); void refreshVersions(); return true;
@@ -184,40 +179,12 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
     const ok = await applyOps([{ type: "ADD_SECTION", ...onPage, sectionType: b.baseComponent, sectionId: id, props, ...(footer && b.baseComponent !== "Footer" ? { beforeSectionId: footer.id } : {}) }], `Thêm khối ${b.name}`, b.id);
     if (ok) setSelectedId(id);
   }
-  async function addSection(c: RegistryComponent) {
-    if (!schema) return;
-    const id = `${c.id.toLowerCase()}-${Math.random().toString(36).slice(2, 7)}`;
-    const footer = pageSections.find((s) => s.type === "Footer");
-    const ok = await applyOps([{ type: "ADD_SECTION", ...onPage, sectionType: c.id, sectionId: id, props: defaultProps(c), ...(footer && c.id !== "Footer" ? { beforeSectionId: footer.id } : {}) }], `Thêm ${label(c.id)}`);
-    if (ok) setSelectedId(id);
-  }
-
-  // preview click-to-select (design mode): only messages from our own iframe window, only ids that exist in the schema
-  useEffect(() => {
-    if (mode !== "design") return;
-    const onMessage = (e: MessageEvent) => {
-      if (e.source !== frameRef.current?.contentWindow) return;
-      const d = e.data as { type?: unknown; sectionId?: unknown };
-      if (d?.type === "studio:select" && typeof d.sectionId === "string" && pageSections.some((s) => s.id === d.sectionId)) setSelectedId(d.sectionId);
-    };
-    window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
-  }, [mode, pageSections]);
-
   const assetUrls = useMemo(() => Object.fromEntries(assets.filter((a) => a.downloadUrl).map((a) => [a.id, a.downloadUrl!])), [assets]);
   const previewDocument = useMemo(() => (schema ? renderSchemaDocument(schema, {
-    selectedId: mode === "design" ? selectedId : null, interactive: mode === "design" && !readOnly, nonce: nonceOfPage(), assets: assetUrls, pageId
-  }) : ""), [schema, selectedId, mode, readOnly, assetUrls, pageId]);
+    selectedId: null, interactive: false, nonce: nonceOfPage(), assets: assetUrls, pageId
+  }) : ""), [schema, assetUrls, pageId]);
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
-  function onDragEnd(e: DragEndEvent) {
-    if (!schema || !e.over || e.active.id === e.over.id) return;
-    const from = pageSections.findIndex((s) => s.id === e.active.id), to = pageSections.findIndex((s) => s.id === e.over!.id);
-    if (from < 0 || to < 0) return;
-    void applyOps([{ type: "MOVE_SECTION", sectionId: String(e.active.id), index: to }], `Di chuyển ${label(pageSections[from].type)}`);
-  }
-
-  if (loadError) return <div className="wsError"><ErrorState error={loadError} retry={() => { setLoadError(null); reload().catch(setLoadError); }}/><p><a className="btn" href="/studio/projects">← Danh sách ứng dụng</a></p></div>;
+  if (loadError) return <div className="wsError"><ErrorState error={loadError} retry={() => { setLoadError(null); reload().catch(setLoadError); }}/><p><a className="btn" href={S("/projects")}>← Danh sách ứng dụng</a></p></div>;
   if (project?.appType === "STATIC_APP") return <CodeWorkspace project={project} view={view} onProject={setProject}/>;
   if (!project || !schema) return <div className="wsError"><StateView kind="loading" title="Đang mở ứng dụng…"/></div>;
   // company blocks, then my own drafts (an approved block of mine is already in the company list)
@@ -226,11 +193,32 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const selected = pageSections.find((s) => s.id === selectedId) ?? null;
   const latest = versions[0]?.versionNumber;
 
+  const renderPreview = (o: { selectedId: string | null; interactive: boolean; pageId: string }) => renderSchemaDocument(schema, { selectedId: o.selectedId, interactive: o.interactive, nonce: nonceOfPage(), assets: assetUrls, pageId: o.pageId });
+  const modeTabs = (
+    <nav className="modeTabs" aria-label="Chế độ">
+      {MODES.map((m) => <button key={m} className={mode === m ? "active" : ""} aria-pressed={mode === m} onClick={() => go(m)}>{m === "ai" ? "✦ AI" : m === "design" ? "Design" : "Code"}</button>)}
+    </nav>
+  );
+
   return (
-    <div className="studio workspace3">
+    <div className={`studio workspace3${mode === "design" ? " bx-root" : ""}`}>
+      {mode === "design" ? <BuilderWorkspace
+        project={project} doc={schema as AppDefinitionV2} revision={revision} registry={registry} assets={assets} backend={backend} pageId={pageId} onPage={(id) => { setPageId(id); setSelectedId(null); }}
+        selectedId={selectedId} onSelect={setSelectedId} device={device} onDevice={setDevice} busy={busy !== null} save={save} readOnly={readOnly} latest={latest}
+        blocks={blockOptions.map(({ b, who }): BlockOption => ({ id: b.id, name: b.name, who, baseLabel: label(b.baseComponent) }))}
+        applyOps={applyOps} addBlock={(id) => { const o = blockOptions.find(({ b }) => b.id === id); if (o) void addBlock(o.b); }}
+        renderPreview={renderPreview} labelOf={label} summaryOf={sectionSummary}
+        leading={<button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}>←</button>}
+        modeTabs={modeTabs}
+        trailing={<>
+          <button className="button ghost" onClick={() => go("site")}>Website</button>
+          <button className="button ghost" onClick={() => go("versions")}>Phiên bản</button>
+          <button className="button ghost" onClick={() => go("assets")}>Tệp</button>
+          <button className="button icon" aria-label="Cài đặt project" title={can("PROJECT_SETTINGS") ? "Cài đặt project" : "Bạn không có quyền đổi cài đặt"} disabled={!can("PROJECT_SETTINGS")} onClick={() => go("settings")}>⚙</button></>}
+        goAi={() => go("ai")} openSite={() => go("site")} openMembers={() => go("members")} openPublish={() => go("publish")} saveBlock={() => setSavingBlock(true)}/> : (
       <header className="topbar">
         <div className="brand">
-          <button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push("/studio/projects")}>←</button>
+          <button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}>←</button>
           <div>
             <div className="projectName">{project.name}</div>
             <div className="projectMeta">{latest ? `Phiên bản ${latest}` : "Chưa có phiên bản"} · revision {revision} · {project.siteVisibility === "PUBLIC" ? "Công khai" : "Riêng tư"}{readOnly ? " · chỉ xem" : ""}</div>
@@ -239,9 +227,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
             {save.state === "saving" ? "Đang lưu…" : save.state === "error" ? "Lưu thất bại" : `✓ Đã lưu${save.at ? ` ${save.at.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}` : ""}`}
           </span>
         </div>
-        <nav className="modeTabs" aria-label="Chế độ">
-          {MODES.map((m) => <button key={m} className={mode === m ? "active" : ""} aria-pressed={mode === m} onClick={() => go(m)}>{m === "ai" ? "✦ AI" : m === "design" ? "Design" : "Code"}</button>)}
-        </nav>
+        {modeTabs}
         <div className="topActions">
           <button className="button ghost" onClick={() => go("site")}>Website</button>
           <button className="button ghost" onClick={() => go("versions")}>Phiên bản</button>
@@ -250,7 +236,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
           <button className="button icon" aria-label="Cài đặt project" title={can("PROJECT_SETTINGS") ? "Cài đặt project" : "Bạn không có quyền đổi cài đặt"} disabled={!can("PROJECT_SETTINGS")} onClick={() => go("settings")}>⚙</button>
           <button className="button primary" disabled={!can("PROJECT_PUBLISH") || busy !== null} title={can("PROJECT_PUBLISH") ? "Xuất bản phiên bản hiện tại" : "Bạn không có quyền xuất bản"} onClick={() => go("publish")}>Xuất bản</button>
         </div>
-      </header>
+      </header>)}
 
       {project.status === "ARCHIVED" ? <div className="archivedBanner" role="status">Ứng dụng đã được lưu trữ: chỉ xem, website đang ngoại tuyến.
         <button className="smallButton" onClick={() => void run("settings", () => api.restoreProject(ws, projectId), "Không khôi phục được (cần quyền chủ sở hữu hoặc quản trị).").then((r) => { if (r) void reload(); })}>Khôi phục</button></div> : null}
@@ -264,7 +250,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
             <div className="row"><button className="btn primary" onClick={() => go("design")}>Chỉnh trực quan (Design)</button><button className="btn" onClick={() => go("ai")}>Chỉnh bằng AI</button></div>
           </div>
         </main>
-      ) : (
+      ) : mode === "ai" ? (
         <main className={`wsBody mode-${mode}`}>
           {mode === "ai" ? (
             <section className="promptPane">
@@ -308,64 +294,23 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
                 </div>
               </div>
             </section>
-          ) : (
-            <section className="designLeft" aria-label="Cấu trúc trang và thư viện component">
-              <div className="paneSection">
-                <h2>Cấu trúc trang</h2>
-                <PageBar schema={schema} pageId={pageId} onPage={(id) => { setPageId(id); setSelectedId(null); }} onAdd={() => go("site")} canEdit={!readOnly}/>
-                <p className="hint">{readOnly ? "Bạn chỉ có quyền xem." : "Kéo để đổi thứ tự (hoặc dùng phím: chọn tay cầm, Space, mũi tên). Nhấp để chọn."}</p>
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-                  <SortableContext items={pageSections.map((s) => s.id)} strategy={verticalListSortingStrategy}>
-                    <ol className="outline">{pageSections.map((s) => (
-                      <SortableRow key={s.id} section={s} title={label(s.type)} active={s.id === selectedId} disabled={readOnly || busy !== null} onSelect={() => setSelectedId(s.id === selectedId ? null : s.id)}/>
-                    ))}</ol>
-                  </SortableContext>
-                </DndContext>
-              </div>
-              {!readOnly ? (
-                <div className="paneSection">
-                  <h2>Thư viện component</h2>
-                  <p className="hint">Component đã được duyệt của công ty. Nhấp để thêm vào trang.</p>
-                  <ul className="libList">{registry.filter((c) => c.status === "ACTIVE").map((c) => (
-                    <li key={c.id}><button type="button" disabled={busy !== null || NOT_RENDERED.has(c.id)} onClick={() => void addSection(c)} title={NOT_RENDERED.has(c.id) ? "Chưa có renderer cho component này" : `Thêm ${label(c.id)}`}>
-                      <b>+ {label(c.id)}</b><span>{c.category}{NOT_RENDERED.has(c.id) ? " · chưa hỗ trợ xem trước" : ""}</span></button></li>))}</ul>
-                  <h2>Khối dựng sẵn</h2>
-                  <p className="hint">Cấu hình sẵn của component đã duyệt. “Công ty” đã được phê duyệt; “Của tôi” là khối riêng của bạn.</p>
-                  {blockOptions.length === 0 ? <p className="hint">Chưa có khối nào. Chọn một mục rồi bấm “Lưu thành khối”.</p> : (
-                    <ul className="libList">{blockOptions.map(({ b, who }) => (
-                      <li key={`${who}-${b.id}`}><button type="button" disabled={busy !== null} onClick={() => void addBlock(b)} title={`Thêm khối ${b.name}`}>
-                        <b>+ {b.name}</b><span>{who} · {label(b.baseComponent)}</span></button></li>))}</ul>)}
-                </div>
-              ) : null}
-            </section>
-          )}
+          ) : null}
 
           <section className="previewPane">
             <div className="previewToolbar">
               <div className="toolbarGroup"><span className="toolbarLabel">Xem trước</span>
                 <div className="segmented">{(["desktop", "tablet", "mobile"] as DeviceMode[]).map((d) => (
                   <button key={d} className={device === d ? "active" : ""} aria-pressed={device === d} onClick={() => setDevice(d)}><DeviceIcon kind={d}/>{d === "desktop" ? "Máy tính" : d === "tablet" ? "Máy tính bảng" : "Điện thoại"}</button>))}</div></div>
-              <div className="toolbarGroup">{mode === "design" && !readOnly ? <span className="toolbarLabel">Nhấp vào một mục trong bản xem trước để chỉnh</span> : null}</div>
+              <div className="toolbarGroup"/>
             </div>
             <div className={`canvasViewport viewport-${device}`}>
-              {/* AI mode: no scripts at all. Design mode: our own click-to-select script only; still no same-origin, forms, popups or top navigation. */}
-              <iframe ref={frameRef} className="previewFrame" title="Bản xem trước website" sandbox={mode === "design" && !readOnly ? "allow-scripts" : ""} srcDoc={previewDocument}/>
+              {/* AI mode: no scripts at all (the Builder canvas has its own sandboxed iframe) */}
+              <iframe className="previewFrame" title="Bản xem trước website" sandbox="" srcDoc={previewDocument}/>
             </div>
           </section>
 
-          {mode === "design" ? (
-            <aside className="inspectorPane" aria-label="Thuộc tính">
-              {selected && !readOnly ? <div className="inspectorTools"><button type="button" className="btn sm" onClick={() => setSavingBlock(true)}>Lưu thành khối…</button></div> : null}
-              {selected ? (
-                <SectionInspector key={`${selected.id}:${JSON.stringify(selected.props)}`} section={selected} component={registry.find((c) => c.id === selected.type)}
-                  index={pageSections.indexOf(selected)} count={pageSections.length} readOnly={readOnly} busy={busy === "edit"} assets={assets}
-                  onClose={() => setSelectedId(null)}
-                  onApply={async (ops, summary) => { const ok = await applyOps(ops, summary); if (ok && ops.some((o) => o.type === "REMOVE_SECTION")) setSelectedId(null); return ok; }}/>
-              ) : <StateView kind="empty" title="Chưa chọn mục nào" detail={<p>Chọn một mục trong “Cấu trúc trang” hoặc nhấp vào bản xem trước.</p>}/>}
-            </aside>
-          ) : null}
         </main>
-      )}
+      ) : null}
 
       {notice ? <button className="toast" onClick={() => setNotice(null)}>{notice}</button> : null}
 
@@ -393,15 +338,5 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
         allowed={publicPublish === false ? ["PRIVATE"] : ["PRIVATE", "PUBLIC"]}
         onClose={() => { go(mode); void reload().catch(() => undefined); }} onUnauthorized={() => undefined}/> : null}
     </div>
-  );
-}
-
-function SortableRow({ section, title, active, disabled, onSelect }: { section: Section; title: string; active: boolean; disabled: boolean; onSelect: () => void }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: section.id, disabled });
-  return (
-    <li ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1 }} className="sortRow">
-      {!disabled ? <button type="button" className="dragHandle" aria-label={`Kéo để di chuyển ${title}`} {...attributes} {...listeners}>⋮⋮</button> : null}
-      <button type="button" className={active ? "active" : ""} aria-pressed={active} onClick={onSelect}><b>{title}</b><span>{sectionSummary(section) || section.id}</span></button>
-    </li>
   );
 }

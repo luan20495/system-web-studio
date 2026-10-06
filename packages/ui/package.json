@@ -1,0 +1,29 @@
+{
+  "name": "@xweb/ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles/*": "./src/styles/*"
+  },
+  "sideEffects": [
+    "*.css"
+  ],
+  "dependencies": {
+    "@xweb/api-client": "*",
+    "@xweb/i18n": "*",
+    "@xweb/permissions": "*",
+    "@xweb/types": "*"
+  },
+  "peerDependencies": {
+    "next": ">=16",
+    "react": ">=19",
+    "react-dom": ">=19"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}
