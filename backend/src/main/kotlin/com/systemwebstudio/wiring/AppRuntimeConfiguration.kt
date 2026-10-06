@@ -54,6 +54,31 @@ class AppRuntime(
 )
 
 /**
+ * The run state of C4 (V29, D-C0-23), selected by `app.workflow.run-store`: `jdbc` (default when the property is absent) = PostgreSQL, `memory` = explicit volatile
+ * dev / test override. **Any other value defines no store at all**, so every consumer of [ActionRunStore] / [WorkflowRunStore] fails and the application does not
+ * start - there is deliberately no fallback. Kept in its own class so that this rule can be tested without the rest of the runtime.
+ */
+@Configuration
+@ConditionalOnProperty(prefix = "app.workflow", name = ["enabled"], havingValue = "true")
+class RunStoreConfiguration {
+    @Bean
+    @ConditionalOnProperty(prefix = "app.workflow", name = ["run-store"], havingValue = "jdbc", matchIfMissing = true)
+    fun durableActionRunStore(jdbc: JdbcTemplate, json: JsonMapper): ActionRunStore = JdbcActionRunStore(jdbc, json)
+
+    @Bean
+    @ConditionalOnProperty(prefix = "app.workflow", name = ["run-store"], havingValue = "jdbc", matchIfMissing = true)
+    fun durableWorkflowRunStore(jdbc: JdbcTemplate, json: JsonMapper): WorkflowRunStore = JdbcWorkflowRunStore(jdbc, json)
+
+    @Bean
+    @ConditionalOnProperty(prefix = "app.workflow", name = ["run-store"], havingValue = "memory")
+    fun volatileActionRunStore(): ActionRunStore = InMemoryActionRunStore()
+
+    @Bean
+    @ConditionalOnProperty(prefix = "app.workflow", name = ["run-store"], havingValue = "memory")
+    fun volatileWorkflowRunStore(): WorkflowRunStore = InMemoryWorkflowRunStore()
+}
+
+/**
  * C0 · wires C4's runtime to C1 (access, tenant gate), C2 (AppDefinition, resolver) and C3 (data gateway, when it exists). Everything is behind
  * `app.workflow.enabled` (default false): with the flag off none of these beans exists and no route is mounted.
  *
@@ -81,22 +106,6 @@ class AppRuntimeConfiguration {
 
     @Bean
     fun logicAuditPort(audit: AuditService): LogicAuditPort = LogicAuditAdapter(audit)
-
-    @Bean
-    @ConditionalOnProperty(prefix = "app.workflow", name = ["run-store"], havingValue = "jdbc", matchIfMissing = true)
-    fun durableActionRunStore(jdbc: JdbcTemplate, json: JsonMapper): ActionRunStore = JdbcActionRunStore(jdbc, json)
-
-    @Bean
-    @ConditionalOnProperty(prefix = "app.workflow", name = ["run-store"], havingValue = "jdbc", matchIfMissing = true)
-    fun durableWorkflowRunStore(jdbc: JdbcTemplate, json: JsonMapper): WorkflowRunStore = JdbcWorkflowRunStore(jdbc, json)
-
-    @Bean
-    @ConditionalOnProperty(prefix = "app.workflow", name = ["run-store"], havingValue = "memory")
-    fun volatileActionRunStore(): ActionRunStore = InMemoryActionRunStore()
-
-    @Bean
-    @ConditionalOnProperty(prefix = "app.workflow", name = ["run-store"], havingValue = "memory")
-    fun volatileWorkflowRunStore(): WorkflowRunStore = InMemoryWorkflowRunStore()
 
     @Bean
     fun workflowQueue(): WorkflowQueue = InMemoryWorkflowQueue()
