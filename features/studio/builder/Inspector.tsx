@@ -16,8 +16,8 @@ import type { DefCtx } from "./ctx";
 
 const uid = () => Math.random().toString(36).slice(2, 7);
 
-export function Inspector({ ctx, section, component, meta, index, count, readOnly, busy, assets, rawPermissions, onApply, onClose, onMove, onRemove, onSaveBlock, openDataWizard, pageId }: {
-  ctx: DefCtx; section: Section; component?: RegistryComponent; meta?: ComponentMetadataV2; index: number; count: number; readOnly: boolean; busy: boolean; assets: AssetDto[];
+export function Inspector({ ctx, section, component, meta, index, count, canUp, canDown, readOnly, busy, assets, rawPermissions, onApply, onClose, onMove, onRemove, onSaveBlock, openDataWizard, pageId }: {
+  ctx: DefCtx; section: Section; component?: RegistryComponent; meta?: ComponentMetadataV2; index: number; count: number; canUp?: boolean; canDown?: boolean; readOnly: boolean; busy: boolean; assets: AssetDto[];
   rawPermissions: readonly string[]; onApply: (ops: SchemaOperation[], summary: string) => Promise<boolean>; onClose: () => void; onMove: (d: -1 | 1) => void;
   onRemove: () => void; onSaveBlock?: () => void; openDataWizard: (sectionId: string) => void; pageId: string;
 }) {
@@ -42,8 +42,8 @@ export function Inspector({ ctx, section, component, meta, index, count, readOnl
           <PropsForm key={`c:${section.id}:${JSON.stringify(section.props)}`} section={section} entries={[...groups.content, ...(groups.visibility ? [groups.visibility] : [])]} allDefs={defs} assets={assets}
             readOnly={readOnly} busy={busy} summary={`Chỉnh sửa ${label}`} onApply={onApply} emptyText="Thành phần này không có nội dung chỉnh được."/>
           <div className="bx-insp-tools">
-            <button type="button" className="bx-btn sm" disabled={readOnly || busy || index === 0} onClick={() => onMove(-1)}>↑ Lên</button>
-            <button type="button" className="bx-btn sm" disabled={readOnly || busy || index === count - 1} onClick={() => onMove(1)}>↓ Xuống</button>
+            <button type="button" className="bx-btn sm" disabled={readOnly || busy || !(canUp ?? index > 0)} onClick={() => onMove(-1)}>↑ Lên</button>
+            <button type="button" className="bx-btn sm" disabled={readOnly || busy || !(canDown ?? index < count - 1)} onClick={() => onMove(1)}>↓ Xuống</button>
             <button type="button" className="bx-btn sm danger" disabled={readOnly || busy} onClick={onRemove}>Xóa mục</button>
             {onSaveBlock && !readOnly ? <button type="button" className="bx-btn sm" onClick={onSaveBlock}>Lưu thành khối…</button> : null}
           </div>

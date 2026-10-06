@@ -24,7 +24,7 @@ import { AiPanel, FormsPanel, ThemePanel } from "./panels/MiscPanels";
 import { Dialog, StateBox } from "./ui/primitives";
 import type { DefCtx } from "./ctx";
 import type { Backend } from "./core/backend";
-import { clampSlot, planAdd, planMove, planStep, sectionIndexForSlot, slotForClickAdd, slotFromPoint, type SectionRect } from "./core/dnd";
+import { canStep, clampSlot, planAdd, planMove, planStep, sectionIndexForSlot, slotForClickAdd, slotFromPoint, type SectionRect } from "./core/dnd";
 import { defaultProps, typeLabel } from "./core/library";
 import { sectionsOf } from "./core/pages";
 import { capabilitiesFor, whyNot } from "./core/permissions";
@@ -184,7 +184,7 @@ export function BuilderWorkspace(props: {
         <aside className="bx-right" aria-label="Thuộc tính">
           {!edit ? <TestPanel doc={doc} rawPermissions={props.project.permissions}/>
             : selected ? (
-              <Inspector ctx={ctx} section={selected} component={registry.find((c) => c.id === selected.type)} meta={backend.metadata.get(selected.type)} index={sections.indexOf(selected)} count={sections.length}
+              <Inspector ctx={ctx} section={selected} component={registry.find((c) => c.id === selected.type)} meta={backend.metadata.get(selected.type)} index={sections.indexOf(selected)} canUp={canStep(sections, selected.id, -1)} canDown={canStep(sections, selected.id, 1)} count={sections.length}
                 readOnly={!interactive} busy={busy} assets={props.assets} rawPermissions={props.project.permissions} onApply={(ops, summary) => props.applyOps(ops, summary)} onClose={() => select(null)}
                 onMove={(d) => void step(selected.id, d)} onRemove={() => setRemoving(true)} onSaveBlock={props.saveBlock} pageId={pageId}
                 openDataWizard={(id) => { setDataFocus({ sectionId: id }); setRail("data"); }}/>

@@ -36,17 +36,22 @@ export function Canvas({ document: html, sections, selectedId, onSelect, onRects
   return (
     <div className={`canvasViewport viewport-${device}`}>
       <div className="bx-canvas">
-        {/* AI/Test: no scripts. Edit: our own select/layout script only; still no same-origin, forms, popups or top navigation. */}
-        <iframe ref={frameRef} className="previewFrame" title={title} sandbox={interactive ? "allow-scripts" : ""} srcDoc={html}/>
-        <div ref={setNodeRef} className={`bx-shield${dragging ? " on" : ""}`} data-testid="canvas-drop">
+        <div className="bx-frame">
+          {/* AI/Test: no scripts. Edit: our own select/layout script only; still no same-origin, forms, popups or top navigation. */}
+          <iframe ref={frameRef} className="previewFrame" title={title} sandbox={interactive ? "allow-scripts" : ""} srcDoc={html}/>
+          <div ref={setNodeRef} className={`bx-shield${dragging ? " on" : ""}`} data-testid="canvas-drop">
+            {dragging ? (slot === null
+              ? null
+              : <div className="bx-insert" style={{ top: indicatorY(rects, slot) }} aria-hidden="true"><span>Thả vào đây</span></div>) : null}
+            {dragging && !rects.length ? <div className="bx-empty-drop">Thả component vào trang trống</div> : null}
+          </div>
+        </div>
+        {/* Drag handles live in a gutter NEXT TO the preview, never over the iframe: a press must not be routed into the sandboxed frame. */}
+        <div className="bx-gutter" role="group" aria-label="Tay nắm kéo các phần của trang">
           {interactive && !dragging ? rects.map((r) => {
             const s = sections.find((x) => x.id === r.id);
             return s ? <Handle key={r.id} id={r.id} top={r.top} label={labelOf(s.type)} active={r.id === selectedId}/> : null;
           }) : null}
-          {dragging ? (slot === null
-            ? null
-            : <div className="bx-insert" style={{ top: indicatorY(rects, slot) }} aria-hidden="true"><span>Thả vào đây</span></div>) : null}
-          {dragging && !rects.length ? <div className="bx-empty-drop">Thả component vào trang trống</div> : null}
         </div>
       </div>
     </div>

@@ -59,6 +59,9 @@ export function planStep(sections: Section[], sectionId: string, delta: -1 | 1):
   return planMove(sections, sectionId, delta < 0 ? from - 1 : from + 2);
 }
 
+/** may this section move one step? false for the first/last section and for a trailing Footer (it always stays last), so the button is disabled instead of silently doing nothing */
+export const canStep = (sections: Section[], sectionId: string, delta: -1 | 1): boolean => planStep(sections, sectionId, delta).kind === "move";
+
 /** click-to-add (the no-drag fallback): after the selected section, otherwise at the end (before a trailing Footer) */
 export function slotForClickAdd(sections: Section[], selectedId: string | null, type: string): number {
   const i = selectedId ? sections.findIndex((s) => s.id === selectedId) : -1;

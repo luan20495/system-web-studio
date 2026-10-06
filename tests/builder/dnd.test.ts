@@ -68,3 +68,12 @@ test("slot over rendered rectangles maps back to a section index even when a sec
   assert.equal(D.indicatorY(rects, 1), 100);
   assert.equal(D.indicatorY(rects, 2), 200);
 });
+
+test("canStep: a step button is enabled only when it would really move (trailing Footer never moves, ends cannot step off the list)", () => {
+  assert.equal(D.canStep(list(), "a", -1), false);
+  assert.equal(D.canStep(list(), "a", 1), true);
+  assert.equal(D.canStep(list(), "c", 1), false, "moving below the Footer is clamped to a no-op");
+  assert.equal(D.canStep(list(), "f", -1), false, "Footer stays last");
+  assert.equal(D.canStep(list(), "f", 1), false);
+  assert.equal(D.canStep(list(), "missing", 1), false);
+});
