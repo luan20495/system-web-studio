@@ -86,7 +86,15 @@ data class WorkflowRun(
     val lastSweptAt: Instant? = null,
     /** Retention stage 1 happened: [input] and the steps' payloads were replaced by a placeholder. The row (status, timings, error codes) stays. */
     val redactedAt: Instant? = null,
-    val version: Long = 0
+    val version: Long = 0,
+    /**
+     * Ownership of the step that is RUNNING: the worker that claimed it and until when the claim is good. The claim is the compare-and-set that moves the step to
+     * RUNNING (one winner per attempt); the owner renews [leaseUntil] while it works; a lease that ran out means the worker is presumed dead and the sweeper
+     * hands the step to the next claimer (attempt + 1, same idempotency key). Both are null whenever no step is RUNNING. A store that does not persist them
+     * degrades to the old rule (`updatedAt` older than the stale threshold), which a renewal also refreshes.
+     */
+    val leaseOwner: String? = null,
+    val leaseUntil: Instant? = null
 ) {
     val currentStep: StepState? get() = currentStepId?.let { steps[it] }
     fun withStep(s: StepState) = copy(steps = steps + (s.stepId to s))
@@ -152,7 +160,13 @@ fun WorkflowRun.isTimerDue(now: Instant): Boolean = !status.terminal && currentS
 fun WorkflowRun.isAwaitingApproval(): Boolean = !status.terminal && currentStep.let { it != null && it.status == StepStatus.WAITING && it.approvalId != null }
 /** Not finished (or compensation still IN_PROGRESS) and untouched since [staleBefore]: lost job, crashed worker, stuck compensation, overdue run. */
 fun WorkflowRun.isStale(staleBefore: Instant): Boolean = (!status.terminal || compensation == CompensationState.IN_PROGRESS) && updatedAt.isBefore(staleBefore)
-fun WorkflowRun.needsSweep(now: Instant, staleBefore: Instant): Boolean = isTimerDue(now) || isAwaitingApproval() || isStale(staleBefore)
+/**
+ * Lost job, crashed worker, stuck compensation, overdue run. A run whose step holds a lease is abandoned when the lease has run out (the owner stopped renewing);
+ * without a lease it is the old rule, [isStale].
+ */
+fun WorkflowRun.isAbandoned(now: Instant, staleBefore: Instant): Boolean =
+    if (leaseUntil != null && !status.terminal) !leaseUntil.isAfter(now) else isStale(staleBefore)
+fun WorkflowRun.needsSweep(now: Instant, staleBefore: Instant): Boolean = isTimerDue(now) || isAwaitingApproval() || isAbandoned(now, staleBefore)
 
 class InMemoryWorkflowRunStore : WorkflowRunStore {
     private val rows = ConcurrentHashMap<Pair<UUID, UUID>, WorkflowRun>()
@@ -181,7 +195,7 @@ class InMemoryWorkflowRunStore : WorkflowRunStore {
     @Synchronized
     override fun claimForSweep(now: Instant, limit: Int, perTenant: Int, minInterval: Duration, staleBefore: Instant, approvalInterval: Duration): List<WorkflowRun> {
         val eligible = rows.values.filter { r ->
-            val interval = if (r.isAwaitingApproval() && !r.isTimerDue(now) && !r.isStale(staleBefore)) approvalInterval else minInterval
+            val interval = if (r.isAwaitingApproval() && !r.isTimerDue(now) && !r.isAbandoned(now, staleBefore)) approvalInterval else minInterval
             r.needsSweep(now, staleBefore) && (r.notBefore == null || !r.notBefore.isAfter(now)) && (r.lastSweptAt == null || !r.lastSweptAt.isAfter(now.minus(interval)))
         }.sortedWith(compareBy<WorkflowRun, Instant?>(nullsFirst()) { it.lastSweptAt }.thenBy { it.updatedAt }.thenBy { it.runId })
         val chosen = FairSelection.pick(eligible, limit, perTenant) { it.tenantId }

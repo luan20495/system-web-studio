@@ -114,7 +114,9 @@ class WorkflowEngine(
     /** Sweeper: a run is examined at most once per this interval, however many passes run. */
     private val sweepMinInterval: Duration = Duration.ofSeconds(5),
     /** Sweeper: a run that is only waiting for an approval (the callback normally resumes it) is polled at most this often. */
-    private val sweepApprovalInterval: Duration = Duration.ofSeconds(60)
+    private val sweepApprovalInterval: Duration = Duration.ofSeconds(60),
+    /** Identity of this worker in [WorkflowRun.leaseOwner]. One per engine instance (node); diagnostics and ownership checks only. */
+    private val workerId: String = "node-" + UUID.randomUUID().toString().take(8)
 ) : WorkflowRuntime, WorkflowStarterPort, ScheduledRunEnqueuer, ApprovalListener {
 
     private val log = System.getLogger(WorkflowEngine::class.java.name)
@@ -290,7 +292,7 @@ class WorkflowEngine(
                 if (!claimable) return@mutate null
                 attempt = st.attempt + 1
                 val running = st.copy(status = StepStatus.RUNNING, attempt = attempt, startedAt = now, wakeAt = null, errorCode = null, errorMessage = null)
-                Transition(cur.withStep(running).copy(status = WorkflowRunStatus.RUNNING, updatedAt = now), null, false, null)
+                Transition(cur.withStep(running).copy(status = WorkflowRunStatus.RUNNING, updatedAt = now, leaseOwner = workerId, leaseUntil = now.plus(staleAfter)), null, false, null)
             }
         } catch (e: ContendedException) { return ProcessOutcome.RETRY }) ?: return ProcessOutcome.DONE
         val run = claimed.run
@@ -298,10 +300,11 @@ class WorkflowEngine(
         // 2. execute outside any lock
         val ctx = ActionContext(run.tenantId, run.createdBy, run.workspaceId, run.appId, "wf:${run.runId}")
         val resolved = resolveInputs(run, step)
+        val beat = heartbeat(run, step.id, attempt)
         val outcome = try { execute(ctx, run, step, resolved, attempt) } catch (e: Exception) {
             log.log(System.Logger.Level.ERROR, "Step ${step.id} threw ${e.javaClass.name}")
             StepOutcome.Fail(ActionErrorCodes.HANDLER_ERROR, "Step failed unexpectedly")
-        }
+        } finally { beat.close() }
 
         // 3. record the outcome (compare-and-set); a cancel/timeout that happened meanwhile wins
         val applied = try {
@@ -673,7 +676,7 @@ class WorkflowEngine(
                 val a = r.currentStep?.approvalId?.let { svc.find(r.tenantId, it) }
                 if (a != null && a.status.terminal) { resumeFromApproval(a); reconciled++ }
             }
-            if (r.isStale(staleBefore)) ok = sweepStale(r, now, { republished++ }, { timedOut++ }, { comp++ }) && ok
+            if (r.isAbandoned(now, staleBefore)) ok = sweepStale(r, now, { republished++ }, { timedOut++ }, { comp++ }) && ok
             ok
         }
         val expired = approvals?.expireDue(limit, sweepPerTenant) ?: 0
@@ -732,6 +735,38 @@ class WorkflowEngine(
     private class ContendedException : RuntimeException(null, null, false, false)
 
     /**
+     * The owner of the RUNNING step [stepId] / [attempt] extends its lease (and refreshes `updatedAt`, which is what a store without lease columns goes by).
+     * @return false when this worker no longer holds the step (it finished, was cancelled, timed out, or the lease ran out and the sweeper gave the step to
+     * someone else): the caller should stop heartbeating - the outcome it is about to record will be dropped anyway. Transient trouble (contention, store
+     * outage) is not "lost": it answers true and the next beat tries again; the lease simply runs on.
+     */
+    fun renewLease(tenantId: UUID, runId: UUID, stepId: String, attempt: Int): Boolean {
+        val now = clock.instant()
+        return try {
+            mutate(tenantId, runId) { cur ->
+                val s = cur.currentStep
+                if (cur.status.terminal || s == null || s.stepId != stepId || s.status != StepStatus.RUNNING || s.attempt != attempt) null
+                else if (cur.leaseOwner != null && cur.leaseOwner != workerId) null
+                else Transition(cur.copy(leaseOwner = workerId, leaseUntil = now.plus(staleAfter), updatedAt = now), null, false, null)
+            } != null
+        } catch (e: ContendedException) { true } catch (e: Exception) { true }
+    }
+
+    /** Keeps the lease of a running step alive every third of the lease until closed. A daemon virtual thread: it never outlives the step and never blocks shutdown. */
+    private fun heartbeat(run: WorkflowRun, stepId: String, attempt: Int): AutoCloseable {
+        val every = staleAfter.dividedBy(3).let { if (it < Duration.ofSeconds(1)) Duration.ofSeconds(1) else it }
+        val stop = java.util.concurrent.atomic.AtomicBoolean(false)
+        val thread = Thread.ofVirtual().name("wf-lease-${run.runId}").unstarted {
+            while (!stop.get()) {
+                try { Thread.sleep(every) } catch (e: InterruptedException) { return@unstarted }
+                if (stop.get() || !renewLease(run.tenantId, run.runId, stepId, attempt)) return@unstarted
+            }
+        }
+        thread.start()
+        return AutoCloseable { stop.set(true); thread.interrupt() }
+    }
+
+    /**
      * Read-modify-write with compare-and-set. [f] returns the change to make, or null for "nothing to do" (the run moved on, the step was
      * superseded...). Returns the committed transition, or null when [f] declined or the run is gone. Throws [ContendedException] if the
      * row kept changing under us.
@@ -739,7 +774,10 @@ class WorkflowEngine(
     private fun mutate(tenantId: UUID, runId: UUID, f: (WorkflowRun) -> Transition?): Transition? {
         repeat(6) {
             val cur = runs.get(tenantId, runId) ?: return null
-            val t = f(cur) ?: return null
+            val t0 = f(cur) ?: return null
+            // a lease only exists while a step is RUNNING: every transition that leaves RUNNING (outcome, retry, wait, cancel, timeout, sweep) releases it
+            val t = if ((t0.run.currentStep?.status == StepStatus.RUNNING && !t0.run.status.terminal) || (t0.run.leaseOwner == null && t0.run.leaseUntil == null)) t0
+                    else Transition(t0.run.copy(leaseOwner = null, leaseUntil = null), t0.publishStep, t0.publishCompensation, t0.event)
             if (runs.compareAndSet(cur, t.run)) return Transition(t.run.copy(version = cur.version + 1), t.publishStep, t.publishCompensation, t.event)
         }
         throw ContendedException()
