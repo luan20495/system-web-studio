@@ -110,7 +110,7 @@ Design choices worth a reviewer's attention: (a) plain `amqp-client` instead of 
 | H-2 | Every writable connector / `ActionNotifyPort` must either dedupe on the **derived** key or report `IDEMPOTENCY_OUTCOME_UNKNOWN` when it cannot tell. Add to the connector contract tests. | A-1 option 1 | C3/C0 |
 | H-3 | `workflow_runs.lease_owner VARCHAR(64) NULL`, `lease_until TIMESTAMPTZ NULL`; store ops `claimStep(run, workerId, leaseUntil)` / `renewLease(run, workerId, leaseUntil)` as CAS; sweeper staleness = `lease_until < now` (fallback `updated_at`). C4 writes the port change + engine heartbeat + tests. **Schema goes into V29 before it is imported, or V30 if C0 allocates it; C4 allocates nothing.** | L-1 | `V29__...sql` / V30, `JdbcWorkflowRunStore` |
 | H-4 | Raise the wiring minimum `app.workflow.stale-after` from PT30S to `2 × ActionLimits ceiling timeout` (60 s for the 30 s default) until H-3 exists. | L-1 | `AppRuntimeConfiguration` |
-| H-5 | **C4 side done** (`WorkflowQueueConfiguration`, `WorkflowQueueSelection`, `CachedBrokerConnection`; section 9). C0 asks: inject `WorkflowQueue` in the wiring, **delete any queue bean the wiring creates itself** (two beans = start-up failure, on purpose), set `app.workflow.queue=amqp` (or the `prod` profile) in production config, and give prod/test brokers the `spring.rabbitmq.*` settings. | G2 | `AppRuntimeConfiguration`, `application*.yml` |
+| H-5 | **C4 side done and verified on the Mac (G2-C4 GREEN); C0 side is the current BLOCKER (section 10.3, `B-C4-11`)** (`WorkflowQueueConfiguration`, `WorkflowQueueSelection`, `CachedBrokerConnection`; section 9). C0 asks: inject `WorkflowQueue` in the wiring, **delete any queue bean the wiring creates itself** (two beans = start-up failure, on purpose), set `app.workflow.queue=amqp` (or the `prod` profile) in production config, and give prod/test brokers the `spring.rabbitmq.*` settings. | G2 | `AppRuntimeConfiguration`, `application*.yml` |
 | H-6 | Schedule retention (`redactFinished`/`purgeFinished`) - already implemented in the stores, nobody calls it. | hygiene | wiring |
 | H-7 | Import V29 only after its Mac gate; C4 will re-run `WorkflowRestartRecoveryTests`-equivalents against `AmqpWorkflowQueue` once both exist (G3). | G1/G3 | - |
 
@@ -136,16 +136,17 @@ C6 must not mock RabbitMQ or the stores for G4.
 
 | Gate | State | Evidence / missing |
 |---|---|---|
-| G1 Durable persistence | **NOT DONE** | V29 on a branch, Mac gate pending, no durable adapter is wired into integration; C4 has not run it |
-| G2 RabbitMQ + DLQ | **NOT DONE** | adapter + contract/IT **written**, compiled only against hand-written API stubs; **not run** (no Gradle/Docker where C4 works) |
-| G3 Restart / recovery | **NOT DONE** | unit-level scenarios VERIFIED (harness 399/399); durable + broker restart scenarios WRITTEN, not run |
-| G4 Real full-stack workflow E2E | **NOT DONE** | needs G1+G2 and a real wired stack |
+| G1 Durable persistence | **PARTIAL / WAITING V29 integration gate** | V29 (`wire/v29-run-persistence`) carries `action_runs.mutating`, `workflow_runs.lease_owner/lease_until` and the JDBC stores (H-1, H-3 handled by C0); not on `integration/v2` yet, no durable adapter wired, C4 has not run it |
+| G2-C4 RabbitMQ + DLQ (the adapter) | **GREEN** | `AmqpWorkflowQueueTests` 14/14 on a real RabbitMQ 4 (Testcontainers, macOS, JDK 21, Gradle 9.8); see section 10 |
+| G2-INTEGRATED RabbitMQ + DLQ in the running application | **BLOCKED BY C0 H-5** | the wiring still creates `InMemoryWorkflowQueue` itself (`AppRuntimeConfiguration.workflowQueue()`), a second bean named `workflowQueue` next to C4's; see section 10 |
+| G3 Restart / recovery | **NOT DONE** | unit-level scenarios VERIFIED; durable (PostgreSQL) + broker restart scenarios of 9.4 not written against real stores yet; need G1 and G2-INTEGRATED |
+| G4 Real full-stack workflow E2E | **NOT DONE** | needs G1 + G2-INTEGRATED and a real wired stack |
 | G5 C6 regression | **NOT DONE** | handoff above |
 
 
 ## 9. Batch 3 status (A-1, H-3, H-5) - what C4 changed and what C0 must still do
 
-Verification level: **harness only** (Kotlin compiled with kotlinc against hand-written stubs, 422 tests run by a mini JUnit runner). Gradle, Testcontainers and a real broker have **not** been run by C4. Nothing here is GREEN for G1-G5.
+Verification level (updated): the queue adapter, its configuration and the queue tests were first verified by a harness (kotlinc against stubs) and are now **verified with Gradle on macOS** (JDK 21.0.12, Docker Desktop 4.94, Gradle 9.8.0): 52/52 targeted tests pass (section 10). The durable stores (V29) and the integrated runtime are **not** covered: G1, G3, G4, G5 are not GREEN.
 
 ### 9.1 A-1 - mutating abandoned run is an unknown outcome (decided: option "UNKNOWN", `retryable=false`)
 C4 side (done): `ActionRunRecord.mutating`, `ActionRunStore.begin(key, fingerprint, now, mutating)`, `AbandonedRuns.result(mutating)` = `IDEMPOTENCY_OUTCOME_UNKNOWN`, `retryable=false` for mutating, `TIMEOUT` retryable for non-mutating; `ActionRuntime` passes `def.type.mutatesState`; `InMemoryActionRunStore` honours it. A workflow step whose action run was abandoned therefore fails the run with UNKNOWN (no retry, no onError, not compensated; earlier steps are).
@@ -165,7 +166,7 @@ C0 must (V29, or V30 if C0 allocates it; C4 allocates nothing):
 Tests: `WorkflowLeaseTests` (9), `WorkflowAbandonedWriteTests`; mutants (lease ignored, owner not checked) fail them.
 
 ### 9.3 H-5 - queue adapter selection (C4 side done, new files only)
-`app.workflow.queue=memory|amqp`; unset = `amqp` under the `prod`/`production` profile, `memory` otherwise; `memory` in production and any other value are start-up errors. `WorkflowQueueConfiguration` provides the single `WorkflowQueue` bean (declares the topology at start-up for `amqp`, closes channels and connection at shutdown); `logic.*` knows nothing of the switch. Tests: `WorkflowQueueSelectionTests` (7). Not verified against Spring Boot 4 / the real amqp-client (stubs only): first Mac compile may report API mismatches, to be fixed by C4.
+`app.workflow.queue=memory|amqp`; unset = `amqp` under the `prod`/`production` profile, `memory` otherwise; `memory` in production and any other value are start-up errors. `WorkflowQueueConfiguration` provides the single `WorkflowQueue` bean (declares the topology at start-up for `amqp`, closes channels and connection at shutdown); `logic.*` knows nothing of the switch. Tests: `WorkflowQueueSelectionTests` (7). Verified on the Mac against the real Spring Boot / amqp-client (`WorkflowQueueConfigurationTests` 6/6, section 10). The first run found and fixed one real defect: `confirm-timeout` is now read as a String and parsed with `DurationStyle` (commit `a775094`).
 
 ### 9.4 Integration test plan for the 16 scenarios (code only after `AmqpWorkflowQueueTests` is green on the Mac)
 Needs C0's JDBC stores (V29) + RabbitMQ container + PostgreSQL container, in one `@SpringBootTest` base reusing `IntegrationTestBase`. Tests that restart the broker or backend reuse the fixed-port technique of `AmqpWorkflowQueueTests`; "backend restart" = new engine/worker/queue instances over the same database.
@@ -189,5 +190,28 @@ Needs C0's JDBC stores (V29) + RabbitMQ container + PostgreSQL container, in one
 | 15 | lease expiry + reclaim | sweeper republishes, new owner, attempt 2, same idempotency key |
 | 16 | cancel queued / running | CANCELLED, lease cleared, late result ignored |
 
-### 9.5 Gates (unchanged: none GREEN)
-G1 durable persistence: NOT DONE (needs C0 JDBC stores + tests). G2 RabbitMQ + DLQ: NOT DONE (adapter and tests written, never run). G3 restart/recovery: NOT DONE. G4 real full-stack E2E: NOT DONE. G5 C6 regression: NOT DONE.
+### 9.5 Gates
+See the table in section 8 (kept in one place). Short form: G1 PARTIAL, G2-C4 GREEN, G2-INTEGRATED BLOCKED BY C0 H-5, G3/G4/G5 NOT DONE.
+
+## 10. Verification on the Mac (broker) and the current blocker
+
+### 10.1 What was run
+Worktree `xweb-c4`, branch `agent/c4-workflow`, JDK 21.0.12, Docker Desktop 4.94.0 (engine 29.8.2), Gradle 9.8.0, `rabbitmq:4-management-alpine` through Testcontainers, `--no-daemon --rerun-tasks`. Compile (`compileKotlin compileTestKotlin`) GREEN. Targeted tests: 52 run, 52 passed, 0 failed, 0 skipped: `WorkflowQueueDisciplineTests` 4, `InMemoryWorkflowQueueContractTests` 5, `WorkflowLeaseTests` 9, `ActionRunAbandonmentTests` 6, `WorkflowAbandonedWriteTests` 1, `WorkflowQueueSelectionTests` 7, `WorkflowQueueConfigurationTests` 6, `AmqpWorkflowQueueTests` 14. No mock of the broker.
+
+### 10.2 C4 broker verification: GREEN
+- the AMQP adapter compiles and runs against the real `amqp-client`;
+- publisher confirm: a confirmed publish is persistent (`deliveryMode 2`) and carries `messageId`/`correlationId`; a broker `basic.nack` surfaces as an exception (measured: a quorum queue with `x-max-length=1` accepts one message over the limit and nacks the next, so the test publishes until the broker refuses);
+- mandatory / unroutable: a publish to a queue that does not exist is refused (`IllegalStateException`), not lost;
+- manual ack: ack only after the run is saved; a lease from a dead channel is stale and acknowledging it is a no-op, a reused delivery tag acknowledges nothing else;
+- DLQ: `nack(requeue=false)` dead-letters exactly that message; the delivery limit dead-letters a message whose consumer keeps dying; a poison run reaches `xweb.workflow.jobs.dlq`, healthy runs are untouched;
+- duplicate / redelivery discipline: duplicate delivery and consumer death before the ack do one effect; messages survive a broker restart.
+Semantics impact: none. No queue, engine or action semantics changed; the frozen A-1 rules are unchanged.
+
+### 10.3 Full runtime G2: PARTIAL / BLOCKED BY C0 WIRING (H-5, `B-C4-11`)
+`G2-C4: GREEN`, `G2-INTEGRATED: BLOCKED`. Not claimed GREEN until C0 has done this:
+- `AppRuntimeConfiguration.kt` (C0, on `integration/v2`, `wire/c3-c4-runtime`, `wire/v29-run-persistence`, `wire/c3-persistence`) declares `@Bean fun workflowQueue(): WorkflowQueue = InMemoryWorkflowQueue()`.
+- C4's `WorkflowQueueConfiguration` declares a bean with the same name and role. After the merge, Spring refuses to start (bean definition override is off by default) - on purpose, "two beans = start-up failure".
+- C0 must: (1) delete the hard-coded `workflowQueue()` bean from `AppRuntimeConfiguration`; (2) keep injecting the interface `WorkflowQueue` into `appRuntime(...)` / the worker wiring; (3) let `WorkflowQueueConfiguration` choose the implementation; (4) set `app.workflow.queue=amqp` (or the `prod` profile) in production config, plus `spring.rabbitmq.*`; (5) `memory` for dev/test where appropriate; (6) end with exactly one `WorkflowQueue` bean. C4 does not edit C0 files.
+
+### 10.4 V29 status (read from `wire/v29-run-persistence`, `5f28adc`)
+Present: `action_runs.mutating` (default TRUE), `workflow_runs.lease_owner/lease_until` (+ check that they come together, index for the lease predicate), `JdbcActionRunStore.begin(..., mutating)` and a `sweepStale` that applies `AbandonedRuns.result(mutating)`, lease mapping in `get/insert/compareAndSet`, sweep predicate on `lease_until`. A-1 and H-3 reached V29 as cherry-picks (`c0e4173`, `4095c30`), not the original C4 SHAs. H-1 and H-3 are therefore handled by C0; the remaining blocker is **H-5 wiring**, then **real restart/recovery verification (G3)** with PostgreSQL and RabbitMQ Testcontainers and no mocked persistence or broker (plan: 9.4 and the 12 scenarios of the C4 batch).
