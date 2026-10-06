@@ -75,12 +75,7 @@ internal object ManagementContexts {
         GatewayContext(tenant = TenantContext(access.tenantId, null, TenantStatus.ACTIVE, false), actorUserId = access.userId, requestId = requestId, workspaceId = access.workspaceId)
 }
 
-internal fun problem(e: ConnectorFailure): ResponseEntity<JsonNode> {
-    val p = GatewayProblems.of(e)
-    val b = ResponseEntity.status(p.status)
-    if (p.retryAfterSeconds != null) b.header(HttpHeaders.RETRY_AFTER, p.retryAfterSeconds.toString())
-    return b.body(p.toJson(RequestIdFilter.current()))
-}
+internal fun problem(e: ConnectorFailure): ResponseEntity<JsonNode> = ManagementErrors.of(e)      // the frozen envelope, see ManagementTransport.kt
 
 /** runs a route body; a [ConnectorFailure] becomes its fixed-text problem answer, null = an empty body with [status] */
 internal fun managementReply(status: Int = 200, block: () -> JsonNode?): ResponseEntity<JsonNode> = try {
