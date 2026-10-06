@@ -91,10 +91,15 @@ class ArtifactLifecycleTests : IntegrationTestBase() {
         jdbc.update("INSERT INTO server_deployments (id, project_id, version, artifact_id, status) VALUES (?,?,1,?,'RUNNING'), (?,?,2,?,'STARTING')",
             sdNow, sc.projectId, runtimeNow.id, sdNext, sc.projectId, runtimeNext.id)
         jdbc.update("UPDATE app_runtimes SET current_deployment_id = ?, desired_deployment_id = ? WHERE project_id = ?", sdNow, sdNext, sc.projectId)
-        assertThat(candidates(sc)).isEmpty()
-        retention.run(dryRun = false)
-        assertThat(alive(sc)).hasSize(4)
-        listOf(building, deploying, runtimeNow, runtimeNext).forEach { assertThat(store.exists(it.key)).isTrue() }
+        try {
+            assertThat(candidates(sc)).isEmpty()
+            retention.run(dryRun = false)
+            assertThat(alive(sc)).hasSize(4)
+            listOf(building, deploying, runtimeNow, runtimeNext).forEach { assertThat(store.exists(it.key)).isTrue() }
+        } finally {
+            // the runner endpoint lists EVERY app of the database and decrypts its credentials: a fabricated runtime row must not outlive this test
+            jdbc.update("DELETE FROM app_runtimes WHERE project_id = ?", sc.projectId)
+        }
     }
 
     @Test
