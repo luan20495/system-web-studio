@@ -70,8 +70,13 @@ class InMemoryWorkflowQueue(private val maxDeliveries: Int = 5) : WorkflowQueue 
     fun readyCount() = ready.size
     fun inFlightCount() = inFlight.size
     fun deadLetterBodies(): List<String> = dead.map { it.body } + deadInFlight.values.map { it.body }
-    /** Simulates a consumer that died without acking: everything in flight is redelivered. */
-    fun requeueInFlight() { inFlight.values.toList().forEach { inFlight.remove(it.id); ready += it } }
+    /**
+     * Simulates a consumer that died without acking: everything in flight is redelivered - like a quorum queue's `x-delivery-limit`, a message that
+     * has already used its [maxDeliveries] goes to the dead-letter queue instead of looping for ever.
+     */
+    fun requeueInFlight() {
+        inFlight.values.toList().forEach { inFlight.remove(it.id); if (it.deliveries >= maxDeliveries) dead += it else ready += it }
+    }
 
     override fun publish(job: WorkflowJob) {
         if (failPublish) throw IllegalStateException("broker unavailable")
