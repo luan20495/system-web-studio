@@ -120,3 +120,104 @@ Chặn `U&"…"`/`U&'…'` ở mọi vị trí, ký tự điều khiển, ký t�
 
 ## D-C3-20 — Address security: bỏ `SupplementaryRanges` · PROPOSED · 2026-10-06 · C3
 C3 chỉ dựa vào `PublicAddress` canonical (INTEGRATION_V2 §8) do C0 áp vào `runtime/Gateway.kt`; deny-list nền tảng luôn chặn và fail closed (mục chặn không resolve được ⇒ ADDRESS_BLOCKED). `AddressRangeSpecTests` là cổng kiểm cho patch C0 (`agents/C3_PUBLIC_ADDRESS_PATCH.md`).
+
+## D-C4-01 — Danh sách ActionType chốt (đóng kín) · ACCEPTED (C0, imported 2026-10-06) · 2026-10-05 · C4 · sửa 2026-10-06
+Thay D-009 của nhánh C4 (id này không có trên integration/v2). `NAVIGATE, REFRESH_QUERY, SUBMIT_FORM, CREATE_RECORD, UPDATE_RECORD, DELETE_RECORD, CALL_API, NOTIFY, START_WORKFLOW` — đúng 9 tên của contract v2, so khớp **chính xác**. **Sửa 2026-10-06: bỏ hoàn toàn bản đồ alias** (`RUN_QUERY`, `WRITE_DATA`, `CALL_CONNECTOR_OPERATION`, `SET_VALUE` và mọi tên khác bị từ chối; action đó không được cung cấp). `SET_VALUE` là trạng thái client, không có action phía server. Ghi dữ liệu = tham chiếu `queryRef` (query `mode=WRITE` đã khai báo trong AppDefinition, không SQL/URL/tên bảng); `CALL_API` = `dataSourceRef` + `operationKey` đã duyệt (không URL thô). `DOWNLOAD_FILE`/`OPEN_URL` chưa làm vì chưa có security model. Thêm loại mới = đổi contract, phải qua file này. Hệ quả: B-C4-02, B-C4-04.
+
+## D-C4-02 — ActionContext của C4 + port thay cho AccessContext/ActionAuthorizer · ACCEPTED (C0, imported 2026-10-06) · 2026-10-05 · C4
+Thay D-008 của nhánh C4 (id này không có trên integration/v2). `ActionRuntime.execute(ctx: ActionContext, req)`; `ActionContext(tenantId, actor, workspaceId?, projectId?, requestId?)` do server dựng (HTTP: từ `AccessContext`+`TenantContext`; worker: từ run đã lưu). Quyền đi qua `AccessPort.check(AccessRequest(permission, resourceKind, resourceId, appId, mode))`, tenant qua `TenantGate`, người nhận/approver qua `PrincipalResolver`; cả ba do C1 cấp adapter (B-C4-01). `logic.*` không import `access/**`. Hệ quả: contract `action-workflow.md` cần cập nhật chữ ký nếu đồng ý.
+
+## D-C4-03 — Định nghĩa action/workflow đọc từ AppDefinition canonical · ACCEPTED (C0, imported 2026-10-06) · 2026-10-05 · C4
+Thay D-010 của nhánh C4 (id này không có trên integration/v2). C4 **không** có bảng `action_definitions`; `ActionDefinition`/`WorkflowDefinition` được đọc từ JSON AppDefinition của C2 qua `AppDefinitionSource` (lớp `*.canonical`), theo tenant + app + mode (LIVE=bản publish, TEST=bản nháp). Tham chiếu không giải quyết được (query/dataSource/workflow/permission/action nối chuỗi) → action/workflow **không được cung cấp** (fail closed). C4 chỉ sở hữu bảng trạng thái chạy (B-C4-05).
+
+## D-C4-04 — Mô hình thực thi workflow · ACCEPTED (C0, imported 2026-10-06) · 2026-10-05 · C4
+Trạng thái nằm trong DB (CAS trên dòng run), RabbitMQ chỉ mang tín hiệu `v1|jobId|tenantId|runId|stepId` (không actor/quyền/payload). Timer, retry/backoff, job mất, worker chết, approval bị lỡ callback do **sweeper** xử lý (không cần delayed delivery của broker). Poison/quá `maxDeliveries` → DLQ → run `FAILED/DEAD_LETTERED`. Run chạy như người tạo, quyền kiểm lại ở **từng step**. Định nghĩa được snapshot vào run. `start` không chặn HTTP.
+
+## D-C4-05 — Phạm vi idempotency · ACCEPTED (C0, imported 2026-10-06) · 2026-10-05 · C4
+Action: `(tenant, app, action, user, key)`; workflow start: `(tenant, app, workflow, creator, mode, key)`; TEST và LIVE là hai phạm vi riêng. Key của step workflow: `wf:<runId>:<stepId>` (lượt thứ n≥2 của vòng lặp: `…:v<n>`). Write action bắt buộc `REQUIRED`; `NONE` trên action đổi state bị validator từ chối.
+
+## D-C4-06 — Ngữ nghĩa TEST mode · ACCEPTED (C0, imported 2026-10-06) · 2026-10-05 · C4
+TEST không commit mutation, không gửi thông báo thật, không start workflow/approval thật, không tạo run state. Phản hồi là `WouldRun(level, plan, reason)` với `level` = `NOT_EXECUTED` (mặc định) / `VALIDATED` / `SANDBOX` — chỉ nâng cấp khi downstream có dry-run tường minh (`dryRunWrite/dryRunOperation`); không giả vờ. Plan chỉ chứa tên input, không chứa giá trị.
+
+## D-C4-07 — Ngữ nghĩa Approval · ACCEPTED (C0, imported 2026-10-06) · 2026-10-05 · C4
+Approver được resolve và snapshot lúc tạo; người yêu cầu bị loại trừ mặc định; quorum `requiredApprovals`; một từ chối là từ chối cả yêu cầu; cross-tenant bị từ chối trừ khi chính sách của C1 cho phép (`CrossTenantApprovalPolicy`, mặc định DENY_ALL).
+
+## D-C4-08 — Scheduler chỉ enqueue · ACCEPTED (C0, imported 2026-10-06) · 2026-10-05 · C4
+Scheduler không gọi action/connector/notification; tick claim bằng CAS rồi giao `ScheduledRunRequest` (key `sched:<id>:<fireEpochMilli>`) cho `ScheduledRunEnqueuer` (do `WorkflowEngine` implement). Misfire: `SKIP` hoặc `FIRE_ONCE`, không bao giờ bù từng lần bị lỡ. Run lịch chạy như owner của schedule.
+
+## D-C4-09 — Notification là port, không vendor · ACCEPTED (C0, imported 2026-10-06) · 2026-10-05 · C4
+Nội dung = template đã duyệt (`templateRef`) + tham số có kiểu; webhook chỉ tới `endpointRef` đã đăng ký; vendor email/SMS là một `ChannelSender` do bên tích hợp viết. Giao hàng at-least-once khi có crash, trừ khi provider khử trùng theo `deliveryKey`.
+
+## D-C4-10 — `ActionDef.trigger` là tùy chọn trên định nghĩa, bắt buộc chỉ với action gắn UI · ACCEPTED (C0, imported 2026-10-06) · 2026-10-06 · C4
+Runtime chấp nhận `trigger{sectionId, event}` **tùy chọn**. Run UI cấp cao nhất (`TriggerKind.UI_EVENT`, `callDepth == 0`) chỉ chạy action có `trigger` và tên event khớp; workflow step, schedule và action con trong chuỗi `onSuccess`/`onError` không cần `trigger`. `trigger` có mặt nhưng sai dạng → action không dùng được (fail closed). Khớp với `ActionDef.trigger` tùy chọn của C2. **Việc còn lại cho C0** (C4 không sửa C2 hay `docs/contracts/**`): `docs/contracts/v2/action-workflow.md` §2 và `app-definition.md` viết `trigger{sectionId, event}` không có `?` — cần ghi chú `trigger?` (tùy chọn; bắt buộc chỉ khi action được gắn vào một section UI) qua một mục DECISIONS của C0.
+
+## D-C4-11 — Idempotency key dẫn xuất; key thô không rời ActionRuntime · ACCEPTED (C0, imported 2026-10-06) · 2026-10-06 · C4
+`derivedKey = base64url(sha256("<tenant>|<app>|<user>|<action>|<clientKey>"))` (43 ký tự, không padding). Chỉ key dẫn xuất được lưu (`action_runs.idempotency_key`), ghi log/audit (che bớt) và gửi cho C3/notification/workflow; retry dùng lại đúng key. `WriteRequest`/`OperationRequest` yêu cầu `appId`, `mode` và key dẫn xuất (validate trong `init`). Hệ quả: B-C4-04 (adapter C3 chuyển tiếp key dẫn xuất xuống connector).
+
+## D-C4-12 — Một cửa dữ liệu: ActionRuntime → ActionDataPort → adapter C0 → DataGateway · ACCEPTED (C0, imported 2026-10-06) · 2026-10-06 · C4
+`logic.*` không import repository/connector/JDBC/HTTP client/`access|tenancy|data|app.*` (test kiến trúc quét import); chỉ `action.handlers` dùng `ActionDataPort`. Action ghi dữ liệu cần thêm quyền `DATA_MUTATE`. Chữ ký port ghi ở `FINAL-C4-runtime-design.md` §2. Adapter (C0 wiring + `AppDataBindingResolver`) tra `queryRef`/`dataSourceRef` theo `(tenant, app, mode)` rồi gọi DataGateway của C3.
+
+## D-C4-13 — Cách ly poison/outage và sweeper công bằng · ACCEPTED (C0, imported 2026-10-06) · 2026-10-06 · C4
+Worker không bao giờ requeue ngay. Đã xử lý hoặc sự cố hạ tầng → `ack` (sweeper publish lại sau backoff, sàn 1s); message sai định dạng → DLQ; message làm worker ném exception → một lần lỗi của chính run (backoff mũ, trần 10 phút), sau `maxProcessFailures` (5) run `FAILED/DEAD_LETTERED` và **chỉ message đó** vào DLQ. Dead letter do broker → một lần lỗi, không giết run ngay. Sweeper: claim hợp nhất, cũ nhất đủ điều kiện trước, round-robin theo tenant, có chặn, một run tối đa một lần mỗi interval, run lỗi bị backoff. Hệ quả cho C0: adapter RabbitMQ không requeue từ phía worker; `delivery-limit` chỉ là lưới an toàn (B-C4-06).
+
+## D-C4-14 — Rate limit theo tenant · ACCEPTED (C0, imported 2026-10-06) · 2026-10-06 · C4
+Port `TenantRateLimiter.tryAcquire(tenant, scope, cost)` với scope `ACTION_EXECUTE`, `WORKFLOW_START`, `SCHEDULER_ENQUEUE` (token bucket; `RateLimit(capacity, refillPerSecond)`, mặc định + override theo tenant). Kiểm sau authz, trước khi tạo trạng thái; vượt → `RATE_LIMITED` (retryable, `retryAfterMillis`); step workflow bị limit chờ rồi thử lại mà không tốn lượt retry; scheduler giữ fire đến hạn. Bản `InMemory` là theo từng node; limiter dùng chung toàn cụm là adapter của C0 (B-C4-08).
+
+## D-C4-15 — Định danh thực thi của schedule và đăng ký idempotent · ACCEPTED (C0, imported 2026-10-06) · 2026-10-06 · C4
+Mỗi lần bắn có định danh duy nhất `(tenant, schedule, fireAt)` trong sổ `schedule_executions` (insert-if-absent trước khi enqueue) + key `sched:<id>:<fireEpochMilli>` + guard đơn điệu theo `lastRunAt`. Schedule do AppDefinition khai báo có `declaredKey = workflow:<id>` unique theo `(tenant, app)`; publish lại không tạo trùng, bỏ khai báo thì disable (không xoá). Enqueue lỗi tạm thời: backoff mũ + ngân sách bỏ cuộc tường minh.
+
+## D-C4-16 — Retention cho dữ liệu chạy · ACCEPTED (C0, imported 2026-10-06) · 2026-10-06 · C4
+`RetentionService` xoá theo lô có chặn chỉ các hàng **đã kết thúc**; PENDING/RUNNING/WAITING, compensation đang chạy, approval PENDING, fire CLAIMED không bao giờ bị đụng (ràng buộc nằm trong hợp đồng store). Workflow run hai giai đoạn (làm trống payload sau 14 ngày, xoá sau 90 ngày); mặc định `action_runs` 30 ngày, `approvals` 180 ngày, ledger 30 ngày; tối thiểu 7 ngày vì xoá hàng chấm dứt khử trùng key. Cột/chỉ mục cần có trong yêu cầu migration gộp (BOARD.md); không cấp số Flyway.
+
+## D-C4-17 — executor-level TIMEOUT / INTERRUPTED of a MUTATING action is an unknown outcome (closes F-1) · ACCEPTED (C0) · 2026-10-06 · C4
+- Context: when the executor cuts a handler off (`TIMEOUT`, `INTERRUPTED`, or a cancelled future) the handler may still commit. For an action that changes
+  state that is the same situation as a data layer answering "outcome unknown", but C4 reported it as `TIMEOUT`/`INTERRUPTED`, retryable when a key
+  de-duplicated it and, with an `onError[]` chain, as an ordinary failure.
+- Decision: a **single normalisation point**, `DefaultActionRuntime.normalizeAmbiguous`, applied once to the result of the LIVE execution:
+  for `ActionType.mutatesState` types, `TIMEOUT` and `INTERRUPTED` become `IDEMPOTENCY_OUTCOME_UNKNOWN`, `retryable = false`, message fixed,
+  `details["cause"]` = the original code. Every existing unknown-outcome rule then applies unchanged:
+  no retry (a run stored as failed-non-retryable is replayed as is, the handler is not run again), no UI `onError[]` chain (`NO_CHAIN_CODES`),
+  no workflow `onError` route (`WorkflowEngine.failStep`), the ambiguous step is not in `compensable` (not compensated), prior completed steps are still compensated
+  by the existing workflow rules.
+- Not changed: non-mutating actions (`NAVIGATE`, `REFRESH_QUERY`) keep `TIMEOUT` / `INTERRUPTED` and their retry flag and their `onError` chain;
+  a TEST preview is never normalised (nothing was written); `MUTATION_REJECTED` stays a definite failure (not retryable, `onError` allowed);
+  the workflow's own run-level `TIMEOUT` (`maxDuration`) is a different code and is unchanged. No `ActionType` value added; the frozen nine are intact.
+- "Mutating" means `ActionType.mutatesState` (`SUBMIT_FORM`, `CREATE_RECORD`, `UPDATE_RECORD`, `DELETE_RECORD`, `CALL_API`, `NOTIFY`, `START_WORKFLOW`), not only the
+  data-writing subset used for `DATA_MUTATE`.
+- Changes C4 semantics: yes (a mutating step that times out is no longer retried with backoff; it fails the run `IDEMPOTENCY_OUTCOME_UNKNOWN`).
+  C4-owned files: `ActionRuntime.kt`, `ActionResult.kt` KDoc, tests (`ActionRuntimeTests` 7 new / 1 replaced, `WorkflowShapeTests` 2 rewritten).
+- Operational consequence for C0/UI: a slow mutating action no longer self-heals by retry. The user (or an operator) checks the data source and starts a
+  new operation with a new client key.
+
+## D-C0-13 (draft id D-C0-C4-UI-ONERROR) — an unknown-outcome write does not run the UI `onError` chain · ACCEPTED · 2026-10-06 · C0
+- Context: a data write that ends ambiguously is reported as `IDEMPOTENCY_OUTCOME_UNKNOWN` (409, never retryable, `data-runtime.md` §4b).
+  The write may have been committed. A workflow already refuses to route such a step to `onError` and does not compensate it.
+  Before this change a UI action (`ActionRuntime.run`) still ran its `onError` actions, which assume "nothing happened".
+- Decision: `IDEMPOTENCY_OUTCOME_UNKNOWN` is in `NO_CHAIN_CODES` (like the "did not get to run" codes): no `onError` follow-ups, also on replay.
+  `MUTATION_REJECTED` (definite, nothing applied) keeps its `onError` chain. `onSuccess` is unchanged.
+- Changes C4 semantics: yes (C4-owned files `ActionRuntime.kt`, `ActionResult.kt` KDoc, one new test). No contract value changes.
+- The executor-level `TIMEOUT`/`INTERRUPTED` of a mutating action (follow-up F-1) is decided in D-C4-17.
+
+## D-C0-14 (draft id D-C0-C4-ACTORKIND) — C4 keeps its own `logic.action.ActorKind`; adapters convert by name · ACCEPTED · 2026-10-06 · C0
+- `logic/**` may not import `tenancy` (architecture test). `logic.action.ActorKind {USER, SYSTEM, APP_TOKEN, SERVICE}` stays; it is pinned by
+  `ActionContractV2Tests` to the four names of `tenancy.ActorKind`. The C0 adapters convert with `valueOf(name)` in both directions; an unknown name is
+  denied (default deny), never mapped to USER.
+- Consequence for the wiring skeleton: `RequestContexts.kt.skel` must build `ActionActor(me.userId, logic.action.ActorKind.USER)`, not `tenancy.ActorKind`
+  (the skeleton comment "C4 placeholder is deleted at import" is wrong for C4 and is corrected when W-01 is implemented).
+
+## D-C0-15 (draft id D-C0-C4-DATA-ERRORS) — C3 failures map to C4 `PortOutcome.Failure` in the `ActionDataPortAdapter` (W-05) · ACCEPTED · 2026-10-06 · C0
+1. `IDEMPOTENCY_OUTCOME_UNKNOWN` -> `Failure("IDEMPOTENCY_OUTCOME_UNKNOWN", retryable=false)`
+2. `MUTATION_REJECTED` -> `Failure("MUTATION_REJECTED", retryable=false)`
+3. `IDEMPOTENCY_IN_PROGRESS`, `RATE_LIMITED` -> same code, `retryable=true`
+4. `IDEMPOTENCY_CONFLICT` and every other code in C3's `DataGateway.NOT_EXECUTED` (certainly nothing applied) -> same code, `retryable=false`
+5. Any other `ConnectorFailure` code (TIMEOUT, CONNECT_FAILED, UPSTREAM_STATUS, QUERY_FAILED, RESPONSE_*, INTERNAL, unclassified) and any non-`ConnectorFailure`
+   exception on a WRITE -> `Failure("IDEMPOTENCY_OUTCOME_UNKNOWN", retryable=false)`: C3 has already moved the key to UNKNOWN (`DataGateway.mutate` catch block).
+Order matters: 1–3 are matched first; "everything else is ambiguous" is the last rule, never the first. No generic catch-all error code for writes.
+
+## D-C0-16 — C4 official import: scope and evidence · ACCEPTED · 2026-10-06 · C0
+`backend/src/{main,test}/kotlin/com/systemwebstudio/logic/**` (46 files) imported by path in one commit from the verified overlay `verify/c4-overlay@43a8088`
+(= `agent/c4-workflow@f6bb475` + C0 review changes 1586be0 and 43a8088). Overlay evidence on a real Mac: `compileKotlin` 34 s, `compileTestKotlin` 52 s, full
+`clean test` 5 m 41 s, all green. Not imported: wiring skeletons, `application*.yml`, `SecurityConfiguration`, `runtime/Gateway.kt`, migrations (none; V28 stays
+unallocated), harness/shims, any C1/C2/C3 copy. Frozen contracts re-checked statically: exactly 9 `ActionType` values, no import of tenancy/data/access/app/common/
+audit/runtime/integration/wiring or Spring in `logic/**`, `ActionDataPort` only under `logic/action`. **Not yet "integrated green":** that needs the full Gradle run of
+`integration/v2` after this import.

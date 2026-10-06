@@ -88,7 +88,8 @@ Record template (copy per step into `BASELINE.md`): `S<N> · <date> · <sha> · 
 
 ### S14 — Import C4
 - [ ] `V2_IMPORT_MANIFEST.md` §5 → `feat(c4): import action/workflow runtime from agent/c4-workflow@6fff346 (paths only)`; hand-merge shared docs.
-**Expected:** only `logic/**`, its tests, two audit docs, and the hand-merged docs.
+**Expected:** only `logic/**`, its tests, the C4 audit docs, and the hand-merged docs.
+- 2026-10-06: done as `feat(c4): integrate action and workflow runtime` (paths from verified overlay `43a8088`) + a docs commit; S15 (full Gradle on `integration/v2`) is still open.
 
 ### S15 — Test after C4
 - [ ] `./gradlew test --console=plain` (full)

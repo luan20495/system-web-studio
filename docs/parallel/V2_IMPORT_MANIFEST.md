@@ -8,7 +8,7 @@ Frozen 2026-10-06 on `integration/v2`. **Nothing in this file has been executed*
 | C1 | `fix/c1-v2` | `0d7a527` | `c59604b` (= `integration/v2` before the C0 prep commit) | already ported **by path** from `agent/c1-tenancy` `e3a48eb` and fixed (V26 rejects mismatching tenant, guarded undo, compat-removal plan, canonical permissions, adapters, self-grant rule). `agent/c1-tenancy` is **superseded** — do not import from it |
 | C2 | `fix/c2-v2` | `99d8169` | `c59604b` | ported by path from `agent/c2-app-model` `a4d5f8b` and aligned (canonical enums, full `ActionDef`/`WorkflowDef`/`MappingDef`, `AppDataBindingResolver`, `ensureInitialized` runs the V2 validator, conformance fixtures). `agent/c2-app-model` is **superseded** |
 | C3 | `agent/c3-data` | `02fe1d1` | `a82660f` | additive only (88 files, all `data/**` + docs). Moved since the review at `607c116` (SqlGuard `U&`, cache ticket, webhook replay, PG preflight, `AiDataCatalog`, `transforms[]`, `SupplementaryRanges` removed, canonical `TenantContext`) |
-| C4 | `agent/c4-workflow` | `6fff346` | `a82660f` | additive only (50 files, all `logic/**` + docs). Moved since the review at `a38ff60` (no aliases, derived key, fair sweeper, rate limits, retention, schedule ledger) |
+| C4 | `agent/c4-workflow` | `f6bb475` (imported content: verified overlay `43a8088`) | `a82660f` | additive only (50 files, all `logic/**` + docs). Moved since the review at `a38ff60` (no aliases, derived key, fair sweeper, rate limits, retention, schedule ledger) |
 | C5 | `agent/c5-web` | `8e04d79` | `a82660f` | **out of scope here** (checklist step 17); see §6 |
 
 **The head of each source is re-read at import time.** If a head moved, C0 reads `git log <recorded>..<new>` first and updates this table; a newer head is never imported unseen.
@@ -63,13 +63,15 @@ Frozen 2026-10-06 on `integration/v2`. **Nothing in this file has been executed*
 | **Blockers** | B-C3-02 migration (unnumbered) · B-C3-03 `ActionDataPort` adapter → W-05 · B-C3-04 **closed by the C0 patch, pending Mac compile + tests** · B-C3-07 **closed** (webhook route security declared; handler = W-07) · B-C3-06 **closed** (`transforms[]` canonical) · B-C3-08 `WorkflowTriggerPort` ↔ C4 adapter · B-C3-09 realtime bus/cache bypass are per node (multi-node needs Redis pub/sub: C0 decision) · B-C3-10 / B-C3-11 beans, scheduler for `SyncRunner`, controllers `/api/v1/data/**`, trusted-proxy peer address, trust store for PG `verify-full` (all C0 wiring) |
 
 ## 5. C4 — action / workflow / approval / scheduler (inert library)
-**Source:** `agent/c4-workflow` @ `6fff346` · **Import step:** checklist 14 (tests: 15). It imports **no** other module (verified by import scan), so it compiles on the base alone; it is imported after C3 only to keep the wiring order (C0 adapter `ActionDataPortAdapter` needs C2, C3 and C4).
+**Status (2026-10-06): IMPORTED** as `452f467` (code: `logic/**` main 28 + test 18 files, content of `verify/c4-overlay@43a8088`) plus a docs commit (audit docs incl. `C4-standalone-readiness.md`, DECISIONS D-C4-01…17 + D-C0-13…16, BOARD, BLOCKERS B-C4-01…10 + B-C0-C4-01/02). **Official full Gradle on `integration/v2` still pending.**
+
+**Source:** `agent/c4-workflow` @ `f6bb475` · **Import step:** checklist 14 (tests: 15). It imports **no** other module (verified by import scan), so it compiles on the base alone; it is imported after C3 only to keep the wiring order (C0 adapter `ActionDataPortAdapter` needs C2, C3 and C4).
 
 | | |
 |---|---|
-| **Import (paths)** | `backend/src/main/kotlin/com/systemwebstudio/logic/` · `backend/src/test/kotlin/com/systemwebstudio/logic/` · `docs/parallel/audit/{FINAL-C4-runtime-design,PREP-T13-action-runtime-design}.md` |
+| **Import (paths)** | `backend/src/main/kotlin/com/systemwebstudio/logic/` · `backend/src/test/kotlin/com/systemwebstudio/logic/` · `docs/parallel/audit/{FINAL-C4-runtime-design,PREP-T13-action-runtime-design,C4-standalone-readiness}.md` |
 | **Never import** | `docs/parallel/{BOARD,BLOCKERS,DECISIONS}.md` · `integration/queue/**` (C0-gated; the RabbitMQ adapter is C0 wiring, B-C4-06) · any Flyway file (none) · `application*.yml` |
-| **Merge by hand** | BOARD/BLOCKERS/DECISIONS: D-C4-01…16, B-C4-01…10; C4's own `D-008`/`D-009` are superseded by D-C4-01/02 (rename on merge) |
+| **Merge by hand** | BOARD/BLOCKERS/DECISIONS: D-C4-01…16 (+ D-C4-17), B-C4-01…10 — **done**; C4's own `D-008`/`D-009` are superseded by D-C4-01/02 (rename on merge) |
 | **Check command** | `git diff --cached --name-only \| grep -v -E '^(backend/src/(main\|test)/kotlin/com/systemwebstudio/logic/\|docs/parallel/audit/(FINAL-C4-runtime-design\|PREP-T13-action-runtime-design).md)'` → empty |
 | **Required tests after import** | compile · `--tests 'com.systemwebstudio.logic.*'` incl. the **architecture test** `ActionDataPathTests` (no `access\|tenancy\|data\|app.*` import, no JDBC/HTTP in `logic.*`), canonical catalog tests against C2's conformance fixtures (C0 adds the loads after both are in; C4 may not edit C2's fixtures), sweeper fairness, DLQ isolation, retention bounds, schedule ledger, rate limits · inertness check as for C3 (no Spring annotation in `logic/**`) · full suite unchanged |
 | **Dependent migrations** | the **action/workflow persistence** request (ledger item 4, unnumbered; needs V26 + items 2–3): `action_runs, workflow_runs, workflow_run_steps, approvals, schedules, schedule_executions, notification_deliveries, in_app_notifications` (retention per D-C4-16). Nothing at import time (in-memory stores) |
