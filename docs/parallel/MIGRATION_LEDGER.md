@@ -8,8 +8,8 @@ Rules (unchanged): only C0 allocates a number; one number = one task; migrations
 | Version | File | Task / owner | Status | Gate to apply |
 |---|---|---|---|---|
 | base | `V1 … V25` | — | applied on every environment | — |
-| **V26** | `V26__tenant_foundation.sql` | T2 · **C1** | ASSIGNED. Fixed version lives on `fix/c1-v2` (`0d7a527`, psql-verified by C1; **not Gradle-verified**). **Not on `integration/v2` yet.** | `MAC_INTEGRATION_CHECKLIST` steps 2 (C1 Gradle), 4–5 (import C1 + tests) and 8 (V26 verify on V25-shaped data) |
-| **V27** | `V27__publish_configs.sql` | T7 · **C2** | ASSIGNED, **conditional**: C2 may create the file only after V26 is integrated **and** step 8 is green. Until then C2 keeps it unnumbered in its branch. Flag `app.publish-configs.enabled` stays OFF after V27 is applied. | step 9 (allocate/run V27) |
+| **V26** | `V26__tenant_foundation.sql` | T2 · **C1** | **ON `integration/v2`** (imported from `fix/c1-v2@32c5922`, commit `91565d8`). Verified on the Mac by the owner: C1 full Gradle green on its branch, `run-v26-checks.sh` → `ALL V26 CHECKS PASSED` on real PostgreSQL. Integrated-branch Gradle run: pending. | `MAC_INTEGRATION_CHECKLIST` steps 2 (C1 Gradle), 4–5 (import C1 + tests) and 8 (V26 verify on V25-shaped data) |
+| **V27** | `V27__publish_configs.sql` | T7 · **C2** | **FILE CREATED on `integration/v2` (2026-10-06, by C0 on C2's behalf)** after V26 was integrated and verified. C0 corrected the C2 draft DDL to the ledger rules (`tenant_id NOT NULL REFERENCES tenants(id)`, composite FK `(workspace_id, tenant_id)` → `workspaces(id, tenant_id)`, `(tenant_id, created_at)` index; additive only). Undo: `docs/parallel/c2/undo/U27__publish_configs.sql` (guarded). Test: `PublishConfigsMigrationTests`. **Not run yet** (Mac). Flag `app.publish-configs.enabled` stays OFF. | step 9 (allocate/run V27) |
 
 **V27 is the last number allocated.** The next number C0 will hand out is **V28, but none is allocated now.** Nobody may pick it, reserve it or write a file with it.
 
