@@ -4,6 +4,7 @@ import com.rabbitmq.client.ConnectionFactory
 import com.systemwebstudio.logic.workflow.InMemoryWorkflowQueue
 import com.systemwebstudio.logic.workflow.WorkflowQueue
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.boot.convert.DurationStyle
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -17,8 +18,12 @@ import org.springframework.core.env.Environment
  * `app.workflow.amqp.queue|dead-letter-queue|dead-letter-exchange|delivery-limit|confirm-timeout`.
  *
  * `amqp` declares the topology at start-up and so fails fast when the broker is unreachable or when an existing queue was declared with other arguments.
+ *
+ * Gated by `app.workflow.enabled=true`, the same switch as the rest of the workflow runtime (C0 wiring): with the runtime off nothing consumes the queue, so the
+ * application must not connect to the broker or declare a topology for it.
  */
 @Configuration
+@ConditionalOnProperty(prefix = "app.workflow", name = ["enabled"], havingValue = "true")
 class WorkflowQueueConfiguration {
 
     @Bean(destroyMethod = "close")
