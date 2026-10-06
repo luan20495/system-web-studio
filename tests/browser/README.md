@@ -1,5 +1,7 @@
 # Browser tests (real Chromium, pointer + keyboard)
 
+**Class `harness`. Neither spec below talks to a backend, so neither counts as real-backend evidence.** The real-backend suite is `tests/e2e-real/` (`npm run test:e2e:real`, runbook `docs/C5_REAL_BACKEND_E2E_RUNBOOK.md`, matrix `docs/C5_REAL_BACKEND_E2E_MATRIX.md`). Run order: unit → these harness specs → real-backend; their results are reported separately.
+
 Not part of `npm run test:unit`. No new repo dependency: Playwright comes from `playwright-core` (already installed) and a browser is passed with `CHROME=/path/to/chrome`
 (macOS: `CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"`). The harness bundle needs `esbuild`, installed OUTSIDE the repo.
 
@@ -19,3 +21,5 @@ canvas re-renders. It validates nothing the server validates and is never shippe
 
 Covers only what needs no session (redirect to /login with `next`, labels, CSP/headers, no cookies, login error with the API down).
 Login, session, portal switching, OIDC and CORS need the real backend and are NOT covered here.
+
+In the Builder harness the Test panel gets **no runtime**, so it must show "Chưa sẵn sàng" (not connected) — the spec asserts that. The Test panel with a runtime is exercised by `tests/builder/{apiclient,errors,components}.test.ts(x)` and, against a real server, by E2E-10/11/S1.
