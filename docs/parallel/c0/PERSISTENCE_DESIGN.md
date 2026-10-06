@@ -1,7 +1,7 @@
-# C0 — Persistence design for real LIVE E2E (removes B-C0-W-01) — PROPOSAL, NOT ALLOCATED
+# C0 — Persistence design for real LIVE E2E (removes B-C0-W-01)
 
-Status: **PROPOSED 2026-10-06 (C0). No migration file exists, no number is allocated in `MIGRATION_LEDGER.md`, no code was written.**
-Base: `integration/v2 @ e7307fd`. Needs the owner's acceptance of §7 before anything is created.
+Status: **ACCEPTED 2026-10-06 (D-C0-21, decisions D1–D7 in §7).** V28 and V29 are allocated in `MIGRATION_LEDGER.md`. V28 and the C3 adapters are implemented on branch `wire/c3-persistence`; V29 starts only after the V28 Mac gate is green.
+Base: `integration/v2 @ e7307fd`.
 
 ## 1. Audit result
 
@@ -29,9 +29,9 @@ Base: `integration/v2 @ e7307fd`. Needs the owner's acceptance of §7 before any
 
 Correctness never depends on the broker: a lost message leaves a PENDING/stale run that `claimForSweep` finds again. Therefore a persistent store with the existing in-memory queue is already restart-safe for a single node (latency = stale threshold). RabbitMQ is needed for multi-node fan-out, prompt delivery and the DLQ, and is Phase 2.
 
-Deliberately deferred (each needs its own accepted request): `source_schemas` (use an in-memory, rebuildable `SourceSchemaStore`; masked snapshots are derived data), `sync_jobs`/`sync_state`, `webhook_endpoints`/`webhook_replay` (W-07), `approvals`, `schedules`, `schedule_executions`, `notification_deliveries`, `in_app_notifications`, RLS.
+Deliberately deferred (each needs its own accepted request): `sync_jobs`/`sync_state`, `webhook_endpoints`/`webhook_replay` (W-07), `approvals`, `schedules`, `schedule_executions`, `notification_deliveries`, `in_app_notifications`, RLS.
 
-## 3. Proposed V28 — data runtime foundation (C3 minimal + C0 binding)
+## 3. V28 — data runtime foundation (C3 minimal + `source_schemas` + C0 bindings) — the authoritative DDL is `backend/src/main/resources/db/migration/V28__data_runtime.sql`; this section is the design summary (D2, D3, D4 applied)
 
 All tables: `tenant_id uuid NOT NULL REFERENCES tenants(id)`; workspace-scoped rows use the composite FK `(workspace_id, tenant_id) → workspaces(id, tenant_id)`; children use `(data_source_id, tenant_id) → data_sources(id, tenant_id)`; additive only; no data migration; no backfill.
 
@@ -67,6 +67,21 @@ CREATE TABLE data_credentials (            -- ciphertext only (SecretsCrypto "v1
     CONSTRAINT data_credentials_ciphertext_check CHECK (ciphertext LIKE 'v1:%')
 );
 -- data_sources.credential_ref is deliberately not a FK: webhook secrets share this table and rotation discards the old ref after the source row moved on.
+
+CREATE TABLE source_schemas (            -- D2: masked discovery snapshots; immutable rows, version grows per data source
+    id                  UUID PRIMARY KEY,
+    tenant_id           UUID NOT NULL REFERENCES tenants (id),
+    data_source_id      UUID NOT NULL,
+    version             INTEGER NOT NULL,
+    discovered_at       TIMESTAMPTZ NOT NULL,
+    fingerprint         VARCHAR(64) NOT NULL,
+    data_source_version BIGINT NOT NULL,
+    requested_by        UUID REFERENCES users (id),
+    includes_samples    BOOLEAN NOT NULL,
+    snapshot            JSONB NOT NULL,                 -- masked; no credentials, no connection data
+    CONSTRAINT source_schemas_version_unique UNIQUE (tenant_id, data_source_id, version),
+    CONSTRAINT source_schemas_source_fk FOREIGN KEY (data_source_id, tenant_id) REFERENCES data_sources (id, tenant_id)
+);
 
 CREATE TABLE data_queries (
     tenant_id      UUID NOT NULL REFERENCES tenants (id),
@@ -106,7 +121,7 @@ CREATE TABLE data_idempotency (            -- key = C4's derived key (43-char ba
     fingerprint    VARCHAR(128) NOT NULL,
     state          VARCHAR(16) NOT NULL,
     affected       BIGINT,
-    output_json    JSONB,                           -- only when DONE; bounded by the gateway; no secrets, no request parameters
+    output_json    TEXT,                            -- only when DONE; bounded by the gateway; no secrets, no request parameters (text: it is the gateway's own encoded document)
     completed_at   TIMESTAMPTZ,
     lease_until    TIMESTAMPTZ NOT NULL,
     expires_at     TIMESTAMPTZ NOT NULL,
@@ -138,13 +153,13 @@ CREATE INDEX data_source_bindings_source_idx ON data_source_bindings (tenant_id,
 ```
 
 Rules the adapters enforce (not expressible as FK): a workspace-scoped source may only be bound inside its own workspace; DISABLED queries/mutations/sources resolve to "not found"; every statement filters on `tenant_id`.
-Retention: `data_idempotency` rows are purged only when `expires_at < now()` (RESERVED/UNKNOWN rows are never purged earlier); nothing else expires.
+Retention (D4): `data_idempotency.expires_at` = max(gateway request, configured retention), default 30 days, minimum 7 days (`app.data-platform.idempotency-retention`); rows are purged only when `expires_at < now()` by a bounded scheduled purge; RESERVED/UNKNOWN rows are never purged earlier. Nothing else expires. `data_source_bindings` is read-only for the runtime (D3).
 Undo story: `docs/parallel/c0/undo/U28__data_runtime_foundation.sql` (guarded `DROP TABLE IF EXISTS` in reverse order), same pattern as U26/U27. Tests: `DataRuntimeMigrationTests` (tables, constraints, cross-tenant FK rejection, ciphertext check).
 
 ## 4. Proposed V29 — action / workflow run stores (C4 minimal)
 
 Taken from `audit/FINAL-C4-runtime-design.md` §10 **unchanged except**: (a) `workspace_id` gets the composite tenant FK, (b) `action_runs.run_id` stays `uuid` and the adapter maps the port's string form, (c) approvals/schedules/notifications are NOT included. Tables: `action_runs`, `workflow_runs`, `workflow_run_steps` with the unique keys and the partial indexes listed there (`action_runs_stale`, `action_runs_retention`, `workflow_runs_timers`, `workflow_runs_approval`, `workflow_runs_sweep`, `workflow_runs_retention`, `workflow_runs_redact`, `workflow_run_steps_tenant`). `app_id` = the project id, **no FK** (history must outlive a deleted project; tenant integrity comes from the workspace FK).
-Open point for C4/C0 review before creation: `RunKey.appId` is `UUID?` in the port while `action_runs.app_id` is `NOT NULL`; the HTTP path always has a project id, so the adapter rejects a null `appId` as a definite pre-execution failure.
+D6: `RunKey.appId` is `UUID?` in the port, so `action_runs.app_id` is **nullable** (not stricter than the domain contract). The natural unique key `(tenant_id, app_id, action_id, user_id, idempotency_key)` would let two NULL-app rows coexist, so V29 uses a null-safe unique index (`COALESCE(app_id, '00000000-0000-0000-0000-000000000000')`) and a partial index for rows without an app; the adapter treats a null `appId` as its own scope.
 Retention: unchanged (D-C4-16), driven by `RetentionService.runOnce()` on a timer that C0 adds.
 
 ## 5. Adapters to implement (all in `wiring/` or the owning module's `persistence` package, JDBC via `NamedParameterJdbcTemplate`, every query tenant-filtered)
@@ -164,13 +179,15 @@ Retention: unchanged (D-C4-16), driven by `RetentionService.runOnce()` on a time
 * Tests: Testcontainers RabbitMQ — publish/confirm, redelivery count, nack(requeue=false) → DLQ, consumer death → redelivery, broker down → publish throws and the run stays PENDING.
 * Until then `app.workflow.queue=memory` (single node). The volatile guard keeps refusing LIVE mutating workflows in any multi-node profile.
 
-## 7. Decisions needed from the owner (C0 will record them in DECISIONS before any file is created)
+## 7. Decisions (accepted 2026-10-06 — recorded as D-C0-21)
 
-1. **Number split and order:** V28 = data runtime foundation (§3), V29 = run stores (§4); one number per task per ledger; ledger items 1 (tenant resources) and 3 (sharing/groups) are re-ordered after them because neither is a prerequisite of these tables. Alternative: one combined V28 (fewer Mac cycles, breaks "one number = one task").
-2. `source_schemas` deferred (in-memory store) — or include it in V28.
-3. TEST-mode bindings stored in the same table (`mode` column) — or LIVE only.
-4. C3 idempotency TTL stays 24 h (vs C4 30 d) — or raise it to the C4 horizon.
-5. Approvals/schedules/notifications persistence stays out; LIVE workflows containing an `APPROVAL` step must stay refused until their tables exist.
+1. **D1** two migrations: V28 data runtime, V29 run stores; nothing already allocated is renumbered; only unallocated roadmap items moved.
+2. **D2** `source_schemas` is in V28 (minimal); sync/webhook infrastructure and advanced history stay deferred.
+3. **D3** one `data_source_bindings` table with `mode TEST|LIVE` in the key; TEST execution never writes bindings.
+4. **D4** data idempotency retention default 30 days, configurable, minimum 7 days, never earlier than the action-run replay window.
+5. **D5** approvals, schedules, notifications out of V28/V29 (tracked, not cancelled); LIVE workflows with an APPROVAL step stay refused.
+6. **D6** `action_runs.app_id` nullable; null-safe unique key.
+7. **D7** no management API invented; tracked as B-C0-W-03 (OPEN). Related finding B-C0-W-04: production connectors are read-only.
 
 ## 8. Implementation order
 
