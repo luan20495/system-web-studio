@@ -110,7 +110,7 @@ Design choices worth a reviewer's attention: (a) plain `amqp-client` instead of 
 | H-2 | Every writable connector / `ActionNotifyPort` must either dedupe on the **derived** key or report `IDEMPOTENCY_OUTCOME_UNKNOWN` when it cannot tell. Add to the connector contract tests. | A-1 option 1 | C3/C0 |
 | H-3 | `workflow_runs.lease_owner VARCHAR(64) NULL`, `lease_until TIMESTAMPTZ NULL`; store ops `claimStep(run, workerId, leaseUntil)` / `renewLease(run, workerId, leaseUntil)` as CAS; sweeper staleness = `lease_until < now` (fallback `updated_at`). C4 writes the port change + engine heartbeat + tests. **Schema goes into V29 before it is imported, or V30 if C0 allocates it; C4 allocates nothing.** | L-1 | `V29__...sql` / V30, `JdbcWorkflowRunStore` |
 | H-4 | Raise the wiring minimum `app.workflow.stale-after` from PT30S to `2 × ActionLimits ceiling timeout` (60 s for the 30 s default) until H-3 exists. | L-1 | `AppRuntimeConfiguration` |
-| H-5 | Make the queue a selectable bean. `app.workflow.queue` = `memory` (default) \| `amqp`:<br>`@Bean @ConditionalOnProperty(prefix="app.workflow", name=["queue"], havingValue="amqp") fun workflowQueue(cf: CachingConnectionFactory): WorkflowQueue = AmqpWorkflowQueue({ nativeConnection(cf) }).also { it.declareTopology() }`<br>and the in-memory bean `@ConditionalOnProperty(... havingValue="memory", matchIfMissing=true)`. `nativeConnection` = one cached native connection from `cf.rabbitConnectionFactory`, re-created when `!isOpen`. Close it on shutdown. | G2 | `AppRuntimeConfiguration`, `application.yml` |
+| H-5 | **C4 side done** (`WorkflowQueueConfiguration`, `WorkflowQueueSelection`, `CachedBrokerConnection`; section 9). C0 asks: inject `WorkflowQueue` in the wiring, **delete any queue bean the wiring creates itself** (two beans = start-up failure, on purpose), set `app.workflow.queue=amqp` (or the `prod` profile) in production config, and give prod/test brokers the `spring.rabbitmq.*` settings. | G2 | `AppRuntimeConfiguration`, `application*.yml` |
 | H-6 | Schedule retention (`redactFinished`/`purgeFinished`) - already implemented in the stores, nobody calls it. | hygiene | wiring |
 | H-7 | Import V29 only after its Mac gate; C4 will re-run `WorkflowRestartRecoveryTests`-equivalents against `AmqpWorkflowQueue` once both exist (G3). | G1/G3 | - |
 
@@ -141,3 +141,53 @@ C6 must not mock RabbitMQ or the stores for G4.
 | G3 Restart / recovery | **NOT DONE** | unit-level scenarios VERIFIED (harness 399/399); durable + broker restart scenarios WRITTEN, not run |
 | G4 Real full-stack workflow E2E | **NOT DONE** | needs G1+G2 and a real wired stack |
 | G5 C6 regression | **NOT DONE** | handoff above |
+
+
+## 9. Batch 3 status (A-1, H-3, H-5) - what C4 changed and what C0 must still do
+
+Verification level: **harness only** (Kotlin compiled with kotlinc against hand-written stubs, 422 tests run by a mini JUnit runner). Gradle, Testcontainers and a real broker have **not** been run by C4. Nothing here is GREEN for G1-G5.
+
+### 9.1 A-1 - mutating abandoned run is an unknown outcome (decided: option "UNKNOWN", `retryable=false`)
+C4 side (done): `ActionRunRecord.mutating`, `ActionRunStore.begin(key, fingerprint, now, mutating)`, `AbandonedRuns.result(mutating)` = `IDEMPOTENCY_OUTCOME_UNKNOWN`, `retryable=false` for mutating, `TIMEOUT` retryable for non-mutating; `ActionRuntime` passes `def.type.mutatesState`; `InMemoryActionRunStore` honours it. A workflow step whose action run was abandoned therefore fails the run with UNKNOWN (no retry, no onError, not compensated; earlier steps are).
+C0 must (nothing done by C4 in C0 files):
+1. `action_runs.mutating BOOLEAN NOT NULL DEFAULT TRUE` in V29 (before it reaches integration); default TRUE = a legacy row is treated as mutating (safe).
+2. `JdbcActionRunStore.begin(..., mutating)` persists it; `sweepStale` writes `AbandonedRuns.result(row.mutating)` instead of the fixed retryable TIMEOUT. **`JdbcActionRunStore` does not compile against the new interface until this is done** (the 3-argument `begin` still exists as a default method, the 4-argument one is abstract).
+3. `ActionRunRecoveryTests` first test and D-C0-23 item 3 change: an abandoned mutating run is UNKNOWN, not retryable TIMEOUT.
+Behaviour cost (accepted by the A-1 decision): a write that was sent and committed before the crash is no longer reconciled automatically by replay-by-key; it surfaces as UNKNOWN after the action sweep (default PT10M). A crash before the write was sent is indistinguishable and is also UNKNOWN for mutating actions.
+
+### 9.2 H-3 - durable lease (C4 model and engine done; schema is C0's)
+C4 side (done): `WorkflowRun.leaseOwner` / `leaseUntil`; the claim CAS sets both (`workerId`, `now + staleAfter`); a heartbeat renews them every `staleAfter/3` (min 1 s) while the step runs (`renewLease` is a CAS that only the owner and only for the running attempt can win); every transition that leaves RUNNING, and every terminal run, clears them; abandonment = `leaseUntil <= now` when a lease is present, otherwise the old `updated_at < staleBefore` rule (so a store without the columns keeps working).
+C0 must (V29, or V30 if C0 allocates it; C4 allocates nothing):
+- `workflow_runs.lease_owner VARCHAR(64) NULL`, `workflow_runs.lease_until TIMESTAMPTZ NULL`; `JdbcWorkflowRunStore` maps them in `get/insert/compareAndSet` (same row, same `version` CAS: claim and lease are one atomic write).
+- Sweep query: `status NOT IN (terminal) AND ((lease_until IS NOT NULL AND lease_until <= :now) OR (lease_until IS NULL AND updated_at < :staleBefore))` plus the existing timer / approval predicates; keep the fair, bounded `last_swept_at` ordering.
+- Wire `workerId` (one per node, e.g. `node-<uuid>` or hostname+pid) when constructing `WorkflowEngine`.
+- H-4 (minimum `stale-after`) is mitigated by the heartbeat but not removed: the heartbeat thread stops with the process, which is exactly when the lease must expire.
+Tests: `WorkflowLeaseTests` (9), `WorkflowAbandonedWriteTests`; mutants (lease ignored, owner not checked) fail them.
+
+### 9.3 H-5 - queue adapter selection (C4 side done, new files only)
+`app.workflow.queue=memory|amqp`; unset = `amqp` under the `prod`/`production` profile, `memory` otherwise; `memory` in production and any other value are start-up errors. `WorkflowQueueConfiguration` provides the single `WorkflowQueue` bean (declares the topology at start-up for `amqp`, closes channels and connection at shutdown); `logic.*` knows nothing of the switch. Tests: `WorkflowQueueSelectionTests` (7). Not verified against Spring Boot 4 / the real amqp-client (stubs only): first Mac compile may report API mismatches, to be fixed by C4.
+
+### 9.4 Integration test plan for the 16 scenarios (code only after `AmqpWorkflowQueueTests` is green on the Mac)
+Needs C0's JDBC stores (V29) + RabbitMQ container + PostgreSQL container, in one `@SpringBootTest` base reusing `IntegrationTestBase`. Tests that restart the broker or backend reuse the fixed-port technique of `AmqpWorkflowQueueTests`; "backend restart" = new engine/worker/queue instances over the same database.
+
+| # | Scenario | Asserts |
+|---|---|---|
+| 1 | create workflow | definition persisted, version pinned |
+| 2 | persist run | `workflow_runs` row PENDING, steps rows, before any publish |
+| 3 | publish Rabbit message | message in `xweb.workflow.jobs`, persistent, `messageId`/`correlationId` |
+| 4 | consume | `basic.get` delivery, no auto-ack, unacked count 1 |
+| 5 | claim persisted run | row RUNNING, `lease_owner`/`lease_until` set, attempt 1 |
+| 6 | execute step | action run row + C3 write once |
+| 7 | persist result | step SUCCEEDED, run terminal, lease cleared |
+| 8 | ACK | queue empty, unacked 0, only after 7 |
+| 9 | backend restart | PENDING/RUNNING run completes after new instances start |
+| 10 | broker restart | persistent message survives, run completes |
+| 11 | duplicate delivery | second delivery is a no-op, one write |
+| 12 | consumer crash before ACK | redelivered, one write |
+| 13 | worker crash after persisted result, before ACK | redelivery is DONE with no second write |
+| 14 | ambiguous mutation crash | run `FAILED`, `IDEMPOTENCY_OUTCOME_UNKNOWN`, no retry, no compensation of that step |
+| 15 | lease expiry + reclaim | sweeper republishes, new owner, attempt 2, same idempotency key |
+| 16 | cancel queued / running | CANCELLED, lease cleared, late result ignored |
+
+### 9.5 Gates (unchanged: none GREEN)
+G1 durable persistence: NOT DONE (needs C0 JDBC stores + tests). G2 RabbitMQ + DLQ: NOT DONE (adapter and tests written, never run). G3 restart/recovery: NOT DONE. G4 real full-stack E2E: NOT DONE. G5 C6 regression: NOT DONE.
