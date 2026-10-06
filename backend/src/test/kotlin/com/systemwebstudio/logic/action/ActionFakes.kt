@@ -21,8 +21,11 @@ object Fx {
     val now: Instant = Instant.parse("2026-10-05T00:00:00Z")
     val clock: Clock = Clock.fixed(now, ZoneOffset.UTC)
 
-    fun ctx(tenant: UUID = tenantA, app: UUID? = appA, userId: UUID = user, kind: ActorKind = ActorKind.USER) =
-        ActionContext(tenant, ActionActor(userId, kind), workspaceId = UUID.randomUUID(), projectId = app, requestId = "req-1")
+    /** The workspace of [appA] in every fixture request. It used to be a new random id per call, so two requests "of the same scope" never were one. */
+    val workspaceA: UUID = UUID.fromString("00000000-0000-0000-0000-0000000000c1")
+
+    fun ctx(tenant: UUID = tenantA, app: UUID? = appA, userId: UUID = user, kind: ActorKind = ActorKind.USER, workspace: UUID? = workspaceA) =
+        ActionContext(tenant, ActionActor(userId, kind), workspaceId = workspace, projectId = app, requestId = "req-1")
 
     val uiTrigger = ActionTrigger("btn", EventType.ON_CLICK)
     /** The key C4 derives for a client key (what stores and ports see). */

@@ -785,7 +785,20 @@ class WorkflowEngine(
 
     private fun load(tenantId: UUID, runId: UUID): WorkflowRun? = try { runs.get(tenantId, runId) } catch (e: Exception) { null }
 
+    /**
+     * The run lives in exactly the scope of this request: tenant, workspace, project (application). A value is compared with a value, `null` is a value and never a
+     * wildcard: a run without a workspace is not visible from a request that names one, and a request without a project sees no run (a run always has an application).
+     */
+    private fun sameResourceScope(run: WorkflowRun, ctx: ActionContext): Boolean =
+        run.tenantId == ctx.tenantId && run.workspaceId == ctx.workspaceId && ctx.projectId != null && run.appId == ctx.projectId
+
+    /**
+     * Who may see or cancel a run, in this order: resource scope first (tenant, workspace, project), then the creator shortcut, then the permission. A wrong scope is
+     * answered like a run that does not exist (RUN_NOT_FOUND, never 403), so existence is not leaked and a creator cannot reach his run through another workspace
+     * (F-1: the creator shortcut used to come first and the scope was never compared).
+     */
     private fun mayView(ctx: ActionContext, run: WorkflowRun): Boolean {
+        if (!sameResourceScope(run, ctx)) return false
         if (run.createdBy.userId == ctx.actor.userId) return true
         val d = try { access.check(ctx, AccessRequest(LogicPermissions.WORKFLOW_MANAGE, ResourceKind.WORKFLOW_RUN, run.runId.toString(), run.appId, run.mode)) } catch (e: Exception) { null }
         return d is AuthorizationDecision.Allowed
