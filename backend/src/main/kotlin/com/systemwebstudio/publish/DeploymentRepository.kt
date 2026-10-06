@@ -45,10 +45,14 @@ class DeploymentRepository(private val jdbc: JdbcTemplate) {
         val finished = to in DeploymentStatus.terminal
         val n = jdbc.update(
             "UPDATE deployments SET status = ?, updated_at = now(), url = COALESCE(?, url), error = ?, finished_at = CASE WHEN ? THEN now() ELSE finished_at END WHERE id = ? AND status = ?",
-            to, url, error, finished, id, from)
+            to, url, error?.take(StepFailure.MAX_LENGTH), finished, id, from)
         if (n == 1) event(id, to, message ?: error)
         return n == 1
     }
+
+    /** how many times the given step was already retried for this deployment (survives a worker restart: it is read from the history) */
+    fun retries(id: UUID, step: String): Int =
+        jdbc.queryForObject("SELECT count(*) FROM deployment_events WHERE deployment_id = ? AND status = ? AND message LIKE 'Retry %'", Int::class.java, id, step) ?: 0
 
     fun staleIds(queuedOlderThanSeconds: Long, inProgressOlderThanSeconds: Long): List<UUID> = jdbc.query(
         """SELECT id FROM deployments WHERE (status = 'QUEUED' AND updated_at < now() - make_interval(secs => ?))

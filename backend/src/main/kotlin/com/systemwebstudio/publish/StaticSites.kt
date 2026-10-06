@@ -32,8 +32,8 @@ class RenderClient(
         val body = json.writeValueAsString(mapOf("schema" to schema, "assets" to assets))
         val request = HttpRequest.newBuilder(URI("${url.trimEnd('/')}/render")).timeout(Duration.ofSeconds(20))
             .header("Content-Type", "application/json").header("X-Render-Token", token).POST(HttpRequest.BodyPublishers.ofString(body)).build()
-        val response = try { http.send(request, HttpResponse.BodyHandlers.ofString()) } catch (e: Exception) { throw BuildFailure("Render worker is not reachable") }
-        if (response.statusCode() != 200) throw BuildFailure("Render worker answered HTTP ${response.statusCode()}")
+        val response = try { http.send(request, HttpResponse.BodyHandlers.ofString()) } catch (e: Exception) { throw BuildFailure("Render worker is not reachable", transient = true) }
+        if (response.statusCode() != 200) throw BuildFailure("Render worker answered HTTP ${response.statusCode()}", transient = response.statusCode() >= 500)
         return response.body()
     }
 
@@ -42,8 +42,8 @@ class RenderClient(
         val body = json.writeValueAsString(mapOf("schema" to schema, "assets" to assets))
         val request = HttpRequest.newBuilder(URI("${url.trimEnd('/')}/render-site")).timeout(Duration.ofSeconds(30))
             .header("Content-Type", "application/json").header("X-Render-Token", token).POST(HttpRequest.BodyPublishers.ofString(body)).build()
-        val response = try { http.send(request, HttpResponse.BodyHandlers.ofString()) } catch (e: Exception) { throw BuildFailure("Render worker is not reachable") }
-        if (response.statusCode() != 200) throw BuildFailure("Render worker answered HTTP ${response.statusCode()}")
+        val response = try { http.send(request, HttpResponse.BodyHandlers.ofString()) } catch (e: Exception) { throw BuildFailure("Render worker is not reachable", transient = true) }
+        if (response.statusCode() != 200) throw BuildFailure("Render worker answered HTTP ${response.statusCode()}", transient = response.statusCode() >= 500)
         val files = json.readTree(response.body()).get("files") ?: throw BuildFailure("Render worker returned no files")
         return files.propertyNames().associateWith { files.get(it).asString() }
     }
@@ -61,7 +61,8 @@ class RenderClient(
     }
 }
 
-class BuildFailure(message: String) : RuntimeException(message)
+/** A build step that failed. `transient` = the cause is expected to go away (worker restarting, 5xx): the processor may retry the step. */
+class BuildFailure(message: String, val transient: Boolean = false) : RuntimeException(message)
 
 /** Result of a safe-render preview: PNG bytes, or why there is none (UNAVAILABLE = no browser configured on the worker). */
 sealed interface PreviewResult { class Png(val bytes: ByteArray) : PreviewResult; object Unavailable : PreviewResult; class Failed(val reason: String) : PreviewResult }
