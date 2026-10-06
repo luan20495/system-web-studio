@@ -11,8 +11,10 @@ import tools.jackson.databind.JsonNode
 import java.util.UUID
 
 /**
- * Routes of docs/contracts/v2/runtime-api.md with BOTH flags on and `allow-volatile-stores=false` (the acceptance default). There is no DataGateway bean
- * (D-C0-20), so every LIVE data path answers 503; TEST/WouldRun, permissions, tenant isolation, strict parsing and the volatile guard are fully reachable.
+ * Routes of docs/contracts/v2/runtime-api.md with BOTH flags on and `allow-volatile-stores=false` (the acceptance default). Since V28 (D-C0-21) the DataGateway
+ * bean exists, backed by the persistent stores; nothing is registered or bound in this class, so a data path answers "unbound" (422), never an invented
+ * success. TEST/WouldRun, permissions, tenant isolation, strict parsing and the volatile guard are fully reachable. The real LIVE data paths are in
+ * [DataRuntimeLiveApiTests].
  * The AppDefinition is the C2 sample document written as the project's working draft; nothing is published, so LIVE finds no definition.
  */
 @TestPropertySource(properties = ["app.workflow.enabled=true", "app.data-platform.enabled=true", "app.workflow.allow-volatile-stores=false", "app.workflow.worker-delay-ms=3600000"])
@@ -96,12 +98,14 @@ class AppRuntimeApiTests : IntegrationTestBase() {
         assertThat(a.body(r).get("error").get("code").asString()).isEqualTo("UNKNOWN_ACTION")
     }
 
+    // C0 / V28 (D-C0-21): this test used to expect 503 DATA_RUNTIME_UNAVAILABLE because no DataGateway bean existed. The bean exists now, so the truthful answer for an
+    // application whose data source slot has no binding is 422 DATA_SOURCE_UNBOUND. The 503 is still produced (and still tested) when the gateway is absent: ActionDataPortAdapterTests.
     @Test
-    fun `TEST mode of a query needs APP_EDIT and the data runtime answers 503 while there is no gateway`() {
+    fun `TEST mode of a query needs APP_EDIT and, with nothing bound, the data runtime answers 422 DATA_SOURCE_UNBOUND`() {
         val sc = withDefinition()
         val r = sc.s.post(rt(sc, "queries/orders-list/run"), """{"mode":"TEST"}""")
-        assertThat(r.response.status).isEqualTo(503)
-        assertThat(sc.s.body(r).get("code").asString()).isEqualTo("DATA_RUNTIME_UNAVAILABLE")
+        assertThat(r.response.status).isEqualTo(422)
+        assertThat(sc.s.body(r).get("code").asString()).isEqualTo("DATA_SOURCE_UNBOUND")
     }
 
     @Test

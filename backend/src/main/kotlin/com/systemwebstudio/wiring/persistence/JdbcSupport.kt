@@ -8,7 +8,7 @@ import java.time.Instant
 import java.util.UUID
 
 /**
- * Small helpers shared by the C3 JDBC adapters (V28). Plain [JdbcTemplate], same style as the other repositories of the platform:
+ * Small helpers shared by the C3 JDBC adapters (V28). Plain `JdbcTemplate`, same style as the other repositories of the platform:
  * every statement carries `tenant_id`, so another tenant's row is simply not found.
  */
 internal object JdbcSupport {
@@ -18,9 +18,6 @@ internal object JdbcSupport {
     fun ResultSet.instantOrNull(column: String): Instant? = getTimestamp(column)?.toInstant()
     fun ResultSet.longOrNull(column: String): Long? { val v = getLong(column); return if (wasNull()) null else v }
     fun ts(instant: Instant): Timestamp = Timestamp.from(instant)
-
-    /** a stored definition that no longer validates is a data error, not a reason to leak the content: report it as not found */
-    inline fun <T : Any> lenient(block: () -> T?): T? = try { block() } catch (e: RuntimeException) { if (e is ConnectorFailure) throw e; null }
 
     fun conflict(message: String) = ConnectorFailure(FailureCodes.CONFLICT, message)
 }

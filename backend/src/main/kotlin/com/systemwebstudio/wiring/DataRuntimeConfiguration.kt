@@ -110,7 +110,7 @@ class DataRuntimeConfiguration {
         connectors.add(PostgresConnector(queries, policy))
         connectors.add(RestConnector(queries))
         connectors.addAll(PlannedConnectors.all())
-        connectors.addAll(extra.orderedStream().toList())
+        connectors.addAll(extra.orderedStream().collect(java.util.stream.Collectors.toList()))
         return DataConnectorRegistry(connectors)
     }
 
