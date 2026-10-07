@@ -35,7 +35,7 @@ object PermissionCodes {
     val CANONICAL: Set<String> = setOf(
         "APP_VIEW", "APP_USE", "APP_EDIT", "APP_PUBLISH", "APP_SHARE",
         "DATA_SOURCE_VIEW", "DATA_SOURCE_MANAGE", "QUERY_EXECUTE", "DATA_MUTATE", "ACTION_EXECUTE", "WORKFLOW_EXECUTE", "WORKFLOW_MANAGE",
-        "TENANT_MANAGE", "TENANT_MEMBERS"
+        "TENANT_MANAGE", "TENANT_MEMBERS", "MEMBER_MANAGE"
     )
 
     private val storageOfCanonical: Map<String, Permission> =
@@ -46,7 +46,7 @@ object PermissionCodes {
 
     /**
      * Canonical codes of [perms], sorted, for responses that cross a boundary (`/auth/me`). Storage constants that have no canonical code
-     * (PROJECT_SETTINGS, PROJECT_DELETE, PROJECT_CREATE, MEMBER_MANAGE, AUDIT_READ, REGISTRY_WRITE) are internal and are NOT exposed.
+     * (PROJECT_SETTINGS, PROJECT_DELETE, PROJECT_CREATE, AUDIT_READ, REGISTRY_WRITE) are internal and are NOT exposed. MEMBER_MANAGE is a portal-facing canonical capability.
      */
     fun canonicalCodesOf(perms: Collection<Permission>): List<String> = perms.map { codeOf(it) }.filter { it in CANONICAL }.distinct().sorted()
 
