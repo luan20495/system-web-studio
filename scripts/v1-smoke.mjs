@@ -73,6 +73,9 @@ const slot = { schemaVersion: 2, kind: "PAGE_SCHEMA",
   mappings: [{ id: "orders-map", queryRef: "orders-list", fields: [{ from: "order_no", to: "name" }, { from: "customer", to: "description" }] }],
   viewModels: [{ id: "orders-vm", name: "Orders", queryRef: "orders-list", mappingRef: "orders-map", fields: [{ name: "name" }, { name: "description" }] }] };
 sh(SEED, `UPDATE page_schemas SET schema = schema || '${JSON.stringify(slot).replace(/'/g, "''")}'::jsonb WHERE project_id = '${pid}';\n`);
+// the seed bypassed versioning: one real edit through the API commits the draft (with the slot) as a version, which is what a publish serves
+r = await call("PATCH", `${P}/schema`, { operations: [{ type: "UPDATE_THEME", definition: { radius: "MD" } }], expectedRevision: (await call("GET", P)).json?.revision, summary: "data slot" });
+check("a real edit commits the draft as a version", r.status === 200, `${r.status} ${r.status === 200 ? "" : r.text.slice(0, 220)}`);
 for (const mode of ["TEST", "LIVE"]) { r = await call("PUT", `${P}/data-bindings/${mode}/erp-db`, { dataSourceId: ds }); check(`bind ${mode} slot erp-db`, r.status === 200 && r.json?.mode === mode, `${r.status}`); }
 r = await call("PUT", `${P}/data-bindings/test/erp-db`, { dataSourceId: ds }); check("lower-case mode refused", r.status === 400 && r.json?.code === "INVALID_PARAMS", `${r.status}`);
 
@@ -91,8 +94,8 @@ r = await call("GET", `${P}/site`); const siteUrl = r.json?.url; check("site inf
 if (siteUrl) {
   const page = await fetch(siteUrl); const cfgRes = await fetch(new URL("__factory/config.json", siteUrl));
   check("published site is served by the sites gateway", page.status === 200, `${page.status}`);
-  const rc = await cfgRes.json().catch(() => null);
-  check("runtime config names the release, apiBase is configuration", cfgRes.status === 200 && rc?.releaseId === dep && ("apiBase" in rc), `${cfgRes.status} releaseId=${rc?.releaseId === dep ? "active" : rc?.releaseId} apiBase=${rc?.apiBase}`);
+  // a PAGE_SCHEMA site is static HTML rendered at publish: it has no runtime config (only a code app, kind STATIC_APP, is served `__factory/config.json`; B-C5-06 / D-C0-35)
+  check("a page site has no runtime config (code apps only - gap recorded, not a pass of the apiBase flow)", cfgRes.status === 404, `${cfgRes.status}`);
 }
 r = await call("POST", `${P}/app-runtime/queries/orders-list/run`, { params: { status: "open" } });
 check("LIVE query = the active release, over TLS", r.status === 200 && r.json?.mode === "LIVE" && /SO-1001/.test(r.text), `${r.status}`);
