@@ -266,6 +266,19 @@ app:
     # host; read at request time, never baked into an artifact. Blank = not configured (apiBase null, no address is invented). Local: application-local.yml; prod: optional,
     # must be https and not loopback / private (ProductionConfigValidator).
     data-api-base: ${SITES_DATA_API_BASE:}
+    # D-C0-36: the Public Runtime (published-runtime.md section 4): POST /sites/{slug}/_data/queries/{queryId}/run, anonymous, read-only LIVE query of the ACTIVE release.
+    # Mounted only when BOTH app.data-platform.enabled and this switch are true (default false). The release allow-list is the `public: true` READ queries of the immutable
+    # version snapshot of the release, gated by publish_configs.public_data_approved; no provider answer = C1 refuses every query.
+    public-data:
+      enabled: ${SITES_PUBLIC_DATA_ENABLED:false}
+      max-body-bytes: ${SITES_PUBLIC_DATA_MAX_BODY_BYTES:16384}
+      max-rows: ${SITES_PUBLIC_DATA_MAX_ROWS:100}                       # cap per public call (the query's own maxRows may only lower it)
+      max-response-bytes: ${SITES_PUBLIC_DATA_MAX_RESPONSE_BYTES:262144}   # larger result => 502 RESPONSE_TOO_LARGE
+      rate:                                                             # Redis fixed windows (common.RateLimiter); a Redis outage refuses
+        ip-burst: ${SITES_PUBLIC_DATA_IP_BURST:30}                      # per client address, any slug, per ip-burst-window-seconds
+        ip-burst-window-seconds: 10
+        site-ip-per-minute: ${SITES_PUBLIC_DATA_SITE_IP_PER_MINUTE:120} # per site and client address (sustained)
+        site-per-minute: ${SITES_PUBLIC_DATA_SITE_PER_MINUTE:1200}      # per site, all addresses
     cookie-name: site_session
     cookie-secure: ${SITES_COOKIE_SECURE:false}
     session-hours: 8

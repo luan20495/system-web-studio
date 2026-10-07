@@ -83,7 +83,9 @@ data class DataSourceDef(val id: String, val name: String? = null, val type: Str
  */
 data class QueryDef(
     val id: String, val name: String? = null, val dataSourceRef: String, val mode: QueryMode = QueryMode.READ,
-    val operationKey: String? = null, val params: List<ParamDef> = emptyList(), val maxRows: Int? = null
+    val operationKey: String? = null, val params: List<ParamDef> = emptyList(), val maxRows: Int? = null,
+    /** D-C0-36: the author offers this READ query to anonymous visitors of the published site (PUBLIC_SITE). Default false = private. Only a declaration: what a RELEASE actually exposes is derived from its immutable version snapshot and gated by the project's public-data approval at request time. */
+    val public: Boolean = false
 )
 
 /** What to do with a value that cannot be mapped (C3 `MappingErrorPolicy`; default NULL_FIELD). */

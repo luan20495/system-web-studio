@@ -148,7 +148,7 @@ class ManagementBodyLimitFilter(
         if (declared > limit) return tooLarge(request, response)
         val bytes = request.inputStream.readNBytes(limit + 1)
         if (bytes.size > limit) return tooLarge(request, response)
-        chain.doFilter(Replay(request, bytes), response)
+        chain.doFilter(ReplayedRequest(request, bytes), response)
     }
 
     private fun tooLarge(request: HttpServletRequest, response: HttpServletResponse) {
@@ -159,23 +159,24 @@ class ManagementBodyLimitFilter(
         response.writer.write(json.writeValueAsString(r.body))
     }
 
-    private class Replay(request: HttpServletRequest, private val bytes: ByteArray) : HttpServletRequestWrapper(request) {
-        override fun getInputStream(): ServletInputStream {
-            val delegate = ByteArrayInputStream(bytes)
-            return object : ServletInputStream() {
-                override fun read(): Int = delegate.read()
-                override fun read(b: ByteArray, off: Int, len: Int): Int = delegate.read(b, off, len)
-                override fun isFinished(): Boolean = delegate.available() == 0
-                override fun isReady(): Boolean = true
-                override fun setReadListener(listener: ReadListener?) { throw UnsupportedOperationException("blocking reads only") }
-            }
-        }
-        override fun getContentLength(): Int = bytes.size
-        override fun getContentLengthLong(): Long = bytes.size.toLong()
-        override fun getReader() = java.io.BufferedReader(java.io.InputStreamReader(inputStream, characterEncoding ?: "UTF-8"))
-    }
-
     private companion object {
         val NO_BODY = setOf("GET", "HEAD", "OPTIONS")
     }
+}
+
+/** a request whose already-read body is replayed to the next filter / controller unchanged */
+internal class ReplayedRequest(request: HttpServletRequest, private val bytes: ByteArray) : HttpServletRequestWrapper(request) {
+    override fun getInputStream(): ServletInputStream {
+        val delegate = ByteArrayInputStream(bytes)
+        return object : ServletInputStream() {
+            override fun read(): Int = delegate.read()
+            override fun read(b: ByteArray, off: Int, len: Int): Int = delegate.read(b, off, len)
+            override fun isFinished(): Boolean = delegate.available() == 0
+            override fun isReady(): Boolean = true
+            override fun setReadListener(listener: ReadListener?) { throw UnsupportedOperationException("blocking reads only") }
+        }
+    }
+    override fun getContentLength(): Int = bytes.size
+    override fun getContentLengthLong(): Long = bytes.size.toLong()
+    override fun getReader() = java.io.BufferedReader(java.io.InputStreamReader(inputStream, characterEncoding ?: "UTF-8"))
 }

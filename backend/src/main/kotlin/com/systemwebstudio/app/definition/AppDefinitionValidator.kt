@@ -103,6 +103,7 @@ class DefaultAppDefinitionValidator(
         d.queries.forEachIndexed { i, q ->
             known(q.dataSourceRef, dataSources, "queries[$i].dataSourceRef", "data source", out)
             uniqueNames("queries[$i].params", q.params.map { it.name }, out)
+            if (q.public && q.mode != QueryMode.READ) out += Violation("queries[$i].public", "only a READ query can be offered to anonymous visitors")
         }
 
         d.mappings.forEachIndexed { i, m ->

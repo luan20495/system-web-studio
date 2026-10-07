@@ -158,7 +158,7 @@ internal class AppDefinitionReader(private val out: MutableList<Violation>) {
     }
 
     private fun query(n: JsonNode, at: String): QueryDef? {
-        if (!obj(n, at, setOf("id", "name", "dataSourceRef", "mode", "operationKey", "params", "maxRows"))) return null
+        if (!obj(n, at, setOf("id", "name", "dataSourceRef", "mode", "operationKey", "params", "maxRows", "public"))) return null
         val id = id(n, "id", at, true)
         val ds = id(n, "dataSourceRef", at, true)
         val mode = enumOf<QueryMode>(n, "mode", at) ?: QueryMode.READ
@@ -166,7 +166,8 @@ internal class AppDefinitionReader(private val out: MutableList<Violation>) {
         val params = params(n, "params", at, PARAM_NAME, "a parameter name (lowercase first letter, then letters, digits, _)")
         val maxRows = int(n, "maxRows", at, 1, AppDefinitionLimits.MAX_ROWS)
         val name = text(n, "name", at, AppDefinitionLimits.MAX_NAME)
-        return if (id == null || ds == null) null else QueryDef(id, name, ds, mode, key, params, maxRows)
+        val public = bool(n, "public", at) ?: false
+        return if (id == null || ds == null) null else QueryDef(id, name, ds, mode, key, params, maxRows, public)
     }
 
     private fun mapping(n: JsonNode, at: String): MappingDef? {
