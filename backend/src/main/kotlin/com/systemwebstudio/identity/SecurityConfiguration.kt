@@ -84,6 +84,9 @@ class SecurityConfiguration {
     /**
      * Published sites (ADR 0009), reached only through the sites gateway on their own origin: anonymous or a site session handled by
      * SiteServingController, never the Studio session; GET only; no CSRF (nothing changes state); headers set per response.
+     * Two anonymous POSTs only: website forms, and the PUBLIC_SITE read-only LIVE query (D-C0-35, `published-runtime.md` §4) - exactly one path shape, a single
+     * segment each for the slug and the query id. No cookie / session / Authorization header is read on either (`securityContext` is disabled), so there is
+     * nothing to forge and no CSRF to bypass; the tenant, workspace, project and release are derived from the slug by the server, never from the request.
      */
     @Bean
     @org.springframework.core.annotation.Order(1)
@@ -99,6 +102,7 @@ class SecurityConfiguration {
             // the only POST: anonymous website form submissions (no cookie is used, so there is nothing to forge; Origin is checked)
             .authorizeHttpRequests { it.requestMatchers(HttpMethod.GET, "/sites/**").permitAll().requestMatchers(HttpMethod.HEAD, "/sites/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/sites/*/_forms/*").permitAll()
+                .requestMatchers(HttpMethod.POST, "/sites/*/_data/queries/*/run").permitAll()     // PUBLIC_SITE: read-only LIVE query; the controller is C0's, the policy is C1's
                 // server app APIs (stage J): every method, checked by AppGatewayController against the app's declared routes
                 .requestMatchers("/sites/*/api/**", "/sites/_app/*/api/**").permitAll().anyRequest().denyAll() }
             .formLogin { it.disable() }

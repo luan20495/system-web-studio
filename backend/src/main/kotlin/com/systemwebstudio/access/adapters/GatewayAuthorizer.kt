@@ -3,6 +3,7 @@ package com.systemwebstudio.access.adapters
 import com.systemwebstudio.access.AccessContext
 import com.systemwebstudio.access.AccessService
 import com.systemwebstudio.access.Permission
+import com.systemwebstudio.tenancy.ActorKind
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Component
 import java.util.UUID
@@ -26,9 +27,12 @@ data class GatewayAuthRequest(
  * SCHEMA_SAMPLE -> DATA_SOURCE_MANAGE **and** QUERY_EXECUTE (sampling reads real rows: managing is not enough).
  * Unknown operation, non-USER actor (SYSTEM / SERVICE / APP_TOKEN: TEMPORARY V2 POLICY, see ActorPolicy), missing workspace (tenant-level data sources have
  * no permission holder: TENANT_ADMIN has no implicit data access, D-C1-12), tenant mismatch, unknown project/version => Denied.
+ *
+ * The one non-USER exception is [ActorKind.PUBLIC_SITE] (D-C0-35): it may reach `QUERY_EXECUTE` and nothing else, and only for the app version of the ACTIVE public
+ * release of the project it names (see [PublicSiteAuthorizer.authorizeGateway]); it has no user, so no USER role or permission is ever consulted for it.
  */
 @Component("c1GatewayAuthorizer")
-class GatewayAuthorizer(private val access: AccessService, private val jdbc: JdbcTemplate) {
+class GatewayAuthorizer(private val access: AccessService, private val jdbc: JdbcTemplate, private val publicSite: PublicSiteAuthorizer) {
     companion object {
         val REQUIRED: Map<String, Set<Permission>> = mapOf(
             "DATASOURCE_READ" to setOf(Permission.DATA_SOURCE_VIEW),
@@ -46,6 +50,7 @@ class GatewayAuthorizer(private val access: AccessService, private val jdbc: Jdb
 
     fun authorize(r: GatewayAuthRequest): AccessDecision = decide {
         val required = REQUIRED[r.operation] ?: return@decide AccessDecision.Denied("unknown operation")
+        if (r.actor.kind == ActorKind.PUBLIC_SITE) return@decide publicSite.authorizeGateway(r)       // QUERY_EXECUTE only; never reaches the USER permission model
         val userId = ActorPolicy.userOrNull(r.actor) ?: return@decide AccessDecision.Denied(ActorPolicy.DENIED_REASON)   // TEMPORARY V2 POLICY
         val workspaceId = r.workspaceId ?: return@decide AccessDecision.Denied("workspace required")
         if (r.appVersionId != null && r.projectId == null) return@decide AccessDecision.Denied("project required for an app version")
