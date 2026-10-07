@@ -382,7 +382,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
         onClose={() => setSavingBlock(false)} onSaved={(m) => { setSavingBlock(false); setNotice(m); loadBlocks(); }}/> : null}
       {panel === "assets" ? <AssetsDrawer workspaceId={ws} projectId={projectId} canEdit={mayEdit} onClose={() => { void loadAssets(ws); go(mode); }} onError={(e) => setNotice(errText(e, "Thao tác tệp thất bại."))}/> : null}
       {panel === "members" && me ? <MembersDrawer workspaceId={ws} projectId={projectId} me={me} onClose={() => go(mode)} onError={(e) => setNotice(errText(e, "Thao tác thành viên thất bại."))}/> : null}
-      {panel === "publish" ? <PublishModal workspaceId={ws} projectId={projectId} revision={revision} current={project.siteVisibility} versionNumber={latest} canPublish={mayPublish}
+      {panel === "publish" ? <PublishModal workspaceId={ws} projectId={projectId} revision={revision} current={project.siteVisibility} versionNumber={latest} canPublish={mayPublish} draft={schema as AppDefinitionV2}
         allowed={publicPublish === false ? ["PRIVATE"] : ["PRIVATE", "PUBLIC"]}
         onClose={() => { go(mode); void reload().catch(() => undefined); }} onUnauthorized={() => undefined}/> : null}
     </div>

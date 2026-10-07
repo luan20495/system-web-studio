@@ -7,6 +7,7 @@
 import { createRoot } from "react-dom/client";
 import { ApiError } from "@xweb/api-client";
 import type { Deployment, SiteInfo } from "@xweb/types";
+import type { AppDefinitionV2 } from "@xweb/types";
 import { PublishModal, type ReleaseCalls } from "../../features/studio/ReleaseModal";
 import "../../packages/ui/src/styles/globals.css";
 import "../../packages/ui/src/styles/responsive.css";
@@ -57,4 +58,14 @@ const calls = {
   unpublishSite: async (_w: string, _p: string, expected?: string | null, key?: string) => { rec("unpublish", [expected, key]); maybeThrow("unpublish"); rel.site = { ...idle(null, null, rel.site.pointerVersion + 1), slug: "demo" }; return rel.site; },
 } as unknown as ReleaseCalls;
 
-createRoot(document.getElementById("root")!).render(<PublishModal workspaceId="w1" projectId="p1" revision={7} current="PRIVATE" versionNumber={4} canPublish={canPublish} calls={calls} timing={{ busy: 400, idle: 700 }} onClose={() => undefined} onUnauthorized={() => undefined}/>);
+// ?draft=public|private|invalid : the document the dialog is asked to publish (PAGE_SCHEMA public data); absent = no draft (code app / older tests)
+const DRAFT = new URLSearchParams(location.search).get("draft");
+const base = { page: "p", pages: [], sections: [{ id: "hero", type: "Hero", props: {} }, { id: "grid", type: "ProductGrid", props: {} }], dataSources: [{ id: "orders", name: "Đơn hàng", type: "postgres" }] };
+const drafts: Record<string, AppDefinitionV2> = {
+  public: { ...base, queries: [{ id: "q-title", name: "Tiêu đề", dataSourceRef: "orders", mode: "READ", public: true }, { id: "q-private", dataSourceRef: "orders", mode: "READ" }, { id: "q-items", name: "Sản phẩm", dataSourceRef: "orders", mode: "READ", public: true }, { id: "q-w", dataSourceRef: "orders", mode: "WRITE" }],
+    dataBindings: [{ id: "b1", sectionId: "hero", prop: "title", queryRef: "q-title" }, { id: "b2", sectionId: "grid", prop: "items", queryRef: "q-items" }] } as unknown as AppDefinitionV2,
+  private: { ...base, queries: [{ id: "q-private", dataSourceRef: "orders", mode: "READ" }, { id: "q-w", dataSourceRef: "orders", mode: "WRITE" }] } as unknown as AppDefinitionV2,
+  invalid: { ...base, queries: [{ id: "q-w", name: "Ghi", dataSourceRef: "orders", mode: "WRITE", public: true }, { id: "q-private", dataSourceRef: "orders", mode: "READ" }], dataBindings: [{ id: "b1", sectionId: "hero", prop: "title", queryRef: "q-private" }] } as unknown as AppDefinitionV2,
+  plain: { ...base } as unknown as AppDefinitionV2,
+};
+createRoot(document.getElementById("root")!).render(<PublishModal draft={DRAFT ? drafts[DRAFT] : undefined} workspaceId="w1" projectId="p1" revision={7} current="PRIVATE" versionNumber={4} canPublish={canPublish} calls={calls} timing={{ busy: 400, idle: 700 }} onClose={() => undefined} onUnauthorized={() => undefined}/>);

@@ -157,10 +157,10 @@ test("workflows panel: NOT_READY gate and list", () => {
   assert.match(ok, /Duyệt/); assert.match(ok, /3 bước \(1 phê duyệt\)/);
 });
 
-test("data wizard: six steps; source and discovery are NOT_READY without a server; no mock rows", () => {
+test("data wizard: six data steps + the public-data tab; source and discovery are NOT_READY without a server; no mock rows", () => {
   const html = renderToStaticMarkup(<DataWizard ctx={ctx()}/>);
   for (const s of ["Nguồn dữ liệu", "Truy vấn", "Ánh xạ", "ViewModel"]) assert.match(html, new RegExp(s));
-  assert.equal((html.match(/role="tab"/g) ?? []).length, 6);
+  assert.equal((html.match(/role="tab"/g) ?? []).length, 7); assert.match(html, /Dữ liệu công khai/);
   assert.match(html, /Chưa sẵn sàng/); assert.match(html, /Kho/);
   assert.doesNotMatch(html, /mock|fake|giả lập thành công/i);
   assert.match(html, /Ánh xạ[\s\S]*name \[Bỏ khoảng trắng đầu\/cuối\]/);

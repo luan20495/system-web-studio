@@ -10,6 +10,8 @@ export type DefCtx = {
   readiness: Readiness;
   canEdit: boolean;
   busy: boolean;
+  /** the site's current visibility (PRIVATE | PUBLIC | …) — only used to word the readiness of public data; never to decide what is public */
+  siteVisibility?: string | null;
   metadata: Map<string, ComponentMetadataV2>;
   registry: RegistryComponent[];
   labelOf: (type: string) => string;

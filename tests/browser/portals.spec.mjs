@@ -1,11 +1,11 @@
 // @class: harness — real Chromium on a test-only host (fake host / no API behind it); NOT a backend E2E
 // Real-browser checks of the three portals WITHOUT a backend: everything that does not need a session.
-// Needs the three apps running: platform 127.0.0.1:3001, admin 127.0.0.1:3002, studio 127.0.0.1:3003 (npm run build:<app> && cd apps/<app> && npx next start -H 127.0.0.1 -p <port>).
+// Needs the three apps running: platform 127.0.0.1:3001, admin 127.0.0.1:3002, studio 127.0.0.1:3003 (PORTAL_STUDIO_PORT overrides the studio port when 3003 is taken) (npm run build:<app> && cd apps/<app> && npx next start -H 127.0.0.1 -p <port>).
 // With no API behind the same-origin /api proxy the browser sees 500s; the UI must still show the login form. It does NOT test login, session, OIDC or cookies after sign-in.
 import { createRequire } from "node:module";
 const require = createRequire(new URL("../../package.json", import.meta.url).pathname);
 const { chromium } = require("playwright-core");
-const PORTALS = [["platform", 3001, "/platform", "Xweb Platform"], ["admin", 3002, "/admin", "Quản trị công ty"], ["studio", 3003, "/studio", "Xweb Studio"]];
+const PORTALS = [["platform", 3001, "/platform", "Xweb Platform"], ["admin", 3002, "/admin", "Quản trị công ty"], ["studio", Number(process.env.PORTAL_STUDIO_PORT ?? 3003), "/studio", "Xweb Studio"]];
 const results = []; const check = (n, ok, d = "") => { results.push(ok); console.log(`${ok ? "PASS" : "FAIL"}  ${n}${d ? "  — " + d : ""}`); };
 const browser = await chromium.launch({ executablePath: process.env.CHROME ?? "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
 

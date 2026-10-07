@@ -15,7 +15,7 @@ export const FROM_RE = /^[A-Za-z0-9_][A-Za-z0-9_ -]{0,63}(\.[A-Za-z0-9_][A-Za-z0
 export const OPERATION_KEY_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 export const MAX_TRANSFORMS = 8;
 
-export type DataStepId = "source" | "discovery" | "query" | "mapping" | "viewModel" | "binding";
+export type DataStepId = "source" | "discovery" | "query" | "mapping" | "viewModel" | "binding" | "public";
 export const DATA_STEPS: readonly { id: DataStepId; label: string; help: string }[] = [
   { id: "source", label: "Nguồn dữ liệu", help: "Nguồn do quản trị viên cấp cho ứng dụng. Khóa kết nối không bao giờ hiện ở đây." },
   { id: "discovery", label: "Khám phá cấu trúc", help: "Xem bảng/API và các cột mà nguồn cho phép." },
@@ -23,6 +23,7 @@ export const DATA_STEPS: readonly { id: DataStepId; label: string; help: string 
   { id: "mapping", label: "Ánh xạ", help: "Đổi cột của nguồn thành các trường dễ dùng." },
   { id: "viewModel", label: "ViewModel", help: "Hình dạng dữ liệu mà giao diện nhận." },
   { id: "binding", label: "Gắn vào thành phần", help: "Chọn thành phần và thuộc tính sẽ hiển thị dữ liệu này." },
+  { id: "public", label: "Dữ liệu công khai", help: "Trang công khai chỉ chạy các truy vấn ĐỌC bạn đã bật “Công khai”. Gắn thuộc tính của trang vào các truy vấn đó." },
 ];
 
 /** readiness per step: the document can only describe the flow; sources/discovery/preview need the Data Platform to be wired to HTTP */
@@ -89,7 +90,7 @@ export function newParam(name = ""): ParamDef { return { name, type: "STRING" };
 /** `required` is TRUE when absent (C3 default). We never write `required: true` redundantly, only an explicit false. */
 export function setParamRequired(p: ParamDef, required: boolean): ParamDef { const { required: _r, ...rest } = p; void _r; return required ? rest : { ...rest, required: false }; }
 
-export type QueryDraft = { name: string; dataSourceRef: string; mode: "READ" | "WRITE"; operationKey: string; params: ParamDef[]; maxRows?: number };
+export type QueryDraft = { name: string; dataSourceRef: string; mode: "READ" | "WRITE"; operationKey: string; params: ParamDef[]; maxRows?: number; public?: boolean };
 export function checkQuery(d: QueryDraft, doc: AppDefinitionV2): string[] {
   const e: string[] = [];
   if (!d.name.trim()) e.push("Hãy đặt tên cho truy vấn.");
@@ -99,11 +100,12 @@ export function checkQuery(d: QueryDraft, doc: AppDefinitionV2): string[] {
   if (names.some((n) => !TARGET_RE.test(n))) e.push("Tên tham số chỉ gồm chữ, số, gạch dưới và bắt đầu bằng chữ.");
   if (new Set(names).size !== names.length) e.push("Tên tham số bị trùng.");
   if (d.maxRows !== undefined && (!Number.isInteger(d.maxRows) || d.maxRows < 1)) e.push("Số dòng tối đa phải là số nguyên dương.");
+  if (d.public && d.mode !== "READ") e.push("Chỉ truy vấn đọc mới được công khai.");
   return e;
 }
 export function buildQuery(d: QueryDraft, doc: AppDefinitionV2): QueryDef {
   const id = uniqueId("q", (doc.queries ?? []).map((q) => q.id));
-  return { id, name: d.name.trim(), dataSourceRef: d.dataSourceRef, mode: d.mode, operationKey: d.operationKey, params: d.params, ...(d.maxRows ? { maxRows: d.maxRows } : {}) };
+  return { id, name: d.name.trim(), dataSourceRef: d.dataSourceRef, mode: d.mode, operationKey: d.operationKey, params: d.params, ...(d.maxRows ? { maxRows: d.maxRows } : {}), ...(d.public && d.mode === "READ" ? { public: true } : {}) };
 }
 
 export function checkMapping(fields: FieldMappingDef[]): string[] {

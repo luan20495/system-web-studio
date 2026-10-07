@@ -83,12 +83,12 @@ export function BuilderWorkspace(props: {
   const counts = { block: issues.filter((i) => i.severity === "BLOCK").length, warn: issues.filter((i) => i.severity === "WARN").length };
 
   const ctx: DefCtx = useMemo(() => ({
-    doc, readiness: backend.definitionOps as Readiness, canEdit: cap.canEdit && interactive, busy, metadata: backend.metadata, registry, labelOf: props.labelOf,
+    doc, readiness: backend.definitionOps as Readiness, canEdit: cap.canEdit && interactive, busy, siteVisibility: props.project.siteVisibility, metadata: backend.metadata, registry, labelOf: props.labelOf,
     dataManagement: props.dataManagement, canManageData: cap.canManageDataSources, manageDataReason: whyNot("canManageDataSources"),
     canViewData: cap.canViewDataSources, viewDataReason: whyNot("canViewDataSources"), canBindData: cap.canBindDataSources && interactive, bindDataReason: cap.canBindDataSources ? "Chế độ dùng thử hoặc chỉ-xem: không thể đổi liên kết." : whyNot("canBindDataSources"),
     commit: (ops, summary) => props.applyOps(ops, summary),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [doc, backend, cap.canEdit, cap.canManageDataSources, cap.canViewDataSources, cap.canBindDataSources, interactive, busy, registry, props.labelOf, props.applyOps, props.dataManagement]);
+  }), [doc, backend, cap.canEdit, cap.canManageDataSources, cap.canViewDataSources, cap.canBindDataSources, interactive, busy, props.project.siteVisibility, registry, props.labelOf, props.applyOps, props.dataManagement]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
   const collision: CollisionDetection = useCallback((args) => {

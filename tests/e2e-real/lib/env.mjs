@@ -38,6 +38,8 @@ export function loadConfig(env = process.env) {
     },
     publicBase: env.E2E_PUBLIC_BASE,
     dataSource: loadDataSourceFacts(env),
+    /** E2E-PD01 operator facts: a REAL approved READ operation of the real data source above (C3 query definition id, or E2E_PD_SQL = a read-only SELECT the flow registers as a C3 query definition through the Management API) and the text its first row returns. Absent → the flow is BLOCKED with the exact reason; nothing is invented. */
+    publicData: { operationKey: env.E2E_PD_OPERATION_KEY?.trim() || "", sql: env.E2E_PD_SQL?.trim() || "", expectText: env.E2E_PD_EXPECT_TEXT ?? "", writeOperationKey: env.E2E_PD_WRITE_OPERATION_KEY?.trim() || "" },
     restartBackendCmd: env.E2E_RESTART_BACKEND_CMD,
     pauseStoreCmd: env.E2E_PAUSE_STORE_CMD, resumeStoreCmd: env.E2E_RESUME_STORE_CMD, pauseRenderCmd: env.E2E_PAUSE_RENDER_CMD, resumeRenderCmd: env.E2E_RESUME_RENDER_CMD,
     pauseBackendCmd: env.E2E_PAUSE_BACKEND_CMD, resumeBackendCmd: env.E2E_RESUME_BACKEND_CMD,

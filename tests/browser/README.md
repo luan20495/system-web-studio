@@ -23,6 +23,13 @@ canvas re-renders. It validates nothing the server validates and is never shippe
 
 Note: `npm run test:unit` recreates `.test-build`; rebuild the harness (and restart the static server, whose working directory disappears) afterwards.
 
+## Public data V1 (`publicdata.spec.mjs`) — component harness + a page built by C2's own code, NOT a backend
+Three parts, 43 checks. (1) `public-harness.tsx` mounts the real `<DataWizard>` with an in-page host that records every typed operation in `window.__pops` and applies the definition operations locally (`?s=` ok · empty · invalid · bound · reject · readonly · private): slot add/edit/delete/duplicate/referenced, `QueryDef.public` (READ true/false, WRITE blocked, persisted WRITE+public shown invalid), binding add/rebind/remove, readiness, no public action/mutation/workflow control. (2) `release.html?draft=public|private|invalid|plain` drives the publish dialog (PUBLIC_QUERIES list, acknowledgement, event after publishing, no extra field on the wire). (3) `build-c2-site.mjs` reads C2's `lib/schema-preview.ts` and `workers/render/page-runtime.ts` from git (`C2_REF`, default `c1e0df5`), runs C2's `resolveBindings` + `renderSitePages` and writes a published page + C2's runtime script to `.test-build/browser/c2/`; the spec answers the page's same-origin config and data routes and asserts the five runtime states (loading-config, not-ready, loading-data, ready, error) with C5's vocabulary (`describeRuntimeState`). If the ref is not in the clone, part 3 is reported SKIPPED, never passed.
+
+    node tests/browser/build-harness.mjs
+    (cd .test-build/browser && python3 -m http.server 4000 --bind 127.0.0.1 &)
+    CHROME=... node tests/browser/publicdata.spec.mjs          # 43 checks
+
 ## Portals (`portals.spec.mjs`) — three real Next apps, no backend
     npm run build:platform && npm run build:admin && npm run build:studio
     (cd apps/platform && npx next start -H 127.0.0.1 -p 3001 &) ; same for admin 3002, studio 3003

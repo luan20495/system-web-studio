@@ -12,6 +12,8 @@ import {
   rollbackBody, rollbackCandidates, type ReleaseErrorView,
 } from "@xweb/api-client";
 import { useDialog } from "@/components/useDialog";
+import type { AppDefinitionV2 } from "@xweb/types";
+import { diffAnnounced, parsePublicQueriesEvent, publicDataBlockers, publishApproval } from "./builder/core/publicData";
 
 const fmt = (iso: string) => new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
 
@@ -20,7 +22,9 @@ export type ReleaseCalls = Pick<typeof api, "publish" | "getDeployment" | "listD
 
 const MAX_POLL_FAILURES = 5;
 
-export function PublishModal({ workspaceId, projectId, revision, current, versionNumber, onClose, onUnauthorized, allowed = ["PRIVATE", "PUBLIC"], canPublish, calls = api, timing }: {
+export function PublishModal({ workspaceId, projectId, revision, current, versionNumber, onClose, onUnauthorized, allowed = ["PRIVATE", "PUBLIC"], canPublish, calls = api, timing, draft }: {
+  /** the document that will be published (the draft at `revision`). With it the dialog lists what becomes public; without it (code apps) there is no public-data approval. */
+  draft?: AppDefinitionV2 | null;
   workspaceId: string; projectId: string; revision: number; current: "PRIVATE" | "PUBLIC"; versionNumber?: number; onClose: () => void; onUnauthorized: () => void;
   /** visibilities this project may be published with (policy); default both */
   allowed?: ("PRIVATE" | "PUBLIC")[];
@@ -45,6 +49,13 @@ export function PublishModal({ workspaceId, projectId, revision, current, versio
   // One key per LOGICAL request: the same payload keeps its key (a retry after a lost answer can never create a second operation), a different payload gets a new one,
   // and after an outcome the user wants to repeat the key is rotated (a replay would only return the old outcome).
   const publishKeys = useRef(new ReleaseKeyBook()), rollbackKeys = useRef(new ReleaseKeyBook()), unpublishKeys = useRef(new ReleaseKeyBook());
+  // PAGE_SCHEMA public data: what THIS draft would make public, computed by the same rule as the server's allow-list (core/publicData.ts). The acknowledgement is a LOCAL confirmation (it is not a
+  // field of POST /publish: review M1) and it is only asked for when a public query exists; it is tied to that exact list, so editing the queries asks again.
+  const approval = draft ? publishApproval(draft) : null;
+  const blockers = draft ? publicDataBlockers(draft) : [];
+  const approvalKey = approval && approval.required ? approval.queries.map((q) => q.id).join(",") : "";
+  const [ackKey, setAckKey] = useState<string | null>(null);
+  const acknowledged = !approval?.required || ackKey === approvalKey;
   const alive = useRef(true);
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
 
@@ -97,7 +108,7 @@ export function PublishModal({ workspaceId, projectId, revision, current, versio
   };
 
   async function start() {
-    if (locked || !canPublish) return;
+    if (locked || !canPublish || !acknowledged) return;
     setSubmitting(true); setError(null); setNote(null);
     try { setDeployment(await calls.publish(workspaceId, projectId, visibility, revision, publishKeys.current.keyFor(publishBody(visibility, revision)))); setPollFailures(0); }
     catch (e) { fail(e, publishKeys.current); } finally { setSubmitting(false); }
@@ -160,6 +171,18 @@ export function PublishModal({ workspaceId, projectId, revision, current, versio
         : <p className="hint">{site!.slug ? "Trang đang được gỡ xuống." : "Chưa xuất bản lần nào."} Xuất bản sẽ tạo một trang tĩnh thật trên máy chủ.</p>}
         <small className="hint" data-testid="pointer-version">pointerVersion {site!.pointerVersion} (chỉ để quan sát, không gửi lại máy chủ)</small></div> : null}
       {!allowed.includes("PUBLIC") && !deployment ? <p className="hint">Quản trị viên đang tắt xuất bản <b>công khai</b> cho loại ứng dụng này; chỉ xuất bản riêng tư (thành viên đăng nhập bằng tài khoản công ty).</p> : null}
+      {!deployment && approval?.required ? (
+        <div className="publicBox" data-testid="public-queries-box" role="group" aria-label="Dữ liệu sẽ được công khai">
+          <b data-testid="public-queries-count" data-count={approval.queries.length}>Dữ liệu sẽ được công khai ({approval.queries.length} truy vấn)</b>
+          <p className="hint" data-testid="public-queries-warning">{approval.warning}</p>
+          <ul data-testid="public-queries-list">{approval.queries.map((q) => (
+            <li key={q.id} data-testid={`public-query:${q.id}`}><code>{q.id}</code> — {q.name} · khe {q.slotName} · {q.boundBy.length ? `dùng ở ${q.boundBy.join(", ")}` : "chưa gắn vào thành phần nào"}</li>))}</ul>
+          {visibility !== "PUBLIC" ? <p className="hint" data-testid="public-queries-private-note">Trang đang xuất bản ở chế độ riêng tư: trang không nhận địa chỉ dữ liệu (apiBase) nên khách chưa thấy dữ liệu, nhưng danh sách truy vấn công khai vẫn được ghi vào bản phát hành này.</p> : null}
+          <label className="checkRow"><input type="checkbox" data-testid="publish-ack" disabled={locked || !canPublish} checked={acknowledged} onChange={(e) => setAckKey(e.target.checked ? approvalKey : null)}/><span>Tôi xác nhận dữ liệu của các truy vấn trên được phép công khai.</span></label>
+        </div>) : null}
+      {!deployment && blockers.length ? (
+        <div className="formError" role="alert" data-testid="public-data-blockers"><b>Máy chủ có thể từ chối bản này</b>
+          <ul>{blockers.slice(0, 6).map((b, i) => <li key={i}>{b.message}</li>)}</ul></div>) : null}
       {!deployment ? allowed.map((v) => (
         <button className={`publishChoice ${visibility === v ? "selected" : ""}`} key={v} disabled={locked || !canPublish} onClick={() => setVisibility(v)}>
           <b>{v === "PRIVATE" ? "Riêng tư" : "Công khai"}</b><span>{v === "PRIVATE" ? "Chỉ thành viên được cấp quyền." : "Mọi người có thể truy cập."}</span></button>
@@ -168,6 +191,13 @@ export function PublishModal({ workspaceId, projectId, revision, current, versio
           <b data-testid="deployment-status">{deploymentLabel(deployment.status)}</b>
           <ol>{deployment.events.map((ev, i) => <li key={i}>{deploymentLabel(ev.status)}{ev.message ? ` — ${ev.message}` : ""}</li>)}</ol>
           {deployment.status === "ROLLING_BACK" ? <p className="hint" data-testid="deployment-rolling-back">Đang hoàn tác bước chuyển bản. Đây chưa phải thành công; trạng thái cuối sẽ là “Thất bại”.</p> : null}
+          {(() => {
+            const ev = deployment.events.find((x) => x.status === "PUBLIC_QUERIES");
+            if (!ev) return null;
+            const frozen = parsePublicQueriesEvent(ev.message), d = diffAnnounced(approval?.required ? approval.queries.map((q) => q.id) : [], frozen);
+            return <div className="hint" role="status" data-testid="public-queries-event">Máy chủ đã ghi vào bản phát hành: <b>{frozen.join(", ") || "—"}</b>
+              {d.onlyAnnounced.length || d.onlyFrozen.length ? <span className="formError" data-testid="public-queries-mismatch"> Khác với danh sách đã hiện trước khi xuất bản ({d.onlyAnnounced.length ? `thiếu: ${d.onlyAnnounced.join(", ")}` : ""}{d.onlyAnnounced.length && d.onlyFrozen.length ? "; " : ""}{d.onlyFrozen.length ? `thêm: ${d.onlyFrozen.join(", ")}` : ""}).</span> : null}</div>;
+          })()}
           {isDeploymentSuccess(deployment.status) && deployment.url ? (deployment.mock ? <p><b>Demo deployment</b> — chưa có website thật nào được phục vụ. Địa chỉ thử nghiệm: <code>{deployment.url}</code></p>
             : <p data-testid="deployment-success">Website đã lên: <a href={deployment.url} target="_blank" rel="noopener noreferrer">{deployment.url}</a></p>) : null}
           {failed ? <div className="formError" role="alert" data-testid="deployment-failed" data-code={failed.code ?? ""}><b>{failed.title}</b><p>{failed.detail}</p></div> : null}
@@ -190,7 +220,7 @@ export function PublishModal({ workspaceId, projectId, revision, current, versio
       <div className="modalActions">
         {!deployment && real && site?.online ? <button className="button ghost" data-testid="unpublish" disabled={locked || !canPublish} title={!canPublish ? "Cần quyền xuất bản (APP_PUBLISH)" : undefined} onClick={() => { lastAction.current = () => void unpublish(); void unpublish(); }}>{pending?.kind === "UNPUBLISH" ? "Đang gỡ…" : "Gỡ trang xuống"}</button> : null}
         <button className="button ghost" onClick={onClose} disabled={deploymentBusy || pending !== null}>{deployment ? "Đóng" : "Hủy"}</button>
-        {!deployment ? <button className="button primary" data-testid="publish" disabled={locked || !canPublish} title={!canPublish ? "Cần quyền xuất bản (APP_PUBLISH)" : operationHeld ? "Đang có thao tác phát hành khác" : undefined}
+        {!deployment ? <button className="button primary" data-testid="publish" disabled={locked || !canPublish || !acknowledged} title={!canPublish ? "Cần quyền xuất bản (APP_PUBLISH)" : !acknowledged ? "Hãy xác nhận dữ liệu công khai trước" : operationHeld ? "Đang có thao tác phát hành khác" : undefined}
             onClick={() => { lastAction.current = null; void start(); }}>{submitting ? "Đang gửi…" : "Xuất bản"}</button>
           : deploymentBusy && pollFailures >= MAX_POLL_FAILURES ? <button className="button primary" data-testid="publish-recheck" onClick={() => setPollFailures(0)}>Kiểm tra lại</button>
           : deploymentBusy ? <button className="button primary" disabled>Đang xử lý…</button>

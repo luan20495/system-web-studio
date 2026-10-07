@@ -61,7 +61,11 @@ export function validateDefinition(doc: AppDefinitionV2): RefIssue[] {
   const queryById = new Map(list(doc.queries).map((q) => [q.id, q]));
   const mappingById = new Map(list(doc.mappings).map((m) => [m.id, m]));
 
-  list(doc.queries).forEach((q, i) => known(q.dataSourceRef, dataSources, `queries[${i}].dataSourceRef`, "nguồn dữ liệu"));
+  list(doc.queries).forEach((q, i) => {
+    known(q.dataSourceRef, dataSources, `queries[${i}].dataSourceRef`, "nguồn dữ liệu");
+    // C2 (c1e0df5): a public query is run by visitors with no account, so it can only read. A stored WRITE+public query is shown as invalid, never fixed silently.
+    if (q.public === true && (q.mode ?? "READ") !== "READ") add(`queries[${i}].public`, `Chỉ truy vấn đọc mới được công khai; “${q.name || q.id}” là truy vấn ghi.`);
+  });
   list(doc.mappings).forEach((m, i) => {
     known(m.queryRef, queries, `mappings[${i}].queryRef`, "truy vấn");
     for (const d of dupes(m.fields.map((f) => f.to))) add(`mappings[${i}].fields`, `Trường đích “${d}” bị trùng.`);
@@ -200,6 +204,11 @@ export function usersOf(doc: AppDefinitionV2, collection: DefinitionCollection, 
   const out: string[] = [];
   const name = (x: { id: string; name?: string }) => x.name || x.id;
   switch (collection) {
+    case "dataSources":
+      list(doc.queries).filter((q) => q.dataSourceRef === id).forEach((q) => out.push(`truy vấn ${name(q)}`));
+      list(doc.actions).filter((a) => a.dataSourceRef === id).forEach((a) => out.push(`hành động ${name(a)}`));
+      list(doc.permissions).filter((p) => p.resourceType === "DATA_SOURCE" && p.resourceRef === id).forEach((p) => out.push(`quyền ${name(p)}`));
+      break;
     case "queries":
       list(doc.mappings).filter((m) => m.queryRef === id).forEach((m) => out.push(`ánh xạ ${name(m)}`));
       list(doc.viewModels).filter((v) => v.queryRef === id).forEach((v) => out.push(`ViewModel ${name(v)}`));

@@ -140,6 +140,6 @@ test("data wizard source step: with no host it says Chưa sẵn sàng; the docum
   const none = renderToStaticMarkup(<DataWizard ctx={ctx()}/>);
   assert.match(none, /Chưa sẵn sàng/); assert.match(none, /Chưa có khe nào/);
   const withSlot = renderToStaticMarkup(<DataWizard ctx={ctx({ doc: baseDoc({ dataSources: [{ id: "erp-db", name: "ERP", type: "CONNECTOR" }] } as never) })}/>);
-  assert.match(withSlot, /ERP/); assert.match(withSlot, /chưa gắn nguồn trong tài liệu/);
+  assert.match(withSlot, /ERP/); assert.match(withSlot, /chưa gắn nguồn/); assert.doesNotMatch(withSlot, /Studio chưa có thao tác để thêm khe/);
   assert.deepEqual(a11yProblems(none), []);
 });

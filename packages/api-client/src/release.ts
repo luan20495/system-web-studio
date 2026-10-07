@@ -22,6 +22,8 @@ export const DEPLOYMENT_STATUS_LABEL: Readonly<Record<string, string>> = {
   ROLLING_BACK: "Đang hoàn tác (chưa phải thành công)", RUNNING: "Đang chạy", FAILED: "Thất bại", ROLLED_BACK: "Đã hoàn tác (đã chuyển sang bản khác)",
   // event-only names that appear in deployments[].events[] (never statuses)
   SWITCH: "Chuyển sang bản mới", ROLLBACK_OK: "Hoàn tác xong", ROLLBACK_FAILED: "Hoàn tác không thành công", ROLLBACK_OFFLINE: "Hoàn tác: trang đang ngoại tuyến", SCOPE_BUSY: "Đang chờ một thao tác phát hành khác", STALE_PUBLISH: "Bản này đã cũ hơn bản đang chạy",
+  /** event name written by the build step when the release has public queries (C2 c1e0df5); never a status */
+  PUBLIC_QUERIES: "Truy vấn công khai của bản này",
 };
 export const deploymentLabel = (status: string): string => DEPLOYMENT_STATUS_LABEL[status] ?? status;
 
