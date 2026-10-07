@@ -18,4 +18,9 @@ export type DefCtx = {
   /** workspace-level DATA_SOURCE_MANAGE (the server decides; this only disables controls with a reason) */
   canManageData?: boolean;
   manageDataReason?: string;
+  /** DATA_SOURCE_VIEW (metadata only) · and DATA_SOURCE_MANAGE + APP_EDIT for a TEST/draft binding; each with the reason shown on the disabled control */
+  canViewData?: boolean;
+  viewDataReason?: string;
+  canBindData?: boolean;
+  bindDataReason?: string;
 };

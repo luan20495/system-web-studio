@@ -15,6 +15,7 @@ import { backendFrom, type ProbeState } from "./builder/core/backend";
 import { explainError } from "./builder/core/errors";
 import { NOT_RENDERED } from "./builder/core/library";
 import type { BlockOption } from "./builder/panels/ComponentsPanel";
+import { canEditProject, canPublish, canShare, canViewProject, holdsStorageConstant, resolvePermissions } from "@xweb/permissions";
 import { useSession } from "../session";
 import { ErrorState, errText, fmtDate, StateView, tok, usd } from "../ui";
 import { AssetsDrawer, DeviceIcon, Drawer, MembersDrawer, PublishModal, SettingsDrawer, suggestions } from "./drawers";
@@ -76,8 +77,12 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const [model, setModel] = useState<string>(() => { try { return localStorage.getItem("studio-ai-model") ?? ""; } catch { return ""; } });
   const promptRef = useRef<HTMLTextAreaElement>(null);
   const ws = project?.workspaceId ?? "";
-  const can = (p: string) => project?.permissions.includes(p) ?? false;
-  const readOnly = !can("PROJECT_EDIT");
+  // UX only (the server re-checks every call). The input is the permission list the server resolved for THIS project; no role name is read (permissions.ts / canonical.ts).
+  const perms = useMemo(() => resolvePermissions(project?.permissions), [project?.permissions]);
+  const mayEdit = canEditProject(perms), mayPublish = canPublish(perms), mayShare = canShare(perms), mayDelete = holdsStorageConstant(project?.permissions, "PROJECT_DELETE");
+  const readOnly = !mayEdit;
+  // page-level gate: a project whose resolved permissions lack APP_VIEW is not shown (APP_VIEW without APP_EDIT is NOT a reason to leave: it opens read-only)
+  useEffect(() => { if (project && !canViewProject(perms)) router.replace("/auth/no-access?portal=studio&reason=app-view"); }, [project, perms, router]);
 
   const toMessages = (items: PromptHistoryItem[]): Msg[] => [...items].reverse().flatMap((p) => [
     { id: `${p.id}-u`, role: "user" as const, content: p.text },
@@ -256,7 +261,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
           <button className="button ghost" onClick={() => go("site")}>Website</button>
           <button className="button ghost" onClick={() => go("versions")}>Phiên bản</button>
           <button className="button ghost" onClick={() => go("assets")}>Tệp</button>
-          <button className="button icon" aria-label="Cài đặt project" title={can("PROJECT_SETTINGS") ? "Cài đặt project" : "Bạn không có quyền đổi cài đặt"} disabled={!can("PROJECT_SETTINGS")} onClick={() => go("settings")}>⚙</button></>}
+          <button className="button icon" aria-label="Cài đặt project" title={mayEdit ? "Cài đặt project" : "Bạn không có quyền đổi cài đặt"} disabled={!mayEdit} onClick={() => go("settings")}>⚙</button></>}
         goAi={() => go("ai")} openSite={() => go("site")} openMembers={() => go("members")} openPublish={() => go("publish")} saveBlock={() => setSavingBlock(true)}/> : (
       <header className="topbar">
         <div className="brand">
@@ -274,9 +279,9 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
           <button className="button ghost" onClick={() => go("site")}>Website</button>
           <button className="button ghost" onClick={() => go("versions")}>Phiên bản</button>
           <button className="button ghost" onClick={() => go("assets")}>Tệp</button>
-          {can("PROJECT_MEMBERS") ? <button className="button ghost" onClick={() => go("members")}>Chia sẻ</button> : null}
-          <button className="button icon" aria-label="Cài đặt project" title={can("PROJECT_SETTINGS") ? "Cài đặt project" : "Bạn không có quyền đổi cài đặt"} disabled={!can("PROJECT_SETTINGS")} onClick={() => go("settings")}>⚙</button>
-          <button className="button primary" disabled={!can("PROJECT_PUBLISH") || busy !== null} title={can("PROJECT_PUBLISH") ? "Xuất bản phiên bản hiện tại" : "Bạn không có quyền xuất bản"} onClick={() => go("publish")}>Xuất bản</button>
+          {mayShare ? <button className="button ghost" onClick={() => go("members")}>Chia sẻ</button> : null}
+          <button className="button icon" aria-label="Cài đặt project" title={mayEdit ? "Cài đặt project" : "Bạn không có quyền đổi cài đặt"} disabled={!mayEdit} onClick={() => go("settings")}>⚙</button>
+          <button className="button primary" disabled={!mayPublish || busy !== null} title={mayPublish ? "Xuất bản phiên bản hiện tại" : "Bạn không có quyền xuất bản"} onClick={() => go("publish")}>Xuất bản</button>
         </div>
       </header>)}
 
@@ -361,20 +366,20 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
           <article className="versionItem" key={v.id}>
             <div><b>Phiên bản {v.versionNumber}{v.current ? " · hiện tại" : ""}</b><span>{fmtDate(v.createdAt)}</span></div>
             <p>{v.summary}</p><small>{v.kind}{v.createdBy ? ` · ${v.createdBy}` : ""}</small>
-            {v.restorable && can("PROJECT_EDIT") ? <button className="smallButton" disabled={busy !== null} onClick={() => void restore(v)}>{busy === "restore" ? "Đang khôi phục…" : "Khôi phục"}</button> : null}
+            {v.restorable && mayEdit ? <button className="smallButton" disabled={busy !== null} onClick={() => void restore(v)}>{busy === "restore" ? "Đang khôi phục…" : "Khôi phục"}</button> : null}
           </article>))}</div>
       </Drawer> : null}
       {panel === "site" ? <SiteDrawer schema={schema} ws={ws} pid={projectId} pageId={pageId} onPage={(id) => { setPageId(id); setSelectedId(null); }} canEdit={!readOnly}
-        canPublish={can("PROJECT_PUBLISH")} apply={applyOps} onClose={() => go(mode)}/> : null}
+        canPublish={mayPublish} apply={applyOps} onClose={() => go(mode)}/> : null}
       {panel === "settings" ? <SettingsDrawer project={project} busy={busy === "settings"} onClose={() => go(mode)} onSave={saveSettings}
         extra={<>{!readOnly ? <SaveTemplateSection workspaceId={ws} projectId={projectId} projectName={project.name}/> : null}
-          {can("PROJECT_DELETE") && project.status !== "ARCHIVED" ? <section className="settingGroup"><h3>Lưu trữ ứng dụng</h3>
+          {mayDelete && project.status !== "ARCHIVED" ? <section className="settingGroup"><h3>Lưu trữ ứng dụng</h3>
             <p className="hint">Ứng dụng chỉ còn xem được, website bị gỡ khỏi mạng. Dữ liệu và phiên bản được giữ; có thể khôi phục.</p>
             <button className="button ghost" onClick={() => { if (confirm(`Lưu trữ “${project.name}”?`)) void run("settings", () => api.archiveProject(ws, projectId), "Không lưu trữ được.").then((r) => { if (r) { go(mode); void reload(); } }); }}>Lưu trữ</button>
           </section> : null}</>}/> : null}
       {savingBlock && selected ? <SaveBlockDrawer workspaceId={ws} projectId={projectId} section={selected} title={label(selected.type)}
         onClose={() => setSavingBlock(false)} onSaved={(m) => { setSavingBlock(false); setNotice(m); loadBlocks(); }}/> : null}
-      {panel === "assets" ? <AssetsDrawer workspaceId={ws} projectId={projectId} canEdit={can("PROJECT_EDIT")} onClose={() => { void loadAssets(ws); go(mode); }} onError={(e) => setNotice(errText(e, "Thao tác tệp thất bại."))}/> : null}
+      {panel === "assets" ? <AssetsDrawer workspaceId={ws} projectId={projectId} canEdit={mayEdit} onClose={() => { void loadAssets(ws); go(mode); }} onError={(e) => setNotice(errText(e, "Thao tác tệp thất bại."))}/> : null}
       {panel === "members" && me ? <MembersDrawer workspaceId={ws} projectId={projectId} me={me} onClose={() => go(mode)} onError={(e) => setNotice(errText(e, "Thao tác thành viên thất bại."))}/> : null}
       {panel === "publish" ? <PublishModal workspaceId={ws} projectId={projectId} revision={revision} current={project.siteVisibility} versionNumber={latest}
         allowed={publicPublish === false ? ["PRIVATE"] : ["PRIVATE", "PUBLIC"]}

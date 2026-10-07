@@ -50,13 +50,6 @@ test("no arbitrary code: forbidden keys (sql/script/url/headers/token/...) are r
   assert.ok(A.checkAction({ id: "a", name: "x", type: "NAVIGATE", pageRef: "home", script: "alert(1)", trigger: trig } as never, d()).some((i) => /script/.test(i.message)));
 });
 
-test("which permission the server checks per action kind (informational)", () => {
-  assert.equal(A.permissionToRun("UPDATE_RECORD"), "DATA_MUTATE");
-  assert.equal(A.permissionToRun("START_WORKFLOW"), "WORKFLOW_EXECUTE");
-  assert.equal(A.permissionToRun("REFRESH_QUERY"), "APP_USE");
-  assert.equal(A.permissionToRun("NOTIFY"), "ACTION_EXECUTE");
-});
-
 test("events/actions offered come from component-metadata only", () => {
   assert.deepEqual(A.eventsFor(undefined), []);
   const meta = { events: [{ name: "onClick", label: "x", supportedActions: ["NAVIGATE", "RUN_QUERY", "REFRESH_QUERY"] }, { name: "onBogus", label: "b", supportedActions: [] }] } as never;

@@ -128,11 +128,11 @@ test("data step readiness: the source step is available only with a management h
 const ctx = (over: Partial<DefCtx> = {}): DefCtx => ({ doc: baseDoc({}), commit: async () => true, readiness: available(), canEdit: true, busy: false, metadata: new Map(), registry: [], labelOf: (t) => t, ...over });
 
 test("panel SSR: no host → NOT_READY (no fake source); with a host the first paint is the loading state; no input ever holds a value", () => {
-  const none = renderToStaticMarkup(<DataSourcesPanel doc={baseDoc({})} canManage manageReason=""/>);
+  const none = renderToStaticMarkup(<DataSourcesPanel doc={baseDoc({})} canView viewReason="" canManage manageReason="" canBind bindReason=""/>);
   assert.match(none, /Chưa sẵn sàng/); assert.match(none, /không có nguồn nào được giả lập/i); assert.doesNotMatch(none, /data-testid="ds-list"/);
   const noop = async () => { throw new Error("not called in SSR"); };
   const calls = { connectors: noop, list: noop, create: noop, update: noop, remove: noop, credential: noop, setCredential: noop, removeCredential: noop, test: noop, listBindings: noop, bind: noop, unbind: noop } as never;
-  const html = renderToStaticMarkup(<DataSourcesPanel doc={baseDoc({})} calls={calls} canManage manageReason=""/>);
+  const html = renderToStaticMarkup(<DataSourcesPanel doc={baseDoc({})} calls={calls} canView viewReason="" canManage manageReason="" canBind bindReason=""/>);
   assert.match(html, /Đang tải/); assert.deepEqual(a11yProblems(html), []);
 });
 

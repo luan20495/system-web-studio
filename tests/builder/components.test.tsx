@@ -213,19 +213,19 @@ const rtDoc = () => baseDoc({ actions: [{ id: "n", name: "Báo", type: "NOTIFY",
 
 test("test panel with a runtime: runs need APP_EDIT, unsaved changes block runs, an editor can run (no fake result is rendered)", () => {
   const viewer = renderToStaticMarkup(<TestPanel doc={rtDoc()} rawPermissions={["APP_VIEW", "ACTION_EXECUTE"]} runtime={noRt}/>);
-  assert.match(viewer, /quyền chỉnh sửa/); assert.match(viewer, /disabled=""[^>]*data-testid="run-action:n"|data-testid="run-action:n"[^>]*disabled=""/);
-  const dirty = renderToStaticMarkup(<TestPanel doc={rtDoc()} rawPermissions={["APP_VIEW", "APP_EDIT", "ACTION_EXECUTE"]} runtime={noRt} dirty/>);
+  assert.match(viewer, /Chỉnh sửa ứng dụng/); assert.match(viewer, /disabled=""[^>]*data-testid="run-action:n"|data-testid="run-action:n"[^>]*disabled=""/);
+  const dirty = renderToStaticMarkup(<TestPanel doc={rtDoc()} rawPermissions={["APP_VIEW", "APP_USE", "APP_EDIT", "ACTION_EXECUTE"]} runtime={noRt} dirty/>);
   assert.match(dirty, /thay đổi chưa lưu/);
-  const ok = renderToStaticMarkup(<TestPanel doc={rtDoc()} rawPermissions={["APP_VIEW", "APP_EDIT", "ACTION_EXECUTE"]} runtime={noRt}/>);
+  const ok = renderToStaticMarkup(<TestPanel doc={rtDoc()} rawPermissions={["APP_VIEW", "APP_USE", "APP_EDIT", "ACTION_EXECUTE"]} runtime={noRt}/>);
   assert.match(ok, /data-testid="run-action:n"/); assert.doesNotMatch(ok, /data-testid="run-action:n"[^>]*disabled=""/);
   assert.doesNotMatch(ok, /data-outcome="SUCCESS"/); assert.doesNotMatch(ok, /Chưa kết nối máy chủ/);
-  assert.match(renderToStaticMarkup(<TestPanel doc={rtDoc()} rawPermissions={["APP_VIEW", "APP_EDIT", "ACTION_EXECUTE"]}/>), /Chưa kết nối máy chủ/);
+  assert.match(renderToStaticMarkup(<TestPanel doc={rtDoc()} rawPermissions={["APP_VIEW", "APP_USE", "APP_EDIT", "ACTION_EXECUTE"]}/>), /Chưa kết nối máy chủ/);
   assert.deepEqual(a11yProblems(ok), []);
 });
 
 test("test panel: an action without a UI trigger is not runnable from the browser route (the server answers UNKNOWN_ACTION, D-C4-10)", () => {
   const noTrigger = baseDoc({ actions: [{ id: "n", name: "Báo", type: "NOTIFY", channel: "IN_APP", templateRef: "t" }] } as never);
-  const html = renderToStaticMarkup(<TestPanel doc={noTrigger} rawPermissions={["APP_VIEW", "APP_EDIT", "ACTION_EXECUTE"]} runtime={noRt}/>);
+  const html = renderToStaticMarkup(<TestPanel doc={noTrigger} rawPermissions={["APP_VIEW", "APP_USE", "APP_EDIT", "ACTION_EXECUTE"]} runtime={noRt}/>);
   assert.match(html, /data-testid="no-trigger:n"/); assert.match(html, /chỉ chạy từ workflow hoặc hành động khác/);
   assert.match(html, /disabled=""[^>]*data-testid="run-action:n"|data-testid="run-action:n"[^>]*disabled=""/);
   assert.deepEqual(a11yProblems(html), []);

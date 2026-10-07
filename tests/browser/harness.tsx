@@ -11,6 +11,7 @@ import { BuilderWorkspace } from "../../features/studio/builder/BuilderWorkspace
 import { renderSchemaDocument } from "../../lib/schema-preview";
 import { sectionLabel, sectionSummary } from "../../components/SectionInspector";
 import { backendFrom } from "../../features/studio/builder/core/backend";
+import { canEditProject, resolvePermissions } from "../../packages/permissions/src/canonical";
 import "../../packages/ui/src/styles/globals.css";
 import "../../packages/ui/src/styles/responsive.css";
 import "../../packages/ui/src/styles/http.css";
@@ -24,6 +25,22 @@ const BROKEN = new URLSearchParams(location.search).has("broken");
 // ?v2=1 : harness-only switch that behaves like a backend whose component-metadata endpoint exists, so the typed V2 editors unlock. It adds NO data source
 // operations (none exist) and no query results; the seeded definitions below are a fixture of the DOCUMENT, not data.
 const V2 = new URLSearchParams(location.search).has("v2");
+// ?perms=APP_VIEW,APP_USE : the permission list the "server" resolved for this project (canonical codes). The host derives read-only exactly like ProjectWorkspace: from the list, never from a role name.
+const PERMS = (new URLSearchParams(location.search).get("perms") ?? "APP_VIEW,APP_USE,APP_EDIT,APP_PUBLISH,APP_SHARE").split(",").filter(Boolean);
+// ?rt=1 : a recording fake of the runtime routes (window.__rt). It proves what the UI SENDS (nothing when a control is disabled); it says nothing about what a server answers.
+const RT = new URLSearchParams(location.search).has("rt");
+declare global { interface Window { __rt: string[] } }
+window.__rt = [];
+const rtCalls = RT ? {
+  runQuery: async (id: string) => { window.__rt.push(`query:${id}`); return { queryId: id, mode: "TEST", cache: "MISS", result: { rows: [] } } as never; },
+  runAction: async (id: string) => { window.__rt.push(`action:${id}`); return { actionId: id, mode: "TEST", status: "WOULD_RUN", followUps: [] } as never; },
+  startWorkflow: async (id: string) => { window.__rt.push(`workflow:${id}`); return { runId: "r1", workflowId: id, mode: "TEST", status: "SUCCEEDED", steps: [] } as never; },
+  getRun: async () => ({ runId: "r1", status: "SUCCEEDED", steps: [] }) as never, cancelRun: async () => ({}) as never, newKey: () => `k${Date.now()}`,
+} : undefined;
+const RT_SEED = RT ? { actions: [
+  { id: "a-nav", name: "Đi tới trang", type: "NAVIGATE", pageRef: "home", trigger: { sectionId: "s-hero", event: "onClick" } },
+  { id: "a-create", name: "Tạo bản ghi", type: "CREATE_RECORD", mutationRef: "m1", trigger: { sectionId: "s-hero", event: "onClick" } },
+], workflows: [{ id: "wf1", name: "Quy trình", trigger: "MANUAL", steps: [{ id: "end", kind: "END" }] }] } : {};
 const V2_SEED = V2 ? { dataSources: [{ id: "ds1", name: "Kho đơn hàng", type: "CONNECTOR" }], queries: [{ id: "q-orders", name: "Danh sách đơn", dataSourceRef: "ds1", operationKey: "orders.list", params: [] }] } : {};
 
 const comp = (id: string, name: string, category: string, required: string[], properties: RegistryComponent["versions"][number]["propsSchema"]["properties"]): RegistryComponent =>
@@ -36,7 +53,7 @@ const registry: RegistryComponent[] = [
   comp("Footer", "Footer", "layout", ["text"], { text: { type: "string" } }),
 ];
 const project = { id: "p1", workspaceId: "w1", name: "Harness", description: null, ownerUserId: "u1", framework: "NEXT", siteVisibility: "PRIVATE", authMode: "NONE", domain: null, customDomain: null,
-  deploymentMode: "MOCK", deploymentTarget: null, status: "DRAFT", revision: 1, createdAt: "", updatedAt: "", permissions: ["PROJECT_EDIT", "PROJECT_VIEW", "PROJECT_PUBLISH", "PROJECT_SETTINGS", "PROJECT_MEMBERS"], appType: "PAGE_SCHEMA" } as unknown as ApiProject;
+  deploymentMode: "MOCK", deploymentTarget: null, status: "DRAFT", revision: 1, createdAt: "", updatedAt: "", permissions: PERMS, appType: "PAGE_SCHEMA" } as unknown as ApiProject;
 
 function applyLocal(doc: AppDefinitionV2, ops: Ops): AppDefinitionV2 {
   let d: AppDefinitionV2 = { ...doc, pages: [...(doc.pages ?? [])] };
@@ -71,7 +88,7 @@ function Host() {
   const [doc, setDoc] = useState<AppDefinitionV2>({ page: "Trang chủ", sections: [
     { id: "s-nav", type: "Navbar", props: { brand: "Harness" } }, { id: "s-hero", type: "Hero", props: { title: "Xin chào", subtitle: "Mô tả" } },
     { id: "s-test", type: "Testimonials", props: { heading: "Khách hàng" } }, { id: "s-foot", type: "Footer", props: { text: "© Harness" } },
-  ], pages: [], ...V2_SEED, ...(BROKEN ? { site: { navigation: [{ id: "n1", label: "Trang đã mất", pageId: "ghost" }] } } : {}) } as unknown as AppDefinitionV2);
+  ], pages: [], ...V2_SEED, ...RT_SEED, ...(BROKEN ? { site: { navigation: [{ id: "n1", label: "Trang đã mất", pageId: "ghost" }] } } : {}) } as unknown as AppDefinitionV2);
   const [revision, setRevision] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pageId, setPageId] = useState("home");
@@ -79,7 +96,7 @@ function Host() {
   const backend = useMemo(() => backendFrom(V2 ? { status: "ok", metadata: [] } : { status: "error", error: { status: 404, message: "Not Found" } }), []);
   return <div className="studio workspace3 bx-root"><BuilderWorkspace
     project={project} doc={doc} revision={revision} registry={registry} assets={[]} blocks={[]} backend={backend} pageId={pageId} onPage={(id) => { setPageId(id); setSelectedId(null); }}
-    selectedId={selectedId} onSelect={setSelectedId} device={device} onDevice={setDevice} busy={false} save={{ state: "saved", at: null }} readOnly={false} latest={1}
+    selectedId={selectedId} onSelect={setSelectedId} device={device} onDevice={setDevice} busy={false} save={{ state: "saved", at: null }} readOnly={!canEditProject(resolvePermissions(PERMS))} runtime={rtCalls} latest={1}
     applyOps={async (ops, summary) => { window.__ops.push({ summary, ops }); setDoc((d) => applyLocal(d, ops)); setRevision((r) => r + 1); return true; }}
     addBlock={() => undefined}
     renderPreview={(o) => renderSchemaDocument(doc, { selectedId: o.selectedId, interactive: o.interactive, nonce: "", assets: {}, pageId: o.pageId })}

@@ -19,9 +19,6 @@ export function loadDataSourceFacts(env = process.env) {
   return { provided: true, type, config: c.v, credential: k.v, error };
 }
 
-/** C1's decision about a workspace VIEWER and Studio, supplied by the operator once C1 has decided (C5 never decides it): `app-view` = a viewer reaches Studio read-only, `no-studio` = a viewer is refused. Unset = undecided → E2E-04/05 stay BLOCKED. */
-export const viewerPolicyOf = (env = process.env) => (["app-view", "no-studio"].includes(env.E2E_VIEWER_POLICY) ? env.E2E_VIEWER_POLICY : null);
-
 export function loadConfig(env = process.env) {
   const missing = REQUIRED.filter(([k]) => !env[k]);
   const studio = (env.E2E_STUDIO_URL ?? "").replace(/\/+$/, "");
@@ -45,7 +42,6 @@ export function loadConfig(env = process.env) {
     pauseBackendCmd: env.E2E_PAUSE_BACKEND_CMD, resumeBackendCmd: env.E2E_RESUME_BACKEND_CMD,
     stopBackendCmd: env.E2E_STOP_BACKEND_CMD, startBackendCmd: env.E2E_START_BACKEND_CMD,
     stopRabbitCmd: env.E2E_STOP_RABBIT_CMD, startRabbitCmd: env.E2E_START_RABBIT_CMD,
-    viewerPolicy: viewerPolicyOf(env),
     /** stability runs: a number shuffles the order of the selected flows (deterministic per seed) to expose order dependencies and state leaks between flows */
     shuffleSeed: /^\d+$/.test(env.E2E_SHUFFLE_SEED ?? "") ? Number(env.E2E_SHUFFLE_SEED) : null,
     durableRunStores: env.E2E_DURABLE_RUN_STORES === "1",

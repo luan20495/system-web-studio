@@ -85,9 +85,10 @@ export function BuilderWorkspace(props: {
   const ctx: DefCtx = useMemo(() => ({
     doc, readiness: backend.definitionOps as Readiness, canEdit: cap.canEdit && interactive, busy, metadata: backend.metadata, registry, labelOf: props.labelOf,
     dataManagement: props.dataManagement, canManageData: cap.canManageDataSources, manageDataReason: whyNot("canManageDataSources"),
+    canViewData: cap.canViewDataSources, viewDataReason: whyNot("canViewDataSources"), canBindData: cap.canBindDataSources && interactive, bindDataReason: cap.canBindDataSources ? "Chế độ dùng thử hoặc chỉ-xem: không thể đổi liên kết." : whyNot("canBindDataSources"),
     commit: (ops, summary) => props.applyOps(ops, summary),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [doc, backend, cap.canEdit, cap.canManageDataSources, interactive, busy, registry, props.labelOf, props.applyOps, props.dataManagement]);
+  }), [doc, backend, cap.canEdit, cap.canManageDataSources, cap.canViewDataSources, cap.canBindDataSources, interactive, busy, registry, props.labelOf, props.applyOps, props.dataManagement]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
   const collision: CollisionDetection = useCallback((args) => {
@@ -191,7 +192,7 @@ export function BuilderWorkspace(props: {
                 onMove={(d) => void step(selected.id, d)} onRemove={() => setRemoving(true)} onSaveBlock={props.saveBlock} pageId={pageId}
                 openDataWizard={(id) => { setDataFocus({ sectionId: id }); setRail("data"); }}/>
             ) : (
-              <div className="bx-empty"><h2>Chưa chọn mục nào</h2><p>Chọn một mục trong “Trang” hoặc nhấp vào bản xem trước để chỉnh.</p>
+              <div className="bx-empty"><h2>Chưa chọn mục nào</h2>{readOnly ? <p>Bạn chỉ có quyền xem ứng dụng này. Chọn một mục trong “Trang” để xem thuộc tính; không chỉnh sửa được.</p> : <p>Chọn một mục trong “Trang” hoặc nhấp vào bản xem trước để chỉnh.</p>}
                 {backend.metadataReadiness.state !== "AVAILABLE" ? <StateBox state={backend.metadataReadiness} compact/> : null}</div>)}
         </aside>
       </main>

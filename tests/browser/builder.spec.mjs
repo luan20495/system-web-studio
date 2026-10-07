@@ -336,6 +336,67 @@ async function dragTo(page, from, to, { steps = 14, hold } = {}) {
   await p.close();
 }
 
+// ---------- C1 permission contract in the browser (UX only; the server enforces). The host passes the RESOLVED permission list, never a role name ----------
+async function withPerms(perms) {
+  const p = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  p.errors = []; p.on("pageerror", (e) => p.errors.push(e.message)); p.on("console", (m) => { if (["error", "warning"].includes(m.type()) && !/favicon|404/.test(m.text())) p.errors.push(m.text()); });
+  await p.goto(`${URL_}?v2=1&rt=1&perms=${perms}`); await p.waitForSelector("iframe"); await p.waitForTimeout(700);
+  return p;
+}
+const rtCalls = (p) => p.evaluate(() => window.__rt);
+{
+  // case A: APP_VIEW + APP_USE (what a viewer's project payload resolves to): the Builder opens READ-ONLY
+  const p = await withPerms("APP_VIEW,APP_USE");
+  const t = await p.locator("body").innerText();
+  check("PERM viewer (APP_VIEW, APP_USE): the Builder opens (no redirect) with a clear read-only notice", /Bạn chỉ có quyền xem/.test(t));
+  check("PERM viewer: with nothing selected the inspector says it is read-only (not 'click to edit')", /chỉ có quyền xem/.test(await p.locator(".bx-right").innerText()) && !/nhấp vào bản xem trước để chỉnh/.test(await p.locator(".bx-right").innerText()));
+  await p.locator("[role=treeitem]").nth(2).click(); await p.waitForTimeout(400);   // the canvas is not interactive for a viewer: properties are opened from the page tree
+  const inputs = p.locator(".bx-right input:not([type=hidden]), .bx-right textarea");
+  check("PERM viewer: every property input is disabled (no editing)", (await inputs.count()) > 0 && (await inputs.evaluateAll((els) => els.every((e) => e.disabled))));
+  check("PERM viewer: Save/edit buttons are not offered or are disabled", (await p.getByRole("button", { name: /Lưu thay đổi|Lưu/ }).evaluateAll((els) => els.every((e) => e.disabled))));
+  const pub = p.locator("header.bx-top").getByRole("button", { name: /^Xuất bản/ });
+  check("PERM viewer: Publish is disabled and says why (APP_PUBLISH)", (await pub.isDisabled()) && /xuất bản/i.test((await pub.getAttribute("title")) ?? ""), await pub.getAttribute("title"));
+  await p.getByRole("button", { name: "Dùng thử" }).click(); await p.locator('[data-testid="test-panel"]').waitFor();
+  const q = p.getByTestId("run-query:q-orders"), act = p.getByTestId("run-action:a-nav"), mut = p.getByTestId("run-action:a-create"), wf = p.getByTestId("run-workflow:wf1");
+  const all = [q, act, mut, wf];
+  check("PERM viewer: every Test control is disabled (missing APP_EDIT and the run permissions)", (await Promise.all(all.map((b) => b.isDisabled()))).every(Boolean));
+  check("PERM viewer: each disabled control names the missing permissions in its title", (await Promise.all(all.map(async (b) => /Chỉnh sửa ứng dụng/.test((await b.getAttribute("title")) ?? "")))).every(Boolean), await q.getAttribute("title"));
+  for (const b of all) await b.click({ force: true, timeout: 1500 }).catch(() => undefined);
+  await p.waitForTimeout(500);
+  check("PERM viewer: clicking disabled controls sends NOTHING to the runtime (the server would refuse a forged call anyway)", (await rtCalls(p)).length === 0, JSON.stringify(await rtCalls(p)));
+  check("PERM viewer: no console errors/warnings", p.errors.length === 0, p.errors.join(" | "));
+  await p.close();
+}
+{
+  // case B: every conjunction present: the controls are usable and reach the runtime
+  const p = await withPerms("APP_VIEW,APP_USE,APP_EDIT,QUERY_EXECUTE,ACTION_EXECUTE,DATA_MUTATE,WORKFLOW_EXECUTE");
+  await p.getByRole("button", { name: "Dùng thử" }).click(); await p.locator('[data-testid="test-panel"]').waitFor();
+  const all = ["run-query:q-orders", "run-action:a-nav", "run-action:a-create", "run-workflow:wf1"].map((id) => p.getByTestId(id));
+  check("PERM editor (all conjunctions): the Test controls are enabled", (await Promise.all(all.map((b) => b.isEnabled()))).every(Boolean));
+  for (const b of all) await b.click(); await p.waitForTimeout(800);
+  check("PERM editor: each control sent exactly one runtime call", JSON.stringify((await rtCalls(p)).sort()) === JSON.stringify(["action:a-create", "action:a-nav", "query:q-orders", "workflow:wf1"]), JSON.stringify(await rtCalls(p)));
+  await p.close();
+}
+{
+  // case C: a missing member of a conjunction disables exactly the control that needs it
+  const p = await withPerms("APP_VIEW,APP_USE,APP_EDIT,ACTION_EXECUTE");   // no QUERY_EXECUTE, no DATA_MUTATE, no WORKFLOW_EXECUTE
+  await p.getByRole("button", { name: "Dùng thử" }).click(); await p.locator('[data-testid="test-panel"]').waitFor();
+  const st = async (id) => ({ off: await p.getByTestId(id).isDisabled(), title: (await p.getByTestId(id).getAttribute("title")) ?? "" });
+  const [q, nav, mut, wf] = await Promise.all(["run-query:q-orders", "run-action:a-nav", "run-action:a-create", "run-workflow:wf1"].map(st));
+  check("PERM partial: a navigate action needs only APP_USE + ACTION_EXECUTE (+APP_EDIT in TEST): enabled", !nav.off);
+  check("PERM partial: the query is disabled and names QUERY_EXECUTE (Chạy truy vấn)", q.off && /Chạy truy vấn/.test(q.title), q.title);
+  check("PERM partial: the mutating action is disabled and names DATA_MUTATE (Ghi dữ liệu)", mut.off && /Ghi dữ liệu/.test(mut.title), mut.title);
+  check("PERM partial: the workflow is disabled and names WORKFLOW_EXECUTE (Chạy workflow)", wf.off && /Chạy workflow/.test(wf.title), wf.title);
+  await p.close();
+}
+{
+  // case D: a role-looking string is just data: nothing is granted by it
+  const p = await withPerms("VIEWER,EDITOR,WORKSPACE_ADMIN");
+  const t = await p.locator("body").innerText();
+  check("PERM role names alone grant nothing: read-only notice, Publish disabled", /Bạn chỉ có quyền xem/.test(t) && (await p.locator("header.bx-top").getByRole("button", { name: /^Xuất bản/ }).isDisabled()));
+  await p.close();
+}
+
 await browser.close();
 const failed = results.filter((r) => !r.ok);
 console.log(`\n${results.length - failed.length}/${results.length} passed`);

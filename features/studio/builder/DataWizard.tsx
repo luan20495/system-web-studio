@@ -91,7 +91,7 @@ export function DataWizard({ ctx, focus }: { ctx: DefCtx; focus?: { sectionId?: 
         <p className="hint">{cur.help}</p>
 
         {step === "source" ? (<>
-          <DataSourcesPanel doc={doc} calls={ctx.dataManagement} canManage={ctx.canManageData ?? false} manageReason={ctx.manageDataReason ?? "Bạn chưa được cấp quyền quản lý nguồn dữ liệu."}/>
+          <DataSourcesPanel doc={doc} calls={ctx.dataManagement} canView={ctx.canViewData ?? false} viewReason={ctx.viewDataReason ?? "Bạn chưa được cấp quyền xem nguồn dữ liệu."} canManage={ctx.canManageData ?? false} manageReason={ctx.manageDataReason ?? "Bạn chưa được cấp quyền quản lý nguồn dữ liệu."} canBind={ctx.canBindData ?? false} bindReason={ctx.bindDataReason ?? "Liên kết nguồn dữ liệu cần quyền quản lý nguồn dữ liệu và quyền chỉnh sửa ứng dụng."}/>
           <h3 className="bx-h3">Khe dữ liệu đã khai báo trong ứng dụng</h3>
           {(doc.dataSources ?? []).length ? <ul className="bx-list">{(doc.dataSources ?? []).map((d) => <li key={d.id}><b>{d.name || d.id}</b><small>{d.type}{d.sourceRef ? "" : " · chưa gắn nguồn trong tài liệu"}</small></li>)}</ul>
             : <p className="hint">Chưa có khe nào. Khe dữ liệu nằm trong tài liệu ứng dụng; Studio chưa có thao tác để thêm khe.</p>}

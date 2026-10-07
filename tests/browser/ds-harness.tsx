@@ -59,4 +59,7 @@ const doc = S === "noslots" ? ({ sections: [] } as unknown as AppDefinitionV2)
   : ({ sections: [], dataSources: [{ id: "erp-db", name: "ERP", type: "CONNECTOR" }, { id: "crm", name: "CRM", type: "CONNECTOR" }] } as unknown as AppDefinitionV2);
 
 window.__secretsSeenInDom = () => [...document.querySelectorAll("input")].some((i) => /hunter2|S3cr3t/.test(i.value)) || /hunter2|S3cr3t/.test(document.body.innerText);
-createRoot(document.getElementById("root")!).render(<div style={{ maxWidth: 560, padding: 12 }}><DataSourcesPanel doc={doc} calls={S === "nocalls" ? undefined : calls} canManage={S !== "readonly"} manageReason="Bạn chưa được cấp quyền quản lý nguồn dữ liệu."/></div>);
+createRoot(document.getElementById("root")!).render(<div style={{ maxWidth: 560, padding: 12 }}><DataSourcesPanel doc={doc} calls={S === "nocalls" ? undefined : calls}
+    canView={S !== "noview"} viewReason="Bạn chưa được cấp quyền xem nguồn dữ liệu."
+    canManage={!["readonly", "viewonly", "noview"].includes(S)} manageReason="Bạn chưa được cấp quyền quản lý nguồn dữ liệu."
+    canBind={!["readonly", "viewonly", "noview", "nobind"].includes(S)} bindReason="Liên kết nguồn dữ liệu cần quyền quản lý nguồn dữ liệu và quyền chỉnh sửa ứng dụng."/></div>);

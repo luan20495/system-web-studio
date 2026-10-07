@@ -28,15 +28,6 @@ export const EVENT_LABEL: Readonly<Record<EventType, string>> = {
   onLoad: "Khi trang mở", onClick: "Khi nhấn", onChange: "Khi giá trị đổi", onSubmit: "Khi gửi biểu mẫu", onSuccess: "Khi thành công", onError: "Khi có lỗi",
 };
 export const isClientOnly = (t: ActionType): boolean => (CLIENT_ONLY_ACTION_TYPES as readonly string[]).includes(t);
-/** the canonical permission the SERVER checks to run this kind of action (tenant-permission.md §5, action-workflow.md §5) */
-export function permissionToRun(t: ActionType): PermissionCode {
-  switch (t) {
-    case "NAVIGATE": case "REFRESH_QUERY": return "APP_USE";
-    case "SUBMIT_FORM": case "CREATE_RECORD": case "UPDATE_RECORD": case "DELETE_RECORD": return "DATA_MUTATE";
-    case "START_WORKFLOW": return "WORKFLOW_EXECUTE";
-    default: return "ACTION_EXECUTE";
-  }
-}
 
 export const isRejectedAlias = (name: string): boolean => (REJECTED_ACTION_ALIASES as readonly string[]).includes(name);
 export const isActionType = (name: string): name is ActionType => (ACTION_TYPES as readonly string[]).includes(name);

@@ -86,7 +86,7 @@ test("platformScope wins over systemAdmin when the server sends it", () => {
 });
 
 test("a TENANT_ADMIN does not get the Admin portal yet (every /admin/** API is AdminGuard) but does get tenant.members", () => {
-  const me: Me = { ...baseMe, tenantId: "t", tenantRole: "TENANT_ADMIN", platformScope: false, permissions: ["APP_VIEW", "APP_EDIT", "TENANT_MEMBERS"], workspaces: [wsRow(["APP_EDIT"])] };
+  const me: Me = { ...baseMe, tenantId: "t", tenantRole: "TENANT_ADMIN", platformScope: false, permissions: ["APP_VIEW", "APP_EDIT", "TENANT_MEMBERS"], workspaces: [wsRow(["APP_VIEW", "APP_EDIT"])] };
   const caps = capabilitiesOf(me);
   assert.ok(!caps.has("tenant.administer")); assert.ok(caps.has("tenant.members")); assert.ok(caps.has("studio.build"));
   assert.equal(isAdmin(me), false); assert.equal(hasPermission(me, "TENANT_MEMBERS"), true); assert.equal(hasPermission(me, "APP_PUBLISH"), false);

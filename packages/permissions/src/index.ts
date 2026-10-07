@@ -1,4 +1,7 @@
 import type { Me } from "@xweb/types";
+import { canViewStudioIn } from "./canonical";
+
+export * from "./canonical";
 
 /**
  * Which of the three Xweb web apps a person may open, derived from what the server says about them (`/auth/me`).
@@ -19,9 +22,6 @@ export const PORTAL_REQUIRES: Record<PortalId, Capability> = {
 export const PORTAL_PREFIX: Record<PortalId, string> = { platform: "/platform", admin: "/admin", studio: "/studio" };
 export const PORTAL_LABEL: Record<PortalId, string> = { platform: "Xweb Platform", admin: "Quản trị công ty", studio: "Xweb Studio" };
 
-/** Codes that only describe the tenant/platform level (tenant-permission.md §5). A workspace whose only codes are these gives no business-data access. */
-const TENANT_LEVEL_CODES: ReadonlySet<string> = new Set(["TENANT_MANAGE", "TENANT_MEMBERS"]);
-
 /** True when the server listed `code` among the person's canonical permissions (platform + primary tenant). Display only; the server decides. */
 export const hasPermission = (me: Me | null | undefined, code: string): boolean => !!me?.permissions?.includes(code);
 
@@ -33,8 +33,10 @@ export const hasPermission = (me: Me | null | undefined, code: string): boolean 
  *    tenant-scoped admin API exists AND an Admin screen uses it (the only one today is `/admin/tenants/{id}/members`, TENANT_MEMBERS, with no UI).
  *    See docs/parallel/c5/PHASE3_AUDIT.md M-05; the one-line change is in this function.
  *  - tenant.members    = TENANT_MEMBERS (the tenant's own TENANT_ADMIN, or platform scope). Not used by a portal gate yet.
- *  - studio.build      = some workspace gives business-data permissions. A platform-only SYSTEM_ADMIN (role "ADMIN", businessAccess=false) is listed in
- *    `workspaces` but only holds tenant-level codes there, so Studio is not offered. Without per-workspace `permissions` (older backend): any workspace.
+ *  - studio.build      = the C1 contract: Studio access requires APP_VIEW. Some workspace's resolved `permissions` must hold it (canViewStudioIn). A platform-only
+ *    SYSTEM_ADMIN (businessAccess=false) is listed in `workspaces` but holds only tenant-level codes there, so Studio is not offered. A workspace whose `permissions` field is
+ *    ABSENT (older backend) does not block. No role name is read anywhere. NOTE (CONTRACT MISMATCH, handoff H-C1-04): `/auth/me` lists WORKSPACE-level codes only, so a person
+ *    whose APP_VIEW comes from a PROJECT membership (workspace VIEWER / EDITOR / PUBLISHER) gets `permissions: []` here and is refused; the project payload does resolve APP_VIEW.
  */
 export function capabilitiesOf(me: Me | null | undefined): ReadonlySet<Capability> {
   const out = new Set<Capability>();
@@ -42,7 +44,7 @@ export function capabilitiesOf(me: Me | null | undefined): ReadonlySet<Capabilit
   const platform = me.platformScope ?? me.systemAdmin === true;
   if (platform) { out.add("platform.operate"); out.add("tenant.administer"); }
   if (platform || me.tenantRole === "TENANT_ADMIN" || hasPermission(me, "TENANT_MEMBERS")) out.add("tenant.members");
-  const builds = me.workspaces.some((w) => !w.permissions || w.permissions.some((c) => !TENANT_LEVEL_CODES.has(c)));
+  const builds = me.workspaces.some((w) => canViewStudioIn(w.permissions));
   if (builds) out.add("studio.build");
   return out;
 }

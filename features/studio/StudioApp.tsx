@@ -100,9 +100,8 @@ function Home() {
   const recent = useLoad(() => api.projectsPage(workspaceId, 0, 6), [workspaceId]);
   const usage = useLoad(() => api.myUsage(), []);
   const comps = useLoad(() => api.components(), []);
-  const role = me!.workspaces.find((w) => w.id === workspaceId)?.role;
-  // creating makes you the project owner, which needs workspace membership; "ADMIN" = system admin viewing a workspace without membership
-  const canCreate = role === "WORKSPACE_ADMIN" || role === "EDITOR";
+  // Creating a project has NO canonical permission code (PROJECT_CREATE is a server-internal storage constant that /auth/me does not expose), so the UI cannot know in advance and
+  // must not guess from a role name: the form is offered and the server decides (403 → a plain message). Handoff H-C1-05 asks for a resolved capability.
   const [idea, setIdea] = useState(""); const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null);
   async function start(e: FormEvent) {
     e.preventDefault(); const text = idea.trim(); if (!text) return;
@@ -110,21 +109,19 @@ function Home() {
     try {
       const p = await api.createProject(workspaceId, text.length > 60 ? `${text.slice(0, 57)}…` : text);
       router.push(S(`/projects/${p.id}/ai?prompt=${encodeURIComponent(text)}`));
-    } catch (x) { setErr(errText(x, "Không tạo được ứng dụng.")); setBusy(false); }
+    } catch (x) { setErr(x instanceof ApiError && x.status === 403 ? "Bạn không có quyền tạo ứng dụng trong workspace này (máy chủ từ chối)." : errText(x, "Không tạo được ứng dụng.")); setBusy(false); }
   }
   const u = usage.data;
   return (<>
     <section className="homeHero">
       <h1>Bạn muốn xây dựng gì?</h1>
       <p>Mô tả ý tưởng; Studio tạo website từ component đã duyệt của công ty, rồi bạn chỉnh bằng AI hoặc trực quan.</p>
-      {canCreate ? (
         <form className="bigPrompt" onSubmit={(e) => void start(e)}>
           <textarea aria-label="Mô tả ứng dụng muốn tạo" placeholder="Ví dụ: Website giới thiệu máy lọc nước, có bảng so sánh 3 sản phẩm…" value={idea} onChange={(e) => setIdea(e.target.value)} maxLength={2000}
             onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) void start(e); }}/>
           <div className="row between"><small className="muted">Hiện hỗ trợ loại ứng dụng: Website (một trang). Ctrl/⌘ + Enter để tạo.</small><button className="btn primary" disabled={busy || !idea.trim()}>{busy ? "Đang tạo…" : "Tạo bằng AI"}</button></div>
           {err ? <p className="formError" role="alert">{err}</p> : null}
         </form>
-      ) : <p className="notice">{role === "ADMIN" ? "Bạn đang xem workspace này với quyền quản trị hệ thống nhưng không phải thành viên, nên không tạo ứng dụng ở đây được. Chọn workspace của bạn hoặc nhờ quản trị workspace thêm bạn." : "Vai trò của bạn trong workspace này không cho phép tạo ứng dụng mới."}</p>}
     </section>
     <div className="kpiGrid">
       <div className="kpi"><div className="kpiLabel">Lượt AI hôm nay</div>
@@ -168,11 +165,7 @@ function Projects() {
 }
 
 // ------------------------------------------------------------------ create
-function useCanCreate() {
-  const { me } = useSession(); const { workspaceId } = useStudio();
-  const role = me!.workspaces.find((w) => w.id === workspaceId)?.role;
-  return role === "WORKSPACE_ADMIN" || role === "EDITOR";
-}
+// (no role-based "can create": see Home; the server answers 403 when creation is not allowed)
 
 function NewApp() {
   const router = useRouter(); const { workspaceId } = useStudio();
@@ -275,12 +268,12 @@ function TemplateCard({ t, onUse, onChanged, categories, mine }: { t: TemplateDt
 }
 
 function Templates() {
-  const router = useRouter(); const canCreate = useCanCreate();
+  const router = useRouter();
   const [scope, setScope] = useState<"company" | "mine">("company");
   const [category, setCategory] = useState(""); const [sort, setSort] = useState<"recent" | "popular">("recent");
   const cats = useLoad(() => api.libraryCategories(), []);
   const { data, error, loading, reload } = useLoad(() => api.templates(scope, { category: category || undefined, sort }), [scope, category, sort]);
-  const use = canCreate ? (t: TemplateDto) => router.push(S(`/new?template=${t.id}`)) : undefined;
+  const use = (t: TemplateDto) => router.push(S(`/new?template=${t.id}`));
   return (<>
     <div className="pageHead"><div><h1>Templates</h1><p>Mẫu khởi đầu cho website. Một mẫu là cấu trúc trang (Page Schema) từ component đã duyệt, không phải mã nguồn; ảnh không đi kèm mẫu.</p></div></div>
     <div className="tabs" role="tablist">{([["company", "Mẫu của công ty"], ["mine", "Mẫu của tôi"]] as const).map(([k, l]) =>
@@ -294,7 +287,7 @@ function Templates() {
       <div className="compGrid">
         {scope === "company" ? <article className="libCard"><div className="thumb placeholder"><span>Trang mặc định</span></div><h2>Trang mặc định</h2>
           <p>Có sẵn trong hệ thống: thanh điều hướng, Hero, sản phẩm, công nghệ, đánh giá, form liên hệ, chân trang.</p>
-          {canCreate ? <div className="actions"><Link className="btn sm primary" href={S("/new")}>Dùng mẫu này</Link></div> : null}</article> : null}
+          <div className="actions"><Link className="btn sm primary" href={S("/new")}>Dùng mẫu này</Link></div></article> : null}
         {data!.map((t) => <TemplateCard key={t.id} t={t} onUse={use} onChanged={reload} categories={cats.data?.templates ?? {}} mine={scope === "mine"}/>)}
         {data!.length === 0 ? <StateView kind="empty" title={scope === "mine" ? "Bạn chưa lưu mẫu nào" : "Chưa có mẫu công ty"}
           detail={<p>{scope === "mine" ? "Mở một ứng dụng → Cài đặt → “Lưu trang thành mẫu”." : "Tác giả gửi mẫu đi duyệt; quản trị viên duyệt để đưa vào thư viện công ty."}</p>}/> : null}

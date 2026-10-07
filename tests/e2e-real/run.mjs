@@ -5,7 +5,7 @@
 //              2 = NOT RUN: no backend configured/reachable, or the fixtures could not be created. This is never a pass.
 import { loadConfig, REQUIRED, EXIT, shuffled } from "./lib/env.mjs";
 import { execFileSync } from "node:child_process";
-import { Check, Blocked, Skip, printTable, summarise, writeReport, writeEvidence } from "./lib/report.mjs";
+import { Check, Blocked, Mismatch, Skip, printTable, summarise, writeReport, writeEvidence } from "./lib/report.mjs";
 import { createFixtures, cleanup } from "./lib/fixtures.mjs";
 import { launch } from "./lib/ui.mjs";
 
@@ -52,17 +52,18 @@ const browser = await launch(cfg);
 const results = [];
 for (const f of selected) {
   console.log(`\n${f.id} — ${f.title}`);
-  const check = new Check(); let status = "PASS", owner = null, reason = null, ref = null; const start = new Date().toISOString();
+  const check = new Check(); let status = "PASS", owner = null, reason = null, ref = null, mismatch = null; const start = new Date().toISOString();
   try { await f.run({ cfg, fx, browser, check }); }
   catch (e) {
     if (e instanceof Blocked) { status = "BLOCKED"; owner = e.owner; reason = e.message; ref = e.ref; console.log(`    ⛔ BLOCKED (${owner}${ref ? ` · ${ref}` : ""}): ${reason}`); }
+    else if (e instanceof Mismatch) { status = "FAIL"; owner = e.owner; reason = e.message; ref = e.ref; mismatch = e.detail; console.log(`    ✗ ${reason}  (owner ${owner}${ref ? ` · ${ref}` : ""})`); }
     else if (e instanceof Skip) { status = "SKIP"; reason = e.message; console.log(`    ⏭ SKIP: ${reason}`); }
     else { status = "FAIL"; reason = `exception: ${e?.stack?.split("\n").slice(0, 3).join(" ⏎ ") ?? e}`; console.log(`    ✗ ${reason}`); }
   }
   // a failed check always wins: a BLOCKED flow whose evidence checks fail is a FAIL, a PASS needs zero failed checks and at least one check
   if (check.failed.length) status = "FAIL";
   else if (status === "PASS" && check.items.length === 0) { status = "FAIL"; reason = "the flow made no assertions"; }
-  results.push({ id: f.id, title: f.title, status, owner, ref, reason, start, end: new Date().toISOString(), workspace: fx.workspaces?.A, project: fx.projects?.A?.id, checks: check.items, failed: check.failed });
+  results.push({ id: f.id, title: f.title, status, owner, ref, reason, mismatch, start, end: new Date().toISOString(), workspace: fx.workspaces?.A, project: fx.projects?.A?.id, checks: check.items, failed: check.failed });
 }
 await browser.close();
 const problems = await cleanup(fx, (m) => console.log(`  [cleanup] ${m}`));

@@ -44,6 +44,7 @@ export async function createFixtures(cfg, log = () => {}) {
   await user("adminA", "A", "WORKSPACE_ADMIN");
   await user("adminB", "B", "WORKSPACE_ADMIN");
   await user("viewerA", "A", "VIEWER");
+  await user("lonelyA", "A", "VIEWER");           // a member of workspace A with NO membership of project A: no APP_VIEW anywhere (E2E-04 case B)
 
   // project A: owned by adminA; viewerA is a VIEWER of the workspace, which gives no project membership by itself → add it as project VIEWER
   const A = fx.sessions.adminA, wa = fx.workspaces.A;

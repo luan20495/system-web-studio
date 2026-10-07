@@ -233,8 +233,9 @@ export function MemberTable({ title, members, roles, currentUserId, onChange, on
 }
 
 export function MembersDrawer({ workspaceId, projectId, me, onClose, onError }: { workspaceId: string; projectId: string; me: Me; onClose: () => void; onError: (e: unknown) => void }) {
-  const wsRole = me.workspaces.find((w) => w.id === workspaceId)?.role;
-  const wsAdmin = wsRole === "WORKSPACE_ADMIN" || wsRole === "ADMIN" || me.roles.includes("ADMIN");
+  // No role name decides anything here (MEMBER_MANAGE is a server-internal constant that is not exposed to the client): the workspace member list is requested and the SERVER's answer decides.
+  // A 403/404 simply means "not visible to you" and the section is not shown (handoff H-C1-05).
+  const [wsVisible, setWsVisible] = useState(false);
   const [project, setProject] = useState<Member[] | null>(null);
   const [workspace, setWorkspace] = useState<Member[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -242,8 +243,9 @@ export function MembersDrawer({ workspaceId, projectId, me, onClose, onError }: 
 
   const load = useCallback(() => {
     api.listProjectMembers(workspaceId, projectId).then(setProject).catch(onError);
-    if (wsAdmin) api.listWorkspaceMembers(workspaceId).then(setWorkspace).catch(onError);
-  }, [workspaceId, projectId, wsAdmin, onError]);
+    api.listWorkspaceMembers(workspaceId).then((m) => { setWorkspace(m); setWsVisible(true); })
+      .catch((e) => { if (e instanceof ApiError && (e.status === 403 || e.status === 404)) { setWorkspace(null); setWsVisible(false); } else onError(e); });
+  }, [workspaceId, projectId, onError]);
   useEffect(() => { load(); }, [load]);
 
   const who = (v: string) => (v.includes("@") ? { email: v.trim() } : { username: v.trim() });
@@ -260,7 +262,7 @@ export function MembersDrawer({ workspaceId, projectId, me, onClose, onError }: 
         onChange={(m, r) => void act("project", () => api.changeProjectMember(workspaceId, projectId, m.userId, r))}
         onRemove={(m) => { if (window.confirm(`Xóa ${m.username} khỏi project?`)) void act("project", () => api.removeProjectMember(workspaceId, projectId, m.userId)); }}
         onAdd={(v, r) => act("project", () => api.addProjectMember(workspaceId, projectId, who(v), r))}/>
-      {wsAdmin ? <MemberTable title="Thành viên workspace" members={workspace} roles={WORKSPACE_ROLES} currentUserId={me.id} busy={busy} error={errors.workspace}
+      {wsVisible ? <MemberTable title="Thành viên workspace" members={workspace} roles={WORKSPACE_ROLES} currentUserId={me.id} busy={busy} error={errors.workspace}
         onChange={(m, r) => void act("workspace", () => api.changeWorkspaceMember(workspaceId, m.userId, r))}
         onRemove={(m) => { if (window.confirm(`Xóa ${m.username} khỏi workspace? Họ cũng mất quyền ở mọi project.`)) void act("workspace", () => api.removeWorkspaceMember(workspaceId, m.userId)); }}
         onAdd={(v, r) => act("workspace", () => api.addWorkspaceMember(workspaceId, who(v), r))}/> : null}

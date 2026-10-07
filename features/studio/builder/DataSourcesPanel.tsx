@@ -17,7 +17,12 @@ import { Dialog, Field, StateBox } from "./ui/primitives";
 type Load = { state: "loading" } | { state: "ready" } | { state: "error"; message: ManagementMessage } | { state: "gate"; gate: Readiness };
 const emptyForm = (): SourceForm => ({ name: "", type: "", config: {}, credential: {} });
 
-export function DataSourcesPanel({ doc, calls, canManage, manageReason }: { doc: AppDefinitionV2; calls?: DataManagementCalls; canManage: boolean; manageReason: string }) {
+/**
+ * Access (all UX; the server re-checks): `canView` = DATA_SOURCE_VIEW shows the metadata list and nothing else; `canManage` = DATA_SOURCE_MANAGE gates create / update / delete /
+ * credential metadata / connection test; `canBind` = DATA_SOURCE_MANAGE + APP_EDIT gates the TEST/draft binding. Without `canView` no request is sent at all.
+ */
+export function DataSourcesPanel({ doc, calls, canView, viewReason, canManage, manageReason, canBind, bindReason }: {
+  doc: AppDefinitionV2; calls?: DataManagementCalls; canView: boolean; viewReason: string; canManage: boolean; manageReason: string; canBind: boolean; bindReason: string }) {
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [connectors, setConnectors] = useState<ConnectorDescriptor[]>([]);
   const [sources, setSources] = useState<DataSourceView[]>([]);
@@ -41,11 +46,13 @@ export function DataSourcesPanel({ doc, calls, canManage, manageReason }: { doc:
 
   const reload = useCallback(async () => {
     if (!calls) return;
+    if (!canView) { setLoad({ state: "gate", gate: notReady(viewReason) }); return; }   // no permission: ask nothing
     setLoad({ state: "loading" });
     try {
-      const [cs, ds, bs] = await Promise.all([calls.connectors(), calls.list(), calls.listBindings()]);
+      // metadata is DATA_SOURCE_VIEW; the connector catalogue, credential metadata and bindings belong to management (DATA_SOURCE_MANAGE; bindings also APP_EDIT)
+      const [cs, ds, bs] = await Promise.all([canManage ? calls.connectors() : Promise.resolve([]), calls.list(), canBind ? calls.listBindings() : Promise.resolve([])]);
       const meta: Record<string, CredentialMetadata> = {};
-      await Promise.all(ds.filter((d) => d.hasCredential).map(async (d) => { try { meta[d.id] = await calls.credential(d.id); } catch { /* the badge falls back to hasCredential */ } }));
+      await Promise.all(ds.filter((d) => canManage && d.hasCredential).map(async (d) => { try { meta[d.id] = await calls.credential(d.id); } catch { /* the badge falls back to hasCredential */ } }));
       if (!alive.current) return;
       setConnectors(cs); setSources(ds); setBindings(bs); setCreds(meta); setLoad({ state: "ready" });
     } catch (e) {
@@ -53,7 +60,7 @@ export function DataSourcesPanel({ doc, calls, canManage, manageReason }: { doc:
       const gate = managementReadinessFromError(e);
       setLoad(gate ? { state: "gate", gate } : { state: "error", message: explainManagementError(e) });
     }
-  }, [calls]);
+  }, [calls, canView, canManage, canBind, viewReason]);
   useEffect(() => { void reload(); }, [reload]);
 
   if (!calls) return <StateBox state={notReady("Chưa kết nối máy chủ để quản lý nguồn dữ liệu. Không có nguồn nào được giả lập ở trình duyệt.")}/>;
@@ -66,6 +73,7 @@ export function DataSourcesPanel({ doc, calls, canManage, manageReason }: { doc:
 
   const descriptor = connectors.find((c) => c.type === form.type);
   const writes = !canManage ? manageReason : null;
+  const bindLock = !canBind ? bindReason : null;
   const busy = (k: string) => pending.has(k);
 
   /** one funnel for every write: lock → call → reload on ambiguity → unlock. Secrets never reach `say`. */
@@ -126,6 +134,7 @@ export function DataSourcesPanel({ doc, calls, canManage, manageReason }: { doc:
   return (
     <div className="bx-ds" data-testid="ds-panel">
       {writes ? <p className="hint" data-testid="ds-readonly">{writes}</p> : null}
+      {!writes && bindLock ? <p className="hint" data-testid="ds-bind-locked">{bindLock}</p> : null}
       <h3 className="bx-h3">Nguồn dữ liệu của không gian làm việc</h3>
       {sources.length ? (
         <ul className="bx-list" data-testid="ds-list">
@@ -187,10 +196,10 @@ export function DataSourcesPanel({ doc, calls, canManage, manageReason }: { doc:
                 return (
                   <div className="bx-row" key={mode} data-testid={`binding:${mode}:${s.id}`}>
                     <span>{BINDING_LABEL[mode]}: {cur ? <b data-testid={`bound:${mode}:${s.id}`}>{curSrc?.name ?? cur.dataSourceId}</b> : <i>chưa liên kết</i>}</span>
-                    <select aria-label={`Nguồn cho ${s.id} (${mode})`} disabled={!!writes || busy(k)} value={pick[`${mode}:${s.id}`] ?? ""} onChange={(e) => setPick({ ...pick, [`${mode}:${s.id}`]: e.target.value })}>
+                    <select aria-label={`Nguồn cho ${s.id} (${mode})`} disabled={!!bindLock || busy(k)} value={pick[`${mode}:${s.id}`] ?? ""} onChange={(e) => setPick({ ...pick, [`${mode}:${s.id}`]: e.target.value })}>
                       <option value="">— chọn nguồn —</option>{sources.filter((d) => d.status === "ACTIVE").map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</select>
-                    <button type="button" className="smallButton" data-testid={`bind:${mode}:${s.id}`} disabled={!!writes || busy(k)} aria-busy={busy(k)} title={writes ?? undefined} onClick={() => void bind(mode, s.id)}>{busy(k) ? "Đang lưu…" : cur ? "Đổi liên kết" : "Liên kết"}</button>
-                    {cur ? <button type="button" className="smallButton" data-testid={`unbind:${mode}:${s.id}`} disabled={!!writes || busy(k)} onClick={() => void unbind(mode, s.id)}>Bỏ liên kết</button> : null}
+                    <button type="button" className="smallButton" data-testid={`bind:${mode}:${s.id}`} disabled={!!bindLock || busy(k)} aria-busy={busy(k)} title={bindLock ?? undefined} onClick={() => void bind(mode, s.id)}>{busy(k) ? "Đang lưu…" : cur ? "Đổi liên kết" : "Liên kết"}</button>
+                    {cur ? <button type="button" className="smallButton" data-testid={`unbind:${mode}:${s.id}`} disabled={!!bindLock || busy(k)} title={bindLock ?? undefined} onClick={() => void unbind(mode, s.id)}>Bỏ liên kết</button> : null}
                     {noteText(k)}
                   </div>
                 );

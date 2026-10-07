@@ -3,9 +3,11 @@
 import { execFile } from "node:child_process";
 import { createServer } from "node:http";
 import { summarise, formatEvidence, kindOf } from "./lib/report.mjs";
-import { loadDataSourceFacts, viewerPolicyOf, shuffled } from "./lib/env.mjs";
+import { loadDataSourceFacts, shuffled } from "./lib/env.mjs";
 import { builderUrl, boundedRetry, containsText, rememberMarker, liveMarkers } from "./lib/ui.mjs";
 import { deniedWriteProbe, e2eActionDefinition } from "./lib/fixtures.mjs";
+import { resolve, expectations } from "./lib/permissions.mjs";
+import { Mismatch } from "./lib/report.mjs";
 
 // async on purpose: the throw-away servers live in THIS process and must keep answering while the suite runs
 const run = (env) => new Promise((res) => execFile(process.execPath, [new URL("./run.mjs", import.meta.url).pathname], { env: { PATH: process.env.PATH, ...env }, encoding: "utf8", timeout: 60_000 }, (err, stdout, stderr) => res({ status: err ? (typeof err.code === "number" ? err.code : 99) : 0, stdout, stderr })));
@@ -60,11 +62,21 @@ await (async () => {
 })();
 check("REGRESSION CSS case: a marker is found when the page shows it upper-cased (text-transform)", containsText("Sản phẩm E2E-ABC-XYZ Liên hệ", "e2e-abc-xyz") && containsText("E2E-ABC-XYZ", "E2E-abc-xyz"));
 check("CSS case: a DIFFERENT, truncated or empty marker is still caught", !containsText("E2E-ABC-1", "e2e-abc-2") && !containsText("E2E-ABC", "e2e-abc-1") && !containsText("anything", "") && !containsText("anything", undefined));
-check("viewer policy from the environment: only the two decided values are accepted, anything else is treated as undecided", viewerPolicyOf({ E2E_VIEWER_POLICY: "app-view" }) === "app-view" && viewerPolicyOf({ E2E_VIEWER_POLICY: "no-studio" }) === "no-studio" && viewerPolicyOf({ E2E_VIEWER_POLICY: "yes" }) === null && viewerPolicyOf({}) === null);
 check("shuffle: deterministic per seed, a permutation (nothing lost or duplicated), different seeds differ", (() => { const a = ["a", "b", "c", "d", "e", "f", "g"]; const x = shuffled(a, 7), y = shuffled(a, 7), z = shuffled(a, 8); return JSON.stringify(x) === JSON.stringify(y) && [...x].sort().join() === a.join() && JSON.stringify(x) !== JSON.stringify(z); })());
 check("REGRESSION order dependency: the expected public text is the latest marker the server STILL holds (an overwritten earlier marker is ignored, whatever the flow order)", (() => {
   const fx = { notes: {} }; rememberMarker(fx, "E2E-A"); rememberMarker(fx, "E2E-B"); rememberMarker(fx, "E2E-C");
   const draft = { sections: [{ props: { eyebrow: "E2E-B" } }] };            // B was saved last; A was overwritten; C was never saved
   return JSON.stringify(liveMarkers(fx, draft)) === '["E2E-B"]' && liveMarkers({ notes: {} }, draft).length === 0;
+})());
+check("permission expectations come from the resolved set (storage alias PROJECT_READ = APP_VIEW), never from a role name", (() => {
+  const viewer = expectations(resolve(["APP_USE", "PROJECT_READ"]));
+  const none = expectations(resolve([]));
+  const editor = expectations(resolve(["APP_VIEW", "APP_USE", "APP_EDIT", "QUERY_EXECUTE", "ACTION_EXECUTE"]));
+  return viewer.viewStudio && viewer.readOnly && !viewer.edit && !viewer.testQuery && !viewer.testNavigateAction && !none.viewStudio && !none.readOnly
+    && editor.testQuery && editor.testNavigateAction && !editor.testWorkflow && !editor.publish && resolve(["VIEWER", "WORKSPACE_ADMIN"]).size === 0;
+})());
+check("a CONTRACT MISMATCH carries owner, expected, actual, impact and 'frontend workaround: NONE'", (() => {
+  const m = new Mismatch("C1", { expected: "e", actual: "a", impact: "i" }, "ref");
+  return m.owner === "C1" && m.detail.workaround === "NONE" && /CONTRACT MISMATCH/.test(m.message) && formatEvidence({ frontendHead: "x", backend: {}, studio: "s" }, { id: "E", title: "t", status: "FAIL", owner: "C1", mismatch: m.detail, reason: m.message, checks: [] }).includes("CONTRACT MISMATCH: expected e | actual a | impact i | frontend workaround NONE");
 })());
 const bad = results.filter((x) => !x).length; console.log(`\n${results.length - bad}/${results.length} passed`); process.exit(bad ? 1 : 0);

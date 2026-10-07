@@ -119,6 +119,23 @@ const secretInDom = (p) => p.evaluate(() => window.__secretsSeenInDom());
   check("…and the reason is on screen", /chưa được cấp quyền/.test(await p.getByTestId("ds-readonly").innerText()));
   check("reads still work (the list is visible)", (await p.getByTestId("ds:ds-1").count()) === 1); await p.close(); }
 
+// C1 permission contract (UX only; the server re-checks): DATA_SOURCE_VIEW = metadata only · DATA_SOURCE_MANAGE = management · TEST/draft binding also needs APP_EDIT
+{ const p = await open("viewonly");
+  const names = (await calls(p)).map((c) => c.name);
+  check("DATA_SOURCE_VIEW only: the metadata list is requested and shown", names.includes("list") && (await p.getByTestId("ds:ds-1").count()) === 1);
+  check("…but the catalogue, credential metadata and bindings (management) are NOT requested", !names.some((n) => ["connectors", "credential", "listBindings"].includes(n)), names.join(","));
+  const ids = ["ds-test:ds-1", "ds-toggle:ds-1", "ds-delete:ds-1", "ds-create"];
+  check("…and every management control is disabled with a reason on screen", (await Promise.all(ids.map((id) => p.getByTestId(id).isDisabled()))).every(Boolean) && /chưa được cấp quyền quản lý/.test(await p.getByTestId("ds-readonly").innerText()));
+  await p.close(); }
+{ const p = await open("noview");
+  check("without DATA_SOURCE_VIEW nothing is requested at all and the reason is shown", (await calls(p)).length === 0 && /chưa được cấp quyền xem/.test(await p.locator("body").innerText()));
+  check("…and no source name or form is rendered", (await p.getByTestId("ds:ds-1").count()) === 0 && (await p.getByTestId("ds-create").count()) === 0);
+  await p.close(); }
+{ const p = await open("nobind");
+  check("DATA_SOURCE_MANAGE without APP_EDIT: management works (list, create enabled)", (await p.getByTestId("ds-create").isDisabled()) === false && (await calls(p, "connectors")).length === 1);
+  check("…but a TEST binding is locked with the reason (needs APP_EDIT too) and bindings were not requested", (await p.getByTestId("bind:TEST:erp-db").isDisabled()) && /quyền chỉnh sửa ứng dụng/.test(await p.getByTestId("ds-bind-locked").innerText()) && (await calls(p, "listBindings")).length === 0);
+  await p.close(); }
+
 // 7. empty + keyboard/labels
 { const p = await open("empty");
   check("empty list: explanatory text + the create form", (await p.getByTestId("ds-empty").count()) === 1 && (await p.getByTestId("ds-create-form").count()) === 1);

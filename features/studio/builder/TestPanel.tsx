@@ -7,10 +7,10 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ActionEnvelope, AppDefinitionV2, RunQueryResponse, WorkflowRunView } from "@xweb/types";
-import { ACTION_LABEL, permissionToRun } from "./core/actions";
-import { permissionLabel } from "./core/inspector";
+import { ACTION_LABEL } from "./core/actions";
+import { actionRequires, PERMISSION_LABEL_VI } from "../../../packages/permissions/src/canonical";
 import { explainError } from "./core/errors";
-import { capabilitiesFor, type BuilderCapabilities } from "./core/permissions";
+import { testGates } from "./core/permissions";
 import { OUTCOME_LABEL, TEST_RULES, describeTestEffect, describeWorkflowTest, isRunFinished, outcomeFromError, outcomeFromRun, outcomeFromServer, publishInTest, type TestOutcome } from "./core/testMode";
 import { notReady, runtimeReadinessFromError, type Readiness } from "./core/readiness";
 import { StateBox } from "./ui/primitives";
@@ -39,6 +39,9 @@ export type RuntimeCalls = {
   newKey: () => string;
 };
 
+/** "Dùng ứng dụng + Chạy hành động + Ghi dữ liệu + chỉnh sửa (chế độ thử)": the conjunction the server checks for this action */
+const requiredLabel = (type: string, declared: string | null) => actionRequires({ type, declaredPermission: declared }, { test: true }).map((c) => PERMISSION_LABEL_VI[c]).join(" + ");
+
 const POLL_MS = 1500, POLL_MAX_MS = 120_000;
 type QueryResult = { kind: "rows"; res: RunQueryResponse } | { kind: "outcome"; outcome: TestOutcome };
 type Feature = "queries" | "actions" | "workflows";
@@ -48,7 +51,8 @@ export function TestPanel({ doc, rawPermissions, runtime, dirty = false }: {
   /** the draft has changes that are not saved yet: TEST runs the SAVED draft, so running now would test something else */
   dirty?: boolean;
 }) {
-  const cap = capabilitiesFor(rawPermissions);
+  // every gate below is the CONJUNCTION the server enforces (permissions.ts / canonical.ts); UX only, a forged request is still refused by the server
+  const gate = testGates(rawPermissions);
   const [results, setResults] = useState<Record<string, TestOutcome>>({});
   const [queryRes, setQueryRes] = useState<Record<string, QueryResult>>({});
   const [unavailable, setUnavailable] = useState<Partial<Record<Feature, Readiness>>>({});
@@ -61,8 +65,6 @@ export function TestPanel({ doc, rawPermissions, runtime, dirty = false }: {
   const alive = useRef(true);
   useEffect(() => { alive.current = true; const t = timers.current; return () => { alive.current = false; t.forEach(clearTimeout); t.clear(); }; }, []);
 
-  /** runtime-api.md §5: TEST needs the edit right on the project (the server checks PROJECT_EDIT = APP_EDIT before anything else) */
-  const noEdit = !cap.canEdit ? "Chế độ thử cần quyền chỉnh sửa ứng dụng." : null;
   const queries = (doc.queries ?? []).filter((q) => (q.mode ?? "READ") === "READ");
   const actions = doc.actions ?? [], workflows = doc.workflows ?? [];
   const base: Readiness = runtime ? { state: "AVAILABLE" } : notReady("Chưa kết nối máy chủ để chạy thử. Không có kết quả nào được giả lập ở trình duyệt.");
@@ -142,7 +144,7 @@ export function TestPanel({ doc, rawPermissions, runtime, dirty = false }: {
       {queries.length === 0 ? <p className="hint">Chưa có truy vấn đọc nào để thử.</p> : (
         <ul className="bx-list" aria-label="Truy vấn có thể thử">{queries.map((q) => {
           const st = featureState("queries"), res = queryRes[q.id];
-          const lacks = noEdit ?? (!cap.canRunQueries ? "Bạn chưa được cấp quyền chạy truy vấn." : null);
+          const lacks = gate.query();
           return (
             <li key={q.id} className="bx-test-row" data-testid={`query-row:${q.id}`}>
               <div><b>{q.name || q.id}</b><small>Chạy ở chế độ thử trên bản nháp đã lưu</small>
@@ -156,16 +158,16 @@ export function TestPanel({ doc, rawPermissions, runtime, dirty = false }: {
       {actions.length === 0 ? <p className="hint">Chưa có hành động nào để thử.</p> : (
         <ul className="bx-list" aria-label="Hành động có thể thử">{actions.map((a) => {
           const eff = describeTestEffect(a);
-          const need = permissionToRun(a.type);
+          const declared = a.permissionRef ? (doc.permissions ?? []).find((d) => d.id === a.permissionRef)?.permission ?? null : null;
           const key = `a:${a.id}`;
           const st = featureState("actions");
-          const lacks = noEdit ?? (((need === "DATA_MUTATE" || need === "ACTION_EXECUTE") && !cap.canRunActions) ? "Bạn chưa có quyền chạy hành động." : need === "WORKFLOW_EXECUTE" && !cap.canStartWorkflows ? "Bạn chưa có quyền chạy workflow." : need === "APP_USE" && !cap.canView ? "Bạn chưa có quyền dùng ứng dụng." : null);
+          const lacks = gate.action({ type: a.type, declaredPermission: declared });
           const busy = pending.has(key);
           // the browser route always runs an action as a UI event; the server answers UNKNOWN_ACTION for one without a declared trigger (D-C4-10: workflow/chain-only actions)
           const noTrigger = a.trigger ? null : "Hành động này không gắn với sự kiện nào trên giao diện nên chỉ chạy từ workflow hoặc hành động khác; chạy trực tiếp sẽ bị máy chủ từ chối.";
           return (
             <li key={a.id} className="bx-test-row" data-testid={`action-row:${a.id}`}>
-              <div><b>{a.name || a.id}</b><small>{ACTION_LABEL[a.type]} · cần quyền “{permissionLabel[need]}”</small><OutcomeView outcome={results[key] ?? eff}/>
+              <div><b>{a.name || a.id}</b><small>{ACTION_LABEL[a.type]} · cần: {requiredLabel(a.type, declared)}</small><OutcomeView outcome={results[key] ?? eff}/>
                 {noTrigger ? <p className="hint" data-testid={`no-trigger:${a.id}`}>{noTrigger}</p> : null}
                 {locked.has(key) ? <p className="hint"><button type="button" className="smallButton" data-testid={`unlock:${key}`} onClick={() => unlock(key)}>Tôi đã kiểm tra dữ liệu, cho phép chạy lại</button></p> : null}</div>
               <button type="button" className="smallButton" data-testid={`run-action:${a.id}`} disabled={st.state !== "AVAILABLE" || !!lacks || !!noTrigger || busy || locked.has(key)} aria-busy={busy}
@@ -175,13 +177,13 @@ export function TestPanel({ doc, rawPermissions, runtime, dirty = false }: {
 
       <h3 className="bx-h3">Workflow ({workflows.length})</h3>
       {workflows.length === 0 ? <p className="hint">Chưa có workflow nào.</p> : workflows.map((w) => {
-        const key = `w:${w.id}`, st = featureState("workflows"), run = runs[w.id], busy = pending.has(key);
+        const key = `w:${w.id}`, st = featureState("workflows"), run = runs[w.id], busy = pending.has(key), wfLacks = gate.workflow();
         return (
           <div key={w.id} className="bx-test-wf" data-testid={`workflow-row:${w.id}`}>
             <div className="bx-test-row"><div><b>{w.name || w.id}</b><small>Chạy thử vẫn có thể tạo một bản ghi lượt chạy (workflow_run).</small></div>
               <span className="bx-row-tools">
-                <button type="button" className="smallButton" data-testid={`run-workflow:${w.id}`} disabled={st.state !== "AVAILABLE" || !!noEdit || !cap.canStartWorkflows || busy || locked.has(key)} aria-busy={busy}
-                  title={reason("workflows") ?? noEdit ?? (!cap.canStartWorkflows ? "Bạn chưa có quyền chạy workflow." : undefined)} onClick={() => void startWorkflow(w.id)}>{busy ? "Đang chạy…" : "Chạy thử"}</button>
+                <button type="button" className="smallButton" data-testid={`run-workflow:${w.id}`} disabled={st.state !== "AVAILABLE" || !!wfLacks || busy || locked.has(key)} aria-busy={busy}
+                  title={reason("workflows") ?? wfLacks ?? undefined} onClick={() => void startWorkflow(w.id)}>{busy ? "Đang chạy…" : "Chạy thử"}</button>
                 {run && busy && !isRunFinished(run) ? <button type="button" className="smallButton danger" data-testid={`cancel-workflow:${w.id}`} onClick={() => void cancel(w.id)}>Hủy lượt chạy</button> : null}</span></div>
             {results[key] ? <OutcomeView outcome={results[key]}/> : null}
             {run ? <p className="hint" data-testid={`run-status:${w.id}`}>Lượt chạy {run.runId} · {run.status}{run.steps?.length ? ` · ${run.steps.map((s) => `${s.stepId}:${s.status}`).join(", ")}` : ""}</p> : null}

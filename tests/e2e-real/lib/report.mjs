@@ -4,6 +4,9 @@ import { join } from "node:path";
 
 /** thrown by a flow when a prerequisite owned by someone else is missing; the reason is what the server actually answered / what is documented */
 export class Blocked extends Error { constructor(owner, reason, ref = "") { super(reason); this.owner = owner; this.ref = ref; } }
+/** thrown when the backend contradicts a contract that is DECIDED (not a missing prerequisite): the flow ends FAIL with the owner, never PASS and never a silent BLOCKED.
+ *  `expected`/`actual`/`impact` are written into the report as the CONTRACT MISMATCH block; the frontend must not work around it. */
+export class Mismatch extends Error { constructor(owner, { expected, actual, impact, workaround = "NONE" }, ref = "") { super(`CONTRACT MISMATCH — expected: ${expected}; actual: ${actual}; impact: ${impact}`); this.owner = owner; this.detail = { expected, actual, impact, workaround }; this.ref = ref; } }
 /** thrown when the operator did not provide an optional input; not a defect of the product */
 export class Skip extends Error {}
 
@@ -61,6 +64,7 @@ export function formatEvidence(meta, r) {
     `UI ASSERTION:${list(by("ui"))}`,
     `PERSISTENCE ASSERTION:${list(by("persistence"))}`,
     `RESTART/RECOVERY:${rec.length ? list(rec) : " not applicable to this flow"}`,
+    ...(r.mismatch ? [`CONTRACT MISMATCH: expected ${r.mismatch.expected} | actual ${r.mismatch.actual} | impact ${r.mismatch.impact} | frontend workaround ${r.mismatch.workaround}`] : []),
     `BLOCKER: ${r.status === "BLOCKED" || r.status === "FAIL" ? (r.reason ?? (r.failed?.length ? r.failed.map((f) => f.name).join("; ") : "")).replace(/\s+/g, " ").slice(0, 400) : "none"}`,
     `OWNER: ${r.owner ?? (r.status === "FAIL" ? "unassigned (triage)" : "n/a")}${r.ref ? ` · ref ${r.ref}` : ""}`,
   ].join("\n");
