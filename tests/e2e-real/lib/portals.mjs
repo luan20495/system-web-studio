@@ -34,3 +34,13 @@ export async function makeUser(fx, cfg, key, workspace, role, { activate = true 
   }
   return u;
 }
+
+/** the activation link the create-account dialog shows (read from the DOM, never from the API response) → the person opens it and chooses a password through the real activation page */
+export async function activateByLink(browser, link, password) {
+  const ctx = await browser.newContext(); const pg = await ctx.newPage(); pg.setDefaultTimeout(10_000);
+  await pg.goto(link, { waitUntil: "domcontentloaded" });
+  await pg.getByLabel("Mật khẩu", { exact: true }).fill(password); await pg.getByLabel("Nhập lại mật khẩu").fill(password);
+  await pg.getByRole("button", { name: "Lưu mật khẩu" }).click();
+  const ok = await pg.getByText("Đã đặt mật khẩu").waitFor({ timeout: 15_000 }).then(() => true).catch(() => false);
+  await ctx.close(); return ok;
+}
