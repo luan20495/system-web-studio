@@ -82,7 +82,7 @@ class AppDefinitionCodec(private val json: JsonMapper) {
         o.str("operationKey", q.operationKey)
         o.attach("params", params(q.params))
         if (q.maxRows != null) o.put("maxRows", q.maxRows)
-        if (q.public) o.put("public", true)
+        if (q.isPublic) o.put("public", true)
         return o
     }
 

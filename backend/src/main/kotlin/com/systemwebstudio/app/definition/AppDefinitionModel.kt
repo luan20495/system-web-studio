@@ -84,8 +84,11 @@ data class DataSourceDef(val id: String, val name: String? = null, val type: Str
 data class QueryDef(
     val id: String, val name: String? = null, val dataSourceRef: String, val mode: QueryMode = QueryMode.READ,
     val operationKey: String? = null, val params: List<ParamDef> = emptyList(), val maxRows: Int? = null,
-    /** D-C0-36: the author offers this READ query to anonymous visitors of the published site (PUBLIC_SITE). Default false = private. Only a declaration: what a RELEASE actually exposes is derived from its immutable version snapshot and gated by the project's public-data approval at request time. */
-    val public: Boolean = false
+    /**
+     * Wire key `public`. Listed in the public query allow-list of every release published from a version of this document (see [PublicQueries]):
+     * a visitor of the published site may run it, read-only, through the Public Runtime. Default false = deny. Only a READ query can be public.
+     */
+    val isPublic: Boolean = false
 )
 
 /** What to do with a value that cannot be mapped (C3 `MappingErrorPolicy`; default NULL_FIELD). */
@@ -315,4 +318,14 @@ data class AppDefinitionV2(
         }
         return out
     }
+}
+
+/**
+ * The public query allow-list of a document (V1 Public Runtime, D-C0-35): the local ids of the queries marked `public` that are READ queries, in
+ * document order. Pure function of the document, so it is exactly as immutable as the project version snapshot it is read from: a release names
+ * a version, a version never changes, hence the allow-list of a release can never change, a rollback restores the allow-list of the restored
+ * release by moving the pointer, and an edit of the draft cannot reach it.
+ */
+object PublicQueries {
+    fun of(def: AppDefinitionV2): List<String> = def.queries.filter { it.isPublic && it.mode == QueryMode.READ }.map { it.id }
 }

@@ -166,8 +166,8 @@ internal class AppDefinitionReader(private val out: MutableList<Violation>) {
         val params = params(n, "params", at, PARAM_NAME, "a parameter name (lowercase first letter, then letters, digits, _)")
         val maxRows = int(n, "maxRows", at, 1, AppDefinitionLimits.MAX_ROWS)
         val name = text(n, "name", at, AppDefinitionLimits.MAX_NAME)
-        val public = bool(n, "public", at) ?: false
-        return if (id == null || ds == null) null else QueryDef(id, name, ds, mode, key, params, maxRows, public)
+        val isPublic = bool(n, "public", at) ?: false
+        return if (id == null || ds == null) null else QueryDef(id, name, ds, mode, key, params, maxRows, isPublic)
     }
 
     private fun mapping(n: JsonNode, at: String): MappingDef? {

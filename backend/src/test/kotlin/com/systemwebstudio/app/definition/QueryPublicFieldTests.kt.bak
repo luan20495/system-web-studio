@@ -26,10 +26,10 @@ class QueryPublicFieldTests {
         val codec = AppDefinitionCodec(tools.jackson.databind.json.JsonMapper.builder().build())
         val doc = AppDefinitionTestSupport.doc(q(""","public":true"""))
         val def = codec.fromJson(doc)
-        assertThat(def.queries.single().isPublic).isTrue()
+        assertThat(def.queries.single().public).isTrue()
         assertThat(codec.toJson(def).get("queries").get(0).get("public").asBoolean()).isTrue()
         val plain = codec.fromJson(AppDefinitionTestSupport.doc(q("")))
-        assertThat(plain.queries.single().isPublic).isFalse()
+        assertThat(plain.queries.single().public).isFalse()
         assertThat(codec.toJson(plain).get("queries").get(0).has("public")).isFalse()
     }
 }
