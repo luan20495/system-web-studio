@@ -15,18 +15,24 @@ import tools.jackson.databind.node.ObjectNode
  * are held to the same ones.
  *
  * What is deliberately NOT done here: setting `schemaVersion` / `kind` (that would make a legacy document with unknown top-level keys
- * strict by a side effect), cascading deletes (removing a query that something still uses is reported by the validator with the path of
- * the dangling reference), and creating data sources (granted by the data platform, not by an edit).
+ * strict by a side effect), and cascading deletes (removing a query or a data source slot that something still uses is reported by the
+ * validator with the path of the dangling reference).
+ *
+ * Data sources are SLOT DECLARATIONS (B-C0-W-07): `{id, name, type, description}` and nothing else. An operation can never set, change or
+ * clear `sourceRef` (the registration of a tenant data source is the data platform's, via the Management API) nor carry a credential or any
+ * connection detail, and it can never re-type a slot that is already registered (that would silently change what the physical source must be).
  */
 class DefinitionPatch(private val json: JsonMapper) {
     private companion object {
         /** operation family → the collection key of the document */
         val COLLECTIONS = mapOf(
-            "VIEW_MODEL" to "viewModels", "QUERY" to "queries", "MAPPING" to "mappings", "DATA_BINDING" to "dataBindings",
+            "DATA_SOURCE" to "dataSources", "VIEW_MODEL" to "viewModels", "QUERY" to "queries", "MAPPING" to "mappings", "DATA_BINDING" to "dataBindings",
             "ACTION" to "actions", "WORKFLOW_REF" to "workflows", "PERMISSION_REF" to "permissions"
         )
         val SINGLETONS = mapOf("THEME" to "theme", "PUBLISH_CONFIG" to "publishConfig")
         val FORBIDDEN_KEYS = setOf("__proto__", "constructor", "prototype")
+        /** the only fields of a data source slot an operation may write */
+        val SLOT_FIELDS = setOf("id", "name", "type", "description")
     }
 
     private fun bad(msg: String): Nothing = throw ApiException.badRequest("INVALID_OPERATION", msg)
@@ -51,6 +57,14 @@ class DefinitionPatch(private val json: JsonMapper) {
         return d as ObjectNode
     }
 
+    /** a slot declaration carries no physical binding: refuse `sourceRef` by name (the clear answer) and anything else that is not a slot field */
+    private fun requireSlotFields(def: ObjectNode) {
+        def.propertyNames().forEach { field ->
+            if (field == "sourceRef") bad("a data source slot is a declaration only: sourceRef is granted by the data platform and cannot be set, changed or cleared by an edit")
+            if (field !in SLOT_FIELDS) bad("'$field' is not a field of a data source slot (allowed: ${SLOT_FIELDS.sorted().joinToString(", ")})")
+        }
+    }
+
     private fun collection(root: ObjectNode, key: String, create: Boolean): ArrayNode? {
         val existing = root.get(key)
         if (existing != null && existing !is ArrayNode) bad("'$key' is not an array")
@@ -65,6 +79,10 @@ class DefinitionPatch(private val json: JsonMapper) {
 
     private fun add(root: ObjectNode, key: String, op: SchemaOperation) {
         val def = definition(op)
+        if (key == "dataSources") {
+            requireSlotFields(def)
+            if (def.get("type")?.isString != true) bad("definition.type is required (the kind of source the slot expects, e.g. \"postgres\")")
+        }
         val id = def.get("id")?.takeIf { it.isString }?.asString() ?: bad("definition.id is required")
         if (op.definitionId != null && op.definitionId != id) bad("definitionId does not match definition.id")
         val items = collection(root, key, create = true)!!
@@ -75,10 +93,13 @@ class DefinitionPatch(private val json: JsonMapper) {
     private fun update(root: ObjectNode, key: String, op: SchemaOperation) {
         val id = op.definitionId ?: bad("definitionId is required")
         val patch = definition(op)
+        if (key == "dataSources") requireSlotFields(patch)
         val items = collection(root, key, create = false)
         val i = indexOfId(items, id)
         if (i < 0) bad("'$id' not found in $key")
         val target = items!!.get(i) as ObjectNode
+        if (key == "dataSources" && target.get("sourceRef") != null && patch.has("type") && patch.get("type") != target.get("type"))
+            bad("the type of a slot that is already registered with a data source cannot change")
         patch.propertyNames().toList().forEach { field ->
             val value = patch.get(field)
             if (field == "id") { if (!(value.isString && value.asString() == id)) bad("the id of a definition is immutable"); return@forEach }

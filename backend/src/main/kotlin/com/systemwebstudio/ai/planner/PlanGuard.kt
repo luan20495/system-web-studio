@@ -41,7 +41,7 @@ class PlanGuard(private val toOperation: (JsonNode) -> SchemaOperation, private 
             if (node !is ObjectNode) throw BadPlanOutput("operations[$i] is not an object")
             node.propertyNames().firstOrNull { it !in OP_FIELDS }?.let { throw BadPlanOutput("operations[$i] has an unknown field '$it'") }
             val type = node.get("type")?.takeIf { it.isString }?.asString() ?: throw BadPlanOutput("operations[$i] has no type")
-            if (type !in OperationTypes.allV2) throw BadPlanOutput("operations[$i] has an unknown type '$type'")
+            if (type !in OperationTypes.planner) throw BadPlanOutput("operations[$i] has an unknown type '$type'")
             try { toOperation(node) } catch (e: Exception) { throw BadPlanOutput("operations[$i] is not understood") }
         }
         val message = root.get("message")?.takeIf { it.isString }?.asString()?.trim()?.take(500).orEmpty()
@@ -60,7 +60,7 @@ class PlanGuard(private val toOperation: (JsonNode) -> SchemaOperation, private 
         val out = ArrayList<PlanViolation>()
         ops.forEachIndexed { i, op ->
             val at = "operations[$i]"
-            if (op.type !in OperationTypes.allV2) out += PlanViolation(at, "operation type '${op.type}' is not allowed")
+            if (op.type !in OperationTypes.planner) out += PlanViolation(at, "operation type '${op.type}' is not allowed")
             if (op.type in NEVER) out += PlanViolation(at, NEVER_WHY.getValue(op.type))
             if (op.type == "UPDATE_ACTION" && op.definition?.has("permissionRef") == true)
                 out += PlanViolation("$at.definition.permissionRef", "the permission of an action is not changed by AI")

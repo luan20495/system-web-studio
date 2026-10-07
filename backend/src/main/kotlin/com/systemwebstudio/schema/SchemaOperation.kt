@@ -39,9 +39,11 @@ object OperationTypes {
 
     /**
      * AppDefinition V2 (D-C2-07): one ADD / UPDATE / REMOVE triple per typed collection, plus UPDATE of the two singletons.
-     * Data sources are deliberately NOT here: a source is granted by the data platform, never created by an edit.
+     * Data sources (B-C0-W-07) are SLOT DECLARATIONS only: `{id, name, type, description}`. A slot never carries `sourceRef`, a credential or any
+     * connection detail: which tenant data source fills a slot is granted by the data platform (Management API `data-bindings`), never by an edit.
      */
     val definitions = setOf(
+        "ADD_DATA_SOURCE", "UPDATE_DATA_SOURCE", "REMOVE_DATA_SOURCE",
         "ADD_VIEW_MODEL", "UPDATE_VIEW_MODEL", "REMOVE_VIEW_MODEL",
         "ADD_QUERY", "UPDATE_QUERY", "REMOVE_QUERY",
         "ADD_MAPPING", "UPDATE_MAPPING", "REMOVE_MAPPING",
@@ -52,6 +54,12 @@ object OperationTypes {
         "UPDATE_THEME", "UPDATE_PUBLISH_CONFIG"
     )
 
+    /** the data source SLOT operations: an author's decision, never an AI proposal (the planner keeps its pre-B-C0-W-07 vocabulary) */
+    val dataSourceSlots = setOf("ADD_DATA_SOURCE", "UPDATE_DATA_SOURCE", "REMOVE_DATA_SOURCE")
+
     /** everything the patch engine and PATCH /schema accept */
     val allV2 = all + definitions
+
+    /** what the AI planner may even name: everything except the data source slot operations */
+    val planner = allV2 - dataSourceSlots
 }

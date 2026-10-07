@@ -180,12 +180,12 @@ class DefinitionOperationsTests {
     @Test
     fun `the operation vocabulary keeps the legacy set and adds the typed V2 set next to it`() {
         assertThat(OperationTypes.all.size).isEqualTo(12)
-        assertThat(OperationTypes.definitions).hasSize(23)
-        assertThat(OperationTypes.definitions).contains("UPDATE_PERMISSION_REF", "ADD_WORKFLOW_REF", "REMOVE_DATA_BINDING")
+        assertThat(OperationTypes.definitions).hasSize(26)                                  // 23 + the three data source SLOT operations (B-C0-W-07)
+        assertThat(OperationTypes.definitions).contains("UPDATE_PERMISSION_REF", "ADD_WORKFLOW_REF", "REMOVE_DATA_BINDING", "ADD_DATA_SOURCE", "UPDATE_DATA_SOURCE", "REMOVE_DATA_SOURCE")
         assertThat(OperationTypes.all.intersect(OperationTypes.definitions)).isEmpty()
-        assertThat(OperationTypes.allV2.size).isEqualTo(35)
-        // no operation can create or change a data source (granted by the data platform) or a credential
-        assertThat(OperationTypes.definitions.none { it.contains("DATA_SOURCE") || it.contains("CREDENTIAL") || it.contains("SECRET") }).isTrue()
+        assertThat(OperationTypes.allV2.size).isEqualTo(38)
+        // an operation declares a data source SLOT (DataSourceSlotOperationsTests); none can create or change a credential or a secret, or bind a slot to a source
+        assertThat(OperationTypes.definitions.none { it.contains("CREDENTIAL") || it.contains("SECRET") }).isTrue()
     }
 
     @Test
