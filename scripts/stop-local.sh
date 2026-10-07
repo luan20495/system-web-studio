@@ -3,6 +3,7 @@
 . "$(dirname "$0")/_env.sh"
 # stop the watchdog and backup daemon first: an intentional stop must not be "repaired" by the watchdog
 for f in .run/watchdog-local.pid .run/backup-daemon-local.pid; do [ -f "$f" ] && { kill "$(cat "$f")" 2>/dev/null || true; rm -f "$f"; }; done
+[ -d .run/portals ] && "$(dirname "$0")/portals.sh" down || true      # V1 portals (started only by PORTALS=1)
 for n in frontend backend render runner; do
   if [ -f ".run/$n.pid" ]; then kill "$(cat ".run/$n.pid")" 2>/dev/null || true; rm -f ".run/$n.pid"; fi
 done
@@ -17,5 +18,5 @@ lsof -ti tcp:"${RENDER_PORT:-18095}" -sTCP:LISTEN | xargs kill 2>/dev/null || tr
 for port in 8080 "$FRONTEND_PORT"; do
   for _ in $(seq 1 60); do lsof -ti tcp:"$port" -sTCP:LISTEN >/dev/null 2>&1 || break; sleep 1; done
 done
-[ "${1:-}" = "--infra" ] && docker compose stop
+if [ "${1:-}" = "--infra" ]; then docker compose stop; "$(dirname "$0")/data-target.sh" down 2>/dev/null || true; fi
 echo stopped

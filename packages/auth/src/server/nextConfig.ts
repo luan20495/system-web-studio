@@ -11,7 +11,12 @@ export function createNextConfig(options: { http: boolean; root?: string }): Nex
     throw new Error("STUDIO_BASE_PATH must be an absolute URL path without query or fragment.");
   }
   const httpMode = options.http;
-  const apiTarget = (process.env.API_PROXY_TARGET ?? "http://127.0.0.1:8080").replace(/\/+$/, "");
+  // D-C0-34: the backend address is stated, never inherited. `next dev` may fall back to the local API; a production build / start (what every deployment and
+  // scripts/portals.sh run) needs API_PROXY_TARGET, or HBL_ENV=local to say "this is a local machine".
+  const stated = process.env.API_PROXY_TARGET;
+  if (httpMode && !stated && process.env.NODE_ENV === "production" && process.env.HBL_ENV !== "local")
+    throw new Error("API_PROXY_TARGET is required for a production build / start (set it, or HBL_ENV=local on a development machine).");
+  const apiTarget = (stated ?? "http://127.0.0.1:8080").replace(/\/+$/, "");
 
   return {
     // lets a second dev server (http mode) run next to an existing one without sharing .next
