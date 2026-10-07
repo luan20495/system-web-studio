@@ -79,4 +79,16 @@ class SiteRuntimeConfigTests : ScopeIntegrationTestBase() {
         assertThat(env.getProperty("app.sites.data-api-base")).isEqualTo("https://data.staging.example.test/api")
         assertThat(SiteService.resolveDataApiBase(env.getProperty("app.sites.data-api-base") as String)).isEqualTo("https://data.staging.example.test/api")
     }
+
+    @Test
+    fun `a configured apiBase on another origin than the sites origin is detected - it would leave every data page NOT_READY`() {
+        assertThat(SiteService.sameOrigin("https://sites.example.test/{slug}/_data", "https://sites.example.test")).isTrue()
+        assertThat(SiteService.sameOrigin("http://127.0.0.1:18088/{slug}/_data", "http://127.0.0.1:18088/")).isTrue()
+        assertThat(SiteService.sameOrigin("https://{slug}.example.test/_data", "https://acme.example.test")).describedAs("a per-site host").isTrue()
+        assertThat(SiteService.sameOrigin("http://localhost:18088/{slug}/_data", "http://127.0.0.1:18088")).describedAs("localhost is not 127.0.0.1").isFalse()
+        assertThat(SiteService.sameOrigin("https://data.example.test/{slug}/_data", "https://sites.example.test")).isFalse()
+        assertThat(SiteService.sameOrigin("http://sites.example.test/{slug}/_data", "https://sites.example.test")).describedAs("scheme").isFalse()
+        assertThat(SiteService.sameOrigin("https://sites.example.test:8443/{slug}/_data", "https://sites.example.test")).describedAs("port").isFalse()
+        assertThat(SiteService.sameOrigin("not a url", "https://sites.example.test")).isFalse()
+    }
 }

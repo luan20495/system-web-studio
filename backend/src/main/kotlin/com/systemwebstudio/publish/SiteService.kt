@@ -47,6 +47,11 @@ class SiteService(
 ) {
     private val random = SecureRandom()
     private val dataApiBase: String? = resolveDataApiBase(dataApiBaseRaw)
+    init {
+        // a page's runtime only calls its OWN origin: an apiBase on another origin leaves every data-bound page NOT_READY, so say so once at startup
+        if (dataApiBase != null && !sameOrigin(dataApiBase, sitesOrigin))
+            org.slf4j.LoggerFactory.getLogger(SiteService::class.java).warn("app.sites.data-api-base is not on the sites origin ({}): published pages only call their own origin, so their data panels will stay NOT_READY", sitesOrigin)
+    }
 
     /** the browser-facing Data Runtime base for [slug]: the configured value with `{slug}` replaced by the site's slug; null when none is configured (or the value needs a slug and there is none) */
     fun dataApiBaseFor(slug: String?): String? {
@@ -131,6 +136,18 @@ class SiteService(
             return v
         }
         const val SLUG_TOKEN = "{slug}"
+
+        /** scheme, host and port of a configured base (the {slug} token read as a host label) against the sites origin */
+        fun sameOrigin(base: String, origin: String): Boolean {
+            fun parts(v: String): Triple<String, String, Int>? {
+                val u = runCatching { java.net.URI(v.replace(SLUG_TOKEN, "x-sample").trim()) }.getOrNull() ?: return null
+                val scheme = u.scheme?.lowercase() ?: return null
+                val host = u.host?.lowercase() ?: return null
+                return Triple(scheme, host.replace("x-sample", "*"), if (u.port != -1) u.port else if (scheme == "https") 443 else 80)
+            }
+            val a = parts(base) ?: return false; val b = parts(origin) ?: return false
+            return a.first == b.first && a.third == b.third && (a.second == b.second || '*' in a.second)
+        }
     }
 
     fun preview(token: String): Pair<String, Map<String, ManifestFile>>? {
