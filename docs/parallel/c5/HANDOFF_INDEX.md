@@ -24,6 +24,8 @@
 | H-C3-04 Management API live-verified (23 api + 9 ui checks, 0 failed) | C3 | info | - |
 | H-C0-07 a local stack cannot reach any data source (public-address-only policy, no dev switch) | C0 | P2 | E2E-07, 08, 09 |
 | H-C0-08 portal URLs / API mode are build-time, loopback fallback for API_PROXY_TARGET (C0's H3 for C5) | C5 (C0 asked) | P3 | - |
+| H-C0-09 the C2 publish contract (`fix/c2-v3 8d40218`) is not in integration/v2 (merge conflicts with the imported slice) | C0 | P1 | E2E-P01…P09 on integration |
+| H-C2-06 release contract consumed and verified live; UNPUBLISH operation / ROLLING_BACK only in the harness | C2 | info | - |
 | H-C2-05 ETag present but If-None-Match answers 200 | C2 | P3 | - |
 | H-C4-02 NOTIFY 501 `ActionNotifyPort` not wired; AMQP adapter only on `agent/c4-workflow` | C4 | P2 | E2E-14 |
 

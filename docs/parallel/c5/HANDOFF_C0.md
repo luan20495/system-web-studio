@@ -121,3 +121,7 @@ Verified: `integration/v2 @ 3333aa7` (no merge, `docs/parallel/c5/e2e-stack.sh`)
 ## H-C0-08 — C0's own handoff item H3 for C5 (acknowledged, not done in this batch)
 
 Portal URLs and the API mode are `NEXT_PUBLIC_*` build-time values and `nextConfig.ts` falls back to `http://127.0.0.1:8080` for `API_PROXY_TARGET`: one build per environment. C5 owns the fix (runtime config, no loopback fallback in the shipped build) but it is a feature, not part of the stability batch. Listed in NEXT.
+
+## H-C0-09 — the C2 publish contract is not in integration/v2 (2026-10-07)
+
+`fix/c2-v3 @ 8d40218` (publish/rollback/unpublish contract, V30 lease and fencing, `PublishApiContractTests`) does not merge cleanly into `integration/v2 @ ef0d890`: add/add conflicts in `ReleaseService.kt`, `ReleaseCasTests.kt`, `SiteRuntimeConfigTests.kt`, `BATCH2_HANDOFF.md`, content conflicts in `SiteService.kt`, `BLOCKERS.md`, `BOARD.md` (C0 imported an older C2 slice). C5 verified the Studio against a backend built from `8d40218` itself (P01–P09 PASS ×3). Please integrate it (C0's decision which side wins), then C6 reruns `E2E_BASE_REF=integration/v2 docs/parallel/c5/e2e-stack.sh e2e E2E-P01,…,E2E-P09`. The stack also needs `RATE_LIMIT_PUBLISH_MAX` raised (default 10/min/user) for a suite that publishes a lot.

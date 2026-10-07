@@ -48,6 +48,7 @@ Build and start `integration/v2` (JDK 21, PostgreSQL, Redis, MinIO; Docker for T
 | `app.tenancy.system-admin-business-access=false` (default) | all | keep |
 | `SECRETS_MASTER_KEY` (base64, 32 bytes) | E2E-06 (credentials) | without it `POST …/data-sources` with a credential answers 500 `SECRETS_UNAVAILABLE` |
 | `DEPLOY_PROVIDER=static` + `SITES_ORIGIN`, `RENDER_URL`, `RENDER_TOKEN` + a running render worker and sites gateway | E2E-13 | the default `mock` provider only produces a demo URL → BLOCKED. Gateway: `infra/sites-gateway/default.conf.template` with `API_UPSTREAM` = the API |
+| the C2 publish contract (`fix/c2-v3 8d40218`, not yet in `integration/v2`) and `RATE_LIMIT_PUBLISH_MAX` (default 10/min/user) raised | E2E-P01…P09 | `E2E_BASE_REF=8d40218 docs/parallel/c5/e2e-stack.sh up`; the script sets `RATE_LIMIT_PUBLISH_MAX=500`. Publish is rate limited per user: the helpers wait `Retry-After` once on 429 |
 | `app.workflow.run-store=jdbc` (default on a build with V29) | E2E-12 | `memory` or a build without V29 loses runs on restart |
 | `E2E_RESTART_BACKEND_CMD` | E2E-12 | must kill ONLY the API process (never `kill` by name) and start it again; the suite waits up to 150 s |
 
@@ -80,6 +81,8 @@ cd apps/studio && npx next start -H 127.0.0.1 -p 3003               # setting AP
 | `E2E_RESTART_BACKEND_CMD`, `E2E_DURABLE_RUN_STORES=1` | no | E2E-12 only: command that restarts the backend (twice per run); assert durable stores exist (V29). E2E-12 publishes the project and starts a **LIVE** WAIT-only run: the engine simulates every step in TEST mode, so a TEST run is already terminal before any restart |
 | `E2E_STOP_BACKEND_CMD`, `E2E_START_BACKEND_CMD` | no | E2E-S6, S7: stop / start ONLY the API (the start hook must return once the process is launched; the flows wait for the API) |
 | `E2E_PAUSE_BACKEND_CMD`, `E2E_RESUME_BACKEND_CMD` | no | E2E-S9: `SIGSTOP` / `SIGCONT` of ONLY the API process (a hang, not an outage) |
+| `E2E_PAUSE_STORE_CMD`, `E2E_RESUME_STORE_CMD` | no | E2E-P04, P05: pause / unpause ONLY the artifact store (MinIO); the flow pauses it when a publish reaches DEPLOYING or during a rollback |
+| `E2E_PAUSE_RENDER_CMD`, `E2E_RESUME_RENDER_CMD` | no | E2E-P08: SIGSTOP / SIGCONT ONLY the render worker |
 | `E2E_SHUFFLE_SEED=<n>` | no | shuffles the order of the selected flows (deterministic per seed): exposes order dependencies and state leaks between flows |
 | `E2E_BACKEND_URL`, `E2E_BACKEND_HEAD` | no | informational: written into every evidence block (the suite only talks to the Studio origin) |
 | `E2E_STOP_RABBIT_CMD`, `E2E_START_RABBIT_CMD`, `E2E_RABBITMQ_WIRED=1` | no | E2E-14 only |

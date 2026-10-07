@@ -62,3 +62,8 @@ The first text said a statically published site "does not serve `/runtime-config
 ## H-C2-05 — published page: ETag present, conditional GET not honoured (P3)
 
 `GET <site>/<slug>/` answers `200` with `Cache-Control: public, no-cache, no-transform` and an `ETag`, but a repeat request with `If-None-Match: <that ETag>` answers `200` again, not `304`. Revalidation therefore re-downloads the page. Not a contract promise (so not a failing check); recorded as a fact in every E2E-13 run (`fixtureNotes.publicPageCache`).
+
+## H-C2-06 — release contract consumed by Studio (2026-10-07): what C5 verified, and three notes
+
+Verified live against `fix/c2-v3 @ 8d40218` (E2E-P01…P09 ×3, see `RELEASE_CONTRACT.md`): exact publish/rollback/unpublish requests; 202/200 shapes; `Idempotent-Replay`; 409 `SCOPE_BUSY` with `Retry-After: 5` and the holder; `ROLLBACK_STALE` with details; `IDEMPOTENCY_KEY_REUSED` for publish, rollback and unpublish; `operation` PUBLISH and ROLLBACK observed; `STALE_PUBLISH` as a FAILED deployment; unpublish idempotent when offline; rolled-away release `ROLLED_BACK`; pointerVersion +1 per pointer change.
+Notes (no request unless C2 disagrees): (1) `operation = UNPUBLISH` was never observable (the scope is held for an instant), so the Studio busy state for UNPUBLISH is covered by the browser harness only; (2) `ROLLING_BACK` cannot be produced on a real stack on demand, harness only; (3) the sites-gateway ETag/`If-None-Match` fact (H-C2-05) is unchanged.
