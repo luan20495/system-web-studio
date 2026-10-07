@@ -80,7 +80,6 @@ cd apps/studio && npx next start -H 127.0.0.1 -p 3003               # setting AP
 | `E2E_RESTART_BACKEND_CMD`, `E2E_DURABLE_RUN_STORES=1` | no | E2E-12 only: command that restarts the backend (twice per run); assert durable stores exist (V29). E2E-12 publishes the project and starts a **LIVE** WAIT-only run: the engine simulates every step in TEST mode, so a TEST run is already terminal before any restart |
 | `E2E_STOP_BACKEND_CMD`, `E2E_START_BACKEND_CMD` | no | E2E-S6, S7: stop / start ONLY the API (the start hook must return once the process is launched; the flows wait for the API) |
 | `E2E_PAUSE_BACKEND_CMD`, `E2E_RESUME_BACKEND_CMD` | no | E2E-S9: `SIGSTOP` / `SIGCONT` of ONLY the API process (a hang, not an outage) |
-| `E2E_VIEWER_POLICY` | no | `app-view` or `no-studio`, **only once C1 has decided** (H-C1-03). Unset = undecided: E2E-04/05 end BLOCKED(C1). `no-studio`: a refused viewer is the expected, passing behaviour. `app-view`: a refused viewer is a failed check |
 | `E2E_SHUFFLE_SEED=<n>` | no | shuffles the order of the selected flows (deterministic per seed): exposes order dependencies and state leaks between flows |
 | `E2E_BACKEND_URL`, `E2E_BACKEND_HEAD` | no | informational: written into every evidence block (the suite only talks to the Studio origin) |
 | `E2E_STOP_RABBIT_CMD`, `E2E_START_RABBIT_CMD`, `E2E_RABBITMQ_WIRED=1` | no | E2E-14 only |

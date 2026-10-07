@@ -17,7 +17,9 @@
 | H-C3-03 no approved-query / mutation management endpoint | C3 | P1 | E2E-06*, 07, 09 |
 | H-C4-01 no RabbitMQ / in-memory run stores (B-C4-05/06) | C4 | P1 | E2E-12 (now PASS on a V29 stack), 14 |
 | H-C0-06 the Mac run needed V29 + C3 merged onto integration/v2 (conflict-free); env notes | C0 | P1 | - |
-| H-C1-03 workspace VIEWER holds `permissions: []` → Studio gate refuses (decision) | C1 | P2 | E2E-04, 05 (viewer part) |
+| H-C1-03 VIEWER policy (decision taken: APP_VIEW, read-only) — RESOLVED | C1 | - | - |
+| H-C1-04 CONTRACT MISMATCH: `/auth/me` carries no project-membership permissions (VIEWER/EDITOR/PUBLISHER refused at the portal) | C1/C0 | P1 | E2E-04 (case A), E2E-05 (UI half) |
+| H-C1-05 no resolved capability for create-project / list-workspace-members (role checks removed) | C1 | P3 | - |
 | H-C2-04 (corrected) two runtime-config contracts: `__factory/config.json {apiBase}` (C0, code apps only) vs `/runtime-config.json {DATA_API_BASE_URL}` (C2 proposal, C5 loader); neither served for page-schema sites | C2/C0 | P1 | E2E-08, 09 |
 | H-C3-04 Management API live-verified (23 api + 9 ui checks, 0 failed) | C3 | info | - |
 | H-C0-07 a local stack cannot reach any data source (public-address-only policy, no dev switch) | C0 | P2 | E2E-07, 08, 09 |

@@ -55,3 +55,22 @@ From C5 (Studio/Frontend), baseline `integration/v2 @ f894cc6`. C5 changed nothi
 - **Suggested contract/fix:** C1 decides: (a) a VIEWER role carries `APP_VIEW` (then the gate opens Studio read-only with no C5 change), or (b) viewers are intentionally not Studio users (then project VIEWER membership is meaningless for Studio and C5 keeps the gate; the E2E-04/05 viewer part becomes "refused", which C5 will then assert as PASS).
 - **C5 workaround:** none; the gate is not loosened without a contract.
 - **Blocked test IDs:** E2E-04, E2E-05 (viewer part only)
+
+## H-C1-03 — RESOLVED 2026-10-07
+
+C1 decided: a VIEWER holds APP_VIEW and Studio opens read-only; `/auth/no-access` is right only without APP_VIEW. C5 implemented the contract (`PERMISSION_CONTRACT.md`) and removed the `E2E_VIEWER_POLICY` switch. The decision is not delivered by the backend yet: see H-C1-04.
+
+## H-C1-04 — CONTRACT MISMATCH: `/auth/me` does not carry project-membership permissions
+
+- **Owner:** C1 / C0 · **Severity:** P1 (everyone except WORKSPACE_ADMIN is locked out of Studio)
+- **Expected:** a VIEWER's resolved permissions include APP_VIEW, so the Studio portal opens read-only.
+- **Actual (live, `integration/v2 @ 96110d3`):** `GET /auth/me` → `permissions: []` and `workspaces[].permissions: []` for a workspace VIEWER who is a project VIEWER; the same for project EDITOR and PUBLISHER members. `GET /workspaces/{w}/projects/{p}` → `permissions: ["APP_USE","PROJECT_READ"]` (VIEWER), `[…"PROJECT_EDIT"…,"PROJECT_READ",…]` (EDITOR), `["APP_USE","PROJECT_PUBLISH","PROJECT_READ"]` (PUBLISHER). `PermissionMatrix.workspaceRoles` gives workspace VIEWER / EDITOR / PUBLISHER an empty set; project grants live only in `projectRoles`.
+- **Impact:** the portal gate (reads `/auth/me`) redirects the VIEWER to `/auth/no-access`; E2E-04 case A and the UI half of E2E-05 cannot pass; the project payload also still returns storage names (`PROJECT_READ`) next to canonical ones although `/auth/me` promises canonical codes only.
+- **Frontend workaround:** NONE. APP_VIEW is not injected from a role name and the gate is not loosened.
+- **Suggested contract/fix (C1/C0 decide):** expose a resolved field that includes project-scoped grants (e.g. per-project canonical permissions in the project list / `/auth/me`), and return canonical codes on the project payload. C5 consumes whichever field is named.
+- **Evidence:** `E2E-04`/`E2E-05` evidence blocks ("CONTRACT MISMATCH"), `fixtureNotes.viewerResolved`, `docs/parallel/c5/PERMISSION_CONTRACT.md` §4.
+- **Rerun:** `docs/parallel/c5/e2e-stack.sh e2e E2E-04,E2E-05` — expected PASS once the backend delivers it (no test change needed).
+
+## H-C1-05 — no resolved capability for "create project" and "list workspace members"
+
+`PROJECT_CREATE` and `MEMBER_MANAGE` are server-internal storage constants that `/auth/me` does not expose (`canonicalCodesOf` filters them), so the UI had hidden the create form and the workspace-member table by ROLE NAME. That is forbidden, so the role checks are removed: the form is offered and the server answers 403 (plain message); the workspace-member list is requested and a 403/404 hides the section. Request: an exposed canonical capability (or a documented rule) for these two, so the UI can disable instead of letting the person try.
