@@ -99,8 +99,8 @@ class TenantService(
         val args = mutableListOf<Any>(tenantId, tenantId, tenantId)
         val search = if (pattern == null) "" else {
             args += pattern; args += pattern; args += pattern
-            """ AND (lower(u.username) LIKE ? ESCAPE '\\' OR lower(coalesce(u.display_name,'')) LIKE ? ESCAPE '\\'
-                      OR lower(coalesce(u.email,'')) LIKE ? ESCAPE '\\')"""
+            """ AND (lower(u.username) LIKE ? ESCAPE '\' OR lower(coalesce(u.display_name,'')) LIKE ? ESCAPE '\'
+                      OR lower(coalesce(u.email,'')) LIKE ? ESCAPE '\')"""
         }
         return jdbc.query(
             """SELECT DISTINCT u.id, u.username, u.display_name, u.email
