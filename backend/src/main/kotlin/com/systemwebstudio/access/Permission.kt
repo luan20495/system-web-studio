@@ -41,7 +41,7 @@ object PermissionCodes {
     private val storageOfCanonical: Map<String, Permission> =
         CANONICAL.associateWith { code -> canonicalOfStorage.entries.firstOrNull { it.value == code }?.key ?: Permission.valueOf(code) }
 
-    /** canonical code of a storage constant; constants without a canonical code (PROJECT_SETTINGS, PROJECT_DELETE, PROJECT_CREATE, MEMBER_MANAGE, AUDIT_READ, REGISTRY_WRITE) keep their name */
+    /** canonical code of a storage constant; constants without a canonical code (PROJECT_SETTINGS, PROJECT_DELETE, PROJECT_CREATE, AUDIT_READ, REGISTRY_WRITE) keep their name */
     fun codeOf(p: Permission): String = canonicalOfStorage[p] ?: p.name
 
     /**
