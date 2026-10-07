@@ -90,7 +90,11 @@ class DeploymentProcessor(
         val state = RunState()
         while (current != DeploymentStatus.RUNNING) {
             pause()
-            when (val result = step(d, current, state)) {
+            val startedAt = System.nanoTime()
+            val result = step(d, current, state)
+            // identifiers and the outcome only: no payloads, no credentials
+            log.info("deployment {} project={} step={} outcome={} durationMs={}", id, d.projectId, current, result.javaClass.simpleName, (System.nanoTime() - startedAt) / 1_000_000)
+            when (result) {
                 is StepResult.Wait, is StepResult.Lost -> return
                 is StepResult.Fail -> {
                     val attemptsMade = deployments.retries(d.id, current) + 1

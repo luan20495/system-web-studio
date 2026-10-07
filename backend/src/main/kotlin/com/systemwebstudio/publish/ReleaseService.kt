@@ -187,7 +187,8 @@ class ReleaseService(
         val scopeKey = "site-op:$kind:$projectId:$userId:$key"
         val id = UUID.nameUUIDFromBytes(scopeKey.toByteArray())
         val hash = java.security.MessageDigest.getInstance("SHA-256").digest(body.toByteArray()).joinToString("") { "%02x".format(it) }
-        jdbc.update("INSERT INTO idempotency_keys (scope_key, request_hash, resource_type, resource_id) VALUES (?,?,'SITE_OPERATION',?) ON CONFLICT DO NOTHING", scopeKey, hash, id)
+        val fresh = jdbc.update("INSERT INTO idempotency_keys (scope_key, request_hash, resource_type, resource_id) VALUES (?,?,'SITE_OPERATION',?) ON CONFLICT DO NOTHING", scopeKey, hash, id)
+        log.info("site operation {} app={} op={} requestHash={} {}", kind, projectId, id, hash.take(12), if (fresh == 1) "new" else "replay")      // the hash, never the key
         val stored = jdbc.queryForObject("SELECT request_hash FROM idempotency_keys WHERE scope_key = ?", String::class.java, scopeKey)
         if (stored != hash) throw com.systemwebstudio.common.ApiException.conflict("IDEMPOTENCY_KEY_REUSED", "This Idempotency-Key was already used with a different request")
         return id
@@ -206,6 +207,8 @@ class ReleaseService(
             is ScopeAcquisition.Acquired -> try { body(a.lease) } finally { a.lease.release() }
         }
     }
+
+    private val log = org.slf4j.LoggerFactory.getLogger(javaClass)
 
     private companion object { val KEY = Regex("^[A-Za-z0-9_.:-]{8,120}$") }
 }

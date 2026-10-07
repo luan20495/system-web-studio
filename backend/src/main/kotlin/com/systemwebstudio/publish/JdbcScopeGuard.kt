@@ -47,12 +47,16 @@ class JdbcScopeGuard(
             jdbc.query(ACQUIRE, { rs, _ -> Taken(rs.getLong(1), rs.getObject(2, UUID::class.java), rs.getLong(3), rs.getObject(4, UUID::class.java), rs.getLong(5), rs.getLong(6), rs.getBoolean(7)) },
                 request.operationId, request.operation.name, request.deploymentId, request.operationId, request.seq, worker, request.operationId, secs(leaseTtl),
                 project, request.scope.tenantId, request.operationId, request.allowReentry, request.operationId, secs(leaseMax)).firstOrNull()
-        } ?: return ScopeAcquisition.Busy(holder(project))
+        } ?: return holder(project).let { h ->
+            log.info("release scope busy app={} op={} kind={} heldBy={} heldByOp={}", project, request.operationId, request.operation, h?.kind, h?.operationId)
+            ScopeAcquisition.Busy(h)
+        }
         val fence = LeaseFence(project, request.operationId, taken.fence, taken.seq, taken.pointerVersion)
         val order = ScopeOrdering.of(taken.seq, request.operationId, taken.activeSeq, taken.activeOperationId)
         if (order == ScopeOrder.STALE || order == ScopeOrder.CONFLICT) {
             // we took the scope only to learn that this intent is overtaken: give it back at once
             fence.releaseNow()
+            log.info("release scope refused app={} op={} kind={} seq={} activeSeq={} order={}", project, request.operationId, request.operation, taken.seq, taken.activeSeq, order)
             val why = if (order == ScopeOrder.STALE) "a newer release operation already moved the active release" else "another operation holds the same activation number"
             return ScopeAcquisition.Stale(why, taken.activeSeq, taken.activeDeployment)
         }
@@ -60,6 +64,8 @@ class JdbcScopeGuard(
             taken.activeDeployment, taken.activeSeq, taken.activeOperationId, resumed = taken.resumed || order == ScopeOrder.RESUME, fence = fence, onRelease = { fence.stopAndRelease() })
         fence.lease = lease
         fence.startHeartbeat()
+        log.info("release scope acquired app={} op={} kind={} seq={} fence={} pointerVersion={} active={} resumed={}", project, request.operationId, request.operation, taken.seq,
+            taken.fence, taken.pointerVersion, taken.activeDeployment, lease.resumed)
         return ScopeAcquisition.Acquired(lease)
     }
 
@@ -94,7 +100,7 @@ class JdbcScopeGuard(
 
         fun stopAndRelease() { stopped.set(true); beat?.cancel(false); releaseNow() }
 
-        fun releaseNow() { runCatching { tx.execute { jdbc.update(RELEASE, project, operationId, token) } }.onFailure { log.warn("Could not release the scope of {}: {}", project, it.message) } }
+        fun releaseNow() { runCatching { tx.execute { jdbc.update(RELEASE, project, operationId, token) }.also { n -> log.debug("release scope released app={} op={} fence={} released={}", project, operationId, token, n) } }.onFailure { log.warn("Could not release the scope of {}: {}", project, it.message) } }
 
         override fun commit(deploymentId: UUID?, inSameTransaction: (() -> Unit)?): Boolean {
             if (out) return false
@@ -106,6 +112,8 @@ class JdbcScopeGuard(
             } ?: false
             if (ok) version += 1 else out = true
             lease?.pointerVersion = version
+            if (ok) log.info("active release moved app={} op={} to={} pointerVersion={} fence={}", project, operationId, deploymentId, version, token)
+            else log.warn("active release NOT moved (fenced out) app={} op={} wanted={} expectedVersion={} fence={}", project, operationId, deploymentId, version, token)
             return ok
         }
 
