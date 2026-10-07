@@ -58,18 +58,12 @@ export async function run({ cfg, fx, browser, check }) {
   const stranger = await api.put(`/admin/tenants/${t.id}/members/${lonely.id}`, { role: "MEMBER" });
   check.ok("even a SYSTEM_ADMIN cannot add an unrelated account to a tenant (404 USER_NOT_FOUND): no global directory", stranger.status === 404 && stranger.body?.code === "USER_NOT_FOUND", `status=${stranger.status} ${stranger.body?.code}`, "http");
 
-  // ---- a SYSTEM_ADMIN manages the members of any workspace from the workspace page (same member API, same rules) ---------------------------------------------------
+  // ---- D-C1-13: a SYSTEM_ADMIN holds NO member power in a workspace: the workspace page explains it and offers no member form -------------------------------------
   await openPortal(page, cfg, "platform", `/workspaces/${fx.workspaces.A}`);
-  await page.getByTestId("ws-add-who").waitFor({ timeout: 10_000 });
-  await page.getByTestId("ws-add-who").fill(fx.users.adminB.username); await page.getByTestId("ws-add-role").selectOption("VIEWER");
-  await page.getByRole("button", { name: "Thêm vào workspace" }).click(); await page.getByText("Đã thêm vào workspace.").waitFor({ timeout: 10_000 });
-  let wm = (await api.get(`/workspaces/${fx.workspaces.A}/members`)).body ?? [];
-  check.ok("workspace page (SYSTEM_ADMIN): add by username → the server lists adminB as VIEWER of workspace A", wm.some((m) => m.userId === fx.users.adminB.id && m.role === "VIEWER"), JSON.stringify(wm.map((m) => [m.username, m.role])), "persistence");
-  await page.getByTestId(`wm:${fx.users.adminB.username}`).locator("select").selectOption("EDITOR"); await page.getByText("Đã đổi vai trò.").waitFor({ timeout: 10_000 });
-  page.once("dialog", (d) => void d.accept());
-  await page.getByTestId(`wm:${fx.users.adminB.username}`).getByRole("button", { name: "Gỡ" }).click(); await page.getByText("Đã gỡ khỏi workspace.").waitFor({ timeout: 10_000 });
-  wm = (await api.get(`/workspaces/${fx.workspaces.A}/members`)).body ?? [];
-  check.ok("…re-role to Biên tập viên then remove: gone on the server", !wm.some((m) => m.userId === fx.users.adminB.id), "", "persistence");
+  await page.getByTestId("ws-members-forbidden").waitFor({ timeout: 10_000 });
+  check.ok("workspace page (SYSTEM_ADMIN): the member panel says the platform admin does not manage workspace members, and there is NO add-member form (the server lists no MEMBER_MANAGE for it)", (await page.getByTestId("ws-add-who").count()) === 0 && (await page.getByTestId("ws-members").count()) === 0 && /tạo tài khoản/.test(await page.getByTestId("ws-members-forbidden").innerText()));
+  const list = await api.get(`/workspaces/${fx.workspaces.A}/members`); const add = await api.post(`/workspaces/${fx.workspaces.A}/members`, { username: fx.users.adminB.username, role: "VIEWER" });
+  check.ok("[api] …and the server agrees: SYSTEM_ADMIN is refused the member list and the add (403)", list.status === 403 && add.status === 403, `${list.status}/${add.status}`, "http");
 
   // ---- audit + system pages are real ---------------------------------------------------------------------------------------------------------------------
   await openPortal(page, cfg, "platform", "/audit");

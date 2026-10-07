@@ -65,7 +65,7 @@ export async function run({ cfg, fx, browser, check }) {
   const toSys = await L.put(`/admin/tenants/${DEFAULT_TENANT}/members/${sa.id}`, { role: "MEMBER" });
   check.ok("[api] adding that SYSTEM_ADMIN account by id → 404 (not eligible, no oracle)", toSys.status === 404, `status=${toSys.status} ${toSys.body?.code}`, "http");
   const idleAdd = await L.put(`/admin/tenants/${DEFAULT_TENANT}/members/${idle.id}`, { role: "MEMBER" }); const offAdd = await L.put(`/admin/tenants/${DEFAULT_TENANT}/members/${off.id}`, { role: "MEMBER" });
-  check.ok("[api] a non-activated and a disabled account cannot be added by id either (404)", idleAdd.status === 404 && offAdd.status === 404, `${idleAdd.status}/${offAdd.status}`, "http");
+  check.ok("[api] a non-activated account cannot be added by id (404); a RELATED but disabled account is refused with its own code (422 USER_DISABLED, C1 cf0c962)", idleAdd.status === 404 && offAdd.status === 422 && offAdd.body?.code === "USER_DISABLED", `${idleAdd.status}/${offAdd.status} ${offAdd.body?.code}`, "http");
   const x1 = await L.get(`/admin/tenants/${t2}/members`), x2 = await L.get(`/admin/tenants/${t2}/member-candidates`), x3 = await L.put(`/admin/tenants/${t2}/members/${adminA.id}`, { role: "MEMBER" });
   check.ok("[api] a caller from ANOTHER tenant gets 404 for members, candidates and add", [x1.status, x2.status, x3.status].every((s) => s === 404), `${x1.status}/${x2.status}/${x3.status}`, "http");
   const self = await L.put(`/admin/tenants/${DEFAULT_TENANT}/members/${lonely.id}`, { role: "MEMBER" });

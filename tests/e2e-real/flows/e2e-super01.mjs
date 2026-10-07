@@ -1,53 +1,59 @@
-// @class: real-backend — SUPER01: the SYSTEM_ADMIN creates a TENANT ADMIN account through the PLATFORM portal (real UI → existing POST /admin/users), the account activates through the real activation link, the company role is assigned in the
-// tenant page, and the new admin can open the ADMIN portal. What is NOT possible today is recorded as BLOCKED with the owner: choosing a tenant for a NEW workspace / listing workspaces by tenant (H-C1-14); the Admin-side creation is ADMIN01.
-import { Blocked } from "../lib/report.mjs";
+// @class: real-backend — SUPER01 on C1's tenant-scoped contract: the SYSTEM_ADMIN, in the PLATFORM portal, creates a tenant admin of a NEW tenant through the real dialog
+// (POST /admin/tenants/{t}/users, the tenant is the path), reads the one-time activation link from the DOM, the person activates through the real activation page and logs in to the ADMIN portal.
+// The tenant and its workspace are made through the product's own routes (POST /admin/tenants, POST /admin/tenants/{t}/workspaces): nothing here uses the legacy workspace route.
 import { activateByLink, loginPortal, navLabels, openPortal, watchApi } from "../lib/portals.mjs";
 import { newPage, pageProblems } from "../lib/ui.mjs";
-import { randomSecret } from "../lib/api.mjs";
-export const id = "E2E-SUPER01", title = "Super admin creates a tenant admin (Platform UI) → activation link → company role → the new admin opens the Admin portal";
-const DEFAULT_TENANT = "00000000-0000-0000-0000-000000000001";
+import { Session, randomSecret } from "../lib/api.mjs";
+export const id = "E2E-SUPER01", title = "SYSTEM_ADMIN (Platform) → create tenant admin of a new tenant (+ workspace) → activation link → activate → login Admin portal";
 export async function run({ cfg, fx, browser, check }) {
-  const sys = fx.sessions.admin; const username = `e2e-${fx.runId}-ta`.toLowerCase();
+  const sys = fx.sessions.admin; const slug = `e2e-${fx.runId}-s01`.toLowerCase(); const username = `e2e-${fx.runId}-ta1`.toLowerCase();
+  const t = await sys.post("/admin/tenants", { slug, name: `E2E S01 ${fx.runId}` });
+  check.ok("[api] SYSTEM_ADMIN creates a NEW tenant (201, no first admin yet)", t.status === 201 && !!t.body?.id, `status=${t.status} ${t.body?.code}`, "http");
+  fx.created.tenants = [...(fx.created.tenants ?? []), t.body.id]; const tenantId = t.body.id;
+  const w = await sys.post(`/admin/tenants/${tenantId}/workspaces`, { name: `e2e-${fx.runId}-s01-ws` });
+  check.ok("[api] …and a workspace OF THAT TENANT through the tenant route (201, tenantId explicit)", w.status === 201 && w.body?.tenantId === tenantId, `status=${w.status} ${JSON.stringify(w.body)}`, "http");
+  fx.created.workspaces.push(w.body.id);
+
   const page = await newPage(browser); const bad = watchApi(page);
   const landed = await loginPortal(page, cfg, "platform", cfg.adminUser, cfg.adminPassword);
   check.ok("the SYSTEM_ADMIN logs in through the Platform portal", landed.startsWith("/platform") && !/login|no-access/.test(landed), landed);
   await openPortal(page, cfg, "platform", "/users");
   await page.getByTestId("users-create").click(); await page.getByTestId("create-account").waitFor({ timeout: 15_000 });
-  check.ok("the dialog is the new 'Tạo tài khoản': four sections, no NOT_READY notice, no SYSTEM_ADMIN type", (await page.locator("form[data-testid=create-account] fieldset").count()) === 4 && (await page.getByTestId("prov-not-ready").count()) === 0 && !(await page.getByTestId("acc-type").innerText()).includes("SYSTEM"));
+  check.ok("the dialog: four sections, a tenant selector, NO not-ready notice, NO SYSTEM_ADMIN type", (await page.locator("form[data-testid=create-account] fieldset").count()) === 4 && (await page.getByTestId("acc-tenant").count()) === 1 && (await page.getByTestId("prov-not-ready").count()) === 0 && !(await page.getByTestId("acc-type").innerText()).includes("SYSTEM"));
   await page.getByTestId("acc-username").fill(username); await page.getByTestId("acc-display").fill(`E2E TA ${fx.runId}`); await page.getByTestId("acc-email").fill(`${username}@example.test`);
-  await page.getByTestId("acc-type").selectOption("TENANT_ADMIN"); await page.getByTestId("acc-tenant").selectOption(DEFAULT_TENANT);
-  const wsName = `e2e-${fx.runId}-ws-A`; const wsOpt = page.locator("#x", {}).first();
-  const val = await page.getByTestId("acc-workspace").locator("option", { hasText: wsName }).first().getAttribute("value").catch(() => null);
-  if (!val) throw new Blocked("C5", `the fixture workspace ${wsName} is not in the first page of /admin/workspaces (25): the dialog lists the first page only`, "fixture");
-  await page.getByTestId("acc-workspace").selectOption(val);
-  const created = page.waitForResponse((r) => r.request().method() === "POST" && /\/admin\/users$/.test(new URL(r.url()).pathname), { timeout: 15_000 });
-  await page.getByTestId("acc-submit").click(); const cr = await created;
-  check.ok("POST /admin/users → 201 with exactly {username, displayName, email, workspaceId, role}: no tenant id, no password", cr.status() === 201 && JSON.stringify(Object.keys(JSON.parse(cr.request().postData())).sort()) === JSON.stringify(["displayName", "email", "role", "username", "workspaceId"]) && JSON.parse(cr.request().postData()).role === "WORKSPACE_ADMIN", `status=${cr.status()} ${cr.request().postData()}`, "http");
+  await page.getByTestId("acc-tenant").selectOption(tenantId); await page.getByTestId("acc-type").selectOption("TENANT_ADMIN");
+  const wsOpts = await page.getByTestId("acc-workspace").locator("option").evaluateAll((o) => o.map((x) => x.value));
+  const listed = wsOpts.includes(w.body.id);
+  if (listed) await page.getByTestId("acc-workspace").selectOption(w.body.id);
+  check.ok("the workspace of the chosen tenant is offered (optional; assigned here)", listed, `options=${wsOpts.length} (H-C1-16: /admin/workspaces is not filtered by tenant; the dialog lists its first page)`);
+  if (listed) await page.getByTestId("acc-role").selectOption("WORKSPACE_ADMIN");
+  const created = page.waitForResponse((r) => r.request().method() === "POST" && /\/admin\/tenants\/[^/]+\/users$/.test(new URL(r.url()).pathname), { timeout: 15_000 });
+  await page.getByTestId("acc-submit").click(); const cr = await created; const body = JSON.parse(cr.request().postData());
+  check.ok("POST /admin/tenants/{tenantId}/users → 201; the tenant is the PATH, never in the body; tenantRole TENANT_ADMIN; workspaceId + workspaceRole together; no password", cr.status() === 201 && new URL(cr.url()).pathname.endsWith(`/admin/tenants/${tenantId}/users`) && !("tenantId" in body) && body.tenantRole === "TENANT_ADMIN" && (!listed || (body.workspaceId === w.body.id && body.workspaceRole === "WORKSPACE_ADMIN")) && !("password" in body), `status=${cr.status()} keys=${Object.keys(body).sort()}`, "http");
   const link = await page.locator('input[aria-label="Liên kết"]').inputValue();
-  check.ok("the activation link is shown once in the dialog (one-time, /auth/activate#token), the platform never shows a password", /\/auth\/activate#/.test(link) && !/password|mật khẩu:/i.test(await page.locator("body").innerText()));
+  check.ok("the activation link is shown once in the dialog (/auth/activate#token); no password anywhere", /\/auth\/activate#/.test(link) && !/mật khẩu:/i.test(await page.locator("body").innerText()));
   await page.getByRole("button", { name: "Xong" }).click(); await page.getByTestId("account-created").waitFor();
-  check.ok("the summary: account, status Chờ kích hoạt, workspace, role, and the company role as a NEXT step (not done)", /Chờ kích hoạt/.test(await page.getByTestId("res-status").innerText()) && /ws-A/.test(await page.getByTestId("res-workspace").innerText()) && /Quản trị công ty/.test(await page.getByTestId("res-pending").innerText()) && /Chưa gán/.test(await page.getByTestId("res-tenant").innerText()));
-  const u = (await sys.get("/admin/users?q=" + encodeURIComponent(username))).body?.items?.[0]; fx.created.users.push(u.id);
-  const wm = (await sys.get(`/workspaces/${fx.workspaces.A}/members`)).body ?? [];
-  check.ok("[api] the account exists, is pending (not activated) and is WORKSPACE_ADMIN of the chosen workspace", u?.username === username && u.pending === true && wm.some((m) => m.username === username && m.role === "WORKSPACE_ADMIN"), JSON.stringify({ pending: u?.pending }), "persistence");
-  const dup = await sys.post("/admin/users", { username, displayName: "dup", workspaceId: fx.workspaces.A, role: "VIEWER" });
-  check.ok("[api] a second account with the same username is refused (409 USERNAME_TAKEN)", dup.status === 409 && dup.body?.code === "USERNAME_TAKEN", `status=${dup.status} ${dup.body?.code}`, "http");
+  const urlAfter = page.url(); const stored = await page.evaluate(() => JSON.stringify([Object.entries(localStorage), Object.entries(sessionStorage)]));
+  const tokenPart = link.split("#")[1] ?? "";
+  check.ok("after 'Xong' the token is gone: not in the summary, the URL, localStorage or sessionStorage", tokenPart.length > 20 && !(await page.locator("body").innerHTML()).includes(tokenPart) && !urlAfter.includes(tokenPart) && !stored.includes(tokenPart));
+  check.ok("the summary: Chờ kích hoạt, the company AND its role already assigned, the workspace; the only next step is the person's activation", /Chờ kích hoạt/.test(await page.getByTestId("res-status").innerText()) && /Quản trị công ty/.test(await page.getByTestId("res-tenant").innerText()) && (!listed || /Quản trị workspace|ws/.test(await page.getByTestId("res-workspace").innerText())) && (await page.getByTestId("res-pending").locator("li").count()) === 1);
+  const members = (await sys.get(`/admin/tenants/${tenantId}/members`)).body ?? [];
+  const m = members.find((x) => x.username === username); if (m) fx.created.users.push(m.userId);
+  check.ok("[api] the server lists the account as TENANT_ADMIN of the new tenant (already, before activation)", m?.role === "TENANT_ADMIN", JSON.stringify(m), "persistence");
+  const dup = await sys.post(`/admin/tenants/${tenantId}/users`, { username, displayName: "dup" });
+  check.ok("[api] the same username again is refused: 409 USERNAME_TAKEN", dup.status === 409 && dup.body?.code === "USERNAME_TAKEN", `status=${dup.status} ${dup.body?.code}`, "http");
 
   const password = randomSecret();
-  check.ok("the new admin activates through the REAL activation page (set password)", await activateByLink(browser, link.replace(/^https?:\/\/[^/]+/, cfg.platformUrl), password));
-  await openPortal(page, cfg, "platform", `/tenants/${DEFAULT_TENANT}`);
-  const row = page.locator(`[data-testid^="tm:"]`, { hasText: username }).first(); await row.waitFor({ timeout: 15_000 });
-  await row.locator("select").selectOption("TENANT_ADMIN"); await page.getByText("Đã đổi vai trò.").waitFor({ timeout: 10_000 });
-  const tm = (await sys.get(`/admin/tenants/${DEFAULT_TENANT}/members`)).body ?? [];
-  check.ok("the company role is assigned AFTER activation in the tenant page: the server lists the account as TENANT_ADMIN", tm.some((m) => m.userId === u.id && m.role === "TENANT_ADMIN"), "", "persistence");
+  check.ok("the new admin activates through the REAL activation page", await activateByLink(browser, link.replace(/^https?:\/\/[^/]+/, cfg.platformUrl), password));
+  const own = new Session(cfg.studio, "s01ta"); const meTa = await own.login(username, password); const wsRow = (meTa?.workspaces ?? []).find((x) => x.id === w.body.id);
+  check.ok("[api] after activation /auth/me lists the chosen workspace with MEMBER_MANAGE (WORKSPACE_ADMIN, from the server) and the tenant TENANT_MEMBERS", !listed || (!!wsRow && (wsRow.permissions ?? []).includes("MEMBER_MANAGE") && (meTa.permissions ?? []).includes("TENANT_MEMBERS")), JSON.stringify({ ws: wsRow?.permissions, tenant: meTa?.permissions }), "http");
   const adminPage = await newPage(browser); const where = await loginPortal(adminPage, cfg, "admin", username, password);
-  check.ok("the new tenant admin logs in through the ADMIN portal and is not refused", where.startsWith("/admin") && !/login|no-access/.test(where), where);
-  check.ok("…and sees Công ty của tôi and Người dùng, not the system-wide sections", (await navLabels(adminPage)).includes("Công ty của tôi") && (await navLabels(adminPage)).includes("Người dùng") && !(await navLabels(adminPage)).includes("Nhật ký kiểm toán"));
+  check.ok("…and logs in through the ADMIN portal: not refused", where.startsWith("/admin") && !/login|no-access/.test(where), where);
+  const nav = await navLabels(adminPage);
+  check.ok("…sees Công ty của tôi and Người dùng, not the system-wide sections", nav.includes("Công ty của tôi") && nav.includes("Người dùng") && !nav.includes("Nhật ký kiểm toán"), nav.join(" | "));
+  fx.users.superTa = { id: m?.userId, username, password, tenantId, workspaceId: listed ? w.body.id : null };
   await adminPage.context().close();
   check.ok("no unexpected 4xx/5xx from the portal's calls", bad.filter((x) => !/→ (409|403|404)|auth\/me → 401/.test(x)).length === 0, bad.join(" | "));
   check.ok("no unhandled page errors", pageProblems(page).length === 0, pageProblems(page).join(" | "));
   await page.context().close();
-  fx.users.superTa = { id: u.id, username, password };
-  await sys.put(`/admin/tenants/${DEFAULT_TENANT}/members/${u.id}`, { role: "MEMBER" });
-  throw new Blocked("C1", "a tenant admin can be made only for a tenant that already has workspaces (DEFAULT here): a NEW tenant's workspace cannot be created or listed by tenant (POST /admin/workspaces takes no tenant, /admin/workspaces rows carry no tenantId) — H-C1-14", "H-C1-14");
 }

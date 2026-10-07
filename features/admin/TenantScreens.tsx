@@ -21,7 +21,7 @@ import { Modal } from "./Modal";
 import { PageHead } from "./PageHead";
 import { A } from "./base";
 import {
-  CANDIDATE_MAX_RESULTS, TENANT_ROLES, TENANT_STATUS_LABEL, WORKSPACE_ROLES, adminErrorText, candidateLabel, candidateQuery, adminScope, checkTenantForm, memberChangeBlock, personLabel, personOf, tenantActions, tenantMemberRows,
+  CANDIDATE_MAX_RESULTS, TENANT_ROLES, TENANT_STATUS_LABEL, WORKSPACE_ROLES, adminErrorText, candidateLabel, candidateQuery, adminScope, canManageWorkspaceMembers, checkTenantForm, memberChangeBlock, personLabel, personOf, tenantActions, tenantMemberRows,
   workspaceMemberBlock, workspaceRoleLabel, type Person,
 } from "./adminModel";
 
@@ -250,8 +250,17 @@ export function MyWorkspacesPage() {
   </>);
 }
 
-/** also used by the SYSTEM_ADMIN's workspace page: the same calls, the same rules (`MemberController`) */
+/** also used by the SYSTEM_ADMIN's workspace page: the same calls, the same rules (`MemberController`). The panel opens only when the server lists MEMBER_MANAGE for this workspace. */
 export function WorkspaceMembers({ workspaceId, name }: { workspaceId: string; name: string }) {
+  const { me } = useSession();
+  if (!canManageWorkspaceMembers(me, workspaceId)) return (
+    <Card title={`Thành viên của ${name}`}>
+      <StateView kind="forbidden" title="Bạn không quản lý thành viên workspace này" detail={<p data-testid="ws-members-forbidden">Quản trị hệ thống và quản trị công ty không tự có quyền quản lý thành viên workspace. Hãy chọn workspace và vai trò khi <b>tạo tài khoản</b>, hoặc nhờ quản trị viên của workspace thêm người.</p>}/>
+    </Card>);
+  return <WorkspaceMembersPanel workspaceId={workspaceId} name={name}/>;
+}
+
+function WorkspaceMembersPanel({ workspaceId, name }: { workspaceId: string; name: string }) {
   const { me } = useSession();
   const members = useLoad(() => api.listWorkspaceMembers(workspaceId), [workspaceId]);
   const [who, setWho] = useState(""); const [role, setRole] = useState("EDITOR");

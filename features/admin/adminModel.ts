@@ -30,6 +30,17 @@ export function adminScope(me: Me | null | undefined): AdminScope {
   };
 }
 
+/**
+ * Whether the server lets this person manage the members of ONE workspace: `/auth/me` lists MEMBER_MANAGE in that workspace's permissions.
+ * A SYSTEM_ADMIN sees every workspace but holds only tenant-level codes there (D-C1-13), so the member panel is not offered to them.
+ * A row whose `permissions` field is absent (older backend) does not block: the server still decides. No role name is read.
+ */
+export function canManageWorkspaceMembers(me: Me | null | undefined, workspaceId: string): boolean {
+  const row = me?.workspaces.find((w) => w.id === workspaceId);
+  if (!row) return false;
+  return row.permissions === undefined ? true : row.permissions.includes("MEMBER_MANAGE");
+}
+
 /** sections only a SYSTEM_ADMIN can open: their APIs are guarded by AdminGuard (T1 audit) */
 export const SYSTEM_ONLY: ReadonlySet<string> = new Set(["users", "workspaces", "applications", "ai", "ai-governance", "alerts", "security", "costs", "departments", "identity", "connectors", "backups", "components", "templates", "builds", "packages", "audit", "system", "settings", "tenants"]);
 /** sections for the people who administer a tenant / a workspace but are not SYSTEM_ADMIN */

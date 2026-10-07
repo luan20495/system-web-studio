@@ -13,28 +13,32 @@ import type { ProvisioningApi, ProvisionResult, WorkspaceRoleId } from "./provis
 import {
   ACCOUNT_TYPES, emptyAccountForm, provisioningProblem, validateAccountForm, type AccountForm, type AccountTypeId, type ProvisioningPlan, type ProvisioningProblem,
 } from "./provisioningModel";
-import { workspaceRoleLabel } from "./adminModel";
+import { tenantRoleLabel, workspaceRoleLabel } from "./adminModel";
 
 export type Option = { id: string; name: string };
 const asProblem = (e: unknown): ProvisioningProblem => provisioningProblem(e as { code?: string; status?: number; message?: string; reason?: string });
 
-export function CreateAccountDialog({ api, plan, tenants, workspaces, onClose, onCreated, createWorkspace }: {
-  api: ProvisioningApi; plan: ProvisioningPlan; tenants: Option[]; workspaces: Option[];
+export function CreateAccountDialog({ api, plan, tenants, workspacesOf, onClose, onCreated }: {
+  api: ProvisioningApi; plan: ProvisioningPlan;
+  /** the tenants the caller may pick (all for a SYSTEM_ADMIN; only their own for a tenant admin of several). Unused when the plan has a fixed tenant. */
+  tenants: Option[];
+  /** workspaces already known for a tenant (the host decides where they come from); the ones created in this dialog are added here */
+  workspacesOf: (tenantId: string) => Option[];
   onClose: () => void; onCreated?: (r: ProvisionResult) => void;
-  /** SYSTEM_ADMIN only: make a workspace on the spot (POST /admin/workspaces) */
-  createWorkspace?: (name: string) => Promise<Option>;
 }) {
   const [form, setForm] = useState<AccountForm>(() => emptyAccountForm(plan.accountTypes[0]?.id ?? "USER"));
   const [newWs, setNewWs] = useState(""); const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false); const [problem, setProblem] = useState<ProvisioningProblem | null>(null);
-  const [result, setResult] = useState<ProvisionResult | null>(null); const [extraWs, setExtraWs] = useState<Option[]>([]);
-  const wsOptions = [...workspaces, ...extraWs];
+  const [result, setResult] = useState<ProvisionResult | null>(null); const [made, setMade] = useState<(Option & { tenantId: string })[]>([]);
+  const tenantId = plan.fixedTenant?.id ?? form.tenantId;
+  const tenantName = plan.fixedTenant?.name ?? tenants.find((t) => t.id === tenantId)?.name ?? "";
+  const wsOptions = tenantId ? [...workspacesOf(tenantId), ...made.filter((m) => m.tenantId === tenantId)] : [];
   const type = ACCOUNT_TYPES[form.type];
   const notReady = plan.create.state !== "ready";
-  const problems = validateAccountForm({ ...form, workspaceId: form.workspaceId === "__new" ? (newWs.trim() ? "new" : "") : form.workspaceId }, plan);
+  const problems = validateAccountForm(form, plan, { newWorkspaceName: newWs });
   const field = (k: keyof typeof problems) => (touched && problems[k] ? problems[k] : undefined);
   const set = (patch: Partial<AccountForm>) => setForm((f) => ({ ...f, ...patch }));
-  const setType = (t: AccountTypeId) => set({ type: t, role: ACCOUNT_TYPES[t].roles[0].id });
+  const setType = (t: AccountTypeId) => set({ type: t, role: ACCOUNT_TYPES[t].roles[0].id, ...(ACCOUNT_TYPES[t].workspace === "required" && !form.workspaceId ? {} : {}) });
 
   async function submit(e: FormEvent) {
     e.preventDefault(); setTouched(true); setProblem(null);
@@ -42,15 +46,16 @@ export function CreateAccountDialog({ api, plan, tenants, workspaces, onClose, o
     setBusy(true);
     try {
       let workspaceId = form.workspaceId;
-      if (workspaceId === "__new") { if (!createWorkspace) throw Object.assign(new Error("no"), { code: "PROVISIONING_NOT_READY", reason: "Tạo workspace mới không khả dụng ở đây." }); const w = await createWorkspace(newWs.trim()); setExtraWs((x) => [...x, w]); workspaceId = w.id; }
-      const account = { username: form.username, displayName: form.displayName, email: form.email, workspaceId, workspaceRole: form.role as WorkspaceRoleId };
-      const tenant = form.type === "TENANT_ADMIN" ? (plan.fixedTenant ?? tenants.find((t) => t.id === form.tenantId)) : undefined;
-      const r = plan.fixedTenant ? await api.createTenantUser(account) : await api.createPlatformUser(account, tenant ? { tenantAdminOf: tenant } : undefined);
+      if (workspaceId === "__new") {
+        // a workspace OF this tenant (the legacy route would put it in the DEFAULT tenant); kept in the options if the account step then fails, so a retry does not create a second one
+        const w = await api.createTenantWorkspace(tenantId, newWs); setMade((x) => [...x, { id: w.id, name: w.name, tenantId }]); workspaceId = w.id; set({ workspaceId: w.id });
+      }
+      const r = await api.createTenantUser(tenantId, { username: form.username, displayName: form.displayName, email: form.email, tenantRole: type.tenantRole, ...(workspaceId ? { workspace: { id: workspaceId, role: form.role } } : {}) });
       setResult(r); onCreated?.(r);
     } catch (err) { setProblem(asProblem(err)); } finally { setBusy(false); }
   }
 
-  if (result) return <CreatedAccount result={result} workspaceName={wsOptions.find((w) => w.id === result.workspaceId)?.name ?? result.workspaceId} onClose={onClose} onAnother={() => { setResult(null); setForm(emptyAccountForm(plan.accountTypes[0]?.id ?? "USER")); setTouched(false); }}/>;
+  if (result) return <CreatedAccount result={result} tenantName={tenantName} workspaceName={result.workspace ? wsOptions.find((w) => w.id === result.workspace!.id)?.name ?? result.workspace.id : null} onClose={onClose} onAnother={() => { setResult(null); setForm(emptyAccountForm(plan.accountTypes[0]?.id ?? "USER")); setTouched(false); setNewWs(""); }}/>;
   const dupUser = problem?.field === "username" ? problem.text : undefined, dupMail = problem?.field === "email" ? problem.text : undefined;
   return (
     <Modal label="Tạo tài khoản" onClose={onClose}>
@@ -68,30 +73,32 @@ export function CreateAccountDialog({ api, plan, tenants, workspaces, onClose, o
           {field("email") || dupMail ? <p className="formError" role="alert" data-testid="acc-email-error">{dupMail ?? field("email")}</p> : null}
         </fieldset>
 
-        <fieldset className="stack" aria-label="Phạm vi"><legend className="bx-h4">2 · Phạm vi</legend>
+        <fieldset className="stack" aria-label="Phạm vi"><legend className="bx-h4">2 · Công ty và workspace</legend>
+          {plan.fixedTenant ? <label className="field"><span>Công ty</span><input data-testid="acc-tenant-fixed" readOnly value={plan.fixedTenant.name} aria-readonly="true"/><small className="hint">Lấy từ phiên đăng nhập của bạn; không đổi được.</small></label>
+            : <label className="field"><span>Công ty</span>
+              <select data-testid="acc-tenant" value={form.tenantId} aria-invalid={!!field("tenant")} onChange={(e) => set({ tenantId: e.target.value, workspaceId: "" })}><option value="">— chọn —</option>{tenants.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>}
+          {field("tenant") ? <p className="formError" role="alert">{field("tenant")}</p> : null}
           <label className="field"><span>Loại tài khoản</span>
             <select data-testid="acc-type" value={form.type} onChange={(e) => setType(e.target.value as AccountTypeId)}>{plan.accountTypes.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}</select>
             <small className="hint">{type.hint}</small></label>
-          {plan.fixedTenant ? <label className="field"><span>Công ty</span><input data-testid="acc-tenant-fixed" readOnly value={plan.fixedTenant.name} aria-readonly="true"/><small className="hint">Lấy từ phiên đăng nhập của bạn; không đổi được.</small></label>
-            : form.type === "TENANT_ADMIN" ? <label className="field"><span>Công ty</span>
-              <select data-testid="acc-tenant" value={form.tenantId} aria-invalid={!!field("tenant")} onChange={(e) => set({ tenantId: e.target.value })}><option value="">— chọn —</option>{tenants.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label> : null}
-          {field("tenant") ? <p className="formError" role="alert">{field("tenant")}</p> : null}
-          <label className="field"><span>Workspace</span>
-            <select data-testid="acc-workspace" value={form.workspaceId} aria-invalid={!!(field("workspace") || problem?.field === "workspace")} onChange={(e) => set({ workspaceId: e.target.value })}>
-              <option value="">— chọn —</option>{wsOptions.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}{createWorkspace ? <option value="__new">+ Tạo workspace mới</option> : null}</select></label>
+          <label className="field"><span>Workspace{type.workspace === "optional" ? " (không bắt buộc)" : ""}</span>
+            <select data-testid="acc-workspace" value={form.workspaceId} disabled={!tenantId} aria-invalid={!!(field("workspace") || problem?.field === "workspace")} onChange={(e) => set({ workspaceId: e.target.value })}>
+              <option value="">{type.workspace === "optional" ? "Không gán workspace" : "— chọn —"}</option>{wsOptions.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}{plan.canCreateWorkspace && tenantId ? <option value="__new">+ Tạo workspace mới của công ty này</option> : null}</select>
+            {!tenantId ? <small className="hint">Chọn công ty trước.</small> : null}</label>
           {form.workspaceId === "__new" ? <label className="field"><span>Tên workspace mới</span><input data-testid="acc-new-ws" value={newWs} onChange={(e) => setNewWs(e.target.value)}/></label> : null}
           {field("workspace") || problem?.field === "workspace" ? <p className="formError" role="alert">{problem?.field === "workspace" ? problem.text : field("workspace")}</p> : null}
-          {plan.tenantChoice ? <p className="hint" data-testid="acc-ws-note">Danh sách workspace chưa cho biết workspace thuộc công ty nào (máy chủ chưa trả tenant của workspace, H-C1-14); máy chủ kiểm tra khi gán.</p> : null}
+          {plan.tenantChoice && !plan.fixedTenant ? <p className="hint" data-testid="acc-ws-note">Máy chủ kiểm tra workspace thuộc đúng công ty đã chọn khi tạo; danh sách này chưa lọc theo công ty.</p> : null}
         </fieldset>
 
         <fieldset className="stack" aria-label="Vai trò"><legend className="bx-h4">3 · Vai trò</legend>
+          <p className="hint" data-testid="acc-tenant-role">Vai trò công ty: <b>{tenantRoleLabel(type.tenantRole)}</b></p>
           <label className="field"><span>Vai trò trong workspace</span>
-            <select data-testid="acc-role" value={form.role} onChange={(e) => set({ role: e.target.value as WorkspaceRoleId })}>{type.roles.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}</select></label>
-          {form.type === "TENANT_ADMIN" ? <p className="hint">Vai trò “Quản trị công ty” được gán sau khi người này kích hoạt tài khoản (máy chủ không cho gán cho tài khoản chưa kích hoạt).</p> : null}
+            <select data-testid="acc-role" value={form.role} disabled={!form.workspaceId} onChange={(e) => set({ role: e.target.value as WorkspaceRoleId })}>{type.roles.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}</select>
+            {!form.workspaceId ? <small className="hint">Chọn workspace để chọn vai trò (workspace và vai trò đi cùng nhau).</small> : null}</label>
         </fieldset>
 
         <fieldset className="stack" aria-label="Kích hoạt"><legend className="bx-h4">4 · Kích hoạt</legend>
-          <p className="hint">Sau khi tạo, bạn nhận một liên kết kích hoạt dùng một lần (hết hạn sau 24 giờ). Người dùng tự đặt mật khẩu; bạn không bao giờ biết mật khẩu.</p>
+          <p className="hint">Sau khi tạo, bạn nhận một liên kết kích hoạt dùng một lần (hết hạn sau 24 giờ), chỉ hiển thị một lần. Người dùng tự đặt mật khẩu; bạn không bao giờ biết mật khẩu.</p>
         </fieldset>
 
         {problem ? <p className={problem.kind === "not-ready" ? "notice" : "formError"} role="alert" data-testid="prov-problem" data-kind={problem.kind}>{problem.text}</p> : null}
@@ -101,8 +108,9 @@ export function CreateAccountDialog({ api, plan, tenants, workspaces, onClose, o
   );
 }
 
-function CreatedAccount({ result, workspaceName, onClose, onAnother }: { result: ProvisionResult; workspaceName: string; onClose: () => void; onAnother: () => void }) {
+function CreatedAccount({ result, tenantName, workspaceName, onClose, onAnother }: { result: ProvisionResult; tenantName: string; workspaceName: string | null; onClose: () => void; onAnother: () => void }) {
   const [showLink, setShowLink] = useState(true);
+  // the link is shown once, in this state only; closing the box drops it
   if (showLink) return <LinkBox link={result.activation as ActivationLink} onClose={() => setShowLink(false)}/>;
   return (
     <Modal label="Đã tạo tài khoản" onClose={onClose}>
@@ -111,9 +119,8 @@ function CreatedAccount({ result, workspaceName, onClose, onAnother }: { result:
         <dl className="kv">
           <dt>Tài khoản</dt><dd data-testid="res-account"><b>{result.user.displayName}</b> ({result.user.username})</dd>
           <dt>Trạng thái</dt><dd data-testid="res-status">Chờ kích hoạt</dd>
-          <dt>Workspace</dt><dd data-testid="res-workspace">{workspaceName}</dd>
-          <dt>Vai trò</dt><dd data-testid="res-role">{workspaceRoleLabel(result.workspaceRole)}</dd>
-          <dt>Công ty</dt><dd data-testid="res-tenant">{result.pending.some((p) => p.id === "assignTenantRole") ? "Chưa gán (xem bước tiếp theo)" : "Theo workspace"}</dd>
+          <dt>Công ty</dt><dd data-testid="res-tenant">{tenantName} · {tenantRoleLabel(result.tenantRole)}</dd>
+          <dt>Workspace</dt><dd data-testid="res-workspace">{workspaceName ? `${workspaceName} · ${workspaceRoleLabel(result.workspace!.role)}` : "Chưa gán workspace"}</dd>
         </dl>
         <h3 className="bx-h4">Bước tiếp theo</h3>
         <ol data-testid="res-pending">{result.pending.map((p) => <li key={p.id}>{p.label}</li>)}</ol>
@@ -125,8 +132,8 @@ function CreatedAccount({ result, workspaceName, onClose, onAnother }: { result:
 
 // ------------------------------------------------------------------------------------------------------------------------ Admin portal page
 /** "Người dùng" of someone who is not a SYSTEM_ADMIN: their own tenant (read-only), create account (when the backend has it), add an existing account to a workspace (MEMBER_MANAGE) */
-export function PeopleView({ api, plan, tenants, workspaces, memberWorkspaces, onCreated }: {
-  api: ProvisioningApi; plan: ProvisioningPlan; tenants: Option[]; workspaces: Option[]; memberWorkspaces: Option[]; onCreated?: (r: ProvisionResult) => void;
+export function PeopleView({ api, plan, tenants, workspacesOf, memberWorkspaces, onCreated }: {
+  api: ProvisioningApi; plan: ProvisioningPlan; tenants: Option[]; workspacesOf: (tenantId: string) => Option[]; memberWorkspaces: Option[]; onCreated?: (r: ProvisionResult) => void;
 }) {
   const [creating, setCreating] = useState(false);
   const canTry = plan.create.state !== "forbidden";
@@ -137,12 +144,12 @@ export function PeopleView({ api, plan, tenants, workspaces, memberWorkspaces, o
           : <p className="hint" data-testid="people-no-tenant">Bạn không quản trị công ty nào.</p>}
       </Card>
       <Card title="Tạo tài khoản mới" actions={canTry ? <button className="btn primary" data-testid="people-create" disabled={plan.create.state !== "ready"} title={plan.create.state === "not-ready" ? "Backend provisioning chưa sẵn sàng" : undefined} onClick={() => setCreating(true)}>+ Tạo tài khoản</button> : undefined}>
-        {plan.create.state === "ready" ? <p className="hint">Tạo tài khoản trong công ty của bạn, gán workspace và vai trò.</p> : null}
+        {plan.create.state === "ready" ? <p className="hint">Tạo tài khoản trong công ty của bạn: nhận một liên kết kích hoạt, tùy chọn gán workspace và vai trò.</p> : null}
         {plan.create.state === "not-ready" ? <p className="notice" role="note" data-testid="people-not-ready">Backend provisioning chưa sẵn sàng: {plan.create.reason}</p> : null}
         {plan.create.state === "forbidden" ? <p className="hint" data-testid="people-forbidden">{plan.create.reason}</p> : null}
       </Card>
       <AddExisting api={api} plan={plan} workspaces={memberWorkspaces}/>
-      {creating ? <CreateAccountDialog api={api} plan={plan} tenants={tenants} workspaces={workspaces} onClose={() => setCreating(false)} onCreated={onCreated}/> : null}
+      {creating ? <CreateAccountDialog api={api} plan={plan} tenants={tenants} workspacesOf={workspacesOf} onClose={() => setCreating(false)} onCreated={onCreated}/> : null}
     </div>
   );
 }

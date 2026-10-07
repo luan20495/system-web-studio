@@ -92,6 +92,10 @@ export const api = {
     createTenant: (b: { slug: string; name: string; firstAdminUserId?: string }) => call<TenantView>("/admin/tenants", { method: "POST", body: json(b) }),
     setTenantStatus: (id: string, status: "ACTIVE" | "SUSPENDED" | "DELETED") => call<TenantView>(`/admin/tenants/${id}/status`, { method: "PATCH", body: json({ status }) }),
     tenantMembers: (id: string) => call<TenantMemberView[]>(`/admin/tenants/${id}/members`),
+    /** C1 `tenant-provisioning-contract.md` @ 2356d64: a brand-new account in THIS tenant, by invitation (one-time activation link, no password). `workspaceId` and `workspaceRole` come together or not at all. */
+    createTenantUser: (tenantId: string, b: { username: string; displayName: string; email?: string; tenantRole?: "MEMBER" | "TENANT_ADMIN"; workspaceId?: string; workspaceRole?: string }) => call<ActivationLink>(`/admin/tenants/${tenantId}/users`, { method: "POST", body: json(b) }),
+    /** a workspace OF the tenant (the legacy POST /admin/workspaces puts it in the DEFAULT tenant and is not used by the portals) */
+    createTenantWorkspace: (tenantId: string, name: string) => call<{ id: string; name: string; slug: string; tenantId: string }>(`/admin/tenants/${tenantId}/workspaces`, { method: "POST", body: json({ name }) }),
     tenantMemberCandidates: (id: string, q?: string) => call<TenantMemberCandidate[]>(`/admin/tenants/${id}/member-candidates${qs({ q })}`),
     setTenantMember: (id: string, userId: string, role: string) => call<TenantMemberView>(`/admin/tenants/${id}/members/${userId}`, { method: "PUT", body: json({ role }) }),
     removeTenantMember: (id: string, userId: string) => call<void>(`/admin/tenants/${id}/members/${userId}`, { method: "DELETE" }),

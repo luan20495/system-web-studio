@@ -44,3 +44,35 @@ export async function activateByLink(browser, link, password) {
   const ok = await pg.getByText("Đã đặt mật khẩu").waitFor({ timeout: 15_000 }).then(() => true).catch(() => false);
   await ctx.close(); return ok;
 }
+
+/** a tenant of its own for one flow (platform route) with one workspace made through the TENANT route; both are tracked for cleanup */
+export async function makeTenant(fx, key, { workspace = true } = {}) {
+  const slug = `e2e-${fx.runId}-${key}`.toLowerCase().replace(/[^a-z0-9-]/g, "-").slice(0, 40);
+  const t = await fx.sessions.admin.post("/admin/tenants", { slug, name: `E2E ${key} ${fx.runId}` });
+  if (t.status !== 201) throw new Error(`makeTenant ${key}: ${t.status} ${t.body?.code}`);
+  fx.created.tenants = [...(fx.created.tenants ?? []), t.body.id];
+  const out = { id: t.body.id, slug, workspaceId: null };
+  if (workspace) {
+    const w = await fx.sessions.admin.post(`/admin/tenants/${t.body.id}/workspaces`, { name: `e2e-${fx.runId}-${key}-ws` });
+    if (w.status !== 201) throw new Error(`makeTenant ${key}: workspace ${w.status} ${w.body?.code}`);
+    fx.created.workspaces.push(w.body.id); out.workspaceId = w.body.id;
+  }
+  return out;
+}
+
+/** an account created through C1's tenant route by `as` (default: the SYSTEM_ADMIN session), optionally activated and logged in. The token is used in memory only. */
+export async function makeTenantUser(fx, cfg, tenantId, key, { as = fx.sessions.admin, tenantRole = "MEMBER", workspaceId, workspaceRole, activate = true } = {}) {
+  const username = `e2e-${fx.runId}-${key}`.toLowerCase().replace(/[^a-z0-9._-]/g, "-").slice(0, 40);
+  const body = { username, displayName: `E2E ${key} ${fx.runId}`, tenantRole, ...(workspaceId ? { workspaceId, workspaceRole } : {}) };
+  const r = await as.post(`/admin/tenants/${tenantId}/users`, body);
+  if (r.status !== 201) throw new Error(`makeTenantUser ${key}: ${r.status} ${r.body?.code}`);
+  fx.created.users.push(r.body.userId);
+  const u = { id: r.body.userId, username, password: null, session: null };
+  if (activate) {
+    u.password = randomSecret();
+    const c = await new Session(cfg.studio, "activation").post("/auth/activation/complete", { token: r.body.token, password: u.password });
+    if (c.status >= 300) throw new Error(`makeTenantUser ${key}: activation ${c.status}`);
+    u.session = new Session(cfg.studio, key); await u.session.login(username, u.password);
+  }
+  return u;
+}

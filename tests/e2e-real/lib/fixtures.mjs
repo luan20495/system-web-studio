@@ -101,6 +101,10 @@ export async function cleanup(fx, log = () => {}) {
     if (r && r.status >= 300) problems.push(`disable user ${id}: ${r.status}`);
     await admin?.post(`/admin/users/${id}/revoke-sessions`, {});
   }
+  for (const id of [...(fx.created.tenants ?? [])].reverse()) {
+    const r = await admin?.patch(`/admin/tenants/${id}/status`, { status: "DELETED" });
+    if (r && r.status >= 300 && r.status !== 404) problems.push(`delete tenant ${id}: ${r.status} ${r.body?.code ?? ""}`);
+  }
   if (fx.created.workspaces.length) problems.push(`left behind (no delete route): workspaces ${fx.created.workspaces.join(", ")} named e2e-${fx.runId}-*`);
   log(problems.length ? `cleanup notes: ${problems.join("; ")}` : "cleanup clean");
   return problems;

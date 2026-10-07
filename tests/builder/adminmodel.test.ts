@@ -79,3 +79,16 @@ test("server refusals are explained by CODE in Vietnamese; unknown ones keep the
   assert.match(M.adminErrorText({ status: 403 }, "x"), /không có quyền/); assert.match(M.adminErrorText({ status: 404 }, "x"), /Không tìm thấy/);
   assert.equal(M.adminErrorText({ status: 500, message: "boom" }, "Chưa lưu được"), "Chưa lưu được (boom)");
 });
+
+test("workspace member panel opens only on MEMBER_MANAGE of THAT workspace: a SYSTEM_ADMIN (tenant codes only) and a plain member are not offered it; an absent field does not block", () => {
+  const sys = me({ platformScope: true, workspaces: [ws("w1", ["TENANT_MANAGE", "TENANT_MEMBERS"])] });
+  const wsa = me({ workspaces: [ws("w1", ["MEMBER_MANAGE", "APP_VIEW"]), ws("w2", ["APP_VIEW"])] });
+  assert.equal(M.canManageWorkspaceMembers(sys, "w1"), false);
+  assert.equal(M.canManageWorkspaceMembers(wsa, "w1"), true);
+  assert.equal(M.canManageWorkspaceMembers(wsa, "w2"), false);
+  assert.equal(M.canManageWorkspaceMembers(wsa, "nope"), false);
+  assert.equal(M.canManageWorkspaceMembers(null, "w1"), false);
+  assert.equal(M.canManageWorkspaceMembers(me({ workspaces: [{ id: "w9", name: "old", role: "x", tenantId: "t" } as never] }), "w9"), true);
+  // a role NAME grants nothing
+  assert.equal(M.canManageWorkspaceMembers(me({ workspaces: [{ ...ws("w3", []), role: "WORKSPACE_ADMIN" }] }), "w3"), false);
+});
