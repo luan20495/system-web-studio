@@ -37,6 +37,14 @@ data class WorkspaceSummary(
     /** canonical permission codes the caller holds in this workspace (for UI gating only; the server re-checks every call) */
     val permissions: List<String> = emptyList()
 )
+data class ProjectScopeSummary(
+    val projectId: UUID,
+    val workspaceId: UUID,
+    /** informational only; clients must gate on permissions, never on this role string */
+    val role: String,
+    /** canonical permissions resolved from this exact project membership */
+    val permissions: List<String>
+)
 data class MeResponse(
     val id: UUID, val username: String, val displayName: String,
     val roles: List<String>, val workspaces: List<WorkspaceSummary>,
@@ -50,7 +58,9 @@ data class MeResponse(
     val businessAccess: Boolean = false,
     val tenants: List<TenantMembershipSummary> = emptyList(),
     /** platform + primary-tenant permissions as canonical codes (portal routing) */
-    val permissions: List<String> = emptyList()
+    val permissions: List<String> = emptyList(),
+    /** project-scoped permissions. These are never unioned into tenant/workspace/global permission lists. */
+    val projectScopes: List<ProjectScopeSummary> = emptyList()
 )
 
 @RestController
@@ -144,9 +154,37 @@ class AuthController(
         }
         val roles = principal.authorities.mapNotNull { it.authority?.removePrefix("ROLE_") }
         val systemAdmin = jdbc.queryForObject("SELECT system_admin FROM users WHERE id = ?", Boolean::class.java, principal.userId) == true    // live value, not the login-time snapshot
+        val projectScopes = jdbc.query(
+            """SELECT p.id AS project_id, p.workspace_id, pm.role, p.lifecycle,
+                      EXISTS (SELECT 1 FROM workspace_members wm WHERE wm.workspace_id = p.workspace_id AND wm.user_id = pm.user_id AND wm.active) AS workspace_active,
+                      EXISTS (SELECT 1 FROM tenant_members tm WHERE tm.tenant_id = w.tenant_id AND tm.user_id = pm.user_id AND tm.active) AS tenant_active,
+                      t.status AS tenant_status
+               FROM project_members pm
+               JOIN projects p ON p.id = pm.project_id AND p.workspace_id = pm.workspace_id
+               JOIN workspaces w ON w.id = p.workspace_id
+               JOIN tenants t ON t.id = w.tenant_id
+               WHERE pm.user_id = ? AND pm.active AND p.active
+               ORDER BY p.workspace_id, p.id""",
+            { rs, _ ->
+                val workspaceActive = rs.getBoolean("workspace_active")
+                val tenantActive = rs.getBoolean("tenant_active")
+                val tenantStatus = rs.getString("tenant_status")
+                val usable = systemAdmin || (workspaceActive && tenantActive && tenantStatus == "ACTIVE")
+                if (!usable) null else {
+                    val role = rs.getString("role")
+                    ProjectScopeSummary(
+                        rs.getObject("project_id", UUID::class.java),
+                        rs.getObject("workspace_id", UUID::class.java),
+                        role,
+                        meTenancy.projectPermissions(role, rs.getString("lifecycle") == "ARCHIVED")
+                    )
+                }
+            },
+            principal.userId
+        ).filterNotNull()
         val t = meTenancy.forUser(principal.userId, systemAdmin)
         return MeResponse(principal.userId, principal.username, principal.displayName ?: principal.username, roles, workspaces, systemAdmin,
-            t.tenantId, t.tenantRole, t.platformScope, t.businessAccess, t.tenants, t.permissions)
+            t.tenantId, t.tenantRole, t.platformScope, t.businessAccess, t.tenants, t.permissions, projectScopes)
     }
 
     @PostMapping("/logout")
