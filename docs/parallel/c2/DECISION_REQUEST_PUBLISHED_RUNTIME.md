@@ -1,3 +1,5 @@
+> **2026-10-07 update — superseded for V1 by D-C0-35.** C0 chose the same-origin ANONYMOUS public data route for PAGE_SCHEMA sites (`/{slug}/_data/…`, principal `PUBLIC_SITE`), not the capability-path / user-session design below. What C2 built for it: `HANDOFF_C3_PUBLIC_QUERY.md` and `HANDOFF_C5_PAGE_SCHEMA_DATA.md`. The question below (a published CODE app calling the Data Runtime with a user session) is **not the V1 path** and stays open and unimplemented; nothing here was built.
+
 # DECISION REQUEST — how a published app reaches the Data Runtime (B-C2-B3-01)
 
 Raised by C2 on 2026-10-07 at `fix/c2-v3 @ 8d40218`. **C2 decides nothing here**: the contract belongs to C0, identity / session / CSRF / CORS to C1, the runtime surface to C3. This file is C2's proposal (Option A) with every question the owners must answer, so they can approve, amend or reject it in one pass. Evidence: `PUBLISHED_RUNTIME_TOPOLOGY.md` §0 (the four facts that block the current design) and §9.

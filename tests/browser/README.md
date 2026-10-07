@@ -19,3 +19,14 @@ canvas re-renders. It validates nothing the server validates and is never shippe
 
 Covers only what needs no session (redirect to /login with `next`, labels, CSP/headers, no cookies, login error with the API down).
 Login, session, portal switching, OIDC and CORS need the real backend and are NOT covered here.
+
+## PAGE_SCHEMA client runtime (`page-runtime.spec.mjs`) — real Chrome, a stub origin, NOT an E2E
+The page the real renderer produces and the real runtime script (`workers/render/page-runtime.ts`), served by a local stub that plays the sites gateway (page, runtime file, `__factory/config.json`, the data route) with the CSP a data-bound page is served with. Covers the states (LOADING_CONFIG / NOT_READY / LOADING_DATA / READY / ERROR), every error mapping, one attempt and no retry, no credentials and no other host, HTML in data shown as text, caps and sub-pages. The data route is a test double: the public data controller (C0 + C3 + C1) does not exist yet.
+
+    npx tsc -p tests/tsconfig.json
+    CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" node tests/browser/page-runtime.spec.mjs
+
+## Sites gateway (`tests/gateway/data-route.mjs`) — a real nginx in a throwaway container
+Renders `infra/sites-gateway/default.conf.template` against a stub upstream on 127.0.0.1 (needs Docker and the `nginxinc/nginx-unprivileged:1.29-alpine` image that `compose.yml` uses): the public data route (path shape, POST only, size, rate limit, credentials stripped, query string dropped) and that pages, forms, the server-app `/api` proxy and `/healthz` are unchanged.
+
+    node tests/gateway/data-route.mjs
