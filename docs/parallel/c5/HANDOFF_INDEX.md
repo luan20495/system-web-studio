@@ -28,7 +28,12 @@
 | H-C2-06 release contract consumed and verified live; UNPUBLISH operation / ROLLING_BACK only in the harness | C2 | info | - |
 | H-C2-05 ETag present but If-None-Match answers 200 | C2 | P3 | - |
 | H-C4-02 NOTIFY 501 `ActionNotifyPort` not wired; AMQP adapter only on `agent/c4-workflow` | C4 | P2 | E2E-14 |
+| H-C2-07 `publish` ignores the public-data acknowledgement; PUBLIC_QUERIES is only known after the click | C2 | P1 | PAGE_SCHEMA public data |
+| H-C2-08 keep `resolveBindings` / bindable table stable (C5 mirror is checked against fixtures generated from it) | C2 | P3 | - |
+| H-C2-09 Studio preview is not data-aware (by design) | C2 | info | - |
+| H-C0-10 import `fix/c2-v3 c1e0df5` into integration/v2 (conflicts in AppDefinition{Model,Reader,Validator}); `SITES_DATA_API_BASE` | C0 | P0 | E2E-PD01/PD02 on integration |
+| H-C3-05 confirm `E2E_PD_SQL` (a query definition via the Management API) is the way to make an approved page query | C3 | info | E2E-PD01 |
 
 `*` = the query half only. Live results of 2026-10-06: `MAC_RUN_2026-10-06.md`.
 
-Files: `HANDOFF_C0.md` … `HANDOFF_C4.md`. C6 retest: `docs/C5_REAL_BACKEND_E2E_RUNBOOK.md`. Audit: `API_AUDIT_F894CC6.md`.
+Files: `HANDOFFS_PAGE_SCHEMA_DATA.md` (public data V1), `HANDOFF_C0.md` … `HANDOFF_C4.md`. C6 retest: `docs/C5_REAL_BACKEND_E2E_RUNBOOK.md`. Audit: `API_AUDIT_F894CC6.md`.
