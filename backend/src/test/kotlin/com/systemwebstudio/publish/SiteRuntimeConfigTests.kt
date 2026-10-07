@@ -64,4 +64,12 @@ class SiteRuntimeConfigTests : ScopeIntegrationTestBase() {
         assertThat(sites.runtimeConfig(sc.projectId, "preview", "PUBLIC", null)["version"]).isEqualTo(newNumber)                 // a preview has no release: the latest
         assertThat(sites.runtimeConfig(sc.projectId, "production", "PUBLIC", null, UUID.randomUUID())["version"]).isEqualTo(newNumber)   // an unknown release falls back, it never fails
     }
+
+    @Test
+    fun `the key can be set from the environment as APP_SITES_DATA_API_BASE`() {
+        // how Spring resolves `${app.sites.data-api-base}` against the process environment (relaxed binding of system environment variables)
+        val env = org.springframework.core.env.SystemEnvironmentPropertySource("test-env", mapOf("APP_SITES_DATA_API_BASE" to "https://data.staging.example.test/api"))
+        assertThat(env.getProperty("app.sites.data-api-base")).isEqualTo("https://data.staging.example.test/api")
+        assertThat(SiteService.resolveDataApiBase(env.getProperty("app.sites.data-api-base") as String)).isEqualTo("https://data.staging.example.test/api")
+    }
 }

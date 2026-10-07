@@ -48,7 +48,7 @@ Scope `(tenantId = projects.tenant_id, appId = projects.id, PRODUCTION)` = the `
 
 ### Runtime config key (asked by C0)
 
-`app.sites.data-api-base` → `apiBase` in `__factory/config.json`, together with `releaseId`. Read at request time from the environment, never baked into an artifact; blank / relative / non-http(s) / credentials / fragment ⇒ `null` (no address is invented). **Deviation from the proposed payload:** `environment` stays `"preview" | "production"` (lower case) because `@company/app-sdk` types it so; the scope's `PRODUCTION` is internal. Real HTTP probing stays BLOCKED (no public host).
+`app.sites.data-api-base` → `apiBase` in `__factory/config.json`, together with `releaseId`. Read **once when the API process starts** (not per request; a change needs a restart; corrected 2026-10-07), never baked into an artifact; blank / relative / non-http(s) / credentials / fragment ⇒ `null` (no address is invented). **Deviation from the proposed payload:** `environment` stays `"preview" | "production"` (lower case) because `@company/app-sdk` types it so; the scope's `PRODUCTION` is internal. Real HTTP probing stays BLOCKED (no public host).
 
 ### Known limits of the concurrency work
 
@@ -56,3 +56,7 @@ Scope `(tenantId = projects.tenant_id, appId = projects.id, PRODUCTION)` = the `
 - A publish that lost the scope after its pointer CAS succeeded ends FAILED / STALE_PUBLISH while the pointer may still name it until the new owner moves it; `live()` serves `DEPLOYING` and `RUNNING` only, so a FAILED deployment is not served.
 - `ProjectLifecycle` (not a C2 file) still takes the site offline with the unfenced `SiteService.point`; it fences operations out but is not itself behind the guard.
 - LIM-1 (C0 F-8, a release is served while `DEPLOYING` until verified) is unchanged for the post-switch confirmation; the pre-switch verification is the Batch 2 mitigation. The candidate-pointer flip is Batch 3.
+
+### Update 2026-10-07 (audit of the published runtime)
+
+`PUBLISH_API_CONTRACT.md` (for C5), `PUBLISHED_RUNTIME_TOPOLOGY.md` (for C3 / C0 / C1) and `RELEASE_ENVIRONMENTS.md` (Batch 3) hold the audited contract, topology and readiness findings. Code changes made by the audit: the runtime config `version` is the served release's (it was the project's latest), artifacts up to 16 MiB are re-read and hashed before activation (`app.deploy.verify-bytes-limit`), structured logs for scope / pointer / step durations, no loopback literals left in `publish/**`, and `PublishApiContractTests` pin the HTTP contract.
