@@ -4,10 +4,12 @@ import com.systemwebstudio.support.ApiSession
 import com.systemwebstudio.support.IntegrationTestBase
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
 import java.util.UUID
 
 /** C1 · H-C1-04: /auth/me mirrors effective project authorization without widening global/workspace authority. */
 class ProjectScopedAuthMeTests : IntegrationTestBase() {
+    @Autowired lateinit var tenants: TenantService
     private fun me(s: ApiSession) = s.body(s.get("/api/v1/auth/me"))
     private fun scopes(s: ApiSession) = me(s).get("projectScopes").toList()
     private fun scope(s: ApiSession, projectId: UUID) =
