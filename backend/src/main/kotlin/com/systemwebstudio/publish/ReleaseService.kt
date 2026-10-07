@@ -62,8 +62,16 @@ class JdbcReleaseStore(private val jdbc: JdbcTemplate, private val deployments: 
  * sha256 (it was not altered), and every file of it is in the store with the recorded size. Reads metadata only (a stat per file).
  */
 @Component
-class StoredArtifactVerifier(private val jdbc: JdbcTemplate, private val json: JsonMapper, private val store: ArtifactStore) : ArtifactVerifier {
-    override fun verify(artifactId: UUID): ArtifactCheck {
+class StoredArtifactVerifier(
+    private val jdbc: JdbcTemplate, private val json: JsonMapper, private val store: ArtifactStore,
+    /** artifacts up to this many bytes get their content re-read and hashed before activation (`app.deploy.verify-bytes-limit`, default 16 MiB; 0 = never) */
+    @Value("\${app.deploy.verify-bytes-limit:16777216}") private val contentLimitBytes: Long
+) : ArtifactVerifier {
+    override fun verify(artifactId: UUID): ArtifactCheck = check(artifactId, deep = false)
+
+    override fun verifyContent(artifactId: UUID): ArtifactCheck = check(artifactId, deep = true)
+
+    private fun check(artifactId: UUID, deep: Boolean): ArtifactCheck {
         val row = jdbc.queryForList("SELECT storage_prefix, manifest::text AS manifest, sha256, deleted_at FROM artifacts WHERE id = ?", artifactId).firstOrNull()
             ?: return ArtifactCheck(false, "the artifact record does not exist")
         if (row["deleted_at"] != null) return ArtifactCheck(false, "the artifact was removed by retention")
@@ -78,6 +86,14 @@ class StoredArtifactVerifier(private val jdbc: JdbcTemplate, private val json: J
             val size = try { store.size("$prefix/${f.path}") } catch (e: Exception) { return ArtifactCheck(false, "the artifact store could not be read: " + FailureClassifier.safe(e.message, 100)) }
             if (size == null) return ArtifactCheck(false, "file ${f.path} is missing in the artifact store")
             if (size != f.size.toLong()) return ArtifactCheck(false, "file ${f.path} has ${size} bytes, expected ${f.size}")
+        }
+        // the bytes themselves, for artifacts that are small enough to be worth re-reading
+        if (deep && contentLimitBytes > 0 && files.sumOf { it.size.toLong() } <= contentLimitBytes) {
+            for (f in files) {
+                val bytes = try { store.get("$prefix/${f.path}") } catch (e: Exception) { return ArtifactCheck(false, "the artifact store could not be read: " + FailureClassifier.safe(e.message, 100)) }
+                    ?: return ArtifactCheck(false, "file ${f.path} is missing in the artifact store")
+                if (!StaticSiteBuilder.sha256(bytes).equals(f.sha256, ignoreCase = true)) return ArtifactCheck(false, "file ${f.path} was altered: its checksum differs from the manifest")
+            }
         }
         return ArtifactCheck(true)
     }

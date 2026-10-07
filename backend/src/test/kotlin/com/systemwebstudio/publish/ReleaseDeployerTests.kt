@@ -436,4 +436,40 @@ class ReleaseDeployerTests {
         store.active = releaseN1
         assertThat(deployer(runtime = none).restoreRelease(project, releaseN)).isInstanceOf(RollbackResult.Restored::class.java)
     }
+
+    // ------------------------------------------------------------------ content check before activation
+
+    private class CountingVerifier(val contentOk: Boolean = true) : ArtifactVerifier {
+        var cheap = 0; var content = 0
+        override fun verify(artifactId: UUID): ArtifactCheck { cheap++; return ArtifactCheck(true) }
+        override fun verifyContent(artifactId: UUID): ArtifactCheck { content++; return if (contentOk) ArtifactCheck(true) else ArtifactCheck(false, "file index.html was altered: its checksum differs from the manifest") }
+    }
+
+    @Test
+    fun `the bytes are verified once before the switch and the cheap check is used after it`() {
+        val v = CountingVerifier()
+        val live = ReleaseDeployer(provider, store, v, StepRunner(), 5_000, 5_000).deploy(request())
+        assertThat(live).isInstanceOf(DeployOutcome.Live::class.java)
+        assertThat(v.content).isEqualTo(1); assertThat(v.cheap).isZero()                     // the fake provider does its own confirmation
+    }
+
+    @Test
+    fun `an artifact whose bytes were altered is never switched in`() {
+        val v = CountingVerifier(contentOk = false)
+        val f = failed(ReleaseDeployer(provider, store, v, StepRunner(), 5_000, 5_000).deploy(request()))
+        assertThat(f.failure.code).isEqualTo(FailureCode.VERIFICATION_FAILED); assertThat(f.failure.message).contains("altered")
+        assertThat(f.rollback).isEqualTo(RollbackResult.NotSwitched); assertThat(provider.calls).isEmpty(); assertThat(store.active).isEqualTo(releaseN)
+    }
+
+    @Test
+    fun `a rollback checks the target's bytes before the switch and only the cheap check after it`() {
+        store.active = releaseN1
+        val v = CountingVerifier()
+        assertThat(ReleaseDeployer(provider, store, v, StepRunner(), 5_000, 5_000).restoreRelease(project, releaseN)).isInstanceOf(RollbackResult.Restored::class.java)
+        assertThat(v.content).isEqualTo(1); assertThat(v.cheap).isEqualTo(1)
+        store.active = releaseN1
+        val bad = CountingVerifier(contentOk = false)
+        val rb = ReleaseDeployer(provider, store, bad, StepRunner(), 5_000, 5_000).restoreRelease(project, releaseN) as RollbackResult.Failed
+        assertThat(rb.reason).contains("altered"); assertThat(store.active).isEqualTo(releaseN1)
+    }
 }

@@ -8,8 +8,16 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 data class ArtifactCheck(val ok: Boolean, val reason: String? = null)
 
-/** Proves that an artifact can still be served: the record exists, was not removed by retention, and its files are all in the store. */
-fun interface ArtifactVerifier { fun verify(artifactId: UUID): ArtifactCheck }
+/**
+ * Proves that an artifact can still be served: the record exists, was not removed by retention, and its files are all in the store.
+ * [verify] is the cheap check (record, manifest checksum, every file present with its recorded size: one stat per file). [verifyContent] additionally
+ * re-reads the bytes and compares each file's SHA-256 with the manifest; it is used once, before an artifact is made active, and is skipped for
+ * artifacts above the size limit (the gateway re-checks every file it serves against the manifest anyway). The default is the cheap check.
+ */
+fun interface ArtifactVerifier {
+    fun verify(artifactId: UUID): ArtifactCheck
+    fun verifyContent(artifactId: UUID): ArtifactCheck = verify(artifactId)
+}
 
 /** The release bookkeeping the deployer needs (JDBC in production, a fake in unit tests). */
 interface ReleaseStore {
@@ -102,7 +110,7 @@ class ReleaseDeployer(
 
         // 1. verify BEFORE anything can serve it
         request.artifactId?.let { artifact ->
-            val check = try { runner.bounded(verifyTimeoutMs) { artifacts.verify(artifact) } } catch (e: Exception) { return notServed(FailureClassifier.classify("VERIFYING", e)) }
+            val check = try { runner.bounded(verifyTimeoutMs) { artifacts.verifyContent(artifact) } } catch (e: Exception) { return notServed(FailureClassifier.classify("VERIFYING", e)) }
             if (!check.ok) return notServed(StepFailure(FailureCode.VERIFICATION_FAILED, "The release cannot be served: " + FailureClassifier.safe(check.reason)))
         }
         // 2. stage (prepare without serving)
@@ -272,14 +280,15 @@ class ReleaseDeployer(
         result.error?.let { return FailureClassifier.safe(it) }
         if (target != null && artifact != null) {
             // the artifact was checked before the switch; it may have been removed or changed since
-            artifactProblem(target, artifact)?.let { return "$it (found after the switch)" }
+            artifactProblem(target, artifact, deep = false)?.let { return "$it (found after the switch)" }
             if (releases.activeDeployment(projectId) != target) return "the site does not point at release ${releases.label(target)} after the switch"
         }
         return null
     }
 
-    private fun artifactProblem(target: UUID, artifact: UUID): String? {
-        val check = try { runner.bounded(verifyTimeoutMs) { artifacts.verify(artifact) } } catch (e: Exception) { ArtifactCheck(false, "verification failed: " + FailureClassifier.safe(e.message, 120)) }
+    /** [deep]: also compare the bytes with the manifest. Done once before the switch; the check after the switch is the cheap one (a file that changed since is caught when it is served). */
+    private fun artifactProblem(target: UUID, artifact: UUID, deep: Boolean = true): String? {
+        val check = try { runner.bounded(verifyTimeoutMs) { if (deep) artifacts.verifyContent(artifact) else artifacts.verify(artifact) } } catch (e: Exception) { ArtifactCheck(false, "verification failed: " + FailureClassifier.safe(e.message, 120)) }
         return if (check.ok) null else "release ${releases.label(target)} cannot be served again: ${check.reason}"
     }
 
