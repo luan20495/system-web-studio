@@ -16,7 +16,9 @@
     "@xweb/api-client": "*",
     "@xweb/i18n": "*",
     "@xweb/permissions": "*",
-    "@xweb/types": "*"
+    "@xweb/types": "*",
+    "lucide-react": "^1.52.0",
+    "simple-icons": "^16.34.0"
   },
   "peerDependencies": {
     "next": ">=16",

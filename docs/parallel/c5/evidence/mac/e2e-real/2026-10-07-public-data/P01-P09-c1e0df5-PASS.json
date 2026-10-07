@@ -1,0 +1,900 @@
+{
+  "studio": "http://127.0.0.1:3043",
+  "runId": "muxpcwvr",
+  "frontendHead": "ff954f1",
+  "backend": {
+    "url": "http://127.0.0.1:41080",
+    "head": "c1e0df5 docs(c2): C5 and C3 handoffs for the data-bound PAGE_SCHEMA, V31 candidate proposal, board and blockers [c1e0df5]"
+  },
+  "facts": {
+    "authConfig": {
+      "localLogin": true,
+      "oidc": false,
+      "publicPublish": true
+    },
+    "fixtureNotes": {
+      "viewerOnProject": "member",
+      "initialRevision": 0,
+      "definitionOps": {
+        "ok": true
+      },
+      "unpublishOperationObserved": "not observed (the scope is held for an instant; the busy UI for UNPUBLISH is covered by the browser harness)",
+      "p08Building": "c7340b5c-b3a6-47a2-aeb5-edb9a87d8b9d"
+    },
+    "routes": {
+      "queries": {
+        "status": 404,
+        "code": "QUERY_NOT_FOUND"
+      },
+      "actions": {
+        "status": 404,
+        "code": "UNKNOWN_ACTION"
+      }
+    }
+  },
+  "cleanup": [
+    "left behind (no delete route): workspaces 4be61f3e-a27d-40d1-8f91-6823910fa5b8, 09ed932a-37a2-4aef-abfa-011061789e2c named e2e-muxpcwvr-*"
+  ],
+  "node": "v22.23.1",
+  "summary": {
+    "total": 9,
+    "PASS": 9,
+    "FAIL": 0,
+    "BLOCKED": 0,
+    "SKIP": 0
+  },
+  "results": [
+    {
+      "id": "E2E-P01",
+      "title": "Publish success: exact request, deployment polling, SiteInfo idle, pointerVersion observable but never sent",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-07T06:04:22.240Z",
+      "end": "2026-10-07T06:04:37.684Z",
+      "workspace": "4be61f3e-a27d-40d1-8f91-6823910fa5b8",
+      "project": "d113b984-55c9-4e35-92c1-518374544939",
+      "checks": [
+        {
+          "name": "before: SiteInfo has the contract shape (pointerVersion integer, operation key present and null = idle)",
+          "ok": true,
+          "detail": "{\"pv\":0,\"op\":null}",
+          "kind": "http"
+        },
+        {
+          "name": "POST …/publish answered 202 (asynchronous)",
+          "ok": true,
+          "detail": "status=202",
+          "kind": "http"
+        },
+        {
+          "name": "the body is EXACTLY {visibility, expectedRevision}",
+          "ok": true,
+          "detail": "{\"visibility\":\"PRIVATE\",\"expectedRevision\":2}",
+          "kind": "http"
+        },
+        {
+          "name": "headers: Idempotency-Key in the contract format (8–120 of A-Za-z0-9_.:-) and X-XSRF-TOKEN",
+          "ok": true,
+          "detail": "ui-a3739f00-9db5-4959-9b21-1ef98158e451",
+          "kind": "http"
+        },
+        {
+          "name": "the deployment has the documented key set (id, projectId, versionId, versionNumber, visibility, status, url, error, provider, createdAt, updatedAt, finishedAt, events, mock)",
+          "ok": true,
+          "detail": "id,projectId,versionId,versionNumber,visibility,status,url,error,provider,createdAt,updatedAt,finishedAt,events,mock",
+          "kind": "http"
+        },
+        {
+          "name": "the UI stopped on a TERMINAL status and shows success only for RUNNING",
+          "ok": true,
+          "detail": "status=RUNNING",
+          "kind": "http"
+        },
+        {
+          "name": "the dialog reports the site is up with the deployment URL",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the server agrees: RUNNING, mock=false, provider static, finishedAt set",
+          "ok": true,
+          "detail": "status=RUNNING",
+          "kind": "persistence"
+        },
+        {
+          "name": "SiteInfo: online, the new deployment is current, operation = null (idle)",
+          "ok": true,
+          "detail": "{\"cur\":\"0bf3102b-ca59-461c-b2ba-8580f1c257ad\",\"op\":null}",
+          "kind": "http"
+        },
+        {
+          "name": "pointerVersion moved by exactly +1 with the pointer",
+          "ok": true,
+          "detail": "0 → 1",
+          "kind": "persistence"
+        },
+        {
+          "name": "pointerVersion is shown to the user as observability only",
+          "ok": true,
+          "detail": "pointerVersion 1 (chỉ để quan sát, không gửi lại máy chủ)",
+          "kind": "ui"
+        },
+        {
+          "name": "the browser NEVER sent pointerVersion, tenantId or an invented concurrency field on any release route",
+          "ok": true,
+          "detail": "[]",
+          "kind": "ui"
+        },
+        {
+          "name": "polling stopped: no deployment status request after the terminal answer for 3 s",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-P02",
+      "title": "Concurrent publish on the same scope + idempotent replay",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-07T06:04:37.684Z",
+      "end": "2026-10-07T06:04:47.242Z",
+      "workspace": "4be61f3e-a27d-40d1-8f91-6823910fa5b8",
+      "project": "d113b984-55c9-4e35-92c1-518374544939",
+      "checks": [
+        {
+          "name": "both concurrent publishes are accepted (202) as two DIFFERENT deployments",
+          "ok": true,
+          "detail": "202/202",
+          "kind": "http"
+        },
+        {
+          "name": "each ends RUNNING or FAILED [STALE_PUBLISH] — nothing stuck, no other failure",
+          "ok": true,
+          "detail": "RUNNING  | FAILED [STALE_PUBLISH] a newer release operation already moved the active release",
+          "kind": "persistence"
+        },
+        {
+          "name": "at least one of them is RUNNING and it is the one the site now serves",
+          "ok": true,
+          "detail": "RUNNING | FAILED",
+          "kind": "persistence"
+        },
+        {
+          "name": "the site serves a RUNNING one of the two and is idle",
+          "ok": true,
+          "detail": "{\"cur\":\"76439b08-a8a3-4b2e-8cf2-f7e13d134257\",\"op\":null}",
+          "kind": "http"
+        },
+        {
+          "name": "pointerVersion moved forward (by 1 per activation, so +1 or +2)",
+          "ok": true,
+          "detail": "1 → 2",
+          "kind": "persistence"
+        },
+        {
+          "name": "same key + same payload → 202 with Idempotent-Replay: true and the ORIGINAL deployment id",
+          "ok": true,
+          "detail": "status=202 replay=true",
+          "kind": "http"
+        },
+        {
+          "name": "a NEW key with the same payload is a NEW deployment (not a replay)",
+          "ok": true,
+          "detail": "status=202",
+          "kind": "http"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-P03",
+      "title": "Rollback success: exact request, 200 + SiteInfo, rolled-away release is ROLLED_BACK, APP_PUBLISH, pointerVersion",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-07T06:04:47.242Z",
+      "end": "2026-10-07T06:04:59.640Z",
+      "workspace": "4be61f3e-a27d-40d1-8f91-6823910fa5b8",
+      "project": "d113b984-55c9-4e35-92c1-518374544939",
+      "checks": [
+        {
+          "name": "(setup) three RUNNING releases, the newest is active",
+          "ok": true,
+          "detail": "406460e8-d5f7-44dc-8ed4-b8c583d4b0ca vs 406460e8-d5f7-44dc-8ed4-b8c583d4b0ca",
+          "kind": "http"
+        },
+        {
+          "name": "the older releases are offered for rollback; the one being served is not",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "pending state is shown while the request is in flight (the button says it is working)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "POST …/site/rollback answered 200 (synchronous)",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "http"
+        },
+        {
+          "name": "the body is {deploymentId, expectedActiveDeploymentId} — the target and the release the UI saw as active — and nothing else",
+          "ok": true,
+          "detail": "{\"deploymentId\":\"63eafed0-14fb-421f-995f-cab0d2b2ad32\",\"expectedActiveDeploymentId\":\"406460e8-d5f7-44dc-8ed4-b8c583d4b0ca\"}",
+          "kind": "http"
+        },
+        {
+          "name": "Idempotency-Key (optional) is sent in the contract format; CSRF header present",
+          "ok": true,
+          "detail": "ui-c4ab74af-90f3-465b-a361-4547d8bb53d4",
+          "kind": "http"
+        },
+        {
+          "name": "the answer is a SiteInfo whose current deployment is the target and whose operation is idle",
+          "ok": true,
+          "detail": "{\"cur\":\"63eafed0-14fb-421f-995f-cab0d2b2ad32\",\"op\":null}",
+          "kind": "http"
+        },
+        {
+          "name": "the UI says the release is served again only AFTER the 200 (final message names the version)",
+          "ok": true,
+          "detail": "Đã phục vụ lại phiên bản 6.",
+          "kind": "ui"
+        },
+        {
+          "name": "server: the site serves the target and pointerVersion moved by exactly +1",
+          "ok": true,
+          "detail": "6 → 7",
+          "kind": "persistence"
+        },
+        {
+          "name": "server: the release that was rolled away from is ROLLED_BACK (terminal); the others stay RUNNING",
+          "ok": true,
+          "detail": "{\"406460e8-d5f7-44dc-8ed4-b8c583d4b0ca\":\"ROLLED_BACK\",\"63eafed0-14fb-421f-995f-cab0d2b2ad32\":\"RUNNING\",\"c89bed8f-af43-442a-a03b-7b55cb6d9687\":\"RUNNING\",\"d3d05fc2-c964-471d-839f-b7fb2a89aedf\":\"RUNNING\",\"76439b08-a8a3-4b2e-8cf2-f7e13d134257\":\"RUNNING\",\"e773bfbf-1a40-4be2-9b58-da745f541d95\":\"FAILED\",\"0",
+          "kind": "persistence"
+        },
+        {
+          "name": "a ROLLED_BACK release is not restorable: the server answers 400 DEPLOYMENT_NOT_RESTORABLE",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "the UI no longer offers the ROLLED_BACK release",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the browser NEVER sent pointerVersion or an invented field",
+          "ok": true,
+          "detail": "[]",
+          "kind": "ui"
+        },
+        {
+          "name": "permission: a project VIEWER forging the rollback is refused (403) — rollback needs APP_PUBLISH, not APP_EDIT",
+          "ok": true,
+          "detail": "status=403 FORBIDDEN",
+          "kind": "http"
+        },
+        {
+          "name": "permission: …and the same for unpublish (403)",
+          "ok": true,
+          "detail": "status=403",
+          "kind": "http"
+        },
+        {
+          "name": "…which changed nothing",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-P06",
+      "title": "Rollback stale: 409 ROLLBACK_STALE, nothing changed, reload and decide again",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-07T06:04:59.640Z",
+      "end": "2026-10-07T06:05:12.540Z",
+      "workspace": "4be61f3e-a27d-40d1-8f91-6823910fa5b8",
+      "project": "d113b984-55c9-4e35-92c1-518374544939",
+      "checks": [
+        {
+          "name": "(setup) another session rolled back to B (200)",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "http"
+        },
+        {
+          "name": "the UI's rollback carried the release it saw as active (C) and the server answered 409 ROLLBACK_STALE",
+          "ok": true,
+          "detail": "status=409 ROLLBACK_STALE",
+          "kind": "http"
+        },
+        {
+          "name": "…details carry the real active release and the expected one; no Retry-After (not retryable as is)",
+          "ok": true,
+          "detail": "{\"activeDeploymentId\":\"e0884988-f17c-4424-8301-42dbfdb85ddc\",\"expectedActiveDeploymentId\":\"83b0c7db-ebb0-4e35-8142-5ab3ba75fe52\"}",
+          "kind": "http"
+        },
+        {
+          "name": "UI: 'the active release changed — reload and decide again' (kind stale), says nothing was changed",
+          "ok": true,
+          "detail": "Bản đang chạy đã thay đổi Bản đang chạy không còn là bản bạn thấy khi chọn. Không có gì bị thay đổi. Hãy tải lại trạng thái rồi quyết định lại. Tải lại trạng thái",
+          "kind": "ui"
+        },
+        {
+          "name": "UI: NO blind retry button (not retryable as is); a reload action is offered",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "server: nothing changed (still B, same pointerVersion)",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "after the reload the served release is B and C (rolled away from) is no longer offered",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the decision taken on fresh state succeeds (200) with the NEW expectation (B)",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "http"
+        },
+        {
+          "name": "the new request used a NEW Idempotency-Key (the refused one was not replayed)",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "API: unpublish expecting a release that is not active → 409 ROLLBACK_STALE, still online",
+          "ok": true,
+          "detail": "status=409 ROLLBACK_STALE",
+          "kind": "http"
+        },
+        {
+          "name": "API: a target that is ALREADY active answers 200 even with a stale expectation (a retry that already succeeded), and changes nothing",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "http"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "console: Failed to load resource: the server responded with a status of 409 (Conflict)",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-P07",
+      "title": "Idempotency: replay, 409 IDEMPOTENCY_KEY_REUSED, and the UI's key lifecycle",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-07T06:05:12.540Z",
+      "end": "2026-10-07T06:05:37.411Z",
+      "workspace": "4be61f3e-a27d-40d1-8f91-6823910fa5b8",
+      "project": "d113b984-55c9-4e35-92c1-518374544939",
+      "checks": [
+        {
+          "name": "publish: same key + same payload → 202, Idempotent-Replay: true, the ORIGINAL deployment",
+          "ok": true,
+          "detail": "202/202",
+          "kind": "http"
+        },
+        {
+          "name": "publish: same key + DIFFERENT payload → 409 IDEMPOTENCY_KEY_REUSED",
+          "ok": true,
+          "detail": "status=409 IDEMPOTENCY_KEY_REUSED",
+          "kind": "http"
+        },
+        {
+          "name": "…the standard envelope without `retryable`, and the documented message",
+          "ok": true,
+          "detail": "[\"code\",\"message\",\"requestId\",\"details\"]",
+          "kind": "http"
+        },
+        {
+          "name": "a missing key is 400 MISSING_HEADER and a malformed one 400 INVALID_IDEMPOTENCY_KEY",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "rollback: same key + same payload → both 200 and ONE effect (pointerVersion +1, not +2)",
+          "ok": true,
+          "detail": "200/200 16→17",
+          "kind": "persistence"
+        },
+        {
+          "name": "rollback: same key + a DIFFERENT target → 409 IDEMPOTENCY_KEY_REUSED (judged before any eligibility check)",
+          "ok": true,
+          "detail": "status=409 IDEMPOTENCY_KEY_REUSED",
+          "kind": "http"
+        },
+        {
+          "name": "unpublish: same key twice → both 200, pointerVersion unchanged by the second",
+          "ok": true,
+          "detail": "200/200",
+          "kind": "persistence"
+        },
+        {
+          "name": "unpublish: same key + a different expectation → 409 IDEMPOTENCY_KEY_REUSED",
+          "ok": true,
+          "detail": "status=409 IDEMPOTENCY_KEY_REUSED",
+          "kind": "http"
+        },
+        {
+          "name": "UI: after a finished publish the dialog offers 'Xuất bản lại' only for non-success outcomes (RUNNING offers Close)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "UI: two publishes with different payloads (PRIVATE then PUBLIC) used two DIFFERENT valid keys",
+          "ok": true,
+          "detail": "[\"ui-1174eb7a-90e2-4f99-af56-c752f9854629\",\"ui-29bd280a-5c86-4a5d-9416-2a448871aa81\"]",
+          "kind": "http"
+        },
+        {
+          "name": "UI: neither was refused with IDEMPOTENCY_KEY_REUSED (a key per dialog would have been)",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-P09",
+      "title": "Unpublish: exact request, 200 + SiteInfo offline, idempotent when offline, stale expectation, operation=UNPUBLISH when observable",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-07T06:05:37.411Z",
+      "end": "2026-10-07T06:05:56.574Z",
+      "workspace": "4be61f3e-a27d-40d1-8f91-6823910fa5b8",
+      "project": "d113b984-55c9-4e35-92c1-518374544939",
+      "checks": [
+        {
+          "name": "API: unpublish expecting a release that is not the active one → 409 ROLLBACK_STALE, still online",
+          "ok": true,
+          "detail": "status=409 ROLLBACK_STALE",
+          "kind": "http"
+        },
+        {
+          "name": "DELETE …/site answered 200",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "http"
+        },
+        {
+          "name": "NO body; the expectation is the query parameter expectedActiveDeploymentId = the release the UI saw as active",
+          "ok": true,
+          "detail": "?expectedActiveDeploymentId=a212d5ff-eace-4fdd-b1c1-4621b8d082c7 body=null",
+          "kind": "http"
+        },
+        {
+          "name": "Idempotency-Key (optional) sent in the contract format",
+          "ok": true,
+          "detail": "ui-3898219d-251b-45d3-a4c2-7e877993f7e5",
+          "kind": "http"
+        },
+        {
+          "name": "the answer: online=false, currentDeploymentId=null, slug kept, operation=null",
+          "ok": true,
+          "detail": "{\"o\":false,\"c\":null,\"s\":\"e2e-muxpcwvr-proj-a-d113b9\"}",
+          "kind": "http"
+        },
+        {
+          "name": "UI: says the page was taken down (after the 200)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "pointerVersion moved by exactly +1; deployments are KEPT (none deleted, statuses unchanged)",
+          "ok": true,
+          "detail": "24 → 25",
+          "kind": "persistence"
+        },
+        {
+          "name": "the public URL no longer serves the site (404)",
+          "ok": true,
+          "detail": "http://127.0.0.1:41088/e2e-muxpcwvr-proj-a-d113b9/",
+          "kind": "persistence"
+        },
+        {
+          "name": "unpublish when already offline → 200 and NOTHING is written (pointerVersion unchanged)",
+          "ok": true,
+          "detail": "status=200 25→25",
+          "kind": "persistence"
+        },
+        {
+          "name": "UI: with the site offline the 'Gỡ trang xuống' button is not offered",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "a rollback to a kept release serves the site again (200, online) with no rebuild",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "http"
+        },
+        {
+          "name": "the browser NEVER sent pointerVersion or an invented field",
+          "ok": true,
+          "detail": "[]",
+          "kind": "ui"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-P04",
+      "title": "Scope busy: operation=PUBLISH, 409 SCOPE_BUSY + Retry-After 5, busy UI, retry after the scope is free",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-07T06:05:56.575Z",
+      "end": "2026-10-07T06:06:14.869Z",
+      "workspace": "4be61f3e-a27d-40d1-8f91-6823910fa5b8",
+      "project": "d113b984-55c9-4e35-92c1-518374544939",
+      "checks": [
+        {
+          "name": "the dialog opened on an idle scope: no busy banner, controls enabled",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "(setup) a publish was accepted (202)",
+          "ok": true,
+          "detail": "202",
+          "kind": "http"
+        },
+        {
+          "name": "SiteInfo.operation = PUBLISH with this deployment's id, since and leaseUntil",
+          "ok": true,
+          "detail": "{\"kind\":\"PUBLISH\",\"deploymentId\":\"cf3dda89-81f8-4332-9f2c-e77872f7f5e2\",\"since\":\"2026-10-07T06:06:10.716049Z\",\"leaseUntil\":\"2026-10-07T06:07:40.716049Z\"}",
+          "kind": "http"
+        },
+        {
+          "name": "the lease is in the future (a live operation, not an expired one)",
+          "ok": true,
+          "detail": "2026-10-07T06:07:40.716049Z",
+          "kind": "http"
+        },
+        {
+          "name": "rollback while the PUBLISH holds the scope → 409 SCOPE_BUSY",
+          "ok": true,
+          "detail": "status=409 SCOPE_BUSY",
+          "kind": "http"
+        },
+        {
+          "name": "…with Retry-After: 5",
+          "ok": true,
+          "detail": "5",
+          "kind": "http"
+        },
+        {
+          "name": "…the standard envelope (no `retryable` field) and the holder in details.operation",
+          "ok": true,
+          "detail": "[\"code\",\"message\",\"requestId\",\"details\"]",
+          "kind": "http"
+        },
+        {
+          "name": "unpublish while the PUBLISH holds the scope → 409 SCOPE_BUSY",
+          "ok": true,
+          "detail": "status=409 SCOPE_BUSY",
+          "kind": "http"
+        },
+        {
+          "name": "UI: the server's SCOPE_BUSY is shown (kind scope-busy) naming the running operation and the 5 s wait",
+          "ok": true,
+          "detail": "Ứng dụng đang có một thao tác phát hành khác Thao tác đang chạy: đang xuất bản. Thử lại sau 5 giây khi thao tác đó xong. Thử lại sau 5sTải lại trạng thái",
+          "kind": "ui"
+        },
+        {
+          "name": "UI: a retry affordance exists and waits for Retry-After (disabled at first)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "UI: SiteInfo.operation = PUBLISH is reflected (banner with kind PUBLISH)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "UI: Publish and every rollback/unpublish control are disabled while the scope is held",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "(setup) the publish reached DEPLOYING and the store was frozen there",
+          "ok": true,
+          "detail": "DEPLOYING",
+          "kind": "http"
+        },
+        {
+          "name": "after the store is resumed the publish completes and the scope is idle again (operation = null)",
+          "ok": true,
+          "detail": "{\"cur\":\"cf3dda89-81f8-4332-9f2c-e77872f7f5e2\",\"op\":null}",
+          "kind": "persistence"
+        },
+        {
+          "name": "UI: the busy banner goes away by itself (polling) and the controls come back",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "pointerVersion advanced by the one completed publish",
+          "ok": true,
+          "detail": "52 → 53",
+          "kind": "persistence"
+        },
+        {
+          "name": "the refused rollback / unpublish changed nothing (still online, pointer moved only by the publish)",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "retry after the scope is free: the rollback is accepted (200)",
+          "ok": true,
+          "detail": "status=200 undefined",
+          "kind": "http"
+        },
+        {
+          "name": "no unhandled page errors (the 409 of the refused rollback is the expected console line)",
+          "ok": true,
+          "detail": "console: Failed to load resource: the server responded with a status of 409 (Conflict)",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-P05",
+      "title": "Rollback in flight: operation=ROLLBACK, refresh during rollback, polling until the server's final state",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-07T06:06:14.869Z",
+      "end": "2026-10-07T06:06:31.014Z",
+      "workspace": "4be61f3e-a27d-40d1-8f91-6823910fa5b8",
+      "project": "d113b984-55c9-4e35-92c1-518374544939",
+      "checks": [
+        {
+          "name": "SiteInfo.operation = ROLLBACK while the rollback runs (deploymentId is null: only PUBLISH names one)",
+          "ok": true,
+          "detail": "{\"kind\":\"ROLLBACK\",\"deploymentId\":null,\"since\":\"2026-10-07T06:06:26.243938Z\",\"leaseUntil\":\"2026-10-07T06:07:56.243938Z\"}",
+          "kind": "http"
+        },
+        {
+          "name": "a second rollback (no key) → 409 SCOPE_BUSY while the first runs",
+          "ok": true,
+          "detail": "status=409 SCOPE_BUSY",
+          "kind": "http"
+        },
+        {
+          "name": "the pointer has not moved yet: nothing is final while the operation runs",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "after the refresh the dialog shows the busy scope: banner kind ROLLBACK",
+          "ok": true,
+          "detail": "Ứng dụng này đang hoàn tác về bản cũ. Các nút xuất bản / hoàn tác / gỡ xuống tạm khóa cho tới khi xong.",
+          "kind": "ui"
+        },
+        {
+          "name": "after the refresh Publish and the rollback buttons are disabled (no duplicate operation)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "after the refresh the page does NOT claim the rollback is done",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the server's operation ends (operation = null)",
+          "ok": true,
+          "detail": "null",
+          "kind": "persistence"
+        },
+        {
+          "name": "the final pointer is either the restored release (the operation completed) or unchanged (the operation failed) — never anything else",
+          "ok": true,
+          "detail": "e63d48e9-c26e-4e9d-9d41-b4ad19e09b1b",
+          "kind": "persistence"
+        },
+        {
+          "name": "pointerVersion is consistent with the outcome (+1 if restored, unchanged otherwise)",
+          "ok": true,
+          "detail": "57 → 58 restored=true",
+          "kind": "persistence"
+        },
+        {
+          "name": "the reloaded dialog follows the server by itself: busy banner gone, controls back",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the reloaded dialog shows the version the server really serves",
+          "ok": true,
+          "detail": "Đang phục vụ phiên bản 21 (riêng tư — chỉ thành viên, đăng nhập bằng tài khoản công ty) tại http://127.0.0.1:41088/e2e-m",
+          "kind": "persistence"
+        },
+        {
+          "name": "the first page (before the refresh) never sent pointerVersion",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "no unhandled page errors other than the aborted request of the refreshed page",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-P08",
+      "title": "Stale publish becomes terminal FAILED [STALE_PUBLISH]; Studio shows it; publish again works",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-07T06:06:31.014Z",
+      "end": "2026-10-07T06:06:50.042Z",
+      "workspace": "4be61f3e-a27d-40d1-8f91-6823910fa5b8",
+      "project": "d113b984-55c9-4e35-92c1-518374544939",
+      "checks": [
+        {
+          "name": "UI: the publish is shown as a BUSY step (BUILDING) while the worker is paused — not success",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "UI: while busy the dialog cannot be dismissed and offers no second publish",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "a rollback while the publish is still BUILDING goes through (200)",
+          "ok": true,
+          "detail": "status=200 undefined",
+          "kind": "http"
+        },
+        {
+          "name": "UI: the deployment ends as a FAILED deployment with the STALE_PUBLISH explanation (data-code)",
+          "ok": true,
+          "detail": "Bản xuất bản này đã cũ hơn bản đang chạy Một thao tác phát hành mới hơn (xuất bản hoặc hoàn tác) đã đổi bản đang chạy trước khi bản này kịp lên. Bản đang chạy k",
+          "kind": "ui"
+        },
+        {
+          "name": "UI: it is not shown as success and not as a conflict/HTTP error (no error dialog)",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "UI: the history lists the STALE_PUBLISH event in plain words",
+          "ok": true,
+          "detail": "Đang chờ — Deployment queued | Kiểm tra chính sách — Checking policy | Kiểm tra bảo mật — Running security checks | Đang build — Building (static site, or sandbox build for code apps) | Đang triển khai — Switching the site to the new artifact | Thất bại — [STALE_PUBLISH] a newer release operation al",
+          "kind": "ui"
+        },
+        {
+          "name": "server: the deployment is terminal FAILED with error '[STALE_PUBLISH] …' and a STALE_PUBLISH event",
+          "ok": true,
+          "detail": "{\"s\":\"FAILED\",\"e\":\"[STALE_PUBLISH] a newer release operation already moved the active release\"}",
+          "kind": "persistence"
+        },
+        {
+          "name": "server: the stale publish wrote nothing — the rollback target B is still the active release, operation idle",
+          "ok": true,
+          "detail": "{\"cur\":\"94107384-e764-40ca-b93f-e027e6e78a13\",\"op\":null}",
+          "kind": "persistence"
+        },
+        {
+          "name": "publish again used a NEW Idempotency-Key (replaying the old one would only return the FAILED deployment)",
+          "ok": true,
+          "detail": "[\"ui-e14717f7-c884-495c-a251-c3d415f0ada8\",\"ui-d56cff44-c836-4a44-adf2-5e74451bfb47\"]",
+          "kind": "http"
+        },
+        {
+          "name": "…and it succeeded: the site now serves the new deployment",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    }
+  ]
+}

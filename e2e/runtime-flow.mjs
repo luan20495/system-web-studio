@@ -1,3 +1,5 @@
+// @class: real-backend — real browser -> real backend
+// @legacy: pre-V2 single-origin root app (:3100) + scripts/run-local.sh; NOT run against integration/v2; some steps seed via SQL or stub the AI provider
 // Server runtime E2E (stage J/K): app kinds through the REAL pipeline — sandbox build, isolated runtime container, API through the sites gateway,
 // own database, signed identity, blue/green switch, isolation between apps and from the platform. Needs the FULL local stack
 // (./scripts/run-local.sh) with the Docker daemon; it switches the `server-apps.enabled` policy on for the run and restores it afterwards.

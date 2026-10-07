@@ -2,20 +2,26 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { api, ApiError } from "@/lib/http-api";
+import { api, ApiError, newIdempotencyKey } from "@/lib/http-api";
 import { renderSchemaDocument } from "@/lib/schema-preview";
 import type { AiStatus, ApiProject, AssetDto, BlockDto, PageSchema, PromptHistoryItem, RegistryComponent, SchemaOperation, VersionSummary } from "@/lib/http-types";
 import type { DeviceMode } from "@/lib/types";
 import { sectionLabel, sectionSummary } from "@/components/SectionInspector";
 import type { AppDefinitionV2, DefinitionOperation } from "@xweb/types";
 import { BuilderWorkspace } from "./builder/BuilderWorkspace";
+import type { RuntimeCalls } from "./builder/TestPanel";
+import type { DataManagementCalls } from "./builder/core/dataManagement";
 import { backendFrom, type ProbeState } from "./builder/core/backend";
 import { explainError } from "./builder/core/errors";
 import { NOT_RENDERED } from "./builder/core/library";
 import type { BlockOption } from "./builder/panels/ComponentsPanel";
+import { canEditProject, canPublish, canShare, canViewProject, holdsStorageConstant, resolvePermissions } from "@xweb/permissions";
 import { useSession } from "../session";
 import { ErrorState, errText, fmtDate, StateView, tok, usd } from "../ui";
-import { AssetsDrawer, DeviceIcon, Drawer, MembersDrawer, PublishModal, SettingsDrawer, suggestions } from "./drawers";
+import { AssetsDrawer, DeviceIcon, Drawer, MembersDrawer, SettingsDrawer, suggestions } from "./drawers";
+import { PublishModal } from "./ReleaseModal";
+import { AiProgress } from "./AiProgress";
+import type { AiLive } from "./aiProgressModel";
 import { SaveBlockDrawer, SaveTemplateSection } from "./libraryPanels";
 import { CodeWorkspace } from "./CodeWorkspace";
 import { SiteDrawer } from "./SitePanels";
@@ -55,7 +61,9 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const [assets, setAssets] = useState<AssetDto[]>([]);
   const [ai, setAi] = useState<AiStatus | null>(null);
   /** a streamed AI answer in progress: stream id (for cancel), raw output so far, last status */
-  const [live, setLive] = useState<{ id: string | null; text: string; status: string } | null>(null);
+  const [live, setLive] = useState<AiLive | null>(null);
+  /** aborts the request while the server has not yet answered `start` (a stream id exists only after that) */
+  const streamAbort = useRef<AbortController | null>(null);
   /** page of a multi-page site being edited in Design mode ("home" = the root page) */
   const [pageId, setPageId] = useState("home");
   const [publicPublish, setPublicPublish] = useState<boolean | undefined>(undefined);
@@ -74,8 +82,12 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const [model, setModel] = useState<string>(() => { try { return localStorage.getItem("studio-ai-model") ?? ""; } catch { return ""; } });
   const promptRef = useRef<HTMLTextAreaElement>(null);
   const ws = project?.workspaceId ?? "";
-  const can = (p: string) => project?.permissions.includes(p) ?? false;
-  const readOnly = !can("PROJECT_EDIT");
+  // UX only (the server re-checks every call). The input is the permission list the server resolved for THIS project; no role name is read (permissions.ts / canonical.ts).
+  const perms = useMemo(() => resolvePermissions(project?.permissions), [project?.permissions]);
+  const mayEdit = canEditProject(perms), mayPublish = canPublish(perms), mayShare = canShare(perms), mayDelete = holdsStorageConstant(project?.permissions, "PROJECT_DELETE");
+  const readOnly = !mayEdit;
+  // page-level gate: a project whose resolved permissions lack APP_VIEW is not shown (APP_VIEW without APP_EDIT is NOT a reason to leave: it opens read-only)
+  useEffect(() => { if (project && !canViewProject(perms)) router.replace("/auth/no-access?portal=studio&reason=app-view"); }, [project, perms, router]);
 
   const toMessages = (items: PromptHistoryItem[]): Msg[] => [...items].reverse().flatMap((p) => [
     { id: `${p.id}-u`, role: "user" as const, content: p.text },
@@ -102,11 +114,20 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const valid = (m: string) => m === "auto" || m === "mock" || (ai?.models ?? []).some((x) => x.id === m);
   const effectiveModel = ai?.configured ? (model && valid(model) ? model : valid(ai.defaultModel) ? ai.defaultModel : "auto") : "mock";
 
+  const saveFailureRef = useRef<"none" | "retryable">("none");
   async function run<T>(label: string, fn: () => Promise<T>, fallback: string): Promise<T | undefined> {
-    setBusy(label); setSave((x) => ({ ...x, state: "saving" }));
-    try { const out = await fn(); setSave({ state: "saved", at: new Date() }); return out; }
+    // An AI request is not a save: while it waits for the model nothing is being written, so the top bar keeps saying what is true ("saved") and a failed/cancelled request is not "Lưu thất bại".
+    const isSave = label !== "prompt";
+    setBusy(label); if (isSave) setSave((x) => ({ ...x, state: "saving" }));
+    saveFailureRef.current = "none";
+    try { const out = await fn(); setSave((x) => (isSave || (out as { version?: unknown } | undefined)?.version ? { state: "saved", at: new Date() } : x)); return out; }
     catch (e) {
-      setSave((x) => ({ ...x, state: "error" }));
+      if (isSave) setSave((x) => ({ ...x, state: "error" }));
+      // the user cancelled before the server answered: nothing failed
+      if (e instanceof ApiError && e.code === "ABORTED") { setNotice("Đã huỷ yêu cầu AI."); return undefined; }
+      // retryable = nothing definite was decided by the server (no answer, 5xx, 429); conflict/validation/permission failures are final: retrying the same edit cannot succeed
+      const st = e instanceof ApiError ? e.status : 0;
+      saveFailureRef.current = st === 0 || st >= 500 || st === 429 ? "retryable" : "none";
       if (e instanceof ApiError && e.code === "REVISION_CONFLICT") { setNotice("Project vừa được thay đổi ở nơi khác. Đã tải lại bản mới nhất, hãy thử lại."); await reload().catch(() => undefined); }
       else if (e instanceof ApiError && e.code === "AI_TOKEN_LIMIT") {
         const d = e.details as { scope?: string; used?: number; limit?: number } | undefined;
@@ -125,12 +146,16 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
     setMessages((m) => [...m, { id: `local-${Date.now()}`, role: "user", content: text }]); setPrompt("");
     const real = ai?.configured === true && effectiveModel !== "mock";
     // real models stream (partial output, cancel, deadline); the simulator answers at once
-    const r = await run("prompt", () => real
-      ? api.streamPrompt(ws, projectId, text, revision, effectiveModel, {
-          onStart: (id) => setLive({ id, text: "", status: "" }),
-          onDelta: (t) => setLive((l) => l ? { ...l, text: l.text + t } : l),
-          onStatus: (st) => setLive((l) => l ? { ...l, status: st } : l) }).finally(() => setLive(null))
-      : api.sendPrompt(ws, projectId, text, revision, ai?.configured ? effectiveModel : undefined), "Không thể cập nhật website.");
+    const r = await run("prompt", () => {
+      if (!real) return api.sendPrompt(ws, projectId, text, revision, ai?.configured ? effectiveModel : undefined);
+      const ctl = new AbortController(); streamAbort.current = ctl;
+      const t0 = Date.now(); setLive({ id: null, text: "", status: "", startedAt: t0, lastAt: t0, deadline: null });
+      const touch = (f: (l: AiLive) => AiLive) => setLive((l) => (l ? f({ ...l, lastAt: Date.now() }) : l));
+      return api.streamPrompt(ws, projectId, text, revision, effectiveModel, {
+          onStart: (id, deadline) => touch((l) => ({ ...l, id, deadline: deadline ?? null })),
+          onDelta: (t) => touch((l) => ({ ...l, text: l.text + t })),
+          onStatus: (st) => touch((l) => ({ ...l, status: st })) }, ctl.signal).finally(() => { streamAbort.current = null; setLive(null); });
+    }, "Không thể cập nhật website.");
     if (!r) return;
     setSchema(r.pageSchema); setRevision(r.revision);
     const changed = Array.from(new Set(r.schemaPatch.map((op) => op.sectionType ?? r.pageSchema.sections.find((s) => s.id === op.sectionId)?.type ?? schema?.sections.find((s) => s.id === op.sectionId)?.type).filter(Boolean) as string[]));
@@ -151,11 +176,20 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params, project, schema]);
 
+  /** the last edit that could not be saved (network/5xx/timeout), kept so the user can retry it instead of redoing the work */
+  const [failedEdit, setFailedEdit] = useState<{ ops: (SchemaOperation | DefinitionOperation)[]; summary: string; blockId?: string } | null>(null);
   async function applyOps(ops: (SchemaOperation | DefinitionOperation)[], summary: string, blockId?: string): Promise<boolean> {
     const r = await run("edit", () => api.patchSchema(ws, projectId, revision, ops, summary, blockId), "Không lưu được thay đổi.");
-    if (!r) return false;
-    setSchema(r.schema); setRevision(r.revision); void refreshVersions(); return true;
+    if (!r) { setFailedEdit(saveFailureRef.current === "retryable" ? { ops, summary, blockId } : null); return false; }
+    setFailedEdit(null); setSchema(r.schema); setRevision(r.revision); void refreshVersions(); return true;
   }
+  const retrySave = () => { if (failedEdit) void applyOps(failedEdit.ops, failedEdit.summary, failedEdit.blockId); };
+  // leaving while an edit is in flight or failed would lose it silently
+  useEffect(() => {
+    if (busy !== "edit" && !failedEdit) return;
+    const h = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", h); return () => window.removeEventListener("beforeunload", h);
+  }, [busy, failedEdit]);
   async function restore(v: VersionSummary) {
     if (!window.confirm(`Khôi phục phiên bản ${v.versionNumber}? Một phiên bản mới sẽ được tạo; lịch sử cũ giữ nguyên.`)) return;
     const r = await run("restore", () => api.restoreVersion(ws, projectId, v.id, revision), "Không khôi phục được phiên bản.");
@@ -184,6 +218,32 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
     selectedId: null, interactive: false, nonce: nonceOfPage(), assets: assetUrls, pageId
   }) : ""), [schema, assetUrls, pageId]);
 
+  /** Test mode talks to the real backend: TEST = the saved draft, no side effects, key per click (runtime-api.md). Rebuilt only when the project changes. */
+  const runtime = useMemo<RuntimeCalls | undefined>(() => !ws || !projectId ? undefined : ({
+    runQuery: (q) => api.appRuntime.runQuery(ws, projectId, q, { mode: "TEST" }),
+    runAction: (a, key) => api.appRuntime.executeAction(ws, projectId, a, { mode: "TEST", idempotencyKey: key }),
+    startWorkflow: (w, key) => api.appRuntime.startWorkflow(ws, projectId, w, { mode: "TEST", idempotencyKey: key }),
+    getRun: (r) => api.appRuntime.workflowRun(ws, projectId, r),
+    cancelRun: (r) => api.appRuntime.cancelWorkflowRun(ws, projectId, r),
+    newKey: () => newIdempotencyKey("test"),
+  }), [ws, projectId]);
+
+  /** C3 Management API (MANAGEMENT_API.md): tenant is derived by the server from the workspace in the path; nothing but contract fields is sent. */
+  const dataManagement = useMemo<DataManagementCalls | undefined>(() => !ws || !projectId ? undefined : ({
+    connectors: async () => (await api.dataManagement.connectors(ws)).items,
+    list: async () => (await api.dataManagement.list(ws)).items,
+    create: (b) => api.dataManagement.create(ws, b),
+    update: (id, b) => api.dataManagement.update(ws, id, b),
+    remove: (id) => api.dataManagement.remove(ws, id),
+    credential: (id) => api.dataManagement.credential(ws, id),
+    setCredential: (id, c) => api.dataManagement.setCredential(ws, id, c),
+    removeCredential: (id) => api.dataManagement.removeCredential(ws, id),
+    test: (id) => api.dataManagement.testConnection(ws, id),
+    listBindings: async () => (await api.dataManagement.listBindings(ws, projectId)).items,
+    bind: (m, slot, id) => api.dataManagement.bind(ws, projectId, m, slot, id),
+    unbind: (m, slot) => api.dataManagement.unbind(ws, projectId, m, slot),
+  }), [ws, projectId]);
+
   if (loadError) return <div className="wsError"><ErrorState error={loadError} retry={() => { setLoadError(null); reload().catch(setLoadError); }}/><p><a className="btn" href={S("/projects")}>← Danh sách ứng dụng</a></p></div>;
   if (project?.appType === "STATIC_APP") return <CodeWorkspace project={project} view={view} onProject={setProject}/>;
   if (!project || !schema) return <div className="wsError"><StateView kind="loading" title="Đang mở ứng dụng…"/></div>;
@@ -205,7 +265,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
       {mode === "design" ? <BuilderWorkspace
         project={project} doc={schema as AppDefinitionV2} revision={revision} registry={registry} assets={assets} backend={backend} pageId={pageId} onPage={(id) => { setPageId(id); setSelectedId(null); }}
         selectedId={selectedId} onSelect={setSelectedId} device={device} onDevice={setDevice} busy={busy !== null} save={save} readOnly={readOnly} latest={latest}
-        blocks={blockOptions.map(({ b, who }): BlockOption => ({ id: b.id, name: b.name, who, baseLabel: label(b.baseComponent) }))}
+        runtime={runtime} dataManagement={dataManagement} onRetrySave={failedEdit ? retrySave : undefined} blocks={blockOptions.map(({ b, who }): BlockOption => ({ id: b.id, name: b.name, who, baseLabel: label(b.baseComponent) }))}
         applyOps={applyOps} addBlock={(id) => { const o = blockOptions.find(({ b }) => b.id === id); if (o) void addBlock(o.b); }}
         renderPreview={renderPreview} labelOf={label} summaryOf={sectionSummary}
         leading={<button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}>←</button>}
@@ -214,7 +274,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
           <button className="button ghost" onClick={() => go("site")}>Website</button>
           <button className="button ghost" onClick={() => go("versions")}>Phiên bản</button>
           <button className="button ghost" onClick={() => go("assets")}>Tệp</button>
-          <button className="button icon" aria-label="Cài đặt project" title={can("PROJECT_SETTINGS") ? "Cài đặt project" : "Bạn không có quyền đổi cài đặt"} disabled={!can("PROJECT_SETTINGS")} onClick={() => go("settings")}>⚙</button></>}
+          <button className="button icon" aria-label="Cài đặt project" title={mayEdit ? "Cài đặt project" : "Bạn không có quyền đổi cài đặt"} disabled={!mayEdit} onClick={() => go("settings")}>⚙</button></>}
         goAi={() => go("ai")} openSite={() => go("site")} openMembers={() => go("members")} openPublish={() => go("publish")} saveBlock={() => setSavingBlock(true)}/> : (
       <header className="topbar">
         <div className="brand">
@@ -232,9 +292,9 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
           <button className="button ghost" onClick={() => go("site")}>Website</button>
           <button className="button ghost" onClick={() => go("versions")}>Phiên bản</button>
           <button className="button ghost" onClick={() => go("assets")}>Tệp</button>
-          {can("PROJECT_MEMBERS") ? <button className="button ghost" onClick={() => go("members")}>Chia sẻ</button> : null}
-          <button className="button icon" aria-label="Cài đặt project" title={can("PROJECT_SETTINGS") ? "Cài đặt project" : "Bạn không có quyền đổi cài đặt"} disabled={!can("PROJECT_SETTINGS")} onClick={() => go("settings")}>⚙</button>
-          <button className="button primary" disabled={!can("PROJECT_PUBLISH") || busy !== null} title={can("PROJECT_PUBLISH") ? "Xuất bản phiên bản hiện tại" : "Bạn không có quyền xuất bản"} onClick={() => go("publish")}>Xuất bản</button>
+          {mayShare ? <button className="button ghost" onClick={() => go("members")}>Chia sẻ</button> : null}
+          <button className="button icon" aria-label="Cài đặt project" title={mayEdit ? "Cài đặt project" : "Bạn không có quyền đổi cài đặt"} disabled={!mayEdit} onClick={() => go("settings")}>⚙</button>
+          <button className="button primary" disabled={!mayPublish || busy !== null} title={mayPublish ? "Xuất bản phiên bản hiện tại" : "Bạn không có quyền xuất bản"} onClick={() => go("publish")}>Xuất bản</button>
         </div>
       </header>)}
 
@@ -265,10 +325,8 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
                     {m.detail ? <div className="msgDetail">{m.detail}</div> : null}
                     {m.meta?.length ? <div className="chips">{m.meta.map((x) => <span className="chip" key={x}>{x}</span>)}</div> : null}</div></div>
                 ))}
-                {busy === "prompt" && live ? <div className="message assistant"><div className="bubble typing liveStream" role="status">
-                    <div><span className="dots" aria-hidden="true"><i/><i/><i/></span> {live.status.startsWith("tool:") ? `AI đang tra cứu (${live.status.slice(5)})…` : live.text ? `Đang nhận câu trả lời… ${live.text.length} ký tự` : "Đang chờ AI…"}</div>
-                    {live.text ? <pre className="streamTail" aria-hidden="true">{live.text.slice(-240)}</pre> : null}
-                    {live.id ? <button type="button" className="smallButton" onClick={() => { void api.cancelStream(live.id!).catch(() => undefined); }}>Huỷ</button> : null}</div></div>
+                {busy === "prompt" && live ? <AiProgress live={live} model={effectiveModel}
+                    onCancel={() => { if (live.id) void api.cancelStream(live.id).catch(() => undefined); else streamAbort.current?.abort(); }}/>
                   : busy === "prompt" ? <div className="message assistant"><div className="bubble typing" role="status"><span className="dots" aria-hidden="true"><i/><i/><i/></span> Đang phân tích yêu cầu{ai?.configured && effectiveModel !== "mock" ? " với AI…" : "…"}</div></div> : null}
               </div>
               <div className="composer">
@@ -319,22 +377,22 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
           <article className="versionItem" key={v.id}>
             <div><b>Phiên bản {v.versionNumber}{v.current ? " · hiện tại" : ""}</b><span>{fmtDate(v.createdAt)}</span></div>
             <p>{v.summary}</p><small>{v.kind}{v.createdBy ? ` · ${v.createdBy}` : ""}</small>
-            {v.restorable && can("PROJECT_EDIT") ? <button className="smallButton" disabled={busy !== null} onClick={() => void restore(v)}>{busy === "restore" ? "Đang khôi phục…" : "Khôi phục"}</button> : null}
+            {v.restorable && mayEdit ? <button className="smallButton" disabled={busy !== null} onClick={() => void restore(v)}>{busy === "restore" ? "Đang khôi phục…" : "Khôi phục"}</button> : null}
           </article>))}</div>
       </Drawer> : null}
       {panel === "site" ? <SiteDrawer schema={schema} ws={ws} pid={projectId} pageId={pageId} onPage={(id) => { setPageId(id); setSelectedId(null); }} canEdit={!readOnly}
-        canPublish={can("PROJECT_PUBLISH")} apply={applyOps} onClose={() => go(mode)}/> : null}
+        canPublish={mayPublish} apply={applyOps} onClose={() => go(mode)}/> : null}
       {panel === "settings" ? <SettingsDrawer project={project} busy={busy === "settings"} onClose={() => go(mode)} onSave={saveSettings}
         extra={<>{!readOnly ? <SaveTemplateSection workspaceId={ws} projectId={projectId} projectName={project.name}/> : null}
-          {can("PROJECT_DELETE") && project.status !== "ARCHIVED" ? <section className="settingGroup"><h3>Lưu trữ ứng dụng</h3>
+          {mayDelete && project.status !== "ARCHIVED" ? <section className="settingGroup"><h3>Lưu trữ ứng dụng</h3>
             <p className="hint">Ứng dụng chỉ còn xem được, website bị gỡ khỏi mạng. Dữ liệu và phiên bản được giữ; có thể khôi phục.</p>
             <button className="button ghost" onClick={() => { if (confirm(`Lưu trữ “${project.name}”?`)) void run("settings", () => api.archiveProject(ws, projectId), "Không lưu trữ được.").then((r) => { if (r) { go(mode); void reload(); } }); }}>Lưu trữ</button>
           </section> : null}</>}/> : null}
       {savingBlock && selected ? <SaveBlockDrawer workspaceId={ws} projectId={projectId} section={selected} title={label(selected.type)}
         onClose={() => setSavingBlock(false)} onSaved={(m) => { setSavingBlock(false); setNotice(m); loadBlocks(); }}/> : null}
-      {panel === "assets" ? <AssetsDrawer workspaceId={ws} projectId={projectId} canEdit={can("PROJECT_EDIT")} onClose={() => { void loadAssets(ws); go(mode); }} onError={(e) => setNotice(errText(e, "Thao tác tệp thất bại."))}/> : null}
+      {panel === "assets" ? <AssetsDrawer workspaceId={ws} projectId={projectId} canEdit={mayEdit} onClose={() => { void loadAssets(ws); go(mode); }} onError={(e) => setNotice(errText(e, "Thao tác tệp thất bại."))}/> : null}
       {panel === "members" && me ? <MembersDrawer workspaceId={ws} projectId={projectId} me={me} onClose={() => go(mode)} onError={(e) => setNotice(errText(e, "Thao tác thành viên thất bại."))}/> : null}
-      {panel === "publish" ? <PublishModal workspaceId={ws} projectId={projectId} revision={revision} current={project.siteVisibility} versionNumber={latest}
+      {panel === "publish" ? <PublishModal workspaceId={ws} projectId={projectId} revision={revision} current={project.siteVisibility} versionNumber={latest} canPublish={mayPublish} draft={schema as AppDefinitionV2}
         allowed={publicPublish === false ? ["PRIVATE"] : ["PRIVATE", "PUBLIC"]}
         onClose={() => { go(mode); void reload().catch(() => undefined); }} onUnauthorized={() => undefined}/> : null}
     </div>

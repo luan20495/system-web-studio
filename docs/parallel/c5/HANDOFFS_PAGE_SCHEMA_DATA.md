@@ -1,0 +1,27 @@
+# C5 handoffs — PAGE_SCHEMA public data V1 (2026-10-07)
+
+What C5 consumed: C2 `fix/c2-v3 @ c1e0df5` (`HANDOFF_C5_PAGE_SCHEMA_DATA.md`), release contract `8d40218`, C0 baseline `integration/v2 @ 27f7b6f`. Review before coding: `PAGE_SCHEMA_DATA_REVIEW.md` (M1–M8).
+C5 changed nothing it does not own. Everything below is a request for the owner; none of it is worked around in the frontend.
+
+| ID | To | P | Request | Evidence |
+|---|---|---|---|---|
+| H-C2-07 | C2 | P1 | **Enforce the public-data acknowledgement and publish it before the click.** Today `POST /publish` ignores `publicDataApproved` (it exists only in the flag-gated publish-config API) and the list of public queries is announced only AFTER the click (deployment event `PUBLIC_QUERIES`). C5 shows the list from the draft with a mirror of `PublicQueries.of` and a LOCAL acknowledgement checkbox (nothing extra is sent: the release contract is unchanged). Please either (a) make `publish` refuse a release that has public queries unless the project's `publicDataApproved` is set (and tell C5 which route sets it from the Studio), or (b) add a read-only "what would this release publish" answer (public query ids, bindings) so C5 can drop its mirror. | `PAGE_SCHEMA_DATA_REVIEW.md` M1, M2; `PublishConfigApi`/`PublishConfigPolicy` @ c1e0df5 (`PUBLIC_DATA_NOT_APPROVED`, not consulted by publish) |
+| H-C2-08 | C2 | P3 | Keep `tests/page-runtime/page-runtime.test.ts` cases and `resolveBindings` messages stable: C5's mirror (`features/studio/builder/core/publicData.ts`) is checked against fixtures GENERATED from C2's own `resolveBindings` (`scripts/gen-publicdata-fixtures.mjs`, `tests/builder/publicdata-cases.json`). A new bindable prop or limit needs the same change in the table (`BINDABLE_SCALAR/LIST`, `MAX_DISTINCT_QUERIES`). | `tests/builder/publicdata.test.ts` "mirror = C2 resolveBindings" |
+| H-C2-09 | C2 | info | The Studio preview stays NOT data-aware (as C2 stated): it renders the authored values, and C5 shows readiness + the five runtime state names, never rows. A data-bound preview would need a Studio-callable, anonymous-safe preview source; not requested. | M5 |
+| H-C0-10 | C0 | **P0 for the canonical E2E** | Import `fix/c2-v3 @ c1e0df5` into `integration/v2`. `git merge-tree integration/v2 c1e0df5` (2026-10-07) conflicts in `AppDefinitionModel.kt`, `AppDefinitionReader.kt`, `AppDefinitionValidator.kt`. Until it is imported the stack on integration refuses `ADD_DATA_SOURCE` and has no `QueryDef.public`, no page runtime, no `config.json` apiBase, no `PUBLIC_QUERIES`; the public data route (D-C0-36) has nothing to serve. Also set `SITES_DATA_API_BASE=<sites origin>/{slug}/_data` on the stack. C5 changed `e2e-stack.sh` to pass `E2E_SITES_DATA_API_BASE` through. | E2E-PD01/PD02 on a stack at `c1e0df5` (below) vs a stack at `8d40218`: `400 INVALID_OPERATION operation[0] ADD_DATA_SOURCE: sectionId is required` |
+| H-C0-07 (reopened scope) | C0/C3 | P2 | A real data source cannot be created on a local stack: `POST /data-sources` with the stack's own Postgres → `400 INVALID_CONFIG host is not an allowed database address` (public DNS + verify-full TLS only, no dev switch). So the LAST hop of the canonical chain (LIVE query → DataGateway → real rows) cannot be run locally. Decide: a documented dev allow-list, or a public TLS Postgres for the C6 run. | E2E-PD01 on the `c1e0df5` stack: BLOCKED (C3) with the server's answer |
+| H-C3-05 | C3 | info | `E2E_PD_SQL` registers a read-only SELECT through `POST /data-sources/{id}/queries` (`kind:"SQL"`) and uses its id as the page query's `operationKey`; nothing about it is typed into the page document. Please confirm this is the intended way to make an "approved operation" for a page query. | `tests/e2e-real/lib/publicdata.mjs` |
+
+## What is verified, and where
+| Claim | Class | Where |
+|---|---|---|
+| mirror of `resolveBindings` = C2 (23 cases, generated from C2's code at c1e0df5) | unit | `tests/builder/publicdata.test.ts` |
+| slot / `public` / binding / approval rules, security UX | unit + SSR | `tests/builder/publicdata*.test.ts(x)` |
+| editors click-through, publish approval, the five runtime states of C2's OWN runtime script on a page built by C2's `renderSitePages` | harness (real Chromium, no backend) | `tests/browser/publicdata.spec.mjs` |
+| slot → READ public query → binding → publish approval → PUBLIC_QUERIES → runtime config → the page's one anonymous request, on a real backend at `c1e0df5` | real-backend | `E2E-PD02` |
+| canonical chain to real rows | real-backend | `E2E-PD01` — BLOCKED (H-C0-10 on integration; H-C0-07 for a real source) |
+
+## AI progress (2026-10-07)
+| ID | To | P | Request | Evidence |
+|---|---|---|---|---|
+| H-C2-10 | C2 (ai/*, prompt/*) | P2 | The AI stream emits `status` ONLY for `tool:<name>`. With model "auto" the server tries OpenRouter free models in turn (each can fail or sit queued) inside one 120 s deadline, and the browser sees nothing between `start` and the first `delta`: the user gets an endless "Đang chờ AI…". Please emit `status` events the UI already understands: `model:<id>` when a model call starts, `fallback:<id>` when it moves to the next, `validating` and `saving` when the server leaves the model call (`finish()` steps 3). `start` already carries `deadline`; keep it. The UI maps unknown status text to a neutral line and never prints it raw. | `AiStreams.kt`, `ExternalLLMProvider.complete`, `PromptController.finish` @ c1e0df5; `features/studio/aiProgressModel.ts` |

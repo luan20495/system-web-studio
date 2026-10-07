@@ -6,10 +6,11 @@
 import { useState } from "react";
 import type { ActionDef, ActionType, EventType, InputSourceDef } from "@xweb/types";
 import { ACTION_TYPES, CONTEXT_KEYS, EVENT_TYPES, IDEMPOTENCY_POLICIES, INPUT_SOURCE_KINDS, NOTIFY_CHANNELS } from "./core/contract";
-import { ACTION_HELP, ACTION_LABEL, EVENT_LABEL, actionOps, actionTypesFor, checkAction, isClientOnly, newAction, pageOptions, permissionToRun } from "./core/actions";
+import { ACTION_HELP, ACTION_LABEL, EVENT_LABEL, actionOps, actionTypesFor, checkAction, isClientOnly, newAction, pageOptions } from "./core/actions";
 import { allSections } from "./core/definition";
 import { OPERATION_KEY_RE } from "./core/dataFlow";
 import { permissionLabel } from "./core/inspector";
+import { actionRequires } from "../../../packages/permissions/src/canonical";
 import { Field } from "./ui/primitives";
 import type { DefCtx } from "./ctx";
 
@@ -119,7 +120,7 @@ export function ActionEditor({ ctx, initial, preset, onDone, onCancel }: {
         <select id={id} disabled={disabled} value={a.idempotency ?? ""} onChange={(e) => patch({ idempotency: (e.target.value || undefined) as never })}>
           <option value="">Mặc định</option>{IDEMPOTENCY_POLICIES.map((p) => <option key={p} value={p}>{p}</option>)}</select>)}</Field> : null}
 
-      <Field label="Quyền chạy" hint={`Máy chủ kiểm tra quyền “${permissionLabel[permissionToRun(a.type)]}” khi chạy. Có thể chọn một quyền đã khai báo cho hành động này.`}>{(id) => (
+      <Field label="Quyền chạy" hint={`Máy chủ kiểm tra: ${actionRequires({ type: a.type, declaredPermission: (doc.permissions ?? []).find((d) => d.id === a.permissionRef)?.permission ?? null }).map((c) => permissionLabel[c]).join(" + ")} khi chạy. Có thể chọn một quyền đã khai báo cho hành động này.`}>{(id) => (
         <select id={id} disabled={disabled} value={a.permissionRef ?? ""} onChange={(e) => patch({ permissionRef: e.target.value || undefined })}>
           <option value="">Mặc định theo loại hành động</option>{(doc.permissions ?? []).map((p) => <option key={p.id} value={p.id}>{p.name || permissionLabel[p.permission]}</option>)}</select>)}</Field>
 

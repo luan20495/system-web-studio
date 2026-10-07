@@ -5,10 +5,9 @@ import type { ActionDef, ActionType } from "@xweb/types";
 import { ACTION_LABEL, ROLE_LABEL, actionOps, describeAction, roleOf } from "../core/actions";
 import { usersOf } from "../core/definition";
 import { ACTION_TYPES } from "../core/contract";
-import { staticReadiness } from "../core/readiness";
 import { ActionEditor } from "../ActionEditor";
 import type { DefCtx } from "../ctx";
-import { Dialog, Gate, StateBox } from "../ui/primitives";
+import { Dialog, Gate } from "../ui/primitives";
 
 export function ActionsPanel({ ctx, preset }: { ctx: DefCtx; preset?: { type?: ActionType; sectionId?: string } }) {
   const [editing, setEditing] = useState<ActionDef | "new" | null>(preset ? "new" : null);
@@ -33,7 +32,7 @@ export function ActionsPanel({ ctx, preset }: { ctx: DefCtx; preset?: { type?: A
                 </li>);
             })}</ul>))}
       </Gate>
-      <StateBox state={staticReadiness("ACTION_RUNTIME")} compact/>
+      <p className="hint">Chạy thử hành động: chuyển sang chế độ “Dùng thử”. Chạy thật chỉ sau khi xuất bản.</p>
       <p className="hint">Các loại: {ACTION_TYPES.map((t) => ACTION_LABEL[t]).join(", ")}.</p>
       {removing ? (
         <Dialog title={`Xóa hành động “${removing.name || removing.id}”?`} onClose={() => setRemoving(null)} footer={<>

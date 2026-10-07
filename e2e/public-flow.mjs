@@ -1,3 +1,5 @@
+// @class: real-backend — real browser -> real backend
+// @legacy: pre-V2 single-origin root app (:3100) + scripts/run-local.sh; NOT run against integration/v2; some steps seed via SQL or stub the AI provider
 // End-to-end check of the PUBLISHED deployment (scripts/public-up.sh) from a real browser through Cloudflare.
 // E2E_RESOLVE_IP maps the two public hostnames to a Cloudflare IP while the local resolver still has a stale negative cache.
 import { chromium } from "playwright-core";

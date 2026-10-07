@@ -1,0 +1,223 @@
+{
+ "ref": "c1e0df5",
+ "maxDistinctQueries": 8,
+ "results": [
+  {
+   "name": "text binding Hero.title → public READ query",
+   "c2": {
+    "ok": true,
+    "bindings": [
+     {
+      "id": "b1",
+      "sectionId": "hero",
+      "prop": "title",
+      "query": "q-title",
+      "kind": "text"
+     }
+    ]
+   }
+  },
+  {
+   "name": "mode absent counts as READ",
+   "c2": {
+    "ok": true,
+    "bindings": [
+     {
+      "id": "b1",
+      "sectionId": "hero",
+      "prop": "title",
+      "query": "q-title",
+      "kind": "text"
+     }
+    ]
+   }
+  },
+  {
+   "name": "list prop ProductGrid.items",
+   "c2": {
+    "ok": true,
+    "bindings": [
+     {
+      "id": "b1",
+      "sectionId": "grid",
+      "prop": "items",
+      "query": "q-items",
+      "kind": "list"
+     }
+    ]
+   }
+  },
+  {
+   "name": "scalar ProductGrid.heading",
+   "c2": {
+    "ok": true,
+    "bindings": [
+     {
+      "id": "b1",
+      "sectionId": "grid",
+      "prop": "heading",
+      "query": "q1",
+      "kind": "text"
+     }
+    ]
+   }
+  },
+  {
+   "name": "through a view model's queryRef",
+   "c2": {
+    "ok": true,
+    "bindings": [
+     {
+      "id": "b1",
+      "sectionId": "hero",
+      "prop": "title",
+      "query": "q1",
+      "kind": "text"
+     }
+    ]
+   }
+  },
+  {
+   "name": "through a view model's mapping",
+   "c2": {
+    "ok": true,
+    "bindings": [
+     {
+      "id": "b1",
+      "sectionId": "hero",
+      "prop": "title",
+      "query": "q1",
+      "kind": "text"
+     }
+    ]
+   }
+  },
+  {
+   "name": "section on a secondary page",
+   "c2": {
+    "ok": true,
+    "bindings": [
+     {
+      "id": "b1",
+      "sectionId": "foot",
+      "prop": "text",
+      "query": "q1",
+      "kind": "text"
+     }
+    ]
+   }
+  },
+  {
+   "name": "Hero.ctaLabel is not bindable",
+   "c2": {
+    "ok": false,
+    "message": "binding 'b1': Hero.ctaLabel cannot be bound to data"
+   }
+  },
+  {
+   "name": "ComparisonBlock.rows is not bindable",
+   "c2": {
+    "ok": false,
+    "message": "binding 'b1': ComparisonBlock.rows cannot be bound to data"
+   }
+  },
+  {
+   "name": "Navbar.items (list) is not bindable",
+   "c2": {
+    "ok": false,
+    "message": "binding 'b1': Navbar.items cannot be bound to data"
+   }
+  },
+  {
+   "name": "unknown component",
+   "c2": {
+    "ok": false,
+    "message": "binding 'b1': Gallery.title cannot be bound to data"
+   }
+  },
+  {
+   "name": "section does not exist",
+   "c2": {
+    "ok": false,
+    "message": "binding 'b1': section 'ghost' does not exist"
+   }
+  },
+  {
+   "name": "query does not exist",
+   "c2": {
+    "ok": false,
+    "message": "binding 'b1': query 'q-ghost' does not exist"
+   }
+  },
+  {
+   "name": "query is not public (false)",
+   "c2": {
+    "ok": false,
+    "message": "binding 'b1': query 'q1' is not public: mark it public in the app definition or remove the binding"
+   }
+  },
+  {
+   "name": "query is not public (absent)",
+   "c2": {
+    "ok": false,
+    "message": "binding 'b1': query 'q1' is not public: mark it public in the app definition or remove the binding"
+   }
+  },
+  {
+   "name": "WRITE query marked public",
+   "c2": {
+    "ok": false,
+    "message": "binding 'b1': query 'q1' is not a READ query"
+   }
+  },
+  {
+   "name": "binding names no query",
+   "c2": {
+    "ok": false,
+    "message": "binding 'b1': it names no query (queryRef, or a view model that has one)"
+   }
+  },
+  {
+   "name": "view model does not exist",
+   "c2": {
+    "ok": false,
+    "message": "binding 'b1': view model 'vm-ghost' does not exist"
+   }
+  },
+  {
+   "name": "view model without a query",
+   "c2": {
+    "ok": false,
+    "message": "binding 'b1': it names no query (queryRef, or a view model that has one)"
+   }
+  },
+  {
+   "name": "uppercase section id is refused",
+   "c2": {
+    "ok": false,
+    "message": "binding 'b1': sectionId 'Hero' is not a valid id"
+   }
+  },
+  {
+   "name": "uppercase query id is refused",
+   "c2": {
+    "ok": false,
+    "message": "binding 'b1': query id 'Q1' is not a valid id"
+   }
+  },
+  {
+   "name": "binding id with a dot is refused",
+   "c2": {
+    "ok": false,
+    "message": "binding 'b.1': id 'b.1' is not a valid id"
+   }
+  },
+  {
+   "name": "nine distinct queries",
+   "c2": {
+    "ok": false,
+    "message": "a page can use at most 8 different queries, it uses 9"
+   }
+  }
+ ]
+}

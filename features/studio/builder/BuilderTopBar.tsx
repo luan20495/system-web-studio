@@ -4,10 +4,12 @@ import type { ReactNode } from "react";
 type Device = "desktop" | "tablet" | "mobile";
 const DEVICES: { id: Device; label: string }[] = [{ id: "desktop", label: "Máy tính" }, { id: "tablet", label: "Máy tính bảng" }, { id: "mobile", label: "Điện thoại" }];
 
-export function BuilderTopBar({ name, meta, save, appMode, onAppMode, device, onDevice, leading, modeTabs, canShare, shareReason, onShare, canPublish, publishReason, publishBusy, issues, onPublish, trailing }: {
+export function BuilderTopBar({ name, meta, save, appMode, onAppMode, device, onDevice, leading, modeTabs, canShare, shareReason, onShare, canPublish, publishReason, publishBusy, issues, onPublish, trailing, onRetrySave }: {
   name: string; meta: string; save: { state: "saved" | "saving" | "error"; at: Date | null }; appMode: "EDIT" | "TEST"; onAppMode: (m: "EDIT" | "TEST") => void;
   device: Device; onDevice: (d: Device) => void; leading?: ReactNode; modeTabs?: ReactNode; canShare: boolean; shareReason: string; onShare: () => void;
   canPublish: boolean; publishReason: string; publishBusy: boolean; issues: { block: number; warn: number }; onPublish: () => void; trailing?: ReactNode;
+  /** set only while a failed save is waiting: re-sends the SAME edit (safe: the server checks the revision, so an edit that did land answers 409 and the page reloads) */
+  onRetrySave?: () => void;
 }) {
   return (
     <header className="topbar bx-top" aria-label="Thanh công cụ Builder">
@@ -17,6 +19,7 @@ export function BuilderTopBar({ name, meta, save, appMode, onAppMode, device, on
         <span className={`saveState ${save.state}`} role="status" aria-live="polite">
           {save.state === "saving" ? "Đang lưu…" : save.state === "error" ? "Lưu thất bại" : `✓ Đã lưu${save.at ? ` ${save.at.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}` : ""}`}
         </span>
+        {save.state === "error" && onRetrySave ? <button type="button" className="smallButton" data-testid="retry-save" onClick={onRetrySave}>Thử lại</button> : null}
       </div>
       <div className="bx-top-center">
         {modeTabs}

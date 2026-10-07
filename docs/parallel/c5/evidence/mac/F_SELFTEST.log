@@ -1,0 +1,17 @@
+
+> system-web-studio@0.2.0 test:e2e:real:selftest
+> node tests/e2e-real/selftest.mjs
+
+PASS  no environment → exit 2 and says NOT RUN
+PASS  unreachable backend → exit 2
+PASS  a server that is not the platform API → exit 2
+PASS  local login disabled → exit 2 (fixtures impossible)
+PASS  platform-like server but admin login refused → exit 2 (setup failed), never 0
+PASS  summary counts BLOCKED/SKIP separately from PASS
+PASS  E2E_DS_* absent → not provided
+PASS  E2E_DS_* needs a JSON-object config
+PASS  malformed E2E_DS_CONFIG_JSON → an error that does NOT contain the value
+PASS  malformed credential JSON → a reason without the value
+PASS  valid E2E_DS_* → provided with parsed values
+
+11/11 passed

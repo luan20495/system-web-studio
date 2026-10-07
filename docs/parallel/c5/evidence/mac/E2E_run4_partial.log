@@ -1,0 +1,64 @@
+
+> system-web-studio@0.2.0 test:e2e:real
+> node tests/e2e-real/run.mjs
+
+REAL BACKEND suite · studio=http://127.0.0.1:3003 · run=muwqxhzc · 4 flow(s)
+  [fixture] workspace A created
+  [fixture] workspace B created
+  [fixture] user adminA (WORKSPACE_ADMIN) ready
+  [fixture] user adminB (WORKSPACE_ADMIN) ready
+  [fixture] user viewerA (VIEWER) ready
+  [probe] queries route → 404 QUERY_NOT_FOUND · actions route → 404 UNKNOWN_ACTION  (404 without a code = flag off)
+
+E2E-06 — Configure DataSource (+ Query) and query via the real backend
+    ✓ [api] connector catalogue answers 200 with items
+    ✓ [api] postgres is AVAILABLE and the planned connectors are not
+    ✓ [api] create → 201 with a DataSourceView
+    ✓ [api] the view says a credential exists but carries no secret and no credential reference
+    ✓ [api] credential metadata: configured + key NAMES only, no values
+    ✓ [api] a second source with the same name (case-insensitive) → 409 CONFLICT
+    ✓ [api] a secret-looking key in config → 400 INVALID_*
+    ✓ [api] an identity field in the body (tenantId) → 400 INVALID_PARAMS
+    ✓ [api] a PLANNED connector (csv) → 501 NOT_IMPLEMENTED
+    ✓ [api] an unknown connector type → 422 UNSUPPORTED_TYPE
+    ✓ [api] isolation: workspace B's admin cannot read A's source by id (404 NOT_FOUND)
+    ✓ [api] isolation: 'foreign' and 'unknown' answer IDENTICALLY (no existence oracle)
+    ✓ [api] isolation: B's admin listing A's workspace is refused (403/404), no items
+    ✓ [api] permission: a VIEWER cannot create (403 PERMISSION_DENIED)
+    ✓ [api] permission: a VIEWER cannot change a source, and nothing changed
+    ✓ [api] permission: a VIEWER's read is 200 or 403, never 5xx, and never shows a secret
+    ✓ [api] test connection of an unreachable host → HTTP 200 with ok:false and a documented code
+    ✓ [api] the failure text does not leak the credential
+    ✓ [api] a DISABLED source cannot be tested: 409 DISABLED
+    ✓ [api] bind TEST → 200 with the binding
+    ✓ [api] the binding list contains it, mode normalised
+    ✓ [api] permission: a project VIEWER cannot list/alter bindings (403)
+    ✓ [api] deleting a BOUND source → 409 CONFLICT and it still exists
+    ✓ [ui] the Builder opens by direct URL
+    ✗ exception: locator.click: Timeout 30000ms exceeded. ⏎ Call log: ⏎   - waiting for getByRole('button', { name: /Dữ liệu/ }).first()
+
+E2E-07 — TEST-binding query runs and shows results
+    ⛔ BLOCKED (C3 · MANAGEMENT_API.md §5 + H-C2-02): Sources and TEST bindings can be created (C3 e606465, not yet in integration/v2), but no route creates an approved query and the document cannot declare a data slot (C2 H-C2-02). Set E2E_DATA_WORKSPACE_ID, E2E_DATA_PROJECT_ID, E2E_DATA_QUERY_ID, E2E_DATA_USER, E2E_DATA_PASSWORD for a project the operator seeded (source + slot + TEST binding + query; user needs PROJECT_EDIT + QUERY_EXECUTE).
+
+E2E-S1 — (supplementary) TEST-mode action answers WOULD_RUN from the real backend
+    ⛔ BLOCKED (C0 · app.workflow.enabled): server answered "not mounted": Chưa sẵn sàng Máy chủ chưa có chức năng tương ứng. (app.workflow.enabled must be true in the test stack)
+
+E2E-10 — Mutation/action failure: real backend error, UI error state, no fake success
+    ✓ the action is listed and runnable for a workspace admin
+    ✓ (setup) the action was removed on the server
+    ✓ the UI shows an ERROR state for the real backend failure
+    ✓ the message says the item was not found, in plain language (no raw status line)
+    ✓ NO success is displayed anywhere in the row
+    ✓ the run button is usable again (not stuck in 'Đang chạy…')
+    ✓ no unhandled page errors
+  [cleanup] cleanup notes: left behind (no delete route): workspaces 427d557d-2f2b-43a6-bd73-1887168f5c08, 5264c602-3e59-40b6-bf84-606cdc873172 named e2e-muwqxhzc-*
+
+| ID | Status | Owner | Detail |
+|---|---|---|---|
+| E2E-06 | FAIL |  | exception: locator.click: Timeout 30000ms exceeded. ⏎ Call log: ⏎   - waiting for getByRole('button', { name: /Dữ liệu/ }).first() |
+| E2E-07 | BLOCKED | C3 | Sources and TEST bindings can be created (C3 e606465, not yet in integration/v2), but no route creates an approved query and the document cannot declare a data slot (C2 H-C2-02). Set E2E_DATA_WORKSPAC |
+| E2E-S1 | BLOCKED | C0 | server answered "not mounted": Chưa sẵn sàng Máy chủ chưa có chức năng tương ứng. (app.workflow.enabled must be true in the test stack) |
+| E2E-10 | PASS |  |  |
+
+REAL BACKEND: PASS 1/4 · FAIL 1/4 · BLOCKED 2/4 · SKIP 0/4
+report: docs/parallel/c5/evidence/mac/e2e-real/report-2026-10-06T14-01-13-471Z.json

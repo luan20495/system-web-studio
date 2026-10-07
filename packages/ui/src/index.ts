@@ -3,3 +3,8 @@ export { useLoad } from "./useLoad";
 export { Modal } from "./Modal";
 export { useDialog } from "./useDialog";
 export { PortalSwitcher } from "./PortalSwitcher";
+export * from "./icons";
+export { ProviderLogo, hasBrandLogo } from "./ProviderLogo";
+export { Switch } from "./Switch";
+export { Picker, type PickerOption } from "./Picker";
+export { ModalHeader } from "./ModalHeader";

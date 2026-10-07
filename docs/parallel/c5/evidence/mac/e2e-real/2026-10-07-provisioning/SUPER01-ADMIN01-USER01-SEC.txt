@@ -1,0 +1,109 @@
+FLOW: E2E-SUPER01 — Super admin creates a tenant admin (Platform UI) → activation link → company role → the new admin opens the Admin portal
+RESULT: BLOCKED
+START: 2026-10-07T11:33:16.224Z
+END: 2026-10-07T11:33:24.783Z
+FRONTEND_HEAD: f08537a
+BACKEND_HEAD: 7ecea1a test(c1): align auth me with portal membership capability [7ecea1a2a10df763f885f89ce42229b1c4012cac]
+BACKEND_URL: http://127.0.0.1:43080
+PROJECT: ef1cc80b-6505-40f8-b4cd-6febb089a24b
+WORKSPACE: 39b9a196-9364-4bf7-a7cc-6908af9fee33
+HTTP EVIDENCE:
+  - ok POST /admin/users → 201 with exactly {username, displayName, email, workspaceId, role}: no tenant id, no password
+  - ok the summary: account, status Chờ kích hoạt, workspace, role, and the company role as a NEXT step (not done)
+  - ok [api] a second account with the same username is refused (409 USERNAME_TAKEN)
+UI ASSERTION:
+  - ok the SYSTEM_ADMIN logs in through the Platform portal
+  - ok the dialog is the new 'Tạo tài khoản': four sections, no NOT_READY notice, no SYSTEM_ADMIN type
+  - ok the activation link is shown once in the dialog (one-time, /auth/activate#token), the platform never shows a password
+  - ok the new admin activates through the REAL activation page (set password)
+  - ok the new tenant admin logs in through the ADMIN portal and is not refused
+  - ok …and sees Công ty của tôi and Người dùng, not the system-wide sections
+  - ok no unexpected 4xx/5xx from the portal's calls
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok [api] the account exists, is pending (not activated) and is WORKSPACE_ADMIN of the chosen workspace
+  - ok the company role is assigned AFTER activation in the tenant page: the server lists the account as TENANT_ADMIN
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: a tenant admin can be made only for a tenant that already has workspaces (DEFAULT here): a NEW tenant's workspace cannot be created or listed by tenant (POST /admin/workspaces takes no tenant, /admin/workspaces rows carry no tenantId) — H-C1-14
+OWNER: C1 · ref H-C1-14
+
+---
+
+FLOW: E2E-ADMIN01 — Tenant admin: Admin portal → Người dùng → create account (NOT_READY until C1's contract: disabled, reason shown, nothing sent); add-existing is not offered without MEMBER_MANAGE
+RESULT: BLOCKED
+START: 2026-10-07T11:33:24.783Z
+END: 2026-10-07T11:33:27.951Z
+FRONTEND_HEAD: f08537a
+BACKEND_HEAD: 7ecea1a test(c1): align auth me with portal membership capability [7ecea1a2a10df763f885f89ce42229b1c4012cac]
+BACKEND_URL: http://127.0.0.1:43080
+PROJECT: ef1cc80b-6505-40f8-b4cd-6febb089a24b
+WORKSPACE: 39b9a196-9364-4bf7-a7cc-6908af9fee33
+HTTP EVIDENCE:
+  - ok [api] the platform route is NOT a workaround: a tenant admin gets 403 ADMIN_REQUIRED from POST /admin/users
+UI ASSERTION:
+  - ok navigation has Người dùng and Công ty của tôi for a tenant admin
+  - ok the screen shows the tenant from the SESSION (read-only), never an editable tenant id
+  - ok create is NOT_READY: the button is disabled, the reason is shown ('Backend provisioning chưa sẵn sàng'), nothing is sent
+  - ok a forced click opens no dialog and POSTs nothing
+  - ok add-existing is not offered to a tenant admin who holds no MEMBER_MANAGE (the reason is shown)
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: tenant-scoped account creation has no backend route yet (createTenantUser NOT_READY). When C1 delivers it: flip CAPABILITIES.createTenantUser, then this flow creates the account in the UI, activates it through the link, and USER01 continues with it.
+OWNER: C1 · ref C1 provisioning contract
+
+---
+
+FLOW: E2E-USER01 — App creator (EDITOR): Studio login → project visible → edit / save / reload → permissions are the role's
+RESULT: FAIL
+START: 2026-10-07T11:33:27.951Z
+END: 2026-10-07T11:34:21.517Z
+FRONTEND_HEAD: f08537a
+BACKEND_HEAD: 7ecea1a test(c1): align auth me with portal membership capability [7ecea1a2a10df763f885f89ce42229b1c4012cac]
+BACKEND_URL: http://127.0.0.1:43080
+PROJECT: ef1cc80b-6505-40f8-b4cd-6febb089a24b
+WORKSPACE: 39b9a196-9364-4bf7-a7cc-6908af9fee33
+HTTP EVIDENCE:
+  - ok [api] the workspace admin adds the creator to project A as EDITOR (member route)
+  - ok [api] the creator's resolved project permissions include APP_EDIT and NOT APP_PUBLISH
+  - ok [api] …and no MEMBER_MANAGE (the Admin portal does not open): /auth/me lists none
+  - ok [api] an edit by the creator is accepted (200)
+  - ok [api] publishing is refused for the creator (403): the role is the role
+UI ASSERTION:
+  - FAIL the project is visible in the creator's Ứng dụng list
+  - FAIL the project opens in the Builder (APP_VIEW + APP_EDIT)
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok after a reload the edit is still there (persisted)
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: the project is visible in the creator's Ứng dụng list; the project opens in the Builder (APP_VIEW + APP_EDIT)
+OWNER: unassigned (triage)
+
+---
+
+FLOW: E2E-SEC01 — SEC01 tenant admin cannot create / grant SYSTEM_ADMIN · SEC02 tenant A cannot see or create into tenant B · SEC03 workspace admin cannot escalate
+RESULT: PASS
+START: 2026-10-07T11:34:21.517Z
+END: 2026-10-07T11:34:23.308Z
+FRONTEND_HEAD: f08537a
+BACKEND_HEAD: 7ecea1a test(c1): align auth me with portal membership capability [7ecea1a2a10df763f885f89ce42229b1c4012cac]
+BACKEND_URL: http://127.0.0.1:43080
+PROJECT: ef1cc80b-6505-40f8-b4cd-6febb089a24b
+WORKSPACE: 39b9a196-9364-4bf7-a7cc-6908af9fee33
+HTTP EVIDENCE:
+  - ok SEC01 [api] a tenant admin cannot create an account through the platform route (403 ADMIN_REQUIRED)
+  - ok SEC01 [api] …cannot grant SYSTEM_ADMIN to anyone, nor to themselves (403)
+  - ok SEC02 [api] tenant A's admin gets 404 for tenant B (tenant, members, candidates, add self, re-role, remove)
+  - ok SEC02 [api] …and the other way round (B's admin on tenant A): 404
+  - ok SEC02 [api] neither can list the system-wide users (403): no cross-tenant user directory
+  - ok SEC03 [api] a workspace admin cannot make themselves tenant admin (own tenant, another tenant), create accounts, grant SYSTEM_ADMIN, create or suspend tenants (all 403/404)
+  - ok SEC03 [api] …cannot change their own workspace role (403 SELF_GRANT_FORBIDDEN)
+  - ok SEC03 [api] …and cannot add themselves to (or read) another workspace (403/404)
+UI ASSERTION: none recorded
+PERSISTENCE ASSERTION:
+  - ok SEC01 [api] …and the account stayed non-admin
+  - ok SEC02 [api] each tenant's member list holds only its own people
+  - ok SEC03 [api] nothing changed: the workspace admin is still a plain tenant MEMBER and not SYSTEM_ADMIN
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a

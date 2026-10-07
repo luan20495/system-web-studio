@@ -46,7 +46,7 @@ export type PromptResponse = {
   stopped?: "CANCELLED" | "TIMEOUT" | null; partial?: string | null; reuseSources?: ReuseSources | null;
 };
 export type ReuseSources = { components: string[]; blocks: string[]; templates: string[]; generated: number };
-export type StreamHandlers = { onStart?: (streamId: string) => void; onDelta?: (text: string) => void; onStatus?: (text: string) => void };
+export type StreamHandlers = { onStart?: (streamId: string, deadlineMs?: number | null) => void; onDelta?: (text: string) => void; onStatus?: (text: string) => void };
 export type PromptUsage = { attempts: number; promptTokens: number | null; completionTokens: number | null; totalTokens: number | null; costUsd: number | null; latencyMs: number };
 export type PromptHistoryItem = { id: string; text: string; createdAt: string; outcome: string; assistantMessage: string; versionId: string | null; registryReuse: number | null;
   provider?: string | null; model?: string | null; aiCalls?: number; totalTokens?: number | null; costUsd?: number | null };
@@ -64,9 +64,10 @@ export type SiteDomain = { id: string; hostname: string; status: "PENDING" | "VE
 export type AssetDto = { id: string; name: string; contentType: string; size: number; status: string; createdAt: string; downloadUrl: string | null };
 export type UploadUrl = { assetId: string; uploadUrl: string; method: string; headers: Record<string, string>; expiresInSeconds: number };
 
-export type DeploymentStatus = "QUEUED" | "POLICY_CHECK" | "SECURITY_CHECK" | "BUILDING" | "DEPLOYING" | "RUNNING" | "FAILED" | "ROLLED_BACK";
+/** The closed list of `deployments.status` (docs/parallel/c2/PUBLISH_API_CONTRACT.md §5, V30). ROLLBACK_FAILED / ROLLBACK_OFFLINE are EVENT names, never statuses. */
+export type DeploymentStatus = "QUEUED" | "POLICY_CHECK" | "SECURITY_CHECK" | "BUILDING" | "DEPLOYING" | "ROLLING_BACK" | "RUNNING" | "FAILED" | "ROLLED_BACK";
 export type Deployment = {
-  id: string; versionNumber: number; visibility: "PRIVATE" | "PUBLIC"; status: DeploymentStatus; url: string | null; error: string | null;
+  id: string; projectId?: string; versionId?: string; updatedAt?: string; versionNumber: number; visibility: "PRIVATE" | "PUBLIC"; status: DeploymentStatus; url: string | null; error: string | null;
   provider: string; mock: boolean; createdAt: string; finishedAt: string | null; events: { status: string; message: string | null; createdAt: string }[];
 };
 
@@ -101,6 +102,13 @@ export type AiUserView = { workspaceId: string | null; workspaces: { id: string;
   effectiveDefaultModel: string; requestsToday: number; tokensToday: number; tokensThisMonth: number; paidSpentThisMonthUsd: number;
   limits: Record<"requestsPerDay" | "tokensPerDay" | "tokensPerMonthWorkspace" | "paidBudgetUserMonth" | "paidBudgetWorkspaceMonth", AiLimitLine>; override: AiOverride | null };
 export type AiProbe = { id: string; ok: boolean; latencyMs: number; detail: string };
+/** MIRROR of tenancy/TenantController.kt @ integration/v2 1a9995c (T2). A member row carries only ids: names are resolved by the caller (see features/admin/tenantModel.ts). */
+export type TenantStatusName = "ACTIVE" | "SUSPENDED" | "DELETED";
+export type TenantView = { id: string; slug: string; name: string; status: TenantStatusName | string; createdAt: string };
+/** `username`/`displayName`/`email` come with C1's tenant member directory (fix/c1-portal-authz-blockers @ 7ecea1a); optional so an older backend still parses */
+export type TenantMemberView = { tenantId: string; userId: string; role: TenantRoleName | string; active: boolean; username?: string | null; displayName?: string | null; email?: string | null };
+/** `GET /admin/tenants/{id}/member-candidates?q=` — users already related to THIS tenant (workspace member, or a former member), enabled, activated, not SYSTEM_ADMIN; ≤ 50; `q` ≥ 2 characters */
+export type TenantMemberCandidate = { userId: string; username: string; displayName: string | null; email: string | null };
 export type Member = { userId: string; username: string; displayName: string | null; email: string | null; role: string; joinedAt: string };
 export const WORKSPACE_ROLES = ["WORKSPACE_ADMIN", "EDITOR", "PUBLISHER", "VIEWER"] as const;
 export const PROJECT_ROLES = ["OWNER", "EDITOR", "PUBLISHER", "VIEWER"] as const;
@@ -172,8 +180,15 @@ export type BlockDto = { id: string; name: string; description: string; baseComp
   category?: string; tags?: string[]; usageCount?: number; previewStatus?: "NONE" | "READY" | "FAILED" | "UNAVAILABLE" };
 
 // ---- Phase 7.1: real static sites (ADR 0009)
+/** The release operation that holds the app's scope right now (PUBLISH_API_CONTRACT.md §4). `null` on SiteInfo = idle (also when a lease expired). `deploymentId` is non-null only for PUBLISH. */
+export type ReleaseOperationKind = "PUBLISH" | "ROLLBACK" | "UNPUBLISH";
+export type SiteOperation = { kind: ReleaseOperationKind; deploymentId: string | null; since: string; leaseUntil: string };
 export type SiteInfo = { slug: string | null; url: string | null; online: boolean; visibility: "PRIVATE" | "PUBLIC" | null; currentDeploymentId: string | null;
-  currentVersionNumber: number | null; provider: string; updatedAt: string | null };
+  currentVersionNumber: number | null; provider: string; updatedAt: string | null;
+  /** +1 on every change of the active pointer. OBSERVABILITY ONLY: no request accepts it, the client never sends it and never builds optimistic concurrency on it. */
+  pointerVersion: number;
+  /** the key is always present; null = idle */
+  operation: SiteOperation | null };
 
 // ---- Phase 7.2–7.4: code projects
 export type TreeFile = { path: string; size: number };

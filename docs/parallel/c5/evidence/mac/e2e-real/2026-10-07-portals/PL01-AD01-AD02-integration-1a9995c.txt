@@ -1,0 +1,105 @@
+FLOW: E2E-PL01 — Platform portal: login, navigation, tenants (create, suspend, restore, members, last-admin rule), SYSTEM_ADMIN grant / revoke
+RESULT: PASS
+START: 2026-10-07T09:07:34.884Z
+END: 2026-10-07T09:07:49.849Z
+FRONTEND_HEAD: db4d595
+BACKEND_HEAD: 1a9995c feat(c0): global ingress option A - hblpub upgraded to V1, trusted proxy measured, https redirect at the gateway, global smoke (D-C0-38) [integration/v2]
+BACKEND_URL: http://127.0.0.1:42080
+PROJECT: 328372b5-540c-4015-96eb-bcde6b6c4026
+WORKSPACE: 0d1f9318-9876-4cde-810f-2638b735bb2a
+HTTP EVIDENCE:
+  - ok POST /admin/tenants → 201 and the page opens the new tenant
+  - ok a duplicate slug is refused by the server (409 TENANT_SLUG_TAKEN)
+  - ok the server enforces it too (409 LAST_TENANT_ADMIN)
+  - ok the audit page lists the tenant events just made (TENANT_CREATED / TENANT_STATUS_CHANGED / TENANT_MEMBER_SET)
+  - ok cleanup: the tenant is marked DELETED
+UI ASSERTION:
+  - ok login through the Platform portal lands inside /platform (not on the login or no-access page)
+  - ok navigation lists Tổng quan, Công ty (tenant), Người dùng & Workspace, Nhật ký kiểm toán, Sức khỏe hệ thống — and nothing from the tenant-admin console
+  - ok the tenant list is the REAL list (the DEFAULT tenant is there) and the section is not 'Chưa sẵn sàng'
+  - ok an invalid form is refused in the dialog with both messages and NO request is sent
+  - ok the member row shows the person's NAME (resolved from /admin/users), not a bare id
+  - ok you cannot change your own SYSTEM_ADMIN right: the button is not offered on your own account
+  - ok the system-health page loads without an error state
+  - ok a workspace member with no platform scope is sent to /auth/no-access, never to a platform screen
+  - ok no unexpected 4xx/5xx from the portal's own calls (the deliberate refusals excepted)
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok the server stored it: slug, name, ACTIVE
+  - ok suspend: the UI says so and the server agrees (SUSPENDED)
+  - ok restore: back to ACTIVE on the server
+  - ok add member as quản trị công ty: the server lists adminA as TENANT_ADMIN
+  - ok demoting the ONLY TENANT_ADMIN is explained in words and nothing changed on the server
+  - ok remove a plain member: gone from the active list on the server, the admin stays
+  - ok grant SYSTEM_ADMIN to a fixture account: confirmed in a dialog, then the server says systemAdmin = true
+  - ok revoke it: systemAdmin = false on the server
+  - ok workspace page (SYSTEM_ADMIN): add by username → the server lists adminB as VIEWER of workspace A
+  - ok …re-role to Biên tập viên then remove: gone on the server
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-AD01 — Admin portal, tenant admin: own company + members, no system-admin screens, rules explained, refused by the API as well
+RESULT: PASS
+START: 2026-10-07T09:07:49.849Z
+END: 2026-10-07T09:07:56.224Z
+FRONTEND_HEAD: db4d595
+BACKEND_HEAD: 1a9995c feat(c0): global ingress option A - hblpub upgraded to V1, trusted proxy measured, https redirect at the gateway, global smoke (D-C0-38) [integration/v2]
+BACKEND_URL: http://127.0.0.1:42080
+PROJECT: 328372b5-540c-4015-96eb-bcde6b6c4026
+WORKSPACE: 0d1f9318-9876-4cde-810f-2638b735bb2a
+HTTP EVIDENCE:
+  - ok [api] /auth/me of the tenant admin lists the tenant with role TENANT_ADMIN and is NOT platform scope
+  - ok a tenant admin gets NO suspend / delete buttons (platform operations)
+  - ok [api] the same person is refused the system-wide user list (403 ADMIN_REQUIRED)
+  - ok [api] …but allowed to read the members of THEIR tenant (TENANT_MEMBERS)
+  - ok [api] …and refused to suspend it (platform only: 403)
+  - ok [api] …and refused the members of another tenant (403/404, no list)
+  - ok cleanup: the fixture tenant is marked DELETED
+UI ASSERTION:
+  - ok login through the Admin portal lands inside /admin (a tenant admin is NOT refused)
+  - ok navigation = Tổng quan + Công ty của tôi (+ the sections still waiting for a backend); NO Người dùng, Nhật ký kiểm toán, AI…
+  - ok the landing page lists the tenant this person administers (no system overview, no 403 from /admin/overview)
+  - ok Công ty của tôi shows the tenant, ACTIVE, with its member list from the API
+  - ok the person's own row is named (from the session), marked 'bạn', and its role / remove controls are disabled (no self-change)
+  - ok adding a person is explained, not hidden: this account cannot look people up (needs a workspace to administer / H-C1-11)
+  - ok typing a system-only URL shows 'chỉ dành cho quản trị hệ thống' and makes NO call to /admin/users
+  - ok Workspace của tôi: this account administers no workspace, so the page says so (no empty fake table)
+  - ok a workspace viewer is sent to /auth/no-access by the Admin portal
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-AD02 — Admin portal, workspace admin: opens on DATA_SOURCE_MANAGE, own data sources, no system screens; member management waits for a canonical capability (H-C1-05)
+RESULT: BLOCKED
+START: 2026-10-07T09:07:56.224Z
+END: 2026-10-07T09:08:00.096Z
+FRONTEND_HEAD: db4d595
+BACKEND_HEAD: 1a9995c feat(c0): global ingress option A - hblpub upgraded to V1, trusted proxy measured, https redirect at the gateway, global smoke (D-C0-38) [integration/v2]
+BACKEND_URL: http://127.0.0.1:42080
+PROJECT: 328372b5-540c-4015-96eb-bcde6b6c4026
+WORKSPACE: 0d1f9318-9876-4cde-810f-2638b735bb2a
+HTTP EVIDENCE:
+  - ok [api] /auth/me lists DATA_SOURCE_MANAGE for the workspace admin's workspace
+  - ok [fact] /auth/me lists NO member-management capability for a workspace admin (MEMBER_MANAGE is not a canonical code)
+  - ok [api] …and the API refuses it too (403 ADMIN_REQUIRED)
+UI ASSERTION:
+  - ok a WORKSPACE_ADMIN logs in through the Admin portal and is not refused
+  - ok navigation = Tổng quan + Nguồn dữ liệu; no Người dùng / Nhật ký kiểm toán / Công ty của tôi
+  - ok 'Workspace của tôi' is offered ONLY when the server lists the capability for it
+  - ok the landing page is the scoped home (no system overview call → no 403)
+  - ok Nguồn dữ liệu: the REAL panel of the workspace (catalogue / add form), not 'Chưa sẵn sàng'
+  - ok the page says slots are bound per application in the Studio (no bind controls here)
+  - ok a system-only URL says 'chỉ dành cho quản trị hệ thống' and makes no call to /admin/users
+  - ok no unexpected 4xx/5xx from the portal's calls
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: member management in the Admin portal needs a canonical capability: /auth/me lists no MEMBER_MANAGE-equivalent for a WORKSPACE_ADMIN (it is not one of the 14 canonical codes). The portal does not infer it from a role name. Workspace admins manage members in the Studio meanwhile.
+OWNER: C1 · ref H-C1-05

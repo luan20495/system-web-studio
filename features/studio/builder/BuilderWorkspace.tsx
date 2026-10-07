@@ -14,7 +14,8 @@ import { Canvas, DragChip } from "./Canvas";
 import { Inspector } from "./Inspector";
 import { LeftRail, type RailId } from "./LeftRail";
 import { BuilderTopBar } from "./BuilderTopBar";
-import { TestPanel } from "./TestPanel";
+import { TestPanel, type RuntimeCalls } from "./TestPanel";
+import type { DataManagementCalls } from "./core/dataManagement";
 import { DataWizard } from "./DataWizard";
 import { ComponentsPanel, type BlockOption } from "./panels/ComponentsPanel";
 import { PagesPanel } from "./panels/PagesPanel";
@@ -59,7 +60,7 @@ export function BuilderWorkspace(props: {
   renderPreview: (o: { selectedId: string | null; interactive: boolean; pageId: string }) => string;
   labelOf: (type: string) => string; summaryOf: (s: Section) => string;
   leading?: ReactNode; modeTabs?: ReactNode; trailing?: ReactNode;
-  goAi: () => void; openSite: () => void; openMembers: () => void; openPublish: () => void; saveBlock: () => void;
+  runtime?: RuntimeCalls; dataManagement?: DataManagementCalls; onRetrySave?: () => void; goAi: () => void; openSite: () => void; openMembers: () => void; openPublish: () => void; saveBlock: () => void;
 }) {
   const { doc, registry, backend, pageId, selectedId, readOnly, busy } = props;
   const cap = capabilitiesFor(props.project.permissions);
@@ -82,10 +83,12 @@ export function BuilderWorkspace(props: {
   const counts = { block: issues.filter((i) => i.severity === "BLOCK").length, warn: issues.filter((i) => i.severity === "WARN").length };
 
   const ctx: DefCtx = useMemo(() => ({
-    doc, readiness: backend.definitionOps as Readiness, canEdit: cap.canEdit && interactive, busy, metadata: backend.metadata, registry, labelOf: props.labelOf,
+    doc, readiness: backend.definitionOps as Readiness, canEdit: cap.canEdit && interactive, busy, siteVisibility: props.project.siteVisibility, metadata: backend.metadata, registry, labelOf: props.labelOf,
+    dataManagement: props.dataManagement, canManageData: cap.canManageDataSources, manageDataReason: whyNot("canManageDataSources"),
+    canViewData: cap.canViewDataSources, viewDataReason: whyNot("canViewDataSources"), canBindData: cap.canBindDataSources && interactive, bindDataReason: cap.canBindDataSources ? "Chế độ dùng thử hoặc chỉ-xem: không thể đổi liên kết." : whyNot("canBindDataSources"),
     commit: (ops, summary) => props.applyOps(ops, summary),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [doc, backend, cap.canEdit, interactive, busy, registry, props.labelOf, props.applyOps]);
+  }), [doc, backend, cap.canEdit, cap.canManageDataSources, cap.canViewDataSources, cap.canBindDataSources, interactive, busy, props.project.siteVisibility, registry, props.labelOf, props.applyOps, props.dataManagement]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
   const collision: CollisionDetection = useCallback((args) => {
@@ -173,7 +176,7 @@ export function BuilderWorkspace(props: {
     <DndContext sensors={sensors} collisionDetection={collision} accessibility={{ announcements, screenReaderInstructions }} onDragStart={onDragStart} onDragMove={onDragMove} onDragEnd={(e) => void onDragEnd(e)} onDragCancel={() => { setDrag(null); setSlot(null); }}>
       <BuilderTopBar name={props.project.name} meta={meta} save={props.save} appMode={appMode} onAppMode={setAppMode} device={props.device} onDevice={props.onDevice}
         leading={props.leading} modeTabs={props.modeTabs} trailing={props.trailing}
-        canShare={cap.canShare} shareReason={shareReason} onShare={props.openMembers} canPublish={cap.canPublish} publishReason={publishReason} publishBusy={busy} issues={counts} onPublish={publish}/>
+        canShare={cap.canShare} shareReason={shareReason} onShare={props.openMembers} canPublish={cap.canPublish && props.save.state !== "error"} publishReason={props.save.state === "error" ? "Có thay đổi chưa lưu được. Thử lưu lại trước khi xuất bản." : publishReason} publishBusy={busy} issues={counts} onPublish={publish} onRetrySave={props.onRetrySave}/>
       <main className="bx-body">
         <LeftRail value={rail} onChange={setRail}>{leftPanel}</LeftRail>
         <section className="bx-center" aria-label="Bản xem trước ứng dụng">
@@ -182,14 +185,14 @@ export function BuilderWorkspace(props: {
             device={props.device} labelOf={props.labelOf} frameRef={frameRef} title="Bản xem trước ứng dụng"/>
         </section>
         <aside className="bx-right" aria-label="Thuộc tính">
-          {!edit ? <TestPanel doc={doc} rawPermissions={props.project.permissions}/>
+          {!edit ? <TestPanel doc={doc} rawPermissions={props.project.permissions} runtime={props.runtime} dirty={props.save.state !== "saved" || busy}/>
             : selected ? (
               <Inspector ctx={ctx} section={selected} component={registry.find((c) => c.id === selected.type)} meta={backend.metadata.get(selected.type)} index={sections.indexOf(selected)} canUp={canStep(sections, selected.id, -1)} canDown={canStep(sections, selected.id, 1)} count={sections.length}
                 readOnly={!interactive} busy={busy} assets={props.assets} rawPermissions={props.project.permissions} onApply={(ops, summary) => props.applyOps(ops, summary)} onClose={() => select(null)}
                 onMove={(d) => void step(selected.id, d)} onRemove={() => setRemoving(true)} onSaveBlock={props.saveBlock} pageId={pageId}
                 openDataWizard={(id) => { setDataFocus({ sectionId: id }); setRail("data"); }}/>
             ) : (
-              <div className="bx-empty"><h2>Chưa chọn mục nào</h2><p>Chọn một mục trong “Trang” hoặc nhấp vào bản xem trước để chỉnh.</p>
+              <div className="bx-empty"><h2>Chưa chọn mục nào</h2>{readOnly ? <p>Bạn chỉ có quyền xem ứng dụng này. Chọn một mục trong “Trang” để xem thuộc tính; không chỉnh sửa được.</p> : <p>Chọn một mục trong “Trang” hoặc nhấp vào bản xem trước để chỉnh.</p>}
                 {backend.metadataReadiness.state !== "AVAILABLE" ? <StateBox state={backend.metadataReadiness} compact/> : null}</div>)}
         </aside>
       </main>

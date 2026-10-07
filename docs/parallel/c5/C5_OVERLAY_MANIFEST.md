@@ -23,9 +23,9 @@ comm -12 /tmp/v2.paths /tmp/c5.paths                           # the conflict se
 | `packages/ui/**` | shared UI + CSS (`app/{factory,globals,http,responsive}.css` were **renamed** into `packages/ui/src/styles/`, 100 % similarity) | the legacy `app/layout.tsx` import paths are updated (§2) |
 | `features/studio/**` | Studio screens and the whole Builder (`features/studio/builder/**`, `core/**`, panels, editors, DnD) | |
 | `features/admin/**` | Admin screens (3 files modified, 1 added) | |
-| `tests/builder/**`, `tests/browser/**`, `tests/tsconfig.json` | unit/SSR/conformance tests; browser harness + portals specs (labelled NOT backend) | `tests/e2e-real/**` is **not** created yet (`PHASE3_E2E_PLAN.md` §5) |
+| `tests/builder/**`, `tests/browser/**`, `tests/tsconfig.json` | unit/SSR/conformance tests; browser harness + portals specs (labelled NOT backend) | `tests/e2e-real/**` (real-backend suite, 14 flows + 2 supplementary, never run against a backend), `scripts/test-classify.mjs` (`npm run test:classify`); matrix `docs/C5_REAL_BACKEND_E2E_MATRIX.md` |
 | `scripts/test-unit.mjs` | `npm run test:unit` driver (tsc → commonjs `.test-build` → `node --test`) | |
-| `docs/parallel/c5/**`, `docs/parallel/agents/C5_*.md`, `docs/parallel/audit/PREP-T12-builder-architecture.md` | C5 docs | |
+| `docs/C5_REAL_BACKEND_E2E_{MATRIX,RUNBOOK}.md`, `docs/parallel/c5/**` (incl. `API_AUDIT_F894CC6.md`, `HANDOFF_*.md`), `docs/parallel/agents/C5_*.md`, `docs/parallel/audit/PREP-T12-builder-architecture.md` | C5 docs | |
 
 ## 2. Legacy front-end files C5 edited (shims / small edits; `integration/v2` unchanged → clean overwrite)
 
@@ -82,4 +82,4 @@ Expected conflict set = the three docs files. If `comm -12` prints anything else
 
 ## 7. What C5 does not claim
 
-Not built on the Mac (macOS), not run against any backend, no real-backend E2E has passed, the Builder's Data / Action / Workflow / Test panels are `NOT_READY` by design until the routes exist (Q-2), and the Admin portal remains platform-only until Q-1 is answered.
+Not built on the Mac (macOS), not run against any backend, no real-backend E2E has passed, the Builder's Data panel stays `NOT_READY` (no management API, B-C0-W-03); the Action / Workflow / Test panels call the f894cc6 app-runtime routes (TEST mode) and show `NOT_READY` when the server answers "not mounted", and the Admin portal remains platform-only until Q-1 is answered.

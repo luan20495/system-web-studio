@@ -1,0 +1,363 @@
+{
+  "studio": "http://127.0.0.1:3003",
+  "runId": "muwqcqxk",
+  "facts": {
+    "authConfig": {
+      "localLogin": true,
+      "oidc": false,
+      "publicPublish": true
+    },
+    "fixtureNotes": {
+      "viewerOnProject": "member",
+      "initialRevision": 0,
+      "definitionOps": {
+        "ok": true
+      }
+    },
+    "routes": {
+      "queries": {
+        "status": 404,
+        "code": "QUERY_NOT_FOUND"
+      },
+      "actions": {
+        "status": 404,
+        "code": "UNKNOWN_ACTION"
+      }
+    }
+  },
+  "cleanup": [
+    "left behind (no delete route): workspaces e28c79f0-37fb-4d37-854c-b03cfcd25a92, 48fa55c8-ce65-41b0-ade2-2c414b3d0a73 named e2e-muwqcqxk-*"
+  ],
+  "node": "v22.23.1",
+  "summary": {
+    "total": 8,
+    "PASS": 1,
+    "FAIL": 7,
+    "BLOCKED": 0,
+    "SKIP": 0
+  },
+  "results": [
+    {
+      "id": "E2E-01",
+      "title": "Load project/page from the real backend",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "checks": [
+        {
+          "name": "GET …/projects/{id}/schema answered 200 by the real backend",
+          "ok": true,
+          "detail": "status=200"
+        },
+        {
+          "name": "the Builder canvas rendered (preview iframe present)",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "the project name stored in the backend is on screen",
+          "ok": true,
+          "detail": "← e2e-muwqcqxk-proj-A Phiên bản 2 · revision 1 · Riêng tư ✓ Đã lưu 20:44 ✦ AI Design Code Website Phiên bản Tệp Chia sẻ "
+        },
+        {
+          "name": "the canvas shows the persisted first section (page content comes from the server, not a fixture in the browser)",
+          "ok": true,
+          "detail": "sections=7 props={\"brand\":\"e2e-muwqcqxk-proj-A\",\"links\":[{\"id\":\"l1\",\"href\":\"#products\",\"label\":\"S"
+        },
+        {
+          "name": "no unhandled page errors / serious console errors",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-02",
+      "title": "Edit component/page → save → reload → persists",
+      "status": "FAIL",
+      "owner": null,
+      "ref": null,
+      "reason": "exception: page.waitForSelector: Timeout 10000ms exceeded. ⏎ Call log: ⏎   - waiting for locator('.bx-right input') to be visible",
+      "checks": [],
+      "failed": []
+    },
+    {
+      "id": "E2E-03",
+      "title": "Workspace isolation A/B",
+      "status": "FAIL",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "checks": [
+        {
+          "name": "adminA: the project list shows their own project",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "adminA: the project list does NOT show the other workspace's project",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "adminA: no unhandled page errors",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "adminB: the project list shows their own project",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "adminB: the project list does NOT show the other workspace's project",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "adminB: no unhandled page errors",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "B reads A's project by id → 404 (existence not disclosed)",
+          "ok": true,
+          "detail": "status=404 code=WORKSPACE_NOT_FOUND"
+        },
+        {
+          "name": "the 404 body does not carry A's data",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "B lists A's workspace → refused (403/404), no rows",
+          "ok": true,
+          "detail": "status=404"
+        },
+        {
+          "name": "B cannot write into A's project (403/404)",
+          "ok": false,
+          "detail": "status=400"
+        },
+        {
+          "name": "A's project revision is unchanged by the attempts",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "A reads B's project through B's workspace → 404",
+          "ok": true,
+          "detail": "status=404"
+        },
+        {
+          "name": "a project id of B under A's workspace path → 404 (no cross-workspace lookup)",
+          "ok": true,
+          "detail": "status=404"
+        }
+      ],
+      "failed": [
+        {
+          "name": "B cannot write into A's project (403/404)",
+          "ok": false,
+          "detail": "status=400"
+        }
+      ]
+    },
+    {
+      "id": "E2E-04",
+      "title": "Authorized user reaches a valid Studio resource",
+      "status": "FAIL",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "checks": [
+        {
+          "name": "adminA: after login the Studio shell is reachable (not sent to /auth/no-access)",
+          "ok": true,
+          "detail": "http://127.0.0.1:3003/studio"
+        },
+        {
+          "name": "adminA: direct URL → schema 200",
+          "ok": true,
+          "detail": "status=200"
+        },
+        {
+          "name": "adminA: direct URL → Builder canvas",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "adminA: editor is not read-only",
+          "ok": true,
+          "detail": "← e2e-muwqcqxk-proj-A Phiên bản 2 · revision 1 · Riêng tư ✓ Đã lưu 20:44 ✦ AI Design Code Website Ph"
+        },
+        {
+          "name": "adminA: refresh keeps the project open",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "adminA: no unhandled page errors",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "viewerA: after login the Studio shell is reachable (not sent to /auth/no-access)",
+          "ok": false,
+          "detail": "http://127.0.0.1:3003/auth/no-access?portal=studio"
+        },
+        {
+          "name": "viewerA: direct URL → schema 200",
+          "ok": false,
+          "detail": "status=undefined"
+        },
+        {
+          "name": "viewerA: direct URL → Builder canvas",
+          "ok": false,
+          "detail": ""
+        },
+        {
+          "name": "viewerA: viewer sees the read-only notice",
+          "ok": false,
+          "detail": "◆ AI Software Factory ⛔ Không có quyền truy cập Bạn không có quyền truy cập Xweb Studio. Đăng xuất N"
+        },
+        {
+          "name": "viewerA: refresh keeps the project open",
+          "ok": false,
+          "detail": ""
+        },
+        {
+          "name": "viewerA: no unhandled page errors",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "failed": [
+        {
+          "name": "viewerA: after login the Studio shell is reachable (not sent to /auth/no-access)",
+          "ok": false,
+          "detail": "http://127.0.0.1:3003/auth/no-access?portal=studio"
+        },
+        {
+          "name": "viewerA: direct URL → schema 200",
+          "ok": false,
+          "detail": "status=undefined"
+        },
+        {
+          "name": "viewerA: direct URL → Builder canvas",
+          "ok": false,
+          "detail": ""
+        },
+        {
+          "name": "viewerA: viewer sees the read-only notice",
+          "ok": false,
+          "detail": "◆ AI Software Factory ⛔ Không có quyền truy cập Bạn không có quyền truy cập Xweb Studio. Đăng xuất N"
+        },
+        {
+          "name": "viewerA: refresh keeps the project open",
+          "ok": false,
+          "detail": ""
+        }
+      ]
+    },
+    {
+      "id": "E2E-05",
+      "title": "Forbidden path UX, no data leak",
+      "status": "FAIL",
+      "owner": null,
+      "ref": null,
+      "reason": "exception: locator.click: Timeout 30000ms exceeded. ⏎ Call log: ⏎   - waiting for getByRole('button', { name: 'Dùng thử' })",
+      "checks": [
+        {
+          "name": "outsider: no Builder canvas is shown",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "outsider: the page says something went wrong / not found (not a blank screen)",
+          "ok": true,
+          "detail": "? Không tìm thấy Workspace not found (mã req_fb0d781526f74dadaaa1188786cbdf6b) Thử lại ← Danh sách ứng dụng"
+        },
+        {
+          "name": "outsider: A's project name is nowhere on screen",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "outsider: no API response of that page load contains A's project name or description",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "outsider: no unhandled page errors",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "viewer: PATCH …/schema → 403",
+          "ok": false,
+          "detail": "status=400 code=VALIDATION_FAILED"
+        },
+        {
+          "name": "viewer: A's revision is unchanged",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "viewer: read-only notice shown",
+          "ok": false,
+          "detail": ""
+        },
+        {
+          "name": "viewer: no save control is enabled",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "failed": [
+        {
+          "name": "viewer: PATCH …/schema → 403",
+          "ok": false,
+          "detail": "status=400 code=VALIDATION_FAILED"
+        },
+        {
+          "name": "viewer: read-only notice shown",
+          "ok": false,
+          "detail": ""
+        }
+      ]
+    },
+    {
+      "id": "E2E-10",
+      "title": "Mutation/action failure: real backend error, UI error state, no fake success",
+      "status": "FAIL",
+      "owner": null,
+      "ref": null,
+      "reason": "exception: locator.click: Timeout 30000ms exceeded. ⏎ Call log: ⏎   - waiting for getByRole('button', { name: 'Dùng thử' })",
+      "checks": [],
+      "failed": []
+    },
+    {
+      "id": "E2E-11",
+      "title": "Workflow start from Studio, backend executes, UI reads state/result",
+      "status": "FAIL",
+      "owner": null,
+      "ref": null,
+      "reason": "exception: locator.click: Timeout 30000ms exceeded. ⏎ Call log: ⏎   - waiting for getByRole('button', { name: 'Dùng thử' })",
+      "checks": [],
+      "failed": []
+    },
+    {
+      "id": "E2E-13",
+      "title": "Publish → real artifact/runtime state → public page reachable",
+      "status": "FAIL",
+      "owner": null,
+      "ref": null,
+      "reason": "exception: locator.click: Timeout 30000ms exceeded. ⏎ Call log: ⏎   - waiting for locator('header.bx-top').getByRole('button', { name: /^Xuất bản/ })",
+      "checks": [],
+      "failed": []
+    }
+  ]
+}

@@ -1,0 +1,441 @@
+{
+  "studio": "http://127.0.0.1:3003",
+  "runId": "muwqp6zb",
+  "facts": {
+    "authConfig": {
+      "localLogin": true,
+      "oidc": false,
+      "publicPublish": true
+    },
+    "fixtureNotes": {
+      "viewerOnProject": "member",
+      "initialRevision": 0,
+      "definitionOps": {
+        "ok": true
+      },
+      "marker": "E2E-muwqp6zb-muwqpnd6",
+      "viewerSchemaViaApi": 200,
+      "viewerGate": {
+        "url": "/auth/no-access",
+        "canvas": false
+      }
+    },
+    "routes": {
+      "queries": {
+        "status": 404,
+        "code": "QUERY_NOT_FOUND"
+      },
+      "actions": {
+        "status": 404,
+        "code": "UNKNOWN_ACTION"
+      }
+    }
+  },
+  "cleanup": [
+    "left behind (no delete route): workspaces 53deb5c2-e0a2-4ede-a1ac-65ace7b2a09b, 06a1e2ff-98ac-46a3-840d-028eae101444 named e2e-muwqp6zb-*"
+  ],
+  "node": "v22.23.1",
+  "summary": {
+    "total": 8,
+    "PASS": 4,
+    "FAIL": 1,
+    "BLOCKED": 3,
+    "SKIP": 0
+  },
+  "results": [
+    {
+      "id": "E2E-01",
+      "title": "Load project/page from the real backend",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "checks": [
+        {
+          "name": "GET …/projects/{id}/schema answered 200 by the real backend",
+          "ok": true,
+          "detail": "status=200"
+        },
+        {
+          "name": "the Builder canvas rendered (preview iframe present)",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "the project name stored in the backend is on screen",
+          "ok": true,
+          "detail": "← e2e-muwqp6zb-proj-A Phiên bản 2 · revision 1 · Riêng tư ✓ Đã lưu 20:54 ✦ AI Design Code Chỉnh sửa Dùng thử Máy tính Má"
+        },
+        {
+          "name": "the canvas shows the persisted first section (page content comes from the server, not a fixture in the browser)",
+          "ok": true,
+          "detail": "sections=7 props={\"brand\":\"e2e-muwqp6zb-proj-A\",\"links\":[{\"id\":\"l1\",\"href\":\"#products\",\"label\":\"S"
+        },
+        {
+          "name": "no unhandled page errors / serious console errors",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-02",
+      "title": "Edit component/page → save → reload → persists",
+      "status": "FAIL",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "checks": [
+        {
+          "name": "PATCH …/schema answered 200 by the real backend",
+          "ok": true,
+          "detail": "status=200"
+        },
+        {
+          "name": "the top bar says saved",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "server revision increased",
+          "ok": true,
+          "detail": "1 → 2"
+        },
+        {
+          "name": "the new text is in the persisted schema (read back through a separate session)",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "after a full reload the canvas shows the saved text",
+          "ok": false,
+          "detail": "e2e-muwqp6zb-proj-A\nSản phẩm\nLiên hệ\n\nE2E-MUWQP6ZB-MUWQPND6\n\nNước sạch mỗi ngày, sống khỏe mỗi ngày."
+        },
+        {
+          "name": "a new version row exists for the edit",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "no unhandled page errors / serious console errors",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "failed": [
+        {
+          "name": "after a full reload the canvas shows the saved text",
+          "ok": false,
+          "detail": "e2e-muwqp6zb-proj-A\nSản phẩm\nLiên hệ\n\nE2E-MUWQP6ZB-MUWQPND6\n\nNước sạch mỗi ngày, sống khỏe mỗi ngày."
+        }
+      ]
+    },
+    {
+      "id": "E2E-03",
+      "title": "Workspace isolation A/B",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "checks": [
+        {
+          "name": "adminA: the project list shows their own project",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "adminA: the project list does NOT show the other workspace's project",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "adminA: no unhandled page errors",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "adminB: the project list shows their own project",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "adminB: the project list does NOT show the other workspace's project",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "adminB: no unhandled page errors",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "B reads A's project by id → 404 (existence not disclosed)",
+          "ok": true,
+          "detail": "status=404 code=WORKSPACE_NOT_FOUND"
+        },
+        {
+          "name": "the 404 body does not carry A's data",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "B lists A's workspace → refused (403/404), no rows",
+          "ok": true,
+          "detail": "status=404"
+        },
+        {
+          "name": "B cannot write into A's project (403/404)",
+          "ok": true,
+          "detail": "status=404"
+        },
+        {
+          "name": "A's project revision is unchanged by the attempts",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "A reads B's project through B's workspace → 404",
+          "ok": true,
+          "detail": "status=404"
+        },
+        {
+          "name": "a project id of B under A's workspace path → 404 (no cross-workspace lookup)",
+          "ok": true,
+          "detail": "status=404"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-04",
+      "title": "Authorized user reaches a valid Studio resource",
+      "status": "BLOCKED",
+      "owner": "C1",
+      "ref": "viewer portal access",
+      "reason": "a workspace VIEWER holds permissions [] (GET /auth/me) so the Studio portal gate sends the viewer to /auth/no-access although the project lists them as a member; the read-only Builder cannot be observed. Decision needed from C1: should a project member without workspace permissions reach Studio read-only?",
+      "checks": [
+        {
+          "name": "adminA: after login the Studio shell is reachable (not sent to /auth/no-access)",
+          "ok": true,
+          "detail": "http://127.0.0.1:3003/studio"
+        },
+        {
+          "name": "adminA: direct URL → schema 200",
+          "ok": true,
+          "detail": "status=200"
+        },
+        {
+          "name": "adminA: direct URL → Builder canvas",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "adminA: editor is not read-only",
+          "ok": true,
+          "detail": "← e2e-muwqp6zb-proj-A Phiên bản 3 · revision 2 · Riêng tư ✓ Đã lưu 20:54 ✦ AI Design Code Chỉnh sửa "
+        },
+        {
+          "name": "adminA: refresh keeps the project open",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "adminA: no unhandled page errors",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "viewerA: the refusal page does not show project data",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "viewerA: the API itself still lets a project member READ the schema (200)",
+          "ok": true,
+          "detail": "status=200"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-05",
+      "title": "Forbidden path UX, no data leak",
+      "status": "BLOCKED",
+      "owner": "C1",
+      "ref": "viewer portal access",
+      "reason": "a workspace VIEWER holds permissions [] (GET /auth/me), so the Studio portal gate sends the viewer to /auth/no-access even though the project lists them as a member: the read-only Builder / Test-mode-disabled UX for a viewer cannot be observed. Decision needed from C1: should a project member without workspace permissions reach Studio read-only?",
+      "checks": [
+        {
+          "name": "outsider: no Builder canvas is shown",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "outsider: the page says something went wrong / not found (not a blank screen)",
+          "ok": true,
+          "detail": "? Không tìm thấy Workspace not found (mã req_a517c666c00d465ab603885566195428) Thử lại ← Danh sách ứng dụng"
+        },
+        {
+          "name": "outsider: A's project name is nowhere on screen",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "outsider: no API response of that page load contains A's project name or description",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "outsider: no unhandled page errors",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "viewer: PATCH …/schema → 403",
+          "ok": true,
+          "detail": "status=403 code=FORBIDDEN"
+        },
+        {
+          "name": "viewer: A's revision is unchanged",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "viewer: no editable save control",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "viewer: no project data on screen",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "viewer: no unhandled page errors",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-10",
+      "title": "Mutation/action failure: real backend error, UI error state, no fake success",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "checks": [
+        {
+          "name": "the action is listed and runnable for a workspace admin",
+          "ok": true,
+          "detail": "null"
+        },
+        {
+          "name": "(setup) the action was removed on the server",
+          "ok": true,
+          "detail": "status=200 code=undefined"
+        },
+        {
+          "name": "the UI shows an ERROR state for the real backend failure",
+          "ok": true,
+          "detail": "ERROR: Lỗi Không tìm thấy mục cần chạy. Mục này chưa được lưu vào ứng dụng hoặc đã bị xóa (chế độ thử dùng bản nháp đã lưu; chế độ thật dùng bản đã xuất bản). Không nên bấm chạy lại ngay."
+        },
+        {
+          "name": "the message says the item was not found, in plain language (no raw status line)",
+          "ok": true,
+          "detail": "Lỗi Không tìm thấy mục cần chạy. Mục này chưa được lưu vào ứng dụng hoặc đã bị xóa (chế độ thử dùng bản nháp đã lưu; chế độ thật dùng bản đã xuất bản). Không nên bấm chạy lại ngay."
+        },
+        {
+          "name": "NO success is displayed anywhere in the row",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "the run button is usable again (not stuck in 'Đang chạy…')",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-11",
+      "title": "Workflow start from Studio, backend executes, UI reads state/result",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "checks": [
+        {
+          "name": "the workflow is listed and startable for a workspace admin",
+          "ok": true,
+          "detail": "null"
+        },
+        {
+          "name": "POST …/workflows/{id}/runs answered 202 with a run id",
+          "ok": true,
+          "detail": "status=202 code=undefined"
+        },
+        {
+          "name": "the start request carried an idempotencyKey (required by the contract)",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "the UI shows the run id and a status read from the server",
+          "ok": true,
+          "detail": "Lượt chạy 8dbdec4c-6b8b-4071-aa86-57b9f55e800d · SUCCEEDED · end:SUCCEEDED"
+        },
+        {
+          "name": "the run finished as a simulated (TEST) run: 'would run', not a real success",
+          "ok": true,
+          "detail": "WOULD_RUN: Sẽ chạy (chưa thực hiện) Lượt chạy thử đã kết thúc; các bước được mô phỏng, dữ liệu thật không đổi (theo máy chủ)."
+        },
+        {
+          "name": "the run view read through a separate session agrees (terminal status)",
+          "ok": true,
+          "detail": "status=200 SUCCEEDED"
+        },
+        {
+          "name": "the run belongs to the TEST mode",
+          "ok": true,
+          "detail": "TEST"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-13",
+      "title": "Publish → real artifact/runtime state → public page reachable",
+      "status": "BLOCKED",
+      "owner": "C2",
+      "ref": "deployment provider",
+      "reason": "the deployment provider is MOCK: a demo URL is shown but no real artifact is served (configure a SELF_HOSTED provider for this flow)",
+      "checks": [
+        {
+          "name": "POST …/publish accepted by the backend (2xx) with a deployment id",
+          "ok": true,
+          "detail": "status=202 code=undefined"
+        },
+        {
+          "name": "the publish request carried an Idempotency-Key",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "failed": []
+    }
+  ]
+}

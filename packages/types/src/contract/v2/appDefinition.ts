@@ -37,8 +37,13 @@ export type DataSourceDef = { id: string; name?: string; type: string; sourceRef
 /** `ParamDef.required` is TRUE when the key is absent (C3's default): use `paramRequired`, never `p.required ?? false`. */
 export type ParamDef = { name: string; type: ParamType; required?: boolean; defaultValue?: JsonValue };
 export const paramRequired = (p: Pick<ParamDef, "required">): boolean => p.required ?? true;
-/** In the document a query is a BINDING: local id + local dataSourceRef + `operationKey` = id of the C3 query/mutation definition. */
-export type QueryDef = { id: string; name?: string; dataSourceRef: string; mode?: QueryMode; operationKey?: string; params?: ParamDef[]; maxRows?: number };
+/**
+ * In the document a query is a BINDING: local id + local dataSourceRef + `operationKey` = id of the C3 query/mutation definition.
+ * `public` (C2 PUBLIC_QUERY_REFERENCE, c1e0df5): visitors with no account may run it. Optional, default false = deny. Only a READ query may be public (a WRITE one with `public: true` is 422).
+ */
+export type QueryDef = { id: string; name?: string; dataSourceRef: string; mode?: QueryMode; operationKey?: string; params?: ParamDef[]; maxRows?: number; public?: boolean };
+/** C2 DATA_SOURCE_SLOT (c1e0df5): what ADD/UPDATE_DATA_SOURCE may carry. Nothing else — no sourceRef, credential, URL, host or SQL (the server refuses them by name). */
+export type DataSourceSlotDef = { id: string; name?: string; type: string; description?: string };
 
 /** C3's `Transform`: an object with `type` (toString, toNumber, trim, lower, upper, toBoolean, date, enumMap, join, split, formula) + its own keys. Kept verbatim. */
 export const TRANSFORM_TYPES = ["toString", "toNumber", "trim", "lower", "upper", "toBoolean", "date", "enumMap", "join", "split", "formula"] as const;
@@ -148,14 +153,14 @@ export type AppDefinitionV2Keys = {
 };
 export type AppDefinitionV2 = PageSchema & AppDefinitionV2Keys;
 
-/** The collections an author edits with typed operations, and the operation family of each (DefinitionPatch). Data sources are NOT here: they are granted, not created. */
+/** The collections an author edits with typed operations, and the operation family of each (DefinitionPatch). `dataSources` = the logical SLOTS only (C2 DATA_SOURCE_SLOT); a real source is registered by the Management API. */
 export const DEFINITION_COLLECTIONS = {
-  viewModels: "VIEW_MODEL", queries: "QUERY", mappings: "MAPPING", dataBindings: "DATA_BINDING", actions: "ACTION", workflows: "WORKFLOW_REF", permissions: "PERMISSION_REF",
+  viewModels: "VIEW_MODEL", queries: "QUERY", mappings: "MAPPING", dataBindings: "DATA_BINDING", actions: "ACTION", workflows: "WORKFLOW_REF", permissions: "PERMISSION_REF", dataSources: "DATA_SOURCE",
 } as const;
 export type DefinitionCollection = keyof typeof DEFINITION_COLLECTIONS;
-/** The 23 typed V2 operations (app-definition.md §4). The 12 legacy page operations are unchanged (SchemaOperation in ../../index.ts). */
+/** The 26 typed V2 operations (app-definition.md §4 + C2 DATA_SOURCE_SLOT). The 12 legacy page operations are unchanged (SchemaOperation in ../../index.ts). */
 export type DefinitionOperationType =
-  | `${"ADD" | "UPDATE" | "REMOVE"}_${"VIEW_MODEL" | "QUERY" | "MAPPING" | "DATA_BINDING" | "ACTION" | "WORKFLOW_REF" | "PERMISSION_REF"}`
+  | `${"ADD" | "UPDATE" | "REMOVE"}_${"VIEW_MODEL" | "QUERY" | "MAPPING" | "DATA_BINDING" | "ACTION" | "WORKFLOW_REF" | "PERMISSION_REF" | "DATA_SOURCE"}`
   | "UPDATE_THEME" | "UPDATE_PUBLISH_CONFIG";
 /** ADD_*: `definition` = the whole object; UPDATE_*: the fields to change (null = clear the field); REMOVE_*: only `definitionId`. REMOVE does not cascade. */
 export type DefinitionOperation = { type: DefinitionOperationType; definitionId?: string; definition?: Record<string, JsonValue | null> };

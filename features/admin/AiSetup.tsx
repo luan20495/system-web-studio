@@ -7,6 +7,7 @@ import type { AiLimitDefaults, AiOverride, AiProbe, AiProviderInfo, AiProviderKi
 import { useLoad } from "../useLoad";
 import { Modal } from "./Modal";
 import { Card, ErrorState, errText, num, Pill, StateView, usd } from "../ui";
+import { Activity, CircleAlert, CircleCheck, CircleSlash, Cpu, KeyRound, ModalHeader, Pencil, Picker, Plus, Power, ProviderLogo, Save, Server, Settings2, ShieldCheck, Switch, Trash2, Zap, ChevronDown, ChevronUp, Download, type PickerOption } from "@xweb/ui";
 
 // ------------------------------------------------------------------ wording
 export const KIND_LABELS: Record<AiProviderKind, string> = {
@@ -57,31 +58,38 @@ function ProvidersTab() {
     try { await api.admin.updateAiProvider(p.id, { enabled: !p.enabled }); reload(); } catch (e) { setMsg(errText(e, "Chưa đổi được trạng thái.")); }
   }
   return (<>
-    <Card title="Nhà cung cấp AI" actions={<button className="btn primary" onClick={() => setDialog({})}>+ Thêm nhà cung cấp</button>}>
+    <Card title="Nhà cung cấp AI" actions={<button className="btn primary xp-btnIcon" onClick={() => setDialog({})}><Plus size={16} aria-hidden="true"/>Thêm nhà cung cấp</button>}>
       <p className="hint">Chưa cấu hình AI thật thì hệ thống dùng chế độ thử nghiệm (mô phỏng, không gửi dữ liệu ra ngoài). Khóa kết nối được mã hóa khi lưu và không thể xem lại; chỉ có thể thay khóa mới.</p>
       {msg ? <p className="notice" role="status">{msg}</p> : null}
       {error ? <ErrorState error={error} retry={reload}/> : loading && !data ? <StateView kind="loading"/> : !data!.length ? (
         <StateView kind="empty" title="Chưa cấu hình AI thật." detail={<p>Thêm nhà cung cấp AI đầu tiên để nhân viên dùng được AI thật.</p>} action={<button className="btn primary" onClick={() => setDialog({})}>+ Thêm nhà cung cấp</button>}/>
       ) : <div className="providerList">{data!.map((p) => {
         const pr = probes[p.id]; const kind = (p.kind || "LOCAL") as AiProviderKind;
-        return <section key={p.id} className="providerItem" aria-label={p.name}>
-          <div className="row between"><div>
-            <b>{p.name}</b> <small>{KIND_LABELS[kind] ?? kind}</small>{" "}
-            {p.managedBySystem ? <Pill value="COMPANY" label="Được quản lý bởi hệ thống"/> : p.enabled ? <Pill value="ACTIVE" label="Đang bật"/> : <Pill value="DISABLED" label="Đang tắt"/>}{" "}
-            {p.configured ? <Pill value="HEALTHY" label="Đã cấu hình"/> : <Pill value="NOT_CONFIGURED" label={p.models.length === 0 ? "Chưa chọn mô hình" : "Chưa cấu hình"}/>}
-            <small>Khóa kết nối: {p.keySet ? "✓ Đã cấu hình" : KEY_OPTIONAL(kind) ? "Không dùng" : "Chưa cấu hình"}{p.paid ? " · Tính phí" : " · Miễn phí"}</small>
-          </div>
-            <div className="row">
-              {pr && pr !== "running" ? <Pill value={pr.ok ? "HEALTHY" : "UNAVAILABLE"} label={pr.ok ? `✓ ${pr.detail}` : pr.detail}/> : null}
-              <button className="btn sm" disabled={pr === "running"} onClick={() => void probe(p.id)}>{pr === "running" ? "Đang kiểm tra…" : "Kiểm tra kết nối"}</button>
+        const on = p.models.filter((m) => m.enabled).length;
+        return <section key={p.id} className="providerItem" aria-label={p.name} data-testid={`provider:${p.id}`}>
+          <div className="xp-provRow">
+            <ProviderLogo kind={kind} size={44}/>
+            <div className="xp-provMain">
+              <div className="xp-provName"><b>{p.name}</b> <small>{KIND_LABELS[kind] ?? kind}</small>
+                {p.managedBySystem ? <Pill value="COMPANY" label="Được quản lý bởi hệ thống"/> : p.enabled ? <Pill value="ACTIVE" label="Đang bật"/> : <Pill value="DISABLED" label="Đang tắt"/>}
+                {p.configured ? <Pill value="HEALTHY" label="Đã cấu hình"/> : <Pill value="NOT_CONFIGURED" label={p.models.length === 0 ? "Chưa chọn mô hình" : "Chưa cấu hình"}/>}</div>
+              <div className="xp-provMeta">
+                <span data-testid="model-count"><Cpu size={13} aria-hidden="true"/>{p.models.length ? `${p.models.length} mô hình${p.models.some((m) => m.enabled) ? ` · ${on} đang được phép dùng` : " · chưa mô hình nào được phép dùng (vào tab Mô hình để bật)"}` : "Chưa có mô hình nào"}</span>
+                <span><KeyRound size={13} aria-hidden="true"/>Khóa kết nối: {p.keySet ? "✓ Đã cấu hình" : KEY_OPTIONAL(kind) ? "Không dùng" : "Chưa cấu hình"}</span>
+                <span>{p.paid ? "Tính phí" : "Miễn phí"}</span>
+                {pr && pr !== "running" ? <span data-testid="probe-result" data-ok={pr.ok} style={{ color: pr.ok ? "var(--f-ok)" : "var(--f-bad)" }}>{pr.ok ? <CircleCheck size={13} aria-hidden="true"/> : <CircleAlert size={13} aria-hidden="true"/>}{pr.ok ? ` ${pr.detail}` : ` ${pr.detail}`}</span> : null}
+              </div>
+            </div>
+            <div className="xp-provActions">
+              <button className="btn sm xp-btnIcon" disabled={pr === "running"} onClick={() => void probe(p.id)}><Zap size={14} aria-hidden="true"/>{pr === "running" ? "Đang kiểm tra…" : "Kiểm tra kết nối"}</button>
               {!p.managedBySystem ? <>
-                {kind !== "OPENROUTER" ? <button className="btn sm" onClick={() => setPicker(p)}>Tải danh sách mô hình</button> : null}
-                <button className="btn sm" onClick={() => setDialog({ edit: p })}>Sửa</button>
-                <button className="btn sm" onClick={() => void toggle(p)}>{p.enabled ? "Tắt" : "Bật"}</button>
-                <button className="btn sm danger" onClick={() => void remove(p)}>Xóa</button>
+                {kind !== "OPENROUTER" ? <button className="btn sm xp-btnIcon" onClick={() => setPicker(p)}><Download size={14} aria-hidden="true"/>Tải danh sách mô hình</button> : null}
+                <button className="btn sm xp-btnIcon" onClick={() => setDialog({ edit: p })}><Pencil size={14} aria-hidden="true"/>Sửa</button>
+                <button className="btn sm xp-btnIcon" onClick={() => void toggle(p)}>{p.enabled ? <CircleSlash size={14} aria-hidden="true"/> : <Power size={14} aria-hidden="true"/>}{p.enabled ? "Tắt" : "Bật"}</button>
+                <button className="btn sm danger xp-btnIcon" onClick={() => void remove(p)}><Trash2 size={14} aria-hidden="true"/>Xóa</button>
               </> : null}
-            </div></div>
-          <p className="hint">{p.models.length ? `${p.models.length} mô hình${p.models.some((m) => m.enabled) ? ` · ${p.models.filter((m) => m.enabled).length} đang được phép dùng` : " · chưa mô hình nào được phép dùng (vào tab Mô hình để bật)"}` : "Chưa có mô hình nào."}</p>
+            </div>
+          </div>
         </section>;
       })}</div>}
     </Card>
@@ -107,27 +115,46 @@ function ProviderDialog({ edit, onClose, onSaved }: { edit?: AiProviderInfo; onC
       onSaved(saved);
     } catch (err) { setError(errText(err, "Chưa lưu được nhà cung cấp.")); } finally { setBusy(false); }
   }
+  const kinds = (Object.keys(KIND_LABELS) as AiProviderKind[]).map((k): PickerOption<AiProviderKind> => ({ value: k, label: KIND_LABELS[k], hint: KIND_HINT[k], icon: <ProviderLogo kind={k} size={32}/> }));
   return (
     <Modal label={edit ? "Sửa nhà cung cấp" : "Thêm nhà cung cấp"} onClose={onClose}>
-      <form className="modalBody" onSubmit={(e) => void submit(e)} autoComplete="off">
-        <h2>{edit ? "Sửa nhà cung cấp" : "Thêm nhà cung cấp"}</h2>
-        {!edit ? <label className="field"><span>Loại</span><select value={kind} onChange={(e) => pickKind(e.target.value as AiProviderKind)}>
-          {(Object.keys(KIND_LABELS) as AiProviderKind[]).map((k) => <option key={k} value={k}>{KIND_LABELS[k]}</option>)}</select><small>{KIND_HINT[kind]}</small></label> : null}
-        <label className="field"><span>Tên</span><input value={name} onChange={(e) => setName(e.target.value)} required maxLength={80}/></label>
-        {NEEDS_ADDRESS(kind) ? <label className="field"><span>Địa chỉ dịch vụ</span><input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} required placeholder="http://localhost:11434/v1"/></label> : null}
-        <label className="field"><span>Khóa kết nối{KEY_OPTIONAL(kind) ? " (không bắt buộc)" : ""}</span>
-          <input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} autoComplete="new-password" required={!edit && !KEY_OPTIONAL(kind)} placeholder={edit?.keySet ? "••••••••" : ""}/>
-          <small>{edit?.keySet ? "✓ Đã cấu hình. Để trống nếu không muốn thay đổi khóa hiện tại." : "Khóa được mã hóa khi lưu và không thể xem lại."}</small></label>
-        {kind !== "OPENROUTER" ? <>
+      <form className="modalBody" onSubmit={(e) => void submit(e)} autoComplete="off" data-testid="provider-dialog">
+        <ModalHeader icon={<Server size={22}/>} title={edit ? "Sửa nhà cung cấp" : "Thêm nhà cung cấp"} subtitle={edit ? `Cập nhật kết nối tới ${edit.name}. Khóa đã lưu không bao giờ hiển thị lại.` : "Kết nối một nhà cung cấp AI cho cả công ty."}/>
+
+        <section className="xp-section" aria-label="Nhà cung cấp">
+          <h3><Server size={14} aria-hidden="true"/> Nhà cung cấp</h3>
+          {!edit ? <Picker label="Loại" buttonLabel="Nhà cung cấp" value={kind} options={kinds} onChange={pickKind}/> : <div className="row"><ProviderLogo kind={kind} size={40}/><div><b>{KIND_LABELS[kind]}</b><small className="hint">{KIND_HINT[kind]}</small></div></div>}
+          <label className="field"><span>Tên</span><input value={name} onChange={(e) => setName(e.target.value)} required maxLength={80}/></label>
+          {NEEDS_ADDRESS(kind) ? <label className="field"><span>Địa chỉ dịch vụ</span><input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} required placeholder="https://ai.example.com/v1"/></label> : null}
+        </section>
+
+        <section className="xp-section" aria-label="API key">
+          <h3><KeyRound size={14} aria-hidden="true"/> API key</h3>
+          <label className="field"><span>Khóa kết nối{KEY_OPTIONAL(kind) ? " (không bắt buộc)" : ""}</span>
+            <span className="xp-keyInput"><KeyRound size={16} aria-hidden="true"/><input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} autoComplete="new-password" required={!edit && !KEY_OPTIONAL(kind)} placeholder={edit?.keySet ? "••••••••" : ""}/></span>
+            <small>{edit?.keySet ? "✓ Đã cấu hình. Để trống nếu không muốn thay đổi khóa hiện tại." : "Dán khóa do nhà cung cấp cấp cho công ty."}</small></label>
+          <p className="xp-note" role="note"><ShieldCheck size={16} aria-hidden="true"/><span>Bảo mật: khóa được mã hóa khi lưu, chỉ nằm trên máy chủ và không thể xem lại; chỉ có thể thay khóa mới.</span></p>
+        </section>
+
+        {kind !== "OPENROUTER" ? <section className="xp-section" aria-label="Mô hình">
+          <h3><Cpu size={14} aria-hidden="true"/> Mô hình</h3>
           <label className="field"><span>Danh sách mô hình (mỗi dòng một mô hình)</span><textarea rows={3} value={models} onChange={(e) => setModels(e.target.value)} placeholder="Để trống rồi dùng “Tải danh sách mô hình” sau khi lưu"/></label>
           <label className="field"><span>Mô hình mặc định của nhà cung cấp này</span>
             <select value={defaultModel} onChange={(e) => setDefaultModel(e.target.value)}><option value="">Không chọn</option>{list.map((m) => <option key={m} value={m}>{m}</option>)}</select></label>
-        </> : <p className="hint">Hệ thống tự lấy danh sách mô hình miễn phí của OpenRouter.</p>}
-        <label className="check"><input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)}/> Bật nhà cung cấp này</label>
-        <button type="button" className="btn ghost sm" onClick={() => setAdvanced(!advanced)}>{advanced ? "Ẩn Nâng cao" : "Nâng cao"}</button>
-        {advanced ? <label className="check"><input type="checkbox" checked={paid} onChange={(e) => setPaid(e.target.checked)} disabled={kind === "OPENROUTER"}/> Có tính phí (mô hình trả phí mặc định TẮT và cần ngân sách)</label> : null}
+        </section> : <p className="hint">Hệ thống tự lấy danh sách mô hình miễn phí của OpenRouter.</p>}
+
+        <section className="xp-section" aria-label="Trạng thái">
+          <h3><Activity size={14} aria-hidden="true"/> Trạng thái</h3>
+          <Switch icon={<Power size={16}/>} checked={enabled} onChange={setEnabled} label="Bật nhà cung cấp này" hint={enabled ? "Nhân viên có thể dùng các mô hình được cho phép." : "Đang tắt: không mô hình nào của nhà cung cấp này được dùng."}/>
+        </section>
+
+        <div className="xp-adv">
+          <button type="button" className="xp-advBtn" aria-expanded={advanced} onClick={() => setAdvanced(!advanced)}><Settings2 size={16} aria-hidden="true"/> {advanced ? "Ẩn Nâng cao" : "Nâng cao"}<span style={{ marginLeft: "auto" }}>{advanced ? <ChevronUp size={16} aria-hidden="true"/> : <ChevronDown size={16} aria-hidden="true"/>}</span></button>
+          {advanced ? <div className="xp-advBody"><Switch checked={paid} onChange={setPaid} disabled={kind === "OPENROUTER"} label="Có tính phí" hint="Mô hình trả phí mặc định TẮT và cần ngân sách."/></div> : null}
+        </div>
+
         {error ? <p className="formError" role="alert">{error}</p> : null}
-        <div className="row"><button className="btn primary" disabled={busy || !name.trim()}>{busy ? "Đang lưu…" : "Lưu"}</button><button type="button" className="btn" onClick={onClose}>Hủy</button></div>
+        <div className="row"><button className="btn primary xp-btnIcon" disabled={busy || !name.trim()}><Save size={16} aria-hidden="true"/>{busy ? "Đang lưu…" : "Lưu"}</button><button type="button" className="btn" onClick={onClose}>Hủy</button></div>
       </form>
     </Modal>
   );

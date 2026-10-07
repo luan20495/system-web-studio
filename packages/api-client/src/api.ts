@@ -1,11 +1,44 @@
 import type {
-  AdminAi, AiCallRow, SettingView, BuildPolicyReport, CleanupResult, RepoRow, AiPrice, AiProbe, AiProviderInfo, AiProviderForm, AiDiscover, AiLimitsView, AiLimitDefaults, AiUserView, AiUsageReport, AdminApp, BlockDto, CheckResult, TemplateDto, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, ActivationLink, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
+  AdminAi, AiCallRow, SettingView, BuildPolicyReport, CleanupResult, RepoRow, AiPrice, AiProbe, AiProviderInfo, AiProviderForm, AiDiscover, AiLimitsView, AiLimitDefaults, AiUserView, AiUsageReport, AdminApp, BlockDto, CheckResult, TemplateDto, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, TenantView, TenantMemberView, TenantMemberCandidate, ActivationLink, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
   BackupEnvironment, AppKind, RuntimeStatus, Connector, Department, CostPrice, CostReport, SecurityReport, FormSubmission, SiteDomain, TemplateReview, LibraryCategories, AccessRule, EffectiveModel, AiBudget, AdminAlert, StreamHandlers,
-  AiStatus, ApiProject, AuthConfig, Member, SiteInfo, DesignNode, DependencyRequest, PackageView, CloneAccess, TreeFile, CodeFile, CodeCommit, CodeChange, DiffFile, CodeAiResponse, CodeAiHistoryItem, RegistryComponent, ComponentMetadataV2, DefinitionOperation, AssetDto, Deployment, Me, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
+  AiStatus, ApiProject, AuthConfig, Member, SiteInfo, DesignNode, DependencyRequest, PackageView, CloneAccess, TreeFile, CodeFile, CodeCommit, CodeChange, DiffFile, CodeAiResponse, CodeAiHistoryItem, RegistryComponent, ComponentMetadataV2, DefinitionOperation, AssetDto, Deployment, Me, RunQueryRequest, RunQueryResponse, ExecuteActionRequest, ActionEnvelope, StartWorkflowRequest, WorkflowRunView, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
+} from "@xweb/types";
+import type {
+  ConnectorList, DataSourceView, DataSourceList, CreateDataSourceRequest, UpdateDataSourceRequest, CredentialMetadata, SetCredentialRequest,
+  ConnectionTestResult, DataBinding, DataBindingList, BindingMode,
 } from "@xweb/types";
 import { ApiError, call, json, qs, resetCsrf, stream } from "./core";
+import { isValidReleaseKey, publishBody, rollbackBody, unpublishQuery } from "./release";
 
 const P = (w: string, p: string) => `/workspaces/${w}/projects/${p}`;
+const RT = (w: string, p: string) => `${P(w, p)}/app-runtime`;
+const seg = encodeURIComponent;
+
+/** a client-side refusal before anything is sent: same shape as a server 400, so the UI treats it as "nothing was written" */
+function badKey(): never { throw new ApiError(400, "IDEMPOTENCY_KEY_INVALID", "Khóa chống ghi trùng không hợp lệ (1–128 ký tự A–Z a–z 0–9 . _ : -)."); }
+/** same pattern as IDEMPOTENCY_KEY_PATTERN in the contract mirror (kept local: this module must load under plain node in the unit tests) */
+const KEY = /^[A-Za-z0-9._:-]{1,128}$/;
+const checkKey = (k: string | undefined) => { if (k !== undefined && !KEY.test(k)) badKey(); };
+/** publish / rollback / unpublish keys follow the C2 contract (8–120 chars): refused before anything is sent */
+function badReleaseKey(): never { throw new ApiError(400, "INVALID_IDEMPOTENCY_KEY", "Khóa chống ghi trùng không hợp lệ (8–120 ký tự A–Z a–z 0–9 . _ : -)."); }
+const checkReleaseKey = (k: string | undefined, required: boolean) => { if (k === undefined ? required : !isValidReleaseKey(k)) badReleaseKey(); };
+
+
+/** same patterns as DATA_SOURCE_NAME_PATTERN / SLOT_ID_PATTERN in the management mirror (local copies: this module must load under plain node in the unit tests) */
+const DS_NAME = /^[A-Za-z0-9][A-Za-z0-9 ._-]{0,79}$/;
+const SLOT = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
+const WS = (w: string) => `/workspaces/${seg(w)}/data-sources`;
+/** a refusal before anything is sent: same shape as the server's 400 (nothing was written) */
+function invalid(message: string): never { throw new ApiError(400, "INVALID_PARAMS", message); }
+const bindingMode = (m: string): BindingMode => { const u = m.toUpperCase(); if (u !== "LIVE" && u !== "TEST") invalid("Chế độ liên kết phải là TEST hoặc LIVE."); return u as BindingMode; };
+/** the secret-bearing request body must never be echoed anywhere: errors thrown here carry fixed text only */
+const MGMT_TEST_TIMEOUT_MS = 30_000;
+
+/** A fresh idempotency key. One per user intent: reuse it only to retry the SAME intent, never to repeat it. */
+export function newIdempotencyKey(prefix = "ui"): string {
+  const id = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  return `${prefix}:${id}`.slice(0, 128);
+}
 
 export const api = {
   async login(username: string, password: string): Promise<Me> {
@@ -51,10 +84,20 @@ export const api = {
     user: (id: string) => call<AdminUserDetail>(`/admin/users/${id}`),
     setUserStatus: (id: string, enabled: boolean) => call<AdminUser>(`/admin/users/${id}/status`, { method: "PATCH", body: json({ enabled }) }),
     revokeSessions: (id: string) => call<{ revoked: number }>(`/admin/users/${id}/revoke-sessions`, { method: "POST" }),
-    createUser: (b: { username: string; displayName: string; email?: string; workspaceId: string; role: string }) => call<ActivationLink>("/admin/users", { method: "POST", body: json(b) }),
     activationLink: (id: string) => call<ActivationLink>(`/admin/users/${id}/activation-link`, { method: "POST" }),
     setSystemAdmin: (id: string, grant: boolean) => call<{ systemAdmin: boolean }>(`/admin/users/${id}/system-admin`, { method: "POST", body: json({ grant, confirm: true }) }),
-    createWorkspace: (name: string) => call<{ id: string; name: string }>("/admin/workspaces", { method: "POST", body: json({ name }) }),
+    tenants: () => call<TenantView[]>("/admin/tenants"),
+    tenant: (id: string) => call<TenantView>(`/admin/tenants/${id}`),
+    createTenant: (b: { slug: string; name: string; firstAdminUserId?: string }) => call<TenantView>("/admin/tenants", { method: "POST", body: json(b) }),
+    setTenantStatus: (id: string, status: "ACTIVE" | "SUSPENDED" | "DELETED") => call<TenantView>(`/admin/tenants/${id}/status`, { method: "PATCH", body: json({ status }) }),
+    tenantMembers: (id: string) => call<TenantMemberView[]>(`/admin/tenants/${id}/members`),
+    /** C1 `tenant-provisioning-contract.md` @ 2356d64: a brand-new account in THIS tenant, by invitation (one-time activation link, no password). `workspaceId` and `workspaceRole` come together or not at all. */
+    createTenantUser: (tenantId: string, b: { username: string; displayName: string; email?: string; tenantRole?: "MEMBER" | "TENANT_ADMIN"; workspaceId?: string; workspaceRole?: string }) => call<ActivationLink>(`/admin/tenants/${tenantId}/users`, { method: "POST", body: json(b) }),
+    /** a workspace OF the tenant. The legacy collection POST (no tenant) puts it in the DEFAULT tenant: the portals have no client method for it. */
+    createTenantWorkspace: (tenantId: string, name: string) => call<{ id: string; name: string; slug: string; tenantId: string }>(`/admin/tenants/${tenantId}/workspaces`, { method: "POST", body: json({ name }) }),
+    tenantMemberCandidates: (id: string, q?: string) => call<TenantMemberCandidate[]>(`/admin/tenants/${id}/member-candidates${qs({ q })}`),
+    setTenantMember: (id: string, userId: string, role: string) => call<TenantMemberView>(`/admin/tenants/${id}/members/${userId}`, { method: "PUT", body: json({ role }) }),
+    removeTenantMember: (id: string, userId: string) => call<void>(`/admin/tenants/${id}/members/${userId}`, { method: "DELETE" }),
     workspaces: (page: number, q?: string) => call<Page<AdminWorkspace>>(`/admin/workspaces${qs({ page, size: 25, q })}`),
     workspace: (id: string) => call<AdminWorkspaceDetail>(`/admin/workspaces/${id}`),
     applications: (params: { page: number; q?: string; visibility?: string; status?: string; workspaceId?: string }) => call<Page<AdminApp>>(`/admin/applications${qs({ size: 25, ...params })}`),
@@ -188,6 +231,65 @@ export const api = {
   withdrawBlock: (id: string) => call<BlockDto>(`/component-packages/${id}/withdraw`, { method: "POST" }),
   deleteBlock: (id: string) => call<void>(`/component-packages/${id}`, { method: "DELETE" }),
   getProject: (w: string, p: string) => call<ApiProject>(P(w, p)),
+  /**
+   * Browser-facing runtime routes (api.appRuntime; `api.runtime` is the unrelated deployment-status call) (docs/contracts/v2/runtime-api.md, FROZEN). Flags: `app.data-platform.enabled` (queries), `app.workflow.enabled`
+   * (actions, workflows). A disabled flag = the controller does not exist = a 404 WITHOUT a domain code (see readiness.runtimeReadinessFromError).
+   * Bodies carry only the fields of the contract; the server rejects anything else (400 INVALID_REQUEST).
+   */
+  appRuntime: {
+    runQuery: (w: string, p: string, queryId: string, body: RunQueryRequest = {}) =>
+      call<RunQueryResponse>(`${RT(w, p)}/queries/${seg(queryId)}/run`, { method: "POST", body: json(body) }),
+    executeAction: async (w: string, p: string, actionId: string, body: ExecuteActionRequest = {}) => {
+      checkKey(body.idempotencyKey);
+      return call<ActionEnvelope>(`${RT(w, p)}/actions/${seg(actionId)}/execute`, { method: "POST", body: json(body) });
+    },
+    startWorkflow: async (w: string, p: string, workflowId: string, body: StartWorkflowRequest) => { // async: a refusal is a rejected promise, never a synchronous throw
+      checkKey(body.idempotencyKey); // required by the contract
+      if (!body.idempotencyKey) badKey();
+      return call<WorkflowRunView>(`${RT(w, p)}/workflows/${seg(workflowId)}/runs`, { method: "POST", body: json(body) });
+    },
+    workflowRun: (w: string, p: string, runId: string) => call<WorkflowRunView>(`${RT(w, p)}/workflow-runs/${seg(runId)}`),
+    cancelWorkflowRun: (w: string, p: string, runId: string) => call<WorkflowRunView>(`${RT(w, p)}/workflow-runs/${seg(runId)}/cancel`, { method: "POST" }),
+  },
+  /**
+   * Data Source Management API (C3, MANAGEMENT_API.md @ e606465; routes exist in C3's code, NOT verified against a running backend). Flag: `app.data-platform.enabled`
+   * (off = controller not mounted = 404 WITHOUT a domain code). Tenant is derived by the server from the workspace in the path; the client never sends tenant/workspace/credentialRef/id in a body.
+   * No call here ever returns or logs a secret: `credential` bodies are write-only and the only answer about a credential is CredentialMetadata (key names).
+   */
+  dataManagement: {
+    connectors: (w: string) => call<ConnectorList>(`${WS(w)}/connectors`),
+    list: (w: string) => call<DataSourceList>(WS(w)),
+    get: (w: string, id: string) => call<DataSourceView>(`${WS(w)}/${seg(id)}`),
+    create: async (w: string, body: CreateDataSourceRequest) => {
+      if (!DS_NAME.test(body.name)) invalid("Tên nguồn dữ liệu không hợp lệ (chữ/số, khoảng trắng . _ -, tối đa 80 ký tự, bắt đầu bằng chữ hoặc số).");
+      return call<DataSourceView>(WS(w), { method: "POST", body: json({ name: body.name, type: body.type, ...(body.config ? { config: body.config } : {}), ...(body.credential ? { credential: body.credential } : {}) }) });
+    },
+    /** `config` REPLACES the whole configuration (send every key to keep). The server applies name/config first and status second, not atomically: after any error, re-read. */
+    update: async (w: string, id: string, body: UpdateDataSourceRequest) => {
+      if (body.name === undefined && body.config === undefined && body.status === undefined) invalid("Không có gì để thay đổi.");
+      if (body.name !== undefined && !DS_NAME.test(body.name)) invalid("Tên nguồn dữ liệu không hợp lệ.");
+      return call<DataSourceView>(`${WS(w)}/${seg(id)}`, { method: "PATCH", body: json({ ...(body.name !== undefined ? { name: body.name } : {}), ...(body.config !== undefined ? { config: body.config } : {}), ...(body.status !== undefined ? { status: body.status } : {}) }) });
+    },
+    remove: (w: string, id: string) => call<void>(`${WS(w)}/${seg(id)}`, { method: "DELETE" }),
+    credential: (w: string, id: string) => call<CredentialMetadata>(`${WS(w)}/${seg(id)}/credential`),
+    setCredential: async (w: string, id: string, credential: SetCredentialRequest["credential"]) => {
+      const keys = Object.keys(credential);
+      if (keys.length < 1 || keys.length > 8) invalid("Khóa kết nối phải có từ 1 đến 8 trường.");
+      return call<CredentialMetadata>(`${WS(w)}/${seg(id)}/credential`, { method: "PUT", body: json({ credential }) });
+    },
+    removeCredential: (w: string, id: string) => call<void>(`${WS(w)}/${seg(id)}/credential`, { method: "DELETE" }),
+    /** HTTP 200 means "the test ran"; read `ok`. Non-200: 404 / 409 DISABLED / 403 / 429. */
+    testConnection: (w: string, id: string) => call<ConnectionTestResult>(`${WS(w)}/${seg(id)}/test`, { method: "POST", signal: AbortSignal.timeout(MGMT_TEST_TIMEOUT_MS) }),
+    listBindings: (w: string, p: string) => call<DataBindingList>(`${P(w, p)}/data-bindings`),
+    bind: async (w: string, p: string, mode: string, slotId: string, dataSourceId: string) => {
+      const m = bindingMode(mode); if (!SLOT.test(slotId)) invalid("Mã khe dữ liệu không hợp lệ.");
+      return call<DataBinding>(`${P(w, p)}/data-bindings/${m}/${seg(slotId)}`, { method: "PUT", body: json({ dataSourceId }) });
+    },
+    unbind: async (w: string, p: string, mode: string, slotId: string) => {
+      const m = bindingMode(mode); if (!SLOT.test(slotId)) invalid("Mã khe dữ liệu không hợp lệ.");
+      return call<void>(`${P(w, p)}/data-bindings/${m}/${seg(slotId)}`, { method: "DELETE" });
+    },
+  },
   lookupProject: (p: string) => call<ApiProject>(`/projects/${p}`),
   updateProject: (w: string, p: string, expectedRevision: number, patch: Partial<ApiProject>) =>
     call<ApiProject>(P(w, p), { method: "PATCH", body: json({ ...patch, expectedRevision }) }),
@@ -207,8 +309,8 @@ export const api = {
   sendPrompt: (w: string, p: string, prompt: string, expectedRevision: number, model?: string) =>
     // AI calls can take a while when the first free model is busy and the server fails over to the next one
     call<PromptResponse>(`${P(w, p)}/prompts`, { method: "POST", body: json({ prompt, expectedRevision, ...(model ? { model } : {}) }), signal: AbortSignal.timeout(130_000) }),
-  streamPrompt: (w: string, p: string, prompt: string, expectedRevision: number, model: string | undefined, h: StreamHandlers) =>
-    stream<PromptResponse>(`${P(w, p)}/prompts/stream`, { prompt, expectedRevision, ...(model ? { model } : {}) }, h),
+  streamPrompt: (w: string, p: string, prompt: string, expectedRevision: number, model: string | undefined, h: StreamHandlers, signal?: AbortSignal) =>
+    stream<PromptResponse>(`${P(w, p)}/prompts/stream`, { prompt, expectedRevision, ...(model ? { model } : {}) }, h, signal),
   listPrompts: (w: string, p: string) => call<PromptHistoryItem[]>(`${P(w, p)}/prompts?limit=100`),   // newest first
 
   listVersions: (w: string, p: string) => call<VersionSummary[]>(`${P(w, p)}/versions?limit=100`),
@@ -224,8 +326,11 @@ export const api = {
   },
   deleteAsset: (w: string, p: string, id: string) => call<void>(`${P(w, p)}/assets/${id}`, { method: "DELETE" }),
 
-  publish: (w: string, p: string, visibility: "PRIVATE" | "PUBLIC", expectedRevision: number, idempotencyKey: string) =>
-    call<Deployment>(`${P(w, p)}/publish`, { method: "POST", body: json({ visibility, expectedRevision }), idempotencyKey }),
+  /** 202 + the deployment (asynchronous: poll getDeployment). Idempotency-Key REQUIRED; body is exactly {visibility, expectedRevision}. */
+  publish: async (w: string, p: string, visibility: "PRIVATE" | "PUBLIC", expectedRevision: number, idempotencyKey: string) => {
+    checkReleaseKey(idempotencyKey, true);
+    return call<Deployment>(`${P(w, p)}/publish`, { method: "POST", body: json(publishBody(visibility, expectedRevision)), idempotencyKey });
+  },
   getDeployment: (w: string, p: string, id: string) => call<Deployment>(`${P(w, p)}/deployments/${id}`),
   listDeployments: (w: string, p: string) => call<Deployment[]>(`${P(w, p)}/deployments`),
   site: (w: string, p: string) => call<SiteInfo>(`${P(w, p)}/site`),
@@ -237,7 +342,15 @@ export const api = {
   verifyDomain: (w: string, p: string, id: string) => call<SiteDomain>(`${P(w, p)}/domains/${id}/verify`, { method: "POST" }),
   checkDomainTls: (w: string, p: string, id: string) => call<SiteDomain>(`${P(w, p)}/domains/${id}/check-tls`, { method: "POST" }),
   removeDomain: (w: string, p: string, id: string) => call<void>(`${P(w, p)}/domains/${id}`, { method: "DELETE" }),
-  rollbackSite: (w: string, p: string, deploymentId: string) => call<SiteInfo>(`${P(w, p)}/site/rollback`, { method: "POST", body: json({ deploymentId }) }),
-  unpublishSite: (w: string, p: string) => call<SiteInfo>(`${P(w, p)}/site`, { method: "DELETE" }),
+  /** 200 + SiteInfo, SYNCHRONOUS (the site serves the restored release when it returns). Body {deploymentId, expectedActiveDeploymentId?}; Idempotency-Key optional. */
+  rollbackSite: async (w: string, p: string, req: { deploymentId: string; expectedActiveDeploymentId?: string | null }, idempotencyKey?: string) => {
+    checkReleaseKey(idempotencyKey, false);
+    return call<SiteInfo>(`${P(w, p)}/site/rollback`, { method: "POST", body: json(rollbackBody(req)), idempotencyKey });
+  },
+  /** 200 + SiteInfo, NO body; the optional expectation is the query parameter; Idempotency-Key optional. Already offline = 200, nothing written. */
+  unpublishSite: async (w: string, p: string, expectedActiveDeploymentId?: string | null, idempotencyKey?: string) => {
+    checkReleaseKey(idempotencyKey, false);
+    return call<SiteInfo>(`${P(w, p)}/site${unpublishQuery(expectedActiveDeploymentId)}`, { method: "DELETE", idempotencyKey });
+  },
   siteAccessTicket: (slug: string, path: string) => call<{ redirect: string }>(`/sites/${encodeURIComponent(slug)}/access-ticket`, { method: "POST", body: json({ path }) })
 };

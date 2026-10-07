@@ -5,7 +5,6 @@ import type { ThemeDef } from "@xweb/types";
 import { THEME_FONTS, THEME_RADII } from "../core/contract";
 import { allSections, defOps } from "../core/definition";
 import { actionsOfSection } from "../core/actions";
-import { staticReadiness } from "../core/readiness";
 import type { DefCtx } from "../ctx";
 import { Field, Gate, StateBox } from "../ui/primitives";
 
@@ -25,7 +24,7 @@ export function FormsPanel({ ctx, onSelect, onNewAction, openSite }: { ctx: DefC
               <span className="bx-row-tools"><button type="button" className="smallButton" onClick={() => onSelect(s.id, s.pageId)}>Chọn</button>
                 <button type="button" className="smallButton" disabled={!ctx.canEdit || ctx.readiness.state !== "AVAILABLE"} title={ctx.readiness.state === "AVAILABLE" ? undefined : "Chưa sẵn sàng: máy chủ chưa nhận thao tác hành động"} onClick={() => onNewAction(s.id)}>Thêm hành động gửi</button></span></li>);
         })}</ul>)}
-      <StateBox state={ctx.readiness.state === "AVAILABLE" ? staticReadiness("ACTION_RUNTIME") : ctx.readiness} compact/>
+      <StateBox state={ctx.readiness} compact/>
       <p><button type="button" className="bx-btn sm" onClick={openSite}>Tin gửi về, tên miền, SEO…</button></p>
     </div>
   );

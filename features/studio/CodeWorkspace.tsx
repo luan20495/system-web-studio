@@ -1,13 +1,16 @@
 "use client";
 // Code projects (STATIC_APP, ADR 0008/0012): AI and Code modes over a real Git repository; every change is a commit on its own branch,
 // built in the sandbox, previewed from the sites origin (CSP sandbox) and merged only after a green build.
+import { canEditProject, canPublish, canShare, resolvePermissions } from "@xweb/permissions";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/http-api";
 import { SERVER_KINDS, type AiStatus, type ApiProject, type AuthConfig, type CodeAiHistoryItem, type CodeChange, type CodeCommit, type DiffFile, type TreeFile } from "@/lib/http-types";
 import { useSession } from "../session";
 import { ago, ErrorState, errText, fmtDate, StateView, tok, usd } from "../ui";
-import { Drawer, MembersDrawer, PublishModal } from "./drawers";
+import { Drawer, MembersDrawer } from "./drawers";
+import { PublishModal } from "./ReleaseModal";
+import { describeStatus } from "./aiProgressModel";
 import { DesignPane, IdeDrawer, PackagesDrawer, RuntimeDrawer } from "./CodePanels";
 import { projectBase, S } from "./base";
 
@@ -44,7 +47,9 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
   const panel = ["members", "publish", "versions", "packages", "ide", "runtime"].includes(view ?? "") ? view : null;
   const isServer = SERVER_KINDS.includes(project.appKind ?? "SOURCE_WEB_APP");
   const go = (to: string) => router.push(`${base}/${to}`);
-  const canEdit = project.permissions.includes("PROJECT_EDIT");
+  // UX only: the list is what the server resolved for this project; helpers in @xweb/permissions (canonical.ts)
+  const perms = resolvePermissions(project.permissions);
+  const canEdit = canEditProject(perms), canPublishApp = canPublish(perms), canShareApp = canShare(perms);
   const [tree, setTree] = useState<TreeFile[] | null>(null);
   const [path, setPath] = useState("src/App.tsx");
   const [original, setOriginal] = useState<Record<string, { text: string | null; editable: boolean }>>({});
@@ -137,8 +142,8 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
           <button className="button ghost" onClick={() => go("packages")}>Thư viện</button>
           <button className="button ghost" onClick={() => go("ide")}>IDE</button>
           {isServer ? <button className="button ghost" onClick={() => go("runtime")}>Máy chủ</button> : null}
-          {project.permissions.includes("PROJECT_MEMBERS") ? <button className="button ghost" onClick={() => go("members")}>Chia sẻ</button> : null}
-          <button className="button primary" disabled={!project.permissions.includes("PROJECT_PUBLISH")} onClick={() => go("publish")}>Xuất bản</button>
+          {canShareApp ? <button className="button ghost" onClick={() => go("members")}>Chia sẻ</button> : null}
+          <button className="button primary" disabled={!canPublishApp} onClick={() => go("publish")}>Xuất bản</button>
         </div>
       </header>
       <main className="codeBody">
@@ -162,7 +167,7 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
                   <option value="auto">Tự động</option>
                   {(ai.providers ?? []).map((g) => <optgroup key={g.id} label={`${g.name}${g.paid ? " · tính phí" : ""}`}>{g.models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</optgroup>)}
                   <option value="mock">Chế độ thử nghiệm (không dùng AI thật)</option></select> : <span className="hint">AI hiện chưa được quản trị viên bật (Chế độ thử nghiệm).</span>}
-                {live ? <span className="hint" role="status">{live.status.startsWith("tool:") ? `AI đang dùng ${live.status.slice(5)}…` : `Đang nhận… ${live.chars} ký tự`}
+                {live ? <span className="hint" role="status">{describeStatus(live.status) ?? (live.chars > 0 ? `Đang nhận… ${live.chars} ký tự` : "Đã gửi, đang chờ model trả lời…")}
                   {live.id ? <button type="button" className="smallButton" onClick={() => { void api.cancelStream(live.id!).catch(() => undefined); }}>Huỷ</button> : null}</span> : null}
                 <button className="sendButton" disabled={busy !== null || !prompt.trim()} onClick={() => void sendPrompt()}>{busy === "ai" ? "Đang tạo…" : "Gửi ↑"}</button>
               </div>
@@ -202,7 +207,7 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
               <div className="tabs" role="tablist">{(["preview", "diff", "log"] as const).map((t) => <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? "active" : ""} onClick={() => setTab(t)}>
                 {t === "preview" ? "Xem trước" : t === "diff" ? "Mã thay đổi" : "Build & quét"}</button>)}</div>
               <div className="row">
-                {change.status === "READY" && change.reviewRequired && !change.approvedBy && me && change.createdBy !== me.displayName && project.permissions.includes("PROJECT_PUBLISH")
+                {change.status === "READY" && change.reviewRequired && !change.approvedBy && me && change.createdBy !== me.displayName && canPublishApp
                   ? <button className="button ghost" disabled={busy !== null} onClick={() => void approve(change)}>Duyệt</button> : null}
                 {canEdit && change.status === "READY" ? <button className="button primary" disabled={busy !== null || (!!change.reviewRequired && !change.approvedBy)}
                   title={change.reviewRequired && !change.approvedBy ? "Cần một thành viên khác duyệt trước" : undefined} onClick={() => void merge(change)}>{busy === "merge" ? "Đang hợp nhất…" : "Hợp nhất vào main"}</button> : null}
@@ -233,19 +238,19 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
       </main>
       {notice ? <button className="toast" onClick={() => setNotice(null)}>{notice}</button> : null}
       {panel === "members" && me ? <MembersDrawer workspaceId={ws} projectId={pid} me={me} onClose={() => go(mode)} onError={(e) => setNotice(errText(e, "Thao tác thành viên thất bại."))}/> : null}
-      {panel === "publish" ? <PublishModal workspaceId={ws} projectId={pid} revision={project.revision} current="PRIVATE" allowed={cfg?.codeAppPublicPublish === false || cfg?.publicPublish === false ? ["PRIVATE"] : ["PRIVATE", "PUBLIC"]} onClose={() => { go(mode); api.lookupProject(pid).then(onProject).catch(() => undefined); }}
+      {panel === "publish" ? <PublishModal workspaceId={ws} projectId={pid} revision={project.revision} current="PRIVATE" canPublish={canPublishApp} allowed={cfg?.codeAppPublicPublish === false || cfg?.publicPublish === false ? ["PRIVATE"] : ["PRIVATE", "PUBLIC"]} onClose={() => { go(mode); api.lookupProject(pid).then(onProject).catch(() => undefined); }}
         onUnauthorized={() => setNotice("Phiên đăng nhập đã hết hạn.")}/> : null}
       {panel === "versions" ? <Drawer title="Lịch sử (commit trên main)" sub="Lấy trực tiếp từ kho Git của nền tảng." onClose={() => go(mode)}>
         {commits == null ? <StateView kind="loading"/> : <ol className="commitList">{commits.map((c) => <li key={c.sha}><b>{c.message.split("\n")[0]}</b>
           <small className="code">{c.sha.slice(0, 10)} {c.verified ? <span className="pill pill-ok">Đã ký · {c.signer}</span> : <span className="pill pill-muted">Chưa ký</span>}</small>
           <small>Tác giả {c.author} · commit bởi {c.committer} · {fmtDate(c.date)}</small></li>)}</ol>}
-        {project.permissions.includes("PROJECT_SETTINGS") ? <section className="settingGroup"><h3>Chính sách hợp nhất</h3>
+        {canEdit ? <section className="settingGroup"><h3>Chính sách hợp nhất</h3>
           <select aria-label="Chính sách hợp nhất" defaultValue="" onChange={(e) => void act("policy", () => api.code.mergePolicy(ws, pid, (e.target.value || null) as "AUTO_MERGE_ALLOWED" | "REVIEW_REQUIRED" | null), "Không đổi được.").then((r) => { if (r) { setNotice(`Chính sách hiện hành: ${r.effective === "REVIEW_REQUIRED" ? "cần duyệt" : "hợp nhất trực tiếp"}`); void loadChanges(); } })}>
             <option value="">Theo workspace</option><option value="AUTO_MERGE_ALLOWED">Hợp nhất trực tiếp sau khi build xanh</option><option value="REVIEW_REQUIRED">Cần người khác duyệt</option></select></section> : null}
       </Drawer> : null}
       {panel === "packages" ? <PackagesDrawer ws={ws} pid={pid} canEdit={canEdit} onClose={() => go(mode)} onChange={(id) => { setSelected(id); go(mode); void loadChanges(); }}/> : null}
       {panel === "ide" ? <IdeDrawer ws={ws} pid={pid} onClose={() => go(mode)}/> : null}
-      {panel === "runtime" && isServer ? <RuntimeDrawer ws={ws} pid={pid} canPublish={project.permissions.includes("PROJECT_PUBLISH")} canSettings={project.permissions.includes("PROJECT_SETTINGS")} onClose={() => go(mode)}/> : null}
+      {panel === "runtime" && isServer ? <RuntimeDrawer ws={ws} pid={pid} canPublish={canPublishApp} canSettings={canEdit} onClose={() => go(mode)}/> : null}
     </div>
   );
 }

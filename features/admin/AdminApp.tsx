@@ -5,12 +5,16 @@ import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { api } from "@/lib/http-api";
 import type { Connector, CostLine, Department, SecurityFinding, AccessRule, AiBudget, AdminAlert, EffectiveModel, AdminApp as App, AiProbe, PackageView, RepoRow, SettingView, BlockDto, TemplateDto, AiUsageReport, AuditRow, HealthItem, UsageBucket, UsageTotals } from "@/lib/http-types";
-import { CreateUserDialog, LinkBox } from "./UserDialogs";
+import { LinkBox } from "./UserDialogs";
+import { PeoplePage, PlatformCreateAccount } from "./ProvisioningLive";
 import { AiAdmin, UserAiCard } from "./AiSetup";
 import type { ActivationLink } from "@/lib/http-types";
 import { useSession } from "../session";
 import { PORTAL_LABEL, portalHref, rememberPortal, type PortalId } from "@xweb/permissions";
 import { PortalSwitcher } from "@xweb/ui";
+import { PageHead } from "./PageHead";
+import { CompanyPage, DataSourcesAdminPage, MyWorkspacesPage, ScopedHome, TenantDetailPage, TenantsPage, WorkspaceMembers } from "./TenantScreens";
+import { adminScope, sectionAccess, type AdminScope } from "./adminModel";
 import { A, adminPortal, otherConsoleHref, owns, setAdminPortal, type AdminPortal } from "./base";
 import { useLoad } from "../useLoad";
 import { BlockStatus, blockPage, CheckList, ReviewTimeline, SchemaThumb } from "../library";
@@ -23,18 +27,24 @@ const NAV: [string, string, string][] = [
 
 /** Sections whose backend does not exist yet: the screen says so plainly instead of showing invented data. */
 const COMING: Record<string, { title: string; icon: string; why: string; needs: string }> = {
-  tenants: { title: "Công ty (tenant)", icon: "▥", why: "Danh sách công ty, tạo/khóa/mở công ty, gói dịch vụ và hạn mức theo công ty.", needs: "Cần bảng và API tenant của nền tảng (T2). Hiện hệ thống chỉ có một tổ chức." },
-  groups: { title: "Nhóm", icon: "☰", why: "Nhóm người dùng để cấp quyền và chia sẻ ứng dụng hàng loạt.", needs: "Cần mô hình nhóm và vai trò theo tổ chức (T3)." },
-  sharing: { title: "Chia sẻ", icon: "⇆", why: "Chia sẻ ứng dụng cho người dùng, nhóm, phòng ban, cả công ty hoặc công ty khác.", needs: "Cần API chia sẻ và phê duyệt chia sẻ giữa các công ty." },
-  "data-sources": { title: "Nguồn dữ liệu", icon: "⛁", why: "Kết nối và quản lý nguồn dữ liệu của công ty.", needs: "Cần API nguồn dữ liệu và connector (T8). Khóa kết nối chỉ nằm ở máy chủ, không bao giờ gửi xuống trình duyệt." },
-  byok: { title: "AI riêng của công ty", icon: "✧", why: "Dùng AI mặc định của Xweb hoặc tự đưa khóa AI của công ty (BYOK).", needs: "Cần API cấu hình AI theo công ty. Khóa chỉ ghi, không đọc lại." },
+  groups: { title: "Nhóm", icon: "☰", why: "Nhóm người dùng để cấp quyền và chia sẻ ứng dụng hàng loạt.", needs: "Máy chủ chưa có API nhóm (chỉ có nhóm SCIM đồng bộ từ IdP, chưa quản lý được). Chờ C1 (T3)." },
+  sharing: { title: "Chia sẻ", icon: "⇆", why: "Chia sẻ ứng dụng cho người dùng, nhóm, phòng ban, cả công ty hoặc công ty khác.", needs: "Máy chủ chưa có API chia sẻ giữa người dùng, nhóm và công ty (chia sẻ trong từng ứng dụng đã có ở Studio → Chia sẻ). Chờ C1/C2 (T15)." },
+  byok: { title: "AI riêng của công ty", icon: "✧", why: "Dùng AI mặc định của Xweb hoặc tự đưa khóa AI của công ty (BYOK).", needs: "API đã có nhưng đang tắt trên máy chủ (cờ app.tenant-ai.enabled, bảng tenant_ai_providers chờ C0 cấp migration). Khóa chỉ ghi, không đọc lại." },
 };
-const NAV_COMING: Record<AdminPortal, string[]> = { all: [], platform: ["tenants"], admin: ["groups", "sharing", "data-sources", "byok"] };
+const NAV_COMING: Record<AdminPortal, string[]> = { all: [], platform: [], admin: ["groups", "sharing", "byok"] };
+/** screens that run on the tenant / workspace APIs (TenantScreens.tsx) */
+const SCOPED_NAV: Record<string, [string, string, string]> = {
+  tenants: ["tenants", "Công ty (tenant)", "▥"], people: ["people", "Người dùng", "◎"], company: ["company", "Công ty của tôi", "▥"], "my-workspaces": ["my-workspaces", "Workspace của tôi", "◎"], "data-sources": ["data-sources", "Nguồn dữ liệu", "⛁"],
+};
 
-function navFor(p: AdminPortal): [string, string, string][] {
-  const real = NAV.filter(([k]) => owns(k, p));
+/** What each console lists for THIS person. The server still decides every call; a section the person cannot use is simply not offered. */
+function navFor(p: AdminPortal, scope: AdminScope): [string, string, string][] {
+  if (p === "platform") return [NAV[0], SCOPED_NAV.tenants, ...NAV.filter(([k]) => k !== "" && owns(k, p))];
   const soon = NAV_COMING[p].map((k): [string, string, string] => [k, COMING[k].title, COMING[k].icon]);
-  return p === "platform" ? [real[0], ...soon, ...real.slice(1)] : [...real, ...soon];
+  if (p === "all") return NAV;
+  if (scope.platform) return [...NAV.filter(([k]) => owns(k, p)), ...(scope.dataWorkspaces.length ? [SCOPED_NAV["data-sources"]] : []), ...soon];
+  // not a SYSTEM_ADMIN: only what the server lists for them
+  return [NAV[0], ...(scope.tenants.length || scope.workspaces.length ? [SCOPED_NAV.people] : []), ...(scope.tenants.length ? [SCOPED_NAV.company] : []), ...(scope.workspaces.length ? [SCOPED_NAV["my-workspaces"]] : []), ...(scope.dataWorkspaces.length ? [SCOPED_NAV["data-sources"]] : []), ...soon];
 }
 
 const CONSOLE_NAME: Record<AdminPortal, string> = { all: "Admin Console", platform: "Xweb Platform", admin: "Quản trị công ty" };
@@ -43,20 +53,31 @@ export function AdminApp({ seg, portal = "all" }: { seg: string[]; portal?: Admi
   setAdminPortal(portal);
   const section = seg[0] ?? "";
   const active = section === "workspaces" ? "users" : section;
+  const { me } = useSession();
+  const scope = adminScope(me);
   return (
     <div className="shell admin">
-      <AdminSidebar active={active}/>
+      <AdminSidebar active={active} scope={scope}/>
       <div className="shellMain">
         <AdminHeader/>
-        <main className="page" id="main" tabIndex={0}>{route(seg)}</main>
+        <main className="page" id="main" tabIndex={0}>{route(seg, scope)}</main>
       </div>
     </div>
   );
 }
 
-function route(seg: string[]): ReactNode {
+function route(seg: string[], scope: AdminScope): ReactNode {
   const key = seg[0] ?? "";
   if (COMING[key] && NAV_COMING[adminPortal()].includes(key)) return <ComingSection id={key}/>;
+  if (key === "tenants" && adminPortal() === "platform") return seg[1] ? <TenantDetailPage id={seg[1]}/> : <TenantsPage/>;
+  if (adminPortal() !== "platform" && adminPortal() !== "all") {
+    if (key === "people" && !scope.platform) return scope.tenants.length || scope.workspaces.length ? <PeoplePage/> : <NeedsScope what="công ty hay workspace"/>;
+    if (key === "company") return sectionAccess(key, scope) === "ok" ? <CompanyPage/> : <NeedsScope what="công ty"/>;
+    if (key === "my-workspaces") return sectionAccess(key, scope) === "ok" ? <MyWorkspacesPage/> : <NeedsScope what="workspace"/>;
+    if (key === "data-sources") return sectionAccess(key, scope) === "ok" ? <DataSourcesAdminPage/> : <NeedsScope what="nguồn dữ liệu"/>;
+    if (!scope.platform && key === "") return <ScopedHome/>;
+    if (!scope.platform && sectionAccess(key, scope) === "needs-platform") return <NeedsPlatform/>;
+  }
   if (!owns(key)) return <ElsewhereNote section={key}/>;
   switch (key) {
     case "": return <Overview/>;
@@ -83,6 +104,13 @@ function route(seg: string[]): ReactNode {
   }
 }
 
+function NeedsPlatform() {
+  return <StateView kind="forbidden" title="Mục này chỉ dành cho quản trị hệ thống" detail={<p>Tài khoản của bạn quản trị công ty / workspace, không phải toàn hệ thống. Các mục bạn dùng được nằm ở thanh bên trái.</p>}/>;
+}
+function NeedsScope({ what }: { what: string }) {
+  return <StateView kind="forbidden" title={`Bạn chưa quản trị ${what} nào`} detail={<p>Máy chủ không liệt kê quyền tương ứng cho tài khoản này.</p>}/>;
+}
+
 function ComingSection({ id }: { id: string }) {
   const c = COMING[id];
   return (<>
@@ -97,13 +125,13 @@ function ElsewhereNote({ section }: { section: string }) {
   return <StateView kind="notfound" title="Mục này nằm ở trang khác" detail={<p>Mục này thuộc {PORTAL_LABEL[other]}.</p>} action={<a className="btn" href={otherConsoleHref(other, `/${section}`)}>Mở {PORTAL_LABEL[other]}</a>}/>;
 }
 
-function AdminSidebar({ active }: { active: string }) {
+function AdminSidebar({ active, scope }: { active: string; scope: AdminScope }) {
   const { me } = useSession();
   return (
     <aside className="sidebar dark" aria-label="Điều hướng quản trị">
       <div className="sideBrand"><span className="logoMark" aria-hidden="true">◆</span><div><b>AI Software Factory</b><small>{CONSOLE_NAME[adminPortal()]}</small></div></div>
-      <nav>{navFor(adminPortal()).map(([key, label, icon]) => <NavLink key={key} href={A(key ? `/${key}` : "")} active={active === key} icon={icon}>{label}</NavLink>)}</nav>
-      <div className="sideFoot"><div className="avatar" aria-hidden="true">{(me?.displayName ?? "?").slice(0, 2).toUpperCase()}</div><div><b>{me?.displayName}</b><small>{adminPortal() === "platform" ? "Quản trị nền tảng" : "Quản trị viên"}</small></div></div>
+      <nav>{navFor(adminPortal(), scope).map(([key, label, icon]) => <NavLink key={key} href={A(key ? `/${key}` : "")} active={active === key} icon={icon}>{label}</NavLink>)}</nav>
+      <div className="sideFoot"><div className="avatar" aria-hidden="true">{(me?.displayName ?? "?").slice(0, 2).toUpperCase()}</div><div><b>{me?.displayName}</b><small>{adminPortal() === "platform" ? "Quản trị nền tảng" : scope.platform ? "Quản trị hệ thống" : scope.tenants.length ? "Quản trị công ty" : "Quản trị workspace"}</small></div></div>
     </aside>
   );
 }
@@ -121,10 +149,6 @@ function AdminHeader() {
       </div>
     </header>
   );
-}
-
-function PageHead({ title, sub, actions }: { title: string; sub?: string; actions?: ReactNode }) {
-  return <div className="pageHead"><div><h1>{title}</h1>{sub ? <p>{sub}</p> : null}</div>{actions}</div>;
 }
 
 function AuditTable({ rows, compact }: { rows: AuditRow[]; compact?: boolean }) {
@@ -212,8 +236,8 @@ function UserList() {
   const { data, error, loading, reload } = useLoad(() => api.admin.users(page, query, status), [page, query, status]);
   const [adding, setAdding] = useState(false);
   return (
-    <Card actions={<button className="btn primary" onClick={() => setAdding(true)}>+ Thêm người dùng</button>}>
-      {adding ? <CreateUserDialog onClose={() => setAdding(false)} onCreated={reload}/> : null}
+    <Card actions={<button className="btn primary" data-testid="users-create" onClick={() => setAdding(true)}>+ Tạo tài khoản</button>}>
+      {adding ? <PlatformCreateAccount onClose={() => setAdding(false)} onCreated={reload}/> : null}
       <form className="filters" onSubmit={(e) => { e.preventDefault(); setPage(0); setQuery(q); }}>
         <input aria-label="Tìm người dùng" placeholder="Tìm theo tên, tên đăng nhập, email" value={q} onChange={(e) => setQ(e.target.value)}/>
         <select aria-label="Trạng thái" value={status} onChange={(e) => { setPage(0); setStatus(e.target.value); }}>
@@ -306,6 +330,7 @@ function WorkspaceList() {
 }
 
 function WorkspaceDetail({ id }: { id: string }) {
+  const { me } = useSession();
   const { data, error, loading, reload } = useLoad(() => api.admin.workspace(id), [id]);
   if (loading && !data) return <StateView kind="loading"/>;
   if (error) return <ErrorState error={error} retry={reload}/>;
@@ -316,6 +341,7 @@ function WorkspaceDetail({ id }: { id: string }) {
       <Card title={`Thành viên (${d.members.length})`}><table className="table"><thead><tr><th>Người dùng</th><th>Vai trò</th><th>Trạng thái</th></tr></thead><tbody>{d.members.map((m) => <tr key={m.userId}><td><Link href={A(`/users/${m.userId}`)}>{m.displayName ?? m.username}</Link><small>{m.username}</small></td><td>{m.role}</td><td>{m.enabled ? <Pill value="ACTIVE" label="Hoạt động"/> : <Pill value="DISABLED" label="Bị khóa"/>}</td></tr>)}</tbody></table></Card>
       <Card title={`Ứng dụng (${d.projects.length})`}><AppTable rows={d.projects}/></Card>
     </div>
+    {adminScope(me).platform ? <WorkspaceMembers workspaceId={d.workspace.id} name={d.workspace.name}/> : null}
     <Card title="Hoạt động"><AuditTable rows={d.recentActivity} compact/></Card>
   </>);
 }

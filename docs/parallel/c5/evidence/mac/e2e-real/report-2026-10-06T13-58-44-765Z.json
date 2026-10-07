@@ -1,0 +1,620 @@
+{
+  "studio": "http://127.0.0.1:3003",
+  "runId": "muwqsvvb",
+  "facts": {
+    "authConfig": {
+      "localLogin": true,
+      "oidc": false,
+      "publicPublish": true
+    },
+    "fixtureNotes": {
+      "viewerOnProject": "member",
+      "initialRevision": 0,
+      "definitionOps": {
+        "ok": true
+      },
+      "marker": "E2E-muwqsvvb-muwqt3gs",
+      "viewerSchemaViaApi": 200,
+      "viewerGate": {
+        "url": "/auth/no-access",
+        "canvas": false
+      }
+    },
+    "routes": {
+      "queries": {
+        "status": 404,
+        "code": "QUERY_NOT_FOUND"
+      },
+      "actions": {
+        "status": 404,
+        "code": "UNKNOWN_ACTION"
+      }
+    }
+  },
+  "cleanup": [
+    "left behind (no delete route): workspaces 48113c30-971f-4e78-89e3-3340793d3411, 6a141ca9-b0ae-418b-b15f-320bcc5c4f34 named e2e-muwqsvvb-*"
+  ],
+  "node": "v22.23.1",
+  "summary": {
+    "total": 16,
+    "PASS": 6,
+    "FAIL": 2,
+    "BLOCKED": 8,
+    "SKIP": 0
+  },
+  "results": [
+    {
+      "id": "E2E-01",
+      "title": "Load project/page from the real backend",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "checks": [
+        {
+          "name": "GET …/projects/{id}/schema answered 200 by the real backend",
+          "ok": true,
+          "detail": "status=200"
+        },
+        {
+          "name": "the Builder canvas rendered (preview iframe present)",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "the project name stored in the backend is on screen",
+          "ok": true,
+          "detail": "← e2e-muwqsvvb-proj-A Phiên bản 2 · revision 1 · Riêng tư ✓ Đã lưu 20:56 ✦ AI Design Code Chỉnh sửa Dùng thử Máy tính Má"
+        },
+        {
+          "name": "the canvas shows the persisted first section (page content comes from the server, not a fixture in the browser)",
+          "ok": true,
+          "detail": "sections=7 props={\"brand\":\"e2e-muwqsvvb-proj-A\",\"links\":[{\"id\":\"l1\",\"href\":\"#products\",\"label\":\"S"
+        },
+        {
+          "name": "no unhandled page errors / serious console errors",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-02",
+      "title": "Edit component/page → save → reload → persists",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "checks": [
+        {
+          "name": "PATCH …/schema answered 200 by the real backend",
+          "ok": true,
+          "detail": "status=200"
+        },
+        {
+          "name": "the top bar says saved",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "server revision increased",
+          "ok": true,
+          "detail": "1 → 2"
+        },
+        {
+          "name": "the new text is in the persisted schema (read back through a separate session)",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "after a full reload the canvas shows the saved text",
+          "ok": true,
+          "detail": "e2e-muwqsvvb-proj-A\nSản phẩm\nLiên hệ\n\nE2E-MUWQSVVB-MUWQT3GS\n\nNước sạch mỗi ngày, sống khỏe mỗi ngày."
+        },
+        {
+          "name": "a new version row exists for the edit",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "no unhandled page errors / serious console errors",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-03",
+      "title": "Workspace isolation A/B",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "checks": [
+        {
+          "name": "adminA: the project list shows their own project",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "adminA: the project list does NOT show the other workspace's project",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "adminA: no unhandled page errors",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "adminB: the project list shows their own project",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "adminB: the project list does NOT show the other workspace's project",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "adminB: no unhandled page errors",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "B reads A's project by id → 404 (existence not disclosed)",
+          "ok": true,
+          "detail": "status=404 code=WORKSPACE_NOT_FOUND"
+        },
+        {
+          "name": "the 404 body does not carry A's data",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "B lists A's workspace → refused (403/404), no rows",
+          "ok": true,
+          "detail": "status=404"
+        },
+        {
+          "name": "B cannot write into A's project (403/404)",
+          "ok": true,
+          "detail": "status=404"
+        },
+        {
+          "name": "A's project revision is unchanged by the attempts",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "A reads B's project through B's workspace → 404",
+          "ok": true,
+          "detail": "status=404"
+        },
+        {
+          "name": "a project id of B under A's workspace path → 404 (no cross-workspace lookup)",
+          "ok": true,
+          "detail": "status=404"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-04",
+      "title": "Authorized user reaches a valid Studio resource",
+      "status": "BLOCKED",
+      "owner": "C1",
+      "ref": "viewer portal access",
+      "reason": "a workspace VIEWER holds permissions [] (GET /auth/me) so the Studio portal gate sends the viewer to /auth/no-access although the project lists them as a member; the read-only Builder cannot be observed. Decision needed from C1: should a project member without workspace permissions reach Studio read-only?",
+      "checks": [
+        {
+          "name": "adminA: after login the Studio shell is reachable (not sent to /auth/no-access)",
+          "ok": true,
+          "detail": "http://127.0.0.1:3003/studio"
+        },
+        {
+          "name": "adminA: direct URL → schema 200",
+          "ok": true,
+          "detail": "status=200"
+        },
+        {
+          "name": "adminA: direct URL → Builder canvas",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "adminA: editor is not read-only",
+          "ok": true,
+          "detail": "← e2e-muwqsvvb-proj-A Phiên bản 3 · revision 2 · Riêng tư ✓ Đã lưu 20:57 ✦ AI Design Code Chỉnh sửa "
+        },
+        {
+          "name": "adminA: refresh keeps the project open",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "adminA: no unhandled page errors",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "viewerA: the refusal page does not show project data",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "viewerA: the API itself still lets a project member READ the schema (200)",
+          "ok": true,
+          "detail": "status=200"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-05",
+      "title": "Forbidden path UX, no data leak",
+      "status": "BLOCKED",
+      "owner": "C1",
+      "ref": "viewer portal access",
+      "reason": "a workspace VIEWER holds permissions [] (GET /auth/me), so the Studio portal gate sends the viewer to /auth/no-access even though the project lists them as a member: the read-only Builder / Test-mode-disabled UX for a viewer cannot be observed. Decision needed from C1: should a project member without workspace permissions reach Studio read-only?",
+      "checks": [
+        {
+          "name": "outsider: no Builder canvas is shown",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "outsider: the page says something went wrong / not found (not a blank screen)",
+          "ok": true,
+          "detail": "? Không tìm thấy Workspace not found (mã req_62545d1bf8a9407980fde839546df148) Thử lại ← Danh sách ứng dụng"
+        },
+        {
+          "name": "outsider: A's project name is nowhere on screen",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "outsider: no API response of that page load contains A's project name or description",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "outsider: no unhandled page errors",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "viewer: PATCH …/schema → 403",
+          "ok": true,
+          "detail": "status=403 code=FORBIDDEN"
+        },
+        {
+          "name": "viewer: A's revision is unchanged",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "viewer: no editable save control",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "viewer: no project data on screen",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "viewer: no unhandled page errors",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-06",
+      "title": "Configure DataSource (+ Query) and query via the real backend",
+      "status": "FAIL",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "checks": [
+        {
+          "name": "[api] connector catalogue answers 200 with items",
+          "ok": true,
+          "detail": "status=200 code="
+        },
+        {
+          "name": "[api] postgres is AVAILABLE and the planned connectors are not",
+          "ok": true,
+          "detail": "[\"csv:PLANNED\",\"google_sheets:PLANNED\",\"graphql:PLANNED\",\"mysql:PLANNED\",\"odoo:PLANNED\",\"postgres:AVAILABLE\",\"rest:AVAILABLE\",\"salesforce:PLANNED\"]"
+        },
+        {
+          "name": "[api] create → 201 with a DataSourceView",
+          "ok": false,
+          "detail": "status=500 code=SECRETS_UNAVAILABLE credentials need SECRETS_MASTER_KEY"
+        }
+      ],
+      "failed": [
+        {
+          "name": "[api] create → 201 with a DataSourceView",
+          "ok": false,
+          "detail": "status=500 code=SECRETS_UNAVAILABLE credentials need SECRETS_MASTER_KEY"
+        }
+      ]
+    },
+    {
+      "id": "E2E-07",
+      "title": "TEST-binding query runs and shows results",
+      "status": "BLOCKED",
+      "owner": "C3",
+      "ref": "MANAGEMENT_API.md §5 + H-C2-02",
+      "reason": "Sources and TEST bindings can be created (C3 e606465, not yet in integration/v2), but no route creates an approved query and the document cannot declare a data slot (C2 H-C2-02). Set E2E_DATA_WORKSPACE_ID, E2E_DATA_PROJECT_ID, E2E_DATA_QUERY_ID, E2E_DATA_USER, E2E_DATA_PASSWORD for a project the operator seeded (source + slot + TEST binding + query; user needs PROJECT_EDIT + QUERY_EXECUTE).",
+      "checks": [],
+      "failed": []
+    },
+    {
+      "id": "E2E-08",
+      "title": "LIVE-binding query runs and shows results",
+      "status": "BLOCKED",
+      "owner": "C0",
+      "ref": "B-C5-06 (published host) + B-C0-W-01 (V29)",
+      "reason": "LIVE needs (1) a RUNNING deployment and a published host that serves /runtime-config.json and the Data API (topology not decided: C0/C2/C3; C2's runtime-config proposal is unverified), (2) a query + declared slot (C2 H-C2-02, C3 §5), and (3) durable run stores for mutating work (V29 not in integration/v2). The LIVE binding route exists (C3 e606465) but is unverified. Studio's Test panel is TEST-only by design. [published host: E2E_PUBLIC_BASE not set — no published host to ask]",
+      "checks": [],
+      "failed": []
+    },
+    {
+      "id": "E2E-09",
+      "title": "Mutation/action success with a real side effect and correct UI",
+      "status": "BLOCKED",
+      "owner": "C3",
+      "ref": "B-C0-W-04 + B-C0-W-01 + H-C2-02",
+      "reason": "The production connectors (postgres, rest) are read-only, so a LIVE data mutation answers MUTATION_UNSUPPORTED (B-C0-W-04); there is no approved-mutation management endpoint and no op to declare the slot (C3 §5, C2 H-C2-02); LIVE mutating actions answer 503 RUNTIME_STORES_VOLATILE until V29 is in integration/v2 (B-C0-W-01). Sources/bindings can be managed now (C3 e606465, unverified). TEST mode never writes (WOULD_RUN) — covered by E2E-S1. The client rule is tested at unit level: an ambiguous mutation is IDEMPOTENCY_OUTCOME_UNKNOWN, never retried, never shown as success.",
+      "checks": [],
+      "failed": []
+    },
+    {
+      "id": "E2E-S1",
+      "title": "(supplementary) TEST-mode action answers WOULD_RUN from the real backend",
+      "status": "FAIL",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "checks": [
+        {
+          "name": "the browser called POST …/app-runtime/actions/{id}/execute",
+          "ok": true,
+          "detail": "no request seen"
+        },
+        {
+          "name": "the request body only carries contract fields (mode TEST, idempotencyKey)",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "the server answered 200 with status WOULD_RUN",
+          "ok": false,
+          "detail": "status=404 body.status=FAILED code=UNKNOWN_ACTION"
+        },
+        {
+          "name": "the UI shows 'would run', NOT success",
+          "ok": false,
+          "detail": "ERROR: Lỗi Không tìm thấy mục cần chạy. Mục này chưa được lưu vào ứng dụng hoặc đã bị xóa (chế độ thử dùng bản nháp đã lưu; chế độ thật dùng bản đã xuất bản). Không nê"
+        },
+        {
+          "name": "no SUCCESS state is shown in the row",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "failed": [
+        {
+          "name": "the server answered 200 with status WOULD_RUN",
+          "ok": false,
+          "detail": "status=404 body.status=FAILED code=UNKNOWN_ACTION"
+        },
+        {
+          "name": "the UI shows 'would run', NOT success",
+          "ok": false,
+          "detail": "ERROR: Lỗi Không tìm thấy mục cần chạy. Mục này chưa được lưu vào ứng dụng hoặc đã bị xóa (chế độ thử dùng bản nháp đã lưu; chế độ thật dùng bản đã xuất bản). Không nê"
+        }
+      ]
+    },
+    {
+      "id": "E2E-10",
+      "title": "Mutation/action failure: real backend error, UI error state, no fake success",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "checks": [
+        {
+          "name": "the action is listed and runnable for a workspace admin",
+          "ok": true,
+          "detail": "null"
+        },
+        {
+          "name": "(setup) the action was removed on the server",
+          "ok": true,
+          "detail": "status=200 code=undefined"
+        },
+        {
+          "name": "the UI shows an ERROR state for the real backend failure",
+          "ok": true,
+          "detail": "ERROR: Lỗi Không tìm thấy mục cần chạy. Mục này chưa được lưu vào ứng dụng hoặc đã bị xóa (chế độ thử dùng bản nháp đã lưu; chế độ thật dùng bản đã xuất bản). Không nên bấm chạy lại ngay."
+        },
+        {
+          "name": "the message says the item was not found, in plain language (no raw status line)",
+          "ok": true,
+          "detail": "Lỗi Không tìm thấy mục cần chạy. Mục này chưa được lưu vào ứng dụng hoặc đã bị xóa (chế độ thử dùng bản nháp đã lưu; chế độ thật dùng bản đã xuất bản). Không nên bấm chạy lại ngay."
+        },
+        {
+          "name": "NO success is displayed anywhere in the row",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "the run button is usable again (not stuck in 'Đang chạy…')",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-11",
+      "title": "Workflow start from Studio, backend executes, UI reads state/result",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "checks": [
+        {
+          "name": "the workflow is listed and startable for a workspace admin",
+          "ok": true,
+          "detail": "null"
+        },
+        {
+          "name": "POST …/workflows/{id}/runs answered 202 with a run id",
+          "ok": true,
+          "detail": "status=202 code=undefined"
+        },
+        {
+          "name": "the start request carried an idempotencyKey (required by the contract)",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "the UI shows the run id and a status read from the server",
+          "ok": true,
+          "detail": "Lượt chạy bece0103-1614-4f58-b4ca-381350328204 · SUCCEEDED · end:SUCCEEDED"
+        },
+        {
+          "name": "the run finished as a simulated (TEST) run: 'would run', not a real success",
+          "ok": true,
+          "detail": "WOULD_RUN: Sẽ chạy (chưa thực hiện) Lượt chạy thử đã kết thúc; các bước được mô phỏng, dữ liệu thật không đổi (theo máy chủ)."
+        },
+        {
+          "name": "the run view read through a separate session agrees (terminal status)",
+          "ok": true,
+          "detail": "status=200 SUCCEEDED"
+        },
+        {
+          "name": "the run belongs to the TEST mode",
+          "ok": true,
+          "detail": "TEST"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-12",
+      "title": "Durable workflow: restart the backend, state recovers",
+      "status": "BLOCKED",
+      "owner": "C0",
+      "ref": "B-C0-W-01 (V29) / B-C4-05",
+      "reason": "C4 run stores are in memory on integration/v2 (f894cc6): V29 run-persistence is a branch (wire/v29-run-persistence), not integrated. A restart loses every run by design today. Set E2E_DURABLE_RUN_STORES=1 only for a stack that has V29.",
+      "checks": [],
+      "failed": []
+    },
+    {
+      "id": "E2E-13",
+      "title": "Publish → real artifact/runtime state → public page reachable",
+      "status": "BLOCKED",
+      "owner": "C2",
+      "ref": "deployment provider",
+      "reason": "the deployment provider is MOCK: a demo URL is shown but no real artifact is served (configure a SELF_HOSTED provider for this flow)",
+      "checks": [
+        {
+          "name": "POST …/publish accepted by the backend (2xx) with a deployment id",
+          "ok": true,
+          "detail": "status=202 code=undefined"
+        },
+        {
+          "name": "the publish request carried an Idempotency-Key",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-14",
+      "title": "RabbitMQ (or another dependency) down → correct failure → recovery/retry",
+      "status": "BLOCKED",
+      "owner": "C4",
+      "ref": "B-C4-06 / B-C0-W-01",
+      "reason": "No RabbitMQ consumer or queue adapter is wired on integration/v2 (f894cc6): C4 workflow queue and run stores are in memory (B-C4-05, B-C4-06). There is no dependency whose outage can change a workflow start. Set E2E_RABBITMQ_WIRED=1 only for a stack that has the queue adapter.",
+      "checks": [],
+      "failed": []
+    },
+    {
+      "id": "E2E-S2",
+      "title": "(supplementary) Save fails offline, retry after reconnect saves exactly once",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "checks": [
+        {
+          "name": "the top bar says the save failed",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "a retry button is offered",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "Publish is disabled while an edit is unsaved",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "the retry reached the real backend and was accepted (200)",
+          "ok": true,
+          "detail": "status=200"
+        },
+        {
+          "name": "the top bar says saved again and the retry button is gone",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "the edit is persisted",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "exactly ONE revision was added (the failed attempt never reached the server; no double apply)",
+          "ok": true,
+          "detail": "4 → 5"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "console: Failed to load resource: net::ERR_INTERNET_DISCONNECTED"
+        }
+      ],
+      "failed": []
+    }
+  ]
+}

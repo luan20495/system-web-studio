@@ -1,3 +1,4 @@
+// @class: unit — pure logic / server-side render of components; no browser, no network
 import test from "node:test";
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -156,10 +157,10 @@ test("workflows panel: NOT_READY gate and list", () => {
   assert.match(ok, /Duyệt/); assert.match(ok, /3 bước \(1 phê duyệt\)/);
 });
 
-test("data wizard: six steps; source and discovery are NOT_READY without a server; no mock rows", () => {
+test("data wizard: six data steps + the public-data tab; source and discovery are NOT_READY without a server; no mock rows", () => {
   const html = renderToStaticMarkup(<DataWizard ctx={ctx()}/>);
   for (const s of ["Nguồn dữ liệu", "Truy vấn", "Ánh xạ", "ViewModel"]) assert.match(html, new RegExp(s));
-  assert.equal((html.match(/role="tab"/g) ?? []).length, 6);
+  assert.equal((html.match(/role="tab"/g) ?? []).length, 7); assert.match(html, /Dữ liệu công khai/);
   assert.match(html, /Chưa sẵn sàng/); assert.match(html, /Kho/);
   assert.doesNotMatch(html, /mock|fake|giả lập thành công/i);
   assert.match(html, /Ánh xạ[\s\S]*name \[Bỏ khoảng trắng đầu\/cuối\]/);
@@ -205,4 +206,35 @@ test("forms + theme panels: NOT_READY gates, no CSS/URL inputs for the theme", (
   assert.match(th, /SYSTEM/); assert.doesNotMatch(th, /<textarea/); assert.match(th, /chưa áp dụng giao diện này/);
   assert.match(renderToStaticMarkup(<ThemePanel ctx={ctx({ readiness: notReady("y") })}/>), /Chưa sẵn sàng/);
   assert.deepEqual(a11yProblems(th), []);
+});
+
+const noRt = { runQuery: async () => ({}) as never, runAction: async () => ({}) as never, startWorkflow: async () => ({}) as never, getRun: async () => ({}) as never, cancelRun: async () => ({}) as never, newKey: () => "k" };
+const rtDoc = () => baseDoc({ actions: [{ id: "n", name: "Báo", type: "NOTIFY", channel: "IN_APP", templateRef: "t", trigger: { sectionId: "s1", event: "onClick" } }] } as never);
+
+test("test panel with a runtime: runs need APP_EDIT, unsaved changes block runs, an editor can run (no fake result is rendered)", () => {
+  const viewer = renderToStaticMarkup(<TestPanel doc={rtDoc()} rawPermissions={["APP_VIEW", "ACTION_EXECUTE"]} runtime={noRt}/>);
+  assert.match(viewer, /Chỉnh sửa ứng dụng/); assert.match(viewer, /disabled=""[^>]*data-testid="run-action:n"|data-testid="run-action:n"[^>]*disabled=""/);
+  const dirty = renderToStaticMarkup(<TestPanel doc={rtDoc()} rawPermissions={["APP_VIEW", "APP_USE", "APP_EDIT", "ACTION_EXECUTE"]} runtime={noRt} dirty/>);
+  assert.match(dirty, /thay đổi chưa lưu/);
+  const ok = renderToStaticMarkup(<TestPanel doc={rtDoc()} rawPermissions={["APP_VIEW", "APP_USE", "APP_EDIT", "ACTION_EXECUTE"]} runtime={noRt}/>);
+  assert.match(ok, /data-testid="run-action:n"/); assert.doesNotMatch(ok, /data-testid="run-action:n"[^>]*disabled=""/);
+  assert.doesNotMatch(ok, /data-outcome="SUCCESS"/); assert.doesNotMatch(ok, /Chưa kết nối máy chủ/);
+  assert.match(renderToStaticMarkup(<TestPanel doc={rtDoc()} rawPermissions={["APP_VIEW", "APP_USE", "APP_EDIT", "ACTION_EXECUTE"]}/>), /Chưa kết nối máy chủ/);
+  assert.deepEqual(a11yProblems(ok), []);
+});
+
+test("test panel: an action without a UI trigger is not runnable from the browser route (the server answers UNKNOWN_ACTION, D-C4-10)", () => {
+  const noTrigger = baseDoc({ actions: [{ id: "n", name: "Báo", type: "NOTIFY", channel: "IN_APP", templateRef: "t" }] } as never);
+  const html = renderToStaticMarkup(<TestPanel doc={noTrigger} rawPermissions={["APP_VIEW", "APP_USE", "APP_EDIT", "ACTION_EXECUTE"]} runtime={noRt}/>);
+  assert.match(html, /data-testid="no-trigger:n"/); assert.match(html, /chỉ chạy từ workflow hoặc hành động khác/);
+  assert.match(html, /disabled=""[^>]*data-testid="run-action:n"|data-testid="run-action:n"[^>]*disabled=""/);
+  assert.deepEqual(a11yProblems(html), []);
+});
+
+test("top bar: the retry button appears only for a failed save that has a retry handler", () => {
+  const base = { name: "A", meta: "r", appMode: "EDIT" as const, onAppMode: () => undefined, device: "desktop" as const, onDevice: () => undefined, canShare: true, shareReason: "", onShare: () => undefined, canPublish: true, publishReason: "", publishBusy: false, issues: { block: 0, warn: 0 }, onPublish: () => undefined };
+  const failed = renderToStaticMarkup(<BuilderTopBar {...base} save={{ state: "error", at: null }} onRetrySave={() => undefined}/>);
+  assert.match(failed, /Lưu thất bại/); assert.match(failed, /data-testid="retry-save"/);
+  assert.doesNotMatch(renderToStaticMarkup(<BuilderTopBar {...base} save={{ state: "error", at: null }}/>), /retry-save/);
+  assert.doesNotMatch(renderToStaticMarkup(<BuilderTopBar {...base} save={{ state: "saved", at: null }} onRetrySave={() => undefined}/>), /retry-save/);
 });

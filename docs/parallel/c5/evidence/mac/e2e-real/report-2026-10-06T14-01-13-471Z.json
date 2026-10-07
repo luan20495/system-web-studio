@@ -1,0 +1,239 @@
+{
+  "studio": "http://127.0.0.1:3003",
+  "runId": "muwqxhzc",
+  "facts": {
+    "authConfig": {
+      "localLogin": true,
+      "oidc": false,
+      "publicPublish": true
+    },
+    "fixtureNotes": {
+      "viewerOnProject": "member",
+      "initialRevision": 0,
+      "definitionOps": {
+        "ok": true
+      },
+      "viewerReadsDataSources": 403
+    },
+    "routes": {
+      "queries": {
+        "status": 404,
+        "code": "QUERY_NOT_FOUND"
+      },
+      "actions": {
+        "status": 404,
+        "code": "UNKNOWN_ACTION"
+      }
+    }
+  },
+  "cleanup": [
+    "left behind (no delete route): workspaces 427d557d-2f2b-43a6-bd73-1887168f5c08, 5264c602-3e59-40b6-bf84-606cdc873172 named e2e-muwqxhzc-*"
+  ],
+  "node": "v22.23.1",
+  "summary": {
+    "total": 4,
+    "PASS": 1,
+    "FAIL": 1,
+    "BLOCKED": 2,
+    "SKIP": 0
+  },
+  "results": [
+    {
+      "id": "E2E-06",
+      "title": "Configure DataSource (+ Query) and query via the real backend",
+      "status": "FAIL",
+      "owner": null,
+      "ref": null,
+      "reason": "exception: locator.click: Timeout 30000ms exceeded. ⏎ Call log: ⏎   - waiting for getByRole('button', { name: /Dữ liệu/ }).first()",
+      "checks": [
+        {
+          "name": "[api] connector catalogue answers 200 with items",
+          "ok": true,
+          "detail": "status=200 code="
+        },
+        {
+          "name": "[api] postgres is AVAILABLE and the planned connectors are not",
+          "ok": true,
+          "detail": "[\"csv:PLANNED\",\"google_sheets:PLANNED\",\"graphql:PLANNED\",\"mysql:PLANNED\",\"odoo:PLANNED\",\"postgres:AVAILABLE\",\"rest:AVAILABLE\",\"salesforce:PLANNED\"]"
+        },
+        {
+          "name": "[api] create → 201 with a DataSourceView",
+          "ok": true,
+          "detail": "status=201 code= "
+        },
+        {
+          "name": "[api] the view says a credential exists but carries no secret and no credential reference",
+          "ok": true,
+          "detail": "[\"id\",\"workspaceId\",\"name\",\"type\",\"config\",\"hasCredential\",\"status\",\"version\",\"createdBy\",\"createdAt\",\"updatedAt\"]"
+        },
+        {
+          "name": "[api] credential metadata: configured + key NAMES only, no values",
+          "ok": true,
+          "detail": "status=200"
+        },
+        {
+          "name": "[api] a second source with the same name (case-insensitive) → 409 CONFLICT",
+          "ok": true,
+          "detail": "status=409 code=CONFLICT"
+        },
+        {
+          "name": "[api] a secret-looking key in config → 400 INVALID_*",
+          "ok": true,
+          "detail": "status=400 code=INVALID_CONFIG"
+        },
+        {
+          "name": "[api] an identity field in the body (tenantId) → 400 INVALID_PARAMS",
+          "ok": true,
+          "detail": "status=400 code=INVALID_PARAMS"
+        },
+        {
+          "name": "[api] a PLANNED connector (csv) → 501 NOT_IMPLEMENTED",
+          "ok": true,
+          "detail": "status=501 code=NOT_IMPLEMENTED"
+        },
+        {
+          "name": "[api] an unknown connector type → 422 UNSUPPORTED_TYPE",
+          "ok": true,
+          "detail": "status=422 code=UNSUPPORTED_TYPE"
+        },
+        {
+          "name": "[api] isolation: workspace B's admin cannot read A's source by id (404 NOT_FOUND)",
+          "ok": true,
+          "detail": "status=404 code=NOT_FOUND"
+        },
+        {
+          "name": "[api] isolation: 'foreign' and 'unknown' answer IDENTICALLY (no existence oracle)",
+          "ok": true,
+          "detail": "404/404"
+        },
+        {
+          "name": "[api] isolation: B's admin listing A's workspace is refused (403/404), no items",
+          "ok": true,
+          "detail": "status=404"
+        },
+        {
+          "name": "[api] permission: a VIEWER cannot create (403 PERMISSION_DENIED)",
+          "ok": true,
+          "detail": "status=403 code=PERMISSION_DENIED"
+        },
+        {
+          "name": "[api] permission: a VIEWER cannot change a source, and nothing changed",
+          "ok": true,
+          "detail": "status=403"
+        },
+        {
+          "name": "[api] permission: a VIEWER's read is 200 or 403, never 5xx, and never shows a secret",
+          "ok": true,
+          "detail": "status=403"
+        },
+        {
+          "name": "[api] test connection of an unreachable host → HTTP 200 with ok:false and a documented code",
+          "ok": true,
+          "detail": "status=200 ok=false code=INVALID_CREDENTIAL"
+        },
+        {
+          "name": "[api] the failure text does not leak the credential",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "[api] a DISABLED source cannot be tested: 409 DISABLED",
+          "ok": true,
+          "detail": "patch=200 test=409 DISABLED"
+        },
+        {
+          "name": "[api] bind TEST → 200 with the binding",
+          "ok": true,
+          "detail": "status=200 code="
+        },
+        {
+          "name": "[api] the binding list contains it, mode normalised",
+          "ok": true,
+          "detail": "status=200"
+        },
+        {
+          "name": "[api] permission: a project VIEWER cannot list/alter bindings (403)",
+          "ok": true,
+          "detail": "status=403"
+        },
+        {
+          "name": "[api] deleting a BOUND source → 409 CONFLICT and it still exists",
+          "ok": true,
+          "detail": "status=409 code=CONFLICT"
+        },
+        {
+          "name": "[ui] the Builder opens by direct URL",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-07",
+      "title": "TEST-binding query runs and shows results",
+      "status": "BLOCKED",
+      "owner": "C3",
+      "ref": "MANAGEMENT_API.md §5 + H-C2-02",
+      "reason": "Sources and TEST bindings can be created (C3 e606465, not yet in integration/v2), but no route creates an approved query and the document cannot declare a data slot (C2 H-C2-02). Set E2E_DATA_WORKSPACE_ID, E2E_DATA_PROJECT_ID, E2E_DATA_QUERY_ID, E2E_DATA_USER, E2E_DATA_PASSWORD for a project the operator seeded (source + slot + TEST binding + query; user needs PROJECT_EDIT + QUERY_EXECUTE).",
+      "checks": [],
+      "failed": []
+    },
+    {
+      "id": "E2E-S1",
+      "title": "(supplementary) TEST-mode action answers WOULD_RUN from the real backend",
+      "status": "BLOCKED",
+      "owner": "C0",
+      "ref": "app.workflow.enabled",
+      "reason": "server answered \"not mounted\": Chưa sẵn sàng Máy chủ chưa có chức năng tương ứng. (app.workflow.enabled must be true in the test stack)",
+      "checks": [],
+      "failed": []
+    },
+    {
+      "id": "E2E-10",
+      "title": "Mutation/action failure: real backend error, UI error state, no fake success",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "checks": [
+        {
+          "name": "the action is listed and runnable for a workspace admin",
+          "ok": true,
+          "detail": "null"
+        },
+        {
+          "name": "(setup) the action was removed on the server",
+          "ok": true,
+          "detail": "status=200 code=undefined"
+        },
+        {
+          "name": "the UI shows an ERROR state for the real backend failure",
+          "ok": true,
+          "detail": "ERROR: Lỗi Không tìm thấy mục cần chạy. Mục này chưa được lưu vào ứng dụng hoặc đã bị xóa (chế độ thử dùng bản nháp đã lưu; chế độ thật dùng bản đã xuất bản). Không nên bấm chạy lại ngay."
+        },
+        {
+          "name": "the message says the item was not found, in plain language (no raw status line)",
+          "ok": true,
+          "detail": "Lỗi Không tìm thấy mục cần chạy. Mục này chưa được lưu vào ứng dụng hoặc đã bị xóa (chế độ thử dùng bản nháp đã lưu; chế độ thật dùng bản đã xuất bản). Không nên bấm chạy lại ngay."
+        },
+        {
+          "name": "NO success is displayed anywhere in the row",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "the run button is usable again (not stuck in 'Đang chạy…')",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "failed": []
+    }
+  ]
+}

@@ -3,10 +3,9 @@ import { useState } from "react";
 import type { WorkflowDef } from "@xweb/types";
 import { usersOf } from "../core/definition";
 import { kindOf, workflowOps } from "../core/workflow";
-import { staticReadiness } from "../core/readiness";
 import { WorkflowEditor } from "../WorkflowEditor";
 import type { DefCtx } from "../ctx";
-import { Dialog, Gate, StateBox } from "../ui/primitives";
+import { Dialog, Gate } from "../ui/primitives";
 
 const TRIGGER: Record<string, string> = { MANUAL: "Thủ công", SCHEDULE: "Theo lịch", ACTION: "Từ hành động" };
 
@@ -28,7 +27,7 @@ export function WorkflowsPanel({ ctx }: { ctx: DefCtx }) {
                 {!disabled ? <span className="bx-row-tools"><button type="button" className="smallButton" onClick={() => setEditing(w)}>Sửa</button>
                   <button type="button" className="smallButton danger" aria-label={`Xóa workflow ${w.name || w.id}`} onClick={() => setRemoving(w)}>Xóa</button></span> : null}</li>))}</ul>))}
       </Gate>
-      <StateBox state={staticReadiness("WORKFLOW_RUNTIME")} compact/>
+      <p className="hint">Chạy thử workflow: chuyển sang chế độ “Dùng thử”.</p>
       {removing ? (
         <Dialog title={`Xóa workflow “${removing.name || removing.id}”?`} onClose={() => setRemoving(null)} footer={<>
           <button type="button" className="bx-btn" onClick={() => setRemoving(null)}>Hủy</button>

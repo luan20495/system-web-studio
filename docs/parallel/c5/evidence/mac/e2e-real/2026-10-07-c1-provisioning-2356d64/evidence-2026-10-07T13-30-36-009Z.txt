@@ -1,0 +1,220 @@
+FLOW: E2E-PL01 — Platform portal: login, navigation, tenants (create, suspend, restore, members, last-admin rule), SYSTEM_ADMIN grant / revoke
+RESULT: PASS
+START: 2026-10-07T13:29:48.983Z
+END: 2026-10-07T13:29:59.913Z
+FRONTEND_HEAD: e028508
+BACKEND_HEAD: 2356d64 docs(c1): tenant-scoped provisioning API contract for C5 and exact error codes [2356d64]
+BACKEND_URL: http://127.0.0.1:44080
+PROJECT: 247e73fe-732a-4b5d-af3f-83786a4eb262
+WORKSPACE: dcb1ae8d-4a82-40dd-a2eb-28e0313ce5c3
+HTTP EVIDENCE:
+  - ok POST /admin/tenants → 201 and the page opens the new tenant
+  - ok a duplicate slug is refused by the server (409 TENANT_SLUG_TAKEN)
+  - ok the server enforces it too (409 LAST_TENANT_ADMIN)
+  - ok a brand-new tenant has no candidates (the directory is tenant-scoped, never global) and the picker says so
+  - ok even a SYSTEM_ADMIN cannot add an unrelated account to a tenant (404 USER_NOT_FOUND): no global directory
+  - ok [api] …and the server agrees: SYSTEM_ADMIN is refused the member list and the add (403)
+  - ok the audit page lists the tenant events just made (TENANT_CREATED / TENANT_STATUS_CHANGED / TENANT_MEMBER_SET)
+  - ok cleanup: the tenant is marked DELETED
+UI ASSERTION:
+  - ok login through the Platform portal lands inside /platform (not on the login or no-access page)
+  - ok navigation lists Tổng quan, Công ty (tenant), Người dùng & Workspace, Nhật ký kiểm toán, Sức khỏe hệ thống — and nothing from the tenant-admin console
+  - ok the tenant list is the REAL list (the DEFAULT tenant is there) and the section is not 'Chưa sẵn sàng'
+  - ok an invalid form is refused in the dialog with both messages and NO request is sent
+  - ok the member row shows the person's NAME from the member metadata (no extra lookup)
+  - ok workspace page (SYSTEM_ADMIN): the member panel says the platform admin does not manage workspace members, and there is NO add-member form (the server lists no MEMBER_MANAGE for it)
+  - ok the system-health page loads without an error state
+  - ok a workspace member with no platform scope is sent to /auth/no-access, never to a platform screen
+  - ok no unexpected 4xx/5xx from the portal's own calls (the deliberate refusals excepted)
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok the server stored it: slug, name, ACTIVE
+  - ok suspend: the UI says so and the server agrees (SUSPENDED)
+  - ok restore: back to ACTIVE on the server
+  - ok the first administrator chosen in the dialog is TENANT_ADMIN on the server, with name and email metadata
+  - ok demoting the ONLY TENANT_ADMIN is explained in words and nothing changed on the server
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-AD01 — Admin portal, tenant admin: own company + members, no system-admin screens, rules explained, refused by the API as well
+RESULT: PASS
+START: 2026-10-07T13:29:59.914Z
+END: 2026-10-07T13:30:06.938Z
+FRONTEND_HEAD: e028508
+BACKEND_HEAD: 2356d64 docs(c1): tenant-scoped provisioning API contract for C5 and exact error codes [2356d64]
+BACKEND_URL: http://127.0.0.1:44080
+PROJECT: 247e73fe-732a-4b5d-af3f-83786a4eb262
+WORKSPACE: dcb1ae8d-4a82-40dd-a2eb-28e0313ce5c3
+HTTP EVIDENCE:
+  - ok [api] /auth/me of the tenant admin lists the tenant with role TENANT_ADMIN and is NOT platform scope
+  - ok a tenant admin gets NO suspend / delete buttons (platform operations)
+  - ok [api] the same person is refused the system-wide user list (403 ADMIN_REQUIRED)
+  - ok [api] …but allowed to read the members of THEIR tenant (TENANT_MEMBERS), each row with userId, username, displayName, email, role, active
+  - ok [api] …and refused to suspend it (platform only: 403)
+  - ok [api] …and refused the members of another tenant (403/404, no list)
+  - ok cleanup: the fixture tenant is marked DELETED
+UI ASSERTION:
+  - ok login through the Admin portal lands inside /admin (a tenant admin is NOT refused)
+  - ok navigation = Tổng quan + Công ty của tôi (+ the sections still waiting for a backend); NO Người dùng, Nhật ký kiểm toán, AI…
+  - ok the landing page lists the tenant this person administers (no system overview, no 403 from /admin/overview)
+  - ok Công ty của tôi shows the tenant, ACTIVE, with its member list from the API
+  - ok the person's own row is named (from the session), marked 'bạn', and its role / remove controls are disabled (no self-change)
+  - ok the add form is real: a search box and a candidate list (empty here: this fresh tenant has no workspace and no former member) — not a 'cannot look people up' notice
+  - ok a 1-character search is not sent (the server would answer 400 QUERY_TOO_SHORT): the form asks for 2
+  - ok typing a system-only URL shows 'chỉ dành cho quản trị hệ thống' and makes NO call to /admin/users
+  - ok Workspace của tôi: this account administers no workspace, so the page says so (no empty fake table)
+  - ok a workspace viewer is sent to /auth/no-access by the Admin portal
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-AD02 — Admin portal, workspace admin: 'Workspace của tôi' opens on MEMBER_MANAGE (not on a role name), members add / re-role / remove, rules, isolation, negative roles
+RESULT: PASS
+START: 2026-10-07T13:30:06.938Z
+END: 2026-10-07T13:30:19.552Z
+FRONTEND_HEAD: e028508
+BACKEND_HEAD: 2356d64 docs(c1): tenant-scoped provisioning API contract for C5 and exact error codes [2356d64]
+BACKEND_URL: http://127.0.0.1:44080
+PROJECT: 247e73fe-732a-4b5d-af3f-83786a4eb262
+WORKSPACE: dcb1ae8d-4a82-40dd-a2eb-28e0313ce5c3
+HTTP EVIDENCE:
+  - ok [api] /auth/me: the workspace admin's workspace lists MEMBER_MANAGE (and DATA_SOURCE_MANAGE)
+  - ok [api] a workspace viewer: /auth/me does NOT list MEMBER_MANAGE
+  - ok [api] …and the server refuses their member list (403/404) — the backend re-checks
+  - ok [api] a workspace editor: /auth/me does NOT list MEMBER_MANAGE
+  - ok [api] …and the server refuses their member list (403/404) — the backend re-checks
+  - ok [api] a workspace publisher: /auth/me does NOT list MEMBER_MANAGE
+  - ok [api] …and the server refuses their member list (403/404) — the backend re-checks
+  - ok [api] adding the same person twice is refused (409 ALREADY_MEMBER)
+  - ok [api] the server refuses self-change (403 SELF_GRANT_FORBIDDEN), as the UI did before the click
+  - ok [api] adminA cannot read workspace B's members (403/404)
+  - ok [api] …and the API refuses it too (403 ADMIN_REQUIRED)
+UI ASSERTION:
+  - ok a workspace viewer is refused by the Admin portal (/auth/no-access) — not offered 'Workspace của tôi'
+  - ok a workspace editor is refused by the Admin portal (/auth/no-access) — not offered 'Workspace của tôi'
+  - ok a workspace publisher is refused by the Admin portal (/auth/no-access) — not offered 'Workspace của tôi'
+  - ok a WORKSPACE_ADMIN logs in through the Admin portal and is not refused
+  - ok navigation = Tổng quan + Workspace của tôi + Nguồn dữ liệu; no Người dùng / Nhật ký kiểm toán / Công ty của tôi
+  - ok the member table is the REAL list of workspace A (adminA, viewerA, lonelyA)
+  - ok own row: role and remove are disabled (no self-change)
+  - ok an unknown username is refused by the server and said in words (nothing added)
+  - ok the page offers no workspace picker with B (one workspace administered)
+  - ok Nguồn dữ liệu: the REAL panel of the workspace (catalogue / add form), not 'Chưa sẵn sàng'
+  - ok a system-only URL says 'chỉ dành cho quản trị hệ thống' and makes no call to /admin/users
+  - ok no unexpected 4xx/5xx from the portal's calls (deliberate refusals excepted)
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok add by username as Người xem: the server lists adminB as VIEWER of workspace A
+  - ok change the role to Biên tập viên: persisted
+  - ok remove: gone from the workspace on the server
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-AD03 — Tenant admin member directory: metadata, tenant-scoped candidates (search, limit, exclusions), add through the UI, isolation and rules
+RESULT: FAIL
+START: 2026-10-07T13:30:19.552Z
+END: 2026-10-07T13:30:20.252Z
+FRONTEND_HEAD: e028508
+BACKEND_HEAD: 2356d64 docs(c1): tenant-scoped provisioning API contract for C5 and exact error codes [2356d64]
+BACKEND_URL: http://127.0.0.1:44080
+PROJECT: 247e73fe-732a-4b5d-af3f-83786a4eb262
+WORKSPACE: dcb1ae8d-4a82-40dd-a2eb-28e0313ce5c3
+HTTP EVIDENCE: none recorded
+UI ASSERTION: none recorded
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: exception: Error: makeUser disabled: activation 429 ⏎ at makeUser (file:///Users/hoangluan/code/xweb-c5/tests/e2e-real/lib/portals.mjs:32:32) ⏎ at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+OWNER: unassigned (triage)
+
+---
+
+FLOW: E2E-SUPER01 — SYSTEM_ADMIN (Platform) → create tenant admin of a new tenant (+ workspace) → activation link → activate → login Admin portal
+RESULT: FAIL
+START: 2026-10-07T13:30:20.252Z
+END: 2026-10-07T13:30:34.032Z
+FRONTEND_HEAD: e028508
+BACKEND_HEAD: 2356d64 docs(c1): tenant-scoped provisioning API contract for C5 and exact error codes [2356d64]
+BACKEND_URL: http://127.0.0.1:44080
+PROJECT: 247e73fe-732a-4b5d-af3f-83786a4eb262
+WORKSPACE: dcb1ae8d-4a82-40dd-a2eb-28e0313ce5c3
+HTTP EVIDENCE:
+  - ok [api] SYSTEM_ADMIN creates a NEW tenant (201, no first admin yet)
+  - ok [api] …and a workspace OF THAT TENANT through the tenant route (201, tenantId explicit)
+  - ok POST /admin/tenants/{tenantId}/users → 201; the tenant is the PATH, never in the body; tenantRole TENANT_ADMIN; workspaceId + workspaceRole together; no password
+  - ok [api] the same username again is refused: 409 USERNAME_TAKEN
+UI ASSERTION:
+  - ok the SYSTEM_ADMIN logs in through the Platform portal
+  - ok the dialog: four sections, a tenant selector, NO not-ready notice, NO SYSTEM_ADMIN type
+  - ok the workspace of the chosen tenant is offered (optional; assigned here)
+  - ok the activation link is shown once in the dialog (/auth/activate#token); no password anywhere
+  - ok after 'Xong' the token is gone: not in the summary, the URL, localStorage or sessionStorage
+  - ok the summary: Chờ kích hoạt, the company AND its role already assigned, the workspace; the only next step is the person's activation
+PERSISTENCE ASSERTION:
+  - ok [api] the server lists the account as TENANT_ADMIN of the new tenant (already, before activation)
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: exception: locator.fill: Timeout 10000ms exceeded. ⏎ Call log: ⏎ - waiting for getByLabel('Mật khẩu', { exact: true })
+OWNER: unassigned (triage)
+
+---
+
+FLOW: E2E-ADMIN01 — Tenant admin (Admin portal) → Người dùng → create workspace admin + app creator by invitation → activation → the creator can sign in
+RESULT: FAIL
+START: 2026-10-07T13:30:34.032Z
+END: 2026-10-07T13:30:34.479Z
+FRONTEND_HEAD: e028508
+BACKEND_HEAD: 2356d64 docs(c1): tenant-scoped provisioning API contract for C5 and exact error codes [2356d64]
+BACKEND_URL: http://127.0.0.1:44080
+PROJECT: 247e73fe-732a-4b5d-af3f-83786a4eb262
+WORKSPACE: dcb1ae8d-4a82-40dd-a2eb-28e0313ce5c3
+HTTP EVIDENCE: none recorded
+UI ASSERTION: none recorded
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: exception: Error: makeTenantUser a01ta: activation 429 ⏎ at makeTenantUser (file:///Users/hoangluan/code/xweb-c5/tests/e2e-real/lib/portals.mjs:74:32) ⏎ at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+OWNER: unassigned (triage)
+
+---
+
+FLOW: E2E-USER01 — App creator (EDITOR, made by the tenant admin): Studio login → project visible → edit / save / reload → permissions are the role's
+RESULT: FAIL
+START: 2026-10-07T13:30:34.480Z
+END: 2026-10-07T13:30:34.821Z
+FRONTEND_HEAD: e028508
+BACKEND_HEAD: 2356d64 docs(c1): tenant-scoped provisioning API contract for C5 and exact error codes [2356d64]
+BACKEND_URL: http://127.0.0.1:44080
+PROJECT: 247e73fe-732a-4b5d-af3f-83786a4eb262
+WORKSPACE: dcb1ae8d-4a82-40dd-a2eb-28e0313ce5c3
+HTTP EVIDENCE: none recorded
+UI ASSERTION: none recorded
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: exception: Error: makeTenantUser u01ta: activation 429 ⏎ at makeTenantUser (file:///Users/hoangluan/code/xweb-c5/tests/e2e-real/lib/portals.mjs:74:32) ⏎ at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+OWNER: unassigned (triage)
+
+---
+
+FLOW: E2E-SEC01 — SEC01 tenant admin cannot create SYSTEM_ADMIN · SEC02 cross-tenant is a safe 404 · SEC03 workspace admin cannot escalate
+RESULT: FAIL
+START: 2026-10-07T13:30:34.821Z
+END: 2026-10-07T13:30:35.201Z
+FRONTEND_HEAD: e028508
+BACKEND_HEAD: 2356d64 docs(c1): tenant-scoped provisioning API contract for C5 and exact error codes [2356d64]
+BACKEND_URL: http://127.0.0.1:44080
+PROJECT: 247e73fe-732a-4b5d-af3f-83786a4eb262
+WORKSPACE: dcb1ae8d-4a82-40dd-a2eb-28e0313ce5c3
+HTTP EVIDENCE: none recorded
+UI ASSERTION: none recorded
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: exception: Error: makeTenantUser sataA: activation 429 ⏎ at makeTenantUser (file:///Users/hoangluan/code/xweb-c5/tests/e2e-real/lib/portals.mjs:74:32) ⏎ at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+OWNER: unassigned (triage)

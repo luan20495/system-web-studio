@@ -1,0 +1,151 @@
+
+> system-web-studio@0.2.0 test:e2e:real
+> node tests/e2e-real/run.mjs
+
+REAL BACKEND suite · studio=http://127.0.0.1:3003 · run=muwqsvvb · 16 flow(s)
+  [fixture] workspace A created
+  [fixture] workspace B created
+  [fixture] user adminA (WORKSPACE_ADMIN) ready
+  [fixture] user adminB (WORKSPACE_ADMIN) ready
+  [fixture] user viewerA (VIEWER) ready
+  [probe] queries route → 404 QUERY_NOT_FOUND · actions route → 404 UNKNOWN_ACTION  (404 without a code = flag off)
+
+E2E-01 — Load project/page from the real backend
+    ✓ GET …/projects/{id}/schema answered 200 by the real backend
+    ✓ the Builder canvas rendered (preview iframe present)
+    ✓ the project name stored in the backend is on screen
+    ✓ the canvas shows the persisted first section (page content comes from the server, not a fixture in the browser)
+    ✓ no unhandled page errors / serious console errors
+
+E2E-02 — Edit component/page → save → reload → persists
+    ✓ PATCH …/schema answered 200 by the real backend
+    ✓ the top bar says saved
+    ✓ server revision increased
+    ✓ the new text is in the persisted schema (read back through a separate session)
+    ✓ after a full reload the canvas shows the saved text
+    ✓ a new version row exists for the edit
+    ✓ no unhandled page errors / serious console errors
+
+E2E-03 — Workspace isolation A/B
+    ✓ adminA: the project list shows their own project
+    ✓ adminA: the project list does NOT show the other workspace's project
+    ✓ adminA: no unhandled page errors
+    ✓ adminB: the project list shows their own project
+    ✓ adminB: the project list does NOT show the other workspace's project
+    ✓ adminB: no unhandled page errors
+    ✓ B reads A's project by id → 404 (existence not disclosed)
+    ✓ the 404 body does not carry A's data
+    ✓ B lists A's workspace → refused (403/404), no rows
+    ✓ B cannot write into A's project (403/404)
+    ✓ A's project revision is unchanged by the attempts
+    ✓ A reads B's project through B's workspace → 404
+    ✓ a project id of B under A's workspace path → 404 (no cross-workspace lookup)
+
+E2E-04 — Authorized user reaches a valid Studio resource
+    ✓ adminA: after login the Studio shell is reachable (not sent to /auth/no-access)
+    ✓ adminA: direct URL → schema 200
+    ✓ adminA: direct URL → Builder canvas
+    ✓ adminA: editor is not read-only
+    ✓ adminA: refresh keeps the project open
+    ✓ adminA: no unhandled page errors
+    ✓ viewerA: the refusal page does not show project data
+    ✓ viewerA: the API itself still lets a project member READ the schema (200)
+    ⛔ BLOCKED (C1 · viewer portal access): a workspace VIEWER holds permissions [] (GET /auth/me) so the Studio portal gate sends the viewer to /auth/no-access although the project lists them as a member; the read-only Builder cannot be observed. Decision needed from C1: should a project member without workspace permissions reach Studio read-only?
+
+E2E-05 — Forbidden path UX, no data leak
+    ✓ outsider: no Builder canvas is shown
+    ✓ outsider: the page says something went wrong / not found (not a blank screen)
+    ✓ outsider: A's project name is nowhere on screen
+    ✓ outsider: no API response of that page load contains A's project name or description
+    ✓ outsider: no unhandled page errors
+    ✓ viewer: PATCH …/schema → 403
+    ✓ viewer: A's revision is unchanged
+    ✓ viewer: no editable save control
+    ✓ viewer: no project data on screen
+    ✓ viewer: no unhandled page errors
+    ⛔ BLOCKED (C1 · viewer portal access): a workspace VIEWER holds permissions [] (GET /auth/me), so the Studio portal gate sends the viewer to /auth/no-access even though the project lists them as a member: the read-only Builder / Test-mode-disabled UX for a viewer cannot be observed. Decision needed from C1: should a project member without workspace permissions reach Studio read-only?
+
+E2E-06 — Configure DataSource (+ Query) and query via the real backend
+    ✓ [api] connector catalogue answers 200 with items
+    ✓ [api] postgres is AVAILABLE and the planned connectors are not
+    ✗ [api] create → 201 with a DataSourceView  — status=500 code=SECRETS_UNAVAILABLE credentials need SECRETS_MASTER_KEY
+
+E2E-07 — TEST-binding query runs and shows results
+    ⛔ BLOCKED (C3 · MANAGEMENT_API.md §5 + H-C2-02): Sources and TEST bindings can be created (C3 e606465, not yet in integration/v2), but no route creates an approved query and the document cannot declare a data slot (C2 H-C2-02). Set E2E_DATA_WORKSPACE_ID, E2E_DATA_PROJECT_ID, E2E_DATA_QUERY_ID, E2E_DATA_USER, E2E_DATA_PASSWORD for a project the operator seeded (source + slot + TEST binding + query; user needs PROJECT_EDIT + QUERY_EXECUTE).
+
+E2E-08 — LIVE-binding query runs and shows results
+    ⛔ BLOCKED (C0 · B-C5-06 (published host) + B-C0-W-01 (V29)): LIVE needs (1) a RUNNING deployment and a published host that serves /runtime-config.json and the Data API (topology not decided: C0/C2/C3; C2's runtime-config proposal is unverified), (2) a query + declared slot (C2 H-C2-02, C3 §5), and (3) durable run stores for mutating work (V29 not in integration/v2). The LIVE binding route exists (C3 e606465) but is unverified. Studio's Test panel is TEST-only by design. [published host: E2E_PUBLIC_BASE not set — no published host to ask]
+
+E2E-09 — Mutation/action success with a real side effect and correct UI
+    ⛔ BLOCKED (C3 · B-C0-W-04 + B-C0-W-01 + H-C2-02): The production connectors (postgres, rest) are read-only, so a LIVE data mutation answers MUTATION_UNSUPPORTED (B-C0-W-04); there is no approved-mutation management endpoint and no op to declare the slot (C3 §5, C2 H-C2-02); LIVE mutating actions answer 503 RUNTIME_STORES_VOLATILE until V29 is in integration/v2 (B-C0-W-01). Sources/bindings can be managed now (C3 e606465, unverified). TEST mode never writes (WOULD_RUN) — covered by E2E-S1. The client rule is tested at unit level: an ambiguous mutation is IDEMPOTENCY_OUTCOME_UNKNOWN, never retried, never shown as success.
+
+E2E-S1 — (supplementary) TEST-mode action answers WOULD_RUN from the real backend
+    ✓ the browser called POST …/app-runtime/actions/{id}/execute
+    ✓ the request body only carries contract fields (mode TEST, idempotencyKey)
+    ✗ the server answered 200 with status WOULD_RUN  — status=404 body.status=FAILED code=UNKNOWN_ACTION
+    ✗ the UI shows 'would run', NOT success  — ERROR: Lỗi Không tìm thấy mục cần chạy. Mục này chưa được lưu vào ứng dụng hoặc đã bị xóa (chế độ thử dùng bản nháp đã lưu; chế độ thật dùng bản đã xuất bản). Không nê
+    ✓ no SUCCESS state is shown in the row
+    ✓ no unhandled page errors
+
+E2E-10 — Mutation/action failure: real backend error, UI error state, no fake success
+    ✓ the action is listed and runnable for a workspace admin
+    ✓ (setup) the action was removed on the server
+    ✓ the UI shows an ERROR state for the real backend failure
+    ✓ the message says the item was not found, in plain language (no raw status line)
+    ✓ NO success is displayed anywhere in the row
+    ✓ the run button is usable again (not stuck in 'Đang chạy…')
+    ✓ no unhandled page errors
+
+E2E-11 — Workflow start from Studio, backend executes, UI reads state/result
+    ✓ the workflow is listed and startable for a workspace admin
+    ✓ POST …/workflows/{id}/runs answered 202 with a run id
+    ✓ the start request carried an idempotencyKey (required by the contract)
+    ✓ the UI shows the run id and a status read from the server
+    ✓ the run finished as a simulated (TEST) run: 'would run', not a real success
+    ✓ the run view read through a separate session agrees (terminal status)
+    ✓ the run belongs to the TEST mode
+    ✓ no unhandled page errors
+
+E2E-12 — Durable workflow: restart the backend, state recovers
+    ⛔ BLOCKED (C0 · B-C0-W-01 (V29) / B-C4-05): C4 run stores are in memory on integration/v2 (f894cc6): V29 run-persistence is a branch (wire/v29-run-persistence), not integrated. A restart loses every run by design today. Set E2E_DURABLE_RUN_STORES=1 only for a stack that has V29.
+
+E2E-13 — Publish → real artifact/runtime state → public page reachable
+    ✓ POST …/publish accepted by the backend (2xx) with a deployment id
+    ✓ the publish request carried an Idempotency-Key
+    ⛔ BLOCKED (C2 · deployment provider): the deployment provider is MOCK: a demo URL is shown but no real artifact is served (configure a SELF_HOSTED provider for this flow)
+
+E2E-14 — RabbitMQ (or another dependency) down → correct failure → recovery/retry
+    ⛔ BLOCKED (C4 · B-C4-06 / B-C0-W-01): No RabbitMQ consumer or queue adapter is wired on integration/v2 (f894cc6): C4 workflow queue and run stores are in memory (B-C4-05, B-C4-06). There is no dependency whose outage can change a workflow start. Set E2E_RABBITMQ_WIRED=1 only for a stack that has the queue adapter.
+
+E2E-S2 — (supplementary) Save fails offline, retry after reconnect saves exactly once
+    ✓ the top bar says the save failed
+    ✓ a retry button is offered
+    ✓ Publish is disabled while an edit is unsaved
+    ✓ the retry reached the real backend and was accepted (200)
+    ✓ the top bar says saved again and the retry button is gone
+    ✓ the edit is persisted
+    ✓ exactly ONE revision was added (the failed attempt never reached the server; no double apply)
+    ✓ no unhandled page errors
+  [cleanup] cleanup notes: left behind (no delete route): workspaces 48113c30-971f-4e78-89e3-3340793d3411, 6a141ca9-b0ae-418b-b15f-320bcc5c4f34 named e2e-muwqsvvb-*
+
+| ID | Status | Owner | Detail |
+|---|---|---|---|
+| E2E-01 | PASS |  |  |
+| E2E-02 | PASS |  |  |
+| E2E-03 | PASS |  |  |
+| E2E-04 | BLOCKED | C1 | a workspace VIEWER holds permissions [] (GET /auth/me) so the Studio portal gate sends the viewer to /auth/no-access although the project lists them as a member; the read-only Builder cannot be observ |
+| E2E-05 | BLOCKED | C1 | a workspace VIEWER holds permissions [] (GET /auth/me), so the Studio portal gate sends the viewer to /auth/no-access even though the project lists them as a member: the read-only Builder / Test-mode- |
+| E2E-06 | FAIL |  | 1 check(s) failed: [api] create → 201 with a DataSourceView |
+| E2E-07 | BLOCKED | C3 | Sources and TEST bindings can be created (C3 e606465, not yet in integration/v2), but no route creates an approved query and the document cannot declare a data slot (C2 H-C2-02). Set E2E_DATA_WORKSPAC |
+| E2E-08 | BLOCKED | C0 | LIVE needs (1) a RUNNING deployment and a published host that serves /runtime-config.json and the Data API (topology not decided: C0/C2/C3; C2's runtime-config proposal is unverified), (2) a query + d |
+| E2E-09 | BLOCKED | C3 | The production connectors (postgres, rest) are read-only, so a LIVE data mutation answers MUTATION_UNSUPPORTED (B-C0-W-04); there is no approved-mutation management endpoint and no op to declare the s |
+| E2E-S1 | FAIL |  | 2 check(s) failed: the server answered 200 with status WOULD_RUN; the UI shows 'would run', NOT success |
+| E2E-10 | PASS |  |  |
+| E2E-11 | PASS |  |  |
+| E2E-12 | BLOCKED | C0 | C4 run stores are in memory on integration/v2 (f894cc6): V29 run-persistence is a branch (wire/v29-run-persistence), not integrated. A restart loses every run by design today. Set E2E_DURABLE_RUN_STOR |
+| E2E-13 | BLOCKED | C2 | the deployment provider is MOCK: a demo URL is shown but no real artifact is served (configure a SELF_HOSTED provider for this flow) |
+| E2E-14 | BLOCKED | C4 | No RabbitMQ consumer or queue adapter is wired on integration/v2 (f894cc6): C4 workflow queue and run stores are in memory (B-C4-05, B-C4-06). There is no dependency whose outage can change a workflow |
+| E2E-S2 | PASS |  |  |
+
+REAL BACKEND: PASS 6/16 · FAIL 2/16 · BLOCKED 8/16 · SKIP 0/16
+report: docs/parallel/c5/evidence/mac/e2e-real/report-2026-10-06T13-58-44-765Z.json

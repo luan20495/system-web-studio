@@ -1,0 +1,15 @@
+FLOW: E2E-PD01 — Public data V1, canonical chain: Studio slot → READ public query → bind → publish (PUBLIC_QUERIES, acknowledgement) → anonymous page → config → apiBase → /{slug}/_data → LIVE → rendered
+RESULT: BLOCKED
+START: 2026-10-07T05:47:03.802Z
+END: 2026-10-07T05:47:03.854Z
+FRONTEND_HEAD: ff954f1
+BACKEND_HEAD: 8d40218 docs(c2): audited HTTP contract, published runtime topology and Batch 3 readiness; no loopback literals in publish/** [integration/v2]
+BACKEND_URL: http://127.0.0.1:58080
+PROJECT: ee89a4b4-f63c-4166-932a-f23c7ca8c2fa
+WORKSPACE: 10ec128b-59dd-406b-9a19-bc7e13abf54b
+HTTP EVIDENCE: none recorded
+UI ASSERTION: none recorded
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: the stack does not accept ADD_DATA_SOURCE (400 INVALID_OPERATION operation[0] ADD_DATA_SOURCE: sectionId is required): C2's PAGE_SCHEMA data runtime (fix/c2-v3 c1e0df5: slots, QueryDef.public, page runtime, config apiBase) is not in this build
+OWNER: C0 · ref H-C0-10

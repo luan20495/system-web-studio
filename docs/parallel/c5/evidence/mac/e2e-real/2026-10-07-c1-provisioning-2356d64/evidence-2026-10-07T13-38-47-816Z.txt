@@ -1,0 +1,65 @@
+FLOW: E2E-AD03 — Tenant admin member directory: metadata, tenant-scoped candidates (search, limit, exclusions), add through the UI, isolation and rules
+RESULT: PASS
+START: 2026-10-07T13:38:35.594Z
+END: 2026-10-07T13:38:42.563Z
+FRONTEND_HEAD: e028508
+BACKEND_HEAD: 2356d64 docs(c1): tenant-scoped provisioning API contract for C5 and exact error codes [2356d64]
+BACKEND_URL: http://127.0.0.1:44080
+PROJECT: 9f39645b-e570-4a07-8c98-b0ca37c9563b
+WORKSPACE: b17b4c1c-6d1d-40fb-953b-f6fde1023c98
+HTTP EVIDENCE:
+  - ok [api] GET members: every row has userId, username, displayName, email, role, active
+  - ok [api] …and the metadata is right (adminA: its username and display name)
+  - ok [api] candidates: 200, a list of {userId, username, displayName, email}
+  - ok [api] a former member in a workspace of the tenant (adminB) IS a candidate
+  - ok [api] current members are not candidates (adminA)
+  - ok [api] a SYSTEM_ADMIN account (activated, enabled, a workspace member, former tenant member) is never a candidate
+  - ok [api] a non-activated account and a disabled account are not candidates
+  - ok [api] at most 50 results, sorted by username
+  - ok [api] search q finds adminB by part of the username and only matching people
+  - ok [api] a 1-character search is refused (400 QUERY_TOO_SHORT)
+  - ok [api] a search with no match is an empty list
+  - ok [fact] 'a user known only to ANOTHER tenant is invisible' cannot be built through the public API; it is C1's backend test TenantMemberDirectoryTests
+  - ok [api] a guessed foreign UUID → 404 USER_NOT_FOUND
+  - ok [api] adding that SYSTEM_ADMIN account by id → 404 (not eligible, no oracle)
+  - ok [api] a non-activated account cannot be added by id (404); a RELATED but disabled account is refused with its own code (422 USER_DISABLED, C1 cf0c962)
+  - ok [api] a caller from ANOTHER tenant gets 404 for members, candidates and add
+  - ok [api] changing your own tenant role → 403 SELF_GRANT_FORBIDDEN
+UI ASSERTION:
+  - ok Công ty của tôi: the member rows show names and emails from the member metadata
+  - ok typing the search shows adminB (name · email) in the candidate list, and not the SYSTEM_ADMIN / disabled / non-activated accounts
+  - ok the member appears in the table with his name
+  - ok no unexpected 4xx/5xx from the portal's calls
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok add candidate: the server lists adminB as an active MEMBER, with metadata
+  - ok the candidate disappears after the add (API and picker)
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-USER01 — App creator (EDITOR, made by the tenant admin): Studio login → project visible → edit / save / reload → permissions are the role's
+RESULT: BLOCKED
+START: 2026-10-07T13:38:42.563Z
+END: 2026-10-07T13:38:47.222Z
+FRONTEND_HEAD: e028508
+BACKEND_HEAD: 2356d64 docs(c1): tenant-scoped provisioning API contract for C5 and exact error codes [2356d64]
+BACKEND_URL: http://127.0.0.1:44080
+PROJECT: 9f39645b-e570-4a07-8c98-b0ca37c9563b
+WORKSPACE: b17b4c1c-6d1d-40fb-953b-f6fde1023c98
+HTTP EVIDENCE:
+  - ok [api] the workspace admin creates a project in the new workspace (201)
+  - ok [api] …and adds the creator to the project as EDITOR (member route)
+  - ok [api] the creator's resolved project permissions include APP_EDIT and NOT APP_PUBLISH
+  - ok [api] …and no MEMBER_MANAGE: /auth/me lists none in the workspace
+  - ok [api] an edit by the creator is accepted (200)
+  - ok [api] publishing is refused for the creator (403): the role is the role
+UI ASSERTION:
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok after a reload the edit is still there (persisted)
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: the Studio portal refuses this creator at login (/auth/no-access) although /auth/me lists the workspace with []. The API side of the same account works (project APIs, edit, persist, no publish). H-C1-04 (still open).
+OWNER: C1 · ref H-C1-04

@@ -1,5 +1,8 @@
 # C5 — Phase 3 browser E2E plan for the REAL backend
 
+> **Superseded for IDs and status (C5, agent/c5-web):** the E-xx flows below were rebuilt as E2E-01…E2E-14 (+S1, S2) in `docs/C5_REAL_BACKEND_E2E_MATRIX.md`, implemented in `tests/e2e-real/` and run with `docs/C5_REAL_BACKEND_E2E_RUNBOOK.md`. Test-data panels are no longer static NOT_READY: the Action/Workflow/Test panels now use the app-runtime routes of `f894cc6` (see `docs/parallel/c5/API_AUDIT_F894CC6.md`). Still no real-backend run has happened.
+
+
 Status: **PLAN ONLY. No real-backend E2E has run. Nothing below is green, and nothing may be reported green until it has run against a real backend.**
 Written 2026-10-06 against `integration/v2` @ `4884be3`. The three portals are not started by `scripts/run-local.sh` (it starts the legacy root app on :3100), so a new start path is needed first (§3).
 

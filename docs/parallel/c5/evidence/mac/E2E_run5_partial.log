@@ -1,0 +1,85 @@
+
+> system-web-studio@0.2.0 test:e2e:real
+> node tests/e2e-real/run.mjs
+
+REAL BACKEND suite · studio=http://127.0.0.1:3003 · run=muwr071j · 4 flow(s)
+  [fixture] workspace A created
+  [fixture] workspace B created
+  [fixture] user adminA (WORKSPACE_ADMIN) ready
+  [fixture] user adminB (WORKSPACE_ADMIN) ready
+  [fixture] user viewerA (VIEWER) ready
+  [probe] queries route → 404 QUERY_NOT_FOUND · actions route → 404 UNKNOWN_ACTION  (404 without a code = flag off)
+
+E2E-06 — Configure DataSource (+ Query) and query via the real backend
+    ✓ [api] connector catalogue answers 200 with items
+    ✓ [api] postgres is AVAILABLE and the planned connectors are not
+    ✓ [api] create → 201 with a DataSourceView
+    ✓ [api] the view says a credential exists but carries no secret and no credential reference
+    ✓ [api] credential metadata: configured + key NAMES only, no values
+    ✓ [api] a second source with the same name (case-insensitive) → 409 CONFLICT
+    ✓ [api] a secret-looking key in config → 400 INVALID_*
+    ✓ [api] an identity field in the body (tenantId) → 400 INVALID_PARAMS
+    ✓ [api] a PLANNED connector (csv) → 501 NOT_IMPLEMENTED
+    ✓ [api] an unknown connector type → 422 UNSUPPORTED_TYPE
+    ✓ [api] isolation: workspace B's admin cannot read A's source by id (404 NOT_FOUND)
+    ✓ [api] isolation: 'foreign' and 'unknown' answer IDENTICALLY (no existence oracle)
+    ✓ [api] isolation: B's admin listing A's workspace is refused (403/404), no items
+    ✓ [api] permission: a VIEWER cannot create (403 PERMISSION_DENIED)
+    ✓ [api] permission: a VIEWER cannot change a source, and nothing changed
+    ✓ [api] permission: a VIEWER's read is 200 or 403, never 5xx, and never shows a secret
+    ✓ [api] test connection of an unreachable host → HTTP 200 with ok:false and a documented code
+    ✓ [api] the failure text does not leak the credential
+    ✓ [api] a DISABLED source cannot be tested: 409 DISABLED
+    ✓ [api] bind TEST → 200 with the binding
+    ✓ [api] the binding list contains it, mode normalised
+    ✓ [api] permission: a project VIEWER cannot list/alter bindings (403)
+    ✓ [api] deleting a BOUND source → 409 CONFLICT and it still exists
+    ✓ [ui] the Builder opens by direct URL
+    ✓ [ui] the Data panel shows the source-management panel (not 'Chưa sẵn sàng')
+    ✓ [ui] the new source is listed
+    ✓ [ui] credential: 'Đã cấu hình' with key names and no value
+    ✓ [ui] no password field is prefilled and no secret is anywhere in the DOM
+    ✓ [ui] test connection: the real failure is shown as FAILED with its code
+    ✓ [ui] the failure text shows no secret
+    ✓ [ui] the existing TEST binding's slot is not invented by the UI (the document declares no slots)
+    ✓ [ui] no unhandled page errors
+    ✓ [backend] browsing and testing changed nothing: still ACTIVE, version unchanged
+    ⛔ BLOCKED (C2 · H-C2-02 + B-C0-W-03(queries)): Source, credential, test-connection and binding management exist (C3 e606465) and are exercised above, but the QUERY half cannot be configured: the AppDefinition has no operation to declare a data slot (dataSources[] is 'granted, not created' — C2 H-C2-02) and C3 has no approved-query management endpoint (MANAGEMENT_API.md §5). Use E2E-07 with an operator-seeded project for the query.
+
+E2E-S1 — (supplementary) TEST-mode action answers WOULD_RUN from the real backend
+    ✓ the browser called POST …/app-runtime/actions/{id}/execute
+    ✓ the request body only carries contract fields (mode TEST, idempotencyKey)
+    ✓ the server answered 200 with status WOULD_RUN
+    ✓ the UI shows 'would run', NOT success
+    ✓ no SUCCESS state is shown in the row
+    ✓ no unhandled page errors
+
+E2E-10 — Mutation/action failure: real backend error, UI error state, no fake success
+    ✓ the action is listed and runnable for a workspace admin
+    ✓ (setup) the action was removed on the server
+    ✓ the UI shows an ERROR state for the real backend failure
+    ✓ the message says the item was not found, in plain language (no raw status line)
+    ✓ NO success is displayed anywhere in the row
+    ✓ the run button is usable again (not stuck in 'Đang chạy…')
+    ✓ no unhandled page errors
+
+E2E-11 — Workflow start from Studio, backend executes, UI reads state/result
+    ✓ the workflow is listed and startable for a workspace admin
+    ✓ POST …/workflows/{id}/runs answered 202 with a run id
+    ✓ the start request carried an idempotencyKey (required by the contract)
+    ✓ the UI shows the run id and a status read from the server
+    ✓ the run finished as a simulated (TEST) run: 'would run', not a real success
+    ✓ the run view read through a separate session agrees (terminal status)
+    ✓ the run belongs to the TEST mode
+    ✓ no unhandled page errors
+  [cleanup] cleanup notes: left behind (no delete route): workspaces 923b0dd1-0f62-4e07-9e4d-1b40ab53e719, e929aa97-b9fd-4c2a-babd-92521cbbd8bf named e2e-muwr071j-*
+
+| ID | Status | Owner | Detail |
+|---|---|---|---|
+| E2E-06 | BLOCKED | C2 | Source, credential, test-connection and binding management exist (C3 e606465) and are exercised above, but the QUERY half cannot be configured: the AppDefinition has no operation to declare a data slo |
+| E2E-S1 | PASS |  |  |
+| E2E-10 | PASS |  |  |
+| E2E-11 | PASS |  |  |
+
+REAL BACKEND: PASS 3/4 · FAIL 0/4 · BLOCKED 1/4 · SKIP 0/4
+report: docs/parallel/c5/evidence/mac/e2e-real/report-2026-10-06T14-02-53-001Z.json

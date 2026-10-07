@@ -1,3 +1,4 @@
+// @class: unit — pure logic / server-side render of components; no browser, no network
 import test from "node:test";
 import assert from "node:assert/strict";
 import * as C from "../../features/studio/builder/core/contract";
@@ -38,7 +39,7 @@ test("event wire names are the six canonical ones", () => {
 });
 
 test("static NOT_READY features carry a reason, none is faked AVAILABLE", () => {
-  for (const k of ["DATA_SOURCES", "SCHEMA_DISCOVERY", "QUERY_PREVIEW", "ACTION_RUNTIME", "WORKFLOW_RUNTIME", "TEST_MODE", "SHARING"] as const) {
+  for (const k of ["DATA_SOURCES", "SCHEMA_DISCOVERY", "QUERY_PREVIEW", "SHARING"] as const) {
     const r = staticReadiness(k);
     assert.equal(r.state, "NOT_READY", k);
     assert.ok(r.state === "NOT_READY" && r.reason.length > 10);

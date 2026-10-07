@@ -29,7 +29,7 @@ function PortalRouter({ portal, render }: { portal: PortalId; render: (seg: stri
   const { me, loading, disabled } = useSession();
   const prefix = PORTAL_PREFIX[portal].slice(1);
 
-  if (seg[0] === "login") return <LoginPage fixedPortal={portal}/>;
+  if (seg[0] === "login" || (seg[0] === prefix && seg[1] === "login")) return <LoginPage fixedPortal={portal}/>;   // `/<portal>/login` is the URL people type: it is the login page, not a console section
   if (seg[0] === "auth") {
     if (seg[1] === "activate") return <ActivatePage/>;
     if (seg[1] === "signing-in") return <SigningIn fixedPortal={portal}/>;

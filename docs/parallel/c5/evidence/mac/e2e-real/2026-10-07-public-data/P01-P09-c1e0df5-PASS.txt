@@ -1,0 +1,277 @@
+FLOW: E2E-P01 — Publish success: exact request, deployment polling, SiteInfo idle, pointerVersion observable but never sent
+RESULT: PASS
+START: 2026-10-07T06:04:22.240Z
+END: 2026-10-07T06:04:37.684Z
+FRONTEND_HEAD: ff954f1
+BACKEND_HEAD: c1e0df5 docs(c2): C5 and C3 handoffs for the data-bound PAGE_SCHEMA, V31 candidate proposal, board and blockers [c1e0df5]
+BACKEND_URL: http://127.0.0.1:41080
+PROJECT: d113b984-55c9-4e35-92c1-518374544939
+WORKSPACE: 4be61f3e-a27d-40d1-8f91-6823910fa5b8
+HTTP EVIDENCE:
+  - ok before: SiteInfo has the contract shape (pointerVersion integer, operation key present and null = idle)
+  - ok POST …/publish answered 202 (asynchronous)
+  - ok the body is EXACTLY {visibility, expectedRevision}
+  - ok headers: Idempotency-Key in the contract format (8–120 of A-Za-z0-9_.:-) and X-XSRF-TOKEN
+  - ok the deployment has the documented key set (id, projectId, versionId, versionNumber, visibility, status, url, error, provider, createdAt, updatedAt, finishedAt, events, mock)
+  - ok the UI stopped on a TERMINAL status and shows success only for RUNNING
+  - ok SiteInfo: online, the new deployment is current, operation = null (idle)
+  - ok polling stopped: no deployment status request after the terminal answer for 3 s
+UI ASSERTION:
+  - ok the dialog reports the site is up with the deployment URL
+  - ok pointerVersion is shown to the user as observability only
+  - ok the browser NEVER sent pointerVersion, tenantId or an invented concurrency field on any release route
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok the server agrees: RUNNING, mock=false, provider static, finishedAt set
+  - ok pointerVersion moved by exactly +1 with the pointer
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-P02 — Concurrent publish on the same scope + idempotent replay
+RESULT: PASS
+START: 2026-10-07T06:04:37.684Z
+END: 2026-10-07T06:04:47.242Z
+FRONTEND_HEAD: ff954f1
+BACKEND_HEAD: c1e0df5 docs(c2): C5 and C3 handoffs for the data-bound PAGE_SCHEMA, V31 candidate proposal, board and blockers [c1e0df5]
+BACKEND_URL: http://127.0.0.1:41080
+PROJECT: d113b984-55c9-4e35-92c1-518374544939
+WORKSPACE: 4be61f3e-a27d-40d1-8f91-6823910fa5b8
+HTTP EVIDENCE:
+  - ok both concurrent publishes are accepted (202) as two DIFFERENT deployments
+  - ok the site serves a RUNNING one of the two and is idle
+  - ok same key + same payload → 202 with Idempotent-Replay: true and the ORIGINAL deployment id
+  - ok a NEW key with the same payload is a NEW deployment (not a replay)
+UI ASSERTION: none recorded
+PERSISTENCE ASSERTION:
+  - ok each ends RUNNING or FAILED [STALE_PUBLISH] — nothing stuck, no other failure
+  - ok at least one of them is RUNNING and it is the one the site now serves
+  - ok pointerVersion moved forward (by 1 per activation, so +1 or +2)
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-P03 — Rollback success: exact request, 200 + SiteInfo, rolled-away release is ROLLED_BACK, APP_PUBLISH, pointerVersion
+RESULT: PASS
+START: 2026-10-07T06:04:47.242Z
+END: 2026-10-07T06:04:59.640Z
+FRONTEND_HEAD: ff954f1
+BACKEND_HEAD: c1e0df5 docs(c2): C5 and C3 handoffs for the data-bound PAGE_SCHEMA, V31 candidate proposal, board and blockers [c1e0df5]
+BACKEND_URL: http://127.0.0.1:41080
+PROJECT: d113b984-55c9-4e35-92c1-518374544939
+WORKSPACE: 4be61f3e-a27d-40d1-8f91-6823910fa5b8
+HTTP EVIDENCE:
+  - ok (setup) three RUNNING releases, the newest is active
+  - ok POST …/site/rollback answered 200 (synchronous)
+  - ok the body is {deploymentId, expectedActiveDeploymentId} — the target and the release the UI saw as active — and nothing else
+  - ok Idempotency-Key (optional) is sent in the contract format; CSRF header present
+  - ok the answer is a SiteInfo whose current deployment is the target and whose operation is idle
+  - ok a ROLLED_BACK release is not restorable: the server answers 400 DEPLOYMENT_NOT_RESTORABLE
+  - ok permission: a project VIEWER forging the rollback is refused (403) — rollback needs APP_PUBLISH, not APP_EDIT
+  - ok permission: …and the same for unpublish (403)
+UI ASSERTION:
+  - ok the older releases are offered for rollback; the one being served is not
+  - ok pending state is shown while the request is in flight (the button says it is working)
+  - ok the UI says the release is served again only AFTER the 200 (final message names the version)
+  - ok the UI no longer offers the ROLLED_BACK release
+  - ok the browser NEVER sent pointerVersion or an invented field
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok server: the site serves the target and pointerVersion moved by exactly +1
+  - ok server: the release that was rolled away from is ROLLED_BACK (terminal); the others stay RUNNING
+  - ok …which changed nothing
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-P06 — Rollback stale: 409 ROLLBACK_STALE, nothing changed, reload and decide again
+RESULT: PASS
+START: 2026-10-07T06:04:59.640Z
+END: 2026-10-07T06:05:12.540Z
+FRONTEND_HEAD: ff954f1
+BACKEND_HEAD: c1e0df5 docs(c2): C5 and C3 handoffs for the data-bound PAGE_SCHEMA, V31 candidate proposal, board and blockers [c1e0df5]
+BACKEND_URL: http://127.0.0.1:41080
+PROJECT: d113b984-55c9-4e35-92c1-518374544939
+WORKSPACE: 4be61f3e-a27d-40d1-8f91-6823910fa5b8
+HTTP EVIDENCE:
+  - ok (setup) another session rolled back to B (200)
+  - ok the UI's rollback carried the release it saw as active (C) and the server answered 409 ROLLBACK_STALE
+  - ok …details carry the real active release and the expected one; no Retry-After (not retryable as is)
+  - ok the decision taken on fresh state succeeds (200) with the NEW expectation (B)
+  - ok the new request used a NEW Idempotency-Key (the refused one was not replayed)
+  - ok API: unpublish expecting a release that is not active → 409 ROLLBACK_STALE, still online
+  - ok API: a target that is ALREADY active answers 200 even with a stale expectation (a retry that already succeeded), and changes nothing
+UI ASSERTION:
+  - ok UI: 'the active release changed — reload and decide again' (kind stale), says nothing was changed
+  - ok UI: NO blind retry button (not retryable as is); a reload action is offered
+  - ok after the reload the served release is B and C (rolled away from) is no longer offered
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok server: nothing changed (still B, same pointerVersion)
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-P07 — Idempotency: replay, 409 IDEMPOTENCY_KEY_REUSED, and the UI's key lifecycle
+RESULT: PASS
+START: 2026-10-07T06:05:12.540Z
+END: 2026-10-07T06:05:37.411Z
+FRONTEND_HEAD: ff954f1
+BACKEND_HEAD: c1e0df5 docs(c2): C5 and C3 handoffs for the data-bound PAGE_SCHEMA, V31 candidate proposal, board and blockers [c1e0df5]
+BACKEND_URL: http://127.0.0.1:41080
+PROJECT: d113b984-55c9-4e35-92c1-518374544939
+WORKSPACE: 4be61f3e-a27d-40d1-8f91-6823910fa5b8
+HTTP EVIDENCE:
+  - ok publish: same key + same payload → 202, Idempotent-Replay: true, the ORIGINAL deployment
+  - ok publish: same key + DIFFERENT payload → 409 IDEMPOTENCY_KEY_REUSED
+  - ok …the standard envelope without `retryable`, and the documented message
+  - ok a missing key is 400 MISSING_HEADER and a malformed one 400 INVALID_IDEMPOTENCY_KEY
+  - ok rollback: same key + a DIFFERENT target → 409 IDEMPOTENCY_KEY_REUSED (judged before any eligibility check)
+  - ok unpublish: same key + a different expectation → 409 IDEMPOTENCY_KEY_REUSED
+  - ok UI: two publishes with different payloads (PRIVATE then PUBLIC) used two DIFFERENT valid keys
+  - ok UI: neither was refused with IDEMPOTENCY_KEY_REUSED (a key per dialog would have been)
+UI ASSERTION:
+  - ok UI: after a finished publish the dialog offers 'Xuất bản lại' only for non-success outcomes (RUNNING offers Close)
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok rollback: same key + same payload → both 200 and ONE effect (pointerVersion +1, not +2)
+  - ok unpublish: same key twice → both 200, pointerVersion unchanged by the second
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-P09 — Unpublish: exact request, 200 + SiteInfo offline, idempotent when offline, stale expectation, operation=UNPUBLISH when observable
+RESULT: PASS
+START: 2026-10-07T06:05:37.411Z
+END: 2026-10-07T06:05:56.574Z
+FRONTEND_HEAD: ff954f1
+BACKEND_HEAD: c1e0df5 docs(c2): C5 and C3 handoffs for the data-bound PAGE_SCHEMA, V31 candidate proposal, board and blockers [c1e0df5]
+BACKEND_URL: http://127.0.0.1:41080
+PROJECT: d113b984-55c9-4e35-92c1-518374544939
+WORKSPACE: 4be61f3e-a27d-40d1-8f91-6823910fa5b8
+HTTP EVIDENCE:
+  - ok API: unpublish expecting a release that is not the active one → 409 ROLLBACK_STALE, still online
+  - ok DELETE …/site answered 200
+  - ok NO body; the expectation is the query parameter expectedActiveDeploymentId = the release the UI saw as active
+  - ok Idempotency-Key (optional) sent in the contract format
+  - ok the answer: online=false, currentDeploymentId=null, slug kept, operation=null
+  - ok a rollback to a kept release serves the site again (200, online) with no rebuild
+UI ASSERTION:
+  - ok UI: says the page was taken down (after the 200)
+  - ok UI: with the site offline the 'Gỡ trang xuống' button is not offered
+  - ok the browser NEVER sent pointerVersion or an invented field
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok pointerVersion moved by exactly +1; deployments are KEPT (none deleted, statuses unchanged)
+  - ok the public URL no longer serves the site (404)
+  - ok unpublish when already offline → 200 and NOTHING is written (pointerVersion unchanged)
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-P04 — Scope busy: operation=PUBLISH, 409 SCOPE_BUSY + Retry-After 5, busy UI, retry after the scope is free
+RESULT: PASS
+START: 2026-10-07T06:05:56.575Z
+END: 2026-10-07T06:06:14.869Z
+FRONTEND_HEAD: ff954f1
+BACKEND_HEAD: c1e0df5 docs(c2): C5 and C3 handoffs for the data-bound PAGE_SCHEMA, V31 candidate proposal, board and blockers [c1e0df5]
+BACKEND_URL: http://127.0.0.1:41080
+PROJECT: d113b984-55c9-4e35-92c1-518374544939
+WORKSPACE: 4be61f3e-a27d-40d1-8f91-6823910fa5b8
+HTTP EVIDENCE:
+  - ok (setup) a publish was accepted (202)
+  - ok SiteInfo.operation = PUBLISH with this deployment's id, since and leaseUntil
+  - ok the lease is in the future (a live operation, not an expired one)
+  - ok rollback while the PUBLISH holds the scope → 409 SCOPE_BUSY
+  - ok …with Retry-After: 5
+  - ok …the standard envelope (no `retryable` field) and the holder in details.operation
+  - ok unpublish while the PUBLISH holds the scope → 409 SCOPE_BUSY
+  - ok (setup) the publish reached DEPLOYING and the store was frozen there
+  - ok retry after the scope is free: the rollback is accepted (200)
+UI ASSERTION:
+  - ok the dialog opened on an idle scope: no busy banner, controls enabled
+  - ok UI: the server's SCOPE_BUSY is shown (kind scope-busy) naming the running operation and the 5 s wait
+  - ok UI: a retry affordance exists and waits for Retry-After (disabled at first)
+  - ok UI: SiteInfo.operation = PUBLISH is reflected (banner with kind PUBLISH)
+  - ok UI: Publish and every rollback/unpublish control are disabled while the scope is held
+  - ok UI: the busy banner goes away by itself (polling) and the controls come back
+  - ok no unhandled page errors (the 409 of the refused rollback is the expected console line)
+PERSISTENCE ASSERTION:
+  - ok after the store is resumed the publish completes and the scope is idle again (operation = null)
+  - ok pointerVersion advanced by the one completed publish
+  - ok the refused rollback / unpublish changed nothing (still online, pointer moved only by the publish)
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-P05 — Rollback in flight: operation=ROLLBACK, refresh during rollback, polling until the server's final state
+RESULT: PASS
+START: 2026-10-07T06:06:14.869Z
+END: 2026-10-07T06:06:31.014Z
+FRONTEND_HEAD: ff954f1
+BACKEND_HEAD: c1e0df5 docs(c2): C5 and C3 handoffs for the data-bound PAGE_SCHEMA, V31 candidate proposal, board and blockers [c1e0df5]
+BACKEND_URL: http://127.0.0.1:41080
+PROJECT: d113b984-55c9-4e35-92c1-518374544939
+WORKSPACE: 4be61f3e-a27d-40d1-8f91-6823910fa5b8
+HTTP EVIDENCE:
+  - ok SiteInfo.operation = ROLLBACK while the rollback runs (deploymentId is null: only PUBLISH names one)
+  - ok a second rollback (no key) → 409 SCOPE_BUSY while the first runs
+UI ASSERTION:
+  - ok after the refresh the dialog shows the busy scope: banner kind ROLLBACK
+  - ok after the refresh Publish and the rollback buttons are disabled (no duplicate operation)
+  - ok after the refresh the page does NOT claim the rollback is done
+  - ok the reloaded dialog follows the server by itself: busy banner gone, controls back
+  - ok the first page (before the refresh) never sent pointerVersion
+  - ok no unhandled page errors other than the aborted request of the refreshed page
+PERSISTENCE ASSERTION:
+  - ok the pointer has not moved yet: nothing is final while the operation runs
+  - ok the server's operation ends (operation = null)
+  - ok the final pointer is either the restored release (the operation completed) or unchanged (the operation failed) — never anything else
+  - ok pointerVersion is consistent with the outcome (+1 if restored, unchanged otherwise)
+  - ok the reloaded dialog shows the version the server really serves
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-P08 — Stale publish becomes terminal FAILED [STALE_PUBLISH]; Studio shows it; publish again works
+RESULT: PASS
+START: 2026-10-07T06:06:31.014Z
+END: 2026-10-07T06:06:50.042Z
+FRONTEND_HEAD: ff954f1
+BACKEND_HEAD: c1e0df5 docs(c2): C5 and C3 handoffs for the data-bound PAGE_SCHEMA, V31 candidate proposal, board and blockers [c1e0df5]
+BACKEND_URL: http://127.0.0.1:41080
+PROJECT: d113b984-55c9-4e35-92c1-518374544939
+WORKSPACE: 4be61f3e-a27d-40d1-8f91-6823910fa5b8
+HTTP EVIDENCE:
+  - ok a rollback while the publish is still BUILDING goes through (200)
+  - ok UI: it is not shown as success and not as a conflict/HTTP error (no error dialog)
+  - ok publish again used a NEW Idempotency-Key (replaying the old one would only return the FAILED deployment)
+UI ASSERTION:
+  - ok UI: the publish is shown as a BUSY step (BUILDING) while the worker is paused — not success
+  - ok UI: while busy the dialog cannot be dismissed and offers no second publish
+  - ok UI: the deployment ends as a FAILED deployment with the STALE_PUBLISH explanation (data-code)
+  - ok UI: the history lists the STALE_PUBLISH event in plain words
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok server: the deployment is terminal FAILED with error '[STALE_PUBLISH] …' and a STALE_PUBLISH event
+  - ok server: the stale publish wrote nothing — the rollback target B is still the active release, operation idle
+  - ok …and it succeeded: the site now serves the new deployment
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a

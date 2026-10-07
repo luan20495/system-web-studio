@@ -1,3 +1,4 @@
+// @class: mock — fetch or backend is stubbed; proves what the client sends/reads, NOT backend behaviour
 // GitHub Pages regression: the mock-mode static export, served under the Pages base path, must work with no backend.
 import { chromium } from "playwright-core";
 import { execSync } from "node:child_process";

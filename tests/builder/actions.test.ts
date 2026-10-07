@@ -1,3 +1,4 @@
+// @class: unit — pure logic / server-side render of components; no browser, no network
 import test from "node:test";
 import assert from "node:assert/strict";
 import * as A from "../../features/studio/builder/core/actions";
@@ -47,13 +48,6 @@ test("trigger is OPTIONAL: UI-bound has one, child (workflow step) does not and 
 test("no arbitrary code: forbidden keys (sql/script/url/headers/token/...) are reported anywhere in a declaration", () => {
   assert.deepEqual(A.forbiddenKeys({ type: "CALL_API", operationKey: "k", input: { sql: "x" }, headers: { a: 1 } }).sort(), ["headers", "input.sql"]);
   assert.ok(A.checkAction({ id: "a", name: "x", type: "NAVIGATE", pageRef: "home", script: "alert(1)", trigger: trig } as never, d()).some((i) => /script/.test(i.message)));
-});
-
-test("which permission the server checks per action kind (informational)", () => {
-  assert.equal(A.permissionToRun("UPDATE_RECORD"), "DATA_MUTATE");
-  assert.equal(A.permissionToRun("START_WORKFLOW"), "WORKFLOW_EXECUTE");
-  assert.equal(A.permissionToRun("REFRESH_QUERY"), "APP_USE");
-  assert.equal(A.permissionToRun("NOTIFY"), "ACTION_EXECUTE");
 });
 
 test("events/actions offered come from component-metadata only", () => {

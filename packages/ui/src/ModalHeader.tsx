@@ -1,0 +1,10 @@
+import type { ReactNode } from "react";
+/** Dialog header: an icon tile, the title (the dialog's accessible name comes from the Modal's label) and a subtitle that says what the dialog does. */
+export function ModalHeader({ icon, title, subtitle }: { icon: ReactNode; title: string; subtitle?: string }) {
+  return (
+    <div className="xp-modalHead">
+      <span className="xp-headIcon" aria-hidden="true">{icon}</span>
+      <div><h2>{title}</h2>{subtitle ? <p>{subtitle}</p> : null}</div>
+    </div>
+  );
+}

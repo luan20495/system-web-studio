@@ -14,6 +14,8 @@ import {
 import { allSections, defOps, usersOf } from "./core/definition";
 import { bindableProps } from "./core/inspector";
 import { staticReadiness } from "./core/readiness";
+import { DataSourcesPanel } from "./DataSourcesPanel";
+import { PublicDataTab, SlotEditor } from "./PublicDataPanels";
 import { Dialog, Field, Gate, StateBox, Tabs, tabPanelProps } from "./ui/primitives";
 import type { DefCtx } from "./ctx";
 
@@ -23,7 +25,7 @@ export function DataWizard({ ctx, focus }: { ctx: DefCtx; focus?: { sectionId?: 
   const { doc } = ctx;
   const [step, setStep] = useState<DataStepId>("source");
   const [msg, setMsg] = useState<string | null>(null);
-  const [qd, setQd] = useState<{ name: string; dataSourceRef: string; mode: "READ" | "WRITE"; operationKey: string; params: ParamDef[]; maxRows?: number }>({ name: "", dataSourceRef: doc.dataSources?.[0]?.id ?? "", mode: "READ", operationKey: "", params: [] });
+  const [qd, setQd] = useState<{ name: string; dataSourceRef: string; mode: "READ" | "WRITE"; operationKey: string; params: ParamDef[]; maxRows?: number; public?: boolean }>({ name: "", dataSourceRef: doc.dataSources?.[0]?.id ?? "", mode: "READ", operationKey: "", params: [] });
   const [queryId, setQueryId] = useState<string>(doc.queries?.[0]?.id ?? "");
   const [fields, setFields] = useState<FieldMappingDef[]>([emptyField()]);
   const [mapName, setMapName] = useState("");
@@ -36,9 +38,11 @@ export function DataWizard({ ctx, focus }: { ctx: DefCtx; focus?: { sectionId?: 
   const [bProp, setBProp] = useState("");
   const [removing, setRemoving] = useState<{ collection: "queries" | "mappings" | "viewModels" | "dataBindings"; id: string; name: string } | null>(null);
   const disabled = !ctx.canEdit || ctx.busy;
-  const ready = (s: DataStepId) => stepReadiness(s, ctx.readiness);
+  const ready = (s: DataStepId) => stepReadiness(s, ctx.readiness, !!ctx.dataManagement);
   const prefix = "data-wizard";
 
+  // the slot the query form shows: the chosen one, or the first slot when none was chosen / the chosen one is gone (a slot added in this same session must be usable without touching the select)
+  const slotRef = (doc.dataSources ?? []).some((d) => d.id === qd.dataSourceRef) ? qd.dataSourceRef : doc.dataSources?.[0]?.id ?? "";
   const queries = doc.queries ?? [], mappings = doc.mappings ?? [], vms = doc.viewModels ?? [], bindings = doc.dataBindings ?? [];
   const sections = allSections(doc);
   const targetSection = sections.find((s) => s.id === bSection);
@@ -51,8 +55,9 @@ export function DataWizard({ ctx, focus }: { ctx: DefCtx; focus?: { sectionId?: 
   const done = async (ops: Parameters<DefCtx["commit"]>[0], summary: string) => { setMsg(null); return ctx.commit(ops, summary); };
 
   async function saveQuery() {
-    const e = checkQuery(qd, doc); if (e.length) { setMsg(e[0]); return; }
-    const q: QueryDef = buildQuery(qd, doc);
+    const draft = { ...qd, dataSourceRef: slotRef };
+    const e = checkQuery(draft, doc); if (e.length) { setMsg(e[0]); return; }
+    const q: QueryDef = buildQuery(draft, doc);
     if (await done([defOps.add("queries", q)], `Thêm truy vấn ${q.name}`)) { setQueryId(q.id); setStep("mapping"); }
   }
   async function saveMapping() {
@@ -90,23 +95,23 @@ export function DataWizard({ ctx, focus }: { ctx: DefCtx; focus?: { sectionId?: 
         <p className="hint">{cur.help}</p>
 
         {step === "source" ? (<>
-          <StateBox state={staticReadiness("DATA_SOURCES")}/>
-          <h3 className="bx-h3">Nguồn dữ liệu đã có trong ứng dụng</h3>
-          {(doc.dataSources ?? []).length ? <ul className="bx-list">{(doc.dataSources ?? []).map((d) => <li key={d.id}><b>{d.name || d.id}</b><small>{d.type}{d.sourceRef ? "" : " · chưa được nối"}</small></li>)}</ul>
-            : <p className="hint">Chưa có nguồn nào. Nguồn dữ liệu do quản trị viên tạo và cấp quyền; tài liệu ứng dụng chỉ tham chiếu tới nguồn đã cấp.</p>}
+          <DataSourcesPanel doc={doc} calls={ctx.dataManagement} canView={ctx.canViewData ?? false} viewReason={ctx.viewDataReason ?? "Bạn chưa được cấp quyền xem nguồn dữ liệu."} canManage={ctx.canManageData ?? false} manageReason={ctx.manageDataReason ?? "Bạn chưa được cấp quyền quản lý nguồn dữ liệu."} canBind={ctx.canBindData ?? false} bindReason={ctx.bindDataReason ?? "Liên kết nguồn dữ liệu cần quyền quản lý nguồn dữ liệu và quyền chỉnh sửa ứng dụng."}/>
+          <SlotEditor ctx={ctx}/>
         </>) : null}
 
         {step === "discovery" ? <StateBox state={ready("discovery")}/> : null}
 
         {step === "query" ? (
           <Gate state={ready("query")}>
-            {!(doc.dataSources ?? []).length ? <StateBox state={staticReadiness("DATA_SOURCES")} compact/> : (
+            {!(doc.dataSources ?? []).length ? <p className="hint" data-testid="no-slots">Ứng dụng chưa có khe dữ liệu nên chưa tạo được truy vấn. Hãy thêm khe ở bước “Nguồn dữ liệu”.</p> : (
               <form className="bx-form" onSubmit={(e) => { e.preventDefault(); void saveQuery(); }}>
                 <Field label="Tên truy vấn">{(id) => <input id={id} disabled={disabled} value={qd.name} onChange={(e) => setQd({ ...qd, name: e.target.value })}/>}</Field>
-                <Field label="Nguồn dữ liệu">{(id) => <select id={id} disabled={disabled} value={qd.dataSourceRef} onChange={(e) => setQd({ ...qd, dataSourceRef: e.target.value })}>
+                <Field label="Nguồn dữ liệu">{(id) => <select id={id} disabled={disabled} value={slotRef} onChange={(e) => setQd({ ...qd, dataSourceRef: e.target.value })}>
                   {(doc.dataSources ?? []).map((d) => <option key={d.id} value={d.id}>{d.name || d.id}</option>)}</select>}</Field>
-                <Field label="Kiểu">{(id) => <select id={id} disabled={disabled} value={qd.mode} onChange={(e) => setQd({ ...qd, mode: e.target.value as "READ" | "WRITE" })}>{QUERY_MODES.map((m) => <option key={m} value={m}>{m === "READ" ? "Đọc dữ liệu" : "Ghi dữ liệu"}</option>)}</select>}</Field>
+                <Field label="Kiểu">{(id) => <select id={id} disabled={disabled} value={qd.mode} onChange={(e) => setQd({ ...qd, mode: e.target.value as "READ" | "WRITE", ...(e.target.value === "WRITE" ? { public: false } : {}) })}>{QUERY_MODES.map((m) => <option key={m} value={m}>{m === "READ" ? "Đọc dữ liệu" : "Ghi dữ liệu"}</option>)}</select>}</Field>
                 <Field label="Mã thao tác đã duyệt" hint="Do quản trị viên đặt tên (ví dụ products.list). Không nhập câu SQL hay địa chỉ.">{(id) => <input id={id} disabled={disabled} value={qd.operationKey} onChange={(e) => setQd({ ...qd, operationKey: e.target.value })}/>}</Field>
+                <label className="checkRow" data-testid="query-public-row"><input type="checkbox" data-testid="query-public" disabled={disabled || qd.mode !== "READ"} checked={qd.mode === "READ" && qd.public === true} onChange={(e) => setQd({ ...qd, public: e.target.checked })}/><span>Công khai (khách không cần đăng nhập cũng chạy được)</span></label>
+                {qd.mode !== "READ" ? <p className="hint" data-testid="query-public-write-note">Truy vấn ghi không thể công khai.</p> : null}
                 <fieldset className="bx-group"><legend>Tham số</legend>
                   {qd.params.map((p, i) => (
                     <div className="bx-row" key={i}>
@@ -188,11 +193,13 @@ export function DataWizard({ ctx, focus }: { ctx: DefCtx; focus?: { sectionId?: 
           </Gate>
         ) : null}
 
+        {step === "public" ? <PublicDataTab ctx={ctx} focus={focus}/> : null}
+
         {msg ? <p className="formError" role="alert">{msg}</p> : null}
       </div>
 
       <details className="bx-existing"><summary>Đã khai báo ({queries.length + mappings.length + vms.length + bindings.length})</summary>
-        <DefList title="Truy vấn" items={queries.map((q) => ({ id: q.id, name: q.name || q.id, note: `${q.mode ?? "READ"} · ${q.operationKey ?? ""}` }))} onRemove={(i) => setRemoving({ collection: "queries", id: i.id, name: i.name })} disabled={disabled}/>
+        <DefList title="Truy vấn" items={queries.map((q) => ({ id: q.id, name: q.name || q.id, note: `${q.mode ?? "READ"} · ${q.operationKey ?? ""}${q.public === true ? " · công khai" : ""}` }))} onRemove={(i) => setRemoving({ collection: "queries", id: i.id, name: i.name })} disabled={disabled}/>
         <DefList title="Ánh xạ" items={mappings.map((m) => ({ id: m.id, name: m.name || m.id, note: m.fields.map((f) => `${f.to}${f.transforms.length ? ` [${f.transforms.map(describeTransform).join(" → ")}]` : ""}`).join(", ") }))} onRemove={(i) => setRemoving({ collection: "mappings", id: i.id, name: i.name })} disabled={disabled}/>
         <DefList title="ViewModel" items={vms.map((v) => ({ id: v.id, name: v.name || v.id, note: `${v.cardinality ?? "LIST"} · ${v.fields.map((f) => f.name).join(", ")}` }))} onRemove={(i) => setRemoving({ collection: "viewModels", id: i.id, name: i.name })} disabled={disabled}/>
         <DefList title="Gắn dữ liệu" items={bindings.map((b) => ({ id: b.id, name: `${b.sectionId}.${b.prop}`, note: b.viewModelRef ? `← ${vms.find((v) => v.id === b.viewModelRef)?.name ?? b.viewModelRef}` : "" }))} onRemove={(i) => setRemoving({ collection: "dataBindings", id: i.id, name: i.name })} disabled={disabled}/>

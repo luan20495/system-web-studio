@@ -1,0 +1,88 @@
+{
+  "studio": "http://127.0.0.1:3003",
+  "runId": "muwr6vfm",
+  "facts": {
+    "authConfig": {
+      "localLogin": true,
+      "oidc": false,
+      "publicPublish": true
+    },
+    "fixtureNotes": {
+      "viewerOnProject": "member",
+      "initialRevision": 0,
+      "definitionOps": {
+        "ok": true
+      },
+      "marker": "E2E-muwr6vfm-muwr704w"
+    },
+    "routes": {
+      "queries": {
+        "status": 404,
+        "code": "QUERY_NOT_FOUND"
+      },
+      "actions": {
+        "status": 404,
+        "code": "UNKNOWN_ACTION"
+      }
+    }
+  },
+  "cleanup": [
+    "left behind (no delete route): workspaces 27a973ce-bd1f-4306-948b-5ee529ba1e95, f8efc742-319c-4422-a9c9-070923fb8aff named e2e-muwr6vfm-*"
+  ],
+  "node": "v22.23.1",
+  "summary": {
+    "total": 1,
+    "PASS": 1,
+    "FAIL": 0,
+    "BLOCKED": 0,
+    "SKIP": 0
+  },
+  "results": [
+    {
+      "id": "E2E-02",
+      "title": "Edit component/page → save → reload → persists",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "checks": [
+        {
+          "name": "PATCH …/schema answered 200 by the real backend",
+          "ok": true,
+          "detail": "status=200"
+        },
+        {
+          "name": "the top bar says saved",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "server revision increased",
+          "ok": true,
+          "detail": "1 → 2"
+        },
+        {
+          "name": "the new text is in the persisted schema (read back through a separate session)",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "after a full reload the canvas shows the saved text",
+          "ok": true,
+          "detail": "e2e-muwr6vfm-proj-A\nSản phẩm\nLiên hệ\n\nE2E-MUWR6VFM-MUWR704W\n\nNước sạch mỗi ngày, sống khỏe mỗi ngày."
+        },
+        {
+          "name": "a new version row exists for the edit",
+          "ok": true,
+          "detail": ""
+        },
+        {
+          "name": "no unhandled page errors / serious console errors",
+          "ok": true,
+          "detail": ""
+        }
+      ],
+      "failed": []
+    }
+  ]
+}

@@ -1,0 +1,131 @@
+FLOW: E2E-SUPER01 — SYSTEM_ADMIN (Platform) → create tenant admin of a new tenant (+ workspace) → activation link → activate → login Admin portal
+RESULT: PASS
+START: 2026-10-07T13:37:55.790Z
+END: 2026-10-07T13:38:03.019Z
+FRONTEND_HEAD: e028508
+BACKEND_HEAD: 2356d64 docs(c1): tenant-scoped provisioning API contract for C5 and exact error codes [2356d64]
+BACKEND_URL: http://127.0.0.1:44080
+PROJECT: f2c77b6f-72d1-473a-999e-de781dc2e3d8
+WORKSPACE: bcc81924-f079-4a72-9fce-af362adac92f
+HTTP EVIDENCE:
+  - ok [api] SYSTEM_ADMIN creates a NEW tenant (201, no first admin yet)
+  - ok [api] …and a workspace OF THAT TENANT through the tenant route (201, tenantId explicit)
+  - ok POST /admin/tenants/{tenantId}/users → 201; the tenant is the PATH, never in the body; tenantRole TENANT_ADMIN; workspaceId + workspaceRole together; no password
+  - ok [api] the same username again is refused: 409 USERNAME_TAKEN
+  - ok [api] after activation /auth/me lists the chosen workspace with MEMBER_MANAGE (WORKSPACE_ADMIN, from the server) and the tenant TENANT_MEMBERS
+UI ASSERTION:
+  - ok the SYSTEM_ADMIN logs in through the Platform portal
+  - ok the dialog: four sections, a tenant selector, NO not-ready notice, NO SYSTEM_ADMIN type
+  - ok the workspace of the chosen tenant is offered (optional; assigned here)
+  - ok the activation link is shown once in the dialog (/auth/activate#token); no password anywhere
+  - ok after 'Xong' the token is gone: not in the summary, the URL, localStorage or sessionStorage
+  - ok the summary: Chờ kích hoạt, the company AND its role already assigned, the workspace; the only next step is the person's activation
+  - ok the new admin activates through the REAL activation page
+  - ok …and logs in through the ADMIN portal: not refused
+  - ok …sees Công ty của tôi and Người dùng, not the system-wide sections
+  - ok no unexpected 4xx/5xx from the portal's calls
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok [api] the server lists the account as TENANT_ADMIN of the new tenant (already, before activation)
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-ADMIN01 — Tenant admin (Admin portal) → Người dùng → create workspace admin + app creator by invitation → activation → the creator can sign in
+RESULT: PASS
+START: 2026-10-07T13:38:03.019Z
+END: 2026-10-07T13:38:13.236Z
+FRONTEND_HEAD: e028508
+BACKEND_HEAD: 2356d64 docs(c1): tenant-scoped provisioning API contract for C5 and exact error codes [2356d64]
+BACKEND_URL: http://127.0.0.1:44080
+PROJECT: f2c77b6f-72d1-473a-999e-de781dc2e3d8
+WORKSPACE: bcc81924-f079-4a72-9fce-af362adac92f
+HTTP EVIDENCE:
+  - ok the workspace is created through the TENANT route (POST /admin/tenants/{tenant}/workspaces → 201, tenantId = the session's tenant) — never the legacy POST /admin/workspaces
+  - ok POST /admin/tenants/{tenant}/users → 201 with tenantRole MEMBER, that workspace and WORKSPACE_ADMIN together; the tenant only in the path
+  - ok [api] the workspace admin signs in; /auth/me lists the new workspace with MEMBER_MANAGE (server permission, not a role name)
+  - ok the app creator is created (201): MEMBER, email as given, workspace + role together or none
+  - ok workspace assignment of an EXISTING tenant member is the WORKSPACE ADMIN's action: POST /workspaces/{w}/members → 201
+  - ok [api] the app creator signs in with the chosen password; /auth/me lists the workspace and no MEMBER_MANAGE / TENANT_*
+UI ASSERTION:
+  - ok the tenant admin logs in through the ADMIN portal
+  - ok navigation has Người dùng and Công ty của tôi
+  - ok Người dùng: the tenant is the SESSION's (read-only), the create action is enabled, no not-ready notice
+  - ok the dialog: NO tenant selector (fixed, read-only tenant), the types never include SYSTEM_ADMIN (tenant admin may be offered)
+  - ok the activation link is shown once (/auth/activate#token)
+  - ok the summary shows account, Chờ kích hoạt, the company and the workspace with its role; the token is gone from the page
+  - ok the workspace admin activates through the REAL activation page
+  - ok [observed] is the workspace the tenant admin just created offered to it for the next account? (H-C1-16: a tenant admin is not a member of it; /auth/me lists member workspaces only)
+  - ok the app creator activates through the REAL activation page
+  - ok the app creator is NOT admitted to the Admin portal (no admin capability from the server)
+  - ok no unexpected 4xx/5xx from the portal's calls
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-USER01 — App creator (EDITOR, made by the tenant admin): Studio login → project visible → edit / save / reload → permissions are the role's
+RESULT: FAIL
+START: 2026-10-07T13:38:13.236Z
+END: 2026-10-07T13:38:15.086Z
+FRONTEND_HEAD: e028508
+BACKEND_HEAD: 2356d64 docs(c1): tenant-scoped provisioning API contract for C5 and exact error codes [2356d64]
+BACKEND_URL: http://127.0.0.1:44080
+PROJECT: f2c77b6f-72d1-473a-999e-de781dc2e3d8
+WORKSPACE: bcc81924-f079-4a72-9fce-af362adac92f
+HTTP EVIDENCE:
+  - ok [api] the workspace admin creates a project in the new workspace (201)
+  - ok [api] …and adds the creator to the project as EDITOR (member route)
+  - ok [api] the creator's resolved project permissions include APP_EDIT and NOT APP_PUBLISH
+  - ok [api] …and no MEMBER_MANAGE: /auth/me lists none in the workspace
+  - ok [api] an edit by the creator is accepted (200)
+  - ok [api] publishing is refused for the creator (403): the role is the role
+UI ASSERTION:
+  - FAIL H-C1-04 the Studio signs the creator in (the server lists the workspace and its permissions) (landed=/auth/no-access workspacePerms=[])
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok after a reload the edit is still there (persisted)
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: the Studio portal refuses this creator at login (/auth/no-access) although /auth/me lists the workspace with []. The API side of the same account works (project APIs, edit, persist, no publish). H-C1-04 (still open).
+OWNER: C1 · ref H-C1-04
+
+---
+
+FLOW: E2E-SEC01 — SEC01 tenant admin cannot create SYSTEM_ADMIN · SEC02 cross-tenant is a safe 404 · SEC03 workspace admin cannot escalate
+RESULT: PASS
+START: 2026-10-07T13:38:15.086Z
+END: 2026-10-07T13:38:19.707Z
+FRONTEND_HEAD: e028508
+BACKEND_HEAD: 2356d64 docs(c1): tenant-scoped provisioning API contract for C5 and exact error codes [2356d64]
+BACKEND_URL: http://127.0.0.1:44080
+PROJECT: f2c77b6f-72d1-473a-999e-de781dc2e3d8
+WORKSPACE: bcc81924-f079-4a72-9fce-af362adac92f
+HTTP EVIDENCE:
+  - ok SEC01 [api] tenantRole SYSTEM_ADMIN is refused (400 TENANT_ROLE_INVALID)
+  - ok SEC01 [api] the legacy platform route is closed to a tenant admin (403 ADMIN_REQUIRED)
+  - ok SEC01 [api] …cannot grant SYSTEM_ADMIN to anyone nor to itself (403)
+  - ok SEC01 [api] the tenant admin's /auth/me carries no platform scope
+  - ok SEC02 [api] tenant A's admin gets 404 TENANT_NOT_FOUND on every tenant-B route (create user, create workspace, members, candidates, add self, re-role, remove, read)
+  - ok SEC02 [api] a workspace of ANOTHER tenant in my tenant's create → 404 WORKSPACE_NOT_FOUND, and no account is created
+  - ok SEC02 [api] …and the other way round (B's admin on tenant A): 404
+  - ok SEC02 [api] neither tenant admin can list the system-wide users or workspaces (403)
+  - ok SEC03 [api] a workspace admin cannot call the tenant routes (create user / workspace, candidates, members, make itself tenant admin) → 403, nor platform routes (legacy create, system-admin, new tenant, suspend)
+  - ok SEC03 [api] …with the codes of the contract (FORBIDDEN on tenant routes, ADMIN_REQUIRED on platform routes)
+  - ok SEC03 [api] …cannot change its own workspace role (403 SELF_GRANT_FORBIDDEN)
+  - ok SEC03 [api] …cannot read, nor add itself to, a workspace of another tenant (403/404)
+  - ok SEC03 [api] …cannot pull a person of ANOTHER tenant into its workspace (404 USER_NOT_FOUND)
+UI ASSERTION: none recorded
+PERSISTENCE ASSERTION:
+  - ok SEC01 [api] unknown fields (systemAdmin, platformScope, role) never take effect: the account is a plain, non-admin MEMBER
+  - ok SEC01 [api] nobody became a SYSTEM_ADMIN
+  - ok SEC02 [api] …and the refused create left nothing behind (no account named like it)
+  - ok SEC02 [api] each tenant's member list holds only its own people
+  - ok SEC03 [api] nothing changed: still a plain tenant MEMBER, not a SYSTEM_ADMIN, the tenant still ACTIVE
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
