@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 2,
+  "kind": "PAGE_SCHEMA",
+  "page": "actions",
+  "sections": [
+    {"id": "hero-1", "type": "Hero", "componentVersion": "1.0.0", "props": {"title": "Hành động", "ctaLabel": "Đồng bộ"}},
+    {"id": "products-1", "type": "ProductGrid", "componentVersion": "1.0.0", "props": {"heading": "Sản phẩm", "items": []}},
+    {"id": "contact-1", "type": "ContactForm", "componentVersion": "1.0.0", "props": {"heading": "Liên hệ", "submitLabel": "Gửi"}}
+  ],
+  "pages": [{"id": "about", "slug": "about", "title": "Giới thiệu", "sections": [{"id": "footer-1", "type": "Footer", "componentVersion": "1.0.0", "props": {"text": "©"}}]}],
+  "dataSources": [{"id": "erp-db", "name": "ERP", "type": "postgres"}],
+  "queries": [
+    {"id": "orders-list", "dataSourceRef": "erp-db", "operationKey": "orders.list"},
+    {"id": "order-update", "dataSourceRef": "erp-db", "mode": "WRITE", "operationKey": "orders.update", "params": [{"name": "id", "type": "STRING"}]},
+    {"id": "order-create", "dataSourceRef": "erp-db", "mode": "WRITE", "operationKey": "orders.create", "params": [{"name": "customer", "type": "STRING"}]},
+    {"id": "order-delete", "dataSourceRef": "erp-db", "mode": "WRITE", "operationKey": "orders.delete", "params": [{"name": "id", "type": "STRING"}]}
+  ],
+  "viewModels": [{"id": "orders-vm", "queryRef": "orders-list", "fields": [{"name": "name"}]}],
+  "permissions": [
+    {"id": "perm-act", "permission": "ACTION_EXECUTE", "resourceType": "ACTION", "resourceRef": "call-erp"}
+  ],
+  "workflows": [
+    {"id": "wf-review", "trigger": "ACTION", "steps": [{"id": "s1", "actionRef": "notify-all"}]}
+  ],
+  "actions": [
+    {
+      "id": "call-erp",
+      "name": "Đồng bộ ERP",
+      "type": "CALL_API",
+      "enabled": false,
+      "trigger": {"sectionId": "contact-1", "event": "onSubmit"},
+      "viewModelRef": "orders-vm",
+      "dataSourceRef": "erp-db",
+      "operationKey": "orders.sync",
+      "permissionRef": "perm-act",
+      "inputs": [
+        {"name": "customer", "required": true, "type": "STRING", "maxLength": 100},
+        {"name": "qty", "type": "INTEGER"},
+        {"name": "amount", "type": "NUMBER"},
+        {"name": "urgent", "type": "BOOLEAN"},
+        {"name": "at", "type": "TIMESTAMP"},
+        {"name": "day", "type": "DATE"},
+        {"name": "meta", "type": "OBJECT"},
+        {"name": "tags", "type": "ARRAY"},
+        {"name": "extra"}
+      ],
+      "inputMapping": {
+        "customer": {"source": "FORM_FIELD", "name": "customer"},
+        "qty": {"source": "ROUTE_PARAM", "name": "qty"},
+        "amount": {"source": "COMPONENT_STATE", "path": "contact.amount"},
+        "urgent": {"source": "LITERAL", "value": true},
+        "at": {"source": "CONTEXT", "key": "NOW"},
+        "day": {"source": "PREVIOUS_RESULT", "path": ""},
+        "meta": {"source": "VIEW_MODEL", "path": "orders.first"}
+      },
+      "idempotency": "OPTIONAL",
+      "limits": {"timeoutMillis": 15000},
+      "onSuccess": ["notify-all", "notify-mail"],
+      "onError": ["notify-hook"]
+    },
+    {"id": "notify-all", "type": "NOTIFY", "channel": "IN_APP", "templateRef": "tpl-order-synced",
+     "recipients": [
+       {"kind": "USER", "userId": "0b8f2a3e-5c1d-4b7a-9e2f-3d4c5b6a7e80", "tenantId": "11111111-2222-4333-8444-555555555555"},
+       {"kind": "GROUP", "groupId": "sales"},
+       {"kind": "ROLE", "role": "manager"},
+       {"kind": "DEPARTMENT_MANAGER", "departmentId": "dept-1"}
+     ]},
+    {"id": "notify-mail", "type": "NOTIFY", "channel": "EMAIL", "templateRef": "tpl-order-mail", "recipients": [{"kind": "DEPARTMENT_MANAGER"}]},
+    {"id": "notify-hook", "type": "NOTIFY", "channel": "WEBHOOK", "templateRef": "tpl-order-hook", "endpointRef": "ep-erp-events"},
+    {"id": "notify-sms", "type": "NOTIFY", "channel": "SMS", "templateRef": "tpl-order-sms"},
+    {"id": "refresh", "type": "REFRESH_QUERY", "queryRef": "orders-list", "viewModelRef": "orders-vm", "trigger": {"sectionId": "hero-1", "event": "onClick"}},
+    {"id": "edit-order", "type": "UPDATE_RECORD", "queryRef": "order-update", "trigger": {"sectionId": "products-1", "event": "onClick"}, "idempotency": "REQUIRED"},
+    {"id": "submit-contact", "type": "SUBMIT_FORM", "queryRef": "order-create", "trigger": {"sectionId": "contact-1", "event": "onSubmit"}, "idempotency": "OPTIONAL"},
+    {"id": "create-order", "type": "CREATE_RECORD", "queryRef": "order-create", "idempotency": "REQUIRED"},
+    {"id": "delete-order", "type": "DELETE_RECORD", "queryRef": "order-delete", "trigger": {"sectionId": "products-1", "event": "onClick"}},
+    {"id": "go-about", "type": "NAVIGATE", "pageRef": "about"},
+    {"id": "start-review", "type": "START_WORKFLOW", "workflowRef": "wf-review", "idempotency": "REQUIRED"}
+  ]
+}

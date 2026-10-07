@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 2,
+  "kind": "PAGE_SCHEMA",
+  "page": "bad-reference",
+  "sections": [{"id": "hero-1", "type": "Hero", "componentVersion": "1.0.0", "props": {"title": "T"}}],
+  "dataSources": [{"id": "erp-db", "type": "postgres"}],
+  "queries": [{"id": "orders-list", "dataSourceRef": "missing-source", "operationKey": "orders.list"}],
+  "actions": [
+    {"id": "refresh", "type": "REFRESH_QUERY", "queryRef": "missing-query", "trigger": {"sectionId": "ghost-1", "event": "onClick"}}
+  ],
+  "dataBindings": [{"id": "b1", "sectionId": "hero-1", "prop": "title", "viewModelRef": "missing-vm"}]
+}

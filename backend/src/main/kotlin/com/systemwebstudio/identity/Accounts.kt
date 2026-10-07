@@ -92,6 +92,81 @@ class AccountService(
         return ActivationLink(id, username, r.displayName.trim(), "ACTIVATION", token, exp)
     }
 
+
+    /**
+     * Tenant-scoped provisioning used by TENANT_ADMIN / SYSTEM_ADMIN after the caller has passed TENANT_MEMBERS authorization.
+     * Creates a pending LOCAL account, tenant membership and optional workspace membership atomically, then returns the existing
+     * one-time activation link. No password is accepted, stored or logged here.
+     */
+    @Transactional
+    fun createTenantUser(
+        adminId: UUID,
+        tenantId: UUID,
+        usernameInput: String,
+        displayNameInput: String,
+        emailInput: String?,
+        tenantRole: String,
+        workspaceId: UUID?,
+        workspaceRole: String?
+    ): ActivationLink {
+        val username = usernameInput.trim().lowercase()
+        if (!usernamePattern.matches(username) || username.startsWith("oidc-"))
+            throw ApiException.badRequest("INVALID_USERNAME", "Tên đăng nhập 3–40 ký tự: chữ thường, số, dấu . _ -")
+        val displayName = displayNameInput.trim()
+        if (displayName.isBlank() || displayName.length > 160)
+            throw ApiException.badRequest("VALIDATION_FAILED", "displayName is required (max 160 characters)")
+        val email = emailInput?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
+        if (email != null && !Regex("^[^\\s@<>\"]{1,64}@[^\\s@<>\"]{1,190}\\.[A-Za-z]{2,24}$").matches(email))
+            throw ApiException.badRequest("INVALID_EMAIL", "Email không hợp lệ")
+        if (email != null && jdbc.queryForObject("SELECT count(*) FROM users WHERE lower(email) = ?", Long::class.java, email)!! > 0)
+            throw ApiException.conflict("EMAIL_TAKEN", "Email này đã được dùng")
+        if (jdbc.queryForObject("SELECT count(*) FROM tenants WHERE id = ? AND status <> 'DELETED'", Long::class.java, tenantId)!! == 0L)
+            throw ApiException.notFound("TENANT_NOT_FOUND", "Tenant not found")
+        if (tenantRole !in setOf("TENANT_ADMIN", "MEMBER"))
+            throw ApiException.badRequest("TENANT_ROLE_INVALID", "Role must be TENANT_ADMIN or MEMBER")
+        if ((workspaceId == null) != (workspaceRole == null))
+            throw ApiException.badRequest("VALIDATION_FAILED", "workspaceId and workspaceRole must be supplied together")
+        if (workspaceRole != null && workspaceRole !in setOf("WORKSPACE_ADMIN", "EDITOR", "PUBLISHER", "VIEWER"))
+            throw ApiException.badRequest("INVALID_ROLE", "Invalid workspace role")
+        if (workspaceId != null && jdbc.queryForObject(
+                "SELECT count(*) FROM workspaces WHERE id = ? AND tenant_id = ?",
+                Long::class.java, workspaceId, tenantId
+            )!! == 0L)
+            throw ApiException.notFound("WORKSPACE_NOT_FOUND", "Workspace not found")
+
+        val id = UUID.randomUUID()
+        val unusable = requireNotNull(encoder.encode(Base64.getEncoder().encodeToString(ByteArray(48).also(random::nextBytes))))
+        val inserted = jdbc.update(
+            """INSERT INTO users (id, username, password_hash, enabled, display_name, email, auth_source, activated_at, system_admin)
+               VALUES (?,?,?,TRUE,?,?, 'LOCAL', NULL, FALSE) ON CONFLICT (username) DO NOTHING""",
+            id, username, unusable, displayName, email
+        )
+        if (inserted == 0) throw ApiException.conflict("USERNAME_TAKEN", "Tên đăng nhập này đã tồn tại")
+
+        jdbc.update(
+            """INSERT INTO tenant_members (tenant_id, user_id, role, active, created_by)
+               VALUES (?,?,?,TRUE,?)""",
+            tenantId, id, tenantRole, adminId
+        )
+        if (workspaceId != null) {
+            jdbc.update(
+                """INSERT INTO workspace_members (workspace_id, user_id, role, active, tenant_id)
+                   VALUES (?,?,?,TRUE,?)""",
+                workspaceId, id, workspaceRole, tenantId
+            )
+        }
+
+        val (token, exp) = newToken(id, "ACTIVATION", adminId)
+        audit.record("USER_CREATED", "USER", id, workspaceId, actorId = adminId,
+            newValue = mapOf("username" to username, "tenantId" to tenantId, "tenantRole" to tenantRole, "workspaceRole" to workspaceRole))
+        audit.record("TENANT_MEMBER_SET", "TENANT", tenantId, actorId = adminId,
+            newValue = mapOf("userId" to id, "role" to tenantRole))
+        if (workspaceId != null) audit.record("ADD_MEMBER", "WORKSPACE_MEMBER", id, workspaceId, null, actorId = adminId,
+            newValue = mapOf("role" to workspaceRole, "userId" to id))
+        audit.record("ACTIVATION_LINK_CREATED", "USER", id, actorId = adminId, newValue = mapOf("expiresAt" to exp.toString()))
+        return ActivationLink(id, username, displayName, "ACTIVATION", token, exp)
+    }
+
     /** a link for a pending account (activation) or an active one (password reset) */
     @Transactional
     fun link(adminId: UUID, userId: UUID): ActivationLink {

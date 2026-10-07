@@ -12,13 +12,18 @@ class MemberApiTests : IntegrationTestBase() {
         s.post(wsMembers(ws), """{"username":"$username","role":"$role"}""")
     private fun audit(action: String, ws: UUID) = jdbc.queryForObject("SELECT count(*) FROM audit_events WHERE action=? AND workspace_id=?", Long::class.java, action, ws)!!
 
+    /** a person of the (default) tenant: addable by a workspace administrator. A user with NO tenant membership is a stranger to every workspace (404, no global directory). */
+    private fun colleague(prefix: String) = fx.user(prefix).also {
+        jdbc.update("INSERT INTO tenant_members (tenant_id, user_id, role) VALUES (?, ?, 'MEMBER') ON CONFLICT DO NOTHING", com.systemwebstudio.tenancy.TenantIds.DEFAULT, it.id)
+    }
+
     private class Ws(val id: UUID, val admin: com.systemwebstudio.identity.UserEntity)
     private fun workspace(): Ws { val ws = fx.workspace(); val a = fx.user("wsadmin"); fx.member(ws, a, "WORKSPACE_ADMIN"); return Ws(ws, a) }
 
     @Test
     fun `workspace admin adds, changes and removes members and every step is audited`() {
         val w = workspace(); val s = sessionFor(w.admin.username)
-        val target = fx.user("newbie")
+        val target = colleague("newbie")
         assertThat(add(s, w.id, target.username, "VIEWER").response.status).isEqualTo(201)
         assertThat(role(w.id, target.id)).isEqualTo("VIEWER")
         assertThat(add(s, w.id, target.username, "EDITOR").response.status).isEqualTo(409)                      // already a member
@@ -55,9 +60,10 @@ class MemberApiTests : IntegrationTestBase() {
         // a second admin appears: now one of them can go, but never both
         val second = fx.user("second"); fx.member(w.id, second, "WORKSPACE_ADMIN")
         assertThat(s.delete("${wsMembers(w.id)}/${second.id}").response.status).isEqualTo(204)
+        // D-C1-13: a SYSTEM_ADMIN who is not a member of the workspace has NO MEMBER_MANAGE there (tenant-scoped provisioning is its tool), so it cannot touch the last admin at all
         val s2 = sessionFor(fx.user("sys", systemAdmin = true).username)
-        assertThat(s2.patch("${wsMembers(w.id)}/${w.admin.id}", """{"role":"EDITOR"}""").response.status).isEqualTo(409)
-        assertThat(s2.body(s2.delete("${wsMembers(w.id)}/${w.admin.id}")).get("code").asString()).isEqualTo("LAST_ADMIN")
+        assertThat(s2.patch("${wsMembers(w.id)}/${w.admin.id}", """{"role":"EDITOR"}""").response.status).isEqualTo(403)
+        assertThat(s2.delete("${wsMembers(w.id)}/${w.admin.id}").response.status).isEqualTo(403)
         assertThat(role(w.id, w.admin.id)).isEqualTo("WORKSPACE_ADMIN")
     }
 
@@ -76,9 +82,12 @@ class MemberApiTests : IntegrationTestBase() {
     fun `unknown, disabled and ambiguous targets and invalid roles are rejected`() {
         val w = workspace(); val s = sessionFor(w.admin.username)
         assertThat(add(s, w.id, "nobody-" + UUID.randomUUID(), "VIEWER").response.status).isEqualTo(404)
-        val d = fx.user("dis"); fx.disable(d.id)
+        val d = colleague("dis"); fx.disable(d.id)
         assertThat(add(s, w.id, d.username, "VIEWER").response.status).isEqualTo(422)
-        val u = fx.user("ok")
+        val stranger = fx.user("stranger")            // exists, but has no relation to this tenant: indistinguishable from "no such user"
+        assertThat(add(s, w.id, stranger.username, "VIEWER").response.status).isEqualTo(404)
+        assertThat(role(w.id, stranger.id)).isNull()
+        val u = colleague("ok")
         assertThat(add(s, w.id, u.username, "SUPERUSER").response.status).isEqualTo(400)
         assertThat(add(s, w.id, u.username, "ADMIN").response.status).isEqualTo(400)                          // system admin is not grantable here
         assertThat(s.post(wsMembers(w.id), """{"username":"${u.username}","email":"a@b.c","role":"VIEWER"}""").response.status).isEqualTo(400)
@@ -100,7 +109,7 @@ class MemberApiTests : IntegrationTestBase() {
         val sc = scenario()                                     // sc.user is EDITOR in the workspace and OWNER of the project
         val base = "${sc.base}/members"
         val mate = fx.user("mate"); fx.member(sc.ws, mate, "VIEWER")
-        val outsider = fx.user("outsider")
+        val outsider = colleague("outsider")
         assertThat(sc.s.post(base, """{"username":"${outsider.username}","role":"VIEWER"}""").response.status).isEqualTo(422)   // not in workspace
         assertThat(sc.s.post(base, """{"username":"${mate.username}","role":"EDITOR"}""").response.status).isEqualTo(201)
         assertThat(sc.s.post(base, """{"username":"${mate.username}","role":"EDITOR"}""").response.status).isEqualTo(409)

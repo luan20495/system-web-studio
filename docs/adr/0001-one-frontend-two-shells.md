@@ -1,5 +1,5 @@
 # ADR 0001 — One frontend, two shells, client-side routing
-Status: accepted (2026-10-02)
+Status: accepted (2026-10-02) · **superseded by [ADR 0022](0022-frontend-monorepo-three-deployments.md)** (2026-10-06), effective when the C5 monorepo import lands; until then this ADR describes the code
 
 **Context.** The product now has two user areas (Admin Console, Builder Studio) plus auth screens, and needs deep links
 (`/studio/projects/{id}/design`). The same Next.js source must still produce the static mock build (GitHub Pages) without a server.

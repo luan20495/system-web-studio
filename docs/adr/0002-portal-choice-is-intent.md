@@ -1,5 +1,5 @@
 # ADR 0002 — Portal choice is navigation intent, never authorization
-Status: accepted (2026-10-02)
+Status: accepted (2026-10-02) · still in force under [ADR 0022](0022-frontend-monorepo-three-deployments.md): the three portals do not change that choosing a portal is intent, not authorization
 
 The login screen asks "Admin Console" or "Builder Studio". The choice is kept in `sessionStorage` (`factory-portal`) and used only by
 `resolvePostLogin()` (`features/routing.ts`) to pick a destination. It is never sent to the server. Admin access requires the live

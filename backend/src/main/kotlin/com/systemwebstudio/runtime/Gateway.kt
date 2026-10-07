@@ -28,23 +28,76 @@ import java.security.MessageDigest
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
+import java.net.Inet4Address
+import java.net.Inet6Address
 import java.net.InetAddress
 
 private val http: HttpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).followRedirects(HttpClient.Redirect.NEVER).build()
 private const val MAX_BODY = 1_000_000
 private const val MAX_RESPONSE = 5_000_000
 
-/** Outbound requests the platform makes for users (connectors, TLS checks) may only reach public internet addresses. */
+/**
+ * Outbound requests the platform makes for users (connectors, TLS checks, data connectors) may only reach public internet addresses.
+ *
+ * This is the one network-address policy of the platform (docs/contracts/v2/integration-contract.md §2, INTEGRATION_V2 §8; spec: C3 `AddressRangeSpecTests`).
+ * Everything that is not provably a global unicast address is refused (fail closed): loopback, private, link-local, multicast, "this network", shared
+ * address space, documentation, benchmarking, reserved (240/4), IETF protocol assignments, IPv4-embedding IPv6 forms (IPv4-mapped, 6to4, Teredo) and NAT64.
+ * NAT64 (64:ff9b::/96) is judged by the IPv4 address it embeds. Callers that connect must resolve ONCE and connect to that very address.
+ */
 object PublicAddress {
+    /** Every address [host] resolves to must be public. An unresolvable name is not public. */
     fun isPublic(host: String): Boolean {
         val addrs = runCatching { InetAddress.getAllByName(host) }.getOrNull() ?: return false
-        return addrs.isNotEmpty() && addrs.none { a ->
-            a.isLoopbackAddress || a.isSiteLocalAddress || a.isLinkLocalAddress || a.isAnyLocalAddress || a.isMulticastAddress ||
-                (a is java.net.Inet6Address && (a.address[0].toInt() and 0xfe) == 0xfc) ||                       // fc00::/7 unique local
-                a.hostAddress.startsWith("100.") && a.address[1].toInt().and(0xff) in 64..127 ||                  // 100.64.0.0/10 carrier-grade NAT
-                a.hostAddress == "169.254.169.254" || a.hostAddress.startsWith("0.")
+        return addrs.isNotEmpty() && addrs.all { isPublicAddress(it) }
+    }
+
+    /** Pure verdict on one already-resolved address (no DNS, no side effects). IPv6 zone ids do not change the verdict. */
+    fun isPublicAddress(a: InetAddress): Boolean {
+        if (a.isLoopbackAddress || a.isSiteLocalAddress || a.isLinkLocalAddress || a.isAnyLocalAddress || a.isMulticastAddress) return false
+        val b = a.address
+        return when (a) {
+            is Inet4Address -> V4.none { it.matches(b) }
+            is Inet6Address -> when {
+                (b[0].toInt() and 0xfe) == 0xfc -> false                                   // fc00::/7 unique local
+                V6.any { it.matches(b) } -> false
+                NAT64.matches(b) -> isPublicAddress(InetAddress.getByAddress(b.copyOfRange(12, 16)))   // judged by the embedded IPv4
+                else -> true
+            }
+            else -> false
         }
     }
+
+    private class Cidr(literal: String, private val bits: Int) {
+        private val prefix: ByteArray = InetAddress.getByName(literal).address     // IP literal: no DNS
+        fun matches(a: ByteArray): Boolean {
+            if (a.size != prefix.size) return false
+            val full = bits / 8; val rest = bits % 8
+            for (i in 0 until full) if (a[i] != prefix[i]) return false
+            return rest == 0 || ((a[full].toInt() xor prefix[full].toInt()) and (0xff shl (8 - rest)) and 0xff) == 0
+        }
+    }
+
+    private val V4 = listOf(
+        Cidr("0.0.0.0", 8),          // "this network"
+        Cidr("100.64.0.0", 10),      // shared address space (carrier-grade NAT)
+        Cidr("192.0.0.0", 24),       // IETF protocol assignments (incl. DS-Lite, PCP anycast)
+        Cidr("192.0.2.0", 24),       // TEST-NET-1
+        Cidr("192.88.99.0", 24),     // 6to4 relay anycast (deprecated)
+        Cidr("198.18.0.0", 15),      // benchmarking
+        Cidr("198.51.100.0", 24),    // TEST-NET-2
+        Cidr("203.0.113.0", 24),     // TEST-NET-3
+        Cidr("240.0.0.0", 4))        // reserved, incl. 255.255.255.255
+    private val V6 = listOf(
+        Cidr("::", 96),              // unspecified, loopback, IPv4-compatible
+        Cidr("::ffff:0:0:0", 96),    // IPv4-mapped (the JDK normally returns an Inet4Address for these; kept for byte-level callers)
+        Cidr("64:ff9b:1::", 48),     // local-use NAT64
+        Cidr("100::", 64),           // discard-only
+        Cidr("2001::", 23),          // IETF protocol assignments, incl. Teredo 2001::/32
+        Cidr("2001:db8::", 32),      // documentation
+        Cidr("2002::", 16),          // 6to4
+        Cidr("3fff::", 20),          // documentation (RFC 9637)
+        Cidr("5f00::", 16))          // SRv6 SIDs
+    private val NAT64 = Cidr("64:ff9b::", 96)
 }
 
 /** "/api/items/{id}" matches "/api/items/42": literal segments exactly, {param} = one non-empty segment */

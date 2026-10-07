@@ -25,6 +25,32 @@ export SPRING_PROFILES_ACTIVE="${SPRING_PROFILES_ACTIVE:-local}"
 [ -d /opt/homebrew/opt/openjdk@21 ] && export JAVA_HOME=/opt/homebrew/opt/openjdk@21
 export PATH="$JAVA_HOME/bin:$PATH"
 FRONTEND_PORT="${FRONTEND_PORT:-3100}"
+# --- V1 LOCAL (docs/parallel/V1_LOCAL_TARGET.md, D-C0-29/34): PORTALS=1 runs the three portals instead of the legacy :3100 app and the whole V1 configuration.
+# Ports are configuration; defaults are the documented ones. Nothing here is read by production code that does not also read it from the environment.
+export PORTAL_HOST="${PORTAL_HOST:-127.0.0.1}"
+export PORTAL_PLATFORM_PORT="${PORTAL_PLATFORM_PORT:-3001}" PORTAL_ADMIN_PORT="${PORTAL_ADMIN_PORT:-3002}" PORTAL_STUDIO_PORT="${PORTAL_STUDIO_PORT:-3003}"
+export DATA_TARGET_PORT="${DATA_TARGET_PORT:-15440}"
+PORTAL_ORIGINS="http://${PORTAL_HOST}:${PORTAL_PLATFORM_PORT},http://${PORTAL_HOST}:${PORTAL_ADMIN_PORT},http://${PORTAL_HOST}:${PORTAL_STUDIO_PORT}"
+if [ "${PORTALS:-0}" = 1 ]; then
+  # the features of the V1 flow (all default OFF in the application; a decision, recorded here and in V1_LOCAL_TARGET.md)
+  export DATA_PLATFORM_ENABLED=true WORKFLOW_ENABLED=true PUBLISH_CONFIGS_ENABLED=true
+  export WORKFLOW_QUEUE="${WORKFLOW_QUEUE:-amqp}"                 # RabbitMQ, as in production (H-5); memory is refused there
+  export HBL_ENV=local API_PROXY_TARGET="${API_PROXY_TARGET:-http://127.0.0.1:8080}"
+  export WEB_ORIGIN_PLATFORM="http://${PORTAL_HOST}:${PORTAL_PLATFORM_PORT}" WEB_ORIGIN_ADMIN="http://${PORTAL_HOST}:${PORTAL_ADMIN_PORT}" WEB_ORIGIN_STUDIO="http://${PORTAL_HOST}:${PORTAL_STUDIO_PORT}"
+  export STUDIO_ORIGIN="${STUDIO_ORIGIN:-$WEB_ORIGIN_STUDIO}"
+  # the Public Runtime (D-C0-36 / 37): same-origin through the sites gateway; apiBase is ONE value for every site ({slug} is replaced per site)
+  export SITES_PUBLIC_DATA_ENABLED=true
+  _so="${SITES_ORIGIN:-http://127.0.0.1:18088}"; _slug='{slug}'      # (a literal {slug} cannot sit inside ${...:-...})
+  export SITES_DATA_API_BASE="${SITES_DATA_API_BASE:-$_so/$_slug/_data}"
+  # the API sees the gateway container's address as its TCP peer (Docker Desktop: a private range); the gateway passes ONE validated client address (nginx real_ip)
+  export TRUST_PROXY="${TRUST_PROXY:-true}" TRUSTED_PROXY_CIDRS="${TRUSTED_PROXY_CIDRS:-127.0.0.1/32,172.16.0.0/12,192.168.0.0/16,10.0.0.0/8}"
+  export CORS_ALLOWED_ORIGINS="${CORS_ALLOWED_ORIGINS:-${PORTAL_ORIGINS},http://localhost:${FRONTEND_PORT},http://127.0.0.1:${FRONTEND_PORT}}"
+  # the local data target (scripts/data-target.sh): ONE exact endpoint the postgres connector may reach, TLS verified against its dev CA
+  export DATA_PLATFORM_POSTGRES_ALLOWED_PRIVATE="${DATA_PLATFORM_POSTGRES_ALLOWED_PRIVATE:-127.0.0.1:${DATA_TARGET_PORT}}"
+  if [ -f "$ROOT/.run/data-target/truststore.jks" ] && [ -f "$ROOT/.run/data-target/truststore.pass" ]; then
+    export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Djavax.net.ssl.trustStore=$ROOT/.run/data-target/truststore.jks -Djavax.net.ssl.trustStorePassword=$(cat "$ROOT/.run/data-target/truststore.pass")"
+  fi
+fi
 export CORS_ALLOWED_ORIGINS="${CORS_ALLOWED_ORIGINS:-http://localhost:${FRONTEND_PORT},http://127.0.0.1:${FRONTEND_PORT}}"
 mkdir -p "$ROOT/.run"
 # Real static sites (ADR 0009): render worker + sites gateway (compose service sites-gateway on 127.0.0.1:18088)

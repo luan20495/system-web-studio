@@ -287,6 +287,18 @@ class AiProviderRegistry(private val env: Environment, private val json: JsonMap
         return all
     }
 
+    /**
+     * A provider that is not a row of `ai_providers`: the one a tenant configured for itself (D-C2-11). Same client classes and the same
+     * key handling (the key goes only in the auth header); never added to [providers], so it can not be reached by another tenant or by a
+     * platform model id. The caller (TenantAiApi) has already checked the endpoint against the operator's allow-list.
+     */
+    fun buildDetached(kind: String, id: String, name: String, baseUrl: String, apiKey: String, models: List<String>): ChatProvider {
+        val s = ProviderSlot(id, name, apiKey, baseUrl.ifBlank { defaultBase(kind) }, models.filter { MODEL.matches(it) },
+            keyRequired = kind in setOf("OPENAI", "ANTHROPIC", "GEMINI"), paid = true, timeoutSeconds = 60,
+            tokenParam = if (kind == "OPENAI") "max_completion_tokens" else "max_tokens", sendTemperature = kind != "OPENAI", fromWeb = true, enabled = true)
+        return if (kind == "ANTHROPIC") AnthropicProvider(s, json) else OpenAiCompatibleProvider(s, json)
+    }
+
     private fun build(p: StoredProvider): ChatProvider {
         val s = ProviderSlot(p.slug, p.name, p.apiKey.orEmpty(), p.baseUrl.ifBlank { defaultBase(p.kind) }, p.models.filter { MODEL.matches(it) },
             keyRequired = p.kind in setOf("OPENAI", "ANTHROPIC", "GEMINI"), paid = p.paid, timeoutSeconds = 60,

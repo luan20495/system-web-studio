@@ -166,8 +166,8 @@ class BuildJobService(
         val manifest = files.map { (p, f) -> mapOf("path" to p, "size" to f.first.size, "sha256" to StaticSiteBuilder.sha256(f.first), "contentType" to f.second) }
         val manifestJson = json.writeValueAsString(manifest)
         val sha = StaticSiteBuilder.sha256(manifestJson.toByteArray())
-        jdbc.query("SELECT id FROM artifacts WHERE project_id = ? AND sha256 = ?", { rs, _ -> rs.getObject(1, UUID::class.java) }, projectId, sha).firstOrNull()?.let { return it }
         val prefix = "$projectId/$sha"
+        StaticSiteBuilder.reuseOrRevive(jdbc, store, projectId, sha, files.mapKeys { "$prefix/${it.key}" })?.let { return it }
         files.forEach { (p, f) -> store.putOnce("$prefix/$p", f.first, f.second) }
         jdbc.update("""INSERT INTO artifacts (id, project_id, sha256, kind, storage_prefix, file_count, total_bytes, manifest, commit_sha)
             VALUES (?,?,?,'STATIC_APP',?,?,?,CAST(? AS jsonb),?) ON CONFLICT (project_id, sha256) DO NOTHING""",
@@ -211,7 +211,7 @@ class BuildJobService(
 class BuildRunnerController(
     private val jobs: BuildJobService, private val heartbeat: com.systemwebstudio.admin.RunnerHeartbeat,
     @Value("\${app.build.runner-token:}") private val token: String,
-    @Value("\${app.build.api-base:http://127.0.0.1:8080}") private val apiBase: String
+    @Value("\${app.build.api-base}") private val apiBase: String
 ) {
     private fun auth(request: HttpServletRequest) {
         val got = request.getHeader("X-Runner-Token") ?: ""

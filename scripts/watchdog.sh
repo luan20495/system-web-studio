@@ -12,7 +12,13 @@ fails=0
 while true; do
   bad=""
   curl -fsS -m 5 "$API/actuator/health/liveness" >/dev/null 2>&1 || bad="$bad api"
-  curl -fsS -m 5 -o /dev/null "$UI/login" 2>/dev/null || bad="$bad ui"
+  if [ "$ENVN" = public ] && [ "${PUBLIC_PORTALS:-true}" = true ]; then
+    # public: the three portals (each answers on its own loopback port) and the tunnel process; the legacy root UI is not part of this topology
+    for pp in "${PORTAL_PLATFORM_PORT_PUBLIC:-3201}" "${PORTAL_ADMIN_PORT_PUBLIC:-3202}" "${PORTAL_STUDIO_PORT_PUBLIC:-3203}"; do curl -fsS -m 5 -o /dev/null "http://127.0.0.1:$pp/" 2>/dev/null || bad="$bad portal:$pp"; done
+    { [ -f "$ROOT/.run/public/tunnel.pid" ] && kill -0 "$(cat "$ROOT/.run/public/tunnel.pid")" 2>/dev/null; } || bad="$bad tunnel"
+  else
+    curl -fsS -m 5 -o /dev/null "$UI/login" 2>/dev/null || bad="$bad ui"
+  fi
   curl -fsS -m 5 "$RENDER/health" >/dev/null 2>&1 || bad="$bad render"
   if [ -n "$bad" ]; then fails=$((fails + 1)); else fails=0; fi
   if [ "$fails" -ge 2 ]; then

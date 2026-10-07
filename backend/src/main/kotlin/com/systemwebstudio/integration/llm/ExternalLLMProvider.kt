@@ -50,9 +50,10 @@ class ExternalLLMProvider(
      * [MAX_TOOL_STEPS] times; the server runs the tool (authorized by the caller) and sends the result back as delimited data.
      */
     fun <T> complete(model: String?, system: String, user: String, maxTokens: Int, exclude: Set<String> = emptySet(), sink: StreamSink? = null,
-                     tools: AiTools? = null, parse: (String) -> T): Completion<T> {
+                     tools: AiTools? = null, candidatesOverride: List<Triple<ChatProvider, String, String>>? = null, parse: (String) -> T): Completion<T> {
         val chosen = ai.effectiveModel(model)
-        val candidates: List<Triple<ChatProvider, String, String>> = when {
+        // [candidatesOverride] = (provider, bare model, id for accounting): a tenant's own provider (D-C2-11), never replaced by another model
+        val candidates: List<Triple<ChatProvider, String, String>> = candidatesOverride ?: when {
             chosen == null || chosen == "auto" -> ai.autoCandidates().filter { it !in exclude }.map { Triple(openRouter, it, it) }
             else -> providers.split(chosen)?.let { (p, bare) -> listOf(Triple(p, bare, chosen)) } ?: listOf(Triple(openRouter, chosen, chosen))
         }

@@ -12,7 +12,7 @@ import org.springframework.transaction.support.TransactionTemplate
 data class CleanupResult(val dryRun: Boolean, val abandonedUploads: Int, val deletedAssetRows: Int, val idempotencyKeys: Int, val failedDeployments: Int, val aiCalls: Int = 0,
                          val retention: RetentionResult? = null, val formSubmissions: Int = 0) {
     val total get() = abandonedUploads + deletedAssetRows + idempotencyKeys + failedDeployments + aiCalls + formSubmissions +
-        (retention?.let { it.previewsExpired + it.artifactsDeleted + it.failedBuildLogsCleared + it.repositoriesPendingDelete } ?: 0)
+        (retention?.let { it.previewsExpired + it.artifactsDeleted + it.failedBuildLogsCleared + it.repositoriesPendingDelete + it.orphanObjectsDeleted } ?: 0)
 }
 
 /**

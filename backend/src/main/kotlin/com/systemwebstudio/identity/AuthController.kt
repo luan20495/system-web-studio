@@ -1,5 +1,7 @@
 package com.systemwebstudio.identity
 
+import com.systemwebstudio.access.MeTenancyService
+import com.systemwebstudio.access.TenantMembershipSummary
 import com.systemwebstudio.audit.AuditService
 import com.systemwebstudio.common.ApiException
 import com.systemwebstudio.common.RateLimiter
@@ -28,11 +30,27 @@ import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
 data class LoginRequest(@field:NotBlank @field:Size(max = 120) val username: String, @field:NotBlank @field:Size(max = 256) val password: String)
-data class WorkspaceSummary(val id: UUID, val name: String, val role: String)
+data class WorkspaceSummary(
+    val id: UUID, val name: String, val role: String,
+    /** tenant of the workspace (server-derived) */
+    val tenantId: UUID? = null,
+    /** canonical permission codes the caller holds in this workspace (for UI gating only; the server re-checks every call) */
+    val permissions: List<String> = emptyList()
+)
 data class MeResponse(
     val id: UUID, val username: String, val displayName: String,
     val roles: List<String>, val workspaces: List<WorkspaceSummary>,
-    val systemAdmin: Boolean = false
+    val systemAdmin: Boolean = false,
+    /** primary tenant of the caller (null = no tenant membership) */
+    val tenantId: UUID? = null,
+    /** TENANT_ADMIN | MEMBER in the primary tenant; source of truth is tenant_members */
+    val tenantRole: String? = null,
+    /** true for SYSTEM_ADMIN (platform scope; no business-data access unless [businessAccess]) */
+    val platformScope: Boolean = false,
+    val businessAccess: Boolean = false,
+    val tenants: List<TenantMembershipSummary> = emptyList(),
+    /** platform + primary-tenant permissions as canonical codes (portal routing) */
+    val permissions: List<String> = emptyList()
 )
 
 @RestController
@@ -44,6 +62,7 @@ class AuthController(
     private val rateLimiter: RateLimiter,
     private val audit: AuditService,
     private val jdbc: JdbcTemplate,
+    private val meTenancy: MeTenancyService,
     private val codeProjects: com.systemwebstudio.code.CodeProjectService,
     private val runtime: com.systemwebstudio.runtime.ServerRuntimeService,
     @Value("\${app.local-login.enabled:true}") private val localLogin: Boolean,
@@ -55,7 +74,7 @@ class AuthController(
     @Value("\${app.rate-limit.login-window-seconds:900}") private val windowSeconds: Long,
     private val registrations: org.springframework.beans.factory.ObjectProvider<org.springframework.security.oauth2.client.registration.ClientRegistrationRepository>,
     @Value("\${app.oidc.post-logout-redirect-uri:}") private val postLogoutRedirect: String,
-    @Value("\${app.sites.studio-origin:http://localhost:3100}") private val studioOrigin: String,
+    @Value("\${app.sites.studio-origin}") private val studioOrigin: String,
     @Value("\${app.saml.enabled:false}") private val samlEnabled: Boolean,
     @Value("\${app.saml.idp-hint:}") private val samlHint: String,
     @Value("\${app.saml.label:}") private val samlLabel: String
@@ -109,21 +128,25 @@ class AuthController(
     fun me(@AuthenticationPrincipal principal: StudioUserDetails): MeResponse {
         val workspaces = if (principal.systemAdmin) {
             // every workspace is visible to a system admin; the role is the real membership role, or ADMIN when not a member
-            jdbc.query("""SELECT w.id, w.name, coalesce(m.role, 'ADMIN') AS role FROM workspaces w
+            jdbc.query("""SELECT w.id, w.name, coalesce(m.role, 'ADMIN') AS role, w.tenant_id FROM workspaces w
                 LEFT JOIN workspace_members m ON m.workspace_id = w.id AND m.user_id = ? AND m.active ORDER BY w.name""", { rs, _ ->
-                WorkspaceSummary(rs.getObject("id", UUID::class.java), rs.getString("name"), rs.getString("role"))
+                val role = rs.getString("role")
+                WorkspaceSummary(rs.getObject("id", UUID::class.java), rs.getString("name"), role, rs.getObject("tenant_id", UUID::class.java), meTenancy.workspacePermissions(role))
             }, principal.userId)
         } else {
             jdbc.query(
-                """SELECT w.id, w.name, m.role FROM workspace_members m JOIN workspaces w ON w.id = m.workspace_id
+                """SELECT w.id, w.name, m.role, w.tenant_id FROM workspace_members m JOIN workspaces w ON w.id = m.workspace_id
                    WHERE m.user_id = ? AND m.active ORDER BY w.name""", { rs, _ ->
-                    WorkspaceSummary(rs.getObject("id", UUID::class.java), rs.getString("name"), rs.getString("role"))
+                    val role = rs.getString("role")
+                    WorkspaceSummary(rs.getObject("id", UUID::class.java), rs.getString("name"), role, rs.getObject("tenant_id", UUID::class.java), meTenancy.workspacePermissions(role))
                 }, principal.userId
             )
         }
         val roles = principal.authorities.mapNotNull { it.authority?.removePrefix("ROLE_") }
         val systemAdmin = jdbc.queryForObject("SELECT system_admin FROM users WHERE id = ?", Boolean::class.java, principal.userId) == true    // live value, not the login-time snapshot
-        return MeResponse(principal.userId, principal.username, principal.displayName ?: principal.username, roles, workspaces, systemAdmin)
+        val t = meTenancy.forUser(principal.userId, systemAdmin)
+        return MeResponse(principal.userId, principal.username, principal.displayName ?: principal.username, roles, workspaces, systemAdmin,
+            t.tenantId, t.tenantRole, t.platformScope, t.businessAccess, t.tenants, t.permissions)
     }
 
     @PostMapping("/logout")

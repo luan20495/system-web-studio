@@ -1,5 +1,7 @@
 # Contract — TenantContext
 
+> **SUPERSEDED (2026-10-05, C0)** by `docs/contracts/v2/tenant-permission.md`. This file is the Phase 0 draft, kept for history only; do not implement from it.
+
 Owner: **C1** (đổi contract → `DECISIONS.md`). Trạng thái: DESIGN (chưa có code). Package: `com.systemwebstudio.tenancy`.
 
 ## Mục đích

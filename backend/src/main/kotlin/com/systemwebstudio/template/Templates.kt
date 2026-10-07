@@ -33,7 +33,9 @@ data class TemplateDto(
     val category: String = "general", val tags: List<String> = emptyList(), val reviewStatus: String = "PRIVATE", val usageCount: Int = 0,
     /** NONE | READY | FAILED | UNAVAILABLE; when READY the image is served by GET /api/v1/templates/{id}/preview */
     val previewStatus: String = "NONE", val submittedAt: Instant? = null, val reviewedBy: String? = null, val reviewedAt: Instant? = null,
-    val reviewComment: String? = null, val canReview: Boolean = false
+    val reviewComment: String? = null, val canReview: Boolean = false,
+    /** Template V2 (D-C2-09): PRIVATE | TENANT | SYSTEM, the data the template expects the project to bind, and its sample rows (view model id -> rows) */
+    val scope: String = "PRIVATE", val dataSlots: List<DataSlot> = emptyList(), val sampleData: JsonNode? = null, val builtIn: Boolean = false
 )
 data class SaveTemplateRequest(
     @field:NotBlank @field:Size(max = 120) val name: String,
@@ -41,7 +43,7 @@ data class SaveTemplateRequest(
     /** update this template (new version) instead of creating one */
     val templateId: UUID? = null
 )
-data class SaveTemplateResult(val template: TemplateDto, val removedImages: Int)
+data class SaveTemplateResult(val template: TemplateDto, val removedImages: Int, /** tenant / project data left out of the template (connector ids, publish draft, ...) */ val removedPrivateData: List<String> = emptyList())
 data class UpdateTemplateRequest(@field:Size(min = 1, max = 120) val name: String? = null, @field:Size(max = 500) val description: String? = null)
 
 /**
@@ -56,6 +58,8 @@ class TemplateService(private val jdbc: JdbcTemplate, private val json: JsonMapp
         t.preview_status, t.submitted_at, coalesce(r.display_name, r.username), t.reviewed_at, t.review_comment
         FROM templates t LEFT JOIN users u ON u.id = t.author_id LEFT JOIN users r ON r.id = t.reviewed_by"""
 
+    private val sanitizer = TemplateSanitizer(json)
+
     fun row(rs: ResultSet, viewer: UUID?, admin: Boolean): TemplateDto {
         val schema = json.readTree(rs.getString(12))
         val sections = schema.get("sections")?.toList().orEmpty()
@@ -64,8 +68,26 @@ class TemplateService(private val jdbc: JdbcTemplate, private val json: JsonMapp
             sections.size, sections.mapNotNull { it.get("type")?.asString() }.distinct(), schema,
             category = rs.getString(13), tags = rs.getString(14).split(',').filter { it.isNotEmpty() }, reviewStatus = rs.getString(15), usageCount = rs.getInt(16),
             previewStatus = rs.getString(17), submittedAt = rs.getTimestamp(18)?.toInstant(), reviewedBy = rs.getString(19), reviewedAt = rs.getTimestamp(20)?.toInstant(),
-            reviewComment = rs.getString(21))
-        return t.copy(canEdit = viewer != null && canEdit(viewer, admin, t), canReview = viewer != null && admin && t.authorId != viewer && t.reviewStatus == "REVIEW")
+            reviewComment = rs.getString(21), scope = TemplateScope.of(rs.getString(4)).name, dataSlots = sanitizer.dataSlots(schema),
+            sampleData = sanitizer.sampleData(schema))
+        // the source project of a template is not for everyone who may use it (C1 B-009): only the author and a system admin see it
+        val shown = if (viewer != null && (admin || t.authorId == viewer)) t else t.copy(sourceProjectId = null)
+        return shown.copy(canEdit = viewer != null && canEdit(viewer, admin, t), canReview = viewer != null && admin && t.authorId != viewer && t.reviewStatus == "REVIEW")
+    }
+
+    /** a built-in business template (scope SYSTEM, defined in code, never edited) as the same DTO the library uses */
+    fun builtIn(b: BuiltInTemplate): TemplateDto {
+        val sections = b.schema.get("sections")?.toList().orEmpty()
+        return TemplateDto(b.id, b.name, b.description, "COMPANY", "ACTIVE", 1, SYSTEM_AUTHOR, "XWEB", null, BUILT_IN_DATE, BUILT_IN_DATE,
+            sections.size, sections.mapNotNull { it.get("type")?.asString() }.distinct(), b.schema, canEdit = false,
+            category = b.category, tags = b.tags, reviewStatus = "APPROVED", scope = TemplateScope.SYSTEM.name,
+            dataSlots = sanitizer.dataSlots(b.schema), sampleData = sanitizer.sampleData(b.schema), builtIn = true)
+    }
+
+    /** built-ins matching the library filters, in the fixed catalogue order (they come before the company templates) */
+    fun builtIns(q: String?, category: String?, tag: String?): List<TemplateDto> = BusinessTemplates.all(json).map { builtIn(it) }.filter { t ->
+        (q.isNullOrBlank() || t.name.contains(q.trim(), ignoreCase = true) || t.description.contains(q.trim(), ignoreCase = true)) &&
+            (category == null || t.category == category) && (tag == null || tag in t.tags)
     }
 
     /** the author only while the template is a private draft (not during review, not once approved); a system admin always */
@@ -73,6 +95,7 @@ class TemplateService(private val jdbc: JdbcTemplate, private val json: JsonMapp
 
     /** 404 (not 403) for templates the caller may not see, so ids of private templates are not confirmed. */
     fun visible(userId: UUID, id: UUID): TemplateDto {
+        BusinessTemplates.find(json, id)?.let { return builtIn(it) }
         val admin = guard.isAdmin(userId)
         val t = jdbc.query("$select WHERE t.id = ?", { rs, _ -> row(rs, userId, admin) }, id).firstOrNull()
         if (t == null || !(admin || (t.status == "ACTIVE" && (t.visibility == "COMPANY" || t.authorId == userId)))) throw ApiException.notFound("TEMPLATE_NOT_FOUND", "Template not found")
@@ -86,12 +109,16 @@ class TemplateService(private val jdbc: JdbcTemplate, private val json: JsonMapp
         val violations = validator.validate(t.schema)
         if (violations.isNotEmpty()) throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "TEMPLATE_OUTDATED",
             "This template no longer matches the approved components", mapOf("violations" to violations.take(10).map { mapOf("path" to it.path, "message" to it.message) }))
-        // counted when a project is created from it (same transaction as the project, so a failed creation does not count)
-        jdbc.update("UPDATE templates SET usage_count = usage_count + 1 WHERE id = ?", id)
+        // counted when a project is created from it (same transaction as the project, so a failed creation does not count); built-ins have no row
+        if (!t.builtIn) jdbc.update("UPDATE templates SET usage_count = usage_count + 1 WHERE id = ?", id)
         return t to t.schema
     }
 
     companion object {
+        /** author of the built-in templates: not a user */
+        val SYSTEM_AUTHOR: UUID = UUID(0L, 0L)
+        private val BUILT_IN_DATE: Instant = Instant.parse("2026-10-01T00:00:00Z")
+
         /**
          * Images (asset://) belong to the project they were uploaded to; a copy elsewhere would point at files the new project does not own
          * (and commit would reject it). They are cleared, and the caller is told how many.
@@ -132,7 +159,11 @@ class TemplateController(
         category?.takeIf { Regex("^[a-z0-9-]{1,40}$").matches(it) }?.let { where.append(" AND t.category = ?"); args += it }
         tag?.lowercase()?.takeIf { Regex("^[a-z0-9-]{1,24}$").matches(it) }?.let { where.append(" AND ? = ANY(t.tags)"); args += it }
         val order = if (sort == "popular") "t.usage_count DESC, t.updated_at DESC" else "t.updated_at DESC"
-        return jdbc.query("${templates.select}$where ORDER BY $order LIMIT 100", { rs, _ -> templates.row(rs, me.userId, admin) }, *args.toTypedArray())
+        val stored = jdbc.query("${templates.select}$where ORDER BY $order LIMIT 100", { rs, _ -> templates.row(rs, me.userId, admin) }, *args.toTypedArray())
+        if (scope == "mine") return stored
+        val builtIns = templates.builtIns(q, category?.takeIf { Regex("^[a-z0-9-]{1,40}$").matches(it) }, tag?.lowercase())
+        // built-ins have no usage count: by popularity they follow the stored templates, otherwise they come first
+        return if (sort == "popular") stored + builtIns else builtIns + stored
     }
 
     @GetMapping("/api/v1/templates/{id}")
@@ -148,7 +179,10 @@ class TemplateController(
         val ctx = access.forProject(me.userId, workspaceId, projectId)
         ctx.require(Permission.PROJECT_EDIT)
         val current = repo.currentSchema(projectId) ?: throw ApiException.conflict("NO_PAGE", "This project has no page yet")
-        val (schema, removed) = TemplateService.stripAssets(current)
+        val (stripped, removed) = TemplateService.stripAssets(current)
+        // a template is portable: no connector id, no publish draft, no credential-like extension (D-C2-09)
+        val portable = TemplateSanitizer(json).sanitize(stripped, TemplateScope.PRIVATE)
+        val schema = portable.schema
         validator.requireValid(schema)
         val name = request.name.trim(); val description = request.description?.trim().orEmpty()
         val id = if (request.templateId != null) {
@@ -156,16 +190,16 @@ class TemplateController(
             if (!t.canEdit) throw ApiException.forbidden("Only the author (while private) or a system admin can change this template")
             jdbc.update("UPDATE templates SET name = ?, description = ?, schema = CAST(? AS jsonb), version = version + 1, source_project_id = ?, updated_at = now() WHERE id = ?",
                 name, description, json.writeValueAsString(schema), projectId, t.id)
-            audit.record("UPDATE_TEMPLATE", "TEMPLATE", t.id, workspaceId, projectId, newValue = mapOf("version" to t.version + 1, "removedImages" to removed))
+            audit.record("UPDATE_TEMPLATE", "TEMPLATE", t.id, workspaceId, projectId, newValue = mapOf("version" to t.version + 1, "removedImages" to removed, "removedPrivateData" to portable.removed.size))
             t.id
         } else {
             val newId = UUID.randomUUID()
             jdbc.update("INSERT INTO templates (id, name, description, schema, author_id, source_project_id) VALUES (?,?,?,CAST(? AS jsonb),?,?)",
                 newId, name, description, json.writeValueAsString(schema), me.userId, projectId)
-            audit.record("CREATE_TEMPLATE", "TEMPLATE", newId, workspaceId, projectId, newValue = mapOf("name" to name, "removedImages" to removed))
+            audit.record("CREATE_TEMPLATE", "TEMPLATE", newId, workspaceId, projectId, newValue = mapOf("name" to name, "removedImages" to removed, "removedPrivateData" to portable.removed.size))
             newId
         }
-        return SaveTemplateResult(templates.visible(me.userId, id), removed)
+        return SaveTemplateResult(templates.visible(me.userId, id), removed, portable.removed)
     }
 
     @PatchMapping("/api/v1/templates/{id}")

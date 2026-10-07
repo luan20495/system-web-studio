@@ -50,3 +50,11 @@ app:
     secret-key: ${MINIO_ROOT_PASSWORD}
   deploy:
     step-delay-ms: 0
+  sites:
+    origin: ${SITES_ORIGIN}
+    studio-origin: ${STUDIO_ORIGIN}
+    data-api-base: ${SITES_DATA_API_BASE:}   # optional; when set: https, not loopback / private (ProductionConfigValidator)
+  render:
+    url: ${RENDER_URL}
+  workflow:
+    queue: ${WORKFLOW_QUEUE:amqp}      # H-5: RabbitMQ is the only production queue; WORKFLOW_QUEUE=memory (or anything but amqp) stops the start

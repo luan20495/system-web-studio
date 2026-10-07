@@ -3,6 +3,8 @@ package com.systemwebstudio.publish
 import com.systemwebstudio.audit.AuditService
 import com.systemwebstudio.integration.deploy.DeployProvider
 import com.systemwebstudio.integration.deploy.DeployRequest
+import com.systemwebstudio.integration.queue.JobQueue
+import com.systemwebstudio.integration.queue.Queues
 import com.systemwebstudio.schema.PageSchemaValidator
 import org.slf4j.LoggerFactory
 import org.slf4j.MDC
@@ -15,8 +17,17 @@ import java.util.UUID
 
 /**
  * Runs one deployment through POLICY_CHECK -> SECURITY_CHECK -> BUILDING -> DEPLOYING -> RUNNING.
- * Each step is a compare-and-set on the status column, so a duplicate or redelivered message cannot
- * run the same step twice, and a crashed worker is resumed from the status it left behind.
+ * Each step is a compare-and-set on the status column, so a duplicate or redelivered message cannot run the same step twice, and a crashed
+ * worker is resumed from the status it left behind.
+ *
+ * Failure handling (the final state is always deterministic and always says why):
+ *  - every failure is classified ([FailureClassifier]): a stable code + the real reason are stored in `deployments.error`, never a generic text;
+ *  - transient failures (render worker / storage / database blip) retry the same step a bounded number of times with backoff; the retry count
+ *    is read from the history, so a restart does not reset it. Permanent failures and ambiguous ones (a deploy that timed out) are never retried;
+ *  - DEPLOYING goes through [ReleaseDeployer]: verify the artifact, stage, bring the server runtime (server apps) to the same release, switch the
+ *    site, confirm. Nothing is switched in before it was verified; if anything fails after the switch the previous release is made active again
+ *    from its immutable artifact (site and server runtime together) or, if that is impossible, the site is taken offline. A deployment is
+ *    RUNNING only after verification said HEALTHY.
  */
 @Service
 class DeploymentProcessor(
@@ -27,13 +38,39 @@ class DeploymentProcessor(
     private val audit: AuditService,
     private val json: JsonMapper,
     private val builder: StaticSiteBuilder,
-    private val runtime: com.systemwebstudio.runtime.ServerRuntimeService,
     private val buildJobs: com.systemwebstudio.code.BuildJobService,
-    @Value("\${app.deploy.step-delay-ms:0}") private val stepDelayMs: Long
+    private val releases: ReleaseService,
+    private val queue: JobQueue,
+    private val appDefinitions: com.systemwebstudio.app.definition.AppDefinitionCodec,
+    @Value("\${app.deploy.step-delay-ms:0}") private val stepDelayMs: Long,
+    @Value("\${app.deploy.step-max-attempts:3}") maxAttempts: Int,
+    @Value("\${app.deploy.retry-backoff-ms:500}") backoffMs: Long,
+    @Value("\${app.deploy.build-timeout-seconds:300}") buildSeconds: Long,
+    @Value("\${app.deploy.scope-wait-seconds:300}") scopeWaitSeconds: Long,
+    @Value("\${app.deploy.scope-retry-ms:2000}") private val scopeRetryMs: Long
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
+    private val retry = RetryPolicy(maxAttempts.coerceAtLeast(1), backoffMs)
+    private val buildTimeoutMs = buildSeconds * 1000
+    private val scopeWait = java.time.Duration.ofSeconds(scopeWaitSeconds)
+    private val runner = StepRunner()
+    private val retryLater = java.util.concurrent.Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "deploy-scope-retry").apply { isDaemon = true } }
 
     private val forbidden = listOf("<script", "javascript:", "onerror=", "onload=", "data:text/html")
+
+    /** what one step of one run produced */
+    private sealed interface StepResult {
+        data object Advance : StepResult
+        /** a code build is still running: stop now, its completion re-queues this deployment */
+        data object Wait : StepResult
+        /** this run lost the release scope to the same operation (a redelivery): the resumed run decides, this one writes nothing */
+        data object Lost : StepResult
+        /** [rollingBack]: the deployment is ROLLING_BACK, so it leaves that state to FAILED and is never retried (it must not roll forward) */
+        data class Fail(val failure: StepFailure, val rollback: RollbackResult? = null, val rollingBack: Boolean = false) : StepResult
+    }
+
+    /** values carried from one step of a run to the next */
+    private class RunState(var artifactHash: String = "", var url: String? = null)
 
     fun process(deploymentId: UUID) {
         MDC.put("requestId", "job_" + deploymentId.toString().replace("-", "").take(16))
@@ -48,52 +85,120 @@ class DeploymentProcessor(
         val d = deployments.find(id) ?: run { log.warn("Deployment {} not found", id); return }
         if (d.status in DeploymentStatus.terminal) return
         var current = d.status
+        if (current == DeploymentStatus.ROLLING_BACK) { resumeRollingBack(d); return }
         if (current == DeploymentStatus.QUEUED && !move(d, current, DeploymentStatus.POLICY_CHECK, "Checking policy")) return
         current = if (current == DeploymentStatus.QUEUED) DeploymentStatus.POLICY_CHECK else current
-        var artifactHash = ""
-        var url: String? = null
+        val state = RunState()
         while (current != DeploymentStatus.RUNNING) {
             pause()
-            val error: String? = try {
-                when (current) {
-                    DeploymentStatus.POLICY_CHECK -> policy(d)
-                    DeploymentStatus.SECURITY_CHECK -> security(d)
-                    DeploymentStatus.BUILDING -> if (isCodeApp(d)) {
-                        // code project: the sandbox runner builds it; the job's completion re-queues this deployment
-                        when (val r = codeBuild(d)) { null -> return; else -> { if (r.startsWith("ERR:")) r.removePrefix("ERR:") else { artifactHash = r; null } } }
-                    } else { artifactHash = build(d); null }
-                    DeploymentStatus.DEPLOYING -> {
-                        val project = jdbc.queryForMap("SELECT name, deployment_target FROM projects WHERE id = ?", d.projectId)
-                        // read back from the row so a resumed job deploys the artifact the BUILDING step recorded
-                        val artifactId = jdbc.queryForObject("SELECT artifact_id FROM deployments WHERE id = ?", UUID::class.java, d.id)
-                        if (provider.buildsArtifacts && artifactId == null) "No artifact was built"
-                        else {
-                            val result = provider.deploy(DeployRequest(d.id, project["name"] as String, d.versionNumber, d.visibility, project["deployment_target"] as String?,
-                                artifactHash.ifEmpty { artifactId?.let { a -> jdbc.queryForObject("SELECT sha256 FROM artifacts WHERE id = ?", String::class.java, a) } ?: build(d, record = false) },
-                                d.projectId, artifactId))
-                            url = result.url
-                            // server apps: the same build's server part now goes to the isolated runtime (blue/green, health-checked)
-                            if (result.error == null && artifactId != null && isServerApp(d)) {
-                                val commit = jdbc.queryForObject("SELECT commit_sha FROM project_versions WHERE id = ?", String::class.java, d.versionId)
-                                runtime.deploy(d.projectId, artifactId, commit, jdbc.queryForObject("SELECT requested_by FROM deployments WHERE id = ?", UUID::class.java, d.id))
-                            }
-                            result.error
-                        }
+            val startedAt = System.nanoTime()
+            val result = step(d, current, state)
+            // identifiers and the outcome only: no payloads, no credentials
+            log.info("deployment {} project={} step={} outcome={} durationMs={}", id, d.projectId, current, result.javaClass.simpleName, (System.nanoTime() - startedAt) / 1_000_000)
+            when (result) {
+                is StepResult.Wait, is StepResult.Lost -> return
+                is StepResult.Fail -> {
+                    val attemptsMade = deployments.retries(d.id, current) + 1
+                    if (!result.rollingBack && retry.canRetry(result.failure, attemptsMade)) {
+                        deployments.event(d.id, current, "Retry $attemptsMade/${retry.maxAttempts}: ${result.failure.reason()}")
+                        log.warn("Deployment {} step {} failed transiently (attempt {}): {}", id, current, attemptsMade, result.failure.message)
+                        sleep(retry.delayBefore(attemptsMade + 1))
+                        continue
                     }
-                    else -> "Unexpected state $current"
+                    fail(d, if (result.rollingBack) DeploymentStatus.ROLLING_BACK else current, result.failure, attemptsMade, result.rollback)
+                    return
                 }
-            } catch (e: BuildFailure) {
-                e.message ?: "Build failed"
-            } catch (e: Exception) {
-                log.error("Deployment {} crashed in {}", id, current, e)
-                "Internal error during $current"
+                is StepResult.Advance -> {
+                    val next = DeploymentStatus.pipeline[DeploymentStatus.pipeline.indexOf(current) + 1]
+                    val ok = if (next == DeploymentStatus.RUNNING) finish(d, current, state.url!!) else move(d, current, next, label(next))
+                    if (!ok) return
+                    current = next
+                }
             }
-            if (error != null) { fail(d, current, error); return }
-            val next = DeploymentStatus.pipeline[DeploymentStatus.pipeline.indexOf(current) + 1]
-            val ok = if (next == DeploymentStatus.RUNNING) finish(d, current, url!!) else move(d, current, next, label(next))
-            if (!ok) return
-            current = next
         }
+    }
+
+    /** One attempt of one step. Never throws: whatever goes wrong becomes a classified [StepResult.Fail]. */
+    private fun step(d: DeploymentDto, current: String, state: RunState): StepResult = try {
+        when (current) {
+            DeploymentStatus.POLICY_CHECK -> policy(d)?.let { StepResult.Fail(StepFailure(FailureCode.POLICY_REJECTED, it)) } ?: StepResult.Advance
+            DeploymentStatus.SECURITY_CHECK -> security(d)?.let { StepResult.Fail(StepFailure(FailureCode.SECURITY_REJECTED, it)) } ?: StepResult.Advance
+            DeploymentStatus.BUILDING -> buildStep(d, state)
+            DeploymentStatus.DEPLOYING -> deployStep(d, state)
+            else -> StepResult.Fail(StepFailure(FailureCode.INTERNAL_ERROR, "Unexpected state $current"))
+        }
+    } catch (e: Exception) {
+        log.error("Deployment {} crashed in {}", d.id, current, e)
+        StepResult.Fail(FailureClassifier.classify(current, e))
+    }
+
+    private fun buildStep(d: DeploymentDto, state: RunState): StepResult {
+        if (isCodeApp(d)) {
+            // code project: the sandbox runner builds it; the job's completion re-queues this deployment
+            val r = codeBuild(d) ?: return StepResult.Wait
+            if (r.startsWith("ERR:")) return StepResult.Fail(StepFailure(FailureCode.BUILD_FAILED, FailureClassifier.safe(r.removePrefix("ERR:"))))
+            state.artifactHash = r
+            return StepResult.Advance
+        }
+        state.artifactHash = runner.bounded(buildTimeoutMs) { build(d) }
+        announcePublicQueries(d)
+        return StepResult.Advance
+    }
+
+    /**
+     * The publish confirmation of what becomes public: the queries of THIS release's snapshot that visitors with no account may run (read-only). Written once
+     * per deployment (a retried BUILDING step does not repeat it); nothing when the release has none.
+     */
+    private fun announcePublicQueries(d: DeploymentDto) {
+        if (deployments.firstEventAt(d.id, "PUBLIC_QUERIES") != null) return
+        val ids = runCatching { com.systemwebstudio.app.definition.PublicQueries.of(appDefinitions.fromJson(json.readTree(snapshot(d)))) }.getOrDefault(emptyList())
+        if (ids.isNotEmpty()) deployments.event(d.id, "PUBLIC_QUERIES", "Public queries of this release (anyone who can open the site may run them, read-only): " + ids.joinToString(", "))
+    }
+
+    private fun deployStep(d: DeploymentDto, state: RunState): StepResult {
+        val request = deployRequest(d, state.artifactHash) ?: return StepResult.Fail(StepFailure(FailureCode.ARTIFACT_MISSING, "No artifact was built for this deployment"))
+        return when (val outcome = releases.publish(releases.scopeOf(d.projectId), request, deployments.activationSeq(d.id))) {
+            is DeployOutcome.Live -> { state.url = outcome.url; StepResult.Advance }
+            is DeployOutcome.Failed -> StepResult.Fail(outcome.failure, outcome.rollback, outcome.rollingBack)
+            is DeployOutcome.Lost -> StepResult.Lost
+            is DeployOutcome.Busy -> waitForScope(d, outcome.holder)
+        }
+    }
+
+    /** what the provider is asked to deploy; null = the provider builds artifacts and none was recorded. Read back from the row so a resumed job deploys what BUILDING recorded. */
+    private fun deployRequest(d: DeploymentDto, knownHash: String = ""): DeployRequest? {
+        val project = jdbc.queryForMap("SELECT name, deployment_target FROM projects WHERE id = ?", d.projectId)
+        val artifactId = jdbc.queryForObject("SELECT artifact_id FROM deployments WHERE id = ?", UUID::class.java, d.id)
+        if (provider.buildsArtifacts && artifactId == null) return null
+        val hash = knownHash.ifEmpty { artifactId?.let { a -> jdbc.queryForObject("SELECT sha256 FROM artifacts WHERE id = ?", String::class.java, a) } ?: build(d, record = false) }
+        return DeployRequest(d.id, project["name"] as String, d.versionNumber, d.visibility, project["deployment_target"] as String?, hash, d.projectId, artifactId)
+    }
+
+    /**
+     * A crashed undo: the deployment was ROLLING_BACK. Finish it under the scope (previous release restored, or the site taken offline, the
+     * server runtime following) and end FAILED. It never re-verifies the failed release and never rolls forward.
+     */
+    private fun resumeRollingBack(d: DeploymentDto) {
+        val request = deployRequest(d) ?: run { fail(d, DeploymentStatus.ROLLING_BACK, StepFailure(FailureCode.ARTIFACT_MISSING, "No artifact was built for this deployment"), 1, null); return }
+        val rollback = releases.resumeRollback(releases.scopeOf(d.projectId), request, deployments.activationSeq(d.id))
+        if (rollback == null) { waitForScope(d, null).let { if (it is StepResult.Fail) fail(d, DeploymentStatus.ROLLING_BACK, it.failure, 1, null) }; return }
+        val reason = deployments.lastEventMessage(d.id, DeploymentStatus.ROLLING_BACK)?.removePrefix("Rolling back: ")
+        val code = StepFailure.codeOf(reason) ?: FailureCode.INTERNAL_ERROR
+        fail(d, DeploymentStatus.ROLLING_BACK, StepFailure(code, reason?.replace(Regex("^\\[[A-Z_]+] "), "") ?: "The release was being rolled back when the worker stopped"), 1, rollback)
+    }
+
+    /**
+     * Another release operation owns the scope. This is not a failure and it does not hold a worker: the deployment goes back to the queue (a short
+     * delay, and the recovery sweeper as the safety net) and is retried, until [scopeWait] has passed since it first had to wait; then it ends FAILED / SCOPE_BUSY.
+     */
+    private fun waitForScope(d: DeploymentDto, holder: ScopeHolder?): StepResult {
+        val first = deployments.firstEventAt(d.id, "SCOPE_BUSY")
+        if (first == null) deployments.event(d.id, "SCOPE_BUSY", "Waiting: another release operation" + (holder?.let { " (${it.kind})" } ?: "") + " owns the release scope of this app")
+        else if (java.time.Duration.between(first, java.time.Instant.now()) > scopeWait)
+            return StepResult.Fail(StepFailure(FailureCode.SCOPE_BUSY, "Another release operation owned the scope for more than ${scopeWait.seconds} s"))
+        deployments.touch(d.id)
+        retryLater.schedule({ runCatching { queue.publish(Queues.PUBLISH, d.id.toString()) }.onFailure { log.warn("Could not re-queue waiting deployment {}: {}", d.id, it.message) } }, scopeRetryMs, java.util.concurrent.TimeUnit.MILLISECONDS)
+        return StepResult.Wait
     }
 
     private fun label(s: String) = when (s) {
@@ -105,9 +210,6 @@ class DeploymentProcessor(
 
     private fun snapshot(d: DeploymentDto) =
         jdbc.queryForObject("SELECT schema_snapshot::text FROM project_versions WHERE id = ?", String::class.java, d.versionId)!!
-
-    private fun isServerApp(d: DeploymentDto) =
-        jdbc.queryForObject("SELECT app_kind FROM projects WHERE id = ?", String::class.java, d.projectId) in com.systemwebstudio.code.CodeProjectService.SERVER_KINDS
 
     private fun isCodeApp(d: DeploymentDto) =
         jdbc.queryForObject("SELECT app_type FROM projects WHERE id = ?", String::class.java, d.projectId) == "STATIC_APP"
@@ -168,6 +270,7 @@ class DeploymentProcessor(
     }
 
     private fun pause() { if (stepDelayMs > 0) Thread.sleep(stepDelayMs) }
+    private fun sleep(ms: Long) { if (ms > 0) Thread.sleep(ms) }
 
     private fun move(d: DeploymentDto, from: String, to: String, message: String): Boolean {
         val ok = deployments.transition(d.id, from, to, message)
@@ -185,10 +288,13 @@ class DeploymentProcessor(
         return ok
     }
 
-    private fun fail(d: DeploymentDto, from: String, error: String) {
+    private fun fail(d: DeploymentDto, from: String, failure: StepFailure, attempts: Int, rollback: RollbackResult?) {
+        val rolledBack = rollback?.takeUnless { it is RollbackResult.NotSwitched }
+        val error = (failure.reason(attempts) + (rolledBack?.let { " | rollback: ${it.summary}" } ?: "")).take(StepFailure.MAX_LENGTH)
         if (deployments.transition(d.id, from, DeploymentStatus.FAILED, null, error = error)) {
+            if (failure.code == FailureCode.STALE_PUBLISH) deployments.event(d.id, "STALE_PUBLISH", failure.message)
             audit.record("DEPLOY_STATUS_CHANGE", "DEPLOYMENT", d.id, workspaceOf(d), d.projectId, actorId = null,
-                oldValue = mapOf("status" to from), newValue = mapOf("status" to DeploymentStatus.FAILED, "error" to error))
+                oldValue = mapOf("status" to from), newValue = mapOf("status" to DeploymentStatus.FAILED, "error" to error, "code" to failure.code.name))
         }
     }
 

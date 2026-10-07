@@ -20,6 +20,7 @@ import org.springframework.security.web.context.SecurityContextHolderFilter
 import org.springframework.security.web.context.SecurityContextRepository
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository
 import org.springframework.security.web.csrf.CsrfException
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
@@ -27,6 +28,25 @@ import tools.jackson.databind.json.JsonMapper
 
 @Configuration
 class SecurityConfiguration {
+    companion object {
+        /**
+         * The ONE anonymous, CSRF-exempt route of the data platform (C3, docs/contracts/v2/data-runtime.md §6): exactly POST on a single path segment.
+         * Not a wildcard: every other path under /api/v1/webhooks stays authenticated and CSRF-protected. The signature / replay check is NOT here; it is done in C3's
+         * webhook handler before anything is parsed (docs/parallel/WEB_SECURITY_CONFIG.md §1). No controller exists until C3 is imported (then 404).
+         */
+        val DATA_WEBHOOK_INGEST: org.springframework.security.web.util.matcher.RequestMatcher =
+            PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/api/v1/webhooks/data/{endpointId}")
+
+        /** CORS allows credentials, so every origin must be exact: scheme://host[:port], no wildcard, no path, no "null". */
+        fun requireExactOrigins(origins: List<String>): List<String> {
+            val cleaned = origins.map { it.trim() }.filter { it.isNotEmpty() }
+            val exact = Regex("^https?://[A-Za-z0-9.\\-]+(:[0-9]{1,5})?$")
+            val bad = cleaned.filterNot { exact.matches(it) }
+            require(cleaned.isNotEmpty() && bad.isEmpty()) { "app.cors.allowed-origins must list exact origins (scheme://host[:port], no wildcard or path); rejected: $bad" }
+            return cleaned
+        }
+    }
+
     @Bean
     fun passwordEncoder(): PasswordEncoder = Argon2PasswordEncoder(16, 32, 1, 65_536, 3)
 
@@ -48,10 +68,10 @@ class SecurityConfiguration {
 
     @Bean
     fun corsConfigurationSource(
-        @Value("\${app.cors.allowed-origins:http://localhost:3000,http://127.0.0.1:3000}") origins: List<String>
+        @Value("\${app.cors.allowed-origins}") origins: List<String>
     ): CorsConfigurationSource {
         val cors = CorsConfiguration().apply {
-            allowedOrigins = origins                      // never "*": credentials are allowed
+            allowedOrigins = requireExactOrigins(origins)   // never "*": credentials are allowed
             allowedMethods = listOf("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS")
             allowedHeaders = listOf("Content-Type", "X-XSRF-TOKEN", "X-Request-Id", "Idempotency-Key")
             exposedHeaders = listOf("X-Request-Id", "Retry-After")
@@ -64,6 +84,9 @@ class SecurityConfiguration {
     /**
      * Published sites (ADR 0009), reached only through the sites gateway on their own origin: anonymous or a site session handled by
      * SiteServingController, never the Studio session; GET only; no CSRF (nothing changes state); headers set per response.
+     * Two anonymous POSTs only: website forms, and the PUBLIC_SITE read-only LIVE query (D-C0-35, `published-runtime.md` §4) - exactly one path shape, a single
+     * segment each for the slug and the query id. No cookie / session / Authorization header is read on either (`securityContext` is disabled), so there is
+     * nothing to forge and no CSRF to bypass; the tenant, workspace, project and release are derived from the slug by the server, never from the request.
      */
     @Bean
     @org.springframework.core.annotation.Order(1)
@@ -79,6 +102,7 @@ class SecurityConfiguration {
             // the only POST: anonymous website form submissions (no cookie is used, so there is nothing to forge; Origin is checked)
             .authorizeHttpRequests { it.requestMatchers(HttpMethod.GET, "/sites/**").permitAll().requestMatchers(HttpMethod.HEAD, "/sites/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/sites/*/_forms/*").permitAll()
+                .requestMatchers(HttpMethod.POST, "/sites/*/_data/queries/*/run").permitAll()     // PUBLIC_SITE: read-only LIVE query; the controller is C0's, the policy is C1's
                 // server app APIs (stage J): every method, checked by AppGatewayController against the app's declared routes
                 .requestMatchers("/sites/*/api/**", "/sites/_app/*/api/**").permitAll().anyRequest().denyAll() }
             .formLogin { it.disable() }
@@ -144,7 +168,7 @@ class SecurityConfiguration {
             .securityContext { it.securityContextRepository(securityContextRepository) }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED) }
             .requestCache { it.disable() }
-            .csrf { it.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()) }
+            .csrf { it.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()).ignoringRequestMatchers(DATA_WEBHOOK_INGEST) }
             .headers { h ->
                 // API responses are JSON: nothing may be framed, scripted or embedded. (Swagger UI, local profile only, needs scripts.)
                 if (!openApiPublic) h.contentSecurityPolicy { it.policyDirectives("default-src 'none'; frame-ancestors 'none'; base-uri 'none'") }
@@ -156,6 +180,7 @@ class SecurityConfiguration {
                 it.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     .requestMatchers(*publicPaths).permitAll()
+                    .requestMatchers(DATA_WEBHOOK_INGEST).permitAll()      // C3 data webhook ingest only; verified by signature in the handler
                     .requestMatchers("/actuator/prometheus").hasRole("METRICS")
                     .anyRequest().authenticated()
             }

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 2,
+  "kind": "PAGE_SCHEMA",
+  "page": "transforms",
+  "sections": [{"id": "products-1", "type": "ProductGrid", "componentVersion": "1.0.0", "props": {"heading": "Đơn hàng", "items": []}}],
+  "dataSources": [{"id": "erp-db", "type": "postgres"}],
+  "queries": [{"id": "orders-list", "dataSourceRef": "erp-db", "operationKey": "orders.list"}],
+  "mappings": [
+    {"id": "orders-map", "queryRef": "orders-list", "fields": [
+      {"from": "order_no", "to": "orderNo", "transforms": [{"type": "trim"}]},
+      {"from": "total", "to": "total", "transforms": [{"type": "toNumber"}]},
+      {"from": "code", "to": "code", "transforms": [{"type": "trim"}, {"type": "upper"}]},
+      {"from": "status", "to": "status", "transforms": [{"type": "enumMap", "map": {"O": "open", "C": "closed"}, "default": "unknown"}]},
+      {"to": "fullName", "transforms": [{"type": "join", "fields": ["first", "last"], "separator": " "}]},
+      {"from": "plain", "to": "plain"}
+    ]}
+  ]
+}

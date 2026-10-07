@@ -69,4 +69,7 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    // D-C0-32: the suite caches one Spring context per distinct configuration (queue / data platform / release scope / G3 variants); the default 512 MB test heap ran out
+    // after the C4 and C2 imports (OutOfMemoryError, then every later context 'failure threshold exceeded'). A fixed ceiling keeps the result reproducible.
+    maxHeapSize = "2g"
 }

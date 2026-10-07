@@ -63,6 +63,8 @@ class PromptController(
     private val schemas: SchemaService,
     private val patcher: SchemaPatchEngine,
     private val validator: com.systemwebstudio.schema.PageSchemaValidator,
+    /** the V2 part of the document (data bindings, actions ...): an AI edit that leaves it inconsistent is "the AI failed", not a 422 */
+    private val appDefinitions: com.systemwebstudio.app.definition.AppDefinitionValidator,
     private val commits: SchemaCommitService,
     private val repo: SchemaRepository,
     private val limiter: RateLimiter,
@@ -201,7 +203,7 @@ class PromptController(
                 if (!external) throw e
                 planMessage = "AI đề xuất thay đổi không hợp lệ (${e.message}); nội dung không đổi."; outcome = "UNSUPPORTED"; current
             }
-            val violations = if (next != current) validator.validate(next) else emptyList()
+            val violations = if (next != current) validator.validate(next) + appDefinitions.validateExtensions(next).violations else emptyList()
             if (external && violations.isNotEmpty()) {
                 planMessage = "AI đề xuất nội dung không hợp lệ (${violations.first().path}: ${violations.first().message}); nội dung không đổi."; outcome = "UNSUPPORTED"; next = current
             }

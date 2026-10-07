@@ -5,7 +5,9 @@ import com.systemwebstudio.access.Permission
 import com.systemwebstudio.common.ApiException
 import com.systemwebstudio.integration.deploy.DeployProvider
 import com.systemwebstudio.integration.deploy.DeployRequest
+import com.systemwebstudio.integration.deploy.PointerFence
 import com.systemwebstudio.integration.deploy.DeployResult
+import com.systemwebstudio.integration.deploy.DeployVerification
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.data.redis.core.StringRedisTemplate
@@ -32,11 +34,31 @@ data class LiveSite(
 @Service
 class SiteService(
     private val jdbc: JdbcTemplate, private val json: JsonMapper, private val access: AccessService, private val redis: StringRedisTemplate,
-    @Value("\${app.sites.origin:http://127.0.0.1:18088}") val sitesOrigin: String,
-    @Value("\${app.sites.studio-origin:http://localhost:3100}") val studioOrigin: String,
-    @Value("\${app.sites.session-hours:8}") private val sessionHours: Long
+    @Value("\${app.sites.origin}") val sitesOrigin: String,
+    @Value("\${app.sites.studio-origin}") val studioOrigin: String,
+    @Value("\${app.sites.session-hours:8}") private val sessionHours: Long,
+    /**
+     * Where a published app finds the Data Runtime API (`app.sites.data-api-base`). It is configuration of the ENVIRONMENT (read once, when the API
+     * process starts; a change needs a restart), never part of an artifact: the same artifact runs in DEV / STAGING / PROD against different hosts, and a
+     * rollback needs no rebuild. Blank = not configured. NOTE: a published code app is served with `connect-src 'self' <sites origin>` and an opaque
+     * origin, so a browser can only use this address if it is the sites origin itself; see docs/parallel/c2/PUBLISHED_RUNTIME_TOPOLOGY.md.
+     */
+    @Value("\${app.sites.data-api-base:}") dataApiBaseRaw: String = ""
 ) {
     private val random = SecureRandom()
+    private val dataApiBase: String? = resolveDataApiBase(dataApiBaseRaw)
+    init {
+        // a page's runtime only calls its OWN origin: an apiBase on another origin leaves every data-bound page NOT_READY, so say so once at startup
+        if (dataApiBase != null && !sameOrigin(dataApiBase, sitesOrigin))
+            org.slf4j.LoggerFactory.getLogger(SiteService::class.java).warn("app.sites.data-api-base is not on the sites origin ({}): published pages only call their own origin, so their data panels will stay NOT_READY", sitesOrigin)
+    }
+
+    /** the browser-facing Data Runtime base for [slug]: the configured value with `{slug}` replaced by the site's slug; null when none is configured (or the value needs a slug and there is none) */
+    fun dataApiBaseFor(slug: String?): String? {
+        val template = dataApiBase ?: return null
+        if (SLUG_TOKEN !in template) return template
+        return slug?.takeIf { Regex("^[a-z0-9][a-z0-9-]{1,79}$").matches(it) }?.let { template.replace(SLUG_TOKEN, it) }
+    }
 
     fun url(slug: String) = "${sitesOrigin.trimEnd('/')}/$slug/"
 
@@ -50,9 +72,17 @@ class SiteService(
         return jdbc.queryForObject("SELECT slug FROM sites WHERE project_id = ?", String::class.java, projectId)!!
     }
 
-    fun point(projectId: UUID, deploymentId: UUID?) {
-        jdbc.update("UPDATE sites SET current_deployment_id = ?, updated_at = now() WHERE project_id = ?", deploymentId, projectId)
+    /** the visibility a release was published with becomes the project's again (runs inside the pointer commit's transaction) */
+    fun copyVisibilityOf(projectId: UUID, deploymentId: UUID) {
+        jdbc.update("UPDATE projects SET site_visibility = (SELECT visibility FROM deployments WHERE id = ?) WHERE id = ?", deploymentId, projectId)
     }
+
+    fun artifactOf(deploymentId: UUID): UUID? =
+        jdbc.query("SELECT artifact_id FROM deployments WHERE id = ?", { rs, _ -> rs.getObject(1, UUID::class.java) }, deploymentId).firstOrNull()
+
+    /** the deployment the site points at, null = offline / no site */
+    fun pointer(projectId: UUID): UUID? =
+        jdbc.query("SELECT current_deployment_id FROM sites WHERE project_id = ?", { rs, _ -> rs.getObject(1, UUID::class.java) }, projectId).firstOrNull()
 
     /** The artifact currently served for a slug, or null (unknown slug, offline, deleted project). */
     fun live(slug: String): LiveSite? = jdbc.query(
@@ -74,12 +104,50 @@ class SiteService(
     fun previewProject(token: String): UUID? = jdbc.query("SELECT project_id FROM code_changes WHERE preview_token = ?", { rs, _ -> rs.getObject(1, UUID::class.java) }, token).firstOrNull()
 
     /** `__factory/config.json` for @company/app-sdk: identity of the app, environment, visibility, and the viewer of a PRIVATE app. No secrets. */
-    fun runtimeConfig(projectId: UUID, environment: String, visibility: String, userId: UUID?): Map<String, Any?> {
+    fun runtimeConfig(projectId: UUID, environment: String, visibility: String, userId: UUID?, releaseId: UUID? = null, slug: String? = null, pageSite: Boolean = false): Map<String, Any?> {
         val p = jdbc.queryForMap("SELECT name FROM projects WHERE id = ?", projectId)
-        val version = jdbc.query("SELECT max(version_number) FROM project_versions WHERE project_id = ?", { rs, _ -> rs.getObject(1)?.toString() }, projectId).firstOrNull()
+        // the version of the release that is being SERVED; a preview (no release) shows the latest one. It must not be the project's latest version for a
+        // production request: after a rollback the served release is older than the newest version.
+        val version = (releaseId?.let { jdbc.query("SELECT v.version_number FROM deployments d JOIN project_versions v ON v.id = d.version_id WHERE d.id = ? AND d.project_id = ?",
+            { rs, _ -> rs.getObject(1)?.toString() }, it, projectId).firstOrNull() }
+            ?: jdbc.query("SELECT max(version_number) FROM project_versions WHERE project_id = ?", { rs, _ -> rs.getObject(1)?.toString() }, projectId).firstOrNull())
         val user = userId?.let { jdbc.query("SELECT coalesce(display_name, username) FROM users WHERE id = ?", { rs, _ -> rs.getString(1) }, it).firstOrNull() }
         return mapOf("appId" to projectId.toString(), "appName" to p["name"], "environment" to environment, "visibility" to visibility, "version" to version,
-            "user" to user?.let { mapOf("displayName" to it) }, "flags" to emptyMap<String, Boolean>(), "apiBase" to null, "generatedAt" to java.time.Instant.now().toString())
+            "user" to user?.let { mapOf("displayName" to it) }, "flags" to emptyMap<String, Boolean>(),
+            // the public data route is anonymous (published-runtime.md §4): a PRIVATE page site has no data address until a contract says how a member reaches it
+            "apiBase" to (if (pageSite && visibility != "PUBLIC") null else dataApiBaseFor(slug)),
+            "releaseId" to releaseId?.toString(), "generatedAt" to java.time.Instant.now().toString())
+    }
+
+    companion object {
+        /**
+         * The configured Data Runtime API base, or null when nothing usable is configured: blank, not an absolute http(s) URL, no host, or carrying
+         * credentials. Nothing is invented: an unusable value is "not configured", never a guess.
+         */
+        fun resolveDataApiBase(raw: String?): String? {
+            val v = raw?.trim().orEmpty()
+            if (v.isEmpty()) return null
+            // the template may name the site once or more through the single token {slug}; any other brace is not configuration
+            if ("\${" in v) return null                                        // ${slug} (another syntax) would silently become "$<slug>"
+            val probe = v.replace(SLUG_TOKEN, "x-sample")
+            if ('{' in probe || '}' in probe) return null
+            val uri = runCatching { java.net.URI(probe) }.getOrNull() ?: return null
+            if (uri.scheme?.lowercase() !in setOf("http", "https") || uri.host.isNullOrBlank() || uri.userInfo != null || uri.fragment != null) return null
+            return v
+        }
+        const val SLUG_TOKEN = "{slug}"
+
+        /** scheme, host and port of a configured base (the {slug} token read as a host label) against the sites origin */
+        fun sameOrigin(base: String, origin: String): Boolean {
+            fun parts(v: String): Triple<String, String, Int>? {
+                val u = runCatching { java.net.URI(v.replace(SLUG_TOKEN, "x-sample").trim()) }.getOrNull() ?: return null
+                val scheme = u.scheme?.lowercase() ?: return null
+                val host = u.host?.lowercase() ?: return null
+                return Triple(scheme, host.replace("x-sample", "*"), if (u.port != -1) u.port else if (scheme == "https") 443 else 80)
+            }
+            val a = parts(base) ?: return false; val b = parts(origin) ?: return false
+            return a.first == b.first && a.third == b.third && (a.second == b.second || '*' in a.second)
+        }
     }
 
     fun preview(token: String): Pair<String, Map<String, ManifestFile>>? {
@@ -147,14 +215,54 @@ class SiteService(
 /** Real static hosting (ADR 0009): the artifact built in BUILDING becomes what the site's address serves. */
 @Component
 @ConditionalOnProperty(name = ["app.deploy.provider"], havingValue = "static")
-class StaticSiteDeployProvider(private val sites: SiteService) : DeployProvider {
+class StaticSiteDeployProvider(private val sites: SiteService, private val verifier: ArtifactVerifier, private val probe: ReleaseHealthProbe) : DeployProvider {
     override val name = "static"
     override val buildsArtifacts = true
     override fun deploy(request: DeployRequest): DeployResult {
         val projectId = request.projectId ?: return DeployResult(null, "Missing project")
-        if (request.artifactId == null) return DeployResult(null, "No artifact was built")
+        val artifactId = request.artifactId ?: return DeployResult(null, "No artifact was built")
+        val fence = request.fence ?: return DeployResult(null, "The release scope fence is missing: the pointer is only moved by the operation that holds the scope")
         val slug = sites.ensureSlug(projectId, request.projectName)
-        sites.point(projectId, request.deploymentId)
+        // the last look before the pointer moves: the files can disappear between the release check and this switch
+        verifier.verify(artifactId).let { if (!it.ok) return DeployResult(null, "the artifact cannot be served: ${it.reason}") }
+        if (!fence.commit(request.deploymentId)) return DeployResult(null, PointerFence.REFUSED)
         return DeployResult(sites.url(slug), null)
+    }
+
+    /**
+     * Confirmation after the switch: the address points at this release, everything it serves is in the artifact store, and, when a real public host
+     * is configured, the address really answers. Without one the answer says that the HTTP probe did not run.
+     */
+    override fun verify(request: DeployRequest): DeployVerification {
+        val projectId = request.projectId ?: return DeployVerification.unhealthy("missing project")
+        val artifactId = request.artifactId ?: return DeployVerification.unhealthy("no artifact was built")
+        if (sites.pointer(projectId) != request.deploymentId) return DeployVerification.unhealthy("the site does not point at this release")
+        val check = verifier.verify(artifactId)
+        if (!check.ok) return DeployVerification.unhealthy("the artifact cannot be served: ${check.reason}")
+        val base = "the site points at this release and all its files are present"
+        if (!probe.configured) return DeployVerification.healthy("$base (HTTP probe of the public address: not configured)")
+        val url = sites.url(sites.ensureSlug(projectId, request.projectName))
+        val answer = probe.probe(url, protectedSite = request.visibility != "PUBLIC")
+        return when (answer.state) {
+            DeployVerification.State.HEALTHY -> DeployVerification.healthy("$base; ${answer.detail}")
+            DeployVerification.State.UNHEALTHY -> DeployVerification.unhealthy(answer.detail ?: "the public address is not healthy")
+            DeployVerification.State.UNKNOWN -> DeployVerification.unknown(answer.detail ?: "the public address could not be checked")
+        }
+    }
+
+    override fun restore(projectId: UUID, previousDeploymentId: UUID?): DeployResult =
+        DeployResult(null, "The release scope fence is missing: the pointer is only moved by the operation that holds the scope")
+
+    /** The pointer and the visibility that release was published with move together, in the one transaction of the compare-and-set. */
+    override fun restore(projectId: UUID, previousDeploymentId: UUID?, fence: PointerFence?): DeployResult {
+        if (fence == null) return restore(projectId, previousDeploymentId)
+        previousDeploymentId?.let { target ->
+            val artifactId = sites.artifactOf(target) ?: return DeployResult(null, "release has no artifact")
+            verifier.verify(artifactId).let { if (!it.ok) return DeployResult(null, "the artifact cannot be served: ${it.reason}") }
+        }
+        val committed = fence.commit(previousDeploymentId) {
+            if (previousDeploymentId != null) sites.copyVisibilityOf(projectId, previousDeploymentId)
+        }
+        return if (committed) DeployResult(null, null) else DeployResult(null, PointerFence.REFUSED)
     }
 }

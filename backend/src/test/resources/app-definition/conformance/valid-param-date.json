@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 2,
+  "kind": "PAGE_SCHEMA",
+  "page": "date-param",
+  "sections": [{"id": "hero-1", "type": "Hero", "componentVersion": "1.0.0", "props": {"title": "Báo cáo"}}],
+  "dataSources": [{"id": "erp-db", "type": "postgres"}],
+  "queries": [
+    {"id": "report", "dataSourceRef": "erp-db", "operationKey": "report.by-day",
+     "params": [{"name": "day", "type": "DATE", "default": "2026-10-05"}, {"name": "until", "type": "DATE", "required": false}]}
+  ]
+}

@@ -54,10 +54,35 @@ services:
   sites-gateway:
     image: nginxinc/nginx-unprivileged:1.29-alpine
     environment:
-      API_UPSTREAM: host.docker.internal:${API_PORT:-18081}
+      API_UPSTREAM: ${API_UPSTREAM_HOST:-host.docker.internal}:${API_PORT:-18081}   # public-up.sh passes the IPv4 of the host: host.docker.internal also has an AAAA that is unreachable on Docker Desktop
       SITES_HOST: ${SITES_HOST:-sites.localhost}
+      GATEWAY_REAL_IP_FROM: ${GATEWAY_REAL_IP_FROM:-127.0.0.1}   # proxies whose X-Forwarded-For is believed (tunnel / LB range); default none
+      GATEWAY_FORCE_HTTPS: ${GATEWAY_FORCE_HTTPS:-0}
     ports: ["127.0.0.1:${SITES_GATEWAY_PORT:-28088}:8080"]
     volumes: ["./infra/sites-gateway/default.conf.template:/etc/nginx/templates/default.conf.template:ro"]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    read_only: true
+    tmpfs: ["/tmp", "/etc/nginx/conf.d:uid=101,gid=101,mode=0755"]
+    mem_limit: 128m
+    restart: unless-stopped
+    healthcheck: { test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"], interval: 10s, timeout: 3s, retries: 6 }
+
+  # Portal gateway (D-C0-39): one origin for the three portal hostnames (Platform / Admin / Studio), routed by Host. Redirects plain http to https, decides the client address, 404s any other host.
+  # The tunnel points platform./admin./studio. at 127.0.0.1:${PORTAL_GATEWAY_PORT}; the portals (next start) listen on loopback only.
+  portal-gateway:
+    image: nginxinc/nginx-unprivileged:1.29-alpine
+    environment:
+      PORTAL_UPSTREAM_HOST: ${API_UPSTREAM_HOST:-host.docker.internal}   # IPv4 of the host (public-up.sh): host.docker.internal also has an unreachable AAAA on Docker Desktop
+      PORTAL_PLATFORM_PORT: ${PORTAL_PLATFORM_PORT_PUBLIC:-3201}
+      PORTAL_ADMIN_PORT: ${PORTAL_ADMIN_PORT_PUBLIC:-3202}
+      PORTAL_STUDIO_PORT: ${PORTAL_STUDIO_PORT_PUBLIC:-3203}
+      PORTAL_PLATFORM_HOST: ${PUBLIC_PLATFORM_HOST:-platform.toolsmcp.uk}
+      PORTAL_ADMIN_HOST: ${PUBLIC_ADMIN_HOST:-admin.toolsmcp.uk}
+      PORTAL_STUDIO_HOST: ${PUBLIC_HOST:-studio.toolsmcp.uk}
+      PORTAL_REAL_IP_FROM: ${PORTAL_REAL_IP_FROM:-127.0.0.1}   # the measured peer of the tunnel (public-up.sh: the bridge gateway of this network); default none
+      PORTAL_FORCE_HTTPS: ${PORTAL_FORCE_HTTPS:-0}
+    ports: ["127.0.0.1:${PORTAL_GATEWAY_PORT:-3210}:8080"]
+    volumes: ["./infra/portal-gateway/default.conf.template:/etc/nginx/templates/default.conf.template:ro"]
     extra_hosts: ["host.docker.internal:host-gateway"]
     read_only: true
     tmpfs: ["/tmp", "/etc/nginx/conf.d:uid=101,gid=101,mode=0755"]

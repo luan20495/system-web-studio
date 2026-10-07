@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 2,
+  "kind": "PAGE_SCHEMA",
+  "page": "workflows",
+  "sections": [{"id": "hero-1", "type": "Hero", "componentVersion": "1.0.0", "props": {"title": "Quy trình"}}],
+  "actions": [
+    {"id": "act-a", "type": "NOTIFY", "channel": "IN_APP", "templateRef": "tpl-a"},
+    {"id": "act-undo", "type": "NOTIFY", "channel": "IN_APP", "templateRef": "tpl-undo"},
+    {"id": "act-notify", "type": "NOTIFY", "channel": "EMAIL", "templateRef": "tpl-notify"}
+  ],
+  "workflows": [
+    {"id": "wf-manual", "steps": [{"id": "only", "actionRef": "act-a"}]},
+    {
+      "id": "wf-full",
+      "name": "Duyệt đơn",
+      "enabled": false,
+      "trigger": "SCHEDULE",
+      "schedule": "0 8 * * 1-5",
+      "timezone": "Asia/Ho_Chi_Minh",
+      "startStepId": "s-start",
+      "compensateOnCancel": true,
+      "limits": {"maxSteps": 20, "maxStepExecutions": 50, "maxRetries": 5, "maxDurationSeconds": 86400, "maxPayloadBytes": 65536, "maxDepth": 3, "maxStepTimeoutMillis": 60000},
+      "steps": [
+        {
+          "id": "s-start", "actionRef": "act-a",
+          "inputs": {
+            "customer": {"from": "INPUT", "path": "customer"},
+            "mode": {"from": "LITERAL", "value": "auto"}
+          },
+          "next": "s-wait",
+          "onError": "s-fail",
+          "retry": {"maxAttempts": 3, "initialBackoffMillis": 500, "multiplier": 1.5, "maxBackoffMillis": 5000},
+          "timeoutMillis": 10000,
+          "compensationActionRef": "act-undo"
+        },
+        {"id": "s-wait", "kind": "WAIT", "waitSeconds": 60, "next": "s-approve"},
+        {
+          "id": "s-approve", "kind": "APPROVAL",
+          "approval": {
+            "title": "Duyệt đơn hàng",
+            "approvers": [{"kind": "ROLE", "role": "manager"}, {"kind": "GROUP", "groupId": "finance"}],
+            "requiredApprovals": 2, "expiresInSeconds": 86400, "allowSelfApproval": false,
+            "notifyTemplateRef": "tpl-approval", "onReject": "s-fail", "onExpire": "s-fail"
+          },
+          "next": "s-branch"
+        },
+        {
+          "id": "s-branch", "kind": "BRANCH",
+          "branches": [
+            {"condition": {"all": [
+               {"op": "EQ", "left": {"from": "STEP", "stepId": "s-start", "path": "status"}, "right": {"from": "LITERAL", "value": "ok"}},
+               {"not": {"exists": {"from": "INPUT", "path": "skip"}}}
+             ]}, "next": "s-notify"},
+            {"condition": {"any": [
+               {"op": "IN", "left": {"from": "INPUT", "path": "tier"}, "right": {"from": "LITERAL", "value": "gold"}},
+               {"op": "GTE", "left": {"from": "INPUT", "path": "amount"}, "right": {"from": "LITERAL", "value": 1000}}
+             ]}, "next": "s-end"}
+          ],
+          "defaultNext": "s-end"
+        },
+        {"id": "s-notify", "actionRef": "act-notify", "inputs": {"orderId": {"from": "STEP", "stepId": "s-start", "path": "result.id"}}, "next": "s-end"},
+        {"id": "s-end", "kind": "END"},
+        {"id": "s-fail"}
+      ]
+    }
+  ]
+}

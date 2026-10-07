@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 2,
+  "kind": "PAGE_SCHEMA",
+  "page": "bad-field",
+  "sections": [{"id": "hero-1", "type": "Hero", "componentVersion": "1.0.0", "props": {"title": "T"}}],
+  "dataSources": [{"id": "erp-db", "type": "postgres"}],
+  "queries": [{"id": "orders-list", "dataSourceRef": "erp-db", "operationKey": "orders.list", "rawSql": "select 1"}],
+  "mappings": [{"id": "m1", "queryRef": "orders-list", "fields": [{"from": "a", "to": "b", "expression": "a + 1"}]}],
+  "actions": [{"id": "go", "type": "NAVIGATE", "pageRef": "home", "url": "https://example.com"}],
+  "futureTopLevelKey": {"x": 1}
+}

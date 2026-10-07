@@ -57,7 +57,7 @@ class HardeningTests : IntegrationTestBase() {
             val env = MockEnvironment().withProperty("spring.datasource.password", "s3cure-db-password-1").withProperty("spring.data.redis.password", "s3cure-redis-password-1")
                 .withProperty("spring.rabbitmq.password", "s3cure-rabbit-password-1").withProperty("app.storage.secret-key", "s3cure-minio-secret-1")
                 .withProperty("server.servlet.session.cookie.secure", "true").withProperty("app.cors.allowed-origins", "https://studio.example.com")
-                .withProperty("app.storage.public-endpoint", "https://files.example.com").withProperty("app.forms.ip-salt", "salt-for-the-hardening-test-0001").withProperty("app.proxy.trust", "true").withProperty("app.proxy.trusted-cidrs", "10.0.0.0/8")
+                .withProperty("app.storage.public-endpoint", "https://files.example.com").withProperty("app.forms.ip-salt", "salt-for-the-hardening-test-0001").withProperty("app.sites.origin", "https://sites.example.com").withProperty("app.sites.studio-origin", "https://studio.example.com").withProperty("app.render.url", "http://render.internal:18095").withProperty("app.proxy.trust", "true").withProperty("app.proxy.trusted-cidrs", "10.0.0.0/8")
             env.setActiveProfiles("prod")
             p.forEach { env.setProperty(it.first, it.second) }
             ProductionConfigValidator(env)

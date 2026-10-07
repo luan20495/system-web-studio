@@ -1,0 +1,28 @@
+// WIRING SKELETON — not compiled (see README.md). Moves to wiring/AiDataCatalogAdapter.kt at checklist step 11 (import C3), after C1 (step 4) and C2 (step 6).
+// The planner stays OFF (app.ai-planner.enabled=false) until this adapter, C1's canonical permissions and the PlanGuard tests are green on the Mac.
+// Tests to add (W-06): AiDataCatalogAdapterTests — a user without DATA_SOURCE_VIEW sees an empty list; no host/URL/credential/SQL/sample text reaches GrantedDataSource;
+// the adapter calls C3's provider with the CALLER's context only.
+package com.systemwebstudio.wiring
+
+import com.systemwebstudio.access.AccessContext
+import com.systemwebstudio.ai.planner.AiDataCatalog as PlannerCatalog         // C2's consumer port: fun interface granted(ctx: AccessContext): List<GrantedDataSource>
+import com.systemwebstudio.ai.planner.GrantedDataSource
+import com.systemwebstudio.ai.planner.GrantedOperation
+import com.systemwebstudio.data.discovery.AiDataCatalogProvider                // C3 provider: catalog(GatewayContext, AiCatalogOptions) -> AiDataCatalog
+import com.systemwebstudio.data.gateway.GatewayContext
+
+/*
+ * C3 AiDataCatalogProvider (masked, per-caller, default-deny)  ->  C2 planner's PlannerCatalog.
+ *
+ *   AiCatalogDataSource(id, name, type, schema?, queries[], mutations[])  ->  GrantedDataSource(sourceRef = id.toString(), type, name, operations)
+ *   AiCatalogQuery(id, params[], maxRows)                                 ->  GrantedOperation(key = id, mode = READ,  params = params.map { it.name }, fields = entity fields of the query's entity, names only)
+ *   AiCatalogMutation(id, kind, params[], entity?)                        ->  GrantedOperation(key = id, mode = WRITE, params = params.map { it.name }, fields = entity fields, names only)
+ *
+ * Only NAMES cross: no sample values (includeMaskedSamples stays false), no `sensitive` field (C3 already removed it from names it must not give), no host, URL, port, SQL,
+ * credential reference or configNonSecret. `sourceRef` is opaque to the model (C2 never sends it) and is what C2's `dataSources[].sourceRef` stores.
+ * The context is the caller's: GatewayContext built from the AccessContext the planner endpoint already resolved (RequestContexts.gatewayContext). No tenant parameter exists.
+ */
+class AiDataCatalogAdapter(private val provider: AiDataCatalogProvider /* , private val contexts: RequestContexts */) : PlannerCatalog {
+    override fun granted(ctx: AccessContext): List<GrantedDataSource> =
+        TODO("W-06: val g: GatewayContext = <build from ctx: tenantContext, userId, ActorKind.USER, workspaceId, projectId?>; val c = provider.catalog(g) /* default options: no samples */; map as above; on any exception return emptyList() (never a partial list)")
+}

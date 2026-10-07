@@ -1,0 +1,31 @@
+// WIRING SKELETON — not compiled (see README.md). Moves to wiring/DataWebhookController.kt at checklist step 11 (import C3). Active only when app.data-platform.webhooks-enabled=true.
+// Security is declared in identity/SecurityConfiguration (DATA_WEBHOOK_INGEST: permitAll + CSRF-exempt for exactly this POST). Signature, timestamp tolerance, replay,
+// size limit and rate limit are C3's (WebhookIngress / WebhookHttp); this controller adds NOTHING to them and takes NOTHING from the request except what WebhookHttp picks.
+// Tests to add (W-07): WebhookControllerTests — unsigned = 401 (uniform body), oversized = 413 without buffering, repeated signature header = unsigned, a tenant id in the body/query is ignored.
+package com.systemwebstudio.wiring
+
+import com.systemwebstudio.data.sync.webhook.WebhookHttp
+import com.systemwebstudio.data.sync.webhook.WebhookIngress
+import com.systemwebstudio.data.sync.webhook.WebhookRoutes
+
+/*
+ *   @RestController
+ *   @ConditionalOnProperty("app.data-platform.webhooks-enabled", havingValue = "true")
+ *   class DataWebhookController(private val ingress: WebhookIngress) {
+ *       @PostMapping(WebhookRoutes.PATH)                                     // "/api/v1/webhooks/data/{endpointId}" — the same string as SecurityConfiguration.DATA_WEBHOOK_INGEST
+ *       fun ingest(@PathVariable endpointId: String, request: HttpServletRequest): ResponseEntity<String>
+ *   }
+ *
+ * Body of `ingest` (specification):
+ *   1. body    = WebhookHttp.readBody(request.inputStream, request.contentLengthLong.takeIf { it >= 0 })  ?: return 413 (nothing was buffered past the limit). Raw BYTES: the signature covers them.
+ *   2. headers = request.headerNames.toList().associateWith { request.getHeaders(it).toList() }
+ *   3. req     = WebhookHttp.request(endpointId, headers, body, peerAddress = request.remoteAddr)   // remoteAddr is the transport peer; ClientIpFilter has already resolved a trusted proxy
+ *   4. res     = ingress.handle(req)                                                                    // C3: signature -> replay -> rate limit -> enqueue by identifier
+ *   5. return ResponseEntity.status(res.status).contentType(JSON).body(WebhookHttp.responseBody(res))   // fixed body {"status":"<code>"}; never an echo of the request
+ *
+ * Do not add: an @RequestBody parse, a CORS header, a session read, a redirect, a log of headers/body.
+ */
+internal object DataWebhookControllerSpec {
+    const val PATH = WebhookRoutes.PATH
+    val collaborators = listOf(WebhookHttp::class, WebhookIngress::class)
+}

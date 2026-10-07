@@ -23,7 +23,7 @@ import java.util.UUID
 @Component
 class RenderClient(
     private val json: JsonMapper,
-    @Value("\${app.render.url:http://127.0.0.1:18095}") private val url: String,
+    @Value("\${app.render.url}") private val url: String,
     @Value("\${app.render.token:}") private val token: String
 ) {
     private val http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
@@ -32,18 +32,22 @@ class RenderClient(
         val body = json.writeValueAsString(mapOf("schema" to schema, "assets" to assets))
         val request = HttpRequest.newBuilder(URI("${url.trimEnd('/')}/render")).timeout(Duration.ofSeconds(20))
             .header("Content-Type", "application/json").header("X-Render-Token", token).POST(HttpRequest.BodyPublishers.ofString(body)).build()
-        val response = try { http.send(request, HttpResponse.BodyHandlers.ofString()) } catch (e: Exception) { throw BuildFailure("Render worker is not reachable") }
-        if (response.statusCode() != 200) throw BuildFailure("Render worker answered HTTP ${response.statusCode()}")
+        val response = try { http.send(request, HttpResponse.BodyHandlers.ofString()) } catch (e: Exception) { throw BuildFailure("Render worker is not reachable", transient = true) }
+        if (response.statusCode() != 200) throw BuildFailure("Render worker answered HTTP ${response.statusCode()}", transient = response.statusCode() >= 500)
         return response.body()
     }
+
+    private fun reasonOf(body: String): String =
+        runCatching { json.readTree(body).get("error")?.asString() }.getOrNull()?.replace(Regex("[\\r\\n]+"), " ")?.take(300)?.takeIf { it.isNotBlank() } ?: "the renderer refused it"
 
     /** Every page of a (multi-page) site: index.html, <slug>/index.html, 404.html. */
     fun renderSite(schema: JsonNode, assets: Map<String, String>): Map<String, String> {
         val body = json.writeValueAsString(mapOf("schema" to schema, "assets" to assets))
         val request = HttpRequest.newBuilder(URI("${url.trimEnd('/')}/render-site")).timeout(Duration.ofSeconds(30))
             .header("Content-Type", "application/json").header("X-Render-Token", token).POST(HttpRequest.BodyPublishers.ofString(body)).build()
-        val response = try { http.send(request, HttpResponse.BodyHandlers.ofString()) } catch (e: Exception) { throw BuildFailure("Render worker is not reachable") }
-        if (response.statusCode() != 200) throw BuildFailure("Render worker answered HTTP ${response.statusCode()}")
+        val response = try { http.send(request, HttpResponse.BodyHandlers.ofString()) } catch (e: Exception) { throw BuildFailure("Render worker is not reachable", transient = true) }
+        if (response.statusCode() == 422) throw BuildFailure("The page cannot be published: " + reasonOf(response.body()), transient = false)      // a refusal with its reason (e.g. a data binding that cannot work)
+        if (response.statusCode() != 200) throw BuildFailure("Render worker answered HTTP ${response.statusCode()}", transient = response.statusCode() >= 500)
         val files = json.readTree(response.body()).get("files") ?: throw BuildFailure("Render worker returned no files")
         return files.propertyNames().associateWith { files.get(it).asString() }
     }
@@ -61,14 +65,15 @@ class RenderClient(
     }
 }
 
-class BuildFailure(message: String) : RuntimeException(message)
+/** A build step that failed. `transient` = the cause is expected to go away (worker restarting, 5xx): the processor may retry the step. */
+class BuildFailure(message: String, val transient: Boolean = false) : RuntimeException(message)
 
 /** Result of a safe-render preview: PNG bytes, or why there is none (UNAVAILABLE = no browser configured on the worker). */
 sealed interface PreviewResult { class Png(val bytes: ByteArray) : PreviewResult; object Unavailable : PreviewResult; class Failed(val reason: String) : PreviewResult }
 
 /** AST service of the same worker (Design mode for code apps): parse-only, nothing executed. */
 @Component
-class AstClient(private val json: JsonMapper, @Value("\${app.render.url:http://127.0.0.1:18095}") private val url: String, @Value("\${app.render.token:}") private val token: String) {
+class AstClient(private val json: JsonMapper, @Value("\${app.render.url}") private val url: String, @Value("\${app.render.token:}") private val token: String) {
     private val http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
     fun post(path: String, body: Any): Pair<Int, JsonNode> {
         val r = try { http.send(HttpRequest.newBuilder(URI("${url.trimEnd('/')}$path")).timeout(Duration.ofSeconds(20)).header("Content-Type", "application/json")
@@ -106,17 +111,27 @@ class StaticSiteBuilder(private val jdbc: JdbcTemplate, private val json: JsonMa
         // every page of the site from one schema version: the deployment is an atomic snapshot of all pages
         val pages = render.renderSite(schema, urls)
         if ("index.html" !in pages) throw BuildFailure("Render worker returned no home page")
-        pages.forEach { (path, html) ->
+        pages.forEach { (path, content) ->
+            if (path == RUNTIME_PATH) {
+                // the client runtime of a data-bound page: one static script, the same bytes in every release, served as a file of the artifact
+                if (content.isBlank() || content.length > MAX_RUNTIME_BYTES) throw BuildFailure("The page runtime from the renderer is empty or too large")
+                files[path] = content.toByteArray(Charsets.UTF_8) to "application/javascript; charset=utf-8"
+                return@forEach
+            }
             if (!PAGE_PATH.matches(path)) throw BuildFailure("Unexpected page path from the renderer")
-            // the renderer never emits scripts for a published page; anything else means the input or renderer is wrong
-            if (Regex("<\\s*script", RegexOption.IGNORE_CASE).containsMatchIn(html)) throw BuildFailure("Rendered page contains a script")
-            files[path] = html.toByteArray(Charsets.UTF_8) to "text/html; charset=utf-8"
+            // the renderer never emits an author script for a published page; the ONLY script allowed is the one reference to the runtime file
+            val withoutRuntimeTag = RUNTIME_TAG.replace(content, "")
+            if (SCRIPT.containsMatchIn(withoutRuntimeTag)) throw BuildFailure("Rendered page contains a script")
+            if (withoutRuntimeTag.length != content.length && RUNTIME_PATH !in pages) throw BuildFailure("A rendered page references the page runtime but the renderer did not ship it")
+            files[path] = content.toByteArray(Charsets.UTF_8) to "text/html; charset=utf-8"
         }
+        // a runtime nobody references would be dead weight in the artifact and in the CSP decision (a script-allowing page is only ever served when the runtime is present)
+        if (RUNTIME_PATH in pages && pages.filterKeys { it != RUNTIME_PATH }.values.none { RUNTIME_TAG.containsMatchIn(it) }) throw BuildFailure("The renderer shipped a page runtime that no page uses")
         val manifest = files.map { (path, f) -> ManifestFile(path, f.first.size, sha256(f.first), f.second) }
         val manifestJson = json.writeValueAsString(manifest)
         val sha = sha256(manifestJson.toByteArray())
-        existing(projectId, sha)?.let { return it }
         val prefix = "$projectId/$sha"
+        reuseOrRevive(jdbc, store, projectId, sha, files.mapKeys { "$prefix/${it.key}" })?.let { return it }
         files.forEach { (path, f) -> store.putOnce("$prefix/$path", f.first, f.second) }
         jdbc.update("""INSERT INTO artifacts (id, project_id, version_id, sha256, storage_prefix, file_count, total_bytes, manifest)
             VALUES (?,?,?,?,?,?,?,CAST(? AS jsonb)) ON CONFLICT (project_id, sha256) DO NOTHING""",
@@ -128,6 +143,29 @@ class StaticSiteBuilder(private val jdbc: JdbcTemplate, private val json: JsonMa
         jdbc.query("SELECT id FROM artifacts WHERE project_id = ? AND sha256 = ?", { rs, _ -> rs.getObject(1, UUID::class.java) }, projectId, sha).firstOrNull()
 
     companion object {
+        /**
+         * The artifact of this content if one is already recorded, else null (the caller builds it). Content-addressed, so the same content
+         * is the same artifact, but a row that retention already removed has no files any more: handing it back would give a release
+         * that cannot be served. Such a row is brought back instead: its files are written again (write-once, keyed by content) and the row
+         * is live again with a fresh `created_at`, which puts it back inside retention's one-hour grace so a cleanup that is running right now
+         * cannot take it again.
+         * [objects]: full store key -> bytes and content type.
+         */
+        fun reuseOrRevive(jdbc: JdbcTemplate, store: ArtifactStore, projectId: UUID, sha: String, objects: Map<String, Pair<ByteArray, String>>): UUID? {
+            val row = jdbc.query("SELECT id, deleted_at IS NOT NULL FROM artifacts WHERE project_id = ? AND sha256 = ?",
+                { rs, _ -> rs.getObject(1, UUID::class.java) to rs.getBoolean(2) }, projectId, sha).firstOrNull() ?: return null
+            if (!row.second) return row.first
+            objects.forEach { (key, f) -> store.putOnce(key, f.first, f.second) }
+            jdbc.update("UPDATE artifacts SET deleted_at = NULL, created_at = now() WHERE id = ?", row.first)
+            return row.first
+        }
+
+        /** the client runtime of a data-bound PAGE_SCHEMA page (workers/render/page-runtime.ts); present in an artifact only together with the references to it */
+        const val RUNTIME_PATH = "_runtime/page-runtime.js"
+        private const val MAX_RUNTIME_BYTES = 32 * 1024
+        /** the one script reference a published page may contain: relative to the page, to the runtime file, deferred, nothing else */
+        private val RUNTIME_TAG = Regex("<script src=\"(\\./|\\.\\./)_runtime/page-runtime\\.js\" defer></script>")
+        private val SCRIPT = Regex("<\\s*script", RegexOption.IGNORE_CASE)
         val PAGE_PATH = Regex("^(index\\.html|404\\.html|[a-z0-9]+(-[a-z0-9]+)*/index\\.html)$")
         fun sha256(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     }

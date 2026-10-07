@@ -1,5 +1,7 @@
 # Contract — Data Platform (DataConnector, SchemaDiscovery, QueryExecutor, MappingEngine, DataGateway)
 
+> **SUPERSEDED (2026-10-05, C0)** by `docs/contracts/v2/data-runtime.md`. This file is the Phase 0 draft, kept for history only; do not implement from it.
+
 Owner: **C3**. Trạng thái: DESIGN. Package mới: `com.systemwebstudio.data.{datasource,discovery,query,mapping,gateway}`.
 
 ## Hiện trạng cần bảo toàn

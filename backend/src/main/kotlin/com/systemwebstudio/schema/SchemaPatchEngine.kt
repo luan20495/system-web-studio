@@ -11,6 +11,8 @@ import tools.jackson.databind.node.ObjectNode
 /** Applies structured operations to a copy of the schema. Validation happens afterwards, in the caller. */
 @Service
 class SchemaPatchEngine(private val registry: ComponentRegistry, private val json: JsonMapper) {
+    private val definitionPatch = DefinitionPatch(json)
+
     companion object {
         private val SEGMENT = Regex("^[A-Za-z][A-Za-z0-9]{0,39}$")
         private val FORBIDDEN = setOf("__proto__", "constructor", "prototype")
@@ -26,7 +28,8 @@ class SchemaPatchEngine(private val registry: ComponentRegistry, private val jso
         copy.get("sections") as? ArrayNode ?: bad("schema has no sections array")
         ops.forEachIndexed { i, op ->
             try {
-                if (op.type in OperationTypes.site) applySite(copy, op)
+                if (op.type in OperationTypes.definitions) definitionPatch.apply(copy, op)
+                else if (op.type in OperationTypes.site) applySite(copy, op)
                 else applyOne(sectionsFor(copy, op), op, allSections(copy))
             } catch (e: ApiException) {
                 throw ApiException.badRequest("INVALID_OPERATION", "operation[$i] ${op.type}: ${e.message}", mapOf("operationIndex" to i))

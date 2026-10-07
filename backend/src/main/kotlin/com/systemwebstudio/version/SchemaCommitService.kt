@@ -1,6 +1,7 @@
 package com.systemwebstudio.version
 
 import com.systemwebstudio.access.AccessContext
+import com.systemwebstudio.app.definition.AppDefinitionValidator
 import com.systemwebstudio.audit.AuditService
 import com.systemwebstudio.common.ApiException
 import com.systemwebstudio.schema.PageSchemaValidator
@@ -24,7 +25,8 @@ class SchemaCommitService(
     private val jdbc: JdbcTemplate,
     private val repo: SchemaRepository,
     private val validator: PageSchemaValidator,
-    private val audit: AuditService
+    private val audit: AuditService,
+    private val appDefinitions: AppDefinitionValidator
 ) {
     @Transactional
     fun commit(
@@ -32,6 +34,8 @@ class SchemaCommitService(
         promptId: UUID? = null, restoredFrom: UUID? = null
     ): CommitResult {
         validator.requireValid(schema)
+        // AppDefinitionV2 keys (dataSources, queries, ...) are optional; a plain Page Schema has none, and this call is then a no-op
+        appDefinitions.requireValidExtensions(schema)
         val project = ctx.project!!
         // external navigation links may only be ADDED for approved hosts (links already in the site keep working until edited)
         val newLinks = validator.unapprovedLinks(schema) - repo.currentSchema(project.id)?.let { validator.unapprovedLinks(it) }.orEmpty().toSet()

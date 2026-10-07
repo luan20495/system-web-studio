@@ -1,0 +1,17 @@
+{
+  "page": "unknown-fields",
+  "seo": {"title": "Giữ nguyên", "noindex": false, "futureSeoKey": [1, 2, {"a": null}]},
+  "legacyUnknownKey": {"kept": true, "nested": {"list": [1, "two", false]}},
+  "sections": [
+    {"id": "hero-1", "type": "Hero", "componentVersion": "1.0.0", "props": {"title": "Hi"}, "futureSectionKey": "kept"}
+  ],
+  "pages": [
+    {"id": "about", "slug": "about", "title": "About",
+     "sections": [{"id": "footer-1", "type": "Footer", "componentVersion": "1.0.0", "props": {"text": "©"}}]}
+  ],
+  "site": {"title": "Site"},
+  "extensions": {
+    "acme.crm": {"segment": "smb", "tags": ["a", "b"], "limits": {"max": 3, "ratio": 0.25}},
+    "xweb.ai": {"lastPlanId": "plan-1", "notes": null}
+  }
+}
