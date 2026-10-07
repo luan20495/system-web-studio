@@ -34,8 +34,8 @@ data class LiveSite(
 @Service
 class SiteService(
     private val jdbc: JdbcTemplate, private val json: JsonMapper, private val access: AccessService, private val redis: StringRedisTemplate,
-    @Value("\${app.sites.origin:http://127.0.0.1:18088}") val sitesOrigin: String,
-    @Value("\${app.sites.studio-origin:http://localhost:3100}") val studioOrigin: String,
+    @Value("\${app.sites.origin}") val sitesOrigin: String,
+    @Value("\${app.sites.studio-origin}") val studioOrigin: String,
     @Value("\${app.sites.session-hours:8}") private val sessionHours: Long,
     /**
      * Where a published app finds the Data Runtime API (`app.sites.data-api-base`). It is configuration of the ENVIRONMENT (read once, when the API

@@ -41,7 +41,7 @@ data class DiffFile(val path: String, val before: String?, val after: String?)
 class CodeChangeService(
     private val code: CodeProjectService, private val jobs: BuildJobService, private val jdbc: JdbcTemplate, private val json: JsonMapper,
     private val versions: SchemaRepository, private val audit: AuditService, private val policy: BuildPolicyService,
-    @Value("\${app.sites.origin:http://127.0.0.1:18088}") private val sitesOrigin: String
+    @Value("\${app.sites.origin}") private val sitesOrigin: String
 ) {
     fun requireCode(ctx: AccessContext) { if (ctx.project!!.appType != "STATIC_APP") throw ApiException.conflict("NOT_A_CODE_PROJECT", "This project is page-schema based") }
 

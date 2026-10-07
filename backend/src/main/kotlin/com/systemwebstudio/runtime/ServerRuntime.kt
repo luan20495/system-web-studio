@@ -57,7 +57,7 @@ class ServerRuntimeService(
     @Value("\${app.build.runner-token:}") private val runnerToken: String,
     @Value("\${app.runtime.gateway-url:}") val gatewayUrl: String,
     @Value("\${app.runtime.gateway-token:}") val gatewayToken: String,
-    @Value("\${app.build.api-base:http://127.0.0.1:8080}") private val apiBase: String
+    @Value("\${app.build.api-base}") private val apiBase: String
 ) {
     /** policy (Admin → Settings, default off) AND every runtime component configured */
     val available: Boolean get() = settings.bool("server-apps.enabled") && configured

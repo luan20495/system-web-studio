@@ -211,7 +211,7 @@ class BuildJobService(
 class BuildRunnerController(
     private val jobs: BuildJobService, private val heartbeat: com.systemwebstudio.admin.RunnerHeartbeat,
     @Value("\${app.build.runner-token:}") private val token: String,
-    @Value("\${app.build.api-base:http://127.0.0.1:8080}") private val apiBase: String
+    @Value("\${app.build.api-base}") private val apiBase: String
 ) {
     private fun auth(request: HttpServletRequest) {
         val got = request.getHeader("X-Runner-Token") ?: ""

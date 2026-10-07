@@ -23,7 +23,7 @@ import java.util.UUID
 @Component
 class RenderClient(
     private val json: JsonMapper,
-    @Value("\${app.render.url:http://127.0.0.1:18095}") private val url: String,
+    @Value("\${app.render.url}") private val url: String,
     @Value("\${app.render.token:}") private val token: String
 ) {
     private val http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
@@ -69,7 +69,7 @@ sealed interface PreviewResult { class Png(val bytes: ByteArray) : PreviewResult
 
 /** AST service of the same worker (Design mode for code apps): parse-only, nothing executed. */
 @Component
-class AstClient(private val json: JsonMapper, @Value("\${app.render.url:http://127.0.0.1:18095}") private val url: String, @Value("\${app.render.token:}") private val token: String) {
+class AstClient(private val json: JsonMapper, @Value("\${app.render.url}") private val url: String, @Value("\${app.render.token:}") private val token: String) {
     private val http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
     fun post(path: String, body: Any): Pair<Int, JsonNode> {
         val r = try { http.send(HttpRequest.newBuilder(URI("${url.trimEnd('/')}$path")).timeout(Duration.ofSeconds(20)).header("Content-Type", "application/json")

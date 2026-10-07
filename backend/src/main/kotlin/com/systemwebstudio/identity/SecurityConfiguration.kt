@@ -68,7 +68,7 @@ class SecurityConfiguration {
 
     @Bean
     fun corsConfigurationSource(
-        @Value("\${app.cors.allowed-origins:http://localhost:3000,http://127.0.0.1:3000}") origins: List<String>
+        @Value("\${app.cors.allowed-origins}") origins: List<String>
     ): CorsConfigurationSource {
         val cors = CorsConfiguration().apply {
             allowedOrigins = requireExactOrigins(origins)   // never "*": credentials are allowed

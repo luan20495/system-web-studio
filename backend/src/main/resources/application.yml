@@ -6,7 +6,7 @@ spring:
   config:
     import: optional:file:../.env[.properties]
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://127.0.0.1:15432/system_web_studio}
+    url: ${DATABASE_URL}                                  # REQUIRED; the local value is in application-local.yml / scripts/_env.sh
     username: ${DATABASE_USER:studio}
     password: ${DATABASE_PASSWORD:}
     hikari:
@@ -34,14 +34,14 @@ spring:
         repository-type: indexed
   data:
     redis:
-      host: ${REDIS_HOST:127.0.0.1}
-      port: ${REDIS_PORT:16379}
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
       # Fail fast: with Redis down every request needs it (sessions), so waiting 60s helps nobody.
       timeout: 2s
       connect-timeout: 2s
   rabbitmq:
-    host: ${RABBITMQ_HOST:127.0.0.1}
-    port: ${RABBITMQ_PORT:15674}
+    host: ${RABBITMQ_HOST}
+    port: ${RABBITMQ_PORT}
     username: ${RABBITMQ_USER:studio}
     password: ${RABBITMQ_PASSWORD:}
     listener:
@@ -57,7 +57,6 @@ spring:
           initial-interval: 1s
           multiplier: 2.0
 server:
-  address: ${SERVER_ADDRESS:127.0.0.1}
   port: ${SERVER_PORT:8080}
   shutdown: graceful          # stop accepting, let in-flight requests finish (SHUTDOWN_TIMEOUT)
   max-http-request-header-size: 16KB
@@ -183,14 +182,14 @@ app:
     # Exact origins only (scheme://host[:port]): credentials are allowed, so no "*", no path (SecurityConfiguration.requireExactOrigins enforces it).
     # The default still serves the legacy single UI (:3000). When the three portals are imported (C5, import step 6) this default becomes the three
     # origins below and AuthSecurityTests follows; production has no default (application-prod.yml). See docs/parallel/WEB_SECURITY_CONFIG.md §2.
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:}
   # The three frontend deployments (ADR 0022). Declared here as the single source of truth for documentation and the C0 wiring (`wiring/web/WebOrigins`);
   # nothing reads them for CORS or OIDC yet. Each is one exact origin. A portal reaches the API only through its own same-origin /api proxy.
   web:
     origins:
-      platform: ${WEB_ORIGIN_PLATFORM:http://localhost:3001}   # SYSTEM_ADMIN (platform scope)
-      admin: ${WEB_ORIGIN_ADMIN:http://localhost:3002}         # TENANT_ADMIN and scoped managers
-      studio: ${WEB_ORIGIN_STUDIO:http://localhost:3003}       # tenant members: build, run, publish
+      platform: ${WEB_ORIGIN_PLATFORM:}   # SYSTEM_ADMIN (platform scope)
+      admin: ${WEB_ORIGIN_ADMIN:}         # TENANT_ADMIN and scoped managers
+      studio: ${WEB_ORIGIN_STUDIO:}       # tenant members: build, run, publish
   # --- V2 feature switches (C0-owned, frozen). EVERY ONE IS OFF. Turning one on is a decision recorded in docs/parallel/DECISIONS.md, not a config tweak:
   # the conditions are in docs/contracts/v2/integration-contract.md §6 and docs/parallel/V2_IMPORT_MANIFEST.md. The environment override exists for tests
   # and for the day the condition is met; prod must not set any of them before then.
@@ -261,8 +260,12 @@ app:
     max-page-chars: 24000
     model-allowlist: ${OPENROUTER_MODEL_ALLOWLIST:}            # optional comma list to restrict the free models offered
   sites:
-    origin: ${SITES_ORIGIN:http://127.0.0.1:18088}               # public address of the sites gateway (separate host from the Studio)
-    studio-origin: ${STUDIO_ORIGIN:http://localhost:3100}          # where private-site visitors are sent to sign in
+    origin: ${SITES_ORIGIN:}                                    # browser-facing address of the sites gateway (separate host from the Studio); local: application-local.yml, prod: REQUIRED
+    studio-origin: ${STUDIO_ORIGIN:}                            # where private-site visitors are sent to sign in; local: application-local.yml, prod: REQUIRED
+    # D-C0-34: where a PUBLISHED app finds the Data Runtime API = runtimeConfig.apiBase (__factory/config.json). BROWSER-facing absolute http(s) URL, never an internal
+    # host; read at request time, never baked into an artifact. Blank = not configured (apiBase null, no address is invented). Local: application-local.yml; prod: optional,
+    # must be https and not loopback / private (ProductionConfigValidator).
+    data-api-base: ${SITES_DATA_API_BASE:}
     cookie-name: site_session
     cookie-secure: ${SITES_COOKIE_SECURE:false}
     session-hours: 8
@@ -297,11 +300,11 @@ app:
     enabled: ${SERVER_APPS_ENABLED:false}
   build:
     runner-token: ${BUILD_RUNNER_TOKEN:}                         # empty = runner endpoints disabled
-    api-base: ${BUILD_API_BASE:http://127.0.0.1:8080}             # how the runner reaches this API (loopback)
+    api-base: ${BUILD_API_BASE:}                                  # how the build runner reaches this API (service-to-service URL); local: application-local.yml
     image: ${BUILD_IMAGE:node@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402}   # node:22-alpine, pinned by digest
     preview-days: 7
   render:
-    url: ${RENDER_URL:http://127.0.0.1:18095}                     # workers/render (same renderer as the Studio preview)
+    url: ${RENDER_URL:}                                           # workers/render (same renderer as the Studio preview; service-to-service URL); local: application-local.yml, prod: REQUIRED
     token: ${RENDER_TOKEN:}
   ai:
     # Other providers (ADR 0007). Each needs a key (local: optional) and an EXPLICIT model list; every model starts disabled until a
@@ -327,8 +330,8 @@ app:
   storage:
     bucket: ${MINIO_BUCKET:studio-assets}
     artifacts-bucket: ${MINIO_ARTIFACTS_BUCKET:studio-artifacts}     # private; sites are served through the API behind the sites gateway
-    endpoint: ${MINIO_ENDPOINT:http://127.0.0.1:19000}
-    public-endpoint: ${MINIO_PUBLIC_ENDPOINT:${MINIO_ENDPOINT:http://127.0.0.1:19000}}
+    endpoint: ${MINIO_ENDPOINT}
+    public-endpoint: ${MINIO_PUBLIC_ENDPOINT:${MINIO_ENDPOINT}}
     access-key: ${MINIO_ROOT_USER:}
     secret-key: ${MINIO_ROOT_PASSWORD:}
     presign-minutes: 10
@@ -339,5 +342,12 @@ app:
     provider: ${DEPLOY_PROVIDER:mock}
     step-delay-ms: 0
     recovery-interval-ms: 30000
+    # C2 V30 release scope (docs/parallel/c0/C2_DEPLOY_CONTRACT.md); the values are the code defaults, listed so an operator sees every knob
+    scope-lease-seconds: ${DEPLOY_SCOPE_LEASE_SECONDS:90}                 # lease TTL (min 30); heartbeat = TTL / 3
+    scope-lease-max-seconds: ${DEPLOY_SCOPE_LEASE_MAX_SECONDS:900}        # longest one operation may hold the scope
+    scope-wait-seconds: ${DEPLOY_SCOPE_WAIT_SECONDS:300}                  # a publish waits this long for a busy scope, then FAILED / SCOPE_BUSY
+    scope-retry-ms: ${DEPLOY_SCOPE_RETRY_MS:2000}
+    scope-duplicate-wait-seconds: ${DEPLOY_SCOPE_DUPLICATE_WAIT_SECONDS:60}
+    scope-lifecycle-wait-seconds: ${DEPLOY_SCOPE_LIFECYCLE_WAIT_SECONDS:10}   # D-C0-33: archive / delete wait for a live release operation, then 409 SCOPE_BUSY
     mock:
-      base-url: http://localhost:3000/mock-deployments
+      base-url: ${MOCK_DEPLOY_BASE_URL:http://localhost:3000/mock-deployments}      # the mock provider is refused in production (ProductionConfigValidator)

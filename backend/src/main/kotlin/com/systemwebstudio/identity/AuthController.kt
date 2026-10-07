@@ -74,7 +74,7 @@ class AuthController(
     @Value("\${app.rate-limit.login-window-seconds:900}") private val windowSeconds: Long,
     private val registrations: org.springframework.beans.factory.ObjectProvider<org.springframework.security.oauth2.client.registration.ClientRegistrationRepository>,
     @Value("\${app.oidc.post-logout-redirect-uri:}") private val postLogoutRedirect: String,
-    @Value("\${app.sites.studio-origin:http://localhost:3100}") private val studioOrigin: String,
+    @Value("\${app.sites.studio-origin}") private val studioOrigin: String,
     @Value("\${app.saml.enabled:false}") private val samlEnabled: Boolean,
     @Value("\${app.saml.idp-hint:}") private val samlHint: String,
     @Value("\${app.saml.label:}") private val samlLabel: String

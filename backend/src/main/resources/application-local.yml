@@ -6,7 +6,22 @@ springdoc:
   swagger-ui:
     enabled: true
     path: /swagger-ui.html
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://127.0.0.1:15432/system_web_studio}
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:16379}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:127.0.0.1}
+    port: ${RABBITMQ_PORT:15674}
+server:
+  address: ${SERVER_ADDRESS:127.0.0.1}
 app:
+  storage:
+    endpoint: ${MINIO_ENDPOINT:http://127.0.0.1:19000}
+    public-endpoint: ${MINIO_PUBLIC_ENDPOINT:${MINIO_ENDPOINT:http://127.0.0.1:19000}}
   deploy:
     step-delay-ms: 700
   data-platform:
@@ -14,3 +29,19 @@ app:
     # It is neither the platform DB (127.0.0.1:15432) nor the apps DB (127.0.0.1:15434), which stay denied. Override with the environment variable.
     postgres-targets:
       allowed-private: ${DATA_PLATFORM_POSTGRES_ALLOWED_PRIVATE:127.0.0.1:15440}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000}
+  web:
+    origins:
+      platform: ${WEB_ORIGIN_PLATFORM:http://127.0.0.1:3001}
+      admin: ${WEB_ORIGIN_ADMIN:http://127.0.0.1:3002}
+      studio: ${WEB_ORIGIN_STUDIO:http://127.0.0.1:3003}
+  sites:
+    origin: ${SITES_ORIGIN:http://127.0.0.1:18088}
+    studio-origin: ${STUDIO_ORIGIN:http://127.0.0.1:3003}
+    # data-api-base stays blank until the same-origin public runtime route exists (docs/contracts/v2/published-runtime.md section 6): set SITES_DATA_API_BASE to the
+    # browser-facing address (the sites origin) then.
+  build:
+    api-base: ${BUILD_API_BASE:http://127.0.0.1:8080}
+  render:
+    url: ${RENDER_URL:http://127.0.0.1:18095}

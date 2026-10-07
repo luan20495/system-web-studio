@@ -37,6 +37,17 @@ class ProductionConfigValidator(env: Environment) {
         value("app.data-platform.postgres-targets.allowed-private").split(',').map { it.trim().lowercase() }.filter { it.isNotEmpty() }.forEach {
             if (it.startsWith("127.") || it.startsWith("localhost") || it.startsWith("[::1]") || it.startsWith("::1") || it.startsWith("0.")) problems += "app.data-platform.postgres-targets.allowed-private must not allow a loopback address in production"
         }
+        // D-C0-34 · browser-facing and service addresses are stated, never inherited from a development default
+        for (k in listOf("app.sites.origin", "app.sites.studio-origin", "app.render.url")) if (value(k).isBlank()) problems += "$k is required in production (SITES_ORIGIN / STUDIO_ORIGIN / RENDER_URL)"
+        for (k in listOf("app.sites.origin", "app.sites.studio-origin")) value(k).takeIf { it.isNotBlank() }?.let { v ->
+            if (!v.startsWith("https://")) problems += "$k must be https in production"
+            else if (BROWSER_HOST_DENY.any { d -> v.lowercase().substringAfter("://").substringBefore('/').substringBefore(':').let { h -> h == d || h.endsWith(".$d") } }) problems += "$k must be a public address, not '$v'"
+        }
+        value("app.sites.data-api-base").takeIf { it.isNotBlank() }?.let { v ->
+            val host = v.lowercase().substringAfter("://", "").substringBefore('/').substringBefore(':')
+            if (!v.startsWith("https://")) problems += "SITES_DATA_API_BASE (the apiBase browsers call) must be https in production"
+            else if (host.isEmpty() || BROWSER_HOST_DENY.any { d -> host == d || host.endsWith(".$d") } || Regex("^(10|127|192\\.168|172\\.(1[6-9]|2[0-9]|3[01]))\\.").containsMatchIn(host)) problems += "SITES_DATA_API_BASE must be a browser-reachable public address, not an internal or loopback host"
+        }
         if (value("app.deploy.provider") == "mock") problems += "DEPLOY_PROVIDER=mock must not be used in production (labelled demo deployments only)"
         if (value("app.bootstrap.admin-username").isNotBlank()) {
             val pw = value("app.bootstrap.admin-password")
@@ -52,5 +63,10 @@ class ProductionConfigValidator(env: Environment) {
         }
         if (value("app.build.runner-token").isNotBlank() && value("app.build.runner-token").length < 24) problems += "BUILD_RUNNER_TOKEN must be at least 24 characters"
         if (problems.isNotEmpty()) throw IllegalStateException("Unsafe production configuration:\n - " + problems.joinToString("\n - "))
+    }
+
+    private companion object {
+        /** names a browser can never reach from the internet (an internal host or the docker bridge is service-to-service, not a browser address) */
+        val BROWSER_HOST_DENY = setOf("localhost", "host.docker.internal", "internal", "local", "svc", "cluster.local")
     }
 }
