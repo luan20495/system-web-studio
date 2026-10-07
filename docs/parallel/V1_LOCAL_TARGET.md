@@ -112,3 +112,19 @@ Classes: **V1_BLOCKER** (must be solved before V1), **V2_ONLY** (cloud / scale /
 1. C3 fixes the must-fix list and reports GREEN with SHA → 2. C0 imports the C3 branch → 3. C0 ownership review of `wiring/**` → 4. C0 mounts / wires the Management API → 5. C1 negative security, C3 integration tests, backend full regression → 6. GREEN: Management API READY to C5 → 7. C2 syncs `integration/v2` → 8. C2 Batch 2 / V30 → 9. C2 finishes local publish + `runtimeConfig.apiBase` → 10. C0 + C2 freeze local topology / config (L-1, L-4) → 11. C5 switches to the real Management API → 12. C5 runs the full local E2E → 13. C6 independent final QA → 14. all GREEN → **V1 LOCAL READY (declared by C6's result)**.
 
 Steps 7–9 (C2) run in parallel with 1–6 once C2 has synced; they do not wait for C3.
+
+## 9. Progress at `integration/v2 @ 68de73a` (D-C0-32 .. D-C0-35)
+
+| Item | State |
+|---|---|
+| L-1 portals | DONE: `./scripts/portals.sh`, `PORTALS=1 ./scripts/run-local.sh` (ports configurable; proven on 13001-13003; 3003 is currently held by another session's process) |
+| L-2 config hygiene | DONE (base / local / prod split, validator, `ConfigHygieneTests`); frontend `NEXT_PUBLIC_PORTAL_URL_*` still build-time (C5, V2) |
+| L-3 Management API | DONE (D-C0-30) |
+| L-4 `apiBase` | DONE as a decision: key approved, `{slug}` token + public route pending (C2) |
+| L-5 C2 V30 | DONE (imported, green, immutable) |
+| L-6 data target | DONE: `./scripts/data-target.sh` |
+| C4 queue (H-5) | DONE; G2-INTEGRATED / G3 unblocked |
+| ProjectLifecycle fencing | DONE (D-C0-33) |
+| LIM-1 | contract frozen; Batch 3 pending (V31) |
+| Public Runtime | design frozen; NOT implemented (B-C0-PUB-01) |
+| V1 blockers left | B-C0-W-07 (slot declaration), B-C5-06 (page site runtime / owner decision), B-C0-PUB-01 (only if the demo shows public data), C5 real E2E, C6 final QA, a free 3001 / 3002 / 3003 |

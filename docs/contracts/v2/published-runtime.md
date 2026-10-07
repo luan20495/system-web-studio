@@ -107,7 +107,7 @@ The set of public queries of a release is **immutable once the release exists** 
 
 | Capability | State | Evidence / what is missing |
 |---|---|---|
-| `__factory/config.json` runtime config | RUNNING | `SiteControllers` + `SiteService.runtimeConfig`; `SiteRuntimeConfigTests`, `PublishApiContractTests`. `apiBase` is `null` until configured. |
+| `__factory/config.json` runtime config | RUNNING **for code apps (kind `STATIC_APP`) only** | `SiteControllers` serves it only when `app` is true; `SiteRuntimeConfigTests`, `PublishApiContractTests`. `apiBase` is `null` until configured. **A PAGE_SCHEMA site is static HTML rendered at publish (workers/render): it has no runtime config and no data runtime in the page** (verified live by `scripts/v1-smoke.mjs`: `/__factory/config.json` = 404 on a page site). The published-app flow Browser -> runtime config -> apiBase -> backend therefore exists only for a code app (needs the medium / full stack: Forgejo + build runner), until the renderer ships a client runtime for page sites (B-C5-06, decision D-C5-03). |
 | Authenticated `app-runtime` LIVE / TEST query | RUNNING (integration-tested) | `AppRuntimeDataController`, `AppRuntimeApiTests`, `DataRuntimeLiveApiTests` (real PostgreSQL / Redis); LIVE now = active release (D-C0-33). |
 | Authenticated actions / workflows | RUNNING (integration-tested) | `AppRuntimeActionController`, V29 stores, restart / recovery suites. |
 | Release-pinned LIVE definition | RUNNING | D-C0-33 (`RuntimeAppDefinitions`). |
