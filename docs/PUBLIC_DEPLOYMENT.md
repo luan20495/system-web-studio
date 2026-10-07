@@ -1,5 +1,23 @@
 # Publishing the app from this machine (Cloudflare tunnel)
 
+> **Since D-C0-39 (2026-10-07) the Studio hostname is the Studio portal and there are three portals**: Platform `platform.toolsmcp.uk`, Admin `admin.toolsmcp.uk`, Studio `studio.toolsmcp.uk`.
+> The legacy single root UI on 3200 below is no longer published (`PUBLIC_PORTALS=false` brings it back). The diagram right below is the current topology.
+
+```
+Internet ─HTTPS─► Cloudflare ─tunnel hbl-studio─► 127.0.0.1:3210  portal gateway (nginx, routes by Host, http→https 308, client address)
+                                                    ├─ platform.toolsmcp.uk → 127.0.0.1:3201  Platform portal (next start)  ─┐
+                                                    ├─ admin.toolsmcp.uk    → 127.0.0.1:3202  Admin portal                   ├─ same-origin /api, /oauth2, /login/oauth2 ─► 127.0.0.1:18081 API (prod)
+                                                    └─ studio.toolsmcp.uk   → 127.0.0.1:3203  Studio portal                 ─┘
+                                              ├─► 127.0.0.1:28088  sites gateway   (sites.toolsmcp.uk/{slug}/, /{slug}/_data/… → API /sites/**)
+                                              └─► 127.0.0.1:29000  MinIO           (studio-files.toolsmcp.uk, presigned URLs only)
+```
+One portal = one hostname (each serves `/_next/**` from the root of its origin). The browser never talks to the API host: every portal proxies `/api` on its own origin. Sessions are per origin
+(host-only cookies): signing in on one portal does not sign in on another (B-C0-WEB-01, C1 contract). Details, measured proxy chain and tests: `docs/parallel/DECISIONS.md` D-C0-39.
+`./scripts/public-portals.sh up|down|status` builds (`apps/*/.next-public`, never the local `.next`) and runs the three portals; `./scripts/public-launchd.sh install` (optional, not done for you) starts the stack at login.
+Tests through the Internet hostnames: `node scripts/global-portals-smoke.mjs`, `node scripts/global-portals-browser.mjs`, `node scripts/global-smoke.mjs`, `node tests/gateway/portal-route.mjs`.
+
+## Legacy single-UI topology (kept for rollback)
+
 ```
 Internet ──HTTPS──► Cloudflare ──tunnel hbl-studio──► 127.0.0.1:3200  Next.js UI  ──/api,/oauth2──► 127.0.0.1:18081  API (prod profile, java -jar)
                                                   └─► 127.0.0.1:29000  MinIO (presigned URLs only, host studio-files.*)

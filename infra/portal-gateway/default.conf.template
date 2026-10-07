@@ -1,0 +1,73 @@
+# Portal gateway (D-C0-39): the ONE origin the tunnel points the three portal hostnames at.
+#   Cloudflare -> cloudflared -> this nginx (127.0.0.1:$PORTAL_GATEWAY_PORT) -> next start (platform | admin | studio, one loopback port each) -> /api -> API
+# Why it exists: (1) plain http at the edge is redirected to https in ONE place (the Next apps are C5 / packages-auth files, the zone option "Always Use HTTPS" is shared with other
+# systems); (2) the client address the portals and the API see is decided here, from the measured chain, never from what the visitor typed; (3) a host that is not a portal is a 404.
+# One portal = one hostname: every portal serves /_next/** from the root of its own origin, so routing is by Host only, never by path.
+map $http_x_forwarded_proto $fwd_proto { default $http_x_forwarded_proto; "" $scheme; }
+# PORTAL_FORCE_HTTPS=1 (global mode): a request the edge received over plain http (X-Forwarded-Proto: http) is redirected to https. Local mode leaves it 0.
+map "$http_x_forwarded_proto:${PORTAL_FORCE_HTTPS}" $force_https { "http:1" 1; default 0; }
+# only the three configured names are routed, anything else is the default server below
+upstream portal_platform { server ${PORTAL_UPSTREAM_HOST}:${PORTAL_PLATFORM_PORT}; keepalive 16; }
+upstream portal_admin    { server ${PORTAL_UPSTREAM_HOST}:${PORTAL_ADMIN_PORT};    keepalive 16; }
+upstream portal_studio   { server ${PORTAL_UPSTREAM_HOST}:${PORTAL_STUDIO_PORT};   keepalive 16; }
+
+# Client address: X-Forwarded-For is believed ONLY from the proxies named in PORTAL_REAL_IP_FROM (the measured peer of the tunnel; default 127.0.0.1 = none), right-most
+# untrusted entry (real_ip_recursive). Everything below forwards ONE address, $remote_addr: a forged prefix never reaches the portal or the API.
+set_real_ip_from ${PORTAL_REAL_IP_FROM};
+real_ip_header X-Forwarded-For;
+real_ip_recursive on;
+server_tokens off;
+
+# shared by the three portal servers (nginx has no include of a snippet here; the block is repeated verbatim)
+server {
+    listen 8080 default_server;
+    server_name _;
+    location = /healthz { access_log off; default_type text/plain; return 200 "ok\n"; }
+    # a Host that is not one of the three portals: nothing is revealed
+    location / { default_type text/plain; return 404 "not found\n"; }
+}
+
+server {
+    listen 8080;
+    server_name ${PORTAL_PLATFORM_HOST};
+    if ($force_https) { return 308 https://$host$request_uri; }
+    client_max_body_size 20m;
+    location = /healthz { access_log off; default_type text/plain; return 200 "ok\n"; }
+    location / {
+        proxy_pass http://portal_platform;
+        proxy_http_version 1.1; proxy_set_header Connection "";
+        proxy_set_header Host $host; proxy_set_header X-Forwarded-Host $host; proxy_set_header X-Forwarded-Proto $fwd_proto;
+        proxy_set_header X-Forwarded-For $remote_addr; proxy_set_header X-Real-IP $remote_addr; proxy_set_header Forwarded "";
+        proxy_buffering off; proxy_read_timeout 120s; proxy_send_timeout 120s;
+    }
+}
+
+server {
+    listen 8080;
+    server_name ${PORTAL_ADMIN_HOST};
+    if ($force_https) { return 308 https://$host$request_uri; }
+    client_max_body_size 20m;
+    location = /healthz { access_log off; default_type text/plain; return 200 "ok\n"; }
+    location / {
+        proxy_pass http://portal_admin;
+        proxy_http_version 1.1; proxy_set_header Connection "";
+        proxy_set_header Host $host; proxy_set_header X-Forwarded-Host $host; proxy_set_header X-Forwarded-Proto $fwd_proto;
+        proxy_set_header X-Forwarded-For $remote_addr; proxy_set_header X-Real-IP $remote_addr; proxy_set_header Forwarded "";
+        proxy_buffering off; proxy_read_timeout 120s; proxy_send_timeout 120s;
+    }
+}
+
+server {
+    listen 8080;
+    server_name ${PORTAL_STUDIO_HOST};
+    if ($force_https) { return 308 https://$host$request_uri; }
+    client_max_body_size 20m;
+    location = /healthz { access_log off; default_type text/plain; return 200 "ok\n"; }
+    location / {
+        proxy_pass http://portal_studio;
+        proxy_http_version 1.1; proxy_set_header Connection "";
+        proxy_set_header Host $host; proxy_set_header X-Forwarded-Host $host; proxy_set_header X-Forwarded-Proto $fwd_proto;
+        proxy_set_header X-Forwarded-For $remote_addr; proxy_set_header X-Real-IP $remote_addr; proxy_set_header Forwarded "";
+        proxy_buffering off; proxy_read_timeout 120s; proxy_send_timeout 120s;
+    }
+}

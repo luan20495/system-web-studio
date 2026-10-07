@@ -56,8 +56,19 @@ grep -q '^SECRETS_MASTER_KEY=' "$ENVF" || ( umask 077; echo "SECRETS_MASTER_KEY=
 grep -q '^FORMS_IP_SALT=' "$ENVF" || ( umask 077; echo "FORMS_IP_SALT=$(gen)" >> "$ENVF" )
 grep -q '^SOURCE_APP_PUBLIC_PUBLISH_ENABLED=' "$ENVF" || ( umask 077; { echo "# Source-code apps (needs FORGEJO_* + runner); public publishing of code apps off for the pilot"; echo "SOURCE_APPS_ENABLED=true"; echo "SOURCE_APP_BUILD_ENABLED=true"; echo "SOURCE_APP_PUBLIC_PUBLISH_ENABLED=false"; } >> "$ENVF" )
 grep -q '^SITES_HOST=' "$ENVF" || ( umask 077; { echo "# Published sites (gateway) — separate host from the Studio"; echo "SITES_HOST=sites.toolsmcp.uk"; echo "SITES_GATEWAY_PORT=28088"; echo "RENDER_PORT_PUBLIC=28095"; echo "RENDER_TOKEN=$(gen)"; } >> "$ENVF" )
+# Three portals (D-C0-39): one hostname per portal (every portal serves /_next/** from the root of its origin). Non-secret, added to an existing public.env once.
+grep -q '^PUBLIC_PORTALS=' "$ENVF" || ( umask 077; { echo "# Public portals: platform / admin / studio, one hostname each, same-origin /api proxy (PUBLIC_PORTALS=false + PUBLIC_STUDIO_UI=legacy = the old single root UI on UI_PORT)"; echo "PUBLIC_PORTALS=true"; echo "PUBLIC_PLATFORM_HOST=platform.toolsmcp.uk"; echo "PUBLIC_ADMIN_HOST=admin.toolsmcp.uk"; echo "PORTAL_PLATFORM_PORT_PUBLIC=3201"; echo "PORTAL_ADMIN_PORT_PUBLIC=3202"; echo "PORTAL_STUDIO_PORT_PUBLIC=3203"; } >> "$ENVF" )
 set -a; . "$ENVF"; set +a
-PUBLIC_ORIGIN="https://$PUBLIC_HOST"
+PUBLIC_ORIGIN="https://$PUBLIC_HOST"          # the STUDIO portal origin (kept under its historical key)
+PORTALS="${PUBLIC_PORTALS:-true}"
+if [ "$PORTALS" = true ]; then
+  # Browsers reach the API only through the portal's own /api proxy, but that proxy forwards the browser's Origin header, so the API sees (and checks) exactly these three.
+  # Never "*", never localhost, never the sites origin.
+  WEB_PLATFORM="https://$PUBLIC_PLATFORM_HOST"; WEB_ADMIN="https://$PUBLIC_ADMIN_HOST"; WEB_STUDIO="$PUBLIC_ORIGIN"
+  CORS_ORIGINS="$WEB_PLATFORM,$WEB_ADMIN,$WEB_STUDIO"
+else
+  WEB_PLATFORM=""; WEB_ADMIN=""; WEB_STUDIO=""; CORS_ORIGINS="$PUBLIC_ORIGIN"
+fi
 # V1 feature set of the public environment (D-C0-38): data platform, workflow (RabbitMQ queue, the prod default), publish policy, the Public Runtime. All are OFF in the
 # application unless stated here; V1_FEATURES=false brings the public stack back to its pre-V1 behaviour. apiBase is ONE value for every site ({slug} is replaced per site).
 V1_FEATURES="${V1_FEATURES:-true}"
@@ -77,6 +88,9 @@ if [ -z "${API_UPSTREAM_HOST:-}" ]; then
   _h4="$(docker run --rm --entrypoint sh --add-host h:host-gateway nginxinc/nginx-unprivileged:1.29-alpine -c 'getent ahostsv4 h | head -1' 2>/dev/null | awk '{print $1}' || true)"
   [[ "$_h4" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] && export API_UPSTREAM_HOST="$_h4"
 fi
+# portal gateway (D-C0-39): same measured peer (the tunnel reaches both gateways from the bridge gateway of this network), same https policy
+[ -z "${PORTAL_REAL_IP_FROM:-}" ] && [ -n "${GATEWAY_REAL_IP_FROM:-}" ] && export PORTAL_REAL_IP_FROM="$GATEWAY_REAL_IP_FROM"
+export PORTAL_FORCE_HTTPS="${PORTAL_FORCE_HTTPS:-1}" PORTAL_GATEWAY_PORT="${PORTAL_GATEWAY_PORT:-3210}"
 export GATEWAY_FORCE_HTTPS="${GATEWAY_FORCE_HTTPS:-1}"   # global mode: plain http at the edge is redirected to https at the gateway
 docker compose -f compose.public.yml --env-file "$ENVF" up -d --wait
 
@@ -100,7 +114,7 @@ if ! alive "http://127.0.0.1:$API_PORT/actuator/health/liveness"; then
       MINIO_ENDPOINT="http://127.0.0.1:$MINIO_PORT_PUBLIC" MINIO_PUBLIC_ENDPOINT="https://$PUBLIC_FILES_HOST"    \
       DEPLOY_PROVIDER=static SITES_ORIGIN="https://$SITES_HOST" STUDIO_ORIGIN="$PUBLIC_ORIGIN" SITES_COOKIE_SECURE=true \
       RENDER_URL="http://127.0.0.1:$RENDER_PORT_PUBLIC" RENDER_TOKEN="$RENDER_TOKEN" \
-      CORS_ALLOWED_ORIGINS="$PUBLIC_ORIGIN" TRUST_PROXY=true TRUSTED_PROXY_CIDRS="${PUBLIC_TRUSTED_PROXY_CIDRS:-127.0.0.1/32,::1/128}" \
+      CORS_ALLOWED_ORIGINS="$CORS_ORIGINS" WEB_ORIGIN_PLATFORM="$WEB_PLATFORM" WEB_ORIGIN_ADMIN="$WEB_ADMIN" WEB_ORIGIN_STUDIO="$WEB_STUDIO" TRUST_PROXY=true TRUSTED_PROXY_CIDRS="${PUBLIC_TRUSTED_PROXY_CIDRS:-127.0.0.1/32,::1/128}" \
       DATA_PLATFORM_ENABLED="$V1_FEATURES" WORKFLOW_ENABLED="$V1_FEATURES" PUBLISH_CONFIGS_ENABLED="$V1_FEATURES" SITES_PUBLIC_DATA_ENABLED="$V1_FEATURES" \
       SITES_DATA_API_BASE="$SITES_DATA_API_BASE" \
       BACKUP_STATUS_DIRS="public:$ROOT/backups/public" \
@@ -112,7 +126,12 @@ if ! alive "http://127.0.0.1:$API_PORT/actuator/health/liveness"; then
   alive "http://127.0.0.1:$API_PORT/actuator/health/readiness" || { echo "API did not become ready; see $RUN/api.log" >&2; tail -20 "$RUN/api.log" >&2; exit 1; }
 fi
 
-if ! alive "http://127.0.0.1:$UI_PORT/"; then
+if [ "$PORTALS" = true ]; then
+  say "starting the three portals (platform / admin / studio)"
+  "$ROOT/scripts/public-portals.sh" up
+  # cut-over (D-C0-39): the legacy root UI on UI_PORT no longer has a hostname; stop it (rollback = PUBLIC_PORTALS=false, then re-run this script)
+  if [ -f "$RUN/ui.pid" ] && kill -0 "$(cat "$RUN/ui.pid")" 2>/dev/null; then say "stopping the legacy root UI (no hostname points at it any more)"; kill "$(cat "$RUN/ui.pid")" 2>/dev/null || true; rm -f "$RUN/ui.pid"; _l="$(lsof -nP -iTCP:"$UI_PORT" -sTCP:LISTEN -t 2>/dev/null | head -1 || true)"; [ -n "$_l" ] && kill "$_l" 2>/dev/null || true; fi
+elif ! alive "http://127.0.0.1:$UI_PORT/"; then
   say "building the UI (http mode)"
   export NEXT_PUBLIC_API_MODE=http NEXT_DIST_DIR=.next-public API_PROXY_TARGET="http://127.0.0.1:$API_PORT"
   if [ ! -f .next-public/BUILD_ID ] || [ -n "$(find app components features lib next.config.ts proxy.ts package.json -newer .next-public/BUILD_ID -type f 2>/dev/null | head -1)" ]; then
@@ -142,18 +161,42 @@ cat > "$CFG" <<YML
 tunnel: $TUNNEL_ID
 credentials-file: $HOME/.cloudflared/$TUNNEL_ID.json
 ingress:
+$( if [ "$PORTALS" = true ]; then
+cat <<PORTAL_ROUTES
+  - hostname: $PUBLIC_PLATFORM_HOST
+    service: http://127.0.0.1:$PORTAL_GATEWAY_PORT
+  - hostname: $PUBLIC_ADMIN_HOST
+    service: http://127.0.0.1:$PORTAL_GATEWAY_PORT
+  - hostname: $PUBLIC_HOST
+    service: http://127.0.0.1:$PORTAL_GATEWAY_PORT
+PORTAL_ROUTES
+else
+cat <<LEGACY_ROUTE
   - hostname: $PUBLIC_HOST
     service: http://127.0.0.1:$UI_PORT
+LEGACY_ROUTE
+fi )
   - hostname: $PUBLIC_FILES_HOST
     service: http://127.0.0.1:$MINIO_PORT_PUBLIC
   - hostname: $SITES_HOST
     service: http://127.0.0.1:$SITES_GATEWAY_PORT
   - service: http_status:404
 YML
-for h in "$PUBLIC_HOST" "$PUBLIC_FILES_HOST" "$SITES_HOST"; do
-  cloudflared tunnel --config "$CFG" route dns --overwrite-dns "$TUNNEL_ID" "$h" > "$RUN/route-$h.log" 2>&1 || { echo "DNS route for $h failed:" >&2; cat "$RUN/route-$h.log" >&2; exit 1; }
+# A hostname that already exists is only re-pointed when it is ours (one of the three historical names); a NEW portal hostname is created without --overwrite-dns,
+# so a record that belongs to something else makes the command fail instead of being replaced.
+DNS_HOSTS=("$PUBLIC_HOST" "$PUBLIC_FILES_HOST" "$SITES_HOST"); [ "$PORTALS" = true ] && DNS_HOSTS+=("$PUBLIC_PLATFORM_HOST" "$PUBLIC_ADMIN_HOST")
+for h in "${DNS_HOSTS[@]}"; do
+  _ow="--overwrite-dns"; case "$h" in "$PUBLIC_PLATFORM_HOST"|"$PUBLIC_ADMIN_HOST") _ow="";; esac
+  cloudflared tunnel --config "$CFG" route dns $_ow "$TUNNEL_ID" "$h" > "$RUN/route-$h.log" 2>&1 || { echo "DNS route for $h failed:" >&2; cat "$RUN/route-$h.log" >&2; exit 1; }
   grep -q "tunnelID=$TUNNEL_ID" "$RUN/route-$h.log" || { echo "DNS for $h was not attached to tunnel $TUNNEL_ID:" >&2; cat "$RUN/route-$h.log" >&2; exit 1; }
 done
+# cloudflared reads the ingress file only at start: a changed file means a controlled restart of THIS tunnel (the pid of the process this script started; gemma is never touched)
+_cfg_sha="$(shasum "$CFG" | cut -d' ' -f1)"
+if [ -f "$RUN/tunnel.pid" ] && kill -0 "$(cat "$RUN/tunnel.pid")" 2>/dev/null && [ "$(cat "$RUN/tunnel.cfg.sha" 2>/dev/null)" != "$_cfg_sha" ]; then
+  say "tunnel ingress changed: restarting tunnel hbl-studio"
+  kill "$(cat "$RUN/tunnel.pid")" 2>/dev/null || true; for _ in $(seq 1 20); do kill -0 "$(cat "$RUN/tunnel.pid")" 2>/dev/null || break; sleep 0.5; done
+fi
+echo "$_cfg_sha" > "$RUN/tunnel.cfg.sha"
 if ! { [ -f "$RUN/tunnel.pid" ] && kill -0 "$(cat "$RUN/tunnel.pid")" 2>/dev/null; }; then
   ( nohup cloudflared tunnel --config "$CFG" --no-autoupdate run "$TUNNEL_ID" > "$RUN/tunnel.log" 2>&1 < /dev/null & echo $! > "$RUN/tunnel.pid" )
 fi

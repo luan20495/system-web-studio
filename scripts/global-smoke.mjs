@@ -150,7 +150,7 @@ r = await fetch(`${SITES}/zz-probe-cf/`, { headers: { "cf-connecting-ip": "1.2.3
 note("L forged CF-Connecting-IP from the Internet", r.status === 403 ? "PASS" : "CHECK", `${r.status} (Cloudflare rejects a client-supplied CF-Connecting-IP; it is never used by the origin)`);
 
 // ---- cleanup: unpublish and archive what this run created
-if (pid) { await req(STUDIO, "DELETE", `${P}/site`); await req(STUDIO, "DELETE", P); }
+if (pid) { await req(STUDIO, "DELETE", `${P}/site`); await req(STUDIO, "DELETE", `${P}?expectedRevision=${(await req(STUDIO, "GET", P)).json?.revision ?? 0}`); }
 if (slug) { r = await req(SITES, "GET", `/${slug}/`, { auth: false }); check("E after unpublish the site is offline (404)", r.status === 404, `${r.status}`); }
 const failed = results.filter(([, ok]) => !ok).map(([n]) => n);
 console.log(`\nTOTAL ${results.length}  FAILED ${failed.length}${failed.length ? "  -> " + failed.join(" | ") : ""}   NOTES ${notes.map(([n, s]) => `${s}`).join(",")}`);
