@@ -51,11 +51,11 @@ class MeTenancyTests : IntegrationTestBase() {
         val sc = scenario(); val sys = fx.user("me-sys", systemAdmin = true)
         val m = me(sys.username)
         assertThat(m.get("systemAdmin").asBoolean()).isTrue(); assertThat(m.get("platformScope").asBoolean()).isTrue(); assertThat(m.get("businessAccess").asBoolean()).isFalse()
-        assertThat(strings(m.get("permissions"))).containsExactly("MEMBER_MANAGE", "TENANT_MANAGE", "TENANT_MEMBERS")
+        assertThat(strings(m.get("permissions"))).containsExactly("TENANT_MANAGE", "TENANT_MEMBERS")
         assertThat(strings(m.get("permissions"))).doesNotContain("APP_VIEW", "DATA_MUTATE")
         val row = m.get("workspaces").toList().single { it.get("id").asString() == sc.ws.toString() }
         assertThat(row.get("role").asString()).isEqualTo("ADMIN")
-        assertThat(strings(row.get("permissions"))).containsExactlyInAnyOrder("MEMBER_MANAGE", "TENANT_MANAGE", "TENANT_MEMBERS")
+        assertThat(strings(row.get("permissions"))).containsExactlyInAnyOrder("TENANT_MANAGE", "TENANT_MEMBERS")
         assertThat(m.path("tenantId").let { it.isNull || it.isMissingNode }).isTrue()                                                         // no membership of its own
     }
 }
