@@ -2,7 +2,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
-/** Dialog rendered at the document root (so no card/overflow can clip it); Escape closes it and focus moves inside. */
+/** The overlay class is `adminModal`, NOT `modal`: globals.css already defines `.modal` as the Studio dialog BOX (width 520, dark panel, light text), which squeezed this overlay to 520px and made the text unreadable. Dialog rendered at the document root (so no card/overflow can clip it); Escape closes it and focus moves inside. */
 export function Modal({ label, onClose, children }: { label: string; onClose: () => void; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -14,5 +14,5 @@ export function Modal({ label, onClose, children }: { label: string; onClose: ()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   if (typeof document === "undefined") return null;
-  return createPortal(<div className="modal" role="dialog" aria-modal="true" aria-label={label} ref={ref}>{children}</div>, document.body);
+  return createPortal(<div className="adminModal" role="dialog" aria-modal="true" aria-label={label} ref={ref}>{children}</div>, document.body);
 }
