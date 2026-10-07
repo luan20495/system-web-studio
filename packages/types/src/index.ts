@@ -105,7 +105,10 @@ export type AiProbe = { id: string; ok: boolean; latencyMs: number; detail: stri
 /** MIRROR of tenancy/TenantController.kt @ integration/v2 1a9995c (T2). A member row carries only ids: names are resolved by the caller (see features/admin/tenantModel.ts). */
 export type TenantStatusName = "ACTIVE" | "SUSPENDED" | "DELETED";
 export type TenantView = { id: string; slug: string; name: string; status: TenantStatusName | string; createdAt: string };
-export type TenantMemberView = { tenantId: string; userId: string; role: TenantRoleName | string; active: boolean };
+/** `username`/`displayName`/`email` come with C1's tenant member directory (fix/c1-portal-authz-blockers @ 7ecea1a); optional so an older backend still parses */
+export type TenantMemberView = { tenantId: string; userId: string; role: TenantRoleName | string; active: boolean; username?: string | null; displayName?: string | null; email?: string | null };
+/** `GET /admin/tenants/{id}/member-candidates?q=` — users already related to THIS tenant (workspace member, or a former member), enabled, activated, not SYSTEM_ADMIN; ≤ 50; `q` ≥ 2 characters */
+export type TenantMemberCandidate = { userId: string; username: string; displayName: string | null; email: string | null };
 export type Member = { userId: string; username: string; displayName: string | null; email: string | null; role: string; joinedAt: string };
 export const WORKSPACE_ROLES = ["WORKSPACE_ADMIN", "EDITOR", "PUBLISHER", "VIEWER"] as const;
 export const PROJECT_ROLES = ["OWNER", "EDITOR", "PUBLISHER", "VIEWER"] as const;

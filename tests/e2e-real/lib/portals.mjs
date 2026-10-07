@@ -17,3 +17,20 @@ export const openPortal = async (page, cfg, which, path = "") => { await page.go
 export const navLabels = (page) => page.locator("aside nav a").evaluateAll((l) => l.map((a) => a.textContent.replace(/^[^A-Za-zÀ-ỹ]+/, "").trim()));
 /** every /api response with status ≥ 400 the page received (path, status): the flows decide which ones are expected */
 export function watchApi(page) { const bad = []; page.on("response", (r) => { if (r.status() >= 400 && /\/api\//.test(r.url())) bad.push(`${r.request().method()} ${new URL(r.url()).pathname} → ${r.status()}`); }); return bad; }
+
+import { Session, randomSecret } from "./api.mjs";
+/** an extra fixture account (registered for cleanup): created by the SYSTEM_ADMIN, activated, logged in. `activate: false` leaves it non-activated. */
+export async function makeUser(fx, cfg, key, workspace, role, { activate = true } = {}) {
+  const username = `e2e-${fx.runId}-${key}`.toLowerCase().replace(/[^a-z0-9._-]/g, "-").slice(0, 40);
+  const r = await fx.sessions.admin.post("/admin/users", { username, displayName: `E2E ${key} ${fx.runId}`, workspaceId: fx.workspaces[workspace], role });
+  if (r.status !== 201) throw new Error(`makeUser ${key}: ${r.status} ${r.body?.code}`);
+  fx.created.users.push(r.body.userId);
+  const u = { id: r.body.userId, username, password: null, session: null };
+  if (activate) {
+    u.password = randomSecret();
+    const c = await new Session(cfg.studio, "activation").post("/auth/activation/complete", { token: r.body.token, password: u.password });
+    if (c.status >= 300) throw new Error(`makeUser ${key}: activation ${c.status}`);
+    u.session = new Session(cfg.studio, key); await u.session.login(username, u.password);
+  }
+  return u;
+}

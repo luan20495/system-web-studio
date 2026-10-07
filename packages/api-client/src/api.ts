@@ -1,5 +1,5 @@
 import type {
-  AdminAi, AiCallRow, SettingView, BuildPolicyReport, CleanupResult, RepoRow, AiPrice, AiProbe, AiProviderInfo, AiProviderForm, AiDiscover, AiLimitsView, AiLimitDefaults, AiUserView, AiUsageReport, AdminApp, BlockDto, CheckResult, TemplateDto, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, TenantView, TenantMemberView, ActivationLink, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
+  AdminAi, AiCallRow, SettingView, BuildPolicyReport, CleanupResult, RepoRow, AiPrice, AiProbe, AiProviderInfo, AiProviderForm, AiDiscover, AiLimitsView, AiLimitDefaults, AiUserView, AiUsageReport, AdminApp, BlockDto, CheckResult, TemplateDto, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, TenantView, TenantMemberView, TenantMemberCandidate, ActivationLink, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
   BackupEnvironment, AppKind, RuntimeStatus, Connector, Department, CostPrice, CostReport, SecurityReport, FormSubmission, SiteDomain, TemplateReview, LibraryCategories, AccessRule, EffectiveModel, AiBudget, AdminAlert, StreamHandlers,
   AiStatus, ApiProject, AuthConfig, Member, SiteInfo, DesignNode, DependencyRequest, PackageView, CloneAccess, TreeFile, CodeFile, CodeCommit, CodeChange, DiffFile, CodeAiResponse, CodeAiHistoryItem, RegistryComponent, ComponentMetadataV2, DefinitionOperation, AssetDto, Deployment, Me, RunQueryRequest, RunQueryResponse, ExecuteActionRequest, ActionEnvelope, StartWorkflowRequest, WorkflowRunView, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
 } from "@xweb/types";
@@ -92,6 +92,7 @@ export const api = {
     createTenant: (b: { slug: string; name: string; firstAdminUserId?: string }) => call<TenantView>("/admin/tenants", { method: "POST", body: json(b) }),
     setTenantStatus: (id: string, status: "ACTIVE" | "SUSPENDED" | "DELETED") => call<TenantView>(`/admin/tenants/${id}/status`, { method: "PATCH", body: json({ status }) }),
     tenantMembers: (id: string) => call<TenantMemberView[]>(`/admin/tenants/${id}/members`),
+    tenantMemberCandidates: (id: string, q?: string) => call<TenantMemberCandidate[]>(`/admin/tenants/${id}/member-candidates${qs({ q })}`),
     setTenantMember: (id: string, userId: string, role: string) => call<TenantMemberView>(`/admin/tenants/${id}/members/${userId}`, { method: "PUT", body: json({ role }) }),
     removeTenantMember: (id: string, userId: string) => call<void>(`/admin/tenants/${id}/members/${userId}`, { method: "DELETE" }),
     createWorkspace: (name: string) => call<{ id: string; name: string }>("/admin/workspaces", { method: "POST", body: json({ name }) }),

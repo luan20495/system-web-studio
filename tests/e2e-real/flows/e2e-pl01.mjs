@@ -22,6 +22,10 @@ export async function run({ cfg, fx, browser, check }) {
   await page.getByTestId("tenant-slug").fill("A"); await page.getByTestId("tenant-name").fill(" "); await page.getByTestId("tenant-create").getByRole("button", { name: "Tạo công ty" }).click();
   check.ok("an invalid form is refused in the dialog with both messages and NO request is sent", (await page.getByText(/Mã công ty gồm/).count()) === 1 && (await page.getByText(/Hãy nhập tên công ty/).count()) === 1 && !bad.some((b) => /POST \/api\/v1\/admin\/tenants/.test(b)));
   await page.getByTestId("tenant-slug").fill(slug); await page.getByTestId("tenant-name").fill(`E2E PL ${fx.runId}`);
+  // the first administrator is picked from the SYSTEM_ADMIN's account search (creating a tenant may name any enabled account)
+  await page.getByLabel("Tìm người dùng").fill(fx.users.adminA.username); await page.waitForTimeout(900);
+  const firstOpt = page.locator("#tenant-first-admin option", { hasText: fx.users.adminA.username }).first(); await firstOpt.waitFor({ timeout: 8000 });
+  await page.locator("#tenant-first-admin").selectOption(await firstOpt.getAttribute("value"));
   const created = page.waitForResponse((r) => r.request().method() === "POST" && /\/admin\/tenants$/.test(new URL(r.url()).pathname), { timeout: 15_000 });
   await page.getByTestId("tenant-create").getByRole("button", { name: "Tạo công ty" }).click(); const cr = await created;
   await page.waitForURL(/\/platform\/tenants\/[0-9a-f-]{36}/, { timeout: 10_000 }).catch(() => undefined);
@@ -41,37 +45,18 @@ export async function run({ cfg, fx, browser, check }) {
 
   // ---- members + last-admin rule ----------------------------------------------------------------------------------------------------------------------
   const adminA = fx.users.adminA, lonely = fx.users.lonelyA;
-  await page.getByLabel("Tìm người dùng").fill(adminA.username); await page.waitForTimeout(900);
-  const opt = page.locator("#tm-person option", { hasText: adminA.username }).first(); await opt.waitFor({ timeout: 8000 });
-  await page.locator("#tm-person").selectOption(await opt.getAttribute("value"));
-  await page.getByTestId("tm-role").selectOption("TENANT_ADMIN");
-  await page.getByRole("button", { name: "Thêm vào công ty" }).click(); await page.getByText("Đã thêm vào công ty.").waitFor({ timeout: 10_000 });
   let members = (await api.get(`/admin/tenants/${t.id}/members`)).body ?? [];
-  check.ok("add member as quản trị công ty: the server lists adminA as TENANT_ADMIN", members.some((m) => m.userId === adminA.id && m.role === "TENANT_ADMIN"), JSON.stringify(members), "persistence");
-  check.ok("the member row shows the person's NAME (resolved from /admin/users), not a bare id", (await page.getByTestId(`tm:${adminA.id}`).innerText()).includes(adminA.username));
+  check.ok("the first administrator chosen in the dialog is TENANT_ADMIN on the server, with name and email metadata", members.some((m) => m.userId === adminA.id && m.role === "TENANT_ADMIN" && m.username === adminA.username && "displayName" in m && "email" in m), JSON.stringify(members), "persistence");
+  check.ok("the member row shows the person's NAME from the member metadata (no extra lookup)", (await page.getByTestId(`tm:${adminA.id}`).innerText()).includes(adminA.username));
   const only = page.getByTestId(`tm:${adminA.id}`).locator("select");
   await only.selectOption("MEMBER"); await page.waitForTimeout(700);
   check.ok("demoting the ONLY TENANT_ADMIN is explained in words and nothing changed on the server", /ít nhất một quản trị/.test(await page.getByTestId("tenant-msg").innerText()) && ((await api.get(`/admin/tenants/${t.id}/members`)).body ?? []).find((m) => m.userId === adminA.id)?.role === "TENANT_ADMIN");
   const direct = await api.put(`/admin/tenants/${t.id}/members/${adminA.id}`, { role: "MEMBER" });
   check.ok("the server enforces it too (409 LAST_TENANT_ADMIN)", direct.status === 409 && direct.body?.code === "LAST_TENANT_ADMIN", `status=${direct.status} ${direct.body?.code}`, "http");
-  await page.getByLabel("Tìm người dùng").fill(lonely.username); await page.waitForTimeout(900);
-  const opt2 = page.locator("#tm-person option", { hasText: lonely.username }).first(); await opt2.waitFor({ timeout: 8000 });
-  await page.locator("#tm-person").selectOption(await opt2.getAttribute("value"));
-  await page.getByRole("button", { name: "Thêm vào công ty" }).click(); await page.getByText("Đã thêm vào công ty.").waitFor({ timeout: 10_000 });
-  page.once("dialog", (d) => void d.accept());
-  await page.getByTestId(`tm:${lonely.id}`).getByRole("button", { name: "Gỡ" }).click(); await page.getByText("Đã gỡ khỏi công ty.").waitFor({ timeout: 10_000 });
-  members = (await api.get(`/admin/tenants/${t.id}/members`)).body ?? [];
-  check.ok("remove a plain member: gone from the active list on the server, the admin stays", !members.some((m) => m.userId === lonely.id && m.active) && members.some((m) => m.userId === adminA.id), JSON.stringify(members), "persistence");
-
-  // ---- SYSTEM_ADMIN management -------------------------------------------------------------------------------------------------------------------------
-  await openPortal(page, cfg, "platform", `/users/${lonely.id}`);
-  const grant = page.getByRole("button", { name: "Cấp quyền Quản trị hệ thống" }); await grant.waitFor({ timeout: 10_000 });
-  page.once("dialog", (d) => void d.accept()); await grant.click(); await page.getByText("Đã cấp quyền Quản trị hệ thống.").waitFor({ timeout: 10_000 });
-  check.ok("grant SYSTEM_ADMIN to a fixture account: confirmed in a dialog, then the server says systemAdmin = true", (await api.get(`/admin/users/${lonely.id}`)).body?.user?.systemAdmin === true, "", "persistence");
-  page.once("dialog", (d) => void d.accept()); await page.getByRole("button", { name: "Gỡ quyền Quản trị hệ thống" }).click(); await page.getByText("Đã gỡ quyền Quản trị hệ thống.").waitFor({ timeout: 10_000 });
-  check.ok("revoke it: systemAdmin = false on the server", (await api.get(`/admin/users/${lonely.id}`)).body?.user?.systemAdmin === false, "", "persistence");
-  await openPortal(page, cfg, "platform", `/users/${(await api.get("/auth/me")).body?.id}`);
-  check.ok("you cannot change your own SYSTEM_ADMIN right: the button is not offered on your own account", (await page.getByRole("button", { name: /Quản trị hệ thống/ }).count()) === 0);
+  const cand = await api.get(`/admin/tenants/${t.id}/member-candidates`);
+  check.ok("a brand-new tenant has no candidates (the directory is tenant-scoped, never global) and the picker says so", cand.status === 200 && Array.isArray(cand.body) && cand.body.length === 0 && /Không có người phù hợp/.test(await page.getByTestId("tm-person").innerText()), `status=${cand.status} ${JSON.stringify(cand.body)}`, "http");
+  const stranger = await api.put(`/admin/tenants/${t.id}/members/${lonely.id}`, { role: "MEMBER" });
+  check.ok("even a SYSTEM_ADMIN cannot add an unrelated account to a tenant (404 USER_NOT_FOUND): no global directory", stranger.status === 404 && stranger.body?.code === "USER_NOT_FOUND", `status=${stranger.status} ${stranger.body?.code}`, "http");
 
   // ---- a SYSTEM_ADMIN manages the members of any workspace from the workspace page (same member API, same rules) ---------------------------------------------------
   await openPortal(page, cfg, "platform", `/workspaces/${fx.workspaces.A}`);

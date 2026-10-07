@@ -78,17 +78,25 @@ export const personOf = (x: Member | AdminUser, id = "userId" in x ? x.userId : 
 export const shortId = (id: string) => id.slice(0, 8);
 export function personLabel(p: Person | undefined, id: string): string { return p ? (p.displayName && p.displayName !== p.username ? `${p.displayName} (${p.username})` : p.username) : `Người dùng ${shortId(id)}…`; }
 
-export type MemberRow = { userId: string; label: string; known: boolean; role: string; roleLabel: string };
-/** tenant members with names where the console can resolve them; an unresolved id is shown as such, never guessed */
-export function tenantMemberRows(members: TenantMemberView[], people: Map<string, Person>): MemberRow[] {
-  return members.filter((m) => m.active).map((m) => ({ userId: m.userId, label: personLabel(people.get(m.userId), m.userId), known: people.has(m.userId), role: m.role, roleLabel: tenantRoleLabel(m.role) }))
-    .sort((a, b) => a.label.localeCompare(b.label, "vi"));
+export type MemberRow = { userId: string; label: string; email: string | null; known: boolean; role: string; roleLabel: string };
+/** tenant members, named from the member row itself (C1's directory metadata) or, for an older backend, from `people`; an unresolved id is shown as such, never guessed */
+export function tenantMemberRows(members: TenantMemberView[], people: Map<string, Person> = new Map()): MemberRow[] {
+  return members.filter((m) => m.active).map((m) => {
+    const p: Person | undefined = m.username ? { id: m.userId, username: m.username, displayName: m.displayName ?? null } : people.get(m.userId);
+    return { userId: m.userId, label: personLabel(p, m.userId), email: m.email ?? null, known: !!p, role: m.role, roleLabel: tenantRoleLabel(m.role) };
+  }).sort((a, b) => a.label.localeCompare(b.label, "vi"));
 }
-/** people that can be added: known to the console, not yet members */
-export const addableTenantPeople = (people: Map<string, Person>, members: TenantMemberView[]): Person[] => {
-  const have = new Set(members.filter((m) => m.active).map((m) => m.userId));
-  return [...people.values()].filter((p) => !have.has(p.id)).sort((a, b) => personLabel(a, a.id).localeCompare(personLabel(b, b.id), "vi"));
-};
+/** the candidate directory needs ≥ 2 characters when a search is typed (the server answers 400 QUERY_TOO_SHORT otherwise); empty = the first 50 */
+export const CANDIDATE_MIN_QUERY = 2, CANDIDATE_MAX_RESULTS = 50;
+export function candidateQuery(raw: string): { ask: boolean; q?: string; hint?: string } {
+  const q = raw.trim();
+  if (!q) return { ask: true };
+  if (q.length < CANDIDATE_MIN_QUERY) return { ask: false, hint: `Gõ ít nhất ${CANDIDATE_MIN_QUERY} ký tự để tìm.` };
+  return { ask: true, q };
+}
+export const candidateLabel = (c: { username: string; displayName: string | null; email: string | null }): string =>
+  `${personLabel({ id: "", username: c.username, displayName: c.displayName }, "")}${c.email ? ` · ${c.email}` : ""}`;
+
 /** the server forbids changing your own tenant role / adding yourself (SELF_GRANT_FORBIDDEN) and removing the last TENANT_ADMIN (LAST_TENANT_ADMIN): the UI says it before the click */
 export function memberChangeBlock(m: { userId: string; role: string }, me: { id: string }, all: TenantMemberView[], next: "TENANT_ADMIN" | "MEMBER" | "REMOVE"): string | null {
   if (m.userId === me.id) return "Bạn không thể tự đổi vai trò hoặc tự gỡ mình khỏi công ty.";

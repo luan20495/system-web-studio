@@ -45,11 +45,19 @@ test("status actions: ACTIVE → suspend/delete, SUSPENDED → unlock/delete, DE
   assert.ok(M.tenantActions(t("ACTIVE")).every((a) => a.confirm.includes("Acme")));
   assert.equal(M.tenantActions(t("ACTIVE")).find((a) => a.to === "DELETED")!.danger, true);
 });
-test("member rows: names where known, an unresolved id is shown as such (never guessed), inactive members are not listed", () => {
-  const people = new Map([["u2", { id: "u2", username: "bao", displayName: "Bảo" }], ["u3", { id: "u3", username: "an", displayName: null }]]);
-  const rows = M.tenantMemberRows([mem("u2", "TENANT_ADMIN"), mem("u3", "MEMBER"), mem("deadbeef-0000", "MEMBER"), mem("u4", "MEMBER", false)], people);
-  assert.deepEqual(rows.map((r) => [r.label, r.known, r.roleLabel]), [["an", true, "Thành viên"], ["Bảo (bao)", true, "Quản trị công ty"], ["Người dùng deadbeef…", false, "Thành viên"]]);
-  assert.deepEqual(M.addableTenantPeople(people, [mem("u2", "MEMBER")]).map((p) => p.id), ["u3"]);
+test("member rows: named from the member row (C1 directory metadata), an older backend falls back to the people map, an unresolved id is shown as such; inactive members are not listed", () => {
+  const withMeta = (userId: string, role: string, username: string, displayName: string | null, email: string | null): TenantMemberView => ({ ...mem(userId, role), username, displayName, email });
+  const rows = M.tenantMemberRows([withMeta("u2", "TENANT_ADMIN", "bao", "Bảo", "bao@x.vn"), withMeta("u3", "MEMBER", "an", null, null), mem("deadbeef-0000", "MEMBER"), mem("u4", "MEMBER", false)]);
+  assert.deepEqual(rows.map((r) => [r.label, r.known, r.roleLabel, r.email]), [["an", true, "Thành viên", null], ["Bảo (bao)", true, "Quản trị công ty", "bao@x.vn"], ["Người dùng deadbeef…", false, "Thành viên", null]]);
+  const people = new Map([["u9", { id: "u9", username: "cu", displayName: "Cũ" }]]);
+  assert.equal(M.tenantMemberRows([mem("u9", "MEMBER")], people)[0].label, "Cũ (cu)");
+});
+test("candidate directory: 2+ characters when a search is typed, empty asks for the first 50, the label carries the email", () => {
+  assert.deepEqual(M.candidateQuery(""), { ask: true }); assert.deepEqual(M.candidateQuery("  "), { ask: true });
+  assert.equal(M.candidateQuery("a").ask, false); assert.match(M.candidateQuery("a").hint!, /ít nhất 2/);
+  assert.deepEqual(M.candidateQuery(" ab "), { ask: true, q: "ab" });
+  assert.equal(M.CANDIDATE_MAX_RESULTS, 50);
+  assert.equal(M.candidateLabel({ username: "bao", displayName: "Bảo", email: "b@x.vn" }), "Bảo (bao) · b@x.vn"); assert.equal(M.candidateLabel({ username: "an", displayName: null, email: null }), "an");
 });
 test("rules the server enforces are said before the click: self change, last TENANT_ADMIN", () => {
   const all = [mem("u1", "TENANT_ADMIN"), mem("u2", "TENANT_ADMIN"), mem("u3", "MEMBER")];

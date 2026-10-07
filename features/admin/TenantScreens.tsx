@@ -11,7 +11,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { api, ApiError } from "@/lib/http-api";
-import type { Member, TenantMemberView, TenantView } from "@/lib/http-types";
+import type { Member, TenantMemberCandidate, TenantMemberView, TenantView } from "@/lib/http-types";
 import { useSession } from "../session";
 import { useLoad } from "../useLoad";
 import { Card, ErrorState, fmtDate, Kpi, Pill, StateView } from "../ui";
@@ -21,7 +21,7 @@ import { Modal } from "./Modal";
 import { PageHead } from "./PageHead";
 import { A } from "./base";
 import {
-  TENANT_ROLES, TENANT_STATUS_LABEL, WORKSPACE_ROLES, addableTenantPeople, adminErrorText, adminScope, checkTenantForm, memberChangeBlock, personLabel, personOf, tenantActions, tenantMemberRows,
+  CANDIDATE_MAX_RESULTS, TENANT_ROLES, TENANT_STATUS_LABEL, WORKSPACE_ROLES, adminErrorText, candidateLabel, candidateQuery, adminScope, checkTenantForm, memberChangeBlock, personLabel, personOf, tenantActions, tenantMemberRows,
   workspaceMemberBlock, workspaceRoleLabel, type Person,
 } from "./adminModel";
 
@@ -62,14 +62,17 @@ function PersonSelect({ id, people, q, setQ, value, onChange, platform }: { id: 
 function TenantMembers({ tenantId, tenantName }: { tenantId: string; tenantName: string }) {
   const { me } = useSession();
   const members = useLoad(() => api.admin.tenantMembers(tenantId), [tenantId]);
-  // the person at the keyboard is always nameable (the tenant API returns bare ids)
-  const self = useMemo(() => (me ? [{ id: me.id, username: me.username, displayName: me.displayName }] : []), [me]);
-  const { people, q, setQ, platform, nobody } = usePeople(self);
+  const [q, setQ] = useState(""); const [applied, setApplied] = useState("");
+  useEffect(() => { const t = setTimeout(() => setApplied(q), 300); return () => clearTimeout(t); }, [q]);
+  const ask = candidateQuery(applied);
+  // the directory is tenant-scoped on the server: only people already related to THIS tenant (a workspace of it, or a former membership) are offered
+  const candidates = useLoad(async () => (ask.ask ? api.admin.tenantMemberCandidates(tenantId, ask.q) : []), [tenantId, ask.ask, ask.q, members.data]);
   const [pick, setPick] = useState(""); const [role, setRole] = useState<string>("MEMBER");
   const [busy, setBusy] = useState<string | null>(null); const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const list: TenantMemberView[] = members.data ?? [];
-  const rows = tenantMemberRows(list, people);
-  const addable = addableTenantPeople(people, list);
+  const rows = tenantMemberRows(list);
+  const options: TenantMemberCandidate[] = candidates.data ?? [];
+  useEffect(() => { if (pick && !options.some((c) => c.userId === pick)) setPick(""); }, [options, pick]);
   async function act(key: string, fn: () => Promise<unknown>, ok: string) {
     setBusy(key); setMsg(null);
     try { await fn(); setMsg({ kind: "ok", text: ok }); members.reload(); } catch (e) { setMsg({ kind: "err", text: say(e, "Chưa thực hiện được.") }); } finally { setBusy(null); }
@@ -83,7 +86,6 @@ function TenantMembers({ tenantId, tenantName }: { tenantId: string; tenantName:
   async function add(e: FormEvent) {
     e.preventDefault();
     if (!pick) { setMsg({ kind: "err", text: "Hãy chọn một người dùng." }); return; }
-    if (pick === me!.id) { setMsg({ kind: "err", text: "Bạn không thể tự thêm mình vào công ty." }); return; }
     await act("add", () => api.admin.setTenantMember(tenantId, pick, role), "Đã thêm vào công ty."); setPick("");
   }
   return (
@@ -93,7 +95,7 @@ function TenantMembers({ tenantId, tenantName }: { tenantId: string; tenantName:
           <thead><tr><th>Người dùng</th><th>Vai trò</th><th/></tr></thead>
           <tbody>{rows.map((r) => (
             <tr key={r.userId} data-testid={`tm:${r.userId}`}>
-              <td>{r.known ? <b>{r.label}</b> : <span title="Tên chưa tra cứu được: API công ty chỉ trả mã người dùng">{r.label}</span>}{r.userId === me?.id ? <small> · bạn</small> : null}</td>
+              <td>{r.known ? <b>{r.label}</b> : <span title="Máy chủ không trả tên cho người này">{r.label}</span>}{r.userId === me?.id ? <small> · bạn</small> : null}{r.email ? <small>{r.email}</small> : null}</td>
               <td><select aria-label={`Vai trò của ${r.label}`} value={r.role} disabled={busy !== null || r.userId === me?.id} onChange={(e) => change(r, e.target.value as "TENANT_ADMIN" | "MEMBER")}>
                 {TENANT_ROLES.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</select></td>
               <td><button className="btn sm danger" disabled={busy !== null || r.userId === me?.id} title={r.userId === me?.id ? "Bạn không thể tự gỡ mình" : undefined} onClick={() => change(r, "REMOVE")}>Gỡ</button></td>
@@ -101,10 +103,17 @@ function TenantMembers({ tenantId, tenantName }: { tenantId: string; tenantName:
         </table>)}
       <form className="stack" onSubmit={(e) => void add(e)} data-testid="tenant-member-add">
         <h3 className="bx-h3">Thêm thành viên</h3>
-        {nobody ? <p className="hint" data-testid="tenant-add-blocked">Chưa thêm được người mới từ màn hình này: tài khoản của bạn chỉ tra cứu được người trong các workspace bạn quản trị, và bạn chưa quản trị workspace nào. (Cần API tra cứu người dùng theo công ty: handoff H-C1-11.)</p> : (<>
-          <PersonSelect id="tm-person" people={addable} q={q} setQ={setQ} value={pick} onChange={setPick} platform={platform}/>
-          <label className="field"><span>Vai trò</span><select data-testid="tm-role" value={role} onChange={(e) => setRole(e.target.value)}>{TENANT_ROLES.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</select></label>
-          <div className="row"><button className="btn primary" disabled={busy !== null || !pick}>{busy === "add" ? "Đang thêm…" : "Thêm vào công ty"}</button></div></>)}
+        <label className="field"><span>Tìm người dùng</span><input data-testid="tm-search" placeholder="Tên, tên đăng nhập hoặc email (ít nhất 2 ký tự)" value={q} autoComplete="off" onChange={(e) => setQ(e.target.value)}/></label>
+        {ask.hint ? <p className="hint" data-testid="tm-hint">{ask.hint}</p> : null}
+        <label className="field"><span>Người dùng</span>
+          <select data-testid="tm-person" size={Math.min(6, Math.max(2, options.length))} value={pick} onChange={(e) => setPick(e.target.value)} disabled={!ask.ask}>
+            {options.length === 0 ? <option value="" disabled>{candidates.loading ? "Đang tìm…" : "Không có người phù hợp"}</option> : null}
+            {options.map((c) => <option key={c.userId} value={c.userId}>{candidateLabel(c)}</option>)}
+          </select>
+          <small className="hint">Chỉ hiện người đã thuộc một workspace của công ty này (hoặc từng là thành viên), đã kích hoạt và không phải quản trị hệ thống. Tối đa {CANDIDATE_MAX_RESULTS} kết quả.</small></label>
+        {candidates.error ? <p className="formError" role="alert">{say(candidates.error, "Chưa tìm được người dùng.")}</p> : null}
+        <label className="field"><span>Vai trò</span><select data-testid="tm-role" value={role} onChange={(e) => setRole(e.target.value)}>{TENANT_ROLES.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</select></label>
+        <div className="row"><button className="btn primary" data-testid="tm-add" disabled={busy !== null || !pick}>{busy === "add" ? "Đang thêm…" : "Thêm vào công ty"}</button></div>
       </form>
       {msg ? <p className={msg.kind === "ok" ? "notice" : "formError"} role={msg.kind === "ok" ? "status" : "alert"} data-testid="tenant-msg">{msg.text}</p> : null}
     </Card>

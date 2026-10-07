@@ -27,13 +27,15 @@ export async function run({ cfg, fx, browser, check }) {
   const row = page.getByTestId(`tm:${lonely.id}`);
   check.ok("the person's own row is named (from the session), marked 'bạn', and its role / remove controls are disabled (no self-change)", /bạn/.test(await row.innerText()) && (await row.locator("select").isDisabled()) && (await row.getByRole("button", { name: "Gỡ" }).isDisabled()));
   check.ok("a tenant admin gets NO suspend / delete buttons (platform operations)", (await page.getByTestId("tenant-SUSPENDED").count()) === 0 && (await page.getByTestId("tenant-DELETED").count()) === 0);
-  check.ok("adding a person is explained, not hidden: this account cannot look people up (needs a workspace to administer / H-C1-11)", (await page.getByTestId("tenant-add-blocked").count()) === 1);
+  check.ok("the add form is real: a search box and a candidate list (empty here: this fresh tenant has no workspace and no former member) — not a 'cannot look people up' notice", (await page.getByTestId("tm-search").count()) === 1 && (await page.getByTestId("tenant-add-blocked").count()) === 0 && /Không có người phù hợp/.test(await page.getByTestId("tm-person").innerText()));
+  await page.getByTestId("tm-search").fill("a"); await page.waitForTimeout(600);
+  check.ok("a 1-character search is not sent (the server would answer 400 QUERY_TOO_SHORT): the form asks for 2", /ít nhất 2 ký tự/.test(await page.getByTestId("tm-hint").innerText()) && !bad.some((b) => /member-candidates/.test(b)), bad.join(" | "));
 
   // the API agrees with what the UI showed
   const sysOnly = await fx.sessions.lonelyA.get("/admin/users");
   check.ok("[api] the same person is refused the system-wide user list (403 ADMIN_REQUIRED)", sysOnly.status === 403 && sysOnly.body?.code === "ADMIN_REQUIRED", `status=${sysOnly.status} ${sysOnly.body?.code}`, "http");
   const mem = await fx.sessions.lonelyA.get(`/admin/tenants/${tid}/members`);
-  check.ok("[api] …but allowed to read the members of THEIR tenant (TENANT_MEMBERS)", mem.status === 200 && Array.isArray(mem.body), `status=${mem.status}`, "http");
+  check.ok("[api] …but allowed to read the members of THEIR tenant (TENANT_MEMBERS), each row with userId, username, displayName, email, role, active", mem.status === 200 && Array.isArray(mem.body) && mem.body.length > 0 && mem.body.every((m) => ["userId", "username", "displayName", "email", "role", "active"].every((k) => k in m)), `status=${mem.status} ${JSON.stringify(mem.body).slice(0, 160)}`, "http");
   const suspend = await fx.sessions.lonelyA.patch(`/admin/tenants/${tid}/status`, { status: "SUSPENDED" });
   check.ok("[api] …and refused to suspend it (platform only: 403)", suspend.status === 403, `status=${suspend.status} ${suspend.body?.code}`, "http");
   const foreign = await fx.sessions.lonelyA.get(`/admin/tenants/00000000-0000-0000-0000-000000000001/members`);
