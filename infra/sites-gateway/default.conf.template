@@ -16,6 +16,11 @@ map $http_x_forwarded_proto $fwd_proto { default $http_x_forwarded_proto; "" $sc
 server {
     listen 8080;
     server_name ${SITES_HOST} localhost 127.0.0.1;
+    # Client address (D-C0-37): X-Forwarded-For is believed ONLY from the proxies named in GATEWAY_REAL_IP_FROM (default 127.0.0.1 = none: the gateway is reached
+    # directly). Behind a tunnel / load balancer name its address range; then $remote_addr below is the visitor, for limit_req and for the API.
+    set_real_ip_from ${GATEWAY_REAL_IP_FROM};
+    real_ip_header X-Forwarded-For;
+    real_ip_recursive on;
     server_tokens off;
     client_max_body_size 1k;
 
@@ -55,7 +60,8 @@ server {
         proxy_http_version 1.1;
         proxy_set_header Connection "";
         proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-For $http_x_forwarded_for;
+        # one validated address, never the header the visitor sent (a spoofed X-Forwarded-For cannot choose its own rate-limit bucket)
+        proxy_set_header X-Forwarded-For $remote_addr;
         proxy_set_header X-Forwarded-Proto $fwd_proto;
         proxy_set_header Cookie "";
         proxy_set_header Authorization "";
@@ -107,6 +113,11 @@ server {
 server {
     listen 8080 default_server;
     server_name _;
+    # Client address (D-C0-37): X-Forwarded-For is believed ONLY from the proxies named in GATEWAY_REAL_IP_FROM (default 127.0.0.1 = none: the gateway is reached
+    # directly). Behind a tunnel / load balancer name its address range; then $remote_addr below is the visitor, for limit_req and for the API.
+    set_real_ip_from ${GATEWAY_REAL_IP_FROM};
+    real_ip_header X-Forwarded-For;
+    real_ip_recursive on;
     server_tokens off;
     client_max_body_size 1k;
 

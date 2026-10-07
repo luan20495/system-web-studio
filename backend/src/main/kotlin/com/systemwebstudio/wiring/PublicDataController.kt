@@ -7,7 +7,9 @@ import com.systemwebstudio.access.adapters.PublicSiteGatewayContext
 import com.systemwebstudio.access.adapters.PublicSiteRequest
 import com.systemwebstudio.access.adapters.PublicSiteResponses
 import com.systemwebstudio.app.definition.AppDefinitionFormatException
+import com.systemwebstudio.app.definition.AppDefinitionCodec
 import com.systemwebstudio.app.definition.AppResolutionException
+import com.systemwebstudio.app.definition.PublicQueries
 import com.systemwebstudio.app.definition.QueryMode
 import com.systemwebstudio.app.definition.ResolutionCodes
 import com.systemwebstudio.common.ApiException
@@ -80,7 +82,7 @@ private val PUBLIC_DATA_PATH = Regex("^/sites/[^/]+/_data/queries/[^/]+/run$")
  * publish policy carries the public-data approval (`publish_configs.public_data_approved`, the author's explicit acknowledgement; revoking it closes the route at
  * once). No row, no approval, no snapshot, any error: the empty set (C1 then refuses every query).
  */
-class ReleaseSnapshotPublicQueryAllowList(private val jdbc: JdbcTemplate, private val json: JsonMapper) : PublicQueryAllowList {
+class ReleaseSnapshotPublicQueryAllowList(private val jdbc: JdbcTemplate, private val json: JsonMapper, private val codec: AppDefinitionCodec) : PublicQueryAllowList {
     override fun publicQueryIds(tenantId: UUID, projectId: UUID, releaseId: UUID): Set<String> = try {
         val rows = jdbc.queryForList(
             """SELECT v.schema_snapshot::text AS snapshot, pc.public_data_approved AS approved
@@ -90,25 +92,9 @@ class ReleaseSnapshotPublicQueryAllowList(private val jdbc: JdbcTemplate, privat
                JOIN publish_configs pc ON pc.project_id = d.project_id AND pc.tenant_id = w.tenant_id
                WHERE d.id = ? AND d.project_id = ?""", tenantId, releaseId, projectId)
         val row = rows.firstOrNull()
-        if (row == null || row["approved"] != true) emptySet() else idsOf(json.readTree(row["snapshot"] as String))
+        if (row == null || row["approved"] != true) emptySet() else PublicQueries.of(codec.fromJson(json.readTree(row["snapshot"] as String))).toSet()
     } catch (e: Exception) {
-        emptySet()
-    }
-
-    companion object {
-        /** `queries[]` entries with `"public": true` (a JSON boolean, exactly) and a READ mode (absent = READ) */
-        fun idsOf(snapshot: JsonNode): Set<String> {
-            val queries = snapshot.get("queries")?.takeIf { it.isArray } ?: return emptySet()
-            val out = LinkedHashSet<String>()
-            for (i in 0 until queries.size()) {
-                val q = queries.get(i) ?: continue
-                val id = q.get("id")?.takeIf { it.isString }?.asString() ?: continue
-                if (q.get("public")?.let { it.isBoolean && it.asBoolean() } != true) continue
-                val mode = q.get("mode")?.takeIf { it.isString }?.asString() ?: QueryMode.READ.name
-                if (mode == QueryMode.READ.name) out += id
-            }
-            return out
-        }
+        emptySet()                                                           // an unreadable snapshot is not public: fail closed
     }
 }
 
@@ -145,7 +131,7 @@ class PublicDataBodyLimitFilter(
 class PublicDataConfiguration {
     /** the release allow-list provider C1's policy consults; without this bean the policy keeps its default, DENY ALL */
     @Bean
-    fun publicQueryAllowList(jdbc: JdbcTemplate, json: JsonMapper): PublicQueryAllowList = ReleaseSnapshotPublicQueryAllowList(jdbc, json)
+    fun publicQueryAllowList(jdbc: JdbcTemplate, json: JsonMapper, codec: AppDefinitionCodec): PublicQueryAllowList = ReleaseSnapshotPublicQueryAllowList(jdbc, json, codec)
 }
 
 @RestController
@@ -238,6 +224,8 @@ class PublicDataController(
             val r = gateway.runQuery(ctx, GatewayQuery(query.dataSource.sourceId, query.operationKey, params, PageSpec(limit), mappingRef))
             val out = json.createObjectNode()
             out.put("queryId", queryId)
+            out.put("mode", "LIVE")                                  // the shape of runtime-api.md R1, which the page runtime reads
+            out.put("cache", r.cache.name)
             out.set("result", ViewModelDataJson.toNode(r.data))
             val text = json.writeValueAsString(out)
             if (text.toByteArray().size > maxResponseBytes) return reply(502, FailureCodes.RESPONSE_TOO_LARGE, "The result is too large.", requestId)

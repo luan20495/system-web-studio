@@ -46,6 +46,7 @@ class PublicDataEndpointTests : ManagementApiTestBase() {
     @Autowired lateinit var schemas: SchemaRepository
     @Autowired lateinit var limiter: com.systemwebstudio.common.RateLimiter
     @Autowired lateinit var gateway: DataGateway
+    @Autowired lateinit var codec: com.systemwebstudio.app.definition.AppDefinitionCodec
     @Autowired @org.springframework.beans.factory.annotation.Qualifier("requestMappingHandlerMapping") lateinit var mappings: RequestMappingHandlerMapping
 
     private val sample: JsonNode get() = AppDefinitionTestSupport.resource("valid-v2-sample.json")
@@ -270,11 +271,8 @@ class PublicDataEndpointTests : ManagementApiTestBase() {
     // ------------------------------------------------------------------------------------------------ the allow-list provider on its own
 
     @Test
-    fun `the provider takes only exact boolean true on a READ query of an array, and nothing else`() {
-        fun ids(s: String) = ReleaseSnapshotPublicQueryAllowList.idsOf(json.readTree(s))
-        assertThat(ids("""{"queries":[{"id":"a","public":true},{"id":"b","public":false},{"id":"c"},{"id":"d","public":"true"},{"id":"e","public":1},{"id":"w","public":true,"mode":"WRITE"},{"id":"r","public":true,"mode":"READ"}]}""")).containsExactlyInAnyOrder("a", "r")
-        assertThat(ids("""{"queries":{"id":"a","public":true}}""")).isEmpty(); assertThat(ids("{}")).isEmpty(); assertThat(ids("""{"queries":[{"public":true},{"id":5,"public":true}]}""")).isEmpty()
-        val p = ReleaseSnapshotPublicQueryAllowList(jdbc, json)
+    fun `the provider is C2's PublicQueries over the release's own snapshot, gated by the approval, and fails closed`() {
+        val p = ReleaseSnapshotPublicQueryAllowList(jdbc, json, codec)
         assertThat(p.publicQueryIds(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID())).describedAs("unknown release").isEmpty()
         val a = pub(); assertThat(p.publicQueryIds(a.tenant, a.sc.projectId, a.release)).containsExactly("orders-list")
         assertThat(p.publicQueryIds(UUID.randomUUID(), a.sc.projectId, a.release)).describedAs("another tenant").isEmpty()

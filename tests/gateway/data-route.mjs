@@ -21,7 +21,7 @@ await new Promise((r) => upstream.listen(0, "127.0.0.1", r));
 const upPort = upstream.address().port; const gwPort = await freePort();
 const name = `xweb-c2-gateway-test-${process.pid}`;
 const docker = (...a) => spawnSync("docker", a, { encoding: "utf8" });
-const started = docker("run", "-d", "--rm", "--name", name, "-p", `127.0.0.1:${gwPort}:8080`, "-e", `API_UPSTREAM=host.docker.internal:${upPort}`, "-e", "SITES_HOST=sites.test",
+const started = docker("run", "-d", "--rm", "--name", name, "-p", `127.0.0.1:${gwPort}:8080`, "-e", `API_UPSTREAM=host.docker.internal:${upPort}`, "-e", "SITES_HOST=sites.test", "-e", "GATEWAY_REAL_IP_FROM=127.0.0.1",
   "-v", `${TEMPLATE}:/etc/nginx/templates/default.conf.template:ro`, IMAGE);
 if (started.status !== 0) { console.log("FAIL  could not start the gateway container:", started.stderr.trim().slice(0, 300)); process.exit(1); }
 const gw = (path, init = {}) => fetch(`http://127.0.0.1:${gwPort}${path}`, { redirect: "manual", ...init });
@@ -39,6 +39,11 @@ try {
   check("no Cookie, no Authorization, no CSRF header ever reaches the API on this route", !!c && !c.headers.cookie && !c.headers.authorization && !c.headers["x-xsrf-token"], c ? Object.keys(c.headers).join(",") : "no call");
   check("the API still gets the Host and the forwarding headers it needs for its own limits", c?.headers.host === "127.0.0.1" && !!c.headers["x-forwarded-proto"] && c.headers["content-type"] === "application/json", c?.headers.host);
   check("the answer is not cached by the gateway", !/HIT/.test(r.headers.get("x-cache") ?? "") && r.headers.get("cache-control") === "no-store");
+
+  // client address: a visitor-supplied X-Forwarded-For is NOT believed (the gateway is not behind a trusted proxy here), the API gets ONE validated address
+  calls.length = 0; await gw("/demo/_data/queries/q-title/run", { method: "POST", headers: { "Content-Type": "application/json", "X-Forwarded-For": "1.2.3.4, 5.6.7.8" }, body: "{}" });
+  const xff = calls[0]?.headers["x-forwarded-for"] ?? "";
+  check("a spoofed X-Forwarded-For never reaches the API; it gets exactly one address (the real peer)", !!xff && !/1\.2\.3\.4|5\.6\.7\.8/.test(xff) && !xff.includes(","), xff);
 
   for (const method of ["GET", "HEAD", "PUT", "PATCH", "DELETE"]) {
     calls.length = 0; const x = await gw("/demo/_data/queries/q-title/run", { method, ...(["PUT", "PATCH"].includes(method) ? { body: "{}" } : {}) });

@@ -38,6 +38,11 @@ if [ "${PORTALS:-0}" = 1 ]; then
   export HBL_ENV=local API_PROXY_TARGET="${API_PROXY_TARGET:-http://127.0.0.1:8080}"
   export WEB_ORIGIN_PLATFORM="http://${PORTAL_HOST}:${PORTAL_PLATFORM_PORT}" WEB_ORIGIN_ADMIN="http://${PORTAL_HOST}:${PORTAL_ADMIN_PORT}" WEB_ORIGIN_STUDIO="http://${PORTAL_HOST}:${PORTAL_STUDIO_PORT}"
   export STUDIO_ORIGIN="${STUDIO_ORIGIN:-$WEB_ORIGIN_STUDIO}"
+  # the Public Runtime (D-C0-36 / 37): same-origin through the sites gateway; apiBase is ONE value for every site ({slug} is replaced per site)
+  export SITES_PUBLIC_DATA_ENABLED=true
+  export SITES_DATA_API_BASE="${SITES_DATA_API_BASE:-${SITES_ORIGIN}/{slug}/_data}"
+  # the API sees the gateway container's address as its TCP peer (Docker Desktop: a private range); the gateway passes ONE validated client address (nginx real_ip)
+  export TRUST_PROXY="${TRUST_PROXY:-true}" TRUSTED_PROXY_CIDRS="${TRUSTED_PROXY_CIDRS:-127.0.0.1/32,172.16.0.0/12,192.168.0.0/16,10.0.0.0/8}"
   export CORS_ALLOWED_ORIGINS="${CORS_ALLOWED_ORIGINS:-${PORTAL_ORIGINS},http://localhost:${FRONTEND_PORT},http://127.0.0.1:${FRONTEND_PORT}}"
   # the local data target (scripts/data-target.sh): ONE exact endpoint the postgres connector may reach, TLS verified against its dev CA
   export DATA_PLATFORM_POSTGRES_ALLOWED_PRIVATE="${DATA_PLATFORM_POSTGRES_ALLOWED_PRIVATE:-127.0.0.1:${DATA_TARGET_PORT}}"
