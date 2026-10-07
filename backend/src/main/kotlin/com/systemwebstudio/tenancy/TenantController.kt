@@ -3,6 +3,8 @@ package com.systemwebstudio.tenancy
 import com.systemwebstudio.access.AccessService
 import com.systemwebstudio.access.Permission
 import com.systemwebstudio.common.ApiException
+import com.systemwebstudio.identity.AccountService
+import com.systemwebstudio.identity.ActivationLink
 import com.systemwebstudio.identity.StudioUserDetails
 import com.systemwebstudio.identity.UserRepository
 import org.springframework.http.HttpStatus
@@ -15,6 +17,14 @@ data class TenantResponse(val id: UUID, val slug: String, val name: String, val 
 data class CreateTenantRequest(val slug: String? = null, val name: String? = null, val firstAdminUserId: UUID? = null)
 data class TenantStatusRequest(val status: String? = null)
 data class TenantMemberRequest(val role: String? = null)
+data class TenantUserProvisionRequest(
+    val username: String? = null,
+    val displayName: String? = null,
+    val email: String? = null,
+    val tenantRole: String? = "MEMBER",
+    val workspaceId: UUID? = null,
+    val workspaceRole: String? = null
+)
 
 private fun TenantEntity.toResponse() = TenantResponse(id, slug, name, status, createdAt)
 
@@ -28,7 +38,8 @@ private fun TenantEntity.toResponse() = TenantResponse(id, slug, name, status, c
 class TenantController(
     private val access: AccessService,
     private val service: TenantService,
-    private val users: UserRepository
+    private val users: UserRepository,
+    private val accounts: AccountService
 ) {
     @GetMapping
     fun list(@AuthenticationPrincipal me: StudioUserDetails): List<TenantResponse> {
@@ -55,6 +66,27 @@ class TenantController(
         access.forPlatform(me.userId)
         val status = TenantStatus.entries.firstOrNull { it.name == r.status } ?: throw ApiException.badRequest("TENANT_STATUS_INVALID", "Status must be ACTIVE, SUSPENDED or DELETED")
         return service.setStatus(tenantId, status, me.userId).toResponse()
+    }
+
+    /**
+     * Creates a brand-new LOCAL account inside exactly one authorized tenant. TENANT_ADMIN and SYSTEM_ADMIN both reach this
+     * endpoint through TENANT_MEMBERS; WORKSPACE_ADMIN alone cannot. The optional workspace assignment is verified against the
+     * same tenant before AccountService writes anything.
+     */
+    @PostMapping("/{tenantId}/users")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun createUser(
+        @PathVariable tenantId: UUID,
+        @RequestBody r: TenantUserProvisionRequest,
+        @AuthenticationPrincipal me: StudioUserDetails
+    ): ActivationLink {
+        access.forTenant(me.userId, tenantId).require(Permission.TENANT_MEMBERS)
+        val username = r.username?.trim().orEmpty()
+        val displayName = r.displayName?.trim().orEmpty()
+        val tenantRole = r.tenantRole ?: "MEMBER"
+        return accounts.createTenantUser(
+            me.userId, tenantId, username, displayName, r.email, tenantRole, r.workspaceId, r.workspaceRole
+        )
     }
 
     @GetMapping("/{tenantId}/members")
