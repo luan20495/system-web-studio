@@ -21,16 +21,24 @@ class PrivilegeEscalationTests : IntegrationTestBase() {
     fun `a system admin cannot add itself to a workspace it does not belong to (R-08)`() {
         val sc = scenario(); val sys = fx.user("esc-sys", systemAdmin = true); val s = sessionFor(sys.username)
         val r = s.post(ws(sc.ws), """{"username":"${sys.username}","role":"WORKSPACE_ADMIN"}""")
-        assertThat(r.response.status).isEqualTo(403); assertThat(code(r, s)).isEqualTo("SELF_GRANT_FORBIDDEN")
+        // D-C1-13: a non-member platform admin holds no MEMBER_MANAGE in the workspace, so the refusal is the missing permission (FORBIDDEN) before the self-grant rule;
+        // the self-grant rule itself is proven for holders of MEMBER_MANAGE (workspace admin, below) and at tenant level (SELF_GRANT_FORBIDDEN)
+        assertThat(r.response.status).isEqualTo(403); assertThat(code(r, s)).isEqualTo("FORBIDDEN")
         assertThat(wsRole(sc.ws, sys.id)).isNull()
         assertThat(s.get(sc.base).response.status).isEqualTo(404)                                            // still no business access
     }
 
     @Test
-    fun `a system admin can still onboard OTHER people - the platform duty is kept, only self-grant is closed`() {
+    fun `a system admin onboards OTHER people through tenant-scoped provisioning, never through a workspace it is not a member of`() {
         val sc = scenario(); val sys = fx.user("esc-sys2", systemAdmin = true); val s = sessionFor(sys.username); val newcomer = fx.user("newcomer")
-        assertThat(s.post(ws(sc.ws), """{"username":"${newcomer.username}","role":"VIEWER"}""").response.status).isEqualTo(201)
-        assertThat(wsRole(sc.ws, newcomer.id)).isEqualTo("VIEWER")
+        // D-C1-13: no MEMBER_MANAGE for a non-member platform admin ...
+        assertThat(s.post(ws(sc.ws), """{"username":"${newcomer.username}","role":"VIEWER"}""").response.status).isEqualTo(403)
+        assertThat(wsRole(sc.ws, newcomer.id)).isNull()
+        // ... the platform duty lives in the tenant API: a brand-new person, in the tenant of that workspace, with a workspace role
+        val tenant = jdbc.queryForObject("SELECT tenant_id FROM workspaces WHERE id = ?", java.util.UUID::class.java, sc.ws)
+        val r = s.post("/api/v1/admin/tenants/$tenant/users", """{"username":"onboarded-${java.util.UUID.randomUUID().toString().take(8)}","displayName":"Onboarded","tenantRole":"MEMBER","workspaceId":"${sc.ws}","workspaceRole":"VIEWER"}""")
+        assertThat(r.response.status).isEqualTo(201)
+        assertThat(wsRole(sc.ws, java.util.UUID.fromString(s.body(r).get("userId").asString()))).isEqualTo("VIEWER")
     }
 
     @Test
@@ -72,8 +80,12 @@ class PrivilegeEscalationTests : IntegrationTestBase() {
         assertThat(tenants.roleOf(t.id, sys.id)).isNull()
         assertThat(tas.put("/api/v1/admin/tenants/${t.id}/members/${ta.id}", """{"role":"MEMBER"}""").response.status).isEqualTo(403)
         assertThat(tenants.roleOf(t.id, ta.id)).isEqualTo(TenantRole.TENANT_ADMIN)
-        val other = fx.user("esc-other")
-        assertThat(ss.put("/api/v1/admin/tenants/${t.id}/members/${other.id}", """{"role":"TENANT_ADMIN"}""").response.status).isEqualTo(200)   // granting someone else is fine
+        // granting someone else is fine - but only a person related to THIS tenant (here: a member of one of its workspaces); a stranger is a 404, never a global directory
+        val stranger = fx.user("esc-stranger")
+        assertThat(ss.put("/api/v1/admin/tenants/${t.id}/members/${stranger.id}", """{"role":"TENANT_ADMIN"}""").response.status).isEqualTo(404)
+        assertThat(tenants.roleOf(t.id, stranger.id)).isNull()
+        val other = fx.user("esc-other"); fx.member(tenants.createWorkspace(t.id, "Esc WS")["id"] as java.util.UUID, other, "VIEWER")
+        assertThat(ss.put("/api/v1/admin/tenants/${t.id}/members/${other.id}", """{"role":"TENANT_ADMIN"}""").response.status).isEqualTo(200)
         assertThat(tenants.roleOf(t.id, other.id)).isEqualTo(TenantRole.TENANT_ADMIN)
     }
 

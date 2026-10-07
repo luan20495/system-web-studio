@@ -37,13 +37,20 @@ private val PROJECT_ROLES = setOf("OWNER", "EDITOR", "PUBLISHER", "VIEWER")
 @RestController
 class MemberController(private val access: AccessService, private val jdbc: JdbcTemplate, private val audit: AuditService) {
 
-    private fun resolveUser(username: String?, email: String?): Triple<UUID, String, String?> {
+    /**
+     * Resolves the person to add. When [tenantId] is given (every workspace route) the person must be an ACTIVE member of THAT tenant, otherwise the answer is the same
+     * `404 USER_NOT_FOUND` as for a name nobody has: a workspace administrator cannot probe or pull in accounts of other tenants (no global directory, F-5).
+     * Only an eligible account can be reported as disabled.
+     */
+    private fun resolveUser(username: String?, email: String?, tenantId: UUID? = null): Triple<UUID, String, String?> {
         val u = username?.trim()?.takeIf { it.isNotEmpty() }
         val e = email?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
         if ((u == null) == (e == null)) throw ApiException.badRequest("VALIDATION_FAILED", "Provide exactly one of username or email")
         val rows = if (u != null) jdbc.queryForList("SELECT id, username, enabled FROM users WHERE username = ?", u)
         else jdbc.queryForList("SELECT id, username, enabled FROM users WHERE lower(email) = ?", e)
-        val row = rows.firstOrNull() ?: throw ApiException.notFound("USER_NOT_FOUND", "No such user. The person must sign in once (or be created by an administrator) first.")
+        val notFound = ApiException.notFound("USER_NOT_FOUND", "No such user in this organisation. The person must be created by an administrator of the tenant first.")
+        val row = rows.firstOrNull() ?: throw notFound
+        if (tenantId != null && jdbc.queryForObject("SELECT count(*) FROM tenant_members WHERE tenant_id = ? AND user_id = ? AND active", Long::class.java, tenantId, row["id"])!! == 0L) throw notFound
         if (row["enabled"] != true) throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "USER_DISABLED", "That account is disabled")
         return Triple(row["id"] as UUID, row["username"] as String, e)
     }
@@ -69,9 +76,10 @@ class MemberController(private val access: AccessService, private val jdbc: Jdbc
     @Transactional
     @ResponseStatus(HttpStatus.CREATED)
     fun addWorkspace(@PathVariable w: UUID, @Valid @RequestBody body: AddMemberRequest, @AuthenticationPrincipal me: StudioUserDetails): MemberDto {
-        access.forWorkspace(me.userId, w).require(Permission.MEMBER_MANAGE)
+        val wctx = access.forWorkspace(me.userId, w)
+        wctx.require(Permission.MEMBER_MANAGE)
         if (body.role !in WORKSPACE_ROLES) throw ApiException.badRequest("INVALID_ROLE", "Role must be one of $WORKSPACE_ROLES")
-        val (userId, _, _) = resolveUser(body.username, body.email)
+        val (userId, _, _) = resolveUser(body.username, body.email, wctx.tenantId)
         rejectSelfGrant(me, userId)
         val existing = jdbc.queryForList("SELECT active, role FROM workspace_members WHERE workspace_id = ? AND user_id = ? FOR UPDATE", w, userId).firstOrNull()
         if (existing?.get("active") == true) throw ApiException.conflict("ALREADY_MEMBER", "User is already a member of this workspace")
@@ -128,9 +136,10 @@ class MemberController(private val access: AccessService, private val jdbc: Jdbc
     @Transactional
     @ResponseStatus(HttpStatus.CREATED)
     fun addProject(@PathVariable w: UUID, @PathVariable p: UUID, @Valid @RequestBody body: AddMemberRequest, @AuthenticationPrincipal me: StudioUserDetails): MemberDto {
-        access.forProject(me.userId, w, p).require(Permission.PROJECT_MEMBERS)
+        val pctx = access.forProject(me.userId, w, p)
+        pctx.require(Permission.PROJECT_MEMBERS)
         if (body.role !in PROJECT_ROLES) throw ApiException.badRequest("INVALID_ROLE", "Role must be one of $PROJECT_ROLES")
-        val (userId, _, _) = resolveUser(body.username, body.email)
+        val (userId, _, _) = resolveUser(body.username, body.email, pctx.tenantId)
         rejectSelfGrant(me, userId)
         val inWorkspace = jdbc.queryForObject("SELECT count(*) FROM workspace_members WHERE workspace_id = ? AND user_id = ? AND active", Long::class.java, w, userId)!!
         if (inWorkspace == 0L) throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "NOT_WORKSPACE_MEMBER", "Add the user to the workspace first")

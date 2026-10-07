@@ -148,29 +148,36 @@ class TenantService(
         )
     }
 
-    /** True when the public tenant-member API may add/reactivate this user without exposing a global directory. */
-    fun mayAddMember(tenantId: UUID, userId: UUID): Boolean {
+    enum class MemberEligibility { ELIGIBLE, NOT_FOUND, DISABLED }
+
+    /**
+     * Whether the public tenant-member API may add / reactivate [userId]: an ACTIVE member of this tenant, or an activated non-platform account that is related to it
+     * (an active workspace membership in one of its workspaces, or an inactive tenant membership). A disabled account is reported as DISABLED only when it is related to
+     * this tenant (it is already visible there); anyone else is NOT_FOUND, exactly like a guessed UUID.
+     */
+    fun eligibility(tenantId: UUID, userId: UUID): MemberEligibility {
         get(tenantId)
-        val active = members.findByTenantIdAndUserId(tenantId, userId)?.active == true
-        if (active) return true
-        return jdbc.queryForObject(
-            """SELECT EXISTS (
-                   SELECT 1 FROM users u
-                   WHERE u.id = ? AND u.enabled AND u.activated_at IS NOT NULL AND NOT u.system_admin
-                     AND (
-                       EXISTS (
-                         SELECT 1 FROM workspace_members wm JOIN workspaces w ON w.id = wm.workspace_id
-                         WHERE wm.user_id = u.id AND wm.active AND w.tenant_id = ?
-                       )
-                       OR EXISTS (
-                         SELECT 1 FROM tenant_members tm
-                         WHERE tm.tenant_id = ? AND tm.user_id = u.id AND NOT tm.active
-                       )
-                     )
-               )""",
+        if (members.findByTenantIdAndUserId(tenantId, userId)?.active == true) return MemberEligibility.ELIGIBLE
+        val enabled = jdbc.queryForList(
+            """SELECT u.enabled FROM users u
+               WHERE u.id = ? AND u.activated_at IS NOT NULL AND NOT u.system_admin
+                 AND (
+                   EXISTS (
+                     SELECT 1 FROM workspace_members wm JOIN workspaces w ON w.id = wm.workspace_id
+                     WHERE wm.user_id = u.id AND wm.active AND w.tenant_id = ?
+                   )
+                   OR EXISTS (
+                     SELECT 1 FROM tenant_members tm
+                     WHERE tm.tenant_id = ? AND tm.user_id = u.id AND NOT tm.active
+                   )
+                 )""",
             Boolean::class.java, userId, tenantId, tenantId
-        ) == true
+        ).firstOrNull() ?: return MemberEligibility.NOT_FOUND
+        return if (enabled) MemberEligibility.ELIGIBLE else MemberEligibility.DISABLED
     }
+
+    /** True when the public tenant-member API may add/reactivate this user without exposing a global directory. */
+    fun mayAddMember(tenantId: UUID, userId: UUID): Boolean = eligibility(tenantId, userId) == MemberEligibility.ELIGIBLE
 
     fun roleOf(tenantId: UUID, userId: UUID): TenantRole? =
         members.findByTenantIdAndUserId(tenantId, userId)?.takeIf { it.active }?.let { TenantRole.valueOf(it.role) }

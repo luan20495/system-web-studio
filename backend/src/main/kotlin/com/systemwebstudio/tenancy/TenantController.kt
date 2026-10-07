@@ -125,7 +125,12 @@ class TenantController(
     fun setMember(@PathVariable tenantId: UUID, @PathVariable userId: UUID, @RequestBody r: TenantMemberRequest, @AuthenticationPrincipal me: StudioUserDetails): TenantMemberView {
         access.forTenant(me.userId, tenantId).require(Permission.TENANT_MEMBERS)
         val role = TenantRole.entries.firstOrNull { it.name == r.role } ?: throw ApiException.badRequest("TENANT_ROLE_INVALID", "Role must be TENANT_ADMIN or MEMBER")
-        if (!service.mayAddMember(tenantId, userId)) throw ApiException.notFound("USER_NOT_FOUND", "User not found")
+        // self-grant is judged first (403 SELF_GRANT_FORBIDDEN in the service); any other target must be related to THIS tenant, else it is indistinguishable from "no such user"
+        if (userId != me.userId) when (service.eligibility(tenantId, userId)) {
+            TenantService.MemberEligibility.NOT_FOUND -> throw ApiException.notFound("USER_NOT_FOUND", "User not found")
+            TenantService.MemberEligibility.DISABLED -> throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "USER_DISABLED", "That account is disabled")
+            TenantService.MemberEligibility.ELIGIBLE -> Unit
+        }
         return service.setMember(tenantId, userId, role, me.userId)
     }
 
