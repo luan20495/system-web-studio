@@ -36,6 +36,8 @@
 | H-C1-05 CLOSED (C1 7ecea1a, verified: AD02 PASS) | C1 | - | - |
 | H-C1-11 member metadata works; **candidates endpoint 500 on PostgreSQL** (ORDER BY with DISTINCT; `ESCAPE '\\'`): fix in `H-C1-11_test_patch.diff`; `/auth/me` permissions still primary-tenant only | C1 | **P1** | E2E-AD03 |
 | H-C1-13 C1's own MeTenancyTests fail (2/4) at 7ecea1a: tests vs `PermissionMatrix` disagree on MEMBER_MANAGE | C1 | P2 | - |
+| H-C1-14 workspaces cannot be created in / listed by tenant (no tenantId) | C1 | P1 | SUPER01 (new tenant) |
+| H-C1-15 tenant-scoped account creation contract missing | C1 | P0 | ADMIN01, USER01 chain |
 | H-C0-11 CORS must list the 3 portal origins; public routing = one hostname per portal (see HANDOFFS_PORTALS.md) | C0 | P0 | public portals |
 | H-C1-12 / H-C0-12 groups, sharing, BYOK have no usable backend (no API / flag off) | C1/C2/C0 | P3 | Admin sections stay "Chưa sẵn sàng" |
 | H-C2-10 AI stream `status` only for tools: add model/fallback/validating/saving so the UI can show what the server is doing | C2 | P2 | AI chat feedback |
