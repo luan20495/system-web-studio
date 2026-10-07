@@ -40,4 +40,28 @@ class SiteRuntimeConfigTests : ScopeIntegrationTestBase() {
         assertThat(StaticSiteBuilder::class.java.declaredFields.map { it.name }).noneMatch { it.contains("apiBase", ignoreCase = true) || it.contains("dataApi", ignoreCase = true) }
         assertThat(StaticSiteBuilder::class.java.declaredConstructors.flatMap { it.parameters.toList() }.map { it.name }).noneMatch { it.contains("apiBase", ignoreCase = true) }
     }
+
+    @Test
+    fun `version is the version of the release being served, so a rollback shows the older one - a preview shows the latest`() {
+        val sc = scenario()
+        val versions = jdbc.queryForList("SELECT id FROM project_versions WHERE project_id = ? ORDER BY version_number", UUID::class.java, sc.projectId)
+        // a second version, as if the project had moved on
+        val v1 = versions.first()
+        val v2 = UUID.randomUUID()
+        jdbc.update("""INSERT INTO project_versions (id, workspace_id, project_id, version_number, schema_snapshot, kind, summary, created_by)
+            SELECT ?, workspace_id, project_id, version_number + 1, schema_snapshot, 'EDIT', 'next', created_by FROM project_versions WHERE id = ?""", v2, v1)
+        fun release(version: UUID): UUID {
+            val id = UUID.randomUUID()
+            jdbc.update("INSERT INTO deployments (id, workspace_id, project_id, version_id, requested_by, visibility, status, provider) VALUES (?,?,?,?,?,'PUBLIC','RUNNING','static')", id, sc.ws, sc.projectId, version, sc.user.id)
+            return id
+        }
+        val old = release(v1); val newest = release(v2)
+        val oldNumber = jdbc.queryForObject("SELECT version_number FROM project_versions WHERE id = ?", Int::class.java, v1).toString()
+        val newNumber = jdbc.queryForObject("SELECT version_number FROM project_versions WHERE id = ?", Int::class.java, v2).toString()
+        assertThat(oldNumber).isNotEqualTo(newNumber)
+        assertThat(sites.runtimeConfig(sc.projectId, "production", "PUBLIC", null, newest)["version"]).isEqualTo(newNumber)
+        assertThat(sites.runtimeConfig(sc.projectId, "production", "PUBLIC", null, old)["version"]).describedAs("after a rollback to the older release").isEqualTo(oldNumber)
+        assertThat(sites.runtimeConfig(sc.projectId, "preview", "PUBLIC", null)["version"]).isEqualTo(newNumber)                 // a preview has no release: the latest
+        assertThat(sites.runtimeConfig(sc.projectId, "production", "PUBLIC", null, UUID.randomUUID())["version"]).isEqualTo(newNumber)   // an unknown release falls back, it never fails
+    }
 }
