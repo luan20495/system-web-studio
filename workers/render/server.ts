@@ -5,6 +5,7 @@ import { timingSafeEqual } from "node:crypto";
 import { renderSchemaDocument, renderSitePages } from "../../lib/schema-preview";
 import type { PageSchema } from "../../lib/http-types";
 import { edit as astEdit, tree as astTree } from "./ast";
+import { BindingError, PAGE_RUNTIME_JS, PAGE_RUNTIME_PATH, resolveBindings } from "./page-runtime";
 import { previewAvailable, screenshot } from "./preview";
 
 const PORT = Number(process.env.RENDER_PORT ?? 18095);
@@ -52,7 +53,15 @@ createServer((req, res) => {
       const assets: Record<string, string> = {};
       // only relative paths inside the artifact are accepted as image URLs
       for (const [id, path] of Object.entries(body.assets ?? {})) if (/^assets\/[0-9a-f-]{36}\.[a-z0-9]{2,5}$/.test(path)) assets[id] = path;
-      if (req.url === "/render-site") return send(res, 200, JSON.stringify({ files: renderSitePages(body.schema, assets) }), "application/json");
+      if (req.url === "/render-site") {
+        // a page with data bindings also ships the client runtime; a binding that cannot work is refused here, with the reason (HTTP 422), never skipped
+        let bindings;
+        try { bindings = resolveBindings(body.schema); }
+        catch (e) { if (e instanceof BindingError) return send(res, 422, JSON.stringify({ error: e.message }), "application/json"); throw e; }
+        const files = renderSitePages(body.schema, assets, bindings);
+        if (bindings.length > 0) files[PAGE_RUNTIME_PATH] = PAGE_RUNTIME_JS;
+        return send(res, 200, JSON.stringify({ files }), "application/json");
+      }
       send(res, 200, renderSchemaDocument(body.schema, { selectedId: null, interactive: false, assets }), "text/html; charset=utf-8");
     } catch {
       send(res, 400, "invalid request");

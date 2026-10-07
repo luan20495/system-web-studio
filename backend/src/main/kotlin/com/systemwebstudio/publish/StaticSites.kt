@@ -37,12 +37,16 @@ class RenderClient(
         return response.body()
     }
 
+    private fun reasonOf(body: String): String =
+        runCatching { json.readTree(body).get("error")?.asString() }.getOrNull()?.replace(Regex("[\\r\\n]+"), " ")?.take(300)?.takeIf { it.isNotBlank() } ?: "the renderer refused it"
+
     /** Every page of a (multi-page) site: index.html, <slug>/index.html, 404.html. */
     fun renderSite(schema: JsonNode, assets: Map<String, String>): Map<String, String> {
         val body = json.writeValueAsString(mapOf("schema" to schema, "assets" to assets))
         val request = HttpRequest.newBuilder(URI("${url.trimEnd('/')}/render-site")).timeout(Duration.ofSeconds(30))
             .header("Content-Type", "application/json").header("X-Render-Token", token).POST(HttpRequest.BodyPublishers.ofString(body)).build()
         val response = try { http.send(request, HttpResponse.BodyHandlers.ofString()) } catch (e: Exception) { throw BuildFailure("Render worker is not reachable", transient = true) }
+        if (response.statusCode() == 422) throw BuildFailure("The page cannot be published: " + reasonOf(response.body()), transient = false)      // a refusal with its reason (e.g. a data binding that cannot work)
         if (response.statusCode() != 200) throw BuildFailure("Render worker answered HTTP ${response.statusCode()}", transient = response.statusCode() >= 500)
         val files = json.readTree(response.body()).get("files") ?: throw BuildFailure("Render worker returned no files")
         return files.propertyNames().associateWith { files.get(it).asString() }
@@ -107,12 +111,22 @@ class StaticSiteBuilder(private val jdbc: JdbcTemplate, private val json: JsonMa
         // every page of the site from one schema version: the deployment is an atomic snapshot of all pages
         val pages = render.renderSite(schema, urls)
         if ("index.html" !in pages) throw BuildFailure("Render worker returned no home page")
-        pages.forEach { (path, html) ->
+        pages.forEach { (path, content) ->
+            if (path == RUNTIME_PATH) {
+                // the client runtime of a data-bound page: one static script, the same bytes in every release, served as a file of the artifact
+                if (content.isBlank() || content.length > MAX_RUNTIME_BYTES) throw BuildFailure("The page runtime from the renderer is empty or too large")
+                files[path] = content.toByteArray(Charsets.UTF_8) to "application/javascript; charset=utf-8"
+                return@forEach
+            }
             if (!PAGE_PATH.matches(path)) throw BuildFailure("Unexpected page path from the renderer")
-            // the renderer never emits scripts for a published page; anything else means the input or renderer is wrong
-            if (Regex("<\\s*script", RegexOption.IGNORE_CASE).containsMatchIn(html)) throw BuildFailure("Rendered page contains a script")
-            files[path] = html.toByteArray(Charsets.UTF_8) to "text/html; charset=utf-8"
+            // the renderer never emits an author script for a published page; the ONLY script allowed is the one reference to the runtime file
+            val withoutRuntimeTag = RUNTIME_TAG.replace(content, "")
+            if (SCRIPT.containsMatchIn(withoutRuntimeTag)) throw BuildFailure("Rendered page contains a script")
+            if (withoutRuntimeTag.length != content.length && RUNTIME_PATH !in pages) throw BuildFailure("A rendered page references the page runtime but the renderer did not ship it")
+            files[path] = content.toByteArray(Charsets.UTF_8) to "text/html; charset=utf-8"
         }
+        // a runtime nobody references would be dead weight in the artifact and in the CSP decision (a script-allowing page is only ever served when the runtime is present)
+        if (RUNTIME_PATH in pages && pages.filterKeys { it != RUNTIME_PATH }.values.none { RUNTIME_TAG.containsMatchIn(it) }) throw BuildFailure("The renderer shipped a page runtime that no page uses")
         val manifest = files.map { (path, f) -> ManifestFile(path, f.first.size, sha256(f.first), f.second) }
         val manifestJson = json.writeValueAsString(manifest)
         val sha = sha256(manifestJson.toByteArray())
@@ -146,6 +160,12 @@ class StaticSiteBuilder(private val jdbc: JdbcTemplate, private val json: JsonMa
             return row.first
         }
 
+        /** the client runtime of a data-bound PAGE_SCHEMA page (workers/render/page-runtime.ts); present in an artifact only together with the references to it */
+        const val RUNTIME_PATH = "_runtime/page-runtime.js"
+        private const val MAX_RUNTIME_BYTES = 32 * 1024
+        /** the one script reference a published page may contain: relative to the page, to the runtime file, deferred, nothing else */
+        private val RUNTIME_TAG = Regex("<script src=\"(\\./|\\.\\./)_runtime/page-runtime\\.js\" defer></script>")
+        private val SCRIPT = Regex("<\\s*script", RegexOption.IGNORE_CASE)
         val PAGE_PATH = Regex("^(index\\.html|404\\.html|[a-z0-9]+(-[a-z0-9]+)*/index\\.html)$")
         fun sha256(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     }
