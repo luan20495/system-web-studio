@@ -4,8 +4,9 @@ const attr = (tag: string, name: string) => new RegExp(`\\s${name}="([^"]*)"`).e
 
 export function unnamedButtons(html: string): string[] {
   const bad: string[] = [];
+  const labelled = new Set(Array.from(html.matchAll(/<label\b[^>]*\sfor="([^"]*)"/g), (m) => m[1]));   // a button named by <label for=…> (a switch)
   for (const m of html.matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/g)) {
-    const name = attr(m[1], "aria-label") || attr(m[1], "title") || strip(m[2]);
+    const name = attr(m[1], "aria-label") || attr(m[1], "title") || strip(m[2]) || (labelled.has(attr(m[1], "id") ?? "\0") ? "label-for" : "");
     if (!name) bad.push(m[0].slice(0, 120));
   }
   return bad;

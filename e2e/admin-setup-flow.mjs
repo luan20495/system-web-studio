@@ -68,7 +68,7 @@ await check("admin creates an employee and gets a one-time activation link (no p
   WS = sql(`select workspace_id from workspace_members m join users u on u.id=m.user_id where u.username='${USER}'`);
 });
 await check("admin adds an AI provider; the key is stored write-only and the connection test passes", async () => {
-  await admin.p.goto(BASE + "/admin/ai/providers"); await admin.p.getByRole("button", { name: "+ Thêm nhà cung cấp" }).first().click();
+  await admin.p.goto(BASE + "/admin/ai/providers"); await admin.p.getByRole("button", { name: "Thêm nhà cung cấp" }).first().click();
   const d = admin.p.getByRole("dialog", { name: "Thêm nhà cung cấp" });
   await d.getByLabel("Loại").selectOption({ label: "AI nội bộ (Local)" }); await d.getByLabel("Tên").fill("Stub E2E");
   await d.getByLabel("Địa chỉ dịch vụ").fill("http://127.0.0.1:18099/v1"); await d.getByLabel(/Khóa kết nối/).fill(KEY); await d.getByRole("button", { name: "Lưu" }).click();
