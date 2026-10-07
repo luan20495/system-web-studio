@@ -166,8 +166,12 @@ class AuthController(
             { rs, _ -> rs.getObject("workspace_id", UUID::class.java) to rs.getObject("project_id", UUID::class.java) },
             principal.userId
         ).mapNotNull { (workspaceId, projectId) ->
-            runCatching { access.forProject(principal.userId, workspaceId, projectId) }.getOrNull()?.let { ctx ->
+            try {
+                val ctx = access.forProject(principal.userId, workspaceId, projectId)
                 ProjectScopeSummary(projectId, workspaceId, ctx.projectRole, PermissionCodes.canonicalCodesOf(ctx.permissions))
+            } catch (_: ApiException) {
+                // Stale/inactive/out-of-scope membership is not disclosed in /auth/me; unexpected infrastructure errors still propagate.
+                null
             }
         }
         val t = meTenancy.forUser(principal.userId, systemAdmin)
