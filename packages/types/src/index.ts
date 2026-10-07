@@ -102,6 +102,10 @@ export type AiUserView = { workspaceId: string | null; workspaces: { id: string;
   effectiveDefaultModel: string; requestsToday: number; tokensToday: number; tokensThisMonth: number; paidSpentThisMonthUsd: number;
   limits: Record<"requestsPerDay" | "tokensPerDay" | "tokensPerMonthWorkspace" | "paidBudgetUserMonth" | "paidBudgetWorkspaceMonth", AiLimitLine>; override: AiOverride | null };
 export type AiProbe = { id: string; ok: boolean; latencyMs: number; detail: string };
+/** MIRROR of tenancy/TenantController.kt @ integration/v2 1a9995c (T2). A member row carries only ids: names are resolved by the caller (see features/admin/tenantModel.ts). */
+export type TenantStatusName = "ACTIVE" | "SUSPENDED" | "DELETED";
+export type TenantView = { id: string; slug: string; name: string; status: TenantStatusName | string; createdAt: string };
+export type TenantMemberView = { tenantId: string; userId: string; role: TenantRoleName | string; active: boolean };
 export type Member = { userId: string; username: string; displayName: string | null; email: string | null; role: string; joinedAt: string };
 export const WORKSPACE_ROLES = ["WORKSPACE_ADMIN", "EDITOR", "PUBLISHER", "VIEWER"] as const;
 export const PROJECT_ROLES = ["OWNER", "EDITOR", "PUBLISHER", "VIEWER"] as const;

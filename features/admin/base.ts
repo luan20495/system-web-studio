@@ -22,7 +22,7 @@ export function otherConsoleHref(to: "platform" | "admin", path = ""): string { 
 /** Section keys (first path segment) each console owns. `null` = everything (legacy). */
 export const OWNED: Record<AdminPortal, ReadonlySet<string> | null> = {
   all: null,
-  platform: new Set(["", "tenants", "ai", "components", "templates", "builds", "packages", "system", "backups", "costs", "alerts", "security", "settings", "audit", "connectors"]),
+  platform: new Set(["", "tenants", "users", "workspaces", "ai", "components", "templates", "builds", "packages", "system", "backups", "costs", "alerts", "security", "settings", "audit", "connectors"]),
   admin: new Set(["", "users", "workspaces", "applications", "departments", "identity", "ai-governance", "templates", "audit", "sharing", "data-sources", "groups", "byok"]),
 };
 export function owns(key: string, p: AdminPortal = portal): boolean { const set = OWNED[p]; return set === null || set.has(key); }

@@ -85,11 +85,28 @@ test("platformScope wins over systemAdmin when the server sends it", () => {
   assert.ok(!capabilitiesOf({ ...baseMe, systemAdmin: true, platformScope: false }).has("platform.operate"));
 });
 
-test("a TENANT_ADMIN does not get the Admin portal yet (every /admin/** API is AdminGuard) but does get tenant.members", () => {
+test("a TENANT_ADMIN gets the Admin console (the tenant members API + screens exist) but NOT platform operations or the SYSTEM_ADMIN-only sections", () => {
   const me: Me = { ...baseMe, tenantId: "t", tenantRole: "TENANT_ADMIN", platformScope: false, permissions: ["APP_VIEW", "APP_EDIT", "TENANT_MEMBERS"], workspaces: [wsRow(["APP_VIEW", "APP_EDIT"])] };
   const caps = capabilitiesOf(me);
-  assert.ok(!caps.has("tenant.administer")); assert.ok(caps.has("tenant.members")); assert.ok(caps.has("studio.build"));
-  assert.equal(isAdmin(me), false); assert.equal(hasPermission(me, "TENANT_MEMBERS"), true); assert.equal(hasPermission(me, "APP_PUBLISH"), false);
+  assert.ok(!caps.has("tenant.administer")); assert.ok(caps.has("tenant.members")); assert.ok(caps.has("admin.console")); assert.ok(caps.has("studio.build")); assert.ok(!caps.has("platform.operate"));
+  assert.equal(isAdmin(me), true); assert.deepEqual(accessiblePortals(me), ["admin", "studio"]);
+  assert.equal(hasPermission(me, "TENANT_MEMBERS"), true); assert.equal(hasPermission(me, "APP_PUBLISH"), false);
+});
+
+test("a WORKSPACE_ADMIN (MEMBER_MANAGE listed by the server) gets the Admin console; an editor / viewer does not; no role name is read", () => {
+  const wsAdmin: Me = { ...baseMe, platformScope: false, permissions: [], workspaces: [wsRow(["APP_VIEW", "APP_EDIT", "MEMBER_MANAGE"])] };
+  assert.ok(capabilitiesOf(wsAdmin).has("workspace.members")); assert.equal(isAdmin(wsAdmin), true); assert.ok(!capabilitiesOf(wsAdmin).has("platform.operate"));
+  const editor: Me = { ...baseMe, platformScope: false, permissions: [], workspaces: [wsRow(["APP_VIEW", "APP_EDIT"])] };
+  assert.equal(isAdmin(editor), false); assert.deepEqual(accessiblePortals(editor), ["studio"]);
+  // DATA_SOURCE_MANAGE (canonical, role-free) opens the console for data-source administration; MEMBER_MANAGE is not a canonical code today (H-C1-05), so a WORKSPACE_ADMIN as /auth/me lists them has THIS only
+  const dataAdmin: Me = { ...baseMe, platformScope: false, permissions: [], workspaces: [wsRow(["APP_VIEW", "APP_EDIT", "DATA_SOURCE_MANAGE", "DATA_SOURCE_VIEW"])] };
+  assert.ok(capabilitiesOf(dataAdmin).has("workspace.data")); assert.ok(!capabilitiesOf(dataAdmin).has("workspace.members")); assert.equal(isAdmin(dataAdmin), true);
+  assert.equal(isAdmin({ ...baseMe, platformScope: false, permissions: [], workspaces: [wsRow(["APP_VIEW", "DATA_SOURCE_VIEW"])] }), false, "viewing data sources alone is not administering");
+  // a role NAME alone grants nothing
+  const claims: Me = { ...baseMe, platformScope: false, permissions: [], workspaces: [{ id: "w", name: "W", role: "WORKSPACE_ADMIN", tenantId: "t", permissions: ["APP_VIEW"] }] };
+  assert.equal(isAdmin(claims), false);
+  assert.equal(resolvePortalPostLogin({ me: editor, portal: "admin" }), "/auth/no-access?portal=admin");
+  assert.equal(resolvePortalPostLogin({ me: wsAdmin, portal: "admin" }).startsWith("/auth/"), false);
 });
 
 test("a platform-only SYSTEM_ADMIN (tenant-level codes in every workspace row) is not offered Studio and lands on the console", () => {
@@ -108,4 +125,12 @@ test("a SYSTEM_ADMIN with businessAccess keeps Studio (workspace rows carry app 
 test("a VIEWER-style member (APP_VIEW only) can open Studio but not the console", () => {
   const me: Me = { ...baseMe, tenantRole: "MEMBER", workspaces: [wsRow(["APP_VIEW", "APP_USE"])] };
   assert.equal(hasWorkspace(me), true); assert.equal(isAdmin(me), false);
+});
+
+test("REGRESSION (found on the real stack): a `next` that points at an authentication page is dropped, so signing in from /platform/login lands on the console, not on 'not found'", () => {
+  for (const bad of ["/platform/login", "/admin/login", "/studio/login", "/login", "/login?next=/admin", "/auth/no-access", "/admin/auth/activate", "/platform/login?x=1"]) assert.equal(safeNext(bad), null, bad);
+  assert.equal(safeNext("/platform/tenants"), "/platform/tenants"); assert.equal(safeNext("/admin/company"), "/admin/company");
+  const me: Me = { id: "u", username: "u", displayName: "U", roles: [], workspaces: [], systemAdmin: true, platformScope: true };
+  assert.equal(resolvePortalPostLogin({ me, portal: "platform", next: "/platform/login" }), "/platform");
+  assert.equal(resolvePortalPostLogin({ me, portal: "admin", next: "/admin/login" }), "/admin");
 });

@@ -37,6 +37,8 @@ export function loadConfig(env = process.env) {
       user: env.E2E_DATA_USER, password: env.E2E_DATA_PASSWORD,
     },
     publicBase: env.E2E_PUBLIC_BASE,
+    /** the Platform and Admin portals (each its own Next app, own login, same-origin /api proxy to the backend); defaults = the local ports */
+    platformUrl: (env.E2E_PLATFORM_URL ?? "http://127.0.0.1:3001").replace(/\/+$/, ""), adminUrl: (env.E2E_ADMIN_URL ?? "http://127.0.0.1:3002").replace(/\/+$/, ""),
     dataSource: loadDataSourceFacts(env),
     /** E2E-PD01 operator facts: a REAL approved READ operation of the real data source above (C3 query definition id, or E2E_PD_SQL = a read-only SELECT the flow registers as a C3 query definition through the Management API) and the text its first row returns. Absent → the flow is BLOCKED with the exact reason; nothing is invented. */
     publicData: { operationKey: env.E2E_PD_OPERATION_KEY?.trim() || "", sql: env.E2E_PD_SQL?.trim() || "", expectText: env.E2E_PD_EXPECT_TEXT ?? "", writeOperationKey: env.E2E_PD_WRITE_OPERATION_KEY?.trim() || "" },

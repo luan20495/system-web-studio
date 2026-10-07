@@ -12,11 +12,11 @@ export type PortalId = "platform" | "admin" | "studio";
 export const PORTAL_IDS: readonly PortalId[] = ["platform", "admin", "studio"];
 
 /** What a person can do at the portal level. Kept coarse on purpose: finer permissions come from the server (`ApiProject.permissions`, `Me.permissions`). */
-export type Capability = "platform.operate" | "tenant.administer" | "tenant.members" | "studio.build";
+export type Capability = "platform.operate" | "tenant.administer" | "tenant.members" | "workspace.members" | "workspace.data" | "admin.console" | "studio.build";
 
 export const PORTAL_REQUIRES: Record<PortalId, Capability> = {
   platform: "platform.operate",
-  admin: "tenant.administer",
+  admin: "admin.console",
   studio: "studio.build"
 };
 export const PORTAL_PREFIX: Record<PortalId, string> = { platform: "/platform", admin: "/admin", studio: "/studio" };
@@ -43,7 +43,13 @@ export function capabilitiesOf(me: Me | null | undefined): ReadonlySet<Capabilit
   if (!me) return out;
   const platform = me.platformScope ?? me.systemAdmin === true;
   if (platform) { out.add("platform.operate"); out.add("tenant.administer"); }
-  if (platform || me.tenantRole === "TENANT_ADMIN" || hasPermission(me, "TENANT_MEMBERS")) out.add("tenant.members");
+  if (platform || me.tenantRole === "TENANT_ADMIN" || me.tenants?.some((t) => t.role === "TENANT_ADMIN") || hasPermission(me, "TENANT_MEMBERS")) out.add("tenant.members");
+  // a workspace admin: the server lists MEMBER_MANAGE among the canonical codes of that workspace (no role name is read)
+  if (me.workspaces.some((w) => w.permissions?.includes("MEMBER_MANAGE"))) out.add("workspace.members");
+  // data-source administration: the server lists DATA_SOURCE_MANAGE (a canonical code, role-free) for the workspace
+  if (me.workspaces.some((w) => w.permissions?.includes("DATA_SOURCE_MANAGE"))) out.add("workspace.data");
+  // the Admin console opens for whoever has at least one thing to administer; WHAT they can do inside is decided per screen from the same capabilities and, finally, by the server
+  if (out.has("tenant.administer") || out.has("tenant.members") || out.has("workspace.members") || out.has("workspace.data")) out.add("admin.console");
   const builds = me.workspaces.some((w) => canViewStudioIn(w.permissions));
   if (builds) out.add("studio.build");
   return out;
@@ -98,11 +104,13 @@ export function rememberedPortal(): Portal | null {
 /** Only same-app paths are accepted as a post-login destination (no open redirects, no protocol-relative URLs). */
 export function safeNext(next: string | null | undefined): string | null {
   if (!next || !next.startsWith("/") || next.startsWith("//") || next.includes("\\")) return null;
+  // never "go back" to an authentication page: `/platform/login` is a URL people type, and sending them there after signing in rendered the console's "not found" instead of the console
+  if (/^\/(?:(?:platform|admin|studio)\/)?(?:login|auth)(?:[/?#]|$)/.test(next)) return null;
   return portalOfPath(next) && /^\/[a-z]+(\/|$|\?|#)/.test(next) ? next : null;
 }
 
 /** Admin-console gate (see capabilitiesOf). */
-export const isAdmin = (me: Me) => capabilitiesOf(me).has("tenant.administer");
+export const isAdmin = (me: Me) => capabilitiesOf(me).has("admin.console");
 /** "May use Studio": some workspace gives business-data permissions (a workspace list alone is not enough for a platform-only admin). */
 export const hasWorkspace = (me: Me) => capabilitiesOf(me).has("studio.build");
 
