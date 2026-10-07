@@ -104,7 +104,7 @@ check("visitor: no request leaves the sites origin", v.reqs.every((q) => new URL
 check("visitor: no cookie in the profile", v.cookies.length === 0, JSON.stringify(v.cookies.map((c) => c.name)));
 const cfg = await (await fetch(new URL("__factory/config.json", siteUrl))).json();
 check("runtime config: slug-scoped apiBase, no internal host, release id", cfg.apiBase === `${new URL(siteUrl).origin}/${slug}/_data` && cfg.releaseId === rel1.dep && !/docker|localhost/.test(cfg.apiBase ?? ""), JSON.stringify({ apiBase: cfg.apiBase, version: cfg.version }));
-const keys = Object.keys(cfg).sort().join(","); check("runtime config exposes no tenant, workspace, credential or lease", !/tenant|workspace|credential|lease|fence|secret/i.test(JSON.stringify(cfg)), keys);
+const keys = Object.keys(cfg).sort().join(","); check("runtime config exposes no tenant, workspace, credential, lease or fence field", Object.keys(cfg).every((k) => !/tenant|workspace|credential|lease|fence|secret|artifact|token/i.test(k.replace("releaseId", ""))), keys);
 
 // raw requests a visitor could try
 const post = (path, body, headers = {}) => fetch(new URL("/" + path, siteUrl), { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body) });
@@ -120,13 +120,15 @@ x = await post(`${slug}/_data/queries/q-title/run`, { params: {} }); check("the 
 await patch([{ type: "UPDATE_QUERY", definitionId: "q-title", definition: { public: true } }], "draft restored");
 
 // ---- release 2 uses another query for the title; rollback restores release 1
-r = await patch([{ type: "UPDATE_DATA_BINDING", definitionId: "b-title", definition: { queryRef: "q-title2", mappingRef: "m-title2" } }], "release 2 binding");
+r = await patch([q("q-extra", "shop.items"), { type: "ADD_MAPPING", definition: { id: "m-extra", queryRef: "q-extra", fields: [{ from: "name", to: "name" }] } },
+  { type: "UPDATE_DATA_BINDING", definitionId: "b-title", definition: { queryRef: "q-title2", mappingRef: "m-title2" } }], "release 2: a new public query and another title binding");
 check("release 2 binding edit", r.status === 200, `${r.status} ${r.status === 200 ? "" : r.text.slice(0, 200)}`);
 const rel2 = await publish(); check("publish release 2", rel2.st === "RUNNING", rel2.st);
+x = await post(`${slug}/_data/queries/q-extra/run`, { params: {} }); check("release 2 serves its own new public query q-extra", x.status === 200, String(x.status));
 v = await visit("release 2"); check("visitor sees release 2 (Second release)", /^Second release: \d+$/.test(v.title ?? ""), v.title ?? "");
 r = await call("POST", `${P}/site/rollback`, { deploymentId: rel1.dep }, { "idempotency-key": "rb-" + randomUUID() }); check("rollback to release 1", r.status === 200, String(r.status));
 v = await visit("after rollback"); check("visitor sees release 1 again after the rollback", /^Open orders: \d+$/.test(v.title ?? ""), v.title ?? "");
-x = await post(`${slug}/_data/queries/q-title2/run`, { params: {} }); check("q-title2 is not public in release 1 (404 after rollback)", x.status === 404, String(x.status));
+x = await post(`${slug}/_data/queries/q-extra/run`, { params: {} }); check("q-extra belongs to release 2 only: 404 after the rollback (the allow-list follows the release)", x.status === 404, String(x.status));
 
 // ---- unpublish
 r = await call("DELETE", `${P}/site`); check("unpublish", r.status === 200 || r.status === 204, String(r.status));
