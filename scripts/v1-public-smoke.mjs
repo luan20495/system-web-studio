@@ -67,11 +67,11 @@ check("data bindings (Hero title, ProductGrid items)", r.status === 200, `${r.st
 
 // public data needs the author's explicit acknowledgement
 let rev1 = await call("GET", `${P}/publish-config`);
-r = await call("PUT", `${P}/publish-config`, { mode: "STATIC", visibility: "PUBLIC", requiresAuth: false, acknowledgePublicData: false, ...(rev1.json?.revision ? { expectedRevision: rev1.json.revision } : {}) });
-check("a PUBLIC data-bound page is refused without the public-data acknowledgement", r.status >= 400 || r.json?.publicDataApproved === false, `${r.status}`);
+r = await call("PUT", `${P}/publish-config`, { mode: "STATIC", visibility: "PUBLIC", requiresAuth: false, acknowledgePublicData: false, ...(rev1.json?.config?.revision ? { expectedRevision: rev1.json.config.revision } : {}) });
+check("a PUBLIC data-bound page is refused without the public-data acknowledgement", r.status >= 400 || r.json?.config?.publicDataApproved === false, `${r.status}`);
 rev1 = await call("GET", `${P}/publish-config`);
-r = await call("PUT", `${P}/publish-config`, { mode: "STATIC", visibility: "PUBLIC", requiresAuth: false, acknowledgePublicData: true, ...(rev1.json?.revision ? { expectedRevision: rev1.json.revision } : {}) });
-check("acknowledge public data", r.status === 200 && r.json?.publicDataApproved === true, `${r.status} ${r.status === 200 ? "" : r.text.slice(0, 200)}`);
+r = await call("PUT", `${P}/publish-config`, { mode: "STATIC", visibility: "PUBLIC", requiresAuth: false, acknowledgePublicData: true, ...(rev1.json?.config?.revision ? { expectedRevision: rev1.json.config.revision } : {}) });
+check("acknowledge public data", r.status === 200 && r.json?.config?.publicDataApproved === true, `${r.status} ${r.status === 200 ? "" : r.text.slice(0, 200)}`);
 
 async function publish() {
   const x = await call("POST", `${P}/publish`, { visibility: "PUBLIC", expectedRevision: await rev() }, { "idempotency-key": "pub-smoke-" + randomUUID() });
@@ -107,7 +107,7 @@ check("runtime config: slug-scoped apiBase, no internal host, release id", cfg.a
 const keys = Object.keys(cfg).sort().join(","); check("runtime config exposes no tenant, workspace, credential or lease", !/tenant|workspace|credential|lease|fence|secret/i.test(JSON.stringify(cfg)), keys);
 
 // raw requests a visitor could try
-const post = (path, body, headers = {}) => fetch(new URL(path, siteUrl), { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body) });
+const post = (path, body, headers = {}) => fetch(new URL("/" + path, siteUrl), { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body) });
 let x = await post(`${slug}/_data/queries/q-title/run`, { params: {}, tenantId: randomUUID() }); check("forged tenantId in the body is refused (400)", x.status === 400, String(x.status));
 x = await post(`${slug}/_data/queries/q-title/run`, { params: {} }, { "x-forwarded-for": "6.6.6.6" }); check("a public query by plain POST works", x.status === 200, String(x.status));
 x = await post(`${slug}/_data/mutations/orders.create/run`, { params: {} }); check("there is no public mutation route", x.status >= 400 && x.status !== 429 && ![200, 202].includes(x.status), String(x.status));

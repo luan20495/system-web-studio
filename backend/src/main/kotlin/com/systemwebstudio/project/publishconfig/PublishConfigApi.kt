@@ -39,10 +39,13 @@ class JdbcPublishConfigRepository(private val jdbc: JdbcTemplate) : PublishConfi
 
     override fun save(config: PublishConfig, linkTokenHash: String?, expectedRevision: Long?): Boolean =
         if (expectedRevision == null) jdbc.update(
-            """INSERT INTO publish_configs (project_id, workspace_id, mode, visibility, requires_auth, cache_seconds, public_data_approved,
-                   link_token_hash, revision, updated_by, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?, now()) ON CONFLICT (project_id) DO NOTHING""",
-            config.projectId, config.workspaceId, config.mode.name, config.visibility.name, config.requiresAuth, config.cacheSeconds,
-            config.publicDataApproved, linkTokenHash, config.revision, config.updatedBy) == 1
+            // tenant_id is NOT NULL since V27 (the tenant of the project's workspace, never taken from the request); the first INSERT of this repository never set it
+            """INSERT INTO publish_configs (project_id, workspace_id, tenant_id, mode, visibility, requires_auth, cache_seconds, public_data_approved,
+                   link_token_hash, revision, updated_by, updated_at)
+               SELECT p.id, p.workspace_id, p.tenant_id, ?, ?, ?, ?, ?, ?, ?, ?, now() FROM projects p WHERE p.id = ? AND p.workspace_id = ?
+               ON CONFLICT (project_id) DO NOTHING""",
+            config.mode.name, config.visibility.name, config.requiresAuth, config.cacheSeconds,
+            config.publicDataApproved, linkTokenHash, config.revision, config.updatedBy, config.projectId, config.workspaceId) == 1
         else jdbc.update(
             """UPDATE publish_configs SET mode = ?, visibility = ?, requires_auth = ?, cache_seconds = ?, public_data_approved = ?,
                    link_token_hash = ?, revision = ?, updated_by = ?, updated_at = now() WHERE project_id = ? AND revision = ?""",
