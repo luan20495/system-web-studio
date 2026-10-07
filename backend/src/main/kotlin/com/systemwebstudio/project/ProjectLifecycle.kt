@@ -6,7 +6,7 @@ import com.systemwebstudio.admin.AdminGuard
 import com.systemwebstudio.audit.AuditService
 import com.systemwebstudio.common.ApiException
 import com.systemwebstudio.identity.StudioUserDetails
-import com.systemwebstudio.publish.SiteService
+import com.systemwebstudio.publish.ReleaseService
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.stereotype.Service
@@ -20,13 +20,13 @@ import java.util.UUID
  * site stays offline until someone publishes. Data, versions and repositories are kept.
  */
 @Service
-class ProjectLifecycleService(private val jdbc: JdbcTemplate, private val sites: SiteService, private val audit: AuditService,
+class ProjectLifecycleService(private val jdbc: JdbcTemplate, private val releases: ReleaseService, private val audit: AuditService,
                               private val runtime: com.systemwebstudio.runtime.ServerRuntimeService) {
     fun archive(projectId: UUID, workspaceId: UUID, actor: UUID) {
         val n = jdbc.update("UPDATE projects SET lifecycle = 'ARCHIVED', archived_at = now(), archived_by = ?, updated_at = now() WHERE id = ? AND active AND lifecycle = 'ACTIVE'", actor, projectId)
         if (n == 0) throw ApiException.conflict("NOT_ARCHIVABLE", "Only an active application can be archived")
-        val wasOnline = jdbc.queryForObject("SELECT count(*) FROM sites WHERE project_id = ? AND current_deployment_id IS NOT NULL", Long::class.java, projectId)!! > 0
-        if (wasOnline) sites.point(projectId, null)
+        // offline through the release scope (fenced, D-C0-33): a publish that is mid-flight can never put an archived application back online; a busy scope is 409 SCOPE_BUSY and this transaction rolls back
+        val wasOnline = releases.takeOffline(projectId).changed
         runtime.stop(projectId, actor)          // a server app's containers are removed by the runner
         audit.record("APPLICATION_ARCHIVED", "PROJECT", projectId, workspaceId, projectId, newValue = mapOf("siteTakenOffline" to wasOnline))
     }

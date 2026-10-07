@@ -60,15 +60,6 @@ class SiteService(
         return jdbc.queryForObject("SELECT slug FROM sites WHERE project_id = ?", String::class.java, projectId)!!
     }
 
-    /**
-     * An UNFENCED pointer write, kept for the one caller that is not a release operation (a project being archived takes its site offline). It
-     * moves pointer_version, so any release operation that is mid-flight is fenced out at its next commit instead of overwriting this. Release
-     * operations never use it: they move the pointer through the fence of the scope they hold.
-     */
-    fun point(projectId: UUID, deploymentId: UUID?) {
-        jdbc.update("UPDATE sites SET current_deployment_id = ?, pointer_version = pointer_version + 1, updated_at = now() WHERE project_id = ?", deploymentId, projectId)
-    }
-
     /** the visibility a release was published with becomes the project's again (runs inside the pointer commit's transaction) */
     fun copyVisibilityOf(projectId: UUID, deploymentId: UUID) {
         jdbc.update("UPDATE projects SET site_visibility = (SELECT visibility FROM deployments WHERE id = ?) WHERE id = ?", deploymentId, projectId)

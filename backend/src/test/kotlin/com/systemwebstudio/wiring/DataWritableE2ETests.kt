@@ -151,8 +151,11 @@ class DataWritableE2ETests : IntegrationTestBase() {
         val document = sample
         schemas.upsertSchema(sc.projectId, sc.ws, document)
         val versionId = schemas.insertVersion(sc.ws, sc.projectId, schemas.nextVersionNumber(sc.projectId), document, "EDIT", "published", null, null, null, sc.user.id)
+        val deployment = UUID.randomUUID()
         jdbc.update("INSERT INTO deployments (id, workspace_id, project_id, version_id, requested_by, visibility, status, provider) VALUES (?, ?, ?, ?, ?, 'PRIVATE', 'RUNNING', 'mock')",
-            UUID.randomUUID(), sc.ws, sc.projectId, versionId, sc.user.id)
+            deployment, sc.ws, sc.projectId, versionId, sc.user.id)
+        jdbc.update("INSERT INTO sites (project_id, slug, current_deployment_id) VALUES (?, ?, ?) ON CONFLICT (project_id) DO UPDATE SET current_deployment_id = EXCLUDED.current_deployment_id",
+            sc.projectId, "e2e-" + UUID.randomUUID().toString().replace("-", "").take(12), deployment)      // D-C0-33: LIVE = the active release
 
         val env = Env(sc, tenant, adminUser, admin, dsId)
         if (bindLive) {

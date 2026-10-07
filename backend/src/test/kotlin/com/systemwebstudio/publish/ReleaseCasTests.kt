@@ -20,11 +20,12 @@ import java.util.concurrent.TimeUnit
  * The deployer under a REAL lease on a real PostgreSQL: the pointer moves only through the fence of the scope the operation holds. The provider is a
  * stand-in that does what the static provider does (compare-and-set through the fence) and can be held at the moment of the switch.
  */
-@TestPropertySource(properties = ["app.deploy.provider=static", "app.render.url=http://127.0.0.1:9"])
+@TestPropertySource(properties = ["app.deploy.provider=static", "app.render.url=http://127.0.0.1:9", "app.deploy.scope-lifecycle-wait-seconds=1"])
 class ReleaseCasTests : IntegrationTestBase() {
     @Autowired lateinit var guard: JdbcScopeGuard
     @Autowired lateinit var store: JdbcReleaseStore
     @Autowired lateinit var sites: SiteService
+    @Autowired lateinit var releases: ReleaseService
     @Autowired lateinit var staticProvider: StaticSiteDeployProvider
 
     private class FencingProvider : DeployProvider {
@@ -120,12 +121,54 @@ class ReleaseCasTests : IntegrationTestBase() {
         assertThat(site(f)["pointer_version"]).isEqualTo(1L)                           // the pointer moved exactly once
     }
 
+    // ------------------------------------------------------------------ the application lifecycle goes through the same door (D-C0-33)
+
     @Test
-    fun `an unfenced write to the pointer - the one non-release caller - fences out an operation that is mid-flight`() {
-        val f = fx(); val a = dep(f, "DEPLOYING"); val lease = publishLease(f, a)
-        sites.point(f.sc.projectId, null)                                              // a project archived: takes the site offline without the scope
-        assertThat(lease.fence.commit(a.id)).isFalse()
+    fun `archiving or deleting an application takes the site offline through the scope - a publish that was mid-flight is fenced out and an older one is stale`() {
+        val f = fx(); val p = dep(f); point(f, p); val a = dep(f, "DEPLOYING"); val lease = publishLease(f, a)
+        expire(f)                                                                      // A's worker is presumed dead; the lifecycle takes the scope over
+        val off = releases.takeOffline(f.sc.projectId)
+        assertThat(off.changed).isTrue(); assertThat(off.previous).isEqualTo(p.id)
+        assertThat(pointer(f)).isNull()
+        assertThat(site(f)["active_seq"] as Long).isGreaterThan(a.seq)                // a newer intent than the publish that was in flight
+        assertThat(lease.fence.commit(a.id)).describedAs("the mid-flight publish can no longer activate").isFalse()
         assertThat(lease.lost).isTrue(); assertThat(pointer(f)).isNull()
+        assertThat(guard.acquire(ScopeRequest(f.scope, ReleaseOperation.PUBLISH, a.id, a.id, a.seq))).isInstanceOf(ScopeAcquisition.Stale::class.java)
+        assertThat(guard.holder(f.scope)).describedAs("the scope is free again").isNull()
+        assertThat(releases.takeOffline(f.sc.projectId).changed).describedAs("already offline: nothing written").isFalse()
+    }
+
+    @Test
+    fun `a release operation that is alive blocks the lifecycle for a bounded time - 409 SCOPE_BUSY, nothing changes, the operation is not disturbed`() {
+        val f = fx(); val p = dep(f); point(f, p); val a = dep(f, "DEPLOYING"); val lease = publishLease(f, a)
+        val before = site(f)
+        val started = System.nanoTime()
+        val e = org.junit.jupiter.api.Assertions.assertThrows(com.systemwebstudio.common.ApiException::class.java) { releases.takeOffline(f.sc.projectId) }
+        assertThat(e.code).isEqualTo("SCOPE_BUSY"); assertThat(e.status.value()).isEqualTo(409)
+        assertThat((System.nanoTime() - started) / 1_000_000).describedAs("waited, but only the configured time").isBetween(800L, 6_000L)
+        assertThat(site(f)["current_deployment_id"]).isEqualTo(before["current_deployment_id"]); assertThat(site(f)["pointer_version"]).isEqualTo(before["pointer_version"])
+        assertThat(lease.lost).isFalse()
+        assertThat(lease.fence.commit(a.id)).describedAs("the live publish still completes").isTrue()
+        lease.release()
+        assertThat(releases.takeOffline(f.sc.projectId).changed).isTrue(); assertThat(pointer(f)).isNull()
+    }
+
+    @Test
+    fun `an application that never had a site has nothing to take offline`() {
+        val sc = scenario()
+        assertThat(releases.takeOffline(sc.projectId).changed).isFalse()
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM sites WHERE project_id = ?", Long::class.java, sc.projectId)).isZero()
+    }
+
+    @Test
+    fun `no production code writes the active pointer outside the scope guard`() {
+        val root = java.io.File("src/main/kotlin")
+        val writers = root.walkTopDown().filter { it.isFile && it.extension == "kt" }
+            .filter { Regex("""UPDATE\s+sites\s+SET[^"]*current_deployment_id""", RegexOption.IGNORE_CASE).containsMatchIn(it.readText()) }.map { it.name }.toList()
+        assertThat(writers).describedAs("files that UPDATE sites.current_deployment_id").containsExactly("JdbcScopeGuard.kt")
+        assertThat(java.io.File("src/main/kotlin/com/systemwebstudio/publish/SiteService.kt").readText()).doesNotContain("fun point(")
+        val inserts = root.walkTopDown().filter { it.isFile && it.extension == "kt" }.filter { Regex("""INSERT\s+INTO\s+sites[^"]*current_deployment_id""", RegexOption.IGNORE_CASE).containsMatchIn(it.readText()) }.toList()
+        assertThat(inserts).isEmpty()
     }
 
     // ------------------------------------------------------------------ ROLLING_BACK and the automatic rollback

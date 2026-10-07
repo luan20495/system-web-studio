@@ -73,6 +73,16 @@ class DataRuntimeLiveApiTests : IntegrationTestBase() {
         connector.mutationHook = { _, _, _ -> MutationOutcome(1, com.systemwebstudio.data.query.DataJson.toNode(mapOf("id" to "rec-1"))) }
     }
 
+    /** a published release: a RUNNING deployment of [versionId] AND the active pointer on it (D-C0-33: LIVE is the active release, not the latest RUNNING deployment) */
+    private fun activate(sc: Scenario, versionId: UUID): UUID {
+        val dep = UUID.randomUUID()
+        jdbc.update("INSERT INTO deployments (id, workspace_id, project_id, version_id, requested_by, visibility, status, provider) VALUES (?, ?, ?, ?, ?, 'PRIVATE', 'RUNNING', 'mock')",
+            dep, sc.ws, sc.projectId, versionId, sc.user.id)
+        jdbc.update("INSERT INTO sites (project_id, slug, current_deployment_id) VALUES (?, ?, ?) ON CONFLICT (project_id) DO UPDATE SET current_deployment_id = EXCLUDED.current_deployment_id, pointer_version = sites.pointer_version + 1",
+            sc.projectId, "live-" + UUID.randomUUID().toString().replace("-", "").take(12), dep)
+        return dep
+    }
+
     private class App(val sc: Scenario, val tenant: UUID, val source: DataSource)
 
     private fun rt(app: App, path: String) = "${app.sc.base}/app-runtime/$path"
@@ -105,8 +115,7 @@ class DataRuntimeLiveApiTests : IntegrationTestBase() {
         // scenario() creates the project through the API, which already wrote version 1 (INITIAL); a second row with number 1 would violate
         // project_versions_unique (project_id, version_number) - the published document is the NEXT version of the project
         val versionId = schemas.insertVersion(sc.ws, sc.projectId, schemas.nextVersionNumber(sc.projectId), document, "EDIT", "published", null, null, null, sc.user.id)
-        jdbc.update("INSERT INTO deployments (id, workspace_id, project_id, version_id, requested_by, visibility, status, provider) VALUES (?, ?, ?, ?, ?, 'PRIVATE', 'RUNNING', 'mock')",
-            UUID.randomUUID(), sc.ws, sc.projectId, versionId, sc.user.id)
+        activate(sc, versionId)
         if (sourceRef == null && bindLive) bindings.bind(tenant, sc.ws, sc.projectId, ExecutionMode.LIVE, "erp-db", ds.id, sc.user.id)
         return App(sc, tenant, ds)
     }
@@ -425,4 +434,28 @@ class DataRuntimeLiveApiTests : IntegrationTestBase() {
     }
 
     private fun failureCode(block: () -> Unit): String? = try { block(); null } catch (e: ConnectorFailure) { e.code }
+
+    // ------------------------------------------------------------------------------------------------ LIVE = the active release (D-C0-33)
+
+    @Test
+    fun `LIVE answers from the active release only - offline means nothing is published, and a rollback target is what is served`() {
+        val app = app(); val a = admin(app.sc)
+        val path = rt(app, "queries/orders-list/run")
+        assertThat(a.post(path, "{}").response.status).describedAs("active release").isEqualTo(200)
+        // unpublish: the pointer goes NULL while the deployment is still RUNNING - the old "latest RUNNING" rule kept answering here
+        jdbc.update("UPDATE sites SET current_deployment_id = NULL WHERE project_id = ?", app.sc.projectId)
+        val offline = a.post(path, "{}")
+        assertThat(offline.response.status).describedAs(offline.response.contentAsString).isEqualTo(404)
+        assertThat(a.body(offline).get("code").asString()).isEqualTo("QUERY_NOT_FOUND")
+        // a newer RUNNING deployment that is NOT the active release must not be picked up; the active one decides
+        val other = schemas.insertVersion(app.sc.ws, app.sc.projectId, schemas.nextVersionNumber(app.sc.projectId), sample, "EDIT", "newer", null, null, null, app.sc.user.id)
+        val newer = UUID.randomUUID()
+        jdbc.update("INSERT INTO deployments (id, workspace_id, project_id, version_id, requested_by, visibility, status, provider) VALUES (?, ?, ?, ?, ?, 'PRIVATE', 'RUNNING', 'mock')", newer, app.sc.ws, app.sc.projectId, other, app.sc.user.id)
+        assertThat(a.post(path, "{}").response.status).describedAs("a RUNNING deployment without the pointer is not published").isEqualTo(404)
+        jdbc.update("UPDATE sites SET current_deployment_id = ? WHERE project_id = ?", newer, app.sc.projectId)
+        assertThat(a.post(path, "{}").response.status).describedAs("the pointer moved to it").isEqualTo(200)
+        // the pointer on a FAILED / ROLLED_BACK deployment serves nothing
+        jdbc.update("UPDATE deployments SET status = 'ROLLED_BACK' WHERE id = ?", newer)
+        assertThat(a.post(path, "{}").response.status).isEqualTo(404)
+    }
 }

@@ -33,7 +33,8 @@ data class OrphanSweep(val found: Int, val bytes: Long, val deleted: Int, val fa
 class ArtifactRetentionService(
     private val gitAccess: org.springframework.beans.factory.ObjectProvider<com.systemwebstudio.code.GitAccessService>,
     private val jdbc: JdbcTemplate, private val json: JsonMapper, private val store: ArtifactStore, private val git: ForgejoClient,
-    private val settings: SettingsService, private val audit: AuditService
+    private val settings: SettingsService, private val audit: AuditService,
+    private val releases: com.systemwebstudio.publish.ReleaseService
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -130,7 +131,7 @@ class ArtifactRetentionService(
 
     /** Project deleted: take its site offline and archive its repository (read-only), to be deleted after the retention period. */
     fun onProjectDeleted(projectId: UUID) {
-        jdbc.update("UPDATE sites SET current_deployment_id = NULL, updated_at = now() WHERE project_id = ?", projectId)
+        releases.takeOffline(projectId)             // through the release scope (fenced, D-C0-33): no unfenced pointer write
         jdbc.query("SELECT name FROM repositories WHERE project_id = ? AND state = 'ACTIVE'", { rs, _ -> rs.getString(1) }, projectId).firstOrNull()?.let { name ->
             runCatching { git.setArchived(name, true) }.onFailure { log.warn("Could not archive repository {}: {}", name, it.message) }
             jdbc.update("""UPDATE repositories SET state = 'ARCHIVED', archived_at = now(), delete_after = now() + make_interval(days => ?), updated_at = now()

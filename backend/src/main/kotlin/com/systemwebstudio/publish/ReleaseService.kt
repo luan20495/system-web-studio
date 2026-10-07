@@ -110,8 +110,10 @@ class ReleaseService(
     private val guard: ReleaseScopeGuard, private val sites: SiteService, private val jdbc: JdbcTemplate,
     @Value("\${app.deploy.deploy-timeout-seconds:120}") deploySeconds: Long,
     @Value("\${app.deploy.verify-timeout-seconds:60}") verifySeconds: Long,
-    @Value("\${app.deploy.scope-duplicate-wait-seconds:60}") duplicateWaitSeconds: Long
+    @Value("\${app.deploy.scope-duplicate-wait-seconds:60}") duplicateWaitSeconds: Long,
+    @Value("\${app.deploy.scope-lifecycle-wait-seconds:10}") lifecycleWaitSeconds: Long = 10
 ) {
+    private val lifecycleWaitNanos = lifecycleWaitSeconds.coerceIn(0, 120) * 1_000_000_000L
     private val duplicateWaitNanos = duplicateWaitSeconds * 1_000_000_000L
     val deployer = ReleaseDeployer(provider, releases, verifier, StepRunner(), deploySeconds * 1000, verifySeconds * 1000, runtime)
 
@@ -170,6 +172,30 @@ class ReleaseService(
             if (!lease.fence.commit(null)) throw ReleaseScopeGuard.busy(scope, guard.holder(scope))
             Unpublished(true, active)
         }
+
+    /**
+     * The application lifecycle (archive, delete) takes the site offline through the SAME door as an operator's unpublish (D-C0-33): the release scope, a fresh
+     * intent number, the fencing token. There is no unfenced pointer write left in the product. It waits a bounded time for a release operation that is mid-flight
+     * (`app.deploy.scope-lifecycle-wait-seconds`, default 10): a busy scope after that is `409 SCOPE_BUSY` and the caller's transaction (archive / delete) is rolled
+     * back, so a project is never "archived but still being published". Whatever was in flight is overtaken by this operation's number and can never activate
+     * afterwards (STALE_PUBLISH / fenced out). A project that never had a site has nothing to take offline.
+     */
+    fun takeOffline(projectId: UUID): Unpublished {
+        if (jdbc.queryForObject("SELECT count(*) FROM sites WHERE project_id = ?", Long::class.java, projectId) == 0L) return Unpublished(false, null)
+        val request = ScopeRequest(scopeOf(projectId), ReleaseOperation.UNPUBLISH, UUID.randomUUID())
+        val deadline = System.nanoTime() + lifecycleWaitNanos
+        var a = guard.acquire(request)
+        while (a is ScopeAcquisition.Busy && System.nanoTime() < deadline) { Thread.sleep(200); a = guard.acquire(request) }
+        return when (a) {
+            is ScopeAcquisition.Busy -> throw ReleaseScopeGuard.busy(request.scope, a.holder)
+            is ScopeAcquisition.Stale -> throw com.systemwebstudio.common.ApiException.conflict("SCOPE_BUSY", a.reason)
+            is ScopeAcquisition.Acquired -> try {
+                val active = a.lease.activeDeploymentId ?: return Unpublished(false, null)
+                if (!a.lease.fence.commit(null)) throw ReleaseScopeGuard.busy(request.scope, guard.holder(request.scope))
+                Unpublished(true, active)
+            } finally { a.lease.release() }
+        }
+    }
 
     private fun staleCheck(lease: ScopeLease, expectedActive: UUID?, alreadyDone: Boolean) {
         if (expectedActive != null && !alreadyDone && lease.activeDeploymentId != expectedActive)

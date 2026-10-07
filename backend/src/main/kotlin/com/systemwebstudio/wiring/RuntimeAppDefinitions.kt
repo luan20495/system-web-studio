@@ -27,7 +27,7 @@ interface DefinitionLoader {
 
 /**
  * C0 · reads the AppDefinition of an application for the runtime. The AppDefinition V2 keys live in the Page Schema of the project:
- * TEST = the working draft (`page_schemas`), LIVE = the schema snapshot of the project's latest `RUNNING` deployment (the published version).
+ * TEST = the working draft (`page_schemas`), LIVE = the schema snapshot of the version of the ACTIVE release (`sites.current_deployment_id`, D-C0-33).
  * Every method first proves that the project belongs to the tenant (tenant of its workspace) and answers `null` otherwise — another tenant's
  * application is indistinguishable from a missing one. Stateless; no cache (a published version is immutable, the draft must be fresh).
  */
@@ -61,8 +61,14 @@ class RuntimeAppDefinitions(private val jdbc: JdbcTemplate, private val schemas:
         false   // fail closed
     }
 
+    /**
+     * D-C0-33 · the published version is the one of the ACTIVE release: `sites.current_deployment_id` (the pointer that only the fenced release scope moves), with
+     * the same status filter the sites gateway serves with (`DEPLOYING` / `RUNNING`, SiteService.live). Never "the latest RUNNING deployment": that answered after an
+     * unpublish and could name another release than the one visitors were getting. No pointer (never published, unpublished, archived) = nothing is published.
+     */
     private fun publishedVersionId(projectId: UUID): UUID? = jdbc.queryForList(
-        "SELECT version_id FROM deployments WHERE project_id = ? AND status = 'RUNNING' ORDER BY created_at DESC LIMIT 1",
+        """SELECT d.version_id FROM sites s JOIN deployments d ON d.id = s.current_deployment_id AND d.project_id = s.project_id
+           WHERE s.project_id = ? AND d.status IN ('DEPLOYING', 'RUNNING')""",
         UUID::class.java, projectId
     ).firstOrNull()
 }
