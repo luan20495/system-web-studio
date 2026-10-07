@@ -1,6 +1,8 @@
 package com.systemwebstudio.identity
 
+import com.systemwebstudio.access.AccessService
 import com.systemwebstudio.access.MeTenancyService
+import com.systemwebstudio.access.PermissionCodes
 import com.systemwebstudio.access.TenantMembershipSummary
 import com.systemwebstudio.audit.AuditService
 import com.systemwebstudio.common.ApiException
@@ -37,6 +39,14 @@ data class WorkspaceSummary(
     /** canonical permission codes the caller holds in this workspace (for UI gating only; the server re-checks every call) */
     val permissions: List<String> = emptyList()
 )
+data class ProjectScopeSummary(
+    val projectId: UUID,
+    val workspaceId: UUID,
+    /** Informational only. Clients must gate on canonical permissions, never on this role string. */
+    val role: String?,
+    /** Effective canonical permissions resolved by the same AccessService used by project APIs. */
+    val permissions: List<String>
+)
 data class MeResponse(
     val id: UUID, val username: String, val displayName: String,
     val roles: List<String>, val workspaces: List<WorkspaceSummary>,
@@ -50,7 +60,9 @@ data class MeResponse(
     val businessAccess: Boolean = false,
     val tenants: List<TenantMembershipSummary> = emptyList(),
     /** platform + primary-tenant permissions as canonical codes (portal routing) */
-    val permissions: List<String> = emptyList()
+    val permissions: List<String> = emptyList(),
+    /** Effective permissions per explicit project membership; never flattened into global/workspace authority. */
+    val projectScopes: List<ProjectScopeSummary> = emptyList()
 )
 
 @RestController
@@ -63,6 +75,7 @@ class AuthController(
     private val audit: AuditService,
     private val jdbc: JdbcTemplate,
     private val meTenancy: MeTenancyService,
+    private val access: AccessService,
     private val codeProjects: com.systemwebstudio.code.CodeProjectService,
     private val runtime: com.systemwebstudio.runtime.ServerRuntimeService,
     @Value("\${app.local-login.enabled:true}") private val localLogin: Boolean,
@@ -144,9 +157,22 @@ class AuthController(
         }
         val roles = principal.authorities.mapNotNull { it.authority?.removePrefix("ROLE_") }
         val systemAdmin = jdbc.queryForObject("SELECT system_admin FROM users WHERE id = ?", Boolean::class.java, principal.userId) == true    // live value, not the login-time snapshot
+        val projectScopes = jdbc.query(
+            """SELECT pm.project_id, pm.workspace_id
+               FROM project_members pm
+               JOIN projects p ON p.id = pm.project_id AND p.workspace_id = pm.workspace_id
+               WHERE pm.user_id = ? AND pm.active AND p.active
+               ORDER BY pm.workspace_id, pm.project_id""",
+            { rs, _ -> rs.getObject("workspace_id", UUID::class.java) to rs.getObject("project_id", UUID::class.java) },
+            principal.userId
+        ).mapNotNull { (workspaceId, projectId) ->
+            runCatching { access.forProject(principal.userId, workspaceId, projectId) }.getOrNull()?.let { ctx ->
+                ProjectScopeSummary(projectId, workspaceId, ctx.projectRole, PermissionCodes.canonicalCodesOf(ctx.permissions))
+            }
+        }
         val t = meTenancy.forUser(principal.userId, systemAdmin)
         return MeResponse(principal.userId, principal.username, principal.displayName ?: principal.username, roles, workspaces, systemAdmin,
-            t.tenantId, t.tenantRole, t.platformScope, t.businessAccess, t.tenants, t.permissions)
+            t.tenantId, t.tenantRole, t.platformScope, t.businessAccess, t.tenants, t.permissions, projectScopes)
     }
 
     @PostMapping("/logout")
