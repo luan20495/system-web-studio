@@ -4,7 +4,7 @@
 #
 #   e2e-stack.sh prepare          detached git worktree = $E2E_BASE_REF (+ $E2E_MERGE_REFS, empty by default) (conflict = stop, nothing is resolved for you) and a random-secret env file (mode 600)
 #   e2e-stack.sh up               prepare + infra + backend + render worker + Studio (build with the proxy target) — idempotent
-#   e2e-stack.sh infra-up | backend-up | backend-launch (no wait) | backend-down | backend-restart | backend-pause | backend-resume | render-up | studio-up
+#   e2e-stack.sh infra-up | backend-up | backend-launch (no wait) | backend-down | backend-restart | backend-pause | backend-resume | store-pause | store-resume | render-pause | render-resume | render-up | studio-up
 #   e2e-stack.sh e2e [flows]      run the real-backend suite (E2E_SHUFFLE_SEED=<n> shuffles the order). Hooks for E2E-12/S6/S7/14 are wired to this script.
 #   e2e-stack.sh status | down [--infra] [--worktree]
 #
@@ -68,6 +68,7 @@ WEB_ORIGIN_PLATFORM=http://127.0.0.1:3001
 MAX_PROJECTS_PER_WORKSPACE=100000
 DATA_PLATFORM_ENABLED=true
 WORKFLOW_ENABLED=true
+RATE_LIMIT_PUBLISH_MAX=500
 DEPLOY_PROVIDER=static
 SITES_ORIGIN=http://127.0.0.1:$SITES_PORT
 STUDIO_ORIGIN=http://127.0.0.1:$STUDIO_PORT
@@ -107,6 +108,11 @@ backend_up() {
 backend_down() { need_env; kill_port "$API_PORT" || die "API on $API_PORT did not stop"; }
 backend_restart() { backend_down; backend_up; }
 backend_pause() { need_env; local p; p="$(listener "$API_PORT")"; [ -n "$p" ] || die "no API listening on $API_PORT"; kill -STOP $p; }    # a HANG, not an outage (E2E-S9)
+# fault injection for the release flows (E2E-P*): the artifact store or the render worker is PAUSED (not stopped), so a publish stays in a known step and the scope lease stays alive
+store_pause() { need_env; docker pause "$NAME-minio" >/dev/null; }
+store_resume() { need_env; docker unpause "$NAME-minio" >/dev/null 2>&1 || true; }
+render_pause() { need_env; local p; p="$(listener "$RENDER_PORT")"; [ -n "$p" ] || die "no render worker on $RENDER_PORT"; kill -STOP $p; }
+render_resume() { need_env; local p; p="$(listener "$RENDER_PORT")"; [ -z "$p" ] || kill -CONT $p; }
 backend_resume() { need_env; local p; p="$(listener "$API_PORT")"; [ -z "$p" ] || kill -CONT $p; }
 render_up() {
   need_env; [ -z "$(listener "$RENDER_PORT")" ] || return 0
@@ -130,7 +136,7 @@ studio_up() {
 e2e() {
   need_env; local flows="${1:-}"
   ( cd "$REPO" && E2E_ONLY="$flows" E2E_STUDIO_URL="http://127.0.0.1:$STUDIO_PORT" E2E_ADMIN_USER=local.admin E2E_ADMIN_PASSWORD="$LOCAL_ADMIN_PASSWORD" E2E_CHROME="$CHROME" \
-      E2E_DURABLE_RUN_STORES=1 E2E_RESTART_BACKEND_CMD="$SELF backend-restart" E2E_STOP_BACKEND_CMD="$SELF backend-down" E2E_PAUSE_BACKEND_CMD="$SELF backend-pause" E2E_RESUME_BACKEND_CMD="$SELF backend-resume" E2E_START_BACKEND_CMD="$SELF backend-launch" \
+      E2E_DURABLE_RUN_STORES=1 E2E_RESTART_BACKEND_CMD="$SELF backend-restart" E2E_STOP_BACKEND_CMD="$SELF backend-down" E2E_PAUSE_STORE_CMD="$SELF store-pause" E2E_RESUME_STORE_CMD="$SELF store-resume" E2E_PAUSE_RENDER_CMD="$SELF render-pause" E2E_RESUME_RENDER_CMD="$SELF render-resume" E2E_PAUSE_BACKEND_CMD="$SELF backend-pause" E2E_RESUME_BACKEND_CMD="$SELF backend-resume" E2E_START_BACKEND_CMD="$SELF backend-launch" \
       E2E_BACKEND_URL="http://127.0.0.1:$API_PORT" E2E_BACKEND_HEAD="$(git -C "$WT" log --oneline -1) [$BASE_REF${MERGE_REFS:+ + $MERGE_REFS}]" E2E_OUT_DIR="${E2E_OUT_DIR:-$REPO/.run/e2e-real}" \
       npm run test:e2e:real )
 }
@@ -161,6 +167,10 @@ case "${1:-}" in
   backend-down) backend_down ;;
   backend-restart) backend_restart ;;
   backend-pause) backend_pause ;;
+  store-pause) store_pause ;;
+  store-resume) store_resume ;;
+  render-pause) render_pause ;;
+  render-resume) render_resume ;;
   backend-resume) backend_resume ;;
   render-up) render_up ;;
   studio-up) studio_up ;;

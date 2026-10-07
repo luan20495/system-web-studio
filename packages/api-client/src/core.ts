@@ -2,7 +2,7 @@ import type { StreamHandlers } from "@xweb/types";
 
 /** Error with the backend's stable {code, message, requestId, details} contract. */
 export class ApiError extends Error {
-  constructor(readonly status: number, readonly code: string, message: string, readonly requestId?: string, readonly details?: unknown, readonly retryable?: boolean) {
+  constructor(readonly status: number, readonly code: string, message: string, readonly requestId?: string, readonly details?: unknown, readonly retryable?: boolean, readonly retryAfterSeconds?: number) {
     super(message);
   }
   get isConflict() { return this.status === 409; }
@@ -69,7 +69,8 @@ export async function call<T>(path: string, init: RequestInit & { idempotencyKey
     if (response.status === 401 && !path.startsWith("/auth/")) unauthorizedHandler?.(body?.code ?? "AUTHENTICATION_REQUIRED");
     const retryAfter = response.headers.get("Retry-After");
     const message = response.status === 429 && retryAfter ? `${body?.message ?? "Quá nhiều yêu cầu"} Thử lại sau ${retryAfter}s.` : body?.message ?? `Lỗi ${response.status}`;
-    throw new ApiError(response.status, body?.code ?? `HTTP_${response.status}`, message, body?.requestId, body?.details, body?.retryable);
+    const ra = Number(retryAfter); // seconds (SCOPE_BUSY answers 5); a date form is ignored
+    throw new ApiError(response.status, body?.code ?? `HTTP_${response.status}`, message, body?.requestId, body?.details, body?.retryable, Number.isFinite(ra) && ra > 0 ? ra : undefined);
   }
   init.onTotal?.(Number(response.headers.get("X-Total-Count") ?? "0"));
   if (response.status === 204) return undefined as T;

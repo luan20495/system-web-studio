@@ -13,7 +13,6 @@ import { useDialog } from "@/components/useDialog";
 
 const fmt = (iso: string) => new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
 const errText = (e: unknown, fallback: string) => (e instanceof ApiError ? `${e.message}${e.requestId ? ` (mã ${e.requestId})` : ""}` : e instanceof Error ? e.message : fallback);
-const TERMINAL = ["RUNNING", "FAILED", "ROLLED_BACK"];
 
 export const suggestions = (ai: boolean) => ai
   ? ["Thêm bảng so sánh sản phẩm", "Viết lại tiêu đề hero hấp dẫn hơn", "Ẩn phần đánh giá", "Thêm một sản phẩm mới", "Rút gọn nội dung hero"]
@@ -95,104 +94,6 @@ export function AssetsDrawer({ workspaceId, projectId, canEdit, onClose, onError
           {canEdit ? <button className="smallButton danger" onClick={() => { if (window.confirm(`Xóa ${a.name}?`)) api.deleteAsset(workspaceId, projectId, a.id).then(load).catch(onError); }}>Xóa</button> : null}
         </article>))}</div>
     </Drawer>
-  );
-}
-
-const STATUS_LABEL: Record<string, string> = {
-  QUEUED: "Đang chờ", POLICY_CHECK: "Kiểm tra chính sách", SECURITY_CHECK: "Kiểm tra bảo mật", BUILDING: "Đang build",
-  DEPLOYING: "Đang triển khai", RUNNING: "Đang chạy", FAILED: "Thất bại", ROLLED_BACK: "Đã hoàn tác"
-};
-
-const MAX_POLL_FAILURES = 5;
-export function PublishModal({ workspaceId, projectId, revision, current, versionNumber, onClose, onUnauthorized, allowed = ["PRIVATE", "PUBLIC"] }: {
-  workspaceId: string; projectId: string; revision: number; current: "PRIVATE" | "PUBLIC"; versionNumber?: number; onClose: () => void; onUnauthorized: () => void;
-  /** visibilities this project may be published with (policy); default both */
-  allowed?: ("PRIVATE" | "PUBLIC")[];
-}) {
-  const [visibility, setVisibility] = useState<"PRIVATE" | "PUBLIC">(allowed.includes(current) ? current : allowed[0]);
-  const [deployment, setDeployment] = useState<Deployment | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [site, setSite] = useState<SiteInfo | null>(null);
-  const [history, setHistory] = useState<Deployment[]>([]);
-  const [siteBusy, setSiteBusy] = useState(false);
-  const loadSite = useCallback(() => {
-    api.site(workspaceId, projectId).then(setSite).catch(() => undefined);
-    api.listDeployments(workspaceId, projectId).then(setHistory).catch(() => undefined);
-  }, [workspaceId, projectId]);
-  useEffect(() => { loadSite(); }, [loadSite]);
-  // One key per dialog: clicking twice or retrying after a network error can never create a second deployment.
-  const key = useRef<string>(`ui-${crypto.randomUUID()}`);
-  const running = deployment !== null && !TERMINAL.includes(deployment.status);
-  const dialog = useDialog("Xuất bản website", running ? null : onClose);        // cannot be dismissed with Escape mid-publish
-
-  // Poll the deployment until it ends. A failed poll says nothing about the deployment itself (it keeps running on the server): retry with backoff, and after
-  // MAX_POLL_FAILURES stop and offer a manual "Kiểm tra lại" instead of leaving the dialog stuck on "Đang xử lý…" with no way forward.
-  const [pollFailures, setPollFailures] = useState(0);
-  useEffect(() => {
-    if (!deployment || TERMINAL.includes(deployment.status) || pollFailures >= MAX_POLL_FAILURES) return;
-    const t = setTimeout(() => {
-      api.getDeployment(workspaceId, projectId, deployment.id).then((d) => { setError(null); setPollFailures(0); setDeployment(d); }).catch((e: unknown) => {
-        if (e instanceof ApiError && e.status === 401) { onUnauthorized(); return; }
-        const next = pollFailures + 1;
-        setPollFailures(next);
-        setError(errText(e, "Không đọc được trạng thái triển khai.") + (next >= MAX_POLL_FAILURES ? " Triển khai có thể vẫn đang chạy trên máy chủ; bấm “Kiểm tra lại”." : " Đang thử lại…"));
-      });
-    }, 800 * (1 + pollFailures * 2));
-    return () => clearTimeout(t);
-  }, [deployment, pollFailures, workspaceId, projectId, onUnauthorized]);
-  useEffect(() => { if (deployment && TERMINAL.includes(deployment.status)) loadSite(); }, [deployment, loadSite]);
-  const real = site ? site.provider !== "mock" : false;
-  async function siteAction(fn: () => Promise<SiteInfo>) {
-    setSiteBusy(true); setError(null);
-    try { setSite(await fn()); loadSite(); } catch (e) { if (e instanceof ApiError && e.status === 401) onUnauthorized(); else setError(errText(e, "Không thực hiện được.")); } finally { setSiteBusy(false); }
-  }
-
-  async function start() {
-    setSubmitting(true); setError(null);
-    try { setDeployment(await api.publish(workspaceId, projectId, visibility, revision, key.current)); }
-    catch (e) {
-      if (e instanceof ApiError && e.status === 401) onUnauthorized();
-      else setError(e instanceof ApiError && e.code === "REVISION_CONFLICT" ? "Project đã thay đổi. Đóng hộp thoại, kiểm tra bản mới rồi xuất bản lại." : errText(e, "Xuất bản thất bại."));
-    } finally { setSubmitting(false); }
-  }
-
-  return (
-    <div className="overlay modalOverlay"><div className="modal" {...dialog.props}>
-      <h2 id={dialog.titleId}>Xuất bản website</h2>
-      <p>{versionNumber ? `Phiên bản ${versionNumber}` : "Phiên bản hiện tại"} sẽ được đưa qua kiểm tra chính sách, bảo mật, build và triển khai.</p>
-      {!deployment && site && !real ? <p className="hint">Hiện tại môi trường xuất bản là <b>mô phỏng</b>: hệ thống tạo URL thử nghiệm, chưa có website thật nào được phục vụ.</p> : null}
-      {!deployment && real ? <div className="siteBox">{site!.online && site!.url
-        ? <p>Đang phục vụ phiên bản {site!.currentVersionNumber ?? "—"} ({site!.visibility === "PRIVATE" ? "riêng tư — chỉ thành viên, đăng nhập bằng tài khoản công ty" : "công khai"}) tại{" "}
-            <a href={site!.url} target="_blank" rel="noopener noreferrer">{site!.url}</a></p>
-        : <p className="hint">{site!.slug ? "Trang đang được gỡ xuống." : "Chưa xuất bản lần nào."} Xuất bản sẽ tạo một trang tĩnh thật trên máy chủ.</p>}</div> : null}
-      {!allowed.includes("PUBLIC") && !deployment ? <p className="hint">Quản trị viên đang tắt xuất bản <b>công khai</b> cho loại ứng dụng này; chỉ xuất bản riêng tư (thành viên đăng nhập bằng tài khoản công ty).</p> : null}
-      {!deployment ? allowed.map((v) => (
-        <button className={`publishChoice ${visibility === v ? "selected" : ""}`} key={v} onClick={() => setVisibility(v)}>
-          <b>{v === "PRIVATE" ? "Riêng tư" : "Công khai"}</b><span>{v === "PRIVATE" ? "Chỉ thành viên được cấp quyền." : "Mọi người có thể truy cập."}</span></button>
-      )) : (
-        <div className="deployBox" role="status" aria-live="polite">
-          <b>{STATUS_LABEL[deployment.status] ?? deployment.status}</b>
-          <ol>{deployment.events.map((ev, i) => <li key={i}>{STATUS_LABEL[ev.status] ?? ev.status}{ev.message ? ` — ${ev.message}` : ""}</li>)}</ol>
-          {deployment.status === "RUNNING" && deployment.url ? (deployment.mock ? <p><b>Demo deployment</b> — chưa có website thật nào được phục vụ. Địa chỉ thử nghiệm: <code>{deployment.url}</code></p>
-            : <p>Website đã lên: <a href={deployment.url} target="_blank" rel="noopener noreferrer">{deployment.url}</a></p>) : null}
-          {deployment.status === "FAILED" ? <p className="formError">Không xuất bản được: {deployment.error}</p> : null}
-        </div>
-      )}
-      {!deployment && real && history.some((h) => h.status === "RUNNING") ? <details className="siteHistory"><summary>Các lần xuất bản ({history.filter((h) => h.status === "RUNNING").length})</summary>
-        <ul>{history.filter((h) => h.status === "RUNNING" && !h.mock).map((h) => <li key={h.id}>
-          <span>Phiên bản {h.versionNumber} · {h.visibility === "PRIVATE" ? "riêng tư" : "công khai"} · {fmt(h.createdAt)}</span>
-          {site?.currentDeploymentId === h.id ? <b>Đang phục vụ</b> : <button className="button ghost" disabled={siteBusy} onClick={() => void siteAction(() => api.rollbackSite(workspaceId, projectId, h.id))}>Phục vụ lại bản này</button>}
-        </li>)}</ul></details> : null}
-      {error ? <p className="formError" role="alert">{error}</p> : null}
-      <div className="modalActions">
-        {!deployment && real && site?.online ? <button className="button ghost" disabled={siteBusy} onClick={() => { if (confirm("Gỡ trang xuống? Địa chỉ sẽ báo không tìm thấy cho tới khi xuất bản lại hoặc phục vụ lại một bản cũ.")) void siteAction(() => api.unpublishSite(workspaceId, projectId)); }}>Gỡ trang xuống</button> : null}
-        <button className="button ghost" onClick={onClose}>{deployment ? "Đóng" : "Hủy"}</button>
-        {!deployment ? <button className="button primary" disabled={submitting} onClick={() => void start()}>{submitting ? "Đang gửi…" : "Xuất bản"}</button>
-          : running && pollFailures >= MAX_POLL_FAILURES ? <button className="button primary" data-testid="publish-recheck" onClick={() => { setError(null); setPollFailures(0); }}>Kiểm tra lại</button>
-          : running ? <button className="button primary" disabled>Đang xử lý…</button> : null}
-      </div>
-    </div></div>
   );
 }
 

@@ -155,6 +155,8 @@
 .switch{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
 .siteBox{border:1px solid var(--line,#2a3446);border-radius:10px;padding:10px 12px;margin:8px 0}.siteHistory{margin:8px 0}.siteHistory ul{list-style:none;padding:0;margin:8px 0;display:grid;gap:6px}.siteHistory li{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .siteHistory li button{white-space:nowrap;flex:none}
+/* a long release history must scroll INSIDE the dialog (the dialog is flex-centred: tall content would be clipped above and below and the rollback buttons unreachable) */
+.siteHistory ul{max-height:min(36vh,240px);overflow:auto}.deployBox ol{max-height:min(24vh,170px);overflow:auto}
 /* Phase 7.4: code projects (dark editor tokens: --panel, --line, --muted) */
 .codeStudio{height:100vh;display:grid;grid-template-rows:auto 1fr}
 .codeBody{min-height:0;display:grid;grid-template-columns:minmax(380px,44%) minmax(0,1fr)}

@@ -64,9 +64,10 @@ export type SiteDomain = { id: string; hostname: string; status: "PENDING" | "VE
 export type AssetDto = { id: string; name: string; contentType: string; size: number; status: string; createdAt: string; downloadUrl: string | null };
 export type UploadUrl = { assetId: string; uploadUrl: string; method: string; headers: Record<string, string>; expiresInSeconds: number };
 
-export type DeploymentStatus = "QUEUED" | "POLICY_CHECK" | "SECURITY_CHECK" | "BUILDING" | "DEPLOYING" | "RUNNING" | "FAILED" | "ROLLED_BACK";
+/** The closed list of `deployments.status` (docs/parallel/c2/PUBLISH_API_CONTRACT.md §5, V30). ROLLBACK_FAILED / ROLLBACK_OFFLINE are EVENT names, never statuses. */
+export type DeploymentStatus = "QUEUED" | "POLICY_CHECK" | "SECURITY_CHECK" | "BUILDING" | "DEPLOYING" | "ROLLING_BACK" | "RUNNING" | "FAILED" | "ROLLED_BACK";
 export type Deployment = {
-  id: string; versionNumber: number; visibility: "PRIVATE" | "PUBLIC"; status: DeploymentStatus; url: string | null; error: string | null;
+  id: string; projectId?: string; versionId?: string; updatedAt?: string; versionNumber: number; visibility: "PRIVATE" | "PUBLIC"; status: DeploymentStatus; url: string | null; error: string | null;
   provider: string; mock: boolean; createdAt: string; finishedAt: string | null; events: { status: string; message: string | null; createdAt: string }[];
 };
 
@@ -172,8 +173,15 @@ export type BlockDto = { id: string; name: string; description: string; baseComp
   category?: string; tags?: string[]; usageCount?: number; previewStatus?: "NONE" | "READY" | "FAILED" | "UNAVAILABLE" };
 
 // ---- Phase 7.1: real static sites (ADR 0009)
+/** The release operation that holds the app's scope right now (PUBLISH_API_CONTRACT.md §4). `null` on SiteInfo = idle (also when a lease expired). `deploymentId` is non-null only for PUBLISH. */
+export type ReleaseOperationKind = "PUBLISH" | "ROLLBACK" | "UNPUBLISH";
+export type SiteOperation = { kind: ReleaseOperationKind; deploymentId: string | null; since: string; leaseUntil: string };
 export type SiteInfo = { slug: string | null; url: string | null; online: boolean; visibility: "PRIVATE" | "PUBLIC" | null; currentDeploymentId: string | null;
-  currentVersionNumber: number | null; provider: string; updatedAt: string | null };
+  currentVersionNumber: number | null; provider: string; updatedAt: string | null;
+  /** +1 on every change of the active pointer. OBSERVABILITY ONLY: no request accepts it, the client never sends it and never builds optimistic concurrency on it. */
+  pointerVersion: number;
+  /** the key is always present; null = idle */
+  operation: SiteOperation | null };
 
 // ---- Phase 7.2–7.4: code projects
 export type TreeFile = { path: string; size: number };

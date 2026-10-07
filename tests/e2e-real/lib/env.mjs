@@ -39,6 +39,7 @@ export function loadConfig(env = process.env) {
     publicBase: env.E2E_PUBLIC_BASE,
     dataSource: loadDataSourceFacts(env),
     restartBackendCmd: env.E2E_RESTART_BACKEND_CMD,
+    pauseStoreCmd: env.E2E_PAUSE_STORE_CMD, resumeStoreCmd: env.E2E_RESUME_STORE_CMD, pauseRenderCmd: env.E2E_PAUSE_RENDER_CMD, resumeRenderCmd: env.E2E_RESUME_RENDER_CMD,
     pauseBackendCmd: env.E2E_PAUSE_BACKEND_CMD, resumeBackendCmd: env.E2E_RESUME_BACKEND_CMD,
     stopBackendCmd: env.E2E_STOP_BACKEND_CMD, startBackendCmd: env.E2E_START_BACKEND_CMD,
     stopRabbitCmd: env.E2E_STOP_RABBIT_CMD, startRabbitCmd: env.E2E_START_RABBIT_CMD,

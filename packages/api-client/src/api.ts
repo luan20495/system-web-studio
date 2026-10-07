@@ -8,6 +8,7 @@ import type {
   ConnectionTestResult, DataBinding, DataBindingList, BindingMode,
 } from "@xweb/types";
 import { ApiError, call, json, qs, resetCsrf, stream } from "./core";
+import { isValidReleaseKey, publishBody, rollbackBody, unpublishQuery } from "./release";
 
 const P = (w: string, p: string) => `/workspaces/${w}/projects/${p}`;
 const RT = (w: string, p: string) => `${P(w, p)}/app-runtime`;
@@ -18,6 +19,9 @@ function badKey(): never { throw new ApiError(400, "IDEMPOTENCY_KEY_INVALID", "K
 /** same pattern as IDEMPOTENCY_KEY_PATTERN in the contract mirror (kept local: this module must load under plain node in the unit tests) */
 const KEY = /^[A-Za-z0-9._:-]{1,128}$/;
 const checkKey = (k: string | undefined) => { if (k !== undefined && !KEY.test(k)) badKey(); };
+/** publish / rollback / unpublish keys follow the C2 contract (8–120 chars): refused before anything is sent */
+function badReleaseKey(): never { throw new ApiError(400, "INVALID_IDEMPOTENCY_KEY", "Khóa chống ghi trùng không hợp lệ (8–120 ký tự A–Z a–z 0–9 . _ : -)."); }
+const checkReleaseKey = (k: string | undefined, required: boolean) => { if (k === undefined ? required : !isValidReleaseKey(k)) badReleaseKey(); };
 
 
 /** same patterns as DATA_SOURCE_NAME_PATTERN / SLOT_ID_PATTERN in the management mirror (local copies: this module must load under plain node in the unit tests) */
@@ -312,8 +316,11 @@ export const api = {
   },
   deleteAsset: (w: string, p: string, id: string) => call<void>(`${P(w, p)}/assets/${id}`, { method: "DELETE" }),
 
-  publish: (w: string, p: string, visibility: "PRIVATE" | "PUBLIC", expectedRevision: number, idempotencyKey: string) =>
-    call<Deployment>(`${P(w, p)}/publish`, { method: "POST", body: json({ visibility, expectedRevision }), idempotencyKey }),
+  /** 202 + the deployment (asynchronous: poll getDeployment). Idempotency-Key REQUIRED; body is exactly {visibility, expectedRevision}. */
+  publish: async (w: string, p: string, visibility: "PRIVATE" | "PUBLIC", expectedRevision: number, idempotencyKey: string) => {
+    checkReleaseKey(idempotencyKey, true);
+    return call<Deployment>(`${P(w, p)}/publish`, { method: "POST", body: json(publishBody(visibility, expectedRevision)), idempotencyKey });
+  },
   getDeployment: (w: string, p: string, id: string) => call<Deployment>(`${P(w, p)}/deployments/${id}`),
   listDeployments: (w: string, p: string) => call<Deployment[]>(`${P(w, p)}/deployments`),
   site: (w: string, p: string) => call<SiteInfo>(`${P(w, p)}/site`),
@@ -325,7 +332,15 @@ export const api = {
   verifyDomain: (w: string, p: string, id: string) => call<SiteDomain>(`${P(w, p)}/domains/${id}/verify`, { method: "POST" }),
   checkDomainTls: (w: string, p: string, id: string) => call<SiteDomain>(`${P(w, p)}/domains/${id}/check-tls`, { method: "POST" }),
   removeDomain: (w: string, p: string, id: string) => call<void>(`${P(w, p)}/domains/${id}`, { method: "DELETE" }),
-  rollbackSite: (w: string, p: string, deploymentId: string) => call<SiteInfo>(`${P(w, p)}/site/rollback`, { method: "POST", body: json({ deploymentId }) }),
-  unpublishSite: (w: string, p: string) => call<SiteInfo>(`${P(w, p)}/site`, { method: "DELETE" }),
+  /** 200 + SiteInfo, SYNCHRONOUS (the site serves the restored release when it returns). Body {deploymentId, expectedActiveDeploymentId?}; Idempotency-Key optional. */
+  rollbackSite: async (w: string, p: string, req: { deploymentId: string; expectedActiveDeploymentId?: string | null }, idempotencyKey?: string) => {
+    checkReleaseKey(idempotencyKey, false);
+    return call<SiteInfo>(`${P(w, p)}/site/rollback`, { method: "POST", body: json(rollbackBody(req)), idempotencyKey });
+  },
+  /** 200 + SiteInfo, NO body; the optional expectation is the query parameter; Idempotency-Key optional. Already offline = 200, nothing written. */
+  unpublishSite: async (w: string, p: string, expectedActiveDeploymentId?: string | null, idempotencyKey?: string) => {
+    checkReleaseKey(idempotencyKey, false);
+    return call<SiteInfo>(`${P(w, p)}/site${unpublishQuery(expectedActiveDeploymentId)}`, { method: "DELETE", idempotencyKey });
+  },
   siteAccessTicket: (slug: string, path: string) => call<{ redirect: string }>(`/sites/${encodeURIComponent(slug)}/access-ticket`, { method: "POST", body: json({ path }) })
 };
