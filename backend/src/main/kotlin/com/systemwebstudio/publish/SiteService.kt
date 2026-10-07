@@ -48,6 +48,13 @@ class SiteService(
     private val random = SecureRandom()
     private val dataApiBase: String? = resolveDataApiBase(dataApiBaseRaw)
 
+    /** the browser-facing Data Runtime base for [slug]: the configured value with `{slug}` replaced by the site's slug; null when none is configured (or the value needs a slug and there is none) */
+    fun dataApiBaseFor(slug: String?): String? {
+        val template = dataApiBase ?: return null
+        if (SLUG_TOKEN !in template) return template
+        return slug?.takeIf { Regex("^[a-z0-9][a-z0-9-]{1,79}$").matches(it) }?.let { template.replace(SLUG_TOKEN, it) }
+    }
+
     fun url(slug: String) = "${sitesOrigin.trimEnd('/')}/$slug/"
 
     /** The project's slug, created on first publish: readable name + a short id (unique, stable, ASCII). */
@@ -92,7 +99,7 @@ class SiteService(
     fun previewProject(token: String): UUID? = jdbc.query("SELECT project_id FROM code_changes WHERE preview_token = ?", { rs, _ -> rs.getObject(1, UUID::class.java) }, token).firstOrNull()
 
     /** `__factory/config.json` for @company/app-sdk: identity of the app, environment, visibility, and the viewer of a PRIVATE app. No secrets. */
-    fun runtimeConfig(projectId: UUID, environment: String, visibility: String, userId: UUID?, releaseId: UUID? = null): Map<String, Any?> {
+    fun runtimeConfig(projectId: UUID, environment: String, visibility: String, userId: UUID?, releaseId: UUID? = null, slug: String? = null, pageSite: Boolean = false): Map<String, Any?> {
         val p = jdbc.queryForMap("SELECT name FROM projects WHERE id = ?", projectId)
         // the version of the release that is being SERVED; a preview (no release) shows the latest one. It must not be the project's latest version for a
         // production request: after a rollback the served release is older than the newest version.
@@ -101,7 +108,9 @@ class SiteService(
             ?: jdbc.query("SELECT max(version_number) FROM project_versions WHERE project_id = ?", { rs, _ -> rs.getObject(1)?.toString() }, projectId).firstOrNull())
         val user = userId?.let { jdbc.query("SELECT coalesce(display_name, username) FROM users WHERE id = ?", { rs, _ -> rs.getString(1) }, it).firstOrNull() }
         return mapOf("appId" to projectId.toString(), "appName" to p["name"], "environment" to environment, "visibility" to visibility, "version" to version,
-            "user" to user?.let { mapOf("displayName" to it) }, "flags" to emptyMap<String, Boolean>(), "apiBase" to dataApiBase,
+            "user" to user?.let { mapOf("displayName" to it) }, "flags" to emptyMap<String, Boolean>(),
+            // the public data route is anonymous (published-runtime.md §4): a PRIVATE page site has no data address until a contract says how a member reaches it
+            "apiBase" to (if (pageSite && visibility != "PUBLIC") null else dataApiBaseFor(slug)),
             "releaseId" to releaseId?.toString(), "generatedAt" to java.time.Instant.now().toString())
     }
 
@@ -113,10 +122,15 @@ class SiteService(
         fun resolveDataApiBase(raw: String?): String? {
             val v = raw?.trim().orEmpty()
             if (v.isEmpty()) return null
-            val uri = runCatching { java.net.URI(v) }.getOrNull() ?: return null
+            // the template may name the site once or more through the single token {slug}; any other brace is not configuration
+            if ("\${" in v) return null                                        // ${slug} (another syntax) would silently become "$<slug>"
+            val probe = v.replace(SLUG_TOKEN, "x-sample")
+            if ('{' in probe || '}' in probe) return null
+            val uri = runCatching { java.net.URI(probe) }.getOrNull() ?: return null
             if (uri.scheme?.lowercase() !in setOf("http", "https") || uri.host.isNullOrBlank() || uri.userInfo != null || uri.fragment != null) return null
             return v
         }
+        const val SLUG_TOKEN = "{slug}"
     }
 
     fun preview(token: String): Pair<String, Map<String, ManifestFile>>? {

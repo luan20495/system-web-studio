@@ -15,7 +15,7 @@ import java.net.InetSocketAddress
 @TestPropertySource(properties = [
     "app.deploy.provider=static", "app.sites.origin=https://sites.example.test", "app.sites.studio-origin=https://studio.example.test", "app.render.token=render-test-token",
     "app.deploy.scope-wait-seconds=4", "app.deploy.scope-retry-ms=200", "app.deploy.scope-duplicate-wait-seconds=3", "app.deploy.recovery-interval-ms=600000",
-    "app.sites.data-api-base=https://data.dev.example.test/api/v1"
+    "app.sites.data-api-base=https://sites.example.test/{slug}/_data"
 ])
 abstract class ScopeIntegrationTestBase : IntegrationTestBase() {
     companion object {
@@ -25,7 +25,15 @@ abstract class ScopeIntegrationTestBase : IntegrationTestBase() {
             createContext("/render-site") { ex ->
                 val body = mapper.readTree(ex.requestBody.readBytes())
                 val title = body.get("schema").get("sections").firstOrNull { it.get("type").asString() == "Hero" }?.get("props")?.get("title")?.asString() ?: ""
-                val bytes = mapper.writeValueAsBytes(mapOf("files" to linkedMapOf("index.html" to "<!doctype html><html><body><h1>$title</h1></body></html>", "404.html" to "<!doctype html><title>404</title>")))
+                // the real worker (workers/render) is covered by tests/page-runtime and tests/browser; this double follows its contract: a page with data bindings
+                // also carries the one script reference and ships the runtime file. A few titles switch on the failure modes the builder must refuse.
+                val bound = (body.get("schema").get("dataBindings")?.size() ?: 0) > 0
+                if (title == "__REFUSE__") { val e = mapper.writeValueAsBytes(mapOf("error" to "binding 'b1': query 'q-title' is not public: mark it public in the app definition or remove the binding")); ex.sendResponseHeaders(422, e.size.toLong()); ex.responseBody.use { it.write(e) }; return@createContext }
+                val tag = if ((bound && title != "__NO_TAG__") || title == "__ORPHAN_TAG__") "<script src=\"./_runtime/page-runtime.js\" defer></script>" else ""
+                val inline = if (title == "__SCRIPT__") "<script>alert(1)</script>" else ""
+                val out = linkedMapOf("index.html" to "<!doctype html><html><body><h1>$title</h1>$tag$inline</body></html>", "404.html" to "<!doctype html><title>404</title>")
+                if ((bound && title != "__ORPHAN_TAG__") || title == "__UNUSED_RUNTIME__") out["_runtime/page-runtime.js"] = "/* page runtime test double */\n(function () { \"use strict\"; })();\n"
+                val bytes = mapper.writeValueAsBytes(mapOf("files" to out))
                 ex.sendResponseHeaders(200, bytes.size.toLong()); ex.responseBody.use { it.write(bytes) }
             }
             start()

@@ -41,6 +41,7 @@ class DeploymentProcessor(
     private val buildJobs: com.systemwebstudio.code.BuildJobService,
     private val releases: ReleaseService,
     private val queue: JobQueue,
+    private val appDefinitions: com.systemwebstudio.app.definition.AppDefinitionCodec,
     @Value("\${app.deploy.step-delay-ms:0}") private val stepDelayMs: Long,
     @Value("\${app.deploy.step-max-attempts:3}") maxAttempts: Int,
     @Value("\${app.deploy.retry-backoff-ms:500}") backoffMs: Long,
@@ -140,7 +141,18 @@ class DeploymentProcessor(
             return StepResult.Advance
         }
         state.artifactHash = runner.bounded(buildTimeoutMs) { build(d) }
+        announcePublicQueries(d)
         return StepResult.Advance
+    }
+
+    /**
+     * The publish confirmation of what becomes public: the queries of THIS release's snapshot that visitors with no account may run (read-only). Written once
+     * per deployment (a retried BUILDING step does not repeat it); nothing when the release has none.
+     */
+    private fun announcePublicQueries(d: DeploymentDto) {
+        if (deployments.firstEventAt(d.id, "PUBLIC_QUERIES") != null) return
+        val ids = runCatching { com.systemwebstudio.app.definition.PublicQueries.of(appDefinitions.fromJson(json.readTree(snapshot(d)))) }.getOrDefault(emptyList())
+        if (ids.isNotEmpty()) deployments.event(d.id, "PUBLIC_QUERIES", "Public queries of this release (anyone who can open the site may run them, read-only): " + ids.joinToString(", "))
     }
 
     private fun deployStep(d: DeploymentDto, state: RunState): StepResult {

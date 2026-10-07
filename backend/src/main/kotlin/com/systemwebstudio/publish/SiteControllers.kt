@@ -36,6 +36,11 @@ class SiteServingController(
     companion object {
         /** Page-schema sites contain no scripts: nothing may run, be framed or load from elsewhere; forms may only post to the site itself. */
         const val SITE_CSP = "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; font-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+        /**
+         * A PAGE_SCHEMA page whose artifact ships the client runtime: that ONE first-party script file and requests to its own origin, nothing else (no inline
+         * script, no other host, no frames). Not sandboxed: the page is same-origin with its own data route, which is what keeps the runtime free of CORS and credentials.
+         */
+        const val DATA_BOUND_SITE_CSP = "default-src 'none'; script-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'unsafe-inline'; font-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
     }
 
     private fun common(response: HttpServletResponse) {
@@ -89,7 +94,7 @@ class SiteServingController(
         val site = sites.live(slug)?.takeIf { it.visibility == "PRIVATE" && it.kind == "STATIC_APP" } ?: return page(response, 404, "Không tìm thấy", "")
         if (!sites.canRead(user, site)) return page(response, 403, "Bạn không có quyền xem ứng dụng này", "")
         val raw = request.requestURI.substringAfter("/sites/_app/$token/", "")
-        if (raw == "__factory/config.json") return runtimeConfig(response, sites.runtimeConfig(site.projectId, "production", "PRIVATE", user, site.deploymentId))
+        if (raw == "__factory/config.json") return runtimeConfig(response, sites.runtimeConfig(site.projectId, "production", "PRIVATE", user, site.deploymentId, site.slug))
         serveFile(site.prefix, site.files, raw, private = true, app = true, frameAncestors = null, preview = false, request, response)
     }
 
@@ -114,6 +119,9 @@ class SiteServingController(
         val raw = request.requestURI.substringAfter("/sites/$slug/", "")
         val private = site.visibility == "PRIVATE"
         val app = site.kind == "STATIC_APP"
+        // a PAGE_SCHEMA site whose artifact carries the client runtime (it has data bindings) also has a runtime config
+        val dataPage = !app && site.files.containsKey(StaticSiteBuilder.RUNTIME_PATH)
+        var viewer: UUID? = null
         if (private) {
             val user = sites.sessionUser(cookie)
             if (user == null) {
@@ -122,12 +130,14 @@ class SiteServingController(
                 return
             }
             if (!sites.canRead(user, site)) return page(response, 403, "Bạn không có quyền xem trang này", "Trang riêng tư chỉ dành cho thành viên của ứng dụng.")
+            viewer = user
             if (app) {
                 response.setHeader("Cache-Control", "no-store"); response.setHeader("Referrer-Policy", "no-referrer"); response.status = 302
                 response.setHeader("Location", "/_app/${sites.openAppToken(user, slug)}/$raw"); return
             }
         }
-        if (app && raw == "__factory/config.json") return runtimeConfig(response, sites.runtimeConfig(site.projectId, "production", site.visibility, null, site.deploymentId))
+        if ((app || dataPage) && raw == "__factory/config.json")
+            return runtimeConfig(response, sites.runtimeConfig(site.projectId, "production", site.visibility, viewer, site.deploymentId, site.slug, pageSite = dataPage))
         serveFile(site.prefix, site.files, raw, private, app, null, preview = false, request, response, root = "/$slug/")
     }
 
@@ -164,6 +174,7 @@ class SiteServingController(
         if (app && (path.startsWith("server/") || path == "openapi.json")) return page(response, 404, "Không tìm thấy", "")
         val file = files[path] ?: return notFound(prefix, files, app, root, request, response)
         common(response)
+        if (!app && files.containsKey(StaticSiteBuilder.RUNTIME_PATH)) response.setHeader("Content-Security-Policy", DATA_BOUND_SITE_CSP)
         if (app) {
             val o = sites.sitesOrigin.trimEnd('/')
             response.setHeader("Content-Security-Policy", "sandbox allow-scripts; default-src 'none'; script-src 'self' $o; style-src 'self' $o 'unsafe-inline'; " +

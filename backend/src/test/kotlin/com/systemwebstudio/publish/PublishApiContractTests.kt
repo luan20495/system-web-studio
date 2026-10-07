@@ -183,7 +183,7 @@ class PublishApiContractTests : ScopeIntegrationTestBase() {
         assertThat(cfg.get("appId").asString()).isEqualTo(sc.projectId.toString()); assertThat(cfg.get("releaseId").asString()).isEqualTo(newer.id.toString())
         assertThat(cfg.get("environment").asString()).isEqualTo("production"); assertThat(cfg.get("visibility").asString()).isEqualTo("PUBLIC")
         assertThat(cfg.get("user").isNull).isTrue(); assertThat(cfg.get("flags").isObject).isTrue()
-        assertThat(cfg.get("apiBase").asString()).isEqualTo("https://data.dev.example.test/api/v1")                  // the value of app.sites.data-api-base of THIS test context
+        assertThat(cfg.get("apiBase").asString()).isEqualTo("https://sites.example.test/$slug/_data")                    // app.sites.data-api-base of THIS test context, {slug} = this site
         assertThat(before.contentAsString).doesNotContain("token", "secret", "password", "Authorization")            // nothing credential-like is ever in the config
 
         // the app page is served in a sandbox that can only talk to its own origin

@@ -15,15 +15,17 @@ class SiteRuntimeConfigTests : ScopeIntegrationTestBase() {
     @Test
     fun `the configured base and the release being served reach the app at request time`() {
         val sc = scenario(); val release = UUID.randomUUID()
-        val cfg = sites.runtimeConfig(sc.projectId, "production", "PUBLIC", null, release)
-        assertThat(cfg["apiBase"]).isEqualTo("https://data.dev.example.test/api/v1")
+        val cfg = sites.runtimeConfig(sc.projectId, "production", "PUBLIC", null, release, slug = "demo-site")
+        assertThat(cfg["apiBase"]).isEqualTo("https://sites.example.test/demo-site/_data")                    // {slug} is replaced by the site's slug: the same value serves every site
         assertThat(cfg["releaseId"]).isEqualTo(release.toString())
         assertThat(cfg["environment"]).isEqualTo("production")                         // the vocabulary of @company/app-sdk is unchanged
         assertThat(cfg["appId"]).isEqualTo(sc.projectId.toString())
         // a rollback changes only which release is served: the same configuration answers for the other release, no rebuild
         val other = UUID.randomUUID()
-        assertThat(sites.runtimeConfig(sc.projectId, "production", "PUBLIC", null, other)).containsEntry("releaseId", other.toString()).containsEntry("apiBase", "https://data.dev.example.test/api/v1")
+        assertThat(sites.runtimeConfig(sc.projectId, "production", "PUBLIC", null, other, slug = "demo-site")).containsEntry("releaseId", other.toString()).containsEntry("apiBase", "https://sites.example.test/demo-site/_data")
         assertThat(sites.runtimeConfig(sc.projectId, "preview", "PUBLIC", null)["releaseId"]).isNull()          // a preview serves no release
+        assertThat(sites.runtimeConfig(sc.projectId, "preview", "PUBLIC", null)["apiBase"]).describedAs("a value that needs a slug and has none").isNull()
+        assertThat(sites.runtimeConfig(sc.projectId, "production", "PUBLIC", null, release, slug = "Bad Slug!")["apiBase"]).isNull()                 // never a guess from a malformed slug
     }
 
     @Test
@@ -31,6 +33,11 @@ class SiteRuntimeConfigTests : ScopeIntegrationTestBase() {
         for (bad in listOf(null, "", "   ", "data.example.test", "/api/v1", "ftp://data.example.test", "javascript:alert(1)", "https://user:pw@data.example.test", "https://", "https://data.example.test/#x", "http://exa mple.test"))
             assertThat(SiteService.resolveDataApiBase(bad)).describedAs(bad).isNull()
         assertThat(SiteService.resolveDataApiBase(" https://data.example.test/api ")).isEqualTo("https://data.example.test/api")
+        // the token {slug} is the only placeholder; anything else in braces is not configuration
+        assertThat(SiteService.resolveDataApiBase("https://sites.example.test/{slug}/_data")).isEqualTo("https://sites.example.test/{slug}/_data")
+        assertThat(SiteService.resolveDataApiBase("https://{slug}.example.test/_data")).isEqualTo("https://{slug}.example.test/_data")
+        for (bad in listOf("https://sites.example.test/{site}/_data", "https://sites.example.test/{slug/_data", "https://sites.example.test/${'$'}{slug}/_data", "https://sites.example.test/{{slug}}/_data", "{slug}", "/{slug}/_data"))
+            assertThat(SiteService.resolveDataApiBase(bad)).describedAs(bad).isNull()
         assertThat(SiteService.resolveDataApiBase("http://127.0.0.1:8080")).isEqualTo("http://127.0.0.1:8080")
     }
 
