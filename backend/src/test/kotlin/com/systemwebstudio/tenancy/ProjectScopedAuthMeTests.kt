@@ -65,7 +65,7 @@ class ProjectScopedAuthMeTests : IntegrationTestBase() {
     @Test
     fun `F TENANT_ADMIN without project membership gets no automatic Studio project scope`() {
         val u = fx.user("ta-f")
-        jdbc.update("UPDATE tenant_members SET role='TENANT_ADMIN' WHERE tenant_id=? AND user_id=?", TenantIds.DEFAULT, u.id)
+        jdbc.update("INSERT INTO tenant_members (tenant_id,user_id,role,active) VALUES (?,?, 'TENANT_ADMIN', true)", TenantIds.DEFAULT, u.id)
         val s = sessionFor(u.username)
         assertThat(scopes(s)).isEmpty()
         assertThat(me(s).get("permissions").toList().map { it.asString() }).containsExactlyInAnyOrder("TENANT_MANAGE", "TENANT_MEMBERS")
