@@ -124,7 +124,7 @@ class TenantService(
                      )
                  )
                  $search
-               ORDER BY lower(u.username), u.id
+               ORDER BY u.username, u.id
                LIMIT 50""",
             { rs, _ -> TenantMemberCandidate(
                 rs.getObject("id", UUID::class.java),
