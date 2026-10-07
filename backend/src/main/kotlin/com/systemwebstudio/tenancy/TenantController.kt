@@ -63,11 +63,25 @@ class TenantController(
         return service.membersOf(tenantId)
     }
 
+    /**
+     * Tenant-scoped candidate directory. It never becomes a global user directory: only users already related to this tenant
+     * (workspace membership or an inactive tenant membership) are returned.
+     */
+    @GetMapping("/{tenantId}/member-candidates")
+    fun memberCandidates(
+        @PathVariable tenantId: UUID,
+        @RequestParam(required = false) q: String?,
+        @AuthenticationPrincipal me: StudioUserDetails
+    ): List<TenantMemberCandidate> {
+        access.forTenant(me.userId, tenantId).require(Permission.TENANT_MEMBERS)
+        return service.memberCandidates(tenantId, q)
+    }
+
     @PutMapping("/{tenantId}/members/{userId}")
     fun setMember(@PathVariable tenantId: UUID, @PathVariable userId: UUID, @RequestBody r: TenantMemberRequest, @AuthenticationPrincipal me: StudioUserDetails): TenantMemberView {
         access.forTenant(me.userId, tenantId).require(Permission.TENANT_MEMBERS)
         val role = TenantRole.entries.firstOrNull { it.name == r.role } ?: throw ApiException.badRequest("TENANT_ROLE_INVALID", "Role must be TENANT_ADMIN or MEMBER")
-        if (!users.existsById(userId)) throw ApiException.notFound("USER_NOT_FOUND", "User not found")
+        if (!service.mayAddMember(tenantId, userId)) throw ApiException.notFound("USER_NOT_FOUND", "User not found")
         return service.setMember(tenantId, userId, role, me.userId)
     }
 
