@@ -73,8 +73,8 @@ object PermissionCodes {
  *   TENANT_ADMIN  TENANT_MANAGE + TENANT_MEMBERS on its own tenant. Grants NO implicit access to workspace/project business data.
  *   MEMBER        no tenant-level permission.
  * System ADMIN (users.system_admin) is a PLATFORM role (D-C1-11):
- *   - may administer tenants (TENANT_MANAGE, TENANT_MEMBERS) and workspace membership (MEMBER_MANAGE), and create projects only in
- *     workspaces it belongs to (PROJECT_CREATE is kept so the legacy ADMIN_NOT_MEMBER 409 answer is preserved);
+ *   - may administer tenants (TENANT_MANAGE, TENANT_MEMBERS). A non-member SYSTEM_ADMIN gets no workspace/business permission;
+ *     tenant-scoped provisioning is the authority for creating users/workspaces and assigning initial membership;
  *   - does NOT read tenant business data (projects, schema, versions, audit of a workspace) unless it is a member of the workspace,
  *     or the operator sets app.tenancy.system-admin-business-access=true (legacy behaviour: every permission everywhere).
  *   - can never grant ITSELF anything (see MemberController / TenantController: self-grant is rejected).
@@ -105,9 +105,9 @@ object PermissionMatrix {
     /** Legacy "god mode"; only used when app.tenancy.system-admin-business-access=true. */
     val systemAdmin: Set<Permission> = Permission.entries.toSet()
 
-    /** What a SYSTEM_ADMIN holds in a workspace it is not a member of (default policy). No project/audit/business-data permission. */
+    /** What a SYSTEM_ADMIN holds in a workspace it is not a member of (default policy): platform/tenant authority only. */
     val platformScope: Set<Permission> = setOf(
-        Permission.MEMBER_MANAGE, Permission.PROJECT_CREATE, Permission.TENANT_MANAGE, Permission.TENANT_MEMBERS
+        Permission.TENANT_MANAGE, Permission.TENANT_MEMBERS
     )
 
     val tenantRoles: Map<String, Set<Permission>> = mapOf(
