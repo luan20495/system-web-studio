@@ -64,6 +64,18 @@ class TenantService(
         return t
     }
 
+    @Transactional
+    fun createWorkspace(tenantId: UUID, nameInput: String, actorId: UUID? = null): Map<String, Any> {
+        get(tenantId)
+        val name = nameInput.trim()
+        if (name.isBlank() || name.length > 160) throw ApiException.badRequest("VALIDATION_FAILED", "Workspace name is required (max 160 characters)")
+        val id = UUID.randomUUID()
+        val slug = "w-" + id.toString().replace("-", "").take(16)
+        jdbc.update("INSERT INTO workspaces (id, name, slug, tenant_id) VALUES (?,?,?,?)", id, name, slug, tenantId)
+        audit.record("WORKSPACE_CREATED", "WORKSPACE", id, id, actorId = actorId, newValue = mapOf("name" to name, "tenantId" to tenantId))
+        return mapOf("id" to id, "name" to name, "slug" to slug, "tenantId" to tenantId)
+    }
+
     fun membersOf(tenantId: UUID): List<TenantMemberView> {
         get(tenantId)
         return jdbc.query(
