@@ -1,0 +1,206 @@
+{
+  "studio": "http://127.0.0.1:3073",
+  "runId": "muxwzkkm",
+  "frontendHead": "fef566d",
+  "backend": {
+    "url": "http://127.0.0.1:43080",
+    "head": "7ecea1a test(c1): align auth me with portal membership capability [7ecea1a2a10df763f885f89ce42229b1c4012cac]"
+  },
+  "facts": {
+    "authConfig": {
+      "localLogin": true,
+      "oidc": false,
+      "publicPublish": true
+    },
+    "fixtureNotes": {
+      "viewerOnProject": "member",
+      "initialRevision": 0,
+      "definitionOps": {
+        "ok": true
+      }
+    },
+    "routes": {
+      "queries": {
+        "status": 404,
+        "code": "QUERY_NOT_FOUND"
+      },
+      "actions": {
+        "status": 404,
+        "code": "UNKNOWN_ACTION"
+      }
+    }
+  },
+  "cleanup": [
+    "left behind (no delete route): workspaces 6f5477c3-cc7d-4ab4-bd9a-0c46a7c08dfc, 9bb6f1b8-8c14-466e-bf03-79f56fe7e811 named e2e-muxwzkkm-*"
+  ],
+  "node": "v22.23.1",
+  "summary": {
+    "total": 1,
+    "PASS": 1,
+    "FAIL": 0,
+    "BLOCKED": 0,
+    "SKIP": 0
+  },
+  "results": [
+    {
+      "id": "E2E-AD03",
+      "title": "Tenant admin member directory: metadata, tenant-scoped candidates (search, limit, exclusions), add through the UI, isolation and rules",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-07T09:37:57.106Z",
+      "end": "2026-10-07T09:38:04.155Z",
+      "workspace": "6f5477c3-cc7d-4ab4-bd9a-0c46a7c08dfc",
+      "project": "3be22236-727b-4ad0-86eb-026cf45ecc9b",
+      "checks": [
+        {
+          "name": "[api] GET members: every row has userId, username, displayName, email, role, active",
+          "ok": true,
+          "detail": "status=200 {\"tenantId\":\"00000000-0000-0000-0000-000000000001\",\"userId\":\"81be1789-9d70-41b6-86c5-bb8af1e42c60\",\"role\":\"MEMBER\",\"active\":true,\"username\":\"e2e-muxwtfrq-admina\",\"displayName\":\"E2E adminA muxwtfrq\",\"email\":null}",
+          "kind": "http"
+        },
+        {
+          "name": "[api] …and the metadata is right (adminA: its username and display name)",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "[api] candidates: 200, a list of {userId, username, displayName, email}",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a former member in a workspace of the tenant (adminB) IS a candidate",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "[api] current members are not candidates (adminA)",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a SYSTEM_ADMIN account (activated, enabled, a workspace member, former tenant member) is never a candidate",
+          "ok": true,
+          "detail": "grant=200",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a non-activated account and a disabled account are not candidates",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "[api] at most 50 results, sorted by username",
+          "ok": true,
+          "detail": "n=1",
+          "kind": "http"
+        },
+        {
+          "name": "[api] search q finds adminB by part of the username and only matching people",
+          "ok": true,
+          "detail": "n=1",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a 1-character search is refused (400 QUERY_TOO_SHORT)",
+          "ok": true,
+          "detail": "status=400 QUERY_TOO_SHORT",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a search with no match is an empty list",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "[fact] 'a user known only to ANOTHER tenant is invisible' cannot be built through the public API; it is C1's backend test TenantMemberDirectoryTests",
+          "ok": true,
+          "detail": "see the backend targeted run",
+          "kind": "http"
+        },
+        {
+          "name": "Công ty của tôi: the member rows show names and emails from the member metadata",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "typing the search shows adminB (name · email) in the candidate list, and not the SYSTEM_ADMIN / disabled / non-activated accounts",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "add candidate: the server lists adminB as an active MEMBER, with metadata",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "the member appears in the table with his name",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the candidate disappears after the add (API and picker)",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "[api] a guessed foreign UUID → 404 USER_NOT_FOUND",
+          "ok": true,
+          "detail": "status=404 USER_NOT_FOUND",
+          "kind": "http"
+        },
+        {
+          "name": "[api] adding that SYSTEM_ADMIN account by id → 404 (not eligible, no oracle)",
+          "ok": true,
+          "detail": "status=404 USER_NOT_FOUND",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a non-activated and a disabled account cannot be added by id either (404)",
+          "ok": true,
+          "detail": "404/404",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a caller from ANOTHER tenant gets 404 for members, candidates and add",
+          "ok": true,
+          "detail": "404/404/404",
+          "kind": "http"
+        },
+        {
+          "name": "[api] changing your own tenant role → 403 SELF_GRANT_FORBIDDEN",
+          "ok": true,
+          "detail": "status=403 SELF_GRANT_FORBIDDEN",
+          "kind": "http"
+        },
+        {
+          "name": "no unexpected 4xx/5xx from the portal's calls",
+          "ok": true,
+          "detail": "GET /api/v1/auth/me → 401",
+          "kind": "ui"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    }
+  ]
+}

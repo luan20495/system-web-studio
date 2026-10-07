@@ -1,0 +1,10 @@
+C1 7ecea1a — targeted backend tests (Mac, JDK 21, Testcontainers), run by C5 2026-10-07
+
+UNPATCHED (as C1 committed):
+  MeTenancyTests            4 tests, 2 failed
+  PermissionCanonicalTests  7 tests, 0 failed
+  TenantMemberDirectoryTests 2 tests, 1 failed (candidates endpoint answers 500: 'for SELECT DISTINCT, ORDER BY expressions must appear in select list'; with q: 'invalid escape string')
+
+With the two-line test-only patch (H-C1-11_test_patch.diff): TenantMemberDirectoryTests passes; MeTenancyTests still 2 failed:
+  - tenant admin - tenantRole TENANT_ADMIN and the tenant permissions, still no platform scope(): org.opentest4j.AssertionFailedError: Expecting actual: ["TENANT_MANAGE", "TENANT_MEMBERS"] to contain exactly (and in same order): ["MEMBER_MANAGE", "TENANT_MANAGE", "TENANT_MEMBERS"] but could not find the following elements: ["MEMBER_MANAGE"]
+  - system admin - platform scope without business access, non-member workspaces show platform permissio: org.opentest4j.AssertionFailedError: Expecting actual: ["MEMBER_MANAGE", "TENANT_MANAGE", "TENANT_MEMBERS"] to contain exactly (and in same order): ["TENANT_MANAGE", "TENANT_MEMBERS"] but some elements were not expected: ["MEMBER_MANAGE"]

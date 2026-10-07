@@ -1,0 +1,24 @@
+diff --git a/backend/src/main/kotlin/com/systemwebstudio/tenancy/TenantService.kt b/backend/src/main/kotlin/com/systemwebstudio/tenancy/TenantService.kt
+index 6f82e33..c22660a 100644
+--- a/backend/src/main/kotlin/com/systemwebstudio/tenancy/TenantService.kt
++++ b/backend/src/main/kotlin/com/systemwebstudio/tenancy/TenantService.kt
+@@ -99,8 +99,8 @@ class TenantService(
+         val args = mutableListOf<Any>(tenantId, tenantId, tenantId)
+         val search = if (pattern == null) "" else {
+             args += pattern; args += pattern; args += pattern
+-            """ AND (lower(u.username) LIKE ? ESCAPE '\\' OR lower(coalesce(u.display_name,'')) LIKE ? ESCAPE '\\'
+-                      OR lower(coalesce(u.email,'')) LIKE ? ESCAPE '\\')"""
++            """ AND (lower(u.username) LIKE ? ESCAPE '\' OR lower(coalesce(u.display_name,'')) LIKE ? ESCAPE '\'
++                      OR lower(coalesce(u.email,'')) LIKE ? ESCAPE '\')"""
+         }
+         return jdbc.query(
+             """SELECT DISTINCT u.id, u.username, u.display_name, u.email
+@@ -124,7 +124,7 @@ class TenantService(
+                      )
+                  )
+                  $search
+-               ORDER BY lower(u.username), u.id
++               ORDER BY u.username, u.id
+                LIMIT 50""",
+             { rs, _ -> TenantMemberCandidate(
+                 rs.getObject("id", UUID::class.java),
