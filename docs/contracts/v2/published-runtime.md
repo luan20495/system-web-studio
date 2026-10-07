@@ -112,13 +112,30 @@ The set of public queries of a release is **immutable once the release exists** 
 | Authenticated actions / workflows | RUNNING (integration-tested) | `AppRuntimeActionController`, V29 stores, restart / recovery suites. |
 | Release-pinned LIVE definition | RUNNING | D-C0-33 (`RuntimeAppDefinitions`). |
 | Management API | RUNNING (`management-api.md`, D-C0-30) | |
-| Public query route | NOT_IMPLEMENTED | no controller under `/sites/{slug}/_data`. Owner: C3 (query semantics) + C0 (controller wiring). |
+| Public query route | IMPLEMENTED, flag OFF by default (`app.sites.public-data.enabled`), integration-tested | `PublicDataController` (D-C0-36): `POST /sites/{slug}/_data/queries/{queryId}/run`; `PublicDataEndpointTests` (14, real PostgreSQL / Redis / C1 policy / C3 gateway; connector is the double). Not yet reachable from a browser: the sites gateway has no route (next row). |
 | Sites gateway proxy for the data route | NOT_IMPLEMENTED | `infra/sites-gateway/default.conf.template` proxies GET / HEAD of sites, the forms POST and `/{slug}/api/**` of server apps only. Owner: C2 (+ C0 for the template). |
-| `PUBLIC_SITE` principal | NOT_IMPLEMENTED | `ActorKind` = `USER, SYSTEM, APP_TOKEN, SERVICE`; `ActorPolicy` denies all but USER. Owner: C1 (decision + policy), C0 (adapter wiring). |
-| Release query allow-list | NOT_IMPLEMENTED | no field, table or snapshot. Owner: C2 (+ V31 request). |
+| `PUBLIC_SITE` principal | IMPLEMENTED (C1, imported D-C0-36) | `tenancy.ActorKind.PUBLIC_SITE`, `PublicSiteAuthorizer`, gateway branch; 16 + 14 tests. |
+| Release query allow-list | IMPLEMENTED as a provider; declaration = `queries[].public: true` (READ only, validator-enforced) | `ReleaseSnapshotPublicQueryAllowList` reads the immutable snapshot of the release's version + `publish_configs.public_data_approved` (live approval switch). **No migration (V31 not needed for this).** Open: the Studio / C2 operation that lets an author set `public` and the approval in the UI (`UPDATE_QUERY` with `public: true` already works; the approval is the publish-config API `acknowledgePublicData`). |
 | Deterministic release binding | PARTIAL | the pointer decides the definition (done); the LIVE data-source binding is per project, not per release (by design, section 4); the public route must still read the release's allow-list. |
-| Rate limiting of a public data route | NOT_IMPLEMENTED | nginx `sites_rl` covers sites GET; Management has a tenant throttle; C3's gate is per tenant. Owner: C0 (Redis limiter) with C2 (nginx). |
+| Rate limiting of a public data route | IMPLEMENTED | `common.RateLimiter` (Redis): per client address burst (30 / 10 s), per site + address (120 / min), per site (1200 / min); Redis outage = refuse; nginx `limit_req` still to add (C2). |
 | `apiBase` with `{slug}` | NOT_IMPLEMENTED | `SiteService.resolveDataApiBase` accepts a plain URL only. Owner: C2. |
 | Candidate pointer (LIM-1 target) | NOT_IMPLEMENTED | section 2.2; needs V31. Owner: C2. |
+
+## 7a. Public route as implemented (D-C0-36)
+
+| Item | Frozen behaviour |
+|---|---|
+| Route | `POST /sites/{slug}/_data/queries/{queryId}/run`, body optional `{"params":{...}}` and nothing else (`400 INVALID_REQUEST` for any other key: tenantId, workspaceId, projectId, releaseId, role, mode, mappingRef, page, sql, ...) |
+| Resolution | slug -> `SiteService.live` -> tenant of the workspace -> C1 `PublicSiteAuthorizer` (re-verifies RUNNING + PUBLIC + the active pointer, then the release allow-list) -> the release's own version -> LIVE binding -> `DataGateway.runQuery` with `GatewayContext(actorKind = PUBLIC_SITE, actorUserId = null)` |
+| Refusal | one `404 QUERY_NOT_FOUND "Query not found"` for every cause (unknown / offline / archived / deleted / private / not RUNNING / not approved / not public / other release / TEST); never 401 / 403 |
+| Other answers | `400 INVALID_REQUEST` (malformed), `413 PAYLOAD_TOO_LARGE` (> 16 KiB), `422 DATA_SOURCE_UNBOUND`, `429 RATE_LIMITED` + `Retry-After`, `502 DATA_UNAVAILABLE` / `RESPONSE_TOO_LARGE` (> 256 KiB), `504 DATA_TIMEOUT`, `503 DATA_RUNTIME_UNAVAILABLE`, `500 INTERNAL`; all `{code,message,requestId,retryable,details}`; connector text, hosts, schema, SQL and credential metadata never leave |
+| Caps | `app.sites.public-data.max-rows` (100; the query's own `maxRows` may only lower it), `max-response-bytes` (262144), `max-body-bytes` (16384); the data source's statement timeout is C3's |
+| Headers | `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`; no CORS headers (same origin); no cookie read or set |
+| Security chain | the existing STATELESS `/sites/**` chain (no session, no security context, no CSRF filter because there is no state to ride); POST is permitted for exactly `/sites/*/_forms/*` and `/sites/*/_data/queries/*/run`, every other POST under `/sites` is denied; `/api/v1/**` keeps CSRF |
+| Audit | `DATA_PUBLIC_QUERY_SERVED` (`actorKind = PUBLIC_SITE`, site, release, query, request id; no visitor identity) next to C3's `DATASOURCE_QUERIED` / `DATA_QUERY_SERVED` |
+| Allow-list | `queries[].public === true` (JSON boolean) and READ, in the immutable snapshot of THE RELEASE asked about, and `publish_configs.public_data_approved` true now; draft edits never matter; rollback = the previous release's list; revoking the approval closes the route at once |
+| Flags | both `app.data-platform.enabled` and `app.sites.public-data.enabled` (default false) |
+
+nginx route C2 must add to both server blocks of `infra/sites-gateway/default.conf.template` (and the V2 template): `location ~ "^/[a-z0-9][a-z0-9-]{1,79}/_data/queries/[A-Za-z0-9][A-Za-z0-9._:-]{0,127}/run$"` with `limit_except POST { deny all; }`, `limit_req` (new zone, per `$binary_remote_addr`), `client_max_body_size 16k`, `rewrite ^/(.*)$ /sites/$1 break;`, `proxy_pass http://studio_api;`, the same proxy headers as the forms route, `proxy_no_cache 1; proxy_cache_bypass 1;`, `proxy_hide_header Set-Cookie`. Behind the gateway the API sees the bridge address unless `app.proxy.trust` / `trusted-cidrs` name it (then `ClientIpFilter` uses the right-most untrusted `X-Forwarded-For`); until it does, the per-address budgets are shared by all visitors of that gateway.
 
 ## 8. Handoffs (exact) — see `docs/parallel/c0/HANDOFFS_2026-10-07.md`
