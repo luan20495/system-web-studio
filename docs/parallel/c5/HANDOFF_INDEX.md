@@ -33,8 +33,12 @@
 | H-C2-09 Studio preview is not data-aware (by design) | C2 | info | - |
 | H-C0-10 import `fix/c2-v3 c1e0df5` into integration/v2 (conflicts in AppDefinition{Model,Reader,Validator}); `SITES_DATA_API_BASE` | C0 | P0 | E2E-PD01/PD02 on integration |
 | H-C3-05 confirm `E2E_PD_SQL` (a query definition via the Management API) is the way to make an approved page query | C3 | info | E2E-PD01 |
+| H-C1-05 (updated) a WORKSPACE_ADMIN has no canonical capability for member management: the Admin portal cannot offer "Workspace của tôi" | C1 | P1 | E2E-AD02 |
+| H-C1-11 tenant members API returns ids only; no tenant-scoped user lookup; `/auth/me` permissions are primary-tenant only | C1 | P1 | E2E-AD01 (add member) |
+| H-C0-11 CORS must list the 3 portal origins; public routing = one hostname per portal (see HANDOFFS_PORTALS.md) | C0 | P0 | public portals |
+| H-C1-12 / H-C0-12 groups, sharing, BYOK have no usable backend (no API / flag off) | C1/C2/C0 | P3 | Admin sections stay "Chưa sẵn sàng" |
 | H-C2-10 AI stream `status` only for tools: add model/fallback/validating/saving so the UI can show what the server is doing | C2 | P2 | AI chat feedback |
 
 `*` = the query half only. Live results of 2026-10-06: `MAC_RUN_2026-10-06.md`.
 
-Files: `HANDOFFS_PAGE_SCHEMA_DATA.md` (public data V1), `HANDOFF_C0.md` … `HANDOFF_C4.md`. C6 retest: `docs/C5_REAL_BACKEND_E2E_RUNBOOK.md`. Audit: `API_AUDIT_F894CC6.md`.
+Files: `HANDOFFS_PORTALS.md` (Platform/Admin portals), `HANDOFFS_PAGE_SCHEMA_DATA.md` (public data V1), `HANDOFF_C0.md` … `HANDOFF_C4.md`. C6 retest: `docs/C5_REAL_BACKEND_E2E_RUNBOOK.md`. Audit: `API_AUDIT_F894CC6.md`.
