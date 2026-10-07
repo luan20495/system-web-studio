@@ -42,7 +42,7 @@ class MemberController(private val access: AccessService, private val jdbc: Jdbc
      * `404 USER_NOT_FOUND` as for a name nobody has: a workspace administrator cannot probe or pull in accounts of other tenants (no global directory, F-5).
      * Only an eligible account can be reported as disabled.
      */
-    private fun resolveUser(username: String?, email: String?, tenantId: UUID? = null): Triple<UUID, String, String?> {
+    private fun resolveUser(username: String?, email: String?, tenantId: UUID? = null, selfId: UUID? = null): Triple<UUID, String, String?> {
         val u = username?.trim()?.takeIf { it.isNotEmpty() }
         val e = email?.trim()?.lowercase()?.takeIf { it.isNotEmpty() }
         if ((u == null) == (e == null)) throw ApiException.badRequest("VALIDATION_FAILED", "Provide exactly one of username or email")
@@ -50,7 +50,8 @@ class MemberController(private val access: AccessService, private val jdbc: Jdbc
         else jdbc.queryForList("SELECT id, username, enabled FROM users WHERE lower(email) = ?", e)
         val notFound = ApiException.notFound("USER_NOT_FOUND", "No such user in this organisation. The person must be created by an administrator of the tenant first.")
         val row = rows.firstOrNull() ?: throw notFound
-        if (tenantId != null && jdbc.queryForObject("SELECT count(*) FROM tenant_members WHERE tenant_id = ? AND user_id = ? AND active", Long::class.java, tenantId, row["id"])!! == 0L) throw notFound
+        // yourself is never a stranger (and not an oracle): the self-grant rule answers that case (403 SELF_GRANT_FORBIDDEN), not the tenant filter
+        if (tenantId != null && row["id"] != selfId && jdbc.queryForObject("SELECT count(*) FROM tenant_members WHERE tenant_id = ? AND user_id = ? AND active", Long::class.java, tenantId, row["id"])!! == 0L) throw notFound
         if (row["enabled"] != true) throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "USER_DISABLED", "That account is disabled")
         return Triple(row["id"] as UUID, row["username"] as String, e)
     }
@@ -79,7 +80,7 @@ class MemberController(private val access: AccessService, private val jdbc: Jdbc
         val wctx = access.forWorkspace(me.userId, w)
         wctx.require(Permission.MEMBER_MANAGE)
         if (body.role !in WORKSPACE_ROLES) throw ApiException.badRequest("INVALID_ROLE", "Role must be one of $WORKSPACE_ROLES")
-        val (userId, _, _) = resolveUser(body.username, body.email, wctx.tenantId)
+        val (userId, _, _) = resolveUser(body.username, body.email, wctx.tenantId, me.userId)
         rejectSelfGrant(me, userId)
         val existing = jdbc.queryForList("SELECT active, role FROM workspace_members WHERE workspace_id = ? AND user_id = ? FOR UPDATE", w, userId).firstOrNull()
         if (existing?.get("active") == true) throw ApiException.conflict("ALREADY_MEMBER", "User is already a member of this workspace")
@@ -139,7 +140,7 @@ class MemberController(private val access: AccessService, private val jdbc: Jdbc
         val pctx = access.forProject(me.userId, w, p)
         pctx.require(Permission.PROJECT_MEMBERS)
         if (body.role !in PROJECT_ROLES) throw ApiException.badRequest("INVALID_ROLE", "Role must be one of $PROJECT_ROLES")
-        val (userId, _, _) = resolveUser(body.username, body.email, pctx.tenantId)
+        val (userId, _, _) = resolveUser(body.username, body.email, pctx.tenantId, me.userId)
         rejectSelfGrant(me, userId)
         val inWorkspace = jdbc.queryForObject("SELECT count(*) FROM workspace_members WHERE workspace_id = ? AND user_id = ? AND active", Long::class.java, w, userId)!!
         if (inWorkspace == 0L) throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "NOT_WORKSPACE_MEMBER", "Add the user to the workspace first")
