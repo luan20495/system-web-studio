@@ -1,0 +1,61 @@
+{
+  "studio": "http://127.0.0.1:3023",
+  "runId": "muxoqmi9",
+  "frontendHead": "ff954f1",
+  "backend": {
+    "url": "http://127.0.0.1:58080",
+    "head": "8d40218 docs(c2): audited HTTP contract, published runtime topology and Batch 3 readiness; no loopback literals in publish/** [integration/v2]"
+  },
+  "facts": {
+    "authConfig": {
+      "localLogin": true,
+      "oidc": false,
+      "publicPublish": true
+    },
+    "fixtureNotes": {
+      "viewerOnProject": "member",
+      "initialRevision": 0,
+      "definitionOps": {
+        "ok": true
+      }
+    },
+    "routes": {
+      "queries": {
+        "status": 404,
+        "code": "QUERY_NOT_FOUND"
+      },
+      "actions": {
+        "status": 404,
+        "code": "UNKNOWN_ACTION"
+      }
+    }
+  },
+  "cleanup": [
+    "left behind (no delete route): workspaces 10ec128b-59dd-406b-9a19-bc7e13abf54b, ce7df12c-abc2-45b6-aa69-40831162be7a named e2e-muxoqmi9-*"
+  ],
+  "node": "v22.23.1",
+  "summary": {
+    "total": 1,
+    "PASS": 0,
+    "FAIL": 0,
+    "BLOCKED": 1,
+    "SKIP": 0
+  },
+  "results": [
+    {
+      "id": "E2E-PD01",
+      "title": "Public data V1, canonical chain: Studio slot → READ public query → bind → publish (PUBLIC_QUERIES, acknowledgement) → anonymous page → config → apiBase → /{slug}/_data → LIVE → rendered",
+      "status": "BLOCKED",
+      "owner": "C0",
+      "ref": "H-C0-10",
+      "reason": "the stack does not accept ADD_DATA_SOURCE (400 INVALID_OPERATION operation[0] ADD_DATA_SOURCE: sectionId is required): C2's PAGE_SCHEMA data runtime (fix/c2-v3 c1e0df5: slots, QueryDef.public, page runtime, config apiBase) is not in this build",
+      "mismatch": null,
+      "start": "2026-10-07T05:47:03.802Z",
+      "end": "2026-10-07T05:47:03.854Z",
+      "workspace": "10ec128b-59dd-406b-9a19-bc7e13abf54b",
+      "project": "ee89a4b4-f63c-4166-932a-f23c7ca8c2fa",
+      "checks": [],
+      "failed": []
+    }
+  ]
+}

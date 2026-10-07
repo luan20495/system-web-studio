@@ -1,0 +1,61 @@
+{
+  "studio": "http://127.0.0.1:3043",
+  "runId": "muxoufml",
+  "frontendHead": "ff954f1",
+  "backend": {
+    "url": "http://127.0.0.1:41080",
+    "head": "c1e0df5 docs(c2): C5 and C3 handoffs for the data-bound PAGE_SCHEMA, V31 candidate proposal, board and blockers [c1e0df5]"
+  },
+  "facts": {
+    "authConfig": {
+      "localLogin": true,
+      "oidc": false,
+      "publicPublish": true
+    },
+    "fixtureNotes": {
+      "viewerOnProject": "member",
+      "initialRevision": 0,
+      "definitionOps": {
+        "ok": true
+      }
+    },
+    "routes": {
+      "queries": {
+        "status": 404,
+        "code": "QUERY_NOT_FOUND"
+      },
+      "actions": {
+        "status": 404,
+        "code": "UNKNOWN_ACTION"
+      }
+    }
+  },
+  "cleanup": [
+    "left behind (no delete route): workspaces 4f436bbf-3f67-48d1-8dc5-dcca940cc8d1, b9bbbae0-67e3-4dac-aa1f-a6246f106051 named e2e-muxoufml-*"
+  ],
+  "node": "v22.23.1",
+  "summary": {
+    "total": 1,
+    "PASS": 0,
+    "FAIL": 0,
+    "BLOCKED": 1,
+    "SKIP": 0
+  },
+  "results": [
+    {
+      "id": "E2E-PD01",
+      "title": "Public data V1, canonical chain: Studio slot → READ public query → bind → publish (PUBLIC_QUERIES, acknowledgement) → anonymous page → config → apiBase → /{slug}/_data → LIVE → rendered",
+      "status": "BLOCKED",
+      "owner": "C3",
+      "ref": "operator input",
+      "reason": "the operator's data source was refused by the Management API (400 INVALID_CONFIG invalid configuration: host is not an allowed database address): fix E2E_DS_TYPE / E2E_DS_CONFIG_JSON / E2E_DS_CREDENTIAL_JSON",
+      "mismatch": null,
+      "start": "2026-10-07T05:49:59.977Z",
+      "end": "2026-10-07T05:50:00.100Z",
+      "workspace": "4f436bbf-3f67-48d1-8dc5-dcca940cc8d1",
+      "project": "14702fd9-bd97-48b6-8ddc-a167d529733d",
+      "checks": [],
+      "failed": []
+    }
+  ]
+}

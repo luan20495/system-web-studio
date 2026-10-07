@@ -1,0 +1,15 @@
+FLOW: E2E-PD01 — Public data V1, canonical chain: Studio slot → READ public query → bind → publish (PUBLIC_QUERIES, acknowledgement) → anonymous page → config → apiBase → /{slug}/_data → LIVE → rendered
+RESULT: BLOCKED
+START: 2026-10-07T05:49:59.977Z
+END: 2026-10-07T05:50:00.100Z
+FRONTEND_HEAD: ff954f1
+BACKEND_HEAD: c1e0df5 docs(c2): C5 and C3 handoffs for the data-bound PAGE_SCHEMA, V31 candidate proposal, board and blockers [c1e0df5]
+BACKEND_URL: http://127.0.0.1:41080
+PROJECT: 14702fd9-bd97-48b6-8ddc-a167d529733d
+WORKSPACE: 4f436bbf-3f67-48d1-8dc5-dcca940cc8d1
+HTTP EVIDENCE: none recorded
+UI ASSERTION: none recorded
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: the operator's data source was refused by the Management API (400 INVALID_CONFIG invalid configuration: host is not an allowed database address): fix E2E_DS_TYPE / E2E_DS_CONFIG_JSON / E2E_DS_CREDENTIAL_JSON
+OWNER: C3 · ref operator input
