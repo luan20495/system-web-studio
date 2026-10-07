@@ -46,7 +46,7 @@ export type PromptResponse = {
   stopped?: "CANCELLED" | "TIMEOUT" | null; partial?: string | null; reuseSources?: ReuseSources | null;
 };
 export type ReuseSources = { components: string[]; blocks: string[]; templates: string[]; generated: number };
-export type StreamHandlers = { onStart?: (streamId: string) => void; onDelta?: (text: string) => void; onStatus?: (text: string) => void };
+export type StreamHandlers = { onStart?: (streamId: string, deadlineMs?: number | null) => void; onDelta?: (text: string) => void; onStatus?: (text: string) => void };
 export type PromptUsage = { attempts: number; promptTokens: number | null; completionTokens: number | null; totalTokens: number | null; costUsd: number | null; latencyMs: number };
 export type PromptHistoryItem = { id: string; text: string; createdAt: string; outcome: string; assistantMessage: string; versionId: string | null; registryReuse: number | null;
   provider?: string | null; model?: string | null; aiCalls?: number; totalTokens?: number | null; costUsd?: number | null };

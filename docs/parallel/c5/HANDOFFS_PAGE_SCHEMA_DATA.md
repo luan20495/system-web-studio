@@ -20,3 +20,8 @@ C5 changed nothing it does not own. Everything below is a request for the owner;
 | editors click-through, publish approval, the five runtime states of C2's OWN runtime script on a page built by C2's `renderSitePages` | harness (real Chromium, no backend) | `tests/browser/publicdata.spec.mjs` |
 | slot → READ public query → binding → publish approval → PUBLIC_QUERIES → runtime config → the page's one anonymous request, on a real backend at `c1e0df5` | real-backend | `E2E-PD02` |
 | canonical chain to real rows | real-backend | `E2E-PD01` — BLOCKED (H-C0-10 on integration; H-C0-07 for a real source) |
+
+## AI progress (2026-10-07)
+| ID | To | P | Request | Evidence |
+|---|---|---|---|---|
+| H-C2-10 | C2 (ai/*, prompt/*) | P2 | The AI stream emits `status` ONLY for `tool:<name>`. With model "auto" the server tries OpenRouter free models in turn (each can fail or sit queued) inside one 120 s deadline, and the browser sees nothing between `start` and the first `delta`: the user gets an endless "Đang chờ AI…". Please emit `status` events the UI already understands: `model:<id>` when a model call starts, `fallback:<id>` when it moves to the next, `validating` and `saving` when the server leaves the model call (`finish()` steps 3). `start` already carries `deadline`; keep it. The UI maps unknown status text to a neutral line and never prints it raw. | `AiStreams.kt`, `ExternalLLMProvider.complete`, `PromptController.finish` @ c1e0df5; `features/studio/aiProgressModel.ts` |

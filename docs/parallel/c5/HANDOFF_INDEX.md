@@ -33,6 +33,7 @@
 | H-C2-09 Studio preview is not data-aware (by design) | C2 | info | - |
 | H-C0-10 import `fix/c2-v3 c1e0df5` into integration/v2 (conflicts in AppDefinition{Model,Reader,Validator}); `SITES_DATA_API_BASE` | C0 | P0 | E2E-PD01/PD02 on integration |
 | H-C3-05 confirm `E2E_PD_SQL` (a query definition via the Management API) is the way to make an approved page query | C3 | info | E2E-PD01 |
+| H-C2-10 AI stream `status` only for tools: add model/fallback/validating/saving so the UI can show what the server is doing | C2 | P2 | AI chat feedback |
 
 `*` = the query half only. Live results of 2026-10-06: `MAC_RUN_2026-10-06.md`.
 

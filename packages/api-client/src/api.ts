@@ -299,8 +299,8 @@ export const api = {
   sendPrompt: (w: string, p: string, prompt: string, expectedRevision: number, model?: string) =>
     // AI calls can take a while when the first free model is busy and the server fails over to the next one
     call<PromptResponse>(`${P(w, p)}/prompts`, { method: "POST", body: json({ prompt, expectedRevision, ...(model ? { model } : {}) }), signal: AbortSignal.timeout(130_000) }),
-  streamPrompt: (w: string, p: string, prompt: string, expectedRevision: number, model: string | undefined, h: StreamHandlers) =>
-    stream<PromptResponse>(`${P(w, p)}/prompts/stream`, { prompt, expectedRevision, ...(model ? { model } : {}) }, h),
+  streamPrompt: (w: string, p: string, prompt: string, expectedRevision: number, model: string | undefined, h: StreamHandlers, signal?: AbortSignal) =>
+    stream<PromptResponse>(`${P(w, p)}/prompts/stream`, { prompt, expectedRevision, ...(model ? { model } : {}) }, h, signal),
   listPrompts: (w: string, p: string) => call<PromptHistoryItem[]>(`${P(w, p)}/prompts?limit=100`),   // newest first
 
   listVersions: (w: string, p: string) => call<VersionSummary[]>(`${P(w, p)}/versions?limit=100`),

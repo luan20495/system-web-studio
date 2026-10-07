@@ -20,6 +20,8 @@ import { useSession } from "../session";
 import { ErrorState, errText, fmtDate, StateView, tok, usd } from "../ui";
 import { AssetsDrawer, DeviceIcon, Drawer, MembersDrawer, SettingsDrawer, suggestions } from "./drawers";
 import { PublishModal } from "./ReleaseModal";
+import { AiProgress } from "./AiProgress";
+import type { AiLive } from "./aiProgressModel";
 import { SaveBlockDrawer, SaveTemplateSection } from "./libraryPanels";
 import { CodeWorkspace } from "./CodeWorkspace";
 import { SiteDrawer } from "./SitePanels";
@@ -59,7 +61,9 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const [assets, setAssets] = useState<AssetDto[]>([]);
   const [ai, setAi] = useState<AiStatus | null>(null);
   /** a streamed AI answer in progress: stream id (for cancel), raw output so far, last status */
-  const [live, setLive] = useState<{ id: string | null; text: string; status: string } | null>(null);
+  const [live, setLive] = useState<AiLive | null>(null);
+  /** aborts the request while the server has not yet answered `start` (a stream id exists only after that) */
+  const streamAbort = useRef<AbortController | null>(null);
   /** page of a multi-page site being edited in Design mode ("home" = the root page) */
   const [pageId, setPageId] = useState("home");
   const [publicPublish, setPublicPublish] = useState<boolean | undefined>(undefined);
@@ -112,11 +116,15 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
 
   const saveFailureRef = useRef<"none" | "retryable">("none");
   async function run<T>(label: string, fn: () => Promise<T>, fallback: string): Promise<T | undefined> {
-    setBusy(label); setSave((x) => ({ ...x, state: "saving" }));
+    // An AI request is not a save: while it waits for the model nothing is being written, so the top bar keeps saying what is true ("saved") and a failed/cancelled request is not "Lưu thất bại".
+    const isSave = label !== "prompt";
+    setBusy(label); if (isSave) setSave((x) => ({ ...x, state: "saving" }));
     saveFailureRef.current = "none";
-    try { const out = await fn(); setSave({ state: "saved", at: new Date() }); return out; }
+    try { const out = await fn(); setSave((x) => (isSave || (out as { version?: unknown } | undefined)?.version ? { state: "saved", at: new Date() } : x)); return out; }
     catch (e) {
-      setSave((x) => ({ ...x, state: "error" }));
+      if (isSave) setSave((x) => ({ ...x, state: "error" }));
+      // the user cancelled before the server answered: nothing failed
+      if (e instanceof ApiError && e.code === "ABORTED") { setNotice("Đã huỷ yêu cầu AI."); return undefined; }
       // retryable = nothing definite was decided by the server (no answer, 5xx, 429); conflict/validation/permission failures are final: retrying the same edit cannot succeed
       const st = e instanceof ApiError ? e.status : 0;
       saveFailureRef.current = st === 0 || st >= 500 || st === 429 ? "retryable" : "none";
@@ -138,12 +146,16 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
     setMessages((m) => [...m, { id: `local-${Date.now()}`, role: "user", content: text }]); setPrompt("");
     const real = ai?.configured === true && effectiveModel !== "mock";
     // real models stream (partial output, cancel, deadline); the simulator answers at once
-    const r = await run("prompt", () => real
-      ? api.streamPrompt(ws, projectId, text, revision, effectiveModel, {
-          onStart: (id) => setLive({ id, text: "", status: "" }),
-          onDelta: (t) => setLive((l) => l ? { ...l, text: l.text + t } : l),
-          onStatus: (st) => setLive((l) => l ? { ...l, status: st } : l) }).finally(() => setLive(null))
-      : api.sendPrompt(ws, projectId, text, revision, ai?.configured ? effectiveModel : undefined), "Không thể cập nhật website.");
+    const r = await run("prompt", () => {
+      if (!real) return api.sendPrompt(ws, projectId, text, revision, ai?.configured ? effectiveModel : undefined);
+      const ctl = new AbortController(); streamAbort.current = ctl;
+      const t0 = Date.now(); setLive({ id: null, text: "", status: "", startedAt: t0, lastAt: t0, deadline: null });
+      const touch = (f: (l: AiLive) => AiLive) => setLive((l) => (l ? f({ ...l, lastAt: Date.now() }) : l));
+      return api.streamPrompt(ws, projectId, text, revision, effectiveModel, {
+          onStart: (id, deadline) => touch((l) => ({ ...l, id, deadline: deadline ?? null })),
+          onDelta: (t) => touch((l) => ({ ...l, text: l.text + t })),
+          onStatus: (st) => touch((l) => ({ ...l, status: st })) }, ctl.signal).finally(() => { streamAbort.current = null; setLive(null); });
+    }, "Không thể cập nhật website.");
     if (!r) return;
     setSchema(r.pageSchema); setRevision(r.revision);
     const changed = Array.from(new Set(r.schemaPatch.map((op) => op.sectionType ?? r.pageSchema.sections.find((s) => s.id === op.sectionId)?.type ?? schema?.sections.find((s) => s.id === op.sectionId)?.type).filter(Boolean) as string[]));
@@ -313,10 +325,8 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
                     {m.detail ? <div className="msgDetail">{m.detail}</div> : null}
                     {m.meta?.length ? <div className="chips">{m.meta.map((x) => <span className="chip" key={x}>{x}</span>)}</div> : null}</div></div>
                 ))}
-                {busy === "prompt" && live ? <div className="message assistant"><div className="bubble typing liveStream" role="status">
-                    <div><span className="dots" aria-hidden="true"><i/><i/><i/></span> {live.status.startsWith("tool:") ? `AI đang tra cứu (${live.status.slice(5)})…` : live.text ? `Đang nhận câu trả lời… ${live.text.length} ký tự` : "Đang chờ AI…"}</div>
-                    {live.text ? <pre className="streamTail" aria-hidden="true">{live.text.slice(-240)}</pre> : null}
-                    {live.id ? <button type="button" className="smallButton" onClick={() => { void api.cancelStream(live.id!).catch(() => undefined); }}>Huỷ</button> : null}</div></div>
+                {busy === "prompt" && live ? <AiProgress live={live} model={effectiveModel}
+                    onCancel={() => { if (live.id) void api.cancelStream(live.id).catch(() => undefined); else streamAbort.current?.abort(); }}/>
                   : busy === "prompt" ? <div className="message assistant"><div className="bubble typing" role="status"><span className="dots" aria-hidden="true"><i/><i/><i/></span> Đang phân tích yêu cầu{ai?.configured && effectiveModel !== "mock" ? " với AI…" : "…"}</div></div> : null}
               </div>
               <div className="composer">

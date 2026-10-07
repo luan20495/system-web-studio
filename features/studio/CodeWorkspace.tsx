@@ -10,6 +10,7 @@ import { useSession } from "../session";
 import { ago, ErrorState, errText, fmtDate, StateView, tok, usd } from "../ui";
 import { Drawer, MembersDrawer } from "./drawers";
 import { PublishModal } from "./ReleaseModal";
+import { describeStatus } from "./aiProgressModel";
 import { DesignPane, IdeDrawer, PackagesDrawer, RuntimeDrawer } from "./CodePanels";
 import { projectBase, S } from "./base";
 
@@ -166,7 +167,7 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
                   <option value="auto">Tự động</option>
                   {(ai.providers ?? []).map((g) => <optgroup key={g.id} label={`${g.name}${g.paid ? " · tính phí" : ""}`}>{g.models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</optgroup>)}
                   <option value="mock">Chế độ thử nghiệm (không dùng AI thật)</option></select> : <span className="hint">AI hiện chưa được quản trị viên bật (Chế độ thử nghiệm).</span>}
-                {live ? <span className="hint" role="status">{live.status.startsWith("tool:") ? `AI đang dùng ${live.status.slice(5)}…` : `Đang nhận… ${live.chars} ký tự`}
+                {live ? <span className="hint" role="status">{describeStatus(live.status) ?? (live.chars > 0 ? `Đang nhận… ${live.chars} ký tự` : "Đã gửi, đang chờ model trả lời…")}
                   {live.id ? <button type="button" className="smallButton" onClick={() => { void api.cancelStream(live.id!).catch(() => undefined); }}>Huỷ</button> : null}</span> : null}
                 <button className="sendButton" disabled={busy !== null || !prompt.trim()} onClick={() => void sendPrompt()}>{busy === "ai" ? "Đang tạo…" : "Gửi ↑"}</button>
               </div>
