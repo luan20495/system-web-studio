@@ -1,0 +1,542 @@
+{
+  "studio": "http://127.0.0.1:3086",
+  "runId": "muy9usg5",
+  "frontendHead": "b669abd",
+  "backend": {
+    "url": "http://127.0.0.1:47080",
+    "head": "ae0432f test(c0): provisioning E2E (35 checks, real stack) and legacy-workspace-route import guard; D-C0-40 (C1 imported + gated, C5 import held) [ae0432f]"
+  },
+  "facts": {
+    "authConfig": {
+      "localLogin": true,
+      "oidc": false,
+      "publicPublish": true
+    },
+    "fixtureNotes": {
+      "viewerOnProject": "member",
+      "initialRevision": 0,
+      "definitionOps": {
+        "ok": true
+      }
+    },
+    "routes": {
+      "queries": {
+        "status": 404,
+        "code": "QUERY_NOT_FOUND"
+      },
+      "actions": {
+        "status": 404,
+        "code": "UNKNOWN_ACTION"
+      }
+    }
+  },
+  "cleanup": [
+    "left behind (no delete route): workspaces 8e1a416c-72d6-4a19-ace8-cd908923611a, fad7d82f-0dd5-4102-ad2f-32a8f151b2d7, 68ae68f5-3b89-4d65-beea-6b119e9e3b59, d48b1bc1-c7bc-4cea-a1c6-f351fa2a48b5, 620bb1e6-9c07-492e-a9a4-0f36cb3d433f, 437d46b8-6c46-40d9-97f5-ac8bbf96fb5d, bc2d7f70-08cc-4378-bc72-40ea3f8c9c9e named e2e-muy9usg5-*"
+  ],
+  "node": "v22.23.1",
+  "summary": {
+    "total": 4,
+    "PASS": 3,
+    "FAIL": 0,
+    "BLOCKED": 1,
+    "SKIP": 0
+  },
+  "results": [
+    {
+      "id": "E2E-SUPER01",
+      "title": "SYSTEM_ADMIN (Platform) → create tenant admin of a new tenant (+ workspace) → activation link → activate → login Admin portal",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-07T15:38:09.916Z",
+      "end": "2026-10-07T15:38:17.691Z",
+      "workspace": "8e1a416c-72d6-4a19-ace8-cd908923611a",
+      "project": "f951fb47-0fb9-4842-9213-d8865efec43e",
+      "checks": [
+        {
+          "name": "[api] SYSTEM_ADMIN creates a NEW tenant (201, no first admin yet)",
+          "ok": true,
+          "detail": "status=201 undefined",
+          "kind": "http"
+        },
+        {
+          "name": "[api] …and a workspace OF THAT TENANT through the tenant route (201, tenantId explicit)",
+          "ok": true,
+          "detail": "status=201 {\"id\":\"68ae68f5-3b89-4d65-beea-6b119e9e3b59\",\"name\":\"e2e-muy9usg5-s01-ws\",\"slug\":\"w-68ae68f53b894d65\",\"tenantId\":\"a7ee9521-a1d2-4580-9277-f586d8bf0a25\"}",
+          "kind": "http"
+        },
+        {
+          "name": "the SYSTEM_ADMIN logs in through the Platform portal",
+          "ok": true,
+          "detail": "/platform",
+          "kind": "ui"
+        },
+        {
+          "name": "the dialog: four sections, a tenant selector, NO not-ready notice, NO SYSTEM_ADMIN type",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the workspace of the chosen tenant is offered (optional; assigned here)",
+          "ok": true,
+          "detail": "options=6 (H-C1-16: /admin/workspaces is not filtered by tenant; the dialog lists its first page)",
+          "kind": "ui"
+        },
+        {
+          "name": "POST /admin/tenants/{tenantId}/users → 201; the tenant is the PATH, never in the body; tenantRole TENANT_ADMIN; workspaceId + workspaceRole together; no password",
+          "ok": true,
+          "detail": "status=201 keys=displayName,email,tenantRole,username,workspaceId,workspaceRole",
+          "kind": "http"
+        },
+        {
+          "name": "the activation link is shown once in the dialog (/auth/activate#token); no password anywhere",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "after 'Xong' the token is gone: not in the summary, the URL, localStorage or sessionStorage",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the summary: Chờ kích hoạt, the company AND its role already assigned, the workspace; the only next step is the person's activation",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "[api] the server lists the account as TENANT_ADMIN of the new tenant (already, before activation)",
+          "ok": true,
+          "detail": "{\"tenantId\":\"a7ee9521-a1d2-4580-9277-f586d8bf0a25\",\"userId\":\"62dae3bf-6c37-4619-9fd8-6ac75fc38e61\",\"role\":\"TENANT_ADMIN\",\"active\":true,\"username\":\"e2e-muy9usg5-ta1\",\"displayName\":\"E2E TA muy9usg5\",\"email\":\"e2e-muy9usg5-ta1@example.test\"}",
+          "kind": "persistence"
+        },
+        {
+          "name": "CSRF + body: the create-account request carries X-XSRF-TOKEN and its body has no tenant / tenantId; no browser request to the legacy workspace route",
+          "ok": true,
+          "detail": "n=1 csrf=true",
+          "kind": "http"
+        },
+        {
+          "name": "[api] the same username again is refused: 409 USERNAME_TAKEN",
+          "ok": true,
+          "detail": "status=409 USERNAME_TAKEN",
+          "kind": "http"
+        },
+        {
+          "name": "the new admin activates through the REAL activation page",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "[api] after activation /auth/me lists the chosen workspace with MEMBER_MANAGE (WORKSPACE_ADMIN, from the server) and the tenant TENANT_MEMBERS",
+          "ok": true,
+          "detail": "{\"ws\":[\"ACTION_EXECUTE\",\"APP_EDIT\",\"APP_PUBLISH\",\"APP_SHARE\",\"APP_USE\",\"APP_VIEW\",\"DATA_MUTATE\",\"DATA_SOURCE_MANAGE\",\"DATA_SOURCE_VIEW\",\"MEMBER_MANAGE\",\"QUERY_EXECUTE\",\"WORKFLOW_EXECUTE\",\"WORKFLOW_MANAGE\"],\"tenant\":[\"TENANT_MANAGE\",\"TENANT_MEMBERS\"]}",
+          "kind": "http"
+        },
+        {
+          "name": "…and logs in through the ADMIN portal: not refused",
+          "ok": true,
+          "detail": "/admin",
+          "kind": "ui"
+        },
+        {
+          "name": "…sees Công ty của tôi and Người dùng, not the system-wide sections",
+          "ok": true,
+          "detail": "Tổng quan | Người dùng | Công ty của tôi | Workspace của tôi | Nguồn dữ liệu | Nhóm | Chia sẻ | AI riêng của công ty",
+          "kind": "ui"
+        },
+        {
+          "name": "no unexpected 4xx/5xx from the portal's calls",
+          "ok": true,
+          "detail": "GET /api/v1/auth/me → 401",
+          "kind": "ui"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-ADMIN01",
+      "title": "Tenant admin (Admin portal) → Người dùng → create workspace admin + app creator by invitation → activation → the creator can sign in",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-07T15:38:17.691Z",
+      "end": "2026-10-07T15:38:27.959Z",
+      "workspace": "8e1a416c-72d6-4a19-ace8-cd908923611a",
+      "project": "f951fb47-0fb9-4842-9213-d8865efec43e",
+      "checks": [
+        {
+          "name": "the tenant admin logs in through the ADMIN portal",
+          "ok": true,
+          "detail": "/admin",
+          "kind": "ui"
+        },
+        {
+          "name": "navigation has Người dùng and Công ty của tôi",
+          "ok": true,
+          "detail": "Tổng quan | Người dùng | Công ty của tôi | Nhóm | Chia sẻ | AI riêng của công ty",
+          "kind": "ui"
+        },
+        {
+          "name": "Người dùng: the tenant is the SESSION's (read-only), the create action is enabled, no not-ready notice",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the dialog: NO tenant selector (fixed, read-only tenant), the types never include SYSTEM_ADMIN (tenant admin may be offered)",
+          "ok": true,
+          "detail": "TENANT_ADMIN,WORKSPACE_ADMIN,USER",
+          "kind": "ui"
+        },
+        {
+          "name": "the workspace is created through the TENANT route (POST /admin/tenants/{tenant}/workspaces → 201, tenantId = the session's tenant) — never the legacy POST /admin/workspaces",
+          "ok": true,
+          "detail": "status=201 /api/v1/admin/tenants/f4057489-a0ab-4124-8cd6-b5773f0b5fde/workspaces",
+          "kind": "http"
+        },
+        {
+          "name": "the workspace request body is exactly {name}: the tenant id is the PATH only, never repeated in the body",
+          "ok": true,
+          "detail": "[\"name\"]",
+          "kind": "http"
+        },
+        {
+          "name": "POST /admin/tenants/{tenant}/users → 201 with tenantRole MEMBER, that workspace and WORKSPACE_ADMIN together; the tenant only in the path",
+          "ok": true,
+          "detail": "status=201 [\"username\",\"displayName\",\"tenantRole\",\"workspaceId\",\"workspaceRole\"]",
+          "kind": "http"
+        },
+        {
+          "name": "the activation link is shown once (/auth/activate#token)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the summary shows account, Chờ kích hoạt, the company and the workspace with its role; the token is gone from the page",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the workspace admin activates through the REAL activation page",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "[api] the workspace admin signs in; /auth/me lists the new workspace with MEMBER_MANAGE (server permission, not a role name)",
+          "ok": true,
+          "detail": "[\"ACTION_EXECUTE\",\"APP_EDIT\",\"APP_PUBLISH\",\"APP_SHARE\",\"APP_USE\",\"APP_VIEW\",\"DATA_MUTATE\",\"DATA_SOURCE_MANAGE\",\"DATA_SOURCE_VIEW\",\"MEMBER_MANAGE\",\"QUERY_EXECUTE\",\"WORKFLOW_EXECUTE\",\"WORKFLOW_MANAGE\"]",
+          "kind": "http"
+        },
+        {
+          "name": "[observed] is the workspace the tenant admin just created offered to it for the next account? (H-C1-16: a tenant admin is not a member of it; /auth/me lists member workspaces only)",
+          "ok": true,
+          "detail": "offered=,__new canPick=false",
+          "kind": "ui"
+        },
+        {
+          "name": "the app creator is created (201): MEMBER, email as given, workspace + role together or none",
+          "ok": true,
+          "detail": "status=201 [\"username\",\"displayName\",\"email\",\"tenantRole\"]",
+          "kind": "http"
+        },
+        {
+          "name": "the app creator activates through the REAL activation page",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "workspace assignment of an EXISTING tenant member is the WORKSPACE ADMIN's action: POST /workspaces/{w}/members → 201",
+          "ok": true,
+          "detail": "status=201 undefined",
+          "kind": "http"
+        },
+        {
+          "name": "[api] the app creator signs in with the chosen password; /auth/me lists the workspace and no MEMBER_MANAGE / TENANT_*",
+          "ok": true,
+          "detail": "workspace=true perms=[] tenantPerms=[]",
+          "kind": "http"
+        },
+        {
+          "name": "the app creator is NOT admitted to the Admin portal (no admin capability from the server)",
+          "ok": true,
+          "detail": "/auth/no-access",
+          "kind": "ui"
+        },
+        {
+          "name": "LEGACY ROUTE: 0 browser requests to POST /api/v1/admin/workspaces in the whole tenant-admin flow; the workspace went to POST /api/v1/admin/tenants/{tenantId}/workspaces",
+          "ok": true,
+          "detail": "legacy=0 posts=/api/v1/admin/tenants/{id}/workspaces , /api/v1/admin/tenants/{id}/users , /api/v1/admin/tenants/{id}/users",
+          "kind": "http"
+        },
+        {
+          "name": "CSRF: every mutating admin request the UI sent carries the X-XSRF-TOKEN header",
+          "ok": true,
+          "detail": "n=3 withToken=3",
+          "kind": "http"
+        },
+        {
+          "name": "no tenantId / tenant in any body the UI sent to a tenant route",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "no unexpected 4xx/5xx from the portal's calls",
+          "ok": true,
+          "detail": "GET /api/v1/auth/me → 401",
+          "kind": "ui"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-USER01",
+      "title": "App creator (EDITOR, made by the tenant admin): Studio login → project visible → edit / save / reload → permissions are the role's",
+      "status": "BLOCKED",
+      "owner": "C1",
+      "ref": "H-C1-04",
+      "reason": "the Studio portal refuses this creator at login (/auth/no-access) although /auth/me lists the workspace with []. The API side of the same account works (project APIs, edit, persist, no publish). H-C1-04 (still open).",
+      "mismatch": null,
+      "start": "2026-10-07T15:38:27.960Z",
+      "end": "2026-10-07T15:38:29.950Z",
+      "workspace": "8e1a416c-72d6-4a19-ace8-cd908923611a",
+      "project": "f951fb47-0fb9-4842-9213-d8865efec43e",
+      "checks": [
+        {
+          "name": "[api] the workspace admin creates a project in the new workspace (201)",
+          "ok": true,
+          "detail": "status=201 undefined",
+          "kind": "http"
+        },
+        {
+          "name": "[api] …and adds the creator to the project as EDITOR (member route)",
+          "ok": true,
+          "detail": "status=201 undefined",
+          "kind": "http"
+        },
+        {
+          "name": "[api] the creator's resolved project permissions include APP_EDIT and NOT APP_PUBLISH",
+          "ok": true,
+          "detail": "ACTION_EXECUTE,APP_USE,DATA_SOURCE_VIEW,PROJECT_CREATE,PROJECT_EDIT,PROJECT_READ,PROJECT_SETTINGS,QUERY_EXECUTE",
+          "kind": "http"
+        },
+        {
+          "name": "[api] …and no MEMBER_MANAGE: /auth/me lists none in the workspace",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "[api] an edit by the creator is accepted (200)",
+          "ok": true,
+          "detail": "status=200 undefined",
+          "kind": "http"
+        },
+        {
+          "name": "after a reload the edit is still there (persisted)",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "[api] publishing is refused for the creator (403): the role is the role",
+          "ok": true,
+          "detail": "status=403 FORBIDDEN",
+          "kind": "http"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-SEC01",
+      "title": "SEC01 tenant admin cannot create SYSTEM_ADMIN · SEC02 cross-tenant is a safe 404 · SEC03 workspace admin cannot escalate",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-07T15:38:29.950Z",
+      "end": "2026-10-07T15:38:35.592Z",
+      "workspace": "8e1a416c-72d6-4a19-ace8-cd908923611a",
+      "project": "f951fb47-0fb9-4842-9213-d8865efec43e",
+      "checks": [
+        {
+          "name": "SEC01 [api] tenantRole SYSTEM_ADMIN is refused (400 TENANT_ROLE_INVALID)",
+          "ok": true,
+          "detail": "status=400 TENANT_ROLE_INVALID",
+          "kind": "http"
+        },
+        {
+          "name": "SEC01 [api] unknown fields (systemAdmin, platformScope, role) never take effect: the account is a plain, non-admin MEMBER",
+          "ok": true,
+          "detail": "status=201 systemAdmin=false",
+          "kind": "persistence"
+        },
+        {
+          "name": "SEC01 [api] the legacy platform route is closed to a tenant admin (403 ADMIN_REQUIRED)",
+          "ok": true,
+          "detail": "status=403 ADMIN_REQUIRED",
+          "kind": "http"
+        },
+        {
+          "name": "SEC01 [api] …cannot grant SYSTEM_ADMIN to anyone nor to itself (403)",
+          "ok": true,
+          "detail": "403/403",
+          "kind": "http"
+        },
+        {
+          "name": "SEC01 [api] nobody became a SYSTEM_ADMIN",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "SEC01 [api] the tenant admin's /auth/me carries no platform scope",
+          "ok": true,
+          "detail": "{\"platformScope\":false,\"systemAdmin\":false}",
+          "kind": "http"
+        },
+        {
+          "name": "SEC02 [api] tenant A's admin gets 404 TENANT_NOT_FOUND on every tenant-B route (create user, create workspace, members, candidates, add self, re-role, remove, read)",
+          "ok": true,
+          "detail": "createUser=404/TENANT_NOT_FOUND createWs=404/TENANT_NOT_FOUND members=404/TENANT_NOT_FOUND candidates=404/TENANT_NOT_FOUND setRole=404/TENANT_NOT_FOUND reRole=404/TENANT_NOT_FOUND remove=404/TENANT_NOT_FOUND tenant=404/TENANT_NOT_FOUND",
+          "kind": "http"
+        },
+        {
+          "name": "SEC02 [api] …and the refused create left nothing behind (no account named like it)",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "SEC02 [api] a workspace of ANOTHER tenant in my tenant's create → 404 WORKSPACE_NOT_FOUND, and no account is created",
+          "ok": true,
+          "detail": "status=404 WORKSPACE_NOT_FOUND",
+          "kind": "http"
+        },
+        {
+          "name": "SEC02 [api] …and the other way round (B's admin on tenant A): 404",
+          "ok": true,
+          "detail": "404/404/404",
+          "kind": "http"
+        },
+        {
+          "name": "SEC02 [api] neither tenant admin can list the system-wide users or workspaces (403)",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "SEC02 [api] each tenant's member list holds only its own people",
+          "ok": true,
+          "detail": "A=3 B=2",
+          "kind": "persistence"
+        },
+        {
+          "name": "SEC03 [api] a workspace admin cannot call the tenant routes (create user / workspace, candidates, members, make itself tenant admin) → 403, nor platform routes (legacy create, system-admin, new tenant, suspend)",
+          "ok": true,
+          "detail": "createUser=403/FORBIDDEN createWs=403/FORBIDDEN candidates=403/FORBIDDEN members=403/FORBIDDEN selfTenant=403/FORBIDDEN legacyUser=403/ADMIN_REQUIRED sysAdmin=403/ADMIN_REQUIRED newTenant=403/ADMIN_REQUIRED suspend=403/ADMIN_REQUIRED",
+          "kind": "http"
+        },
+        {
+          "name": "SEC03 [api] …with the codes of the contract (FORBIDDEN on tenant routes, ADMIN_REQUIRED on platform routes)",
+          "ok": true,
+          "detail": "FORBIDDEN/FORBIDDEN/ADMIN_REQUIRED",
+          "kind": "http"
+        },
+        {
+          "name": "SEC03 [api] …cannot change its own workspace role (403 SELF_GRANT_FORBIDDEN)",
+          "ok": true,
+          "detail": "status=403 SELF_GRANT_FORBIDDEN",
+          "kind": "http"
+        },
+        {
+          "name": "SEC03 [api] …cannot read, nor add itself to, a workspace of another tenant (403/404)",
+          "ok": true,
+          "detail": "404/404",
+          "kind": "http"
+        },
+        {
+          "name": "SEC03 [api] …cannot pull a person of ANOTHER tenant into its workspace (404 USER_NOT_FOUND)",
+          "ok": true,
+          "detail": "status=404 USER_NOT_FOUND",
+          "kind": "http"
+        },
+        {
+          "name": "SEC03 [api] nothing changed: still a plain tenant MEMBER, not a SYSTEM_ADMIN, the tenant still ACTIVE",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "401 [api] an unauthenticated caller (valid CSRF, no session) is refused on create user / create workspace / list members: 401",
+          "ok": true,
+          "detail": "401/AUTHENTICATION_REQUIRED 401/AUTHENTICATION_REQUIRED 401/AUTHENTICATION_REQUIRED",
+          "kind": "http"
+        },
+        {
+          "name": "401 [api] …and nothing was created (no account named like it)",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "CSRF [api] an authenticated mutating request WITHOUT the CSRF header, or with a wrong one, is refused (403) and does nothing",
+          "ok": true,
+          "detail": "403/403/403 codes=CSRF_INVALID,CSRF_INVALID,CSRF_INVALID",
+          "kind": "http"
+        },
+        {
+          "name": "CSRF [api] the same request WITH the session's CSRF token succeeds (201): the refusal above was the missing token, not the route",
+          "ok": true,
+          "detail": "status=201 undefined",
+          "kind": "http"
+        },
+        {
+          "name": "body injection [api] a foreign tenant id in the BODY (tenantId / tenant) is ignored: the path is the authority — the account is a member of tenant A, not of B",
+          "ok": true,
+          "detail": "status=201 inA=true inB=false",
+          "kind": "persistence"
+        },
+        {
+          "name": "body injection [api] …and a workspace created with a foreign tenantId in the body belongs to tenant A (the path)",
+          "ok": true,
+          "detail": "status=201 tenantId=A",
+          "kind": "persistence"
+        }
+      ],
+      "failed": []
+    }
+  ]
+}

@@ -1,0 +1,662 @@
+{
+  "studio": "http://127.0.0.1:3086",
+  "runId": "muy9vq52",
+  "frontendHead": "b669abd",
+  "backend": {
+    "url": "http://127.0.0.1:47080",
+    "head": "ae0432f test(c0): provisioning E2E (35 checks, real stack) and legacy-workspace-route import guard; D-C0-40 (C1 imported + gated, C5 import held) [ae0432f]"
+  },
+  "facts": {
+    "authConfig": {
+      "localLogin": true,
+      "oidc": false,
+      "publicPublish": true
+    },
+    "fixtureNotes": {
+      "viewerOnProject": "member",
+      "initialRevision": 0,
+      "definitionOps": {
+        "ok": true
+      }
+    },
+    "routes": {
+      "queries": {
+        "status": 404,
+        "code": "QUERY_NOT_FOUND"
+      },
+      "actions": {
+        "status": 404,
+        "code": "UNKNOWN_ACTION"
+      }
+    }
+  },
+  "cleanup": [
+    "left behind (no delete route): workspaces 4155c7b5-c556-4879-ba89-3c1431c95b6f, 2460a525-8980-4413-b7e0-33b723eedc1d named e2e-muy9vq52-*"
+  ],
+  "node": "v22.23.1",
+  "summary": {
+    "total": 4,
+    "PASS": 4,
+    "FAIL": 0,
+    "BLOCKED": 0,
+    "SKIP": 0
+  },
+  "results": [
+    {
+      "id": "E2E-PL01",
+      "title": "Platform portal: login, navigation, tenants (create, suspend, restore, members, last-admin rule), SYSTEM_ADMIN grant / revoke",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-07T15:38:52.448Z",
+      "end": "2026-10-07T15:39:03.406Z",
+      "workspace": "4155c7b5-c556-4879-ba89-3c1431c95b6f",
+      "project": "529d542f-af0b-40a0-9730-d6c590e26221",
+      "checks": [
+        {
+          "name": "login through the Platform portal lands inside /platform (not on the login or no-access page)",
+          "ok": true,
+          "detail": "/platform",
+          "kind": "ui"
+        },
+        {
+          "name": "navigation lists Tổng quan, Công ty (tenant), Người dùng & Workspace, Nhật ký kiểm toán, Sức khỏe hệ thống — and nothing from the tenant-admin console",
+          "ok": true,
+          "detail": "Tổng quan | Công ty (tenant) | Người dùng & Workspace | AI | Cảnh báo | Bảo mật | Chi phí | Connector | Sao lưu | Components | Templates | Nhật ký kiểm toán | Build & lưu trữ | Packages | Sức khỏe hệ thống | Cài đặt",
+          "kind": "ui"
+        },
+        {
+          "name": "the tenant list is the REAL list (the DEFAULT tenant is there) and the section is not 'Chưa sẵn sàng'",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "an invalid form is refused in the dialog with both messages and NO request is sent",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "POST /admin/tenants → 201 and the page opens the new tenant",
+          "ok": true,
+          "detail": "status=201 http://127.0.0.1:3001/platform/tenants/d18cf2e9-b4f3-47be-ac36-83e18e50a0e9",
+          "kind": "http"
+        },
+        {
+          "name": "the server stored it: slug, name, ACTIVE",
+          "ok": true,
+          "detail": "{\"id\":\"d18cf2e9-b4f3-47be-ac36-83e18e50a0e9\",\"slug\":\"e2e-muy9vq52-pl\",\"name\":\"E2E PL muy9vq52\",\"status\":\"ACTIVE\",\"createdAt\":\"2026-10-07T15:38:56.630622Z\"}",
+          "kind": "persistence"
+        },
+        {
+          "name": "a duplicate slug is refused by the server (409 TENANT_SLUG_TAKEN)",
+          "ok": true,
+          "detail": "status=409 TENANT_SLUG_TAKEN",
+          "kind": "http"
+        },
+        {
+          "name": "suspend: the UI says so and the server agrees (SUSPENDED)",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "restore: back to ACTIVE on the server",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "the first administrator chosen in the dialog is TENANT_ADMIN on the server, with name and email metadata",
+          "ok": true,
+          "detail": "[{\"tenantId\":\"d18cf2e9-b4f3-47be-ac36-83e18e50a0e9\",\"userId\":\"3ce971b7-b892-4fc6-98af-4295894d7efa\",\"role\":\"TENANT_ADMIN\",\"active\":true,\"username\":\"e2e-muy9vq52-admina\",\"displayName\":\"E2E adminA muy9vq52\",\"email\":null}]",
+          "kind": "persistence"
+        },
+        {
+          "name": "the member row shows the person's NAME from the member metadata (no extra lookup)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "demoting the ONLY TENANT_ADMIN is explained in words and nothing changed on the server",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "the server enforces it too (409 LAST_TENANT_ADMIN)",
+          "ok": true,
+          "detail": "status=409 LAST_TENANT_ADMIN",
+          "kind": "http"
+        },
+        {
+          "name": "a brand-new tenant has no candidates (the directory is tenant-scoped, never global) and the picker says so",
+          "ok": true,
+          "detail": "status=200 []",
+          "kind": "http"
+        },
+        {
+          "name": "even a SYSTEM_ADMIN cannot add an unrelated account to a tenant (404 USER_NOT_FOUND): no global directory",
+          "ok": true,
+          "detail": "status=404 USER_NOT_FOUND",
+          "kind": "http"
+        },
+        {
+          "name": "workspace page (SYSTEM_ADMIN): the member panel says the platform admin does not manage workspace members, and there is NO add-member form (the server lists no MEMBER_MANAGE for it)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "[api] …and the server agrees: SYSTEM_ADMIN is refused the member list and the add (403)",
+          "ok": true,
+          "detail": "403/403",
+          "kind": "http"
+        },
+        {
+          "name": "the audit page lists the tenant events just made (TENANT_CREATED / TENANT_STATUS_CHANGED / TENANT_MEMBER_SET)",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "the system-health page loads without an error state",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "a workspace member with no platform scope is sent to /auth/no-access, never to a platform screen",
+          "ok": true,
+          "detail": "/auth/no-access",
+          "kind": "ui"
+        },
+        {
+          "name": "cleanup: the tenant is marked DELETED",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "http"
+        },
+        {
+          "name": "no unexpected 4xx/5xx from the portal's own calls (the deliberate refusals excepted)",
+          "ok": true,
+          "detail": "GET /api/v1/auth/me → 401",
+          "kind": "ui"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-AD01",
+      "title": "Admin portal, tenant admin: own company + members, no system-admin screens, rules explained, refused by the API as well",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-07T15:39:03.406Z",
+      "end": "2026-10-07T15:39:10.498Z",
+      "workspace": "4155c7b5-c556-4879-ba89-3c1431c95b6f",
+      "project": "529d542f-af0b-40a0-9730-d6c590e26221",
+      "checks": [
+        {
+          "name": "[api] /auth/me of the tenant admin lists the tenant with role TENANT_ADMIN and is NOT platform scope",
+          "ok": true,
+          "detail": "{\"ps\":false,\"t\":[[\"default\",\"MEMBER\"],[\"e2e-muy9vq52-ad\",\"TENANT_ADMIN\"]],\"perms\":[]}",
+          "kind": "http"
+        },
+        {
+          "name": "login through the Admin portal lands inside /admin (a tenant admin is NOT refused)",
+          "ok": true,
+          "detail": "/admin",
+          "kind": "ui"
+        },
+        {
+          "name": "navigation = Tổng quan + Công ty của tôi (+ the sections still waiting for a backend); NO Người dùng, Nhật ký kiểm toán, AI…",
+          "ok": true,
+          "detail": "Tổng quan | Người dùng | Công ty của tôi | Nhóm | Chia sẻ | AI riêng của công ty",
+          "kind": "ui"
+        },
+        {
+          "name": "the landing page lists the tenant this person administers (no system overview, no 403 from /admin/overview)",
+          "ok": true,
+          "detail": "GET /api/v1/auth/me → 401",
+          "kind": "ui"
+        },
+        {
+          "name": "Công ty của tôi shows the tenant, ACTIVE, with its member list from the API",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the person's own row is named (from the session), marked 'bạn', and its role / remove controls are disabled (no self-change)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "a tenant admin gets NO suspend / delete buttons (platform operations)",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "the add form is real: a search box and a candidate list (empty here: this fresh tenant has no workspace and no former member) — not a 'cannot look people up' notice",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "a 1-character search is not sent (the server would answer 400 QUERY_TOO_SHORT): the form asks for 2",
+          "ok": true,
+          "detail": "GET /api/v1/auth/me → 401",
+          "kind": "ui"
+        },
+        {
+          "name": "[api] the same person is refused the system-wide user list (403 ADMIN_REQUIRED)",
+          "ok": true,
+          "detail": "status=403 ADMIN_REQUIRED",
+          "kind": "http"
+        },
+        {
+          "name": "[api] …but allowed to read the members of THEIR tenant (TENANT_MEMBERS), each row with userId, username, displayName, email, role, active",
+          "ok": true,
+          "detail": "status=200 [{\"tenantId\":\"e15613e7-1493-411f-9dd1-eabc1a388988\",\"userId\":\"bd87b47a-bd3f-4ba6-beec-ce6ea53d3859\",\"role\":\"TENANT_ADMIN\",\"active\":true,\"username\":\"e2e-muy9vq52",
+          "kind": "http"
+        },
+        {
+          "name": "[api] …and refused to suspend it (platform only: 403)",
+          "ok": true,
+          "detail": "status=403 ADMIN_REQUIRED",
+          "kind": "http"
+        },
+        {
+          "name": "[api] …and refused the members of another tenant (403/404, no list)",
+          "ok": true,
+          "detail": "status=403",
+          "kind": "http"
+        },
+        {
+          "name": "typing a system-only URL shows 'chỉ dành cho quản trị hệ thống' and makes NO call to /admin/users",
+          "ok": true,
+          "detail": "GET /api/v1/auth/me → 401",
+          "kind": "ui"
+        },
+        {
+          "name": "Workspace của tôi: this account administers no workspace, so the page says so (no empty fake table)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "a workspace viewer is sent to /auth/no-access by the Admin portal",
+          "ok": true,
+          "detail": "/auth/no-access",
+          "kind": "ui"
+        },
+        {
+          "name": "cleanup: the fixture tenant is marked DELETED",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "http"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-AD02",
+      "title": "Admin portal, workspace admin: 'Workspace của tôi' opens on MEMBER_MANAGE (not on a role name), members add / re-role / remove, rules, isolation, negative roles",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-07T15:39:10.498Z",
+      "end": "2026-10-07T15:39:23.255Z",
+      "workspace": "4155c7b5-c556-4879-ba89-3c1431c95b6f",
+      "project": "529d542f-af0b-40a0-9730-d6c590e26221",
+      "checks": [
+        {
+          "name": "[api] /auth/me: the workspace admin's workspace lists MEMBER_MANAGE (and DATA_SOURCE_MANAGE)",
+          "ok": true,
+          "detail": "[\"ACTION_EXECUTE\",\"APP_EDIT\",\"APP_PUBLISH\",\"APP_SHARE\",\"APP_USE\",\"APP_VIEW\",\"DATA_MUTATE\",\"DATA_SOURCE_MANAGE\",\"DATA_SOURCE_VIEW\",\"MEMBER_MANAGE\",\"QUERY_EXECUTE\",\"WORKFLOW_EXECUTE\",\"WORKFLOW_MANAGE\"]",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a workspace viewer: /auth/me does NOT list MEMBER_MANAGE",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "[api] …and the server refuses their member list (403/404) — the backend re-checks",
+          "ok": true,
+          "detail": "status=403",
+          "kind": "http"
+        },
+        {
+          "name": "a workspace viewer is refused by the Admin portal (/auth/no-access) — not offered 'Workspace của tôi'",
+          "ok": true,
+          "detail": "/auth/no-access",
+          "kind": "ui"
+        },
+        {
+          "name": "[api] a workspace editor: /auth/me does NOT list MEMBER_MANAGE",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "[api] …and the server refuses their member list (403/404) — the backend re-checks",
+          "ok": true,
+          "detail": "status=403",
+          "kind": "http"
+        },
+        {
+          "name": "a workspace editor is refused by the Admin portal (/auth/no-access) — not offered 'Workspace của tôi'",
+          "ok": true,
+          "detail": "/auth/no-access",
+          "kind": "ui"
+        },
+        {
+          "name": "[api] a workspace publisher: /auth/me does NOT list MEMBER_MANAGE",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "[api] …and the server refuses their member list (403/404) — the backend re-checks",
+          "ok": true,
+          "detail": "status=403",
+          "kind": "http"
+        },
+        {
+          "name": "a workspace publisher is refused by the Admin portal (/auth/no-access) — not offered 'Workspace của tôi'",
+          "ok": true,
+          "detail": "/auth/no-access",
+          "kind": "ui"
+        },
+        {
+          "name": "a WORKSPACE_ADMIN logs in through the Admin portal and is not refused",
+          "ok": true,
+          "detail": "/admin",
+          "kind": "ui"
+        },
+        {
+          "name": "navigation = Tổng quan + Workspace của tôi + Nguồn dữ liệu; no Người dùng / Nhật ký kiểm toán / Công ty của tôi",
+          "ok": true,
+          "detail": "Tổng quan | Người dùng | Workspace của tôi | Nguồn dữ liệu | Nhóm | Chia sẻ | AI riêng của công ty",
+          "kind": "ui"
+        },
+        {
+          "name": "the member table is the REAL list of workspace A (adminA, viewerA, lonelyA)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "own row: role and remove are disabled (no self-change)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "an unknown username is refused by the server and said in words (nothing added)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "add by username as Người xem: the server lists adminB as VIEWER of workspace A",
+          "ok": true,
+          "detail": "[[\"e2e-muy9vq52-admina\",\"WORKSPACE_ADMIN\"],[\"e2e-muy9vq52-adminb\",\"VIEWER\"],[\"e2e-muy9vq52-editorx\",\"EDITOR\"],[\"e2e-muy9vq52-lonelya\",\"VIEWER\"],[\"e2e-muy9vq52-pubx\",\"PUBLISHER\"],[\"e2e-muy9vq52-viewera\",\"VIEWER\"]]",
+          "kind": "persistence"
+        },
+        {
+          "name": "change the role to Biên tập viên: persisted",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "[api] adding the same person twice is refused (409 ALREADY_MEMBER)",
+          "ok": true,
+          "detail": "status=409 ALREADY_MEMBER",
+          "kind": "http"
+        },
+        {
+          "name": "[api] the server refuses self-change (403 SELF_GRANT_FORBIDDEN), as the UI did before the click",
+          "ok": true,
+          "detail": "status=403 SELF_GRANT_FORBIDDEN",
+          "kind": "http"
+        },
+        {
+          "name": "remove: gone from the workspace on the server",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "[api] adminA cannot read workspace B's members (403/404)",
+          "ok": true,
+          "detail": "status=404",
+          "kind": "http"
+        },
+        {
+          "name": "the page offers no workspace picker with B (one workspace administered)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "Nguồn dữ liệu: the REAL panel of the workspace (catalogue / add form), not 'Chưa sẵn sàng'",
+          "ok": true,
+          "detail": "Nguồn dữ liệu\n\nKết nối cơ sở dữ liệu / API của workspace. Khóa kết nối chỉ ghi, không bao giờ hiển thị lại. Liên kết khe",
+          "kind": "ui"
+        },
+        {
+          "name": "a system-only URL says 'chỉ dành cho quản trị hệ thống' and makes no call to /admin/users",
+          "ok": true,
+          "detail": "GET /api/v1/auth/me → 401 | POST /api/v1/workspaces/4155c7b5-c556-4879-ba89-3c1431c95b6f/members → 404",
+          "kind": "ui"
+        },
+        {
+          "name": "[api] …and the API refuses it too (403 ADMIN_REQUIRED)",
+          "ok": true,
+          "detail": "status=403 ADMIN_REQUIRED",
+          "kind": "http"
+        },
+        {
+          "name": "no unexpected 4xx/5xx from the portal's calls (deliberate refusals excepted)",
+          "ok": true,
+          "detail": "GET /api/v1/auth/me → 401 | POST /api/v1/workspaces/4155c7b5-c556-4879-ba89-3c1431c95b6f/members → 404",
+          "kind": "ui"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-AD03",
+      "title": "Tenant admin member directory: metadata, tenant-scoped candidates (search, limit, exclusions), add through the UI, isolation and rules",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-07T15:39:23.255Z",
+      "end": "2026-10-07T15:39:30.015Z",
+      "workspace": "4155c7b5-c556-4879-ba89-3c1431c95b6f",
+      "project": "529d542f-af0b-40a0-9730-d6c590e26221",
+      "checks": [
+        {
+          "name": "[api] GET members: every row has userId, username, displayName, email, role, active",
+          "ok": true,
+          "detail": "status=200 {\"tenantId\":\"00000000-0000-0000-0000-000000000001\",\"userId\":\"15728be9-5184-4253-b7fd-f2a794e3d1f7\",\"role\":\"MEMBER\",\"active\":true,\"username\":\"e2e-muy9usg5-admina\",\"displayName\":\"E2E adminA muy9usg5\",\"email\":null}",
+          "kind": "http"
+        },
+        {
+          "name": "[api] …and the metadata is right (adminA: its username and display name)",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "[api] candidates: 200, a list of {userId, username, displayName, email}",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a former member in a workspace of the tenant (adminB) IS a candidate",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "[api] current members are not candidates (adminA)",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a SYSTEM_ADMIN account (activated, enabled, a workspace member, former tenant member) is never a candidate",
+          "ok": true,
+          "detail": "grant=200",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a non-activated account and a disabled account are not candidates",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "[api] at most 50 results, sorted by username",
+          "ok": true,
+          "detail": "n=1",
+          "kind": "http"
+        },
+        {
+          "name": "[api] search q finds adminB by part of the username and only matching people",
+          "ok": true,
+          "detail": "n=1",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a 1-character search is refused (400 QUERY_TOO_SHORT)",
+          "ok": true,
+          "detail": "status=400 QUERY_TOO_SHORT",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a search with no match is an empty list",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "[fact] 'a user known only to ANOTHER tenant is invisible' cannot be built through the public API; it is C1's backend test TenantMemberDirectoryTests",
+          "ok": true,
+          "detail": "see the backend targeted run",
+          "kind": "http"
+        },
+        {
+          "name": "Công ty của tôi: the member rows show names and emails from the member metadata",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "typing the search shows adminB (name · email) in the candidate list, and not the SYSTEM_ADMIN / disabled / non-activated accounts",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "add candidate: the server lists adminB as an active MEMBER, with metadata",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "the member appears in the table with his name",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the candidate disappears after the add (API and picker)",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "[api] a guessed foreign UUID → 404 USER_NOT_FOUND",
+          "ok": true,
+          "detail": "status=404 USER_NOT_FOUND",
+          "kind": "http"
+        },
+        {
+          "name": "[api] adding that SYSTEM_ADMIN account by id → 404 (not eligible, no oracle)",
+          "ok": true,
+          "detail": "status=404 USER_NOT_FOUND",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a non-activated account cannot be added by id (404); a RELATED but disabled account is refused with its own code (422 USER_DISABLED, C1 cf0c962)",
+          "ok": true,
+          "detail": "404/422 USER_DISABLED",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a caller from ANOTHER tenant gets 404 for members, candidates and add",
+          "ok": true,
+          "detail": "404/404/404",
+          "kind": "http"
+        },
+        {
+          "name": "[api] changing your own tenant role → 403 SELF_GRANT_FORBIDDEN",
+          "ok": true,
+          "detail": "status=403 SELF_GRANT_FORBIDDEN",
+          "kind": "http"
+        },
+        {
+          "name": "no unexpected 4xx/5xx from the portal's calls",
+          "ok": true,
+          "detail": "GET /api/v1/auth/me → 401",
+          "kind": "ui"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    }
+  ]
+}
