@@ -128,3 +128,9 @@ Steps 7–9 (C2) run in parallel with 1–6 once C2 has synced; they do not wait
 | LIM-1 | contract frozen; Batch 3 pending (V31) |
 | Public Runtime | design frozen; NOT implemented (B-C0-PUB-01) |
 | V1 blockers left | B-C0-W-07 (slot declaration), B-C5-06 (page site runtime / owner decision), B-C0-PUB-01 (only if the demo shows public data), C5 real E2E, C6 final QA, a free 3001 / 3002 / 3003 |
+
+## 10. Public path (D-C0-37) and operating notes
+- V1 public demo = a public PAGE_SCHEMA page (option b) -> `/{slug}/_data` -> PUBLIC_SITE -> LIVE read-only query -> the TLS data target. Proven by `./scripts/v1-public-smoke.sh` (42 checks, a real Chrome, no session). PRIVATE page data is OUT OF SCOPE for V1.
+- Run: `PORTALS=1 ./scripts/run-local.sh`, then `./scripts/v1-smoke.sh` and `./scripts/v1-public-smoke.sh`. `_env.sh` turns on `SITES_PUBLIC_DATA_ENABLED`, `SITES_DATA_API_BASE={sites origin}/{slug}/_data`, `TRUST_PROXY` for the local gateway.
+- **Render worker:** `run-local.sh` reuses a healthy worker on 18095. After any change under `workers/render` or `lib/schema-preview.ts`, stop it first (`./scripts/stop-local.sh` kills it; or kill the `workers/render` node process) so a fresh build starts; a stale worker publishes data-bound pages without the runtime.
+- Sites gateway: after a template change recreate the container (`docker compose up -d sites-gateway`); `GATEWAY_REAL_IP_FROM` (default `127.0.0.1`) names the proxies whose `X-Forwarded-For` is believed.

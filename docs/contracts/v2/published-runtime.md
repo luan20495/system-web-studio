@@ -107,19 +107,19 @@ The set of public queries of a release is **immutable once the release exists** 
 
 | Capability | State | Evidence / what is missing |
 |---|---|---|
-| `__factory/config.json` runtime config | RUNNING **for code apps (kind `STATIC_APP`) only** | `SiteControllers` serves it only when `app` is true; `SiteRuntimeConfigTests`, `PublishApiContractTests`. `apiBase` is `null` until configured. **A PAGE_SCHEMA site is static HTML rendered at publish (workers/render): it has no runtime config and no data runtime in the page** (verified live by `scripts/v1-smoke.mjs`: `/__factory/config.json` = 404 on a page site). The published-app flow Browser -> runtime config -> apiBase -> backend therefore exists only for a code app (needs the medium / full stack: Forgejo + build runner), until the renderer ships a client runtime for page sites (B-C5-06, decision D-C5-03). |
+| `__factory/config.json` runtime config | RUNNING for code apps AND for PAGE_SCHEMA sites that ship the runtime (C2 `f5a78fd`, D-C0-37); earlier text: code apps only | `SiteControllers` serves it only when `app` is true; `SiteRuntimeConfigTests`, `PublishApiContractTests`. `apiBase` is `null` until configured. **A PAGE_SCHEMA site is static HTML rendered at publish (workers/render): it has no runtime config and no data runtime in the page** (verified live by `scripts/v1-smoke.mjs`: `/__factory/config.json` = 404 on a page site). The published-app flow Browser -> runtime config -> apiBase -> backend therefore exists only for a code app (needs the medium / full stack: Forgejo + build runner), until the renderer ships a client runtime for page sites (B-C5-06, decision D-C5-03). |
 | Authenticated `app-runtime` LIVE / TEST query | RUNNING (integration-tested) | `AppRuntimeDataController`, `AppRuntimeApiTests`, `DataRuntimeLiveApiTests` (real PostgreSQL / Redis); LIVE now = active release (D-C0-33). |
 | Authenticated actions / workflows | RUNNING (integration-tested) | `AppRuntimeActionController`, V29 stores, restart / recovery suites. |
 | Release-pinned LIVE definition | RUNNING | D-C0-33 (`RuntimeAppDefinitions`). |
 | Management API | RUNNING (`management-api.md`, D-C0-30) | |
 | Public query route | IMPLEMENTED, flag OFF by default (`app.sites.public-data.enabled`), integration-tested | `PublicDataController` (D-C0-36): `POST /sites/{slug}/_data/queries/{queryId}/run`; `PublicDataEndpointTests` (14, real PostgreSQL / Redis / C1 policy / C3 gateway; connector is the double). Not yet reachable from a browser: the sites gateway has no route (next row). |
-| Sites gateway proxy for the data route | NOT_IMPLEMENTED | `infra/sites-gateway/default.conf.template` proxies GET / HEAD of sites, the forms POST and `/{slug}/api/**` of server apps only. Owner: C2 (+ C0 for the template). |
+| Sites gateway proxy for the data route | IMPLEMENTED (C2 `4dbbd8b`) + trusted-proxy fix (C0, D-C0-37) | `infra/sites-gateway/default.conf.template`; `tests/gateway/data-route.mjs` 29 / 29; live. |
 | `PUBLIC_SITE` principal | IMPLEMENTED (C1, imported D-C0-36) | `tenancy.ActorKind.PUBLIC_SITE`, `PublicSiteAuthorizer`, gateway branch; 16 + 14 tests. |
 | Release query allow-list | IMPLEMENTED as a provider; declaration = `queries[].public: true` (READ only, validator-enforced) | `ReleaseSnapshotPublicQueryAllowList` reads the immutable snapshot of the release's version + `publish_configs.public_data_approved` (live approval switch). **No migration (V31 not needed for this).** Open: the Studio / C2 operation that lets an author set `public` and the approval in the UI (`UPDATE_QUERY` with `public: true` already works; the approval is the publish-config API `acknowledgePublicData`). |
 | Deterministic release binding | PARTIAL | the pointer decides the definition (done); the LIVE data-source binding is per project, not per release (by design, section 4); the public route must still read the release's allow-list. |
 | Rate limiting of a public data route | IMPLEMENTED | `common.RateLimiter` (Redis): per client address burst (30 / 10 s), per site + address (120 / min), per site (1200 / min); Redis outage = refuse; nginx `limit_req` still to add (C2). |
-| `apiBase` with `{slug}` | NOT_IMPLEMENTED | `SiteService.resolveDataApiBase` accepts a plain URL only. Owner: C2. |
-| Candidate pointer (LIM-1 target) | NOT_IMPLEMENTED | section 2.2; needs V31. Owner: C2. |
+| `apiBase` with `{slug}` | IMPLEMENTED (C2 `f5a78fd`) | live: `http://127.0.0.1:18088/<slug>/_data` |
+| Candidate pointer (LIM-1 target) | NOT_IMPLEMENTED; V31 APPROVED and allocated to C2 (D-C0-37 item 6) | section 2.2 |
 
 ## 7a. Public route as implemented (D-C0-36)
 
