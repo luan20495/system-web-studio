@@ -20,7 +20,6 @@ import com.systemwebstudio.logic.action.WorkflowStarterPort
 import com.systemwebstudio.logic.action.canonical.AppDefinitionSource
 import com.systemwebstudio.logic.action.canonical.CanonicalActionCatalog
 import com.systemwebstudio.logic.action.handlers.DefaultActionHandlers
-import com.systemwebstudio.logic.workflow.InMemoryWorkflowQueue
 import com.systemwebstudio.logic.workflow.InMemoryWorkflowRunStore
 import com.systemwebstudio.logic.workflow.WorkflowEngine
 import com.systemwebstudio.logic.workflow.WorkflowQueue
@@ -85,8 +84,9 @@ class RunStoreConfiguration {
  * Run state (V29, D-C0-23): `app.workflow.run-store` selects the `ActionRunStore` / `WorkflowRunStore` - `jdbc` (the default: durable, restart-safe, the only
  * choice for production) or `memory` (explicit dev / test choice, single node, lost on restart; LIVE changes are then refused with `RUNTIME_STORES_VOLATILE`
  * unless `app.workflow.allow-volatile-stores=true`). Any other value leaves the beans undefined and the application does not start: there is no silent fallback to
- * volatile stores. The `WorkflowQueue` is still in memory until the RabbitMQ phase; a lost job is not lost work, the sweeper re-publishes every run whose
- * job vanished (a PENDING / stale run), so a restart only delays - it never drops - a run.
+ * volatile stores. The `WorkflowQueue` bean is NOT created here (H-5, D-C0-32): `integration/queue/workflow/WorkflowQueueConfiguration` provides the one bean from
+ * `app.workflow.queue=memory|amqp`; this class only injects the interface. The queue is a nudge: a lost job is not lost work, the sweeper re-publishes every run
+ * whose job vanished (a PENDING / stale run), so a restart only delays - it never drops - a run.
  */
 @Configuration
 @ConditionalOnProperty(prefix = "app.workflow", name = ["enabled"], havingValue = "true")
@@ -106,9 +106,6 @@ class AppRuntimeConfiguration {
 
     @Bean
     fun logicAuditPort(audit: AuditService): LogicAuditPort = LogicAuditAdapter(audit)
-
-    @Bean
-    fun workflowQueue(): WorkflowQueue = InMemoryWorkflowQueue()
 
     @Bean
     fun appRuntime(

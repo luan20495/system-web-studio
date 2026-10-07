@@ -50,3 +50,5 @@ app:
     secret-key: ${MINIO_ROOT_PASSWORD}
   deploy:
     step-delay-ms: 0
+  workflow:
+    queue: ${WORKFLOW_QUEUE:amqp}      # H-5: RabbitMQ is the only production queue; WORKFLOW_QUEUE=memory (or anything but amqp) stops the start
