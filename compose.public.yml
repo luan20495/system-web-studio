@@ -54,9 +54,10 @@ services:
   sites-gateway:
     image: nginxinc/nginx-unprivileged:1.29-alpine
     environment:
-      API_UPSTREAM: host.docker.internal:${API_PORT:-18081}
+      API_UPSTREAM: ${API_UPSTREAM_HOST:-host.docker.internal}:${API_PORT:-18081}   # public-up.sh passes the IPv4 of the host: host.docker.internal also has an AAAA that is unreachable on Docker Desktop
       SITES_HOST: ${SITES_HOST:-sites.localhost}
       GATEWAY_REAL_IP_FROM: ${GATEWAY_REAL_IP_FROM:-127.0.0.1}   # proxies whose X-Forwarded-For is believed (tunnel / LB range); default none
+      GATEWAY_FORCE_HTTPS: ${GATEWAY_FORCE_HTTPS:-0}
     ports: ["127.0.0.1:${SITES_GATEWAY_PORT:-28088}:8080"]
     volumes: ["./infra/sites-gateway/default.conf.template:/etc/nginx/templates/default.conf.template:ro"]
     extra_hosts: ["host.docker.internal:host-gateway"]

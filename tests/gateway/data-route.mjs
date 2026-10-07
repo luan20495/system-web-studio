@@ -9,6 +9,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 
 const TEMPLATE = new URL("../../infra/sites-gateway/default.conf.template", import.meta.url).pathname;
 const IMAGE = "nginxinc/nginx-unprivileged:1.29-alpine";
+const FORCE_HTTPS = process.env.GATEWAY_FORCE_HTTPS ?? "1";   // run twice: 1 = global mode (redirect plain http), 0 = local mode
 const results = []; const check = (n, ok, d = "") => { results.push(ok); console.log(`${ok ? "PASS" : "FAIL"}  ${n}${d ? "  — " + d : ""}`); };
 const freePort = () => new Promise((r) => { const s = tcp(); s.listen(0, "127.0.0.1", () => { const p = s.address().port; s.close(() => r(p)); }); });
 
@@ -21,7 +22,7 @@ await new Promise((r) => upstream.listen(0, "127.0.0.1", r));
 const upPort = upstream.address().port; const gwPort = await freePort();
 const name = `xweb-c2-gateway-test-${process.pid}`;
 const docker = (...a) => spawnSync("docker", a, { encoding: "utf8" });
-const started = docker("run", "-d", "--rm", "--name", name, "-p", `127.0.0.1:${gwPort}:8080`, "-e", `API_UPSTREAM=host.docker.internal:${upPort}`, "-e", "SITES_HOST=sites.test", "-e", "GATEWAY_REAL_IP_FROM=127.0.0.1",
+const started = docker("run", "-d", "--rm", "--name", name, "-p", `127.0.0.1:${gwPort}:8080`, "-e", `GATEWAY_FORCE_HTTPS=${FORCE_HTTPS}`, "-e", `API_UPSTREAM=host.docker.internal:${upPort}`, "-e", "SITES_HOST=sites.test", "-e", "GATEWAY_REAL_IP_FROM=127.0.0.1",
   "-v", `${TEMPLATE}:/etc/nginx/templates/default.conf.template:ro`, IMAGE);
 if (started.status !== 0) { console.log("FAIL  could not start the gateway container:", started.stderr.trim().slice(0, 300)); process.exit(1); }
 const gw = (path, init = {}) => fetch(`http://127.0.0.1:${gwPort}${path}`, { redirect: "manual", ...init });
@@ -81,6 +82,12 @@ try {
   calls.length = 0; await gw("/demo/api/items", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
   check("the server-app API proxy still goes to the API", called("POST", "/sites/demo/api/items").length === 1);
   check("an unknown top-level path is still a 404 of the gateway", (await gw("/")).status === 404);
+  // plain http at the edge (D-C0-38): redirected only when GATEWAY_FORCE_HTTPS=1; direct local requests carry no X-Forwarded-Proto and are never redirected
+  const edgeHttp = await gw("/demo/", { headers: { "X-Forwarded-Proto": "http", Host: "sites.test" } });
+  const edgeHttps = await gw("/demo/", { headers: { "X-Forwarded-Proto": "https" } });
+  if (FORCE_HTTPS === "1") check("plain http at the edge is redirected 308 to https on the requested host and path (fetch cannot set Host: 127.0.0.1)", edgeHttp.status === 308 && edgeHttp.headers.get("location") === "https://127.0.0.1/demo/", `${edgeHttp.status} ${edgeHttp.headers.get("location")}`);
+  else check("local mode: X-Forwarded-Proto http is NOT redirected (GATEWAY_FORCE_HTTPS=0)", edgeHttp.status === 200, `${edgeHttp.status}`);
+  check("https at the edge and direct requests are served", edgeHttps.status === 200 && (await gw("/demo/")).status === 200);
   const hz = await gw("/healthz"); check("healthz is still 200 ok", hz.status === 200 && (await hz.text()).trim() === "ok");
 } finally { docker("rm", "-f", name); upstream.close(); }
 const failed = results.filter((x) => !x).length; console.log(`\n${results.length - failed}/${results.length} passed`); process.exit(failed ? 1 : 0);

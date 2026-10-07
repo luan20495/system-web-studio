@@ -58,11 +58,26 @@ grep -q '^SOURCE_APP_PUBLIC_PUBLISH_ENABLED=' "$ENVF" || ( umask 077; { echo "# 
 grep -q '^SITES_HOST=' "$ENVF" || ( umask 077; { echo "# Published sites (gateway) — separate host from the Studio"; echo "SITES_HOST=sites.toolsmcp.uk"; echo "SITES_GATEWAY_PORT=28088"; echo "RENDER_PORT_PUBLIC=28095"; echo "RENDER_TOKEN=$(gen)"; } >> "$ENVF" )
 set -a; . "$ENVF"; set +a
 PUBLIC_ORIGIN="https://$PUBLIC_HOST"
+# V1 feature set of the public environment (D-C0-38): data platform, workflow (RabbitMQ queue, the prod default), publish policy, the Public Runtime. All are OFF in the
+# application unless stated here; V1_FEATURES=false brings the public stack back to its pre-V1 behaviour. apiBase is ONE value for every site ({slug} is replaced per site).
+V1_FEATURES="${V1_FEATURES:-true}"
+_slug='{slug}'; SITES_DATA_API_BASE="https://$SITES_HOST/$_slug/_data"
 
 say "docker"
 if ! docker info >/dev/null 2>&1; then open -a Docker; for _ in $(seq 1 90); do docker info >/dev/null 2>&1 && break; sleep 2; done; fi
 docker info >/dev/null 2>&1 || { echo "Docker is not running" >&2; exit 1; }
 say "data services (compose project hblpub)"
+# The sites gateway trusts X-Forwarded-For only from the peer it measures: the Docker bridge gateway of the hblpub network (Docker Desktop NAT, cloudflared on the host
+# reaches it from that address). Taken from the live network, never hard-coded; unset/unknown = 127.0.0.1 = trust nothing.
+if [ -z "${GATEWAY_REAL_IP_FROM:-}" ]; then
+  _gw="$(docker network inspect hblpub_default -f '{{range .IPAM.Config}}{{.Gateway}} {{end}}' 2>/dev/null | tr ' ' '\n' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)"
+  [ -n "$_gw" ] && export GATEWAY_REAL_IP_FROM="$_gw/32"
+fi
+if [ -z "${API_UPSTREAM_HOST:-}" ]; then
+  _h4="$(docker run --rm --entrypoint sh --add-host h:host-gateway nginxinc/nginx-unprivileged:1.29-alpine -c 'getent ahostsv4 h | head -1' 2>/dev/null | awk '{print $1}' || true)"
+  [[ "$_h4" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] && export API_UPSTREAM_HOST="$_h4"
+fi
+export GATEWAY_FORCE_HTTPS="${GATEWAY_FORCE_HTTPS:-1}"   # global mode: plain http at the edge is redirected to https at the gateway
 docker compose -f compose.public.yml --env-file "$ENVF" up -d --wait
 
 alive() { curl -fsS -m3 "$1" >/dev/null 2>&1; }
@@ -85,7 +100,9 @@ if ! alive "http://127.0.0.1:$API_PORT/actuator/health/liveness"; then
       MINIO_ENDPOINT="http://127.0.0.1:$MINIO_PORT_PUBLIC" MINIO_PUBLIC_ENDPOINT="https://$PUBLIC_FILES_HOST"    \
       DEPLOY_PROVIDER=static SITES_ORIGIN="https://$SITES_HOST" STUDIO_ORIGIN="$PUBLIC_ORIGIN" SITES_COOKIE_SECURE=true \
       RENDER_URL="http://127.0.0.1:$RENDER_PORT_PUBLIC" RENDER_TOKEN="$RENDER_TOKEN" \
-      CORS_ALLOWED_ORIGINS="$PUBLIC_ORIGIN" TRUST_PROXY=true TRUSTED_PROXY_CIDRS="127.0.0.1/32,::1/128" \
+      CORS_ALLOWED_ORIGINS="$PUBLIC_ORIGIN" TRUST_PROXY=true TRUSTED_PROXY_CIDRS="${PUBLIC_TRUSTED_PROXY_CIDRS:-127.0.0.1/32,::1/128}" \
+      DATA_PLATFORM_ENABLED="$V1_FEATURES" WORKFLOW_ENABLED="$V1_FEATURES" PUBLISH_CONFIGS_ENABLED="$V1_FEATURES" SITES_PUBLIC_DATA_ENABLED="$V1_FEATURES" \
+      SITES_DATA_API_BASE="$SITES_DATA_API_BASE" \
       BACKUP_STATUS_DIRS="public:$ROOT/backups/public" \
       APP_DEPLOY_MOCK_BASE_URL="$PUBLIC_ORIGIN/mock-deployments" OPENROUTER_REFERER="$PUBLIC_ORIGIN" \
             \

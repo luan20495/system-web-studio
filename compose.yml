@@ -83,6 +83,7 @@ services:
       API_UPSTREAM: ${SITES_API_UPSTREAM:-host.docker.internal:8080}
       SITES_HOST: ${SITES_HOST:-sites.localhost}
       GATEWAY_REAL_IP_FROM: ${GATEWAY_REAL_IP_FROM:-127.0.0.1}   # proxies whose X-Forwarded-For is believed (tunnel / LB range); default none
+      GATEWAY_FORCE_HTTPS: ${GATEWAY_FORCE_HTTPS:-0}
     ports:
       - "127.0.0.1:${SITES_GATEWAY_PORT:-18088}:8080"
     volumes:
