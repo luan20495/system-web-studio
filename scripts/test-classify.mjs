@@ -11,6 +11,11 @@ import { join, relative } from "node:path";
 const root = new URL("..", import.meta.url).pathname;
 const CLASSES = ["unit", "mock", "harness", "real-backend"];
 const HELPERS = new Set(["tests/builder/a11y.ts", "tests/builder/fixtures.ts", "tests/browser/harness.tsx", "tests/browser/ds-harness.tsx", "tests/browser/build-harness.mjs", "tests/tsconfig.json", "tests/browser/README.md", "tests/e2e-real/README.md"]);
+// Test files OWNED BY OTHER AGENTS (imported into integration/v2 by C0 / C2). C5 does not edit them and does not classify them; they are listed so nothing is silently skipped.
+const EXTERNAL = new Map([
+  ["tests/browser/page-runtime.spec.mjs", "C2"], ["tests/page-runtime/page-runtime.test.ts", "C2"],
+  ["tests/gateway/data-route.mjs", "C0"], ["tests/gateway/portal-route.mjs", "C0"], ["tests/guards/no-legacy-admin-workspaces.mjs", "C0"],
+]);
 const files = [];
 (function walk(dir) {
   for (const n of readdirSync(dir)) {
@@ -21,9 +26,10 @@ const files = [];
 })(join(root, "tests"));
 for (const n of readdirSync(join(root, "e2e"))) if (n.endsWith(".mjs")) files.push(`e2e/${n}`);
 
-const rows = []; const problems = [];
+const rows = []; const problems = []; const external = [];
 for (const f of files.sort()) {
   if (HELPERS.has(f)) continue;
+  if (EXTERNAL.has(f)) { external.push(`${f} (${EXTERNAL.get(f)})`); continue; }
   const src = readFileSync(join(root, f), "utf8"); const head = src.split("\n").slice(0, 6).join("\n");
   const m = /^\/\/ @class: ([a-z-]+)/m.exec(head);
   if (!m || !CLASSES.includes(m[1])) { problems.push(`${f}: no valid '// @class:' tag in the first lines`); continue; }
@@ -37,6 +43,7 @@ for (const f of files.sort()) {
 }
 const by = (c) => rows.filter((r) => r[1] === c).length;
 console.log(`test classification: ${rows.length} files · unit ${by("unit")} · mock ${by("mock")} · harness ${by("harness")} · real-backend ${by("real-backend")}`);
+if (external.length) console.log(`external (owned by others, not classified here): ${external.length} — ${external.join(", ")}`);
 for (const [f, c] of rows) if (process.argv.includes("--list")) console.log(`  ${c.padEnd(13)} ${f}`);
 if (problems.length) { console.error("\n" + problems.map((p) => "✗ " + p).join("\n")); process.exit(1); }
 console.log("OK: every test file is classified and no mock/harness test claims to be a backend E2E");

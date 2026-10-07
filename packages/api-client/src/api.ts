@@ -84,7 +84,6 @@ export const api = {
     user: (id: string) => call<AdminUserDetail>(`/admin/users/${id}`),
     setUserStatus: (id: string, enabled: boolean) => call<AdminUser>(`/admin/users/${id}/status`, { method: "PATCH", body: json({ enabled }) }),
     revokeSessions: (id: string) => call<{ revoked: number }>(`/admin/users/${id}/revoke-sessions`, { method: "POST" }),
-    createUser: (b: { username: string; displayName: string; email?: string; workspaceId: string; role: string }) => call<ActivationLink>("/admin/users", { method: "POST", body: json(b) }),
     activationLink: (id: string) => call<ActivationLink>(`/admin/users/${id}/activation-link`, { method: "POST" }),
     setSystemAdmin: (id: string, grant: boolean) => call<{ systemAdmin: boolean }>(`/admin/users/${id}/system-admin`, { method: "POST", body: json({ grant, confirm: true }) }),
     tenants: () => call<TenantView[]>("/admin/tenants"),
@@ -94,12 +93,11 @@ export const api = {
     tenantMembers: (id: string) => call<TenantMemberView[]>(`/admin/tenants/${id}/members`),
     /** C1 `tenant-provisioning-contract.md` @ 2356d64: a brand-new account in THIS tenant, by invitation (one-time activation link, no password). `workspaceId` and `workspaceRole` come together or not at all. */
     createTenantUser: (tenantId: string, b: { username: string; displayName: string; email?: string; tenantRole?: "MEMBER" | "TENANT_ADMIN"; workspaceId?: string; workspaceRole?: string }) => call<ActivationLink>(`/admin/tenants/${tenantId}/users`, { method: "POST", body: json(b) }),
-    /** a workspace OF the tenant (the legacy POST /admin/workspaces puts it in the DEFAULT tenant and is not used by the portals) */
+    /** a workspace OF the tenant. The legacy collection POST (no tenant) puts it in the DEFAULT tenant: the portals have no client method for it. */
     createTenantWorkspace: (tenantId: string, name: string) => call<{ id: string; name: string; slug: string; tenantId: string }>(`/admin/tenants/${tenantId}/workspaces`, { method: "POST", body: json({ name }) }),
     tenantMemberCandidates: (id: string, q?: string) => call<TenantMemberCandidate[]>(`/admin/tenants/${id}/member-candidates${qs({ q })}`),
     setTenantMember: (id: string, userId: string, role: string) => call<TenantMemberView>(`/admin/tenants/${id}/members/${userId}`, { method: "PUT", body: json({ role }) }),
     removeTenantMember: (id: string, userId: string) => call<void>(`/admin/tenants/${id}/members/${userId}`, { method: "DELETE" }),
-    createWorkspace: (name: string) => call<{ id: string; name: string }>("/admin/workspaces", { method: "POST", body: json({ name }) }),
     workspaces: (page: number, q?: string) => call<Page<AdminWorkspace>>(`/admin/workspaces${qs({ page, size: 25, q })}`),
     workspace: (id: string) => call<AdminWorkspaceDetail>(`/admin/workspaces/${id}`),
     applications: (params: { page: number; q?: string; visibility?: string; status?: string; workspaceId?: string }) => call<Page<AdminApp>>(`/admin/applications${qs({ size: 25, ...params })}`),

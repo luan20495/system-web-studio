@@ -10,6 +10,7 @@ export async function run({ cfg, fx, browser, check }) {
   const tenant = await makeTenant(fx, "a01", { workspace: false });
   const ta = await makeTenantUser(fx, cfg, tenant.id, "a01ta", { tenantRole: "TENANT_ADMIN" });
   const page = await newPage(browser); const bad = watchApi(page);
+  const sent = []; page.on("request", (r) => { if (r.method() !== "GET" && /\/api\/v1\/admin\//.test(r.url())) sent.push({ m: r.method(), p: new URL(r.url()).pathname, csrf: !!r.headers()["x-xsrf-token"], body: r.postData() }); });
   const where = await loginPortal(page, cfg, "admin", ta.username, ta.password);
   check.ok("the tenant admin logs in through the ADMIN portal", where.startsWith("/admin") && !/login|no-access/.test(where), where);
   check.ok("navigation has Người dùng and Công ty của tôi", (await navLabels(page)).includes("Người dùng") && (await navLabels(page)).includes("Công ty của tôi"), (await navLabels(page)).join(" | "));
@@ -29,6 +30,8 @@ export async function run({ cfg, fx, browser, check }) {
   const wsBody = await wr.json();
   check.ok("the workspace is created through the TENANT route (POST /admin/tenants/{tenant}/workspaces → 201, tenantId = the session's tenant) — never the legacy POST /admin/workspaces", wr.status() === 201 && new URL(wr.url()).pathname.endsWith(`/admin/tenants/${tenant.id}/workspaces`) && wsBody.tenantId === tenant.id, `status=${wr.status()} ${new URL(wr.url()).pathname}`, "http");
   const wsId = wsBody.id; fx.created.workspaces.push(wsId);
+  const wsReq = JSON.parse(wr.request().postData() ?? "{}");
+  check.ok("the workspace request body is exactly {name}: the tenant id is the PATH only, never repeated in the body", JSON.stringify(Object.keys(wsReq)) === JSON.stringify(["name"]) && wsReq.name === wsName, JSON.stringify(Object.keys(wsReq)), "http");
   check.ok("POST /admin/tenants/{tenant}/users → 201 with tenantRole MEMBER, that workspace and WORKSPACE_ADMIN together; the tenant only in the path", ur.status() === 201 && new URL(ur.url()).pathname.endsWith(`/admin/tenants/${tenant.id}/users`) && !("tenantId" in ub) && ub.tenantRole === "MEMBER" && ub.workspaceId === wsId && ub.workspaceRole === "WORKSPACE_ADMIN", `status=${ur.status()} ${JSON.stringify(Object.keys(ub))}`, "http");
   const linkA = await page.locator('input[aria-label="Liên kết"]').inputValue(); const tokenA = linkA.split("#")[1] ?? "";
   check.ok("the activation link is shown once (/auth/activate#token)", /\/auth\/activate#/.test(linkA) && tokenA.length > 20);
@@ -72,6 +75,10 @@ export async function run({ cfg, fx, browser, check }) {
   const cp = await newPage(browser); const cwhere = await loginPortal(cp, cfg, "admin", creatorName, pwC);
   check.ok("the app creator is NOT admitted to the Admin portal (no admin capability from the server)", /no-access|login/.test(cwhere) || !(await navLabels(cp)).includes("Người dùng"), cwhere);
   await cp.context().close();
+  const legacy = sent.filter((x) => x.m === "POST" && /\/api\/v1\/admin\/workspaces$/.test(x.p));
+  check.ok("LEGACY ROUTE: 0 browser requests to POST /api/v1/admin/workspaces in the whole tenant-admin flow; the workspace went to POST /api/v1/admin/tenants/{tenantId}/workspaces", legacy.length === 0 && sent.some((x) => x.m === "POST" && x.p === `/api/v1/admin/tenants/${tenant.id}/workspaces`), `legacy=${legacy.length} posts=${sent.map((x) => x.p.replace(/[0-9a-f-]{36}/g, "{id}")).join(" , ")}`, "http");
+  check.ok("CSRF: every mutating admin request the UI sent carries the X-XSRF-TOKEN header", sent.length >= 3 && sent.every((x) => x.csrf), `n=${sent.length} withToken=${sent.filter((x) => x.csrf).length}`, "http");
+  check.ok("no tenantId / tenant in any body the UI sent to a tenant route", sent.filter((x) => /\/admin\/tenants\//.test(x.p) && x.body).every((x) => !/"tenant(Id)?"/.test(x.body)), "", "http");
   check.ok("no unexpected 4xx/5xx from the portal's calls", bad.filter((x) => !/auth\/me → 401/.test(x)).length === 0, bad.join(" | "));
   check.ok("no unhandled page errors", pageProblems(page).length === 0, pageProblems(page).join(" | "));
   await page.context().close();

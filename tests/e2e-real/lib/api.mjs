@@ -10,8 +10,8 @@ export class Session {
   }
   async request(method, path, body, extra = {}) {
     const mutating = !["GET", "HEAD", "OPTIONS"].includes(method);
-    if (mutating && !this.csrf) await this.refreshCsrf();
-    const headers = { Accept: "application/json", Origin: this.base, Cookie: this.#cookieHeader(), ...(body !== undefined ? { "Content-Type": "application/json" } : {}), ...(mutating ? { "X-XSRF-TOKEN": this.csrf } : {}), ...(extra.headers ?? {}) };
+    if (mutating && !this.csrf && !extra.noCsrf) await this.refreshCsrf();
+    const headers = { Accept: "application/json", Origin: this.base, Cookie: this.#cookieHeader(), ...(body !== undefined ? { "Content-Type": "application/json" } : {}), ...(mutating && !extra.noCsrf ? { "X-XSRF-TOKEN": this.csrf } : {}), ...(extra.headers ?? {}) };
     let res;
     try { res = await fetch(`${this.base}/api/v1${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(extra.timeoutMs ?? 20_000), redirect: "manual" }); }
     catch (e) { return { status: 0, body: null, error: String(e?.message ?? e) }; }

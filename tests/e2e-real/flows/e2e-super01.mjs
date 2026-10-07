@@ -15,6 +15,7 @@ export async function run({ cfg, fx, browser, check }) {
   fx.created.workspaces.push(w.body.id);
 
   const page = await newPage(browser); const bad = watchApi(page);
+  const sent = []; page.on("request", (r) => { if (r.method() !== "GET" && /\/api\/v1\/admin\//.test(r.url())) sent.push({ m: r.method(), p: new URL(r.url()).pathname, csrf: !!r.headers()["x-xsrf-token"], body: r.postData() }); });
   const landed = await loginPortal(page, cfg, "platform", cfg.adminUser, cfg.adminPassword);
   check.ok("the SYSTEM_ADMIN logs in through the Platform portal", landed.startsWith("/platform") && !/login|no-access/.test(landed), landed);
   await openPortal(page, cfg, "platform", "/users");
@@ -40,6 +41,8 @@ export async function run({ cfg, fx, browser, check }) {
   const members = (await sys.get(`/admin/tenants/${tenantId}/members`)).body ?? [];
   const m = members.find((x) => x.username === username); if (m) fx.created.users.push(m.userId);
   check.ok("[api] the server lists the account as TENANT_ADMIN of the new tenant (already, before activation)", m?.role === "TENANT_ADMIN", JSON.stringify(m), "persistence");
+  const tu = sent.filter((x) => x.m === "POST" && x.p === `/api/v1/admin/tenants/${tenantId}/users`);
+  check.ok("CSRF + body: the create-account request carries X-XSRF-TOKEN and its body has no tenant / tenantId; no browser request to the legacy workspace route", tu.length === 1 && tu[0].csrf && !/"tenant(Id)?"/.test(tu[0].body ?? "") && !sent.some((x) => x.m === "POST" && /\/api\/v1\/admin\/workspaces$/.test(x.p)), `n=${tu.length} csrf=${tu[0]?.csrf}`, "http");
   const dup = await sys.post(`/admin/tenants/${tenantId}/users`, { username, displayName: "dup" });
   check.ok("[api] the same username again is refused: 409 USERNAME_TAKEN", dup.status === 409 && dup.body?.code === "USERNAME_TAKEN", `status=${dup.status} ${dup.body?.code}`, "http");
 

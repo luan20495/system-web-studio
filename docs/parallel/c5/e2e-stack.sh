@@ -130,7 +130,7 @@ studio_up() {
   cp "$REPO/apps/studio/tsconfig.json" "$DIR/tsconfig.studio.orig"
   ( cd "$REPO" && API_PROXY_TARGET="http://127.0.0.1:$API_PORT" npm run build:studio > "$LOGS/studio-build.log" 2>&1 ) || { cp "$DIR/tsconfig.studio.orig" "$REPO/apps/studio/tsconfig.json"; die "Studio build failed; see $LOGS/studio-build.log"; }
   cp "$DIR/tsconfig.studio.orig" "$REPO/apps/studio/tsconfig.json"
-  ( cd "$REPO/apps/studio" && nohup npx next start -H 127.0.0.1 -p "$STUDIO_PORT" >> "$LOGS/studio.log" 2>&1 & )
+  ( cd "$REPO/apps/studio" && API_PROXY_TARGET="http://127.0.0.1:$API_PORT" nohup npx next start -H 127.0.0.1 -p "$STUDIO_PORT" >> "$LOGS/studio.log" 2>&1 & )   # integration/v2 nextConfig requires the proxy target at START too
   wait_http "http://127.0.0.1:$STUDIO_PORT/api/v1/auth/config" 60 || die "Studio does not reach the API (check the build's proxy target); see $LOGS/studio.log"
 }
 

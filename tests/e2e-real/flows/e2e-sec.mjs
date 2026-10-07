@@ -1,6 +1,7 @@
 // @class: real-backend — SEC01-03 on C1's tenant-scoped contract, asserted against the real API with real sessions of real, activated accounts (the UI half is asserted in e2e-admin01/super01 and in the provisioning harness, which is labelled harness).
 // Every tenant here is NEW (made through POST /admin/tenants) and its accounts through POST /admin/tenants/{t}/users: nothing touches the DEFAULT tenant.
 import { makeTenant, makeTenantUser } from "../lib/portals.mjs";
+import { Session } from "../lib/api.mjs";
 export const id = "E2E-SEC01", title = "SEC01 tenant admin cannot create SYSTEM_ADMIN · SEC02 cross-tenant is a safe 404 · SEC03 workspace admin cannot escalate";
 export async function run({ cfg, fx, check }) {
   const sys = fx.sessions.admin;
@@ -69,4 +70,24 @@ export async function run({ cfg, fx, check }) {
   check.ok("SEC03 [api] …cannot pull a person of ANOTHER tenant into its workspace (404 USER_NOT_FOUND)", foreign.status === 404 && foreign.body?.code === "USER_NOT_FOUND", `status=${foreign.status} ${foreign.body?.code}`, "http");
   const tm = (await sys.get(`/admin/tenants/${A.id}/members`)).body ?? [];
   check.ok("SEC03 [api] nothing changed: still a plain tenant MEMBER, not a SYSTEM_ADMIN, the tenant still ACTIVE", tm.find((m) => m.userId === wsaA.id)?.role === "MEMBER" && (await sys.get(`/admin/users/${wsaA.id}`)).body?.user?.systemAdmin === false && (await sys.get(`/admin/tenants/${A.id}`)).body?.status !== "SUSPENDED", "", "persistence");
+
+  // ---- 401 / CSRF / body injection ---------------------------------------------------------------------------------------------------------------------------
+  const anon = new Session(cfg.studio, "anon"); await anon.refreshCsrf();
+  const a401 = [await anon.post(`/admin/tenants/${A.id}/users`, { username: name("s4a"), displayName: "a" }), await anon.post(`/admin/tenants/${A.id}/workspaces`, { name: "a" }), await anon.get(`/admin/tenants/${A.id}/members`)];
+  check.ok("401 [api] an unauthenticated caller (valid CSRF, no session) is refused on create user / create workspace / list members: 401", a401.every((r) => r.status === 401), a401.map((r) => `${r.status}/${r.body?.code ?? ""}`).join(" "), "http");
+  check.ok("401 [api] …and nothing was created (no account named like it)", ((await sys.get(`/admin/users?q=${encodeURIComponent(name("s4a"))}`)).body?.items ?? []).length === 0, "", "persistence");
+  const c1 = await taA.session.post(`/admin/tenants/${A.id}/users`, { username: name("s4b"), displayName: "c" }, { noCsrf: true });
+  const c2 = await taA.session.post(`/admin/tenants/${A.id}/workspaces`, { name: name("s4ws") }, { noCsrf: true });
+  const c3 = await taA.session.post(`/admin/tenants/${A.id}/users`, { username: name("s4c"), displayName: "c" }, { headers: { "X-XSRF-TOKEN": "not-the-token" } });
+  check.ok("CSRF [api] an authenticated mutating request WITHOUT the CSRF header, or with a wrong one, is refused (403) and does nothing", [c1, c2, c3].every((r) => r.status === 403) && ((await sys.get(`/admin/users?q=${encodeURIComponent(name("s4b"))}`)).body?.items ?? []).length === 0, `${c1.status}/${c2.status}/${c3.status} codes=${[c1, c2, c3].map((r) => r.body?.code ?? "").join(",")}`, "http");
+  const okc = await taA.session.post(`/admin/tenants/${A.id}/users`, { username: name("s4d"), displayName: "c" });
+  if (okc.body?.userId) fx.created.users.push(okc.body.userId);
+  check.ok("CSRF [api] the same request WITH the session's CSRF token succeeds (201): the refusal above was the missing token, not the route", okc.status === 201, `status=${okc.status} ${okc.body?.code}`, "http");
+  const inj = await taA.session.post(`/admin/tenants/${A.id}/users`, { username: name("s4e"), displayName: "i", tenantId: B.id, tenant: B.id, workspaceId: undefined });
+  if (inj.body?.userId) fx.created.users.push(inj.body.userId);
+  const inA = ((await sys.get(`/admin/tenants/${A.id}/members`)).body ?? []).some((m) => m.userId === inj.body?.userId), inB = ((await sys.get(`/admin/tenants/${B.id}/members`)).body ?? []).some((m) => m.userId === inj.body?.userId);
+  check.ok("body injection [api] a foreign tenant id in the BODY (tenantId / tenant) is ignored: the path is the authority — the account is a member of tenant A, not of B", inj.status === 201 && inA && !inB, `status=${inj.status} inA=${inA} inB=${inB}`, "persistence");
+  const injW = await taA.session.post(`/admin/tenants/${A.id}/workspaces`, { name: name("s4w"), tenantId: B.id });
+  if (injW.body?.id) fx.created.workspaces.push(injW.body.id);
+  check.ok("body injection [api] …and a workspace created with a foreign tenantId in the body belongs to tenant A (the path)", injW.status === 201 && injW.body?.tenantId === A.id, `status=${injW.status} tenantId=${injW.body?.tenantId === A.id ? "A" : injW.body?.tenantId}`, "persistence");
 }

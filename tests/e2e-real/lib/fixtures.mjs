@@ -1,6 +1,6 @@
 // @class: real-backend — per-run fixtures, created ONLY through the product's own HTTP API (no SQL, no direct DB, no server key material).
 //   tenant            : the stack's default tenant. Tenant provisioning is a platform (C1) action, not exercised here → cross-TENANT isolation is C1's backend tests.
-//   workspace A / B   : POST /admin/workspaces
+//   workspace A / B   : POST /admin/tenants/{DEFAULT_TENANT}/workspaces (the tenant route, tenant explicit in the path; the legacy collection POST is not used anywhere in the suite)
 //   users             : adminA (WORKSPACE_ADMIN in A), adminB (WORKSPACE_ADMIN in B), viewerA (VIEWER in A); activated with a RANDOM per-run password kept in memory
 //   project / page / component / action / workflow : created as adminA through the normal routes (PATCH /schema operations)
 //   datasource / credential / TEST|LIVE binding : created through C3's Management API (docs/parallel/c3/MANAGEMENT_API.md) by the flows that exercise it (tracked in created.dataSources / created.bindings and removed by cleanup())
@@ -11,6 +11,8 @@ import { Session, randomSecret } from "./api.mjs";
 
 const need = (r, what) => { if (r.status < 200 || r.status >= 300) throw new Error(`fixture: ${what} failed (${r.status} ${r.body?.code ?? r.error ?? ""})`); return r.body; };
 
+/** the stack's default tenant: the legacy fixtures (flows 01–14) live there, now addressed explicitly */
+export const DEFAULT_TENANT = "00000000-0000-0000-0000-000000000001";
 export const E2E_ACTION_ID = "e2e-start-wf";
 /** the fixture action: starts the fixture workflow from a click on the first section (a mutating type, so TEST must answer WOULD_RUN and never write) */
 export const e2eActionDefinition = (sectionId) => ({ id: E2E_ACTION_ID, name: "E2E khởi chạy workflow", type: "START_WORKFLOW", workflowRef: "e2e-wf", idempotency: "REQUIRED", ...(sectionId ? { trigger: { sectionId, event: "onClick" } } : {}) });
@@ -29,7 +31,7 @@ export async function createFixtures(cfg, log = () => {}) {
   if (!fx.me?.systemAdmin && !fx.me?.platformScope) throw new Error("fixture: E2E_ADMIN_USER is not a system admin (cannot create workspaces/users)");
 
   for (const k of ["A", "B"]) {
-    const w = need(await admin.post("/admin/workspaces", { name: name(`ws-${k}`) }), `create workspace ${k}`);
+    const w = need(await admin.post(`/admin/tenants/${DEFAULT_TENANT}/workspaces`, { name: name(`ws-${k}`) }), `create workspace ${k}`);
     fx.workspaces[k] = w.id; fx.created.workspaces.push(w.id); log(`workspace ${k} created`);
   }
   async function user(key, workspace, role) {
