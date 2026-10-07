@@ -17,6 +17,7 @@ data class TenantResponse(val id: UUID, val slug: String, val name: String, val 
 data class CreateTenantRequest(val slug: String? = null, val name: String? = null, val firstAdminUserId: UUID? = null)
 data class TenantStatusRequest(val status: String? = null)
 data class TenantMemberRequest(val role: String? = null)
+data class TenantWorkspaceRequest(val name: String? = null)
 data class TenantUserProvisionRequest(
     val username: String? = null,
     val displayName: String? = null,
@@ -66,6 +67,17 @@ class TenantController(
         access.forPlatform(me.userId)
         val status = TenantStatus.entries.firstOrNull { it.name == r.status } ?: throw ApiException.badRequest("TENANT_STATUS_INVALID", "Status must be ACTIVE, SUSPENDED or DELETED")
         return service.setStatus(tenantId, status, me.userId).toResponse()
+    }
+
+    @PostMapping("/{tenantId}/workspaces")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun createWorkspace(
+        @PathVariable tenantId: UUID,
+        @RequestBody r: TenantWorkspaceRequest,
+        @AuthenticationPrincipal me: StudioUserDetails
+    ): Map<String, Any> {
+        access.forTenant(me.userId, tenantId).require(Permission.TENANT_MANAGE)
+        return service.createWorkspace(tenantId, r.name.orEmpty(), me.userId)
     }
 
     /**
