@@ -47,4 +47,11 @@ class MeTenancyService(
         else PermissionMatrix.workspaceRoles[role].orEmpty()
         return PermissionCodes.canonicalCodesOf(set)
     }
+
+    /** Canonical project-role permissions for /auth/me project scopes. No workspace/platform permission is folded into this list. */
+    fun projectPermissions(role: String, archived: Boolean = false): List<String> {
+        val set = PermissionMatrix.projectRoles[role].orEmpty()
+        val effective = if (archived) set.intersect(setOf(Permission.PROJECT_READ, Permission.AUDIT_READ)) else set
+        return PermissionCodes.canonicalCodesOf(effective)
+    }
 }
