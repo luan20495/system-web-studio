@@ -144,6 +144,7 @@ class PostgresTargetPoliciesTests {
             .withProperty("spring.rabbitmq.password", strong).withProperty("app.storage.secret-key", strong).withProperty("server.servlet.session.cookie.secure", "true")
             .withProperty("app.cors.allowed-origins", "https://studio.example.com").withProperty("app.storage.public-endpoint", "https://files.example.com")
             .withProperty("app.forms.ip-salt", strong).withProperty("app.deploy.provider", "static")
+            .withProperty("app.sites.origin", "https://sites.example.com").withProperty("app.sites.studio-origin", "https://studio.example.com").withProperty("app.render.url", "http://render.internal:18095")
         ProductionConfigValidator(env())
         ProductionConfigValidator(env().withProperty(key, "replica.corp.example.com:5432,10.1.2.3:5432"))
         for (loop in listOf("127.0.0.1:15440", "localhost:5432", "[::1]:5432", "10.1.2.3:5432,127.0.0.1:15440"))
