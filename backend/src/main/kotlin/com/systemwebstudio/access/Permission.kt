@@ -35,18 +35,18 @@ object PermissionCodes {
     val CANONICAL: Set<String> = setOf(
         "APP_VIEW", "APP_USE", "APP_EDIT", "APP_PUBLISH", "APP_SHARE",
         "DATA_SOURCE_VIEW", "DATA_SOURCE_MANAGE", "QUERY_EXECUTE", "DATA_MUTATE", "ACTION_EXECUTE", "WORKFLOW_EXECUTE", "WORKFLOW_MANAGE",
-        "TENANT_MANAGE", "TENANT_MEMBERS"
+        "TENANT_MANAGE", "TENANT_MEMBERS", "MEMBER_MANAGE"
     )
 
     private val storageOfCanonical: Map<String, Permission> =
         CANONICAL.associateWith { code -> canonicalOfStorage.entries.firstOrNull { it.value == code }?.key ?: Permission.valueOf(code) }
 
-    /** canonical code of a storage constant; constants without a canonical code (PROJECT_SETTINGS, PROJECT_DELETE, PROJECT_CREATE, MEMBER_MANAGE, AUDIT_READ, REGISTRY_WRITE) keep their name */
+    /** canonical code of a storage constant; constants without a canonical code (PROJECT_SETTINGS, PROJECT_DELETE, PROJECT_CREATE, AUDIT_READ, REGISTRY_WRITE) keep their name */
     fun codeOf(p: Permission): String = canonicalOfStorage[p] ?: p.name
 
     /**
      * Canonical codes of [perms], sorted, for responses that cross a boundary (`/auth/me`). Storage constants that have no canonical code
-     * (PROJECT_SETTINGS, PROJECT_DELETE, PROJECT_CREATE, MEMBER_MANAGE, AUDIT_READ, REGISTRY_WRITE) are internal and are NOT exposed.
+     * (PROJECT_SETTINGS, PROJECT_DELETE, PROJECT_CREATE, AUDIT_READ, REGISTRY_WRITE) are internal and are NOT exposed. MEMBER_MANAGE is a portal-facing canonical capability.
      */
     fun canonicalCodesOf(perms: Collection<Permission>): List<String> = perms.map { codeOf(it) }.filter { it in CANONICAL }.distinct().sorted()
 
@@ -73,8 +73,8 @@ object PermissionCodes {
  *   TENANT_ADMIN  TENANT_MANAGE + TENANT_MEMBERS on its own tenant. Grants NO implicit access to workspace/project business data.
  *   MEMBER        no tenant-level permission.
  * System ADMIN (users.system_admin) is a PLATFORM role (D-C1-11):
- *   - may administer tenants (TENANT_MANAGE, TENANT_MEMBERS) and workspace membership (MEMBER_MANAGE), and create projects only in
- *     workspaces it belongs to (PROJECT_CREATE is kept so the legacy ADMIN_NOT_MEMBER 409 answer is preserved);
+ *   - may administer tenants (TENANT_MANAGE, TENANT_MEMBERS). A non-member SYSTEM_ADMIN gets no workspace/business permission;
+ *     tenant-scoped provisioning is the authority for creating users/workspaces and assigning initial membership;
  *   - does NOT read tenant business data (projects, schema, versions, audit of a workspace) unless it is a member of the workspace,
  *     or the operator sets app.tenancy.system-admin-business-access=true (legacy behaviour: every permission everywhere).
  *   - can never grant ITSELF anything (see MemberController / TenantController: self-grant is rejected).
@@ -105,9 +105,9 @@ object PermissionMatrix {
     /** Legacy "god mode"; only used when app.tenancy.system-admin-business-access=true. */
     val systemAdmin: Set<Permission> = Permission.entries.toSet()
 
-    /** What a SYSTEM_ADMIN holds in a workspace it is not a member of (default policy). No project/audit/business-data permission. */
+    /** What a SYSTEM_ADMIN holds in a workspace it is not a member of (default policy): platform/tenant authority only. */
     val platformScope: Set<Permission> = setOf(
-        Permission.MEMBER_MANAGE, Permission.PROJECT_CREATE, Permission.TENANT_MANAGE, Permission.TENANT_MEMBERS
+        Permission.TENANT_MANAGE, Permission.TENANT_MEMBERS
     )
 
     val tenantRoles: Map<String, Set<Permission>> = mapOf(

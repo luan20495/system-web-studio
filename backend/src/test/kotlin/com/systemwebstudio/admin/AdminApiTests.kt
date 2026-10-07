@@ -24,12 +24,14 @@ class AdminApiTests : IntegrationTestBase() {
     }
 
     @Test
-    fun `a system admin who is not a workspace member gets a clear 409 instead of a server error, and sees the real role in me`() {
+    fun `a system admin who is not a workspace member gets a clear 403 instead of a server error, and sees the real role in me`() {
         val ws = fx.workspace(); val owner = fx.user("wsown"); fx.member(ws, owner, "WORKSPACE_ADMIN")
         val adminUser = fx.user("nonmember", systemAdmin = true); val a = sessionFor(adminUser.username)
         val before = jdbc.queryForObject("SELECT count(*) FROM projects WHERE workspace_id = ?", Long::class.java, ws)
         val r = a.post(api(ws), """{"name":"Không được tạo"}""")
-        assertThat(r.response.status).isEqualTo(409); assertThat(a.body(r).get("code").asString()).isEqualTo("ADMIN_NOT_MEMBER")
+        // D-C1-13: a non-member platform admin holds no PROJECT_CREATE at all, so this is the plain missing-permission 403 (ADMIN_NOT_MEMBER 409 remains only for the
+        // explicit legacy flag app.tenancy.system-admin-business-access=true, where the god-mode set includes PROJECT_CREATE)
+        assertThat(r.response.status).isEqualTo(403); assertThat(a.body(r).get("code").asString()).isEqualTo("FORBIDDEN")
         assertThat(jdbc.queryForObject("SELECT count(*) FROM projects WHERE workspace_id = ?", Long::class.java, ws)).isEqualTo(before)
         val role = a.body(a.get("/api/v1/auth/me")).get("workspaces").toList().single { it.get("id").asString() == ws.toString() }.get("role").asString()
         assertThat(role).isEqualTo("ADMIN")

@@ -25,7 +25,7 @@ class MeTenancyTests : IntegrationTestBase() {
         assertThat(m.get("tenants").toList().map { it.get("id").asString() }).contains(TenantIds.DEFAULT.toString())
         val row = m.get("workspaces").toList().single { it.get("id").asString() == w.toString() }
         assertThat(row.get("tenantId").asString()).isEqualTo(TenantIds.DEFAULT.toString())
-        assertThat(strings(row.get("permissions"))).contains("APP_VIEW", "APP_EDIT", "APP_PUBLISH", "APP_SHARE", "DATA_SOURCE_MANAGE", "WORKFLOW_MANAGE")
+        assertThat(strings(row.get("permissions"))).contains("APP_VIEW", "APP_EDIT", "APP_PUBLISH", "APP_SHARE", "DATA_SOURCE_MANAGE", "WORKFLOW_MANAGE", "MEMBER_MANAGE")
     }
 
     @Test

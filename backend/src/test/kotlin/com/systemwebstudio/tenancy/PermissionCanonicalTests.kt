@@ -30,8 +30,8 @@ class PermissionCanonicalTests {
 
     @Test
     fun `new codes exist with exactly the canonical name and the canonical set is closed and round-trips`() {
-        for (c in newCodes + listOf("TENANT_MANAGE", "TENANT_MEMBERS")) { assertThat(Permission.valueOf(c).name).isEqualTo(c); assertThat(PermissionCodes.fromCode(c)).isEqualTo(Permission.valueOf(c)); assertThat(PermissionCodes.codeOf(Permission.valueOf(c))).isEqualTo(c) }
-        assertThat(PermissionCodes.CANONICAL).containsExactlyInAnyOrder(*(newCodes + listOf("APP_VIEW", "APP_EDIT", "APP_PUBLISH", "APP_SHARE", "TENANT_MANAGE", "TENANT_MEMBERS")).toTypedArray())
+        for (c in newCodes + listOf("TENANT_MANAGE", "TENANT_MEMBERS", "MEMBER_MANAGE")) { assertThat(Permission.valueOf(c).name).isEqualTo(c); assertThat(PermissionCodes.fromCode(c)).isEqualTo(Permission.valueOf(c)); assertThat(PermissionCodes.codeOf(Permission.valueOf(c))).isEqualTo(c) }
+        assertThat(PermissionCodes.CANONICAL).containsExactlyInAnyOrder(*(newCodes + listOf("APP_VIEW", "APP_EDIT", "APP_PUBLISH", "APP_SHARE", "TENANT_MANAGE", "TENANT_MEMBERS", "MEMBER_MANAGE")).toTypedArray())
         for (code in PermissionCodes.CANONICAL) assertThat(PermissionCodes.codeOf(PermissionCodes.fromCode(code)!!)).isEqualTo(code)
     }
 
@@ -71,13 +71,13 @@ class PermissionCanonicalTests {
         val all = Permission.entries
         val codes = PermissionCodes.canonicalCodesOf(all)
         assertThat(PermissionCodes.CANONICAL).containsAll(codes)
-        assertThat(codes).doesNotContain("PROJECT_READ", "PROJECT_EDIT", "PROJECT_PUBLISH", "PROJECT_MEMBERS", "PROJECT_SETTINGS", "PROJECT_DELETE", "PROJECT_CREATE", "MEMBER_MANAGE", "AUDIT_READ", "REGISTRY_WRITE")
+        assertThat(codes).doesNotContain("PROJECT_READ", "PROJECT_EDIT", "PROJECT_PUBLISH", "PROJECT_MEMBERS", "PROJECT_SETTINGS", "PROJECT_DELETE", "PROJECT_CREATE", "AUDIT_READ", "REGISTRY_WRITE")
         assertThat(codes).containsExactlyInAnyOrderElementsOf(PermissionCodes.CANONICAL)         // every canonical code is reachable from some storage constant
-        assertThat(PermissionCodes.canonicalCodesOf(listOf(Permission.PROJECT_READ, Permission.PROJECT_READ, Permission.MEMBER_MANAGE))).containsExactly("APP_VIEW")
+        assertThat(PermissionCodes.canonicalCodesOf(listOf(Permission.PROJECT_READ, Permission.PROJECT_READ, Permission.MEMBER_MANAGE))).containsExactly("APP_VIEW", "MEMBER_MANAGE")
     }
 
     @Test
     fun `unknown, blank, lower-case and legacy storage names are not canonical codes`() {
-        for (c in listOf("", " ", "app_view", "APP_VIEW ", "PROJECT_READ", "PROJECT_MEMBERS", "MEMBER_MANAGE", "AUDIT_READ", "GOD", "DATA_SOURCE")) assertThat(PermissionCodes.fromCode(c)).describedAs(c).isNull()
+        for (c in listOf("", " ", "app_view", "APP_VIEW ", "PROJECT_READ", "PROJECT_MEMBERS", "AUDIT_READ", "GOD", "DATA_SOURCE")) assertThat(PermissionCodes.fromCode(c)).describedAs(c).isNull()
     }
 }

@@ -80,7 +80,7 @@ class TenantAccessTests : IntegrationTestBase() {
     @Test
     fun `SYSTEM_ADMIN keeps the platform operations - member management and tenant administration`() {
         val sc = scenario(); val sys = fx.user("sys2", systemAdmin = true); val s = sessionFor(sys.username)
-        assertThat(status(s.get("/api/v1/workspaces/${sc.ws}/members"))).isEqualTo(200)     // MEMBER_MANAGE retained (documented bypass #1)
+        assertThat(status(s.get("/api/v1/workspaces/${sc.ws}/members"))).describedAs("D-C1-13: a non-member platform admin has no MEMBER_MANAGE in a workspace (tenant-scoped provisioning is its tool)").isEqualTo(403)
         assertThat(status(s.get("/api/v1/admin/tenants"))).isEqualTo(200)
         assertThat(access.forTenant(sys.id, TenantIds.DEFAULT).platformScope).isTrue()
         assertThat(status(s.get("/api/v1/auth/me"))).isEqualTo(200)
@@ -111,6 +111,7 @@ class TenantAccessTests : IntegrationTestBase() {
     fun `tenant admin API - platform operations need SYSTEM_ADMIN, membership operations need TENANT_MEMBERS on that tenant`() {
         val sys = sessionFor(fx.user("sys4", systemAdmin = true).username)
         val ta = fx.user("tadm3"); val member = fx.user("tmember"); val outsider = fx.user("outsider")
+        val strayId = fx.user("tstray").id
         val created = sys.post("/api/v1/admin/tenants", """{"slug":"${slug()}","name":"API Tenant","firstAdminUserId":"${ta.id}"}""")
         assertThat(status(created)).isEqualTo(201)
         val id = sys.body(created).get("id").asString()
@@ -119,6 +120,8 @@ class TenantAccessTests : IntegrationTestBase() {
         assertThat(status(outs.post("/api/v1/admin/tenants", """{"slug":"${slug()}","name":"nope"}"""))).isEqualTo(403)
         assertThat(status(tas.get("/api/v1/admin/tenants"))).isEqualTo(403)                  // listing all tenants is platform-only
         assertThat(status(tas.get("/api/v1/admin/tenants/$id"))).isEqualTo(200)
+        assertThat(status(tas.put("/api/v1/admin/tenants/$id/members/$strayId", """{"role":"MEMBER"}"""))).describedAs("a user with no relation to this tenant is not addable (no global directory)").isEqualTo(404)
+        fx.member(tenants.createWorkspace(java.util.UUID.fromString(id), "API WS")["id"] as java.util.UUID, member, "VIEWER")      // now related to the tenant (workspace member)
         assertThat(status(tas.put("/api/v1/admin/tenants/$id/members/${member.id}", """{"role":"MEMBER"}"""))).isEqualTo(200)
         assertThat(tas.body(tas.get("/api/v1/admin/tenants/$id/members")).size()).isEqualTo(2)
         assertThat(status(tas.patch("/api/v1/admin/tenants/$id/status", """{"status":"SUSPENDED"}"""))).isEqualTo(403)   // suspending = platform-only
