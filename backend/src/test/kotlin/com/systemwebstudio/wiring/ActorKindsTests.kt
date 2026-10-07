@@ -17,8 +17,17 @@ class ActorKindsTests {
     }
 
     @Test
-    fun `the two enums have exactly the same names`() {
-        assertThat(LogicActorKind.entries.map { it.name }).containsExactlyElementsOf(TenancyActorKind.entries.map { it.name })
+    fun `the two enums have exactly the same names, except PUBLIC_SITE which exists only in tenancy`() {
+        // D-C0-35: the anonymous visitor of a published site is a tenancy actor kind ONLY. C4's runtime has no such kind, so a public call can never reach it.
+        assertThat(TenancyActorKind.entries.map { it.name }.filter { it != "PUBLIC_SITE" }).containsExactlyElementsOf(LogicActorKind.entries.map { it.name })
+        assertThat(TenancyActorKind.entries.map { it.name }.filter { it !in LogicActorKind.entries.map { k -> k.name } }).containsExactly("PUBLIC_SITE")
+    }
+
+    @Test
+    fun `a PUBLIC_SITE is not convertible for the action and workflow runtime, and no logic kind converts to it`() {
+        // the adapters turn this exception into a denial ("actor kind not authorised"); it is never mapped to USER
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException::class.java) { ActorKinds.toLogic(TenancyActorKind.PUBLIC_SITE) }
+        for (kind in LogicActorKind.entries) assertThat(ActorKinds.toTenancy(kind)).isNotEqualTo(TenancyActorKind.PUBLIC_SITE)
     }
 
     @Test
