@@ -7,11 +7,11 @@ import { join, relative, sep } from "node:path";
 export const REPO = new URL("../..", import.meta.url).pathname.replace(/\/$/, "");
 export const SKIP_DIRS = new Set(["node_modules", ".git", ".run", ".test-build", "build", "dist", "coverage", "out"]);
 
-/** all files under `dir` (repo-relative, forward slashes), skipping build output; `.next*` directories are skipped */
+/** all files under `dir` (repo-relative, forward slashes), skipping build output and every dot-directory */
 export function walk(root, dir = root, acc = []) {
   let names; try { names = readdirSync(dir); } catch { return acc; }
   for (const n of names) {
-    if (SKIP_DIRS.has(n) || n.startsWith(".next")) continue;
+    if (SKIP_DIRS.has(n) || n.startsWith(".")) continue;      // every dot-directory: .git, .run, .next*, .test-build and NESTED CHECKOUTS such as .worktrees/* (a second copy of the repository is not this repository)
     const p = join(dir, n); let s; try { s = statSync(p); } catch { continue; }
     if (s.isDirectory()) walk(root, p, acc); else acc.push(relative(root, p).split(sep).join("/"));
   }

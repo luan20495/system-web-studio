@@ -1,6 +1,14 @@
 {
   "_doc": "Documented exceptions of the organization source guards. Every entry needs an owner and a reason, and a stale entry (the token no longer appears) fails the guard.",
   "allow": [
-    { "file": "features/admin/organization.ts", "token": "ORG_MANAGE", "owner": "C5", "reason": "type-level placeholder in `type Need`: no capability uses it and it is not a canonical permission (backend access/Permission.kt CANONICAL has no ORG_*). Remove when C1 names the capability in H-C1-17; until then nothing may rely on it.", "finding": "F-1 (C0 import gate, D-C0-44)" }
+    {
+      "file": "features/admin/organization.ts",
+      "token": "ORG_MANAGE",
+      "owner": "C1+C5",
+      "reason": "type-level placeholder in `type Need`: no capability uses it and it is not a canonical permission (backend access/Permission.kt CANONICAL has no ORG_*). Temporary: kept only while H-C1-17 is unresolved (D-C0-46).",
+      "finding": "F-1 (C0 import gate, D-C0-44)",
+      "trigger": "when C1 H-C1-17 freezes the exact organization permissions (or states that there are none)",
+      "outcome": "replace ORG_MANAGE in features/admin/organization.ts `type Need` with the canonical permission(s) C1 names, or remove the unused entry; THEN delete this allow-list entry. Until then ORG_MANAGE must stay unused: it is NOT a backend permission and must not be promoted or invented."
+    }
   ]
 }

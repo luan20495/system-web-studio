@@ -91,7 +91,7 @@ export function guardFailClosed(root = REPO) {
     }
   }
   for (const a of allow) {
-    if (!a.owner || !a.reason) out.push({ rule: "ORG-FAIL-CLOSED-ALLOWLIST", file: "tests/guards/org-guards.allow.json", message: `allow entry ${a.file} ${a.token} has no owner / reason` });
+    if (!a.owner || !a.reason || !a.trigger || !a.outcome) out.push({ rule: "ORG-FAIL-CLOSED-ALLOWLIST", file: "tests/guards/org-guards.allow.json", message: `allow entry ${a.file} ${a.token} needs owner, reason, trigger (when it must be revisited) and outcome (what must happen then)` });
     else if (!used.has(`${a.file}|${a.token}`)) out.push({ rule: "ORG-FAIL-CLOSED-ALLOWLIST", file: "tests/guards/org-guards.allow.json", message: `allow entry ${a.file} ${a.token} is stale (the token is gone): remove it` });
   }
   return out;

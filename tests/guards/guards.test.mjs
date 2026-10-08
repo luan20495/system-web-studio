@@ -86,9 +86,10 @@ test("G2 fail-closed: a route is allowed ONLY when a capability is wired in org-
 });
 test("G2 fail-closed: the allow-list needs owner + reason and goes stale when the token is gone", () => {
   const allow = (o) => ({ "tests/guards/org-guards.allow.json": JSON.stringify({ allow: [o] }) });
-  assert.deepEqual(guardFailClosed(FC(`export type Need = "ORG_MANAGE";`, allow({ file: ORG, token: "ORG_MANAGE", owner: "C5", reason: "placeholder" }))), []);
+  assert.deepEqual(guardFailClosed(FC(`export type Need = "ORG_MANAGE";`, allow({ file: ORG, token: "ORG_MANAGE", owner: "C1+C5", reason: "placeholder", trigger: "H-C1-17 freezes the permissions", outcome: "replace or remove, then delete this entry" }))), []);
   assert.ok(rules(guardFailClosed(FC(`export type Need = "ORG_MANAGE";`, allow({ file: ORG, token: "ORG_MANAGE" })))).includes("ORG-FAIL-CLOSED-ALLOWLIST"));
-  assert.ok(rules(guardFailClosed(FC(`export const a = 1;`, allow({ file: ORG, token: "ORG_MANAGE", owner: "C5", reason: "x" })))).includes("ORG-FAIL-CLOSED-ALLOWLIST"));
+  assert.ok(rules(guardFailClosed(FC(`export type Need = "ORG_MANAGE";`, allow({ file: ORG, token: "ORG_MANAGE", owner: "C1+C5", reason: "x" })))).includes("ORG-FAIL-CLOSED-ALLOWLIST"), "an entry without trigger / outcome is refused");
+  assert.ok(rules(guardFailClosed(FC(`export const a = 1;`, allow({ file: ORG, token: "ORG_MANAGE", owner: "C1+C5", reason: "x", trigger: "t", outcome: "o" })))).includes("ORG-FAIL-CLOSED-ALLOWLIST"));
   assert.ok(rules(guardFailClosed(FC(`export const a = 1;`, { "tests/guards/org-contract.json": undefined }))).includes("ORG-FAIL-CLOSED-LEDGER"), "the wired-capabilities ledger must exist");
 });
 
@@ -197,6 +198,13 @@ for (const [name, build, rule] of [
   ["the V31 row no longer says C2 / candidate", () => MIG(["V30__a.sql"], LEDGER().replace("candidate activation · **C2**", "something")), "MIGRATION-RESERVED"],
   ["flyway out-of-order on", () => MIG(["V30__a.sql"], LEDGER(), { "backend/src/main/resources/application.yml": "spring:\n  flyway:\n    out-of-order: true\n" }), "MIGRATION-OUT-OF-ORDER"],
 ]) test(`G7 migrations FAILS: ${name}`, () => assert.ok(rules(guardMigrationLedger(build())).includes(rule), `${rule} expected`));
+
+// ----------------------------------------------------------------------------------------------------------------------------------- nested checkouts
+test("a NESTED CHECKOUT (.worktrees/*, found when the guards first ran in the main checkout) and build output are never scanned: no false duplicate migration, no foreign violation", () => {
+  const nested = { ".worktrees/c3-overlay/backend/src/main/resources/db/migration/V30__a.sql": "select 1;", ".worktrees/c3-overlay/features/admin/organizationTree.ts": `export const MAX_DEPTH = 3; localStorage.x;`, "backend/build/resources/main/db/migration/V30__a.sql": "select 1;" };
+  assert.deepEqual(guardMigrationLedger(MIG(["V30__a.sql"], LEDGER(), nested)), []);
+  assert.deepEqual(guardHierarchy(fx(nested)), []); assert.deepEqual(guardFailClosed(FC(`export const a = 1;`, nested)), []);
+});
 
 // ----------------------------------------------------------------------------------------------------------------------------------- real files, mutated copies
 function realCopy() {
