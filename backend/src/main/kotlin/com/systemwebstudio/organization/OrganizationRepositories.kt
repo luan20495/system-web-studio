@@ -9,18 +9,22 @@ import java.util.UUID
 /*
  * C1 → C3 SEAMS. Everything the organization / employee application services need from persistence, and nothing about how it is stored.
  *
- * Rules every implementation MUST honour (C3 verifies them with `OrganizationRepositoryContractKit`, the abstract conformance test in the C1 test sources):
+ * Rules every implementation MUST honour (C3 verifies them with `OrganizationRepositoryContractKit`, the abstract conformance test in the C1 test sources, `backend/src/test/kotlin/com/systemwebstudio/organization/`):
  *  1. TENANT FIRST. Every method takes the tenant id as its first argument and filters by it. A record of another tenant is indistinguishable from a missing one:
  *     `find*` answers null, lists omit it, a counter ignores it. The tenant id of a record NEVER comes from a request body: the service passes the one it derived.
  *  2. VERSIONED WRITES. Every `update` / `setActive` / `move` / `setPrimary` / `end` takes `expectedVersion` and applies only if the stored version equals it, in ONE atomic
  *     statement, then increments the version and refreshes `updatedAt`. It answers null when nothing was applied (stale version OR missing); the service then re-reads to tell
  *     404 from 409 VERSION_CONFLICT. No lost update, ever.
  *  3. UNIQUENESS is enforced by the store, not only by a pre-check: a violation is thrown as [DuplicateOrganizationKey] (the service maps it to 409 and the surrounding
- *     transaction rolls back). Keys: type / position / grade `code` (per tenant, case-insensitive, even when inactive), unit `code` (per tenant, case-insensitive, among ACTIVE
- *     units: archiving frees it), employee `employee` (one profile per user and tenant) and `employeeCode`, `membership` (one ACTIVE membership per user and unit),
- *     `assignment` (one ACTIVE assignment per user, position, grade and unit).
+ *     transaction rolls back). Keys: type `code` (per tenant, even when inactive); position / grade `code` (per tenant, case-insensitive, even when inactive); unit `code`
+ *     SIBLING-SCOPED (D-C0-43): unique among the NON-ARCHIVED units with the same `(tenant, parentId)`, roots (`parentId = null`) being siblings of each other; the code is
+ *     already CANONICAL when it reaches the store (trimmed, upper-cased, `Locale.ROOT`) so the store compares it exactly; archiving frees the code; `membership` (one ACTIVE
+ *     membership per user and unit); `assignment` (one ACTIVE position assignment per membership and position: the grade is an ATTRIBUTE, never part of the identity).
  *  4. ONE TRANSACTION. Implementations take part in the AMBIENT Spring transaction (no REQUIRES_NEW, no second connection): employee creation provisions the account (C1 tables)
- *     and the profile / memberships / positions (C3 tables) atomically, and an audit failure rolls the mutation back.
+ *     and the memberships / positions (C3 tables) atomically, and an audit failure rolls the mutation back.
+ *  4b. LOCKING. The tenant STRUCTURAL lock ([TenantStructuralLock]) is taken ONLY by the subtree move. Every other write (create / update / archive / restore of a unit, employees,
+ *     memberships, position assignments, catalogs) uses the ordinary transaction, FK / unique constraints, row locks (e.g. `FOR SHARE` on the parent or unit row an insert depends
+ *     on, `FOR UPDATE` on the row an archive reads) and the optimistic version: they never serialise on the tenant structural lock.
  *  5. DETERMINISM. Lists have a total order; the services re-sort anyway where the contract fixes one.
  *  6. NO CASCADE. Nothing is deleted behind the caller's back: archive / end are state changes of the row itself.
  */
@@ -28,9 +32,17 @@ import java.util.UUID
 /** thrown by a repository when a uniqueness rule (see above) is violated */
 class DuplicateOrganizationKey(val key: String) : RuntimeException("duplicate organization key: $key")
 
-/** Serialises every structure mutation of ONE tenant for the rest of the ambient transaction (a move / archive / restore / membership change). Re-entrant. */
-interface TenantStructureLock {
-    fun <T> withTenantLock(tenantId: UUID, block: () -> T): T
+/** thrown by [OrganizationUnitRepository.move] when the destination is the unit itself or one of its descendants (the store re-checks it atomically, whatever the service pre-checked) */
+class OrganizationCycle : RuntimeException("organization cycle")
+
+/**
+ * The tenant STRUCTURAL lock (PostgreSQL: `pg_advisory_xact_lock` on the tenant). Used ONLY by the subtree move, whose cycle / depth / rule validation reads a tree that a
+ * concurrent move could change. `acquire` blocks until the lock is free and holds it until the AMBIENT TRANSACTION ends (commit or rollback); it is re-entrant inside one
+ * transaction and fails with [IllegalStateException] when no transaction is active. The contract execution boundary of a move is ONE READ COMMITTED transaction:
+ * `acquire` -> resolve source / destination -> recursive cycle / depth / rule validation -> `move` (expectedVersion CAS + parent UPDATE) -> audit -> commit.
+ */
+interface TenantStructuralLock {
+    fun acquire(tenantId: UUID)
 }
 
 interface OrganizationUnitTypeRepository {
@@ -47,13 +59,17 @@ interface OrganizationUnitTypeRepository {
 interface OrganizationUnitRepository {
     fun find(tenantId: UUID, id: UUID): OrganizationUnitDto?
     fun listAll(tenantId: UUID, includeArchived: Boolean): List<OrganizationUnitDto>
-    /** key `code` (among active units) */
+    /** key `code` (sibling-scoped, see rule 3) */
     fun insert(unit: OrganizationUnitDto): OrganizationUnitDto
-    /** writes name, code, sortOrder, metadata ONLY (never parent, type or active); key `code` */
+    /** writes name, code, sortOrder, metadata ONLY (never parent, type or active); key `code` (among the siblings of the unit) */
     fun update(unit: OrganizationUnitDto, expectedVersion: Long): OrganizationUnitDto?
-    /** ATOMIC: sets the parent (null = root) and optionally the sortOrder of the unit; its whole subtree follows because only the unit's own parent changes */
+    /**
+     * ATOMIC: sets the parent (null = root) and optionally the sortOrder of the unit; its whole subtree follows because only the unit's own parent changes.
+     * The caller holds the [TenantStructuralLock]. The store MUST still refuse a cycle itself (recursive check in the same statement / transaction): [OrganizationCycle];
+     * a sibling of the destination with the same code: key `code`; stale version / missing: null.
+     */
     fun move(tenantId: UUID, id: UUID, newParentId: UUID?, sortOrder: Int?, expectedVersion: Long): OrganizationUnitDto?
-    /** archive (false) / restore (true); key `code` when a restore finds the code taken by another active unit */
+    /** archive (false: sets `archivedAt`, active=false) / restore (true: clears `archivedAt`, active=true); key `code` when a restore finds a sibling with the code */
     fun setActive(tenantId: UUID, id: UUID, active: Boolean, expectedVersion: Long): OrganizationUnitDto?
     /** the unit (relativeDepth 0) and EVERY descendant, whatever its state; empty when the unit is not in the tenant */
     fun subtree(tenantId: UUID, id: UUID): List<SubtreeNode>
@@ -62,20 +78,18 @@ interface OrganizationUnitRepository {
     fun activeChildCount(tenantId: UUID, id: UUID): Int
 }
 
-interface EmployeeProfileRepository {
-    fun find(tenantId: UUID, userId: UUID): EmployeeProfileRecord?
-    /** keys `employee`, `employeeCode`. The user must already be a member of the tenant (the caller checked it against the C1 user system). */
-    fun insert(profile: EmployeeProfileRecord): EmployeeProfileRecord
-    /** writes employeeCode, phone, joinedOn, metadata; key `employeeCode` */
-    fun update(profile: EmployeeProfileRecord, expectedVersion: Long): EmployeeProfileRecord?
-    fun setStatus(tenantId: UUID, userId: UUID, status: String, expectedVersion: Long): EmployeeProfileRecord?
+/**
+ * The employee DIRECTORY. There is NO employee profile entity in V1 (frozen C0 decision EMPLOYEE_PROFILE = NOT_NEEDED): an employee is a tenant member, i.e.
+ * `tenant_members JOIN users`, plus their organization memberships and position assignments. Enabled / disabled is `tenant_members.active`.
+ */
+interface EmployeeDirectoryRepository {
     /**
-     * One page of the directory, already filtered / sorted / paginated. `sort` is one of name | username | code | created (name / username order by the C1 identity,
-     * so an implementation may join the C1-owned read model `users` / `tenant_members` READ-ONLY, or use [identities]); ties are broken by userId. Text matches username,
-     * display name, e-mail and employeeCode, case-insensitively and LITERALLY (`%`, `_`, `\` are text). `unitIds` = employees with an ACTIVE membership in any of them;
-     * `positionId` / `gradeId` = employees with an ACTIVE assignment of it. An employee matching through several memberships is still ONE row.
+     * One page of user ids of the directory, already filtered / sorted / paginated. Candidates are the (active or inactive) members of the tenant. `sort` is `name` | `username`
+     * (the C1 identity: a C3 implementation joins `users` / `tenant_members` READ-ONLY, or uses [identities]); ties are broken by userId. Text matches username, display name and
+     * e-mail, case-insensitively and LITERALLY (`%`, `_`, `\` are text). `active` filters `tenant_members.active`. `unitIds` = users with an ACTIVE membership in any of them;
+     * `positionId` / `gradeId` = users with an ACTIVE position assignment of it. A user matching through several memberships is still ONE row; `total` is the filtered count.
      */
-    fun search(tenantId: UUID, criteria: EmployeeSearch, identities: TenantIdentityDirectory): Slice<EmployeeProfileRecord>
+    fun search(tenantId: UUID, criteria: EmployeeSearch, identities: TenantIdentityDirectory): Slice<UUID>
 }
 
 interface EmployeeOrganizationMembershipRepository {
@@ -83,7 +97,7 @@ interface EmployeeOrganizationMembershipRepository {
     /** one query for a page of the directory (no N+1); unordered, the service sorts */
     fun listForUsers(tenantId: UUID, userIds: Collection<UUID>, includeInactive: Boolean): List<OrganizationMembershipDto>
     fun find(tenantId: UUID, userId: UUID, membershipId: UUID): OrganizationMembershipDto?
-    /** key `membership`. `primary=true` is applied through [setPrimary]'s rules: at most ONE active primary per tenant and user. */
+    /** key `membership`. The user must be a member of the tenant (composite FK `tenant_members(tenant_id, user_id)`). At most ONE active primary per tenant and user (see [setPrimary]). */
     fun insert(membership: OrganizationMembershipDto): OrganizationMembershipDto
     /** writes relationType only */
     fun update(membership: OrganizationMembershipDto, expectedVersion: Long): OrganizationMembershipDto?
@@ -118,8 +132,10 @@ interface EmployeePositionRepository {
     fun list(tenantId: UUID, userId: UUID, includeInactive: Boolean): List<EmployeePositionDto>
     fun listForUsers(tenantId: UUID, userIds: Collection<UUID>, includeInactive: Boolean): List<EmployeePositionDto>
     fun find(tenantId: UUID, userId: UUID, id: UUID): EmployeePositionDto?
-    /** key `assignment` */
+    /** key `assignment` (one ACTIVE assignment per membership and position). The membership must belong to the same tenant and user (composite FK); `organizationUnitId` is the unit of that membership. */
     fun insert(assignment: EmployeePositionDto): EmployeePositionDto
+    /** writes `gradeId` only (the grade is an attribute of the assignment); the position and the membership are immutable */
+    fun update(assignment: EmployeePositionDto, expectedVersion: Long): EmployeePositionDto?
     /** ATOMIC: at most ONE active primary position per tenant and user */
     fun setPrimary(tenantId: UUID, userId: UUID, id: UUID, expectedVersion: Long): EmployeePositionDto?
     fun end(tenantId: UUID, userId: UUID, id: UUID, expectedVersion: Long): EmployeePositionDto?
@@ -146,9 +162,9 @@ interface TenantIdentityDirectory {
 @Component
 class OrganizationRepositories(
     private val typeRepo: ObjectProvider<OrganizationUnitTypeRepository>, private val unitRepo: ObjectProvider<OrganizationUnitRepository>,
-    private val profileRepo: ObjectProvider<EmployeeProfileRepository>, private val membershipRepo: ObjectProvider<EmployeeOrganizationMembershipRepository>,
+    private val directoryRepo: ObjectProvider<EmployeeDirectoryRepository>, private val membershipRepo: ObjectProvider<EmployeeOrganizationMembershipRepository>,
     private val positionRepo: ObjectProvider<PositionRepository>, private val gradeRepo: ObjectProvider<GradeRepository>,
-    private val employeePositionRepo: ObjectProvider<EmployeePositionRepository>, private val lockProvider: ObjectProvider<TenantStructureLock>
+    private val employeePositionRepo: ObjectProvider<EmployeePositionRepository>, private val lockProvider: ObjectProvider<TenantStructuralLock>
 ) {
     companion object {
         const val NOT_AVAILABLE = "ORG_PERSISTENCE_NOT_AVAILABLE"
@@ -156,10 +172,10 @@ class OrganizationRepositories(
     }
     val types: OrganizationUnitTypeRepository get() = typeRepo.getIfAvailable() ?: throw notAvailable()
     val units: OrganizationUnitRepository get() = unitRepo.getIfAvailable() ?: throw notAvailable()
-    val profiles: EmployeeProfileRepository get() = profileRepo.getIfAvailable() ?: throw notAvailable()
+    val directory: EmployeeDirectoryRepository get() = directoryRepo.getIfAvailable() ?: throw notAvailable()
     val memberships: EmployeeOrganizationMembershipRepository get() = membershipRepo.getIfAvailable() ?: throw notAvailable()
     val positions: PositionRepository get() = positionRepo.getIfAvailable() ?: throw notAvailable()
     val grades: GradeRepository get() = gradeRepo.getIfAvailable() ?: throw notAvailable()
     val employeePositions: EmployeePositionRepository get() = employeePositionRepo.getIfAvailable() ?: throw notAvailable()
-    val lock: TenantStructureLock get() = lockProvider.getIfAvailable() ?: throw notAvailable()
+    val lock: TenantStructuralLock get() = lockProvider.getIfAvailable() ?: throw notAvailable()
 }

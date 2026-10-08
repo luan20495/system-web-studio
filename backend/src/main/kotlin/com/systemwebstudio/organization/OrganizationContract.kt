@@ -2,7 +2,6 @@ package com.systemwebstudio.organization
 
 import tools.jackson.databind.JsonNode
 import java.time.Instant
-import java.time.LocalDate
 import java.util.UUID
 
 /*
@@ -15,8 +14,6 @@ import java.util.UUID
  * The same data classes are the API DTOs and the records the seams exchange (they carry `tenantId`; a body never does). Everything is tenant-scoped by construction:
  * every repository method takes the tenant FIRST and a record of another tenant is indistinguishable from a missing one (null / empty).
  */
-
-object OrgStatus { const val ACTIVE = "ACTIVE"; const val INACTIVE = "INACTIVE" }
 
 // ---------------------------------------------------------------------------------------------------------------------------- unit types
 /**
@@ -43,7 +40,9 @@ data class OrgUnitTypeUpdateRequest(val name: String? = null, val icon: String? 
 /** `active=false` means ARCHIVED (soft). There is no hard delete in the tenant admin API. */
 data class OrganizationUnitDto(
     val id: UUID, val tenantId: UUID, val typeId: UUID, val parentId: UUID?, val name: String, val code: String, val sortOrder: Int,
-    val metadata: JsonNode, val active: Boolean, val version: Long, val createdAt: Instant, val updatedAt: Instant
+    val metadata: JsonNode, val active: Boolean, val version: Long, val createdAt: Instant, val updatedAt: Instant,
+    /** lifecycle: ACTIVE = (`active=true`, `archivedAt=null`); ARCHIVED = (`active=false`, `archivedAt` set). Always consistent; maps to C3's `deleted_at`. */
+    val archivedAt: Instant? = null
 )
 data class OrganizationUnitNodeDto(val unit: OrganizationUnitDto, val children: List<OrganizationUnitNodeDto>)
 data class OrganizationUnitDetailDto(val unit: OrganizationUnitDto, val path: List<OrganizationUnitDto>, val activeChildCount: Int, val activeMemberCount: Int)
@@ -59,43 +58,30 @@ data class SubtreeNode(val id: UUID, val typeId: UUID, val relativeDepth: Int, v
 
 // ---------------------------------------------------------------------------------------------------------------------------- employees
 /**
- * The part of an employee that is NOT identity: the HR profile (C3-owned). Identity (username, display name, e-mail, credentials, activation, account state, tenant role)
- * stays in the C1 user system; the employee DTO is a PROJECTION of both, never a second identity.
+ * An employee is a TENANT MEMBER: `tenant_members JOIN users` (identity, credentials, activation, tenant role: C1) plus the organization memberships and position assignments
+ * (C3). There is NO employee profile entity in V1 (employeeCode / phone / joinedOn are NOT part of the contract; a future HR extension needs its own approval after V32).
+ * `active` is `tenant_members.active`: disabling an employee is the canonical tenant-membership lifecycle, nothing is duplicated.
  */
-data class EmployeeProfileRecord(
-    val tenantId: UUID, val userId: UUID, val employeeCode: String?, val phone: String?, val joinedOn: LocalDate?, val metadata: JsonNode,
-    val status: String, val version: Long, val createdAt: Instant, val updatedAt: Instant
-)
-
 data class EmployeeDto(
-    val userId: UUID, val tenantId: UUID, val username: String, val employeeCode: String?, val displayName: String?, val email: String?, val phone: String?, val joinedOn: LocalDate?,
-    val metadata: JsonNode, val status: String, val accountEnabled: Boolean, val accountActivated: Boolean, val tenantRole: String,
+    val userId: UUID, val tenantId: UUID, val username: String, val displayName: String?, val email: String?,
+    /** `tenant_members.active` */
+    val active: Boolean, val accountEnabled: Boolean, val accountActivated: Boolean, val tenantRole: String,
     /** derived from the active primary membership: never written directly */
     val primaryOrganizationUnitId: UUID?,
-    val positions: List<EmployeePositionDto>, val organizationMemberships: List<OrganizationMembershipDto>,
-    val createdAt: Instant, val updatedAt: Instant, val version: Long
+    val positions: List<EmployeePositionDto>, val organizationMemberships: List<OrganizationMembershipDto>
 )
 data class EmployeePageDto(val items: List<EmployeeDto>, val total: Long, val page: Int, val size: Int)
 
 data class EmployeeMembershipInput(val organizationUnitId: UUID? = null, val relationType: String? = null, val primary: Boolean? = null)
-data class EmployeePositionInput(val positionId: UUID? = null, val gradeId: UUID? = null, val organizationUnitId: UUID? = null, val primary: Boolean? = null)
+/** a position in the create request is scoped to one of the memberships of the SAME request, named by its unit */
+data class EmployeePositionInput(val organizationUnitId: UUID? = null, val positionId: UUID? = null, val gradeId: UUID? = null, val primary: Boolean? = null)
 
-/**
- * Create / invite. EITHER a brand-new account (provisioned by the canonical tenant provisioning service, activation returned) OR `userId` of an ACTIVE member of this tenant
- * (profile only). Optional memberships and positions are created in the same transaction.
- */
+/** Create = a NEW account provisioned by the canonical tenant provisioning (activation link returned, no password) plus optional memberships and scoped positions, in one transaction. */
 data class EmployeeCreateRequest(
     val username: String? = null, val displayName: String? = null, val email: String? = null, val tenantRole: String? = null, val workspaceId: UUID? = null, val workspaceRole: String? = null,
-    val userId: UUID? = null,
-    val employeeCode: String? = null, val phone: String? = null, val joinedOn: LocalDate? = null, val metadata: JsonNode? = null,
     val organizationMemberships: List<EmployeeMembershipInput>? = null, val positions: List<EmployeePositionInput>? = null
 )
 data class EmployeeCreatedDto(val employee: EmployeeDto, val activation: com.systemwebstudio.identity.ActivationLink?)
-
-data class EmployeeUpdateRequest(
-    val employeeCode: String? = null, val phone: String? = null, val joinedOn: LocalDate? = null, val metadata: JsonNode? = null,
-    val clearEmployeeCode: Boolean? = null, val clearPhone: Boolean? = null, val clearJoinedOn: Boolean? = null, val expectedVersion: Long? = null
-)
 
 /** Relation types are BUSINESS data (MEMBER, MANAGER, HEAD, ...: a tenant vocabulary): no authorization is ever derived from them. */
 data class OrganizationMembershipDto(
@@ -113,17 +99,21 @@ data class PositionUpdateRequest(val name: String? = null, val description: Stri
 data class GradeCreateRequest(val name: String? = null, val code: String? = null, val rank: Int? = null, val description: String? = null)
 data class GradeUpdateRequest(val name: String? = null, val rank: Int? = null, val description: String? = null, val clearRank: Boolean? = null, val expectedVersion: Long? = null)
 
-/** A position held by an employee. `organizationUnitId` is OPTIONAL and INDEPENDENT of the employee's organization memberships (the unit must exist in the tenant; membership is not required). */
+/**
+ * A position held by an employee WITHIN one of their organization memberships (D-C0-43: EmployeePosition -> EmployeeOrganizationUnit -> OrganizationUnit). There is no
+ * tenant-global position. `organizationUnitId` is the unit of the membership (derived, always equal to it). The grade is an attribute of the assignment.
+ */
 data class EmployeePositionDto(
-    val id: UUID, val tenantId: UUID, val userId: UUID, val positionId: UUID, val gradeId: UUID?, val organizationUnitId: UUID?, val primary: Boolean, val active: Boolean,
+    val id: UUID, val tenantId: UUID, val userId: UUID, val membershipId: UUID, val organizationUnitId: UUID, val positionId: UUID, val gradeId: UUID?, val primary: Boolean, val active: Boolean,
     val version: Long, val createdAt: Instant, val updatedAt: Instant
 )
-data class EmployeePositionCreateRequest(val positionId: UUID? = null, val gradeId: UUID? = null, val organizationUnitId: UUID? = null, val primary: Boolean? = null)
+data class EmployeePositionCreateRequest(val membershipId: UUID? = null, val positionId: UUID? = null, val gradeId: UUID? = null, val primary: Boolean? = null)
+data class EmployeePositionUpdateRequest(val gradeId: UUID? = null, val clearGrade: Boolean? = null, val primary: Boolean? = null, val expectedVersion: Long? = null)
 
 // ---------------------------------------------------------------------------------------------------------------------------- search criteria handed to C3
-/** Employee directory query. `userIds` / `unitIds` / `positionId` / `gradeId` are already resolved and tenant-validated by C1; text matching on identity fields uses [TenantIdentityDirectory]. */
+/** Employee directory query. `unitIds` / `positionId` / `gradeId` are already resolved and tenant-validated by C1; text matching on identity fields uses [TenantIdentityDirectory]. */
 data class EmployeeSearch(
-    val text: String?, val unitIds: Set<UUID>?, val positionId: UUID?, val gradeId: UUID?, val status: String?, val userId: UUID?,
+    val text: String?, val unitIds: Set<UUID>?, val positionId: UUID?, val gradeId: UUID?, val active: Boolean?, val userId: UUID?,
     val sort: String, val ascending: Boolean, val page: Int, val size: Int
 )
 data class Slice<T>(val items: List<T>, val total: Long)

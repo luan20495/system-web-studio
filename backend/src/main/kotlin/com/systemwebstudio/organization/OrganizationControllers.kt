@@ -171,29 +171,25 @@ class EmployeeController(private val access: AccessService, private val service:
         access.org(me, tenantId, Permission.EMPLOYEE_VIEW)
         return service.list(tenantId, q, organizationUnitId, includeDescendants, positionId, gradeId, active, userId, page, size, sort, dir)
     }
+    /** an employee has no version of its own: its state is the tenant membership (`active`) and its memberships / positions carry their versions */
     @GetMapping("/{userId}")
-    fun get(@PathVariable tenantId: UUID, @PathVariable userId: UUID, @AuthenticationPrincipal me: StudioUserDetails): ResponseEntity<EmployeeDto> {
-        access.org(me, tenantId, Permission.EMPLOYEE_VIEW); return service.get(tenantId, userId).let { versioned(it, it.version) }
+    fun get(@PathVariable tenantId: UUID, @PathVariable userId: UUID, @AuthenticationPrincipal me: StudioUserDetails): EmployeeDto {
+        access.org(me, tenantId, Permission.EMPLOYEE_VIEW); return service.get(tenantId, userId)
     }
 
-    /** a NEW account is account provisioning: it needs TENANT_MEMBERS on top of EMPLOYEE_MANAGE (both held by the company's Tenant Admin only); the profile of an existing member needs EMPLOYEE_MANAGE only */
+    /** a NEW account is account provisioning: it needs TENANT_MEMBERS on top of EMPLOYEE_MANAGE (both held by the company's Tenant Admin only) */
     @PostMapping
     fun create(@PathVariable tenantId: UUID, @RequestBody r: EmployeeCreateRequest, @AuthenticationPrincipal me: StudioUserDetails): ResponseEntity<EmployeeCreatedDto> {
-        val a = access.org(me, tenantId, Permission.EMPLOYEE_MANAGE)
-        if (r.userId == null) a.require(Permission.TENANT_MEMBERS)
-        return service.create(tenantId, me.userId, r).let { versioned(it, it.employee.version, HttpStatus.CREATED) }
-    }
-    @PatchMapping("/{userId}")
-    fun update(@PathVariable tenantId: UUID, @PathVariable userId: UUID, @RequestBody r: EmployeeUpdateRequest, @AuthenticationPrincipal me: StudioUserDetails): ResponseEntity<EmployeeDto> {
-        access.org(me, tenantId, Permission.EMPLOYEE_MANAGE); return service.update(tenantId, userId, me.userId, r).let { versioned(it, it.version) }
+        access.org(me, tenantId, Permission.EMPLOYEE_MANAGE).require(Permission.TENANT_MEMBERS)
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.create(tenantId, me.userId, r))
     }
     @PostMapping("/{userId}/disable")
-    fun disable(@PathVariable tenantId: UUID, @PathVariable userId: UUID, @RequestBody r: VersionRequest, @AuthenticationPrincipal me: StudioUserDetails): ResponseEntity<EmployeeDto> {
-        access.org(me, tenantId, Permission.EMPLOYEE_MANAGE); return service.setActive(tenantId, userId, me.userId, false, r.expectedVersion).let { versioned(it, it.version) }
+    fun disable(@PathVariable tenantId: UUID, @PathVariable userId: UUID, @AuthenticationPrincipal me: StudioUserDetails): EmployeeDto {
+        access.org(me, tenantId, Permission.EMPLOYEE_MANAGE); return service.setActive(tenantId, userId, me.userId, false)
     }
     @PostMapping("/{userId}/enable")
-    fun enable(@PathVariable tenantId: UUID, @PathVariable userId: UUID, @RequestBody r: VersionRequest, @AuthenticationPrincipal me: StudioUserDetails): ResponseEntity<EmployeeDto> {
-        access.org(me, tenantId, Permission.EMPLOYEE_MANAGE); return service.setActive(tenantId, userId, me.userId, true, r.expectedVersion).let { versioned(it, it.version) }
+    fun enable(@PathVariable tenantId: UUID, @PathVariable userId: UUID, @AuthenticationPrincipal me: StudioUserDetails): EmployeeDto {
+        access.org(me, tenantId, Permission.EMPLOYEE_MANAGE); return service.setActive(tenantId, userId, me.userId, true)
     }
 
     // ---- organization memberships (multi-org)
@@ -222,6 +218,10 @@ class EmployeeController(private val access: AccessService, private val service:
     @PostMapping("/{userId}/positions")
     fun addPosition(@PathVariable tenantId: UUID, @PathVariable userId: UUID, @RequestBody r: EmployeePositionCreateRequest, @AuthenticationPrincipal me: StudioUserDetails): ResponseEntity<EmployeePositionDto> {
         access.org(me, tenantId, Permission.EMPLOYEE_MANAGE); return service.addPosition(tenantId, userId, me.userId, r).let { versioned(it, it.version, HttpStatus.CREATED) }
+    }
+    @PatchMapping("/{userId}/positions/{employeePositionId}")
+    fun updatePosition(@PathVariable tenantId: UUID, @PathVariable userId: UUID, @PathVariable employeePositionId: UUID, @RequestBody r: EmployeePositionUpdateRequest, @AuthenticationPrincipal me: StudioUserDetails): ResponseEntity<EmployeePositionDto> {
+        access.org(me, tenantId, Permission.EMPLOYEE_MANAGE); return service.updatePosition(tenantId, userId, employeePositionId, me.userId, r).let { versioned(it, it.version) }
     }
     @DeleteMapping("/{userId}/positions/{employeePositionId}")
     fun removePosition(@PathVariable tenantId: UUID, @PathVariable userId: UUID, @PathVariable employeePositionId: UUID, @RequestParam expectedVersion: Long?, @AuthenticationPrincipal me: StudioUserDetails): ResponseEntity<EmployeePositionDto> {
