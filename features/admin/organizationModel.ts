@@ -70,6 +70,11 @@ export function unitPath(units: readonly OrgUnit[], id: string | null | undefine
   for (let cur = id ? by.get(id) : undefined; cur && !guard.has(cur.id); cur = cur.parentId ? by.get(cur.parentId) : undefined) { guard.add(cur.id); out.unshift(cur.name); }
   return out.join(" › ");
 }
+/** a long breadcrumb ("A › B › … › Z") keeps the first two and the last three levels; the full path stays available as the title / aria-label of the element that shows it */
+export function compactPath(path: string, keepStart = 2, keepEnd = 3): string {
+  const parts = path.split(" › "); if (parts.length <= keepStart + keepEnd + 1) return path;
+  return [...parts.slice(0, keepStart), "…", ...parts.slice(-keepEnd)].join(" › ");
+}
 const typeOf = (types: readonly OrgUnitType[], id: string | null | undefined) => (id ? types.find((t) => t.id === id) : undefined);
 /** a type with no `allowedParentTypeIds` sits anywhere; otherwise the parent's TYPE must be listed (and there must be a parent) */
 export function parentRule(type: OrgUnitType | undefined, parent: OrgUnit | null, types: readonly OrgUnitType[]): string | null {

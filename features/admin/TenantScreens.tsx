@@ -15,7 +15,7 @@ import type { Member, TenantMemberCandidate, TenantMemberView, TenantView } from
 import { useSession } from "../session";
 import { useLoad } from "../useLoad";
 import { Card, ErrorState, fmtDate, Kpi, Pill, StateView } from "../ui";
-import { Building2, CircleCheck, ModalHeader, ShieldCheck, UserRound } from "@xweb/ui";
+import { ArrowLeft, Building2, CircleCheck, ModalHeader, ShieldCheck, UserRound } from "@xweb/ui";
 import { PersonPicker } from "./PersonPicker";
 import { DataSourcesPanel } from "../studio/builder/DataSourcesPanel";
 import type { DataManagementCalls } from "../studio/builder/core/dataManagement";
@@ -159,7 +159,7 @@ export function TenantsPage() {
 
 export function TenantDetailPage({ id }: { id: string }) {
   return (<>
-    <p><Link className="btn sm ghost" href={A("/tenants")}>← Danh sách công ty</Link></p>
+    <p><Link className="btn sm ghost xp-btnIcon" href={A("/tenants")}><ArrowLeft size={14} aria-hidden="true"/> Danh sách công ty</Link></p>
     <TenantBody id={id}/>
   </>);
 }

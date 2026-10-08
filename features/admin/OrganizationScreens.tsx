@@ -11,7 +11,7 @@ import { Card, StateView } from "../ui";
 import { useLoad } from "../useLoad";
 import type { NewOrgUnitType, OrganizationApi, OrgUnit, OrgUnitType } from "./organization";
 import {
-  UNIT_ICONS, buildTree, deleteBlock, flattenTree, moveTargets, orgProblem, safeIcon, unitPath, validateTypeForm, validateUnitForm, type OrgProblem, type OrganizationPlan, type TreeNode,
+  UNIT_ICONS, buildTree, compactPath, deleteBlock, flattenTree, moveTargets, orgProblem, safeIcon, unitPath, validateTypeForm, validateUnitForm, type OrgProblem, type OrganizationPlan, type TreeNode,
 } from "./organizationModel";
 import { UnitIcon } from "./unitIcons";
 
@@ -166,7 +166,7 @@ function Detail({ unit, units, type, canEdit, busy, problem, onAction }: { unit:
   return (
     <div className="stack" data-testid="org-detail">
       <div className="xp-detailHead"><span className="xp-headIcon" aria-hidden="true"><UnitIcon id={type?.icon} size={22}/></span>
-        <div><h3 data-testid="detail-name">{unit.name}</h3><small className="hint">{path}</small></div></div>
+        <div style={{ minWidth: 0 }}><h3 data-testid="detail-name">{unit.name}</h3><small className="hint" data-testid="detail-path" title={path} aria-label={path}>{compactPath(path)}</small></div></div>
       <dl className="kv">
         <div><dt>Loại</dt><dd data-testid="detail-type">{type ? type.name : "Chưa chọn loại"}</dd></div>
         {unit.code ? <div><dt>Mã</dt><dd>{unit.code}</dd></div> : null}

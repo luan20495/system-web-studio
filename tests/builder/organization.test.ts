@@ -138,3 +138,8 @@ test("directory fallback at scale: filtering / paging 10 000 members is a single
   console.log(`  [metric] employeesFromMembers, 10 000 members: search ${ms.toFixed(1)} ms, page switch ${per.toFixed(1)} ms each`);
   assert.ok(per < 500);
 });
+
+test("compactPath keeps a short breadcrumb whole and shortens a long one to first 2 … last 3", () => {
+  assert.equal(M.compactPath("A › B › C"), "A › B › C"); assert.equal(M.compactPath("A › B › C › D › E › F"), "A › B › C › D › E › F");
+  assert.equal(M.compactPath(Array.from({ length: 60 }, (_, i) => `L${i + 1}`).join(" › ")), "L1 › L2 › … › L58 › L59 › L60"); assert.equal(M.compactPath(""), "");
+});

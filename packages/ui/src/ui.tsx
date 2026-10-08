@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ApiError } from "@xweb/api-client";
-import { Ban, Inbox, SearchX, TriangleAlert } from "./icons";
+import { ArrowLeft, ArrowRight, Ban, Inbox, SearchX, TriangleAlert } from "./icons";
 
 export const fmtDate = (iso?: string | null) => (iso ? new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso)) : "—");
 export function ago(iso?: string | null): string {
@@ -51,9 +51,9 @@ export function Pager({ page, size, total, onPage }: { page: number; size: numbe
   return (
     <nav className="pager" aria-label="Phân trang">
       <span>{total === 0 ? "0" : `${page * size + 1}–${Math.min(total, (page + 1) * size)}`} / {num(total)}</span>
-      <button className="btn sm" disabled={page <= 0} onClick={() => onPage(page - 1)}>← Trước</button>
+      <button className="btn sm" disabled={page <= 0} onClick={() => onPage(page - 1)}><ArrowLeft size={14} aria-hidden="true"/> Trước</button>
       <span aria-current="page">Trang {page + 1}/{pages}</span>
-      <button className="btn sm" disabled={page + 1 >= pages} onClick={() => onPage(page + 1)}>Sau →</button>
+      <button className="btn sm" disabled={page + 1 >= pages} onClick={() => onPage(page + 1)}>Sau <ArrowRight size={14} aria-hidden="true"/></button>
     </nav>
   );
 }

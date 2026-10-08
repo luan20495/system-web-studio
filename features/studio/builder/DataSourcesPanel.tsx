@@ -208,7 +208,7 @@ export function DataSourcesPanel({ doc, calls, canView, viewReason, canManage, m
           ))}
         </ul>
         {unboundLive(doc, bindings).length ? <p className="hint" data-testid="live-unbound">Chưa liên kết LIVE cho: {unboundLive(doc, bindings).join(", ")}. Ứng dụng đã xuất bản sẽ trả lỗi “nguồn chưa được liên kết” khi gọi dữ liệu thật.</p> : null}
-      </> : <p className="hint" data-testid="slot-empty">Tài liệu ứng dụng chưa khai báo khe dữ liệu (dataSources[]) và chưa có thao tác nào để thêm khe từ Studio, nên chưa liên kết được. Nhờ C2 bổ sung (xem handoff).</p>}
+      </> : <p className="hint" data-testid="slot-empty">Tài liệu ứng dụng chưa khai báo khe dữ liệu (dataSources[]) và chưa có thao tác nào để thêm khe từ Studio, nên chưa liên kết được. Tính năng này sẽ mở khi máy chủ hỗ trợ khai báo khe dữ liệu.</p>}
 
       {removing ? (
         <Dialog title={`Xóa nguồn “${removing.name}”?`} onClose={() => setRemoving(null)} footer={<>

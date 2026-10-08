@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Settings, Sparkles } from "@xweb/ui";
+import { ArrowLeft, Settings, Sparkles } from "@xweb/ui";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api, ApiError, newIdempotencyKey } from "@/lib/http-api";
 import { renderSchemaDocument } from "@/lib/schema-preview";
@@ -246,7 +246,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
     unbind: (m, slot) => api.dataManagement.unbind(ws, projectId, m, slot),
   }), [ws, projectId]);
 
-  if (loadError) return <div className="wsError"><ErrorState error={loadError} retry={() => { setLoadError(null); reload().catch(setLoadError); }}/><p><a className="btn" href={S("/projects")}>← Danh sách ứng dụng</a></p></div>;
+  if (loadError) return <div className="wsError"><ErrorState error={loadError} retry={() => { setLoadError(null); reload().catch(setLoadError); }}/><p><a className="btn xp-btnIcon" href={S("/projects")}><ArrowLeft size={14} aria-hidden="true"/> Danh sách ứng dụng</a></p></div>;
   if (project?.appType === "STATIC_APP") return <CodeWorkspace project={project} view={view} onProject={setProject}/>;
   if (!project || !schema) return <div className="wsError"><StateView kind="loading" title="Đang mở ứng dụng…"/></div>;
   // company blocks, then my own drafts (an approved block of mine is already in the company list)
@@ -270,7 +270,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
         runtime={runtime} dataManagement={dataManagement} onRetrySave={failedEdit ? retrySave : undefined} blocks={blockOptions.map(({ b, who }): BlockOption => ({ id: b.id, name: b.name, who, baseLabel: label(b.baseComponent) }))}
         applyOps={applyOps} addBlock={(id) => { const o = blockOptions.find(({ b }) => b.id === id); if (o) void addBlock(o.b); }}
         renderPreview={renderPreview} labelOf={label} summaryOf={sectionSummary}
-        leading={<button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}>←</button>}
+        leading={<button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}><ArrowLeft size={16} aria-hidden="true"/></button>}
         modeTabs={modeTabs}
         trailing={<>
           <button className="button ghost" onClick={() => go("site")}>Website</button>
@@ -280,7 +280,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
         goAi={() => go("ai")} openSite={() => go("site")} openMembers={() => go("members")} openPublish={() => go("publish")} saveBlock={() => setSavingBlock(true)}/> : (
       <header className="topbar">
         <div className="brand">
-          <button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}>←</button>
+          <button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}><ArrowLeft size={16} aria-hidden="true"/></button>
           <div>
             <div className="projectName">{project.name}</div>
             <div className="projectMeta">{latest ? `Phiên bản ${latest}` : "Chưa có phiên bản"} · revision {revision} · {project.siteVisibility === "PUBLIC" ? "Công khai" : "Riêng tư"}{readOnly ? " · chỉ xem" : ""}</div>

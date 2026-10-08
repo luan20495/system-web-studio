@@ -342,14 +342,14 @@
   .shell>.sidebar{display:flex;position:fixed;z-index:70;inset:0 auto 0 0;width:min(86vw,300px);transform:translateX(-102%);transition:transform .18s ease;box-shadow:none}
   .shell[data-nav=open]>.sidebar{transform:none;box-shadow:0 0 40px rgba(0,0,0,.4)}
   .shell[data-nav=open]>.sideBackdrop{display:block;position:fixed;inset:0;z-index:65;background:rgba(15,23,42,.45)}
-  .topHeader{padding:0 12px;gap:8px}.topHeader .row{flex-wrap:nowrap;min-width:0}.topHeader .crumb{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .topHeader{padding:0 12px;gap:8px}.topHeader .crumb{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .page{padding:16px 14px 40px}
   .pageHead{flex-wrap:wrap}.pageHead h1{font-size:21px}
   .search input{width:100%}.topHeader .search{flex:1;min-width:0}
 }
 @media(prefers-reduced-motion:reduce){.shell>.sidebar{transition:none}}
 /* tables never spill out of their card: the card scrolls sideways instead; long ids wrap */
-.card{overflow-x:auto}.table td{overflow-wrap:anywhere}.table th{white-space:nowrap}
+.card{overflow-x:auto}.table td{overflow-wrap:break-word}.table td code,.table td .code,.table td .breakAll{word-break:break-all}.table th{white-space:nowrap}
 
 /* ---------- controls v2 (shared by Platform / Admin / Studio shells and the auth pages) ---------- */
 :root{--sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:20px;--sp-6:24px;--sp-8:32px;--f-focus:#4f46e5;--f-placeholder:#677086;--f-disabled-bg:#f3f4f6;--f-disabled-ink:#7a8394}
@@ -380,3 +380,14 @@
 .modalBody{--mpad:24px;padding:var(--mpad);max-height:calc(100dvh - 32px);overscroll-behavior:contain}
 .modalBody .xp-footer{position:sticky;bottom:calc(var(--mpad)*-1);margin:0 calc(var(--mpad)*-1) calc(var(--mpad)*-1);padding:12px var(--mpad);background:var(--f-panel,#fff);z-index:2;border-radius:0 0 12px 12px}
 @media(max-width:600px){.modalBody{--mpad:16px;width:100%}.adminModal{padding:8px;align-items:flex-end}.modalBody .xp-footer{flex-wrap:wrap}.modalBody .xp-footer .btn{flex:1 1 auto}}
+
+/* very narrow phones: the header may use two lines instead of pushing the page sideways */
+@media(max-width:520px){.shellMain{grid-template-rows:auto minmax(0,1fr)}.topHeader{flex-wrap:wrap;padding:8px 12px;min-height:56px}.topHeader .row{flex-wrap:wrap;min-width:0}.topHeader .crumb{display:none}.topHeader .btn.sm{padding:0 10px;white-space:nowrap}}
+
+/* the single mobile column must be allowed to shrink below its content (1fr alone is minmax(auto,1fr) and made the whole page wider than the phone) */
+@media(max-width:900px){.shell{grid-template-columns:minmax(0,1fr)}}
+/* chips on the light shells (the default chip colours are for the dark editor) */
+.shell .chip{color:var(--f-muted);border-color:var(--f-line);background:var(--f-bg)}
+
+/* an absolutely positioned child (e.g. a visually hidden "Thao tác" header label) must scroll / clip WITH its card, not escape it and widen the page */
+.card,.table th{position:relative}

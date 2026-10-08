@@ -12,7 +12,7 @@ import { AiAdmin, UserAiCard } from "./AiSetup";
 import type { ActivationLink } from "@/lib/http-types";
 import { useSession } from "../session";
 import { PORTAL_LABEL, portalHref, rememberPortal, type PortalId } from "@xweb/permissions";
-import { MenuButton, useNavDrawer, AppWindow, Boxes, Building2, Circle, CircleCheck, CircleDollarSign, Database, Diamond, Fingerprint, FolderTree, HardDrive, Hammer, HeartPulse, KeyRound, Layers, LayoutDashboard, LayoutTemplate, Network, Package, PortalSwitcher, Plug, ScrollText, Scale, Settings, Share2, ShieldCheck, Sparkles, TriangleAlert, UserRound, Users } from "@xweb/ui";
+import { MenuButton, useNavDrawer, ArrowLeft, AppWindow, Boxes, Building2, Circle, CircleCheck, CircleDollarSign, Database, Diamond, Fingerprint, FolderTree, HardDrive, Hammer, HeartPulse, KeyRound, Layers, LayoutDashboard, LayoutTemplate, Network, Package, PortalSwitcher, Plug, ScrollText, Scale, Settings, Share2, ShieldCheck, Sparkles, TriangleAlert, UserRound, Users } from "@xweb/ui";
 import { PageHead } from "./PageHead";
 import { CompanyPage, DataSourcesAdminPage, MyWorkspacesPage, ScopedHome, TenantDetailPage, TenantsPage, WorkspaceMembers } from "./TenantScreens";
 import { adminScope, sectionAccess, type AdminScope } from "./adminModel";
@@ -28,9 +28,9 @@ const NAV: [string, string, ReactNode][] = [
 
 /** Sections whose backend does not exist yet: the screen says so plainly instead of showing invented data. */
 const COMING: Record<string, { title: string; icon: ReactNode; why: string; needs: string }> = {
-  groups: { title: "Nhóm", icon: <Users size={18}/>, why: "Nhóm người dùng để cấp quyền và chia sẻ ứng dụng hàng loạt.", needs: "Máy chủ chưa có API nhóm (chỉ có nhóm SCIM đồng bộ từ IdP, chưa quản lý được). Chờ C1 (T3)." },
-  sharing: { title: "Chia sẻ", icon: <Share2 size={18}/>, why: "Chia sẻ ứng dụng cho người dùng, nhóm, phòng ban, cả công ty hoặc công ty khác.", needs: "Máy chủ chưa có API chia sẻ giữa người dùng, nhóm và công ty (chia sẻ trong từng ứng dụng đã có ở Studio → Chia sẻ). Chờ C1/C2 (T15)." },
-  byok: { title: "AI riêng của công ty", icon: <KeyRound size={18}/>, why: "Dùng AI mặc định của Xweb hoặc tự đưa khóa AI của công ty (BYOK).", needs: "API đã có nhưng đang tắt trên máy chủ (cờ app.tenant-ai.enabled, bảng tenant_ai_providers chờ C0 cấp migration). Khóa chỉ ghi, không đọc lại." },
+  groups: { title: "Nhóm", icon: <Users size={18}/>, why: "Nhóm người dùng để cấp quyền và chia sẻ ứng dụng hàng loạt.", needs: "Máy chủ chưa có API nhóm (chỉ có nhóm đồng bộ từ hệ thống đăng nhập một lần, chưa quản lý được). Mục này sẽ mở khi máy chủ hỗ trợ." },
+  sharing: { title: "Chia sẻ", icon: <Share2 size={18}/>, why: "Chia sẻ ứng dụng cho người dùng, nhóm, phòng ban, cả công ty hoặc công ty khác.", needs: "Máy chủ chưa có API chia sẻ giữa người dùng, nhóm và công ty (chia sẻ trong từng ứng dụng đã có ở Studio, mục Chia sẻ). Mục này sẽ mở khi máy chủ hỗ trợ." },
+  byok: { title: "AI riêng của công ty", icon: <KeyRound size={18}/>, why: "Dùng AI mặc định của Xweb hoặc tự đưa khóa AI của công ty (BYOK).", needs: "Tính năng đã có nhưng đang tắt trên máy chủ. Khi bật, khóa chỉ ghi và không bao giờ hiển thị lại." },
 };
 const NAV_COMING: Record<AdminPortal, string[]> = { all: [], platform: [], admin: ["groups", "sharing", "byok"] };
 /** screens that run on the tenant / workspace APIs (TenantScreens.tsx) */
@@ -430,7 +430,7 @@ function AppDetail({ id }: { id: string }) {
     {tab === "prompts" ? <Card>{d.prompts.length ? <table className="table"><thead><tr><th>Thời gian</th><th>Người dùng</th><th>Prompt</th><th>Model</th><th>Kết quả</th></tr></thead><tbody>{d.prompts.map((p) => <tr key={p.id}><td>{ago(p.createdAt)}</td><td>{p.user ?? "—"}</td><td>{p.text}</td><td className="code">{p.model ?? p.provider ?? "—"}</td><td>{p.outcome ? <Pill value={p.outcome}/> : "—"}</td></tr>)}</tbody></table> : <StateView kind="empty" title="Chưa có prompt"/>}</Card> : null}
     {tab === "deployments" ? <Card>{d.deployments.length ? <table className="table"><thead><tr><th>Thời gian</th><th>Phiên bản</th><th>Truy cập</th><th>Trạng thái</th><th>Môi trường</th><th>Lỗi</th></tr></thead><tbody>{d.deployments.map((x) => <tr key={x.id}><td>{fmtDate(x.createdAt)}</td><td>v{x.versionNumber ?? "—"}</td><td>{x.visibility}</td><td><Pill value={x.status}/></td><td>{x.provider === "mock" ? "Demo deployment (mô phỏng)" : x.provider === "static" ? "Trang tĩnh (thật)" : x.provider}</td><td>{x.error ?? "—"}</td></tr>)}</tbody></table> : <StateView kind="empty" title="Chưa xuất bản lần nào"/>}</Card> : null}
     {tab === "audit" ? <Card><AuditTable rows={d.audit}/></Card> : null}
-    <p><button className="btn ghost" onClick={() => router.push(A("/applications"))}>← Danh sách ứng dụng</button></p>
+    <p><button className="btn ghost xp-btnIcon" onClick={() => router.push(A("/applications"))}><ArrowLeft size={14} aria-hidden="true"/> Danh sách ứng dụng</button></p>
   </>);
 }
 
