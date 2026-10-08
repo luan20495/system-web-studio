@@ -5,7 +5,7 @@
  * section operations locally so the canvas re-renders. It validates nothing the server validates and it is never shipped.
  */
 import { createRoot } from "react-dom/client";
-import { useMemo, useState } from "react";
+import { Profiler, useMemo, useState } from "react";
 import type { ApiProject, AppDefinitionV2, DefinitionOperation, RegistryComponent, SchemaOperation, Section } from "@xweb/types";
 import { BuilderWorkspace } from "../../features/studio/builder/BuilderWorkspace";
 import { renderSchemaDocument } from "../../lib/schema-preview";
@@ -41,6 +41,12 @@ const RT_SEED = RT ? { actions: [
   { id: "a-nav", name: "Đi tới trang", type: "NAVIGATE", pageRef: "home", trigger: { sectionId: "s-hero", event: "onClick" } },
   { id: "a-create", name: "Tạo bản ghi", type: "CREATE_RECORD", mutationRef: "m1", trigger: { sectionId: "s-hero", event: "onClick" } },
 ], workflows: [{ id: "wf1", name: "Quy trình", trigger: "MANUAL", steps: [{ id: "end", kind: "END" }] }] } : {};
+// ?sections=N&pages=M : GENERATED large fixture for the performance script (scripts/perf-harness.mjs): N extra sections on the home page, M extra pages with 3 sections each. Defaults 0 = unchanged.
+const BIG_N = Number(new URLSearchParams(location.search).get("sections") ?? 0), BIG_P = Number(new URLSearchParams(location.search).get("pages") ?? 0);
+const BIG_TYPES = [["Hero", "title"], ["Testimonials", "heading"], ["ContactForm", "title"]] as const;
+const bigSection = (id: string, i: number) => ({ id, type: BIG_TYPES[i % 3][0], props: { [BIG_TYPES[i % 3][1]]: `Khối số ${i} — nội dung mẫu cho trang lớn` } });
+const BIG_SECTIONS = Array.from({ length: BIG_N }, (_, i) => bigSection(`s-g${i}`, i));
+const BIG_PAGES = Array.from({ length: BIG_P }, (_, p) => ({ id: `pg${p}`, slug: `/trang-${p}`, title: `Trang số ${p}`, sections: Array.from({ length: 3 }, (_, i) => bigSection(`s-p${p}-${i}`, i)) }));
 const V2_SEED = V2 ? { dataSources: [{ id: "ds1", name: "Kho đơn hàng", type: "CONNECTOR" }], queries: [{ id: "q-orders", name: "Danh sách đơn", dataSourceRef: "ds1", operationKey: "orders.list", params: [] }] } : {};
 
 const comp = (id: string, name: string, category: string, required: string[], properties: RegistryComponent["versions"][number]["propsSchema"]["properties"]): RegistryComponent =>
@@ -87,8 +93,8 @@ function applyLocal(doc: AppDefinitionV2, ops: Ops): AppDefinitionV2 {
 function Host() {
   const [doc, setDoc] = useState<AppDefinitionV2>({ page: "Trang chủ", sections: [
     { id: "s-nav", type: "Navbar", props: { brand: "Harness" } }, { id: "s-hero", type: "Hero", props: { title: "Xin chào", subtitle: "Mô tả" } },
-    { id: "s-test", type: "Testimonials", props: { heading: "Khách hàng" } }, { id: "s-foot", type: "Footer", props: { text: "© Harness" } },
-  ], pages: [], ...V2_SEED, ...RT_SEED, ...(BROKEN ? { site: { navigation: [{ id: "n1", label: "Trang đã mất", pageId: "ghost" }] } } : {}) } as unknown as AppDefinitionV2);
+    { id: "s-test", type: "Testimonials", props: { heading: "Khách hàng" } }, { id: "s-foot", type: "Footer", props: { text: "© Harness" } }, ...BIG_SECTIONS,
+  ], pages: BIG_PAGES, ...V2_SEED, ...RT_SEED, ...(BROKEN ? { site: { navigation: [{ id: "n1", label: "Trang đã mất", pageId: "ghost" }] } } : {}) } as unknown as AppDefinitionV2);
   const [revision, setRevision] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pageId, setPageId] = useState("home");
@@ -103,4 +109,7 @@ function Host() {
     labelOf={(t) => sectionLabel(t, registry.find((c) => c.id === t)?.name)} summaryOf={sectionSummary}
     goAi={() => undefined} openSite={() => undefined} openMembers={() => undefined} openPublish={() => { window.__published += 1; }} saveBlock={() => undefined}/></div>;
 }
-createRoot(document.getElementById("root")!).render(<Host/>);
+// React Profiler (real durations only in the profiling bundle, HARNESS_PROFILING=1; a plain bundle never calls it). Read by scripts/perf-harness.mjs.
+declare global { interface Window { __prof: { phase: string; actual: number; base: number; at: number }[] } }
+window.__prof = [];
+createRoot(document.getElementById("root")!).render(<Profiler id="host" onRender={(_id, phase, actual, base) => { window.__prof.push({ phase, actual, base, at: performance.now() }); }}><Host/></Profiler>);
