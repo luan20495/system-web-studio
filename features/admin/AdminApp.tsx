@@ -6,6 +6,7 @@ import { Fragment, useEffect, useMemo, useState, type FormEvent, type ReactNode 
 import { api } from "@/lib/http-api";
 import type { Connector, CostLine, Department, SecurityFinding, AccessRule, AiBudget, AdminAlert, EffectiveModel, AdminApp as App, AiProbe, PackageView, RepoRow, SettingView, BlockDto, TemplateDto, AiUsageReport, AuditRow, HealthItem, UsageBucket, UsageTotals } from "@/lib/http-types";
 import { LinkBox } from "./UserDialogs";
+import { EmployeesPage, OrganizationPage } from "./OrganizationLive";
 import { PeoplePage, PlatformCreateAccount } from "./ProvisioningLive";
 import { AiAdmin, UserAiCard } from "./AiSetup";
 import type { ActivationLink } from "@/lib/http-types";
@@ -34,7 +35,7 @@ const COMING: Record<string, { title: string; icon: string; why: string; needs: 
 const NAV_COMING: Record<AdminPortal, string[]> = { all: [], platform: [], admin: ["groups", "sharing", "byok"] };
 /** screens that run on the tenant / workspace APIs (TenantScreens.tsx) */
 const SCOPED_NAV: Record<string, [string, string, string]> = {
-  tenants: ["tenants", "Công ty (tenant)", "▥"], people: ["people", "Người dùng", "◎"], company: ["company", "Công ty của tôi", "▥"], "my-workspaces": ["my-workspaces", "Workspace của tôi", "◎"], "data-sources": ["data-sources", "Nguồn dữ liệu", "⛁"],
+  tenants: ["tenants", "Công ty (tenant)", "▥"], people: ["people", "Người dùng", "◎"], company: ["company", "Công ty của tôi", "▥"], organization: ["organization", "Cơ cấu tổ chức", "◈"], employees: ["employees", "Nhân viên", "◎"], "my-workspaces": ["my-workspaces", "Workspace của tôi", "◎"], "data-sources": ["data-sources", "Nguồn dữ liệu", "⛁"],
 };
 
 /** What each console lists for THIS person. The server still decides every call; a section the person cannot use is simply not offered. */
@@ -44,7 +45,7 @@ function navFor(p: AdminPortal, scope: AdminScope): [string, string, string][] {
   if (p === "all") return NAV;
   if (scope.platform) return [...NAV.filter(([k]) => owns(k, p)), ...(scope.dataWorkspaces.length ? [SCOPED_NAV["data-sources"]] : []), ...soon];
   // not a SYSTEM_ADMIN: only what the server lists for them
-  return [NAV[0], ...(scope.tenants.length || scope.workspaces.length ? [SCOPED_NAV.people] : []), ...(scope.tenants.length ? [SCOPED_NAV.company] : []), ...(scope.workspaces.length ? [SCOPED_NAV["my-workspaces"]] : []), ...(scope.dataWorkspaces.length ? [SCOPED_NAV["data-sources"]] : []), ...soon];
+  return [NAV[0], ...(scope.tenants.length ? [SCOPED_NAV.company, SCOPED_NAV.organization, SCOPED_NAV.employees] : []), ...(scope.tenants.length || scope.workspaces.length ? [SCOPED_NAV.people] : []), ...(scope.workspaces.length ? [SCOPED_NAV["my-workspaces"]] : []), ...(scope.dataWorkspaces.length ? [SCOPED_NAV["data-sources"]] : []), ...soon];
 }
 
 const CONSOLE_NAME: Record<AdminPortal, string> = { all: "Admin Console", platform: "Xweb Platform", admin: "Quản trị công ty" };
@@ -73,6 +74,8 @@ function route(seg: string[], scope: AdminScope): ReactNode {
   if (adminPortal() !== "platform" && adminPortal() !== "all") {
     if (key === "people" && !scope.platform) return scope.tenants.length || scope.workspaces.length ? <PeoplePage/> : <NeedsScope what="công ty hay workspace"/>;
     if (key === "company") return sectionAccess(key, scope) === "ok" ? <CompanyPage/> : <NeedsScope what="công ty"/>;
+    if (key === "organization") return sectionAccess(key, scope) === "ok" ? <OrganizationPage/> : <NeedsScope what="công ty"/>;
+    if (key === "employees") return sectionAccess(key, scope) === "ok" ? <EmployeesPage/> : <NeedsScope what="công ty"/>;
     if (key === "my-workspaces") return sectionAccess(key, scope) === "ok" ? <MyWorkspacesPage/> : <NeedsScope what="workspace"/>;
     if (key === "data-sources") return sectionAccess(key, scope) === "ok" ? <DataSourcesAdminPage/> : <NeedsScope what="nguồn dữ liệu"/>;
     if (!scope.platform && key === "") return <ScopedHome/>;

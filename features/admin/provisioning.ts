@@ -42,7 +42,7 @@ export type NewAccount = { username: string; displayName: string; email?: string
  * Nothing is left "pending" but the person's own activation.
  */
 export type ProvisionResult = { tenantId: string; user: { id: string; username: string; displayName: string }; tenantRole: TenantRoleId; workspace: { id: string; role: WorkspaceRoleId } | null; activation: ActivationLink; pending: PendingStep[] };
-export type PendingStep = { id: "activate"; label: string };
+export type PendingStep = { id: "activate" | "organization"; label: string };
 
 export interface ProvisioningApi {
   state(id: CapabilityId): CapabilityState;

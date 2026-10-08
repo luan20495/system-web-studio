@@ -18,8 +18,11 @@ import { tenantRoleLabel, workspaceRoleLabel } from "./adminModel";
 export type Option = { id: string; name: string };
 const asProblem = (e: unknown): ProvisioningProblem => provisioningProblem(e as { code?: string; status?: number; message?: string; reason?: string });
 
-export function CreateAccountDialog({ api, plan, tenants, workspacesOf, onClose, onCreated }: {
+export function CreateAccountDialog({ api, plan, tenants, workspacesOf, onClose, onCreated, title = "Tạo tài khoản", submitLabel = "Tạo tài khoản", extraSection, afterCreate }: {
   api: ProvisioningApi; plan: ProvisioningPlan;
+  /** dialog wording (the employee directory says "Thêm nhân viên") */ title?: string; submitLabel?: string;
+  /** extra fieldset(s) rendered before the activation note (e.g. the organization unit / position of an employee); the host owns their state */ extraSection?: React.ReactNode;
+  /** runs AFTER the account exists; returns a warning text when a follow-up step failed (the account is NOT rolled back: it is shown as a pending step) */ afterCreate?: (r: ProvisionResult) => Promise<string | null>;
   /** the tenants the caller may pick (all for a SYSTEM_ADMIN; only their own for a tenant admin of several). Unused when the plan has a fixed tenant. */
   tenants: Option[];
   /** workspaces already known for a tenant (the host decides where they come from); the ones created in this dialog are added here */
@@ -51,16 +54,18 @@ export function CreateAccountDialog({ api, plan, tenants, workspacesOf, onClose,
         const w = await api.createTenantWorkspace(tenantId, newWs); setMade((x) => [...x, { id: w.id, name: w.name, tenantId }]); workspaceId = w.id; set({ workspaceId: w.id });
       }
       const r = await api.createTenantUser(tenantId, { username: form.username, displayName: form.displayName, email: form.email, tenantRole: type.tenantRole, ...(workspaceId ? { workspace: { id: workspaceId, role: form.role } } : {}) });
-      setResult(r); onCreated?.(r);
+      const warn = afterCreate ? await afterCreate(r).catch(() => "Bước gán cơ cấu tổ chức chưa thực hiện được.") : null;
+      const done = warn ? { ...r, pending: [...r.pending, { id: "organization" as const, label: warn }] } : r;
+      setResult(done); onCreated?.(done);
     } catch (err) { setProblem(asProblem(err)); } finally { setBusy(false); }
   }
 
   if (result) return <CreatedAccount result={result} tenantName={tenantName} workspaceName={result.workspace ? wsOptions.find((w) => w.id === result.workspace!.id)?.name ?? result.workspace.id : null} onClose={onClose} onAnother={() => { setResult(null); setForm(emptyAccountForm(plan.accountTypes[0]?.id ?? "USER")); setTouched(false); setNewWs(""); }}/>;
   const dupUser = problem?.field === "username" ? problem.text : undefined, dupMail = problem?.field === "email" ? problem.text : undefined;
   return (
-    <Modal label="Tạo tài khoản" onClose={onClose}>
+    <Modal label={title} onClose={onClose}>
       <form className="modalBody" noValidate onSubmit={(e) => void submit(e)} data-testid="create-account">
-        <h2>Tạo tài khoản</h2>
+        <h2>{title}</h2>
         {plan.create.state === "not-ready" ? <p className="notice" role="note" data-testid="prov-not-ready">Backend provisioning chưa sẵn sàng: {plan.create.reason}</p> : null}
         {plan.create.state === "forbidden" ? <p className="notice" role="note" data-testid="prov-forbidden">{plan.create.reason}</p> : null}
 
@@ -97,12 +102,14 @@ export function CreateAccountDialog({ api, plan, tenants, workspacesOf, onClose,
             {!form.workspaceId ? <small className="hint">Chọn workspace để chọn vai trò (workspace và vai trò đi cùng nhau).</small> : null}</label>
         </fieldset>
 
+        {extraSection}
+
         <fieldset className="stack" aria-label="Kích hoạt"><legend className="bx-h4">4 · Kích hoạt</legend>
           <p className="hint">Sau khi tạo, bạn nhận một liên kết kích hoạt dùng một lần (hết hạn sau 24 giờ), chỉ hiển thị một lần. Người dùng tự đặt mật khẩu; bạn không bao giờ biết mật khẩu.</p>
         </fieldset>
 
         {problem ? <p className={problem.kind === "not-ready" ? "notice" : "formError"} role="alert" data-testid="prov-problem" data-kind={problem.kind}>{problem.text}</p> : null}
-        <div className="row"><button className="btn primary" data-testid="acc-submit" disabled={busy || notReady} title={notReady ? "Backend provisioning chưa sẵn sàng" : undefined}>{busy ? "Đang tạo…" : "Tạo tài khoản"}</button><button type="button" className="btn" onClick={onClose}>Hủy</button></div>
+        <div className="row"><button className="btn primary" data-testid="acc-submit" disabled={busy || notReady} title={notReady ? "Backend provisioning chưa sẵn sàng" : undefined}>{busy ? "Đang tạo…" : submitLabel}</button><button type="button" className="btn" onClick={onClose}>Hủy</button></div>
       </form>
     </Modal>
   );
@@ -117,10 +124,10 @@ function CreatedAccount({ result, tenantName, workspaceName, onClose, onAnother 
       <div className="modalBody" data-testid="account-created">
         <h2>Đã tạo tài khoản</h2>
         <dl className="kv">
-          <dt>Tài khoản</dt><dd data-testid="res-account"><b>{result.user.displayName}</b> ({result.user.username})</dd>
-          <dt>Trạng thái</dt><dd data-testid="res-status">Chờ kích hoạt</dd>
-          <dt>Công ty</dt><dd data-testid="res-tenant">{tenantName} · {tenantRoleLabel(result.tenantRole)}</dd>
-          <dt>Workspace</dt><dd data-testid="res-workspace">{workspaceName ? `${workspaceName} · ${workspaceRoleLabel(result.workspace!.role)}` : "Chưa gán workspace"}</dd>
+          <div><dt>Tài khoản</dt><dd data-testid="res-account"><b>{result.user.displayName}</b> ({result.user.username})</dd></div>
+          <div><dt>Trạng thái</dt><dd data-testid="res-status">Chờ kích hoạt</dd></div>
+          <div><dt>Công ty</dt><dd data-testid="res-tenant">{tenantName} · {tenantRoleLabel(result.tenantRole)}</dd></div>
+          <div><dt>Workspace</dt><dd data-testid="res-workspace">{workspaceName ? `${workspaceName} · ${workspaceRoleLabel(result.workspace!.role)}` : "Chưa gán workspace"}</dd></div>
         </dl>
         <h3 className="bx-h4">Bước tiếp theo</h3>
         <ol data-testid="res-pending">{result.pending.map((p) => <li key={p.id}>{p.label}</li>)}</ol>
