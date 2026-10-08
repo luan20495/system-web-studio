@@ -165,6 +165,23 @@ await block("scenario 11", async () => { const p = await open({ portal: "platfor
   check("DAT04 AI usage with an empty daily series renders (no 'Invalid time value')", (await p.locator("h1").count()) === 1 && /Mức sử dụng model/.test(await text(p)));
   await p.__ctx.close(); });
 
+// ===================================================================================================================== M-054 the Platform overview speaks to the platform operator
+await block("scenario 12", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform" }); await settle(p, 500);
+  const main = await p.locator("main").innerText();
+  check("OVW01 the Platform overview does NOT show the company checklist (no 'Tạo website đầu tiên', no 'Mở Builder Studio', no 'Thêm người dùng')", !/Tạo website đầu tiên|Mở Builder Studio|Thêm người dùng|Thiết lập ban đầu/.test(main), main.slice(0, 220));
+  check("OVW02 it shows the platform's own checklist: companies, AI provider, model, limits", /Thiết lập nền tảng/.test(main) && /Tạo công ty đầu tiên/.test(main) && /Thêm nhà cung cấp AI/.test(main) && /Thiết lập hạn mức AI/.test(main));
+  await p.__ctx.close(); });
+await block("scenario 13", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform", empty: "1" }); await settle(p, 500);
+  const link = p.locator("main .checklist a", { hasText: "Tạo công ty" });
+  check("OVW03 no company yet: the first step links to the Platform's company list", (await link.count()) === 1 && (await link.getAttribute("href")) === "/platform/tenants");
+  await p.__ctx.close(); });
+await block("scenario 14", async () => { const p = await open({ portal: "all", me: "sys", start: "/admin" }); await settle(p, 500);
+  check("OVW04 the legacy combined console keeps the company checklist (unchanged)", /Thiết lập ban đầu/.test(await p.locator("main").innerText()) && /Tạo website đầu tiên/.test(await p.locator("main").innerText()));
+  await p.__ctx.close(); });
+await block("scenario 15", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin" }); await settle(p, 500);
+  check("OVW05 the Admin console's overview for a SYSTEM_ADMIN shows no setup checklist (unchanged)", !/Thiết lập (ban đầu|nền tảng)/.test(await p.locator("main").innerText()));
+  await p.__ctx.close(); });
+
 // ===================================================================================================================== route / navigation snapshot (M-066: the split must not change behaviour)
 // For every persona the sidebar labels and, for every section key (deep links, aliases, foreign and unknown keys included), the final path, the h1, the h2s and the kind of state view are recorded in admin-routes.snapshot.json
 // (generated from the pre-split code, `UPDATE_SNAPSHOT=1` rewrites it). Dates / numbers are not compared: only structure.
