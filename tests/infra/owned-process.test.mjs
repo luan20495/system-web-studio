@@ -10,7 +10,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readFileSync, existsSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import net from "node:net";
-import { startOwned, stopOwned, stopOwnedPort, identify, statusOf, listenerPids, exists, startTimeOf, readMeta, writeMeta, withOwned } from "../../scripts/lib/owned-process.mjs";
+import { startOwned, stopOwned, stopOwnedPort, identify, statusOf, listenerPids, exists, startTimeOf, commandOf, cwdOf, isZombie, readMeta, writeMeta, withOwned } from "../../scripts/lib/owned-process.mjs";
 
 const REPO = new URL("../..", import.meta.url).pathname.replace(/\/$/, "");
 const CLI = join(REPO, "scripts/owned-process.mjs");
@@ -153,4 +153,30 @@ test("scripts/stop-local.sh (rewritten, D-C0-48): stops what runs from ITS check
   assert.ok(exists(foreignRender) && (await probe(render)), "the listener of ANOTHER checkout on the render port survived"); assert.match(r.stderr, new RegExp(`port ${render}: used by a process that is NOT from this checkout`));
   assert.ok(exists(bystander), "the pid file pointed at a foreign process (as after pid reuse): it was not signalled"); assert.match(r.stderr, /not a running process of this checkout/);
   assert.ok(!existsSync(join(root, ".run/render.pid")) && !existsSync(join(root, ".run/runner.pid")), "the stale pid files were removed");
+});
+
+test("identity: start time, command and cwd are each checked ON THEIR OWN (the other two correct, one wrong => REUSED, never signalled); the all-correct control is OWNED", async () => {
+  const a = await freePort(); const A = await foreignNext(a, "ID"); const st = startTimeOf(A), cmd = commandOf(A), cwd = cwdOf(A); assert.ok(st && cmd && cwd, "the live process is observable");
+  const base = { schema: 1, owner: "iso", name: "id", pid: A, pgid: null, members: [] };
+  assert.equal(identify({ ...base, startTime: st, command: cmd, cwd }).state, "OWNED", "control: all three match");
+  const wrong = {
+    "start time only": { startTime: "Mon Jan  1 00:00:00 2001", command: cmd, cwd },
+    "command only": { startTime: st, command: cmd + " --some-other-argument", cwd },
+    "cwd only": { startTime: st, command: cmd, cwd: join(work, "a-directory-it-is-not-in") },
+  };
+  for (const [what, m] of Object.entries(wrong)) {
+    const meta = { ...base, ...m }; assert.equal(identify(meta).state, "REUSED", `${what} differs => REUSED`);
+    const r = await stopOwned(meta, { removeState: false }); assert.equal(r.state, "STALE_FOREIGN", what); assert.ok(exists(A) && (await probe(a)), `${what}: the foreign process was not signalled`);
+  }
+});
+
+test("zombie handling, explicitly: a child that exited but was never reaped answers kill -0 and shows in ps, yet counts as GONE; its (foreign) parent is untouched", async () => {
+  const parent = spawn("python3", ["-c", "import subprocess,time; subprocess.Popen(['sleep','0.4']); time.sleep(60)"], { detached: true, stdio: "ignore" }); parent.unref(); foreigners.push(parent.pid);
+  let child = null; for (let i = 0; i < 50 && !child; i++) { await sleep(100); child = Number(spawnSync("pgrep", ["-P", String(parent.pid)], { encoding: "utf8" }).stdout.trim().split("\n")[0]) || null; }
+  assert.ok(child, "the parent started a child"); const rec = { startTime: startTimeOf(child), command: commandOf(child) }; assert.ok(rec.startTime, "observed while alive");
+  for (let i = 0; i < 40 && !isZombie(child); i++) await sleep(100);
+  assert.ok(isZombie(child), "the child exited and was not reaped: a zombie"); assert.doesNotThrow(() => process.kill(child, 0), "kill -0 still succeeds for a zombie (why it cannot be trusted)");
+  assert.equal(exists(child), false, "exists() counts a zombie as dead");
+  const meta = { schema: 1, owner: "iso", name: "zombie", pid: child, pgid: null, members: [], ...rec, cwd: null };
+  assert.equal(identify(meta).state, "GONE"); assert.equal((await stopOwned(meta, { removeState: false })).state, "ALREADY_GONE"); assert.ok(exists(parent.pid), "the foreign parent was not touched");
 });
