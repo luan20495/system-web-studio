@@ -43,6 +43,64 @@ await block("scenario 1", async () => { const p = await open({ portal: "platform
   check("ADM00b a request with no fixture would be recorded as unknown (none made here)", !(await calls(p)).some((c) => c.unknown));
   await p.__ctx.close(); });
 
+// ===================================================================================================================== M-007 the one-time activation link
+await block("scenario 2", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/users" });
+  await createAccountToLink(p);
+  check("LNK01 the link dialog opens with the link; initial focus is on the COPY control, not on 'Xong'", (await dlg(p).count()) === 1 && /ACT-TOKEN/.test(await linkValue(p)) && (await focusName(p)) === "Sao chép liên kết", `focus = "${await focusName(p)}"`);
+  await p.keyboard.press("Enter"); await settle(p, 250);
+  check("LNK02 Enter on the initial focus copies the link (clipboard holds it) and says so", (await p.evaluate(() => navigator.clipboard.readText())).includes("/auth/activate#ACT-TOKEN") && /Đã sao chép/.test(await dlg(p).innerText()));
+  await p.getByRole("button", { name: "Xong" }).click(); await settle(p, 250);
+  check("LNK03 once copied, 'Xong' closes at once and the result dialog follows", /Đã tạo tài khoản/.test(await text(p)) && (await dlg(p).count()) === 1);
+  await p.getByRole("button", { name: "Xem lại liên kết" }).click(); await settle(p, 250);
+  check("LNK04 the result dialog can show the link again while this dialog lives (the link is only in its state, never stored)", /ACT-TOKEN/.test(await linkValue(p)));
+  await p.__ctx.close(); });
+
+await block("scenario 3", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/users" });
+  await createAccountToLink(p);
+  await p.keyboard.press("Escape"); await settle(p, 250);
+  check("LNK05 Esc before the link was copied does NOT discard it: the dialog stays, the link is still there, a confirmation explains", (await dlg(p).count()) === 1 && /ACT-TOKEN/.test(await linkValue(p)) && /chưa sao chép/i.test(await p.locator("[role=alert]").first().innerText()));
+  check("LNK05b the confirmation puts focus on the SAFE choice (back to the link), not on 'discard'", /Quay lại/.test(await focusName(p)), await focusName(p));
+  await p.keyboard.press("Enter"); await settle(p, 200);
+  check("LNK05c Enter on the safe choice returns to the link with nothing lost", (await dlg(p).count()) === 1 && /ACT-TOKEN/.test(await linkValue(p)) && (await p.locator("[role=alert]").count()) === 0);
+  await p.getByRole("button", { name: "Xong" }).click(); await settle(p, 200);
+  check("LNK06 'Xong' before copying asks the same question instead of closing", (await dlg(p).count()) === 1 && /chưa sao chép/i.test(await dlg(p).innerText()));
+  await p.keyboard.press("Escape"); await settle(p, 200);
+  check("LNK06b Esc inside the question cancels the question (still on the link), it does not close", (await dlg(p).count()) === 1 && /ACT-TOKEN/.test(await linkValue(p)) && (await p.locator("[role=alert]").count()) === 0);
+  await p.getByRole("button", { name: "Xong" }).click(); await p.getByRole("button", { name: /Tôi đã lưu liên kết/ }).click(); await settle(p, 250);
+  check("LNK07 'Tôi đã lưu liên kết, đóng' is the explicit confirmation: the link dialog closes and the result dialog follows", /Đã tạo tài khoản/.test(await text(p)));
+  await p.__ctx.close(); });
+
+await block("scenario 4", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/users" }, { clipboard: "deny" });
+  await createAccountToLink(p);
+  await p.getByRole("button", { name: "Sao chép liên kết" }).click(); await settle(p, 250);
+  const alert = await p.locator("[role=alert]").first().innerText().catch(() => "");
+  check("LNK08 a refused clipboard is VISIBLE (role=alert) and tells the person what to do; the button does not claim success", /Không sao chép được/.test(alert) && !/Đã sao chép/.test(await dlg(p).innerText()), alert);
+  await p.getByRole("button", { name: "Xong" }).click(); await settle(p, 200);
+  check("LNK08b after a failed copy 'Xong' still asks before discarding", (await dlg(p).count()) === 1 && /chưa sao chép/i.test(await dlg(p).innerText()));
+  await p.__ctx.close(); });
+
+await block("scenario 5", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/users" });
+  await createAccountToLink(p);
+  await p.getByLabel("Liên kết", { exact: true }).evaluate((i) => { i.focus(); i.select(); i.dispatchEvent(new ClipboardEvent("copy", { bubbles: true })); }); await settle(p, 150);
+  await p.getByRole("button", { name: "Xong" }).click(); await settle(p, 250);
+  check("LNK09 copying by hand from the field (Ctrl/Cmd+C) counts as copied", /Đã tạo tài khoản/.test(await text(p)));
+  await p.__ctx.close(); });
+
+await block("scenario 6", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/users/u2" });
+  await p.getByRole("button", { name: "Đặt lại mật khẩu" }).click(); await settle(p, 400);
+  check("LNK10 password-reset link (user detail): same rules, focus on Copy", (await focusName(p)) === "Sao chép liên kết", await focusName(p));
+  await p.keyboard.press("Escape"); await settle(p, 200);
+  check("LNK10b Esc does not discard the reset link either", (await dlg(p).count()) === 1 && /RESET|SECRET-TOKEN/.test(await linkValue(p)));
+  await p.__ctx.close(); });
+
+// Admin portal (tenant admin): the person who cannot re-issue the link in this UI
+await block("scenario 7", async () => { const p = await open({ portal: "admin", me: "tadmin", start: "/admin/people" });
+  await p.getByTestId("people-create").click(); await settle(p, 300);
+  await p.getByTestId("acc-username").fill("moi.nv"); await p.getByTestId("acc-display").fill("Nhân Viên Mới"); await p.getByTestId("acc-submit").click(); await settle(p, 500);
+  await p.keyboard.press("Enter"); await settle(p, 250);
+  check("LNK11 tenant admin: creating an account, then Enter on the initial focus copies (never discards) the link", /Đã sao chép/.test(await dlg(p).innerText()) && /ACT-TOKEN/.test(await linkValue(p)));
+  await p.__ctx.close(); });
+
 check("no console error / warning / uncaught exception in any page", errors.length === 0, errors.slice(0, 3).join(" | "));
 await browser.close();
 const failed = results.filter((r) => !r.ok).length; console.log(`\n${results.length - failed}/${results.length} checks passed`); process.exit(failed ? 1 : 0);

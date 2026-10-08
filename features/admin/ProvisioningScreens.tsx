@@ -116,9 +116,9 @@ export function CreateAccountDialog({ api, plan, tenants, workspacesOf, onClose,
 }
 
 function CreatedAccount({ result, tenantName, workspaceName, onClose, onAnother }: { result: ProvisionResult; tenantName: string; workspaceName: string | null; onClose: () => void; onAnother: () => void }) {
-  const [showLink, setShowLink] = useState(true);
-  // the link is shown once, in this state only; closing the box drops it
-  if (showLink) return <LinkBox link={result.activation as ActivationLink} onClose={() => setShowLink(false)}/>;
+  const [showLink, setShowLink] = useState(true); const [copied, setCopied] = useState(false);
+  // the link lives in this state only (never stored, logged or put in a URL): closing this whole dialog drops it. Until then it can be opened again.
+  if (showLink) return <LinkBox link={result.activation as ActivationLink} copiedBefore={copied} onCopied={() => setCopied(true)} onClose={() => setShowLink(false)}/>;
   return (
     <Modal label="Đã tạo tài khoản" onClose={onClose}>
       <div className="modalBody" data-testid="account-created">
@@ -131,7 +131,7 @@ function CreatedAccount({ result, tenantName, workspaceName, onClose, onAnother 
         </dl>
         <h3 className="bx-h4">Bước tiếp theo</h3>
         <ol data-testid="res-pending">{result.pending.map((p) => <li key={p.id}>{p.label}</li>)}</ol>
-        <div className="xp-footer"><button className="btn" onClick={onClose}>Xong</button><button className="btn primary" onClick={onAnother}>Tạo tài khoản khác</button></div>
+        <div className="xp-footer"><button className="btn" onClick={() => setShowLink(true)}>Xem lại liên kết</button><button className="btn" onClick={onClose}>Xong</button><button className="btn primary" onClick={onAnother}>Tạo tài khoản khác</button></div>
       </div>
     </Modal>
   );
