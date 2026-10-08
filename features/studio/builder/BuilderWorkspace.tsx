@@ -13,6 +13,7 @@ import type { ApiProject, AppDefinitionV2, AssetDto, DefinitionOperation, Regist
 import { useOverflow } from "../../../packages/ui/src/useOverflow";
 import { Canvas, DragChip } from "./Canvas";
 import { Inspector } from "./Inspector";
+import type { PropsDraft } from "./PropsForm";
 import { LeftRail, type RailId } from "./LeftRail";
 import { BuilderTopBar } from "./BuilderTopBar";
 import { TestPanel, type RuntimeCalls } from "./TestPanel";
@@ -29,6 +30,7 @@ import type { Backend } from "./core/backend";
 import { canStep, clampSlot, planAdd, planMove, planStep, sectionIndexForSlot, slotForClickAdd, slotFromPoint, type SectionRect } from "./core/dnd";
 import { defaultProps, typeLabel } from "./core/library";
 import { sectionsOf } from "./core/pages";
+import { allSections } from "./core/definition";
 import { capabilitiesFor, whyNot } from "./core/permissions";
 import { blockers, preflight, type PreflightIssue } from "./core/preflight";
 import type { Readiness } from "./core/readiness";
@@ -89,7 +91,18 @@ export function BuilderWorkspace(props: {
   const edit = appMode === "EDIT";
   const interactive = edit && !readOnly;
   const issues = useMemo(() => preflight(doc), [doc]);
-  const counts = { block: issues.filter((i) => i.severity === "BLOCK").length, warn: issues.filter((i) => i.severity === "WARN").length };
+  // unsaved Inspector edits (M-002), held here so they survive selecting another section; a draft made on props that have since changed is stale and ignored
+  const [drafts, setDrafts] = useState<Record<string, PropsDraft>>({});
+  const setDraft = useCallback((key: string, d: PropsDraft | null) => setDrafts((prev) => {
+    if (d) return { ...prev, [key]: d };
+    if (!(key in prev)) return prev;
+    const { [key]: _gone, ...rest } = prev; void _gone; return rest;
+  }), []);
+  const unsaved: PreflightIssue[] = useMemo(() => Object.entries(drafts).flatMap(([key, d]) => {
+    const s = allSections(doc).find((x) => x.id === key.slice(2));
+    return s && d.base === JSON.stringify(s.props) ? [{ severity: "WARN" as const, code: "UNSAVED_DRAFT" as const, message: `Có thay đổi chưa lưu ở “${props.labelOf(s.type)}”. Bản xuất bản dùng nội dung đã lưu: hãy lưu hoặc hoàn tác trước.`, pageId: s.pageId }] : [];
+  }), [drafts, doc, props.labelOf]); // eslint-disable-line react-hooks/exhaustive-deps
+  const counts = { block: issues.filter((i) => i.severity === "BLOCK").length, warn: issues.filter((i) => i.severity === "WARN").length + unsaved.length };
 
   const ctx: DefCtx = useMemo(() => ({
     doc, readiness: backend.definitionOps as Readiness, canEdit: cap.canEdit && interactive, busy, siteVisibility: props.project.siteVisibility, metadata: backend.metadata, registry, labelOf: props.labelOf,
@@ -156,11 +169,12 @@ export function BuilderWorkspace(props: {
 
   function publish() {
     if (counts.block) { setCheck(issues.filter((i) => i.severity === "BLOCK")); return; }
-    if (counts.warn) { setCheck(issues); return; }
+    if (counts.warn) { setCheck([...issues, ...unsaved]); return; }
     props.openPublish();
   }
 
-  const html = useMemo(() => props.renderPreview({ selectedId: edit ? selectedId : null, interactive, pageId }), [props.renderPreview, selectedId, edit, interactive, pageId]); // eslint-disable-line react-hooks/exhaustive-deps
+  // M-003: the selection is NOT part of the document (it is posted to the frame), so selecting never rebuilds srcDoc; `edit` (not `interactive`) decides whether the frame runs our script
+  const html = useMemo(() => props.renderPreview({ selectedId: null, interactive: edit, pageId }), [props.renderPreview, edit, pageId]); // eslint-disable-line react-hooks/exhaustive-deps
   const meta = `${props.latest ? `Phiên bản ${props.latest}` : "Chưa có phiên bản"} · revision ${props.revision} · ${props.project.siteVisibility === "PUBLIC" ? "Công khai" : "Riêng tư"}${readOnly ? " · chỉ xem" : ""}`;
   const shareReason = whyNot("canShare");
   const publishReason = whyNot("canPublish");
@@ -195,13 +209,13 @@ export function BuilderWorkspace(props: {
         <LeftRail id="mview-panel-tools" value={rail} onChange={setRail}>{leftPanel}</LeftRail>
         <section className="bx-center" id="mview-panel-canvas" tabIndex={-1} aria-label="Bản xem trước ứng dụng">
           {!edit ? <p className="bx-banner" role="note">Đang ở chế độ dùng thử: bản xem trước không chỉnh sửa được.</p> : readOnly ? <p className="bx-banner" role="note">Bạn chỉ có quyền xem.</p> : null}
-          <Canvas document={html} sections={sections} selectedId={selectedId} onSelect={select} onRects={setRects} rects={rects} interactive={interactive} dragging={!!drag && drag.kind !== "row"} slot={slot}
+          <Canvas document={html} sections={sections} selectedId={selectedId} onSelect={select} onRects={setRects} rects={rects} interactive={interactive} selectable={edit} dragging={!!drag && drag.kind !== "row"} slot={slot}
             device={props.device} labelOf={props.labelOf} frameRef={frameRef} title="Bản xem trước ứng dụng"/>
         </section>
         <aside ref={rightRef} id="mview-panel-props" className="bx-right" aria-label="Thuộc tính" {...(rightScrolls ? { tabIndex: 0 } : {})}>
           {!edit ? <TestPanel doc={doc} rawPermissions={props.project.permissions} runtime={props.runtime} dirty={props.save.state !== "saved" || busy}/>
             : selected ? (
-              <Inspector ctx={ctx} section={selected} component={registry.find((c) => c.id === selected.type)} meta={backend.metadata.get(selected.type)} index={sections.indexOf(selected)} canUp={canStep(sections, selected.id, -1)} canDown={canStep(sections, selected.id, 1)} count={sections.length}
+              <Inspector ctx={ctx} drafts={drafts} onDraft={setDraft} section={selected} component={registry.find((c) => c.id === selected.type)} meta={backend.metadata.get(selected.type)} index={sections.indexOf(selected)} canUp={canStep(sections, selected.id, -1)} canDown={canStep(sections, selected.id, 1)} count={sections.length}
                 readOnly={!interactive} busy={busy} assets={props.assets} rawPermissions={props.project.permissions} onApply={(ops, summary) => props.applyOps(ops, summary)} onClose={() => select(null)}
                 onMove={(d) => void step(selected.id, d)} onRemove={() => setRemoving(true)} onSaveBlock={props.saveBlock} pageId={pageId}
                 openDataWizard={(id) => { setDataFocus({ sectionId: id }); openRail("data"); }}/>

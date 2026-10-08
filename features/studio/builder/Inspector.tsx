@@ -11,16 +11,18 @@ import { bindableProps, groupProps, permissionLabel, permissionRefsFor, propsSch
 import { capabilitiesFor, whyNot } from "./core/permissions";
 import { staticReadiness } from "./core/readiness";
 import { ActionEditor } from "./ActionEditor";
-import { PropsForm } from "./PropsForm";
+import { PropsForm, type PropsDraft } from "./PropsForm";
 import { Dialog, Gate, StateBox, Tabs, tabPanelProps } from "./ui/primitives";
 import type { DefCtx } from "./ctx";
 
 const uid = () => Math.random().toString(36).slice(2, 7);
 
-export function Inspector({ ctx, section, component, meta, index, count, canUp, canDown, readOnly, busy, assets, rawPermissions, onApply, onClose, onMove, onRemove, onSaveBlock, openDataWizard, pageId }: {
+export function Inspector({ ctx, section, component, meta, index, count, canUp, canDown, readOnly, busy, assets, rawPermissions, onApply, onClose, onMove, onRemove, onSaveBlock, openDataWizard, pageId, drafts, onDraft }: {
   ctx: DefCtx; section: Section; component?: RegistryComponent; meta?: ComponentMetadataV2; index: number; count: number; canUp?: boolean; canDown?: boolean; readOnly: boolean; busy: boolean; assets: AssetDto[];
   rawPermissions: readonly string[]; onApply: (ops: SchemaOperation[], summary: string) => Promise<boolean>; onClose: () => void; onMove: (d: -1 | 1) => void;
   onRemove: () => void; onSaveBlock?: () => void; openDataWizard: (sectionId: string) => void; pageId: string;
+  /** unsaved edits held by the Builder per section (M-002), keyed `c:<sectionId>` (Nội dung) / `d:<sectionId>` (Giao diện) */
+  drafts?: Record<string, PropsDraft>; onDraft?: (key: string, d: PropsDraft | null) => void;
 }) {
   const [tab, setTab] = useState<InspectorTabId>("content");
   const groups = useMemo(() => groupProps(component), [component]);
@@ -40,7 +42,7 @@ export function Inspector({ ctx, section, component, meta, index, count, canUp, 
       <Tabs label="Nhóm thuộc tính" idPrefix={prefix} items={items} value={tab} onChange={(t) => setTab(t as InspectorTabId)}/>
       <div {...tabPanelProps(prefix, tab)} className="bx-tabpanel">
         {tab === "content" ? (<>
-          <PropsForm key={`c:${section.id}:${JSON.stringify(section.props)}`} section={section} entries={[...groups.content, ...(groups.visibility ? [groups.visibility] : [])]} allDefs={defs} assets={assets}
+          <PropsForm key={`c:${section.id}`} draft={drafts?.[`c:${section.id}`]} onDraft={onDraft ? (d) => onDraft(`c:${section.id}`, d) : undefined} section={section} entries={[...groups.content, ...(groups.visibility ? [groups.visibility] : [])]} allDefs={defs} assets={assets}
             readOnly={readOnly} busy={busy} summary={`Chỉnh sửa ${label}`} onApply={onApply} emptyText="Thành phần này không có nội dung chỉnh được."/>
           <div className="bx-insp-tools">
             <button type="button" className="bx-btn sm" disabled={readOnly || busy || !(canUp ?? index > 0)} onClick={() => onMove(-1)}>↑ Lên</button>
@@ -50,7 +52,7 @@ export function Inspector({ ctx, section, component, meta, index, count, canUp, 
           </div>
         </>) : null}
         {tab === "design" ? (current.readiness.state === "AVAILABLE"
-          ? <PropsForm key={`d:${section.id}:${JSON.stringify(section.props)}`} section={section} entries={groups.design} allDefs={defs} assets={assets} readOnly={readOnly} busy={busy} summary={`Chỉnh giao diện ${label}`} onApply={onApply} emptyText=""/>
+          ? <PropsForm key={`d:${section.id}`} draft={drafts?.[`d:${section.id}`]} onDraft={onDraft ? (d) => onDraft(`d:${section.id}`, d) : undefined} section={section} entries={groups.design} allDefs={defs} assets={assets} readOnly={readOnly} busy={busy} summary={`Chỉnh giao diện ${label}`} onApply={onApply} emptyText=""/>
           : <StateBox state={current.readiness}/>) : null}
         {tab === "data" ? <DataTab ctx={ctx} section={section} component={component} meta={meta} state={current.readiness} openDataWizard={openDataWizard}/> : null}
         {tab === "action" ? <ActionTab ctx={ctx} section={section} meta={meta} state={current.readiness}/> : null}

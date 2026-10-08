@@ -13,7 +13,7 @@ import { allSections, validateDefinition } from "./definition";
 export type PreflightIssue = {
   severity: "BLOCK" | "WARN";
   code: "ROUTE_NAV_PAGE_MISSING" | "ROUTE_NAV_URL_INSECURE" | "ROUTE_NAV_ANCHOR_MISSING" | "ROUTE_ACTION_PAGE_MISSING" | "ROUTE_SLUG_INVALID" | "PAGE_EMPTY"
-    | "REF_BROKEN" | "STATIC_PUBLIC_DATA" | "PUBLIC_DATA_NEEDS_APPROVAL" | "ACTION_UNATTACHED" | "NAV_TOO_MANY";
+    | "REF_BROKEN" | "STATIC_PUBLIC_DATA" | "PUBLIC_DATA_NEEDS_APPROVAL" | "ACTION_UNATTACHED" | "NAV_TOO_MANY" | "UNSAVED_DRAFT";
   message: string;
   path?: string;
   pageId?: string;

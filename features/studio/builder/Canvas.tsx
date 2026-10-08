@@ -4,7 +4,7 @@
  * iframe (an iframe swallows pointer events, so the drag would otherwise stop at its edge) and an insertion line shows where the drop lands.
  * Every section that has a rectangle gets a drag handle (Edit mode only); selection works by clicking inside the preview.
  */
-import { useEffect, useState, type RefObject } from "react";
+import { useCallback, useEffect, useState, type RefObject } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import type { Section } from "@xweb/types";
 import { indicatorY, type SectionRect } from "./core/dnd";
@@ -16,11 +16,15 @@ function validRects(raw: unknown, known: Set<string>): SectionRect[] {
   return raw.filter((r): r is SectionRect => !!r && typeof r.id === "string" && known.has(r.id) && Number.isFinite(r.top) && Number.isFinite(r.height));
 }
 
-export function Canvas({ document: html, sections, selectedId, onSelect, onRects, rects, interactive, dragging, slot, device, labelOf, frameRef, title }: {
+export function Canvas({ document: html, sections, selectedId, onSelect, onRects, rects, interactive, selectable = interactive, dragging, slot, device, labelOf, frameRef, title }: {
   document: string; sections: Section[]; selectedId: string | null; onSelect: (id: string) => void; onRects: (r: SectionRect[]) => void; rects: SectionRect[];
-  interactive: boolean; dragging: boolean; slot: number | null; device: Device; labelOf: (type: string) => string; frameRef: RefObject<HTMLIFrameElement | null>; title: string;
+  interactive: boolean;
+  /** the preview runs our own select/layout script (editing, also read-only). The selection is POSTED to it (M-003), never part of `document`, so selecting does not reload the frame. */
+  selectable?: boolean; dragging: boolean; slot: number | null; device: Device; labelOf: (type: string) => string; frameRef: RefObject<HTMLIFrameElement | null>; title: string;
 }) {
   const { setNodeRef } = useDroppable({ id: "canvas", disabled: !interactive });
+  const postSelection = useCallback(() => { if (selectable) frameRef.current?.contentWindow?.postMessage({ type: "studio:selected", sectionId: selectedId }, "*"); }, [selectable, selectedId, frameRef]);
+  useEffect(postSelection, [postSelection, html]);   // a selection change or a new document (the frame reloads): (re)apply the highlight without touching srcDoc
   useEffect(() => {
     const known = new Set(sections.map((s) => s.id));
     const onMessage = (e: MessageEvent) => {
@@ -38,7 +42,7 @@ export function Canvas({ document: html, sections, selectedId, onSelect, onRects
       <div className="bx-canvas">
         <div className="bx-frame">
           {/* AI/Test: no scripts. Edit: our own select/layout script only; still no same-origin, forms, popups or top navigation. */}
-          <iframe ref={frameRef} className="previewFrame" title={title} sandbox={interactive ? "allow-scripts" : ""} srcDoc={html}/>
+          <iframe ref={frameRef} className="previewFrame" title={title} sandbox={selectable ? "allow-scripts" : ""} srcDoc={html} onLoad={postSelection}/>
           <div ref={setNodeRef} className={`bx-shield${dragging ? " on" : ""}`} data-testid="canvas-drop">
             {dragging ? (slot === null
               ? null

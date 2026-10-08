@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Settings, Sparkles } from "@xweb/ui";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api, ApiError, newIdempotencyKey } from "@/lib/http-api";
@@ -141,6 +141,16 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
     } finally { setBusy(null); }
   }
   const refreshVersions = async () => setVersions(await api.listVersions(ws, projectId).catch(() => versions));
+
+  // M-004: the conversation follows the newest message. Your own message always scrolls; a reply (or the progress block) only follows while you are at the bottom,
+  // otherwise a "Tin mới" button offers the jump, so reading older messages is never interrupted.
+  const convRef = useRef<HTMLDivElement>(null); const stick = useRef(true); const [behind, setBehind] = useState(false);
+  const onConversationScroll = () => { const el = convRef.current; if (!el) return; stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80; if (stick.current) setBehind(false); };
+  const scrollToNewest = (behavior: ScrollBehavior = "instant") => { const el = convRef.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior }); };
+  const working = busy === "prompt";
+  useLayoutEffect(() => {
+    if (stick.current || messages[messages.length - 1]?.role === "user") { stick.current = true; setBehind(false); scrollToNewest(); } else setBehind(true);
+  }, [messages.length, working, !!live, mode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const label = (type: string) => sectionLabel(type, registry.find((c) => c.id === type)?.name);
   async function submitPrompt(text = prompt.trim()) {
@@ -316,20 +326,21 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
         <main className={`wsBody mode-${mode}`}>
           {mode === "ai" ? (
             <section className="promptPane">
-              <div className="conversation">
+              <div className="conversation" ref={convRef} onScroll={onConversationScroll}>
                 {messages.length === 0 ? (
                   <div className="intro"><h1>Bạn muốn ứng dụng thay đổi thế nào?</h1><p>Mô tả bằng lời; thay đổi được kiểm tra theo registry rồi lưu thành phiên bản có thể khôi phục.</p>
                     {!readOnly ? <div className="starterList" aria-label="Gợi ý để bắt đầu">{suggestions(ai?.configured === true).map((t) => (
                       <button type="button" key={t} className="starter" disabled={busy !== null} onClick={() => { setPrompt(t); promptRef.current?.focus(); }}><Sparkles size={14} aria-hidden="true"/>{t}</button>))}</div> : null}</div>
                 ) : null}
-                {messages.map((m) => (
+                <div role="log" aria-live="polite" aria-relevant="additions" aria-label="Cuộc trò chuyện với AI">{messages.map((m) => (
                   <div className={`message ${m.role}`} key={m.id}><div className="bubble"><div>{m.content}</div>
                     {m.detail ? <div className="msgDetail">{m.detail}</div> : null}
                     {m.meta?.length ? <div className="chips">{m.meta.map((x) => <span className="chip" key={x}>{x}</span>)}</div> : null}</div></div>
-                ))}
+                ))}</div>
                 {busy === "prompt" && live ? <AiProgress live={live} model={effectiveModel}
                     onCancel={() => { if (live.id) void api.cancelStream(live.id).catch(() => undefined); else streamAbort.current?.abort(); }}/>
                   : busy === "prompt" ? <div className="message assistant"><div className="bubble typing" role="status"><span className="dots" aria-hidden="true"><i/><i/><i/></span> Đang phân tích yêu cầu{ai?.configured && effectiveModel !== "mock" ? " với AI…" : "…"}</div></div> : null}
+                {behind ? <button type="button" className="smallButton" style={{ position: "sticky", bottom: 8, marginLeft: "auto", display: "block" }} onClick={() => { stick.current = true; setBehind(false); scrollToNewest("smooth"); }}>Tin mới ↓</button> : null}
               </div>
               <div className="composer">
                 {!readOnly && messages.length > 0 ? <div className="suggestions" aria-label="Gợi ý">{suggestions(ai?.configured === true).map((t) => (

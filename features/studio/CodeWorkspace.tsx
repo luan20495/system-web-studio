@@ -11,6 +11,7 @@ import { useSession } from "../session";
 import { ago, ErrorState, errText, fmtDate, StateView, tok, usd } from "../ui";
 import { Drawer, MembersDrawer } from "./drawers";
 import { PublishModal } from "./ReleaseModal";
+import { ReviewDialog } from "./ReviewDialog";
 import { describeStatus } from "./aiProgressModel";
 import { DesignPane, IdeDrawer, PackagesDrawer, RuntimeDrawer } from "./CodePanels";
 import { projectBase, S } from "./base";
@@ -118,9 +119,10 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
     const m = await act("merge", () => api.code.merge(ws, pid, c.id), "Không hợp nhất được.");
     if (m) { void loadChanges(); setOriginal({}); void loadTree(); api.lookupProject(pid).then(onProject).catch(() => undefined); setNotice("Đã hợp nhất vào main. Có thể xuất bản."); }
   }
-  async function approve(c: CodeChange) {
-    const comment = window.prompt("Nhận xét khi duyệt (tuỳ chọn):") ?? undefined;
-    if (await act("approve", () => api.code.approve(ws, pid, c.id, comment), "Không duyệt được.")) void loadChanges();
+  /** M-001: the change under review. Nothing is sent until the person presses "Duyệt" in the dialog; Cancel / Esc only close it. */
+  const [reviewing, setReviewing] = useState<CodeChange | null>(null);
+  async function approve(c: CodeChange, comment?: string) {
+    if (await act("approve", () => api.code.approve(ws, pid, c.id, comment), "Không duyệt được.")) { setReviewing(null); void loadChanges(); }
   }
   async function discard(c: CodeChange) { if (await act("discard", () => api.code.discard(ws, pid, c.id), "Không huỷ được.")) void loadChanges(); }
 
@@ -209,7 +211,7 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
                 {t === "preview" ? "Xem trước" : t === "diff" ? "Mã thay đổi" : "Build & quét"}</button>)}</div>
               <div className="row">
                 {change.status === "READY" && change.reviewRequired && !change.approvedBy && me && change.createdBy !== me.displayName && canPublishApp
-                  ? <button className="button ghost" disabled={busy !== null} onClick={() => void approve(change)}>Duyệt</button> : null}
+                  ? <button className="button ghost" disabled={busy !== null} onClick={() => setReviewing(change)}>Duyệt</button> : null}
                 {canEdit && change.status === "READY" ? <button className="button primary" disabled={busy !== null || (!!change.reviewRequired && !change.approvedBy)}
                   title={change.reviewRequired && !change.approvedBy ? "Cần một thành viên khác duyệt trước" : undefined} onClick={() => void merge(change)}>{busy === "merge" ? "Đang hợp nhất…" : "Hợp nhất vào main"}</button> : null}
                 {canEdit && ["BUILDING", "READY", "FAILED"].includes(change.status) ? <button className="button ghost" disabled={busy !== null} onClick={() => void discard(change)}>Huỷ</button> : null}
@@ -238,6 +240,7 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
         </section>
       </main>
       {notice ? <button className="toast" onClick={() => setNotice(null)}>{notice}</button> : null}
+      {reviewing ? <ReviewDialog summary={reviewing.summary} busy={busy === "approve"} onApprove={(comment) => void approve(reviewing, comment)} onClose={() => setReviewing(null)}/> : null}
       {panel === "members" && me ? <MembersDrawer workspaceId={ws} projectId={pid} me={me} onClose={() => go(mode)} onError={(e) => setNotice(errText(e, "Thao tác thành viên thất bại."))}/> : null}
       {panel === "publish" ? <PublishModal workspaceId={ws} projectId={pid} revision={project.revision} current="PRIVATE" canPublish={canPublishApp} allowed={cfg?.codeAppPublicPublish === false || cfg?.publicPublish === false ? ["PRIVATE"] : ["PRIVATE", "PUBLIC"]} onClose={() => { go(mode); api.lookupProject(pid).then(onProject).catch(() => undefined); }}
         onUnauthorized={() => setNotice("Phiên đăng nhập đã hết hạn.")}/> : null}

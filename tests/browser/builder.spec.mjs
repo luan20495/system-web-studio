@@ -420,6 +420,57 @@ const rtCalls = (p) => p.evaluate(() => window.__rt);
   await p.close();
 }
 
+// ---------- M-003: selecting a section does not reload the preview iframe or reset its scroll (tree click, canvas click, read-only viewer) ----------
+for (const [label, query] of [["editor", ""], ["read-only viewer", "?perms=APP_VIEW"]]) {
+  const p = await browser.newPage({ viewport: { width: 1440, height: 380 } }); p.errors = []; p.on("pageerror", (e) => p.errors.push(e.message));
+  await p.goto(URL_ + query); await p.waitForSelector("iframe"); await p.waitForTimeout(700);
+  const frame = () => p.frames().find((f) => f !== p.mainFrame());
+  const room = await frame().evaluate(() => document.documentElement.scrollHeight - innerHeight);
+  await frame().evaluate(() => { window.__marker = 1; window.scrollTo({ top: 150, behavior: "instant" }); }); await p.waitForTimeout(300);
+  const before = await frame().evaluate(() => window.scrollY);
+  check(`M-003 [${label}]: fixture is scrollable`, room > 170 && before >= 140, `room=${room} scrollY=${before}`);
+  await p.locator("[role=treeitem][aria-level='2']").filter({ hasText: "Đánh giá" }).first().click(); await p.waitForTimeout(700);
+  let st = await frame().evaluate(() => ({ marker: window.__marker ?? null, y: window.scrollY, sel: [...document.querySelectorAll(".__sel")].map((e) => e.getAttribute("data-sid")) }));
+  check(`M-003 [${label}]: a tree click keeps the same iframe document (marker) and the scroll position`, st.marker === 1 && Math.abs(st.y - before) < 5, JSON.stringify(st));
+  check(`M-003 [${label}]: ...and the selected section is highlighted inside the frame`, st.sel.length === 1 && st.sel[0] === "s-test", JSON.stringify(st.sel));
+  await frame().locator("[data-sid='s-foot']").click(); await p.waitForTimeout(700);
+  st = await frame().evaluate(() => ({ marker: window.__marker ?? null, y: window.scrollY, sel: [...document.querySelectorAll(".__sel")].map((e) => e.getAttribute("data-sid")) }));
+  check(`M-003 [${label}]: a click inside the preview keeps the frame (marker) and never resets the scroll (Playwright itself scrolls the target into view)`, st.marker === 1 && st.y >= before - 5, JSON.stringify(st));
+  check(`M-003 [${label}]: ...and moves the highlight to the clicked section (one at a time)`, st.sel.length === 1 && st.sel[0] === "s-foot", JSON.stringify(st.sel));
+  if (!query) {
+    await p.getByRole("button", { name: "Đóng bảng thuộc tính" }).click(); await p.waitForTimeout(500);
+    const cleared = await frame().evaluate(() => ({ marker: window.__marker ?? null, sel: document.querySelectorAll(".__sel").length }));
+    check("M-003 [editor]: closing the Inspector clears the highlight without a reload", cleared.marker === 1 && cleared.sel === 0, JSON.stringify(cleared));
+  }
+  check(`M-003 [${label}]: no uncaught error`, p.errors.length === 0, p.errors.join(" | "));
+  await p.close();
+}
+
+// ---------- M-002: unsaved Inspector edits survive a selection change; focus is kept after "Lưu thay đổi" ----------
+{
+  const p = await fresh();
+  const row = (name) => p.locator("[role=treeitem][aria-level='2']").filter({ hasText: name }).first();
+  const title = () => p.locator(".bx-inspector").getByLabel("Tiêu đề", { exact: true });
+  await row("Hero").click(); await p.waitForTimeout(300);
+  await title().fill("Tiêu đề đang gõ dở"); await p.waitForTimeout(100);
+  check("M-002: a dirty form says so ('Có thay đổi chưa lưu')", (await p.locator(".bx-inspector").getByText(/chưa lưu/).count()) > 0);
+  await row("Chân trang").click(); await p.waitForTimeout(300);
+  await row("Hero").click(); await p.waitForTimeout(300);
+  check("M-002: the typed value survives selecting another section and coming back", (await title().inputValue()) === "Tiêu đề đang gõ dở", `value="${await title().inputValue()}"`);
+  check("M-002: nothing was sent while the edit was only a draft", (await ops(p)).length === 0, JSON.stringify(await ops(p)));
+  await p.getByRole("button", { name: "Xuất bản" }).click(); await p.waitForTimeout(300);
+  check("M-002: publishing with an unsaved draft warns first (pre-check dialog), it does not silently publish the saved text", (await p.getByRole("dialog").getByText(/chưa lưu/).count()) > 0 && (await p.evaluate(() => window.__published)) === 0);
+  await p.keyboard.press("Escape"); await p.waitForTimeout(200);
+  await p.locator(".bx-inspector").getByRole("button", { name: "Lưu thay đổi" }).click(); await p.waitForTimeout(500);
+  const o = await ops(p);
+  check("M-002: Lưu thay đổi sends the edit as UPDATE_PROP", o.length === 1 && o[0].ops.some((x) => x.type === "UPDATE_PROP" && x.value === "Tiêu đề đang gõ dở"), JSON.stringify(o));
+  const act = await p.evaluate(() => { const a = document.activeElement; return { tag: a?.tagName, inInspector: !!a?.closest(".bx-inspector"), label: a?.getAttribute("aria-label") ?? a?.id }; });
+  check("M-002: after saving, focus is on a control of the Inspector (not <body>)", act.tag !== "BODY" && act.inInspector, JSON.stringify(act));
+  check("M-002: the saved value is shown and the form is clean again", (await title().inputValue()) === "Tiêu đề đang gõ dở" && (await p.locator(".bx-inspector").getByText(/chưa lưu/).count()) === 0);
+  check("M-002: no uncaught error", p.errors.length === 0, p.errors.join(" | "));
+  await p.close();
+}
+
 await browser.close();
 const failed = results.filter((r) => !r.ok);
 console.log(`\n${results.length - failed.length}/${results.length} passed`);
