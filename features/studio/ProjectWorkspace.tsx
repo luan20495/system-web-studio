@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
-import { ArrowLeft, ErrorBoundary, Settings, Sparkles, Tabs } from "@xweb/ui";
+import { ArrowLeft, ErrorBoundary, Settings, Sparkles, Tabs, toast } from "@xweb/ui";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api, newIdempotencyKey } from "@/lib/http-api";
 import { renderSchemaDocument } from "@/lib/schema-preview";
@@ -65,7 +65,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const [device, setDevice] = useState<DeviceMode>("desktop");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pane, setPane] = useState<"chat" | "preview">("chat"); const paneId = useId();
-  const { busy, notice, setNotice, save, setSave, failedEdit, setFailedEdit, saveFailureRef, onConflict, run } = useSaveMachine();
+  const { busy, save, setSave, failedEdit, setFailedEdit, saveFailureRef, onConflict, run } = useSaveMachine();
   const ws = project?.workspaceId ?? "";
   // UX only (the server re-checks every call). The input is the permission list the server resolved for THIS project; no role name is read (permissions.ts / canonical.ts).
   const perms = useMemo(() => resolvePermissions(project?.permissions), [project?.permissions]);
@@ -110,11 +110,11 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
     if (!window.confirm(`Khôi phục phiên bản ${v.versionNumber}? Một phiên bản mới sẽ được tạo; lịch sử cũ giữ nguyên.`)) return;
     const r = await run("restore", () => api.restoreVersion(ws, projectId, v.id, revision), "Không khôi phục được phiên bản.");
     if (!r) return;
-    setSchema(r.schema); setRevision(r.revision); void refreshVersions(); setNotice(`Đã khôi phục phiên bản ${v.versionNumber} thành phiên bản ${r.version.versionNumber}.`);
+    setSchema(r.schema); setRevision(r.revision); void refreshVersions(); toast.success(`Đã khôi phục phiên bản ${v.versionNumber} thành phiên bản ${r.version.versionNumber}.`);
   }
   async function saveSettings(patch: Partial<ApiProject>) {
     const p = await run("settings", () => api.updateProject(ws, projectId, revision, patch), "Không lưu được cài đặt.");
-    if (p) { setProject(p); setRevision(p.revision); go(mode); setNotice("Đã lưu cài đặt."); }
+    if (p) { setProject(p); setRevision(p.revision); go(mode); toast.success("Đã lưu cài đặt."); }
   }
   const pageSections = useMemo(() => (!schema ? [] : pageId === "home" ? schema.sections : schema.pages?.find((x) => x.id === pageId)?.sections ?? schema.sections), [schema, pageId]);
   useEffect(() => { if (schema && pageId !== "home" && !schema.pages?.some((x) => x.id === pageId)) setPageId("home"); }, [schema, pageId]);
@@ -294,7 +294,6 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
         </main>
       ) : null}
 
-      {notice ? <button className="toast" onClick={() => setNotice(null)}>{notice}</button> : null}
 
       {panel === "versions" ? <Drawer title="Lịch sử phiên bản" sub="Khôi phục tạo một phiên bản mới; phiên bản cũ không bao giờ bị sửa." onClose={() => go(mode)}>
         <div className="versionList">{versions.map((v) => (
@@ -313,9 +312,9 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
             <button className="button ghost" onClick={() => { if (confirm(`Lưu trữ “${project.name}”?`)) void run("settings", () => api.archiveProject(ws, projectId), "Không lưu trữ được.").then((r) => { if (r) { go(mode); void reload(); } }); }}>Lưu trữ</button>
           </section> : null}</>}/> : null}
       {savingBlock && selected ? <SaveBlockDrawer workspaceId={ws} projectId={projectId} section={selected} title={label(selected.type)}
-        onClose={() => setSavingBlock(false)} onSaved={(m) => { setSavingBlock(false); setNotice(m); loadBlocks(); }}/> : null}
-      {panel === "assets" ? <AssetsDrawer workspaceId={ws} projectId={projectId} canEdit={mayEdit} onClose={() => { void loadAssets(ws); go(mode); }} onError={(e) => setNotice(errText(e, "Thao tác tệp thất bại."))}/> : null}
-      {panel === "members" && me ? <MembersDrawer workspaceId={ws} projectId={projectId} me={me} onClose={() => go(mode)} onError={(e) => setNotice(errText(e, "Thao tác thành viên thất bại."))}/> : null}
+        onClose={() => setSavingBlock(false)} onSaved={(m) => { setSavingBlock(false); toast.success(m); loadBlocks(); }}/> : null}
+      {panel === "assets" ? <AssetsDrawer workspaceId={ws} projectId={projectId} canEdit={mayEdit} onClose={() => { void loadAssets(ws); go(mode); }} onError={(e) => toast.error(errText(e, "Thao tác tệp thất bại."))}/> : null}
+      {panel === "members" && me ? <MembersDrawer workspaceId={ws} projectId={projectId} me={me} onClose={() => go(mode)} onError={(e) => toast.error(errText(e, "Thao tác thành viên thất bại."))}/> : null}
       {panel === "publish" ? <PublishModal workspaceId={ws} projectId={projectId} revision={revision} current={project.siteVisibility} versionNumber={latest} canPublish={mayPublish} draft={schema as AppDefinitionV2}
         allowed={publicPublish === false ? ["PRIVATE"] : ["PRIVATE", "PUBLIC"]}
         onClose={() => { go(mode); void reload().catch(() => undefined); }} onUnauthorized={() => undefined}/> : null}

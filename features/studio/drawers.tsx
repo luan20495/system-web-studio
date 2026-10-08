@@ -11,9 +11,9 @@ import type {
 import { PROJECT_ROLES, WORKSPACE_ROLES } from "@/lib/http-types";
 import type { DeviceMode } from "@/lib/types";
 import { useDialog } from "@/components/useDialog";
+import { errText } from "../ui";
 
 const fmt = (iso: string) => new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
-const errText = (e: unknown, fallback: string) => (e instanceof ApiError ? `${e.message}${e.requestId ? ` (mã ${e.requestId})` : ""}` : e instanceof Error ? e.message : fallback);
 
 export const suggestions = (ai: boolean) => ai
   ? ["Thêm bảng so sánh sản phẩm", "Viết lại tiêu đề hero hấp dẫn hơn", "Ẩn phần đánh giá", "Thêm một sản phẩm mới", "Rút gọn nội dung hero"]

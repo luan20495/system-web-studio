@@ -1,11 +1,12 @@
 "use client";
 /**
- * The save / busy / notice state machine of the project workspace (extracted from `ProjectWorkspace`, M-048; behaviour unchanged).
+ * The save / busy state machine of the project workspace (extracted from `ProjectWorkspace`, M-048; behaviour unchanged).
  * `run` wraps every request that writes (or asks the AI): it sets `busy`, drives the "Đang lưu / Đã lưu / Lưu thất bại" state, maps failures to a notice
  * (`describeRunFailure`) and remembers whether a failed edit may be retried. Leaving while an edit is in flight or failed would lose it silently, so
  * `beforeunload` is armed meanwhile.
  */
 import { useEffect, useRef, useState } from "react";
+import { toast } from "@xweb/ui";
 import type { SchemaOperation } from "@/lib/http-types";
 import type { DefinitionOperation } from "@xweb/types";
 import { describeRunFailure } from "./runFailure";
@@ -15,7 +16,6 @@ export type FailedEdit = { ops: (SchemaOperation | DefinitionOperation)[]; summa
 
 export function useSaveMachine() {
   const [busy, setBusy] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [save, setSave] = useState<SaveState>({ state: "saved", at: null });
   /** the last edit that could not be saved (network / 5xx / timeout), kept so the user can retry it instead of redoing the work */
   const [failedEdit, setFailedEdit] = useState<FailedEdit | null>(null);
@@ -32,9 +32,9 @@ export function useSaveMachine() {
     catch (e) {
       if (isSave) setSave((x) => ({ ...x, state: "error" }));
       const f = describeRunFailure(e, fallback);
-      if (f.aborted) { setNotice(f.notice); return undefined; }
+      if (f.aborted) { if (f.notice) toast.info(f.notice); return undefined; }
       saveFailureRef.current = f.retryable ? "retryable" : "none";
-      if (f.notice) setNotice(f.notice);
+      if (f.notice) toast.error(f.notice);
       if (f.reload) await onConflict.current().catch(() => undefined);
       return undefined;
     } finally { setBusy(null); }
@@ -47,5 +47,5 @@ export function useSaveMachine() {
     window.addEventListener("beforeunload", h); return () => window.removeEventListener("beforeunload", h);
   }, [busy, failedEdit]);
 
-  return { busy, notice, setNotice, save, setSave, failedEdit, setFailedEdit, saveFailureRef, onConflict, run };
+  return { busy, save, setSave, failedEdit, setFailedEdit, saveFailureRef, onConflict, run };
 }

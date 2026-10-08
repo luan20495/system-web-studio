@@ -77,4 +77,45 @@ for (const w of [768, 1000]) {
   check("M-104 [code 390]: 'Thay đổi' shows the change list and hides the conversation", (await box(p, ".codeRight")).shown && !(await box(p, ".codeLeft")).shown && (await p.locator(".changeItem").count()) > 0);
   await p.close();
 }
+// ---------- M-016 + M-075: feedback goes through the shared toast; error text never leaks codes ----------
+{
+  const s = newState(); const p = await open(b, "/studio/projects/p1/design", { state: s }); await p.waitForSelector("iframe"); await wait(900);
+  const row = (n) => p.locator("[role=treeitem][aria-level='2']").filter({ hasText: n }).first();
+  s.fail = { "PATCH /workspaces/w1/projects/p1/schema": { status: 422, code: "VALIDATION_FAILED", message: "Dữ liệu không hợp lệ" } };
+  await row("Đánh giá").click(); await p.getByRole("button", { name: "↑ Lên" }).first().click(); await wait(1000);
+  const err = p.locator("[role=alert] .xp-toast-error");
+  check("M-016: a failed save raises an ERROR toast in an assertive live region (role=alert)", (await err.count()) === 1 && /Dữ liệu không hợp lệ/.test(await err.innerText()));
+  check("M-016: the legacy <button class=toast> is gone", (await p.locator("button.toast").count()) === 0);
+  check("M-016: the toast has a 'Đóng thông báo' button", (await err.getByRole("button", { name: "Đóng thông báo" }).count()) === 1);
+  await wait(7500);
+  check("M-016: an error toast does NOT time out by itself (it was dismissed only by a click)", (await p.locator("[role=alert] .xp-toast-error").count()) === 1);
+  await err.getByRole("button", { name: "Đóng thông báo" }).click(); await wait(300);
+  check("M-016: ...and the close button removes it", (await p.locator(".xp-toast-error").count()) === 0);
+  // a failure raised from inside a dialog is not hidden under the dialog's overlay
+  await p.locator(".bx-panel-head").getByRole("button", { name: /Trang/ }).click(); await wait(200);
+  await p.getByRole("dialog").getByLabel("Tên trang").fill("Liên hệ"); s.fail = { "PATCH /workspaces/w1/projects/p1/schema": { status: 422, code: "VALIDATION_FAILED", message: "Đường dẫn trùng" } };
+  await p.getByRole("dialog").getByRole("button", { name: "Thêm trang" }).click(); await wait(1000);
+  const onTop = await p.evaluate(() => { const t = document.querySelector(".xp-toast-error"); if (!t) return "no toast"; const r = t.getBoundingClientRect(); const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!e?.closest(".xp-toast") || `${e?.tagName}.${e?.className} @${Math.round(r.left)},${Math.round(r.top)} ${Math.round(r.width)}x${Math.round(r.height)}`; });
+  check("M-016: a toast raised while a dialog is open is ABOVE the dialog overlay (it used to sit under it)", onTop === true, String(onTop));
+  check("M-016: no uncaught error", p.errors.length === 0, p.errors.join(" | "));
+  await p.close();
+  // success: polite status, leaves by itself
+  const s2 = newState(); const q = await open(b, "/studio/projects/p1/design", { state: s2 }); await q.waitForSelector("iframe"); await wait(900);
+  await q.getByRole("button", { name: "Cài đặt project" }).click(); await wait(400);
+  await q.getByRole("button", { name: "Lưu thay đổi" }).click(); await wait(1000);
+  const ok = q.locator("[role=status] .xp-toast-success");
+  check("M-016: a success toast ('Đã lưu cài đặt.') is a polite status", (await ok.count()) === 1 && /Đã lưu cài đặt/.test(await ok.innerText()));
+  await wait(7000);
+  check("M-016: ...and leaves by itself after about 6 s", (await q.locator(".xp-toast-success").count()) === 0);
+  await q.close();
+}
+{
+  // M-075: a server error code is not appended to the toast; the person gets the message (+ reference)
+  const s = newCodeState(); s.changes[0] = { ...s.changes[0], reviewRequired: false }; const p = await open(b, "/studio/projects/p1/code", { state: s }); await p.waitForSelector(".changeItem"); await wait(600);
+  s.fail = { "POST .*/merge$": { status: 500, code: "INTERNAL_X7", message: "Không hợp nhất được vì máy chủ bận" } };
+  await p.getByRole("button", { name: "Hợp nhất vào main" }).click(); await wait(900);
+  const t = await p.locator(".xp-toast-error").innerText().catch(() => "(none)");
+  check("M-075: the toast says what happened without the raw error code", /máy chủ bận/.test(t) && !/INTERNAL_X7/.test(t), t.replace(/\n/g, " "));
+  await p.close();
+}
 await b.close(); finish();

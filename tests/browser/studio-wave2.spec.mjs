@@ -66,7 +66,7 @@ for (const [path, heading] of [["/studio", /Bạn muốn xây dựng gì/], ["/s
 {
   const s = newState(); const p = await open(b, "/studio/projects/p1/design", { state: s }); await p.waitForSelector("iframe"); await wait(800);
   const row = (n) => p.locator("[role=treeitem][aria-level='2']").filter({ hasText: n }).first();
-  const attempt = async (fail) => { s.fail = { "PATCH /workspaces/w1/projects/p1/schema": { ...fail, once: true } }; await row("Đánh giá").click(); await p.getByRole("button", { name: "↑ Lên" }).first().click(); await wait(900); return (await p.locator(".toast").innerText().catch(() => "")); };
+  const attempt = async (fail) => { s.fail = { "PATCH /workspaces/w1/projects/p1/schema": { ...fail, once: true } }; await row("Đánh giá").click(); await p.getByRole("button", { name: "↑ Lên" }).first().click(); await wait(900); return (await p.locator(".xp-toast").first().innerText().catch(() => "")); };
   let t = await attempt({ status: 409, code: "REVISION_CONFLICT", message: "x" });
   check("M-048: REVISION_CONFLICT -> 'Project vừa được thay đổi ở nơi khác…' and the document is reloaded", /thay đổi ở nơi khác/.test(t) && s.log.filter((l) => l.method === "GET" && l.path.endsWith("/schema")).length >= 2, t);
   await p.close();

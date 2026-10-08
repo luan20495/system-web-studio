@@ -3,7 +3,7 @@
 // built in the sandbox, previewed from the sites origin (CSP sandbox) and merged only after a green build.
 import { canEditProject, canPublish, canShare, resolvePermissions } from "@xweb/permissions";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Sparkles, Tabs } from "@xweb/ui";
+import { ArrowLeft, Sparkles, Tabs, toast } from "@xweb/ui";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/http-api";
 import { SERVER_KINDS, type AiStatus, type ApiProject, type AuthConfig, type CodeAiHistoryItem, type CodeChange, type CodeCommit, type DiffFile, type TreeFile } from "@/lib/http-types";
@@ -65,7 +65,7 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
   const [history, setHistory] = useState<CodeAiHistoryItem[]>([]);
   const [prompt, setPrompt] = useState(""); const [ai, setAi] = useState<AiStatus | null>(null);
   const [model, setModel] = useState<string>(() => { try { return localStorage.getItem("studio-ai-model") ?? ""; } catch { return ""; } });
-  const [busy, setBusy] = useState<string | null>(null); const [notice, setNotice] = useState<string | null>(null); const [error, setError] = useState<unknown>(null);
+  const [busy, setBusy] = useState<string | null>(null); const [error, setError] = useState<unknown>(null);
   const [pane, setPane] = useState<"work" | "changes">("work"); const paneId = useId();
   const [tabIndent, setTabIndent] = useState(false); const escapeTab = useRef(false);   // M-015: Tab indents only when this is switched on
   const [commits, setCommits] = useState<CodeCommit[] | null>(null);
@@ -82,7 +82,7 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
   useEffect(() => { if (!changes.some((c) => c.status === "BUILDING")) return; const t = setInterval(() => void loadChanges(), 2500); return () => clearInterval(t); }, [changes, loadChanges]);
   useEffect(() => {
     if (original[path] || !tree?.some((f) => f.path === path)) return;
-    api.code.file(ws, pid, path).then((f) => setOriginal((o) => ({ ...o, [path]: { text: f.text, editable: f.editable } }))).catch((e) => setNotice(errText(e, "Không đọc được tệp.")));
+    api.code.file(ws, pid, path).then((f) => setOriginal((o) => ({ ...o, [path]: { text: f.text, editable: f.editable } }))).catch((e) => toast.error(errText(e, "Không đọc được tệp.")));
   }, [path, tree, original, ws, pid]);
   const change = changes.find((c) => c.id === selected) ?? null;
   useEffect(() => { setDiff(null); if (change && tab === "diff") api.code.diff(ws, pid, change.id).then(setDiff).catch(() => undefined); }, [change?.id, tab, ws, pid]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -96,12 +96,12 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
   const files = useMemo(() => (tree ?? []).slice().sort((a, b) => a.path.localeCompare(b.path)), [tree]);
 
   async function act<T>(label: string, fn: () => Promise<T>, fallback: string): Promise<T | undefined> {
-    setBusy(label); setNotice(null);
-    try { return await fn(); } catch (e) { setNotice(e instanceof ApiError ? `${e.message}${e.code ? ` (${e.code})` : ""}` : errText(e, fallback)); return undefined; } finally { setBusy(null); }
+    setBusy(label);
+    try { return await fn(); } catch (e) { toast.error(errText(e, fallback)); return undefined; } finally { setBusy(null); }
   }
   async function propose() {
     const c = await act("propose", () => api.code.propose(ws, pid, summary.trim() || `Sửa ${dirty.join(", ")}`, dirty.map((p) => ({ path: p, content: drafts[p] }))), "Không tạo được thay đổi.");
-    if (c) { setDrafts({}); setSummary(""); setSelected(c.id); setTab("preview"); void loadChanges(); setNotice("Đã tạo thay đổi trên nhánh riêng; đang build trong sandbox."); }
+    if (c) { setDrafts({}); setSummary(""); setSelected(c.id); setTab("preview"); void loadChanges(); toast.success("Đã tạo thay đổi trên nhánh riêng; đang build trong sandbox."); }
   }
   async function sendPrompt() {
     const text = prompt.trim(); if (!text) return;
@@ -115,12 +115,12 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
     if (r) {
       setPrompt(""); void loadHistory();
       if (r.change) { setSelected(r.change.id); setTab("preview"); void loadChanges(); }
-      setNotice(`${r.message}${r.usage?.totalTokens != null ? ` · ${tok(r.usage.totalTokens)} token${r.usage.costUsd != null ? ` · ${usd(r.usage.costUsd)}` : ""}` : ""}`);
+      toast.info(`${r.message}${r.usage?.totalTokens != null ? ` · ${tok(r.usage.totalTokens)} token${r.usage.costUsd != null ? ` · ${usd(r.usage.costUsd)}` : ""}` : ""}`);
     }
   }
   async function merge(c: CodeChange) {
     const m = await act("merge", () => api.code.merge(ws, pid, c.id), "Không hợp nhất được.");
-    if (m) { void loadChanges(); setOriginal({}); void loadTree(); api.lookupProject(pid).then(onProject).catch(() => undefined); setNotice("Đã hợp nhất vào main. Có thể xuất bản."); }
+    if (m) { void loadChanges(); setOriginal({}); void loadTree(); api.lookupProject(pid).then(onProject).catch(() => undefined); toast.success("Đã hợp nhất vào main. Có thể xuất bản."); }
   }
   /** M-001: the change under review. Nothing is sent until the person presses "Duyệt" in the dialog; Cancel / Esc only close it. */
   const [reviewing, setReviewing] = useState<CodeChange | null>(null);
@@ -160,7 +160,7 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
         <div className="wsPaneSwitch"><Tabs label="Khu vực làm việc" idBase={paneId} value={pane} onChange={setPane} panels={false}
           tabs={[{ value: "work", label: mode === "ai" ? "Trò chuyện" : mode === "design" ? "Thiết kế" : "Mã nguồn" }, { value: "changes", label: "Thay đổi" }]}/></div>
         <section className="codeLeft" aria-label={mode === "ai" ? "AI" : mode === "design" ? "Thiết kế" : "Mã nguồn"}>
-          {mode === "design" ? <DesignPane ws={ws} pid={pid} canEdit={canEdit} onChange={(c) => { setSelected(c.id); setTab("preview"); void loadChanges(); setNotice("Đã tạo thay đổi giao diện; đang build trong sandbox."); }}/> : mode === "ai" ? (<>
+          {mode === "design" ? <DesignPane ws={ws} pid={pid} canEdit={canEdit} onChange={(c) => { setSelected(c.id); setTab("preview"); void loadChanges(); toast.success("Đã tạo thay đổi giao diện; đang build trong sandbox."); }}/> : mode === "ai" ? (<>
             <div className="chatScroll">
               {history.length === 0 ? <div className="hint chatEmpty">Mô tả thay đổi bạn muốn. AI chỉ sửa src/, public/ và index.html; mỗi thay đổi được build trong sandbox và cần bạn hợp nhất.
                 {!ai?.configured ? <> AI hiện chưa được quản trị viên bật. <b>Chế độ thử nghiệm</b> hiểu vài yêu cầu như “đổi tiêu đề thành “…”” hoặc “đổi màu nền vàng”.</> : null}</div> : null}
@@ -260,17 +260,16 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
           </div> : null}
         </section>
       </main>
-      {notice ? <button className="toast" onClick={() => setNotice(null)}>{notice}</button> : null}
       {reviewing ? <ReviewDialog summary={reviewing.summary} busy={busy === "approve"} onApprove={(comment) => void approve(reviewing, comment)} onClose={() => setReviewing(null)}/> : null}
-      {panel === "members" && me ? <MembersDrawer workspaceId={ws} projectId={pid} me={me} onClose={() => go(mode)} onError={(e) => setNotice(errText(e, "Thao tác thành viên thất bại."))}/> : null}
+      {panel === "members" && me ? <MembersDrawer workspaceId={ws} projectId={pid} me={me} onClose={() => go(mode)} onError={(e) => toast.error(errText(e, "Thao tác thành viên thất bại."))}/> : null}
       {panel === "publish" ? <PublishModal workspaceId={ws} projectId={pid} revision={project.revision} current="PRIVATE" canPublish={canPublishApp} allowed={cfg?.codeAppPublicPublish === false || cfg?.publicPublish === false ? ["PRIVATE"] : ["PRIVATE", "PUBLIC"]} onClose={() => { go(mode); api.lookupProject(pid).then(onProject).catch(() => undefined); }}
-        onUnauthorized={() => setNotice("Phiên đăng nhập đã hết hạn.")}/> : null}
+        onUnauthorized={() => toast.warning("Phiên đăng nhập đã hết hạn.")}/> : null}
       {panel === "versions" ? <Drawer title="Lịch sử (commit trên main)" sub="Lấy trực tiếp từ kho Git của nền tảng." onClose={() => go(mode)}>
         {commits == null ? <StateView kind="loading"/> : <ol className="commitList">{commits.map((c) => <li key={c.sha}><b>{c.message.split("\n")[0]}</b>
           <small className="code">{c.sha.slice(0, 10)} {c.verified ? <span className="pill pill-ok">Đã ký · {c.signer}</span> : <span className="pill pill-muted">Chưa ký</span>}</small>
           <small>Tác giả {c.author} · commit bởi {c.committer} · {fmtDate(c.date)}</small></li>)}</ol>}
         {canEdit ? <section className="settingGroup"><h3>Chính sách hợp nhất</h3>
-          <select aria-label="Chính sách hợp nhất" defaultValue="" onChange={(e) => void act("policy", () => api.code.mergePolicy(ws, pid, (e.target.value || null) as "AUTO_MERGE_ALLOWED" | "REVIEW_REQUIRED" | null), "Không đổi được.").then((r) => { if (r) { setNotice(`Chính sách hiện hành: ${r.effective === "REVIEW_REQUIRED" ? "cần duyệt" : "hợp nhất trực tiếp"}`); void loadChanges(); } })}>
+          <select aria-label="Chính sách hợp nhất" defaultValue="" onChange={(e) => void act("policy", () => api.code.mergePolicy(ws, pid, (e.target.value || null) as "AUTO_MERGE_ALLOWED" | "REVIEW_REQUIRED" | null), "Không đổi được.").then((r) => { if (r) { toast.info(`Chính sách hiện hành: ${r.effective === "REVIEW_REQUIRED" ? "cần duyệt" : "hợp nhất trực tiếp"}`); void loadChanges(); } })}>
             <option value="">Theo workspace</option><option value="AUTO_MERGE_ALLOWED">Hợp nhất trực tiếp sau khi build xanh</option><option value="REVIEW_REQUIRED">Cần người khác duyệt</option></select></section> : null}
       </Drawer> : null}
       {panel === "packages" ? <PackagesDrawer ws={ws} pid={pid} canEdit={canEdit} onClose={() => go(mode)} onChange={(id) => { setSelected(id); go(mode); void loadChanges(); }}/> : null}
