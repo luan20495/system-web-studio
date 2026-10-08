@@ -11,7 +11,8 @@ import {
   ReleaseKeyBook, SITE_IDLE_POLL_MS, SITE_POLL_MS, deploymentLabel, explainFailedDeployment, explainReleaseError, isBusyDeployment, isDeploymentSuccess, isReleaseBusy, isTerminalDeployment, operationBanner, publishBody,
   rollbackBody, rollbackCandidates, type ReleaseErrorView,
 } from "@xweb/api-client";
-import { useDialog } from "@/components/useDialog";
+import { useOverlayDialog } from "./useOverlayDialog";
+import { confirm } from "@xweb/ui";
 import type { AppDefinitionV2 } from "@xweb/types";
 import { diffAnnounced, parsePublicQueriesEvent, publicDataBlockers, publishApproval } from "./builder/core/publicData";
 
@@ -83,7 +84,7 @@ export function PublishModal({ workspaceId, projectId, revision, current, versio
     return () => clearTimeout(t);
   }, [operationHeld, pending, submitting, deploymentBusy, siteTick, siteFailures, loadSite, idleMs]);
   const locked = submitting || pending !== null || operationHeld || deploymentBusy;
-  const dialog = useDialog("Xuất bản website", deploymentBusy || pending ? null : onClose);        // cannot be dismissed with Escape mid-operation
+  const dialog = useOverlayDialog("Xuất bản website", deploymentBusy || pending ? null : onClose);        // cannot be dismissed with Escape mid-operation
 
   // Poll the deployment until it ends (terminal = RUNNING | FAILED | ROLLED_BACK). ROLLING_BACK is busy, never success. A failed poll says nothing about the deployment itself.
   const [pollFailures, setPollFailures] = useState(0);
@@ -115,8 +116,10 @@ export function PublishModal({ workspaceId, projectId, revision, current, versio
   }
   function publishAgain() { publishKeys.current.rotate(); setDeployment(null); setError(null); setNote(null); setPollFailures(0); }
 
-  async function rollback(target: Deployment) {
+  async function rollback(target: Deployment, confirmed = false) {
     if (locked || !canPublish) return;
+    // switching the LIVE site is not undone by closing this dialog: say what changes, and name the versions (M-019)
+    if (!confirmed && !(await confirm({ title: `Phục vụ lại phiên bản ${target.versionNumber}?`, message: `Website đang chạy ${site?.currentVersionNumber ? `phiên bản ${site.currentVersionNumber}` : "bản hiện tại"} sẽ được thay bằng phiên bản ${target.versionNumber} ngay lập tức. Bạn có thể phục vụ lại bản mới hơn sau đó.`, confirmLabel: "Phục vụ lại bản này", danger: true }))) return;
     const expected = site?.currentDeploymentId ?? null;
     const req = rollbackBody({ deploymentId: target.id, expectedActiveDeploymentId: expected });
     setPending({ kind: "ROLLBACK", deploymentId: target.id }); setError(null); setNote(null);
@@ -137,7 +140,7 @@ export function PublishModal({ workspaceId, projectId, revision, current, versio
 
   async function unpublish() {
     if (locked || !canPublish) return;
-    if (!window.confirm("Gỡ trang xuống? Địa chỉ sẽ báo không tìm thấy cho tới khi xuất bản lại hoặc phục vụ lại một bản cũ.")) return;
+    if (!(await confirm({ title: "Gỡ trang xuống?", message: "Địa chỉ của website sẽ báo không tìm thấy cho tới khi bạn xuất bản lại hoặc phục vụ lại một bản cũ.", confirmLabel: "Gỡ trang xuống", danger: true }))) return;
     const expected = site?.currentDeploymentId ?? null;
     setPending({ kind: "UNPUBLISH" }); setError(null); setNote(null);
     try {
@@ -210,7 +213,7 @@ export function PublishModal({ workspaceId, projectId, revision, current, versio
           <span>Phiên bản {h.versionNumber} · {h.visibility === "PRIVATE" ? "riêng tư" : "công khai"} · {fmt(h.createdAt)}</span>
           {site?.currentDeploymentId === h.id ? <b>Đang phục vụ</b>
             : <button className="button ghost" data-testid={`rollback:${h.id}`} disabled={locked || !canPublish} title={!canPublish ? "Cần quyền xuất bản (APP_PUBLISH)" : locked ? "Đang có thao tác phát hành khác" : undefined}
-                onClick={() => { lastAction.current = () => void rollback(h); void rollback(h); }}>{pending?.kind === "ROLLBACK" && pending.deploymentId === h.id ? "Đang hoàn tác…" : "Phục vụ lại bản này"}</button>}
+                onClick={() => { lastAction.current = () => void rollback(h, true); void rollback(h); }}>{pending?.kind === "ROLLBACK" && pending.deploymentId === h.id ? "Đang hoàn tác…" : "Phục vụ lại bản này"}</button>}
         </li>)}</ul>
         {history.some((h) => h.status === "ROLLED_BACK") ? <p className="hint">Các bản “đã hoàn tác” không còn phục vụ lại được; xuất bản lại phiên bản đó nếu cần.</p> : null}</details> : null}
       {note ? <p className="hint" role="status" data-testid="release-note">{note}</p> : null}

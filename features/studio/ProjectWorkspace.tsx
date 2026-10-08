@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
-import { ArrowLeft, ErrorBoundary, Settings, Sparkles, Tabs, toast } from "@xweb/ui";
+import { ArrowLeft, ErrorBoundary, Settings, Sparkles, Tabs, toast, confirm } from "@xweb/ui";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api, newIdempotencyKey } from "@/lib/http-api";
 import { renderSchemaDocument } from "@/lib/schema-preview";
@@ -107,10 +107,15 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const retrySave = () => { if (failedEdit) void applyOps(failedEdit.ops, failedEdit.summary, failedEdit.blockId); };
 
   async function restore(v: VersionSummary) {
-    if (!window.confirm(`Khôi phục phiên bản ${v.versionNumber}? Một phiên bản mới sẽ được tạo; lịch sử cũ giữ nguyên.`)) return;
+    if (!(await confirm({ title: `Khôi phục phiên bản ${v.versionNumber}?`, message: "Nội dung của phiên bản này trở thành một phiên bản MỚI. Lịch sử cũ giữ nguyên, nên có thể quay lại bản hiện tại sau đó.", confirmLabel: "Khôi phục phiên bản này" }))) return;
     const r = await run("restore", () => api.restoreVersion(ws, projectId, v.id, revision), "Không khôi phục được phiên bản.");
     if (!r) return;
     setSchema(r.schema); setRevision(r.revision); void refreshVersions(); toast.success(`Đã khôi phục phiên bản ${v.versionNumber} thành phiên bản ${r.version.versionNumber}.`);
+  }
+  async function archive() {
+    if (!project || !(await confirm({ title: `Lưu trữ “${project.name}”?`, message: "Ứng dụng chỉ còn xem được và website bị gỡ khỏi mạng. Dữ liệu và phiên bản được giữ; có thể khôi phục sau.", confirmLabel: "Lưu trữ ứng dụng", danger: true }))) return;
+    const r = await run("settings", () => api.archiveProject(ws, projectId), "Không lưu trữ được.");
+    if (r) { go(mode); void reload(); }
   }
   async function saveSettings(patch: Partial<ApiProject>) {
     const p = await run("settings", () => api.updateProject(ws, projectId, revision, patch), "Không lưu được cài đặt.");
@@ -309,7 +314,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
         extra={<>{!readOnly ? <SaveTemplateSection workspaceId={ws} projectId={projectId} projectName={project.name}/> : null}
           {mayDelete && project.status !== "ARCHIVED" ? <section className="settingGroup"><h3>Lưu trữ ứng dụng</h3>
             <p className="hint">Ứng dụng chỉ còn xem được, website bị gỡ khỏi mạng. Dữ liệu và phiên bản được giữ; có thể khôi phục.</p>
-            <button className="button ghost" onClick={() => { if (confirm(`Lưu trữ “${project.name}”?`)) void run("settings", () => api.archiveProject(ws, projectId), "Không lưu trữ được.").then((r) => { if (r) { go(mode); void reload(); } }); }}>Lưu trữ</button>
+            <button className="button ghost" onClick={() => void archive()}>Lưu trữ</button>
           </section> : null}</>}/> : null}
       {savingBlock && selected ? <SaveBlockDrawer workspaceId={ws} projectId={projectId} section={selected} title={label(selected.type)}
         onClose={() => setSavingBlock(false)} onSaved={(m) => { setSavingBlock(false); toast.success(m); loadBlocks(); }}/> : null}

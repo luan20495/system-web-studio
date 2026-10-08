@@ -3,7 +3,7 @@
 // built in the sandbox, previewed from the sites origin (CSP sandbox) and merged only after a green build.
 import { canEditProject, canPublish, canShare, resolvePermissions } from "@xweb/permissions";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Sparkles, Tabs, toast } from "@xweb/ui";
+import { ArrowLeft, confirm, Sparkles, Tabs, toast } from "@xweb/ui";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/http-api";
 import { SERVER_KINDS, type AiStatus, type ApiProject, type AuthConfig, type CodeAiHistoryItem, type CodeChange, type CodeCommit, type DiffFile, type TreeFile } from "@/lib/http-types";
@@ -127,7 +127,10 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
   async function approve(c: CodeChange, comment?: string) {
     if (await act("approve", () => api.code.approve(ws, pid, c.id, comment), "Không duyệt được.")) { setReviewing(null); void loadChanges(); }
   }
-  async function discard(c: CodeChange) { if (await act("discard", () => api.code.discard(ws, pid, c.id), "Không huỷ được.")) void loadChanges(); }
+  async function discard(c: CodeChange) {
+    if (!(await confirm({ title: "Bỏ thay đổi này?", message: `“${c.summary}” bị bỏ và không hợp nhất vào main. Không thể hoàn tác.`, confirmLabel: "Bỏ thay đổi", danger: true }))) return;
+    if (await act("discard", () => api.code.discard(ws, pid, c.id), "Không bỏ được thay đổi.")) void loadChanges();
+  }
 
   if (error) return <div className="wsError"><ErrorState error={error} retry={() => { setError(null); void loadTree(); }}/></div>;
   return (
@@ -235,7 +238,7 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
                   ? <button className="button ghost" disabled={busy !== null} onClick={() => setReviewing(change)}>Duyệt</button> : null}
                 {canEdit && change.status === "READY" ? <button className="button primary" disabled={busy !== null || (!!change.reviewRequired && !change.approvedBy)}
                   title={change.reviewRequired && !change.approvedBy ? "Cần một thành viên khác duyệt trước" : undefined} onClick={() => void merge(change)}>{busy === "merge" ? "Đang hợp nhất…" : "Hợp nhất vào main"}</button> : null}
-                {canEdit && ["BUILDING", "READY", "FAILED"].includes(change.status) ? <button className="button ghost" disabled={busy !== null} onClick={() => void discard(change)}>Huỷ</button> : null}
+                {canEdit && ["BUILDING", "READY", "FAILED"].includes(change.status) ? <button className="button ghost" disabled={busy !== null} onClick={() => void discard(change)}>Bỏ thay đổi</button> : null}
               </div>
             </div>
             {change.reviewRequired ? <p className="hint">{change.approvedBy ? `Đã duyệt bởi ${change.approvedBy}${change.reviewComment ? ` — “${change.reviewComment}”` : ""}` : "Dự án yêu cầu duyệt: một thành viên có quyền xuất bản (không phải người tạo) cần duyệt trước khi hợp nhất."}</p> : null}

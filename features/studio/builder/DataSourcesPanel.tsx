@@ -219,7 +219,7 @@ export function DataSourcesPanel({ doc, calls, canView, viewReason, canManage, m
       {removing ? (
         <Dialog title={`Xóa nguồn “${removing.name}”?`} onClose={() => setRemoving(null)} footer={<>
           <button type="button" className="button ghost" onClick={() => setRemoving(null)}>Hủy</button>
-          <button type="button" className="button primary" data-testid="ds-delete-confirm" disabled={busy(`del:${removing.id}`)} onClick={() => void doRemove()}>Xóa nguồn</button></>}>
+          <button type="button" className="bx-btn danger" data-testid="ds-delete-confirm" disabled={busy(`del:${removing.id}`)} onClick={() => void doRemove()}>Xóa nguồn</button></>}>
           <p>Nguồn và khóa kết nối của nó sẽ bị xóa khỏi không gian làm việc. Nếu nguồn đang được liên kết với một ứng dụng, máy chủ sẽ từ chối: hãy bỏ liên kết trước.</p>
           {noteText(`del:${removing.id}`)}
         </Dialog>

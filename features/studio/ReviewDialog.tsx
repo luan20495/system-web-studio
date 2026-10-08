@@ -6,10 +6,10 @@
  * There is deliberately no "Từ chối" button: the server has no reject endpoint for a code change (only approve and discard), so none is invented here.
  */
 import { useId, useState } from "react";
-import { useDialog } from "@/components/useDialog";
+import { useOverlayDialog } from "./useOverlayDialog";
 
 export function ReviewDialog({ summary, busy, onApprove, onClose }: { summary: string; busy: boolean; onApprove: (comment?: string) => void; onClose: () => void }) {
-  const dialog = useDialog("Duyệt thay đổi", busy ? null : onClose);   // cannot be dismissed with Escape while the request is in flight
+  const dialog = useOverlayDialog("Duyệt thay đổi", busy ? null : onClose);   // cannot be dismissed with Escape while the request is in flight
   const [comment, setComment] = useState("");
   const field = useId();
   return (

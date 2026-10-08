@@ -1,5 +1,6 @@
 "use client";
 
+import { confirm } from "@xweb/ui";
 import { useState } from "react";
 import { api } from "@/lib/http-api";
 import type { BlockDto } from "@/lib/http-types";
@@ -23,7 +24,7 @@ function BlockCard({ b, mine, onChanged }: { b: BlockDto; mine: boolean; onChang
     {mine ? <div className="actions">
       {b.status === "PRIVATE" ? <button className="btn sm primary" onClick={() => void act(async () => { const r = await api.submitBlock(b.id); if (!r.passed) { setOpen(true); throw new Error("Kiểm tra tự động không đạt; xem danh sách bên dưới."); } }, "Đã gửi duyệt.")}>Gửi duyệt</button> : null}
       {b.status === "REVIEW" ? <button className="btn sm" onClick={() => void act(() => api.withdrawBlock(b.id), "Đã rút lại.")}>Rút lại</button> : null}
-      {b.approvedVersion == null && b.status !== "REVIEW" ? <button className="btn sm ghost" onClick={() => { if (confirm(`Xóa khối “${b.name}”?`)) void act(() => api.deleteBlock(b.id)); }}>Xóa</button> : null}
+      {b.approvedVersion == null && b.status !== "REVIEW" ? <button className="btn sm ghost" onClick={() => void (async () => { if (await confirm({ title: `Xóa khối “${b.name}”?`, message: "Khối riêng tư của bạn bị xóa. Trang đã chèn khối này không bị ảnh hưởng: nó là một mục bình thường của component gốc.", confirmLabel: "Xóa khối", danger: true })) await act(() => api.deleteBlock(b.id)); })()}>Xóa</button> : null}
       <button className="btn sm ghost" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? "Ẩn chi tiết" : "Chi tiết"}</button>
     </div> : null}
     {open && mine ? <div>

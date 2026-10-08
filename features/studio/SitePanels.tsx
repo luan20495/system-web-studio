@@ -1,7 +1,7 @@
 "use client";
 // Website structure (stage G): pages + SEO, navigation, 404 page, form submissions, custom domains.
 import { useCallback, useEffect, useState } from "react";
-import { Plus, X } from "@xweb/ui";
+import { confirm, Plus, X } from "@xweb/ui";
 import { api, ApiError } from "@/lib/http-api";
 import type { FormSubmission, NavLink, PageSchema, SchemaOperation, SiteDomain } from "@/lib/http-types";
 import { ago, errText, StateView } from "../ui";
@@ -46,7 +46,7 @@ function PagesSection({ schema, pageId, onPage, canEdit, apply }: { schema: Page
     if (await apply([{ type: "ADD_PAGE", pageId: id, props: { slug: s, title: t } }], `Thêm trang ${t}`)) { setNewTitle(""); onPage(id); }
   }
   async function remove() {
-    if (!current || !confirm(`Xoá trang “${current.title}” cùng các phần của nó? Liên kết điều hướng tới trang này cũng bị xoá.`)) return;
+    if (!current || !(await confirm({ title: `Xóa trang “${current.title}”?`, message: "Các phần của trang và liên kết điều hướng tới trang này cũng bị xóa. Có thể khôi phục từ lịch sử phiên bản.", confirmLabel: "Xóa trang", danger: true }))) return;
     if (await apply([{ type: "REMOVE_PAGE", pageId: current.id }], `Xoá trang ${current.title}`)) onPage("home");
   }
   return <section className="settingGroup"><h3>Trang</h3>
@@ -103,7 +103,7 @@ function FormsSection({ ws, pid }: { ws: string; pid: string }) {
   const [data, setData] = useState<{ items: FormSubmission[]; total: number } | null>(null); const [err, setErr] = useState<string | null>(null);
   const load = useCallback(() => api.formSubmissions(ws, pid).then(setData).catch((e) => setErr(e instanceof ApiError && e.status === 403 ? "Chỉ người chỉnh sửa ứng dụng mới xem được dữ liệu form." : errText(e, "Không tải được."))), [ws, pid]);
   useEffect(() => { void load(); }, [load]);
-  async function del(s: FormSubmission) { if (!confirm("Xoá tin gửi này?")) return; try { await api.deleteFormSubmission(ws, pid, s.id); void load(); } catch (e) { setErr(errText(e, "Không xoá được.")); } }
+  async function del(s: FormSubmission) { if (!(await confirm({ title: "Xóa tin gửi này?", message: "Tin nhắn của khách bị xóa vĩnh viễn và không thể hoàn tác.", confirmLabel: "Xóa tin gửi", danger: true }))) return; try { await api.deleteFormSubmission(ws, pid, s.id); void load(); } catch (e) { setErr(errText(e, "Không xoá được.")); } }
   return <section className="settingGroup"><h3>Form gửi về</h3>
     <p className="hint">Tin gửi từ form liên hệ trên website đã xuất bản (công khai). Dữ liệu cá nhân: chỉ người chỉnh sửa xem được, tự xoá sau thời hạn lưu giữ của công ty.</p>
     {err ? <p className="formError" role="alert">{err}</p> : !data ? <StateView kind="loading"/> : data.items.length === 0 ? <p className="hint">Chưa có tin gửi nào.</p> : <>
@@ -135,7 +135,7 @@ function DomainsSection({ ws, pid, canPublish }: { ws: string; pid: string; canP
       {canPublish ? <div className="row">
         {d.status !== "VERIFIED" ? <button type="button" className="smallButton" disabled={busy !== null} onClick={() => void act(d.id, () => api.verifyDomain(ws, pid, d.id))}>Kiểm tra DNS</button>
           : <button type="button" className="smallButton" disabled={busy !== null} onClick={() => void act(d.id, () => api.checkDomainTls(ws, pid, d.id))}>Kiểm tra HTTPS</button>}
-        <button type="button" className="smallButton" disabled={busy !== null} onClick={() => { if (confirm(`Gỡ tên miền ${d.hostname}?`)) void act(d.id, () => api.removeDomain(ws, pid, d.id)); }}>Gỡ</button>
+        <button type="button" className="smallButton" disabled={busy !== null} onClick={() => void (async () => { if (await confirm({ title: `Gỡ tên miền ${d.hostname}?`, message: "Website không còn mở được bằng tên miền này. Bạn có thể thêm lại sau và xác minh lại.", confirmLabel: "Gỡ tên miền", danger: true })) await act(d.id, () => api.removeDomain(ws, pid, d.id)); })()}>Gỡ</button>
       </div> : null}</li>)}</ul>}
   </section>;
 }

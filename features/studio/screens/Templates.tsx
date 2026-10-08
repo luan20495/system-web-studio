@@ -1,5 +1,6 @@
 "use client";
 
+import { confirm } from "@xweb/ui";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -49,7 +50,7 @@ function TemplateCard({ t, onUse, onChanged, categories, mine }: { t: TemplateDt
       {onUse ? <button className="btn sm primary" onClick={() => onUse(t)}>Dùng mẫu này</button> : null}
       {t.canEdit ? <><button className="btn sm" onClick={() => setEditing(true)}>Sửa</button>
         {t.reviewStatus === "PRIVATE" ? <button className="btn sm" onClick={() => void submit()}>Gửi duyệt cho công ty</button> : null}
-        <button className="btn sm ghost" onClick={() => { if (confirm(`Lưu trữ mẫu “${t.name}”? Ứng dụng đã tạo từ mẫu không bị ảnh hưởng.`)) void act(() => api.archiveTemplate(t.id)); }}>Lưu trữ</button></> : null}
+        <button className="btn sm ghost" onClick={() => void (async () => { if (await confirm({ title: `Lưu trữ mẫu “${t.name}”?`, message: "Mẫu không còn được đề xuất cho ứng dụng mới. Ứng dụng đã tạo từ mẫu không bị ảnh hưởng.", confirmLabel: "Lưu trữ mẫu", danger: true })) await act(() => api.archiveTemplate(t.id)); })()}>Lưu trữ</button></> : null}
       {t.reviewStatus === "REVIEW" && mine ? <button className="btn sm ghost" onClick={() => void act(() => api.withdrawTemplate(t.id))}>Rút lại</button> : null}
     </div>}
     {checks ? <ul className="plainList" aria-label="Kết quả kiểm tra">{checks.filter((c) => !c.ok).map((c) => <li key={c.check} className="formError">{c.check}: {c.message}</li>)}</ul> : null}

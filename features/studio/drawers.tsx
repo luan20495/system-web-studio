@@ -2,7 +2,7 @@
 // Project drawers/modals shared by the Studio workspace (settings, assets, members, publish).
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { X } from "@xweb/ui";
+import { X, confirm, useBackdropClose } from "@xweb/ui";
 import { api, ApiError } from "@/lib/http-api";
 import { renderSchemaDocument } from "@/lib/schema-preview";
 import type {
@@ -10,7 +10,7 @@ import type {
 } from "@/lib/http-types";
 import { PROJECT_ROLES, WORKSPACE_ROLES } from "@/lib/http-types";
 import type { DeviceMode } from "@/lib/types";
-import { useDialog } from "@/components/useDialog";
+import { useOverlayDialog } from "./useOverlayDialog";
 import { errText } from "../ui";
 
 const fmt = (iso: string) => new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
@@ -27,9 +27,10 @@ export function DeviceIcon({ kind }: { kind: DeviceMode }) {
 }
 
 export function Drawer({ title, sub, onClose, children, wide }: { title: string; sub?: string; onClose: () => void; children: ReactNode; wide?: boolean }) {
-  const dialog = useDialog(title, onClose);
+  const dialog = useOverlayDialog(title, onClose);
+  const backdrop = useBackdropClose(onClose, true);   // closes only when the press started AND ended on the backdrop (selecting text in a field and releasing outside no longer dismisses it)
   return (
-    <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="overlay" {...backdrop}>
       <div className={`drawer${wide ? " wide" : ""}`} {...dialog.props}>
         <div className="drawerHeader"><div><h2 id={dialog.titleId}>{title}</h2>{sub ? <p>{sub}</p> : null}</div><button className="button icon" aria-label="Đóng" onClick={onClose}><X size={16} aria-hidden="true"/></button></div>
         {children}
@@ -83,6 +84,11 @@ export function AssetsDrawer({ workspaceId, projectId, canEdit, onClose, onError
     finally { setUploading(false); if (input.current) input.current.value = ""; }
   }
 
+  async function removeAsset(a: AssetDto) {
+    if (!(await confirm({ title: `Xóa tệp “${a.name}”?`, message: "Tệp bị xóa khỏi project và không thể hoàn tác. Các trang đang dùng tệp này sẽ không còn hiển thị nó.", confirmLabel: "Xóa tệp", danger: true }))) return;
+    try { await api.deleteAsset(workspaceId, projectId, a.id); await load(); } catch (e) { onError(e); }
+  }
+
   return (
     <Drawer title="Tệp của project" sub="PNG, JPEG, WebP, GIF hoặc PDF. Lưu trong MinIO qua URL ký sẵn." onClose={onClose}>
       {canEdit ? <label className="uploadBox">{uploading ? "Đang tải lên…" : "Chọn tệp để tải lên"}
@@ -92,7 +98,7 @@ export function AssetsDrawer({ workspaceId, projectId, canEdit, onClose, onError
           <div><b>{a.name}</b><span>{(a.size / 1024).toFixed(1)} KB</span></div>
           {a.contentType.startsWith("image/") && a.downloadUrl ? /* eslint-disable-next-line @next/next/no-img-element */ <img className="assetThumb" src={a.downloadUrl} alt={a.name}/> : null}
           {a.downloadUrl ? <a href={a.downloadUrl} target="_blank" rel="noreferrer noopener">Mở tệp</a> : null}
-          {canEdit ? <button className="smallButton danger" onClick={() => { if (window.confirm(`Xóa ${a.name}?`)) api.deleteAsset(workspaceId, projectId, a.id).then(load).catch(onError); }}>Xóa</button> : null}
+          {canEdit ? <button className="smallButton danger" onClick={() => void removeAsset(a)}>Xóa</button> : null}
         </article>))}</div>
     </Drawer>
   );
@@ -162,11 +168,11 @@ export function MembersDrawer({ workspaceId, projectId, me, onClose, onError }: 
     <Drawer wide title="Thành viên và quyền" sub="Quyền được kiểm tra ở máy chủ; thay đổi được ghi vào nhật ký kiểm toán." onClose={onClose}>
       <MemberTable title="Thành viên project" members={project} roles={PROJECT_ROLES} currentUserId={me.id} busy={busy} error={errors.project}
         onChange={(m, r) => void act("project", () => api.changeProjectMember(workspaceId, projectId, m.userId, r))}
-        onRemove={(m) => { if (window.confirm(`Xóa ${m.username} khỏi project?`)) void act("project", () => api.removeProjectMember(workspaceId, projectId, m.userId)); }}
+        onRemove={(m) => void (async () => { const self = m.userId === me.id; if (await confirm({ title: self ? "Rời khỏi project này?" : `Xóa ${m.username} khỏi project?`, message: self ? "Bạn sẽ mất quyền truy cập project này, trừ khi bạn còn quyền ở cấp workspace." : `${m.username} sẽ không còn truy cập được project này.`, confirmLabel: self ? "Rời project" : "Xóa khỏi project", danger: true })) await act("project", () => api.removeProjectMember(workspaceId, projectId, m.userId)); })()}
         onAdd={(v, r) => act("project", () => api.addProjectMember(workspaceId, projectId, who(v), r))}/>
       {wsVisible ? <MemberTable title="Thành viên workspace" members={workspace} roles={WORKSPACE_ROLES} currentUserId={me.id} busy={busy} error={errors.workspace}
         onChange={(m, r) => void act("workspace", () => api.changeWorkspaceMember(workspaceId, m.userId, r))}
-        onRemove={(m) => { if (window.confirm(`Xóa ${m.username} khỏi workspace? Họ cũng mất quyền ở mọi project.`)) void act("workspace", () => api.removeWorkspaceMember(workspaceId, m.userId)); }}
+        onRemove={(m) => void (async () => { const self = m.userId === me.id; if (await confirm({ title: self ? "Rời khỏi workspace này?" : `Xóa ${m.username} khỏi workspace?`, message: self ? "Bạn sẽ mất quyền ở mọi project của workspace này." : `${m.username} cũng mất quyền ở mọi project của workspace.`, confirmLabel: self ? "Rời workspace" : "Xóa khỏi workspace", danger: true })) await act("workspace", () => api.removeWorkspaceMember(workspaceId, m.userId)); })()}
         onAdd={(v, r) => act("workspace", () => api.addWorkspaceMember(workspaceId, who(v), r))}/> : null}
     </Drawer>
   );
