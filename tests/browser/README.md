@@ -58,3 +58,9 @@ Pitfall found while writing it: `page.waitForSelector` returns an `ElementHandle
 
     CHROME=... node tests/browser/harness-server.mjs run -- node tests/browser/sanity.spec.mjs        # SANITY_ROUNDS=40 by default
     # production bundle: HARNESS_NODE_ENV=production node tests/browser/build-harness.mjs && CHROME=... node tests/browser/harness-server.mjs run --dir .test-build/browser-prod -- node tests/browser/sanity.spec.mjs
+
+## Studio-app harness (`studio-p1.spec.mjs`, `studio-app/`) - the REAL `<StudioApp>`, a FAKE `/api/v1`, NOT a backend
+`studio-app/entry.tsx` mounts `PortalApp` -> `StudioApp` with `next/navigation` and `next/link` replaced by a virtual router (`?start=/studio/projects/p1/ai` gives the first path, `window.__nav.log` records pushes); `studio-app/fake-api.mjs` answers `/api/v1/**` inside Playwright (`page.route`, state object per test, `state.log` = every request, `state.hold` / `state.fail` to hold or fail a call). It proves what the UI sends and shows for the answers a fake gives; it validates nothing the server validates. `studio-p1.spec.mjs` holds the regression checks of the confirmed Studio P1s (M-001 review dialog, M-004 AI conversation); M-002 / M-003 live in `builder.spec.mjs`.
+
+    node tests/browser/build-harness.mjs                       # also builds studio.html
+    CHROME=... node tests/browser/harness-server.mjs run -- node tests/browser/studio-p1.spec.mjs
