@@ -355,7 +355,7 @@
 :root{--sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:20px;--sp-6:24px;--sp-8:32px;--f-focus:#4f46e5;--f-placeholder:#677086;--f-disabled-bg:#f3f4f6;--f-disabled-ink:#7a8394}
 .shell,.authPage,.splash,.wsError{font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
 .shell h1,.authPage h1{font-weight:700;letter-spacing:-.01em}.shell h2,.shell h3{font-weight:650}
-.shell select,.authPage select{appearance:none;-webkit-appearance:none;min-height:36px;padding:0 32px 0 10px;border:1px solid var(--f-line);border-radius:8px;background-color:#fff;color:var(--f-text);font:inherit;
+.shell select,.authPage select,.adminModal select{appearance:none;-webkit-appearance:none;min-height:36px;padding:0 32px 0 10px;border:1px solid var(--f-line);border-radius:8px;background-color:#fff;color:var(--f-text);font:inherit;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23545f70' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
   background-repeat:no-repeat;background-position:right 10px center;background-size:16px;text-overflow:ellipsis}
 .shell select[multiple],.shell select[size]:not([size="1"]){background-image:none;padding:6px 10px}

@@ -157,7 +157,7 @@
   .bx-top .brand{flex:1 1 100%}
   .bx-top-center{flex:1 1 100%;flex-wrap:nowrap;justify-content:flex-start;overflow-x:auto;padding-bottom:2px}
   .bx-top-center>*{flex:none}
-  .bx-top .topActions{flex:1 1 100%;flex-wrap:nowrap;justify-content:flex-start;overflow-x:auto;padding-bottom:2px}
+  .bx-top .topActions{flex:1 1 100%;flex-wrap:wrap;justify-content:flex-start;gap:6px}
   .bx-top .topActions>*{flex:none}
   .bx-top .topActions>.button.ghost,.bx-top .topActions>.button.icon{display:inline-flex}
   .bx-top .projectName,.bx-top .projectMeta{max-width:60vw}
@@ -171,3 +171,14 @@
 .bx-tabs button:focus-visible{outline:2px solid #93c5fd;outline-offset:-2px}
 /* checkboxes / radios of the editor are real targets: 24 px (WCAG 2.5.8) */
 .bx-right input[type=checkbox],.bx-right input[type=radio],.bx-left-panel input[type=checkbox],.bx-left-panel input[type=radio],.drawer input[type=checkbox],.drawer input[type=radio]{width:24px;height:24px;min-height:24px;margin:0;accent-color:#6366f1;flex:none}
+
+/* C6 fix pass 2 (UX-006 / UX-008): the workspace header of AI / Code pages, icon buttons that shrank, compact selects, text buttons, brand width on a phone */
+.button.icon{flex:none;min-width:32px}
+.linkButton{display:inline-flex;align-items:center;min-height:24px}
+.bx-left-panel select,.bx-right select,.bx-panel-body select{min-height:32px}
+@media(max-width:900px){
+  .studio.workspace3:not(.bx-root){grid-template-rows:auto minmax(0,1fr);height:100dvh}
+  .workspace3:not(.bx-root) .topbar{height:auto;padding-block:8px;row-gap:8px}
+  .workspace3:not(.bx-root) .topActions{flex-wrap:wrap;justify-content:flex-start}
+}
+@media(max-width:760px){.bx-top .projectName,.bx-top .projectMeta{max-width:max(120px,calc(100vw - 210px))}}
