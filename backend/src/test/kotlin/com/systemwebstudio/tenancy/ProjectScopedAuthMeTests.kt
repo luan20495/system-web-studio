@@ -174,6 +174,11 @@ class ProjectScopedAuthMeTests : IntegrationTestBase() {
         }
         assertThat(perms(creatorScope)).contains("APP_VIEW", "APP_EDIT").doesNotContain("APP_PUBLISH")
         assertThat(creatorMe.get("permissions").toList().map { it.asString() }).doesNotContain("APP_VIEW", "APP_EDIT", "APP_PUBLISH")
+        // the point of H-C1-04: a workspace VIEWER holds no Studio permission at workspace level (PermissionMatrix.workspaceRoles), the project role is the ONLY source of APP_VIEW,
+        // and it is never flattened into workspaces[].permissions
+        val creatorWorkspace = creatorMe.get("workspaces").toList().single { it.get("id").asString() == workspaceId.toString() }
+        assertThat(creatorWorkspace.get("permissions").toList().map { it.asString() }).describedAs("workspaces[].permissions of a workspace VIEWER").doesNotContain("APP_VIEW", "APP_EDIT", "APP_PUBLISH", "APP_USE")
+        assertThat(creatorMe.get("projectScopes").toList().map { it.get("workspaceId").asString() }).containsExactly(workspaceId.toString())
 
         assertThat(creator.get(api(workspaceId, projectId)).response.status).isEqualTo(200)
         assertThat(creator.patch(
@@ -187,5 +192,39 @@ class ProjectScopedAuthMeTests : IntegrationTestBase() {
             "Idempotency-Key" to "h-c1-04-editor-denied"
         )
         assertThat(publish.response.status).isEqualTo(403)
+    }
+
+    @Test
+    fun `I stale or removed memberships and deleted projects are not disclosed, and the response carries no secret`() {
+        val owner = fx.user("h04-owner-i"); val w = fx.workspace(); fx.member(w, owner, "WORKSPACE_ADMIN"); val ownerSession = sessionFor(owner.username)
+        val kept = fx.project(w, owner, "Kept"); val removed = fx.project(w, owner, "Removed"); val deleted = fx.project(w, owner, "Deleted"); val inactive = fx.project(w, owner, "Inactive member")
+        val user = fx.user("h04-stale"); fx.member(w, user, "VIEWER")
+        for (p in listOf(kept, removed, deleted, inactive)) fx.projectRole(p, user, "EDITOR")
+        val s = sessionFor(user.username)
+        assertThat(scopes(s).map { it.get("projectId").asString() }).containsExactlyInAnyOrder(kept.id.toString(), removed.id.toString(), deleted.id.toString(), inactive.id.toString())
+
+        assertThat(ownerSession.delete("${api(w, removed.id)}/members/${user.id}").response.status).isEqualTo(204)                      // removed through the API
+        jdbc.update("UPDATE project_members SET active = false WHERE project_id = ? AND user_id = ?", inactive.id, user.id)             // deactivated
+        jdbc.update("UPDATE projects SET active = false WHERE id = ?", deleted.id)                                                      // project deleted
+        assertThat(scopes(s).map { it.get("projectId").asString() }).describedAs("only the live membership remains").containsExactly(kept.id.toString())
+        for (gone in listOf(removed, deleted, inactive)) assertThat(s.get(api(w, gone.id)).response.status).describedAs("direct API agrees with /auth/me").isEqualTo(404)
+
+        val raw = s.get("/api/v1/auth/me").response.contentAsString.lowercase()
+        for (secret in listOf("password", "argon2", "hash", "token", "secret")) assertThat(raw).describedAs("/auth/me body must not contain '$secret'").doesNotContain(secret)
+    }
+
+    @Test
+    fun `J a user without any workspace or project membership gets nothing, and one project membership never leaks into another user's response`() {
+        val owner = fx.user("h04-owner-j"); val w = fx.workspace(); fx.member(w, owner, "EDITOR"); val p = fx.project(w, owner)
+        val member = fx.user("h04-member-j"); fx.member(w, member, "VIEWER"); fx.projectRole(p, member, "EDITOR")
+        val nobody = fx.user("h04-nobody")
+        val ns = sessionFor(nobody.username)
+        assertThat(me(ns).get("workspaces").size()).isZero(); assertThat(scopes(ns)).isEmpty()
+        assertThat(ns.get(api(w, p.id)).response.status).isEqualTo(404)
+        assertThat(scopes(sessionFor(member.username)).map { it.get("projectId").asString() }).containsExactly(p.id.toString())
+        // the owner's own scope is its own: OWNER keeps the owner set, and a second user never receives it
+        val ownerScopes = scopes(sessionFor(owner.username)).filter { it.get("projectId").asString() == p.id.toString() }
+        assertThat(ownerScopes).hasSize(1); assertThat(perms(ownerScopes.single())).contains("APP_VIEW", "APP_EDIT", "APP_PUBLISH")
+        assertThat(perms(scope(sessionFor(member.username), p.id))).doesNotContain("APP_PUBLISH")
     }
 }
