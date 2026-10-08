@@ -58,3 +58,9 @@ Pitfall found while writing it: `page.waitForSelector` returns an `ElementHandle
 
     CHROME=... node tests/browser/harness-server.mjs run -- node tests/browser/sanity.spec.mjs        # SANITY_ROUNDS=40 by default
     # production bundle: HARNESS_NODE_ENV=production node tests/browser/build-harness.mjs && CHROME=... node tests/browser/harness-server.mjs run --dir .test-build/browser-prod -- node tests/browser/sanity.spec.mjs
+
+## Platform / Admin portals (`admin.spec.mjs`) — the REAL `PortalApp` + `AdminApp` with a FAKE `fetch`, NOT a backend
+`admin-harness.tsx` mounts the real portal entry (login gate, session, `AdminApp` router, every screen) in real Chromium. `window.fetch` answers `/api/v1/**` from in-page fixtures and records every request in `window.__calls`; `admin-next-shim.tsx` stands in for `next/link` / `next/navigation` (a history based router, aliased only in the separate esbuild call of `build-harness.mjs`). Query: `?portal=platform|admin&me=sys|sysmember|tadmin|wsadmin|plain|sysatenant&start=/platform/tenants` plus `fail` / `failw` / `slow` / `empty` / `big` / `daily=empty` / `bad=audit` scenarios (see the header of the harness). It proves what the SCREENS do with the answers C1's contract describes (activation link, tenant provisioning, `/auth/me` scope), never what a server answers. Sections so far: the one-time activation link dialog (M-007), create company → first admin (M-008), SYSTEM_ADMIN application detail (M-009).
+
+    node tests/browser/build-harness.mjs
+    CHROME=... node tests/browser/harness-server.mjs run -- node tests/browser/admin.spec.mjs          # 38 checks
