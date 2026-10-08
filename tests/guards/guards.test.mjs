@@ -12,6 +12,7 @@ import { guardHierarchy, guardFailClosed, guardRelationNotPermission } from "./o
 import { guardLegacyWorkspaceRoute } from "./no-legacy-admin-workspaces.mjs";
 import { guardTestLabeling } from "./test-labeling.mjs";
 import { guardMigrationLedger } from "./migration-ledger.mjs";
+import { guardProcessSafety } from "./process-safety.mjs";
 import { scanAll } from "../../scripts/scan-prod-bundles.mjs";
 
 const dirs = [];
@@ -199,6 +200,67 @@ for (const [name, build, rule] of [
   ["flyway out-of-order on", () => MIG(["V30__a.sql"], LEDGER(), { "backend/src/main/resources/application.yml": "spring:\n  flyway:\n    out-of-order: true\n" }), "MIGRATION-OUT-OF-ORDER"],
 ]) test(`G7 migrations FAILS: ${name}`, () => assert.ok(rules(guardMigrationLedger(build())).includes(rule), `${rule} expected`));
 
+
+// ----------------------------------------------------------------------------------------------------------------------------------- 8. process safety (D-C0-48)
+const PS = (file, code) => fx({ [file]: code });
+test("G8 process safety: the lifecycle idioms that ARE safe are CLEAN", () => {
+  const root = fx({
+    "scripts/ok.sh": [
+      'kill "$owned_pid" 2>/dev/null || true', 'kill -TERM "$pid"', 'kill -0 "$pid" 2>/dev/null && echo alive', 'kill "$(cat "$RUN/api.pid")"',
+      'pkill -TERM -P "$owned_pid" 2>/dev/null || true', 'pkill -P "$parent"', 'kill -- -"$pgid"',
+      'node "$ROOT/scripts/owned-process.mjs" stop-port --port 8080 --cwd-under "$ROOT"', 'op_stop_port 3001 --state "$f"', 'op_stop "$STATE"',
+      'docker stop hbl-v1-data-target', 'docker kill "$container"', 'docker compose -f compose.yml stop sites-gateway',
+      'for _ in $(seq 1 60); do lsof -ti tcp:"$port" -sTCP:LISTEN >/dev/null 2>&1 || break; sleep 1; done',          // waiting for a port is not killing
+      '# pkill -f "next start" is forbidden here (a comment explaining it)', 'echo "never kill by name"  # killall node in a comment',
+    ].join("\n"),
+    "tests/infra/ok.test.mjs": `process.kill(pid, "SIGTERM"); process.kill(-pgid, "SIGKILL"); child.kill("SIGKILL"); // pkill -f x in a comment\nspawnSync("pkill", ["-TERM", "-P", String(parentPid)]);`,
+    "e2e/ok.py": "os.kill(pid, 15)  # killall node\nproc.terminate()\n",
+    "scripts/pragma.sh": 'lsof -ti tcp:"$p" | xargs kill  # guard-allow: PROCESS-SAFETY — the port is the one this very script just opened, checked two lines above',
+    "scripts/owned.sh": 'owner="$(lsof -ti tcp:"$p")"\n[ "$(ps -o lstart= -p "$owner")" = "$recorded_lstart" ] && lsof -ti tcp:"$p" | xargs kill',            // ownership identity checked in the same statement
+    "docs/parallel/policy.md": "never run pkill -f \"next start\" or killall node", "tests/guards/fixture.mjs": 'const bad = "pkill -f next";', "tmp/elsewhere.sh": 'pkill -f "next start"',            // docs, the guard's own dir and non-project dirs are out of scope
+  });
+  assert.deepEqual(guardProcessSafety(root), []);
+});
+for (const [name, file, code, rule] of [
+  ['pkill -f "next start"', "scripts/a.sh", 'pkill -f "next start"', "PROCESS-SAFETY-PKILL"],
+  ['pkill -f "next build"', "scripts/a.sh", 'pkill -f "next build"; sleep 1', "PROCESS-SAFETY-PKILL"],
+  ['pkill -f "http.server 4000"', "tests/x.sh", 'pkill -f "http.server 4000"', "PROCESS-SAFETY-PKILL"],
+  ['pkill -f "tests/e2e-real/run.mjs"', "scripts/a.sh", 'pkill -f "tests/e2e-real/run.mjs" || true', "PROCESS-SAFETY-PKILL"],
+  ["pkill -f gradlew (the 11:38 incident)", "scripts/a.sh", 'pkill -f "gradlew"', "PROCESS-SAFETY-PKILL"],
+  ["pkill by exact name", "scripts/a.sh", "pkill -x node", "PROCESS-SAFETY-PKILL"],
+  ["pkill -TERM without -P", "scripts/a.sh", 'pkill -TERM node', "PROCESS-SAFETY-PKILL"],
+  ["pkill in a JS array form", "tests/x.mjs", 'spawnSync("pkill", ["-f", "next start"]);', "PROCESS-SAFETY-PKILL"],
+  ["pkill in a JS exec string", "scripts/x.mjs", 'execSync(\'pkill -f "next start" || true\');', "PROCESS-SAFETY-PKILL"],
+  ["pkill in Python", "e2e/x.py", 'subprocess.run(["pkill", "-f", "next"])', "PROCESS-SAFETY-PKILL"],
+  ["killall node", "scripts/a.sh", "killall node", "PROCESS-SAFETY-KILLALL"],
+  ["killall java", "scripts/a.sh", "killall java 2>/dev/null", "PROCESS-SAFETY-KILLALL"],
+  ["killall in JS", "tests/x.mjs", 'execSync("killall -9 node")', "PROCESS-SAFETY-KILLALL"],
+  ["kill $(pgrep -f foo)", "scripts/a.sh", "kill $(pgrep -f foo)", "PROCESS-SAFETY-PGREP-KILL"],
+  ["kill `pgrep foo`", "scripts/a.sh", "kill -9 `pgrep foo`", "PROCESS-SAFETY-PGREP-KILL"],
+  ["pgrep | xargs kill", "scripts/a.sh", 'pgrep -f "next" | xargs kill', "PROCESS-SAFETY-PGREP-KILL"],
+  ["ps | grep | xargs kill", "scripts/a.sh", "ps aux | grep next | awk '{print $2}' | xargs kill", "PROCESS-SAFETY-PGREP-KILL"],
+  ["a for loop over pgrep", "scripts/a.sh", 'for p in $(pgrep -f next); do kill "$p"; done', "PROCESS-SAFETY-PGREP-KILL"],
+  ["kill $(lsof -ti tcp:$p -sTCP:LISTEN)", "scripts/a.sh", 'kill $(lsof -ti tcp:$p -sTCP:LISTEN)', "PROCESS-SAFETY-KILL-BY-PORT"],
+  ["lsof -ti ... | xargs kill", "scripts/a.sh", 'lsof -ti tcp:3001 -sTCP:LISTEN | xargs kill 2>/dev/null || true', "PROCESS-SAFETY-KILL-BY-PORT"],
+  ["kill-by-port in JS", "tests/x.mjs", 'execSync(`kill $(lsof -ti tcp:${port})`)', "PROCESS-SAFETY-KILL-BY-PORT"],
+  ["fuser -k", "scripts/a.sh", "fuser -k 3001/tcp", "PROCESS-SAFETY-KILL-BY-PORT"],
+  ["kill 0", "scripts/a.sh", "kill -9 0", "PROCESS-SAFETY-GROUP-ZERO"],
+  ["process.kill(0)", "tests/x.mjs", 'process.kill(0, "SIGKILL")', "PROCESS-SAFETY-GROUP-ZERO"],
+  ["kill -1 (everything)", "scripts/a.sh", "kill -9 -1", "PROCESS-SAFETY-GROUP-ZERO"],
+  ["a continued command line", "scripts/a.sh", 'pkill \\\n  -f "next start"', "PROCESS-SAFETY-PKILL"],
+  ["in workers/", "workers/x/run.sh", "killall node", "PROCESS-SAFETY-KILLALL"],
+  ["in infra/", "infra/x/run.sh", 'pkill -f java', "PROCESS-SAFETY-PKILL"],
+]) test(`G8 process safety FAILS: ${name}`, () => assert.ok(rules(guardProcessSafety(PS(file, code))).includes(rule), `${rule} expected for: ${code}`));
+test("G8 process safety: the ORIGINAL scripts/stop-local.sh (pkill -f + kill-by-port, the 2026-10 hazard) is caught line by line", () => {
+  const orig = ['pkill -f "system-web-studio.*bootRun" 2>/dev/null || true', "lsof -ti tcp:8080 -sTCP:LISTEN | xargs kill 2>/dev/null || true", 'lsof -ti tcp:"$FRONTEND_PORT" -sTCP:LISTEN | xargs kill 2>/dev/null || true', 'lsof -ti tcp:"${RENDER_PORT:-18095}" -sTCP:LISTEN | xargs kill 2>/dev/null || true'].join("\n");
+  assert.deepEqual(rules(guardProcessSafety(PS("scripts/stop-local.sh", orig))), ["PROCESS-SAFETY-KILL-BY-PORT", "PROCESS-SAFETY-PKILL"]); assert.equal(guardProcessSafety(PS("scripts/stop-local.sh", orig)).length, 4);
+});
+test("G8 process safety: STRINGS are scanned (a JS command lives in a string), so a message that merely NAMES a forbidden command is flagged too: rephrase it or add a pragma with a reason", () => {
+  assert.ok(rules(guardProcessSafety(PS("scripts/a.sh", 'echo "do not run killall node"'))).includes("PROCESS-SAFETY-KILLALL"));
+  assert.deepEqual(guardProcessSafety(PS("scripts/a.sh", 'echo "do not kill by name"')), []);
+});
+test("G8 process safety: a pragma without a reason does NOT silence it", () => assert.ok(rules(guardProcessSafety(PS("scripts/a.sh", 'pkill -f x  # guard-allow: PROCESS-SAFETY'))).includes("PROCESS-SAFETY-PKILL")));
+
 // ----------------------------------------------------------------------------------------------------------------------------------- nested checkouts
 test("a NESTED CHECKOUT (.worktrees/*, found when the guards first ran in the main checkout) and build output are never scanned: no false duplicate migration, no foreign violation", () => {
   const nested = { ".worktrees/c3-overlay/backend/src/main/resources/db/migration/V30__a.sql": "select 1;", ".worktrees/c3-overlay/features/admin/organizationTree.ts": `export const MAX_DEPTH = 3; localStorage.x;`, "backend/build/resources/main/db/migration/V30__a.sql": "select 1;" };
@@ -227,7 +289,7 @@ test("REAL FILES (copy) MUTATED: flipping the org adapter's permission need to a
 });
 
 // ----------------------------------------------------------------------------------------------------------------------------------- CLIs on the real repository
-for (const [name, args] of [["org hierarchy", ["tests/guards/org-source-guards.mjs", "hierarchy"]], ["org fail-closed", ["tests/guards/org-source-guards.mjs", "fail-closed"]], ["org relation", ["tests/guards/org-source-guards.mjs", "relation"]], ["legacy route", ["tests/guards/no-legacy-admin-workspaces.mjs"]], ["test labeling", ["tests/guards/test-labeling.mjs"]], ["migration ledger", ["tests/guards/migration-ledger.mjs"]]])
+for (const [name, args] of [["org hierarchy", ["tests/guards/org-source-guards.mjs", "hierarchy"]], ["org fail-closed", ["tests/guards/org-source-guards.mjs", "fail-closed"]], ["org relation", ["tests/guards/org-source-guards.mjs", "relation"]], ["legacy route", ["tests/guards/no-legacy-admin-workspaces.mjs"]], ["test labeling", ["tests/guards/test-labeling.mjs"]], ["migration ledger", ["tests/guards/migration-ledger.mjs"]], ["process safety", ["tests/guards/process-safety.mjs"]]])
   test(`CLI on the real repository is green: ${name}`, () => { const r = spawnSync(process.execPath, args, { cwd: REPO, encoding: "utf8" }); assert.equal(r.status, 0, r.stdout + r.stderr); });
 test("CLI exit code is 1 on a violation (not just a printed message)", () => {
   const r = spawnSync(process.execPath, ["tests/guards/org-source-guards.mjs", "hierarchy", "--root", fx({ [ORG]: `export const MAX_DEPTH = 3;` })], { cwd: REPO, encoding: "utf8" });

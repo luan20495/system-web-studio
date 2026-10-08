@@ -12,6 +12,7 @@ const STEPS = [
   ["a fake transport is never called a real E2E", ["tests/guards/test-labeling.mjs"]],
   ["every test file is classified (C5 classifier)", ["scripts/test-classify.mjs"]],
   ["migrations: no duplicate number, V31 C2 / V32 Dynamic Organization reserved", ["tests/guards/migration-ledger.mjs"]],
+  ["process safety: no machine-wide kill by name or by port alone", ["tests/guards/process-safety.mjs"]],
 ];
 let failed = 0; const rows = [];
 for (const [name, args] of STEPS) {
