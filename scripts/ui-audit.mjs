@@ -29,7 +29,7 @@ async function seed() {
   const ta = await user("ta", { displayName: "Nguyễn Thị Quản Trị Viên Đầu Tiên Của Công Ty", tenantRole: "TENANT_ADMIN" });
   const wsa = await user("wsa", { displayName: "Trần Văn Ưu Tú", ws: "WORKSPACE_ADMIN" });
   const names = ["Lê Hoàng Anh", "Phạm Thị Ngọc Ánh", "Đặng Quốc Việt", "Ngô Thị Hồng Nhung", "Bùi Văn Đức", "Hồ Thị Thu Hà", "Vũ Minh Quân", "Dương Thị Mỹ Linh"];
-  for (let i = 0; i < 24; i++) { const n = names[i % names.length] + (i >= names.length ? ` (${i})` : ""); must(await sys.post(`/admin/tenants/${tenant.id}/users`, { username: `audit-${run}-e${i}`, displayName: i === 3 ? "Nguyễn Hoàng Thiên Phúc Bảo Long Quang Vinh Hiển Đạt Thịnh Khang An Phú (tên rất dài để thử cắt chữ)" : n, tenantRole: "MEMBER", email: i === 3 ? `nguyen.hoang.thien.phuc.bao.long.quang.vinh@${run}.cong-ty-co-phan-anh-duong-viet-nam.example.vn` : `e${i}@anh-duong.example.vn` }), `employee ${i}`); }
+  for (let i = 0; i < 24; i++) { const n = names[i % names.length] + (i >= names.length ? ` (${i})` : ""); must(await sys.post(`/admin/tenants/${tenant.id}/users`, { username: `audit-${run}-e${i}`, displayName: i === 3 ? "Nguyễn Hoàng Thiên Phúc Bảo Long Quang Vinh Hiển Đạt Thịnh Khang An Phú (tên rất dài để thử cắt chữ)" : n, tenantRole: "MEMBER", email: i === 3 ? `nguyen.hoang.thien.phuc.bao.long.quang.vinh@${run}.cong-ty-co-phan-anh-duong-viet-nam.example.vn` : `e${i}@${run}.anh-duong.example.vn` }), `employee ${i}`); }
   const wsaS = new Session(URLS.studio, "wsa"); await wsaS.login(wsa.username, wsa.password);
   const proj = must(await wsaS.post(`/workspaces/${ws.id}/projects`, { name: "Trang giới thiệu sản phẩm mới của Công ty Cổ phần Ánh Dương", description: "Dự án thử giao diện", appType: "PAGE_SCHEMA" }), "project");
   Object.assign(created, { tenant, ws, ta, wsa, proj });
@@ -44,7 +44,7 @@ const MEASURE = () => {
   const entities = /&(amp|lt|gt|nbsp|hellip|mdash|#\d+);/.test(text);
   const vw = window.innerWidth; const overflowX = document.documentElement.scrollWidth - vw;
   const vis = (e) => { const r = e.getBoundingClientRect(); const cs = getComputedStyle(e); return r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && cs.display !== "none"; };
-  const leafs = [...document.body.querySelectorAll("*")].filter((e) => vis(e) && ![...e.childNodes].some((n) => n.nodeType === 1) && e.textContent.trim() && !e.closest("svg,iframe,[aria-hidden=true]"));
+  const leafs = [...document.body.querySelectorAll("*")].filter((e) => vis(e) && ![...e.childNodes].some((n) => n.nodeType === 1) && e.textContent.trim() && !e.closest("svg,iframe,[aria-hidden=true],.srOnly"));
   const spill = leafs.filter((e) => e.getBoundingClientRect().right > vw + 1).slice(0, 4).map((e) => e.textContent.trim().slice(0, 40));
   const clipped = leafs.filter((e) => { const cs = getComputedStyle(e); return (cs.overflow === "hidden" || cs.overflowX === "hidden") && cs.textOverflow !== "ellipsis" && e.scrollWidth > e.clientWidth + 2; }).slice(0, 4).map((e) => e.textContent.trim().slice(0, 40));
   const tiny = leafs.filter((e) => parseFloat(getComputedStyle(e).fontSize) < 11).length;
