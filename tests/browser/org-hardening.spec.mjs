@@ -1,6 +1,6 @@
 // @class: harness — real Chromium on the organization tree, the employee directory and the person picker with an in-page FAKE in-memory transport (no backend): accessibility, hardened states, GENERATED large fixtures, responsive.
 // The large fixtures (2 000 units, depth 10 / 60, 10 000 employees) are GENERATED in the harness; the numbers are FRONTEND render / interaction timings on this machine, NOT a backend measurement and NOT a scale E2E.
-// Run: node tests/browser/build-harness.mjs && (cd .test-build/browser && python3 -m http.server 4000 --bind 127.0.0.1 &) && CHROME=... [EVIDENCE=<dir>] node tests/browser/org-hardening.spec.mjs
+// Run: node tests/browser/build-harness.mjs && CHROME=... [EVIDENCE=<dir>] node tests/browser/harness-server.mjs run -- node tests/browser/org-hardening.spec.mjs
 import { createRequire } from "node:module";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";

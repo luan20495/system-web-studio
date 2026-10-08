@@ -1,6 +1,6 @@
 // @class: harness — real Chromium on the create-account screens with an in-page FAKE transport behind the REAL adapter (no backend). Proves what the SCREENS do (gating, validation, states, no invented calls).
 // NOT a backend E2E: the real chain is tests/e2e-real SUPER01 / ADMIN01 / USER01 / SEC01-03.
-// Run: node tests/browser/build-harness.mjs && (cd .test-build/browser && python3 -m http.server 4000 --bind 127.0.0.1 &) && CHROME=... node tests/browser/provisioning.spec.mjs
+// Run: node tests/browser/build-harness.mjs && CHROME=... node tests/browser/harness-server.mjs run -- node tests/browser/provisioning.spec.mjs
 import { createRequire } from "node:module";
 const require = createRequire(new URL("../../package.json", import.meta.url).pathname);
 const { chromium } = require("playwright-core");

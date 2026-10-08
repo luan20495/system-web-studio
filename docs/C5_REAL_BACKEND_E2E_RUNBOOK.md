@@ -51,7 +51,7 @@ Build and start `integration/v2` (JDK 21, PostgreSQL, Redis, MinIO; Docker for T
 | the C2 publish contract (`fix/c2-v3 8d40218`, not yet in `integration/v2`) and `RATE_LIMIT_PUBLISH_MAX` (default 10/min/user) raised | E2E-P01…P09 | `E2E_BASE_REF=8d40218 docs/parallel/c5/e2e-stack.sh up`; the script sets `RATE_LIMIT_PUBLISH_MAX=500`. Publish is rate limited per user: the helpers wait `Retry-After` once on 429 |
 | C2's PAGE_SCHEMA data runtime (`fix/c2-v3 c1e0df5`: slots, `QueryDef.public`, page runtime, runtime config `apiBase`, `PUBLIC_QUERIES`) and `SITES_DATA_API_BASE` | E2E-PD01, PD02 | `E2E_BASE_REF=c1e0df5 E2E_SITES_DATA_API_BASE='http://127.0.0.1:<sites port>/{slug}/_data' docs/parallel/c5/e2e-stack.sh up` (it is NOT in `integration/v2`: H-C0-10). PD01 also needs a real source the C3 address policy accepts: `E2E_DS_TYPE/CONFIG_JSON/CREDENTIAL_JSON` + `E2E_PD_SQL` (a read-only SELECT) or `E2E_PD_OPERATION_KEY`, and `E2E_PD_EXPECT_TEXT` (the text of its first row, shown as the Navbar brand). Without them the flow is BLOCKED with the exact missing piece. |
 | `app.workflow.run-store=jdbc` (default on a build with V29) | E2E-12 | `memory` or a build without V29 loses runs on restart |
-| `E2E_RESTART_BACKEND_CMD` | E2E-12 | must kill ONLY the API process (never `kill` by name) and start it again; the suite waits up to 150 s |
+| `E2E_RESTART_BACKEND_CMD` | E2E-12 | must stop ONLY the API process this stack started (never by name, never by port: use `docs/parallel/c5/e2e-stack.sh backend-restart`, see `docs/parallel/c5/PROCESS_SAFETY.md`) and start it again; the suite waits up to 150 s |
 
 Local login must be on (`/api/v1/auth/config` → `localLogin: true`). CORS must allow the Studio origin exactly (`app.web.origins.studio`).
 

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # C5 · local real-backend E2E stack for macOS (docs/parallel/c5/MAC_RUN_2026-10-06.md). Everything is parameterised so it never touches another stack:
-# its own containers (prefix $E2E_STACK_NAME), its own ports, its own state directory. It starts nothing it does not own and kills only the process LISTENING on its own port.
+# its own containers (prefix $E2E_STACK_NAME), its own ports, its own state directory. PROCESS SAFETY (docs/parallel/c5/PROCESS_SAFETY.md): every process this script starts is spawned through
+# tests/lib/owned-process-cli.mjs (own process group, pid + start time + command recorded in $DIR/run/*.json) and is signalled ONLY after that identity is re-validated. There is no process-name
+# sweep, no stop-by-port and no signal to a bare pid-file value; a port held by somebody else is a clear FAILURE (it names the port and the holder), never a reason to stop that holder.
 #
 #   e2e-stack.sh prepare          detached git worktree = $E2E_BASE_REF (+ $E2E_MERGE_REFS, empty by default) (conflict = stop, nothing is resolved for you) and a random-secret env file (mode 600)
 #   e2e-stack.sh up               prepare + infra + backend + render worker + Studio (build with the proxy target) — idempotent
@@ -26,8 +28,17 @@ ENVF="$DIR/stack.env"; WT="$DIR/backend-worktree"; LOGS="$DIR/logs"
 
 say() { printf '[e2e-stack] %s\n' "$*"; }
 die() { printf '[e2e-stack] ERROR: %s\n' "$*" >&2; exit 1; }
-listener() { lsof -ti "tcp:$1" -sTCP:LISTEN 2>/dev/null || true; }                 # LISTEN only: never kill client connections of another process
-kill_port() { local p; p="$(listener "$1")"; [ -z "$p" ] || { kill $p; for _ in $(seq 1 30); do [ -z "$(listener "$1")" ] && return 0; sleep 1; done; return 1; }; }
+OWNED_CLI="$REPO/tests/lib/owned-process-cli.mjs"; RUNST="$DIR/run"
+owned() { node "$OWNED_CLI" "$@"; }                                                    # start | refresh | adopt | stop | signal | status | port-free (all validated; see the CLI header)
+st() { printf '%s/%s.json' "$RUNST" "$1"; }                                            # state file (pid, pgid, start time, command) of one owned process
+is_owned_up() { owned status --state "$(st "$1")" >/dev/null 2>&1; }                  # true only when the recorded pid is alive AND start time + command still match
+port_free() { owned port-free "$1" >/dev/null 2>&1; }                                  # read-only check
+port_wait_free() { for _ in $(seq 1 "${2:-30}"); do port_free "$1" && return 0; sleep 1; done; return 1; }
+stop_owned() {   # stop ONLY what this script started under that name: validated SIGTERM -> SIGKILL of its own group, verified gone; a stale state (pid reused by someone else) is ignored, NOT signalled
+  local rc=0; owned stop --state "$(st "$1")" || rc=$?
+  case "$rc" in 0) ;; 4) say "$1: the recorded pid belongs to someone else now: stale state dropped, nothing was signalled" ;; *) return "$rc" ;; esac
+}
+port_busy_die() { owned port-free "$1" || die "$2 port $1 is held by a process this script did not start (holder above). It was NOT touched. Free it yourself or choose another port ($3)."; }
 wait_http() { local url="$1" secs="$2"; for _ in $(seq 1 "$secs"); do curl -fsS "$url" >/dev/null 2>&1 && return 0; sleep 1; done; return 1; }
 need_env() { [ -f "$ENVF" ] || die "no $ENVF: run '$0 prepare' first"; set -a; . "$ENVF"; set +a; }
 
@@ -97,32 +108,44 @@ infra_up() {
 }
 
 backend_launch() {   # starts the process and returns at once (the E2E start hook has a 60 s budget; the flows wait for the API themselves)
-  need_env; [ -z "$(listener "$API_PORT")" ] || { say "API port $API_PORT already has a listener"; return 0; }
-  # kotlinc needs more heap than the default (the first compile died with OutOfMemoryError: GC overhead limit exceeded)
-  ( cd "$WT/backend" && PATH="$JAVA_HOME/bin:$PATH" nohup ./gradlew bootRun --console=plain -Dorg.gradle.jvmargs=-Xmx3g -Pkotlin.daemon.jvmargs=-Xmx3g >> "$LOGS/backend.log" 2>&1 & )
+  need_env; mkdir -p "$RUNST"
+  if is_owned_up backend; then say "backend already running (owned, state $(st backend))"; return 0; fi
+  # kotlinc needs more heap than the default (the first compile died with OutOfMemoryError: GC overhead limit exceeded). A busy API port FAILS here (exit 3, holder named): nobody is stopped to make room.
+  PATH="$JAVA_HOME/bin:$PATH" owned start --state "$(st backend)" --log "$LOGS/backend.log" --cwd "$WT/backend" --name backend --port "$API_PORT" -- ./gradlew bootRun --console=plain -Dorg.gradle.jvmargs=-Xmx3g -Pkotlin.daemon.jvmargs=-Xmx3g || die "backend not started (API port $API_PORT busy or the launch failed; nothing was stopped)"
   say "backend starting (first start compiles, ~1.5 min); log: $LOGS/backend.log"
 }
+# gradle runs the app JVM under its daemon, outside our process group: the listener is recorded as owned ONLY when its command line contains this stack's private worktree path and it started after our launch
+backend_adopt() { is_owned_up backend-app && return 0; owned adopt --state "$(st backend-app)" --port "$API_PORT" --parent "$(st backend)" --contains "$WT" --name backend-app; }
 backend_up() {
   backend_launch; need_env
   wait_http "http://127.0.0.1:$API_PORT/actuator/health/liveness" 300 || die "backend did not come up; see $LOGS/backend.log"
+  owned refresh --state "$(st backend)" || true; backend_adopt || die "the listener on $API_PORT is not provably this stack's API: not adopted, not touched"
 }
-backend_down() { need_env; kill_port "$API_PORT" || die "API on $API_PORT did not stop"; }
+backend_down() {
+  need_env
+  if is_owned_up backend; then backend_adopt 2>/dev/null || true; fi                                    # late adoption (backend-launch does not wait)
+  stop_owned backend-app || die "the API process of this stack did not stop"; stop_owned backend || die "the gradle launcher of this stack did not stop"
+  port_wait_free "$API_PORT" "${E2E_STOP_WAIT_SECS:-30}" || { owned port-free "$API_PORT" || true; die "API port $API_PORT is still busy after stopping what this script started: the holder (above) is not ours and was NOT touched"; }
+}
 backend_restart() { backend_down; backend_up; }
-backend_pause() { need_env; local p; p="$(listener "$API_PORT")"; [ -n "$p" ] || die "no API listening on $API_PORT"; kill -STOP $p; }    # a HANG, not an outage (E2E-S9)
+backend_pause() { need_env; if is_owned_up backend; then backend_adopt || die "the listener on $API_PORT is not provably this stack's API"; fi; is_owned_up backend-app || die "no API started by this script (nothing paused)"; owned signal --state "$(st backend-app)" --sig STOP; }    # a HANG, not an outage (E2E-S9)
 # fault injection for the release flows (E2E-P*): the artifact store or the render worker is PAUSED (not stopped), so a publish stays in a known step and the scope lease stays alive
 store_pause() { need_env; docker pause "$NAME-minio" >/dev/null; }
 store_resume() { need_env; docker unpause "$NAME-minio" >/dev/null 2>&1 || true; }
-render_pause() { need_env; local p; p="$(listener "$RENDER_PORT")"; [ -n "$p" ] || die "no render worker on $RENDER_PORT"; kill -STOP $p; }
-render_resume() { need_env; local p; p="$(listener "$RENDER_PORT")"; [ -z "$p" ] || kill -CONT $p; }
-backend_resume() { need_env; local p; p="$(listener "$API_PORT")"; [ -z "$p" ] || kill -CONT $p; }
+render_pause() { need_env; is_owned_up render || die "no render worker started by this script (nothing paused)"; owned signal --state "$(st render)" --sig STOP; }
+render_resume() { need_env; is_owned_up render || return 0; owned signal --state "$(st render)" --sig CONT; }
+backend_resume() { need_env; is_owned_up backend-app || return 0; owned signal --state "$(st backend-app)" --sig CONT; }
 render_up() {
-  need_env; [ -z "$(listener "$RENDER_PORT")" ] || return 0
+  need_env; mkdir -p "$RUNST"; if is_owned_up render; then return 0; fi
   ( cd "$WT" && npx tsc -p workers/render/tsconfig.json )
-  ( cd "$WT" && RENDER_PORT="$RENDER_PORT" RENDER_TOKEN="$RENDER_TOKEN" nohup node workers/render/dist/workers/render/server.js >> "$LOGS/render.log" 2>&1 & )
-  wait_http "http://127.0.0.1:$RENDER_PORT/health" 30 || die "render worker did not start"
+  RENDER_PORT="$RENDER_PORT" RENDER_TOKEN="$RENDER_TOKEN" owned start --state "$(st render)" --log "$LOGS/render.log" --cwd "$WT" --name render --port "$RENDER_PORT" -- node workers/render/dist/workers/render/server.js || die "render worker not started (port $RENDER_PORT busy or the launch failed; nothing was stopped)"
+  wait_http "http://127.0.0.1:$RENDER_PORT/health" 30 || { stop_owned render || true; die "render worker did not start"; }
+  owned refresh --state "$(st render)" || true
 }
 studio_up() {
-  need_env; kill_port "$STUDIO_PORT" || true
+  need_env; mkdir -p "$RUNST"
+  stop_owned studio || die "the previous Studio of this stack did not stop"                              # restart: only the Studio THIS script started; a foreign listener is never stopped
+  port_busy_die "$STUDIO_PORT" "Studio" "set E2E_STUDIO_PORT"
   # the proxy target is BAKED IN AT BUILD TIME (next build); setting it only on `next start` has no effect
   # NEXT_DIST_DIR keeps this stack's build apart from the checkout's normal `.next` (git-ignored: .next-check*/), so a gate build never breaks a running Studio
   export NEXT_DIST_DIR=".next-check-$NAME"
@@ -130,8 +153,10 @@ studio_up() {
   cp "$REPO/apps/studio/tsconfig.json" "$DIR/tsconfig.studio.orig"
   ( cd "$REPO" && API_PROXY_TARGET="http://127.0.0.1:$API_PORT" npm run build:studio > "$LOGS/studio-build.log" 2>&1 ) || { cp "$DIR/tsconfig.studio.orig" "$REPO/apps/studio/tsconfig.json"; die "Studio build failed; see $LOGS/studio-build.log"; }
   cp "$DIR/tsconfig.studio.orig" "$REPO/apps/studio/tsconfig.json"
-  ( cd "$REPO/apps/studio" && API_PROXY_TARGET="http://127.0.0.1:$API_PORT" nohup npx next start -H 127.0.0.1 -p "$STUDIO_PORT" >> "$LOGS/studio.log" 2>&1 & )   # integration/v2 nextConfig requires the proxy target at START too
-  wait_http "http://127.0.0.1:$STUDIO_PORT/api/v1/auth/config" 60 || die "Studio does not reach the API (check the build's proxy target); see $LOGS/studio.log"
+  # integration/v2 nextConfig requires the proxy target at START too
+  API_PROXY_TARGET="http://127.0.0.1:$API_PORT" owned start --state "$(st studio)" --log "$LOGS/studio.log" --cwd "$REPO/apps/studio" --name studio --port "$STUDIO_PORT" -- npx next start -H 127.0.0.1 -p "$STUDIO_PORT" || die "Studio not started (port $STUDIO_PORT busy or the launch failed; nothing was stopped)"
+  wait_http "http://127.0.0.1:$STUDIO_PORT/api/v1/auth/config" 60 || { stop_owned studio || true; die "Studio does not reach the API (check the build's proxy target); see $LOGS/studio.log"; }
+  owned refresh --state "$(st studio)" || true
 }
 
 e2e() {
@@ -144,13 +169,14 @@ e2e() {
 
 status() {
   for p in "api $API_PORT" "render $RENDER_PORT" "studio $STUDIO_PORT" "pg $PG_PORT" "redis $REDIS_PORT" "minio $MINIO_PORT" "rabbit $RABBIT_PORT" "sites $SITES_PORT"; do
-    set -- $p; printf '%-7s :%-6s %s\n' "$1" "$2" "$([ -n "$(listener "$2")" ] && echo listening || echo -)"
+    set -- $p; printf '%-7s :%-6s %s\n' "$1" "$2" "$(if port_free "$2"; then echo -; elif is_owned_up "$(case "$1" in api) echo backend-app;; render) echo render;; studio) echo studio;; *) echo none;; esac)"; then echo "listening (owned)"; else echo "listening"; fi)"
   done
   curl -fsS "http://127.0.0.1:$API_PORT/actuator/health/readiness" 2>/dev/null && echo || echo "api readiness: not answering"
 }
 down() {
   need_env 2>/dev/null || true
-  kill_port "$STUDIO_PORT" || true; kill_port "$RENDER_PORT" || true; kill_port "$API_PORT" || true
+  # only what this script started (state files), each validated; a foreign process on one of these ports stays untouched
+  for n in studio render backend-app backend; do stop_owned "$n" || say "WARNING: $n did not stop (see above)"; done
   for a in "$@"; do
     case "$a" in
       --infra) for c in pg redis minio rabbit sites; do docker rm -f "$NAME-$c" >/dev/null 2>&1 || true; done ;;
