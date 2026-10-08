@@ -4,6 +4,7 @@ import { Fragment, useState } from "react";
 import Link from "next/link";
 import type { AuditRow } from "@/lib/http-types";
 import { useA } from "../console/context";
+import { parseJsonOr } from "../safeJson";
 import { actionLabel, ago, fmtDate, StateView } from "../../ui";
 
 export function AuditTable({ rows, compact }: { rows: AuditRow[]; compact?: boolean }) {
@@ -20,7 +21,7 @@ export function AuditTable({ rows, compact }: { rows: AuditRow[]; compact?: bool
           <td>{r.projectId ? <Link href={A(`/applications/${r.projectId}`)} onClick={(e) => e.stopPropagation()}>{r.resourceType}</Link> : r.resourceType}</td>
           {compact ? null : <><td>{r.ipAddress ?? "—"}</td><td className="code">{r.requestId ?? "—"}</td></>}
         </tr>
-        {open === r.id ? <tr className="detailRow"><td colSpan={compact ? 4 : 6}><pre>{JSON.stringify({ resourceId: r.resourceId, old: r.oldValue && JSON.parse(r.oldValue), new: r.newValue && JSON.parse(r.newValue) }, null, 2)}</pre></td></tr> : null}
+        {open === r.id ? <tr className="detailRow"><td colSpan={compact ? 4 : 6}><pre>{JSON.stringify({ resourceId: r.resourceId, old: parseJsonOr(r.oldValue), new: parseJsonOr(r.newValue) }, null, 2)}</pre></td></tr> : null}
       </Fragment>))}</tbody>
     </table>
   );

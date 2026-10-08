@@ -28,7 +28,7 @@ export function UsageTable({ rows, keyLabel }: { rows: UsageBucket[]; keyLabel: 
 
 export function DailyBars({ daily }: { daily: AiUsageReport["daily"] }) {
   const max = Math.max(1, ...daily.map((d) => d.totalTokens));
-  const day = (iso: string) => new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit" }).format(new Date(`${iso}T00:00:00`));
+  const day = (iso: string) => { const d = new Date(`${iso}T00:00:00`); return Number.isNaN(d.getTime()) ? iso : new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit" }).format(d); };   // an empty series has no first day: an Invalid Date must not throw
   return <figure className="barsFig">
     <div className="bars" role="img" aria-label={`Token theo ngày từ ${day(daily[0]?.day ?? "")} đến hôm nay, cao nhất ${num(max)} token`}>
       {daily.map((d) => <div key={d.day} className="bar" title={`${day(d.day)}: ${num(d.totalTokens)} token, ${num(d.calls)} lượt gọi${d.failedCalls ? `, ${num(d.failedCalls)} lỗi` : ""}`}>

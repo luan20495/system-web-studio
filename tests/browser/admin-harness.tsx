@@ -2,7 +2,7 @@
 /**
  * TEST-ONLY harness for tests/browser/admin.spec.mjs. It proves what the SCREENS do with the answers C1's contract describes; it never proves what a server answers.
  * Query: ?portal=platform|admin|all  &me=sys|sysmember|tadmin|wsadmin|plain|sysatenant|none  &start=/platform/tenants  &fail=<path prefix: GET answers 500>  &failw=<prefix: writes answer 500>  &slow=<prefix: 2.5 s>
- *        &empty=1  &big=1  &daily=empty  &bad=audit.   Every request is recorded in window.__calls ({method, path, body}); a request with no fixture answers 404 and is recorded as {unknown}.
+ *        &empty=1  &big=1  &daily=empty  &bad=audit|schema.   Every request is recorded in window.__calls ({method, path, body}); a request with no fixture answers 404 and is recorded as {unknown}.
  * `window.__cfg` can be changed by the spec at run time (slow / fail / failw). The activation token in the fixtures is a made-up string.
  */
 import { createRoot } from "react-dom/client";
@@ -105,7 +105,7 @@ const H: Handler[] = [
   ["GET", /^\/admin\/ai\/budgets$/, () => []],
   ["GET", /^\/admin\/alerts$/, () => ({ open: 1, items: [{ id: "al1", kind: "AI_BUDGET_SOFT", severity: "WARNING", message: "Gần hết", createdAt: iso(0), acknowledgedAt: null, acknowledgedBy: null }] })],
   ["POST", /^\/admin\/alerts\/([^/]+)\/acknowledge$/, () => ({ ok: true })],
-  ["GET", /^\/admin\/components$/, () => []],
+  ["GET", /^\/admin\/components$/, () => [{ id: "hero", name: "Hero", category: "layout", description: "Banner", latestVersion: "1.0.0", status: "ACTIVE", usedInProjects: 1, sections: 2, propsSchema: P.get("bad") === "schema" ? "not json at all" : "{\"type\":\"object\"}" }]],
   ["GET", /^\/admin\/component-packages$/, () => ({ page: page([]), counts: {} })],
   ["GET", /^\/admin\/templates$/, () => page([])],
   ["GET", /^\/admin\/audit\/actions$/, () => ["USER_LOGIN"]],
