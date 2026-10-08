@@ -104,7 +104,7 @@ class EmployeeDirectoryService(
         if (memberships.count { it.primary == true } > 1) throw OrgRules.bad("at most one primary membership")
         val positions = memberships.map { it.positions.orEmpty() }          // positions are NESTED under the membership they are held within: there is no unit-as-scope input
         if (positions.sumOf { it.size } > MAX_POSITIONS) throw OrgRules.bad("too many positions")
-        if (positions.any { l -> l.count { it.primary == true } > 1 || l.map { it.positionId }.let { ids -> ids.size != ids.distinct().size } }) throw OrgRules.bad("a position may appear once per membership, and at most one position may be primary")
+        if (positions.any { l -> l.count { it.primary == true } > 1 || l.mapNotNull { it.positionId }.let { ids -> ids.size != ids.distinct().size } }) throw OrgRules.bad("a position may appear once per membership, and at most one position may be primary")
         if (positions.sumOf { l -> l.count { it.primary == true } } > 1) throw OrgRules.bad("at most one primary position")
         // validate everything that does not need the account FIRST (cheap, and the order of the errors is the order of the contract)
         val units = memberships.map { m -> activeUnit(tenantId, m.organizationUnitId!!).also { relationOf(m.relationType) } }
@@ -177,7 +177,7 @@ class EmployeeDirectoryService(
         val before = repos.memberships.find(tenantId, userId, membershipId)?.takeIf { it.active } ?: throw noMembership()
         var current = before
         if (r.relationType != null) current = repos.memberships.update(before.copy(relationType = relationOf(r.relationType)), expected) ?: throw OrgRules.conflictOrMissing(repos.memberships.find(tenantId, userId, membershipId)?.version, noMembership())
-        if (r.primary == true && !current.primary) current = repos.memberships.setPrimary(tenantId, userId, membershipId, if (r.relationType != null) current.version else expected) ?: throw OrgRules.conflictOrMissing(repos.memberships.find(tenantId, userId, membershipId)?.version, noMembership())
+        if (r.primary == true && !current.primary) current = try { repos.memberships.setPrimary(tenantId, userId, membershipId, if (r.relationType != null) current.version else expected) } catch (e: DuplicateOrganizationKey) { throw lostRace() } ?: throw OrgRules.conflictOrMissing(repos.memberships.find(tenantId, userId, membershipId)?.version, noMembership())
         else if (r.relationType == null && current.version != expected) throw OrgRules.conflictOrMissing(current.version, noMembership())
         audit.record("EMPLOYEE_ORG_UPDATED", "EMPLOYEE", userId, actorId = actorId, oldValue = membershipAudit(before), newValue = membershipAudit(current))
         return current
@@ -262,7 +262,7 @@ class EmployeeDirectoryService(
             val gradeId = r.gradeId?.let { activeGrade(tenantId, it).id }
             current = repos.employeePositions.update(before.copy(gradeId = gradeId), expected) ?: throw OrgRules.conflictOrMissing(repos.employeePositions.find(tenantId, userId, assignmentId)?.version, noAssignment())
         }
-        if (r.primary == true && !current.primary) current = repos.employeePositions.setPrimary(tenantId, userId, assignmentId, if (gradeChange) current.version else expected) ?: throw OrgRules.conflictOrMissing(repos.employeePositions.find(tenantId, userId, assignmentId)?.version, noAssignment())
+        if (r.primary == true && !current.primary) current = try { repos.employeePositions.setPrimary(tenantId, userId, assignmentId, if (gradeChange) current.version else expected) } catch (e: DuplicateOrganizationKey) { throw lostRace() } ?: throw OrgRules.conflictOrMissing(repos.employeePositions.find(tenantId, userId, assignmentId)?.version, noAssignment())
         else if (!gradeChange && current.version != expected) throw OrgRules.conflictOrMissing(current.version, noAssignment())
         audit.record("EMPLOYEE_POSITION_UPDATED", "EMPLOYEE", userId, actorId = actorId, oldValue = assignmentAudit(before), newValue = assignmentAudit(current))
         return current

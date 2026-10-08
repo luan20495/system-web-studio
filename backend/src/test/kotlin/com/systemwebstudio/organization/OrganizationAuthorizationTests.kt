@@ -140,4 +140,14 @@ class OrganizationAuthorizationTests : OrganizationTestBase() {
         // every one of those rows names its tenant and its actor
         assertThat(jdbc.queryForObject("SELECT count(*) FROM audit_events WHERE actor_id = ? AND action IN ('ORG_UNIT_CREATED','EMPLOYEE_CREATED') AND new_value::text LIKE ?", Long::class.java, c.adminId, "%${c.id}%")).isEqualTo(2L)
     }
+
+    @Test
+    fun `a SYSTEM_ADMIN who is also a member of the company has its member role there - but only the platform scope once the company is DELETED`() {
+        val sys = sysAdmin(); val c = company(sys); val sysId = UUID.fromString(sys.body(sys.get("/api/v1/auth/me")).get("id").asString())
+        jdbc.update("INSERT INTO tenant_members (tenant_id, user_id, role, active) VALUES (?, ?, 'TENANT_ADMIN', true)", c.id, sysId)       // a platform operator who also belongs to the company
+        assertThat(sys.get(units(c)).response.status).describedAs("an active member keeps its Tenant Admin role").isEqualTo(200)
+        jdbc.update("UPDATE tenants SET status = 'DELETED' WHERE id = ?", c.id)
+        assertThat(sys.get(units(c)).response.status).describedAs("a deleted company: platform scope only, no organization data").isEqualTo(403)
+        assertThat(c.admin.get(units(c)).response.status).describedAs("an ordinary user of a deleted company: 404").isEqualTo(404)
+    }
 }
