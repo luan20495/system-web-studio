@@ -1,14 +1,11 @@
 // @class: harness — real Chromium on Platform → AI → Nhà cung cấp with an in-page FAKE of the admin AI routes (no backend): list rows (logo, name, status, model count, test connection), the add dialog (icons, picker, switches, key field),
 // the exact request body (contract unchanged), keyboard, and "no icon comes from the internet". NOT a backend E2E.
 // Run: node tests/browser/build-harness.mjs && CHROME=... node tests/browser/harness-server.mjs run -- node tests/browser/aiproviders.spec.mjs
-import { createRequire } from "node:module";
-const require = createRequire(new URL("../../package.json", import.meta.url).pathname);
-const { chromium } = require("playwright-core");
-const ORIGIN = (process.env.HARNESS_URL ?? "http://127.0.0.1:4000/index.html").replace(/\/[^/]*$/, "");
-const results = [];
-const check = (name, ok, detail = "") => { results.push({ name, ok: !!ok, detail }); console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  — " + detail : ""}`); };
+import { harnessOrigin, launch, makeChecks } from "./lib/spec.mjs";
+const ORIGIN = harnessOrigin();
+const { check, finish } = makeChecks();
 const errors = []; const hosts = new Set();
-const browser = await chromium.launch({ executablePath: process.env.CHROME ?? "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
+const browser = await launch();
 async function open(s = "ok") {
   const p = await browser.newPage({ viewport: { width: 1200, height: 1000 } }); p.setDefaultTimeout(6000);
   p.on("pageerror", (e) => errors.push(e.message)); p.on("console", (m) => { if (["error", "warning"].includes(m.type()) && !/favicon|404/.test(m.text())) errors.push(m.text()); });
@@ -86,4 +83,4 @@ const reqs = (p) => p.evaluate(() => window.__ai);
 check("no request left the page's own origin (no hot-linked icon, font or logo)", [...hosts].every((h) => h === new URL(ORIGIN).host), [...hosts].join(","));
 check("no console error / warning / uncaught exception", errors.length === 0, errors.slice(0, 3).join(" | "));
 await browser.close();
-const failed = results.filter((r) => !r.ok); console.log(`\n${results.length - failed.length}/${results.length} checks passed`); process.exit(failed.length ? 1 : 0);
+finish();

@@ -5,6 +5,16 @@
 Not part of `npm run test:unit`. No new repo dependency: Playwright comes from `playwright-core` (already installed) and a browser is passed with `CHROME=/path/to/chrome`
 (macOS: `CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"`). The harness bundle needs `esbuild`, installed OUTSIDE the repo.
 
+## Shared spec toolkit (`tests/browser/lib/spec.mjs`)
+Every spec imports one toolkit instead of copying its boilerplate: `makeChecks()` (PASS / FAIL / SKIP lines, summary, exit code), `launch()` (Chrome from `$CHROME`, else the first installed default of the OS: macOS Google Chrome / Chromium / Edge, Linux `/opt/pw-browsers`, `google-chrome`, `chromium`, Windows Program Files; a missing browser stops with exit 2 and the list it looked for), `harnessUrl()` / `harnessOrigin()` / `harnessPage("org.html")` and `watchConsole(page, errors)`.
+**`HARNESS_URL` is required.** A spec started without it (not through `node tests/browser/harness-server.mjs run -- node tests/browser/<spec>`) fails at once with exit 2 and says so; no spec falls back to a fixed port (4000 used to be the default and may belong to another process). The toolkit is covered by `tests/browser/lib/spec.test.mjs` (run by `npm run test:unit`), which also fails if a spec calls `chromium.launch` itself or hard-codes a port or a Linux Chrome path. `page-runtime.spec.mjs` is C2-owned and keeps its own stub origin.
+
+## Hooks (`hooks.spec.mjs`) — the real `useAction` / `useLoad` with in-page fake calls, NOT a backend
+`hooks-harness.tsx` mounts the hooks of `packages/ui/src`; the spec proves a real double click sends ONE call, a rejected call re-enables the control and keeps the idempotency key for the retry, StrictMode keeps the busy state, and `useLoad` keeps its old contract while the opt-in keyed cache de-duplicates, shows cached data on the first render, aborts superseded requests and is cleared by `clearLoadCache()`. The framework-free cores are also unit-tested (`tests/builder/ui-hooks-core.test.ts`).
+
+    node tests/browser/build-harness.mjs
+    node tests/browser/harness-server.mjs run -- node tests/browser/hooks.spec.mjs        # 20 checks
+
 ## Builder (`builder.spec.mjs`) — component harness, NOT a backend E2E
 `harness.tsx` mounts the real `<BuilderWorkspace>`; its host records every operation in `window.__ops` and applies the few section/page operations locally so the
 canvas re-renders. It validates nothing the server validates and is never shipped. It exists to exercise drag and drop, focus, tabs, dialogs and ARIA in a real browser.

@@ -19,18 +19,18 @@ const rows = [];
 await withEnv({ dir: null, tag: "perfv" }, async ({ browser, chromeVersion }) => {
   console.log(`SYNTHETIC lab run (PerformanceObserver) in headless Chrome ${chromeVersion}; CPU throttle x${CPU}; runs=${RUNS}; NOT production Core Web Vitals.`);
   for (const url of urls) {
-    const S = { fcp: [], lcp: [], cls: [], tbt: [], longMax: [], dcl: [], load: [], jsKB: [], reqs: [], lcpEl: "" };
+    const S = { fcp: [], lcp: [], cls: [], tbt: [], longMax: [], dcl: [], load: [], jsKB: [], reqs: [], api: [], lcpEl: "" };
     for (let i = 0; i < RUNS; i++) {
       const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } }); const page = await ctx.newPage(); await page.addInitScript(INIT);
       const cdp = await ctx.newCDPSession(page); if (CPU > 1) await cdp.send("Emulation.setCPUThrottlingRate", { rate: CPU });
       await page.goto(url, { waitUntil: "load" }); await page.waitForTimeout(1500);
       const r = await page.evaluate(() => { const nav = performance.getEntriesByType("navigation")[0]; const fcp = performance.getEntriesByType("paint").find((e) => e.name === "first-contentful-paint");
         const res = performance.getEntriesByType("resource"); return { fcp: fcp?.startTime ?? NaN, lcp: window.__v.lcp, lcpEl: window.__v.lcpEl, cls: window.__v.cls, tbt: window.__v.long.filter((x) => x.at >= (fcp?.startTime ?? 0)).reduce((a, x) => a + Math.max(0, x.d - 50), 0), longMax: Math.max(0, ...window.__v.long.map((x) => x.d)),
-          dcl: nav.domContentLoadedEventEnd, load: nav.loadEventEnd, jsKB: res.filter((x) => x.initiatorType === "script").reduce((a, x) => a + (x.encodedBodySize || 0), 0) / 1024, reqs: res.length + 1 }; });
+          dcl: nav.domContentLoadedEventEnd, load: nav.loadEventEnd, jsKB: res.filter((x) => x.initiatorType === "script").reduce((a, x) => a + (x.encodedBodySize || 0), 0) / 1024, reqs: res.length + 1, api: res.filter((x) => x.name.includes("/api/")).length }; });
       for (const k of Object.keys(S)) if (k !== "lcpEl") S[k].push(r[k]); S.lcpEl = r.lcpEl; await ctx.close();
     }
     rows.push({ url, ...Object.fromEntries(Object.entries(S).map(([k, v]) => [k, Array.isArray(v) ? med(v) : v])), lcpMax: mx(S.lcp) });
   }
 });
-console.log("| URL | FCP ms | LCP ms (max) | LCP element | CLS | TBT-like ms | longest task ms | DCL ms | load ms | script bytes on wire KB | requests |\n|---|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|");
-for (const r of rows) console.log(`| ${r.url} | ${f(r.fcp)} | ${f(r.lcp)} (${f(r.lcpMax)}) | ${r.lcpEl} | ${f(r.cls, 3)} | ${f(r.tbt)} | ${f(r.longMax)} | ${f(r.dcl)} | ${f(r.load)} | ${f(r.jsKB, 1)} | ${f(r.reqs)} |`);
+console.log("| URL | FCP ms | LCP ms (max) | LCP element | CLS | TBT-like ms | longest task ms | DCL ms | load ms | script bytes on wire KB | requests | of which /api/ |\n|---|---:|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|");
+for (const r of rows) console.log(`| ${r.url} | ${f(r.fcp)} | ${f(r.lcp)} (${f(r.lcpMax)}) | ${r.lcpEl} | ${f(r.cls, 3)} | ${f(r.tbt)} | ${f(r.longMax)} | ${f(r.dcl)} | ${f(r.load)} | ${f(r.jsKB, 1)} | ${f(r.reqs)} | ${f(r.api)} |`);

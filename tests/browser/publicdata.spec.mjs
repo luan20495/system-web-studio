@@ -1,16 +1,12 @@
 // @class: harness — real Chromium on (1) the real <DataWizard> public-data editors with an in-page host, (2) the publish dialog with an in-page fake of its calls, (3) a published page built by C2's OWN code
 // (resolveBindings + renderSitePages + the runtime script, c1e0df5) whose same-origin config/data routes are answered by the SPEC. NOT a backend and NOT a backend E2E: the real chain is E2E-PD01 (tests/e2e-real).
 // Run: node tests/browser/build-harness.mjs && CHROME=... node tests/browser/harness-server.mjs run -- node tests/browser/publicdata.spec.mjs
-import { createRequire } from "node:module";
 import { existsSync } from "node:fs";
-const require = createRequire(new URL("../../package.json", import.meta.url).pathname);
-const { chromium } = require("playwright-core");
-const ORIGIN = (process.env.HARNESS_URL ?? "http://127.0.0.1:4000/index.html").replace(/\/[^/]*$/, "");
-const results = [];
-const check = (name, ok, detail = "") => { results.push({ name, ok: !!ok, detail }); console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  — " + detail : ""}`); };
-const skip = (name, why) => { results.push({ name, ok: null, detail: why }); console.log(`SKIP  ${name}  — ${why}`); };
+import { harnessOrigin, launch, makeChecks } from "./lib/spec.mjs";
+const ORIGIN = harnessOrigin();
+const { check, skip, finish } = makeChecks();
 const allErrors = [];
-const browser = await chromium.launch({ executablePath: process.env.CHROME ?? "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
+const browser = await launch();
 const T = (p, id) => p.getByTestId(id);
 const track = (p) => { p.on("pageerror", (e) => allErrors.push(`pageerror: ${e.message}`)); p.on("console", (m) => { if (["error", "warning"].includes(m.type()) && !/favicon|404|Failed to load resource/.test(m.text())) allErrors.push(`${m.type()}: ${m.text()}`); }); };
 async function wizard(s = "ok", tab) {
@@ -266,6 +262,4 @@ else {
 
 check("no console error / warning / uncaught exception in any page", allErrors.length === 0, allErrors.slice(0, 3).join(" | "));
 await browser.close();
-const failed = results.filter((r) => r.ok === false), skipped = results.filter((r) => r.ok === null);
-console.log(`\n${results.length - failed.length - skipped.length}/${results.length - skipped.length} checks passed${skipped.length ? `, ${skipped.length} skipped` : ""}`);
-process.exit(failed.length ? 1 : 0);
+finish();
