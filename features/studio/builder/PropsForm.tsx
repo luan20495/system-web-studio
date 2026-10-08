@@ -1,6 +1,6 @@
 "use client";
 /** Generic form for a group of component props (Content tab and Design tab). Generated from the registry's props schema; saved as the same page operations the AI uses. */
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import type { AssetDto, PropDef, Section } from "@xweb/types";
 import { propOperations } from "./core/inspector";
 import type { SchemaOperation } from "@xweb/types";
@@ -14,21 +14,44 @@ const LABELS: Record<string, string> = {
   radius: "Bo góc", font: "Phông chữ", fontFamily: "Phông chữ",
 };
 export const propLabel = (k: string) => LABELS[k] ?? k;
-const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v));
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 const lines = (v: unknown) => (Array.isArray(v) ? v.map(String).join("\n") : "");
 const toLines = (t: string) => t.split("\n").map((x) => x.trim()).filter(Boolean);
 
-export function PropsForm({ section, entries, allDefs, assets = [], readOnly, busy, onApply, summary, emptyText }: {
+/**
+ * An unsaved edit (M-002). It is kept by the HOST (Builder) per section, so it survives selecting another section; `base` is the saved props it was made on:
+ * when the saved props change under it (another edit, a restored version) the draft is stale and is ignored instead of overwriting newer content.
+ */
+export type PropsDraft = { base: string; values: Record<string, unknown> };
+
+export function PropsForm({ section, entries, allDefs, assets = [], readOnly, busy, onApply, summary, emptyText, draft: hostDraft, onDraft }: {
   section: Section; entries: [string, PropDef][]; allDefs: Record<string, PropDef>; assets?: AssetDto[]; readOnly: boolean; busy: boolean;
   onApply: (ops: SchemaOperation[], summary: string) => Promise<boolean>; summary: string; emptyText: string;
+  /** host-held draft of THIS form (omit both props to keep the draft local to the form, as in the SSR tests) */
+  draft?: PropsDraft | null; onDraft?: (d: PropsDraft | null) => void;
 }) {
   const uid = useId();
   const keys = useMemo(() => new Set(entries.map(([k]) => k)), [entries]);
-  const [draft, setDraft] = useState<Record<string, unknown>>(() => clone(section.props));
+  const formRef = useRef<HTMLDivElement>(null); const lastField = useRef<string | null>(null);
+  const [localDraft, setLocalDraft] = useState<PropsDraft | null>(null);
+  const stored = onDraft ? hostDraft ?? null : localDraft; const store = onDraft ?? setLocalDraft;
+  const base = JSON.stringify(section.props);
+  const draft: Record<string, unknown> = stored && stored.base === base ? stored.values : section.props;
   const dirty = entries.some(([k]) => !same(draft[k], section.props[k]));
-  const set = (k: string, v: unknown) => setDraft((d) => ({ ...d, [k]: v }));
+  const set = (k: string, v: unknown) => {
+    const next = { ...draft, [k]: v };
+    store(entries.some(([kk]) => !same(next[kk], section.props[kk])) ? { base, values: next } : null);
+  };
   const disabled = readOnly || busy;
+  async function save() {
+    const ops = propOperations(section, allDefs, draft, keys);
+    if (!ops.length) return;
+    const ok = await onApply(ops, summary);
+    if (!ok) return;                                  // a failed save keeps the draft
+    store(null);
+    // the Save button is disabled again once the form is clean: put focus back on the control the person was editing (never <body>)
+    requestAnimationFrame(() => { const el = (lastField.current ? document.getElementById(lastField.current) : null) ?? formRef.current?.querySelector<HTMLElement>("input,select,textarea"); el?.focus(); });
+  }
 
   function field(key: string, def: PropDef, value: unknown, onChange: (v: unknown) => void, name: string) {
     const id = `${uid}-${name}`;
@@ -52,7 +75,7 @@ export function PropsForm({ section, entries, allDefs, assets = [], readOnly, bu
 
   if (!entries.length) return <p className="hint">{emptyText}</p>;
   return (
-    <div className="bx-propsform">
+    <div className="bx-propsform" ref={formRef} onFocusCapture={(e) => { const t = e.target as HTMLElement; if (t.id && /^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName)) lastField.current = t.id; }}>
       {entries.map(([key, def]) => {
         if (def.type === "array" && def.itemProperties) {
           const items = (draft[key] as Record<string, unknown>[] | undefined) ?? [];
@@ -74,9 +97,9 @@ export function PropsForm({ section, entries, allDefs, assets = [], readOnly, bu
       })}
       {!readOnly ? (
         <div className="saveRow">
-          <button type="button" className="button ghost" disabled={!dirty || busy} onClick={() => setDraft(clone(section.props))}>Hoàn tác</button>
-          <button type="button" className="button primary" disabled={!dirty || busy}
-            onClick={() => { const ops = propOperations(section, allDefs, draft, keys); if (ops.length) void onApply(ops, summary); }}>{busy ? "Đang lưu…" : "Lưu thay đổi"}</button>
+          {dirty ? <small className="hint" role="status">Có thay đổi chưa lưu.</small> : null}
+          <button type="button" className="button ghost" disabled={!dirty || busy} onClick={() => store(null)}>Hoàn tác</button>
+          <button type="button" className="button primary" disabled={!dirty || busy} onClick={() => void save()}>{busy ? "Đang lưu…" : "Lưu thay đổi"}</button>
         </div>
       ) : <p className="hint">Bạn chỉ có quyền xem.</p>}
     </div>

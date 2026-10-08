@@ -420,6 +420,31 @@ const rtCalls = (p) => p.evaluate(() => window.__rt);
   await p.close();
 }
 
+// ---------- M-002: unsaved Inspector edits survive a selection change; focus is kept after "Lưu thay đổi" ----------
+{
+  const p = await fresh();
+  const row = (name) => p.locator("[role=treeitem][aria-level='2']").filter({ hasText: name }).first();
+  const title = () => p.locator(".bx-inspector").getByLabel("Tiêu đề", { exact: true });
+  await row("Hero").click(); await p.waitForTimeout(300);
+  await title().fill("Tiêu đề đang gõ dở"); await p.waitForTimeout(100);
+  check("M-002: a dirty form says so ('Có thay đổi chưa lưu')", (await p.locator(".bx-inspector").getByText(/chưa lưu/).count()) > 0);
+  await row("Chân trang").click(); await p.waitForTimeout(300);
+  await row("Hero").click(); await p.waitForTimeout(300);
+  check("M-002: the typed value survives selecting another section and coming back", (await title().inputValue()) === "Tiêu đề đang gõ dở", `value="${await title().inputValue()}"`);
+  check("M-002: nothing was sent while the edit was only a draft", (await ops(p)).length === 0, JSON.stringify(await ops(p)));
+  await p.getByRole("button", { name: "Xuất bản" }).click(); await p.waitForTimeout(300);
+  check("M-002: publishing with an unsaved draft warns first (pre-check dialog), it does not silently publish the saved text", (await p.getByRole("dialog").getByText(/chưa lưu/).count()) > 0 && (await p.evaluate(() => window.__published)) === 0);
+  await p.keyboard.press("Escape"); await p.waitForTimeout(200);
+  await p.locator(".bx-inspector").getByRole("button", { name: "Lưu thay đổi" }).click(); await p.waitForTimeout(500);
+  const o = await ops(p);
+  check("M-002: Lưu thay đổi sends the edit as UPDATE_PROP", o.length === 1 && o[0].ops.some((x) => x.type === "UPDATE_PROP" && x.value === "Tiêu đề đang gõ dở"), JSON.stringify(o));
+  const act = await p.evaluate(() => { const a = document.activeElement; return { tag: a?.tagName, inInspector: !!a?.closest(".bx-inspector"), label: a?.getAttribute("aria-label") ?? a?.id }; });
+  check("M-002: after saving, focus is on a control of the Inspector (not <body>)", act.tag !== "BODY" && act.inInspector, JSON.stringify(act));
+  check("M-002: the saved value is shown and the form is clean again", (await title().inputValue()) === "Tiêu đề đang gõ dở" && (await p.locator(".bx-inspector").getByText(/chưa lưu/).count()) === 0);
+  check("M-002: no uncaught error", p.errors.length === 0, p.errors.join(" | "));
+  await p.close();
+}
+
 await browser.close();
 const failed = results.filter((r) => !r.ok);
 console.log(`\n${results.length - failed.length}/${results.length} passed`);
