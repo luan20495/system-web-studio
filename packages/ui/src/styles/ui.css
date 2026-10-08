@@ -91,3 +91,7 @@
 .shell .bx-dialog-body{display:grid;gap:8px}
 .shell .bx-dialog-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
 @media(max-width:600px){.shell .bx-overlay{padding:8px;align-items:end}.shell .bx-dialog{width:100%;padding:16px}}
+
+/* ---------- states (packages/ui/src/States.tsx, LoadGate.tsx) ---------- */
+.xp-stateRef{font-size:13px;color:var(--f-muted)}.xp-stateRef code{font:inherit;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--f-text);user-select:all}
+.xp-stateBanner{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 12px;padding:10px 12px;border:1px solid var(--f-bad-line);border-radius:var(--f-r);background:var(--f-bad-bg);color:var(--f-bad);font-size:14px}

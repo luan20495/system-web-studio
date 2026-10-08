@@ -14,3 +14,4 @@ export { toast, useToast, ensureToastHost, ToastHost, ToastViewport, toastReduce
 export { confirm, prompt, type ConfirmOptions, type PromptOptions } from "./dialogs";
 export { acquireOverlay, overlayDepth, useBackdropClose, type OverlayHandle } from "./overlay";
 export { isTabbable, tabbables, trapTab, TABBABLE_SELECTOR } from "./focus";
+export { LoadGate, StaleBanner, type LoadState, type EmptyState } from "./LoadGate";

@@ -62,7 +62,8 @@
 .healthGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:16px}
 .healthCard{background:#fff;border:1px solid var(--f-line);border-left:4px solid #98a2b3;border-radius:var(--f-r);padding:12px 14px;display:grid;gap:4px}
 .healthCard.h-HEALTHY{border-left-color:#12b76a}.healthCard.h-DEGRADED{border-left-color:#f79009}.healthCard.h-UNAVAILABLE{border-left-color:#f04438}
-.stateView{display:grid;justify-items:center;gap:8px;text-align:center;padding:36px 16px;color:var(--f-muted)}.stateView h2{margin:0;font-size:16px;color:var(--f-text)}.stateView p{margin:0;max-width:56ch}
+.stateView{display:grid;justify-items:center;gap:8px;text-align:center;padding:36px 16px;color:var(--f-muted)}.stateView h1,.stateView h2{margin:0;font-size:16px;color:var(--f-text)}.stateView h1{font-size:18px}.stateView p{margin:0;max-width:56ch}
+.stateView.compact{grid-auto-flow:column;justify-content:start;justify-items:start;align-items:center;gap:8px;padding:6px 0;text-align:left}.stateView.compact .stateIcon{width:24px;height:24px}.stateView.compact .stateTitle{margin:0;font-size:13px;color:var(--f-text)}.stateView.compact p{font-size:13px}.stateView .stateTitle b{font-weight:600}
 .stateIcon{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:#f2f4f7;color:#475467;font-weight:700}
 .splash,.wsError{min-height:100vh;display:grid;place-items:center;padding:24px}
 .shell .spinner,.authPage .spinner,.splash .spinner,.wsError .spinner{border-color:#e4e7ec;border-top-color:var(--f-accent)}
@@ -103,7 +104,7 @@
 .wsBody{min-height:0;display:grid;grid-template-columns:minmax(330px,34%) minmax(0,1fr)}
 .wsBody.mode-design{grid-template-columns:300px minmax(0,1fr) 340px}
 .designLeft,.inspectorPane{min-height:0;overflow:auto;background:var(--panel);border-right:1px solid var(--line);padding:14px}
-.inspectorPane{border-right:0;border-left:1px solid var(--line)}.inspectorPane .inspector{margin:0}.inspectorPane .stateView h2{color:var(--text)}.inspectorPane .stateView{color:var(--muted)}
+.inspectorPane{border-right:0;border-left:1px solid var(--line)}.inspectorPane .inspector{margin:0}.inspectorPane .stateView h1,.inspectorPane .stateView h2{color:var(--text)}.inspectorPane .stateView{color:var(--muted)}
 .paneSection{margin-bottom:18px}.paneSection h2{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 4px}
 .sortRow{display:flex;gap:6px;align-items:stretch}.sortRow>.dragHandle{width:26px;flex:none}.sortRow>button:last-child{flex:1;min-width:0;width:auto;text-align:left;display:grid;gap:2px;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--text)}
 .sortRow>button:last-child span{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sortRow>button.active{border-color:#6366f1;background:#1d2148}
@@ -196,7 +197,7 @@
 .studio .tabs>*{color:#b8c2d6}
 .studio .tabs>.active{color:#c3cbff;border-bottom-color:#c3cbff}
 .studio .linkChip{background:rgba(124,140,255,.22);color:#eef0ff}
-.studio .stateView h2{color:#e6edf3}.studio .stateView p,.studio .stateView .stateDetail{color:#b8c2d6}
+.studio .stateView h1,.studio .stateView h2{color:#e6edf3}.studio .stateView p,.studio .stateView .stateDetail{color:#b8c2d6}
 .settingsTable td{vertical-align:top}.settingsTable small{display:block}.settingCtl{white-space:nowrap}.settingCtl input[type=number]{width:110px}
 .designCode{flex:1;min-height:0;display:flex;flex-direction:column}
 .designSplit{flex:1;min-height:0;display:grid;grid-template-columns:minmax(200px,45%) 1fr}
