@@ -33,6 +33,8 @@ internal object OrgRules {
         if (!rx.matches(c)) throw bad("$what is not valid", "INVALID_CODE")
         return c
     }
+    /** CANONICAL unit code (frozen, shared by C1 / C3 / C5): trimmed, validated against [UNIT_CODE], then UPPER-CASED with [java.util.Locale.ROOT]; stored, compared and returned in that form */
+    fun unitCode(raw: String?): String = code(raw, UNIT_CODE, "code").uppercase(java.util.Locale.ROOT)
     fun conflictOrMissing(currentVersion: Long?, notFound: ApiException): ApiException =
         if (currentVersion == null) notFound else ApiException.conflict("VERSION_CONFLICT", "The record changed since it was read; reload and retry.", mapOf("currentVersion" to currentVersion))
     fun metadata(json: JsonMapper, node: JsonNode?): JsonNode {
@@ -72,7 +74,7 @@ class OrganizationUnitTypeService(private val repos: OrganizationRepositories, p
         val code = OrgRules.code(r.code, OrgRules.TYPE_CODE, "code", lower = true)
         val name = OrgRules.text(r.name, 120, "name")!!; val icon = OrgRules.text(r.icon, 60, "icon", false)
         val now = Instant.now()
-        return repos.lock.withTenantLock(tenantId) {
+        return run {
             val rules = checkRules(tenantId, null, r.rules)
             val created = try {
                 repos.types.insert(OrganizationUnitTypeDto(UUID.randomUUID(), tenantId, name, code, icon, true, rules, 0, now, now))
@@ -85,7 +87,7 @@ class OrganizationUnitTypeService(private val repos: OrganizationRepositories, p
     @Transactional
     fun update(tenantId: UUID, id: UUID, actorId: UUID, r: OrgUnitTypeUpdateRequest): OrganizationUnitTypeDto {
         val expected = OrgRules.need(r.expectedVersion)
-        return repos.lock.withTenantLock(tenantId) {
+        return run {
             val before = get(tenantId, id)
             val next = before.copy(name = r.name?.let { OrgRules.text(it, 120, "name")!! } ?: before.name, icon = if (r.icon != null) OrgRules.text(r.icon, 60, "icon", false) else before.icon,
                 rules = if (r.rules != null) checkRules(tenantId, id, r.rules) else before.rules)
@@ -99,7 +101,7 @@ class OrganizationUnitTypeService(private val repos: OrganizationRepositories, p
     @Transactional
     fun setActive(tenantId: UUID, id: UUID, actorId: UUID, active: Boolean, expectedVersion: Long?): OrganizationUnitTypeDto {
         val expected = OrgRules.need(expectedVersion)
-        return repos.lock.withTenantLock(tenantId) {
+        return run {
             val before = get(tenantId, id)
             val after = repos.types.update(before.copy(active = active), expected) ?: throw OrgRules.conflictOrMissing(repos.types.find(tenantId, id)?.version, notFound())
             audit.record(if (active) "ORG_UNIT_TYPE_ENABLED" else "ORG_UNIT_TYPE_DISABLED", "ORG_UNIT_TYPE", id, actorId = actorId, oldValue = snapshot(before), newValue = snapshot(after))
@@ -156,9 +158,9 @@ class OrganizationUnitService(private val repos: OrganizationRepositories, priva
 
     @Transactional
     fun create(tenantId: UUID, actorId: UUID, r: OrgUnitCreateRequest): OrganizationUnitDto {
-        val code = OrgRules.code(r.code, OrgRules.UNIT_CODE, "code"); val name = OrgRules.text(r.name, 160, "name")!!; val meta = OrgRules.metadata(json, r.metadata)
+        val code = OrgRules.unitCode(r.code); val name = OrgRules.text(r.name, 160, "name")!!; val meta = OrgRules.metadata(json, r.metadata)
         val typeId = r.typeId ?: throw OrgRules.bad("typeId is required")
-        return repos.lock.withTenantLock(tenantId) {
+        return run {
             val type = repos.types.find(tenantId, typeId) ?: throw ApiException.notFound("ORG_UNIT_TYPE_NOT_FOUND", "Organization unit type not found")
             if (!type.active) throw ApiException.conflict("ORG_UNIT_TYPE_DISABLED", "The unit type '${type.code}' is disabled")
             val parent = r.parentId?.let { activeUnit(tenantId, it) }                        // foreign / unknown -> 404; archived -> 409
@@ -168,7 +170,7 @@ class OrganizationUnitService(private val repos: OrganizationRepositories, priva
             val now = Instant.now()
             val created = try {
                 repos.units.insert(OrganizationUnitDto(UUID.randomUUID(), tenantId, typeId, parent?.id, name, code, r.sortOrder ?: 0, meta, true, 0, now, now))
-            } catch (e: DuplicateOrganizationKey) { throw ApiException.conflict("ORG_UNIT_CODE_TAKEN", "A unit with this code already exists in the company") }
+            } catch (e: DuplicateOrganizationKey) { throw ApiException.conflict("ORG_UNIT_CODE_TAKEN", "A sibling unit under the same parent already has this code") }
             audit.record("ORG_UNIT_CREATED", "ORG_UNIT", created.id, actorId = actorId, newValue = snapshot(created))
             created
         }
@@ -177,12 +179,12 @@ class OrganizationUnitService(private val repos: OrganizationRepositories, priva
     @Transactional
     fun update(tenantId: UUID, id: UUID, actorId: UUID, r: OrgUnitUpdateRequest): OrganizationUnitDto {
         val expected = OrgRules.need(r.expectedVersion)
-        return repos.lock.withTenantLock(tenantId) {
+        return run {
             val before = get(tenantId, id)
             if (!before.active) throw ApiException.conflict("ORG_UNIT_ARCHIVED", "An archived unit cannot be changed; restore it first")
-            val next = before.copy(name = r.name?.let { OrgRules.text(it, 160, "name")!! } ?: before.name, code = r.code?.let { OrgRules.code(it, OrgRules.UNIT_CODE, "code") } ?: before.code,
+            val next = before.copy(name = r.name?.let { OrgRules.text(it, 160, "name")!! } ?: before.name, code = r.code?.let { OrgRules.unitCode(it) } ?: before.code,
                 sortOrder = r.sortOrder ?: before.sortOrder, metadata = r.metadata?.let { OrgRules.metadata(json, it) } ?: before.metadata)
-            val after = try { repos.units.update(next, expected) } catch (e: DuplicateOrganizationKey) { throw ApiException.conflict("ORG_UNIT_CODE_TAKEN", "A unit with this code already exists in the company") }
+            val after = try { repos.units.update(next, expected) } catch (e: DuplicateOrganizationKey) { throw ApiException.conflict("ORG_UNIT_CODE_TAKEN", "A sibling unit under the same parent already has this code") }
                 ?: throw OrgRules.conflictOrMissing(repos.units.find(tenantId, id)?.version, notFound())
             audit.record("ORG_UNIT_UPDATED", "ORG_UNIT", id, actorId = actorId, oldValue = snapshot(before), newValue = snapshot(after))
             after
@@ -190,12 +192,14 @@ class OrganizationUnitService(private val repos: OrganizationRepositories, priva
     }
 
     /**
-     * Move a unit with its whole subtree (atomic: only the unit's own parent changes). Order: source (404) -> source active -> destination (404, foreign = unknown) -> destination
-     * active -> not itself, not inside its own subtree (ORG_CYCLE) -> type rules and depth for the unit AND every descendant -> versioned write.
+     * Move a unit with its whole subtree (atomic: only the unit's own parent changes). The ONE operation that takes the tenant structural lock, as the FIRST step of the
+     * transaction, and keeps it to commit: lock -> source (404) -> source active -> destination (404, foreign = unknown) -> destination active -> not itself, not inside
+     * its own subtree (ORG_CYCLE) -> type rules and depth for the unit AND every descendant -> versioned write (the store re-checks the cycle and the sibling code) -> audit.
      */
     @Transactional
     fun move(tenantId: UUID, id: UUID, actorId: UUID, newParentId: UUID?, sortOrder: Int?, expectedVersion: Long): OrganizationUnitDto =
-        repos.lock.withTenantLock(tenantId) {
+        run {
+            repos.lock.acquire(tenantId)                                                       // FIRST: the structural lock is held until this transaction ends
             val source = get(tenantId, id)
             if (!source.active) throw ApiException.conflict("ORG_UNIT_ARCHIVED", "An archived unit cannot be moved")
             val dest = newParentId?.let { activeUnit(tenantId, it) }
@@ -206,7 +210,10 @@ class OrganizationUnitService(private val repos: OrganizationRepositories, priva
             val sourceType = types[source.typeId] ?: throw ApiException.notFound("ORG_UNIT_TYPE_NOT_FOUND", "Organization unit type not found")
             checkPlacement(sourceType, dest?.let { types[it.typeId] }, baseDepth)
             for (n in subtree) types[n.typeId]?.rules?.maxDepth?.let { if (baseDepth + n.relativeDepth > it) throw ruleViolation("MAX_DEPTH", "The move would put a '${types[n.typeId]!!.code}' unit deeper than level $it") }
-            val after = repos.units.move(tenantId, id, dest?.id, sortOrder, expectedVersion) ?: throw OrgRules.conflictOrMissing(repos.units.find(tenantId, id)?.version, notFound())
+            val after = try { repos.units.move(tenantId, id, dest?.id, sortOrder, expectedVersion) }
+                catch (e: OrganizationCycle) { throw ApiException.conflict("ORG_CYCLE", "A unit cannot be moved below itself or one of its descendants") }
+                catch (e: DuplicateOrganizationKey) { throw ApiException.conflict("ORG_UNIT_CODE_TAKEN", "A sibling unit under the destination already has this code") }
+                ?: throw OrgRules.conflictOrMissing(repos.units.find(tenantId, id)?.version, notFound())
             audit.record("ORG_UNIT_MOVED", "ORG_UNIT", id, actorId = actorId,
                 oldValue = mapOf("tenantId" to tenantId, "parentId" to source.parentId, "sortOrder" to source.sortOrder, "version" to source.version),
                 newValue = mapOf("tenantId" to tenantId, "parentId" to after.parentId, "sortOrder" to after.sortOrder, "version" to after.version, "subtreeSize" to subtree.size))
@@ -217,7 +224,7 @@ class OrganizationUnitService(private val repos: OrganizationRepositories, priva
     @Transactional
     fun archive(tenantId: UUID, id: UUID, actorId: UUID, expectedVersion: Long?): OrganizationUnitDto {
         val expected = OrgRules.need(expectedVersion)
-        return repos.lock.withTenantLock(tenantId) {
+        return run {
             val before = get(tenantId, id)
             if (!before.active) throw ApiException.conflict("ORG_UNIT_ARCHIVED", "The unit is already archived")
             val children = repos.units.activeChildCount(tenantId, id)
@@ -235,7 +242,7 @@ class OrganizationUnitService(private val repos: OrganizationRepositories, priva
     fun restore(tenantId: UUID, id: UUID, actorId: UUID, expectedVersion: Long?): OrganizationUnitDto {
         val expected = OrgRules.need(expectedVersion)
         fun conflict(reason: String, message: String) = ApiException.conflict("RESTORE_CONFLICT", message, mapOf("reason" to reason))
-        return repos.lock.withTenantLock(tenantId) {
+        return run {
             val before = get(tenantId, id)
             if (before.active) throw conflict("NOT_ARCHIVED", "The unit is not archived")
             if (tenants.get(tenantId).status != "ACTIVE") throw conflict("TENANT_INACTIVE", "The company is not active")
