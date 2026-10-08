@@ -35,14 +35,8 @@ export function Pager({ page, size, total, onPage }: { page: number; size: numbe
   );
 }
 
-const TONE: Record<string, string> = {
-  PENDING: "warn",
-  HEALTHY: "ok", OK: "ok", ERROR: "bad", BAD_OUTPUT: "warn", RUNNING: "ok", ACTIVE: "ok", UPDATED: "ok", READY: "ok", true: "ok", PUBLIC: "info",
-  DEGRADED: "warn", QUEUED: "warn", POLICY_CHECK: "warn", SECURITY_CHECK: "warn", BUILDING: "warn", DEPLOYING: "warn", NO_CHANGE: "muted", PRIVATE: "muted",
-  UNAVAILABLE: "bad", FAILED: "bad", DISABLED: "bad", false: "bad", UNSUPPORTED: "warn", NOT_CONFIGURED: "muted", UNKNOWN: "muted", NOT_IMPLEMENTED: "muted", COMING_SOON: "muted",
-  SUSPENDED: "warn", DELETED: "bad", REVIEW: "warn", APPROVED: "ok", DEPRECATED: "bad", DRAFT: "muted", REJECTED: "bad", SUPERSEDED: "muted", COMPANY: "info", ARCHIVED: "muted"
-};
-export function Pill({ value, label }: { value: string; label?: string }) { return <span className={`pill pill-${TONE[value] ?? "muted"}`}>{label ?? value}</span>; }
+export { Pill, pillTone, PILL_TONE, type PillTone } from "./Pill";
+import { Pill } from "./Pill";
 export function Kpi({ label, value, hint }: { label: string; value: ReactNode; hint?: ReactNode }) {
   return <div className="kpi"><div className="kpiLabel">{label}</div><div className="kpiValue">{value}</div>{hint ? <div className="kpiHint">{hint}</div> : null}</div>;
 }

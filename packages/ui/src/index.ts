@@ -15,3 +15,7 @@ export { confirm, prompt, type ConfirmOptions, type PromptOptions } from "./dial
 export { acquireOverlay, overlayDepth, useBackdropClose, type OverlayHandle } from "./overlay";
 export { isTabbable, tabbables, trapTab, TABBABLE_SELECTOR } from "./focus";
 export { LoadGate, StaleBanner, type LoadState, type EmptyState } from "./LoadGate";
+export { Tabs, TabPanel, tabId, panelId, nextTabIndex, type TabItem } from "./Tabs";
+export { RadioGroup, type RadioOption } from "./RadioGroup";
+export { DisclosureRow } from "./DisclosureRow";
+export { ReasonButton, type ReasonButtonProps } from "./ReasonButton";
