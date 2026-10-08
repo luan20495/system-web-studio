@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @class: real-backend
 // Visual / behavioural check of the redesigned "Platform -> Công ty -> Tạo công ty" dialog in a REAL Chrome with an EMPTY profile (no build or browser cache reused).
 // It opens the dialog and never submits it: no company is created. Also fails on any /_next asset error, any failed API call (other than the anonymous 401 probes),
 // any console / page error, and any request to localhost when the portal is a public one.

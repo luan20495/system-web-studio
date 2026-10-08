@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @class: real-backend
 // GLOBAL smoke (D-C0-38): the public prod-profile stack, reached ONLY through its Internet hostnames (Cloudflare -> hbl-studio tunnel).
 //   A Studio loads  B authenticated API through the same-origin proxy  C session + CSRF over HTTPS (cookie flags)  D CORS  E published PAGE_SCHEMA site on the sites host
 //   F CSP of the published page  G runtime config  H public query route (PASS only when a data-bound page is integrated, else NOT_READY with the reason)

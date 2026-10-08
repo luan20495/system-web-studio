@@ -21,7 +21,11 @@
     "test:classify": "node scripts/test-classify.mjs",
     "test:e2e:real": "node tests/e2e-real/run.mjs",
     "test:e2e:real:selftest": "node tests/e2e-real/selftest.mjs",
-    "test:browser:build": "node tests/browser/build-harness.mjs"
+    "test:browser:build": "node tests/browser/build-harness.mjs",
+    "guard:static": "node tests/guards/run-static.mjs",
+    "guard:test": "node --test tests/guards/guards.test.mjs",
+    "scan:bundles": "node scripts/scan-prod-bundles.mjs",
+    "gate:frontend": "node scripts/gate-frontend.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

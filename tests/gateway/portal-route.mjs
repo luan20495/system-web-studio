@@ -1,3 +1,4 @@
+// @class: integration
 // The portal gateway template (infra/portal-gateway) against a real nginx (throwaway container, three stub portals on loopback): routing by Host, one portal = one hostname,
 // the plain-http redirect (both modes), the client address the portals receive (a forged X-Forwarded-For / X-Real-IP / Forwarded never gets through, a trusted proxy's one is believed),
 // unknown hosts, streaming responses and big bodies. Needs Docker and the image nginxinc/nginx-unprivileged:1.29-alpine.
