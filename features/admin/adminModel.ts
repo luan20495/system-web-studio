@@ -51,21 +51,7 @@ export function canActInWorkspace(me: Me | null | undefined, workspaceId: string
   return me.businessAccess === true || me.workspaces.some((w) => w.id === workspaceId);
 }
 
-/** sections only a SYSTEM_ADMIN can open: their APIs are guarded by AdminGuard (T1 audit) */
-export const SYSTEM_ONLY: ReadonlySet<string> = new Set(["users", "workspaces", "applications", "ai", "ai-governance", "alerts", "security", "costs", "departments", "identity", "connectors", "backups", "components", "templates", "builds", "packages", "audit", "system", "settings", "tenants"]);
-/** sections for the people who administer a tenant / a workspace but are not SYSTEM_ADMIN */
-export const SCOPED_SECTIONS = { company: "company", organization: "organization", employees: "employees", myWorkspaces: "my-workspaces", dataSources: "data-sources" } as const;
-
-export type SectionAccess = "ok" | "needs-platform" | "needs-scope";
-export function sectionAccess(key: string, scope: AdminScope): SectionAccess {
-  if (key === "") return "ok";
-  if (key === SCOPED_SECTIONS.company) return scope.platform || scope.tenants.length ? "ok" : "needs-scope";
-  if (key === SCOPED_SECTIONS.organization || key === SCOPED_SECTIONS.employees) return scope.tenants.length ? "ok" : "needs-scope";
-  if (key === SCOPED_SECTIONS.myWorkspaces) return scope.workspaces.length ? "ok" : "needs-scope";
-  if (key === SCOPED_SECTIONS.dataSources) return scope.dataWorkspaces.length ? "ok" : "needs-scope";
-  if (SYSTEM_ONLY.has(key)) return scope.platform ? "ok" : "needs-platform";
-  return "ok";
-}
+// Which sections exist, who may open them and how they are routed: console/sectionPolicy.ts over the ONE table in console/sections.tsx.
 
 // ------------------------------------------------------------------------------------------------------------------------------ tenants
 export const TENANT_SLUG_RE = /^[a-z0-9][a-z0-9-]{0,118}[a-z0-9]$/;

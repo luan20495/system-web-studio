@@ -22,7 +22,7 @@ import { DataSourcesPanel } from "../studio/builder/DataSourcesPanel";
 import type { DataManagementCalls } from "../studio/builder/core/dataManagement";
 import { Modal } from "./Modal";
 import { PageHead } from "./PageHead";
-import { A } from "./base";
+import { useA } from "./console/context";
 import {
   CANDIDATE_MAX_RESULTS, TENANT_ROLES, TENANT_STATUS_LABEL, WORKSPACE_ROLES, adminErrorText, candidateLabel, candidateQuery, adminScope, slugify, canManageWorkspaceMembers, checkTenantForm, memberChangeBlock, personLabel, personOf, tenantActions, tenantMemberRows,
   workspaceMemberBlock, workspaceRoleLabel, type Person,
@@ -145,6 +145,7 @@ function TenantBody({ id, onChanged }: { id: string; onChanged?: () => void }) {
 
 // ------------------------------------------------------------------------------------------------------------------------- platform
 export function TenantsPage() {
+  const A = useA();
   const router = useRouter();
   const list = useLoad(() => api.admin.tenants(), []);
   const [adding, setAdding] = useState(false);
@@ -166,6 +167,7 @@ export function TenantsPage() {
 }
 
 export function TenantDetailPage({ id }: { id: string }) {
+  const A = useA();
   return (<>
     <p><Link className="btn sm ghost xp-btnIcon" href={A("/tenants")}><ArrowLeft size={14} aria-hidden="true"/> Danh sách công ty</Link></p>
     <TenantBody id={id}/>
@@ -238,6 +240,7 @@ export function CompanyPage() {
 
 /** the landing page of someone who is not a SYSTEM_ADMIN: only what the server lists for them */
 export function ScopedHome() {
+  const A = useA();
   const { me } = useSession();
   const scope = useMemo(() => adminScope(me), [me]);
   return (<>
