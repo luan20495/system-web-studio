@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { PORTAL_LABEL, type PortalId } from "@xweb/permissions";
 import { Card, ComingSoon, StateView } from "../../ui";
@@ -16,15 +17,20 @@ export function route(portal: AdminPortal, seg: string[], scope: AdminScope): Re
   const r = resolveSection(SECTIONS, portal, key, scope);
   switch (r.kind) {
     case "coming": return <ComingSection section={r.section}/>;
-    case "page": return r.section.render?.(seg) ?? <StateView level={1} kind="notfound"/>;
+    case "page": return r.section.render?.(seg) ?? <NotFound/>;
     case "needs-scope": return <NeedsScope what={r.what}/>;
     case "needs-platform": return <NeedsPlatform/>;
     case "scoped-home": return <ScopedHome/>;
     case "elsewhere": return <ElsewhereNote section={key}/>;
-    case "notfound": return <StateView level={1} kind="notfound"/>;
+    case "notfound": return <NotFound/>;
   }
 }
 
+/** an address no screen answers: a real 404 with the way back (not "it is in the other console") */
+function NotFound() {
+  const { A } = useAdminConsole();
+  return <StateView level={1} kind="notfound" action={<Link className="btn" href={A("")}>Về trang tổng quan</Link>}/>;
+}
 function NeedsPlatform() {
   return <StateView level={1} kind="forbidden" title="Mục này chỉ dành cho quản trị hệ thống" detail={<p>Tài khoản của bạn quản trị công ty / workspace, không phải toàn hệ thống. Các mục bạn dùng được nằm ở thanh bên trái.</p>}/>;
 }

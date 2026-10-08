@@ -57,8 +57,9 @@ test("resolveSection: the same decisions the console always made (coming, tenant
   assert.equal(r("platform", "tenants", sys).kind, "page"); assert.equal(r("admin", "tenants", sys).kind, "elsewhere"); assert.equal(r("admin", "tenants").kind, "needs-platform");
   assert.deepEqual(r("admin", "company"), { kind: "needs-scope", what: "công ty" }); assert.equal(r("admin", "company", tenantAdmin).kind, "page");
   assert.deepEqual(r("admin", "people"), { kind: "needs-scope", what: "công ty hay workspace" }); assert.equal(r("admin", "people", tenantAdmin).kind, "page");
-  assert.equal(r("admin", "people", sys).kind, "elsewhere", "a SYSTEM_ADMIN does not use the people screen of the Admin console");
-  assert.equal(r("admin", "").kind, "scoped-home"); assert.equal(r("admin", "", sys).kind, "page"); assert.equal(r("admin", "users").kind, "needs-platform"); assert.equal(r("admin", "users", sys).kind, "page");
-  assert.equal(r("admin", "ai", sys).kind, "elsewhere"); assert.equal(r("platform", "company").kind, "elsewhere"); assert.equal(r("admin", "nope", sys).kind, "elsewhere", "today's answer for an unknown key (M-055 changes it)");
+    assert.equal(r("admin", "").kind, "scoped-home"); assert.equal(r("admin", "", sys).kind, "page"); assert.equal(r("admin", "users").kind, "needs-platform"); assert.equal(r("admin", "users", sys).kind, "page");
+  assert.equal(r("admin", "ai", sys).kind, "elsewhere", "it exists, in the Platform"); assert.equal(r("platform", "company").kind, "elsewhere", "it exists, in the Admin console");
+  assert.equal(r("admin", "nope", sys).kind, "notfound", "an unknown key is a 404, not 'it is in the other console' (M-055)"); assert.equal(r("platform", "nope", sys).kind, "notfound");
+  assert.equal(r("platform", "people", sys).kind, "notfound", "the other console would send a SYSTEM_ADMIN back: no ping-pong"); assert.equal(r("admin", "people", sys).kind, "notfound");
   assert.equal(r("all", "company").kind, "notfound"); assert.equal(r("all", "users").kind, "page"); assert.equal(r("all", "nope").kind, "notfound");
 });

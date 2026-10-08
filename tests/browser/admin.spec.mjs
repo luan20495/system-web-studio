@@ -358,6 +358,20 @@ await block("scenario 41", async () => { const p = await open({ portal: "platfor
   check("SKP05 and scrolls <main> back to the top", (await p.evaluate(() => document.querySelector("main").scrollTop)) === 0);
   await p.__ctx.close(); });
 
+// ===================================================================================================================== M-055 an unknown address is a 404, not "it is in the other console"
+await block("scenario 42", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/nope" }); await settle(p, 400);
+  const h1 = await p.locator("h1").innerText(); const t = await p.locator("main").innerText();
+  check("NF01 /platform/nope says it was not found (no 'nằm ở trang khác', no button to the other console)", /Không tìm thấy/.test(h1) && !/trang khác/.test(t) && (await p.locator("main a[href^='/admin']").count()) === 0, h1);
+  check("NF02 and offers a way back to the overview of THIS console", (await p.locator("main").getByRole("link", { name: /tổng quan/i }).getAttribute("href")) === "/platform");
+  await nav(p, "/platform/people"); check("NF03 /platform/people (a SYSTEM_ADMIN has no such screen anywhere) is a 404, not a loop to the Admin console", /Không tìm thấy/.test(await p.locator("h1").innerText()));
+  await nav(p, "/platform/company"); check("NF04 /platform/company exists in the Admin console: the pointer stays", /nằm ở trang khác/.test(await p.locator("h1").innerText()) && (await p.locator("main a[href='/admin/company']").count()) === 1);
+  await p.__ctx.close(); });
+await block("scenario 43", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/nope/deeper" }); await settle(p, 400);
+  check("NF05 /admin/nope/deeper is a 404", /Không tìm thấy/.test(await p.locator("h1").innerText()));
+  await nav(p, "/admin/people"); check("NF06 /admin/people as a SYSTEM_ADMIN is a 404 (no ping-pong)", /Không tìm thấy/.test(await p.locator("h1").innerText()));
+  await nav(p, "/admin/ai"); check("NF07 /admin/ai exists in the Platform: the pointer stays", /nằm ở trang khác/.test(await p.locator("h1").innerText()));
+  await p.__ctx.close(); });
+
 // ===================================================================================================================== route / navigation snapshot (M-066: the split must not change behaviour)
 // For every persona the sidebar labels and, for every section key (deep links, aliases, foreign and unknown keys included), the final path, the h1, the h2s and the kind of state view are recorded in admin-routes.snapshot.json
 // (generated from the pre-split code, `UPDATE_SNAPSHOT=1` rewrites it). Dates / numbers are not compared: only structure.

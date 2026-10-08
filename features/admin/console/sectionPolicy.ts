@@ -72,6 +72,12 @@ export type Resolution<T extends SectionMeta> =
   | { kind: "elsewhere" }
   | { kind: "notfound" };
 
+/** whether the OTHER console would really show this section to this person (so "it is in the other console" is true, and not a loop) */
+function servedByOther(sec: SectionMeta, portal: AdminPortal, scope: AdminScope): boolean {
+  if (portal === "platform") return sec.portals.includes("admin") || sec.surface === "scoped" || (sec.surface === "people" && !scope.platform);
+  return sec.portals.includes("platform");
+}
+
 /** Which screen answers a first path segment in this console for this person. */
 export function resolveSection<T extends SectionMeta>(table: readonly T[], portal: AdminPortal, key: string, scope: AdminScope): Resolution<T> {
   const sec = find(table, key);
@@ -83,6 +89,7 @@ export function resolveSection<T extends SectionMeta>(table: readonly T[], porta
     if (!scope.platform && key === "") return { kind: "scoped-home" };
     if (!scope.platform && sectionAccess(table, key, scope) === "needs-platform") return { kind: "needs-platform" };
   }
-  if (!owns(table, portal, key)) return { kind: "elsewhere" };
-  return sec?.surface === "standard" ? { kind: "page", section: sec } : { kind: "notfound" };
+  if (!sec) return { kind: "notfound" };                 // no console has such a section: a 404 (it used to be "it is in the other console", which answered the same: a loop)
+  if (!owns(table, portal, key)) return servedByOther(sec, portal, scope) ? { kind: "elsewhere" } : { kind: "notfound" };
+  return sec.surface === "standard" ? { kind: "page", section: sec } : { kind: "notfound" };
 }
