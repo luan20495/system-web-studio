@@ -1,6 +1,6 @@
 # H-C1-04 — project-scoped Studio access
 
-Base: `integration/v2 @ 62ce9697cd56`.
+Base: `integration/v2 @ e310b6a16156` (rebased from `fix/c1-h-c1-04-rc` which was validated on 62ce9697cd56; cherry-picked cleanly, no conflict).
 
 ## Root cause
 
@@ -56,7 +56,7 @@ Studio admission may use: at least one usable scope containing `APP_VIEW` (works
 
 ## Validation (macOS, JDK 21, Docker, PostgreSQL via Testcontainers)
 
-Branch `fix/c1-h-c1-04-rc` on `integration/v2 @ 62ce9697cd56` (ancestor verified). `ProjectScopedAuthMeTests` has 12 tests, all through the real HTTP API and the real database:
+Branch `fix/c1-h-c1-04-v2` on `integration/v2 @ e310b6a16156`. `ProjectScopedAuthMeTests` has 12 tests, all through the real HTTP API and the real database:
 
 | Case | Proves |
 |---|---|
