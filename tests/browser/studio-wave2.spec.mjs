@@ -1,7 +1,8 @@
 // @class: harness — real Chromium on the REAL Studio app with an in-test FAKE of /api/v1 (tests/browser/studio-app/); NOT a backend and NOT a backend E2E (HARNESS, NOT REAL BACKEND)
 // Regression checks of Studio wave-2 issues (docs/parallel/c5/audit/MASTER_ISSUE_LEDGER.md): M-015, M-006 (Builder boundary), ...
 // Run: node tests/browser/build-harness.mjs && node tests/browser/harness-server.mjs run -- node tests/browser/studio-wave2.spec.mjs
-import { launch, open, check, wait, finish, newState } from "./studio-app/lib.mjs";
+import { open, check, wait, finish, newState } from "./studio-app/lib.mjs";
+import { launch } from "./lib/spec.mjs";
 import { newCodeState } from "./studio-app/fake-api.mjs";
 const b = await launch();
 

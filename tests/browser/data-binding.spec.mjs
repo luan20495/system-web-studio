@@ -1,7 +1,8 @@
 // @class: harness — real Chromium on the REAL Studio app with an in-test FAKE of /api/v1 (tests/browser/studio-app/); NOT a backend and NOT a backend E2E (HARNESS, NOT REAL BACKEND)
 // M-005: the guided "Hiển thị dữ liệu trong trang" flow of the Builder's Dữ liệu rail. It proves what the UI sends and shows for the answers a fake gives.
 // Run: node tests/browser/build-harness.mjs && node tests/browser/harness-server.mjs run -- node tests/browser/data-binding.spec.mjs
-import { launch, open, check, wait, finish } from "./studio-app/lib.mjs";
+import { open, check, wait, finish } from "./studio-app/lib.mjs";
+import { launch } from "./lib/spec.mjs";
 import { newDataState } from "./studio-app/fake-api.mjs";
 const b = await launch();
 const patches = (p) => p.state.log.filter((l) => l.method === "PATCH" && /\/schema$/.test(l.path));
