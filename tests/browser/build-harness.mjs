@@ -6,13 +6,15 @@ const root = resolve(new URL("../..", import.meta.url).pathname);
 const esbuild = createRequire(join(process.env.ESBUILD_DIR ?? "/tmp/esb", "package.json"))("esbuild");
 // HARNESS_NODE_ENV=production builds the production React bundle into .test-build/browser-prod (the sanity spec runs against it: the development build keeps debug references to removed DOM)
 const nodeEnv = process.env.HARNESS_NODE_ENV === "production" ? "production" : "development";
-const out = join(root, ".test-build", nodeEnv === "production" ? "browser-prod" : "browser");
+// HARNESS_PROFILING=1 (with HARNESS_NODE_ENV=production): minified production bundle on react-dom/profiling, so <Profiler onRender> reports real durations (a plain production bundle never calls it). -> .test-build/browser-prof, used by scripts/perf-harness.mjs
+const profiling = process.env.HARNESS_PROFILING === "1";
+const out = join(root, ".test-build", profiling ? "browser-prof" : nodeEnv === "production" ? "browser-prod" : "browser");
 mkdirSync(out, { recursive: true });
 const alias = { "@": root, "@xweb/types": join(root, "packages/types/src/index.ts"), "@xweb/permissions": join(root, "packages/permissions/src/index.ts"),
   "@xweb/ui": join(root, "packages/ui/src/index.ts"), "@xweb/i18n": join(root, "packages/i18n/src/index.ts"), "@xweb/api-client": join(root, "packages/api-client/src/index.ts") };
 await esbuild.build({ entryPoints: [join(root, "tests/browser/harness.tsx"), join(root, "tests/browser/ds-harness.tsx"), join(root, "tests/browser/release-harness.tsx"), join(root, "tests/browser/public-harness.tsx"), join(root, "tests/browser/prov-harness.tsx"), join(root, "tests/browser/org-harness.tsx"), join(root, "tests/browser/ai-harness.tsx")], bundle: true, outdir: out, format: "iife", jsx: "automatic", platform: "browser",
   define: { "process.env": "{}", "process.env.NODE_ENV": JSON.stringify(nodeEnv), "process.env.NEXT_PUBLIC_PORTAL_URL_PLATFORM": "undefined", "process.env.NEXT_PUBLIC_PORTAL_URL_ADMIN": "undefined", "process.env.NEXT_PUBLIC_PORTAL_URL_STUDIO": "undefined" },
-  alias, loader: { ".css": "css" }, logLevel: "warning", minify: nodeEnv === "production" });
+  alias: profiling ? { ...alias, "react-dom/client": join(root, "node_modules/react-dom/profiling.js") } : alias, loader: { ".css": "css" }, logLevel: "warning", minify: nodeEnv === "production" });
 // the Platform / Admin portals harness: the REAL PortalApp + AdminApp need `next/link` and `next/navigation` (a history based stand-in) and the @xweb/auth package; a separate build so no other entry sees these aliases
 await esbuild.build({ entryPoints: [join(root, "tests/browser/admin-harness.tsx")], bundle: true, outdir: out, format: "iife", jsx: "automatic", platform: "browser", nodePaths: [join(root, "node_modules")],
   define: { "process.env": "{}", "process.env.NODE_ENV": JSON.stringify(nodeEnv), "process.env.NEXT_PUBLIC_PORTAL_URL_PLATFORM": "undefined", "process.env.NEXT_PUBLIC_PORTAL_URL_ADMIN": "undefined", "process.env.NEXT_PUBLIC_PORTAL_URL_STUDIO": "undefined" },

@@ -40,7 +40,9 @@ const GENERATED: Record<string, OrgUnit[]> = {
   deep10: gen(10, (i) => (i === 0 ? null : i - 1), (i) => `Cấp ${i + 1}: Bộ phận phụ trách chăm sóc khách hàng khu vực miền Trung và Tây Nguyên (nhóm ${i + 1})`),
   deep60: gen(60, (i) => (i === 0 ? null : i - 1), (i) => `Cấp ${i + 1} — Đơn vị lồng nhau`),
 };
-let units: OrgUnit[] = GENERATED[S] ?? (empty ? [] : [
+// ?s=emp-10k-bigorg : 10 000 employees AND the 2 000-unit tree (the unit filter <select> then has 2 000 options): used by scripts/perf-harness.mjs
+const BIGORG = S.endsWith("-bigorg");
+let units: OrgUnit[] = GENERATED[S] ?? (BIGORG ? GENERATED.big : empty ? [] : [
   { id: "tech", parentId: null, typeId: "t-div", name: "Khối Công nghệ", enabled: true, version: 1 },
   { id: "mobile", parentId: "tech", typeId: "t-dept", name: "Mobile", enabled: true, version: 1 },
   { id: "flutter", parentId: "mobile", typeId: "t-team", name: "Flutter Team", enabled: true, version: 1, employeeCount: 2 },
@@ -51,7 +53,7 @@ let types: OrgUnitType[] = empty ? [] : [{ id: "t-div", code: "DIVISION", name: 
 const positions: Position[] = [{ id: "p-jr", name: "Nhân viên", level: 1 }, { id: "p-sr", name: "Trưởng nhóm", level: 3 }];
 const N_EMP = S.startsWith("emp-10k") ? 10000 : 45;
 const emps: Employee[] = S === "emp-empty" ? [] : Array.from({ length: N_EMP }, (_, i): Employee => {
-  const unit = ["flutter", "web", "hr"][i % 3]; const n = i + 1;
+  const unit = BIGORG ? `g${i % 2000}` : ["flutter", "web", "hr"][i % 3]; const n = i + 1;
   return { userId: `u${String(n).padStart(2, "0")}`, username: `user${n}`, displayName: n === 5 ? "Nguyễn Đức Anh" : `Nhân viên ${n}`, email: `u${n}@acme.vn`, tenantRole: n === 1 ? "TENANT_ADMIN" : "MEMBER", active: n !== 7 && n !== 8,
     orgUnitId: unit, orgUnitName: units.find((u) => u.id === unit)?.name ?? null, positionId: n % 2 ? "p-jr" : "p-sr", positionName: n % 2 ? "Nhân viên" : "Trưởng nhóm" };
 });
