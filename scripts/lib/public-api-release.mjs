@@ -18,7 +18,7 @@
 // Flyway itself would only WARN about an older jar on a newer schema (ignore-migration-patterns default *:future), so this check is ours and it fails closed.
 import { spawn, spawnSync } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { context, ReleaseError, writeJsonAtomic, readJson, withLock, resolveSource, httpGet, freePort, sameStart } from "./public-release.mjs";
@@ -41,7 +41,7 @@ export function apiContext(env = process.env, scriptsRoot = null) {
   const javaHome = env.PUBLIC_API_JAVA_HOME ?? (existsSync("/opt/homebrew/opt/openjdk@21") ? "/opt/homebrew/opt/openjdk@21" : env.JAVA_HOME ?? "");
   const container = env.PUBLIC_API_PG_CONTAINER ?? "hblpub-postgres-1"; const dbUser = pub.DATABASE_USER ?? "studio";
   return { ...c, api, releasesDir: join(api, "releases"), approvedFile: join(api, "approved.json"), lockFile: join(api, "release.lock"), incidentFile: join(api, "incident.json"), stateFile: join(c.run, "api.owned.json"), buildDir: join(api, "build"),
-    port: c.apiPort, javaHome, java: env.PUBLIC_API_JAVA ?? (javaHome ? join(javaHome, "bin", "java") : "java"), dbName: env.PUBLIC_API_DB_NAME ?? "studio", rehearse: env.PUBLIC_API_REHEARSE ?? "schema",
+    port: c.apiPort, javaHome, java: env.PUBLIC_API_JAVA ?? (javaHome ? join(javaHome, "bin", "java") : "java"), dbName: env.PUBLIC_API_DB_NAME ?? "studio", rehearse: env.PUBLIC_API_REHEARSE ?? "fresh",
     dbCmd: words(env.PUBLIC_API_DB_CMD ?? `docker exec -i ${container} psql -U ${dbUser} -v ON_ERROR_STOP=1`), dumpCmd: words(env.PUBLIC_API_DUMP_CMD ?? `docker exec ${container} pg_dump -U ${dbUser}`),
     // RELEASE BUILD (D-C0-50 hardening): clean, isolated, no build cache, every task re-run, no daemon shared with other agents, Kotlin incremental state off, an isolated GRADLE_USER_HOME
     gradleHome: env.PUBLIC_API_GRADLE_HOME ?? join(api, "gradle-home"), requireJavaMajor: Number(env.PUBLIC_API_REQUIRE_JAVA_MAJOR ?? 21),
@@ -172,11 +172,12 @@ export async function stopApi(c) { const meta = readMeta(c.stateFile); if (!meta
 const syncPidFile = (c, pid) => { try { if (pid) writeFileSync(join(c.run, "api.pid"), `${pid}\n`); else rmSync(join(c.run, "api.pid"), { force: true }); } catch { /* informational */ } };
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------ build a candidate
+/** the snapshot is `backend/` + `docs/`: the backend tests read ../docs (contracts, manual undo scripts); the jar itself depends on backend/ only */
 function extractBackend(root, sha40, dir) {
   return new Promise((res, rej) => {
-    mkdirSync(dir, { recursive: true }); const a = spawn("git", ["-C", root, "archive", "--format=tar", sha40, "backend"], { stdio: ["ignore", "pipe", "pipe"] }); const t = spawn("tar", ["-x", "-C", dir], { stdio: ["pipe", "ignore", "pipe"] });
+    mkdirSync(dir, { recursive: true }); const paths = ["backend", ...(git(root, ["cat-file", "-e", `${sha40}:docs`]).status === 0 ? ["docs"] : [])]; const a = spawn("git", ["-C", root, "archive", "--format=tar", sha40, ...paths], { stdio: ["ignore", "pipe", "pipe"] }); const t = spawn("tar", ["-x", "-C", dir], { stdio: ["pipe", "ignore", "pipe"] });
     let err = ""; a.stderr.on("data", (d) => (err += d)); t.stderr.on("data", (d) => (err += d)); a.stdout.pipe(t.stdin); let ca = null, ct = null;
-    const fin = () => { if (ca != null && ct != null) (ca === 0 && ct === 0 ? res() : rej(new ReleaseError("SNAPSHOT_FAILED", `git archive ${sha40.slice(0, 12)} backend: ${err.trim().slice(0, 200)}`))); }; a.on("close", (x) => { ca = x; fin(); }); t.on("close", (x) => { ct = x; fin(); });
+    const fin = () => { if (ca != null && ct != null) (ca === 0 && ct === 0 ? res() : rej(new ReleaseError("SNAPSHOT_FAILED", `git archive ${sha40.slice(0, 12)} backend docs: ${err.trim().slice(0, 200)}`))); }; a.on("close", (x) => { ca = x; fin(); }); t.on("close", (x) => { ct = x; fin(); });
   });
 }
 /** the environment of a release build: the caller's, minus every Gradle / JVM option variable, with the verified JDK first on PATH and an ISOLATED GRADLE_USER_HOME (no shared build cache, no daemon of another agent) */
@@ -196,8 +197,8 @@ function requireJdk(c) {
 }
 /** counts of the Gradle test results XML of a snapshot (read right after the test task: `clean bootJar` removes them) */
 function testResults(dir) {
-  const d = join(dir, "backend", "build", "test-results", "test"); if (!existsSync(d)) return null; const o = { classes: 0, total: 0, failures: 0, errors: 0, skipped: 0, skippedClasses: [] };
-  for (const f of readdirSync(d)) { if (!f.endsWith(".xml")) continue; const m = /<testsuite [^>]*>/.exec(readFileSync(join(d, f), "utf8").slice(0, 2000))?.[0] ?? ""; const g = (k) => Number(new RegExp(` ${k}="(\\d+)"`).exec(m)?.[1] ?? 0); o.classes++; o.total += g("tests"); o.failures += g("failures"); o.errors += g("errors"); const sk = g("skipped"); o.skipped += sk; if (sk) o.skippedClasses.push(/ name="([^"]+)"/.exec(m)?.[1] ?? f); }
+  const d = join(dir, "backend", "build", "test-results", "test"); if (!existsSync(d)) return null; const o = { classes: 0, total: 0, failures: 0, errors: 0, skipped: 0, skippedClasses: [], failing: [] };
+  for (const f of readdirSync(d)) { if (!f.endsWith(".xml")) continue; const m = /<testsuite [^>]*>/.exec(readFileSync(join(d, f), "utf8").slice(0, 2000))?.[0] ?? ""; const g = (k) => Number(new RegExp(` ${k}="(\\d+)"`).exec(m)?.[1] ?? 0); o.classes++; o.total += g("tests"); o.failures += g("failures"); o.errors += g("errors"); const sk = g("skipped"); o.skipped += sk; if (sk) o.skippedClasses.push(/ name="([^"]+)"/.exec(m)?.[1] ?? f); if (g("failures") || g("errors")) { const body = readFileSync(join(d, f), "utf8"); for (const t of body.matchAll(/<testcase name="([^"]+)" classname="([^"]+)"[^>]*>\s*<(?:failure|error)/g)) o.failing.push(`${t[2].split(".").pop()}.${t[1]}`); } }
   return o;
 }
 /** one clean build of `sha40` in its own snapshot directory -> { dir, jar, sha256, entries, entryDigest } */
@@ -226,7 +227,12 @@ export async function buildCandidate(c, sha40, { skipTests = false, expandOnly =
   mkdirSync(c.buildDir, { recursive: true }); const dir = join(c.buildDir, id), dir2 = join(c.buildDir, `${id}-r2`); const stage = `${relDir(c, id)}.tmp.${process.pid}`; rmSync(stage, { recursive: true, force: true }); rmSync(dir, { recursive: true, force: true }); rmSync(dir2, { recursive: true, force: true });
   try {
     const treeSha = git(c.root, ["rev-parse", `${sha40}:backend`]).stdout.trim(); log(`snapshot of backend @ ${sha40.slice(0, 12)} (tree ${treeSha.slice(0, 12)}), ${jdk.version}`); await extractBackend(c.root, sha40, dir);
-    let tests = { mode: "skipped" }; if (!skipTests) { log("backend tests (full, clean, no build cache)"); const t = gradle(c, dir, c.testCmd, "tests"); const res = testResults(dir); if (!t.ok || (res && (res.failures || res.errors))) throw new ReleaseError("CANDIDATE_TESTS_FAILED", `backend tests failed (log ${t.log}): ${res ? `${res.total} tests, ${res.failures} failures, ${res.errors} errors; ` : ""}${t.tail}`); tests = { mode: "full", ...(res ?? {}) }; }
+    let tests = { mode: "skipped" }; if (!skipTests) {
+      log("backend tests (full, clean, no build cache)"); const t = gradle(c, dir, c.testCmd, "tests"); const res = testResults(dir);
+      if (!t.ok || (res && (res.failures || res.errors))) {   // keep the evidence: the log and the result XMLs of the failed run outlive the build directory
+        const keep = join(c.api, "failed", `${id}-${new Date().toISOString().replace(/[:.]/g, "-")}`); mkdirSync(keep, { recursive: true }); try { copyFileSync(t.log, join(keep, "tests.log")); cpSync(join(dir, "backend", "build", "test-results", "test"), join(keep, "test-results"), { recursive: true }); } catch { /* partial evidence is still evidence */ }
+        throw new ReleaseError("CANDIDATE_TESTS_FAILED", `backend tests failed (evidence kept in ${keep}): ${res ? `${res.total} tests, ${res.failures} failures, ${res.errors} errors, failing: ${res.failing.slice(0, 12).join(", ")}; ` : ""}${t.tail}`);
+      } tests = { mode: "full", ...(res ?? {}) }; }
     const b1 = await buildJarOnce(c, sha40, dir, log); let reproduced = null; if (reproduce) { const b2 = await buildJarOnce(c, sha40, dir2, log); assertReproducible(b1, b2); reproduced = { builds: 2, sha256: [b1.sha256, b2.sha256] }; log(`reproducible: both clean builds are ${b1.sha256.slice(0, 16)}…`); }
     mkdirSync(stage, { recursive: true }); copyFileSync(b1.jar, join(stage, "app.jar")); const entries = jarEntries(join(stage, "app.jar")); const migrations = jarMigrations(join(stage, "app.jar"), entries);
     const cur = readApproved(c); const curVers = new Set((cur ? readRelease(c, cur.releaseId)?.schema?.versions ?? [] : []).map((m) => m.version)); const added = migrations.map((m) => m.version).filter((v) => !curVers.has(v));
@@ -234,11 +240,15 @@ export async function buildCandidate(c, sha40, { skipTests = false, expandOnly =
     const build = { mode: "clean-isolated", command: c.buildCmd.join(" "), javaVersion: jdk.version, gradleDistribution: wrapper, gradleUserHome: c.gradleHome ? "isolated" : "shared", reproduced };
     const record = { schema: 1, id, kind: "built", sourceSha: sha40, sourceShort: sha40.slice(0, 12), backendTreeSha: treeSha, createdAt: new Date().toISOString(), javaMajor, buildFingerprint: buildFingerprintOf(treeSha, build.javaVersion, wrapper), configFingerprint: cfgFp,
       runtimeConfig: list, secretKeyNames: secretKeyNames(c), jar: { file: "app.jar", sha256: sha(readFileSync(join(stage, "app.jar"))), size: statSync(join(stage, "app.jar")).size, entryDigest: entryDigest(entries) },
-      schema: { versions: migrations, maxVersion: migrations.at(-1)?.version ?? null, expandOnly: expandOnly ? added : [] }, build, verification: { tests, rehearsal: c.rehearse } };
+      schema: { versions: migrations, maxVersion: migrations.at(-1)?.version ?? null, expandOnly: expandOnly ? added : [] }, build, verification: { tests } };
     writeJsonAtomic(join(stage, "release.json"), record); rmSync(relDir(c, id), { recursive: true, force: true }); renameSync(stage, relDir(c, id)); return { id, reused: false };
   } catch (e) { rmSync(stage, { recursive: true, force: true }); throw e; } finally { rmSync(dir, { recursive: true, force: true }); rmSync(dir2, { recursive: true, force: true }); }
 }
 
+/** the last ERROR message of the candidate's own log (JSON lines): why it did not come up. Messages only, truncated; no environment is ever logged by the application. */
+function startupError(c) {
+  try { const lines = readFileSync(join(c.run, "validate-api.owned.log"), "utf8").split("\n").filter(Boolean).slice(-400); for (let i = lines.length - 1; i >= 0; i--) { try { const j = JSON.parse(lines[i]); if (j.level === "ERROR" || j.level === "WARN") return `${String(j.message ?? "").slice(0, 160)}${j.stack_trace ? " | " + String(j.stack_trace).split("\n").find((l) => /Caused by|Exception/.test(l))?.slice(0, 200) : ""}`.replace(/\s+/g, " "); } catch { /* not JSON */ } } } catch { /* no log */ } return "";
+}
 /** prove the candidate on a TEMPORARY port against a SCRATCH database: it starts, Flyway applies, readiness (db, redis, rabbit, minio) is UP. The real API and the real database are not touched. */
 export async function validateCandidate(c, id, log = () => {}) {
   const rel = readRelease(c, id); const problems = []; let started = null;
@@ -247,7 +257,7 @@ export async function validateCandidate(c, id, log = () => {}) {
       const port = await freePort(); const url = (rel.runtimeConfig.find((x) => x.startsWith("DATABASE_URL=")) ?? "DATABASE_URL=jdbc:postgresql://127.0.0.1:25432/x").slice("DATABASE_URL=".length).replace(/\/[^/]+$/, `/${scratch}`);
       // candidate-smoke limitation (recorded): WORKFLOW_ENABLED=false (no workflow queue / scheduler) and the AMQP listener containers are NOT started (PublishWorker listens on the REAL studio.publish queue): the candidate must not consume messages of the real broker; the broker connection itself is still checked by readiness
       try { started = await startApi(c, id, { port, tag: "public-validate", stateFile: join(c.run, "validate-api.owned.json"), overrides: { DATABASE_URL: url, WORKFLOW_ENABLED: "false", SPRING_RABBITMQ_LISTENER_SIMPLE_AUTO_STARTUP: "false" } }); } catch (e) { problems.push(`did not start on a temporary port (${e.code ?? "ERROR"}: ${String(e.message).slice(0, 160)})`); return; }
-      if (!(await waitReady(port, c.apiStartTimeoutMs))) { problems.push("readiness (database, redis, rabbit, minio) did not become UP"); return; }
+      if (!(await waitReady(port, c.apiStartTimeoutMs))) { problems.push(`readiness (database, redis, rabbit, minio) did not become UP${startupError(c) ? `; the candidate logged: ${startupError(c)}` : ""}`); return; }
       const live = await httpGet(`http://127.0.0.1:${port}/actuator/health/liveness`); if (live.status !== 200) problems.push(`liveness answered ${live.status || live.error}`);
       const applied = appliedMigrations(c, scratch); const miss = rel.schema.versions.filter((m) => !applied.some((a) => a.version === m.version && a.success)).map((m) => m.version); if (miss.length) problems.push(`Flyway did not apply ${miss.join(", ")} on the scratch database`);
       log(`validate :${port} scratch=${scratch} (${c.rehearse}) -> ${problems.length ? problems.join("; ") : "ready, Flyway applied " + applied.length + " migrations"}`);
@@ -440,7 +450,7 @@ export async function initApiFromRunning(c, { source = null, dryRun = false, log
     const stage = `${relDir(c, id)}.tmp.${process.pid}`; rmSync(stage, { recursive: true, force: true }); mkdirSync(stage, { recursive: true }); const r0 = spawnSync("cp", ["-c", jarPath, join(stage, "app.jar")]); if (r0.status !== 0) copyFileSync(jarPath, join(stage, "app.jar"));
     if (sha(readFileSync(join(stage, "app.jar"))) !== jarSha) { rmSync(stage, { recursive: true, force: true }); throw new ReleaseError("ADOPT_REFUSED", "the copy of the jar differs from the running one"); }
     const record = { schema: 1, id, kind: "adopted", sourceSha: cand, sourceShort: cand.slice(0, 12), backendTreeSha: treeSha, createdAt: new Date().toISOString(), javaMajor, buildFingerprint: buildFingerprintOf(treeSha, `adopted-java-${javaMajor}`), configFingerprint: cfgFp, runtimeConfig: list, secretKeyNames: secretKeyNames(c),
-      jar: { file: "app.jar", sha256: jarSha, size: st.size, entryDigest: eDigest }, schema: { versions: migrations, maxVersion: migrations.at(-1)?.version ?? null, expandOnly: [] }, verification: { tests: "not-run (adopted)", build: "reproduced from the commit", rehearsal: "n/a" }, adoption: { at: new Date().toISOString(), evidence } };
+      jar: { file: "app.jar", sha256: jarSha, size: st.size, entryDigest: eDigest }, schema: { versions: migrations, maxVersion: migrations.at(-1)?.version ?? null, expandOnly: [] }, verification: { tests: "not-run (adopted)", build: "reproduced from the commit" }, adoption: { at: new Date().toISOString(), evidence } };
     writeJsonAtomic(join(stage, "release.json"), record); rmSync(relDir(c, id), { recursive: true, force: true }); renameSync(stage, relDir(c, id));
     const members = [{ pid, startTime: startTimeOf(pid), command: commandOf(pid) }];   // legacy ownership -> helper metadata, WITHOUT touching the process
     writeMeta(c.stateFile, { schema: 1, owner: "public", name: "api", mode: "public", port: c.port, pid, pgid: null, startTime: members[0].startTime, command: members[0].command, cwd: cwdOf(pid), listenerPid: pid, members, startedBy: "adopted", recordedAt: new Date().toISOString(), extra: { releaseId: id, jarSha256: jarSha, configFingerprint: cfgFp, adoptedFromLegacy: true } });

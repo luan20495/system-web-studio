@@ -251,6 +251,17 @@ test("init-api --from-running: pins the API that runs NOW from evidence (same pr
   });
 });
 
+// ================================================================================================================================ rehearsal modes
+test("candidate rehearsal: default = a FRESH empty scratch database (Flyway applies every migration, no production data); `schema` is an explicit opt-in that copies structure + migration history only", async (t) => {
+  const sb = await sandbox(); const A = commit(sb, "A");
+  await t.test("default (fresh): no pg_dump of the real database at all; the candidate migrates an empty scratch database", async () => {
+    const r = api(sb, ["deploy-api", A, "--skip-tests"]); assert.equal(r.status, 0, r.out); const ps = lines(sb, "psql.log"); assert.ok(!ps.some((l) => /pg_dump/.test(l)), "nothing of the real database is dumped"); assert.ok(lines(sb, "starts.log").some((l) => / cand_/.test(l))); assert.match(r.out, /\(fresh\)/);
+  });
+  await t.test("schema (opt-in): structure + flyway_schema_history are copied, never data; the real database is only dumped read-only", async () => {
+    const B = commit(sb, "B"); const r = api(sb, ["deploy-api", B, "--skip-tests"], { PUBLIC_API_REHEARSE: "schema" }); assert.equal(r.status, 0, r.out); const dumps = lines(sb, "psql.log").filter((l) => /pg_dump/.test(l)); assert.equal(dumps.length, 2); assert.ok(dumps.some((l) => /--schema-only/.test(l)) && dumps.some((l) => /--data-only .*-t flyway_schema_history/.test(l)) && !dumps.some((l) => /pg_dump (?!.*--(schema|data)-only)/.test(l)), "only schema-only and the migration history table");
+  });
+});
+
 // ================================================================================================================================ release preparation: reproducible, verified, nothing approved
 test("prepare-api / reproduce-api / validate-api: two clean independent builds must be byte-identical (else NON_REPRODUCIBLE_RELEASE_BUILD, exit 10); preparing approves and starts NOTHING", async (t) => {
   const sb = await sandbox(); const A = commit(sb, "A");
