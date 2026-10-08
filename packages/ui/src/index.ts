@@ -1,5 +1,7 @@
 export * from "./ui";
-export { useLoad } from "./useLoad";
+export { useLoad, clearLoadCache, loadCache, createLoadCache, type LoadContext, type UseLoadOptions, type LoadCache } from "./useLoad";
+export { useAction, createActionRunner, type ActionContext, type ActionResult, type UseActionOptions, type ActionState, type ActionRunner } from "./useAction";
+import "./sessionReset";
 export { Modal } from "./Modal";
 export { useDialog } from "./useDialog";
 export { PortalSwitcher } from "./PortalSwitcher";

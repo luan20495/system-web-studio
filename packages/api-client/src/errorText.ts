@@ -91,6 +91,7 @@ export const ERROR_CODE_TEXT: Record<string, string> = {
   ALREADY_MEMBER: "Người này đã là thành viên.",
   PROVIDER_EXISTS: "Nhà cung cấp này đã tồn tại.",
   RULE_EXISTS: "Quy tắc này đã tồn tại.",
+  CONFLICT: "Thao tác xung đột với dữ liệu hiện có. Kiểm tra lại rồi thử lại.",
   REVISION_CONFLICT: "Dữ liệu vừa được thay đổi ở nơi khác. Tải lại bản mới nhất rồi làm lại.",
   IDEMPOTENCY_OUTCOME_UNKNOWN: "Chưa biết thao tác đã được thực hiện hay chưa. Kiểm tra dữ liệu trước khi làm lại.",
   IDEMPOTENCY_IN_PROGRESS: "Thao tác này đang được xử lý. Đợi vài giây rồi kiểm tra lại.",
@@ -193,7 +194,7 @@ export function errorParts(e: unknown, fallback: string = GENERIC_ERROR): ErrorP
       : kind === "auth" ? ERROR_CODE_TEXT.AUTHENTICATION_REQUIRED
       : kind === "forbidden" ? ERROR_CODE_TEXT.FORBIDDEN
       : kind === "notfound" ? ERROR_CODE_TEXT.NOT_FOUND
-      : kind === "conflict" ? ERROR_CODE_TEXT.REVISION_CONFLICT
+      : kind === "conflict" ? ERROR_CODE_TEXT.CONFLICT
       : kind === "ratelimit" ? ERROR_CODE_TEXT.RATE_LIMITED
       : kind === "busy" ? ERROR_CODE_TEXT.SCOPE_BUSY
       : kind === "server" ? ERROR_CODE_TEXT.INTERNAL_ERROR

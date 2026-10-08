@@ -25,6 +25,15 @@ async function csrf(): Promise<string> {
 /** Forget the cached CSRF token (it is bound to the session, so login/logout rotate it). */
 export const resetCsrf = () => { csrfRequest = undefined; };
 
+/**
+ * The identity behind the session changed (login, logout, a 401 in the middle of a session): everything that was cached for the previous identity must go.
+ * api.login / api.logout call `sessionChanged()`; packages/ui registers `clearLoadCache` on it (src/sessionReset.ts), so a cached list never survives into the next user's session.
+ * (`resetCsrf` alone is also used to refresh the token after CSRF_INVALID: that is NOT a session change.)
+ */
+const sessionListeners = new Set<() => void>();
+export const onSessionChange = (fn: () => void) => { sessionListeners.add(fn); return () => { sessionListeners.delete(fn); }; };
+export function sessionChanged() { resetCsrf(); for (const f of [...sessionListeners]) { try { f(); } catch { /* a listener must not break sign-in / sign-out */ } } }
+
 /** One place decides what an expired session means for the UI (the router sends the user to /auth/session-expired). */
 let unauthorizedHandler: ((code: string) => void) | null = null;
 export const onUnauthorized = (fn: ((code: string) => void) | null) => { unauthorizedHandler = fn; };
@@ -66,6 +75,7 @@ export async function call<T>(path: string, init: RequestInit & { idempotencyKey
   } catch (e) {
     // AbortSignal.timeout → TimeoutError. Same status 0 as a dropped connection (the outcome of a write is unknown either way), different code for the UI.
     if (e instanceof DOMException && e.name === "TimeoutError") throw new ApiError(0, "TIMEOUT", "Máy chủ không phản hồi kịp (quá 15 giây). Nếu bạn vừa lưu hoặc gửi dữ liệu, hãy kiểm tra lại kết quả trước khi làm lại.");
+    if (e instanceof DOMException && e.name === "AbortError") throw new ApiError(0, "ABORTED", "Đã huỷ yêu cầu."); // the caller's own signal (useLoad aborts a superseded load)
     throw new ApiError(0, "NETWORK", "Không kết nối được tới máy chủ. Kiểm tra mạng rồi thử lại.");
   }
   if (!response.ok) {
@@ -73,7 +83,7 @@ export async function call<T>(path: string, init: RequestInit & { idempotencyKey
     const body = normaliseError(raw);
     const requestId = requestIdOf(response, body?.requestId);
     if (response.status === 403 && body?.code === "CSRF_INVALID" && retry) { resetCsrf(); return call<T>(path, init, false); }
-    if (response.status === 401 && !path.startsWith("/auth/")) unauthorizedHandler?.(body?.code ?? "AUTHENTICATION_REQUIRED");
+    if (response.status === 401 && !path.startsWith("/auth/")) { sessionChanged(); unauthorizedHandler?.(body?.code ?? "AUTHENTICATION_REQUIRED"); }
     const retryAfter = response.headers.get("Retry-After");
     const message = response.status === 429 && retryAfter ? `${body?.message ?? "Quá nhiều yêu cầu."} Thử lại sau ${retryAfter}s.` : body?.message ?? `Lỗi ${response.status}`;
     const ra = Number(retryAfter); // seconds (SCOPE_BUSY answers 5); a date form is ignored
@@ -107,7 +117,7 @@ export async function stream<T>(path: string, body: unknown, h: StreamHandlers, 
       // After the first stream byte this branch is unreachable: an `error` event is never retried.
       if (retry) return stream<T>(path, body, h, signal, false);
     }
-    if (response.status === 401) unauthorizedHandler?.(b?.code ?? "AUTHENTICATION_REQUIRED"); // same expired-session path as call()
+    if (response.status === 401) { sessionChanged(); unauthorizedHandler?.(b?.code ?? "AUTHENTICATION_REQUIRED"); } // same expired-session path as call()
     throw new ApiError(response.status, b?.code ?? `HTTP_${response.status}`, b?.message ?? `Lỗi ${response.status}`, requestIdOf(response, b?.requestId), b?.details, b?.retryable);
   }
   const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
