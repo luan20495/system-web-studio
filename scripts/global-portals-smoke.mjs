@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @class: real-backend
 // PUBLIC 3-PORTAL smoke (D-C0-39): platform / admin / studio reached ONLY through their Internet hostnames (Cloudflare -> tunnel hbl-studio -> next start -> same-origin /api -> API).
 //   per portal: HTTPS + Next HTML, every /_next asset the page references (JS, CSS, fonts), no localhost / internal address in anything the browser receives,
 //   login page, session + cookie flags, GET through the same-origin proxy, unsafe call with / without / with a forged CSRF token, CORS through the proxy, logout, 401 afterwards,

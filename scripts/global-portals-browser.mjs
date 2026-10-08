@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @class: real-backend
 // PUBLIC 3-PORTAL browser smoke (D-C0-39): real Chrome, empty profile, the Internet hostnames only.
 //   per portal: / -> login (UI), real sign-in, post-login page, reload (refresh), deep link, sign-out; every request/response/console message is recorded:
 //   no request to localhost / loopback / a private port, no request outside {portal, studio-files, sites}, no CORS error, no ChunkLoadError, no hydration error, no 5xx.

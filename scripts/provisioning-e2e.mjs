@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @class: real-backend
 // PROVISIONING E2E at the API (D-C1-13A): the C1 tenant-scoped contract against a REAL stack (real PostgreSQL, Redis session, CSRF, activation by link), no mock, no test hook.
 //   A Super Admin (platform)  : tenant -> workspace OF the tenant -> first Tenant Admin by invitation (+ workspace + WORKSPACE_ADMIN)
 //   B Tenant / Workspace Admin: activates the link, signs in, creates a workspace of its tenant through the NEW route, creates a brand-new user (+ workspace role), adds an eligible person

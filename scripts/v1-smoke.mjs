@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @class: real-backend
 // V1 local stack smoke (D-C0-35). A real session against the running API (PORTALS=1 ./scripts/run-local.sh), no mock, no test hook:
 //   login + CSRF -> Management API -> TLS PostgreSQL target (create, credential, test connection, schema discovery, query definition, TEST / LIVE binding)
 //   -> the platform and apps databases are refused -> authenticated app-runtime query over TLS -> publish -> the site is served -> LIVE query = the active release

@@ -1,3 +1,4 @@
+// @class: integration
 // The sites gateway template against a real nginx (throwaway container, stub upstream on 127.0.0.1): the public data route of published-runtime.md
 // section 4 and that the routes that existed before it still behave. Needs Docker and the image nginxinc/nginx-unprivileged:1.29-alpine (the one compose.yml uses).
 //   node tests/gateway/data-route.mjs
