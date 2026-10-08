@@ -31,4 +31,36 @@ const posts = (p, re) => p.state.log.filter((l) => l.method === "POST" && re.tes
   check("M-001: the dialog closes after a successful approve", (await p.getByRole("dialog").count()) === 0);
   await p.close();
 }
+// ---------- M-004: AI conversation follows the newest message and announces each finished message once ----------
+{
+  const prompts = Array.from({ length: 25 }, (_, i) => ({ id: `h${25 - i}`, text: `Yêu cầu số ${25 - i}`, createdAt: "2026-10-08T08:00:00Z", outcome: "UPDATED", assistantMessage: `Đã xử lý yêu cầu số ${25 - i}. ` + "Chi tiết ".repeat(12), versionId: null, registryReuse: 0, model: "mock", aiCalls: 0, totalTokens: null, costUsd: null }));
+  const atBottom = (p) => p.locator(".conversation").evaluate((e) => ({ top: Math.round(e.scrollTop), h: e.scrollHeight, c: e.clientHeight, ok: e.scrollHeight - e.scrollTop - e.clientHeight <= 8 }));
+  const s = newState(); s.prompts = prompts;
+  const p = await open(b, "/studio/projects/p1/ai", { state: s, viewport: { width: 1440, height: 800 } }); await p.waitForSelector(".conversation .message"); await wait(700);
+  let g = await atBottom(p);
+  check("M-004: a long history opens at the newest message", g.ok, JSON.stringify(g));
+  const log = p.locator("[role=log]");
+  check("M-004: the messages are a role=log with a polite live region and a name", (await log.count()) === 1 && (await log.getAttribute("aria-live")) === "polite" && !!(await log.getAttribute("aria-label")));
+  check("M-004: the typing / progress status is NOT inside the log (it keeps its own status role)", (await p.locator("[role=log] [role=status]").count()) === 0 && (await p.locator("[role=log] .typing").count()) === 0);
+  await p.evaluate(() => { const l = document.querySelector("[role=log]"); window.__adds = 0; new MutationObserver((ms) => { for (const m of ms) window.__adds += [...m.addedNodes].filter((n) => n.nodeType === 1).length; }).observe(l, { childList: true }); });
+  await p.getByLabel("Mô tả thay đổi").fill("Thêm bảng so sánh"); await p.getByLabel("Mô tả thay đổi").press("Enter"); await wait(1200);
+  g = await atBottom(p);
+  check("M-004: after sending, the new answer is scrolled into view", g.ok, JSON.stringify(g));
+  const adds = await p.evaluate(() => window.__adds);
+  check("M-004: one send adds exactly two nodes to the live region (your message + the finished answer), not one per update", adds === 2, `added=${adds}`);
+  // the person scrolled up to read history while the answer is on its way: it must not yank them down
+  let release; s.hold = { "POST /workspaces/w1/projects/p1/prompts$": { promise: new Promise((r) => { release = r; }) } };
+  await p.getByLabel("Mô tả thay đổi").fill("Ẩn phần đánh giá"); await p.getByLabel("Mô tả thay đổi").press("Enter"); await wait(500);
+  await p.locator(".conversation").evaluate((e) => { e.scrollTop = 0; }); await wait(300);
+  release(); await wait(1000);
+  const up = await p.locator(".conversation").evaluate((e) => Math.round(e.scrollTop));
+  check("M-004: a reply arriving while the person reads older messages does not pull the view away", up < 40, `scrollTop=${up}`);
+  const jump = p.getByRole("button", { name: /Tin mới/ });
+  check("M-004: ...and a 'Tin mới' button offers the jump", (await jump.count()) === 1);
+  await jump.click(); await wait(2000);
+  g = await atBottom(p);
+  check("M-004: the 'Tin mới' button scrolls to the newest message and goes away", g.ok && (await p.getByRole("button", { name: /Tin mới/ }).count()) === 0, JSON.stringify(g));
+  check("M-004: no uncaught error", p.errors.length === 0, p.errors.join(" | "));
+  await p.close();
+}
 await b.close(); finish();
