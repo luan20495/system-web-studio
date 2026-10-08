@@ -30,4 +30,26 @@ const b = await launch();
   check("M-015: no uncaught error", p.errors.length === 0, p.errors.join(" | "));
   await p.close();
 }
+// ---------- M-048: StudioApp was split into one file per screen; every route still renders its screen (behaviour-preserving) ----------
+for (const [path, heading] of [["/studio", /Bạn muốn xây dựng gì/], ["/studio/projects", /^Ứng dụng$/], ["/studio/new", /Tạo ứng dụng/], ["/studio/templates", /^Templates$/], ["/studio/components", /Company Components/], ["/studio/activity", /Hoạt động của tôi/], ["/studio/nope", /Không tìm thấy/]]) {
+  const p = await open(b, path); await p.waitForSelector("main h1, main h2", { timeout: 8000 }).catch(() => undefined); await wait(500);
+  const h = await p.locator("main h1").first().innerText().catch(() => "");
+  check(`M-048: ${path} renders its screen (${heading})`, heading.test(h) || heading.test(await p.locator("main").innerText()), h);
+  check(`M-048: ${path} has no uncaught error`, p.errors.length === 0, p.errors.join(" | "));
+  await p.close();
+}
+// ---------- M-048: the error -> notice mapping of the save machine is unchanged ----------
+{
+  const s = newState(); const p = await open(b, "/studio/projects/p1/design", { state: s }); await p.waitForSelector("iframe"); await wait(800);
+  const row = (n) => p.locator("[role=treeitem][aria-level='2']").filter({ hasText: n }).first();
+  const attempt = async (fail) => { s.fail = { "PATCH /workspaces/w1/projects/p1/schema": { ...fail, once: true } }; await row("Đánh giá").click(); await p.getByRole("button", { name: "↑ Lên" }).first().click(); await wait(900); return (await p.locator(".toast").innerText().catch(() => "")); };
+  let t = await attempt({ status: 409, code: "REVISION_CONFLICT", message: "x" });
+  check("M-048: REVISION_CONFLICT -> 'Project vừa được thay đổi ở nơi khác…' and the document is reloaded", /thay đổi ở nơi khác/.test(t) && s.log.filter((l) => l.method === "GET" && l.path.endsWith("/schema")).length >= 2, t);
+  await p.close();
+  const s2 = newState(); const q = await open(b, "/studio/projects/p1/design", { state: s2 }); await q.waitForSelector("iframe"); await wait(800);
+  s2.fail = { "PATCH /workspaces/w1/projects/p1/schema": { status: 503, code: "DEPENDENCY_UNAVAILABLE", message: "down", once: true } };
+  await q.locator("[role=treeitem][aria-level='2']").filter({ hasText: "Đánh giá" }).first().click(); await q.getByRole("button", { name: "↑ Lên" }).first().click(); await wait(900);
+  check("M-048: a 5xx save failure is retryable: top bar says 'Lưu thất bại' and offers 'Thử lại'", /Lưu thất bại/.test(await q.locator(".bx-top").innerText()) && (await q.getByTestId("retry-save").count()) === 1);
+  await q.close();
+}
 await b.close(); finish();
