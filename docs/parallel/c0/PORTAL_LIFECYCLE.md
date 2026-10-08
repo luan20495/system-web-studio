@@ -1,5 +1,8 @@
 # Portal build / restart lifecycle (C0, D-C0-45)
 
+> **Superseded for PUBLIC portals by D-C0-49** (`PUBLIC_DEPLOYMENT_PINNING.md`): `public-portals.sh` no longer fingerprints or builds the working tree; it runs the approved, immutable release and changes only through `deploy <sha>`. Everything below still describes the **local** lifecycle (`scripts/portals.sh`, 3301–3303), which stays source-aware.
+
+
 `scripts/portals.sh` (local) and `scripts/public-portals.sh` (public) share `scripts/_portals_lib.sh`. Commands: `up | down | restart | status | build`, each with `--force-rebuild` where it makes sense. Old command lines keep working (`up`, `down`, `status`).
 
 ## What is compared

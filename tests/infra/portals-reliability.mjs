@@ -41,7 +41,7 @@ async function sandbox({ withPublic = true } = {}) {
   const sb = { d, p, pp, bin: join(d, "bin") };
   mkdirSync(join(d, "bin"), { recursive: true }); writeFileSync(join(d, "bin/npx"), NPX); chmodSync(join(d, "bin/npx"), 0o755); writeFileSync(join(d, "bin/server.js"), SERVER);
   mkdirSync(join(d, "scripts"), { recursive: true });
-  for (const f of ["portals.sh", "public-portals.sh", "_portals_lib.sh", "portal-fingerprint.mjs"]) cpSync(join(REPO, "scripts", f), join(d, "scripts", f));
+  for (const f of ["portals.sh", "public-portals.sh", "public-release.mjs", "_portals_lib.sh", "portal-fingerprint.mjs", "lib/public-release.mjs", "lib/owned-process.mjs"]) { mkdirSync(join(d, "scripts", f, ".."), { recursive: true }); cpSync(join(REPO, "scripts", f), join(d, "scripts", f)); }
   // the real _env.sh needs .env, JDK and the whole local stack: the sandbox gets a stub that exports what portals.sh reads from it
   writeFileSync(join(d, "scripts/_env.sh"), `ROOT="$(cd "$(dirname "\${BASH_SOURCE[0]}")/.." && pwd)"; cd "$ROOT"\nexport PORTAL_HOST=127.0.0.1\nexport API_PROXY_TARGET="\${API_PROXY_TARGET:-http://127.0.0.1:8080}"\n`);
   writeFileSync(join(d, "package.json"), `{"name":"sandbox"}`); writeFileSync(join(d, "package-lock.json"), `{"lock":1}`); mkdirSync(join(d, "node_modules"));
@@ -174,31 +174,31 @@ test("LOCAL lifecycle: first build, no-op, per-portal and shared source changes,
 });
 
 // ================================================================================================================================ atomicity
-test("5. a FAILED build never marks the new fingerprint and never takes down a healthy portal", async (t) => {
-  const sb = await sandbox({ withPublic: true });
-  assert.equal(pub(sb, ["up"]).status, 0);
-  const before = Object.fromEntries(APPS.map((a) => [a, ppidOf(sb, a)])); const fp0 = state(sb, ".run/public", "portal-", "admin", "fp"); const dist0 = state(sb, ".run/public", "portal-", "admin", "dist");
+test("5. LOCAL: a FAILED build never marks the new fingerprint and never takes down a healthy portal (the public portals have their own, stronger contract: tests/infra/public-pinning.test.mjs)", async (t) => {
+  const sb = await sandbox({ withPublic: false });
+  assert.equal(local(sb, ["up"]).status, 0);
+  const before = Object.fromEntries(APPS.map((a) => [a, pidOf(sb, a)])); const fp0 = state(sb, ".run/portals", "", "admin", "fp"); const dist0 = state(sb, ".run/portals", "", "admin", "dist");
   writeFileSync(join(sb.d, "apps/admin/marker.txt"), "admin-BROKEN\n"); writeFileSync(join(sb.d, "FAIL_BUILD"), "1");
-  const r = pub(sb, ["up"]);
+  const r = local(sb, ["up"]);
   await t.test("up exits 1, says nothing was stopped, and shows the build log", () => { assert.equal(r.status, 1, r.out); assert.match(r.out, /build of portal admin failed/); assert.match(r.out, /nothing was stopped or started/); });
   await t.test("the old healthy process of EVERY portal is still running and still serves the OLD source", async () => {
-    for (const a of APPS) { assert.equal(ppidOf(sb, a), before[a]); assert.ok(alive(before[a])); } assert.equal((await get(sb.pp.admin)).mark, "admin-v1");
+    for (const a of APPS) { assert.equal(pidOf(sb, a), before[a]); assert.ok(alive(before[a])); } assert.equal((await get(sb.p.admin)).mark, "admin-v1");
   });
   await t.test("the fingerprint / dist state of the last SUCCESSFUL build is untouched and no partial dist directory is left", () => {
-    assert.equal(state(sb, ".run/public", "portal-", "admin", "fp"), fp0); assert.equal(state(sb, ".run/public", "portal-", "admin", "dist"), dist0); assert.deepEqual(dists(sb, "admin", "public"), [dist0]);
+    assert.equal(state(sb, ".run/portals", "", "admin", "fp"), fp0); assert.equal(state(sb, ".run/portals", "", "admin", "dist"), dist0); assert.deepEqual(dists(sb, "admin", "local"), [dist0]);
     assert.equal(readFileSync(join(sb.d, "apps/admin/tsconfig.json"), "utf8"), `{"app":"admin"}\n`, "tsconfig restored even though the build failed");
   });
   await t.test("status reports the stale running portal; and once the build can succeed the next `up` swaps it", async () => {
-    assert.match(pub(sb, ["status"]).out, /admin[^\n]*STALE: source/); rmSync(join(sb.d, "FAIL_BUILD"));
-    assert.equal(pub(sb, ["up"]).status, 0); assert.equal((await get(sb.pp.admin)).mark, "admin-BROKEN"); assert.notEqual(ppidOf(sb, "admin"), before.admin);
+    assert.match(local(sb, ["status"]).out, /admin[^\n]*STALE: source/); rmSync(join(sb.d, "FAIL_BUILD"));
+    assert.equal(local(sb, ["up"]).status, 0); assert.equal((await get(sb.p.admin)).mark, "admin-BROKEN"); assert.notEqual(pidOf(sb, "admin"), before.admin);
   });
   await t.test("a NEW build that does not START is rolled back to the previous build (and reported), not left as a dead portal", async () => {
-    writeFileSync(join(sb.d, "apps/admin/marker.txt"), "admin-v9\n"); const prevPid = ppidOf(sb, "admin");
+    writeFileSync(join(sb.d, "apps/admin/marker.txt"), "admin-v9\n"); const prevPid = pidOf(sb, "admin");
     // the fake `next start` dies for this dist when the marker says so: simulate with a MARK the server cannot read (the build copies marker.txt; make the dist unreadable after build via a wrapper)
     writeFileSync(join(sb.d, "bin/npx"), NPX.replace('sleep 0.2; exit 0;;', 'sleep 0.2; [ -f "$SANDBOX/BREAK_START" ] && rm -f "$d/MARK"; exit 0;;')); chmodSync(join(sb.d, "bin/npx"), 0o755); writeFileSync(join(sb.d, "BREAK_START"), "1");
-    const r2 = pub(sb, ["up"]); assert.equal(r2.status, 1, r2.out); assert.match(r2.out, /did not start/); assert.match(r2.out, /rolled back/);
-    assert.equal((await get(sb.pp.admin))?.mark, "admin-BROKEN", "the previous build serves again"); assert.ok(prevPid && ppidOf(sb, "admin"), "a recorded process");
-    assert.match(pub(sb, ["status"]).out, /admin[^\n]*STALE: source/);
+    const r2 = local(sb, ["up"]); assert.equal(r2.status, 1, r2.out); assert.match(r2.out, /did not start/); assert.match(r2.out, /rolled back/);
+    assert.equal((await get(sb.p.admin))?.mark, "admin-BROKEN", "the previous build serves again"); assert.ok(prevPid && pidOf(sb, "admin"), "a recorded process");
+    assert.match(local(sb, ["status"]).out, /admin[^\n]*STALE: source/);
   });
 });
 
@@ -213,40 +213,21 @@ test("6. a port used by a FOREIGN process is refused (exit 2), named, never kill
   const st = local(sb, ["status"]); assert.match(st.out, /admin[^\n]*foreign[^\n]*FOREIGN/); assert.notEqual(st.status, 0);
   const d = local(sb, ["down"]); assert.equal(d.status, 0, d.out); assert.match(d.out, /not started by this script: left alone/); assert.ok(alive(foreign.pid), "`down` never kills a foreign process");
   const rr = local(sb, ["restart"]); assert.equal(rr.status, 2); assert.ok(alive(foreign.pid));
-  const pu = pub(sb, ["up"]); assert.equal(pu.status, 0, "the PUBLIC portals (other ports) are not affected by a foreign process on a LOCAL port: " + pu.out);
   // a stale pid file pointing at the foreign pid with a different start time must not make it "ours"
   writeFileSync(join(sb.d, ".run/portals/admin.pid"), String(foreign.pid)); writeFileSync(join(sb.d, ".run/portals/admin.pidstart"), "Mon Jan  1 00:00:00 2001");
   assert.equal(local(sb, ["down"]).status, 0); assert.ok(alive(foreign.pid), "a pid file that matches the listener but not its start time is not ownership");
 });
 
 // ================================================================================================================================ local + public
-test("9. local and public are independent: separate state, ports and dist directories; a change rebuilds each only when ITS script runs; `down` of one leaves the other", async (t) => {
-  const sb = await sandbox({ withPublic: true });
-  mkdirSync(join(sb.d, "apps/admin/.next-public"), { recursive: true }); writeFileSync(join(sb.d, "apps/admin/.next-public/BUILD_ID"), "legacy"); mkdirSync(join(sb.d, "apps/admin/.next"), { recursive: true });
-  assert.equal(local(sb, ["up"]).status, 0); assert.ok(existsSync(join(sb.d, "apps/admin/.next-public")), "the local script never removes the public legacy directory"); assert.equal(pub(sb, ["up"]).status, 0);
-  assert.ok(!existsSync(join(sb.d, "apps/admin/.next-public")), "the orphaned legacy public dist directory is removed once the portal serves a fingerprint directory"); assert.ok(existsSync(join(sb.d, "apps/admin/.next")), "the local legacy .next is NEVER touched");
-  const lp = Object.fromEntries(APPS.map((a) => [a, pidOf(sb, a)])), pp = Object.fromEntries(APPS.map((a) => [a, ppidOf(sb, a)]));
-  for (const a of APPS) assert.notEqual(lp[a], pp[a]);
-  assert.ok(existsSync(join(sb.d, ".run/portals")) && existsSync(join(sb.d, ".run/public"))); for (const a of APPS) { assert.equal(dists(sb, a, "local").length, 1); assert.equal(dists(sb, a, "public").length, 1); }
-  await t.test("a source change: only the script that runs rebuilds; the other mode reports STALE until ITS up", async () => {
-    writeFileSync(join(sb.d, "apps/studio/marker.txt"), "studio-v2\n"); const n0 = lines(sb, "builds.log").length;
-    assert.equal(local(sb, ["up"]).status, 0); assert.equal(lines(sb, "builds.log").length, n0 + 1); assert.equal((await get(sb.p.studio)).mark, "studio-v2"); assert.equal((await get(sb.pp.studio)).mark, "studio-v1", "public untouched");
-    assert.match(pub(sb, ["status"]).out, /studio[^\n]*STALE: source/); assert.match(local(sb, ["status"]).out, /studio[^\n]*CURRENT/);
-    assert.equal(pub(sb, ["up"]).status, 0); assert.equal((await get(sb.pp.studio)).mark, "studio-v2"); assert.equal(dists(sb, "studio", "local").length, 1, "pruning one mode never removes the other's directory"); assert.equal(dists(sb, "studio", "public").length, 1);
-  });
-  await t.test("a RUN-environment-only change (public: SITES_ORIGIN) restarts the public portals WITHOUT rebuilding", async () => {
-    const n0 = lines(sb, "builds.log").length, before = ppidOf(sb, "admin"); const pe = readFileSync(join(sb.d, ".run/public/public.env"), "utf8").replace("SITES_HOST=sites.example", "SITES_HOST=sites2.example"); writeFileSync(join(sb.d, ".run/public/public.env"), pe);
-    assert.match(pub(sb, ["status"]).out, /STALE: run environment changed/); assert.equal(pub(sb, ["up"]).status, 0);
-    assert.equal(lines(sb, "builds.log").length, n0, "no build"); assert.notEqual(ppidOf(sb, "admin"), before); assert.equal((await get(sb.pp.admin)).sites, "https://sites2.example");
-  });
-  await t.test("a changed public hostname is a BUILD input (it is baked into the browser bundle): rebuild", async () => {
-    const n0 = lines(sb, "builds.log").length; writeFileSync(join(sb.d, ".run/public/public.env"), readFileSync(join(sb.d, ".run/public/public.env"), "utf8").replace("PUBLIC_ADMIN_HOST=admin.example", "PUBLIC_ADMIN_HOST=admin2.example"));
-    assert.equal(pub(sb, ["up"]).status, 0); assert.equal(lines(sb, "builds.log").length, n0 + 3);
-  });
-  await t.test("`public down` leaves the local portals running and `local down` leaves the public ones", async () => {
-    const lpids = APPS.map((a) => pidOf(sb, a)); assert.equal(pub(sb, ["down"]).status, 0); for (const a of APPS) assert.equal(await get(sb.pp[a]), null); for (const pid of lpids) assert.ok(alive(pid));
-    assert.equal(pub(sb, ["up"]).status, 0); const ppids = APPS.map((a) => ppidOf(sb, a)); assert.equal(local(sb, ["down"]).status, 0); for (const pid of ppids) assert.ok(alive(pid)); for (const a of APPS) assert.equal(await get(sb.p[a]), null);
-  });
+test("9. local and public are independent: the LOCAL portals stay source-aware, the PUBLIC portals are never built from the working tree (D-C0-49)", async () => {
+  const sb = await sandbox({ withPublic: true }); const publicBuilds = () => lines(sb, "builds.log").length;
+  assert.equal(local(sb, ["up"]).status, 0); const n0 = publicBuilds(); assert.equal(n0, 3, "the local portals were built from the working tree");
+  const u = pub(sb, ["up"]); assert.equal(u.status, 5, "public `up` without an approved release fails closed: " + u.out); assert.match(u.out, /NO_APPROVED_RELEASE/); assert.equal(publicBuilds(), n0, "public built nothing from the working tree");
+  const b = pub(sb, ["build"]); assert.equal(b.status, 64); assert.match(b.out, /deploy <sha>/); assert.equal(publicBuilds(), n0);
+  const lp = Object.fromEntries(APPS.map((a) => [a, pidOf(sb, a)])); writeFileSync(join(sb.d, "apps/studio/marker.txt"), "studio-v2\n");
+  assert.equal(local(sb, ["up"]).status, 0); assert.equal(publicBuilds(), n0 + 1, "a source change rebuilds the LOCAL studio only"); assert.equal((await get(sb.p.studio)).mark, "studio-v2"); assert.equal(pidOf(sb, "platform"), lp.platform);
+  assert.equal(pub(sb, ["status"]).status, 5, "public still has nothing approved: no state of the working tree changes that"); assert.deepEqual(readdirSync(join(sb.d, ".run/public")).filter((n) => /releases|approved/.test(n)), [], "no release or approval was created implicitly");
+  assert.equal(local(sb, ["down"]).status, 0); for (const a of APPS) assert.equal(await get(sb.p[a]), null);
 });
 
 // ================================================================================================================================ the fingerprint itself

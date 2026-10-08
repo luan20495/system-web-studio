@@ -74,7 +74,7 @@ const tcpOpen = (port) => new Promise((res) => { const s = net.connect({ host: "
 const httpOk = async (url) => { try { const r = await fetch(url, { signal: AbortSignal.timeout(2500) }); return r.status < 500; } catch { return false; } };
 
 /**
- * startOwned({ owner, name, cmd:[...], cwd, env, port, mode, stateFile, logFile, ready:{port|url, timeoutMs}, group=true }) -> meta
+ * startOwned({ owner, name, cmd:[...], cwd, env, port, mode, stateFile, logFile, ready:{port|url, timeoutMs}, group=true, extra }) -> meta   (`extra`: free JSON stored in the metadata, e.g. a release id)
  * Refuses with Error code PORT_BUSY when `port` already has a listener (it would be someone else's), PROCESS_EXITED / NOT_READY when it does not come up (the child is then stopped).
  */
 export async function startOwned(spec) {
@@ -98,7 +98,7 @@ export async function startOwned(spec) {
   const leader = members.find((m) => m.pid === child.pid) ?? snapshot(child.pid);
   if (!leader.startTime) await fail("PROCESS_EXITED", `${owner}/${name} is not running after start`);
   const listener = port != null ? listenerPids(port)[0] ?? null : null;
-  const meta = { schema: 1, owner, name, mode, port, pid: child.pid, pgid: group ? pgidOf(child.pid) : null, startTime: leader.startTime, command: leader.command, cwd: cwdOf(child.pid) ?? resolve(cwd), listenerPid: listener, members, startedBy: process.pid, recordedAt: new Date().toISOString(), logFile };
+  const meta = { schema: 1, owner, name, mode, port, pid: child.pid, pgid: group ? pgidOf(child.pid) : null, startTime: leader.startTime, command: leader.command, cwd: cwdOf(child.pid) ?? resolve(cwd), listenerPid: listener, members, startedBy: process.pid, recordedAt: new Date().toISOString(), logFile, ...(spec.extra ? { extra: spec.extra } : {}) };
   writeMeta(stateFile, meta); return { ...meta, stateFile };
 }
 
