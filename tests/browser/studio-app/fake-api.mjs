@@ -53,7 +53,7 @@ export async function installFake(page, s) {
     if (path === "/auth/me") return json(route, s.me);
     if (path === "/auth/config") return json(route, s.config);
     if (path === "/me/usage") return json(route, { aiConfigured: false, aiRequestsUsed: 0, aiRequestsLimit: 0, aiWindowResetsInSeconds: 0, tokensLast24h: 0, tokensLimitPerDay: 0, promptsToday: 2, promptsPerMinute: 10, usageLast30Days: { calls: 0 } });
-    if (path === "/components") return json(route, registry);
+    if (path === "/components") return json(route, s.registry ?? registry);
     if (path === "/component-metadata") return s.metadata === "404" ? json(route, { code: "NOT_FOUND", message: "Not Found" }, 404) : json(route, s.metadata);
     if (path === "/ai/status") return json(route, s.ai);
     if (path === "/library/categories") return json(route, { templates: { general: "Chung" }, blocks: {} });

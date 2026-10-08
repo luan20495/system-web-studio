@@ -38,6 +38,29 @@ for (const [path, heading] of [["/studio", /Bạn muốn xây dựng gì/], ["/s
   check(`M-048: ${path} has no uncaught error`, p.errors.length === 0, p.errors.join(" | "));
   await p.close();
 }
+// ---------- M-006 (Builder boundary): a throwing panel keeps the project chrome ----------
+{
+  // a saved document with a malformed prop: the Inspector's form throws (`items.map is not a function`) as soon as that section is selected
+  const s = newState();
+  s.registry = (await import("./studio-app/fake-api.mjs")).registry.map((c) => c.id !== "Hero" ? c : { ...c, versions: [{ ...c.versions[0], propsSchema: { ...c.versions[0].propsSchema, properties: { ...c.versions[0].propsSchema.properties, badges: { type: "array", itemProperties: { name: { type: "string" } }, itemRequired: ["id", "name"] } } } }] });
+  s.schema.sections = s.schema.sections.map((x) => x.id === "s-hero" ? { ...x, props: { ...x.props, badges: "oops" } } : x);
+  const p = await open(b, "/studio/projects/p1/design", { state: s }); await p.waitForSelector("iframe"); await wait(900);
+  const row = (n) => p.locator("[role=treeitem][aria-level='2']").filter({ hasText: n }).first();
+  await row("Đầu trang").click(); await wait(700);
+  const bodyText = await p.locator("body").innerText();
+  check("M-006: a throwing Inspector does NOT blank the page: the project name, mode tabs and Chia sẻ / Xuất bản are still there", /Website máy lọc nước/.test(bodyText) && (await p.getByRole("button", { name: "Xuất bản" }).count()) > 0 && (await p.locator(".modeTabs").count()) === 1, bodyText.slice(0, 120).replace(/\n/g, " | "));
+  check("M-006: the failed panel shows a Vietnamese fallback with 'Thử lại', never the exception text", (await p.getByTestId("error-fallback").count()) === 1 && /Thử lại/.test(await p.getByTestId("error-fallback").innerText()) && !/is not a function|TypeError/.test(bodyText));
+  check("M-006: the page tree and the preview still work next to the failed panel", (await p.locator("[role=treeitem][aria-level='2']").count()) >= 5 && (await p.locator("iframe").count()) === 1);
+  check("M-006: focus moved to the fallback heading", await p.evaluate(() => !!document.activeElement?.closest("[data-testid=error-fallback]")));
+  await row("Chân trang").click(); await wait(600);
+  check("M-006: selecting another section clears the error (resetKeys) and its Inspector works", (await p.getByTestId("error-fallback").count()) === 0 && (await p.locator(".bx-inspector").count()) === 1);
+  await row("Đầu trang").click(); await wait(500);
+  check("M-006: selecting the broken section again shows the fallback again, still without losing the chrome", (await p.getByTestId("error-fallback").count()) === 1 && (await p.locator(".modeTabs").count()) === 1);
+  await p.getByTestId("error-fallback").getByRole("button", { name: "Thử lại" }).click(); await wait(500);
+  check("M-006: 'Thử lại' retries (the same data fails again, the fallback returns, the page stays up)", (await p.locator(".modeTabs").count()) === 1);
+  await p.close();
+}
+
 // ---------- M-048: the error -> notice mapping of the save machine is unchanged ----------
 {
   const s = newState(); const p = await open(b, "/studio/projects/p1/design", { state: s }); await p.waitForSelector("iframe"); await wait(800);

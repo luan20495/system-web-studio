@@ -11,6 +11,7 @@ import {
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import type { ApiProject, AppDefinitionV2, AssetDto, DefinitionOperation, RegistryComponent, SchemaOperation, Section } from "@xweb/types";
 import { useOverflow } from "../../../packages/ui/src/useOverflow";
+import { ErrorBoundary } from "../../../packages/ui/src/ErrorBoundary";
 import { Canvas, DragChip } from "./Canvas";
 import { Inspector } from "./Inspector";
 import type { PropsDraft } from "./PropsForm";
@@ -204,13 +205,17 @@ export function BuilderWorkspace(props: {
           <Tabs label="Khu vực làm việc" idPrefix="mview" value={mview} onChange={(id) => setMview(id as "canvas" | "tools" | "props")}
             items={[{ id: "canvas", label: "Bản xem trước" }, { id: "tools", label: "Công cụ" }, { id: "props", label: edit ? "Thuộc tính" : "Kiểm thử", badge: edit && selected ? "●" : undefined, badgeLabel: "có mục đang chọn" }]}/>
         </div>
-        <LeftRail id="mview-panel-tools" value={rail} onChange={setRail}>{leftPanel}</LeftRail>
+        <LeftRail id="mview-panel-tools" value={rail} onChange={setRail}><ErrorBoundary variant="inline" title="Công cụ này gặp sự cố" resetKeys={[rail]}>{leftPanel}</ErrorBoundary></LeftRail>
         <section className="bx-center" id="mview-panel-canvas" tabIndex={-1} aria-label="Bản xem trước ứng dụng">
           {!edit ? <p className="bx-banner" role="note">Đang ở chế độ dùng thử: bản xem trước không chỉnh sửa được.</p> : readOnly ? <p className="bx-banner" role="note">Bạn chỉ có quyền xem.</p> : null}
-          <Canvas document={html} sections={sections} selectedId={selectedId} onSelect={select} onRects={setRects} rects={rects} interactive={interactive} selectable={edit} dragging={!!drag && drag.kind !== "row"} slot={slot}
-            device={props.device} labelOf={props.labelOf} frameRef={frameRef} title="Bản xem trước ứng dụng"/>
+          <ErrorBoundary variant="inline" title="Bản xem trước gặp sự cố" resetKeys={[pageId]}>
+            <Canvas document={html} sections={sections} selectedId={selectedId} onSelect={select} onRects={setRects} rects={rects} interactive={interactive} selectable={edit} dragging={!!drag && drag.kind !== "row"} slot={slot}
+              device={props.device} labelOf={props.labelOf} frameRef={frameRef} title="Bản xem trước ứng dụng"/>
+          
+          </ErrorBoundary>
         </section>
         <aside ref={rightRef} id="mview-panel-props" className="bx-right" aria-label="Thuộc tính" {...(rightScrolls ? { tabIndex: 0 } : {})}>
+          <ErrorBoundary variant="inline" title="Bảng thuộc tính gặp sự cố" resetKeys={[selectedId, edit]}>
           {!edit ? <TestPanel doc={doc} rawPermissions={props.project.permissions} runtime={props.runtime} dirty={props.save.state !== "saved" || busy}/>
             : selected ? (
               <Inspector ctx={ctx} drafts={drafts} onDraft={setDraft} section={selected} component={registry.find((c) => c.id === selected.type)} meta={backend.metadata.get(selected.type)} index={sections.indexOf(selected)} canUp={canStep(sections, selected.id, -1)} canDown={canStep(sections, selected.id, 1)} count={sections.length}
@@ -220,6 +225,7 @@ export function BuilderWorkspace(props: {
             ) : (
               <div className="bx-empty"><h2>Chưa chọn mục nào</h2>{readOnly ? <p>Bạn chỉ có quyền xem ứng dụng này. Chọn một mục trong “Trang” để xem thuộc tính; không chỉnh sửa được.</p> : <p>Chọn một mục trong “Trang” hoặc nhấp vào bản xem trước để chỉnh.</p>}
                 {backend.metadataReadiness.state !== "AVAILABLE" ? <StateBox state={backend.metadataReadiness} compact/> : null}</div>)}
+          </ErrorBoundary>
         </aside>
       </main>
       <DragOverlay>{drag ? <DragChip label={drag.label}/> : null}</DragOverlay>
