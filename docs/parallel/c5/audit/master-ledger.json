@@ -43,7 +43,8 @@
   "design · canvas",
   "Selecting a section reloads the preview iframe and resets its scroll",
   [
-   "S1-001"
+   "S1-001",
+   "S4-011"
   ],
   "BuilderWorkspace.tsx:163 (html depends on selectedId) + lib/schema-preview.ts:114 (selection baked into HTML)",
   "S1",
@@ -51,7 +52,7 @@
   "N (harness)",
   "srcDoc independent of selection; postMessage {studio:select} (script exists) to toggle the selection class",
   "builder.spec: scrollY + iframe marker survive a selection",
-  ""
+  "S4-011 measured: preview reload after a selection 45 ms at 50 sections, 104 ms at 404, 208 ms at 1004 (HARNESS)"
  ],
  [
   "M-004",
@@ -216,7 +217,8 @@
   [
    "S3-001",
    "S2-020",
-   "R-037"
+   "R-037",
+   "S4-004"
   ],
   "apps/admin|platform layout.tsx do not load builder.css; DataSourcesPanel.tsx uses bx-*; TenantScreens.tsx:20-21,350 imports it with a fake doc 'as never'",
   "S3 (CSS) + S1 (DataSourcesPanel.tsx is a Studio file) + S2 (Admin host)",
@@ -224,7 +226,7 @@
   "N (harness)",
   "Move panel styles to a shared scoped stylesheet loaded by all portals (or restyle with factory classes); give the panel a real Admin variant instead of the fake doc",
   "harness render in Admin context; axe; screenshot",
-  "O-01: panel markup is S1's file"
+  "O-01: panel markup is S1's file · S4-004: TenantScreens.tsx:20 pulls 24 KB of features/studio into Platform and Admin"
  ],
  [
   "M-013",
@@ -859,7 +861,8 @@
   "design canvas",
   "studio:layout fires every frame and each builds a new rect array -> full re-render (20 messages measured in the harness)",
   [
-   "S1-041"
+   "S1-041",
+   "S4-013"
   ],
   "Canvas.tsx:30, BuilderWorkspace.tsx:79",
   "S1 + S4 measure",
@@ -867,7 +870,7 @@
   "N (harness)",
   "rAF/equality-gate setRects",
   "S4 perf script before/after",
-  ""
+  "S4-013: canvas scroll drops 25/96 frames at 1004 sections, 0 at the contract maximum (HARNESS)"
  ],
  [
   "M-047",
@@ -996,7 +999,12 @@
   "Platform and Admin ship identical bundles (942 KB/272 KB gzip) and Studio 1048 KB/311 KB; no code splitting; whole UI + endpoint inventory shipped to every user",
   [
    "R-007",
-   "R2-016"
+   "R2-016",
+   "S4-001",
+   "S4-002",
+   "S4-003",
+   "S4-006",
+   "S4-008"
   ],
   "one catch-all route + static imports: apps/*/app/entry.tsx, AdminApp.tsx",
   "S4 measure + S2/S1",
@@ -1004,7 +1012,7 @@
   "N",
   "dynamic import for dialogs/panels/Admin sections; split AdminApp by portal (see M-064)",
   "S4 bundle table before/after",
-  "D-06: AdminApp split shared with M-066"
+  "D-06: AdminApp split shared with M-066 · S4 measured: First Load JS Platform/Admin 809.4/230.0 KB (raw/gzip, identical), Studio 912.6/267.6 KB, legacy 1198.0/340.8 KB; login-only code ~54 KB vs 400-517 KB loaded; 0 dynamic chunks; builder 367.9 KB min, @dnd-kit 71% of Studio code (SYNTHETIC build metrics, Next 16 prints no route sizes)"
  ],
  [
   "M-054",
@@ -1375,7 +1383,9 @@
   [
    "R-027",
    "R-028",
-   "R-029"
+   "R-029",
+   "S4-031",
+   "S4-035"
   ],
   "AdminApp, TenantScreens, ProjectWorkspace, StudioApp... ; build-harness.mjs:4; test-unit.mjs",
   "S4 (+S2/S1 tests)",
@@ -1383,7 +1393,7 @@
   "N",
   "tests/browser/lib shared toolkit; admin + studio-app harnesses; keep C0 asks separate",
   "spec counts + flake runs",
-  ""
+  "9 specs fall back to port 4000 when HARNESS_URL is unset (S4-031); default CHROME path is Linux-only (S4-035)"
  ],
  [
   "M-073",
@@ -1851,7 +1861,8 @@
    "S2-034",
    "S2-035",
    "R-036",
-   "S2-044"
+   "S2-044",
+   "S4-017"
   ],
   "TenantScreens.tsx:35-48; AiSetup.tsx; useLoad.ts; ui.tsx:9",
   "S2/S3 + S4",
@@ -1859,7 +1870,7 @@
   "N",
   "debounce; share fetch; cached Intl formatters",
   "S4 request counts",
-  ""
+  "S4-017: no cache/abort; the same lists fetched by two screens; session calls start after hydration"
  ],
  [
   "M-098",
@@ -1892,7 +1903,8 @@
    "R-042",
    "R-035",
    "R-043",
-   "R-024"
+   "R-024",
+   "S4-033"
   ],
   "R doc tables",
   "S4/S1/S2",
@@ -1900,7 +1912,7 @@
   "N",
   "remove verified-dead exports; add test ids where a spec needs them",
   "tsc + unit",
-  "C-09: grab-bag; every item is tracked in the wave plan, do not treat as one fix"
+  "C-09: grab-bag; every item is tracked in the wave plan, do not treat as one fix · data-testid coverage: 1 for 142 handlers in AdminApp.tsx, 0 in StudioApp/ProjectWorkspace/AuthPages (S4-033)"
  ],
  [
   "M-100",
@@ -1949,7 +1961,8 @@
   "test:unit",
   "test:unit deletes .test-build (breaks a running harness server)",
   [
-   "R-030"
+   "R-030",
+   "S4-036"
   ],
   "scripts/test-unit.mjs:9",
   "C0",
@@ -2050,5 +2063,171 @@
   "single import spelling; do not break the unit runner",
   "unit + all builds",
   "split from M-072 (C-07); executes last"
+ ],
+ [
+  "M-108",
+  "P3",
+  "HANDOFF",
+  "infra",
+  "next build / CSP",
+  "HTML is no-store because of the per-request CSP nonce (fails Lighthouse back/forward-cache); ~14 KiB legacy-JS polyfills remain (no browserslist floor)",
+  [
+   "S4-005",
+   "S4-007"
+  ],
+  "packages/auth/src/server/csp.ts, apps/*/proxy.ts, layout.tsx await connection(); Next default target",
+  "C0 (decision)",
+  "C0: keep nonce (security) or hash-based CSP for static shells; declare the browser floor",
+  "N",
+  "handoff; C5 keeps nonce behaviour",
+  "Lighthouse bf-cache + legacy-javascript audits",
+  ""
+ ],
+ [
+  "M-109",
+  "P3",
+  "C5",
+  "Studio",
+  "design · Pages panel",
+  "PagesPanel canStep is O(n²) per render (20-32 ms at 1000 sections; beyond the 50-section contract)",
+  [
+   "S4-010"
+  ],
+  "PagesPanel.tsx:69-70; core/dnd.ts:56-63",
+  "S1",
+  "none",
+  "N (harness)",
+  "O(1) first/last rule; unit test equals canStep for all positions",
+  "perf-micro + unit",
+  ""
+ ],
+ [
+  "M-110",
+  "P3",
+  "C5",
+  "Studio",
+  "design · tree/canvas handles",
+  "Page-tree rows and canvas drag handles are not memoised (85% of selection cost at >=404 sections); the tree unmounts when the rail changes",
+  [
+   "S4-012"
+  ],
+  "PagesPanel.tsx:68-70, Canvas.tsx:51,62, BuilderWorkspace.tsx leftPanel",
+  "S1",
+  "none",
+  "N (harness)",
+  "memo + stable handlers; window above ~200 rows",
+  "perf-harness attribution table",
+  ""
+ ],
+ [
+  "M-111",
+  "P3",
+  "C5",
+  "Admin",
+  "organization",
+  "Expand-all has no windowing (26,073 DOM nodes for 2,000 units; 200 ms paint); moveTargets rebuilds the whole tree; unitPath per row (O(rows x units))",
+  [
+   "S4-014",
+   "S4-015",
+   "S4-016"
+  ],
+  "OrganizationScreens.tsx:70,140-164,230; organizationModel.ts:68,89-105; EmployeesScreens.tsx:88",
+  "S2",
+  "none (NOT_READY org)",
+  "N (harness)",
+  "window above ~1000 rows; reuse the tree memo; id->unit Map once",
+  "org-hardening PERF + perf-harness + perf-micro",
+  ""
+ ],
+ [
+  "M-112",
+  "P3",
+  "C5",
+  "Studio",
+  "builder CSS",
+  "The phone page-scroll mode needs :has() (no fallback)",
+  [
+   "S4-020"
+  ],
+  "builder.css:194,203; factory.css:144",
+  "S1 (builder.css) + S3",
+  "none",
+  "N",
+  "class on <html> set from the builder instead of :has(), or state the floor",
+  "Firefox/WebKit run once S4-022 is resolved",
+  ""
+ ],
+ [
+  "M-113",
+  "P3",
+  "C5",
+  "Studio",
+  "published site / preview",
+  "Unconditional scroll-behavior:smooth ignores prefers-reduced-motion (renderer output changes: republish note for C2)",
+  [
+   "S4-021"
+  ],
+  "lib/preview-document.ts:13",
+  "S1 (C5 file) + C2 notified",
+  "C2: republish note",
+  "N",
+  "@media (prefers-reduced-motion:no-preference)",
+  "page-runtime.spec + CSS assertion",
+  ""
+ ],
+ [
+  "M-114",
+  "P2",
+  "TOOLING",
+  "tooling",
+  "cross-browser",
+  "Only Chrome 155 (headless) was ever executed: no Firefox/WebKit/Safari run for the builder (sandboxed srcdoc iframe, dnd-kit pointer events, :has) or login",
+  [
+   "S4-022"
+  ],
+  "environment: no Playwright Firefox/WebKit installed; adding CI is forbidden by CLAUDE.md",
+  "S4 (+ user/C0: installing browsers on the integration machine)",
+  "none",
+  "N",
+  "install playwright firefox/webkit on the integration machine and run portals/builder/org specs, or one manual Safari pass; until then cross-browser is a STATIC report only",
+  "same specs under firefox/webkit",
+  "never claim Safari/Firefox support from a Chrome run"
+ ],
+ [
+  "M-115",
+  "P2",
+  "TOOLING",
+  "tooling",
+  "portals.spec",
+  "portals.spec hard-coded ports 3001/3002 (would read the live stack by accident)",
+  [
+   "S4-030"
+  ],
+  "tests/browser/portals.spec.mjs:8",
+  "S4",
+  "none",
+  "N",
+  "PORTAL_PLATFORM_PORT / PORTAL_ADMIN_PORT overrides",
+  "spec 33/33 x3 on private builds",
+  "FIXED",
+  "FIXED (merged b0aff1d, spec 33/33 x3 on private ports)"
+ ],
+ [
+  "M-116",
+  "P3",
+  "TOOLING",
+  "tooling",
+  "unit tests",
+  "Contract conformance test is silently skipped unless XWEB_CONFORMANCE_DIR is set",
+  [
+   "S4-032"
+  ],
+  "tests/builder/conformance.test.ts:27,31,36",
+  "S4 (C0 file for the runner)",
+  "C0 owns scripts/test-unit.mjs",
+  "N",
+  "loud pending line",
+  "unit summary",
+  ""
  ]
 ]
