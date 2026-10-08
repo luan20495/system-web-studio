@@ -35,7 +35,7 @@ export async function run({ cfg, fx, browser, check }) {
   check.ok("POST /admin/tenants/{tenant}/users → 201 with tenantRole MEMBER, that workspace and WORKSPACE_ADMIN together; the tenant only in the path", ur.status() === 201 && new URL(ur.url()).pathname.endsWith(`/admin/tenants/${tenant.id}/users`) && !("tenantId" in ub) && ub.tenantRole === "MEMBER" && ub.workspaceId === wsId && ub.workspaceRole === "WORKSPACE_ADMIN", `status=${ur.status()} ${JSON.stringify(Object.keys(ub))}`, "http");
   const linkA = await page.locator('input[aria-label="Liên kết"]').inputValue(); const tokenA = linkA.split("#")[1] ?? "";
   check.ok("the activation link is shown once (/auth/activate#token)", /\/auth\/activate#/.test(linkA) && tokenA.length > 20);
-  await page.getByRole("button", { name: "Xong" }).click(); await page.getByTestId("account-created").waitFor();
+  await page.getByRole("button", { name: "Xong" }).click(); await page.getByRole("button", { name: /Tôi đã lưu liên kết/ }).click(); await page.getByTestId("account-created").waitFor();
   check.ok("the summary shows account, Chờ kích hoạt, the company and the workspace with its role; the token is gone from the page", /Chờ kích hoạt/.test(await page.getByTestId("res-status").innerText()) && (await page.getByTestId("res-workspace").innerText()).includes(wsName) && !(await page.locator("body").innerHTML()).includes(tokenA));
   const pwA = randomSecret();
   check.ok("the workspace admin activates through the REAL activation page", await activateByLink(browser, linkA.replace(/^https?:\/\/[^/]+/, cfg.adminUrl), pwA));
@@ -56,7 +56,7 @@ export async function run({ cfg, fx, browser, check }) {
   const cResp = page.waitForResponse((r) => r.request().method() === "POST" && /\/admin\/tenants\/[^/]+\/users$/.test(new URL(r.url()).pathname), { timeout: 20_000 });
   await page.getByTestId("acc-submit").click(); const cr = await cResp; const cb = JSON.parse(cr.request().postData());
   check.ok("the app creator is created (201): MEMBER, email as given, workspace + role together or none", cr.status() === 201 && cb.tenantRole === "MEMBER" && cb.email === `${creatorName}@example.test` && (canPick ? cb.workspaceId === wsId && cb.workspaceRole === "EDITOR" : !("workspaceId" in cb) && !("workspaceRole" in cb)), `status=${cr.status()} ${JSON.stringify(Object.keys(cb))}`, "http");
-  const linkC = await page.locator('input[aria-label="Liên kết"]').inputValue(); await page.getByRole("button", { name: "Xong" }).click(); await page.getByTestId("account-created").waitFor();
+  const linkC = await page.locator('input[aria-label="Liên kết"]').inputValue(); await page.getByRole("button", { name: "Xong" }).click(); await page.getByRole("button", { name: /Tôi đã lưu liên kết/ }).click(); await page.getByTestId("account-created").waitFor();
   const pwC = randomSecret();
   check.ok("the app creator activates through the REAL activation page", await activateByLink(browser, linkC.replace(/^https?:\/\/[^/]+/, cfg.adminUrl), pwC));
   const creatorId = ((await sys.get(`/admin/tenants/${tenant.id}/members`)).body ?? []).find((m) => m.username === creatorName)?.userId; if (creatorId) fx.created.users.push(creatorId);

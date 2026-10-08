@@ -64,7 +64,7 @@ await check("admin creates an employee and gets a one-time activation link (no p
   await d.locator("select").nth(1).selectOption({ label: "Biên tập viên" }); await d.getByRole("button", { name: "Tạo người dùng" }).click();
   const link = admin.p.getByRole("dialog", { name: "Liên kết kích hoạt" }); activationLink = await link.getByLabel("Liên kết").inputValue();
   expect(/\/auth\/activate#[A-Za-z0-9_-]{30,}/.test(activationLink), "link shape"); expect(!(await link.innerText()).match(/mật khẩu tạm/i), "temporary password shown");
-  await link.getByRole("button", { name: "Xong" }).click();
+  await link.getByRole("button", { name: "Xong" }).click(); await link.getByRole("button", { name: /Tôi đã lưu liên kết/ }).click();   // asks before discarding a link that was not copied (M-007)
   WS = sql(`select workspace_id from workspace_members m join users u on u.id=m.user_id where u.username='${USER}'`);
 });
 await check("admin adds an AI provider; the key is stored write-only and the connection test passes", async () => {
