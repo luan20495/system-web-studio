@@ -11,6 +11,7 @@ const check = (name, ok, detail = "") => { results.push({ name, ok: !!ok, detail
 const errors = [];
 const browser = await chromium.launch({ executablePath: process.env.CHROME ?? "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
 const T = (p, id) => p.getByTestId(id);
+const closeLink = async (p) => { await p.getByRole("button", { name: "Xong" }).click(); await p.getByRole("button", { name: /Tôi đã lưu liên kết/ }).click(); };   // the one-time link dialog asks before it closes until the link was copied (M-007)
 async function open(v, s = "ok", viewport = { width: 1200, height: 900 }) {
   const p = await browser.newPage({ viewport }); p.setDefaultTimeout(6000);
   p.on("pageerror", (e) => errors.push(e.message)); p.on("console", (m) => { if (["error", "warning"].includes(m.type()) && !/favicon|404/.test(m.text())) errors.push(m.text()); });
@@ -203,7 +204,7 @@ const axe = async (p, ctx) => { await p.addScriptTag({ path: AXE }); const r = a
   check("EMP_UI04 create: the existing tenant provisioning dialog, titled 'Thêm nhân viên', with an extra 'Cơ cấu tổ chức' section (unit + position)", /Thêm nhân viên/.test(await T(p, "create-account").innerText()) && (await T(p, "emp-org-fields").count()) === 1 && (await T(p, "emp-new-unit").isEnabled()) && (await T(p, "emp-new-position").isEnabled()));
   await T(p, "acc-username").fill("bao.nguyen"); await T(p, "acc-display").fill("Bảo Nguyễn"); await T(p, "acc-type").selectOption("USER");
   await T(p, "emp-new-unit").selectOption("flutter"); await T(p, "emp-new-position").selectOption("p-sr");
-  await T(p, "acc-submit").click(); await p.getByRole("button", { name: "Xong" }).click(); await T(p, "account-created").waitFor();
+  await T(p, "acc-submit").click(); await closeLink(p); await T(p, "account-created").waitFor();
   const pc = (await prov(p)).filter((x) => x.name === "createTenantUser"); const oc = (await calls(p)).filter((x) => /^updateEmployee/.test(x.name));
   check("EMP_UI04b ONE account call (tenant 't1' as the path, no tenantId in the body), then the organization steps for THAT new user: unit 'flutter' and position 'p-sr'", pc.length === 1 && pc[0].args[0] === "t1" && !("tenantId" in pc[0].args[1]) && oc.length === 2 && oc[0].name === "updateEmployeeOrganization" && oc[0].args[2] === "flutter" && oc[0].args[1] === "id-bao.nguyen" && oc[1].args[2] === "p-sr", JSON.stringify([pc.map((x) => x.args), oc.map((x) => x.args)]));
   await p.getByRole("button", { name: "Xong" }).click(); await settle(p, 400); await T(p, "emp-search").fill("bao.nguyen"); await settle(p, 700);
@@ -286,7 +287,7 @@ const axe = async (p, ctx) => { await p.addScriptTag({ path: AXE }); const r = a
   check("EMP_NR04 detail: unit and position cannot be assigned yet (disabled selects with the not-ready panel), no save button", (await T(p, "detail-unit").isDisabled()) && (await T(p, "detail-pos").isDisabled()) && (await T(p, "detail-org-not-ready").count()) === 1 && /chưa hỗ trợ/.test(await T(p, "detail-org-not-ready").innerText()) && (await T(p, "detail-unit-save").count()) === 0);
   await p.keyboard.press("Escape"); await T(p, "emp-create").click(); await T(p, "create-account").waitFor();
   check("EMP_NR05 create: the organization fields are disabled with a not-ready notice, and the account can still be created", (await T(p, "emp-new-unit").isDisabled()) && (await T(p, "emp-org-not-ready").count()) === 1);
-  await T(p, "acc-username").fill("an.tran"); await T(p, "acc-display").fill("An Trần"); await T(p, "acc-type").selectOption("USER"); await T(p, "acc-submit").click(); await p.getByRole("button", { name: "Xong" }).click(); await T(p, "account-created").waitFor();
+  await T(p, "acc-username").fill("an.tran"); await T(p, "acc-display").fill("An Trần"); await T(p, "acc-type").selectOption("USER"); await T(p, "acc-submit").click(); await closeLink(p); await T(p, "account-created").waitFor();
   check("EMP_NR06 creating works through the REAL provisioning route: ONE createTenantUser call and ZERO organization calls", (await prov(p)).filter((x) => x.name === "createTenantUser").length === 1 && !(await names(p)).some((n) => /^updateEmployee|OrganizationUnit/.test(n)));
   await p.close(); }
 

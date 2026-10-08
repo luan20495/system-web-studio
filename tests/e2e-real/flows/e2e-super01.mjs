@@ -33,7 +33,7 @@ export async function run({ cfg, fx, browser, check }) {
   check.ok("POST /admin/tenants/{tenantId}/users → 201; the tenant is the PATH, never in the body; tenantRole TENANT_ADMIN; workspaceId + workspaceRole together; no password", cr.status() === 201 && new URL(cr.url()).pathname.endsWith(`/admin/tenants/${tenantId}/users`) && !("tenantId" in body) && body.tenantRole === "TENANT_ADMIN" && (!listed || (body.workspaceId === w.body.id && body.workspaceRole === "WORKSPACE_ADMIN")) && !("password" in body), `status=${cr.status()} keys=${Object.keys(body).sort()}`, "http");
   const link = await page.locator('input[aria-label="Liên kết"]').inputValue();
   check.ok("the activation link is shown once in the dialog (/auth/activate#token); no password anywhere", /\/auth\/activate#/.test(link) && !/mật khẩu:/i.test(await page.locator("body").innerText()));
-  await page.getByRole("button", { name: "Xong" }).click(); await page.getByTestId("account-created").waitFor();
+  await page.getByRole("button", { name: "Xong" }).click(); await page.getByRole("button", { name: /Tôi đã lưu liên kết/ }).click(); await page.getByTestId("account-created").waitFor();
   const urlAfter = page.url(); const stored = await page.evaluate(() => JSON.stringify([Object.entries(localStorage), Object.entries(sessionStorage)]));
   const tokenPart = link.split("#")[1] ?? "";
   check.ok("after 'Xong' the token is gone: not in the summary, the URL, localStorage or sessionStorage", tokenPart.length > 20 && !(await page.locator("body").innerHTML()).includes(tokenPart) && !urlAfter.includes(tokenPart) && !stored.includes(tokenPart));
