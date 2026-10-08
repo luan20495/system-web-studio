@@ -6,6 +6,7 @@ import type { AccessRule, AiBudget, EffectiveModel } from "@/lib/http-types";
 import { confirm } from "@xweb/ui";
 import { useLoad } from "../../useLoad";
 import { ago, Card, ErrorState, errText, num, Pill, StateView, usd } from "../../ui";
+import { LoadNote } from "../LoadNote";
 import { PageHead } from "../PageHead";
 
 // ---------------------------------------------------------------- Stage E: AI governance
@@ -14,18 +15,13 @@ const SCOPE_LABEL: Record<string, string> = { ORG: "Toàn tổ chức", WORKSPAC
 
 /** Picks a scope id: workspaces/users/applications are searched through the existing admin lists. */
 export function ScopePicker({ types, value, onChange }: { types: string[]; value: { type: string; id: string }; onChange: (v: { type: string; id: string }) => void }) {
-  const [q, setQ] = useState(""); const [opts, setOpts] = useState<{ id: string; label: string }[]>([]); const [ws, setWs] = useState(""); const [role, setRole] = useState("EDITOR");
-  useEffect(() => {
-    const t = setTimeout(() => {
-      const kind = value.type === "ROLE" ? "WORKSPACE" : value.type;
-      const load = kind === "WORKSPACE" ? api.admin.workspaces(0, q).then((p) => p.items.map((w) => ({ id: w.id, label: w.name })))
-        : kind === "USER" ? api.admin.users(0, q).then((p) => p.items.map((u) => ({ id: u.id, label: `${u.displayName ?? u.username} (${u.username})` })))
-        : kind === "PROJECT" ? api.admin.applications({ page: 0, q }).then((p) => p.items.map((a) => ({ id: a.id, label: `${a.name} · ${a.workspaceName}` })))
-        : Promise.resolve([]);
-      load.then(setOpts).catch(() => setOpts([]));
-    }, 250);
-    return () => clearTimeout(t);
-  }, [value.type, q]);
+  const [q, setQ] = useState(""); const [applied, setApplied] = useState(""); const [ws, setWs] = useState(""); const [role, setRole] = useState("EDITOR");
+  useEffect(() => { const t = setTimeout(() => setApplied(q), 250); return () => clearTimeout(t); }, [q]);     // one request per pause in typing, not per key
+  const kind = value.type === "ROLE" ? "WORKSPACE" : value.type;
+  const found = useLoad(async (): Promise<{ id: string; label: string }[]> => (kind === "WORKSPACE" ? (await api.admin.workspaces(0, applied)).items.map((w) => ({ id: w.id, label: w.name }))
+    : kind === "USER" ? (await api.admin.users(0, applied)).items.map((u) => ({ id: u.id, label: `${u.displayName ?? u.username} (${u.username})` }))
+    : kind === "PROJECT" ? (await api.admin.applications({ page: 0, q: applied })).items.map((a) => ({ id: a.id, label: `${a.name} · ${a.workspaceName}` })) : []), [kind, applied]);
+  const opts = found.data ?? [];
   useEffect(() => { if (value.type === "ROLE" && ws) onChange({ type: "ROLE", id: `${ws}:${role}` }); }, [ws, role]); // eslint-disable-line react-hooks/exhaustive-deps
   return <>
     <select aria-label="Phạm vi" value={value.type} onChange={(e) => { setQ(""); setWs(""); onChange({ type: e.target.value, id: "" }); }}>
@@ -36,6 +32,7 @@ export function ScopePicker({ types, value, onChange }: { types: string[]; value
         <option value="">— chọn —</option>{opts.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}</select>
       {value.type === "ROLE" ? <select aria-label="Vai trò" value={role} onChange={(e) => setRole(e.target.value)}>
         {["WORKSPACE_ADMIN", "EDITOR", "PUBLISHER", "VIEWER"].map((r) => <option key={r} value={r}>{r}</option>)}</select> : null}
+      <LoadNote load={found} what="danh sách để chọn"/>
     </> : null}
   </>;
 }

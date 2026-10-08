@@ -1,10 +1,12 @@
 "use client";
+import { LoadGate } from "@xweb/ui";
 
 import { useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { api } from "@/lib/http-api";
 import type { AiProviderInfo, AiUsageReport, UsageBucket, UsageTotals } from "@/lib/http-types";
 import { useA } from "../console/context";
+import { LoadNote } from "../LoadNote";
 import { useLoad } from "../../useLoad";
 import { ago, Card, ErrorState, errText, fmtDate, Kpi, num, Pager, Pill, StateView, tok, usd } from "../../ui";
 
@@ -91,6 +93,7 @@ export function PricingCard() {
   }
   return <Card title="Bảng giá model">
     <p className="hint">Dùng để tính chi phí khi nhà cung cấp không báo (OpenAI, Anthropic, Gemini, model nội bộ). Hệ thống không có sẵn giá nào. Giá không sửa được: thay đổi = thêm dòng mới áp dụng từ thời điểm thêm; chi phí đã ghi không bị tính lại.</p>
+    <LoadNote load={providers} what="danh sách model"/>
     <form className="filters wrap" onSubmit={(e) => void add(e)}>
       <select aria-label="Model" value={f.modelId} onChange={(e) => setF({ ...f, modelId: e.target.value })} required><option value="">Chọn model</option>{models.map((m) => <option key={m} value={m}>{m}</option>)}</select>
       <input aria-label="Giá token vào (USD / 1 triệu)" type="number" min="0" max="10000" step="0.000001" placeholder="Vào USD/1M" value={f.input} onChange={(e) => setF({ ...f, input: e.target.value })} required/>
@@ -122,8 +125,7 @@ export function AiPage() {
   const { data, error, loading, reload } = useLoad(() => api.admin.ai(), []);
   const [days, setDays] = useState(30);
   const usage = useLoad(() => api.admin.aiUsage(days), [days]);
-  if (loading && !data) return <StateView kind="loading"/>;
-  if (error) return <ErrorState error={error} retry={reload}/>;
+  if (!data) return <LoadGate load={{ data, error, loading, reload }} level={2} label="số liệu AI">{() => null}</LoadGate>;
   const a = data!;
   const u = usage.data;
   const t = u?.totals;

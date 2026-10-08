@@ -5,7 +5,7 @@ import Link from "next/link";
 import { api } from "@/lib/http-api";
 import type { BlockDto, TemplateDto } from "@/lib/http-types";
 import { useA } from "../console/context";
-import { confirm, prompt } from "@xweb/ui";
+import { confirm, prompt, LoadGate } from "@xweb/ui";
 import { useLoad } from "../../useLoad";
 import { BlockStatus, blockPage, CheckList, ReviewTimeline, SchemaThumb } from "../../library";
 import { ago, Card, ComingSoon, ErrorState, errText, num, Pager, Pill, StateView } from "../../ui";
@@ -28,8 +28,7 @@ export function ComponentsPage() {
 export function RegistryTable() {
   const { data, error, loading, reload } = useLoad(() => api.admin.components(), []);
   const [open, setOpen] = useState<string | null>(null);
-  if (loading && !data) return <StateView kind="loading"/>;
-  if (error) return <ErrorState error={error} retry={reload}/>;
+  if (!data) return <LoadGate load={{ data, error, loading, reload }} level={2} label="danh sách component">{() => null}</LoadGate>;
   return (<>
     <Card>
       <table className="table"><thead><tr><th>Component</th><th>Nhóm</th><th>Phiên bản</th><th>Trạng thái</th><th>Dùng trong</th><th><span className="srOnly">Thao tác</span></th></tr></thead>
@@ -67,8 +66,7 @@ export function BlocksAdmin() {
 export function BlockReviewPanel({ id, onDone }: { id: string; onDone: () => void }) {
   const { data, error, loading, reload } = useLoad(() => api.admin.block(id), [id]);
   const [comment, setComment] = useState(""); const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null);
-  if (loading && !data) return <StateView kind="loading"/>;
-  if (error) return <ErrorState error={error} retry={reload}/>;
+  if (!data) return <LoadGate load={{ data, error, loading, reload }} level={2} label="chi tiết khối">{() => null}</LoadGate>;
   const b: BlockDto = data!;
   const latest = b.versions.find((v) => v.version === b.latestVersion);
   const page = blockPage(b);

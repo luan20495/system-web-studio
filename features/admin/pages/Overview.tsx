@@ -4,7 +4,7 @@ import { AuditTable } from "./AuditTable";
 import { AiMonthCard } from "./AiUsagePages";
 import Link from "next/link";
 import { api } from "@/lib/http-api";
-import { Circle, CircleCheck } from "@xweb/ui";
+import { Circle, CircleCheck, LoadGate } from "@xweb/ui";
 import { portalHref } from "@xweb/permissions";
 import { useA, useAdminConsole } from "../console/context";
 import { useLoad } from "../../useLoad";
@@ -17,8 +17,7 @@ export function Overview() {
   const { owns, portal } = useAdminConsole();
   const A = useA();
   const { data, error, loading, reload } = useLoad(() => api.admin.overview(), []);
-  if (loading && !data) return <StateView kind="loading"/>;
-  if (error) return <ErrorState error={error} retry={reload}/>;
+  if (!data) return <LoadGate load={{ data, error, loading, reload }} level={1} label="tổng quan">{() => null}</LoadGate>;
   const o = data!;
   return (<>
     <PageHead title="Tổng quan" sub="Số liệu thật từ cơ sở dữ liệu của nền tảng."/>

@@ -14,7 +14,7 @@ import { LinkBox } from "../UserDialogs";
 import { useSession } from "../../session";
 import { adminScope } from "../adminModel";
 import { useA } from "../console/context";
-import { confirm } from "@xweb/ui";
+import { confirm, LoadGate } from "@xweb/ui";
 import { useLoad } from "../../useLoad";
 import { ago, Card, ErrorState, errText, fmtDate, Kpi, num, Pager, Pill, StateView } from "../../ui";
 import { PageHead } from "../PageHead";
@@ -70,8 +70,7 @@ export function UserDetail({ id }: { id: string }) {
   const { me } = useSession();
   const { data, error, loading, reload, setData } = useLoad(() => api.admin.user(id), [id]);
   const [busy, setBusy] = useState(false); const [msg, setMsg] = useState<string | null>(null); const [link, setLink] = useState<ActivationLink | null>(null);
-  if (loading && !data) return <StateView kind="loading"/>;
-  if (error) return <ErrorState error={error} retry={reload}/>;
+  if (!data) return <LoadGate load={{ data, error, loading, reload }} level={1} label="thông tin người dùng">{() => null}</LoadGate>;
   const d = data!; const u = d.user; const self = me?.id === u.id;
   async function newLink() {
     setBusy(true); setMsg(null);
@@ -138,8 +137,7 @@ export function WorkspaceDetail({ id }: { id: string }) {
   const A = useA();
   const { me } = useSession();
   const { data, error, loading, reload } = useLoad(() => api.admin.workspace(id), [id]);
-  if (loading && !data) return <StateView kind="loading"/>;
-  if (error) return <ErrorState error={error} retry={reload}/>;
+  if (!data) return <LoadGate load={{ data, error, loading, reload }} level={1} label="thông tin workspace">{() => null}</LoadGate>;
   const d = data!;
   return (<>
     <PageHead title={d.workspace.name} sub={`${d.workspace.slug} · tạo ${fmtDate(d.workspace.createdAt)}`}/>

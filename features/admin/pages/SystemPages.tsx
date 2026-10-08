@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/http-api";
 import type { PackageView, RepoRow, SettingView, HealthItem } from "@/lib/http-types";
-import { confirm, prompt } from "@xweb/ui";
+import { confirm, prompt, LoadGate } from "@xweb/ui";
 import { useLoad } from "../../useLoad";
 import { ago, Card, ErrorState, errText, fmtDate, Kpi, num, Pill, StateView } from "../../ui";
 import { PageHead } from "../PageHead";
@@ -12,8 +12,7 @@ import { PageHead } from "../PageHead";
 const HEALTH_LABEL: Record<HealthItem["status"], string> = { HEALTHY: "Khỏe", DEGRADED: "Suy giảm", UNAVAILABLE: "Không khả dụng", UNKNOWN: "Không rõ", NOT_CONFIGURED: "Chưa cấu hình" };
 export function HealthPage() {
   const { data, error, loading, reload } = useLoad(() => api.admin.health(), []);
-  if (loading && !data) return <StateView kind="loading"/>;
-  if (error) return <ErrorState error={error} retry={reload}/>;
+  if (!data) return <LoadGate load={{ data, error, loading, reload }} level={1} label="tình trạng hệ thống">{() => null}</LoadGate>;
   const h = data!;
   return (<>
     <PageHead title="Sức khỏe hệ thống" sub={`Kiểm tra trực tiếp lúc ${fmtDate(h.checkedAt)}`} actions={<button className="btn" onClick={reload} disabled={loading}>{loading ? "Đang kiểm tra…" : "Kiểm tra lại"}</button>}/>
@@ -45,10 +44,9 @@ export function BuildsPage() {
   const [msg, setMsg] = useState<string | null>(null); const [err, setErr] = useState<string | null>(null); const [busy, setBusy] = useState(false);
   async function runCleanup() { if (!(await confirm({ title: "Chạy dọn dẹp ngay?", message: `Sẽ xoá ${num(preview.data?.retention?.artifactsDeleted ?? 0)} artifact (${mib(preview.data?.retention?.artifactBytesFreed)}) và dữ liệu hết hạn lưu giữ. Việc này không hoàn tác được.`, confirmLabel: "Chạy dọn dẹp", danger: true }))) return; setBusy(true); setErr(null); try { const r = await api.admin.retentionRun(); setMsg(`Đã dọn: ${r.retention?.artifactsDeleted ?? 0} artifact (${mib(r.retention?.artifactBytesFreed)}), ${r.retention?.previewsExpired ?? 0} bản xem trước hết hạn.`); preview.reload(); rep.reload(); repos.reload(); } catch (x) { setErr(errText(x, "Không dọn được.")); } finally { setBusy(false); } }
   async function hardDelete(r: RepoRow) { if (!(await confirm({ title: `Xoá vĩnh viễn kho mã “${r.name}”?`, message: "Không thể hoàn tác.", confirmLabel: "Xoá vĩnh viễn", danger: true }))) return; setErr(null); try { await api.admin.deleteRepository(r.projectId); repos.reload(); } catch (x) { setErr(errText(x, "Không xoá được.")); } }
-  const d = rep.data; const p = preview.data;
   return (<>
     <PageHead title="Build & lưu trữ" sub="Số liệu đo thật từ runner (CPU của container, thời gian, kích thước kết quả). Giới hạn chỉnh trong Cài đặt → Build / Lưu trữ / Lưu giữ."/>
-    {rep.error ? <ErrorState error={rep.error} retry={rep.reload}/> : !d ? <StateView kind="loading"/> : <>
+    <LoadGate load={rep} label="số liệu build">{(d) => <>
       <div className="kpiGrid">
         <Kpi label="Build 30 ngày" value={num(d.totals.builds)} hint={`${num(d.totals.succeeded)} thành công · ${num(d.totals.failed)} lỗi`}/>
         <Kpi label="CPU đã dùng" value={secs(d.totals.cpuMs)} hint={`thời gian chạy ${secs(d.totals.durationMs)}`}/>
@@ -59,19 +57,19 @@ export function BuildsPage() {
       <Card title="Theo ứng dụng"><UsageRows rows={d.byProject} label="Ứng dụng"/></Card>
       <Card title="Build bị từ chối">{d.rejections.length ? <table className="table"><thead><tr><th>Thời gian</th><th>Người</th><th>Ứng dụng</th><th>Lý do</th><th>Chi tiết</th></tr></thead>
         <tbody>{d.rejections.map((r, i) => <tr key={i}><td>{ago(r.createdAt)}</td><td>{r.user ?? "—"}</td><td>{r.project ?? "—"}</td><td className="code">{r.reason}</td><td>{r.detail}</td></tr>)}</tbody></table> : <StateView kind="empty" title="Không có build nào bị từ chối"/>}</Card>
-    </>}
+    </>}</LoadGate>
     <Card title="Dọn dẹp (lưu giữ)" actions={<button className="btn sm primary" disabled={busy} onClick={() => void runCleanup()}>{busy ? "Đang dọn…" : "Chạy dọn dẹp ngay"}</button>}>
       <p className="hint">Luôn giữ: bản đang phục vụ, N bản xuất bản gần nhất để quay lại, bản xem trước còn hạn, build đang chạy. Job tự chạy mỗi giờ; mỗi lần xoá đều ghi audit.</p>
-      {p ? <ul className="plainList"><li>Sẽ xoá {num(p.retention?.artifactsDeleted ?? 0)} artifact ({mib(p.retention?.artifactBytesFreed)})</li><li>{num(p.retention?.previewsExpired ?? 0)} bản xem trước đã hết hạn</li>
-        <li>{num(p.retention?.failedBuildLogsCleared ?? 0)} log build lỗi cũ</li><li>{num(p.retention?.repositoriesPendingDelete ?? 0)} kho mã hết hạn lưu trữ</li></ul> : <StateView kind="loading"/>}
+      <LoadGate load={preview} compact label="bản xem trước dọn dẹp">{(p) => <ul className="plainList"><li>Sẽ xoá {num(p.retention?.artifactsDeleted ?? 0)} artifact ({mib(p.retention?.artifactBytesFreed)})</li><li>{num(p.retention?.previewsExpired ?? 0)} bản xem trước đã hết hạn</li>
+        <li>{num(p.retention?.failedBuildLogsCleared ?? 0)} log build lỗi cũ</li><li>{num(p.retention?.repositoriesPendingDelete ?? 0)} kho mã hết hạn lưu trữ</li></ul>}</LoadGate>
       {msg ? <p className="hint" role="status">{msg}</p> : null}{err ? <p className="formError" role="alert">{err}</p> : null}
     </Card>
-    <Card title="Kho mã nguồn">{!repos.data ? <StateView kind="loading"/> : repos.data.length === 0 ? <StateView kind="empty" title="Chưa có kho mã"/> :
+    <Card title="Kho mã nguồn"><LoadGate load={repos} compact label="kho mã" isEmpty={(r) => r.length === 0} empty={{ title: "Chưa có kho mã" }}>{(rows) =>
       <table className="table"><thead><tr><th>Kho</th><th>Ứng dụng</th><th>Trạng thái</th><th>Kích thước</th><th>Lưu trữ đến</th><th><span className="srOnly">Thao tác</span></th></tr></thead>
-        <tbody>{repos.data.map((r) => <tr key={r.projectId}><td className="code">{r.name}</td><td>{r.project ?? "—"}</td>
+        <tbody>{rows.map((r) => <tr key={r.projectId}><td className="code">{r.name}</td><td>{r.project ?? "—"}</td>
           <td><Pill value={r.state === "ACTIVE" ? "ACTIVE" : r.state === "DELETED" ? "DISABLED" : "UNKNOWN"} label={{ ACTIVE: "Đang dùng", ARCHIVED: "Đã lưu trữ", PENDING_DELETE: "Chờ xoá", DELETED: "Đã xoá" }[r.state]}/></td>
           <td>{mib(r.sizeBytes)}</td><td>{r.deleteAfter ? fmtDate(r.deleteAfter) : "—"}</td>
-          <td>{r.state === "PENDING_DELETE" ? <button className="btn sm danger" onClick={() => void hardDelete(r)}>Xoá vĩnh viễn</button> : null}</td></tr>)}</tbody></table>}</Card>
+          <td>{r.state === "PENDING_DELETE" ? <button className="btn sm danger" onClick={() => void hardDelete(r)}>Xoá vĩnh viễn</button> : null}</td></tr>)}</tbody></table>}</LoadGate></Card>
   </>);
 }
 

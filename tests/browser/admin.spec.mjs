@@ -372,6 +372,43 @@ await block("scenario 43", async () => { const p = await open({ portal: "admin",
   await nav(p, "/admin/ai"); check("NF07 /admin/ai exists in the Platform: the pointer stays", /nằm ở trang khác/.test(await p.locator("h1").innerText()));
   await p.__ctx.close(); });
 
+// ===================================================================================================================== M-056 a failed secondary load says so (error + retry), never a spinner or '…' forever
+await block("scenario 44", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/builds", fail: "/admin/retention" }); await settle(p, 900);
+  const main = p.locator("main");
+  check("LDG01 Builds: the two failed panels (cleanup preview, repositories) show an error each, NO spinner left", (await main.locator(".spinner").count()) === 0 && (await main.locator(".state-error, .state-network").count()) === 2, `spinners=${await main.locator(".spinner").count()} errors=${await main.locator(".state-error, .state-network").count()}`);
+  check("LDG02 the report that DID load is still on screen", /Build 30 ngày/.test(await main.innerText()));
+  await p.evaluate(() => { window.__cfg.fail = null; });
+  await main.getByRole("button", { name: "Thử lại" }).first().click(); await settle(p, 600);
+  check("LDG03 'Thử lại' reloads that panel (the other one still offers it)", (await main.locator(".state-error, .state-network").count()) === 1 && /Sẽ xoá/.test(await main.innerText()));
+  await p.__ctx.close(); });
+await block("scenario 45", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/builds", slow: "/admin/retention" }); await settle(p, 500);
+  check("LDG04 a loading panel says WHAT is loading", /Đang tải bản xem trước dọn dẹp/.test(await p.locator("main").innerText()));
+  await p.__ctx.close(); });
+await block("scenario 46", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/identity", fail: "/admin/scim" }); await settle(p, 900);
+  const main = p.locator("main");
+  check("LDG05 Identity: a failed SCIM load leaves no '…' KPI and no spinner; it says so with a retry", !/…/.test(await main.locator(".kpiGrid").innerText()) && (await main.locator(".spinner").count()) === 0 && (await main.getByRole("button", { name: "Thử lại" }).count()) >= 1, (await main.locator(".kpiGrid").innerText()).replace(/\s+/g, " "));
+  await p.__ctx.close(); });
+await block("scenario 47", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/identity", fail: "/auth/config" }); await settle(p, 900);
+  check("LDG06 Identity: a failed /auth/config says so in the OIDC / SAML tiles (not '…')", !/…/.test(await p.locator("main .kpiGrid").innerText()) && (await p.locator("main .kpiGrid .state-error, main .kpiGrid .state-network").count()) >= 2);
+  await p.__ctx.close(); });
+await block("scenario 48", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/ai-governance", fail: "/admin/users" }); await settle(p, 500);
+  await p.getByLabel("Phạm vi").first().selectOption("USER"); await settle(p, 900);
+  check("LDG07 a scope picker whose search failed says so (it used to show an empty list)", /Chưa tải được danh sách để chọn/.test(await p.locator("main").innerText()));
+  await p.__ctx.close(); });
+await block("scenario 49", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/applications/a1", fail: "/admin/workspaces" }); await settle(p, 900);
+  check("LDG08 application detail: the owner choices that failed to load say so", /Chưa tải được danh sách thành viên workspace/.test(await p.locator("main").innerText()));
+  await p.__ctx.close(); });
+await block("scenario 50", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/users/u2", slow: "/admin/users/u2" }); await settle(p, 400);
+  check("LDG09 a detail page that is still loading already has its one h1, naming what loads", (await p.locator("h1").count()) === 1 && /Đang tải thông tin người dùng/.test(await p.locator("h1").innerText()));
+  await p.__ctx.close(); });
+await block("scenario 51", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/users/u2", fail: "/admin/users/u2" }); await settle(p, 900);
+  check("LDG10 a detail page whose load failed has one h1 (the error) and a retry", (await p.locator("h1").count()) === 1 && (await p.getByRole("button", { name: "Thử lại" }).count()) === 1);
+  await p.__ctx.close(); });
+await block("scenario 52", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/tenants", fail: "/admin/users" }); await settle(p, 400);
+  await p.getByRole("button", { name: "+ Tạo công ty" }).click(); await settle(p, 900);
+  check("LDG11 create company: the first-admin picker whose account list failed says so", /Chưa tải được danh sách tài khoản/.test(await p.locator("[role=dialog]").innerText()));
+  await p.__ctx.close(); });
+
 // ===================================================================================================================== route / navigation snapshot (M-066: the split must not change behaviour)
 // For every persona the sidebar labels and, for every section key (deep links, aliases, foreign and unknown keys included), the final path, the h1, the h2s and the kind of state view are recorded in admin-routes.snapshot.json
 // (generated from the pre-split code, `UPDATE_SNAPSHOT=1` rewrites it). Dates / numbers are not compared: only structure.

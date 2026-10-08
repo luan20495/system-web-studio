@@ -17,6 +17,7 @@ import { useLoad } from "../useLoad";
 import { Card, ErrorState, fmtDate, Kpi, Pill, StateView } from "../ui";
 import { isTenantAdminRole, isWorkspaceAdminRole } from "@xweb/permissions";
 import { ArrowLeft, Building2, CircleCheck, ModalHeader, ShieldCheck, UserRound, confirm } from "@xweb/ui";
+import { LoadNote } from "./LoadNote";
 import { PersonPicker } from "./PersonPicker";
 import { PlatformCreateAccount } from "./ProvisioningLive";
 import { DataSourcesPanel } from "../studio/builder/DataSourcesPanel";
@@ -47,7 +48,7 @@ function usePeople(extra: Person[] = []) {
     return needle ? all.filter((p) => `${p.username} ${p.displayName ?? ""}`.toLowerCase().includes(needle)) : all;
   }, [scope.platform, wsIds, q]);
   const people = useMemo(() => { const m = new Map<string, Person>(); [...extra, ...(found.data ?? [])].forEach((p) => m.set(p.id, p)); return m; }, [found.data, extra]);
-  return { people, q, setQ, loading: found.loading, platform: scope.platform, nobody: !scope.platform && scope.workspaces.length === 0 };
+  return { people, q, setQ, loading: found.loading, load: found, platform: scope.platform, nobody: !scope.platform && scope.workspaces.length === 0 };
 }
 
 // ------------------------------------------------------------------------------------------------------------------ tenant members
@@ -194,7 +195,7 @@ function CreateTenantDialog({ onClose, onCreated }: { onClose: () => void; onCre
   // the code follows the name until the person edits it by hand
   const [slugEdited, setSlugEdited] = useState(false);
   const [touched, setTouched] = useState(false); const [busy, setBusy] = useState(false); const [error, setError] = useState<string | null>(null);
-  const { people, q, setQ, loading } = usePeople();
+  const { people, q, setQ, loading, load: peopleLoad } = usePeople();
   const problems = checkTenantForm({ slug, name });
   const slugOk = !problems.slug && slug.trim() !== "";
   function onName(v: string) { setName(v); if (!slugEdited) setSlug(slugify(v)); }
@@ -227,6 +228,7 @@ function CreateTenantDialog({ onClose, onCreated }: { onClose: () => void; onCre
           <h3><UserRound size={14} aria-hidden="true"/> Quản trị viên đầu tiên <span className="xp-opt-tag">Không bắt buộc</span></h3>
           <PersonPicker id="tenant-first-admin" label="Tìm người dùng" people={[...people.values()]} q={q} setQ={setQ} value={admin} onChange={setAdmin} loading={loading}
             placeholder="Tìm theo tên hoặc tên đăng nhập" emptyText={q ? "Không có người phù hợp" : "Chưa có tài khoản nào để chọn"}/>
+          <LoadNote load={peopleLoad} what="danh sách tài khoản"/>
           <p className="xp-note" role="note"><ShieldCheck size={16} aria-hidden="true"/><span>Chỉ chọn được tài khoản đã có. Muốn tạo người mới: bỏ trống ở đây, rồi dùng nút “Tạo tài khoản quản trị công ty” ở trang công ty vừa tạo (người đó nhận một liên kết kích hoạt).</span></p>
         </section>
 

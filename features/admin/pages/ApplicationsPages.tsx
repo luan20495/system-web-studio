@@ -6,12 +6,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/http-api";
 import type { AdminApp as App } from "@/lib/http-types";
-import { ArrowLeft, confirm } from "@xweb/ui";
+import { ArrowLeft, confirm, LoadGate } from "@xweb/ui";
 import { useSession } from "../../session";
 import { canActInWorkspace } from "../adminModel";
 import { useA } from "../console/context";
 import { useLoad } from "../../useLoad";
 import { ago, Card, ComingSoon, ErrorState, errText, fmtDate, Kpi, Pager, Pill, StateView } from "../../ui";
+import { LoadNote } from "../LoadNote";
 import { PageHead } from "../PageHead";
 
 // ------------------------------------------------------------------ application inventory
@@ -57,8 +58,7 @@ export function AppDetail({ id }: { id: string }) {
   const ws = useLoad(() => (data ? api.admin.workspace(data.app.workspaceId) : Promise.resolve(null)), [data?.app.workspaceId]);
   const [tab, setTab] = useState<"overview" | "members" | "versions" | "prompts" | "deployments" | "audit">("overview");
   const [newOwner, setNewOwner] = useState(""); const [busy, setBusy] = useState(false); const [msg, setMsg] = useState<string | null>(null);
-  if (loading && !data) return <StateView kind="loading"/>;
-  if (error) return <ErrorState error={error} retry={reload}/>;
+  if (!data) return <LoadGate load={{ data, error, loading, reload }} level={1} label="thông tin ứng dụng">{() => null}</LoadGate>;
   const d = data!; const a = d.app; const inWorkspace = canActInWorkspace(me, a.workspaceId);
   async function act(fn: () => Promise<unknown>, ok: string) { setBusy(true); setMsg(null); try { await fn(); setMsg(ok); reload(); } catch (e) { setMsg(errText(e, "Thao tác thất bại.")); } finally { setBusy(false); } }
   const tabs: [typeof tab, string][] = [["overview", "Tổng quan"], ["members", `Thành viên (${d.members.length})`], ["versions", "Phiên bản"], ["prompts", "Hoạt động AI"], ["deployments", "Xuất bản"], ["audit", "Nhật ký"]];
@@ -84,6 +84,7 @@ export function AppDetail({ id }: { id: string }) {
               {(ws.data?.members ?? []).filter((m) => m.enabled && m.userId !== a.ownerId).map((m) => <option key={m.userId} value={m.userId}>{m.displayName ?? m.username} ({m.username})</option>)}
             </select>
             <button className="btn primary" disabled={!newOwner || busy}>Chuyển</button>
+            <LoadNote load={ws} what="danh sách thành viên workspace"/>
           </form>) : <p className="muted">Ứng dụng đã bị xóa.</p>}
           <p className="hint">Chủ cũ ở lại dự án với vai trò Editor. Mọi thay đổi được ghi nhật ký.</p>
         </Card>

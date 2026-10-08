@@ -4,10 +4,11 @@ import Link from "next/link";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { api } from "@/lib/http-api";
 import type { AiLimitDefaults, AiOverride, AiProbe, AiProviderInfo, AiProviderKind } from "@/lib/http-types";
+import { LoadNote } from "./LoadNote";
 import { useLoad } from "../useLoad";
 import { Modal } from "./Modal";
 import { Card, ErrorState, errText, num, Pill, StateView, usd } from "../ui";
-import { Activity, CircleAlert, CircleCheck, CircleSlash, Cpu, KeyRound, ModalHeader, Pencil, Picker, Plus, Power, ProviderLogo, Save, Server, Settings2, ShieldCheck, Switch, Trash2, Zap, ChevronDown, ChevronUp, Download, type PickerOption, confirm } from "@xweb/ui";
+import { Activity, CircleAlert, CircleCheck, CircleSlash, Cpu, KeyRound, ModalHeader, Pencil, Picker, Plus, Power, ProviderLogo, Save, Server, Settings2, ShieldCheck, Switch, Trash2, Zap, ChevronDown, ChevronUp, Download, type PickerOption, confirm, LoadGate } from "@xweb/ui";
 
 // ------------------------------------------------------------------ wording
 export const KIND_LABELS: Record<AiProviderKind, string> = {
@@ -213,6 +214,7 @@ function ModelsTab({ pricing }: { pricing: ReactNode }) {
     <Card title="Mô hình AI" actions={<span>Mặc định hiện tại: <b>{defaultModel === "auto" ? "Tự động" : defaultModel}</b> {defaultModel !== "auto" ? <button className="btn sm" onClick={() => void makeDefault("auto")}>Đặt về Tự động</button> : null}</span>}>
       <p className="hint">“Tự động” dùng các mô hình miễn phí của OpenRouter khi đã cấu hình, nếu không thì dùng chế độ thử nghiệm. Mô hình trả phí mặc định TẮT; muốn dùng cần bật, nhập giá và cấp ngân sách ở tab Hạn mức. Nhân viên chỉ thấy mô hình đang bật.</p>
       {msg ? <p className="notice" role="status">{msg}</p> : null}
+      <LoadNote load={limits} what="mô hình mặc định hiện tại"/>
       {error ? <ErrorState error={error} retry={reload}/> : loading && !data ? <StateView kind="loading"/> : rows.length === 0 ? (
         <StateView kind="empty" title="Chưa có mô hình nào" detail={<p>Thêm nhà cung cấp rồi chọn mô hình ở tab Nhà cung cấp.</p>} action={<Link className="btn primary" href={A("/ai/providers")}>Đến Nhà cung cấp</Link>}/>
       ) : <table className="table"><thead><tr><th>Mô hình</th><th>Nhà cung cấp</th><th>Loại</th><th>Giá (USD / 1 triệu token)</th><th>Được phép dùng</th><th>Mặc định</th></tr></thead>
@@ -244,8 +246,7 @@ function LimitsTab() {
   const models = useLoad(() => api.admin.aiProviders(), []);
   const [form, setForm] = useState<Record<string, string> | null>(null); const [msg, setMsg] = useState<string | null>(null); const [busy, setBusy] = useState(false);
   const [adding, setAdding] = useState(false);
-  if (loading && !data) return <StateView kind="loading"/>;
-  if (error) return <ErrorState error={error} retry={reload}/>;
+  if (!data) return <LoadGate load={{ data, error, loading, reload }} level={2} label="hạn mức AI">{() => null}</LoadGate>;
   const d = data!.defaults;
   const f = form ?? { defaultModel: d.defaultModel, requestsPerUserDay: String(d.requestsPerUserDay), tokensPerUserDay: String(d.tokensPerUserDay), tokensPerWorkspaceMonth: String(d.tokensPerWorkspaceMonth),
     paidBudgetPerUserMonth: String(d.paidBudgetPerUserMonth), paidBudgetPerWorkspaceMonth: String(d.paidBudgetPerWorkspaceMonth) };
@@ -263,7 +264,7 @@ function LimitsTab() {
       <form className="grid2" onSubmit={(e) => void save(e)}>
         <label className="field"><span>Mô hình mặc định</span><select value={f.defaultModel} onChange={(e) => set("defaultModel", e.target.value)}>
           <option value="auto">Tự động</option>{enabledModels.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}</select>
-          <small>Dùng khi nhân viên không chọn mô hình.</small></label>
+          <small>Dùng khi nhân viên không chọn mô hình.</small><LoadNote load={models} what="danh sách mô hình"/></label>
         <NumberField label="Lượt AI / người / ngày" value={f.requestsPerUserDay} onChange={(v) => set("requestsPerUserDay", v)} hint={(n) => n === 0 ? "Không giới hạn" : `${num(n)} lượt mỗi người mỗi ngày`}/>
         <NumberField label="Lượng AI (token) / người / ngày" value={f.tokensPerUserDay} onChange={(v) => set("tokensPerUserDay", v)} hint={(n) => n === 0 ? "Không giới hạn" : `${num(n)} token`}/>
         <NumberField label="Lượng AI (token) / không gian làm việc / tháng" value={f.tokensPerWorkspaceMonth} onChange={(v) => set("tokensPerWorkspaceMonth", v)} hint={(n) => n === 0 ? "Không giới hạn" : `${num(n)} token`}/>

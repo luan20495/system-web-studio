@@ -4,7 +4,7 @@ import { ScopePicker } from "./AiGovernancePage";
 import { Fragment, useState } from "react";
 import { api } from "@/lib/http-api";
 import type { Connector, Department } from "@/lib/http-types";
-import { confirm, prompt } from "@xweb/ui";
+import { LoadGate, confirm, prompt } from "@xweb/ui";
 import { useLoad } from "../../useLoad";
 import { ago, Card, ErrorState, errText, Kpi, Pill, StateView } from "../../ui";
 import { PageHead } from "../PageHead";
@@ -54,14 +54,14 @@ export function IdentityPage() {
     <PageHead title="Định danh" sub="Đăng nhập một lần (OIDC), SAML qua nhà cung cấp OIDC (identity brokering), cấp tài khoản tự động (SCIM 2.0). MFA do nhà cung cấp danh tính quản lý."/>
     {err ? <p className="formError" role="alert">{err}</p> : null}
     <div className="kpiGrid">
-      <Kpi label="OIDC (SSO)" value={c ? (c.oidc ? "Bật" : "Tắt") : "…"} hint="OIDC_ENABLED · đăng xuất cũng kết thúc phiên ở IdP"/>
-      <Kpi label="SAML" value={c ? (c.saml ? "Bật (qua IdP broker)" : "Tắt") : "…"} hint="SAML_ENABLED + SAML_IDP_HINT"/>
-      <Kpi label="SCIM 2.0" value={s ? (s.enabled ? "Bật" : "Tắt") : "…"} hint={s ? `${s.users} tài khoản do SCIM cấp · SCIM_ENABLED + SCIM_TOKEN` : ""}/>
+      <Kpi label="OIDC (SSO)" value={<LoadGate load={cfg} compact label="trạng thái đăng nhập một lần">{(c) => (c.oidc ? "Bật" : "Tắt")}</LoadGate>} hint="OIDC_ENABLED · đăng xuất cũng kết thúc phiên ở IdP"/>
+      <Kpi label="SAML" value={<LoadGate load={cfg} compact label="trạng thái SAML">{(c) => (c.saml ? "Bật (qua IdP broker)" : "Tắt")}</LoadGate>} hint="SAML_ENABLED + SAML_IDP_HINT"/>
+      <Kpi label="SCIM 2.0" value={<LoadGate load={scim} compact label="trạng thái SCIM">{(s) => (s.enabled ? "Bật" : "Tắt")}</LoadGate>} hint={s ? `${s.users} tài khoản do SCIM cấp · SCIM_ENABLED + SCIM_TOKEN` : ""}/>
       <Kpi label="MFA" value="Do IdP quản lý" hint="MFA managed by Identity Provider"/>
     </div>
     <Card title="Nhóm SCIM → quyền workspace">
       <p className="hint">Nhóm từ IdP chỉ tạo quyền khi được ánh xạ ở đây; không có ánh xạ nào tới quản trị hệ thống. Thành viên do SCIM thêm sẽ được SCIM gỡ; thành viên thêm tay không bị đụng tới.</p>
-      {!s ? <StateView kind="loading"/> : <>
+      <LoadGate load={scim} label="nhóm SCIM">{(s) => <>
         <form className="filters wrap" onSubmit={(e) => { e.preventDefault(); if (m.groupId && m.ws.id) void act(() => api.addScimMapping(m.groupId, m.ws.id, m.role)); }}>
           <select aria-label="Nhóm SCIM" value={m.groupId} onChange={(e) => setM({ ...m, groupId: e.target.value })}><option value="">— nhóm —</option>{s.groups.map((g) => <option key={g.id} value={g.id}>{g.displayName} ({g.members})</option>)}</select>
           <ScopePicker types={["WORKSPACE"]} value={m.ws} onChange={(v) => setM({ ...m, ws: v })}/>
@@ -70,7 +70,7 @@ export function IdentityPage() {
         </form>
         {s.mappings.length === 0 ? <StateView kind="empty" title="Chưa có ánh xạ"/> : <table className="table"><thead><tr><th>Nhóm</th><th>Workspace</th><th>Vai trò</th><th><span className="srOnly">Thao tác</span></th></tr></thead>
           <tbody>{s.mappings.map((x) => <tr key={x.id}><td>{x.group}</td><td>{x.workspace}</td><td className="code">{x.role}</td><td><button className="btn sm ghost" onClick={() => void act(() => api.deleteScimMapping(x.id))}>Gỡ</button></td></tr>)}</tbody></table>}
-      </>}
+      </>}</LoadGate>
     </Card>
   </>);
 }
