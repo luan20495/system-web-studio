@@ -25,3 +25,4 @@ export { SkipLink } from "./SkipLink";
 export { useMain, focusTargetFor, focusProgrammatically } from "./useMain";
 export { useOverflow } from "./useOverflow";
 export { BREAKPOINT, MQ } from "./breakpoints";
+export { Button, buttonClass, type ButtonProps, type ButtonVariant } from "./Button";

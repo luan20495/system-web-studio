@@ -8,6 +8,7 @@ import { RadioGroup } from "../../packages/ui/src/RadioGroup";
 import { DisclosureRow } from "../../packages/ui/src/DisclosureRow";
 import { ReasonButton } from "../../packages/ui/src/ReasonButton";
 import { Pill, PILL_TONE, pillTone } from "../../packages/ui/src/Pill";
+import { Button, buttonClass } from "../../packages/ui/src/Button";
 import { Picker } from "../../packages/ui/src/Picker";
 import { onSessionChange, sessionChanged, resetCsrf } from "../../packages/api-client/src/core";
 import { a11yProblems } from "./a11y";
@@ -84,3 +85,16 @@ test("sessionChanged() resets the CSRF token and notifies listeners (the load ca
   assert.doesNotThrow(() => sessionChanged()); assert.equal(n, 1);
   off(); bad(); sessionChanged(); assert.equal(n, 1);
 });
+
+test("Button renders exactly the documented class vocabulary, type=button by default, busy = aria-busy", () => {
+  assert.equal(buttonClass({}), "btn");
+  assert.equal(buttonClass({ variant: "primary" }), "btn primary");
+  assert.equal(buttonClass({ variant: "danger" }), "btn danger");
+  assert.equal(buttonClass({ variant: "danger", filled: true }), "btn primary danger");
+  assert.equal(buttonClass({ variant: "ghost", size: "sm", icon: true, block: true, className: "x" }), "btn ghost sm icon block x");
+  assert.equal(renderToStaticMarkup(<Button>Lưu</Button>), '<button type="button" class="btn">Lưu</button>');
+  assert.match(renderToStaticMarkup(<Button type="submit" variant="primary" size="sm">Gửi</Button>), /<button type="submit" class="btn primary sm">/);
+  assert.match(renderToStaticMarkup(<Button busy>Đang lưu</Button>), /aria-busy="true"/);
+  { const h = renderToStaticMarkup(<Button icon aria-label="Đóng">x</Button>); assert.match(h, /class="btn icon"/); assert.match(h, /aria-label="Đóng"/); }
+});
+

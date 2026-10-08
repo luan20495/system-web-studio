@@ -26,7 +26,7 @@
 .emptyState{padding:26px 8px 6px;text-align:center}.emptyState h2{margin:0 0 6px;font-size:20px}.emptyState p{margin:0 auto 6px;max-width:42ch}
 .saveState{font-size:12px;padding:5px 10px;border-radius:999px;border:1px solid rgba(32,201,151,.28);background:rgba(32,201,151,.08);color:#9aefd5;margin-left:6px;white-space:nowrap}
 .saveState.saving{color:#cfd8e3;border-color:var(--dk-field-line);background:rgba(255,255,255,.04)}.saveState.error{color:#ffb4ab;border-color:rgba(255,120,110,.4);background:rgba(255,120,110,.08)}
-.button.ghost.on{background:#1f2937;border-color:#3b82f6}.button:hover:not(:disabled){border-color:#3a4452}
+.button.ghost.on{background:#1f2937;border-color:#3b82f6}.button:hover:not(:disabled){border-color:var(--dk-btn-hover-line)}
 .composer .sendButton{height:36px;padding:0 16px;border-radius:999px;background:linear-gradient(135deg,var(--blue),var(--accent));border:0;color:#04120e;font-weight:800}
 .composer .sendButton:disabled{background:#2a313b;color:#7b8794}
 .paneTabs{display:flex;gap:4px;padding:10px 14px 0;border-bottom:1px solid var(--line)}.paneTabs button{background:none;border:0;border-bottom:2px solid transparent;color:var(--muted);padding:8px 10px;font-weight:600}
