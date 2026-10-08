@@ -96,7 +96,7 @@
   "Guided path with plain-language names, one entry point, hide advanced steps; fix the contradictory message",
   "builder/datasources/publicdata specs updated; usability walkthrough in the evidence",
   "",
-  "PROPOSAL APPROVED by C5-L: single guided form + 'Nâng cao' wizard, auto-created hidden slot, v1 = direct columns only (custom columns wait for the C3 mapping answer); implementation by S1 pending"
+  "FIXED (HARNESS, merged 5e11aca): guided 4-section form, wizard under 'Nâng cao', v1 direct columns; 'Sửa' of an existing connection not done"
  ],
  [
   "M-006",
@@ -117,7 +117,7 @@
   "Shared ErrorBoundary (packages/ui) + error.tsx/global-error.tsx per app + boundary around the route render and around BuilderWorkspace; request id shown; 'Thử lại'",
   "unit (SSR fallback) + harness page that throws on click: fallback, focus, retry",
   "P1 justified only because M-076 shows real throw paths (R2 rated it P3)",
-  "PARTIAL: ErrorBoundary + error.tsx/global-error.tsx + per-route wrap merged (da6c70f); Builder inline boundary (S1) pending"
+  "FIXED (HARNESS): boundaries in the three apps (da6c70f) + Builder panels inline (merged 5e11aca)"
  ],
  [
   "M-007",
@@ -292,7 +292,8 @@
   "N (harness)",
   "Esc-then-Tab escape hatch (or Tab indents only when explicitly enabled) with a visible hint",
   "harness: Shift+Tab leaves; hint present",
-  ""
+  "",
+  "FIXED (HARNESS, merged 5e11aca): Tab/Shift+Tab leave the editor; opt-in indent option; Esc-then-Tab"
  ],
  [
   "M-016",
@@ -395,7 +396,8 @@
   "N (harness)",
   "useAction(busy,error,once) in packages/ui; migrate the listed call sites",
   "harness double-click tests",
-  ""
+  "",
+  "HOOK MERGED (a5dcdc1): useAction; call-site migration pending (S1/S2 wave 2)"
  ],
  [
   "M-021",
@@ -473,7 +475,8 @@
   "N (harness)",
   "aria-activedescendant on the focused combobox button or move focus into the listbox",
   "harness + axe",
-  ""
+  "",
+  "FIXED (HARNESS, merged bb5f6e4): Picker aria-activedescendant"
  ],
  [
   "M-025",
@@ -550,7 +553,8 @@
   "N",
   "Use the Tabs primitive (or plain nav links without role=tab)",
   "axe + keyboard harness",
-  "D-02/D-03: radio cards also M-081; PersonPicker aria-expanded also M-085"
+  "D-02/D-03: radio cards also M-081; PersonPicker aria-expanded also M-085",
+  "WIDGET MERGED (bb5f6e4): Tabs/TabPanel; adoption pending"
  ],
  [
   "M-029",
@@ -569,7 +573,8 @@
   "N",
   "Row button with aria-expanded",
   "harness keyboard",
-  ""
+  "",
+  "WIDGET MERGED (bb5f6e4): DisclosureRow; adoption pending"
  ],
  [
   "M-030",
@@ -588,7 +593,8 @@
   "N (harness)",
   "radiogroup semantics",
   "release.spec + axe",
-  ""
+  "",
+  "WIDGET MERGED (bb5f6e4): RadioGroup; adoption pending"
  ],
  [
   "M-031",
@@ -608,7 +614,8 @@
   "N",
   "aria-disabled + visible helper text instead of title-only",
   "harness",
-  ""
+  "",
+  "WIDGET MERGED (bb5f6e4): ReasonButton; adoption pending"
  ],
  [
   "M-032",
@@ -626,7 +633,8 @@
   "N",
   "Pill tone per semantic status map",
   "screenshots",
-  ""
+  "",
+  "WIDGET MERGED (bb5f6e4): Pill tones; adoption pending"
  ],
  [
   "M-033",
@@ -922,7 +930,8 @@
   "N",
   "extract hooks (useSaveMachine, useAiStream) and split StudioApp screens; behaviour-preserving",
   "unit tests for extracted hooks",
-  ""
+  "",
+  "FIXED (merged 5e11aca; behaviour-preserving: StudioApp 393->89 lines, ProjectWorkspace 413->315 + hooks)"
  ],
  [
   "M-049",
@@ -1000,7 +1009,8 @@
   "Y",
   "C5: central helper + guard test scanning features/admin; C1 supplies capability codes",
   "permissions.test guard extended",
-  "R2: UX-only, server authorises; guard needs a single-helper allow-list and features/admin + TENANT_ADMIN in scope"
+  "R2: UX-only, server authorises; guard needs a single-helper allow-list and features/admin + TENANT_ADMIN in scope",
+  "FIXED (HARNESS + guard test, merged c9799bb): single roles helper, guard scans features/admin"
  ],
  [
   "M-053",
@@ -1042,7 +1052,8 @@
   "N (harness)",
   "persona-specific overview",
   "admin harness",
-  ""
+  "",
+  "FIXED (HARNESS, merged c9799bb)"
  ],
  [
   "M-055",
@@ -1133,7 +1144,8 @@
   "Y",
   "C5: stop showing the legacy field as truth; label",
   "real-backend",
-  ""
+  "",
+  "C5 PART FIXED (HARNESS, merged c9799bb): provider tile reads /admin/ai/providers; backend handoff open"
  ],
  [
   "M-060",
@@ -1243,7 +1255,8 @@
   "N",
   "fix copy; verify policy with C1 (do not guess)",
   "review",
-  "C-05: also takes S2-031 (settings card keys, stale copy) · R2: not a contradiction: both minimums (6 at sign-up, 8 at activation) are intentional in the backend; state the rule per flow, ask C1 about showing 'no username' / '>=4 distinct characters'"
+  "C-05: also takes S2-031 (settings card keys, stale copy) · R2: not a contradiction: both minimums (6 at sign-up, 8 at activation) are intentional in the backend; state the rule per flow, ask C1 about showing 'no username' / '>=4 distinct characters'",
+  "FIXED (HARNESS, merged c9799bb); C1 question (no-username / >=4 distinct) unchanged"
  ],
  [
   "M-065",
@@ -1282,7 +1295,8 @@
   "N",
   "split by section (R doc line ranges), one registry, portal passed by context",
   "build + admin harness; no behaviour change",
-  ""
+  "",
+  "FIXED (merged c9799bb): AdminApp.tsx 1,197 -> 40 lines, ONE section registry, console context; 360-cell route snapshot taken before the split passes unchanged"
  ],
  [
   "M-067",
@@ -1405,7 +1419,8 @@
   "N",
   "tests/browser/lib shared toolkit; admin + studio-app harnesses; keep C0 asks separate",
   "spec counts + flake runs",
-  "9 specs fall back to port 4000 when HARNESS_URL is unset (S4-031); default CHROME path is Linux-only (S4-035)"
+  "9 specs fall back to port 4000 when HARNESS_URL is unset (S4-031); default CHROME path is Linux-only (S4-035)",
+  "PARTIAL: spec toolkit + HARNESS_URL required merged (a5dcdc1), all specs migrated; shims (R-023 -> M-107) and untested files remain"
  ],
  [
   "M-073",
@@ -1444,7 +1459,8 @@
   "N",
   "read X-Request-Id header; boundary reports via a seam (no endpoint invented)",
   "unit",
-  "raised: raw R-002 and R-003 are both P2"
+  "raised: raw R-002 and R-003 are both P2",
+  "FIXED (merged bb5f6e4): X-Request-Id header read, reporter seam"
  ],
  [
   "M-075",
@@ -1466,7 +1482,8 @@
   "N",
   "single errorText(); never show Error.message of non-ApiError; Vietnamese mapping per code",
   "unit: mapper table",
-  "O-04: packages/api-client/core.ts is touched by M-074/M-075/M-092/M-097: single editor S3"
+  "O-04: packages/api-client/core.ts is touched by M-074/M-075/M-092/M-097: single editor S3",
+  "COMPONENT/LIB MERGED (bb5f6e4): errorText/errorParts + code catalog; call-site migration pending (S1/S2 wave 2)"
  ],
  [
   "M-076",
@@ -1485,7 +1502,8 @@
   "N (harness)",
   "guard + safe parse",
   "unit + harness",
-  "DailyBars half is latent (backend zero-fills days, AdminAiUsageController.kt:64); the JSON.parse half stays P2"
+  "DailyBars half is latent (backend zero-fills days, AdminAiUsageController.kt:64); the JSON.parse half stays P2",
+  "FIXED (HARNESS, merged c9799bb): safe JSON helpers; DailyBars half was latent"
  ],
  [
   "M-077",
@@ -1539,7 +1557,8 @@
   "N",
   "",
   "harness",
-  ""
+  "",
+  "COMPONENT MERGED (bb5f6e4)"
  ],
  [
   "M-080",
@@ -1638,7 +1657,8 @@
   "N",
   "level=1 for page-level states; captions/scope",
   "axe all-impacts",
-  ""
+  "",
+  "COMPONENT MERGED (bb5f6e4): States/LoadGate; feature adoption pending"
  ],
  [
   "M-085",
@@ -1788,7 +1808,8 @@
   "N",
   "retry once",
   "unit",
-  "retry only before the first stream byte"
+  "retry only before the first stream byte",
+  "FIXED (merged bb5f6e4): CSRF retry once before the first stream byte"
  ],
  [
   "M-093",
@@ -1882,7 +1903,8 @@
   "N",
   "debounce; share fetch; cached Intl formatters",
   "S4 request counts",
-  "S4-017: no cache/abort; the same lists fetched by two screens; session calls start after hydration"
+  "S4-017: no cache/abort; the same lists fetched by two screens; session calls start after hydration",
+  "PARTIAL: useLoad keyed cache + abort merged (a5dcdc1) and session reset wired (bb5f6e4); api.* methods do not yet expose signal; tenant switch not covered"
  ],
  [
   "M-098",
@@ -2222,7 +2244,7 @@
   "PORTAL_PLATFORM_PORT / PORTAL_ADMIN_PORT overrides",
   "spec 33/33 x3 on private builds",
   "FIXED",
-  "FIXED (merged b0aff1d, spec 33/33 x3 on private ports)"
+  "FIXED (merged b0aff1d)"
  ],
  [
   "M-116",
@@ -2241,5 +2263,23 @@
   "loud pending line",
   "unit summary",
   ""
+ ],
+ [
+  "M-117",
+  "P3",
+  "C5",
+  "all",
+  "global link style",
+  "Links inside running text are distinguished only by colour (axe link-in-text-block, WCAG 1.4.1)",
+  [
+   "S3-WAVE1"
+  ],
+  "global link style in factory.css/globals.css",
+  "S3",
+  "none",
+  "N (harness)",
+  "underline links in running text (or another non-colour cue) via a token",
+  "axe in ui-widgets harness + admin screens",
+  "found by S3 while building the widgets harness; new, not in the phase-1 audits"
  ]
 ]

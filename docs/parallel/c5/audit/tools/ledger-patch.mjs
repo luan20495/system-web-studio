@@ -92,3 +92,27 @@ status("M-014", "FIXED (HARNESS, merged da6c70f; 320/360/390)");
 status("M-016", "PARTIAL: shared Toast + confirm/prompt components merged (da6c70f); call-site migration pending (S1/S2 wave 2)");
 status("M-022", "FIXED (HARNESS, merged da6c70f)");
 status("M-012", "PARTIAL: shared CSS merged (da6c70f, HARNESS); leftover for S1/S2: DataSourcesPanel delete confirm uses 'button primary' (should be danger)");
+
+// ---- integration round 2 (agent/c5-web c9799bb): S1 milestone 1, S3 wave-1 milestone 1, S2 wave 1, S4 wave 1 (HARNESS unless stated)
+status("M-015", "FIXED (HARNESS, merged 5e11aca): Tab/Shift+Tab leave the editor; opt-in indent option; Esc-then-Tab");
+status("M-005", "FIXED (HARNESS, merged 5e11aca): guided 4-section form, wizard under 'Nâng cao', v1 direct columns; 'Sửa' of an existing connection not done");
+status("M-006", "FIXED (HARNESS): boundaries in the three apps (da6c70f) + Builder panels inline (merged 5e11aca)");
+status("M-048", "FIXED (merged 5e11aca; behaviour-preserving: StudioApp 393->89 lines, ProjectWorkspace 413->315 + hooks)");
+status("M-066", "FIXED (merged c9799bb): AdminApp.tsx 1,197 -> 40 lines, ONE section registry, console context; 360-cell route snapshot taken before the split passes unchanged");
+status("M-076", "FIXED (HARNESS, merged c9799bb): safe JSON helpers; DailyBars half was latent");
+status("M-054", "FIXED (HARNESS, merged c9799bb)");
+status("M-052", "FIXED (HARNESS + guard test, merged c9799bb): single roles helper, guard scans features/admin");
+status("M-059", "C5 PART FIXED (HARNESS, merged c9799bb): provider tile reads /admin/ai/providers; backend handoff open");
+status("M-064", "FIXED (HARNESS, merged c9799bb); C1 question (no-username / >=4 distinct) unchanged");
+status("M-075", "COMPONENT/LIB MERGED (bb5f6e4): errorText/errorParts + code catalog; call-site migration pending (S1/S2 wave 2)");
+status("M-074", "FIXED (merged bb5f6e4): X-Request-Id header read, reporter seam");
+status("M-092", "FIXED (merged bb5f6e4): CSRF retry once before the first stream byte");
+status("M-084", "COMPONENT MERGED (bb5f6e4): States/LoadGate; feature adoption pending");
+status("M-079", "COMPONENT MERGED (bb5f6e4)");
+status("M-024", "FIXED (HARNESS, merged bb5f6e4): Picker aria-activedescendant");
+status("M-028", "WIDGET MERGED (bb5f6e4): Tabs/TabPanel; adoption pending"); status("M-029", "WIDGET MERGED (bb5f6e4): DisclosureRow; adoption pending"); status("M-030", "WIDGET MERGED (bb5f6e4): RadioGroup; adoption pending"); status("M-031", "WIDGET MERGED (bb5f6e4): ReasonButton; adoption pending"); status("M-032", "WIDGET MERGED (bb5f6e4): Pill tones; adoption pending");
+status("M-020", "HOOK MERGED (a5dcdc1): useAction; call-site migration pending (S1/S2 wave 2)");
+status("M-097", "PARTIAL: useLoad keyed cache + abort merged (a5dcdc1) and session reset wired (bb5f6e4); api.* methods do not yet expose signal; tenant switch not covered");
+status("M-072", "PARTIAL: spec toolkit + HARNESS_URL required merged (a5dcdc1), all specs migrated; shims (R-023 -> M-107) and untested files remain");
+status("M-115", "FIXED (merged b0aff1d)");
+rows.push(["M-117","P3","C5","all","global link style","Links inside running text are distinguished only by colour (axe link-in-text-block, WCAG 1.4.1)",["S3-WAVE1"],"global link style in factory.css/globals.css","S3","none","N (harness)","underline links in running text (or another non-colour cue) via a token","axe in ui-widgets harness + admin screens","found by S3 while building the widgets harness; new, not in the phase-1 audits"]);
