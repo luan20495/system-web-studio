@@ -75,7 +75,7 @@ export async function call<T>(path: string, init: RequestInit & { idempotencyKey
   } catch (e) {
     // AbortSignal.timeout → TimeoutError. Same status 0 as a dropped connection (the outcome of a write is unknown either way), different code for the UI.
     if (e instanceof DOMException && e.name === "TimeoutError") throw new ApiError(0, "TIMEOUT", "Máy chủ không phản hồi kịp (quá 15 giây). Nếu bạn vừa lưu hoặc gửi dữ liệu, hãy kiểm tra lại kết quả trước khi làm lại.");
-    if (e instanceof DOMException && e.name === "AbortError") throw new ApiError(0, "ABORTED", "Đã huỷ yêu cầu."); // the caller's own signal (useLoad aborts a superseded load)
+    if (e instanceof DOMException && e.name === "AbortError") throw new ApiError(0, "ABORTED", "Đã hủy yêu cầu."); // the caller's own signal (useLoad aborts a superseded load)
     throw new ApiError(0, "NETWORK", "Không kết nối được tới máy chủ. Kiểm tra mạng rồi thử lại.");
   }
   if (!response.ok) {
@@ -106,7 +106,7 @@ export async function stream<T>(path: string, body: unknown, h: StreamHandlers, 
     response = await fetch(`/api/v1${path}`, { method: "POST", credentials: "include", cache: "no-store",
       headers: { "Content-Type": "application/json", Accept: "text/event-stream", "X-XSRF-TOKEN": token }, body: JSON.stringify(body), signal });
   } catch (e) {
-    if (signal?.aborted) throw new ApiError(0, "ABORTED", "Đã huỷ yêu cầu AI.");
+    if (signal?.aborted) throw new ApiError(0, "ABORTED", "Đã hủy yêu cầu AI.");
     throw new ApiError(0, "NETWORK", "Không kết nối được tới máy chủ. Kiểm tra mạng rồi thử lại.");
   }
   if (!response.ok || !response.body) {
@@ -124,7 +124,7 @@ export async function stream<T>(path: string, body: unknown, h: StreamHandlers, 
   let buf = "";
   for (;;) {
     let chunk: ReadableStreamReadResult<string>;
-    try { chunk = await reader.read(); } catch { throw signal?.aborted ? new ApiError(0, "ABORTED", "Đã huỷ yêu cầu AI.") : new ApiError(0, "STREAM_ENDED", "Kết nối AI bị ngắt trước khi có kết quả."); }
+    try { chunk = await reader.read(); } catch { throw signal?.aborted ? new ApiError(0, "ABORTED", "Đã hủy yêu cầu AI.") : new ApiError(0, "STREAM_ENDED", "Kết nối AI bị ngắt trước khi có kết quả."); }
     const { value, done } = chunk;
     if (done) break;
     buf += value;

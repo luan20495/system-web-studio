@@ -22,7 +22,7 @@ test("the table: (status, code) → Vietnamese sentence, kind and retryability",
   const rows: Array<[ApiError, RegExp, string, boolean]> = [
     [api(0, "NETWORK", "x"), /^Không kết nối được tới máy chủ\. Kiểm tra mạng/, "network", true],
     [api(0, "TIMEOUT", "x"), /không phản hồi kịp/, "timeout", true],
-    [api(0, "ABORTED", "x"), /^Đã huỷ yêu cầu\.$/, "aborted", false],
+    [api(0, "ABORTED", "x"), /^Đã hủy yêu cầu\.$/, "aborted", false],
     [api(0, "STREAM_ENDED", "x"), /ngắt trước khi có kết quả/, "network", true],
     [api(401, "AUTHENTICATION_REQUIRED"), /hết hạn.*Đăng nhập lại/, "auth", false],
     [api(401, "INVALID_CREDENTIALS"), /^Sai tên đăng nhập hoặc mật khẩu\.$/, "auth", false],
