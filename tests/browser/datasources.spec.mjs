@@ -1,12 +1,9 @@
 // @class: harness — real Chromium on a test-only host whose `calls` are an in-page fake; proves what the PANEL does with C3's documented answers, NOT what the backend answers
 // Run: node tests/browser/build-harness.mjs && node tests/browser/harness-server.mjs run -- node tests/browser/datasources.spec.mjs
-import { createRequire } from "node:module";
-const require = createRequire(new URL("../../package.json", import.meta.url).pathname);
-const { chromium } = require("playwright-core");
-const BASE = process.env.DS_HARNESS_URL ?? "http://127.0.0.1:4000/ds.html";
-const results = [];
-const check = (name, ok, detail = "") => { results.push({ name, ok: !!ok, detail }); console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  — " + String(detail).replace(/\s+/g, " ").slice(0, 160) : ""}`); };
-const browser = await chromium.launch({ executablePath: process.env.CHROME ?? "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
+import { harnessUrl, launch, makeChecks } from "./lib/spec.mjs";
+const BASE = harnessUrl("DS_HARNESS_URL");
+const { check, finish } = makeChecks({ clip: 160 });
+const browser = await launch();
 async function open(s, { ready = true } = {}) {
   const page = await browser.newPage({ viewport: { width: 700, height: 1100 } });
   page.errors = []; page.on("pageerror", (e) => page.errors.push(e.message)); page.on("console", (m) => { if (m.type() === "error" && !/favicon|404/.test(m.text())) page.errors.push(m.text()); });
@@ -144,6 +141,4 @@ const secretInDom = (p) => p.evaluate(() => window.__secretsSeenInDom());
   await p.keyboard.press("Tab"); check("keyboard focus enters the panel", await p.evaluate(() => document.activeElement && document.activeElement !== document.body)); await p.close(); }
 
 await browser.close();
-const failed = results.filter((r) => !r.ok);
-console.log(`\n${results.length - failed.length}/${results.length} passed`);
-process.exit(failed.length ? 1 : 0);
+finish();

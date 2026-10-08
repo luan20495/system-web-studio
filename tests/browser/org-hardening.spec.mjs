@@ -5,14 +5,13 @@ import { createRequire } from "node:module";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 const require = createRequire(new URL("../../package.json", import.meta.url).pathname);
-const { chromium } = require("playwright-core");
+import { harnessOrigin, launch, makeChecks } from "./lib/spec.mjs";
 const AXE = require.resolve("axe-core/axe.min.js");
-const ORIGIN = (process.env.HARNESS_URL ?? "http://127.0.0.1:4000/index.html").replace(/\/[^/]*$/, "");
+const ORIGIN = harnessOrigin();
 const EVIDENCE = process.env.EVIDENCE ?? null; if (EVIDENCE) mkdirSync(EVIDENCE, { recursive: true });
-const results = []; const metrics = {};
-const check = (name, ok, detail = "") => { results.push({ name, ok: !!ok, detail }); console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  — " + detail : ""}`); };
+const { check, finish } = makeChecks(); const metrics = {};
 const errors = [];
-const browser = await chromium.launch({ executablePath: process.env.CHROME ?? "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
+const browser = await launch();
 const T = (p, id) => p.getByTestId(id);
 async function open(v, s = "ok", viewport = { width: 1200, height: 900 }) {
   const p = await browser.newPage({ viewport }); p.setDefaultTimeout(15000);
@@ -195,6 +194,4 @@ check("no console error / warning / uncaught exception in any page", errors.leng
 await browser.close();
 if (EVIDENCE) writeFileSync(join(EVIDENCE, "metrics.json"), JSON.stringify(metrics, null, 2));
 console.log("\nMETRICS " + JSON.stringify(metrics));
-const failed = results.filter((r) => !r.ok);
-console.log(`\n${results.length - failed.length}/${results.length} checks passed`);
-process.exit(failed.length ? 1 : 0);
+finish();

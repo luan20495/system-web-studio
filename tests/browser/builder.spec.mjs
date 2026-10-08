@@ -1,16 +1,13 @@
 // @class: harness — real Chromium on a test-only host (fake host / no API behind it); NOT a backend E2E
 // Real-browser checks of the Builder (pointer + keyboard) against tests/browser/harness.tsx. TEST-ONLY harness: NOT a backend E2E.
 // Run: node tests/browser/build-harness.mjs && node tests/browser/harness-server.mjs run -- node tests/browser/builder.spec.mjs
-import { createRequire } from "node:module";
 import { mkdirSync } from "node:fs";
-const require = createRequire(new URL("../../package.json", import.meta.url).pathname);
-const { chromium } = require("playwright-core");
-const URL_ = process.env.HARNESS_URL ?? "http://127.0.0.1:4000/index.html";
+import { harnessUrl, launch, makeChecks } from "./lib/spec.mjs";
+const URL_ = harnessUrl();
 const shots = process.env.SHOTS ?? "/tmp/shots"; mkdirSync(shots, { recursive: true });
-const results = [];
-const check = (name, ok, detail = "") => { results.push({ name, ok: !!ok, detail }); console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  — " + detail : ""}`); };
+const { check, finish } = makeChecks();
 
-const browser = await chromium.launch({ executablePath: process.env.CHROME ?? "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
+const browser = await launch();
 async function fresh() {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   page.errors = []; page.on("pageerror", (e) => page.errors.push(e.message)); page.on("console", (m) => { if (m.type() === "error" && !/favicon|404/.test(m.text())) page.errors.push(m.text()); });
@@ -421,6 +418,4 @@ const rtCalls = (p) => p.evaluate(() => window.__rt);
 }
 
 await browser.close();
-const failed = results.filter((r) => !r.ok);
-console.log(`\n${results.length - failed.length}/${results.length} passed`);
-process.exit(failed.length ? 1 : 0);
+finish();

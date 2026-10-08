@@ -1,14 +1,11 @@
 // @class: harness — real Chromium on the create-account screens with an in-page FAKE transport behind the REAL adapter (no backend). Proves what the SCREENS do (gating, validation, states, no invented calls).
 // NOT a backend E2E: the real chain is tests/e2e-real SUPER01 / ADMIN01 / USER01 / SEC01-03.
 // Run: node tests/browser/build-harness.mjs && CHROME=... node tests/browser/harness-server.mjs run -- node tests/browser/provisioning.spec.mjs
-import { createRequire } from "node:module";
-const require = createRequire(new URL("../../package.json", import.meta.url).pathname);
-const { chromium } = require("playwright-core");
-const ORIGIN = (process.env.HARNESS_URL ?? "http://127.0.0.1:4000/index.html").replace(/\/[^/]*$/, "");
-const results = [];
-const check = (name, ok, detail = "") => { results.push({ name, ok: !!ok, detail }); console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  — " + detail : ""}`); };
+import { harnessOrigin, launch, makeChecks } from "./lib/spec.mjs";
+const ORIGIN = harnessOrigin();
+const { check, finish } = makeChecks();
 const errors = [];
-const browser = await chromium.launch({ executablePath: process.env.CHROME ?? "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
+const browser = await launch();
 const T = (p, id) => p.getByTestId(id);
 const closeLink = async (p) => { await p.getByRole("button", { name: "Xong" }).click(); await p.getByRole("button", { name: /Tôi đã lưu liên kết/ }).click(); };   // the one-time link dialog asks before it closes until the link was copied (M-007)
 async function open(s) {
@@ -117,6 +114,4 @@ for (const [s, name, kind, re] of ERR) {
 
 check("no console error / warning / uncaught exception in any page", errors.length === 0, errors.slice(0, 3).join(" | "));
 await browser.close();
-const failed = results.filter((r) => !r.ok);
-console.log(`\n${results.length - failed.length}/${results.length} checks passed`);
-process.exit(failed.length ? 1 : 0);
+finish();

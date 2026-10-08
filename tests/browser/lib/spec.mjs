@@ -1,0 +1,71 @@
+// @class: harness
+// Shared toolkit of the real-Chromium browser specs (tests/browser/*.spec.mjs): the check list, the console capture, the Chrome path and the harness URL that every spec used to copy.
+// It is test tooling, not a test: HARNESS, NOT REAL BACKEND, and nothing here starts, finds or stops a process.
+//
+//   import { chromium, harnessOrigin, launch, makeChecks, watchConsole } from "./lib/spec.mjs";
+//   const { check, finish } = makeChecks();
+//   const browser = await launch();
+//   ... check("name", ok, "detail") ...
+//   await browser.close(); finish();
+//
+// HARNESS_URL is REQUIRED. A spec started without it (i.e. not through `node tests/browser/harness-server.mjs run -- node tests/browser/<spec>`) fails at once with exit code 2. It never falls back to
+// a fixed port such as 4000: that port may be someone else's server.
+import { createRequire } from "node:module";
+import { existsSync } from "node:fs";
+
+const require = createRequire(new URL("../../../package.json", import.meta.url).pathname);
+export const { chromium } = require("playwright-core");
+
+/** print a fatal setup problem and stop with exit code 2 (a spec that cannot start is never a pass) */
+export function die(message) { console.error(`\nspec setup error: ${message}\n`); process.exit(2); }
+
+/** the harness page URL the owned server was started for; `name` is the environment variable (HARNESS_URL, or DS_HARNESS_URL for the data-source harness) */
+export function harnessUrl(name = "HARNESS_URL") {
+  const v = process.env[name];
+  if (!v) die(`${name} is not set. Run the spec through the owned harness server so it gets a free port and is stopped afterwards:\n  node tests/browser/harness-server.mjs run -- node ${process.argv[1] ? process.argv[1].replace(process.cwd() + "/", "") : "tests/browser/<spec>.spec.mjs"}\n(no fixed port is ever assumed; port 4000 in particular may belong to another process)`);
+  try { new URL(v); } catch { die(`${name}="${v}" is not a URL`); }
+  return v;
+}
+/** the harness server's origin without the page name, e.g. http://127.0.0.1:51234 */
+export const harnessOrigin = (name = "HARNESS_URL") => harnessUrl(name).replace(/\/[^/]*$/, "");
+/** the URL of another harness page on the same server (`org.html`, `release.html`...) */
+export const harnessPage = (page, name = "HARNESS_URL") => `${harnessOrigin(name)}/${page}`;
+
+const CANDIDATES = {
+  darwin: ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/Applications/Chromium.app/Contents/MacOS/Chromium", "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"],
+  linux: ["/opt/pw-browsers/chromium-1194/chrome-linux/chrome", "/usr/bin/google-chrome", "/usr/bin/google-chrome-stable", "/usr/bin/chromium", "/usr/bin/chromium-browser"],
+  win32: ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe", "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"],
+};
+/** the Chromium-family browser to drive: $CHROME if set (must exist), else the first installed default of this OS; otherwise a clear error naming what was looked for */
+export function chromePath(env = process.env, platform = process.platform, exists = existsSync) {
+  if (env.CHROME) { if (!exists(env.CHROME)) die(`CHROME=${env.CHROME} does not exist`); return env.CHROME; }
+  const list = CANDIDATES[platform] ?? [];
+  const hit = list.find((p) => exists(p));
+  if (!hit) die(`no Chrome / Chromium found for ${platform}. Looked for:\n  ${list.join("\n  ") || "(no default for this OS)"}\nSet CHROME=/path/to/chrome`);
+  return hit;
+}
+/** chromium.launch with the OS default Chrome path; `extra` is passed to Playwright (for example `{ args: ["--enable-precise-memory-info"] }`) */
+export const launch = (extra = {}) => chromium.launch({ executablePath: chromePath(), ...extra });
+
+/**
+ * The check list every spec keeps: `check(name, ok, detail)` prints `PASS|FAIL  name  — detail` and records it, `skip(name, why)` records a skip, `finish()` prints the summary and exits 1 on any FAIL.
+ * `clip`: shorten the detail to this many characters on one line (long DOM text). `results` is exposed for specs that report their own extras.
+ */
+export function makeChecks({ clip = 0 } = {}) {
+  const results = [];
+  const text = (d) => (clip ? String(d).replace(/\s+/g, " ").slice(0, clip) : d);
+  const check = (name, ok, detail = "") => { results.push({ name, ok: !!ok, detail }); console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  — " + text(detail) : ""}`); };
+  const skip = (name, why) => { results.push({ name, ok: null, detail: why }); console.log(`SKIP  ${name}  — ${why}`); };
+  const finish = () => {
+    const failed = results.filter((r) => r.ok === false), skipped = results.filter((r) => r.ok === null);
+    console.log(`\n${results.length - failed.length - skipped.length}/${results.length - skipped.length} checks passed${skipped.length ? `, ${skipped.length} skipped` : ""}`);
+    process.exit(failed.length ? 1 : 0);
+  };
+  return { results, check, skip, finish };
+}
+
+/** collect console errors / warnings and uncaught exceptions of a page into `into` (an array); `ignore` drops matching text (default: favicon and 404 noise of a harness) */
+export function watchConsole(page, into, { ignore = /favicon|404/ } = {}) {
+  page.on("pageerror", (e) => into.push(e.message));
+  page.on("console", (m) => { if (["error", "warning"].includes(m.type()) && !ignore.test(m.text())) into.push(m.text()); });
+}

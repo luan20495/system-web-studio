@@ -2,13 +2,11 @@
 // Real-browser checks of the three portals WITHOUT a backend: everything that does not need a session.
 // Needs the three apps running: platform 127.0.0.1:3001, admin 127.0.0.1:3002, studio 127.0.0.1:3003 (PORTAL_PLATFORM_PORT / PORTAL_ADMIN_PORT / PORTAL_STUDIO_PORT override the ports) (npm run build:<app> && cd apps/<app> && npx next start -H 127.0.0.1 -p <port>).
 // With no API behind the same-origin /api proxy the browser sees 500s; the UI must still show the login form. It does NOT test login, session, OIDC or cookies after sign-in.
-import { createRequire } from "node:module";
-const require = createRequire(new URL("../../package.json", import.meta.url).pathname);
-const { chromium } = require("playwright-core");
+import { launch, makeChecks } from "./lib/spec.mjs";
 // every port is overridable (PORTAL_PLATFORM_PORT / PORTAL_ADMIN_PORT / PORTAL_STUDIO_PORT): a second stack on the machine must not be tested by accident (S4-audit)
 const PORTALS = [["platform", Number(process.env.PORTAL_PLATFORM_PORT ?? 3001), "/platform", "Xweb Platform"], ["admin", Number(process.env.PORTAL_ADMIN_PORT ?? 3002), "/admin", "Quản trị công ty"], ["studio", Number(process.env.PORTAL_STUDIO_PORT ?? 3003), "/studio", "Xweb Studio"]];
-const results = []; const check = (n, ok, d = "") => { results.push(ok); console.log(`${ok ? "PASS" : "FAIL"}  ${n}${d ? "  — " + d : ""}`); };
-const browser = await chromium.launch({ executablePath: process.env.CHROME ?? "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
+const { check, finish } = makeChecks();
+const browser = await launch();
 
 for (const [name, port, prefix, title] of PORTALS) {
   const origin = `http://127.0.0.1:${port}`;
@@ -42,4 +40,4 @@ for (const [name, port, prefix, title] of PORTALS) {
   await ctx.close();
 }
 await browser.close();
-const failed = results.filter((x) => !x).length; console.log(`\n${results.length - failed}/${results.length} passed`); process.exit(failed ? 1 : 0);
+finish();

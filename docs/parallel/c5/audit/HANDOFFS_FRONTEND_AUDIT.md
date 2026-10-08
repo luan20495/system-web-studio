@@ -129,6 +129,7 @@ These are **questions**, not instructions. Where the backend source already answ
 | HF-C0-06 | M-072 | esbuild as a devDependency | non-blocking |
 | HF-C0-07 | M-073 | stale README / ARCHITECTURE / LOCAL_DEVELOPMENT | non-blocking |
 | HF-C0-08 | M-094 | `canApprove` on a code change | non-blocking |
+| HF-C0-09 | M-072 / M-102 | ONE batched request from S4 wave 1: esbuild devDependency, `test-classify` HELPERS entries, `test:unit` outDir | non-blocking |
 
 **HF-C0-01 — Security header defaults** · M-090 (R2-010) · non-blocking
 * Observed: HSTS only when `STUDIO_HSTS=true` (`packages/auth/src/server/csp.ts:41`); headers in `packages/auth/src/server/nextConfig.ts:35-43` are `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy` (3 features); no COOP / CORP / CSP report endpoint; the mock static export serves no CSP or `X-Frame-Options` (`proxy.ts:3-5`) `[STATIC]`. No live response was captured (no server started).
@@ -160,6 +161,13 @@ These are **questions**, not instructions. Where the backend source already answ
 * Observed: the "Duyệt" button is hidden when `change.createdBy === me.displayName` (`features/studio/CodeWorkspace.tsx:211`) and `createdBy` is a display name (`CodeChange` DTO, `code/CodeChangeController.kt:31`), not an identity `[STATIC]`. The server already refuses self-review: `403 SELF_REVIEW` (`code/CodeChangeController.kt:115`) `[STATIC-BE]`.
 * Request (`code/**` is C0-gated): a server flag on the change (`canApprove`, or `createdByMe`) so the UI can decide without comparing names.
 * C5 will NOT: invent the flag. Interim C5 part: stop using the display-name heuristic and map `SELF_REVIEW` to a Vietnamese message.
+
+**HF-C0-09 — Batched request: test tooling in shared files (S4 wave 1, branch `agent/c5-s4-wave1`)** · M-072, M-102 · non-blocking (C5 works without it today)
+Three small edits in C0-owned files, asked together so they are one review. C5 changed none of them.
+1. **`package.json`: `esbuild` as a root devDependency** (supersedes the "ask" of HF-C0-06; same item). Reason: the browser harness build (`tests/browser/build-harness.mjs`) and the measurement scripts (`scripts/bundle-report.mjs`, `scripts/perf-micro.mjs`) read `ESBUILD_DIR ?? /tmp/esb`, i.e. outside the repository, so a clean checkout cannot run the 12 harness specs. Once it is a dependency C5 changes the default to `node_modules` (one line per file) and keeps `ESBUILD_DIR` as an override. Suggested range: the version already installed in `/tmp/esb` of the audit machine (`node -e "console.log(require(/tmp/esb/node_modules/esbuild/package.json).version)"`).
+2. **`scripts/test-classify.mjs` `HELPERS`: add** `tests/browser/lib/spec.mjs` (the shared spec toolkit, a helper not a test), `tests/browser/hooks-harness.tsx` and `tests/browser/admin-harness.tsx` / `admin-next-shim.tsx` if not yet listed. Today `spec.mjs` carries a `// @class: harness` tag so `test:classify` passes and counts it as one harness file; the HELPERS entry stops it being counted as a test. (HF-T-02 asks for a manifest instead of an in-script list: either is fine, C5 only needs the entry.) `tests/browser/lib/spec.test.mjs` and `spec-lib.wire.test.ts` are real tests (`@class: unit`) and need nothing.
+3. **`scripts/test-unit.mjs` + `tests/tsconfig.json` `outDir`: `.test-build/unit`** (HF-C0-04). `test:unit` still deletes `.test-build`, which removes a harness bundle that was built earlier (observed again in this wave: every unit run needs a harness rebuild before the browser specs). Note for the edit: `tests/browser/page-runtime.spec.mjs` (C2) requires `./.test-build/lib/schema-preview.js` and `./.test-build/workers/render/page-runtime.js`, and `tests/browser/lib/spec.test.mjs` does not use `.test-build`; both the compile output path in `scripts/test-unit.mjs` (`out`, `join(out, "tests")`) and `tests/lib/owned-process.wire.test.ts` / `tests/browser/lib/spec-lib.wire.test.ts` (`__dirname` three / four levels up to the repo root) assume the current depth; moving to `.test-build/unit` adds one level, so those two wire tests need `..` once more (C5 will do that in the same merge if C0 prefers).
+* C5 will NOT: edit `package.json`, `package-lock.json`, `scripts/test-classify.mjs`, `scripts/test-unit.mjs`.
 
 ---
 

@@ -1,15 +1,12 @@
 // @class: harness — real Chromium on the Builder component harness (no backend). Light sanity, NOT a performance project: opening/closing panels many times must not leak DOM nodes, listeners or JS heap,
 // must not produce console errors/warnings (React warnings included) and must not make any network request after the page has loaded.
 // Run: node tests/browser/build-harness.mjs && CHROME=... node tests/browser/harness-server.mjs run -- node tests/browser/sanity.spec.mjs
-import { createRequire } from "node:module";
-const require = createRequire(new URL("../../package.json", import.meta.url).pathname);
-const { chromium } = require("playwright-core");
-const URL_ = process.env.HARNESS_URL ?? "http://127.0.0.1:4000/index.html";
+import { harnessUrl, launch, makeChecks } from "./lib/spec.mjs";
+const URL_ = harnessUrl();
 const ROUNDS = Number(process.env.SANITY_ROUNDS ?? 40), WARMUP = 10;
-const results = [];
-const check = (name, ok, detail = "") => { results.push({ name, ok: !!ok, detail }); console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  — " + detail : ""}`); };
+const { check, finish } = makeChecks();
 
-const browser = await chromium.launch({ executablePath: process.env.CHROME ?? "/opt/pw-browsers/chromium-1194/chrome-linux/chrome", args: ["--enable-precise-memory-info"] });
+const browser = await launch({ args: ["--enable-precise-memory-info"] });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 page.setDefaultTimeout(5000);                                              // a missing control must fail fast, not wait 30 s per click
 const console_ = [], errors = [], requestsAfterLoad = []; let loaded = false;
@@ -54,4 +51,4 @@ check("no console errors or warnings (React warnings included)", console_.length
 check("no uncaught exception / unhandled rejection", errors.length === 0, errors.slice(0, 3).join(" | "));
 check("no network request after the page loaded (nothing polls, nothing storms)", requestsAfterLoad.length === 0, requestsAfterLoad.slice(0, 3).join(" | "));
 await browser.close();
-const bad = results.filter((r) => !r.ok).length; console.log(`\n${results.length - bad}/${results.length} passed`); process.exit(bad ? 1 : 0);
+finish();
