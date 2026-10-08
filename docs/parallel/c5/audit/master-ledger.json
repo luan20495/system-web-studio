@@ -1,0 +1,1983 @@
+[
+ [
+  "M-001",
+  "P1",
+  "C5",
+  "Studio",
+  "/projects/:id/code · change review",
+  "Cancel in the code-change review prompt APPROVES the change",
+  [
+   "S1-004"
+  ],
+  "CodeWorkspace.tsx:122 (+:211): window.prompt(...) ?? undefined turns Cancel (null) into 'no comment' and POSTs approve",
+  "S1",
+  "none",
+  "N (harness)",
+  "Replace prompt with a real dialog (see M-017): Cancel = no request; explicit 'Duyệt' / 'Từ chối' buttons",
+  "unit: cancel path sends nothing; harness spec: Cancel leaves the change pending",
+  ""
+ ],
+ [
+  "M-002",
+  "P1",
+  "C5",
+  "Studio",
+  "design · Inspector",
+  "Unsaved Inspector edits are silently lost when another section is selected; focus drops to body after 'Lưu thay đổi'",
+  [
+   "S1-005"
+  ],
+  "Inspector.tsx:43,53: key = section id + JSON.stringify(props) remounts the form; no dirty guard, no focus restore",
+  "S1",
+  "none",
+  "N (harness)",
+  "Dirty state kept per section or an unsaved-changes prompt; keep the form mounted across selection; return focus to the saved control",
+  "builder.spec: type, select another, come back = value kept or prompt shown; focus after save",
+  ""
+ ],
+ [
+  "M-003",
+  "P1",
+  "C5",
+  "Studio",
+  "design · canvas",
+  "Selecting a section reloads the preview iframe and resets its scroll",
+  [
+   "S1-001"
+  ],
+  "BuilderWorkspace.tsx:163 (html depends on selectedId) + lib/schema-preview.ts:114 (selection baked into HTML)",
+  "S1",
+  "none",
+  "N (harness)",
+  "srcDoc independent of selection; postMessage {studio:select} (script exists) to toggle the selection class",
+  "builder.spec: scrollY + iframe marker survive a selection",
+  ""
+ ],
+ [
+  "M-004",
+  "P1",
+  "C5",
+  "Studio",
+  "ai mode · conversation",
+  "AI conversation never scrolls to the newest message and is not announced to screen readers",
+  [
+   "S1-002",
+   "S1-003",
+   "S3-023"
+  ],
+  "ProjectWorkspace.tsx:319-333: no scroll anchoring, no role=log; role=status text changes on every chunk (continuous chatter)",
+  "S1",
+  "none",
+  "N (harness; streaming not driven)",
+  "Scroll anchor on new message; role=log with polite announcements per message (not per chunk); keep typing status separate",
+  "harness: scrollTop follows; axe + live-region check",
+  "S1-003 was P2; merged under the P1 queue per C5-L instruction (WCAG 4.1.3 + core flow)"
+ ],
+ [
+  "M-005",
+  "P1",
+  "C5",
+  "Studio",
+  "design · Data rail",
+  "Data binding needs 7 steps, internal jargon (ViewModel, slot, operation key) and two competing 'Gắn dữ liệu' paths; contradictory 'no operation to add a slot' copy",
+  [
+   "S1-006",
+   "S1-027"
+  ],
+  "builder/DataWizard.tsx:39-205, PublicDataPanels.tsx:157-226, DataSourcesPanel.tsx:213 vs DataWizard.tsx:100",
+  "S1",
+  "C3 data contract unchanged (flow simplification is UI only)",
+  "N (harness)",
+  "Guided path with plain-language names, one entry point, hide advanced steps; fix the contradictory message",
+  "builder/datasources/publicdata specs updated; usability walkthrough in the evidence",
+  ""
+ ],
+ [
+  "M-006",
+  "P1",
+  "C5",
+  "all",
+  "error handling",
+  "No error boundary anywhere: a render exception unmounts the whole portal; the Builder loses its in-flight edit",
+  [
+   "R-001",
+   "S2-005",
+   "R2-015"
+  ],
+  "no error.tsx / global-error.tsx / ErrorBoundary in apps/*/app, app/, PortalApp.tsx:15-17",
+  "S3 (component) + S1 (Builder boundary) + S2 (Portal boundary)",
+  "none",
+  "N",
+  "Shared ErrorBoundary (packages/ui) + error.tsx/global-error.tsx per app + boundary around the route render and around BuilderWorkspace; request id shown; 'Thử lại'",
+  "unit (SSR fallback) + harness page that throws on click: fallback, focus, retry",
+  ""
+ ],
+ [
+  "M-007",
+  "P1",
+  "C5",
+  "Platform+Admin",
+  "users (create) · people · employees · users/:id (reset) · link dialog",
+  "One-time activation link lost on Enter/Esc/'Xong' (initial focus on 'Xong'); tenant admin cannot re-issue it",
+  [
+   "S2-001",
+   "S3-033"
+  ],
+  "Modal.tsx:16 focuses the first button; UserDialogs.tsx:13-27; ProvisioningScreens.tsx:118-121",
+  "S2 (+S3 Modal)",
+  "C1: re-issue for tenant admin (reset needs platformScope)",
+  "Y (re-issue); N for the C5 part",
+  "Focus the link/Copy; Esc and 'Xong' ask for confirmation until copied; clipboard failure visible",
+  "admin harness: Enter/Esc/Xong keep the link until confirmed",
+  "backend half = handoff C1"
+ ],
+ [
+  "M-008",
+  "P1",
+  "C5",
+  "Platform",
+  "tenants · Tạo công ty",
+  "'Tạo công ty' is a dead end for the first admin (≈12 clicks across two modules)",
+  [
+   "S2-002"
+  ],
+  "TenantScreens.tsx:205 (copy), TenantBody:120-135 (no CTA)",
+  "S2",
+  "C1 provisioning contract (existing)",
+  "Y",
+  "Offer the create-account step from the company page / pre-fill; fix the misleading note",
+  "admin harness + real-stack walkthrough",
+  ""
+ ],
+ [
+  "M-009",
+  "P1",
+  "HANDOFF",
+  "Admin (SYSTEM_ADMIN)",
+  "applications/:id",
+  "SYSTEM_ADMIN app detail offers 'Xóa' / 'Khôi phục vN' on workspace-scoped routes the backend refuses (404 for a non-member platform admin)",
+  [
+   "S2-003"
+  ],
+  "AdminApp.tsx:405,429 (api.deleteProject, api.restoreVersion); backend AccessService (source-verified only)",
+  "S2 (hide/explain) + C1",
+  "C1: admin-scoped delete/restore",
+  "Y",
+  "C5: hide or explain the controls until C1 provides routes; do not invent routes",
+  "real-backend e2e once C1 route exists",
+  "Backend half not verified on real backend"
+ ],
+ [
+  "M-010",
+  "P1",
+  "C5",
+  "Platform+Admin",
+  "create company / create account dialogs",
+  "Esc/backdrop closes the dialog while the POST is in flight: the account is created and the link modal never shows; Esc closes all stacked modals; onClose captured once",
+  [
+   "S2-004",
+   "S1-011",
+   "S3-035"
+  ],
+  "Modal.tsx:19 onClose() unconditional, useEffect([]) captures first onClose; drawers.tsx:32 / builder primitives:46 overlay mousedown closes at once",
+  "S3 (Modal) + S2/S1",
+  "none",
+  "N",
+  "Modal 'dismissible' prop: not dismissible while busy; backdrop click needs mousedown+mouseup on the backdrop; Esc closes only the top modal",
+  "harness: Esc during in-flight does nothing; stacked Esc order",
+  ""
+ ],
+ [
+  "M-011",
+  "P1",
+  "C5",
+  "Studio AI/Code mode",
+  "<=767px",
+  "Studio AI/Code workspace on a phone hides Website/Phiên bản/Tệp/Chia sẻ/Cài đặt (and Lịch sử/Thư viện/IDE/Máy chủ) with no replacement menu; preview only 25% of the screen",
+  [
+   "S3-004",
+   "S3-022"
+  ],
+  "responsive.css:182-186 hides the buttons; pane-tab rules target legacy markup; ProjectWorkspace topbar",
+  "S1",
+  "none",
+  "N (replica markup in S3 audit: re-measure on the real stack)",
+  "Overflow ('Thêm ▾') menu / drawer on <=767; pane switch for AI/preview",
+  "responsive matrix + axe; replica replaced by the real component in the final audit",
+  "S3 evidence was a REPLICA (markup copy), re-measure"
+ ],
+ [
+  "M-012",
+  "P1",
+  "C5",
+  "Platform+Admin",
+  "data-sources",
+  "Admin/Platform 'Nguồn dữ liệu' renders unstyled (UA fieldset borders, delete dialog in page flow, white-on-white buttons, giant headings); panel built for the dark Studio and imported across features",
+  [
+   "S3-001",
+   "S2-020",
+   "S3-007",
+   "R-037"
+  ],
+  "apps/admin|platform layout.tsx do not load builder.css; DataSourcesPanel.tsx uses bx-*; TenantScreens.tsx:20-21,350 imports it with a fake doc 'as never'",
+  "S3 (styles) + S2",
+  "none",
+  "N (harness)",
+  "Move panel styles to a shared scoped stylesheet loaded by all portals (or restyle with factory classes); give the panel a real Admin variant instead of the fake doc",
+  "harness render in Admin context; axe; screenshot",
+  ""
+ ],
+ [
+  "M-013",
+  "P1",
+  "C5",
+  "all (<=900px)",
+  "mobile nav drawer closed",
+  "Closed mobile nav drawer stays in the Tab order (16 links; first Tab lands off-screen)",
+  [
+   "S2-016",
+   "S3-002"
+  ],
+  "factory.css:342-343 transform only; useNavDrawer has Esc but no inert/visibility/focus move",
+  "S3",
+  "none",
+  "N (harness)",
+  "visibility:hidden/inert when closed, focus move + trap + restore when open",
+  "harness: Tab skips closed drawer; open/close focus",
+  ""
+ ],
+ [
+  "M-014",
+  "P1",
+  "C5",
+  "Platform+Admin",
+  "<=394px · 400% zoom",
+  "'.grid2 minmax(380px,1fr)' overflows main sideways at <=394px (WCAG 1.4.10 reflow)",
+  [
+   "S3-003"
+  ],
+  "factory.css:41 repeat(auto-fit,minmax(380px,1fr))",
+  "S3",
+  "none",
+  "N (harness)",
+  "minmax(min(380px,100%),1fr)",
+  "responsive matrix at 360/390; no horizontal scroll",
+  ""
+ ],
+ [
+  "M-015",
+  "P1",
+  "C5",
+  "Studio",
+  "code workspace editor",
+  "Code editor swallows Tab/Shift+Tab: keyboard trap (WCAG 2.1.2 A)",
+  [
+   "S1-034",
+   "S3-005"
+  ],
+  "CodeWorkspace.tsx:185 preventDefault on every Tab",
+  "S1",
+  "none",
+  "N (harness)",
+  "Esc-then-Tab escape hatch (or Tab indents only when explicitly enabled) with a visible hint",
+  "harness: Shift+Tab leaves; hint present",
+  ""
+ ],
+ [
+  "M-016",
+  "P1",
+  "C5",
+  "Studio",
+  "all (feedback)",
+  "Toast has no live region, no dismiss, no timeout, sits under the builder overlay and is replaced silently",
+  [
+   "S1-014",
+   "S3-006"
+  ],
+  "ProjectWorkspace.tsx:375, CodeWorkspace.tsx:240 (<button class=toast>), globals.css z-index 70 < overlay",
+  "S3 (component) + S1",
+  "none",
+  "N",
+  "Shared Toast: role=status/alert by kind, auto-dismiss (errors persist), dismiss button, above overlays",
+  "unit + harness live-region test; axe",
+  "S1 rated P2, S3 rated P1: WCAG 4.1.3 (AA) on the main feedback channel -> P1"
+ ],
+ [
+  "M-017",
+  "P2",
+  "C5",
+  "all",
+  "destructive confirmations (native confirm/prompt)",
+  "30-34 native window.confirm()/prompt() sites: unstyled, suppressible, reject reason entered in a bare prompt; leaving yourself says 'Xóa luan khỏi project?'",
+  [
+   "S2-007",
+   "S1-032",
+   "S3-017",
+   "R-013",
+   "R2-023"
+  ],
+  "AdminApp.tsx:285,290,295,404,405,429,650,686,690,770,816,851,934,1081,1082; drawers.tsx:165; AiSetup",
+  "S3 (ConfirmDialog/PromptDialog) + S1 + S2",
+  "none",
+  "N",
+  "Shared ConfirmDialog/PromptDialog (focus trap, destructive style, busy lock) and replace all call sites",
+  "harness specs; grep guard: no window.confirm/prompt in portal code",
+  ""
+ ],
+ [
+  "M-018",
+  "P2",
+  "C5",
+  "Platform+Admin",
+  "users/:id · AI budget · cleanup · credentials",
+  "Irreversible/high-impact actions with no confirmation: role select commits on change (promote to TENANT_ADMIN), disable user, cleanup run, delete credential, delete secret",
+  [
+   "S2-008",
+   "S3-050"
+  ],
+  "TenantScreens.tsx:70-76,89; AiSetup.tsx:57-59; AdminApp.tsx:685-689,83x",
+  "S2",
+  "none",
+  "N",
+  "Confirm with consequence text; role change needs explicit 'Lưu'",
+  "admin harness",
+  ""
+ ],
+ [
+  "M-019",
+  "P2",
+  "C5",
+  "Studio",
+  "versions · code · settings",
+  "Destructive Studio actions with no/weak confirmation: 'Phục vụ lại bản này' rolls back live release in one click; discard code change; delete runtime secret; 'Khôi phục bản này'; 'Xóa nguồn' confirm is a primary button",
+  [
+   "S1-013",
+   "S1-033",
+   "S1-054"
+  ],
+  "ReleaseModal.tsx:213; CodeWorkspace.tsx:125,215; CodePanels.tsx:132,139; DataSourcesPanel.tsx:218",
+  "S1",
+  "none",
+  "N (harness; release spec asserts one click)",
+  "ConfirmDialog with consequences; danger styling; update release spec",
+  "release.spec updated",
+  ""
+ ],
+ [
+  "M-020",
+  "P2",
+  "C5",
+  "all",
+  "forms · create/update",
+  "No shared in-flight guard: double click/Ctrl+Enter sends duplicate requests (2 cost POSTs, 2 dept POSTs, 2 AI-budget PUTs, 3 createProject, 2 ADD_PAGE, archive/withdraw/delete)",
+  [
+   "S2-009",
+   "S1-008",
+   "S1-015",
+   "S1-057",
+   "R-011"
+  ],
+  "AdminApp.tsx:510,1041,1076-1088,920,926,1144; StudioApp.tsx:112,127,244-317; PagesPanel.tsx:128-146; 13 hand-written act()",
+  "S3 (useAction hook) + S1/S2 call sites",
+  "none",
+  "N (harness)",
+  "useAction(busy,error,once) in packages/ui; migrate the listed call sites",
+  "harness double-click tests",
+  ""
+ ],
+ [
+  "M-021",
+  "P2",
+  "C5",
+  "Studio",
+  "builder dialogs",
+  "Builder dialog: Esc does nothing when focus is on <body> (handlers on the dialog node); backdrop mousedown closes unsaved add/rename dialogs",
+  [
+   "S1-012",
+   "S3-012"
+  ],
+  "builder/ui/primitives.tsx:28-52 (onKeyDown on dialog div :36-38, onMouseDown :46)",
+  "S1 (+S3)",
+  "none",
+  "N (harness)",
+  "document-level Escape while open; mouseup-on-backdrop rule shared with M-010",
+  "builder.spec dialogs",
+  ""
+ ],
+ [
+  "M-022",
+  "P2",
+  "C5",
+  "all",
+  "Modal with Picker",
+  "Modal opens with focus on the invisible srOnly <select> and keeps it in the Tab loop",
+  [
+   "S3-010"
+  ],
+  "Modal.tsx:16 selector + :5 FOCUSABLE lack tabindex=-1/hidden exclusion",
+  "S3",
+  "none",
+  "N (harness)",
+  "exclude tabindex=-1 and .srOnly from FOCUSABLE and initial focus",
+  "harness",
+  ""
+ ],
+ [
+  "M-023",
+  "P2",
+  "C5",
+  "all",
+  "dialog primitives",
+  "Four dialog/focus-trap implementations with different rules (scroll lock only in Modal; no inert/aria-hidden behind; Esc propagation; nested lock restore order)",
+  [
+   "R-012",
+   "S3-034",
+   "S1-043"
+  ],
+  "Modal.tsx:11, useDialog.ts:11,26, builder/ui/primitives.tsx, company-ui",
+  "S3",
+  "none",
+  "N",
+  "One shared dialog core (trap, restore, scroll lock with correct nesting, inert background) used by Modal/useDialog/builder Dialog",
+  "unit + harness nested-dialog test",
+  ""
+ ],
+ [
+  "M-024",
+  "P2",
+  "C5",
+  "all",
+  "Picker",
+  "Picker listbox: aria-activedescendant on the listbox while focus stays on the button; active option never announced",
+  [
+   "S3-011"
+  ],
+  "Picker.tsx:38 vs :42",
+  "S3",
+  "none",
+  "N (harness)",
+  "aria-activedescendant on the focused combobox button or move focus into the listbox",
+  "harness + axe",
+  ""
+ ],
+ [
+  "M-025",
+  "P2",
+  "C5",
+  "all",
+  "skip link / landmarks / route change",
+  "No skip link (19 Tabs to <main>); main is a tab stop even when it does not scroll; no focus/scroll handling on route change",
+  [
+   "S2-017",
+   "S3-038",
+   "S2-033"
+  ],
+  "AdminApp.tsx:61-68, StudioApp.tsx:42",
+  "S2/S1/S3",
+  "none",
+  "N",
+  "Skip link in the shared shell; main tabindex only while overflowing (useOverflow); focus main/h1 on route change",
+  "harness keyboard test",
+  ""
+ ],
+ [
+  "M-026",
+  "P2",
+  "C5",
+  "all light shells",
+  "focus ring",
+  "Focus ring #67b8ff is 2.13:1 on white (7 control types); checkbox/radio ring #c7d2fe 1.49:1",
+  [
+   "S3-008"
+  ],
+  "responsive.css:62-70 dark ring applies everywhere; factory.css checkbox ring",
+  "S3",
+  "none",
+  "N",
+  "Light-theme focus token >=3:1 (non-text contrast) per surface",
+  "computed contrast script + screenshots",
+  ""
+ ],
+ [
+  "M-027",
+  "P2",
+  "C5",
+  "all",
+  "control boundaries",
+  "Control borders 1.24-1.48:1 (inputs, switch off track, outlined buttons) fail 1.4.11; inputs identified only by border",
+  [
+   "S3-009",
+   "R2-030"
+  ],
+  "--f-line reused for control borders (factory.css:26,362), .xp-switch",
+  "S3",
+  "none",
+  "N",
+  "Separate --f-control-border token >=3:1; switch off-state contrast",
+  "contrast script",
+  ""
+ ],
+ [
+  "M-028",
+  "P2",
+  "C5",
+  "all",
+  "tabs",
+  "role=tab on <a>/<button> with no tabpanel/aria-controls/arrow keys; radio cards each a tab stop; PersonPicker aria-expanded constant",
+  [
+   "S1-048",
+   "S2-032",
+   "S3-013"
+  ],
+  "AdminApp.tsx:232-235,407,581-584; AiSetup.tsx:38; StudioApp.tsx:164,207-211,285; ad-hoc .tabs",
+  "S3 (Tabs primitive) + S1/S2",
+  "none",
+  "N",
+  "Use the Tabs primitive (or plain nav links without role=tab)",
+  "axe + keyboard harness",
+  ""
+ ],
+ [
+  "M-029",
+  "P2",
+  "C5",
+  "Platform+Admin",
+  "audit table",
+  "Audit rows expand on mouse click only (no role/aria-expanded/keyboard)",
+  [
+   "S2-021",
+   "S3-014"
+  ],
+  "AdminApp.tsx:168-174 tr onClick",
+  "S2",
+  "none",
+  "N",
+  "Row button with aria-expanded",
+  "harness keyboard",
+  ""
+ ],
+ [
+  "M-030",
+  "P2",
+  "C5",
+  "Studio",
+  "release modal",
+  "Publish audience choice ('Riêng tư'/'Công khai') are class-only buttons (no aria-pressed/radio)",
+  [
+   "S1-018",
+   "S3-015"
+  ],
+  "ReleaseModal.tsx:187; .publishChoice",
+  "S1",
+  "none",
+  "N (harness)",
+  "radiogroup semantics",
+  "release.spec + axe",
+  ""
+ ],
+ [
+  "M-031",
+  "P2",
+  "C5",
+  "all",
+  "disabled controls",
+  "Disabled-button reasons exist only as title= (invisible on touch, not focusable); disabled buttons are not focusable",
+  [
+   "S1-030",
+   "S2-042",
+   "S3-016"
+  ],
+  "BuilderTopBar.tsx:37-38, ProjectWorkspace.tsx:279,298-299, ReleaseModal; AdminApp.tsx:304",
+  "S3 (pattern) + S1/S2",
+  "none",
+  "N",
+  "aria-disabled + visible helper text instead of title-only",
+  "harness",
+  ""
+ ],
+ [
+  "M-032",
+  "P2",
+  "C5",
+  "Platform+Admin",
+  "status colours",
+  "Warnings/risk shown grey (status keys reused as a colour picker): Rủi ro cao, Trả phí, Chờ duyệt…",
+  [
+   "S3-044"
+  ],
+  "AdminApp.tsx:863, AiSetup.tsx:218 ...",
+  "S3",
+  "none",
+  "N",
+  "Pill tone per semantic status map",
+  "screenshots",
+  ""
+ ],
+ [
+  "M-033",
+  "P2",
+  "C5",
+  "Platform+Admin",
+  "<=600px · providers",
+  "Provider row collapses to width 0 next to a 244px action group at 390",
+  [
+   "S2-018"
+  ],
+  "factory.css:257-259 (.xp-provMain flex row, no wrap)",
+  "S2/S3",
+  "none",
+  "N (harness)",
+  "wrap row <=600",
+  "responsive matrix",
+  ""
+ ],
+ [
+  "M-034",
+  "P2",
+  "C5",
+  "Platform+Admin",
+  "dialogs",
+  "Server error rendered below the fold, under the sticky footer",
+  [
+   "S2-019"
+  ],
+  "TenantScreens.tsx:208, ProvisioningScreens:112",
+  "S2",
+  "none",
+  "N",
+  "error near the submit + scroll into view + role=alert",
+  "harness",
+  ""
+ ],
+ [
+  "M-035",
+  "P2",
+  "C5",
+  "Studio",
+  "members drawer",
+  "Members drawer table overflows at 390 (role select clipped, 'Xóa' off-screen)",
+  [
+   "S1-031"
+  ],
+  "drawers.tsx:105-134, http.css .memberTable",
+  "S1",
+  "none",
+  "N (harness)",
+  "card layout <=600",
+  "responsive matrix",
+  ""
+ ],
+ [
+  "M-036",
+  "P2",
+  "C5",
+  "Studio",
+  "design · phone",
+  "Phone builder does not tell the user that phones are look-and-adjust; toolbar is tall with meaningless device buttons",
+  [
+   "S1-007"
+  ],
+  "builder.css:146-160, BuilderTopBar.tsx; (phone switch added in 9f858c2, limitation not communicated)",
+  "S1",
+  "none",
+  "N",
+  "One-line notice on <=760 ('Trên điện thoại: xem và chỉnh nhẹ; kéo-thả cần màn hình lớn'), hide device buttons",
+  "mobile run + screenshot",
+  ""
+ ],
+ [
+  "M-037",
+  "P2",
+  "C5",
+  "Studio",
+  "design rails",
+  "Half-filled data/action/workflow editors lose their state on a rail-tab switch (only the selected rail panel is mounted)",
+  [
+   "S1-056"
+  ],
+  "BuilderWorkspace.tsx:168-182",
+  "S1",
+  "none",
+  "N (harness)",
+  "Keep panels mounted (hidden) or lift draft state",
+  "builder.spec",
+  ""
+ ],
+ [
+  "M-038",
+  "P2",
+  "C5",
+  "Studio",
+  "menu / 404 / theme editors",
+  "MenuEditor/NotFoundEditor/ThemePanel copy the doc into useState once: after removing a page, 'Lưu menu' re-adds a link to the deleted page",
+  [
+   "S1-010"
+  ],
+  "panels/PagesPanel.tsx:174,207, MiscPanels.tsx:36",
+  "S1",
+  "none",
+  "N (harness)",
+  "derive from doc / reset on revision",
+  "builder.spec",
+  ""
+ ],
+ [
+  "M-039",
+  "P2",
+  "HANDOFF",
+  "Studio",
+  "settings drawer",
+  "Settings cannot clear domain/customDomain/deploymentTarget (empty values omitted from PATCH)",
+  [
+   "S1-009"
+  ],
+  "drawers.tsx:49-51",
+  "S1 + C2 answer",
+  "C2: PATCH semantics for omitted/null fields",
+  "Y",
+  "DO NOT invent semantics: ask C2 (question routed); then send explicit clear if allowed",
+  "real-backend e2e",
+  ""
+ ],
+ [
+  "M-040",
+  "P2",
+  "HANDOFF",
+  "Studio",
+  "ai mode",
+  "GET /ai/status is sent without workspaceId (effect runs with ws === '') and never refreshed",
+  [
+   "S1-036"
+  ],
+  "ProjectWorkspace.tsx:112 (+:85)",
+  "S1 + C2 answer",
+  "C2: does ?workspaceId change the answer?",
+  "Y",
+  "Question routed to C2; guard the effect until the workspace is known",
+  "real-backend check",
+  ""
+ ],
+ [
+  "M-041",
+  "P2",
+  "C5",
+  "Studio",
+  "home",
+  "Project cards: hard-coded 'Website' pill with PRIVATE tone (appKind exists); KPIs show '…' forever and chips blank on error",
+  [
+   "S1-025",
+   "S1-026"
+  ],
+  "StudioApp.tsx:97,107-108,133-141,149",
+  "S1",
+  "none",
+  "N (harness)",
+  "use appKind; error + retry state",
+  "harness",
+  ""
+ ],
+ [
+  "M-042",
+  "P2",
+  "C5",
+  "Studio",
+  "preview · test mode · theme",
+  "Preview is non-interactive (sandbox) so 'try' is a list of buttons; Theme panel values are saved but not shown (renderer ignores AppDefinition.theme)",
+  [
+   "S1-028",
+   "S1-055",
+   "R2-029"
+  ],
+  "BuilderWorkspace.tsx:90, Canvas.tsx; MiscPanels.tsx:35-45, lib/schema-preview.ts + workers/render never read theme",
+  "S1 (label) + C2 (renderer)",
+  "C2: apply AppDefinition.theme in workers/render and schema-preview",
+  "Y",
+  "C5: say clearly what preview does; C2 implements theme",
+  "real-backend publish check",
+  "renderer is C2/shared"
+ ],
+ [
+  "M-043",
+  "P2",
+  "C5",
+  "Studio",
+  "ai/code tabs",
+  "'Code' tab always shown; the page says Code Mode is 'a separate product phase' (dead end)",
+  [
+   "S1-029"
+  ],
+  "ProjectWorkspace.tsx:259-263,305-314",
+  "S1",
+  "none",
+  "N",
+  "hide or label 'Sắp có'",
+  "harness",
+  ""
+ ],
+ [
+  "M-044",
+  "P2",
+  "C5",
+  "Studio",
+  "page dialogs",
+  "Page dialog shows only 'Không lưu được' (real reason only in a toast)",
+  [
+   "S1-016"
+  ],
+  "panels/PagesPanel.tsx:92,98,104",
+  "S1",
+  "none",
+  "N (harness)",
+  "show server reason in the dialog (role=alert)",
+  "builder.spec",
+  ""
+ ],
+ [
+  "M-045",
+  "P2",
+  "C5",
+  "Studio",
+  "code drafts",
+  "No beforeunload/navigation guard for code drafts (reload loses them)",
+  [
+   "S1-035"
+  ],
+  "CodeWorkspace.tsx",
+  "S1",
+  "none",
+  "N",
+  "dirty guard",
+  "harness",
+  ""
+ ],
+ [
+  "M-046",
+  "P2",
+  "C5",
+  "Studio",
+  "design canvas",
+  "studio:layout fires every frame and each builds a new rect array -> full re-render (20 messages measured in the harness)",
+  [
+   "S1-041"
+  ],
+  "Canvas.tsx:30, BuilderWorkspace.tsx:79",
+  "S1 + S4 measure",
+  "none",
+  "N (harness)",
+  "rAF/equality-gate setRects",
+  "S4 perf script before/after",
+  ""
+ ],
+ [
+  "M-047",
+  "P2",
+  "C5",
+  "Studio",
+  "Site drawer vs Pages panel",
+  "Two implementations of page add/nav/404 editing with different validation (SitePanels.tsx vs PagesPanel/MenuEditor/NotFoundEditor); 3 copies of slug helper",
+  [
+   "S1-042",
+   "R-019",
+   "R-018"
+  ],
+  "SitePanels.tsx:10-100 vs panels/PagesPanel.tsx; adminModel.ts:71, core/pages.ts:24",
+  "S1",
+  "none",
+  "N",
+  "single implementation (builder core) used by both",
+  "unit + builder.spec",
+  ""
+ ],
+ [
+  "M-048",
+  "P2",
+  "C5",
+  "Studio",
+  "ProjectWorkspace / StudioApp",
+  "ProjectWorkspace is one 357-line function (24 useState, 12 useEffect: save machine, error mapping, AI streaming, block plan); StudioApp has 8 screens",
+  [
+   "R-005",
+   "S1-044",
+   "R-006"
+  ],
+  "ProjectWorkspace.tsx:45-402; StudioApp.tsx:104-394",
+  "S1",
+  "none",
+  "N",
+  "extract hooks (useSaveMachine, useAiStream) and split StudioApp screens; behaviour-preserving",
+  "unit tests for extracted hooks",
+  ""
+ ],
+ [
+  "M-049",
+  "P2",
+  "C5",
+  "Studio",
+  "ai mode",
+  "?prompt= auto-sends an AI prompt on load (creates a version): link-triggered action, prompt in URL/history/logs",
+  [
+   "R2-001",
+   "S1-046"
+  ],
+  "ProjectWorkspace.tsx:173-178; StudioApp.tsx:117",
+  "S1",
+  "none",
+  "N",
+  "hand the prompt over via history.state/one-shot store; never act on load without user action",
+  "harness",
+  ""
+ ],
+ [
+  "M-050",
+  "P2",
+  "C5",
+  "Studio",
+  "code panels",
+  "IDE clone token shown in clear twice (also in git clone URL); null renders 'null'; no mask/copy/auto-clear",
+  [
+   "R2-002"
+  ],
+  "CodePanels.tsx:98,103-105",
+  "S1",
+  "none",
+  "N",
+  "mask + copy button + timeout; no URL-embedded token",
+  "harness",
+  ""
+ ],
+ [
+  "M-051",
+  "P2",
+  "HANDOFF",
+  "Studio",
+  "site access",
+  "Access-ticket query path sent unvalidated; r.redirect goes straight to window.location.assign; href/iframe URLs used as-is",
+  [
+   "R2-003",
+   "S1-047",
+   "R2-008"
+  ],
+  "StudioApp.tsx:372-382; drawers.tsx:94, ReleaseModal.tsx:170,202, CodeWorkspace.tsx:221; api.ts",
+  "S1 (client validation) + C2 (server)",
+  "C2: server validation of path/redirect (inference)",
+  "Y",
+  "client: validate same-origin/https, encode path; C2 confirms server",
+  "unit for URL guard",
+  ""
+ ],
+ [
+  "M-052",
+  "P2",
+  "C5",
+  "Platform+Admin",
+  "permissions",
+  "Tenant scope/admin gate derived from role === 'TENANT_ADMIN' (header claims no role name is read); capabilities docs contradict",
+  [
+   "R2-004",
+   "S2-036",
+   "R-032",
+   "R-033"
+  ],
+  "packages/permissions/src/index.ts:46; adminModel.ts:25",
+  "S2 (+C1 capability codes)",
+  "C1: per-tenant capability codes (H-C1-04 style)",
+  "Y",
+  "C5: central helper + guard test scanning features/admin; C1 supplies capability codes",
+  "permissions.test guard extended",
+  ""
+ ],
+ [
+  "M-053",
+  "P2",
+  "C5",
+  "Platform+Admin+Studio",
+  "bundles",
+  "Platform and Admin ship identical bundles (942 KB/272 KB gzip) and Studio 1048 KB/311 KB; no code splitting; whole UI + endpoint inventory shipped to every user",
+  [
+   "R-007",
+   "R2-016"
+  ],
+  "one catch-all route + static imports: apps/*/app/entry.tsx, AdminApp.tsx",
+  "S4 measure + S2/S1",
+  "none",
+  "N",
+  "dynamic import for dialogs/panels/Admin sections; split AdminApp by portal (see M-064)",
+  "S4 bundle table before/after",
+  ""
+ ],
+ [
+  "M-054",
+  "P2",
+  "C5",
+  "Platform",
+  "overview",
+  "Platform overview shows the company onboarding checklist to a SYSTEM_ADMIN",
+  [
+   "S2-012"
+  ],
+  "AdminApp.tsx:188,205-226",
+  "S2",
+  "none",
+  "N (harness)",
+  "persona-specific overview",
+  "admin harness",
+  ""
+ ],
+ [
+  "M-055",
+  "P2",
+  "C5",
+  "Platform+Admin",
+  "unknown route",
+  "/platform/nope and /admin/nope answer 'Mục này nằm ở trang khác' with a button to the other portal, which answers the same (loop)",
+  [
+   "S2-013"
+  ],
+  "AdminApp.tsx:88, base.ts:23",
+  "S2",
+  "none",
+  "N",
+  "real 404 state",
+  "harness",
+  ""
+ ],
+ [
+  "M-056",
+  "P2",
+  "C5",
+  "Platform+Admin",
+  "builds · identity · settings",
+  "Failed secondary loads leave spinners forever (Builds 2 spinners, Identity KPI '…'); scope options swallow errors",
+  [
+   "S2-014"
+  ],
+  "AdminApp.tsx:788-792,1124,1117-1119,894",
+  "S2",
+  "none",
+  "N (harness)",
+  "error state + retry",
+  "harness",
+  ""
+ ],
+ [
+  "M-057",
+  "P2",
+  "C5",
+  "Admin",
+  "employees/:id",
+  "'Tắt tài khoản/Bật tài khoản' enabled for scope.platform but has no onClick",
+  [
+   "S2-015"
+  ],
+  "EmployeesScreens.tsx:164; OrganizationLive.tsx:41",
+  "S2",
+  "NOT_READY org backend",
+  "N",
+  "disable with reason or wire to existing member route only if it exists (no invention)",
+  "org harness",
+  ""
+ ],
+ [
+  "M-058",
+  "P2",
+  "HANDOFF",
+  "Platform",
+  "tenants · users",
+  "Tenants list has no search/pager (63 rows); users list has no company column/filter; first page of workspaces of ALL tenants only",
+  [
+   "S2-022",
+   "S2-023"
+  ],
+  "TenantScreens.tsx:139-160; AdminApp.tsx:256-265; ProvisioningLive.tsx:21-26",
+  "S2 + C1",
+  "C1: tenant fields/filter on /admin/users; GET /admin/tenants/{t}/workspaces",
+  "Y",
+  "C5: client search/pager over what exists; C1 supplies routes",
+  "real-backend",
+  ""
+ ],
+ [
+  "M-059",
+  "P2",
+  "HANDOFF",
+  "Platform",
+  "AI settings",
+  "'Nhà cung cấp: OpenRouter/Mô phỏng · Chưa có OPENROUTER_API_KEY' comes from legacy /admin/ai (reports only openrouter|mock)",
+  [
+   "S2-024"
+  ],
+  "AdminApp.tsx:543-547",
+  "S2 + backend",
+  "backend: provider status route",
+  "Y",
+  "C5: stop showing the legacy field as truth; label",
+  "real-backend",
+  ""
+ ],
+ [
+  "M-060",
+  "P2",
+  "C5",
+  "all",
+  "text · config names",
+  "Config/internal names shown to users (OPENROUTER_API_KEY, OIDC_ENABLED, SCIM_TOKEN, BACKUP_STATUS_DIRS, app.data-platform.enabled, APP_PUBLISH, pointerVersion, apiBase, ADD_QUERY, DataGateway.discoverSchema, 'Backend provisioning', 'revision N', MinIO, 'Mock/Self-host/Cloud')",
+  [
+   "S2-025",
+   "S3-026",
+   "S1-019",
+   "S1-020",
+   "S1-021"
+  ],
+  "AdminApp.tsx:543,1117-1120,1184-1185; ReleaseModal.tsx:164-223; builder/core/readiness.ts:39-58; provisioningModel.ts:82",
+  "S3 (text) + S1/S2",
+  "none",
+  "N",
+  "plain Vietnamese copy; keep technical names in a collapsed 'Chi tiết kỹ thuật'",
+  "text lint guard (denylist) + review",
+  ""
+ ],
+ [
+  "M-061",
+  "P2",
+  "C5",
+  "all",
+  "text · enums",
+  "Raw enum/role/state codes shown (UPDATED, REJECTED, PASS/SKIPPED, CRITICAL, WORKSPACE_ADMIN…VIEWER, MANUAL_EDIT, SYSTEM/SERIF…, step/section ids, raw prop keys, settings card keys)",
+  [
+   "S3-025",
+   "S2-026",
+   "R2-022",
+   "S1-049",
+   "S1-050",
+   "S1-052",
+   "S2-031"
+  ],
+  "missing label maps: AdminApp.tsx:907,1128,1132,316,348,997,1015,1191; builder/WorkflowEditor.tsx; Inspector.tsx:83; ProjectWorkspace.tsx:378-381",
+  "S3 (maps) + S1/S2",
+  "none",
+  "N",
+  "central label maps in @xweb/i18n with a guard for unmapped values",
+  "unit: every enum has a label",
+  ""
+ ],
+ [
+  "M-062",
+  "P2",
+  "C5",
+  "all",
+  "text · terminology",
+  "Terminology inconsistent: workspace 105 vs không gian làm việc 14; ứng dụng/project/dự án; component/thành phần; model/mô hình; 3 Vietnamese names per role in 4 tables; test-mode named 5 ways; xoá/xóa, huỷ/hủy mixed",
+  [
+   "S3-024",
+   "S3-027",
+   "S3-028",
+   "S2-030",
+   "S1-023",
+   "S1-024",
+   "R-020",
+   "R2-020"
+  ],
+  "4 role label tables (drawers.tsx:101, UserDialogs.tsx:7, adminModel.ts:138, i18n/index.ts:14); no glossary",
+  "S3",
+  "none",
+  "N",
+  "canonical glossary (docs) + apply; single role-label source",
+  "text guard + review",
+  ""
+ ],
+ [
+  "M-063",
+  "P2",
+  "C5",
+  "all",
+  "text · English & brand",
+  "English left in UI (Components, Templates, Packages, Registry, AI Control, Design/Code, Mock/Self-host/Cloud, Admin Console, Builder Studio, a full MFA sentence) and 4 product names",
+  [
+   "S3-029",
+   "S3-032",
+   "S2-029",
+   "S1-022",
+   "R2-028"
+  ],
+  "AdminApp nav; AuthPages.tsx:21; StudioApp.tsx:65; AdminApp.tsx:139",
+  "S3",
+  "none",
+  "N",
+  "Vietnamese labels; one product name constant",
+  "review",
+  ""
+ ],
+ [
+  "M-064",
+  "P2",
+  "C5",
+  "Platform+Admin",
+  "text · contradictions",
+  "Stale/contradictory copy: 'Lưu trữ' listed as not implemented beside a working Lưu trữ button; Home says 'Website'; password policy 6 chars at sign-up vs 8 at activation",
+  [
+   "S3-030"
+  ],
+  "AdminApp.tsx:404,424; S3 text doc T-04",
+  "S2",
+  "none",
+  "N",
+  "fix copy; verify policy with C1 (do not guess)",
+  "review",
+  ""
+ ],
+ [
+  "M-065",
+  "P2",
+  "C5",
+  "Platform+Admin",
+  "navigation / IA",
+  "People are managed in 4 screens (Công ty của tôi, Nhân viên, Người dùng, Nhóm) with two org models and two create-account entry points",
+  [
+   "S2-027"
+  ],
+  "AdminApp.tsx:24-49",
+  "L decision + S2",
+  "C1 org model NOT_READY",
+  "N",
+  "DECISION: keep routes (NOT_READY org), add cross-links + one 'Tạo tài khoản' entry; no new routes",
+  "UX walkthrough",
+  ""
+ ],
+ [
+  "M-066",
+  "P2",
+  "C5",
+  "Platform+Admin",
+  "AdminApp.tsx",
+  "AdminApp.tsx is 1,197 lines/49 components/32 tables rendering BOTH portals; module-level portal state assigned during render; 4-5 registries must agree to add a page",
+  [
+   "R-004",
+   "S2-040",
+   "R-008",
+   "R-009"
+  ],
+  "features/admin/AdminApp.tsx:24-1196; base.ts:12-17; NAV/OWNED/SYSTEM_ONLY/route()/COMING",
+  "S2",
+  "none",
+  "N",
+  "split by section (R doc line ranges), one registry, portal passed by context",
+  "build + admin harness; no behaviour change",
+  ""
+ ],
+ [
+  "M-067",
+  "P2",
+  "C5",
+  "all",
+  "patterns",
+  "Copy-pasted act(), load ladders (28), filter+table+pager (8-11), Field (48 hand-written className=field), 3 Field/Table variants",
+  [
+   "R-014"
+  ],
+  "see R doc 1.4",
+  "S3 (extract) + S1/S2",
+  "none",
+  "N",
+  "extract LoadGate, Field, FilterBar where >=3 copies; do not abstract one-offs",
+  "unit/harness",
+  ""
+ ],
+ [
+  "M-068",
+  "P2",
+  "C5",
+  "all",
+  "design system · buttons",
+  "Four live button systems (.btn 188, .smallButton 65, .button 61, .bx-btn 51) + ~20 button-likes",
+  [
+   "S3-018",
+   "R-015"
+  ],
+  "globals/factory/builder.css layering",
+  "S3",
+  "none",
+  "N",
+  "one button component/class set with documented variants; migrate in steps",
+  "screenshots + axe",
+  ""
+ ],
+ [
+  "M-069",
+  "P2",
+  "C5",
+  "all",
+  "design system · colour tokens",
+  "386 hex (191 unique), 249 with no token, ~50% of colours tokenised, two token vocabularies, --sp-* unused, --danger/--warn used but undefined; radius/shadow/font-size not tokenised",
+  [
+   "S3-019",
+   "R2-025",
+   "R2-027",
+   "S3-041",
+   "R-016",
+   "R2-031",
+   "R2-032"
+  ],
+  "five layered CSS files",
+  "S3",
+  "none",
+  "N",
+  "token consolidation (light + dark sets), define missing tokens, replace repeated hex",
+  "css counting script before/after",
+  ""
+ ],
+ [
+  "M-070",
+  "P2",
+  "C5",
+  "all",
+  "design system · CSS hygiene",
+  "93 selectors defined twice, 40 with conflicts; dead hooks (sr-only, .stack, bx-h3 outside builder)",
+  [
+   "S3-020",
+   "S1-039",
+   "S3-047"
+  ],
+  "five layered files",
+  "S3",
+  "none",
+  "N",
+  "dedupe; define .sr-only alias or fix usage",
+  "unused/duplicate selector script",
+  ""
+ ],
+ [
+  "M-071",
+  "P2",
+  "RESEARCH",
+  "all",
+  "i18n",
+  "No i18n framework: ~4,300 hard-coded strings (Vietnamese product rule), lang=vi fixed, no negotiation",
+  [
+   "R2-017",
+   "R2-018",
+   "R-044"
+  ],
+  "packages/i18n 25 lines",
+  "R (plan only)",
+  "none",
+  "N",
+  "Phased plan (docs): cookie+Accept-Language via proxy, ratchet guard; NO mass rewrite (needs C0/C7 approval)",
+  "n/a",
+  "per instruction: report + plan, not rewrite"
+ ],
+ [
+  "M-072",
+  "P2",
+  "TOOLING",
+  "tooling",
+  "tests/harness",
+  "Test suite reach and reproducibility: 14 main files (~3,900 lines) reachable from no test; harness needs esbuild in /tmp/esb; 11 specs re-implement toolkit and 9 fall back to port 4000; 9 shims/23 relative imports",
+  [
+   "R-027",
+   "R-028",
+   "R-029",
+   "R-023"
+  ],
+  "AdminApp, TenantScreens, ProjectWorkspace, StudioApp... ; build-harness.mjs:4; test-unit.mjs",
+  "S4 (+S2/S1 tests)",
+  "C0 owns scripts/package.json",
+  "N",
+  "tests/browser/lib shared toolkit; admin + studio-app harnesses; keep C0 asks separate",
+  "spec counts + flake runs",
+  ""
+ ],
+ [
+  "M-073",
+  "P2",
+  "TOOLING",
+  "scripts",
+  "process safety (not C5)",
+  "portals.sh down kills the pid in <name>.launcher without identity validation; no ESLint/Prettier; stale README/ARCHITECTURE docs",
+  [
+   "R-041",
+   "R-026",
+   "R-031"
+  ],
+  "scripts/portals.sh:66-67; package.json; README.md",
+  "C0",
+  "C0",
+  "N",
+  "handoff to C0 (ownership); FRONTEND_ONBOARDING covers the C5 part",
+  "n/a",
+  ""
+ ],
+ [
+  "M-074",
+  "P3",
+  "C5",
+  "all",
+  "error reporting",
+  "No log/window.onerror/report seam; request id read from JSON body only (header X-Request-Id ignored; absent for network/timeout/5xx)",
+  [
+   "R-003",
+   "R-002"
+  ],
+  "packages/api-client/src/core.ts:73; 0 hits for onerror/reportError",
+  "S3/S2",
+  "C0: reporting endpoint (optional)",
+  "N",
+  "read X-Request-Id header; boundary reports via a seam (no endpoint invented)",
+  "unit",
+  ""
+ ],
+ [
+  "M-075",
+  "P2",
+  "C5",
+  "all",
+  "error text",
+  "10 independent error mappers; raw exception/server text shown ('Unexpected token <…', English fallbacks, 'Kiểm tra backend', 'CSRF token'); errText duplicated verbatim in drawers.tsx",
+  [
+   "S2-010",
+   "S2-011",
+   "R-010",
+   "R2-007",
+   "R2-021"
+  ],
+  "ui.tsx:21,47; drawers.tsx:16; adminModel.ts:155-160; provisioningModel.ts:114-122; api-client core.ts:16,18,63,92",
+  "S3 (one errText) + S1/S2",
+  "backend: stable error codes (C1/C2) for free-text cases",
+  "N",
+  "single errorText(); never show Error.message of non-ApiError; Vietnamese mapping per code",
+  "unit: mapper table",
+  ""
+ ],
+ [
+  "M-076",
+  "P2",
+  "C5",
+  "Platform+Admin",
+  "audit / charts",
+  "DailyBars throws RangeError on empty daily; AuditTable JSON.parse unguarded: whole portal blanks (h1 count 0)",
+  [
+   "S2-006",
+   "S3-045"
+  ],
+  "AdminApp.tsx:457-459,174,600",
+  "S2",
+  "none",
+  "N (harness)",
+  "guard + safe parse",
+  "unit + harness",
+  ""
+ ],
+ [
+  "M-077",
+  "P3",
+  "C5",
+  "Studio",
+  "page dialog",
+  "Slug shown as /api/ but saved as api-2 (uniqueSlug)",
+  [
+   "S1-017"
+  ],
+  "PagesPanel.tsx:130 vs core/pages.ts:60",
+  "S1",
+  "none",
+  "N",
+  "show the final slug",
+  "builder.spec",
+  ""
+ ],
+ [
+  "M-078",
+  "P3",
+  "C5",
+  "Studio",
+  "navigation",
+  "Every drawer close is router.push: Back re-opens the closed drawer",
+  [
+   "S1-059"
+  ],
+  "ProjectWorkspace.tsx:377-399",
+  "S1",
+  "none",
+  "N",
+  "replace history on close",
+  "harness",
+  ""
+ ],
+ [
+  "M-079",
+  "P3",
+  "C5",
+  "Studio",
+  "errors",
+  "'Không tìm thấy' shown twice, 'Thử lại' on a 404, light page in a dark app",
+  [
+   "S1-038"
+  ],
+  "ProjectWorkspace.tsx:249, ui.tsx ErrorState",
+  "S1/S3",
+  "none",
+  "N",
+  "",
+  "harness",
+  ""
+ ],
+ [
+  "M-080",
+  "P3",
+  "C5",
+  "Studio",
+  "labels",
+  "'Khôi phục' shown to everyone (fails after click); versions with 0 rows render header only; workflow/action editors use <select multiple> (Ctrl-click) and a new action opens with role=alert",
+  [
+   "S1-051",
+   "S1-053",
+   "S3-043",
+   "S2-045"
+  ],
+  "ProjectWorkspace.tsx:303-304; ActionEditor.tsx:57,130; TenantScreens.tsx:99",
+  "S1/S2",
+  "none",
+  "N",
+  "permission-aware controls; checkbox lists",
+  "harness",
+  ""
+ ],
+ [
+  "M-081",
+  "P3",
+  "C5",
+  "Studio",
+  "a11y labels",
+  "'Khám phá cấu trúc' + 'chưa' reads as one word; each enabled card is its own tab stop",
+  [
+   "S1-040",
+   "S3-048"
+  ],
+  "DataWizard.tsx:89, Inspector.tsx:31, primitives.tsx:78; Studio cards",
+  "S1",
+  "none",
+  "N",
+  "aria text separation; roving focus optional",
+  "axe",
+  ""
+ ],
+ [
+  "M-082",
+  "P3",
+  "C5",
+  "Studio",
+  "perf",
+  "lineDiff re-runs for every file on every render (~24 ms/keystroke on 1,800 lines)",
+  [
+   "S1-045"
+  ],
+  "CodeWorkspace.tsx:34-46",
+  "S1",
+  "none",
+  "N (harness)",
+  "memoize per file",
+  "S4 perf",
+  ""
+ ],
+ [
+  "M-083",
+  "P3",
+  "C5",
+  "Studio",
+  "text",
+  "Small copy: search box clipped 'Tìm ứn…'; 'Chạy / thử' wraps; nested 'Chỉ đọc' boxes",
+  [
+   "S1-037",
+   "S1-058",
+   "S2-043"
+  ],
+  "StudioApp.tsx:76-88; screenshots; factory.css:54",
+  "S1/S2",
+  "none",
+  "N",
+  "",
+  "screenshots",
+  ""
+ ],
+ [
+  "M-084",
+  "P3",
+  "C5",
+  "all",
+  "a11y headings/tables",
+  "ErrorState/loading render only an h2 (no h1); CodeWorkspace has no h1; AI-mode h1 disappears; 2 of 40 tables have <caption>; chart bars tooltip-only",
+  [
+   "S2-041",
+   "S3-036",
+   "S3-037",
+   "S3-031"
+  ],
+  "ui.tsx:36 StateView default level 2; CodeWorkspace",
+  "S3",
+  "none",
+  "N",
+  "level=1 for page-level states; captions/scope",
+  "axe all-impacts",
+  ""
+ ],
+ [
+  "M-085",
+  "P3",
+  "C5",
+  "all",
+  "a11y misc",
+  "Sticky footer covers 32px under focused input (2.4.11 AAA); combobox/tree ARIA details (constant aria-expanded)",
+  [
+   "S3-046",
+   "S3-039"
+  ],
+  "no scroll-padding-bottom; tree focus",
+  "S3",
+  "none",
+  "N",
+  "scroll-padding; ARIA fix",
+  "harness",
+  ""
+ ],
+ [
+  "M-086",
+  "P3",
+  "C5",
+  "all",
+  "forced colors / fonts / spacing",
+  "No forced-colors support; Inter declared but never loaded; weights unsupported; 53% spacing off-scale; 16 radii; 11 shadows",
+  [
+   "S3-042",
+   "S3-040"
+  ],
+  "CSS",
+  "S3",
+  "none",
+  "N",
+  "forced-colors fallbacks; font stack",
+  "manual forced-colors check",
+  ""
+ ],
+ [
+  "M-087",
+  "P3",
+  "C5",
+  "all",
+  "responsive",
+  "100vh toolbar overlap (unverified on device); no max-width at >=1280 (1610px tables/4-column grid2); 14 breakpoint thresholds/7 'phone' values",
+  [
+   "S3-021",
+   "S3-049",
+   "R-017"
+  ],
+  "vh unit; factory.css",
+  "S3",
+  "none",
+  "N",
+  "dvh with fallback; container max-width; breakpoint tokens",
+  "responsive matrix",
+  "S3-021 unverified on device (P3 until verified)"
+ ],
+ [
+  "M-088",
+  "P3",
+  "C5",
+  "all",
+  "secrets in state",
+  "Connector authValue and activation token/passwords stay in React state/DOM after success; p.join('') silently glues a path",
+  [
+   "R2-005",
+   "R2-006",
+   "S2-037"
+  ],
+  "AdminApp.tsx:1141-1157; AuthPages.tsx:32-87",
+  "S2",
+  "none",
+  "N",
+  "clear after use; fix path join",
+  "unit",
+  ""
+ ],
+ [
+  "M-089",
+  "P3",
+  "C5",
+  "Studio",
+  "preview security hardening",
+  "Page nonce copied into the srcdoc script and postMessage target '*' (defence in depth; all interpolations escaped today)",
+  [
+   "R2-009"
+  ],
+  "lib/schema-preview.ts:114; ProjectWorkspace.tsx:43,258",
+  "S1",
+  "none",
+  "N",
+  "explicit target origin where possible",
+  "review",
+  ""
+ ],
+ [
+  "M-090",
+  "P3",
+  "HANDOFF",
+  "infra",
+  "headers",
+  "HSTS opt-in only; no COOP/CORP/report-to; mock/static build serves no CSP/XFO",
+  [
+   "R2-010"
+  ],
+  "packages/auth/src/server/csp.ts:41, nextConfig",
+  "C0",
+  "C0 shared files",
+  "Y",
+  "handoff",
+  "n/a",
+  ""
+ ],
+ [
+  "M-091",
+  "P3",
+  "C5",
+  "Studio",
+  "storage",
+  "studio-ws and studio-ai-model survive logout (shared by the next user of the browser)",
+  [
+   "R2-011"
+  ],
+  "StudioApp.tsx:31,34",
+  "S1",
+  "none",
+  "N",
+  "clear on logout",
+  "unit",
+  ""
+ ],
+ [
+  "M-092",
+  "P3",
+  "C5",
+  "all",
+  "CSRF",
+  "stream() resets CSRF token on CSRF_INVALID but surfaces the failure instead of retrying once",
+  [
+   "R2-012"
+  ],
+  "packages/api-client/src/core.ts:96",
+  "S3",
+  "none",
+  "N",
+  "retry once",
+  "unit",
+  ""
+ ],
+ [
+  "M-093",
+  "P3",
+  "C5",
+  "all",
+  "fail-open display",
+  "Absent permissions list is treated as allowed; failed /auth/config shows the local-password form",
+  [
+   "R2-013"
+  ],
+  "permissions/canonical.ts:109; adminModel.ts",
+  "S2",
+  "none",
+  "N",
+  "fail closed in UI (backend remains authority)",
+  "unit",
+  ""
+ ],
+ [
+  "M-094",
+  "P3",
+  "HANDOFF",
+  "Studio",
+  "code review",
+  "'Duyệt' hidden when createdBy === me.displayName (display names are not identities)",
+  [
+   "R2-014"
+  ],
+  "CodeWorkspace.tsx:211",
+  "S1",
+  "C0-gated code module: server canApprove flag",
+  "Y",
+  "handoff",
+  "n/a",
+  ""
+ ],
+ [
+  "M-095",
+  "P3",
+  "C5",
+  "Platform+Admin",
+  "navigation noise",
+  "Nhóm/Chia sẻ/AI riêng appear in every admin's nav unmarked; employee detail repeats same NOT_READY notices",
+  [
+   "S2-039"
+  ],
+  "AdminApp.tsx:35,46-48; EmployeesScreens.tsx:150,155",
+  "S2",
+  "NOT_READY",
+  "N",
+  "",
+  "review",
+  ""
+ ],
+ [
+  "M-096",
+  "P3",
+  "C5",
+  "Platform",
+  "AI copy",
+  "'Cấu hình AI cho cả công ty' on a multi-company Platform; providers are global",
+  [
+   "S2-028"
+  ],
+  "AiSetup.tsx:37",
+  "S2",
+  "none",
+  "N",
+  "",
+  "review",
+  ""
+ ],
+ [
+  "M-097",
+  "P3",
+  "C5",
+  "all",
+  "requests/work",
+  "9 requests for 9 keystrokes; duplicate GETs (providers 2x, limits/models 3x); useLoad no abort/cache, fixed 15s timeout; Intl.DateTimeFormat per cell",
+  [
+   "S2-034",
+   "S2-035",
+   "R-036",
+   "S2-044"
+  ],
+  "TenantScreens.tsx:35-48; AiSetup.tsx; useLoad.ts; ui.tsx:9",
+  "S2/S3 + S4",
+  "none",
+  "N",
+  "debounce; share fetch; cached Intl formatters",
+  "S4 request counts",
+  ""
+ ],
+ [
+  "M-098",
+  "P3",
+  "C5",
+  "Platform+Admin",
+  "feedback",
+  "Copy failure silent; link origin is the current portal",
+  [
+   "S2-038"
+  ],
+  "UserDialogs.tsx:15-16",
+  "S2",
+  "none",
+  "N",
+  "",
+  "harness",
+  ""
+ ],
+ [
+  "M-099",
+  "P3",
+  "C5",
+  "all",
+  "maintainability",
+  "Dead exports (15, plus 38 needless), 4 unused imports, 9 'as never' / 2 'as unknown as', 293 test ids with none in the 6 main files, api object monolith, me!.workspaces[0]",
+  [
+   "R-021",
+   "R-025",
+   "R-042",
+   "R-035",
+   "R-043",
+   "R-024"
+  ],
+  "R doc tables",
+  "S4/S1/S2",
+  "none",
+  "N",
+  "remove verified-dead exports; add test ids where a spec needs them",
+  "tsc + unit",
+  ""
+ ],
+ [
+  "M-100",
+  "P3",
+  "RESEARCH",
+  "all",
+  "legacy / packages",
+  "Legacy root app (StudioShell, AppEntry, mock-data), live helpers beside it, company-ui/app-sdk with no consumer, types cycle (type-only)",
+  [
+   "R-022",
+   "R-038",
+   "R-040",
+   "R-039"
+  ],
+  "components/, lib/mock-data.ts, packages/*",
+  "R (report only)",
+  "C0 owns decision",
+  "N",
+  "report only (owner C0); no removal",
+  "n/a",
+  ""
+ ],
+ [
+  "M-101",
+  "P3",
+  "HANDOFF",
+  "Studio",
+  "render",
+  "renderSchemaDocument mutates module-level ctx/up/site (shared with workers/render)",
+  [
+   "R-034"
+  ],
+  "lib/schema-preview.ts:24,31,32,108-110",
+  "C5 (file) + C2 (worker)",
+  "C2: shared renderer",
+  "N",
+  "refactor to per-call context after C2 agrees",
+  "unit",
+  ""
+ ],
+ [
+  "M-102",
+  "P3",
+  "TOOLING",
+  "tooling",
+  "test:unit",
+  "test:unit deletes .test-build (breaks a running harness server)",
+  [
+   "R-030"
+  ],
+  "scripts/test-unit.mjs:9",
+  "C0",
+  "C0",
+  "N",
+  "handoff to C0; documented in onboarding",
+  "n/a",
+  ""
+ ],
+ [
+  "M-103",
+  "P3",
+  "RESEARCH",
+  "all",
+  "formatting / RTL / tenant theme",
+  "vi-VN hard-coded, usd() en-US; 89 physical CSS declarations vs 16 logical; one token = fill+text+tint (tenant brand risk); product name/logo hard-coded; no favicon/manifest",
+  [
+   "R2-019",
+   "R2-024",
+   "R2-026"
+  ],
+  "ui.tsx:9-20; css; factory.css:2,12,13",
+  "R (plan)",
+  "tenant theme contract NOT invented",
+  "N",
+  "report + plan",
+  "n/a",
+  ""
+ ]
+]
