@@ -342,6 +342,22 @@ await block("scenario 39", async () => { const p = await open({ portal: "platfor
   verdict("HIC05 running the retention cleanup now asks first (it deletes data)", await ask(p, { open: () => p.getByRole("button", { name: "Chạy dọn dẹp ngay" }).click(), title: /Chạy dọn dẹp ngay\?/, confirm: "Chạy dọn dẹp", re: /retention\/run$/, method: "POST" }));
   await p.__ctx.close(); });
 
+// ===================================================================================================================== M-025 (Admin part) skip link, focus and scroll on route change
+await block("scenario 40", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/users" }); await settle(p, 500);
+  await p.keyboard.press("Tab");
+  check("SKP01 the FIRST Tab stop is the skip link", /Bỏ qua điều hướng/.test(await focusName(p)), await focusName(p));
+  await p.keyboard.press("Enter"); await settle(p, 200);
+  check("SKP02 Enter on it lands in <main> (the sidebar's 16 links are skipped)", await p.evaluate(() => document.activeElement?.id === "main"));
+  const tabindex = await p.locator("main").getAttribute("tabindex"); const scrolls = await p.evaluate(() => { const m = document.querySelector("main"); return m.scrollHeight > m.clientHeight; });
+  check("SKP03 <main> is a Tab stop (0) only while it scrolls, otherwise -1", tabindex === (scrolls ? "0" : "-1"), `tabindex=${tabindex} scrolls=${scrolls}`);
+  await p.__ctx.close(); });
+await block("scenario 41", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/system" }, { h: 400 }); await settle(p, 500);
+  await p.evaluate(() => { document.querySelector("main").scrollTop = 99999; });
+  await p.getByRole("link", { name: "Cài đặt" }).click(); await settle(p, 700);
+  check("SKP04 following a sidebar link moves focus to the new page's h1", await p.evaluate(() => document.activeElement?.tagName === "H1" && /Cài đặt/.test(document.activeElement.textContent)), await p.evaluate(() => document.activeElement?.tagName + ":" + (document.activeElement?.textContent ?? "").slice(0, 30)));
+  check("SKP05 and scrolls <main> back to the top", (await p.evaluate(() => document.querySelector("main").scrollTop)) === 0);
+  await p.__ctx.close(); });
+
 // ===================================================================================================================== route / navigation snapshot (M-066: the split must not change behaviour)
 // For every persona the sidebar labels and, for every section key (deep links, aliases, foreign and unknown keys included), the final path, the h1, the h2s and the kind of state view are recorded in admin-routes.snapshot.json
 // (generated from the pre-split code, `UPDATE_SNAPSHOT=1` rewrites it). Dates / numbers are not compared: only structure.
