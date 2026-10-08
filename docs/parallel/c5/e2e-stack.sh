@@ -36,7 +36,7 @@ port_free() { owned port-free "$1" >/dev/null 2>&1; }                           
 port_wait_free() { for _ in $(seq 1 "${2:-30}"); do port_free "$1" && return 0; sleep 1; done; return 1; }
 stop_owned() {   # stop ONLY what this script started under that name: validated SIGTERM -> SIGKILL of its own group, verified gone; a stale state (pid reused by someone else) is ignored, NOT signalled
   local rc=0; owned stop --state "$(st "$1")" || rc=$?
-  case "$rc" in 0) ;; 4) say "$1: the recorded pid belongs to someone else now: stale state dropped, nothing was signalled" ;; *) return "$rc" ;; esac
+  case "$rc" in 0) ;; 4) say "$1: the recorded pid belongs to someone else now: nothing was signalled, state file kept" ;; *) return "$rc" ;; esac
 }
 port_busy_die() { owned port-free "$1" || die "$2 port $1 is held by a process this script did not start (holder above). It was NOT touched. Free it yourself or choose another port ($3)."; }
 wait_http() { local url="$1" secs="$2"; for _ in $(seq 1 "$secs"); do curl -fsS "$url" >/dev/null 2>&1 && return 0; sleep 1; done; return 1; }

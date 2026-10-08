@@ -31,7 +31,7 @@ try {
     case "stop": {
       const state = need("state"); if (!readState(state)) { say("nothing recorded, nothing to stop"); break; }
       const r = await stopOwned(state, { graceMs: opt("grace") ? Number(opt("grace")) : 8000 });
-      if (r.state === "REFUSED") { console.error(`[owned] REFUSED: ${r.reason}. Nothing was signalled.`); process.exit(4); }
+      if (r.state === "REFUSED") { console.error(`[owned] REFUSED: ${r.reason}. Nothing was signalled; the state file is KEPT (${state}) so the recorded process can still be found.`); process.exit(4); }
       if (r.state === "FAILED") { console.error(`[owned] FAILED: ${r.reason} (pid ${r.pid})`); process.exit(5); }
       say(`${r.state}${r.signal ? ` (${r.signal})` : ""}`); break;
     }
