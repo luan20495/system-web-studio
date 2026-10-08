@@ -1,9 +1,10 @@
 /**
  * What the Admin / Platform consoles show to whom, and the rules of the tenant screens. Pure (no React, no fetch): unit-tested.
  * Display only: the server authorises every call (`AdminGuard`, `AccessService.forTenant/forWorkspace`); a wrong answer here can at worst show a screen whose calls answer 403.
- * No role NAME is read: a person's scope comes from the canonical codes `/auth/me` lists (TENANT_MEMBERS, MEMBER_MANAGE, DATA_SOURCE_MANAGE) and from `platformScope`.
+ * A role NAME is read only through packages/permissions/src/roles.ts (guarded): a person's scope comes from the canonical codes `/auth/me` lists (TENANT_MEMBERS, MEMBER_MANAGE, DATA_SOURCE_MANAGE) and from `platformScope`.
  */
 import type { Me, TenantMemberView, TenantView, WorkspaceSummary, Member, AdminUser } from "@xweb/types";
+import { isTenantAdminRole, isWorkspaceAdminRole } from "../../packages/permissions/src/roles";
 
 export type AdminScope = {
   /** SYSTEM_ADMIN: every `/api/v1/admin/**` screen (users, workspaces, audit…) */
@@ -22,7 +23,7 @@ export function adminScope(me: Me | null | undefined): AdminScope {
   // `/auth/me` carries the permissions of the PRIMARY tenant only, but lists every membership with its role: a person is shown the tenants where the server says they are TENANT_ADMIN
   // (or the primary one when the server listed TENANT_MEMBERS). Display only: `/admin/tenants/{id}/**` authorises per tenant.
   const holdsTenant = (me.permissions ?? []).includes("TENANT_MEMBERS");
-  const tenants = (me.tenants ?? []).filter((t) => t.role === "TENANT_ADMIN" || (holdsTenant && t.id === me.tenantId)).map((t) => ({ id: t.id, slug: t.slug, name: t.name, status: t.status }));
+  const tenants = (me.tenants ?? []).filter((t) => isTenantAdminRole(t.role) || (holdsTenant && t.id === me.tenantId)).map((t) => ({ id: t.id, slug: t.slug, name: t.name, status: t.status }));
   return {
     platform, tenants,
     workspaces: me.workspaces.filter((w) => w.permissions?.includes("MEMBER_MANAGE")),
@@ -125,8 +126,8 @@ export const candidateLabel = (c: { username: string; displayName: string | null
 /** the server forbids changing your own tenant role / adding yourself (SELF_GRANT_FORBIDDEN) and removing the last TENANT_ADMIN (LAST_TENANT_ADMIN): the UI says it before the click */
 export function memberChangeBlock(m: { userId: string; role: string }, me: { id: string }, all: TenantMemberView[], next: "TENANT_ADMIN" | "MEMBER" | "REMOVE"): string | null {
   if (m.userId === me.id) return "Bạn không thể tự đổi vai trò hoặc tự gỡ mình khỏi công ty.";
-  const admins = all.filter((x) => x.active && x.role === "TENANT_ADMIN").length;
-  if (m.role === "TENANT_ADMIN" && next !== "TENANT_ADMIN" && admins <= 1) return "Công ty phải còn ít nhất một quản trị viên.";
+  const admins = all.filter((x) => x.active && isTenantAdminRole(x.role)).length;
+  if (isTenantAdminRole(m.role) && !isTenantAdminRole(next) && admins <= 1) return "Công ty phải còn ít nhất một quản trị viên.";
   return null;
 }
 
@@ -135,7 +136,7 @@ export const WORKSPACE_ROLES = [{ id: "WORKSPACE_ADMIN", label: "Quản trị kh
 export const workspaceRoleLabel = (r: string) => WORKSPACE_ROLES.find((x) => x.id === r)?.label ?? r;
 export function workspaceMemberBlock(m: Member, me: { id: string }, all: Member[], next: string | "REMOVE"): string | null {
   if (m.userId === me.id) return "Bạn không thể tự đổi vai trò hoặc tự gỡ mình khỏi workspace.";
-  if (m.role === "WORKSPACE_ADMIN" && next !== "WORKSPACE_ADMIN" && all.filter((x) => x.role === "WORKSPACE_ADMIN").length <= 1) return "Workspace phải còn ít nhất một quản trị viên.";
+  if (isWorkspaceAdminRole(m.role) && !isWorkspaceAdminRole(next) && all.filter((x) => isWorkspaceAdminRole(x.role)).length <= 1) return "Workspace phải còn ít nhất một quản trị viên.";
   return null;
 }
 
