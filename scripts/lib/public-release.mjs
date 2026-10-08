@@ -108,7 +108,7 @@ export async function withLock(c, fn) {
 const stateFileOf = (c, name) => join(c.run, `portal-${name}.owned.json`);
 const nextBinOf = (c, id) => join(relDir(c, id), "node_modules", "next", "dist", "bin", "next");
 const tcpOpen = (port) => new Promise((res) => { const s = net.connect({ host: "127.0.0.1", port }); const d = (v) => { s.destroy(); res(v); }; s.once("connect", () => d(true)); s.once("error", () => d(false)); s.setTimeout(1500, () => d(false)); });
-async function freePort() { return new Promise((res) => { const s = net.createServer(); s.listen(0, "127.0.0.1", () => { const p = s.address().port; s.close(() => res(p)); }); }); }
+export async function freePort() { return new Promise((res) => { const s = net.createServer(); s.listen(0, "127.0.0.1", () => { const p = s.address().port; s.close(() => res(p)); }); }); }
 
 /** start portal `name` of release `id` (cwd = the release's own apps/<name>; env = the release's PINNED build + runtime env, nothing from the working tree) */
 export async function startPortal(c, id, name, { port, stateFile = stateFileOf(c, name), tag = "public" } = {}) {
@@ -121,7 +121,7 @@ export async function stopPortal(c, name) {
   return stopOwned(meta, { graceMs: c.graceMs, removeState: true });
 }
 /** the old lifecycle stored `ps -o lstart=` verbatim (day padded: "Oct  8"); the helper normalises whitespace ("Oct 8"): same instant, compare normalised */
-const sameStart = (a, b) => String(a).trim().replace(/\s+/g, " ") === String(b).trim().replace(/\s+/g, " ");
+export const sameStart = (a, b) => String(a).trim().replace(/\s+/g, " ") === String(b).trim().replace(/\s+/g, " ");
 /** a process the OLD lifecycle recorded (pid file + start time + cwd in this checkout) but that is not pinned yet: ours, not foreign - `init --from-running` adopts it */
 export function legacyOwned(c, name) {
   const pids = listenerPids(c.ports[name]); const pid = pids[0]; const get = (e) => { try { return readFileSync(join(c.run, `portal-${name}.${e}`), "utf8").trim(); } catch { return ""; } };
@@ -136,7 +136,7 @@ export function runningOf(c, name) {
   return { port, listener: pids[0], owned: foreignPid == null, foreign: foreignPid != null, foreignPid, releaseId: meta?.extra?.releaseId ?? null, buildId: meta?.extra?.buildId ?? null, meta, identity: id.state };
 }
 /** one fresh connection per request (`Connection: close`) and one retry: a pooled keep-alive socket to the PREVIOUS process on the same port must never read as "unhealthy" */
-async function httpGet(url, ms = 4000) {
+export async function httpGet(url, ms = 4000) {
   let last = null;
   for (let i = 0; i < 2; i++) { try { const r = await fetch(url, { signal: AbortSignal.timeout(ms), redirect: "manual", headers: { connection: "close" } }); return { status: r.status, headers: r.headers, text: await r.text() }; } catch (e) { last = { status: 0, error: String(e.message ?? e), headers: new Headers(), text: "" }; await sleep(150); } }
   return last;
@@ -153,7 +153,7 @@ export async function smoke(c, port) {
 async function waitHealthy(port, ms = 20000) { const end = Date.now() + ms; while (Date.now() < end) { const r = await httpGet(`http://127.0.0.1:${port}/login`, 3000); if (r.status > 0 && r.status < 500) return true; await sleep(300); } return false; }
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------ build a candidate
-function extractSnapshot(root, sha12, dir) {
+export function extractSnapshot(root, sha12, dir) {
   return new Promise((res, rej) => {
     mkdirSync(dir, { recursive: true }); const a = spawn("git", ["-C", root, "archive", "--format=tar", sha12], { stdio: ["ignore", "pipe", "pipe"] }); const t = spawn("tar", ["-x", "-C", dir], { stdio: ["pipe", "ignore", "pipe"] });
     let err = ""; a.stderr.on("data", (d) => (err += d)); t.stderr.on("data", (d) => (err += d)); a.stdout.pipe(t.stdin);

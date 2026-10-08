@@ -68,7 +68,7 @@ No assumption from conversation text. Every portal must show: listener pid = pid
 
 1. **Not zero-downtime.** Activation is stop-then-start per portal (seconds of refused connections); the portal gateway cannot switch upstreams. Guaranteed instead: a failed candidate never moves the pointer or touches the running release; a failed real-port start rolls back automatically.
 2. Adoption pins the **source and build** of the running process by evidence; the **runtime env** of a process started before this change cannot be read back from the OS without secrets, so it is the current non-secret `public.env` allow-list. The first `restart` after adoption runs with that pinned env.
-3. The API (18081) is **not** pinned by this decision: `public-up.sh` API recovery still builds its jar from the working tree (follow-up D-C0-50 proposal).
+3. The API (18081) is not pinned by D-C0-49; it is pinned by D-C0-50 (`PUBLIC_API_PINNING.md`).
 4. Until this branch is imported into the checkout that runs the watchdog, the old watchdog / `_portals_lib.sh` lifecycle is the code that runs; after import, a process the old code started that is not the approved release shows `RUNNING_UNAPPROVED`.
 5. The process-safety guard (D-C0-48) checks committed code only; it does not protect manual commands or `/tmp` scripts.
 6. No Cloudflare / DNS / tunnel / gateway change.

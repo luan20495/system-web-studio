@@ -61,18 +61,9 @@ grep -q '^PUBLIC_PORTALS=' "$ENVF" || ( umask 077; { echo "# Public portals: pla
 set -a; . "$ENVF"; set +a
 PUBLIC_ORIGIN="https://$PUBLIC_HOST"          # the STUDIO portal origin (kept under its historical key)
 PORTALS="${PUBLIC_PORTALS:-true}"
-if [ "$PORTALS" = true ]; then
-  # Browsers reach the API only through the portal's own /api proxy, but that proxy forwards the browser's Origin header, so the API sees (and checks) exactly these three.
-  # Never "*", never localhost, never the sites origin.
-  WEB_PLATFORM="https://$PUBLIC_PLATFORM_HOST"; WEB_ADMIN="https://$PUBLIC_ADMIN_HOST"; WEB_STUDIO="$PUBLIC_ORIGIN"
-  CORS_ORIGINS="$WEB_PLATFORM,$WEB_ADMIN,$WEB_STUDIO"
-else
-  WEB_PLATFORM=""; WEB_ADMIN=""; WEB_STUDIO=""; CORS_ORIGINS="$PUBLIC_ORIGIN"
-fi
-# V1 feature set of the public environment (D-C0-38): data platform, workflow (RabbitMQ queue, the prod default), publish policy, the Public Runtime. All are OFF in the
-# application unless stated here; V1_FEATURES=false brings the public stack back to its pre-V1 behaviour. apiBase is ONE value for every site ({slug} is replaced per site).
-V1_FEATURES="${V1_FEATURES:-true}"
-_slug='{slug}'; SITES_DATA_API_BASE="https://$SITES_HOST/$_slug/_data"
+# D-C0-50: the API's configuration (CORS origins of the three portals, the V1 feature set of D-C0-38, SITES_DATA_API_BASE, ...) is no longer derived here. It is derived by deriveRuntimeConfig()
+# in scripts/lib/public-api-release.mjs when an API release is built (`public-api.sh deploy-api <sha>`) and PINNED in that release; a recovery restarts the pinned values. To change one
+# (e.g. V1_FEATURES=false in public.env) deploy a new API release: a restart alone keeps the approved configuration.
 
 say "docker"
 if ! docker info >/dev/null 2>&1; then open -a Docker; for _ in $(seq 1 90); do docker info >/dev/null 2>&1 && break; sleep 2; done; fi
@@ -101,29 +92,11 @@ if ! alive "http://127.0.0.1:$RENDER_PORT_PUBLIC/health"; then
   ( nohup env RENDER_PORT="$RENDER_PORT_PUBLIC" RENDER_TOKEN="$RENDER_TOKEN" node workers/render/dist/workers/render/server.js > "$RUN/render.log" 2>&1 < /dev/null & echo $! > "$RUN/render.pid" )
   for _ in $(seq 1 20); do alive "http://127.0.0.1:$RENDER_PORT_PUBLIC/health" && break; sleep 0.5; done
 fi
+# D-C0-50: API RECOVERY != API DEPLOYMENT. A missing API is recovered from the APPROVED, immutable artifact (java -jar <release>/app.jar): no Gradle, no compile, no working-tree source.
+# With no approved release this FAILS CLOSED; the explicit paths are `public-api.sh deploy-api <sha>` (new release) and `public-api.sh init-api --from-running` (pin what runs).
 if ! alive "http://127.0.0.1:$API_PORT/actuator/health/liveness"; then
-  say "building the API jar"
-  (cd backend && ./gradlew bootJar -x test --console=plain -q)
-  JAR="$(ls -t backend/build/libs/*.jar | grep -v plain | head -1)"
-  say "starting the API (profile prod) from $JAR"
-  ( cd "$RUN"; nohup env SPRING_PROFILES_ACTIVE=prod APP_PROFILE=prod \
-      SERVER_ADDRESS=127.0.0.1 SERVER_PORT="$API_PORT" \
-      DATABASE_URL="jdbc:postgresql://127.0.0.1:$PG_PORT/studio"   \
-      REDIS_HOST=127.0.0.1 REDIS_PORT="$REDIS_PORT_PUBLIC"  \
-      RABBITMQ_HOST=127.0.0.1 RABBITMQ_PORT="$RABBITMQ_PORT_PUBLIC" RABBITMQ_USER=studio  \
-      MINIO_ENDPOINT="http://127.0.0.1:$MINIO_PORT_PUBLIC" MINIO_PUBLIC_ENDPOINT="https://$PUBLIC_FILES_HOST"    \
-      DEPLOY_PROVIDER=static SITES_ORIGIN="https://$SITES_HOST" STUDIO_ORIGIN="$PUBLIC_ORIGIN" SITES_COOKIE_SECURE=true \
-      RENDER_URL="http://127.0.0.1:$RENDER_PORT_PUBLIC" RENDER_TOKEN="$RENDER_TOKEN" \
-      CORS_ALLOWED_ORIGINS="$CORS_ORIGINS" WEB_ORIGIN_PLATFORM="$WEB_PLATFORM" WEB_ORIGIN_ADMIN="$WEB_ADMIN" WEB_ORIGIN_STUDIO="$WEB_STUDIO" TRUST_PROXY=true TRUSTED_PROXY_CIDRS="${PUBLIC_TRUSTED_PROXY_CIDRS:-127.0.0.1/32,::1/128}" \
-      DATA_PLATFORM_ENABLED="$V1_FEATURES" WORKFLOW_ENABLED="$V1_FEATURES" PUBLISH_CONFIGS_ENABLED="$V1_FEATURES" SITES_PUBLIC_DATA_ENABLED="$V1_FEATURES" \
-      SITES_DATA_API_BASE="$SITES_DATA_API_BASE" \
-      BACKUP_STATUS_DIRS="public:$ROOT/backups/public" \
-      APP_DEPLOY_MOCK_BASE_URL="$PUBLIC_ORIGIN/mock-deployments" OPENROUTER_REFERER="$PUBLIC_ORIGIN" \
-            \
-          \
-      java -XX:MaxRAMPercentage=40 -jar "$ROOT/$JAR" > api.log 2>&1 < /dev/null & echo $! > api.pid )
-  for _ in $(seq 1 90); do alive "http://127.0.0.1:$API_PORT/actuator/health/readiness" && break; sleep 2; done
-  alive "http://127.0.0.1:$API_PORT/actuator/health/readiness" || { echo "API did not become ready; see $RUN/api.log" >&2; tail -20 "$RUN/api.log" >&2; exit 1; }
+  say "starting the APPROVED API release (scripts/public-api.sh up; never built here)"
+  "$ROOT/scripts/public-api.sh" up || { echo "the public API was NOT started: $RUN/api/approved.json decides what runs (public-api.sh status); nothing was built" >&2; exit 1; }
 fi
 
 if [ "$PORTALS" = true ]; then

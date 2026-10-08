@@ -28,7 +28,8 @@
     "gate:frontend": "node scripts/gate-frontend.mjs",
     "test:infra:portals": "node --test tests/infra/portals-reliability.mjs",
     "test:infra:processes": "node --test tests/infra/owned-process.test.mjs",
-    "test:infra:public": "node --test tests/infra/public-pinning.test.mjs"
+    "test:infra:public": "node --test tests/infra/public-pinning.test.mjs",
+    "test:infra:api": "node --test tests/infra/public-api-pinning.test.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

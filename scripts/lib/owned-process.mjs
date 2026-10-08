@@ -74,7 +74,7 @@ const tcpOpen = (port) => new Promise((res) => { const s = net.connect({ host: "
 const httpOk = async (url) => { try { const r = await fetch(url, { signal: AbortSignal.timeout(2500) }); return r.status < 500; } catch { return false; } };
 
 /**
- * startOwned({ owner, name, cmd:[...], cwd, env, port, mode, stateFile, logFile, ready:{port|url, timeoutMs}, group=true, extra }) -> meta   (`extra`: free JSON stored in the metadata, e.g. a release id)
+ * startOwned({ owner, name, cmd:[...], cwd, env, port, mode, stateFile, logFile, ready:{port|url, timeoutMs}, group=true, extra }) -> meta   (`extra`: free JSON stored in the metadata, e.g. a release id; `inheritEnv: false` = the child gets EXACTLY `env`, nothing of the caller's environment)
  * Refuses with Error code PORT_BUSY when `port` already has a listener (it would be someone else's), PROCESS_EXITED / NOT_READY when it does not come up (the child is then stopped).
  */
 export async function startOwned(spec) {
@@ -84,7 +84,7 @@ export async function startOwned(spec) {
   const prev = identify(readMeta(stateFile)); if (prev.state === "OWNED") throw Object.assign(new Error(`${owner}/${name} is already running (pid ${readMeta(stateFile).pid})`), { code: "ALREADY_RUNNING" });
   if (port != null) { const l = listenerPids(port); if (l.length) throw Object.assign(new Error(`port ${port} is already used by pid ${l.join(",")}: not ours, not started`), { code: "PORT_BUSY", pids: l }); }
   mkdirSync(dirname(logFile), { recursive: true }); const fd = openSync(logFile, "a");
-  const child = spawn(cmd[0], cmd.slice(1), { cwd, env: { ...process.env, ...env }, detached: group, stdio: ["ignore", fd, fd] }); closeSync(fd); child.unref();
+  const child = spawn(cmd[0], cmd.slice(1), { cwd, env: spec.inheritEnv === false ? { ...env } : { ...process.env, ...env }, detached: group, stdio: ["ignore", fd, fd] }); closeSync(fd); child.unref();
   let exited = null; child.once("exit", (code, sig) => { exited = { code, sig }; });
   const need = spec.ready ?? (port != null ? { port } : null); const deadline = Date.now() + (need?.timeoutMs ?? 60000);
   const fail = async (code, msg) => { try { if (exists(child.pid)) process.kill(group ? -child.pid : child.pid, "SIGKILL"); } catch { /* gone */ } throw Object.assign(new Error(`${msg} (log: ${logFile})`), { code }); };
