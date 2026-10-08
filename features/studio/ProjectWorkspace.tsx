@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Settings, Sparkles } from "@xweb/ui";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ArrowLeft, ErrorBoundary, Settings, Sparkles } from "@xweb/ui";
 import { useRouter, useSearchParams } from "next/navigation";
-import { api, ApiError, newIdempotencyKey } from "@/lib/http-api";
+import { api, newIdempotencyKey } from "@/lib/http-api";
 import { renderSchemaDocument } from "@/lib/schema-preview";
-import type { AiStatus, ApiProject, AssetDto, BlockDto, PageSchema, PromptHistoryItem, RegistryComponent, SchemaOperation, VersionSummary } from "@/lib/http-types";
+import type { ApiProject, AssetDto, BlockDto, PageSchema, RegistryComponent, SchemaOperation, VersionSummary } from "@/lib/http-types";
 import type { DeviceMode } from "@/lib/types";
 import { sectionLabel, sectionSummary } from "@/components/SectionInspector";
 import type { AppDefinitionV2, DefinitionOperation } from "@xweb/types";
@@ -13,34 +13,27 @@ import { BuilderWorkspace } from "./builder/BuilderWorkspace";
 import type { RuntimeCalls } from "./builder/TestPanel";
 import type { DataManagementCalls } from "./builder/core/dataManagement";
 import { backendFrom, type ProbeState } from "./builder/core/backend";
-import { explainError } from "./builder/core/errors";
 import { NOT_RENDERED } from "./builder/core/library";
 import type { BlockOption } from "./builder/panels/ComponentsPanel";
 import { canEditProject, canPublish, canShare, canViewProject, holdsStorageConstant, resolvePermissions } from "@xweb/permissions";
 import { useSession } from "../session";
-import { ErrorState, errText, fmtDate, StateView, tok, usd } from "../ui";
+import { ErrorState, errText, fmtDate, StateView } from "../ui";
 import { AssetsDrawer, DeviceIcon, Drawer, MembersDrawer, SettingsDrawer, suggestions } from "./drawers";
 import { PublishModal } from "./ReleaseModal";
 import { AiProgress } from "./AiProgress";
-import type { AiLive } from "./aiProgressModel";
 import { SaveBlockDrawer, SaveTemplateSection } from "./libraryPanels";
 import { CodeWorkspace } from "./CodeWorkspace";
 import { SiteDrawer } from "./SitePanels";
 import { insertable } from "../library";
 import { projectBase, S } from "./base";
+import { nonceOfPage, toMessages } from "./workspace/runFailure";
+import { useSaveMachine } from "./workspace/useSaveMachine";
+import { useAiConversation } from "./workspace/useAiConversation";
 
 type Mode = "ai" | "design" | "code";
 type PanelName = "members" | "versions" | "assets" | "publish" | "settings" | "site";
 const MODES: Mode[] = ["ai", "design", "code"];
 const PANELS: PanelName[] = ["members", "versions", "assets", "publish", "settings", "site"];
-/** Provider-reported usage of one prompt. The simulator makes no model call, so it has no tokens to show. */
-function usageChip(calls: number, tokens: number | null, cost: number | null): string {
-  if (!calls) return "không tính token";
-  return [tokens == null ? "token: nhà cung cấp không báo" : `${tok(tokens)} token`, ...(cost == null ? [] : [usd(cost)]), ...(calls > 1 ? [`${calls} lượt gọi model`] : [])].join(" · ");
-}
-
-type Msg = { id: string; role: "user" | "assistant"; content: string; meta?: string[]; detail?: string };
-const nonceOfPage = () => (typeof document === "undefined" ? undefined : (document.querySelector("script[nonce]") as HTMLScriptElement | null)?.nonce || undefined);
 
 export function ProjectWorkspace({ projectId, view }: { projectId: string; view?: string }) {
   const router = useRouter(); const params = useSearchParams(); const { me } = useSession();
@@ -55,16 +48,10 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const [schema, setSchema] = useState<PageSchema | null>(null);
   const [revision, setRevision] = useState(0);
   const [versions, setVersions] = useState<VersionSummary[]>([]);
-  const [messages, setMessages] = useState<Msg[]>([]);
   const [registry, setRegistry] = useState<RegistryComponent[]>([]);
   const [blocks, setBlocks] = useState<{ company: BlockDto[]; mine: BlockDto[] }>({ company: [], mine: [] });
   const [savingBlock, setSavingBlock] = useState(false);
   const [assets, setAssets] = useState<AssetDto[]>([]);
-  const [ai, setAi] = useState<AiStatus | null>(null);
-  /** a streamed AI answer in progress: stream id (for cancel), raw output so far, last status */
-  const [live, setLive] = useState<AiLive | null>(null);
-  /** aborts the request while the server has not yet answered `start` (a stream id exists only after that) */
-  const streamAbort = useRef<AbortController | null>(null);
   /** page of a multi-page site being edited in Design mode ("home" = the root page) */
   const [pageId, setPageId] = useState("home");
   const [publicPublish, setPublicPublish] = useState<boolean | undefined>(undefined);
@@ -74,14 +61,9 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   useEffect(() => { api.componentMetadata().then((metadata) => setProbe({ status: "ok", metadata })).catch((error) => setProbe({ status: "error", error })); }, []);
   const backend = useMemo(() => backendFrom(probe), [probe]);
   const [loadError, setLoadError] = useState<unknown>(null);
-  const [busy, setBusy] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [save, setSave] = useState<{ state: "saved" | "saving" | "error"; at: Date | null }>({ state: "saved", at: null });
-  const [prompt, setPrompt] = useState("");
   const [device, setDevice] = useState<DeviceMode>("desktop");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [model, setModel] = useState<string>(() => { try { return localStorage.getItem("studio-ai-model") ?? ""; } catch { return ""; } });
-  const promptRef = useRef<HTMLTextAreaElement>(null);
+  const { busy, notice, setNotice, save, setSave, failedEdit, setFailedEdit, saveFailureRef, onConflict, run } = useSaveMachine();
   const ws = project?.workspaceId ?? "";
   // UX only (the server re-checks every call). The input is the permission list the server resolved for THIS project; no role name is read (permissions.ts / canonical.ts).
   const perms = useMemo(() => resolvePermissions(project?.permissions), [project?.permissions]);
@@ -91,11 +73,12 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   useEffect(() => { if (project?.name) document.title = `${project.name} · Xweb Studio`; }, [project?.name]);
   useEffect(() => { if (project && !canViewProject(perms)) router.replace("/auth/no-access?portal=studio&reason=app-view"); }, [project, perms, router]);
 
-  const toMessages = (items: PromptHistoryItem[]): Msg[] => [...items].reverse().flatMap((p) => [
-    { id: `${p.id}-u`, role: "user" as const, content: p.text },
-    { id: `${p.id}-a`, role: "assistant" as const, content: p.assistantMessage,
-      meta: [p.outcome, ...(p.model ? [p.model === "mock" ? "Chế độ thử nghiệm" : p.model] : []), usageChip(p.aiCalls ?? 0, p.totalTokens ?? null, p.costUsd ?? null)] }
-  ]);
+  const label = (type: string) => sectionLabel(type, registry.find((c) => c.id === type)?.name);
+  const refreshVersions = async () => setVersions(await api.listVersions(ws, projectId).catch(() => versions));
+  const chat = useAiConversation({ ws, projectId, project, schema, revision, readOnly, busy, mode, run, setSchema, setRevision, refreshVersions, label,
+    handOver: { prompt: params.get("prompt"), clear: () => router.replace(`${base}/ai`) } });
+  const { ai, setAi, messages, setMessages, prompt, setPrompt, live, setModel, effectiveModel, promptRef, submitPrompt, cancel, convRef, behind, onConversationScroll, jumpToNewest } = chat;
+
   const loadAssets = useCallback((w: string) => api.listAssets(w, projectId).then(setAssets).catch(() => undefined), [projectId]);
   const loadBlocks = useCallback(() => {
     Promise.all([api.blocks("company"), api.blocks("mine")]).then(([company, mine]) => setBlocks({ company, mine })).catch(() => undefined);
@@ -108,100 +91,19 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
     setProject(p); setSchema(s.schema); setRevision(s.revision); setVersions(v); setMessages(toMessages(h));
     setSave((x) => (x.at ? x : { state: "saved", at: new Date(p.updatedAt) }));
     void loadAssets(p.workspaceId);
-  }, [projectId, loadAssets]);
+  }, [projectId, loadAssets]); // eslint-disable-line react-hooks/exhaustive-deps
+  onConflict.current = reload;
   useEffect(() => { reload().catch(setLoadError); api.components().then(setRegistry).catch(() => undefined); loadBlocks(); api.aiStatus(ws).then(setAi).catch(() => undefined); }, [reload]); // eslint-disable-line react-hooks/exhaustive-deps
   // signed download URLs expire after 10 minutes: refresh the asset map before that
   useEffect(() => { if (!ws) return; const t = setInterval(() => void loadAssets(ws), 8 * 60_000); return () => clearInterval(t); }, [ws, loadAssets]);
-  useEffect(() => { try { localStorage.setItem("studio-ai-model", model); } catch { /* ignore */ } }, [model]);
-  const valid = (m: string) => m === "auto" || m === "mock" || (ai?.models ?? []).some((x) => x.id === m);
-  const effectiveModel = ai?.configured ? (model && valid(model) ? model : valid(ai.defaultModel) ? ai.defaultModel : "auto") : "mock";
 
-  const saveFailureRef = useRef<"none" | "retryable">("none");
-  async function run<T>(label: string, fn: () => Promise<T>, fallback: string): Promise<T | undefined> {
-    // An AI request is not a save: while it waits for the model nothing is being written, so the top bar keeps saying what is true ("saved") and a failed/cancelled request is not "Lưu thất bại".
-    const isSave = label !== "prompt";
-    setBusy(label); if (isSave) setSave((x) => ({ ...x, state: "saving" }));
-    saveFailureRef.current = "none";
-    try { const out = await fn(); setSave((x) => (isSave || (out as { version?: unknown } | undefined)?.version ? { state: "saved", at: new Date() } : x)); return out; }
-    catch (e) {
-      if (isSave) setSave((x) => ({ ...x, state: "error" }));
-      // the user cancelled before the server answered: nothing failed
-      if (e instanceof ApiError && e.code === "ABORTED") { setNotice("Đã huỷ yêu cầu AI."); return undefined; }
-      // retryable = nothing definite was decided by the server (no answer, 5xx, 429); conflict/validation/permission failures are final: retrying the same edit cannot succeed
-      const st = e instanceof ApiError ? e.status : 0;
-      saveFailureRef.current = st === 0 || st >= 500 || st === 429 ? "retryable" : "none";
-      if (e instanceof ApiError && e.code === "REVISION_CONFLICT") { setNotice("Project vừa được thay đổi ở nơi khác. Đã tải lại bản mới nhất, hãy thử lại."); await reload().catch(() => undefined); }
-      else if (e instanceof ApiError && e.code === "AI_TOKEN_LIMIT") {
-        const d = e.details as { scope?: string; used?: number; limit?: number } | undefined;
-        setNotice(`${d?.scope === "workspace" ? "Workspace đã dùng hết ngân sách token AI của tháng" : "Bạn đã dùng hết hạn mức token AI trong 24 giờ"}${d?.limit ? ` (${tok(d.used ?? 0)} / ${tok(d.limit)} token)` : ""}. Có thể chọn “Mô phỏng” để tiếp tục chỉnh sửa.`);
-      }
-      else if (e instanceof ApiError && (e.status === 409 || e.status === 422 || e.status === 429 || e.code === "TENANT_SUSPENDED")) { const m = explainError(e); setNotice(`${m.title}. ${m.detail}`); }
-      else if (!(e instanceof ApiError && e.status === 401)) setNotice(errText(e, fallback));
-      return undefined;
-    } finally { setBusy(null); }
-  }
-  const refreshVersions = async () => setVersions(await api.listVersions(ws, projectId).catch(() => versions));
-
-  // M-004: the conversation follows the newest message. Your own message always scrolls; a reply (or the progress block) only follows while you are at the bottom,
-  // otherwise a "Tin mới" button offers the jump, so reading older messages is never interrupted.
-  const convRef = useRef<HTMLDivElement>(null); const stick = useRef(true); const [behind, setBehind] = useState(false);
-  const onConversationScroll = () => { const el = convRef.current; if (!el) return; stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80; if (stick.current) setBehind(false); };
-  const scrollToNewest = (behavior: ScrollBehavior = "instant") => { const el = convRef.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior }); };
-  const working = busy === "prompt";
-  useLayoutEffect(() => {
-    if (stick.current || messages[messages.length - 1]?.role === "user") { stick.current = true; setBehind(false); scrollToNewest(); } else setBehind(true);
-  }, [messages.length, working, !!live, mode]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const label = (type: string) => sectionLabel(type, registry.find((c) => c.id === type)?.name);
-  async function submitPrompt(text = prompt.trim()) {
-    if (!text || busy || readOnly || !project) return;
-    setMessages((m) => [...m, { id: `local-${Date.now()}`, role: "user", content: text }]); setPrompt("");
-    const real = ai?.configured === true && effectiveModel !== "mock";
-    // real models stream (partial output, cancel, deadline); the simulator answers at once
-    const r = await run("prompt", () => {
-      if (!real) return api.sendPrompt(ws, projectId, text, revision, ai?.configured ? effectiveModel : undefined);
-      const ctl = new AbortController(); streamAbort.current = ctl;
-      const t0 = Date.now(); setLive({ id: null, text: "", status: "", startedAt: t0, lastAt: t0, deadline: null });
-      const touch = (f: (l: AiLive) => AiLive) => setLive((l) => (l ? f({ ...l, lastAt: Date.now() }) : l));
-      return api.streamPrompt(ws, projectId, text, revision, effectiveModel, {
-          onStart: (id, deadline) => touch((l) => ({ ...l, id, deadline: deadline ?? null })),
-          onDelta: (t) => touch((l) => ({ ...l, text: l.text + t })),
-          onStatus: (st) => touch((l) => ({ ...l, status: st })) }, ctl.signal).finally(() => { streamAbort.current = null; setLive(null); });
-    }, "Không thể cập nhật website.");
-    if (!r) return;
-    setSchema(r.pageSchema); setRevision(r.revision);
-    const changed = Array.from(new Set(r.schemaPatch.map((op) => op.sectionType ?? r.pageSchema.sections.find((s) => s.id === op.sectionId)?.type ?? schema?.sections.find((s) => s.id === op.sectionId)?.type).filter(Boolean) as string[]));
-    const used = Array.from(new Set(r.pageSchema.sections.map((s) => s.type)));
-    const reuse = r.reuseSources;
-    const meta = [r.outcome, r.model && r.model !== "mock" ? r.model : "Chế độ thử nghiệm", ...(r.version ? [`Phiên bản ${r.version.versionNumber}`] : []),
-      usageChip(r.usage?.attempts ?? 0, r.usage?.totalTokens ?? null, r.usage?.costUsd ?? null),
-      ...(reuse && (reuse.blocks.length || reuse.templates.length) ? [`Tái sử dụng: ${reuse.blocks.length} khối, ${reuse.templates.length} template`] : [])];
-    const detail = r.outcome === "UPDATED" ? `Đã đổi: ${changed.map(label).join(", ") || "—"} · Component đang dùng: ${used.map(label).join(", ")}` : undefined;
-    setMessages((m) => [...m, { id: r.promptId, role: "assistant", content: r.message.content, meta, detail }]);
-    if (r.version) void refreshVersions();
-  }
-  // a prompt handed over from Studio Home is sent once, then removed from the URL
-  const handedOver = useRef(false);
-  useEffect(() => {
-    const p = params.get("prompt");
-    if (p && project && schema && !handedOver.current) { handedOver.current = true; router.replace(`${base}/ai`); void submitPrompt(p); }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params, project, schema]);
-
-  /** the last edit that could not be saved (network/5xx/timeout), kept so the user can retry it instead of redoing the work */
-  const [failedEdit, setFailedEdit] = useState<{ ops: (SchemaOperation | DefinitionOperation)[]; summary: string; blockId?: string } | null>(null);
   async function applyOps(ops: (SchemaOperation | DefinitionOperation)[], summary: string, blockId?: string): Promise<boolean> {
     const r = await run("edit", () => api.patchSchema(ws, projectId, revision, ops, summary, blockId), "Không lưu được thay đổi.");
     if (!r) { setFailedEdit(saveFailureRef.current === "retryable" ? { ops, summary, blockId } : null); return false; }
     setFailedEdit(null); setSchema(r.schema); setRevision(r.revision); void refreshVersions(); return true;
   }
   const retrySave = () => { if (failedEdit) void applyOps(failedEdit.ops, failedEdit.summary, failedEdit.blockId); };
-  // leaving while an edit is in flight or failed would lose it silently
-  useEffect(() => {
-    if (busy !== "edit" && !failedEdit) return;
-    const h = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
-    window.addEventListener("beforeunload", h); return () => window.removeEventListener("beforeunload", h);
-  }, [busy, failedEdit]);
+
   async function restore(v: VersionSummary) {
     if (!window.confirm(`Khôi phục phiên bản ${v.versionNumber}? Một phiên bản mới sẽ được tạo; lịch sử cũ giữ nguyên.`)) return;
     const r = await run("restore", () => api.restoreVersion(ws, projectId, v.id, revision), "Không khôi phục được phiên bản.");
@@ -274,7 +176,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
 
   return (
     <div className={`studio workspace3${mode === "design" ? " bx-root" : ""}`}>
-      {mode === "design" ? <BuilderWorkspace
+      {mode === "design" ? <ErrorBoundary variant="inline" resetKeys={[projectId]} homeHref={S("/projects")} onReset={() => void reload().catch(() => undefined)}><BuilderWorkspace
         project={project} doc={schema as AppDefinitionV2} revision={revision} registry={registry} assets={assets} backend={backend} pageId={pageId} onPage={(id) => { setPageId(id); setSelectedId(null); }}
         selectedId={selectedId} onSelect={setSelectedId} device={device} onDevice={setDevice} busy={busy !== null} save={save} readOnly={readOnly} latest={latest}
         runtime={runtime} dataManagement={dataManagement} onRetrySave={failedEdit ? retrySave : undefined} blocks={blockOptions.map(({ b, who }): BlockOption => ({ id: b.id, name: b.name, who, baseLabel: label(b.baseComponent) }))}
@@ -287,7 +189,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
           <button className="button ghost" onClick={() => go("versions")}>Phiên bản</button>
           <button className="button ghost" onClick={() => go("assets")}>Tệp</button>
           <button className="button icon" aria-label="Cài đặt project" title={mayEdit ? "Cài đặt project" : "Bạn không có quyền đổi cài đặt"} disabled={!mayEdit} onClick={() => go("settings")}><Settings size={16} aria-hidden="true"/></button></>}
-        goAi={() => go("ai")} openSite={() => go("site")} openMembers={() => go("members")} openPublish={() => go("publish")} saveBlock={() => setSavingBlock(true)}/> : (
+        goAi={() => go("ai")} openSite={() => go("site")} openMembers={() => go("members")} openPublish={() => go("publish")} saveBlock={() => setSavingBlock(true)}/></ErrorBoundary> : (
       <header className="topbar">
         <div className="brand">
           <button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}><ArrowLeft size={16} aria-hidden="true"/></button>
@@ -338,9 +240,9 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
                     {m.meta?.length ? <div className="chips">{m.meta.map((x) => <span className="chip" key={x}>{x}</span>)}</div> : null}</div></div>
                 ))}</div>
                 {busy === "prompt" && live ? <AiProgress live={live} model={effectiveModel}
-                    onCancel={() => { if (live.id) void api.cancelStream(live.id).catch(() => undefined); else streamAbort.current?.abort(); }}/>
+                    onCancel={cancel}/>
                   : busy === "prompt" ? <div className="message assistant"><div className="bubble typing" role="status"><span className="dots" aria-hidden="true"><i/><i/><i/></span> Đang phân tích yêu cầu{ai?.configured && effectiveModel !== "mock" ? " với AI…" : "…"}</div></div> : null}
-                {behind ? <button type="button" className="smallButton" style={{ position: "sticky", bottom: 8, marginLeft: "auto", display: "block" }} onClick={() => { stick.current = true; setBehind(false); scrollToNewest("smooth"); }}>Tin mới ↓</button> : null}
+                {behind ? <button type="button" className="smallButton" style={{ position: "sticky", bottom: 8, marginLeft: "auto", display: "block" }} onClick={jumpToNewest}>Tin mới ↓</button> : null}
               </div>
               <div className="composer">
                 {!readOnly && messages.length > 0 ? <div className="suggestions" aria-label="Gợi ý">{suggestions(ai?.configured === true).map((t) => (
