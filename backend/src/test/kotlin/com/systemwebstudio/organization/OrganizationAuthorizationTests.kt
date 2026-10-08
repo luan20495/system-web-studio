@@ -143,7 +143,8 @@ class OrganizationAuthorizationTests : OrganizationTestBase() {
 
     @Test
     fun `a SYSTEM_ADMIN who is also a member of the company has its member role there - but only the platform scope once the company is DELETED`() {
-        val sys = sysAdmin(); val c = company(sys); val sysId = UUID.fromString(sys.body(sys.get("/api/v1/auth/me")).get("id").asString())
+        val sys = sessionFor(fx.user("org-sys-member", systemAdmin = true).username)          // its own operator: it becomes a MEMBER of one company, which must not leak into other tests
+        val c = company(sys); val sysId = UUID.fromString(sys.body(sys.get("/api/v1/auth/me")).get("id").asString())
         jdbc.update("INSERT INTO tenant_members (tenant_id, user_id, role, active) VALUES (?, ?, 'TENANT_ADMIN', true)", c.id, sysId)       // a platform operator who also belongs to the company
         assertThat(sys.get(units(c)).response.status).describedAs("an active member keeps its Tenant Admin role").isEqualTo(200)
         jdbc.update("UPDATE tenants SET status = 'DELETED' WHERE id = ?", c.id)

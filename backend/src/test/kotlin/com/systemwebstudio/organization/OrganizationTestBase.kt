@@ -17,6 +17,28 @@ import java.util.UUID
 abstract class OrganizationTestBase : IntegrationTestBase() {
     protected val PASSWORD = "Org-Pass-2026-x"
 
+    // ---- the test database is shared by EVERY test class of the JVM and the sign-up cap (`app.signup.max-users`, 500) counts every account ever created: each test removes the
+    // tenants and accounts it made (and only those), so the organization suite adds nothing to the global user count. Audit rows stay (append-only, no FK to users).
+    private var usersBefore: Set<UUID> = emptySet(); private var tenantsBefore: Set<UUID> = emptySet()
+    private fun idsOf(table: String): Set<UUID> = jdbc.queryForList("SELECT id FROM $table", UUID::class.java).toSet()
+    @org.junit.jupiter.api.BeforeEach fun snapshotBeforeOrganizationTest() { usersBefore = idsOf("users"); tenantsBefore = idsOf("tenants") }
+    @org.junit.jupiter.api.AfterEach fun purgeWhatTheOrganizationTestCreated() {
+        val tenants = (idsOf("tenants") - tenantsBefore).map { "'$it'" }.joinToString(",")
+        val users = (idsOf("users") - usersBefore).map { "'$it'" }.joinToString(",")
+        if (tenants.isNotEmpty()) {
+            jdbc.execute("DELETE FROM workspace_members WHERE workspace_id IN (SELECT id FROM workspaces WHERE tenant_id IN ($tenants))")
+            jdbc.execute("DELETE FROM workspaces WHERE tenant_id IN ($tenants)")
+            jdbc.execute("DELETE FROM tenant_members WHERE tenant_id IN ($tenants)")
+            jdbc.execute("DELETE FROM tenants WHERE id IN ($tenants)")
+        }
+        if (users.isNotEmpty()) {
+            jdbc.execute("DELETE FROM account_tokens WHERE user_id IN ($users) OR created_by IN ($users)")
+            jdbc.execute("DELETE FROM workspace_members WHERE user_id IN ($users)")
+            jdbc.execute("DELETE FROM tenant_members WHERE user_id IN ($users)")
+            jdbc.execute("DELETE FROM users WHERE id IN ($users)")
+        }
+    }
+
     protected class Company(val id: UUID, val slug: String, val adminId: UUID, val adminName: String, val admin: ApiSession)
 
     protected fun uname(p: String) = p + "-" + UUID.randomUUID().toString().take(8)
@@ -80,5 +102,7 @@ abstract class OrganizationTestBase : IntegrationTestBase() {
     protected fun auditCount(action: String, resourceId: UUID) =
         jdbc.queryForObject("SELECT count(*) FROM audit_events WHERE action = ? AND resource_id = ?", Long::class.java, action, resourceId.toString())!!
 
-    private companion object { val IP_COUNTER = java.util.concurrent.atomic.AtomicInteger() }      // JUnit makes a new instance per test: the counter must outlive it
+    private companion object {
+        val IP_COUNTER = java.util.concurrent.atomic.AtomicInteger()
+    }      // JUnit makes a new instance per test: the counter must outlive it
 }
