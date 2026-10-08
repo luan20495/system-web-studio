@@ -20,6 +20,8 @@ const browser = await launch({ headless: true });
 const out = {};
 for (const [name, path] of PAGES) for (const [sz, w, h] of SIZES) {
   const ctx = await browser.newContext({ viewport: { width: w, height: h }, reducedMotion: "reduce" }); const p = await ctx.newPage(); p.setDefaultTimeout(4000);
+  await p.clock.setFixedTime(new Date("2026-10-09T09:00:00Z"));          // relative dates ("2 giờ trước") must not change the pixels between runs
+  await p.addInitScript(() => { let n = 1; Math.random = () => ((n = (n * 16807) % 2147483647) / 2147483647); });
   try {
     await p.goto(BASE + path); await p.waitForSelector("#root > *", { timeout: 6000 }).catch(() => undefined); await p.waitForTimeout(700);
     const buf = await p.screenshot({ animations: "disabled", caret: "hide" });
