@@ -1,0 +1,183 @@
+/**
+ * Pure rules of the organization screens (no React, no network): the dynamic tree, move targets and cycle protection, form validation, delete rules the UI explains, the employee directory fallback,
+ * the gate (`organizationPlan`) and the mapping of every refusal to words. The server stays the authority on all of it; this only avoids obvious refusals and explains the rest.
+ * Nothing here reads a role name. Organization metadata is never a permission.
+ */
+import type { TenantMemberView } from "@xweb/types";
+import type { AdminScope } from "./adminModel";
+import {
+  OrganizationNotReady, type Employee, type EmployeePage, type EmployeeQuery, type OrgCapabilityId, type OrgCapabilityState, type OrgUnit, type OrgUnitType,
+} from "./organization";
+
+// ------------------------------------------------------------------------------------------------------------------------------- icons
+/** The closed set of icons a unit type may use. An icon is an id from this list (rendered by unitIcons.tsx from the design system's Lucide set); never a URL, never user-supplied markup. */
+export const UNIT_ICONS: readonly { id: string; label: string }[] = [
+  { id: "building", label: "Công ty / Khối" }, { id: "landmark", label: "Trụ sở" }, { id: "map-pin", label: "Chi nhánh / Địa điểm" }, { id: "briefcase", label: "Phòng / Ban" },
+  { id: "layers", label: "Bộ phận" }, { id: "users", label: "Team / Nhóm" }, { id: "git-branch", label: "Nhánh" }, { id: "folder", label: "Thư mục / Khác" },
+  { id: "cpu", label: "Công nghệ" }, { id: "code", label: "Phát triển" }, { id: "smartphone", label: "Mobile" }, { id: "package", label: "Sản phẩm / Kho" },
+  { id: "megaphone", label: "Marketing" }, { id: "wallet", label: "Tài chính" }, { id: "headset", label: "Hỗ trợ" }, { id: "scale", label: "Pháp chế" },
+];
+export const DEFAULT_ICON = "folder";
+export const isUnitIcon = (id: string): boolean => UNIT_ICONS.some((i) => i.id === id);
+export const safeIcon = (id: string | null | undefined): string => (id && isUnitIcon(id) ? id : DEFAULT_ICON);
+
+// ------------------------------------------------------------------------------------------------------------------------------- tree
+export type TreeNode = { unit: OrgUnit; children: TreeNode[]; depth: number; /** the parent was not in the list: shown at the root, never dropped */ orphan: boolean };
+const byName = (a: OrgUnit, b: OrgUnit) => a.name.localeCompare(b.name, "vi", { sensitivity: "base" }) || a.id.localeCompare(b.id);
+
+/** flat server rows → forest. Order: name. A row whose parent is missing (or that would close a loop) is shown at the root, flagged `orphan`; nothing is dropped. */
+export function buildTree(units: readonly OrgUnit[]): TreeNode[] {
+  const ids = new Set(units.map((u) => u.id)); const kids = new Map<string | null, OrgUnit[]>();
+  for (const u of units) { const p = u.parentId && ids.has(u.parentId) && u.parentId !== u.id ? u.parentId : null; (kids.get(p) ?? kids.set(p, []).get(p)!).push(u); }
+  const seen = new Set<string>();
+  const make = (u: OrgUnit, depth: number, orphan: boolean): TreeNode => { seen.add(u.id); return { unit: u, depth, orphan, children: (kids.get(u.id) ?? []).sort(byName).filter((c) => !seen.has(c.id)).map((c) => make(c, depth + 1, false)) }; };
+  const roots = (kids.get(null) ?? []).sort(byName).map((u) => make(u, 0, !!u.parentId));
+  // a pure cycle (A→B→A, no root reaches it) would be invisible: surface the rest at the root too
+  for (const u of [...units].sort(byName)) if (!seen.has(u.id)) roots.push(make(u, 0, true));
+  return roots;
+}
+export const flattenTree = (nodes: readonly TreeNode[], open?: ReadonlySet<string>): TreeNode[] => nodes.flatMap((n) => [n, ...(open && !open.has(n.unit.id) ? [] : flattenTree(n.children, open))]);
+export function descendantIds(units: readonly OrgUnit[], id: string): Set<string> {
+  const out = new Set<string>(); const stack = [id];
+  while (stack.length) { const cur = stack.pop()!; for (const u of units) if (u.parentId === cur && !out.has(u.id) && u.id !== id) { out.add(u.id); stack.push(u.id); } }
+  return out;
+}
+export const childCountOf = (units: readonly OrgUnit[], id: string): number => units.filter((u) => u.parentId === id).length;
+/** "Khối Công nghệ › Mobile › Flutter Team" */
+export function unitPath(units: readonly OrgUnit[], id: string | null | undefined): string {
+  const by = new Map(units.map((u) => [u.id, u])); const out: string[] = []; const guard = new Set<string>();
+  for (let cur = id ? by.get(id) : undefined; cur && !guard.has(cur.id); cur = cur.parentId ? by.get(cur.parentId) : undefined) { guard.add(cur.id); out.unshift(cur.name); }
+  return out.join(" › ");
+}
+const typeOf = (types: readonly OrgUnitType[], id: string | null | undefined) => (id ? types.find((t) => t.id === id) : undefined);
+/** a type with no `allowedParentTypeIds` sits anywhere; otherwise the parent's TYPE must be listed (and there must be a parent) */
+export function parentRule(type: OrgUnitType | undefined, parent: OrgUnit | null, types: readonly OrgUnitType[]): string | null {
+  const allowed = type?.allowedParentTypeIds ?? []; if (!type || allowed.length === 0) return null;
+  const names = allowed.map((a) => typeOf(types, a)?.name ?? a).join(", ");
+  if (!parent) return `Loại “${type.name}” phải nằm trong: ${names}.`;
+  return parent.typeId && allowed.includes(parent.typeId) ? null : `Loại “${type.name}” chỉ đặt được trong: ${names}.`;
+}
+
+export type MoveTarget = { id: string | null; label: string; depth: number; disabled: boolean; reason?: string; current: boolean };
+/** every place a unit could go, with the reason when it cannot: itself / its subtree (a cycle), a type rule, "already here". The server re-checks (ORG_CYCLE). */
+export function moveTargets(units: readonly OrgUnit[], types: readonly OrgUnitType[], id: string): MoveTarget[] {
+  const me = units.find((u) => u.id === id); if (!me) return [];
+  const below = descendantIds(units, id); const type = typeOf(types, me.typeId);
+  const rows: MoveTarget[] = [];
+  const rootReason = parentRule(type, null, types);
+  rows.push({ id: null, label: "Gốc (không thuộc đơn vị nào)", depth: 0, current: !me.parentId, disabled: !!rootReason || !me.parentId, reason: !me.parentId ? "Đang ở gốc." : rootReason ?? undefined });
+  for (const n of flattenTree(buildTree(units))) {
+    const u = n.unit; let reason: string | undefined;
+    if (u.id === id) reason = "Không thể chuyển vào chính nó.";
+    else if (below.has(u.id)) reason = "Không thể chuyển vào đơn vị con của nó (tạo vòng).";
+    else if (u.id === me.parentId) reason = "Đang ở đây.";
+    else if (!u.enabled) reason = "Đơn vị đang tắt.";
+    else reason = parentRule(type, u, types) ?? undefined;
+    rows.push({ id: u.id, label: u.name, depth: n.depth + 1, current: u.id === me.parentId, disabled: !!reason, reason });
+  }
+  return rows;
+}
+export const wouldCycle = (units: readonly OrgUnit[], id: string, newParentId: string | null): boolean => !!newParentId && (newParentId === id || descendantIds(units, id).has(newParentId));
+
+// ------------------------------------------------------------------------------------------------------------------------------- validation
+export const UNIT_CODE_RE = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,39}$/;
+export const TYPE_CODE_RE = /^[A-Z][A-Z0-9_]{1,31}$/;
+export type UnitFormErrors = { name?: string; code?: string; type?: string };
+export function validateUnitForm(f: { name: string; code: string; typeId: string | null }, ctx: { types: readonly OrgUnitType[]; parent: OrgUnit | null }): UnitFormErrors {
+  const out: UnitFormErrors = {}; const name = f.name.trim();
+  if (!name) out.name = "Hãy nhập tên đơn vị."; else if (name.length > 120) out.name = "Tên đơn vị tối đa 120 ký tự.";
+  if (f.code.trim() && !UNIT_CODE_RE.test(f.code.trim())) out.code = "Mã gồm chữ, số, “.”, “_”, “-” (tối đa 40 ký tự), bắt đầu bằng chữ hoặc số.";
+  const t = typeOf(ctx.types, f.typeId);
+  if (f.typeId && !t) out.type = "Loại đơn vị không còn tồn tại.";
+  else { const r = parentRule(t, ctx.parent, ctx.types); if (r) out.type = r; }
+  return out;
+}
+export type TypeFormErrors = { name?: string; code?: string; icon?: string };
+export function validateTypeForm(f: { name: string; code: string; icon: string }, existing: readonly OrgUnitType[]): TypeFormErrors {
+  const out: TypeFormErrors = {}; const name = f.name.trim(); const code = f.code.trim().toUpperCase();
+  if (!name) out.name = "Hãy nhập tên loại (ví dụ: Khối)."; else if (name.length > 80) out.name = "Tên loại tối đa 80 ký tự.";
+  if (!TYPE_CODE_RE.test(code)) out.code = "Mã gồm 2–32 ký tự A–Z, 0–9, “_”, bắt đầu bằng chữ (ví dụ: DIVISION).";
+  else if (existing.some((t) => t.code.toUpperCase() === code)) out.code = "Mã này đã được dùng cho loại khác.";
+  if (!isUnitIcon(f.icon)) out.icon = "Hãy chọn một biểu tượng trong danh sách.";
+  return out;
+}
+/** what the UI says BEFORE the click when the counts it knows make a delete pointless; unknown counts → null (the server decides) */
+export function deleteBlock(u: OrgUnit, units: readonly OrgUnit[]): string | null {
+  const kids = u.childCount ?? childCountOf(units, u.id);
+  if (kids > 0) return `Còn ${kids} đơn vị con. Chuyển hoặc xóa chúng trước.`;
+  if ((u.employeeCount ?? 0) > 0) return `Còn ${u.employeeCount} nhân viên. Chuyển họ sang đơn vị khác trước.`;
+  return null;
+}
+
+// ------------------------------------------------------------------------------------------------------------------------------- employees
+export const EMPLOYEE_PAGE_SIZE = 20;
+const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/gi, "d").toLowerCase();
+/** the directory built from the tenant member list: search by name / username / email (accent-insensitive), status, then a page. It has no unit or position, so those filters do not apply. */
+export function employeesFromMembers(members: readonly TenantMemberView[], q: EmployeeQuery): EmployeePage {
+  const needle = fold((q.q ?? "").trim());
+  const rows: Employee[] = members.map((m) => ({ userId: m.userId, username: m.username ?? m.userId.slice(0, 8), displayName: m.displayName ?? null, email: m.email ?? null, tenantRole: m.role, active: m.active }));
+  const st = q.status ?? "ALL";
+  const hit = rows.filter((e) => (st === "ALL" || (st === "ACTIVE") === e.active) && (!needle || fold(`${e.displayName ?? ""} ${e.username} ${e.email ?? ""}`).includes(needle)))
+    .sort((a, b) => (a.displayName ?? a.username).localeCompare(b.displayName ?? b.username, "vi", { sensitivity: "base" }) || a.userId.localeCompare(b.userId));
+  const size = Math.max(1, q.size || EMPLOYEE_PAGE_SIZE); const last = Math.max(0, Math.ceil(hit.length / size) - 1); const page = Math.min(Math.max(0, q.page), last);
+  return { items: hit.slice(page * size, page * size + size), total: hit.length, page, size, source: "members" };
+}
+export const pageCount = (p: { total: number; size: number }) => Math.max(1, Math.ceil(p.total / Math.max(1, p.size)));
+export const employeeName = (e: { displayName: string | null; username: string }) => e.displayName?.trim() || e.username;
+
+// ------------------------------------------------------------------------------------------------------------------------------- gate
+export type CapView = { state: "ready" } | { state: "not-ready"; reason: string };
+const capView = (s: OrgCapabilityState): CapView => (s.status === "READY" ? { state: "ready" } : { state: "not-ready", reason: s.reason });
+export type OrganizationPlan = {
+  /** from the server's listing of the caller's tenant capability (adminScope): a screen is offered only when the server lists a tenant the caller administers */
+  access: { granted: true } | { granted: false; reason: string };
+  /** exactly one tenant → fixed from the session (read-only); several → only the caller's own tenants, never a free id */
+  fixedTenant: { id: string; name: string } | null; tenantChoice: { id: string; name: string }[];
+  units: CapView; edit: CapView; types: CapView; positions: CapView; assignOrg: CapView; assignPosition: CapView;
+  /** "directory" when listEmployees is ready; "members" while the organization-aware list is not */
+  directory: "directory" | "members";
+};
+export function organizationPlan(scope: AdminScope, state: (id: OrgCapabilityId) => OrgCapabilityState): OrganizationPlan {
+  const granted = scope.tenants.length > 0;
+  const own = scope.tenants.map((t) => ({ id: t.id, name: t.name }));
+  const edit = [state("createOrganizationUnit"), state("updateOrganizationUnit"), state("moveOrganizationUnit"), state("deleteOrganizationUnit")].find((s) => s.status === "NOT_READY");
+  return {
+    access: granted ? { granted: true } : { granted: false, reason: "Máy chủ không liệt kê công ty nào mà bạn quản trị, nên không mở cơ cấu tổ chức cho tài khoản này." },
+    fixedTenant: own.length === 1 ? own[0] : null, tenantChoice: own.length > 1 ? own : [],
+    units: capView(state("listOrganizationUnits")), edit: edit ? capView(edit) : { state: "ready" }, types: capView(state("listOrganizationUnitTypes")), positions: capView(state("listPositions")),
+    assignOrg: capView(state("updateEmployeeOrganization")), assignPosition: capView(state("updateEmployeePosition")),
+    directory: state("listEmployees").status === "READY" ? "directory" : "members",
+  };
+}
+
+// ------------------------------------------------------------------------------------------------------------------------------- errors
+export type OrgProblemKind = "validation" | "duplicate" | "cycle" | "blocked" | "version" | "conflict" | "forbidden" | "notfound" | "unavailable" | "not-ready" | "unknown";
+export type OrgProblem = { kind: OrgProblemKind; text: string };
+type Err = { code?: string; status?: number; message?: string };
+/**
+ * Codes marked (assumed) are the NAMES C1 is expected to use; they are not a contract yet. Any other code falls back to the HTTP status, and an unknown one shows the server's own message.
+ */
+const BY_CODE: Record<string, [OrgProblemKind, string]> = {
+  ORG_CYCLE: ["cycle", "Không thể chuyển đơn vị vào chính nó hoặc đơn vị con của nó (tạo vòng)."], CYCLE_DETECTED: ["cycle", "Không thể chuyển đơn vị vào chính nó hoặc đơn vị con của nó (tạo vòng)."],
+  ORG_HAS_CHILDREN: ["blocked", "Không xóa được: đơn vị còn đơn vị con. Chuyển hoặc xóa chúng trước."], ORG_HAS_EMPLOYEES: ["blocked", "Không xóa được: đơn vị còn nhân viên. Chuyển họ sang đơn vị khác trước."],
+  UNIT_NOT_EMPTY: ["blocked", "Không xóa được: đơn vị còn đơn vị con hoặc nhân viên."],
+  VERSION_CONFLICT: ["version", "Đơn vị vừa được người khác thay đổi. Tải lại cơ cấu rồi thử lại."], STALE_VERSION: ["version", "Đơn vị vừa được người khác thay đổi. Tải lại cơ cấu rồi thử lại."],
+  ORG_CODE_TAKEN: ["duplicate", "Mã này đã được dùng."], DUPLICATE_NAME: ["duplicate", "Đã có đơn vị cùng tên ở vị trí này."], TYPE_CODE_TAKEN: ["duplicate", "Mã loại đơn vị này đã được dùng."],
+  ORG_PARENT_TYPE_INVALID: ["validation", "Loại đơn vị này không đặt được ở vị trí đã chọn."], VALIDATION_FAILED: ["validation", "Dữ liệu chưa hợp lệ. Kiểm tra lại các trường."],
+  FORBIDDEN: ["forbidden", "Bạn không có quyền thực hiện thao tác này."], UNIT_NOT_FOUND: ["notfound", "Không tìm thấy đơn vị (có thể đã bị xóa). Tải lại cơ cấu."],
+  TENANT_NOT_FOUND: ["notfound", "Không tìm thấy công ty."], USER_NOT_FOUND: ["notfound", "Không tìm thấy nhân viên trong công ty này."], USER_DISABLED: ["conflict", "Tài khoản này đang bị khóa."],
+};
+export function orgProblem(e: unknown): OrgProblem {
+  if (e instanceof OrganizationNotReady) return { kind: "not-ready", text: `Chưa sẵn sàng: ${e.reason}` };
+  const x = (e ?? {}) as Err; const hit = x.code ? BY_CODE[x.code] : undefined;
+  if (hit) return { kind: hit[0], text: hit[1] };
+  const s = x.status ?? 0;
+  if (s === 400 || s === 422) return { kind: "validation", text: "Dữ liệu chưa hợp lệ. Kiểm tra lại các trường." };
+  if (s === 401) return { kind: "forbidden", text: "Phiên đăng nhập đã hết. Hãy đăng nhập lại." };
+  if (s === 403) return { kind: "forbidden", text: "Bạn không có quyền thực hiện thao tác này." };
+  if (s === 404) return { kind: "notfound", text: "Không tìm thấy mục này (có thể đã bị xóa). Tải lại." };
+  if (s === 409) return { kind: "conflict", text: "Thao tác xung đột với dữ liệu hiện tại. Tải lại rồi thử lại." };
+  if (s === 503) return { kind: "unavailable", text: "Máy chủ chưa sẵn sàng. Thử lại sau." };
+  if (s >= 500 || s === 0) return { kind: "unavailable", text: "Không kết nối được máy chủ. Chưa rõ thao tác đã được ghi hay chưa: tải lại để kiểm tra." };
+  return { kind: "unknown", text: x.message ? `Chưa thực hiện được (${x.message}).` : "Chưa thực hiện được." };
+}

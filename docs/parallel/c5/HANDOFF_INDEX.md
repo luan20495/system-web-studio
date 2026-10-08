@@ -39,6 +39,7 @@
 | H-C1-14 creation CLOSED (tenant workspace route used); listing remains = H-C1-16 | C1 | - | - |
 | H-C1-15 **CLOSED**: tenant-scoped account creation wired (SUPER01, ADMIN01 PASS) | C1 | - | - |
 | H-C1-16 no way to list the workspaces of a tenant (`/admin/workspaces` rows lack `tenantId`; `/auth/me` lists member workspaces only) | C1 | P2 | tenant admin picking a workspace it does not belong to |
+| H-C1-17 contract for organization units / unit types / positions / employee directory (the screens are built behind a NOT_READY adapter; E2E-ORG01 WAITING_FOR_C1) | C1 | **P1** | /admin/organization, /admin/employees, E2E-ORG01 |
 | H-C0-11 CORS must list the 3 portal origins; public routing = one hostname per portal (see HANDOFFS_PORTALS.md) | C0 | P0 | public portals |
 | H-C1-12 / H-C0-12 groups, sharing, BYOK have no usable backend (no API / flag off) | C1/C2/C0 | P3 | Admin sections stay "Chưa sẵn sàng" |
 | H-C2-10 AI stream `status` only for tools: add model/fallback/validating/saving so the UI can show what the server is doing | C2 | P2 | AI chat feedback |
