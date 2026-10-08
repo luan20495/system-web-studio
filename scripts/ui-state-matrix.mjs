@@ -51,7 +51,7 @@ const SNAP = () => {
   const kinds = [...document.querySelectorAll(".stateView")].map((e) => (/state-([a-z-]+)/.exec(e.className)?.[1] ?? "?"));
   const alerts = [...document.querySelectorAll("[role=alert],.formError,.notice.warn,[data-kind]")].map((e) => e.textContent.trim().slice(0, 160)).filter(Boolean);
   return { kinds, alerts, mainLen: main.innerText.trim().length, bodyLen: text.trim().length, text: text.slice(0, 4000), retry: [...document.querySelectorAll("button")].some((b) => /Thử lại/.test(b.textContent)),
-    loading: !!document.querySelector(".state-loading,.spinner,[aria-busy=true],[role=status]"), emptyText: /Chưa có|Không có|trống|Chưa thêm|Chưa chọn/i.test(text), forbiddenText: /không có quyền|chỉ dành cho|Bạn chưa quản trị|không thuộc|Máy chủ không liệt kê/i.test(text) };
+    loading: !!document.querySelector(".state-loading,.spinner,[aria-busy=true],[role=status]"), emptyText: /Chưa có|Không có|trống|Chưa thêm|Chưa chọn/i.test(text), emptyTextHidden: /Chưa có|Không có|trống|Chưa thêm|Chưa chọn/i.test(document.body.textContent ?? ""), forbiddenText: /không có quyền|chỉ dành cho|Bạn chưa quản trị|không thuộc|Máy chủ không liệt kê/i.test(text) };
 };
 
 // ------------------------------------------------------------------------------------------------------------------------------- judging
@@ -68,7 +68,7 @@ function judge(state, s, m, errs, ctx) {
   switch (state) {
     case "default": case "populated": { const e = s.kinds.filter((k) => ["error", "network", "conflict", "expired"].includes(k)); if (e.length) return bad(`shows a ${e.join("/")} state with healthy fixture data`); const sub = s.kinds.filter((k) => ["forbidden", "notfound"].includes(k)); return ok(sub.length ? `a ${sub.join("/")} sub-state is shown (check the fixture or the permission)` : ""); }
     case "loading": return s.loading ? ok("loading indicator within 450 ms") : bad("no loading indicator (status / spinner / aria-busy) while the request is pending");
-    case "empty": return s.kinds.includes("error") ? bad("empty data shows an ERROR state") : (s.kinds.includes("empty") || s.emptyText) ? ok(s.kinds.includes("empty") ? "empty state" : "empty text") : bad("empty data shows neither an empty state nor an empty text (looks broken)");
+    case "empty": return s.kinds.includes("error") ? bad("empty data shows an ERROR state") : (s.kinds.includes("empty") || s.emptyText || s.emptyTextHidden) ? ok(s.kinds.includes("empty") ? "empty state" : s.emptyText ? "empty text" : "empty text exists in a panel that is hidden at this width (phone: one workspace at a time)") : bad("empty data shows neither an empty state nor an empty text (looks broken)");
     case "error": if (LEAK.test(s.text)) { const m = LEAK.exec(s.text); return bad(`raw backend text on screen: ...${s.text.slice(Math.max(0, m.index - 30), m.index + 40).replace(/\s+/g, " ")}...`); }
       return s.kinds.some((k) => ["error", "network"].includes(k)) || s.alerts.length ? ok(`error shown${s.retry ? " with a retry button" : " (no retry button)"}`) : bad("a failing request shows no error state (silent or blank)");
     case "permission-denied": { const m = /\b403\b|FORBIDDEN|Access Denied/.exec(s.text); if (m) return bad(`raw 403 / FORBIDDEN text on screen: ...${s.text.slice(Math.max(0, m.index - 30), m.index + 40).replace(/\s+/g, " ")}...`); }
@@ -130,7 +130,7 @@ await withEnv({ dir: ".test-build/browser", tag: "statem" }, async ({ base, brow
             if (st === "loading") { let rel_; const p = new Promise((r) => { rel_ = r; }); hold.release = rel_; s0.hold["^GET /(workspaces|projects|components|templates|component-packages|me/|library)"] = { promise: p }; }
             if (st === "error") s0.fail["^GET /(workspaces|projects|components|templates|component-packages|me/|library)"] = { code: "INTERNAL_ERROR", message: "java.lang.NullPointerException at com.systemwebstudio.Foo.bar(Foo.kt:42)", status: 500 };
             if (st === "permission-denied") s0.fail["^GET /(workspaces|projects|components|templates|component-packages|me/|library)"] = { code: "FORBIDDEN", message: "Access Denied", status: 403 };
-            if (st === "empty") { s0.projects = []; s0.templates = []; s0.blocks = []; s0.versions = []; s0.prompts = []; s0.assets = []; s0.members = []; }
+            if (st === "empty") { if (!isProject) s0.projects = []; s0.templates = []; s0.blocks = []; s0.versions = []; s0.prompts = []; s0.assets = []; s0.members = []; }   // a project screen stays on its project: emptying the project list would make it "not found", a different state
             if (st === "long-content") { const L = (x) => `${x} — ${"Nội dung rất dài của trường này ".repeat(6)}${"KhongNgatDongNao".repeat(6)}`; s0.me.displayName = L(s0.me.displayName); s0.me.workspaces[0].name = L(s0.me.workspaces[0].name); s0.project.name = L(s0.project.name); s0.projects = s0.projects.map((p) => ({ ...p, name: L(p.name), description: L("mô tả") })); s0.versions = s0.versions.map((v) => ({ ...v, summary: L(v.summary) })); }
             if (st === "populated") { s0.projects = Array.from({ length: 30 }, (_, i) => ({ ...s0.project, id: `px${i}`, name: `Ứng dụng số ${i}` })); s0.projects[0] = s0.project; }
             page = await ctx.newPage(); const errs = capture(page); await installFake(page, s0);
