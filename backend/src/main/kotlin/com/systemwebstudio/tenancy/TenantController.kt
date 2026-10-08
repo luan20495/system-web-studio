@@ -14,7 +14,7 @@ import java.time.Instant
 import java.util.UUID
 
 data class TenantResponse(val id: UUID, val slug: String, val name: String, val status: String, val createdAt: Instant)
-data class CreateTenantRequest(val slug: String? = null, val name: String? = null, val firstAdminUserId: UUID? = null)
+data class CreateTenantRequest(val slug: String? = null, val name: String? = null, val firstAdminUserId: UUID? = null, val firstAdmin: FirstAdminRequest? = null)
 data class TenantStatusRequest(val status: String? = null)
 data class TenantMemberRequest(val role: String? = null)
 data class TenantWorkspaceRequest(val name: String? = null)
@@ -40,7 +40,8 @@ class TenantController(
     private val access: AccessService,
     private val service: TenantService,
     private val users: UserRepository,
-    private val accounts: AccountService
+    private val accounts: AccountService,
+    private val bootstrap: CompanyBootstrapService
 ) {
     @GetMapping
     fun list(@AuthenticationPrincipal me: StudioUserDetails): List<TenantResponse> {
@@ -50,10 +51,16 @@ class TenantController(
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    fun create(@RequestBody r: CreateTenantRequest, @AuthenticationPrincipal me: StudioUserDetails): TenantResponse {
+    fun create(@RequestBody r: CreateTenantRequest, @AuthenticationPrincipal me: StudioUserDetails): TenantCreatedResponse {
         access.forPlatform(me.userId)
+        // additive: `firstAdmin` creates the company AND its first Tenant Admin (pending account + activation link) atomically; `firstAdminUserId` keeps naming an existing account
+        if (r.firstAdmin != null) {
+            if (r.firstAdminUserId != null) throw ApiException.badRequest("VALIDATION_FAILED", "Send firstAdmin (a new account) or firstAdminUserId (an existing one), not both")
+            return bootstrap.create(me.userId, r.slug.orEmpty(), r.name.orEmpty(), r.firstAdmin)
+        }
         if (r.firstAdminUserId != null && !users.existsById(r.firstAdminUserId)) throw ApiException.badRequest("USER_NOT_FOUND", "First admin user does not exist")
-        return service.create(r.slug.orEmpty(), r.name.orEmpty(), r.firstAdminUserId, me.userId).toResponse()
+        val t = service.create(r.slug.orEmpty(), r.name.orEmpty(), r.firstAdminUserId, me.userId)
+        return TenantCreatedResponse(t.id, t.slug, t.name, t.status, t.createdAt)
     }
 
     @GetMapping("/{tenantId}")
