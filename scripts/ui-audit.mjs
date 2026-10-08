@@ -37,6 +37,8 @@ async function seed() {
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------- measurements
+/* phone builder (<= 760 px) shows ONE workspace at a time: switch to the one a state lives in before touching it */
+const mv = async (pg, name) => { const t = pg.locator(".bx-mview [role=tab]").filter({ hasText: name }).first(); if ((await t.count()) && (await t.isVisible())) { await t.click(); await pg.waitForTimeout(250); } };
 const MEASURE = () => {
   const text = document.body.innerText; const isIconish = (c) => /[←-⇿⌀-⏿■-➿⬀-⯿]/.test(c);
   const glyphs = [...new Set([...text].filter(isIconish))].join("");
@@ -87,8 +89,8 @@ async function visit(page, portal, vp, route, label, shotDir, extra) {
   if (/\/admin\/employees$/.test(path)) { steps.push(["dialog-add-employee", async (pg) => { await pg.getByTestId("emp-create").click(); await pg.getByTestId("create-account").waitFor(); }]); steps.push(["dialog-employee-detail", async (pg) => { await pg.locator("[data-testid^=emp\\:]").first().click(); await pg.getByTestId("emp-detail").waitFor(); }]); }
   if (/\/design$/.test(path) && portal === "studio") {
     steps.push(["builder-section-selected", async (pg) => { await pg.frameLocator("iframe").locator("section").first().click({ position: { x: 30, y: 30 } }); await pg.waitForTimeout(500); }]);
-    for (const tab of ["Nội dung", "Thiết kế", "Dữ liệu", "Hành động", "Quyền", "Nâng cao"]) steps.push([`inspector-tab-${tab}`, async (pg) => { const t = pg.locator(".bx-right").getByRole("tab", { name: new RegExp(tab, "i") }).first(); if (await t.count()) { await t.click(); await pg.waitForTimeout(300); } }]);
-    steps.push(["dialog-add-page", async (pg) => { await pg.getByRole("tab", { name: "Trang", exact: true }).click(); await pg.getByRole("button", { name: /^Trang$/ }).first().click(); await pg.getByRole("dialog").waitFor(); }]);
+    for (const tab of ["Nội dung", "Thiết kế", "Dữ liệu", "Hành động", "Quyền", "Nâng cao"]) steps.push([`inspector-tab-${tab}`, async (pg) => { await mv(pg, /^Thuộc tính/); const t = pg.locator(".bx-right").getByRole("tab", { name: new RegExp(tab, "i") }).first(); if (await t.count()) { await t.click(); await pg.waitForTimeout(300); } }]);
+    steps.push(["dialog-add-page", async (pg) => { await mv(pg, /^Công cụ$/); await pg.getByRole("tab", { name: "Trang", exact: true }).click(); await pg.getByRole("button", { name: /^Trang$/ }).first().click(); await pg.getByRole("dialog").waitFor(); }]);
   }
   for (const [name, run] of steps) {
     try { await run(page); await page.waitForTimeout(350); rows.push({ portal, vp, route: `${path}#${name}`, label: `${label}-${name}`, ok, ...(await page.evaluate(MEASURE).catch(() => ({}))), axe: await axe(page), errs: [], bad: [] });
@@ -99,11 +101,12 @@ async function visit(page, portal, vp, route, label, shotDir, extra) {
   if (portal === "studio" && /\/design$/.test(new URL(route).pathname)) {
     for (const tab of ["Thành phần", "Dữ liệu", "Biểu mẫu", "Hành động", "Workflow", "Giao diện", "AI"]) {
       const t = page.getByRole("tab", { name: tab, exact: true }).first(); if (!(await t.count())) continue;
+      await mv(page, /^Công cụ$/);
       await t.click().catch(() => undefined); await page.waitForTimeout(450);
       rows.push({ portal, vp, route: `${new URL(route).pathname}#rail:${tab}`, label: `${label}-rail-${tab}`, ok, ...(await page.evaluate(MEASURE).catch(() => ({}))), axe: await axe(page), errs: [], bad: [] });
     }
     const test = page.getByRole("button", { name: /Dùng thử/ }).first();
-    if (await test.count()) { await test.click().catch(() => undefined); await page.waitForTimeout(500); rows.push({ portal, vp, route: `${new URL(route).pathname}#test-mode`, label: `${label}-test-mode`, ok, ...(await page.evaluate(MEASURE).catch(() => ({}))), axe: await axe(page), errs: [], bad: [] }); }
+    if (await test.count()) { await test.click().catch(() => undefined); await page.waitForTimeout(500); await mv(page, /^(Thuộc tính|Kiểm thử)/); rows.push({ portal, vp, route: `${new URL(route).pathname}#test-mode`, label: `${label}-test-mode`, ok, ...(await page.evaluate(MEASURE).catch(() => ({}))), axe: await axe(page), errs: [], bad: [] }); }
   }
 }
 

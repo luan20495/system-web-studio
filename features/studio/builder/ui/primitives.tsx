@@ -75,7 +75,7 @@ export function Tabs({ label, items, value, onChange, orientation = "horizontal"
       {items.map((t) => (
         <button key={t.id} type="button" role="tab" id={`${idPrefix}-tab-${t.id}`} aria-selected={t.id === value} aria-controls={`${idPrefix}-panel-${t.id}`}
           tabIndex={t.id === value ? 0 : -1} className={t.id === value ? "active" : ""} onClick={() => onChange(t.id)}>
-          {t.label}{t.badge ? <span className="bx-badge" {...(t.badgeLabel ? { role: "img" as const, "aria-label": t.badgeLabel } : {})}>{t.badge}</span> : null}
+          {t.label}{t.badge ? <><span className="bx-badge" {...(t.badgeLabel ? { "aria-hidden": true as const } : {})}>{t.badge}</span>{t.badgeLabel ? <span className="srOnly"> ({t.badgeLabel})</span> : null}</> : null}
         </button>
       ))}
     </div>

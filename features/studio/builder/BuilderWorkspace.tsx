@@ -69,7 +69,11 @@ export function BuilderWorkspace(props: {
   const [rail, setRail] = useState<RailId>("pages");
   // phones (<= 760 px): ONE workspace at a time (canvas / tools / properties). All three stay mounted, so switching never reloads the canvas or loses a form; CSS shows one. Wider screens ignore this state.
   const [mview, setMview] = useState<"canvas" | "tools" | "props">("canvas");
-  const openRail = (id: RailId) => { setRail(id); setMview("tools"); };
+  const openRail = (id: RailId) => {
+    setRail(id); setMview("tools");
+    // if the pane that held focus (e.g. the Inspector) is hidden by this switch on a phone, move focus to the tab we land on instead of letting it fall to <body>
+    requestAnimationFrame(() => { const a = document.activeElement; if (!a || a === document.body || a.getClientRects().length === 0) { window.scrollTo(0, 0); document.getElementById("mview-tab-tools")?.focus(); } });
+  };
   const [dataFocus, setDataFocus] = useState<{ sectionId?: string }>({});
   const [actionPreset, setActionPreset] = useState<{ sectionId?: string } | undefined>(undefined);
   const [rects, setRects] = useState<SectionRect[]>([]);
@@ -186,7 +190,7 @@ export function BuilderWorkspace(props: {
         <a className="bx-skip" href="#mview-panel-canvas" onClick={(e) => { e.preventDefault(); setMview("canvas"); requestAnimationFrame(() => document.getElementById("mview-panel-canvas")?.focus()); }}>Bỏ qua tới bản xem trước</a>
         <div className="bx-mview">
           <Tabs label="Khu vực làm việc" idPrefix="mview" value={mview} onChange={(id) => setMview(id as "canvas" | "tools" | "props")}
-            items={[{ id: "canvas", label: "Bản xem trước" }, { id: "tools", label: "Công cụ" }, { id: "props", label: edit ? "Thuộc tính" : "Kiểm thử", badge: edit && selected ? "●" : undefined, badgeLabel: "đã chọn một mục" }]}/>
+            items={[{ id: "canvas", label: "Bản xem trước" }, { id: "tools", label: "Công cụ" }, { id: "props", label: edit ? "Thuộc tính" : "Kiểm thử", badge: edit && selected ? "●" : undefined, badgeLabel: "có mục đang chọn" }]}/>
         </div>
         <LeftRail id="mview-panel-tools" value={rail} onChange={setRail}>{leftPanel}</LeftRail>
         <section className="bx-center" id="mview-panel-canvas" tabIndex={-1} aria-label="Bản xem trước ứng dụng">

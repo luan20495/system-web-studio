@@ -50,6 +50,8 @@ for (const w of [390, 430]) {
   const c = await vis(p, ".bx-center"); const lf = await vis(p, ".bx-left"); const rt = await vis(p, ".bx-right");
   check(`${T} canvas view: the canvas is the ONLY workspace shown and is ≥ 60 % of the screen high`, c?.shown && !lf?.shown && !rt?.shown && c.h >= h * 0.6, JSON.stringify({ c, lf: lf?.shown, rt: rt?.shown }));
   check(`${T} canvas view: no horizontal overflow`, (await overflow(p)) <= 0, `overflow=${await overflow(p)}`);
+  const css = await p.evaluate(() => ({ pad: getComputedStyle(document.documentElement).scrollPaddingTop, ob: getComputedStyle(document.documentElement).overscrollBehaviorY, center: getComputedStyle(document.querySelector(".bx-center")).scrollMarginTop }));
+  check(`${T} focus is never hidden under the sticky switch (scroll-padding-top ≥ 60 px, scroll-margin on the panes) and pull-to-refresh is contained`, parseInt(css.pad) >= 60 && parseInt(css.center) >= 60 && css.ob === "contain", JSON.stringify(css));
   await p.screenshot({ path: join(OUT, `${w}-canvas.png`) });
   // iframe identity to prove the canvas never reloads
   const fr = () => p.frames().find((x) => x !== p.mainFrame()); await fr().evaluate(() => { window.__alive = 7; }); await p.evaluate(() => { window.__frame = document.querySelector("iframe"); });
