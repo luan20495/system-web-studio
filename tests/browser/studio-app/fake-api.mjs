@@ -100,3 +100,29 @@ export function newCodeState(over = {}) {
   s.diff = [];
   return s;
 }
+
+/** applies typed definition operations (ADD_ / UPDATE_ / REMOVE_ DATA_SOURCE | QUERY | DATA_BINDING | MAPPING | VIEW_MODEL) to a page schema the way the server stores them (no validation) */
+export function applyDefinitionOps(schema, ops) {
+  const coll = { DATA_SOURCE: "dataSources", QUERY: "queries", DATA_BINDING: "dataBindings", MAPPING: "mappings", VIEW_MODEL: "viewModels" };
+  const d = { ...schema };
+  for (const o of ops ?? []) {
+    const m = /^(ADD|UPDATE|REMOVE)_([A-Z_]+)$/.exec(o.type ?? ""); const key = m && coll[m[2]]; if (!key) continue;
+    const list = [...(d[key] ?? [])];
+    if (m[1] === "ADD") list.push(o.definition);
+    else if (m[1] === "UPDATE") { const i = list.findIndex((x) => x.id === o.definitionId); if (i >= 0) list[i] = { ...list[i], ...o.definition }; }
+    else { const i = list.findIndex((x) => x.id === o.definitionId); if (i >= 0) list.splice(i, 1); }
+    d[key] = list;
+  }
+  return d;
+}
+
+/** a page-schema project where the typed V2 operations are available (component-metadata answers) and the person may view workspace data sources */
+export function newDataState(over = {}) {
+  const perms = ["APP_VIEW", "APP_USE", "APP_EDIT", "APP_PUBLISH", "APP_SHARE", "DATA_SOURCE_VIEW"];
+  const s = newState({ projectPerms: perms, ...over });
+  s.project = { ...s.project, permissions: s.projectPerms }; s.projects = [s.project];
+  s.metadata = [{ type: "ProductGrid", source: "OVERLAY", bindableProps: [{ prop: "items", cardinality: "LIST", itemFields: ["name", "description"] }], events: [] }];
+  s.sources = [{ id: "src1", name: "Kho đơn hàng", type: "POSTGRES", status: "ACTIVE", hasCredential: false, config: {} }];
+  s.patchApply = (schema, body) => applyDefinitionOps(schema, body.operations);
+  return s;
+}
