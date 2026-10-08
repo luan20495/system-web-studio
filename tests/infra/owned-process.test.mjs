@@ -2,7 +2,7 @@
 // Isolation tests of the owned-process helper (D-C0-48): REAL processes on REAL temporary ports, no mocks. The point of every test is the same: what the helper does NOT own survives.
 //   foreign A = started by the test itself, outside the helper (like another agent's server); owned B = started through the helper.
 //   node --test tests/infra/owned-process.test.mjs        (npm run test:infra:processes)
-// Nothing here ever runs a broad `pkill`; the "control" tests only LIST (pgrep) what such a command would have matched.
+// Nothing here ever runs a broad name-based kill; the "control" tests only LIST (pgrep) what such a command would have matched.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
@@ -20,7 +20,7 @@ const work = realpathSync(mkdtempSync(join(tmpdir(), "owned-")));
 const foreigners = [];                                              // every foreign process the TESTS created: killed by pid at the end (never by name)
 test.after(() => { for (const p of foreigners) { try { process.kill(p, "SIGKILL"); } catch { /* gone */ } } rmSync(work, { recursive: true, force: true }); });
 
-// a tiny HTTP server whose COMMAND LINE contains `next start -p PORT` (what a Next portal looks like to `pkill -f "next start"`)
+// a tiny HTTP server whose COMMAND LINE contains `next start -p PORT` (what a Next portal looks like to a name-based kill of "next start")
 const SERVER = `require("http").createServer((q,r)=>r.end("up")).listen(+process.argv.at(-1),"127.0.0.1")`;
 // the port is the LAST argument so SERVER can read it; keep the "next start" words in front of it
 const nextLike2 = (port, tag = "") => [process.execPath, "-e", `require("http").createServer((q,r)=>r.end("up")).listen(+process.argv.at(-1),"127.0.0.1")`, "--", `ISO${tag}`, "next", "start", "-p", String(port)];

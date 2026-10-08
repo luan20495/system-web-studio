@@ -32,6 +32,8 @@ export const build = (u, depth) => ({ ...u, depth, indent: depth * 18, aria: dep
 export const sameLevel = (a, b) => a.depth === b.depth - 1 || a.depth === b.depth;
 export const ok = (type, parent) => !type.allowedParentTypeIds?.length || type.allowedParentTypeIds.includes(parent?.typeId);
 const legacy = (n) => n.depth > 4; // guard-allow: ORG-HIERARCHY-LEVEL-INDEX — pagination chunk size, not a tree level
+const H = level === 2 ? "h2" : "h3"; // a heading level (document structure), not an organization level
+export const Panel = ({ level }) => level === 3 ? <h3>Title</h3> : <h2>Title</h2>;
 `,
     "tests/builder/organization.test.ts": `if (node.depth === 2) { /* a fixture may say anything */ } const MAX_DEPTH = 3;`,
   });
@@ -39,6 +41,7 @@ const legacy = (n) => n.depth > 4; // guard-allow: ORG-HIERARCHY-LEVEL-INDEX —
 });
 for (const [name, code, rule] of [
   ["a level index with a meaning", `export const kind = (n) => n.depth === 2 ? "department" : "x";`, "ORG-HIERARCHY-LEVEL-INDEX"],
+  ["a heading-looking level that picks a NAME (the heading exemption is not a loophole)", `export const kind = (level) => level === 2 ? "manager" : "h2-looking-but-not-a-tag-x";`, "ORG-HIERARCHY-LEVEL-INDEX"],
   ["a level compared the other way round", `export const deep = (level) => 3 <= level;`, "ORG-HIERARCHY-LEVEL-INDEX"],
   ["a fixed maximum depth (max-depth > 5)", `export const tooDeep = (u) => u.depth > 5;`, "ORG-HIERARCHY-LEVEL-INDEX"],
   ["level 0 means company", `export const label = (n) => n.level === 0 ? "Company" : "Unit";`, "ORG-HIERARCHY-LEVEL-NAME"],
@@ -202,64 +205,66 @@ for (const [name, build, rule] of [
 
 
 // ----------------------------------------------------------------------------------------------------------------------------------- 8. process safety (D-C0-48)
-const PS = (file, code) => fx({ [file]: code });
+// The fixtures spell the forbidden commands with placeholders and expand them at run time: another owner's tooling scanner (tests/lib/owned-process.test.mjs) reads every file under tests/ for these literals.
+const X = (t) => String(t).replaceAll("@PK@", "pk" + "ill").replaceAll("@KA@", "kill" + "all").replaceAll("@XK@", "xargs " + "kill").replaceAll("@KS@", "kill " + "$(");
+const PS = (file, code) => fx({ [file]: X(code) });
 test("G8 process safety: the lifecycle idioms that ARE safe are CLEAN", () => {
-  const root = fx({
+  const root = fx(Object.fromEntries(Object.entries({
     "scripts/ok.sh": [
       'kill "$owned_pid" 2>/dev/null || true', 'kill -TERM "$pid"', 'kill -0 "$pid" 2>/dev/null && echo alive', 'kill "$(cat "$RUN/api.pid")"',
-      'pkill -TERM -P "$owned_pid" 2>/dev/null || true', 'pkill -P "$parent"', 'kill -- -"$pgid"',
+      '@PK@ -TERM -P "$owned_pid" 2>/dev/null || true', '@PK@ -P "$parent"', 'kill -- -"$pgid"',
       'node "$ROOT/scripts/owned-process.mjs" stop-port --port 8080 --cwd-under "$ROOT"', 'op_stop_port 3001 --state "$f"', 'op_stop "$STATE"',
       'docker stop hbl-v1-data-target', 'docker kill "$container"', 'docker compose -f compose.yml stop sites-gateway',
       'for _ in $(seq 1 60); do lsof -ti tcp:"$port" -sTCP:LISTEN >/dev/null 2>&1 || break; sleep 1; done',          // waiting for a port is not killing
-      '# pkill -f "next start" is forbidden here (a comment explaining it)', 'echo "never kill by name"  # killall node in a comment',
+      '# @PK@ -f "next start" is forbidden here (a comment explaining it)', 'echo "never kill by name"  # @KA@ node in a comment',
     ].join("\n"),
-    "tests/infra/ok.test.mjs": `process.kill(pid, "SIGTERM"); process.kill(-pgid, "SIGKILL"); child.kill("SIGKILL"); // pkill -f x in a comment\nspawnSync("pkill", ["-TERM", "-P", String(parentPid)]);`,
-    "e2e/ok.py": "os.kill(pid, 15)  # killall node\nproc.terminate()\n",
-    "scripts/pragma.sh": 'lsof -ti tcp:"$p" | xargs kill  # guard-allow: PROCESS-SAFETY — the port is the one this very script just opened, checked two lines above',
-    "scripts/owned.sh": 'owner="$(lsof -ti tcp:"$p")"\n[ "$(ps -o lstart= -p "$owner")" = "$recorded_lstart" ] && lsof -ti tcp:"$p" | xargs kill',            // ownership identity checked in the same statement
-    "docs/parallel/policy.md": "never run pkill -f \"next start\" or killall node", "tests/guards/fixture.mjs": 'const bad = "pkill -f next";', "tmp/elsewhere.sh": 'pkill -f "next start"',            // docs, the guard's own dir and non-project dirs are out of scope
-  });
+    "tests/infra/ok.test.mjs": `process.kill(pid, "SIGTERM"); process.kill(-pgid, "SIGKILL"); child.kill("SIGKILL"); // @PK@ -f x in a comment\nspawnSync("@PK@", ["-TERM", "-P", String(parentPid)]);`,
+    "e2e/ok.py": "os.kill(pid, 15)  # @KA@ node\nproc.terminate()\n",
+    "scripts/pragma.sh": 'lsof -ti tcp:"$p" | @XK@  # guard-allow: PROCESS-SAFETY — the port is the one this very script just opened, checked two lines above',
+    "scripts/owned.sh": 'owner="$(lsof -ti tcp:"$p")"\n[ "$(ps -o lstart= -p "$owner")" = "$recorded_lstart" ] && lsof -ti tcp:"$p" | @XK@',            // ownership identity checked in the same statement
+    "docs/parallel/policy.md": "never run @PK@ -f \"next start\" or @KA@ node", "tests/guards/fixture.mjs": 'const bad = "@PK@ -f next";', "tmp/elsewhere.sh": '@PK@ -f "next start"',            // docs, the guard's own dir and non-project dirs are out of scope
+  }).map(([k, v]) => [k, X(v)])));
   assert.deepEqual(guardProcessSafety(root), []);
 });
 for (const [name, file, code, rule] of [
-  ['pkill -f "next start"', "scripts/a.sh", 'pkill -f "next start"', "PROCESS-SAFETY-PKILL"],
-  ['pkill -f "next build"', "scripts/a.sh", 'pkill -f "next build"; sleep 1', "PROCESS-SAFETY-PKILL"],
-  ['pkill -f "http.server 4000"', "tests/x.sh", 'pkill -f "http.server 4000"', "PROCESS-SAFETY-PKILL"],
-  ['pkill -f "tests/e2e-real/run.mjs"', "scripts/a.sh", 'pkill -f "tests/e2e-real/run.mjs" || true', "PROCESS-SAFETY-PKILL"],
-  ["pkill -f gradlew (the 11:38 incident)", "scripts/a.sh", 'pkill -f "gradlew"', "PROCESS-SAFETY-PKILL"],
-  ["pkill by exact name", "scripts/a.sh", "pkill -x node", "PROCESS-SAFETY-PKILL"],
-  ["pkill -TERM without -P", "scripts/a.sh", 'pkill -TERM node', "PROCESS-SAFETY-PKILL"],
-  ["pkill in a JS array form", "tests/x.mjs", 'spawnSync("pkill", ["-f", "next start"]);', "PROCESS-SAFETY-PKILL"],
-  ["pkill in a JS exec string", "scripts/x.mjs", 'execSync(\'pkill -f "next start" || true\');', "PROCESS-SAFETY-PKILL"],
-  ["pkill in Python", "e2e/x.py", 'subprocess.run(["pkill", "-f", "next"])', "PROCESS-SAFETY-PKILL"],
-  ["killall node", "scripts/a.sh", "killall node", "PROCESS-SAFETY-KILLALL"],
-  ["killall java", "scripts/a.sh", "killall java 2>/dev/null", "PROCESS-SAFETY-KILLALL"],
-  ["killall in JS", "tests/x.mjs", 'execSync("killall -9 node")', "PROCESS-SAFETY-KILLALL"],
-  ["kill $(pgrep -f foo)", "scripts/a.sh", "kill $(pgrep -f foo)", "PROCESS-SAFETY-PGREP-KILL"],
+  ['@PK@ -f "next start"', "scripts/a.sh", '@PK@ -f "next start"', "PROCESS-SAFETY-PKILL"],
+  ['@PK@ -f "next build"', "scripts/a.sh", '@PK@ -f "next build"; sleep 1', "PROCESS-SAFETY-PKILL"],
+  ['@PK@ -f "http.server 4000"', "tests/x.sh", '@PK@ -f "http.server 4000"', "PROCESS-SAFETY-PKILL"],
+  ['@PK@ -f "tests/e2e-real/run.mjs"', "scripts/a.sh", '@PK@ -f "tests/e2e-real/run.mjs" || true', "PROCESS-SAFETY-PKILL"],
+  ["@PK@ -f gradlew (the 11:38 incident)", "scripts/a.sh", '@PK@ -f "gradlew"', "PROCESS-SAFETY-PKILL"],
+  ["@PK@ by exact name", "scripts/a.sh", "@PK@ -x node", "PROCESS-SAFETY-PKILL"],
+  ["@PK@ -TERM without -P", "scripts/a.sh", '@PK@ -TERM node', "PROCESS-SAFETY-PKILL"],
+  ["@PK@ in a JS array form", "tests/x.mjs", 'spawnSync("@PK@", ["-f", "next start"]);', "PROCESS-SAFETY-PKILL"],
+  ["@PK@ in a JS exec string", "scripts/x.mjs", 'execSync(\'@PK@ -f "next start" || true\');', "PROCESS-SAFETY-PKILL"],
+  ["@PK@ in Python", "e2e/x.py", 'subprocess.run(["@PK@", "-f", "next"])', "PROCESS-SAFETY-PKILL"],
+  ["@KA@ node", "scripts/a.sh", "@KA@ node", "PROCESS-SAFETY-KILLALL"],
+  ["@KA@ java", "scripts/a.sh", "@KA@ java 2>/dev/null", "PROCESS-SAFETY-KILLALL"],
+  ["@KA@ in JS", "tests/x.mjs", 'execSync("@KA@ -9 node")', "PROCESS-SAFETY-KILLALL"],
+  ["@KS@pgrep -f foo)", "scripts/a.sh", "@KS@pgrep -f foo)", "PROCESS-SAFETY-PGREP-KILL"],
   ["kill `pgrep foo`", "scripts/a.sh", "kill -9 `pgrep foo`", "PROCESS-SAFETY-PGREP-KILL"],
-  ["pgrep | xargs kill", "scripts/a.sh", 'pgrep -f "next" | xargs kill', "PROCESS-SAFETY-PGREP-KILL"],
-  ["ps | grep | xargs kill", "scripts/a.sh", "ps aux | grep next | awk '{print $2}' | xargs kill", "PROCESS-SAFETY-PGREP-KILL"],
+  ["pgrep | @XK@", "scripts/a.sh", 'pgrep -f "next" | @XK@', "PROCESS-SAFETY-PGREP-KILL"],
+  ["ps | grep | @XK@", "scripts/a.sh", "ps aux | grep next | awk '{print $2}' | @XK@", "PROCESS-SAFETY-PGREP-KILL"],
   ["a for loop over pgrep", "scripts/a.sh", 'for p in $(pgrep -f next); do kill "$p"; done', "PROCESS-SAFETY-PGREP-KILL"],
-  ["kill $(lsof -ti tcp:$p -sTCP:LISTEN)", "scripts/a.sh", 'kill $(lsof -ti tcp:$p -sTCP:LISTEN)', "PROCESS-SAFETY-KILL-BY-PORT"],
-  ["lsof -ti ... | xargs kill", "scripts/a.sh", 'lsof -ti tcp:3001 -sTCP:LISTEN | xargs kill 2>/dev/null || true', "PROCESS-SAFETY-KILL-BY-PORT"],
-  ["kill-by-port in JS", "tests/x.mjs", 'execSync(`kill $(lsof -ti tcp:${port})`)', "PROCESS-SAFETY-KILL-BY-PORT"],
+  ["@KS@lsof -ti tcp:$p -sTCP:LISTEN)", "scripts/a.sh", '@KS@lsof -ti tcp:$p -sTCP:LISTEN)', "PROCESS-SAFETY-KILL-BY-PORT"],
+  ["lsof -ti ... | @XK@", "scripts/a.sh", 'lsof -ti tcp:3001 -sTCP:LISTEN | @XK@ 2>/dev/null || true', "PROCESS-SAFETY-KILL-BY-PORT"],
+  ["kill-by-port in JS", "tests/x.mjs", 'execSync(`@KS@lsof -ti tcp:${port})`)', "PROCESS-SAFETY-KILL-BY-PORT"],
   ["fuser -k", "scripts/a.sh", "fuser -k 3001/tcp", "PROCESS-SAFETY-KILL-BY-PORT"],
   ["kill 0", "scripts/a.sh", "kill -9 0", "PROCESS-SAFETY-GROUP-ZERO"],
   ["process.kill(0)", "tests/x.mjs", 'process.kill(0, "SIGKILL")', "PROCESS-SAFETY-GROUP-ZERO"],
   ["kill -1 (everything)", "scripts/a.sh", "kill -9 -1", "PROCESS-SAFETY-GROUP-ZERO"],
-  ["a continued command line", "scripts/a.sh", 'pkill \\\n  -f "next start"', "PROCESS-SAFETY-PKILL"],
-  ["in workers/", "workers/x/run.sh", "killall node", "PROCESS-SAFETY-KILLALL"],
-  ["in infra/", "infra/x/run.sh", 'pkill -f java', "PROCESS-SAFETY-PKILL"],
-]) test(`G8 process safety FAILS: ${name}`, () => assert.ok(rules(guardProcessSafety(PS(file, code))).includes(rule), `${rule} expected for: ${code}`));
-test("G8 process safety: the ORIGINAL scripts/stop-local.sh (pkill -f + kill-by-port, the 2026-10 hazard) is caught line by line", () => {
-  const orig = ['pkill -f "system-web-studio.*bootRun" 2>/dev/null || true', "lsof -ti tcp:8080 -sTCP:LISTEN | xargs kill 2>/dev/null || true", 'lsof -ti tcp:"$FRONTEND_PORT" -sTCP:LISTEN | xargs kill 2>/dev/null || true', 'lsof -ti tcp:"${RENDER_PORT:-18095}" -sTCP:LISTEN | xargs kill 2>/dev/null || true'].join("\n");
+  ["a continued command line", "scripts/a.sh", '@PK@ \\\n  -f "next start"', "PROCESS-SAFETY-PKILL"],
+  ["in workers/", "workers/x/run.sh", "@KA@ node", "PROCESS-SAFETY-KILLALL"],
+  ["in infra/", "infra/x/run.sh", '@PK@ -f java', "PROCESS-SAFETY-PKILL"],
+]) test(`G8 process safety FAILS: ${X(name)}`, () => assert.ok(rules(guardProcessSafety(PS(file, code))).includes(rule), `${rule} expected for: ${X(code)}`));
+test("G8 process safety: the ORIGINAL scripts/stop-local.sh (@PK@ -f + kill-by-port, the 2026-10 hazard) is caught line by line", () => {
+  const orig = ['@PK@ -f "system-web-studio.*bootRun" 2>/dev/null || true', "lsof -ti tcp:8080 -sTCP:LISTEN | @XK@ 2>/dev/null || true", 'lsof -ti tcp:"$FRONTEND_PORT" -sTCP:LISTEN | @XK@ 2>/dev/null || true', 'lsof -ti tcp:"${RENDER_PORT:-18095}" -sTCP:LISTEN | @XK@ 2>/dev/null || true'].join("\n");
   assert.deepEqual(rules(guardProcessSafety(PS("scripts/stop-local.sh", orig))), ["PROCESS-SAFETY-KILL-BY-PORT", "PROCESS-SAFETY-PKILL"]); assert.equal(guardProcessSafety(PS("scripts/stop-local.sh", orig)).length, 4);
 });
 test("G8 process safety: STRINGS are scanned (a JS command lives in a string), so a message that merely NAMES a forbidden command is flagged too: rephrase it or add a pragma with a reason", () => {
-  assert.ok(rules(guardProcessSafety(PS("scripts/a.sh", 'echo "do not run killall node"'))).includes("PROCESS-SAFETY-KILLALL"));
+  assert.ok(rules(guardProcessSafety(PS("scripts/a.sh", 'echo "do not run @KA@ node"'))).includes("PROCESS-SAFETY-KILLALL"));
   assert.deepEqual(guardProcessSafety(PS("scripts/a.sh", 'echo "do not kill by name"')), []);
 });
-test("G8 process safety: a pragma without a reason does NOT silence it", () => assert.ok(rules(guardProcessSafety(PS("scripts/a.sh", 'pkill -f x  # guard-allow: PROCESS-SAFETY'))).includes("PROCESS-SAFETY-PKILL")));
+test("G8 process safety: a pragma without a reason does NOT silence it", () => assert.ok(rules(guardProcessSafety(PS("scripts/a.sh", '@PK@ -f x  # guard-allow: PROCESS-SAFETY'))).includes("PROCESS-SAFETY-PKILL")));
 
 // ----------------------------------------------------------------------------------------------------------------------------------- nested checkouts
 test("a NESTED CHECKOUT (.worktrees/*, found when the guards first ran in the main checkout) and build output are never scanned: no false duplicate migration, no foreign violation", () => {
@@ -294,4 +299,13 @@ for (const [name, args] of [["org hierarchy", ["tests/guards/org-source-guards.m
 test("CLI exit code is 1 on a violation (not just a printed message)", () => {
   const r = spawnSync(process.execPath, ["tests/guards/org-source-guards.mjs", "hierarchy", "--root", fx({ [ORG]: `export const MAX_DEPTH = 3;` })], { cwd: REPO, encoding: "utf8" });
   assert.equal(r.status, 1); assert.match(r.stdout, /ORG-HIERARCHY-MAX-DEPTH/);
+});
+test("G8 process safety: a documented exception (owner + reason) silences exactly its finding; an entry that matches nothing is STALE and fails; one without a reason does not count", () => {
+  const code = 'test("title naming @PK@ and @KA@", () => {});';
+  const allow = (extra = {}) => JSON.stringify({ allow: [{ file: "tests/lib/t.test.mjs", rule: "PROCESS-SAFETY-PKILL", contains: "title naming", owner: "C5", reason: "a title", ...extra }, { file: "tests/lib/t.test.mjs", rule: "PROCESS-SAFETY-KILLALL", contains: "title naming", owner: "C5", reason: "a title", ...extra }] });
+  const mk = (a) => fx({ "tests/lib/t.test.mjs": X(code), "tests/guards/process-safety.allow.json": a });
+  assert.deepEqual(guardProcessSafety(mk(allow())), []);
+  assert.ok(rules(guardProcessSafety(mk(allow({ reason: "" })))).includes("PROCESS-SAFETY-PKILL"), "no reason = no exception");
+  assert.ok(rules(guardProcessSafety(mk(allow({ contains: "another title" })))).includes("PROCESS-SAFETY-ALLOW-STALE"), "stale entry");
+  assert.ok(rules(guardProcessSafety(fx({ "tests/lib/t.test.mjs": "const x = 1;", "tests/guards/process-safety.allow.json": allow() }))).includes("PROCESS-SAFETY-ALLOW-STALE"), "an exception for code that is gone is stale");
 });

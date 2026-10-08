@@ -1,0 +1,19 @@
+{
+  "_doc": "Documented exceptions of the process-safety guard (D-C0-48). Each needs an owner and a reason; a stale entry fails the guard. The guard scans STRINGS, so a test TITLE that merely names a forbidden command is a finding unless it is listed here.",
+  "allow": [
+    {
+      "file": "tests/lib/owned-process.test.mjs",
+      "rule": "PROCESS-SAFETY-PKILL",
+      "contains": "in C5-owned tracked tooling",
+      "owner": "C5",
+      "reason": "the title of C5's own scanner test (it ASSERTS the absence of these commands in C5 tooling); the file never runs them. Rephrase the title and delete this entry when C5 next touches the file."
+    },
+    {
+      "file": "tests/lib/owned-process.test.mjs",
+      "rule": "PROCESS-SAFETY-KILLALL",
+      "contains": "in C5-owned tracked tooling",
+      "owner": "C5",
+      "reason": "same title as above (second rule)"
+    }
+  ]
+}

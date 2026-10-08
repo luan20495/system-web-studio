@@ -14,6 +14,8 @@ const ORG_NAME = /organi[sz]ation|employee|org-?unit|unitIcons|PersonPicker|orgu
 export const orgFiles = (root) => walk(root).filter((f) => CODE.test(f) && !isNonProduction(f) && (FRONTEND_DIRS.test(f) || f.startsWith("backend/src/main/")) && ORG_NAME.test(f));
 const productionFiles = (root) => walk(root).filter((f) => CODE.test(f) && !isNonProduction(f) && (FRONTEND_DIRS.test(f) || f.startsWith("backend/src/main/")));
 
+// A level number that picks an HTML heading tag (<h2> / "h3" / aria-level) is document structure (accessibility), not the organization hierarchy: the same statement names the heading tag.
+const HEADING_LEVEL = /["'`]h[1-6]["'`]|<h[1-6][\s>]|aria-level/i;
 const HIER = "company|companies|department|dept|team|division|branch|region|squad|section|unit|group|level\\d*|tier\\d*|công ty|phòng|phòng ban|khối|chi nhánh|bộ phận|nhóm|đội";
 const DEPTH = "(?:depth|level|lvl|tier|nesting|generation|[a-z]\\w*(?:Depth|Level)|\\w+_(?:DEPTH|LEVEL))";
 
@@ -37,7 +39,7 @@ function scan(root, files, rules) {
 // ------------------------------------------------------------------------------------------------------------------------------------ 1. hierarchy
 const HIERARCHY_RULES = [
   { rule: "ORG-HIERARCHY-LEVEL-INDEX", msg: "a level / depth number is compared with a literal >= 1: a level index must never carry a meaning (the tree is data)",
-    re: new RegExp(`\\b${DEPTH}\\b\\s*(?:===|==|!==|!=|<=|>=|<|>)\\s*[1-9]\\d*\\b|\\b[1-9]\\d*\\s*(?:===|==|!==|!=|<=|>=|<|>)\\s*\\b${DEPTH}\\b`, "g") },
+    re: new RegExp(`\\b${DEPTH}\\b\\s*(?:===|==|!==|!=|<=|>=|<|>)\\s*[1-9]\\d*\\b|\\b[1-9]\\d*\\s*(?:===|==|!==|!=|<=|>=|<|>)\\s*\\b${DEPTH}\\b`, "g"), when: (code, m, line) => !HEADING_LEVEL.test(code.split("\n")[line - 1] ?? "") },
   { rule: "ORG-HIERARCHY-LEVEL-NAME", msg: "level 0 / depth 0 compared in the same statement as a hierarchy word: 'level 0 means company'",
     re: new RegExp(`\\b${DEPTH}\\b\\s*(?:===|==)\\s*0\\b`, "g"),
     when: (code, m, line) => new RegExp(`["'\`][^"'\`\\n]*\\b(?:${HIER})\\b`, "i").test(code.split("\n").slice(Math.max(0, line - 2), line + 1).join(" ")) },
