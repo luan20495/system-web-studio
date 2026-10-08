@@ -1,6 +1,6 @@
 // @class: harness — real Chromium on (1) the real <DataWizard> public-data editors with an in-page host, (2) the publish dialog with an in-page fake of its calls, (3) a published page built by C2's OWN code
 // (resolveBindings + renderSitePages + the runtime script, c1e0df5) whose same-origin config/data routes are answered by the SPEC. NOT a backend and NOT a backend E2E: the real chain is E2E-PD01 (tests/e2e-real).
-// Run: node tests/browser/build-harness.mjs && (cd .test-build/browser && python3 -m http.server 4000 --bind 127.0.0.1 &) && CHROME=... node tests/browser/publicdata.spec.mjs
+// Run: node tests/browser/build-harness.mjs && CHROME=... node tests/browser/harness-server.mjs run -- node tests/browser/publicdata.spec.mjs
 import { createRequire } from "node:module";
 import { existsSync } from "node:fs";
 const require = createRequire(new URL("../../package.json", import.meta.url).pathname);

@@ -1,6 +1,6 @@
 // @class: harness — real Chromium on the organization tree and the employee directory with an in-page FAKE in-memory transport behind the REAL adapters (no backend). Proves what the SCREENS do (states, gating, no invented calls).
 // NOT a backend E2E: C1 has not published the organization contract yet, so there is no real-backend run for these screens (docs/parallel/c5/ORGANIZATION_UI.md). The error codes the fake uses are ASSUMED names.
-// Run: node tests/browser/build-harness.mjs && (cd .test-build/browser && python3 -m http.server 4000 --bind 127.0.0.1 &) && CHROME=... node tests/browser/org.spec.mjs
+// Run: node tests/browser/build-harness.mjs && CHROME=... node tests/browser/harness-server.mjs run -- node tests/browser/org.spec.mjs
 import { createRequire } from "node:module";
 const require = createRequire(new URL("../../package.json", import.meta.url).pathname);
 const { chromium } = require("playwright-core");

@@ -1,6 +1,6 @@
 // @class: harness — real Chromium on Platform → AI → Nhà cung cấp with an in-page FAKE of the admin AI routes (no backend): list rows (logo, name, status, model count, test connection), the add dialog (icons, picker, switches, key field),
 // the exact request body (contract unchanged), keyboard, and "no icon comes from the internet". NOT a backend E2E.
-// Run: node tests/browser/build-harness.mjs && (cd .test-build/browser && python3 -m http.server 4000 --bind 127.0.0.1 &) && CHROME=... node tests/browser/aiproviders.spec.mjs
+// Run: node tests/browser/build-harness.mjs && CHROME=... node tests/browser/harness-server.mjs run -- node tests/browser/aiproviders.spec.mjs
 import { createRequire } from "node:module";
 const require = createRequire(new URL("../../package.json", import.meta.url).pathname);
 const { chromium } = require("playwright-core");

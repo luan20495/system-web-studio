@@ -1,6 +1,6 @@
 // @class: harness — real Chromium on the Builder component harness (no backend). Light sanity, NOT a performance project: opening/closing panels many times must not leak DOM nodes, listeners or JS heap,
 // must not produce console errors/warnings (React warnings included) and must not make any network request after the page has loaded.
-// Run: node tests/browser/build-harness.mjs && (cd .test-build/browser && python3 -m http.server 4000 --bind 127.0.0.1 &) && CHROME=... node tests/browser/sanity.spec.mjs
+// Run: node tests/browser/build-harness.mjs && CHROME=... node tests/browser/harness-server.mjs run -- node tests/browser/sanity.spec.mjs
 import { createRequire } from "node:module";
 const require = createRequire(new URL("../../package.json", import.meta.url).pathname);
 const { chromium } = require("playwright-core");
