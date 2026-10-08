@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { api, ApiError } from "@/lib/http-api";
 import { sectionLabel } from "@/components/SectionInspector";
+import { LoadGate } from "@xweb/ui";
 import { useSession } from "../../session";
 import { useLoad } from "../../useLoad";
 import { Card, ErrorState, errText, num, StateView, usd } from "../../ui";
@@ -42,15 +43,21 @@ export function Home() {
         </form>
     </section>
     <div className="kpiGrid">
-      <div className="kpi"><div className="kpiLabel">Lượt AI hôm nay</div>
-        <div className="kpiValue">{u ? (u.aiConfigured ? (u.aiRequestsLimit > 0 ? `${num(u.aiRequestsUsed)} / ${num(u.aiRequestsLimit)}` : `${num(u.aiRequestsUsed)} (không giới hạn)`) : "Chế độ thử nghiệm") : "…"}</div>
-        <div className="kpiHint">{u ? (u.aiConfigured ? (u.aiWindowResetsInSeconds ? `Làm mới sau ${Math.ceil(u.aiWindowResetsInSeconds / 3600)} giờ` : "Chưa dùng lượt nào") : "AI hiện chưa được quản trị viên bật") : ""}</div></div>
-      <div className="kpi"><div className="kpiLabel">Token AI 24 giờ qua</div>
-        <div className="kpiValue">{u ? (u.aiConfigured || u.tokensLast24h ? `${num(u.tokensLast24h)}${u.tokensLimitPerDay ? ` / ${num(u.tokensLimitPerDay)}` : ""}` : "—") : "…"}</div>
-        <div className="kpiHint">{u ? (u.usageLast30Days?.calls ? `30 ngày: ${num(u.usageLast30Days.totalTokens)} token · ${usd(u.usageLast30Days.costUsd)} (số liệu nhà cung cấp)` : "Chưa gọi model thật nào; Chế độ thử nghiệm không tính token") : ""}</div></div>
-      <div className="kpi"><div className="kpiLabel">Prompt hôm nay</div><div className="kpiValue">{u ? num(u.promptsToday) : "…"}</div><div className="kpiHint">{u ? `Tối đa ${u.promptsPerMinute}/phút` : ""}</div></div>
-      <div className="kpi"><div className="kpiLabel">Ứng dụng trong workspace</div><div className="kpiValue">{recent.data ? num(recent.data.total) : "…"}</div></div>
-      <div className="kpi"><div className="kpiLabel">Component của công ty</div><div className="kpiValue">{comps.data ? comps.data.length : "…"}</div></div>
+      {usage.error && !u
+        ? <div className="kpi"><div className="kpiLabel">Mức dùng AI của bạn</div><div className="kpiValue"><ErrorState error={usage.error} retry={usage.reload} compact title="Chưa tải được mức dùng AI"/></div></div>
+        : (<>
+          <div className="kpi"><div className="kpiLabel">Lượt AI hôm nay</div>
+            <div className="kpiValue">{u ? (u.aiConfigured ? (u.aiRequestsLimit > 0 ? `${num(u.aiRequestsUsed)} / ${num(u.aiRequestsLimit)}` : `${num(u.aiRequestsUsed)} (không giới hạn)`) : "Chế độ thử nghiệm") : "…"}</div>
+            <div className="kpiHint">{u ? (u.aiConfigured ? (u.aiWindowResetsInSeconds ? `Làm mới sau ${Math.ceil(u.aiWindowResetsInSeconds / 3600)} giờ` : "Chưa dùng lượt nào") : "AI hiện chưa được quản trị viên bật") : ""}</div></div>
+          <div className="kpi"><div className="kpiLabel">Token AI 24 giờ qua</div>
+            <div className="kpiValue">{u ? (u.aiConfigured || u.tokensLast24h ? `${num(u.tokensLast24h)}${u.tokensLimitPerDay ? ` / ${num(u.tokensLimitPerDay)}` : ""}` : "—") : "…"}</div>
+            <div className="kpiHint">{u ? (u.usageLast30Days?.calls ? `30 ngày: ${num(u.usageLast30Days.totalTokens)} token · ${usd(u.usageLast30Days.costUsd)} (số liệu nhà cung cấp)` : "Chưa gọi model thật nào; Chế độ thử nghiệm không tính token") : ""}</div></div>
+          <div className="kpi"><div className="kpiLabel">Prompt hôm nay</div><div className="kpiValue">{u ? num(u.promptsToday) : "…"}</div><div className="kpiHint">{u ? `Tối đa ${u.promptsPerMinute}/phút` : ""}</div></div>
+        </>)}
+      <div className="kpi"><div className="kpiLabel">Ứng dụng trong workspace</div>
+        <div className="kpiValue"><LoadGate load={recent} compact label="số ứng dụng" errorTitle="Chưa tải được số ứng dụng">{(d) => <>{num(d.total)}</>}</LoadGate></div></div>
+      <div className="kpi"><div className="kpiLabel">Component của công ty</div>
+        <div className="kpiValue"><LoadGate load={comps} compact label="số component" errorTitle="Chưa tải được số component">{(d) => <>{d.length}</>}</LoadGate></div></div>
     </div>
     <Card title="Ứng dụng gần đây" actions={<Link className="btn sm" href={S("/projects")}>Xem tất cả</Link>}>
       {recent.error ? <ErrorState error={recent.error} retry={recent.reload}/> : !recent.data ? <StateView kind="loading"/> : recent.data.items.length === 0
@@ -58,7 +65,9 @@ export function Home() {
         : <div className="projectGrid">{recent.data.items.map((p) => <ProjectCard key={p.id} p={p} mine={p.ownerUserId === me!.id}/>)}</div>}
     </Card>
     <Card title="Component dùng chung" actions={<Link className="btn sm" href={S("/components")}>Thư viện</Link>}>
-      {comps.data ? <div className="chipRow">{comps.data.filter((c) => c.status === "ACTIVE").map((c) => <span key={c.id} className="tag">{sectionLabel(c.id, c.name)} <small>{num(c.usedInProjects ?? 0)} ứng dụng</small></span>)}</div> : <StateView kind="loading"/>}
+      <LoadGate load={comps} compact label="component dùng chung" errorTitle="Chưa tải được danh sách component">
+        {(d) => <div className="chipRow">{d.filter((c) => c.status === "ACTIVE").map((c) => <span key={c.id} className="tag">{sectionLabel(c.id, c.name)} <small>{num(c.usedInProjects ?? 0)} ứng dụng</small></span>)}</div>}
+      </LoadGate>
     </Card>
   </>);
 }

@@ -171,4 +171,21 @@ for (const w of [768, 1000]) {
   check("M-017: no native dialog was shown in any of these flows", (p.dialogs ?? []).length === 0);
   await p.close();
 }
+// ---------- M-041: Home - a failed KPI / chip load says so with a retry (it showed "…" / a spinner forever); the kind pill comes from appKind ----------
+{
+  const s = newState();
+  s.fail = { "GET /me/usage": { status: 503, code: "DEPENDENCY_UNAVAILABLE", message: "down" }, "GET /components": { status: 503, code: "DEPENDENCY_UNAVAILABLE", message: "down" } };
+  const p = await open(b, "/studio", { state: s }); await p.waitForSelector(".homeHero"); await wait(1500);
+  const kpi = await p.locator(".kpiGrid").innerText();
+  check("M-041: no KPI stays on '…' after the usage / component loads fail", !/…/.test(kpi.replace(/Đang tải[^\n]*…/g, "")), kpi.replace(/\n/g, " | "));
+  check("M-041: the failed KPIs and the chips each say what could not be loaded", /Chưa tải được mức dùng AI/.test(kpi) && /Chưa tải được số component/.test(kpi) && /Chưa tải được danh sách component/.test(await p.locator("main").innerText()));
+  const retries = await p.getByRole("button", { name: "Thử lại" }).count();
+  check("M-041: a retry exists and works (a recovered load shows the numbers)", retries >= 2);
+  delete s.fail["GET /me/usage"]; delete s.fail["GET /components"];
+  await p.getByRole("button", { name: "Thử lại" }).first().click(); await wait(900);
+  check("M-041: after retry the AI usage tiles appear", /Lượt AI hôm nay/.test(await p.locator(".kpiGrid").innerText()));
+  const pills = await p.locator(".projectCard").evaluateAll((els) => els.map((e) => e.innerText.replace(/\n/g, " ")));
+  check("M-041: the kind pill comes from appKind (the Dashboard project no longer says 'Website')", pills.some((t) => /Dashboard bán hàng/.test(t) && /Dashboard/.test(t.replace("Dashboard bán hàng", "")) && !/Website/.test(t)), pills.join(" || "));
+  await p.close();
+}
 await b.close(); finish();
