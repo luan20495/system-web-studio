@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api } from "@/lib/http-api";
 import type { AccessRule, AiBudget, EffectiveModel } from "@/lib/http-types";
+import { confirm } from "@xweb/ui";
 import { useLoad } from "../../useLoad";
 import { ago, Card, ErrorState, errText, num, Pill, StateView, usd } from "../../ui";
 import { PageHead } from "../PageHead";
@@ -61,7 +62,7 @@ export function AiGovernancePage() {
       setMsg("Đã lưu ngân sách."); budgets.reload();
     } catch (x) { setErr(errText(x, "Không lưu được.")); }
   }
-  async function delBudget(x: AiBudget) { if (!confirm("Xoá ngân sách này?")) return; try { await api.admin.deleteBudget(x.id); budgets.reload(); } catch (e) { setErr(errText(e, "Không xoá được.")); } }
+  async function delBudget(x: AiBudget) { if (!(await confirm({ title: "Xoá ngân sách này?", message: `${SCOPE_LABEL[x.scopeType]} ${x.scopeLabel ?? x.scopeId}: không còn bị giới hạn bởi ngân sách này.`, confirmLabel: "Xoá ngân sách", danger: true }))) return; try { await api.admin.deleteBudget(x.id); budgets.reload(); } catch (e) { setErr(errText(e, "Không xoá được.")); } }
   async function runCheck(e: FormEvent) { e.preventDefault(); setErr(null); try { setEff(await api.admin.effectiveModels(check.id, checkWs.id || undefined)); } catch (x) { setErr(errText(x, "Không kiểm tra được.")); } }
   const money = (v: number, c: string) => `${num(Math.round(v * 10000) / 10000)} ${c}`;
   return (<>

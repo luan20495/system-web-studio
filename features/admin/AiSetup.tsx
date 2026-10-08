@@ -7,7 +7,7 @@ import type { AiLimitDefaults, AiOverride, AiProbe, AiProviderInfo, AiProviderKi
 import { useLoad } from "../useLoad";
 import { Modal } from "./Modal";
 import { Card, ErrorState, errText, num, Pill, StateView, usd } from "../ui";
-import { Activity, CircleAlert, CircleCheck, CircleSlash, Cpu, KeyRound, ModalHeader, Pencil, Picker, Plus, Power, ProviderLogo, Save, Server, Settings2, ShieldCheck, Switch, Trash2, Zap, ChevronDown, ChevronUp, Download, type PickerOption } from "@xweb/ui";
+import { Activity, CircleAlert, CircleCheck, CircleSlash, Cpu, KeyRound, ModalHeader, Pencil, Picker, Plus, Power, ProviderLogo, Save, Server, Settings2, ShieldCheck, Switch, Trash2, Zap, ChevronDown, ChevronUp, Download, type PickerOption, confirm } from "@xweb/ui";
 
 // ------------------------------------------------------------------ wording
 export const KIND_LABELS: Record<AiProviderKind, string> = {
@@ -52,7 +52,7 @@ function ProvidersTab() {
     try { const r = await api.admin.aiProbe(id); setProbes((p) => ({ ...p, [id]: r })); } catch (e) { setProbes((p) => ({ ...p, [id]: { id, ok: false, latencyMs: 0, detail: errText(e, "Chưa kiểm tra được.") } })); }
   }
   async function remove(p: AiProviderInfo) {
-    if (!window.confirm(`Xóa nhà cung cấp “${p.name}”? Khóa kết nối đã lưu sẽ bị xóa và các mô hình của nhà cung cấp này ngừng hoạt động.`)) return;
+    if (!(await confirm({ title: `Xóa nhà cung cấp “${p.name}”?`, message: "Khóa kết nối đã lưu sẽ bị xóa và các mô hình của nhà cung cấp này ngừng hoạt động.", confirmLabel: "Xóa nhà cung cấp", danger: true }))) return;
     try { await api.admin.deleteAiProvider(p.id); setMsg(`Đã xóa “${p.name}”.`); reload(); } catch (e) { setMsg(errText(e, "Chưa xóa được.")); }
   }
   async function toggle(p: AiProviderInfo) {
@@ -283,7 +283,7 @@ function LimitsTab() {
 const SCOPE_LABEL = { USER: "Người dùng", WORKSPACE: "Không gian làm việc", PROJECT: "Ứng dụng" } as const;
 function OverrideRow({ o, onDone }: { o: AiOverride; onDone: (v: import("@/lib/http-types").AiLimitsView) => void }) {
   const [err, setErr] = useState<string | null>(null);
-  async function del() { if (!window.confirm("Xóa hạn mức riêng này? Đối tượng sẽ quay về hạn mức mặc định.")) return; try { onDone(await api.admin.deleteAiOverride(o.id)); } catch (e) { setErr(errText(e, "Chưa xóa được.")); } }
+  async function del() { if (!(await confirm({ title: "Xóa hạn mức riêng này?", message: `${o.scopeLabel ?? o.scopeId} sẽ quay về hạn mức mặc định.`, confirmLabel: "Xóa hạn mức", danger: true }))) return; try { onDone(await api.admin.deleteAiOverride(o.id)); } catch (e) { setErr(errText(e, "Chưa xóa được.")); } }
   return <tr><td><b>{o.scopeLabel ?? o.scopeId}</b><small>{SCOPE_LABEL[o.scopeType]}</small></td>
     <td>{o.requestsPerDay == null ? <span className="muted">Theo mặc định</span> : countLimit(o.requestsPerDay)}</td>
     <td>{o.tokensPerDay == null ? <span className="muted">Theo mặc định</span> : countLimit(o.tokensPerDay)}</td>
@@ -346,7 +346,7 @@ export function UserAiCard({ userId, name }: { userId: string; name: string }) {
   const v = data!; const L = v.limits;
   const line = (l: { value: number; source: keyof typeof SOURCE_LABEL }, fmt: (n: number) => string) => <>{fmt(l.value)} <small className="muted">· {SOURCE_LABEL[l.source]}</small></>;
   async function clear() {
-    if (!v.override || !window.confirm("Xóa hạn mức riêng của người này? Họ sẽ quay về hạn mức mặc định.")) return;
+    if (!v.override || !(await confirm({ title: "Xóa hạn mức riêng của người này?", message: "Họ sẽ quay về hạn mức mặc định.", confirmLabel: "Xóa hạn mức", danger: true }))) return;
     try { await api.admin.deleteAiOverride(v.override.id); setMsg("Đã xóa hạn mức riêng."); reload(); } catch (e) { setMsg(errText(e, "Chưa xóa được.")); }
   }
   return (

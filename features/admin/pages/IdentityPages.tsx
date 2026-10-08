@@ -4,6 +4,7 @@ import { ScopePicker } from "./AiGovernancePage";
 import { Fragment, useState } from "react";
 import { api } from "@/lib/http-api";
 import type { Connector, Department } from "@/lib/http-types";
+import { confirm, prompt } from "@xweb/ui";
 import { useLoad } from "../../useLoad";
 import { ago, Card, ErrorState, errText, Kpi, Pill, StateView } from "../../ui";
 import { PageHead } from "../PageHead";
@@ -17,8 +18,8 @@ export function DepartmentsPage() {
   const teamsOf = (id: string) => (data ?? []).filter((d) => d.parentId === id);
   function row(d: Department) {
     return <li key={d.id} className="deptRow"><b>{d.name}</b> <small>{d.kind === "TEAM" ? "nhóm" : "phòng ban"} · {d.users} người · {d.workspaces} workspace</small>
-      <button className="btn sm ghost" onClick={() => { const n = window.prompt("Tên mới:", d.name)?.trim(); if (n) void act(() => api.admin.renameDepartment(d.id, { name: n })); }}>Đổi tên</button>
-      <button className="btn sm ghost" onClick={() => { if (confirm(`Xoá “${d.name}”?`)) void act(() => api.admin.deleteDepartment(d.id)); }}>Xoá</button></li>;
+      <button className="btn sm ghost" onClick={async () => { const n = (await prompt({ title: `Đổi tên “${d.name}”`, label: "Tên mới", defaultValue: d.name, required: true, maxLength: 120, confirmLabel: "Đổi tên" }))?.trim(); if (n) void act(() => api.admin.renameDepartment(d.id, { name: n })); }}>Đổi tên</button>
+      <button className="btn sm ghost" onClick={async () => { if (await confirm({ title: `Xoá “${d.name}”?`, message: "Mục này sẽ bị xoá khỏi cơ cấu phòng ban và nhóm.", confirmLabel: "Xoá", danger: true })) void act(() => api.admin.deleteDepartment(d.id)); }}>Xoá</button></li>;
   }
   return (<>
     <PageHead title="Phòng ban & nhóm" sub="Nhóm tổ chức để báo cáo chi phí và sử dụng. Không cấp quyền: quyền truy cập vẫn theo thành viên workspace/ứng dụng."/>

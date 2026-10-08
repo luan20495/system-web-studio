@@ -5,6 +5,7 @@ import Link from "next/link";
 import { api } from "@/lib/http-api";
 import type { BlockDto, TemplateDto } from "@/lib/http-types";
 import { useA } from "../console/context";
+import { confirm, prompt } from "@xweb/ui";
 import { useLoad } from "../../useLoad";
 import { BlockStatus, blockPage, CheckList, ReviewTimeline, SchemaThumb } from "../../library";
 import { ago, Card, ComingSoon, ErrorState, errText, num, Pager, Pill, StateView } from "../../ui";
@@ -85,7 +86,7 @@ export function BlockReviewPanel({ id, onDone }: { id: string; onDone: () => voi
           <button className="btn danger" disabled={busy || !comment.trim()} onClick={() => void act(() => api.admin.reviewBlock(b.id, "REJECT", b.latestVersion, comment.trim()))}>Từ chối</button></div>
       </div> : <p className="notice">Bạn là người đóng góp khối này nên không thể tự duyệt; cần một quản trị viên khác.</p>) : null}
       <div className="row">
-        {b.status !== "DEPRECATED" && b.approvedVersion != null ? <button className="btn sm" disabled={busy} onClick={() => { if (confirm("Ngừng dùng khối này? Khối biến khỏi thư viện; các trang đang dùng không bị thay đổi.")) void act(() => api.admin.deprecateBlock(b.id, comment.trim() || undefined)); }}>Ngừng dùng</button> : null}
+        {b.status !== "DEPRECATED" && b.approvedVersion != null ? <button className="btn sm" disabled={busy} onClick={async () => { if (await confirm({ title: `Ngừng dùng khối “${b.name}”?`, message: "Khối biến khỏi thư viện; các trang đang dùng không bị thay đổi.", confirmLabel: "Ngừng dùng", danger: true })) void act(() => api.admin.deprecateBlock(b.id, comment.trim() || undefined)); }}>Ngừng dùng</button> : null}
         {b.status === "DEPRECATED" ? <button className="btn sm" disabled={busy} onClick={() => void act(() => api.admin.restoreBlock(b.id))}>Khôi phục</button> : null}
       </div>
       {err ? <p className="formError" role="alert">{err}</p> : null}
@@ -122,11 +123,11 @@ export function TemplatesAdmin() {
               <td><div className="row">
                 <button className="btn sm" aria-expanded={open === t.id} onClick={() => setOpen(open === t.id ? null : t.id)}>Xem</button>
                 {t.canReview ? <><button className="btn sm primary" onClick={() => void act(() => api.admin.reviewTemplate(t.id, "APPROVE"))}>Duyệt</button>
-                  <button className="btn sm" onClick={() => { const c = window.prompt("Lý do từ chối (gửi cho tác giả):")?.trim(); if (c) void act(() => api.admin.reviewTemplate(t.id, "REJECT", c)); }}>Từ chối</button></> : null}
+                  <button className="btn sm" onClick={async () => { const c = (await prompt({ title: `Từ chối mẫu “${t.name}”`, label: "Lý do từ chối (gửi cho tác giả)", multiline: true, required: true, maxLength: 1000, confirmLabel: "Từ chối" }))?.trim(); if (c) void act(() => api.admin.reviewTemplate(t.id, "REJECT", c)); }}>Từ chối</button></> : null}
                 {t.status === "ACTIVE" && t.reviewStatus !== "REVIEW" ? (t.visibility === "PRIVATE"
                   ? <button className="btn sm primary" onClick={() => void act(() => api.admin.templateVisibility(t.id, "COMPANY"))}>Chia sẻ toàn công ty</button>
                   : <button className="btn sm" onClick={() => void act(() => api.admin.templateVisibility(t.id, "PRIVATE"))}>Thu hồi về riêng tư</button>) : null}
-                {t.status === "ACTIVE" ? <button className="btn sm ghost" onClick={() => { if (confirm(`Lưu trữ mẫu “${t.name}”?`)) void act(() => api.admin.templateStatus(t.id, "ARCHIVED")); }}>Lưu trữ</button>
+                {t.status === "ACTIVE" ? <button className="btn sm ghost" onClick={async () => { if (await confirm({ title: `Lưu trữ mẫu “${t.name}”?`, message: "Mẫu không còn được chọn khi tạo ứng dụng. Có thể khôi phục sau.", confirmLabel: "Lưu trữ" })) void act(() => api.admin.templateStatus(t.id, "ARCHIVED")); }}>Lưu trữ</button>
                   : <button className="btn sm" onClick={() => void act(() => api.admin.templateStatus(t.id, "ACTIVE"))}>Khôi phục</button>}
               </div></td></tr>
             {open === t.id ? <tr className="detailRow"><td colSpan={7}><div className="grid2">{t.previewStatus === "READY"

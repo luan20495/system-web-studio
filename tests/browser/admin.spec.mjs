@@ -25,7 +25,31 @@ async function block(name, fn) { try { await fn(); } catch (e) { check(`${name} 
 const dlg = (p) => p.locator("[role=dialog]");
 const text = async (p) => (await p.locator("body").innerText()).replace(/\s+/g, " ");
 const settle = (p, ms = 350) => p.waitForTimeout(ms);
+/** client-side navigation inside the page (no reload): the app's router listens to popstate */
+const nav = async (p, path) => { await p.evaluate((u) => { history.pushState(null, "", u); window.dispatchEvent(new PopStateEvent("popstate")); }, path); await settle(p, 450); };
 const linkValue = (p) => p.getByLabel("Liên kết", { exact: true }).inputValue();
+
+
+/**
+ * A confirmation is the app's Modal (M-017), never a native dialog: it names what happens, Esc sends NOTHING, and the confirm button sends the request.
+ * `field`: a prompt (reason / name) whose empty answer is refused with an inline error.
+ */
+async function ask(p, { open, title, confirm, re, field, method }) {
+  const hits = async () => (await calls(p)).filter((c) => c.method !== "GET" && (!method || c.method === method) && re.test(c.path)).length;
+  const n0 = p.__dialogs.length;
+  await open(); await settle(p, 250);
+  const d = dlg(p);
+  const okTitle = (await d.count()) === 1 && title.test(await d.locator("h2").first().innerText().catch(() => ""));
+  const noNative = p.__dialogs.length === n0;
+  await p.keyboard.press("Escape"); await settle(p, 200);
+  const cancelled = (await dlg(p).count()) === 0 && (await hits()) === 0;
+  await open(); await settle(p, 250);
+  let emptyRefused = true;
+  if (field) { await dlg(p).locator("textarea, input").first().fill(""); await dlg(p).getByRole("button", { name: confirm, exact: true }).click(); await settle(p, 150); emptyRefused = (await dlg(p).count()) === 1 && (await dlg(p).locator("[role=alert]").count()) === 1 && (await hits()) === 0; await dlg(p).locator("textarea, input").first().fill(field); }
+  await dlg(p).getByRole("button", { name: confirm, exact: true }).click(); await settle(p, 350);
+  return { okTitle, noNative, cancelled, emptyRefused, sent: (await hits()) >= 1 };
+}
+const verdict = (name, r) => check(name, r.okTitle && r.noNative && r.cancelled && r.emptyRefused && r.sent, JSON.stringify(r));
 
 /** Platform → Người dùng → "+ Tạo tài khoản" → fill → submit; the one-time link dialog is open afterwards */
 async function createAccountToLink(p) {
@@ -157,7 +181,7 @@ await block("scenario 10", async () => { const p = await open({ portal: "admin",
   await p.__ctx.close(); });
 await block("scenario 11", async () => { const p = await open({ portal: "admin", me: "sysmember", start: "/admin/applications/a2" }); // member of w1
   check("APP06 a platform admin who IS a member of the workspace keeps 'Xóa' (the server still decides)", (await p.getByRole("button", { name: "Xóa", exact: true }).count()) === 1 && !/không phải thành viên workspace/.test(await text(p)));
-  await p.getByRole("button", { name: "Xóa", exact: true }).click(); await settle(p, 400);
+  await p.getByRole("button", { name: "Xóa", exact: true }).click(); await settle(p, 300); await dlg(p).getByRole("button", { name: "Xóa ứng dụng", exact: true }).click(); await settle(p, 400);
   check("APP07 and it calls the workspace-scoped delete route as before", (await posts(p, /^\/workspaces\/w1\/projects\/a2/)).length === 1, JSON.stringify((await calls(p)).filter((c) => c.method === "DELETE")));
   await p.getByRole("tab", { name: "Phiên bản" }).click(); await settle(p, 200);
   check("APP08 member: 'Khôi phục' (old versions) stays available", (await p.getByRole("button", { name: "Khôi phục", exact: true }).count()) === 1);
@@ -231,6 +255,52 @@ await block("scenario 20", async () => { const p = await open({ portal: "admin",
 await block("scenario 21", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform" }); await settle(p, 600);
   const t = await p.locator("main").innerText();
   check("TXT05 the AI month card does not say budgets are not implemented (they are: 'Quyền & ngân sách AI')", !/chưa triển khai/.test(t) && /Quyền & ngân sách AI/.test(t));
+  await p.__ctx.close(); });
+
+// ===================================================================================================================== M-017 every native confirm / prompt is the app's dialog
+await block("scenario 22", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/users/u2", fx: "1" });
+  verdict("CNF01 lock account", await ask(p, { open: () => p.getByRole("button", { name: "Khóa tài khoản", exact: true }).click(), title: /Khóa tài khoản binh\?/, confirm: "Khóa tài khoản", re: /^\/admin\/users\/u2\/status/ }));
+  verdict("CNF02 grant system admin", await ask(p, { open: () => p.getByRole("button", { name: "Cấp quyền Quản trị hệ thống" }).click(), title: /Cấp quyền Quản trị hệ thống cho binh\?/, confirm: "Cấp quyền", re: /system-admin$/ }));
+  verdict("CNF03 revoke sessions", await ask(p, { open: () => p.getByRole("button", { name: /Thu hồi phiên/ }).click(), title: /Thu hồi mọi phiên đăng nhập của binh\?/, confirm: "Thu hồi phiên", re: /revoke-sessions$/ }));
+  await p.__ctx.close(); });
+await block("scenario 23", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/tenants/t1", fx: "1" });
+  verdict("CNF04 suspend a company", await ask(p, { open: () => p.getByTestId("tenant-SUSPENDED").click(), title: /Tạm khóa công ty “Acme”\?/, confirm: "Tạm khóa", re: /tenants\/t1\/status/ }));
+  verdict("CNF05 remove a company member (the person is named)", await ask(p, { open: () => p.locator('[data-testid="tm:u2"] button').click(), title: /Gỡ .*binh.* khỏi công ty\?/i, confirm: "Gỡ khỏi công ty", re: /tenants\/t1\/members\/u2/ }));
+  await p.__ctx.close(); });
+await block("scenario 24", async () => { const p = await open({ portal: "admin", me: "tadmin", start: "/admin/my-workspaces", fx: "1" });
+  verdict("CNF06 remove a workspace member", await ask(p, { open: () => p.locator('[data-testid="wm:binh"] button').click(), title: /Gỡ Bình khỏi workspace\?/, confirm: "Gỡ khỏi workspace", re: /workspaces\/w1\/members\/u2/ }));
+  await p.__ctx.close(); });
+await block("scenario 25", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/ai/providers", fx: "1" });
+  verdict("CNF07 delete an AI provider", await ask(p, { open: () => p.getByRole("button", { name: "Xóa", exact: true }).first().click(), title: /Xóa nhà cung cấp “OpenAI công ty”\?/, confirm: "Xóa nhà cung cấp", re: /ai\/providers\/p1$/ }));
+  await nav(p, "/platform/ai/limits"); await settle(p, 500);
+  verdict("CNF08 delete an AI limit override", await ask(p, { open: () => p.getByRole("button", { name: "Xóa", exact: true }).first().click(), title: /Xóa hạn mức riêng này\?/, confirm: "Xóa hạn mức", re: /limits\/overrides\/o1$/ }));
+  await p.__ctx.close(); });
+await block("scenario 26", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/ai-governance", fx: "1" });
+  verdict("CNF09 delete an AI budget", await ask(p, { open: () => p.getByRole("button", { name: "Xoá", exact: true }).first().click(), title: /Xoá ngân sách này\?/, confirm: "Xoá ngân sách", re: /ai\/budgets\/b1$/ }));
+  await nav(p, "/admin/departments"); await settle(p, 500);
+  verdict("CNF10 delete a department", await ask(p, { open: () => p.getByRole("button", { name: "Xoá", exact: true }).first().click(), title: /Xoá “Kỹ thuật”\?/, confirm: "Xoá", re: /departments\/d1$/, method: "DELETE" }));
+  verdict("CNF11 rename a department (a prompt: empty is refused)", await ask(p, { open: () => p.getByRole("button", { name: "Đổi tên" }).click(), title: /Đổi tên “Kỹ thuật”/, confirm: "Đổi tên", re: /departments\/d1$/, method: "PATCH", field: "Kỹ thuật mới" }));
+  await p.__ctx.close(); });
+await block("scenario 27", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/applications/a1", fx: "1" });
+  verdict("CNF12 archive an application", await ask(p, { open: () => p.getByRole("button", { name: "Lưu trữ", exact: true }).click(), title: /Lưu trữ “Cổng khách hàng”\?/, confirm: "Lưu trữ", re: /applications\/a1\/archive$/ }));
+  await p.__ctx.close(); });
+await block("scenario 28", async () => { const p = await open({ portal: "admin", me: "sysmember", start: "/admin/applications/a2", fx: "1" });
+  await p.getByRole("tab", { name: "Phiên bản" }).click(); await settle(p, 200);
+  verdict("CNF13 restore an old version", await ask(p, { open: () => p.getByRole("button", { name: "Khôi phục", exact: true }).click(), title: /Khôi phục v1\?/, confirm: "Khôi phục v1", re: /projects\/a2\/versions|restore/ }));
+  await p.__ctx.close(); });
+await block("scenario 29", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/builds", fx: "1" });
+  verdict("CNF14 permanently delete a repository", await ask(p, { open: () => p.getByRole("button", { name: "Xoá vĩnh viễn" }).click(), title: /Xoá vĩnh viễn kho mã “repo-1”\?/, confirm: "Xoá vĩnh viễn", re: /repositories\/pr1\/delete$/ }));
+  await p.__ctx.close(); });
+await block("scenario 30", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/packages", fx: "1" });
+  verdict("CNF15 accept a package's risk (a prompt: the reason is required)", await ask(p, { open: () => p.getByRole("button", { name: "Cho phép", exact: true }).click(), title: /Cho phép “date-fns” dù có lỗ hổng/, confirm: "Chấp nhận rủi ro", re: /packages\/date-fns\/decision$/, field: "Đã rà soát, chỉ dùng ở phía máy chủ" }));
+  await p.__ctx.close(); });
+await block("scenario 31", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/settings", fx: "1" });
+  await p.getByLabel("Tên miền cho phép").fill("evil.com");
+  verdict("CNF16 change a HIGH-risk setting", await ask(p, { open: () => p.getByRole("button", { name: "Lưu", exact: true }).first().click(), title: /Đổi “Tên miền cho phép”\?/, confirm: "Đổi cài đặt", re: /settings\/policies\/net\.domains$/ }));
+  await p.__ctx.close(); });
+await block("scenario 32", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/templates", fx: "1" });
+  verdict("CNF17 reject a template (a prompt: the reason is required)", await ask(p, { open: () => p.getByRole("button", { name: "Từ chối", exact: true }).click(), title: /Từ chối mẫu “Trang chủ mẫu”/, confirm: "Từ chối", re: /templates\/tp1\/review$/, field: "Thiếu tiêu đề" }));
+  verdict("CNF18 archive a template", await ask(p, { open: () => p.getByRole("button", { name: "Lưu trữ", exact: true }).click(), title: /Lưu trữ mẫu “Trang chủ mẫu”\?/, confirm: "Lưu trữ", re: /templates\/tp1\/status$/ }));
   await p.__ctx.close(); });
 
 // ===================================================================================================================== route / navigation snapshot (M-066: the split must not change behaviour)

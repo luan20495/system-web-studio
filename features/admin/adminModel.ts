@@ -85,17 +85,17 @@ export const TENANT_ROLES = [{ id: "TENANT_ADMIN", label: "Quản trị công ty
 export const tenantRoleLabel = (r: string) => TENANT_ROLES.find((x) => x.id === r)?.label ?? r;
 export const TENANT_STATUS_LABEL: Record<string, string> = { ACTIVE: "Hoạt động", SUSPENDED: "Tạm khóa", DELETED: "Đã xóa" };
 
-export type TenantAction = { to: "ACTIVE" | "SUSPENDED" | "DELETED"; label: string; danger: boolean; confirm: string };
+export type TenantAction = { to: "ACTIVE" | "SUSPENDED" | "DELETED"; label: string; danger: boolean; confirm: string; /** what happens, for the confirmation dialog (the title is "{label} công ty …?") */ message: string };
 /** the status changes offered for a tenant; the DEFAULT tenant offers none (the server would refuse them) */
 export function tenantActions(t: Pick<TenantView, "id" | "status" | "name">): TenantAction[] {
   if (t.id === DEFAULT_TENANT_ID) return [];
   if (t.status === "ACTIVE") return [
-    { to: "SUSPENDED", label: "Tạm khóa", danger: false, confirm: `Tạm khóa công ty “${t.name}”? Người dùng của công ty này sẽ không vào được cho tới khi mở khóa lại.` },
-    { to: "DELETED", label: "Xóa", danger: true, confirm: `Xóa công ty “${t.name}”? Công ty bị đánh dấu đã xóa và không còn xuất hiện cho người dùng.` }];
+    { to: "SUSPENDED", label: "Tạm khóa", danger: false, confirm: `Tạm khóa công ty “${t.name}”? Người dùng của công ty này sẽ không vào được cho tới khi mở khóa lại.`, message: "Người dùng của công ty này sẽ không vào được cho tới khi mở khóa lại." },
+    { to: "DELETED", label: "Xóa", danger: true, confirm: `Xóa công ty “${t.name}”? Công ty bị đánh dấu đã xóa và không còn xuất hiện cho người dùng.`, message: "Công ty bị đánh dấu đã xóa và không còn xuất hiện cho người dùng. Có thể khôi phục sau." }];
   if (t.status === "SUSPENDED") return [
-    { to: "ACTIVE", label: "Mở khóa", danger: false, confirm: `Mở khóa công ty “${t.name}”?` },
-    { to: "DELETED", label: "Xóa", danger: true, confirm: `Xóa công ty “${t.name}”? Công ty bị đánh dấu đã xóa và không còn xuất hiện cho người dùng.` }];
-  return [{ to: "ACTIVE", label: "Khôi phục", danger: false, confirm: `Khôi phục công ty “${t.name}” về trạng thái hoạt động?` }];
+    { to: "ACTIVE", label: "Mở khóa", danger: false, confirm: `Mở khóa công ty “${t.name}”?`, message: "Người dùng của công ty vào lại được." },
+    { to: "DELETED", label: "Xóa", danger: true, confirm: `Xóa công ty “${t.name}”? Công ty bị đánh dấu đã xóa và không còn xuất hiện cho người dùng.`, message: "Công ty bị đánh dấu đã xóa và không còn xuất hiện cho người dùng. Có thể khôi phục sau." }];
+  return [{ to: "ACTIVE", label: "Khôi phục", danger: false, confirm: `Khôi phục công ty “${t.name}” về trạng thái hoạt động?`, message: "Công ty trở về trạng thái hoạt động." }];
 }
 
 /** a person the console can name: from workspace members (`/workspaces/{w}/members`) and, for a SYSTEM_ADMIN, from `/admin/users` */

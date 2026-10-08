@@ -14,6 +14,7 @@ import { LinkBox } from "../UserDialogs";
 import { useSession } from "../../session";
 import { adminScope } from "../adminModel";
 import { useA } from "../console/context";
+import { confirm } from "@xweb/ui";
 import { useLoad } from "../../useLoad";
 import { ago, Card, ErrorState, errText, fmtDate, Kpi, num, Pager, Pill, StateView } from "../../ui";
 import { PageHead } from "../PageHead";
@@ -78,17 +79,17 @@ export function UserDetail({ id }: { id: string }) {
   }
   async function grantAdmin() {
     const grant = !u.systemAdmin;
-    if (!window.confirm(grant ? `Cấp quyền Quản trị hệ thống cho ${u.username}? Người này sẽ quản lý được toàn bộ người dùng, AI và cài đặt của công ty.` : `Gỡ quyền Quản trị hệ thống của ${u.username}?`)) return;
+    if (!(await confirm({ title: grant ? `Cấp quyền Quản trị hệ thống cho ${u.username}?` : `Gỡ quyền Quản trị hệ thống của ${u.username}?`, message: grant ? "Người này sẽ quản lý được toàn bộ người dùng, AI và cài đặt của công ty." : "Người này không còn quản lý được người dùng, AI và cài đặt của công ty.", confirmLabel: grant ? "Cấp quyền" : "Gỡ quyền", danger: true }))) return;
     setBusy(true); setMsg(null);
     try { await api.admin.setSystemAdmin(u.id, grant); setMsg(grant ? "Đã cấp quyền Quản trị hệ thống." : "Đã gỡ quyền Quản trị hệ thống."); reload(); } catch (e) { setMsg(errText(e, "Chưa đổi được quyền.")); } finally { setBusy(false); }
   }
   async function toggle() {
-    if (!window.confirm(u.enabled ? `Khóa tài khoản ${u.username}? Mọi phiên đăng nhập của người này sẽ bị thu hồi ngay.` : `Mở khóa tài khoản ${u.username}?`)) return;
+    if (!(await confirm({ title: u.enabled ? `Khóa tài khoản ${u.username}?` : `Mở khóa tài khoản ${u.username}?`, message: u.enabled ? "Mọi phiên đăng nhập của người này sẽ bị thu hồi ngay." : "Người này đăng nhập lại được.", confirmLabel: u.enabled ? "Khóa tài khoản" : "Mở khóa", danger: u.enabled }))) return;
     setBusy(true); setMsg(null);
     try { await api.admin.setUserStatus(u.id, !u.enabled); setMsg(u.enabled ? "Đã khóa tài khoản và thu hồi phiên." : "Đã mở khóa tài khoản."); reload(); } catch (e) { setMsg(errText(e, "Không đổi được trạng thái.")); } finally { setBusy(false); }
   }
   async function revoke() {
-    if (!window.confirm(`Thu hồi mọi phiên đăng nhập của ${u.username}?`)) return;
+    if (!(await confirm({ title: `Thu hồi mọi phiên đăng nhập của ${u.username}?`, message: "Người này phải đăng nhập lại trên mọi thiết bị.", confirmLabel: "Thu hồi phiên", danger: true }))) return;
     setBusy(true); try { const r = await api.admin.revokeSessions(u.id); setMsg(`Đã thu hồi ${r.revoked} phiên.`); setData({ ...d, activeSessions: 0 }); } catch (e) { setMsg(errText(e, "Không thu hồi được phiên.")); } finally { setBusy(false); }
   }
   return (<>

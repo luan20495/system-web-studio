@@ -15,7 +15,7 @@ import type { Member, TenantMemberCandidate, TenantMemberView, TenantView } from
 import { useSession } from "../session";
 import { useLoad } from "../useLoad";
 import { Card, ErrorState, fmtDate, Kpi, Pill, StateView } from "../ui";
-import { ArrowLeft, Building2, CircleCheck, ModalHeader, ShieldCheck, UserRound } from "@xweb/ui";
+import { ArrowLeft, Building2, CircleCheck, ModalHeader, ShieldCheck, UserRound, confirm } from "@xweb/ui";
 import { PersonPicker } from "./PersonPicker";
 import { PlatformCreateAccount } from "./ProvisioningLive";
 import { DataSourcesPanel } from "../studio/builder/DataSourcesPanel";
@@ -69,10 +69,10 @@ function TenantMembers({ tenantId, tenantName, onCreateAdmin, rev = 0 }: { tenan
     setBusy(key); setMsg(null);
     try { await fn(); setMsg({ kind: "ok", text: ok }); members.reload(); } catch (e) { setMsg({ kind: "err", text: say(e, "Chưa thực hiện được.") }); } finally { setBusy(null); }
   }
-  function change(m: { userId: string; role: string }, next: "TENANT_ADMIN" | "MEMBER" | "REMOVE") {
+  async function change(m: { userId: string; role: string }, next: "TENANT_ADMIN" | "MEMBER" | "REMOVE") {
     const block = memberChangeBlock(m, { id: me!.id }, list, next);
     if (block) { setMsg({ kind: "err", text: block }); return; }
-    if (next === "REMOVE") { if (!window.confirm("Gỡ người này khỏi công ty?")) return; void act(`rm:${m.userId}`, () => api.admin.removeTenantMember(tenantId, m.userId), "Đã gỡ khỏi công ty."); }
+    if (next === "REMOVE") { const who = rows.find((r) => r.userId === m.userId)?.label ?? "người này"; if (!(await confirm({ title: `Gỡ ${who} khỏi công ty?`, message: `Họ không còn là thành viên của công ty “${tenantName}”. Tài khoản của họ không bị xóa.`, confirmLabel: "Gỡ khỏi công ty", danger: true }))) return; void act(`rm:${m.userId}`, () => api.admin.removeTenantMember(tenantId, m.userId), "Đã gỡ khỏi công ty."); }
     else void act(`role:${m.userId}`, () => api.admin.setTenantMember(tenantId, m.userId, next), "Đã đổi vai trò.");
   }
   async function add(e: FormEvent) {
@@ -125,8 +125,8 @@ function TenantBody({ id, onChanged }: { id: string; onChanged?: () => void }) {
   const actions = scope.platform ? tenantActions(t) : [];
   // the first administrator of a company is made HERE (existing route: POST /admin/tenants/{t}/users). Only a Platform operator, only while the company is usable.
   const canCreateAdmin = scope.platform && t.status === "ACTIVE";
-  async function setStatus(to: "ACTIVE" | "SUSPENDED" | "DELETED", confirm: string) {
-    if (!window.confirm(confirm)) return;
+  async function setStatus(to: "ACTIVE" | "SUSPENDED" | "DELETED", a: { label: string; danger: boolean; message: string }) {
+    if (!(await confirm({ title: `${a.label} công ty “${t.name}”?`, message: a.message, confirmLabel: a.label, danger: a.danger }))) return;
     setBusy(true); setMsg(null);
     try { await api.admin.setTenantStatus(t.id, to); setMsg("Đã đổi trạng thái công ty."); tenant.reload(); onChanged?.(); } catch (e) { setMsg(say(e, "Chưa đổi được trạng thái.")); } finally { setBusy(false); }
   }
@@ -134,7 +134,7 @@ function TenantBody({ id, onChanged }: { id: string; onChanged?: () => void }) {
     <PageHead title={t.name} sub={`${t.slug} · tạo ${fmtDate(t.createdAt)}`} actions={actions.length || canCreateAdmin ? <div className="row">
       {canCreateAdmin ? <button className="btn primary" data-testid="tenant-create-admin" onClick={() => setCreating(true)}>Tạo tài khoản quản trị công ty</button> : null}
       {actions.map((a) => (
-      <button key={a.to} className={`btn ${a.danger ? "danger" : ""}`} disabled={busy} data-testid={`tenant-${a.to}`} onClick={() => void setStatus(a.to, a.confirm)}>{a.label}</button>))}</div> : undefined}/>
+      <button key={a.to} className={`btn ${a.danger ? "danger" : ""}`} disabled={busy} data-testid={`tenant-${a.to}`} onClick={() => void setStatus(a.to, a)}>{a.label}</button>))}</div> : undefined}/>
     {msg ? <p className="notice" role="status">{msg}</p> : null}
     <div className="kpiGrid"><Kpi label="Trạng thái" value={statusPill(t.status)}/><Kpi label="Mã công ty" value={t.slug}/></div>
     {t.status !== "ACTIVE" ? <p className="hint" role="note">Công ty đang {TENANT_STATUS_LABEL[t.status]?.toLowerCase() ?? t.status}: người dùng của công ty không vào được cho tới khi mở khóa.</p> : null}
@@ -290,10 +290,10 @@ function WorkspaceMembersPanel({ workspaceId, name }: { workspaceId: string; nam
     setBusy(key); setMsg(null);
     try { await fn(); setMsg({ kind: "ok", text: ok }); members.reload(); } catch (e) { setMsg({ kind: "err", text: say(e, "Chưa thực hiện được.") }); } finally { setBusy(null); }
   }
-  function change(m: Member, next: string) {
+  async function change(m: Member, next: string) {
     const block = workspaceMemberBlock(m, { id: me!.id }, list, next);
     if (block) { setMsg({ kind: "err", text: block }); return; }
-    if (next === "REMOVE") { if (!window.confirm(`Gỡ ${m.displayName ?? m.username} khỏi workspace? Họ cũng mất quyền ở mọi ứng dụng của workspace.`)) return; void act(`rm:${m.userId}`, () => api.removeWorkspaceMember(workspaceId, m.userId), "Đã gỡ khỏi workspace."); }
+    if (next === "REMOVE") { if (!(await confirm({ title: `Gỡ ${m.displayName ?? m.username} khỏi workspace?`, message: `Họ cũng mất quyền ở mọi ứng dụng của workspace “${name}”.`, confirmLabel: "Gỡ khỏi workspace", danger: true }))) return; void act(`rm:${m.userId}`, () => api.removeWorkspaceMember(workspaceId, m.userId), "Đã gỡ khỏi workspace."); }
     else void act(`role:${m.userId}`, () => api.changeWorkspaceMember(workspaceId, m.userId, next), "Đã đổi vai trò.");
   }
   async function add(e: FormEvent) {

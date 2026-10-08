@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/http-api";
 import type { PackageView, RepoRow, SettingView, HealthItem } from "@/lib/http-types";
+import { confirm, prompt } from "@xweb/ui";
 import { useLoad } from "../../useLoad";
 import { ago, Card, ErrorState, errText, fmtDate, Kpi, num, Pill, StateView } from "../../ui";
 import { PageHead } from "../PageHead";
@@ -43,7 +44,7 @@ export function BuildsPage() {
   const repos = useLoad(() => api.admin.repositories(), []);
   const [msg, setMsg] = useState<string | null>(null); const [err, setErr] = useState<string | null>(null); const [busy, setBusy] = useState(false);
   async function runCleanup() { setBusy(true); setErr(null); try { const r = await api.admin.retentionRun(); setMsg(`Đã dọn: ${r.retention?.artifactsDeleted ?? 0} artifact (${mib(r.retention?.artifactBytesFreed)}), ${r.retention?.previewsExpired ?? 0} bản xem trước hết hạn.`); preview.reload(); rep.reload(); repos.reload(); } catch (x) { setErr(errText(x, "Không dọn được.")); } finally { setBusy(false); } }
-  async function hardDelete(r: RepoRow) { if (!confirm(`Xoá vĩnh viễn kho mã “${r.name}”? Không thể hoàn tác.`)) return; setErr(null); try { await api.admin.deleteRepository(r.projectId); repos.reload(); } catch (x) { setErr(errText(x, "Không xoá được.")); } }
+  async function hardDelete(r: RepoRow) { if (!(await confirm({ title: `Xoá vĩnh viễn kho mã “${r.name}”?`, message: "Không thể hoàn tác.", confirmLabel: "Xoá vĩnh viễn", danger: true }))) return; setErr(null); try { await api.admin.deleteRepository(r.projectId); repos.reload(); } catch (x) { setErr(errText(x, "Không xoá được.")); } }
   const d = rep.data; const p = preview.data;
   return (<>
     <PageHead title="Build & lưu trữ" sub="Số liệu đo thật từ runner (CPU của container, thời gian, kích thước kết quả). Giới hạn chỉnh trong Cài đặt → Build / Lưu trữ / Lưu giữ."/>
@@ -89,7 +90,7 @@ export function PackagesPage() {
     setErr(null);
     const risky = (p.findings ?? []).some((x) => x.severity === "HIGH" || x.severity === "CRITICAL");
     let accept = false, note: string | undefined;
-    if (status === "ALLOWED" && risky) { note = window.prompt("Package có lỗ hổng HIGH/CRITICAL. Ghi lý do chấp nhận rủi ro (bắt buộc):") ?? ""; if (!note.trim()) return; accept = true; }
+    if (status === "ALLOWED" && risky) { note = (await prompt({ title: `Cho phép “${p.name}” dù có lỗ hổng nghiêm trọng?`, message: "Package có lỗ hổng mức cao hoặc nghiêm trọng. Việc chấp nhận rủi ro được ghi lại cùng lý do.", label: "Lý do chấp nhận rủi ro (bắt buộc)", multiline: true, required: true, maxLength: 500, confirmLabel: "Chấp nhận rủi ro" })) ?? ""; if (!note.trim()) return; accept = true; }
     try { await api.admin.decidePackage(p.name, status, accept, note); reload(); } catch (x) { setErr(errText(x, "Không đổi được.")); }
   }
   return (<>
@@ -124,7 +125,7 @@ export function SettingsPage() {
   const [draft, setDraft] = useState<Record<string, string>>({}); const [err, setErr] = useState<string | null>(null); const [ok, setOk] = useState<string | null>(null);
   async function save(s: SettingView, value: string) {
     setErr(null); setOk(null);
-    if (s.risk === "HIGH" && !confirm(`“${s.label}” là cài đặt rủi ro cao. Đổi thành ${value}?`)) return;
+    if (s.risk === "HIGH" && !(await confirm({ title: `Đổi “${s.label}”?`, message: `Đây là cài đặt rủi ro cao. Giá trị mới: ${value}.`, confirmLabel: "Đổi cài đặt", danger: true }))) return;
     try { await api.admin.setPolicy(s.key, value, s.risk === "HIGH"); setOk(`Đã lưu: ${s.label}`); setDraft((d) => { const n = { ...d }; delete n[s.key]; return n; }); pol.reload(); }
     catch (x) { setErr(errText(x, "Không lưu được.")); }
   }

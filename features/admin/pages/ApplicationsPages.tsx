@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/http-api";
 import type { AdminApp as App } from "@/lib/http-types";
-import { ArrowLeft } from "@xweb/ui";
+import { ArrowLeft, confirm } from "@xweb/ui";
 import { useSession } from "../../session";
 import { canActInWorkspace } from "../adminModel";
 import { useA } from "../console/context";
@@ -66,8 +66,8 @@ export function AppDetail({ id }: { id: string }) {
     <PageHead title={a.name} sub={`${a.workspaceName} · chủ sở hữu ${a.owner} · ${!a.active ? "đã xóa" : a.lifecycle === "ARCHIVED" ? "đã lưu trữ (chỉ xem, ngoại tuyến)" : "đang hoạt động"}`}
       actions={a.active ? <div className="row">
         {a.lifecycle === "ARCHIVED" ? <button className="btn" disabled={busy} onClick={() => void act(() => api.admin.restoreApp(a.id), "Đã khôi phục ứng dụng (website vẫn ngoại tuyến tới khi xuất bản lại).")}>Khôi phục</button>
-          : <button className="btn" disabled={busy} onClick={() => { if (window.confirm(`Lưu trữ "${a.name}"? Ứng dụng chỉ còn xem được và website bị gỡ khỏi mạng.`)) void act(() => api.admin.archiveApp(a.id), "Đã lưu trữ ứng dụng."); }}>Lưu trữ</button>}
-        {inWorkspace ? <button className="btn danger" disabled={busy} onClick={() => { if (window.confirm(`Xóa ứng dụng "${a.name}"? (xóa mềm, có ghi nhật ký)`)) void act(() => api.deleteProject(a.workspaceId, a.id, a.revision), "Đã xóa ứng dụng."); }}>Xóa</button> : null}</div> : undefined}/>
+          : <button className="btn" disabled={busy} onClick={async () => { if (await confirm({ title: `Lưu trữ “${a.name}”?`, message: "Ứng dụng chỉ còn xem được và website bị gỡ khỏi mạng. Có thể khôi phục sau.", confirmLabel: "Lưu trữ" })) void act(() => api.admin.archiveApp(a.id), "Đã lưu trữ ứng dụng."); }}>Lưu trữ</button>}
+        {inWorkspace ? <button className="btn danger" disabled={busy} onClick={async () => { if (await confirm({ title: `Xóa ứng dụng “${a.name}”?`, message: "Xóa mềm: ứng dụng biến khỏi danh sách và việc này được ghi nhật ký.", confirmLabel: "Xóa ứng dụng", danger: true })) void act(() => api.deleteProject(a.workspaceId, a.id, a.revision), "Đã xóa ứng dụng."); }}>Xóa</button> : null}</div> : undefined}/>
     {a.active && !inWorkspace ? <p className="notice" role="note" data-testid="app-no-workspace-access">{noWorkspaceAccess(a.workspaceName)}</p> : null}
     {msg ? <p className="notice" role="status">{msg}</p> : null}
     <div className="tabs" role="tablist">{tabs.map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? "active" : ""} onClick={() => setTab(k)}>{l}</button>)}</div>
@@ -92,7 +92,7 @@ export function AppDetail({ id }: { id: string }) {
     </>) : null}
     {tab === "members" ? <Card><table className="table"><thead><tr><th>Người dùng</th><th>Vai trò</th><th>Trạng thái</th></tr></thead><tbody>{d.members.map((m) => <tr key={m.userId}><td><Link href={A(`/users/${m.userId}`)}>{m.displayName ?? m.username}</Link><small>{m.username}</small></td><td>{m.role}</td><td>{m.enabled ? <Pill value="ACTIVE" label="Hoạt động"/> : <Pill value="DISABLED" label="Bị khóa"/>}</td></tr>)}</tbody></table></Card> : null}
     {tab === "versions" ? <Card>{a.active && !inWorkspace ? <p className="hint">{noWorkspaceAccess(a.workspaceName)}</p> : null}<table className="table"><thead><tr><th>Phiên bản</th><th>Loại</th><th>Mô tả</th><th>Tác giả</th><th>Thời gian</th><th><span className="srOnly">Thao tác</span></th></tr></thead><tbody>{d.versions.map((v, i) => <tr key={v.id}><td><b>v{v.versionNumber}</b>{i === 0 ? <small>hiện tại</small> : null}</td><td>{v.kind}</td><td>{v.summary}</td><td>{v.createdBy ?? "—"}</td><td>{fmtDate(v.createdAt)}</td>
-      <td>{i > 0 && a.active && inWorkspace ? <button className="btn sm" disabled={busy} onClick={() => { if (window.confirm(`Khôi phục v${v.versionNumber}? Một phiên bản mới sẽ được tạo.`)) void act(() => api.restoreVersion(a.workspaceId, a.id, v.id, a.revision), `Đã khôi phục v${v.versionNumber}.`); }}>Khôi phục</button> : null}</td></tr>)}</tbody></table></Card> : null}
+      <td>{i > 0 && a.active && inWorkspace ? <button className="btn sm" disabled={busy} onClick={async () => { if (await confirm({ title: `Khôi phục v${v.versionNumber}?`, message: "Một phiên bản mới sẽ được tạo từ nội dung của bản này.", confirmLabel: `Khôi phục v${v.versionNumber}` })) void act(() => api.restoreVersion(a.workspaceId, a.id, v.id, a.revision), `Đã khôi phục v${v.versionNumber}.`); }}>Khôi phục</button> : null}</td></tr>)}</tbody></table></Card> : null}
     {tab === "prompts" ? <Card>{d.prompts.length ? <table className="table"><thead><tr><th>Thời gian</th><th>Người dùng</th><th>Prompt</th><th>Model</th><th>Kết quả</th></tr></thead><tbody>{d.prompts.map((p) => <tr key={p.id}><td>{ago(p.createdAt)}</td><td>{p.user ?? "—"}</td><td>{p.text}</td><td className="code">{p.model ?? p.provider ?? "—"}</td><td>{p.outcome ? <Pill value={p.outcome}/> : "—"}</td></tr>)}</tbody></table> : <StateView kind="empty" title="Chưa có prompt"/>}</Card> : null}
     {tab === "deployments" ? <Card>{d.deployments.length ? <table className="table"><thead><tr><th>Thời gian</th><th>Phiên bản</th><th>Truy cập</th><th>Trạng thái</th><th>Môi trường</th><th>Lỗi</th></tr></thead><tbody>{d.deployments.map((x) => <tr key={x.id}><td>{fmtDate(x.createdAt)}</td><td>v{x.versionNumber ?? "—"}</td><td>{x.visibility}</td><td><Pill value={x.status}/></td><td>{x.provider === "mock" ? "Demo deployment (mô phỏng)" : x.provider === "static" ? "Trang tĩnh (thật)" : x.provider}</td><td>{x.error ?? "—"}</td></tr>)}</tbody></table> : <StateView kind="empty" title="Chưa xuất bản lần nào"/>}</Card> : null}
     {tab === "audit" ? <Card><AuditTable rows={d.audit}/></Card> : null}
