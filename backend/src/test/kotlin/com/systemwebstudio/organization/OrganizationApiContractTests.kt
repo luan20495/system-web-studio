@@ -1,6 +1,7 @@
 package com.systemwebstudio.organization
 
 import org.assertj.core.api.Assertions.assertThat
+import org.springframework.beans.factory.annotation.Autowired
 import org.junit.jupiter.api.Test
 import org.springframework.context.annotation.Import
 import tools.jackson.databind.JsonNode
@@ -250,14 +251,62 @@ class OrganizationApiContractTests : OrganizationTestBase() {
     }
 
     @Test
-    fun `unit codes are unique per company among active units and case-insensitive, two companies may reuse a code, input is validated`() {
+    fun `CF-3 unit code is REQUIRED, CANONICAL (trimmed, upper-case) and unique among the non-archived SIBLINGS - roots are siblings, other parents may reuse it, a move or a restore re-checks it`() {
         val a = company(); val b = company(); val ta = type(a, "unit"); val tb = type(b, "unit")
-        unit(a, ta, "SALES"); unit(b, tb, "SALES")
-        val dup = a.admin.post(units(a), """{"typeId":"${id(ta)}","code":"sales","name":"dup"}"""); assertThat(dup.response.status).isEqualTo(409); assertThat(code(dup, a.admin)).isEqualTo("ORG_UNIT_CODE_TAKEN")
+        val root = unit(a, ta, "ROOT-A"); val rootB = unit(a, ta, "ROOT-B"); unit(b, tb, "ROOT-A")                 // another company reuses everything
+        // canonical form: whatever the case or the padding, the unit is stored and returned trimmed and upper-case
+        val sales = c0Unit(a, ta, "  sales ", root); assertThat(sales.get("code").asString()).isEqualTo("SALES")
+        // the SAME code under a different parent, and as a root, is allowed
+        val salesB = unit(a, ta, "Sales", rootB); assertThat(salesB.get("code").asString()).isEqualTo("SALES"); assertThat(unit(a, ta, "SALES").get("parentId").isNull).isTrue()
+        // siblings: refused whatever the case; the wording names the sibling scope, not "the company"
+        val dup = a.admin.post(units(a), """{"typeId":"${id(ta)}","code":"sales","name":"dup","parentId":"${id(root)}"}"""); assertThat(dup.response.status).isEqualTo(409); assertThat(code(dup, a.admin)).isEqualTo("ORG_UNIT_CODE_TAKEN")
+        assertThat(a.admin.body(dup).get("message").asString()).contains("sibling").doesNotContain("company")
+        val dupRoot = a.admin.post(units(a), """{"typeId":"${id(ta)}","code":"root-a","name":"dup"}"""); assertThat(code(dupRoot, a.admin)).describedAs("two roots").isEqualTo("ORG_UNIT_CODE_TAKEN")
+        // update onto a sibling's code
+        val ops = unit(a, ta, "OPS", root); assertThat(code(a.admin.patch("${units(a)}/${id(ops)}", """{"code":" sales ","expectedVersion":${ver(ops)}}"""), a.admin)).isEqualTo("ORG_UNIT_CODE_TAKEN")
+        assertThat(a.admin.body(a.admin.patch("${units(a)}/${id(ops)}", """{"code":"ops2","expectedVersion":${ver(ops)}}""")).get("code").asString()).isEqualTo("OPS2")
+        // a MOVE next to a sibling that already has the code is refused (nothing moves); under a parent without it, it works
+        val moveClash = move(a, salesB, root); assertThat(moveClash.response.status).isEqualTo(409); assertThat(code(moveClash, a.admin)).isEqualTo("ORG_UNIT_CODE_TAKEN")
+        assertThat(unitNow(a, salesB).get("parentId").asString()).isEqualTo(id(rootB).toString())
+        val ops3 = unit(a, ta, "FREE", rootB); assertThat(move(a, ops3, root).response.status).isEqualTo(200)
+        // archiving frees the code among siblings, restore re-checks it
+        val off = c0Archive(a, sales); val again = unit(a, ta, "sales", root)
+        val restoreClash = a.admin.post("${units(a)}/${id(sales)}/restore", """{"expectedVersion":${ver(off)}}"""); assertThat(restoreClash.response.status).isEqualTo(409); assertThat(a.admin.body(restoreClash).get("details").get("reason").asString()).isEqualTo("CODE_TAKEN")
+        assertThat(again.get("code").asString()).isEqualTo("SALES")
+        // input validation: required, shape
+        assertThat(code(a.admin.post(units(a), """{"typeId":"${id(ta)}","name":"x"}"""), a.admin)).describedAs("a code is required").isEqualTo("INVALID_CODE")
+        assertThat(code(a.admin.post(units(a), """{"typeId":"${id(ta)}","code":"   ","name":"x"}"""), a.admin)).isEqualTo("INVALID_CODE")
         assertThat(code(a.admin.post(units(a), """{"typeId":"${id(ta)}","code":"bad code","name":"x"}"""), a.admin)).isEqualTo("INVALID_CODE")
         assertThat(code(a.admin.post(units(a), """{"typeId":"${id(ta)}","code":"OK","name":""}"""), a.admin)).isEqualTo("VALIDATION_FAILED")
         assertThat(code(a.admin.post(units(a), """{"code":"NOTYPE","name":"x"}"""), a.admin)).isEqualTo("VALIDATION_FAILED")
         assertThat(a.admin.post(units(a), """{"typeId":"${id(ta)}","code":"META","name":"m","metadata":[1]}""").response.status).isEqualTo(400)
         assertThat(a.admin.post(units(a), """{"typeId":"${id(ta)}","code":"BIG","name":"m","metadata":{"x":"${"y".repeat(9000)}"}}""").response.status).isEqualTo(400)
+    }
+
+    private fun c0Unit(c: Company, type: JsonNode, rawCode: String, parent: JsonNode?): JsonNode {
+        val r = c.admin.post(units(c), """{"typeId":"${id(type)}","code":"$rawCode","name":"n"${if (parent != null) ""","parentId":"${id(parent)}"""" else ""}}""")
+        assertThat(r.response.status).isEqualTo(201); return c.admin.body(r)
+    }
+    private fun c0Archive(c: Company, u: JsonNode): JsonNode { val r = c.admin.post("${units(c)}/${id(u)}/archive", """{"expectedVersion":${ver(unitNow(c, u))}}"""); assertThat(r.response.status).isEqualTo(200); return c.admin.body(r) }
+
+    @Autowired lateinit var store: InMemoryOrganization
+
+    @Test
+    fun `CF-4 the tenant structural lock is taken by the subtree MOVE only - employee, membership, position, catalog and ordinary unit operations never serialise on it`() {
+        val c = company(); val t = type(c, "unit"); val a = unit(c, t, "A"); val b = unit(c, t, "B")
+        val before = store.lockAcquisitions.get()
+        // everything except the move
+        val e = newEmployee(c); val u = uid(e); val m = c.admin.body(c.admin.post("${employees(c)}/$u/organization-memberships", """{"organizationUnitId":"${id(a)}"}"""))
+        val pos = c.admin.body(c.admin.post(positions(c), """{"code":"P","name":"P"}""")); val g = c.admin.body(c.admin.post(grades(c), """{"code":"G","name":"G"}"""))
+        val held = c.admin.body(c.admin.post("${employees(c)}/$u/positions", """{"membershipId":"${id(m)}","positionId":"${id(pos)}","gradeId":"${id(g)}"}"""))
+        c.admin.patch("${employees(c)}/$u/positions/${id(held)}", """{"clearGrade":true,"expectedVersion":${ver(held)}}"""); c.admin.post("${employees(c)}/$u/disable"); c.admin.post("${employees(c)}/$u/enable")
+        c.admin.patch("${units(c)}/${id(b)}", """{"name":"B2","expectedVersion":0}"""); c.admin.post("${types(c)}/${id(t)}/disable", """{"expectedVersion":${ver(t)}}"""); c.admin.post("${types(c)}/${id(t)}/enable", """{"expectedVersion":1}""")
+        val kid = unit(c, t, "KID", b); c.admin.post("${units(c)}/${id(kid)}/archive", """{"expectedVersion":0}"""); c.admin.post("${units(c)}/${id(kid)}/restore", """{"expectedVersion":1}""")
+        assertThat(store.lockAcquisitions.get()).describedAs("no structural lock for ordinary operations").isEqualTo(before)
+        // a move (and only a move) takes it, once per transaction
+        assertThat(move(c, unitNow(c, b), a).response.status).isEqualTo(200); assertThat(store.lockAcquisitions.get()).isEqualTo(before + 1)
+        assertThat(code(move(c, unitNow(c, a), unitNow(c, b)), c.admin)).describedAs("a refused move still took the lock first").isEqualTo("ORG_CYCLE"); assertThat(store.lockAcquisitions.get()).isEqualTo(before + 2)
+        // the lock is released with the transaction: the next move is not blocked
+        assertThat(move(c, unitNow(c, b), null).response.status).isEqualTo(200)
     }
 }

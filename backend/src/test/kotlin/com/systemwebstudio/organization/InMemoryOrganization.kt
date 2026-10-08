@@ -18,10 +18,10 @@ import java.util.concurrent.locks.ReentrantLock
 class InMemoryOrganization(private val clock: () -> Instant = { Instant.now() }) {
     private class State {
         val types = LinkedHashMap<UUID, OrganizationUnitTypeDto>(); val units = LinkedHashMap<UUID, OrganizationUnitDto>()
-        val profiles = LinkedHashMap<Pair<UUID, UUID>, EmployeeProfileRecord>(); val memberships = LinkedHashMap<UUID, OrganizationMembershipDto>()
+        val memberships = LinkedHashMap<UUID, OrganizationMembershipDto>()
         val positions = LinkedHashMap<UUID, PositionDto>(); val grades = LinkedHashMap<UUID, GradeDto>(); val assignments = LinkedHashMap<UUID, EmployeePositionDto>()
         fun copy() = State().also { c ->
-            c.types.putAll(types); c.units.putAll(units); c.profiles.putAll(profiles); c.memberships.putAll(memberships); c.positions.putAll(positions); c.grades.putAll(grades); c.assignments.putAll(assignments)
+            c.types.putAll(types); c.units.putAll(units); c.memberships.putAll(memberships); c.positions.putAll(positions); c.grades.putAll(grades); c.assignments.putAll(assignments)
         }
     }
     private var state = State()
@@ -48,9 +48,25 @@ class InMemoryOrganization(private val clock: () -> Instant = { Instant.now() })
         } finally { mutex.unlock() }
     }
 
-    val lock = object : TenantStructureLock {
-        override fun <T> withTenantLock(tenantId: UUID, block: () -> T): T { val l = tenantLocks.computeIfAbsent(tenantId) { ReentrantLock() }; l.lock(); try { return block() } finally { l.unlock() } }
+    /** transaction-scoped like pg_advisory_xact_lock: held until the ambient transaction completes, re-entrant inside it */
+    val lock = object : TenantStructuralLock {
+        override fun acquire(tenantId: UUID) {
+            check(TransactionSynchronizationManager.isSynchronizationActive()) { "the structural lock needs an active transaction" }
+            @Suppress("UNCHECKED_CAST")
+            val held = (TransactionSynchronizationManager.getResource(heldKey) as MutableSet<UUID>?) ?: HashSet<UUID>().also {
+                TransactionSynchronizationManager.bindResource(heldKey, it)
+                TransactionSynchronizationManager.registerSynchronization(object : TransactionSynchronization {
+                    override fun afterCompletion(status: Int) {
+                        it.forEach { t -> tenantLocks[t]?.unlock() }; TransactionSynchronizationManager.unbindResourceIfPossible(heldKey)
+                    }
+                })
+            }
+            if (held.add(tenantId)) { lockAcquisitions.incrementAndGet(); tenantLocks.computeIfAbsent(tenantId) { ReentrantLock() }.lock() }
+        }
     }
+    private val heldKey = Any()
+    /** how many times a transaction took the tenant structural lock (the contract: ONLY the subtree move does) */
+    val lockAcquisitions = java.util.concurrent.atomic.AtomicInteger()
 
     val types = object : OrganizationUnitTypeRepository {
         override fun list(tenantId: UUID, includeInactive: Boolean) = tx { types.values.filter { it.tenantId == tenantId && (includeInactive || it.active) } }
@@ -66,29 +82,37 @@ class InMemoryOrganization(private val clock: () -> Instant = { Instant.now() })
         }
     }
 
+    private fun State.subtreeIds(tenantId: UUID, id: UUID): Set<UUID> {
+        val out = HashSet<UUID>(); val queue = ArrayDeque<UUID>(); queue.add(id)
+        while (queue.isNotEmpty()) { val c = queue.removeFirst(); if (out.add(c)) units.values.filter { it.tenantId == tenantId && it.parentId == c }.forEach { queue.add(it.id) } }
+        return out
+    }
+
     val units = object : OrganizationUnitRepository {
         override fun find(tenantId: UUID, id: UUID) = tx { units[id]?.takeIf { it.tenantId == tenantId } }
         override fun listAll(tenantId: UUID, includeArchived: Boolean) = tx { units.values.filter { it.tenantId == tenantId && (includeArchived || it.active) } }
         override fun insert(unit: OrganizationUnitDto) = tx(true) {
             check(unit.parentId == null || units[unit.parentId]?.tenantId == unit.tenantId) { "foreign parent" }
             check(types[unit.typeId]?.tenantId == unit.tenantId) { "foreign type" }
-            if (units.values.any { it.tenantId == unit.tenantId && it.active && it.code.equals(unit.code, true) }) dup("code")
+            if (units.values.any { it.tenantId == unit.tenantId && it.active && it.parentId == unit.parentId && it.code.equals(unit.code, true) }) dup("code")
             unit.copy(version = 0).also { units[it.id] = it }
         }
         override fun update(unit: OrganizationUnitDto, expectedVersion: Long) = tx(true) {
             val cur = units[unit.id]?.takeIf { it.tenantId == unit.tenantId && it.version == expectedVersion } ?: return@tx null
-            if (cur.active && units.values.any { it.id != cur.id && it.tenantId == cur.tenantId && it.active && it.code.equals(unit.code, true) }) dup("code")
+            if (cur.active && units.values.any { it.id != cur.id && it.tenantId == cur.tenantId && it.active && it.parentId == cur.parentId && it.code.equals(unit.code, true) }) dup("code")
             cur.copy(name = unit.name, code = unit.code, sortOrder = unit.sortOrder, metadata = unit.metadata, version = cur.version + 1, updatedAt = now()).also { units[it.id] = it }
         }
         override fun move(tenantId: UUID, id: UUID, newParentId: UUID?, sortOrder: Int?, expectedVersion: Long) = tx(true) {
             val cur = units[id]?.takeIf { it.tenantId == tenantId && it.version == expectedVersion } ?: return@tx null
             if (newParentId != null && units[newParentId]?.tenantId != tenantId) return@tx null
+            if (newParentId != null && (newParentId == id || subtreeIds(tenantId, id).contains(newParentId))) throw OrganizationCycle()
+            if (cur.active && units.values.any { it.id != id && it.tenantId == tenantId && it.active && it.parentId == newParentId && it.code.equals(cur.code, true) }) dup("code")
             cur.copy(parentId = newParentId, sortOrder = sortOrder ?: cur.sortOrder, version = cur.version + 1, updatedAt = now()).also { units[id] = it }
         }
         override fun setActive(tenantId: UUID, id: UUID, active: Boolean, expectedVersion: Long) = tx(true) {
             val cur = units[id]?.takeIf { it.tenantId == tenantId && it.version == expectedVersion } ?: return@tx null
-            if (active && units.values.any { it.id != id && it.tenantId == tenantId && it.active && it.code.equals(cur.code, true) }) dup("code")
-            cur.copy(active = active, version = cur.version + 1, updatedAt = now()).also { units[id] = it }
+            if (active && units.values.any { it.id != id && it.tenantId == tenantId && it.active && it.parentId == cur.parentId && it.code.equals(cur.code, true) }) dup("code")
+            cur.copy(active = active, archivedAt = if (active) null else now(), version = cur.version + 1, updatedAt = now()).also { units[id] = it }
         }
         override fun subtree(tenantId: UUID, id: UUID) = tx {
             val root = units[id]?.takeIf { it.tenantId == tenantId } ?: return@tx emptyList<SubtreeNode>()
@@ -107,36 +131,19 @@ class InMemoryOrganization(private val clock: () -> Instant = { Instant.now() })
         override fun activeChildCount(tenantId: UUID, id: UUID) = tx { units.values.count { it.tenantId == tenantId && it.parentId == id && it.active } }
     }
 
-    val profiles = object : EmployeeProfileRepository {
-        override fun find(tenantId: UUID, userId: UUID) = tx { profiles[tenantId to userId] }
-        override fun insert(profile: EmployeeProfileRecord) = tx(true) {
-            if (profiles.containsKey(profile.tenantId to profile.userId)) dup("employee")
-            if (profile.employeeCode != null && profiles.values.any { it.tenantId == profile.tenantId && it.employeeCode.equals(profile.employeeCode, true) }) dup("employeeCode")
-            profile.copy(version = 0).also { profiles[it.tenantId to it.userId] = it }
-        }
-        override fun update(profile: EmployeeProfileRecord, expectedVersion: Long) = tx(true) {
-            val cur = profiles[profile.tenantId to profile.userId]?.takeIf { it.version == expectedVersion } ?: return@tx null
-            if (profile.employeeCode != null && profiles.values.any { it.userId != cur.userId && it.tenantId == cur.tenantId && it.employeeCode.equals(profile.employeeCode, true) }) dup("employeeCode")
-            cur.copy(employeeCode = profile.employeeCode, phone = profile.phone, joinedOn = profile.joinedOn, metadata = profile.metadata, version = cur.version + 1, updatedAt = now()).also { profiles[cur.tenantId to cur.userId] = it }
-        }
-        override fun setStatus(tenantId: UUID, userId: UUID, status: String, expectedVersion: Long) = tx(true) {
-            val cur = profiles[tenantId to userId]?.takeIf { it.version == expectedVersion } ?: return@tx null
-            cur.copy(status = status, version = cur.version + 1, updatedAt = now()).also { profiles[tenantId to userId] = it }
-        }
+    val directory = object : EmployeeDirectoryRepository {
         override fun search(tenantId: UUID, criteria: EmployeeSearch, identities: TenantIdentityDirectory) = tx {
-            val who = identities.members(tenantId).associateBy { it.userId }; val needle = criteria.text?.lowercase()
-            val rows = profiles.values.filter { p ->
-                val i = who[p.userId]
-                p.tenantId == tenantId && i != null && (criteria.status == null || p.status == criteria.status) && (criteria.userId == null || p.userId == criteria.userId) &&
-                    (needle == null || listOf(i.username, i.displayName, i.email, p.employeeCode).any { it?.lowercase()?.contains(needle) == true }) &&
-                    (criteria.unitIds == null || memberships.values.any { it.tenantId == tenantId && it.userId == p.userId && it.active && it.organizationUnitId in criteria.unitIds }) &&
-                    (criteria.positionId == null || assignments.values.any { it.tenantId == tenantId && it.userId == p.userId && it.active && it.positionId == criteria.positionId }) &&
-                    (criteria.gradeId == null || assignments.values.any { it.tenantId == tenantId && it.userId == p.userId && it.active && it.gradeId == criteria.gradeId })
+            val needle = criteria.text?.lowercase()
+            val rows = identities.members(tenantId).filter { i ->
+                (criteria.active == null || i.tenantMemberActive == criteria.active) && (criteria.userId == null || i.userId == criteria.userId) &&
+                    (needle == null || listOf(i.username, i.displayName, i.email).any { it?.lowercase()?.contains(needle) == true }) &&
+                    (criteria.unitIds == null || memberships.values.any { it.tenantId == tenantId && it.userId == i.userId && it.active && it.organizationUnitId in criteria.unitIds }) &&
+                    (criteria.positionId == null || assignments.values.any { it.tenantId == tenantId && it.userId == i.userId && it.active && it.positionId == criteria.positionId }) &&
+                    (criteria.gradeId == null || assignments.values.any { it.tenantId == tenantId && it.userId == i.userId && it.active && it.gradeId == criteria.gradeId })
             }
-            val key: (EmployeeProfileRecord) -> String = { p -> val i = who[p.userId]!!; when (criteria.sort) {
-                "username" -> i.username.lowercase(); "code" -> (p.employeeCode ?: "￿").lowercase(); "created" -> p.createdAt.toString(); else -> (i.displayName ?: i.username).lowercase() } }
-            val sorted = rows.sortedWith(if (criteria.ascending) compareBy<EmployeeProfileRecord>(key).thenBy { it.userId } else compareByDescending<EmployeeProfileRecord>(key).thenBy { it.userId })
-            Slice(sorted.drop(criteria.page * criteria.size).take(criteria.size), sorted.size.toLong())
+            val key: (TenantIdentity) -> String = { i -> if (criteria.sort == "username") i.username.lowercase() else (i.displayName ?: i.username).lowercase() }
+            val sorted = rows.sortedWith(if (criteria.ascending) compareBy<TenantIdentity>(key).thenBy { it.userId } else compareByDescending<TenantIdentity>(key).thenBy { it.userId })
+            Slice(sorted.drop(criteria.page * criteria.size).take(criteria.size).map { it.userId }, sorted.size.toLong())
         }
     }
 
@@ -204,8 +211,14 @@ class InMemoryOrganization(private val clock: () -> Instant = { Instant.now() })
         override fun listForUsers(tenantId: UUID, userIds: Collection<UUID>, includeInactive: Boolean) = tx { assignments.values.filter { it.tenantId == tenantId && it.userId in userIds && (includeInactive || it.active) } }
         override fun find(tenantId: UUID, userId: UUID, id: UUID) = tx { assignments[id]?.takeIf { it.tenantId == tenantId && it.userId == userId } }
         override fun insert(assignment: EmployeePositionDto) = tx(true) {
-            if (assignments.values.any { it.tenantId == assignment.tenantId && it.userId == assignment.userId && it.active && it.positionId == assignment.positionId && it.gradeId == assignment.gradeId && it.organizationUnitId == assignment.organizationUnitId }) dup("assignment")
+            val m = memberships[assignment.membershipId]?.takeIf { it.tenantId == assignment.tenantId && it.userId == assignment.userId }
+            check(m != null && m.organizationUnitId == assignment.organizationUnitId) { "the membership must belong to the same tenant and user, and name the unit" }
+            if (assignments.values.any { it.tenantId == assignment.tenantId && it.active && it.membershipId == assignment.membershipId && it.positionId == assignment.positionId }) dup("assignment")
             assignment.copy(version = 0, primary = false, active = true).also { assignments[it.id] = it }
+        }
+        override fun update(assignment: EmployeePositionDto, expectedVersion: Long) = tx(true) {
+            val cur = assignments[assignment.id]?.takeIf { it.tenantId == assignment.tenantId && it.userId == assignment.userId && it.active && it.version == expectedVersion } ?: return@tx null
+            cur.copy(gradeId = assignment.gradeId, version = cur.version + 1, updatedAt = now()).also { assignments[it.id] = it }
         }
         override fun setPrimary(tenantId: UUID, userId: UUID, id: UUID, expectedVersion: Long) = tx(true) {
             val cur = assignments[id]?.takeIf { it.tenantId == tenantId && it.userId == userId && it.active && it.version == expectedVersion } ?: return@tx null
@@ -223,12 +236,13 @@ class InMemoryOrganization(private val clock: () -> Instant = { Instant.now() })
 @TestConfiguration
 class InMemoryOrganizationConfig {
     private val store = InMemoryOrganization()
+    @Bean fun inMemoryOrganization(): InMemoryOrganization = store
     @Bean fun orgTypeRepository(): OrganizationUnitTypeRepository = store.types
     @Bean fun orgUnitRepository(): OrganizationUnitRepository = store.units
-    @Bean fun employeeProfileRepository(): EmployeeProfileRepository = store.profiles
+    @Bean fun employeeDirectoryRepository(): EmployeeDirectoryRepository = store.directory
     @Bean fun employeeMembershipRepository(): EmployeeOrganizationMembershipRepository = store.memberships
     @Bean fun positionRepository(): PositionRepository = store.positions
     @Bean fun gradeRepository(): GradeRepository = store.grades
     @Bean fun employeePositionRepository(): EmployeePositionRepository = store.employeePositions
-    @Bean fun tenantStructureLock(): TenantStructureLock = store.lock
+    @Bean fun tenantStructuralLock(): TenantStructuralLock = store.lock
 }

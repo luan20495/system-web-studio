@@ -16,7 +16,6 @@ import java.util.UUID
  */
 abstract class OrganizationTestBase : IntegrationTestBase() {
     protected val PASSWORD = "Org-Pass-2026-x"
-    private var ipCounter = 0
 
     protected class Company(val id: UUID, val slug: String, val adminId: UUID, val adminName: String, val admin: ApiSession)
 
@@ -27,7 +26,7 @@ abstract class OrganizationTestBase : IntegrationTestBase() {
     /** the activation endpoint is limited per IP (30 / 10 min) and MockMvc shares one address: every call comes from a fresh one */
     protected fun fromNewAddress(path: String, body: String): MvcResult = session().perform(
         MockMvcRequestBuilders.post(path).contentType(MediaType.APPLICATION_JSON).content(body)
-            .with { r -> r.remoteAddr = "10.88.${(++ipCounter / 250) % 250}.${ipCounter % 250}"; r })
+            .with { r -> val n = IP_COUNTER.incrementAndGet(); r.remoteAddr = "10.88.${(n / 250) % 250}.${n % 250}"; r })
 
     protected fun activateAndLogin(username: String, token: String): ApiSession {
         assertThat(fromNewAddress("/api/v1/auth/activation/complete", """{"token":"$token","password":"$PASSWORD"}""").response.status).describedAs("activation of $username").isEqualTo(200)
@@ -80,4 +79,6 @@ abstract class OrganizationTestBase : IntegrationTestBase() {
 
     protected fun auditCount(action: String, resourceId: UUID) =
         jdbc.queryForObject("SELECT count(*) FROM audit_events WHERE action = ? AND resource_id = ?", Long::class.java, action, resourceId.toString())!!
+
+    private companion object { val IP_COUNTER = java.util.concurrent.atomic.AtomicInteger() }      // JUnit makes a new instance per test: the counter must outlive it
 }
