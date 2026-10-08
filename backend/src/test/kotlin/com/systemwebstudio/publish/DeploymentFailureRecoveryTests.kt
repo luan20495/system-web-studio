@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 @TestPropertySource(properties = [
     "app.deploy.provider=static", "app.sites.origin=https://sites.example.test", "app.sites.studio-origin=https://studio.example.test",
-    "app.render.token=render-test-token", "app.deploy.step-max-attempts=3", "app.deploy.retry-backoff-ms=10"
+    "app.render.token=render-test-token", "app.deploy.step-max-attempts=3", "app.deploy.retry-backoff-ms=10",\n    "app.deploy.recovery-interval-ms=600000"
 ])
 class DeploymentFailureRecoveryTests : IntegrationTestBase() {
     @MockitoSpyBean lateinit var store: ArtifactStore
