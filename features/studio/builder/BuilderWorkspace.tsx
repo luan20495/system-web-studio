@@ -18,7 +18,7 @@ import { LeftRail, type RailId } from "./LeftRail";
 import { BuilderTopBar } from "./BuilderTopBar";
 import { TestPanel, type RuntimeCalls } from "./TestPanel";
 import type { DataManagementCalls } from "./core/dataManagement";
-import { DataWizard } from "./DataWizard";
+import { DataPanel } from "./DataPanel";
 import { ComponentsPanel, type BlockOption } from "./panels/ComponentsPanel";
 import { PagesPanel } from "./panels/PagesPanel";
 import { ActionsPanel } from "./panels/ActionsPanel";
@@ -76,7 +76,7 @@ export function BuilderWorkspace(props: {
     // if the pane that held focus (e.g. the Inspector) is hidden by this switch on a phone, move focus to the tab we land on instead of letting it fall to <body>
     requestAnimationFrame(() => { const a = document.activeElement; if (!a || a === document.body || a.getClientRects().length === 0) { window.scrollTo(0, 0); document.getElementById("mview-tab-tools")?.focus(); } });
   };
-  const [dataFocus, setDataFocus] = useState<{ sectionId?: string }>({});
+  const [dataFocus, setDataFocus] = useState<{ sectionId?: string; prop?: string; n?: number }>({});
   const [actionPreset, setActionPreset] = useState<{ sectionId?: string } | undefined>(undefined);
   const [rects, setRects] = useState<SectionRect[]>([]);
   const [drag, setDrag] = useState<{ kind: "lib" | "sec" | "row"; id: string; label: string } | null>(null);
@@ -184,9 +184,7 @@ export function BuilderWorkspace(props: {
       case "pages": return <PagesPanel doc={doc} pageId={pageId} onPage={props.onPage} selectedId={selectedId} onSelect={select} labelOf={props.labelOf} summaryOf={props.summaryOf}
         canEdit={interactive} busy={busy} apply={(ops, summary) => props.applyOps(ops, summary)} genId={newId} onMoveSection={(id, d) => void step(id, d)}/>;
       case "components": return <ComponentsPanel registry={registry} blocks={props.blocks} canEdit={interactive} busy={busy} onAdd={(id) => void addComponent(id)} onAddBlock={props.addBlock}/>;
-      case "data": return <div className="bx-panel-body"><div className="bx-panel-head"><h2>Dữ liệu</h2></div>
-        <p className="hint">Nguồn → khám phá → truy vấn → ánh xạ → ViewModel → gắn vào thành phần. Không có dữ liệu mẫu giả.</p>
-        <DataWizard ctx={ctx} focus={dataFocus}/></div>;
+      case "data": return <DataPanel key={dataFocus.n ?? 0} ctx={ctx} focus={dataFocus}/>;
       case "forms": return <FormsPanel ctx={ctx} onSelect={(id, pg) => { props.onPage(pg); select(id); }} onNewAction={(id) => { setActionPreset({ sectionId: id }); openRail("actions"); }} openSite={props.openSite}/>;
       case "actions": return <ActionsPanel key={actionPreset?.sectionId ?? "list"} ctx={ctx} preset={actionPreset ? { type: "SUBMIT_FORM", sectionId: actionPreset.sectionId } : undefined}/>;
       case "workflows": return <WorkflowsPanel ctx={ctx}/>;
@@ -218,7 +216,7 @@ export function BuilderWorkspace(props: {
               <Inspector ctx={ctx} drafts={drafts} onDraft={setDraft} section={selected} component={registry.find((c) => c.id === selected.type)} meta={backend.metadata.get(selected.type)} index={sections.indexOf(selected)} canUp={canStep(sections, selected.id, -1)} canDown={canStep(sections, selected.id, 1)} count={sections.length}
                 readOnly={!interactive} busy={busy} assets={props.assets} rawPermissions={props.project.permissions} onApply={(ops, summary) => props.applyOps(ops, summary)} onClose={() => select(null)}
                 onMove={(d) => void step(selected.id, d)} onRemove={() => setRemoving(true)} onSaveBlock={props.saveBlock} pageId={pageId}
-                openDataWizard={(id) => { setDataFocus({ sectionId: id }); openRail("data"); }}/>
+                openDataWizard={(id, prop) => { setDataFocus({ sectionId: id, prop, n: Date.now() }); openRail("data"); }}/>
             ) : (
               <div className="bx-empty"><h2>Chưa chọn mục nào</h2>{readOnly ? <p>Bạn chỉ có quyền xem ứng dụng này. Chọn một mục trong “Trang” để xem thuộc tính; không chỉnh sửa được.</p> : <p>Chọn một mục trong “Trang” hoặc nhấp vào bản xem trước để chỉnh.</p>}
                 {backend.metadataReadiness.state !== "AVAILABLE" ? <StateBox state={backend.metadataReadiness} compact/> : null}</div>)}

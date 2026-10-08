@@ -309,6 +309,7 @@ async function dragTo(page, from, to, { steps = 14, hold } = {}) {
   check("Action/Workflow: no page errors", p.errors.length === 0, p.errors.join(" ; "));
   // Data wizard: data sources are NOT_READY, so no fake source, query or mapping can be created
   await p.locator(".bx-left").getByRole("tab", { name: "Dữ liệu" }).click(); await p.waitForTimeout(300);
+  await left.getByText("Nâng cao", { exact: true }).click(); await p.waitForTimeout(200);   // M-005: the 7-step wizard lives under "Nâng cao"
   const dt = await left.innerText();
   // Query step: DATE is a param type; `required` defaults to true (absent key means required)
   await left.getByRole("tab", { name: "Truy vấn" }).click(); await p.waitForTimeout(300);

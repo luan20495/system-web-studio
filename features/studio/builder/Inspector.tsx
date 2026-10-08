@@ -20,7 +20,7 @@ const uid = () => Math.random().toString(36).slice(2, 7);
 export function Inspector({ ctx, section, component, meta, index, count, canUp, canDown, readOnly, busy, assets, rawPermissions, onApply, onClose, onMove, onRemove, onSaveBlock, openDataWizard, pageId, drafts, onDraft }: {
   ctx: DefCtx; section: Section; component?: RegistryComponent; meta?: ComponentMetadataV2; index: number; count: number; canUp?: boolean; canDown?: boolean; readOnly: boolean; busy: boolean; assets: AssetDto[];
   rawPermissions: readonly string[]; onApply: (ops: SchemaOperation[], summary: string) => Promise<boolean>; onClose: () => void; onMove: (d: -1 | 1) => void;
-  onRemove: () => void; onSaveBlock?: () => void; openDataWizard: (sectionId: string) => void; pageId: string;
+  onRemove: () => void; onSaveBlock?: () => void; openDataWizard: (sectionId: string, prop?: string) => void; pageId: string;
   /** unsaved edits held by the Builder per section (M-002), keyed `c:<sectionId>` (Nội dung) / `d:<sectionId>` (Giao diện) */
   drafts?: Record<string, PropsDraft>; onDraft?: (key: string, d: PropsDraft | null) => void;
 }) {

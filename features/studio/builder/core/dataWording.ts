@@ -24,7 +24,7 @@ export const DATA_WORDS = {
     manage: "Quản lý nguồn dữ liệu",
   },
   columns: { title: "3. Hiển thị cột nào?", asIs: "Dùng nguyên các cột nguồn trả về", note: "Cột đổi tên hoặc định dạng nằm ở mục Nâng cao." },
-  who: { title: "4. Ai xem được?", public: "Khách chưa đăng nhập cũng xem được dữ liệu này", publicOff: "Chưa công khai: trang đã xuất bản sẽ chưa hiển thị dữ liệu này." },
+  who: { title: "4. Ai xem được?", public: "Khách chưa đăng nhập cũng xem được dữ liệu này", warning: "Bất kỳ ai mở được trang này đều chạy được truy vấn dữ liệu này (chỉ đọc, không cần đăng nhập). Chỉ bật khi dữ liệu được phép công khai.", publicOff: "Chưa công khai: trang đã xuất bản sẽ chưa hiển thị dữ liệu này." },
   save: "Lưu", saving: "Đang lưu…", cancel: "Hủy",
   saved: (slotCreated: boolean) => `Đã thêm dữ liệu vào trang.${slotCreated ? " Hãy liên kết nguồn thật ở Nâng cao > Nguồn dữ liệu." : ""}`,
   unlink: "Gỡ",
