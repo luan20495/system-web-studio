@@ -168,7 +168,7 @@ await block("scenario 11", async () => { const p = await open({ portal: "platfor
 // ===================================================================================================================== M-054 the Platform overview speaks to the platform operator
 await block("scenario 12", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform" }); await settle(p, 500);
   const main = await p.locator("main").innerText();
-  check("OVW01 the Platform overview does NOT show the company checklist (no 'Tạo website đầu tiên', no 'Mở Builder Studio', no 'Thêm người dùng')", !/Tạo website đầu tiên|Mở Builder Studio|Thêm người dùng|Thiết lập ban đầu/.test(main), main.slice(0, 220));
+  check("OVW01 the Platform overview does NOT show the company checklist (no 'Tạo ứng dụng đầu tiên', no 'Mở Builder Studio', no 'Thêm người dùng')", !/Tạo (website|ứng dụng) đầu tiên|Mở Builder Studio|Thêm người dùng|Thiết lập ban đầu/.test(main), main.slice(0, 220));
   check("OVW02 it shows the platform's own checklist: companies, AI provider, model, limits", /Thiết lập nền tảng/.test(main) && /Tạo công ty đầu tiên/.test(main) && /Thêm nhà cung cấp AI/.test(main) && /Thiết lập hạn mức AI/.test(main));
   await p.__ctx.close(); });
 await block("scenario 13", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform", empty: "1" }); await settle(p, 500);
@@ -176,7 +176,7 @@ await block("scenario 13", async () => { const p = await open({ portal: "platfor
   check("OVW03 no company yet: the first step links to the Platform's company list", (await link.count()) === 1 && (await link.getAttribute("href")) === "/platform/tenants");
   await p.__ctx.close(); });
 await block("scenario 14", async () => { const p = await open({ portal: "all", me: "sys", start: "/admin" }); await settle(p, 500);
-  check("OVW04 the legacy combined console keeps the company checklist (unchanged)", /Thiết lập ban đầu/.test(await p.locator("main").innerText()) && /Tạo website đầu tiên/.test(await p.locator("main").innerText()));
+  check("OVW04 the legacy combined console keeps the company checklist (first step says 'ứng dụng', not 'website')", /Thiết lập ban đầu/.test(await p.locator("main").innerText()) && /Tạo ứng dụng đầu tiên/.test(await p.locator("main").innerText()) && !/website/i.test(await p.locator(".checklist").innerText()));
   await p.__ctx.close(); });
 await block("scenario 15", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin" }); await settle(p, 500);
   check("OVW05 the Admin console's overview for a SYSTEM_ADMIN shows no setup checklist (unchanged)", !/Thiết lập (ban đầu|nền tảng)/.test(await p.locator("main").innerText()));
@@ -192,6 +192,26 @@ await block("scenario 16", async () => { const p = await open({ portal: "platfor
 await block("scenario 17", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/ai/usage", empty: "1" }); await settle(p, 600);
   const kpi = await p.locator(".kpi", { hasText: "Nhà cung cấp AI" }).innerText().catch(() => "");
   check("AIS04 no provider configured: the tile says the system runs in trial (simulated) mode, without an env var name", /Chế độ thử nghiệm/.test(kpi) && !/OPENROUTER|API_KEY/.test(kpi), kpi.replace(/\s+/g, " "));
+  await p.__ctx.close(); });
+
+// ===================================================================================================================== M-064 copy that contradicts the product (password rule per flow, stale "not implemented", "website")
+await block("scenario 18", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/users" });
+  await p.getByTestId("users-create").click(); await settle(p, 600);
+  check("TXT01 the create-account dialog states the password rule of the ACTIVATION flow (the person sets it: at least 8 characters)", /tối thiểu 8 ký tự/.test(await p.locator("[role=dialog]").innerText()));
+  await p.getByTestId("acc-tenant").selectOption("t1"); await p.getByTestId("acc-username").fill("moi.user"); await p.getByTestId("acc-display").fill("Người Mới"); await p.getByTestId("acc-submit").click(); await settle(p, 500);
+  check("TXT02 the activation link dialog states it too", /tối thiểu 8 ký tự/.test(await p.locator("[role=dialog]").innerText()));
+  await p.__ctx.close(); });
+await block("scenario 19", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/users/u2" });
+  await p.getByRole("button", { name: "Đặt lại mật khẩu" }).click(); await settle(p, 400);
+  check("TXT03 the password-reset link dialog states the rule", /tối thiểu 8 ký tự/.test(await p.locator("[role=dialog]").innerText()));
+  await p.__ctx.close(); });
+await block("scenario 20", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/applications/a1" }); await settle(p, 400);
+  const main = await p.locator("main").innerText();
+  check("TXT04 application detail does not list 'Lưu trữ (archive)' as not implemented beside a working 'Lưu trữ' button", !/Lưu trữ \(archive\)/.test(main) && (await p.getByRole("button", { name: "Lưu trữ", exact: true }).count()) === 1 && /Chặn xuất bản công khai/.test(main), main.slice(main.indexOf("Chưa triển khai"), main.indexOf("Chưa triển khai") + 160));
+  await p.__ctx.close(); });
+await block("scenario 21", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform" }); await settle(p, 600);
+  const t = await p.locator("main").innerText();
+  check("TXT05 the AI month card does not say budgets are not implemented (they are: 'Quyền & ngân sách AI')", !/chưa triển khai/.test(t) && /Quyền & ngân sách AI/.test(t));
   await p.__ctx.close(); });
 
 // ===================================================================================================================== route / navigation snapshot (M-066: the split must not change behaviour)

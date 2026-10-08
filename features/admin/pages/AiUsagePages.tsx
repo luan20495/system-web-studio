@@ -73,7 +73,7 @@ export function AiMonthCard() {
       <Kpi label="Token" value={num(t.totalTokens)} hint={t.callsWithoutUsage ? `${num(t.callsWithoutUsage)} lượt không có số liệu` : "số liệu nhà cung cấp"}/>
       <Kpi label="Chi phí" value={usd(t.costUsd)} hint={t.calls ? `${num(t.costReportedCalls)}/${num(t.calls)} lượt có chi phí` : "Chưa có lượt gọi"}/>
     </div>}
-    <p className="hint">Ngân sách theo tổ chức/dự án và ngưỡng cảnh báo: chưa triển khai (đang có giới hạn token theo người dùng và workspace).</p>
+    <p className="hint">Ngân sách tiền (theo tổ chức, workspace, người dùng, ứng dụng) và ngưỡng cảnh báo đặt ở mục “Quyền & ngân sách AI” của Quản trị công ty.</p>
   </Card>;
 }
 

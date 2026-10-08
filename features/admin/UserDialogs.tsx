@@ -36,7 +36,7 @@ export function LinkBox({ link, onClose, copiedBefore = false, onCopied }: { lin
     <Modal label="Liên kết kích hoạt" onClose={onEscape}>
       <div className="modalBody" data-testid="link-box">
         <h2>{link.purpose === "RESET" ? "Liên kết đặt lại mật khẩu" : "Liên kết kích hoạt"}</h2>
-        <p>Gửi liên kết này cho <b>{link.displayName}</b> ({link.username}). Người dùng tự đặt mật khẩu của mình. Liên kết chỉ dùng được một lần, hết hạn lúc {fmtDate(link.expiresAt)} và <b>sẽ không hiển thị lại</b>: hãy sao chép trước khi đóng.</p>
+        <p>Gửi liên kết này cho <b>{link.displayName}</b> ({link.username}). Người dùng tự đặt mật khẩu của mình khi mở liên kết (tối thiểu 8 ký tự). Liên kết chỉ dùng được một lần, hết hạn lúc {fmtDate(link.expiresAt)} và <b>sẽ không hiển thị lại</b>: hãy sao chép trước khi đóng.</p>
         <input ref={field} readOnly aria-label="Liên kết" value={url} onFocus={(e) => e.currentTarget.select()} onCopy={markCopied}/>
         <span className="srOnly" role="status">{copied ? "Đã sao chép liên kết." : ""}</span>
         {copyFailed ? <p className="formError" role="alert">Không sao chép được tự động (trình duyệt đang chặn). Hãy chọn liên kết trong ô trên, nhấn Ctrl+C (⌘C trên Mac), rồi chọn Xong.</p> : null}

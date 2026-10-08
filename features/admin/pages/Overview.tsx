@@ -77,7 +77,7 @@ export function SetupChecklist({ users, projects }: { users: number; projects: n
     { done: providers.data.some((p) => p.models.some((m) => m.enabled)), label: "Chọn mô hình mặc định", href: A("/ai/models"), action: "Chọn mô hình" },
     { done: limits.data.customized, label: "Thiết lập hạn mức AI", href: A("/ai/limits"), action: "Thiết lập" },
     { done: users > 1, label: "Thêm người dùng", href: A("/users"), action: "Thêm người dùng" },
-    { done: projects > 0, label: "Tạo website đầu tiên", href: portalHref("studio"), action: "Mở Builder Studio" }
+    { done: projects > 0, label: "Tạo ứng dụng đầu tiên", href: portalHref("studio"), action: "Mở Builder Studio" }
   ];
   if (items.every((i) => i.done)) return null;
   return (
