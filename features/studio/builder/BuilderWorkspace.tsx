@@ -10,6 +10,7 @@ import {
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import type { ApiProject, AppDefinitionV2, AssetDto, DefinitionOperation, RegistryComponent, SchemaOperation, Section } from "@xweb/types";
+import { useOverflow } from "../../../packages/ui/src/useOverflow";
 import { Canvas, DragChip } from "./Canvas";
 import { Inspector } from "./Inspector";
 import { LeftRail, type RailId } from "./LeftRail";
@@ -22,7 +23,7 @@ import { PagesPanel } from "./panels/PagesPanel";
 import { ActionsPanel } from "./panels/ActionsPanel";
 import { WorkflowsPanel } from "./panels/WorkflowsPanel";
 import { AiPanel, FormsPanel, ThemePanel } from "./panels/MiscPanels";
-import { Dialog, StateBox } from "./ui/primitives";
+import { Dialog, StateBox, Tabs } from "./ui/primitives";
 import type { DefCtx } from "./ctx";
 import type { Backend } from "./core/backend";
 import { canStep, clampSlot, planAdd, planMove, planStep, sectionIndexForSlot, slotForClickAdd, slotFromPoint, type SectionRect } from "./core/dnd";
@@ -66,6 +67,13 @@ export function BuilderWorkspace(props: {
   const cap = capabilitiesFor(props.project.permissions);
   const [appMode, setAppMode] = useState<"EDIT" | "TEST">("EDIT");
   const [rail, setRail] = useState<RailId>("pages");
+  // phones (<= 760 px): ONE workspace at a time (canvas / tools / properties). All three stay mounted, so switching never reloads the canvas or loses a form; CSS shows one. Wider screens ignore this state.
+  const [mview, setMview] = useState<"canvas" | "tools" | "props">("canvas");
+  const openRail = (id: RailId) => {
+    setRail(id); setMview("tools");
+    // if the pane that held focus (e.g. the Inspector) is hidden by this switch on a phone, move focus to the tab we land on instead of letting it fall to <body>
+    requestAnimationFrame(() => { const a = document.activeElement; if (!a || a === document.body || a.getClientRects().length === 0) { window.scrollTo(0, 0); document.getElementById("mview-tab-tools")?.focus(); } });
+  };
   const [dataFocus, setDataFocus] = useState<{ sectionId?: string }>({});
   const [actionPreset, setActionPreset] = useState<{ sectionId?: string } | undefined>(undefined);
   const [rects, setRects] = useState<SectionRect[]>([]);
@@ -74,6 +82,7 @@ export function BuilderWorkspace(props: {
   const [removing, setRemoving] = useState(false);
   const [check, setCheck] = useState<PreflightIssue[] | null>(null);
   const frameRef = useRef<HTMLIFrameElement>(null);
+  const rightRef = useRef<HTMLElement>(null); const rightScrolls = useOverflow(rightRef, "y"); // the properties panel is a keyboard stop only while it scrolls
 
   const sections = useMemo(() => sectionsOf(doc, pageId), [doc, pageId]);
   const selected = sections.find((s) => s.id === selectedId) ?? null;
@@ -164,7 +173,7 @@ export function BuilderWorkspace(props: {
       case "data": return <div className="bx-panel-body"><div className="bx-panel-head"><h2>Dữ liệu</h2></div>
         <p className="hint">Nguồn → khám phá → truy vấn → ánh xạ → ViewModel → gắn vào thành phần. Không có dữ liệu mẫu giả.</p>
         <DataWizard ctx={ctx} focus={dataFocus}/></div>;
-      case "forms": return <FormsPanel ctx={ctx} onSelect={(id, pg) => { props.onPage(pg); select(id); }} onNewAction={(id) => { setActionPreset({ sectionId: id }); setRail("actions"); }} openSite={props.openSite}/>;
+      case "forms": return <FormsPanel ctx={ctx} onSelect={(id, pg) => { props.onPage(pg); select(id); }} onNewAction={(id) => { setActionPreset({ sectionId: id }); openRail("actions"); }} openSite={props.openSite}/>;
       case "actions": return <ActionsPanel key={actionPreset?.sectionId ?? "list"} ctx={ctx} preset={actionPreset ? { type: "SUBMIT_FORM", sectionId: actionPreset.sectionId } : undefined}/>;
       case "workflows": return <WorkflowsPanel ctx={ctx}/>;
       case "theme": return <ThemePanel ctx={ctx}/>;
@@ -177,20 +186,25 @@ export function BuilderWorkspace(props: {
       <BuilderTopBar name={props.project.name} meta={meta} save={props.save} appMode={appMode} onAppMode={setAppMode} device={props.device} onDevice={props.onDevice}
         leading={props.leading} modeTabs={props.modeTabs} trailing={props.trailing}
         canShare={cap.canShare} shareReason={shareReason} onShare={props.openMembers} canPublish={cap.canPublish && props.save.state !== "error"} publishReason={props.save.state === "error" ? "Có thay đổi chưa lưu được. Thử lưu lại trước khi xuất bản." : publishReason} publishBusy={busy} issues={counts} onPublish={publish} onRetrySave={props.onRetrySave}/>
-      <main className="bx-body">
-        <LeftRail value={rail} onChange={setRail}>{leftPanel}</LeftRail>
-        <section className="bx-center" aria-label="Bản xem trước ứng dụng">
+      <main className="bx-body" data-mview={mview}>
+        <a className="bx-skip" href="#mview-panel-canvas" onClick={(e) => { e.preventDefault(); setMview("canvas"); requestAnimationFrame(() => document.getElementById("mview-panel-canvas")?.focus()); }}>Bỏ qua tới bản xem trước</a>
+        <div className="bx-mview">
+          <Tabs label="Khu vực làm việc" idPrefix="mview" value={mview} onChange={(id) => setMview(id as "canvas" | "tools" | "props")}
+            items={[{ id: "canvas", label: "Bản xem trước" }, { id: "tools", label: "Công cụ" }, { id: "props", label: edit ? "Thuộc tính" : "Kiểm thử", badge: edit && selected ? "●" : undefined, badgeLabel: "có mục đang chọn" }]}/>
+        </div>
+        <LeftRail id="mview-panel-tools" value={rail} onChange={setRail}>{leftPanel}</LeftRail>
+        <section className="bx-center" id="mview-panel-canvas" tabIndex={-1} aria-label="Bản xem trước ứng dụng">
           {!edit ? <p className="bx-banner" role="note">Đang ở chế độ dùng thử: bản xem trước không chỉnh sửa được.</p> : readOnly ? <p className="bx-banner" role="note">Bạn chỉ có quyền xem.</p> : null}
           <Canvas document={html} sections={sections} selectedId={selectedId} onSelect={select} onRects={setRects} rects={rects} interactive={interactive} dragging={!!drag && drag.kind !== "row"} slot={slot}
             device={props.device} labelOf={props.labelOf} frameRef={frameRef} title="Bản xem trước ứng dụng"/>
         </section>
-        <aside className="bx-right" aria-label="Thuộc tính">
+        <aside ref={rightRef} id="mview-panel-props" className="bx-right" aria-label="Thuộc tính" {...(rightScrolls ? { tabIndex: 0 } : {})}>
           {!edit ? <TestPanel doc={doc} rawPermissions={props.project.permissions} runtime={props.runtime} dirty={props.save.state !== "saved" || busy}/>
             : selected ? (
               <Inspector ctx={ctx} section={selected} component={registry.find((c) => c.id === selected.type)} meta={backend.metadata.get(selected.type)} index={sections.indexOf(selected)} canUp={canStep(sections, selected.id, -1)} canDown={canStep(sections, selected.id, 1)} count={sections.length}
                 readOnly={!interactive} busy={busy} assets={props.assets} rawPermissions={props.project.permissions} onApply={(ops, summary) => props.applyOps(ops, summary)} onClose={() => select(null)}
                 onMove={(d) => void step(selected.id, d)} onRemove={() => setRemoving(true)} onSaveBlock={props.saveBlock} pageId={pageId}
-                openDataWizard={(id) => { setDataFocus({ sectionId: id }); setRail("data"); }}/>
+                openDataWizard={(id) => { setDataFocus({ sectionId: id }); openRail("data"); }}/>
             ) : (
               <div className="bx-empty"><h2>Chưa chọn mục nào</h2>{readOnly ? <p>Bạn chỉ có quyền xem ứng dụng này. Chọn một mục trong “Trang” để xem thuộc tính; không chỉnh sửa được.</p> : <p>Chọn một mục trong “Trang” hoặc nhấp vào bản xem trước để chỉnh.</p>}
                 {backend.metadataReadiness.state !== "AVAILABLE" ? <StateBox state={backend.metadataReadiness} compact/> : null}</div>)}

@@ -7,6 +7,7 @@
 import type { AppDefinitionV2, DefinitionOperation, DefinitionCollection, JsonValue, Section } from "@xweb/types";
 import { ACTION_TYPES, CLIENT_ONLY_ACTION_TYPES, DEFINITION_COLLECTIONS, PERMISSION_CODES } from "./contract";
 import { pageExists } from "./pages";
+import { fieldsOf, vmFieldsOf } from "./safeRead";
 
 export type RefIssue = { path: string; message: string };
 
@@ -68,21 +69,21 @@ export function validateDefinition(doc: AppDefinitionV2): RefIssue[] {
   });
   list(doc.mappings).forEach((m, i) => {
     known(m.queryRef, queries, `mappings[${i}].queryRef`, "truy vấn");
-    for (const d of dupes(m.fields.map((f) => f.to))) add(`mappings[${i}].fields`, `Trường đích “${d}” bị trùng.`);
+    for (const d of dupes(fieldsOf(m).map((f) => f.to))) add(`mappings[${i}].fields`, `Trường đích “${d}” bị trùng.`);
     // app-definition.md §3 (frozen 2026-10-06): `fields[].transforms[]` is canonical; the legacy `transform` is read-only, and both on one field is rejected.
-    m.fields.forEach((f, j) => {
+    fieldsOf(m).forEach((f, j) => {
       const legacy = (f as unknown as { transform?: unknown }).transform;
       if (legacy !== undefined && (f as { transforms?: unknown }).transforms !== undefined) add(`mappings[${i}].fields[${j}].transform`, "Trường ánh xạ không được có đồng thời “transform” (cũ) và “transforms”.");
     });
   });
   list(doc.viewModels).forEach((vm, i) => {
     const at = `viewModels[${i}]`;
-    for (const d of dupes(vm.fields.map((f) => f.name))) add(`${at}.fields`, `Trường “${d}” bị trùng.`);
+    for (const d of dupes(vmFieldsOf(vm).map((f) => f.name))) add(`${at}.fields`, `Trường “${d}” bị trùng.`);
     const qk = vm.queryRef !== undefined && known(vm.queryRef, queries, `${at}.queryRef`, "truy vấn");
     if (qk && queryById.get(vm.queryRef!)!.mode === "WRITE") add(`${at}.queryRef`, `ViewModel chỉ đọc dữ liệu; “${vm.queryRef}” là truy vấn ghi.`);
     const mk = vm.mappingRef !== undefined && known(vm.mappingRef, mappings, `${at}.mappingRef`, "ánh xạ");
     if (qk && mk && mappingById.get(vm.mappingRef!)!.queryRef !== vm.queryRef) add(`${at}.mappingRef`, `Ánh xạ “${vm.mappingRef}” đọc truy vấn khác với truy vấn của ViewModel.`);
-    if (mk) for (const f of mappingById.get(vm.mappingRef!)!.fields) if (!vm.fields.some((x) => x.name === f.to)) add(`${at}.mappingRef`, `Ánh xạ trả về trường “${f.to}” nhưng ViewModel không có trường này.`);
+    if (mk) for (const f of fieldsOf(mappingById.get(vm.mappingRef!))) if (!vmFieldsOf(vm).some((x) => x.name === f.to)) add(`${at}.mappingRef`, `Ánh xạ trả về trường “${f.to}” nhưng ViewModel không có trường này.`);
   });
 
   list(doc.actions).forEach((a, i) => {

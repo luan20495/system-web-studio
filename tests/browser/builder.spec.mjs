@@ -1,6 +1,6 @@
 // @class: harness — real Chromium on a test-only host (fake host / no API behind it); NOT a backend E2E
 // Real-browser checks of the Builder (pointer + keyboard) against tests/browser/harness.tsx. TEST-ONLY harness: NOT a backend E2E.
-// Run: node tests/browser/build-harness.mjs && (cd .test-build/browser && python3 -m http.server 4000 --bind 127.0.0.1 &) && node tests/browser/builder.spec.mjs
+// Run: node tests/browser/build-harness.mjs && node tests/browser/harness-server.mjs run -- node tests/browser/builder.spec.mjs
 import { createRequire } from "node:module";
 import { mkdirSync } from "node:fs";
 const require = createRequire(new URL("../../package.json", import.meta.url).pathname);
@@ -394,6 +394,29 @@ const rtCalls = (p) => p.evaluate(() => window.__rt);
   const p = await withPerms("VIEWER,EDITOR,WORKSPACE_ADMIN");
   const t = await p.locator("body").innerText();
   check("PERM role names alone grant nothing: read-only notice, Publish disabled", /Bạn chỉ có quyền xem/.test(t) && (await p.locator("header.bx-top").getByRole("button", { name: /^Xuất bản/ }).isDisabled()));
+  await p.close();
+}
+
+{
+  // PHONE (<= 760 px): ONE workspace at a time (C6 UX-002b); wider screens keep every pane (the switch is hidden)
+  const p = await fresh(); await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(300);
+  const shown = (sel) => p.evaluate((s) => { const e = document.querySelector(s); return !!e && getComputedStyle(e).display !== "none" && e.getBoundingClientRect().width > 0; }, sel);
+  const tabs = await p.locator(".bx-mview [role=tab]").allInnerTexts();
+  check("PHONE 390: a 3-way switch (Bản xem trước / Công cụ / Thuộc tính), the canvas is the only workspace shown", tabs.length === 3 && (await shown(".bx-center")) && !(await shown(".bx-left")) && !(await shown(".bx-right")), JSON.stringify(tabs));
+  await p.getByRole("tab", { name: "Công cụ", exact: true }).click();
+  const w = await p.evaluate(() => Math.round(document.querySelector(".bx-left-panel").getBoundingClientRect().width));
+  check("PHONE 390: Công cụ shows the rail + panel at full width (≥ 366 px) and hides the canvas", (await shown(".bx-left")) && !(await shown(".bx-center")) && w >= 366, `panel ${w}px`);
+  await p.locator(".bx-left > .bx-tabs").getByRole("tab", { name: "Dữ liệu", exact: true }).click();
+  await p.evaluate(() => { document.querySelector(".bx-left-panel").dataset.keep = "same-node"; });
+  await p.getByRole("tab", { name: "Bản xem trước", exact: true }).click(); await p.getByRole("tab", { name: "Công cụ", exact: true }).click();
+  check("PHONE 390: Canvas → Công cụ round trip keeps the active rail and the very same panel node (nothing remounted, so no form state is lost)", (await p.evaluate(() => document.querySelector(".bx-left-panel").dataset.keep)) === "same-node" && (await p.locator('.bx-left > .bx-tabs [aria-selected="true"]').innerText()) === "Dữ liệu");
+  await p.getByRole("tab", { name: "Công cụ", exact: true }).focus(); await p.keyboard.press("ArrowRight");
+  { await p.waitForTimeout(250); const act = await p.evaluate(() => document.activeElement?.textContent.trim() ?? ""); const right = await shown(".bx-right"), left = await shown(".bx-left");
+    check("PHONE 390: ArrowRight on the switch moves focus + selection to Thuộc tính and shows the properties pane", /^Thuộc tính|^Kiểm thử/.test(act) && right && !left, JSON.stringify({ act, right, left })); }
+  check("PHONE 390: no horizontal page overflow", (await p.evaluate(() => document.documentElement.scrollWidth - innerWidth)) <= 0);
+  await p.setViewportSize({ width: 1024, height: 800 }); await p.waitForTimeout(250);
+  check("PHONE → 1024: the switch is hidden again and canvas, tools and properties are all shown", !(await shown(".bx-mview")) && (await shown(".bx-center")) && (await shown(".bx-left")) && (await shown(".bx-right")));
+  check("PHONE: no uncaught error", p.errors.length === 0, p.errors.join(" | "));
   await p.close();
 }
 

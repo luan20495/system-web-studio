@@ -1,0 +1,291 @@
+[
+ {
+  "name": "fixture (query + mapping without transforms)",
+  "info": 200
+ },
+ {
+  "name": "@390 the switch shows 3 named tabs, Bản xem trước selected, each ≥ 44 px high",
+  "ok": true,
+  "detail": "[{\"n\":\"Bản xem trước\",\"sel\":\"true\",\"h\":44,\"w\":122},{\"n\":\"Công cụ\",\"sel\":\"false\",\"h\":44,\"w\":122},{\"n\":\"Thuộc tính\",\"sel\":\"false\",\"h\":44,\"w\":122}]"
+ },
+ {
+  "name": "@390 canvas view: the canvas is the ONLY workspace shown and is ≥ 60 % of the screen high",
+  "ok": true,
+  "detail": "{\"c\":{\"shown\":true,\"w\":390,\"h\":784,\"top\":284},\"lf\":false,\"rt\":false}"
+ },
+ {
+  "name": "@390 canvas view: no horizontal overflow",
+  "ok": true,
+  "detail": "overflow=0"
+ },
+ {
+  "name": "@390 focus is never hidden under the sticky switch (scroll-padding-top ≥ 60 px, scroll-margin on the panes) and pull-to-refresh is contained",
+  "ok": true,
+  "detail": "{\"pad\":\"64px\",\"ob\":\"contain\",\"center\":\"64px\"}"
+ },
+ {
+  "name": "@390 tools view: the tools pane is full width (≥ 366 px), the panel content is ≥ 366 px wide and the canvas is hidden",
+  "ok": true,
+  "detail": "{\"tl\":{\"shown\":true,\"w\":390,\"h\":1256,\"top\":284},\"panel\":{\"shown\":true,\"w\":390,\"h\":1169,\"top\":371}}"
+ },
+ {
+  "name": "@390 tools view: the rail tabs are readable (all 8, each ≥ 36 px high)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "@390 Dữ liệu: panel ≥ 366 px wide and tall enough to work (≥ 250 px), no control outside the screen or < 24 px, no page overflow",
+  "ok": true,
+  "detail": "{\"pn\":{\"shown\":true,\"w\":390,\"h\":1405,\"top\":371},\"pb\":[],\"overflow\":0}"
+ },
+ {
+  "name": "@390 Dữ liệu: axe (all impacts) 0 violations",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "@390 Hành động: panel ≥ 366 px wide and tall enough to work (≥ 250 px), no control outside the screen or < 24 px, no page overflow",
+  "ok": true,
+  "detail": "{\"pn\":{\"shown\":true,\"w\":390,\"h\":374,\"top\":371},\"pb\":[],\"overflow\":0}"
+ },
+ {
+  "name": "@390 Hành động: axe (all impacts) 0 violations",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "@390 Workflow: panel ≥ 366 px wide and tall enough to work (≥ 250 px), no control outside the screen or < 24 px, no page overflow",
+  "ok": true,
+  "detail": "{\"pn\":{\"shown\":true,\"w\":390,\"h\":262,\"top\":371},\"pb\":[],\"overflow\":0}"
+ },
+ {
+  "name": "@390 Workflow: axe (all impacts) 0 violations",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "@390 Trang: panel ≥ 366 px wide and tall enough to work (≥ 250 px), no control outside the screen or < 24 px, no page overflow",
+  "ok": true,
+  "detail": "{\"pn\":{\"shown\":true,\"w\":390,\"h\":1169,\"top\":371},\"pb\":[],\"overflow\":0}"
+ },
+ {
+  "name": "@390 state: Canvas → Data (typed) → Canvas → Tools keeps the typed text, the active rail and does NOT reload the canvas",
+  "ok": true,
+  "detail": "{\"alive\":true,\"kept\":{\"value\":\"giữ-lại-123\",\"rail\":\"Dữ liệu\"}}"
+ },
+ {
+  "name": "@390 selecting a section marks the Thuộc tính tab (badge) without leaving the tools view",
+  "ok": true,
+  "detail": "Thuộc tính● (có mục đang chọn)"
+ },
+ {
+  "name": "@390 properties view: Inspector full width (≥ 366 px), tall (≥ 400 px), controls inside the screen and ≥ 24 px",
+  "ok": true,
+  "detail": "{\"ins\":{\"shown\":true,\"w\":390,\"h\":784,\"top\":284},\"ib\":[]}"
+ },
+ {
+  "name": "@390 properties: axe (all impacts) 0 violations",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "@390 every Inspector tab opens without page overflow",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "@390 the selection survives going back to the canvas (the tab keeps its badge)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "@390 canvas: axe (all impacts) 0 violations",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "@390 keyboard: ArrowRight moves selection AND focus to Công cụ, the tools pane shows, the focus ring is visible",
+  "ok": true,
+  "detail": "{\"active\":\"Công cụ\",\"sel\":\"Công cụ\",\"tools\":\"flex\",\"outline\":\"solid 2px\"}"
+ },
+ {
+  "name": "@390 keyboard: End → last tab, Home → first tab",
+  "ok": true,
+  "detail": "Thuộc tính● (có mục đang chọn) / Bản xem trước"
+ },
+ {
+  "name": "@390 the skip link is reachable by Tab",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "@390 no uncaught error / console error during the whole run",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "@430 the switch shows 3 named tabs, Bản xem trước selected, each ≥ 44 px high",
+  "ok": true,
+  "detail": "[{\"n\":\"Bản xem trước\",\"sel\":\"true\",\"h\":44,\"w\":135},{\"n\":\"Công cụ\",\"sel\":\"false\",\"h\":44,\"w\":135},{\"n\":\"Thuộc tính\",\"sel\":\"false\",\"h\":44,\"w\":135}]"
+ },
+ {
+  "name": "@430 canvas view: the canvas is the ONLY workspace shown and is ≥ 60 % of the screen high",
+  "ok": true,
+  "detail": "{\"c\":{\"shown\":true,\"w\":430,\"h\":872,\"top\":282},\"lf\":false,\"rt\":false}"
+ },
+ {
+  "name": "@430 canvas view: no horizontal overflow",
+  "ok": true,
+  "detail": "overflow=0"
+ },
+ {
+  "name": "@430 focus is never hidden under the sticky switch (scroll-padding-top ≥ 60 px, scroll-margin on the panes) and pull-to-refresh is contained",
+  "ok": true,
+  "detail": "{\"pad\":\"64px\",\"ob\":\"contain\",\"center\":\"64px\"}"
+ },
+ {
+  "name": "@430 tools view: the tools pane is full width (≥ 406 px), the panel content is ≥ 406 px wide and the canvas is hidden",
+  "ok": true,
+  "detail": "{\"tl\":{\"shown\":true,\"w\":430,\"h\":1237,\"top\":282},\"panel\":{\"shown\":true,\"w\":430,\"h\":1150,\"top\":369}}"
+ },
+ {
+  "name": "@430 tools view: the rail tabs are readable (all 8, each ≥ 36 px high)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "@430 Dữ liệu: panel ≥ 406 px wide and tall enough to work (≥ 250 px), no control outside the screen or < 24 px, no page overflow",
+  "ok": true,
+  "detail": "{\"pn\":{\"shown\":true,\"w\":430,\"h\":1405,\"top\":369},\"pb\":[],\"overflow\":0}"
+ },
+ {
+  "name": "@430 Dữ liệu: axe (all impacts) 0 violations",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "@430 Hành động: panel ≥ 406 px wide and tall enough to work (≥ 250 px), no control outside the screen or < 24 px, no page overflow",
+  "ok": true,
+  "detail": "{\"pn\":{\"shown\":true,\"w\":430,\"h\":374,\"top\":369},\"pb\":[],\"overflow\":0}"
+ },
+ {
+  "name": "@430 Hành động: axe (all impacts) 0 violations",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "@430 Workflow: panel ≥ 406 px wide and tall enough to work (≥ 250 px), no control outside the screen or < 24 px, no page overflow",
+  "ok": true,
+  "detail": "{\"pn\":{\"shown\":true,\"w\":430,\"h\":262,\"top\":369},\"pb\":[],\"overflow\":0}"
+ },
+ {
+  "name": "@430 Workflow: axe (all impacts) 0 violations",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "@430 Trang: panel ≥ 406 px wide and tall enough to work (≥ 250 px), no control outside the screen or < 24 px, no page overflow",
+  "ok": true,
+  "detail": "{\"pn\":{\"shown\":true,\"w\":430,\"h\":1150,\"top\":369},\"pb\":[],\"overflow\":0}"
+ },
+ {
+  "name": "@430 state: Canvas → Data (typed) → Canvas → Tools keeps the typed text, the active rail and does NOT reload the canvas",
+  "ok": true,
+  "detail": "{\"alive\":true,\"kept\":{\"value\":\"giữ-lại-123\",\"rail\":\"Dữ liệu\"}}"
+ },
+ {
+  "name": "@430 selecting a section marks the Thuộc tính tab (badge) without leaving the tools view",
+  "ok": true,
+  "detail": "Thuộc tính● (có mục đang chọn)"
+ },
+ {
+  "name": "@430 properties view: Inspector full width (≥ 406 px), tall (≥ 400 px), controls inside the screen and ≥ 24 px",
+  "ok": true,
+  "detail": "{\"ins\":{\"shown\":true,\"w\":430,\"h\":872,\"top\":282},\"ib\":[]}"
+ },
+ {
+  "name": "@430 properties: axe (all impacts) 0 violations",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "@430 every Inspector tab opens without page overflow",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "@430 the selection survives going back to the canvas (the tab keeps its badge)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "@430 canvas: axe (all impacts) 0 violations",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "@430 keyboard: ArrowRight moves selection AND focus to Công cụ, the tools pane shows, the focus ring is visible",
+  "ok": true,
+  "detail": "{\"active\":\"Công cụ\",\"sel\":\"Công cụ\",\"tools\":\"flex\",\"outline\":\"solid 2px\"}"
+ },
+ {
+  "name": "@430 keyboard: End → last tab, Home → first tab",
+  "ok": true,
+  "detail": "Thuộc tính● (có mục đang chọn) / Bản xem trước"
+ },
+ {
+  "name": "@430 the skip link is reachable by Tab",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "@430 no uncaught error / console error during the whole run",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "@768 no regression: the phone switch is hidden and the canvas, tools and properties are all shown",
+  "ok": true,
+  "detail": "{\"mview\":\"none\",\"left\":{\"shown\":true,\"w\":330,\"h\":594},\"center\":{\"shown\":true,\"w\":438,\"h\":594},\"right\":{\"shown\":true,\"w\":768,\"h\":105},\"cols\":\"330px 438px\",\"overflow\":0,\"bodyOverflow\":\"hidden\"}"
+ },
+ {
+  "name": "@768 axe (all impacts) 0 violations",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "@768 no console error",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "@1024 no regression: the phone switch is hidden and the canvas, tools and properties are all shown",
+  "ok": true,
+  "detail": "{\"mview\":\"none\",\"left\":{\"shown\":true,\"w\":330,\"h\":594},\"center\":{\"shown\":true,\"w\":694,\"h\":594},\"right\":{\"shown\":true,\"w\":1024,\"h\":105},\"cols\":\"330px 694px\",\"overflow\":0,\"bodyOverflow\":\"hidden\"}"
+ },
+ {
+  "name": "@1024 axe (all impacts) 0 violations",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "@1024 no console error",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "@1440 no regression: the phone switch is hidden and the canvas, tools and properties are all shown",
+  "ok": true,
+  "detail": "{\"mview\":\"none\",\"left\":{\"shown\":true,\"w\":380,\"h\":842},\"center\":{\"shown\":true,\"w\":720,\"h\":842},\"right\":{\"shown\":true,\"w\":340,\"h\":842},\"cols\":\"380px 720px 340px\",\"overflow\":0,\"bodyOverflow\":\"hidden\"}"
+ },
+ {
+  "name": "@1440 axe (all impacts) 0 violations",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "@1440 no console error",
+  "ok": true,
+  "detail": ""
+ }
+]

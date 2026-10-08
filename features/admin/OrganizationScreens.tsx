@@ -20,11 +20,12 @@ export type Tenant = { id: string; name: string };
 export const LARGE_TREE = 300;
 
 // ------------------------------------------------------------------------------------------------------------------------------- shared bits
-export function NotReadyPanel({ title, reason, testid, children }: { title: string; reason: string; testid: string; children?: React.ReactNode }) {
+export function NotReadyPanel({ title, reason, testid, children, level = 3 }: { title: string; reason: string; testid: string; children?: React.ReactNode; level?: 2 | 3 }) {
+  const H = level === 2 ? "h2" : "h3"; // 2 when the panel sits directly under the page's h1 (no skipped heading level)
   return (
     <div className="xp-orgNotReady" role="note" data-testid={testid}>
       <span className="xp-orgNotReadyIcon" aria-hidden="true"><Info size={20}/></span>
-      <div><h3>{title}</h3><p>{reason}</p>{children}</div>
+      <div><H>{title}</H><p>{reason}</p>{children}</div>
     </div>
   );
 }
@@ -74,9 +75,9 @@ export function OrganizationView({ api, plan, tenant }: { api: OrganizationApi; 
         </div>
       </div>
       {flash ? <p className="notice" role="status" data-testid="org-flash">{flash}</p> : null}
-      {ready && !canEdit ? <NotReadyPanel testid="org-edit-not-ready" title="Cơ cấu đang ở chế độ chỉ xem" reason={(plan.edit as { reason: string }).reason}><p className="hint">Bạn xem được cây, nhưng thêm, sửa, di chuyển, bật/tắt và xóa đơn vị chưa dùng được.</p></NotReadyPanel> : null}
+      {ready && !canEdit ? <NotReadyPanel level={2} testid="org-edit-not-ready" title="Cơ cấu đang ở chế độ chỉ xem" reason={(plan.edit as { reason: string }).reason}><p className="hint">Bạn xem được cây, nhưng thêm, sửa, di chuyển, bật/tắt và xóa đơn vị chưa dùng được.</p></NotReadyPanel> : null}
 
-      {!ready ? <NotReadyPanel testid="org-not-ready" title="Cơ cấu tổ chức chưa sẵn sàng" reason={(plan.units as { reason: string }).reason}>
+      {!ready ? <NotReadyPanel level={2} testid="org-not-ready" title="Cơ cấu tổ chức chưa sẵn sàng" reason={(plan.units as { reason: string }).reason}>
         <p className="hint">Giao diện đã sẵn sàng: cây đơn vị tùy biến (không cố định Phòng/Team), loại đơn vị, thêm / sửa / di chuyển / bật tắt / xóa. Màn hình sẽ hoạt động khi máy chủ công bố API; không có dữ liệu nào được tạo giả.</p></NotReadyPanel>
         : data.error ? <ErrorBlock error={data.error} retry={reload}/>
         : data.loading && !data.data ? <StateView kind="loading"/>

@@ -1,0 +1,16 @@
+{
+ "visits": 231,
+ "axe": {
+  "serious:color-contrast": 2,
+  "serious:target-size": 1,
+  "serious:scrollable-region-focusable": 2
+ },
+ "axeCriticalNodes": 0,
+ "axeSeriousNodes": 5,
+ "small24Nodes": 146,
+ "small24Visits": 70,
+ "nameMismatchNodes": 9,
+ "nameMismatchVisits": 6,
+ "overflowVisits": 0,
+ "errs": 0
+}

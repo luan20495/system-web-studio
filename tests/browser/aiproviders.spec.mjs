@@ -1,6 +1,6 @@
 // @class: harness — real Chromium on Platform → AI → Nhà cung cấp with an in-page FAKE of the admin AI routes (no backend): list rows (logo, name, status, model count, test connection), the add dialog (icons, picker, switches, key field),
 // the exact request body (contract unchanged), keyboard, and "no icon comes from the internet". NOT a backend E2E.
-// Run: node tests/browser/build-harness.mjs && (cd .test-build/browser && python3 -m http.server 4000 --bind 127.0.0.1 &) && CHROME=... node tests/browser/aiproviders.spec.mjs
+// Run: node tests/browser/build-harness.mjs && CHROME=... node tests/browser/harness-server.mjs run -- node tests/browser/aiproviders.spec.mjs
 import { createRequire } from "node:module";
 const require = createRequire(new URL("../../package.json", import.meta.url).pathname);
 const { chromium } = require("playwright-core");
@@ -53,8 +53,8 @@ const reqs = (p) => p.evaluate(() => window.__ai);
   await T(p, "picker-button").press("ArrowDown"); await p.keyboard.press("Escape");
   check("picker keyboard: Esc closes the list but NOT the dialog", (await p.locator('[role="listbox"]').count()) === 0 && (await T(p, "provider-dialog").count()) === 1);
   await T(p, "picker-button").click(); await p.locator('[role="option"][data-value="LOCAL"]').click();
-  check("picker: choosing 'AI nội bộ (Local)' shows the service address field and the model fields (as before)", (await p.getByLabel("Địa chỉ dịch vụ").count()) === 1 && (await p.getByLabel(/Danh sách mô hình/).count()) === 1);
-  check("picker: the address placeholder is neutral (no localhost)", !/localhost|127\.0\.0\.1/.test((await p.getByLabel("Địa chỉ dịch vụ").getAttribute("placeholder")) ?? ""));
+  check("picker: choosing 'AI nội bộ (Local)' shows the service address field and the model fields (as before)", (await p.getByLabel("Địa chỉ dịch vụ", { exact: true }).count()) === 1 && (await p.getByLabel(/Danh sách mô hình/).count()) === 1);
+  check("picker: the address placeholder is neutral (no localhost)", !/localhost|127\.0\.0\.1/.test((await p.getByLabel("Địa chỉ dịch vụ", { exact: true }).getAttribute("placeholder")) ?? ""));
   await p.getByLabel("Loại").selectOption({ label: "Tương thích OpenAI" });
   check("compat: the hidden native select still answers getByLabel('Loại').selectOption(…) (existing scripts keep working) and the picker follows", (await T(p, "picker-button").innerText()).includes("Tương thích OpenAI"));
   // switches
@@ -66,7 +66,7 @@ const reqs = (p) => p.evaluate(() => window.__ai);
   const paid = p.getByRole("switch", { name: "Có tính phí" });
   check("Nâng cao opens a 'Có tính phí' switch (expanded state announced)", (await p.locator(".xp-advBtn").getAttribute("aria-expanded")) === "true" && (await paid.count()) === 1);
   // submit: contract unchanged
-  await p.getByLabel("Tên").fill("Cổng nội bộ"); await p.getByLabel("Địa chỉ dịch vụ").fill("https://ai.example.com/v1"); await p.getByLabel(/Khóa kết nối/).fill("sk-test-123");
+  await p.getByLabel("Tên").fill("Cổng nội bộ"); await p.getByLabel("Địa chỉ dịch vụ", { exact: true }).fill("https://ai.example.com/v1"); await p.getByLabel(/Khóa kết nối/).fill("sk-test-123");
   await p.getByRole("button", { name: "Lưu" }).click(); await p.waitForTimeout(500);
   const post = (await reqs(p)).find((r) => r.method === "POST" && r.path === "/admin/ai/providers");
   check("submit: POST /admin/ai/providers with EXACTLY the fields of before (name, baseUrl, apiKey, models, defaultModel, paid, enabled, kind) — nothing new", !!post && JSON.stringify(Object.keys(post.body).sort()) === JSON.stringify(["apiKey", "baseUrl", "defaultModel", "enabled", "kind", "models", "name", "paid"]) && post.body.kind === "OPENAI_COMPATIBLE" && post.body.apiKey === "sk-test-123" && post.body.enabled === true && post.body.paid === true, JSON.stringify(post?.body));

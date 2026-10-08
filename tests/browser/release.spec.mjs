@@ -1,6 +1,6 @@
 // @class: harness — real Chromium on the release dialog with an in-page FAKE of its six calls (no backend). It proves how the dialog treats the answers the C2 contract describes: statuses (ROLLING_BACK busy, never success),
 // STALE_PUBLISH as a FAILED deployment, SiteInfo.operation busy states, 409 SCOPE_BUSY / ROLLBACK_STALE / IDEMPOTENCY_KEY_REUSED, key lifecycle, APP_PUBLISH. NOT a backend E2E: see tests/e2e-real E2E-P01…P09.
-// Run: node tests/browser/build-harness.mjs && (cd .test-build/browser && python3 -m http.server 4000 --bind 127.0.0.1 &) && CHROME=... node tests/browser/release.spec.mjs
+// Run: node tests/browser/build-harness.mjs && CHROME=... node tests/browser/harness-server.mjs run -- node tests/browser/release.spec.mjs
 import { createRequire } from "node:module";
 const require = createRequire(new URL("../../package.json", import.meta.url).pathname);
 const { chromium } = require("playwright-core");

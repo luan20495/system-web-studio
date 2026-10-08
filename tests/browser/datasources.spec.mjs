@@ -1,5 +1,5 @@
 // @class: harness — real Chromium on a test-only host whose `calls` are an in-page fake; proves what the PANEL does with C3's documented answers, NOT what the backend answers
-// Run: node tests/browser/build-harness.mjs && (cd .test-build/browser && python3 -m http.server 4000 --bind 127.0.0.1 &) && node tests/browser/datasources.spec.mjs
+// Run: node tests/browser/build-harness.mjs && node tests/browser/harness-server.mjs run -- node tests/browser/datasources.spec.mjs
 import { createRequire } from "node:module";
 const require = createRequire(new URL("../../package.json", import.meta.url).pathname);
 const { chromium } = require("playwright-core");

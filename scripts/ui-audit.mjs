@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // UI/UX audit runner (a developer tool, NOT a test): opens EVERY real route of the three portals in real Chromium against a real stack, at several viewports, and records per route what a human reviewer would notice:
 // glyph characters that may render as tofu (□ ?), U+FFFD, mojibake, horizontal overflow, text spilling out of the viewport, clipped text without an ellipsis, broken images, icon-only controls without an accessible name,
-// form controls without a label, console errors, failing API calls, blank pages, axe (wcag2a/aa) serious + critical violations. It also writes a screenshot per route + viewport.
+// form controls without a label, console errors, failing API calls, blank pages, axe violations of EVERY impact (tags wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa, best-practice; the summary counts critical / serious separately from moderate / minor). It also writes a screenshot per route + viewport.
 // Nothing is intercepted or faked: the data is created through the product's own API (a NEW tenant with a tenant admin, a workspace admin, a project, 25 employees with long Vietnamese names).
 //   node scripts/ui-audit.mjs --out <dir> [--only platform,admin,studio] [--viewports 1440,1024,768,390]
 // env: AUDIT_STACK_ENV (default ~/.xweb-e2e-stack/c5e2e-ae/stack.env), AUDIT_STUDIO (http://127.0.0.1:3086), AUDIT_PLATFORM (http://127.0.0.1:3001), AUDIT_ADMIN (http://127.0.0.1:3002), CHROME
@@ -37,6 +37,8 @@ async function seed() {
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------- measurements
+/* phone builder (<= 760 px) shows ONE workspace at a time: switch to the one a state lives in before touching it */
+const mv = async (pg, name) => { const t = pg.locator(".bx-mview [role=tab]").filter({ hasText: name }).first(); if ((await t.count()) && (await t.isVisible())) { await t.click(); await pg.waitForTimeout(250); } };
 const MEASURE = () => {
   const text = document.body.innerText; const isIconish = (c) => /[←-⇿⌀-⏿■-➿⬀-⯿]/.test(c);
   const glyphs = [...new Set([...text].filter(isIconish))].join("");
@@ -49,15 +51,20 @@ const MEASURE = () => {
   const clipped = leafs.filter((e) => { const cs = getComputedStyle(e); return (cs.overflow === "hidden" || cs.overflowX === "hidden") && cs.textOverflow !== "ellipsis" && e.scrollWidth > e.clientWidth + 2; }).slice(0, 4).map((e) => e.textContent.trim().slice(0, 40));
   const tiny = leafs.filter((e) => parseFloat(getComputedStyle(e).fontSize) < 11).length;
   const imgs = [...document.images].filter((i) => i.complete && i.naturalWidth === 0).map((i) => i.src.slice(-40));
-  const name = (e) => (e.getAttribute("aria-label") || e.getAttribute("aria-labelledby") || e.getAttribute("title") || e.textContent || "").trim();
+  const name = (e) => (e.getAttribute("aria-label") || e.getAttribute("aria-labelledby") || e.getAttribute("title") || e.textContent || [...(e.labels ?? [])].map((l) => l.textContent).join(" ") || "").trim();
   const noName = [...document.querySelectorAll("button,[role=button],a[href]")].filter((e) => vis(e) && !name(e) && !e.querySelector("img[alt]:not([alt=''])")).slice(0, 4).map((e) => e.outerHTML.slice(0, 80));
   const noLabel = [...document.querySelectorAll("input:not([type=hidden]),select,textarea")].filter((e) => vis(e) && !e.getAttribute("aria-label") && !e.getAttribute("aria-labelledby") && !e.closest("label") && !(e.id && document.querySelector(`label[for="${CSS.escape(e.id)}"]`))).slice(0, 4).map((e) => e.outerHTML.slice(0, 80));
+  const norm = (t) => t.toLowerCase().replace(/\s+/g, " ").trim();
+  const textOf = (n) => (n.nodeType === 3 ? n.textContent : n.nodeType === 1 && n.getAttribute("aria-hidden") !== "true" ? [...n.childNodes].map(textOf).join(" ") : ""); const visibleText = (e) => norm(textOf(e)).replace(/[^\p{L}\p{N}]+/gu, " ").trim(); /* element boundaries count as a space, punctuation is ignored, as in the accessible-name comparison */
+  const nameMismatch = [...document.querySelectorAll("button,[role=button],a[href],[role=tab],[role=menuitem],[role=radio],[role=checkbox],[role=combobox]")].filter((e) => vis(e) && e.getAttribute("aria-label")).filter((e) => { const t = visibleText(e); return t && /[\p{L}\p{N}]/u.test(t) && !norm(e.getAttribute("aria-label")).replace(/[^\p{L}\p{N}]+/gu, " ").trim().includes(t); }).slice(0, 5).map((e) => `${visibleText(e).slice(0, 30)} ≠ ${e.getAttribute("aria-label").slice(0, 40)}`);
+  const small = [...document.querySelectorAll("button,[role=button],[role=tab],a.btn,input[type=checkbox],input[type=radio],select")].filter((e) => { if (!vis(e) || e.classList.contains("srOnly")) return false; /* .srOnly = visually hidden mirror (1 px clip), not a pointer target */ const r = e.getBoundingClientRect(); return r.width < 24 || r.height < 24; }).slice(0, 6).map((e) => `${e.tagName.toLowerCase()}.${(e.className || "").toString().slice(0, 24)} ${Math.round(e.getBoundingClientRect().width)}x${Math.round(e.getBoundingClientRect().height)} ${(e.getAttribute("aria-label") || e.textContent || "").trim().slice(0, 24)}`);
   const native = [...document.querySelectorAll("select:not(.srOnly)")].filter(vis).length;
   const h1 = document.querySelectorAll("h1").length; const main = document.querySelectorAll("main").length;
-  return { glyphs, replacement, mojibake, entities, overflowX, spill, clipped, tiny, imgs, noName, noLabel, native, h1, main, title: document.title, textLen: text.trim().length, h: document.documentElement.scrollHeight };
+  return { glyphs, replacement, mojibake, entities, overflowX, spill, clipped, tiny, imgs, noName, noLabel, nameMismatch, small, native, h1, main, title: document.title, textLen: text.trim().length, h: document.documentElement.scrollHeight };
 };
+const AXE_TAGS = (process.env.AUDIT_AXE_TAGS ?? "wcag2a,wcag2aa,wcag21a,wcag21aa,wcag22aa,best-practice").split(",");
 async function axe(page) {
-  try { await page.addScriptTag({ path: AXE }); return await page.evaluate(async () => (await window.axe.run(document, { runOnly: ["wcag2a", "wcag2aa"], resultTypes: ["violations"] })).violations.filter((v) => ["critical", "serious"].includes(v.impact)).map((v) => ({ id: v.id, impact: v.impact, n: v.nodes.length, sel: v.nodes[0]?.target?.join(" ").slice(0, 70) }))); } catch (e) { return [{ id: "axe-failed", impact: "n/a", n: 0, sel: String(e).slice(0, 60) }]; }
+  try { await page.addScriptTag({ path: AXE }); return await page.evaluate(async (tags) => (await window.axe.run(document, { runOnly: tags, resultTypes: ["violations"] })).violations.map((v) => ({ id: v.id, impact: v.impact, n: v.nodes.length, sel: v.nodes[0]?.target?.join(" ").slice(0, 70), nodes: v.nodes.slice(0, 6).map((x) => `${x.target.join(" ").slice(0, 80)} :: ${(x.html ?? "").replace(/\s+/g, " ").slice(0, 110)}`) })), AXE_TAGS); } catch (e) { return [{ id: "axe-failed", impact: "n/a", n: 0, sel: String(e).slice(0, 60), nodes: [] }]; }
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------- runner
@@ -73,6 +80,34 @@ async function visit(page, portal, vp, route, label, shotDir, extra) {
   mkdirSync(shotDir, { recursive: true }); await page.screenshot({ path: join(shotDir, `${slug}.png`), fullPage: vp >= 1000 || vp <= 430 }).catch(() => undefined);
   page.off("console", onErr); page.off("pageerror", onPE); page.off("response", onResp);
   rows.push({ portal, vp, route: new URL(route).pathname, label, ok, ...m, axe: ax, errs, bad });
+  // dialogs and inspector states: the same route, one more interaction, audited again (a dialog / drawer / inspector tab is where most small controls live)
+  const path = new URL(route).pathname;
+  const steps = [];
+  if (/\/platform\/tenants$/.test(path)) steps.push(["dialog-create-company", async (pg) => { await pg.getByRole("button", { name: /Tạo công ty/ }).first().click(); await pg.getByTestId("tenant-create").waitFor(); }]);
+  if (/\/platform\/users$/.test(path)) steps.push(["dialog-create-account", async (pg) => { await pg.getByTestId("users-create").click(); await pg.getByTestId("create-account").waitFor(); }]);
+  if (/\/platform\/ai$/.test(path)) steps.push(["dialog-ai-provider", async (pg) => { const b = pg.getByRole("button", { name: /Thêm nhà cung cấp/ }).first(); await b.click(); await pg.waitForTimeout(400); }]);
+  if (/\/admin\/employees$/.test(path)) { steps.push(["dialog-add-employee", async (pg) => { await pg.getByTestId("emp-create").click(); await pg.getByTestId("create-account").waitFor(); }]); steps.push(["dialog-employee-detail", async (pg) => { await pg.locator("[data-testid^=emp\\:]").first().click(); await pg.getByTestId("emp-detail").waitFor(); }]); }
+  if (/\/design$/.test(path) && portal === "studio") {
+    steps.push(["builder-section-selected", async (pg) => { await pg.frameLocator("iframe").locator("section").first().click({ position: { x: 30, y: 30 } }); await pg.waitForTimeout(500); }]);
+    for (const tab of ["Nội dung", "Thiết kế", "Dữ liệu", "Hành động", "Quyền", "Nâng cao"]) steps.push([`inspector-tab-${tab}`, async (pg) => { await mv(pg, /^Thuộc tính/); const t = pg.locator(".bx-right").getByRole("tab", { name: new RegExp(tab, "i") }).first(); if (await t.count()) { await t.click(); await pg.waitForTimeout(300); } }]);
+    steps.push(["dialog-add-page", async (pg) => { await mv(pg, /^Công cụ$/); await pg.getByRole("tab", { name: "Trang", exact: true }).click(); await pg.getByRole("button", { name: /^Trang$/ }).first().click(); await pg.getByRole("dialog").waitFor(); }]);
+  }
+  for (const [name, run] of steps) {
+    try { await run(page); await page.waitForTimeout(350); rows.push({ portal, vp, route: `${path}#${name}`, label: `${label}-${name}`, ok, ...(await page.evaluate(MEASURE).catch(() => ({}))), axe: await axe(page), errs: [], bad: [] });
+      mkdirSync(shotDir, { recursive: true }); await page.screenshot({ path: join(shotDir, `${slug}-${name}.png`) }).catch(() => undefined);
+      await page.keyboard.press("Escape").catch(() => undefined); await page.waitForTimeout(200);
+    } catch (e) { rows.push({ portal, vp, route: `${path}#${name}`, label: `${label}-${name}`, ok: false, errs: [`state not reached: ${String(e).slice(0, 90)}`], axe: [], bad: [] }); await page.keyboard.press("Escape").catch(() => undefined); }
+  }
+  if (portal === "studio" && /\/design$/.test(new URL(route).pathname)) {
+    for (const tab of ["Thành phần", "Dữ liệu", "Biểu mẫu", "Hành động", "Workflow", "Giao diện", "AI"]) {
+      const t = page.getByRole("tab", { name: tab, exact: true }).first(); if (!(await t.count())) continue;
+      await mv(page, /^Công cụ$/);
+      await t.click().catch(() => undefined); await page.waitForTimeout(450);
+      rows.push({ portal, vp, route: `${new URL(route).pathname}#rail:${tab}`, label: `${label}-rail-${tab}`, ok, ...(await page.evaluate(MEASURE).catch(() => ({}))), axe: await axe(page), errs: [], bad: [] });
+    }
+    const test = page.getByRole("button", { name: /Dùng thử/ }).first();
+    if (await test.count()) { await test.click().catch(() => undefined); await page.waitForTimeout(500); await mv(page, /^(Thuộc tính|Kiểm thử)/); rows.push({ portal, vp, route: `${new URL(route).pathname}#test-mode`, label: `${label}-test-mode`, ok, ...(await page.evaluate(MEASURE).catch(() => ({}))), axe: await axe(page), errs: [], bad: [] }); }
+  }
 }
 
 async function loginPortal(page, portal, username, password) {
@@ -102,6 +137,6 @@ for (const vp of VIEWPORTS) {
 }
 await browser.close();
 mkdirSync(OUT, { recursive: true }); writeFileSync(join(OUT, "audit.json"), JSON.stringify({ run, created: { tenant: d.tenant.id, project: P }, rows }, null, 1));
-const flag = (r) => [r.glyphs ? `glyphs[${r.glyphs}]` : "", r.replacement ? "U+FFFD" : "", r.mojibake ? "mojibake" : "", r.entities ? "entity" : "", r.overflowX > 1 ? `overflowX+${r.overflowX}` : "", r.spill?.length ? `spill(${r.spill.join("|")})` : "", r.clipped?.length ? `clipped(${r.clipped.join("|")})` : "", r.imgs?.length ? "brokenImg" : "", r.noName?.length ? `noName(${r.noName.length})` : "", r.noLabel?.length ? `noLabel(${r.noLabel.length})` : "", r.axe?.length ? `axe[${r.axe.map((a) => `${a.id}:${a.impact}x${a.n}`).join(",")}]` : "", r.errs?.length ? `console(${r.errs.length})` : "", r.bad?.length ? `api(${[...new Set(r.bad)].join(",")})` : "", (r.textLen ?? 0) < 20 ? "BLANK" : "", r.h1 === 0 ? "noH1" : ""].filter(Boolean).join(" ");
+const flag = (r) => [r.glyphs ? `glyphs[${r.glyphs}]` : "", r.replacement ? "U+FFFD" : "", r.mojibake ? "mojibake" : "", r.entities ? "entity" : "", r.overflowX > 1 ? `overflowX+${r.overflowX}` : "", r.spill?.length ? `spill(${r.spill.join("|")})` : "", r.clipped?.length ? `clipped(${r.clipped.join("|")})` : "", r.imgs?.length ? "brokenImg" : "", r.noName?.length ? `noName(${r.noName.length})` : "", r.noLabel?.length ? `noLabel(${r.noLabel.length})` : "", r.nameMismatch?.length ? `nameMismatch(${r.nameMismatch.length})` : "", r.small?.length ? `<24px(${r.small.length})` : "", r.axe?.length ? `axe[${r.axe.map((a) => `${a.id}:${a.impact}x${a.n}`).join(",")}]` : "", r.errs?.length ? `console(${r.errs.length})` : "", r.bad?.length ? `api(${[...new Set(r.bad)].join(",")})` : "", (r.textLen ?? 0) < 20 ? "BLANK" : "", r.h1 === 0 ? "noH1" : ""].filter(Boolean).join(" ");
 const md = ["| portal | vp | route | issues |", "|---|---|---|---|", ...rows.map((r) => `| ${r.portal} | ${r.vp} | ${r.route} | ${flag(r) || "ok"} |`)].join("\n");
 writeFileSync(join(OUT, "audit.md"), md + "\n"); console.log(`audited ${rows.length} (route × viewport) · routes ${new Set(rows.map((r) => r.portal + r.route)).size} · with issues ${rows.filter((r) => flag(r)).length}\nreport: ${OUT}/audit.md`);

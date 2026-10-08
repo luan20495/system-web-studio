@@ -121,7 +121,7 @@ export function MemberTable({ title, members, roles, currentUserId, onChange, on
               <td><b>{m.displayName ?? m.username}{m.userId === currentUserId ? <em className="you">Bạn</em> : null}</b><small>{m.username}{m.email ? ` · ${m.email}` : ""}</small></td>
               <td><select aria-label={`Vai trò của ${m.username}`} value={m.role} disabled={busy || m.userId === currentUserId} onChange={(e) => onChange(m, e.target.value)}>
                 {roles.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}</select></td>
-              <td><button className="smallButton danger" disabled={busy} onClick={() => onRemove(m)} aria-label={`Xóa ${m.username}`}>{m.userId === currentUserId ? "Rời" : "Xóa"}</button></td>
+              <td><button className="smallButton danger" disabled={busy} onClick={() => onRemove(m)} aria-label={`${m.userId === currentUserId ? "Rời" : "Xóa"} ${m.username}`}>{m.userId === currentUserId ? "Rời" : "Xóa"}</button></td>
             </tr>))}</tbody>
         </table>)}
       <form className="inlineForm" onSubmit={(e) => { e.preventDefault(); void onAdd(who, role).then((ok) => { if (ok) setWho(""); }); }}>

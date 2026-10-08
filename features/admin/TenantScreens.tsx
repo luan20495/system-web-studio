@@ -82,7 +82,7 @@ function TenantMembers({ tenantId, tenantName }: { tenantId: string; tenantName:
     <Card title={`Thành viên của ${tenantName}${members.data ? ` (${rows.length})` : ""}`}>
       {members.error ? <ErrorState error={members.error} retry={members.reload}/> : members.loading && !members.data ? <StateView kind="loading"/> : rows.length === 0 ? <StateView kind="empty" title="Công ty chưa có thành viên"/> : (
         <table className="table" data-testid="tenant-members">
-          <thead><tr><th>Người dùng</th><th>Vai trò</th><th/></tr></thead>
+          <thead><tr><th>Người dùng</th><th>Vai trò</th><th><span className="srOnly">Thao tác</span></th></tr></thead>
           <tbody>{rows.map((r) => (
             <tr key={r.userId} data-testid={`tm:${r.userId}`}>
               <td>{r.known ? <b>{r.label}</b> : <span title="Máy chủ không trả tên cho người này">{r.label}</span>}{r.userId === me?.id ? <small> · bạn</small> : null}{r.email ? <small>{r.email}</small> : null}</td>
@@ -294,7 +294,7 @@ function WorkspaceMembersPanel({ workspaceId, name }: { workspaceId: string; nam
     <Card title={`Thành viên của ${name}${members.data ? ` (${list.length})` : ""}`}>
       {members.error ? <ErrorState error={members.error} retry={members.reload}/> : members.loading && !members.data ? <StateView kind="loading"/> : list.length === 0 ? <StateView kind="empty" title="Workspace chưa có thành viên"/> : (
         <table className="table" data-testid="ws-members">
-          <thead><tr><th>Người dùng</th><th>Vai trò</th><th>Tham gia</th><th/></tr></thead>
+          <thead><tr><th>Người dùng</th><th>Vai trò</th><th>Tham gia</th><th><span className="srOnly">Thao tác</span></th></tr></thead>
           <tbody>{list.map((m) => (
             <tr key={m.userId} data-testid={`wm:${m.username}`}>
               <td><b>{m.displayName ?? m.username}</b><small>{m.username}{m.email ? ` · ${m.email}` : ""}{m.userId === me?.id ? " · bạn" : ""}</small></td>
@@ -347,7 +347,7 @@ export function DataSourcesAdminPage() {
     <PageHead title="Nguồn dữ liệu" sub="Kết nối cơ sở dữ liệu / API của workspace. Khóa kết nối chỉ ghi, không bao giờ hiển thị lại. Liên kết khe dữ liệu của từng ứng dụng nằm trong Studio."/>
     {scope.dataWorkspaces.length > 1 ? <label className="field"><span>Workspace</span><select value={id} onChange={(e) => setId(e.target.value)}>{scope.dataWorkspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></label> : null}
     <Card>
-      <DataSourcesPanel key={id} doc={{ page: "", sections: [] } as never} calls={calls} canView={perms.includes("DATA_SOURCE_VIEW") || perms.includes("DATA_SOURCE_MANAGE")} viewReason="Bạn chưa được cấp quyền xem nguồn dữ liệu."
+      <DataSourcesPanel key={id} headingLevel={2} doc={{ page: "", sections: [] } as never} calls={calls} canView={perms.includes("DATA_SOURCE_VIEW") || perms.includes("DATA_SOURCE_MANAGE")} viewReason="Bạn chưa được cấp quyền xem nguồn dữ liệu."
         canManage={perms.includes("DATA_SOURCE_MANAGE")} manageReason="Bạn chưa được cấp quyền quản lý nguồn dữ liệu." canBind={false} bindReason="Liên kết khe dữ liệu được thực hiện trong Studio."/>
     </Card>
   </>);

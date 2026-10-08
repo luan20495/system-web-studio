@@ -21,8 +21,10 @@ const emptyForm = (): SourceForm => ({ name: "", type: "", config: {}, credentia
  * Access (all UX; the server re-checks): `canView` = DATA_SOURCE_VIEW shows the metadata list and nothing else; `canManage` = DATA_SOURCE_MANAGE gates create / update / delete /
  * credential metadata / connection test; `canBind` = DATA_SOURCE_MANAGE + APP_EDIT gates the TEST/draft binding. Without `canView` no request is sent at all.
  */
-export function DataSourcesPanel({ doc, calls, canView, viewReason, canManage, manageReason, canBind, bindReason }: {
+export function DataSourcesPanel({ doc, calls, canView, viewReason, canManage, manageReason, canBind, bindReason, headingLevel = 3 }: {
+  headingLevel?: 2 | 3; // 2 when the panel sits directly under a page h1 (Admin), 3 inside the builder rail (under its h2)
   doc: AppDefinitionV2; calls?: DataManagementCalls; canView: boolean; viewReason: string; canManage: boolean; manageReason: string; canBind: boolean; bindReason: string }) {
+  const H = headingLevel === 2 ? "h2" : "h3";
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [connectors, setConnectors] = useState<ConnectorDescriptor[]>([]);
   const [sources, setSources] = useState<DataSourceView[]>([]);
@@ -135,7 +137,7 @@ export function DataSourcesPanel({ doc, calls, canView, viewReason, canManage, m
     <div className="bx-ds" data-testid="ds-panel">
       {writes ? <p className="hint" data-testid="ds-readonly">{writes}</p> : null}
       {!writes && bindLock ? <p className="hint" data-testid="ds-bind-locked">{bindLock}</p> : null}
-      <h3 className="bx-h3">Nguồn dữ liệu của không gian làm việc</h3>
+      <H className="bx-h3">Nguồn dữ liệu của không gian làm việc</H>
       {sources.length ? (
         <ul className="bx-list" data-testid="ds-list">
           {sources.map((d) => {
@@ -171,7 +173,7 @@ export function DataSourcesPanel({ doc, calls, canView, viewReason, canManage, m
       ) : <p className="hint" data-testid="ds-empty">Chưa có nguồn dữ liệu nào trong không gian làm việc này.</p>}
 
       <form className="bx-form" data-testid="ds-create-form" onSubmit={(e) => { e.preventDefault(); void create(); }}>
-        <h3 className="bx-h3">Thêm nguồn dữ liệu</h3>
+        <H className="bx-h3">Thêm nguồn dữ liệu</H>
         <Field label="Tên nguồn">{(id) => <input id={id} disabled={!!writes} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}/>}</Field>
         <Field label="Loại">{(id) => <select id={id} disabled={!!writes} value={form.type} onChange={(e) => setForm({ ...emptyForm(), name: form.name, type: e.target.value })}>
           <option value="">— chọn loại —</option>{connectors.map((c) => <option key={c.type} value={c.type} disabled={c.status !== "AVAILABLE"}>{c.displayName}{c.status !== "AVAILABLE" ? " (sắp có)" : ""}</option>)}</select>}</Field>
@@ -185,7 +187,7 @@ export function DataSourcesPanel({ doc, calls, canView, viewReason, canManage, m
         <button type="submit" className="button primary" data-testid="ds-create" disabled={!!writes || busy("create")} aria-busy={busy("create")} title={writes ?? undefined}>{busy("create") ? "Đang tạo…" : "Tạo nguồn"}</button>
       </form>
 
-      <h3 className="bx-h3">Liên kết khe dữ liệu của ứng dụng</h3>
+      <H className="bx-h3">Liên kết khe dữ liệu của ứng dụng</H>
       {slots.length ? <>
         <ul className="bx-list" data-testid="slot-list">
           {slots.map((s) => (
