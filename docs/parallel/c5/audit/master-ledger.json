@@ -110,7 +110,7 @@
   "N",
   "Shared ErrorBoundary (packages/ui) + error.tsx/global-error.tsx per app + boundary around the route render and around BuilderWorkspace; request id shown; 'Thử lại'",
   "unit (SSR fallback) + harness page that throws on click: fallback, focus, retry",
-  ""
+  "P1 justified only because M-076 shows real throw paths (R2 rated it P3)"
  ],
  [
   "M-007",
@@ -129,7 +129,8 @@
   "Y (re-issue); N for the C5 part",
   "Focus the link/Copy; Esc and 'Xong' ask for confirmation until copied; clipboard failure visible",
   "admin harness: Enter/Esc/Xong keep the link until confirmed",
-  "backend half = handoff C1"
+  "backend half = handoff C1",
+  "C5 PART FIXED (HARNESS, merged e27318c) · C1 re-issue handoff open"
  ],
  [
   "M-008",
@@ -147,7 +148,8 @@
   "Y",
   "Offer the create-account step from the company page / pre-fill; fix the misleading note",
   "admin harness + real-stack walkthrough",
-  ""
+  "",
+  "FIXED (HARNESS, merged e27318c)"
  ],
  [
   "M-009",
@@ -165,7 +167,8 @@
   "Y",
   "C5: hide or explain the controls until C1 provides routes; do not invent routes",
   "real-backend e2e once C1 route exists",
-  "Backend half not verified on real backend"
+  "Backend half not verified on real backend · R2 thought P2 plausible; C5-R verified from source that a non-member SYSTEM_ADMIN holds only {TENANT_MANAGE, TENANT_MEMBERS} so forProject answers 404 (Permission.kt:109-111, AccessService.kt:85-111): P1 stands. Use Me.businessAccess to explain, not hide by guess",
+  "C5 PART FIXED (HARNESS, merged e27318c) · C1 handoff + real-backend 404 not confirmed"
  ],
  [
   "M-010",
@@ -175,9 +178,7 @@
   "create company / create account dialogs",
   "Esc/backdrop closes the dialog while the POST is in flight: the account is created and the link modal never shows; Esc closes all stacked modals; onClose captured once",
   [
-   "S2-004",
-   "S1-011",
-   "S3-035"
+   "S2-004"
   ],
   "Modal.tsx:19 onClose() unconditional, useEffect([]) captures first onClose; drawers.tsx:32 / builder primitives:46 overlay mousedown closes at once",
   "S3 (Modal) + S2/S1",
@@ -185,7 +186,7 @@
   "N",
   "Modal 'dismissible' prop: not dismissible while busy; backdrop click needs mousedown+mouseup on the backdrop; Esc closes only the top modal",
   "harness: Esc during in-flight does nothing; stacked Esc order",
-  ""
+  "C-01: split (S1-011 -> M-021, S3-035 -> M-023); only S2-004 remains here"
  ],
  [
   "M-011",
@@ -193,10 +194,9 @@
   "C5",
   "Studio AI/Code mode",
   "<=767px",
-  "Studio AI/Code workspace on a phone hides Website/Phiên bản/Tệp/Chia sẻ/Cài đặt (and Lịch sử/Thư viện/IDE/Máy chủ) with no replacement menu; preview only 25% of the screen",
+  "Studio AI/Code workspace on a phone hides Website/Phiên bản/Tệp/Chia sẻ/Cài đặt (and Lịch sử/Thư viện/IDE/Máy chủ) with no replacement menu",
   [
-   "S3-004",
-   "S3-022"
+   "S3-004"
   ],
   "responsive.css:182-186 hides the buttons; pane-tab rules target legacy markup; ProjectWorkspace topbar",
   "S1",
@@ -216,16 +216,15 @@
   [
    "S3-001",
    "S2-020",
-   "S3-007",
    "R-037"
   ],
   "apps/admin|platform layout.tsx do not load builder.css; DataSourcesPanel.tsx uses bx-*; TenantScreens.tsx:20-21,350 imports it with a fake doc 'as never'",
-  "S3 (styles) + S2",
+  "S3 (CSS) + S1 (DataSourcesPanel.tsx is a Studio file) + S2 (Admin host)",
   "none",
   "N (harness)",
   "Move panel styles to a shared scoped stylesheet loaded by all portals (or restyle with factory classes); give the panel a real Admin variant instead of the fake doc",
   "harness render in Admin context; axe; screenshot",
-  ""
+  "O-01: panel markup is S1's file"
  ],
  [
   "M-013",
@@ -248,7 +247,7 @@
  ],
  [
   "M-014",
-  "P1",
+  "P2",
   "C5",
   "Platform+Admin",
   "<=394px · 400% zoom",
@@ -262,7 +261,7 @@
   "N (harness)",
   "minmax(min(380px,100%),1fr)",
   "responsive matrix at 360/390; no horizontal scroll",
-  ""
+  "lowered P1->P2 for consistency with M-026/M-027 (same WCAG AA rule, narrow-viewport only)"
  ],
  [
   "M-015",
@@ -341,7 +340,7 @@
   "N",
   "Confirm with consequence text; role change needs explicit 'Lưu'",
   "admin harness",
-  ""
+  "D-01: runtime secret delete is also in M-019 (S1 file CodePanels.tsx:139: owner S1)"
  ],
  [
   "M-019",
@@ -394,7 +393,8 @@
   "Builder dialog: Esc does nothing when focus is on <body> (handlers on the dialog node); backdrop mousedown closes unsaved add/rename dialogs",
   [
    "S1-012",
-   "S3-012"
+   "S3-012",
+   "S1-011"
   ],
   "builder/ui/primitives.tsx:28-52 (onKeyDown on dialog div :36-38, onMouseDown :46)",
   "S1 (+S3)",
@@ -432,7 +432,8 @@
   [
    "R-012",
    "S3-034",
-   "S1-043"
+   "S1-043",
+   "S3-035"
   ],
   "Modal.tsx:11, useDialog.ts:11,26, builder/ui/primitives.tsx, company-ui",
   "S3",
@@ -535,7 +536,7 @@
   "N",
   "Use the Tabs primitive (or plain nav links without role=tab)",
   "axe + keyboard harness",
-  ""
+  "D-02/D-03: radio cards also M-081; PersonPicker aria-expanded also M-085"
  ],
  [
   "M-029",
@@ -737,7 +738,7 @@
   "Y",
   "DO NOT invent semantics: ask C2 (question routed); then send explicit clear if allowed",
   "real-backend e2e",
-  ""
+  "STATIC-BE (R2): domain/customDomain cannot be cleared (hostname regex rejects ''); null = unchanged; '' clears description/deploymentTarget. Question stays with C2"
  ],
  [
   "M-040",
@@ -755,7 +756,7 @@
   "Y",
   "Question routed to C2; guard the effect until the workspace is known",
   "real-backend check",
-  ""
+  "STATIC-BE (R2): /ai/status?workspaceId= narrows the model list by access rules. Question stays with C2"
  ],
  [
   "M-041",
@@ -774,7 +775,7 @@
   "N (harness)",
   "use appKind; error + retry state",
   "harness",
-  ""
+  "D-05: shares a root with M-056: 21 of 72 useLoad results never read .error"
  ],
  [
   "M-042",
@@ -789,12 +790,12 @@
    "R2-029"
   ],
   "BuilderWorkspace.tsx:90, Canvas.tsx; MiscPanels.tsx:35-45, lib/schema-preview.ts + workers/render never read theme",
-  "S1 (label) + C2 (renderer)",
+  "S1 (both preview halves: lib/schema-preview.ts is a C5 hot file) + C2 review",
   "C2: apply AppDefinition.theme in workers/render and schema-preview",
   "Y",
   "C5: say clearly what preview does; C2 implements theme",
   "real-backend publish check",
-  "renderer is C2/shared"
+  "renderer is C2/shared · C-11"
  ],
  [
   "M-043",
@@ -923,8 +924,8 @@
   "S1",
   "none",
   "N",
-  "hand the prompt over via history.state/one-shot store; never act on load without user action",
-  "harness",
+  "one-shot store (NOT history.state: the Next router owns it); a ?prompt= URL only pre-fills the composer; never POST on load",
+  "harness: zero POST on load",
   ""
  ],
  [
@@ -941,14 +942,14 @@
   "S1",
   "none",
   "N",
-  "mask + copy button + timeout; no URL-embedded token",
+  "show a credential-free URL + separately masked username/token; guard the null token (prints 'null' today); do NOT invent http.extraHeader",
   "harness",
   ""
  ],
  [
   "M-051",
-  "P2",
-  "HANDOFF",
+  "P3",
+  "C5",
   "Studio",
   "site access",
   "Access-ticket query path sent unvalidated; r.redirect goes straight to window.location.assign; href/iframe URLs used as-is",
@@ -959,15 +960,15 @@
   ],
   "StudioApp.tsx:372-382; drawers.tsx:94, ReleaseModal.tsx:170,202, CodeWorkspace.tsx:221; api.ts",
   "S1 (client validation) + C2 (server)",
-  "C2: server validation of path/redirect (inference)",
-  "Y",
-  "client: validate same-origin/https, encode path; C2 confirms server",
+  "C2 confirmation (non-blocking, HF-C2-03): server validates path and builds the redirect from the configured sites origin",
+  "N",
+  "client: https only, no credentials, valid path; host pinned only if C0 provides the sites origin (NOT 'same-origin': the redirect goes to the sites origin)",
   "unit for URL guard",
-  ""
+  "R2: P2->P3, server half is closed in source"
  ],
  [
   "M-052",
-  "P2",
+  "P3",
   "C5",
   "Platform+Admin",
   "permissions",
@@ -984,7 +985,7 @@
   "Y",
   "C5: central helper + guard test scanning features/admin; C1 supplies capability codes",
   "permissions.test guard extended",
-  ""
+  "R2: UX-only, server authorises; guard needs a single-helper allow-list and features/admin + TENANT_ADMIN in scope"
  ],
  [
   "M-053",
@@ -1003,7 +1004,7 @@
   "N",
   "dynamic import for dialogs/panels/Admin sections; split AdminApp by portal (see M-064)",
   "S4 bundle table before/after",
-  ""
+  "D-06: AdminApp split shared with M-066"
  ],
  [
   "M-054",
@@ -1134,7 +1135,7 @@
   "N",
   "plain Vietnamese copy; keep technical names in a collapsed 'Chi tiết kỹ thuật'",
   "text lint guard (denylist) + review",
-  ""
+  "O-03: S3 supplies the label library + guard; S1/S2 apply it in their own files"
  ],
  [
   "M-061",
@@ -1148,9 +1149,7 @@
    "S2-026",
    "R2-022",
    "S1-049",
-   "S1-050",
-   "S1-052",
-   "S2-031"
+   "S1-050"
   ],
   "missing label maps: AdminApp.tsx:907,1128,1132,316,348,997,1015,1191; builder/WorkflowEditor.tsx; Inspector.tsx:83; ProjectWorkspace.tsx:378-381",
   "S3 (maps) + S1/S2",
@@ -1158,7 +1157,7 @@
   "N",
   "central label maps in @xweb/i18n with a guard for unmapped values",
   "unit: every enum has a label",
-  ""
+  "O-03: S3 supplies the label library + guard; S1/S2 apply it in their own files"
  ],
  [
   "M-062",
@@ -1183,7 +1182,7 @@
   "N",
   "canonical glossary (docs) + apply; single role-label source",
   "text guard + review",
-  ""
+  "O-03: S3 supplies the label library + guard; S1/S2 apply it in their own files"
  ],
  [
   "M-063",
@@ -1205,17 +1204,18 @@
   "N",
   "Vietnamese labels; one product name constant",
   "review",
-  ""
+  "O-03: S3 supplies the label library + guard; S1/S2 apply it in their own files"
  ],
  [
   "M-064",
-  "P2",
+  "P3",
   "C5",
   "Platform+Admin",
   "text · contradictions",
   "Stale/contradictory copy: 'Lưu trữ' listed as not implemented beside a working Lưu trữ button; Home says 'Website'; password policy 6 chars at sign-up vs 8 at activation",
   [
-   "S3-030"
+   "S3-030",
+   "S2-031"
   ],
   "AdminApp.tsx:404,424; S3 text doc T-04",
   "S2",
@@ -1223,7 +1223,7 @@
   "N",
   "fix copy; verify policy with C1 (do not guess)",
   "review",
-  ""
+  "C-05: also takes S2-031 (settings card keys, stale copy) · R2: not a contradiction: both minimums (6 at sign-up, 8 at activation) are intentional in the backend; state the rule per flow, ask C1 about showing 'no username' / '>=4 distinct characters'"
  ],
  [
   "M-065",
@@ -1280,7 +1280,7 @@
   "N",
   "extract LoadGate, Field, FilterBar where >=3 copies; do not abstract one-offs",
   "unit/harness",
-  ""
+  "C-06: also covers the ladders/filters/persistence half of raw R-011 (its act() half is in M-020)"
  ],
  [
   "M-068",
@@ -1323,7 +1323,7 @@
   "N",
   "token consolidation (light + dark sets), define missing tokens, replace repeated hex",
   "css counting script before/after",
-  ""
+  "386 hex includes 30 token definitions (R2 count 356 excludes them)"
  ],
  [
   "M-070",
@@ -1363,7 +1363,7 @@
   "N",
   "Phased plan (docs): cookie+Accept-Language via proxy, ratchet guard; NO mass rewrite (needs C0/C7 approval)",
   "n/a",
-  "per instruction: report + plan, not rewrite"
+  "per instruction: report + plan, not rewrite · packages/i18n is 23 lines; run the S3 glossary pass first; phase 0 (provider, locale-aware formatters, ratchet guard) is C5-only; a second locale needs a product decision"
  ],
  [
   "M-072",
@@ -1375,8 +1375,7 @@
   [
    "R-027",
    "R-028",
-   "R-029",
-   "R-023"
+   "R-029"
   ],
   "AdminApp, TenantScreens, ProjectWorkspace, StudioApp... ; build-harness.mjs:4; test-unit.mjs",
   "S4 (+S2/S1 tests)",
@@ -1408,7 +1407,7 @@
  ],
  [
   "M-074",
-  "P3",
+  "P2",
   "C5",
   "all",
   "error reporting",
@@ -1423,7 +1422,7 @@
   "N",
   "read X-Request-Id header; boundary reports via a seam (no endpoint invented)",
   "unit",
-  ""
+  "raised: raw R-002 and R-003 are both P2"
  ],
  [
   "M-075",
@@ -1445,7 +1444,7 @@
   "N",
   "single errorText(); never show Error.message of non-ApiError; Vietnamese mapping per code",
   "unit: mapper table",
-  ""
+  "O-04: packages/api-client/core.ts is touched by M-074/M-075/M-092/M-097: single editor S3"
  ],
  [
   "M-076",
@@ -1464,7 +1463,7 @@
   "N (harness)",
   "guard + safe parse",
   "unit + harness",
-  ""
+  "DailyBars half is latent (backend zero-fills days, AdminAiUsageController.kt:64); the JSON.parse half stays P2"
  ],
  [
   "M-077",
@@ -1539,7 +1538,7 @@
   "N",
   "permission-aware controls; checkbox lists",
   "harness",
-  ""
+  "C-08: grab-bag; items handled individually"
  ],
  [
   "M-081",
@@ -1644,7 +1643,7 @@
   "C5",
   "all",
   "forced colors / fonts / spacing",
-  "No forced-colors support; Inter declared but never loaded; weights unsupported; 53% spacing off-scale; 16 radii; 11 shadows",
+  "No forced-colors support; Inter declared but never loaded; font weights unsupported by the system stack",
   [
    "S3-042",
    "S3-040"
@@ -1683,18 +1682,18 @@
   "C5",
   "all",
   "secrets in state",
-  "Connector authValue and activation token/passwords stay in React state/DOM after success; p.join('') silently glues a path",
+  "Connector authValue and activation token/passwords stay in React state/DOM after success; p.join('') silently glues a path; RuntimeDrawer secret cleared even on a failed save; retained result.activation and ActivatePage token/again fields",
   [
    "R2-005",
    "R2-006",
    "S2-037"
   ],
   "AdminApp.tsx:1141-1157; AuthPages.tsx:32-87",
-  "S2",
+  "S1 + S2",
   "none",
   "N",
-  "clear after use; fix path join",
-  "unit",
+  "clear after use; keep the activation link only until copied/confirmed (reconcile with M-007); fix path join",
+  "harness DOM / input-value assertions (unit is not enough)",
   ""
  ],
  [
@@ -1711,7 +1710,7 @@
   "S1",
   "none",
   "N",
-  "explicit target origin where possible",
+  "renderer escaping fuzz test is the real regression guard (C5-only); CSP sha256 for the canvas script is a C0 handoff",
   "review",
   ""
  ],
@@ -1749,7 +1748,7 @@
   "N",
   "clear on logout",
   "unit",
-  ""
+  "also clear sessionStorage keys in logout and the 401 handler"
  ],
  [
   "M-092",
@@ -1767,7 +1766,7 @@
   "N",
   "retry once",
   "unit",
-  ""
+  "retry only before the first stream byte"
  ],
  [
   "M-093",
@@ -1785,7 +1784,7 @@
   "N",
   "fail closed in UI (backend remains authority)",
   "unit",
-  ""
+  "R2: split (a) failed /auth/config -> error state: do now; (b) 'absent permissions = deny' blocked on HF-C1-05, verify on a real stack"
  ],
  [
   "M-094",
@@ -1801,7 +1800,7 @@
   "S1",
   "C0-gated code module: server canApprove flag",
   "Y",
-  "handoff",
+  "interim C5: drop the displayName heuristic and map SELF_REVIEW (403) to a Vietnamese message; server canApprove flag stays a C0-gated handoff",
   "n/a",
   ""
  ],
@@ -1878,7 +1877,7 @@
   "N",
   "",
   "harness",
-  ""
+  "use portalHref when configured (window.location.origin may be an internal host)"
  ],
  [
   "M-099",
@@ -1901,7 +1900,7 @@
   "N",
   "remove verified-dead exports; add test ids where a spec needs them",
   "tsc + unit",
-  ""
+  "C-09: grab-bag; every item is tracked in the wave plan, do not treat as one fix"
  ],
  [
   "M-100",
@@ -1978,6 +1977,78 @@
   "N",
   "report + plan",
   "n/a",
+  "R2-026 was P2; kept as RESEARCH, blocks any tenant-theme work"
+ ],
+ [
+  "M-104",
+  "P2",
+  "C5",
+  "Studio AI/Code mode",
+  "<=767px",
+  "Studio AI mode on a phone: 3-row top bar 141 px + prompt 492 px leave the preview 211 px (25% of 844); no pane switch in the real UI",
+  [
+   "S3-022"
+  ],
+  "responsive.css:98-155 pane-tab rules target legacy markup only; ProjectWorkspace layout",
+  "S1",
+  "none",
+  "N (replica in S3 audit: re-measure)",
+  "pane switch (chat / preview) on <=767 reusing the builder phone-switch pattern",
+  "responsive matrix + harness",
+  "split from M-011 (C-02)"
+ ],
+ [
+  "M-105",
+  "P2",
+  "C5",
+  "Platform+Admin",
+  "5 Admin dialogs",
+  "Admin dialogs: fieldset.stack = UA 2px groove border, legend 16px/400, dialog title a bare 24px h2 (no ModalHeader); .stack defined nowhere",
+  [
+   "S3-007"
+  ],
+  "features/admin dialogs + factory.css (.stack undefined)",
+  "S3 (CSS) + S2",
+  "none",
+  "N (harness)",
+  "define .stack/legend/ModalHeader usage for Admin dialogs",
+  "harness screenshot + axe",
+  "split from M-012 (C-03)"
+ ],
+ [
+  "M-106",
+  "P2",
+  "C5",
+  "Studio",
+  "workflow / action editors",
+  "Workflow editor targets/branches list raw step ids (end, generated ids); jargon",
+  [
+   "S1-052"
+  ],
+  "builder/WorkflowEditor.tsx:37,69,106,116-117",
+  "S1",
+  "C4 contract unchanged",
+  "N (harness)",
+  "show step titles, hide ids",
+  "builder.spec",
   ""
+ ],
+ [
+  "M-107",
+  "P2",
+  "C5",
+  "all",
+  "tests/tsconfig shims",
+  "9 shim files and 22-23 relative ../packages/... imports in S1/S2 files (3 spellings of one import): unit runner compiles to CommonJS/node10 so @xweb/* cannot load",
+  [
+   "R-023"
+  ],
+  "scripts/test-unit.mjs:2 + tests/tsconfig.json",
+  "S4 (one repo-wide pass, LAST, after S1/S2/S3 merged)",
+  "C0 owns scripts/test-unit.mjs",
+  "N",
+  "single import spelling; do not break the unit runner",
+  "unit + all builds",
+  "split from M-072 (C-07); executes last"
  ]
 ]
