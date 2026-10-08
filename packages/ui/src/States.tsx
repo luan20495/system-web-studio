@@ -30,7 +30,7 @@ export function StateView({ kind, title, detail, action, level = 2, compact = fa
 }
 
 /** the sentences a kind already says in its own title/detail; an error whose mapped text is just one of these adds nothing and must not be printed a second time */
-const KIND_DEFAULT_SENTENCE = new Set(["FORBIDDEN", "NOT_FOUND", "AUTHENTICATION_REQUIRED", "NETWORK", "INTERNAL_ERROR", "VALIDATION_FAILED", "REVISION_CONFLICT", "SCOPE_BUSY"].map((c) => ERROR_CODE_TEXT[c]));
+const KIND_DEFAULT_SENTENCE = new Set(["FORBIDDEN", "NOT_FOUND", "AUTHENTICATION_REQUIRED", "NETWORK", "INTERNAL_ERROR", "VALIDATION_FAILED", "REVISION_CONFLICT", "CONFLICT", "SCOPE_BUSY"].map((c) => ERROR_CODE_TEXT[c]));
 /** a retry cannot help when the answer is "no", "gone" or "sign in again"; it can when the failure was transient */
 export const retryHelps = (kind: StateKind) => kind !== "notfound" && kind !== "forbidden" && kind !== "expired";
 /**

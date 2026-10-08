@@ -92,11 +92,11 @@ test("apps: Platform and Admin load the shared stylesheet and NOT builder.css (d
   assert.deepEqual(importsOf(read("apps/studio/app/layout.tsx")), ["globals", "responsive", "http", "factory", "builder", "ui"]);
   assert.deepEqual(importsOf(read("tests/browser/admin-css.ts")), importsOf(read("apps/admin/app/layout.tsx")));
 });
-test("ui.css: every rule is either a token block, an `.xp-*` component, or scoped under `.shell` (cannot leak into the dark builder); colours only as tokens", () => {
+test("ui.css: every rule is either a token block, an `.xp-*` component, or scoped under `.shell` (cannot leak into the dark builder) or a `.studio .xp-*` dark variant; colours only as tokens", () => {
   const css = read("packages/ui/src/styles/ui.css").replace(/\/\*[\s\S]*?\*\//g, "");
   const rules = Array.from(css.matchAll(/(?<=^|\})\s*([^{}@]+)\{([^{}]*)\}/g), (m) => ({ sel: m[1].trim(), body: m[2] }));
   assert.ok(rules.length > 40);
-  for (const r of rules) for (const s of r.sel.split(",").map((x) => x.trim())) assert.match(s, /^(:root|\.xp-[\w-]+|\.shell\s)/, `unscoped selector: ${s}`);
+  for (const r of rules) for (const s of r.sel.split(",").map((x) => x.trim())) assert.match(s, /^(:root|\.xp-[\w-]+|\.shell\s|\.studio\s\.xp-)/, `unscoped selector: ${s}`);
   for (const r of rules.filter((x) => x.sel !== ":root")) assert.doesNotMatch(r.body, /#[0-9a-fA-F]{3,8}\b/, `hard-coded hex outside the token block in: ${r.sel}`);
   assert.match(css, /--ui-z-toast:100/);
 });

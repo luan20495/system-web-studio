@@ -68,7 +68,8 @@ test("the server's English message is not shown; a Vietnamese one written for pe
 
 test("an unknown code with a Vietnamese message shows that message; with an English one falls back to the status class", () => {
   assert.equal(errorText(api(409, "BRAND_NEW_CODE", "Mục này đang được dùng ở nơi khác.")), "Mục này đang được dùng ở nơi khác.");
-  assert.match(errorText(api(409, "BRAND_NEW_CODE", "Resource is busy")), /thay đổi ở nơi khác/);
+  assert.match(errorText(api(409, "BRAND_NEW_CODE", "Resource is busy")), /xung đột/);
+  assert.match(errorText(api(409, "CONFLICT", "name already used")), /xung đột/);
 });
 
 test("the reference code: shown for server errors and for codes the table does not know, hidden for ordinary refusals", () => {

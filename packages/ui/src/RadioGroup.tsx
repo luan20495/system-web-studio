@@ -16,7 +16,7 @@ export function RadioGroup<V extends string>({ legend, hideLegend = false, value
 }) {
   const auto = useId(); const group = name ?? auto;
   return (
-    <fieldset className={`xp-radioGroup${className ? ` ${className}` : ""}`} aria-describedby={describedBy} disabled={disabled}>
+    <fieldset role="radiogroup" className={`xp-radioGroup${className ? ` ${className}` : ""}`} aria-describedby={describedBy} disabled={disabled}>
       <legend className={hideLegend ? "srOnly" : "xp-radioLegend"}>{legend}</legend>
       <div className="xp-radioList">
         {options.map((o) => (
