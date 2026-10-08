@@ -114,3 +114,10 @@
 
 /* device switch: icon buttons (named by aria-label / title); the text label only where there is room */
 .bx-devLabel{display:none}@media(min-width:1760px){.bx-devLabel{display:inline}}
+
+/* the action group sizes to its content (it used to overflow to the LEFT over the device switch); the brand (project name) is what shrinks, with its ellipsis */
+.bx-top .topActions{flex:none}.bx-top .brand{flex:1 1 180px}.bx-top-center{flex:0 1 auto}
+
+/* ROOT CAUSE of the cramped builder bar: `.workspace3 .topbar` (a 3-column grid, specificity 0,2,0) beat `.bx-top` (flex, 0,1,0), so the action group lived in a 1fr cell and its buttons overflowed to the LEFT over the device switch. The builder bar is a wrapping flex row. */
+.workspace3 .topbar.bx-top,.topbar.bx-top{display:flex;grid-template-columns:none}
+.bx-node.section b{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.25}

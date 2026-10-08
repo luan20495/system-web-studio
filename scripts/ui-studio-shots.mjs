@@ -25,6 +25,7 @@ for (const w of [1440, 390]) {
   await p.goto(`${STUDIO}/login`, { waitUntil: "networkidle" }); await p.getByLabel("Tên đăng nhập").fill(`shots-${run}`); await p.getByLabel("Mật khẩu").fill(pw);
   await Promise.all([p.waitForURL((x) => !/\/login/.test(x.pathname)), p.getByRole("button", { name: "Đăng nhập" }).click()]); await p.waitForLoadState("networkidle").catch(() => undefined);
   await p.goto(`${STUDIO}/studio/projects/${proj.id}/design`, { waitUntil: "domcontentloaded" }); await p.waitForSelector("iframe", { timeout: 20000 }).catch(() => undefined); await p.waitForTimeout(800);
+  if (w === 1440) console.log("top bar rects", JSON.stringify(await p.evaluate(() => { const r = (e) => { const x = e.getBoundingClientRect(); return [Math.round(x.left), Math.round(x.right)]; }; return { brand: r(document.querySelector(".bx-top .brand")), center: r(document.querySelector(".bx-top-center")), segs: [...document.querySelectorAll(".bx-top .segmented")].map((s) => ({ box: r(s), btns: [...s.querySelectorAll("button")].map(r) })), actions: r(document.querySelector(".bx-top .topActions")), actionKids: [...document.querySelector(".bx-top .topActions").children].map((c) => c.className + ":" + r(c).join("-")) }; })));
   for (const [name, file] of RAIL) {
     const tab = p.getByRole("tab", { name, exact: true }).first();
     if (await tab.count()) { await tab.click().catch(() => undefined); await p.waitForTimeout(400); }
