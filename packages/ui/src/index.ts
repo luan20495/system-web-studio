@@ -9,3 +9,8 @@ export { Switch } from "./Switch";
 export { Picker, type PickerOption } from "./Picker";
 export { ModalHeader } from "./ModalHeader";
 export { MenuButton, useNavDrawer } from "./NavDrawer";
+export { ErrorBoundary, ErrorFallback, errorReference, type FallbackProps } from "./ErrorBoundary";
+export { toast, useToast, ensureToastHost, ToastHost, ToastViewport, toastReducer, DEFAULT_DURATIONS, MAX_VISIBLE, type Toast, type ToastApi, type ToastInput, type ToastKind, type ToastState } from "./Toast";
+export { confirm, prompt, type ConfirmOptions, type PromptOptions } from "./dialogs";
+export { acquireOverlay, overlayDepth, useBackdropClose, type OverlayHandle } from "./overlay";
+export { isTabbable, tabbables, trapTab, TABBABLE_SELECTOR } from "./focus";
