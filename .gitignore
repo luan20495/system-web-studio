@@ -28,3 +28,7 @@ packages/*/dist/
 
 # frontend gate builds (scripts/gate-frontend.mjs)
 .next-gate/
+
+# portal dist directories named after the source fingerprint (scripts/_portals_lib.sh)
+.next-local-*/
+.next-public-*/

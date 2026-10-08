@@ -13,7 +13,7 @@ Internet ─HTTPS─► Cloudflare ─tunnel hbl-studio─► 127.0.0.1:3210  po
 ```
 One portal = one hostname (each serves `/_next/**` from the root of its origin). The browser never talks to the API host: every portal proxies `/api` on its own origin. Sessions are per origin
 (host-only cookies): signing in on one portal does not sign in on another (B-C0-WEB-01, C1 contract). Details, measured proxy chain and tests: `docs/parallel/DECISIONS.md` D-C0-39.
-`./scripts/public-portals.sh up|down|status` builds (`apps/*/.next-public`, never the local `.next`) and runs the three portals; `./scripts/public-launchd.sh install` (optional, not done for you) starts the stack at login.
+`./scripts/public-portals.sh up|down|restart|build|status [--force-rebuild]` fingerprints the source and builds / restarts ONLY what changed (`apps/*/.next-public-<fingerprint>`, never the local portals' directories), keeps a failed build from touching a healthy portal; see `docs/parallel/c0/PORTAL_LIFECYCLE.md`; `./scripts/public-launchd.sh install` (optional, not done for you) starts the stack at login.
 Tests through the Internet hostnames: `node scripts/global-portals-smoke.mjs`, `node scripts/global-portals-browser.mjs`, `node scripts/global-smoke.mjs`, `node tests/gateway/portal-route.mjs`.
 
 ## Legacy single-UI topology (kept for rollback)
