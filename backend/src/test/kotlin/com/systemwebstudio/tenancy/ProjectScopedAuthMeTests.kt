@@ -227,4 +227,20 @@ class ProjectScopedAuthMeTests : IntegrationTestBase() {
         assertThat(ownerScopes).hasSize(1); assertThat(perms(ownerScopes.single())).contains("APP_VIEW", "APP_EDIT", "APP_PUBLISH")
         assertThat(perms(scope(sessionFor(member.username), p.id))).doesNotContain("APP_PUBLISH")
     }
+
+    @Test
+    fun `K a project membership whose workspace membership is no longer active is omitted instead of failing the whole response`() {
+        val owner = fx.user("h04-owner-k"); val w = fx.workspace(); fx.member(w, owner, "EDITOR"); val gone = fx.project(w, owner, "Gone"); val live = fx.project(w, owner, "Live")
+        val user = fx.user("h04-ws-gone"); fx.member(w, user, "VIEWER"); fx.projectRole(gone, user, "EDITOR")
+        val w2 = fx.workspace(); fx.member(w2, owner, "EDITOR"); val other = fx.project(w2, owner, "Other"); fx.member(w2, user, "VIEWER"); fx.projectRole(other, user, "VIEWER")
+        val s = sessionFor(user.username)
+        assertThat(scopes(s).map { it.get("projectId").asString() }).containsExactlyInAnyOrder(gone.id.toString(), other.id.toString())
+        // the project row stays "active", but the person is out of its workspace: AccessService.forProject refuses (404), so /auth/me must not list it - and must still answer 200
+        jdbc.update("UPDATE workspace_members SET active = false WHERE workspace_id = ? AND user_id = ?", w, user.id)
+        val response = s.get("/api/v1/auth/me")
+        assertThat(response.response.status).isEqualTo(200)
+        assertThat(s.body(response).get("projectScopes").toList().map { it.get("projectId").asString() }).containsExactly(other.id.toString())
+        assertThat(s.get(api(w, gone.id)).response.status).describedAs("the project API agrees").isEqualTo(404)
+        assertThat(live.id).isNotEqualTo(gone.id)
+    }
 }
