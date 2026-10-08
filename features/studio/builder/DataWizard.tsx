@@ -5,6 +5,7 @@
  * Nothing is simulated: with no server for a step the step says "Chưa sẵn sàng" and why; no sample rows are ever produced here.
  */
 import { useMemo, useState } from "react";
+import { ArrowDown, ArrowUp, X } from "../../../packages/ui/src/icons";
 import type { FieldMappingDef, MappingDef, ParamDef, QueryDef, ViewModelDef, DataBindingDef } from "@xweb/types";
 import { CARDINALITIES, FIELD_TYPES, MAPPING_ERROR_POLICIES, PARAM_TYPES, QUERY_MODES, paramRequired } from "./core/contract";
 import {
@@ -150,9 +151,9 @@ export function DataWizard({ ctx, focus }: { ctx: DefCtx; focus?: { sectionId?: 
                         {transformsOf(f).map((t, k) => (
                           <li key={k} className="chip">{describeTransform(t)}{!isSimpleTransform(t) ? " (giữ nguyên)" : ""}
                             {!disabled ? <>
-                              <button type="button" className="chipBtn" aria-label={`Đưa ${describeTransform(t)} lên`} disabled={k === 0} onClick={() => setField(i, moveTransform(f, k, k - 1))}>↑</button>
-                              <button type="button" className="chipBtn" aria-label={`Đưa ${describeTransform(t)} xuống`} disabled={k === transformsOf(f).length - 1} onClick={() => setField(i, moveTransform(f, k, k + 1))}>↓</button>
-                              <button type="button" className="chipBtn" aria-label={`Bỏ ${describeTransform(t)}`} onClick={() => setField(i, removeTransform(f, k))}>×</button></> : null}
+                              <button type="button" className="chipBtn" aria-label={`Đưa ${describeTransform(t)} lên`} disabled={k === 0} onClick={() => setField(i, moveTransform(f, k, k - 1))}><ArrowUp size={12} aria-hidden="true"/></button>
+                              <button type="button" className="chipBtn" aria-label={`Đưa ${describeTransform(t)} xuống`} disabled={k === transformsOf(f).length - 1} onClick={() => setField(i, moveTransform(f, k, k + 1))}><ArrowDown size={12} aria-hidden="true"/></button>
+                              <button type="button" className="chipBtn" aria-label={`Bỏ ${describeTransform(t)}`} onClick={() => setField(i, removeTransform(f, k))}><X size={12} aria-hidden="true"/></button></> : null}
                           </li>))}
                       </ol>
                       {!disabled && transformsOf(f).length < MAX_TRANSFORMS ? (

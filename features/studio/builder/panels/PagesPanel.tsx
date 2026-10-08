@@ -188,8 +188,8 @@ function MenuEditor({ doc, pages, canEdit, busy, apply, genId }: { doc: AppDefin
               <input aria-label={`Nhãn liên kết ${i + 1}`} value={l.label} maxLength={40} disabled={disabled} onChange={(e) => setLinks(links.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}/>
               <small>{l.pageId !== undefined ? (broken ? "trang đã xoá" : `trang: ${pages.find((p) => p.id === l.pageId)?.title ?? l.pageId}`) : l.url ? "liên kết ngoài" : `phần ${l.anchor}`}</small>
               {!disabled ? <span className="bx-row-tools">
-                <button type="button" className="bx-mini" aria-label={`Đưa liên kết ${l.label} lên`} disabled={i === 0} onClick={() => setLinks(moveNavLink(links, i, i - 1))}>↑</button>
-                <button type="button" className="bx-mini" aria-label={`Đưa liên kết ${l.label} xuống`} disabled={i === links.length - 1} onClick={() => setLinks(moveNavLink(links, i, i + 1))}>↓</button>
+                <button type="button" className="bx-mini" aria-label={`Đưa liên kết ${l.label} lên`} disabled={i === 0} onClick={() => setLinks(moveNavLink(links, i, i - 1))}><ArrowUp size={14} aria-hidden="true"/></button>
+                <button type="button" className="bx-mini" aria-label={`Đưa liên kết ${l.label} xuống`} disabled={i === links.length - 1} onClick={() => setLinks(moveNavLink(links, i, i + 1))}><ArrowDown size={14} aria-hidden="true"/></button>
                 <button type="button" className="bx-mini danger" aria-label={`Xóa liên kết ${l.label}`} onClick={() => setLinks(links.filter((_, j) => j !== i))}><X size={14} aria-hidden="true"/></button></span> : null}
             </li>);
         })}

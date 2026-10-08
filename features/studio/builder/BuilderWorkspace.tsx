@@ -184,7 +184,7 @@ export function BuilderWorkspace(props: {
           <Canvas document={html} sections={sections} selectedId={selectedId} onSelect={select} onRects={setRects} rects={rects} interactive={interactive} dragging={!!drag && drag.kind !== "row"} slot={slot}
             device={props.device} labelOf={props.labelOf} frameRef={frameRef} title="Bản xem trước ứng dụng"/>
         </section>
-        <aside className="bx-right" aria-label="Thuộc tính">
+        <aside className="bx-right" aria-label="Thuộc tính" tabIndex={0}>
           {!edit ? <TestPanel doc={doc} rawPermissions={props.project.permissions} runtime={props.runtime} dirty={props.save.state !== "saved" || busy}/>
             : selected ? (
               <Inspector ctx={ctx} section={selected} component={registry.find((c) => c.id === selected.type)} meta={backend.metadata.get(selected.type)} index={sections.indexOf(selected)} canUp={canStep(sections, selected.id, -1)} canDown={canStep(sections, selected.id, 1)} count={sections.length}

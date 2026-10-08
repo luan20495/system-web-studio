@@ -1,6 +1,7 @@
 "use client";
 /** Workflow V1 editor: an ordered list of steps (ACTION / WAIT / APPROVAL / BRANCH / END). No BPMN canvas: cards with readable retry, timeout, condition, approval and compensation. */
 import { useState } from "react";
+import { ArrowDown, ArrowUp } from "../../../packages/ui/src/icons";
 import type { CompareOp, ConditionDef, StepKind, WorkflowDef, WorkflowStepDef } from "@xweb/types";
 import { COMPARE_OPS, PRINCIPAL_KINDS, STEP_KINDS, WORKFLOW_TRIGGERS } from "./core/contract";
 import { OP_LABEL, STEP_HELP, STEP_LABEL, addStep, checkWorkflow, describeCondition, formatSeconds, kindOf, moveStep, newWorkflow, orderedSteps, removeStep, stepChips, updateStep, workflowOps } from "./core/workflow";
@@ -52,8 +53,8 @@ export function WorkflowEditor({ ctx, initial, onDone, onCancel }: { ctx: DefCtx
                 <button type="button" className="bx-step-title" aria-expanded={expanded} aria-controls={panelId} onClick={() => setOpen(expanded ? null : s.id)}>
                   <b>{STEP_LABEL[k]}</b><small>{s.id}{reachable ? "" : " · không có đường tới"}</small></button>
                 {!disabled ? <span className="bx-step-tools">
-                  <button type="button" className="smallButton" aria-label={`Đưa bước ${s.id} lên`} disabled={wf.steps[0]?.id === s.id} onClick={() => setWf(moveStep(wf, s.id, -1))}>↑</button>
-                  <button type="button" className="smallButton" aria-label={`Đưa bước ${s.id} xuống`} disabled={wf.steps[wf.steps.length - 1]?.id === s.id} onClick={() => setWf(moveStep(wf, s.id, 1))}>↓</button>
+                  <button type="button" className="smallButton" aria-label={`Đưa bước ${s.id} lên`} disabled={wf.steps[0]?.id === s.id} onClick={() => setWf(moveStep(wf, s.id, -1))}><ArrowUp size={14} aria-hidden="true"/></button>
+                  <button type="button" className="smallButton" aria-label={`Đưa bước ${s.id} xuống`} disabled={wf.steps[wf.steps.length - 1]?.id === s.id} onClick={() => setWf(moveStep(wf, s.id, 1))}><ArrowDown size={14} aria-hidden="true"/></button>
                   <button type="button" className="smallButton danger" aria-label={`Xóa bước ${s.id}`} onClick={() => setWf(removeStep(wf, s.id))}>Xóa</button></span> : null}
               </div>
               {chips.length ? <ul className="bx-chips" aria-label={`Chi tiết bước ${s.id}`}>{chips.map((c, i) => <li key={i} className={`chip chip-${c.kind}`}>{c.text}</li>)}</ul> : <p className="hint">{STEP_HELP[k]}</p>}

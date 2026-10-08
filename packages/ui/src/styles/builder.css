@@ -121,3 +121,53 @@
 /* ROOT CAUSE of the cramped builder bar: `.workspace3 .topbar` (a 3-column grid, specificity 0,2,0) beat `.bx-top` (flex, 0,1,0), so the action group lived in a 1fr cell and its buttons overflowed to the LEFT over the device switch. The builder bar is a wrapping flex row. */
 .workspace3 .topbar.bx-top,.topbar.bx-top{display:flex;grid-template-columns:none}
 .bx-node.section b{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.25}
+
+/* ===== accessibility pass (C6 QA @ 5cc230e): target size (WCAG 2.5.8: ≥ 24 px, ≥ 32 px on small / touch screens), focus rings on the scrollable panels, contrast ===== */
+.bx-right:focus-visible,.bx-left-panel:focus-visible{outline:2px solid #93c5fd;outline-offset:-2px}
+.chipBtn{display:inline-flex;align-items:center;justify-content:center;min-width:24px;min-height:24px;border-radius:6px}.chipBtn:hover:not(:disabled){background:rgba(255,255,255,.12)}.chipBtn:focus-visible{outline:2px solid #93c5fd;outline-offset:1px}
+.smallButton{min-width:28px;min-height:28px;display:inline-flex;align-items:center;justify-content:center;gap:4px}
+.bx-mini{min-width:28px;height:28px}.bx-drag{min-width:28px}
+.bx-tabs button,.bx-btn,.bx-icon{min-height:28px}
+.segmented button{min-width:32px;min-height:32px}
+@media(max-width:768px),(pointer:coarse){
+  .chipBtn,.smallButton,.bx-mini,.bx-drag,.bx-icon,.button.icon,.bx-handle{min-width:32px;min-height:32px}
+  .segmented button,.bx-tabs button,.bx-btn.sm{min-height:36px}.segmented button{min-width:36px}
+  .xp-clear,.xp-iconBtn{min-width:32px;min-height:32px}
+}
+/* secondary text on the dark editor: the "disabled" library entries and hints keep ≥ 4.5:1 (token --muted on the panel) instead of a faded colour */
+.bx-panel-body .disabled,.bx-panel-body .disabled small,.bx-panel-body small,.bx-panel-body .hint{color:var(--muted);opacity:1}
+.bx-panel-body .disabled b{color:#c9d1dc;opacity:1}
+
+/* ===== builder layout pass (UX-002 / UX-003) =====
+   desktop: a wider left column and rail so "Thành phần" / "Hành động" fit on one line; tablet: the rail becomes a row of tabs ABOVE the panel (the panel keeps the whole column, it used to get ~170 px);
+   phone: the canvas comes first and keeps a usable height, the toolbar uses compact rows (groups scroll sideways inside their own row instead of stacking into 5 rows), every action stays reachable. */
+.bx-body{grid-template-columns:minmax(340px,380px) minmax(0,1fr) minmax(300px,340px)}
+.bx-left .bx-tabs-vertical{width:116px}.bx-tabs button{white-space:nowrap}
+@media(max-width:1100px){
+  .bx-body{grid-template-columns:minmax(300px,330px) minmax(0,1fr)}
+  .bx-left{flex-direction:column}
+  .bx-left .bx-tabs-vertical{width:auto;flex-direction:row;flex-wrap:wrap;border-right:0;border-bottom:1px solid var(--line);padding:6px}
+  .bx-left .bx-tabs-vertical button{text-align:center}
+}
+@media(max-width:760px){
+  .bx-body{grid-template-columns:minmax(0,1fr);overflow:auto}
+  .bx-center{order:-1;min-height:min(64dvh,560px)}
+  .bx-left,.bx-right{max-height:none}
+  .bx-top{gap:6px;padding:6px 10px;min-height:0}
+  .bx-top .brand{flex:1 1 100%}
+  .bx-top-center{flex:1 1 100%;flex-wrap:nowrap;justify-content:flex-start;overflow-x:auto;padding-bottom:2px}
+  .bx-top-center>*{flex:none}
+  .bx-top .topActions{flex:1 1 100%;flex-wrap:nowrap;justify-content:flex-start;overflow-x:auto;padding-bottom:2px}
+  .bx-top .topActions>*{flex:none}
+  .bx-top .topActions>.button.ghost,.bx-top .topActions>.button.icon{display:inline-flex}
+  .bx-top .projectName,.bx-top .projectMeta{max-width:60vw}
+}
+
+/* rail / inactive tab contrast: a stronger secondary-text token for the dark editor (≥ 9:1 on the panel) used by the rail, tabs and hints; hover / active / focus keep distinct, visible states */
+:root{--muted-strong:#c4cbd6}
+.bx-tabs button{color:var(--muted-strong)}
+.bx-tabs button:hover:not(.active){background:#1b2130;color:#fff}
+.bx-tabs button.active{background:#2d3270;color:#fff}
+.bx-tabs button:focus-visible{outline:2px solid #93c5fd;outline-offset:-2px}
+/* checkboxes / radios of the editor are real targets: 24 px (WCAG 2.5.8) */
+.bx-right input[type=checkbox],.bx-right input[type=radio],.bx-left-panel input[type=checkbox],.bx-left-panel input[type=radio],.drawer input[type=checkbox],.drawer input[type=radio]{width:24px;height:24px;min-height:24px;margin:0;accent-color:#6366f1;flex:none}

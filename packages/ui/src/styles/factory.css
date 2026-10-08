@@ -391,3 +391,6 @@
 
 /* an absolutely positioned child (e.g. a visually hidden "Thao tác" header label) must scroll / clip WITH its card, not escape it and widen the page */
 .card,.table th{position:relative}
+
+/* checkboxes / radios in the light shells and dialogs are real targets: 24 px (WCAG 2.5.8) */
+.shell input[type=checkbox],.shell input[type=radio],.adminModal input[type=checkbox],.adminModal input[type=radio]{width:24px;height:24px;min-height:24px}
