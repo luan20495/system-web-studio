@@ -23,7 +23,12 @@ export function useSaveMachine() {
   /** set by the host: how to reload the document after a REVISION_CONFLICT */
   const onConflict = useRef<() => Promise<unknown>>(async () => undefined);
 
+  /** M-020: ONE write / AI request at a time, decided from a ref (a `busy` state only disables the buttons after the next render, so a double click or Enter + click in the same tick sent two). */
+  const flight = useRef<string | null>(null);
+
   async function run<T>(label: string, fn: () => Promise<T>, fallback: string): Promise<T | undefined> {
+    if (flight.current !== null) return undefined;      // callers that must tell "skipped" from "failed" test `flight.current` first (applyOps does)
+    flight.current = label;
     // An AI request is not a save: while it waits for the model nothing is being written, so the top bar keeps saying what is true ("saved") and a failed/cancelled request is not "Lưu thất bại".
     const isSave = label !== "prompt";
     setBusy(label); if (isSave) setSave((x) => ({ ...x, state: "saving" }));
@@ -37,7 +42,7 @@ export function useSaveMachine() {
       if (f.notice) toast.error(f.notice);
       if (f.reload) await onConflict.current().catch(() => undefined);
       return undefined;
-    } finally { setBusy(null); }
+    } finally { flight.current = null; setBusy(null); }
   }
 
   // leaving while an edit is in flight or failed would lose it silently
@@ -47,5 +52,5 @@ export function useSaveMachine() {
     window.addEventListener("beforeunload", h); return () => window.removeEventListener("beforeunload", h);
   }, [busy, failedEdit]);
 
-  return { busy, save, setSave, failedEdit, setFailedEdit, saveFailureRef, onConflict, run };
+  return { busy, save, setSave, failedEdit, setFailedEdit, saveFailureRef, onConflict, run, flight };
 }

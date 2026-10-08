@@ -65,7 +65,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const [device, setDevice] = useState<DeviceMode>("desktop");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pane, setPane] = useState<"chat" | "preview">("chat"); const paneId = useId();
-  const { busy, save, setSave, failedEdit, setFailedEdit, saveFailureRef, onConflict, run } = useSaveMachine();
+  const { busy, save, setSave, failedEdit, setFailedEdit, saveFailureRef, onConflict, run, flight } = useSaveMachine();
   const ws = project?.workspaceId ?? "";
   // UX only (the server re-checks every call). The input is the permission list the server resolved for THIS project; no role name is read (permissions.ts / canonical.ts).
   const perms = useMemo(() => resolvePermissions(project?.permissions), [project?.permissions]);
@@ -100,6 +100,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   useEffect(() => { if (!ws) return; const t = setInterval(() => void loadAssets(ws), 8 * 60_000); return () => clearInterval(t); }, [ws, loadAssets]);
 
   async function applyOps(ops: (SchemaOperation | DefinitionOperation)[], summary: string, blockId?: string): Promise<boolean> {
+    if (flight.current !== null) return false;           // another write / AI request is in flight (M-020): this one is dropped, not sent twice and not reported as a failure
     const r = await run("edit", () => api.patchSchema(ws, projectId, revision, ops, summary, blockId), "Không lưu được thay đổi.");
     if (!r) { setFailedEdit(saveFailureRef.current === "retryable" ? { ops, summary, blockId } : null); return false; }
     setFailedEdit(null); setSchema(r.schema); setRevision(r.revision); void refreshVersions(); return true;

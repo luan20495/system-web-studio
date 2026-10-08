@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { api, ApiError } from "@/lib/http-api";
 import { sectionLabel } from "@/components/SectionInspector";
-import { LoadGate } from "@xweb/ui";
+import { LoadGate, useAction } from "@xweb/ui";
 import { useSession } from "../../session";
 import { useLoad } from "../../useLoad";
 import { Card, ErrorState, errText, num, StateView, usd } from "../../ui";
@@ -21,14 +21,16 @@ export function Home() {
   const comps = useLoad(() => api.components(), []);
   // Creating a project has NO canonical permission code (PROJECT_CREATE is a server-internal storage constant that /auth/me does not expose), so the UI cannot know in advance and
   // must not guess from a role name: the form is offered and the server decides (403 → a plain message). Handoff H-C1-05 asks for a resolved capability.
-  const [idea, setIdea] = useState(""); const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null);
+  const [idea, setIdea] = useState(""); const [err, setErr] = useState<string | null>(null); const [leaving, setLeaving] = useState(false);
+  // M-020: Ctrl+Enter, Enter + click and a double click all arrive before React re-renders `busy`; the action decides from a ref and sends ONE createProject
+  const create = useAction((_ctx, text: string) => api.createProject(workspaceId, text.length > 60 ? `${text.slice(0, 57)}…` : text));
+  const busy = create.busy || leaving;
   async function start(e: FormEvent) {
     e.preventDefault(); const text = idea.trim(); if (!text) return;
-    setBusy(true); setErr(null);
-    try {
-      const p = await api.createProject(workspaceId, text.length > 60 ? `${text.slice(0, 57)}…` : text);
-      router.push(S(`/projects/${p.id}/ai?prompt=${encodeURIComponent(text)}`));
-    } catch (x) { setErr(x instanceof ApiError && x.status === 403 ? "Bạn không có quyền tạo ứng dụng trong workspace này (máy chủ từ chối)." : errText(x, "Không tạo được ứng dụng.")); setBusy(false); }
+    setErr(null);
+    const r = await create.run(text);
+    if (r.status === "ok") { setLeaving(true); router.push(S(`/projects/${r.value.id}/ai?prompt=${encodeURIComponent(text)}`)); }
+    else if (r.status === "error") setErr(r.error instanceof ApiError && r.error.status === 403 ? "Bạn không có quyền tạo ứng dụng trong workspace này (máy chủ từ chối)." : errText(r.error, "Không tạo được ứng dụng."));
   }
   const u = usage.data;
   return (<>

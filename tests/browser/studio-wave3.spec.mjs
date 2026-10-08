@@ -188,4 +188,37 @@ for (const w of [768, 1000]) {
   check("M-041: the kind pill comes from appKind (the Dashboard project no longer says 'Website')", pills.some((t) => /Dashboard bán hàng/.test(t) && /Dashboard/.test(t.replace("Dashboard bán hàng", "")) && !/Website/.test(t)), pills.join(" || "));
   await p.close();
 }
+// ---------- M-020: one request per action - a double click / Ctrl+Enter / double Enter used to send two (a slow server widens the window) ----------
+{
+  const count = (p, method, re) => p.state.log.filter((l) => l.method === method && re.test(l.path)).length;
+  // Home: Ctrl+Enter twice (the textarea handler did not look at `busy`), then Enter + click
+  let s = newState(); s.delay = 700;
+  let p = await open(b, "/studio", { state: s }); await p.waitForSelector(".homeHero"); await wait(1200);
+  const idea = p.getByLabel("Mô tả ứng dụng muốn tạo"); await idea.fill("Website bán máy lọc nước");
+  await idea.press("Control+Enter"); await idea.press("Control+Enter"); await p.getByRole("button", { name: /Tạo bằng AI|Đang tạo/ }).click({ force: true, timeout: 2000 }).catch(() => undefined); await wait(1500);
+  check("M-020: Home - Ctrl+Enter twice (+ a click) creates ONE project", count(p, "POST", /^\/workspaces\/w1\/projects$/) === 1, String(count(p, "POST", /^\/workspaces\/w1\/projects$/)));
+  await p.close();
+  // Builder page dialog: double Enter on "Thêm trang"
+  s = newState(); p = await open(b, "/studio/projects/p1/design", { state: s }); await p.waitForSelector("iframe"); await wait(900); s.delay = 700;
+  await p.locator(".bx-panel-head").getByRole("button", { name: /Trang/ }).click(); await wait(200);
+  const nameBox = p.getByRole("dialog").getByLabel("Tên trang"); await nameBox.fill("Liên hệ"); await nameBox.press("Enter"); await nameBox.press("Enter"); await wait(1800);
+  check("M-020: Builder 'Thêm trang' - a double Enter sends ONE ADD_PAGE", count(p, "PATCH", /schema$/) === 1, String(count(p, "PATCH", /schema$/)));
+  await p.close();
+  // Site drawer: double click on 'Lưu trang' / double Enter on 'Thêm trang'
+  s = newState(); p = await open(b, "/studio/projects/p1/site", { state: s }); await p.waitForSelector("[role=dialog]"); await wait(900); s.delay = 700;
+  const dlg = p.getByRole("dialog");
+  await dlg.getByRole("button", { name: "Lưu trang" }).dblclick(); await wait(1800);
+  check("M-020: Site drawer 'Lưu trang' - a double click sends ONE PATCH", count(p, "PATCH", /schema$/) === 1, String(count(p, "PATCH", /schema$/)));
+  const before = count(p, "PATCH", /schema$/);
+  const np = dlg.getByLabel("Tên trang mới"); await np.fill("Giới thiệu"); await np.press("Enter"); await np.press("Enter"); await wait(1800);
+  check("M-020: Site drawer 'Thêm trang' - a double Enter sends ONE ADD_PAGE", count(p, "PATCH", /schema$/) - before === 1, String(count(p, "PATCH", /schema$/) - before));
+  await p.close();
+  // Templates: 'Rút lại' double click
+  s = newState(); const now = new Date().toISOString();
+  s.templates = [{ id: "t1", name: "Mẫu của tôi A", description: "", category: "general", tags: [], sections: 3, version: 1, author: "Luân", usageCount: 0, updatedAt: now, canEdit: true, reviewStatus: "REVIEW", previewStatus: "NONE", schema: s.schema }];
+  p = await open(b, "/studio/templates", { state: s }); await p.getByRole("tab", { name: "Mẫu của tôi" }).click(); await p.getByRole("button", { name: "Rút lại" }).waitFor(); s.delay = 700;
+  await p.getByRole("button", { name: "Rút lại" }).dblclick(); await wait(1800);
+  check("M-020: Templates 'Rút lại' - a double click sends ONE withdraw", count(p, "POST", /templates\/t1\/withdraw$/) === 1, String(count(p, "POST", /templates\/t1\/withdraw$/)));
+  await p.close();
+}
 await b.close(); finish();
