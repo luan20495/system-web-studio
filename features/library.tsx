@@ -1,6 +1,7 @@
 "use client";
 // Shared pieces for templates and contributed blocks (Studio and Admin Console).
 import { useMemo, useState } from "react";
+import { CircleCheck, CircleX } from "../packages/ui/src/icons";
 import type { BlockDto, BlockReview, CheckResult, PageSchema, RegistryComponent } from "@/lib/http-types";
 import { renderSchemaDocument } from "@/lib/schema-preview";
 import { fmtDate, Pill } from "./ui";
@@ -34,7 +35,7 @@ const CHECK_LABEL: Record<string, string> = {
 };
 export function CheckList({ checks }: { checks: CheckResult[] }) {
   return <ul className="checkList" aria-label="Kết quả kiểm tra tự động">{checks.map((c) =>
-    <li key={c.check} className={c.ok ? "ok" : "bad"}><span aria-hidden="true">{c.ok ? "✓" : "✕"}</span><b>{CHECK_LABEL[c.check] ?? c.check}</b><small>{c.message}</small></li>)}</ul>;
+    <li key={c.check} className={c.ok ? "ok" : "bad"}><span aria-hidden="true" className="xp-checkIcon">{c.ok ? <CircleCheck size={16}/> : <CircleX size={16}/>}</span><b>{CHECK_LABEL[c.check] ?? c.check}</b><small>{c.message}</small></li>)}</ul>;
 }
 
 const DECISION_LABEL: Record<string, string> = {

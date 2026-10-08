@@ -71,11 +71,18 @@ export function checkTenantForm(f: { slug: string; name: string }): { slug?: str
 export function slugify(name: string): string {
   return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/gi, "d").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 120).replace(/-+$/g, "");
 }
-/** up to two letters for an avatar: first letter of the first and the last word of the display name (or of the username) */
+/**
+ * Up to two letters for an avatar: the first letter of the first and of the last WORD of the name that has a letter.
+ * Bracketed parts ("(Demo)", "[QA]", "{x}") and tokens without a letter ("#3", "—", emoji) are ignored; Vietnamese marks are folded ("Đức" → "D") and any Unicode letter works (Cyrillic, CJK…).
+ * No letter in the display name → the same rule on the username → "?". Never throws.
+ */
 export function initials(p: { username: string; displayName: string | null }): string {
-  const words = (p.displayName && p.displayName.trim() ? p.displayName : p.username).trim().split(/[\s._-]+/).filter(Boolean);
-  const pick = (w: string) => (w.normalize("NFD").replace(/[\u0300-\u036f]/g, "")[0] ?? "").toUpperCase();
-  return words.length > 1 ? pick(words[0]) + pick(words[words.length - 1]) : pick(words[0] ?? "?");
+  const clean = (t: string) => t.replace(/[(\[{][^)\]}]*[)\]}]?/gu, " ").normalize("NFD").replace(/\p{M}/gu, "").replace(/đ/giu, "d");
+  const wordsOf = (t: string | null | undefined) => clean(t ?? "").split(/[\s._\-/]+/u).filter((w) => /\p{L}/u.test(w));
+  const first = (w: string) => (Array.from(w).find((c) => /\p{L}/u.test(c)) ?? "").toLocaleUpperCase();
+  const own = wordsOf(p.displayName); const words = own.length ? own : wordsOf(p.username);
+  if (!words.length) return "?";
+  return words.length > 1 ? first(words[0]) + first(words[words.length - 1]) : first(words[0]);
 }
 export const TENANT_ROLES = [{ id: "TENANT_ADMIN", label: "Quản trị công ty" }, { id: "MEMBER", label: "Thành viên" }] as const;
 export const tenantRoleLabel = (r: string) => TENANT_ROLES.find((x) => x.id === r)?.label ?? r;

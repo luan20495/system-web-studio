@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Settings, Sparkles } from "@xweb/ui";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api, ApiError, newIdempotencyKey } from "@/lib/http-api";
 import { renderSchemaDocument } from "@/lib/schema-preview";
@@ -256,7 +257,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const renderPreview = (o: { selectedId: string | null; interactive: boolean; pageId: string }) => renderSchemaDocument(schema, { selectedId: o.selectedId, interactive: o.interactive, nonce: nonceOfPage(), assets: assetUrls, pageId: o.pageId });
   const modeTabs = (
     <nav className="modeTabs" aria-label="Chế độ">
-      {MODES.map((m) => <button key={m} className={mode === m ? "active" : ""} aria-pressed={mode === m} onClick={() => go(m)}>{m === "ai" ? "✦ AI" : m === "design" ? "Design" : "Code"}</button>)}
+      {MODES.map((m) => <button key={m} className={mode === m ? "active" : ""} aria-pressed={mode === m} onClick={() => go(m)}>{m === "ai" ? <><Sparkles size={14} aria-hidden="true"/> AI</> : m === "design" ? "Design" : "Code"}</button>)}
     </nav>
   );
 
@@ -274,7 +275,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
           <button className="button ghost" onClick={() => go("site")}>Website</button>
           <button className="button ghost" onClick={() => go("versions")}>Phiên bản</button>
           <button className="button ghost" onClick={() => go("assets")}>Tệp</button>
-          <button className="button icon" aria-label="Cài đặt project" title={mayEdit ? "Cài đặt project" : "Bạn không có quyền đổi cài đặt"} disabled={!mayEdit} onClick={() => go("settings")}>⚙</button></>}
+          <button className="button icon" aria-label="Cài đặt project" title={mayEdit ? "Cài đặt project" : "Bạn không có quyền đổi cài đặt"} disabled={!mayEdit} onClick={() => go("settings")}><Settings size={16} aria-hidden="true"/></button></>}
         goAi={() => go("ai")} openSite={() => go("site")} openMembers={() => go("members")} openPublish={() => go("publish")} saveBlock={() => setSavingBlock(true)}/> : (
       <header className="topbar">
         <div className="brand">
@@ -284,7 +285,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
             <div className="projectMeta">{latest ? `Phiên bản ${latest}` : "Chưa có phiên bản"} · revision {revision} · {project.siteVisibility === "PUBLIC" ? "Công khai" : "Riêng tư"}{readOnly ? " · chỉ xem" : ""}</div>
           </div>
           <span className={`saveState ${save.state}`} role="status" aria-live="polite">
-            {save.state === "saving" ? "Đang lưu…" : save.state === "error" ? "Lưu thất bại" : `✓ Đã lưu${save.at ? ` ${save.at.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}` : ""}`}
+            {save.state === "saving" ? "Đang lưu…" : save.state === "error" ? "Lưu thất bại" : `Đã lưu${save.at ? ` ${save.at.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}` : ""}`}
           </span>
         </div>
         {modeTabs}
@@ -293,7 +294,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
           <button className="button ghost" onClick={() => go("versions")}>Phiên bản</button>
           <button className="button ghost" onClick={() => go("assets")}>Tệp</button>
           {mayShare ? <button className="button ghost" onClick={() => go("members")}>Chia sẻ</button> : null}
-          <button className="button icon" aria-label="Cài đặt project" title={mayEdit ? "Cài đặt project" : "Bạn không có quyền đổi cài đặt"} disabled={!mayEdit} onClick={() => go("settings")}>⚙</button>
+          <button className="button icon" aria-label="Cài đặt project" title={mayEdit ? "Cài đặt project" : "Bạn không có quyền đổi cài đặt"} disabled={!mayEdit} onClick={() => go("settings")}><Settings size={16} aria-hidden="true"/></button>
           <button className="button primary" disabled={!mayPublish || busy !== null} title={mayPublish ? "Xuất bản phiên bản hiện tại" : "Bạn không có quyền xuất bản"} onClick={() => go("publish")}>Xuất bản</button>
         </div>
       </header>)}
@@ -318,7 +319,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
                 {messages.length === 0 ? (
                   <div className="intro"><h1>Bạn muốn ứng dụng thay đổi thế nào?</h1><p>Mô tả bằng lời; thay đổi được kiểm tra theo registry rồi lưu thành phiên bản có thể khôi phục.</p>
                     {!readOnly ? <div className="starterList" aria-label="Gợi ý để bắt đầu">{suggestions(ai?.configured === true).map((t) => (
-                      <button type="button" key={t} className="starter" disabled={busy !== null} onClick={() => { setPrompt(t); promptRef.current?.focus(); }}><span aria-hidden="true">✦</span>{t}</button>))}</div> : null}</div>
+                      <button type="button" key={t} className="starter" disabled={busy !== null} onClick={() => { setPrompt(t); promptRef.current?.focus(); }}><Sparkles size={14} aria-hidden="true"/>{t}</button>))}</div> : null}</div>
                 ) : null}
                 {messages.map((m) => (
                   <div className={`message ${m.role}`} key={m.id}><div className="bubble"><div>{m.content}</div>

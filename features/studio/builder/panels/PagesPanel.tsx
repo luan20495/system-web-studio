@@ -5,6 +5,7 @@
  * they are shown as "Chưa sẵn sàng" with the reason (the menu order, which does have an operation, is editable).
  */
 import { useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { X } from "../../../../packages/ui/src/icons";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { AppDefinitionV2, ActionDef, NavLink, Section } from "@xweb/types";
@@ -188,7 +189,7 @@ function MenuEditor({ doc, pages, canEdit, busy, apply, genId }: { doc: AppDefin
               {!disabled ? <span className="bx-row-tools">
                 <button type="button" className="bx-mini" aria-label={`Đưa liên kết ${l.label} lên`} disabled={i === 0} onClick={() => setLinks(moveNavLink(links, i, i - 1))}>↑</button>
                 <button type="button" className="bx-mini" aria-label={`Đưa liên kết ${l.label} xuống`} disabled={i === links.length - 1} onClick={() => setLinks(moveNavLink(links, i, i + 1))}>↓</button>
-                <button type="button" className="bx-mini danger" aria-label={`Xóa liên kết ${l.label}`} onClick={() => setLinks(links.filter((_, j) => j !== i))}>✕</button></span> : null}
+                <button type="button" className="bx-mini danger" aria-label={`Xóa liên kết ${l.label}`} onClick={() => setLinks(links.filter((_, j) => j !== i))}><X size={14} aria-hidden="true"/></button></span> : null}
             </li>);
         })}
       </ol>

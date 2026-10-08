@@ -9,7 +9,7 @@ import { sectionLabel } from "@/components/SectionInspector";
 import { useSession } from "../session";
 import { rememberPortal } from "../routing";
 import { canAccessPortal } from "@xweb/permissions";
-import { PortalSwitcher } from "@xweb/ui";
+import { AppWindow, Boxes, Diamond, History, House, LayoutTemplate, Plus, PortalSwitcher } from "@xweb/ui";
 import { useLoad } from "../useLoad";
 import { actionLabel, ago, Card, ErrorState, errText, NavLink, num, Pager, Pill, StateView, usd } from "../ui";
 import { ProjectWorkspace } from "./ProjectWorkspace";
@@ -54,11 +54,11 @@ function route(seg: string[]): ReactNode {
 }
 
 function StudioSidebar({ active }: { active: string }) {
-  const nav: [string, string, string][] = [["", "Trang chủ", "⌂"], ["projects", "Ứng dụng", "▤"], ["templates", "Templates", "▧"], ["components", "Components", "◇"], ["activity", "Hoạt động", "≡"]];
+  const nav: [string, string, ReactNode][] = [["", "Trang chủ", <House size={18}/>], ["projects", "Ứng dụng", <AppWindow size={18}/>], ["templates", "Templates", <LayoutTemplate size={18}/>], ["components", "Components", <Boxes size={18}/>], ["activity", "Hoạt động", <History size={18}/>]];
   return (
-    <aside className="sidebar" aria-label="Điều hướng Studio">
-      <div className="sideBrand"><span className="logoMark" aria-hidden="true">◆</span><div><b>Company Builder Studio</b><small>AI Software Factory</small></div></div>
-      <Link className="btn primary block" href={S("/new")}>+ Tạo ứng dụng</Link>
+    <aside className="sidebar dark" aria-label="Điều hướng Studio">
+      <div className="sideBrand"><span className="logoMark" aria-hidden="true"><Diamond size={16} fill="currentColor"/></span><div><b>Company Builder Studio</b><small>AI Software Factory</small></div></div>
+      <Link className="btn primary block xp-btnIcon" href={S("/new")}><Plus size={16} aria-hidden="true"/> Tạo ứng dụng</Link>
       <nav>{nav.map(([k, l, i]) => <NavLink key={k} href={S(k ? `/${k}` : "")} active={active === k} icon={i}>{l}</NavLink>)}</nav>
     </aside>
   );

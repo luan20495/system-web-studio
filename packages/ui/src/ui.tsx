@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ApiError } from "@xweb/api-client";
+import { Ban, Inbox, SearchX, TriangleAlert } from "./icons";
 
 export const fmtDate = (iso?: string | null) => (iso ? new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso)) : "—");
 export function ago(iso?: string | null): string {
@@ -34,7 +35,7 @@ export function StateView({ kind, title, detail, action }: { kind: StateKind; ti
   const [t, d] = STATE_TEXT[kind];
   return (
     <div className={`stateView state-${kind}`} role={kind === "loading" ? "status" : kind === "empty" ? undefined : "alert"}>
-      {kind === "loading" ? <div className="spinner" aria-hidden="true"/> : <div className="stateIcon" aria-hidden="true">{kind === "empty" ? "○" : kind === "forbidden" ? "⛔" : kind === "notfound" ? "?" : "!"}</div>}
+      {kind === "loading" ? <div className="spinner" aria-hidden="true"/> : <div className="stateIcon" aria-hidden="true">{kind === "empty" ? <Inbox size={20}/> : kind === "forbidden" ? <Ban size={20}/> : kind === "notfound" ? <SearchX size={20}/> : <TriangleAlert size={20}/>}</div>}
       <h2>{title ?? t}</h2>{detail ?? (d ? <p>{d}</p> : null)}{action}
     </div>
   );

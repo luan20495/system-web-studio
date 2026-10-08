@@ -322,3 +322,10 @@
   .xp-empFilters{grid-template-columns:1fr}.xp-orgBar{align-items:stretch}.xp-tenantSwitch{max-width:none}
 }
 .modalBody .field input:focus-visible,.modalBody .field select:focus-visible,.modalBody .field textarea:focus-visible,.xp-moveRow input:focus-visible{border-color:var(--f-accent);outline:2px solid #c7d2fe;outline-offset:0}
+
+/* icons that replaced text glyphs (✓ ✕ ○ …): one stroke style, aligned with the text */
+.xp-checkIcon{display:inline-flex;align-items:center;vertical-align:middle;flex:none}
+.xp-spin{animation:xp-rot 1s linear infinite}@keyframes xp-rot{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.xp-spin{animation:none}}
+
+/* sidebar footer / long names: one line with an ellipsis, never a 3-line wall of text */
+.sideFoot>div{min-width:0}.sideFoot b,.sideFoot small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

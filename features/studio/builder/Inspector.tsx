@@ -1,6 +1,7 @@
 "use client";
 /** Right column: Content, Design, Data, Action, Permission, Advanced. No raw JSON for normal users; Advanced is read-only identifiers and never shows a secret. */
 import { useMemo, useState } from "react";
+import { CircleCheck, CircleX, X } from "../../../packages/ui/src/icons";
 import type { AssetDto, ComponentMetadataV2, EventType, PermissionCode, RegistryComponent, SchemaOperation, Section } from "@xweb/types";
 import { PERMISSION_CODES, PERMISSION_RESOURCE_TYPES } from "./core/contract";
 import { actionsOfSection, describeAction, eventsFor, EVENT_LABEL, roleOf } from "./core/actions";
@@ -34,7 +35,7 @@ export function Inspector({ ctx, section, component, meta, index, count, canUp, 
     <section className="bx-inspector" aria-label={`Thuộc tính của ${label}`}>
       <div className="bx-insp-head">
         <div><h2>{label}</h2><small>{section.id}</small></div>
-        <button type="button" className="bx-icon" aria-label="Đóng bảng thuộc tính" title="Đóng bảng thuộc tính" onClick={onClose}>✕</button>
+        <button type="button" className="bx-icon" aria-label="Đóng bảng thuộc tính" title="Đóng bảng thuộc tính" onClick={onClose}><X size={16} aria-hidden="true"/></button>
       </div>
       <Tabs label="Nhóm thuộc tính" idPrefix={prefix} items={items} value={tab} onChange={(t) => setTab(t as InspectorTabId)}/>
       <div {...tabPanelProps(prefix, tab)} className="bx-tabpanel">
@@ -148,7 +149,7 @@ function PermissionTab({ ctx, section, rawPermissions }: { ctx: DefCtx; section:
       <h3 className="bx-h3">Quyền của bạn trên ứng dụng này</h3>
       <ul className="bx-caps" aria-label="Quyền của bạn">
         {([["canView", "Xem"], ["canEdit", "Chỉnh sửa"], ["canPublish", "Xuất bản"], ["canShare", "Chia sẻ"]] as const).map(([k, l]) => (
-          <li key={k} className={cap[k] ? "yes" : "no"}><span aria-hidden="true">{cap[k] ? "✓" : "✕"}</span> {l}{cap[k] ? "" : <small> · {whyNot(k)}</small>}</li>))}
+          <li key={k} className={cap[k] ? "yes" : "no"}><span aria-hidden="true" className="xp-checkIcon">{cap[k] ? <CircleCheck size={14}/> : <CircleX size={14}/>}</span> {l}{cap[k] ? "" : <small> · {whyNot(k)}</small>}</li>))}
       </ul>
       <h3 className="bx-h3">Quyền cần có để dùng thành phần này</h3>
       {refs.length === 0 ? <p className="hint">Thành phần chưa gắn dữ liệu hay hành động, nên chưa có quyền riêng nào để khai báo.</p> : (

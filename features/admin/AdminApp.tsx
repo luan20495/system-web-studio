@@ -12,7 +12,7 @@ import { AiAdmin, UserAiCard } from "./AiSetup";
 import type { ActivationLink } from "@/lib/http-types";
 import { useSession } from "../session";
 import { PORTAL_LABEL, portalHref, rememberPortal, type PortalId } from "@xweb/permissions";
-import { PortalSwitcher } from "@xweb/ui";
+import { AppWindow, Boxes, Building2, Circle, CircleCheck, CircleDollarSign, Database, Diamond, Fingerprint, FolderTree, HardDrive, Hammer, HeartPulse, KeyRound, Layers, LayoutDashboard, LayoutTemplate, Network, Package, PortalSwitcher, Plug, ScrollText, Scale, Settings, Share2, ShieldCheck, Sparkles, TriangleAlert, UserRound, Users } from "@xweb/ui";
 import { PageHead } from "./PageHead";
 import { CompanyPage, DataSourcesAdminPage, MyWorkspacesPage, ScopedHome, TenantDetailPage, TenantsPage, WorkspaceMembers } from "./TenantScreens";
 import { adminScope, sectionAccess, type AdminScope } from "./adminModel";
@@ -21,27 +21,27 @@ import { useLoad } from "../useLoad";
 import { BlockStatus, blockPage, CheckList, ReviewTimeline, SchemaThumb } from "../library";
 import { actionLabel, ago, Card, ComingSoon, ErrorState, errText, fmtDate, Kpi, NavLink, num, Pager, Pill, StateView, tok, usd } from "../ui";
 
-const NAV: [string, string, string][] = [
-  ["", "Tổng quan", "▦"], ["users", "Người dùng & Workspace", "◎"], ["applications", "Ứng dụng", "▤"], ["ai", "AI", "✦"], ["ai-governance", "Quyền & ngân sách AI", "⚖"], ["alerts", "Cảnh báo", "!"], ["security", "Bảo mật", "⛨"], ["costs", "Chi phí", "$"], ["departments", "Phòng ban", "⌘"], ["identity", "Định danh (SSO/SCIM)", "⚿"], ["connectors", "Connector", "⇄"], ["backups", "Sao lưu", "⛁"],
-  ["components", "Components", "◇"], ["templates", "Templates", "▧"], ["audit", "Nhật ký kiểm toán", "≡"], ["builds", "Build & lưu trữ", "⬢"], ["packages", "Packages", "▣"], ["system", "Sức khỏe hệ thống", "♥"], ["settings", "Cài đặt", "⚙"]
+const NAV: [string, string, ReactNode][] = [
+  ["", "Tổng quan", <LayoutDashboard size={18}/>], ["users", "Người dùng & Workspace", <Users size={18}/>], ["applications", "Ứng dụng", <AppWindow size={18}/>], ["ai", "AI", <Sparkles size={18}/>], ["ai-governance", "Quyền & ngân sách AI", <Scale size={18}/>], ["alerts", "Cảnh báo", <TriangleAlert size={18}/>], ["security", "Bảo mật", <ShieldCheck size={18}/>], ["costs", "Chi phí", <CircleDollarSign size={18}/>], ["departments", "Phòng ban", <Network size={18}/>], ["identity", "Định danh (SSO/SCIM)", <Fingerprint size={18}/>], ["connectors", "Connector", <Plug size={18}/>], ["backups", "Sao lưu", <HardDrive size={18}/>],
+  ["components", "Components", <Boxes size={18}/>], ["templates", "Templates", <LayoutTemplate size={18}/>], ["audit", "Nhật ký kiểm toán", <ScrollText size={18}/>], ["builds", "Build & lưu trữ", <Hammer size={18}/>], ["packages", "Packages", <Package size={18}/>], ["system", "Sức khỏe hệ thống", <HeartPulse size={18}/>], ["settings", "Cài đặt", <Settings size={18}/>]
 ];
 
 /** Sections whose backend does not exist yet: the screen says so plainly instead of showing invented data. */
-const COMING: Record<string, { title: string; icon: string; why: string; needs: string }> = {
-  groups: { title: "Nhóm", icon: "☰", why: "Nhóm người dùng để cấp quyền và chia sẻ ứng dụng hàng loạt.", needs: "Máy chủ chưa có API nhóm (chỉ có nhóm SCIM đồng bộ từ IdP, chưa quản lý được). Chờ C1 (T3)." },
-  sharing: { title: "Chia sẻ", icon: "⇆", why: "Chia sẻ ứng dụng cho người dùng, nhóm, phòng ban, cả công ty hoặc công ty khác.", needs: "Máy chủ chưa có API chia sẻ giữa người dùng, nhóm và công ty (chia sẻ trong từng ứng dụng đã có ở Studio → Chia sẻ). Chờ C1/C2 (T15)." },
-  byok: { title: "AI riêng của công ty", icon: "✧", why: "Dùng AI mặc định của Xweb hoặc tự đưa khóa AI của công ty (BYOK).", needs: "API đã có nhưng đang tắt trên máy chủ (cờ app.tenant-ai.enabled, bảng tenant_ai_providers chờ C0 cấp migration). Khóa chỉ ghi, không đọc lại." },
+const COMING: Record<string, { title: string; icon: ReactNode; why: string; needs: string }> = {
+  groups: { title: "Nhóm", icon: <Users size={18}/>, why: "Nhóm người dùng để cấp quyền và chia sẻ ứng dụng hàng loạt.", needs: "Máy chủ chưa có API nhóm (chỉ có nhóm SCIM đồng bộ từ IdP, chưa quản lý được). Chờ C1 (T3)." },
+  sharing: { title: "Chia sẻ", icon: <Share2 size={18}/>, why: "Chia sẻ ứng dụng cho người dùng, nhóm, phòng ban, cả công ty hoặc công ty khác.", needs: "Máy chủ chưa có API chia sẻ giữa người dùng, nhóm và công ty (chia sẻ trong từng ứng dụng đã có ở Studio → Chia sẻ). Chờ C1/C2 (T15)." },
+  byok: { title: "AI riêng của công ty", icon: <KeyRound size={18}/>, why: "Dùng AI mặc định của Xweb hoặc tự đưa khóa AI của công ty (BYOK).", needs: "API đã có nhưng đang tắt trên máy chủ (cờ app.tenant-ai.enabled, bảng tenant_ai_providers chờ C0 cấp migration). Khóa chỉ ghi, không đọc lại." },
 };
 const NAV_COMING: Record<AdminPortal, string[]> = { all: [], platform: [], admin: ["groups", "sharing", "byok"] };
 /** screens that run on the tenant / workspace APIs (TenantScreens.tsx) */
-const SCOPED_NAV: Record<string, [string, string, string]> = {
-  tenants: ["tenants", "Công ty (tenant)", "▥"], people: ["people", "Người dùng", "◎"], company: ["company", "Công ty của tôi", "▥"], organization: ["organization", "Cơ cấu tổ chức", "◈"], employees: ["employees", "Nhân viên", "◎"], "my-workspaces": ["my-workspaces", "Workspace của tôi", "◎"], "data-sources": ["data-sources", "Nguồn dữ liệu", "⛁"],
+const SCOPED_NAV: Record<string, [string, string, ReactNode]> = {
+  tenants: ["tenants", "Công ty (tenant)", <Building2 size={18}/>], people: ["people", "Người dùng", <UserRound size={18}/>], company: ["company", "Công ty của tôi", <Building2 size={18}/>], organization: ["organization", "Cơ cấu tổ chức", <FolderTree size={18}/>], employees: ["employees", "Nhân viên", <Users size={18}/>], "my-workspaces": ["my-workspaces", "Workspace của tôi", <Layers size={18}/>], "data-sources": ["data-sources", "Nguồn dữ liệu", <Database size={18}/>],
 };
 
 /** What each console lists for THIS person. The server still decides every call; a section the person cannot use is simply not offered. */
-function navFor(p: AdminPortal, scope: AdminScope): [string, string, string][] {
+function navFor(p: AdminPortal, scope: AdminScope): [string, string, ReactNode][] {
   if (p === "platform") return [NAV[0], SCOPED_NAV.tenants, ...NAV.filter(([k]) => k !== "" && owns(k, p))];
-  const soon = NAV_COMING[p].map((k): [string, string, string] => [k, COMING[k].title, COMING[k].icon]);
+  const soon = NAV_COMING[p].map((k): [string, string, ReactNode] => [k, COMING[k].title, COMING[k].icon]);
   if (p === "all") return NAV;
   if (scope.platform) return [...NAV.filter(([k]) => owns(k, p)), ...(scope.dataWorkspaces.length ? [SCOPED_NAV["data-sources"]] : []), ...soon];
   // not a SYSTEM_ADMIN: only what the server lists for them
@@ -132,7 +132,7 @@ function AdminSidebar({ active, scope }: { active: string; scope: AdminScope }) 
   const { me } = useSession();
   return (
     <aside className="sidebar dark" aria-label="Điều hướng quản trị">
-      <div className="sideBrand"><span className="logoMark" aria-hidden="true">◆</span><div><b>AI Software Factory</b><small>{CONSOLE_NAME[adminPortal()]}</small></div></div>
+      <div className="sideBrand"><span className="logoMark" aria-hidden="true"><Diamond size={16} fill="currentColor"/></span><div><b>AI Software Factory</b><small>{CONSOLE_NAME[adminPortal()]}</small></div></div>
       <nav>{navFor(adminPortal(), scope).map(([key, label, icon]) => <NavLink key={key} href={A(key ? `/${key}` : "")} active={active === key} icon={icon}>{label}</NavLink>)}</nav>
       <div className="sideFoot"><div className="avatar" aria-hidden="true">{(me?.displayName ?? "?").slice(0, 2).toUpperCase()}</div><div><b>{me?.displayName}</b><small>{adminPortal() === "platform" ? "Quản trị nền tảng" : scope.platform ? "Quản trị hệ thống" : scope.tenants.length ? "Quản trị công ty" : "Quản trị workspace"}</small></div></div>
     </aside>
@@ -215,7 +215,7 @@ function SetupChecklist({ users, projects }: { users: number; projects: number }
     <Card title="Thiết lập ban đầu">
       <p className="hint">Hoàn thành các bước sau để công ty bắt đầu dùng được AI Software Factory.</p>
       <ol className="checklist">{items.map((i) => (
-        <li key={i.label} className={i.done ? "done" : ""}><span aria-hidden="true">{i.done ? "✓" : "○"}</span> <b>{i.label}</b>{" "}
+        <li key={i.label} className={i.done ? "done" : ""}><span aria-hidden="true" className="xp-checkIcon">{i.done ? <CircleCheck size={16}/> : <Circle size={16}/>}</span> <b>{i.label}</b>{" "}
           {i.done ? <small className="muted">Đã xong</small> : <Link className="btn sm" href={i.href}>{i.action}</Link>}</li>))}</ol>
     </Card>
   );

@@ -40,6 +40,8 @@ export function EmployeesView({ api, plan, tenant, onTenant, prov, canToggleStat
   const query: EmployeeQuery = useMemo(() => ({ q: q || undefined, orgUnitId: unit || null, includeSubtree: true, status, page, size: EMPLOYEE_PAGE_SIZE }), [q, unit, status, page]);
   const list = useLoad(async (): Promise<EmployeePage | null> => (access ? api.listEmployees(tenant.id, query) : null), [tenant.id, access, query.q, query.orgUnitId, query.status, query.page]);
   const data = list.data; const unitList = units.data ?? [];
+  // while the organization-aware list is not available the member list has no unit / position: those columns are left out instead of showing empty cells that look like errors
+  const showOrg = data?.source !== "members";
   const problem = list.error ? orgProblem(list.error) : null;
   const options = useMemo(() => unitOptions(unitList), [unitList]);
   if (!access) return <StateView kind="forbidden" title="Bạn chưa quản trị công ty nào" detail={<p data-testid="emp-forbidden">{(plan.access as { reason: string }).reason}</p>}/>;
@@ -75,12 +77,12 @@ export function EmployeesView({ api, plan, tenant, onTenant, prov, canToggleStat
           : (
             <>
               <table className="table xp-empTable" data-testid="emp-table">
-                <thead><tr><th>Nhân viên</th><th>Đơn vị</th><th>Vị trí</th><th>Vai trò công ty</th><th>Trạng thái</th></tr></thead>
+                <thead><tr><th>Nhân viên</th>{showOrg ? <><th>Đơn vị</th><th>Vị trí</th></> : null}<th>Vai trò công ty</th><th>Trạng thái</th></tr></thead>
                 <tbody>{data.items.map((e) => (
                   <tr key={e.userId} className="clickRow" data-testid={`emp:${e.userId}`} tabIndex={0} onClick={() => setDetail(e)} onKeyDown={(k) => { if (k.key === "Enter") setDetail(e); }}>
                     <td data-label="Nhân viên"><span className="xp-empName"><Avatar e={e}/><span className="xp-personText"><b>{employeeName(e)}</b><small>{e.username}{e.email ? ` · ${e.email}` : ""}</small></span></span></td>
-                    <td data-label="Đơn vị">{e.orgUnitName ?? (e.orgUnitId ? unitPath(unitList, e.orgUnitId) : <span className="hint">—</span>)}</td>
-                    <td data-label="Vị trí">{e.positionName ?? <span className="hint">—</span>}</td>
+                    {showOrg ? <><td data-label="Đơn vị">{e.orgUnitName ?? (e.orgUnitId ? unitPath(unitList, e.orgUnitId) : <span className="hint">Chưa gán</span>)}</td>
+                    <td data-label="Vị trí">{e.positionName ?? <span className="hint">Chưa gán</span>}</td></> : null}
                     <td data-label="Vai trò công ty">{tenantRoleLabel(e.tenantRole)}</td>
                     <td data-label="Trạng thái"><StatusPill active={e.active}/></td>
                   </tr>))}</tbody>

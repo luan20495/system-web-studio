@@ -17,7 +17,7 @@ export function BuilderTopBar({ name, meta, save, appMode, onAppMode, device, on
         {leading}
         <div><div className="projectName">{name}</div><div className="projectMeta">{meta}</div></div>
         <span className={`saveState ${save.state}`} role="status" aria-live="polite">
-          {save.state === "saving" ? "Đang lưu…" : save.state === "error" ? "Lưu thất bại" : `✓ Đã lưu${save.at ? ` ${save.at.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}` : ""}`}
+          {save.state === "saving" ? "Đang lưu…" : save.state === "error" ? "Lưu thất bại" : `Đã lưu${save.at ? ` ${save.at.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}` : ""}`}
         </span>
         {save.state === "error" && onRetrySave ? <button type="button" className="smallButton" data-testid="retry-save" onClick={onRetrySave}>Thử lại</button> : null}
       </div>
