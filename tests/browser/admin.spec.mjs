@@ -440,6 +440,14 @@ await block("scenario 56", async () => { const p = await open({ portal: "platfor
   check("TEN06 3 companies: no pager (everything fits one page)", (await p.locator(".pager").count()) === 0 && (await p.locator("[data-testid=tenant-list] tbody tr").count()) === 3);
   await p.__ctx.close(); });
 
+// ===================================================================================================================== M-123 after a successful "Tạo công ty" focus is not lost
+await block("scenario 57", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/tenants" }); await settle(p, 500);
+  await p.getByRole("button", { name: "+ Tạo công ty" }).click(); await settle(p, 300);
+  await p.getByTestId("tenant-name").fill("Công ty Tập Trung"); await p.getByRole("button", { name: "Tạo công ty" }).last().click(); await settle(p, 1000);
+  const f = await p.evaluate(() => ({ tag: document.activeElement?.tagName, text: (document.activeElement?.textContent ?? "").slice(0, 40) }));
+  check("FOC01 after creating a company the focus is on the new company's heading (not <body>)", f.tag === "H1" && /Công ty Tập Trung/.test(f.text), JSON.stringify(f));
+  await p.__ctx.close(); });
+
 // ===================================================================================================================== route / navigation snapshot (M-066: the split must not change behaviour)
 // For every persona the sidebar labels and, for every section key (deep links, aliases, foreign and unknown keys included), the final path, the h1, the h2s and the kind of state view are recorded in admin-routes.snapshot.json
 // (generated from the pre-split code, `UPDATE_SNAPSHOT=1` rewrites it). Dates / numbers are not compared: only structure.
