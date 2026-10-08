@@ -34,7 +34,7 @@ Three parts, 43 checks. (1) `public-harness.tsx` mounts the real `<DataWizard>` 
     # each app through the owned-process CLI: exit 3 (port named) if 3001 / 3002 / 3003 is already taken; it never stops the holder
     node tests/lib/owned-process-cli.mjs start --state .run/owned/portal-platform.json --cwd apps/platform --port 3001 -- npx next start -H 127.0.0.1 -p 3001      # same for admin 3002 and studio 3003 (state portal-admin / portal-studio)
     CHROME=... node tests/browser/portals.spec.mjs
-    node tests/lib/owned-process-cli.mjs stop --state .run/owned/portal-platform.json                                                                      # validated stop of exactly what was started; repeat for admin and studio
+    node tests/lib/owned-process-cli.mjs stop --state .run/owned/portal-platform.json                                                                      # validated stop of exactly what was started (no `refresh` needed: `start` records the npx -> npm exec re-exec); a REFUSED stop keeps the state file; repeat for admin and studio
 
 Covers only what needs no session (redirect to /login with `next`, labels, CSP/headers, no cookies, login error with the API down).
 Login, session, portal switching, OIDC and CORS need the real backend and are NOT covered here.

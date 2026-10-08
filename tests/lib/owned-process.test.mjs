@@ -8,7 +8,7 @@ import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import net from "node:net";
-import { PortBusyError, assertPortFree, commandOf, exists, freePort, identify, pgidOf, readState, signalOwned, spawnOwned, startTimeOf, statusOf, stopOwned, withOwned, writeState } from "./owned-process.mjs";
+import { PortBusyError, assertPortFree, commandOf, exists, freePort, identify, npxArgs, pgidOf, readState, refreshIdentity, signalOwned, spawnOwned, startTimeOf, statusOf, stopOwned, withOwned, writeState } from "./owned-process.mjs";
 
 const ROOT = resolve(new URL("../..", import.meta.url).pathname);
 const TMP = mkdtempSync(join(tmpdir(), "owned-proc-test-"));
@@ -227,5 +227,60 @@ test("e2e-stack.sh: render worker lifecycle through the CLI - start on a free po
   const sp = spawnSync(process.execPath, [cli, "stop", "--state", sf], { encoding: "utf8" }); assert.equal(sp.status, 0, sp.stderr); assert.match(sp.stdout, /STOPPED/);
   assert.equal(await fetch(`http://127.0.0.1:${port}/`).then(() => true, () => false), false, "the owned server is gone");
   assert.ok(stranger.alive(), "unrelated process untouched");
+});
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ launcher re-exec (npx -> npm exec) and state-file retention
+const sh = (name, body) => { const f = join(TMP, name); writeFileSync(f, body, { mode: 0o755 }); return f; };
+test("LAUNCHER_REEXEC: a launcher that re-execs itself with a different argv is still OWNED after start and stops WITHOUT an explicit refresh (spawnOwned and the CLI)", async () => {
+  const stranger = await foreignNext(false);
+  const wrapper = sh("reexec.sh", `#!/bin/sh\nsleep 0.5\nexec ${process.execPath} -e 'setInterval(()=>{},1e6)' -- npm exec next start -H 127.0.0.1 -p 1\n`);
+  const o = await spawnOwned("sh", [wrapper], { stateFile: join(TMP, "reexec.json") });
+  const live = commandOf(o.pid);
+  assert.match(live, /npm exec next start/, `the wrapper re-exec'd (live command: ${live})`);
+  assert.notEqual(o.command, live, "the command line really changed after start");
+  assert.equal(identify(readState(o.stateFile)).state, "OWNED", "settled identity recorded automatically");
+  assert.equal((await stopOwned(o.stateFile, { graceMs: 4000 })).state, "STOPPED"); assert.equal(exists(o.pid), false);
+  const cli = join(ROOT, "tests/lib/owned-process-cli.mjs"); const sf = join(TMP, "reexec-cli.json");
+  assert.equal(spawnSync(process.execPath, [cli, "start", "--state", sf, "--", "sh", wrapper], { encoding: "utf8" }).status, 0);
+  const pid = readState(sf).pid; assert.equal(spawnSync(process.execPath, [cli, "status", "--state", sf], { encoding: "utf8" }).stdout.trim(), "OWNED");
+  const sp = spawnSync(process.execPath, [cli, "stop", "--state", sf], { encoding: "utf8" }); assert.equal(sp.status, 0, sp.stderr); assert.equal(exists(pid), false);
+  assert.ok(stranger.alive());
+});
+test("LAUNCHER_REEXEC: the settle step never blesses a pid that changed hands (start time differs => nothing recorded as ours)", async () => {
+  const stranger = await foreignNext(false);
+  const state = { pid: stranger.pid, startedAt: "Mon Jan 1 00:00:00 2001", command: "sh wrapper", settledCommands: [], scope: "pid" };
+  assert.equal(refreshIdentity(state).ok, false); assert.deepEqual(state.settledCommands, []); assert.equal(identify(state).state, "REUSED"); assert.ok(stranger.alive());
+});
+test("allowlist: `node .../npx <args>` = `npx <args>` = `npm exec <args>` ONLY with identical arguments; never any other command", async () => {
+  assert.equal(npxArgs("/opt/homebrew/bin/node /opt/homebrew/bin/npx next start -H 127.0.0.1 -p 3001"), "next start -H 127.0.0.1 -p 3001");
+  assert.equal(npxArgs("npm exec next start -H 127.0.0.1 -p 3001"), "next start -H 127.0.0.1 -p 3001");
+  assert.equal(npxArgs("node /usr/lib/node_modules/npm/bin/npx-cli.js next start -p 1"), "next start -p 1");
+  for (const no of ["node server.js", "npm run build", "npm exec", "npx", "python3 -m http.server", "/bin/sh -c npx next start"]) assert.equal(npxArgs(no), null, no);
+  // live process whose command line IS `npm exec next start -p 7` (argv0 set by bash; no npm needed)
+  const o = await spawnOwned("bash", ["-c", 'exec -a "npm exec next start -H 127.0.0.1 -p 7" sleep 60'], { settleMs: 0 });
+  for (let i = 0; i < 30 && !/^npm exec/.test(commandOf(o.pid)); i++) await sleep(100);
+  assert.match(commandOf(o.pid), /^npm exec next start -H 127\.0\.0\.1 -p 7 60$/, "the test process looks like `npm exec ...`");
+  const rec = (command, extra = {}) => ({ ...readStateLike(o), command, settledCommands: [], ...extra });
+  assert.equal(identify(rec("/opt/homebrew/bin/node /opt/homebrew/bin/npx next start -H 127.0.0.1 -p 7 60")).state, "OWNED", "npx -> npm exec with the same arguments");
+  assert.equal(identify(rec("npx next start -H 127.0.0.1 -p 8")).state, "REUSED", "different arguments");
+  assert.equal(identify(rec("node server.js next start -H 127.0.0.1 -p 7 60")).state, "REUSED", "not an npx launcher");
+  assert.equal(identify(rec("/opt/homebrew/bin/node /opt/homebrew/bin/npx next start -H 127.0.0.1 -p 7 60", { startedAt: "Mon Jan 1 00:00:00 2001" })).state, "REUSED", "right command, wrong start time: still refused");
+  assert.equal((await stopOwned({ ...o, settledCommands: [commandOf(o.pid)] }, { graceMs: 3000 })).state, "STOPPED");
+});
+const readStateLike = (o) => ({ pid: o.pid, pgid: o.pgid, scope: o.scope, startedAt: o.startedAt, spawnedAtLocal: o.spawnedAtLocal });
+
+test("STATE_KEPT: a REFUSED stop keeps the state file while the recorded pid is alive (stopOwned and the CLI); STOPPED / ALREADY_GONE remove it", async () => {
+  const stranger = await foreignNext(false); const cli = join(ROOT, "tests/lib/owned-process-cli.mjs");
+  const live = { pid: stranger.pid, pgid: stranger.pid, scope: "group", startedAt: "Mon Jan 1 00:00:00 2001", command: commandOf(stranger.pid) };
+  const f1 = join(TMP, "kept1.json"); writeState(f1, live);
+  const r = await stopOwned(f1, { graceMs: 300 }); assert.equal(r.state, "REFUSED"); assert.equal(r.stateKept, true);
+  assert.deepEqual(readState(f1), live, "the state file is intact");
+  const f2 = join(TMP, "kept2.json"); writeState(f2, live);
+  const c = spawnSync(process.execPath, [cli, "stop", "--state", f2], { encoding: "utf8" }); assert.equal(c.status, 4); assert.match(c.stderr, /KEPT/); assert.deepEqual(readState(f2), live);
+  const f3 = join(TMP, "kept3.json"); writeState(f3, { pid: 1, startedAt: "x" }); assert.equal((await stopOwned(f3)).state, "REFUSED"); assert.notEqual(readState(f3), null, "unusable state is kept too");
+  assert.ok(stranger.alive());
+  const mine = await spawnOwned(process.execPath, idle(["state-removal"]), { stateFile: join(TMP, "rm1.json"), settleMs: 0 });
+  assert.equal((await stopOwned(mine.stateFile)).state, "STOPPED"); assert.equal(readState(join(TMP, "rm1.json")), null, "STOPPED removes the state");
+  writeState(join(TMP, "rm2.json"), { ...live, pid: mine.pid, pgid: mine.pid }); assert.equal((await stopOwned(join(TMP, "rm2.json"))).state, "ALREADY_GONE"); assert.equal(readState(join(TMP, "rm2.json")), null, "ALREADY_GONE removes the state");
 });
 void relative;

@@ -68,6 +68,18 @@ const fileOf = (x) => (typeof x === "string" ? x : x?.stateFile ?? null);
 
 // ----------------------------------------------------------------------------------------------------------------------------------------------------------- identity
 const commandsOf = (s) => [s.command, ...(s.settledCommands ?? [])].filter(Boolean);
+/** the ONE accepted rename: `npx` re-execs itself as `npm exec`, so `node .../npx <args>`, `npx <args>` and `npm exec <args>` are the same launch. Returns the <args> part (non-empty) or null for any other command. */
+const base = (p) => p.replace(/^.*\//, "");
+export function npxArgs(cmd) {
+  const t = String(cmd).trim().split(/\s+/);
+  let rest = null;
+  if (base(t[0]) === "node" && /^(npx|npx-cli\.js)$/.test(base(t[1] ?? ""))) rest = t.slice(2);
+  else if (/^(npx|npx-cli\.js)$/.test(base(t[0]))) rest = t.slice(1);
+  else if (base(t[0]) === "npm" && t[1] === "exec") rest = t.slice(2);
+  return rest && rest.length ? rest.join(" ") : null;
+}
+/** exact match, or the npx <-> npm exec allowlist with IDENTICAL arguments; never "any command" */
+const commandMatches = (state, live) => commandsOf(state).some((c) => c === live || (npxArgs(c) !== null && npxArgs(c) === npxArgs(live)));
 /**
  * identify(state) -> { state, reason }
  *   OWNED    the recorded pid is alive AND start time AND command match
@@ -81,7 +93,7 @@ export function identify(state) {
   const startTime = startTimeOf(state.pid); if (!startTime) return { state: "GONE", reason: "pid vanished" };
   if (startTime !== state.startedAt) return { state: "REUSED", reason: `start time differs (recorded "${state.startedAt}", live "${startTime}")` };
   const cmd = commandOf(state.pid);
-  if (!commandsOf(state).includes(cmd)) return { state: "REUSED", reason: `command differs (recorded "${state.command.slice(0, 80)}", live "${cmd.slice(0, 80)}")` };
+  if (!commandMatches(state, cmd)) return { state: "REUSED", reason: `command differs (recorded "${state.command.slice(0, 80)}", live "${cmd.slice(0, 80)}")` };
   return { state: "OWNED", reason: "pid, start time and command match" };
 }
 const isGroup = (s) => s.scope !== "pid" && Number.isInteger(s.pgid) && s.pgid > 1;
@@ -95,11 +107,11 @@ const selfPgid = () => pgidOf(process.pid);
 
 // ----------------------------------------------------------------------------------------------------------------------------------------------------------- spawn
 /**
- * spawnOwned(cmd, args, { cwd, env, logFile, stateFile, name, port, host, group=true }) -> { pid, pgid, startedAt, command, stateFile }
+ * spawnOwned(cmd, args, { cwd, env, logFile, stateFile, name, port, host, group=true, settleMs=3000 }) -> { pid, pgid, startedAt, command, stateFile }
  * `port` => assertPortFree first (PortBusyError, nothing started). The child is DETACHED (own session / process group), stdout+stderr go to logFile (append, else discarded).
  */
 export async function spawnOwned(cmd, args = [], opts = {}) {
-  const { cwd = process.cwd(), env = {}, logFile = null, stateFile = null, name = null, port = null, host = "127.0.0.1", group = true } = opts;
+  const { cwd = process.cwd(), env = {}, logFile = null, stateFile = null, name = null, port = null, host = "127.0.0.1", group = true, settleMs = 3000 } = opts;
   if (!cmd) throw new Error("spawnOwned needs a command");
   if (stateFile) { const prev = readState(stateFile); if (prev && identify(prev).state === "OWNED") throw Object.assign(new Error(`${name ?? cmd} is already running (pid ${prev.pid}, state ${stateFile})`), { code: "ALREADY_RUNNING", state: prev }); }
   if (port != null) await assertPortFree(port, host);
@@ -114,8 +126,21 @@ export async function spawnOwned(cmd, args = [], opts = {}) {
   if (!startedAt || !command || isZombie(pid)) throw Object.assign(new Error(`${cmd} exited before its identity could be recorded (log: ${logFile ?? "none"})`), { code: "EXITED_EARLY" });
   const state = { schema: 1, name, pid, pgid: group ? pgidOf(pid) : null, scope: group ? "group" : "pid", startedAt, command, settledCommands: [], spawnedAtLocal: new Date(spawnedAtMs).toString(), argv: [cmd, ...args], cwd: resolve(cwd), logFile: logFile ? resolve(logFile) : null, port, startedBy: process.pid };
   if (group && state.pgid !== pid) { try { process.kill(pid, "SIGKILL"); } catch { /* gone */ } throw new Error(`pgid ${state.pgid} != pid ${pid}: the child did not get its own process group, refusing to track it`); }
+  if (settleMs > 0) await settleIdentity(state, settleMs);
   if (stateFile) writeState(stateFile, state);
   return { ...state, stateFile: stateFile ? resolve(stateFile) : null, child };
+}
+
+/** A launcher may re-exec itself (`npx` -> `npm exec`, a shell script -> its program): the command line changes while pid and start time stay. Watch up to `maxMs` (return early once the command
+ *  has been stable for 600 ms) and record every command seen, ONLY while the pid still has the recorded start time (and pgid): a pid that changed hands is never blessed. */
+async function settleIdentity(state, maxMs, stableMs = 600) {
+  const end = Date.now() + maxMs; let lastChange = Date.now();
+  while (Date.now() < end && Date.now() - lastChange < stableMs) {
+    await sleep(100);
+    if (!exists(state.pid) || startTimeOf(state.pid) !== state.startedAt || (isGroup(state) && pgidOf(state.pid) !== state.pgid)) return;
+    const cmd = commandOf(state.pid);
+    if (cmd && !commandsOf(state).includes(cmd)) { state.settledCommands = [...(state.settledCommands ?? []), cmd]; lastChange = Date.now(); }
+  }
 }
 
 /** after readiness: record the command the process shows NOW (a node server renames itself, `npx` execs ...). Requires the same pid + start time and (group) the same pgid: never re-blesses a reused pid. */
@@ -176,7 +201,12 @@ export function signalOwned(stateOrFile, sig) {
  */
 export async function stopOwned(stateOrFile, opts = {}) {
   const { graceMs = 8000, killMs = 4000, removeState = true } = opts; const state = stateOf(stateOrFile); const file = fileOf(stateOrFile);
-  const done = (r) => { if (removeState && file && ["STOPPED", "ALREADY_GONE", "REFUSED"].includes(r.state) && r.removeStale !== false) rmSync(file, { force: true }); return r; };
+  // the state file is removed only for STOPPED / ALREADY_GONE (and for a REFUSED whose recorded pid is provably gone). A REFUSED result KEEPS it while the recorded pid is alive: the operator still needs to see what was recorded.
+  const done = (r) => {
+    const drop = removeState && file && (["STOPPED", "ALREADY_GONE"].includes(r.state) || (r.state === "REFUSED" && !exists(state?.pid)));
+    if (drop) rmSync(file, { force: true }); else if (file && r.state === "REFUSED") r.stateKept = true;
+    return r;
+  };
   const id = identify(state);
   if (id.state === "UNKNOWN") return { state: "REFUSED", reason: id.reason, removeStale: false };
   if (id.state === "REUSED") return done({ state: "REFUSED", reason: `${id.reason}: pid ${state.pid} belongs to someone else, not signalled` });
