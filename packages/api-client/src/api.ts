@@ -7,7 +7,7 @@ import type {
   ConnectorList, DataSourceView, DataSourceList, CreateDataSourceRequest, UpdateDataSourceRequest, CredentialMetadata, SetCredentialRequest,
   ConnectionTestResult, DataBinding, DataBindingList, BindingMode,
 } from "@xweb/types";
-import { ApiError, call, json, qs, resetCsrf, stream } from "./core";
+import { ApiError, call, json, qs, sessionChanged, stream } from "./core";
 import { isValidReleaseKey, publishBody, rollbackBody, unpublishQuery } from "./release";
 
 const P = (w: string, p: string) => `/workspaces/${w}/projects/${p}`;
@@ -43,7 +43,7 @@ export function newIdempotencyKey(prefix = "ui"): string {
 export const api = {
   async login(username: string, password: string): Promise<Me> {
     await call("/auth/login", { method: "POST", body: json({ username, password }) });
-    resetCsrf();
+    sessionChanged();
     return call<Me>("/auth/me");
   },
   me: () => call<Me>("/auth/me"),
@@ -59,7 +59,7 @@ export const api = {
   componentMetadata: () => call<ComponentMetadataV2[]>("/component-metadata"),
   /** returns the identity provider's end-session URL when the user signed in with SSO (RP-initiated logout) */
   async logout(): Promise<string | null> {
-    const r = await call<{ status: string; redirect?: string }>("/auth/logout", { method: "POST" }).finally(resetCsrf);
+    const r = await call<{ status: string; redirect?: string }>("/auth/logout", { method: "POST" }).finally(sessionChanged);
     return r?.redirect && /^https?:\/\//.test(r.redirect) ? r.redirect : null;
   },
   adminScim: () => call<{ enabled: boolean; users: number; groups: { id: string; displayName: string; members: number }[];

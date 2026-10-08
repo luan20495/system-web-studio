@@ -91,3 +91,31 @@
 .shell .bx-dialog-body{display:grid;gap:8px}
 .shell .bx-dialog-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
 @media(max-width:600px){.shell .bx-overlay{padding:8px;align-items:end}.shell .bx-dialog{width:100%;padding:16px}}
+
+/* ---------- states (packages/ui/src/States.tsx, LoadGate.tsx) ---------- */
+.xp-stateRef{font-size:13px;color:var(--f-muted)}.xp-stateRef code{font:inherit;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--f-text);user-select:all}
+.xp-stateBanner{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 12px;padding:10px 12px;border:1px solid var(--f-bad-line);border-radius:var(--f-r);background:var(--f-bad-bg);color:var(--f-bad);font-size:14px}
+
+/* ---------- widgets (Tabs, RadioGroup, DisclosureRow, ReasonButton) ----------
+   Each widget reads its colours from --xp-* properties that default to the light (--f-*) theme and are re-pointed for the dark Studio editor, so the same markup is correct on both. */
+.xp-radioCard,.xp-reasonWrap,.xp-discToggle,.xp-tabs{--xp-line:var(--f-line);--xp-bg:var(--f-panel);--xp-fg:var(--f-text);--xp-muted:var(--f-muted);--xp-accent:var(--f-accent);--xp-accent-bg:var(--f-accent-soft);--xp-hover:var(--f-line2);--xp-focus:var(--f-focus)}
+.studio .xp-radioCard,.studio .xp-reasonWrap,.studio .xp-discToggle,.studio .xp-tabs{--xp-line:var(--line);--xp-bg:var(--panel2);--xp-fg:var(--text);--xp-muted:var(--muted);--xp-accent:var(--blue);--xp-accent-bg:color-mix(in srgb,var(--blue) 18%,var(--panel2));--xp-hover:var(--panel2);--xp-focus:var(--blue)}
+.xp-tabs button:focus-visible{outline:2px solid var(--xp-focus);outline-offset:-2px;border-radius:6px}.xp-tabCount{font-weight:500;color:var(--xp-muted)}
+.xp-radioGroup{border:0;margin:0;padding:0;min-width:0}.xp-radioLegend{padding:0;margin:0 0 8px;font-size:13px;font-weight:600}
+.xp-radioList{display:grid;gap:8px}
+.xp-radioCard{position:relative;display:block;cursor:pointer}
+.xp-radioCard input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.xp-radioBody{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border:1px solid var(--xp-line);border-radius:var(--f-r);background:var(--xp-bg);color:var(--xp-fg);text-align:left}
+.xp-radioBody::before{content:"";flex:none;box-sizing:border-box;width:18px;height:18px;margin-top:1px;border:2px solid var(--xp-muted);border-radius:50%;background:transparent}
+.xp-radioCard.selected .xp-radioBody{border-color:var(--xp-accent);background:var(--xp-accent-bg)}
+.xp-radioCard.selected .xp-radioBody::before{border-color:var(--xp-accent);background:radial-gradient(circle,var(--xp-accent) 0 4px,transparent 5px)}
+.xp-radioCard input:focus-visible+.xp-radioBody{outline:2px solid var(--xp-focus);outline-offset:2px}
+.xp-radioCard.disabled{cursor:not-allowed;opacity:.6}.xp-radioCard.disabled input{cursor:not-allowed}
+.xp-radioIcon{flex:none;display:inline-grid;place-items:center}.xp-radioText{display:grid;gap:2px}.xp-radioText small{color:var(--xp-muted);font-size:13px;line-height:1.4}
+.xp-reasonWrap{display:inline-flex;flex-direction:column;align-items:flex-start;gap:4px;max-width:100%}.xp-reasonWrap.inline{flex-direction:row;align-items:center;flex-wrap:wrap;gap:8px}
+.xp-reason{font-size:12px;line-height:1.4;color:var(--xp-muted)}
+.xp-reasonBtn[aria-disabled=true]{opacity:.6;cursor:not-allowed}
+.xp-disc{cursor:pointer}.xp-disc:hover{background:var(--xp-hover)}.xp-discToggle{width:44px;padding-right:0}
+.xp-discBtn{display:inline-grid;place-items:center;width:32px;height:32px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--xp-muted)}
+.xp-discBtn:hover{background:var(--xp-hover)}.xp-discBtn:focus-visible{outline:2px solid var(--xp-focus);outline-offset:2px}
+.xp-discDetail>td{padding:12px 16px;background:var(--f-bg)}
