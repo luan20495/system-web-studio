@@ -8,7 +8,7 @@ import { useMemo, useState } from "react";
 import type { FieldMappingDef, MappingDef, ParamDef, QueryDef, ViewModelDef, DataBindingDef } from "@xweb/types";
 import { CARDINALITIES, FIELD_TYPES, MAPPING_ERROR_POLICIES, PARAM_TYPES, QUERY_MODES, paramRequired } from "./core/contract";
 import {
-  DATA_STEPS, FROM_RE, MAX_TRANSFORMS, SIMPLE_TRANSFORMS, addTransform, bindingCompatibility, buildBinding, buildMapping, buildQuery, checkMapping, checkQuery, describeTransform,
+  DATA_STEPS, FROM_RE, MAX_TRANSFORMS, SIMPLE_TRANSFORMS, addTransform, bindingCompatibility, buildBinding, buildMapping, buildQuery, checkMapping, checkQuery, describeTransform, fieldsOf, mappingNote, transformsOf,
   isSimpleTransform, moveTransform, newParam, removeTransform, setParamRequired, stepReadiness, viewModelFromMapping, viewStateOf, VIEW_STATE_TEXT, type DataStepId,
 } from "./core/dataFlow";
 import { allSections, defOps, usersOf } from "./core/definition";
@@ -147,15 +147,15 @@ export function DataWizard({ ctx, focus }: { ctx: DefCtx; focus?: { sectionId?: 
                         {!disabled && fields.length > 1 ? <button type="button" className="smallButton danger" aria-label={`Xóa trường ${i + 1}`} onClick={() => setFields(fields.filter((_, j) => j !== i))}>Xóa</button> : null}
                       </div>
                       <ol className="bx-chips" aria-label={`Biến đổi của trường ${f.to || i + 1}`}>
-                        {f.transforms.map((t, k) => (
+                        {transformsOf(f).map((t, k) => (
                           <li key={k} className="chip">{describeTransform(t)}{!isSimpleTransform(t) ? " (giữ nguyên)" : ""}
                             {!disabled ? <>
                               <button type="button" className="chipBtn" aria-label={`Đưa ${describeTransform(t)} lên`} disabled={k === 0} onClick={() => setField(i, moveTransform(f, k, k - 1))}>↑</button>
-                              <button type="button" className="chipBtn" aria-label={`Đưa ${describeTransform(t)} xuống`} disabled={k === f.transforms.length - 1} onClick={() => setField(i, moveTransform(f, k, k + 1))}>↓</button>
+                              <button type="button" className="chipBtn" aria-label={`Đưa ${describeTransform(t)} xuống`} disabled={k === transformsOf(f).length - 1} onClick={() => setField(i, moveTransform(f, k, k + 1))}>↓</button>
                               <button type="button" className="chipBtn" aria-label={`Bỏ ${describeTransform(t)}`} onClick={() => setField(i, removeTransform(f, k))}>×</button></> : null}
                           </li>))}
                       </ol>
-                      {!disabled && f.transforms.length < MAX_TRANSFORMS ? (
+                      {!disabled && transformsOf(f).length < MAX_TRANSFORMS ? (
                         <select aria-label={`Thêm biến đổi cho trường ${f.to || i + 1}`} value="" onChange={(e) => { if (!e.target.value) return; const r = addTransform(f, e.target.value); if ("error" in r) setMsg(r.error); else setField(i, r); }}>
                           <option value="">+ Thêm biến đổi…</option>{SIMPLE_TRANSFORMS.map((t) => <option key={t.type} value={t.type}>{t.label}</option>)}</select>) : null}
                     </div>))}
@@ -200,7 +200,7 @@ export function DataWizard({ ctx, focus }: { ctx: DefCtx; focus?: { sectionId?: 
 
       <details className="bx-existing"><summary>Đã khai báo ({queries.length + mappings.length + vms.length + bindings.length})</summary>
         <DefList title="Truy vấn" items={queries.map((q) => ({ id: q.id, name: q.name || q.id, note: `${q.mode ?? "READ"} · ${q.operationKey ?? ""}${q.public === true ? " · công khai" : ""}` }))} onRemove={(i) => setRemoving({ collection: "queries", id: i.id, name: i.name })} disabled={disabled}/>
-        <DefList title="Ánh xạ" items={mappings.map((m) => ({ id: m.id, name: m.name || m.id, note: m.fields.map((f) => `${f.to}${f.transforms.length ? ` [${f.transforms.map(describeTransform).join(" → ")}]` : ""}`).join(", ") }))} onRemove={(i) => setRemoving({ collection: "mappings", id: i.id, name: i.name })} disabled={disabled}/>
+        <DefList title="Ánh xạ" items={mappings.map((m) => ({ id: m.id, name: m.name || m.id, note: mappingNote(m) }))} onRemove={(i) => setRemoving({ collection: "mappings", id: i.id, name: i.name })} disabled={disabled}/>
         <DefList title="ViewModel" items={vms.map((v) => ({ id: v.id, name: v.name || v.id, note: `${v.cardinality ?? "LIST"} · ${v.fields.map((f) => f.name).join(", ")}` }))} onRemove={(i) => setRemoving({ collection: "viewModels", id: i.id, name: i.name })} disabled={disabled}/>
         <DefList title="Gắn dữ liệu" items={bindings.map((b) => ({ id: b.id, name: `${b.sectionId}.${b.prop}`, note: b.viewModelRef ? `← ${vms.find((v) => v.id === b.viewModelRef)?.name ?? b.viewModelRef}` : "" }))} onRemove={(i) => setRemoving({ collection: "dataBindings", id: i.id, name: i.name })} disabled={disabled}/>
       </details>

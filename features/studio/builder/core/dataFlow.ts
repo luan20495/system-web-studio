@@ -49,6 +49,19 @@ export const SIMPLE_TRANSFORMS: readonly { type: string; label: string }[] = [
 const LABELS: Record<string, string> = Object.fromEntries(SIMPLE_TRANSFORMS.map((t) => [t.type, t.label]));
 Object.assign(LABELS, { toBoolean: "Chuyển thành đúng/sai", date: "Định dạng ngày", enumMap: "Đổi giá trị theo bảng", join: "Ghép nhiều cột", split: "Tách chuỗi", formula: "Công thức" });
 export const describeTransform = (t: TransformDef): string => LABELS[t.type] ?? t.type;
+/**
+ * Safe READ of a mapping field's transforms: a field stored without `transforms` (undefined / null), with the LEGACY `transform` (one object or an array), or with garbage reads as a list — it never throws.
+ * Nothing is written back from here: an untouched mapping keeps exactly what the server stored; an edited field is rebuilt with the canonical `transforms[]`.
+ */
+export function transformsOf(f: { transforms?: unknown; transform?: unknown } | null | undefined): TransformDef[] {
+  const src = f?.transforms !== undefined && f?.transforms !== null ? f.transforms : f?.transform;
+  if (Array.isArray(src)) return src.filter((t): t is TransformDef => !!t && typeof t === "object" && typeof (t as TransformDef).type === "string");
+  return src && typeof src === "object" && typeof (src as TransformDef).type === "string" ? [src as TransformDef] : [];
+}
+/** the fields of a stored mapping; a mapping without `fields` reads as having none */
+export const fieldsOf = (m: { fields?: unknown } | null | undefined): FieldMappingDef[] => (Array.isArray(m?.fields) ? (m!.fields as FieldMappingDef[]).filter((f) => !!f && typeof f === "object") : []);
+/** "price [toNumber → …], name" — the one-line summary shown for a mapping (Data panel list, Inspector) */
+export const mappingNote = (m: { fields?: unknown } | null | undefined): string => fieldsOf(m).map((f) => { const t = transformsOf(f); return `${f.to}${t.length ? ` [${t.map(describeTransform).join(" → ")}]` : ""}`; }).join(", ");
 /** only the parameterless transforms can be added from the UI; the others are kept exactly as stored and shown read-only */
 export const isSimpleTransform = (t: TransformDef): boolean => Object.keys(t).length === 1 && t.type in LABELS && SIMPLE_TRANSFORMS.some((s) => s.type === t.type);
 
@@ -75,13 +88,15 @@ export function normalizeMapping(raw: Record<string, unknown>): { mapping: Mappi
 
 export function addTransform(f: FieldMappingDef, type: string): FieldMappingDef | { error: string } {
   if (!SIMPLE_TRANSFORMS.some((t) => t.type === type)) return { error: "Biến đổi này chưa tạo được từ giao diện." };
-  if (f.transforms.length >= MAX_TRANSFORMS) return { error: `Tối đa ${MAX_TRANSFORMS} biến đổi cho một trường.` };
-  return { ...f, transforms: [...f.transforms, { type }] };
+  const cur = transformsOf(f);
+  if (cur.length >= MAX_TRANSFORMS) return { error: `Tối đa ${MAX_TRANSFORMS} biến đổi cho một trường.` };
+  return { ...f, transforms: [...cur, { type }] };
 }
-export const removeTransform = (f: FieldMappingDef, index: number): FieldMappingDef => ({ ...f, transforms: f.transforms.filter((_, i) => i !== index) });
+export const removeTransform = (f: FieldMappingDef, index: number): FieldMappingDef => ({ ...f, transforms: transformsOf(f).filter((_, i) => i !== index) });
 export function moveTransform(f: FieldMappingDef, from: number, to: number): FieldMappingDef {
-  if (from < 0 || from >= f.transforms.length || to < 0 || to >= f.transforms.length || from === to) return f;
-  const next = f.transforms.slice(); const [t] = next.splice(from, 1); next.splice(to, 0, t);
+  const cur = transformsOf(f);
+  if (from < 0 || from >= cur.length || to < 0 || to >= cur.length || from === to) return f;
+  const next = cur.slice(); const [t] = next.splice(from, 1); next.splice(to, 0, t);
   return { ...f, transforms: next };
 }
 
@@ -114,8 +129,8 @@ export function checkMapping(fields: FieldMappingDef[]): string[] {
   for (const f of fields) {
     if (!TARGET_RE.test(f.to)) e.push(`Tên trường “${f.to}” không hợp lệ (chữ, số, gạch dưới; bắt đầu bằng chữ).`);
     if (f.from != null && !FROM_RE.test(f.from)) e.push(`Cột nguồn “${f.from}” không hợp lệ.`);
-    if ((f.from == null || f.from === "") && !f.transforms.length && f.default === undefined) e.push(`Trường “${f.to}” cần cột nguồn, biến đổi hoặc giá trị mặc định.`);
-    if (f.transforms.length > MAX_TRANSFORMS) e.push(`Trường “${f.to}” có quá ${MAX_TRANSFORMS} biến đổi.`);
+    if ((f.from == null || f.from === "") && !transformsOf(f).length && f.default === undefined) e.push(`Trường “${f.to}” cần cột nguồn, biến đổi hoặc giá trị mặc định.`);
+    if (transformsOf(f).length > MAX_TRANSFORMS) e.push(`Trường “${f.to}” có quá ${MAX_TRANSFORMS} biến đổi.`);
   }
   const to = fields.map((f) => f.to);
   if (new Set(to).size !== to.length) e.push("Có hai trường trùng tên đích.");
@@ -127,11 +142,11 @@ export function buildMapping(name: string, queryRef: string, fields: FieldMappin
 
 /** best-effort type of a mapped field from its last transform; never claims more than the transforms say */
 export function fieldTypeOf(f: FieldMappingDef): FieldType {
-  const last = f.transforms[f.transforms.length - 1]?.type;
+  const list = transformsOf(f); const last = list[list.length - 1]?.type;
   return last === "toNumber" ? "NUMBER" : last === "toBoolean" ? "BOOLEAN" : last === "date" ? "DATE" : "STRING";
 }
 export function viewModelFromMapping(m: MappingDef, doc: AppDefinitionV2, name: string, cardinality: "SINGLE" | "LIST" = "LIST"): ViewModelDef {
-  const fields: ViewModelFieldDef[] = m.fields.map((f) => ({ name: f.to, type: fieldTypeOf(f) }));
+  const fields: ViewModelFieldDef[] = fieldsOf(m).map((f) => ({ name: f.to, type: fieldTypeOf(f) }));
   return { id: uniqueId("vm", (doc.viewModels ?? []).map((v) => v.id)), name: name.trim() || undefined, queryRef: m.queryRef, mappingRef: m.id, cardinality, fields };
 }
 

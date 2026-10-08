@@ -5,7 +5,7 @@ import { CircleCheck, CircleX, X } from "../../../packages/ui/src/icons";
 import type { AssetDto, ComponentMetadataV2, EventType, PermissionCode, RegistryComponent, SchemaOperation, Section } from "@xweb/types";
 import { PERMISSION_CODES, PERMISSION_RESOURCE_TYPES } from "./core/contract";
 import { actionsOfSection, describeAction, eventsFor, EVENT_LABEL, roleOf } from "./core/actions";
-import { bindingCompatibility, viewStateOf, VIEW_STATE_TEXT, describeTransform } from "./core/dataFlow";
+import { bindingCompatibility, viewStateOf, VIEW_STATE_TEXT, mappingNote } from "./core/dataFlow";
 import { defOps } from "./core/definition";
 import { bindableProps, groupProps, permissionLabel, permissionRefsFor, propsSchemaOfRegistry, tabStates, type InspectorTabId } from "./core/inspector";
 import { capabilitiesFor, whyNot } from "./core/permissions";
@@ -83,7 +83,7 @@ function DataTab({ ctx, section, component, meta, state, openDataWizard }: { ctx
                 <b>{p.prop}</b><small>{p.cardinality === "LIST" ? "danh sách" : "một giá trị"}{p.derived ? " · suy ra từ schema" : ""}</small>
                 {b ? (<>
                   <small>ViewModel: {vm?.name ?? b.viewModelRef ?? "—"}{q ? ` · truy vấn ${q.name ?? q.id}` : ""}</small>
-                  {m ? <small>Ánh xạ: {m.fields.map((f) => `${f.to}${f.transforms.length ? ` [${f.transforms.map(describeTransform).join(" → ")}]` : ""}`).join(", ")}</small> : null}
+                  {m ? <small>Ánh xạ: {mappingNote(m)}</small> : null}
                   {compat && !compat.ok ? <small className="formError" role="alert">{compat.message}</small> : null}
                   <small>Trạng thái: {VIEW_STATE_TEXT[vmView.kind]}{vmView.kind === "not-ready" ? ` — ${vmView.reason}` : ""}</small>
                 </>) : <small>Chưa gắn dữ liệu</small>}
