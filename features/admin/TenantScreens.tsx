@@ -190,7 +190,7 @@ function CreateTenantDialog({ onClose, onCreated }: { onClose: () => void; onCre
     try { onCreated(await api.admin.createTenant({ slug: slug.trim().toLowerCase(), name: name.trim(), ...(admin ? { firstAdminUserId: admin } : {}) })); } catch (err) { setError(say(err, "Chưa tạo được công ty.")); } finally { setBusy(false); }
   }
   return (
-    <Modal label="Tạo công ty" onClose={onClose}>
+    <Modal label="Tạo công ty" onClose={onClose} dismissible={!busy}>
       <form className="modalBody xp-tenantForm" noValidate onSubmit={(e) => void submit(e)} data-testid="tenant-create">
         <ModalHeader icon={<Building2 size={22}/>} title="Tạo công ty" subtitle="Mỗi công ty là một không gian riêng: người dùng, workspace và dữ liệu tách biệt với công ty khác."/>
 

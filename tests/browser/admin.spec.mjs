@@ -98,6 +98,25 @@ await block("scenario 7", async () => { const p = await open({ portal: "admin", 
   check("LNK11 tenant admin: creating an account, then Enter on the initial focus copies (never discards) the link", /Đã sao chép/.test(await dlg(p).innerText()) && /ACT-TOKEN/.test(await linkValue(p)));
   await p.__ctx.close(); });
 
+// ===================================================================================================================== M-010 (S2 side) a create dialog cannot be dismissed while its request is in flight
+await block("scenario 6a", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/tenants", slow: "/admin/tenants" });
+  await p.getByRole("button", { name: "+ Tạo công ty" }).click(); await settle(p, 300);
+  await p.getByTestId("tenant-name").fill("Công ty Chậm"); await p.getByRole("button", { name: "Tạo công ty" }).last().click(); await settle(p, 300);
+  await p.keyboard.press("Escape"); await settle(p, 200);
+  check("INF01 create company: Esc while the POST is in flight does not close the dialog", (await dlg(p).count()) === 1);
+  await p.waitForTimeout(2600);
+  check("INF01b after the answer the company page opens as usual", /\/platform\/tenants\/tn\d+$/.test(p.url()), p.url());
+  await p.__ctx.close(); });
+await block("scenario 6b", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/users" });
+  await p.getByTestId("users-create").click(); await settle(p, 600);
+  await p.getByTestId("acc-tenant").selectOption("t1"); await p.getByTestId("acc-username").fill("cham.user"); await p.getByTestId("acc-display").fill("Chậm");
+  await p.evaluate(() => { window.__cfg.slow = "/admin/tenants/t1/users"; }); await p.getByTestId("acc-submit").click(); await settle(p, 300);
+  await p.keyboard.press("Escape"); await settle(p, 200);
+  check("INF02 create account: Esc while the POST is in flight does not close the dialog", (await dlg(p).count()) === 1);
+  await p.waitForTimeout(2600);
+  check("INF02b the one-time link is shown when the answer arrives", /ACT-TOKEN/.test(await linkValue(p)));
+  await p.__ctx.close(); });
+
 // ===================================================================================================================== M-008 create company → first admin
 await block("scenario 7", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/tenants" });
   await p.getByRole("button", { name: "+ Tạo công ty" }).click(); await settle(p, 300);
