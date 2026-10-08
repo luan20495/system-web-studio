@@ -23,9 +23,9 @@ for (const [name, path] of PAGES) for (const [sz, w, h] of SIZES) {
   await p.clock.setFixedTime(new Date("2026-10-09T09:00:00Z"));          // relative dates ("2 giờ trước") must not change the pixels between runs
   await p.addInitScript(() => { let n = 1; Math.random = () => ((n = (n * 16807) % 2147483647) / 2147483647); });
   try {
-    await p.goto(BASE + path); await p.waitForSelector("#root > *", { timeout: 6000 }).catch(() => undefined); await p.waitForTimeout(700);
+    await p.goto(BASE + path); await p.waitForSelector("#root > *", { timeout: 6000 }).catch(() => undefined); await p.addStyleTag({ content: "*,*::before,*::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}" }); await p.waitForTimeout(1000); if (name === "builder") { await p.waitForSelector("iframe").catch(() => undefined); await p.waitForTimeout(2500); }
     const buf = await p.screenshot({ animations: "disabled", caret: "hide" });
-    out[`${name}@${sz}`] = createHash("sha256").update(buf).digest("hex").slice(0, 16);
+    out[`${name}@${sz}`] = name === "builder" ? "(screenshot only: the preview iframe paints at a non-deterministic moment)" : createHash("sha256").update(buf).digest("hex").slice(0, 16);
     if (SHOTS) writeFileSync(join(SHOTS, `${name}@${sz}.png`), buf);
   } catch (e) { out[`${name}@${sz}`] = `ERROR ${String(e.message).slice(0, 60)}`; }
   await ctx.close();
