@@ -1,0 +1,25 @@
+ok 1 - a 7-level tenant-defined hierarchy (Root > Region > Branch > Division > Department > Team > Squad) renders with depth = data position
+ok 2 - there is no depth limit: a 60-level chain keeps every node, in order, once
+ok 3 - names and types carry no meaning: the same shape with completely different labels gives the same tree
+ok 4 - siblings at different depths, several roots (multi-root forest) and lazy collapse follow the data
+ok 5 - moving a node offers no target inside its own subtree, whatever the depth (cycle is impossible to pick)
+ok 6 - a broken or looping parent link never hides a unit (orphans surface at the root)
+#   [metric] buildTree + flattenTree, 2000 nodes: 5.8 ms
+#   [metric] employeesFromMembers, 10 000 members: search 15.5 ms, page switch 0.1 ms each
+ok 7 - contract layer: every operation is NOT_READY (owner C1), names no URL, and the adapter sends NOTHING
+ok 8 - employee directory falls back to the tenant member list (a real, existing route) and only that
+ok 9 - a READY capability calls the transport (the wiring C1's contract will flip)
+ok 10 - tree: dynamic nesting by name, nothing dropped (orphans and pure cycles are surfaced)
+ok 11 - move: self / subtree are refused (no cycle), type rules and 'already here' are explained, the root is offered when the type allows it
+ok 12 - forms: unit and type validation (names, codes, parent-type rule, allow-listed icon, no duplicate code)
+ok 13 - icons: a closed allow-list; anything else (a URL, markup, an unknown id) falls back to the folder
+ok 14 - delete: the UI explains a known block (children / employees) and leaves unknown counts to the server
+ok 15 - employees from the member list: accent-insensitive search, status, stable order, paging clamps
+ok 16 - gate: offered only when the server lists a tenant the caller administers; one tenant is fixed, several are the caller's own; no role name is read
+ok 17 - errors: every refusal is mapped to words by code, then by status; an unknown code shows the server's message; NOT_READY is its own kind
+ok 18 - tree at scale: a 20 000-deep chain does not overflow the stack, 2 000 nodes build in linear time, aria positions are right
+ok 19 - directory fallback at scale: filtering / paging 10 000 members is a single pass (frontend fixture benchmark, NOT a backend measure)
+ok 20 - compactPath keeps a short breadcrumb whole and shortens a long one to first 2 … last 3
+# tests 20
+# pass 20
+# fail 0

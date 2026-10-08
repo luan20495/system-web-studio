@@ -1,0 +1,4 @@
+# Subtest: slugify proposes a valid company code from a Vietnamese name; initials make an avatar
+ok 10 - slugify proposes a valid company code from a Vietnamese name; initials make an avatar
+# Subtest: initials: bracket groups, counters, punctuation, emoji, empty input and any Unicode letters never give '(' or crash
+ok 11 - initials: bracket groups, counters, punctuation, emoji, empty input and any Unicode letters never give '(' or crash

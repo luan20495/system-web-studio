@@ -1,0 +1,212 @@
+[
+ {
+  "name": "CC-1440 create company: the dialog fits the width, the page behind has no horizontal scroll",
+  "ok": true,
+  "detail": "{\"l\":460,\"r\":980,\"t\":150.078125,\"b\":749.921875,\"vw\":1440,\"vh\":900,\"subTop\":701.921875,\"subBottom\":737.921875}"
+ },
+ {
+  "name": "CC-1440 …the submit button is reachable (visible after scrolling the dialog)",
+  "ok": true,
+  "detail": "{\"top\":774.921875,\"bottom\":810.921875,\"vh\":900}"
+ },
+ {
+  "name": "CC-unicode the Vietnamese name is typed, shown and turned into a code without losing letters",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "CC-strings the dialog's Vietnamese strings render intact (title, sections, hints)",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "CC-focus-trap 16 × Tab never leaves the dialog",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "CC-errors an invalid name / code is aria-invalid and linked (aria-describedby) to its error text",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "CC-picker search finds people, ArrowDown + Enter chooses one, the chosen card appears",
+  "ok": true,
+  "detail": "options=11"
+ },
+ {
+  "name": "CC-picker 'Bỏ chọn' returns to the search box",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "CC-axe no serious / critical violation in the dialog",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "CC-escape Escape closes the dialog and focus returns to the 'Tạo công ty' button that opened it",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "ADMIN-organization-1440 no horizontal overflow of the page",
+  "ok": true,
+  "detail": "overflow=0"
+ },
+ {
+  "name": "ADMIN-organization-axe no serious / critical violation",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "ADMIN-employees-1440 no horizontal overflow of the page",
+  "ok": true,
+  "detail": "overflow=0"
+ },
+ {
+  "name": "ADMIN-employees-axe no serious / critical violation",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "CC-1024 create company: the dialog fits the width, the page behind has no horizontal scroll",
+  "ok": true,
+  "detail": "{\"l\":252,\"r\":772,\"t\":150.078125,\"b\":749.921875,\"vw\":1024,\"vh\":900,\"subTop\":701.921875,\"subBottom\":737.921875}"
+ },
+ {
+  "name": "CC-1024 …the submit button is reachable (visible after scrolling the dialog)",
+  "ok": true,
+  "detail": "{\"top\":774.921875,\"bottom\":810.921875,\"vh\":900}"
+ },
+ {
+  "name": "ADMIN-organization-1024 no horizontal overflow of the page",
+  "ok": true,
+  "detail": "overflow=0"
+ },
+ {
+  "name": "ADMIN-employees-1024 no horizontal overflow of the page",
+  "ok": true,
+  "detail": "overflow=0"
+ },
+ {
+  "name": "CC-768 create company: the dialog fits the width, the page behind has no horizontal scroll",
+  "ok": true,
+  "detail": "{\"l\":124,\"r\":644,\"t\":100.078125,\"b\":699.921875,\"vw\":768,\"vh\":800,\"subTop\":651.921875,\"subBottom\":687.921875}"
+ },
+ {
+  "name": "CC-768 …the submit button is reachable (visible after scrolling the dialog)",
+  "ok": true,
+  "detail": "{\"top\":724.921875,\"bottom\":760.921875,\"vh\":800}"
+ },
+ {
+  "name": "ADMIN-organization-768 no horizontal overflow of the page",
+  "ok": true,
+  "detail": "overflow=0"
+ },
+ {
+  "name": "ADMIN-organization-768 the menu button is shown at this width",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "ADMIN-nav-768 the drawer opens with the navigation inside the viewport",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "ADMIN-nav-768 Escape closes the drawer",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "ADMIN-employees-768 no horizontal overflow of the page",
+  "ok": true,
+  "detail": "overflow=0"
+ },
+ {
+  "name": "ADMIN-employees-768 the menu button is shown at this width",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "CC-430 create company: the dialog fits the width, the page behind has no horizontal scroll",
+  "ok": true,
+  "detail": "{\"l\":8,\"r\":422,\"t\":200.15625,\"b\":792,\"vw\":430,\"vh\":800,\"subTop\":744,\"subBottom\":780}"
+ },
+ {
+  "name": "CC-430 …the submit button is reachable (visible after scrolling the dialog)",
+  "ok": true,
+  "detail": "{\"top\":744,\"bottom\":780,\"vh\":800}"
+ },
+ {
+  "name": "ADMIN-organization-430 no horizontal overflow of the page",
+  "ok": true,
+  "detail": "overflow=0"
+ },
+ {
+  "name": "ADMIN-organization-430 the menu button is shown at this width",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "ADMIN-nav-430 the drawer opens with the navigation inside the viewport",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "ADMIN-nav-430 Escape closes the drawer",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "ADMIN-employees-430 no horizontal overflow of the page",
+  "ok": true,
+  "detail": "overflow=0"
+ },
+ {
+  "name": "ADMIN-employees-430 the menu button is shown at this width",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "CC-390 create company: the dialog fits the width, the page behind has no horizontal scroll",
+  "ok": true,
+  "detail": "{\"l\":8,\"r\":382,\"t\":168.15625,\"b\":792,\"vw\":390,\"vh\":800,\"subTop\":744,\"subBottom\":780}"
+ },
+ {
+  "name": "CC-390 …the submit button is reachable (visible after scrolling the dialog)",
+  "ok": true,
+  "detail": "{\"top\":744,\"bottom\":780,\"vh\":800}"
+ },
+ {
+  "name": "ADMIN-organization-390 no horizontal overflow of the page",
+  "ok": true,
+  "detail": "overflow=0"
+ },
+ {
+  "name": "ADMIN-organization-390 the menu button is shown at this width",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "ADMIN-nav-390 the drawer opens with the navigation inside the viewport",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "ADMIN-nav-390 Escape closes the drawer",
+  "ok": true,
+  "detail": ""
+ },
+ {
+  "name": "ADMIN-employees-390 no horizontal overflow of the page",
+  "ok": true,
+  "detail": "overflow=0"
+ },
+ {
+  "name": "ADMIN-employees-390 the menu button is shown at this width",
+  "ok": true,
+  "detail": ""
+ }
+]
