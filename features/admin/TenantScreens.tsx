@@ -17,6 +17,7 @@ import { useLoad } from "../useLoad";
 import { Card, ErrorState, fmtDate, Kpi, Pill, StateView } from "../ui";
 import { ArrowLeft, Building2, CircleCheck, ModalHeader, ShieldCheck, UserRound } from "@xweb/ui";
 import { PersonPicker } from "./PersonPicker";
+import { PlatformCreateAccount } from "./ProvisioningLive";
 import { DataSourcesPanel } from "../studio/builder/DataSourcesPanel";
 import type { DataManagementCalls } from "../studio/builder/core/dataManagement";
 import { Modal } from "./Modal";
@@ -49,9 +50,10 @@ function usePeople(extra: Person[] = []) {
 }
 
 // ------------------------------------------------------------------------------------------------------------------ tenant members
-function TenantMembers({ tenantId, tenantName }: { tenantId: string; tenantName: string }) {
+/** `onCreateAdmin` (Platform, an ACTIVE company): the way to give a company its first administrator when nobody exists yet; `rev` bumps after an account was created so the list reloads */
+function TenantMembers({ tenantId, tenantName, onCreateAdmin, rev = 0 }: { tenantId: string; tenantName: string; onCreateAdmin?: () => void; rev?: number }) {
   const { me } = useSession();
-  const members = useLoad(() => api.admin.tenantMembers(tenantId), [tenantId]);
+  const members = useLoad(() => api.admin.tenantMembers(tenantId), [tenantId, rev]);
   const [q, setQ] = useState(""); const [applied, setApplied] = useState("");
   useEffect(() => { const t = setTimeout(() => setApplied(q), 300); return () => clearTimeout(t); }, [q]);
   const ask = candidateQuery(applied);
@@ -80,7 +82,7 @@ function TenantMembers({ tenantId, tenantName }: { tenantId: string; tenantName:
   }
   return (
     <Card title={`Thành viên của ${tenantName}${members.data ? ` (${rows.length})` : ""}`}>
-      {members.error ? <ErrorState error={members.error} retry={members.reload}/> : members.loading && !members.data ? <StateView kind="loading"/> : rows.length === 0 ? <StateView kind="empty" title="Công ty chưa có thành viên"/> : (
+      {members.error ? <ErrorState error={members.error} retry={members.reload}/> : members.loading && !members.data ? <StateView kind="loading"/> : rows.length === 0 ? <StateView kind="empty" title="Công ty chưa có thành viên" detail={onCreateAdmin ? <p>Công ty chưa có quản trị viên: chưa ai đăng nhập để quản lý công ty này. Tạo tài khoản đầu tiên; người đó nhận một liên kết kích hoạt và tự đặt mật khẩu.</p> : undefined} action={onCreateAdmin ? <button className="btn primary" data-testid="tenant-create-admin-empty" onClick={onCreateAdmin}>Tạo tài khoản quản trị công ty</button> : undefined}/> : (
         <table className="table" data-testid="tenant-members">
           <thead><tr><th>Người dùng</th><th>Vai trò</th><th><span className="srOnly">Thao tác</span></th></tr></thead>
           <tbody>{rows.map((r) => (
@@ -116,22 +118,28 @@ function TenantBody({ id, onChanged }: { id: string; onChanged?: () => void }) {
   const { me } = useSession();
   const scope = useMemo(() => adminScope(me), [me]);
   const [busy, setBusy] = useState(false); const [msg, setMsg] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false); const [rev, setRev] = useState(0);
   if (tenant.error) return <ErrorState error={tenant.error} retry={tenant.reload}/>;
   if (tenant.loading && !tenant.data) return <StateView kind="loading"/>;
   const t = tenant.data as TenantView;
   const actions = scope.platform ? tenantActions(t) : [];
+  // the first administrator of a company is made HERE (existing route: POST /admin/tenants/{t}/users). Only a Platform operator, only while the company is usable.
+  const canCreateAdmin = scope.platform && t.status === "ACTIVE";
   async function setStatus(to: "ACTIVE" | "SUSPENDED" | "DELETED", confirm: string) {
     if (!window.confirm(confirm)) return;
     setBusy(true); setMsg(null);
     try { await api.admin.setTenantStatus(t.id, to); setMsg("Đã đổi trạng thái công ty."); tenant.reload(); onChanged?.(); } catch (e) { setMsg(say(e, "Chưa đổi được trạng thái.")); } finally { setBusy(false); }
   }
   return (<>
-    <PageHead title={t.name} sub={`${t.slug} · tạo ${fmtDate(t.createdAt)}`} actions={actions.length ? <div className="row">{actions.map((a) => (
+    <PageHead title={t.name} sub={`${t.slug} · tạo ${fmtDate(t.createdAt)}`} actions={actions.length || canCreateAdmin ? <div className="row">
+      {canCreateAdmin ? <button className="btn primary" data-testid="tenant-create-admin" onClick={() => setCreating(true)}>Tạo tài khoản quản trị công ty</button> : null}
+      {actions.map((a) => (
       <button key={a.to} className={`btn ${a.danger ? "danger" : ""}`} disabled={busy} data-testid={`tenant-${a.to}`} onClick={() => void setStatus(a.to, a.confirm)}>{a.label}</button>))}</div> : undefined}/>
     {msg ? <p className="notice" role="status">{msg}</p> : null}
     <div className="kpiGrid"><Kpi label="Trạng thái" value={statusPill(t.status)}/><Kpi label="Mã công ty" value={t.slug}/></div>
     {t.status !== "ACTIVE" ? <p className="hint" role="note">Công ty đang {TENANT_STATUS_LABEL[t.status]?.toLowerCase() ?? t.status}: người dùng của công ty không vào được cho tới khi mở khóa.</p> : null}
-    <TenantMembers tenantId={t.id} tenantName={t.name}/>
+    <TenantMembers tenantId={t.id} tenantName={t.name} rev={rev} onCreateAdmin={canCreateAdmin ? () => setCreating(true) : undefined}/>
+    {creating ? <PlatformCreateAccount tenant={{ id: t.id, name: t.name }} onClose={() => setCreating(false)} onCreated={() => setRev((r) => r + 1)}/> : null}
   </>);
 }
 
@@ -202,7 +210,7 @@ function CreateTenantDialog({ onClose, onCreated }: { onClose: () => void; onCre
           <h3><UserRound size={14} aria-hidden="true"/> Quản trị viên đầu tiên <span className="xp-opt-tag">Không bắt buộc</span></h3>
           <PersonPicker id="tenant-first-admin" label="Tìm người dùng" people={[...people.values()]} q={q} setQ={setQ} value={admin} onChange={setAdmin} loading={loading}
             placeholder="Tìm theo tên hoặc tên đăng nhập" emptyText={q ? "Không có người phù hợp" : "Chưa có tài khoản nào để chọn"}/>
-          <p className="xp-note" role="note"><ShieldCheck size={16} aria-hidden="true"/><span>Bỏ trống thì công ty được tạo trống; bạn thêm hoặc tạo quản trị viên ở trang công ty ngay sau đó.</span></p>
+          <p className="xp-note" role="note"><ShieldCheck size={16} aria-hidden="true"/><span>Chỉ chọn được tài khoản đã có. Muốn tạo người mới: bỏ trống ở đây, rồi dùng nút “Tạo tài khoản quản trị công ty” ở trang công ty vừa tạo (người đó nhận một liên kết kích hoạt).</span></p>
         </section>
 
         {error ? <p className="formError" role="alert">{error}</p> : null}

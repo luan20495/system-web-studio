@@ -101,6 +101,34 @@ await block("scenario 7", async () => { const p = await open({ portal: "admin", 
   check("LNK11 tenant admin: creating an account, then Enter on the initial focus copies (never discards) the link", /Đã sao chép/.test(await dlg(p).innerText()) && /ACT-TOKEN/.test(await linkValue(p)));
   await p.__ctx.close(); });
 
+// ===================================================================================================================== M-008 create company → first admin
+await block("scenario 7", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/tenants" });
+  await p.getByRole("button", { name: "+ Tạo công ty" }).click(); await settle(p, 300);
+  const note = await p.locator("[role=dialog] .xp-note").innerText();
+  check("CMP01 the dialog's note names the REAL next step (the 'Tạo tài khoản quản trị công ty' button of the company page), not a vague 'ở trang công ty'", /Tạo tài khoản quản trị công ty/.test(note), note);
+  await p.getByTestId("tenant-name").fill("Công ty Mới"); await p.getByRole("button", { name: "Tạo công ty" }).last().click(); await settle(p, 600);
+  check("CMP02 after creating, the company page opens", /\/platform\/tenants\/tn\d+$/.test(p.url()), p.url());
+  const cta = p.getByRole("button", { name: "Tạo tài khoản quản trị công ty" });
+  check("CMP03 the empty company page offers 'Tạo tài khoản quản trị công ty' (in the header AND in the empty members card) and says why", (await cta.count()) === 2 && /chưa có quản trị viên/i.test(await text(p)), `buttons=${await cta.count()}`);
+  await cta.first().click(); await settle(p, 400);
+  check("CMP04 the dialog opens with this company FIXED (read-only, from the page) and the type 'Quản trị công ty' preselected", (await p.getByTestId("acc-tenant-fixed").inputValue()) === "Công ty Mới" && (await p.getByTestId("acc-type").inputValue()) === "TENANT_ADMIN");
+  const wsOpts = await p.getByTestId("acc-workspace").locator("option").allInnerTexts();
+  check("CMP05 the workspace list is NOT another company's workspaces (no tenant→workspace listing exists): only 'none' and 'create one of this company'", wsOpts.length === 2 && /Không gán/.test(wsOpts[0]) && /Tạo workspace mới/.test(wsOpts[1]), wsOpts.join("|"));
+  await p.getByTestId("acc-username").fill("giam.doc"); await p.getByTestId("acc-display").fill("Giám Đốc"); await p.getByTestId("acc-submit").click(); await settle(p, 500);
+  const req = (await posts(p, /\/admin\/tenants\/tn\d+\/users$/))[0];
+  check("CMP06 ONE existing provisioning route is called for the company on the page, with tenantRole TENANT_ADMIN and no workspace", !!req && req.body.tenantRole === "TENANT_ADMIN" && !("workspaceId" in req.body) && req.body.username === "giam.doc", JSON.stringify(req));
+  check("CMP06b no other write was sent (no new route)", (await calls(p)).filter((c) => c.method !== "GET" && !/\/admin\/tenants(\/tn\d+\/users)?$/.test(c.path) && !/auth/.test(c.path)).length === 0);
+  await p.getByRole("button", { name: "Sao chép liên kết" }).click(); await p.getByRole("button", { name: "Xong" }).click(); await settle(p, 250); await p.getByRole("button", { name: "Xong" }).click(); await settle(p, 500);
+  check("CMP07 back on the company page the new admin is listed and the 'no admin yet' state is gone", /giam\.doc|Giám Đốc/.test(await p.locator("[data-testid=tenant-members]").innerText()) && !/chưa có quản trị viên/i.test(await text(p)));
+  await p.__ctx.close(); });
+
+await block("scenario 8", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/tenants/t2" }); // SUSPENDED
+  check("CMP08 a suspended company offers no create-account button (unlock first)", (await p.getByRole("button", { name: "Tạo tài khoản quản trị công ty" }).count()) === 0);
+  await p.__ctx.close(); });
+await block("scenario 9", async () => { const p = await open({ portal: "admin", me: "tadmin", start: "/admin/company" });
+  check("CMP09 a tenant admin's own company page does not get the platform button (they use 'Người dùng')", (await p.getByRole("button", { name: "Tạo tài khoản quản trị công ty" }).count()) === 0);
+  await p.__ctx.close(); });
+
 check("no console error / warning / uncaught exception in any page", errors.length === 0, errors.slice(0, 3).join(" | "));
 await browser.close();
 const failed = results.filter((r) => !r.ok).length; console.log(`\n${results.length - failed}/${results.length} checks passed`); process.exit(failed ? 1 : 0);
