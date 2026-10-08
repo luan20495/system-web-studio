@@ -8,9 +8,9 @@ export const RAIL = [
 ] as const;
 export type RailId = (typeof RAIL)[number]["id"];
 
-export function LeftRail({ value, onChange, children }: { value: RailId; onChange: (id: RailId) => void; children: ReactNode }) {
+export function LeftRail({ id, value, onChange, children }: { id?: string; value: RailId; onChange: (id: RailId) => void; children: ReactNode }) {
   return (
-    <aside className="bx-left" aria-label="Công cụ dựng ứng dụng">
+    <aside id={id} className="bx-left" aria-label="Công cụ dựng ứng dụng">
       <Tabs label="Công cụ" orientation="vertical" idPrefix="rail" items={RAIL.map((r) => ({ id: r.id, label: r.label }))} value={value} onChange={(id) => onChange(id as RailId)}/>
       <div {...tabPanelProps("rail", value)} className="bx-left-panel">{children}</div>
     </aside>

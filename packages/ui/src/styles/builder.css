@@ -185,3 +185,26 @@
 .bx-skip{position:absolute;left:8px;top:-48px;z-index:60;padding:8px 12px;border-radius:8px;background:#fff;color:#10151b;font-weight:700;min-height:36px;display:inline-flex;align-items:center}
 .bx-skip:focus{top:8px}
 .bx-center:focus{outline:none}
+
+/* ===== phone workspace (<= 760 px): ONE workspace at a time (C6 UX-002b / UX-003) =====
+   Canvas, tools (rail + panel) and properties are all mounted (state is never lost, the canvas never reloads); a sticky 3-way switch shows one of them at full width. The page itself scrolls (the toolbar scrolls away),
+   so the visible workspace gets nearly the whole screen. Above 760 px nothing here applies (the switch is hidden) and the 2 / 3 column layouts are unchanged. */
+.bx-mview{display:none}
+@media(max-width:760px){
+  html:has(.bx-root),body:has(.bx-root){height:auto;overflow:visible}
+  .studio.bx-root{display:block;height:auto;min-height:100dvh}
+  .bx-body{display:block;overflow:visible}
+  .bx-mview{display:block;position:sticky;top:0;z-index:45;background:var(--bg);border-bottom:1px solid var(--line);padding:6px 8px}
+  .bx-mview .bx-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin:0;border:0;flex-wrap:nowrap}
+  .bx-mview .bx-tabs button{min-height:44px;text-align:center;white-space:normal;line-height:1.2;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:14px}
+  .bx-body[data-mview="canvas"] :is(.bx-left,.bx-right),
+  .bx-body[data-mview="tools"] :is(.bx-center,.bx-right),
+  .bx-body[data-mview="props"] :is(.bx-center,.bx-left){display:none}
+  .bx-center{order:0;height:calc(100dvh - 60px);min-height:420px}
+  .bx-left,.bx-right{overflow:visible;min-height:calc(100dvh - 60px);border:0}
+  .bx-left{display:flex;flex-direction:column}
+  .bx-left-panel{overflow:visible;flex:none}
+  .bx-top-center{flex-wrap:wrap;overflow:visible}
+  .bx-mview .bx-tabs button{position:relative}
+  .bx-mview .bx-badge{position:absolute;top:5px;right:8px;min-width:0;padding:0;background:none;color:#93c5fd;font-size:11px;line-height:1}
+}
