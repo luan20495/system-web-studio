@@ -12,7 +12,7 @@ import { AiAdmin, UserAiCard } from "./AiSetup";
 import type { ActivationLink } from "@/lib/http-types";
 import { useSession } from "../session";
 import { PORTAL_LABEL, portalHref, rememberPortal, type PortalId } from "@xweb/permissions";
-import { AppWindow, Boxes, Building2, Circle, CircleCheck, CircleDollarSign, Database, Diamond, Fingerprint, FolderTree, HardDrive, Hammer, HeartPulse, KeyRound, Layers, LayoutDashboard, LayoutTemplate, Network, Package, PortalSwitcher, Plug, ScrollText, Scale, Settings, Share2, ShieldCheck, Sparkles, TriangleAlert, UserRound, Users } from "@xweb/ui";
+import { MenuButton, useNavDrawer, AppWindow, Boxes, Building2, Circle, CircleCheck, CircleDollarSign, Database, Diamond, Fingerprint, FolderTree, HardDrive, Hammer, HeartPulse, KeyRound, Layers, LayoutDashboard, LayoutTemplate, Network, Package, PortalSwitcher, Plug, ScrollText, Scale, Settings, Share2, ShieldCheck, Sparkles, TriangleAlert, UserRound, Users } from "@xweb/ui";
 import { PageHead } from "./PageHead";
 import { CompanyPage, DataSourcesAdminPage, MyWorkspacesPage, ScopedHome, TenantDetailPage, TenantsPage, WorkspaceMembers } from "./TenantScreens";
 import { adminScope, sectionAccess, type AdminScope } from "./adminModel";
@@ -55,12 +55,16 @@ export function AdminApp({ seg, portal = "all" }: { seg: string[]; portal?: Admi
   const section = seg[0] ?? "";
   const active = section === "workspaces" ? "users" : section;
   const { me } = useSession();
-  const scope = adminScope(me);
+  const scope = adminScope(me); const nav = useNavDrawer();
+  // one title per screen ("Nhân viên · Quản trị công ty"), so browser tabs, history and screen readers can tell the pages apart
+  const sectionLabel = navFor(adminPortal(), scope).find(([k]) => k === active)?.[1] as string | undefined;
+  useEffect(() => { document.title = `${sectionLabel ?? "Quản trị"} · ${CONSOLE_NAME[portal]}`; }, [sectionLabel, portal]);
   return (
-    <div className="shell admin">
+    <div className="shell admin" data-nav={nav.open ? "open" : "closed"}>
       <AdminSidebar active={active} scope={scope}/>
+      <div className="sideBackdrop" onClick={nav.close} aria-hidden="true"/>
       <div className="shellMain">
-        <AdminHeader/>
+        <AdminHeader nav={nav}/>
         <main className="page" id="main" tabIndex={0}>{route(seg, scope)}</main>
       </div>
     </div>
@@ -103,15 +107,15 @@ function route(seg: string[], scope: AdminScope): ReactNode {
     case "audit": return <AuditPage/>;
     case "system": return <HealthPage/>;
     case "settings": return <SettingsPage/>;
-    default: return <StateView kind="notfound"/>;
+    default: return <StateView level={1} kind="notfound"/>;
   }
 }
 
 function NeedsPlatform() {
-  return <StateView kind="forbidden" title="Mục này chỉ dành cho quản trị hệ thống" detail={<p>Tài khoản của bạn quản trị công ty / workspace, không phải toàn hệ thống. Các mục bạn dùng được nằm ở thanh bên trái.</p>}/>;
+  return <StateView level={1} kind="forbidden" title="Mục này chỉ dành cho quản trị hệ thống" detail={<p>Tài khoản của bạn quản trị công ty / workspace, không phải toàn hệ thống. Các mục bạn dùng được nằm ở thanh bên trái.</p>}/>;
 }
 function NeedsScope({ what }: { what: string }) {
-  return <StateView kind="forbidden" title={`Bạn chưa quản trị ${what} nào`} detail={<p>Máy chủ không liệt kê quyền tương ứng cho tài khoản này.</p>}/>;
+  return <StateView level={1} kind="forbidden" title={`Bạn chưa quản trị ${what} nào`} detail={<p>Máy chủ không liệt kê quyền tương ứng cho tài khoản này.</p>}/>;
 }
 
 function ComingSection({ id }: { id: string }) {
@@ -125,13 +129,13 @@ function ComingSection({ id }: { id: string }) {
 /** A section that exists, but in the other console. */
 function ElsewhereNote({ section }: { section: string }) {
   const other: PortalId = adminPortal() === "platform" ? "admin" : "platform";
-  return <StateView kind="notfound" title="Mục này nằm ở trang khác" detail={<p>Mục này thuộc {PORTAL_LABEL[other]}.</p>} action={<a className="btn" href={otherConsoleHref(other, `/${section}`)}>Mở {PORTAL_LABEL[other]}</a>}/>;
+  return <StateView level={1} kind="notfound" title="Mục này nằm ở trang khác" detail={<p>Mục này thuộc {PORTAL_LABEL[other]}.</p>} action={<a className="btn" href={otherConsoleHref(other, `/${section}`)}>Mở {PORTAL_LABEL[other]}</a>}/>;
 }
 
 function AdminSidebar({ active, scope }: { active: string; scope: AdminScope }) {
   const { me } = useSession();
   return (
-    <aside className="sidebar dark" aria-label="Điều hướng quản trị">
+    <aside className="sidebar dark" id="admin-sidebar" aria-label="Điều hướng quản trị">
       <div className="sideBrand"><span className="logoMark" aria-hidden="true"><Diamond size={16} fill="currentColor"/></span><div><b>AI Software Factory</b><small>{CONSOLE_NAME[adminPortal()]}</small></div></div>
       <nav>{navFor(adminPortal(), scope).map(([key, label, icon]) => <NavLink key={key} href={A(key ? `/${key}` : "")} active={active === key} icon={icon}>{label}</NavLink>)}</nav>
       <div className="sideFoot"><div className="avatar" aria-hidden="true">{(me?.displayName ?? "?").slice(0, 2).toUpperCase()}</div><div><b>{me?.displayName}</b><small>{adminPortal() === "platform" ? "Quản trị nền tảng" : scope.platform ? "Quản trị hệ thống" : scope.tenants.length ? "Quản trị công ty" : "Quản trị workspace"}</small></div></div>
@@ -139,11 +143,11 @@ function AdminSidebar({ active, scope }: { active: string; scope: AdminScope }) 
   );
 }
 
-function AdminHeader() {
+function AdminHeader({ nav }: { nav: ReturnType<typeof useNavDrawer> }) {
   const { me, logout } = useSession();
   return (
     <header className="topHeader">
-      <div className="crumb">{CONSOLE_NAME[adminPortal()]}</div>
+      <div className="row"><MenuButton open={nav.open} onClick={nav.toggle} buttonRef={nav.button} controls="admin-sidebar"/><div className="crumb">{CONSOLE_NAME[adminPortal()]}</div></div>
       <div className="row">
         {adminPortal() === "all"
           ? (me && me.workspaces.length > 0 ? <Link className="btn sm" href={portalHref("studio")} onClick={() => rememberPortal("builder")}>Mở Builder Studio</Link> : null)

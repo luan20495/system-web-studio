@@ -20,10 +20,13 @@ await page.goto(URL_); await page.waitForSelector("iframe"); await page.waitForT
 const cdp = await page.context().newCDPSession(page);
 await cdp.send("Memory.enable").catch(() => undefined);
 async function counters() {
-  await cdp.send("HeapProfiler.collectGarbage").catch(() => undefined); await page.waitForTimeout(150);
-  const c = await cdp.send("Memory.getDOMCounters");                               // nodes, jsEventListeners, documents
+  // Chrome's jsEventListeners counter jumps between a few values (a 26-listener quantum: 200 / 226 / 252) even on an idle page, with the DOM node count and the heap unchanged. A single reading is therefore noise
+  // (measured: the same build fails the ≤ 10 % check 2 runs out of 5). Take the MEDIAN of 5 readings, each after a forced GC: a real leak still shows (it grows every round), the quantum jitter does not.
+  const reads = [];
+  for (let k = 0; k < 5; k++) { await cdp.send("HeapProfiler.collectGarbage").catch(() => undefined); await page.waitForTimeout(150); reads.push(await cdp.send("Memory.getDOMCounters")); }   // nodes, jsEventListeners, documents
+  const med = (key) => reads.map((r) => r[key]).sort((a, b) => a - b)[2];
   const heap = await page.evaluate(() => performance.memory?.usedJSHeapSize ?? 0);
-  return { nodes: c.nodes, listeners: c.jsEventListeners, documents: c.documents, heap };
+  return { nodes: med("nodes"), listeners: med("jsEventListeners"), documents: med("documents"), heap };
 }
 
 const RAIL = ["Trang", "Thành phần", "Dữ liệu", "Biểu mẫu", "Hành động", "Workflow", "Giao diện", "AI"];

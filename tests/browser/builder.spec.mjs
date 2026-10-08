@@ -211,7 +211,7 @@ async function dragTo(page, from, to, { steps = 14, hold } = {}) {
   const panel = p.locator(".bx-left-panel");
   const lastOps = async () => (await ops(p)).slice(-1)[0]?.ops ?? [];
   // create
-  await panel.getByRole("button", { name: /＋ Trang/ }).click();
+  await panel.getByRole("button", { name: /^Trang$/ }).click();
   await p.getByRole("dialog").getByRole("textbox").fill("Giới thiệu");
   check("Page: create dialog previews the route", /\/gioi-thieu/.test(await p.getByRole("dialog").innerText()), (await p.getByRole("dialog").innerText()).replace(/\n/g, " "));
   await p.getByRole("dialog").getByRole("button", { name: "Thêm trang" }).click(); await p.waitForTimeout(500);
@@ -283,7 +283,7 @@ async function dragTo(page, from, to, { steps = 14, hold } = {}) {
   await p.goto(URL_ + "?v2=1"); await p.waitForSelector("iframe"); await p.waitForTimeout(700);
   const left = p.locator(".bx-left-panel");
   await p.locator(".bx-left").getByRole("tab", { name: "Hành động" }).click();
-  await p.getByRole("button", { name: /＋ Hành động/ }).click(); await p.waitForTimeout(300);
+  await p.getByRole("button", { name: /^Hành động$/ }).click(); await p.waitForTimeout(300);
   const typeSel = left.locator("select").first();
   const values = await typeSel.locator("option").evaluateAll((os) => os.map((o) => o.value));
   check("Action: exactly the 9 canonical types are offered (REFRESH_QUERY present, no RUN_QUERY/WRITE_DATA/SET_VALUE)",
@@ -301,8 +301,8 @@ async function dragTo(page, from, to, { steps = 14, hold } = {}) {
   // workflow
   await p.locator(".bx-left").getByRole("tab", { name: "Workflow" }).click(); await p.waitForTimeout(300);
   const wtxt = await left.innerText();
-  check("Workflow panel is available with the V2 backend and offers a new workflow", /Workflow/.test(wtxt) && (await left.getByRole("button", { name: /＋ Workflow/ }).count()) >= 1, wtxt.replace(/\n/g, " ").slice(0, 120));
-  await left.getByRole("button", { name: /＋ Workflow/ }).click(); await p.waitForTimeout(300);
+  check("Workflow panel is available with the V2 backend and offers a new workflow", /Workflow/.test(wtxt) && (await left.getByRole("button", { name: /^Workflow$/ }).count()) >= 1, wtxt.replace(/\n/g, " ").slice(0, 120));
+  await left.getByRole("button", { name: /^Workflow$/ }).click(); await p.waitForTimeout(300);
   const wopts = await left.evaluate((el) => [...el.querySelectorAll("select option")].map((o) => o.value).join(","));
   await p.screenshot({ path: `${shots}/workflow-editor.png` });
   check("Workflow editor opens (steps ACTION/WAIT/APPROVAL/BRANCH/END, no BPMN canvas)", (await left.locator("canvas, svg[role=graphics-document]").count()) === 0 && /END|Kết thúc/.test(await left.innerText()), wopts.slice(0, 120));

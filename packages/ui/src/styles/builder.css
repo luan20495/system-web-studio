@@ -100,3 +100,5 @@
 .publicBox{border:1px solid var(--warn,#d9a21b);border-radius:10px;padding:10px 12px;margin:8px 0;display:grid;gap:6px}
 .publicBox ul{margin:0;padding-left:18px;max-height:min(24vh,170px);overflow:auto}
 .publicBox code{word-break:break-all}
+
+.bx-sortrow:focus-visible{outline:2px solid #67b8ff;outline-offset:2px;border-radius:8px}.bx-sortrow .bx-node{flex:1;min-width:0}.bx-drag,.bx-mini{display:inline-flex;align-items:center;justify-content:center}

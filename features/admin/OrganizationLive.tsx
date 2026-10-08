@@ -24,7 +24,6 @@ function useTenant() {
 
 export function OrganizationPage() {
   const { plan, tenant, setChosen } = useTenant();
-  useEffect(() => { document.title = "Cơ cấu tổ chức"; }, []);
   return (<>
     <PageHead title="Cơ cấu tổ chức" sub="Dựng cơ cấu của công ty bằng các đơn vị và loại đơn vị do bạn tự định nghĩa."/>
     {plan.tenantChoice.length > 1 ? <label className="field xp-tenantSwitch"><span>Công ty</span><select data-testid="org-tenant-switch" value={tenant.id} onChange={(e) => setChosen(e.target.value)}>{plan.tenantChoice.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label> : null}
@@ -36,7 +35,6 @@ export function EmployeesPage() {
   const { me, scope, plan, tenant, setChosen } = useTenant();
   const provPlan = useMemo(() => provisioningPlan(scope, "admin", liveProvisioning.state), [scope]);
   const ownOf = useMemo(() => (tenantId: string): Option[] => (me?.workspaces ?? []).filter((w) => w.tenantId === tenantId).map((w) => ({ id: w.id, name: w.name })), [me]);
-  useEffect(() => { document.title = "Nhân viên"; }, []);
   return (<>
     <PageHead title="Nhân viên" sub="Danh bạ nhân viên của công ty: tìm kiếm, lọc theo đơn vị, thêm nhân viên và xem chi tiết."/>
     <EmployeesView api={liveOrganization} plan={plan} tenant={tenant} onTenant={setChosen} canToggleStatus={scope.platform}

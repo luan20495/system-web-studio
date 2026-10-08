@@ -33,7 +33,6 @@ export function PeoplePage() {
   // the caller's own workspaces of that tenant (`/auth/me` rows carry the tenant); a tenant admin who belongs to none creates one in the dialog
   const ownOf = useMemo(() => (tenantId: string): Option[] => (me?.workspaces ?? []).filter((w) => w.tenantId === tenantId).map((w) => ({ id: w.id, name: w.name })), [me]);
   const admin = useMemo(() => scope.workspaces.map((w): Option => ({ id: w.id, name: w.name })), [scope]);
-  useEffect(() => { document.title = "Người dùng"; }, []);
   return (<>
     <PageHead title="Người dùng" sub="Tạo tài khoản trong công ty của bạn và thêm người vào workspace."/>
     <PeopleView api={liveProvisioning} plan={plan} tenants={scope.tenants.map((t): Option => ({ id: t.id, name: t.name }))} workspacesOf={ownOf} memberWorkspaces={admin}/>

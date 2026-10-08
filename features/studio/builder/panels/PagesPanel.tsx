@@ -5,7 +5,7 @@
  * they are shown as "Chưa sẵn sàng" with the reason (the menu order, which does have an operation, is editable).
  */
 import { useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { X } from "../../../../packages/ui/src/icons";
+import { ArrowDown, ArrowUp, GripVertical, Plus, X } from "../../../../packages/ui/src/icons";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { AppDefinitionV2, ActionDef, NavLink, Section } from "@xweb/types";
@@ -43,7 +43,7 @@ export function PagesPanel({ doc, pageId, onPage, selectedId, onSelect, labelOf,
   return (
     <div className="bx-panel-body">
       <div className="bx-panel-head"><h2>Trang</h2>
-        {canEdit ? <button type="button" className="bx-btn sm" disabled={busy} onClick={() => setDialog("add")}>＋ Trang</button> : null}</div>
+        {canEdit ? <button type="button" className="bx-btn sm" disabled={busy} onClick={() => setDialog("add")}><Plus size={14} aria-hidden="true"/> Trang</button> : null}</div>
 
       {routeIssues.length ? (
         <div className="bx-alert" role="alert"><b>{routeIssues.length} đường dẫn sẽ chặn xuất bản</b>
@@ -111,15 +111,16 @@ function SectionNode({ section, title, summary, active, canEdit, busy, first, la
   section: Section; title: string; summary: string; active: boolean; canEdit: boolean; busy: boolean; first: boolean; last: boolean; onSelect: () => void; onMove: (d: -1 | 1) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: `row:${section.id}`, disabled: !canEdit || busy });
+  // the <li> IS the treeitem: its drag handle and ↑ ↓ buttons are its own children (a tree may only own treeitems / groups; buttons beside a treeitem are an ARIA violation)
   return (
-    <li role="none" ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1 }} className="bx-sortrow">
-      {canEdit ? <button type="button" className="bx-drag" aria-label={`Kéo để di chuyển ${title}`} title={`Kéo để di chuyển ${title}`} {...attributes} {...listeners}>⋮⋮</button> : null}
-      <div role="treeitem" aria-level={2} aria-selected={active} tabIndex={active ? 0 : -1} className={`bx-node section${active ? " active" : ""}`} onClick={onSelect}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(); } }}>
-        <b>{title}</b><span>{summary || section.id}</span></div>
+    <li role="treeitem" aria-level={2} aria-selected={active} tabIndex={active ? 0 : -1} ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1 }} className={`bx-sortrow${active ? " active" : ""}`}
+      onClick={(e) => { if (!(e.target as HTMLElement).closest("button")) onSelect(); }}
+      onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onSelect(); } }}>
+      {canEdit ? <button type="button" className="bx-drag" aria-label={`Kéo để di chuyển ${title}`} title={`Kéo để di chuyển ${title}`} {...attributes} {...listeners}><GripVertical size={14} aria-hidden="true"/></button> : null}
+      <div className={`bx-node section${active ? " active" : ""}`}><b>{title}</b><span>{summary || section.id}</span></div>
       {canEdit ? <span className="bx-row-tools">
-        <button type="button" className="bx-mini" aria-label={`Đưa ${title} lên`} disabled={busy || first} onClick={() => onMove(-1)}>↑</button>
-        <button type="button" className="bx-mini" aria-label={`Đưa ${title} xuống`} disabled={busy || last} onClick={() => onMove(1)}>↓</button></span> : null}
+        <button type="button" className="bx-mini" aria-label={`Đưa ${title} lên`} disabled={busy || first} onClick={() => onMove(-1)}><ArrowUp size={14} aria-hidden="true"/></button>
+        <button type="button" className="bx-mini" aria-label={`Đưa ${title} xuống`} disabled={busy || last} onClick={() => onMove(1)}><ArrowDown size={14} aria-hidden="true"/></button></span> : null}
     </li>
   );
 }

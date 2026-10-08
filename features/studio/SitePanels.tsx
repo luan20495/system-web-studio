@@ -1,7 +1,7 @@
 "use client";
 // Website structure (stage G): pages + SEO, navigation, 404 page, form submissions, custom domains.
 import { useCallback, useEffect, useState } from "react";
-import { X } from "@xweb/ui";
+import { Plus, X } from "@xweb/ui";
 import { api, ApiError } from "@/lib/http-api";
 import type { FormSubmission, NavLink, PageSchema, SchemaOperation, SiteDomain } from "@/lib/http-types";
 import { ago, errText, StateView } from "../ui";
@@ -18,7 +18,7 @@ export function PageBar({ schema, pageId, onPage, onAdd, canEdit }: { schema: Pa
       <option value="home">Trang chủ (/)</option>
       {(schema.pages ?? []).map((p) => <option key={p.id} value={p.id}>{p.title} (/{p.slug}/)</option>)}
     </select>
-    {canEdit ? <button type="button" className="smallButton" onClick={onAdd}>＋ Trang</button> : null}
+    {canEdit ? <button type="button" className="smallButton" onClick={onAdd}><Plus size={14} aria-hidden="true"/> Trang</button> : null}
   </div>;
 }
 
@@ -84,7 +84,7 @@ function NavigationSection({ schema, canEdit, apply }: { schema: PageSchema; can
       {canEdit ? <button type="button" className="smallButton" aria-label={`Xoá liên kết ${l.label}`} onClick={() => setLinks((ls) => ls.filter((_, j) => j !== i))}><X size={14} aria-hidden="true"/></button> : null}
     </li>)}</ul>
     {canEdit ? <div className="drawerActions">
-      <button className="button ghost" disabled={links.length >= 12} onClick={() => setLinks((ls) => [...ls, { id: `n-${Math.random().toString(36).slice(2, 7)}`, label: "Liên kết", pageId: "home" }])}>＋ Liên kết</button>
+      <button className="button ghost" disabled={links.length >= 12} onClick={() => setLinks((ls) => [...ls, { id: `n-${Math.random().toString(36).slice(2, 7)}`, label: "Liên kết", pageId: "home" }])}><Plus size={14} aria-hidden="true"/> Liên kết</button>
       <button className="button primary" disabled={links.some((l) => !l.label.trim())} onClick={() => void apply([{ type: "SET_NAVIGATION", value: links.map((l) => ({ ...l, label: l.label.trim() })) }], "Cập nhật điều hướng")}>Lưu điều hướng</button>
     </div> : null}
   </section>;

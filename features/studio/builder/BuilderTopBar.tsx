@@ -15,7 +15,7 @@ export function BuilderTopBar({ name, meta, save, appMode, onAppMode, device, on
     <header className="topbar bx-top" aria-label="Thanh công cụ Builder">
       <div className="brand">
         {leading}
-        <div><div className="projectName">{name}</div><div className="projectMeta">{meta}</div></div>
+        <div><div className="projectName" role="heading" aria-level={1}>{name}</div><div className="projectMeta">{meta}</div></div>
         <span className={`saveState ${save.state}`} role="status" aria-live="polite">
           {save.state === "saving" ? "Đang lưu…" : save.state === "error" ? "Lưu thất bại" : `Đã lưu${save.at ? ` ${save.at.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}` : ""}`}
         </span>

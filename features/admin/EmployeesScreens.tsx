@@ -31,14 +31,15 @@ function unitOptions(units: readonly OrgUnit[]): { id: string; label: string }[]
 export function EmployeesView({ api, plan, tenant, onTenant, prov, canToggleStatus = false }: { api: OrganizationApi; plan: OrganizationPlan; tenant: Tenant; onTenant?: (id: string) => void; prov: EmployeeProvisioning; canToggleStatus?: boolean }) {
   const access = plan.access.granted;
   const [qText, setQText] = useState(""); const [q, setQ] = useState(""); const [unit, setUnit] = useState(""); const [status, setStatus] = useState<EmployeeStatus | "ALL">("ALL"); const [page, setPage] = useState(0);
-  const [creating, setCreating] = useState(false); const [detail, setDetail] = useState<Employee | null>(null);
-  useEffect(() => { const t = setTimeout(() => { setQ(qText.trim()); setPage(0); }, 250); return () => clearTimeout(t); }, [qText]);
+  const [creating, setCreating] = useState(false); const [detail, setDetail] = useState<Employee | null>(null); const [rev, setRev] = useState(0);
+  // debounce: apply the text 250 ms after the last keystroke, and only if it CHANGED (otherwise the first tick after mount would reset the page the person just chose)
+  useEffect(() => { if (qText.trim() === q) return; const t = setTimeout(() => { setQ(qText.trim()); setPage(0); }, 250); return () => clearTimeout(t); }, [qText, q]);
   useEffect(() => { setPage(0); setUnit(""); }, [tenant.id]);
   const orgAware = plan.directory === "directory" && plan.units.state === "ready";
   const units = useLoad(async (): Promise<OrgUnit[]> => (access && orgAware ? api.listOrganizationUnits(tenant.id) : []), [tenant.id, access, orgAware]);
   const positions = useLoad(async (): Promise<Position[]> => (access && plan.positions.state === "ready" ? api.listPositions(tenant.id) : []), [tenant.id, access, plan.positions.state]);
-  const query: EmployeeQuery = useMemo(() => ({ q: q || undefined, orgUnitId: unit || null, includeSubtree: true, status, page, size: EMPLOYEE_PAGE_SIZE }), [q, unit, status, page]);
-  const list = useLoad(async (): Promise<EmployeePage | null> => (access ? api.listEmployees(tenant.id, query) : null), [tenant.id, access, query.q, query.orgUnitId, query.status, query.page]);
+  const query: EmployeeQuery = useMemo(() => ({ q: q || undefined, orgUnitId: unit || null, includeSubtree: true, status, page, size: EMPLOYEE_PAGE_SIZE, fresh: rev }), [q, unit, status, page, rev]);
+  const list = useLoad(async (): Promise<EmployeePage | null> => (access ? api.listEmployees(tenant.id, query) : null), [tenant.id, access, query.q, query.orgUnitId, query.status, query.page, query.fresh]);
   const data = list.data; const unitList = units.data ?? [];
   // while the organization-aware list is not available the member list has no unit / position: those columns are left out instead of showing empty cells that look like errors
   const showOrg = data?.source !== "members";
@@ -57,6 +58,8 @@ export function EmployeesView({ api, plan, tenant, onTenant, prov, canToggleStat
         </div>
       </div>
 
+      {!canCreate ? <p className="notice" role="note" data-testid="emp-create-not-ready">Chưa thêm được nhân viên: {(prov.plan.create as { reason?: string }).reason ?? "bạn không có quyền tạo tài khoản."}</p> : null}
+
       <div className="xp-empFilters" role="search">
         <span className="xp-search"><Search size={16} aria-hidden="true"/><input data-testid="emp-search" aria-label="Tìm nhân viên" placeholder="Tìm theo tên, tên đăng nhập hoặc email" autoComplete="off" value={qText} onChange={(e) => setQText(e.target.value)}/>
           {qText ? <button type="button" className="xp-clear" aria-label="Xóa tìm kiếm" onClick={() => setQText("")}><X size={14} aria-hidden="true"/></button> : null}</span>
@@ -73,6 +76,7 @@ export function EmployeesView({ api, plan, tenant, onTenant, prov, canToggleStat
       <Card className="xp-empCard">
         {problem ? <StateView kind={problem.kind === "forbidden" ? "forbidden" : problem.kind === "not-ready" ? "empty" : "error"} title={problem.kind === "forbidden" ? "Không có quyền" : problem.kind === "not-ready" ? "Danh sách nhân viên chưa sẵn sàng" : "Không tải được danh sách"} detail={<p data-testid="emp-error" data-kind={problem.kind}>{problem.text}</p>} action={problem.kind === "not-ready" ? undefined : <button className="btn" data-testid="emp-retry" onClick={list.reload}>Thử lại</button>}/>
           : list.loading && !data ? <StateView kind="loading"/>
+          : data && data.items.length === 0 && data.total > 0 ? <StateView kind="empty" title="Trang này không có nhân viên" detail={<p data-testid="emp-page-empty">Danh sách đã thay đổi nên trang {data.page + 1} không còn dữ liệu (còn {data.total} nhân viên).</p>} action={<button className="btn" data-testid="emp-first-page" onClick={() => setPage(0)}>Về trang đầu</button>}/>
           : !data || data.items.length === 0 ? <StateView kind="empty" title={q || unit || status !== "ALL" ? "Không có nhân viên phù hợp" : "Chưa có nhân viên"} detail={<p data-testid="emp-empty">{q || unit || status !== "ALL" ? "Thử đổi từ khóa hoặc bộ lọc." : "Thêm nhân viên đầu tiên bằng nút “Thêm nhân viên”."}</p>}/>
           : (
             <>
@@ -94,8 +98,8 @@ export function EmployeesView({ api, plan, tenant, onTenant, prov, canToggleStat
             </>)}
       </Card>
 
-      {creating ? <CreateEmployeeDialog org={api} plan={plan} tenant={tenant} units={unitList} positions={positions.data ?? []} prov={prov} onClose={() => setCreating(false)} onCreated={() => list.reload()}/> : null}
-      {detail ? <EmployeeDetail org={api} plan={plan} tenant={tenant} employee={detail} units={unitList} positions={positions.data ?? []} canToggleStatus={canToggleStatus} onClose={() => setDetail(null)} onChanged={(e) => { setDetail(e); list.reload(); }}/> : null}
+      {creating ? <CreateEmployeeDialog org={api} plan={plan} tenant={tenant} units={unitList} positions={positions.data ?? []} prov={prov} onClose={() => setCreating(false)} onCreated={() => setRev((r) => r + 1)}/> : null}
+      {detail ? <EmployeeDetail org={api} plan={plan} tenant={tenant} employee={detail} units={unitList} positions={positions.data ?? []} canToggleStatus={canToggleStatus} onClose={() => setDetail(null)} onChanged={(e) => { setDetail(e); setRev((r) => r + 1); }}/> : null}
     </div>
   );
 }

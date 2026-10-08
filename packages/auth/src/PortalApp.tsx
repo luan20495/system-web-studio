@@ -42,7 +42,7 @@ function PortalRouter({ portal, render }: { portal: PortalId; render: (seg: stri
   if (seg.length === 0) return <Redirect to={resolvePortalPostLogin({ me, disabled, portal })}/>;
   if (disabled) return <Redirect to="/auth/no-access?reason=disabled"/>;
   if (!me) return <Redirect to={`/login?next=${encodeURIComponent(pathname + (typeof window !== "undefined" ? window.location.search : ""))}`}/>;
-  if (seg[0] !== prefix) return <div className="splash"><StateView kind="notfound" title="Không có trang này" action={<a className="btn" href={PORTAL_PREFIX[portal]}>Về trang chính</a>}/></div>;
+  if (seg[0] !== prefix) return <div className="splash"><StateView level={1} kind="notfound" title="Không có trang này" action={<a className="btn" href={PORTAL_PREFIX[portal]}>Về trang chính</a>}/></div>;
   if (!canAccessPortal(me, portal)) return <Redirect to={`/auth/no-access?portal=${portal}`}/>;
   return <>{render(seg.slice(1))}</>;
 }

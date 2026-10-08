@@ -22,24 +22,45 @@ export const isUnitIcon = (id: string): boolean => UNIT_ICONS.some((i) => i.id =
 export const safeIcon = (id: string | null | undefined): string => (id && isUnitIcon(id) ? id : DEFAULT_ICON);
 
 // ------------------------------------------------------------------------------------------------------------------------------- tree
-export type TreeNode = { unit: OrgUnit; children: TreeNode[]; depth: number; /** the parent was not in the list: shown at the root, never dropped */ orphan: boolean };
+/** `pos` / `size`: 1-based position among the siblings and their count (aria-posinset / aria-setsize) */
+export type TreeNode = { unit: OrgUnit; children: TreeNode[]; depth: number; pos: number; size: number; /** the parent was not in the list: shown at the root, never dropped */ orphan: boolean };
 const byName = (a: OrgUnit, b: OrgUnit) => a.name.localeCompare(b.name, "vi", { sensitivity: "base" }) || a.id.localeCompare(b.id);
 
-/** flat server rows → forest. Order: name. A row whose parent is missing (or that would close a loop) is shown at the root, flagged `orphan`; nothing is dropped. */
+/**
+ * flat server rows → forest. Order: name. A row whose parent is missing (or that would close a loop) is shown at the root, flagged `orphan`; nothing is dropped.
+ * Iterative (no recursion): a chain of any depth cannot overflow the stack; cost O(n log n) for the sort, O(n) for the rest.
+ */
 export function buildTree(units: readonly OrgUnit[]): TreeNode[] {
-  const ids = new Set(units.map((u) => u.id)); const kids = new Map<string | null, OrgUnit[]>();
-  for (const u of units) { const p = u.parentId && ids.has(u.parentId) && u.parentId !== u.id ? u.parentId : null; (kids.get(p) ?? kids.set(p, []).get(p)!).push(u); }
-  const seen = new Set<string>();
-  const make = (u: OrgUnit, depth: number, orphan: boolean): TreeNode => { seen.add(u.id); return { unit: u, depth, orphan, children: (kids.get(u.id) ?? []).sort(byName).filter((c) => !seen.has(c.id)).map((c) => make(c, depth + 1, false)) }; };
-  const roots = (kids.get(null) ?? []).sort(byName).map((u) => make(u, 0, !!u.parentId));
-  // a pure cycle (A→B→A, no root reaches it) would be invisible: surface the rest at the root too
-  for (const u of [...units].sort(byName)) if (!seen.has(u.id)) roots.push(make(u, 0, true));
+  const sorted = [...units].sort(byName); const nodes = new Map<string, TreeNode>();
+  for (const u of sorted) nodes.set(u.id, { unit: u, children: [], depth: 0, pos: 1, size: 1, orphan: false });
+  const roots: TreeNode[] = [];
+  for (const u of sorted) { const n = nodes.get(u.id)!; const p = u.parentId && u.parentId !== u.id ? nodes.get(u.parentId) : undefined; if (p) p.children.push(n); else { n.orphan = !!u.parentId; roots.push(n); } }
+  // walk from the roots (explicit stack), assigning depth / position and dropping any edge back to a node already placed
+  const placed = new Set<string>();
+  const place = (root: TreeNode) => {
+    const stack: TreeNode[] = [root]; placed.add(root.unit.id);
+    while (stack.length) {
+      const n = stack.pop()!; n.children = n.children.filter((c) => !placed.has(c.unit.id));
+      n.children.forEach((c, i) => { c.depth = n.depth + 1; c.pos = i + 1; c.size = n.children.length; placed.add(c.unit.id); stack.push(c); });
+    }
+  };
+  roots.forEach((r, i) => { r.pos = i + 1; r.size = roots.length; place(r); });
+  // a pure cycle (A→B→A, no root reaches it) would be invisible: surface what is left at the root too
+  for (const u of sorted) { if (placed.has(u.id)) continue; const n = nodes.get(u.id)!; n.orphan = true; n.depth = 0; roots.push(n); place(n); }
+  roots.forEach((r, i) => { r.pos = i + 1; r.size = roots.length; });
   return roots;
 }
-export const flattenTree = (nodes: readonly TreeNode[], open?: ReadonlySet<string>): TreeNode[] => nodes.flatMap((n) => [n, ...(open && !open.has(n.unit.id) ? [] : flattenTree(n.children, open))]);
+/** depth-first, parents before children; only an OPEN node shows its children. Iterative. */
+export function flattenTree(nodes: readonly TreeNode[], open?: ReadonlySet<string>): TreeNode[] {
+  const out: TreeNode[] = []; const stack: TreeNode[] = [];
+  for (let i = nodes.length - 1; i >= 0; i--) stack.push(nodes[i]);
+  while (stack.length) { const n = stack.pop()!; out.push(n); if (!open || open.has(n.unit.id)) for (let i = n.children.length - 1; i >= 0; i--) stack.push(n.children[i]); }
+  return out;
+}
 export function descendantIds(units: readonly OrgUnit[], id: string): Set<string> {
+  const kids = new Map<string, string[]>(); for (const u of units) if (u.parentId) (kids.get(u.parentId) ?? kids.set(u.parentId, []).get(u.parentId)!).push(u.id);
   const out = new Set<string>(); const stack = [id];
-  while (stack.length) { const cur = stack.pop()!; for (const u of units) if (u.parentId === cur && !out.has(u.id) && u.id !== id) { out.add(u.id); stack.push(u.id); } }
+  while (stack.length) for (const k of kids.get(stack.pop()!) ?? []) if (!out.has(k) && k !== id) { out.add(k); stack.push(k); }
   return out;
 }
 export const childCountOf = (units: readonly OrgUnit[], id: string): number => units.filter((u) => u.parentId === id).length;
@@ -111,15 +132,23 @@ export function deleteBlock(u: OrgUnit, units: readonly OrgUnit[]): string | nul
 
 // ------------------------------------------------------------------------------------------------------------------------------- employees
 export const EMPLOYEE_PAGE_SIZE = 20;
-const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/gi, "d").toLowerCase();
+const fold = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/gi, "d").toLowerCase();
+/** per member-list work done ONCE: the rows, the sorted order and the folded search keys. A search or a page switch on the same list is then a single cheap pass (no re-sort, no re-fold). */
+const PREPARED = new WeakMap<readonly TenantMemberView[], { rows: Employee[]; keys: string[] }>();
+function prepare(members: readonly TenantMemberView[]) {
+  const hit = PREPARED.get(members); if (hit) return hit;
+  const all: Employee[] = members.map((m) => ({ userId: m.userId, username: m.username ?? m.userId.slice(0, 8), displayName: m.displayName ?? null, email: m.email ?? null, tenantRole: m.role, active: m.active }));
+  const collator = new Intl.Collator("vi", { sensitivity: "base" });
+  const rows = all.sort((a, b) => collator.compare(a.displayName ?? a.username, b.displayName ?? b.username) || a.userId.localeCompare(b.userId));
+  const made = { rows, keys: rows.map((e) => fold(`${e.displayName ?? ""} ${e.username} ${e.email ?? ""}`)) };
+  PREPARED.set(members, made); return made;
+}
 /** the directory built from the tenant member list: search by name / username / email (accent-insensitive), status, then a page. It has no unit or position, so those filters do not apply. */
 export function employeesFromMembers(members: readonly TenantMemberView[], q: EmployeeQuery): EmployeePage {
-  const needle = fold((q.q ?? "").trim());
-  const rows: Employee[] = members.map((m) => ({ userId: m.userId, username: m.username ?? m.userId.slice(0, 8), displayName: m.displayName ?? null, email: m.email ?? null, tenantRole: m.role, active: m.active }));
-  const st = q.status ?? "ALL";
-  const hit = rows.filter((e) => (st === "ALL" || (st === "ACTIVE") === e.active) && (!needle || fold(`${e.displayName ?? ""} ${e.username} ${e.email ?? ""}`).includes(needle)))
-    .sort((a, b) => (a.displayName ?? a.username).localeCompare(b.displayName ?? b.username, "vi", { sensitivity: "base" }) || a.userId.localeCompare(b.userId));
-  const size = Math.max(1, q.size || EMPLOYEE_PAGE_SIZE); const last = Math.max(0, Math.ceil(hit.length / size) - 1); const page = Math.min(Math.max(0, q.page), last);
+  const { rows, keys } = prepare(members); const needle = fold((q.q ?? "").trim()); const st = q.status ?? "ALL";
+  const size = Math.max(1, q.size || EMPLOYEE_PAGE_SIZE); const hit: Employee[] = [];
+  for (let i = 0; i < rows.length; i++) { const e = rows[i]; if ((st === "ALL" || (st === "ACTIVE") === e.active) && (!needle || keys[i].includes(needle))) hit.push(e); }
+  const last = Math.max(0, Math.ceil(hit.length / size) - 1); const page = Math.min(Math.max(0, q.page), last);
   return { items: hit.slice(page * size, page * size + size), total: hit.length, page, size, source: "members" };
 }
 export const pageCount = (p: { total: number; size: number }) => Math.max(1, Math.ceil(p.total / Math.max(1, p.size)));

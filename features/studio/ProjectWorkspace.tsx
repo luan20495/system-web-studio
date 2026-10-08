@@ -88,6 +88,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const mayEdit = canEditProject(perms), mayPublish = canPublish(perms), mayShare = canShare(perms), mayDelete = holdsStorageConstant(project?.permissions, "PROJECT_DELETE");
   const readOnly = !mayEdit;
   // page-level gate: a project whose resolved permissions lack APP_VIEW is not shown (APP_VIEW without APP_EDIT is NOT a reason to leave: it opens read-only)
+  useEffect(() => { if (project?.name) document.title = `${project.name} · Xweb Studio`; }, [project?.name]);
   useEffect(() => { if (project && !canViewProject(perms)) router.replace("/auth/no-access?portal=studio&reason=app-view"); }, [project, perms, router]);
 
   const toMessages = (items: PromptHistoryItem[]): Msg[] => [...items].reverse().flatMap((p) => [

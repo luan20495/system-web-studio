@@ -154,7 +154,7 @@ function ProviderDialog({ edit, onClose, onSaved }: { edit?: AiProviderInfo; onC
         </div>
 
         {error ? <p className="formError" role="alert">{error}</p> : null}
-        <div className="row"><button className="btn primary xp-btnIcon" disabled={busy || !name.trim()}><Save size={16} aria-hidden="true"/>{busy ? "Đang lưu…" : "Lưu"}</button><button type="button" className="btn" onClick={onClose}>Hủy</button></div>
+        <div className="xp-footer"><button type="button" className="btn" onClick={onClose}>Hủy</button><button className="btn primary xp-btnIcon" disabled={busy || !name.trim()} aria-busy={busy || undefined}><Save size={16} aria-hidden="true"/>{busy ? "Đang lưu…" : "Lưu"}</button></div>
       </form>
     </Modal>
   );
@@ -329,7 +329,7 @@ export function OverrideDialog({ fixed, current, onClose, onSaved }: { fixed?: {
         {fields.map((k) => <label key={k} className="field"><span>{L[k as keyof typeof L]}</span><input type="number" min="0" step={k === "budget" ? "0.01" : "1"} value={v[k as keyof typeof v]} onChange={(e) => setV({ ...v, [k]: e.target.value })} placeholder="Theo mặc định"/>
           <small>{v[k as keyof typeof v].trim() === "" ? "Để trống = theo mặc định của công ty" : Number(v[k as keyof typeof v]) === 0 ? H[k as keyof typeof H].replace("0 = ", "") : ""}</small></label>)}
         {error ? <p className="formError" role="alert">{error}</p> : null}
-        <div className="row"><button className="btn primary" disabled={busy}>{busy ? "Đang lưu…" : "Lưu"}</button><button type="button" className="btn" onClick={onClose}>Hủy</button></div>
+        <div className="xp-footer"><button type="button" className="btn" onClick={onClose}>Hủy</button><button className="btn primary" disabled={busy} aria-busy={busy || undefined}>{busy ? "Đang lưu…" : "Lưu"}</button></div>
       </form>
     </Modal>
   );

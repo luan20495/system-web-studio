@@ -9,7 +9,7 @@ import { sectionLabel } from "@/components/SectionInspector";
 import { useSession } from "../session";
 import { rememberPortal } from "../routing";
 import { canAccessPortal } from "@xweb/permissions";
-import { AppWindow, Boxes, Diamond, History, House, LayoutTemplate, Plus, PortalSwitcher } from "@xweb/ui";
+import { MenuButton, useNavDrawer, AppWindow, Boxes, Diamond, History, House, LayoutTemplate, Plus, PortalSwitcher } from "@xweb/ui";
 import { useLoad } from "../useLoad";
 import { actionLabel, ago, Card, ErrorState, errText, NavLink, num, Pager, Pill, StateView, usd } from "../ui";
 import { ProjectWorkspace } from "./ProjectWorkspace";
@@ -22,6 +22,10 @@ const useStudio = () => useContext(Ctx)!;
 
 /** `dedicated` = rendered by the Studio web app (app.xweb.vn); links to the other consoles then go through the portal switcher. */
 export function StudioApp({ seg, dedicated = false }: { seg: string[]; dedicated?: boolean }) {
+  const nav = useNavDrawer();
+  const TITLES: Record<string, string> = { "": "Trang chủ", projects: "Ứng dụng", new: "Tạo ứng dụng", templates: "Templates", components: "Components", activity: "Hoạt động", "site-access": "Mở trang riêng tư" };
+  const section = seg[0] ?? "";
+  useEffect(() => { if (!(section === "projects" && seg[1])) document.title = `${TITLES[section] ?? "Không tìm thấy trang"} · Xweb Studio`; }, [section, seg[1]]); // eslint-disable-line react-hooks/exhaustive-deps
   const { me } = useSession();
   const [workspaceId, setWs] = useState(() => {
     try { const saved = localStorage.getItem("studio-ws"); if (saved && me!.workspaces.some((w) => w.id === saved)) return saved; } catch { /* ignore */ }
@@ -32,9 +36,10 @@ export function StudioApp({ seg, dedicated = false }: { seg: string[]; dedicated
   if (seg[0] === "projects" && seg[1]) return <ProjectWorkspace projectId={seg[1]} view={seg[2]}/>;
   return (
     <Ctx.Provider value={{ workspaceId, setWorkspaceId, dedicated }}>
-      <div className="shell studio-shell">
+      <div className="shell studio-shell" data-nav={nav.open ? "open" : "closed"}>
         <StudioSidebar active={seg[0] ?? ""}/>
-        <div className="shellMain"><StudioHeader/><main className="page" id="main" tabIndex={0}>{route(seg)}</main></div>
+        <div className="sideBackdrop" onClick={nav.close} aria-hidden="true"/>
+        <div className="shellMain"><StudioHeader nav={nav}/><main className="page" id="main" tabIndex={0}>{route(seg)}</main></div>
       </div>
     </Ctx.Provider>
   );
@@ -49,14 +54,14 @@ function route(seg: string[]): ReactNode {
     case "components": return <Components/>;
     case "activity": return <Activity/>;
     case "site-access": return <SiteAccess/>;
-    default: return <StateView kind="notfound"/>;
+    default: return <StateView level={1} kind="notfound"/>;
   }
 }
 
 function StudioSidebar({ active }: { active: string }) {
   const nav: [string, string, ReactNode][] = [["", "Trang chủ", <House size={18}/>], ["projects", "Ứng dụng", <AppWindow size={18}/>], ["templates", "Templates", <LayoutTemplate size={18}/>], ["components", "Components", <Boxes size={18}/>], ["activity", "Hoạt động", <History size={18}/>]];
   return (
-    <aside className="sidebar dark" aria-label="Điều hướng Studio">
+    <aside className="sidebar dark" id="studio-sidebar" aria-label="Điều hướng Studio">
       <div className="sideBrand"><span className="logoMark" aria-hidden="true"><Diamond size={16} fill="currentColor"/></span><div><b>Company Builder Studio</b><small>AI Software Factory</small></div></div>
       <Link className="btn primary block xp-btnIcon" href={S("/new")}><Plus size={16} aria-hidden="true"/> Tạo ứng dụng</Link>
       <nav>{nav.map(([k, l, i]) => <NavLink key={k} href={S(k ? `/${k}` : "")} active={active === k} icon={i}>{l}</NavLink>)}</nav>
@@ -64,11 +69,12 @@ function StudioSidebar({ active }: { active: string }) {
   );
 }
 
-function StudioHeader() {
+function StudioHeader({ nav }: { nav: ReturnType<typeof useNavDrawer> }) {
   const { me, logout } = useSession(); const { workspaceId, setWorkspaceId, dedicated } = useStudio(); const router = useRouter();
   const [q, setQ] = useState("");
   return (
     <header className="topHeader">
+      <MenuButton open={nav.open} onClick={nav.toggle} buttonRef={nav.button} controls="studio-sidebar"/>
       <form className="search" role="search" onSubmit={(e) => { e.preventDefault(); router.push(S(`/projects?q=${encodeURIComponent(q)}`)); }}>
         <input aria-label="Tìm ứng dụng" placeholder="Tìm ứng dụng…" value={q} onChange={(e) => setQ(e.target.value)}/>
       </form>
@@ -372,8 +378,8 @@ function SiteAccess() {
     api.siteAccessTicket(site, path).then((r) => { window.location.assign(r.redirect); })
       .catch((x: unknown) => setErr(x instanceof ApiError && x.status === 404 ? "Bạn không có quyền xem trang riêng tư này, hoặc trang không còn tồn tại." : errText(x, "Không mở được trang.")));
   }, [site, path]);
-  return err ? <StateView kind="forbidden" title="Không mở được trang" detail={<p>{err}</p>} action={<Link className="btn" href={S()}>Về Studio</Link>}/>
-    : <StateView kind="loading" title="Đang mở trang riêng tư…"/>;
+  return err ? <StateView level={1} kind="forbidden" title="Không mở được trang" detail={<p>{err}</p>} action={<Link className="btn" href={S()}>Về Studio</Link>}/>
+    : <StateView level={1} kind="loading" title="Đang mở trang riêng tư…"/>;
 }
 
 function Activity() {
