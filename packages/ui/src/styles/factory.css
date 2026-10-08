@@ -38,7 +38,7 @@
 .pageHead{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px}.pageHead h1{margin:0;font-size:24px;letter-spacing:-.01em}.pageHead p{margin:4px 0 0;color:var(--f-muted);font-size:14px;max-width:80ch}
 .card{background:var(--f-panel);border:1px solid var(--f-line);border-radius:var(--f-r);padding:16px 18px;margin-bottom:16px;box-shadow:var(--f-shadow);min-width:0}
 .cardHead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}.cardHead h2{margin:0;font-size:15px}
-.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:16px}.grid2>.card{margin-bottom:0}.grid2{margin-bottom:16px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(380px,100%),1fr));gap:16px}.grid2>.card{margin-bottom:0}.grid2{margin-bottom:16px}
 .kpiGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px}
 .kpi{background:var(--f-panel);border:1px solid var(--f-line);border-radius:var(--f-r);padding:14px 16px;box-shadow:var(--f-shadow)}
 .kpiLabel{color:var(--f-muted);font-size:13px}.kpiValue{font-size:24px;font-weight:700;margin-top:4px;letter-spacing:-.01em}.kpiHint{color:var(--f-muted);font-size:12px;margin-top:2px}
@@ -339,8 +339,9 @@
 .navToggle{display:none}.sideBackdrop{display:none}
 @media(max-width:900px){
   .navToggle{display:inline-flex}
-  .shell>.sidebar{display:flex;position:fixed;z-index:70;inset:0 auto 0 0;width:min(86vw,300px);transform:translateX(-102%);transition:transform .18s ease;box-shadow:none}
-  .shell[data-nav=open]>.sidebar{transform:none;box-shadow:0 0 40px rgba(0,0,0,.4)}
+  /* closed = visibility:hidden (not a Tab stop, not in the accessibility tree); it flips AFTER the slide-out so the close animation still shows */
+  .shell>.sidebar{display:flex;position:fixed;z-index:70;inset:0 auto 0 0;width:min(86vw,300px);transform:translateX(-102%);visibility:hidden;transition:transform .18s ease,visibility 0s linear .18s;box-shadow:none}
+  .shell[data-nav=open]>.sidebar{transform:none;visibility:visible;transition-delay:0s;box-shadow:0 0 40px rgba(0,0,0,.4)}
   .shell[data-nav=open]>.sideBackdrop{display:block;position:fixed;inset:0;z-index:65;background:rgba(15,23,42,.45)}
   .topHeader{padding:0 12px;gap:8px}.topHeader .crumb{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .page{padding:16px 14px 40px}

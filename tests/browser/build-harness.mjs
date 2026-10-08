@@ -1,6 +1,6 @@
 // Bundles tests/browser/harness.tsx for the browser. esbuild is NOT a repo dependency: `npm i --prefix /tmp/esb esbuild` and pass ESBUILD_DIR.
 import { createRequire } from "node:module";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 const root = resolve(new URL("../..", import.meta.url).pathname);
 const esbuild = createRequire(join(process.env.ESBUILD_DIR ?? "/tmp/esb", "package.json"))("esbuild");
@@ -10,9 +10,11 @@ const nodeEnv = process.env.HARNESS_NODE_ENV === "production" ? "production" : "
 const profiling = process.env.HARNESS_PROFILING === "1";
 const out = join(root, ".test-build", profiling ? "browser-prof" : nodeEnv === "production" ? "browser-prod" : "browser");
 mkdirSync(out, { recursive: true });
+// shared-UI harness pages (tests/browser/shared-ui.spec.mjs): page name -> entry; HARNESS, NOT REAL BACKEND
+const SHARED_UI = [["ui-modal", "ui-modal-harness"], ["ui-nav", "ui-nav-harness"], ["ui-toast", "ui-toast-harness"], ["ui-boundary", "ui-boundary-harness"], ["admin-ds", "admin-ds-harness"]].filter(([, e]) => existsSync(join(root, `tests/browser/${e}.tsx`)));
 const alias = { "@": root, "@xweb/types": join(root, "packages/types/src/index.ts"), "@xweb/permissions": join(root, "packages/permissions/src/index.ts"),
   "@xweb/ui": join(root, "packages/ui/src/index.ts"), "@xweb/i18n": join(root, "packages/i18n/src/index.ts"), "@xweb/api-client": join(root, "packages/api-client/src/index.ts") };
-await esbuild.build({ entryPoints: [join(root, "tests/browser/harness.tsx"), join(root, "tests/browser/ds-harness.tsx"), join(root, "tests/browser/release-harness.tsx"), join(root, "tests/browser/public-harness.tsx"), join(root, "tests/browser/prov-harness.tsx"), join(root, "tests/browser/org-harness.tsx"), join(root, "tests/browser/ai-harness.tsx")], bundle: true, outdir: out, format: "iife", jsx: "automatic", platform: "browser",
+await esbuild.build({ entryPoints: [join(root, "tests/browser/harness.tsx"), join(root, "tests/browser/ds-harness.tsx"), join(root, "tests/browser/release-harness.tsx"), join(root, "tests/browser/public-harness.tsx"), join(root, "tests/browser/prov-harness.tsx"), join(root, "tests/browser/org-harness.tsx"), join(root, "tests/browser/ai-harness.tsx"), ...SHARED_UI.map(([, e]) => join(root, `tests/browser/${e}.tsx`))], bundle: true, outdir: out, format: "iife", jsx: "automatic", platform: "browser",
   define: { "process.env": "{}", "process.env.NODE_ENV": JSON.stringify(nodeEnv), "process.env.NEXT_PUBLIC_PORTAL_URL_PLATFORM": "undefined", "process.env.NEXT_PUBLIC_PORTAL_URL_ADMIN": "undefined", "process.env.NEXT_PUBLIC_PORTAL_URL_STUDIO": "undefined" },
   alias: profiling ? { ...alias, "react-dom/client": join(root, "node_modules/react-dom/profiling.js") } : alias, loader: { ".css": "css" }, logLevel: "warning", minify: nodeEnv === "production" });
 // the Platform / Admin portals harness: the REAL PortalApp + AdminApp need `next/link` and `next/navigation` (a history based stand-in) and the @xweb/auth package; a separate build so no other entry sees these aliases
@@ -27,5 +29,6 @@ writeFileSync(join(out, "prov.html"), `<!doctype html><html lang="vi"><head><met
 writeFileSync(join(out, "ai.html"), `<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI providers harness</title><link rel="stylesheet" href="ai-harness.css"></head><body><div id="root"></div><script src="ai-harness.js"></script></body></html>`);
 writeFileSync(join(out, "admin.html"), `<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admin portals harness</title><link rel="stylesheet" href="admin-harness.css"></head><body><div id="root"></div><script src="admin-harness.js"></script></body></html>`);
 writeFileSync(join(out, "org.html"), `<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Organization harness</title><link rel="stylesheet" href="org-harness.css"></head><body><div id="root"></div><script src="org-harness.js"></script></body></html>`);
+for (const [page, entry] of SHARED_UI) writeFileSync(join(out, `${page}.html`), `<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${page} harness</title><link rel="stylesheet" href="${entry}.css"></head><body><div id="root"></div><script src="${entry}.js"></script></body></html>`);
 await (await import("./build-c2-site.mjs")).buildC2Site(root, out, esbuild);
 console.log("built", out);

@@ -4,6 +4,7 @@ import "@xweb/ui/styles/globals.css";
 import "@xweb/ui/styles/responsive.css";
 import "@xweb/ui/styles/http.css";
 import "@xweb/ui/styles/factory.css";
+import "@xweb/ui/styles/ui.css";
 
 export const metadata: Metadata = { title: "Xweb Admin", description: "Quản trị công ty trên Xweb" };
 
