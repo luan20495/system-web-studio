@@ -173,7 +173,8 @@ export function BuilderWorkspace(props: {
     props.openPublish();
   }
 
-  const html = useMemo(() => props.renderPreview({ selectedId: edit ? selectedId : null, interactive, pageId }), [props.renderPreview, selectedId, edit, interactive, pageId]); // eslint-disable-line react-hooks/exhaustive-deps
+  // M-003: the selection is NOT part of the document (it is posted to the frame), so selecting never rebuilds srcDoc; `edit` (not `interactive`) decides whether the frame runs our script
+  const html = useMemo(() => props.renderPreview({ selectedId: null, interactive: edit, pageId }), [props.renderPreview, edit, pageId]); // eslint-disable-line react-hooks/exhaustive-deps
   const meta = `${props.latest ? `Phiên bản ${props.latest}` : "Chưa có phiên bản"} · revision ${props.revision} · ${props.project.siteVisibility === "PUBLIC" ? "Công khai" : "Riêng tư"}${readOnly ? " · chỉ xem" : ""}`;
   const shareReason = whyNot("canShare");
   const publishReason = whyNot("canPublish");
@@ -208,7 +209,7 @@ export function BuilderWorkspace(props: {
         <LeftRail id="mview-panel-tools" value={rail} onChange={setRail}>{leftPanel}</LeftRail>
         <section className="bx-center" id="mview-panel-canvas" tabIndex={-1} aria-label="Bản xem trước ứng dụng">
           {!edit ? <p className="bx-banner" role="note">Đang ở chế độ dùng thử: bản xem trước không chỉnh sửa được.</p> : readOnly ? <p className="bx-banner" role="note">Bạn chỉ có quyền xem.</p> : null}
-          <Canvas document={html} sections={sections} selectedId={selectedId} onSelect={select} onRects={setRects} rects={rects} interactive={interactive} dragging={!!drag && drag.kind !== "row"} slot={slot}
+          <Canvas document={html} sections={sections} selectedId={selectedId} onSelect={select} onRects={setRects} rects={rects} interactive={interactive} selectable={edit} dragging={!!drag && drag.kind !== "row"} slot={slot}
             device={props.device} labelOf={props.labelOf} frameRef={frameRef} title="Bản xem trước ứng dụng"/>
         </section>
         <aside ref={rightRef} id="mview-panel-props" className="bx-right" aria-label="Thuộc tính" {...(rightScrolls ? { tabIndex: 0 } : {})}>
