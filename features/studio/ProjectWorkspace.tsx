@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ErrorBoundary, Settings, Sparkles } from "@xweb/ui";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { ArrowLeft, ErrorBoundary, Settings, Sparkles, Tabs } from "@xweb/ui";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api, newIdempotencyKey } from "@/lib/http-api";
 import { renderSchemaDocument } from "@/lib/schema-preview";
@@ -20,6 +20,7 @@ import { useSession } from "../session";
 import { ErrorState, errText, fmtDate, StateView } from "../ui";
 import { AssetsDrawer, DeviceIcon, Drawer, MembersDrawer, SettingsDrawer, suggestions } from "./drawers";
 import { PublishModal } from "./ReleaseModal";
+import { OverflowMenu } from "./OverflowMenu";
 import { AiProgress } from "./AiProgress";
 import { SaveBlockDrawer, SaveTemplateSection } from "./libraryPanels";
 import { CodeWorkspace } from "./CodeWorkspace";
@@ -63,6 +64,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const [loadError, setLoadError] = useState<unknown>(null);
   const [device, setDevice] = useState<DeviceMode>("desktop");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [pane, setPane] = useState<"chat" | "preview">("chat"); const paneId = useId();
   const { busy, notice, setNotice, save, setSave, failedEdit, setFailedEdit, saveFailureRef, onConflict, run } = useSaveMachine();
   const ws = project?.workspaceId ?? "";
   // UX only (the server re-checks every call). The input is the permission list the server resolved for THIS project; no role name is read (permissions.ts / canonical.ts).
@@ -194,7 +196,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
         <div className="brand">
           <button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}><ArrowLeft size={16} aria-hidden="true"/></button>
           <div>
-            <div className="projectName">{project.name}</div>
+            <div className="projectName" role="heading" aria-level={1} title={project.name}>{project.name}</div>
             <div className="projectMeta">{latest ? `Phiên bản ${latest}` : "Chưa có phiên bản"} · revision {revision} · {project.siteVisibility === "PUBLIC" ? "Công khai" : "Riêng tư"}{readOnly ? " · chỉ xem" : ""}</div>
           </div>
           <span className={`saveState ${save.state}`} role="status" aria-live="polite">
@@ -208,6 +210,10 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
           <button className="button ghost" onClick={() => go("assets")}>Tệp</button>
           {mayShare ? <button className="button ghost" onClick={() => go("members")}>Chia sẻ</button> : null}
           <button className="button icon" aria-label="Cài đặt project" title={mayEdit ? "Cài đặt project" : "Bạn không có quyền đổi cài đặt"} disabled={!mayEdit} onClick={() => go("settings")}><Settings size={16} aria-hidden="true"/></button>
+          <OverflowMenu items={[
+            { key: "site", label: "Website", onSelect: () => go("site") }, { key: "versions", label: "Phiên bản", onSelect: () => go("versions") }, { key: "assets", label: "Tệp", onSelect: () => go("assets") },
+            ...(mayShare ? [{ key: "members", label: "Chia sẻ", onSelect: () => go("members") }] : []),
+            { key: "settings", label: "Cài đặt project", onSelect: () => go("settings"), unavailable: !mayEdit, reason: "Bạn không có quyền đổi cài đặt." }]}/>
           <button className="button primary" disabled={!mayPublish || busy !== null} title={mayPublish ? "Xuất bản phiên bản hiện tại" : "Bạn không có quyền xuất bản"} onClick={() => go("publish")}>Xuất bản</button>
         </div>
       </header>)}
@@ -225,12 +231,15 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
           </div>
         </main>
       ) : mode === "ai" ? (
-        <main className={`wsBody mode-${mode}`}>
+        <main className={`wsBody mode-${mode}`} data-pane={pane}>
+          {/* phone (<= 767 px): ONE pane at a time (M-104). Both stay mounted, so the conversation, the draft prompt and the preview keep their state; CSS shows one. */}
+          <div className="wsPaneSwitch"><Tabs label="Khu vực làm việc" idBase={paneId} value={pane} onChange={setPane} panels={false}
+            tabs={[{ value: "chat", label: "Trò chuyện" }, { value: "preview", label: "Xem trước" }]}/></div>
           {mode === "ai" ? (
             <section className="promptPane">
               <div className="conversation" ref={convRef} onScroll={onConversationScroll}>
                 {messages.length === 0 ? (
-                  <div className="intro"><h1>Bạn muốn ứng dụng thay đổi thế nào?</h1><p>Mô tả bằng lời; thay đổi được kiểm tra theo registry rồi lưu thành phiên bản có thể khôi phục.</p>
+                  <div className="intro"><h2>Bạn muốn ứng dụng thay đổi thế nào?</h2><p>Mô tả bằng lời; thay đổi được kiểm tra theo registry rồi lưu thành phiên bản có thể khôi phục.</p>
                     {!readOnly ? <div className="starterList" aria-label="Gợi ý để bắt đầu">{suggestions(ai?.configured === true).map((t) => (
                       <button type="button" key={t} className="starter" disabled={busy !== null} onClick={() => { setPrompt(t); promptRef.current?.focus(); }}><Sparkles size={14} aria-hidden="true"/>{t}</button>))}</div> : null}</div>
                 ) : null}

@@ -210,3 +210,44 @@
   .bx-mview .bx-tabs button{position:relative}
   .bx-mview .bx-badge{position:absolute;top:5px;right:8px;min-width:0;padding:0;background:none;color:#93c5fd;font-size:11px;line-height:1}
 }
+
+/* ===== wave 3: AI / Code workspace on small screens (M-011, M-104) =====
+   1) 768-1023 px: responsive.css gives `.studio` the rows 56px 48px 1fr for the legacy 3-row markup; the real workspace has only a header and a main, so the main fell into the 48 px row
+      (the AI preview collapsed to a 48 px strip at e.g. 1000 px). The two-row grid builder.css already used below 900 px now applies up to 1023 px.
+   2) <= 767 px: the text buttons are hidden by responsive.css; `.wsMore` (OverflowMenu) replaces them, and `.wsPaneSwitch` shows ONE pane at a time (chat / preview, or work / changes). */
+@media(max-width:1023px){.studio.workspace3:not(.bx-root){grid-template-rows:auto minmax(0,1fr);height:100dvh}}
+.wsMore{display:none;position:relative}
+.wsPaneSwitch{display:none}
+.wsMoreBtn{width:34px;height:34px;padding:0;font-size:18px;line-height:1}
+.wsMoreMenu{position:absolute;right:0;top:calc(100% + 6px);z-index:45;min-width:210px;display:grid;gap:2px;padding:6px;background:#0f151c;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+.wsMoreItem{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;width:100%;min-height:44px;padding:8px 12px;border:0;border-radius:8px;background:transparent;color:var(--text);text-align:left;font:inherit;cursor:pointer}
+.wsMoreItem:hover,.wsMoreItem:focus-visible{background:var(--panel2)}
+.wsMoreItem[aria-disabled=true]{cursor:not-allowed;opacity:.85}.wsMoreItem small{color:var(--muted);font-size:12px}
+@media(max-width:900px){
+  /* the panes are stacked from here down (factory.css): ONE at a time instead */
+  .wsPaneSwitch{display:block;grid-column:1/-1;padding:6px 10px;border-bottom:1px solid var(--line);background:var(--panel)}
+  .wsPaneSwitch .tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0}
+  .wsPaneSwitch .tabs button{min-height:40px;border:1px solid var(--line);border-radius:8px;background:#111820;color:var(--muted);font:inherit}
+  .wsPaneSwitch .tabs button.active{border-color:#46617a;background:#223043;color:var(--text)}
+  .wsBody.mode-ai{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+  .wsBody.mode-ai .promptPane,.wsBody.mode-ai .previewPane{min-height:0}
+  .wsBody.mode-ai[data-pane=chat] .previewPane,.wsBody.mode-ai[data-pane=preview] .promptPane{display:none}
+  .codeBody{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+  .codeBody[data-pane=work] .codeRight,.codeBody[data-pane=changes] .codeLeft{display:none}
+}
+@media(max-width:1023px){
+  /* two rows instead of three: [back, name, saved] [... Xuất bản] then the mode tabs */
+  .workspace3:not(.bx-root) .topbar,.studio.codeStudio .topbar{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"brand actions" "tabs tabs";align-items:center;padding-block:6px;row-gap:6px}
+  .workspace3:not(.bx-root) .topbar .brand,.studio.codeStudio .topbar .brand{grid-area:brand;min-width:0}
+  .workspace3:not(.bx-root) .topbar .modeTabs,.studio.codeStudio .topbar .modeTabs{grid-area:tabs;justify-self:start}
+  .workspace3:not(.bx-root) .topbar .topActions,.studio.codeStudio .topbar .topActions{grid-area:actions;flex-wrap:nowrap}
+  .studio.codeStudio .topbar .brand .projectMeta{display:none}
+  .topbar .topActions .button.primary,.modeTabs button{white-space:nowrap}
+  .modeTabs button{display:inline-flex;align-items:center;gap:4px}
+  .workspace3:not(.bx-root) .topActions .button,.studio.codeStudio .topActions .button{white-space:nowrap}
+}
+@media(max-width:767px){
+  .wsMore{display:block}
+}
+
+.intro h2{font-size:24px;margin:0 0 6px}

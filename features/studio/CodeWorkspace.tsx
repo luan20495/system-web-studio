@@ -2,8 +2,8 @@
 // Code projects (STATIC_APP, ADR 0008/0012): AI and Code modes over a real Git repository; every change is a commit on its own branch,
 // built in the sandbox, previewed from the sites origin (CSP sandbox) and merged only after a green build.
 import { canEditProject, canPublish, canShare, resolvePermissions } from "@xweb/permissions";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Sparkles } from "@xweb/ui";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { ArrowLeft, Sparkles, Tabs } from "@xweb/ui";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/http-api";
 import { SERVER_KINDS, type AiStatus, type ApiProject, type AuthConfig, type CodeAiHistoryItem, type CodeChange, type CodeCommit, type DiffFile, type TreeFile } from "@/lib/http-types";
@@ -12,6 +12,7 @@ import { ago, ErrorState, errText, fmtDate, StateView, tok, usd } from "../ui";
 import { Drawer, MembersDrawer } from "./drawers";
 import { PublishModal } from "./ReleaseModal";
 import { ReviewDialog } from "./ReviewDialog";
+import { OverflowMenu } from "./OverflowMenu";
 import { describeStatus } from "./aiProgressModel";
 import { DesignPane, IdeDrawer, PackagesDrawer, RuntimeDrawer } from "./CodePanels";
 import { projectBase, S } from "./base";
@@ -65,6 +66,7 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
   const [prompt, setPrompt] = useState(""); const [ai, setAi] = useState<AiStatus | null>(null);
   const [model, setModel] = useState<string>(() => { try { return localStorage.getItem("studio-ai-model") ?? ""; } catch { return ""; } });
   const [busy, setBusy] = useState<string | null>(null); const [notice, setNotice] = useState<string | null>(null); const [error, setError] = useState<unknown>(null);
+  const [pane, setPane] = useState<"work" | "changes">("work"); const paneId = useId();
   const [tabIndent, setTabIndent] = useState(false); const escapeTab = useRef(false);   // M-015: Tab indents only when this is switched on
   const [commits, setCommits] = useState<CodeCommit[] | null>(null);
   const [live, setLive] = useState<{ id: string | null; chars: number; status: string } | null>(null);
@@ -134,7 +136,7 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
         <div className="brand">
           <button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}><ArrowLeft size={16} aria-hidden="true"/></button>
           <div>
-            <div className="projectName">{project.name}</div>
+            <div className="projectName" role="heading" aria-level={1} title={project.name}>{project.name}</div>
             <div className="projectMeta">Ứng dụng web (mã nguồn) · React + Vite · revision {project.revision}{canEdit ? "" : " · chỉ xem"}</div>
           </div>
         </div>
@@ -147,10 +149,16 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
           <button className="button ghost" onClick={() => go("ide")}>IDE</button>
           {isServer ? <button className="button ghost" onClick={() => go("runtime")}>Máy chủ</button> : null}
           {canShareApp ? <button className="button ghost" onClick={() => go("members")}>Chia sẻ</button> : null}
+          <OverflowMenu items={[
+            { key: "versions", label: "Lịch sử", onSelect: () => go("versions") }, { key: "packages", label: "Thư viện", onSelect: () => go("packages") }, { key: "ide", label: "IDE", onSelect: () => go("ide") },
+            ...(isServer ? [{ key: "runtime", label: "Máy chủ", onSelect: () => go("runtime") }] : []), ...(canShareApp ? [{ key: "members", label: "Chia sẻ", onSelect: () => go("members") }] : [])]}/>
           <button className="button primary" disabled={!canPublishApp} onClick={() => go("publish")}>Xuất bản</button>
         </div>
       </header>
-      <main className="codeBody">
+      <main className="codeBody" data-pane={pane}>
+        {/* phone (<= 767 px): ONE pane at a time (M-104); both stay mounted so the conversation, the draft and the preview keep their state */}
+        <div className="wsPaneSwitch"><Tabs label="Khu vực làm việc" idBase={paneId} value={pane} onChange={setPane} panels={false}
+          tabs={[{ value: "work", label: mode === "ai" ? "Trò chuyện" : mode === "design" ? "Thiết kế" : "Mã nguồn" }, { value: "changes", label: "Thay đổi" }]}/></div>
         <section className="codeLeft" aria-label={mode === "ai" ? "AI" : mode === "design" ? "Thiết kế" : "Mã nguồn"}>
           {mode === "design" ? <DesignPane ws={ws} pid={pid} canEdit={canEdit} onChange={(c) => { setSelected(c.id); setTab("preview"); void loadChanges(); setNotice("Đã tạo thay đổi giao diện; đang build trong sandbox."); }}/> : mode === "ai" ? (<>
             <div className="chatScroll">
