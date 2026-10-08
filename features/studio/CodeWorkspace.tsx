@@ -2,7 +2,7 @@
 // Code projects (STATIC_APP, ADR 0008/0012): AI and Code modes over a real Git repository; every change is a commit on its own branch,
 // built in the sandbox, previewed from the sites origin (CSP sandbox) and merged only after a green build.
 import { canEditProject, canPublish, canShare, resolvePermissions } from "@xweb/permissions";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Sparkles } from "@xweb/ui";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/http-api";
@@ -65,6 +65,7 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
   const [prompt, setPrompt] = useState(""); const [ai, setAi] = useState<AiStatus | null>(null);
   const [model, setModel] = useState<string>(() => { try { return localStorage.getItem("studio-ai-model") ?? ""; } catch { return ""; } });
   const [busy, setBusy] = useState<string | null>(null); const [notice, setNotice] = useState<string | null>(null); const [error, setError] = useState<unknown>(null);
+  const [tabIndent, setTabIndent] = useState(false); const escapeTab = useRef(false);   // M-015: Tab indents only when this is switched on
   const [commits, setCommits] = useState<CodeCommit[] | null>(null);
   const [live, setLive] = useState<{ id: string | null; chars: number; status: string } | null>(null);
   const [cfg, setCfg] = useState<AuthConfig | null>(null);
@@ -184,7 +185,19 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
                 {original[path]?.text == null && original[path] ? <p className="hint">Tệp nhị phân hoặc quá lớn để hiển thị.</p> :
                   <textarea className="codeEditor" aria-label={`Nội dung ${path}`} spellCheck={false} readOnly={!editable} value={current}
                     onChange={(e) => setDrafts((d) => ({ ...d, [path]: e.target.value }))}
-                    onKeyDown={(e) => { if (e.key === "Tab" && editable) { e.preventDefault(); const t = e.currentTarget, s = t.selectionStart; const v = t.value.slice(0, s) + "  " + t.value.slice(t.selectionEnd); setDrafts((d) => ({ ...d, [path]: v })); requestAnimationFrame(() => { t.selectionStart = t.selectionEnd = s + 2; }); } }}/>}
+                    aria-describedby="code-tab-hint"
+                    onKeyDown={(e) => {
+                      // M-015 (WCAG 2.1.2): Tab moves focus like everywhere else. It indents ONLY when the person turned that option on, and even then Esc then Tab leaves; Shift+Tab always leaves.
+                      if (e.key === "Escape") { escapeTab.current = true; return; }
+                      if (e.key !== "Tab") { escapeTab.current = false; return; }
+                      if (e.shiftKey || !tabIndent || !editable || escapeTab.current) { escapeTab.current = false; return; }
+                      e.preventDefault(); const t = e.currentTarget, s = t.selectionStart; const v = t.value.slice(0, s) + "  " + t.value.slice(t.selectionEnd);
+                      setDrafts((d) => ({ ...d, [path]: v })); requestAnimationFrame(() => { t.selectionStart = t.selectionEnd = s + 2; });
+                    }}/>}
+                <div className="hint" id="code-tab-hint">
+                  <label><input type="checkbox" checked={tabIndent} onChange={(e) => setTabIndent(e.target.checked)}/> Dùng phím Tab để thụt lề</label>
+                  {" "}{tabIndent ? "Nhấn Esc rồi Tab để thoát khỏi ô soạn thảo; Shift+Tab luôn thoát." : "Phím Tab chuyển sang điều khiển kế tiếp. Bật tuỳ chọn này nếu muốn Tab thụt lề hai khoảng trắng."}
+                </div>
                 {canEdit ? <div className="draftBar">
                   <span>{dirty.length ? `Bản nháp: ${dirty.length} tệp` : "Chưa có thay đổi"}</span>
                   <input aria-label="Mô tả thay đổi" placeholder="Mô tả ngắn (tuỳ chọn)" value={summary} maxLength={300} onChange={(e) => setSummary(e.target.value)}/>
