@@ -71,8 +71,8 @@ const reqs = (p) => p.evaluate(() => window.__ai);
   await p.close(); }
 { const p = await open("dup");
   await p.getByRole("button", { name: "Thêm nhà cung cấp" }).first().click(); await p.getByLabel("Tên").fill("Dup"); await p.getByLabel(/Khóa kết nối/).fill("k"); await p.getByRole("button", { name: "Lưu" }).click();
-  await p.getByRole("alert").filter({ hasText: "name already used" }).waitFor().catch(() => undefined);
-  check("error: a server refusal is shown in the dialog (by the server's message) and the dialog stays open", (await T(p, "provider-dialog").count()) === 1 && /already used/.test(await T(p, "provider-dialog").innerText()));
+  await p.getByRole("alert").filter({ hasText: "xung đột" }).waitFor().catch(() => undefined);
+  check("error: a server refusal is shown in the dialog in Vietnamese (mapped by code; the server's English message is NOT shown) and the dialog stays open", (await T(p, "provider-dialog").count()) === 1 && /xung đột/.test(await T(p, "provider-dialog").innerText()) && !/already used/.test(await T(p, "provider-dialog").innerText()));
   await p.close(); }
 { const p = await open();
   await T(p, "provider:p3").getByRole("button", { name: "Bật" }).click(); await p.waitForTimeout(400);

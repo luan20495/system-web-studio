@@ -1,12 +1,14 @@
 // @class: harness — the REAL PortalApp + AdminApp (Platform / Admin portal) in real Chromium with a FAKE `window.fetch` for /api/v1/**. HARNESS, NOT REAL BACKEND, and NOT a backend E2E.
 /**
  * TEST-ONLY harness for tests/browser/admin.spec.mjs. It proves what the SCREENS do with the answers C1's contract describes; it never proves what a server answers.
- * Query: ?portal=platform|admin  &me=sys|sysmember|tadmin|wsadmin|plain|sysatenant|none  &start=/platform/tenants  &fail=<path prefix: GET answers 500>  &failw=<prefix: writes answer 500>  &slow=<prefix: 2.5 s>
- *        &empty=1  &big=1  &daily=empty  &bad=audit.   Every request is recorded in window.__calls ({method, path, body}); a request with no fixture answers 404 and is recorded as {unknown}.
+ * Query: ?portal=platform|admin|all  &me=sys|sysmember|tadmin|wsadmin|plain|sysatenant|none  &start=/platform/tenants  &fail=<path prefix: GET answers 500>  &failw=<prefix: writes answer 500>  &slow=<prefix: 2.5 s>
+ *        &empty=1  &big=1  &daily=empty  &bad=audit|schema.   Every request is recorded in window.__calls ({method, path, body}); a request with no fixture answers 404 and is recorded as {unknown}.
  * `window.__cfg` can be changed by the spec at run time (slow / fail / failw). The activation token in the fixtures is a made-up string.
  */
 import { createRoot } from "react-dom/client";
-import { PortalApp } from "@xweb/auth";
+import { PortalApp, SessionProvider, useSession } from "@xweb/auth";
+import { segments } from "@xweb/permissions";
+import { usePathname } from "next/navigation";
 import { AdminApp } from "../../features/admin/AdminApp";
 import "../../packages/ui/src/styles/globals.css";
 import "../../packages/ui/src/styles/responsive.css";
@@ -14,10 +16,12 @@ import "../../packages/ui/src/styles/http.css";
 import "../../packages/ui/src/styles/factory.css";
 
 const P = new URLSearchParams(location.search);
-const portal = (P.get("portal") ?? "platform") as "platform" | "admin";
+const portal = (P.get("portal") ?? "platform") as "platform" | "admin" | "all";   // "all" = the legacy combined console (components/app/AppEntry.tsx): AdminApp with no dedicated portal
 const who = P.get("me") ?? "sys";
 const failP = P.get("fail"); const slowP = P.get("slow"); const bigData = P.get("big") === "1"; const emptyData = P.get("empty") === "1";
 const start = P.get("start") ?? (portal === "platform" ? "/platform" : "/admin");
+/** portal=all: no PortalApp (that one is per portal); the session + AdminApp directly, like the legacy root app */
+function AllShell() { const { me, loading } = useSession(); const path = usePathname(); if (loading || !me) return null; return <AdminApp seg={segments(path).slice(1)} portal="all"/>; }
 (window as any).__calls = [] as any[];
 (window as any).__cfg = { fail: failP, slow: slowP };
 const iso = (d = 0) => new Date(Date.now() - d * 86400000).toISOString();
@@ -101,7 +105,7 @@ const H: Handler[] = [
   ["GET", /^\/admin\/ai\/budgets$/, () => []],
   ["GET", /^\/admin\/alerts$/, () => ({ open: 1, items: [{ id: "al1", kind: "AI_BUDGET_SOFT", severity: "WARNING", message: "Gần hết", createdAt: iso(0), acknowledgedAt: null, acknowledgedBy: null }] })],
   ["POST", /^\/admin\/alerts\/([^/]+)\/acknowledge$/, () => ({ ok: true })],
-  ["GET", /^\/admin\/components$/, () => []],
+  ["GET", /^\/admin\/components$/, () => [{ id: "hero", name: "Hero", category: "layout", description: "Banner", latestVersion: "1.0.0", status: "ACTIVE", usedInProjects: 1, sections: 2, propsSchema: P.get("bad") === "schema" ? "not json at all" : "{\"type\":\"object\"}" }]],
   ["GET", /^\/admin\/component-packages$/, () => ({ page: page([]), counts: {} })],
   ["GET", /^\/admin\/templates$/, () => page([])],
   ["GET", /^\/admin\/audit\/actions$/, () => ["USER_LOGIN"]],
@@ -157,4 +161,4 @@ window.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
 }) as typeof fetch;
 
 history.replaceState(null, "", start);
-createRoot(document.getElementById("root")!).render(<PortalApp portal={portal} render={(seg) => <AdminApp seg={seg} portal={portal}/>}/>);
+createRoot(document.getElementById("root")!).render(portal === "all" ? <SessionProvider><AllShell/></SessionProvider> : <PortalApp portal={portal} render={(seg) => <AdminApp seg={seg} portal={portal}/>}/>);

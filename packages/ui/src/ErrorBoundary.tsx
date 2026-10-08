@@ -11,6 +11,8 @@
  * `ApiError.requestId`, else Next's `error.digest`. Focus moves to the fallback's heading when it appears (so keyboard / screen-reader users land on it).
  */
 import { Component, useEffect, useRef, type ErrorInfo, type ReactNode } from "react";
+// relative on purpose: the unit-test build resolves only relative runtime imports (same file as @xweb/api-client re-exports, so one reporter)
+import { reportClientError } from "../../api-client/src/errorText";
 
 /** a short reference code for support, from whatever the error carries; never the message / stack */
 export function errorReference(error: unknown): string | null {
@@ -55,7 +57,7 @@ type State = { error: Error | null };
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { error: null };
   static getDerivedStateFromError(error: Error): State { return { error: error ?? new Error("unknown") }; }
-  componentDidCatch(error: Error, info: ErrorInfo) { this.props.onError?.(error, info); }
+  componentDidCatch(error: Error, info: ErrorInfo) { reportClientError(error, "ErrorBoundary"); this.props.onError?.(error, info); }
   componentDidUpdate(prev: Props) {
     const a = prev.resetKeys, b = this.props.resetKeys;
     if (this.state.error && a && b && (a.length !== b.length || a.some((v, i) => !Object.is(v, b[i])))) this.setState({ error: null });

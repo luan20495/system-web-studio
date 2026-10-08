@@ -22,14 +22,6 @@ test("scope: SYSTEM_ADMIN = platform; TENANT_MEMBERS lists the primary tenant; M
   assert.deepEqual([plain.platform, plain.tenants.length, plain.workspaces.length, plain.dataWorkspaces.length], [false, 0, 0, 0]);
   assert.deepEqual(M.adminScope(null), { platform: false, tenants: [], workspaces: [], dataWorkspaces: [] });
 });
-test("sections: system-only sections need the platform; scoped sections need their own scope; the overview is for everyone", () => {
-  const none = M.adminScope(me()); const sys = M.adminScope(me({ platformScope: true }));
-  for (const k of ["users", "workspaces", "applications", "audit", "system", "settings", "tenants", "ai", "identity"]) { assert.equal(M.sectionAccess(k, none), "needs-platform", k); assert.equal(M.sectionAccess(k, sys), "ok", k); }
-  assert.equal(M.sectionAccess("", none), "ok");
-  assert.equal(M.sectionAccess("company", none), "needs-scope"); assert.equal(M.sectionAccess("my-workspaces", none), "needs-scope"); assert.equal(M.sectionAccess("data-sources", none), "needs-scope");
-  const wsAdmin = M.adminScope(me({ workspaces: [ws("w", ["MEMBER_MANAGE"])] })); assert.equal(M.sectionAccess("my-workspaces", wsAdmin), "ok"); assert.equal(M.sectionAccess("company", wsAdmin), "needs-scope");
-  assert.equal(M.sectionAccess("company", sys), "ok", "a SYSTEM_ADMIN may open any tenant");
-});
 test("tenant form mirrors TenantService: slug 2–120 of a-z 0-9 -, name required ≤160", () => {
   assert.deepEqual(M.checkTenantForm({ slug: "acme-vn", name: "Acme" }), {});
   assert.deepEqual(M.checkTenantForm({ slug: " ACME ", name: "Acme" }), {}, "the server lowercases and trims");

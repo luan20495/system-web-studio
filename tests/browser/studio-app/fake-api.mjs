@@ -53,7 +53,7 @@ export async function installFake(page, s) {
     if (path === "/auth/me") return json(route, s.me);
     if (path === "/auth/config") return json(route, s.config);
     if (path === "/me/usage") return json(route, { aiConfigured: false, aiRequestsUsed: 0, aiRequestsLimit: 0, aiWindowResetsInSeconds: 0, tokensLast24h: 0, tokensLimitPerDay: 0, promptsToday: 2, promptsPerMinute: 10, usageLast30Days: { calls: 0 } });
-    if (path === "/components") return json(route, registry);
+    if (path === "/components") return json(route, s.registry ?? registry);
     if (path === "/component-metadata") return s.metadata === "404" ? json(route, { code: "NOT_FOUND", message: "Not Found" }, 404) : json(route, s.metadata);
     if (path === "/ai/status") return json(route, s.ai);
     if (path === "/library/categories") return json(route, { templates: { general: "Chung" }, blocks: {} });
@@ -98,5 +98,31 @@ export function newCodeState(over = {}) {
   s.project = { ...s.project, appType: "STATIC_APP", appKind: "SOURCE_WEB_APP" }; s.projects = [s.project];
   s.changes = [{ id: "c1", status: "READY", reviewRequired: true, approvedBy: null, createdBy: "Người Khác", summary: "Đổi tiêu đề", files: ["src/App.tsx"], headSha: "abcdef1234567", kind: "USER", createdAt: "2026-10-08T08:00:00Z", previewUrl: null, build: null }];
   s.diff = [];
+  return s;
+}
+
+/** applies typed definition operations (ADD_ / UPDATE_ / REMOVE_ DATA_SOURCE | QUERY | DATA_BINDING | MAPPING | VIEW_MODEL) to a page schema the way the server stores them (no validation) */
+export function applyDefinitionOps(schema, ops) {
+  const coll = { DATA_SOURCE: "dataSources", QUERY: "queries", DATA_BINDING: "dataBindings", MAPPING: "mappings", VIEW_MODEL: "viewModels" };
+  const d = { ...schema };
+  for (const o of ops ?? []) {
+    const m = /^(ADD|UPDATE|REMOVE)_([A-Z_]+)$/.exec(o.type ?? ""); const key = m && coll[m[2]]; if (!key) continue;
+    const list = [...(d[key] ?? [])];
+    if (m[1] === "ADD") list.push(o.definition);
+    else if (m[1] === "UPDATE") { const i = list.findIndex((x) => x.id === o.definitionId); if (i >= 0) list[i] = { ...list[i], ...o.definition }; }
+    else { const i = list.findIndex((x) => x.id === o.definitionId); if (i >= 0) list.splice(i, 1); }
+    d[key] = list;
+  }
+  return d;
+}
+
+/** a page-schema project where the typed V2 operations are available (component-metadata answers) and the person may view workspace data sources */
+export function newDataState(over = {}) {
+  const perms = ["APP_VIEW", "APP_USE", "APP_EDIT", "APP_PUBLISH", "APP_SHARE", "DATA_SOURCE_VIEW"];
+  const s = newState({ projectPerms: perms, ...over });
+  s.project = { ...s.project, permissions: s.projectPerms }; s.projects = [s.project];
+  s.metadata = [{ type: "ProductGrid", source: "OVERLAY", bindableProps: [{ prop: "items", cardinality: "LIST", itemFields: ["name", "description"] }], events: [] }];
+  s.sources = [{ id: "src1", name: "Kho đơn hàng", type: "POSTGRES", status: "ACTIVE", hasCredential: false, config: {} }];
+  s.patchApply = (schema, body) => applyDefinitionOps(schema, body.operations);
   return s;
 }

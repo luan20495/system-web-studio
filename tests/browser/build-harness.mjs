@@ -11,7 +11,7 @@ const profiling = process.env.HARNESS_PROFILING === "1";
 const out = join(root, ".test-build", profiling ? "browser-prof" : nodeEnv === "production" ? "browser-prod" : "browser");
 mkdirSync(out, { recursive: true });
 // shared-UI harness pages (tests/browser/shared-ui.spec.mjs): page name -> entry; HARNESS, NOT REAL BACKEND
-const SHARED_UI = [["ui-modal", "ui-modal-harness"], ["ui-nav", "ui-nav-harness"], ["ui-toast", "ui-toast-harness"], ["ui-boundary", "ui-boundary-harness"], ["admin-ds", "admin-ds-harness"]].filter(([, e]) => existsSync(join(root, `tests/browser/${e}.tsx`)));
+const SHARED_UI = [["ui-modal", "ui-modal-harness"], ["ui-nav", "ui-nav-harness"], ["ui-toast", "ui-toast-harness"], ["ui-boundary", "ui-boundary-harness"], ["admin-ds", "admin-ds-harness"], ["ui-widgets", "ui-widgets-harness"]].filter(([, e]) => existsSync(join(root, `tests/browser/${e}.tsx`)));
 const alias = { "@": root, "@xweb/types": join(root, "packages/types/src/index.ts"), "@xweb/permissions": join(root, "packages/permissions/src/index.ts"),
   "@xweb/ui": join(root, "packages/ui/src/index.ts"), "@xweb/i18n": join(root, "packages/i18n/src/index.ts"), "@xweb/api-client": join(root, "packages/api-client/src/index.ts") };
 await esbuild.build({ entryPoints: [join(root, "tests/browser/harness.tsx"), join(root, "tests/browser/ds-harness.tsx"), join(root, "tests/browser/hooks-harness.tsx"), join(root, "tests/browser/release-harness.tsx"), join(root, "tests/browser/public-harness.tsx"), join(root, "tests/browser/prov-harness.tsx"), join(root, "tests/browser/org-harness.tsx"), join(root, "tests/browser/ai-harness.tsx"), ...SHARED_UI.map(([, e]) => join(root, `tests/browser/${e}.tsx`))], bundle: true, outdir: out, format: "iife", jsx: "automatic", platform: "browser",

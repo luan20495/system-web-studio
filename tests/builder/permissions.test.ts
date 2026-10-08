@@ -123,7 +123,7 @@ test("a role NAME alone changes nothing: only the resolved permission list is re
 test("GUARD: no Studio source decides anything from a role name (role === \"VIEWER\" | \"EDITOR\" | …)", () => {
   const roots = ["features/studio", "packages/permissions/src", "packages/auth/src", "packages/ui/src"].map((d) => join(__dirname, "..", "..", "..", d));
   const bad: string[] = [];
-  const walk = (d: string) => { for (const n of readdirSync(d)) { const p = join(d, n); if (statSync(p).isDirectory()) walk(p); else if (/\.(ts|tsx)$/.test(n)) {
+  const walk = (d: string) => { for (const n of readdirSync(d)) { const p = join(d, n); if (statSync(p).isDirectory()) walk(p); else if (/\.(ts|tsx)$/.test(n) && !p.endsWith("permissions/src/roles.ts")) {   // roles.ts is the ONE audited place (guard-role-names.test.ts)
     readFileSync(p, "utf8").split("\n").forEach((line, i) => { if (/^\s*(\*|\/\/|\/\*)/.test(line)) return; if (/\brole\w*\s*[!=]==?\s*"(VIEWER|EDITOR|PUBLISHER|OWNER|WORKSPACE_ADMIN|ADMIN)"/.test(line) || /"(VIEWER|EDITOR|PUBLISHER|WORKSPACE_ADMIN)"\s*\)?\s*\.includes\(\s*\w*role/i.test(line)) bad.push(`${p.split("xweb-c5/").pop()}:${i + 1}: ${line.trim().slice(0, 100)}`); }); } } };
   roots.forEach(walk);
   assert.deepEqual(bad, [], "a role label is data, not authority; use the resolved permission list");

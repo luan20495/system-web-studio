@@ -96,7 +96,7 @@ export function DataWizard({ ctx, focus }: { ctx: DefCtx; focus?: { sectionId?: 
         <p className="hint">{cur.help}</p>
 
         {step === "source" ? (<>
-          <DataSourcesPanel doc={doc} calls={ctx.dataManagement} canView={ctx.canViewData ?? false} viewReason={ctx.viewDataReason ?? "Bạn chưa được cấp quyền xem nguồn dữ liệu."} canManage={ctx.canManageData ?? false} manageReason={ctx.manageDataReason ?? "Bạn chưa được cấp quyền quản lý nguồn dữ liệu."} canBind={ctx.canBindData ?? false} bindReason={ctx.bindDataReason ?? "Liên kết nguồn dữ liệu cần quyền quản lý nguồn dữ liệu và quyền chỉnh sửa ứng dụng."}/>
+          <DataSourcesPanel doc={doc} calls={ctx.dataManagement} canView={ctx.canViewData ?? false} viewReason={ctx.viewDataReason ?? "Bạn chưa được cấp quyền xem nguồn dữ liệu."} canManage={ctx.canManageData ?? false} manageReason={ctx.manageDataReason ?? "Bạn chưa được cấp quyền quản lý nguồn dữ liệu."} canBind={ctx.canBindData ?? false} bindReason={ctx.bindDataReason ?? "Liên kết nguồn dữ liệu cần quyền quản lý nguồn dữ liệu và quyền chỉnh sửa ứng dụng."} canAddSlots/>
           <SlotEditor ctx={ctx}/>
         </>) : null}
 

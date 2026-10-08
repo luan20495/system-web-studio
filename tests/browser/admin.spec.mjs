@@ -98,6 +98,25 @@ await block("scenario 7", async () => { const p = await open({ portal: "admin", 
   check("LNK11 tenant admin: creating an account, then Enter on the initial focus copies (never discards) the link", /Đã sao chép/.test(await dlg(p).innerText()) && /ACT-TOKEN/.test(await linkValue(p)));
   await p.__ctx.close(); });
 
+// ===================================================================================================================== M-010 (S2 side) a create dialog cannot be dismissed while its request is in flight
+await block("scenario 6a", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/tenants", slow: "/admin/tenants" });
+  await p.getByRole("button", { name: "+ Tạo công ty" }).click(); await settle(p, 300);
+  await p.getByTestId("tenant-name").fill("Công ty Chậm"); await p.getByRole("button", { name: "Tạo công ty" }).last().click(); await settle(p, 300);
+  await p.keyboard.press("Escape"); await settle(p, 200);
+  check("INF01 create company: Esc while the POST is in flight does not close the dialog", (await dlg(p).count()) === 1);
+  await p.waitForTimeout(2600);
+  check("INF01b after the answer the company page opens as usual", /\/platform\/tenants\/tn\d+$/.test(p.url()), p.url());
+  await p.__ctx.close(); });
+await block("scenario 6b", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/users" });
+  await p.getByTestId("users-create").click(); await settle(p, 600);
+  await p.getByTestId("acc-tenant").selectOption("t1"); await p.getByTestId("acc-username").fill("cham.user"); await p.getByTestId("acc-display").fill("Chậm");
+  await p.evaluate(() => { window.__cfg.slow = "/admin/tenants/t1/users"; }); await p.getByTestId("acc-submit").click(); await settle(p, 300);
+  await p.keyboard.press("Escape"); await settle(p, 200);
+  check("INF02 create account: Esc while the POST is in flight does not close the dialog", (await dlg(p).count()) === 1);
+  await p.waitForTimeout(2600);
+  check("INF02b the one-time link is shown when the answer arrives", /ACT-TOKEN/.test(await linkValue(p)));
+  await p.__ctx.close(); });
+
 // ===================================================================================================================== M-008 create company → first admin
 await block("scenario 7", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/tenants" });
   await p.getByRole("button", { name: "+ Tạo công ty" }).click(); await settle(p, 300);
@@ -146,6 +165,100 @@ await block("scenario 11", async () => { const p = await open({ portal: "admin",
 await block("scenario 12", async () => { const p = await open({ portal: "admin", me: "sysatenant", start: "/admin/applications/a1" }); // businessAccess = true (legacy flag on)
   check("APP09 when the server says the person has business access (/auth/me businessAccess), the controls stay", (await p.getByRole("button", { name: "Xóa", exact: true }).count()) === 1);
   await p.__ctx.close(); });
+
+// ===================================================================================================================== M-076 values that are not what the screen expects must not blank the portal
+await block("scenario 8", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/audit", bad: "audit" });
+  await p.locator("tr.clickRow").first().click(); await settle(p, 300);
+  check("DAT01 an audit row whose value is NOT JSON expands: the page stays, the raw text is shown", (await p.locator("h1").count()) === 1 && /not json at all/.test(await p.locator(".detailRow pre").innerText()), `h1=${await p.locator("h1").count()}`);
+  await p.__ctx.close(); });
+await block("scenario 9", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/audit" });
+  await p.locator("tr.clickRow").first().click(); await settle(p, 300);
+  check("DAT02 a JSON audit value still shows pretty-printed JSON (unchanged)", /"a": 1/.test(await p.locator(".detailRow pre").innerText()));
+  await p.__ctx.close(); });
+await block("scenario 10", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/components", bad: "schema" });
+  await p.getByRole("button", { name: "Schema" }).click(); await settle(p, 300);
+  check("DAT03 a component whose props schema is not JSON opens its row: the page stays, the raw text is shown", (await p.locator("h1").count()) === 1 && /not json at all/.test(await p.locator(".detailRow pre").innerText()));
+  await p.__ctx.close(); });
+await block("scenario 11", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/ai/usage", daily: "empty" });
+  await settle(p, 400);
+  check("DAT04 AI usage with an empty daily series renders (no 'Invalid time value')", (await p.locator("h1").count()) === 1 && /Mức sử dụng model/.test(await text(p)));
+  await p.__ctx.close(); });
+
+// ===================================================================================================================== M-054 the Platform overview speaks to the platform operator
+await block("scenario 12", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform" }); await settle(p, 500);
+  const main = await p.locator("main").innerText();
+  check("OVW01 the Platform overview does NOT show the company checklist (no 'Tạo ứng dụng đầu tiên', no 'Mở Builder Studio', no 'Thêm người dùng')", !/Tạo (website|ứng dụng) đầu tiên|Mở Builder Studio|Thêm người dùng|Thiết lập ban đầu/.test(main), main.slice(0, 220));
+  check("OVW02 it shows the platform's own checklist: companies, AI provider, model, limits", /Thiết lập nền tảng/.test(main) && /Tạo công ty đầu tiên/.test(main) && /Thêm nhà cung cấp AI/.test(main) && /Thiết lập hạn mức AI/.test(main));
+  await p.__ctx.close(); });
+await block("scenario 13", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform", empty: "1" }); await settle(p, 500);
+  const link = p.locator("main .checklist a", { hasText: "Tạo công ty" });
+  check("OVW03 no company yet: the first step links to the Platform's company list", (await link.count()) === 1 && (await link.getAttribute("href")) === "/platform/tenants");
+  await p.__ctx.close(); });
+await block("scenario 14", async () => { const p = await open({ portal: "all", me: "sys", start: "/admin" }); await settle(p, 500);
+  check("OVW04 the legacy combined console keeps the company checklist (first step says 'ứng dụng', not 'website')", /Thiết lập ban đầu/.test(await p.locator("main").innerText()) && /Tạo ứng dụng đầu tiên/.test(await p.locator("main").innerText()) && !/website/i.test(await p.locator(".checklist").innerText()));
+  await p.__ctx.close(); });
+await block("scenario 15", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin" }); await settle(p, 500);
+  check("OVW05 the Admin console's overview for a SYSTEM_ADMIN shows no setup checklist (unchanged)", !/Thiết lập (ban đầu|nền tảng)/.test(await p.locator("main").innerText()));
+  await p.__ctx.close(); });
+
+// ===================================================================================================================== M-059 the AI usage tab does not present the legacy /admin/ai provider / key status as the truth
+await block("scenario 16", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/ai/usage" }); await settle(p, 600);
+  const main = await p.locator("main").innerText(); const kpi = await p.locator(".kpi", { hasText: "Nhà cung cấp AI" }).innerText().catch(() => "");
+  check("AIS01 the provider tile comes from the configured providers (OpenAI công ty is enabled): not 'OpenRouter / Chưa có OPENROUTER_API_KEY' from the legacy single-provider endpoint", /1 đang bật/.test(kpi) && /OpenAI công ty/.test(kpi) && !/OPENROUTER_API_KEY/.test(main) && !/Chưa có OPENROUTER/.test(main), kpi.replace(/\s+/g, " "));
+  check("AIS02 'qua OpenRouter' is gone from the daily tile (those calls go through whichever provider is configured)", !/qua OpenRouter/.test(main));
+  check("AIS03 no new route: the tile reads /admin/ai/providers, which the Providers tab already uses", (await calls(p)).some((c) => c.path === "/admin/ai/providers") && !(await calls(p)).some((c) => c.unknown));
+  await p.__ctx.close(); });
+await block("scenario 17", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/ai/usage", empty: "1" }); await settle(p, 600);
+  const kpi = await p.locator(".kpi", { hasText: "Nhà cung cấp AI" }).innerText().catch(() => "");
+  check("AIS04 no provider configured: the tile says the system runs in trial (simulated) mode, without an env var name", /Chế độ thử nghiệm/.test(kpi) && !/OPENROUTER|API_KEY/.test(kpi), kpi.replace(/\s+/g, " "));
+  await p.__ctx.close(); });
+
+// ===================================================================================================================== M-064 copy that contradicts the product (password rule per flow, stale "not implemented", "website")
+await block("scenario 18", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/users" });
+  await p.getByTestId("users-create").click(); await settle(p, 600);
+  check("TXT01 the create-account dialog states the password rule of the ACTIVATION flow (the person sets it: at least 8 characters)", /tối thiểu 8 ký tự/.test(await p.locator("[role=dialog]").innerText()));
+  await p.getByTestId("acc-tenant").selectOption("t1"); await p.getByTestId("acc-username").fill("moi.user"); await p.getByTestId("acc-display").fill("Người Mới"); await p.getByTestId("acc-submit").click(); await settle(p, 500);
+  check("TXT02 the activation link dialog states it too", /tối thiểu 8 ký tự/.test(await p.locator("[role=dialog]").innerText()));
+  await p.__ctx.close(); });
+await block("scenario 19", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/users/u2" });
+  await p.getByRole("button", { name: "Đặt lại mật khẩu" }).click(); await settle(p, 400);
+  check("TXT03 the password-reset link dialog states the rule", /tối thiểu 8 ký tự/.test(await p.locator("[role=dialog]").innerText()));
+  await p.__ctx.close(); });
+await block("scenario 20", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/applications/a1" }); await settle(p, 400);
+  const main = await p.locator("main").innerText();
+  check("TXT04 application detail does not list 'Lưu trữ (archive)' as not implemented beside a working 'Lưu trữ' button", !/Lưu trữ \(archive\)/.test(main) && (await p.getByRole("button", { name: "Lưu trữ", exact: true }).count()) === 1 && /Chặn xuất bản công khai/.test(main), main.slice(main.indexOf("Chưa triển khai"), main.indexOf("Chưa triển khai") + 160));
+  await p.__ctx.close(); });
+await block("scenario 21", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform" }); await settle(p, 600);
+  const t = await p.locator("main").innerText();
+  check("TXT05 the AI month card does not say budgets are not implemented (they are: 'Quyền & ngân sách AI')", !/chưa triển khai/.test(t) && /Quyền & ngân sách AI/.test(t));
+  await p.__ctx.close(); });
+
+// ===================================================================================================================== route / navigation snapshot (M-066: the split must not change behaviour)
+// For every persona the sidebar labels and, for every section key (deep links, aliases, foreign and unknown keys included), the final path, the h1, the h2s and the kind of state view are recorded in admin-routes.snapshot.json
+// (generated from the pre-split code, `UPDATE_SNAPSHOT=1` rewrites it). Dates / numbers are not compared: only structure.
+if (!process.env.SKIP_SNAPSHOT) {
+  const KEYS = ["", "tenants", "tenants/t1", "users", "users/u2", "workspaces", "workspaces/w1", "applications", "applications/a1", "ai", "ai/providers", "ai/models", "ai/limits", "ai/usage", "ai-governance", "alerts", "security", "costs", "departments", "identity", "connectors", "backups", "components", "templates", "audit", "builds", "packages", "system", "settings", "groups", "sharing", "byok", "company", "organization", "employees", "people", "my-workspaces", "data-sources", "nope", "nope/deeper"];
+  const PERSONAS = [["platform", "sys"], ["platform", "tadmin"], ["admin", "sys"], ["admin", "sysmember"], ["admin", "tadmin"], ["admin", "wsadmin"], ["admin", "plain"], ["all", "sys"], ["all", "tadmin"]];
+  const snap = {};
+  for (const [portal, me] of PERSONAS) {
+    const p = await open({ portal, me, start: `/${portal === "all" ? "admin" : portal}` }); const prefix = portal === "all" ? "/admin" : `/${portal}`; const out = { nav: null, routes: {} };
+    for (const k of KEYS) {
+      await p.evaluate((u) => { history.pushState(null, "", u); window.dispatchEvent(new PopStateEvent("popstate")); }, `${prefix}${k ? "/" + k : ""}`);
+      for (let i = 0; i < 20; i++) { await p.waitForTimeout(120); if (i > 2 && (await p.locator(".spinner").count()) === 0) break; }
+      if (out.nav === null && (await p.locator("#admin-sidebar").count())) out.nav = await p.locator("#admin-sidebar nav a").allInnerTexts();
+      out.routes[k || "(home)"] = { url: new URL(p.url()).pathname, h1: await p.locator("h1").allInnerTexts(), h2: await p.locator("main h2").allInnerTexts(), states: await p.locator(".stateView").evaluateAll((els) => els.map((e) => [...e.classList].filter((c) => c.startsWith("state-")).join(""))), coming: await p.locator(".comingSoon").count(), title: await p.title() };
+    }
+    snap[`${portal}/${me}`] = out; await p.__ctx.close();
+  }
+  const { readFileSync, writeFileSync } = await import("node:fs"); const file = new URL("./admin-routes.snapshot.json", import.meta.url).pathname;
+  if (process.env.UPDATE_SNAPSHOT) { writeFileSync(file, JSON.stringify(snap, null, 1) + "\n"); console.log("snapshot written"); }
+  const want = JSON.parse(readFileSync(file, "utf8")); const diffs = [];
+  for (const persona of Object.keys(want)) {
+    if (JSON.stringify(want[persona].nav) !== JSON.stringify(snap[persona]?.nav)) diffs.push(`${persona} nav: ${JSON.stringify(snap[persona]?.nav)}`);
+    for (const k of Object.keys(want[persona].routes)) if (JSON.stringify(want[persona].routes[k]) !== JSON.stringify(snap[persona]?.routes[k])) diffs.push(`${persona} ${k}: ${JSON.stringify(snap[persona]?.routes[k])} (want ${JSON.stringify(want[persona].routes[k])})`);
+  }
+  check(`SNAP01 every persona's sidebar and every section's page (${Object.keys(want).length} personas × ${KEYS.length} paths) is exactly what it was before the split`, diffs.length === 0, diffs.slice(0, 3).join(" || "));
+}
 
 check("no console error / warning / uncaught exception in any page", errors.length === 0, errors.slice(0, 3).join(" | "));
 await browser.close();

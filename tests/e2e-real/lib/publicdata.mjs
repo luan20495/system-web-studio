@@ -49,7 +49,7 @@ export async function chain({ cfg, fx, browser, check }, { withData }) {
   const page = await newPage(browser);
   await loginUi(page, cfg, fx.users.adminA.username, fx.users.adminA.password);
   await openBuilder(page, cfg, pid);
-  await page.locator(".bx-left").getByRole("tab", { name: "Dữ liệu" }).click();
+  await page.locator(".bx-left").getByRole("tab", { name: "Dữ liệu" }).click(); await page.locator("[data-testid=data-advanced] > summary").click();   // M-005: the 7-step wizard is under "Nâng cao"
   await page.getByTestId("slot-editor").waitFor({ timeout: 20_000 });
   await page.getByTestId("slot-id").fill(SLOT); await page.getByTestId("slot-name").fill("Đơn hàng"); await page.getByTestId("slot-type").fill(withData ? ds.type.toLowerCase() : "postgres");
   await page.getByTestId("slot-add").click(); await page.getByTestId(`slot-${SLOT}`).waitFor({ timeout: 15_000 });
@@ -76,7 +76,7 @@ export async function chain({ cfg, fx, browser, check }, { withData }) {
   const bad = await patch([{ type: "ADD_QUERY", definition: { id: "pd-bad", dataSourceRef: SLOT, mode: "WRITE", operationKey: operationKey, public: true } }], "e2e-pd01 write+public");
   check.ok("[api] a WRITE query with public=true is REJECTED by the server (422, path queries[i].public) — the UI never offers it", bad.status === 422 && /queries\[\d+\]\.public/.test(JSON.stringify(bad.body)), `status=${bad.status} ${JSON.stringify(bad.body).slice(0, 160)}`, "http");
 
-  await page.reload(); await page.locator(".bx-left").getByRole("tab", { name: "Dữ liệu" }).click();
+  await page.reload(); await page.locator(".bx-left").getByRole("tab", { name: "Dữ liệu" }).click(); await page.locator("[data-testid=data-advanced] > summary").click();
   await page.getByRole("tab", { name: /Dữ liệu công khai/ }).click();
   const first = (await schema()).schema.sections[0];
   await page.getByTestId("binding-section").selectOption(first.id); await page.getByTestId("binding-prop").selectOption("brand").catch(() => undefined);

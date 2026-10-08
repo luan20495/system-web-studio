@@ -21,7 +21,9 @@ const emptyForm = (): SourceForm => ({ name: "", type: "", config: {}, credentia
  * Access (all UX; the server re-checks): `canView` = DATA_SOURCE_VIEW shows the metadata list and nothing else; `canManage` = DATA_SOURCE_MANAGE gates create / update / delete /
  * credential metadata / connection test; `canBind` = DATA_SOURCE_MANAGE + APP_EDIT gates the TEST/draft binding. Without `canView` no request is sent at all.
  */
-export function DataSourcesPanel({ doc, calls, canView, viewReason, canManage, manageReason, canBind, bindReason, headingLevel = 3 }: {
+export function DataSourcesPanel({ doc, calls, canView, viewReason, canManage, manageReason, canBind, bindReason, headingLevel = 3, canAddSlots = false }: {
+  /** the host has its own editor for slots (the Builder: "Khe dữ liệu" right below). false = the old explanation (Admin has none). S1-027 */
+  canAddSlots?: boolean;
   headingLevel?: 2 | 3; // 2 when the panel sits directly under a page h1 (Admin), 3 inside the builder rail (under its h2)
   doc: AppDefinitionV2; calls?: DataManagementCalls; canView: boolean; viewReason: string; canManage: boolean; manageReason: string; canBind: boolean; bindReason: string }) {
   const H = headingLevel === 2 ? "h2" : "h3";
@@ -210,7 +212,9 @@ export function DataSourcesPanel({ doc, calls, canView, viewReason, canManage, m
           ))}
         </ul>
         {unboundLive(doc, bindings).length ? <p className="hint" data-testid="live-unbound">Chưa liên kết LIVE cho: {unboundLive(doc, bindings).join(", ")}. Ứng dụng đã xuất bản sẽ trả lỗi “nguồn chưa được liên kết” khi gọi dữ liệu thật.</p> : null}
-      </> : <p className="hint" data-testid="slot-empty">Tài liệu ứng dụng chưa khai báo khe dữ liệu (dataSources[]) và chưa có thao tác nào để thêm khe từ Studio, nên chưa liên kết được. Tính năng này sẽ mở khi máy chủ hỗ trợ khai báo khe dữ liệu.</p>}
+      </> : canAddSlots
+        ? <p className="hint" data-testid="slot-empty">Ứng dụng chưa có kết nối dữ liệu nào. Thêm kết nối ở mục “Khe dữ liệu” bên dưới, rồi quay lại đây để liên kết với nguồn thật.</p>
+        : <p className="hint" data-testid="slot-empty">Tài liệu ứng dụng chưa khai báo khe dữ liệu (dataSources[]) và chưa có thao tác nào để thêm khe từ Studio, nên chưa liên kết được. Tính năng này sẽ mở khi máy chủ hỗ trợ khai báo khe dữ liệu.</p>}
 
       {removing ? (
         <Dialog title={`Xóa nguồn “${removing.name}”?`} onClose={() => setRemoving(null)} footer={<>
