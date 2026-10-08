@@ -10,6 +10,7 @@ import {
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import type { ApiProject, AppDefinitionV2, AssetDto, DefinitionOperation, RegistryComponent, SchemaOperation, Section } from "@xweb/types";
+import { useOverflow } from "../../../packages/ui/src/useOverflow";
 import { Canvas, DragChip } from "./Canvas";
 import { Inspector } from "./Inspector";
 import { LeftRail, type RailId } from "./LeftRail";
@@ -74,6 +75,7 @@ export function BuilderWorkspace(props: {
   const [removing, setRemoving] = useState(false);
   const [check, setCheck] = useState<PreflightIssue[] | null>(null);
   const frameRef = useRef<HTMLIFrameElement>(null);
+  const rightRef = useRef<HTMLElement>(null); const rightScrolls = useOverflow(rightRef, "y"); // the properties panel is a keyboard stop only while it scrolls
 
   const sections = useMemo(() => sectionsOf(doc, pageId), [doc, pageId]);
   const selected = sections.find((s) => s.id === selectedId) ?? null;
@@ -178,13 +180,14 @@ export function BuilderWorkspace(props: {
         leading={props.leading} modeTabs={props.modeTabs} trailing={props.trailing}
         canShare={cap.canShare} shareReason={shareReason} onShare={props.openMembers} canPublish={cap.canPublish && props.save.state !== "error"} publishReason={props.save.state === "error" ? "Có thay đổi chưa lưu được. Thử lưu lại trước khi xuất bản." : publishReason} publishBusy={busy} issues={counts} onPublish={publish} onRetrySave={props.onRetrySave}/>
       <main className="bx-body">
+        <a className="bx-skip" href="#bx-canvas" onClick={(e) => { e.preventDefault(); document.getElementById("bx-canvas")?.focus(); }}>Bỏ qua tới bản xem trước</a>
         <LeftRail value={rail} onChange={setRail}>{leftPanel}</LeftRail>
-        <section className="bx-center" aria-label="Bản xem trước ứng dụng">
+        <section className="bx-center" id="bx-canvas" tabIndex={-1} aria-label="Bản xem trước ứng dụng">
           {!edit ? <p className="bx-banner" role="note">Đang ở chế độ dùng thử: bản xem trước không chỉnh sửa được.</p> : readOnly ? <p className="bx-banner" role="note">Bạn chỉ có quyền xem.</p> : null}
           <Canvas document={html} sections={sections} selectedId={selectedId} onSelect={select} onRects={setRects} rects={rects} interactive={interactive} dragging={!!drag && drag.kind !== "row"} slot={slot}
             device={props.device} labelOf={props.labelOf} frameRef={frameRef} title="Bản xem trước ứng dụng"/>
         </section>
-        <aside className="bx-right" aria-label="Thuộc tính" tabIndex={0}>
+        <aside ref={rightRef} className="bx-right" aria-label="Thuộc tính" {...(rightScrolls ? { tabIndex: 0 } : {})}>
           {!edit ? <TestPanel doc={doc} rawPermissions={props.project.permissions} runtime={props.runtime} dirty={props.save.state !== "saved" || busy}/>
             : selected ? (
               <Inspector ctx={ctx} section={selected} component={registry.find((c) => c.id === selected.type)} meta={backend.metadata.get(selected.type)} index={sections.indexOf(selected)} canUp={canStep(sections, selected.id, -1)} canDown={canStep(sections, selected.id, 1)} count={sections.length}

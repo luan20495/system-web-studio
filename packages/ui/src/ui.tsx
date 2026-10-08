@@ -71,7 +71,7 @@ export function Kpi({ label, value, hint }: { label: string; value: ReactNode; h
   return <div className="kpi"><div className="kpiLabel">{label}</div><div className="kpiValue">{value}</div>{hint ? <div className="kpiHint">{hint}</div> : null}</div>;
 }
 export function Card({ title, actions, children, className }: { title?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string }) {
-  return <ScrollRegion className={`card ${className ?? ""}`} label={typeof title === "string" && title ? title : "Nội dung"}>{title || actions ? <div className="cardHead">{title ? <h2>{title}</h2> : <span/>}{actions}</div> : null}{children}</ScrollRegion>;
+  return <ScrollRegion className={`card ${className ?? ""}`}>{title || actions ? <div className="cardHead">{title ? <h2>{title}</h2> : <span/>}{actions}</div> : null}{children}</ScrollRegion>;
 }
 export function ComingSoon({ title, children }: { title: string; children: ReactNode }) {
   return <div className="comingSoon"><Pill value="COMING_SOON" label="Chưa triển khai"/><h3>{title}</h3><div>{children}</div></div>;

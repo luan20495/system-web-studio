@@ -7,6 +7,7 @@
 import type { AppDefinitionV2, BindablePropMeta, DataBindingDef, DefinitionOperation, FieldMappingDef, FieldType, MappingDef, ParamDef, QueryDef, TransformDef, ViewModelDef, ViewModelFieldDef } from "@xweb/types";
 import { paramRequired } from "./contract";
 import { defOps } from "./definition";
+import { fieldsOf, transformsOf, vmFieldsOf, withTransforms } from "./safeRead";
 import { notReady, staticReadiness, type Readiness } from "./readiness";
 
 export const ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
@@ -49,17 +50,7 @@ export const SIMPLE_TRANSFORMS: readonly { type: string; label: string }[] = [
 const LABELS: Record<string, string> = Object.fromEntries(SIMPLE_TRANSFORMS.map((t) => [t.type, t.label]));
 Object.assign(LABELS, { toBoolean: "Chuyển thành đúng/sai", date: "Định dạng ngày", enumMap: "Đổi giá trị theo bảng", join: "Ghép nhiều cột", split: "Tách chuỗi", formula: "Công thức" });
 export const describeTransform = (t: TransformDef): string => LABELS[t.type] ?? t.type;
-/**
- * Safe READ of a mapping field's transforms: a field stored without `transforms` (undefined / null), with the LEGACY `transform` (one object or an array), or with garbage reads as a list — it never throws.
- * Nothing is written back from here: an untouched mapping keeps exactly what the server stored; an edited field is rebuilt with the canonical `transforms[]`.
- */
-export function transformsOf(f: { transforms?: unknown; transform?: unknown } | null | undefined): TransformDef[] {
-  const src = f?.transforms !== undefined && f?.transforms !== null ? f.transforms : f?.transform;
-  if (Array.isArray(src)) return src.filter((t): t is TransformDef => !!t && typeof t === "object" && typeof (t as TransformDef).type === "string");
-  return src && typeof src === "object" && typeof (src as TransformDef).type === "string" ? [src as TransformDef] : [];
-}
-/** the fields of a stored mapping; a mapping without `fields` reads as having none */
-export const fieldsOf = (m: { fields?: unknown } | null | undefined): FieldMappingDef[] => (Array.isArray(m?.fields) ? (m!.fields as FieldMappingDef[]).filter((f) => !!f && typeof f === "object") : []);
+export { transformsOf, fieldsOf, vmFieldsOf, withTransforms } from "./safeRead";
 /** "price [toNumber → …], name" — the one-line summary shown for a mapping (Data panel list, Inspector) */
 export const mappingNote = (m: { fields?: unknown } | null | undefined): string => fieldsOf(m).map((f) => { const t = transformsOf(f); return `${f.to}${t.length ? ` [${t.map(describeTransform).join(" → ")}]` : ""}`; }).join(", ");
 /** only the parameterless transforms can be added from the UI; the others are kept exactly as stored and shown read-only */
@@ -90,14 +81,14 @@ export function addTransform(f: FieldMappingDef, type: string): FieldMappingDef 
   if (!SIMPLE_TRANSFORMS.some((t) => t.type === type)) return { error: "Biến đổi này chưa tạo được từ giao diện." };
   const cur = transformsOf(f);
   if (cur.length >= MAX_TRANSFORMS) return { error: `Tối đa ${MAX_TRANSFORMS} biến đổi cho một trường.` };
-  return { ...f, transforms: [...cur, { type }] };
+  return withTransforms(f, [...cur, { type }]);
 }
-export const removeTransform = (f: FieldMappingDef, index: number): FieldMappingDef => ({ ...f, transforms: transformsOf(f).filter((_, i) => i !== index) });
+export const removeTransform = (f: FieldMappingDef, index: number): FieldMappingDef => withTransforms(f, transformsOf(f).filter((_, i) => i !== index));
 export function moveTransform(f: FieldMappingDef, from: number, to: number): FieldMappingDef {
   const cur = transformsOf(f);
   if (from < 0 || from >= cur.length || to < 0 || to >= cur.length || from === to) return f;
   const next = cur.slice(); const [t] = next.splice(from, 1); next.splice(to, 0, t);
-  return { ...f, transforms: next };
+  return withTransforms(f, next);
 }
 
 // ------------------------------------------------------------------------------------------------------------------- builders
@@ -154,7 +145,7 @@ export function viewModelFromMapping(m: MappingDef, doc: AppDefinitionV2, name: 
 export function bindingCompatibility(prop: BindablePropMeta, vm: ViewModelDef): { ok: boolean; missing: string[]; message: string } {
   if (prop.cardinality === "LIST" && (vm.cardinality ?? "LIST") !== "LIST") return { ok: false, missing: [], message: "Thuộc tính này nhận danh sách, nhưng ViewModel chỉ có một bản ghi." };
   if (prop.cardinality === "SINGLE" && vm.cardinality === "LIST") return { ok: false, missing: [], message: "Thuộc tính này nhận một giá trị, nhưng ViewModel là danh sách." };
-  const have = new Set(vm.fields.map((f) => f.name));
+  const have = new Set(vmFieldsOf(vm).map((f) => f.name));
   const missing = prop.itemFields.filter((f) => !have.has(f));
   return missing.length
     ? { ok: false, missing, message: `ViewModel chưa có trường: ${missing.join(", ")}.` }

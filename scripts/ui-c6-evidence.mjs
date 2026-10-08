@@ -30,7 +30,7 @@ const ops = [
 const patch = await u.patch(`/workspaces/${ws.id}/projects/${proj.id}/schema`, { expectedRevision: sc.revision, summary: "ux-001 fixture: mapping without transforms", operations: ops });
 say("UX-001 fixture (PATCH /schema, mapping fields without transforms[])", { status: patch.status, code: patch.body?.code ?? null, violations: (patch.body?.details?.violations ?? []).slice(0, 4) });
 const browser = await chromium.launch({ executablePath: process.env.CHROME ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", headless: true });
-const axe = async (p) => { await p.addScriptTag({ path: AXE }); return p.evaluate(async () => (await window.axe.run(document, { runOnly: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"], resultTypes: ["violations"] })).violations.filter((v) => ["critical", "serious"].includes(v.impact)).map((v) => `${v.id}(${v.nodes.length})`)); };
+const axe = async (p) => { await p.addScriptTag({ path: AXE }); return p.evaluate(async () => (await window.axe.run(document, { runOnly: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"], resultTypes: ["violations"] })).violations.map((v) => `${v.id}:${v.impact}(${v.nodes.length})`)); };
 async function studio(w) {
   const ctx = await browser.newContext({ viewport: { width: w, height: w >= 1000 ? 900 : 800 } }); const p = await ctx.newPage(); p.setDefaultTimeout(15000);
   const errs = []; p.on("pageerror", (e) => errs.push(`pageerror: ${e.message.slice(0, 120)}`)); p.on("console", (m) => { if (m.type() === "error" && !/favicon|Failed to load resource/.test(m.text())) errs.push(`console: ${m.text().slice(0, 120)}`); });
@@ -55,7 +55,21 @@ for (const w of [1440, 768, 430, 390]) {
   await p.screenshot({ path: join(OUT, `data-rail-${w}.png`) });
   const small = await p.evaluate(() => [...document.querySelectorAll("button,[role=button],[role=tab],input[type=checkbox],input[type=radio],select")].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== "hidden" && (r.width < 24 || r.height < 24); }).map((e) => `${e.tagName.toLowerCase()}.${(e.className || "").toString().slice(0, 20)} ${Math.round(e.getBoundingClientRect().width)}x${Math.round(e.getBoundingClientRect().height)}`).slice(0, 8));
   say(`UX-008 controls < 24 px @${w}`, { count: small.length, examples: small });
-  say(`axe serious+critical (builder, Dữ liệu rail) @${w}`, await axe(p));
+  say(`axe (all impacts) (builder, Dữ liệu rail) @${w}`, await axe(p));
+  await ctx.close();
+}
+// Inspector with a SELECTED section at 768 / 1024 (reviewer risk: the third grid row could starve the Inspector) and the skip link / tab order at 430
+for (const w of [768, 1024]) {
+  const { ctx, p } = await studio(w);
+  await p.getByText("Đầu trang (Hero)").first().click(); await p.waitForTimeout(500);
+  const ins = await p.evaluate(() => { const r = document.querySelector(".bx-right"); const b = r.getBoundingClientRect(); return { heightPx: Math.round(b.height), viewportH: innerHeight, scrolls: r.scrollHeight > r.clientHeight + 1, focusable: r.tabIndex >= 0, firstField: !!r.querySelector("input,textarea,select,button") }; });
+  say(`Inspector with a selected section @${w}`, ins); await p.screenshot({ path: join(OUT, `inspector-selected-${w}.png`) }); await ctx.close();
+}
+{
+  const { ctx, p } = await studio(430);
+  await p.keyboard.press("Tab"); const first = []; for (let i = 0; i < 40; i++) { first.push(await p.evaluate(() => (document.activeElement?.textContent || document.activeElement?.getAttribute("aria-label") || "").trim().slice(0, 24))); if (first.at(-1).startsWith("Bỏ qua")) break; await p.keyboard.press("Tab"); }
+  say("skip link reachable by Tab @430 (focus order until it)", first.slice(-4)); const sk = first.at(-1).startsWith("Bỏ qua");
+  if (sk) { await p.keyboard.press("Enter"); say("after Enter focus is on", await p.evaluate(() => document.activeElement?.id)); }
   await ctx.close();
 }
 // UX-005: the Costs table by keyboard (Platform, SYSTEM_ADMIN)
@@ -66,15 +80,15 @@ for (const w of [1440, 768, 390]) {
   const line = (i) => ({ key: `k${i}`, label: `Workspace Kinh doanh miền Nam – Ứng dụng quản lý đơn hàng ${i}`, storageBytes: 12345678901 * (i + 1), buildCpuMs: 9876543 * (i + 1), buildMs: 765432 * (i + 1), aiUsd: 12.3456 * i, aiUnknownCalls: i, storageUsd: 1.2 * i, cpuUsd: 3.4 * i, buildUsd: 0.5 * i, totalKnownUsd: 17.5 * i, complete: i % 2 === 0 });
   await p.route(/\/admin\/costs\?/, (r) => r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ days: 30, prices: [], missingPrices: ["STORAGE_GIB_MONTH"], egress: "Lưu lượng mạng (egress) chưa được đo: không tính.", total: line(0), byDepartment: [line(1), line(2), line(3)], byWorkspace: [line(4), line(5), line(6), line(7)], byApplication: [line(8), line(9)] }) }));
   await p.goto(`${PLATFORM}/platform/costs`, { waitUntil: "domcontentloaded" }); await p.waitForLoadState("networkidle").catch(() => undefined); await p.waitForTimeout(600);
-  const regions = await p.evaluate(() => [...document.querySelectorAll("section.card")].map((c) => ({ title: c.querySelector("h2")?.textContent ?? "", scrolls: c.scrollWidth > c.clientWidth + 1, focusable: c.tabIndex >= 0, role: c.getAttribute("role"), name: c.getAttribute("aria-label") })));
+  const regions = await p.evaluate(() => [...document.querySelectorAll("section.card")].map((c) => ({ title: c.querySelector("h2")?.textContent ?? "", scrolls: c.scrollWidth > c.clientWidth + 1, focusable: c.tabIndex >= 0, role: c.getAttribute("role"), name: c.getAttribute("aria-labelledby") ? document.getElementById(c.getAttribute("aria-labelledby"))?.textContent : null })));
   const scrolling = regions.filter((r) => r.scrolls);
   let reached = null, moved = null;
   if (scrolling.length) {
-    for (let i = 0; i < 40 && !reached; i++) { await p.keyboard.press("Tab"); reached = await p.evaluate(() => { const a = document.activeElement; return a && a.matches("section.card[role=region]") ? { name: a.getAttribute("aria-label"), outline: getComputedStyle(a).outlineStyle + " " + getComputedStyle(a).outlineWidth } : null; }); }
+    for (let i = 0; i < 40 && !reached; i++) { await p.keyboard.press("Tab"); reached = await p.evaluate(() => { const a = document.activeElement; return a && a.matches("section.card[tabindex=\"0\"]") ? { name: document.getElementById(a.getAttribute("aria-labelledby") ?? "")?.textContent ?? null, role: a.getAttribute("role"), outline: getComputedStyle(a).outlineStyle + " " + getComputedStyle(a).outlineWidth } : null; }); }
     if (reached) { const before = await p.evaluate(() => document.activeElement.scrollLeft); await p.keyboard.press("ArrowRight"); await p.keyboard.press("ArrowRight"); await p.waitForTimeout(250); moved = { scrollLeftBefore: before, scrollLeftAfter: await p.evaluate(() => document.activeElement.scrollLeft) }; await p.screenshot({ path: join(OUT, `costs-focus-${w}.png`) }); }
   }
-  say(`UX-005 Costs @${w}`, { cards: regions.length, scrollingCards: scrolling.length, scrollingAreFocusableRegions: scrolling.every((r) => r.focusable && r.role === "region" && r.name), reachedByTab: reached, scrolledByArrowKeys: moved });
-  say(`axe serious+critical (costs) @${w}`, await axe(p));
+  say(`UX-005 Costs @${w}`, { cards: regions.length, scrollingCards: scrolling.length, scrollingAreFocusableRegions: scrolling.every((r) => r.focusable && r.role === "group" && r.name), reachedByTab: reached, scrolledByArrowKeys: moved });
+  say(`axe (all impacts) (costs) @${w}`, await axe(p));
   await ctx.close();
 }
 await browser.close(); writeFileSync(join(OUT, "evidence.json"), JSON.stringify(log, null, 1)); console.log("evidence in " + OUT);

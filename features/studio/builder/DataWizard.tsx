@@ -9,7 +9,7 @@ import { ArrowDown, ArrowUp, X } from "../../../packages/ui/src/icons";
 import type { FieldMappingDef, MappingDef, ParamDef, QueryDef, ViewModelDef, DataBindingDef } from "@xweb/types";
 import { CARDINALITIES, FIELD_TYPES, MAPPING_ERROR_POLICIES, PARAM_TYPES, QUERY_MODES, paramRequired } from "./core/contract";
 import {
-  DATA_STEPS, FROM_RE, MAX_TRANSFORMS, SIMPLE_TRANSFORMS, addTransform, bindingCompatibility, buildBinding, buildMapping, buildQuery, checkMapping, checkQuery, describeTransform, fieldsOf, mappingNote, transformsOf,
+  DATA_STEPS, FROM_RE, MAX_TRANSFORMS, SIMPLE_TRANSFORMS, addTransform, bindingCompatibility, buildBinding, buildMapping, buildQuery, checkMapping, checkQuery, describeTransform, fieldsOf, mappingNote, transformsOf, vmFieldsOf,
   isSimpleTransform, moveTransform, newParam, removeTransform, setParamRequired, stepReadiness, viewModelFromMapping, viewStateOf, VIEW_STATE_TEXT, type DataStepId,
 } from "./core/dataFlow";
 import { allSections, defOps, usersOf } from "./core/definition";
@@ -174,7 +174,7 @@ export function DataWizard({ ctx, focus }: { ctx: DefCtx; focus?: { sectionId?: 
                 <Field label="Ánh xạ">{(id) => <select id={id} disabled={disabled} value={mappingId} onChange={(e) => setMappingId(e.target.value)}>{mappings.map((m) => <option key={m.id} value={m.id}>{m.name || m.id}</option>)}</select>}</Field>
                 <Field label="Tên ViewModel">{(id) => <input id={id} disabled={disabled} value={vmName} onChange={(e) => setVmName(e.target.value)}/>}</Field>
                 <Field label="Dạng dữ liệu">{(id) => <select id={id} disabled={disabled} value={card} onChange={(e) => setCard(e.target.value as "SINGLE" | "LIST")}>{CARDINALITIES.map((c) => <option key={c} value={c}>{c === "LIST" ? "Danh sách" : "Một bản ghi"}</option>)}</select>}</Field>
-                <p className="hint">Các trường lấy từ ánh xạ: {(mappings.find((m) => m.id === mappingId)?.fields ?? []).map((f) => `${f.to} (${viewModelFromMapping(mappings.find((m) => m.id === mappingId)!, doc, "x").fields.find((x) => x.name === f.to)?.type ?? FIELD_TYPES[0]})`).join(", ") || "—"}.</p>
+                <p className="hint">Các trường lấy từ ánh xạ: {fieldsOf(mappings.find((m) => m.id === mappingId)).map((f) => `${f.to} (${viewModelFromMapping(mappings.find((m) => m.id === mappingId)!, doc, "x").fields.find((x) => x.name === f.to)?.type ?? FIELD_TYPES[0]})`).join(", ") || "—"}.</p>
                 <div className="bx-actions"><button type="submit" className="bx-btn primary" disabled={disabled}>Lưu ViewModel</button></div>
               </form>)}
           </Gate>
@@ -202,7 +202,7 @@ export function DataWizard({ ctx, focus }: { ctx: DefCtx; focus?: { sectionId?: 
       <details className="bx-existing"><summary>Đã khai báo ({queries.length + mappings.length + vms.length + bindings.length})</summary>
         <DefList title="Truy vấn" items={queries.map((q) => ({ id: q.id, name: q.name || q.id, note: `${q.mode ?? "READ"} · ${q.operationKey ?? ""}${q.public === true ? " · công khai" : ""}` }))} onRemove={(i) => setRemoving({ collection: "queries", id: i.id, name: i.name })} disabled={disabled}/>
         <DefList title="Ánh xạ" items={mappings.map((m) => ({ id: m.id, name: m.name || m.id, note: mappingNote(m) }))} onRemove={(i) => setRemoving({ collection: "mappings", id: i.id, name: i.name })} disabled={disabled}/>
-        <DefList title="ViewModel" items={vms.map((v) => ({ id: v.id, name: v.name || v.id, note: `${v.cardinality ?? "LIST"} · ${v.fields.map((f) => f.name).join(", ")}` }))} onRemove={(i) => setRemoving({ collection: "viewModels", id: i.id, name: i.name })} disabled={disabled}/>
+        <DefList title="ViewModel" items={vms.map((v) => ({ id: v.id, name: v.name || v.id, note: `${v.cardinality ?? "LIST"} · ${vmFieldsOf(v).map((f) => f.name).join(", ")}` }))} onRemove={(i) => setRemoving({ collection: "viewModels", id: i.id, name: i.name })} disabled={disabled}/>
         <DefList title="Gắn dữ liệu" items={bindings.map((b) => ({ id: b.id, name: `${b.sectionId}.${b.prop}`, note: b.viewModelRef ? `← ${vms.find((v) => v.id === b.viewModelRef)?.name ?? b.viewModelRef}` : "" }))} onRemove={(i) => setRemoving({ collection: "dataBindings", id: i.id, name: i.name })} disabled={disabled}/>
       </details>
 

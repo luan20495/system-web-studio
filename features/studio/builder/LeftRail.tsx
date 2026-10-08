@@ -12,7 +12,7 @@ export function LeftRail({ value, onChange, children }: { value: RailId; onChang
   return (
     <aside className="bx-left" aria-label="Công cụ dựng ứng dụng">
       <Tabs label="Công cụ" orientation="vertical" idPrefix="rail" items={RAIL.map((r) => ({ id: r.id, label: r.label }))} value={value} onChange={(id) => onChange(id as RailId)}/>
-      <div {...tabPanelProps("rail", value)} className="bx-left-panel" tabIndex={0}>{children}</div>
+      <div {...tabPanelProps("rail", value)} className="bx-left-panel">{children}</div>
     </aside>
   );
 }

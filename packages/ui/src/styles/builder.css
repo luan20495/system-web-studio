@@ -136,7 +136,8 @@
 }
 /* secondary text on the dark editor: the "disabled" library entries and hints keep ≥ 4.5:1 (token --muted on the panel) instead of a faded colour */
 .bx-panel-body .disabled,.bx-panel-body .disabled small,.bx-panel-body small,.bx-panel-body .hint{color:var(--muted);opacity:1}
-.bx-panel-body .disabled b{color:#c9d1dc;opacity:1}
+.bx-panel-body .disabled b{color:var(--muted-strong);opacity:1}
+.bx-panel-body .bx-lib-item.disabled{border-style:dashed}
 
 /* ===== builder layout pass (UX-002 / UX-003) =====
    desktop: a wider left column and rail so "Thành phần" / "Hành động" fit on one line; tablet: the rail becomes a row of tabs ABOVE the panel (the panel keeps the whole column, it used to get ~170 px);
@@ -160,11 +161,9 @@
   .bx-top .topActions{flex:1 1 100%;flex-wrap:wrap;justify-content:flex-start;gap:6px}
   .bx-top .topActions>*{flex:none}
   .bx-top .topActions>.button.ghost,.bx-top .topActions>.button.icon{display:inline-flex}
-  .bx-top .projectName,.bx-top .projectMeta{max-width:60vw}
 }
 
 /* rail / inactive tab contrast: a stronger secondary-text token for the dark editor (≥ 9:1 on the panel) used by the rail, tabs and hints; hover / active / focus keep distinct, visible states */
-:root{--muted-strong:#c4cbd6}
 .bx-tabs button{color:var(--muted-strong)}
 .bx-tabs button:hover:not(.active){background:#1b2130;color:#fff}
 .bx-tabs button.active{background:#2d3270;color:#fff}
@@ -182,3 +181,7 @@
   .workspace3:not(.bx-root) .topActions{flex-wrap:wrap;justify-content:flex-start}
 }
 @media(max-width:760px){.bx-top .projectName,.bx-top .projectMeta{max-width:max(120px,calc(100vw - 210px))}}
+/* skip link: the canvas comes first on a phone (visual order) but after the rail in the DOM, so a keyboard user can jump to it; hidden until focused */
+.bx-skip{position:absolute;left:8px;top:-48px;z-index:60;padding:8px 12px;border-radius:8px;background:#fff;color:#10151b;font-weight:700;min-height:36px;display:inline-flex;align-items:center}
+.bx-skip:focus{top:8px}
+.bx-center:focus{outline:none}

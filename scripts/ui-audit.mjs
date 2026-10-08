@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // UI/UX audit runner (a developer tool, NOT a test): opens EVERY real route of the three portals in real Chromium against a real stack, at several viewports, and records per route what a human reviewer would notice:
 // glyph characters that may render as tofu (□ ?), U+FFFD, mojibake, horizontal overflow, text spilling out of the viewport, clipped text without an ellipsis, broken images, icon-only controls without an accessible name,
-// form controls without a label, console errors, failing API calls, blank pages, axe (wcag2a/aa) serious + critical violations. It also writes a screenshot per route + viewport.
+// form controls without a label, console errors, failing API calls, blank pages, axe violations of EVERY impact (tags wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa, best-practice; the summary counts critical / serious separately from moderate / minor). It also writes a screenshot per route + viewport.
 // Nothing is intercepted or faked: the data is created through the product's own API (a NEW tenant with a tenant admin, a workspace admin, a project, 25 employees with long Vietnamese names).
 //   node scripts/ui-audit.mjs --out <dir> [--only platform,admin,studio] [--viewports 1440,1024,768,390]
 // env: AUDIT_STACK_ENV (default ~/.xweb-e2e-stack/c5e2e-ae/stack.env), AUDIT_STUDIO (http://127.0.0.1:3086), AUDIT_PLATFORM (http://127.0.0.1:3001), AUDIT_ADMIN (http://127.0.0.1:3002), CHROME
@@ -62,7 +62,7 @@ const MEASURE = () => {
 };
 const AXE_TAGS = (process.env.AUDIT_AXE_TAGS ?? "wcag2a,wcag2aa,wcag21a,wcag21aa,wcag22aa,best-practice").split(",");
 async function axe(page) {
-  try { await page.addScriptTag({ path: AXE }); return await page.evaluate(async (tags) => (await window.axe.run(document, { runOnly: tags, resultTypes: ["violations"] })).violations.filter((v) => ["critical", "serious"].includes(v.impact)).map((v) => ({ id: v.id, impact: v.impact, n: v.nodes.length, sel: v.nodes[0]?.target?.join(" ").slice(0, 70), nodes: v.nodes.slice(0, 6).map((x) => `${x.target.join(" ").slice(0, 80)} :: ${(x.html ?? "").replace(/\s+/g, " ").slice(0, 110)}`) })), AXE_TAGS); } catch (e) { return [{ id: "axe-failed", impact: "n/a", n: 0, sel: String(e).slice(0, 60), nodes: [] }]; }
+  try { await page.addScriptTag({ path: AXE }); return await page.evaluate(async (tags) => (await window.axe.run(document, { runOnly: tags, resultTypes: ["violations"] })).violations.map((v) => ({ id: v.id, impact: v.impact, n: v.nodes.length, sel: v.nodes[0]?.target?.join(" ").slice(0, 70), nodes: v.nodes.slice(0, 6).map((x) => `${x.target.join(" ").slice(0, 80)} :: ${(x.html ?? "").replace(/\s+/g, " ").slice(0, 110)}`) })), AXE_TAGS); } catch (e) { return [{ id: "axe-failed", impact: "n/a", n: 0, sel: String(e).slice(0, 60), nodes: [] }]; }
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------- runner

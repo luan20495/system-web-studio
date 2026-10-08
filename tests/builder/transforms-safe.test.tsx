@@ -3,7 +3,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { FieldMappingDef, MappingDef } from "@xweb/types";
-import { addTransform, checkMapping, fieldTypeOf, fieldsOf, mappingNote, moveTransform, normalizeMapping, removeTransform, transformsOf, viewModelFromMapping } from "../../features/studio/builder/core/dataFlow";
+import { addTransform, checkMapping, fieldTypeOf, fieldsOf, mappingNote, moveTransform, normalizeMapping, removeTransform, transformsOf, viewModelFromMapping, vmFieldsOf } from "../../features/studio/builder/core/dataFlow";
 import { DataWizard } from "../../features/studio/builder/DataWizard";
 import { available } from "../../features/studio/builder/core/readiness";
 import type { DefCtx } from "../../features/studio/builder/ctx";
@@ -57,4 +57,26 @@ test("Studio Data panel (SSR) renders a document whose mappings have fields with
   let html = ""; assert.doesNotThrow(() => { html = renderToStaticMarkup(<DataWizard ctx={ctx({ doc: d })}/>); });
   assert.match(html, /Không biến đổi/); assert.match(html, /Không có trường/); assert.match(html, /price, name/); assert.match(html, /n \[Chuyển thành số\]/);
   assert.doesNotMatch(html, /undefined|\[object/);
+});
+
+test("a mapping / ViewModel stored WITHOUT `fields` never crashes validateDefinition, preflight or the Data panel (same class as UX-001)", async () => {
+  const { validateDefinition } = await import("../../features/studio/builder/core/definition");
+  const { preflight } = await import("../../features/studio/builder/core/preflight");
+  const d = baseDoc({
+    dataSources: [{ id: "ds", type: "postgres" }], queries: [{ id: "q1", name: "Q", dataSourceRef: "ds", operationKey: "list", mode: "READ" }],
+    mappings: [{ id: "m-nofields", name: "Không trường", queryRef: "q1" }, { id: "m-null", name: "Null", queryRef: "q1", fields: null }],
+    viewModels: [{ id: "vm-nofields", name: "VM", queryRef: "q1", mappingRef: "m-nofields" }, { id: "vm-null", name: "VM2", queryRef: "q1", mappingRef: "m-null", fields: null }],
+  } as never);
+  assert.doesNotThrow(() => validateDefinition(d)); assert.doesNotThrow(() => preflight(d));
+  assert.doesNotThrow(() => renderToStaticMarkup(<DataWizard ctx={ctx({ doc: d })}/>));
+  assert.deepEqual(vmFieldsOf({}), []); assert.deepEqual(vmFieldsOf({ fields: null }), []); assert.deepEqual(vmFieldsOf({ fields: [{ name: "a" }, null] }), [{ name: "a" }]);
+});
+
+test("editing a field rebuilds it with the canonical transforms[] and drops the legacy `transform` (never both: the server rejects that)", () => {
+  const legacy = f({ from: "p", to: "price", transform: { type: "toNumber" } });
+  const added = addTransform(legacy, "trim") as FieldMappingDef;
+  assert.deepEqual(added.transforms, [{ type: "toNumber" }, { type: "trim" }]); assert.equal("transform" in added, false);
+  const removed = removeTransform(legacy, 0); assert.deepEqual(removed.transforms, []); assert.equal("transform" in removed, false);
+  const moved = moveTransform(f({ to: "a", transform: [{ type: "trim" }, { type: "upper" }] }), 0, 1); assert.deepEqual(moved.transforms, [{ type: "upper" }, { type: "trim" }]); assert.equal("transform" in moved, false);
+  assert.ok(Object.keys(legacy).includes("transform") && !("transforms" in legacy), "the stored field object itself is untouched");
 });
