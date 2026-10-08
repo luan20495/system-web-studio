@@ -13,6 +13,9 @@ import java.util.concurrent.Executors
  * for everything C1 owns (accounts, tenants, authorization, audit). Letters follow the H-C1-17 brief; this proves the C1 rules, not C3's SQL.
  */
 @Import(InMemoryOrganizationConfig::class)
+// this context carries the in-memory organization store and its own deployment listeners / recovery sweeper on the SHARED RabbitMQ and database: it is closed after the class so it never competes
+// with the contexts of the publish tests that run later (the full suite failed DeploymentFailureRecoveryTests only while these contexts stayed alive)
+@org.springframework.test.annotation.DirtiesContext(classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 class OrganizationApiContractTests : OrganizationTestBase() {
     // ------------------------------------------------------------------------------------------------ A / B / C
     @Test

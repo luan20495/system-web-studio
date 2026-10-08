@@ -10,6 +10,9 @@ import java.util.UUID
  * independent of C3's physical persistence (in-memory test double behind the seams; real PostgreSQL for accounts, tenants, permissions and audit).
  */
 @Import(InMemoryOrganizationConfig::class)
+// this context carries the in-memory organization store and its own deployment listeners / recovery sweeper on the SHARED RabbitMQ and database: it is closed after the class so it never competes
+// with the contexts of the publish tests that run later (the full suite failed DeploymentFailureRecoveryTests only while these contexts stayed alive)
+@org.springframework.test.annotation.DirtiesContext(classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 class OrganizationAuthorizationTests : OrganizationTestBase() {
     private fun routes(c: Company, unit: UUID, type: UUID, user: UUID, pos: UUID) = listOf(
         "GET" to units(c), "GET" to "${units(c)}/$unit", "GET" to types(c), "GET" to "${types(c)}/$type", "GET" to employees(c), "GET" to "${employees(c)}/$user",

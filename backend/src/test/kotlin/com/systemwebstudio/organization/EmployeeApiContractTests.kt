@@ -12,6 +12,9 @@ import java.util.UUID
  * real PostgreSQL for accounts, tenants, authorization and audit.
  */
 @Import(InMemoryOrganizationConfig::class)
+// this context carries the in-memory organization store and its own deployment listeners / recovery sweeper on the SHARED RabbitMQ and database: it is closed after the class so it never competes
+// with the contexts of the publish tests that run later (the full suite failed DeploymentFailureRecoveryTests only while these contexts stayed alive)
+@org.springframework.test.annotation.DirtiesContext(classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 class EmployeeApiContractTests : OrganizationTestBase() {
     private fun usersCount() = jdbc.queryForObject("SELECT count(*) FROM users", Long::class.java)!!
     private fun page(c: Company, q: String) = c.admin.body(c.admin.get("${employees(c)}?$q"))

@@ -7,6 +7,9 @@ import java.util.UUID
 
 /** C1 · company bootstrap: SYSTEM_ADMIN -> one request -> company + first Tenant Admin (pending) + membership + activation link, atomically (real PostgreSQL). */
 @Import(InMemoryOrganizationConfig::class)
+// this context carries the in-memory organization store and its own deployment listeners / recovery sweeper on the SHARED RabbitMQ and database: it is closed after the class so it never competes
+// with the contexts of the publish tests that run later (the full suite failed DeploymentFailureRecoveryTests only while these contexts stayed alive)
+@org.springframework.test.annotation.DirtiesContext(classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 class CompanyBootstrapTests : OrganizationTestBase() {
     private fun tenantExists(slug: String) = jdbc.queryForObject("SELECT count(*) FROM tenants WHERE slug = ?", Long::class.java, slug)!! > 0
     private fun userExists(name: String) = jdbc.queryForObject("SELECT count(*) FROM users WHERE username = ?", Long::class.java, name)!! > 0
