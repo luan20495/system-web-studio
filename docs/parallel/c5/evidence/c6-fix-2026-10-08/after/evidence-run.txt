@@ -1,0 +1,36 @@
+UX-001 fixture (PATCH /schema, mapping fields without transforms[]): {"status":200,"code":null,"violations":[]}
+UX-002 builder @1440: {"toolbarHeightPx":58,"canvasHeightPx":842,"viewportH":900,"canvasShare":"94%","pageOverflowX":0}
+device switch @1440 (name / size): [{"name":"Máy tính","pressed":"true","w":37,"h":32},{"name":"Máy tính bảng","pressed":"false","w":37,"h":32},{"name":"Điện thoại","pressed":"false","w":36,"h":32}]
+UX-003 rail @1440: {"railW":116,"panelW":263,"anyClipped":false,"minTabH":30,"labels":"Trang | Thành phần | Dữ liệu | Biểu mẫu | Hành động | Workflow | Giao diện | AI | Nguồn dữ liệu | Khám phá cấu trúcchưa | Truy vấn | Ánh xạ | ViewModel | Gắn vào thành phần | Dữ liệu công khai"}
+UX-001 Studio Data @1440: {"pageErrors":0,"errors":[],"declaredList":"Đã khai báo (2)\nTRUY VẤN\nSản phẩm\nREAD · list\nXóa\nÁNH XẠ\nÁnh xạ không biến đổi\nprice, name\nXóa"}
+UX-008 controls < 24 px @1440: {"count":0,"examples":[]}
+axe (all impacts) (builder, Dữ liệu rail) @1440: []
+UX-002 builder @768: {"toolbarHeightPx":101,"canvasHeightPx":594,"viewportH":800,"canvasShare":"74%","pageOverflowX":0}
+device switch @768 (name / size): [{"name":"Máy tính","pressed":"true","w":37,"h":36},{"name":"Máy tính bảng","pressed":"false","w":37,"h":36},{"name":"Điện thoại","pressed":"false","w":36,"h":36}]
+UX-003 rail @768: {"railW":329,"panelW":329,"anyClipped":false,"minTabH":36,"labels":"Trang | Thành phần | Dữ liệu | Biểu mẫu | Hành động | Workflow | Giao diện | AI | Nguồn dữ liệu | Khám phá cấu trúcchưa | Truy vấn | Ánh xạ | ViewModel | Gắn vào thành phần | Dữ liệu công khai"}
+UX-001 Studio Data @768: {"pageErrors":0,"errors":[],"declaredList":"Đã khai báo (2)\nTRUY VẤN\nSản phẩm\nREAD · list\nXóa\nÁNH XẠ\nÁnh xạ không biến đổi\nprice, name\nXóa"}
+UX-008 controls < 24 px @768: {"count":0,"examples":[]}
+axe (all impacts) (builder, Dữ liệu rail) @768: []
+UX-002 builder @430: {"toolbarHeightPx":177,"canvasHeightPx":512,"viewportH":800,"canvasShare":"64%","pageOverflowX":0}
+device switch @430 (name / size): [{"name":"Máy tính","pressed":"true","w":36,"h":36},{"name":"Máy tính bảng","pressed":"false","w":36,"h":36},{"name":"Điện thoại","pressed":"false","w":36,"h":36}]
+UX-003 rail @430: {"railW":429,"panelW":429,"anyClipped":false,"minTabH":36,"labels":"Trang | Thành phần | Dữ liệu | Biểu mẫu | Hành động | Workflow | Giao diện | AI | Nguồn dữ liệu | Khám phá cấu trúcchưa | Truy vấn | Ánh xạ | ViewModel | Gắn vào thành phần | Dữ liệu công khai"}
+UX-001 Studio Data @430: {"pageErrors":0,"errors":[],"declaredList":"Đã khai báo (2)\nTRUY VẤN\nSản phẩm\nREAD · list\nXóa\nÁNH XẠ\nÁnh xạ không biến đổi\nprice, name\nXóa"}
+UX-008 controls < 24 px @430: {"count":0,"examples":[]}
+axe (all impacts) (builder, Dữ liệu rail) @430: []
+UX-002 builder @390: {"toolbarHeightPx":179,"canvasHeightPx":512,"viewportH":800,"canvasShare":"64%","pageOverflowX":0}
+device switch @390 (name / size): [{"name":"Máy tính","pressed":"true","w":36,"h":36},{"name":"Máy tính bảng","pressed":"false","w":36,"h":36},{"name":"Điện thoại","pressed":"false","w":36,"h":36}]
+UX-003 rail @390: {"railW":389,"panelW":389,"anyClipped":false,"minTabH":36,"labels":"Trang | Thành phần | Dữ liệu | Biểu mẫu | Hành động | Workflow | Giao diện | AI | Nguồn dữ liệu | Khám phá cấu trúcchưa | Truy vấn | Ánh xạ | ViewModel | Gắn vào thành phần | Dữ liệu công khai"}
+UX-001 Studio Data @390: {"pageErrors":0,"errors":[],"declaredList":"Đã khai báo (2)\nTRUY VẤN\nSản phẩm\nREAD · list\nXóa\nÁNH XẠ\nÁnh xạ không biến đổi\nprice, name\nXóa"}
+UX-008 controls < 24 px @390: {"count":0,"examples":[]}
+axe (all impacts) (builder, Dữ liệu rail) @390: []
+Inspector with a selected section @768: {"heightPx":362,"viewportH":800,"scrolls":true,"focusable":true,"firstField":true}
+Inspector with a selected section @1024: {"heightPx":412,"viewportH":900,"scrolls":true,"focusable":true,"firstField":true}
+skip link reachable by Tab @430 (focus order until it): ["Cài đặt project","Chia sẻ","Xuất bản","Bỏ qua tới bản xem trước"]
+after Enter focus is on: bx-canvas
+UX-005 Costs @1440: {"cards":4,"scrollingCards":0,"scrollingAreFocusableRegions":true,"reachedByTab":null,"scrolledByArrowKeys":null}
+axe (all impacts) (costs) @1440: []
+UX-005 Costs @768: {"cards":4,"scrollingCards":0,"scrollingAreFocusableRegions":true,"reachedByTab":null,"scrolledByArrowKeys":null}
+axe (all impacts) (costs) @768: []
+UX-005 Costs @390: {"cards":4,"scrollingCards":3,"scrollingAreFocusableRegions":true,"reachedByTab":{"name":"Theo phòng ban","role":"group","outline":"solid 2px"},"scrolledByArrowKeys":{"scrollLeftBefore":0,"scrollLeftAfter":80}}
+axe (all impacts) (costs) @390: []
+evidence in docs/parallel/c5/evidence/c6-fix-2026-10-08/after

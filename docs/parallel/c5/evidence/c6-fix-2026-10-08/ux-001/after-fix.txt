@@ -1,0 +1,3 @@
+ok 1 - UX-001: Studio Data with a mapping field without transforms[]
+# pass 1
+# fail 0

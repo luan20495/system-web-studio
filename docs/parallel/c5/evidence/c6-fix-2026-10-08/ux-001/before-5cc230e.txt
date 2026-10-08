@@ -1,0 +1,5 @@
+not ok 1 - UX-001: Studio Data with a mapping field without transforms[]
+  error: "Cannot read properties of undefined (reading 'length')"
+  name: 'TypeError'
+# pass 0
+# fail 1
