@@ -58,7 +58,7 @@ class TenantAccessTests : IntegrationTestBase() {
         codeOf { access.forWorkspace(ta.id, sc.ws) }.isEqualTo(404 to "WORKSPACE_NOT_FOUND")
         assertThat(status(sessionFor(ta.username).get(sc.base))).isEqualTo(404)
         val t = access.forTenant(ta.id, TenantIds.DEFAULT)
-        assertThat(t.permissions).containsExactlyInAnyOrder(Permission.TENANT_MANAGE, Permission.TENANT_MEMBERS)
+        assertThat(t.permissions).containsExactlyInAnyOrder(Permission.TENANT_MANAGE, Permission.TENANT_MEMBERS, Permission.ORG_STRUCTURE_VIEW, Permission.ORG_STRUCTURE_MANAGE, Permission.EMPLOYEE_VIEW, Permission.EMPLOYEE_MANAGE, Permission.POSITION_GRADE_VIEW, Permission.POSITION_GRADE_MANAGE)
         assertThat(t.platformScope).isFalse()
     }
 
