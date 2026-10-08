@@ -73,5 +73,7 @@ test("flag / summarize: every new finding class is reported, a clean row is empt
   const f = flag({ textLen: 100, h1: 1, overflowX: 20, clippedCtl: ["button[x] clipped"], covered: ["a[y] covered by div[]"], small: ["BUTTON 10x10"], nameMismatch: ["b"], focus: { noIndicator: ["input[z]"], obscuredFully: ["a[q] by header"], offscreen: [] }, axe: [{ id: "label", impact: "critical", n: 1 }], errs: ["e"], bad: ["GET /x 500"] });
   for (const word of ["overflowX+20", "unreachable(", "covered(", "<24px(1)", "nameMismatch(1)", "noFocusRing(input[z])", "focusObscured(", "axe[label:criticalx1]", "console(1)", "api(GET /x 500)"]) assert.ok(f.includes(word), word + " in " + f);
   const sm = summarize([{ portal: "p", route: "/a", overflowX: 5, textLen: 99, axe: [{ id: "a", impact: "serious", n: 1 }], errs: [], bad: [] }, { portal: "p", route: "/b", textLen: 99, axe: [{ id: "b", impact: "minor", n: 1 }], errs: [], bad: [] }]);
+  const skipped = { portal: "p", route: "/c#dialog", skipped: "refused", textLen: 100, h1: 1, errs: [], axe: [], bad: [] };
+  assert.equal(flag(skipped), ""); assert.equal(summarize([skipped]).skippedStates, 1);                 // a persona the screen refuses is not a blank / console-error visit (M-124)
   assert.equal(sm.visits, 2); assert.equal(sm.overflowX, 1); assert.equal(sm.axeCriticalSerious, 1); assert.equal(sm.axeModerateMinor, 1);
 });

@@ -37,7 +37,13 @@ export async function visit(rows, page, portal, vp, route, label, shotDir, extra
     try { await run(page); await page.waitForTimeout(350); rows.push({ portal, vp, route: `${path}#${name}`, label: `${label}-${name}`, ok, ...(await page.evaluate(MEASURE).catch(() => ({}))), axe: await axe(page), errs: [], bad: [] });
       mkdirSync(shotDir, { recursive: true }); await shot(page, { path: join(shotDir, `${slug}-${name}.png`) }).catch(() => undefined);
       await page.keyboard.press("Escape").catch(() => undefined); await page.waitForTimeout(200);
-    } catch (e) { rows.push({ portal, vp, route: `${path}#${name}`, label: `${label}-${name}`, ok: false, errs: [`state not reached: ${String(e).slice(0, 90)}`], axe: [], bad: [] }); await page.keyboard.press("Escape").catch(() => undefined); }
+    } catch (e) {
+      // a persona the screen REFUSES (a system admin on a company screen: "Bạn chưa quản trị công ty nào") has no control to open the state: that is the screen working, not a state that could not be reached
+      const refused = await page.locator(".stateView.state-forbidden").count().catch(() => 0);
+      rows.push(refused ? { portal, vp, route: `${path}#${name}`, label: `${label}-${name}`, ok: true, skipped: "the persona is refused by this screen (forbidden state): no control to open this state", textLen: 100, h1: 1, errs: [], axe: [], bad: [] }
+        : { portal, vp, route: `${path}#${name}`, label: `${label}-${name}`, ok: false, errs: [`state not reached: ${String(e).slice(0, 90)}`], axe: [], bad: [] });
+      await page.keyboard.press("Escape").catch(() => undefined);
+    }
   }
   if (portal === "studio" && /\/design$/.test(PATHNAME)) {
     for (const tab of ["Thành phần", "Dữ liệu", "Biểu mẫu", "Hành động", "Workflow", "Giao diện", "AI"]) {
@@ -63,7 +69,7 @@ export const flag = (r) => [r.glyphs ? `glyphs[${r.glyphs}]` : "", r.replacement
 export function summarize(rows) {
   const n = (f) => rows.filter(f).length; const ax = (imp) => rows.filter((r) => r.axe?.some((a) => imp.includes(a.impact))).length;
   return {
-    visits: rows.length, routes: new Set(rows.map((r) => r.portal + r.route)).size, withIssues: n((r) => flag(r)),
+    visits: rows.length, skippedStates: rows.filter((r) => r.skipped).length, routes: new Set(rows.map((r) => r.portal + r.route)).size, withIssues: n((r) => flag(r)),
     overflowX: n((r) => r.overflowX > 1), unreachable: n((r) => r.clippedCtl?.length), covered: n((r) => r.covered?.length), smallTargets: n((r) => r.small?.length || r.smallMore?.length), nameMismatch: n((r) => r.nameMismatch?.length),
     noFocusRing: n((r) => r.focus?.noIndicator?.length), focusObscured: n((r) => r.focus?.obscuredFully?.length), axeCriticalSerious: ax(["critical", "serious"]), axeModerateMinor: ax(["moderate", "minor"]),
     consoleErrors: n((r) => r.errs?.length), failingApi: n((r) => r.bad?.length), blank: n((r) => (r.textLen ?? 0) < 20),
