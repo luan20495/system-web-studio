@@ -119,3 +119,12 @@ test("initials: bracket groups, counters, punctuation, emoji, empty input and an
   assert.equal(i("a".repeat(5000) + " " + "b".repeat(5000)), "AB", "a very long name is fine");
   for (const v of ["", " ", "😀", "(Demo)", "!!!", "a(", ")(", "\u0000", "\uD83D"]) assert.doesNotThrow(() => M.initials({ username: v, displayName: v }), JSON.stringify(v));
 });
+
+test("canActInWorkspace (M-009): a platform admin who is NOT in the workspace has no workspace-scoped actions (D-C1-13A); a member, or the legacy businessAccess flag, keeps them; nobody gets none", () => {
+  const sysOut = me({ platformScope: true, systemAdmin: true, businessAccess: false, workspaces: [ws("w1", ["APP_VIEW"])] });
+  assert.equal(M.canActInWorkspace(sysOut, "w9"), false, "not a member of w9, no business access");
+  assert.equal(M.canActInWorkspace(sysOut, "w1"), true, "a member of w1: the server decides what the role allows");
+  assert.equal(M.canActInWorkspace(me({ platformScope: true, systemAdmin: true, businessAccess: true }), "w9"), true, "the server says business access (legacy flag): keep the controls");
+  assert.equal(M.canActInWorkspace(me({ platformScope: true, systemAdmin: true }), "w9"), false, "an older /auth/me without the field is NOT read as business access");
+  assert.equal(M.canActInWorkspace(null, "w1"), false); assert.equal(M.canActInWorkspace(undefined, "w1"), false);
+});

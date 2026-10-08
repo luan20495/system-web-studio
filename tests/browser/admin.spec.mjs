@@ -129,6 +129,27 @@ await block("scenario 9", async () => { const p = await open({ portal: "admin", 
   check("CMP09 a tenant admin's own company page does not get the platform button (they use 'Người dùng')", (await p.getByRole("button", { name: "Tạo tài khoản quản trị công ty" }).count()) === 0);
   await p.__ctx.close(); });
 
+// ===================================================================================================================== M-009 SYSTEM_ADMIN application detail
+await block("scenario 10", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/applications/a1" }); // workspace w9: the person is NOT a member
+  const t = await text(p);
+  check("APP01 a platform admin who is not a member of the workspace gets no 'Xóa' button (the backend answers 404 for it)", (await p.getByRole("button", { name: "Xóa", exact: true }).count()) === 0);
+  check("APP02 the reason is VISIBLE text on the page (not a title tooltip) and names the workspace", /không phải thành viên workspace “Kho Hà Nội”/.test(t), t.slice(t.indexOf("Cổng khách hàng"), t.indexOf("Cổng khách hàng") + 300));
+  check("APP03 'Lưu trữ' (admin route) is still offered", (await p.getByRole("button", { name: "Lưu trữ", exact: true }).count()) === 1);
+  await p.getByRole("tab", { name: "Phiên bản" }).click(); await settle(p, 200);
+  check("APP04 versions: no 'Khôi phục' button for this person; the same reason is shown above the table", (await p.getByRole("button", { name: "Khôi phục", exact: true }).count()) === 0 && /không phải thành viên workspace/.test(await text(p)));
+  check("APP05 nothing was sent to a workspace-scoped route", (await calls(p)).filter((c) => /^\/workspaces\//.test(c.path) && c.method !== "GET").length === 0);
+  await p.__ctx.close(); });
+await block("scenario 11", async () => { const p = await open({ portal: "admin", me: "sysmember", start: "/admin/applications/a2" }); // member of w1
+  check("APP06 a platform admin who IS a member of the workspace keeps 'Xóa' (the server still decides)", (await p.getByRole("button", { name: "Xóa", exact: true }).count()) === 1 && !/không phải thành viên workspace/.test(await text(p)));
+  await p.getByRole("button", { name: "Xóa", exact: true }).click(); await settle(p, 400);
+  check("APP07 and it calls the workspace-scoped delete route as before", (await posts(p, /^\/workspaces\/w1\/projects\/a2/)).length === 1, JSON.stringify((await calls(p)).filter((c) => c.method === "DELETE")));
+  await p.getByRole("tab", { name: "Phiên bản" }).click(); await settle(p, 200);
+  check("APP08 member: 'Khôi phục' (old versions) stays available", (await p.getByRole("button", { name: "Khôi phục", exact: true }).count()) === 1);
+  await p.__ctx.close(); });
+await block("scenario 12", async () => { const p = await open({ portal: "admin", me: "sysatenant", start: "/admin/applications/a1" }); // businessAccess = true (legacy flag on)
+  check("APP09 when the server says the person has business access (/auth/me businessAccess), the controls stay", (await p.getByRole("button", { name: "Xóa", exact: true }).count()) === 1);
+  await p.__ctx.close(); });
+
 check("no console error / warning / uncaught exception in any page", errors.length === 0, errors.slice(0, 3).join(" | "));
 await browser.close();
 const failed = results.filter((r) => !r.ok).length; console.log(`\n${results.length - failed}/${results.length} checks passed`); process.exit(failed ? 1 : 0);

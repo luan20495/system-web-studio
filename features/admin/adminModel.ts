@@ -41,6 +41,16 @@ export function canManageWorkspaceMembers(me: Me | null | undefined, workspaceId
   return row.permissions === undefined ? true : row.permissions.includes("MEMBER_MANAGE");
 }
 
+/**
+ * Whether the workspace-scoped routes (delete an application, restore one of its versions: `/workspaces/{w}/projects/**`) can work for this person.
+ * D-C1-13A: a SYSTEM_ADMIN holds NO business permission in a workspace it is not a member of (unless the server runs the legacy flag, which `/auth/me` reports as `businessAccess`).
+ * Those routes then answer 404, so the console does not offer them; the `/admin/applications/**` ones (archive, restore, transfer) are unaffected. Display only: the server still decides every call.
+ */
+export function canActInWorkspace(me: Me | null | undefined, workspaceId: string): boolean {
+  if (!me) return false;
+  return me.businessAccess === true || me.workspaces.some((w) => w.id === workspaceId);
+}
+
 /** sections only a SYSTEM_ADMIN can open: their APIs are guarded by AdminGuard (T1 audit) */
 export const SYSTEM_ONLY: ReadonlySet<string> = new Set(["users", "workspaces", "applications", "ai", "ai-governance", "alerts", "security", "costs", "departments", "identity", "connectors", "backups", "components", "templates", "builds", "packages", "audit", "system", "settings", "tenants"]);
 /** sections for the people who administer a tenant / a workspace but are not SYSTEM_ADMIN */
