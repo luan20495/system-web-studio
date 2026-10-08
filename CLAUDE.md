@@ -12,6 +12,7 @@ Nền tảng nội bộ "AI Software Factory": **Modular Monolith** Kotlin/Sprin
 - Bất biến phải bảo toàn: Page Schema + `SchemaPatchEngine` + `PageSchemaValidator`; component registry/version; immutable project versions; AI Gateway; Connector Proxy + SSRF guard + credential chỉ ở server; Audit append-only; publish pipeline; render/build/runtime planes.
 - Luồng dữ liệu: UI → AppDefinition/ViewModel → Query|Action → Auth+Permission → Data Gateway → Connector → hệ thống ngoài. AI: Prompt → Structured Operation → AppDefinition → Validator → Version (AI không có model dữ liệu riêng).
 - **Không merge main.** Không `push --force`, `reset --hard`, `clean -fd`. Không thêm GitHub Actions.
+- **Máy dùng chung — cấm kill theo tên hoặc theo cổng**: `pkill -f`, `killall`, `kill $(pgrep …)`, `kill $(lsof -ti tcp:P)`. Chỉ kill pid/process group do chính mình khởi chạy, hoặc dùng `scripts/owned-process.mjs` (xem `docs/parallel/c0/PROCESS_SAFETY.md`). Guard `tests/guards/process-safety.mjs` nằm trong `npm run gate:frontend`.
 - Mỗi task: **test và commit riêng**.
 - **Report cuối task**: files changed / tests / blockers / commit SHA.
 

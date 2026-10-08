@@ -26,7 +26,8 @@
     "guard:test": "node --test tests/guards/guards.test.mjs",
     "scan:bundles": "node scripts/scan-prod-bundles.mjs",
     "gate:frontend": "node scripts/gate-frontend.mjs",
-    "test:infra:portals": "node --test tests/infra/portals-reliability.mjs"
+    "test:infra:portals": "node --test tests/infra/portals-reliability.mjs",
+    "test:infra:processes": "node --test tests/infra/owned-process.test.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
