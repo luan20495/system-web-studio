@@ -34,7 +34,7 @@ if (has("BREAK_REAL") && fs.readFileSync(path.join(SB, "BREAK_REAL"), "utf8").tr
 const dbf = path.join(SB, "db.json"); const state = JSON.parse(fs.readFileSync(dbf, "utf8")); state[db] = state[db] || [];   // "Flyway": applies the migrations of the jar that the database lacks; newer ones in the database only WARN (ignore *:future)
 for (const v of mig) if (!state[db].some((r) => r.version === v)) state[db].push({ version: v, checksum: Number(fs.readFileSync(path.join(SB, "checksums", v), "utf8")), success: true });
 fs.writeFileSync(dbf, JSON.stringify(state));
-fs.appendFileSync(path.join(SB, "starts.log"), [marker, port, db, path.basename(path.dirname(jar))].join(" ") + "\n");
+fs.appendFileSync(path.join(SB, "starts.log"), [marker, port, db, path.basename(path.dirname(jar))].join(" ") + "\n"); fs.appendFileSync(path.join(SB, "consumers.log"), db + " amqp-listeners-autostart=" + (process.env.SPRING_RABBITMQ_LISTENER_SIMPLE_AUTO_STARTUP || "default") + " workflow=" + process.env.WORKFLOW_ENABLED + "\n");
 http.createServer((q, r) => {
   if (q.url.startsWith("/actuator/health")) { if (has("UNREADY") && q.url.endsWith("readiness")) { r.statusCode = 503; return r.end("{}"); } return r.end('{"status":"UP"}'); }
   if (q.url === "/__info") return r.end(JSON.stringify({ marker, jar, db, port, workflow: process.env.WORKFLOW_ENABLED, signup: process.env.SIGNUP_ENABLED, hasRenderToken: !!process.env.RENDER_TOKEN, leak: !!process.env.SANDBOX_LEAK, java: process.argv[1] }));
@@ -42,16 +42,24 @@ http.createServer((q, r) => {
 }).listen(port, "127.0.0.1"); setInterval(() => {}, 1e6);
 `;
 const FAKE_GRADLEW = String.raw`#!/usr/bin/env node
-const fs = require("fs"), path = require("path"), cp = require("child_process"); const task = process.argv[2]; const SB = process.env.SANDBOX || "";
+const fs = require("fs"), path = require("path"), cp = require("child_process"); const argv = process.argv.slice(2); const SB = process.env.SANDBOX || "";
 const log = (f, l) => { if (SB) fs.appendFileSync(path.join(SB, f), l + "\n"); };
-if (task === "test") { log("tests.log", "test " + fs.readFileSync("marker.txt", "utf8").trim()); if (SB && fs.existsSync(path.join(SB, "FAIL_TESTS"))) { console.error("simulated test failure"); process.exit(1); } process.exit(0); }
-if (task === "bootJar") {
+const isBuild = argv.includes("bootJar"), isTest = !isBuild && argv.includes("test");
+if (argv.includes("clean")) fs.rmSync("build", { recursive: true, force: true });
+log("gradle.log", argv.join(" ") + " | GRADLE_USER_HOME=" + (process.env.GRADLE_USER_HOME || "-") + " | OPTS=" + (process.env.GRADLE_OPTS || "-"));
+if (isTest) {
+  log("tests.log", "test " + fs.readFileSync("marker.txt", "utf8").trim()); if (SB && fs.existsSync(path.join(SB, "FAIL_TESTS"))) { console.error("simulated test failure"); process.exit(1); }
+  fs.mkdirSync("build/test-results/test", { recursive: true }); fs.writeFileSync("build/test-results/test/TEST-a.xml", '<?xml version="1.0"?>\n<testsuite name="com.x.ATests" tests="3" skipped="1" failures="0" errors="0" timestamp="t">\n</testsuite>\n'); fs.writeFileSync("build/test-results/test/TEST-b.xml", '<testsuite name="com.x.BTests" tests="4" skipped="0" failures="0" errors="0">\n</testsuite>\n'); process.exit(0);
+}
+if (isBuild) {
   if (SB && fs.existsSync(path.join(SB, "FAIL_BUILD"))) { console.error("simulated build failure"); process.exit(1); }
   const marker = fs.readFileSync("marker.txt", "utf8").trim(); const stage = fs.mkdtempSync(path.join(require("os").tmpdir(), "jar-")); fs.mkdirSync(path.join(stage, "BOOT-INF/classes/db/migration"), { recursive: true }); fs.mkdirSync(path.join(stage, "META-INF"), { recursive: true });
   fs.writeFileSync(path.join(stage, "BOOT-INF/classes/marker.txt"), marker + "\n"); fs.writeFileSync(path.join(stage, "META-INF/MANIFEST.MF"), "Manifest-Version: 1.0\n");
   for (const f of fs.readdirSync("db/migration")) fs.copyFileSync(path.join("db/migration", f), path.join(stage, "BOOT-INF/classes/db/migration", f));
+  if (SB && fs.existsSync(path.join(SB, "NONDET"))) fs.writeFileSync(path.join(stage, "BOOT-INF/classes/random.txt"), String(Math.random()));
+  const all = []; const walk = (d) => { for (const e of fs.readdirSync(d).sort()) { const p = path.join(d, e); fs.utimesSync(p, new Date(946684800000), new Date(946684800000)); all.push(path.relative(stage, p)); if (fs.statSync(p).isDirectory()) walk(p); } }; walk(stage);
   fs.mkdirSync("build/libs", { recursive: true }); const out = path.resolve("build/libs/app-0.1.0.jar"); fs.rmSync(out, { force: true });
-  if (cp.spawnSync("zip", ["-qr", out, "."], { cwd: stage }).status !== 0) process.exit(2); fs.rmSync(stage, { recursive: true, force: true }); log("builds.log", "bootJar " + marker); process.exit(0);
+  if (cp.spawnSync("zip", ["-qX", out, "-@"], { cwd: stage, input: all.join("\n") + "\n" }).status !== 0) process.exit(2); fs.rmSync(stage, { recursive: true, force: true }); log("builds.log", "bootJar " + marker); process.exit(0);
 }
 process.exit(0);
 `;
@@ -115,11 +123,12 @@ test("D-C0-50 matrix: approved A, integration B / C, recovery, deploy, restart, 
   });
   await t.test("first explicit deploy of A (tests run, then the jar, then a candidate on a temporary port + SCRATCH database): approved = running = A; the real database is only READ", async () => {
     const r = api(sb, ["deploy-api", A]); assert.equal(r.status, 0, r.out); idA = approved(sb).releaseId; assert.match(idA, /^[0-9a-f]{12}-[0-9a-f]{8}$/); assert.equal(await marker(sb), "A"); assert.deepEqual(lines(sb, "tests.log"), ["test A"]); assert.equal(builds(sb), 1);
-    const rel = JSON.parse(readFileSync(join(sb.d, `.run/public/api/releases/${idA}/release.json`), "utf8")); assert.equal(rel.verification.tests, "full"); assert.equal(rel.sourceSha, A); assert.equal(rel.schema.maxVersion, "2"); assert.ok(rel.jar.sha256 && rel.buildFingerprint && rel.configFingerprint);
+    const rel = JSON.parse(readFileSync(join(sb.d, `.run/public/api/releases/${idA}/release.json`), "utf8")); assert.equal(rel.verification.tests.mode, "full"); assert.equal(rel.verification.tests.total, 7); assert.equal(rel.verification.tests.skipped, 1); assert.equal(rel.verification.tests.failures, 0); assert.equal(rel.build.mode, "clean-isolated"); assert.match(rel.build.command, /--no-build-cache --rerun-tasks --no-daemon/); assert.match(rel.build.javaVersion, /21/); assert.equal(rel.sourceSha, A); assert.equal(rel.schema.maxVersion, "2"); assert.ok(rel.jar.sha256 && rel.buildFingerprint && rel.configFingerprint);
     const ps = lines(sb, "psql.log"); assert.ok(ps.some((l) => /^postgres :: create database cand_/.test(l)) && ps.some((l) => /drop database if exists cand_/.test(l)), "a scratch database was created and dropped"); assert.ok(ps.filter((l) => l.startsWith("studio ::")).every((l) => /select version|pg_dump --(schema|data)-only/.test(l)), "the real database is only read");
     assert.deepEqual(dbs(sb), ["postgres", "studio"], "no scratch database left behind"); assert.deepEqual(dbRows(sb).map((r) => r.version), ["1", "2"], "the approved API applied its migrations to the REAL database at start");
     const starts = lines(sb, "starts.log"); assert.ok(starts.some((l) => / cand_/.test(l)), "the candidate ran against a scratch database"); assert.ok(starts.some((l) => new RegExp(` studio ${idA}$`).test(l)), "and the real start ran the release directory's jar");
-    const i = await info(sb.apiPort); assert.equal(i.leak, false, "the API does not inherit the caller's environment"); assert.equal(i.hasRenderToken, true, "secrets reach the process from public.env"); assert.equal(i.workflow, "true");
+    const cons = lines(sb, "consumers.log"); assert.ok(cons.some((l) => /^cand_.* amqp-listeners-autostart=false workflow=false$/.test(l)), "the candidate ran with the AMQP listeners and the workflow OFF (it must not consume the real broker's messages)"); assert.ok(cons.some((l) => /^studio amqp-listeners-autostart=default/.test(l)), "the real API runs its consumers");
+    const gl = lines(sb, "gradle.log"); assert.ok(gl.length >= 2 && gl.every((l) => /--no-build-cache/.test(l) && /--rerun-tasks/.test(l) && /--no-daemon/.test(l) && /GRADLE_USER_HOME=\S*\/api\/gradle-home/.test(l) && /OPTS=-$/.test(l)), "release builds are clean, uncached, daemon-less, with an isolated GRADLE_USER_HOME"); const i = await info(sb.apiPort); assert.equal(i.leak, false, "the API does not inherit the caller's environment"); assert.equal(i.hasRenderToken, true, "secrets reach the process from public.env"); assert.equal(i.workflow, "true");
   });
   const B = commit(sb, "B"); await sleep(50);
   await t.test("TEST 1. approved=A, integration=B (HEAD): restart serves A; the jar of B is never built; status is CURRENT_APPROVED behind integration", async () => {
@@ -136,7 +145,7 @@ test("D-C0-50 matrix: approved A, integration B / C, recovery, deploy, restart, 
   });
   await t.test("TEST 4. explicit deploy of B: approved becomes B, B runs, A is the previous known-good and is retained", async () => {
     const r = api(sb, ["deploy-api", B, "--skip-tests"]); assert.equal(r.status, 0, r.out); idB = approved(sb).releaseId; assert.equal(await marker(sb), "B"); const a = approved(sb); assert.equal(a.previousKnownGood, idA); assert.ok(releases(sb).includes(idA) && releases(sb).includes(idB));
-    assert.equal(JSON.parse(readFileSync(join(sb.d, `.run/public/api/releases/${idB}/release.json`), "utf8")).verification.tests, "skipped", "--skip-tests is recorded, not hidden"); assert.equal(lines(sb, "tests.log").length, 1); assert.equal(builds(sb), 2); assert.equal(api(sb, ["restart"]).status, 0); assert.equal(await marker(sb), "B", "restart stays on B");
+    assert.equal(JSON.parse(readFileSync(join(sb.d, `.run/public/api/releases/${idB}/release.json`), "utf8")).verification.tests.mode, "skipped", "--skip-tests is recorded, not hidden"); assert.equal(lines(sb, "tests.log").length, 1); assert.equal(builds(sb), 2); assert.equal(api(sb, ["restart"]).status, 0); assert.equal(await marker(sb), "B", "restart stays on B");
   });
   await t.test("TEST 5. candidate BUILD failure: approved stays B and the healthy B process is untouched (same pid); no half-built release is left", async () => {
     const pid0 = owned(sb).pid, ap0 = approved(sb); writeFileSync(join(sb.d, "FAIL_BUILD"), "1"); const r = api(sb, ["deploy-api", C, "--skip-tests"]); rmSync(join(sb.d, "FAIL_BUILD"));
@@ -149,7 +158,7 @@ test("D-C0-50 matrix: approved A, integration B / C, recovery, deploy, restart, 
   });
   await t.test("TEST 7. the candidate passes the proof but FAILS to start on the real port: the pointer returns to B and B runs again (automatic rollback)", async () => {
     const ap0 = approved(sb); writeFileSync(join(sb.d, "BREAK_REAL"), "C"); const r = api(sb, ["deploy-api", C, "--skip-tests"]); rmSync(join(sb.d, "BREAK_REAL"));
-    assert.equal(r.status, 7, r.out); assert.match(r.out, /ACTIVATION_FAILED_ROLLED_BACK/); assert.equal(approved(sb).releaseId, ap0.releaseId, "approved is B again"); assert.equal(await marker(sb), "B"); assert.equal(status(sb).row.state, "CURRENT_APPROVED");
+    assert.equal(r.status, 7, r.out); assert.match(r.out, /ACTIVATION_FAILED_ROLLED_BACK/); assert.deepEqual(approved(sb), ap0, "the approved pointer never moved (byte-identical record)"); assert.equal(await marker(sb), "B"); assert.equal(status(sb).row.state, "CURRENT_APPROVED");
   });
   await t.test("deploy of C succeeds: approved C, previous B; A is pruned, the approved release is never deleted; prune-api keeps approved + previous", async () => {
     const r = api(sb, ["deploy-api", C, "--skip-tests"]); assert.equal(r.status, 0, r.out); idC = approved(sb).releaseId; assert.equal(approved(sb).previousKnownGood, idB); assert.deepEqual(releases(sb).sort(), [idB, idC].sort()); assert.equal(await marker(sb), "C"); const p = api(sb, ["prune-api"]); assert.equal(p.status, 0); assert.deepEqual(releases(sb).sort(), [idB, idC].sort());
@@ -239,6 +248,52 @@ test("init-api --from-running: pins the API that runs NOW from evidence (same pr
   });
   await t.test("the first restart runs the RELEASE copy of the jar (no working-tree dependency), with the pinned environment only", async () => {
     rmSync(join(wt, "build"), { recursive: true, force: true }); writeFileSync(join(wt, "marker.txt"), "tree-moved-on\n"); const b0 = builds(sb); const r = api(sb, ["restart"]); assert.equal(r.status, 0, r.out); const i = await info(sb.apiPort); assert.equal(i.marker, "A"); assert.match(i.jar, /\.run\/public\/api\/releases\//); assert.equal(i.leak, false); assert.equal(i.hasRenderToken, true); assert.equal(builds(sb), b0);
+  });
+});
+
+// ================================================================================================================================ release preparation: reproducible, verified, nothing approved
+test("prepare-api / reproduce-api / validate-api: two clean independent builds must be byte-identical (else NON_REPRODUCIBLE_RELEASE_BUILD, exit 10); preparing approves and starts NOTHING", async (t) => {
+  const sb = await sandbox(); const A = commit(sb, "A");
+  await t.test("reproduce-api: both builds are identical and nothing is recorded", async () => {
+    const r = api(sb, ["reproduce-api", A]); assert.equal(r.status, 0, r.out); const sums = [...r.out.matchAll(/\b([0-9a-f]{64})\b/g)].map((m) => m[1]); assert.equal(sums.length, 2); assert.equal(sums[0], sums[1]); assert.equal(builds(sb), 2); assert.deepEqual(releases(sb), []); assert.equal(approved(sb), null); assert.ok(!existsSync(join(sb.d, ".run/public/api/build/repro1-" + A.slice(0, 12))), "the build directories are removed");
+  });
+  await t.test("a non-deterministic build is refused: NON_REPRODUCIBLE_RELEASE_BUILD, exit 10, nothing recorded", async () => {
+    writeFileSync(join(sb.d, "NONDET"), "1"); const r = api(sb, ["reproduce-api", A]); const p = api(sb, ["prepare-api", A, "--skip-tests"]); rmSync(join(sb.d, "NONDET")); assert.equal(r.status, 10, r.out); assert.match(r.out, /NON_REPRODUCIBLE_RELEASE_BUILD/); assert.equal(p.status, 10, p.out); assert.deepEqual(releases(sb), [], "an irreproducible artifact never becomes a release");
+  });
+  await t.test("prepare-api: the release exists (jar sha256, tests recorded, build mode, both build digests), is NOT approved, nothing is started", async () => {
+    const r = api(sb, ["prepare-api", A]); assert.equal(r.status, 0, r.out); const id = releases(sb)[0]; const rel = JSON.parse(readFileSync(join(sb.d, `.run/public/api/releases/${id}/release.json`), "utf8")); assert.equal(approved(sb), null); assert.equal(await marker(sb), null); assert.equal(rel.build.reproduced.builds, 2); assert.equal(rel.build.reproduced.sha256[0], rel.build.reproduced.sha256[1]); assert.equal(rel.build.reproduced.sha256[0], rel.jar.sha256, "the release jar IS the reproduced build");
+    assert.equal(rel.verification.tests.mode, "full"); assert.equal(rel.verification.tests.total, 7); assert.deepEqual(rel.verification.tests.skippedClasses, ["com.x.ATests"]); assert.equal(rel.schema.maxVersion, "2"); assert.equal(rel.sourceSha, A); assert.match(rel.build.javaVersion, /21/);
+    const v = api(sb, ["validate-api", id]); assert.equal(v.status, 0, v.out); assert.match(v.out, /VALIDATED/); assert.equal(approved(sb), null, "validating approves nothing"); assert.equal(await marker(sb), null); assert.deepEqual(dbs(sb), ["postgres", "studio"]);
+  });
+  await t.test("deploy-api then reuses the prepared release (no rebuild, no second test run) and approves it only after the real process is proven", async () => {
+    const b0 = builds(sb), t0 = lines(sb, "tests.log").length; const r = api(sb, ["deploy-api", A]); assert.equal(r.status, 0, r.out); assert.equal(builds(sb), b0); assert.equal(lines(sb, "tests.log").length, t0); assert.equal(await marker(sb), "A"); assert.match(r.out, /downtime \d+ ms/); assert.equal(api(sb, ["verify-running-api"]).status, 0); assert.match(api(sb, ["verify-running-api"]).out, /IS the approved release/);
+  });
+  await t.test("a wrong JDK is refused BEFORE anything is built (JDK_MISMATCH)", async () => {
+    const b0 = builds(sb); const r = api(sb, ["reproduce-api", A], { PUBLIC_API_REQUIRE_JAVA_MAJOR: "17" }); assert.equal(r.status, 7, r.out); assert.match(r.out, /JDK_MISMATCH/); assert.equal(builds(sb), b0);
+  });
+});
+
+// ================================================================================================================================ the first approved release over a legacy-started API
+test("first approved API release over a LEGACY-started (unproven) API: explicit flag, old jar kept as UNVERIFIED evidence only, the pointer moves after 18081 is healthy, failure restores the old process", async (t) => {
+  const sb = await sandbox(); const A = commit(sb, "A"); const wt = join(sb.d, "backend");
+  const startLegacy = async (label) => {
+    writeFileSync(join(wt, "marker.txt"), `${label}\n`); const g = spawnSync("node", ["./gradlew", "clean", "bootJar"], { cwd: wt, env: { ...process.env, SANDBOX: sb.d }, encoding: "utf8" }); assert.equal(g.status, 0, g.stderr);
+    const cfg = await import(`../../scripts/lib/public-api-release.mjs?${Math.random()}`); const ctx = cfg.apiContext({ ...process.env, PUBLIC_ROOT: sb.d }, sb.d); const e = { PATH: process.env.PATH, ...cfg.deriveRuntimeConfig(ctx), ...Object.fromEntries(Object.entries(SECRETS)), SANDBOX_LEAK: "1", FROM_OLD_SHELL: "kept-for-restore" };
+    const p = spawn(join(sb.d, "bin/java"), ["-XX:MaxRAMPercentage=40", "-jar", join(wt, "build/libs/app-0.1.0.jar")], { cwd: join(sb.d, ".run/public"), env: e, stdio: "ignore", detached: true }); p.unref(); strays.push(p.pid); writeFileSync(join(sb.d, ".run/public/api.pid"), String(p.pid)); for (let i = 0; i < 40 && !(await info(sb.apiPort)); i++) await sleep(150); return p.pid;
+  };
+  const legacyPid = await startLegacy("LEGACY"); assert.equal(await marker(sb), "LEGACY"); const legacySha = (await import("node:crypto")).createHash("sha256").update(readFileSync(join(wt, "build/libs/app-0.1.0.jar"))).digest("hex");
+  await t.test("without the explicit flag the legacy API is never replaced (exit 3) and keeps running", async () => { const r = api(sb, ["deploy-api", A, "--skip-tests"]); assert.equal(r.status, 3, r.out); assert.match(r.out, /init-api --from-running/); assert.ok(exists(legacyPid)); assert.equal(approved(sb), null); assert.equal(await marker(sb), "LEGACY"); });
+  await t.test("the new release fails to start on 18081: the LEGACY API is restored from its saved jar, the approved pointer NEVER moved (no approved.json at all)", async () => {
+    writeFileSync(join(sb.d, "BREAK_REAL"), "A"); const r = api(sb, ["deploy-api", A, "--skip-tests", "--replace-legacy-unverified"]); rmSync(join(sb.d, "BREAK_REAL"));
+    assert.equal(r.status, 7, r.out); assert.match(r.out, /ACTIVATION_FAILED_ROLLED_BACK/); assert.match(r.out, /legacy API .* is running again/); assert.equal(approved(sb), null, "no approved pointer was written"); const i = await info(sb.apiPort); assert.equal(i.marker, "LEGACY"); assert.match(i.jar, /\.run\/public\/api\/legacy\//, "the restored process runs the saved copy"); assert.equal(i.leak, true, "the old environment was restored with it"); assert.ok(!exists(legacyPid) || true);
+    assert.equal(JSON.parse(readFileSync(join(sb.d, ".run/public/api/legacy.json"), "utf8")).provenance, "UNVERIFIED"); assert.equal(status(sb).row.state, "RUNNING_UNAPPROVED");
+  });
+  await t.test("with the flag and a healthy new process: old process stopped, the release runs on 18081, THEN the pointer is written (from = LEGACY_UNVERIFIED, no previous known-good), the old jar is evidence only", async () => {
+    const r = api(sb, ["deploy-api", A, "--skip-tests", "--replace-legacy-unverified"]); assert.equal(r.status, 0, r.out); assert.match(r.out, /replaced the LEGACY_UNVERIFIED API/); assert.match(r.out, /downtime \d+ ms/);
+    const a = approved(sb); assert.ok(a.releaseId.startsWith(A.slice(0, 12))); assert.equal(a.previousKnownGood, null); assert.equal(a.history.at(-1).from, "LEGACY_UNVERIFIED"); assert.equal(await marker(sb), "A"); assert.ok(!exists(owned(sb).pid) === false);
+    assert.ok(!releases(sb).some((id) => id.includes(legacySha.slice(0, 12))), "the legacy jar is not a release"); const leg = JSON.parse(readFileSync(join(sb.d, ".run/public/api/legacy.json"), "utf8")); assert.equal(leg.jarSha256, legacySha); assert.ok(existsSync(join(sb.d, `.run/public/api/legacy/${legacySha.slice(0, 12)}.jar`)));
+    const rb = api(sb, ["rollback-api"]); assert.equal(rb.status, 1, rb.out); assert.match(rb.out, /NO_PREVIOUS_KNOWN_GOOD/, "the unverified legacy jar is never a rollback target"); const rl = api(sb, ["rollback-api", legacySha.slice(0, 12)]); assert.equal(rl.status, 6, rl.out); assert.match(rl.out, /APPROVED_API_BUILD_MISSING/, "an id that is not a release cannot be activated"); assert.equal(api(sb, ["verify-running-api"]).status, 0); assert.equal(status(sb).row.state, "CURRENT_APPROVED");
+    const i = await info(sb.apiPort); assert.equal(i.leak, false); assert.match(i.jar, /\.run\/public\/api\/releases\//);
   });
 });
 

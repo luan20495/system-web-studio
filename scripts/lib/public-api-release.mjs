@@ -43,7 +43,10 @@ export function apiContext(env = process.env, scriptsRoot = null) {
   return { ...c, api, releasesDir: join(api, "releases"), approvedFile: join(api, "approved.json"), lockFile: join(api, "release.lock"), incidentFile: join(api, "incident.json"), stateFile: join(c.run, "api.owned.json"), buildDir: join(api, "build"),
     port: c.apiPort, javaHome, java: env.PUBLIC_API_JAVA ?? (javaHome ? join(javaHome, "bin", "java") : "java"), dbName: env.PUBLIC_API_DB_NAME ?? "studio", rehearse: env.PUBLIC_API_REHEARSE ?? "schema",
     dbCmd: words(env.PUBLIC_API_DB_CMD ?? `docker exec -i ${container} psql -U ${dbUser} -v ON_ERROR_STOP=1`), dumpCmd: words(env.PUBLIC_API_DUMP_CMD ?? `docker exec ${container} pg_dump -U ${dbUser}`),
-    buildCmd: words(env.PUBLIC_API_BUILD_CMD ?? "./gradlew bootJar -x test --console=plain -q"), testCmd: words(env.PUBLIC_API_TEST_CMD ?? "./gradlew test --console=plain -q"),
+    // RELEASE BUILD (D-C0-50 hardening): clean, isolated, no build cache, every task re-run, no daemon shared with other agents, Kotlin incremental state off, an isolated GRADLE_USER_HOME
+    gradleHome: env.PUBLIC_API_GRADLE_HOME ?? join(api, "gradle-home"), requireJavaMajor: Number(env.PUBLIC_API_REQUIRE_JAVA_MAJOR ?? 21),
+    buildCmd: words(env.PUBLIC_API_BUILD_CMD ?? "./gradlew clean bootJar -x test --console=plain -q --no-build-cache --rerun-tasks --no-daemon -Pkotlin.incremental=false"),
+    testCmd: words(env.PUBLIC_API_TEST_CMD ?? "./gradlew clean test --console=plain --no-build-cache --rerun-tasks --no-daemon -Pkotlin.incremental=false"),
     apiStartTimeoutMs: Number(env.PUBLIC_API_START_TIMEOUT_MS ?? 120000), jvmArgs: words(env.PUBLIC_API_JVM_ARGS ?? "-XX:MaxRAMPercentage=40") };
 }
 
@@ -176,28 +179,64 @@ function extractBackend(root, sha40, dir) {
     const fin = () => { if (ca != null && ct != null) (ca === 0 && ct === 0 ? res() : rej(new ReleaseError("SNAPSHOT_FAILED", `git archive ${sha40.slice(0, 12)} backend: ${err.trim().slice(0, 200)}`))); }; a.on("close", (x) => { ca = x; fin(); }); t.on("close", (x) => { ct = x; fin(); });
   });
 }
+/** the environment of a release build: the caller's, minus every Gradle / JVM option variable, with the verified JDK first on PATH and an ISOLATED GRADLE_USER_HOME (no shared build cache, no daemon of another agent) */
+function gradleEnv(c) {
+  const e = { ...process.env }; for (const k of Object.keys(e)) if (/^(GRADLE_OPTS|GRADLE_USER_HOME|ORG_GRADLE_|JAVA_TOOL_OPTIONS|_JAVA_OPTIONS|JDK_JAVA_OPTIONS)/.test(k)) delete e[k];
+  if (c.javaHome) { e.JAVA_HOME = c.javaHome; e.PATH = `${join(c.javaHome, "bin")}:${e.PATH ?? ""}`; } if (c.gradleHome) { mkdirSync(c.gradleHome, { recursive: true }); e.GRADLE_USER_HOME = c.gradleHome; } return e;
+}
 function gradle(c, dir, cmd, label) {
-  const log = join(dir, `${label}.log`); const r = spawnSync(cmd[0], cmd.slice(1), { cwd: join(dir, "backend"), env: { ...process.env, ...(c.javaHome ? { JAVA_HOME: c.javaHome } : {}) }, encoding: "utf8", timeout: 3600000, maxBuffer: 256 * 1024 * 1024 });
+  const log = join(dir, `${label}.log`); const r = spawnSync(cmd[0], cmd.slice(1), { cwd: join(dir, "backend"), env: gradleEnv(c), encoding: "utf8", timeout: 7200000, maxBuffer: 512 * 1024 * 1024 });
   writeFileSync(log, `${r.stdout ?? ""}\n${r.stderr ?? ""}`); return { ok: r.status === 0, tail: `${r.stderr || r.stdout || ""}`.trim().split("\n").slice(-6).join(" | ").slice(0, 400), log };
 }
+export const javaVersionOf = (javaBin) => { const r = spawnSync(javaBin, ["-version"], { encoding: "utf8" }); return `${r.stderr || ""}${r.stdout || ""}`.split("\n")[0].trim(); };
+/** the JDK must be the verified one (major = requireJavaMajor) BEFORE anything is built; JAVA_HOME and the java that will run the jar must agree */
+function requireJdk(c) {
+  const major = javaMajorOf(c.java); if (c.requireJavaMajor && major !== c.requireJavaMajor) throw new ReleaseError("JDK_MISMATCH", `the JDK is ${javaVersionOf(c.java) || "not found"} (${c.java}); the release build requires Java ${c.requireJavaMajor}`);
+  if (c.javaHome && javaMajorOf(join(c.javaHome, "bin", "java")) !== major) throw new ReleaseError("JDK_MISMATCH", `JAVA_HOME ${c.javaHome} and ${c.java} are different Java versions`); return { major, version: javaVersionOf(c.java) };
+}
+/** counts of the Gradle test results XML of a snapshot (read right after the test task: `clean bootJar` removes them) */
+function testResults(dir) {
+  const d = join(dir, "backend", "build", "test-results", "test"); if (!existsSync(d)) return null; const o = { classes: 0, total: 0, failures: 0, errors: 0, skipped: 0, skippedClasses: [] };
+  for (const f of readdirSync(d)) { if (!f.endsWith(".xml")) continue; const m = /<testsuite [^>]*>/.exec(readFileSync(join(d, f), "utf8").slice(0, 2000))?.[0] ?? ""; const g = (k) => Number(new RegExp(` ${k}="(\\d+)"`).exec(m)?.[1] ?? 0); o.classes++; o.total += g("tests"); o.failures += g("failures"); o.errors += g("errors"); const sk = g("skipped"); o.skipped += sk; if (sk) o.skippedClasses.push(/ name="([^"]+)"/.exec(m)?.[1] ?? f); }
+  return o;
+}
+/** one clean build of `sha40` in its own snapshot directory -> { dir, jar, sha256, entries, entryDigest } */
+async function buildJarOnce(c, sha40, dir, log) {
+  rmSync(dir, { recursive: true, force: true }); await extractBackend(c.root, sha40, dir); log(`clean build in ${dir}`);
+  const b = gradle(c, dir, c.buildCmd, "build"); if (!b.ok) throw new ReleaseError("CANDIDATE_BUILD_FAILED", `jar build failed (log ${b.log}): ${b.tail}`);
+  const jar = builtJar(dir); const entries = jarEntries(jar); return { dir, jar, sha256: sha(readFileSync(jar)), size: statSync(jar).size, entries, entryDigest: entryDigest(entries) };
+}
+const sameEntries = (a, b) => { const m = (l) => new Map(l.map((e) => [e.name, `${e.length}/${e.crc}`])); const x = m(a), y = m(b); return [...new Set([...x.keys(), ...y.keys()])].filter((k) => x.get(k) !== y.get(k)); };
+function assertReproducible(b1, b2) {
+  if (b1.sha256 === b2.sha256) return; const diff = sameEntries(b1.entries, b2.entries);
+  throw new ReleaseError("NON_REPRODUCIBLE_RELEASE_BUILD", `two clean builds of the same source differ: sha256 ${b1.sha256.slice(0, 16)} vs ${b2.sha256.slice(0, 16)}; ${diff.length} entries differ${diff.length ? ` (e.g. ${diff.slice(0, 3).join(", ")})` : " (same entry contents: archive metadata differs)"}`, { diff, builds: [b1.sha256, b2.sha256] });
+}
+/** reproduce-api: build the source twice, independently, with the release-build path; nothing is recorded */
+export async function reproduceApi(c, ref, log = () => {}) {
+  const sha40 = resolveSource(c, ref); const jdk = requireJdk(c); mkdirSync(c.buildDir, { recursive: true }); const d1 = join(c.buildDir, `repro1-${sha40.slice(0, 12)}`), d2 = join(c.buildDir, `repro2-${sha40.slice(0, 12)}`);
+  try { const b1 = await buildJarOnce(c, sha40, d1, log); const b2 = await buildJarOnce(c, sha40, d2, log); assertReproducible(b1, b2); return { sourceSha: sha40, jdk: jdk.version, sha256: [b1.sha256, b2.sha256], size: b1.size, entries: b1.entries.length, entryDigest: b1.entryDigest }; }
+  finally { rmSync(d1, { recursive: true, force: true }); rmSync(d2, { recursive: true, force: true }); }
+}
 function builtJar(dir) { const d = join(dir, "backend", "build", "libs"); const jars = existsSync(d) ? readdirSync(d).filter((f) => f.endsWith(".jar") && !f.endsWith("-plain.jar")) : []; if (jars.length !== 1) throw new ReleaseError("CANDIDATE_BUILD_FAILED", `the build produced ${jars.length} runnable jars in ${d} (expected exactly one)`); return join(d, jars[0]); }
-const buildFingerprintOf = (treeSha, javaMajor) => sha(JSON.stringify([treeSha, javaMajor])).slice(0, 16);
+const buildFingerprintOf = (treeSha, javaVersion, gradleDistribution = null) => sha(JSON.stringify([treeSha, javaVersion, gradleDistribution])).slice(0, 16);
 
-export async function buildCandidate(c, sha40, { skipTests = false, expandOnly = false, log = () => {} } = {}) {
-  const javaMajor = javaMajorOf(c.java); const cfg = deriveRuntimeConfig(c); const list = configList(cfg); const cfgFp = configFingerprintOf(list, javaMajor); const id = `${sha40.slice(0, 12)}-${cfgFp.slice(0, 8)}`;
+export async function buildCandidate(c, sha40, { skipTests = false, expandOnly = false, reproduce = false, log = () => {} } = {}) {
+  const jdk = requireJdk(c); const javaMajor = jdk.major; const cfg = deriveRuntimeConfig(c); const list = configList(cfg); const cfgFp = configFingerprintOf(list, javaMajor); const id = `${sha40.slice(0, 12)}-${cfgFp.slice(0, 8)}`;
   const existing = readRelease(c, id); if (existing) { const v = verifyRelease(c, id, { deep: true, approved: null }); if (v.ok) { log(`release ${id} already built: reused (no rebuild)`); return { id, reused: true }; } log(`release ${id} exists but is incomplete / corrupt (${v.problems[0]}): rebuilt`); }
-  const dir = join(c.buildDir, id); rmSync(dir, { recursive: true, force: true }); const stage = `${relDir(c, id)}.tmp.${process.pid}`; rmSync(stage, { recursive: true, force: true });
+  mkdirSync(c.buildDir, { recursive: true }); const dir = join(c.buildDir, id), dir2 = join(c.buildDir, `${id}-r2`); const stage = `${relDir(c, id)}.tmp.${process.pid}`; rmSync(stage, { recursive: true, force: true }); rmSync(dir, { recursive: true, force: true }); rmSync(dir2, { recursive: true, force: true });
   try {
-    const treeSha = git(c.root, ["rev-parse", `${sha40}:backend`]).stdout.trim(); log(`snapshot of backend @ ${sha40.slice(0, 12)} (tree ${treeSha.slice(0, 12)})`); await extractBackend(c.root, sha40, dir);
-    let tests = "skipped"; if (!skipTests) { log("backend tests (full)"); const t = gradle(c, dir, c.testCmd, "tests"); if (!t.ok) throw new ReleaseError("CANDIDATE_TESTS_FAILED", `backend tests failed (log ${t.log}): ${t.tail}`); tests = "full"; }
-    log("building the jar"); const b = gradle(c, dir, c.buildCmd, "build"); if (!b.ok) throw new ReleaseError("CANDIDATE_BUILD_FAILED", `jar build failed (log ${b.log}): ${b.tail}`);
-    const jar = builtJar(dir); mkdirSync(stage, { recursive: true }); copyFileSync(jar, join(stage, "app.jar")); const entries = jarEntries(join(stage, "app.jar")); const migrations = jarMigrations(join(stage, "app.jar"), entries);
+    const treeSha = git(c.root, ["rev-parse", `${sha40}:backend`]).stdout.trim(); log(`snapshot of backend @ ${sha40.slice(0, 12)} (tree ${treeSha.slice(0, 12)}), ${jdk.version}`); await extractBackend(c.root, sha40, dir);
+    let tests = { mode: "skipped" }; if (!skipTests) { log("backend tests (full, clean, no build cache)"); const t = gradle(c, dir, c.testCmd, "tests"); const res = testResults(dir); if (!t.ok || (res && (res.failures || res.errors))) throw new ReleaseError("CANDIDATE_TESTS_FAILED", `backend tests failed (log ${t.log}): ${res ? `${res.total} tests, ${res.failures} failures, ${res.errors} errors; ` : ""}${t.tail}`); tests = { mode: "full", ...(res ?? {}) }; }
+    const b1 = await buildJarOnce(c, sha40, dir, log); let reproduced = null; if (reproduce) { const b2 = await buildJarOnce(c, sha40, dir2, log); assertReproducible(b1, b2); reproduced = { builds: 2, sha256: [b1.sha256, b2.sha256] }; log(`reproducible: both clean builds are ${b1.sha256.slice(0, 16)}…`); }
+    mkdirSync(stage, { recursive: true }); copyFileSync(b1.jar, join(stage, "app.jar")); const entries = jarEntries(join(stage, "app.jar")); const migrations = jarMigrations(join(stage, "app.jar"), entries);
     const cur = readApproved(c); const curVers = new Set((cur ? readRelease(c, cur.releaseId)?.schema?.versions ?? [] : []).map((m) => m.version)); const added = migrations.map((m) => m.version).filter((v) => !curVers.has(v));
-    const record = { schema: 1, id, kind: "built", sourceSha: sha40, sourceShort: sha40.slice(0, 12), backendTreeSha: treeSha, createdAt: new Date().toISOString(), javaMajor, buildFingerprint: buildFingerprintOf(treeSha, javaMajor), configFingerprint: cfgFp,
+    const wrapper = (() => { try { return /distributionUrl=(.+)/.exec(readFileSync(join(dir, "backend", "gradle", "wrapper", "gradle-wrapper.properties"), "utf8"))?.[1]?.replace(/\\/g, "").split("/").pop() ?? null; } catch { return null; } })();
+    const build = { mode: "clean-isolated", command: c.buildCmd.join(" "), javaVersion: jdk.version, gradleDistribution: wrapper, gradleUserHome: c.gradleHome ? "isolated" : "shared", reproduced };
+    const record = { schema: 1, id, kind: "built", sourceSha: sha40, sourceShort: sha40.slice(0, 12), backendTreeSha: treeSha, createdAt: new Date().toISOString(), javaMajor, buildFingerprint: buildFingerprintOf(treeSha, build.javaVersion, wrapper), configFingerprint: cfgFp,
       runtimeConfig: list, secretKeyNames: secretKeyNames(c), jar: { file: "app.jar", sha256: sha(readFileSync(join(stage, "app.jar"))), size: statSync(join(stage, "app.jar")).size, entryDigest: entryDigest(entries) },
-      schema: { versions: migrations, maxVersion: migrations.at(-1)?.version ?? null, expandOnly: expandOnly ? added : [] }, verification: { tests, build: c.buildCmd.join(" "), rehearsal: c.rehearse } };
+      schema: { versions: migrations, maxVersion: migrations.at(-1)?.version ?? null, expandOnly: expandOnly ? added : [] }, build, verification: { tests, rehearsal: c.rehearse } };
     writeJsonAtomic(join(stage, "release.json"), record); rmSync(relDir(c, id), { recursive: true, force: true }); renameSync(stage, relDir(c, id)); return { id, reused: false };
-  } catch (e) { rmSync(stage, { recursive: true, force: true }); throw e; } finally { rmSync(dir, { recursive: true, force: true }); }
+  } catch (e) { rmSync(stage, { recursive: true, force: true }); throw e; } finally { rmSync(dir, { recursive: true, force: true }); rmSync(dir2, { recursive: true, force: true }); }
 }
 
 /** prove the candidate on a TEMPORARY port against a SCRATCH database: it starts, Flyway applies, readiness (db, redis, rabbit, minio) is UP. The real API and the real database are not touched. */
@@ -206,8 +245,8 @@ export async function validateCandidate(c, id, log = () => {}) {
   try {
     await withScratchDb(c, id, c.rehearse === "fresh" ? "fresh" : "schema", async (scratch) => {
       const port = await freePort(); const url = (rel.runtimeConfig.find((x) => x.startsWith("DATABASE_URL=")) ?? "DATABASE_URL=jdbc:postgresql://127.0.0.1:25432/x").slice("DATABASE_URL=".length).replace(/\/[^/]+$/, `/${scratch}`);
-      // WORKFLOW_ENABLED=false: the candidate must not consume messages of the REAL RabbitMQ queues
-      try { started = await startApi(c, id, { port, tag: "public-validate", stateFile: join(c.run, "validate-api.owned.json"), overrides: { DATABASE_URL: url, WORKFLOW_ENABLED: "false" } }); } catch (e) { problems.push(`did not start on a temporary port (${e.code ?? "ERROR"}: ${String(e.message).slice(0, 160)})`); return; }
+      // candidate-smoke limitation (recorded): WORKFLOW_ENABLED=false (no workflow queue / scheduler) and the AMQP listener containers are NOT started (PublishWorker listens on the REAL studio.publish queue): the candidate must not consume messages of the real broker; the broker connection itself is still checked by readiness
+      try { started = await startApi(c, id, { port, tag: "public-validate", stateFile: join(c.run, "validate-api.owned.json"), overrides: { DATABASE_URL: url, WORKFLOW_ENABLED: "false", SPRING_RABBITMQ_LISTENER_SIMPLE_AUTO_STARTUP: "false" } }); } catch (e) { problems.push(`did not start on a temporary port (${e.code ?? "ERROR"}: ${String(e.message).slice(0, 160)})`); return; }
       if (!(await waitReady(port, c.apiStartTimeoutMs))) { problems.push("readiness (database, redis, rabbit, minio) did not become UP"); return; }
       const live = await httpGet(`http://127.0.0.1:${port}/actuator/health/liveness`); if (live.status !== 200) problems.push(`liveness answered ${live.status || live.error}`);
       const applied = appliedMigrations(c, scratch); const miss = rel.schema.versions.filter((m) => !applied.some((a) => a.version === m.version && a.success)).map((m) => m.version); if (miss.length) problems.push(`Flyway did not apply ${miss.join(", ")} on the scratch database`);
@@ -222,43 +261,78 @@ function checkSchema(c, id) {
   const rel = readRelease(c, id); let applied; try { applied = appliedMigrations(c); } catch (e) { throw new ReleaseError("SCHEMA_CHECK_UNAVAILABLE", `${e.message} - the artifact cannot be proven compatible with the database: failing closed`); }
   const v = schemaVerdict(applied, rel.schema.versions, { allowAhead: allowAheadOf(c) }); if (!v.ok) throw new ReleaseError(v.verdict, `release ${id}: ${verdictText(v)}`, { verdict: v }); return v;
 }
-async function replaceRunning(c, id, log) {
-  const r = runningOf(c); if (r.foreign) throw new ReleaseError("FOREIGN_PROCESS", `port ${c.port} is used by pid ${r.foreignPid}, which is not the recorded public API: left alone`);
-  if (r.owned) await stopApi(c);
+const startTimeOfPid = (pid) => startTimeOf(pid);
+/** the API the OLD lifecycle started (api.pid + cwd .run/public + java -jar): captured BEFORE it is replaced, so that it can be restored if the replacement fails. Its jar is copied aside as INCIDENT EVIDENCE: provenance UNVERIFIED, never a release, never a rollback target. */
+function captureLegacy(c, log) {
+  if (!legacyApi(c)) throw new ReleaseError("FOREIGN_PROCESS", `port ${c.port} is not used by the legacy-started public API`); const pid = listenerPids(c.port)[0]; const cmd = commandOf(pid); const toks = cmd.split(/\s+/); const jarPath = /\s-jar\s+(\S+\.jar)/.exec(cmd)?.[1];
+  if (!jarPath || !existsSync(jarPath)) throw new ReleaseError("ADOPT_REFUSED", `cannot find the jar of the legacy API in its command line`); const st = statSync(jarPath); if (openInode(pid, jarPath) !== st.ino) throw new ReleaseError("ADOPT_REFUSED", `the jar ${jarPath} is not the file the legacy API has open`);
+  const jarSha = sha(readFileSync(jarPath)); const dir = join(c.api, "legacy"); mkdirSync(dir, { recursive: true }); const copy = join(dir, `${jarSha.slice(0, 12)}.jar`);
+  if (!existsSync(copy)) { const r = spawnSync("cp", ["-c", jarPath, copy]); if (r.status !== 0) copyFileSync(jarPath, copy); } if (sha(readFileSync(copy)) !== jarSha) throw new ReleaseError("ADOPT_REFUSED", "the copy of the legacy jar differs from the running one");
+  const ji = toks.findIndex((t) => /(^|\/)java$/.test(t)); const ai = toks.indexOf("-jar"); const L = { pid, jarPath, jarSha, copy, javaBin: ji >= 0 ? toks[ji] : c.java, jvmArgs: ji >= 0 ? toks.slice(ji + 1, ai) : c.jvmArgs, env: runningEnv(pid), startTime: startTimeOf(pid), command: cmd, cwd: cwdOf(pid) };
+  writeJsonAtomic(join(c.api, "legacy.json"), { provenance: "UNVERIFIED", capturedAt: new Date().toISOString(), pid, jarPath, jarSha256: jarSha, copy, note: "evidence of the API the old lifecycle started; its source could not be proven; never approved, never a rollback target" }); log(`legacy API pid ${pid}: jar ${jarSha.slice(0, 12)} saved as incident evidence (${copy}); provenance UNVERIFIED`); return L;
+}
+async function stopLegacy(c, L) { const members = [{ pid: L.pid, startTime: L.startTime, command: L.command }]; return stopOwned({ schema: 1, owner: "public", name: "api", mode: "public", port: c.port, pid: L.pid, pgid: null, startTime: L.startTime, command: L.command, cwd: L.cwd, listenerPid: L.pid, members, startedBy: "legacy-replaced" }, { graceMs: 20000, removeState: false }); }
+async function restoreLegacy(c, L) {
+  const m = await startOwned({ owner: "public", name: "api", stateFile: c.stateFile, logFile: join(c.run, "api.log"), cwd: c.run, port: c.port, mode: "public", group: true, inheritEnv: false, cmd: [L.javaBin, ...L.jvmArgs, "-jar", L.copy], env: L.env, ready: { port: c.port, timeoutMs: c.apiStartTimeoutMs }, extra: { releaseId: null, legacy: true, jarSha256: L.jarSha } });
+  syncPidFile(c, m.pid); return waitReady(c.port, c.apiStartTimeoutMs);
+}
+/** what the process on the real port IS, proven: the recorded owned identity, the listener, the OPEN jar (inode) = the release jar, its sha256 = the record, readiness UP. Returns the problems (empty = proven). */
+export async function verifyRunning(c, id) {
+  const rel = readRelease(c, id); const jar = jarOf(c, id); const r = runningOf(c); const problems = [];
+  if (!r.listener) return [`nothing listens on ${c.port}`]; if (!r.owned) problems.push(`the listener ${r.listener} is not the recorded owned process (${r.identity})`); if (r.releaseId !== id) problems.push(`the owned process records release ${r.releaseId}, not ${id}`);
+  if (openInode(r.listener, jar) !== statSync(jar).ino) problems.push(`the process ${r.listener} does not have ${jar} open`); if (sha(readFileSync(jar)) !== rel.jar.sha256) problems.push("the jar's sha256 differs from the release record");
+  if (!(await waitReady(c.port, 5000))) problems.push("readiness is not UP"); return problems;
+}
+async function startReal(c, id, log) {
   try { const m = await startApi(c, id); syncPidFile(c, m.pid); } catch (e) { return { ok: false, error: `${e.code ?? "ERROR"}: ${String(e.message).slice(0, 200)}` }; }
   if (!(await waitReady(c.port, c.apiStartTimeoutMs))) return { ok: false, error: "readiness did not become UP after the start" };
-  log(`API :${c.port} runs ${id}`); return { ok: true };
+  const bad = await verifyRunning(c, id); if (bad.length) return { ok: false, error: `the running process is not the release: ${bad.join("; ")}` }; log(`API :${c.port} runs ${id} (verified: owned identity, open jar, sha256, readiness)`); return { ok: true };
 }
-/** verify -> schema verdict (REAL database, read-only) -> prove on a temporary port + scratch database -> move the pointer (atomic) -> replace the running API -> on failure return to the previous release when the schema still allows it */
-export async function activate(c, id, { action, log = () => {} }) {
-  const before = readApproved(c); foreignGuard(c);   // a foreign listener refuses BEFORE anything moves
+/**
+ * verify -> schema verdict (REAL database, read-only) -> prove on a temporary port + scratch database -> THE WINDOW: stop the old API (owned; or the legacy-started one when `replaceLegacy`), start the verified
+ * artifact on the real port, prove it IS the release -> ONLY THEN move the approved pointer (atomic). If anything fails after the old process was stopped, the old one is restored (the previous approved
+ * release, or the legacy API from its saved jar) when the schema still allows it, and the pointer has NOT moved.
+ */
+export async function activate(c, id, { action, replaceLegacy = false, log = () => {} }) {
+  const before = readApproved(c); const r0 = runningOf(c); const legacyRun = r0.foreign && replaceLegacy && legacyApi(c); if (!legacyRun) foreignGuard(c);   // a foreign listener refuses BEFORE anything moves
   const v = verifyRelease(c, id, { deep: true, approved: null }); if (!v.ok) throw new ReleaseError("APPROVED_API_BUILD_MISSING", v.problems.join("; "), { problems: v.problems });
   const sv = checkSchema(c, id); log(`schema: ${sv.verdict}${sv.pending.length ? ` (the artifact will apply ${sv.pending.join(", ")} at start: a one-way step)` : ""}`);
   const val = await validateCandidate(c, id, log); if (!val.ok) throw new ReleaseError("CANDIDATE_VALIDATION_FAILED", `candidate ${id} is not healthy: ${val.problems.join("; ")}`, { problems: val.problems });
-  writeJsonAtomic(c.approvedFile, approvedRecord(c, id, { action, from: before?.releaseId ?? null, previousKnownGood: action === "rollback" ? null : undefined }));
-  const r = await replaceRunning(c, id, log);
-  if (r.ok) { rmSync(c.crashFile, { force: true }); rmSync(c.incidentFile, { force: true }); return { ok: true, releaseId: id, previous: before?.releaseId ?? null, schema: sv }; }
-  await stopApi(c);
-  if (!before) { rmSync(c.approvedFile, { force: true }); throw new ReleaseError("ACTIVATION_FAILED", `${r.error}; no previous release to return to`); }
-  writeJsonAtomic(c.approvedFile, before);
-  let back; try { checkSchema(c, before.releaseId); back = await replaceRunning(c, before.releaseId, log); }
-  catch (e) { writeJsonAtomic(c.incidentFile, { state: e.code ?? "ROLLBACK_BLOCKED", since: new Date().toISOString(), failed: id, previous: before.releaseId, reason: String(e.message).slice(0, 300) }); throw new ReleaseError("ACTIVATION_FAILED_ROLLBACK_BLOCKED", `${r.error}; the previous release ${before.releaseId} is approved again but was NOT restarted: ${e.message}`); }
-  throw new ReleaseError("ACTIVATION_FAILED_ROLLED_BACK", `${r.error}; the previous release ${before.releaseId} is approved and ${back.ok ? "running again" : "COULD NOT be restarted: " + back.error}`, { rolledBack: back.ok });
+  const legacy = legacyRun ? captureLegacy(c, log) : null; const wasLegacy = !!legacy || (r0.owned && r0.meta?.extra?.legacy === true);   // a legacy API restored by an earlier failed attempt is owned now but still UNVERIFIED
+  const t0 = Date.now(); log("maintenance window: stopping the current API (stop-then-start, not zero-downtime)");
+  if (legacy) await stopLegacy(c, legacy); else if (r0.owned) await stopApi(c);
+  const r = await startReal(c, id, log); const downtimeMs = Date.now() - t0;
+  if (r.ok) { writeJsonAtomic(c.approvedFile, approvedRecord(c, id, { action, from: before?.releaseId ?? (wasLegacy ? "LEGACY_UNVERIFIED" : null), previousKnownGood: action === "rollback" ? null : undefined })); rmSync(c.crashFile, { force: true }); rmSync(c.incidentFile, { force: true }); return { ok: true, releaseId: id, previous: before?.releaseId ?? null, replacedLegacy: wasLegacy, downtimeMs, schema: sv }; }
+  await stopApi(c); syncPidFile(c, null);   // the failed candidate (the approved pointer never moved)
+  if (before) {
+    try { checkSchema(c, before.releaseId); const back = await startReal(c, before.releaseId, log); throw new ReleaseError("ACTIVATION_FAILED_ROLLED_BACK", `${r.error}; the approved pointer did not move; the previous release ${before.releaseId} ${back.ok ? "is running again" : "COULD NOT be restarted: " + back.error}`, { rolledBack: back.ok }); }
+    catch (e) { if (e instanceof ReleaseError && e.code === "ACTIVATION_FAILED_ROLLED_BACK") throw e; writeJsonAtomic(c.incidentFile, { state: e.code ?? "ROLLBACK_BLOCKED", since: new Date().toISOString(), failed: id, previous: before.releaseId, reason: String(e.message).slice(0, 300) }); throw new ReleaseError("ACTIVATION_FAILED_ROLLBACK_BLOCKED", `${r.error}; the previous release ${before.releaseId} was NOT restarted: ${e.message}`); }
+  }
+  if (legacy) { const ok = await restoreLegacy(c, legacy).catch(() => false); throw new ReleaseError("ACTIVATION_FAILED_ROLLED_BACK", `${r.error}; the approved pointer did not move; the legacy API (jar ${legacy.jarSha.slice(0, 12)}, provenance UNVERIFIED) ${ok ? "is running again" : "COULD NOT be restarted"}`, { rolledBack: ok }); }
+  throw new ReleaseError("ACTIVATION_FAILED", `${r.error}; no previous release to return to`);
 }
 export function prune(c, log = () => {}) {
   const a = readApproved(c); const keep = new Set([a?.releaseId, a?.previousKnownGood].filter(Boolean)); const removed = []; if (!a) return { removed, kept: [], skipped: "no approved release: nothing is pruned" };
   for (const id of listReleases(c)) if (!keep.has(id)) { rmSync(relDir(c, id), { recursive: true, force: true }); removed.push(id); log(`pruned ${id}`); }
   if (!existsSync(join(relDir(c, a.releaseId), "release.json"))) throw new ReleaseError("APPROVED_API_BUILD_MISSING", `prune would have removed the approved release ${a.releaseId}`); return { removed, kept: [...keep] };
 }
-export async function deployApi(c, ref, { skipTests = false, expandOnly = false, log = () => {} } = {}) {
+export async function deployApi(c, ref, { skipTests = false, expandOnly = false, reproduce = false, replaceLegacy = false, log = () => {} } = {}) {
   if (!ref || !String(ref).trim()) throw new ReleaseError("USAGE", "deploy-api needs an explicit source (a commit SHA or ref): the working tree HEAD is never assumed");
   const sha40 = resolveSource(c, ref);
   return withApiLock(c, async () => {
-    const cand = await buildCandidate(c, sha40, { skipTests, expandOnly, log }); const cur = readApproved(c);
+    const cand = await buildCandidate(c, sha40, { skipTests, expandOnly, reproduce, log }); const cur = readApproved(c);
     if (cur?.releaseId === cand.id) { const up = await up_(c, log); return { ok: true, releaseId: cand.id, noop: true, ...up }; }
-    try { const r = await activate(c, cand.id, { action: "deploy", log }); return { ...r, pruned: prune(c, log).removed }; }
-    catch (e) { if (!cand.reused && !readApproved(c)?.history?.some((h) => h.releaseId === cand.id)) rmSync(relDir(c, cand.id), { recursive: true, force: true }); throw e; }
+    try { const r = await activate(c, cand.id, { action: "deploy", replaceLegacy, log }); return { ...r, pruned: prune(c, log).removed }; }
+    catch (e) { if (!cand.reused && !readApproved(c)?.history?.some((h) => h.releaseId === cand.id) && !["ACTIVATION_FAILED_ROLLED_BACK", "ACTIVATION_FAILED_ROLLBACK_BLOCKED", "ACTIVATION_FAILED"].includes(e.code)) rmSync(relDir(c, cand.id), { recursive: true, force: true }); throw e; }
   });
+}
+/** prepare-api: build + verify the immutable release (no approval, no process touched) */
+export async function prepareApi(c, ref, { skipTests = false, expandOnly = false, reproduce = true, log = () => {} } = {}) {
+  const sha40 = resolveSource(c, ref); return withApiLock(c, async () => { const r = await buildCandidate(c, sha40, { skipTests, expandOnly, reproduce, log }); const rel = readRelease(c, r.id); return { ...r, sourceSha: sha40, jarSha256: rel.jar.sha256, tests: rel.verification.tests, build: rel.build }; });
+}
+/** validate-api: the temporary-port + scratch-database proof of an existing release, standalone (no approval, the real API untouched) */
+export async function validateApi(c, id, log = () => {}) {
+  return withApiLock(c, async () => { if (!id || !readRelease(c, id)) throw new ReleaseError("USAGE", `unknown API release ${id ?? "(none)"}: see releases-api`); const v = verifyRelease(c, id, { deep: true, approved: null }); if (!v.ok) throw new ReleaseError("APPROVED_API_BUILD_MISSING", v.problems.join("; ")); const sv = checkSchema(c, id); const val = await validateCandidate(c, id, log); if (!val.ok) throw new ReleaseError("CANDIDATE_VALIDATION_FAILED", val.problems.join("; ")); return { ok: true, releaseId: id, schema: sv }; });
 }
 export async function rollbackApi(c, target, log = () => {}) {
   return withApiLock(c, async () => {
@@ -365,7 +439,7 @@ export async function initApiFromRunning(c, { source = null, dryRun = false, log
     if (dryRun) return { dryRun: true, releaseId: id, sourceSha: cand, evidence };
     const stage = `${relDir(c, id)}.tmp.${process.pid}`; rmSync(stage, { recursive: true, force: true }); mkdirSync(stage, { recursive: true }); const r0 = spawnSync("cp", ["-c", jarPath, join(stage, "app.jar")]); if (r0.status !== 0) copyFileSync(jarPath, join(stage, "app.jar"));
     if (sha(readFileSync(join(stage, "app.jar"))) !== jarSha) { rmSync(stage, { recursive: true, force: true }); throw new ReleaseError("ADOPT_REFUSED", "the copy of the jar differs from the running one"); }
-    const record = { schema: 1, id, kind: "adopted", sourceSha: cand, sourceShort: cand.slice(0, 12), backendTreeSha: treeSha, createdAt: new Date().toISOString(), javaMajor, buildFingerprint: buildFingerprintOf(treeSha, javaMajor), configFingerprint: cfgFp, runtimeConfig: list, secretKeyNames: secretKeyNames(c),
+    const record = { schema: 1, id, kind: "adopted", sourceSha: cand, sourceShort: cand.slice(0, 12), backendTreeSha: treeSha, createdAt: new Date().toISOString(), javaMajor, buildFingerprint: buildFingerprintOf(treeSha, `adopted-java-${javaMajor}`), configFingerprint: cfgFp, runtimeConfig: list, secretKeyNames: secretKeyNames(c),
       jar: { file: "app.jar", sha256: jarSha, size: st.size, entryDigest: eDigest }, schema: { versions: migrations, maxVersion: migrations.at(-1)?.version ?? null, expandOnly: [] }, verification: { tests: "not-run (adopted)", build: "reproduced from the commit", rehearsal: "n/a" }, adoption: { at: new Date().toISOString(), evidence } };
     writeJsonAtomic(join(stage, "release.json"), record); rmSync(relDir(c, id), { recursive: true, force: true }); renameSync(stage, relDir(c, id));
     const members = [{ pid, startTime: startTimeOf(pid), command: commandOf(pid) }];   // legacy ownership -> helper metadata, WITHOUT touching the process
