@@ -423,6 +423,23 @@ await block("scenario 54", async () => { const p = await open({ portal: "admin",
   check("EMP57d a company admin: unavailable too, with the existing explanation as visible text", (await p.getByTestId("detail-toggle").getAttribute("aria-disabled")) === "true" && /Chỉ quản trị hệ thống/.test(await p.locator("[role=dialog] .xp-reason").innerText()));
   await p.__ctx.close(); });
 
+// ===================================================================================================================== M-058 the company list can be searched and paged (client-side, over what the API returns)
+await block("scenario 55", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/tenants", big: "1" }); await settle(p, 500);
+  check("TEN01 63 companies: a search box and a pager exist; one page of rows is rendered (not all 63)", (await p.getByLabel("Tìm công ty").count()) === 1 && (await p.locator("[data-testid=tenant-list] tbody tr").count()) === 25 && /1–25 \/ 63/.test(await p.locator(".pager").innerText()), `rows=${await p.locator("[data-testid=tenant-list] tbody tr").count()}`);
+  await p.locator(".pager").getByRole("button", { name: /Sau/ }).click(); await settle(p, 200);
+  check("TEN02 'Sau' shows the next page", /26–50 \/ 63/.test(await p.locator(".pager").innerText()));
+  await p.getByLabel("Tìm công ty").fill("Công ty 5"); await settle(p, 400);
+  const names = await p.locator("[data-testid=tenant-list] tbody tr b").allInnerTexts();
+  check("TEN03 searching by name filters (client-side) and goes back to page 1; the pager follows the filtered total", names.length > 0 && names.every((n) => /Công ty 5/.test(n)) && !/\/ 63/.test(await p.locator(".pager").innerText().catch(() => "")), `${names.length} rows`);
+  await p.getByLabel("Tìm công ty").fill("c-7"); await settle(p, 300);
+  check("TEN04 the company CODE is searched too", (await p.locator("[data-testid=tenant-list] tbody tr").count()) >= 1);
+  await p.getByLabel("Tìm công ty").fill("không-có-công-ty-này"); await settle(p, 300);
+  check("TEN05 no match: a clear message (not an empty table)", /Không có công ty phù hợp/.test(await p.locator("main").innerText()) && (await p.locator("[data-testid=tenant-list]").count()) === 0);
+  await p.__ctx.close(); });
+await block("scenario 56", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/tenants" }); await settle(p, 500);
+  check("TEN06 3 companies: no pager (everything fits one page)", (await p.locator(".pager").count()) === 0 && (await p.locator("[data-testid=tenant-list] tbody tr").count()) === 3);
+  await p.__ctx.close(); });
+
 // ===================================================================================================================== route / navigation snapshot (M-066: the split must not change behaviour)
 // For every persona the sidebar labels and, for every section key (deep links, aliases, foreign and unknown keys included), the final path, the h1, the h2s and the kind of state view are recorded in admin-routes.snapshot.json
 // (generated from the pre-split code, `UPDATE_SNAPSHOT=1` rewrites it). Dates / numbers are not compared: only structure.

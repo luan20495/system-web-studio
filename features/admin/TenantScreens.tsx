@@ -14,9 +14,9 @@ import { api, ApiError } from "@/lib/http-api";
 import type { Member, TenantMemberCandidate, TenantMemberView, TenantView } from "@/lib/http-types";
 import { useSession } from "../session";
 import { useLoad } from "../useLoad";
-import { Card, ErrorState, fmtDate, Kpi, Pill, StateView } from "../ui";
+import { Card, ErrorState, fmtDate, Kpi, Pager, Pill, StateView } from "../ui";
 import { isTenantAdminRole, isWorkspaceAdminRole } from "@xweb/permissions";
-import { ArrowLeft, Building2, CircleCheck, ModalHeader, ShieldCheck, UserRound, confirm } from "@xweb/ui";
+import { ArrowLeft, Building2, CircleCheck, ModalHeader, ShieldCheck, UserRound, confirm, LoadGate } from "@xweb/ui";
 import { LoadNote } from "./LoadNote";
 import { PersonPicker } from "./PersonPicker";
 import { PlatformCreateAccount } from "./ProvisioningLive";
@@ -160,24 +160,36 @@ function TenantBody({ id, onChanged }: { id: string; onChanged?: () => void }) {
 }
 
 // ------------------------------------------------------------------------------------------------------------------------- platform
+const TENANT_PAGE = 25;
 export function TenantsPage() {
   const A = useA();
   const router = useRouter();
   const list = useLoad(() => api.admin.tenants(), []);
   const [adding, setAdding] = useState(false);
+  // the API answers the whole list; searching and paging happen here (a tenant filter / page route is a C1 handoff)
+  const [q, setQ] = useState(""); const [page, setPage] = useState(0);
+  const needle = q.trim().toLowerCase();
+  const shown = useMemo(() => (list.data ?? []).filter((t) => !needle || `${t.name} ${t.slug}`.toLowerCase().includes(needle)), [list.data, needle]);
+  const pageRows = shown.slice(page * TENANT_PAGE, (page + 1) * TENANT_PAGE);
   return (<>
     <PageHead title="Công ty (tenant)" sub="Các công ty dùng nền tảng. Tạo công ty mới, tạm khóa hoặc khôi phục, và quản lý quản trị viên của từng công ty."
       actions={<button className="btn primary" onClick={() => setAdding(true)}>+ Tạo công ty</button>}/>
     {adding ? <CreateTenantDialog onClose={() => setAdding(false)} onCreated={(t) => { setAdding(false); list.reload(); router.push(A(`/tenants/${t.id}`)); }}/> : null}
     <Card>
-      {list.error ? <ErrorState error={list.error} retry={list.reload}/> : list.loading && !list.data ? <StateView kind="loading"/> : (list.data ?? []).length === 0 ? <StateView kind="empty" title="Chưa có công ty nào"/> : (
+      <LoadGate load={list} label="danh sách công ty" isEmpty={(d) => d.length === 0} empty={{ title: "Chưa có công ty nào" }}>{() => (<>
+        <form className="filters" role="search" onSubmit={(e) => e.preventDefault()}>
+          <input aria-label="Tìm công ty" placeholder="Tìm theo tên hoặc mã công ty" value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }}/>
+        </form>
+        {shown.length === 0 ? <StateView kind="empty" title="Không có công ty phù hợp" detail={<p>Thử tên hoặc mã khác.</p>}/> : <>
         <table className="table" data-testid="tenant-list">
           <thead><tr><th>Công ty</th><th>Trạng thái</th><th>Tạo lúc</th></tr></thead>
-          <tbody>{list.data!.map((t) => (
+          <tbody>{pageRows.map((t) => (
             <tr key={t.id} className="clickRow" data-testid={`tenant:${t.slug}`} onClick={() => router.push(A(`/tenants/${t.id}`))}>
               <td><Link href={A(`/tenants/${t.id}`)}><b>{t.name}</b></Link><small>{t.slug}</small></td><td>{statusPill(t.status)}</td><td>{fmtDate(t.createdAt)}</td>
             </tr>))}</tbody>
-        </table>)}
+        </table>
+        {shown.length > TENANT_PAGE ? <Pager page={page} size={TENANT_PAGE} total={shown.length} onPage={setPage}/> : null}</>}
+      </>)}</LoadGate>
     </Card>
   </>);
 }
