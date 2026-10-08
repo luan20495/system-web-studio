@@ -66,6 +66,16 @@ export function checkTenantForm(f: { slug: string; name: string }): { slug?: str
   if (!f.name.trim() || f.name.trim().length > 160) out.name = "Hãy nhập tên công ty (tối đa 160 ký tự).";
   return out;
 }
+/** a company code proposed from its name: Vietnamese letters folded to ASCII, lower-case, runs of anything else become one "-", trimmed, at most 120 characters */
+export function slugify(name: string): string {
+  return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/gi, "d").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 120).replace(/-+$/g, "");
+}
+/** up to two letters for an avatar: first letter of the first and the last word of the display name (or of the username) */
+export function initials(p: { username: string; displayName: string | null }): string {
+  const words = (p.displayName && p.displayName.trim() ? p.displayName : p.username).trim().split(/[\s._-]+/).filter(Boolean);
+  const pick = (w: string) => (w.normalize("NFD").replace(/[\u0300-\u036f]/g, "")[0] ?? "").toUpperCase();
+  return words.length > 1 ? pick(words[0]) + pick(words[words.length - 1]) : pick(words[0] ?? "?");
+}
 export const TENANT_ROLES = [{ id: "TENANT_ADMIN", label: "Quản trị công ty" }, { id: "MEMBER", label: "Thành viên" }] as const;
 export const tenantRoleLabel = (r: string) => TENANT_ROLES.find((x) => x.id === r)?.label ?? r;
 export const TENANT_STATUS_LABEL: Record<string, string> = { ACTIVE: "Hoạt động", SUSPENDED: "Tạm khóa", DELETED: "Đã xóa" };
