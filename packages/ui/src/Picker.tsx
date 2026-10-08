@@ -8,7 +8,7 @@ export type PickerOption<V extends string> = { value: V; label: string; hint?: s
  * A dropdown picker with a logo / hint per option (WAI-ARIA listbox, keyboard: ↑ ↓ Home End Enter Space Esc, type-ahead by first letter).
  * A visually hidden NATIVE <select> mirrors the value: forms, autofill, screen-reader shortcuts and existing scripts that do `getByLabel(label).selectOption(...)` keep working.
  */
-export function Picker<V extends string>({ label, buttonLabel, value, options, onChange, disabled }: { label: string; /** accessible name of the visible button (default: label); the hidden native select keeps `label` */ buttonLabel?: string; value: V; options: PickerOption<V>[]; onChange: (v: V) => void; disabled?: boolean }) {
+export function Picker<V extends string>({ label, buttonLabel, value, options, onChange, disabled, describedBy }: { /** id of the element that explains / reports an error for this field */ describedBy?: string; label: string; /** accessible name of the visible button (default: label); the hidden native select keeps `label` */ buttonLabel?: string; value: V; options: PickerOption<V>[]; onChange: (v: V) => void; disabled?: boolean }) {
   const id = useId(); const [open, setOpen] = useState(false); const [active, setActive] = useState(0);
   const root = useRef<HTMLDivElement>(null); const btn = useRef<HTMLButtonElement>(null);
   const cur = options.find((o) => o.value === value) ?? options[0];
@@ -35,7 +35,7 @@ export function Picker<V extends string>({ label, buttonLabel, value, options, o
     <div className="xp-picker" ref={root} onKeyDown={onKey}>
       <label htmlFor={`${id}-native`} className="xp-pickerLabel">{label}</label>
       <select id={`${id}-native`} className="srOnly" value={value} tabIndex={-1} disabled={disabled} onChange={(e) => onChange(e.target.value as V)}>{options.map((o) => <option key={o.value} value={o.value} disabled={o.disabled}>{o.label}</option>)}</select>
-      <button ref={btn} type="button" className="xp-pickerBtn" role="combobox" aria-haspopup="listbox" aria-expanded={open} aria-controls={`${id}-list`} aria-label={`${buttonLabel ?? label}: ${cur?.label ?? ""}`} disabled={disabled} onClick={() => (open ? setOpen(false) : openAt())} data-testid="picker-button">
+      <button ref={btn} type="button" className="xp-pickerBtn" role="combobox" aria-describedby={describedBy} aria-haspopup="listbox" aria-expanded={open} aria-controls={`${id}-list`} aria-label={`${buttonLabel ?? label}: ${cur?.label ?? ""}`} disabled={disabled} onClick={() => (open ? setOpen(false) : openAt())} data-testid="picker-button">
         {cur?.icon}<span className="xp-pickerCur"><b>{cur?.label}</b>{cur?.hint ? <small>{cur.hint}</small> : null}</span><ChevronDown size={16} aria-hidden="true"/>
       </button>
       {open ? (

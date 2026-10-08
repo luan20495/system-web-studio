@@ -119,3 +119,27 @@ test("errors: every refusal is mapped to words by code, then by status; an unkno
   assert.equal(k(new OrganizationNotReady("moveOrganizationUnit", "Máy chủ chưa hỗ trợ", "C1")), "not-ready"); assert.match(M.orgProblem({ status: 418, message: "teapot" }).text, /teapot/);
   for (const t of [M.orgProblem({ code: "ORG_CYCLE" }).text, M.orgProblem({ code: "ORG_HAS_EMPLOYEES" }).text]) assert.doesNotMatch(t, /Something went wrong|error/i);
 });
+
+test("tree at scale: a 20 000-deep chain does not overflow the stack, 2 000 nodes build in linear time, aria positions are right", () => {
+  const chain = Array.from({ length: 20_000 }, (_, i) => u(`c${i}`, i ? `c${i - 1}` : null, `N${i}`));
+  const flat = M.flattenTree(M.buildTree(chain)); assert.equal(flat.length, 20_000); assert.equal(flat[19_999].depth, 19_999);
+  assert.equal(M.descendantIds(chain, "c0").size, 19_999); assert.equal(M.unitPath(chain.slice(0, 50), "c49").split(" › ").length, 50);
+  const wide = Array.from({ length: 2_000 }, (_, i) => u(`w${i}`, i < 10 ? null : `w${i % 10}`, `U${String(i).padStart(4, "0")}`));
+  const t0 = performance.now(); const tree = M.buildTree(wide); const f = M.flattenTree(tree); const ms = performance.now() - t0;
+  assert.equal(f.length, 2_000); assert.ok(ms < 1_000, `build + flatten of 2000 nodes took ${ms.toFixed(1)} ms`); console.log(`  [metric] buildTree + flattenTree, 2000 nodes: ${ms.toFixed(1)} ms`);
+  const root = tree[0]; assert.equal(root.size, 10); assert.deepEqual(root.children.map((c) => c.pos).slice(0, 3), [1, 2, 3]); assert.ok(root.children.every((c) => c.size === root.children.length));
+});
+
+test("directory fallback at scale: filtering / paging 10 000 members is a single pass (frontend fixture benchmark, NOT a backend measure)", () => {
+  const members: TenantMemberView[] = Array.from({ length: 10_000 }, (_, i) => ({ tenantId: "t", userId: `u${i}`, role: "MEMBER", active: i % 7 !== 0, username: `user${i}`, displayName: `Nhân viên Nguyễn ${i}`, email: `e${i}@x.vn` }));
+  const t0 = performance.now(); const p = M.employeesFromMembers(members, { q: "nguyen 99", page: 0, size: 20 }); const ms = performance.now() - t0;
+  assert.equal(p.items.length, 20); assert.ok(p.total > 20 && p.total <= 10_000); assert.ok(ms < 1_500, `filter + sort + page of 10 000 members took ${ms.toFixed(1)} ms`);
+  const t1 = performance.now(); for (let k = 0; k < 20; k++) M.employeesFromMembers(members, { page: k, size: 20 }); const per = (performance.now() - t1) / 20;
+  console.log(`  [metric] employeesFromMembers, 10 000 members: search ${ms.toFixed(1)} ms, page switch ${per.toFixed(1)} ms each`);
+  assert.ok(per < 500);
+});
+
+test("compactPath keeps a short breadcrumb whole and shortens a long one to first 2 … last 3", () => {
+  assert.equal(M.compactPath("A › B › C"), "A › B › C"); assert.equal(M.compactPath("A › B › C › D › E › F"), "A › B › C › D › E › F");
+  assert.equal(M.compactPath(Array.from({ length: 60 }, (_, i) => `L${i + 1}`).join(" › ")), "L1 › L2 › … › L58 › L59 › L60"); assert.equal(M.compactPath(""), "");
+});

@@ -4,18 +4,20 @@
  * Presentational: it talks only to an `OrganizationApi` (organization.ts) and a `plan` (organizationModel.ts), so the same code runs on the real adapter (NOT_READY until C1's contract) and in the browser harness.
  * Move is a "Di chuyển tới…" dialog (reliable, keyboard friendly), not drag and drop. The UI avoids obvious cycles; the server is the authority (ORG_CYCLE).
  */
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { ArrowRightLeft, Building2, ChevronRight, FolderTree, Info, Pencil, Plus, Power, RefreshCw, Settings2, Trash2, ModalHeader, Picker, type PickerOption } from "@xweb/ui";
+import { memo, useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { ArrowRightLeft, Building2, ChevronRight, ChevronsDownUp, ChevronsUpDown, FolderTree, Info, Pencil, Plus, Power, RefreshCw, Settings2, Trash2, ModalHeader, Picker, type PickerOption } from "@xweb/ui";
 import { Modal } from "./Modal";
 import { Card, StateView } from "../ui";
 import { useLoad } from "../useLoad";
 import type { NewOrgUnitType, OrganizationApi, OrgUnit, OrgUnitType } from "./organization";
 import {
-  UNIT_ICONS, buildTree, deleteBlock, flattenTree, moveTargets, orgProblem, safeIcon, unitPath, validateTypeForm, validateUnitForm, type OrgProblem, type OrganizationPlan, type TreeNode,
+  UNIT_ICONS, buildTree, compactPath, deleteBlock, flattenTree, moveTargets, orgProblem, safeIcon, unitPath, validateTypeForm, validateUnitForm, type OrgProblem, type OrganizationPlan, type TreeNode,
 } from "./organizationModel";
 import { UnitIcon } from "./unitIcons";
 
 export type Tenant = { id: string; name: string };
+/** above this many units a tree starts collapsed to its roots */
+export const LARGE_TREE = 300;
 
 // ------------------------------------------------------------------------------------------------------------------------------- shared bits
 export function NotReadyPanel({ title, reason, testid, children }: { title: string; reason: string; testid: string; children?: React.ReactNode }) {
@@ -48,8 +50,10 @@ export function OrganizationView({ api, plan, tenant }: { api: OrganizationApi; 
   const canEdit = plan.edit.state === "ready";
 
   // new units start expanded; the selection survives a reload while the unit exists
-  useEffect(() => { const fresh = units.filter((u) => !seen.has(u.id)); if (fresh.length) { setSeen(new Set([...seen, ...fresh.map((u) => u.id)])); setOpen(new Set([...open, ...fresh.map((u) => u.id)])); } }, [units]); // eslint-disable-line react-hooks/exhaustive-deps
+  // small trees start fully open; a large one (> LARGE_TREE units) starts with only the roots open, so the first paint is a few rows, not thousands
+  useEffect(() => { const fresh = units.filter((u) => !seen.has(u.id)); if (!fresh.length) return; const roots = new Set(tree.map((n) => n.unit.id)); const openNow = units.length > LARGE_TREE ? fresh.filter((u) => roots.has(u.id)) : fresh; setSeen(new Set([...seen, ...fresh.map((u) => u.id)])); setOpen(new Set([...open, ...openNow.map((u) => u.id)])); }, [units]); // eslint-disable-line react-hooks/exhaustive-deps
   const typeOf = (id: string | null | undefined) => types.find((t) => t.id === id);
+  const onOpen = useCallback((id: string, v: boolean) => setOpen((cur) => { const n = new Set(cur); if (v) n.add(id); else n.delete(id); return n; }), []);
   const reload = useCallback(() => { data.reload(); }, [data]);
   async function toggle(u: OrgUnit) {
     setBusyToggle(true); setToggleProblem(null);
@@ -62,12 +66,15 @@ export function OrganizationView({ api, plan, tenant }: { api: OrganizationApi; 
       <div className="xp-orgBar">
         <p className="hint" data-testid="org-tenant">Công ty: <b>{tenant.name}</b></p>
         <div className="xp-orgBarActions">
+          {ready && units.length > 0 ? <><button className="btn xp-btnIcon" data-testid="org-expand-all" onClick={() => { const parents = new Set(units.map((u) => u.parentId)); setOpen(new Set(units.filter((u) => parents.has(u.id)).map((u) => u.id))); }}><ChevronsUpDown size={16} aria-hidden="true"/> Mở rộng tất cả</button>
+          <button className="btn xp-btnIcon" data-testid="org-collapse-all" onClick={() => setOpen(new Set())}><ChevronsDownUp size={16} aria-hidden="true"/> Thu gọn</button></> : null}
           <button className="btn xp-btnIcon" data-testid="org-types" disabled={!ready} onClick={() => setDialog({ kind: "types" })}><Settings2 size={16} aria-hidden="true"/> Loại đơn vị</button>
           <button className="btn xp-btnIcon" data-testid="org-reload" disabled={!ready} onClick={reload} aria-label="Tải lại cơ cấu"><RefreshCw size={16} aria-hidden="true"/></button>
           <button className="btn primary xp-btnIcon" data-testid="org-add-root" disabled={!ready || !canEdit} title={!canEdit ? "Chưa sẵn sàng" : undefined} onClick={() => setDialog({ kind: "create", parentId: null })}><Plus size={16} aria-hidden="true"/> Thêm đơn vị gốc</button>
         </div>
       </div>
       {flash ? <p className="notice" role="status" data-testid="org-flash">{flash}</p> : null}
+      {ready && !canEdit ? <NotReadyPanel testid="org-edit-not-ready" title="Cơ cấu đang ở chế độ chỉ xem" reason={(plan.edit as { reason: string }).reason}><p className="hint">Bạn xem được cây, nhưng thêm, sửa, di chuyển, bật/tắt và xóa đơn vị chưa dùng được.</p></NotReadyPanel> : null}
 
       {!ready ? <NotReadyPanel testid="org-not-ready" title="Cơ cấu tổ chức chưa sẵn sàng" reason={(plan.units as { reason: string }).reason}>
         <p className="hint">Giao diện đã sẵn sàng: cây đơn vị tùy biến (không cố định Phòng/Team), loại đơn vị, thêm / sửa / di chuyển / bật tắt / xóa. Màn hình sẽ hoạt động khi máy chủ công bố API; không có dữ liệu nào được tạo giả.</p></NotReadyPanel>
@@ -81,7 +88,7 @@ export function OrganizationView({ api, plan, tenant }: { api: OrganizationApi; 
         : (
           <div className="xp-orgGrid">
             <Card title={`Cơ cấu (${units.length})`} className="xp-orgTreeCard">
-              <Tree nodes={tree} types={types} selected={selected} open={open} onSelect={setSelected} onOpen={(id, v) => setOpen((s) => { const n = new Set(s); if (v) n.add(id); else n.delete(id); return n; })}/>
+              <Tree nodes={tree} types={types} selected={selected} open={open} onSelect={setSelected} onOpen={onOpen}/>
             </Card>
             <Card title="Chi tiết" className="xp-orgDetailCard">
               {sel ? <Detail unit={sel} units={units} type={typeOf(sel.typeId)} canEdit={canEdit} busy={busyToggle} problem={toggleProblem} onAction={(k) => k === "child" ? setDialog({ kind: "create", parentId: sel.id }) : k === "toggle" ? void toggle(sel) : setDialog({ kind: k, id: sel.id })}/>
@@ -106,11 +113,36 @@ function ErrorBlock({ error, retry }: { error: unknown; retry: () => void }) {
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------- tree
+const INDENT_PX = 18; const MAX_INDENT_LEVELS = 10;
+/** One row. `memo`: a row re-renders only when ITS props change (selected / open / tabbable / its unit), so selecting a node in a 2 000-node tree re-renders two rows, not 2 000. */
+const TreeRow = memo(function TreeRow({ n, type, selected, open, tabbable, onSelect, onToggle, onFocusRow }: { n: TreeNode; type: OrgUnitType | undefined; selected: boolean; open: boolean; tabbable: boolean; onSelect: (id: string) => void; onToggle: (id: string, v: boolean) => void; onFocusRow: (id: string) => void }) {
+  const u = n.unit; const has = n.children.length > 0;
+  const counts = [count(u.employeeCount, "nhân viên"), has ? `${n.children.length} đơn vị con` : null].filter(Boolean).join(" · ");
+  return (
+    <li role="treeitem" aria-level={n.depth + 1} aria-setsize={n.size} aria-posinset={n.pos} aria-expanded={has ? open : undefined} aria-selected={selected}>
+      <div className={`xp-node${selected ? " sel" : ""}${u.enabled ? "" : " off"}`} data-node={u.id} data-testid={`node:${u.id}`} tabIndex={tabbable ? 0 : -1} onClick={() => { onSelect(u.id); onFocusRow(u.id); }} onFocus={() => onFocusRow(u.id)} style={{ paddingLeft: 8 + Math.min(n.depth, MAX_INDENT_LEVELS) * INDENT_PX }}>
+        <span className={`xp-chev${has ? "" : " leaf"}`} aria-hidden="true" onClick={(e) => { e.stopPropagation(); if (has) onToggle(u.id, !open); }}><ChevronRight size={16} style={{ transform: open ? "rotate(90deg)" : undefined }}/></span>
+        <span className="xp-nodeIcon"><UnitIcon id={type?.icon}/></span>
+        <span className="xp-nodeText"><b title={u.name}>{u.name}</b>{counts ? <small>{counts}</small> : null}</span>
+        {n.depth > MAX_INDENT_LEVELS ? <span className="xp-depthTag" title={`Cấp ${n.depth + 1}`}>C{n.depth + 1}</span> : null}
+        {type ? <span className="xp-typeBadge">{type.name}</span> : null}
+        {!u.enabled ? <span className="pill pill-muted">Đã tắt</span> : null}
+        {n.orphan ? <span className="pill pill-warn" title="Không tìm thấy đơn vị cha trong dữ liệu">Mồ côi</span> : null}
+      </div>
+    </li>);
+});
+
+/**
+ * A flat WAI-ARIA tree (role=tree, treeitems with aria-level / aria-setsize / aria-posinset): only the VISIBLE rows exist in the DOM (a collapsed node renders none of its children), the rows are memoised,
+ * and indentation is capped so a very deep chain does not push the text out of the card (a "C<n>" tag shows the real level). Keyboard: ↑ ↓ → ← Home End Enter.
+ */
 function Tree({ nodes, types, selected, open, onSelect, onOpen }: { nodes: TreeNode[]; types: OrgUnitType[]; selected: string | null; open: Set<string>; onSelect: (id: string) => void; onOpen: (id: string, v: boolean) => void }) {
   const visible = useMemo(() => flattenTree(nodes, open), [nodes, open]);
+  const typeById = useMemo(() => new Map(types.map((t) => [t.id, t])), [types]);
   const [focus, setFocus] = useState<string | null>(null); const root = useRef<HTMLUListElement>(null);
   const cur = focus && visible.some((n) => n.unit.id === focus) ? focus : selected && visible.some((n) => n.unit.id === selected) ? selected : visible[0]?.unit.id ?? null;
-  const go = (id: string | undefined) => { if (!id) return; setFocus(id); requestAnimationFrame(() => root.current?.querySelector<HTMLElement>(`[data-node="${CSS.escape(id)}"]`)?.focus()); };
+  const go = useCallback((id: string | undefined) => { if (!id) return; setFocus(id); requestAnimationFrame(() => root.current?.querySelector<HTMLElement>(`[data-node="${CSS.escape(id)}"]`)?.focus()); }, []);
+  const onFocusRow = useCallback((id: string) => setFocus(id), []);
   function onKey(e: KeyboardEvent) {
     const i = visible.findIndex((n) => n.unit.id === cur); const n = visible[i]; if (!n) return;
     const has = n.children.length > 0; const isOpen = open.has(n.unit.id);
@@ -118,26 +150,14 @@ function Tree({ nodes, types, selected, open, onSelect, onOpen }: { nodes: TreeN
     else if (e.key === "ArrowUp") { e.preventDefault(); go(visible[Math.max(0, i - 1)]?.unit.id); }
     else if (e.key === "Home") { e.preventDefault(); go(visible[0]?.unit.id); } else if (e.key === "End") { e.preventDefault(); go(visible[visible.length - 1]?.unit.id); }
     else if (e.key === "ArrowRight") { e.preventDefault(); if (has && !isOpen) onOpen(n.unit.id, true); else if (has) go(n.children[0].unit.id); }
-    else if (e.key === "ArrowLeft") { e.preventDefault(); if (has && isOpen) onOpen(n.unit.id, false); else { const p = visible.slice(0, i).reverse().find((x) => x.depth === n.depth - 1); go(p?.unit.id); } }
+    else if (e.key === "ArrowLeft") { e.preventDefault(); if (has && isOpen) onOpen(n.unit.id, false); else { let j = i - 1; while (j >= 0 && visible[j].depth >= n.depth) j--; go(visible[j]?.unit.id); } }
     else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(n.unit.id); }
   }
-  const row = (n: TreeNode): React.ReactNode => {
-    const u = n.unit; const t = types.find((x) => x.id === u.typeId); const isOpen = open.has(u.id); const has = n.children.length > 0;
-    const counts = [count(u.employeeCount, "nhân viên"), has ? `${n.children.length} đơn vị con` : null].filter(Boolean).join(" · ");
-    return (
-      <li key={u.id} role="treeitem" aria-level={n.depth + 1} aria-expanded={has ? isOpen : undefined} aria-selected={selected === u.id}>
-        <div className={`xp-node${selected === u.id ? " sel" : ""}${u.enabled ? "" : " off"}`} data-node={u.id} data-testid={`node:${u.id}`} tabIndex={cur === u.id ? 0 : -1} onClick={() => { onSelect(u.id); setFocus(u.id); }} onFocus={() => setFocus(u.id)} style={{ paddingLeft: 8 + n.depth * 20 }}>
-          <button type="button" tabIndex={-1} className={`xp-chev${has ? "" : " leaf"}`} aria-hidden="true" onClick={(e) => { e.stopPropagation(); if (has) onOpen(u.id, !isOpen); }}><ChevronRight size={16} style={{ transform: isOpen ? "rotate(90deg)" : undefined }}/></button>
-          <span className="xp-nodeIcon"><UnitIcon id={t?.icon}/></span>
-          <span className="xp-nodeText"><b>{u.name}</b>{counts ? <small>{counts}</small> : null}</span>
-          {t ? <span className="xp-typeBadge">{t.name}</span> : null}
-          {!u.enabled ? <span className="pill pill-muted">Đã tắt</span> : null}
-          {n.orphan ? <span className="pill pill-warn" title="Không tìm thấy đơn vị cha trong dữ liệu">Mồ côi</span> : null}
-        </div>
-        {has && isOpen ? <ul role="group">{n.children.map(row)}</ul> : null}
-      </li>);
-  };
-  return <ul className="xp-tree" role="tree" aria-label="Cơ cấu tổ chức" data-testid="org-tree" ref={root} onKeyDown={onKey}>{nodes.map(row)}</ul>;
+  return (
+    <ul className="xp-tree" role="tree" aria-label="Cơ cấu tổ chức" data-testid="org-tree" ref={root} onKeyDown={onKey}>
+      {visible.map((n) => <TreeRow key={n.unit.id} n={n} type={n.unit.typeId ? typeById.get(n.unit.typeId) : undefined} selected={selected === n.unit.id} open={open.has(n.unit.id)} tabbable={cur === n.unit.id} onSelect={onSelect} onToggle={onOpen} onFocusRow={onFocusRow}/>)}
+    </ul>
+  );
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------- detail
@@ -146,7 +166,7 @@ function Detail({ unit, units, type, canEdit, busy, problem, onAction }: { unit:
   return (
     <div className="stack" data-testid="org-detail">
       <div className="xp-detailHead"><span className="xp-headIcon" aria-hidden="true"><UnitIcon id={type?.icon} size={22}/></span>
-        <div><h3 data-testid="detail-name">{unit.name}</h3><small className="hint">{path}</small></div></div>
+        <div style={{ minWidth: 0 }}><h3 data-testid="detail-name">{unit.name}</h3><small className="hint" data-testid="detail-path" title={path} aria-label={path}>{compactPath(path)}</small></div></div>
       <dl className="kv">
         <div><dt>Loại</dt><dd data-testid="detail-type">{type ? type.name : "Chưa chọn loại"}</dd></div>
         {unit.code ? <div><dt>Mã</dt><dd>{unit.code}</dd></div> : null}
@@ -172,7 +192,7 @@ function typeOptions(types: OrgUnitType[]): PickerOption<string>[] {
   return [{ value: "", label: "Không chọn loại", hint: "Đơn vị tự do", icon: <span className="xp-nodeIcon"><UnitIcon id={null}/></span> }, ...types.map((t) => ({ value: t.id, label: t.name, hint: t.code, icon: <span className="xp-nodeIcon"><UnitIcon id={t.icon}/></span> }))];
 }
 function UnitDialog({ mode, tenantId, api, units, types, unit, parent, onClose, onDone, onReload }: { mode: "create" | "edit"; tenantId: string; api: OrganizationApi; units: OrgUnit[]; types: OrgUnitType[]; unit?: OrgUnit; parent: OrgUnit | null; onClose: () => void; onDone: (u?: OrgUnit) => void; onReload: () => void }) {
-  const [name, setName] = useState(unit?.name ?? ""); const [code, setCode] = useState(unit?.code ?? ""); const [typeId, setTypeId] = useState(unit?.typeId ?? "");
+  const uid = useId(); const [name, setName] = useState(unit?.name ?? ""); const [code, setCode] = useState(unit?.code ?? ""); const [typeId, setTypeId] = useState(unit?.typeId ?? "");
   const [touched, setTouched] = useState(false); const [busy, setBusy] = useState(false); const [problem, setProblem] = useState<OrgProblem | null>(null);
   const errors = validateUnitForm({ name, code, typeId: typeId || null }, { types, parent });
   const title = mode === "create" ? (parent ? `Thêm đơn vị con của ${parent.name}` : "Thêm đơn vị gốc") : "Sửa đơn vị";
@@ -190,13 +210,13 @@ function UnitDialog({ mode, tenantId, api, units, types, unit, parent, onClose, 
       <form className="modalBody" noValidate onSubmit={(e) => void submit(e)} data-testid="unit-dialog">
         <ModalHeader icon={<Building2 size={22}/>} title={title} subtitle={parent ? `Nằm trong: ${unitPath(units, parent.id)}` : "Đơn vị gốc không thuộc đơn vị nào."}/>
         <section className="xp-section" aria-label="Thông tin đơn vị">
-          <label className="field"><span>Tên đơn vị</span><input data-testid="unit-name" value={name} maxLength={120} autoComplete="off" placeholder="Ví dụ: Khối Công nghệ" aria-invalid={touched && !!errors.name} onChange={(e) => setName(e.target.value)}/></label>
-          {touched && errors.name ? <p className="formError" role="alert">{errors.name}</p> : null}
-          <label className="field"><span>Mã (không bắt buộc)</span><input data-testid="unit-code" value={code} autoComplete="off" spellCheck={false} aria-invalid={touched && !!errors.code} onChange={(e) => setCode(e.target.value)}/></label>
-          {touched && errors.code ? <p className="formError" role="alert">{errors.code}</p> : null}
-          <Picker label="Loại đơn vị" value={typeId} options={typeOptions(types)} onChange={setTypeId}/>
+          <label className="field"><span>Tên đơn vị</span><input data-testid="unit-name" value={name} maxLength={120} autoComplete="off" placeholder="Ví dụ: Khối Công nghệ" aria-invalid={touched && !!errors.name} aria-describedby={touched && errors.name ? `${uid}-name-err` : undefined} onChange={(e) => setName(e.target.value)}/></label>
+          {touched && errors.name ? <p className="formError" role="alert" id={`${uid}-name-err`}>{errors.name}</p> : null}
+          <label className="field"><span>Mã (không bắt buộc)</span><input data-testid="unit-code" value={code} autoComplete="off" spellCheck={false} aria-invalid={touched && !!errors.code} aria-describedby={touched && errors.code ? `${uid}-code-err` : undefined} onChange={(e) => setCode(e.target.value)}/></label>
+          {touched && errors.code ? <p className="formError" role="alert" id={`${uid}-code-err`}>{errors.code}</p> : null}
+          <Picker label="Loại đơn vị" value={typeId} options={typeOptions(types)} onChange={setTypeId} describedBy={touched && errors.type ? `${uid}-type-err` : undefined}/>
           {types.length === 0 ? <p className="hint">Chưa có loại đơn vị nào. Tạo loại (Khối, Chi nhánh, Phòng…) ở nút “Loại đơn vị”, hoặc để đơn vị tự do.</p> : null}
-          {touched && errors.type ? <p className="formError" role="alert" data-testid="unit-type-error">{errors.type}</p> : null}
+          {touched && errors.type ? <p className="formError" role="alert" id={`${uid}-type-err`} data-testid="unit-type-error">{errors.type}</p> : null}
         </section>
         {problem ? <Problem p={problem} onReload={onReload}/> : null}
         <div className="xp-footer"><button type="button" className="btn" onClick={onClose}>Hủy</button><button className="btn primary" data-testid="unit-submit" disabled={busy}>{busy ? "Đang lưu…" : mode === "create" ? "Thêm đơn vị" : "Lưu"}</button></div>
@@ -246,7 +266,7 @@ function DeleteDialog({ tenantId, api, units, unit, onClose, onDone, onReload }:
 }
 
 function TypesDialog({ tenantId, api, plan, types, onClose, onChanged }: { tenantId: string; api: OrganizationApi; plan: OrganizationPlan; types: OrgUnitType[]; onClose: () => void; onChanged: () => void }) {
-  const [name, setName] = useState(""); const [code, setCode] = useState(""); const [icon, setIcon] = useState("folder"); const [allowed, setAllowed] = useState<string[]>([]);
+  const uid = useId(); const [name, setName] = useState(""); const [code, setCode] = useState(""); const [icon, setIcon] = useState("folder"); const [allowed, setAllowed] = useState<string[]>([]);
   const [touched, setTouched] = useState(false); const [busy, setBusy] = useState(false); const [problem, setProblem] = useState<OrgProblem | null>(null); const [added, setAdded] = useState<OrgUnitType[]>([]);
   const all = [...types, ...added.filter((a) => !types.some((t) => t.id === a.id))];
   const errors = validateTypeForm({ name, code, icon }, all); const createState = api.state("createOrganizationUnitType");
@@ -271,10 +291,10 @@ function TypesDialog({ tenantId, api, plan, types, onClose, onChanged }: { tenan
         <form className="xp-section" noValidate onSubmit={(e) => void submit(e)} aria-label="Thêm loại đơn vị" data-testid="type-form">
           <h3>Thêm loại mới</h3>
           {createState.status === "NOT_READY" ? <NotReadyPanel testid="type-create-not-ready" title="Chưa thêm được loại" reason={createState.reason}/> : null}
-          <label className="field"><span>Tên loại</span><input data-testid="type-name" value={name} maxLength={80} autoComplete="off" placeholder="Ví dụ: Khối" aria-invalid={touched && !!errors.name} onChange={(e) => setName(e.target.value)}/></label>
-          {touched && errors.name ? <p className="formError" role="alert">{errors.name}</p> : null}
-          <label className="field"><span>Mã</span><input data-testid="type-code" value={code} autoComplete="off" spellCheck={false} placeholder="DIVISION" aria-invalid={touched && !!errors.code} onChange={(e) => setCode(e.target.value.toUpperCase())}/></label>
-          {touched && errors.code ? <p className="formError" role="alert">{errors.code}</p> : null}
+          <label className="field"><span>Tên loại</span><input data-testid="type-name" value={name} maxLength={80} autoComplete="off" placeholder="Ví dụ: Khối" aria-invalid={touched && !!errors.name} aria-describedby={touched && errors.name ? `${uid}-tname-err` : undefined} onChange={(e) => setName(e.target.value)}/></label>
+          {touched && errors.name ? <p className="formError" role="alert" id={`${uid}-tname-err`}>{errors.name}</p> : null}
+          <label className="field"><span>Mã</span><input data-testid="type-code" value={code} autoComplete="off" spellCheck={false} placeholder="DIVISION" aria-invalid={touched && !!errors.code} aria-describedby={touched && errors.code ? `${uid}-tcode-err` : undefined} onChange={(e) => setCode(e.target.value.toUpperCase())}/></label>
+          {touched && errors.code ? <p className="formError" role="alert" id={`${uid}-tcode-err`}>{errors.code}</p> : null}
           <div className="field" role="radiogroup" aria-label="Biểu tượng"><span>Biểu tượng</span>
             <div className="xp-iconGrid">{UNIT_ICONS.map((i) => (
               <button key={i.id} type="button" role="radio" aria-checked={icon === i.id} aria-label={i.label} title={i.label} data-testid={`icon:${i.id}`} className={`xp-iconBtn${icon === i.id ? " sel" : ""}`} onClick={() => setIcon(safeIcon(i.id))}><UnitIcon id={i.id} size={20}/></button>))}</div>

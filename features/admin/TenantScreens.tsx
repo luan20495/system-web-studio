@@ -9,13 +9,13 @@
  */
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useId, useMemo, useState, type FormEvent } from "react";
 import { api, ApiError } from "@/lib/http-api";
 import type { Member, TenantMemberCandidate, TenantMemberView, TenantView } from "@/lib/http-types";
 import { useSession } from "../session";
 import { useLoad } from "../useLoad";
 import { Card, ErrorState, fmtDate, Kpi, Pill, StateView } from "../ui";
-import { Building2, CircleCheck, ModalHeader, ShieldCheck, UserRound } from "@xweb/ui";
+import { ArrowLeft, Building2, CircleCheck, ModalHeader, ShieldCheck, UserRound } from "@xweb/ui";
 import { PersonPicker } from "./PersonPicker";
 import { DataSourcesPanel } from "../studio/builder/DataSourcesPanel";
 import type { DataManagementCalls } from "../studio/builder/core/dataManagement";
@@ -159,13 +159,13 @@ export function TenantsPage() {
 
 export function TenantDetailPage({ id }: { id: string }) {
   return (<>
-    <p><Link className="btn sm ghost" href={A("/tenants")}>← Danh sách công ty</Link></p>
+    <p><Link className="btn sm ghost xp-btnIcon" href={A("/tenants")}><ArrowLeft size={14} aria-hidden="true"/> Danh sách công ty</Link></p>
     <TenantBody id={id}/>
   </>);
 }
 
 function CreateTenantDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (t: TenantView) => void }) {
-  const [slug, setSlug] = useState(""); const [name, setName] = useState(""); const [admin, setAdmin] = useState("");
+  const uid = useId(); const [slug, setSlug] = useState(""); const [name, setName] = useState(""); const [admin, setAdmin] = useState("");
   // the code follows the name until the person edits it by hand
   const [slugEdited, setSlugEdited] = useState(false);
   const [touched, setTouched] = useState(false); const [busy, setBusy] = useState(false); const [error, setError] = useState<string | null>(null);
@@ -187,15 +187,15 @@ function CreateTenantDialog({ onClose, onCreated }: { onClose: () => void; onCre
         <section className="xp-section" aria-label="Thông tin công ty">
           <h3><Building2 size={14} aria-hidden="true"/> Thông tin công ty</h3>
           <label className="field"><span>Tên công ty</span>
-            <input data-testid="tenant-name" value={name} maxLength={160} placeholder="Ví dụ: Công ty Cổ phần Ánh Dương" autoComplete="off" aria-invalid={touched && !!problems.name} onChange={(e) => onName(e.target.value)}/></label>
-          {touched && problems.name ? <p className="formError" role="alert">{problems.name}</p> : null}
+            <input data-testid="tenant-name" value={name} maxLength={160} placeholder="Ví dụ: Công ty Cổ phần Ánh Dương" autoComplete="off" aria-invalid={touched && !!problems.name} aria-describedby={touched && problems.name ? `${uid}-name-err` : undefined} onChange={(e) => onName(e.target.value)}/></label>
+          {touched && problems.name ? <p className="formError" role="alert" id={`${uid}-name-err`}>{problems.name}</p> : null}
           <label className="field"><span>Mã công ty</span>
             <span className={`xp-slugInput${touched && problems.slug ? " bad" : ""}`}>
-              <input data-testid="tenant-slug" value={slug} autoComplete="off" spellCheck={false} placeholder="anh-duong" aria-invalid={touched && !!problems.slug} onChange={(e) => { setSlugEdited(true); setSlug(e.target.value); }}/>
+              <input data-testid="tenant-slug" value={slug} autoComplete="off" spellCheck={false} placeholder="anh-duong" aria-invalid={touched && !!problems.slug} aria-describedby={`${uid}-slug-help${touched && problems.slug ? ` ${uid}-slug-err` : ""}`} onChange={(e) => { setSlugEdited(true); setSlug(e.target.value); }}/>
               {slugOk ? <CircleCheck size={16} className="xp-ok" aria-label="Mã hợp lệ"/> : null}
             </span>
-            <small>{slugEdited ? "Chữ thường, số và dấu “-”, 2–120 ký tự." : "Tự tạo từ tên công ty; bạn có thể sửa."}</small></label>
-          {touched && problems.slug ? <p className="formError" role="alert">{problems.slug}</p> : null}
+            <small id={`${uid}-slug-help`}>{slugEdited ? "Chữ thường, số và dấu “-”, 2–120 ký tự." : "Tự tạo từ tên công ty; bạn có thể sửa."}</small></label>
+          {touched && problems.slug ? <p className="formError" role="alert" id={`${uid}-slug-err`}>{problems.slug}</p> : null}
         </section>
 
         <section className="xp-section" aria-label="Quản trị viên đầu tiên">

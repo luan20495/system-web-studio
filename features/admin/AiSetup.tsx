@@ -75,7 +75,7 @@ function ProvidersTab() {
                 {p.configured ? <Pill value="HEALTHY" label="Đã cấu hình"/> : <Pill value="NOT_CONFIGURED" label={p.models.length === 0 ? "Chưa chọn mô hình" : "Chưa cấu hình"}/>}</div>
               <div className="xp-provMeta">
                 <span data-testid="model-count"><Cpu size={13} aria-hidden="true"/>{p.models.length ? `${p.models.length} mô hình${p.models.some((m) => m.enabled) ? ` · ${on} đang được phép dùng` : " · chưa mô hình nào được phép dùng (vào tab Mô hình để bật)"}` : "Chưa có mô hình nào"}</span>
-                <span><KeyRound size={13} aria-hidden="true"/>Khóa kết nối: {p.keySet ? "✓ Đã cấu hình" : KEY_OPTIONAL(kind) ? "Không dùng" : "Chưa cấu hình"}</span>
+                <span><KeyRound size={13} aria-hidden="true"/>Khóa kết nối: {p.keySet ? "Đã cấu hình" : KEY_OPTIONAL(kind) ? "Không dùng" : "Chưa cấu hình"}</span>
                 <span>{p.paid ? "Tính phí" : "Miễn phí"}</span>
                 {pr && pr !== "running" ? <span data-testid="probe-result" data-ok={pr.ok} style={{ color: pr.ok ? "var(--f-ok)" : "var(--f-bad)" }}>{pr.ok ? <CircleCheck size={13} aria-hidden="true"/> : <CircleAlert size={13} aria-hidden="true"/>}{pr.ok ? ` ${pr.detail}` : ` ${pr.detail}`}</span> : null}
               </div>
@@ -132,7 +132,7 @@ function ProviderDialog({ edit, onClose, onSaved }: { edit?: AiProviderInfo; onC
           <h3><KeyRound size={14} aria-hidden="true"/> API key</h3>
           <label className="field"><span>Khóa kết nối{KEY_OPTIONAL(kind) ? " (không bắt buộc)" : ""}</span>
             <span className="xp-keyInput"><KeyRound size={16} aria-hidden="true"/><input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} autoComplete="new-password" required={!edit && !KEY_OPTIONAL(kind)} placeholder={edit?.keySet ? "••••••••" : ""}/></span>
-            <small>{edit?.keySet ? "✓ Đã cấu hình. Để trống nếu không muốn thay đổi khóa hiện tại." : "Dán khóa do nhà cung cấp cấp cho công ty."}</small></label>
+            <small>{edit?.keySet ? "Đã cấu hình. Để trống nếu không muốn thay đổi khóa hiện tại." : "Dán khóa do nhà cung cấp cấp cho công ty."}</small></label>
           <p className="xp-note" role="note"><ShieldCheck size={16} aria-hidden="true"/><span>Bảo mật: khóa được mã hóa khi lưu, chỉ nằm trên máy chủ và không thể xem lại; chỉ có thể thay khóa mới.</span></p>
         </section>
 
@@ -154,7 +154,7 @@ function ProviderDialog({ edit, onClose, onSaved }: { edit?: AiProviderInfo; onC
         </div>
 
         {error ? <p className="formError" role="alert">{error}</p> : null}
-        <div className="row"><button className="btn primary xp-btnIcon" disabled={busy || !name.trim()}><Save size={16} aria-hidden="true"/>{busy ? "Đang lưu…" : "Lưu"}</button><button type="button" className="btn" onClick={onClose}>Hủy</button></div>
+        <div className="xp-footer"><button type="button" className="btn" onClick={onClose}>Hủy</button><button className="btn primary xp-btnIcon" disabled={busy || !name.trim()} aria-busy={busy || undefined}><Save size={16} aria-hidden="true"/>{busy ? "Đang lưu…" : "Lưu"}</button></div>
       </form>
     </Modal>
   );
@@ -329,7 +329,7 @@ export function OverrideDialog({ fixed, current, onClose, onSaved }: { fixed?: {
         {fields.map((k) => <label key={k} className="field"><span>{L[k as keyof typeof L]}</span><input type="number" min="0" step={k === "budget" ? "0.01" : "1"} value={v[k as keyof typeof v]} onChange={(e) => setV({ ...v, [k]: e.target.value })} placeholder="Theo mặc định"/>
           <small>{v[k as keyof typeof v].trim() === "" ? "Để trống = theo mặc định của công ty" : Number(v[k as keyof typeof v]) === 0 ? H[k as keyof typeof H].replace("0 = ", "") : ""}</small></label>)}
         {error ? <p className="formError" role="alert">{error}</p> : null}
-        <div className="row"><button className="btn primary" disabled={busy}>{busy ? "Đang lưu…" : "Lưu"}</button><button type="button" className="btn" onClick={onClose}>Hủy</button></div>
+        <div className="xp-footer"><button type="button" className="btn" onClick={onClose}>Hủy</button><button className="btn primary" disabled={busy} aria-busy={busy || undefined}>{busy ? "Đang lưu…" : "Lưu"}</button></div>
       </form>
     </Modal>
   );

@@ -35,9 +35,10 @@ export function PersonPicker({ id, label, people, q, setQ, value, onChange, load
           onChange={(e) => { setQ(e.target.value); setActive(0); }} onKeyDown={onKey}/>
         {q ? <button type="button" className="xp-clear" aria-label="Xóa tìm kiếm" onClick={() => setQ("")}><X size={14} aria-hidden="true"/></button> : null}
       </span>
-      <ul id={list} role="listbox" aria-label="Kết quả tìm kiếm" className="xp-peopleList" aria-busy={loading || undefined}>
+      <p className="srOnly" role="status" aria-live="polite" data-testid="people-status">{loading ? "Đang tìm…" : rows.length ? `${rows.length} kết quả. Dùng mũi tên lên xuống để chọn, Enter để chọn người.` : emptyText}</p>
+      <ul id={list} role="listbox" tabIndex={-1} aria-label="Kết quả tìm kiếm" className="xp-peopleList" aria-busy={loading || undefined}>
         {rows.length === 0 ? <li className="xp-peopleEmpty" role="presentation">{loading ? "Đang tìm…" : emptyText}</li> : rows.map((p, i) => (
-          <li key={p.id} id={`${list}-${i}`} role="option" aria-selected={false} data-value={p.id} className={`xp-person${i === at ? " active" : ""}`} onMouseEnter={() => setActive(i)} onClick={() => onChange(p.id)}>
+          <li key={p.id} id={`${list}-${i}`} role="option" aria-selected={i === at} data-value={p.id} className={`xp-person${i === at ? " active" : ""}`} onMouseEnter={() => setActive(i)} onClick={() => onChange(p.id)}>
             <Avatar p={p}/><span className="xp-personText"><b>{p.displayName || p.username}</b><small>{p.username}</small></span><span className="xp-pick" aria-hidden="true">Chọn</span>
           </li>))}
       </ul>

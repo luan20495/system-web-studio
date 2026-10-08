@@ -7,7 +7,7 @@ import { api, ApiError } from "@xweb/api-client";
 import type { AuthConfig } from "@xweb/types";
 import { useSession } from "./session";
 import { accessiblePortals, canAccessPortal, portalHref, portalOfPath, PORTAL_LABEL, PORTAL_PREFIX, rememberPortal, rememberedPortal, resolvePortalPostLogin, resolvePostLogin, safeNext, type Portal, type PortalId } from "@xweb/permissions";
-import { errText } from "@xweb/ui";
+import { Ban, Clock, Diamond, errText, Inbox } from "@xweb/ui";
 
 const SSO_ERRORS: Record<string, string> = {
   not_provisioned: "Tài khoản SSO của bạn chưa được cấp quyền. Liên hệ quản trị viên.", disabled: "Tài khoản đã bị vô hiệu hóa.",
@@ -18,7 +18,7 @@ function AuthFrame({ children, wide }: { children: React.ReactNode; wide?: boole
   return (
     <main className="authPage">
       <div className={`authPanel${wide ? " wide" : ""}`}>
-        <div className="authBrand"><span className="logoMark" aria-hidden="true">◆</span><span>AI Software Factory</span></div>
+        <div className="authBrand"><span className="logoMark" aria-hidden="true"><Diamond size={16} fill="currentColor"/></span><span>AI Software Factory</span></div>
         {children}
       </div>
       <p className="authFoot">Nền tảng nội bộ · truy cập được kiểm soát và ghi nhật ký</p>
@@ -139,7 +139,7 @@ export function NoAccess() {
   return (
     <AuthFrame>
       <div className="authCenter">
-        <div className="stateIcon" aria-hidden="true">⛔</div>
+        <div className="stateIcon" aria-hidden="true"><Ban size={20}/></div>
         <h1>{disabled ? "Tài khoản đã bị vô hiệu hóa" : "Không có quyền truy cập"}</h1>
         <p className="authLead">{disabled ? "Liên hệ quản trị viên nếu bạn cho rằng đây là nhầm lẫn." : wanted ? `Bạn không có quyền truy cập ${PORTAL_LABEL[wanted]}.` : "Bạn không có quyền truy cập Admin Console."}</p>
         <div className="row">
@@ -157,7 +157,7 @@ export function NoWorkspace() {
   return (
     <AuthFrame>
       <div className="authCenter">
-        <div className="stateIcon" aria-hidden="true">○</div>
+        <div className="stateIcon" aria-hidden="true"><Inbox size={20}/></div>
         <h1>Bạn chưa thuộc workspace nào</h1>
         <p className="authLead">Nhờ quản trị viên thêm bạn vào một workspace để bắt đầu tạo ứng dụng.</p>
         <div className="row">
@@ -174,7 +174,7 @@ export function SessionExpired() {
   return (
     <AuthFrame>
       <div className="authCenter">
-        <div className="stateIcon" aria-hidden="true">⏱</div>
+        <div className="stateIcon" aria-hidden="true"><Clock size={20}/></div>
         <h1>Phiên đăng nhập đã hết hạn</h1>
         <p className="authLead">Đăng nhập lại để quay về đúng trang bạn đang làm việc.</p>
         <Link className="btn primary" href={`/login${next ? `?next=${encodeURIComponent(next)}` : ""}`}>Đăng nhập lại</Link>

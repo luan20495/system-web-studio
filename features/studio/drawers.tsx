@@ -2,6 +2,7 @@
 // Project drawers/modals shared by the Studio workspace (settings, assets, members, publish).
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { X } from "@xweb/ui";
 import { api, ApiError } from "@/lib/http-api";
 import { renderSchemaDocument } from "@/lib/schema-preview";
 import type {
@@ -30,7 +31,7 @@ export function Drawer({ title, sub, onClose, children, wide }: { title: string;
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className={`drawer${wide ? " wide" : ""}`} {...dialog.props}>
-        <div className="drawerHeader"><div><h2 id={dialog.titleId}>{title}</h2>{sub ? <p>{sub}</p> : null}</div><button className="button icon" aria-label="Đóng" onClick={onClose}>✕</button></div>
+        <div className="drawerHeader"><div><h2 id={dialog.titleId}>{title}</h2>{sub ? <p>{sub}</p> : null}</div><button className="button icon" aria-label="Đóng" onClick={onClose}><X size={16} aria-hidden="true"/></button></div>
         {children}
       </div>
     </div>

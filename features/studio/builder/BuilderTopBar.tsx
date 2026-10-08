@@ -1,5 +1,6 @@
 "use client";
 import type { ReactNode } from "react";
+import { Monitor, Smartphone, Tablet } from "../../../packages/ui/src/icons";
 
 type Device = "desktop" | "tablet" | "mobile";
 const DEVICES: { id: Device; label: string }[] = [{ id: "desktop", label: "Máy tính" }, { id: "tablet", label: "Máy tính bảng" }, { id: "mobile", label: "Điện thoại" }];
@@ -15,9 +16,9 @@ export function BuilderTopBar({ name, meta, save, appMode, onAppMode, device, on
     <header className="topbar bx-top" aria-label="Thanh công cụ Builder">
       <div className="brand">
         {leading}
-        <div><div className="projectName">{name}</div><div className="projectMeta">{meta}</div></div>
+        <div><div className="projectName" role="heading" aria-level={1} title={name}>{name}</div><div className="projectMeta">{meta}</div></div>
         <span className={`saveState ${save.state}`} role="status" aria-live="polite">
-          {save.state === "saving" ? "Đang lưu…" : save.state === "error" ? "Lưu thất bại" : `✓ Đã lưu${save.at ? ` ${save.at.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}` : ""}`}
+          {save.state === "saving" ? "Đang lưu…" : save.state === "error" ? "Lưu thất bại" : `Đã lưu${save.at ? ` ${save.at.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}` : ""}`}
         </span>
         {save.state === "error" && onRetrySave ? <button type="button" className="smallButton" data-testid="retry-save" onClick={onRetrySave}>Thử lại</button> : null}
       </div>
@@ -28,7 +29,7 @@ export function BuilderTopBar({ name, meta, save, appMode, onAppMode, device, on
           <button type="button" className={appMode === "TEST" ? "active" : ""} aria-pressed={appMode === "TEST"} onClick={() => onAppMode("TEST")}>Dùng thử</button>
         </div>
         <div className="segmented" role="group" aria-label="Kích thước màn hình xem trước">
-          {DEVICES.map((d) => <button type="button" key={d.id} className={device === d.id ? "active" : ""} aria-pressed={device === d.id} onClick={() => onDevice(d.id)}>{d.label}</button>)}
+          {DEVICES.map((d) => <button type="button" key={d.id} className={device === d.id ? "active" : ""} aria-pressed={device === d.id} aria-label={d.label} title={d.label} onClick={() => onDevice(d.id)}>{d.id === "desktop" ? <Monitor size={16} aria-hidden="true"/> : d.id === "tablet" ? <Tablet size={16} aria-hidden="true"/> : <Smartphone size={16} aria-hidden="true"/>}<span className="bx-devLabel">{d.label}</span></button>)}
         </div>
       </div>
       <div className="topActions">

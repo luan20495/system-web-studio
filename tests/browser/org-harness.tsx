@@ -5,6 +5,7 @@
  * It proves what the SCREENS do with the answers C1's contract is expected to give (its codes are ASSUMED, see organizationModel.ts), never what a server answers. ?v=org|emp, ?s=<scenario>.
  * With ?s=notready the REAL default capability table is used: every operation is NOT_READY and the transport must receive nothing.
  */
+import { Profiler, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type { Me, TenantMemberView } from "@xweb/types";
 import { adminScope } from "../../features/admin/adminModel";
@@ -12,6 +13,7 @@ import { CAPABILITIES, createOrganizationApi, type Employee, type OrgCapabilityI
 import { employeesFromMembers, organizationPlan } from "../../features/admin/organizationModel";
 import { OrganizationView } from "../../features/admin/OrganizationScreens";
 import { EmployeesView } from "../../features/admin/EmployeesScreens";
+import { PersonPicker } from "../../features/admin/PersonPicker";
 import { CAPABILITIES as PROV_CAPS, createProvisioningApi } from "../../features/admin/provisioning";
 import { provisioningPlan } from "../../features/admin/provisioningModel";
 import "../../packages/ui/src/styles/globals.css";
@@ -19,8 +21,8 @@ import "../../packages/ui/src/styles/responsive.css";
 import "../../packages/ui/src/styles/http.css";
 import "../../packages/ui/src/styles/factory.css";
 
-declare global { interface Window { __org: { name: string; args: unknown[] }[]; __prov: { name: string; args: unknown[] }[] } }
-window.__org = []; window.__prov = [];
+declare global { interface Window { __org: { name: string; args: unknown[] }[]; __prov: { name: string; args: unknown[] }[]; __prof: { phase: string; actual: number; base: number; at: number }[] } }
+window.__org = []; window.__prov = []; window.__prof = [];
 const P = new URLSearchParams(location.search); const V = P.get("v") ?? "org"; const S = P.get("s") ?? "ok";
 const err = (status: number, code: string) => Object.assign(new Error("fixed text"), { status, code });
 const me = (o: Partial<Me>): Me => ({ id: "me", username: "me", displayName: "Me", roles: [], workspaces: [], ...o });
@@ -31,16 +33,24 @@ const ME: Me = S === "forbidden" ? me({ tenants: [{ ...T1, role: "MEMBER" }] }) 
 // ---- the fake organization -------------------------------------------------------------------------------------------------------------------------
 let seq = 100; const nid = (p: string) => `${p}${++seq}`;
 const empty = S === "empty" || S === "emp-empty";
-let units: OrgUnit[] = empty ? [] : [
+/** GENERATED frontend fixtures (never real data): ?s=big = 2 000 units (a 4-ary tree), deep10 / deep60 = a chain with long names */
+const gen = (n: number, parentOf: (i: number) => number | null, name: (i: number) => string): OrgUnit[] => Array.from({ length: n }, (_, i) => ({ id: `g${i}`, parentId: parentOf(i) === null ? null : `g${parentOf(i)}`, typeId: i === 0 ? "t-div" : "t-dept", name: name(i), enabled: i % 97 !== 0, version: 1, employeeCount: i % 5 }));
+const GENERATED: Record<string, OrgUnit[]> = {
+  big: gen(2000, (i) => (i === 0 ? null : Math.floor((i - 1) / 4)), (i) => `Đơn vị ${String(i).padStart(4, "0")} — phòng ban số ${i}`),
+  deep10: gen(10, (i) => (i === 0 ? null : i - 1), (i) => `Cấp ${i + 1}: Bộ phận phụ trách chăm sóc khách hàng khu vực miền Trung và Tây Nguyên (nhóm ${i + 1})`),
+  deep60: gen(60, (i) => (i === 0 ? null : i - 1), (i) => `Cấp ${i + 1} — Đơn vị lồng nhau`),
+};
+let units: OrgUnit[] = GENERATED[S] ?? (empty ? [] : [
   { id: "tech", parentId: null, typeId: "t-div", name: "Khối Công nghệ", enabled: true, version: 1 },
   { id: "mobile", parentId: "tech", typeId: "t-dept", name: "Mobile", enabled: true, version: 1 },
   { id: "flutter", parentId: "mobile", typeId: "t-team", name: "Flutter Team", enabled: true, version: 1, employeeCount: 2 },
   { id: "web", parentId: "tech", typeId: "t-dept", name: "Web", enabled: true, version: 1 },
   { id: "hr", parentId: null, typeId: "t-div", name: "Nhân sự", enabled: true, version: 1, employeeCount: 3 },
-];
+]);
 let types: OrgUnitType[] = empty ? [] : [{ id: "t-div", code: "DIVISION", name: "Khối", icon: "building" }, { id: "t-dept", code: "DEPT", name: "Phòng", icon: "briefcase", allowedParentTypeIds: ["t-div"] }, { id: "t-team", code: "TEAM", name: "Team", icon: "users", allowedParentTypeIds: ["t-dept", "t-team"] }];
 const positions: Position[] = [{ id: "p-jr", name: "Nhân viên", level: 1 }, { id: "p-sr", name: "Trưởng nhóm", level: 3 }];
-const emps: Employee[] = S === "emp-empty" ? [] : Array.from({ length: 45 }, (_, i): Employee => {
+const N_EMP = S.startsWith("emp-10k") ? 10000 : 45;
+const emps: Employee[] = S === "emp-empty" ? [] : Array.from({ length: N_EMP }, (_, i): Employee => {
   const unit = ["flutter", "web", "hr"][i % 3]; const n = i + 1;
   return { userId: `u${String(n).padStart(2, "0")}`, username: `user${n}`, displayName: n === 5 ? "Nguyễn Đức Anh" : `Nhân viên ${n}`, email: `u${n}@acme.vn`, tenantRole: n === 1 ? "TENANT_ADMIN" : "MEMBER", active: n !== 7 && n !== 8,
     orgUnitId: unit, orgUnitName: units.find((u) => u.id === unit)?.name ?? null, positionId: n % 2 ? "p-jr" : "p-sr", positionName: n % 2 ? "Nhân viên" : "Trưởng nhóm" };
@@ -62,6 +72,7 @@ const transport: OrganizationTransport = {
   listPositions: rec("listPositions", (_t: string) => positions),
   listEmployees: rec("listEmployees", (_t: string, q: { q?: string; orgUnitId?: string | null; includeSubtree?: boolean; status?: string; page: number; size: number }) => {
     if (S === "emp-down") throw err(500, "INTERNAL");
+    if (S === "emp-pageempty" && q.page > 0) return { items: [], total: emps.length, page: q.page, size: q.size, source: "directory" as const };
     const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/gi, "d").toLowerCase(); const needle = fold(q.q ?? "");
     const scope = q.orgUnitId ? new Set([q.orgUnitId, ...below(q.orgUnitId)]) : null;
     const hit = emps.filter((e) => (!needle || fold(`${e.displayName} ${e.username} ${e.email}`).includes(needle)) && (!scope || (e.orgUnitId && scope.has(e.orgUnitId))) && (!q.status || q.status === "ALL" || (q.status === "ACTIVE") === e.active));
@@ -75,9 +86,13 @@ const transport: OrganizationTransport = {
 
 // ---- adapters (REAL) over the fakes ------------------------------------------------------------------------------------------------------------------
 const ALL = Object.keys(CAPABILITIES) as OrgCapabilityId[];
-const caps: Record<OrgCapabilityId, OrgCapabilityState> = S === "notready" || S === "emp-members" ? { ...CAPABILITIES }
+const MEMBERS_ONLY = S === "emp-members" || S === "emp-10k-members";
+const READONLY = S === "readonly";
+const caps: Record<OrgCapabilityId, OrgCapabilityState> = S === "notready" || MEMBERS_ONLY ? { ...CAPABILITIES }
   : Object.fromEntries(ALL.map((id) => [id, { status: "READY", needs: ["TENANT_MANAGE"], route: "FAKE (harness)" } as OrgCapabilityState])) as Record<OrgCapabilityId, OrgCapabilityState>;
-if (S === "emp-members") { for (const id of ["updateEmployeeOrganization", "updateEmployeePosition"] as const) caps[id] = CAPABILITIES[id]; }
+if (MEMBERS_ONLY) { for (const id of ["updateEmployeeOrganization", "updateEmployeePosition"] as const) caps[id] = CAPABILITIES[id]; }
+// read-only: the list works, every write is NOT_READY (the screen must say so)
+if (READONLY) { for (const id of ["createOrganizationUnit", "updateOrganizationUnit", "moveOrganizationUnit", "deleteOrganizationUnit"] as const) caps[id] = CAPABILITIES[id]; }
 const api = createOrganizationApi(transport, employeesFromMembers, caps);
 const scope = adminScope(ME); const plan = organizationPlan(scope, api.state);
 const rec2 = <A extends unknown[], R>(name: string, f: (...a: A) => R) => (...args: A): Promise<Awaited<R>> => { window.__prov.push({ name, args }); return Promise.resolve().then(() => f(...args)) as Promise<Awaited<R>>; };
@@ -86,14 +101,22 @@ const provApi = createProvisioningApi({
   createTenantWorkspace: rec2("createTenantWorkspace", (t: string, name: string) => ({ id: "w-new", name, tenantId: t })), setTenantMember: rec2("setTenantMember", () => ({ tenantId: "t1", userId: "u", role: "MEMBER", active: true })),
   changeWorkspaceMember: rec2("changeWorkspaceMember", () => ({}) as never), addWorkspaceMember: rec2("addWorkspaceMember", () => ({}) as never), tenantMemberCandidates: rec2("tenantMemberCandidates", () => []),
   activationLink: rec2("activationLink", () => ({}) as never), setUserStatus: rec2("setUserStatus", () => ({})),
-}, PROV_CAPS);
+}, S === "emp-nocreate" ? { ...PROV_CAPS, createTenantUser: { status: "NOT_READY", needs: ["TENANT_MEMBERS"], owner: "C1", reason: "Máy chủ chưa có API tạo tài khoản." } } : PROV_CAPS);
 const provPlan = provisioningPlan(scope, "admin", provApi.state);
 const tenant = plan.fixedTenant ?? plan.tenantChoice[0] ?? { id: "", name: "" };
 const root = document.getElementById("root")!;
+function PickerHost() {
+  const all = Array.from({ length: 12 }, (_, i) => ({ id: `p${i}`, username: `person${i}`, displayName: i === 3 ? "Nguyễn Hoàng Thiên Phúc Bảo Long Quang Vinh" : `Người số ${i}` }));
+  const [q, setQ] = useState(""); const [v, setV] = useState("");
+  const list = all.filter((p) => `${p.displayName} ${p.username}`.toLowerCase().includes(q.toLowerCase()));
+  return <div><button data-testid="before">trước</button><PersonPicker id="pp" label="Tìm người dùng" people={list} q={q} setQ={setQ} value={v} onChange={setV} placeholder="Tìm theo tên" emptyText="Không có người phù hợp"/><p data-testid="chosen">{v}</p><button data-testid="after">sau</button></div>;
+}
 function Host() {
+  if (V === "picker") return <PickerHost/>;
   return V === "emp"
     ? <EmployeesView api={api} plan={plan} tenant={tenant} onTenant={() => undefined} canToggleStatus={false}
         prov={{ api: provApi, plan: provPlan, tenants: plan.tenantChoice.length ? plan.tenantChoice : plan.fixedTenant ? [plan.fixedTenant] : [], workspacesOf: (t) => (ME.workspaces ?? []).filter((w) => w.tenantId === t).map((w) => ({ id: w.id, name: w.name })) }}/>
     : <OrganizationView api={api} plan={plan} tenant={tenant}/>;
 }
-createRoot(root).render(<div className="shell admin" style={{ display: "block", height: "auto", minHeight: "100vh" }}><main className="page" style={{ maxWidth: 1100, margin: "0 auto", padding: 16 }}><Host/></main></div>);
+const onRender = (_id: string, phase: string, actual: number, base: number) => { window.__prof.push({ phase, actual, base, at: performance.now() }); };
+createRoot(root).render(<div className="shell admin" style={{ display: "block", height: "auto", minHeight: "100vh" }}><main className="page" style={{ maxWidth: 1100, margin: "0 auto", padding: 16 }}><Profiler id="host" onRender={onRender}><Host/></Profiler></main></div>);

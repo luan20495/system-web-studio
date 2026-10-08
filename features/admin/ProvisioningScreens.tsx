@@ -4,7 +4,7 @@
  * (provisioning.ts): the production adapter maps routes that exist today and throws NOT_READY for the rest, so the form is complete and honest before C1's contract is final.
  * The tenant of an Admin-portal caller is shown, never typed. Account types come from the plan (never SYSTEM_ADMIN). Every refusal is shown by its code (provisioningProblem).
  */
-import { useMemo, useState, type FormEvent } from "react";
+import { useId, useMemo, useState, type FormEvent } from "react";
 import type { ActivationLink } from "@/lib/http-types";
 import { Modal } from "./Modal";
 import { Card, StateView } from "../ui";
@@ -29,7 +29,7 @@ export function CreateAccountDialog({ api, plan, tenants, workspacesOf, onClose,
   workspacesOf: (tenantId: string) => Option[];
   onClose: () => void; onCreated?: (r: ProvisionResult) => void;
 }) {
-  const [form, setForm] = useState<AccountForm>(() => emptyAccountForm(plan.accountTypes[0]?.id ?? "USER"));
+  const uid = useId(); const [form, setForm] = useState<AccountForm>(() => emptyAccountForm(plan.accountTypes[0]?.id ?? "USER"));
   const [newWs, setNewWs] = useState(""); const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false); const [problem, setProblem] = useState<ProvisioningProblem | null>(null);
   const [result, setResult] = useState<ProvisionResult | null>(null); const [made, setMade] = useState<(Option & { tenantId: string })[]>([]);
@@ -70,28 +70,28 @@ export function CreateAccountDialog({ api, plan, tenants, workspacesOf, onClose,
         {plan.create.state === "forbidden" ? <p className="notice" role="note" data-testid="prov-forbidden">{plan.create.reason}</p> : null}
 
         <fieldset className="stack" aria-label="Thông tin"><legend className="bx-h4">1 · Thông tin</legend>
-          <label className="field"><span>Tên đăng nhập</span><input data-testid="acc-username" autoComplete="off" value={form.username} aria-invalid={!!(field("username") || dupUser)} onChange={(e) => set({ username: e.target.value })}/></label>
-          {field("username") || dupUser ? <p className="formError" role="alert" data-testid="acc-username-error">{dupUser ?? field("username")}</p> : null}
-          <label className="field"><span>Tên hiển thị</span><input data-testid="acc-display" value={form.displayName} maxLength={160} aria-invalid={!!field("displayName")} onChange={(e) => set({ displayName: e.target.value })}/></label>
-          {field("displayName") ? <p className="formError" role="alert">{field("displayName")}</p> : null}
-          <label className="field"><span>Email (không bắt buộc)</span><input data-testid="acc-email" type="email" autoComplete="off" value={form.email} aria-invalid={!!(field("email") || dupMail)} onChange={(e) => set({ email: e.target.value })}/></label>
-          {field("email") || dupMail ? <p className="formError" role="alert" data-testid="acc-email-error">{dupMail ?? field("email")}</p> : null}
+          <label className="field"><span>Tên đăng nhập</span><input data-testid="acc-username" autoComplete="off" value={form.username} aria-invalid={!!(field("username") || dupUser)} aria-describedby={field("username") || dupUser ? `${uid}-user-err` : undefined} onChange={(e) => set({ username: e.target.value })}/></label>
+          {field("username") || dupUser ? <p className="formError" role="alert" id={`${uid}-user-err`} data-testid="acc-username-error">{dupUser ?? field("username")}</p> : null}
+          <label className="field"><span>Tên hiển thị</span><input data-testid="acc-display" value={form.displayName} maxLength={160} aria-invalid={!!field("displayName")} aria-describedby={field("displayName") ? `${uid}-display-err` : undefined} onChange={(e) => set({ displayName: e.target.value })}/></label>
+          {field("displayName") ? <p className="formError" role="alert" id={`${uid}-display-err`}>{field("displayName")}</p> : null}
+          <label className="field"><span>Email (không bắt buộc)</span><input data-testid="acc-email" type="email" autoComplete="off" value={form.email} aria-invalid={!!(field("email") || dupMail)} aria-describedby={field("email") || dupMail ? `${uid}-email-err` : undefined} onChange={(e) => set({ email: e.target.value })}/></label>
+          {field("email") || dupMail ? <p className="formError" role="alert" id={`${uid}-email-err`} data-testid="acc-email-error">{dupMail ?? field("email")}</p> : null}
         </fieldset>
 
         <fieldset className="stack" aria-label="Phạm vi"><legend className="bx-h4">2 · Công ty và workspace</legend>
           {plan.fixedTenant ? <label className="field"><span>Công ty</span><input data-testid="acc-tenant-fixed" readOnly value={plan.fixedTenant.name} aria-readonly="true"/><small className="hint">Lấy từ phiên đăng nhập của bạn; không đổi được.</small></label>
             : <label className="field"><span>Công ty</span>
-              <select data-testid="acc-tenant" value={form.tenantId} aria-invalid={!!field("tenant")} onChange={(e) => set({ tenantId: e.target.value, workspaceId: "" })}><option value="">— chọn —</option>{tenants.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>}
-          {field("tenant") ? <p className="formError" role="alert">{field("tenant")}</p> : null}
+              <select data-testid="acc-tenant" value={form.tenantId} aria-invalid={!!field("tenant")} aria-describedby={field("tenant") ? `${uid}-tenant-err` : undefined} onChange={(e) => set({ tenantId: e.target.value, workspaceId: "" })}><option value="">— chọn —</option>{tenants.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>}
+          {field("tenant") ? <p className="formError" role="alert" id={`${uid}-tenant-err`}>{field("tenant")}</p> : null}
           <label className="field"><span>Loại tài khoản</span>
             <select data-testid="acc-type" value={form.type} onChange={(e) => setType(e.target.value as AccountTypeId)}>{plan.accountTypes.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}</select>
             <small className="hint">{type.hint}</small></label>
           <label className="field"><span>Workspace{type.workspace === "optional" ? " (không bắt buộc)" : ""}</span>
-            <select data-testid="acc-workspace" value={form.workspaceId} disabled={!tenantId} aria-invalid={!!(field("workspace") || problem?.field === "workspace")} onChange={(e) => set({ workspaceId: e.target.value })}>
+            <select data-testid="acc-workspace" value={form.workspaceId} disabled={!tenantId} aria-invalid={!!(field("workspace") || problem?.field === "workspace")} aria-describedby={field("workspace") || problem?.field === "workspace" ? `${uid}-ws-err` : undefined} onChange={(e) => set({ workspaceId: e.target.value })}>
               <option value="">{type.workspace === "optional" ? "Không gán workspace" : "— chọn —"}</option>{wsOptions.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}{plan.canCreateWorkspace && tenantId ? <option value="__new">+ Tạo workspace mới của công ty này</option> : null}</select>
             {!tenantId ? <small className="hint">Chọn công ty trước.</small> : null}</label>
           {form.workspaceId === "__new" ? <label className="field"><span>Tên workspace mới</span><input data-testid="acc-new-ws" value={newWs} onChange={(e) => setNewWs(e.target.value)}/></label> : null}
-          {field("workspace") || problem?.field === "workspace" ? <p className="formError" role="alert">{problem?.field === "workspace" ? problem.text : field("workspace")}</p> : null}
+          {field("workspace") || problem?.field === "workspace" ? <p className="formError" role="alert" id={`${uid}-ws-err`}>{problem?.field === "workspace" ? problem.text : field("workspace")}</p> : null}
           {plan.tenantChoice && !plan.fixedTenant ? <p className="hint" data-testid="acc-ws-note">Máy chủ kiểm tra workspace thuộc đúng công ty đã chọn khi tạo; danh sách này chưa lọc theo công ty.</p> : null}
         </fieldset>
 
@@ -109,7 +109,7 @@ export function CreateAccountDialog({ api, plan, tenants, workspacesOf, onClose,
         </fieldset>
 
         {problem ? <p className={problem.kind === "not-ready" ? "notice" : "formError"} role="alert" data-testid="prov-problem" data-kind={problem.kind}>{problem.text}</p> : null}
-        <div className="row"><button className="btn primary" data-testid="acc-submit" disabled={busy || notReady} title={notReady ? "Backend provisioning chưa sẵn sàng" : undefined}>{busy ? "Đang tạo…" : submitLabel}</button><button type="button" className="btn" onClick={onClose}>Hủy</button></div>
+        <div className="xp-footer"><button type="button" className="btn" onClick={onClose}>Hủy</button><button className="btn primary" data-testid="acc-submit" disabled={busy || notReady} aria-busy={busy || undefined} title={notReady ? "Backend provisioning chưa sẵn sàng" : undefined}>{busy ? "Đang tạo…" : submitLabel}</button></div>
       </form>
     </Modal>
   );
@@ -131,7 +131,7 @@ function CreatedAccount({ result, tenantName, workspaceName, onClose, onAnother 
         </dl>
         <h3 className="bx-h4">Bước tiếp theo</h3>
         <ol data-testid="res-pending">{result.pending.map((p) => <li key={p.id}>{p.label}</li>)}</ol>
-        <div className="row"><button className="btn primary" onClick={onAnother}>Tạo tài khoản khác</button><button className="btn" onClick={onClose}>Xong</button></div>
+        <div className="xp-footer"><button className="btn" onClick={onClose}>Xong</button><button className="btn primary" onClick={onAnother}>Tạo tài khoản khác</button></div>
       </div>
     </Modal>
   );

@@ -100,3 +100,24 @@
 .publicBox{border:1px solid var(--warn,#d9a21b);border-radius:10px;padding:10px 12px;margin:8px 0;display:grid;gap:6px}
 .publicBox ul{margin:0;padding-left:18px;max-height:min(24vh,170px);overflow:auto}
 .publicBox code{word-break:break-all}
+
+.bx-sortrow:focus-visible{outline:2px solid #67b8ff;outline-offset:2px;border-radius:8px}.bx-sortrow .bx-node{flex:1;min-width:0}.bx-drag,.bx-mini{display:inline-flex;align-items:center;justify-content:center}
+
+/* top bar: the project name and meta stay on ONE line with an ellipsis (the full name is the title); button labels never wrap into tall pills; groups wrap to a second row instead of being clipped */
+.bx-top .projectName,.bx-top .projectMeta{max-width:min(38ch,24vw);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bx-top button,.bx-top .segmented button,.bx-top .bx-btn{white-space:nowrap}
+.bx-top-center{justify-content:flex-end}.bx-top .segmented{flex:none}
+/* page tree rows: a long page / section title is one line with an ellipsis, not a 3-line wall in a narrow panel */
+.bx-node b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.bx-node.page{flex-wrap:nowrap}.bx-node.page code{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+@media(max-width:700px){.bx-top .projectName,.bx-top .projectMeta{max-width:42vw}.bx-top{padding:8px 10px}}
+
+/* device switch: icon buttons (named by aria-label / title); the text label only where there is room */
+.bx-devLabel{display:none}@media(min-width:1760px){.bx-devLabel{display:inline}}
+
+/* the action group sizes to its content (it used to overflow to the LEFT over the device switch); the brand (project name) is what shrinks, with its ellipsis */
+.bx-top .topActions{flex:none}.bx-top .brand{flex:1 1 180px}.bx-top-center{flex:0 1 auto}
+
+/* ROOT CAUSE of the cramped builder bar: `.workspace3 .topbar` (a 3-column grid, specificity 0,2,0) beat `.bx-top` (flex, 0,1,0), so the action group lived in a 1fr cell and its buttons overflowed to the LEFT over the device switch. The builder bar is a wrapping flex row. */
+.workspace3 .topbar.bx-top,.topbar.bx-top{display:flex;grid-template-columns:none}
+.bx-node.section b{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.25}

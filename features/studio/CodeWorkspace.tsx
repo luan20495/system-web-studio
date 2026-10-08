@@ -3,6 +3,7 @@
 // built in the sandbox, previewed from the sites origin (CSP sandbox) and merged only after a green build.
 import { canEditProject, canPublish, canShare, resolvePermissions } from "@xweb/permissions";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ArrowLeft, Sparkles } from "@xweb/ui";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/http-api";
 import { SERVER_KINDS, type AiStatus, type ApiProject, type AuthConfig, type CodeAiHistoryItem, type CodeChange, type CodeCommit, type DiffFile, type TreeFile } from "@/lib/http-types";
@@ -128,14 +129,14 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
     <div className="studio codeStudio">
       <header className="topbar">
         <div className="brand">
-          <button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}>←</button>
+          <button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}><ArrowLeft size={16} aria-hidden="true"/></button>
           <div>
             <div className="projectName">{project.name}</div>
             <div className="projectMeta">Ứng dụng web (mã nguồn) · React + Vite · revision {project.revision}{canEdit ? "" : " · chỉ xem"}</div>
           </div>
         </div>
         <nav className="modeTabs" aria-label="Chế độ">
-          {(["ai", "design", "code"] as const).map((m) => <button key={m} className={mode === m && !panel ? "active" : ""} aria-pressed={mode === m} onClick={() => go(m)}>{m === "ai" ? "✦ AI" : m === "design" ? "Design" : "Code"}</button>)}
+          {(["ai", "design", "code"] as const).map((m) => <button key={m} className={mode === m && !panel ? "active" : ""} aria-pressed={mode === m} onClick={() => go(m)}>{m === "ai" ? <><Sparkles size={14} aria-hidden="true"/> AI</> : m === "design" ? "Design" : "Code"}</button>)}
         </nav>
         <div className="topActions">
           <button className="button ghost" onClick={() => go("versions")}>Lịch sử</button>

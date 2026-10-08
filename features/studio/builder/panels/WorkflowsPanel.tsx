@@ -1,4 +1,5 @@
 "use client";
+import { Plus } from "../../../../packages/ui/src/icons";
 import { useState } from "react";
 import type { WorkflowDef } from "@xweb/types";
 import { usersOf } from "../core/definition";
@@ -17,7 +18,7 @@ export function WorkflowsPanel({ ctx }: { ctx: DefCtx }) {
   return (
     <div className="bx-panel-body">
       <div className="bx-panel-head"><h2>Workflow</h2>
-        {ctx.canEdit && ctx.readiness.state === "AVAILABLE" && !editing ? <button type="button" className="bx-btn sm" onClick={() => setEditing("new")}>＋ Workflow</button> : null}</div>
+        {ctx.canEdit && ctx.readiness.state === "AVAILABLE" && !editing ? <button type="button" className="bx-btn sm" onClick={() => setEditing("new")}><Plus size={14} aria-hidden="true"/> Workflow</button> : null}</div>
       <p className="hint">Chuỗi các bước: hành động, chờ, phê duyệt, rẽ nhánh, kết thúc. Mỗi bước hiển thị thử lại, giới hạn thời gian, điều kiện, phê duyệt và hoàn tác.</p>
       <Gate state={ctx.readiness}>
         {editing ? <WorkflowEditor ctx={ctx} initial={editing === "new" ? undefined : editing} onDone={() => setEditing(null)} onCancel={() => setEditing(null)}/> : (

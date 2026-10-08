@@ -322,3 +322,72 @@
   .xp-empFilters{grid-template-columns:1fr}.xp-orgBar{align-items:stretch}.xp-tenantSwitch{max-width:none}
 }
 .modalBody .field input:focus-visible,.modalBody .field select:focus-visible,.modalBody .field textarea:focus-visible,.xp-moveRow input:focus-visible{border-color:var(--f-accent);outline:2px solid #c7d2fe;outline-offset:0}
+
+/* icons that replaced text glyphs (✓ ✕ ○ …): one stroke style, aligned with the text */
+.xp-checkIcon{display:inline-flex;align-items:center;vertical-align:middle;flex:none}
+.xp-spin{animation:xp-rot 1s linear infinite}@keyframes xp-rot{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.xp-spin{animation:none}}
+
+/* sidebar footer / long names: one line with an ellipsis, never a 3-line wall of text */
+.sideFoot>div{min-width:0}.sideFoot b,.sideFoot small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* a long tree scrolls inside its card instead of stretching the page; deep levels keep a capped indent and show a level tag */
+.xp-tree{max-height:min(70vh,720px);overflow:auto;overscroll-behavior:contain}
+.xp-depthTag{padding:0 6px;border-radius:6px;background:var(--f-bg);border:1px solid var(--f-line);font-size:11px;font-weight:600;color:var(--f-muted);white-space:nowrap}
+.xp-nodeText{overflow:hidden}.xp-nodeText small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---------- mobile navigation drawer (≤ 900 px): the sidebar is a drawer opened from the header ---------- */
+.navToggle{display:none}.sideBackdrop{display:none}
+@media(max-width:900px){
+  .navToggle{display:inline-flex}
+  .shell>.sidebar{display:flex;position:fixed;z-index:70;inset:0 auto 0 0;width:min(86vw,300px);transform:translateX(-102%);transition:transform .18s ease;box-shadow:none}
+  .shell[data-nav=open]>.sidebar{transform:none;box-shadow:0 0 40px rgba(0,0,0,.4)}
+  .shell[data-nav=open]>.sideBackdrop{display:block;position:fixed;inset:0;z-index:65;background:rgba(15,23,42,.45)}
+  .topHeader{padding:0 12px;gap:8px}.topHeader .crumb{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .page{padding:16px 14px 40px}
+  .pageHead{flex-wrap:wrap}.pageHead h1{font-size:21px}
+  .search input{width:100%}.topHeader .search{flex:1;min-width:0}
+}
+@media(prefers-reduced-motion:reduce){.shell>.sidebar{transition:none}}
+/* tables never spill out of their card: the card scrolls sideways instead; long ids wrap */
+.card{overflow-x:auto}.table td{overflow-wrap:break-word}.table td code,.table td .code,.table td .breakAll{word-break:break-all}.table th{white-space:nowrap}
+
+/* ---------- controls v2 (shared by Platform / Admin / Studio shells and the auth pages) ---------- */
+:root{--sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:20px;--sp-6:24px;--sp-8:32px;--f-focus:#4f46e5;--f-placeholder:#677086;--f-disabled-bg:#f3f4f6;--f-disabled-ink:#7a8394}
+.shell,.authPage,.splash,.wsError{font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
+.shell h1,.authPage h1{font-weight:700;letter-spacing:-.01em}.shell h2,.shell h3{font-weight:650}
+.shell select,.authPage select{appearance:none;-webkit-appearance:none;min-height:36px;padding:0 32px 0 10px;border:1px solid var(--f-line);border-radius:8px;background-color:#fff;color:var(--f-text);font:inherit;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23545f70' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+  background-repeat:no-repeat;background-position:right 10px center;background-size:16px;text-overflow:ellipsis}
+.shell select[multiple],.shell select[size]:not([size="1"]){background-image:none;padding:6px 10px}
+.shell textarea,.authPage textarea{width:100%;min-height:80px;padding:8px 10px;border:1px solid var(--f-line);border-radius:8px;background:#fff;color:var(--f-text);font:inherit;resize:vertical}
+.shell input[type=checkbox],.shell input[type=radio]{min-height:0;width:16px;height:16px;padding:0;flex:none;accent-color:var(--f-accent)}
+.shell ::placeholder,.authPage ::placeholder{color:var(--f-placeholder);opacity:1}
+.shell input:disabled,.shell select:disabled,.shell textarea:disabled,.authPage input:disabled{background-color:var(--f-disabled-bg);color:var(--f-disabled-ink);cursor:not-allowed}
+.shell input[readonly]{background:var(--f-bg)}
+.shell input:focus-visible,.shell select:focus-visible,.shell textarea:focus-visible,.authPage input:focus-visible{border-color:var(--f-focus);outline:2px solid #c7d2fe;outline-offset:0}
+.shell input:focus,.shell select:focus,.authPage input:focus{outline:2px solid #c7d2fe;outline-offset:0;border-color:var(--f-focus)}
+.btn:focus-visible,.navLink:focus-visible,.shell a:focus-visible,.shell summary:focus-visible{outline:2px solid var(--f-focus);outline-offset:2px}
+.sidebar.dark .navLink:focus-visible,.sidebar.dark .btn:focus-visible{outline-color:#a5b4fc}
+.btn:active:not(:disabled){transform:translateY(1px)}.btn{transition:background-color .12s,border-color .12s}
+.btn[aria-busy=true]{cursor:progress;opacity:.85}
+.btn.primary:disabled{background:#a5a8f0;border-color:#a5a8f0;color:#fff;opacity:1}
+.btn.danger.primary,.btn.primary.danger{background:var(--f-bad);border-color:var(--f-bad);color:#fff}
+@media(prefers-reduced-motion:reduce){.btn{transition:none}.btn:active:not(:disabled){transform:none}}
+.hint,.field small{font-size:13px;line-height:1.45}
+.field>span{font-size:13px;font-weight:600;color:var(--f-text)}
+
+/* dialogs: never taller than the viewport, the body scrolls INSIDE, and the footer (xp-footer) stays visible while the form scrolls */
+.modalBody{--mpad:24px;padding:var(--mpad);max-height:calc(100dvh - 32px);overscroll-behavior:contain}
+.modalBody .xp-footer{position:sticky;bottom:calc(var(--mpad)*-1);margin:0 calc(var(--mpad)*-1) calc(var(--mpad)*-1);padding:12px var(--mpad);background:var(--f-panel,#fff);z-index:2;border-radius:0 0 12px 12px}
+@media(max-width:600px){.modalBody{--mpad:16px;width:100%}.adminModal{padding:8px;align-items:flex-end}.modalBody .xp-footer{flex-wrap:wrap}.modalBody .xp-footer .btn{flex:1 1 auto}}
+
+/* very narrow phones: the header may use two lines instead of pushing the page sideways */
+@media(max-width:520px){.shellMain{grid-template-rows:auto minmax(0,1fr)}.topHeader{flex-wrap:wrap;padding:8px 12px;min-height:56px}.topHeader .row{flex-wrap:wrap;min-width:0}.topHeader .crumb{display:none}.topHeader .btn.sm{padding:0 10px;white-space:nowrap}}
+
+/* the single mobile column must be allowed to shrink below its content (1fr alone is minmax(auto,1fr) and made the whole page wider than the phone) */
+@media(max-width:900px){.shell{grid-template-columns:minmax(0,1fr)}}
+/* chips on the light shells (the default chip colours are for the dark editor) */
+.shell .chip{color:var(--f-muted);border-color:var(--f-line);background:var(--f-bg)}
+
+/* an absolutely positioned child (e.g. a visually hidden "Thao tác" header label) must scroll / clip WITH its card, not escape it and widen the page */
+.card,.table th{position:relative}

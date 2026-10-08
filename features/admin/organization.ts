@@ -69,7 +69,8 @@ export type Employee = {
   /** only when the directory carries it; otherwise the screen says it is unavailable */
   workspaces?: { id: string; name: string; role: string }[];
 };
-export type EmployeeQuery = { q?: string; orgUnitId?: string | null; includeSubtree?: boolean; status?: EmployeeStatus | "ALL"; page: number; size: number };
+/** `fresh`: a cache-bust token (the screen bumps it after a write); the member-list fallback reuses one fetch per tenant for a few seconds otherwise */
+export type EmployeeQuery = { q?: string; orgUnitId?: string | null; includeSubtree?: boolean; status?: EmployeeStatus | "ALL"; page: number; size: number; fresh?: number };
 /** `source`: "directory" = the organization-aware list; "members" = the tenant member list (no unit / position), used while listEmployees is NOT_READY */
 export type EmployeePage = { items: Employee[]; total: number; page: number; size: number; source: "directory" | "members" };
 
@@ -98,6 +99,7 @@ export type MembersToEmployees = (members: TenantMemberView[], q: EmployeeQuery)
  * `fromMembers` turns the tenant member list into a directory page (client-side search / status / paging); it lives in organizationModel.ts and is injected so this file stays free of UI logic.
  */
 export function createOrganizationApi(t: OrganizationTransport, fromMembers: MembersToEmployees, caps: Readonly<Record<OrgCapabilityId, OrgCapabilityState>> = CAPABILITIES): OrganizationApi {
+  let cache: { tenantId: string; at: number; fresh: number | undefined; data: TenantMemberView[] } | null = null; const TTL_MS = 10_000;
   const need = (id: OrgCapabilityId): void => { const c = caps[id]; if (c.status === "NOT_READY") throw new OrganizationNotReady(id, c.reason, c.owner); };
   const via = <K extends keyof OrganizationTransport>(id: OrgCapabilityId, k: K): NonNullable<OrganizationTransport[K]> => {
     need(id); const f = t[k]; if (!f) throw new OrganizationNotReady(id, "Chưa nối máy chủ cho thao tác này.", "C1"); return f as NonNullable<OrganizationTransport[K]>;
@@ -116,7 +118,9 @@ export function createOrganizationApi(t: OrganizationTransport, fromMembers: Mem
       if (caps.listEmployees.status === "READY") return via("listEmployees", "listEmployees")(tenantId, q);
       // not an invented route: the tenant member list of C1's provisioning contract (TENANT_MEMBERS), filtered and paged here
       if (!t.tenantMembers) throw new OrganizationNotReady("listEmployees", "Chưa nối danh sách thành viên công ty.", "C1");
-      return fromMembers(await t.tenantMembers(tenantId), q);
+      // searching / paging the SAME list must not refetch every member each time: one fetch per tenant, reused for a few seconds unless the screen bumped `fresh`
+      if (!cache || cache.tenantId !== tenantId || cache.fresh !== q.fresh || Date.now() - cache.at > TTL_MS) cache = { tenantId, at: Date.now(), fresh: q.fresh, data: await t.tenantMembers(tenantId) };
+      return fromMembers(cache.data, q);
     },
     async createEmployee(tenantId, e) { return via("createEmployee", "createEmployee")(tenantId, e); },
     async updateEmployeeOrganization(tenantId, userId, unit) { return via("updateEmployeeOrganization", "updateEmployeeOrganization")(tenantId, userId, unit); },

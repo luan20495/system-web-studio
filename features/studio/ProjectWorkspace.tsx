@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, Settings, Sparkles } from "@xweb/ui";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api, ApiError, newIdempotencyKey } from "@/lib/http-api";
 import { renderSchemaDocument } from "@/lib/schema-preview";
@@ -87,6 +88,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const mayEdit = canEditProject(perms), mayPublish = canPublish(perms), mayShare = canShare(perms), mayDelete = holdsStorageConstant(project?.permissions, "PROJECT_DELETE");
   const readOnly = !mayEdit;
   // page-level gate: a project whose resolved permissions lack APP_VIEW is not shown (APP_VIEW without APP_EDIT is NOT a reason to leave: it opens read-only)
+  useEffect(() => { if (project?.name) document.title = `${project.name} · Xweb Studio`; }, [project?.name]);
   useEffect(() => { if (project && !canViewProject(perms)) router.replace("/auth/no-access?portal=studio&reason=app-view"); }, [project, perms, router]);
 
   const toMessages = (items: PromptHistoryItem[]): Msg[] => [...items].reverse().flatMap((p) => [
@@ -244,7 +246,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
     unbind: (m, slot) => api.dataManagement.unbind(ws, projectId, m, slot),
   }), [ws, projectId]);
 
-  if (loadError) return <div className="wsError"><ErrorState error={loadError} retry={() => { setLoadError(null); reload().catch(setLoadError); }}/><p><a className="btn" href={S("/projects")}>← Danh sách ứng dụng</a></p></div>;
+  if (loadError) return <div className="wsError"><ErrorState error={loadError} retry={() => { setLoadError(null); reload().catch(setLoadError); }}/><p><a className="btn xp-btnIcon" href={S("/projects")}><ArrowLeft size={14} aria-hidden="true"/> Danh sách ứng dụng</a></p></div>;
   if (project?.appType === "STATIC_APP") return <CodeWorkspace project={project} view={view} onProject={setProject}/>;
   if (!project || !schema) return <div className="wsError"><StateView kind="loading" title="Đang mở ứng dụng…"/></div>;
   // company blocks, then my own drafts (an approved block of mine is already in the company list)
@@ -256,7 +258,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const renderPreview = (o: { selectedId: string | null; interactive: boolean; pageId: string }) => renderSchemaDocument(schema, { selectedId: o.selectedId, interactive: o.interactive, nonce: nonceOfPage(), assets: assetUrls, pageId: o.pageId });
   const modeTabs = (
     <nav className="modeTabs" aria-label="Chế độ">
-      {MODES.map((m) => <button key={m} className={mode === m ? "active" : ""} aria-pressed={mode === m} onClick={() => go(m)}>{m === "ai" ? "✦ AI" : m === "design" ? "Design" : "Code"}</button>)}
+      {MODES.map((m) => <button key={m} className={mode === m ? "active" : ""} aria-pressed={mode === m} onClick={() => go(m)}>{m === "ai" ? <><Sparkles size={14} aria-hidden="true"/> AI</> : m === "design" ? "Design" : "Code"}</button>)}
     </nav>
   );
 
@@ -268,23 +270,23 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
         runtime={runtime} dataManagement={dataManagement} onRetrySave={failedEdit ? retrySave : undefined} blocks={blockOptions.map(({ b, who }): BlockOption => ({ id: b.id, name: b.name, who, baseLabel: label(b.baseComponent) }))}
         applyOps={applyOps} addBlock={(id) => { const o = blockOptions.find(({ b }) => b.id === id); if (o) void addBlock(o.b); }}
         renderPreview={renderPreview} labelOf={label} summaryOf={sectionSummary}
-        leading={<button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}>←</button>}
+        leading={<button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}><ArrowLeft size={16} aria-hidden="true"/></button>}
         modeTabs={modeTabs}
         trailing={<>
           <button className="button ghost" onClick={() => go("site")}>Website</button>
           <button className="button ghost" onClick={() => go("versions")}>Phiên bản</button>
           <button className="button ghost" onClick={() => go("assets")}>Tệp</button>
-          <button className="button icon" aria-label="Cài đặt project" title={mayEdit ? "Cài đặt project" : "Bạn không có quyền đổi cài đặt"} disabled={!mayEdit} onClick={() => go("settings")}>⚙</button></>}
+          <button className="button icon" aria-label="Cài đặt project" title={mayEdit ? "Cài đặt project" : "Bạn không có quyền đổi cài đặt"} disabled={!mayEdit} onClick={() => go("settings")}><Settings size={16} aria-hidden="true"/></button></>}
         goAi={() => go("ai")} openSite={() => go("site")} openMembers={() => go("members")} openPublish={() => go("publish")} saveBlock={() => setSavingBlock(true)}/> : (
       <header className="topbar">
         <div className="brand">
-          <button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}>←</button>
+          <button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}><ArrowLeft size={16} aria-hidden="true"/></button>
           <div>
             <div className="projectName">{project.name}</div>
             <div className="projectMeta">{latest ? `Phiên bản ${latest}` : "Chưa có phiên bản"} · revision {revision} · {project.siteVisibility === "PUBLIC" ? "Công khai" : "Riêng tư"}{readOnly ? " · chỉ xem" : ""}</div>
           </div>
           <span className={`saveState ${save.state}`} role="status" aria-live="polite">
-            {save.state === "saving" ? "Đang lưu…" : save.state === "error" ? "Lưu thất bại" : `✓ Đã lưu${save.at ? ` ${save.at.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}` : ""}`}
+            {save.state === "saving" ? "Đang lưu…" : save.state === "error" ? "Lưu thất bại" : `Đã lưu${save.at ? ` ${save.at.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}` : ""}`}
           </span>
         </div>
         {modeTabs}
@@ -293,7 +295,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
           <button className="button ghost" onClick={() => go("versions")}>Phiên bản</button>
           <button className="button ghost" onClick={() => go("assets")}>Tệp</button>
           {mayShare ? <button className="button ghost" onClick={() => go("members")}>Chia sẻ</button> : null}
-          <button className="button icon" aria-label="Cài đặt project" title={mayEdit ? "Cài đặt project" : "Bạn không có quyền đổi cài đặt"} disabled={!mayEdit} onClick={() => go("settings")}>⚙</button>
+          <button className="button icon" aria-label="Cài đặt project" title={mayEdit ? "Cài đặt project" : "Bạn không có quyền đổi cài đặt"} disabled={!mayEdit} onClick={() => go("settings")}><Settings size={16} aria-hidden="true"/></button>
           <button className="button primary" disabled={!mayPublish || busy !== null} title={mayPublish ? "Xuất bản phiên bản hiện tại" : "Bạn không có quyền xuất bản"} onClick={() => go("publish")}>Xuất bản</button>
         </div>
       </header>)}
@@ -318,7 +320,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
                 {messages.length === 0 ? (
                   <div className="intro"><h1>Bạn muốn ứng dụng thay đổi thế nào?</h1><p>Mô tả bằng lời; thay đổi được kiểm tra theo registry rồi lưu thành phiên bản có thể khôi phục.</p>
                     {!readOnly ? <div className="starterList" aria-label="Gợi ý để bắt đầu">{suggestions(ai?.configured === true).map((t) => (
-                      <button type="button" key={t} className="starter" disabled={busy !== null} onClick={() => { setPrompt(t); promptRef.current?.focus(); }}><span aria-hidden="true">✦</span>{t}</button>))}</div> : null}</div>
+                      <button type="button" key={t} className="starter" disabled={busy !== null} onClick={() => { setPrompt(t); promptRef.current?.focus(); }}><Sparkles size={14} aria-hidden="true"/>{t}</button>))}</div> : null}</div>
                 ) : null}
                 {messages.map((m) => (
                   <div className={`message ${m.role}`} key={m.id}><div className="bubble"><div>{m.content}</div>

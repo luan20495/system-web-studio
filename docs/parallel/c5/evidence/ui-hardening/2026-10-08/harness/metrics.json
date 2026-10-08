@@ -1,0 +1,48 @@
+{
+  "org2k": {
+    "units": 2000,
+    "initialRowsInDom": 5,
+    "dataCommitMs": 14.1,
+    "reloadToPaintMs": 45.7,
+    "expandAllToPaintMs": 399.5,
+    "rowsAfterExpandAll": 2000,
+    "selectToPaintMs": 30.5,
+    "selectProfilerActualMs": 3.9,
+    "selectProfilerBaseMs": 148,
+    "collapseAllToPaintMs": 28.5,
+    "expandPlus25KeysMs": 920,
+    "note": "GENERATED frontend fixture; timings are this machine's render/interaction, not a backend measure"
+  },
+  "depth60": {
+    "rows": 60,
+    "pageOverflow": 0,
+    "treeOverflow": 0,
+    "maxIndent": 188,
+    "tags": 49,
+    "note": "GENERATED chain of 60 levels; no recursion in buildTree / flattenTree / descendantIds (unit test: a 20 000-deep chain)"
+  },
+  "emp10k": {
+    "employees": 10000,
+    "pageSize": 20,
+    "rowsInDomInitial": 20,
+    "rowsInDomAfterSearch": 20,
+    "firstCommitMs": 12.2,
+    "searchRequestsFor12Keystrokes": 1,
+    "pageSwitchToPaintMs": 21.5,
+    "statusFilterToPaintMs": 14,
+    "worstKeystrokeToFrameMs": 18.5,
+    "note": "directory fixture is paged by the FAKE transport (server-like); this is a frontend benchmark, not a backend measure"
+  },
+  "emp10kMembersFallback": {
+    "members": 10000,
+    "rowsInDom": 20,
+    "memberListFetches": 1,
+    "pageSwitchToPaintMs": [
+      16.5,
+      23.7,
+      14,
+      21.2
+    ],
+    "note": "client-side filtering of a generated fixture: a frontend benchmark of the member-list fallback, not backend behaviour"
+  }
+}

@@ -104,7 +104,7 @@ test("pages panel: ARIA tree, routes, broken-route alert, set-home and reorder N
 
 test("pages panel for a viewer: no create/rename/delete controls", () => {
   const html = dnd(<PagesPanel doc={full()} pageId="home" onPage={() => undefined} selectedId={null} onSelect={() => undefined} labelOf={(t) => t} summaryOf={() => ""} canEdit={false} busy={false} apply={async () => true} genId={() => "x"} onMoveSection={() => undefined}/>);
-  assert.doesNotMatch(html, /＋ Trang/); assert.doesNotMatch(html, /Kéo để di chuyển/);
+  assert.doesNotMatch(html, /lucide-plus/, "a viewer has no add-page button"); assert.doesNotMatch(html, /Kéo để di chuyển/);
   assert.match(html, /disabled="">Đổi tên/);
 });
 
@@ -137,9 +137,9 @@ test("action editor: trigger is optional (checkbox), a child action has none", (
 
 test("actions panel: NOT_READY when the V2 core is missing; list with roles when available", () => {
   const nr = renderToStaticMarkup(<ActionsPanel ctx={ctx({ readiness: notReady("C2 chưa tích hợp") })}/>);
-  assert.match(nr, /Chưa sẵn sàng/); assert.match(nr, /C2 chưa tích hợp/); assert.doesNotMatch(nr, /＋ Hành động/);
+  assert.match(nr, /Chưa sẵn sàng/); assert.match(nr, /C2 chưa tích hợp/); assert.doesNotMatch(nr, /lucide-plus/, "no add button while NOT_READY");
   const ok = renderToStaticMarkup(<ActionsPanel ctx={ctx()}/>);
-  assert.match(ok, /Làm mới/); assert.match(ok, /Gắn vào thành phần/); assert.match(ok, /＋ Hành động/);
+  assert.match(ok, /Làm mới/); assert.match(ok, /Gắn vào thành phần/); assert.match(ok, /lucide-plus[\s\S]*Hành động/, "the add button (plus icon + label) is offered");
   assert.deepEqual(a11yProblems(ok), []);
 });
 

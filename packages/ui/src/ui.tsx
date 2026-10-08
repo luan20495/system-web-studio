@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { ApiError } from "@xweb/api-client";
+import { ArrowLeft, ArrowRight, Ban, Inbox, SearchX, TriangleAlert } from "./icons";
 
 export const fmtDate = (iso?: string | null) => (iso ? new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso)) : "—");
 export function ago(iso?: string | null): string {
@@ -30,12 +31,13 @@ export function stateOf(e: unknown): StateKind {
   if (e instanceof ApiError) { if (e.status === 0) return "network"; if (e.status === 403) return "forbidden"; if (e.status === 404) return "notfound"; if (e.status === 409) return "conflict"; if (e.status === 401) return "expired"; }
   return "error";
 }
-export function StateView({ kind, title, detail, action }: { kind: StateKind; title?: string; detail?: ReactNode; action?: ReactNode }) {
-  const [t, d] = STATE_TEXT[kind];
+/** `level`: the heading level of the title (1 when the state IS the whole page: a page needs exactly one h1; 2 inside a card / section) */
+export function StateView({ kind, title, detail, action, level = 2 }: { kind: StateKind; title?: string; detail?: ReactNode; action?: ReactNode; level?: 1 | 2 }) {
+  const [t, d] = STATE_TEXT[kind]; const H = level === 1 ? "h1" : "h2";
   return (
     <div className={`stateView state-${kind}`} role={kind === "loading" ? "status" : kind === "empty" ? undefined : "alert"}>
-      {kind === "loading" ? <div className="spinner" aria-hidden="true"/> : <div className="stateIcon" aria-hidden="true">{kind === "empty" ? "○" : kind === "forbidden" ? "⛔" : kind === "notfound" ? "?" : "!"}</div>}
-      <h2>{title ?? t}</h2>{detail ?? (d ? <p>{d}</p> : null)}{action}
+      {kind === "loading" ? <div className="spinner" aria-hidden="true"/> : <div className="stateIcon" aria-hidden="true">{kind === "empty" ? <Inbox size={20}/> : kind === "forbidden" ? <Ban size={20}/> : kind === "notfound" ? <SearchX size={20}/> : <TriangleAlert size={20}/>}</div>}
+      <H>{title ?? t}</H>{detail ?? (d ? <p>{d}</p> : null)}{action}
     </div>
   );
 }
@@ -49,9 +51,9 @@ export function Pager({ page, size, total, onPage }: { page: number; size: numbe
   return (
     <nav className="pager" aria-label="Phân trang">
       <span>{total === 0 ? "0" : `${page * size + 1}–${Math.min(total, (page + 1) * size)}`} / {num(total)}</span>
-      <button className="btn sm" disabled={page <= 0} onClick={() => onPage(page - 1)}>← Trước</button>
+      <button className="btn sm" disabled={page <= 0} onClick={() => onPage(page - 1)}><ArrowLeft size={14} aria-hidden="true"/> Trước</button>
       <span aria-current="page">Trang {page + 1}/{pages}</span>
-      <button className="btn sm" disabled={page + 1 >= pages} onClick={() => onPage(page + 1)}>Sau →</button>
+      <button className="btn sm" disabled={page + 1 >= pages} onClick={() => onPage(page + 1)}>Sau <ArrowRight size={14} aria-hidden="true"/></button>
     </nav>
   );
 }

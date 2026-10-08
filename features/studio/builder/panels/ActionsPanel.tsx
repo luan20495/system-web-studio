@@ -1,5 +1,6 @@
 "use client";
 /** Actions list + editor. Every action is a typed declaration; roles: bound to a component, child (workflow / chain) or unattached. */
+import { Plus } from "../../../../packages/ui/src/icons";
 import { useState } from "react";
 import type { ActionDef, ActionType } from "@xweb/types";
 import { ACTION_LABEL, ROLE_LABEL, actionOps, describeAction, roleOf } from "../core/actions";
@@ -17,7 +18,7 @@ export function ActionsPanel({ ctx, preset }: { ctx: DefCtx; preset?: { type?: A
   return (
     <div className="bx-panel-body">
       <div className="bx-panel-head"><h2>Hành động</h2>
-        {ctx.canEdit && ctx.readiness.state === "AVAILABLE" && !editing ? <button type="button" className="bx-btn sm" onClick={() => setEditing("new")}>＋ Hành động</button> : null}</div>
+        {ctx.canEdit && ctx.readiness.state === "AVAILABLE" && !editing ? <button type="button" className="bx-btn sm" onClick={() => setEditing("new")}><Plus size={14} aria-hidden="true"/> Hành động</button> : null}</div>
       <p className="hint">Hành động là khai báo có kiểu: chuyển trang, làm mới dữ liệu, gửi biểu mẫu, ghi bản ghi, gọi thao tác đã duyệt, gửi thông báo, chạy workflow. Không có ô nhập mã.</p>
       <Gate state={ctx.readiness}>
         {editing ? <ActionEditor ctx={ctx} initial={editing === "new" ? undefined : editing} preset={editing === "new" ? preset : undefined} onDone={() => setEditing(null)} onCancel={() => setEditing(null)}/> : (

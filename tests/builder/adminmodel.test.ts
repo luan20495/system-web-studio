@@ -103,5 +103,19 @@ test("slugify proposes a valid company code from a Vietnamese name; initials mak
   assert.equal(M.initials({ username: "tom.le", displayName: "Tom Lê" }), "TL");
   assert.equal(M.initials({ username: "app.creator", displayName: null }), "AC");
   assert.equal(M.initials({ username: "pubku0sdsj", displayName: "pubku0sdsj" }), "P");
-  assert.equal(M.initials({ username: "x", displayName: "Nguyễn Văn Đức" }), "NĐ");
+  assert.equal(M.initials({ username: "x", displayName: "Nguyễn Văn Đức" }), "ND");
+  assert.equal(M.initials({ username: "x", displayName: "Bùi Văn Đức (12)" }), "BD", "a trailing counter is not a word");
+  assert.equal(M.initials({ username: "x", displayName: "(12)" }), "X", "no letters in the name: fall back to the username");
+});
+
+test("initials: bracket groups, counters, punctuation, emoji, empty input and any Unicode letters never give '(' or crash", () => {
+  const i = (displayName: string | null, username = "u") => M.initials({ username, displayName });
+  assert.equal(i("App Creator (Demo)"), "AC"); assert.equal(i("Tenant Admin (Demo)"), "TA"); assert.equal(i("(Demo)", "app.creator"), "AC", "only a bracket group: fall back to the username");
+  assert.equal(i("Nguyễn Văn An"), "NA"); assert.equal(i("Đặng Ánh"), "DA"); assert.equal(i("Bùi Văn Đức (12)"), "BD"); assert.equal(i("Lê  Hoàng   Anh"), "LA");
+  assert.equal(i("Tom"), "T"); assert.equal(i("tom.le"), "TL"); assert.equal(i("A [QA] B {x}"), "AB"); assert.equal(i("Mary-Jane O'Neil"), "MO");
+  assert.equal(i(""), "U", "empty display name falls back to the username"); assert.equal(i("   ", "bob"), "B"); assert.equal(i(null, "x"), "X");
+  assert.equal(i("😀"), "U", "emoji-only falls back to the username"); assert.equal(i("😀 🎉", "😀"), "?", "nothing with a letter anywhere → '?'"); assert.equal(i("!!! ---"), "U"); assert.equal(i("(", "("), "?"); assert.equal(i("()", ""), "?");
+  assert.equal(i("Иван Петров"), "ИП", "Cyrillic"); assert.equal(i("山田 太郎"), "山太", "CJK"); assert.equal(i("José Álvarez"), "JA");
+  assert.equal(i("a".repeat(5000) + " " + "b".repeat(5000)), "AB", "a very long name is fine");
+  for (const v of ["", " ", "😀", "(Demo)", "!!!", "a(", ")(", "\u0000", "\uD83D"]) assert.doesNotThrow(() => M.initials({ username: v, displayName: v }), JSON.stringify(v));
 });

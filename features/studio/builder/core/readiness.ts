@@ -36,7 +36,7 @@ export type FeatureKey =
  * knows what unblocks it. Features that DO have a contract endpoint (COMPONENT_METADATA) are probed at runtime instead, see `probeReadiness`.
  */
 export const STATIC_NOT_READY: Partial<Record<FeatureKey, string>> = {
-  DEFINITION_OPERATIONS: "Máy chủ chưa nhận thao tác dữ liệu/hành động (ADD_QUERY, ADD_ACTION…): AppDefinition V2 của C2 chưa được tích hợp.",
+  DEFINITION_OPERATIONS: "Máy chủ chưa nhận thao tác dữ liệu/hành động (ADD_QUERY, ADD_ACTION…): máy chủ chưa hỗ trợ định nghĩa ứng dụng phiên bản 2.",
   DATA_SOURCES: "Chưa kết nối máy chủ để quản lý nguồn dữ liệu (không có nguồn nào được giả lập ở trình duyệt).",
   SCHEMA_DISCOVERY: "Chưa có API khám phá cấu trúc dữ liệu (DataGateway.discoverSchema chưa có đường HTTP).",
   QUERY_PREVIEW: "Xem trước dữ liệu ngay trong trình soạn chưa được nối. Dùng chế độ “Dùng thử” → Truy vấn để chạy truy vấn thật qua máy chủ; dữ liệu mẫu không được tạo ở trình duyệt.",

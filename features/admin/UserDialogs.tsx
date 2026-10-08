@@ -20,9 +20,9 @@ export function LinkBox({ link, onClose }: { link: ActivationLink; onClose: () =
         <h2>{link.purpose === "RESET" ? "Liên kết đặt lại mật khẩu" : "Liên kết kích hoạt"}</h2>
         <p>Gửi liên kết này cho <b>{link.displayName}</b> ({link.username}). Người dùng tự đặt mật khẩu của mình. Liên kết chỉ dùng được một lần, hết hạn lúc {fmtDate(link.expiresAt)} và sẽ không hiển thị lại.</p>
         <input readOnly aria-label="Liên kết" value={url} onFocus={(e) => e.currentTarget.select()}/>
-        <div className="row">
-          <button className="btn primary" onClick={() => void copy()}>{copied ? "Đã sao chép" : "Sao chép liên kết"}</button>
+        <div className="xp-footer">
           <button className="btn" onClick={onClose}>Xong</button>
+          <button className="btn primary" onClick={() => void copy()}>{copied ? "Đã sao chép" : "Sao chép liên kết"}</button>
         </div>
       </div>
     </Modal>
