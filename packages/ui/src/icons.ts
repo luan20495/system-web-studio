@@ -3,6 +3,6 @@
  * Brand logos are NOT here: see ProviderLogo.tsx (Simple Icons, CC0) and docs/parallel/c5/ICON_LICENSES.md.
  */
 export {
-  Activity, Bot, Check, ChevronDown, ChevronUp, CircleAlert, CircleCheck, CircleSlash, Cpu, Download, KeyRound, Lock, Pencil, Plug, Plus, Power, Save, Server, Settings2, ShieldCheck, Sparkles, Trash2, X, Zap,
+  Activity, Bot, Building2, Check, ChevronDown, ChevronUp, CircleAlert, CircleCheck, CircleSlash, Cpu, Download, KeyRound, Lock, Pencil, Plug, Plus, Power, Save, Search, Server, Settings2, ShieldCheck, Sparkles, Trash2, UserRound, X, Zap,
 } from "lucide-react";
 export type { LucideIcon } from "lucide-react";

@@ -24,8 +24,8 @@ export async function run({ cfg, fx, browser, check }) {
   await page.getByTestId("tenant-slug").fill(slug); await page.getByTestId("tenant-name").fill(`E2E PL ${fx.runId}`);
   // the first administrator is picked from the SYSTEM_ADMIN's account search (creating a tenant may name any enabled account)
   await page.getByLabel("Tìm người dùng").fill(fx.users.adminA.username); await page.waitForTimeout(900);
-  const firstOpt = page.locator("#tenant-first-admin option", { hasText: fx.users.adminA.username }).first(); await firstOpt.waitFor({ timeout: 8000 });
-  await page.locator("#tenant-first-admin").selectOption(await firstOpt.getAttribute("value"));
+  const firstOpt = page.locator("#tenant-first-admin [role=option]", { hasText: fx.users.adminA.username }).first(); await firstOpt.waitFor({ timeout: 8000 });
+  await firstOpt.click(); await page.getByTestId("person-chosen").waitFor();
   const created = page.waitForResponse((r) => r.request().method() === "POST" && /\/admin\/tenants$/.test(new URL(r.url()).pathname), { timeout: 15_000 });
   await page.getByTestId("tenant-create").getByRole("button", { name: "Tạo công ty" }).click(); const cr = await created;
   await page.waitForURL(/\/platform\/tenants\/[0-9a-f-]{36}/, { timeout: 10_000 }).catch(() => undefined);

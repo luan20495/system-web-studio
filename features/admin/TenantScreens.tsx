@@ -15,13 +15,15 @@ import type { Member, TenantMemberCandidate, TenantMemberView, TenantView } from
 import { useSession } from "../session";
 import { useLoad } from "../useLoad";
 import { Card, ErrorState, fmtDate, Kpi, Pill, StateView } from "../ui";
+import { Building2, CircleCheck, ModalHeader, ShieldCheck, UserRound } from "@xweb/ui";
+import { PersonPicker } from "./PersonPicker";
 import { DataSourcesPanel } from "../studio/builder/DataSourcesPanel";
 import type { DataManagementCalls } from "../studio/builder/core/dataManagement";
 import { Modal } from "./Modal";
 import { PageHead } from "./PageHead";
 import { A } from "./base";
 import {
-  CANDIDATE_MAX_RESULTS, TENANT_ROLES, TENANT_STATUS_LABEL, WORKSPACE_ROLES, adminErrorText, candidateLabel, candidateQuery, adminScope, canManageWorkspaceMembers, checkTenantForm, memberChangeBlock, personLabel, personOf, tenantActions, tenantMemberRows,
+  CANDIDATE_MAX_RESULTS, TENANT_ROLES, TENANT_STATUS_LABEL, WORKSPACE_ROLES, adminErrorText, candidateLabel, candidateQuery, adminScope, slugify, canManageWorkspaceMembers, checkTenantForm, memberChangeBlock, personLabel, personOf, tenantActions, tenantMemberRows,
   workspaceMemberBlock, workspaceRoleLabel, type Person,
 } from "./adminModel";
 
@@ -44,18 +46,6 @@ function usePeople(extra: Person[] = []) {
   }, [scope.platform, wsIds, q]);
   const people = useMemo(() => { const m = new Map<string, Person>(); [...extra, ...(found.data ?? [])].forEach((p) => m.set(p.id, p)); return m; }, [found.data, extra]);
   return { people, q, setQ, loading: found.loading, platform: scope.platform, nobody: !scope.platform && scope.workspaces.length === 0 };
-}
-
-function PersonSelect({ id, people, q, setQ, value, onChange, platform }: { id: string; people: Person[]; q: string; setQ: (q: string) => void; value: string; onChange: (id: string) => void; platform: boolean }) {
-  return (
-    <div className="stack">
-      <input aria-label="Tìm người dùng" placeholder={platform ? "Tìm theo tên hoặc tên đăng nhập" : "Lọc trong số thành viên các workspace bạn quản trị"} value={q} onChange={(e) => setQ(e.target.value)}/>
-      <select id={id} aria-label="Người dùng" value={value} onChange={(e) => onChange(e.target.value)} size={Math.min(6, Math.max(2, people.length))}>
-        {people.length === 0 ? <option value="" disabled>Không có người phù hợp</option> : null}
-        {people.map((p) => <option key={p.id} value={p.id}>{personLabel(p, p.id)}</option>)}
-      </select>
-    </div>
-  );
 }
 
 // ------------------------------------------------------------------------------------------------------------------ tenant members
@@ -176,9 +166,13 @@ export function TenantDetailPage({ id }: { id: string }) {
 
 function CreateTenantDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (t: TenantView) => void }) {
   const [slug, setSlug] = useState(""); const [name, setName] = useState(""); const [admin, setAdmin] = useState("");
+  // the code follows the name until the person edits it by hand
+  const [slugEdited, setSlugEdited] = useState(false);
   const [touched, setTouched] = useState(false); const [busy, setBusy] = useState(false); const [error, setError] = useState<string | null>(null);
-  const { people, q, setQ } = usePeople();
+  const { people, q, setQ, loading } = usePeople();
   const problems = checkTenantForm({ slug, name });
+  const slugOk = !problems.slug && slug.trim() !== "";
+  function onName(v: string) { setName(v); if (!slugEdited) setSlug(slugify(v)); }
   async function submit(e: FormEvent) {
     e.preventDefault(); setTouched(true); setError(null);
     if (problems.slug || problems.name) return;
@@ -187,17 +181,32 @@ function CreateTenantDialog({ onClose, onCreated }: { onClose: () => void; onCre
   }
   return (
     <Modal label="Tạo công ty" onClose={onClose}>
-      <form className="modalBody" noValidate onSubmit={(e) => void submit(e)} data-testid="tenant-create">
-        <h2>Tạo công ty</h2>
-        <label className="field"><span>Tên công ty</span><input data-testid="tenant-name" value={name} maxLength={160} aria-invalid={touched && !!problems.name} onChange={(e) => setName(e.target.value)}/></label>
-        {touched && problems.name ? <p className="formError" role="alert">{problems.name}</p> : null}
-        <label className="field"><span>Mã công ty</span><input data-testid="tenant-slug" value={slug} autoComplete="off" aria-invalid={touched && !!problems.slug} onChange={(e) => setSlug(e.target.value)}/></label>
-        {touched && problems.slug ? <p className="formError" role="alert">{problems.slug}</p> : null}
-        <div className="field"><span>Quản trị viên đầu tiên (không bắt buộc)</span>
-          <PersonSelect id="tenant-first-admin" people={[...people.values()]} q={q} setQ={setQ} value={admin} onChange={setAdmin} platform/>
-          <small className="hint">Nếu không chọn, công ty được tạo trống; hãy thêm quản trị viên ở trang công ty ngay sau đó.</small></div>
+      <form className="modalBody xp-tenantForm" noValidate onSubmit={(e) => void submit(e)} data-testid="tenant-create">
+        <ModalHeader icon={<Building2 size={22}/>} title="Tạo công ty" subtitle="Mỗi công ty là một không gian riêng: người dùng, workspace và dữ liệu tách biệt với công ty khác."/>
+
+        <section className="xp-section" aria-label="Thông tin công ty">
+          <h3><Building2 size={14} aria-hidden="true"/> Thông tin công ty</h3>
+          <label className="field"><span>Tên công ty</span>
+            <input data-testid="tenant-name" value={name} maxLength={160} placeholder="Ví dụ: Công ty Cổ phần Ánh Dương" autoComplete="off" aria-invalid={touched && !!problems.name} onChange={(e) => onName(e.target.value)}/></label>
+          {touched && problems.name ? <p className="formError" role="alert">{problems.name}</p> : null}
+          <label className="field"><span>Mã công ty</span>
+            <span className={`xp-slugInput${touched && problems.slug ? " bad" : ""}`}>
+              <input data-testid="tenant-slug" value={slug} autoComplete="off" spellCheck={false} placeholder="anh-duong" aria-invalid={touched && !!problems.slug} onChange={(e) => { setSlugEdited(true); setSlug(e.target.value); }}/>
+              {slugOk ? <CircleCheck size={16} className="xp-ok" aria-label="Mã hợp lệ"/> : null}
+            </span>
+            <small>{slugEdited ? "Chữ thường, số và dấu “-”, 2–120 ký tự." : "Tự tạo từ tên công ty; bạn có thể sửa."}</small></label>
+          {touched && problems.slug ? <p className="formError" role="alert">{problems.slug}</p> : null}
+        </section>
+
+        <section className="xp-section" aria-label="Quản trị viên đầu tiên">
+          <h3><UserRound size={14} aria-hidden="true"/> Quản trị viên đầu tiên <span className="xp-opt-tag">Không bắt buộc</span></h3>
+          <PersonPicker id="tenant-first-admin" label="Tìm người dùng" people={[...people.values()]} q={q} setQ={setQ} value={admin} onChange={setAdmin} loading={loading}
+            placeholder="Tìm theo tên hoặc tên đăng nhập" emptyText={q ? "Không có người phù hợp" : "Chưa có tài khoản nào để chọn"}/>
+          <p className="xp-note" role="note"><ShieldCheck size={16} aria-hidden="true"/><span>Bỏ trống thì công ty được tạo trống; bạn thêm hoặc tạo quản trị viên ở trang công ty ngay sau đó.</span></p>
+        </section>
+
         {error ? <p className="formError" role="alert">{error}</p> : null}
-        <div className="row"><button className="btn primary" disabled={busy}>{busy ? "Đang tạo…" : "Tạo công ty"}</button><button type="button" className="btn" onClick={onClose}>Hủy</button></div>
+        <div className="xp-footer"><button type="button" className="btn" onClick={onClose}>Hủy</button><button className="btn primary" disabled={busy}>{busy ? "Đang tạo…" : "Tạo công ty"}</button></div>
       </form>
     </Modal>
   );

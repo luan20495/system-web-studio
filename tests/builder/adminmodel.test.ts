@@ -92,3 +92,16 @@ test("workspace member panel opens only on MEMBER_MANAGE of THAT workspace: a SY
   // a role NAME grants nothing
   assert.equal(M.canManageWorkspaceMembers(me({ workspaces: [{ ...ws("w3", []), role: "WORKSPACE_ADMIN" }] }), "w3"), false);
 });
+
+test("slugify proposes a valid company code from a Vietnamese name; initials make an avatar", () => {
+  assert.equal(M.slugify("Công ty Cổ phần Ánh Dương"), "cong-ty-co-phan-anh-duong");
+  assert.equal(M.slugify("  Đại học  Bách Khoa!! "), "dai-hoc-bach-khoa");
+  assert.equal(M.slugify("ACME_Corp 2026"), "acme-corp-2026");
+  assert.equal(M.slugify("***"), "");
+  assert.equal(M.slugify("a".repeat(200)).length, 120);
+  for (const n of ["Công ty Cổ phần Ánh Dương", "ACME_Corp 2026", "Đại học Bách Khoa"]) assert.deepEqual(M.checkTenantForm({ slug: M.slugify(n), name: n }), {});
+  assert.equal(M.initials({ username: "tom.le", displayName: "Tom Lê" }), "TL");
+  assert.equal(M.initials({ username: "app.creator", displayName: null }), "AC");
+  assert.equal(M.initials({ username: "pubku0sdsj", displayName: "pubku0sdsj" }), "P");
+  assert.equal(M.initials({ username: "x", displayName: "Nguyễn Văn Đức" }), "NĐ");
+});
