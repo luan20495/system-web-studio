@@ -78,3 +78,17 @@ rows.push(["M-114","P2","TOOLING","tooling","cross-browser","Only Chrome 155 (he
 rows.push(["M-115","P2","TOOLING","tooling","portals.spec","portals.spec hard-coded ports 3001/3002 (would read the live stack by accident)",["S4-030"],"tests/browser/portals.spec.mjs:8","S4","none","N","PORTAL_PLATFORM_PORT / PORTAL_ADMIN_PORT overrides","spec 33/33 x3 on private builds","FIXED"]);
 status("M-115", "FIXED (merged b0aff1d, spec 33/33 x3 on private ports)");
 rows.push(["M-116","P3","TOOLING","tooling","unit tests","Contract conformance test is silently skipped unless XWEB_CONFORMANCE_DIR is set",["S4-032"],"tests/builder/conformance.test.ts:27,31,36","S4 (C0 file for the runner)","C0 owns scripts/test-unit.mjs","N","loud pending line","unit summary",""]);
+
+// ---- phase-2 integration statuses (merged into agent/c5-web; all browser evidence is HARNESS, NOT REAL BACKEND)
+status("M-001", "FIXED (HARNESS, merged e3f74d5; no 'Từ chối' button: the server has no reject endpoint for code changes)");
+status("M-002", "FIXED (HARNESS, merged e3f74d5)");
+status("M-003", "FIXED (HARNESS + unit golden hash: published output byte-identical, merged e3f74d5)");
+status("M-004", "FIXED (HARNESS, merged e3f74d5; streaming not driven)");
+status("M-005", "PROPOSAL APPROVED by C5-L: single guided form + 'Nâng cao' wizard, auto-created hidden slot, v1 = direct columns only (custom columns wait for the C3 mapping answer); implementation by S1 pending");
+status("M-006", "PARTIAL: ErrorBoundary + error.tsx/global-error.tsx + per-route wrap merged (da6c70f); Builder inline boundary (S1) pending");
+status("M-010", "FIXED shared (HARNESS, merged da6c70f); callers whose submit lacks aria-busy must pass dismissible={!busy}: S1/S2 in wave 2");
+status("M-013", "FIXED (HARNESS, merged da6c70f; 360/800/900px)");
+status("M-014", "FIXED (HARNESS, merged da6c70f; 320/360/390)");
+status("M-016", "PARTIAL: shared Toast + confirm/prompt components merged (da6c70f); call-site migration pending (S1/S2 wave 2)");
+status("M-022", "FIXED (HARNESS, merged da6c70f)");
+status("M-012", "PARTIAL: shared CSS merged (da6c70f, HARNESS); leftover for S1/S2: DataSourcesPanel delete confirm uses 'button primary' (should be danger)");

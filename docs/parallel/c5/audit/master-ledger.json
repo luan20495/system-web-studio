@@ -15,7 +15,8 @@
   "N (harness)",
   "Replace prompt with a real dialog (see M-017): Cancel = no request; explicit 'Duyệt' / 'Từ chối' buttons",
   "unit: cancel path sends nothing; harness spec: Cancel leaves the change pending",
-  ""
+  "",
+  "FIXED (HARNESS, merged e3f74d5; no 'Từ chối' button: the server has no reject endpoint for code changes)"
  ],
  [
   "M-002",
@@ -33,7 +34,8 @@
   "N (harness)",
   "Dirty state kept per section or an unsaved-changes prompt; keep the form mounted across selection; return focus to the saved control",
   "builder.spec: type, select another, come back = value kept or prompt shown; focus after save",
-  ""
+  "",
+  "FIXED (HARNESS, merged e3f74d5)"
  ],
  [
   "M-003",
@@ -52,7 +54,8 @@
   "N (harness)",
   "srcDoc independent of selection; postMessage {studio:select} (script exists) to toggle the selection class",
   "builder.spec: scrollY + iframe marker survive a selection",
-  "S4-011 measured: preview reload after a selection 45 ms at 50 sections, 104 ms at 404, 208 ms at 1004 (HARNESS)"
+  "S4-011 measured: preview reload after a selection 45 ms at 50 sections, 104 ms at 404, 208 ms at 1004 (HARNESS)",
+  "FIXED (HARNESS + unit golden hash: published output byte-identical, merged e3f74d5)"
  ],
  [
   "M-004",
@@ -72,7 +75,8 @@
   "N (harness; streaming not driven)",
   "Scroll anchor on new message; role=log with polite announcements per message (not per chunk); keep typing status separate",
   "harness: scrollTop follows; axe + live-region check",
-  "S1-003 was P2; merged under the P1 queue per C5-L instruction (WCAG 4.1.3 + core flow)"
+  "S1-003 was P2; merged under the P1 queue per C5-L instruction (WCAG 4.1.3 + core flow)",
+  "FIXED (HARNESS, merged e3f74d5; streaming not driven)"
  ],
  [
   "M-005",
@@ -91,7 +95,8 @@
   "N (harness)",
   "Guided path with plain-language names, one entry point, hide advanced steps; fix the contradictory message",
   "builder/datasources/publicdata specs updated; usability walkthrough in the evidence",
-  ""
+  "",
+  "PROPOSAL APPROVED by C5-L: single guided form + 'Nâng cao' wizard, auto-created hidden slot, v1 = direct columns only (custom columns wait for the C3 mapping answer); implementation by S1 pending"
  ],
  [
   "M-006",
@@ -111,7 +116,8 @@
   "N",
   "Shared ErrorBoundary (packages/ui) + error.tsx/global-error.tsx per app + boundary around the route render and around BuilderWorkspace; request id shown; 'Thử lại'",
   "unit (SSR fallback) + harness page that throws on click: fallback, focus, retry",
-  "P1 justified only because M-076 shows real throw paths (R2 rated it P3)"
+  "P1 justified only because M-076 shows real throw paths (R2 rated it P3)",
+  "PARTIAL: ErrorBoundary + error.tsx/global-error.tsx + per-route wrap merged (da6c70f); Builder inline boundary (S1) pending"
  ],
  [
   "M-007",
@@ -187,7 +193,8 @@
   "N",
   "Modal 'dismissible' prop: not dismissible while busy; backdrop click needs mousedown+mouseup on the backdrop; Esc closes only the top modal",
   "harness: Esc during in-flight does nothing; stacked Esc order",
-  "C-01: split (S1-011 -> M-021, S3-035 -> M-023); only S2-004 remains here"
+  "C-01: split (S1-011 -> M-021, S3-035 -> M-023); only S2-004 remains here",
+  "FIXED shared (HARNESS, merged da6c70f); callers whose submit lacks aria-busy must pass dismissible={!busy}: S1/S2 in wave 2"
  ],
  [
   "M-011",
@@ -226,7 +233,8 @@
   "N (harness)",
   "Move panel styles to a shared scoped stylesheet loaded by all portals (or restyle with factory classes); give the panel a real Admin variant instead of the fake doc",
   "harness render in Admin context; axe; screenshot",
-  "O-01: panel markup is S1's file · S4-004: TenantScreens.tsx:20 pulls 24 KB of features/studio into Platform and Admin"
+  "O-01: panel markup is S1's file · S4-004: TenantScreens.tsx:20 pulls 24 KB of features/studio into Platform and Admin",
+  "PARTIAL: shared CSS merged (da6c70f, HARNESS); leftover for S1/S2: DataSourcesPanel delete confirm uses 'button primary' (should be danger)"
  ],
  [
   "M-013",
@@ -245,7 +253,8 @@
   "N (harness)",
   "visibility:hidden/inert when closed, focus move + trap + restore when open",
   "harness: Tab skips closed drawer; open/close focus",
-  ""
+  "",
+  "FIXED (HARNESS, merged da6c70f; 360/800/900px)"
  ],
  [
   "M-014",
@@ -263,7 +272,8 @@
   "N (harness)",
   "minmax(min(380px,100%),1fr)",
   "responsive matrix at 360/390; no horizontal scroll",
-  "lowered P1->P2 for consistency with M-026/M-027 (same WCAG AA rule, narrow-viewport only)"
+  "lowered P1->P2 for consistency with M-026/M-027 (same WCAG AA rule, narrow-viewport only)",
+  "FIXED (HARNESS, merged da6c70f; 320/360/390)"
  ],
  [
   "M-015",
@@ -301,7 +311,8 @@
   "N",
   "Shared Toast: role=status/alert by kind, auto-dismiss (errors persist), dismiss button, above overlays",
   "unit + harness live-region test; axe",
-  "S1 rated P2, S3 rated P1: WCAG 4.1.3 (AA) on the main feedback channel -> P1"
+  "S1 rated P2, S3 rated P1: WCAG 4.1.3 (AA) on the main feedback channel -> P1",
+  "PARTIAL: shared Toast + confirm/prompt components merged (da6c70f); call-site migration pending (S1/S2 wave 2)"
  ],
  [
   "M-017",
@@ -422,7 +433,8 @@
   "N (harness)",
   "exclude tabindex=-1 and .srOnly from FOCUSABLE and initial focus",
   "harness",
-  ""
+  "",
+  "FIXED (HARNESS, merged da6c70f)"
  ],
  [
   "M-023",
