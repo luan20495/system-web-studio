@@ -6,15 +6,15 @@
 import { createRequire } from "node:module";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { harnessOrigin, launch } from "./lib/spec.mjs";
 const require = createRequire(new URL("../../package.json", import.meta.url).pathname);
-const { chromium } = require("playwright-core");
 const AXE = require.resolve("axe-core/axe.min.js");
-const BASE = (process.env.HARNESS_URL ?? "http://127.0.0.1:4000/index.html").replace(/[^/]*$/, "");
+const BASE = harnessOrigin() + "/";
 const ONLY = (process.env.ONLY ?? "modal,nav,grid,toast,boundary,ds").split(",");
 const SHOTS = process.env.SHOT_DIR; if (SHOTS) mkdirSync(SHOTS, { recursive: true });
 const results = [];
 const check = (name, ok, detail = "") => { results.push({ name, ok: !!ok, detail }); console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  — " + String(detail).replace(/\s+/g, " ").slice(0, 200) : ""}`); };
-const browser = await chromium.launch({ executablePath: process.env.CHROME ?? "/opt/pw-browsers/chromium-1194/chrome-linux/chrome", headless: true });
+const browser = await launch({ headless: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function open(page, w = 1000, h = 800) {
   const p = await browser.newPage({ viewport: { width: w, height: h } }); p.setDefaultTimeout(3000);
