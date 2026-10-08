@@ -1,5 +1,5 @@
 "use client";
-import { A } from "./base";
+import { useA } from "./console/context";
 import Link from "next/link";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { api } from "@/lib/http-api";
@@ -32,6 +32,7 @@ function Head({ title, sub, actions }: { title: string; sub?: string; actions?: 
 // ------------------------------------------------------------------ container with tabs
 const TABS: [string, string][] = [["providers", "Nhà cung cấp"], ["models", "Mô hình"], ["limits", "Hạn mức"], ["usage", "Sử dụng"]];
 export function AiAdmin({ tab, usage, pricing }: { tab?: string; usage: ReactNode; pricing: ReactNode }) {
+  const A = useA();
   const active = TABS.some(([k]) => k === tab) ? tab! : "providers";
   return (<>
     <Head title="AI" sub="Cấu hình AI cho cả công ty: nhà cung cấp, mô hình được dùng và hạn mức. Nhân viên không bao giờ thấy khóa kết nối."/>
@@ -188,6 +189,7 @@ function ModelPicker({ provider, onClose, onSaved }: { provider: AiProviderInfo;
 
 // ------------------------------------------------------------------ models
 function ModelsTab({ pricing }: { pricing: ReactNode }) {
+  const A = useA();
   const { data, error, loading, reload } = useLoad(() => api.admin.aiProviders(), []);
   const limits = useLoad(() => api.admin.aiLimits(), []);
   const [msg, setMsg] = useState<string | null>(null); const [priceFor, setPriceFor] = useState<string | null>(null);

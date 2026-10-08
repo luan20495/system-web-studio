@@ -105,7 +105,7 @@ export function CreateAccountDialog({ api, plan, tenants, workspacesOf, onClose,
         {extraSection}
 
         <fieldset className="stack" aria-label="Kích hoạt"><legend className="bx-h4">4 · Kích hoạt</legend>
-          <p className="hint">Sau khi tạo, bạn nhận một liên kết kích hoạt dùng một lần (hết hạn sau 24 giờ), chỉ hiển thị một lần. Người dùng tự đặt mật khẩu; bạn không bao giờ biết mật khẩu.</p>
+          <p className="hint">Sau khi tạo, bạn nhận một liên kết kích hoạt dùng một lần (hết hạn sau 24 giờ), chỉ hiển thị một lần. Người dùng tự đặt mật khẩu khi kích hoạt (tối thiểu 8 ký tự); bạn không bao giờ biết mật khẩu.</p>
         </fieldset>
 
         {problem ? <p className={problem.kind === "not-ready" ? "notice" : "formError"} role="alert" data-testid="prov-problem" data-kind={problem.kind}>{problem.text}</p> : null}

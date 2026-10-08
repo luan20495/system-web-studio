@@ -22,7 +22,7 @@ import { DataSourcesPanel } from "../studio/builder/DataSourcesPanel";
 import type { DataManagementCalls } from "../studio/builder/core/dataManagement";
 import { Modal } from "./Modal";
 import { PageHead } from "./PageHead";
-import { A } from "./base";
+import { useA } from "./console/context";
 import {
   CANDIDATE_MAX_RESULTS, TENANT_ROLES, TENANT_STATUS_LABEL, WORKSPACE_ROLES, adminErrorText, candidateLabel, candidateQuery, adminScope, slugify, canManageWorkspaceMembers, checkTenantForm, memberChangeBlock, personLabel, personOf, tenantActions, tenantMemberRows,
   workspaceMemberBlock, workspaceRoleLabel, type Person,
@@ -145,6 +145,7 @@ function TenantBody({ id, onChanged }: { id: string; onChanged?: () => void }) {
 
 // ------------------------------------------------------------------------------------------------------------------------- platform
 export function TenantsPage() {
+  const A = useA();
   const router = useRouter();
   const list = useLoad(() => api.admin.tenants(), []);
   const [adding, setAdding] = useState(false);
@@ -166,6 +167,7 @@ export function TenantsPage() {
 }
 
 export function TenantDetailPage({ id }: { id: string }) {
+  const A = useA();
   return (<>
     <p><Link className="btn sm ghost xp-btnIcon" href={A("/tenants")}><ArrowLeft size={14} aria-hidden="true"/> Danh sách công ty</Link></p>
     <TenantBody id={id}/>
@@ -188,7 +190,7 @@ function CreateTenantDialog({ onClose, onCreated }: { onClose: () => void; onCre
     try { onCreated(await api.admin.createTenant({ slug: slug.trim().toLowerCase(), name: name.trim(), ...(admin ? { firstAdminUserId: admin } : {}) })); } catch (err) { setError(say(err, "Chưa tạo được công ty.")); } finally { setBusy(false); }
   }
   return (
-    <Modal label="Tạo công ty" onClose={onClose}>
+    <Modal label="Tạo công ty" onClose={onClose} dismissible={!busy}>
       <form className="modalBody xp-tenantForm" noValidate onSubmit={(e) => void submit(e)} data-testid="tenant-create">
         <ModalHeader icon={<Building2 size={22}/>} title="Tạo công ty" subtitle="Mỗi công ty là một không gian riêng: người dùng, workspace và dữ liệu tách biệt với công ty khác."/>
 
@@ -238,6 +240,7 @@ export function CompanyPage() {
 
 /** the landing page of someone who is not a SYSTEM_ADMIN: only what the server lists for them */
 export function ScopedHome() {
+  const A = useA();
   const { me } = useSession();
   const scope = useMemo(() => adminScope(me), [me]);
   return (<>
