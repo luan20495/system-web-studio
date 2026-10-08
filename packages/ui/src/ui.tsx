@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ApiError } from "@xweb/api-client";
+import { ApiError, errorText } from "@xweb/api-client";
 import { ArrowLeft, ArrowRight, Ban, Inbox, SearchX, TriangleAlert } from "./icons";
 import { ScrollRegion } from "./ScrollRegion";
 
@@ -18,7 +18,9 @@ export const num = (n?: number | null) => (n ?? 0).toLocaleString("vi-VN");
 export const usd = (n?: number | null) => (n == null ? "—" : n === 0 ? "$0" : `$${n < 0.01 ? n.toPrecision(2) : n.toLocaleString("en-US", { maximumFractionDigits: 4 })}`);
 /** Token count; null = not reported. */
 export const tok = (n?: number | null) => (n == null ? "—" : n.toLocaleString("vi-VN"));
-export const errText = (e: unknown, fallback: string) => (e instanceof ApiError ? `${e.message}${e.requestId ? ` (mã ${e.requestId})` : ""}` : e instanceof Error ? e.message : fallback);
+/** the one error mapper (packages/api-client/src/errorText.ts): Vietnamese by error code, never an Error.message of a non-ApiError. `errText` is the historical name. */
+export const errText = (e: unknown, fallback?: string) => errorText(e, fallback);
+export { errorText, errorParts, type ErrorParts, type ErrorKind } from "@xweb/api-client";
 
 export type StateKind = "loading" | "empty" | "forbidden" | "notfound" | "error" | "network" | "conflict" | "expired" | "ai-unavailable" | "publish-failed";
 const STATE_TEXT: Record<StateKind, [string, string]> = {
