@@ -15,6 +15,7 @@ import "../../packages/ui/src/styles/responsive.css";
 import "../../packages/ui/src/styles/http.css";
 import "../../packages/ui/src/styles/factory.css";
 import "../../packages/ui/src/styles/builder.css";
+import "../../packages/ui/src/styles/ui.css";   // the real layouts load it last (apps/*/app/layout.tsx); a harness without it is not the product
 
 declare global { interface Window { __pops: { summary: string; ops: DefinitionOperation[] }[]; __doc: () => AppDefinitionV2 } }
 window.__pops = [];

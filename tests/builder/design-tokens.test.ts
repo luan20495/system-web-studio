@@ -107,3 +107,14 @@ test("M-117: a link inside running text carries a non-colour cue (underline) thr
   assert.equal(tokens.get("--ui-link-line"), "underline");
   assert.match(css["factory.css"], /text-decoration:var\(--ui-link-line\)/);
 });
+
+test("harness fidelity: a browser harness that loads factory.css also loads ui.css after it, as every real layout does (a harness without it tests a stylesheet set the product never ships)", () => {
+  const dir = join(root, "tests/browser");
+  const list = (d: string): string[] => readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? list(join(d, e.name)) : /\.tsx?$/.test(e.name) ? [join(d, e.name)] : []);
+  for (const f of list(dir)) {
+    const t = readFileSync(f, "utf8"); if (!/styles\/factory\.css/.test(t) && !/\.\/admin-css/.test(t)) continue;
+    if (/\.\/admin-css/.test(t)) continue;                                   // admin-css.ts is itself checked against the real layouts (shared-ui.test.tsx)
+    assert.ok(/styles\/ui\.css/.test(t), `${f.replace(root + "/", "")} loads factory.css but not ui.css`);
+    assert.ok(t.indexOf("styles/ui.css") > t.indexOf("styles/factory.css"), `${f.replace(root + "/", "")}: ui.css must come after factory.css`);
+  }
+});
