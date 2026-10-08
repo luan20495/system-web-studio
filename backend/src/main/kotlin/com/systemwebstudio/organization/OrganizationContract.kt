@@ -72,14 +72,14 @@ data class EmployeeDto(
 )
 data class EmployeePageDto(val items: List<EmployeeDto>, val total: Long, val page: Int, val size: Int)
 
-data class EmployeeMembershipInput(val organizationUnitId: UUID? = null, val relationType: String? = null, val primary: Boolean? = null)
-/** a position in the create request is scoped to one of the memberships of the SAME request, named by its unit */
-data class EmployeePositionInput(val organizationUnitId: UUID? = null, val positionId: UUID? = null, val gradeId: UUID? = null, val primary: Boolean? = null)
+/** a membership of the create request; the positions are held WITHIN it (nested: a position is never scoped by a free unit id) */
+data class EmployeeMembershipInput(val organizationUnitId: UUID? = null, val relationType: String? = null, val primary: Boolean? = null, val positions: List<EmployeePositionInput>? = null)
+data class EmployeePositionInput(val positionId: UUID? = null, val gradeId: UUID? = null, val primary: Boolean? = null)
 
-/** Create = a NEW account provisioned by the canonical tenant provisioning (activation link returned, no password) plus optional memberships and scoped positions, in one transaction. */
+/** Create = a NEW account provisioned by the canonical tenant provisioning (activation link returned, no password) plus optional memberships, each with its positions, in one transaction. */
 data class EmployeeCreateRequest(
     val username: String? = null, val displayName: String? = null, val email: String? = null, val tenantRole: String? = null, val workspaceId: UUID? = null, val workspaceRole: String? = null,
-    val organizationMemberships: List<EmployeeMembershipInput>? = null, val positions: List<EmployeePositionInput>? = null
+    val organizationMemberships: List<EmployeeMembershipInput>? = null
 )
 data class EmployeeCreatedDto(val employee: EmployeeDto, val activation: com.systemwebstudio.identity.ActivationLink?)
 

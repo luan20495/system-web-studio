@@ -97,23 +97,25 @@ class EmployeeDirectoryService(
     @Transactional
     fun create(tenantId: UUID, actorId: UUID, r: EmployeeCreateRequest): EmployeeCreatedDto {
         ready()
-        val memberships = r.organizationMemberships.orEmpty(); val positions = r.positions.orEmpty()
-        if (memberships.size > MAX_MEMBERSHIPS || positions.size > MAX_POSITIONS) throw OrgRules.bad("too many memberships or positions")
+        val memberships = r.organizationMemberships.orEmpty()
+        if (memberships.size > MAX_MEMBERSHIPS) throw OrgRules.bad("too many memberships")
         val unitIds = memberships.map { it.organizationUnitId ?: throw OrgRules.bad("organizationUnitId is required") }
         if (unitIds.size != unitIds.distinct().size) throw OrgRules.bad("a unit may appear once in organizationMemberships")
-        if (memberships.count { it.primary == true } > 1 || positions.count { it.primary == true } > 1) throw OrgRules.bad("at most one primary membership and one primary position")
-        if (positions.any { it.organizationUnitId == null || it.organizationUnitId !in unitIds }) throw OrgRules.bad("every position must name (organizationUnitId) a unit of organizationMemberships: a position is held within a membership")
-        if (positions.map { it.organizationUnitId to it.positionId }.let { it.size != it.distinct().size }) throw OrgRules.bad("a position may appear once per unit")
+        if (memberships.count { it.primary == true } > 1) throw OrgRules.bad("at most one primary membership")
+        val positions = memberships.map { it.positions.orEmpty() }          // positions are NESTED under the membership they are held within: there is no unit-as-scope input
+        if (positions.sumOf { it.size } > MAX_POSITIONS) throw OrgRules.bad("too many positions")
+        if (positions.any { l -> l.count { it.primary == true } > 1 || l.map { it.positionId }.let { ids -> ids.size != ids.distinct().size } }) throw OrgRules.bad("a position may appear once per membership, and at most one position may be primary")
+        if (positions.sumOf { l -> l.count { it.primary == true } } > 1) throw OrgRules.bad("at most one primary position")
         // validate everything that does not need the account FIRST (cheap, and the order of the errors is the order of the contract)
         val units = memberships.map { m -> activeUnit(tenantId, m.organizationUnitId!!).also { relationOf(m.relationType) } }
-        val assignments = positions.map { p -> Triple(activePosition(tenantId, p.positionId ?: throw OrgRules.bad("positionId is required")), p.gradeId?.let { activeGrade(tenantId, it) }, p.organizationUnitId!!) }
+        val assignments = positions.map { l -> l.map { p -> Triple(activePosition(tenantId, p.positionId ?: throw OrgRules.bad("positionId is required")), p.gradeId?.let { activeGrade(tenantId, it) }, p.primary == true) } }
         val activation = accounts.createTenantUser(actorId, tenantId, r.username?.trim().orEmpty(), r.displayName?.trim().orEmpty(), r.email, r.tenantRole ?: "MEMBER", r.workspaceId, r.workspaceRole)
         val userId = activation.userId
         val primaryUnit = memberships.indexOfFirst { it.primary == true }.takeIf { it >= 0 } ?: 0
-        val membershipByUnit = HashMap<UUID, OrganizationMembershipDto>()
-        memberships.forEachIndexed { i, m -> insertMembership(tenantId, userId, units[i].id, relationOf(m.relationType), i == primaryUnit).also { membershipByUnit[units[i].id] = it } }
-        val primaryPos = positions.indexOfFirst { it.primary == true }.takeIf { it >= 0 } ?: 0
-        assignments.forEachIndexed { i, (pos, grade, unitId) -> insertAssignment(tenantId, userId, membershipByUnit.getValue(unitId), pos.id, grade?.id, i == primaryPos) }
+        val madeMemberships = memberships.mapIndexed { i, m -> insertMembership(tenantId, userId, units[i].id, relationOf(m.relationType), i == primaryUnit) }
+        val flat = assignments.flatMapIndexed { i, l -> l.map { i to it } }
+        val primaryPos = flat.indexOfFirst { it.second.third }.takeIf { it >= 0 } ?: 0
+        flat.forEachIndexed { k, (i, t) -> insertAssignment(tenantId, userId, madeMemberships[i], t.first.id, t.second?.id, k == primaryPos) }
         val created = get(tenantId, userId)
         audit.record("EMPLOYEE_CREATED", "EMPLOYEE", userId, actorId = actorId, newValue = snapshot(created, true))
         created.organizationMemberships.forEach { audit.record("EMPLOYEE_ORG_ASSIGNED", "EMPLOYEE", userId, actorId = actorId, newValue = membershipAudit(it)) }
@@ -150,7 +152,8 @@ class EmployeeDirectoryService(
         val now = Instant.now()
         val inserted = try { repos.memberships.insert(OrganizationMembershipDto(UUID.randomUUID(), tenantId, userId, unitId, relation, false, true, 0, now, now)) }
         catch (e: DuplicateOrganizationKey) { throw ApiException.conflict("ORG_MEMBERSHIP_EXISTS", "The employee already belongs to this unit") }
-        return if (primary) repos.memberships.setPrimary(tenantId, userId, inserted.id, inserted.version) ?: inserted else inserted
+        catch (e: ReferencedRowInactive) { throw ApiException.conflict("ORG_UNIT_ARCHIVED", "The organization unit is archived") }       // archived concurrently (store-checked)
+        return if (primary) makePrimaryMembership(tenantId, userId, inserted) else inserted
     }
 
     @Transactional
@@ -192,10 +195,12 @@ class EmployeeDirectoryService(
         val before = repos.memberships.find(tenantId, userId, membershipId)?.takeIf { it.active } ?: throw noMembership()
         val held = repos.employeePositions.list(tenantId, userId, false).count { it.membershipId == membershipId }
         if (held > 0) throw ApiException.conflict("EMPLOYEE_ORG_HAS_POSITIONS", "End the positions held in this organization unit first", mapOf("activePositionCount" to held))
-        val ended = repos.memberships.end(tenantId, userId, membershipId, expected) ?: throw OrgRules.conflictOrMissing(repos.memberships.find(tenantId, userId, membershipId)?.version, noMembership())
+        val ended = try { repos.memberships.end(tenantId, userId, membershipId, expected) }
+            catch (e: MembershipHasPositions) { throw ApiException.conflict("EMPLOYEE_ORG_HAS_POSITIONS", "End the positions held in this organization unit first", mapOf("activePositionCount" to e.activePositions)) }     // store-checked atomically
+            ?: throw OrgRules.conflictOrMissing(repos.memberships.find(tenantId, userId, membershipId)?.version, noMembership())
         var promoted: UUID? = null
         if (before.primary) repos.memberships.list(tenantId, userId, false).minWithOrNull(compareBy({ it.createdAt }, { it.id }))?.let {
-            repos.memberships.setPrimary(tenantId, userId, it.id, it.version); promoted = it.id
+            makePrimaryMembership(tenantId, userId, it); promoted = it.id
         }
         audit.record("EMPLOYEE_ORG_REMOVED", "EMPLOYEE", userId, actorId = actorId, oldValue = membershipAudit(before), newValue = membershipAudit(ended) + mapOf("promotedMembershipId" to promoted))
         return ended
@@ -212,13 +217,21 @@ class EmployeeDirectoryService(
         val now = Instant.now()
         val inserted = try { repos.employeePositions.insert(EmployeePositionDto(UUID.randomUUID(), tenantId, userId, membership.id, membership.organizationUnitId, positionId, gradeId, false, true, 0, now, now)) }
         catch (e: DuplicateOrganizationKey) { throw ApiException.conflict("POSITION_ASSIGNMENT_EXISTS", "The employee already holds this position in this organization unit") }
-        return if (primary) repos.employeePositions.setPrimary(tenantId, userId, inserted.id, inserted.version) ?: inserted else inserted
+        catch (e: ReferencedRowInactive) { throw ApiException.conflict("ORG_MEMBERSHIP_INACTIVE", "The organization membership has ended") }      // ended concurrently (store-checked)
+        return if (primary) makePrimaryPosition(tenantId, userId, inserted) else inserted
     }
+
+    /** a lost race on the primary flag (stale version or the partial unique index) is a 409, never a silent "no primary" */
+    private fun lostRace(): ApiException = ApiException.conflict("VERSION_CONFLICT", "The record changed since it was read; reload and retry.")
+    private fun makePrimaryMembership(tenantId: UUID, userId: UUID, m: OrganizationMembershipDto): OrganizationMembershipDto =
+        try { repos.memberships.setPrimary(tenantId, userId, m.id, m.version) ?: throw lostRace() } catch (e: DuplicateOrganizationKey) { throw lostRace() }
+    private fun makePrimaryPosition(tenantId: UUID, userId: UUID, a: EmployeePositionDto): EmployeePositionDto =
+        try { repos.employeePositions.setPrimary(tenantId, userId, a.id, a.version) ?: throw lostRace() } catch (e: DuplicateOrganizationKey) { throw lostRace() }
 
     /** after the primary position ended: the oldest remaining active one becomes primary (a person with positions has one primary) */
     private fun promotePosition(tenantId: UUID, userId: UUID) {
         val left = repos.employeePositions.list(tenantId, userId, false)
-        if (left.isNotEmpty() && left.none { it.primary }) left.minWith(compareBy({ it.createdAt }, { it.id })).let { repos.employeePositions.setPrimary(tenantId, userId, it.id, it.version) }
+        if (left.isNotEmpty() && left.none { it.primary }) left.minWith(compareBy({ it.createdAt }, { it.id })).let { makePrimaryPosition(tenantId, userId, it) }
     }
 
     @Transactional

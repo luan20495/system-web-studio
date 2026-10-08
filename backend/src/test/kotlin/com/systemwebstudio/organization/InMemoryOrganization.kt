@@ -13,7 +13,7 @@ import java.util.concurrent.locks.ReentrantLock
  * TEST DOUBLE of the C3 persistence seams (OrganizationRepositories.kt). It is NOT production persistence: it exists so that C1's application services, API contract and
  * authorization can be tested end to end without C3's SQL, and as the reference behaviour that `OrganizationRepositoryContractKit` pins (C3 runs the same kit against its own
  * implementation). It honours the seam rules: tenant first, versioned writes, store-enforced uniqueness, and the AMBIENT TRANSACTION (a rollback restores the state, so the
- * atomicity of "account + profile + memberships" is observable in tests).
+ * atomicity of "account + memberships + positions" is observable in tests).
  */
 class InMemoryOrganization(private val clock: () -> Instant = { Instant.now() }) {
     private class State {
@@ -93,6 +93,7 @@ class InMemoryOrganization(private val clock: () -> Instant = { Instant.now() })
         override fun listAll(tenantId: UUID, includeArchived: Boolean) = tx { units.values.filter { it.tenantId == tenantId && (includeArchived || it.active) } }
         override fun insert(unit: OrganizationUnitDto) = tx(true) {
             check(unit.parentId == null || units[unit.parentId]?.tenantId == unit.tenantId) { "foreign parent" }
+            if (unit.parentId != null && units[unit.parentId]?.active != true) throw ReferencedRowInactive("unit")                 // FOR SHARE + active check of the parent
             check(types[unit.typeId]?.tenantId == unit.tenantId) { "foreign type" }
             if (units.values.any { it.tenantId == unit.tenantId && it.active && it.parentId == unit.parentId && it.code.equals(unit.code, true) }) dup("code")
             unit.copy(version = 0).also { units[it.id] = it }
@@ -105,12 +106,18 @@ class InMemoryOrganization(private val clock: () -> Instant = { Instant.now() })
         override fun move(tenantId: UUID, id: UUID, newParentId: UUID?, sortOrder: Int?, expectedVersion: Long) = tx(true) {
             val cur = units[id]?.takeIf { it.tenantId == tenantId && it.version == expectedVersion } ?: return@tx null
             if (newParentId != null && units[newParentId]?.tenantId != tenantId) return@tx null
+            if (newParentId != null && units[newParentId]?.active != true) throw ReferencedRowInactive("unit")
             if (newParentId != null && (newParentId == id || subtreeIds(tenantId, id).contains(newParentId))) throw OrganizationCycle()
             if (cur.active && units.values.any { it.id != id && it.tenantId == tenantId && it.active && it.parentId == newParentId && it.code.equals(cur.code, true) }) dup("code")
             cur.copy(parentId = newParentId, sortOrder = sortOrder ?: cur.sortOrder, version = cur.version + 1, updatedAt = now()).also { units[id] = it }
         }
         override fun setActive(tenantId: UUID, id: UUID, active: Boolean, expectedVersion: Long) = tx(true) {
             val cur = units[id]?.takeIf { it.tenantId == tenantId && it.version == expectedVersion } ?: return@tx null
+            if (!active) {                                                                                                         // FOR UPDATE + counts, atomically refusing
+                val children = units.values.count { it.tenantId == tenantId && it.parentId == id && it.active }
+                val members = memberships.values.count { it.tenantId == tenantId && it.organizationUnitId == id && it.active }
+                if (children > 0 || members > 0) throw OrganizationUnitInUse(children, members)
+            } else if (cur.parentId != null && units[cur.parentId]?.active != true) throw ReferencedRowInactive("unit")
             if (active && units.values.any { it.id != id && it.tenantId == tenantId && it.active && it.parentId == cur.parentId && it.code.equals(cur.code, true) }) dup("code")
             cur.copy(active = active, archivedAt = if (active) null else now(), version = cur.version + 1, updatedAt = now()).also { units[id] = it }
         }
@@ -153,6 +160,7 @@ class InMemoryOrganization(private val clock: () -> Instant = { Instant.now() })
         override fun find(tenantId: UUID, userId: UUID, membershipId: UUID) = tx { memberships[membershipId]?.takeIf { it.tenantId == tenantId && it.userId == userId } }
         override fun insert(membership: OrganizationMembershipDto) = tx(true) {
             check(units[membership.organizationUnitId]?.tenantId == membership.tenantId) { "foreign unit" }
+            if (units[membership.organizationUnitId]?.active != true) throw ReferencedRowInactive("unit")
             if (memberships.values.any { it.tenantId == membership.tenantId && it.userId == membership.userId && it.active && it.organizationUnitId == membership.organizationUnitId }) dup("membership")
             membership.copy(version = 0, primary = false, active = true).also { memberships[it.id] = it }
         }
@@ -167,6 +175,8 @@ class InMemoryOrganization(private val clock: () -> Instant = { Instant.now() })
         }
         override fun end(tenantId: UUID, userId: UUID, membershipId: UUID, expectedVersion: Long) = tx(true) {
             val cur = memberships[membershipId]?.takeIf { it.tenantId == tenantId && it.userId == userId && it.active && it.version == expectedVersion } ?: return@tx null
+            val held = assignments.values.count { it.tenantId == tenantId && it.membershipId == membershipId && it.active }
+            if (held > 0) throw MembershipHasPositions(held)
             cur.copy(active = false, primary = false, version = cur.version + 1, updatedAt = now()).also { memberships[it.id] = it }
         }
         override fun activeCountByUnit(tenantId: UUID, unitId: UUID) = tx { memberships.values.count { it.tenantId == tenantId && it.organizationUnitId == unitId && it.active } }
@@ -212,7 +222,8 @@ class InMemoryOrganization(private val clock: () -> Instant = { Instant.now() })
         override fun find(tenantId: UUID, userId: UUID, id: UUID) = tx { assignments[id]?.takeIf { it.tenantId == tenantId && it.userId == userId } }
         override fun insert(assignment: EmployeePositionDto) = tx(true) {
             val m = memberships[assignment.membershipId]?.takeIf { it.tenantId == assignment.tenantId && it.userId == assignment.userId }
-            check(m != null && m.organizationUnitId == assignment.organizationUnitId) { "the membership must belong to the same tenant and user, and name the unit" }
+            require(m != null && m.organizationUnitId == assignment.organizationUnitId) { "the membership must belong to the same tenant and user, and name the unit" }
+            if (!m.active) throw ReferencedRowInactive("membership")
             if (assignments.values.any { it.tenantId == assignment.tenantId && it.active && it.membershipId == assignment.membershipId && it.positionId == assignment.positionId }) dup("assignment")
             assignment.copy(version = 0, primary = false, active = true).also { assignments[it.id] = it }
         }

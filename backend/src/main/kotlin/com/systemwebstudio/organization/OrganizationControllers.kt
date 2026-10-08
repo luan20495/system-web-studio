@@ -183,13 +183,14 @@ class EmployeeController(private val access: AccessService, private val service:
         access.org(me, tenantId, Permission.EMPLOYEE_MANAGE).require(Permission.TENANT_MEMBERS)
         return ResponseEntity.status(HttpStatus.CREATED).body(service.create(tenantId, me.userId, r))
     }
+    /** enable / disable change `tenant_members`: EMPLOYEE_MANAGE and TENANT_MEMBERS, like the creation of an account */
     @PostMapping("/{userId}/disable")
     fun disable(@PathVariable tenantId: UUID, @PathVariable userId: UUID, @AuthenticationPrincipal me: StudioUserDetails): EmployeeDto {
-        access.org(me, tenantId, Permission.EMPLOYEE_MANAGE); return service.setActive(tenantId, userId, me.userId, false)
+        access.org(me, tenantId, Permission.EMPLOYEE_MANAGE).require(Permission.TENANT_MEMBERS); return service.setActive(tenantId, userId, me.userId, false)
     }
     @PostMapping("/{userId}/enable")
     fun enable(@PathVariable tenantId: UUID, @PathVariable userId: UUID, @AuthenticationPrincipal me: StudioUserDetails): EmployeeDto {
-        access.org(me, tenantId, Permission.EMPLOYEE_MANAGE); return service.setActive(tenantId, userId, me.userId, true)
+        access.org(me, tenantId, Permission.EMPLOYEE_MANAGE).require(Permission.TENANT_MEMBERS); return service.setActive(tenantId, userId, me.userId, true)
     }
 
     // ---- organization memberships (multi-org)

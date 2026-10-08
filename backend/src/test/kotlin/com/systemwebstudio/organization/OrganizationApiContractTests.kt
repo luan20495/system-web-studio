@@ -235,6 +235,11 @@ class OrganizationApiContractTests : OrganizationTestBase() {
     }
 
     @Test
+    /**
+     * NOTE: the in-memory double serialises every repository call under one mutex and re-checks cycles itself, so this test proves the SERVICE contract (409 for the loser), NOT the
+     * structural lock: removing `repos.lock.acquire` would not fail it. The race proofs (move vs move, archive vs insert, end vs addPosition, setPrimary vs setPrimary) are C3's mandatory
+     * PostgreSQL concurrency tests, listed in the contract doc. Lock usage itself is pinned by the CF-4 test below (acquisition count).
+     */
     fun `O a stale write is a 409 with the current version, also under concurrency, and two concurrent moves never close a cycle`() {
         val c = company(); val t = type(c, "unit"); val u = unit(c, t, "A")
         assertThat(c.admin.patch("${units(c)}/${id(u)}", """{"name":"first","expectedVersion":0}""").response.status).isEqualTo(200)
@@ -299,9 +304,10 @@ class OrganizationApiContractTests : OrganizationTestBase() {
         val e = newEmployee(c); val u = uid(e); val m = c.admin.body(c.admin.post("${employees(c)}/$u/organization-memberships", """{"organizationUnitId":"${id(a)}"}"""))
         val pos = c.admin.body(c.admin.post(positions(c), """{"code":"P","name":"P"}""")); val g = c.admin.body(c.admin.post(grades(c), """{"code":"G","name":"G"}"""))
         val held = c.admin.body(c.admin.post("${employees(c)}/$u/positions", """{"membershipId":"${id(m)}","positionId":"${id(pos)}","gradeId":"${id(g)}"}"""))
-        c.admin.patch("${employees(c)}/$u/positions/${id(held)}", """{"clearGrade":true,"expectedVersion":${ver(held)}}"""); c.admin.post("${employees(c)}/$u/disable"); c.admin.post("${employees(c)}/$u/enable")
-        c.admin.patch("${units(c)}/${id(b)}", """{"name":"B2","expectedVersion":0}"""); c.admin.post("${types(c)}/${id(t)}/disable", """{"expectedVersion":${ver(t)}}"""); c.admin.post("${types(c)}/${id(t)}/enable", """{"expectedVersion":1}""")
-        val kid = unit(c, t, "KID", b); c.admin.post("${units(c)}/${id(kid)}/archive", """{"expectedVersion":0}"""); c.admin.post("${units(c)}/${id(kid)}/restore", """{"expectedVersion":1}""")
+        fun ok(r: org.springframework.test.web.servlet.MvcResult) = assertThat(r.response.status).describedAs(r.request.requestURI).isEqualTo(200)
+        ok(c.admin.patch("${employees(c)}/$u/positions/${id(held)}", """{"clearGrade":true,"expectedVersion":${ver(held)}}""")); ok(c.admin.post("${employees(c)}/$u/disable")); ok(c.admin.post("${employees(c)}/$u/enable"))
+        ok(c.admin.patch("${units(c)}/${id(b)}", """{"name":"B2","expectedVersion":0}""")); ok(c.admin.post("${types(c)}/${id(t)}/disable", """{"expectedVersion":${ver(t)}}""")); ok(c.admin.post("${types(c)}/${id(t)}/enable", """{"expectedVersion":1}"""))
+        val kid = c.admin.body(c.admin.post(units(c), """{"typeId":"${id(t)}","code":"KID","name":"kid","parentId":"${id(b)}"}""")); ok(c.admin.post("${units(c)}/${id(kid)}/archive", """{"expectedVersion":0}""")); ok(c.admin.post("${units(c)}/${id(kid)}/restore", """{"expectedVersion":1}"""))
         assertThat(store.lockAcquisitions.get()).describedAs("no structural lock for ordinary operations").isEqualTo(before)
         // a move (and only a move) takes it, once per transaction
         assertThat(move(c, unitNow(c, b), a).response.status).isEqualTo(200); assertThat(store.lockAcquisitions.get()).isEqualTo(before + 1)

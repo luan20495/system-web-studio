@@ -57,20 +57,22 @@ class EmployeeApiContractTests : OrganizationTestBase() {
         val users = usersCount()
         val foreign = c.admin.post(employees(c), """{"username":"${uname("c")}","displayName":"C","organizationMemberships":[{"organizationUnitId":"${id(uOther)}"}]}"""); assertThat(foreign.response.status).isEqualTo(404); assertThat(code(foreign, c.admin)).isEqualTo("ORG_UNIT_NOT_FOUND")
         val pos = c.admin.body(c.admin.post(positions(c), """{"code":"DEV","name":"Dev"}""")); c.admin.post("${positions(c)}/${id(pos)}/disable", """{"expectedVersion":${ver(pos)}}""")
-        val disabled = c.admin.post(employees(c), """{"username":"${uname("d")}","displayName":"D","organizationMemberships":[{"organizationUnitId":"${id(u)}"}],"positions":[{"organizationUnitId":"${id(u)}","positionId":"${id(pos)}"}]}""")
+        val disabled = c.admin.post(employees(c), """{"username":"${uname("d")}","displayName":"D","organizationMemberships":[{"organizationUnitId":"${id(u)}","positions":[{"positionId":"${id(pos)}"}]}]}""")
         assertThat(disabled.response.status).isEqualTo(409); assertThat(code(disabled, c.admin)).isEqualTo("POSITION_DISABLED")
         val dupUnit = c.admin.post(employees(c), """{"username":"${uname("e")}","displayName":"E","organizationMemberships":[{"organizationUnitId":"${id(u)}"},{"organizationUnitId":"${id(u)}"}]}""")
         assertThat(dupUnit.response.status).isEqualTo(400)
         val live = c.admin.body(c.admin.post(positions(c), """{"code":"OPS","name":"Ops"}"""))
-        // a position is held WITHIN a membership: no unit, or a unit the same request does not make the person a member of, is refused
+        // a position is held WITHIN a membership: it is NESTED in it (there is no free unit-as-scope input), once per membership, at most one primary
         for (body in listOf(
-            """{"username":"${uname("f")}","displayName":"F","positions":[{"positionId":"${id(live)}"}]}""",
-            """{"username":"${uname("g")}","displayName":"G","positions":[{"organizationUnitId":"${id(u)}","positionId":"${id(live)}"}]}"""))
+            """{"username":"${uname("f")}","displayName":"F","organizationMemberships":[{"organizationUnitId":"${id(u)}","positions":[{"positionId":"${id(live)}"},{"positionId":"${id(live)}"}]}]}""",
+            """{"username":"${uname("g")}","displayName":"G","organizationMemberships":[{"organizationUnitId":"${id(u)}","positions":[{}]}]}""",
+            """{"username":"${uname("i")}","displayName":"I","organizationMemberships":[{"organizationUnitId":"${id(u)}","positions":[{"positionId":"${id(live)}","primary":true},{"positionId":"${id(pos)}","primary":true}]}]}"""))
             assertThat(c.admin.post(employees(c), body).response.status).describedAs(body).isEqualTo(400)
+        assertThat(code(c.admin.post(employees(c), """{"username":"${uname("j")}","displayName":"J","organizationMemberships":[{"organizationUnitId":"${id(u)}","positions":[{"positionId":"${id(live)}","gradeId":"${UUID.randomUUID()}"}]}]}"""), c.admin)).isEqualTo("GRADE_NOT_FOUND")
         assertThat(usersCount()).describedAs("no account was created by any rejected request").isEqualTo(users)
         assertThat(c.admin.body(c.admin.get("${units(c)}/${id(u)}")).get("activeMemberCount").asInt()).isZero()
         // the happy path in one request: account + membership + position scoped to it
-        val ok = c.admin.post(employees(c), """{"username":"${uname("h")}","displayName":"H","organizationMemberships":[{"organizationUnitId":"${id(u)}","relationType":"head"}],"positions":[{"organizationUnitId":"${id(u)}","positionId":"${id(live)}"}]}""")
+        val ok = c.admin.post(employees(c), """{"username":"${uname("h")}","displayName":"H","organizationMemberships":[{"organizationUnitId":"${id(u)}","relationType":"head","positions":[{"positionId":"${id(live)}"}]}]}""")
         assertThat(ok.response.status).isEqualTo(201); val e = c.admin.body(ok).get("employee")
         val pm = e.get("organizationMemberships").single(); val pp = e.get("positions").single()
         assertThat(pm.get("relationType").asString()).isEqualTo("HEAD"); assertThat(pp.get("membershipId").asString()).isEqualTo(pm.get("id").asString()); assertThat(pp.get("organizationUnitId").asString()).isEqualTo(id(u).toString()); assertThat(pp.get("primary").asBoolean()).isTrue()

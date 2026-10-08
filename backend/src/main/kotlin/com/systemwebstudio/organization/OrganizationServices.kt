@@ -171,6 +171,7 @@ class OrganizationUnitService(private val repos: OrganizationRepositories, priva
             val created = try {
                 repos.units.insert(OrganizationUnitDto(UUID.randomUUID(), tenantId, typeId, parent?.id, name, code, r.sortOrder ?: 0, meta, true, 0, now, now))
             } catch (e: DuplicateOrganizationKey) { throw ApiException.conflict("ORG_UNIT_CODE_TAKEN", "A sibling unit under the same parent already has this code") }
+            catch (e: ReferencedRowInactive) { throw ApiException.conflict("ORG_UNIT_ARCHIVED", "The organization unit is archived") }       // the parent was archived concurrently (store-checked)
             audit.record("ORG_UNIT_CREATED", "ORG_UNIT", created.id, actorId = actorId, newValue = snapshot(created))
             created
         }
@@ -213,6 +214,7 @@ class OrganizationUnitService(private val repos: OrganizationRepositories, priva
             val after = try { repos.units.move(tenantId, id, dest?.id, sortOrder, expectedVersion) }
                 catch (e: OrganizationCycle) { throw ApiException.conflict("ORG_CYCLE", "A unit cannot be moved below itself or one of its descendants") }
                 catch (e: DuplicateOrganizationKey) { throw ApiException.conflict("ORG_UNIT_CODE_TAKEN", "A sibling unit under the destination already has this code") }
+                catch (e: ReferencedRowInactive) { throw ApiException.conflict("ORG_UNIT_ARCHIVED", "The destination unit is archived") }
                 ?: throw OrgRules.conflictOrMissing(repos.units.find(tenantId, id)?.version, notFound())
             audit.record("ORG_UNIT_MOVED", "ORG_UNIT", id, actorId = actorId,
                 oldValue = mapOf("tenantId" to tenantId, "parentId" to source.parentId, "sortOrder" to source.sortOrder, "version" to source.version),
@@ -231,7 +233,12 @@ class OrganizationUnitService(private val repos: OrganizationRepositories, priva
             if (children > 0) throw ApiException.conflict("ORG_UNIT_HAS_CHILDREN", "Archive or move the child units first", mapOf("activeChildCount" to children))
             val members = repos.memberships.activeCountByUnit(tenantId, id)
             if (members > 0) throw ApiException.conflict("ORG_UNIT_HAS_MEMBERS", "Remove the members of this unit first", mapOf("activeMemberCount" to members))
-            val after = repos.units.setActive(tenantId, id, false, expected) ?: throw OrgRules.conflictOrMissing(repos.units.find(tenantId, id)?.version, notFound())
+            val after = try { repos.units.setActive(tenantId, id, false, expected) }
+                catch (e: OrganizationUnitInUse) {                                                // the store re-checks atomically under the row lock: a concurrent child / member cannot slip in
+                    throw if (e.activeChildren > 0) ApiException.conflict("ORG_UNIT_HAS_CHILDREN", "Archive or move the child units first", mapOf("activeChildCount" to e.activeChildren))
+                    else ApiException.conflict("ORG_UNIT_HAS_MEMBERS", "Remove the members of this unit first", mapOf("activeMemberCount" to e.activeMembers))
+                }
+                ?: throw OrgRules.conflictOrMissing(repos.units.find(tenantId, id)?.version, notFound())
             audit.record("ORG_UNIT_ARCHIVED", "ORG_UNIT", id, actorId = actorId, oldValue = snapshot(before), newValue = snapshot(after))
             after
         }
@@ -254,6 +261,7 @@ class OrganizationUnitService(private val repos: OrganizationRepositories, priva
             catch (e: ApiException) { throw conflict("TYPE_RULE", "The unit no longer satisfies its type rules") }
             val after = try { repos.units.setActive(tenantId, id, true, expected) }
             catch (e: DuplicateOrganizationKey) { throw conflict("CODE_TAKEN", "Another active unit uses this code; rename one of them first") }
+            catch (e: ReferencedRowInactive) { throw conflict("PARENT_ARCHIVED", "Restore the parent unit first") }
                 ?: throw OrgRules.conflictOrMissing(repos.units.find(tenantId, id)?.version, notFound())
             audit.record("ORG_UNIT_RESTORED", "ORG_UNIT", id, actorId = actorId, oldValue = snapshot(before), newValue = snapshot(after))
             after

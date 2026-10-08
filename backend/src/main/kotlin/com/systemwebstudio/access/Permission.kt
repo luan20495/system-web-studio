@@ -16,9 +16,9 @@ enum class Permission {
     ORG_STRUCTURE_VIEW,
     /** change the company's organization structure (unit types, units, move, archive / restore) */
     ORG_STRUCTURE_MANAGE,
-    /** read the company's employee directory (profiles, organization memberships, position assignments) */
+    /** read the company's employee directory (organization memberships, position assignments) */
     EMPLOYEE_VIEW,
-    /** create / invite employees, edit profiles, manage organization memberships and position assignments, enable / disable */
+    /** create / invite employees, manage organization memberships and position assignments, enable / disable */
     EMPLOYEE_MANAGE,
     /** read the company's position and grade catalogs (a taxonomy separate from the organization tree) */
     POSITION_GRADE_VIEW,

@@ -129,7 +129,7 @@ class AccessService(
             // unless it is an active member of that tenant (then exactly its member role on top) or the legacy flag app.tenancy.system-admin-business-access is on.
             val permissions = when {
                 systemAdminBusinessAccess -> PermissionMatrix.tenantRoles.getValue("TENANT_ADMIN")       // LEGACY BYPASS (flag-gated)
-                m != null -> PermissionMatrix.platformScope + PermissionMatrix.tenantRoles[m.role].orEmpty()
+                m != null && tenant.status != TenantStatus.DELETED.name -> PermissionMatrix.platformScope + PermissionMatrix.tenantRoles[m.role].orEmpty()
                 else -> PermissionMatrix.platformScope
             }
             return TenantAccess(user, tenantId, m?.let { TenantRole.valueOf(it.role) }, permissions, true)

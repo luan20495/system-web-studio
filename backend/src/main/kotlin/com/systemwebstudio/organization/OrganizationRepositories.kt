@@ -25,12 +25,30 @@ import java.util.UUID
  *  4b. LOCKING. The tenant STRUCTURAL lock ([TenantStructuralLock]) is taken ONLY by the subtree move. Every other write (create / update / archive / restore of a unit, employees,
  *     memberships, position assignments, catalogs) uses the ordinary transaction, FK / unique constraints, row locks (e.g. `FOR SHARE` on the parent or unit row an insert depends
  *     on, `FOR UPDATE` on the row an archive reads) and the optimistic version: they never serialise on the tenant structural lock.
+ *  4c. RACE-SAFE REFERENCES (the STORE is the authority, the service's pre-checks only give friendly errors in the contract order). Under READ COMMITTED a count made by the
+ *     service and a write made afterwards can interleave with a concurrent writer, so the invariants below are enforced INSIDE the repository call, atomically, with typed refusals:
+ *       - `units.setActive(false)`: lock the unit row FOR UPDATE, count ACTIVE child units and ACTIVE memberships, throw [OrganizationUnitInUse] when any exists, else apply;
+ *       - `memberships.end`: lock the membership row FOR UPDATE, count ACTIVE position assignments held in it, throw [MembershipHasPositions] when any, else apply;
+ *       - every insert / move / restore that depends on a row being ACTIVE (`units.insert` and `units.move` -> parent / destination unit, `units.setActive(true)` -> parent unit,
+ *         `memberships.insert` -> the unit, `employeePositions.insert` -> the membership) locks that row FOR SHARE and throws [ReferencedRowInactive] (`kind` = "unit" | "membership")
+ *         when it is archived / ended, so an active record can never appear under an archived / ended one;
+ *       - one ACTIVE primary per (tenant, user) for memberships and for position assignments is guaranteed by a PARTIAL UNIQUE INDEX (tenant, user) WHERE primary AND active, or by
+ *         locking all of the user's rows first; a violation is [DuplicateOrganizationKey] with key `primary`. A `setPrimary` race must never leave two primaries.
+ *     Known, documented limit: a type `maxDepth` is validated by the service without the structural lock on create / restore; C3 SHOULD re-check the resulting depth inside `insert`
+ *     / `setActive(true)` under the parent row lock (a concurrent move of an ancestor could otherwise push a new unit past its type's `maxDepth` in a rare race).
  *  5. DETERMINISM. Lists have a total order; the services re-sort anyway where the contract fixes one.
  *  6. NO CASCADE. Nothing is deleted behind the caller's back: archive / end are state changes of the row itself.
  */
 
 /** thrown by a repository when a uniqueness rule (see above) is violated */
 class DuplicateOrganizationKey(val key: String) : RuntimeException("duplicate organization key: $key")
+
+/** thrown by `units.setActive(false)` when the unit still has ACTIVE child units / ACTIVE memberships (checked atomically under the row lock) */
+class OrganizationUnitInUse(val activeChildren: Int, val activeMembers: Int) : RuntimeException("organization unit in use")
+/** thrown by `memberships.end` when ACTIVE position assignments are still held in the membership (checked atomically under the row lock) */
+class MembershipHasPositions(val activePositions: Int) : RuntimeException("membership has active positions")
+/** thrown when a row the write depends on is archived / ended (`kind` = "unit" | "membership"), checked under a FOR SHARE lock of that row */
+class ReferencedRowInactive(val kind: String) : RuntimeException("referenced $kind is not active")
 
 /** thrown by [OrganizationUnitRepository.move] when the destination is the unit itself or one of its descendants (the store re-checks it atomically, whatever the service pre-checked) */
 class OrganizationCycle : RuntimeException("organization cycle")
@@ -69,7 +87,10 @@ interface OrganizationUnitRepository {
      * a sibling of the destination with the same code: key `code`; stale version / missing: null.
      */
     fun move(tenantId: UUID, id: UUID, newParentId: UUID?, sortOrder: Int?, expectedVersion: Long): OrganizationUnitDto?
-    /** archive (false: sets `archivedAt`, active=false) / restore (true: clears `archivedAt`, active=true); key `code` when a restore finds a sibling with the code */
+    /**
+     * archive (false: sets `archivedAt`, active=false; atomically refuses with [OrganizationUnitInUse] while ACTIVE children / memberships exist) / restore (true: clears `archivedAt`,
+     * active=true; [ReferencedRowInactive] when the parent is archived); key `code` when a restore finds a sibling with the code
+     */
     fun setActive(tenantId: UUID, id: UUID, active: Boolean, expectedVersion: Long): OrganizationUnitDto?
     /** the unit (relativeDepth 0) and EVERY descendant, whatever its state; empty when the unit is not in the tenant */
     fun subtree(tenantId: UUID, id: UUID): List<SubtreeNode>
@@ -103,7 +124,7 @@ interface EmployeeOrganizationMembershipRepository {
     fun update(membership: OrganizationMembershipDto, expectedVersion: Long): OrganizationMembershipDto?
     /** ATOMIC: clears the previous primary of the user and sets this one, in one statement / one critical section */
     fun setPrimary(tenantId: UUID, userId: UUID, membershipId: UUID, expectedVersion: Long): OrganizationMembershipDto?
-    /** ends the membership: active=false, primary=false (the row stays, for history) */
+    /** ends the membership: active=false, primary=false (the row stays, for history); atomically refuses with [MembershipHasPositions] while ACTIVE position assignments are held in it */
     fun end(tenantId: UUID, userId: UUID, membershipId: UUID, expectedVersion: Long): OrganizationMembershipDto?
     fun activeCountByUnit(tenantId: UUID, unitId: UUID): Int
 }
