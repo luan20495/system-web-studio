@@ -56,6 +56,7 @@ function ProvidersTab() {
     try { await api.admin.deleteAiProvider(p.id); setMsg(`Đã xóa “${p.name}”.`); reload(); } catch (e) { setMsg(errText(e, "Chưa xóa được.")); }
   }
   async function toggle(p: AiProviderInfo) {
+    if (p.enabled && !(await confirm({ title: `Tắt nhà cung cấp “${p.name}”?`, message: "Mọi mô hình của nhà cung cấp này ngừng dùng được cho cả công ty cho tới khi bạn bật lại.", confirmLabel: "Tắt nhà cung cấp", danger: true }))) return;
     try { await api.admin.updateAiProvider(p.id, { enabled: !p.enabled }); reload(); } catch (e) { setMsg(errText(e, "Chưa đổi được trạng thái.")); }
   }
   return (<>

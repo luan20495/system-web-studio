@@ -15,6 +15,7 @@ import type { Member, TenantMemberCandidate, TenantMemberView, TenantView } from
 import { useSession } from "../session";
 import { useLoad } from "../useLoad";
 import { Card, ErrorState, fmtDate, Kpi, Pill, StateView } from "../ui";
+import { isTenantAdminRole, isWorkspaceAdminRole } from "@xweb/permissions";
 import { ArrowLeft, Building2, CircleCheck, ModalHeader, ShieldCheck, UserRound, confirm } from "@xweb/ui";
 import { PersonPicker } from "./PersonPicker";
 import { PlatformCreateAccount } from "./ProvisioningLive";
@@ -63,6 +64,8 @@ function TenantMembers({ tenantId, tenantName, onCreateAdmin, rev = 0 }: { tenan
   const [busy, setBusy] = useState<string | null>(null); const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const list: TenantMemberView[] = members.data ?? [];
   const rows = tenantMemberRows(list);
+  // a role is CHOSEN in the select and APPLIED by "Lưu" (a select must not commit a privilege change on a stray click / key press)
+  const [draft, setDraft] = useState<Record<string, string>>({});
   const options: TenantMemberCandidate[] = candidates.data ?? [];
   useEffect(() => { if (pick && !options.some((c) => c.userId === pick)) setPick(""); }, [options, pick]);
   async function act(key: string, fn: () => Promise<unknown>, ok: string) {
@@ -74,6 +77,17 @@ function TenantMembers({ tenantId, tenantName, onCreateAdmin, rev = 0 }: { tenan
     if (block) { setMsg({ kind: "err", text: block }); return; }
     if (next === "REMOVE") { const who = rows.find((r) => r.userId === m.userId)?.label ?? "người này"; if (!(await confirm({ title: `Gỡ ${who} khỏi công ty?`, message: `Họ không còn là thành viên của công ty “${tenantName}”. Tài khoản của họ không bị xóa.`, confirmLabel: "Gỡ khỏi công ty", danger: true }))) return; void act(`rm:${m.userId}`, () => api.admin.removeTenantMember(tenantId, m.userId), "Đã gỡ khỏi công ty."); }
     else void act(`role:${m.userId}`, () => api.admin.setTenantMember(tenantId, m.userId, next), "Đã đổi vai trò.");
+  }
+  async function saveRole(r: { userId: string; label: string; role: string }) {
+    const next = draft[r.userId]; if (!next || next === r.role) return;
+    const block = memberChangeBlock(r, { id: me!.id }, list, next as "TENANT_ADMIN" | "MEMBER");
+    if (block) { setMsg({ kind: "err", text: block }); return; }
+    if (isTenantAdminRole(next) || isTenantAdminRole(r.role)) {
+      const up = isTenantAdminRole(next);
+      if (!(await confirm({ title: up ? `Cho ${r.label} làm quản trị công ty?` : `Bỏ quyền quản trị công ty của ${r.label}?`, message: up ? `Người này sẽ quản lý được thành viên và workspace của công ty “${tenantName}”.` : `Người này không còn quản lý được thành viên và workspace của công ty “${tenantName}”.`, confirmLabel: up ? "Cho làm quản trị" : "Bỏ quyền quản trị", danger: !up }))) return;
+    }
+    await act(`role:${r.userId}`, () => api.admin.setTenantMember(tenantId, r.userId, next), "Đã đổi vai trò.");
+    setDraft((d) => { const n = { ...d }; delete n[r.userId]; return n; });
   }
   async function add(e: FormEvent) {
     e.preventDefault();
@@ -88,8 +102,9 @@ function TenantMembers({ tenantId, tenantName, onCreateAdmin, rev = 0 }: { tenan
           <tbody>{rows.map((r) => (
             <tr key={r.userId} data-testid={`tm:${r.userId}`}>
               <td>{r.known ? <b>{r.label}</b> : <span title="Máy chủ không trả tên cho người này">{r.label}</span>}{r.userId === me?.id ? <small> · bạn</small> : null}{r.email ? <small>{r.email}</small> : null}</td>
-              <td><select aria-label={`Vai trò của ${r.label}`} value={r.role} disabled={busy !== null || r.userId === me?.id} onChange={(e) => change(r, e.target.value as "TENANT_ADMIN" | "MEMBER")}>
-                {TENANT_ROLES.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</select></td>
+              <td><span className="row"><select aria-label={`Vai trò của ${r.label}`} value={draft[r.userId] ?? r.role} disabled={busy !== null || r.userId === me?.id} onChange={(e) => setDraft((d) => ({ ...d, [r.userId]: e.target.value }))}>
+                {TENANT_ROLES.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</select>
+                {draft[r.userId] && draft[r.userId] !== r.role ? <><button className="btn sm primary" data-testid={`tm-save:${r.userId}`} disabled={busy !== null} onClick={() => void saveRole(r)}>Lưu</button><button className="btn sm" disabled={busy !== null} onClick={() => setDraft((d) => { const n = { ...d }; delete n[r.userId]; return n; })}>Hủy</button></> : null}</span></td>
               <td><button className="btn sm danger" disabled={busy !== null || r.userId === me?.id} title={r.userId === me?.id ? "Bạn không thể tự gỡ mình" : undefined} onClick={() => change(r, "REMOVE")}>Gỡ</button></td>
             </tr>))}</tbody>
         </table>)}
@@ -286,9 +301,21 @@ function WorkspaceMembersPanel({ workspaceId, name }: { workspaceId: string; nam
   const [who, setWho] = useState(""); const [role, setRole] = useState("EDITOR");
   const [busy, setBusy] = useState<string | null>(null); const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const list = members.data ?? [];
+  const [draft, setDraft] = useState<Record<string, string>>({});   // chosen in the select, applied by "Lưu"
   async function act(key: string, fn: () => Promise<unknown>, ok: string) {
     setBusy(key); setMsg(null);
     try { await fn(); setMsg({ kind: "ok", text: ok }); members.reload(); } catch (e) { setMsg({ kind: "err", text: say(e, "Chưa thực hiện được.") }); } finally { setBusy(null); }
+  }
+  async function saveRole(m: Member) {
+    const next = draft[m.userId]; if (!next || next === m.role) return;
+    const block = workspaceMemberBlock(m, { id: me!.id }, list, next);
+    if (block) { setMsg({ kind: "err", text: block }); return; }
+    if (isWorkspaceAdminRole(next) || isWorkspaceAdminRole(m.role)) {
+      const up = isWorkspaceAdminRole(next); const who = m.displayName ?? m.username;
+      if (!(await confirm({ title: up ? `Cho ${who} làm quản trị workspace?` : `Bỏ quyền quản trị workspace của ${who}?`, message: up ? `Người này sẽ quản lý được thành viên và nguồn dữ liệu của workspace “${name}”.` : `Người này không còn quản lý được thành viên và nguồn dữ liệu của workspace “${name}”.`, confirmLabel: up ? "Cho làm quản trị" : "Bỏ quyền quản trị", danger: !up }))) return;
+    }
+    await act(`role:${m.userId}`, () => api.changeWorkspaceMember(workspaceId, m.userId, next), "Đã đổi vai trò.");
+    setDraft((d) => { const n = { ...d }; delete n[m.userId]; return n; });
   }
   async function change(m: Member, next: string) {
     const block = workspaceMemberBlock(m, { id: me!.id }, list, next);
@@ -309,8 +336,9 @@ function WorkspaceMembersPanel({ workspaceId, name }: { workspaceId: string; nam
           <tbody>{list.map((m) => (
             <tr key={m.userId} data-testid={`wm:${m.username}`}>
               <td><b>{m.displayName ?? m.username}</b><small>{m.username}{m.email ? ` · ${m.email}` : ""}{m.userId === me?.id ? " · bạn" : ""}</small></td>
-              <td><select aria-label={`Vai trò của ${m.username}`} value={m.role} disabled={busy !== null || m.userId === me?.id} onChange={(e) => change(m, e.target.value)}>
-                {WORKSPACE_ROLES.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}{WORKSPACE_ROLES.some((x) => x.id === m.role) ? null : <option value={m.role}>{workspaceRoleLabel(m.role)}</option>}</select></td>
+              <td><span className="row"><select aria-label={`Vai trò của ${m.username}`} value={draft[m.userId] ?? m.role} disabled={busy !== null || m.userId === me?.id} onChange={(e) => setDraft((d) => ({ ...d, [m.userId]: e.target.value }))}>
+                {WORKSPACE_ROLES.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}{WORKSPACE_ROLES.some((x) => x.id === m.role) ? null : <option value={m.role}>{workspaceRoleLabel(m.role)}</option>}</select>
+                {draft[m.userId] && draft[m.userId] !== m.role ? <><button className="btn sm primary" data-testid={`wm-save:${m.username}`} disabled={busy !== null} onClick={() => void saveRole(m)}>Lưu</button><button className="btn sm" disabled={busy !== null} onClick={() => setDraft((d) => { const n = { ...d }; delete n[m.userId]; return n; })}>Hủy</button></> : null}</span></td>
               <td>{fmtDate(m.joinedAt)}</td>
               <td><button className="btn sm danger" disabled={busy !== null || m.userId === me?.id} title={m.userId === me?.id ? "Bạn không thể tự gỡ mình" : undefined} onClick={() => change(m, "REMOVE")}>Gỡ</button></td>
             </tr>))}</tbody>

@@ -106,7 +106,7 @@ export function ConnectorsPage() {
           <td>{c.operations.map((o) => <small key={o.method + o.path} className="code">{o.method} {o.path}</small>)}</td><td>{c.hasSecret ? `${c.authHeader ?? "—"}: ••••` : "không"}</td><td>{c.grants}</td>
           <td><Pill value={c.status === "APPROVED" ? "ACTIVE" : "DISABLED"} label={c.status === "APPROVED" ? "Đã duyệt" : "Tắt"}/></td>
           <td><div className="row"><button className="btn sm" onClick={() => edit(c)}>Sửa</button>
-            <button className="btn sm ghost" onClick={() => void act(() => api.admin.connectorStatus(c.key, c.status === "APPROVED" ? "DISABLED" : "APPROVED"))}>{c.status === "APPROVED" ? "Tắt" : "Bật"}</button>
+            <button className="btn sm ghost" onClick={async () => { if (c.status === "APPROVED" && !(await confirm({ title: `Tắt connector “${c.name}”?`, message: "Ứng dụng có máy chủ đang dùng connector này sẽ không gọi được API này cho tới khi bật lại.", confirmLabel: "Tắt connector", danger: true }))) return; void act(() => api.admin.connectorStatus(c.key, c.status === "APPROVED" ? "DISABLED" : "APPROVED")); }}>{c.status === "APPROVED" ? "Tắt" : "Bật"}</button>
             <button className="btn sm ghost" onClick={() => setGrant({ key: c.key, app: { type: "PROJECT", id: "" } })}>Cấp cho ứng dụng</button></div></td></tr>)}</tbody></table>}</Card>
     {grant ? <Card title={`Cấp “${grant.key}” cho ứng dụng có máy chủ`}>
       <form className="filters wrap" onSubmit={(e) => { e.preventDefault(); if (grant.app.id) void act(() => api.admin.grantConnector(grant.key, grant.app.id), "Đã cấp.").then(() => setGrant(null)); }}>

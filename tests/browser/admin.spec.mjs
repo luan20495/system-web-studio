@@ -36,18 +36,18 @@ const linkValue = (p) => p.getByLabel("Liên kết", { exact: true }).inputValue
  */
 async function ask(p, { open, title, confirm, re, field, method }) {
   const hits = async () => (await calls(p)).filter((c) => c.method !== "GET" && (!method || c.method === method) && re.test(c.path)).length;
-  const n0 = p.__dialogs.length;
+  const n0 = p.__dialogs.length; const h0 = await hits();   // earlier requests of the same kind do not count
   await open(); await settle(p, 250);
   const d = dlg(p);
   const okTitle = (await d.count()) === 1 && title.test(await d.locator("h2").first().innerText().catch(() => ""));
   const noNative = p.__dialogs.length === n0;
   await p.keyboard.press("Escape"); await settle(p, 200);
-  const cancelled = (await dlg(p).count()) === 0 && (await hits()) === 0;
+  const cancelled = (await dlg(p).count()) === 0 && (await hits()) === h0;
   await open(); await settle(p, 250);
   let emptyRefused = true;
-  if (field) { await dlg(p).locator("textarea, input").first().fill(""); await dlg(p).getByRole("button", { name: confirm, exact: true }).click(); await settle(p, 150); emptyRefused = (await dlg(p).count()) === 1 && (await dlg(p).locator("[role=alert]").count()) === 1 && (await hits()) === 0; await dlg(p).locator("textarea, input").first().fill(field); }
+  if (field) { await dlg(p).locator("textarea, input").first().fill(""); await dlg(p).getByRole("button", { name: confirm, exact: true }).click(); await settle(p, 150); emptyRefused = (await dlg(p).count()) === 1 && (await dlg(p).locator("[role=alert]").count()) === 1 && (await hits()) === h0; await dlg(p).locator("textarea, input").first().fill(field); }
   await dlg(p).getByRole("button", { name: confirm, exact: true }).click(); await settle(p, 350);
-  return { okTitle, noNative, cancelled, emptyRefused, sent: (await hits()) >= 1 };
+  return { okTitle, noNative, cancelled, emptyRefused, sent: (await hits()) > h0 };
 }
 const verdict = (name, r) => check(name, r.okTitle && r.noNative && r.cancelled && r.emptyRefused && r.sent, JSON.stringify(r));
 
@@ -300,7 +300,46 @@ await block("scenario 31", async () => { const p = await open({ portal: "platfor
   await p.__ctx.close(); });
 await block("scenario 32", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/templates", fx: "1" });
   verdict("CNF17 reject a template (a prompt: the reason is required)", await ask(p, { open: () => p.getByRole("button", { name: "Từ chối", exact: true }).click(), title: /Từ chối mẫu “Trang chủ mẫu”/, confirm: "Từ chối", re: /templates\/tp1\/review$/, field: "Thiếu tiêu đề" }));
-  verdict("CNF18 archive a template", await ask(p, { open: () => p.getByRole("button", { name: "Lưu trữ", exact: true }).click(), title: /Lưu trữ mẫu “Trang chủ mẫu”\?/, confirm: "Lưu trữ", re: /templates\/tp1\/status$/ }));
+  verdict("CNF18 archive a template", await ask(p, { open: () => p.getByRole("button", { name: "Lưu trữ", exact: true }).first().click(), title: /Lưu trữ mẫu “Trang chủ mẫu”\?/, confirm: "Lưu trữ", re: /templates\/tp1\/status$/ }));
+  await p.__ctx.close(); });
+
+// ===================================================================================================================== M-018 privileged / high-impact actions are explicit
+await block("scenario 33", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/tenants/t1" });
+  const sel = p.locator('[data-testid="tm:u2"] select');
+  await sel.selectOption("TENANT_ADMIN"); await settle(p, 250);
+  check("ROL01 choosing a company role in the select sends NOTHING; 'Lưu' / 'Hủy' appear", (await posts(p, /tenants\/t1\/members\/u2/)).length === 0 && (await p.getByTestId("tm-save:u2").count()) === 1);
+  await p.locator('[data-testid="tm:u2"]').getByRole("button", { name: "Hủy", exact: true }).click(); await settle(p, 150);
+  check("ROL02 'Hủy' puts the select back and removes the buttons", (await sel.inputValue()) === "MEMBER" && (await p.getByTestId("tm-save:u2").count()) === 0);
+  await sel.selectOption("TENANT_ADMIN");
+  verdict("ROL03 promoting to company admin asks first (names the person and the power)", await ask(p, { open: () => p.getByTestId("tm-save:u2").click(), title: /Cho .*binh.* làm quản trị công ty\?/i, confirm: "Cho làm quản trị", re: /tenants\/t1\/members\/u2/, method: "PUT" }));
+  check("ROL03b the PUT carries the chosen role", (await posts(p, /tenants\/t1\/members\/u2/)).some((c) => c.method === "PUT" && c.body.role === "TENANT_ADMIN"));
+  await settle(p, 400);
+  await p.locator('[data-testid="tm:u-ta"] select').selectOption("MEMBER");
+  verdict("ROL04 taking the admin role away asks first", await ask(p, { open: () => p.getByTestId("tm-save:u-ta").click(), title: /Bỏ quyền quản trị công ty của/, confirm: "Bỏ quyền quản trị", re: /tenants\/t1\/members\/u-ta/, method: "PUT" }));
+  await p.__ctx.close(); });
+await block("scenario 34", async () => { const p = await open({ portal: "admin", me: "tadmin", start: "/admin/my-workspaces" });
+  const sel = p.locator('[data-testid="wm:binh"] select');
+  await sel.selectOption("PUBLISHER"); await settle(p, 200);
+  check("ROL05 a workspace role is applied by 'Lưu', not by the select", (await posts(p, /workspaces\/w1\/members\/u2/)).length === 0 && (await p.getByTestId("wm-save:binh").count()) === 1);
+  const n0 = (await dlg(p).count()); await p.getByTestId("wm-save:binh").click(); await settle(p, 350);
+  check("ROL06 a non-admin role change needs no confirmation (one PATCH, no dialog)", n0 === 0 && (await dlg(p).count()) === 0 && (await posts(p, /workspaces\/w1\/members\/u2/)).some((c) => c.method === "PATCH" && c.body.role === "PUBLISHER"));
+  await sel.selectOption("WORKSPACE_ADMIN");
+  verdict("ROL07 making someone workspace admin asks first", await ask(p, { open: () => p.getByTestId("wm-save:binh").click(), title: /Cho Bình làm quản trị workspace\?/, confirm: "Cho làm quản trị", re: /workspaces\/w1\/members\/u2/, method: "PATCH" }));
+  await p.__ctx.close(); });
+await block("scenario 35", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/ai/providers", fx: "1" });
+  verdict("HIC01 turning an AI provider off (every model of it, for everyone) asks first", await ask(p, { open: () => p.getByRole("button", { name: "Tắt", exact: true }).first().click(), title: /Tắt nhà cung cấp “OpenAI công ty”\?/, confirm: "Tắt nhà cung cấp", re: /ai\/providers\/p1$/, method: "PUT" }));
+  await p.__ctx.close(); });
+await block("scenario 36", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/connectors", fx: "1" });
+  verdict("HIC02 turning a connector off asks first", await ask(p, { open: () => p.getByRole("button", { name: "Tắt", exact: true }).first().click(), title: /Tắt connector “CRM”\?/, confirm: "Tắt connector", re: /connectors\/crm\/status/, method: "POST" }));
+  await p.__ctx.close(); });
+await block("scenario 37", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/packages", fx: "1" });
+  verdict("HIC03 denying an allowed package asks first", await ask(p, { open: () => p.getByRole("button", { name: "Từ chối", exact: true }).click(), title: /Từ chối package “left-pad”\?/, confirm: "Từ chối package", re: /packages\/left-pad\/decision$/, method: "PUT" }));
+  await p.__ctx.close(); });
+await block("scenario 38", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/templates", fx: "1" });
+  verdict("HIC04 sharing a template with the whole company asks first", await ask(p, { open: () => p.getByRole("button", { name: "Chia sẻ toàn công ty" }).click(), title: /Chia sẻ mẫu “Bảng giá” cho cả công ty\?/, confirm: "Chia sẻ toàn công ty", re: /templates\/tp2\/visibility$/, method: "POST" }));
+  await p.__ctx.close(); });
+await block("scenario 39", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/builds", fx: "1" });
+  verdict("HIC05 running the retention cleanup now asks first (it deletes data)", await ask(p, { open: () => p.getByRole("button", { name: "Chạy dọn dẹp ngay" }).click(), title: /Chạy dọn dẹp ngay\?/, confirm: "Chạy dọn dẹp", re: /retention\/run$/, method: "POST" }));
   await p.__ctx.close(); });
 
 // ===================================================================================================================== route / navigation snapshot (M-066: the split must not change behaviour)

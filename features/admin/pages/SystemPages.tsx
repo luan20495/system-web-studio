@@ -43,7 +43,7 @@ export function BuildsPage() {
   const preview = useLoad(() => api.admin.retentionPreview(), []);
   const repos = useLoad(() => api.admin.repositories(), []);
   const [msg, setMsg] = useState<string | null>(null); const [err, setErr] = useState<string | null>(null); const [busy, setBusy] = useState(false);
-  async function runCleanup() { setBusy(true); setErr(null); try { const r = await api.admin.retentionRun(); setMsg(`Đã dọn: ${r.retention?.artifactsDeleted ?? 0} artifact (${mib(r.retention?.artifactBytesFreed)}), ${r.retention?.previewsExpired ?? 0} bản xem trước hết hạn.`); preview.reload(); rep.reload(); repos.reload(); } catch (x) { setErr(errText(x, "Không dọn được.")); } finally { setBusy(false); } }
+  async function runCleanup() { if (!(await confirm({ title: "Chạy dọn dẹp ngay?", message: `Sẽ xoá ${num(preview.data?.retention?.artifactsDeleted ?? 0)} artifact (${mib(preview.data?.retention?.artifactBytesFreed)}) và dữ liệu hết hạn lưu giữ. Việc này không hoàn tác được.`, confirmLabel: "Chạy dọn dẹp", danger: true }))) return; setBusy(true); setErr(null); try { const r = await api.admin.retentionRun(); setMsg(`Đã dọn: ${r.retention?.artifactsDeleted ?? 0} artifact (${mib(r.retention?.artifactBytesFreed)}), ${r.retention?.previewsExpired ?? 0} bản xem trước hết hạn.`); preview.reload(); rep.reload(); repos.reload(); } catch (x) { setErr(errText(x, "Không dọn được.")); } finally { setBusy(false); } }
   async function hardDelete(r: RepoRow) { if (!(await confirm({ title: `Xoá vĩnh viễn kho mã “${r.name}”?`, message: "Không thể hoàn tác.", confirmLabel: "Xoá vĩnh viễn", danger: true }))) return; setErr(null); try { await api.admin.deleteRepository(r.projectId); repos.reload(); } catch (x) { setErr(errText(x, "Không xoá được.")); } }
   const d = rep.data; const p = preview.data;
   return (<>
@@ -90,6 +90,7 @@ export function PackagesPage() {
     setErr(null);
     const risky = (p.findings ?? []).some((x) => x.severity === "HIGH" || x.severity === "CRITICAL");
     let accept = false, note: string | undefined;
+    if (status === "DENIED" && !(await confirm({ title: `Từ chối package “${p.name}”?`, message: "Package không còn nằm trong danh mục được phép: ứng dụng mã nguồn không thêm được nó.", confirmLabel: "Từ chối package", danger: true }))) return;
     if (status === "ALLOWED" && risky) { note = (await prompt({ title: `Cho phép “${p.name}” dù có lỗ hổng nghiêm trọng?`, message: "Package có lỗ hổng mức cao hoặc nghiêm trọng. Việc chấp nhận rủi ro được ghi lại cùng lý do.", label: "Lý do chấp nhận rủi ro (bắt buộc)", multiline: true, required: true, maxLength: 500, confirmLabel: "Chấp nhận rủi ro" })) ?? ""; if (!note.trim()) return; accept = true; }
     try { await api.admin.decidePackage(p.name, status, accept, note); reload(); } catch (x) { setErr(errText(x, "Không đổi được.")); }
   }
