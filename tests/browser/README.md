@@ -15,6 +15,26 @@ Every spec imports one toolkit instead of copying its boilerplate: `makeChecks()
     node tests/browser/build-harness.mjs
     node tests/browser/harness-server.mjs run -- node tests/browser/hooks.spec.mjs        # 20 checks
 
+## Final-gate audit tooling (`scripts/ui-*.mjs`, `scripts/audit/`) — developer tools, NOT tests
+Four runners and one self-test. They share one engine (`scripts/audit/measure.mjs` in-page measurements + `engine.mjs` visit / flag / summarize) and one **route inventory derived from the SOURCE** (`scripts/audit/inventory.mjs`: the admin section registry `features/admin/console/sections.tsx` when it exists, otherwise the pre-registry tables of `AdminApp.tsx` / `base.ts`; the Studio `route()` switch and the project `MODES` / `PANELS`). Every runner builds its visit list from that inventory and **exits 1 when a route found in the source was not visited**. Each prints a table and writes JSON. Servers and Chrome are started and stopped only through `tests/lib/owned-process.mjs`; no fixed port, nothing found or killed by name or port.
+
+| Runner | What | Needs | Output |
+|---|---|---|---|
+| `scripts/ui-audit-selftest.mjs` | proves the detectors speak: a fixture WITH each defect is flagged, a clean page is not | Chrome | table, exit 1 on a miss |
+| `scripts/ui-audit-harness.mjs` | the responsive matrix (1920 1440 1280 1024 768 600 430 390 360) over every route on the harnesses: overflow, unreachable / covered controls, targets under 24 px, label-in-name, focus ring and sticky-header cover on the first 10 Tab stops, axe of every impact, console errors, failing API calls (**HARNESS, NOT REAL BACKEND**) | `node tests/browser/build-harness.mjs` | `audit.md`, `audit.json`, `--shots` for screenshots |
+| `scripts/ui-audit.mjs` | the same engine against a REAL stack: `--private-api http://127.0.0.1:47080` builds the three apps into private dist dirs with `API_PROXY_TARGET` at that backend, serves them on free ports (owned), seeds data through the product API, audits, stops them. The backend is never started or stopped. A pass-through shim rewrites only the Origin header because the backend refuses origins that are not on its CORS list | a running backend + its `stack.env` | `audit.md`, `audit.json` |
+| `scripts/ui-state-matrix.mjs` | every screen x default / loading / empty / error / permission-denied / populated / long-content, PASS / FAIL / NOT-REACHABLE with the reason; injected failures include a leaky Java 500 message and a 403 (**HARNESS, NOT REAL BACKEND**) | build-harness | `state-matrix.md`, `.json` |
+| `scripts/ui-keyboard.mjs` | keyboard-only flows (Tab / Shift+Tab / Enter / Space / Escape / arrows, no click): Platform create company, Admin create user, Studio select + edit + publish pre-check; asserts reachability, visible focus, dialog focus-in / trap / wrap / Escape / focus restore (**HARNESS**) | build-harness | `keyboard.md`, `.json` |
+
+    node tests/browser/build-harness.mjs                                   # dev bundle -> .test-build/browser (the runners read it)
+    node scripts/ui-audit-selftest.mjs
+    node scripts/ui-audit-harness.mjs --out /tmp/ah [--only platform,admin,studio] [--viewports 1440,390] [--shots]
+    node scripts/ui-state-matrix.mjs  --out /tmp/sm [--only ...] [--viewports 1440,390] [--states default,loading,...]
+    node scripts/ui-keyboard.mjs      --out /tmp/kb [--viewport 1280] [--only platform,admin,studio]
+    node scripts/ui-audit.mjs --private-api http://127.0.0.1:47080 --out /tmp/real [--only ...] [--viewports ...]     # REAL stack; AUDIT_NO_SHOTS=1 skips screenshots
+
+A clean audit proves nothing until the self-test has passed. NOT-REACHABLE is never a pass: it says the harness cannot produce that state for that screen (for example the screen makes no data request). The unit test `tests/lib/audit-tools.test.mjs` covers the inventory parsers (both table formats), the completeness check and the flag / summary rules.
+
 ## Builder (`builder.spec.mjs`) — component harness, NOT a backend E2E
 `harness.tsx` mounts the real `<BuilderWorkspace>`; its host records every operation in `window.__ops` and applies the few section/page operations locally so the
 canvas re-renders. It validates nothing the server validates and is never shipped. It exists to exercise drag and drop, focus, tabs, dialogs and ARIA in a real browser.
