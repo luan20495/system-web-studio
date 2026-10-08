@@ -496,7 +496,8 @@
   "N",
   "Skip link in the shared shell; main tabindex only while overflowing (useOverflow); focus main/h1 on route change",
   "harness keyboard test",
-  ""
+  "",
+  "COMPONENTS MERGED (dbef6fa): SkipLink + useMain (route focus, conditional tab stop); shell wiring pending (S1/S2)"
  ],
  [
   "M-026",
@@ -514,7 +515,8 @@
   "N",
   "Light-theme focus token >=3:1 (non-text contrast) per surface",
   "computed contrast script + screenshots",
-  ""
+  "",
+  "FIXED (HARNESS + computed-ratio unit tests, merged dbef6fa): light-theme focus ring >=3:1"
  ],
  [
   "M-027",
@@ -533,7 +535,8 @@
   "N",
   "Separate --f-control-border token >=3:1; switch off-state contrast",
   "contrast script",
-  ""
+  "",
+  "FIXED for light controls (merged dbef6fa): --f-control-border 3.4-3.8:1; dark-surface borders not changed (ledger scope)"
  ],
  [
   "M-028",
@@ -652,7 +655,8 @@
   "N (harness)",
   "wrap row <=600",
   "responsive matrix",
-  ""
+  "",
+  "FIXED (HARNESS, merged dbef6fa): provider row wraps at 390 (was 77px)"
  ],
  [
   "M-034",
@@ -1377,7 +1381,8 @@
   "N",
   "dedupe; define .sr-only alias or fix usage",
   "unused/duplicate selector script",
-  ""
+  "",
+  "PARTIAL: undefined tokens --danger/--warn defined (merged dbef6fa); duplicate selector cleanup pending (S3 item 8)"
  ],
  [
   "M-071",
@@ -1677,7 +1682,8 @@
   "N",
   "scroll-padding; ARIA fix",
   "harness",
-  ""
+  "",
+  "FIXED (merged dbef6fa): scroll-padding-bottom for sticky footers"
  ],
  [
   "M-086",
@@ -1696,7 +1702,8 @@
   "N",
   "forced-colors fallbacks; font stack",
   "manual forced-colors check",
-  ""
+  "",
+  "FIXED (HARNESS forcedColors emulation, merged dbef6fa)"
  ],
  [
   "M-087",
@@ -1716,7 +1723,8 @@
   "N",
   "dvh with fallback; container max-width; breakpoint tokens",
   "responsive matrix",
-  "S3-021 unverified on device (P3 until verified)"
+  "S3-021 unverified on device (P3 until verified)",
+  "FIXED (merged dbef6fa): dvh with vh fallback, content max-width 1360 at >=1280, breakpoints ratcheted (consolidation of odd thresholds deferred to item 8)"
  ],
  [
   "M-088",
@@ -2280,6 +2288,7 @@
   "N (harness)",
   "underline links in running text (or another non-colour cue) via a token",
   "axe in ui-widgets harness + admin screens",
-  "found by S3 while building the widgets harness; new, not in the phase-1 audits"
+  "found by S3 while building the widgets harness; new, not in the phase-1 audits",
+  "FIXED (merged dbef6fa): underline links in running text via --ui-link-line"
  ]
 ]

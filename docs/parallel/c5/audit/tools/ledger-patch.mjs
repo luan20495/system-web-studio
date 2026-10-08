@@ -116,3 +116,14 @@ status("M-097", "PARTIAL: useLoad keyed cache + abort merged (a5dcdc1) and sessi
 status("M-072", "PARTIAL: spec toolkit + HARNESS_URL required merged (a5dcdc1), all specs migrated; shims (R-023 -> M-107) and untested files remain");
 status("M-115", "FIXED (merged b0aff1d)");
 rows.push(["M-117","P3","C5","all","global link style","Links inside running text are distinguished only by colour (axe link-in-text-block, WCAG 1.4.1)",["S3-WAVE1"],"global link style in factory.css/globals.css","S3","none","N (harness)","underline links in running text (or another non-colour cue) via a token","axe in ui-widgets harness + admin screens","found by S3 while building the widgets harness; new, not in the phase-1 audits"]);
+
+// ---- integration round 3 (agent/c5-web dbef6fa): S3 wave 1 milestone 2 (HARNESS/unit)
+status("M-025", "COMPONENTS MERGED (dbef6fa): SkipLink + useMain (route focus, conditional tab stop); shell wiring pending (S1/S2)");
+status("M-026", "FIXED (HARNESS + computed-ratio unit tests, merged dbef6fa): light-theme focus ring >=3:1");
+status("M-027", "FIXED for light controls (merged dbef6fa): --f-control-border 3.4-3.8:1; dark-surface borders not changed (ledger scope)");
+status("M-085", "FIXED (merged dbef6fa): scroll-padding-bottom for sticky footers");
+status("M-117", "FIXED (merged dbef6fa): underline links in running text via --ui-link-line");
+status("M-033", "FIXED (HARNESS, merged dbef6fa): provider row wraps at 390 (was 77px)");
+status("M-087", "FIXED (merged dbef6fa): dvh with vh fallback, content max-width 1360 at >=1280, breakpoints ratcheted (consolidation of odd thresholds deferred to item 8)");
+status("M-086", "FIXED (HARNESS forcedColors emulation, merged dbef6fa)");
+status("M-070", "PARTIAL: undefined tokens --danger/--warn defined (merged dbef6fa); duplicate selector cleanup pending (S3 item 8)");
