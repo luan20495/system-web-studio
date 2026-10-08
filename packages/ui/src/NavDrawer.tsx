@@ -7,12 +7,13 @@
  * While it is OPEN, focus moves to its first link, Tab / Shift+Tab wrap inside it, the rest of the shell (header + page) is `inert`, and closing returns focus to the menu button.
  * The drawer is found through the menu button's `aria-controls`; nothing else has to be wired by the screen.
  */
+import { MQ } from "./breakpoints";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu } from "./icons";
 import { tabbables, trapTab } from "./focus";
 
-const NARROW = "(max-width: 900px)";
+const NARROW = MQ.tablet;
 
 export function useNavDrawer() {
   const [open, setOpen] = useState(false); const path = usePathname(); const button = useRef<HTMLButtonElement>(null);

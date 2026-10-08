@@ -6,6 +6,7 @@ import { RadioGroup } from "../../packages/ui/src/RadioGroup";
 import { DisclosureRow } from "../../packages/ui/src/DisclosureRow";
 import { ReasonButton } from "../../packages/ui/src/ReasonButton";
 import { Pill } from "../../packages/ui/src/Pill";
+import { Switch } from "../../packages/ui/src/Switch";
 import { Picker } from "../../packages/ui/src/Picker";
 import { LoadGate } from "../../packages/ui/src/LoadGate";
 import { ErrorState } from "../../packages/ui/src/States";
@@ -43,7 +44,7 @@ function App() {
       <hr/>
       {dark ? null : <table className="table"><thead><tr><th><span className="srOnly">Chi tiết</span></th><th>Thời gian</th><th>Sự kiện</th><th>Liên kết</th></tr></thead>
         <tbody>
-          <DisclosureRow label="Chi tiết sự kiện Đăng nhập" colSpan={4} cells={<><td>10:42</td><td>Đăng nhập</td><td><a href="#x" id="row-link">Mở</a></td></>} detail={<p id="detail-1">Địa chỉ IP 10.0.0.1</p>}/>
+          <DisclosureRow label="Chi tiết sự kiện Đăng nhập" colSpan={4} cells={<><td>10:42</td><td>Đăng nhập, <a href="#z" id="td-link">xem phiên</a></td><td><a href="#x" id="row-link">Mở</a></td></>} detail={<p id="detail-1">Địa chỉ IP 10.0.0.1</p>}/>
           <DisclosureRow label="Chi tiết sự kiện Xuất bản" colSpan={4} cells={<><td>10:50</td><td>Xuất bản</td><td/></>} detail={<p id="detail-2">Phiên bản 3</p>}/>
         </tbody></table>}
       <hr/>
@@ -53,6 +54,14 @@ function App() {
       <p id="pills"><Pill value="HIGH_RISK" label="Rủi ro cao"/> <Pill value="PAID" label="Trả phí"/> <Pill value="AWAITING_REVIEW" label="Chờ duyệt"/> <Pill value="ACTIVE" label="Hoạt động"/> <Pill value="x" tone="info" label="Thông tin"/> <Pill value="UNKNOWN" label="Chưa rõ"/></p>
       <Picker label="Loại" value={kind} options={[{ value: "A", label: "Loại A" }, { value: "B", label: "Loại B" }, { value: "C", label: "Loại C" }]} onChange={setKind}/>
       <hr/>
+      <section aria-label="Điều khiển" id="controls">
+        <p>Xem <a href="#y" id="p-link">hướng dẫn</a> trước khi dùng.</p>
+        <p><label><input type="checkbox" id="c-check"/> Nhớ tôi</label> <label><input type="radio" name="r" id="c-radio"/> Chọn</label> <input id="c-text" aria-label="Ô nhập"/> <select id="c-select" aria-label="Chọn"><option>A</option></select> <textarea id="c-area" aria-label="Ghi chú" style={{ minHeight: 40 }}/></p>
+        <p><button className="btn" id="c-btn">Hủy</button> <button className="btn danger" id="c-danger">Xóa</button> <button className="btn primary" id="c-primary">Lưu</button></p>
+        <div id="switches"><Switch label="Tắt" checked={false} onChange={() => {}}/><Switch label="Bật" checked onChange={() => {}}/></div>
+        <div className="providerItem" style={{ width: "100%" }}><div className="xp-provRow" id="prow"><div className="xp-provMain"><div className="xp-provName"><b>OpenRouter</b><Pill value="ACTIVE" label="Đang bật"/></div><div className="xp-provMeta"><span>https://openrouter.ai/api/v1</span></div></div>
+          <div className="xp-provActions" id="pact"><button className="btn sm">Kiểm tra</button><button className="btn sm">Sửa</button><button className="btn sm danger">Xóa</button><button className="btn sm">Tắt</button></div></div></div>
+      </section>
       <Gate/>
       <div id="notfound-page"><ErrorState level={1} error={new ApiError(404, "PROJECT_NOT_FOUND", "x")} retry={() => window.__log.push("nf-retry")}/></div>
     </div>
