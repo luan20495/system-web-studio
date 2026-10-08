@@ -64,9 +64,11 @@ export function planGuidedBinding(d: GuidedDraft, doc: AppDefinitionV2, labelOf:
     if (!issues.length && name) { slot = draft as DataSourceDef; slotCreated = true; }
   }
 
-  const docWithSlot: AppDefinitionV2 = slot && slotCreated ? { ...doc, dataSources: [...slots, slot] } : doc;
-  const queryDraft = { name: d.datasetName, dataSourceRef: slot?.id ?? "", mode: "READ" as const, operationKey: d.operationKey.trim(), params: d.params, ...(d.maxRows !== undefined ? { maxRows: d.maxRows } : {}), public: d.public };
-  if (slot) for (const m of checkQuery(queryDraft, docWithSlot)) bad(queryProblemField(m), m);
+  // the query is checked even when the source is not valid yet, so every problem of the form shows at once (a new source is probed with its derived id)
+  const probe: DataSourceDef | undefined = slot ?? (d.source.kind === "new" ? ({ id: deriveSlotId(d.source.name.trim(), slots.map((s) => s.id)), type: slotTypeOf(d.source.type) || "x" } as DataSourceDef) : undefined);
+  const docWithSlot: AppDefinitionV2 = probe && d.source.kind === "new" ? { ...doc, dataSources: [...slots, probe] } : doc;
+  const queryDraft = { name: d.datasetName, dataSourceRef: probe?.id ?? "", mode: "READ" as const, operationKey: d.operationKey.trim(), params: d.params, ...(d.maxRows !== undefined ? { maxRows: d.maxRows } : {}), public: d.public };
+  for (const m of checkQuery(queryDraft, docWithSlot)) { const f = queryProblemField(m); if (f === "source" && problems.some((x) => x.field === "source" || x.field === "sourceName" || x.field === "sourceType")) continue; bad(f, m); }
   if (problems.length || !section || !slot) return { ok: false, problems };
 
   const query: QueryDef = buildQuery(queryDraft, docWithSlot);

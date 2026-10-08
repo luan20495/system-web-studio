@@ -11,7 +11,9 @@ import { bindableProps, groupProps, permissionLabel, permissionRefsFor, propsSch
 import { capabilitiesFor, whyNot } from "./core/permissions";
 import { staticReadiness } from "./core/readiness";
 import { ActionEditor } from "./ActionEditor";
-import { PropsForm, type PropsDraft } from "./PropsForm";
+import { PropsForm, propLabel, type PropsDraft } from "./PropsForm";
+import { DATA_WORDS } from "./core/dataWording";
+import { bindablePropsOf, queryOfBinding } from "./core/publicData";
 import { Dialog, Gate, StateBox, Tabs, tabPanelProps } from "./ui/primitives";
 import type { DefCtx } from "./ctx";
 
@@ -63,11 +65,12 @@ export function Inspector({ ctx, section, component, meta, index, count, canUp, 
   );
 }
 
-function DataTab({ ctx, section, component, meta, state, openDataWizard }: { ctx: DefCtx; section: Section; component?: RegistryComponent; meta?: ComponentMetadataV2; state: ReturnType<typeof staticReadiness>; openDataWizard: (id: string) => void }) {
+function DataTab({ ctx, section, component, meta, state, openDataWizard }: { ctx: DefCtx; section: Section; component?: RegistryComponent; meta?: ComponentMetadataV2; state: ReturnType<typeof staticReadiness>; openDataWizard: (id: string, prop?: string) => void }) {
   const { doc } = ctx;
   const props = bindableProps(component, meta);
   const mine = (doc.dataBindings ?? []).filter((b) => b.sectionId === section.id);
   const [removing, setRemoving] = useState<string | null>(null);
+  const datasetOf = (b: { queryRef?: string; viewModelRef?: string }) => { const qid = queryOfBinding(b, doc); const q = (doc.queries ?? []).find((x) => x.id === qid); return q ? (q.name || q.id) : "(không tìm thấy bộ dữ liệu)"; };
   if (state.state !== "AVAILABLE") return <StateBox state={state}/>;
   const vmView = viewStateOf(staticReadiness("QUERY_PREVIEW"), null);
   return (
@@ -82,18 +85,20 @@ function DataTab({ ctx, section, component, meta, state, openDataWizard }: { ctx
           return (
             <li key={p.prop}>
               <div>
-                <b>{p.prop}</b><small>{p.cardinality === "LIST" ? "danh sách" : "một giá trị"}{p.derived ? " · suy ra từ schema" : ""}</small>
+                <b>{propLabel(p.prop)}</b><small>{p.cardinality === "LIST" ? "danh sách" : "một giá trị"}{p.derived ? " · suy ra từ schema" : ""}</small>
                 {b ? (<>
-                  <small>ViewModel: {vm?.name ?? b.viewModelRef ?? "—"}{q ? ` · truy vấn ${q.name ?? q.id}` : ""}</small>
+                  <small data-testid={`insp-data:${p.prop}`}>{DATA_WORDS.inspectorState(datasetOf(b))}</small>
+                  {vm ? <small>ViewModel: {vm.name ?? b.viewModelRef ?? "—"}{q ? ` · truy vấn ${q.name ?? q.id}` : ""}</small> : null}
                   {m ? <small>Ánh xạ: {mappingNote(m)}</small> : null}
                   {compat && !compat.ok ? <small className="formError" role="alert">{compat.message}</small> : null}
                   <small>Trạng thái: {VIEW_STATE_TEXT[vmView.kind]}{vmView.kind === "not-ready" ? ` — ${vmView.reason}` : ""}</small>
-                </>) : <small>Chưa gắn dữ liệu</small>}
+                </>) : <small>{DATA_WORDS.inspectorNone}</small>}
               </div>
-              {b && ctx.canEdit ? <button type="button" className="smallButton danger" aria-label={`Gỡ dữ liệu khỏi ${p.prop}`} onClick={() => setRemoving(b.id)}>Gỡ</button> : null}
+              {b && ctx.canEdit ? <button type="button" className="smallButton danger" aria-label={`Gỡ dữ liệu khỏi ${propLabel(p.prop)}`} onClick={() => setRemoving(b.id)}>Gỡ</button> : null}
+              {!b && ctx.canEdit && bindablePropsOf(section.type).some((x) => x.prop === p.prop) ? <button type="button" className="smallButton" aria-label={`${DATA_WORDS.inspectorButton} cho ${propLabel(p.prop)}`} onClick={() => openDataWizard(section.id, p.prop)}>{DATA_WORDS.inspectorButton}</button> : null}
             </li>);
         })}</ul>)}
-      {ctx.canEdit ? <button type="button" className="bx-btn sm" onClick={() => openDataWizard(section.id)}>Thiết lập luồng dữ liệu…</button> : null}
+      {ctx.canEdit ? <button type="button" className="bx-btn sm" onClick={() => openDataWizard(section.id)}>{DATA_WORDS.inspectorButton}</button> : null}
       {removing ? (
         <Dialog title="Gỡ dữ liệu khỏi thành phần?" onClose={() => setRemoving(null)} footer={<>
           <button type="button" className="bx-btn" onClick={() => setRemoving(null)}>Hủy</button>

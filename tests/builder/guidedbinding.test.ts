@@ -94,6 +94,12 @@ test("at most 8 different datasets per page", () => {
   assert.ok(!p.ok && p.problems.some((x) => /tối đa 8/.test(x.message)));
 });
 
+test("an empty form reports every problem at once (the person fixes them in one pass)", () => {
+  const p = planGuidedBinding({ ...emptyGuidedDraft(), source: { kind: "new", name: "", type: "postgres" } }, base());
+  assert.ok(!p.ok);
+  assert.deepEqual(!p.ok ? [...new Set(p.problems.map((x) => x.field))].sort() : [], ["datasetName", "operationKey", "section", "sourceName"]);
+});
+
 test("the 'Đã kết nối' sentences resolve both the direct and the view-model path", () => {
   const d = base({
     dataSources: [{ id: "s", name: "Kho", type: "postgres" }],
