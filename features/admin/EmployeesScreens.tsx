@@ -5,7 +5,7 @@
  * The tenant is the session's (fixed, read-only) or one of the caller's OWN tenants — there is never a free tenant id. Organization metadata is not a permission and the screen says so.
  */
 import { useEffect, useMemo, useState } from "react";
-import { Info, ModalHeader, Search, UserRound, Users, X } from "@xweb/ui";
+import { Info, ModalHeader, Search, UserRound, Users, X, ReasonButton } from "@xweb/ui";
 import { Modal } from "./Modal";
 import { Card, StateView } from "../ui";
 import { useLoad } from "../useLoad";
@@ -161,8 +161,9 @@ function EmployeeDetail({ org, plan, tenant, employee, units, positions, canTogg
           <p className="xp-note" role="note" data-testid="detail-perm-note"><Info size={16} aria-hidden="true"/><span>Đơn vị và vị trí chỉ để tổ chức, <b>không cấp quyền</b>. Quyền do máy chủ quyết định theo vai trò công ty và vai trò trong từng workspace.</span></p></section>
         <section className="xp-section" aria-label="Trạng thái"><h3>Trạng thái</h3>
           <div className="row"><StatusPill active={employee.active}/>
-            <button className="btn sm" data-testid="detail-toggle" disabled={!canToggleStatus} title={!canToggleStatus ? "Chỉ quản trị hệ thống bật hoặc tắt tài khoản." : undefined}>{employee.active ? "Tắt tài khoản" : "Bật tài khoản"}</button></div>
-          {!canToggleStatus ? <p className="hint" data-testid="detail-toggle-note">Chỉ quản trị hệ thống bật hoặc tắt tài khoản (API hiện có). Quản trị công ty có thể gỡ khỏi công ty ở mục “Công ty của tôi”.</p> : null}</section>
+            {/* the account switch is an account-level action (Platform → Người dùng); this list is the company's MEMBER list, so it is never offered here, and never as a dead button */}
+            <ReasonButton className="btn sm" data-testid="detail-toggle" unavailable reason={canToggleStatus ? "Bật hoặc tắt tài khoản ở Platform → Người dùng. Ở đây chỉ xem trạng thái thành viên công ty." : "Chỉ quản trị hệ thống bật hoặc tắt tài khoản. Quản trị công ty có thể gỡ khỏi công ty ở mục “Công ty của tôi”."}>{employee.active ? "Tắt tài khoản" : "Bật tài khoản"}</ReasonButton></div>
+          </section>
         {ok ? <p className="notice" role="status" data-testid="detail-ok">{ok}</p> : null}
         {problem ? <Problem p={problem}/> : null}
         <div className="xp-footer"><button className="btn" onClick={onClose}>Đóng</button></div>

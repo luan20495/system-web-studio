@@ -409,6 +409,20 @@ await block("scenario 52", async () => { const p = await open({ portal: "platfor
   check("LDG11 create company: the first-admin picker whose account list failed says so", /Chưa tải được danh sách tài khoản/.test(await p.locator("[role=dialog]").innerText()));
   await p.__ctx.close(); });
 
+// ===================================================================================================================== M-057 the employee status button is never a dead control
+await block("scenario 53", async () => { const p = await open({ portal: "admin", me: "sysatenant", start: "/admin/employees" }); await settle(p, 600);
+  await p.locator("[data-testid^='emp:']").first().click(); await settle(p, 300);
+  const btn = p.getByTestId("detail-toggle");
+  check("EMP57a a SYSTEM_ADMIN who is also a company admin: the status button is UNAVAILABLE (aria-disabled), not an enabled control with no handler", (await btn.getAttribute("aria-disabled")) === "true");
+  check("EMP57b the reason is visible text next to it and says where the action is", /Platform/.test(await p.locator("[role=dialog] .xp-reason").innerText()), await p.locator("[role=dialog] .xp-reason").innerText().catch(() => "none"));
+  await p.evaluate(() => { window.__calls.length = 0; }); await btn.click({ force: true }); await settle(p, 300);
+  check("EMP57c clicking it sends nothing", (await calls(p)).filter((c) => c.method !== "GET").length === 0);
+  await p.__ctx.close(); });
+await block("scenario 54", async () => { const p = await open({ portal: "admin", me: "tadmin", start: "/admin/employees" }); await settle(p, 600);
+  await p.locator("[data-testid^='emp:']").first().click(); await settle(p, 300);
+  check("EMP57d a company admin: unavailable too, with the existing explanation as visible text", (await p.getByTestId("detail-toggle").getAttribute("aria-disabled")) === "true" && /Chỉ quản trị hệ thống/.test(await p.locator("[role=dialog] .xp-reason").innerText()));
+  await p.__ctx.close(); });
+
 // ===================================================================================================================== route / navigation snapshot (M-066: the split must not change behaviour)
 // For every persona the sidebar labels and, for every section key (deep links, aliases, foreign and unknown keys included), the final path, the h1, the h2s and the kind of state view are recorded in admin-routes.snapshot.json
 // (generated from the pre-split code, `UPDATE_SNAPSHOT=1` rewrites it). Dates / numbers are not compared: only structure.
