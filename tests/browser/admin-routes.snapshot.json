@@ -1,0 +1,4583 @@
+{
+ "platform/sys": {
+  "nav": [
+   "Tổng quan",
+   "Công ty (tenant)",
+   "Người dùng & Workspace",
+   "AI",
+   "Cảnh báo",
+   "Bảo mật",
+   "Chi phí",
+   "Connector",
+   "Sao lưu",
+   "Components",
+   "Templates",
+   "Nhật ký kiểm toán",
+   "Build & lưu trữ",
+   "Packages",
+   "Sức khỏe hệ thống",
+   "Cài đặt"
+  ],
+  "routes": {
+   "(home)": {
+    "url": "/platform",
+    "h1": [
+     "Tổng quan"
+    ],
+    "h2": [
+     "Thiết lập ban đầu",
+     "Hoạt động gần đây",
+     "AI tháng này"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "Tổng quan · Xweb Platform"
+   },
+   "tenants": {
+    "url": "/platform/tenants",
+    "h1": [
+     "Công ty (tenant)"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Công ty (tenant) · Xweb Platform"
+   },
+   "tenants/t1": {
+    "url": "/platform/tenants/t1",
+    "h1": [
+     "Acme"
+    ],
+    "h2": [
+     "Thành viên của Acme (2)"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "Công ty (tenant) · Xweb Platform"
+   },
+   "users": {
+    "url": "/platform/users",
+    "h1": [
+     "Người dùng & Workspace"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Người dùng & Workspace · Xweb Platform"
+   },
+   "users/u2": {
+    "url": "/platform/users/u2",
+    "h1": [
+     "Bình"
+    ],
+    "h2": [
+     "Workspace (1)",
+     "Ứng dụng (0)",
+     "Chưa tham gia ứng dụng nào",
+     "AI của người này",
+     "Hoạt động gần đây",
+     "Chưa có hoạt động"
+    ],
+    "states": [
+     "state-empty",
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Người dùng & Workspace · Xweb Platform"
+   },
+   "workspaces": {
+    "url": "/platform/workspaces",
+    "h1": [
+     "Người dùng & Workspace"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Người dùng & Workspace · Xweb Platform"
+   },
+   "workspaces/w1": {
+    "url": "/platform/workspaces/w1",
+    "h1": [
+     "Kinh doanh"
+    ],
+    "h2": [
+     "Thành viên (1)",
+     "Ứng dụng (0)",
+     "Chưa có ứng dụng",
+     "Thành viên của Kinh doanh",
+     "Bạn không quản lý thành viên workspace này",
+     "Hoạt động",
+     "Chưa có hoạt động"
+    ],
+    "states": [
+     "state-empty",
+     "state-forbidden",
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Người dùng & Workspace · Xweb Platform"
+   },
+   "applications": {
+    "url": "/platform/applications",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Xweb Platform"
+   },
+   "applications/a1": {
+    "url": "/platform/applications/a1",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Xweb Platform"
+   },
+   "ai": {
+    "url": "/platform/ai",
+    "h1": [
+     "AI"
+    ],
+    "h2": [
+     "Nhà cung cấp AI"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "AI · Xweb Platform"
+   },
+   "ai/providers": {
+    "url": "/platform/ai/providers",
+    "h1": [
+     "AI"
+    ],
+    "h2": [
+     "Nhà cung cấp AI"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "AI · Xweb Platform"
+   },
+   "ai/models": {
+    "url": "/platform/ai/models",
+    "h1": [
+     "AI"
+    ],
+    "h2": [
+     "Mô hình AI",
+     "Bảng giá model",
+     "Chưa có giá nào"
+    ],
+    "states": [
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "AI · Xweb Platform"
+   },
+   "ai/limits": {
+    "url": "/platform/ai/limits",
+    "h1": [
+     "AI"
+    ],
+    "h2": [
+     "Hạn mức mặc định",
+     "Hạn mức riêng"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "AI · Xweb Platform"
+   },
+   "ai/usage": {
+    "url": "/platform/ai/usage",
+    "h1": [
+     "AI"
+    ],
+    "h2": [
+     "Mức sử dụng model",
+     "Theo model",
+     "Theo người dùng (top 20)",
+     "Theo workspace (top 20)",
+     "Chưa có dữ liệu",
+     "Nhật ký lượt gọi model",
+     "Chưa có lượt gọi",
+     "Prompt gần đây"
+    ],
+    "states": [
+     "state-empty",
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "AI · Xweb Platform"
+   },
+   "ai-governance": {
+    "url": "/platform/ai-governance",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Xweb Platform"
+   },
+   "alerts": {
+    "url": "/platform/alerts",
+    "h1": [
+     "Cảnh báo"
+    ],
+    "h2": [
+     "1 cảnh báo đang mở"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "Cảnh báo · Xweb Platform"
+   },
+   "security": {
+    "url": "/platform/security",
+    "h1": [
+     "Phát hiện bảo mật"
+    ],
+    "h2": [
+     "Tất cả phát hiện",
+     "Không có phát hiện"
+    ],
+    "states": [
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Bảo mật · Xweb Platform"
+   },
+   "costs": {
+    "url": "/platform/costs",
+    "h1": [
+     "Chi phí hosting"
+    ],
+    "h2": [
+     "Đơn giá",
+     "Theo phòng ban",
+     "Chưa có số liệu",
+     "Theo workspace",
+     "Chưa có số liệu",
+     "Theo ứng dụng",
+     "Chưa có số liệu"
+    ],
+    "states": [
+     "state-empty",
+     "state-empty",
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Chi phí · Xweb Platform"
+   },
+   "departments": {
+    "url": "/platform/departments",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Xweb Platform"
+   },
+   "identity": {
+    "url": "/platform/identity",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Xweb Platform"
+   },
+   "connectors": {
+    "url": "/platform/connectors",
+    "h1": [
+     "Connector"
+    ],
+    "h2": [
+     "Thêm / sửa connector",
+     "Danh mục"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "Connector · Xweb Platform"
+   },
+   "backups": {
+    "url": "/platform/backups",
+    "h1": [
+     "Sao lưu"
+    ],
+    "h2": [
+     "Chưa cấu hình thư mục sao lưu (BACKUP_STATUS_DIRS)"
+    ],
+    "states": [
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Sao lưu · Xweb Platform"
+   },
+   "components": {
+    "url": "/platform/components",
+    "h1": [
+     "Component Registry"
+    ],
+    "h2": [
+     "Thêm component gốc mới"
+    ],
+    "states": [],
+    "coming": 1,
+    "title": "Components · Xweb Platform"
+   },
+   "templates": {
+    "url": "/platform/templates",
+    "h1": [
+     "Templates"
+    ],
+    "h2": [
+     "Không có mẫu"
+    ],
+    "states": [
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Templates · Xweb Platform"
+   },
+   "audit": {
+    "url": "/platform/audit",
+    "h1": [
+     "Nhật ký kiểm toán"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Nhật ký kiểm toán · Xweb Platform"
+   },
+   "builds": {
+    "url": "/platform/builds",
+    "h1": [
+     "Build & lưu trữ"
+    ],
+    "h2": [
+     "Theo workspace",
+     "Chưa có build",
+     "Theo người dùng",
+     "Chưa có build",
+     "Theo ứng dụng",
+     "Chưa có build",
+     "Build bị từ chối",
+     "Không có build nào bị từ chối",
+     "Dọn dẹp (lưu giữ)",
+     "Kho mã nguồn"
+    ],
+    "states": [
+     "state-empty",
+     "state-empty",
+     "state-empty",
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Build & lưu trữ · Xweb Platform"
+   },
+   "packages": {
+    "url": "/platform/packages",
+    "h1": [
+     "Packages"
+    ],
+    "h2": [
+     "Duyệt package",
+     "Danh mục"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "Packages · Xweb Platform"
+   },
+   "system": {
+    "url": "/platform/system",
+    "h1": [
+     "Sức khỏe hệ thống"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Sức khỏe hệ thống · Xweb Platform"
+   },
+   "settings": {
+    "url": "/platform/settings",
+    "h1": [
+     "Cài đặt"
+    ],
+    "h2": [
+     "ai",
+     "network",
+     "limits",
+     "CẤU HÌNH ĐANG HIỆU LỰC (CHỈ XEM)",
+     "Xác thực"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "Cài đặt · Xweb Platform"
+   },
+   "groups": {
+    "url": "/platform/groups",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Xweb Platform"
+   },
+   "sharing": {
+    "url": "/platform/sharing",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Xweb Platform"
+   },
+   "byok": {
+    "url": "/platform/byok",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Xweb Platform"
+   },
+   "company": {
+    "url": "/platform/company",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Xweb Platform"
+   },
+   "organization": {
+    "url": "/platform/organization",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Xweb Platform"
+   },
+   "employees": {
+    "url": "/platform/employees",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Xweb Platform"
+   },
+   "people": {
+    "url": "/platform/people",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Xweb Platform"
+   },
+   "my-workspaces": {
+    "url": "/platform/my-workspaces",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Xweb Platform"
+   },
+   "data-sources": {
+    "url": "/platform/data-sources",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Xweb Platform"
+   },
+   "nope": {
+    "url": "/platform/nope",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Xweb Platform"
+   },
+   "nope/deeper": {
+    "url": "/platform/nope/deeper",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Xweb Platform"
+   }
+  }
+ },
+ "platform/tadmin": {
+  "nav": null,
+  "routes": {
+   "(home)": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "tenants": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "tenants/t1": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "users": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "users/u2": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "workspaces": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "workspaces/w1": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "applications": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "applications/a1": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "ai": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "ai/providers": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "ai/models": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "ai/limits": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "ai/usage": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "ai-governance": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "alerts": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "security": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "costs": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "departments": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "identity": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "connectors": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "backups": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "components": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "templates": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "audit": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "builds": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "packages": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "system": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "settings": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "groups": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "sharing": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "byok": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "company": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "organization": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "employees": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "people": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "my-workspaces": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "data-sources": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "nope": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "nope/deeper": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   }
+  }
+ },
+ "admin/sys": {
+  "nav": [
+   "Tổng quan",
+   "Người dùng & Workspace",
+   "Ứng dụng",
+   "Quyền & ngân sách AI",
+   "Phòng ban",
+   "Định danh (SSO/SCIM)",
+   "Templates",
+   "Nhật ký kiểm toán",
+   "Nhóm",
+   "Chia sẻ",
+   "AI riêng của công ty"
+  ],
+  "routes": {
+   "(home)": {
+    "url": "/admin",
+    "h1": [
+     "Tổng quan"
+    ],
+    "h2": [
+     "Hoạt động gần đây"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "Tổng quan · Quản trị công ty"
+   },
+   "tenants": {
+    "url": "/admin/tenants",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "tenants/t1": {
+    "url": "/admin/tenants/t1",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "users": {
+    "url": "/admin/users",
+    "h1": [
+     "Người dùng & Workspace"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Người dùng & Workspace · Quản trị công ty"
+   },
+   "users/u2": {
+    "url": "/admin/users/u2",
+    "h1": [
+     "Bình"
+    ],
+    "h2": [
+     "Workspace (1)",
+     "Ứng dụng (0)",
+     "Chưa tham gia ứng dụng nào",
+     "AI của người này",
+     "Hoạt động gần đây",
+     "Chưa có hoạt động"
+    ],
+    "states": [
+     "state-empty",
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Người dùng & Workspace · Quản trị công ty"
+   },
+   "workspaces": {
+    "url": "/admin/workspaces",
+    "h1": [
+     "Người dùng & Workspace"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Người dùng & Workspace · Quản trị công ty"
+   },
+   "workspaces/w1": {
+    "url": "/admin/workspaces/w1",
+    "h1": [
+     "Kinh doanh"
+    ],
+    "h2": [
+     "Thành viên (1)",
+     "Ứng dụng (0)",
+     "Chưa có ứng dụng",
+     "Thành viên của Kinh doanh",
+     "Bạn không quản lý thành viên workspace này",
+     "Hoạt động",
+     "Chưa có hoạt động"
+    ],
+    "states": [
+     "state-empty",
+     "state-forbidden",
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Người dùng & Workspace · Quản trị công ty"
+   },
+   "applications": {
+    "url": "/admin/applications",
+    "h1": [
+     "Ứng dụng"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Ứng dụng · Quản trị công ty"
+   },
+   "applications/a1": {
+    "url": "/admin/applications/a1",
+    "h1": [
+     "Cổng khách hàng"
+    ],
+    "h2": [
+     "Chuyển chủ sở hữu",
+     "Chưa triển khai"
+    ],
+    "states": [],
+    "coming": 1,
+    "title": "Ứng dụng · Quản trị công ty"
+   },
+   "ai": {
+    "url": "/admin/ai",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "ai/providers": {
+    "url": "/admin/ai/providers",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "ai/models": {
+    "url": "/admin/ai/models",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "ai/limits": {
+    "url": "/admin/ai/limits",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "ai/usage": {
+    "url": "/admin/ai/usage",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "ai-governance": {
+    "url": "/admin/ai-governance",
+    "h1": [
+     "Quản trị AI"
+    ],
+    "h2": [
+     "Quyền dùng model (Model Access)",
+     "Chưa có quy tắc chặn nào",
+     "Ngân sách AI (tiền)",
+     "Chưa có ngân sách nào"
+    ],
+    "states": [
+     "state-empty",
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Quyền & ngân sách AI · Quản trị công ty"
+   },
+   "alerts": {
+    "url": "/admin/alerts",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "security": {
+    "url": "/admin/security",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "costs": {
+    "url": "/admin/costs",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "departments": {
+    "url": "/admin/departments",
+    "h1": [
+     "Phòng ban & nhóm"
+    ],
+    "h2": [
+     "Thêm",
+     "Cơ cấu",
+     "Chưa có phòng ban",
+     "Gán người dùng hoặc workspace"
+    ],
+    "states": [
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Phòng ban · Quản trị công ty"
+   },
+   "identity": {
+    "url": "/admin/identity",
+    "h1": [
+     "Định danh"
+    ],
+    "h2": [
+     "Nhóm SCIM → quyền workspace",
+     "Chưa có ánh xạ"
+    ],
+    "states": [
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Định danh (SSO/SCIM) · Quản trị công ty"
+   },
+   "connectors": {
+    "url": "/admin/connectors",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "backups": {
+    "url": "/admin/backups",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "components": {
+    "url": "/admin/components",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "templates": {
+    "url": "/admin/templates",
+    "h1": [
+     "Templates"
+    ],
+    "h2": [
+     "Không có mẫu"
+    ],
+    "states": [
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Templates · Quản trị công ty"
+   },
+   "audit": {
+    "url": "/admin/audit",
+    "h1": [
+     "Nhật ký kiểm toán"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Nhật ký kiểm toán · Quản trị công ty"
+   },
+   "builds": {
+    "url": "/admin/builds",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "packages": {
+    "url": "/admin/packages",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "system": {
+    "url": "/admin/system",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "settings": {
+    "url": "/admin/settings",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "groups": {
+    "url": "/admin/groups",
+    "h1": [
+     "Nhóm"
+    ],
+    "h2": [
+     "Chưa sẵn sàng"
+    ],
+    "states": [],
+    "coming": 1,
+    "title": "Nhóm · Quản trị công ty"
+   },
+   "sharing": {
+    "url": "/admin/sharing",
+    "h1": [
+     "Chia sẻ"
+    ],
+    "h2": [
+     "Chưa sẵn sàng"
+    ],
+    "states": [],
+    "coming": 1,
+    "title": "Chia sẻ · Quản trị công ty"
+   },
+   "byok": {
+    "url": "/admin/byok",
+    "h1": [
+     "AI riêng của công ty"
+    ],
+    "h2": [
+     "Chưa sẵn sàng"
+    ],
+    "states": [],
+    "coming": 1,
+    "title": "AI riêng của công ty · Quản trị công ty"
+   },
+   "company": {
+    "url": "/admin/company",
+    "h1": [
+     "Công ty của tôi"
+    ],
+    "h2": [
+     "Bạn chưa quản trị công ty nào"
+    ],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "organization": {
+    "url": "/admin/organization",
+    "h1": [
+     "Bạn chưa quản trị công ty nào"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "employees": {
+    "url": "/admin/employees",
+    "h1": [
+     "Bạn chưa quản trị công ty nào"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "people": {
+    "url": "/admin/people",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "my-workspaces": {
+    "url": "/admin/my-workspaces",
+    "h1": [
+     "Bạn chưa quản trị workspace nào"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "data-sources": {
+    "url": "/admin/data-sources",
+    "h1": [
+     "Bạn chưa quản trị nguồn dữ liệu nào"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "nope": {
+    "url": "/admin/nope",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "nope/deeper": {
+    "url": "/admin/nope/deeper",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   }
+  }
+ },
+ "admin/sysmember": {
+  "nav": [
+   "Tổng quan",
+   "Người dùng & Workspace",
+   "Ứng dụng",
+   "Quyền & ngân sách AI",
+   "Phòng ban",
+   "Định danh (SSO/SCIM)",
+   "Templates",
+   "Nhật ký kiểm toán",
+   "Nhóm",
+   "Chia sẻ",
+   "AI riêng của công ty"
+  ],
+  "routes": {
+   "(home)": {
+    "url": "/admin",
+    "h1": [
+     "Tổng quan"
+    ],
+    "h2": [
+     "Hoạt động gần đây"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "Tổng quan · Quản trị công ty"
+   },
+   "tenants": {
+    "url": "/admin/tenants",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "tenants/t1": {
+    "url": "/admin/tenants/t1",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "users": {
+    "url": "/admin/users",
+    "h1": [
+     "Người dùng & Workspace"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Người dùng & Workspace · Quản trị công ty"
+   },
+   "users/u2": {
+    "url": "/admin/users/u2",
+    "h1": [
+     "Bình"
+    ],
+    "h2": [
+     "Workspace (1)",
+     "Ứng dụng (0)",
+     "Chưa tham gia ứng dụng nào",
+     "AI của người này",
+     "Hoạt động gần đây",
+     "Chưa có hoạt động"
+    ],
+    "states": [
+     "state-empty",
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Người dùng & Workspace · Quản trị công ty"
+   },
+   "workspaces": {
+    "url": "/admin/workspaces",
+    "h1": [
+     "Người dùng & Workspace"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Người dùng & Workspace · Quản trị công ty"
+   },
+   "workspaces/w1": {
+    "url": "/admin/workspaces/w1",
+    "h1": [
+     "Kinh doanh"
+    ],
+    "h2": [
+     "Thành viên (1)",
+     "Ứng dụng (0)",
+     "Chưa có ứng dụng",
+     "Thành viên của Kinh doanh",
+     "Bạn không quản lý thành viên workspace này",
+     "Hoạt động",
+     "Chưa có hoạt động"
+    ],
+    "states": [
+     "state-empty",
+     "state-forbidden",
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Người dùng & Workspace · Quản trị công ty"
+   },
+   "applications": {
+    "url": "/admin/applications",
+    "h1": [
+     "Ứng dụng"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Ứng dụng · Quản trị công ty"
+   },
+   "applications/a1": {
+    "url": "/admin/applications/a1",
+    "h1": [
+     "Cổng khách hàng"
+    ],
+    "h2": [
+     "Chuyển chủ sở hữu",
+     "Chưa triển khai"
+    ],
+    "states": [],
+    "coming": 1,
+    "title": "Ứng dụng · Quản trị công ty"
+   },
+   "ai": {
+    "url": "/admin/ai",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "ai/providers": {
+    "url": "/admin/ai/providers",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "ai/models": {
+    "url": "/admin/ai/models",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "ai/limits": {
+    "url": "/admin/ai/limits",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "ai/usage": {
+    "url": "/admin/ai/usage",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "ai-governance": {
+    "url": "/admin/ai-governance",
+    "h1": [
+     "Quản trị AI"
+    ],
+    "h2": [
+     "Quyền dùng model (Model Access)",
+     "Chưa có quy tắc chặn nào",
+     "Ngân sách AI (tiền)",
+     "Chưa có ngân sách nào"
+    ],
+    "states": [
+     "state-empty",
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Quyền & ngân sách AI · Quản trị công ty"
+   },
+   "alerts": {
+    "url": "/admin/alerts",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "security": {
+    "url": "/admin/security",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "costs": {
+    "url": "/admin/costs",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "departments": {
+    "url": "/admin/departments",
+    "h1": [
+     "Phòng ban & nhóm"
+    ],
+    "h2": [
+     "Thêm",
+     "Cơ cấu",
+     "Chưa có phòng ban",
+     "Gán người dùng hoặc workspace"
+    ],
+    "states": [
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Phòng ban · Quản trị công ty"
+   },
+   "identity": {
+    "url": "/admin/identity",
+    "h1": [
+     "Định danh"
+    ],
+    "h2": [
+     "Nhóm SCIM → quyền workspace",
+     "Chưa có ánh xạ"
+    ],
+    "states": [
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Định danh (SSO/SCIM) · Quản trị công ty"
+   },
+   "connectors": {
+    "url": "/admin/connectors",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "backups": {
+    "url": "/admin/backups",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "components": {
+    "url": "/admin/components",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "templates": {
+    "url": "/admin/templates",
+    "h1": [
+     "Templates"
+    ],
+    "h2": [
+     "Không có mẫu"
+    ],
+    "states": [
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Templates · Quản trị công ty"
+   },
+   "audit": {
+    "url": "/admin/audit",
+    "h1": [
+     "Nhật ký kiểm toán"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Nhật ký kiểm toán · Quản trị công ty"
+   },
+   "builds": {
+    "url": "/admin/builds",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "packages": {
+    "url": "/admin/packages",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "system": {
+    "url": "/admin/system",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "settings": {
+    "url": "/admin/settings",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "groups": {
+    "url": "/admin/groups",
+    "h1": [
+     "Nhóm"
+    ],
+    "h2": [
+     "Chưa sẵn sàng"
+    ],
+    "states": [],
+    "coming": 1,
+    "title": "Nhóm · Quản trị công ty"
+   },
+   "sharing": {
+    "url": "/admin/sharing",
+    "h1": [
+     "Chia sẻ"
+    ],
+    "h2": [
+     "Chưa sẵn sàng"
+    ],
+    "states": [],
+    "coming": 1,
+    "title": "Chia sẻ · Quản trị công ty"
+   },
+   "byok": {
+    "url": "/admin/byok",
+    "h1": [
+     "AI riêng của công ty"
+    ],
+    "h2": [
+     "Chưa sẵn sàng"
+    ],
+    "states": [],
+    "coming": 1,
+    "title": "AI riêng của công ty · Quản trị công ty"
+   },
+   "company": {
+    "url": "/admin/company",
+    "h1": [
+     "Công ty của tôi"
+    ],
+    "h2": [
+     "Bạn chưa quản trị công ty nào"
+    ],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "organization": {
+    "url": "/admin/organization",
+    "h1": [
+     "Bạn chưa quản trị công ty nào"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "employees": {
+    "url": "/admin/employees",
+    "h1": [
+     "Bạn chưa quản trị công ty nào"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "people": {
+    "url": "/admin/people",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "my-workspaces": {
+    "url": "/admin/my-workspaces",
+    "h1": [
+     "Bạn chưa quản trị workspace nào"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "data-sources": {
+    "url": "/admin/data-sources",
+    "h1": [
+     "Bạn chưa quản trị nguồn dữ liệu nào"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "nope": {
+    "url": "/admin/nope",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "nope/deeper": {
+    "url": "/admin/nope/deeper",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   }
+  }
+ },
+ "admin/tadmin": {
+  "nav": [
+   "Tổng quan",
+   "Công ty của tôi",
+   "Cơ cấu tổ chức",
+   "Nhân viên",
+   "Người dùng",
+   "Workspace của tôi",
+   "Nguồn dữ liệu",
+   "Nhóm",
+   "Chia sẻ",
+   "AI riêng của công ty"
+  ],
+  "routes": {
+   "(home)": {
+    "url": "/admin",
+    "h1": [
+     "Tổng quan"
+    ],
+    "h2": [
+     "Công ty",
+     "Workspace"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "Tổng quan · Quản trị công ty"
+   },
+   "tenants": {
+    "url": "/admin/tenants",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "tenants/t1": {
+    "url": "/admin/tenants/t1",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "users": {
+    "url": "/admin/users",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "users/u2": {
+    "url": "/admin/users/u2",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "workspaces": {
+    "url": "/admin/workspaces",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "workspaces/w1": {
+    "url": "/admin/workspaces/w1",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "applications": {
+    "url": "/admin/applications",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "applications/a1": {
+    "url": "/admin/applications/a1",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "ai": {
+    "url": "/admin/ai",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "ai/providers": {
+    "url": "/admin/ai/providers",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "ai/models": {
+    "url": "/admin/ai/models",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "ai/limits": {
+    "url": "/admin/ai/limits",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "ai/usage": {
+    "url": "/admin/ai/usage",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "ai-governance": {
+    "url": "/admin/ai-governance",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "alerts": {
+    "url": "/admin/alerts",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "security": {
+    "url": "/admin/security",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "costs": {
+    "url": "/admin/costs",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "departments": {
+    "url": "/admin/departments",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "identity": {
+    "url": "/admin/identity",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "connectors": {
+    "url": "/admin/connectors",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "backups": {
+    "url": "/admin/backups",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "components": {
+    "url": "/admin/components",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "templates": {
+    "url": "/admin/templates",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "audit": {
+    "url": "/admin/audit",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "builds": {
+    "url": "/admin/builds",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "packages": {
+    "url": "/admin/packages",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "system": {
+    "url": "/admin/system",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "settings": {
+    "url": "/admin/settings",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "groups": {
+    "url": "/admin/groups",
+    "h1": [
+     "Nhóm"
+    ],
+    "h2": [
+     "Chưa sẵn sàng"
+    ],
+    "states": [],
+    "coming": 1,
+    "title": "Nhóm · Quản trị công ty"
+   },
+   "sharing": {
+    "url": "/admin/sharing",
+    "h1": [
+     "Chia sẻ"
+    ],
+    "h2": [
+     "Chưa sẵn sàng"
+    ],
+    "states": [],
+    "coming": 1,
+    "title": "Chia sẻ · Quản trị công ty"
+   },
+   "byok": {
+    "url": "/admin/byok",
+    "h1": [
+     "AI riêng của công ty"
+    ],
+    "h2": [
+     "Chưa sẵn sàng"
+    ],
+    "states": [],
+    "coming": 1,
+    "title": "AI riêng của công ty · Quản trị công ty"
+   },
+   "company": {
+    "url": "/admin/company",
+    "h1": [
+     "Acme"
+    ],
+    "h2": [
+     "Thành viên của Acme (2)"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "Công ty của tôi · Quản trị công ty"
+   },
+   "organization": {
+    "url": "/admin/organization",
+    "h1": [
+     "Cơ cấu tổ chức"
+    ],
+    "h2": [
+     "Cơ cấu tổ chức chưa sẵn sàng"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "Cơ cấu tổ chức · Quản trị công ty"
+   },
+   "employees": {
+    "url": "/admin/employees",
+    "h1": [
+     "Nhân viên"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Nhân viên · Quản trị công ty"
+   },
+   "people": {
+    "url": "/admin/people",
+    "h1": [
+     "Người dùng"
+    ],
+    "h2": [
+     "Công ty",
+     "Tạo tài khoản mới",
+     "Thêm người đã có tài khoản vào workspace"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "Người dùng · Quản trị công ty"
+   },
+   "my-workspaces": {
+    "url": "/admin/my-workspaces",
+    "h1": [
+     "Workspace của tôi"
+    ],
+    "h2": [
+     "Thành viên của Kinh doanh (2)"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "Workspace của tôi · Quản trị công ty"
+   },
+   "data-sources": {
+    "url": "/admin/data-sources",
+    "h1": [
+     "Nguồn dữ liệu"
+    ],
+    "h2": [
+     "Nguồn dữ liệu của không gian làm việc",
+     "Thêm nguồn dữ liệu",
+     "Liên kết khe dữ liệu của ứng dụng"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "Nguồn dữ liệu · Quản trị công ty"
+   },
+   "nope": {
+    "url": "/admin/nope",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "nope/deeper": {
+    "url": "/admin/nope/deeper",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   }
+  }
+ },
+ "admin/wsadmin": {
+  "nav": [
+   "Tổng quan",
+   "Người dùng",
+   "Workspace của tôi",
+   "Nhóm",
+   "Chia sẻ",
+   "AI riêng của công ty"
+  ],
+  "routes": {
+   "(home)": {
+    "url": "/admin",
+    "h1": [
+     "Tổng quan"
+    ],
+    "h2": [
+     "Công ty",
+     "Workspace"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "Tổng quan · Quản trị công ty"
+   },
+   "tenants": {
+    "url": "/admin/tenants",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "tenants/t1": {
+    "url": "/admin/tenants/t1",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "users": {
+    "url": "/admin/users",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "users/u2": {
+    "url": "/admin/users/u2",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "workspaces": {
+    "url": "/admin/workspaces",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "workspaces/w1": {
+    "url": "/admin/workspaces/w1",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "applications": {
+    "url": "/admin/applications",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "applications/a1": {
+    "url": "/admin/applications/a1",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "ai": {
+    "url": "/admin/ai",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "ai/providers": {
+    "url": "/admin/ai/providers",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "ai/models": {
+    "url": "/admin/ai/models",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "ai/limits": {
+    "url": "/admin/ai/limits",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "ai/usage": {
+    "url": "/admin/ai/usage",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "ai-governance": {
+    "url": "/admin/ai-governance",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "alerts": {
+    "url": "/admin/alerts",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "security": {
+    "url": "/admin/security",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "costs": {
+    "url": "/admin/costs",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "departments": {
+    "url": "/admin/departments",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "identity": {
+    "url": "/admin/identity",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "connectors": {
+    "url": "/admin/connectors",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "backups": {
+    "url": "/admin/backups",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "components": {
+    "url": "/admin/components",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "templates": {
+    "url": "/admin/templates",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "audit": {
+    "url": "/admin/audit",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "builds": {
+    "url": "/admin/builds",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "packages": {
+    "url": "/admin/packages",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "system": {
+    "url": "/admin/system",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "settings": {
+    "url": "/admin/settings",
+    "h1": [
+     "Mục này chỉ dành cho quản trị hệ thống"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "groups": {
+    "url": "/admin/groups",
+    "h1": [
+     "Nhóm"
+    ],
+    "h2": [
+     "Chưa sẵn sàng"
+    ],
+    "states": [],
+    "coming": 1,
+    "title": "Nhóm · Quản trị công ty"
+   },
+   "sharing": {
+    "url": "/admin/sharing",
+    "h1": [
+     "Chia sẻ"
+    ],
+    "h2": [
+     "Chưa sẵn sàng"
+    ],
+    "states": [],
+    "coming": 1,
+    "title": "Chia sẻ · Quản trị công ty"
+   },
+   "byok": {
+    "url": "/admin/byok",
+    "h1": [
+     "AI riêng của công ty"
+    ],
+    "h2": [
+     "Chưa sẵn sàng"
+    ],
+    "states": [],
+    "coming": 1,
+    "title": "AI riêng của công ty · Quản trị công ty"
+   },
+   "company": {
+    "url": "/admin/company",
+    "h1": [
+     "Bạn chưa quản trị công ty nào"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "organization": {
+    "url": "/admin/organization",
+    "h1": [
+     "Bạn chưa quản trị công ty nào"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "employees": {
+    "url": "/admin/employees",
+    "h1": [
+     "Bạn chưa quản trị công ty nào"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "people": {
+    "url": "/admin/people",
+    "h1": [
+     "Người dùng"
+    ],
+    "h2": [
+     "Công ty",
+     "Tạo tài khoản mới",
+     "Thêm người đã có tài khoản vào workspace"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "Người dùng · Quản trị công ty"
+   },
+   "my-workspaces": {
+    "url": "/admin/my-workspaces",
+    "h1": [
+     "Workspace của tôi"
+    ],
+    "h2": [
+     "Thành viên của Kinh doanh (2)"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "Workspace của tôi · Quản trị công ty"
+   },
+   "data-sources": {
+    "url": "/admin/data-sources",
+    "h1": [
+     "Bạn chưa quản trị nguồn dữ liệu nào"
+    ],
+    "h2": [],
+    "states": [
+     "state-forbidden"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "nope": {
+    "url": "/admin/nope",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   },
+   "nope/deeper": {
+    "url": "/admin/nope/deeper",
+    "h1": [
+     "Mục này nằm ở trang khác"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Quản trị công ty"
+   }
+  }
+ },
+ "admin/plain": {
+  "nav": null,
+  "routes": {
+   "(home)": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "tenants": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "tenants/t1": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "users": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "users/u2": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "workspaces": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "workspaces/w1": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "applications": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "applications/a1": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "ai": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "ai/providers": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "ai/models": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "ai/limits": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "ai/usage": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "ai-governance": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "alerts": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "security": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "costs": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "departments": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "identity": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "connectors": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "backups": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "components": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "templates": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "audit": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "builds": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "packages": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "system": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "settings": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "groups": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "sharing": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "byok": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "company": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "organization": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "employees": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "people": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "my-workspaces": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "data-sources": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "nope": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   },
+   "nope/deeper": {
+    "url": "/auth/no-access",
+    "h1": [
+     "Không có quyền truy cập"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Admin portals harness"
+   }
+  }
+ },
+ "all/sys": {
+  "nav": [
+   "Tổng quan",
+   "Người dùng & Workspace",
+   "Ứng dụng",
+   "AI",
+   "Quyền & ngân sách AI",
+   "Cảnh báo",
+   "Bảo mật",
+   "Chi phí",
+   "Phòng ban",
+   "Định danh (SSO/SCIM)",
+   "Connector",
+   "Sao lưu",
+   "Components",
+   "Templates",
+   "Nhật ký kiểm toán",
+   "Build & lưu trữ",
+   "Packages",
+   "Sức khỏe hệ thống",
+   "Cài đặt"
+  ],
+  "routes": {
+   "(home)": {
+    "url": "/admin",
+    "h1": [
+     "Tổng quan"
+    ],
+    "h2": [
+     "Thiết lập ban đầu",
+     "Hoạt động gần đây",
+     "AI tháng này"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "Tổng quan · Admin Console"
+   },
+   "tenants": {
+    "url": "/admin/tenants",
+    "h1": [
+     "Không tìm thấy"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Admin Console"
+   },
+   "tenants/t1": {
+    "url": "/admin/tenants/t1",
+    "h1": [
+     "Không tìm thấy"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Admin Console"
+   },
+   "users": {
+    "url": "/admin/users",
+    "h1": [
+     "Người dùng & Workspace"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Người dùng & Workspace · Admin Console"
+   },
+   "users/u2": {
+    "url": "/admin/users/u2",
+    "h1": [
+     "Bình"
+    ],
+    "h2": [
+     "Workspace (1)",
+     "Ứng dụng (0)",
+     "Chưa tham gia ứng dụng nào",
+     "AI của người này",
+     "Hoạt động gần đây",
+     "Chưa có hoạt động"
+    ],
+    "states": [
+     "state-empty",
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Người dùng & Workspace · Admin Console"
+   },
+   "workspaces": {
+    "url": "/admin/workspaces",
+    "h1": [
+     "Người dùng & Workspace"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Người dùng & Workspace · Admin Console"
+   },
+   "workspaces/w1": {
+    "url": "/admin/workspaces/w1",
+    "h1": [
+     "Kinh doanh"
+    ],
+    "h2": [
+     "Thành viên (1)",
+     "Ứng dụng (0)",
+     "Chưa có ứng dụng",
+     "Thành viên của Kinh doanh",
+     "Bạn không quản lý thành viên workspace này",
+     "Hoạt động",
+     "Chưa có hoạt động"
+    ],
+    "states": [
+     "state-empty",
+     "state-forbidden",
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Người dùng & Workspace · Admin Console"
+   },
+   "applications": {
+    "url": "/admin/applications",
+    "h1": [
+     "Ứng dụng"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Ứng dụng · Admin Console"
+   },
+   "applications/a1": {
+    "url": "/admin/applications/a1",
+    "h1": [
+     "Cổng khách hàng"
+    ],
+    "h2": [
+     "Chuyển chủ sở hữu",
+     "Chưa triển khai"
+    ],
+    "states": [],
+    "coming": 1,
+    "title": "Ứng dụng · Admin Console"
+   },
+   "ai": {
+    "url": "/admin/ai",
+    "h1": [
+     "AI"
+    ],
+    "h2": [
+     "Nhà cung cấp AI"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "AI · Admin Console"
+   },
+   "ai/providers": {
+    "url": "/admin/ai/providers",
+    "h1": [
+     "AI"
+    ],
+    "h2": [
+     "Nhà cung cấp AI"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "AI · Admin Console"
+   },
+   "ai/models": {
+    "url": "/admin/ai/models",
+    "h1": [
+     "AI"
+    ],
+    "h2": [
+     "Mô hình AI",
+     "Bảng giá model",
+     "Chưa có giá nào"
+    ],
+    "states": [
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "AI · Admin Console"
+   },
+   "ai/limits": {
+    "url": "/admin/ai/limits",
+    "h1": [
+     "AI"
+    ],
+    "h2": [
+     "Hạn mức mặc định",
+     "Hạn mức riêng"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "AI · Admin Console"
+   },
+   "ai/usage": {
+    "url": "/admin/ai/usage",
+    "h1": [
+     "AI"
+    ],
+    "h2": [
+     "Mức sử dụng model",
+     "Theo model",
+     "Theo người dùng (top 20)",
+     "Theo workspace (top 20)",
+     "Chưa có dữ liệu",
+     "Nhật ký lượt gọi model",
+     "Chưa có lượt gọi",
+     "Prompt gần đây"
+    ],
+    "states": [
+     "state-empty",
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "AI · Admin Console"
+   },
+   "ai-governance": {
+    "url": "/admin/ai-governance",
+    "h1": [
+     "Quản trị AI"
+    ],
+    "h2": [
+     "Quyền dùng model (Model Access)",
+     "Chưa có quy tắc chặn nào",
+     "Ngân sách AI (tiền)",
+     "Chưa có ngân sách nào"
+    ],
+    "states": [
+     "state-empty",
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Quyền & ngân sách AI · Admin Console"
+   },
+   "alerts": {
+    "url": "/admin/alerts",
+    "h1": [
+     "Cảnh báo"
+    ],
+    "h2": [
+     "1 cảnh báo đang mở"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "Cảnh báo · Admin Console"
+   },
+   "security": {
+    "url": "/admin/security",
+    "h1": [
+     "Phát hiện bảo mật"
+    ],
+    "h2": [
+     "Tất cả phát hiện",
+     "Không có phát hiện"
+    ],
+    "states": [
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Bảo mật · Admin Console"
+   },
+   "costs": {
+    "url": "/admin/costs",
+    "h1": [
+     "Chi phí hosting"
+    ],
+    "h2": [
+     "Đơn giá",
+     "Theo phòng ban",
+     "Chưa có số liệu",
+     "Theo workspace",
+     "Chưa có số liệu",
+     "Theo ứng dụng",
+     "Chưa có số liệu"
+    ],
+    "states": [
+     "state-empty",
+     "state-empty",
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Chi phí · Admin Console"
+   },
+   "departments": {
+    "url": "/admin/departments",
+    "h1": [
+     "Phòng ban & nhóm"
+    ],
+    "h2": [
+     "Thêm",
+     "Cơ cấu",
+     "Chưa có phòng ban",
+     "Gán người dùng hoặc workspace"
+    ],
+    "states": [
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Phòng ban · Admin Console"
+   },
+   "identity": {
+    "url": "/admin/identity",
+    "h1": [
+     "Định danh"
+    ],
+    "h2": [
+     "Nhóm SCIM → quyền workspace",
+     "Chưa có ánh xạ"
+    ],
+    "states": [
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Định danh (SSO/SCIM) · Admin Console"
+   },
+   "connectors": {
+    "url": "/admin/connectors",
+    "h1": [
+     "Connector"
+    ],
+    "h2": [
+     "Thêm / sửa connector",
+     "Danh mục"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "Connector · Admin Console"
+   },
+   "backups": {
+    "url": "/admin/backups",
+    "h1": [
+     "Sao lưu"
+    ],
+    "h2": [
+     "Chưa cấu hình thư mục sao lưu (BACKUP_STATUS_DIRS)"
+    ],
+    "states": [
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Sao lưu · Admin Console"
+   },
+   "components": {
+    "url": "/admin/components",
+    "h1": [
+     "Component Registry"
+    ],
+    "h2": [
+     "Thêm component gốc mới"
+    ],
+    "states": [],
+    "coming": 1,
+    "title": "Components · Admin Console"
+   },
+   "templates": {
+    "url": "/admin/templates",
+    "h1": [
+     "Templates"
+    ],
+    "h2": [
+     "Không có mẫu"
+    ],
+    "states": [
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Templates · Admin Console"
+   },
+   "audit": {
+    "url": "/admin/audit",
+    "h1": [
+     "Nhật ký kiểm toán"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Nhật ký kiểm toán · Admin Console"
+   },
+   "builds": {
+    "url": "/admin/builds",
+    "h1": [
+     "Build & lưu trữ"
+    ],
+    "h2": [
+     "Theo workspace",
+     "Chưa có build",
+     "Theo người dùng",
+     "Chưa có build",
+     "Theo ứng dụng",
+     "Chưa có build",
+     "Build bị từ chối",
+     "Không có build nào bị từ chối",
+     "Dọn dẹp (lưu giữ)",
+     "Kho mã nguồn"
+    ],
+    "states": [
+     "state-empty",
+     "state-empty",
+     "state-empty",
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Build & lưu trữ · Admin Console"
+   },
+   "packages": {
+    "url": "/admin/packages",
+    "h1": [
+     "Packages"
+    ],
+    "h2": [
+     "Duyệt package",
+     "Danh mục"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "Packages · Admin Console"
+   },
+   "system": {
+    "url": "/admin/system",
+    "h1": [
+     "Sức khỏe hệ thống"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Sức khỏe hệ thống · Admin Console"
+   },
+   "settings": {
+    "url": "/admin/settings",
+    "h1": [
+     "Cài đặt"
+    ],
+    "h2": [
+     "ai",
+     "network",
+     "limits",
+     "CẤU HÌNH ĐANG HIỆU LỰC (CHỈ XEM)",
+     "Xác thực"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "Cài đặt · Admin Console"
+   },
+   "groups": {
+    "url": "/admin/groups",
+    "h1": [
+     "Không tìm thấy"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Admin Console"
+   },
+   "sharing": {
+    "url": "/admin/sharing",
+    "h1": [
+     "Không tìm thấy"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Admin Console"
+   },
+   "byok": {
+    "url": "/admin/byok",
+    "h1": [
+     "Không tìm thấy"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Admin Console"
+   },
+   "company": {
+    "url": "/admin/company",
+    "h1": [
+     "Không tìm thấy"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Admin Console"
+   },
+   "organization": {
+    "url": "/admin/organization",
+    "h1": [
+     "Không tìm thấy"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Admin Console"
+   },
+   "employees": {
+    "url": "/admin/employees",
+    "h1": [
+     "Không tìm thấy"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Admin Console"
+   },
+   "people": {
+    "url": "/admin/people",
+    "h1": [
+     "Không tìm thấy"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Admin Console"
+   },
+   "my-workspaces": {
+    "url": "/admin/my-workspaces",
+    "h1": [
+     "Không tìm thấy"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Admin Console"
+   },
+   "data-sources": {
+    "url": "/admin/data-sources",
+    "h1": [
+     "Không tìm thấy"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Admin Console"
+   },
+   "nope": {
+    "url": "/admin/nope",
+    "h1": [
+     "Không tìm thấy"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Admin Console"
+   },
+   "nope/deeper": {
+    "url": "/admin/nope/deeper",
+    "h1": [
+     "Không tìm thấy"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Admin Console"
+   }
+  }
+ },
+ "all/tadmin": {
+  "nav": [
+   "Tổng quan",
+   "Người dùng & Workspace",
+   "Ứng dụng",
+   "AI",
+   "Quyền & ngân sách AI",
+   "Cảnh báo",
+   "Bảo mật",
+   "Chi phí",
+   "Phòng ban",
+   "Định danh (SSO/SCIM)",
+   "Connector",
+   "Sao lưu",
+   "Components",
+   "Templates",
+   "Nhật ký kiểm toán",
+   "Build & lưu trữ",
+   "Packages",
+   "Sức khỏe hệ thống",
+   "Cài đặt"
+  ],
+  "routes": {
+   "(home)": {
+    "url": "/admin",
+    "h1": [
+     "Tổng quan"
+    ],
+    "h2": [
+     "Thiết lập ban đầu",
+     "Hoạt động gần đây",
+     "AI tháng này"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "Tổng quan · Admin Console"
+   },
+   "tenants": {
+    "url": "/admin/tenants",
+    "h1": [
+     "Không tìm thấy"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Admin Console"
+   },
+   "tenants/t1": {
+    "url": "/admin/tenants/t1",
+    "h1": [
+     "Không tìm thấy"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Admin Console"
+   },
+   "users": {
+    "url": "/admin/users",
+    "h1": [
+     "Người dùng & Workspace"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Người dùng & Workspace · Admin Console"
+   },
+   "users/u2": {
+    "url": "/admin/users/u2",
+    "h1": [
+     "Bình"
+    ],
+    "h2": [
+     "Workspace (1)",
+     "Ứng dụng (0)",
+     "Chưa tham gia ứng dụng nào",
+     "AI của người này",
+     "Hoạt động gần đây",
+     "Chưa có hoạt động"
+    ],
+    "states": [
+     "state-empty",
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Người dùng & Workspace · Admin Console"
+   },
+   "workspaces": {
+    "url": "/admin/workspaces",
+    "h1": [
+     "Người dùng & Workspace"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Người dùng & Workspace · Admin Console"
+   },
+   "workspaces/w1": {
+    "url": "/admin/workspaces/w1",
+    "h1": [
+     "Kinh doanh"
+    ],
+    "h2": [
+     "Thành viên (1)",
+     "Ứng dụng (0)",
+     "Chưa có ứng dụng",
+     "Hoạt động",
+     "Chưa có hoạt động"
+    ],
+    "states": [
+     "state-empty",
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Người dùng & Workspace · Admin Console"
+   },
+   "applications": {
+    "url": "/admin/applications",
+    "h1": [
+     "Ứng dụng"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Ứng dụng · Admin Console"
+   },
+   "applications/a1": {
+    "url": "/admin/applications/a1",
+    "h1": [
+     "Cổng khách hàng"
+    ],
+    "h2": [
+     "Chuyển chủ sở hữu",
+     "Chưa triển khai"
+    ],
+    "states": [],
+    "coming": 1,
+    "title": "Ứng dụng · Admin Console"
+   },
+   "ai": {
+    "url": "/admin/ai",
+    "h1": [
+     "AI"
+    ],
+    "h2": [
+     "Nhà cung cấp AI"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "AI · Admin Console"
+   },
+   "ai/providers": {
+    "url": "/admin/ai/providers",
+    "h1": [
+     "AI"
+    ],
+    "h2": [
+     "Nhà cung cấp AI"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "AI · Admin Console"
+   },
+   "ai/models": {
+    "url": "/admin/ai/models",
+    "h1": [
+     "AI"
+    ],
+    "h2": [
+     "Mô hình AI",
+     "Bảng giá model",
+     "Chưa có giá nào"
+    ],
+    "states": [
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "AI · Admin Console"
+   },
+   "ai/limits": {
+    "url": "/admin/ai/limits",
+    "h1": [
+     "AI"
+    ],
+    "h2": [
+     "Hạn mức mặc định",
+     "Hạn mức riêng"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "AI · Admin Console"
+   },
+   "ai/usage": {
+    "url": "/admin/ai/usage",
+    "h1": [
+     "AI"
+    ],
+    "h2": [
+     "Mức sử dụng model",
+     "Theo model",
+     "Theo người dùng (top 20)",
+     "Theo workspace (top 20)",
+     "Chưa có dữ liệu",
+     "Nhật ký lượt gọi model",
+     "Chưa có lượt gọi",
+     "Prompt gần đây"
+    ],
+    "states": [
+     "state-empty",
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "AI · Admin Console"
+   },
+   "ai-governance": {
+    "url": "/admin/ai-governance",
+    "h1": [
+     "Quản trị AI"
+    ],
+    "h2": [
+     "Quyền dùng model (Model Access)",
+     "Chưa có quy tắc chặn nào",
+     "Ngân sách AI (tiền)",
+     "Chưa có ngân sách nào"
+    ],
+    "states": [
+     "state-empty",
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Quyền & ngân sách AI · Admin Console"
+   },
+   "alerts": {
+    "url": "/admin/alerts",
+    "h1": [
+     "Cảnh báo"
+    ],
+    "h2": [
+     "1 cảnh báo đang mở"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "Cảnh báo · Admin Console"
+   },
+   "security": {
+    "url": "/admin/security",
+    "h1": [
+     "Phát hiện bảo mật"
+    ],
+    "h2": [
+     "Tất cả phát hiện",
+     "Không có phát hiện"
+    ],
+    "states": [
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Bảo mật · Admin Console"
+   },
+   "costs": {
+    "url": "/admin/costs",
+    "h1": [
+     "Chi phí hosting"
+    ],
+    "h2": [
+     "Đơn giá",
+     "Theo phòng ban",
+     "Chưa có số liệu",
+     "Theo workspace",
+     "Chưa có số liệu",
+     "Theo ứng dụng",
+     "Chưa có số liệu"
+    ],
+    "states": [
+     "state-empty",
+     "state-empty",
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Chi phí · Admin Console"
+   },
+   "departments": {
+    "url": "/admin/departments",
+    "h1": [
+     "Phòng ban & nhóm"
+    ],
+    "h2": [
+     "Thêm",
+     "Cơ cấu",
+     "Chưa có phòng ban",
+     "Gán người dùng hoặc workspace"
+    ],
+    "states": [
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Phòng ban · Admin Console"
+   },
+   "identity": {
+    "url": "/admin/identity",
+    "h1": [
+     "Định danh"
+    ],
+    "h2": [
+     "Nhóm SCIM → quyền workspace",
+     "Chưa có ánh xạ"
+    ],
+    "states": [
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Định danh (SSO/SCIM) · Admin Console"
+   },
+   "connectors": {
+    "url": "/admin/connectors",
+    "h1": [
+     "Connector"
+    ],
+    "h2": [
+     "Thêm / sửa connector",
+     "Danh mục"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "Connector · Admin Console"
+   },
+   "backups": {
+    "url": "/admin/backups",
+    "h1": [
+     "Sao lưu"
+    ],
+    "h2": [
+     "Chưa cấu hình thư mục sao lưu (BACKUP_STATUS_DIRS)"
+    ],
+    "states": [
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Sao lưu · Admin Console"
+   },
+   "components": {
+    "url": "/admin/components",
+    "h1": [
+     "Component Registry"
+    ],
+    "h2": [
+     "Thêm component gốc mới"
+    ],
+    "states": [],
+    "coming": 1,
+    "title": "Components · Admin Console"
+   },
+   "templates": {
+    "url": "/admin/templates",
+    "h1": [
+     "Templates"
+    ],
+    "h2": [
+     "Không có mẫu"
+    ],
+    "states": [
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Templates · Admin Console"
+   },
+   "audit": {
+    "url": "/admin/audit",
+    "h1": [
+     "Nhật ký kiểm toán"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Nhật ký kiểm toán · Admin Console"
+   },
+   "builds": {
+    "url": "/admin/builds",
+    "h1": [
+     "Build & lưu trữ"
+    ],
+    "h2": [
+     "Theo workspace",
+     "Chưa có build",
+     "Theo người dùng",
+     "Chưa có build",
+     "Theo ứng dụng",
+     "Chưa có build",
+     "Build bị từ chối",
+     "Không có build nào bị từ chối",
+     "Dọn dẹp (lưu giữ)",
+     "Kho mã nguồn"
+    ],
+    "states": [
+     "state-empty",
+     "state-empty",
+     "state-empty",
+     "state-empty"
+    ],
+    "coming": 0,
+    "title": "Build & lưu trữ · Admin Console"
+   },
+   "packages": {
+    "url": "/admin/packages",
+    "h1": [
+     "Packages"
+    ],
+    "h2": [
+     "Duyệt package",
+     "Danh mục"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "Packages · Admin Console"
+   },
+   "system": {
+    "url": "/admin/system",
+    "h1": [
+     "Sức khỏe hệ thống"
+    ],
+    "h2": [],
+    "states": [],
+    "coming": 0,
+    "title": "Sức khỏe hệ thống · Admin Console"
+   },
+   "settings": {
+    "url": "/admin/settings",
+    "h1": [
+     "Cài đặt"
+    ],
+    "h2": [
+     "ai",
+     "network",
+     "limits",
+     "CẤU HÌNH ĐANG HIỆU LỰC (CHỈ XEM)",
+     "Xác thực"
+    ],
+    "states": [],
+    "coming": 0,
+    "title": "Cài đặt · Admin Console"
+   },
+   "groups": {
+    "url": "/admin/groups",
+    "h1": [
+     "Không tìm thấy"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Admin Console"
+   },
+   "sharing": {
+    "url": "/admin/sharing",
+    "h1": [
+     "Không tìm thấy"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Admin Console"
+   },
+   "byok": {
+    "url": "/admin/byok",
+    "h1": [
+     "Không tìm thấy"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Admin Console"
+   },
+   "company": {
+    "url": "/admin/company",
+    "h1": [
+     "Không tìm thấy"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Admin Console"
+   },
+   "organization": {
+    "url": "/admin/organization",
+    "h1": [
+     "Không tìm thấy"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Admin Console"
+   },
+   "employees": {
+    "url": "/admin/employees",
+    "h1": [
+     "Không tìm thấy"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Admin Console"
+   },
+   "people": {
+    "url": "/admin/people",
+    "h1": [
+     "Không tìm thấy"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Admin Console"
+   },
+   "my-workspaces": {
+    "url": "/admin/my-workspaces",
+    "h1": [
+     "Không tìm thấy"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Admin Console"
+   },
+   "data-sources": {
+    "url": "/admin/data-sources",
+    "h1": [
+     "Không tìm thấy"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Admin Console"
+   },
+   "nope": {
+    "url": "/admin/nope",
+    "h1": [
+     "Không tìm thấy"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Admin Console"
+   },
+   "nope/deeper": {
+    "url": "/admin/nope/deeper",
+    "h1": [
+     "Không tìm thấy"
+    ],
+    "h2": [],
+    "states": [
+     "state-notfound"
+    ],
+    "coming": 0,
+    "title": "Quản trị · Admin Console"
+   }
+  }
+ }
+}

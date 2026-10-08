@@ -147,6 +147,33 @@ await block("scenario 12", async () => { const p = await open({ portal: "admin",
   check("APP09 when the server says the person has business access (/auth/me businessAccess), the controls stay", (await p.getByRole("button", { name: "Xóa", exact: true }).count()) === 1);
   await p.__ctx.close(); });
 
+// ===================================================================================================================== route / navigation snapshot (M-066: the split must not change behaviour)
+// For every persona the sidebar labels and, for every section key (deep links, aliases, foreign and unknown keys included), the final path, the h1, the h2s and the kind of state view are recorded in admin-routes.snapshot.json
+// (generated from the pre-split code, `UPDATE_SNAPSHOT=1` rewrites it). Dates / numbers are not compared: only structure.
+{
+  const KEYS = ["", "tenants", "tenants/t1", "users", "users/u2", "workspaces", "workspaces/w1", "applications", "applications/a1", "ai", "ai/providers", "ai/models", "ai/limits", "ai/usage", "ai-governance", "alerts", "security", "costs", "departments", "identity", "connectors", "backups", "components", "templates", "audit", "builds", "packages", "system", "settings", "groups", "sharing", "byok", "company", "organization", "employees", "people", "my-workspaces", "data-sources", "nope", "nope/deeper"];
+  const PERSONAS = [["platform", "sys"], ["platform", "tadmin"], ["admin", "sys"], ["admin", "sysmember"], ["admin", "tadmin"], ["admin", "wsadmin"], ["admin", "plain"], ["all", "sys"], ["all", "tadmin"]];
+  const snap = {};
+  for (const [portal, me] of PERSONAS) {
+    const p = await open({ portal, me, start: `/${portal === "all" ? "admin" : portal}` }); const prefix = portal === "all" ? "/admin" : `/${portal}`; const out = { nav: null, routes: {} };
+    for (const k of KEYS) {
+      await p.evaluate((u) => { history.pushState(null, "", u); window.dispatchEvent(new PopStateEvent("popstate")); }, `${prefix}${k ? "/" + k : ""}`);
+      for (let i = 0; i < 20; i++) { await p.waitForTimeout(120); if (i > 2 && (await p.locator(".spinner").count()) === 0) break; }
+      if (out.nav === null && (await p.locator("#admin-sidebar").count())) out.nav = await p.locator("#admin-sidebar nav a").allInnerTexts();
+      out.routes[k || "(home)"] = { url: new URL(p.url()).pathname, h1: await p.locator("h1").allInnerTexts(), h2: await p.locator("main h2").allInnerTexts(), states: await p.locator(".stateView").evaluateAll((els) => els.map((e) => [...e.classList].filter((c) => c.startsWith("state-")).join(""))), coming: await p.locator(".comingSoon").count(), title: await p.title() };
+    }
+    snap[`${portal}/${me}`] = out; await p.__ctx.close();
+  }
+  const { readFileSync, writeFileSync } = await import("node:fs"); const file = new URL("./admin-routes.snapshot.json", import.meta.url).pathname;
+  if (process.env.UPDATE_SNAPSHOT) { writeFileSync(file, JSON.stringify(snap, null, 1) + "\n"); console.log("snapshot written"); }
+  const want = JSON.parse(readFileSync(file, "utf8")); const diffs = [];
+  for (const persona of Object.keys(want)) {
+    if (JSON.stringify(want[persona].nav) !== JSON.stringify(snap[persona]?.nav)) diffs.push(`${persona} nav: ${JSON.stringify(snap[persona]?.nav)}`);
+    for (const k of Object.keys(want[persona].routes)) if (JSON.stringify(want[persona].routes[k]) !== JSON.stringify(snap[persona]?.routes[k])) diffs.push(`${persona} ${k}: ${JSON.stringify(snap[persona]?.routes[k])} (want ${JSON.stringify(want[persona].routes[k])})`);
+  }
+  check(`SNAP01 every persona's sidebar and every section's page (${Object.keys(want).length} personas × ${KEYS.length} paths) is exactly what it was before the split`, diffs.length === 0, diffs.slice(0, 3).join(" || "));
+}
+
 check("no console error / warning / uncaught exception in any page", errors.length === 0, errors.slice(0, 3).join(" | "));
 await browser.close();
 finish();
