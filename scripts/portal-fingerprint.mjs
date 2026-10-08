@@ -12,7 +12,7 @@
 // Output: 16 hex characters.  --meta: "<short commit> <dirty 0|1>" of the inputs.  --list: the hashed files.  --explain: counts and per-section digests.
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
 const argv = process.argv.slice(2); const dd = argv.indexOf("--"); const flags = dd >= 0 ? argv.slice(0, dd) : argv; const envWords = dd >= 0 ? argv.slice(dd + 1) : [];
@@ -25,10 +25,15 @@ const SHARED = ["packages", "features", "components", "lib", "app", "public"];
 const EXCLUDE = /(^|\/)(node_modules|\.git|\.run|\.test-build)(\/|$)|(^|\/)\.next[^/]*(\/|$)|\.tsbuildinfo$|(^|\/)next-env\.d\.ts$|\.log$|(^|\/)\.DS_Store$/;
 
 function walk(dir, acc) { let names; try { names = readdirSync(dir); } catch { return acc; } for (const n of names) { const p = join(dir, n); const rel = relative(ROOT, p).split(sep).join("/"); if (EXCLUDE.test(rel)) continue; let s; try { s = statSync(p); } catch { continue; } if (s.isDirectory()) walk(p, acc); else acc.push(rel); } return acc; }
+/** git is used to list files only when ROOT is itself the top of a work tree: a snapshot / release directory that merely sits INSIDE another repository (e.g. .run/public/releases/<id>) must be walked, or git would list the parent's paths */
+function isRepoTop() { try { const top = execFileSync("git", ["rev-parse", "--show-toplevel"], { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim(); return realpathSync(top) === realpathSync(ROOT); } catch { return false; } }
 function listCandidates() {
   const specs = [":(top)package.json", ":(top)package-lock.json", ":(top,glob)tsconfig*.json", ":(top,glob)next.config.*", ":(top).npmrc", ":(top).nvmrc", ":(top)node-version", ":(top).node-version", ...SHARED, `apps/${APP}`];
-  try { const out = execFileSync("git", ["ls-files", "-z", "-co", "--exclude-standard", "--", ...specs], { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], maxBuffer: 64 * 1024 * 1024 }); return out.split("\0").filter(Boolean); }
-  catch { return [...readdirSync(ROOT).filter((n) => ROOT_FILES.test(n)), ...SHARED.flatMap((d) => walk(join(ROOT, d), [])), ...walk(join(ROOT, "apps", APP), [])]; }
+  if (isRepoTop()) {
+    try { const out = execFileSync("git", ["ls-files", "-z", "-co", "--exclude-standard", "--", ...specs], { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], maxBuffer: 64 * 1024 * 1024 }); return out.split("\0").filter(Boolean); }
+    catch { /* git failed: fall through to the walk */ }
+  }
+  return [...readdirSync(ROOT).filter((n) => ROOT_FILES.test(n)), ...SHARED.flatMap((d) => walk(join(ROOT, d), [])), ...walk(join(ROOT, "apps", APP), [])];
 }
 // only what this portal's build reads: root config files (no slash), the shared directories, and ITS OWN app directory
 const wanted = (f) => ROOT_FILES.test(f) || SHARED.some((d) => f.startsWith(d + "/")) || f.startsWith(`apps/${APP}/`);
