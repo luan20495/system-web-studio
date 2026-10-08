@@ -65,7 +65,7 @@ summary:focus-visible,
 textarea:focus-visible,
 input:focus-visible,
 select:focus-visible {
-  outline: 2px solid #67b8ff;
+  outline: 2px solid var(--ui-ring, #67b8ff);
   outline-offset: 2px;
 }
 

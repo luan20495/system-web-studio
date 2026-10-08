@@ -4,9 +4,9 @@
 
 /* ---------- shells ---------- */
 .shell,.authPage,.splash,.wsError{background:var(--f-bg);color:var(--f-text)}
-.shell{height:100vh;display:grid;grid-template-columns:252px minmax(0,1fr)}
-.shellMain{min-width:0;display:grid;grid-template-rows:56px 1fr;height:100vh}
-.page{overflow:auto;padding:24px 28px 48px}
+.shell{height:100vh;height:100dvh;display:grid;grid-template-columns:252px minmax(0,1fr)}
+.shellMain{min-width:0;display:grid;grid-template-rows:56px 1fr;height:100vh;height:100dvh}
+.page{overflow:auto;padding:24px 28px 48px;scroll-padding-bottom:72px}
 .sidebar{display:flex;flex-direction:column;gap:14px;padding:16px 12px;border-right:1px solid var(--f-line);background:var(--f-panel);overflow:auto}
 .sidebar.dark{background:#0f1115;border-right-color:#1d2129;color:#e5e7eb}
 .sideBrand{display:flex;gap:10px;align-items:center;padding:4px 6px 10px}.sideBrand b{display:block;font-size:14px}.sideBrand small{color:var(--f-muted);font-size:12px}
@@ -23,14 +23,14 @@
 .crumb{font-weight:600;color:var(--f-muted)}
 .search input{width:min(420px,40vw)}
 .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.row.between,.between{justify-content:space-between}.wrap{flex-wrap:wrap}
-.shell select,.shell input,.authPage input{min-height:36px;padding:0 10px;border:1px solid var(--f-line);border-radius:8px;background:#fff;color:var(--f-text);font:inherit}
-.shell input:focus,.shell select:focus,.authPage input:focus{outline:2px solid var(--f-accent);outline-offset:1px}
+.shell select,.shell input,.authPage input{min-height:36px;padding:0 10px;border:1px solid var(--f-control-border);border-radius:8px;background:#fff;color:var(--f-text);font:inherit}
+.shell input:focus,.shell select:focus,.authPage input:focus{outline:2px solid var(--ui-ring);outline-offset:1px}
 
 /* ---------- buttons (light) ---------- */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 14px;border:1px solid var(--f-line);border-radius:8px;background:#fff;color:var(--f-text);font:inherit;font-weight:600;font-size:14px;text-decoration:none;cursor:pointer}
-.btn:hover:not(:disabled){border-color:#c9ced8;background:#fafbfc}.btn:disabled{opacity:.55;cursor:not-allowed}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 14px;border:1px solid var(--f-control-border);border-radius:8px;background:#fff;color:var(--f-text);font:inherit;font-weight:600;font-size:14px;text-decoration:none;cursor:pointer}
+.btn:hover:not(:disabled){border-color:var(--f-control-border);background:#fafbfc}.btn:disabled{opacity:.55;cursor:not-allowed}
 .btn.primary{background:var(--f-accent);border-color:var(--f-accent);color:var(--f-accent-ink)}.btn.primary:hover:not(:disabled){background:#4338ca}
-.btn.danger{color:var(--f-bad);border-color:#fecdca}.btn.danger:hover:not(:disabled){background:var(--f-bad-bg)}
+.btn.danger{color:var(--f-bad);border-color:var(--f-bad)}.btn.danger:hover:not(:disabled){background:var(--f-bad-bg)}
 .btn.ghost{background:transparent;border-color:transparent}.btn.sm{min-height:30px;padding:0 10px;font-size:13px}.btn.block{width:100%}
 .sidebar.dark .btn{background:#1a1e26;border-color:#2a2f3a;color:#fff}
 
@@ -65,7 +65,7 @@
 .stateView{display:grid;justify-items:center;gap:8px;text-align:center;padding:36px 16px;color:var(--f-muted)}.stateView h1,.stateView h2{margin:0;font-size:16px;color:var(--f-text)}.stateView h1{font-size:18px}.stateView p{margin:0;max-width:56ch}
 .stateView.compact{grid-auto-flow:column;justify-content:start;justify-items:start;align-items:center;gap:8px;padding:6px 0;text-align:left}.stateView.compact .stateIcon{width:24px;height:24px}.stateView.compact .stateTitle{margin:0;font-size:13px;color:var(--f-text)}.stateView.compact p{font-size:13px}.stateView .stateTitle b{font-weight:600}
 .stateIcon{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:#f2f4f7;color:#475467;font-weight:700}
-.splash,.wsError{min-height:100vh;display:grid;place-items:center;padding:24px}
+.splash,.wsError{min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:24px}
 .shell .spinner,.authPage .spinner,.splash .spinner,.wsError .spinner{border-color:#e4e7ec;border-top-color:var(--f-accent)}
 
 /* ---------- studio shell ---------- */
@@ -86,7 +86,7 @@
 .activityList{list-style:none;margin:0;padding:0}.activityList li{display:flex;gap:12px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--f-line2)}.activityList a{color:var(--f-accent)}
 
 /* ---------- auth ---------- */
-.authPage{min-height:100vh;height:100vh;overflow:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 16px;background:radial-gradient(1200px 500px at 50% -10%,#e0e7ff,transparent 60%),var(--f-bg)}
+.authPage{min-height:100vh;min-height:100dvh;height:100vh;height:100dvh;overflow:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 16px;background:radial-gradient(1200px 500px at 50% -10%,#e0e7ff,transparent 60%),var(--f-bg)}
 .authPanel{width:min(440px,100%);background:#fff;border:1px solid var(--f-line);border-radius:16px;padding:28px;box-shadow:0 12px 32px rgba(16,24,40,.08)}.authPanel.wide{width:min(560px,100%)}
 .authBrand{display:flex;align-items:center;gap:10px;font-weight:700;margin-bottom:18px}.authPanel h1{margin:0;font-size:24px;letter-spacing:-.01em}.authLead{margin:4px 0 18px;color:var(--f-muted)}
 .portalPick{border:0;padding:0;margin:0 0 16px;display:grid;grid-template-columns:1fr 1fr;gap:10px}.portalPick legend{font-size:13px;font-weight:600;margin-bottom:8px;color:var(--f-muted)}.portalPick .hint{grid-column:1/-1;margin:0}
@@ -159,7 +159,7 @@
 /* a long release history must scroll INSIDE the dialog (the dialog is flex-centred: tall content would be clipped above and below and the rollback buttons unreachable) */
 .siteHistory ul{max-height:min(36vh,240px);overflow:auto}.deployBox ol{max-height:min(24vh,170px);overflow:auto}
 /* Phase 7.4: code projects (dark editor tokens: --panel, --line, --muted) */
-.codeStudio{height:100vh;display:grid;grid-template-rows:auto 1fr}
+.codeStudio{height:100vh;height:100dvh;display:grid;grid-template-rows:auto 1fr}
 .codeBody{min-height:0;display:grid;grid-template-columns:minmax(380px,44%) minmax(0,1fr)}
 .codeLeft{min-height:0;display:flex;flex-direction:column;background:var(--panel);border-right:1px solid var(--line)}
 .codeLeft .chatScroll{flex:1;overflow:auto;padding:14px;display:grid;gap:10px;align-content:start}
@@ -245,13 +245,13 @@
 .xp-note{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border-radius:8px;background:#f0fdf4;color:#14532d;font-size:13px}.xp-note svg{flex:none;margin-top:2px}
 .xp-rowIcon{display:inline-flex;color:var(--f-muted)}
 .xp-switchRow{display:flex;align-items:center;gap:10px}.xp-switchText{flex:1;display:grid;gap:2px}.xp-switchText label{font-size:14px;font-weight:600}.xp-switchText small{color:var(--f-muted);font-size:12px}.xp-switchRow.disabled{opacity:.6}
-.xp-switch{position:relative;flex:none;width:42px;height:24px;border-radius:999px;border:0;background:#cbd5e1;cursor:pointer;transition:background .15s;padding:0}
+.xp-switch{position:relative;flex:none;width:42px;height:24px;border-radius:999px;border:0;background:var(--f-control-border);cursor:pointer;transition:background .15s;padding:0}
 .xp-switch.on{background:var(--f-accent)}.xp-switch:disabled{cursor:not-allowed}.xp-switch:focus-visible{outline:2px solid var(--f-accent);outline-offset:2px}
 .xp-knob{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}.xp-switch.on .xp-knob{transform:translateX(18px)}
 @media(prefers-reduced-motion:reduce){.xp-switch,.xp-knob{transition:none}}
 .xp-picker{position:relative;display:grid;gap:4px}.xp-pickerLabel{font-size:13px;font-weight:600}
-.xp-pickerBtn{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:6px 10px;border:1px solid var(--f-line);border-radius:10px;background:#fff;color:var(--f-text);text-align:left;cursor:pointer}
-.xp-pickerBtn:focus-visible,.xp-pickerBtn[aria-expanded=true]{border-color:var(--f-accent);outline:2px solid #c7d2fe}.xp-pickerBtn:disabled{opacity:.6;cursor:not-allowed}
+.xp-pickerBtn{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:6px 10px;border:1px solid var(--f-control-border);border-radius:10px;background:#fff;color:var(--f-text);text-align:left;cursor:pointer}
+.xp-pickerBtn:focus-visible,.xp-pickerBtn[aria-expanded=true]{border-color:var(--f-accent);outline:2px solid var(--ui-ring)}.xp-pickerBtn:disabled{opacity:.6;cursor:not-allowed}
 .xp-pickerCur{flex:1;display:grid;min-width:0}.xp-pickerCur b{font-size:14px}.xp-pickerCur small{color:var(--f-muted);font-size:12px;white-space:normal}
 .xp-pickerList{position:absolute;z-index:70;left:0;right:0;top:calc(100% + 4px);margin:0;padding:4px;list-style:none;max-height:320px;overflow:auto;background:#fff;border:1px solid var(--f-line);border-radius:12px;box-shadow:0 12px 32px rgba(15,23,42,.18)}
 .xp-opt{display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;cursor:pointer}.xp-opt.active{background:#eef2ff}.xp-opt[aria-selected=true] b{color:var(--f-accent)}.xp-opt.disabled{opacity:.5;cursor:not-allowed}
@@ -259,18 +259,18 @@
 .xp-provName .pill{margin-left:0}.xp-provMeta{display:flex;gap:12px;flex-wrap:wrap;color:var(--f-muted);font-size:12px}.xp-provMeta span{display:inline-flex;align-items:center;gap:4px}
 .xp-provActions{display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:flex-end}.xp-btnIcon{display:inline-flex;align-items:center;gap:6px}
 .xp-adv{border:1px solid var(--f-line);border-radius:10px}.xp-advBtn{display:flex;align-items:center;gap:8px;width:100%;padding:10px;background:none;border:0;cursor:pointer;font-weight:600;color:var(--f-text)}.xp-adv .xp-advBody{padding:0 10px 10px;display:grid;gap:8px}
-.xp-keyInput{display:flex;align-items:center;gap:8px;border:1px solid var(--f-line);border-radius:8px;padding:0 10px;background:#fff}.xp-keyInput:focus-within{border-color:var(--f-accent);outline:2px solid #c7d2fe}.xp-keyInput input{border:0!important;outline:0!important;flex:1;min-height:40px;background:transparent}
+.xp-keyInput{display:flex;align-items:center;gap:8px;border:1px solid var(--f-control-border);border-radius:8px;padding:0 10px;background:#fff}.xp-keyInput:focus-within{border-color:var(--f-accent);outline:2px solid var(--ui-ring)}.xp-keyInput input{border:0!important;outline:0!important;flex:1;min-height:40px;background:transparent}
 
 /* create-tenant dialog + person picker (features/admin/PersonPicker.tsx) */
 .xp-footer{display:flex;gap:8px;justify-content:flex-end;padding-top:12px;border-top:1px solid var(--f-line)}
 .xp-opt-tag{margin-left:auto;padding:2px 8px;border-radius:999px;background:var(--f-bg);border:1px solid var(--f-line);font-size:11px;font-weight:600;color:var(--f-muted);text-transform:none;letter-spacing:0}
-.xp-slugInput{display:flex;align-items:center;gap:8px;border:1px solid var(--f-line);border-radius:8px;padding:0 10px;background:#fff}
-.xp-slugInput:focus-within{border-color:var(--f-accent);outline:2px solid #c7d2fe}.xp-slugInput.bad{border-color:var(--f-bad)}
+.xp-slugInput{display:flex;align-items:center;gap:8px;border:1px solid var(--f-control-border);border-radius:8px;padding:0 10px;background:#fff}
+.xp-slugInput:focus-within{border-color:var(--f-accent);outline:2px solid var(--ui-ring)}.xp-slugInput.bad{border-color:var(--f-bad)}
 .xp-slugInput input{flex:1;min-width:0;border:0!important;outline:0!important;box-shadow:none!important;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.xp-ok{color:#16a34a;flex:none}
 .field small{font-weight:400;color:var(--f-muted)}
 .xp-people{display:grid;gap:8px}
-.xp-search{display:flex;align-items:center;gap:8px;border:1px solid var(--f-line);border-radius:10px;padding:0 10px;background:#fff;color:var(--f-muted)}
-.xp-search:focus-within{border-color:var(--f-accent);outline:2px solid #c7d2fe}
+.xp-search{display:flex;align-items:center;gap:8px;border:1px solid var(--f-control-border);border-radius:10px;padding:0 10px;background:#fff;color:var(--f-muted)}
+.xp-search:focus-within{border-color:var(--f-accent);outline:2px solid var(--ui-ring)}
 .xp-search input{flex:1;min-width:0;min-height:40px;border:0!important;outline:0!important;box-shadow:none!important;background:transparent;color:var(--f-text)}
 .xp-clear{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border:0;border-radius:6px;background:transparent;color:var(--f-muted);cursor:pointer}.xp-clear:hover{background:var(--f-bg)}
 .xp-peopleList{list-style:none;margin:0;padding:4px;max-height:208px;overflow:auto;border:1px solid var(--f-line);border-radius:10px;background:#fff;display:grid;gap:2px}
@@ -279,7 +279,7 @@
 .xp-personText{display:grid;min-width:0;flex:1}.xp-personText b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.xp-personText small{color:var(--f-muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .xp-avatar{display:inline-flex;align-items:center;justify-content:center;flex:none;width:34px;height:34px;border-radius:50%;background:#e0e7ff;color:#3730a3;font-size:12px;font-weight:700;letter-spacing:.02em}
 .xp-personChosen{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid #c7d2fe;border-radius:10px;background:#f5f7ff}
-.xp-tenantForm input:focus-visible{border-color:var(--f-accent);outline:2px solid #c7d2fe;outline-offset:0}
+.xp-tenantForm input:focus-visible{border-color:var(--f-accent);outline:2px solid var(--ui-ring);outline-offset:0}
 
 /* organization structure + employee directory (features/admin/OrganizationScreens.tsx, EmployeesScreens.tsx) */
 .xp-org,.xp-emp{display:grid;gap:14px}
@@ -322,7 +322,7 @@
   .xp-empTable td:first-child::before{display:none}.xp-empTable td:first-child{display:block}
   .xp-empFilters{grid-template-columns:1fr}.xp-orgBar{align-items:stretch}.xp-tenantSwitch{max-width:none}
 }
-.modalBody .field input:focus-visible,.modalBody .field select:focus-visible,.modalBody .field textarea:focus-visible,.xp-moveRow input:focus-visible{border-color:var(--f-accent);outline:2px solid #c7d2fe;outline-offset:0}
+.modalBody .field input:focus-visible,.modalBody .field select:focus-visible,.modalBody .field textarea:focus-visible,.xp-moveRow input:focus-visible{border-color:var(--f-accent);outline:2px solid var(--ui-ring);outline-offset:0}
 
 /* icons that replaced text glyphs (✓ ✕ ○ …): one stroke style, aligned with the text */
 .xp-checkIcon{display:inline-flex;align-items:center;vertical-align:middle;flex:none}
@@ -354,22 +354,23 @@
 .card{overflow-x:auto}.table td{overflow-wrap:break-word}.table td code,.table td .code,.table td .breakAll{word-break:break-all}.table th{white-space:nowrap}
 
 /* ---------- controls v2 (shared by Platform / Admin / Studio shells and the auth pages) ---------- */
-:root{--sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:20px;--sp-6:24px;--sp-8:32px;--f-focus:#4f46e5;--f-placeholder:#677086;--f-disabled-bg:#f3f4f6;--f-disabled-ink:#7a8394}
+:root{--sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:20px;--sp-6:24px;--sp-8:32px;--f-focus:#4f46e5;--f-control-border:#7a8394;--ui-ring:#67b8ff;--f-placeholder:#677086;--f-disabled-bg:#f3f4f6;--f-disabled-ink:#7a8394}
+.shell,.authPage,.splash,.wsError{--ui-ring:var(--f-focus)}.sidebar.dark{--ui-ring:#a5b4fc}
 .shell,.authPage,.splash,.wsError{font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
 .shell h1,.authPage h1{font-weight:700;letter-spacing:-.01em}.shell h2,.shell h3{font-weight:650}
-.shell select,.authPage select,.adminModal select{appearance:none;-webkit-appearance:none;min-height:36px;padding:0 32px 0 10px;border:1px solid var(--f-line);border-radius:8px;background-color:#fff;color:var(--f-text);font:inherit;
+.shell select,.authPage select,.adminModal select{appearance:none;-webkit-appearance:none;min-height:36px;padding:0 32px 0 10px;border:1px solid var(--f-control-border);border-radius:8px;background-color:#fff;color:var(--f-text);font:inherit;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23545f70' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
   background-repeat:no-repeat;background-position:right 10px center;background-size:16px;text-overflow:ellipsis}
 .shell select[multiple],.shell select[size]:not([size="1"]),.adminModal select[multiple],.adminModal select[size]:not([size="1"]){background-image:none;padding:6px 10px}
-.shell textarea,.authPage textarea{width:100%;min-height:80px;padding:8px 10px;border:1px solid var(--f-line);border-radius:8px;background:#fff;color:var(--f-text);font:inherit;resize:vertical}
+.shell textarea,.authPage textarea{width:100%;min-height:80px;padding:8px 10px;border:1px solid var(--f-control-border);border-radius:8px;background:#fff;color:var(--f-text);font:inherit;resize:vertical}
 .shell input[type=checkbox],.shell input[type=radio]{min-height:0;width:16px;height:16px;padding:0;flex:none;accent-color:var(--f-accent)}
 .shell ::placeholder,.authPage ::placeholder{color:var(--f-placeholder);opacity:1}
 .shell input:disabled,.shell select:disabled,.shell textarea:disabled,.authPage input:disabled{background-color:var(--f-disabled-bg);color:var(--f-disabled-ink);cursor:not-allowed}
 .shell input[readonly]{background:var(--f-bg)}
-.shell input:focus-visible,.shell select:focus-visible,.shell textarea:focus-visible,.authPage input:focus-visible{border-color:var(--f-focus);outline:2px solid #c7d2fe;outline-offset:0}
-.shell input:focus,.shell select:focus,.authPage input:focus{outline:2px solid #c7d2fe;outline-offset:0;border-color:var(--f-focus)}
+.shell input:focus-visible,.shell select:focus-visible,.shell textarea:focus-visible,.authPage input:focus-visible{border-color:var(--f-focus);outline:2px solid var(--ui-ring);outline-offset:0}
+.shell input:focus,.shell select:focus,.authPage input:focus{outline:2px solid var(--ui-ring);outline-offset:0;border-color:var(--f-focus)}
 .btn:focus-visible,.navLink:focus-visible,.shell a:focus-visible,.shell summary:focus-visible{outline:2px solid var(--f-focus);outline-offset:2px}
-.sidebar.dark .navLink:focus-visible,.sidebar.dark .btn:focus-visible{outline-color:#a5b4fc}
+
 .btn:active:not(:disabled){transform:translateY(1px)}.btn{transition:background-color .12s,border-color .12s}
 .btn[aria-busy=true]{cursor:progress;opacity:.85}
 .btn.primary:disabled{background:#a5a8f0;border-color:#a5a8f0;color:#fff;opacity:1}
@@ -379,7 +380,7 @@
 .field>span{font-size:13px;font-weight:600;color:var(--f-text)}
 
 /* dialogs: never taller than the viewport, the body scrolls INSIDE, and the footer (xp-footer) stays visible while the form scrolls */
-.modalBody{--mpad:24px;padding:var(--mpad);max-height:calc(100dvh - 32px);overscroll-behavior:contain}
+.modalBody{--mpad:24px;padding:var(--mpad);max-height:calc(100dvh - 32px);overscroll-behavior:contain;scroll-padding-bottom:72px}
 .modalBody .xp-footer{position:sticky;bottom:calc(var(--mpad)*-1);margin:0 calc(var(--mpad)*-1) calc(var(--mpad)*-1);padding:12px var(--mpad);background:var(--f-panel,#fff);z-index:2;border-radius:0 0 12px 12px}
 @media(max-width:600px){.modalBody{--mpad:16px;width:100%}.adminModal{padding:8px;align-items:flex-end}.modalBody .xp-footer{flex-wrap:wrap}.modalBody .xp-footer .btn{flex:1 1 auto}}
 
@@ -398,3 +399,35 @@
 .shell input[type=checkbox],.shell input[type=radio],.adminModal input[type=checkbox],.adminModal input[type=radio]{width:24px;height:24px;min-height:24px}
 
 .card[tabindex]:focus-visible{outline:2px solid var(--f-accent);outline-offset:-2px}
+
+/* ---------- link cue that is not colour (M-117, WCAG 1.4.1): a link inside running text is underlined ---------- */
+:root{--ui-link-line:underline}
+.shell :is(p,li,td,small,.hint,.muted) a:not(.btn):not(.navLink):not(.portalCard),.authPage :is(p,li,small,.hint) a,.studio :is(p,li) a{text-decoration:var(--ui-link-line);text-decoration-thickness:1px;text-underline-offset:2px}
+
+/* ---------- reflow (M-033, M-087) ----------
+   Breakpoints in use (documented, and ratcheted by tests/builder/design-tokens.test.ts so the set cannot grow):
+     --- 900px  tablet: sidebar becomes a drawer, two-column grids collapse (packages/ui/src/breakpoints.ts: BREAKPOINT.tablet)
+     --- 760px  phone:  one column, stacked page heads
+     --- 600px  narrow: dialogs go full width, rows wrap (providers), footers wrap
+   CSS cannot read a custom property inside @media, so the numbers are written out; JS reads them from breakpoints.ts.
+   Content on very wide screens is centred in a readable column (--ui-content-max) instead of stretching tables to 1600px. */
+:root{--ui-content-max:1360px}
+@media(min-width:1280px){.page{padding-inline:max(28px,calc((100% - var(--ui-content-max))/2))}}
+@media(max-width:600px){.providerItem .xp-provRow{flex-wrap:wrap}.xp-provMain{flex:1 1 220px}.xp-provActions{flex:1 1 100%;justify-content:flex-start}}
+
+/* ---------- forced colors / Windows high contrast (M-086): backgrounds are dropped, so every state needs a border / outline in system colours ---------- */
+@media(forced-colors:active){
+  .btn,.xp-pickerBtn,.xp-keyInput,.xp-slugInput,.xp-search,.shell input,.shell select,.shell textarea{border:1px solid ButtonText}
+  .btn.primary{border-width:2px}.btn:disabled,.btn[aria-disabled=true]{border-color:GrayText;color:GrayText}
+  .pill{border:1px solid CanvasText}
+  .modalBody,.xp-pickerList,.xp-toast,.xp-errorInline,.xp-stateBanner,.card{border:1px solid CanvasText}
+  .xp-switch{border:2px solid ButtonText;background:Canvas}.xp-switch.on{background:Highlight;border-color:Highlight}
+  .xp-knob{background:ButtonText;box-shadow:none}.xp-switch.on .xp-knob{background:HighlightText}
+  .xp-radioBody{border:1px solid ButtonText}.xp-radioBody::before{border-color:ButtonText}
+  .xp-radioCard.selected .xp-radioBody{border:2px solid Highlight}.xp-radioCard.selected .xp-radioBody::before{border-color:Highlight;background:radial-gradient(circle,Highlight 0 4px,transparent 5px)}
+  .tabs>.active,.tabs>[aria-selected=true]{border-bottom:3px solid Highlight}
+  .navLink.active,.navLink[aria-current=page]{outline:2px solid Highlight;outline-offset:-2px}
+  .xp-opt.active,.xp-node.sel{outline:2px solid Highlight;outline-offset:-2px}
+  .xp-skip{border:2px solid CanvasText}
+  :focus-visible{outline:2px solid Highlight!important;outline-offset:2px}
+}

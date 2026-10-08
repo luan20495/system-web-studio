@@ -9,6 +9,8 @@
  *   --ui-toast-ok / -info / -warn / -err   icon colours on that dark surface (#6ce9a6 / #93c5fd / #fedf89 / #fda29b: already used by builder.css chips and alerts)
  *   --ui-scrim            the dialog backdrop (rgba(15,23,42,.45) = the `.adminModal` scrim; three different scrims existed)
  *   --f-bad-line          #fecdca, the pink border of danger controls (used 6x as a literal in factory.css)
+ *   --danger / --warn     were used by builder.css with a fallback and defined nowhere; defined with exactly those fallback values (no visual change)
+ * Light-theme accessibility tokens live in factory.css next to --f-focus: --f-control-border (>=3:1 on every light surface), --ui-ring (the focus ring, per theme), --ui-link-line, --ui-content-max.
  */
 :root{
   --ui-z-toast:100;
@@ -16,6 +18,7 @@
   --ui-toast-ok:#6ce9a6;--ui-toast-info:#93c5fd;--ui-toast-warn:#fedf89;--ui-toast-err:#fda29b;
   --ui-scrim:rgba(15,23,42,.45);
   --f-bad-line:#fecdca;
+  --danger:#e5484d;--warn:#d9a21b;
 }
 
 /* ---------- toast (packages/ui/src/Toast.tsx) ---------- */
