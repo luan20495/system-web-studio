@@ -182,6 +182,18 @@ await block("scenario 15", async () => { const p = await open({ portal: "admin",
   check("OVW05 the Admin console's overview for a SYSTEM_ADMIN shows no setup checklist (unchanged)", !/Thiết lập (ban đầu|nền tảng)/.test(await p.locator("main").innerText()));
   await p.__ctx.close(); });
 
+// ===================================================================================================================== M-059 the AI usage tab does not present the legacy /admin/ai provider / key status as the truth
+await block("scenario 16", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/ai/usage" }); await settle(p, 600);
+  const main = await p.locator("main").innerText(); const kpi = await p.locator(".kpi", { hasText: "Nhà cung cấp AI" }).innerText().catch(() => "");
+  check("AIS01 the provider tile comes from the configured providers (OpenAI công ty is enabled): not 'OpenRouter / Chưa có OPENROUTER_API_KEY' from the legacy single-provider endpoint", /1 đang bật/.test(kpi) && /OpenAI công ty/.test(kpi) && !/OPENROUTER_API_KEY/.test(main) && !/Chưa có OPENROUTER/.test(main), kpi.replace(/\s+/g, " "));
+  check("AIS02 'qua OpenRouter' is gone from the daily tile (those calls go through whichever provider is configured)", !/qua OpenRouter/.test(main));
+  check("AIS03 no new route: the tile reads /admin/ai/providers, which the Providers tab already uses", (await calls(p)).some((c) => c.path === "/admin/ai/providers") && !(await calls(p)).some((c) => c.unknown));
+  await p.__ctx.close(); });
+await block("scenario 17", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/ai/usage", empty: "1" }); await settle(p, 600);
+  const kpi = await p.locator(".kpi", { hasText: "Nhà cung cấp AI" }).innerText().catch(() => "");
+  check("AIS04 no provider configured: the tile says the system runs in trial (simulated) mode, without an env var name", /Chế độ thử nghiệm/.test(kpi) && !/OPENROUTER|API_KEY/.test(kpi), kpi.replace(/\s+/g, " "));
+  await p.__ctx.close(); });
+
 // ===================================================================================================================== route / navigation snapshot (M-066: the split must not change behaviour)
 // For every persona the sidebar labels and, for every section key (deep links, aliases, foreign and unknown keys included), the final path, the h1, the h2s and the kind of state view are recorded in admin-routes.snapshot.json
 // (generated from the pre-split code, `UPDATE_SNAPSHOT=1` rewrites it). Dates / numbers are not compared: only structure.

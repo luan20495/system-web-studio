@@ -3,7 +3,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { api } from "@/lib/http-api";
-import type { AiUsageReport, UsageBucket, UsageTotals } from "@/lib/http-types";
+import type { AiProviderInfo, AiUsageReport, UsageBucket, UsageTotals } from "@/lib/http-types";
 import { useA } from "../console/context";
 import { useLoad } from "../../useLoad";
 import { ago, Card, ErrorState, errText, fmtDate, Kpi, num, Pager, Pill, StateView, tok, usd } from "../../ui";
@@ -105,7 +105,20 @@ export function PricingCard() {
   </Card>;
 }
 
+/**
+ * Which AI providers are in use, from the providers the company configured (the same list as the Providers tab). The legacy `/admin/ai` answer (`provider: openrouter | mock`, `configured` = an environment key)
+ * only knows ONE provider and would say "OpenRouter / no key" while OpenAI or Anthropic is working, so it is not shown as the status (backend handoff: M-059).
+ */
+function ProviderKpi({ providers }: { providers: { data: AiProviderInfo[] | null; error: unknown } }) {
+  if (providers.error) return <Kpi label="Nhà cung cấp AI" value="—" hint="Chưa tải được danh sách nhà cung cấp"/>;
+  if (!providers.data) return <Kpi label="Nhà cung cấp AI" value="…"/>;
+  const on = providers.data.filter((p) => p.enabled && p.configured);
+  return <Kpi label="Nhà cung cấp AI" value={on.length ? `${num(on.length)} đang bật` : "Chế độ thử nghiệm"}
+    hint={on.length ? `${on.slice(0, 3).map((p) => p.name).join(", ")}${on.length > 3 ? ` và ${on.length - 3} nhà cung cấp khác` : ""}` : "Chưa có nhà cung cấp AI thật nào được cấu hình và bật: hệ thống dùng chế độ thử nghiệm (mô phỏng)."}/>;
+}
+
 export function AiPage() {
+  const providers = useLoad(() => api.admin.aiProviders(), []);
   const { data, error, loading, reload } = useLoad(() => api.admin.ai(), []);
   const [days, setDays] = useState(30);
   const usage = useLoad(() => api.admin.aiUsage(days), [days]);
@@ -116,8 +129,8 @@ export function AiPage() {
   const t = u?.totals;
   return (<>
     <div className="kpiGrid">
-      <Kpi label="Nhà cung cấp" value={a.provider === "openrouter" ? "OpenRouter" : "Mô phỏng"} hint={a.configured ? "Đã cấu hình key" : "Chưa có OPENROUTER_API_KEY"}/>
-      <Kpi label="Lượt AI hôm nay" value={num(a.requestsToday)} hint={`${num(a.externalToday)} qua OpenRouter · ${num(a.requestsMonth)} trong tháng`}/>
+      <ProviderKpi providers={providers}/>
+      <Kpi label="Lượt AI hôm nay" value={num(a.requestsToday)} hint={`${num(a.externalToday)} qua AI thật · ${num(a.requestsMonth)} trong tháng`}/>
       <Kpi label="Giới hạn" value={`${a.dailyLimitPerUser} lượt/ngày/người`}
         hint={u ? [u.limits.dailyTokensPerUser ? `${num(u.limits.dailyTokensPerUser)} token/ngày/người` : "Không giới hạn token/người",
           u.limits.monthlyTokensPerWorkspace ? `${num(u.limits.monthlyTokensPerWorkspace)} token/tháng/workspace` : "không giới hạn token/workspace"].join(" · ") : `${a.promptsPerMinute} prompt/phút`}/>
