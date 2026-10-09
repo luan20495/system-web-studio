@@ -147,24 +147,24 @@ for (const w of [768, 1000]) {
   // members: leaving yourself is worded as leaving
   p = await open(b, "/studio/projects/p1/members", { state: s }); await p.waitForSelector("[role=dialog]"); await wait(900);
   await p.getByRole("button", { name: "Rời luan" }).first().click(); await wait(300);
-  check("M-017: removing YOURSELF says 'Rời khỏi project này?' (it said 'Xóa luan khỏi project?')", /Rời khỏi project này\?/.test(await modal(p).innerText()) && /mất quyền truy cập/.test(await modal(p).innerText()), (await modal(p).innerText()).replace(/\n/g, " "));
+  check("M-017: removing YOURSELF says 'Rời khỏi ứng dụng này?' (it said 'Xóa luan khỏi project?')", /Rời khỏi ứng dụng này\?/.test(await modal(p).innerText()) && /mất quyền truy cập/.test(await modal(p).innerText()), (await modal(p).innerText()).replace(/\n/g, " "));
   await modal(p).getByRole("button", { name: "Hủy" }).click(); await wait(200);
   await p.getByRole("button", { name: "Xóa tran" }).first().click(); await wait(300);
-  check("M-017: removing someone else names them and the consequence", /Xóa tran khỏi project\?/.test(await modal(p).innerText()));
+  check("M-017: removing someone else names them and the consequence", /Xóa tran khỏi ứng dụng\?/.test(await modal(p).innerText()));
   await modal(p).getByRole("button", { name: "Hủy" }).click(); await wait(200);
   check("M-017: no member was removed by cancelling", hits(p, "DELETE", /members/) === 0);
   await p.close();
   // assets
   p = await open(b, "/studio/projects/p1/assets", { state: s }); await p.waitForSelector("[role=dialog]"); await wait(900);
   await p.locator(".versionItem").first().getByRole("button", { name: "Xóa" }).click(); await wait(300);
-  check("M-017: deleting a file names it and says it cannot be undone", /anh-san-pham\.png/.test(await modal(p).innerText()) && /không thể hoàn tác/.test(await modal(p).innerText()));
+  check("M-017: deleting a file names it and says it cannot be undone", /anh-san-pham\.png/.test(await modal(p).innerText()) && /không thể lấy lại/.test(await modal(p).innerText()));
   await modal(p).getByRole("button", { name: "Xóa tệp" }).click(); await wait(500);
   check("M-017: confirming sends one DELETE", hits(p, "DELETE", /assets\/a1$/) === 1);
   await p.close();
   // code workspace: discard a change
   const cs = newCodeState(); p = await open(b, "/studio/projects/p1/code", { state: cs }); await p.waitForSelector(".changeItem"); await wait(600);
   await p.getByRole("button", { name: "Bỏ thay đổi" }).first().click(); await wait(300);
-  check("M-019: discarding a code change asks (names it, cannot be undone) and sends nothing yet; the button no longer says 'Huỷ'", /Đổi tiêu đề/.test(await modal(p).innerText()) && /Không thể hoàn tác/.test(await modal(p).innerText()) && p.state.log.filter((l) => /discard$/.test(l.path)).length === 0);
+  check("M-019: discarding a code change asks (names it, cannot be undone) and sends nothing yet; the button no longer says 'Huỷ'", /Đổi tiêu đề/.test(await modal(p).innerText()) && /Không thể lấy lại/.test(await modal(p).innerText()) && p.state.log.filter((l) => /discard$/.test(l.path)).length === 0);
   await modal(p).getByRole("button", { name: "Hủy" }).click(); await wait(200);
   await p.getByRole("button", { name: "Bỏ thay đổi" }).first().click(); await modal(p).getByRole("button", { name: "Bỏ thay đổi" }).click(); await wait(500);
   check("M-019: confirming discards once", p.state.log.filter((l) => /discard$/.test(l.path)).length === 1);
@@ -178,7 +178,7 @@ for (const w of [768, 1000]) {
   const p = await open(b, "/studio", { state: s }); await p.waitForSelector(".homeHero"); await wait(1500);
   const kpi = await p.locator(".kpiGrid").innerText();
   check("M-041: no KPI stays on '…' after the usage / component loads fail", !/…/.test(kpi.replace(/Đang tải[^\n]*…/g, "")), kpi.replace(/\n/g, " | "));
-  check("M-041: the failed KPIs and the chips each say what could not be loaded", /Chưa tải được mức dùng AI/.test(kpi) && /Chưa tải được số component/.test(kpi) && /Chưa tải được danh sách component/.test(await p.locator("main").innerText()));
+  check("M-041: the failed KPIs and the chips each say what could not be loaded", /Chưa tải được mức dùng AI/.test(kpi) && /Chưa tải được số thành phần/.test(kpi) && /Chưa tải được danh sách thành phần/.test(await p.locator("main").innerText()));
   const retries = await p.getByRole("button", { name: "Thử lại" }).count();
   check("M-041: a retry exists and works (a recovered load shows the numbers)", retries >= 2);
   delete s.fail["GET /me/usage"]; delete s.fail["GET /components"];

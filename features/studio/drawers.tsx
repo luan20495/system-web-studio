@@ -84,7 +84,7 @@ export function AssetsDrawer({ workspaceId, projectId, canEdit, onClose, onError
   }
 
   async function removeAsset(a: AssetDto) {
-    if (!(await confirm({ title: `Xóa tệp “${a.name}”?`, message: "Tệp bị xóa khỏi project và không thể hoàn tác. Các trang đang dùng tệp này sẽ không còn hiển thị nó.", confirmLabel: "Xóa tệp", danger: true }))) return;
+    if (!(await confirm({ title: `Xóa tệp “${a.name}”?`, message: "Tệp bị xóa khỏi ứng dụng và không thể lấy lại. Các trang đang dùng tệp này sẽ không còn hiển thị nó.", confirmLabel: "Xóa tệp", danger: true }))) return;
     try { await api.deleteAsset(workspaceId, projectId, a.id); await load(); } catch (e) { onError(e); }
   }
 
@@ -167,11 +167,11 @@ export function MembersDrawer({ workspaceId, projectId, me, onClose, onError }: 
     <Drawer wide title="Thành viên và quyền" sub="Quyền được kiểm tra ở máy chủ; thay đổi được ghi vào nhật ký kiểm toán." onClose={onClose}>
       <MemberTable title="Thành viên project" members={project} roles={PROJECT_ROLES} currentUserId={me.id} busy={busy} error={errors.project}
         onChange={(m, r) => void act("project", () => api.changeProjectMember(workspaceId, projectId, m.userId, r))}
-        onRemove={(m) => void (async () => { const self = m.userId === me.id; if (await confirm({ title: self ? "Rời khỏi project này?" : `Xóa ${m.username} khỏi project?`, message: self ? "Bạn sẽ mất quyền truy cập project này, trừ khi bạn còn quyền ở cấp workspace." : `${m.username} sẽ không còn truy cập được project này.`, confirmLabel: self ? "Rời project" : "Xóa khỏi project", danger: true })) await act("project", () => api.removeProjectMember(workspaceId, projectId, m.userId)); })()}
+        onRemove={(m) => void (async () => { const self = m.userId === me.id; if (await confirm({ title: self ? "Rời khỏi ứng dụng này?" : `Xóa ${m.username} khỏi ứng dụng?`, message: self ? "Bạn sẽ mất quyền truy cập ứng dụng này, trừ khi bạn còn quyền ở cấp workspace." : `${m.username} sẽ không còn truy cập được ứng dụng này.`, confirmLabel: self ? "Rời ứng dụng" : "Xóa khỏi ứng dụng", danger: true })) await act("project", () => api.removeProjectMember(workspaceId, projectId, m.userId)); })()}
         onAdd={(v, r) => act("project", () => api.addProjectMember(workspaceId, projectId, who(v), r))}/>
       {wsVisible ? <MemberTable title="Thành viên workspace" members={workspace} roles={WORKSPACE_ROLES} currentUserId={me.id} busy={busy} error={errors.workspace}
         onChange={(m, r) => void act("workspace", () => api.changeWorkspaceMember(workspaceId, m.userId, r))}
-        onRemove={(m) => void (async () => { const self = m.userId === me.id; if (await confirm({ title: self ? "Rời khỏi workspace này?" : `Xóa ${m.username} khỏi workspace?`, message: self ? "Bạn sẽ mất quyền ở mọi project của workspace này." : `${m.username} cũng mất quyền ở mọi project của workspace.`, confirmLabel: self ? "Rời workspace" : "Xóa khỏi workspace", danger: true })) await act("workspace", () => api.removeWorkspaceMember(workspaceId, m.userId)); })()}
+        onRemove={(m) => void (async () => { const self = m.userId === me.id; if (await confirm({ title: self ? "Rời khỏi workspace này?" : `Xóa ${m.username} khỏi workspace?`, message: self ? "Bạn sẽ mất quyền ở mọi ứng dụng của workspace này." : `${m.username} cũng mất quyền ở mọi ứng dụng của workspace.`, confirmLabel: self ? "Rời workspace" : "Xóa khỏi workspace", danger: true })) await act("workspace", () => api.removeWorkspaceMember(workspaceId, m.userId)); })()}
         onAdd={(v, r) => act("workspace", () => api.addWorkspaceMember(workspaceId, who(v), r))}/> : null}
     </Drawer>
   );

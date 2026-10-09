@@ -8,7 +8,8 @@
  * says what is going on (the save indicator).
  */
 import { useId, type ButtonHTMLAttributes, type MouseEvent } from "react";
-import { toast } from "@xweb/ui";
+// relative on purpose: BuilderTopBar is unit-tested under node, where the package barrel (extension-less re-exports) cannot be loaded
+import { toast } from "../../packages/ui/src/Toast";
 
 export function GuardedButton({ unavailable = false, reason, onClick, children, type = "button", ...rest }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, "title"> & {
   unavailable?: boolean; reason: string;

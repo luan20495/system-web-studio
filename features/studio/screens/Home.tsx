@@ -59,7 +59,7 @@ export function Home() {
       <div className="kpi"><div className="kpiLabel">Ứng dụng trong workspace</div>
         <div className="kpiValue"><LoadGate load={recent} compact label="số ứng dụng" errorTitle="Chưa tải được số ứng dụng">{(d) => <>{num(d.total)}</>}</LoadGate></div></div>
       <div className="kpi"><div className="kpiLabel">Component của công ty</div>
-        <div className="kpiValue"><LoadGate load={comps} compact label="số component" errorTitle="Chưa tải được số component">{(d) => <>{d.length}</>}</LoadGate></div></div>
+        <div className="kpiValue"><LoadGate load={comps} compact label="số thành phần" errorTitle="Chưa tải được số thành phần">{(d) => <>{d.length}</>}</LoadGate></div></div>
     </div>
     <Card title="Ứng dụng gần đây" actions={<Link className="btn sm" href={S("/projects")}>Xem tất cả</Link>}>
       {recent.error ? <ErrorState error={recent.error} retry={recent.reload}/> : !recent.data ? <StateView kind="loading"/> : recent.data.items.length === 0
@@ -67,7 +67,7 @@ export function Home() {
         : <div className="projectGrid">{recent.data.items.map((p) => <ProjectCard key={p.id} p={p} mine={p.ownerUserId === me!.id}/>)}</div>}
     </Card>
     <Card title="Component dùng chung" actions={<Link className="btn sm" href={S("/components")}>Thư viện</Link>}>
-      <LoadGate load={comps} compact label="component dùng chung" errorTitle="Chưa tải được danh sách component">
+      <LoadGate load={comps} compact label="thành phần dùng chung" errorTitle="Chưa tải được danh sách thành phần">
         {(d) => <div className="chipRow">{d.filter((c) => c.status === "ACTIVE").map((c) => <span key={c.id} className="tag">{sectionLabel(c.id, c.name)} <small>{num(c.usedInProjects ?? 0)} ứng dụng</small></span>)}</div>}
       </LoadGate>
     </Card>

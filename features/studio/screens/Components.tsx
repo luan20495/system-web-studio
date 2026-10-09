@@ -31,7 +31,7 @@ function BlockCard({ b, mine, onChanged }: { b: BlockDto; mine: boolean; onChang
     {mine ? <div className="actions">
       {b.status === "PRIVATE" ? <button className="btn sm primary" disabled={doIt.busy} onClick={() => void act(async () => { const r = await api.submitBlock(b.id); if (!r.passed) { setOpen(true); throw new Error("Kiểm tra tự động không đạt; xem danh sách bên dưới."); } }, "Đã gửi duyệt.")}>Gửi duyệt</button> : null}
       {b.status === "REVIEW" ? <button className="btn sm" disabled={doIt.busy} onClick={() => void act(() => api.withdrawBlock(b.id), "Đã rút lại.")}>Rút lại</button> : null}
-      {b.approvedVersion == null && b.status !== "REVIEW" ? <button className="btn sm ghost" disabled={doIt.busy} onClick={() => void act(async () => { if (!(await confirm({ title: `Xóa khối “${b.name}”?`, message: "Khối riêng tư của bạn bị xóa. Trang đã chèn khối này không bị ảnh hưởng: nó là một mục bình thường của component gốc.", confirmLabel: "Xóa khối", danger: true }))) return false; await api.deleteBlock(b.id); })}>Xóa</button> : null}
+      {b.approvedVersion == null && b.status !== "REVIEW" ? <button className="btn sm ghost" disabled={doIt.busy} onClick={() => void act(async () => { if (!(await confirm({ title: `Xóa khối “${b.name}”?`, message: "Khối riêng tư của bạn bị xóa. Trang đã chèn khối này không bị ảnh hưởng: nó là một mục bình thường của thành phần gốc.", confirmLabel: "Xóa khối", danger: true }))) return false; await api.deleteBlock(b.id); })}>Xóa</button> : null}
       <button className="btn sm ghost" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? "Ẩn chi tiết" : "Chi tiết"}</button>
     </div> : null}
     {open && mine ? <div>
@@ -68,7 +68,7 @@ function BlocksSection() {
   const company = useLoad(() => api.blocks("company"), []); const mine = useLoad(() => api.blocks("mine"), []);
   return (<>
     <Card title="Khối dựng sẵn của công ty">
-      <p className="hint">Khối là một cấu hình sẵn (nội dung, bố cục) của một component đã duyệt, được nhân viên đóng góp và quản trị viên phê duyệt. Khối không chứa mã: khi chèn vào trang, nó là một mục bình thường của component gốc. Chưa đo số lần sử dụng khối.</p>
+      <p className="hint">Khối là một cấu hình sẵn (nội dung, bố cục) của một component đã duyệt, được nhân viên đóng góp và quản trị viên phê duyệt. Khối không chứa mã: khi chèn vào trang, nó là một mục bình thường của thành phần gốc. Chưa đo số lần sử dụng khối.</p>
       {company.error ? <ErrorState error={company.error} retry={company.reload}/> : !company.data ? <StateView kind="loading"/> : company.data.length === 0
         ? <StateView kind="empty" title="Chưa có khối nào được duyệt"/> : <div className="compGrid">{company.data.map((b) => <BlockCard key={b.id} b={b} mine={false} onChanged={company.reload}/>)}</div>}
     </Card>

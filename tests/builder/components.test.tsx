@@ -82,12 +82,12 @@ test("left rail has the eight tools; vertical tablist", () => {
   assert.match(html, /aria-orientation="vertical"/); assert.equal((html.match(/role="tab"/g) ?? []).length, 8);
 });
 
-test("top bar: name, save state, Edit/Test, device, Share, Publish; disabled controls explain why", () => {
+test("top bar: name, save state, Edit/Test, device, Share, Publish; unavailable controls are aria-disabled (focusable) and explain why when pressed (M-031)", () => {
   const html = renderToStaticMarkup(<BuilderTopBar name="Cửa hàng" meta="rev 3" save={{ state: "saved", at: null }} appMode="EDIT" onAppMode={() => undefined} device="desktop" onDevice={() => undefined}
     canShare={false} shareReason="Bạn không có quyền chia sẻ." onShare={() => undefined} canPublish={false} publishReason="Bạn không có quyền xuất bản." publishBusy={false} issues={{ block: 2, warn: 0 }} onPublish={() => undefined}/>);
   for (const t of ["Cửa hàng", "Đã lưu", "Chỉnh sửa", "Dùng thử", "Máy tính", "Điện thoại", "Chia sẻ", "Xuất bản"]) assert.match(html, new RegExp(t));
   assert.match(html, /aria-pressed="true"[^>]*>Chỉnh sửa/); assert.match(html, /aria-pressed="false"[^>]*>Dùng thử/);
-  assert.match(html, /title="Bạn không có quyền xuất bản\."/); assert.match(html, /2 lỗi chặn xuất bản/);
+  assert.match(html, /aria-disabled="true"[^>]*>Xuất bản/); assert.ok(!/title="Bạn không có quyền xuất bản\."/.test(html), "no title-only reason"); assert.match(html, /2 lỗi chặn xuất bản/);
   assert.deepEqual(a11yProblems(html), []);
 });
 

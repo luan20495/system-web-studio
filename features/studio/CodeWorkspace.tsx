@@ -128,7 +128,7 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
     if (await act("approve", () => api.code.approve(ws, pid, c.id, comment), "Không duyệt được.")) { setReviewing(null); void loadChanges(); }
   }
   async function discard(c: CodeChange) {
-    if (!(await confirm({ title: "Bỏ thay đổi này?", message: `“${c.summary}” bị bỏ và không hợp nhất vào main. Không thể hoàn tác.`, confirmLabel: "Bỏ thay đổi", danger: true }))) return;
+    if (!(await confirm({ title: "Bỏ thay đổi này?", message: `“${c.summary}” bị bỏ và không hợp nhất vào main. Không thể lấy lại.`, confirmLabel: "Bỏ thay đổi", danger: true }))) return;
     if (await act("discard", () => api.code.discard(ws, pid, c.id), "Không bỏ được thay đổi.")) void loadChanges();
   }
 

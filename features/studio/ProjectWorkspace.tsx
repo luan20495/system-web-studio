@@ -197,7 +197,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
           <button className="button ghost" onClick={() => go("site")}>Website</button>
           <button className="button ghost" onClick={() => go("versions")}>Phiên bản</button>
           <button className="button ghost" onClick={() => go("assets")}>Tệp</button>
-          <GuardedButton className="button icon" aria-label="Cài đặt project" unavailable={!mayEdit} reason="Bạn không có quyền đổi cài đặt project." onClick={() => go("settings")}><Settings size={16} aria-hidden="true"/></GuardedButton></>}
+          <GuardedButton className="button icon" aria-label="Cài đặt project" unavailable={!mayEdit} reason="Bạn không có quyền đổi cài đặt ứng dụng." onClick={() => go("settings")}><Settings size={16} aria-hidden="true"/></GuardedButton></>}
         goAi={() => go("ai")} openSite={() => go("site")} openMembers={() => go("members")} openPublish={() => go("publish")} saveBlock={() => setSavingBlock(true)}/></ErrorBoundary> : (
       <header className="topbar">
         <div className="brand">
@@ -216,7 +216,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
           <button className="button ghost" onClick={() => go("versions")}>Phiên bản</button>
           <button className="button ghost" onClick={() => go("assets")}>Tệp</button>
           {mayShare ? <button className="button ghost" onClick={() => go("members")}>Chia sẻ</button> : null}
-          <GuardedButton className="button icon" aria-label="Cài đặt project" unavailable={!mayEdit} reason="Bạn không có quyền đổi cài đặt project." onClick={() => go("settings")}><Settings size={16} aria-hidden="true"/></GuardedButton>
+          <GuardedButton className="button icon" aria-label="Cài đặt project" unavailable={!mayEdit} reason="Bạn không có quyền đổi cài đặt ứng dụng." onClick={() => go("settings")}><Settings size={16} aria-hidden="true"/></GuardedButton>
           <OverflowMenu items={[
             { key: "site", label: "Website", onSelect: () => go("site") }, { key: "versions", label: "Phiên bản", onSelect: () => go("versions") }, { key: "assets", label: "Tệp", onSelect: () => go("assets") },
             ...(mayShare ? [{ key: "members", label: "Chia sẻ", onSelect: () => go("members") }] : []),
