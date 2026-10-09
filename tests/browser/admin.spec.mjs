@@ -398,6 +398,13 @@ await block("scenario 46", async () => { const p = await open({ portal: "admin",
 await block("scenario 47", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/identity", fail: "/auth/config" }); await settle(p, 900);
   check("LDG06 Identity: a failed /auth/config says so in the OIDC / SAML tiles (not '…')", !/…/.test(await p.locator("main .kpiGrid").innerText()) && (await p.locator("main .kpiGrid .state-error, main .kpiGrid .state-network").count()) >= 2);
   await p.__ctx.close(); });
+// M-093 (a): the login page fails CLOSED when /auth/config fails: an error with a retry, never a guessed local-password form
+for (const portal of ["platform", "admin"]) await block(`scenario 47b ${portal}`, async () => { const p = await open({ portal, me: "none", start: `/${portal}/login`, fail: "/auth/config" }); await settle(p, 700);
+  const t = await text(p);
+  check(`CFG01 ${portal}: failed /auth/config shows an error with a retry, not the password form`, /Chưa tải được cách đăng nhập/.test(t) && (await p.locator("input[type=password]").count()) === 0 && (await p.getByRole("button", { name: "Thử lại" }).count()) === 1, t.slice(0, 200));
+  await p.evaluate(() => { window.__cfg.fail = null; }); await p.getByRole("button", { name: "Thử lại" }).click(); await settle(p, 400);
+  check(`CFG02 ${portal}: retry after the server recovers shows the sign-in form`, (await p.locator("input[type=password]").count()) === 1 && !/Chưa tải được cách đăng nhập/.test(await text(p)));
+  await p.__ctx.close(); });
 await block("scenario 48", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/ai-governance", fail: "/admin/users" }); await settle(p, 500);
   await p.getByLabel("Phạm vi").first().selectOption("USER"); await settle(p, 900);
   check("LDG07 a scope picker whose search failed says so (it used to show an empty list)", /Chưa tải được danh sách để chọn/.test(await p.locator("main").innerText()));
