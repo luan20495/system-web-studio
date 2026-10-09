@@ -147,4 +147,16 @@ class FinalTenantStatusTests : FinalIamTestBase() {
         assertThat(strings(workspaceRow(m, ws).get("permissions"))).describedAs("platform scope only").doesNotContain("APP_VIEW", "MEMBER_MANAGE", "PROJECT_CREATE")
         assertThat(m.get("systemAdmin").asBoolean()).isTrue()
     }
+
+    @Test
+    fun `5b rename of a SUSPENDED company - the Tenant Admin gets 403 TENANT_SUSPENDED, the platform operator can repair it - a DELETED company cannot be renamed by anybody`() {
+        val sys = sysAdmin(); val c = company(sys)
+        assertThat(sys.patch("${base(c)}/status", """{"status":"SUSPENDED"}""").response.status).isEqualTo(200)
+        val denied = c.admin.patch(base(c), """{"name":"Nope"}"""); assertThat(denied.response.status).isEqualTo(403); assertThat(c.admin.body(denied).get("code").asString()).isEqualTo("TENANT_SUSPENDED")
+        assertThat(sys.patch(base(c), """{"name":"Repaired"}""").response.status).describedAs("platform operator").isEqualTo(200)
+        assertThat(sys.patch("${base(c)}/status", """{"status":"DELETED"}""").response.status).isEqualTo(200)
+        assertThat(sys.patch(base(c), """{"name":"Zombie"}""").response.status).describedAs("DELETED for the operator too").isEqualTo(404)
+        assertThat(c.admin.patch(base(c), """{"name":"Zombie"}""").response.status).isEqualTo(404)
+        assertThat(jdbc.queryForObject("SELECT name FROM tenants WHERE id = ?", String::class.java, c.id)).isEqualTo("Repaired")
+    }
 }
