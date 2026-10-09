@@ -149,6 +149,9 @@ test("workflow editor shows retry, timeout, compensation and approval as readabl
   for (const k of ["Hành động", "Chờ", "Phê duyệt", "Rẽ nhánh"]) assert.match(html, new RegExp(`\\+ ${k}`));
   assert.doesNotMatch(html, /BPMN/i);
   assert.deepEqual(a11yProblems(html), []);
+  // M-106: no raw step id is shown as a step name, and step controls are named by the readable title
+  for (const s of full().workflows![0].steps) assert.doesNotMatch(html, new RegExp(`<small>${s.id}`), s.id);
+  assert.match(html, /aria-label="Xóa Bước 1 · /);
 });
 
 test("workflows panel: NOT_READY gate and list", () => {
