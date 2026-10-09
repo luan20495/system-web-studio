@@ -47,7 +47,8 @@ class TenantService(
         if (!slugRegex.matches(s)) throw ApiException.badRequest("TENANT_SLUG_INVALID", "Slug must be 2-120 chars of a-z, 0-9 and '-', starting and ending with a letter or digit")
         if (name.isBlank() || name.length > 160) throw ApiException.badRequest("TENANT_NAME_INVALID", "Name is required (max 160 characters)")
         if (tenants.findBySlug(s) != null) throw ApiException.conflict("TENANT_SLUG_TAKEN", "A tenant with this slug already exists")
-        val t = tenants.save(TenantEntity(slug = s, name = name.trim()))
+        // flushed at once: the company bootstrap continues in the SAME transaction with JDBC statements (account, membership) that must see this row
+        val t = tenants.saveAndFlush(TenantEntity(slug = s, name = name.trim()))
         if (firstAdmin != null) members.save(TenantMemberEntity(t.id, firstAdmin, TenantRole.TENANT_ADMIN.name, true, Instant.now(), actorId))
         audit.record("TENANT_CREATED", "TENANT", t.id, actorId = actorId, newValue = mapOf("slug" to t.slug, "name" to t.name, "firstAdmin" to firstAdmin))
         return t
@@ -191,8 +192,9 @@ class TenantService(
         val existing = members.findByTenantIdAndUserId(tenantId, userId)
         val before = existing?.let { mapOf("role" to it.role, "active" to it.active) }
         if (existing != null && existing.active && existing.role == TenantRole.TENANT_ADMIN.name && role != TenantRole.TENANT_ADMIN) assertNotLastAdmin(tenantId)
-        val saved = if (existing == null) members.save(TenantMemberEntity(tenantId, userId, role.name, true, Instant.now(), actorId))
-        else { existing.role = role.name; existing.active = true; members.save(existing) }
+        // saveAndFlush: callers in the same transaction (employee enable / disable) read tenant_members through JDBC and must see this change
+        val saved = if (existing == null) members.saveAndFlush(TenantMemberEntity(tenantId, userId, role.name, true, Instant.now(), actorId))
+        else { existing.role = role.name; existing.active = true; members.saveAndFlush(existing) }
         audit.record("TENANT_MEMBER_SET", "TENANT", tenantId, actorId = actorId, oldValue = before, newValue = mapOf("userId" to userId, "role" to role.name))
         return saved.view()
     }
@@ -203,7 +205,7 @@ class TenantService(
         val m = members.findByTenantIdAndUserId(tenantId, userId)?.takeIf { it.active } ?: throw ApiException.notFound("TENANT_MEMBER_NOT_FOUND", "Tenant member not found")
         if (m.role == TenantRole.TENANT_ADMIN.name) assertNotLastAdmin(tenantId)
         m.active = false
-        members.save(m)
+        members.saveAndFlush(m)
         audit.record("TENANT_MEMBER_REMOVED", "TENANT", tenantId, actorId = actorId, oldValue = mapOf("userId" to userId, "role" to m.role))
     }
 
