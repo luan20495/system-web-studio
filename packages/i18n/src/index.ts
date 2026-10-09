@@ -3,6 +3,9 @@
 // Wording rules and the glossary: docs/parallel/c5/audit/S3-glossary.md. Guards that only ratchet: tests/builder/text-guard.test.ts.
 import { BRAND } from "./brand";
 export * from "./brand";
+export * from "./locale";
+export * from "./format";
+export * from "./provider";
 export * from "./text";
 export * from "./roles";
 export * from "./labels";
