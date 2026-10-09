@@ -1,6 +1,5 @@
 import type { Me } from "@xweb/types";
 import { canViewProject, canViewStudioIn, resolvePermissions } from "./canonical";
-import { isTenantAdminRole } from "./roles";
 
 export * from "./canonical";
 export * from "./roles";
@@ -34,7 +33,7 @@ export const hasPermission = (me: Me | null | undefined, code: string): boolean 
  *    server (T1 audit, 96/96). A TENANT_ADMIN would open the Admin portal and get 403 on every screen. It opens to TENANT_ADMIN only when a
  *    tenant-scoped admin API exists AND an Admin screen uses it (the only one today is `/admin/tenants/{id}/members`, TENANT_MEMBERS, with no UI).
  *    See docs/parallel/c5/PHASE3_AUDIT.md M-05; the one-line change is in this function.
- *  - tenant.members    = TENANT_MEMBERS (the tenant's own TENANT_ADMIN, or platform scope). Not used by a portal gate yet.
+ *  - tenant.members    = the code TENANT_MEMBERS in `/auth/me.permissions` (primary tenant) or platform scope; no role label is read (contract §9 item 15).
  *  - studio.build      = the C1 contract: Studio access requires APP_VIEW: some workspace's resolved `permissions` (canViewStudioIn) OR some `projectScopes[].permissions` (H-C1-04) must hold it. A platform-only
  *    SYSTEM_ADMIN (businessAccess=false) is listed in `workspaces` but holds only tenant-level codes there, so Studio is not offered. A workspace whose `permissions` field is
  *    ABSENT (older backend) does not block. No role name is read anywhere. A project-only person (workspace VIEWER / EDITOR / PUBLISHER without a workspace-level code) is admitted by their `projectScopes` (C1 imported 47883b0).
@@ -44,7 +43,8 @@ export function capabilitiesOf(me: Me | null | undefined): ReadonlySet<Capabilit
   if (!me) return out;
   const platform = me.platformScope ?? me.systemAdmin === true;
   if (platform) { out.add("platform.operate"); out.add("tenant.administer"); }
-  if (platform || isTenantAdminRole(me.tenantRole) || me.tenants?.some((t) => isTenantAdminRole(t.role)) || hasPermission(me, "TENANT_MEMBERS")) out.add("tenant.members");
+  // C1 final contract §9 item 15: `tenant.members` is the CODE TENANT_MEMBERS (primary tenant) or platform scope, never a role label (`tenantRole` / `tenants[].role` are display data)
+  if (platform || hasPermission(me, "TENANT_MEMBERS")) out.add("tenant.members");
   // a workspace admin: the server lists MEMBER_MANAGE among the canonical codes of that workspace (no role name is read)
   if (me.workspaces.some((w) => w.permissions?.includes("MEMBER_MANAGE"))) out.add("workspace.members");
   // data-source administration: the server lists DATA_SOURCE_MANAGE (a canonical code, role-free) for the workspace

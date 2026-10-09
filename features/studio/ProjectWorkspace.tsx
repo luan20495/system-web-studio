@@ -15,7 +15,7 @@ import type { DataManagementCalls } from "./builder/core/dataManagement";
 import { backendFrom, type ProbeState } from "./builder/core/backend";
 import { NOT_RENDERED } from "./builder/core/library";
 import type { BlockOption } from "./builder/panels/ComponentsPanel";
-import { canEditProject, canPublish, canShare, canViewProject, holdsStorageConstant, resolvePermissions } from "@xweb/permissions";
+import { canAdmitProject, canEditProject, canPublish, canShare, canViewProject, holdsStorageConstant, resolvePermissions } from "@xweb/permissions";
 import { useSession } from "../session";
 import { ErrorState, errText, fmtDate, StateView } from "../ui";
 import { AssetsDrawer, DeviceIcon, Drawer, MembersDrawer, SettingsDrawer, suggestions } from "./drawers";
@@ -77,7 +77,9 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const readOnly = !mayEdit;
   // page-level gate: a project whose resolved permissions lack APP_VIEW is not shown (APP_VIEW without APP_EDIT is NOT a reason to leave: it opens read-only)
   useEffect(() => { if (project?.name) document.title = `${project.name} · Xweb Studio`; }, [project?.name]);
-  useEffect(() => { if (project && !canViewProject(perms)) router.replace("/auth/no-access?portal=studio&reason=app-view"); }, [project, perms, router]);
+  // H-C1-04: ONE project is admitted by `/auth/me` for THAT project (workspace APP_VIEW, or the projectScopes row of exactly this project) AND by the project's own resolved list. Project A's scope never admits B.
+  const admitted = !project || (canViewProject(perms) && canAdmitProject(me, { workspaceId: project.workspaceId, projectId: project.id }));
+  useEffect(() => { if (project && !admitted) router.replace("/auth/no-access?portal=studio&reason=app-view"); }, [project, admitted, router]);
 
   const label = (type: string) => sectionLabel(type, registry.find((c) => c.id === type)?.name);
   const refreshVersions = async () => setVersions(await api.listVersions(ws, projectId).catch(() => versions));
@@ -171,6 +173,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   }), [ws, projectId]);
 
   if (loadError) return <div className="wsError"><ErrorState error={loadError} retry={() => { setLoadError(null); reload().catch(setLoadError); }}/><p><a className="btn xp-btnIcon" href={S("/projects")}><ArrowLeft size={14} aria-hidden="true"/> Danh sách ứng dụng</a></p></div>;
+  if (project && !admitted) return <div className="wsError"><StateView kind="loading" title="Đang chuyển…"/></div>;       // no privileged content is rendered while the redirect happens
   if (project?.appType === "STATIC_APP") return <Suspense fallback={<div className="wsError"><StateView kind="loading" title="Đang mở ứng dụng…"/></div>}><CodeWorkspace project={project} view={view} onProject={setProject}/></Suspense>;
   if (!project || !schema) return <div className="wsError"><StateView kind="loading" title="Đang mở ứng dụng…"/></div>;
   // company blocks, then my own drafts (an approved block of mine is already in the company list)
