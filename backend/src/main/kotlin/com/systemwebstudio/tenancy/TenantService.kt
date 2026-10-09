@@ -55,6 +55,20 @@ class TenantService(
     }
 
     @Transactional
+    fun rename(id: UUID, nameInput: String, actorId: UUID? = null): TenantEntity {
+        val name = nameInput.trim()
+        if (name.isBlank() || name.length > 160) throw ApiException.badRequest("TENANT_NAME_INVALID", "Name is required (max 160 characters)")
+        val t = get(id)
+        if (t.status == TenantStatus.DELETED.name) throw notFound()                              // a deleted company is gone for every caller
+        val old = t.name
+        if (old == name) return t                                                              // idempotent
+        t.name = name; t.updatedAt = Instant.now()
+        tenants.save(t)
+        audit.record("TENANT_UPDATED", "TENANT", id, actorId = actorId, oldValue = mapOf("name" to old), newValue = mapOf("name" to name))
+        return t
+    }
+
+    @Transactional
     fun setStatus(id: UUID, status: TenantStatus, actorId: UUID? = null): TenantEntity {
         val t = get(id)
         if (id == TenantIds.DEFAULT && status != TenantStatus.ACTIVE) throw ApiException.conflict("DEFAULT_TENANT_PROTECTED", "The DEFAULT tenant cannot be suspended or deleted")
