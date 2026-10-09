@@ -137,7 +137,7 @@ export function MemberTable({ title, members, roles, currentUserId, onChange, on
 }
 
 export function MembersDrawer({ workspaceId, projectId, me, onClose, onError }: { workspaceId: string; projectId: string; me: Me; onClose: () => void; onError: (e: unknown) => void }) {
-  // No role name decides anything here (MEMBER_MANAGE is a server-internal constant that is not exposed to the client): the workspace member list is requested and the SERVER's answer decides.
+  // No role name decides anything here (MEMBER_MANAGE is a canonical code now, but this drawer is also opened by a project member, so the workspace member list is requested and the SERVER's answer decides).
   // A 403/404 simply means "not visible to you" and the section is not shown (handoff H-C1-05).
   const [wsVisible, setWsVisible] = useState(false);
   const [project, setProject] = useState<Member[] | null>(null);

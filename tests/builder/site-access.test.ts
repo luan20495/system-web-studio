@@ -8,6 +8,11 @@ test("M-051: the site path follows the server's safePath rule (anything odd beco
   for (const bad of [null, undefined, "", "  ", "san-pham", "//evil.example", "/\\evil", "/a/../b", "https://evil.example/", "javascript:alert(1)", "/a\nb", "/a\u0000", "/" + "x".repeat(512)]) assert.equal(safeSitePath(bad), "/", String(bad));
 });
 
+test("M-051 (R-04): webUrl refuses control characters that the URL parser would drop (\"/\\t/evil.example\" is a protocol-relative URL)", () => {
+  for (const bad of ["/\t/evil.example", "/\n/evil.example", "/\r/evil.example", "https://a.example/\u0000", "/a\\b", "//evil.example"]) assert.equal(webUrl(bad), undefined, JSON.stringify(bad));
+  assert.equal(webUrl("/assets/a.png"), "/assets/a.png"); assert.equal(webUrl("https://sites.example.vn/x"), "https://sites.example.vn/x");
+});
+
 test("M-051: only a plain https ticket link to /_access is followed", () => {
   assert.equal(safeTicketRedirect("https://sites.example.vn/_access?ticket=abc"), "https://sites.example.vn/_access?ticket=abc");
   assert.equal(safeTicketRedirect("http://sites.local:3086/_access?ticket=t1", "http:"), "http://sites.local:3086/_access?ticket=t1", "a local stack: this page is on http too");

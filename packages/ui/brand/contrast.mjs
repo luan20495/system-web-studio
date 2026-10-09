@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // XWEB brand: MEASURED contrast of the semantic colour tokens, light AND dark (WCAG 2.x relative luminance; 4.5 text, 3.0 UI components / graphics).
 //   node packages/ui/brand/contrast.mjs          table, exit 1 when a pair fails
-//   node packages/ui/brand/contrast.mjs --json   machine-readable (tests/builder/brand.test.ts runs it)
+//   node packages/ui/brand/contrast.mjs --json   machine-readable (tests/builder/brand.test.tsx runs it)
 // Reads the token blocks "semantic, LIGHT" and "semantic, DARK" of packages/ui/src/styles/factory.css: the numbers are of the shipped values, not of a copy.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";

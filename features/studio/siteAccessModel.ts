@@ -32,6 +32,9 @@ export function safeTicketRedirect(redirect: unknown, pageProtocol: string = typ
  */
 export function webUrl(url: string | null | undefined): string | undefined {
   if (typeof url !== "string" || !url) return undefined;
-  if (url.startsWith("/")) return url.startsWith("//") || url.startsWith("/\\") ? undefined : url;
+  // the URL parser DROPS tab / newline, so "/\t/evil.example" would become a protocol-relative URL: control characters and backslashes are never part of an accepted value
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0000-\u001f\u007f-\u009f\\]/.test(url)) return undefined;
+  if (url.startsWith("/")) return url.startsWith("//") ? undefined : url;
   try { const u = new URL(url); return (u.protocol === "https:" || u.protocol === "http:") && !u.username && !u.password ? url : undefined; } catch { return undefined; }
 }

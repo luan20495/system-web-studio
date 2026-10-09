@@ -266,7 +266,7 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
         </section>
       </main>
       {reviewing ? <ReviewDialog summary={reviewing.summary} busy={busy === "approve"} onApprove={(comment) => void approve(reviewing, comment)} onClose={() => setReviewing(null)}/> : null}
-      {panel === "members" && me ? <MembersDrawer workspaceId={ws} projectId={pid} me={me} onClose={() => closePanel()} onError={(e) => toast.error(errText(e, "Thao tác thành viên thất bại."))}/> : null}
+      {panel === "members" && me && canShareApp ? <MembersDrawer workspaceId={ws} projectId={pid} me={me} onClose={() => closePanel()} onError={(e) => toast.error(errText(e, "Thao tác thành viên thất bại."))}/> : null}
       {panel === "publish" ? <PublishModal workspaceId={ws} projectId={pid} revision={project.revision} current="PRIVATE" canPublish={canPublishApp} allowed={cfg?.codeAppPublicPublish === false || cfg?.publicPublish === false ? ["PRIVATE"] : ["PRIVATE", "PUBLIC"]} onClose={() => { closePanel(); api.lookupProject(pid).then(onProject).catch(() => undefined); }}
         onUnauthorized={() => toast.warning("Phiên đăng nhập đã hết hạn.")}/> : null}
       {panel === "versions" ? <Drawer title="Lịch sử (commit trên main)" sub="Lấy trực tiếp từ kho Git của nền tảng." onClose={() => closePanel()}>

@@ -121,14 +121,14 @@ test("gate: offered only when the server lists a tenant the caller administers; 
   const partial = M.organizationPlan(scope([{ id: "t1", name: "Acme" }]), (id) => (id === "moveOrganizationUnit" ? CAPABILITIES[id] : ready[id])); assert.equal(partial.edit.state, "not-ready", "one missing edit operation disables editing as a whole, with its reason");
 });
 
-test("errors: every refusal is mapped to words by code, then by status; an unknown code shows the server's message; NOT_READY is its own kind", () => {
+test("errors: every refusal is mapped to words by code, then by status; an unknown code shows only its reference code (never the server's English message); NOT_READY is its own kind", () => {
   const k = (e: unknown) => M.orgProblem(e).kind;
   assert.equal(k({ status: 409, code: "ORG_CYCLE" }), "cycle"); assert.equal(k({ status: 409, code: "ORG_HAS_CHILDREN" }), "blocked"); assert.equal(k({ status: 409, code: "ORG_HAS_EMPLOYEES" }), "blocked");
   assert.equal(k({ status: 409, code: "VERSION_CONFLICT" }), "version"); assert.equal(k({ status: 409, code: "ORG_CODE_TAKEN" }), "duplicate"); assert.equal(k({ status: 400, code: "ORG_PARENT_TYPE_INVALID" }), "validation");
   assert.equal(k({ status: 403, code: "FORBIDDEN" }), "forbidden"); assert.equal(k({ status: 404, code: "UNIT_NOT_FOUND" }), "notfound");
   assert.equal(k({ status: 422 }), "validation"); assert.equal(k({ status: 401 }), "forbidden"); assert.equal(k({ status: 409 }), "conflict"); assert.equal(k({ status: 503 }), "unavailable");
   assert.equal(k({ status: 0 }), "unavailable"); assert.match(M.orgProblem({ status: 500 }).text, /Chưa rõ thao tác đã được ghi/); assert.equal(k(new TypeError("fetch failed")), "unavailable");
-  assert.equal(k(new OrganizationNotReady("moveOrganizationUnit", "Máy chủ chưa hỗ trợ", "C1")), "not-ready"); assert.match(M.orgProblem({ status: 418, message: "teapot" }).text, /teapot/);
+  assert.equal(k(new OrganizationNotReady("moveOrganizationUnit", "Máy chủ chưa hỗ trợ", "C1")), "not-ready"); assert.match(M.orgProblem({ status: 418, code: "X_TEAPOT", message: "teapot" }).text, /X_TEAPOT/); assert.doesNotMatch(M.orgProblem({ status: 418, code: "X_TEAPOT", message: "teapot" }).text, /teapot\)/, "the server's own message is never shown");
   for (const t of [M.orgProblem({ code: "ORG_CYCLE" }).text, M.orgProblem({ code: "ORG_HAS_EMPLOYEES" }).text]) assert.doesNotMatch(t, /Something went wrong|error/i);
 });
 

@@ -164,3 +164,12 @@ test("M-069: radius and type scale are tokens with their original values; the li
     assert.deepEqual(raw, [], `${f}: use var(--f-r-*) / var(--f-fs-*)`);
   }
 });
+
+test("WCAG 1.4.11: the shipped dark form-control border (--dk-field-line, used by inputs, selects, the settings fields and the dark .btn) is >= 3:1 on every dark control background", () => {
+  const line = /--dk-field-line:(#[0-9a-fA-F]{6})/.exec(css["globals.css"])?.[1]; assert.ok(line, "--dk-field-line is defined in globals.css");
+  const lum = (h: string) => { const c = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+  const ratio = (a: string, b: string) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  for (const bg of ["#0b0d10", "#11141a", "#131a22", "#161a21", "#121a22"]) assert.ok(ratio(line!, bg) >= 3, `${line} on ${bg}: ${ratio(line!, bg).toFixed(2)}`);
+  assert.ok(!/border:1px solid #2d3742/.test(css["globals.css"]), "the settings fields no longer use the 1.45:1 literal");
+  assert.match(css["factory.css"], /:is\(\.studio,\.modal,\.drawer\) \.btn\{[^}]*border-color:var\(--dk-field-line\)/); assert.match(css["factory.css"], /\.btn\.ghost\{background:var\(--dk-btn-ghost\);border-color:var\(--dk-field-line\)\}/);
+});

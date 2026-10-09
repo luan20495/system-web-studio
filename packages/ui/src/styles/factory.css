@@ -479,10 +479,10 @@ fieldset.stack>legend{padding:0;margin:0 0 var(--sp-2);font-size:var(--f-fs-md);
    They are gone from markup AND css; tests/builder/design-tokens.test.ts keeps them at zero. .sendButton (the composer's round send button) stays a component of the AI composer.
    The dark skin applies inside `.studio`, `.modal` and `.drawer` (the Studio's overlays). `.btn.dense` is only the builder's density: new screens use .btn / .btn.sm. */
 .btn.icon{width:36px;padding:0}.btn.sm.icon{width:30px}
-:is(.studio,.modal,.drawer) .btn{height:36px;min-height:36px;padding:0 12px;border-radius:var(--f-r);border-color:var(--line);background:var(--dk-field);color:var(--text);font-size:inherit;font-weight:inherit}
+:is(.studio,.modal,.drawer) .btn{height:36px;min-height:36px;padding:0 12px;border-radius:var(--f-r);border-color:var(--dk-field-line);background:var(--dk-field);color:var(--text);font-size:inherit;font-weight:inherit}
 :is(.studio,.modal,.drawer) .btn:hover:not(:disabled){border-color:var(--dk-btn-hover-line);background:var(--dk-field)}
 :is(.studio,.modal,.drawer) .btn.primary,:is(.studio,.modal,.drawer) .btn.primary:hover:not(:disabled){background:var(--ui-inverse-fg);color:var(--dk-ink);border-color:var(--ui-inverse-fg);font-weight:800}
-:is(.studio,.modal,.drawer) .btn.ghost{background:var(--dk-btn-ghost);border-color:var(--line)}
+:is(.studio,.modal,.drawer) .btn.ghost{background:var(--dk-btn-ghost);border-color:var(--dk-field-line)}
 :is(.studio,.modal,.drawer) .btn.sm{height:30px;min-height:30px;font-size:var(--f-fs-sm)}
 :is(.studio,.modal,.drawer) .btn.danger{color:var(--dk-error-ink)}:is(.studio,.modal,.drawer) .btn.danger:hover:not(:disabled){background:var(--dk-field)}
 :is(.studio,.modal,.drawer) .btn:disabled{opacity:.5}

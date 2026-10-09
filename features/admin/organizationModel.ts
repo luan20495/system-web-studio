@@ -231,7 +231,7 @@ export function orgProblem(e: unknown): OrgProblem {
   if (s === 409) return { kind: "conflict", text: "Thao tác xung đột với dữ liệu hiện tại. Tải lại rồi thử lại." };
   if (s === 503) return { kind: "unavailable", text: "Máy chủ chưa sẵn sàng. Thử lại sau." };
   if (s >= 500 || s === 0) return { kind: "unavailable", text: "Không kết nối được máy chủ. Chưa rõ thao tác đã được ghi hay chưa: tải lại để kiểm tra." };
-  return { kind: "unknown", text: x.message ? `Chưa thực hiện được (${x.message}).` : "Chưa thực hiện được." };
+  return { kind: "unknown", text: x.code ? `Chưa thực hiện được (mã ${x.code}).` : "Chưa thực hiện được." };   // the server's own (English) message is never shown, only its code as a reference
 }
 
 /**

@@ -322,7 +322,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
       </Drawer> : null}
       {panel === "site" ? <SiteDrawer schema={schema} ws={ws} pid={projectId} pageId={pageId} onPage={(id) => { setPageId(id); setSelectedId(null); }} canEdit={!readOnly}
         canPublish={mayPublish} apply={applyOps} onClose={() => closePanel()}/> : null}
-      {panel === "settings" ? <SettingsDrawer project={project} busy={busy === "settings"} onClose={() => closePanel()} onSave={saveSettings}
+      {panel === "settings" && mayEdit ? <SettingsDrawer project={project} busy={busy === "settings"} onClose={() => closePanel()} onSave={saveSettings}
         extra={<>{!readOnly ? <SaveTemplateSection workspaceId={ws} projectId={projectId} projectName={project.name}/> : null}
           {mayDelete && project.status !== "ARCHIVED" ? <section className="settingGroup"><h3>Lưu trữ ứng dụng</h3>
             <p className="hint">Ứng dụng chỉ còn xem được, website bị gỡ khỏi mạng. Dữ liệu và phiên bản được giữ; có thể khôi phục.</p>
@@ -331,7 +331,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
       {savingBlock && selected ? <SaveBlockDrawer workspaceId={ws} projectId={projectId} section={selected} title={label(selected.type)}
         onClose={() => setSavingBlock(false)} onSaved={(m) => { setSavingBlock(false); toast.success(m); loadBlocks(); }}/> : null}
       {panel === "assets" ? <AssetsDrawer workspaceId={ws} projectId={projectId} canEdit={mayEdit} onClose={() => { void loadAssets(ws); closePanel(); }} onError={(e) => toast.error(errText(e, "Thao tác tệp thất bại."))}/> : null}
-      {panel === "members" && me ? <MembersDrawer workspaceId={ws} projectId={projectId} me={me} onClose={() => closePanel()} onError={(e) => toast.error(errText(e, "Thao tác thành viên thất bại."))}/> : null}
+      {panel === "members" && me && mayShare ? <MembersDrawer workspaceId={ws} projectId={projectId} me={me} onClose={() => closePanel()} onError={(e) => toast.error(errText(e, "Thao tác thành viên thất bại."))}/> : null}
       {panel === "publish" ? <PublishModal workspaceId={ws} projectId={projectId} revision={revision} current={project.siteVisibility} versionNumber={latest} canPublish={mayPublish} draft={schema as AppDefinitionV2}
         allowed={publicPublish === false ? ["PRIVATE"] : ["PRIVATE", "PUBLIC"]}
         onClose={() => { closePanel(); void reload().catch(() => undefined); }} onUnauthorized={() => undefined}/> : null}

@@ -52,7 +52,7 @@ export function capabilitiesOf(me: Me | null | undefined): ReadonlySet<Capabilit
   // the Admin console opens for whoever has at least one thing to administer; WHAT they can do inside is decided per screen from the same capabilities and, finally, by the server
   if (out.has("tenant.administer") || out.has("tenant.members") || out.has("workspace.members") || out.has("workspace.data")) out.add("admin.console");
   // C1 H-C1-04: a person whose APP_VIEW comes from a PROJECT membership has it in `projectScopes[].permissions` (never merged into the workspace list). Each scope is judged on its own.
-  const builds = me.workspaces.some((w) => canViewStudioIn(w.permissions)) || !!me.projectScopes?.some((s) => canViewProject(resolvePermissions(s.permissions)));
+  const builds = me.workspaces.some((w) => canViewStudioIn(w.permissions)) || !!me.projectScopes?.some((s) => !!s && Array.isArray(s.permissions) && canViewProject(resolvePermissions(s.permissions)));   // a malformed / null row is skipped (fail closed for that row), never a TypeError
   if (builds) out.add("studio.build");
   return out;
 }

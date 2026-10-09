@@ -35,14 +35,14 @@ export function trapTab(e: KeyboardEvent, root: HTMLElement): boolean {
 // ---- the element that OPENED a dialog (where focus returns on close) ---------------------------------------------------------------------------------------
 // Safari / WebKit does not focus a button (or link, checkbox...) when it is CLICKED, so at the moment a dialog opens `document.activeElement` is <body> and closing the dialog could not
 // give focus back to the control the person pressed (WCAG 2.4.3). The last pointer target is remembered (capture phase, no behaviour change) and used only when nothing real has the focus.
-let lastPointerTrigger: HTMLElement | null = null;
+let lastPointerTrigger: HTMLElement | null = null; let lastPointerAt = 0;
 if (typeof document !== "undefined") {
-  document.addEventListener("pointerdown", (e) => { const t = (e.target as Element | null)?.closest?.("button,a[href],summary,[role=button],[role=combobox],[tabindex]"); lastPointerTrigger = t instanceof HTMLElement ? t : null; }, true);
+  document.addEventListener("pointerdown", (e) => { const t = (e.target as Element | null)?.closest?.("button,a[href],summary,[role=button],[role=combobox],[tabindex]"); lastPointerTrigger = t instanceof HTMLElement ? t : null; lastPointerAt = Date.now(); }, true);
 }
 /** the control a dialog should return focus to: the focused element, else (WebKit click) the control last pressed, else null */
 export function dialogOpener(): HTMLElement | null {
   if (typeof document === "undefined") return null;
   const a = document.activeElement;
   if (a instanceof HTMLElement && a !== document.body) return a;
-  return lastPointerTrigger?.isConnected ? lastPointerTrigger : null;
+  return lastPointerTrigger?.isConnected && Date.now() - lastPointerAt < 1500 ? lastPointerTrigger : null;   // only a press that just happened opened this dialog; a stale one would send focus to an unrelated control
 }
