@@ -70,6 +70,17 @@ export function unitPath(units: readonly OrgUnit[], id: string | null | undefine
   for (let cur = id ? by.get(id) : undefined; cur && !guard.has(cur.id); cur = cur.parentId ? by.get(cur.parentId) : undefined) { guard.add(cur.id); out.unshift(cur.name); }
   return out.join(" › ");
 }
+/** unitPath for MANY rows (an employee table, a list of units): the id -> unit map is built ONCE and every path once. The plain unitPath rebuilds the map per call: rows x units (M-111). */
+export function pathResolver(units: readonly OrgUnit[]): (id: string | null | undefined) => string {
+  const by = new Map(units.map((u) => [u.id, u])); const memo = new Map<string, string>();
+  return (id) => {
+    if (!id) return "";
+    const hit = memo.get(id); if (hit !== undefined) return hit;
+    const out: string[] = []; const guard = new Set<string>();
+    for (let cur = by.get(id); cur && !guard.has(cur.id); cur = cur.parentId ? by.get(cur.parentId) : undefined) { guard.add(cur.id); out.unshift(cur.name); }
+    const path = out.join(" › "); memo.set(id, path); return path;
+  };
+}
 /** a long breadcrumb ("A › B › … › Z") keeps the first two and the last three levels; the full path stays available as the title / aria-label of the element that shows it */
 export function compactPath(path: string, keepStart = 2, keepEnd = 3): string {
   const parts = path.split(" › "); if (parts.length <= keepStart + keepEnd + 1) return path;
@@ -86,13 +97,13 @@ export function parentRule(type: OrgUnitType | undefined, parent: OrgUnit | null
 
 export type MoveTarget = { id: string | null; label: string; depth: number; disabled: boolean; reason?: string; current: boolean };
 /** every place a unit could go, with the reason when it cannot: itself / its subtree (a cycle), a type rule, "already here". The server re-checks (ORG_CYCLE). */
-export function moveTargets(units: readonly OrgUnit[], types: readonly OrgUnitType[], id: string): MoveTarget[] {
+export function moveTargets(units: readonly OrgUnit[], types: readonly OrgUnitType[], id: string, tree?: readonly TreeNode[]): MoveTarget[] {
   const me = units.find((u) => u.id === id); if (!me) return [];
   const below = descendantIds(units, id); const type = typeOf(types, me.typeId);
   const rows: MoveTarget[] = [];
   const rootReason = parentRule(type, null, types);
   rows.push({ id: null, label: "Gốc (không thuộc đơn vị nào)", depth: 0, current: !me.parentId, disabled: !!rootReason || !me.parentId, reason: !me.parentId ? "Đang ở gốc." : rootReason ?? undefined });
-  for (const n of flattenTree(buildTree(units))) {
+  for (const n of flattenTree(tree ?? buildTree(units))) {
     const u = n.unit; let reason: string | undefined;
     if (u.id === id) reason = "Không thể chuyển vào chính nó.";
     else if (below.has(u.id)) reason = "Không thể chuyển vào đơn vị con của nó (tạo vòng).";

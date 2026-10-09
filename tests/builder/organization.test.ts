@@ -56,6 +56,15 @@ test("tree: dynamic nesting by name, nothing dropped (orphans and pure cycles ar
   assert.equal(M.unitPath(TREE, "flutter"), "Khối Công nghệ › Mobile › Flutter Team"); assert.equal(M.unitPath(TREE, null), "");
 });
 
+test("M-111: pathResolver gives the same path as unitPath for every unit (one map for many rows, a loop is cut), and moveTargets with a prebuilt tree equals the one without", () => {
+  const path = M.pathResolver(TREE);
+  for (const x of TREE) assert.equal(path(x.id), M.unitPath(TREE, x.id), x.id);
+  assert.equal(path(null), ""); assert.equal(path("nope"), ""); assert.equal(path("flutter"), path("flutter"));
+  const loop = [u("x", "y", "X"), u("y", "x", "Y")]; assert.equal(M.pathResolver(loop)("x"), M.unitPath(loop, "x"));
+  const tree = M.buildTree(TREE);
+  for (const x of TREE) assert.deepEqual(M.moveTargets(TREE, [], x.id, tree), M.moveTargets(TREE, [], x.id), x.id);
+});
+
 test("move: self / subtree are refused (no cycle), type rules and 'already here' are explained, the root is offered when the type allows it", () => {
   assert.equal(M.wouldCycle(TREE, "tech", "flutter"), true); assert.equal(M.wouldCycle(TREE, "tech", "tech"), true); assert.equal(M.wouldCycle(TREE, "flutter", "web"), false); assert.equal(M.wouldCycle(TREE, "flutter", null), false);
   const t = M.moveTargets(TREE, TYPES, "mobile"); const by = (id: string | null) => t.find((x) => x.id === id)!;
