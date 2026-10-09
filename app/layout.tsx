@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
+import { htmlAttrs } from "../packages/i18n/src/locale";
 import "../packages/ui/src/styles/globals.css";
 import "../packages/ui/src/styles/responsive.css";
 import "../packages/ui/src/styles/http.css";
@@ -15,7 +16,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   // Per-request rendering lets Next stamp the CSP nonce on its inline scripts. Not possible (or needed) in the static export.
   if (process.env.NEXT_PUBLIC_API_MODE === "http") await connection();
   return (
-    <html lang="vi">
+    <html {...htmlAttrs()}>
       <body>{children}</body>
     </html>
   );

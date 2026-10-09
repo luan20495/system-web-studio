@@ -6,18 +6,14 @@ import { errorText } from "@xweb/api-client";
 import { ArrowLeft, ArrowRight } from "./icons";
 import { ScrollRegion } from "./ScrollRegion";
 
-export const fmtDate = (iso?: string | null) => (iso ? new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso)) : "—");
-export function ago(iso?: string | null): string {
-  if (!iso) return "—";
-  const s = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
-  if (s < 60) return "vừa xong"; if (s < 3600) return `${Math.floor(s / 60)} phút trước`; if (s < 86400) return `${Math.floor(s / 3600)} giờ trước`;
-  if (s < 86400 * 30) return `${Math.floor(s / 86400)} ngày trước`; return fmtDate(iso);
-}
-export const num = (n?: number | null) => (n ?? 0).toLocaleString("vi-VN");
+// Formatting lives in @xweb/i18n (locale-aware, one Intl object per locale, output identical to the vi-VN helpers that were here). These names are kept: ~113 call sites use them.
+export const fmtDate = (iso?: string | null) => getFormatters(activeLocale()).fmtDate(iso);
+export const ago = (iso?: string | null) => getFormatters(activeLocale()).ago(iso);
+export const num = (n?: number | null) => getFormatters(activeLocale()).num(n);
 /** Provider-reported USD. null = not reported (shown as "—", never as $0). Free models report exactly 0. */
-export const usd = (n?: number | null) => (n == null ? "—" : n === 0 ? "$0" : `$${n < 0.01 ? n.toPrecision(2) : n.toLocaleString("en-US", { maximumFractionDigits: 4 })}`);
+export const usd = (n?: number | null) => getFormatters(activeLocale()).usd(n);
 /** Token count; null = not reported. */
-export const tok = (n?: number | null) => (n == null ? "—" : n.toLocaleString("vi-VN"));
+export const tok = (n?: number | null) => getFormatters(activeLocale()).tok(n);
 /** the one error mapper (packages/api-client/src/errorText.ts): Vietnamese by error code, never an Error.message of a non-ApiError. `errText` is the historical name. */
 export const errText = (e: unknown, fallback?: string) => errorText(e, fallback);
 export { errorText, errorParts, type ErrorParts, type ErrorKind } from "@xweb/api-client";
@@ -50,3 +46,4 @@ export function NavLink({ href, active, children, icon }: { href: string; active
   return <Link href={href} className={`navLink${active ? " active" : ""}`} aria-current={active ? "page" : undefined}>{icon ? <span className="navIcon" aria-hidden="true">{icon}</span> : null}<span>{children}</span></Link>;
 }
 export { ACTION_LABEL, actionLabel } from "@xweb/i18n";
+import { activeLocale, getFormatters } from "@xweb/i18n";
