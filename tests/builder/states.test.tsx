@@ -2,6 +2,7 @@
 /** M-079 / M-084 / M-041 / M-056 (component part): ErrorState says a failure once, StateView takes a heading level, LoadGate walks loading / empty / error / ready. */
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ApiError } from "../../packages/api-client/src/core";
 import { ErrorState, StateView, retryHelps, stateOf } from "../../packages/ui/src/States";
@@ -87,4 +88,15 @@ test("LoadGate level / compact reach the state (page-level h1; a KPI gets a one-
 test("a11y of every state markup", () => {
   const samples = [<ErrorState key="a" error={E(404, "x")} level={1}/>, <ErrorState key="b" error={E(500, "INTERNAL_ERROR", "x", "r")} retry={() => {}}/>, <StateView key="c" kind="empty" title="Trống" action={<button className="btn">Thêm</button>}/>, <StateView key="d" kind="loading"/>];
   for (const s of samples) assert.deepEqual(a11yProblems(renderToStaticMarkup(s)), []);
+});
+
+test("M-084 adoption (shell level): a state that IS the whole page (portal Suspense fallback, splash, unknown-route page) renders its title as the page h1", () => {
+  const files = ["apps/studio/app/entry.tsx", "apps/platform/app/entry.tsx", "apps/admin/app/entry.tsx", "packages/auth/src/PortalApp.tsx", "components/app/AppEntry.tsx"];
+  for (const f of files) {
+    const src = readFileSync(`${process.cwd()}/${f}`, "utf8");
+    const states = src.match(/<StateView\b[^>]*>/g) ?? [];
+    assert.ok(states.length > 0, f);
+    for (const s of states) assert.match(s, /level=\{1\}/, `${f}: ${s}`);
+  }
+  assert.match(renderToStaticMarkup(<StateView level={1} kind="loading"/>), /<h1>Đang tải…<\/h1>/);
 });

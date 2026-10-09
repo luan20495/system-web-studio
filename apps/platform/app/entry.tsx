@@ -10,5 +10,5 @@ const AdminApp = lazy(() => import("@/features/admin/AdminApp").then((m) => ({ d
 
 // the route render is wrapped so a screen exception (or a failed chunk load) shows the shared fallback instead of unmounting the portal; navigating to another screen clears it
 export default function Entry() {
-  return <PortalApp portal="platform" render={(seg) => <ErrorBoundary resetKeys={[seg.join("/")]} homeHref={PORTAL_PREFIX.platform}><Suspense fallback={<StateView kind="loading"/>}><AdminApp seg={seg} portal="platform"/></Suspense></ErrorBoundary>}/>;
+  return <PortalApp portal="platform" render={(seg) => <ErrorBoundary resetKeys={[seg.join("/")]} homeHref={PORTAL_PREFIX.platform}><Suspense fallback={<StateView level={1} kind="loading"/>}><AdminApp seg={seg} portal="platform"/></Suspense></ErrorBoundary>}/>;
 }

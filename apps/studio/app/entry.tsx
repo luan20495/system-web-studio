@@ -11,5 +11,5 @@ const StudioApp = lazy(() => import("@/features/studio/StudioApp").then((m) => (
 // the route render is wrapped so a screen exception (or a failed chunk load) shows the shared fallback instead of unmounting the portal; navigating to another screen clears it.
 // (A boundary around the Builder itself, so a Design-mode crash keeps the project chrome, is added inside features/studio by its owner.)
 export default function Entry() {
-  return <PortalApp portal="studio" render={(seg) => <ErrorBoundary resetKeys={[seg.join("/")]} homeHref={PORTAL_PREFIX.studio}><Suspense fallback={<StateView kind="loading"/>}><StudioApp seg={seg} dedicated/></Suspense></ErrorBoundary>}/>;
+  return <PortalApp portal="studio" render={(seg) => <ErrorBoundary resetKeys={[seg.join("/")]} homeHref={PORTAL_PREFIX.studio}><Suspense fallback={<StateView level={1} kind="loading"/>}><StudioApp seg={seg} dedicated/></Suspense></ErrorBoundary>}/>;
 }
