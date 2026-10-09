@@ -25,6 +25,7 @@ import { PlatformCreateAccount } from "./ProvisioningLive";
 import { DataSourcesPanel } from "../studio/builder/DataSourcesPanel";
 import type { DataManagementCalls } from "../studio/builder/core/dataManagement";
 import { Modal } from "./Modal";
+import { useDebounced } from "./shared/useDebounced";
 import { PageHead } from "./PageHead";
 import { useA } from "./console/context";
 import {
@@ -43,14 +44,18 @@ function usePeople(extra: Person[] = []) {
   const scope = useMemo(() => adminScope(me), [me]);
   const [q, setQ] = useState("");
   const wsIds = scope.workspaces.map((w) => w.id).join(",");
+  // M-097: the server search runs once per pause in typing (debounced); the workspace member lists do not depend on the text at all, so they load once and are filtered here
+  const dq = useDebounced(q.trim());
   const found = useLoad(async (): Promise<Person[]> => {
-    if (scope.platform) return (await api.admin.users(0, q)).items.map((u) => personOf(u));
+    if (scope.platform) return (await api.admin.users(0, dq)).items.map((u) => personOf(u));
     const lists = await Promise.all(scope.workspaces.map((w) => api.listWorkspaceMembers(w.id).catch(() => [] as Member[])));
-    const all = lists.flat().map((m) => personOf(m));
-    const needle = q.trim().toLowerCase();
-    return needle ? all.filter((p) => `${p.username} ${p.displayName ?? ""}`.toLowerCase().includes(needle)) : all;
-  }, [scope.platform, wsIds, q]);
-  const people = useMemo(() => { const m = new Map<string, Person>(); [...extra, ...(found.data ?? [])].forEach((p) => m.set(p.id, p)); return m; }, [found.data, extra]);
+    return lists.flat().map((m) => personOf(m));
+  }, [scope.platform, wsIds, scope.platform ? dq : ""]);
+  const needle = scope.platform ? "" : q.trim().toLowerCase();
+  const people = useMemo(() => {
+    const m = new Map<string, Person>();
+    [...extra, ...(found.data ?? []).filter((p) => !needle || `${p.username} ${p.displayName ?? ""}`.toLowerCase().includes(needle))].forEach((p) => m.set(p.id, p)); return m;
+  }, [found.data, extra, needle]);
   return { people, q, setQ, loading: found.loading, load: found, platform: scope.platform, nobody: !scope.platform && scope.workspaces.length === 0 };
 }
 

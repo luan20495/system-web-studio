@@ -670,6 +670,24 @@ await block("scenario 84", async () => { const p = await open({ portal: "platfor
   check("AI01 the Platform AI page says the configuration is platform-wide (not 'cho cả công ty')", /toàn nền tảng/.test(t) && !/cho cả công ty/.test(t));
   await p.__ctx.close(); });
 
+// ===================================================================================================================== M-097 request counts (HARNESS): no duplicate GETs, no request per keystroke
+const gets = async (p, re) => (await calls(p)).filter((c) => c.method === "GET" && re.test(c.path)).length;
+await block("scenario 86", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/ai/models" }); await settle(p, 900);
+  check("REQ01 AI › Mô hình: the provider list is fetched ONCE although two cards show it (shared keyed load)", (await gets(p, /^\/admin\/ai\/providers$/)) === 1, String(await gets(p, /^\/admin\/ai\/providers$/)));
+  await nav(p, "/platform/ai/limits"); await settle(p, 500);
+  check("REQ02 AI › Hạn mức after Mô hình: limits fetched once per screen (2 in total), providers revalidated once (2 in total)", (await gets(p, /^\/admin\/ai\/limits$/)) === 2 && (await gets(p, /^\/admin\/ai\/providers$/)) === 2, `limits=${await gets(p, /^\/admin\/ai\/limits$/)} providers=${await gets(p, /^\/admin\/ai\/providers$/)}`);
+  await p.getByRole("button", { name: "+ Thiết lập hạn mức riêng" }).click(); await settle(p, 300);
+  const u0 = await gets(p, /^\/admin\/users\?/);
+  await dlg(p).getByPlaceholder("Nhập ít nhất 2 ký tự").pressSequentially("binhxyz", { delay: 40 }); await settle(p, 800);
+  check("REQ03 typing 7 characters in the override search sends ONE search (debounced), not 7", (await gets(p, /^\/admin\/users\?/)) - u0 === 1, String((await gets(p, /^\/admin\/users\?/)) - u0));
+  await p.__ctx.close(); });
+await block("scenario 87", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/tenants" }); await settle(p, 500);
+  await p.getByRole("button", { name: "+ Tạo công ty" }).click(); await settle(p, 500);
+  const u0 = await gets(p, /^\/admin\/users\?/);
+  await dlg(p).getByLabel("Tìm người dùng").pressSequentially("binh", { delay: 40 }); await settle(p, 800);
+  check("REQ04 create company: typing 4 characters in the first-admin search sends ONE search, not 4", (await gets(p, /^\/admin\/users\?/)) - u0 === 1, String((await gets(p, /^\/admin\/users\?/)) - u0));
+  await p.__ctx.close(); });
+
 check("no console error / warning / uncaught exception in any page", errors.length === 0, errors.slice(0, 3).join(" | "));
 await browser.close();
 finish();

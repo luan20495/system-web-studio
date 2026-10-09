@@ -8,6 +8,7 @@ import type { AiLimitDefaults, AiOverride, AiProbe, AiProviderInfo, AiProviderKi
 import { LoadNote } from "./LoadNote";
 import { useSingleFlight } from "./useAdminAction";
 import { useLoad } from "../useLoad";
+import { AI_LIMITS_KEY, AI_PROVIDERS_KEY, useDebounced } from "./shared/useDebounced";
 import { Modal } from "./Modal";
 import { Card, ErrorState, errText, num, Pill, StateView, usd } from "../ui";
 import { Activity, CircleAlert, CircleCheck, CircleSlash, Cpu, KeyRound, ModalHeader, ReasonButton, Pencil, Picker, Plus, Power, ProviderLogo, Save, Server, Settings2, ShieldCheck, Switch, Trash2, Zap, ChevronDown, ChevronUp, Download, type PickerOption, confirm, LoadGate } from "@xweb/ui";
@@ -46,7 +47,7 @@ export function AiAdmin({ tab, usage, pricing }: { tab?: string; usage: ReactNod
 
 // ------------------------------------------------------------------ providers
 function ProvidersTab() {
-  const { data, error, loading, reload } = useLoad(() => api.admin.aiProviders(), []);
+  const { data, error, loading, reload } = useLoad(() => api.admin.aiProviders(), [], { key: AI_PROVIDERS_KEY });
   const [dialog, setDialog] = useState<{ edit?: AiProviderInfo } | null>(null);
   const [picker, setPicker] = useState<AiProviderInfo | null>(null);
   const [probes, setProbes] = useState<Record<string, AiProbe | "running">>({}); const [msg, setMsg] = useState<string | null>(null);
@@ -199,8 +200,8 @@ function ModelPicker({ provider, onClose, onSaved }: { provider: AiProviderInfo;
 // ------------------------------------------------------------------ models
 function ModelsTab({ pricing }: { pricing: ReactNode }) {
   const A = useA();
-  const { data, error, loading, reload } = useLoad(() => api.admin.aiProviders(), []);
-  const limits = useLoad(() => api.admin.aiLimits(), []);
+  const { data, error, loading, reload } = useLoad(() => api.admin.aiProviders(), [], { key: AI_PROVIDERS_KEY });
+  const limits = useLoad(() => api.admin.aiLimits(), [], { key: AI_LIMITS_KEY });
   const [msg, setMsg] = useState<string | null>(null); const [priceFor, setPriceFor] = useState<string | null>(null);
   const [price, setPrice] = useState({ input: "", output: "" });
   const defaultModel = limits.data?.defaults.defaultModel ?? "auto";
@@ -252,8 +253,8 @@ function NumberField({ label, value, onChange, hint, step = "1" }: { label: stri
 }
 
 function LimitsTab() {
-  const { data, error, loading, reload, setData } = useLoad(() => api.admin.aiLimits(), []);
-  const models = useLoad(() => api.admin.aiProviders(), []);
+  const { data, error, loading, reload, setData } = useLoad(() => api.admin.aiLimits(), [], { key: AI_LIMITS_KEY });
+  const models = useLoad(() => api.admin.aiProviders(), [], { key: AI_PROVIDERS_KEY });
   const [form, setForm] = useState<Record<string, string> | null>(null); const [msg, setMsg] = useState<string | null>(null); const [busy, setBusy] = useState(false);
   const [adding, setAdding] = useState(false);
   const once = useSingleFlight();
@@ -311,12 +312,13 @@ function OverrideRow({ o, onDone }: { o: AiOverride; onDone: (v: import("@/lib/h
 export function OverrideDialog({ fixed, current, onClose, onSaved }: { fixed?: { scopeType: "USER" | "WORKSPACE" | "PROJECT"; scopeId: string; label: string }; current?: AiOverride | null; onClose: () => void; onSaved: () => void }) {
   const [scopeType, setScopeType] = useState<"USER" | "WORKSPACE" | "PROJECT">(fixed?.scopeType ?? "USER");
   const [q, setQ] = useState(""); const [target, setTarget] = useState<{ id: string; label: string } | null>(fixed ? { id: fixed.scopeId, label: fixed.label } : null);
+  const dq = useDebounced(q.trim());   // M-097: one search per pause in typing, not one per key
   const found = useLoad(async () => {
-    if (fixed || q.trim().length < 2) return [] as { id: string; label: string }[];
-    if (scopeType === "USER") return (await api.admin.users(0, q.trim())).items.map((u) => ({ id: u.id, label: `${u.displayName ?? u.username} (${u.username})` }));
-    if (scopeType === "WORKSPACE") return (await api.admin.workspaces(0, q.trim())).items.map((w) => ({ id: w.id, label: w.name }));
-    return (await api.admin.applications({ page: 0, q: q.trim() })).items.map((a) => ({ id: a.id, label: `${a.name} — ${a.workspaceName}` }));
-  }, [q, scopeType, fixed]);
+    if (fixed || dq.length < 2) return [] as { id: string; label: string }[];
+    if (scopeType === "USER") return (await api.admin.users(0, dq)).items.map((u) => ({ id: u.id, label: `${u.displayName ?? u.username} (${u.username})` }));
+    if (scopeType === "WORKSPACE") return (await api.admin.workspaces(0, dq)).items.map((w) => ({ id: w.id, label: w.name }));
+    return (await api.admin.applications({ page: 0, q: dq })).items.map((a) => ({ id: a.id, label: `${a.name} — ${a.workspaceName}` }));
+  }, [dq, scopeType, fixed]);
   const [v, setV] = useState({ rpd: current?.requestsPerDay?.toString() ?? "", tpd: current?.tokensPerDay?.toString() ?? "", tpm: current?.tokensPerMonth?.toString() ?? "", budget: current?.paidBudgetMonth?.toString() ?? "" });
   const [busy, setBusy] = useState(false); const [error, setError] = useState<string | null>(null);
   const fields = { USER: ["rpd", "tpd", "budget"], WORKSPACE: ["rpd", "tpd", "tpm", "budget"], PROJECT: ["rpd", "tpm"] }[scopeType];
