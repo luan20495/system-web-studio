@@ -234,7 +234,7 @@ Routes, DTOs, permissions and errors in §2–§6 are frozen. C5 gates UI only o
 
 ## 10. C3 contract kit and tests
 
-**`OrganizationRepositoryContractKit`** (abstract, `backend/src/test/kotlin/com/systemwebstudio/organization/OrganizationRepositoryContractKit.kt`, C1-owned). C3 **subclasses it in its own test sources** (copy-free: depend on the C1 test source set or vendor the file unchanged) and implements the abstract members; the 10 tests must then pass **unchanged**.
+**`OrganizationRepositoryContractKit`** (abstract, `backend/src/test/kotlin/com/systemwebstudio/organization/OrganizationRepositoryContractKit.kt`, C1-owned). C3 **subclasses it in its own test sources** (copy-free: depend on the C1 test source set or vendor the file unchanged) and implements the abstract members; the 13 tests must then pass **unchanged**.
 
 | Abstract member | C3 supplies |
 |---|---|
@@ -246,7 +246,7 @@ Routes, DTOs, permissions and errors in §2–§6 are frozen. C5 gates UI only o
 
 Unit codes reach the store **already canonical (upper-case)**; the kit passes them that way. The reference subclass is `InMemoryOrganizationConformanceTest` (in-memory double `InMemoryOrganization`; `InMemoryOrganizationConfig` wires it as every seam for the API tests).
 
-**What the 10 kit tests pin:**
+**What the 13 kit tests pin:**
 
 | # | Pins |
 |---|---|
@@ -270,7 +270,7 @@ Unit codes reach the store **already canonical (upper-case)**; the kit passes th
 
 ## 11. Known limits (stated, not hidden)
 - **maxDepth race.** A type `maxDepth` is validated by the service on create / restore WITHOUT the structural lock (only the move takes it). A concurrent move of an ancestor can, in a rare race, push a new unit past its type's `maxDepth`. C3 SHOULD re-check the resulting depth inside `units.insert` / `units.setActive(true)` under the parent row lock; the move re-validates every descendant it can see.
-- **Suspended company.** `AccessService.forTenant` does not distinguish SUSPENDED tenants: a Tenant Admin of a suspended company keeps the organization / employee writes (only `restore` requires an ACTIVE company). This is the existing tenant-admin behaviour of this baseline and is unchanged here.
+- **Suspended company.** Organization / employee / position / grade WRITES in a SUSPENDED company answer `403 TENANT_SUSPENDED` (`AccessService.requireTenantWritable`, called by the organization controllers for every `*_MANAGE` route); reads stay allowed. The existing tenant-admin routes (members, users, workspaces) are unchanged (`AccessService.forTenant` does not distinguish SUSPENDED).
 - **DELETED company.** A SYSTEM_ADMIN who is also a member of a DELETED company holds only the platform scope there (never member-role permissions); an ordinary user gets 404.
 - **Legacy bypass.** With `app.tenancy.system-admin-business-access=true` (off by default) SYSTEM_ADMIN holds the TENANT_ADMIN set on every tenant, organization capabilities included. Default and V1 target: off.
 - **In-memory double ≠ PostgreSQL.** The C1 contract / security tests and the kit run against an in-memory double that serialises every repository call; they prove the C1 contract and the kit, not locking or race behaviour. Mandatory C3 PostgreSQL tests: move vs move (lock serialises, one wins, no cycle), archive vs child insert, archive vs membership insert, end membership vs addPosition, setPrimary vs setPrimary (membership and position), restore vs archive of its parent, and the kit run against the real repositories.
