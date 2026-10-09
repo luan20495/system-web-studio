@@ -25,10 +25,10 @@ export function UsersPage({ tab = "users" }: { tab?: "users" | "workspaces" }) {
   const A = useA();
   return (<>
     <PageHead title="Người dùng & Workspace" sub="Workspace là đơn vị tổ chức hiện tại (chưa có phòng ban/đồng bộ HR)."/>
-    <div className="tabs" role="tablist">
-      <Link role="tab" aria-selected={tab === "users"} className={tab === "users" ? "active" : ""} href={A("/users")}>Người dùng</Link>
-      <Link role="tab" aria-selected={tab === "workspaces"} className={tab === "workspaces" ? "active" : ""} href={A("/workspaces")}>Workspace</Link>
-    </div>
+    <nav className="tabs" aria-label="Người dùng và workspace">
+      <Link aria-current={tab === "users" ? "page" : undefined} className={tab === "users" ? "active" : ""} href={A("/users")}>Người dùng</Link>
+      <Link aria-current={tab === "workspaces" ? "page" : undefined} className={tab === "workspaces" ? "active" : ""} href={A("/workspaces")}>Workspace</Link>
+    </nav>
     {tab === "users" ? <UserList/> : <WorkspaceList/>}
   </>);
 }

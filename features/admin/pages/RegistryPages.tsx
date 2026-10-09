@@ -1,11 +1,11 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useId, useMemo, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/http-api";
 import type { BlockDto, TemplateDto } from "@/lib/http-types";
 import { useA } from "../console/context";
-import { confirm, prompt, LoadGate } from "@xweb/ui";
+import { confirm, prompt, LoadGate, Tabs, TabPanel } from "@xweb/ui";
 import { useLoad } from "../../useLoad";
 import { BlockStatus, blockPage, CheckList, ReviewTimeline, SchemaThumb } from "../../library";
 import { ago, Card, ComingSoon, ErrorState, errText, num, Pager, Pill, StateView } from "../../ui";
@@ -15,14 +15,11 @@ import { prettyJson } from "../safeJson";
 
 // ------------------------------------------------------------------ components
 export function ComponentsPage() {
-  const [tab, setTab] = useState<"registry" | "blocks">("registry");
+  const [tab, setTab] = useState<"registry" | "blocks">("registry"); const tid = useId();
   return (<>
     <PageHead title="Component Registry" sub="Thành phần đã duyệt (AI và trình chỉnh sửa chỉ dùng những thành phần này) và khối do nhân viên đóng góp chờ duyệt."/>
-    <div className="tabs" role="tablist">
-      <button role="tab" aria-selected={tab === "registry"} className={tab === "registry" ? "active" : ""} onClick={() => setTab("registry")}>Registry</button>
-      <button role="tab" aria-selected={tab === "blocks"} className={tab === "blocks" ? "active" : ""} onClick={() => setTab("blocks")}>Khối đóng góp</button>
-    </div>
-    {tab === "registry" ? <RegistryTable/> : <BlocksAdmin/>}
+    <Tabs label="Thành phần" idBase={tid} value={tab} onChange={setTab} tabs={[{ value: "registry", label: "Registry" }, { value: "blocks", label: "Khối đóng góp" }]}/>
+    <TabPanel idBase={tid} value={tab}>{tab === "registry" ? <RegistryTable/> : <BlocksAdmin/>}</TabPanel>
   </>);
 }
 

@@ -38,7 +38,7 @@ export function AiAdmin({ tab, usage, pricing }: { tab?: string; usage: ReactNod
   const active = TABS.some(([k]) => k === tab) ? tab! : "providers";
   return (<>
     <Head title="AI" sub="Cấu hình AI cho cả công ty: nhà cung cấp, mô hình được dùng và hạn mức. Nhân viên không bao giờ thấy khóa kết nối."/>
-    <div className="tabs" role="tablist">{TABS.map(([k, l]) => <Link key={k} role="tab" aria-selected={active === k} className={active === k ? "active" : ""} href={A(`/ai/${k}`)}>{l}</Link>)}</div>
+    <nav className="tabs" aria-label="Mục AI">{TABS.map(([k, l]) => <Link key={k} aria-current={active === k ? "page" : undefined} className={active === k ? "active" : ""} href={A(`/ai/${k}`)}>{l}</Link>)}</nav>
     {active === "providers" ? <ProvidersTab/> : active === "models" ? <ModelsTab pricing={pricing}/> : active === "limits" ? <LimitsTab/> : usage}
   </>);
 }

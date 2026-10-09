@@ -593,6 +593,26 @@ await block("scenario 76", async () => { const p = await open({ portal: "platfor
   check("PIL02 'Rủi ro cao' is a red (pill-bad) chip, not grey", /pill-bad/.test(await p.locator(".pill", { hasText: "Rủi ro cao" }).first().getAttribute("class")));
   await p.__ctx.close(); });
 
+// ===================================================================================================================== M-028 route switches are links (aria-current), in-page switches are real tabs (arrows, tabpanel)
+await block("scenario 77", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/ai/models" });
+  await p.getByRole("navigation", { name: "Mục AI" }).waitFor();
+  check("TAB01 AI sections are a nav of LINKS: no role=tab, the current one has aria-current=page", (await p.locator("[role=tab]").count()) === 0 && (await p.getByRole("link", { name: "Mô hình", exact: true }).getAttribute("aria-current")) === "page" && (await p.getByRole("link", { name: "Nhà cung cấp", exact: true }).getAttribute("aria-current")) === null);
+  await nav(p, "/platform/users"); await p.getByRole("navigation", { name: "Người dùng và workspace" }).waitFor();
+  check("TAB02 Users / Workspaces are links with aria-current too", (await p.locator("[role=tab]").count()) === 0 && (await p.getByRole("link", { name: "Người dùng", exact: true }).first().getAttribute("aria-current")) === "page");
+  await p.__ctx.close(); });
+await block("scenario 78", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/applications/a1" });
+  const tabs = p.getByRole("tab"); await tabs.first().waitFor();
+  const t0 = tabs.first(); await t0.focus(); await p.keyboard.press("ArrowRight"); await settle(p, 200);
+  const sel = await p.locator("[role=tab][aria-selected=true]").innerText();
+  const panel = p.locator("[role=tabpanel]"); const lab = await panel.getAttribute("aria-labelledby"); const selId = await p.locator("[role=tab][aria-selected=true]").getAttribute("id");
+  check("TAB03 application detail: ArrowRight moves to the next tab, which is selected; the tabpanel is labelled by it; only the selected tab is a tab stop", /^Thành viên/.test(sel) && lab === selId && (await p.locator("[role=tab][tabindex='0']").count()) === 1, `${sel} ${lab} ${selId}`);
+  check("TAB04 the member count is part of the tab name (read with a comma)", /Thành viên\s*,?\s*\d+/.test(((await p.locator("[role=tab][aria-selected=true]").evaluate((e) => e.textContent)) ?? "").replace(/\s+/g, " ")));
+  await p.__ctx.close(); });
+await block("scenario 79", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/components" });
+  await p.getByRole("tab", { name: "Khối đóng góp" }).click(); await settle(p, 200);
+  check("TAB05 components: 'Khối đóng góp' is a selected tab with its own tabpanel", (await p.getByRole("tab", { name: "Khối đóng góp" }).getAttribute("aria-selected")) === "true" && (await p.locator("[role=tabpanel]").count()) === 1);
+  await p.__ctx.close(); });
+
 check("no console error / warning / uncaught exception in any page", errors.length === 0, errors.slice(0, 3).join(" | "));
 await browser.close();
 finish();
