@@ -1,6 +1,6 @@
 # C5 — cross-browser tooling (M-114), part 1
 
-Date 2026-10-09. Evidence class: TOOLING (no spec was run on Firefox/WebKit; the matrix is part 2, after product code is final).
+Date 2026-10-09. Evidence class: TOOLING (part 1, 2026-10-09: the selector and the Firefox diagnosis). **Part 2 (WEBKIT matrix, 2026-10-10) is recorded in `FINAL_EVIDENCE_2026-10-10.md` §4: 17 of 19 specs fully pass, the other two are an engine clipboard limit and the Alt+Tab emulation (31/31 with `WEBKIT_PLAIN_TAB=1`); Firefox stays BLOCKED_TOOLING.**
 
 ## Browser selector — `tests/browser/lib/spec.mjs`
 - `BROWSER=chromium|firefox|webkit` (default `chromium`; empty = chromium). Evidence labels `CHROMIUM` / `FIREFOX` / `WEBKIT` (`browserLabel()`).

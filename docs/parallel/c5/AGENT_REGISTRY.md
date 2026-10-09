@@ -1,6 +1,6 @@
 # C5 — AGENT REGISTRY (single source of truth for agent ownership)
 
-Maintained by C5-L. Last reconciled: 2026-10-09 (Asia/Saigon), repo head `a9fbdb0` (branch `agent/c5-web`).
+Maintained by C5-L. Last reconciled: 2026-10-10 (Asia/Saigon), repo head `d603488`+docs (branch `agent/c5-web`).
 Times are Asia/Saigon (UTC+7), taken from the session transcript. CONTEXT_SIZE of historical sub-agents was not recorded (UNKNOWN).
 
 ## Admission rules (user-approved, BALANCED mode)
@@ -13,7 +13,7 @@ Times are Asia/Saigon (UTC+7), taken from the session transcript. CONTEXT_SIZE o
 - Any additional agent needs a proposal to the user (PROPOSED_AGENT / WHY_NEEDED / ISSUES / FILES / EXPECTED_TIME_SAVED / EXPECTED_TOKENS / CONFLICT_RISK) and approval.
 
 ## Active execution slots right now
-**ACTIVE_AGENTS = 1 (P-06 C5-S3-BRAND, the only coding agent; P-05 C5-S1-BATCH2 is FINISHED and merged in 72ad63a).** All Wave A agents (P-01..P-03) FINISHED and their branches are merged into `agent/c5-web` (see below); the 15 historical agents H-01..H-15 are FINISHED/STOPPED and ARCHIVED. No agent occupies a slot. C5-R-FINAL is PLANNED only (after Wave B + full gate + real stack).
+**ACTIVE_AGENTS = 0 (2026-10-10).** P-05 C5-S1-BATCH2 FINISHED, merged in 72ad63a; P-06 C5-S3-BRAND FINISHED, merged in 56801b2; P-04 C5-R-FINAL FINISHED (report received, P2/P3 findings fixed in d603488). All Wave A agents (P-01..P-03) FINISHED and their branches are merged into `agent/c5-web` (see below); the 15 historical agents H-01..H-15 are FINISHED/STOPPED and ARCHIVED. No agent occupies a slot. C5-R-FINAL is PLANNED only (after Wave B + full gate + real stack).
 
 ## Registry
 
@@ -38,12 +38,12 @@ Times are Asia/Saigon (UTC+7), taken from the session transcript. CONTEXT_SIZE o
 | P-02 | C5-S2-WAVE-A | Platform / Admin | Wave A | M-025(remainder) M-093 M-097(remainder) M-098 M-065 (keep screens separate, consolidate primitives) | `features/admin/**`, `apps/{platform,admin}`, admin/org tests | FINISHED, ARCHIVED | 10-09 16:37 | see merge commit | small | `agent/c5-s2-wave-a` | 45f4ca4 | MERGED into agent/c5-web (9b67da9); branch tip 16fb8ad; 21 min, ~163k tokens | none | completed |
 | P-03 | C5-S3-WAVE-A | Shared UI / a11y / text / design system | Wave A | M-067 M-069 M-070 M-084 + shared part of M-060..M-063 (no M-068 codemod) | `packages/ui/**`, `packages/i18n/**`, `packages/company-ui/**`, ui tests | FINISHED, ARCHIVED | 10-09 16:37 | see merge commit | small | `agent/c5-s3-wave-a` | 45f4ca4 | MERGED into agent/c5-web (6842f65); branch tip 7168d4d; 18 min, ~138k tokens | none | completed |
 | P-05 | C5-S1-BATCH2 | Studio / Builder second batch | Batch 2 (approved 10-09 after handoff 77e48d6) | M-051 M-078 M-079 M-080 M-081 M-082 M-083 M-089 M-109 M-112 | `features/studio/**`, `packages/ui/src/styles/builder.css`, Studio tests | FINISHED, ARCHIVED | 10-09 (after 77e48d6) | final report received | ~218k tokens, 45 min | `agent/c5-s1-batch2` (worktree `/Users/hoangluan/code/c5-batch2/s1`) | 77e48d6 | MERGED into agent/c5-web (72ad63a); tip a15246c | none | completed |
-| P-06 | C5-S3-BRAND | Design system / XWEB brand (user brief 2026-10-09) | Brand | brand system: logo family, semantic tokens light/dark, backgrounds, banners, portal identity, BRAND_GUIDELINE.md | `packages/ui/**`, `packages/i18n/src/brand.ts`, assets, brand parts of shells | ACTIVE | 10-09 22:3x (after 15bb3b7) | (final report) | small | `agent/c5-s3-brand` (worktree `/Users/hoangluan/code/c5-brand/s3`) | 15bb3b7 | pending; not merged into agent/c5-web until C5-L reviews it | none | - |
-| P-04 | C5-R-FINAL | Read-only final review | Final | n/a | read-only | PLANNED (after Wave B + full gate + real stack) | - | - | - | none | - | - | none | - |
+| P-06 | C5-S3-BRAND | Design system / XWEB brand (user brief 2026-10-09) | Brand | brand system: logo family, semantic tokens light/dark, backgrounds, banners, portal identity, BRAND_GUIDELINE.md | `packages/ui/**`, `packages/i18n/src/brand.ts`, assets, brand parts of shells | FINISHED, ARCHIVED | 10-09 22:3x (after 15bb3b7) | final report received | ~281k tokens, 35 min | `agent/c5-s3-brand` (worktree `/Users/hoangluan/code/c5-brand/s3`) | 15bb3b7 | MERGED into agent/c5-web (56801b2); tip c006077 | none | completed |
+| P-04 | C5-R-FINAL | Read-only final review | Final | n/a | read-only | FINISHED, ARCHIVED (ran 10-09 after Wave B + full gate + real stack + cross-browser; ~288k tokens, 9 min; 2 P2 + 6 P3, no P0/P1; fixed in d603488) | - | - | - | none | - | - | none | - |
 
 ## Totals
-- Entries: **15 historical + 4 planned = 19** (the 15 in the Agent Map are the historical ones H-01..H-15).
-- ACTIVE: **0**. FINISHED: 10 (H-01..H-10). FAILED: 0 as final state (H-05..H-08 failed several times on session/weekly limits and were resumed to completion; treated as STALE contexts). STOPPED: 5 (H-11..H-15). STALE: H-05..H-08.
+- Entries: **21 = 15 historical (H-01..H-15) + 6 current-generation (P-01..P-06)**.
+- ACTIVE: **0**. FINISHED: 10 historical (H-01..H-10) + P-01..P-06. FAILED: 0 as final state (H-05..H-08 failed several times on session/weekly limits and were resumed to completion; treated as STALE contexts). STOPPED: 5 (H-11..H-15). STALE: H-05..H-08.
 - Duplicates among H-11..H-15 and the earlier agents: H-11 duplicates the Studio scope of H-05, H-12 of H-06, H-13 of H-07, H-14 of H-08, H-15 of H-02/H-09/H-10 (same roles, new generation). Their predecessors are FINISHED and merged, and H-11..H-15 produced nothing, so no work is lost or double-owned.
 
 ## Issue ownership (one active owner each; Wave A)

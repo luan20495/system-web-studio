@@ -1,6 +1,6 @@
 # Frontend onboarding (XWeb / System Web Studio)
 
-One entry point for a NEW person or AI working on the web UI. Read it top to bottom once (15 minutes), then use the "How to" sections. Written 2026-10-08 against `agent/c5-web @ 9f858c2`; every command and path was checked against `package.json`, the scripts and the source. Marks used below:
+One entry point for a NEW person or AI working on the web UI. Read it top to bottom once (15 minutes), then use the "How to" sections. Written 2026-10-08 against `agent/c5-web @ 9f858c2`, updated 2026-10-10 for `@ 6883272`+ (button vocabulary, lazy sections, H-C1-04 admission, canonical organization codes, XWEB brand layer, WEBKIT runs); every command and path was checked against `package.json`, the scripts and the source. Marks used below:
 
 - **[RAN]** the command was executed while writing this document and worked;
 - **[READ]** checked by reading the file, not executed (needs a port, Docker, a backend or a browser session that was not available);
@@ -15,7 +15,7 @@ The frontend is three Next.js apps in one npm-workspaces monorepo, one backend (
 | Portal | Package / folder | Dev & start port | Base path | What it is for | Who can enter (UI gate: `packages/permissions/src/index.ts` `capabilitiesOf`) |
 |---|---|---|---|---|---|
 | **Platform** | `@xweb/app-platform`, `apps/platform` | 3001 (`-H 127.0.0.1`) | `/platform` | operate the platform: tenants (companies), all users, AI providers and usage, components, templates, builds, packages, system health, backups, costs, alerts, security, settings, audit, connectors | `platform.operate`: the server says `platformScope` (SYSTEM_ADMIN); an older backend falls back to `systemAdmin` |
-| **Admin** | `@xweb/app-admin`, `apps/admin` | 3002 | `/admin` | run one company: company profile, organization structure, employees, people (create accounts), workspaces, data sources, plus the system sections a SYSTEM_ADMIN also sees | `admin.console`: a platform admin, a tenant admin (`TENANT_MEMBERS` or `tenants[].role = TENANT_ADMIN`), someone with `MEMBER_MANAGE` or `DATA_SOURCE_MANAGE` in a workspace |
+| **Admin** | `@xweb/app-admin`, `apps/admin` | 3002 | `/admin` | run one company: company profile, organization structure, employees, people (create accounts), workspaces, data sources, plus the system sections a SYSTEM_ADMIN also sees | `admin.console`: a platform admin, or a person the server lists `TENANT_MEMBERS` / `MEMBER_MANAGE` / `DATA_SOURCE_MANAGE` for (a role label is NOT read: `tenants[].role` only chooses which tenants the console lists; the organization screens need their own ORG_/EMPLOYEE_ code; was: a tenant admin (`TENANT_MEMBERS` or `tenants[].role = TENANT_ADMIN`), someone with `MEMBER_MANAGE` or `DATA_SOURCE_MANAGE` in a workspace |
 | **Studio** | `@xweb/app-studio`, `apps/studio` | 3003 | `/studio` | build, run and publish apps: projects, AI chat, the Builder (design mode), code mode, templates, components, versions, assets, site settings, publish | `studio.build`: the server lists `APP_VIEW` for some workspace of the person (a platform-only SYSTEM_ADMIN is not offered Studio) |
 
 Facts that surprise people:
@@ -37,7 +37,7 @@ Prerequisites: Node 22+ (`docs/LOCAL_DEVELOPMENT.md`), `npm ci` at the repo root
 | install | `npm ci` | [RAN] |
 | typecheck, root (legacy app + features + components + tests) | `npx tsc --noEmit` (same as `npm run typecheck`) | [RAN] clean |
 | typecheck the 3 apps + 6 packages | `npm run typecheck:packages` (alias `npm run typecheck:all`); apps only: `npm run typecheck:apps` | [RAN] clean |
-| unit tests | `npm run test:unit` | [RAN] 306 tests, 305 pass, 1 skipped, about 24 s |
+| unit tests | `npm run test:unit` | [RAN] 508 tests, 507 pass, 1 skipped (the C2 conformance fixtures, prints PENDING), about 25 s (2026-10-10) |
 | test file classification | `npm run test:classify` | [RAN] "OK: every test file is classified" |
 | production build of one portal | `HBL_ENV=local npm run build:platform` (also `build:admin`, `build:studio`; all three: `HBL_ENV=local npm run build:apps`) | [RAN] platform, admin, studio |
 | legacy root app (mock static export to `out/`) | `npm run build` | [RAN] |
@@ -156,7 +156,7 @@ Builder-only building blocks: `features/studio/builder/ui/primitives.tsx` (`Icon
 
 ```ts
 // features/admin/organization.ts (contract + capability table + adapter factory, pure, unit-tested)
-export const CAPABILITIES: Readonly<Record<OrgCapabilityId, OrgCapabilityState>> = { listOrganizationUnits: NR(NO_CONTRACT, ["TENANT_MEMBERS"]), /* … */ };
+export const CAPABILITIES: Readonly<Record<OrgCapabilityId, OrgCapabilityState>> = { listOrganizationUnits: NR(["ORG_STRUCTURE_VIEW"]), /* … */ };
 export function createOrganizationApi(transport: OrganizationTransport, …): OrganizationApi   // throws OrganizationNotReady and sends NOTHING for a NOT_READY capability
 // features/admin/organizationAdapter.ts (wiring)
 export const liveOrganization = createOrganizationApi({ tenantMembers: (t) => api.admin.tenantMembers(t) }, employeesFromMembers);
@@ -172,7 +172,7 @@ Errors: show the server's `code` in words, never the English message; keep the r
 - Canonical breakpoints in the CSS (`packages/ui/src/styles/*.css`): **≤ 900 px** sidebar becomes a drawer (`useNavDrawer`, `.shell` rules in `factory.css`); **≤ 760 px** the Builder shows ONE workspace at a time through a sticky three-way switch **Bản xem trước / Công cụ / Thuộc tính** (`data-mview` on `.bx-body`, state `mview` in `BuilderWorkspace.tsx`, all panes stay mounted so nothing reloads; `builder.css`); **≤ 720 px** the employee table becomes cards; **≤ 600 px** dialogs become bottom sheets; **≤ 1100 px** the Builder uses two columns. Other widths in the CSS (520, 700, 767, 768, 1023, 1279, 1760, 1920) are older and local: do not add new ones.
 - A phone is a "look and adjust" editor, not a full Builder.
 - Wide tables: put them in a `Card` (it scrolls inside itself); ids that must break go in `code`; names wrap (`break-word`).
-- **Tokens** (`factory.css` `:root`): colours `--f-bg --f-panel --f-line --f-line2 --f-text --f-muted --f-accent --f-accent-ink --f-accent-soft --f-ok/-bg --f-warn/-bg --f-bad/-bg --f-info/-bg`, radius `--f-r` (10 px), `--f-shadow`, focus ring `--f-focus`, `--f-placeholder`, `--f-disabled-bg/-ink`, spacing `--sp-1…--sp-8` (4 8 12 16 20 24 32 px), `--muted-strong` for text on dark rails. The dark editor still uses the older `--bg --panel --text --muted` family in `globals.css`.
+- **Tokens**: NEW code reads the semantic layer (`--color-*`, `--space-*`, `--radius-*`, `--shadow-*`, `--text-*`; top of `factory.css`, rules in `docs/BRAND_GUIDELINE.md`, light on `:root`, dark on `.studio, .modal, .drawer, .sidebar.dark, [data-theme=dark]`). The older names below are legacy twins with the same values (`tests/builder/brand.test.tsx` keeps them equal). `factory.css` `:root`: colours `--f-bg --f-panel --f-line --f-line2 --f-text --f-muted --f-accent --f-accent-ink --f-accent-soft --f-ok/-bg --f-warn/-bg --f-bad/-bg --f-info/-bg`, radius `--f-r` (10 px), `--f-shadow`, focus ring `--f-focus`, `--f-placeholder`, `--f-disabled-bg/-ink`, spacing `--sp-1…--sp-8` (4 8 12 16 20 24 32 px), `--muted-strong` for text on dark rails. The dark editor still uses the older `--bg --panel --text --muted` family in `globals.css`.
 - Type: `Inter, ui-sans-serif, system-ui, …` (no webfont), body 14 px / 1.5, helper 13 px, labels 13 px / 600. Icons 14 / 16 / 18 / 20 / 22 px.
 - Buttons (M-068): ONE vocabulary, `.btn` (`primary`, `ghost`, `sm`, `danger`, `icon`, `block`) or `<Button>` from `@xweb/ui`. The dark Studio skin applies automatically inside `.studio`, `.modal` and `.drawer`; the Builder's compact size is `.btn.dense` (+ `.sm`). `.button`, `.smallButton` and `.bx-btn` no longer exist in markup or CSS and `tests/builder/design-tokens.test.ts` fails if one comes back. A dark overlay rendered outside those three containers gets the LIGHT skin: mount it inside `.studio` (the harness pages do). Evidence: `docs/parallel/c5/audit/M-068-button-convergence.md`.
 - CSS is minified on single lines in places (`globals.css`, `http.css`): edit with care and keep each change small.
@@ -222,7 +222,7 @@ Evidence files in `docs/parallel/c5/evidence/` must say HARNESS or REAL, the git
 - **Other browsers**: `BROWSER=webkit|firefox|chromium` (default chromium, `tests/browser/lib/spec.mjs`). WebKit is Playwright WebKit, labelled `WEBKIT`, never "Safari". Firefox is BLOCKED_TOOLING on macOS 27 (`Could not find profile folder`, `audit/S4-cross-browser.md`). Specs that use Chromium-only features (CDP, `--enable-precise-memory-info`) fail on the other engines by design.
 - **Timing specs** (`hooks.spec.mjs`, busy / double-click windows) fail at random under a heavily loaded machine (load average above ~30: other teams' processes); re-run on a quiet one before calling it a regression (the same spec fails on the old tree too).
 - esbuild is not a repo dependency: `npm i --prefix /tmp/esb esbuild` (or set `ESBUILD_DIR`). `/tmp/esb` was present on this machine [RAN]; on a clean machine it must be installed first.
-- Specs default `CHROME` to a Linux path; on macOS pass `CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"`.
+- `tests/browser/lib/spec.mjs` looks for an installed Chrome per OS (`chromePath`); set `CHROME=...` to override. `BROWSER=webkit` runs the same specs on Playwright WebKit (Tab is sent as Alt+Tab; `WEBKIT_PLAIN_TAB=1` switches that off).
 
 ## 11. How to …
 
@@ -239,7 +239,7 @@ Evidence files in `docs/parallel/c5/evidence/` must say HARNESS or REAL, the git
      </>);
    }
    ```
-2. Register it in **four places** (they must agree): `NAV` (`AdminApp.tsx:24`, `[key, label, icon]`; or `SCOPED_NAV` :37 for tenant/workspace scopes), `OWNED` (`features/admin/base.ts:23`, which console owns the key), `SYSTEM_ONLY` (`adminModel.ts:45`) or `sectionAccess` (`adminModel.ts:50`) for its gate, and a `case` in `route()` (`AdminApp.tsx:74`).
+2. Add ONE entry to the section table `features/admin/console/sections.tsx` (key, label, icon, `portals`, `access`, `surface`, `listed`, `render`); the rules that read it are in `features/admin/console/sectionPolicy.ts` (`sectionAccess`, `navSections`, `resolveSection`). Rarely used system pages are `lazy(() => import(...))` there (M-053, guard `tests/builder/console-lazy.test.ts`); an organization page gates on its canonical code (`access: "orgStructure" | "employeeView"`).
 3. Add the call to `api.admin` (`packages/api-client/src/api.ts`) and the DTO to `packages/types/src/index.ts`; if the backend route is missing, use the NOT_READY pattern (section 7) and a `ComingSection` entry (`COMING`, :30).
 4. Add `data-testid`s for what a test must reach, and the route to `scripts/ui-audit.mjs` (the `PLATFORM`, `ADMIN_TENANT`, `ADMIN_SYSTEM` and `STUDIO` route lists, lines 125–128; C0-owned script: ask C0 or note it in the handoff).
 5. Tests: rules in `tests/builder/adminmodel.test.ts` (or a new `*.test.ts`); a harness page if the screen has states worth proving; a real-backend flow only when the backend exists.
@@ -307,7 +307,7 @@ Rules: lock the submit while `busy` (no double submit); validate with a pure fun
 | `role === "VIEWER"` or any role name in a gate | wrong after a contract change | permission codes through `packages/permissions` |
 | a text glyph (✓ ✕ ▦) as an icon | tofu on some fonts, axe/visual audit fails | Lucide icon from `@xweb/ui` |
 | a native `confirm()` for a new destructive step | untestable, unstyled, English buttons on some browsers | `Modal` confirmation |
-| adding a page to `NAV` but not `OWNED` / `route()` | page shows "Mục này nằm ở trang khác" or not found | all four places (11.1) |
+| a page entry whose `portals` / `access` do not match what you expect | "Mục này nằm ở trang khác", not found, or a refusal screen | the one table entry (11.1) and `sectionPolicy.ts` |
 | faking data for a missing backend | looks finished, is false | NOT_READY with a reason |
 | suppressing an axe rule to get green | hides a real defect | fix the markup; target 0 critical / 0 serious |
 | editing `features/studio/ProjectWorkspace.tsx`, `lib/schema-preview.ts`, `lib/http-api*.ts` while another owner needs it | hot-file conflict | they are C5 hot files: coordinate with C5-L |
@@ -327,7 +327,7 @@ Other people's processes run on the same machine (their `next start`, `http.serv
 
 | Symptom | Look at |
 |---|---|
-| a whole portal is a blank error page | no error boundary exists yet (R-001): open the browser console; the failing component is in the stack |
+| a whole portal is a blank error page | every portal entry and the Builder are wrapped in the shared `ErrorBoundary` (M-006): it shows a reference code; the failing component is in the console stack |
 | an API error | `ApiError.code` + `requestId` (shown as "(mã req_…)" by `errText`; the audit page filters by Request ID); the backend sets `X-Request-Id` on every response |
 | 500 `ECONNREFUSED` on every `/api` call | portal built with the wrong `API_PROXY_TARGET` (section 2.1) |
 | login works but the portal says no access | `capabilitiesOf(me)` in `packages/permissions/src/index.ts`; the person's `/auth/me` (permissions, tenants, workspaces) |
