@@ -1,8 +1,8 @@
 package com.systemwebstudio.identity
 
-import com.systemwebstudio.access.AccessService
 import com.systemwebstudio.access.MeTenancyService
 import com.systemwebstudio.access.PermissionCodes
+import com.systemwebstudio.access.ProjectScopeResolver
 import com.systemwebstudio.access.TenantMembershipSummary
 import com.systemwebstudio.audit.AuditService
 import com.systemwebstudio.common.ApiException
@@ -44,7 +44,7 @@ data class ProjectScopeSummary(
     val workspaceId: UUID,
     /** Informational only. Clients must gate on canonical permissions, never on this role string. */
     val role: String?,
-    /** Effective canonical permissions resolved by the same AccessService used by project APIs. */
+    /** Effective canonical permissions, decided by the same AccessEvaluator that AccessService.forProject (the project APIs) uses. */
     val permissions: List<String>
 )
 data class MeResponse(
@@ -75,7 +75,7 @@ class AuthController(
     private val audit: AuditService,
     private val jdbc: JdbcTemplate,
     private val meTenancy: MeTenancyService,
-    private val access: AccessService,
+    private val projectScopeResolver: ProjectScopeResolver,
     private val codeProjects: com.systemwebstudio.code.CodeProjectService,
     private val runtime: com.systemwebstudio.runtime.ServerRuntimeService,
     @Value("\${app.local-login.enabled:true}") private val localLogin: Boolean,
@@ -141,6 +141,9 @@ class AuthController(
      * Everything here is recomputed from the database on every call (nothing is read from the login-time snapshot of the session): SYSTEM_ADMIN, the roles derived from it, the
      * tenant / workspace / project scopes. A workspace the server would refuse is not listed as usable: removed from its tenant -> omitted; tenant DELETED -> omitted;
      * tenant SUSPENDED -> listed with NO permissions (the server answers 403 TENANT_SUSPENDED there).
+     *
+     * Cost is bounded and independent of the number of workspaces / projects / tenants: 5 SQL statements (users.system_admin; the workspaces
+     * list; ProjectScopeResolver = users flags + one joined project-scope statement; MeTenancyService.forUser = one tenants statement).
      */
     @GetMapping("/me")
     fun me(@AuthenticationPrincipal principal: StudioUserDetails): MeResponse {
@@ -173,23 +176,9 @@ class AuthController(
                 }, principal.userId
             )
         }
-        val projectScopes = jdbc.query(
-            """SELECT pm.project_id, pm.workspace_id
-               FROM project_members pm
-               JOIN projects p ON p.id = pm.project_id AND p.workspace_id = pm.workspace_id
-               WHERE pm.user_id = ? AND pm.active AND p.active
-               ORDER BY pm.workspace_id, pm.project_id""",
-            { rs, _ -> rs.getObject("workspace_id", UUID::class.java) to rs.getObject("project_id", UUID::class.java) },
-            principal.userId
-        ).mapNotNull { (workspaceId, projectId) ->
-            try {
-                val ctx = access.forProject(principal.userId, workspaceId, projectId)
-                ProjectScopeSummary(projectId, workspaceId, ctx.projectRole, PermissionCodes.canonicalCodesOf(ctx.permissions))
-            } catch (_: ApiException) {
-                // Stale/inactive/out-of-scope membership is not disclosed in /auth/me; unexpected infrastructure errors still propagate.
-                null
-            }
-        }
+        // bulk: a constant number of statements however many project memberships the caller has (ProjectScopeResolver), same decision as AccessService.forProject
+        val projectScopes = projectScopeResolver.scopesFor(principal.userId)
+            .map { ProjectScopeSummary(it.projectId, it.workspaceId, it.role, PermissionCodes.canonicalCodesOf(it.permissions)) }
         val t = meTenancy.forUser(principal.userId, systemAdmin)
         return MeResponse(principal.userId, principal.username, principal.displayName ?: principal.username, roles, workspaces, systemAdmin,
             t.tenantId, t.tenantRole, t.platformScope, t.businessAccess, t.tenants, t.permissions, projectScopes)
