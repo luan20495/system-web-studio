@@ -414,4 +414,22 @@ for (const w of [768, 1000]) {
   check("M-044: …and no raw server text / class name is shown", !/java\.lang|NullPointer|com\.x/.test(t), "");
   await p.close();
 }
+
+// ---------- M-038: the menu editor follows the document - removing a page must not leave a stale link that 'Lưu menu' would put back ----------
+{
+  const s = newState(); const base = s.schema;
+  s.schema = { ...base, pages: [{ id: "about", title: "Giới thiệu", slug: "gioi-thieu", sections: [] }], site: { ...(base.site ?? {}), navigation: [{ id: "n1", label: "Giới thiệu", pageId: "about" }, { id: "n2", label: "Liên hệ", anchor: "contact" }] } };
+  s.patchApply = (schema, body) => { let next = schema; for (const op of body.operations ?? []) if (op.type === "REMOVE_PAGE") next = { ...next, pages: (next.pages ?? []).filter((x) => x.id !== op.pageId), site: { ...(next.site ?? {}), navigation: (next.site?.navigation ?? []).filter((l) => l.pageId !== op.pageId) } }; return next; };
+  const p = await open(b, "/studio/projects/p1/design", { state: s }); await p.waitForSelector("iframe"); await wait(900);
+  const menu = () => p.locator("section[aria-labelledby=menu-h]");
+  check("M-038: the menu lists the page link before the removal", (await menu().getByLabel(/Nhãn liên kết/).count()) === 2, String(await menu().getByLabel(/Nhãn liên kết/).count()));
+  await p.getByRole("treeitem", { name: /Giới thiệu/ }).first().click(); await wait(300);
+  await p.getByRole("button", { name: "Xóa trang" }).click(); await wait(300);
+  await p.getByRole("dialog").getByRole("button", { name: /^Xóa/ }).last().click(); await wait(1200);
+  const labels = await menu().getByLabel(/Nhãn liên kết/).evaluateAll((els) => els.map((e) => e.value));
+  const saveDisabled = await menu().getByRole("button", { name: /Lưu menu/ }).isDisabled().catch(() => null);
+  check("M-038: after the page is removed the menu editor shows the document's menu (the stale link is gone)", !labels.includes("Giới thiệu") && labels.includes("Liên hệ"), JSON.stringify(labels));
+  check("M-038: …and 'Lưu menu' is not offered (nothing to save), so the removed link cannot be put back", saveDisabled === true, String(saveDisabled));
+  await p.close();
+}
 await b.close(); finish();

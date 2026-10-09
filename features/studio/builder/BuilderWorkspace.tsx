@@ -191,7 +191,7 @@ export function BuilderWorkspace(props: {
       case "forms": return <FormsPanel ctx={ctx} onSelect={(id, pg) => { props.onPage(pg); select(id); }} onNewAction={(id) => { setActionPreset({ sectionId: id }); openRail("actions"); }} openSite={props.openSite}/>;
       case "actions": return <ActionsPanel key={actionPreset?.sectionId ?? "list"} ctx={ctx} preset={actionPreset ? { type: "SUBMIT_FORM", sectionId: actionPreset.sectionId } : undefined}/>;
       case "workflows": return <WorkflowsPanel ctx={ctx}/>;
-      case "theme": return <ThemePanel ctx={ctx}/>;
+      case "theme": return <ThemePanel key={JSON.stringify((doc as { theme?: unknown }).theme ?? null)} ctx={ctx}/>;
       case "ai": return <AiPanel openAi={props.goAi} canEdit={cap.canEdit}/>;
     }
   })();

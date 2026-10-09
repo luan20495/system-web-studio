@@ -84,8 +84,9 @@ export function PagesPanel({ doc, pageId, onPage, selectedId, onSelect, labelOf,
       {!current.home ? (<div className="bx-notready-row"><button type="button" className="bx-btn sm" disabled>Đặt làm trang chủ</button><StateBox state={setHomeReadiness()} compact/></div>) : null}
       <div className="bx-notready-row"><StateBox state={reorderPagesReadiness()} compact/></div>
 
-      <MenuEditor doc={doc} pages={pages} canEdit={canEdit} busy={busy} apply={apply} genId={genId}/>
-      <NotFoundEditor doc={doc} canEdit={canEdit} busy={busy} apply={apply}/>
+      {/* M-038: these editors keep a draft copy of the saved document; keyed by what is saved, they re-sync when it changes (a removed page, a save) instead of keeping a stale list that 'Lưu menu' would put back */}
+      <MenuEditor key={JSON.stringify(doc.site?.navigation ?? [])} doc={doc} pages={pages} canEdit={canEdit} busy={busy} apply={apply} genId={genId}/>
+      <NotFoundEditor key={JSON.stringify(doc.site?.notFound ?? null)} doc={doc} canEdit={canEdit} busy={busy} apply={apply}/>
 
       {dialog === "add" ? <AddDialog doc={doc} onClose={() => setDialog(null)} onSubmit={async (title) => {
         const id = genId("p"); const r = opsAddPage(doc, title, id);
