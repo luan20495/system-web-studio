@@ -109,7 +109,7 @@ All routes are under `/api/v1/auth`. The session cookie is `STUDIO_SESSION` (`M/
 **`workspaces[]` for a SYSTEM_ADMIN** (`AuthController.kt:149-155`). The rows are **every** workspace:
 - `role` is the real membership role, or `"ADMIN"` when it is not a member.
 - `permissions` = the member role's codes, or the `platformScope` codes for `"ADMIN"` (`MeTenancy.kt:45-49`).
-- **GAP (C1):** this branch applies **no tenant-status filter**. A SYSTEM_ADMIN who is a member of a SUSPENDED or DELETED tenant's workspace sees role permissions in `/auth/me`, although `forWorkspace` refuses them (403 / 404, `M/access/AccessService.kt:94-98`). This is UI-only exposure, because the server re-checks every call.
+- **SYSTEM_ADMIN rows follow the same gates as `forWorkspace`:** a workspace the operator belongs to by MEMBERSHIP grants nothing when its tenant is DELETED or the operator's tenant membership was removed (the row shows role `ADMIN` = platform scope), and carries NO permission when the tenant is SUSPENDED; a workspace without membership is listed with role `ADMIN` (platform scope only).
 
 **`projectScopes[]`** (`AuthController.kt:168-184`):
 - The SQL pre-filter selects active `project_members` rows of active projects.
@@ -155,7 +155,7 @@ Prefix: `/api/v1/admin/tenants` (`M/tenancy/TenantController.kt:39`).
 Authorization helpers (`M/access/AccessService.kt`):
 - `forPlatform` (`:155-159`): an enabled SYSTEM_ADMIN, else 403 `ADMIN_REQUIRED`.
 - `forTenant` (`:127-143`):
-  - A **SYSTEM_ADMIN** passes on any existing tenant, DELETED included. It gets `platformScope` (= TENANT_MANAGE + TENANT_MEMBERS). If it is also an active member and the tenant is not DELETED, its member role's codes are added. If the legacy flag is on, it gets the TENANT_ADMIN set instead.
+  - A **SYSTEM_ADMIN** passes on any existing tenant, DELETED included. It gets `platformScope` (= TENANT_MANAGE + TENANT_MEMBERS). If it is also an ACTIVE member and the tenant is not DELETED, its member role's codes are added. If the legacy flag is on, it gets the TENANT_ADMIN set instead.
   - **Anyone else** needs an active membership and a tenant that is not DELETED. Otherwise the answer is 404 `TENANT_NOT_FOUND`.
   - **`forTenant` does not check SUSPENDED.**
 
@@ -164,7 +164,7 @@ Authorization helpers (`M/access/AccessService.kt`):
 | `GET ` | – | `TenantResponse[]` = `{id, slug, name, status, createdAt}`, all statuses, by `createdAt` | `forPlatform` | platform | 403 `ADMIN_REQUIRED` | – | – |
 | `POST ` (201) | `{slug, name, firstAdmin?: {username, displayName, email?}, firstAdminUserId?}` | `TenantCreatedResponse` = `{id, slug, name, status, createdAt, firstAdmin?: ActivationLink}` | `forPlatform` | platform | see notes 1 and 2 below | – | `TENANT_CREATED {slug, name, firstAdmin}`. With `firstAdmin`, also `USER_CREATED`, `TENANT_MEMBER_SET` and `ACTIVATION_LINK_CREATED`. |
 | `GET /{tenantId}` | – | `TenantResponse` | `forTenant` (any active member, or SYSTEM_ADMIN) | path tenant | 404 `TENANT_NOT_FOUND` | – | – |
-| `PATCH /{tenantId}` (**rename, new**) | `{name}` | `TenantResponse` | `TENANT_MANAGE` via `forTenant` | path tenant. **Slug is immutable.** | 404 `TENANT_NOT_FOUND` (stranger, unknown id, or DELETED for a non-SYSTEM_ADMIN); 403 `FORBIDDEN` (plain member); 400 `TENANT_NAME_INVALID` (blank after trim, or > 160) | – (no version; last write wins) | `TENANT_UPDATED {old:{name}, new:{name}}`. **Idempotent:** the same name returns the tenant with no write and no audit. |
+| `PATCH /{tenantId}` (**rename, new**) | `{name}` | `TenantResponse` | `TENANT_MANAGE` via `forTenant` | path tenant. **Slug is immutable.** | 404 `TENANT_NOT_FOUND` (stranger, unknown id, DELETED for everybody - the service refuses a DELETED tenant; the platform operator may rename an ACTIVE or SUSPENDED one); 403 `TENANT_SUSPENDED` (a Tenant Admin of a SUSPENDED company: the company is read-only for its own administrators); 403 `FORBIDDEN` (plain member); 400 `TENANT_NAME_INVALID` (blank after trim, or > 160) | – (no version; last write wins) | `TENANT_UPDATED {old:{name}, new:{name}}`. **Idempotent:** the same name returns the tenant with no write and no audit. |
 | `PATCH /{tenantId}/status` | `{status: "ACTIVE"\|"SUSPENDED"\|"DELETED"}` (case-sensitive) | `TenantResponse` | `forPlatform` (**SYSTEM_ADMIN only**) | platform | 403 `ADMIN_REQUIRED`; 400 `TENANT_STATUS_INVALID` (checked before the id is looked up); 404 `TENANT_NOT_FOUND`; 409 `DEFAULT_TENANT_PROTECTED` | – | `TENANT_STATUS_CHANGED {old:{status}, new:{status}}` |
 | `POST /{tenantId}/workspaces` (201) | `{name}` | `{id, name, slug: "w-<16 hex>", tenantId}` | `TENANT_MANAGE` | path tenant | 404 `TENANT_NOT_FOUND`; 403 `FORBIDDEN`; 400 `VALIDATION_FAILED` (name 1-160) | – | `WORKSPACE_CREATED` |
 | `GET /{tenantId}/members` | – | `TenantMemberView[]` = `{tenantId, userId, role, active, username, displayName, email}`, **active rows only**, by `lower(displayName ?: username)` then username | `TENANT_MEMBERS` | path tenant | 404; 403 | – | – |
@@ -195,8 +195,8 @@ Notes on the table:
 | Same routes, SYSTEM_ADMIN **acting through a membership** | allowed by matrix | **403 `TENANT_SUSPENDED`** (`:94-98`) | **404** (`:96`) |
 | Same routes, SYSTEM_ADMIN that is **not a member** | `platformScope` only, so business routes give 403 | same, no gate | same, no gate |
 | Organization / employee / position / grade **reads** (`*_VIEW`) | allowed | **allowed** | non-SYSTEM_ADMIN 404 `TENANT_NOT_FOUND`; SYSTEM_ADMIN 403 `FORBIDDEN` (platform scope only) |
-| Organization **writes** (every `*_MANAGE` route, including employee create, enable and disable) | allowed | **403 `TENANT_SUSPENDED`** (`OrganizationControllers.kt:24`, `AccessService.kt:149-152`). Checked **after** the permission, so a plain member still sees 403 `FORBIDDEN`. | as reads. Unit restore also requires an ACTIVE tenant: `RESTORE_CONFLICT {reason: TENANT_INACTIVE}`, reachable only with the legacy flag. |
-| Tenant admin routes (`GET /{t}`, rename, workspaces, members, candidates, users) | allowed | **allowed, unchanged.** `forTenant` does not check SUSPENDED. | non-SYSTEM_ADMIN 404. SYSTEM_ADMIN allowed, except `POST /users`, which gives 404 `TENANT_NOT_FOUND`. |
+| Organization **writes** (every `*_MANAGE` route, including employee create, enable and disable) | allowed | **403 `TENANT_SUSPENDED`** (`OrganizationControllers.kt:24`, `AccessService.kt:149-152`). Checked **after** the permission, so a plain member still sees 403 `FORBIDDEN`. | 404 `TENANT_NOT_FOUND` for every write (`requireTenantWritable`, also with the legacy flag). Unit restore also requires an ACTIVE tenant: `RESTORE_CONFLICT {reason: TENANT_INACTIVE}`. |
+| Tenant admin routes (`GET /{t}`, rename, workspaces, members, candidates, users) | allowed | **allowed, unchanged** (`forTenant` does not check SUSPENDED), except **rename**, which a Tenant Admin cannot do in a SUSPENDED company (403 `TENANT_SUSPENDED`; the platform operator can). | non-SYSTEM_ADMIN 404. SYSTEM_ADMIN allowed, except `POST /users`, which gives 404 `TENANT_NOT_FOUND`. |
 | `/auth/me` | normal | tenant listed in `tenants[]`. Its workspaces are listed with `permissions: []` (non-SYSTEM_ADMIN). Top-level `permissions` still carries the tenant role codes if it is the primary tenant (2.4). | tenant and its workspaces omitted (non-SYSTEM_ADMIN) |
 | Public site (`PUBLIC_SITE`) | served | refused (TenantGate) | refused |
 
@@ -257,7 +257,7 @@ Sessions are stored in Spring Session Redis (indexed by principal name = usernam
 | Activation or password reset completed | deleted | 401 `AUTHENTICATION_REQUIRED` | `Accounts.kt:201`. The test name `AccountActivationTests.kt:32` says "reset signs out", but nothing asserts it. |
 | SYSTEM_ADMIN revoked | kept | admin routes: 403 `ADMIN_REQUIRED`; `forPlatform` routes: 403; `/auth/me` `systemAdmin=false`, `roles=["USER"]` | `AdminSupport.kt:17-21`; `AuthController.kt:147`; `AdminApiTests.kt:44` |
 | Tenant membership deactivated (`DELETE members` / employee `disable`) | kept | tenant routes: 404 `TENANT_NOT_FOUND`; the tenant's workspaces: 404 `WORKSPACE_NOT_FOUND`; `/auth/me` omits them | `AccessService.kt:92,141`; `T/tenancy/TenantAccessTests.kt:38` |
-| Tenant role demoted (TENANT_ADMIN → MEMBER) | kept | 403 `FORBIDDEN` "Missing permission: …" | `AccessService.kt:142`; `T/tenancy/TenantAdminViaRoleTests.kt` (service level only) |
+| Tenant role demoted (TENANT_ADMIN → MEMBER) | kept | 403 `FORBIDDEN` "Missing permission: …" | `TenantAccess.require` (`AccessService.kt:58`); `T/tenancy/TenantAdminViaRoleTests.kt` (service level only) |
 | Tenant SUSPENDED | kept | section 3.2 | `TenantAccessTests.kt:45` |
 | Tenant DELETED | kept | 404 for non-SYSTEM_ADMIN | `AccessService.kt:92,141` |
 | Project membership removed | kept | project routes: 404 `PROJECT_NOT_FOUND`; the `projectScopes` row is omitted | `T/member/MemberApiTests.kt:108`; `ProjectScopedAuthMeTests.kt:198` |
@@ -597,8 +597,8 @@ None of these is fixed on this branch.
 | 2 | **Pending activation / reset tokens survive a disable** and work again after re-enable (within 24 h). | `Accounts.kt:64,187`; no token cleanup in `AdminUserController.kt:78-95` | C0 + C1 |
 | 3 | The next request after an **API disable** answers **401 `AUTHENTICATION_REQUIRED`**, not `ACCOUNT_DISABLED`, because the session is deleted first. Clients must treat both 401 codes as "signed out". | `AdminUserController.kt:91`; `SecurityConfiguration.kt:188-189`; `AdminApiTests.kt:64` | C0 (contract choice) |
 | 4 | **maxDepth race.** Create and restore validate `maxDepth` without the structural lock. C3 should re-check the depth inside `insert` / `setActive(true)` under the parent row lock. | `OrganizationRepositories.kt:37-38`; org contract §11 | C3 |
-| 5 | **The suspended-tenant policy for tenant-admin member and provisioning routes is unchanged.** `forTenant` does not check SUSPENDED, so a Tenant Admin keeps member, user, workspace and rename routes. | `AccessService.kt:127-143`; `Accounts.kt:123` | C1 policy, needs a C0 decision |
-| 6 | `/auth/me` for a SYSTEM_ADMIN applies no tenant-status filter to `workspaces[]`. | `AuthController.kt:149-155` | C1 |
+| 5 | **The suspended-tenant policy for tenant-admin member and provisioning routes is unchanged.** `forTenant` does not check SUSPENDED, so a Tenant Admin keeps member, user and workspace routes (organization writes and rename are read-only in a SUSPENDED company). | `AccessService.kt:127-143`; `Accounts.kt:123` | C1 policy, needs a C0 decision |
+| 6 | `/auth/me` is O(N) in the number of project memberships (each one runs `forProject`, ~5 queries). Acceptable for V1; a batched query or a cap is a later optimisation. | `AuthController.kt` projectScopes | C1 |
 | 7 | Top-level `permissions` covers the primary tenant only. | `MeTenancy.kt:37-41` | C1 + contract (C0) |
 | 8 | Last-tenant-admin count is not locked (concurrent demotions). | `TenantService.kt:225-228` | C1 |
 | 9 | A workspace member with **no** `tenant_members` row is treated as active. | `AccessService.kt:92`; `AuthController.kt:161` | C1 (legacy, pre-V26 data) |
