@@ -626,11 +626,14 @@ for (const w of [768, 1000]) {
   await p.close();
 }
 // ---------- M-083 (C5-S1 batch 2): the Studio header search is not clipped on a phone ----------
-for (const w of [360, 390]) {
+for (const w of [360, 390, 430, 560, 600]) {
   const p = await open(b, "/studio", { viewport: { width: w, height: 800 } }); await p.waitForSelector(".studioTop"); await wait(700);
   const m = await p.evaluate(() => { const i = document.querySelector(".studioTop .search input"); const c = document.createElement("canvas").getContext("2d"); const cs = getComputedStyle(i); c.font = `${cs.fontSize} ${cs.fontFamily}`;
     return { inputW: i.clientWidth, need: Math.ceil(c.measureText(i.placeholder).width + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight)), h: Math.round(i.getBoundingClientRect().height) }; });
   check(`M-083 [${w}]: the header search shows its whole placeholder ('Tìm ứng dụng…'), at least 24 px tall, and nothing scrolls sideways`, m.inputW >= m.need && m.h >= 24 && !(await hscroll(p)), JSON.stringify(m));
+  // real-stack audit finding (600 px): the header grew to two rows but its grid row stayed 56 px, so <main> covered the search. The control at the centre of the input must BE the input.
+  const top = await p.evaluate(() => { const i = document.querySelector(".studioTop .search input"), r = i.getBoundingClientRect(), e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return { hit: e === i || i.contains(e), headerBottom: Math.round(document.querySelector(".studioTop").getBoundingClientRect().bottom), mainTop: Math.round(document.querySelector("main").getBoundingClientRect().top) }; });
+  check(`M-083 [${w}]: the header search is not covered by <main> (the header row grows with its content)`, top.hit && top.mainTop >= top.headerBottom - 1, JSON.stringify(top));
   await p.close();
 }
 await b.close(); finish();

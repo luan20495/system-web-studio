@@ -278,4 +278,5 @@
 @media(max-width:600px){
   .topHeader.studioTop{flex-wrap:wrap;row-gap:8px;padding-block:8px}
   .studioTop .search{order:3;flex:1 1 100%}
+  .studio-shell .shellMain{grid-template-rows:auto minmax(0,1fr)}   /* the header is two rows now: its grid row must grow (a fixed 56px row left the search under <main> between 521 and 600 px; found by the real-stack audit at 600) */
 }
