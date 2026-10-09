@@ -191,12 +191,20 @@ await block("scenario 12", async () => { const p = await open({ portal: "admin",
 
 // ===================================================================================================================== M-076 values that are not what the screen expects must not blank the portal
 await block("scenario 8", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/audit", bad: "audit" });
-  await p.locator("tr.clickRow").first().click(); await settle(p, 300);
-  check("DAT01 an audit row whose value is NOT JSON expands: the page stays, the raw text is shown", (await p.locator("h1").count()) === 1 && /not json at all/.test(await p.locator(".detailRow pre").innerText()), `h1=${await p.locator("h1").count()}`);
+  await p.locator(".xp-discBtn").first().click(); await settle(p, 300);
+  check("DAT01 an audit row whose value is NOT JSON expands: the page stays, the raw text is shown", (await p.locator("h1").count()) === 1 && /not json at all/.test(await p.locator(".xp-discDetail pre").innerText()), `h1=${await p.locator("h1").count()}`);
   await p.__ctx.close(); });
 await block("scenario 9", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/audit" });
-  await p.locator("tr.clickRow").first().click(); await settle(p, 300);
-  check("DAT02 a JSON audit value still shows pretty-printed JSON (unchanged)", /"a": 1/.test(await p.locator(".detailRow pre").innerText()));
+  await p.locator(".xp-discBtn").first().click(); await settle(p, 300);
+  check("DAT02 a JSON audit value still shows pretty-printed JSON (unchanged)", /"a": 1/.test(await p.locator(".xp-discDetail pre").innerText()));
+  // M-029: the row opens from the keyboard, says so, and closes again
+  await p.locator(".xp-discBtn").first().click(); await settle(p, 200);
+  const b0 = p.locator(".xp-discBtn").first(); await b0.focus();
+  const ex0 = await b0.getAttribute("aria-expanded"); await p.keyboard.press("Enter"); await settle(p, 200);
+  const ex1 = await b0.getAttribute("aria-expanded"); const ctl = await b0.getAttribute("aria-controls"); const shown = await p.locator(".xp-discDetail pre").count();
+  await p.keyboard.press("Space"); await settle(p, 200);
+  check("AUD01 an audit row is a real button: Enter opens (aria-expanded + aria-controls + detail), Space closes", ex0 === "false" && ex1 === "true" && !!ctl && shown === 1 && (await b0.getAttribute("aria-expanded")) === "false" && (await p.locator(".xp-discDetail").count()) === 0, `${ex0} ${ex1} ${ctl} ${shown}`);
+  check("AUD02 the button has a name that says which event (not just an icon)", /^Chi tiết: /.test(((await b0.innerText()) || (await b0.evaluate((e) => e.textContent))).trim()));
   await p.__ctx.close(); });
 await block("scenario 10", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/components", bad: "schema" });
   await p.getByRole("button", { name: "Schema" }).click(); await settle(p, 300);
