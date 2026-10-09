@@ -15,6 +15,7 @@ import { ReviewDialog } from "./ReviewDialog";
 import { OverflowMenu } from "./OverflowMenu";
 import { describeStatus } from "./aiProgressModel";
 import { diffFileRows } from "./codeDiff";
+import { webUrl } from "./siteAccessModel";
 import { DesignPane, IdeDrawer, PackagesDrawer, RuntimeDrawer } from "./CodePanels";
 import { projectBase, S } from "./base";
 
@@ -243,8 +244,8 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
             {change.reviewRequired ? <p className="hint">{change.approvedBy ? `Đã duyệt bởi ${change.approvedBy}${change.reviewComment ? ` — “${change.reviewComment}”` : ""}` : "Dự án yêu cầu duyệt: một thành viên có quyền xuất bản (không phải người tạo) cần duyệt trước khi hợp nhất."}</p> : null}
             <TabPanel idBase={detailTabs} value={tab}>
             {tab === "preview" ? (change.previewUrl
-              ? <><iframe className="appPreview" title="Bản xem trước ứng dụng" sandbox="allow-scripts" src={change.previewUrl}/>
-                <p className="hint">Chạy cách ly (không cookie/lưu trữ), liên kết hết hạn {change.previewExpiresAt ? fmtDate(change.previewExpiresAt) : ""}. <a href={change.previewUrl} target="_blank" rel="noopener noreferrer">Mở trong tab mới</a></p></>
+              ? <><iframe className="appPreview" title="Bản xem trước ứng dụng" sandbox="allow-scripts" src={webUrl(change.previewUrl)}/>
+                <p className="hint">Chạy cách ly (không cookie/lưu trữ), liên kết hết hạn {change.previewExpiresAt ? fmtDate(change.previewExpiresAt) : ""}. <a href={webUrl(change.previewUrl)} target="_blank" rel="noopener noreferrer">Mở trong tab mới</a></p></>
               : change.status === "BUILDING" ? <StateView kind="loading" title="Đang build trong sandbox…" detail={<p>{change.build?.stage ? `Bước: ${STAGE[change.build.stage] ?? change.build.stage}` : "Chờ runner nhận việc"}</p>}/>
               : change.status === "FAILED" ? <StateView kind="error" title="Build không thành công" detail={<p>{change.error}</p>}/>
               : <p className="hint">Không có bản xem trước (đã hợp nhất hoặc hết hạn).</p>) : null}
