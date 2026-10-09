@@ -14,7 +14,7 @@
  */
 import type { TenantMemberView } from "@xweb/types";
 
-export type Need = "TENANT_MEMBERS" | "TENANT_MANAGE" | "ORG_MANAGE";
+export type Need = "TENANT_MEMBERS" | "TENANT_MANAGE" | "ORG_STRUCTURE_VIEW" | "ORG_STRUCTURE_MANAGE" | "EMPLOYEE_VIEW" | "EMPLOYEE_MANAGE" | "POSITION_GRADE_VIEW" | "POSITION_GRADE_MANAGE";
 export type Owner = "C1" | "C0";
 
 export type OrgCapabilityId =
