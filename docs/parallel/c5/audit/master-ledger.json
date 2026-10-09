@@ -1062,7 +1062,7 @@
   "dynamic import for dialogs/panels/Admin sections; split AdminApp by portal (see M-064)",
   "S4 bundle table before/after",
   "D-06: AdminApp split shared with M-066 · S4 measured: First Load JS Platform/Admin 809.4/230.0 KB (raw/gzip, identical), Studio 912.6/267.6 KB, legacy 1198.0/340.8 KB; login-only code ~54 KB vs 400-517 KB loaded; 0 dynamic chunks; builder 367.9 KB min, @dnd-kit 71% of Studio code (SYNTHETIC build metrics, Next 16 prints no route sizes)",
-  "PARTIAL (merged 071dfb4): console is a lazy chunk behind the login: Platform/Admin first load 866.6 -> 549.2 KB raw (-36.6%), Studio 989.0 -> 562.4 KB (-43.1%) (lab build output; React/Next runtime ~443 KB of it); deeper splitting inside Studio/Admin pending"
+  "PARTIAL (0ea02e5): measured (bundle-report). Admin/Platform shell chunk 345.9 -> 178.8 KB raw (-48%, 93.3 -> 48.5 gz), Studio shell 461.0 -> 351.4 KB raw (-24%) by lazy sections / lazy code workspace; first load unchanged (552 / 566 KB raw, ~373 KB is the framework). admin 176/176, ui-route 19/19, studio-wave3 162/162. Left: the live portals-lazy.spec run (final gate) before FIXED; page builder not split (measured: opened first)"
  ],
  [
   "M-054",
@@ -1372,7 +1372,7 @@
   "one button component/class set with documented variants; migrate in steps",
   "screenshots + axe",
   "",
-  "VOCABULARY + <Button> + dark skin MERGED (9ea2e39); call-site migration of .button/.smallButton/.bx-btn pending (S1/S2; ratcheted: 73/72/56)"
+  "FIXED (80f8c98): .button / .smallButton / .bx-btn retired (198 className uses in 29 Studio files, all CSS); .btn.dense = the builder's compact size; dark skin on .studio/.modal/.drawer; computed-style probe 2736 comparisons + css-snapshot (release dialog regression found and fixed); guard keeps the legacy classes at zero"
  ],
  [
   "M-069",
@@ -1462,7 +1462,7 @@
   "tests/browser/lib shared toolkit; admin + studio-app harnesses; keep C0 asks separate",
   "spec counts + flake runs",
   "9 specs fall back to port 4000 when HARNESS_URL is unset (S4-031); default CHROME path is Linux-only (S4-035)",
-  "PARTIAL: spec toolkit + HARNESS_URL required merged (a5dcdc1), all specs migrated; shims (R-023 -> M-107) and untested files remain"
+  "PARTIAL (reviewed 2026-10-09): port-4000 fallback gone (HARNESS_URL required, guard test), per-OS Chrome path, shared toolkit in tests/browser/lib, BROWSER selector. Open: esbuild is not a repo dependency (the harness needs ESBUILD_DIR, /tmp/esb today); 43 modules are reached by no UNIT test (their pages are covered by the browser harness specs); the nine shims (HF-C0-M107)"
  ],
  [
   "M-073",
@@ -2008,7 +2008,7 @@
   "remove verified-dead exports; add test ids where a spec needs them",
   "tsc + unit",
   "C-09: grab-bag; every item is tracked in the wave plan, do not treat as one fix · data-testid coverage: 1 for 142 handlers in AdminApp.tsx, 0 in StudioApp/ProjectWorkspace/AuthPages (S4-033)",
-  "OPEN (Wave B review, C5-L): dead exports / unused imports / 'as never' casts; only measured or provable items"
+  "PARTIAL (26f88c8): the 9 provably dead exports removed, 32 unused imports / locals removed (tsc --noUnusedLocals clean outside tests). Not proven, not touched: 'as never' / 'as unknown as' casts, test-id coverage, the api object monolith, me!.workspaces[0]"
  ],
  [
   "M-100",
@@ -2166,7 +2166,7 @@
   "single import spelling; do not break the unit runner",
   "unit + all builds",
   "split from M-072 (C-07); executes last",
-  "OPEN (Wave B step 2, C5-L, serial after M-068): repo-wide relative-import / shim cleanup in S1/S2 files"
+  "PARTIAL (2b0fa31): everything a unit test does not load imports packages by name (3 files converted, guard computes the loaded set); the 15 relative imports and 9 shims stay because the unit runner (C0) cannot load @xweb/* at runtime. BLOCKED_EXTERNAL remainder: HF-C0-M107 (runner resolves @xweb/*)"
  ],
  [
   "M-108",
@@ -2340,7 +2340,7 @@
   "loud pending line",
   "unit summary",
   "",
-  "OPEN (Wave B review, C5-L): contract conformance test is silently skipped unless XWEB_CONFORMANCE_* is set (C0 runner file)"
+  "FIXED (26f88c8): the skipped conformance suite prints one PENDING line naming XWEB_CONFORMANCE_DIR (the gate still reports it as skipped; running it needs the C2 fixtures)"
  ],
  [
   "M-117",
