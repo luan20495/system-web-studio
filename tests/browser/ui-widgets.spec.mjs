@@ -141,5 +141,5 @@ try {
 } catch (e) { check("scenario aborted", false, e.message); }
 await browser.close();
 const failed = results.filter((r) => !r.ok);
-console.log(`\nui-widgets: ${results.length - failed.length}/${results.length} passed  (HARNESS, NOT REAL BACKEND)`);
+console.log(`\nui-widgets: ${results.length - failed.length}/${results.length} passed  (HARNESS: no backend involved)`);
 process.exit(failed.length ? 1 : 0);

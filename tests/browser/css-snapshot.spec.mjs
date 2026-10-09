@@ -33,7 +33,7 @@ for (const [name, path] of PAGES) for (const [sz, w, h] of SIZES) {
 await browser.close();
 if (process.env.SNAP_OUT) writeFileSync(process.env.SNAP_OUT, JSON.stringify(out, null, 1));
 const keys = Object.keys(out); const errs = keys.filter((k) => String(out[k]).startsWith("ERROR"));
-console.log(`css-snapshot: ${keys.length} screenshots, ${errs.length} could not be taken  (HARNESS, NOT REAL BACKEND)`);
+console.log(`css-snapshot: ${keys.length} screenshots, ${errs.length} could not be taken  (HARNESS: no backend involved)`);
 for (const k of errs) console.log(`  ERROR ${k}: ${out[k]}`);
 let changed = [];
 if (process.env.SNAP_BASE) { const base = JSON.parse(readFileSync(process.env.SNAP_BASE, "utf8")); changed = keys.filter((k) => base[k] !== out[k]); console.log(`compared with ${process.env.SNAP_BASE}: ${changed.length} changed`); for (const k of changed) console.log(`  CHANGED ${k}`); }
