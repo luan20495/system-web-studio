@@ -242,3 +242,13 @@ test("top bar: the retry button appears only for a failed save that has a retry 
   assert.doesNotMatch(renderToStaticMarkup(<BuilderTopBar {...base} save={{ state: "error", at: null }}/>), /retry-save/);
   assert.doesNotMatch(renderToStaticMarkup(<BuilderTopBar {...base} save={{ state: "saved", at: null }} onRetrySave={() => undefined}/>), /retry-save/);
 });
+
+test("M-080: action chains are checkbox lists (no <select multiple>), and a NEW action's open problems are not an alert", () => {
+  const html = renderToStaticMarkup(<ActionEditor ctx={ctx()} preset={{ type: "NAVIGATE" }} onDone={() => undefined} onCancel={() => undefined}/>);
+  assert.doesNotMatch(html, /<select[^>]*multiple/i);
+  assert.match(html, /<legend>Khi thành công, chạy tiếp<\/legend>[\s\S]*?type="checkbox"[^>]*\/?>[\s\S]*?Làm mới/);
+  assert.match(html, /<legend>Khi lỗi, chạy tiếp<\/legend>/);
+  assert.match(html, /class="bx-issues"/, "a new NAVIGATE action without a page has an open problem");
+  assert.doesNotMatch(html, /role="alert"/, "nothing failed yet: no alert when the editor opens");
+  assert.deepEqual(a11yProblems(html), []);
+});
