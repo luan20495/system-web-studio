@@ -5,11 +5,11 @@ import { SkipLink } from "../../packages/ui/src/SkipLink";
 import { useMain } from "../../packages/ui/src/useMain";
 import "./admin-css";
 
-const NAV = ["Tổng quan", "Người dùng", "Ứng dụng", "Nhật ký", "Cài đặt"];
+const NAV = ["Tổng quan", "Người dùng", "Ứng dụng", "Nhật ký", "Cài đặt", "Báo cáo"];
 function Page({ route }: { route: number }) {
   const [loaded, setLoaded] = useState(-1);                        // route 3 renders its heading late (a loading state first)
-  useEffect(() => { if (route === 3) { const t = setTimeout(() => setLoaded(3), 120); return () => clearTimeout(t); } setLoaded(-1); }, [route]);
-  if (route === 3 && loaded !== 3) return <p id="loading">Đang tải…</p>;
+  useEffect(() => { if (route === 3 || route === 5) { const t = setTimeout(() => setLoaded(route), route === 3 ? 120 : 900); return () => clearTimeout(t); } setLoaded(-1); }, [route]);   // route 5: a lazily fetched section (900 ms)
+  if ((route === 3 || route === 5) && loaded !== route) return <p id="loading">Đang tải…</p>;
   return <><h1>{NAV[route]}</h1><p>Nội dung của {NAV[route]}</p>{route === 1 ? <div id="tall" style={{ height: 1800 }}>Trang dài</div> : null}</>;
 }
 function App() {

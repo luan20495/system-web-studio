@@ -3,24 +3,36 @@
  * THE section registry of the Platform and Admin consoles: one entry per page. The sidebar, the ownership check, the access rule, the document title and the routing are all derived from this table
  * (sectionPolicy.ts). To add a page: write the component, add ONE entry here (in the order it should appear in the sidebar).
  */
-import type { ReactNode } from "react";
+import { lazy, type ReactNode } from "react";
 import { AppWindow, Boxes, Building2, CircleDollarSign, Database, Fingerprint, FolderTree, HardDrive, Hammer, HeartPulse, KeyRound, Layers, LayoutDashboard, LayoutTemplate, Network, Package, Plug, ScrollText, Scale, Settings, Share2, ShieldCheck, Sparkles, TriangleAlert, UserRound, Users } from "@xweb/ui";
-import { AiAdmin } from "../AiSetup";
 import { EmployeesPage, OrganizationPage } from "../OrganizationLive";
 import { PeoplePage } from "../ProvisioningLive";
 import { CompanyPage, DataSourcesAdminPage, MyWorkspacesPage, TenantDetailPage, TenantsPage } from "../TenantScreens";
-import { AiGovernancePage } from "../pages/AiGovernancePage";
-import { AiPage, PricingCard } from "../pages/AiUsagePages";
-import { AppDetail, AppsPage } from "../pages/ApplicationsPages";
-import { AuditPage } from "../pages/AuditPage";
 import { Overview } from "../pages/Overview";
-import { AlertsPage, CostsPage, SecurityPage } from "../pages/OperationsPages";
-import { ComponentsPage, TemplatesAdmin } from "../pages/RegistryPages";
-import { BuildsPage, HealthPage, PackagesPage, SettingsPage } from "../pages/SystemPages";
-import { BackupsPage, ConnectorsPage, DepartmentsPage, IdentityPage } from "../pages/IdentityPages";
 import { UserDetail, UsersPage, WorkspaceDetail } from "../pages/UsersPages";
 import type { SectionMeta } from "./sectionPolicy";
 import { peopleWhen } from "../shared/peopleSections";
+
+// M-053: the sections below are system / governance screens that a person opens rarely; each is its own chunk, fetched on first visit (routes.tsx wraps the page in <Suspense>). The landing page,
+// company / user / people / organization screens and the shell stay in the console chunk. Each `lazy` keeps the component's own prop types.
+const AiSection = lazy(() => import("./AiSection").then((m) => ({ default: m.AiSection })));
+const AiGovernancePage = lazy(() => import("../pages/AiGovernancePage").then((m) => ({ default: m.AiGovernancePage })));
+const AppDetail = lazy(() => import("../pages/ApplicationsPages").then((m) => ({ default: m.AppDetail })));
+const AppsPage = lazy(() => import("../pages/ApplicationsPages").then((m) => ({ default: m.AppsPage })));
+const AuditPage = lazy(() => import("../pages/AuditPage").then((m) => ({ default: m.AuditPage })));
+const AlertsPage = lazy(() => import("../pages/OperationsPages").then((m) => ({ default: m.AlertsPage })));
+const CostsPage = lazy(() => import("../pages/OperationsPages").then((m) => ({ default: m.CostsPage })));
+const SecurityPage = lazy(() => import("../pages/OperationsPages").then((m) => ({ default: m.SecurityPage })));
+const ComponentsPage = lazy(() => import("../pages/RegistryPages").then((m) => ({ default: m.ComponentsPage })));
+const TemplatesAdmin = lazy(() => import("../pages/RegistryPages").then((m) => ({ default: m.TemplatesAdmin })));
+const BuildsPage = lazy(() => import("../pages/SystemPages").then((m) => ({ default: m.BuildsPage })));
+const HealthPage = lazy(() => import("../pages/SystemPages").then((m) => ({ default: m.HealthPage })));
+const PackagesPage = lazy(() => import("../pages/SystemPages").then((m) => ({ default: m.PackagesPage })));
+const SettingsPage = lazy(() => import("../pages/SystemPages").then((m) => ({ default: m.SettingsPage })));
+const BackupsPage = lazy(() => import("../pages/IdentityPages").then((m) => ({ default: m.BackupsPage })));
+const ConnectorsPage = lazy(() => import("../pages/IdentityPages").then((m) => ({ default: m.ConnectorsPage })));
+const DepartmentsPage = lazy(() => import("../pages/IdentityPages").then((m) => ({ default: m.DepartmentsPage })));
+const IdentityPage = lazy(() => import("../pages/IdentityPages").then((m) => ({ default: m.IdentityPage })));
 
 export type Section = SectionMeta & {
   icon: ReactNode;
@@ -40,7 +52,7 @@ export const SECTIONS: readonly Section[] = [
   { key: "users", label: "Người dùng & Workspace", icon: ic(Users), portals: both, access: "system", surface: "standard", listed: "main", render: (seg) => (seg[1] ? <UserDetail id={seg[1]}/> : <UsersPage/>) },
   { key: "workspaces", label: "Người dùng & Workspace", icon: ic(Users), portals: both, access: "system", surface: "standard", listed: "hidden", render: (seg) => (seg[1] ? <WorkspaceDetail id={seg[1]}/> : <UsersPage tab="workspaces"/>) },
   { key: "applications", label: "Ứng dụng", icon: ic(AppWindow), portals: admin, access: "system", surface: "standard", listed: "main", render: (seg) => (seg[1] ? <AppDetail id={seg[1]}/> : <AppsPage/>) },
-  { key: "ai", label: "AI", icon: ic(Sparkles), portals: platform, access: "system", surface: "standard", listed: "main", render: (seg) => <AiAdmin tab={seg[1]} usage={<AiPage/>} pricing={<PricingCard/>}/> },
+  { key: "ai", label: "AI", icon: ic(Sparkles), portals: platform, access: "system", surface: "standard", listed: "main", render: (seg) => <AiSection tab={seg[1]}/> },
   { key: "ai-governance", label: "Quyền & ngân sách AI", icon: ic(Scale), portals: admin, access: "system", surface: "standard", listed: "main", render: () => <AiGovernancePage/> },
   { key: "alerts", label: "Cảnh báo", icon: ic(TriangleAlert), portals: platform, access: "system", surface: "standard", listed: "main", render: () => <AlertsPage/> },
   { key: "security", label: "Bảo mật", icon: ic(ShieldCheck), portals: platform, access: "system", surface: "standard", listed: "main", render: () => <SecurityPage/> },

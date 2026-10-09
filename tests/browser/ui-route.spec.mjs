@@ -28,9 +28,9 @@ try {
     check("M-025 unfocused, the skip link is off screen (not a visual element)", !hidden || hidden.y + hidden.height <= 0, JSON.stringify(hidden));
     await p.keyboard.press("Enter");
     const m = await act(p);
-    check("M-025 Enter on the skip link moves focus to <main> (past the 5 nav links + header button) and the URL hash is untouched", m.tag === "MAIN" && m.id === "main" && !(await p.url()).includes("#"), JSON.stringify(m));
-    { const q = await open(); for (let i = 0; i < 7; i++) await q.keyboard.press("Tab");
-      check("M-025 what the link saves: 7 Tab stops (skip link, 5 nav links, header button) sit in front of the content", (await act(q)).id === "logout", JSON.stringify(await act(q))); await q.close(); }
+    check("M-025 Enter on the skip link moves focus to <main> (past the 6 nav links + header button) and the URL hash is untouched", m.tag === "MAIN" && m.id === "main" && !(await p.url()).includes("#"), JSON.stringify(m));
+    { const q = await open(); for (let i = 0; i < 8; i++) await q.keyboard.press("Tab");
+      check("M-025 what the link saves: 8 Tab stops (skip link, 6 nav links, header button) sit in front of the content", (await act(q)).id === "logout", JSON.stringify(await act(q))); await q.close(); }
     const tab0 = await p.locator("main").getAttribute("tabindex");
     check("M-025 main is NOT a Tab stop while its content fits (tabindex=-1)", tab0 === "-1", tab0);
     await p.close(); }
@@ -53,6 +53,14 @@ try {
     check("M-025 ...and moves to the <h1> once it exists", late.tag === "H1" && /Nhật ký/.test(late.text ?? ""), JSON.stringify(late));
     await p.click("#nav-4"); await sleep(40); await p.focus("#logout"); await sleep(400);
     check("M-025 if the user moved focus meanwhile, the late upgrade does not steal it back", (await act(p)).id === "logout");
+    // M-053: a lazily fetched section whose heading appears AFTER the 300 ms look (900 ms here): the observer upgrades the focus; a user who moved on is still left alone
+    await p.click("#nav-5"); await sleep(60);
+    check("M-053 a section that renders its heading very late: focus first goes to <main>", (await act(p)).tag === "MAIN");
+    await sleep(1200);
+    const slow = await act(p);
+    check("M-053 ...and moves to the <h1> when it finally appears (not only within 300 ms)", slow.tag === "H1" && /Báo cáo/.test(slow.text ?? ""), JSON.stringify(slow));
+    await p.click("#nav-4"); await p.click("#nav-5"); await sleep(40); await p.focus("#logout"); await sleep(1200);
+    check("M-053 a very late heading does not steal the focus from a user who moved on", (await act(p)).id === "logout");
     await p.addScriptTag({ path: AXE });
     const v = await p.evaluate(async () => (await window.axe.run(document, { resultTypes: ["violations"] })).violations.filter((x) => x.impact === "serious" || x.impact === "critical").map((x) => `${x.id}: ${x.nodes[0].target.join(" ")}`));
     check("axe (serious+critical) on the shell with skip link", v.length === 0, v.join(" ; "));

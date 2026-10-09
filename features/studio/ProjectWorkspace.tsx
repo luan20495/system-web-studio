@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useId, useMemo, useState } from "react";
 import { ArrowLeft, ErrorBoundary, Settings, Sparkles, Tabs, toast, confirm } from "@xweb/ui";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api, newIdempotencyKey } from "@/lib/http-api";
@@ -24,7 +24,8 @@ import { GuardedButton } from "./GuardedButton";
 import { OverflowMenu } from "./OverflowMenu";
 import { AiProgress } from "./AiProgress";
 import { SaveBlockDrawer, SaveTemplateSection } from "./libraryPanels";
-import { CodeWorkspace } from "./CodeWorkspace";
+// M-053: a code project (STATIC_APP) has its own workspace, a page project never loads it: its own chunk, fetched when such a project opens
+const CodeWorkspace = lazy(() => import("./CodeWorkspace").then((m) => ({ default: m.CodeWorkspace })));
 import { SiteDrawer } from "./SitePanels";
 import { insertable } from "../library";
 import { projectBase, S } from "./base";
@@ -170,7 +171,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   }), [ws, projectId]);
 
   if (loadError) return <div className="wsError"><ErrorState error={loadError} retry={() => { setLoadError(null); reload().catch(setLoadError); }}/><p><a className="btn xp-btnIcon" href={S("/projects")}><ArrowLeft size={14} aria-hidden="true"/> Danh sách ứng dụng</a></p></div>;
-  if (project?.appType === "STATIC_APP") return <CodeWorkspace project={project} view={view} onProject={setProject}/>;
+  if (project?.appType === "STATIC_APP") return <Suspense fallback={<div className="wsError"><StateView kind="loading" title="Đang mở ứng dụng…"/></div>}><CodeWorkspace project={project} view={view} onProject={setProject}/></Suspense>;
   if (!project || !schema) return <div className="wsError"><StateView kind="loading" title="Đang mở ứng dụng…"/></div>;
   // company blocks, then my own drafts (an approved block of mine is already in the company list)
   const blockOptions = [...blocks.company.map((b) => ({ b, who: "Công ty" })), ...blocks.mine.filter((b) => b.approvedVersion == null || b.status !== "APPROVED").map((b) => ({ b, who: "Của tôi" }))]
