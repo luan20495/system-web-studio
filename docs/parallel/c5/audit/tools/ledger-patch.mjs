@@ -220,3 +220,16 @@ status("M-130", "FIXED (HARNESS, 8ce992d): activity links >= 24px; studio-wave3 
 status("M-131", "FIXED (HARNESS, 8ce992d): <small> floor of 12px (was 10.8-11.7px); studio-wave3 checks on 3 screens");
 status("M-132", "FIXED (HARNESS, 1bd7a4d): costs hint says which price lines are missing, never 'đủ đơn giá' with missing prices; CST01/CST02");
 status("M-125", "FIXED (HARNESS, merged 35e7520) + detector corrected (ec81e49): 'covered' now re-tests after scrollIntoView");
+
+// ---- integration round 8 (agent/c5-web 1e46c91): C5-L remediation of Studio P2s (S1/S2/S3 rate-limited); every fix has a failing-before regression check (HARNESS, NOT REAL BACKEND)
+status("M-049", "FIXED (HARNESS, 01f8487): a ?prompt= address only pre-fills the composer; the prompt typed on Home is handed over in memory (promptHandover.ts); 5 checks (3 failed before)");
+status("M-050", "FIXED (HARNESS, 7e0a680): clone token masked by default (Hiện/Ẩn, Sao chép), credential-free git command, a missing token says so (no 'null'); 6 checks");
+status("M-045", "FIXED (HARNESS, 9500db3): beforeunload armed while a code draft exists; 'Bỏ nháp' asks first (names files, danger, 'Giữ lại'); 5 checks");
+status("M-044", "FIXED (HARNESS, b3b3cd0): a page dialog that cannot save shows the mapped reason + reference code inside the dialog; 2 checks");
+status("M-038", "FIXED (HARNESS, 27449eb): menu / 404 / theme editors re-sync from the saved document (keyed): a removed page leaves no stale link for 'Lưu menu'; 3 checks");
+status("M-037", "FIXED (HARNESS, 5924e54): opened rail panels stay mounted via React Activity (state kept, effects paused while hidden): half-filled editors survive switching tab; 3 checks");
+status("M-036", "FIXED (HARNESS, 3196633): phone-only note that the builder is for viewing and light edits");
+status("M-035", "FIXED (HARNESS, 4806f9d): members drawer fits 390 and 360 with long unbreakable names (fixed table layout, wrapping name column, shrinking role select)");
+status("M-043", "FIXED (HARNESS, ba62577): the Code mode button says 'Sắp có' on the tab itself; the placeholder page still offers both ways back");
+status("M-021", "FIXED (HARNESS, 1e46c91): builder Dialog closes with Escape at document level; a press that starts inside and ends on the backdrop never closes it");
+status("M-023", "FIXED (HARNESS): Modal (da6c70f) + Studio drawers (35e7520) + builder Dialog (1e46c91) all on the shared overlay stack (top-only Escape, trap, scroll lock restored in any order)");

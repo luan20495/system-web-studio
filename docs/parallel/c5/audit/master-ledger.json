@@ -421,7 +421,8 @@
   "N (harness)",
   "document-level Escape while open; mouseup-on-backdrop rule shared with M-010",
   "builder.spec dialogs",
-  "harness fidelity: 9 harnesses did not load ui.css (fixed 9ea2e39); new harnesses must load ui.css after factory.css (guard test)"
+  "harness fidelity: 9 harnesses did not load ui.css (fixed 9ea2e39); new harnesses must load ui.css after factory.css (guard test)",
+  "FIXED (HARNESS, 1e46c91): builder Dialog closes with Escape at document level; a press that starts inside and ends on the backdrop never closes it"
  ],
  [
   "M-022",
@@ -461,7 +462,8 @@
   "N",
   "One shared dialog core (trap, restore, scroll lock with correct nesting, inert background) used by Modal/useDialog/builder Dialog",
   "unit + harness nested-dialog test",
-  ""
+  "",
+  "FIXED (HARNESS): Modal (da6c70f) + Studio drawers (35e7520) + builder Dialog (1e46c91) all on the shared overlay stack (top-only Escape, trap, scroll lock restored in any order)"
  ],
  [
   "M-024",
@@ -697,7 +699,8 @@
   "N (harness)",
   "card layout <=600",
   "responsive matrix",
-  ""
+  "",
+  "FIXED (HARNESS, 4806f9d): members drawer fits 390 and 360 with long unbreakable names (fixed table layout, wrapping name column, shrinking role select)"
  ],
  [
   "M-036",
@@ -715,7 +718,8 @@
   "N",
   "One-line notice on <=760 ('Trên điện thoại: xem và chỉnh nhẹ; kéo-thả cần màn hình lớn'), hide device buttons",
   "mobile run + screenshot",
-  ""
+  "",
+  "FIXED (HARNESS, 3196633): phone-only note that the builder is for viewing and light edits"
  ],
  [
   "M-037",
@@ -733,7 +737,8 @@
   "N (harness)",
   "Keep panels mounted (hidden) or lift draft state",
   "builder.spec",
-  ""
+  "",
+  "FIXED (HARNESS, 5924e54): opened rail panels stay mounted via React Activity (state kept, effects paused while hidden): half-filled editors survive switching tab; 3 checks"
  ],
  [
   "M-038",
@@ -751,7 +756,8 @@
   "N (harness)",
   "derive from doc / reset on revision",
   "builder.spec",
-  ""
+  "",
+  "FIXED (HARNESS, 27449eb): menu / 404 / theme editors re-sync from the saved document (keyed): a removed page leaves no stale link for 'Lưu menu'; 3 checks"
  ],
  [
   "M-039",
@@ -845,7 +851,8 @@
   "N",
   "hide or label 'Sắp có'",
   "harness",
-  ""
+  "",
+  "FIXED (HARNESS, ba62577): the Code mode button says 'Sắp có' on the tab itself; the placeholder page still offers both ways back"
  ],
  [
   "M-044",
@@ -863,7 +870,8 @@
   "N (harness)",
   "show server reason in the dialog (role=alert)",
   "builder.spec",
-  ""
+  "",
+  "FIXED (HARNESS, b3b3cd0): a page dialog that cannot save shows the mapped reason + reference code inside the dialog; 2 checks"
  ],
  [
   "M-045",
@@ -881,7 +889,8 @@
   "N",
   "dirty guard",
   "harness",
-  ""
+  "",
+  "FIXED (HARNESS, 9500db3): beforeunload armed while a code draft exists; 'Bỏ nháp' asks first (names files, danger, 'Giữ lại'); 5 checks"
  ],
  [
   "M-046",
@@ -960,7 +969,8 @@
   "N",
   "one-shot store (NOT history.state: the Next router owns it); a ?prompt= URL only pre-fills the composer; never POST on load",
   "harness: zero POST on load",
-  ""
+  "",
+  "FIXED (HARNESS, 01f8487): a ?prompt= address only pre-fills the composer; the prompt typed on Home is handed over in memory (promptHandover.ts); 5 checks (3 failed before)"
  ],
  [
   "M-050",
@@ -978,7 +988,8 @@
   "N",
   "show a credential-free URL + separately masked username/token; guard the null token (prints 'null' today); do NOT invent http.extraHeader",
   "harness",
-  ""
+  "",
+  "FIXED (HARNESS, 7e0a680): clone token masked by default (Hiện/Ẩn, Sao chép), credential-free git command, a missing token says so (no 'null'); 6 checks"
  ],
  [
   "M-051",
