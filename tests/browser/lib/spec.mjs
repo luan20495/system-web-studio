@@ -76,6 +76,7 @@ export function launch(extra = {}, env = process.env) {
  * preference can Tab to a button (that is an OS setting, not something a page controls).
  */
 export function withMacWebkitTab(browser) {
+  if (process.env.WEBKIT_PLAIN_TAB === "1") return browser;   // for checks that type into a text area (plain Tab is native there); see studio-wave2 M-015
   const map = (key) => (key === "Tab" ? "Alt+Tab" : key === "Shift+Tab" ? "Alt+Shift+Tab" : key);
   const fix = (page) => { if (page.__altTab) return page; page.__altTab = true; const press = page.keyboard.press.bind(page.keyboard); page.keyboard.press = (key, opts) => press(map(key), opts); return page; };
   const newContext = browser.newContext.bind(browser);
