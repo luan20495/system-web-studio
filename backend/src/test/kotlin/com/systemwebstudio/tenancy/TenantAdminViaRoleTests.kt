@@ -24,7 +24,7 @@ class TenantAdminViaRoleTests : IntegrationTestBase() {
         val ta = fx.user("role-ta"); val t = tenants.create(slug(), "Role", ta.id); val other = tenants.create(slug(), "Role2", fx.user("role-ta2").id)
         val a = access.forTenant(ta.id, t.id)
         assertThat(a.tenantRole).isEqualTo(TenantRole.TENANT_ADMIN)
-        assertThat(a.permissions).containsExactlyInAnyOrder(Permission.TENANT_MANAGE, Permission.TENANT_MEMBERS)
+        assertThat(a.permissions).containsExactlyInAnyOrder(Permission.TENANT_MANAGE, Permission.TENANT_MEMBERS, Permission.ORG_STRUCTURE_VIEW, Permission.ORG_STRUCTURE_MANAGE, Permission.EMPLOYEE_VIEW, Permission.EMPLOYEE_MANAGE, Permission.POSITION_GRADE_VIEW, Permission.POSITION_GRADE_MANAGE)
         assertThat(a.platformScope).isFalse()
         assertThat(status { access.forTenant(ta.id, other.id) }).isEqualTo(404)                       // another tenant: no membership, no authority
     }
