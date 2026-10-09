@@ -184,7 +184,7 @@ function ModelPicker({ provider, onClose, onSaved }: { provider: AiProviderInfo;
   return (
     <Modal label="Chọn mô hình" onClose={onClose}>
       <div className="modalBody">
-        <h2>Mô hình của {provider.name}</h2>
+        <ModalHeader icon={<Cpu size={22}/>} title={`Mô hình của ${provider.name}`} subtitle="Chọn mô hình công ty được dùng. Mô hình chưa chọn sẽ không hiện cho nhân viên."/>
         {error ? <ErrorState error={error}/> : loading ? <StateView kind="loading"/> : <p className="hint">{data!.detail}</p>}
         <div className="checkList">{all.map((m) => <label key={m} className="check"><input type="checkbox" checked={chosen.has(m)} onChange={() => flip(m)}/> {m}</label>)}</div>
         <label className="field"><span>Thêm mã mô hình thủ công</span><input value={manual} onChange={(e) => setManual(e.target.value)} placeholder="ví dụ: gpt-4o-mini"/></label>
@@ -338,7 +338,7 @@ export function OverrideDialog({ fixed, current, onClose, onSaved }: { fixed?: {
   return (
     <Modal label="Thiết lập hạn mức riêng" onClose={onClose}>
       <form className="modalBody" onSubmit={(e) => void submit(e)}>
-        <h2>Thiết lập hạn mức riêng{fixed ? ` cho ${fixed.label}` : ""}</h2>
+        <ModalHeader icon={<Settings2 size={22}/>} title={`Thiết lập hạn mức riêng${fixed ? ` cho ${fixed.label}` : ""}`} subtitle="Hạn mức riêng thay cho hạn mức mặc định của công ty."/>
         {!fixed ? <>
           <label className="field"><span>Áp dụng cho</span><select value={scopeType} onChange={(e) => { setScopeType(e.target.value as typeof scopeType); setTarget(null); setQ(""); }}>
             {(Object.keys(SCOPE_LABEL) as (keyof typeof SCOPE_LABEL)[]).map((k) => <option key={k} value={k}>{SCOPE_LABEL[k]}</option>)}</select></label>

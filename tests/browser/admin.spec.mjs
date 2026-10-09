@@ -622,6 +622,18 @@ await block("scenario 80", async () => { const p = await open({ portal: "platfor
   check("DLG01 a server refusal in 'Tạo công ty' is an alert that is fully visible: inside the viewport and above the sticky footer", !!geo && geo.aTop >= 0 && geo.aBottom <= geo.fTop + 1 && geo.aBottom <= geo.vh, JSON.stringify(geo));
   await p.__ctx.close(); });
 
+// ===================================================================================================================== M-105 Admin dialogs use the shared header and a plain fieldset (no UA groove, no bare 24px h2)
+await block("scenario 81", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/users" });
+  await p.getByTestId("users-create").click(); await settle(p, 600);
+  const shape = await p.evaluate(() => { const d = document.querySelector("[role=dialog]"); const fs = d.querySelector("fieldset.stack"); const lg = fs.querySelector("legend"); const cs = getComputedStyle(fs), ls = getComputedStyle(lg);
+    return { head: d.querySelectorAll(".xp-modalHead h2").length, bare: d.querySelectorAll(".modalBody > h2").length, border: cs.borderTopWidth, legend: ls.fontSize, weight: ls.fontWeight }; });
+  check("DLG02 create account: the title is the shared ModalHeader (one h2 in .xp-modalHead, no bare h2), the fieldset has no UA border and a small legend", shape.head === 1 && shape.bare === 0 && shape.border === "0px" && parseFloat(shape.legend) <= 14 && +shape.weight >= 600, JSON.stringify(shape));
+  await p.keyboard.press("Escape"); await settle(p, 200); await p.__ctx.close(); });
+await block("scenario 82", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/users/u2" });
+  await p.getByRole("button", { name: "Đặt lại mật khẩu" }).click(); await settle(p, 400);
+  check("DLG03 the activation-link dialog uses the shared ModalHeader", (await p.locator("[role=dialog] .xp-modalHead h2").count()) === 1 && (await p.locator("[role=dialog] .modalBody > h2").count()) === 0);
+  await p.__ctx.close(); });
+
 check("no console error / warning / uncaught exception in any page", errors.length === 0, errors.slice(0, 3).join(" | "));
 await browser.close();
 finish();
