@@ -1,0 +1,10 @@
+import { launch, BASE, OUT, secretFromDemoFile, login } from "./ug-lib.mjs";
+import { readFileSync, writeFileSync } from "node:fs";
+const pw = secretFromDemoFile("demo01"); const st = JSON.parse(readFileSync(OUT + "ug-run.json", "utf8")).state;
+const browser = await launch(); const c = await browser.newContext({ viewport: { width: 1440, height: 900 } }); const p = await c.newPage();
+await login(p, "demo01", pw); await p.goto(BASE + `/studio/projects/${st.projectId}/design`, { waitUntil: "networkidle" }); await p.waitForTimeout(1500);
+await p.getByText(/C6 guide QA/).first().click(); await p.waitForTimeout(800); await p.getByLabel("Tiêu đề").last().fill("C6 offline probe");
+await c.setOffline(true); await p.getByRole("button", { name: "Lưu thay đổi" }).click(); await p.waitForTimeout(3500);
+const out = { buttons: await p.getByRole("button").allInnerTexts(), alerts: await p.getByRole("alert").allInnerTexts().catch(() => []), status: await p.getByRole("status").allInnerTexts().catch(() => []), head: (await p.locator("body").innerText()).split("\n").filter((l) => /lưu|Lưu|thử|Thử|mạng|offline|kết nối/i.test(l)).slice(0, 12) };
+await p.screenshot({ path: OUT + "explore-offline.png" }); writeFileSync(OUT + "explore8.json", JSON.stringify(out, null, 1)); console.log(JSON.stringify(out, null, 1));
+await c.setOffline(false); await browser.close();
