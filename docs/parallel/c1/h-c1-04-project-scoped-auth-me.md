@@ -65,7 +65,7 @@ Branch `fix/c1-h-c1-04-v2` on `integration/v2 @ e310b6a16156`. `ProjectScopedAut
 | C PUBLISHER | exactly `APP_VIEW`, `APP_USE`, `APP_PUBLISH`; no edit / mutation / query; edit 403 |
 | D no project membership | `projectScopes = []`; the project is 404 |
 | E foreign project | absent from the scopes; direct API 404 |
-| F TENANT_ADMIN alone | permissions exactly `TENANT_MANAGE` + `TENANT_MEMBERS`; no scope |
+| F TENANT_ADMIN alone | permissions exactly the eight tenant + organization codes (`TENANT_MANAGE`, `TENANT_MEMBERS`, `ORG_STRUCTURE_VIEW/MANAGE`, `EMPLOYEE_VIEW/MANAGE`, `POSITION_GRADE_VIEW/MANAGE`); no scope |
 | G SYSTEM_ADMIN alone | no scope, no `APP_VIEW` / `MEMBER_MANAGE` in `workspaces[].permissions` |
 | H two projects (A VIEWER, B EDITOR) | two separate rows; permissions never unioned |
 | I stale / removed / deactivated membership, deleted project | omitted; the direct API agrees (404); the `/auth/me` body contains no `password`, `hash`, `token`, `secret` |
