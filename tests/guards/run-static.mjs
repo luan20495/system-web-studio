@@ -11,7 +11,7 @@ const STEPS = [
   ["no tenant-admin call to POST /api/v1/admin/workspaces", ["tests/guards/no-legacy-admin-workspaces.mjs"]],
   ["a fake transport is never called a real E2E", ["tests/guards/test-labeling.mjs"]],
   ["every test file is classified (C5 classifier)", ["scripts/test-classify.mjs"]],
-  ["migrations: no duplicate number, V31 C2 / V32 Dynamic Organization reserved", ["tests/guards/migration-ledger.mjs"]],
+  ["migrations: no duplicate number, V31 VOID gap (never created), V32 Dynamic Organization allocated", ["tests/guards/migration-ledger.mjs"]],
   ["process safety: no machine-wide kill by name or by port alone", ["tests/guards/process-safety.mjs"]],
   ["permissions: TS mirror == backend CANONICAL == contract document (no ORG_MANAGE, no aliases)", ["tests/guards/permission-mirror.mjs"]],
 ];

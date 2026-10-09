@@ -39,5 +39,5 @@ export function guardMigrationLedger(root = REPO) {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const a = process.argv.slice(2); const ri = a.indexOf("--root"); process.exit(report("MIGRATION-LEDGER (no duplicate number; V31 C2 / V32 Dynamic Organization reserved)", guardMigrationLedger(ri >= 0 ? a[ri + 1] : REPO), { json: a.includes("--json") }));
+  const a = process.argv.slice(2); const ri = a.indexOf("--root"); process.exit(report("MIGRATION-LEDGER (no duplicate number; V31 VOID gap (never created), V32 Dynamic Organization allocated)", guardMigrationLedger(ri >= 0 ? a[ri + 1] : REPO), { json: a.includes("--json") }));
 }
