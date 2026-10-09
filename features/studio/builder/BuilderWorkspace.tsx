@@ -217,7 +217,7 @@ export function BuilderWorkspace(props: {
         <p className="bx-phone-note" role="note">Trên điện thoại bạn xem và chỉnh nhẹ được. Kéo-thả thành phần và chỉnh nhiều mục cùng lúc cần màn hình lớn hơn.</p>
         <LeftRail id="mview-panel-tools" value={rail} onChange={setRail}><ErrorBoundary variant="inline" title="Công cụ này gặp sự cố" resetKeys={[rail]}>{leftPanel}</ErrorBoundary></LeftRail>
         <section className="bx-center" id="mview-panel-canvas" tabIndex={-1} aria-label="Bản xem trước ứng dụng">
-          {!edit ? <p className="bx-banner" role="note">Đang ở chế độ dùng thử: bản xem trước không chỉnh sửa được.</p> : readOnly ? <p className="bx-banner" role="note">Bạn chỉ có quyền xem.</p> : null}
+          {!edit ? <p className="bx-banner" role="note">Chế độ dùng thử: bản xem trước chỉ để xem, không bấm được nút, form hay liên kết. Hãy chạy thử truy vấn, hành động và workflow bằng các nút “Chạy thử” ở cột bên phải.</p> : readOnly ? <p className="bx-banner" role="note">Bạn chỉ có quyền xem.</p> : null}
           <ErrorBoundary variant="inline" title="Bản xem trước gặp sự cố" resetKeys={[pageId]}>
             <Canvas document={html} sections={sections} selectedId={selectedId} onSelect={select} rectsRef={rectsRef} interactive={interactive} selectable={edit} dragging={!!drag && drag.kind !== "row"} slot={slot}
               device={props.device} labelOf={props.labelOf} frameRef={frameRef} title="Bản xem trước ứng dụng"/>

@@ -190,7 +190,8 @@ test("test panel: Edit != Test rules, would-run / unsupported / not-sent / publi
     { id: "n", name: "Báo", type: "NOTIFY", channel: "IN_APP", templateRef: "t" }, { id: "w", name: "Chạy", type: "START_WORKFLOW", workflowRef: "wf" }],
     workflows: [{ id: "wf", name: "W", trigger: "MANUAL", steps: [{ id: "end", kind: "END" }] }] } as never);
   const html = renderToStaticMarkup(<TestPanel doc={d} rawPermissions={["APP_VIEW", "ACTION_EXECUTE", "WORKFLOW_EXECUTE"]}/>);
-  assert.match(html, /Chế độ dùng thử/); assert.match(html, /data-outcome="WOULD_RUN"/); assert.match(html, /data-outcome="UNSUPPORTED"/); assert.match(html, /data-outcome="NOT_SENT"/); assert.match(html, /data-outcome="NOT_RUN"/);
+  assert.match(html, /Chế độ dùng thử/); assert.match(html, /chỉ để xem \(không tương tác\)/); assert.match(html, /“Chạy thử”/);   // M-042: says the preview is not interactive and where trying happens
+  assert.match(html, /data-outcome="WOULD_RUN"/); assert.match(html, /data-outcome="UNSUPPORTED"/); assert.match(html, /data-outcome="NOT_SENT"/); assert.match(html, /data-outcome="NOT_RUN"/);
   assert.match(html, /workflow_run/); assert.doesNotMatch(html, /data-outcome="SUCCESS"/); assert.match(html, /disabled=""[^>]*>Chạy thử/);
   assert.match(html, /Chưa sẵn sàng/);
   assert.deepEqual(a11yProblems(html), []);
@@ -206,7 +207,7 @@ test("outcome view: 409 unknown outcome and 422 rejected have their own messages
 test("forms + theme panels: NOT_READY gates, no CSS/URL inputs for the theme", () => {
   assert.match(renderToStaticMarkup(<FormsPanel ctx={ctx({ doc: baseDoc({ sections: [{ id: "f1", type: "ContactForm", props: {} } as never] }), readiness: notReady("x") })} onSelect={() => undefined} onNewAction={() => undefined} openSite={() => undefined}/>), /Chưa sẵn sàng/);
   const th = renderToStaticMarkup(<ThemePanel ctx={ctx()}/>);
-  assert.match(th, /SYSTEM/); assert.doesNotMatch(th, /<textarea/); assert.match(th, /chưa áp dụng giao diện này/);
+  assert.match(th, /SYSTEM/); assert.doesNotMatch(th, /<textarea/); assert.match(th, /Chưa áp dụng:.*bản xem trước và website xuất bản hiện chưa dùng/);   // M-042: says plainly that neither preview nor site applies it
   assert.match(renderToStaticMarkup(<ThemePanel ctx={ctx({ readiness: notReady("y") })}/>), /Chưa sẵn sàng/);
   assert.deepEqual(a11yProblems(th), []);
 });

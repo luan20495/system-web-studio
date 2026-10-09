@@ -61,7 +61,7 @@ export function ThemePanel({ ctx }: { ctx: DefCtx }) {
               </div>))}
             {!disabled && colors.length < 12 ? <button type="button" className="smallButton" onClick={() => setColors([...colors, ["", "#000000"]])}>+ Thêm màu</button> : null}
           </fieldset>
-          <p className="hint" role="note">Bản xem trước hiện chưa áp dụng giao diện này (bộ dựng xem trước chưa hỗ trợ). Giá trị vẫn được lưu trong ứng dụng.</p>
+          <p className="hint" role="note"><b>Chưa áp dụng:</b> màu, phông và bo góc ở đây được lưu trong ứng dụng nhưng bản xem trước và website xuất bản hiện chưa dùng chúng, nên bạn sẽ chưa thấy thay đổi.</p>
           {err ? <p className="formError" role="alert">{err}</p> : null}
           <div className="bx-actions"><button type="submit" className="bx-btn primary" disabled={disabled}>Lưu giao diện</button></div>
         </form>
