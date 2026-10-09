@@ -31,17 +31,17 @@
 .xp-toasts{position:fixed;z-index:var(--ui-z-toast);right:16px;bottom:16px;width:min(420px,calc(100vw - 32px));display:flex;flex-direction:column;pointer-events:none}
 .xp-toastList{display:grid;gap:8px}
 .xp-toastList:not(:empty)+.xp-toastList:not(:empty){margin-top:8px}
-.xp-toast{pointer-events:auto;display:flex;align-items:flex-start;gap:10px;padding:12px 8px 12px 14px;border:1px solid var(--ui-inverse-line);border-radius:var(--f-r);background:var(--ui-inverse-bg);color:var(--ui-inverse-fg);box-shadow:var(--shadow);font-size:14px;line-height:1.45}
+.xp-toast{pointer-events:auto;display:flex;align-items:flex-start;gap:10px;padding:12px 8px 12px 14px;border:1px solid var(--ui-inverse-line);border-radius:var(--f-r);background:var(--ui-inverse-bg);color:var(--ui-inverse-fg);box-shadow:var(--shadow);font-size:var(--f-fs-base);line-height:1.45}
 .xp-toastIcon{flex:none;margin-top:1px}
 .xp-toast-success .xp-toastIcon{color:var(--ui-toast-ok)}.xp-toast-info .xp-toastIcon{color:var(--ui-toast-info)}.xp-toast-warning .xp-toastIcon{color:var(--ui-toast-warn)}.xp-toast-error .xp-toastIcon{color:var(--ui-toast-err)}
 .xp-toastBody{flex:1;min-width:0;overflow-wrap:anywhere}
 .xp-toastTitle{display:block;margin-bottom:2px}
-.xp-toastAction,.xp-toastClose{flex:none;min-height:32px;border:0;border-radius:8px;background:transparent;color:var(--ui-inverse-fg);font:inherit;font-weight:600;cursor:pointer}
+.xp-toastAction,.xp-toastClose{flex:none;min-height:32px;border:0;border-radius:var(--f-r-sm);background:transparent;color:var(--ui-inverse-fg);font:inherit;font-weight:600;cursor:pointer}
 .xp-toastAction{padding:0 10px;text-decoration:underline}
 .xp-toastClose{width:32px;display:inline-flex;align-items:center;justify-content:center;padding:0}
 .xp-toastAction:hover,.xp-toastClose:hover{background:var(--ui-inverse-line)}
 .xp-toastAction:focus-visible,.xp-toastClose:focus-visible{outline:2px solid var(--ui-toast-info);outline-offset:1px}
-.xp-toastMore{pointer-events:auto;justify-self:end;padding:2px 10px;border-radius:999px;background:var(--ui-inverse-bg);color:var(--ui-inverse-fg);font-size:12px}
+.xp-toastMore{pointer-events:auto;justify-self:end;padding:2px 10px;border-radius:var(--f-r-pill);background:var(--ui-inverse-bg);color:var(--ui-inverse-fg);font-size:var(--f-fs-sm)}
 @media(max-width:600px){.xp-toasts{right:8px;left:8px;bottom:8px;width:auto}}
 
 /* ---------- confirm() / prompt() (packages/ui/src/dialogs.tsx; the box itself is .adminModal > .modalBody) ---------- */
@@ -55,7 +55,7 @@
 .xp-errorTitle{margin:4px 0 0;font-size:22px;font-weight:700;letter-spacing:-.01em}
 .xp-errorTitle:focus{outline:none}.xp-errorTitle:focus-visible{outline:2px solid var(--f-focus);outline-offset:4px;border-radius:4px}
 .xp-errorText{margin:0;color:var(--f-muted);max-width:46ch}
-.xp-errorRef{margin:0;color:var(--f-muted);font-size:13px}.xp-errorRef code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--f-text);overflow-wrap:anywhere}
+.xp-errorRef{margin:0;color:var(--f-muted);font-size:var(--f-fs-md)}.xp-errorRef code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--f-text);overflow-wrap:anywhere}
 .xp-errorActions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:8px}
 
 /* ---------- builder primitives in the LIGHT shell (Platform / Admin: Nguồn dữ liệu = DataSourcesPanel + Dialog) ----------
@@ -63,29 +63,29 @@
    These rules re-skin only the classes the panel and the Dialog use, and only below `.shell`, so they can neither leak into the dark builder (`.studio`, never inside `.shell`) nor into any other light screen. */
 .shell .bx-ds{display:grid;gap:16px}
 .shell .bx-h3,.shell .bx-h4{margin:0;font-weight:650;color:var(--f-text)}
-.shell .bx-h3{font-size:15px}.shell .bx-h4{font-size:13px;color:var(--f-muted);text-transform:uppercase;letter-spacing:.04em}
+.shell .bx-h3{font-size:15px}.shell .bx-h4{font-size:var(--f-fs-md);color:var(--f-muted);text-transform:uppercase;letter-spacing:.04em}
 .shell .bx-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 .shell .bx-list>li{display:grid;gap:6px;padding:10px 12px;border:1px solid var(--f-line);border-radius:var(--f-r);background:var(--f-panel)}
-.shell .bx-list small,.shell .bx-ds small{color:var(--f-muted);font-size:12px}
+.shell .bx-list small,.shell .bx-ds small{color:var(--f-muted);font-size:var(--f-fs-sm)}
 .shell .bx-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .shell .bx-form{display:grid;gap:12px;max-width:560px}
 .shell .bx-form>.button{justify-self:start}
 .shell .bx-field{display:grid;gap:4px}
-.shell .bx-field label{font-size:13px;font-weight:600;color:var(--f-text)}
-.shell .bx-field small{color:var(--f-muted);font-size:13px;line-height:1.45}
+.shell .bx-field label{font-size:var(--f-fs-md);font-weight:600;color:var(--f-text)}
+.shell .bx-field small{color:var(--f-muted);font-size:var(--f-fs-md);line-height:1.45}
 .shell .bx-group{display:grid;gap:8px;min-width:0;margin:0;padding:10px 12px;border:1px solid var(--f-line);border-radius:var(--f-r)}
-.shell .bx-group legend{padding:0 4px;font-size:12px;font-weight:700;color:var(--f-muted)}
+.shell .bx-group legend{padding:0 4px;font-size:var(--f-fs-sm);font-weight:700;color:var(--f-muted)}
 .shell .bx-state{padding:12px;border:1px dashed var(--f-line);border-radius:var(--f-r);background:var(--f-bg);color:var(--f-muted)}
 .shell .bx-state b{color:var(--f-text)}.shell .bx-state p{margin:4px 0 0}
 .shell .bx-state-error{border-style:solid;border-color:var(--f-bad-line);background:var(--f-bad-bg);color:var(--f-bad)}.shell .bx-state-error b{color:var(--f-bad)}
-.shell .bx-outcome{padding:8px 10px;border:1px solid var(--f-line);border-radius:8px;font-size:13px}
+.shell .bx-outcome{padding:8px 10px;border:1px solid var(--f-line);border-radius:var(--f-r-sm);font-size:var(--f-fs-md)}
 .shell .bx-outcome p{margin:2px 0 0}.shell .bx-outcome ul{margin:6px 0 0;padding-left:18px}
 .shell .bx-outcome.tone-ok{border-color:var(--f-ok);background:var(--f-ok-bg);color:var(--f-ok)}
 .shell .bx-outcome.tone-warn{border-color:var(--f-warn);background:var(--f-warn-bg);color:var(--f-warn)}
 .shell .bx-outcome.tone-bad{border-color:var(--f-bad);background:var(--f-bad-bg);color:var(--f-bad)}
 /* the dark `.button` / `.smallButton` the panel uses, drawn like `.btn` / `.btn.sm` */
-.shell .bx-ds .button,.shell .bx-ds .smallButton,.shell .bx-dialog .button,.shell .bx-dialog .smallButton{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:30px;height:auto;padding:0 10px;border:1px solid var(--f-line);border-radius:8px;background:var(--f-panel);color:var(--f-text);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
-.shell .bx-ds .button,.shell .bx-dialog .button{min-height:36px;padding:0 14px;font-size:14px}
+.shell .bx-ds .button,.shell .bx-ds .smallButton,.shell .bx-dialog .button,.shell .bx-dialog .smallButton{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:30px;height:auto;padding:0 10px;border:1px solid var(--f-line);border-radius:var(--f-r-sm);background:var(--f-panel);color:var(--f-text);font:inherit;font-size:var(--f-fs-md);font-weight:600;cursor:pointer}
+.shell .bx-ds .button,.shell .bx-dialog .button{min-height:36px;padding:0 14px;font-size:var(--f-fs-base)}
 .shell .bx-ds .button:hover:not(:disabled),.shell .bx-ds .smallButton:hover:not(:disabled),.shell .bx-dialog .button:hover:not(:disabled),.shell .bx-dialog .smallButton:hover:not(:disabled){background:var(--f-bg)}
 .shell .bx-ds .button:disabled,.shell .bx-ds .smallButton:disabled,.shell .bx-dialog .button:disabled,.shell .bx-dialog .smallButton:disabled{opacity:.55;cursor:not-allowed}
 .shell .bx-ds .button.primary,.shell .bx-dialog .button.primary{background:var(--f-accent);border-color:var(--f-accent);color:var(--f-accent-ink)}
@@ -95,22 +95,22 @@
 .shell .bx-ds .button:focus-visible,.shell .bx-ds .smallButton:focus-visible,.shell .bx-dialog .button:focus-visible,.shell .bx-dialog .smallButton:focus-visible{outline:2px solid var(--f-focus);outline-offset:2px}
 /* the builder Dialog: a real modal over a scrim (it is not portaled, so it sits in the page flow without these) */
 .shell .bx-overlay{position:fixed;inset:0;z-index:80;display:grid;place-items:center;padding:16px;background:var(--ui-scrim)}
-.shell .bx-dialog{width:min(520px,100%);max-height:90vh;overflow:auto;padding:24px;border-radius:12px;background:var(--f-panel);color:var(--f-text);box-shadow:var(--shadow)}
+.shell .bx-dialog{width:min(520px,100%);max-height:90vh;overflow:auto;padding:24px;border-radius:var(--f-r-lg);background:var(--f-panel);color:var(--f-text);box-shadow:var(--shadow)}
 .shell .bx-dialog h2{margin:0 0 8px;font-size:18px}
 .shell .bx-dialog-body{display:grid;gap:8px}
 .shell .bx-dialog-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
 @media(max-width:600px){.shell .bx-overlay{padding:8px;align-items:end}.shell .bx-dialog{width:100%;padding:16px}}
 
 /* ---------- states (packages/ui/src/States.tsx, LoadGate.tsx) ---------- */
-.xp-stateRef{font-size:13px;color:var(--f-muted)}.xp-stateRef code{font:inherit;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--f-text);user-select:all}
-.xp-stateBanner{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 12px;padding:10px 12px;border:1px solid var(--f-bad-line);border-radius:var(--f-r);background:var(--f-bad-bg);color:var(--f-bad);font-size:14px}
+.xp-stateRef{font-size:var(--f-fs-md);color:var(--f-muted)}.xp-stateRef code{font:inherit;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--f-text);user-select:all}
+.xp-stateBanner{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 12px;padding:10px 12px;border:1px solid var(--f-bad-line);border-radius:var(--f-r);background:var(--f-bad-bg);color:var(--f-bad);font-size:var(--f-fs-base)}
 
 /* ---------- widgets (Tabs, RadioGroup, DisclosureRow, ReasonButton) ----------
    Each widget reads its colours from --xp-* properties that default to the light (--f-*) theme and are re-pointed for the dark Studio editor, so the same markup is correct on both. */
 .xp-radioCard,.xp-reasonWrap,.xp-discToggle,.xp-tabs{--xp-line:var(--f-line);--xp-bg:var(--f-panel);--xp-fg:var(--f-text);--xp-muted:var(--f-muted);--xp-accent:var(--f-accent);--xp-accent-bg:var(--f-accent-soft);--xp-hover:var(--f-line2);--xp-focus:var(--f-focus)}
 .studio .xp-radioCard,.studio .xp-reasonWrap,.studio .xp-discToggle,.studio .xp-tabs{--xp-line:var(--line);--xp-bg:var(--panel2);--xp-fg:var(--text);--xp-muted:var(--muted);--xp-accent:var(--blue);--xp-accent-bg:color-mix(in srgb,var(--blue) 18%,var(--panel2));--xp-hover:var(--panel2);--xp-focus:var(--blue)}
-.xp-tabs button:focus-visible{outline:2px solid var(--xp-focus);outline-offset:-2px;border-radius:6px}.xp-tabCount{font-weight:500;color:var(--xp-muted)}
-.xp-radioGroup{border:0;margin:0;padding:0;min-width:0}.xp-radioLegend{padding:0;margin:0 0 8px;font-size:13px;font-weight:600}
+.xp-tabs button:focus-visible{outline:2px solid var(--xp-focus);outline-offset:-2px;border-radius:var(--f-r-xs)}.xp-tabCount{font-weight:500;color:var(--xp-muted)}
+.xp-radioGroup{border:0;margin:0;padding:0;min-width:0}.xp-radioLegend{padding:0;margin:0 0 8px;font-size:var(--f-fs-md);font-weight:600}
 .xp-radioList{display:grid;gap:8px}
 .xp-radioCard{position:relative;display:block;cursor:pointer}
 .xp-radioCard input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
@@ -120,12 +120,12 @@
 .xp-radioCard.selected .xp-radioBody::before{border-color:var(--xp-accent);background:radial-gradient(circle,var(--xp-accent) 0 4px,transparent 5px)}
 .xp-radioCard input:focus-visible+.xp-radioBody{outline:2px solid var(--xp-focus);outline-offset:2px}
 .xp-radioCard.disabled{cursor:not-allowed;opacity:.6}.xp-radioCard.disabled input{cursor:not-allowed}
-.xp-radioIcon{flex:none;display:inline-grid;place-items:center}.xp-radioText{display:grid;gap:2px}.xp-radioText small{color:var(--xp-muted);font-size:13px;line-height:1.4}
+.xp-radioIcon{flex:none;display:inline-grid;place-items:center}.xp-radioText{display:grid;gap:2px}.xp-radioText small{color:var(--xp-muted);font-size:var(--f-fs-md);line-height:1.4}
 .xp-reasonWrap{display:inline-flex;flex-direction:column;align-items:flex-start;gap:4px;max-width:100%}.xp-reasonWrap.inline{flex-direction:row;align-items:center;flex-wrap:wrap;gap:8px}
-.xp-reason{font-size:12px;line-height:1.4;color:var(--xp-muted)}
+.xp-reason{font-size:var(--f-fs-sm);line-height:1.4;color:var(--xp-muted)}
 .xp-reasonBtn[aria-disabled=true]{opacity:.6;cursor:not-allowed}
 .xp-disc{cursor:pointer}.xp-disc:hover{background:var(--xp-hover)}.xp-discToggle{width:44px;padding-right:0}
-.xp-discBtn{display:inline-grid;place-items:center;width:32px;height:32px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--xp-muted)}
+.xp-discBtn{display:inline-grid;place-items:center;width:32px;height:32px;padding:0;border:0;border-radius:var(--f-r-sm);background:transparent;color:var(--xp-muted)}
 .xp-discBtn:hover{background:var(--xp-hover)}.xp-discBtn:focus-visible{outline:2px solid var(--xp-focus);outline-offset:2px}
 .xp-discDetail>td{padding:12px 16px;background:var(--f-bg)}
 
@@ -133,6 +133,6 @@
 .xp-skip{position:absolute;z-index:calc(var(--ui-z-toast) + 1);left:12px;top:-80px;padding:10px 16px;border-radius:var(--f-r);background:var(--ui-inverse-bg);color:var(--ui-inverse-fg);font-weight:600;text-decoration:none}
 .xp-skip:focus{top:12px;outline:2px solid var(--f-focus);outline-offset:2px}
 /* M-095: a navigation entry for a section that does not exist yet (not a real page). Same colour as the label (contrast stays), smaller and regular weight; logical margin (RTL ratchet). */
-.xp-navSoon{margin-inline-start:6px;font-size:12px;font-weight:400}
+.xp-navSoon{margin-inline-start:6px;font-size:var(--f-fs-sm);font-weight:400}
 /* M-130 (REAL-STACK finding): links in activity rows were 21px high (< 24px target, WCAG 2.5.8): a 24px minimum without changing the look */
 .shell .activityList a{display:inline-flex;align-items:center;min-height:24px}

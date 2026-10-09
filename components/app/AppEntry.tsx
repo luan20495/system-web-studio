@@ -16,7 +16,7 @@ export default function AppEntry() {
   return <Suspense fallback={<Splash/>}><SessionProvider><Router/></SessionProvider></Suspense>;
 }
 
-function Splash() { return <div className="splash"><StateView kind="loading" title="Đang tải…"/></div>; }
+function Splash() { return <div className="splash"><StateView level={1} kind="loading" title="Đang tải…"/></div>; }
 
 function Redirect({ to }: { to: string }) {
   const router = useRouter();
@@ -45,5 +45,5 @@ function Router() {
   // Client-side gates only choose a screen; every admin/studio API call is authorised again by the server.
   if (seg[0] === "admin") return isAdmin(me) ? <AdminApp seg={seg.slice(1)}/> : <Redirect to="/auth/no-access"/>;
   if (seg[0] === "studio") return hasWorkspace(me) ? <StudioApp seg={seg.slice(1)}/> : <Redirect to="/auth/no-workspace"/>;
-  return <div className="splash"><StateView kind="notfound" title="Không có trang này" action={<a className="btn" href="/">Về trang chính</a>}/></div>;
+  return <div className="splash"><StateView level={1} kind="notfound" title="Không có trang này" action={<a className="btn" href="/">Về trang chính</a>}/></div>;
 }

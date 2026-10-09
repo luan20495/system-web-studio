@@ -24,17 +24,17 @@ const strings = result.strings;
 type Rule = { id: string; why: string; re: RegExp; /** only strings that are Vietnamese text (a code inside an English / technical string is not a leak) */ vi?: boolean; baseline: number };
 // BASELINES: measured on agent/c5-web 7bff844 + this branch (2026-10-09). Lower them as strings are fixed; never raise one.
 const RULES: Rule[] = [
-  { id: "internal-constant", why: "an env / enum / flag constant inside user-visible Vietnamese text (OPENROUTER_API_KEY, SCIM_TOKEN, APP_PUBLISH, REFRESH_QUERY...) (M-060)", re: /\b[A-Z][A-Z0-9]+(?:_[A-Z0-9]+)+\b/, vi: true, baseline: 15 },
+  { id: "internal-constant", why: "an env / enum / flag constant inside user-visible Vietnamese text (OPENROUTER_API_KEY, SCIM_TOKEN, APP_PUBLISH, REFRESH_QUERY...) (M-060)", re: /\b[A-Z][A-Z0-9]+(?:_[A-Z0-9]+)+\b/, vi: true, baseline: 13 },
   { id: "internal-term", why: "an implementation word shown to a person: backend, CSRF, sandbox, registry, MinIO, Forgejo, DataGateway, Page Schema, ViewModel, pointerVersion, apiBase, workflow_run, lockfile, runner (M-060)", re: /\b(backend|CSRF|sandbox|registry|MinIO|Forgejo|DataGateway|Page Schema|ViewModel|pointerVersion|apiBase|workflow_run|component-metadata|data-xw-state|lockfile|runner|Dead-letter)\b/i, baseline: 70 },
-  { id: "legacy-name", why: "a product / portal name that is not in BRAND: AI Software Factory, Company Builder Studio, Admin Console, Builder Studio (M-063)", re: new RegExp(`\\b(${BRAND.legacyNames.join("|")})\\b`), baseline: 11 },
+  { id: "legacy-name", why: "a product / portal name that is not in BRAND: AI Software Factory, Company Builder Studio, Admin Console, Builder Studio (M-063)", re: new RegExp(`\\b(${BRAND.legacyNames.join("|")})\\b`), baseline: 7 },
   { id: "english-nav-word", why: "English left in a Vietnamese UI: Components, Templates, Packages, Registry, AI Control, Mock, Demo, Self-host, Project ID, Request ID, Workspace ID (M-063)", re: /\b(Components|Templates|Packages|Registry|AI Control|Mock|Demo|Self-host|Project ID|Request ID|Workspace ID)\b/, baseline: 20 },
-  { id: "term-project", why: "'project' / 'dự án' where the glossary says 'ứng dụng' (M-062)", re: /\b(project|dự án)\b/i, vi: true, baseline: 14 },
+  { id: "term-project", why: "'project' / 'dự án' where the glossary says 'ứng dụng' (M-062)", re: /\b(project|dự án)\b/i, vi: true, baseline: 10 },
   { id: "term-workspace-long", why: "'không gian làm việc' where the glossary says 'workspace' (M-062)", re: /không gian làm việc/i, baseline: 14 },
   { id: "term-tenant", why: "'tenant' shown to people: it is 'công ty' (M-062)", re: /\btenant\b/i, vi: true, baseline: 2 },
-  { id: "term-model", why: "'model' where the glossary says 'mô hình' (M-062)", re: /\bmodel\b/, vi: true, baseline: 10 },
+  { id: "term-model", why: "'model' where the glossary says 'mô hình' (M-062)", re: /\bmodel\b/, vi: true, baseline: 9 },
   { id: "term-component", why: "'component' where the glossary says 'thành phần' (M-062)", re: /\bcomponents?\b/i, vi: true, baseline: 28 },
   { id: "term-template", why: "'template' where the glossary says 'mẫu' (M-062)", re: /\btemplates?\b/i, vi: true, baseline: 2 },
-  { id: "tone-old-style", why: "old tone-mark placement xoá huỷ tuỳ khoá hoà: the product standard is the modern style xóa hủy tùy khóa hòa (M-062)", re: /xoá|huỷ|tuỳ|khoá|hoà/i, baseline: 57 },
+  { id: "tone-old-style", why: "old tone-mark placement xoá huỷ tuỳ khoá hoà: the product standard is the modern style xóa hủy tùy khóa hòa (M-062)", re: /(xoá|huỷ|tuỳ|khoá|hoà)(?![a-zà-ỹđ])/i, baseline: 30 },
   { id: "revision-counter", why: "'revision N' / 'r{n}': an internal concurrency counter shown to people (M-060)", re: /\brevision\b/i, vi: true, baseline: 1 }
 ];
 
@@ -50,7 +50,7 @@ for (const r of RULES) {
 }
 
 test("ratchet: native confirm / prompt / alert calls may not grow (use confirm() / prompt() / toast from @xweb/ui)", () => {
-  const BASELINE = 12;
+  const BASELINE = 0;
   const d = result.dialogs;
   if (d.length > BASELINE) assert.fail(`native dialogs: ${d.length} > ${BASELINE}\n` + d.map((f) => `  ${f.file}:${f.line}  ${f.text}`).join("\n"));
   if (d.length < BASELINE) console.log(`note: native dialogs ${d.length}, baseline ${BASELINE}`);

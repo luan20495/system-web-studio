@@ -123,7 +123,7 @@ export function explainReleaseError(e: ReleaseErrorLike): ReleaseErrorView {
     case "PUBLIC_PUBLISH_DISABLED": case "CODE_APP_PUBLIC_DISABLED": return { ...base, kind: "public-disabled", title: "Quản trị viên đang tắt xuất bản công khai", detail: "Chỉ xuất bản riêng tư được phép.", reload: true };
     case "MISSING_HEADER": case "INVALID_IDEMPOTENCY_KEY": case "VALIDATION_FAILED": case "MALFORMED_REQUEST": return { ...base, kind: "invalid", title: "Yêu cầu không hợp lệ", detail: e?.message ?? "Đây là lỗi của trình duyệt, không phải của bạn." };
   }
-  if (status === 403) return { ...base, kind: "forbidden", title: "Bạn không có quyền xuất bản", detail: "Cần quyền xuất bản (APP_PUBLISH). Máy chủ kiểm tra quyền ở mọi lệnh gọi." };
+  if (status === 403) return { ...base, kind: "forbidden", title: "Bạn không có quyền xuất bản", detail: "Cần quyền xuất bản. Máy chủ kiểm tra quyền ở mọi lệnh gọi." };
   if (status === 404) return { ...base, kind: "other", title: "Không tìm thấy ứng dụng", detail: "Ứng dụng không còn hoặc bạn không có quyền truy cập.", reload: true };
   if (status === 429) return { ...base, kind: "rate-limited", title: "Quá nhiều lần xuất bản", detail: `Thử lại sau ${e?.retryAfterSeconds ?? 60} giây.`, retry: true, retryAfterSeconds: e?.retryAfterSeconds ?? 60 };
   if (status >= 500) return { ...base, kind: "unreachable", title: "Chưa rõ kết quả: máy chủ gặp sự cố khi xử lý", detail: "Chưa rõ thao tác đã được nhận hay chưa. Tải lại trạng thái trước khi thử lại; thử lại với cùng khóa là an toàn.", retry: true, reload: true };

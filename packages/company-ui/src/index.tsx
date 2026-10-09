@@ -136,7 +136,7 @@ export function Dialog({ open, title, onClose, children, footer }: DialogProps) 
 }
 export type ModalProps = Omit<DialogProps, "footer"> & { confirmLabel?: string; cancelLabel?: string; onConfirm?: () => void; tone?: Tone };
 /** Confirm-style dialog built on Dialog. */
-export function Modal({ confirmLabel = "Đồng ý", cancelLabel = "Huỷ", onConfirm, tone = "primary", ...rest }: ModalProps) {
+export function Modal({ confirmLabel = "Đồng ý", cancelLabel = "Hủy", onConfirm, tone = "primary", ...rest }: ModalProps) {
   return <Dialog {...rest} footer={<><Button variant="ghost" tone="neutral" onClick={rest.onClose}>{cancelLabel}</Button>
     {onConfirm ? <Button tone={tone} onClick={onConfirm}>{confirmLabel}</Button> : null}</>}/>;
 }
