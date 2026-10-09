@@ -91,6 +91,16 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
   const valid = (m: string) => m === "auto" || m === "mock" || (ai?.models ?? []).some((x) => x.id === m);
   const effectiveModel = ai?.configured ? (model && valid(model) ? model : valid(ai.defaultModel) ? ai.defaultModel : "auto") : "mock";
   const dirty = Object.keys(drafts).filter((p) => drafts[p] !== original[p]?.text);
+  // M-045: unsaved drafts are not lost silently: leaving the page (reload, closing the tab) asks first while there is a draft, and 'Bỏ nháp' asks before it clears them
+  useEffect(() => {
+    if (!dirty.length) return;
+    const h = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", h); return () => window.removeEventListener("beforeunload", h);
+  }, [dirty.length]);
+  async function discardDrafts() {
+    if (!(await confirm({ title: `Bỏ ${dirty.length} bản nháp chưa gửi?`, message: `Nội dung đã sửa trong ${dirty.length === 1 ? "tệp" : `${dirty.length} tệp`} (${dirty.slice(0, 3).join(", ")}${dirty.length > 3 ? "…" : ""}) sẽ mất và không khôi phục được.`, confirmLabel: "Bỏ nháp", cancelLabel: "Giữ lại", danger: true }))) return;
+    setDrafts({});
+  }
   const current = drafts[path] ?? original[path]?.text ?? "";
   const editable = canEdit && !!original[path]?.editable;
   const files = useMemo(() => (tree ?? []).slice().sort((a, b) => a.path.localeCompare(b.path)), [tree]);
@@ -212,7 +222,7 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
                 {canEdit ? <div className="draftBar">
                   <span>{dirty.length ? `Bản nháp: ${dirty.length} tệp` : "Chưa có thay đổi"}</span>
                   <input aria-label="Mô tả thay đổi" placeholder="Mô tả ngắn (tuỳ chọn)" value={summary} maxLength={300} onChange={(e) => setSummary(e.target.value)}/>
-                  <button className="button ghost" disabled={!dirty.length || busy !== null} onClick={() => setDrafts({})}>Bỏ nháp</button>
+                  <button className="button ghost" disabled={!dirty.length || busy !== null} onClick={() => void discardDrafts()}>Bỏ nháp</button>
                   <button className="button primary" disabled={!dirty.length || busy !== null} onClick={() => void propose()}>{busy === "propose" ? "Đang gửi…" : "Tạo thay đổi & build"}</button>
                 </div> : null}
               </div>

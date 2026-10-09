@@ -384,4 +384,22 @@ for (const w of [768, 1000]) {
   check("M-050: when the server returns no token the drawer says so (role=alert) and prints no 'null'", !/\bnull\b/.test(t2) && (await p.getByRole("alert").filter({ hasText: /không trả token/ }).count()) >= 1, t2.slice(0, 200));
   await p.close();
 }
+
+// ---------- M-045: unsaved code drafts are not lost silently (reload / tab close, one-click 'Bỏ nháp') ----------
+{
+  const s = newCodeState(); const p = await open(b, "/studio/projects/p1/code", { state: s }); await p.waitForSelector(".codeEditor"); await wait(700);
+  const armed = () => p.evaluate(() => { const e = new Event("beforeunload", { cancelable: true }); window.dispatchEvent(e); return e.defaultPrevented; });
+  check("M-045: with no draft, leaving the page is not interrupted", (await armed()) === false);
+  await p.locator(".codeEditor").fill("export default function App(){ return 1 }"); await wait(300);
+  check("M-045: with a draft, reload / closing the tab asks first (beforeunload is armed)", (await armed()) === true);
+  await p.getByRole("button", { name: "Bỏ nháp" }).click(); await wait(400);
+  const dlg = p.getByRole("alertdialog").or(p.getByRole("dialog")).first();
+  check("M-045: 'Bỏ nháp' asks first (a dialog naming how many files are discarded) instead of clearing them at once", (await dlg.count()) === 1 && /Bỏ/.test(await dlg.innerText()) && (await p.locator(".codeEditor").inputValue()).includes("return 1"), "");
+  await dlg.getByRole("button", { name: /Hủy|Giữ/ }).first().click(); await wait(300);
+  check("M-045: Cancel keeps the draft", (await p.locator(".codeEditor").inputValue()).includes("return 1"), "");
+  await p.getByRole("button", { name: "Bỏ nháp" }).click(); await wait(300);
+  await p.getByRole("dialog").or(p.getByRole("alertdialog")).first().getByRole("button", { name: /^Bỏ nháp|^Bỏ/ }).last().click(); await wait(400);
+  check("M-045: confirming discards it and the leave guard is released", !(await p.locator(".codeEditor").inputValue()).includes("return 1") && (await armed()) === false, "");
+  await p.close();
+}
 await b.close(); finish();
