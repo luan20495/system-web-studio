@@ -598,4 +598,20 @@ for (const w of [768, 1000]) {
   check("M-089: clicking a section in the canvas still selects it (postMessage reaches the editor)", (await p.locator(".bx-right [role=tab]").count()) >= 5, (await p.locator(".bx-right").innerText()).split("\n")[0]);
   await p.close();
 }
+// ---------- M-112 (C5-S1 batch 2): the phone page-scroll mode works without :has() (class on <html> set by the builder) ----------
+{
+  const p = await open(b, "/studio/projects/p1/design", { viewport: { width: 390, height: 844 } }); await p.waitForSelector(".bx-mview"); await wait(900);
+  // simulate a browser without :has(): delete every rule that uses it, then read what the page-scroll mode needs
+  const st = await p.evaluate(() => {
+    let removed = 0;
+    const strip = (list) => { for (let i = list.cssRules.length - 1; i >= 0; i--) { const r = list.cssRules[i]; if (r.cssRules && !r.selectorText) strip(r); else if (r.selectorText?.includes(":has(.bx-root)")) { list.deleteRule(i); removed++; } } };
+    for (const sh of document.styleSheets) { try { strip(sh); } catch { /* cross-origin */ } }
+    const h = getComputedStyle(document.documentElement), bd = getComputedStyle(document.body);
+    return { removed, cls: document.documentElement.classList.contains("bx-page"), hOverflow: h.overflowY, bOverflow: bd.overflowY, pad: h.scrollPaddingTop, overscroll: h.overscrollBehaviorY };
+  });
+  check("M-112: with the :has() rules removed, html/body still scroll as a page and keep scroll-padding-top 64px (class fallback)", st.removed >= 2 && st.cls && st.hOverflow === "visible" && st.bOverflow === "visible" && st.pad === "64px" && st.overscroll === "contain", JSON.stringify(st));
+  await p.getByRole("button", { name: /^AI$/ }).first().click().catch(() => undefined); await wait(800);
+  check("M-112: leaving Design removes the class (no page-scroll mode outside the builder)", !(await p.evaluate(() => document.documentElement.classList.contains("bx-page"))));
+  await p.close();
+}
 await b.close(); finish();
