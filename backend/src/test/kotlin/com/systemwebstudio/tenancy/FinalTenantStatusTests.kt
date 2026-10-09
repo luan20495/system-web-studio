@@ -130,4 +130,21 @@ class FinalTenantStatusTests : FinalIamTestBase() {
         assertThat(ops.get(units(c)).response.status).describedAs("no organization data of a deleted company either").isEqualTo(403)
         assertThat(jdbc.queryForObject("SELECT name FROM projects WHERE id = ?", String::class.java, p.id)).isEqualTo("Project")
     }
+
+    @Test
+    fun `6c a SYSTEM_ADMIN whose TENANT membership is removed keeps nothing of its workspace membership - platform scope only, in the API and in auth me`() {
+        val sys = sysAdmin(); val c = company(sys); val ws = wsIn(c)
+        val owner = fx.user("fin-own2"); fx.member(ws, owner, "EDITOR"); val p = fx.project(ws, owner)
+        val op = fx.user("fin-op2", systemAdmin = true); fx.member(ws, op, "WORKSPACE_ADMIN"); val ops = sessionFor(op.username)
+        assertThat(ops.get(api(ws, p.id)).response.status).describedAs("member authority while its tenant membership is active").isEqualTo(200)
+        assertThat(strings(workspaceRow(me(ops), ws).get("permissions"))).contains("APP_VIEW", "MEMBER_MANAGE")
+        // the Tenant Admin of the company cuts the operator off (it is a plain tenant member of this company)
+        assertThat(c.admin.delete("${base(c)}/members/${op.id}").response.status).isIn(200, 204)
+        assertThat(ops.get(api(ws, p.id)).response.status).describedAs("the workspace membership no longer grants anything").isEqualTo(404)
+        assertThat(ops.get("/api/v1/workspaces/$ws/members").response.status).isEqualTo(404)
+        val m = me(ops)
+        assertThat(m.get("projectScopes").toList().map { it.get("projectId").asString() }).doesNotContain(p.id.toString())
+        assertThat(strings(workspaceRow(m, ws).get("permissions"))).describedAs("platform scope only").doesNotContain("APP_VIEW", "MEMBER_MANAGE", "PROJECT_CREATE")
+        assertThat(m.get("systemAdmin").asBoolean()).isTrue()
+    }
 }
