@@ -11,7 +11,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-
 import { CSS } from "@dnd-kit/utilities";
 import type { AppDefinitionV2, ActionDef, NavLink, Section } from "@xweb/types";
 import { MAX_NAV, HOME_ID, addPageToMenu, checkSlug, listPages, moveNavLink, opsAddPage, opsRemovePage, opsRenamePage, opsSetNavigation, opsSetNotFound, pageExists, removeImpact, reorderPagesReadiness, resolveRoute, sectionsOf, setHomeReadiness, slugify, uniqueSlug } from "../core/pages";
-import { canStep } from "../core/dnd";
+import { canStepAt } from "../core/dnd";
 import { preflight } from "../core/preflight";
 import { Dialog, Field, StateBox } from "../ui/primitives";
 import type { SchemaOperation } from "@xweb/types";
@@ -69,7 +69,7 @@ export function PagesPanel({ doc, pageId, onPage, selectedId, onSelect, labelOf,
                     {sections.length === 0 ? <li role="none" className="hint">Trang trống. Kéo một component vào, hoặc nhấn vào component trong mục “Thành phần”.</li> : null}
                     {sections.map((s, i) => (
                       <SectionNode key={s.id} section={s} title={labelOf(s.type)} summary={summaryOf(s)} active={s.id === selectedId} canEdit={canEdit} busy={busy}
-                        first={!canStep(sections, s.id, -1)} last={!canStep(sections, s.id, 1)} onSelect={() => onSelect(s.id === selectedId ? null : s.id)} onMove={(d) => onMoveSection(s.id, d)}/>))}
+                        first={!canStepAt(sections, i, -1)} last={!canStepAt(sections, i, 1)} onSelect={() => onSelect(s.id === selectedId ? null : s.id)} onMove={(d) => onMoveSection(s.id, d)}/>))}
                   </ul>
                 </SortableContext>) : null}
             </li>
