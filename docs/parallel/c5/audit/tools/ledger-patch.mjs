@@ -150,3 +150,25 @@ status("M-069", "PARTIAL (9ea2e39): 107 value-identical token replacements (0 of
 status("M-070", "PARTIAL (9ea2e39): 22 provably dead declarations removed (pixel-identical), 26 -> 19 conflicting duplicate selectors; 99 split-rule duplicates remain");
 note("M-087", "odd breakpoint thresholds (700/720/768/767/520/1100/1023/1279) NOT consolidated: moving switch points is a visual decision; ratchet prevents growth");
 note("M-021", "harness fidelity: 9 harnesses did not load ui.css (fixed 9ea2e39); new harnesses must load ui.css after factory.css (guard test)");
+
+// ---- integration round 5 (agent/c5-web 071dfb4): S2 wave 2 milestone 1, S4 wave 3, S3 wave 2 milestone A (HARNESS unless stated)
+status("M-017", "S2 PART FIXED (HARNESS, merged eb38a2d): all 21 native dialogs in Admin are confirm()/prompt() + guard test; S1 part pending");
+status("M-018", "FIXED (HARNESS, merged eb38a2d): role changes by explicit Lưu (+confirm for admin roles); confirms for provider off, connector off, package deny, template share, retention cleanup");
+status("M-025", "ADMIN PART FIXED (HARNESS, merged eb38a2d); Studio shell wiring pending (S1)");
+status("M-055", "FIXED (HARNESS, merged eb38a2d): real 404 for unknown addresses");
+status("M-056", "FIXED (HARNESS, merged eb38a2d): error + retry on failed secondary loads, LoadGate on 9 ladders");
+status("M-057", "FIXED (HARNESS, merged eb38a2d): reason shown as text, no dead control; not wired (employee `active` is membership state)");
+status("M-058", "C5 PART FIXED (HARNESS, merged eb38a2d): company list search + pager; C1 handoff open");
+status("M-119", "ADMIN/PLATFORM PART FIXED (HARNESS, merged eb38a2d); studio/new pending (S1)");
+status("M-120", "FIXED (HARNESS, merged eb38a2d + S4 matrix: ai/usage no longer crashes)");
+status("M-121", "FIXED (HARNESS, merged eb38a2d)");
+status("M-122", "ADMIN PART FIXED (HARNESS, merged eb38a2d); studio/new pending (S1)");
+status("M-123", "FIXED (HARNESS, merged eb38a2d): focus goes to the new company's h1 via useMain");
+status("M-020", "ADMIN PART FIXED (HARNESS, merged eb38a2d): no act() copy remains in Admin; Studio part pending (S1)");
+status("M-088", "ADMIN PART FIXED (HARNESS, merged eb38a2d); RuntimeDrawer secret (S1) pending");
+status("M-124", "CLOSED (merged 071dfb4): triaged as a HARNESS ARTEFACT (system-admin persona is refused by the company screen: dialog states not reachable); the engine records a forbidden-state refusal as 'skipped'");
+status("M-053", "PARTIAL (merged 071dfb4): console is a lazy chunk behind the login: Platform/Admin first load 866.6 -> 549.2 KB raw (-36.6%), Studio 989.0 -> 562.4 KB (-43.1%) (lab build output; React/Next runtime ~443 KB of it); deeper splitting inside Studio/Admin pending");
+status("M-105", "CSS PATTERN MERGED (c51c705): .stack/legend/ModalHeader; markup adoption in the 5 Admin dialogs pending (S2)");
+status("M-071", "PHASE 0 MERGED (c51c705): vi-only provider, cached locale-aware formatters with identical output (0 Intl objects per 1000 cells), lang/dir from the locale; negotiation + catalogues + 2nd locale NOT started (need product decision)");
+status("M-103", "RTL RATCHET MERGED (c51c705): 97 physical CSS declarations capped; formatting track folded into M-071; tenant theme not started (no contract)");
+note("M-119", "S4 matrix after S2 wave 2 (HARNESS): remaining FAIL cells are studio/new, platform/costs NaN-pattern fixed? re-check in the final run");

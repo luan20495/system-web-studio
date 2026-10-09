@@ -335,7 +335,8 @@
   "N",
   "Shared ConfirmDialog/PromptDialog (focus trap, destructive style, busy lock) and replace all call sites",
   "harness specs; grep guard: no window.confirm/prompt in portal code",
-  ""
+  "",
+  "S2 PART FIXED (HARNESS, merged eb38a2d): all 21 native dialogs in Admin are confirm()/prompt() + guard test; S1 part pending"
  ],
  [
   "M-018",
@@ -354,7 +355,8 @@
   "N",
   "Confirm with consequence text; role change needs explicit 'Lưu'",
   "admin harness",
-  "D-01: runtime secret delete is also in M-019 (S1 file CodePanels.tsx:139: owner S1)"
+  "D-01: runtime secret delete is also in M-019 (S1 file CodePanels.tsx:139: owner S1)",
+  "FIXED (HARNESS, merged eb38a2d): role changes by explicit Lưu (+confirm for admin roles); confirms for provider off, connector off, package deny, template share, retention cleanup"
  ],
  [
   "M-019",
@@ -397,7 +399,7 @@
   "useAction(busy,error,once) in packages/ui; migrate the listed call sites",
   "harness double-click tests",
   "",
-  "HOOK MERGED (a5dcdc1): useAction; call-site migration pending (S1/S2 wave 2)"
+  "ADMIN PART FIXED (HARNESS, merged eb38a2d): no act() copy remains in Admin; Studio part pending (S1)"
  ],
  [
   "M-021",
@@ -497,7 +499,7 @@
   "Skip link in the shared shell; main tabindex only while overflowing (useOverflow); focus main/h1 on route change",
   "harness keyboard test",
   "",
-  "COMPONENTS MERGED (dbef6fa): SkipLink + useMain (route focus, conditional tab stop); shell wiring pending (S1/S2)"
+  "ADMIN PART FIXED (HARNESS, merged eb38a2d); Studio shell wiring pending (S1)"
  ],
  [
   "M-026",
@@ -1038,7 +1040,8 @@
   "N",
   "dynamic import for dialogs/panels/Admin sections; split AdminApp by portal (see M-064)",
   "S4 bundle table before/after",
-  "D-06: AdminApp split shared with M-066 · S4 measured: First Load JS Platform/Admin 809.4/230.0 KB (raw/gzip, identical), Studio 912.6/267.6 KB, legacy 1198.0/340.8 KB; login-only code ~54 KB vs 400-517 KB loaded; 0 dynamic chunks; builder 367.9 KB min, @dnd-kit 71% of Studio code (SYNTHETIC build metrics, Next 16 prints no route sizes)"
+  "D-06: AdminApp split shared with M-066 · S4 measured: First Load JS Platform/Admin 809.4/230.0 KB (raw/gzip, identical), Studio 912.6/267.6 KB, legacy 1198.0/340.8 KB; login-only code ~54 KB vs 400-517 KB loaded; 0 dynamic chunks; builder 367.9 KB min, @dnd-kit 71% of Studio code (SYNTHETIC build metrics, Next 16 prints no route sizes)",
+  "PARTIAL (merged 071dfb4): console is a lazy chunk behind the login: Platform/Admin first load 866.6 -> 549.2 KB raw (-36.6%), Studio 989.0 -> 562.4 KB (-43.1%) (lab build output; React/Next runtime ~443 KB of it); deeper splitting inside Studio/Admin pending"
  ],
  [
   "M-054",
@@ -1075,7 +1078,8 @@
   "N",
   "real 404 state",
   "harness",
-  ""
+  "",
+  "FIXED (HARNESS, merged eb38a2d): real 404 for unknown addresses"
  ],
  [
   "M-056",
@@ -1093,7 +1097,8 @@
   "N (harness)",
   "error state + retry",
   "harness",
-  "S4 state matrix: also admin/identity shows no error when its request fails (see M-122)"
+  "S4 state matrix: also admin/identity shows no error when its request fails (see M-122)",
+  "FIXED (HARNESS, merged eb38a2d): error + retry on failed secondary loads, LoadGate on 9 ladders"
  ],
  [
   "M-057",
@@ -1111,7 +1116,8 @@
   "N",
   "disable with reason or wire to existing member route only if it exists (no invention)",
   "org harness",
-  ""
+  "",
+  "FIXED (HARNESS, merged eb38a2d): reason shown as text, no dead control; not wired (employee `active` is membership state)"
  ],
  [
   "M-058",
@@ -1130,7 +1136,8 @@
   "Y",
   "C5: client search/pager over what exists; C1 supplies routes",
   "real-backend",
-  ""
+  "",
+  "C5 PART FIXED (HARNESS, merged eb38a2d): company list search + pager; C1 handoff open"
  ],
  [
   "M-059",
@@ -1408,7 +1415,8 @@
   "N",
   "Phased plan (docs): cookie+Accept-Language via proxy, ratchet guard; NO mass rewrite (needs C0/C7 approval)",
   "n/a",
-  "per instruction: report + plan, not rewrite · packages/i18n is 23 lines; run the S3 glossary pass first; phase 0 (provider, locale-aware formatters, ratchet guard) is C5-only; a second locale needs a product decision"
+  "per instruction: report + plan, not rewrite · packages/i18n is 23 lines; run the S3 glossary pass first; phase 0 (provider, locale-aware formatters, ratchet guard) is C5-only; a second locale needs a product decision",
+  "PHASE 0 MERGED (c51c705): vi-only provider, cached locale-aware formatters with identical output (0 Intl objects per 1000 cells), lang/dir from the locale; negotiation + catalogues + 2nd locale NOT started (need product decision)"
  ],
  [
   "M-072",
@@ -1750,7 +1758,8 @@
   "N",
   "clear after use; keep the activation link only until copied/confirmed (reconcile with M-007); fix path join",
   "harness DOM / input-value assertions (unit is not enough)",
-  ""
+  "",
+  "ADMIN PART FIXED (HARNESS, merged eb38a2d); RuntimeDrawer secret (S1) pending"
  ],
  [
   "M-089",
@@ -2038,7 +2047,8 @@
   "N",
   "report + plan",
   "n/a",
-  "R2-026 was P2; kept as RESEARCH, blocks any tenant-theme work"
+  "R2-026 was P2; kept as RESEARCH, blocks any tenant-theme work",
+  "RTL RATCHET MERGED (c51c705): 97 physical CSS declarations capped; formatting track folded into M-071; tenant theme not started (no contract)"
  ],
  [
   "M-104",
@@ -2074,7 +2084,8 @@
   "N (harness)",
   "define .stack/legend/ModalHeader usage for Admin dialogs",
   "harness screenshot + axe",
-  "split from M-012 (C-03)"
+  "split from M-012 (C-03)",
+  "CSS PATTERN MERGED (c51c705): .stack/legend/ModalHeader; markup adoption in the 5 Admin dialogs pending (S2)"
  ],
  [
   "M-106",
@@ -2331,7 +2342,8 @@
   "N (harness)",
   "LoadGate empty slot with a real message",
   "state-matrix empty cells PASS",
-  ""
+  "S4 matrix after S2 wave 2 (HARNESS): remaining FAIL cells are studio/new, platform/costs NaN-pattern fixed? re-check in the final run",
+  "ADMIN/PLATFORM PART FIXED (HARNESS, merged eb38a2d); studio/new pending (S1)"
  ],
  [
   "M-120",
@@ -2349,7 +2361,8 @@
   "N (harness)",
   "guard the empty/invalid day in the usage view",
   "admin harness daily=empty on ai/usage",
-  ""
+  "",
+  "FIXED (HARNESS, merged eb38a2d + S4 matrix: ai/usage no longer crashes)"
  ],
  [
   "M-121",
@@ -2367,7 +2380,8 @@
   "N (harness)",
   "number guards + 'chưa có dữ liệu'",
   "admin harness empty costs",
-  ""
+  "",
+  "FIXED (HARNESS, merged eb38a2d)"
  ],
  [
   "M-122",
@@ -2385,7 +2399,8 @@
   "N (harness)",
   "LoadGate / ErrorState",
   "state-matrix error/loading cells PASS",
-  ""
+  "",
+  "ADMIN PART FIXED (HARNESS, merged eb38a2d); studio/new pending (S1)"
  ],
  [
   "M-123",
@@ -2403,7 +2418,8 @@
   "N (harness)",
   "restore focus to the opener or to the new company's heading",
   "ui-keyboard walkthrough step PASS",
-  ""
+  "",
+  "FIXED (HARNESS, merged eb38a2d): focus goes to the new company's h1 via useMain"
  ],
  [
   "M-124",
@@ -2421,7 +2437,8 @@
   "N",
   "triage: classify each as artefact or defect; fix the defects",
   "re-run the matrix",
-  ""
+  "",
+  "CLOSED (merged 071dfb4): triaged as a HARNESS ARTEFACT (system-admin persona is refused by the company screen: dialog states not reachable); the engine records a forbidden-state refusal as 'skipped'"
  ],
  [
   "M-125",
