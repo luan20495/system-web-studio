@@ -57,7 +57,7 @@
 .bx-dragchip{white-space:nowrap;padding:6px 12px;border-radius:999px;background:#6366f1;color:#fff;font-size:12px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.4)}
 /* forms, lists, chips */
 .bx-form{display:grid;gap:10px}.bx-field{display:grid;gap:4px}.bx-field label{font-size:12px;font-weight:600;color:var(--text)}.bx-field small{color:var(--muted);font-size:11px;line-height:1.4}
-.bx-field input,.bx-field select,.bx-field textarea,.bx-form select,.bx-form input,.bx-row input,.bx-row select,.bx-menu input,.bx-left-panel>div>select,.bx-left-panel input[type=search]{background:#121a22;color:var(--text);border:1px solid #2d3742;border-radius:8px;padding:7px 9px;min-width:0;max-width:100%}
+.bx-field input,.bx-field select,.bx-field textarea,.bx-form select,.bx-form input,.bx-row input,.bx-row select,.bx-menu input,.bx-left-panel>div>select,.bx-left-panel>.bx-rail-pane>div>select,.bx-left-panel input[type=search]{background:#121a22;color:var(--text);border:1px solid #2d3742;border-radius:8px;padding:7px 9px;min-width:0;max-width:100%}
 .bx-group{border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:grid;gap:8px;margin:0}.bx-group legend{padding:0 4px;font-size:12px;font-weight:700;color:var(--muted)}
 .bx-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.bx-param{display:grid;min-width:80px}.bx-param small{color:var(--muted)}
 .bx-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:6px}

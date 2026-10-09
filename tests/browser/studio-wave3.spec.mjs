@@ -432,4 +432,20 @@ for (const w of [768, 1000]) {
   check("M-038: …and 'Lưu menu' is not offered (nothing to save), so the removed link cannot be put back", saveDisabled === true, String(saveDisabled));
   await p.close();
 }
+
+// ---------- M-037: switching the rail tab must not throw away what a half-filled editor holds ----------
+{
+  const s = newState(); const base = s.schema;
+  s.schema = { ...base, site: { ...(base.site ?? {}), navigation: [{ id: "n1", label: "Giới thiệu", anchor: "about" }, { id: "n2", label: "Liên hệ", anchor: "contact" }] } };
+  const p = await open(b, "/studio/projects/p1/design", { state: s }); await p.waitForSelector("iframe"); await wait(900);
+  const field = () => p.locator("section[aria-labelledby=menu-h]").getByLabel("Nhãn liên kết 2");
+  await field().fill("Liên hệ ngay hôm nay"); await wait(150);
+  await p.locator(".bx-left > .bx-tabs").getByRole("tab", { name: "Dữ liệu", exact: true }).click(); await wait(400);
+  await p.locator(".bx-left > .bx-tabs").getByRole("tab", { name: "Trang", exact: true }).click(); await wait(400);
+  check("M-037: Trang -> Dữ liệu -> Trang keeps the half-typed menu label (the editor was thrown away before)", (await field().inputValue()) === "Liên hệ ngay hôm nay", await field().inputValue());
+  check("M-037: …and the 'Lưu menu' button still knows there is something to save", await p.locator("section[aria-labelledby=menu-h]").getByRole("button", { name: /Lưu menu/ }).isEnabled(), "");
+  const visiblePanes = await p.evaluate(() => [...document.querySelectorAll(".bx-left-panel .bx-rail-pane")].filter((e) => getComputedStyle(e).display !== "none").length);
+  check("M-037: exactly ONE rail pane is visible at a time (the others are kept hidden, not shown)", visiblePanes === 1, String(visiblePanes));
+  await p.close();
+}
 await b.close(); finish();

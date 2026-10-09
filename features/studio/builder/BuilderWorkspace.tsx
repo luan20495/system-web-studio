@@ -3,7 +3,7 @@
  * The Builder (Design mode): top bar, left tools, centre canvas with real drag and drop, right inspector. One write funnel: `applyOps`.
  * Nothing here talks to a backend that does not exist: backend-dependent tools render NOT_READY with a reason.
  */
-import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import { Activity, useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   DndContext, DragOverlay, KeyboardSensor, PointerSensor, closestCenter, rectIntersection, useSensor, useSensors,
   type Announcements, type CollisionDetection, type DragEndEvent, type DragMoveEvent, type DragStartEvent,
@@ -182,8 +182,8 @@ export function BuilderWorkspace(props: {
   const shareReason = whyNot("canShare");
   const publishReason = whyNot("canPublish");
 
-  const leftPanel = (() => {
-    switch (rail) {
+  const panelOf = (id: RailId): ReactNode => {
+    switch (id) {
       case "pages": return <PagesPanel doc={doc} pageId={pageId} onPage={props.onPage} selectedId={selectedId} onSelect={select} labelOf={props.labelOf} summaryOf={props.summaryOf}
         canEdit={interactive} busy={busy} apply={(ops, summary) => props.applyOps(ops, summary)} lastFailure={props.lastFailure} genId={newId} onMoveSection={(id, d) => void step(id, d)}/>;
       case "components": return <ComponentsPanel registry={registry} blocks={props.blocks} canEdit={interactive} busy={busy} onAdd={(id) => void addComponent(id)} onAddBlock={props.addBlock}/>;
@@ -194,7 +194,13 @@ export function BuilderWorkspace(props: {
       case "theme": return <ThemePanel key={JSON.stringify((doc as { theme?: unknown }).theme ?? null)} ctx={ctx}/>;
       case "ai": return <AiPanel openAi={props.goAi} canEdit={cap.canEdit}/>;
     }
-  })();
+  };
+  // M-037: a rail panel that has been opened STAYS mounted (React <Activity>: state kept, effects paused, rendered at low priority while hidden), so a half-filled
+  // query / action / workflow / menu editor is not thrown away by looking at another tab. Panels that were never opened are not mounted at all (no extra requests).
+  const [opened, setOpened] = useState<RailId[]>(["pages"]);
+  const seen = opened.includes(rail) ? opened : [...opened, rail];
+  if (seen !== opened && seen.length !== opened.length) setOpened(seen);
+  const leftPanel = seen.map((id) => <Activity key={id} mode={id === rail ? "visible" : "hidden"}><div className="bx-rail-pane">{panelOf(id)}</div></Activity>);
 
   return (
     <DndContext sensors={sensors} collisionDetection={collision} accessibility={{ announcements, screenReaderInstructions }} onDragStart={onDragStart} onDragMove={onDragMove} onDragEnd={(e) => void onDragEnd(e)} onDragCancel={() => { setDrag(null); setSlot(null); }}>

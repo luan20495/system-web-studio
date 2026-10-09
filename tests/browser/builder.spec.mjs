@@ -205,7 +205,7 @@ async function dragTo(page, from, to, { steps = 14, hold } = {}) {
 // ---------- 8. Page builder ----------
 {
   const p = await fresh();
-  const panel = p.locator(".bx-left-panel");
+  const panel = p.locator(".bx-left-panel > .bx-rail-pane:visible"); // opened rail panes stay mounted but hidden (M-037): look only at the visible one
   const lastOps = async () => (await ops(p)).slice(-1)[0]?.ops ?? [];
   // create
   await panel.getByRole("button", { name: /^Trang$/ }).click();
@@ -278,7 +278,7 @@ async function dragTo(page, from, to, { steps = 14, hold } = {}) {
 {
   const p = await browser.newPage({ viewport: { width: 1440, height: 1000 } }); p.errors = []; p.on("pageerror", (e) => p.errors.push(e.message));
   await p.goto(URL_ + "?v2=1"); await p.waitForSelector("iframe"); await p.waitForTimeout(700);
-  const left = p.locator(".bx-left-panel");
+  const left = p.locator(".bx-left-panel > .bx-rail-pane:visible"); // opened rail panes stay mounted but hidden (M-037): look only at the visible one
   await p.locator(".bx-left").getByRole("tab", { name: "Hành động" }).click();
   await p.getByRole("button", { name: /^Hành động$/ }).click(); await p.waitForTimeout(300);
   const typeSel = left.locator("select").first();
