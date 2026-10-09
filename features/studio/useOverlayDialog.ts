@@ -9,7 +9,7 @@
  * Pass `null` as `onClose` to make the dialog un-dismissible with Escape (a request is in flight).
  */
 import { useEffect, useId, useRef } from "react";
-import { acquireOverlay, tabbables, trapTab } from "@xweb/ui";
+import { acquireOverlay, dialogOpener, tabbables, trapTab } from "@xweb/ui";
 
 export function useOverlayDialog(title: string, onClose: (() => void) | null) {
   const ref = useRef<HTMLDivElement>(null);
@@ -19,7 +19,7 @@ export function useOverlayDialog(title: string, onClose: (() => void) | null) {
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const opener = dialogOpener();
     const overlay = acquireOverlay();
     (tabbables(node)[0] ?? node).focus();
     const onKey = (e: KeyboardEvent) => {

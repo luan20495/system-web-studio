@@ -18,7 +18,7 @@ export function Picker<V extends string>({ label, buttonLabel, value, options, o
     const away = (e: MouseEvent) => { if (!root.current?.contains(e.target as Node)) setOpen(false); };
     document.addEventListener("mousedown", away); return () => document.removeEventListener("mousedown", away);
   }, [open]);
-  const openAt = () => { setActive(Math.max(0, options.findIndex((o) => o.value === value))); setOpen(true); };
+  const openAt = () => { setActive(Math.max(0, options.findIndex((o) => o.value === value))); setOpen(true); btn.current?.focus(); };   // WebKit does not focus a button on click: the keys of the open list (arrows, Escape) must reach it
   const choose = (i: number) => { const o = options[i]; if (!o || o.disabled) return; onChange(o.value); setOpen(false); btn.current?.focus(); };
   const move = (d: number) => { const at = enabled.indexOf(active); setActive(enabled[Math.min(enabled.length - 1, Math.max(0, at + d))] ?? active); };
   function onKey(e: React.KeyboardEvent) {

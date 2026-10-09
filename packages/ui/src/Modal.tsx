@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { tabbables, trapTab } from "./focus";
+import { dialogOpener, tabbables, trapTab } from "./focus";
 import { acquireOverlay, useBackdropClose } from "./overlay";
 
 const INITIAL = "input:not([readonly]), select, textarea, button";
@@ -24,7 +24,7 @@ export function Modal({ label, onClose, children, dismissible = true, closeOnBac
   latest.current = { onClose, dismissible };
   const canClose = () => latest.current.dismissible && !ref.current?.querySelector('[aria-busy="true"]');
   useEffect(() => {
-    const prev = document.activeElement as HTMLElement | null;
+    const prev = dialogOpener();
     const root = ref.current;
     const overlay = acquireOverlay();
     if (root) {
