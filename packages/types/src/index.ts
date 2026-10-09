@@ -22,7 +22,15 @@ export type Me = {
   tenants?: TenantMembershipSummary[];
   /** platform + primary-tenant permissions as the 14 canonical codes (never legacy storage constants) */
   permissions?: string[];
+  /**
+   * C1 H-C1-04 (`docs/parallel/c1/h-c1-04-project-scoped-auth-me.md`): one row per project the person can really use, resolved by the same AccessService.forProject() as the project APIs.
+   * `permissions` are canonical codes of THAT project only; they are never merged into `permissions` / `workspaces[].permissions` and never unioned across rows.
+   * `role` is informational (display): never branch on it. ABSENT = an older backend (it cannot say no); an empty array = no project scope.
+   */
+  projectScopes?: ProjectScope[];
 };
+
+export type ProjectScope = { projectId: string; workspaceId: string; role?: string; permissions: string[] };
 
 export type ApiProject = {
   id: string; workspaceId: string; name: string; description: string | null; ownerUserId: string; framework: string;

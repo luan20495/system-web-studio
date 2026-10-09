@@ -1,5 +1,5 @@
 import type { Me } from "@xweb/types";
-import { canViewStudioIn } from "./canonical";
+import { canViewProject, canViewStudioIn, resolvePermissions } from "./canonical";
 import { isTenantAdminRole } from "./roles";
 
 export * from "./canonical";
@@ -35,10 +35,9 @@ export const hasPermission = (me: Me | null | undefined, code: string): boolean 
  *    tenant-scoped admin API exists AND an Admin screen uses it (the only one today is `/admin/tenants/{id}/members`, TENANT_MEMBERS, with no UI).
  *    See docs/parallel/c5/PHASE3_AUDIT.md M-05; the one-line change is in this function.
  *  - tenant.members    = TENANT_MEMBERS (the tenant's own TENANT_ADMIN, or platform scope). Not used by a portal gate yet.
- *  - studio.build      = the C1 contract: Studio access requires APP_VIEW. Some workspace's resolved `permissions` must hold it (canViewStudioIn). A platform-only
+ *  - studio.build      = the C1 contract: Studio access requires APP_VIEW: some workspace's resolved `permissions` (canViewStudioIn) OR some `projectScopes[].permissions` (H-C1-04) must hold it. A platform-only
  *    SYSTEM_ADMIN (businessAccess=false) is listed in `workspaces` but holds only tenant-level codes there, so Studio is not offered. A workspace whose `permissions` field is
- *    ABSENT (older backend) does not block. No role name is read anywhere. NOTE (CONTRACT MISMATCH, handoff H-C1-04): `/auth/me` lists WORKSPACE-level codes only, so a person
- *    whose APP_VIEW comes from a PROJECT membership (workspace VIEWER / EDITOR / PUBLISHER) gets `permissions: []` here and is refused; the project payload does resolve APP_VIEW.
+ *    ABSENT (older backend) does not block. No role name is read anywhere. A project-only person (workspace VIEWER / EDITOR / PUBLISHER without a workspace-level code) is admitted by their `projectScopes` (C1 imported 47883b0).
  */
 export function capabilitiesOf(me: Me | null | undefined): ReadonlySet<Capability> {
   const out = new Set<Capability>();
@@ -52,7 +51,8 @@ export function capabilitiesOf(me: Me | null | undefined): ReadonlySet<Capabilit
   if (me.workspaces.some((w) => w.permissions?.includes("DATA_SOURCE_MANAGE"))) out.add("workspace.data");
   // the Admin console opens for whoever has at least one thing to administer; WHAT they can do inside is decided per screen from the same capabilities and, finally, by the server
   if (out.has("tenant.administer") || out.has("tenant.members") || out.has("workspace.members") || out.has("workspace.data")) out.add("admin.console");
-  const builds = me.workspaces.some((w) => canViewStudioIn(w.permissions));
+  // C1 H-C1-04: a person whose APP_VIEW comes from a PROJECT membership has it in `projectScopes[].permissions` (never merged into the workspace list). Each scope is judged on its own.
+  const builds = me.workspaces.some((w) => canViewStudioIn(w.permissions)) || !!me.projectScopes?.some((s) => canViewProject(resolvePermissions(s.permissions)));
   if (builds) out.add("studio.build");
   return out;
 }

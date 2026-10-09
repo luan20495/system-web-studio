@@ -120,6 +120,35 @@ test("a role NAME alone changes nothing: only the resolved permission list is re
   assert.equal(resolvePortalPostLogin({ me: withRole("VIEWER", ["APP_VIEW"]), portal: "studio" }), "/studio");
   assert.equal(resolvePortalPostLogin({ me: withRole("EDITOR", []), portal: "studio" }), "/auth/no-access?portal=studio");
 });
+// ---- H-C1-04: project scopes (C1 docs/parallel/c1/h-c1-04-project-scoped-auth-me.md) ------------------------------------------------------------------
+test("H-C1-04: a project-only person is admitted to Studio by their projectScopes, judged on the scope's own canonical permissions; the role label and the workspace list change nothing", () => {
+  const me = (workspacePerms: string[] | undefined, scopes: { role?: string; permissions: string[] }[] | undefined) => ({
+    id: "u", username: "u", displayName: "U", roles: [], workspaces: [{ id: "w", name: "W", role: "VIEWER", tenantId: "t", ...(workspacePerms ? { permissions: workspacePerms } : {}) }],
+    ...(scopes ? { projectScopes: scopes.map((s, i) => ({ projectId: `p${i}`, workspaceId: "w", ...s })) } : {}) }) as unknown as Me;
+  const studio = (m: Me) => capabilitiesOf(m).has("studio.build");
+  // workspace list empty (the mismatch) + a scope that holds APP_VIEW (C1 cases A VIEWER / B EDITOR / C PUBLISHER all list APP_VIEW) -> admitted
+  assert.equal(studio(me([], [{ role: "VIEWER", permissions: ["APP_VIEW", "APP_USE"] }])), true);
+  assert.equal(studio(me([], [{ role: "PUBLISHER", permissions: ["APP_VIEW", "APP_USE", "APP_PUBLISH"] }])), true);
+  // the role label is informational: the same label with a scope WITHOUT APP_VIEW is refused, and a scope with APP_VIEW is admitted under any label
+  assert.equal(studio(me([], [{ role: "EDITOR", permissions: ["APP_USE", "APP_EDIT"] }])), false, "APP_EDIT / APP_USE never stand in for APP_VIEW");
+  assert.equal(studio(me([], [{ role: "nonsense", permissions: ["APP_VIEW"] }])), true);
+  // no scope, an empty scope list, or a scope without any permission: refused (an EMPTY list is an answer)
+  assert.equal(studio(me([], [])), false); assert.equal(studio(me([], [{ permissions: [] }])), false);
+  // ABSENT projectScopes (older backend) cannot say no: the workspace rule still decides exactly as before
+  assert.equal(studio(me(["APP_VIEW"], undefined)), true); assert.equal(studio(me([], undefined)), false); assert.equal(studio(me(undefined, undefined)), true, "an absent workspace list does not block");
+  // legacy storage names and unknown codes inside a scope are translated / dropped like everywhere else; a legacy name is not an extra grant
+  assert.equal(studio(me([], [{ permissions: ["PROJECT_READ"] }])), true); assert.equal(studio(me([], [{ permissions: ["VIEWER", "EDITOR"] }])), false);
+  // scopes are independent rows: APP_VIEW in one and APP_EDIT in another is still admitted (APP_VIEW exists), but nothing is unioned into a permission set
+  assert.equal(studio(me([], [{ permissions: ["APP_EDIT"] }, { permissions: ["APP_VIEW"] }])), true);
+  assert.equal(studio(me([], [{ permissions: ["APP_EDIT"] }, { permissions: ["APP_USE"] }])), false);
+  // the portal landing agrees: a project-only person goes to Studio, never to no-access
+  assert.equal(resolvePortalPostLogin({ me: me([], [{ permissions: ["APP_VIEW"] }]), portal: "studio" }), "/studio");
+  assert.equal(resolvePortalPostLogin({ me: me([], []), portal: "studio" }), "/auth/no-access?portal=studio");
+  // TENANT_ADMIN / SYSTEM_ADMIN alone are not Studio access (C1 negative invariants F and G)
+  const admin = { id: "u", username: "u", displayName: "U", roles: [], workspaces: [], tenantRole: "TENANT_ADMIN", permissions: ["TENANT_MANAGE", "TENANT_MEMBERS"], projectScopes: [] } as unknown as Me;
+  assert.equal(capabilitiesOf(admin).has("studio.build"), false);
+});
+
 test("GUARD: no Studio source decides anything from a role name (role === \"VIEWER\" | \"EDITOR\" | …)", () => {
   const roots = ["features/studio", "packages/permissions/src", "packages/auth/src", "packages/ui/src"].map((d) => join(__dirname, "..", "..", "..", d));
   const bad: string[] = [];
