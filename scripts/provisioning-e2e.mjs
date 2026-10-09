@@ -67,7 +67,8 @@ check("B the link is single use (410 LINK_INVALID)", r.status === 410 && code(r)
 const ta = new S(); r = await ta.login(taName, taPw);
 check("B Tenant Admin signs in (Admin portal account)", r.status === 200, `${r.status}`);
 const taMe = (await ta.call("GET", "/api/v1/auth/me")).json;
-check("B /auth/me: not a system admin; the tenant permissions are exactly TENANT_MANAGE + TENANT_MEMBERS; the workspace shows MEMBER_MANAGE", taMe?.systemAdmin === false && JSON.stringify([...(taMe.tenants?.[0]?.permissions ?? taMe.permissions ?? [])].sort()) === JSON.stringify(["TENANT_MANAGE", "TENANT_MEMBERS"]) && (taMe.workspaces ?? []).some((w) => w.id === W1 && (w.permissions ?? []).includes("MEMBER_MANAGE")), JSON.stringify(taMe?.tenants?.[0]?.permissions ?? taMe?.permissions));
+const TENANT_ADMIN_CODES = ["EMPLOYEE_MANAGE", "EMPLOYEE_VIEW", "ORG_STRUCTURE_MANAGE", "ORG_STRUCTURE_VIEW", "POSITION_GRADE_MANAGE", "POSITION_GRADE_VIEW", "TENANT_MANAGE", "TENANT_MEMBERS"];   // C1 final contract: exactly these eight (D-C0-51, D-C0-53)
+check("B /auth/me: not a system admin; the tenant permissions are exactly the eight TENANT_ADMIN codes (tenant + six organization); the workspace shows MEMBER_MANAGE", taMe?.systemAdmin === false && JSON.stringify([...(taMe.tenants?.[0]?.permissions ?? taMe.permissions ?? [])].sort()) === JSON.stringify(TENANT_ADMIN_CODES) && (taMe.workspaces ?? []).some((w) => w.id === W1 && (w.permissions ?? []).includes("MEMBER_MANAGE")), JSON.stringify(taMe?.tenants?.[0]?.permissions ?? taMe?.permissions));
 r = await ta.call("POST", `/api/v1/admin/tenants/${T}/workspaces`, { name: `E2E ws2 ${tag}` }); const W2 = r.json?.id;
 check("B Tenant Admin creates a workspace of ITS tenant through the NEW route (tenant derived from the path, authorized by TENANT_MANAGE)", r.status === 201 && r.json?.tenantId === T, `${r.status} ${code(r)}`);
 r = await ta.call("POST", "/api/v1/admin/workspaces", { name: `legacy ${tag}` });

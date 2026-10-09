@@ -28,7 +28,7 @@ Default values of the trailing parameters must never be relied on by new code (t
 | Principal | Scope | Gets |
 |---|---|---|
 | `users.system_admin` (**SYSTEM_ADMIN**) | **Platform** | `platformScope` permissions (`TENANT_MANAGE`, `TENANT_MEMBERS`, `MEMBER_MANAGE`, `PROJECT_CREATE`) on every tenant; **no** business-data access unless the flag `app.tenancy.system-admin-business-access=true` (legacy god mode, default **false**, must be declared in `application.yml` by C0) |
-| `TENANT_ADMIN` (`tenant_members`) | One tenant | `TENANT_MANAGE`, `TENANT_MEMBERS` and the six organization permissions of section 5b on that tenant; **no** implicit workspace/app/data access (D-C1-12) |
+| `TENANT_ADMIN` (`tenant_members`) | One tenant | EXACTLY eight codes: `EMPLOYEE_MANAGE`, `EMPLOYEE_VIEW`, `ORG_STRUCTURE_MANAGE`, `ORG_STRUCTURE_VIEW`, `POSITION_GRADE_MANAGE`, `POSITION_GRADE_VIEW`, `TENANT_MANAGE`, `TENANT_MEMBERS` (the two tenant codes + the six organization permissions of section 5b) on that tenant; a plain MEMBER holds none of them; a non-member SYSTEM_ADMIN holds the two platform codes only; **no** implicit workspace/app/data access (D-C1-12) |
 | `WORKSPACE_ADMIN` / project roles | Workspace / project | as today (`PermissionMatrix` unchanged) |
 
 Consequence recorded as a behaviour change: with the flag off, a system admin who is not a member of a workspace gets 404 on its projects, and `ProjectController.list` returns an empty list for them. Base tests relying on god mode must be rewritten with an explicit reason (INTEGRATION_V2 R-03). **Open hole:** a system admin can add themselves as WORKSPACE_ADMIN via `MEMBER_MANAGE`; C1 must close it or accept it in `DECISIONS.md` (R-08).
@@ -89,3 +89,7 @@ Six canonical codes, **no aliases**. They are part of `access.PermissionCodes.CA
 
 ## 7. V26 transitional mechanisms (must have a removal plan)
 `workspaces.tenant_id DEFAULT <DEFAULT tenant>` and the `BEFORE` fill triggers exist **only** so un-migrated code keeps working. Required before V26 is accepted: trigger raises on a non-NULL mismatching `tenant_id` (fills only NULL); a runbook section "removing compatibility" with owner, condition (every INSERT into the four tables passes tenant_id) and the follow-up migration (drop DEFAULT, drop fill triggers) recorded as a BOARD migration request. See INTEGRATION_V2 §7.
+
+## 7. `/auth/me` cost and tenant rename (D-C0-53, C1 `78237a1`)
+* `/auth/me` is recomputed live and is **bounded: 6 SQL statements per request, independent of the number of workspaces / projects / tenants** (not O(N) in project memberships; measured by the C1 statement-counter test). No latency SLA is derived from a local benchmark. `projectScopes[]` are DB-derived, one row per active project membership whose workspace role is active; a project permission is never flattened into a workspace or global permission, and the `role` string is informational only.
+* Tenant rename: `PATCH /api/v1/admin/tenants/{tenantId}` `{name}`, permission `TENANT_MANAGE`, the slug is immutable, audit `TENANT_UPDATED`, no version / ETag, idempotent; a DELETED tenant is `404 TENANT_NOT_FOUND`; a Tenant Admin of a SUSPENDED tenant gets `403 TENANT_SUSPENDED` (the platform operator may rename an ACTIVE or SUSPENDED one); organization writes of a SUSPENDED tenant are `403 TENANT_SUSPENDED`.
