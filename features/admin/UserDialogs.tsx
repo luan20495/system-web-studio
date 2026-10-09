@@ -4,6 +4,8 @@ import type { ActivationLink } from "@/lib/http-types";
 import { fmtDate } from "../ui";
 import { Modal } from "./Modal";
 import { KeyRound, ModalHeader } from "@xweb/ui";
+import { portalOrigin } from "@xweb/permissions";
+import { activationUrl } from "./adminModel";
 
 export const ROLE_LABELS: Record<string, string> = {
   WORKSPACE_ADMIN: "Quản trị không gian làm việc", EDITOR: "Biên tập viên", PUBLISHER: "Người xuất bản", VIEWER: "Người xem"
@@ -21,7 +23,7 @@ export function LinkBox({ link, onClose, copiedBefore = false, onCopied }: { lin
   const [copied, setCopied] = useState(copiedBefore); const [copyFailed, setCopyFailed] = useState(false); const [asking, setAsking] = useState(false);
   const copiedRef = useRef(copiedBefore); const askingRef = useRef(false); const closeRef = useRef(onClose); closeRef.current = onClose;
   const copyBtn = useRef<HTMLButtonElement>(null); const backBtn = useRef<HTMLButtonElement>(null); const field = useRef<HTMLInputElement>(null); const wasAsking = useRef(false);
-  const url = `${window.location.origin}/auth/activate#${link.token}`;
+  const url = activationUrl(link.token, portalOrigin("studio"), window.location.origin);
   const ask = (v: boolean) => { askingRef.current = v; setAsking(v); };
   const markCopied = () => { copiedRef.current = true; setCopied(true); setCopyFailed(false); onCopied?.(); };
   const tryClose = () => { if (copiedRef.current) closeRef.current(); else ask(true); };

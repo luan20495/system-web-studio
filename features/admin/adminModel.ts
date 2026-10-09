@@ -139,3 +139,13 @@ export function workspaceMemberBlock(m: Member, me: { id: string }, all: Member[
   if (isWorkspaceAdminRole(m.role) && !isWorkspaceAdminRole(next) && all.filter((x) => isWorkspaceAdminRole(x.role)).length <= 1) return "Workspace phải còn ít nhất một quản trị viên.";
   return null;
 }
+
+/**
+ * M-098: the one-time activation / reset link. The person who opens it is an employee, so it points at the Studio web app when its origin is configured
+ * (NEXT_PUBLIC_PORTAL_URL_STUDIO via `portalOrigin("studio")`), not at whatever host the admin happens to use (that may be an internal address the employee cannot reach).
+ * No origin configured (single-host development, the legacy root app) = the current origin. The token stays in the fragment (never sent to a server log).
+ */
+export function activationUrl(token: string, configuredOrigin: string, currentOrigin: string): string {
+  const origin = (configuredOrigin || currentOrigin).replace(/\/+$/, "");
+  return `${origin}/auth/activate#${token}`;
+}

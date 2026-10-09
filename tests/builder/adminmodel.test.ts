@@ -124,3 +124,8 @@ test("canActInWorkspace (M-009): a platform admin who is NOT in the workspace ha
   assert.equal(M.canActInWorkspace(me({ platformScope: true, systemAdmin: true }), "w9"), false, "an older /auth/me without the field is NOT read as business access");
   assert.equal(M.canActInWorkspace(null, "w1"), false); assert.equal(M.canActInWorkspace(undefined, "w1"), false);
 });
+
+test("M-098 the activation link uses the configured Studio origin, else the current one; the token stays in the fragment", () => {
+  assert.equal(M.activationUrl("TOK", "https://app.xweb.vn/", "http://10.0.0.5:3202"), "https://app.xweb.vn/auth/activate#TOK");
+  assert.equal(M.activationUrl("TOK", "", "http://localhost:3202"), "http://localhost:3202/auth/activate#TOK");
+});
