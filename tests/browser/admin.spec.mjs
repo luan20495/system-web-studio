@@ -634,6 +634,15 @@ await block("scenario 82", async () => { const p = await open({ portal: "platfor
   check("DLG03 the activation-link dialog uses the shared ModalHeader", (await p.locator("[role=dialog] .xp-modalHead h2").count()) === 1 && (await p.locator("[role=dialog] .modalBody > h2").count()) === 0);
   await p.__ctx.close(); });
 
+// ===================================================================================================================== M-128 (REAL-STACK finding, HARNESS repro): the sticky dialog footer must never hide a focused control (WCAG 2.4.11)
+await block("scenario 85", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/ai/providers" });
+  await p.setViewportSize({ width: 360, height: 640 });
+  await p.getByRole("button", { name: /Thêm nhà cung/ }).first().click(); await p.locator("[role=dialog]").waitFor(); await p.waitForTimeout(300);
+  let hit = false; for (let i = 0; i < 30 && !hit; i++) { await p.keyboard.press("Tab"); hit = await p.evaluate(() => document.activeElement?.classList.contains("xp-advBtn")); } await p.waitForTimeout(250);
+  const g = await p.evaluate(() => { const a = document.querySelector(".xp-advBtn").getBoundingClientRect(), f = document.querySelector(".xp-footer").getBoundingClientRect(); return { advBottom: Math.round(a.bottom), advTop: Math.round(a.top), footerTop: Math.round(f.top) }; });
+  check("DLG04 at 360x640 the provider dialog's 'Nâng cao' reached by Tab is fully above the sticky footer (focus not obscured; the footer only hides it at the resting scroll position)", hit && g.advBottom <= g.footerTop && g.advTop >= 0, JSON.stringify(g));
+  await p.__ctx.close(); });
+
 // ===================================================================================================================== M-095 / M-096 placeholders in the nav are marked; the AI page says it is platform-wide
 await block("scenario 83", async () => { const p = await open({ portal: "admin", me: "tadmin", start: "/admin" });
   const nav = (await p.locator("aside nav").innerText()).replace(/\s+/g, " ");

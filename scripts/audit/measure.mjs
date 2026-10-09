@@ -49,12 +49,20 @@ export const MEASURE = () => {
     return state;
   };
   const clippedCtl = ctl.filter((e) => ["clipped", "offscreen"].includes(clipState(e))).slice(0, 6).map((e) => `${desc(e)} ${clipState(e)}`);
-  const covered = ctl.filter((e) => {
+  const coveredNow = (e) => {
     if (clipState(e) !== "ok") return false; const r = e.getBoundingClientRect(); const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
     if (cx < 0 || cx >= vw || cy < 0 || cy >= innerHeight) return false;
     const t = document.elementFromPoint(cx, cy); if (!t || e.contains(t) || t.contains(e)) return false;
     if (e.labels && [...e.labels].some((l) => l.contains(t))) return false; if (e.closest("label")?.contains(t)) return false; return true;
-  }).slice(0, 6).map((e) => { const r = e.getBoundingClientRect(); const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return `${desc(e)} covered by ${t ? desc(t) : "?"}`; });
+  };
+  // A control that sits under a sticky footer / bar at the RESTING scroll position is not "covered" if scrolling it into view (what keyboard focus does, honouring scroll-padding) clears it: re-test after scrollIntoView, then restore every scroll position (WCAG 2.4.11 Focus Not Obscured).
+  const stillCoveredAfterScroll = (e) => {
+    const saved = []; for (let q = e.parentElement; q; q = q.parentElement) if (q.scrollHeight > q.clientHeight || q.scrollWidth > q.clientWidth) saved.push([q, q.scrollTop, q.scrollLeft]);
+    const wx = scrollX, wy = scrollY; e.scrollIntoView({ block: "nearest", inline: "nearest" }); const still = coveredNow(e);
+    for (const [q, t, l] of saved) { q.scrollTop = t; q.scrollLeft = l; } scrollTo(wx, wy); return still;
+  };
+  const covered = ctl.filter((e) => coveredNow(e) && stillCoveredAfterScroll(e)).slice(0, 6)
+  .map((e) => { const r = e.getBoundingClientRect(); const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return `${desc(e)} covered by ${t ? desc(t) : "?"}`; });
   const inline = (e) => getComputedStyle(e).display === "inline";
   const smallMore = [...document.querySelectorAll("input:not([type=hidden]):not([type=checkbox]):not([type=radio]),textarea,a[href]")].filter((e) => { if (!vis(e) || e.classList.contains("srOnly") || isSkip(e) || (e.tagName === "A" && inline(e))) return false; const r = e.getBoundingClientRect(); return r.width < 24 || r.height < 24; }).slice(0, 6).map((e) => `${desc(e)} ${Math.round(e.getBoundingClientRect().width)}x${Math.round(e.getBoundingClientRect().height)}`);
   const controls = ctl.length;
