@@ -10,8 +10,7 @@ import {
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import type { ApiProject, AppDefinitionV2, AssetDto, DefinitionOperation, RegistryComponent, SchemaOperation, Section } from "@xweb/types";
-import { useOverflow } from "../../../packages/ui/src/useOverflow";
-import { ErrorBoundary } from "../../../packages/ui/src/ErrorBoundary";
+import { ErrorBoundary, useOverflow } from "@xweb/ui";
 import { Canvas, DragChip } from "./Canvas";
 import { Inspector } from "./Inspector";
 import type { PropsDraft } from "./PropsForm";

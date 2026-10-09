@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { htmlAttrs } from "../packages/i18n/src/locale";
+import { htmlAttrs } from "@xweb/i18n";
 import "../packages/ui/src/styles/globals.css";
 import "../packages/ui/src/styles/responsive.css";
 import "../packages/ui/src/styles/http.css";

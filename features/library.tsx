@@ -1,7 +1,7 @@
 "use client";
 // Shared pieces for templates and contributed blocks (Studio and Admin Console).
 import { useMemo, useState } from "react";
-import { CircleCheck, CircleX } from "../packages/ui/src/icons";
+import { CircleCheck, CircleX } from "@xweb/ui";
 import type { BlockDto, BlockReview, CheckResult, PageSchema, RegistryComponent } from "@/lib/http-types";
 import { renderSchemaDocument } from "@/lib/schema-preview";
 import { fmtDate, Pill } from "./ui";
