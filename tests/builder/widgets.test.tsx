@@ -9,6 +9,7 @@ import { DisclosureRow } from "../../packages/ui/src/DisclosureRow";
 import { ReasonButton } from "../../packages/ui/src/ReasonButton";
 import { Pill, PILL_TONE, pillTone } from "../../packages/ui/src/Pill";
 import { Button, buttonClass } from "../../packages/ui/src/Button";
+import { ModalHeader } from "../../packages/ui/src/ModalHeader";
 import { Picker } from "../../packages/ui/src/Picker";
 import { onSessionChange, sessionChanged, resetCsrf } from "../../packages/api-client/src/core";
 import { a11yProblems } from "./a11y";
@@ -98,3 +99,10 @@ test("Button renders exactly the documented class vocabulary, type=button by def
   { const h = renderToStaticMarkup(<Button icon aria-label="Đóng">x</Button>); assert.match(h, /class="btn icon"/); assert.match(h, /aria-label="Đóng"/); }
 });
 
+
+test("ModalHeader (M-105): the icon is optional, so a title-only dialog uses the same header", () => {
+  const plain = renderToStaticMarkup(<ModalHeader title="Tạo tài khoản"/>);
+  assert.equal(plain, '<div class="xp-modalHead"><div><h2>Tạo tài khoản</h2></div></div>');
+  const full = renderToStaticMarkup(<ModalHeader icon={<i/>} title="T" subtitle="S"/>);
+  assert.match(full, /<span class="xp-headIcon" aria-hidden="true"><i><\/i><\/span><div><h2>T<\/h2><p>S<\/p><\/div>/);
+});

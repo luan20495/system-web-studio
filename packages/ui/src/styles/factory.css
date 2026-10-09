@@ -228,7 +228,15 @@
 /* modal dialogs (admin) */
 .adminModal{position:fixed;inset:0;width:auto;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px;max-height:none;overflow:auto;color:var(--f-text)}
 .modalBody{background:var(--f-panel,var(--f-panel));color:var(--f-text,var(--f-text));border-radius:12px;width:min(520px,100%);overflow:auto;display:grid;gap:12px}
-.modalBody h2{margin:0}.modalBody .field small{color:var(--f-muted);font-weight:400}.modalBody .check{display:flex;align-items:center;gap:8px;font-size:14px}.modalBody .row{display:flex;gap:8px}
+.modalBody h2{margin:0}
+/* ---------- dialog form groups (M-105): the pattern for a titled dialog with grouped fields ----------
+   <Modal><form className="modalBody"><ModalHeader title subtitle? icon?/>  <fieldset className="stack"><legend>1 · Thông tin</legend> ...fields... </fieldset> ... <div className="xp-footer">...</div></form></Modal>
+   `.stack` = a vertical stack with one gap (it was used in 10 places and defined nowhere); a fieldset.stack has no UA groove border; its legend is a small caps label.
+   A title that is still a bare <h2> inside .modalBody gets the ModalHeader's size until the dialog adopts <ModalHeader>. */
+.stack{display:grid;gap:var(--sp-3)}
+fieldset.stack{border:0;margin:0;padding:0;min-width:0}
+fieldset.stack>legend{padding:0;margin:0 0 var(--sp-2);font-size:13px;font-weight:650;color:var(--f-muted);text-transform:uppercase;letter-spacing:.04em}
+.modalBody>h2{margin:0;font-size:18px;line-height:1.3}.modalBody .field small{color:var(--f-muted);font-weight:400}.modalBody .check{display:flex;align-items:center;gap:8px;font-size:14px}.modalBody .row{display:flex;gap:8px}
 
 .checklist{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 .checklist li{display:flex;align-items:center;gap:8px}

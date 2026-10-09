@@ -11,7 +11,7 @@ const BASE = harnessOrigin() + "/";
 const SHOTS = process.env.SHOT_DIR; if (SHOTS) mkdirSync(SHOTS, { recursive: true });
 const PAGES = [
   ["admin-tenants", "admin.html?portal=platform&me=sys&start=/platform/tenants"], ["admin-users", "admin.html?portal=platform&me=sys&start=/platform/users"], ["admin-user", "admin.html?portal=platform&me=sys&start=/platform/users/u2"],
-  ["admin-people", "admin.html?portal=admin&me=tadmin&start=/admin/people"], ["ai-providers", "ai.html?s=ok"], ["org", "org.html?v=org&s=ok"], ["employees", "org.html?v=emp&s=ok"],
+  ["admin-people", "admin.html?portal=admin&me=tadmin&start=/admin/people"], ["prov-create-dialog", "prov.html?s=platform"], ["ai-providers", "ai.html?s=ok"], ["org", "org.html?v=org&s=ok"], ["employees", "org.html?v=emp&s=ok"],
   ["release-dialog", "release.html?s=ok"], ["datasources", "ds.html?s=ok"], ["builder", "index.html?v2=1"], ["studio-home", "studio.html"], ["widgets", "ui-widgets.html"], ["widgets-dark", "ui-widgets.html?dark"],
   ["nav", "ui-nav.html"], ["route-shell", "ui-route.html"], ["toast", "ui-toast.html"], ["admin-ds", "admin-ds.html"]
 ];

@@ -137,3 +137,11 @@ test("ratchet: the legacy button classes (.button / .smallButton / .sendButton /
     if (uses[k].length < max) console.log(`note: .${k} is ${uses[k].length}, baseline ${max}: lower it`);
   }
 });
+
+test("M-105: `.stack` is defined (it was used in 10 places and defined nowhere); a fieldset.stack has no UA border; its legend is styled", () => {
+  const f = css["factory.css"];
+  assert.match(f, /\.stack\{display:grid;gap:var\(--sp-3\)\}/);
+  assert.match(f, /fieldset\.stack\{border:0;margin:0;padding:0;min-width:0\}/);
+  assert.match(f, /fieldset\.stack>legend\{[^}]*font-size:13px[^}]*text-transform:uppercase/);
+  assert.match(f, /\.modalBody>h2\{margin:0;font-size:18px/);
+});
