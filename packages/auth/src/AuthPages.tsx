@@ -7,7 +7,7 @@ import { api, ApiError } from "@xweb/api-client";
 import type { AuthConfig } from "@xweb/types";
 import { useSession } from "./session";
 import { accessiblePortals, canAccessPortal, portalHref, portalOfPath, PORTAL_LABEL, PORTAL_PREFIX, rememberPortal, rememberedPortal, resolvePortalPostLogin, resolvePostLogin, safeNext, type Portal, type PortalId } from "@xweb/permissions";
-import { Ban, BRAND, Clock, Diamond, errText, Inbox } from "@xweb/ui";
+import { Ban, BRAND, Clock, Diamond, errText, Field, Inbox } from "@xweb/ui";
 
 const SSO_ERRORS: Record<string, string> = {
   not_provisioned: "Tài khoản SSO của bạn chưa được cấp quyền. Liên hệ quản trị viên.", disabled: "Tài khoản đã bị vô hiệu hóa.",
@@ -49,8 +49,8 @@ export function ActivatePage() {
       <h1>{info.purpose === "RESET" ? "Đặt lại mật khẩu" : `Chào ${info.displayName}`}</h1>
       <p className="authLead">{info.purpose === "RESET" ? "Chọn mật khẩu mới cho" : "Chọn mật khẩu để kích hoạt tài khoản"} <b>{info.username}</b>.</p>
       <form className="authForm" onSubmit={(e) => void submit(e)}>
-        <label className="field"><span>Mật khẩu</span><input type="password" autoComplete="new-password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} required/></label>
-        <label className="field"><span>Nhập lại mật khẩu</span><input type="password" autoComplete="new-password" value={again} onChange={(e) => setAgain(e.target.value)} required/></label>
+        <Field label="Mật khẩu"><input type="password" autoComplete="new-password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} required/></Field>
+        <Field label="Nhập lại mật khẩu"><input type="password" autoComplete="new-password" value={again} onChange={(e) => setAgain(e.target.value)} required/></Field>
         <p className="hint">Tối thiểu 8 ký tự, gồm cả chữ và số.</p>
         {error ? <p className="formError" role="alert">{error}</p> : null}
         <button className="btn primary block" disabled={busy || !password}>{busy ? "Đang xử lý…" : "Lưu mật khẩu"}</button>
@@ -110,11 +110,11 @@ export function LoginPage({ fixedPortal }: { fixedPortal?: PortalId } = {}) {
       {config?.oidc && config.localLogin ? <div className="divider"><span>hoặc</span></div> : null}
       {config?.localLogin !== false ? (
         <form className="authForm" onSubmit={(e) => void submit(e)}>
-          <label className="field"><span>Tên đăng nhập</span><input autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required/></label>
-          {mode === "signup" ? <label className="field"><span>Tên hiển thị</span><input autoComplete="name" maxLength={80} value={displayName} onChange={(e) => setDisplayName(e.target.value)}/></label> : null}
-          <label className="field"><span>Mật khẩu</span><input type="password" autoComplete={mode === "signup" ? "new-password" : "current-password"} minLength={mode === "signup" ? 6 : undefined} value={password} onChange={(e) => setPassword(e.target.value)} required/></label>
+          <Field label="Tên đăng nhập"><input autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required/></Field>
+          {mode === "signup" ? <Field label="Tên hiển thị"><input autoComplete="name" maxLength={80} value={displayName} onChange={(e) => setDisplayName(e.target.value)}/></Field> : null}
+          <Field label="Mật khẩu"><input type="password" autoComplete={mode === "signup" ? "new-password" : "current-password"} minLength={mode === "signup" ? 6 : undefined} value={password} onChange={(e) => setPassword(e.target.value)} required/></Field>
           {mode === "signup" ? <p className="hint">Tên đăng nhập 3–40 ký tự (a–z, 0–9, . _ -). Mật khẩu tối thiểu 6 ký tự, gồm chữ và số.</p> : null}
-          {mode === "signup" && config?.signupInviteRequired ? <label className="field"><span>Mã mời</span><input value={invite} onChange={(e) => setInvite(e.target.value)} required/></label> : null}
+          {mode === "signup" && config?.signupInviteRequired ? <Field label="Mã mời"><input value={invite} onChange={(e) => setInvite(e.target.value)} required/></Field> : null}
           {error ? <p className="formError" role="alert">{error}</p> : null}
           <button className="btn primary block" disabled={busy || !username || !password}>{busy ? "Đang xử lý…" : mode === "signup" ? "Tạo tài khoản" : "Đăng nhập"}</button>
           {config?.signup ? <button type="button" className="btn ghost block" onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(null); }}>{mode === "login" ? "Chưa có tài khoản? Đăng ký" : "Đã có tài khoản? Đăng nhập"}</button> : null}
