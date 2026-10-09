@@ -428,13 +428,13 @@ await block("scenario 53", async () => { const p = await open({ portal: "admin",
   await p.locator("[data-testid^='emp:']").first().click(); await settle(p, 300);
   const btn = p.getByTestId("detail-toggle");
   check("EMP57a a SYSTEM_ADMIN who is also a company admin: the status button is UNAVAILABLE (aria-disabled), not an enabled control with no handler", (await btn.getAttribute("aria-disabled")) === "true");
-  check("EMP57b the reason is visible text next to it and says where the action is", /Platform/.test(await p.locator("[role=dialog] .xp-reason").innerText()), await p.locator("[role=dialog] .xp-reason").innerText().catch(() => "none"));
+  check("EMP57b the reason is visible text next to it and says why (the operation is not connected yet)", /Chưa sẵn sàng/.test(await p.locator("[role=dialog] .xp-reason").innerText()), await p.locator("[role=dialog] .xp-reason").innerText().catch(() => "none"));
   await p.evaluate(() => { window.__calls.length = 0; }); await btn.click({ force: true }); await settle(p, 300);
   check("EMP57c clicking it sends nothing", (await calls(p)).filter((c) => c.method !== "GET").length === 0);
   await p.__ctx.close(); });
 await block("scenario 54", async () => { const p = await open({ portal: "admin", me: "tadmin", start: "/admin/employees" }); await settle(p, 600);
   await p.locator("[data-testid^='emp:']").first().click(); await settle(p, 300);
-  check("EMP57d a company admin: unavailable too, with the existing explanation as visible text", (await p.getByTestId("detail-toggle").getAttribute("aria-disabled")) === "true" && /Chỉ quản trị hệ thống/.test(await p.locator("[role=dialog] .xp-reason").innerText()));
+  check("EMP57d a company admin: unavailable too, with the explanation as visible text (EMPLOYEE_MANAGE + TENANT_MEMBERS are held; the connection is not there yet)", (await p.getByTestId("detail-toggle").getAttribute("aria-disabled")) === "true" && /Chưa sẵn sàng/.test(await p.locator("[role=dialog] .xp-reason").innerText()));
   await p.__ctx.close(); });
 
 // ===================================================================================================================== M-058 the company list can be searched and paged (client-side, over what the API returns)

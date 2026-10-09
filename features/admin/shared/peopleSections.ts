@@ -8,8 +8,8 @@ export type PeopleKey = "company" | "organization" | "employees" | "people";
 const companyAdmin = (s: AdminScope) => !s.platform && s.tenants.length > 0;
 export const PEOPLE_SECTIONS: readonly { key: PeopleKey; label: string; job: string; when: (s: AdminScope) => boolean }[] = [
   { key: "company", label: "Công ty của tôi", job: "quản trị viên và thành viên của công ty", when: companyAdmin },
-  { key: "organization", label: "Cơ cấu tổ chức", job: "đơn vị và loại đơn vị", when: companyAdmin },
-  { key: "employees", label: "Nhân viên", job: "danh bạ nhân viên, thêm nhân viên vào đơn vị", when: companyAdmin },
+  { key: "organization", label: "Cơ cấu tổ chức", job: "đơn vị và loại đơn vị", when: (s) => s.org.structureView },          // the code ORG_STRUCTURE_VIEW (D-C0-51), not "administers a company"
+  { key: "employees", label: "Nhân viên", job: "danh bạ nhân viên, thêm nhân viên vào đơn vị", when: (s) => s.org.employeeView },     // the code EMPLOYEE_VIEW
   { key: "people", label: "Người dùng", job: "tạo tài khoản, thêm người vào workspace", when: (s) => !s.platform && (s.tenants.length > 0 || s.workspaces.length > 0) },
 ];
 export const peopleWhen = (key: PeopleKey) => PEOPLE_SECTIONS.find((p) => p.key === key)!.when;

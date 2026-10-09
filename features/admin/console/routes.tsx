@@ -18,7 +18,7 @@ export function route(portal: AdminPortal, seg: string[], scope: AdminScope): Re
   switch (r.kind) {
     case "coming": return <ComingSection section={r.section}/>;
     case "page": return <Suspense fallback={<PageLoading/>}>{r.section.render?.(seg) ?? <NotFound/>}</Suspense>;
-    case "needs-scope": return <NeedsScope what={r.what}/>;
+    case "needs-scope": return <NeedsScope what={r.what} title={r.title}/>;
     case "needs-platform": return <NeedsPlatform/>;
     case "scoped-home": return <ScopedHome/>;
     case "elsewhere": return <ElsewhereNote section={key}/>;
@@ -39,8 +39,8 @@ function NotFound() {
 function NeedsPlatform() {
   return <StateView level={1} kind="forbidden" title="Mục này chỉ dành cho quản trị hệ thống" detail={<p>Tài khoản của bạn quản trị công ty / workspace, không phải toàn hệ thống. Các mục bạn dùng được nằm ở thanh bên trái.</p>}/>;
 }
-function NeedsScope({ what }: { what: string }) {
-  return <StateView level={1} kind="forbidden" title={`Bạn chưa quản trị ${what} nào`} detail={<p>Máy chủ không liệt kê quyền tương ứng cho tài khoản này.</p>}/>;
+function NeedsScope({ what, title }: { what: string; title?: string }) {
+  return <StateView level={1} kind="forbidden" title={title ?? `Bạn chưa quản trị ${what} nào`} detail={<p>Máy chủ không liệt kê quyền tương ứng cho tài khoản này.</p>}/>;
 }
 
 function ComingSection({ section }: { section: Section }) {

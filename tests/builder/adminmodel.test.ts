@@ -23,7 +23,8 @@ test("scope: SYSTEM_ADMIN = platform; TENANT_MEMBERS lists the primary tenant; M
   assert.deepEqual(tenantAdmin.workspaces.map((w) => w.id), ["w1"]); assert.deepEqual(tenantAdmin.dataWorkspaces.map((w) => w.id), ["w1", "w3"]);
   const plain = M.adminScope(me({ platformScope: false, permissions: [], tenants: [{ id: "t1", slug: "a", name: "A", status: "ACTIVE", role: "MEMBER" }], tenantId: "t1", workspaces: [ws("w", ["APP_VIEW"])] }));
   assert.deepEqual([plain.platform, plain.tenants.length, plain.workspaces.length, plain.dataWorkspaces.length], [false, 0, 0, 0]);
-  assert.deepEqual(M.adminScope(null), { platform: false, tenants: [], workspaces: [], dataWorkspaces: [] });
+  assert.deepEqual(M.adminScope(null), { org: M.NO_ORG, platform: false, tenants: [], workspaces: [], dataWorkspaces: [] });
+  assert.deepEqual(tenantAdmin.org, M.NO_ORG, "TENANT_MANAGE + TENANT_MEMBERS are not organization codes");
 });
 test("tenant form mirrors TenantService: slug 2–120 of a-z 0-9 -, name required ≤160", () => {
   assert.deepEqual(M.checkTenantForm({ slug: "acme-vn", name: "Acme" }), {});
@@ -132,8 +133,11 @@ test("M-098 the activation link uses the configured Studio origin, else the curr
 });
 
 test("M-065 the people screens stay separate; the cross-links list only the sibling screens the person can open", () => {
-  const tadmin = M.adminScope(me({ platformScope: false, tenantRole: "TENANT_ADMIN", permissions: ["TENANT_MEMBERS"], tenantId: "t1", tenants: [{ id: "t1", slug: "a", name: "A", status: "ACTIVE", role: "TENANT_ADMIN" }] } as Partial<Me>));
+  const tadmin = M.adminScope(me({ platformScope: false, tenantRole: "TENANT_ADMIN", permissions: ["TENANT_MEMBERS", "ORG_STRUCTURE_VIEW", "EMPLOYEE_VIEW"], tenantId: "t1", tenants: [{ id: "t1", slug: "a", name: "A", status: "ACTIVE", role: "TENANT_ADMIN" }] } as Partial<Me>));
   assert.deepEqual(relatedPeople("employees", tadmin).map((p) => p.key), ["company", "organization", "people"]);
+  // a company admin whose server list has NO organization code is offered neither organization screen (the codes decide, not the role label)
+  const noOrg = M.adminScope(me({ platformScope: false, tenantRole: "TENANT_ADMIN", permissions: ["TENANT_MEMBERS"], tenantId: "t1", tenants: [{ id: "t1", slug: "a", name: "A", status: "ACTIVE", role: "TENANT_ADMIN" }] } as Partial<Me>));
+  assert.deepEqual(relatedPeople("company", noOrg).map((p) => p.key), ["people"]);
   const wsadmin = M.adminScope(me({ workspaces: [ws("w1", ["MEMBER_MANAGE"])] }));
   assert.deepEqual(relatedPeople("people", wsadmin).map((p) => p.key), []);
   assert.equal(peopleWhen("people")(wsadmin), true);

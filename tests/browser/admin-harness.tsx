@@ -32,12 +32,14 @@ const emptify = (v: any, depth = 0): any => (Array.isArray(v) ? [] : v && typeof
 const iso = (d = 0) => new Date(Date.now() - d * 86400000).toISOString();
 
 const WS = (id: string, name: string, permissions: string[]) => ({ id, name, role: "x", tenantId: "t1", permissions });
+/** the six organization codes a TENANT_ADMIN of the primary tenant lists in `/auth/me.permissions` (C1 PERMISSION_MATRIX); a SYSTEM_ADMIN alone lists none */
+const ORG_CODES = ["ORG_STRUCTURE_VIEW", "ORG_STRUCTURE_MANAGE", "EMPLOYEE_VIEW", "EMPLOYEE_MANAGE", "POSITION_GRADE_VIEW", "POSITION_GRADE_MANAGE"];
 const ME: Record<string, any> = {
   sys: { id: "u-sys", username: "root", displayName: "Quản trị Hệ thống", roles: ["SYSTEM_ADMIN"], systemAdmin: true, platformScope: true, businessAccess: false, workspaces: [], tenants: [], permissions: ["TENANT_MANAGE", "TENANT_MEMBERS"] },
-  tadmin: { id: "u-ta", username: "ta", displayName: "Trần Quản Trị", roles: [], workspaces: [WS("w1", "Kinh doanh", ["MEMBER_MANAGE", "DATA_SOURCE_MANAGE", "APP_VIEW"])], tenantId: "t1", tenantRole: "TENANT_ADMIN", permissions: ["TENANT_MEMBERS", "TENANT_MANAGE"], tenants: [{ id: "t1", slug: "acme", name: "Acme", status: "ACTIVE", role: "TENANT_ADMIN" }] },
+  tadmin: { id: "u-ta", username: "ta", displayName: "Trần Quản Trị", roles: [], workspaces: [WS("w1", "Kinh doanh", ["MEMBER_MANAGE", "DATA_SOURCE_MANAGE", "APP_VIEW"])], tenantId: "t1", tenantRole: "TENANT_ADMIN", permissions: ["TENANT_MEMBERS", "TENANT_MANAGE", ...ORG_CODES], tenants: [{ id: "t1", slug: "acme", name: "Acme", status: "ACTIVE", role: "TENANT_ADMIN" }] },
   wsadmin: { id: "u-wa", username: "wa", displayName: "Lê Ws", roles: [], workspaces: [WS("w1", "Kinh doanh", ["MEMBER_MANAGE", "APP_VIEW"])], tenantId: "t1", permissions: [], tenants: [{ id: "t1", slug: "acme", name: "Acme", status: "ACTIVE", role: "MEMBER" }] },
   plain: { id: "u-p", username: "p", displayName: "Nhân viên", roles: [], workspaces: [WS("w1", "Kinh doanh", ["APP_VIEW"])], tenantId: "t1", permissions: [], tenants: [{ id: "t1", slug: "acme", name: "Acme", status: "ACTIVE", role: "MEMBER" }] },
-  sysatenant: { id: "u-ta", username: "ta", displayName: "Trần Hệ Thống", roles: ["SYSTEM_ADMIN"], systemAdmin: true, platformScope: true, businessAccess: true, workspaces: [WS("w1", "Kinh doanh", ["MEMBER_MANAGE", "DATA_SOURCE_MANAGE", "APP_VIEW"])], tenantId: "t1", tenantRole: "TENANT_ADMIN", permissions: ["TENANT_MEMBERS", "TENANT_MANAGE"], tenants: [{ id: "t1", slug: "acme", name: "Acme", status: "ACTIVE", role: "TENANT_ADMIN" }] },
+  sysatenant: { id: "u-ta", username: "ta", displayName: "Trần Hệ Thống", roles: ["SYSTEM_ADMIN"], systemAdmin: true, platformScope: true, businessAccess: true, workspaces: [WS("w1", "Kinh doanh", ["MEMBER_MANAGE", "DATA_SOURCE_MANAGE", "APP_VIEW"])], tenantId: "t1", tenantRole: "TENANT_ADMIN", permissions: ["TENANT_MEMBERS", "TENANT_MANAGE", ...ORG_CODES], tenants: [{ id: "t1", slug: "acme", name: "Acme", status: "ACTIVE", role: "TENANT_ADMIN" }] },
   sysmember: { id: "u-sys", username: "root", displayName: "Quản trị Hệ thống", roles: ["SYSTEM_ADMIN"], systemAdmin: true, platformScope: true, businessAccess: false, workspaces: [WS("w1", "Kinh doanh", ["APP_VIEW", "APP_EDIT"])], tenants: [], permissions: ["TENANT_MANAGE", "TENANT_MEMBERS"] },
   none: null as any,
 };

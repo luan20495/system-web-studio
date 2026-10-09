@@ -7,7 +7,7 @@
 import type { AdminScope } from "../adminModel";
 import type { AdminPortal } from "../base";
 
-export type SectionAccessKind = "open" | "system" | "company" | "tenant" | "workspace" | "data";
+export type SectionAccessKind = "open" | "system" | "company" | "tenant" | "workspace" | "data" | "orgStructure" | "employeeView";
 export type SectionAccess = "ok" | "needs-platform" | "needs-scope";
 /**
  * how the section is routed:
@@ -33,6 +33,8 @@ export type SectionMeta = {
   navWhen?: (scope: AdminScope) => boolean;
   /** NeedsScope wording ("Bạn chưa quản trị {denied} nào") when `access` fails */
   denied?: string;
+  /** a full title for the refusal when "Bạn chưa quản trị {denied} nào" does not read right (the organization screens: a missing code, not a missing company) */
+  deniedTitle?: string;
 };
 
 const find = <T extends SectionMeta>(table: readonly T[], key: string): T | undefined => table.find((s) => s.key === key);
@@ -49,6 +51,8 @@ export function sectionAccess(table: readonly SectionMeta[], key: string, scope:
     case "tenant": return scope.tenants.length ? "ok" : "needs-scope";
     case "workspace": return scope.workspaces.length ? "ok" : "needs-scope";
     case "data": return scope.dataWorkspaces.length ? "ok" : "needs-scope";
+    case "orgStructure": return scope.org.structureView ? "ok" : "needs-scope";      // the CODE ORG_STRUCTURE_VIEW, never TENANT_MEMBERS / platformScope / a role
+    case "employeeView": return scope.org.employeeView ? "ok" : "needs-scope";
     case "system": return scope.platform ? "ok" : "needs-platform";
   }
 }
@@ -63,11 +67,13 @@ export function navSections<T extends SectionMeta>(table: readonly T[], portal: 
   return [...base, ...table.filter((s) => s.listed === "scoped" && s.navWhen?.(scope)), ...table.filter((s) => s.listed === "coming" && owns(table, portal, s.key))];
 }
 
+const needsScope = (sec: SectionMeta): { kind: "needs-scope"; what: string; title?: string } => (sec.deniedTitle ? { kind: "needs-scope", what: sec.denied ?? "", title: sec.deniedTitle } : { kind: "needs-scope", what: sec.denied ?? "" });
+
 export type Resolution<T extends SectionMeta> =
   | { kind: "page"; section: T }
   | { kind: "coming"; section: T }
   | { kind: "needs-platform" }
-  | { kind: "needs-scope"; what: string }
+  | { kind: "needs-scope"; what: string; title?: string }
   | { kind: "scoped-home" }
   | { kind: "elsewhere" }
   | { kind: "notfound" };
@@ -84,8 +90,8 @@ export function resolveSection<T extends SectionMeta>(table: readonly T[], porta
   if (portal === "admin" && sec?.surface === "coming") return { kind: "coming", section: sec };
   if (portal === "platform" && sec?.surface === "platform-only") return { kind: "page", section: sec };
   if (portal === "admin") {
-    if (sec?.surface === "people" && !scope.platform) return scope.tenants.length || scope.workspaces.length ? { kind: "page", section: sec } : { kind: "needs-scope", what: sec.denied ?? "" };
-    if (sec?.surface === "scoped") return sectionAccess(table, key, scope) === "ok" ? { kind: "page", section: sec } : { kind: "needs-scope", what: sec.denied ?? "" };
+    if (sec?.surface === "people" && !scope.platform) return scope.tenants.length || scope.workspaces.length ? { kind: "page", section: sec } : needsScope(sec);
+    if (sec?.surface === "scoped") return sectionAccess(table, key, scope) === "ok" ? { kind: "page", section: sec } : needsScope(sec);
     if (!scope.platform && key === "") return { kind: "scoped-home" };
     if (!scope.platform && sectionAccess(table, key, scope) === "needs-platform") return { kind: "needs-platform" };
   }

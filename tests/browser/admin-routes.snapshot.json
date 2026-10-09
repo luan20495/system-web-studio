@@ -1411,7 +1411,7 @@
    "organization": {
     "url": "/admin/organization",
     "h1": [
-     "Bạn chưa quản trị công ty nào"
+     "Bạn chưa có quyền xem cơ cấu tổ chức"
     ],
     "h2": [],
     "states": [
@@ -1423,7 +1423,7 @@
    "employees": {
     "url": "/admin/employees",
     "h1": [
-     "Bạn chưa quản trị công ty nào"
+     "Bạn chưa có quyền xem danh bạ nhân viên"
     ],
     "h2": [],
     "states": [
@@ -1937,7 +1937,7 @@
    "organization": {
     "url": "/admin/organization",
     "h1": [
-     "Bạn chưa quản trị công ty nào"
+     "Bạn chưa có quyền xem cơ cấu tổ chức"
     ],
     "h2": [],
     "states": [
@@ -1949,7 +1949,7 @@
    "employees": {
     "url": "/admin/employees",
     "h1": [
-     "Bạn chưa quản trị công ty nào"
+     "Bạn chưa có quyền xem danh bạ nhân viên"
     ],
     "h2": [],
     "states": [
@@ -2929,7 +2929,7 @@
    "organization": {
     "url": "/admin/organization",
     "h1": [
-     "Bạn chưa quản trị công ty nào"
+     "Bạn chưa có quyền xem cơ cấu tổ chức"
     ],
     "h2": [],
     "states": [
@@ -2941,7 +2941,7 @@
    "employees": {
     "url": "/admin/employees",
     "h1": [
-     "Bạn chưa quản trị công ty nào"
+     "Bạn chưa có quyền xem danh bạ nhân viên"
     ],
     "h2": [],
     "states": [

@@ -1,47 +1,51 @@
 /**
- * Organization structure + employee directory — the frontend contract (2026-10-08).
+ * Organization structure + employee directory: the frontend port (`OrganizationApi`) and its capability table.
  *
- * C1 has NOT published a contract for this yet (no route, no table, no permission code in integration/v2 or fix/c1-*). So nothing here names a URL:
- * `CAPABILITIES` marks every operation `NOT_READY` with the owner, and the adapter throws `OrganizationNotReady` and sends NOTHING. When C1 publishes its contract the only edits are
- *   1. CAPABILITIES.<op>: `status: "READY"`, `route`, `needs` (the canonical capability the SERVER must list);
- *   2. the transport (a slice of `api`) and `api-client` call for that op;
- *   3. `organizationPlan` in organizationModel.ts: the capability that gates the screens (today: the same tenant capability that gates tenant provisioning, flagged `assumed`).
+ * The contract is FROZEN (C1 docs/parallel/c1/organization-employee-contract.md, final-iam-tenant-org-permission-contract.md §9; permissions D-C0-51) but this frontend does NOT call it yet:
+ * ORG_BACKEND_WIRING = WAITING_FOR_C1_C3 (the routes answer 501 ORG_PERSISTENCE_NOT_AVAILABLE until C3 registers its repositories). So every operation stays `NOT_READY`, the adapter throws
+ * `OrganizationNotReady` and sends NOTHING, and this file names no URL. `needs` is already the contract's code(s) per operation. When the backend is wired the edits are
+ *   1. CAPABILITIES.<op>: `status: "READY"`, `route`;
+ *   2. the transport (a slice of `api`) and the `api-client` call for that op, with the renamed DTO fields / error codes of contract §9 (see organizationModel.ts `BY_CODE`, the unit `enabled` -> `active` + `archivedAt`, etc.).
  *
- * One exception that is NOT invented: the employee directory falls back to the tenant member list (`GET /admin/tenants/{t}/members`, C1 2356d64, TENANT_MEMBERS) while `listEmployees` is NOT_READY.
+ * One exception that is NOT invented: the employee directory falls back to the tenant member list (`GET /admin/tenants/{t}/members`, TENANT_MEMBERS) while `listEmployees` is NOT_READY.
  * That list carries username / displayName / email / tenant role / active; it has no organization unit or position, and the UI says so.
  *
- * Organization metadata is NOT a permission: nothing in this file grants anything, and no role name is read.
+ * Organization metadata is NOT a permission: nothing in this file grants anything, and no role name is read. The screens are gated on ORG_STRUCTURE_* / EMPLOYEE_* / POSITION_GRADE_* ONLY.
  */
 import type { TenantMemberView } from "@xweb/types";
+import type { OrgPermissionCode } from "../../packages/types/src/contract/v2/permissions";
 
-export type Need = "TENANT_MEMBERS" | "TENANT_MANAGE" | "ORG_STRUCTURE_VIEW" | "ORG_STRUCTURE_MANAGE" | "EMPLOYEE_VIEW" | "EMPLOYEE_MANAGE" | "POSITION_GRADE_VIEW" | "POSITION_GRADE_MANAGE";
-export type Owner = "C1" | "C0";
+/** user-facing wording (the owner stays in `owner` and in the handoff docs; end users do not need team names) */
+const NO_CONTRACT = "Máy chủ chưa hỗ trợ cơ cấu tổ chức (đơn vị, loại đơn vị, vị trí/cấp bậc, nhân viên).";
+
+/** the canonical codes (C1 final contract §1 / §9, D-C0-51) the SERVER must list in `/auth/me.permissions` for the caller; the screens read these codes and nothing else (no TENANT_MEMBERS / platformScope / role as a stand-in) */
+export type Need = "TENANT_MEMBERS" | OrgPermissionCode;
+export type Owner = "C1" | "C3";
 
 export type OrgCapabilityId =
   | "listOrganizationUnits" | "createOrganizationUnit" | "updateOrganizationUnit" | "moveOrganizationUnit" | "deleteOrganizationUnit"
   | "listOrganizationUnitTypes" | "createOrganizationUnitType" | "listPositions"
   | "listEmployees" | "createEmployee" | "updateEmployeeOrganization" | "updateEmployeePosition";
 
-/** `needsAssumed`: the capability the SERVER will list is not decided by C1 yet; the screen gate uses the closest existing tenant capability until it is. */
-export type OrgCapabilityState = { status: "READY"; needs: Need[]; route: string } | { status: "NOT_READY"; needs: Need[]; needsAssumed: true; reason: string; owner: Owner };
+/** NOT_READY = the frontend adapter does not call the backend yet (WAITING_FOR_C1_C3: the routes are frozen but persistence answers 501 ORG_PERSISTENCE_NOT_AVAILABLE until C3 registers it). `needs` is the contract's code(s) for the operation. */
+export type OrgCapabilityState = { status: "READY"; needs: Need[]; route: string } | { status: "NOT_READY"; needs: Need[]; reason: string; owner: Owner };
 
-const NR = (reason: string, needs: Need[] = ["TENANT_MANAGE"]): OrgCapabilityState => ({ status: "NOT_READY", needs, needsAssumed: true, owner: "C1", reason });
-/** user-facing wording (the owner stays in `owner` and in the handoff docs; end users do not need team names) */
-const NO_CONTRACT = "Máy chủ chưa hỗ trợ cơ cấu tổ chức (đơn vị, loại đơn vị, vị trí/cấp bậc, nhân viên).";
+const NR = (needs: Need[], reason: string = NO_CONTRACT): OrgCapabilityState => ({ status: "NOT_READY", needs, owner: "C3", reason });
 
 export const CAPABILITIES: Readonly<Record<OrgCapabilityId, OrgCapabilityState>> = {
-  listOrganizationUnits: NR(NO_CONTRACT, ["TENANT_MEMBERS"]),
-  createOrganizationUnit: NR(NO_CONTRACT),
-  updateOrganizationUnit: NR(NO_CONTRACT),
-  moveOrganizationUnit: NR(NO_CONTRACT),
-  deleteOrganizationUnit: NR(NO_CONTRACT),
-  listOrganizationUnitTypes: NR(NO_CONTRACT, ["TENANT_MEMBERS"]),
-  createOrganizationUnitType: NR(NO_CONTRACT),
-  listPositions: NR(NO_CONTRACT, ["TENANT_MEMBERS"]),
-  listEmployees: NR(NO_CONTRACT, ["TENANT_MEMBERS"]),
-  createEmployee: NR(NO_CONTRACT, ["TENANT_MEMBERS"]),
-  updateEmployeeOrganization: NR(NO_CONTRACT),
-  updateEmployeePosition: NR(NO_CONTRACT),
+  // permission per operation = C1 docs/parallel/c1/organization-employee-contract.md §1 / §9 (route table); `*_MANAGE` does not imply `*_VIEW`
+  listOrganizationUnits: NR(["ORG_STRUCTURE_VIEW"]),
+  createOrganizationUnit: NR(["ORG_STRUCTURE_MANAGE"]),
+  updateOrganizationUnit: NR(["ORG_STRUCTURE_MANAGE"]),
+  moveOrganizationUnit: NR(["ORG_STRUCTURE_MANAGE"]),
+  deleteOrganizationUnit: NR(["ORG_STRUCTURE_MANAGE"]),                       // the contract has no delete: archive / restore (same code)
+  listOrganizationUnitTypes: NR(["ORG_STRUCTURE_VIEW"]),
+  createOrganizationUnitType: NR(["ORG_STRUCTURE_MANAGE"]),
+  listPositions: NR(["POSITION_GRADE_VIEW"]),
+  listEmployees: NR(["EMPLOYEE_VIEW"]),
+  createEmployee: NR(["EMPLOYEE_MANAGE", "TENANT_MEMBERS"]),                  // POST /employees also provisions the account
+  updateEmployeeOrganization: NR(["EMPLOYEE_MANAGE"]),                        // memberships sub-resource
+  updateEmployeePosition: NR(["EMPLOYEE_MANAGE"]),                            // held positions sub-resource
 };
 
 /** thrown by the adapter for an operation the backend does not have; the UI shows `reason` and disables the action — it never shows success */

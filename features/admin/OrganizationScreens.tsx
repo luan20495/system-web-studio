@@ -61,7 +61,7 @@ export function OrganizationView({ api, plan, tenant }: { api: OrganizationApi; 
     try { await api.updateOrganizationUnit(tenant.id, u.id, u.version, { enabled: !u.enabled }); setFlash(u.enabled ? "Đã tắt đơn vị." : "Đã bật đơn vị."); reload(); } catch (e) { setToggleProblem(orgProblem(e)); } finally { setBusyToggle(false); }
   }
 
-  if (!access) return <StateView kind="forbidden" title="Bạn chưa quản trị công ty nào" detail={<p data-testid="org-forbidden">{(plan.access as { reason: string }).reason}</p>}/>;
+  if (!access) return <StateView kind="forbidden" title="Bạn chưa có quyền xem cơ cấu tổ chức" detail={<p data-testid="org-forbidden">{(plan.access as { reason: string }).reason}</p>}/>;
   return (
     <div className="xp-org" data-testid="org">
       <div className="xp-orgBar">

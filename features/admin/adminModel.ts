@@ -5,8 +5,19 @@
  */
 import type { Me, TenantMemberView, TenantView, WorkspaceSummary, Member, AdminUser } from "@xweb/types";
 import { isTenantAdminRole, isWorkspaceAdminRole } from "../../packages/permissions/src/roles";
+import { canManageEmployees, canManageOrgStructure, canManagePositionsGrades, canProvisionEmployees, canViewEmployees, canViewOrgStructure, canViewPositionsGrades, resolveCanonicalPermissions } from "../../packages/permissions/src/canonical";
+
+/** The organization capabilities the server lists in `/auth/me.permissions` (PRIMARY tenant only, C1 final contract §2.4): ORG_STRUCTURE_*, EMPLOYEE_*, POSITION_GRADE_*. Nothing else grants them (not TENANT_MEMBERS, not platformScope, not a role). */
+export type OrgScope = { structureView: boolean; structureManage: boolean; employeeView: boolean; employeeManage: boolean; employeeProvision: boolean; positionGradeView: boolean; positionGradeManage: boolean };
+export const NO_ORG: OrgScope = { structureView: false, structureManage: false, employeeView: false, employeeManage: false, employeeProvision: false, positionGradeView: false, positionGradeManage: false };
+export function orgScopeOf(permissions: readonly string[] | undefined | null): OrgScope {
+  const p = resolveCanonicalPermissions(permissions);
+  return { structureView: canViewOrgStructure(p), structureManage: canManageOrgStructure(p), employeeView: canViewEmployees(p), employeeManage: canManageEmployees(p), employeeProvision: canProvisionEmployees(p), positionGradeView: canViewPositionsGrades(p), positionGradeManage: canManagePositionsGrades(p) };
+}
 
 export type AdminScope = {
+  /** organization capabilities (codes of the primary tenant); a SYSTEM_ADMIN has none of them */
+  org: OrgScope;
   /** SYSTEM_ADMIN: every `/api/v1/admin/**` screen (users, workspaces, audit…) */
   platform: boolean;
   /** tenants the person administers: the server lists TENANT_MEMBERS among their permissions */
@@ -18,14 +29,14 @@ export type AdminScope = {
 };
 
 export function adminScope(me: Me | null | undefined): AdminScope {
-  if (!me) return { platform: false, tenants: [], workspaces: [], dataWorkspaces: [] };
+  if (!me) return { org: NO_ORG, platform: false, tenants: [], workspaces: [], dataWorkspaces: [] };
   const platform = me.platformScope ?? me.systemAdmin === true;
   // `/auth/me` carries the permissions of the PRIMARY tenant only, but lists every membership with its role: a person is shown the tenants where the server says they are TENANT_ADMIN
   // (or the primary one when the server listed TENANT_MEMBERS). Display only: `/admin/tenants/{id}/**` authorises per tenant.
   const holdsTenant = (me.permissions ?? []).includes("TENANT_MEMBERS");
   const tenants = (me.tenants ?? []).filter((t) => isTenantAdminRole(t.role) || (holdsTenant && t.id === me.tenantId)).map((t) => ({ id: t.id, slug: t.slug, name: t.name, status: t.status }));
   return {
-    platform, tenants,
+    org: orgScopeOf(me.permissions), platform, tenants,
     workspaces: me.workspaces.filter((w) => w.permissions?.includes("MEMBER_MANAGE")),
     dataWorkspaces: me.workspaces.filter((w) => w.permissions?.some((c) => c === "DATA_SOURCE_MANAGE" || c === "DATA_SOURCE_VIEW")),
   };

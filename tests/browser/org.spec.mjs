@@ -123,6 +123,17 @@ const axe = async (p, ctx) => { await p.addScriptTag({ path: AXE }); const r = a
   check("ORG_UI09 permission denied: the server lists no tenant the caller administers → a forbidden state with the reason, NO call to the backend, no tree, no actions", (await T(p, "org-forbidden").count()) === 1 && (await calls(p)).length === 0 && (await T(p, "org-tree").count()) === 0 && (await T(p, "org-add-root").count()) === 0);
   check("ORG_UI09b no role name is shown or used as the reason", !/TENANT_ADMIN|SYSTEM_ADMIN|WORKSPACE_ADMIN/.test(await p.locator("body").innerText()));
   await p.close(); }
+// D-C0-51: the screens read the organization CODES only. A SYSTEM_ADMIN lists exactly TENANT_MANAGE + TENANT_MEMBERS (platform scope): TENANT_MEMBERS and platformScope are NOT stand-ins, so both screens are refused without any backend call
+for (const [v, tid] of [["org", "org-forbidden"], ["emp", "emp-forbidden"]]) { const p = await open(v, "sysadmin");
+  check(`ORG_CODE01 ${v}: a platform operator (TENANT_MANAGE + TENANT_MEMBERS + platformScope, no organization code) is refused: forbidden state, NO backend call`, (await T(p, tid).count()) === 1 && (await calls(p)).length === 0 && !/TENANT_MEMBERS|ORG_STRUCTURE|platform/i.test(await T(p, tid).innerText()));
+  await p.close(); }
+// a viewer holds ORG_STRUCTURE_VIEW / EMPLOYEE_VIEW / POSITION_GRADE_VIEW only: the screens open, every change is unavailable WITH the reason (the codes are not hierarchical: *_VIEW never implies *_MANAGE)
+{ const p = await open("org", "viewer");
+  check("ORG_CODE02 a viewer opens the tree, but cannot add a unit: the button is unavailable (aria-disabled) with the permission reason", (await T(p, "org-tree").count()) === 1 && (await T(p, "org-add-root").getAttribute("aria-disabled")) === "true" && /quyền thay đổi/.test(await p.locator("body").innerText()));
+  await p.close(); }
+{ const p = await open("emp", "viewer");
+  check("ORG_CODE03 a viewer opens the directory but cannot add an employee: unavailable with the reason (EMPLOYEE_MANAGE + TENANT_MEMBERS needed)", (await T(p, "emp-table").count()) === 1 && (await T(p, "emp-create").getAttribute("aria-disabled")) === "true");
+  await p.close(); }
 { const p = await open("org", "down");
   check("ORG_UI09c backend unavailable: an error state with a retry button, in words (not a blank page), the actions do nothing meanwhile", (await T(p, "org-error").getAttribute("data-kind")) === "unavailable" && (await T(p, "org-retry").count()) === 1 && (await T(p, "org-tree").count()) === 0);
   await p.close(); }
@@ -235,7 +246,7 @@ const axe = async (p, ctx) => { await p.addScriptTag({ path: AXE }); const r = a
   await T(p, "emp-status").selectOption("INACTIVE"); await settle(p, 500);
   check("EMP_UI07b status filter 'Đã tắt' → exactly those two", (await rows(p)) === 2 && /2 nhân viên/.test(await T(p, "emp-count").innerText()));
   await T(p, "emp:u07").click(); await T(p, "emp-detail").waitFor();
-  check("EMP_UI07c detail of a disabled account: the status says so; enabling is NOT offered to a company admin (the existing route is platform-only), and the reason is shown", /Đã tắt/.test(await T(p, "emp-detail").innerText()) && (await T(p, "detail-toggle").isDisabled()) && /Chỉ quản trị hệ thống/.test(await T(p, "emp-detail").locator(".xp-reason").innerText()));
+  check("EMP_UI07c detail of a disabled account: the status says so; enabling is NOT offered yet (the operation is not connected), and the reason is shown", /Đã tắt/.test(await T(p, "emp-detail").innerText()) && (await T(p, "detail-toggle").isDisabled()) && /Chưa sẵn sàng/.test(await T(p, "emp-detail").locator(".xp-reason").innerText()));
   await p.close(); }
 
 { const p = await open("emp");

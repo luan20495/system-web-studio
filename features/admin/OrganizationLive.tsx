@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useSession } from "../session";
 import { PageHead } from "./PageHead";
 import { adminScope } from "./adminModel";
-import { organizationPlan } from "./organizationModel";
+import { employeeProvisioningPlan, organizationPlan } from "./organizationModel";
 import { liveOrganization } from "./organizationAdapter";
 import { liveProvisioning } from "./provisioningAdapter";
 import { provisioningPlan } from "./provisioningModel";
@@ -36,12 +36,12 @@ export function OrganizationPage() {
 
 export function EmployeesPage() {
   const { scope, plan, tenant, setChosen } = useTenant();
-  const provPlan = useMemo(() => provisioningPlan(scope, "admin", liveProvisioning.state), [scope]);
+  const provPlan = useMemo(() => employeeProvisioningPlan(scope, provisioningPlan(scope, "admin", liveProvisioning.state)), [scope]);
   const ownOf = useOwnWorkspacesOf();
   return (<>
     <PageHead title="Nhân viên" sub="Danh bạ nhân viên của công ty: tìm kiếm, lọc theo đơn vị, thêm nhân viên và xem chi tiết."/>
     <PeopleLinks current="employees"/>
-    <EmployeesView api={liveOrganization} plan={plan} tenant={tenant} onTenant={setChosen} canToggleStatus={scope.platform}
+    <EmployeesView api={liveOrganization} plan={plan} tenant={tenant} onTenant={setChosen} canToggleStatus={scope.org.employeeProvision}
       prov={{ api: liveProvisioning, plan: provPlan, workspacesOf: ownOf, tenants: plan.tenantChoice.length ? plan.tenantChoice : plan.fixedTenant ? [plan.fixedTenant] : [] }}/>
   </>);
 }

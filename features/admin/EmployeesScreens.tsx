@@ -30,7 +30,7 @@ function unitOptions(units: readonly OrgUnit[]): { id: string; label: string }[]
 }
 
 export function EmployeesView({ api, plan, tenant, onTenant, prov, canToggleStatus = false }: { api: OrganizationApi; plan: OrganizationPlan; tenant: Tenant; onTenant?: (id: string) => void; prov: EmployeeProvisioning; canToggleStatus?: boolean }) {
-  const access = plan.access.granted;
+  const access = plan.employeeAccess.granted;
   const [qText, setQText] = useState(""); const [q, setQ] = useState(""); const [unit, setUnit] = useState(""); const [status, setStatus] = useState<EmployeeStatus | "ALL">("ALL"); const [page, setPage] = useState(0);
   const [creating, setCreating] = useState(false); const [detail, setDetail] = useState<Employee | null>(null); const [rev, setRev] = useState(0);
   // debounce: apply the text 250 ms after the last keystroke, and only if it CHANGED (otherwise the first tick after mount would reset the page the person just chose)
@@ -47,7 +47,7 @@ export function EmployeesView({ api, plan, tenant, onTenant, prov, canToggleStat
   const problem = list.error ? orgProblem(list.error) : null;
   const options = useMemo(() => unitOptions(unitList), [unitList]);
   const pathOf = useMemo(() => pathResolver(unitList), [unitList]);
-  if (!access) return <StateView kind="forbidden" title="Bạn chưa quản trị công ty nào" detail={<p data-testid="emp-forbidden">{(plan.access as { reason: string }).reason}</p>}/>;
+  if (!access) return <StateView kind="forbidden" title="Bạn chưa có quyền xem danh bạ nhân viên" detail={<p data-testid="emp-forbidden">{(plan.employeeAccess as { reason: string }).reason}</p>}/>;
   const canCreate = prov.plan.create.state === "ready";
   return (
     <div className="xp-emp" data-testid="emp">
@@ -167,7 +167,7 @@ function EmployeeDetail({ org, plan, tenant, employee, units, positions, canTogg
         <section className="xp-section" aria-label="Trạng thái"><h3>Trạng thái</h3>
           <div className="row"><StatusPill active={employee.active}/>
             {/* the account switch is an account-level action (Platform → Người dùng); this list is the company's MEMBER list, so it is never offered here, and never as a dead button */}
-            <ReasonButton className="btn sm" data-testid="detail-toggle" unavailable reason={canToggleStatus ? "Bật hoặc tắt tài khoản ở Platform → Người dùng. Ở đây chỉ xem trạng thái thành viên công ty." : "Chỉ quản trị hệ thống bật hoặc tắt tài khoản. Quản trị công ty có thể gỡ khỏi công ty ở mục “Công ty của tôi”."}>{employee.active ? "Tắt tài khoản" : "Bật tài khoản"}</ReasonButton></div>
+            <ReasonButton className="btn sm" data-testid="detail-toggle" unavailable reason={canToggleStatus ? "Chưa sẵn sàng: bật hoặc tắt tài khoản nhân viên sẽ có khi danh bạ được kết nối với máy chủ." : "Bạn cần quyền quản lý nhân viên và quản lý thành viên công ty để bật hoặc tắt tài khoản nhân viên."}>{employee.active ? "Tắt tài khoản" : "Bật tài khoản"}</ReasonButton></div>
           </section>
         {ok ? <p className="notice" role="status" data-testid="detail-ok">{ok}</p> : null}
         {problem ? <Problem p={problem}/> : null}

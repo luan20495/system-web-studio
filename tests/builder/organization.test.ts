@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import type { TenantMemberView } from "@xweb/types";
 import { CAPABILITIES, OrganizationNotReady, createOrganizationApi, type OrgCapabilityId, type OrgCapabilityState, type OrgUnit, type OrgUnitType } from "../../features/admin/organization";
 import * as M from "../../features/admin/organizationModel";
+import { adminScope } from "../../features/admin/adminModel";
 
 const u = (id: string, parentId: string | null, name = id, o: Partial<OrgUnit> = {}): OrgUnit => ({ id, parentId, typeId: null, name, enabled: true, version: 1, ...o });
 const TYPES: OrgUnitType[] = [
@@ -12,11 +13,12 @@ const TYPES: OrgUnitType[] = [
   { id: "t-team", code: "TEAM", name: "Team", icon: "users", allowedParentTypeIds: ["t-dept", "t-team"] },
 ];
 const TREE = [u("tech", null, "Khối Công nghệ", { typeId: "t-div" }), u("mobile", "tech", "Mobile", { typeId: "t-dept" }), u("flutter", "mobile", "Flutter Team", { typeId: "t-team" }), u("web", "tech", "Web", { typeId: "t-dept" }), u("hr", null, "Nhân sự", { typeId: "t-div" })];
-const scope = (tenants: { id: string; name: string }[]) => ({ platform: false, tenants: tenants.map((t) => ({ ...t, slug: t.id, status: "ACTIVE" })), workspaces: [], dataWorkspaces: [] });
+const FULL_ORG = { structureView: true, structureManage: true, employeeView: true, employeeManage: true, employeeProvision: true, positionGradeView: true, positionGradeManage: true };
+const scope = (tenants: { id: string; name: string }[], org = FULL_ORG) => ({ org, platform: false, tenants: tenants.map((t) => ({ ...t, slug: t.id, status: "ACTIVE" })), workspaces: [], dataWorkspaces: [] });
 const ALL_IDS = Object.keys(CAPABILITIES) as OrgCapabilityId[];
 
-test("contract layer: every operation is NOT_READY (owner C1), names no URL, and the adapter sends NOTHING", async () => {
-  for (const id of ALL_IDS) { const c = CAPABILITIES[id]; assert.equal(c.status, "NOT_READY", id); assert.equal((c as { owner: string }).owner, "C1"); assert.ok(!("route" in c), `${id} must not name a route`); assert.ok(!JSON.stringify(c).includes("/api/"), id); }
+test("contract layer: every operation is NOT_READY (owner C3: WAITING_FOR_C1_C3), names no URL, and the adapter sends NOTHING", async () => {
+  for (const id of ALL_IDS) { const c = CAPABILITIES[id]; assert.equal(c.status, "NOT_READY", id); assert.equal((c as { owner: string }).owner, "C3"); assert.ok(!("route" in c), `${id} must not name a route`); assert.ok(!JSON.stringify(c).includes("/api/"), id); }
   const sent: string[] = []; const spy = new Proxy({}, { get: (_t, k) => (...a: unknown[]) => { sent.push(String(k)); return Promise.resolve(a); } }) as never;
   const api = createOrganizationApi(spy, M.employeesFromMembers);
   const calls: [string, () => Promise<unknown>][] = [
@@ -25,7 +27,7 @@ test("contract layer: every operation is NOT_READY (owner C1), names no URL, and
     ["listOrganizationUnitTypes", () => api.listOrganizationUnitTypes("t")], ["createOrganizationUnitType", () => api.createOrganizationUnitType("t", { code: "A1", name: "A", icon: "folder" })], ["listPositions", () => api.listPositions("t")],
     ["createEmployee", () => api.createEmployee("t", { userId: "u" })], ["updateEmployeeOrganization", () => api.updateEmployeeOrganization("t", "u", null)], ["updateEmployeePosition", () => api.updateEmployeePosition("t", "u", null)],
   ];
-  for (const [name, call] of calls) await assert.rejects(call, (e: unknown) => e instanceof OrganizationNotReady && e.capability === name && e.owner === "C1" && /chưa hỗ trợ/.test(e.reason), name);
+  for (const [name, call] of calls) await assert.rejects(call, (e: unknown) => e instanceof OrganizationNotReady && e.capability === name && e.owner === "C3" && /chưa hỗ trợ/.test(e.reason), name);
   assert.deepEqual(sent, [], "nothing reaches the transport while the capability is NOT_READY");
 });
 
@@ -39,7 +41,7 @@ test("employee directory falls back to the tenant member list (a real, existing 
 });
 
 test("a READY capability calls the transport (the wiring C1's contract will flip)", async () => {
-  const caps = { ...CAPABILITIES, moveOrganizationUnit: { status: "READY", needs: ["TENANT_MANAGE"], route: "PATCH /x/{tenantId}" } as OrgCapabilityState };
+  const caps = { ...CAPABILITIES, moveOrganizationUnit: { status: "READY", needs: ["ORG_STRUCTURE_MANAGE"], route: "PATCH /x/{tenantId}" } as OrgCapabilityState };
   const sent: unknown[][] = []; const api = createOrganizationApi({ moveOrganizationUnit: async (...a) => { sent.push(a); return u("a", null); } }, M.employeesFromMembers, caps);
   await api.moveOrganizationUnit("t1", "a", 7, "p"); assert.deepEqual(sent, [["t1", "a", 7, "p"]]);
   await assert.rejects(api.deleteOrganizationUnit("t1", "a", 1), OrganizationNotReady);
@@ -109,11 +111,12 @@ test("employees from the member list: accent-insensitive search, status, stable 
 
 test("gate: offered only when the server lists a tenant the caller administers; one tenant is fixed, several are the caller's own; no role name is read", () => {
   const st = (id: OrgCapabilityId) => CAPABILITIES[id];
-  const none = M.organizationPlan(scope([]), st); assert.equal(none.access.granted, false); assert.match((none.access as { reason: string }).reason, /không liệt kê công ty/);
+  const noOrg = { ...FULL_ORG, structureView: false, employeeView: false };
+  const none = M.organizationPlan(scope([{ id: "t1", name: "Acme" }], noOrg), st); assert.equal(none.access.granted, false); assert.match((none.access as { reason: string }).reason, /quyền xem cơ cấu tổ chức/); assert.equal(none.employeeAccess.granted, false);
   const one = M.organizationPlan(scope([{ id: "t1", name: "Acme" }]), st); assert.equal(one.access.granted, true); assert.deepEqual(one.fixedTenant, { id: "t1", name: "Acme" }); assert.deepEqual(one.tenantChoice, []);
   const two = M.organizationPlan(scope([{ id: "t1", name: "Acme" }, { id: "t3", name: "C" }]), st); assert.equal(two.fixedTenant, null); assert.deepEqual(two.tenantChoice.map((t) => t.id), ["t1", "t3"]);
   assert.equal(one.units.state, "not-ready"); assert.equal(one.edit.state, "not-ready"); assert.equal(one.directory, "members", "the member list backs the directory while listEmployees is NOT_READY");
-  const ready = Object.fromEntries(ALL_IDS.map((id) => [id, { status: "READY", needs: ["TENANT_MANAGE"], route: "x" }])) as Record<OrgCapabilityId, OrgCapabilityState>;
+  const ready = Object.fromEntries(ALL_IDS.map((id) => [id, { status: "READY", needs: CAPABILITIES[id].needs, route: "x" }])) as Record<OrgCapabilityId, OrgCapabilityState>;
   const r = M.organizationPlan(scope([{ id: "t1", name: "Acme" }]), (id) => ready[id]); assert.equal(r.units.state, "ready"); assert.equal(r.edit.state, "ready"); assert.equal(r.directory, "directory"); assert.equal(r.assignOrg.state, "ready");
   const partial = M.organizationPlan(scope([{ id: "t1", name: "Acme" }]), (id) => (id === "moveOrganizationUnit" ? CAPABILITIES[id] : ready[id])); assert.equal(partial.edit.state, "not-ready", "one missing edit operation disables editing as a whole, with its reason");
 });
@@ -151,4 +154,27 @@ test("directory fallback at scale: filtering / paging 10 000 members is a single
 test("compactPath keeps a short breadcrumb whole and shortens a long one to first 2 … last 3", () => {
   assert.equal(M.compactPath("A › B › C"), "A › B › C"); assert.equal(M.compactPath("A › B › C › D › E › F"), "A › B › C › D › E › F");
   assert.equal(M.compactPath(Array.from({ length: 60 }, (_, i) => `L${i + 1}`).join(" › ")), "L1 › L2 › … › L58 › L59 › L60"); assert.equal(M.compactPath(""), "");
+});
+
+test("gate (D-C0-51): the organization screens read ORG_STRUCTURE_* / EMPLOYEE_* / POSITION_GRADE_* and nothing else; TENANT_MEMBERS, platformScope and a role grant none of them", () => {
+  const A = adminScope as (me: unknown) => ReturnType<typeof adminScope>;
+  const base = { id: "u", username: "u", displayName: "U", roles: [], workspaces: [], tenantId: "t1", tenants: [{ id: "t1", slug: "a", name: "A", status: "ACTIVE", role: "TENANT_ADMIN" }] };
+  const st = (id: OrgCapabilityId) => ({ status: "READY", needs: CAPABILITIES[id].needs, route: "x" }) as OrgCapabilityState;
+  // a role label alone, TENANT_MEMBERS alone, platform scope with its two tenant codes: NO organization screen
+  for (const me of [{ ...base, permissions: [] }, { ...base, permissions: ["TENANT_MEMBERS", "TENANT_MANAGE"] }, { ...base, platformScope: true, systemAdmin: true, permissions: ["TENANT_MANAGE", "TENANT_MEMBERS"] }]) {
+    const pl = M.organizationPlan(A(me), st); assert.equal(pl.access.granted, false); assert.equal(pl.employeeAccess.granted, false); assert.equal(A(me).org.employeeProvision, false);
+  }
+  // a viewer: sees structure + employees + positions, may change none of it
+  const v = M.organizationPlan(A({ ...base, permissions: ["ORG_STRUCTURE_VIEW", "EMPLOYEE_VIEW", "POSITION_GRADE_VIEW", "TENANT_MEMBERS"] }), st);
+  assert.equal(v.access.granted, true); assert.equal(v.employeeAccess.granted, true); assert.equal(v.units.state, "ready"); assert.equal(v.positions.state, "ready");
+  assert.equal(v.edit.state, "no-permission"); assert.equal(v.assignOrg.state, "no-permission"); assert.equal(v.assignPosition.state, "no-permission");
+  // *_MANAGE does not imply *_VIEW: a manager without the view code is refused the screen
+  const m = M.organizationPlan(A({ ...base, permissions: ["ORG_STRUCTURE_MANAGE", "EMPLOYEE_MANAGE"] }), st); assert.equal(m.access.granted, false); assert.equal(m.employeeAccess.granted, false);
+  // the full TENANT_ADMIN set
+  const full = A({ ...base, permissions: ["TENANT_MEMBERS", "TENANT_MANAGE", "ORG_STRUCTURE_VIEW", "ORG_STRUCTURE_MANAGE", "EMPLOYEE_VIEW", "EMPLOYEE_MANAGE", "POSITION_GRADE_VIEW", "POSITION_GRADE_MANAGE"] });
+  assert.deepEqual(full.org, FULL_ORG); const f = M.organizationPlan(full, st); assert.equal(f.edit.state, "ready"); assert.equal(f.assignOrg.state, "ready");
+  // employee create / enable / disable also needs TENANT_MEMBERS (contract §9); the obsolete ORG_MANAGE and invented aliases are not codes
+  assert.equal(A({ ...base, permissions: ["EMPLOYEE_MANAGE"] }).org.employeeProvision, false); assert.equal(A({ ...base, permissions: ["EMPLOYEE_MANAGE", "TENANT_MEMBERS"] }).org.employeeProvision, true);
+  const bogus = A({ ...base, permissions: ["ORG_MANAGE", "ORG_ADMIN", "ORG_EDIT", "T-ORG-MANAGE", "ORG_VIEW"] }); assert.equal(bogus.org.structureView || bogus.org.structureManage || bogus.org.employeeView, false);
+  for (const id of ALL_IDS) for (const n of CAPABILITIES[id].needs) assert.ok(["TENANT_MEMBERS", "ORG_STRUCTURE_VIEW", "ORG_STRUCTURE_MANAGE", "EMPLOYEE_VIEW", "EMPLOYEE_MANAGE", "POSITION_GRADE_VIEW", "POSITION_GRADE_MANAGE"].includes(n), `${id}: ${n}`);
 });
