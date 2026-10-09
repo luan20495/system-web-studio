@@ -268,4 +268,25 @@ for (const w of [768, 1000]) {
   check("M-125: every left-rail control 'covered' at 1024 is only cut by its own scrolling panel and is reachable after scrolling (no other control sits on it)", info.every((x) => x.clippedByOwnPanel && x.reachableAfterScroll), JSON.stringify(info));
   await q.close();
 }
+// ---------- M-025 (Studio part): skip link, <main> wiring, focus on the heading after a route change, one h1 per page, focus rings from --ui-ring ----------
+{
+  const p = await open(b, "/studio/activity", { state: newState(), viewport: { width: 1440, height: 1500 } }); await p.waitForSelector("main h1"); await wait(900);
+  await p.keyboard.press("Tab");
+  const first = await p.evaluate(() => { const e = document.activeElement; const r = e?.getBoundingClientRect(); return { text: e?.textContent?.trim(), cls: e?.className, on: !!r && r.top >= -1 && r.left >= -1 && r.width > 0 }; });
+  check("M-025: the FIRST Tab stop is the skip link, visible while focused", /Bỏ qua điều hướng/.test(first.text ?? "") && first.on, JSON.stringify(first));
+  await p.keyboard.press("Enter"); await wait(200);
+  check("M-025: activating it moves focus to <main id=main>", await p.evaluate(() => document.activeElement?.id === "main"));
+  check("M-025: <main> is NOT a Tab stop while it does not scroll (it was tabindex=0 on every page)", await p.evaluate(() => { const m = document.getElementById("main"); return m.scrollHeight <= m.clientHeight + 1 && m.tabIndex === -1; }));
+  await p.getByRole("link", { name: "Templates" }).first().click(); await wait(900);
+  check("M-025: after following a link, focus moves to the new page's heading (not left on <body>)", await p.evaluate(() => document.activeElement?.tagName === "H1" && /Templates/.test(document.activeElement.textContent ?? "")), await p.evaluate(() => `${document.activeElement?.tagName} ${document.activeElement?.textContent?.slice(0, 30)}`));
+  await p.close();
+  for (const path of ["/studio", "/studio/projects", "/studio/new", "/studio/templates", "/studio/components", "/studio/activity", "/studio/site-access?site=x&path=/", "/studio/khong-co"]) {
+    const q = await open(b, path, { state: newState() }); await wait(1100);
+    const n = await q.locator("h1").count();
+    check(`M-025: ${path} has exactly one h1`, n === 1, `${n} h1`);
+    await q.close();
+  }
+  const css = readFileSync(new URL("../../packages/ui/src/styles/builder.css", import.meta.url), "utf8");
+  check("M-025: builder.css has no hard-coded focus outline colour (all use var(--ui-ring))", !/outline:\s*\d+px\s+solid\s+#/i.test(css), (css.match(/outline:\s*\d+px\s+solid\s+#[0-9a-f]+/gi) ?? []).join(" | "));
+}
 await b.close(); finish();

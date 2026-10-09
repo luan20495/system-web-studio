@@ -6,7 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useSession } from "../session";
 import { rememberPortal } from "../routing";
 import { canAccessPortal } from "@xweb/permissions";
-import { MenuButton, useNavDrawer, AppWindow, Boxes, Diamond, History, House, LayoutTemplate, Plus, PortalSwitcher } from "@xweb/ui";
+import { MenuButton, SkipLink, useMain, useNavDrawer, AppWindow, Boxes, Diamond, History, House, LayoutTemplate, Plus, PortalSwitcher } from "@xweb/ui";
 import { NavLink, StateView } from "../ui";
 import { ProjectWorkspace } from "./ProjectWorkspace";
 import { consoleHref, S } from "./base";
@@ -22,6 +22,7 @@ import { SiteAccess } from "./screens/SiteAccess";
 /** `dedicated` = rendered by the Studio web app (app.xweb.vn); links to the other consoles then go through the portal switcher. */
 export function StudioApp({ seg, dedicated = false }: { seg: string[]; dedicated?: boolean }) {
   const nav = useNavDrawer();
+  const main = useMain(seg.join("/"));      // M-025: id="main" for the skip link, a Tab stop only while the region scrolls, focus on the page heading after a route change
   const TITLES: Record<string, string> = { "": "Trang chủ", projects: "Ứng dụng", new: "Tạo ứng dụng", templates: "Templates", components: "Components", activity: "Hoạt động", "site-access": "Mở trang riêng tư" };
   const section = seg[0] ?? "";
   useEffect(() => { if (!(section === "projects" && seg[1])) document.title = `${TITLES[section] ?? "Không tìm thấy trang"} · Xweb Studio`; }, [section, seg[1]]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -36,9 +37,10 @@ export function StudioApp({ seg, dedicated = false }: { seg: string[]; dedicated
   return (
     <Ctx.Provider value={{ workspaceId, setWorkspaceId, dedicated }}>
       <div className="shell studio-shell" data-nav={nav.open ? "open" : "closed"}>
+        <SkipLink/>
         <StudioSidebar active={seg[0] ?? ""}/>
         <div className="sideBackdrop" onClick={nav.close} aria-hidden="true"/>
-        <div className="shellMain"><StudioHeader nav={nav}/><main className="page" id="main" tabIndex={0}>{route(seg)}</main></div>
+        <div className="shellMain"><StudioHeader nav={nav}/><main className="page" {...main}>{route(seg)}</main></div>
       </div>
     </Ctx.Provider>
   );
