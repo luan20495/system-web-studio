@@ -23,14 +23,23 @@ import java.util.UUID
  * Enable / disable IS the canonical tenant-membership lifecycle ([TenantService.removeMember] / [TenantService.setMember]): the last Tenant Admin is protected, nobody disables
  * themselves, enabling restores a plain MEMBER and is refused for an account disabled platform-wide. Memberships and positions are kept (history) while disabled.
  *
- * LOCKING: none of these operations takes the tenant structural lock (it exists for the subtree move only): ordinary transactions, FK / unique constraints and versions.
+ * LOCKING: none of these operations takes the tenant structural lock (it is taken only by the structural unit operations: create, move, restore, type-rule change): ordinary transactions, FK / unique constraints and versions.
  */
 @Service
 class EmployeeDirectoryService(
     private val repos: OrganizationRepositories, private val identities: TenantIdentityDirectory, private val audit: AuditService,
     private val accounts: AccountService, private val tenants: TenantService
 ) {
-    companion object { const val MAX_PAGE_SIZE = 100; const val MAX_OFFSET = 10_000; const val MAX_MEMBERSHIPS = 20; const val MAX_POSITIONS = 20; private val SORTS = setOf("name", "username") }
+    companion object {
+        const val MAX_PAGE_SIZE = 100
+        /** the deepest directory page offset (D-C0-52): beyond it the list answers 400 OFFSET_TOO_LARGE */
+        const val MAX_OFFSET = 10_000
+        /** active organization memberships PER EMPLOYEE */
+        const val MAX_MEMBERSHIPS = 20
+        /** active position assignments PER MEMBERSHIP (not per employee: each membership has its own limit); the 21st answers 400 VALIDATION_FAILED */
+        const val MAX_POSITIONS = 20
+        private val SORTS = setOf("name", "username")
+    }
 
     private fun noEmployee() = ApiException.notFound("EMPLOYEE_NOT_FOUND", "Employee not found")
     private fun noMembership() = ApiException.notFound("ORG_MEMBERSHIP_NOT_FOUND", "Organization membership not found")
@@ -80,7 +89,7 @@ class EmployeeDirectoryService(
 
     // ------------------------------------------------------------------------------------------------------------------------ create
     private fun relationOf(raw: String?): String {
-        val r = (raw?.trim()?.takeIf { it.isNotEmpty() } ?: "MEMBER").uppercase()
+        val r = (raw?.trim()?.takeIf { it.isNotEmpty() } ?: "MEMBER").uppercase(java.util.Locale.ROOT)
         if (!OrgRules.RELATION.matches(r)) throw OrgRules.bad("relationType must be 1-32 characters of A-Z 0-9 _ and start with a letter", "INVALID_CODE")
         return r
     }
@@ -104,7 +113,7 @@ class EmployeeDirectoryService(
         if (unitIds.size != unitIds.distinct().size) throw OrgRules.bad("a unit may appear once in organizationMemberships")
         if (memberships.count { it.primary == true } > 1) throw OrgRules.bad("at most one primary membership")
         val positions = memberships.map { it.positions.orEmpty() }          // positions are NESTED under the membership they are held within: there is no unit-as-scope input
-        if (positions.sumOf { it.size } > MAX_POSITIONS) throw OrgRules.bad("too many positions")
+        if (positions.any { it.size > MAX_POSITIONS }) throw OrgRules.bad("A membership can hold at most $MAX_POSITIONS active positions")    // the limit is PER MEMBERSHIP (C1 contract), not per employee
         if (positions.any { l -> l.count { it.primary == true } > 1 || l.mapNotNull { it.positionId }.let { ids -> ids.size != ids.distinct().size } }) throw OrgRules.bad("a position may appear once per membership, and at most one position may be primary")
         if (positions.sumOf { l -> l.count { it.primary == true } } > 1) throw OrgRules.bad("at most one primary position")
         // validate everything that does not need the account FIRST (cheap, and the order of the errors is the order of the contract)
@@ -243,7 +252,8 @@ class EmployeeDirectoryService(
         val pos = activePosition(tenantId, r.positionId ?: throw OrgRules.bad("positionId is required"))
         val grade = r.gradeId?.let { activeGrade(tenantId, it) }
         val existing = repos.employeePositions.list(tenantId, userId, false)
-        if (existing.size >= MAX_POSITIONS) throw OrgRules.bad("An employee can hold at most $MAX_POSITIONS positions")
+        // MAX_POSITIONS is PER MEMBERSHIP (C1 contract decision): only the ACTIVE assignments of THIS membership count; another membership of the same employee has its own limit
+        if (existing.count { it.membershipId == membership.id && it.active } >= MAX_POSITIONS) throw OrgRules.bad("A membership can hold at most $MAX_POSITIONS active positions")
         val created = insertAssignment(tenantId, userId, membership, pos.id, grade?.id, r.primary == true || existing.isEmpty())
         audit.record("EMPLOYEE_POSITION_ASSIGNED", "EMPLOYEE", userId, actorId = actorId, newValue = assignmentAudit(created))
         return created

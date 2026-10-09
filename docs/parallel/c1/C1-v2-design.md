@@ -53,7 +53,7 @@ Thêm (D-C1-02):
 - `WORKSPACE_ADMIN`, `EDITOR`, `PUBLISHER`, `VIEWER` giữ nguyên.
 - `AccessContext` thêm (đều có default, chữ ký/`copy` cũ chạy được): `tenantId: UUID? = null`, `roles: Set<String> = emptySet()`, `shareGrants: Set<…>` nội bộ. `userId`, `workspaceId`, `projectId`, `permissions` đã có (qua `user`, `workspaceId`, `project`).
 - `AccessService.forTenant(userId, tenantId)` mới (resolve từ resource, không từ client); `forWorkspace/forProject` bổ sung: resolve tenant từ workspace rồi tính quyền hiệu lực = quyền cũ ∪ quyền `TENANT_ADMIN` (nếu có) ∪ quyền từ share/group (§5/§6). Thứ tự ưu tiên ở §6.2.
-- Permission enum bổ sung (D-C1-03): `TENANT_MANAGE`, `TENANT_MEMBERS`, `DEPARTMENT_MANAGE`, `GROUP_MANAGE`, `SHARE_MANAGE`, `SHARE_CROSS_TENANT`, `DATASOURCE_READ`, `DATASOURCE_MANAGE`, `QUERY_EXECUTE`, `ACTION_EXECUTE`, `WORKFLOW_MANAGE` (hai nhóm sau chỉ khai báo cho C3/C4, chưa có hành vi). Không đổi nghĩa permission cũ.
+- Permission enum bổ sung (D-C1-03): `TENANT_MANAGE`, `TENANT_MEMBERS`, ~~`DEPARTMENT_MANAGE`~~ (never implemented; superseded by `ORG_STRUCTURE_VIEW/MANAGE`, `EMPLOYEE_VIEW/MANAGE`, `POSITION_GRADE_VIEW/MANAGE`, see final-iam-tenant-org-permission-contract.md), `GROUP_MANAGE`, `SHARE_MANAGE`, `SHARE_CROSS_TENANT`, `DATASOURCE_READ`, `DATASOURCE_MANAGE`, `QUERY_EXECUTE`, `ACTION_EXECUTE`, `WORKFLOW_MANAGE` (hai nhóm sau chỉ khai báo cho C3/C4, chưa có hành vi). Không đổi nghĩa permission cũ.
 
 ## 3. Department / Group (T4)
 - `departments` đã có (V20: cây `parent_id`, `kind DEPARTMENT|TEAM`, *không* cấp quyền). Thêm `tenant_id`; tên duy nhất theo `(tenant_id, parent_id, lower(name))`; chống vòng lặp parent bằng kiểm tra ở service + CHECK không tự tham chiếu (có sẵn) + test.

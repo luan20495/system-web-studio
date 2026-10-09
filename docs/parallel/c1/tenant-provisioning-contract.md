@@ -84,7 +84,7 @@ SCOPE RULE: never a global directory. A person appears only if the account is en
 | TENANT_ADMIN | `TENANT_MANAGE`, `TENANT_MEMBERS` of its tenant (and not `MEMBER_MANAGE`) | create accounts and workspaces in its tenant, assign tenant roles, list candidates | touch another tenant; grant SYSTEM_ADMIN; manage workspace members unless it is itself a WORKSPACE_ADMIN there |
 | WORKSPACE_ADMIN | `MEMBER_MANAGE` (+ the workspace permissions) | list / add (eligible person) / change role / remove members of its workspace | create accounts; call the tenant APIs; promote itself; touch another workspace or tenant |
 
-`/api/v1/auth/me`: `workspaces[].permissions` of a WORKSPACE_ADMIN contains `MEMBER_MANAGE`; `permissions` (tenant level) of a TENANT_ADMIN is exactly `TENANT_MANAGE` + `TENANT_MEMBERS`; a SYSTEM_ADMIN sees every workspace in the list but its permissions there are exactly `TENANT_MANAGE` + `TENANT_MEMBERS` (no business, no member, no `PROJECT_CREATE`). The legacy god mode exists only with `app.tenancy.system-admin-business-access=true`.
+`/api/v1/auth/me`: `workspaces[].permissions` of a WORKSPACE_ADMIN contains `MEMBER_MANAGE`; `permissions` (tenant level) of a TENANT_ADMIN is exactly the eight codes `TENANT_MANAGE`, `TENANT_MEMBERS`, `ORG_STRUCTURE_VIEW`, `ORG_STRUCTURE_MANAGE`, `EMPLOYEE_VIEW`, `EMPLOYEE_MANAGE`, `POSITION_GRADE_VIEW`, `POSITION_GRADE_MANAGE` (a tenant MEMBER: none); a SYSTEM_ADMIN sees every workspace in the list but its permissions there are exactly `TENANT_MANAGE` + `TENANT_MEMBERS` (no business, no member, no `PROJECT_CREATE`). The legacy god mode exists only with `app.tenancy.system-admin-business-access=true`.
 
 ## 4. Error contract (exact codes of the implementation)
 
