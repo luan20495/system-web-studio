@@ -20,6 +20,7 @@ import { BuildsPage, HealthPage, PackagesPage, SettingsPage } from "../pages/Sys
 import { BackupsPage, ConnectorsPage, DepartmentsPage, IdentityPage } from "../pages/IdentityPages";
 import { UserDetail, UsersPage, WorkspaceDetail } from "../pages/UsersPages";
 import type { SectionMeta } from "./sectionPolicy";
+import { peopleWhen } from "../shared/peopleSections";
 
 export type Section = SectionMeta & {
   icon: ReactNode;
@@ -56,10 +57,10 @@ export const SECTIONS: readonly Section[] = [
   { key: "system", label: "Sức khỏe hệ thống", icon: ic(HeartPulse), portals: platform, access: "system", surface: "standard", listed: "main", render: () => <HealthPage/> },
   { key: "settings", label: "Cài đặt", icon: ic(Settings), portals: platform, access: "system", surface: "standard", listed: "main", render: () => <SettingsPage/> },
   // screens that run on the tenant / workspace APIs (TenantScreens.tsx, OrganizationLive.tsx, ProvisioningLive.tsx): the Admin console only, for the people the server lists as tenant / workspace admins
-  { key: "company", label: "Công ty của tôi", icon: ic(Building2), portals: none, access: "company", surface: "scoped", listed: "scoped", navWhen: (s) => !s.platform && s.tenants.length > 0, denied: "công ty", render: () => <CompanyPage/> },
-  { key: "organization", label: "Cơ cấu tổ chức", icon: ic(FolderTree), portals: none, access: "tenant", surface: "scoped", listed: "scoped", navWhen: (s) => !s.platform && s.tenants.length > 0, denied: "công ty", render: () => <OrganizationPage/> },
-  { key: "employees", label: "Nhân viên", icon: ic(Users), portals: none, access: "tenant", surface: "scoped", listed: "scoped", navWhen: (s) => !s.platform && s.tenants.length > 0, denied: "công ty", render: () => <EmployeesPage/> },
-  { key: "people", label: "Người dùng", icon: ic(UserRound), portals: none, access: "open", surface: "people", listed: "scoped", navWhen: (s) => !s.platform && (s.tenants.length > 0 || s.workspaces.length > 0), denied: "công ty hay workspace", render: () => <PeoplePage/> },
+  { key: "company", label: "Công ty của tôi", icon: ic(Building2), portals: none, access: "company", surface: "scoped", listed: "scoped", navWhen: peopleWhen("company"), denied: "công ty", render: () => <CompanyPage/> },
+  { key: "organization", label: "Cơ cấu tổ chức", icon: ic(FolderTree), portals: none, access: "tenant", surface: "scoped", listed: "scoped", navWhen: peopleWhen("organization"), denied: "công ty", render: () => <OrganizationPage/> },
+  { key: "employees", label: "Nhân viên", icon: ic(Users), portals: none, access: "tenant", surface: "scoped", listed: "scoped", navWhen: peopleWhen("employees"), denied: "công ty", render: () => <EmployeesPage/> },
+  { key: "people", label: "Người dùng", icon: ic(UserRound), portals: none, access: "open", surface: "people", listed: "scoped", navWhen: peopleWhen("people"), denied: "công ty hay workspace", render: () => <PeoplePage/> },
   { key: "my-workspaces", label: "Workspace của tôi", icon: ic(Layers), portals: none, access: "workspace", surface: "scoped", listed: "scoped", navWhen: (s) => !s.platform && s.workspaces.length > 0, denied: "workspace", render: () => <MyWorkspacesPage/> },
   { key: "data-sources", label: "Nguồn dữ liệu", icon: ic(Database), portals: admin, access: "data", surface: "scoped", listed: "scoped", navWhen: (s) => s.dataWorkspaces.length > 0, denied: "nguồn dữ liệu", render: () => <DataSourcesAdminPage/> },
   // sections whose backend does not exist yet: the screen says so plainly instead of showing invented data

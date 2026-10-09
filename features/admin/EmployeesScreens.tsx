@@ -16,6 +16,7 @@ import type { ProvisioningPlan } from "./provisioningModel";
 import { tenantRoleLabel, initials } from "./adminModel";
 import type { Employee, EmployeePage, EmployeeQuery, EmployeeStatus, OrganizationApi, OrgUnit, Position } from "./organization";
 import { EMPLOYEE_PAGE_SIZE, buildTree, employeeName, flattenTree, orgProblem, pageCount, pathResolver, unitPath, type OrgProblem, type OrganizationPlan } from "./organizationModel";
+import { TenantSwitch } from "./shared/TenantSwitch";
 
 export type EmployeeProvisioning = { api: ProvisioningApi; plan: ProvisioningPlan; workspacesOf: (tenantId: string) => Option[]; tenants: Option[] };
 
@@ -52,7 +53,7 @@ export function EmployeesView({ api, plan, tenant, onTenant, prov, canToggleStat
     <div className="xp-emp" data-testid="emp">
       <div className="xp-orgBar">
         {plan.tenantChoice.length > 1 && onTenant
-          ? <label className="field xp-tenantSwitch"><span>Công ty</span><select data-testid="emp-tenant-switch" value={tenant.id} onChange={(e) => onTenant(e.target.value)}>{plan.tenantChoice.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
+          ? <TenantSwitch tenants={plan.tenantChoice} value={tenant.id} onChange={onTenant} testId="emp-tenant-switch"/>
           : <label className="field xp-tenantSwitch"><span>Công ty của bạn</span><input data-testid="emp-tenant" readOnly aria-readonly="true" value={tenant.name}/></label>}
         <div className="xp-orgBarActions">
           <ReasonButton className="btn primary xp-btnIcon" data-testid="emp-create" unavailable={!canCreate} reason={(prov.plan.create as { reason?: string }).reason} onClick={() => setCreating(true)}><UserRound size={16} aria-hidden="true"/> Thêm nhân viên</ReasonButton>

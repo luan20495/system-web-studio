@@ -688,6 +688,17 @@ await block("scenario 87", async () => { const p = await open({ portal: "platfor
   check("REQ04 create company: typing 4 characters in the first-admin search sends ONE search, not 4", (await gets(p, /^\/admin\/users\?/)) - u0 === 1, String((await gets(p, /^\/admin\/users\?/)) - u0));
   await p.__ctx.close(); });
 
+// ===================================================================================================================== M-065 the people screens stay separate routes, cross-linked
+await block("scenario 88", async () => { const p = await open({ portal: "admin", me: "tadmin", start: "/admin/employees" }); await settle(p, 600);
+  const hrefs = await p.locator("[data-testid=people-links] a").evaluateAll((as) => as.map((a) => a.getAttribute("href")));
+  check("PPL01 Nhân viên names its sibling people screens (company, organization, people), not itself", JSON.stringify(hrefs) === JSON.stringify(["/admin/company", "/admin/organization", "/admin/people"]), JSON.stringify(hrefs));
+  await p.locator("[data-testid=people-links]").getByRole("link", { name: "Người dùng" }).click(); await settle(p, 500);
+  check("PPL02 following a cross-link opens that screen (Người dùng) with its own links", /Người dùng/.test(await p.locator("h1").innerText()) && (await p.locator("[data-testid=people-links] a[href='/admin/employees']").count()) === 1);
+  await p.__ctx.close(); });
+await block("scenario 89", async () => { const p = await open({ portal: "admin", me: "wsadmin", start: "/admin/people" }); await settle(p, 600);
+  check("PPL03 a workspace admin (only Người dùng) gets no cross-link line", (await p.locator("[data-testid=people-links]").count()) === 0);
+  await p.__ctx.close(); });
+
 check("no console error / warning / uncaught exception in any page", errors.length === 0, errors.slice(0, 3).join(" | "));
 await browser.close();
 finish();

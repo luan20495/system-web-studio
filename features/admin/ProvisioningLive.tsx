@@ -11,6 +11,8 @@ import { liveProvisioning } from "./provisioningAdapter";
 import { adminScope } from "./adminModel";
 import { provisioningPlan } from "./provisioningModel";
 import { PageHead } from "./PageHead";
+import { useOwnWorkspacesOf } from "./shared/ownWorkspaces";
+import { PeopleLinks } from "./shared/PeopleLinks";
 
 /**
  * Platform / SYSTEM_ADMIN: the dialog with the real tenant and workspace lists.
@@ -35,11 +37,12 @@ export function PeoplePage() {
   const { me } = useSession();
   const scope = useMemo(() => adminScope(me), [me]);
   const plan = useMemo(() => provisioningPlan(scope, "admin", liveProvisioning.state), [scope]);
-  // the caller's own workspaces of that tenant (`/auth/me` rows carry the tenant); a tenant admin who belongs to none creates one in the dialog
-  const ownOf = useMemo(() => (tenantId: string): Option[] => (me?.workspaces ?? []).filter((w) => w.tenantId === tenantId).map((w) => ({ id: w.id, name: w.name })), [me]);
+  // the caller's own workspaces of that tenant; a tenant admin who belongs to none creates one in the dialog
+  const ownOf = useOwnWorkspacesOf();
   const admin = useMemo(() => scope.workspaces.map((w): Option => ({ id: w.id, name: w.name })), [scope]);
   return (<>
     <PageHead title="Người dùng" sub="Tạo tài khoản trong công ty của bạn và thêm người vào workspace."/>
+    <PeopleLinks current="people"/>
     <PeopleView api={liveProvisioning} plan={plan} tenants={scope.tenants.map((t): Option => ({ id: t.id, name: t.name }))} workspacesOf={ownOf} memberWorkspaces={admin}/>
   </>);
 }

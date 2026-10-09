@@ -3,6 +3,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import type { Me, TenantMemberView } from "@xweb/types";
 import * as M from "../../features/admin/adminModel";
+import { relatedPeople, peopleWhen } from "../../features/admin/shared/peopleSections";
 import { ApiError } from "../../packages/api-client/src/core";
 import { errorText } from "../../packages/api-client/src/errorText";
 
@@ -128,4 +129,14 @@ test("canActInWorkspace (M-009): a platform admin who is NOT in the workspace ha
 test("M-098 the activation link uses the configured Studio origin, else the current one; the token stays in the fragment", () => {
   assert.equal(M.activationUrl("TOK", "https://app.xweb.vn/", "http://10.0.0.5:3202"), "https://app.xweb.vn/auth/activate#TOK");
   assert.equal(M.activationUrl("TOK", "", "http://localhost:3202"), "http://localhost:3202/auth/activate#TOK");
+});
+
+test("M-065 the people screens stay separate; the cross-links list only the sibling screens the person can open", () => {
+  const tadmin = M.adminScope(me({ platformScope: false, tenantRole: "TENANT_ADMIN", permissions: ["TENANT_MEMBERS"], tenantId: "t1", tenants: [{ id: "t1", slug: "a", name: "A", status: "ACTIVE", role: "TENANT_ADMIN" }] } as Partial<Me>));
+  assert.deepEqual(relatedPeople("employees", tadmin).map((p) => p.key), ["company", "organization", "people"]);
+  const wsadmin = M.adminScope(me({ workspaces: [ws("w1", ["MEMBER_MANAGE"])] }));
+  assert.deepEqual(relatedPeople("people", wsadmin).map((p) => p.key), []);
+  assert.equal(peopleWhen("people")(wsadmin), true);
+  const sys = M.adminScope(me({ platformScope: true, tenantId: null, tenants: [], permissions: ["TENANT_MANAGE", "TENANT_MEMBERS"] } as Partial<Me>));
+  assert.deepEqual(relatedPeople("company", sys), []);
 });
