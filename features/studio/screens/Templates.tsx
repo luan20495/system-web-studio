@@ -1,9 +1,9 @@
 "use client";
 
-import { confirm, useAction } from "@xweb/ui";
+import { confirm, Tabs, useAction } from "@xweb/ui";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { api } from "@/lib/http-api";
 import type { TemplateDto } from "@/lib/http-types";
 import { useLoad } from "../../useLoad";
@@ -66,7 +66,7 @@ function TemplateCard({ t, onUse, onChanged, categories, mine }: { t: TemplateDt
 }
 
 export function Templates() {
-  const router = useRouter();
+  const router = useRouter(); const tabsId = useId();
   const [scope, setScope] = useState<"company" | "mine">("company");
   const [category, setCategory] = useState(""); const [sort, setSort] = useState<"recent" | "popular">("recent");
   const cats = useLoad(() => api.libraryCategories(), []);
@@ -74,8 +74,7 @@ export function Templates() {
   const use = (t: TemplateDto) => router.push(S(`/new?template=${t.id}`));
   return (<>
     <div className="pageHead"><div><h1>Templates</h1><p>Mẫu khởi đầu cho website. Một mẫu là cấu trúc trang (Page Schema) từ component đã duyệt, không phải mã nguồn; ảnh không đi kèm mẫu.</p></div></div>
-    <div className="tabs" role="tablist">{([["company", "Mẫu của công ty"], ["mine", "Mẫu của tôi"]] as const).map(([k, l]) =>
-      <button key={k} role="tab" aria-selected={scope === k} className={scope === k ? "active" : ""} onClick={() => setScope(k)}>{l}</button>)}</div>
+    <Tabs label="Nguồn mẫu" idBase={tabsId} value={scope} onChange={setScope} panels={false} tabs={[{ value: "company", label: "Mẫu của công ty" }, { value: "mine", label: "Mẫu của tôi" }]}/>
     <div className="filters">
       <select aria-label="Danh mục" value={category} onChange={(e) => setCategory(e.target.value)}><option value="">Mọi danh mục</option>
         {Object.entries(cats.data?.templates ?? {}).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>

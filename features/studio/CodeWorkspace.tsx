@@ -3,7 +3,7 @@
 // built in the sandbox, previewed from the sites origin (CSP sandbox) and merged only after a green build.
 import { canEditProject, canPublish, canShare, resolvePermissions } from "@xweb/permissions";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { ArrowLeft, confirm, Sparkles, Tabs, toast } from "@xweb/ui";
+import { ArrowLeft, confirm, ReasonButton, Sparkles, TabPanel, Tabs, toast } from "@xweb/ui";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/http-api";
 import { SERVER_KINDS, type AiStatus, type ApiProject, type AuthConfig, type CodeAiHistoryItem, type CodeChange, type CodeCommit, type DiffFile, type TreeFile } from "@/lib/http-types";
@@ -66,7 +66,7 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
   const [prompt, setPrompt] = useState(""); const [ai, setAi] = useState<AiStatus | null>(null);
   const [model, setModel] = useState<string>(() => { try { return localStorage.getItem("studio-ai-model") ?? ""; } catch { return ""; } });
   const [busy, setBusy] = useState<string | null>(null); const [error, setError] = useState<unknown>(null);
-  const [pane, setPane] = useState<"work" | "changes">("work"); const paneId = useId();
+  const [pane, setPane] = useState<"work" | "changes">("work"); const paneId = useId(); const detailTabs = useId();
   const [tabIndent, setTabIndent] = useState(false); const escapeTab = useRef(false);   // M-015: Tab indents only when this is switched on
   const [commits, setCommits] = useState<CodeCommit[] | null>(null);
   const [live, setLive] = useState<{ id: string | null; chars: number; status: string } | null>(null);
@@ -231,17 +231,17 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
           </div>
           {change ? <div className="changeDetail">
             <div className="row between">
-              <div className="tabs" role="tablist">{(["preview", "diff", "log"] as const).map((t) => <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? "active" : ""} onClick={() => setTab(t)}>
-                {t === "preview" ? "Xem trước" : t === "diff" ? "Mã thay đổi" : "Build & quét"}</button>)}</div>
+              <Tabs label="Chi tiết thay đổi" idBase={detailTabs} value={tab} onChange={setTab} tabs={[{ value: "preview", label: "Xem trước" }, { value: "diff", label: "Mã thay đổi" }, { value: "log", label: "Build & quét" }]}/>
               <div className="row">
                 {change.status === "READY" && change.reviewRequired && !change.approvedBy && me && change.createdBy !== me.displayName && canPublishApp
                   ? <button className="button ghost" disabled={busy !== null} onClick={() => setReviewing(change)}>Duyệt</button> : null}
-                {canEdit && change.status === "READY" ? <button className="button primary" disabled={busy !== null || (!!change.reviewRequired && !change.approvedBy)}
-                  title={change.reviewRequired && !change.approvedBy ? "Cần một thành viên khác duyệt trước" : undefined} onClick={() => void merge(change)}>{busy === "merge" ? "Đang hợp nhất…" : "Hợp nhất vào main"}</button> : null}
+                {canEdit && change.status === "READY" ? <ReasonButton className="button primary" busy={busy === "merge"} unavailable={busy !== null || (!!change.reviewRequired && !change.approvedBy)}
+                  reason={change.reviewRequired && !change.approvedBy ? "Cần một thành viên khác duyệt trước khi hợp nhất." : undefined} onClick={() => void merge(change)}>{busy === "merge" ? "Đang hợp nhất…" : "Hợp nhất vào main"}</ReasonButton> : null}
                 {canEdit && ["BUILDING", "READY", "FAILED"].includes(change.status) ? <button className="button ghost" disabled={busy !== null} onClick={() => void discard(change)}>Bỏ thay đổi</button> : null}
               </div>
             </div>
             {change.reviewRequired ? <p className="hint">{change.approvedBy ? `Đã duyệt bởi ${change.approvedBy}${change.reviewComment ? ` — “${change.reviewComment}”` : ""}` : "Dự án yêu cầu duyệt: một thành viên có quyền xuất bản (không phải người tạo) cần duyệt trước khi hợp nhất."}</p> : null}
+            <TabPanel idBase={detailTabs} value={tab}>
             {tab === "preview" ? (change.previewUrl
               ? <><iframe className="appPreview" title="Bản xem trước ứng dụng" sandbox="allow-scripts" src={change.previewUrl}/>
                 <p className="hint">Chạy cách ly (không cookie/lưu trữ), liên kết hết hạn {change.previewExpiresAt ? fmtDate(change.previewExpiresAt) : ""}. <a href={change.previewUrl} target="_blank" rel="noopener noreferrer">Mở trong tab mới</a></p></>
@@ -260,6 +260,7 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
                 {change.build.error ? <p className="formError">{change.build.error}</p> : null}
                 <pre className="buildLog">{change.build.log ?? "(chưa có log)"}</pre></> : <p className="hint">Chưa có thông tin build.</p>}
             </div> : null}
+            </TabPanel>
           </div> : null}
         </section>
       </main>

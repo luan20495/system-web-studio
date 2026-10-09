@@ -306,4 +306,26 @@ for (const w of [768, 1000]) {
   check("M-031: with permission Publish is a normal enabled button (no aria-disabled) that opens the dialog", (await ok.getByRole("button", { name: "Xuất bản", exact: true }).first().getAttribute("aria-disabled")) === null);
   await ok.close();
 }
+// ---------- M-028: tabs follow the WAI-ARIA pattern (one Tab stop, arrow keys, a tabpanel for a panel switch) ----------
+{
+  const stops = (p, name) => p.getByRole("tablist", { name }).getByRole("tab").evaluateAll((t) => t.map((e) => `${e.textContent.trim()}:${e.tabIndex}:${e.getAttribute("aria-selected")}`));
+  let p = await open(b, "/studio/projects", { state: newState() }); await p.waitForSelector(".projectCard"); await wait(700);
+  let st = await stops(p, "Lọc ứng dụng");
+  check("M-028: Projects filter - a named tablist with ONE tab stop (the selected tab), the others tabindex -1", st.length === 3 && st.filter((x) => x.split(":")[1] === "0").length === 1 && /^Tất cả:0:true/.test(st[0]), st.join(" | "));
+  await p.getByRole("tab", { name: "Tất cả" }).focus(); await p.keyboard.press("ArrowRight"); await wait(700);
+  check("M-028: Projects filter - ArrowRight moves to 'Của tôi', selects it and reloads the list with that scope", /Của tôi/.test(await p.evaluate(() => document.activeElement?.textContent ?? "")) && p.state.log.some((l) => /projects.*scope=owned|scope=owned/.test(l.path)), p.state.log.map((l) => l.path).filter((x) => /projects/.test(x)).join(" ; ").slice(0, 200));
+  await p.close();
+  p = await open(b, "/studio/templates", { state: newState() }); await wait(900);
+  st = await stops(p, "Nguồn mẫu");
+  check("M-028: Templates scope - a named tablist, one tab stop", st.length === 2 && st.filter((x) => x.split(":")[1] === "0").length === 1, st.join(" | "));
+  await p.getByRole("tab", { name: "Mẫu của công ty" }).focus(); await p.keyboard.press("End"); await wait(500);
+  check("M-028: Templates scope - End selects the last tab", (await stops(p, "Nguồn mẫu"))[1].endsWith(":0:true"));
+  await p.close();
+  const cs = newCodeState(); p = await open(b, "/studio/projects/p1/code", { state: cs }); await p.waitForSelector(".changeItem"); await wait(600);
+  await p.locator(".changeItem").first().click(); await wait(500);
+  const tl = p.getByRole("tablist", { name: "Chi tiết thay đổi" });
+  const sel = await tl.getByRole("tab", { selected: true }).evaluate((t) => ({ controls: t.getAttribute("aria-controls"), hasPanel: !!document.getElementById(t.getAttribute("aria-controls") ?? "x") }));
+  check("M-028: Code change detail - tabs point (aria-controls) at a real tabpanel", (await tl.count()) === 1 && sel.hasPanel, JSON.stringify(sel));
+  await p.close();
+}
 await b.close(); finish();
