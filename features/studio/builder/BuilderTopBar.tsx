@@ -1,5 +1,6 @@
 "use client";
 import type { ReactNode } from "react";
+import { GuardedButton } from "../GuardedButton";
 import { Monitor, Smartphone, Tablet } from "../../../packages/ui/src/icons";
 
 type Device = "desktop" | "tablet" | "mobile";
@@ -34,10 +35,10 @@ export function BuilderTopBar({ name, meta, save, appMode, onAppMode, device, on
       </div>
       <div className="topActions">
         {trailing}
-        <button type="button" className="button ghost" disabled={!canShare} title={canShare ? "Quản lý thành viên của ứng dụng" : shareReason} onClick={onShare}>Chia sẻ</button>
-        <button type="button" className="button primary" disabled={!canPublish || publishBusy} title={canPublish ? "Kiểm tra rồi xuất bản phiên bản hiện tại" : publishReason} onClick={onPublish}>
+        <GuardedButton className="button ghost" unavailable={!canShare} reason={shareReason} onClick={onShare}>Chia sẻ</GuardedButton>
+        <GuardedButton className="button primary" unavailable={!canPublish} reason={publishReason} disabled={publishBusy} onClick={onPublish}>
           Xuất bản{issues.block ? <span className="bx-badge bad" aria-label={`${issues.block} lỗi chặn xuất bản`}>{issues.block}</span> : issues.warn ? <span className="bx-badge warn" aria-label={`${issues.warn} cảnh báo`}>{issues.warn}</span> : null}
-        </button>
+        </GuardedButton>
       </div>
     </header>
   );

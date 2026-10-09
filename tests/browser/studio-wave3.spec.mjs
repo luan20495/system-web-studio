@@ -289,4 +289,21 @@ for (const w of [768, 1000]) {
   const css = readFileSync(new URL("../../packages/ui/src/styles/builder.css", import.meta.url), "utf8");
   check("M-025: builder.css has no hard-coded focus outline colour (all use var(--ui-ring))", !/outline:\s*\d+px\s+solid\s+#/i.test(css), (css.match(/outline:\s*\d+px\s+solid\s+#[0-9a-f]+/gi) ?? []).join(" | "));
 }
+// ---------- M-031 (top bars): an unavailable Publish / Share / Settings is focusable (aria-disabled) and says WHY when pressed, as a status toast (it was a disabled button with a title) ----------
+{
+  const ro = newState({ projectPerms: ["APP_VIEW", "APP_USE"] }); ro.project = { ...ro.project, permissions: ro.projectPerms }; ro.projects = [ro.project];
+  for (const path of ["/studio/projects/p1/ai", "/studio/projects/p1/design"]) {
+    const p = await open(b, path, { state: ro }); await p.waitForSelector(".topbar"); await wait(1100);
+    const pub = p.getByRole("button", { name: "Xuất bản", exact: true }).first();
+    const st = await pub.evaluate((e) => ({ aria: e.getAttribute("aria-disabled"), native: e.hasAttribute("disabled"), title: e.getAttribute("title") }));
+    check(`M-031 [${path.split("/").pop()}]: Publish for a viewer is aria-disabled (focusable), not natively disabled, and has no title-only reason`, st.aria === "true" && !st.native && !st.title, JSON.stringify(st));
+    await pub.focus(); await p.keyboard.press("Enter"); await wait(400);
+    const msg = await p.locator("[role=status] .xp-toast, .xp-toast-info").first().innerText().catch(() => "");
+    check(`M-031 [${path.split("/").pop()}]: pressing it says why in a status toast, and does not open the publish dialog`, /không có quyền xuất bản|quyền/.test(msg) && (await p.getByTestId("release-modal").count()) === 0, msg.replace(/\n/g, " "));
+    await p.close();
+  }
+  const ok = await open(b, "/studio/projects/p1/ai", { state: newState() }); await ok.waitForSelector(".topbar"); await wait(1000);
+  check("M-031: with permission Publish is a normal enabled button (no aria-disabled) that opens the dialog", (await ok.getByRole("button", { name: "Xuất bản", exact: true }).first().getAttribute("aria-disabled")) === null);
+  await ok.close();
+}
 await b.close(); finish();

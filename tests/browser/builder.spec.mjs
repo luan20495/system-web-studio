@@ -353,7 +353,9 @@ const rtCalls = (p) => p.evaluate(() => window.__rt);
   check("PERM viewer: every property input is disabled (no editing)", (await inputs.count()) > 0 && (await inputs.evaluateAll((els) => els.every((e) => e.disabled))));
   check("PERM viewer: Save/edit buttons are not offered or are disabled", (await p.getByRole("button", { name: /Lưu thay đổi|Lưu/ }).evaluateAll((els) => els.every((e) => e.disabled))));
   const pub = p.locator("header.bx-top").getByRole("button", { name: /^Xuất bản/ });
-  check("PERM viewer: Publish is disabled and says why (APP_PUBLISH)", (await pub.isDisabled()) && /xuất bản/i.test((await pub.getAttribute("title")) ?? ""), await pub.getAttribute("title"));
+  await pub.click({ force: true }); await p.waitForTimeout(300);   // M-031: aria-disabled (focusable); pressing it says why in a status toast
+  const why = await p.locator(".xp-toast").first().innerText().catch(() => "");
+  check("PERM viewer: Publish is unavailable (aria-disabled) and says why (APP_PUBLISH) when pressed", (await pub.isDisabled()) && /xuất bản/i.test(why) && (await p.locator('[data-testid="publish-check"], [role=dialog]').count()) === 0, why);
   await p.getByRole("button", { name: "Dùng thử" }).click(); await p.locator('[data-testid="test-panel"]').waitFor();
   const q = p.getByTestId("run-query:q-orders"), act = p.getByTestId("run-action:a-nav"), mut = p.getByTestId("run-action:a-create"), wf = p.getByTestId("run-workflow:wf1");
   const all = [q, act, mut, wf];
