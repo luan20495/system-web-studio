@@ -235,7 +235,7 @@
   "Move panel styles to a shared scoped stylesheet loaded by all portals (or restyle with factory classes); give the panel a real Admin variant instead of the fake doc",
   "harness render in Admin context; axe; screenshot",
   "O-01: panel markup is S1's file · S4-004: TenantScreens.tsx:20 pulls 24 KB of features/studio into Platform and Admin",
-  "PARTIAL: shared CSS merged (da6c70f, HARNESS); leftover for S1/S2: DataSourcesPanel delete confirm uses 'button primary' (should be danger)"
+  "FIXED (HARNESS): shared CSS (da6c70f) + delete confirm is btn danger (35e7520)"
  ],
  [
   "M-013",
@@ -314,7 +314,7 @@
   "Shared Toast: role=status/alert by kind, auto-dismiss (errors persist), dismiss button, above overlays",
   "unit + harness live-region test; axe",
   "S1 rated P2, S3 rated P1: WCAG 4.1.3 (AA) on the main feedback channel -> P1",
-  "FIXED for Studio (HARNESS, merged 35e7520): shared toast adopted; Admin banners not toast-migrated (not needed)"
+  "FIXED (HARNESS, merged da6c70f + 35e7520)"
  ],
  [
   "M-017",
@@ -337,7 +337,7 @@
   "Shared ConfirmDialog/PromptDialog (focus trap, destructive style, busy lock) and replace all call sites",
   "harness specs; grep guard: no window.confirm/prompt in portal code",
   "",
-  "STUDIO PART FIXED (HARNESS, merged 35e7520): 12 native confirm + 1 prompt -> 0; Admin part merged earlier"
+  "FIXED (HARNESS): Admin 21 + Studio 12/1 native dialogs replaced by confirm()/prompt(); guard tests"
  ],
  [
   "M-018",
@@ -401,7 +401,7 @@
   "useAction(busy,error,once) in packages/ui; migrate the listed call sites",
   "harness double-click tests",
   "",
-  "STUDIO CALL SITES FIXED (HARNESS, merged 35e7520); Admin part merged earlier"
+  "FIXED (HARNESS): Admin (eb38a2d) + Studio (35e7520) call sites"
  ],
  [
   "M-021",
@@ -561,7 +561,7 @@
   "Use the Tabs primitive (or plain nav links without role=tab)",
   "axe + keyboard harness",
   "D-02/D-03: radio cards also M-081; PersonPicker aria-expanded also M-085",
-  "STUDIO PART FIXED (HARNESS, merged 35e7520); Admin part pending (S2)"
+  "FIXED (HARNESS): Studio (35e7520) + Admin nav links with aria-current / Tabs (9273b93)"
  ],
  [
   "M-029",
@@ -581,7 +581,7 @@
   "Row button with aria-expanded",
   "harness keyboard",
   "",
-  "WIDGET MERGED (bb5f6e4): DisclosureRow; adoption pending"
+  "FIXED (HARNESS, merged 9273b93): DisclosureRow for audit rows"
  ],
  [
   "M-030",
@@ -622,7 +622,7 @@
   "aria-disabled + visible helper text instead of title-only",
   "harness",
   "",
-  "STUDIO PART FIXED (HARNESS, merged 35e7520): ReasonButton / GuardedButton; Admin part pending (S2)"
+  "FIXED (HARNESS): ReasonButton in Studio (35e7520) and Admin (9273b93)"
  ],
  [
   "M-032",
@@ -641,7 +641,7 @@
   "Pill tone per semantic status map",
   "screenshots",
   "",
-  "WIDGET MERGED (bb5f6e4): Pill tones; adoption pending"
+  "FIXED (HARNESS, merged 9273b93): Pill semantic keys"
  ],
  [
   "M-033",
@@ -678,7 +678,8 @@
   "N",
   "error near the submit + scroll into view + role=alert",
   "harness",
-  ""
+  "",
+  "FIXED (HARNESS, merged 9273b93): FormError scrolls the server error into view above the sticky footer"
  ],
  [
   "M-035",
@@ -1231,7 +1232,7 @@
   "canonical glossary (docs) + apply; single role-label source",
   "text guard + review",
   "O-03: S3 supplies the label library + guard; S1/S2 apply it in their own files",
-  "GLOSSARY + SINGLE ROLE TABLE MERGED (9ea2e39); 11 product-owner decisions D-1..D-11 listed in S3-glossary.md; adoption pending"
+  "PARTIAL (merged 9273b93): glossary wording in the wave-2 Admin strings, ratchet ceilings lowered; remaining offenders tracked by the ratchets"
  ],
  [
   "M-063",
@@ -1505,7 +1506,7 @@
   "single errorText(); never show Error.message of non-ApiError; Vietnamese mapping per code",
   "unit: mapper table",
   "O-04: packages/api-client/core.ts is touched by M-074/M-075/M-092/M-097: single editor S3 · S4 state matrix (HARNESS, pre-adoption): 52 screens show raw 'java.lang.NullPointerException …' text on an injected 500 and 19 show raw 'Access Denied' on a 403; closes when S1/S2 adopt errorText on all screens",
-  "STUDIO + ADMIN SCREENS FIXED in the state matrix (error/permission cells PASS, HARNESS); Admin errorText adoption (S2 milestone 2) pending"
+  "FIXED (HARNESS): Studio errorText (35e7520) + Admin adminErrorText/provisioningProblem replaced by the shared mapper (merged 9273b93); state matrix error/403 cells PASS"
  ],
  [
   "M-076",
@@ -1889,7 +1890,8 @@
   "N",
   "",
   "review",
-  ""
+  "",
+  "FIXED (HARNESS, salvage d319531): nav marks 'Sắp có'; one not-ready note in the employee dialog"
  ],
  [
   "M-096",
@@ -1907,7 +1909,8 @@
   "N",
   "",
   "review",
-  ""
+  "",
+  "FIXED (HARNESS, salvage d319531): AI page says it is platform-wide"
  ],
  [
   "M-097",
@@ -2089,7 +2092,7 @@
   "define .stack/legend/ModalHeader usage for Admin dialogs",
   "harness screenshot + axe",
   "split from M-012 (C-03)",
-  "CSS PATTERN MERGED (c51c705): .stack/legend/ModalHeader; markup adoption in the 5 Admin dialogs pending (S2)"
+  "FIXED (HARNESS): CSS pattern (c51c705) + the five Admin dialogs use ModalHeader (merged 9273b93)"
  ],
  [
   "M-106",
@@ -2200,7 +2203,8 @@
   "N (harness)",
   "window above ~1000 rows; reuse the tree memo; id->unit Map once",
   "org-hardening PERF + perf-harness + perf-micro",
-  ""
+  "",
+  "FIXED (HARNESS, merged 9273b93): organization tree windowed above 1000 visible rows, one path map, move dialog reuses the tree memo; org-hardening 70/70"
  ],
  [
   "M-112",
@@ -2348,7 +2352,7 @@
   "LoadGate empty slot with a real message",
   "state-matrix empty cells PASS",
   "S4 matrix after S2 wave 2 (HARNESS): remaining FAIL cells are studio/new, platform/costs NaN-pattern fixed? re-check in the final run",
-  "FIXED for studio/new (HARNESS, merged 35e7520)"
+  "FIXED (HARNESS): Admin screens (eb38a2d) + studio/new (35e7520)"
  ],
  [
   "M-120",
@@ -2405,7 +2409,7 @@
   "LoadGate / ErrorState",
   "state-matrix error/loading cells PASS",
   "",
-  "FIXED for studio/new (HARNESS, merged 35e7520)"
+  "FIXED (HARNESS): admin/identity (eb38a2d) + studio/new (35e7520)"
  ],
  [
   "M-123",
@@ -2463,7 +2467,7 @@
   "raise targets; find the covering element",
   "matrix: 0 small / 0 covered",
   "",
-  "FIXED (HARNESS, merged 35e7520): targets 9 -> 0; remaining 'covered' = detector reads clipped-by-own-scroll as covered"
+  "FIXED (HARNESS, merged 35e7520) + detector corrected (ec81e49): 'covered' now re-tests after scrollIntoView"
  ],
  [
   "M-126",
@@ -2481,7 +2485,8 @@
   "N (reproduced in HARNESS; found on the REAL STACK)",
   "wrap/stack the header at <=700px, give the search a min width, ellipsis the workspace name",
   "real-stack matrix 600px: 0 covered; harness repro NO",
-  ""
+  "",
+  "FIXED (REAL STACK + HARNESS): the long workspace-name header squeeze was closed by S1's M-118 (merged 35e7520, after S4's baseline commit bd23f89); real-stack re-run at HEAD (Studio 600/768/1024, 102 visits): 0 covered, 0 small targets; ui-repro studio-header-600 = NO"
  ],
  [
   "M-127",
@@ -2499,7 +2504,8 @@
   "N (harness repro; found on the REAL STACK)",
   "reserve space / scroll the conversation above the composer",
   "matrix 768 covered 0",
-  ""
+  "",
+  "FIXED (REAL STACK + HARNESS): AI view at 768 no longer overlaps (S1 M-011/M-104, merged 35e7520); real-stack re-run: 0 covered; ui-repro studio-ai-768 = NO"
  ],
  [
   "M-128",
@@ -2517,7 +2523,8 @@
   "N (harness repro; found on the REAL STACK)",
   "scroll-padding-bottom equal to the footer height inside modalBody; verify reachability by keyboard",
   "matrix 360 covered 0",
-  ""
+  "",
+  "CLOSED, NOT A DEFECT (HARNESS + keyboard test): a control below the fold under a sticky footer is reachable: Tab focus scrolls it clear (adv bottom 558 <= footer top 571 at 360x640); the audit detector now re-tests after scrollIntoView (ec81e49); admin spec DLG04 guards WCAG 2.4.11"
  ],
  [
   "M-129",
@@ -2535,7 +2542,8 @@
   "Y (needs the real component registry list)",
   "give the left panel its own scroll area above the bottom row or cap its height so items never sit under .bx-right",
   "real-stack matrix 1024px: 0 covered",
-  ""
+  "",
+  "CLOSED, DETECTOR CASE (REAL STACK): the items sit at the bottom edge of the left panel's own scroll area; harness boxes show left panel bottom == properties row top (744) with no overlap; scrolled into view they are clear; real-stack re-run at 1024 with the updated detector: 0 covered"
  ],
  [
   "M-130",
@@ -2553,7 +2561,8 @@
   "N",
   "min-height 24px",
   "matrix smallTargets 0",
-  ""
+  "",
+  "FIXED (HARNESS, 8ce992d): activity links >= 24px; studio-wave3 check; real-stack re-run: 0 small targets at 600/768/1024"
  ],
  [
   "M-131",
@@ -2571,7 +2580,8 @@
   "N",
   "identify and raise to >=12px or remove",
   "matrix tinyText 0",
-  ""
+  "",
+  "FIXED (HARNESS, 8ce992d): <small> floor of 12px (was 10.8-11.7px); studio-wave3 checks on 3 screens"
  ],
  [
   "M-132",
@@ -2589,6 +2599,7 @@
   "Y (needs cost data)",
   "show 'chưa đủ đơn giá' when any price line is missing",
   "admin harness costs fixtures",
-  ""
+  "",
+  "FIXED (HARNESS, 1bd7a4d): costs hint says which price lines are missing, never 'đủ đơn giá' with missing prices; CST01/CST02"
  ]
 ]

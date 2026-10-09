@@ -194,3 +194,29 @@ rows.push(["M-129","P2","C5","Studio","builder rail Thành phần · 1024px · R
 rows.push(["M-130","P3","C5","Studio","activity · 1920px · REAL STACK","'mở ứng dụng' link on /studio/activity is 86x21px at 1920 (<24px target)",["S4R-05"],"features/studio/screens/Activity.tsx link","S1","none","N","min-height 24px","matrix smallTargets 0",""]);
 rows.push(["M-131","P3","C5","Studio","home · REAL STACK","10 text leaves under 11px on Studio home (not identified)",["S4R-06"],"unknown (matrix font-size probe)","S1/S3","none","N","identify and raise to >=12px or remove","matrix tinyText 0",""]);
 rows.push(["M-132","P3","C5","Platform","costs · REAL STACK","/platform/costs shows 'Tổng đã biết $0 — đủ đơn giá' while all 3 price lines say 'chưa có đơn giá' (may be legitimate with zero usage)",["S4R-07"],"AdminApp costs page KPI hint logic (features/admin/pages)","S2","none","Y (needs cost data)","show 'chưa đủ đơn giá' when any price line is missing","admin harness costs fixtures",""]);
+
+// ---- integration round 7 (agent/c5-web 1bd7a4d): S2 wave 2 milestone 2 (committed part, merged 9273b93), salvage d319531, REAL-STACK findings closed by C5-L (S1/S2/S3 were rate-limited)
+status("M-075", "FIXED (HARNESS): Studio errorText (35e7520) + Admin adminErrorText/provisioningProblem replaced by the shared mapper (merged 9273b93); state matrix error/403 cells PASS");
+status("M-029", "FIXED (HARNESS, merged 9273b93): DisclosureRow for audit rows");
+status("M-031", "FIXED (HARNESS): ReasonButton in Studio (35e7520) and Admin (9273b93)");
+status("M-032", "FIXED (HARNESS, merged 9273b93): Pill semantic keys");
+status("M-028", "FIXED (HARNESS): Studio (35e7520) + Admin nav links with aria-current / Tabs (9273b93)");
+status("M-034", "FIXED (HARNESS, merged 9273b93): FormError scrolls the server error into view above the sticky footer");
+status("M-105", "FIXED (HARNESS): CSS pattern (c51c705) + the five Admin dialogs use ModalHeader (merged 9273b93)");
+status("M-111", "FIXED (HARNESS, merged 9273b93): organization tree windowed above 1000 visible rows, one path map, move dialog reuses the tree memo; org-hardening 70/70");
+status("M-062", "PARTIAL (merged 9273b93): glossary wording in the wave-2 Admin strings, ratchet ceilings lowered; remaining offenders tracked by the ratchets");
+status("M-095", "FIXED (HARNESS, salvage d319531): nav marks 'Sắp có'; one not-ready note in the employee dialog");
+status("M-096", "FIXED (HARNESS, salvage d319531): AI page says it is platform-wide");
+status("M-012", "FIXED (HARNESS): shared CSS (da6c70f) + delete confirm is btn danger (35e7520)");
+status("M-016", "FIXED (HARNESS, merged da6c70f + 35e7520)");
+status("M-017", "FIXED (HARNESS): Admin 21 + Studio 12/1 native dialogs replaced by confirm()/prompt(); guard tests");
+status("M-020", "FIXED (HARNESS): Admin (eb38a2d) + Studio (35e7520) call sites");
+status("M-119", "FIXED (HARNESS): Admin screens (eb38a2d) + studio/new (35e7520)"); status("M-122", "FIXED (HARNESS): admin/identity (eb38a2d) + studio/new (35e7520)");
+status("M-126", "FIXED (REAL STACK + HARNESS): the long workspace-name header squeeze was closed by S1's M-118 (merged 35e7520, after S4's baseline commit bd23f89); real-stack re-run at HEAD (Studio 600/768/1024, 102 visits): 0 covered, 0 small targets; ui-repro studio-header-600 = NO");
+status("M-127", "FIXED (REAL STACK + HARNESS): AI view at 768 no longer overlaps (S1 M-011/M-104, merged 35e7520); real-stack re-run: 0 covered; ui-repro studio-ai-768 = NO");
+status("M-128", "CLOSED, NOT A DEFECT (HARNESS + keyboard test): a control below the fold under a sticky footer is reachable: Tab focus scrolls it clear (adv bottom 558 <= footer top 571 at 360x640); the audit detector now re-tests after scrollIntoView (ec81e49); admin spec DLG04 guards WCAG 2.4.11");
+status("M-129", "CLOSED, DETECTOR CASE (REAL STACK): the items sit at the bottom edge of the left panel's own scroll area; harness boxes show left panel bottom == properties row top (744) with no overlap; scrolled into view they are clear; real-stack re-run at 1024 with the updated detector: 0 covered");
+status("M-130", "FIXED (HARNESS, 8ce992d): activity links >= 24px; studio-wave3 check; real-stack re-run: 0 small targets at 600/768/1024");
+status("M-131", "FIXED (HARNESS, 8ce992d): <small> floor of 12px (was 10.8-11.7px); studio-wave3 checks on 3 screens");
+status("M-132", "FIXED (HARNESS, 1bd7a4d): costs hint says which price lines are missing, never 'đủ đơn giá' with missing prices; CST01/CST02");
+status("M-125", "FIXED (HARNESS, merged 35e7520) + detector corrected (ec81e49): 'covered' now re-tests after scrollIntoView");
