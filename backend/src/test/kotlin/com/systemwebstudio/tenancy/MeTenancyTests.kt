@@ -42,7 +42,7 @@ class MeTenancyTests : IntegrationTestBase() {
         val m = me(u.username)
         assertThat(m.get("tenantId").asString()).isEqualTo(t.id.toString())                                  // the only membership is the primary tenant
         assertThat(m.get("tenantRole").asString()).isEqualTo("TENANT_ADMIN")
-        assertThat(strings(m.get("permissions"))).containsExactly("TENANT_MANAGE", "TENANT_MEMBERS")
+        assertThat(strings(m.get("permissions"))).containsExactly("EMPLOYEE_MANAGE", "EMPLOYEE_VIEW", "ORG_STRUCTURE_MANAGE", "ORG_STRUCTURE_VIEW", "POSITION_GRADE_MANAGE", "POSITION_GRADE_VIEW", "TENANT_MANAGE", "TENANT_MEMBERS")
         assertThat(m.get("platformScope").asBoolean()).isFalse()
     }
 

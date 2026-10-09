@@ -137,26 +137,42 @@ class AuthController(
         return me(principal)
     }
 
+    /**
+     * Everything here is recomputed from the database on every call (nothing is read from the login-time snapshot of the session): SYSTEM_ADMIN, the roles derived from it, the
+     * tenant / workspace / project scopes. A workspace the server would refuse is not listed as usable: removed from its tenant -> omitted; tenant DELETED -> omitted;
+     * tenant SUSPENDED -> listed with NO permissions (the server answers 403 TENANT_SUSPENDED there).
+     */
     @GetMapping("/me")
     fun me(@AuthenticationPrincipal principal: StudioUserDetails): MeResponse {
-        val workspaces = if (principal.systemAdmin) {
-            // every workspace is visible to a system admin; the role is the real membership role, or ADMIN when not a member
-            jdbc.query("""SELECT w.id, w.name, coalesce(m.role, 'ADMIN') AS role, w.tenant_id FROM workspaces w
-                LEFT JOIN workspace_members m ON m.workspace_id = w.id AND m.user_id = ? AND m.active ORDER BY w.name""", { rs, _ ->
-                val role = rs.getString("role")
-                WorkspaceSummary(rs.getObject("id", UUID::class.java), rs.getString("name"), role, rs.getObject("tenant_id", UUID::class.java), meTenancy.workspacePermissions(role))
-            }, principal.userId)
+        val systemAdmin = jdbc.queryForObject("SELECT system_admin FROM users WHERE id = ?", Boolean::class.java, principal.userId) == true    // live value, not the login-time snapshot
+        val roles = if (systemAdmin) listOf("USER", "ADMIN") else listOf("USER")
+        val workspaces = if (systemAdmin) {
+            // every workspace is visible to a system admin; the role is the real membership role, or ADMIN (platform scope) when not a member. Through a MEMBERSHIP the same tenant gates
+            // as AccessService.forWorkspace apply: tenant DELETED or the tenant membership removed -> the membership grants nothing (platform scope); SUSPENDED -> no permission.
+            jdbc.query("""SELECT w.id, w.name, m.role AS member_role, w.tenant_id, t.status AS tenant_status, tm.active AS tm_active FROM workspaces w
+                LEFT JOIN workspace_members m ON m.workspace_id = w.id AND m.user_id = ? AND m.active
+                LEFT JOIN tenants t ON t.id = w.tenant_id
+                LEFT JOIN tenant_members tm ON tm.tenant_id = w.tenant_id AND tm.user_id = ? ORDER BY w.name""", { rs, _ ->
+                val memberRole = rs.getString("member_role")
+                val tenantStatus = rs.getString("tenant_status")
+                val tmActive = rs.getObject("tm_active") as Boolean?
+                val usable = memberRole != null && tenantStatus != "DELETED" && tmActive != false
+                val role = if (usable) memberRole else "ADMIN"
+                val permissions = if (memberRole != null && tenantStatus == "SUSPENDED") emptyList() else meTenancy.workspacePermissions(role)
+                WorkspaceSummary(rs.getObject("id", UUID::class.java), rs.getString("name"), role, rs.getObject("tenant_id", UUID::class.java), permissions)
+            }, principal.userId, principal.userId)
         } else {
             jdbc.query(
-                """SELECT w.id, w.name, m.role, w.tenant_id FROM workspace_members m JOIN workspaces w ON w.id = m.workspace_id
-                   WHERE m.user_id = ? AND m.active ORDER BY w.name""", { rs, _ ->
+                """SELECT w.id, w.name, m.role, w.tenant_id, t.status AS tenant_status FROM workspace_members m JOIN workspaces w ON w.id = m.workspace_id
+                   LEFT JOIN tenants t ON t.id = w.tenant_id
+                   LEFT JOIN tenant_members tm ON tm.tenant_id = w.tenant_id AND tm.user_id = m.user_id
+                   WHERE m.user_id = ? AND m.active AND (w.tenant_id IS NULL OR ((tm.user_id IS NULL OR tm.active) AND t.status <> 'DELETED')) ORDER BY w.name""", { rs, _ ->
                     val role = rs.getString("role")
-                    WorkspaceSummary(rs.getObject("id", UUID::class.java), rs.getString("name"), role, rs.getObject("tenant_id", UUID::class.java), meTenancy.workspacePermissions(role))
+                    val suspended = rs.getString("tenant_status") == "SUSPENDED"
+                    WorkspaceSummary(rs.getObject("id", UUID::class.java), rs.getString("name"), role, rs.getObject("tenant_id", UUID::class.java), if (suspended) emptyList() else meTenancy.workspacePermissions(role))
                 }, principal.userId
             )
         }
-        val roles = principal.authorities.mapNotNull { it.authority?.removePrefix("ROLE_") }
-        val systemAdmin = jdbc.queryForObject("SELECT system_admin FROM users WHERE id = ?", Boolean::class.java, principal.userId) == true    // live value, not the login-time snapshot
         val projectScopes = jdbc.query(
             """SELECT pm.project_id, pm.workspace_id
                FROM project_members pm

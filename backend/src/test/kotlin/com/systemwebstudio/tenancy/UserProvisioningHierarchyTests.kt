@@ -358,7 +358,7 @@ class UserProvisioningHierarchyTests : IntegrationTestBase() {
         assertThat(wsPerms(wa, t.ws)).contains("MEMBER_MANAGE"); assertThat(me(wa).get("permissions").toList()).isEmpty()
         assertThat(wsPerms(editor, t.ws)).doesNotContain("MEMBER_MANAGE")
         val tam = me(ta)
-        assertThat(tam.get("permissions").toList().map { it.asString() }).describedAs("TENANT_ADMIN: TENANT_MANAGE + TENANT_MEMBERS, no MEMBER_MANAGE").containsExactlyInAnyOrder("TENANT_MANAGE", "TENANT_MEMBERS")
+        assertThat(tam.get("permissions").toList().map { it.asString() }).describedAs("TENANT_ADMIN: TENANT_MANAGE + TENANT_MEMBERS + the six organization capabilities, no MEMBER_MANAGE").containsExactlyInAnyOrder("TENANT_MANAGE", "TENANT_MEMBERS", "ORG_STRUCTURE_VIEW", "ORG_STRUCTURE_MANAGE", "EMPLOYEE_VIEW", "EMPLOYEE_MANAGE", "POSITION_GRADE_VIEW", "POSITION_GRADE_MANAGE")
         assertThat(tam.get("workspaces").size()).describedAs("TENANT_ADMIN is not a workspace member and so sees no workspace and no business permission").isEqualTo(0)
         val sm = me(sys)
         assertThat(sm.get("platformScope").asBoolean()).isTrue(); assertThat(sm.get("systemAdmin").asBoolean()).isTrue()

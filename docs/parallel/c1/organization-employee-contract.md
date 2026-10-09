@@ -1,0 +1,276 @@
+# H-C1-17 — Dynamic Organization & Employee contract (C1 → C3 / C5)
+
+Base `integration/v2 @ e310b6a16156`. Architecture source of truth: **D-C0-43** (arbitrary-depth dynamic tree; no hard-coded Company / Department / Team levels).
+C1 owns this contract, the authorization, the application services and the seams. **C3 owns the real persistence** (this branch contains no production SQL and no migration; **no V32 / SQL is shipped by C1**).
+Until C3 registers its repositories every route below answers `501 ORG_PERSISTENCE_NOT_AVAILABLE` — after authentication and authorization (see §0 for the exact position of the 501 relative to body validation).
+Code that this document is reconciled with (final): `backend/src/main/kotlin/com/systemwebstudio/organization/{OrganizationContract,OrganizationRepositories,OrganizationServices,EmployeeDirectoryService,OrganizationControllers}.kt`, `tenancy/CompanyBootstrapService.kt`, test kit `backend/src/test/kotlin/com/systemwebstudio/organization/OrganizationRepositoryContractKit.kt`.
+
+## Frozen decisions (D-C0-43 reconciliation with C3)
+
+These override anything older. Anything below that contradicts this table is a bug in the document.
+
+| Decision | Contract |
+|---|---|
+| **CF-1 EMPLOYEE_PROFILE = NOT_NEEDED (V1)** | Employee = `tenant_members JOIN users`. `EmployeeDto.active` = `tenant_members.active`. No EmployeeProfile entity / repository / events; no `employeeCode`, `phone`, `joinedOn`, `metadata`. Directory search matches `username`, `displayName`, `email`; sort = `name` \| `username`. **No `PATCH /employees/{id}`.** `POST /employees` creates a **NEW account only** (+ optional memberships and positions). Enable / disable = `POST …/{userId}/disable\|enable` with **no body and no version**, idempotent, the tenant-membership lifecycle: self-disable `403 SELF_GRANT_FORBIDDEN`; last tenant admin `409 LAST_TENANT_ADMIN`; platform-disabled account on enable `422 USER_DISABLED`. An employee has **no `version` and no ETag**. |
+| **CF-2 EmployeePosition is held WITHIN an active organization membership** | Fields: `membershipId` (== the EmployeeOrganizationUnit id; C3 may name the column `employee_organization_unit_id`), `organizationUnitId` (**derived** from the membership, never an independent input), `positionId`, `gradeId?` (an attribute of the assignment, not part of its identity), `active`, `primary`, `version`. **Active uniqueness = `(membershipId, positionId)`** → `409 POSITION_ASSIGNMENT_EXISTS`, even with a different grade. The same position in two different active memberships is allowed. `POST /employees/{userId}/positions` requires `membershipId` (`404 ORG_MEMBERSHIP_NOT_FOUND` if unknown / foreign / of another employee, `409 ORG_MEMBERSHIP_INACTIVE` if ended). `PATCH /employees/{userId}/positions/{id}` `{gradeId? \| clearGrade?, primary?, expectedVersion}` changes the grade / primary. In `POST /employees`, each position names its membership by `organizationUnitId` of a membership **of the same request**. Position / Grade `description` nullable = YES. **Lifecycle:** ending a membership that still has ACTIVE positions → `409 EMPLOYEE_ORG_HAS_POSITIONS {activePositionCount}`; **no silent cascade**; the caller ends the positions first (each audited `EMPLOYEE_POSITION_REMOVED`); ending the primary position promotes the oldest remaining active one; ending the primary membership promotes the oldest remaining active one. Max **20** active memberships / **20** active positions per employee. |
+| **CF-3 Unit `code` REQUIRED, scope SIBLING** | Canonical form = `trim` + `uppercase(Locale.ROOT)`; input regex `^[A-Za-z0-9][A-Za-z0-9._-]{0,59}$` (`400 INVALID_CODE`, also when missing); stored, compared and returned **upper-case**. Unique among **NON-ARCHIVED** units with the same `(tenantId, parentId)`; roots (`parentId` null) are siblings of each other. Allowed: same code under different parents; root vs nested. Refused `409 ORG_UNIT_CODE_TAKEN` on **create, update(code), MOVE next to a same-code sibling**, and on **restore** (`RESTORE_CONFLICT` reason `CODE_TAKEN`). Archiving frees the code. Message wording is sibling-scoped, never "company". Type codes stay lower-case `^[a-z0-9][a-z0-9_-]{0,39}$`, unique per tenant (input is trimmed and lower-cased before the regex); position / grade codes `^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$`, unique per tenant **case-insensitively**. |
+| **CF-4 Structural lock: ONLY the subtree move** | `TenantStructuralLock.acquire(tenantId)` = `pg_advisory_xact_lock` semantics: held until the ambient transaction ends (commit or rollback), re-entrant inside one transaction, **needs an active transaction** (`IllegalStateException` otherwise). Used **only** by the subtree move. **NOT used by** employee create / enable / disable, memberships add / update / remove / primary, position assignments, catalogs (types / positions / grades), unit create / update / archive / restore, directory queries: these use the ordinary transaction, FK / unique constraints, row locks (`FOR SHARE` on the parent / unit row an insert depends on, `FOR UPDATE` on the row an archive reads) and optimistic versions. **Atomic move boundary** (one READ COMMITTED transaction): acquire lock → resolve source → resolve destination (same tenant) → recursive cycle check → resulting depth → type parent/child rules → `maxDepth` for the unit **and every descendant** → `expectedVersion` CAS + UPDATE parent/sortOrder (repository `move`, which **MUST also refuse a cycle itself** with `OrganizationCycle` and a sibling code clash with `DuplicateOrganizationKey("code")`) → audit → commit. Nothing is split across transactions. **Documented limit (residual race):** unit **create** validates `maxDepth` without the structural lock (parent row `FOR SHARE` only); a concurrent move of an **ancestor** could, in a rare race, leave a unit deeper than its type's `maxDepth`. C3 mitigation: re-check the depth inside the insert under the same row lock (recursive CTE under `FOR SHARE`); to close it fully C3 may lock the whole ancestor chain `FOR SHARE` (a move updates the moved row, so it then conflicts). C1 does not hide this: no test of C1 can prove it, only a C3 PostgreSQL test can. |
+| **Soft delete / restore** | Units have `active` + `archivedAt`: ACTIVE = (`active=true`, `archivedAt=null`); ARCHIVED = (`active=false`, `archivedAt` set); maps to C3 `deleted_at`. **No hard-delete API.** Archive refuses `ORG_UNIT_HAS_CHILDREN` / `ORG_UNIT_HAS_MEMBERS`. Restore validates tenant, parent, type, sibling code, rules, lifecycle (`RESTORE_CONFLICT` reasons `NOT_ARCHIVED`, `PARENT_ARCHIVED`, `CODE_TAKEN`, `TYPE_DISABLED`, `TYPE_RULE`, `TENANT_INACTIVE`). Types, positions and grades use enable / disable (`active`). |
+| **MULTI_ORG_MEMBERSHIP = YES** | At most one **active primary** membership per `(tenant, user)`; the source of truth is the membership row (no writable `primaryOrgUnitId` on the employee; `EmployeeDto.primaryOrganizationUnitId` is **derived**). Setting primary is an ordinary transaction (atomic clear + set); **C3 must back it with a partial unique index**. Same for the primary position (one active primary per `(tenant, user)`). |
+| **Permissions** | `ORG_STRUCTURE_VIEW/MANAGE`, `EMPLOYEE_VIEW/MANAGE`, `POSITION_GRADE_VIEW/MANAGE` — TENANT_ADMIN only. `POST /employees` additionally needs `TENANT_MEMBERS`. A relation type, a position or a grade **never** grants a permission. A foreign tenant UUID = safe `404` identical to a missing one; missing permission = `403`; anonymous = `401`; unavailable store = `501 ORG_PERSISTENCE_NOT_AVAILABLE` after authorization. |
+| **Audit events (exact)** | `ORG_UNIT_TYPE_CREATED/UPDATED/ENABLED/DISABLED`, `ORG_UNIT_CREATED/UPDATED/MOVED/ARCHIVED/RESTORED`, `POSITION_CREATED/UPDATED/ENABLED/DISABLED`, `GRADE_CREATED/UPDATED/ENABLED/DISABLED`, `EMPLOYEE_CREATED/ENABLED/DISABLED`, `EMPLOYEE_ORG_ASSIGNED/UPDATED/REMOVED`, `EMPLOYEE_POSITION_ASSIGNED/UPDATED/REMOVED`, `TENANT_CREATED` (bootstrap). **No EmployeeProfile events.** Never audited: password, activation token, hash, credential. Audit is written in the same transaction as the mutation (an audit failure rolls the mutation back). |
+| **Company bootstrap** | `POST /api/v1/admin/tenants` with `firstAdmin` → one transaction: tenant + first TENANT_ADMIN account (pending) + TENANT_ADMIN membership + one-time activation link. No default password. No EmployeeProfile. Rollback proven on PostgreSQL by `CompanyBootstrapTests`. |
+| **Repository contract kit = ADDED** | `OrganizationRepositoryContractKit` (abstract, `backend/src/test/kotlin/com/systemwebstudio/organization/OrganizationRepositoryContractKit.kt`) + `InMemoryOrganizationConformanceTest`. How C3 uses it: §10. **The in-memory runs are NOT PostgreSQL proof.** |
+
+### Decision / conflict matrix
+
+| Decision | Previous C1 | Required (C0 / C3) | Resolution |
+|---|---|---|---|
+| CF-1 employee profile | `EmployeeProfileRepository`; `employeeCode` / `phone` / `joinedOn` / `metadata`; `PATCH /employees/{id}` with `expectedVersion`; `status`; employee `version`; `POST /employees` with optional existing `userId`; enable / disable with `{expectedVersion}`; audit `EMPLOYEE_UPDATED` | `EMPLOYEE_PROFILE = NOT_NEEDED`; employee = `tenant_members JOIN users` | **Removed everywhere** (code, API, seams, audit, doc). Enable / disable: no body, no version. C3 builds nothing for profiles. |
+| CF-2 position scope | `EmployeePosition(user, position, grade?, organizationUnitId?)`; uniqueness `(user, position, grade, unit)`; a position could be tenant-global | Position held inside an active membership; unique `(membership, position)`; grade is an attribute | **Implemented**: `membershipId` required, `organizationUnitId` derived, `gradeId` mutable via PATCH, ending a membership with active positions is refused (no cascade). |
+| CF-3 unit code | unique per tenant among active units, case-insensitive | required, sibling-scoped, canonical upper-case | **Implemented** in `OrgRules.unitCode` + services + store contract (`DuplicateOrganizationKey("code")`); the store receives the canonical code and compares it exactly. |
+| CF-4 structural lock | `TenantStructureLock` seam, scope not bounded in the document | pg_advisory_xact_lock only for the subtree move; nothing else serialises on the tenant | **Implemented**: renamed `TenantStructuralLock`, taken only by `OrganizationUnitService.move`; the in-memory double counts acquisitions (`lockAcquisitions`) so a test proves no other write takes it. Residual create-depth race documented in CF-4. |
+| C3 req.: `description` nullable | nullable in the DTOs | nullable = YES | Accepted, unchanged (`PositionDto.description`, `GradeDto.description` are `String?`; `""` on PATCH clears it to null). |
+| C3 req.: EmployeePosition uniqueness | `(user, position, grade, unit)` | `(membershipId, positionId)` active | Accepted: store key `assignment`; the kit pins it (test 8). |
+| C3 req.: code normalization | free case, compared case-insensitively | canonical upper-case, sibling scope | Accepted: C1 canonicalises before the store; C3 may add `CHECK (code = upper(code))` and a partial unique index on `(tenant_id, parent_id [roots: coalesced], code) WHERE archived_at IS NULL`. |
+
+## 0. Conventions (all routes)
+
+- Base path `/api/v1/admin/tenants/{tenantId}/…`. Session cookie + CSRF header on every mutation (existing platform rule). JSON, `application/json`.
+- **`tenantId` is the path tenant and the only tenant a call can touch.** A `tenantId` / `tenant_id` in a body is never read. Every id (unit, type, employee, position, grade, membership, assignment) is resolved *inside* that tenant: a record of another tenant is indistinguishable from a missing one → **404 with the same code/message** as "does not exist".
+- Order: `401` (no session) → tenant resolution (`AccessService.forTenant`: unknown tenant or a caller who is not of the tenant → safe `404`) → `403 FORBIDDEN` (`Missing permission: …`) → validation / domain. The `501` is raised **when the first store seam is touched**: routes that read the store first (all employee routes, `GET`s) answer `501` before any domain check; a few `POST`/`PATCH` routes validate the body shape (`400`) before touching the store. Never before authorization.
+- **Versioning.** Types, units, memberships, position assignments, positions and grades have `version` (long, starts 0, +1 on every applied write; setting a primary also bumps the demoted row). Writes carry `expectedVersion` (body; for `DELETE` the query parameter `expectedVersion`). Missing → `400 VALIDATION_FAILED`. Stale → `409 VERSION_CONFLICT {currentVersion}`; a missing record → `404`. Single-record responses of these resources carry `ETag: "<version>"`. **Employees have no version / ETag.** Lists carry no ETag.
+- Error body = platform envelope `{ "code", "message", "details"? }`.
+- Query booleans: `includeInactive` (types, positions, grades: default **true**; memberships / held positions: default **false**), `includeArchived` (units: default **false**).
+- Deterministic ordering: units `sortOrder ASC, lower(name) ASC, id ASC`; types / positions `lower(name), id`; grades `rank ASC (null last), lower(name), id`; memberships and held positions `primary first, createdAt, id`; employees see §4.
+- Nothing is hard-deleted: archive / disable / end are state changes of the same row; history stays. No cascade.
+
+## 1. Permissions (canonical codes, tenant-scoped)
+
+| Code | Meaning |
+|---|---|
+| `ORG_STRUCTURE_VIEW` | read unit types, units, tree |
+| `ORG_STRUCTURE_MANAGE` | create / update / move / archive / restore units; create / update / disable / enable unit types |
+| `EMPLOYEE_VIEW` | read employees, their memberships and held positions |
+| `EMPLOYEE_MANAGE` | create employees; disable / enable; add / change / end memberships; add / change / end position assignments |
+| `POSITION_GRADE_VIEW` | read positions and grades |
+| `POSITION_GRADE_MANAGE` | create / update / disable / enable positions and grades |
+
+`*_MANAGE` does **not** imply `*_VIEW` in code (the role matrix grants both together). `POST /employees` requires `EMPLOYEE_MANAGE` **and** `TENANT_MEMBERS` (account provisioning).
+
+### PERMISSION_MATRIX
+
+| Principal | ORG_STRUCTURE_* | EMPLOYEE_* | POSITION_GRADE_* |
+|---|---|---|---|
+| TENANT_ADMIN of that tenant | VIEW+MANAGE | VIEW+MANAGE | VIEW+MANAGE |
+| TENANT_MEMBER / workspace roles / project roles | – | – | – |
+| SYSTEM_ADMIN, platform scope (default) | – (platform scope stays exactly `TENANT_MANAGE`+`TENANT_MEMBERS`) | – | – |
+| SYSTEM_ADMIN with legacy `app.tenancy.system-admin-business-access=true` | as TENANT_ADMIN | as TENANT_ADMIN | as TENANT_ADMIN |
+| Any user of another tenant | – (404) | – | – |
+
+**An organization relation (`MEMBER` / `MANAGER` / `HEAD` / any tenant vocabulary), a position or a grade NEVER grants a permission.** Permissions come only from the tenant / workspace / project role matrices (`PermissionMatrix`).
+
+## 2. Unit types — `/organization-unit-types`
+
+`OrganizationUnitTypeDto { id, tenantId, name, code, icon?, active, rules: {allowedParentTypeIds?, allowedChildTypeIds?, allowRoot?, maxDepth?}, version, createdAt, updatedAt }`
+
+| METHOD PATH | Request | Response | Permission | Errors / notes |
+|---|---|---|---|---|
+| `GET /organization-unit-types?includeInactive=true` | – | `[Type]` (lower(name), id) | ORG_STRUCTURE_VIEW | no pagination, no filter other than `includeInactive` |
+| `GET …/{typeId}` | – | Type + ETag | ORG_STRUCTURE_VIEW | `404 ORG_UNIT_TYPE_NOT_FOUND` |
+| `POST …` | `{name, code, icon?, rules?}` | `201` Type + ETag | ORG_STRUCTURE_MANAGE | `400 VALIDATION_FAILED` (name 1–120, icon ≤60, `maxDepth` 1–100, a rule list ≤50 ids), `400 INVALID_CODE`, `404 ORG_UNIT_TYPE_NOT_FOUND` (a rule id that is not a type of this tenant), `409 ORG_UNIT_TYPE_CODE_TAKEN` |
+| `PATCH …/{typeId}` | `{name?, icon?, rules?, expectedVersion}` | Type + ETag | ORG_STRUCTURE_MANAGE | `rules` present **replaces** the whole object; absent = unchanged; code immutable; `icon` `""` clears; a type may name itself in its rules; `404`, `409 VERSION_CONFLICT` |
+| `POST …/{typeId}/disable`, `…/enable` | `{expectedVersion}` | Type + ETag | ORG_STRUCTURE_MANAGE | a disabled type cannot be used for a **new unit** (`409 ORG_UNIT_TYPE_DISABLED`) or a **restore** (`RESTORE_CONFLICT TYPE_DISABLED`); existing units keep it and stay editable |
+
+Tenant scope: tenant of the path; a type id of another tenant → `404 ORG_UNIT_TYPE_NOT_FOUND`. Version/audit: `version` bumps on every write; audit `ORG_UNIT_TYPE_CREATED|UPDATED|ENABLED|DISABLED` (old/new snapshot: code, name, active, rules, version).
+
+Rule semantics (the unit being placed = *child*; its parent unit's type = *parent*; every field null = unrestricted): `allowRoot=false` → no root of this type (`ROOT_NOT_ALLOWED`; null = allowed when `allowedParentTypeIds` is null or `[]`); `allowedParentTypeIds` non-null → the parent type must be listed (`PARENT_TYPE_NOT_ALLOWED`; `[]` = root only); parent type's `allowedChildTypeIds` non-null must list the child type (`CHILD_TYPE_NOT_ALLOWED`; `[]` = leaf); `maxDepth` → the unit's depth (root = 1) may not exceed it (`MAX_DEPTH`). All → `409 ORG_TYPE_RULE_VIOLATION {reason}`.
+
+## 3. Units (the tree) — `/organization-units`
+
+`OrganizationUnitDto { id, tenantId, typeId, parentId?, name, code, sortOrder, metadata{}, active, version, createdAt, updatedAt, archivedAt? }` (`active=false` ⇔ `archivedAt` set; `code` upper-case).
+`OrganizationUnitNodeDto { unit, children[] }`. `OrganizationUnitDetailDto { unit, path[] (root → unit, Unit[]), activeChildCount, activeMemberCount }`.
+
+| METHOD PATH | Request | Response | Permission | Errors |
+|---|---|---|---|---|
+| `GET /organization-units?format=tree\|flat&includeArchived=false` | – | tree (default) = `[Node]` roots; flat = `[Unit]`; same order | ORG_STRUCTURE_VIEW | `400 VALIDATION_FAILED` (bad `format`) |
+| `GET …/{unitId}` | – | Detail + ETag (= `unit.version`) | ORG_STRUCTURE_VIEW | `404 ORG_UNIT_NOT_FOUND` |
+| `POST …` | `{typeId, parentId?, name, code, sortOrder? (default 0), metadata?}` | `201` Unit + ETag | ORG_STRUCTURE_MANAGE | `400 VALIDATION_FAILED` (typeId missing, name 1–160, `metadata` not an object or > 8192 bytes), `400 INVALID_CODE`, `404 ORG_UNIT_TYPE_NOT_FOUND`, `404 ORG_UNIT_NOT_FOUND` (parent foreign / unknown), `409 ORG_UNIT_TYPE_DISABLED`, `409 ORG_UNIT_ARCHIVED` (parent archived), `409 ORG_TYPE_RULE_VIOLATION {reason}`, `409 ORG_UNIT_CODE_TAKEN` |
+| `PATCH …/{unitId}` | `{name?, code?, sortOrder?, metadata?, expectedVersion}` | Unit + ETag | ORG_STRUCTURE_MANAGE | `404`, `409 ORG_UNIT_ARCHIVED` (an archived unit cannot be changed), `400 INVALID_CODE`, `409 ORG_UNIT_CODE_TAKEN`, `409 VERSION_CONFLICT`; `metadata` present replaces. **Type is immutable; parent changes only through `move`.** |
+| `POST …/{unitId}/move` | `{newParentId (key REQUIRED: uuid, or explicit null = root), expectedVersion, sortOrder?}` | Unit + ETag | ORG_STRUCTURE_MANAGE | `400` (key absent, not a UUID/null, `expectedVersion` missing), `404 ORG_UNIT_NOT_FOUND` (source or destination), `409 ORG_UNIT_ARCHIVED`, `409 ORG_CYCLE`, `409 ORG_TYPE_RULE_VIOLATION {reason}`, `409 ORG_UNIT_CODE_TAKEN`, `409 VERSION_CONFLICT` |
+| `POST …/{unitId}/archive` | `{expectedVersion}` | Unit + ETag | ORG_STRUCTURE_MANAGE | `404`, `409 ORG_UNIT_ARCHIVED` (already), `409 ORG_UNIT_HAS_CHILDREN {activeChildCount}`, `409 ORG_UNIT_HAS_MEMBERS {activeMemberCount}`, `409 VERSION_CONFLICT` |
+| `POST …/{unitId}/restore` | `{expectedVersion}` | Unit + ETag | ORG_STRUCTURE_MANAGE | `404`, `409 RESTORE_CONFLICT {reason}`, `409 VERSION_CONFLICT` |
+
+- **Pagination:** none (the tree is returned whole; tenant structures are bounded). **Filter:** `includeArchived` only. **Sort:** fixed (`sortOrder, lower(name), id`). In `tree` a unit whose parent is hidden (archived) is hidden with it.
+- **Tenant scope:** every id is resolved in the path tenant; a foreign parent / destination / unit is `404 ORG_UNIT_NOT_FOUND`, identical to a missing one.
+- **Version:** `expectedVersion` is a compare-and-set on the unit row; descendants are **not** rewritten by a move (their versions stay).
+- **Audit:** `ORG_UNIT_CREATED|UPDATED|MOVED|ARCHIVED|RESTORED`. `MOVED` carries old / new `parentId`, `sortOrder`, `version` and `subtreeSize`.
+
+### TREE contract
+No fixed depth, no hard-coded level names. Depth is limited only by type `maxDepth` (global safety cap 100 on the rule value). Cycles are impossible: the service pre-checks, **and the store re-checks atomically** (`OrganizationCycle`).
+
+### MOVE contract
+Boundary = ONE READ COMMITTED transaction (CF-4): `TenantStructuralLock.acquire` (first) → source exists in tenant (`404`) → source active (`409 ORG_UNIT_ARCHIVED`) → destination exists in tenant (`404`) and active (`409 ORG_UNIT_ARCHIVED`) → destination is not the unit nor inside its subtree (`409 ORG_CYCLE`) → resulting depth (destination depth + 1, or 1 for root) → type rules of the unit against the destination (`ROOT_NOT_ALLOWED`, `PARENT_TYPE_NOT_ALLOWED`, `CHILD_TYPE_NOT_ALLOWED`, `MAX_DEPTH`) → `maxDepth` of **every descendant** at its new depth (`MAX_DEPTH`) → repository `move` (version CAS + parent / sortOrder UPDATE; sibling code clash → `409 ORG_UNIT_CODE_TAKEN`; stale → `409 VERSION_CONFLICT`) → audit. Only the moved unit's own row changes; the subtree follows. Moving under the same parent is allowed (re-order). A missing `newParentId` key is a `400` (never a silent move to root). Note: the move does **not** re-check that the types involved are still `active` (only create and restore do).
+
+### ARCHIVE / RESTORE contract
+No `DELETE` of a unit. **Archive** refuses while the unit has an active child unit or an active employee membership; nothing cascades. **Restore** checks, in this order: not archived → `NOT_ARCHIVED`; tenant not `ACTIVE` → `TENANT_INACTIVE`; type active → `TYPE_DISABLED`; own parent active → `PARENT_ARCHIVED`; placement rules and depth → `TYPE_RULE`; sibling code free → `CODE_TAKEN` (store-enforced). A restored unit returns under its previous parent with its previous code.
+
+## 4. Employees — `/employees`
+
+Employee = `tenant_members JOIN users` (identity, credentials, activation, tenant role: C1, read through `TenantIdentityDirectory`) + organization memberships + held positions (C3). Nothing of the identity is duplicated.
+
+`EmployeeDto { userId, tenantId, username, displayName?, email?, active (= tenant_members.active), accountEnabled, accountActivated, tenantRole, primaryOrganizationUnitId? (derived from the active primary membership), positions[EmployeePosition] (active only), organizationMemberships[Membership] (active only) }`
+`EmployeePageDto { items[Employee], total, page, size }`. `EmployeeCreatedDto { employee, activation?: {userId, username, displayName, purpose, token, expiresAt} }`.
+
+| METHOD PATH | Request | Response | Permission | Errors |
+|---|---|---|---|---|
+| `GET /employees` | query below | `EmployeePageDto` | EMPLOYEE_VIEW | `400 VALIDATION_FAILED` (page < 0, size outside 1–100, bad sort / dir), `400 QUERY_TOO_SHORT`, `404 ORG_UNIT_NOT_FOUND`, `404 POSITION_NOT_FOUND`, `404 GRADE_NOT_FOUND` |
+| `GET /employees/{userId}` | – | Employee (no ETag) | EMPLOYEE_VIEW | `404 EMPLOYEE_NOT_FOUND` (not a member of the tenant, or another tenant's user) |
+| `POST /employees` | `EmployeeCreateRequest` | `201` `EmployeeCreatedDto` | EMPLOYEE_MANAGE **+ TENANT_MEMBERS** | see below |
+| `POST …/{userId}/disable` | **none** | Employee | EMPLOYEE_MANAGE **+ TENANT_MEMBERS** | `404 EMPLOYEE_NOT_FOUND`, `403 SELF_GRANT_FORBIDDEN`, `409 LAST_TENANT_ADMIN` |
+| `POST …/{userId}/enable` | **none** | Employee | EMPLOYEE_MANAGE **+ TENANT_MEMBERS** | `404 EMPLOYEE_NOT_FOUND`, `422 USER_DISABLED` |
+
+**`GET /employees` query:** `q` (trimmed; < 2 chars → `400 QUERY_TOO_SHORT`; literal — `%`, `_`, `\` are text — and case-insensitive over username, display name, e-mail), `organizationUnitId` (+ `includeDescendants=true` default: the unit and its whole subtree; matches users with an **active membership** in any of those units; a foreign / unknown unit → `404`, not an empty page), `positionId`, `gradeId` (users with an **active** assignment of it; foreign / unknown → `404`), `active` (= `tenant_members.active`; disabled members stay in the directory), `userId`, `page` (0-based, default 0), `size` (1–100, default 25), `sort` = `name` \| `username` (default `name`; `name` orders by `lower(displayName ?: username)`), `dir` = `asc` \| `desc` (default `asc`). Ties are broken by `userId`. An employee matching through several memberships is **one** row; `total` is the filtered count (not the page size). Tenant scope: members of the path tenant only. No version / ETag. Audit: none (read).
+
+**`EmployeeCreateRequest { username, displayName, email?, tenantRole? (TENANT_ADMIN|MEMBER, default MEMBER), workspaceId?, workspaceRole? (together or not at all), organizationMemberships?[{organizationUnitId, relationType? (default MEMBER), primary?, positions?[{positionId, gradeId?, primary?}]}] }`** — positions are NESTED in the membership they are held within (there is no free unit-as-scope input) — creates a **NEW account only** via the canonical provisioning (`AccountService.createTenantUser`): **no password accepted or stored**, response `activation` = one-time link. Account + memberships + positions in **ONE transaction** (any failure rolls all back). If no `primary` is flagged, the first membership / first position is primary. Validation order: ≤20 memberships and ≤20 positions in total, every membership has `organizationUnitId`, a unit once in `organizationMemberships`, ≤1 primary membership and ≤1 primary position, a position once per membership, every position has `positionId` (all `400 VALIDATION_FAILED`); then `404 ORG_UNIT_NOT_FOUND` / `409 ORG_UNIT_ARCHIVED`, `400 INVALID_CODE` (relationType, `^[A-Z][A-Z0-9_]{0,31}$` after upper-casing), `404 POSITION_NOT_FOUND` / `409 POSITION_DISABLED`, `404 GRADE_NOT_FOUND` / `409 GRADE_DISABLED`; then the account errors (`400 INVALID_USERNAME`, `400 VALIDATION_FAILED` for a blank `displayName`, `400 INVALID_EMAIL`, `400 TENANT_ROLE_INVALID`, `400 INVALID_ROLE`, `404 WORKSPACE_NOT_FOUND`, `409 USERNAME_TAKEN`, `409 EMAIL_TAKEN`). Audit: `EMPLOYEE_CREATED`, then one `EMPLOYEE_ORG_ASSIGNED` per membership and one `EMPLOYEE_POSITION_ASSIGNED` per position.
+
+**Enable / disable** = the canonical tenant-membership lifecycle (`TenantService.removeMember` / `setMember`), **idempotent** (already in the requested state → returns the current employee, no audit, no error), **no body, no version**. Disable: self → `403 SELF_GRANT_FORBIDDEN`; last active TENANT_ADMIN → `409 LAST_TENANT_ADMIN`. Enable: re-adds the account as tenant `MEMBER` (a former TENANT_ADMIN does not get the role back); account disabled platform-wide → `422 USER_DISABLED`. Memberships and positions are kept while disabled; while disabled, adding / changing memberships and positions is `409 EMPLOYEE_INACTIVE` (ending them stays allowed). Audit `EMPLOYEE_DISABLED` / `EMPLOYEE_ENABLED` (in addition to the existing `TENANT_MEMBER_REMOVED` / `TENANT_MEMBER_SET` of the tenant service).
+
+### Memberships (multi-organization: YES) — `/employees/{userId}/organization-memberships`
+`OrganizationMembershipDto { id, tenantId, userId, organizationUnitId, relationType, primary, active, version, createdAt, updatedAt }`
+
+| METHOD PATH | Request | Response | Permission | Errors |
+|---|---|---|---|---|
+| `GET …?includeInactive=false` | – | `[Membership]` (primary first, createdAt, id) | EMPLOYEE_VIEW | `404 EMPLOYEE_NOT_FOUND` |
+| `POST …` | `{organizationUnitId, relationType? (default MEMBER), primary?}` | `201` Membership + ETag | EMPLOYEE_MANAGE | `404 EMPLOYEE_NOT_FOUND`, `409 EMPLOYEE_INACTIVE`, `400 VALIDATION_FAILED` (unit missing; > 20 active), `404 ORG_UNIT_NOT_FOUND`, `409 ORG_UNIT_ARCHIVED`, `400 INVALID_CODE`, `409 ORG_MEMBERSHIP_EXISTS` |
+| `PATCH …/{membershipId}` | `{relationType?, primary?, expectedVersion}` | Membership + ETag | EMPLOYEE_MANAGE | `404 ORG_MEMBERSHIP_NOT_FOUND` (unknown, foreign, another employee's, or ended), `409 EMPLOYEE_INACTIVE`, `400 VALIDATION_FAILED` (`primary=false`), `409 VERSION_CONFLICT` |
+| `DELETE …/{membershipId}?expectedVersion=n` | – | ended Membership (`active=false`, `primary=false`) + ETag | EMPLOYEE_MANAGE | `404 ORG_MEMBERSHIP_NOT_FOUND`, **`409 EMPLOYEE_ORG_HAS_POSITIONS {activePositionCount}`**, `409 VERSION_CONFLICT` |
+
+One **active** membership per `(user, unit)` (an ended one does not block a new one); ≤20 active per employee; `relationType` is free business vocabulary with **no** authority. **PRIMARY:** at most one active primary membership per `(tenant, user)`; the first active membership becomes primary; `primary=true` atomically demotes the previous one (its version is bumped); `primary=false` is refused (make another one primary instead); ending the primary promotes the oldest remaining active membership (audit `EMPLOYEE_ORG_REMOVED` carries `promotedMembershipId`). Remove does not require the employee to be active. Tenant scope: the membership must belong to the **same tenant and the same `userId`** of the path. Audit `EMPLOYEE_ORG_ASSIGNED|UPDATED|REMOVED`.
+
+### Held positions — `/employees/{userId}/positions`
+`EmployeePositionDto { id, tenantId, userId, membershipId, organizationUnitId, positionId, gradeId?, primary, active, version, createdAt, updatedAt }` (`organizationUnitId` is always the unit of `membershipId`).
+
+| METHOD PATH | Request | Response | Permission | Errors |
+|---|---|---|---|---|
+| `GET …?includeInactive=false` | – | `[EmployeePosition]` (primary first, createdAt, id) | EMPLOYEE_VIEW | `404 EMPLOYEE_NOT_FOUND` |
+| `POST …` | `{membershipId, positionId, gradeId?, primary?}` | `201` EmployeePosition + ETag | EMPLOYEE_MANAGE | `404 EMPLOYEE_NOT_FOUND`, `409 EMPLOYEE_INACTIVE`, `400 VALIDATION_FAILED` (membershipId / positionId missing; > 20 active), `404 ORG_MEMBERSHIP_NOT_FOUND`, `409 ORG_MEMBERSHIP_INACTIVE`, `404 POSITION_NOT_FOUND`, `409 POSITION_DISABLED`, `404 GRADE_NOT_FOUND`, `409 GRADE_DISABLED`, `409 POSITION_ASSIGNMENT_EXISTS` |
+| `PATCH …/{employeePositionId}` | `{gradeId? \| clearGrade?, primary?, expectedVersion}` | EmployeePosition + ETag | EMPLOYEE_MANAGE | `404 POSITION_ASSIGNMENT_NOT_FOUND` (unknown, foreign, another employee's, or ended), `409 EMPLOYEE_INACTIVE`, `400 VALIDATION_FAILED` (`primary=false`; `gradeId` together with `clearGrade`), `404/409 GRADE_*`, `409 VERSION_CONFLICT` |
+| `DELETE …/{employeePositionId}?expectedVersion=n` | – | ended EmployeePosition (`active=false`, `primary=false`) + ETag | EMPLOYEE_MANAGE | `404 POSITION_ASSIGNMENT_NOT_FOUND`, `409 VERSION_CONFLICT` |
+
+Order of checks in `POST`: employee → membership → position → grade → limit → store uniqueness. The membership, the position and the unit of an assignment are **immutable** (end it and add another); only `gradeId` and `primary` change. First assignment becomes primary; at most one active primary position per `(tenant, user)`; `primary=true` demotes the previous one; ending the primary promotes the oldest remaining active one. Position / grade are business classification only — **no permission**. Audit `EMPLOYEE_POSITION_ASSIGNED|UPDATED|REMOVED`.
+
+## 5. Positions & grades — `/positions`, `/grades`
+Two independent per-tenant catalogs (not organization units, no hierarchy, no permission).
+`PositionDto { id, tenantId, name, code, description?, active, version, createdAt, updatedAt }`, `GradeDto { id, tenantId, name, code, rank?, description?, active, version, createdAt, updatedAt }`.
+
+| METHOD PATH | Request | Response | Permission |
+|---|---|---|---|
+| `GET /positions?includeInactive=true`, `GET /grades?includeInactive=true` | – | `[Position]` (lower(name), id) / `[Grade]` (rank, name, id) | POSITION_GRADE_VIEW |
+| `GET …/{id}` | – | record + ETag | POSITION_GRADE_VIEW |
+| `POST …` | position `{name, code, description?}`; grade `{name, code, rank?, description?}` | `201` + ETag | POSITION_GRADE_MANAGE |
+| `PATCH …/{id}` | position `{name?, description?, expectedVersion}`; grade `{name?, rank?, clearRank?, description?, expectedVersion}` | record + ETag | POSITION_GRADE_MANAGE |
+| `POST …/{id}/disable`, `…/enable` | `{expectedVersion}` | record + ETag | POSITION_GRADE_MANAGE |
+
+Errors: `400 VALIDATION_FAILED` (name 1–120, description ≤500, grade `rank` 0–10000, `expectedVersion` missing), `400 INVALID_CODE`, `404 POSITION_NOT_FOUND` / `GRADE_NOT_FOUND`, `409 POSITION_CODE_TAKEN` / `GRADE_CODE_TAKEN` (per tenant, case-insensitive, also against disabled records), `409 VERSION_CONFLICT`. Code is immutable. `description` is nullable (`""` on PATCH clears it). No pagination / filter beyond `includeInactive`. Disabling never touches existing assignments (a disabled position / grade only cannot be assigned anew). Audit `POSITION_*` / `GRADE_*` (`CREATED|UPDATED|ENABLED|DISABLED`).
+
+## 6. Company bootstrap (atomic) — `POST /api/v1/admin/tenants`
+Caller: authorized SYSTEM_ADMIN (`access.forPlatform`, platform scope `TENANT_MANAGE`). Request `{slug, name, firstAdmin?: {username, displayName, email?}, firstAdminUserId?}`. With `firstAdmin`, **one transaction** (`CompanyBootstrapService`) creates: tenant → first Tenant Admin account (pending, **no password, no default password**) with a `TENANT_ADMIN` membership → one-time activation link. `firstAdmin` together with `firstAdminUserId` → `400 VALIDATION_FAILED`; blank `firstAdmin.username` → `400 VALIDATION_FAILED`; a blank `displayName` is also rejected by the account provisioning (`400 VALIDATION_FAILED`), i.e. it is required in practice. Response `201 TenantCreatedResponse { id, slug, name, status, createdAt, firstAdmin?: ActivationLink{userId, username, displayName, purpose, token, expiresAt} }`. There is **no EmployeeProfile**. The Tenant Admin sets their own password via the activation endpoint. Any failure (taken slug / username, invalid e-mail, audit failure) rolls back everything: no tenant without admin, no orphan account. Without `firstAdmin` the call behaves as before (backward compatible). **BOOTSTRAP_ATOMICITY** is proven on real PostgreSQL by `CompanyBootstrapTests`.
+
+## 7. Audit (append-only, same transaction as the mutation)
+Events (exact): `ORG_UNIT_TYPE_CREATED|UPDATED|ENABLED|DISABLED`, `ORG_UNIT_CREATED|UPDATED|MOVED|ARCHIVED|RESTORED`, `POSITION_CREATED|UPDATED|ENABLED|DISABLED`, `GRADE_CREATED|UPDATED|ENABLED|DISABLED`, `EMPLOYEE_CREATED|ENABLED|DISABLED`, `EMPLOYEE_ORG_ASSIGNED|UPDATED|REMOVED`, `EMPLOYEE_POSITION_ASSIGNED|UPDATED|REMOVED`, `TENANT_CREATED` (bootstrap). No EmployeeProfile events exist. Each carries actor, tenant, resource id (entity types `ORG_UNIT_TYPE`, `ORG_UNIT`, `POSITION`, `GRADE`, `EMPLOYEE`), old / new value (ids and values only). **Never** audited: password, activation token, password hash, any credential. **Failure semantics:** the audit write is inside the mutation's transaction; if it fails the mutation rolls back (no un-audited change). Refused calls (403 / 404 / 409) write nothing. Move audits old / new parent.
+
+## 8. C3 seams (persistence interfaces)
+`backend/src/main/kotlin/com/systemwebstudio/organization/OrganizationRepositories.kt`. C3 registers each as a Spring bean (all optional at boot; a missing one → `501 ORG_PERSISTENCE_NOT_AVAILABLE`).
+
+| Seam | Purpose |
+|---|---|
+| `OrganizationUnitTypeRepository` | `list / find / findAll / insert / update` (no delete; `update` writes name, icon, rules, active) |
+| `OrganizationUnitRepository` | `find / listAll / insert / update / move / setActive / subtree / depthOf / activeChildCount` |
+| `EmployeeDirectoryRepository` | `search(tenantId, EmployeeSearch, TenantIdentityDirectory): Slice<UUID>` — one page of user ids, filtered / sorted / paginated |
+| `EmployeeOrganizationMembershipRepository` | `list / listForUsers / find / insert / update / setPrimary / end / activeCountByUnit` |
+| `PositionRepository`, `GradeRepository` | `list / find / insert / update / setActive` |
+| `EmployeePositionRepository` | `list / listForUsers / find / insert / update (gradeId only) / setPrimary / end` |
+| `TenantStructuralLock` | `acquire(tenantId)` — see CF-4 |
+| `TenantIdentityDirectory` | C1-owned, read-only `users` + `tenant_members` projection (`JdbcTenantIdentityDirectory`); C3 uses it for text matching, never writes those tables |
+
+**Mandatory behaviours (every implementation):**
+1. **Tenant first.** Every method takes the tenant id first and filters by it; a record of another tenant is indistinguishable from a missing one (`find*` → null, lists omit it, counters ignore it, a write through the wrong tenant applies nothing).
+2. **Versioned writes.** `update / setActive / move / setPrimary / end` apply only if the stored version equals `expectedVersion`, in ONE atomic statement, then `version+1` and `updatedAt`; they answer `null` when nothing applied (stale **or** missing; the service re-reads to tell 404 from 409). `insert` stores version 0.
+3. **Uniqueness is enforced by the store** and thrown as `DuplicateOrganizationKey(key)`: type `code` per tenant (even when inactive); position / grade `code` per tenant, case-insensitive, even when inactive (key `code`); unit `code` sibling-scoped among non-archived units, compared exactly on the canonical (upper-case) value, roots are siblings, archiving frees it, `setActive(true)`, `update` and `move` must also raise it (key `code`); `membership` = one ACTIVE membership per `(user, unit)`; `assignment` = one ACTIVE assignment per `(membership, position)` (grade is not part of the key).
+4. **One transaction.** Take part in the AMBIENT Spring transaction (no `REQUIRES_NEW`, no second connection): employee creation provisions the account (C1 tables) and the memberships / positions (C3 tables) atomically; an audit failure rolls the mutation back.
+5. **Locking (CF-4).** Only `TenantStructuralLock` (move). Everything else: ordinary transaction + constraints + row locks + versions. `OrganizationUnitRepository.move` is called with the lock held but **must still refuse a cycle itself** (`OrganizationCycle`) and a sibling code clash.
+6. **Determinism.** Lists have a total order; the services re-sort where the contract fixes an order.
+7. **No cascade.** Archive / end are state changes of the row itself; `move` rewrites only the moved row.
+8a. **Race-safe references (the STORE is the authority; the service's pre-checks only give friendly errors).** Typed refusals, atomic under row locks: `units.setActive(false)` locks the unit FOR UPDATE, counts ACTIVE children / ACTIVE memberships and throws `OrganizationUnitInUse(activeChildren, activeMembers)` (service: `409 ORG_UNIT_HAS_CHILDREN` / `ORG_UNIT_HAS_MEMBERS`); `memberships.end` locks the membership FOR UPDATE, counts ACTIVE assignments and throws `MembershipHasPositions(n)` (service: `409 EMPLOYEE_ORG_HAS_POSITIONS`); `units.insert` / `units.move` / `units.setActive(true)` (parent / destination unit), `memberships.insert` (unit) and `employeePositions.insert` (membership) lock the referenced row FOR SHARE and throw `ReferencedRowInactive(kind = "unit" | "membership")` when it is archived / ended (service: `409 ORG_UNIT_ARCHIVED` / `RESTORE_CONFLICT PARENT_ARCHIVED` / `409 ORG_MEMBERSHIP_INACTIVE`), so an active record never appears under an archived / ended one. An assignment whose membership belongs to another user / tenant or names another unit is refused (`IllegalArgumentException`, a programming error). Pinned by kit tests 10-11.
+8. **Primary.** `setPrimary` is atomic (clears the previous primary of the user and sets this one) for memberships and for position assignments; at most one active primary per `(tenant, user)`, backed by a PARTIAL UNIQUE INDEX `(tenant, user) WHERE primary AND active` (or by locking all of the user's rows first); a violation is `DuplicateOrganizationKey("primary")`, which the services answer as `409 VERSION_CONFLICT` (a lost race is never a silent "no primary"). `end` sets `active=false, primary=false`. The services always `insert` with `primary=false, active=true, version=0` and call `setPrimary` afterwards.
+9. **Membership / assignment integrity.** A membership needs a `tenant_members(tenant_id, user_id)` row (composite FK); an assignment needs a membership of the same tenant and user, and `organizationUnitId` equals that membership's unit.
+10. **Directory search semantics:** candidates = active **and** inactive members of the tenant; `text` matches username, displayName, e-mail, case-insensitive and literal; `active` filters `tenant_members.active`; `unitIds` = users with an ACTIVE membership in any of them; `positionId` / `gradeId` = users with an ACTIVE assignment of it; one row per user; `total` = filtered count; `sort` `name|username`, ties by `userId`.
+
+Hierarchy answers: `subtree(unit)` = the unit (relativeDepth 0) and every descendant whatever its state (empty if not in tenant); `depthOf` root = 1 (null if not in tenant); `activeChildCount` ignores archived children.
+
+**What C3 needs (suggested, not shipped here):** tables for types, units (parent FK `(tenant_id, parent_id)`, `archived_at`/`deleted_at`, partial unique index on `(tenant_id, parent, code) WHERE archived_at IS NULL` with roots coalesced), memberships (composite FK to `tenant_members`, partial unique `(tenant_id, user_id, unit_id) WHERE active`, partial unique `(tenant_id, user_id) WHERE active AND primary`), positions, grades (unique `(tenant_id, lower(code))`), assignments (FK to membership — column may be `employee_organization_unit_id`, partial unique `(membership, position) WHERE active`, partial unique primary per `(tenant_id, user_id)`); every table with `tenant_id`, `version`, timestamps; a recursive query for `subtree` / `depthOf` / cycle check; a `pg_advisory_xact_lock`-based `TenantStructuralLock` bean. Migration numbers are issued by C0 only.
+
+## 9. C5 contract
+Routes, DTOs, permissions and errors in §2–§6 are frozen. C5 gates UI only on canonical permissions from `/auth/me.permissions` (never role names, never relation / position / grade). Show `NOT_READY` on `501 ORG_PERSISTENCE_NOT_AVAILABLE`.
+
+**Route table (prefix `/api/v1/admin/tenants/{tenantId}`):**
+
+| Route | Perm | Body / query | Response |
+|---|---|---|---|
+| `GET /organization-unit-types?includeInactive` · `GET …/{id}` · `POST` · `PATCH …/{id}` · `POST …/{id}/disable\|enable` | ORG_STRUCTURE_VIEW / MANAGE | `{name,code,icon?,rules?}` · `{name?,icon?,rules?,expectedVersion}` · `{expectedVersion}` | `[Type]` / Type+ETag |
+| `GET /organization-units?format=tree\|flat&includeArchived` · `GET …/{id}` · `POST` · `PATCH …/{id}` · `POST …/{id}/move\|archive\|restore` | ORG_STRUCTURE_VIEW / MANAGE | `{typeId,parentId?,name,code,sortOrder?,metadata?}` · `{name?,code?,sortOrder?,metadata?,expectedVersion}` · move `{newParentId (required key),expectedVersion,sortOrder?}` · `{expectedVersion}` | `[Node]` or `[Unit]` / Detail / Unit + ETag |
+| `GET /positions` · `GET /grades` (`includeInactive`) · `GET …/{id}` · `POST` · `PATCH …/{id}` · `POST …/{id}/disable\|enable` | POSITION_GRADE_VIEW / MANAGE | see §5 | list / record + ETag |
+| `GET /employees?q&organizationUnitId&includeDescendants&positionId&gradeId&active&userId&page&size&sort&dir` · `GET /employees/{userId}` | EMPLOYEE_VIEW | – | `EmployeePageDto` / `EmployeeDto` (no ETag) |
+| `POST /employees` | EMPLOYEE_MANAGE + TENANT_MEMBERS | `EmployeeCreateRequest` (§4) | `201 EmployeeCreatedDto` |
+| `POST /employees/{userId}/disable\|enable` | EMPLOYEE_MANAGE + TENANT_MEMBERS | **no body** | `EmployeeDto` |
+| `GET\|POST /employees/{userId}/organization-memberships` · `PATCH\|DELETE …/{membershipId}` | VIEW / MANAGE | `{organizationUnitId,relationType?,primary?}` · `{relationType?,primary?,expectedVersion}` · `?expectedVersion=n` | `[Membership]` / Membership + ETag |
+| `GET\|POST /employees/{userId}/positions` · `PATCH\|DELETE …/{employeePositionId}` | VIEW / MANAGE | `{membershipId,positionId,gradeId?,primary?}` · `{gradeId? \| clearGrade?,primary?,expectedVersion}` · `?expectedVersion=n` | `[EmployeePosition]` / EmployeePosition + ETag |
+| `POST /api/v1/admin/tenants` | platform `TENANT_MANAGE` | `{slug,name,firstAdmin?{username,displayName,email?}}` | `201 TenantCreatedResponse` |
+
+**Rules:** `ETag` / `version` of a record = the `expectedVersion` of its next write. On `409 VERSION_CONFLICT` reload (`details.currentVersion`). **Employees have NO version**: there is no `If-Match` / `expectedVersion` for enable / disable; versions live on memberships and position assignments. `move` always sends `newParentId` (`null` for root). Unit `code` is displayed and compared upper-case; send any case, the response is canonical. To remove a membership that holds positions, end the positions first (`DELETE …/positions/{id}`), then the membership. To make a membership / position primary send `PATCH {primary:true}` (never `false`). Employee `positions[]` / `organizationMemberships[]` list **active** rows only; use the sub-resources with `includeInactive=true` for history.
+
+**Error codes:** `400` `VALIDATION_FAILED`, `INVALID_CODE`, `QUERY_TOO_SHORT`, `INVALID_USERNAME`, `INVALID_EMAIL`, `TENANT_ROLE_INVALID`, `INVALID_ROLE` · `401` · `403` `FORBIDDEN`, `SELF_GRANT_FORBIDDEN` · `404` `TENANT_NOT_FOUND`, `ORG_UNIT_NOT_FOUND`, `ORG_UNIT_TYPE_NOT_FOUND`, `EMPLOYEE_NOT_FOUND`, `ORG_MEMBERSHIP_NOT_FOUND`, `POSITION_NOT_FOUND`, `GRADE_NOT_FOUND`, `POSITION_ASSIGNMENT_NOT_FOUND`, `WORKSPACE_NOT_FOUND` · `409` `VERSION_CONFLICT{currentVersion}`, `ORG_CYCLE`, `ORG_TYPE_RULE_VIOLATION{reason: ROOT_NOT_ALLOWED|PARENT_TYPE_NOT_ALLOWED|CHILD_TYPE_NOT_ALLOWED|MAX_DEPTH}`, `ORG_UNIT_HAS_CHILDREN{activeChildCount}`, `ORG_UNIT_HAS_MEMBERS{activeMemberCount}`, `ORG_UNIT_ARCHIVED`, `RESTORE_CONFLICT{reason: NOT_ARCHIVED|PARENT_ARCHIVED|CODE_TAKEN|TYPE_DISABLED|TYPE_RULE|TENANT_INACTIVE}`, `ORG_UNIT_CODE_TAKEN`, `ORG_UNIT_TYPE_CODE_TAKEN`, `ORG_UNIT_TYPE_DISABLED`, `POSITION_CODE_TAKEN`, `GRADE_CODE_TAKEN`, `POSITION_DISABLED`, `GRADE_DISABLED`, `ORG_MEMBERSHIP_EXISTS`, `ORG_MEMBERSHIP_INACTIVE`, `EMPLOYEE_ORG_HAS_POSITIONS{activePositionCount}`, `POSITION_ASSIGNMENT_EXISTS`, `EMPLOYEE_INACTIVE`, `LAST_TENANT_ADMIN`, `USERNAME_TAKEN`, `EMAIL_TAKEN` · `422` `USER_DISABLED` · `501` `ORG_PERSISTENCE_NOT_AVAILABLE`. (`EMPLOYEE_EXISTS`, `EMPLOYEE_CODE_TAKEN`, `USER_NOT_FOUND` of the older contract no longer exist for these routes.)
+
+## 10. C3 contract kit and tests
+
+**`OrganizationRepositoryContractKit`** (abstract, `backend/src/test/kotlin/com/systemwebstudio/organization/OrganizationRepositoryContractKit.kt`, C1-owned). C3 **subclasses it in its own test sources** (copy-free: depend on the C1 test source set or vendor the file unchanged) and implements the abstract members; the 13 tests must then pass **unchanged**.
+
+| Abstract member | C3 supplies |
+|---|---|
+| `types`, `units`, `directory`, `memberships`, `positions`, `grades`, `employeePositions` | the C3 PostgreSQL repositories under test (§8) |
+| `identities: TenantIdentityDirectory` | read-back of the identity rows (C1's `JdbcTenantIdentityDirectory` over the same database) |
+| `newTenant(): UUID` | inserts a `tenants` row and returns its id |
+| `newMember(tenantId, username, displayName): UUID` | inserts a `users` row (valid username, e.g. `<name>-<6 hex>`) + an active `tenant_members` row (MEMBER) and returns the user id; `username` / `displayName` must be searchable |
+| `setMemberActive(tenantId, userId, active)` | sets `tenant_members.active` |
+
+Unit codes reach the store **already canonical (upper-case)**; the kit passes them that way. The reference subclass is `InMemoryOrganizationConformanceTest` (in-memory double `InMemoryOrganization`; `InMemoryOrganizationConfig` wires it as every seam for the API tests).
+
+**What the 13 kit tests pin:**
+
+| # | Pins |
+|---|---|
+| 1 | tenant first: `find`/`findAll`/`list`/`subtree`/`depthOf`/`activeChildCount`/`activeCountByUnit` of another tenant answer null / empty / 0; a write through the wrong tenant (`update`, `move`, `setActive`) applies nothing; directory and assignments are tenant-scoped |
+| 2 | versioned writes: stale or missing version applies nothing and answers null; current applies once and bumps `version` (units, types, positions) |
+| 3 | unit code is SIBLING-scoped: same code under different parents and root-vs-nested allowed; duplicate under one parent / among roots, rename onto a sibling, and restore next to a same-code sibling raise `DuplicateOrganizationKey("code")`; archiving frees the code; another tenant never collides |
+| 4 | type code unique per tenant (case-insensitive); position / grade code unique per tenant case-insensitively; one active membership per `(user, unit)` (key `membership`), an ended one does not block |
+| 5 | hierarchy: `subtree` relative depths, `depthOf`, `activeChildCount`, atomic `move` (parent, sortOrder, version; descendants follow and are not rewritten; stale → null), archive / restore set / clear `archivedAt`, `listAll(includeArchived)` |
+| 6 | the store refuses a cycle itself (`OrganizationCycle`, below a descendant and below itself) and a sibling code clash on move (`DuplicateOrganizationKey("code")`); nothing applied |
+| 7 | exactly one active primary membership: `setPrimary` clears the previous in the same operation, stale applies nothing, `end` clears the flag and keeps the row, `update` writes `relationType`, `listForUsers` |
+| 8 | assignments within a membership: unique active `(membership, position)` even with another grade (key `assignment`); same position in another membership allowed; `update` changes the grade (versioned, clearable); one primary per user; `end`; an ended one does not block a new one; `organizationUnitId` equals the membership's unit |
+| 9 | directory search: members only, text literal (`%%`, `a_`, `\`) and case-insensitive over username / display name, unit / position / grade filters, `active` flag (disabled stay), sort `name` / `username` asc / desc, deterministic paging, one row per employee, `total` = filtered count, tenant scope |
+| 10 | inside ONE tenant a membership / assignment is scoped by its USER too (another user's `find` / `update` / `setPrimary` / `end` answer null, nothing applied); an assignment must name a membership of the same user and unit |
+| 11 | atomic typed refusals: `OrganizationUnitInUse` (children, members, with counts), `MembershipHasPositions`, `ReferencedRowInactive` for a child under an archived parent, a membership in an archived unit, a move under an archived destination, a position in an ended membership, a restore under an archived parent; `end` / `setPrimary` on an ended row answer null |
+| 12 | sibling code edges: move to the ROOT clashes with a root; a move to the CURRENT parent never clashes with itself; an archived sibling does not clash; restore of a root re-checks the roots; keeping its own code on update is not a clash |
+| 13 | directory `userId` criterion; unit AND position AND text AND `active` combine with AND |
+
+**Which tests remain C3's own (PostgreSQL, not coverable by the kit):** advisory-lock concurrency (two concurrent moves of one tenant serialise; released on commit **and** rollback; re-entrant; `IllegalStateException` without a transaction; a different tenant is not blocked; non-move writes never wait on it); the move race (concurrent move of an ancestor and of a descendant; cycle created by two racing moves is impossible); the create-depth residual race of CF-4; the primary-membership and primary-position races (two concurrent `setPrimary` → exactly one primary, partial unique index); concurrent sibling-code inserts; existence of the FK / partial-unique indexes and composite FKs; transaction participation (no `REQUIRES_NEW`; audit failure rolls back the mutation); a benchmark on a large tree (`subtree` / `depthOf`) and a large directory (search + paging).
+
+**C1 tests (all against the in-memory double, except bootstrap):** `CompanyBootstrapTests` (PostgreSQL, atomicity), `OrganizationApiContractTests`, `EmployeeApiContractTests`, `OrganizationAuthorizationTests` (isolation, foreign node, move / archive / restore auth, cross-tenant assignment, relation ≠ permission, structural guard: every mutating handler requires `*_MANAGE`, every GET `*_VIEW`), `OrganizationUnavailableTests` (501), `OrganizationRepositoryContractKit` + `InMemoryOrganizationConformanceTest`. **These prove the C1 contract and the kit's own satisfiability; they are NOT PostgreSQL proof** (`POSTGRES_ORG_TESTS: WAITING_FOR_C3`).
+
+## 11. Known limits (stated, not hidden)
+- **maxDepth race.** A type `maxDepth` is validated by the service on create / restore WITHOUT the structural lock (only the move takes it). A concurrent move of an ancestor can, in a rare race, push a new unit past its type's `maxDepth`. C3 SHOULD re-check the resulting depth inside `units.insert` / `units.setActive(true)` under the parent row lock; the move re-validates every descendant it can see.
+- **Suspended company.** Organization / employee / position / grade WRITES in a SUSPENDED company answer `403 TENANT_SUSPENDED` (`AccessService.requireTenantWritable`, called by the organization controllers for every `*_MANAGE` route); reads stay allowed. The existing tenant-admin routes (members, users, workspaces) are unchanged (`AccessService.forTenant` does not distinguish SUSPENDED).
+- **DELETED company.** A SYSTEM_ADMIN who is also a member of a DELETED company holds only the platform scope there (never member-role permissions); an ordinary user gets 404.
+- **Legacy bypass.** With `app.tenancy.system-admin-business-access=true` (off by default) SYSTEM_ADMIN holds the TENANT_ADMIN set on every tenant, organization capabilities included. Default and V1 target: off.
+- **In-memory double ≠ PostgreSQL.** The C1 contract / security tests and the kit run against an in-memory double that serialises every repository call; they prove the C1 contract and the kit, not locking or race behaviour. Mandatory C3 PostgreSQL tests: move vs move (lock serialises, one wins, no cycle), archive vs child insert, archive vs membership insert, end membership vs addPosition, setPrimary vs setPrimary (membership and position), restore vs archive of its parent, and the kit run against the real repositories.
