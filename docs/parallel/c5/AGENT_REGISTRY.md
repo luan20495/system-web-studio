@@ -13,7 +13,7 @@ Times are Asia/Saigon (UTC+7), taken from the session transcript. CONTEXT_SIZE o
 - Any additional agent needs a proposal to the user (PROPOSED_AGENT / WHY_NEEDED / ISSUES / FILES / EXPECTED_TIME_SAVED / EXPECTED_TOKENS / CONFLICT_RISK) and approval.
 
 ## Active execution slots right now
-**3 active coding agents** (P-01..P-03, started 2026-10-09 16:37, Wave A, base 45f4ca4). All 15 historical agents (H-01..H-15) are terminal (FINISHED / STOPPED) and ARCHIVED: none occupies a slot. C5-R-FINAL is PLANNED only.
+**ACTIVE_AGENTS = 0.** All Wave A agents (P-01..P-03) FINISHED and their branches are merged into `agent/c5-web` (see below); the 15 historical agents H-01..H-15 are FINISHED/STOPPED and ARCHIVED. No agent occupies a slot. C5-R-FINAL is PLANNED only (after Wave B + full gate + real stack).
 
 ## Registry
 
@@ -34,9 +34,9 @@ Times are Asia/Saigon (UTC+7), taken from the session transcript. CONTEXT_SIZE o
 | H-13 | C5-S3-REMEDIATION shared UI / design system | Remediation (opus) | 10-09 remediation | shared UI | `packages/ui/**` | STOPPED, ARCHIVED | 10-09 15:53 | none | small | `agent/c5-s3-rem` | a9fbdb0 (empty) | NONE | REPLACED BY C5-S3-WAVE-A | same |
 | H-14 | C5-S4-VERIFY final real-stack and matrix verification | Verification (opus) | 10-09 remediation | verification | scripts | STOPPED, ARCHIVED; its two owned processes are already GONE | 10-09 15:53 | none | small | `agent/c5-s4-verify` | a9fbdb0 (empty) | NONE | REPLACED BY C5-L (runs S4 scripts itself) | same; no dedicated S4 agent by default |
 | H-15 | C5-R-REVIEW read-only regression review since 9273b93 | Review (opus) | 10-09 remediation | review | read-only | STOPPED, ARCHIVED (started too early over unstable code) | 10-09 15:53 | none | small | `agent/c5-r-review` | 72f4d0c | NONE | REPLACED BY C5-R-FINAL (later) | review only after Wave A + B + gates |
-| P-01 | C5-S1-WAVE-A | Studio / Builder | Wave A | M-042 M-046 M-047 M-051 M-077..M-083 M-088(Studio) M-089 M-091 M-106 M-109 M-110 M-112 M-113 | `features/studio/**`, `builder.css`, studio tests | ACTIVE | 10-09 16:37 | (see checkpoint) | small | `agent/c5-s1-wave-a` | 45f4ca4 | - | none | - |
-| P-02 | C5-S2-WAVE-A | Platform / Admin | Wave A | M-025(remainder) M-093 M-097(remainder) M-098 M-065 (keep screens separate, consolidate primitives) | `features/admin/**`, `apps/{platform,admin}`, admin/org tests | ACTIVE | 10-09 16:37 | (see checkpoint) | small | `agent/c5-s2-wave-a` | 45f4ca4 | - | none | - |
-| P-03 | C5-S3-WAVE-A | Shared UI / a11y / text / design system | Wave A | M-067 M-069 M-070 M-084 + shared part of M-060..M-063 (no M-068 codemod) | `packages/ui/**`, `packages/i18n/**`, `packages/company-ui/**`, ui tests | ACTIVE | 10-09 16:37 | (see checkpoint) | small | `agent/c5-s3-wave-a` | 45f4ca4 | - | none | - |
+| P-01 | C5-S1-WAVE-A | Studio / Builder | Wave A | M-042 M-046 M-047 M-051 M-077..M-083 M-088(Studio) M-089 M-091 M-106 M-109 M-110 M-112 M-113 | `features/studio/**`, `builder.css`, studio tests | FINISHED, ARCHIVED | 10-09 16:37 | see merge commit | small | `agent/c5-s1-wave-a` | 45f4ca4 | MERGED into agent/c5-web (c5e4272); branch tip 7d46be1; 44 min, ~197k tokens | none | completed |
+| P-02 | C5-S2-WAVE-A | Platform / Admin | Wave A | M-025(remainder) M-093 M-097(remainder) M-098 M-065 (keep screens separate, consolidate primitives) | `features/admin/**`, `apps/{platform,admin}`, admin/org tests | FINISHED, ARCHIVED | 10-09 16:37 | see merge commit | small | `agent/c5-s2-wave-a` | 45f4ca4 | MERGED into agent/c5-web (9b67da9); branch tip 16fb8ad; 21 min, ~163k tokens | none | completed |
+| P-03 | C5-S3-WAVE-A | Shared UI / a11y / text / design system | Wave A | M-067 M-069 M-070 M-084 + shared part of M-060..M-063 (no M-068 codemod) | `packages/ui/**`, `packages/i18n/**`, `packages/company-ui/**`, ui tests | FINISHED, ARCHIVED | 10-09 16:37 | see merge commit | small | `agent/c5-s3-wave-a` | 45f4ca4 | MERGED into agent/c5-web (6842f65); branch tip 7168d4d; 18 min, ~138k tokens | none | completed |
 | P-04 | C5-R-FINAL | Read-only final review | Final | n/a | read-only | PLANNED (after Wave B + full gate + real stack) | - | - | - | none | - | - | none | - |
 
 ## Totals
@@ -61,6 +61,7 @@ Times are Asia/Saigon (UTC+7), taken from the session transcript. CONTEXT_SIZE o
 Rule applied to every old C5 agent worktree: branch HEAD is an ancestor of `agent/c5-web`, no valuable uncommitted change, no process or shell with its cwd/command inside it.
 - Removed 11 agent worktrees (the ten checked earlier, plus `agent-a99ce337dd855d29b` once its two shells had exited). Its WIP (5 files) was superseded by d319531 (3 files identical to HEAD, 2 superseded by later edits) and was saved as a patch in the lead scratchpad before removal.
 - `git worktree prune`: nothing stale left.
-- Branch refs `agent/c5-*` (33) are kept: every one is an ancestor of HEAD (no unique commits), so git history is intact.
+- Wave A worktrees `/Users/hoangluan/code/c5-wave-a/{s1,s2,s3}` were removed after their branches were merged (clean, ancestors of HEAD, no process inside); branches `agent/c5-s{1,2,3}-wave-a` kept.
+- Branch refs `agent/c5-*` (33, including the three Wave A branches) are kept: every one is an ancestor of HEAD (no unique commits), so git history is intact.
 - Not C5 agent worktrees, therefore preserved: the checkouts of other teams (`xweb-c0..c7`, `xweb-wire`, `xweb-v29`, `xweb-base`), `xweb-c5` (lead checkout), `xweb-c5-overlay`, the real-stack backend worktrees under `~/.xweb-e2e-stack/` (`c5e2e-ae` backs a running gradle process; the others are idle, belong to the e2e-stack tooling and are kept until C5-L decides) and the lead scratchpad `stack` worktree.
 - Claude Agent Map UI history: no supported deletion mechanism known (AGENT_MAP_HISTORY_REMOVABLE: NO); not attempted.

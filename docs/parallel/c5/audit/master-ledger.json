@@ -503,7 +503,7 @@
   "Skip link in the shared shell; main tabindex only while overflowing (useOverflow); focus main/h1 on route change",
   "harness keyboard test",
   "",
-  "ADMIN + STUDIO SHELLS FIXED (HARNESS, merged eb38a2d + 35e7520)"
+  "FIXED (HARNESS): Admin + Studio shells (eb38a2d, 35e7520); Platform uses the same AdminApp shell and checks SKP01-05 run on portal=platform (S2 Wave A, no change needed)"
  ],
  [
   "M-026",
@@ -775,7 +775,8 @@
   "Y",
   "DO NOT invent semantics: ask C2 (question routed); then send explicit clear if allowed",
   "real-backend e2e",
-  "STATIC-BE (R2): domain/customDomain cannot be cleared (hostname regex rejects ''); null = unchanged; '' clears description/deploymentTarget. Question stays with C2"
+  "STATIC-BE (R2): domain/customDomain cannot be cleared (hostname regex rejects ''); null = unchanged; '' clears description/deploymentTarget. Question stays with C2",
+  "BLOCKED (handoff C2 answer): domain/customDomain/deploymentTarget cannot be cleared because the server hostname regex rejects an empty value; client part waits for the C2 answer (HF-C2)"
  ],
  [
   "M-040",
@@ -793,7 +794,8 @@
   "Y",
   "Question routed to C2; guard the effect until the workspace is known",
   "real-backend check",
-  "STATIC-BE (R2): /ai/status?workspaceId= narrows the model list by access rules. Question stays with C2"
+  "STATIC-BE (R2): /ai/status?workspaceId= narrows the model list by access rules. Question stays with C2",
+  "BLOCKED (handoff C2 answer): GET /ai/status?workspaceId= narrowing by access needs the C2 answer before the client sends workspaceId"
  ],
  [
   "M-041",
@@ -833,7 +835,8 @@
   "Y",
   "C5: say clearly what preview does; C2 implements theme",
   "real-backend publish check",
-  "renderer is C2/shared · C-11"
+  "renderer is C2/shared · C-11",
+  "CLIENT HALF FIXED (HARNESS, 5d4c585): Test mode/preview banners say the preview is view-only and where to try; Theme panel says the theme is saved but not applied in preview/published site. Renderer half = handoff HF-C2-04 (C2) open"
  ],
  [
   "M-043",
@@ -909,7 +912,8 @@
   "N (harness)",
   "rAF/equality-gate setRects",
   "S4 perf script before/after",
-  "S4-013: canvas scroll drops 25/96 frames at 1004 sections, 0 at the contract maximum (HARNESS)"
+  "S4-013: canvas scroll drops 25/96 frames at 1004 sections, 0 at the contract maximum (HARNESS)",
+  "FIXED (HARNESS, measured, 9877afa): a pure preview scroll no longer re-renders the Builder (handle track moved by transform, rects in a ref, memoised Handle); at 1004 sections host commits 25->0, worst frame 106.9->17.8 ms, dropped 25->0. Follow-up: a scrolled-out handle is clipped yet still tabbable (keyboard focus not visible) - needs a preview-script message"
  ],
  [
   "M-047",
@@ -929,7 +933,8 @@
   "N",
   "single implementation (builder core) used by both",
   "unit + builder.spec",
-  ""
+  "",
+  "FIXED (HARNESS, 74e1d90): the Website drawer uses builder core/pages (uniqueSlug, checkSlug incl. reserved slugs, removeImpact, opsSetNavigation, opsSetNotFound); own slugify and dead PageBar removed. Slug copy in features/admin/adminModel.ts remains (S2 file)"
  ],
  [
   "M-048",
@@ -1009,7 +1014,8 @@
   "N",
   "client: https only, no credentials, valid path; host pinned only if C0 provides the sites origin (NOT 'same-origin': the redirect goes to the sites origin)",
   "unit for URL guard",
-  "R2: P2->P3, server half is closed in source"
+  "R2: P2->P3, server half is closed in source",
+  "OPEN (S1 Wave A deferred, budget): client validation of the access-ticket query path; server half closed in source"
  ],
  [
   "M-052",
@@ -1194,7 +1200,7 @@
   "plain Vietnamese copy; keep technical names in a collapsed 'Chi tiết kỹ thuật'",
   "text lint guard (denylist) + review",
   "O-03: S3 supplies the label library + guard; S1/S2 apply it in their own files",
-  "GUARD + GLOSSARY MERGED (9ea2e39): ratchet-only denylist guards (internal-constant 15, internal-term 72, legacy-name 11, …); copy fixes pending (S1/S2 lower the ceilings as they fix)"
+  "SHARED COPY FIXED (28d5d3f): APP_PUBLISH no longer shown, ceilings lowered (internal-constant 15->13, native dialogs 12->0); runtimeConfig DATA_API_BASE_URL wording needs a product decision"
  ],
  [
   "M-061",
@@ -1217,7 +1223,7 @@
   "central label maps in @xweb/i18n with a guard for unmapped values",
   "unit: every enum has a label",
   "O-03: S3 supplies the label library + guard; S1/S2 apply it in their own files",
-  "LIBRARY MERGED (9ea2e39): 25 typed enum label maps with a neutral 'Khác' fallback; adoption pending (S1/S2)"
+  "LIBRARY MERGED (9ea2e39), shared part verified (S3 Wave A): 25 maps + 'Khác' fallback + guard exist; adoption in S1/S2 call sites pending"
  ],
  [
   "M-062",
@@ -1243,7 +1249,7 @@
   "canonical glossary (docs) + apply; single role-label source",
   "text guard + review",
   "O-03: S3 supplies the label library + guard; S1/S2 apply it in their own files",
-  "PARTIAL (merged 9273b93): glossary wording in the wave-2 Admin strings, ratchet ceilings lowered; remaining offenders tracked by the ratchets"
+  "PARTIAL (28d5d3f): term-project 14->10, term-model 10->9, tone-old-style 57->30"
  ],
  [
   "M-063",
@@ -1266,7 +1272,7 @@
   "Vietnamese labels; one product name constant",
   "review",
   "O-03: S3 supplies the label library + guard; S1/S2 apply it in their own files",
-  "BRAND constant + ratchet MERGED (9ea2e39); legacy names still in strings (ceiling 11)"
+  "PARTIAL (28d5d3f): auth pages use BRAND/PORTAL_LABEL; legacy-name ceiling 11->7"
  ],
  [
   "M-064",
@@ -1304,7 +1310,8 @@
   "N",
   "DECISION: keep routes (NOT_READY org), add cross-links + one 'Tạo tài khoản' entry; no new routes",
   "UX walkthrough",
-  ""
+  "",
+  "FIXED (HARNESS, 16fb8ad), user decision applied: the four people screens stay separate (distinct jobs, evidence in S2-people-screens.md); consolidated shared blocks (peopleSections table, PeopleLinks, TenantSwitch, useOwnWorkspacesOf); no route change"
  ],
  [
   "M-066",
@@ -1344,7 +1351,8 @@
   "N",
   "extract LoadGate, Field, FilterBar where >=3 copies; do not abstract one-offs",
   "unit/harness",
-  "C-06: also covers the ladders/filters/persistence half of raw R-011 (its act() half is in M-020)"
+  "C-06: also covers the ladders/filters/persistence half of raw R-011 (its act() half is in M-020)",
+  "COMPONENT MERGED (HARNESS, 7168d4d): <Field> in @xweb/ui, adopted on the auth pages (6 fields); ~45 call sites in features/admin and features/studio pending"
  ],
  [
   "M-068",
@@ -1389,7 +1397,7 @@
   "token consolidation (light + dark sets), define missing tokens, replace repeated hex",
   "css counting script before/after",
   "386 hex includes 30 token definitions (R2 count 356 excludes them)",
-  "PARTIAL (9ea2e39): 107 value-identical token replacements (0 of 34 css-snapshot screens changed), hex literals 344 -> 234 uses; radius/shadow/font-size tokens, dark palette merge and builder.css hex (S1) remain"
+  "PARTIAL (HARNESS, 8dd71bb): radius + font-size scale tokenised (206 uses, 0 of 34 snapshot screens changed); builder.css hex, globals.css, shadows and the dark palette remain"
  ],
  [
   "M-070",
@@ -1410,7 +1418,7 @@
   "dedupe; define .sr-only alias or fix usage",
   "unused/duplicate selector script",
   "",
-  "PARTIAL (9ea2e39): 22 provably dead declarations removed (pixel-identical), 26 -> 19 conflicting duplicate selectors; 99 split-rule duplicates remain"
+  "PARTIAL (HARNESS, c67f5a1): .sr-only defined (TestPanel caption no longer shows), dead 16px checkbox sizing removed, conflicting duplicates 19->17"
  ],
  [
   "M-071",
@@ -1474,7 +1482,8 @@
   "N",
   "handoff to C0 (ownership); FRONTEND_ONBOARDING covers the C5 part",
   "n/a",
-  ""
+  "",
+  "BLOCKED (handoff C0): scripts/portals.sh down kills the pid in <name>.launcher without identity validation; C0 file"
  ],
  [
   "M-074",
@@ -1555,7 +1564,8 @@
   "N",
   "show the final slug",
   "builder.spec",
-  ""
+  "",
+  "FIXED (HARNESS, 74e1d90): add-page dialog and drawer show the slug that is really saved (uniqueSlug)"
  ],
  [
   "M-078",
@@ -1573,7 +1583,8 @@
   "N",
   "replace history on close",
   "harness",
-  ""
+  "",
+  "OPEN (S1 Wave A deferred, budget): drawer close uses router.push so Back re-opens the drawer"
  ],
  [
   "M-079",
@@ -1613,7 +1624,8 @@
   "N",
   "permission-aware controls; checkbox lists",
   "harness",
-  "C-08: grab-bag; items handled individually"
+  "C-08: grab-bag; items handled individually",
+  "OPEN (S1 Wave A deferred, budget): 'Khôi phục' shown to everyone; versions with 0 rows"
  ],
  [
   "M-081",
@@ -1632,7 +1644,8 @@
   "N",
   "aria text separation; roving focus optional",
   "axe",
-  ""
+  "",
+  "OPEN (S1 Wave A deferred, budget): 'Khám phá cấu trúc' + 'chưa' reads as one word"
  ],
  [
   "M-082",
@@ -1650,7 +1663,8 @@
   "N (harness)",
   "memoize per file",
   "S4 perf",
-  ""
+  "",
+  "OPEN (S1 Wave A deferred, budget): lineDiff re-runs for every file on every render; needs a measurement first"
  ],
  [
   "M-083",
@@ -1670,7 +1684,8 @@
   "N",
   "",
   "screenshots",
-  ""
+  "",
+  "OPEN (S1/S2 deferred, budget): small copy items (search box clipped, 'Chạy / thử' wraps, ...)"
  ],
  [
   "M-084",
@@ -1692,7 +1707,7 @@
   "level=1 for page-level states; captions/scope",
   "axe all-impacts",
   "",
-  "COMPONENT MERGED (bb5f6e4): States/LoadGate; feature adoption pending"
+  "SHELL ADOPTED (HARNESS, 22670eb): portal splashes/fallbacks and the not-found page render h1; CodeWorkspace/AI-mode h1 and table captions pending (S1/S2 files)"
  ],
  [
   "M-085",
@@ -1774,7 +1789,7 @@
   "clear after use; keep the activation link only until copied/confirmed (reconcile with M-007); fix path join",
   "harness DOM / input-value assertions (unit is not enough)",
   "",
-  "ADMIN PART FIXED (HARNESS, merged eb38a2d); RuntimeDrawer secret (S1) pending"
+  "FIXED (HARNESS): Admin part (eb38a2d) + Studio RuntimeDrawer secret cleared only after a successful save, kept for retry after a failure, one save at a time (d2a126b)"
  ],
  [
   "M-089",
@@ -1792,7 +1807,8 @@
   "N",
   "renderer escaping fuzz test is the real regression guard (C5-only); CSP sha256 for the canvas script is a C0 handoff",
   "review",
-  ""
+  "",
+  "OPEN (S1 Wave A deferred, budget): page nonce copied into the srcdoc script and postMessage target '*'"
  ],
  [
   "M-090",
@@ -1810,7 +1826,8 @@
   "Y",
   "handoff",
   "n/a",
-  ""
+  "",
+  "BLOCKED (handoff C0): HSTS opt-in / COOP / CORP / report-to headers are infra"
  ],
  [
   "M-091",
@@ -1828,7 +1845,8 @@
   "N",
   "clear on logout",
   "unit",
-  "also clear sessionStorage keys in logout and the 401 handler"
+  "also clear sessionStorage keys in logout and the 401 handler",
+  "FIXED (UNIT, 52cf9c5): studio-ws, studio-ai-model and ws-mode-* keys cleared on logout and dropped when a different user opens Studio"
  ],
  [
   "M-092",
@@ -1865,7 +1883,8 @@
   "N",
   "fail closed in UI (backend remains authority)",
   "unit",
-  "R2: split (a) failed /auth/config -> error state: do now; (b) 'absent permissions = deny' blocked on HF-C1-05, verify on a real stack"
+  "R2: split (a) failed /auth/config -> error state: do now; (b) 'absent permissions = deny' blocked on HF-C1-05, verify on a real stack",
+  "PARTIAL: (a) FIXED (HARNESS, 418fd25) a failed /auth/config shows an error with retry instead of a guessed password form (CFG01/02, platform + admin); (b) absent permissions list treated as deny BLOCKED on HF-C1-05 + real-stack check"
  ],
  [
   "M-094",
@@ -1883,7 +1902,8 @@
   "Y",
   "interim C5: drop the displayName heuristic and map SELF_REVIEW (403) to a Vietnamese message; server canApprove flag stays a C0-gated handoff",
   "n/a",
-  ""
+  "",
+  "BLOCKED (backend): 'Duyệt' visibility compares createdBy with the display name; needs a user id from the API (handoff)"
  ],
  [
   "M-095",
@@ -1944,7 +1964,7 @@
   "debounce; share fetch; cached Intl formatters",
   "S4 request counts",
   "S4-017: no cache/abort; the same lists fetched by two screens; session calls start after hydration",
-  "PARTIAL: useLoad keyed cache + abort merged (a5dcdc1) and session reset wired (bb5f6e4); api.* methods do not yet expose signal; tenant switch not covered"
+  "MOSTLY FIXED (HARNESS, measured, 26b31e2): person/override searches debounced 300 ms (REQ03 7 keystrokes -> 1 request, REQ04 4 -> 1), workspace member lists loaded once, AI providers/limits on the keyed useLoad cache (REQ01 providers 2 -> 1). Remaining: api.* methods do not accept an AbortSignal (packages/api-client)"
  ],
  [
   "M-098",
@@ -1962,7 +1982,8 @@
   "N",
   "",
   "harness",
-  "use portalHref when configured (window.location.origin may be an internal host)"
+  "use portalHref when configured (window.location.origin may be an internal host)",
+  "FIXED (UNIT + HARNESS, 5f9e3ae): activation/reset link uses portalOrigin('studio') when configured (token stays in the fragment); copy failure already shows a visible alert (LNK08)"
  ],
  [
   "M-099",
@@ -1986,7 +2007,8 @@
   "N",
   "remove verified-dead exports; add test ids where a spec needs them",
   "tsc + unit",
-  "C-09: grab-bag; every item is tracked in the wave plan, do not treat as one fix · data-testid coverage: 1 for 142 handlers in AdminApp.tsx, 0 in StudioApp/ProjectWorkspace/AuthPages (S4-033)"
+  "C-09: grab-bag; every item is tracked in the wave plan, do not treat as one fix · data-testid coverage: 1 for 142 handlers in AdminApp.tsx, 0 in StudioApp/ProjectWorkspace/AuthPages (S4-033)",
+  "OPEN (Wave B review, C5-L): dead exports / unused imports / 'as never' casts; only measured or provable items"
  ],
  [
   "M-100",
@@ -2007,7 +2029,8 @@
   "N",
   "report only (owner C0); no removal",
   "n/a",
-  ""
+  "",
+  "RESEARCH_ONLY (report only): legacy root app / live helpers inventory delivered in R docs; no code change planned"
  ],
  [
   "M-101",
@@ -2025,7 +2048,8 @@
   "N",
   "refactor to per-call context after C2 agrees",
   "unit",
-  ""
+  "",
+  "BLOCKED (handoff C2 worker): renderSchemaDocument mutates module-level ctx/up/site; C5 file half can follow only with the C2 worker change"
  ],
  [
   "M-102",
@@ -2044,7 +2068,8 @@
   "N",
   "handoff to C0; documented in onboarding",
   "n/a",
-  ""
+  "",
+  "BLOCKED (handoff C0): npm run test:unit deletes .test-build (outDir); C0 script"
  ],
  [
   "M-103",
@@ -2121,7 +2146,8 @@
   "N (harness)",
   "show step titles, hide ids",
   "builder.spec",
-  ""
+  "",
+  "FIXED (HARNESS, c495040): workflow steps named by readable title ('Bước N · kind: name') in targets/branches/chips/aria/validation; approver kinds in Vietnamese; retry backoff in seconds; cron presets not done"
  ],
  [
   "M-107",
@@ -2139,7 +2165,8 @@
   "N",
   "single import spelling; do not break the unit runner",
   "unit + all builds",
-  "split from M-072 (C-07); executes last"
+  "split from M-072 (C-07); executes last",
+  "OPEN (Wave B step 2, C5-L, serial after M-068): repo-wide relative-import / shim cleanup in S1/S2 files"
  ],
  [
   "M-108",
@@ -2158,7 +2185,8 @@
   "N",
   "handoff; C5 keeps nonce behaviour",
   "Lighthouse bf-cache + legacy-javascript audits",
-  ""
+  "",
+  "BLOCKED (decision C0): HTML is no-store because of the per-request CSP nonce"
  ],
  [
   "M-109",
@@ -2176,7 +2204,8 @@
   "N (harness)",
   "O(1) first/last rule; unit test equals canStep for all positions",
   "perf-micro + unit",
-  ""
+  "",
+  "OPEN (S1 Wave A deferred, budget): PagesPanel canStep is O(n^2); needs a micro-benchmark before and after"
  ],
  [
   "M-110",
@@ -2194,7 +2223,8 @@
   "N (harness)",
   "memo + stable handlers; window above ~200 rows",
   "perf-harness attribution table",
-  ""
+  "",
+  "PARTIAL (HARNESS, 9877afa): canvas drag handles memoised and found by Map; page-tree row memo/windowing and keeping the tree mounted not done"
  ],
  [
   "M-111",
@@ -2233,7 +2263,8 @@
   "N",
   "class on <html> set from the builder instead of :has(), or state the floor",
   "Firefox/WebKit run once S4-022 is resolved",
-  ""
+  "",
+  "OPEN (S1 Wave A deferred, budget): phone page-scroll mode needs :has() with no fallback"
  ],
  [
   "M-113",
@@ -2251,7 +2282,8 @@
   "N",
   "@media (prefers-reduced-motion:no-preference)",
   "page-runtime.spec + CSS assertion",
-  ""
+  "",
+  "FIXED (HARNESS, d30a98f + 7d46be1): smooth scrolling only under prefers-reduced-motion:no-preference; published output changed on purpose (golden sha256 updated; undoing only that change reproduces the old golden). C2 republish note"
  ],
  [
   "M-114",
@@ -2269,7 +2301,8 @@
   "N",
   "install playwright firefox/webkit on the integration machine and run portals/builder/org specs, or one manual Safari pass; until then cross-browser is a STATIC report only",
   "same specs under firefox/webkit",
-  "never claim Safari/Firefox support from a Chrome run"
+  "never claim Safari/Firefox support from a Chrome run",
+  "OPEN (C5-L, approved): Firefox and Playwright WebKit installed 2026-10-09 (playwright-core 1.63.0, WebKit 26.6); nothing has been run on them yet; evidence labels CHROMIUM / FIREFOX / WEBKIT (WebKit is not Safari)"
  ],
  [
   "M-115",
@@ -2306,7 +2339,8 @@
   "N",
   "loud pending line",
   "unit summary",
-  ""
+  "",
+  "OPEN (Wave B review, C5-L): contract conformance test is silently skipped unless XWEB_CONFORMANCE_* is set (C0 runner file)"
  ],
  [
   "M-117",
