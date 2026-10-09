@@ -83,14 +83,14 @@ try {
     const btn = await style(p, "#c-btn", ["borderTopWidth", "borderTopStyle"]); check("M-086 forced colors: buttons keep their border", parseFloat(btn.borderTopWidth) >= 1 && btn.borderTopStyle !== "none");
     await shot(p, "tokens-forced-colors.png"); await p.close(); }
 
-  // M-105: the Admin dialog pattern (create-account dialog: four fieldset.stack groups, bare h2 title)
+  // M-105: the Admin dialog pattern (create-account dialog: four fieldset.stack groups, ModalHeader title)
   { const p = await open("prov.html?s=platform", 1000, 900); await p.waitForSelector('[data-testid="create-account"]');
     const fs = await style(p, "fieldset.stack", ["borderTopWidth", "borderTopStyle", "paddingTop", "display", "rowGap"]);
     check("M-105 a fieldset.stack has no UA groove border or padding and is a grid with the 12px gap (`.stack` was defined nowhere)", fs.borderTopWidth === "0px" && fs.paddingTop === "0px" && fs.display === "grid" && fs.rowGap === "12px", JSON.stringify(fs));
     const lg = await style(p, "fieldset.stack > legend", ["fontSize", "fontWeight", "textTransform", "paddingTop"]);
     check("M-105 the legend is a 13px / 650 small-caps label (it was a 16px / 400 UA legend)", lg.fontSize === "13px" && lg.fontWeight === "650" && lg.textTransform === "uppercase" && lg.paddingTop === "0px", JSON.stringify(lg));
-    const h = await style(p, ".modalBody > h2", ["fontSize", "marginTop"]);
-    check("M-105 a bare dialog title has the ModalHeader size (18px, no UA margin) until the dialog adopts <ModalHeader>", h.fontSize === "18px" && h.marginTop === "0px", JSON.stringify(h));
+    const h = await style(p, ".modalBody .xp-modalHead h2", ["fontSize", "marginTop"]);
+    check("M-105 the create-account dialog title is a <ModalHeader> (18px, no UA margin; S2 replaced the bare <h2>)", h.fontSize === "18px" && h.marginTop === "0px", JSON.stringify(h));
     await p.addScriptTag({ path: AXE });
     const v = await p.evaluate(async () => (await window.axe.run('[data-testid="create-account"]', { resultTypes: ["violations"] })).violations.filter((x) => x.impact === "serious" || x.impact === "critical").map((x) => `${x.id}: ${x.nodes[0].target.join(" ")}`));
     check("M-105 axe (serious+critical) on the create-account dialog", v.length === 0, v.join(" ; "));
