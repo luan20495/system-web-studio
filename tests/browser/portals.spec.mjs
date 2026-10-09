@@ -10,7 +10,13 @@ const browser = await launch();
 
 for (const [name, port, prefix, title] of PORTALS) {
   const origin = `http://127.0.0.1:${port}`;
+  // M-093 (a): a failed /auth/config is an error with a retry, never a guessed form (fail closed). So the form checks below answer `/api/v1/auth/config` with a minimal valid config (the login POST still goes to the unreachable proxy)
+  const fail = await browser.newContext({ viewport: { width: 1280, height: 800 } }); const fp = await fail.newPage();
+  await fp.goto(origin + "/login", { waitUntil: "networkidle" }); await fp.waitForTimeout(600);
+  check(`[${name}] no backend: the sign-in methods are unknown, so the page FAILS CLOSED (error + retry, no password form)`, (await fp.getByText("Chưa tải được cách đăng nhập").count()) === 1 && (await fp.getByRole("button", { name: /thử lại/i }).count()) >= 1 && (await fp.getByLabel("Mật khẩu").count()) === 0);
+  await fail.close();
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  await ctx.route("**/api/v1/auth/config*", (r) => r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ localLogin: true, oidc: false, saml: false, signup: false, needsSetup: false }) }));
   const page = await ctx.newPage(); const bad = [];
   page.on("console", (m) => { if (/Content Security Policy|Refused to/i.test(m.text())) bad.push(m.text().slice(0, 160)); });
   page.on("pageerror", (e) => bad.push("pageerror " + e.message.slice(0, 120)));

@@ -139,7 +139,14 @@ Builder-only building blocks: `features/studio/builder/ui/primitives.tsx` (`Icon
 - **Section gate (Admin)**: `adminScope(me)` and `sectionAccess` in `features/admin/adminModel.ts` decide which sections are offered; the page renders `NeedsPlatform` / `NeedsScope` otherwise.
 - **Permission codes (Studio)**: `resolvePermissions(project.permissions)` → `canEditProject`, `canPublish`, `canShare`, `canViewDataSources`, … and `whyNot(...)` for the text on a disabled control. A project that opens with `APP_VIEW` but not `APP_EDIT` is read-only, not a redirect. The contract is `docs/parallel/c5/PERMISSION_CONTRACT.md`.
 - **Disabled with a reason, not hidden**, when the person could reasonably wonder why; the reason names the missing permission (`missingReason`).
+- **Studio admission** (`capabilitiesOf` → `studio.build`): some `workspaces[].permissions` holds `APP_VIEW` OR some `projectScopes[].permissions` does (C1 H-C1-04). Each scope is judged alone, never merged into a permission set, the `role` field of a scope is display only. A project-only EDITOR/VIEWER/PUBLISHER is admitted by their scope; when the project opens, its OWN resolved `permissions` decide what is editable.
+- **Role names** are read in exactly one file (`packages/permissions/src/roles.ts`, two functions, guarded); role pickers send a role as data and the server maps it to codes. Application sharing is role-based (`drawers.tsx`): there is no permission-grant / principal / effective-permission UI because there is no such contract (BLOCKED_BY_C1). Full inventory of what each portal consumes: `docs/parallel/c5/audit/IAM_PERMISSION_INVENTORY.md`.
 - The server decides every call (403 = same scope, no permission; 404 = out of scope). Show the server's answer; do not pre-empt it with a guess.
+
+## 6b. Lazy sections and focus after a route change (M-053)
+
+- The Platform / Admin console imports only the landing page and the company / user / people / organization screens statically; every other section in `features/admin/console/sections.tsx` is `lazy(() => import(...))` (own chunk, fetched on first visit) behind the `<Suspense>` of `console/routes.tsx` (`tests/builder/console-lazy.test.ts` keeps it that way). The Studio's code-project workspace is lazy too. Measure with `scripts/bundle-report.mjs` after a build (`audit/M-053-bundle-splitting.md`).
+- A loading fallback must NOT render an `<h1>`: `useMain` moves focus to the first VISIBLE `<h1>` after a route change and waits (MutationObserver, 5 s) for one that appears late. While a lazy section loads React keeps the previous page in the DOM with `display:none`; hidden headings are skipped.
 
 ## 7. API adapter pattern and NOT_READY
 
@@ -167,7 +174,7 @@ Errors: show the server's `code` in words, never the English message; keep the r
 - Wide tables: put them in a `Card` (it scrolls inside itself); ids that must break go in `code`; names wrap (`break-word`).
 - **Tokens** (`factory.css` `:root`): colours `--f-bg --f-panel --f-line --f-line2 --f-text --f-muted --f-accent --f-accent-ink --f-accent-soft --f-ok/-bg --f-warn/-bg --f-bad/-bg --f-info/-bg`, radius `--f-r` (10 px), `--f-shadow`, focus ring `--f-focus`, `--f-placeholder`, `--f-disabled-bg/-ink`, spacing `--sp-1…--sp-8` (4 8 12 16 20 24 32 px), `--muted-strong` for text on dark rails. The dark editor still uses the older `--bg --panel --text --muted` family in `globals.css`.
 - Type: `Inter, ui-sans-serif, system-ui, …` (no webfont), body 14 px / 1.5, helper 13 px, labels 13 px / 600. Icons 14 / 16 / 18 / 20 / 22 px.
-- Buttons: use `.btn` (`primary`, `ghost`, `sm`, `danger`) in portals; `.bx-btn` inside the Builder. `.button` and `.smallButton` are older (new code does not use them).
+- Buttons (M-068): ONE vocabulary, `.btn` (`primary`, `ghost`, `sm`, `danger`, `icon`, `block`) or `<Button>` from `@xweb/ui`. The dark Studio skin applies automatically inside `.studio`, `.modal` and `.drawer`; the Builder's compact size is `.btn.dense` (+ `.sm`). `.button`, `.smallButton` and `.bx-btn` no longer exist in markup or CSS and `tests/builder/design-tokens.test.ts` fails if one comes back. A dark overlay rendered outside those three containers gets the LIGHT skin: mount it inside `.studio` (the harness pages do). Evidence: `docs/parallel/c5/audit/M-068-button-convergence.md`.
 - CSS is minified on single lines in places (`globals.css`, `http.css`): edit with care and keep each change small.
 
 ## 9. Accessibility rules
@@ -209,9 +216,11 @@ Evidence files in `docs/parallel/c5/evidence/` must say HARNESS or REAL, the git
 ### 10.2 Things that bite
 
 - `npm run test:unit` **deletes `.test-build`** (`scripts/test-unit.mjs`): rebuild the harness afterwards (`node tests/browser/build-harness.mjs`; the static server reads files per request, no restart).
-- **A unit-tested module must import at runtime by relative path** (`../../../packages/ui/src/icons`, not `@xweb/ui`): tests are compiled by `tsc` to CommonJS and run by plain `node --test`, and `@xweb/*` resolve to `.ts` sources that node cannot load. Type-only imports may use `@xweb/*`. This is why `builder/core/*` and `*Model.ts` use relative imports.
+- **A module that a unit test LOADS must import at runtime by relative path** (`../../../packages/ui/src/icons`, not `@xweb/ui`): tests are compiled by `tsc` to CommonJS and run by plain `node --test`, and `@xweb/*` resolve to `.ts` sources that node cannot load. Type-only imports may use `@xweb/*`. This is why `builder/core/*`, `*Model.ts` and the components the SSR tests render use relative imports. EVERY OTHER module uses `@xweb/<pkg>` (M-107): `tests/builder/import-spelling.test.ts` computes the loaded set from the compiled output and fails on a relative `packages/` import anywhere else. When C0's runner resolves `@xweb/*` the exception and the nine shim files can go (HF-C0-M107).
 - A new harness page needs: an entry in `tests/browser/build-harness.mjs` (entry list and its `<name>.html` writer), the file listed as a helper in `scripts/test-classify.mjs` (C0-owned), and a `// @class: harness` header.
-- Specs fall back to `http://127.0.0.1:4000/…` when `HARNESS_URL` is unset: always go through `harness-server.mjs run`.
+- A spec started without `HARNESS_URL` refuses to run (exit 2): always go through `node tests/browser/harness-server.mjs run -- node tests/browser/<spec>.spec.mjs`.
+- **Other browsers**: `BROWSER=webkit|firefox|chromium` (default chromium, `tests/browser/lib/spec.mjs`). WebKit is Playwright WebKit, labelled `WEBKIT`, never "Safari". Firefox is BLOCKED_TOOLING on macOS 27 (`Could not find profile folder`, `audit/S4-cross-browser.md`). Specs that use Chromium-only features (CDP, `--enable-precise-memory-info`) fail on the other engines by design.
+- **Timing specs** (`hooks.spec.mjs`, busy / double-click windows) fail at random under a heavily loaded machine (load average above ~30: other teams' processes); re-run on a quiet one before calling it a regression (the same spec fails on the old tree too).
 - esbuild is not a repo dependency: `npm i --prefix /tmp/esb esbuild` (or set `ESBUILD_DIR`). `/tmp/esb` was present on this machine [RAN]; on a clean machine it must be installed first.
 - Specs default `CHROME` to a Linux path; on macOS pass `CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"`.
 
