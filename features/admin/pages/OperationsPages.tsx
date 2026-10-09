@@ -92,7 +92,7 @@ export function CostsPage() {
         {data.missingPrices.map((m) => <li key={m} className="hint">{COST_ITEM[m]}: chưa có đơn giá</li>)}</ul> : null}
     </Card>
     <LoadGate load={{ data, error, loading: !data && !error, reload }} label="chi phí" isEmpty={(d) => !d.total || typeof d.total !== "object"} empty={{ title: "Chưa có số liệu chi phí", detail: <p>Số liệu xuất hiện khi có build, lưu trữ hoặc lượt AI trong khoảng thời gian này.</p> }}>{(data) => <>
-      <div className="kpiGrid"><Kpi label={`Tổng đã biết (${data.days} ngày)`} value={usd(data.total.totalKnownUsd)} hint={data.total.complete ? "đủ đơn giá" : "chưa đầy đủ: thiếu đơn giá hoặc AI chưa rõ chi phí"}/>
+      <div className="kpiGrid"><Kpi label={`Tổng đã biết (${data.days} ngày)`} value={usd(data.total.totalKnownUsd)} hint={data.missingPrices.length ? `chưa có đơn giá: ${data.missingPrices.map((m) => COST_ITEM[m] ?? m).join(", ")}` : data.total.complete ? "đủ đơn giá" : "chưa đầy đủ: thiếu đơn giá hoặc AI chưa rõ chi phí"}/>
         <Kpi label="Lưu trữ hiện tại" value={gib(data.total.storageBytes)}/><Kpi label="CPU build" value={hours(data.total.buildCpuMs)}/><Kpi label="AI" value={usd(data.total.aiUsd)}/></div>
       <Card title="Theo phòng ban"><CostTable rows={data.byDepartment} first="Phòng ban"/></Card>
       <Card title="Theo workspace"><CostTable rows={data.byWorkspace} first="Workspace"/></Card>

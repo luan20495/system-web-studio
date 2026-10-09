@@ -2,7 +2,7 @@
 /**
  * TEST-ONLY harness for tests/browser/admin.spec.mjs. It proves what the SCREENS do with the answers C1's contract describes; it never proves what a server answers.
  * Query: ?portal=platform|admin|all  &me=sys|sysmember|tadmin|wsadmin|plain|sysatenant|none  &start=/platform/tenants  &fail=<path prefix: GET answers 500>  &failw=<prefix: writes answer 500>  &slow=<prefix: 2.5 s>
- *        &empty=1  &big=1  &daily=empty  &bad=audit|schema  &fx=1 (extra fixtures)  &emptify=1 (every array answer empty, like the state-matrix tool).   Every request is recorded in window.__calls ({method, path, body}); a request with no fixture answers 404 and is recorded as {unknown}.
+ *        &empty=1  &big=1  &daily=empty  &bad=audit|schema  &fx=1 (extra fixtures)  &noprices=1 (costs: three price lines missing while the server says complete) &emptify=1 (every array answer empty, like the state-matrix tool).   Every request is recorded in window.__calls ({method, path, body}); a request with no fixture answers 404 and is recorded as {unknown}.
  * `window.__cfg` can be changed by the spec at run time (slow / fail / failw). The activation token in the fixtures is a made-up string.
  */
 import { createRoot } from "react-dom/client";
@@ -136,7 +136,7 @@ const H: Handler[] = [
   ["PATCH", /^\/admin\/departments\/([^/]+)$/, () => []],
   ["DELETE", /^\/admin\/departments\/([^/]+)$/, () => []],
   ["POST", /^\/admin\/departments$/, () => []],
-  ["GET", /^\/admin\/costs$/, () => ({ days: 30, prices: [], missingPrices: [], total: { key: "t", label: null, storageBytes: 0, buildCpuMs: 0, buildMs: 0, aiUsd: 0, aiUnknownCalls: 0, totalKnownUsd: 0, complete: true, storageUsd: null, cpuUsd: null, buildUsd: null }, byDepartment: [], byWorkspace: [], byApplication: [], egress: "chưa đo" })],
+  ["GET", /^\/admin\/costs$/, () => ({ days: 30, prices: [], missingPrices: P.get("noprices") === "1" ? ["STORAGE_GIB_MONTH", "BUILD_CPU_HOUR", "BUILD_MINUTE"] : [], total: { key: "t", label: null, storageBytes: 0, buildCpuMs: 0, buildMs: 0, aiUsd: 0, aiUnknownCalls: 0, totalKnownUsd: 0, complete: true, storageUsd: null, cpuUsd: null, buildUsd: null }, byDepartment: [], byWorkspace: [], byApplication: [], egress: "chưa đo" })],
   ["GET", /^\/admin\/security\/findings$/, () => ({ counts: {}, findings: [], note: "" })],
   ["GET", /^\/admin\/scim$/, () => ({ enabled: false, users: 0, groups: [], mappings: [] })],
   ["GET", /^\/workspaces\/([^/]+)\/members$/, () => [{ userId: "u-wa", username: "wa", displayName: "Lê Ws", email: null, role: "WORKSPACE_ADMIN", joinedAt: iso(5) }, { userId: "u2", username: "binh", displayName: "Bình", email: "b@x.vn", role: "EDITOR", joinedAt: iso(3) }]],

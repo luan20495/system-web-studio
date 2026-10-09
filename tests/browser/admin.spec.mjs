@@ -634,6 +634,15 @@ await block("scenario 82", async () => { const p = await open({ portal: "platfor
   check("DLG03 the activation-link dialog uses the shared ModalHeader", (await p.locator("[role=dialog] .xp-modalHead h2").count()) === 1 && (await p.locator("[role=dialog] .modalBody > h2").count()) === 0);
   await p.__ctx.close(); });
 
+// ===================================================================================================================== M-132 (REAL-STACK finding): the costs total must not say 'đủ đơn giá' while price lines are missing
+await block("scenario 86", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/costs", noprices: "1" }); await settle(p, 600);
+  const t = await text(p);
+  check("CST01 costs: with three price lines missing the total says so and never 'đủ đơn giá'", /chưa có đơn giá/i.test(t) && !/đủ đơn giá/.test(t), t.slice(0, 200));
+  await p.__ctx.close(); });
+await block("scenario 87", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/costs" }); await settle(p, 600);
+  check("CST02 costs: when nothing is missing and the server says complete the total still says 'đủ đơn giá'", /đủ đơn giá/.test(await text(p)));
+  await p.__ctx.close(); });
+
 // ===================================================================================================================== M-128 (REAL-STACK finding, HARNESS repro): the sticky dialog footer must never hide a focused control (WCAG 2.4.11)
 await block("scenario 85", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/ai/providers" });
   await p.setViewportSize({ width: 360, height: 640 });
