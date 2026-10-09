@@ -23,7 +23,7 @@ export function AlertsPage() {
     {err ? <p className="formError" role="alert">{err}</p> : null}
     <Card title={data ? `${num(data.open)} cảnh báo đang mở` : "Cảnh báo"}>{error ? <ErrorState error={error} retry={reload}/> : !data ? <StateView kind="loading"/> : !data.items.length ? <StateView kind="empty" title="Không có cảnh báo"/> :
       <table className="table"><thead><tr><th>Mức</th><th>Loại</th><th>Nội dung</th><th>Thời gian</th><th>Xử lý</th></tr></thead>
-        <tbody>{data.items.map((a) => <tr key={a.id} className={`alertRow ${a.severity}`}><td><Pill value={a.severity === "CRITICAL" ? "DISABLED" : a.severity === "WARNING" ? "UNKNOWN" : "ACTIVE"} label={a.severity}/></td>
+        <tbody>{data.items.map((a) => <tr key={a.id} className={`alertRow ${a.severity}`}><td><Pill value={a.severity} label={a.severity}/></td>
           <td>{ALERT_KIND[a.kind] ?? a.kind}</td><td>{a.message}</td><td>{ago(a.createdAt)}</td>
           <td>{a.acknowledgedAt ? <small>{a.acknowledgedBy ?? "—"} · {ago(a.acknowledgedAt)}</small> : <button className="btn sm" onClick={() => void ack(a)}>Đã xử lý</button>}</td></tr>)}</tbody></table>}</Card>
   </>);
@@ -31,7 +31,6 @@ export function AlertsPage() {
 
 // ---------------------------------------------------------------- Stage H: security findings, hosting cost, departments
 
-const SEV_TONE: Record<string, string> = { CRITICAL: "DISABLED", HIGH: "DISABLED", MEDIUM: "UNKNOWN", LOW: "QUEUED", INFO: "ACTIVE" };
 const SOURCE_LABEL: Record<string, string> = { DEPENDENCY: "Phụ thuộc (OSV)", SECRET: "Quét bí mật", PACKAGE: "Danh mục package", CONFIG: "Cấu hình" };
 export function SecurityPage() {
   const A = useA();
@@ -45,7 +44,7 @@ export function SecurityPage() {
         <div className="kpiLabel">{k}</div><div className="kpiValue">{num(data.counts[k] ?? 0)}</div></button>)}</div>
       <Card title={sev ? `Mức ${sev}` : "Tất cả phát hiện"}>{rows.length === 0 ? <StateView kind="empty" title="Không có phát hiện"/> :
         <table className="table"><thead><tr><th>Mức</th><th>Nguồn</th><th>Phát hiện</th><th>Đối tượng</th><th>Thời điểm</th></tr></thead>
-          <tbody>{rows.map((f, i) => <tr key={i}><td><Pill value={SEV_TONE[f.severity] ?? "UNKNOWN"} label={f.severity}/></td><td>{SOURCE_LABEL[f.source] ?? f.source}</td>
+          <tbody>{rows.map((f, i) => <tr key={i}><td><Pill value={f.severity} label={f.severity}/></td><td>{SOURCE_LABEL[f.source] ?? f.source}</td>
             <td><b>{f.title}</b><small>{f.detail}</small></td>
             <td>{f.resourceType === "PROJECT" && f.resourceId ? <Link href={A(`/applications/${f.resourceId}`)}>{f.resourceName ?? f.resourceId}</Link> : <span className="code">{f.resourceName ?? f.resourceId ?? "—"}</span>}</td>
             <td>{f.detectedAt ? ago(f.detectedAt) : "hiện tại"}</td></tr>)}</tbody></table>}</Card>

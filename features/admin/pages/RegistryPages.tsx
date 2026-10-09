@@ -35,7 +35,7 @@ export function RegistryTable() {
       {data.length === 0 ? <StateView kind="empty" title="Chưa có thành phần nào" detail={<p>Thành phần đã duyệt xuất hiện ở đây khi máy chủ đăng ký chúng.</p>}/> :
       <table className="table"><thead><tr><th>Component</th><th>Nhóm</th><th>Phiên bản</th><th>Trạng thái</th><th>Dùng trong</th><th><span className="srOnly">Thao tác</span></th></tr></thead>
         <tbody>{data!.map((c) => (<Fragment key={c.id}>
-          <tr><td><b>{c.name}</b><small className="code">{c.id}</small><small>{c.description}</small></td><td>{c.category}</td><td>{c.latestVersion}</td><td><Pill value={c.status === "ACTIVE" ? "ACTIVE" : c.status} label={c.status === "ACTIVE" ? "Đã duyệt" : c.status}/></td>
+          <tr><td><b>{c.name}</b><small className="code">{c.id}</small><small>{c.description}</small></td><td>{c.category}</td><td>{c.latestVersion}</td><td><Pill value={c.status === "ACTIVE" ? "APPROVED" : c.status} label={c.status === "ACTIVE" ? "Đã duyệt" : c.status}/></td>
             <td>{num(c.usedInProjects)} ứng dụng<small>{num(c.sections)} mục</small></td><td><button className="btn sm" aria-expanded={open === c.id} onClick={() => setOpen(open === c.id ? null : c.id)}>Schema</button></td></tr>
           {open === c.id ? <tr className="detailRow"><td colSpan={6}><pre>{prettyJson(c.propsSchema)}</pre></td></tr> : null}
         </Fragment>))}</tbody></table>}
@@ -119,7 +119,7 @@ export function TemplatesAdmin() {
         <table className="table"><thead><tr><th>Mẫu</th><th>Tác giả</th><th>Duyệt</th><th>Trạng thái</th><th>Mục · lượt dùng</th><th>Cập nhật</th><th><span className="srOnly">Thao tác</span></th></tr></thead>
           <tbody>{data!.items.map((t) => <Fragment key={t.id}>
             <tr><td><b>{t.name}</b><small>v{t.version}{t.description ? ` · ${t.description}` : ""}</small></td><td>{t.author ?? "—"}</td>
-              <td><Pill value={{ PRIVATE: "PRIVATE", SUBMITTED: "QUEUED", REVIEW: "UNKNOWN", APPROVED: "COMPANY", ARCHIVED: "ARCHIVED" }[t.reviewStatus]}
+              <td><Pill value={{ PRIVATE: "PRIVATE", SUBMITTED: "SUBMITTED", REVIEW: "IN_REVIEW", APPROVED: "APPROVED", ARCHIVED: "ARCHIVED" }[t.reviewStatus]}
                 label={{ PRIVATE: "Riêng tư", SUBMITTED: "Đang kiểm tra", REVIEW: "Chờ duyệt", APPROVED: "Đã duyệt (công ty)", ARCHIVED: "Đã lưu trữ" }[t.reviewStatus]}/></td>
               <td>{t.status === "ACTIVE" ? <Pill value="ACTIVE" label="Đang dùng"/> : <Pill value="ARCHIVED" label="Đã lưu trữ"/>}</td><td>{t.sections} · {t.usageCount}</td><td>{ago(t.updatedAt)}</td>
               <td><div className="row">

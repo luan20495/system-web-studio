@@ -55,7 +55,7 @@ export function UserList() {
           <tbody>{data!.items.map((u) => (
             <tr key={u.id} className="clickRow" onClick={() => router.push(A(`/users/${u.id}`))}>
               <td><Link href={A(`/users/${u.id}`)}><b>{u.displayName ?? u.username}</b></Link><small>{u.username}{u.email ? ` · ${u.email}` : ""} · {u.authSource === "OIDC" ? "SSO" : u.authSource === "SCIM" ? "SCIM" : "Mật khẩu"}</small></td>
-              <td>{u.systemAdmin ? <Pill value="PUBLIC" label="Quản trị hệ thống"/> : <span className="muted">Thành viên</span>}</td>
+              <td>{u.systemAdmin ? <Pill value="INFO" label="Quản trị hệ thống"/> : <span className="muted">Thành viên</span>}</td>
               <td>{u.workspaces}</td><td>{u.projects}</td><td>{ago(u.lastLoginAt)}</td>
               <td>{!u.enabled ? <Pill value="DISABLED" label="Bị khóa"/> : u.pending ? <Pill value="PENDING" label="Chờ kích hoạt"/> : <Pill value="ACTIVE" label="Hoạt động"/>}</td>
             </tr>))}</tbody>

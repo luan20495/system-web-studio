@@ -69,13 +69,13 @@ export function BuildsPage() {
     <Card title="Kho mã nguồn"><LoadGate load={repos} compact label="kho mã" isEmpty={(r) => r.length === 0} empty={{ title: "Chưa có kho mã" }}>{(rows) =>
       <table className="table"><thead><tr><th>Kho</th><th>Ứng dụng</th><th>Trạng thái</th><th>Kích thước</th><th>Lưu trữ đến</th><th><span className="srOnly">Thao tác</span></th></tr></thead>
         <tbody>{rows.map((r) => <tr key={r.projectId}><td className="code">{r.name}</td><td>{r.project ?? "—"}</td>
-          <td><Pill value={r.state === "ACTIVE" ? "ACTIVE" : r.state === "DELETED" ? "DISABLED" : "UNKNOWN"} label={{ ACTIVE: "Đang dùng", ARCHIVED: "Đã lưu trữ", PENDING_DELETE: "Chờ xóa", DELETED: "Đã xóa" }[r.state]}/></td>
+          <td><Pill value={r.state} label={{ ACTIVE: "Đang dùng", ARCHIVED: "Đã lưu trữ", PENDING_DELETE: "Chờ xóa", DELETED: "Đã xóa" }[r.state]}/></td>
           <td>{mib(r.sizeBytes)}</td><td>{r.deleteAfter ? fmtDate(r.deleteAfter) : "—"}</td>
           <td>{r.state === "PENDING_DELETE" ? <button className="btn sm danger" onClick={() => void hardDelete(r)}>Xóa vĩnh viễn</button> : null}</td></tr>)}</tbody></table>}</LoadGate></Card>
   </>);
 }
 
-const PKG_STATUS: Record<string, [string, string]> = { PENDING: ["UNKNOWN", "Chờ duyệt"], RESOLVING: ["QUEUED", "Đang kiểm tra"], ALLOWED: ["ACTIVE", "Cho phép"], DENIED: ["DISABLED", "Từ chối"] };
+const PKG_STATUS: Record<string, [string, string]> = { PENDING: ["AWAITING_REVIEW", "Chờ duyệt"], RESOLVING: ["QUEUED", "Đang kiểm tra"], ALLOWED: ["APPROVED", "Cho phép"], DENIED: ["REJECTED", "Từ chối"] };
 /** Approved npm package catalog (ADR 0013): approve → closure resolved in the sandbox + OSV scan; HIGH/CRITICAL denied unless the risk is accepted. */
 export function PackagesPage() {
   const { data, error, loading, reload } = useLoad(() => api.admin.packages(), []);
@@ -136,7 +136,7 @@ export function SettingsPage() {
     {pol.error ? <ErrorState error={pol.error} retry={pol.reload}/> : !pol.data ? <StateView kind="loading"/> : pol.data.length === 0 ? <StateView kind="empty" title="Chưa có chính sách nào chỉnh được"/> : <div className="grid2">{Object.entries(groups).map(([g, items]) =>
       <Card key={g} title={g}><table className="table settingsTable"><tbody>{items.map((s) => {
         const v = draft[s.key] ?? s.value;
-        return <tr key={s.key}><td><b>{s.label}</b>{s.risk === "HIGH" ? <Pill value="UNKNOWN" label="Rủi ro cao"/> : null}<small className="code">{s.key}</small>
+        return <tr key={s.key}><td><b>{s.label}</b>{s.risk === "HIGH" ? <Pill value="HIGH_RISK" label="Rủi ro cao"/> : null}<small className="code">{s.key}</small>
           <small>{s.overridden ? `Đã đổi bởi ${s.updatedBy ?? "—"} ${s.updatedAt ? ago(s.updatedAt) : ""} · mặc định ${s.defaultValue}` : "Mặc định từ cấu hình"}</small></td>
           <td className="settingCtl">{s.type === "BOOL"
             ? <label className="switch"><input type="checkbox" checked={s.value === "true"} aria-label={s.label} onChange={(e) => void save(s, String(e.target.checked))}/> {s.value === "true" ? "Bật" : "Tắt"}</label>

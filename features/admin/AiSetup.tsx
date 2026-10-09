@@ -229,7 +229,7 @@ function ModelsTab({ pricing }: { pricing: ReactNode }) {
       ) : <table className="table"><thead><tr><th>Mô hình</th><th>Nhà cung cấp</th><th>Loại</th><th>Giá (USD / 1 triệu token)</th><th>Được phép dùng</th><th>Mặc định</th></tr></thead>
         <tbody>{rows.map(({ p, m }) => <tr key={m.id}>
           <td><b>{m.name}</b></td><td>{p.name}</td>
-          <td>{m.paid ? <Pill value="UNKNOWN" label="Trả phí"/> : <Pill value="ACTIVE" label="Miễn phí"/>}</td>
+          <td>{m.paid ? <Pill value="PAID" label="Trả phí"/> : <Pill value="FREE" label="Miễn phí"/>}</td>
           <td>{!m.paid ? <span className="muted">—</span> : priceFor === m.id ? (
             <form className="filters" onSubmit={(e) => void savePrice(e, m.id)}><input aria-label="Giá vào" type="number" min="0" step="0.000001" placeholder="Vào" value={price.input} onChange={(e) => setPrice({ ...price, input: e.target.value })} required/>
               <input aria-label="Giá ra" type="number" min="0" step="0.000001" placeholder="Ra" value={price.output} onChange={(e) => setPrice({ ...price, output: e.target.value })} required/>

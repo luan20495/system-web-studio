@@ -585,6 +585,14 @@ await block("scenario 75", async () => { const p = await open({ portal: "platfor
   check("RSN02 …and activating it sends nothing and opens no dialog", (await calls(p)).length === h0 && (await dlg(p).count()) === 0);
   await p.__ctx.close(); });
 
+// ===================================================================================================================== M-032 a status chip's colour means what it says (warning = amber, high risk = red, not grey)
+await block("scenario 76", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/alerts" });
+  await p.locator(".pill", { hasText: "WARNING" }).first().waitFor();
+  check("PIL01 an alert of severity WARNING is an amber (pill-warn) chip, not grey", /pill-warn/.test(await p.locator(".pill", { hasText: "WARNING" }).first().getAttribute("class")));
+  await nav(p, "/platform/settings"); await p.locator(".pill", { hasText: "Rủi ro cao" }).first().waitFor();
+  check("PIL02 'Rủi ro cao' is a red (pill-bad) chip, not grey", /pill-bad/.test(await p.locator(".pill", { hasText: "Rủi ro cao" }).first().getAttribute("class")));
+  await p.__ctx.close(); });
+
 check("no console error / warning / uncaught exception in any page", errors.length === 0, errors.slice(0, 3).join(" | "));
 await browser.close();
 finish();
