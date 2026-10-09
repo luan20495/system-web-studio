@@ -17,7 +17,7 @@ import { adminScope } from "../adminModel";
 import { useA } from "../console/context";
 import { confirm, LoadGate, ReasonButton } from "@xweb/ui";
 import { useLoad } from "../../useLoad";
-import { ago, Card, ErrorState, errText, fmtDate, Kpi, num, Pager, Pill, StateView } from "../../ui";
+import { ago, Card, ErrorState, fmtDate, Kpi, num, Pager, Pill, StateView } from "../../ui";
 import { PageHead } from "../PageHead";
 
 // ------------------------------------------------------------------ users & workspaces

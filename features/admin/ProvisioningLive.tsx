@@ -1,6 +1,6 @@
 "use client";
 /** The real wiring of the create-account screens (session, API, live adapter). The presentational parts are in ProvisioningScreens.tsx (also used by the browser harness). */
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { api } from "@/lib/http-api";
 import { useSession } from "../session";
 import { useLoad } from "../useLoad";

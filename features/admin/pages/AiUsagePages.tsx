@@ -10,7 +10,7 @@ import { useA } from "../console/context";
 import { LoadNote } from "../LoadNote";
 import { useLoad } from "../../useLoad";
 import { AI_PROVIDERS_KEY } from "../shared/useDebounced";
-import { ago, Card, ErrorState, errText, fmtDate, Kpi, num, Pager, Pill, StateView, tok, usd } from "../../ui";
+import { ago, Card, ErrorState, fmtDate, Kpi, num, Pager, Pill, StateView, tok, usd } from "../../ui";
 
 // ------------------------------------------------------------------ AI control
 const OUTCOME_LABEL: Record<string, string> = { OK: "Thành công", BAD_OUTPUT: "Trả lời không dùng được", ERROR: "Lỗi (không có trả lời)" };

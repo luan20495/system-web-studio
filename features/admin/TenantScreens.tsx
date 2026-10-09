@@ -11,7 +11,7 @@ import { FormError } from "./FormError";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { api, ApiError } from "@/lib/http-api";
+import { api } from "@/lib/http-api";
 import type { Member, TenantMemberCandidate, TenantMemberView, TenantView } from "@/lib/http-types";
 import { useSession } from "../session";
 import { useLoad } from "../useLoad";
@@ -30,10 +30,7 @@ import { TenantSwitch } from "./shared/TenantSwitch";
 import { PeopleLinks } from "./shared/PeopleLinks";
 import { PageHead } from "./PageHead";
 import { useA } from "./console/context";
-import {
-  CANDIDATE_MAX_RESULTS, TENANT_ROLES, TENANT_STATUS_LABEL, WORKSPACE_ROLES, candidateLabel, candidateQuery, adminScope, slugify, canManageWorkspaceMembers, checkTenantForm, memberChangeBlock, personLabel, personOf, tenantActions, tenantMemberRows,
-  workspaceMemberBlock, workspaceRoleLabel, type Person,
-} from "./adminModel";
+import { CANDIDATE_MAX_RESULTS, TENANT_ROLES, TENANT_STATUS_LABEL, WORKSPACE_ROLES, candidateLabel, candidateQuery, adminScope, slugify, canManageWorkspaceMembers, checkTenantForm, memberChangeBlock, personOf, tenantActions, tenantMemberRows, workspaceMemberBlock, workspaceRoleLabel, type Person } from "./adminModel";
 
 /** one mapper for every refusal (M-075): by code, never the Error.message of a non-ApiError */
 const say = (e: unknown, fallback: string) => errorText(e, fallback);

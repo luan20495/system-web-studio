@@ -12,9 +12,7 @@
 import type { ActionDef, ActionType, AppDefinitionV2, WorkflowDef, WorkflowRunView } from "@xweb/types";
 import { explainError, type UserMessage } from "./errors";
 import { WORKFLOW_TERMINAL_STATUSES } from "./contract";
-import { available, type Readiness } from "./readiness";
 
-export type AppMode = "EDIT" | "TEST";
 
 export type TestOutcome =
   | { state: "WOULD_RUN"; note: string }
@@ -42,12 +40,6 @@ export const TEST_RULES: readonly string[] = [
   "Chạy thử workflow vẫn có thể tạo một bản ghi lượt chạy (workflow_run) trên máy chủ.",
 ];
 
-/**
- * Test mode has routes now (runtime-api.md R1–R3), but they sit behind server flags (`app.data-platform.enabled`, `app.workflow.enabled`). There is
- * no capability probe in the contract, so the panel is AVAILABLE and the FIRST answer decides: a 404 without a domain code becomes NOT_READY
- * (`outcomeFromError` → "unavailable"), never a fake result.
- */
-export const testModeReadiness = (): Readiness => available();
 
 export function describeTestEffect(a: ActionDef, opts: { connectorSupportsDryRun?: boolean } = {}): TestOutcome {
   const t: ActionType = a.type;

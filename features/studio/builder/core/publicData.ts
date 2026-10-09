@@ -34,8 +34,6 @@ export const BINDABLE_SCALAR: Readonly<Record<string, readonly string[]>> = {
   ComparisonBlock: ["heading"], Testimonials: ["heading"], ContactForm: ["heading"], Footer: ["text"],
 };
 export const BINDABLE_LIST: Readonly<Record<string, readonly string[]>> = { ProductGrid: ["items"], Testimonials: ["items"] };
-/** row fields a list prop reads (C2 handoff); the data's mapped fields should be named like these */
-export const LIST_ROW_FIELDS: Readonly<Record<string, readonly string[]>> = { "ProductGrid.items": ["name", "description"], "Testimonials.items": ["quote", "author", "location", "rating"] };
 
 export type BindableProp = { prop: string; kind: "text" | "list" };
 export function bindablePropsOf(componentType: string): BindableProp[] {
@@ -270,7 +268,6 @@ export function diffAnnounced(announced: readonly string[], frozen: readonly str
 export const PAGE_RUNTIME_STATES = ["loading-config", "not-ready", "loading-data", "ready", "error"] as const;
 export type PageRuntimeState = (typeof PAGE_RUNTIME_STATES)[number];
 export const BOUND_ELEMENT_STATES = ["ready", "empty", "error"] as const;
-export type BoundElementState = (typeof BOUND_ELEMENT_STATES)[number];
 export const RUNTIME_STATE_TEXT: Record<PageRuntimeState, string> = {
   "loading-config": "Đang tải cấu hình", "not-ready": "Chưa sẵn sàng", "loading-data": "Đang tải dữ liệu", ready: "Đã có dữ liệu", error: "Lỗi dữ liệu",
 };

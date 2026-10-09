@@ -4,7 +4,7 @@
  * READ query (`RUN_QUERY` and the other old names are rejected). `trigger` is OPTIONAL: a UI-bound action has one; a child action (workflow step,
  * onSuccess/onError chain) does not.
  */
-import type { ActionDef, ActionType, AppDefinitionV2, ComponentMetadataV2, DefinitionOperation, EventType, PermissionCode } from "@xweb/types";
+import type { ActionDef, ActionType, AppDefinitionV2, ComponentMetadataV2, DefinitionOperation, EventType } from "@xweb/types";
 import { ACTION_TYPES, CLIENT_ONLY_ACTION_TYPES, EVENT_TYPES, REJECTED_ACTION_ALIASES } from "./contract";
 import { defOps, validateDefinition, type RefIssue } from "./definition";
 import { uniqueId } from "./dataFlow";

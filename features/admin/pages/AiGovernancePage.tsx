@@ -5,7 +5,7 @@ import { api } from "@/lib/http-api";
 import type { AccessRule, AiBudget, EffectiveModel } from "@/lib/http-types";
 import { confirm } from "@xweb/ui";
 import { useLoad } from "../../useLoad";
-import { ago, Card, ErrorState, errText, num, Pill, StateView, usd } from "../../ui";
+import { ago, Card, ErrorState, num, Pill, StateView, usd } from "../../ui";
 import { LoadNote } from "../LoadNote";
 import { PageHead } from "../PageHead";
 import { useAdminAction } from "../useAdminAction";

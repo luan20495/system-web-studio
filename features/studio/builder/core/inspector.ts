@@ -69,8 +69,6 @@ export function bindableProps(component: RegistryComponent | undefined, meta: Co
     : d.type === "string" && !d.format && prop !== "id" ? [{ prop, cardinality: "SINGLE", itemFields: [], derived: true }] : []);
 }
 
-/** events of a component (only canonical EventType wire names come from the metadata). Without metadata: none are invented. */
-export const eventsOf = (meta: ComponentMetadataV2 | undefined) => meta?.events ?? [];
 
 // --------------------------------------------------------------------------------------------------- content → operations
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);

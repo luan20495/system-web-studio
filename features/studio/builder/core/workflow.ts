@@ -4,7 +4,6 @@
  * returns new objects.
  */
 import type { ActionDef, AppDefinitionV2, CompareOp, ConditionDef, DefinitionOperation, StepKind, ValueRefDef, WorkflowDef, WorkflowStepDef } from "@xweb/types";
-import { COMPARE_OPS, STEP_KINDS } from "./contract";
 import { defOps, validateDefinition, type RefIssue } from "./definition";
 import { uniqueId } from "./dataFlow";
 
@@ -16,7 +15,6 @@ export const STEP_HELP: Readonly<Record<StepKind, string>> = {
 export const OP_LABEL: Readonly<Record<CompareOp, string>> = { EQ: "bằng", NE: "khác", GT: "lớn hơn", GTE: "lớn hơn hoặc bằng", LT: "nhỏ hơn", LTE: "nhỏ hơn hoặc bằng", IN: "nằm trong", CONTAINS: "chứa" };
 export const PRINCIPAL_LABEL: Readonly<Record<string, string>> = { USER: "Người dùng", GROUP: "Nhóm", ROLE: "Vai trò", DEPARTMENT_MANAGER: "Quản lý phòng ban" };
 export const kindOf = (s: WorkflowStepDef): StepKind => s.kind ?? (s.actionRef !== undefined ? "ACTION" : "END");
-export const isStepKind = (v: string): v is StepKind => (STEP_KINDS as readonly string[]).includes(v);
 
 export function newWorkflow(doc: AppDefinitionV2, name: string): WorkflowDef {
   const id = uniqueId("wf", (doc.workflows ?? []).map((w) => w.id));
@@ -111,7 +109,6 @@ export function describeCondition(c: ConditionDef): string {
   if ("not" in c) return `không (${describeCondition(c.not)})`;
   return `có ${describeRef(c.exists)}`;
 }
-export const isCompareOp = (v: string): v is CompareOp => (COMPARE_OPS as readonly string[]).includes(v);
 export function compare(left: ValueRefDef, op: CompareOp, right: ValueRefDef): ConditionDef { return { op, left, right }; }
 
 // ------------------------------------------------------------------------------------------------------------------ summaries

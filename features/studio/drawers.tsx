@@ -1,13 +1,9 @@
 "use client";
 // Project drawers/modals shared by the Studio workspace (settings, assets, members, publish).
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { X, confirm, useBackdropClose } from "@xweb/ui";
-import { api, ApiError } from "@/lib/http-api";
-import { renderSchemaDocument } from "@/lib/schema-preview";
-import type {
-  RegistryComponent, AiStatus, ApiProject, AssetDto, AuthConfig, Member, Deployment, Me, PageSchema, PromptHistoryItem, SchemaOperation, Section, SiteInfo, VersionSummary
-} from "@/lib/http-types";
+import { api, ApiError } from "@/lib/http-api";import type { ApiProject, AssetDto, Member, Me } from "@/lib/http-types";
 import { PROJECT_ROLES, WORKSPACE_ROLES } from "@/lib/http-types";
 import type { DeviceMode } from "@/lib/types";
 import { useOverlayDialog } from "./useOverlayDialog";

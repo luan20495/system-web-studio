@@ -6,7 +6,7 @@ import { api } from "@/lib/http-api";
 import type { Connector, Department } from "@/lib/http-types";
 import { LoadGate, confirm, prompt } from "@xweb/ui";
 import { useLoad } from "../../useLoad";
-import { ago, Card, ErrorState, errText, Kpi, Pill, StateView } from "../../ui";
+import { ago, Card, ErrorState, Kpi, Pill, StateView } from "../../ui";
 import { PageHead } from "../PageHead";
 import { useAdminAction } from "../useAdminAction";
 
@@ -50,7 +50,7 @@ export function IdentityPage() {
   const scim = useLoad(() => api.adminScim(), []);
   const [m, setM] = useState({ groupId: "", ws: { type: "WORKSPACE", id: "" }, role: "VIEWER" });
   const { act, busy, err } = useAdminAction("Không thực hiện được.", scim.reload);
-  const c = cfg.data; const s = scim.data;
+  const s = scim.data;
   return (<>
     <PageHead title="Định danh" sub="Đăng nhập một lần (OIDC), SAML qua nhà cung cấp OIDC (identity brokering), cấp tài khoản tự động (SCIM 2.0). MFA do nhà cung cấp danh tính quản lý."/>
     {err ? <p className="formError" role="alert">{err}</p> : null}

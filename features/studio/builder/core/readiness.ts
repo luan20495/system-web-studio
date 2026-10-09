@@ -12,7 +12,6 @@ export const available = (): Readiness => ({ state: "AVAILABLE" });
 export const loading = (): Readiness => ({ state: "LOADING" });
 export const notReady = (reason: string): Readiness => ({ state: "NOT_READY", reason });
 export const failed = (message: string): Readiness => ({ state: "ERROR", message });
-export const isReady = (r: Readiness): boolean => r.state === "AVAILABLE";
 
 /** shape of ApiError that matters here (kept structural so this module does not import the API client) */
 type ErrLike = { status?: number; code?: string; message?: string } | null | undefined;

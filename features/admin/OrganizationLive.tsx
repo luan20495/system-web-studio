@@ -1,6 +1,6 @@
 "use client";
 /** The real wiring of the organization and employee screens (session, live adapters). The presentational parts are OrganizationScreens.tsx / EmployeesScreens.tsx (also used by the browser harness). */
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useSession } from "../session";
 import { PageHead } from "./PageHead";
 import { adminScope } from "./adminModel";

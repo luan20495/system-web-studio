@@ -5,7 +5,7 @@ import { canEditProject, canPublish, canShare, resolvePermissions } from "@xweb/
 import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { ArrowLeft, confirm, ReasonButton, Sparkles, TabPanel, Tabs, toast } from "@xweb/ui";
 import { useRouter } from "next/navigation";
-import { api, ApiError } from "@/lib/http-api";
+import { api } from "@/lib/http-api";
 import { SERVER_KINDS, type AiStatus, type ApiProject, type AuthConfig, type CodeAiHistoryItem, type CodeChange, type CodeCommit, type DiffFile, type TreeFile } from "@/lib/http-types";
 import { useSession } from "../session";
 import { ago, ErrorState, errText, fmtDate, StateView, tok, usd } from "../ui";

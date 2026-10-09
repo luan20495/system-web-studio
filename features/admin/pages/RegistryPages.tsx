@@ -3,12 +3,12 @@
 import { Fragment, useId, useMemo, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/http-api";
-import type { BlockDto, TemplateDto } from "@/lib/http-types";
+import type { BlockDto } from "@/lib/http-types";
 import { useA } from "../console/context";
 import { confirm, prompt, LoadGate, Tabs, TabPanel } from "@xweb/ui";
 import { useLoad } from "../../useLoad";
 import { BlockStatus, blockPage, CheckList, ReviewTimeline, SchemaThumb } from "../../library";
-import { ago, Card, ComingSoon, ErrorState, errText, num, Pager, Pill, StateView } from "../../ui";
+import { ago, Card, ComingSoon, ErrorState, num, Pager, Pill, StateView } from "../../ui";
 import { PageHead } from "../PageHead";
 import { useAdminAction } from "../useAdminAction";
 import { prettyJson } from "../safeJson";

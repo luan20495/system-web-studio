@@ -7,7 +7,7 @@ import { api } from "@/lib/http-api";
 import type { CostLine, SecurityFinding, AdminAlert } from "@/lib/http-types";
 import { useA } from "../console/context";
 import { useLoad } from "../../useLoad";
-import { ago, Card, ErrorState, errText, fmtDate, Kpi, num, Pill, StateView, usd } from "../../ui";
+import { ago, Card, ErrorState, fmtDate, Kpi, num, Pill, StateView, usd } from "../../ui";
 import { PageHead } from "../PageHead";
 import { useAdminAction } from "../useAdminAction";
 

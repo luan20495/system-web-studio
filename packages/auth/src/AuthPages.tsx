@@ -6,7 +6,7 @@ import Link from "next/link";
 import { api, ApiError } from "@xweb/api-client";
 import type { AuthConfig } from "@xweb/types";
 import { useSession } from "./session";
-import { accessiblePortals, canAccessPortal, portalHref, portalOfPath, PORTAL_LABEL, PORTAL_PREFIX, rememberPortal, rememberedPortal, resolvePortalPostLogin, resolvePostLogin, safeNext, type Portal, type PortalId } from "@xweb/permissions";
+import { accessiblePortals, canAccessPortal, portalHref, portalOfPath, PORTAL_LABEL, rememberPortal, rememberedPortal, resolvePortalPostLogin, resolvePostLogin, safeNext, type Portal, type PortalId } from "@xweb/permissions";
 import { Ban, BRAND, Clock, Diamond, ErrorState, errText, Field, Inbox } from "@xweb/ui";
 
 const SSO_ERRORS: Record<string, string> = {

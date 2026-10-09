@@ -5,7 +5,7 @@ import { api } from "@/lib/http-api";
 import type { PackageView, RepoRow, SettingView, HealthItem } from "@/lib/http-types";
 import { confirm, prompt, LoadGate } from "@xweb/ui";
 import { useLoad } from "../../useLoad";
-import { ago, Card, ErrorState, errText, fmtDate, Kpi, num, Pill, StateView } from "../../ui";
+import { ago, Card, ErrorState, fmtDate, Kpi, num, Pill, StateView } from "../../ui";
 import { PageHead } from "../PageHead";
 import { useAdminAction } from "../useAdminAction";
 

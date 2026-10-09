@@ -83,10 +83,6 @@ export function slotForClickAdd(sections: Section[], selectedId: string | null, 
   return clampSlot(sections, i >= 0 ? i + 1 : sections.length, type);
 }
 
-/** the id of the section the indicator sits before (for the label "Thả vào trước …"), or null at the end */
-export function slotNeighbours(sections: Section[], slot: number): { before: Section | null; after: Section | null } {
-  return { before: sections[slot - 1] ?? null, after: sections[slot] ?? null };
-}
 
 /**
  * A slot counted over the RENDERED rectangles (what the pointer sees) back to an index in the section list. Sections the preview has no

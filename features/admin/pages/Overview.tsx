@@ -8,7 +8,7 @@ import { Circle, CircleCheck, LoadGate } from "@xweb/ui";
 import { portalHref } from "@xweb/permissions";
 import { useA, useAdminConsole } from "../console/context";
 import { useLoad } from "../../useLoad";
-import { Card, ErrorState, Kpi, num, StateView } from "../../ui";
+import { Card, Kpi, num } from "../../ui";
 import { DEFAULT_TENANT_ID } from "../adminModel";
 import { PageHead } from "../PageHead";
 

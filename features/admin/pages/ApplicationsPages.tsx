@@ -11,7 +11,7 @@ import { useSession } from "../../session";
 import { canActInWorkspace } from "../adminModel";
 import { useA } from "../console/context";
 import { useLoad } from "../../useLoad";
-import { ago, Card, ComingSoon, ErrorState, errText, fmtDate, Kpi, Pager, Pill, StateView } from "../../ui";
+import { ago, Card, ComingSoon, ErrorState, fmtDate, Kpi, Pager, Pill, StateView } from "../../ui";
 import { LoadNote } from "../LoadNote";
 import { PageHead } from "../PageHead";
 import { useAdminAction } from "../useAdminAction";
