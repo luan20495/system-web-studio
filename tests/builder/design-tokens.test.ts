@@ -142,6 +142,15 @@ test("M-105: `.stack` is defined (it was used in 10 places and defined nowhere);
   const f = css["factory.css"];
   assert.match(f, /\.stack\{display:grid;gap:var\(--sp-3\)\}/);
   assert.match(f, /fieldset\.stack\{border:0;margin:0;padding:0;min-width:0\}/);
-  assert.match(f, /fieldset\.stack>legend\{[^}]*font-size:13px[^}]*text-transform:uppercase/);
+  assert.match(f, /fieldset\.stack>legend\{[^}]*font-size:var\(--f-fs-md\)[^}]*text-transform:uppercase/);
   assert.match(f, /\.modalBody>h2\{margin:0;font-size:18px/);
+});
+
+test("M-069: radius and type scale are tokens with their original values; the light sheets (factory / ui / http) use them instead of re-typing the scale values", () => {
+  const SCALE: Record<string, string> = { "--f-r-xs": "6px", "--f-r-sm": "8px", "--f-r": "10px", "--f-r-lg": "12px", "--f-r-pill": "999px", "--f-fs-xs": "11px", "--f-fs-sm": "12px", "--f-fs-md": "13px", "--f-fs-base": "14px" };
+  for (const [n, v] of Object.entries(SCALE)) assert.equal(tokens.get(n), v, n);
+  for (const f of ["factory.css", "ui.css", "http.css"]) {
+    const raw = Array.from(css[f].matchAll(/(border-radius:(?:6|8|10|12|999)px|font-size:(?:11|12|13|14)px)(?=[;}!])/g), (m) => m[1]);
+    assert.deepEqual(raw, [], `${f}: use var(--f-r-*) / var(--f-fs-*)`);
+  }
 });
