@@ -93,3 +93,18 @@ export function indicatorY(rects: SectionRect[], slot: number): number {
   const last = sorted[sorted.length - 1];
   return last.top + last.height;
 }
+
+/**
+ * M-046: the preview reports viewport rectangles on every scroll frame. When `next` is `prev` moved by one common offset (same ids in the
+ * same order, same heights) it is a pure scroll: the offset is returned and the host only moves the handle track, without a React render.
+ * Anything else (a section added, moved, resized, the frame resized) returns null and the rectangles are taken as the new layout.
+ */
+export function scrollShift(prev: readonly SectionRect[], next: readonly SectionRect[], eps = 0.5): number | null {
+  if (prev.length !== next.length || !prev.length) return null;
+  const d = next[0].top - prev[0].top;
+  for (let i = 0; i < prev.length; i++) {
+    const a = prev[i], b = next[i];
+    if (a.id !== b.id || Math.abs(a.height - b.height) > eps || Math.abs(b.top - a.top - d) > eps) return null;
+  }
+  return d;
+}
