@@ -1,8 +1,9 @@
 "use client";
 
+import { confirm, Tabs, useAction } from "@xweb/ui";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { api } from "@/lib/http-api";
 import type { TemplateDto } from "@/lib/http-types";
 import { useLoad } from "../../useLoad";
@@ -25,12 +26,19 @@ function TemplateCard({ t, onUse, onChanged, categories, mine }: { t: TemplateDt
   const [editing, setEditing] = useState(false); const [name, setName] = useState(t.name); const [desc, setDesc] = useState(t.description);
   const [category, setCategory] = useState(t.category); const [tags, setTags] = useState(t.tags.join(", "));
   const [err, setErr] = useState<string | null>(null); const [checks, setChecks] = useState<{ check: string; ok: boolean; message: string }[] | null>(null);
-  async function act(fn: () => Promise<unknown>) { setErr(null); try { await fn(); setEditing(false); onChanged(); } catch (x) { setErr(errText(x, "Không thực hiện được.")); } }
+  // M-020: one command per card at a time (a ref decides, not the next render). A job that returns false was cancelled (the confirmation was dismissed): nothing changed, nothing to refresh.
+  const doIt = useAction((_ctx, job: () => Promise<unknown>) => job());
+  async function act(job: () => Promise<unknown>, fallback = "Không thực hiện được.") {
+    setErr(null);
+    const r = await doIt.run(job);
+    if (r.status === "error") setErr(errText(r.error, fallback));
+    else if (r.status === "ok" && r.value !== false) { setEditing(false); onChanged(); }
+  }
   async function saveEdit() {
     await act(async () => { await api.updateTemplate(t.id, { name: name.trim(), description: desc.trim() });
       await api.templateCatalog(t.id, { category, tags: tags.split(",").map((x) => x.trim()).filter(Boolean) }); });
   }
-  async function submit() { setErr(null); try { const r = await api.submitTemplate(t.id); setChecks(r.passed ? null : r.checks); onChanged(); } catch (x) { setErr(errText(x, "Không gửi được.")); } }
+  const submit = () => act(async () => { const r = await api.submitTemplate(t.id); setChecks(r.passed ? null : r.checks); }, "Không gửi được.");
   const [tone, label] = REVIEW_LABEL[t.reviewStatus] ?? ["PRIVATE", t.reviewStatus];
   return <article className="libCard">
     <TemplateThumb t={t}/>
@@ -44,13 +52,13 @@ function TemplateCard({ t, onUse, onChanged, categories, mine }: { t: TemplateDt
       <textarea aria-label="Mô tả mẫu" value={desc} maxLength={500} rows={2} onChange={(e) => setDesc(e.target.value)}/>
       <select aria-label="Danh mục" value={category} onChange={(e) => setCategory(e.target.value)}>{Object.entries(categories).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
       <input aria-label="Thẻ (phân tách bằng dấu phẩy)" placeholder="Thẻ, phân tách bằng dấu phẩy" value={tags} onChange={(e) => setTags(e.target.value)}/>
-      <div className="actions"><button className="btn sm primary" disabled={!name.trim()}>Lưu</button><button type="button" className="btn sm" onClick={() => setEditing(false)}>Hủy</button></div>
+      <div className="actions"><button className="btn sm primary" disabled={!name.trim() || doIt.busy}>Lưu</button><button type="button" className="btn sm" onClick={() => setEditing(false)}>Hủy</button></div>
     </form> : <div className="actions">
       {onUse ? <button className="btn sm primary" onClick={() => onUse(t)}>Dùng mẫu này</button> : null}
       {t.canEdit ? <><button className="btn sm" onClick={() => setEditing(true)}>Sửa</button>
-        {t.reviewStatus === "PRIVATE" ? <button className="btn sm" onClick={() => void submit()}>Gửi duyệt cho công ty</button> : null}
-        <button className="btn sm ghost" onClick={() => { if (confirm(`Lưu trữ mẫu “${t.name}”? Ứng dụng đã tạo từ mẫu không bị ảnh hưởng.`)) void act(() => api.archiveTemplate(t.id)); }}>Lưu trữ</button></> : null}
-      {t.reviewStatus === "REVIEW" && mine ? <button className="btn sm ghost" onClick={() => void act(() => api.withdrawTemplate(t.id))}>Rút lại</button> : null}
+        {t.reviewStatus === "PRIVATE" ? <button className="btn sm" disabled={doIt.busy} onClick={() => void submit()}>Gửi duyệt cho công ty</button> : null}
+        <button className="btn sm ghost" disabled={doIt.busy} onClick={() => void act(async () => { if (!(await confirm({ title: `Lưu trữ mẫu “${t.name}”?`, message: "Mẫu không còn được đề xuất cho ứng dụng mới. Ứng dụng đã tạo từ mẫu không bị ảnh hưởng.", confirmLabel: "Lưu trữ mẫu", danger: true }))) return false; await api.archiveTemplate(t.id); })}>Lưu trữ</button></> : null}
+      {t.reviewStatus === "REVIEW" && mine ? <button className="btn sm ghost" disabled={doIt.busy} onClick={() => void act(() => api.withdrawTemplate(t.id))}>Rút lại</button> : null}
     </div>}
     {checks ? <ul className="plainList" aria-label="Kết quả kiểm tra">{checks.filter((c) => !c.ok).map((c) => <li key={c.check} className="formError">{c.check}: {c.message}</li>)}</ul> : null}
     {err ? <p className="formError" role="alert">{err}</p> : null}
@@ -58,7 +66,7 @@ function TemplateCard({ t, onUse, onChanged, categories, mine }: { t: TemplateDt
 }
 
 export function Templates() {
-  const router = useRouter();
+  const router = useRouter(); const tabsId = useId();
   const [scope, setScope] = useState<"company" | "mine">("company");
   const [category, setCategory] = useState(""); const [sort, setSort] = useState<"recent" | "popular">("recent");
   const cats = useLoad(() => api.libraryCategories(), []);
@@ -66,8 +74,7 @@ export function Templates() {
   const use = (t: TemplateDto) => router.push(S(`/new?template=${t.id}`));
   return (<>
     <div className="pageHead"><div><h1>Templates</h1><p>Mẫu khởi đầu cho website. Một mẫu là cấu trúc trang (Page Schema) từ component đã duyệt, không phải mã nguồn; ảnh không đi kèm mẫu.</p></div></div>
-    <div className="tabs" role="tablist">{([["company", "Mẫu của công ty"], ["mine", "Mẫu của tôi"]] as const).map(([k, l]) =>
-      <button key={k} role="tab" aria-selected={scope === k} className={scope === k ? "active" : ""} onClick={() => setScope(k)}>{l}</button>)}</div>
+    <Tabs label="Nguồn mẫu" idBase={tabsId} value={scope} onChange={setScope} panels={false} tabs={[{ value: "company", label: "Mẫu của công ty" }, { value: "mine", label: "Mẫu của tôi" }]}/>
     <div className="filters">
       <select aria-label="Danh mục" value={category} onChange={(e) => setCategory(e.target.value)}><option value="">Mọi danh mục</option>
         {Object.entries(cats.data?.templates ?? {}).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>

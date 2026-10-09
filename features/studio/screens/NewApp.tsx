@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { LoadGate } from "@xweb/ui";
 import { api } from "@/lib/http-api";
 import { SERVER_KINDS, type AppKind } from "@/lib/http-types";
 import { useLoad } from "../../useLoad";
@@ -38,21 +39,30 @@ export function NewApp() {
     }
     catch (x) { setErr(errText(x, "Không tạo được ứng dụng.")); setBusy(false); }
   }
-  const options: [string, string, string][] = [["", "Trang mặc định", "Có sẵn trong hệ thống: thanh điều hướng, Hero, sản phẩm, đánh giá, liên hệ."],
-    ...(company.data ?? []).map((t): [string, string, string] => [t.id, t.name, `Mẫu công ty · ${t.sections} mục · v${t.version}`]),
-    ...(mine.data ?? []).map((t): [string, string, string] => [t.id, t.name, `Mẫu của tôi · ${t.sections} mục · v${t.version}`])];
+  const defaultOption: [string, string, string] = ["", "Trang mặc định", "Có sẵn trong hệ thống: thanh điều hướng, Hero, sản phẩm, đánh giá, liên hệ."];
+  // M-119 / M-122: the template choice is a load of its own (company + mine): it says it is loading, says when it failed (with a retry), says when there is nothing to pick. The default page is always offered.
+  const templates = {
+    data: company.data && mine.data ? [...company.data.map((t): [string, string, string] => [t.id, t.name, `Mẫu công ty · ${t.sections} mục · v${t.version}`]), ...mine.data.map((t): [string, string, string] => [t.id, t.name, `Mẫu của tôi · ${t.sections} mục · v${t.version}`])] : null,
+    error: company.error ?? mine.error, loading: company.loading || mine.loading, reload: () => { company.reload(); mine.reload(); },
+  };
   return (<>
     <div className="pageHead"><div><h1>Tạo ứng dụng</h1><p>Chọn loại ứng dụng. Loại nào chưa bật trên máy chủ này sẽ ghi rõ lý do.</p></div></div>
+    <LoadGate load={authConfig} compact label="loại ứng dụng đã bật" errorTitle="Chưa tải được loại ứng dụng nào đã bật trên máy chủ">{() => (
     <div className="typeGrid" role="radiogroup" aria-label="Loại ứng dụng">{types.map(([k, t, d, on]) => (
       <div key={k} role="radio" tabIndex={on ? 0 : -1} aria-checked={kind === k} aria-disabled={!on} className={`typeCard${kind === k ? " selected" : ""}${on ? "" : " disabled"}`}
         onClick={() => { if (on) setKind(k); }} onKeyDown={(e) => { if (on && (e.key === " " || e.key === "Enter")) { e.preventDefault(); setKind(k); } }}>
         <div className="row between"><b>{t}</b>{on ? <Pill value="ACTIVE" label="Sẵn sàng"/> : <Pill value="COMING_SOON" label="Chưa bật"/>}</div><p>{d}</p>
       </div>))}</div>
+    )}</LoadGate>
     <Card title={kind === "WEBSITE_STATIC" ? "Website mới" : `${types.find((x) => x[0] === kind)?.[1] ?? "Ứng dụng"} mới`}>
       <form onSubmit={(e) => void create(e)}>
         {kind === "WEBSITE_STATIC" ? <fieldset className="pickList" aria-label="Bắt đầu từ mẫu"><legend className="hint">Bắt đầu từ</legend>
-          {options.map(([id, label, sub]) => <label key={id || "default"}><input type="radio" name="template" value={id} checked={templateId === id} onChange={() => setTemplateId(id)}/>
+          {[defaultOption].map(([id, label, sub]) => <label key="default"><input type="radio" name="template" value={id} checked={templateId === id} onChange={() => setTemplateId(id)}/>
             <span><b>{label}</b><small>{sub}</small></span></label>)}
+          <LoadGate load={templates} compact label="mẫu của công ty và của bạn" errorTitle="Chưa tải được danh sách mẫu" isEmpty={(d) => d.length === 0} empty={{ title: "Chưa có mẫu nào", detail: <p>Chưa có mẫu của công ty hoặc của bạn. Website sẽ bắt đầu từ trang mặc định ở trên.</p> }}>
+            {(d) => <>{d.map(([id, label, sub]) => <label key={id}><input type="radio" name="template" value={id} checked={templateId === id} onChange={() => setTemplateId(id)}/>
+              <span><b>{label}</b><small>{sub}</small></span></label>)}</>}
+          </LoadGate>
         </fieldset> : SERVER_KINDS.includes(kind) ? <p className="hint">Bắt đầu từ khung React + Node.js đã duyệt. Máy chủ của ứng dụng chạy trong container cô lập (không root, không Internet), có cơ sở dữ liệu PostgreSQL riêng; bí mật (API key…) chỉ ghi, không bao giờ hiện lại và không gửi cho AI. Chỉ các đường dẫn khai báo trong openapi.json mới gọi được từ bên ngoài.</p>
           : <p className="hint">Bắt đầu từ khung React + Vite + TypeScript đã duyệt. Mã nguồn nằm trong kho Git của nền tảng; thư viện chỉ gồm các gói đã duyệt. Ứng dụng chạy cách ly trong trình duyệt (không có cookie/localStorage).</p>}
         <div className="filters">

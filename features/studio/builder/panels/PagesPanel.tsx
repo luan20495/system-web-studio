@@ -6,6 +6,7 @@
  */
 import { useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { ArrowDown, ArrowUp, GripVertical, Plus, X } from "../../../../packages/ui/src/icons";
+import { useAction } from "../../../../packages/ui/src/useAction";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { AppDefinitionV2, ActionDef, NavLink, Section } from "@xweb/types";
@@ -127,11 +128,14 @@ function SectionNode({ section, title, summary, active, canEdit, busy, first, la
 
 function AddDialog({ doc, onClose, onSubmit }: { doc: AppDefinitionV2; onClose: () => void; onSubmit: (title: string) => Promise<string | null> }) {
   const [title, setTitle] = useState(""); const [err, setErr] = useState<string | null>(null);
+  // M-020: Enter + click / a double Enter send ONE request (decided from a ref); the buttons say it is working
+  const act = useAction((_ctx, t: string) => onSubmit(t));
+  const submit = async () => { const r = await act.run(title); if (r.status === "ok") setErr(r.value); };
   const slug = slugify(title);
   return (
     <Dialog title="Thêm trang" onClose={onClose} footer={<><button type="button" className="bx-btn" onClick={onClose}>Hủy</button>
-      <button type="submit" form="add-page-form" className="bx-btn primary" disabled={!title.trim()}>Thêm trang</button></>}>
-      <form id="add-page-form" onSubmit={(e) => { e.preventDefault(); void onSubmit(title).then(setErr); }}>
+      <button type="submit" form="add-page-form" className="bx-btn primary" disabled={!title.trim() || act.busy} aria-busy={act.busy || undefined}>{act.busy ? "Đang thêm…" : "Thêm trang"}</button></>}>
+      <form id="add-page-form" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
         <Field label="Tên trang">{(id) => <input id={id} data-autofocus value={title} maxLength={80} onChange={(e) => setTitle(e.target.value)}/>}</Field>
         <p className="hint">Đường dẫn dự kiến: <code>/{slug || "…"}/</code>{(doc.pages ?? []).length >= 20 ? " · đã đủ 20 trang" : ""}</p>
         {err ? <p className="formError" role="alert">{err}</p> : null}
@@ -142,12 +146,14 @@ function AddDialog({ doc, onClose, onSubmit }: { doc: AppDefinitionV2; onClose: 
 
 function RenameDialog({ doc, pageId, title: t0, slug: s0, onClose, onSubmit }: { doc: AppDefinitionV2; pageId: string; title: string; slug: string; onClose: () => void; onSubmit: (title: string, slug: string) => Promise<string | null> }) {
   const [title, setTitle] = useState(t0); const [slug, setSlug] = useState(s0); const [err, setErr] = useState<string | null>(null);
+  const act = useAction((_ctx, t: string, s: string) => onSubmit(t, s));
+  const submit = async () => { const r = await act.run(title, slug); if (r.status === "ok") setErr(r.value); };
   const home = pageId === HOME_ID;
   const check = home ? { ok: true as const } : checkSlug(doc, slug, pageId);
   return (
     <Dialog title="Đổi tên và đường dẫn" onClose={onClose} footer={<><button type="button" className="bx-btn" onClick={onClose}>Hủy</button>
-      <button type="submit" form="rename-page-form" className="bx-btn primary" disabled={!title.trim() || !check.ok}>Lưu</button></>}>
-      <form id="rename-page-form" onSubmit={(e) => { e.preventDefault(); void onSubmit(title, slug).then(setErr); }}>
+      <button type="submit" form="rename-page-form" className="bx-btn primary" disabled={!title.trim() || !check.ok || act.busy} aria-busy={act.busy || undefined}>{act.busy ? "Đang lưu…" : "Lưu"}</button></>}>
+      <form id="rename-page-form" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
         <Field label="Tên trang">{(id) => <input id={id} data-autofocus value={title} maxLength={80} onChange={(e) => setTitle(e.target.value)}/>}</Field>
         {home ? <p className="hint">Đường dẫn của trang chủ luôn là <code>/</code>.</p> : (
           <Field label="Đường dẫn" hint={check.ok ? `Địa chỉ: /${slug}/` : check.reason}>{(id) => <input id={id} value={slug} maxLength={60} aria-invalid={!check.ok} onChange={(e) => setSlug(slugify(e.target.value))}/>}</Field>)}
@@ -159,10 +165,11 @@ function RenameDialog({ doc, pageId, title: t0, slug: s0, onClose, onSubmit }: {
 
 function RemoveDialog({ doc, pageId, actions, onClose, onConfirm }: { doc: AppDefinitionV2; pageId: string; actions: ActionDef[]; onClose: () => void; onConfirm: () => Promise<string | null> }) {
   const [err, setErr] = useState<string | null>(null);
+  const act = useAction(() => onConfirm());
   const impact = removeImpact(doc, pageId, actions);
   return (
     <Dialog title={`Xóa trang “${impact?.pageTitle ?? ""}”?`} onClose={onClose} footer={<><button type="button" className="bx-btn" onClick={onClose}>Hủy</button>
-      <button type="button" className="bx-btn danger" onClick={() => void onConfirm().then(setErr)}>Xóa trang</button></>}>
+      <button type="button" className="bx-btn danger" disabled={act.busy} aria-busy={act.busy || undefined} onClick={() => void act.run().then((r) => { if (r.status === "ok") setErr(r.value); })}>{act.busy ? "Đang xóa…" : "Xóa trang"}</button></>}>
       <p>{impact?.message}</p>
       <p className="hint">Có thể khôi phục từ lịch sử phiên bản.</p>
       {err ? <p className="formError" role="alert">{err}</p> : null}

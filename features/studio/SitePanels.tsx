@@ -1,7 +1,7 @@
 "use client";
 // Website structure (stage G): pages + SEO, navigation, 404 page, form submissions, custom domains.
 import { useCallback, useEffect, useState } from "react";
-import { Plus, X } from "@xweb/ui";
+import { confirm, Plus, useAction, X } from "@xweb/ui";
 import { api, ApiError } from "@/lib/http-api";
 import type { FormSubmission, NavLink, PageSchema, SchemaOperation, SiteDomain } from "@/lib/http-types";
 import { ago, errText, StateView } from "../ui";
@@ -31,6 +31,8 @@ function PagesSection({ schema, pageId, onPage, canEdit, apply }: { schema: Page
   const [title, setTitle] = useState(current?.title ?? schema.site?.home?.title ?? ""); const [slug, setSlug] = useState(current?.slug ?? "");
   const [seoTitle, setSeoTitle] = useState(seo.title ?? ""); const [desc, setDesc] = useState(seo.description ?? ""); const [noindex, setNoindex] = useState(seo.noindex === true);
   const [newTitle, setNewTitle] = useState("");
+  // M-020: save / add / remove-page are ONE flight at a time (decided from a ref): a double click on "Xóa trang" opened two confirmations, a double Enter on "Thêm trang" sent two ADD_PAGE
+  const act = useAction((_ctx, job: () => Promise<unknown>) => job());
   useEffect(() => { const s = current ? current.seo ?? {} : schema.site?.home?.seo ?? {};
     setTitle(current?.title ?? schema.site?.home?.title ?? ""); setSlug(current?.slug ?? ""); setSeoTitle(s.title ?? ""); setDesc(s.description ?? ""); setNoindex(s.noindex === true);
   }, [pageId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -46,28 +48,29 @@ function PagesSection({ schema, pageId, onPage, canEdit, apply }: { schema: Page
     if (await apply([{ type: "ADD_PAGE", pageId: id, props: { slug: s, title: t } }], `Thêm trang ${t}`)) { setNewTitle(""); onPage(id); }
   }
   async function remove() {
-    if (!current || !confirm(`Xoá trang “${current.title}” cùng các phần của nó? Liên kết điều hướng tới trang này cũng bị xoá.`)) return;
+    if (!current || !(await confirm({ title: `Xóa trang “${current.title}”?`, message: "Các phần của trang và liên kết điều hướng tới trang này cũng bị xóa. Có thể khôi phục từ lịch sử phiên bản.", confirmLabel: "Xóa trang", danger: true }))) return;
     if (await apply([{ type: "REMOVE_PAGE", pageId: current.id }], `Xoá trang ${current.title}`)) onPage("home");
   }
   return <section className="settingGroup"><h3>Trang</h3>
     <ul className="plainList">{[{ id: "home", title: schema.site?.home?.title || "Trang chủ", slug: "" }, ...pages].map((p) =>
       <li key={p.id} className="row between"><button type="button" className={`linkButton${p.id === pageId ? " active" : ""}`} onClick={() => onPage(p.id)}>{p.title}</button><span className="code">/{p.slug}{p.slug ? "/" : ""}</span></li>)}</ul>
-    {canEdit ? <form className="row" onSubmit={(e) => { e.preventDefault(); void add(); }}>
+    {canEdit ? <form className="row" onSubmit={(e) => { e.preventDefault(); void act.run(add); }}>
       <input aria-label="Tên trang mới" placeholder="Tên trang mới (ví dụ Giới thiệu)" maxLength={80} value={newTitle} onChange={(e) => setNewTitle(e.target.value)}/>
-      <button className="button" disabled={!newTitle.trim() || pages.length >= 20}>Thêm trang</button></form> : null}
+      <button className="button" disabled={!newTitle.trim() || pages.length >= 20 || act.busy} aria-busy={act.busy || undefined}>Thêm trang</button></form> : null}
     <h4>{current ? `Trang “${current.title}”` : "Trang chủ"}: tiêu đề & SEO</h4>
     <Field label="Tiêu đề trang"><input maxLength={80} value={title} disabled={!canEdit} onChange={(e) => setTitle(e.target.value)}/></Field>
     {current ? <Field label="Đường dẫn (slug)"><input maxLength={60} value={slug} disabled={!canEdit} onChange={(e) => setSlug(slugify(e.target.value))}/></Field> : null}
     <Field label="Tiêu đề SEO"><input maxLength={70} value={seoTitle} disabled={!canEdit} onChange={(e) => setSeoTitle(e.target.value)}/></Field>
     <Field label="Mô tả SEO"><input maxLength={160} value={desc} disabled={!canEdit} onChange={(e) => setDesc(e.target.value)}/></Field>
     <label className="switch"><input type="checkbox" checked={noindex} disabled={!canEdit} onChange={(e) => setNoindex(e.target.checked)}/> Không cho công cụ tìm kiếm lập chỉ mục</label>
-    {canEdit ? <div className="drawerActions">{current ? <button className="button ghost" onClick={() => void remove()}>Xoá trang</button> : null}
-      <button className="button primary" disabled={!title.trim() && !!current} onClick={() => void save()}>Lưu trang</button></div> : null}
+    {canEdit ? <div className="drawerActions">{current ? <button className="button ghost" disabled={act.busy} onClick={() => void act.run(remove)}>Xoá trang</button> : null}
+      <button className="button primary" disabled={(!title.trim() && !!current) || act.busy} aria-busy={act.busy || undefined} onClick={() => void act.run(save)}>{act.busy ? "Đang lưu…" : "Lưu trang"}</button></div> : null}
   </section>;
 }
 
 function NavigationSection({ schema, canEdit, apply }: { schema: PageSchema; canEdit: boolean; apply: Apply }) {
   const [links, setLinks] = useState<NavLink[]>(schema.site?.navigation ?? []);
+  const act = useAction((_ctx, job: () => Promise<unknown>) => job());
   useEffect(() => { setLinks(schema.site?.navigation ?? []); }, [schema.site?.navigation]);
   const kind = (l: NavLink) => (l.pageId ? "page" : l.url ? "url" : "anchor");
   function set(i: number, patch: Partial<NavLink>) { setLinks((ls) => ls.map((l, j) => (j === i ? { ...l, ...patch } : l))); }
@@ -85,17 +88,18 @@ function NavigationSection({ schema, canEdit, apply }: { schema: PageSchema; can
     </li>)}</ul>
     {canEdit ? <div className="drawerActions">
       <button className="button ghost" disabled={links.length >= 12} onClick={() => setLinks((ls) => [...ls, { id: `n-${Math.random().toString(36).slice(2, 7)}`, label: "Liên kết", pageId: "home" }])}><Plus size={14} aria-hidden="true"/> Liên kết</button>
-      <button className="button primary" disabled={links.some((l) => !l.label.trim())} onClick={() => void apply([{ type: "SET_NAVIGATION", value: links.map((l) => ({ ...l, label: l.label.trim() })) }], "Cập nhật điều hướng")}>Lưu điều hướng</button>
+      <button className="button primary" disabled={links.some((l) => !l.label.trim()) || act.busy} aria-busy={act.busy || undefined} onClick={() => void act.run(() => apply([{ type: "SET_NAVIGATION", value: links.map((l) => ({ ...l, label: l.label.trim() })) }], "Cập nhật điều hướng"))}>{act.busy ? "Đang lưu…" : "Lưu điều hướng"}</button>
     </div> : null}
   </section>;
 }
 
 function NotFoundSection({ schema, canEdit, apply }: { schema: PageSchema; canEdit: boolean; apply: Apply }) {
+  const act = useAction((_ctx, job: () => Promise<unknown>) => job());
   const [title, setTitle] = useState(schema.site?.notFound?.title ?? ""); const [message, setMessage] = useState(schema.site?.notFound?.message ?? "");
   return <section className="settingGroup"><h3>Trang 404</h3>
     <Field label="Tiêu đề"><input maxLength={80} placeholder="Không tìm thấy trang" value={title} disabled={!canEdit} onChange={(e) => setTitle(e.target.value)}/></Field>
     <Field label="Lời nhắn"><input maxLength={300} placeholder="Trang bạn tìm không tồn tại…" value={message} disabled={!canEdit} onChange={(e) => setMessage(e.target.value)}/></Field>
-    {canEdit ? <div className="drawerActions"><button className="button" onClick={() => void apply([{ type: "UPDATE_SITE", props: { notFound: { ...(title.trim() ? { title: title.trim() } : {}), ...(message.trim() ? { message: message.trim() } : {}) } } }], "Cập nhật trang 404")}>Lưu</button></div> : null}
+    {canEdit ? <div className="drawerActions"><button className="button" disabled={act.busy} aria-busy={act.busy || undefined} onClick={() => void act.run(() => apply([{ type: "UPDATE_SITE", props: { notFound: { ...(title.trim() ? { title: title.trim() } : {}), ...(message.trim() ? { message: message.trim() } : {}) } } }], "Cập nhật trang 404"))}>{act.busy ? "Đang lưu…" : "Lưu"}</button></div> : null}
   </section>;
 }
 
@@ -103,7 +107,7 @@ function FormsSection({ ws, pid }: { ws: string; pid: string }) {
   const [data, setData] = useState<{ items: FormSubmission[]; total: number } | null>(null); const [err, setErr] = useState<string | null>(null);
   const load = useCallback(() => api.formSubmissions(ws, pid).then(setData).catch((e) => setErr(e instanceof ApiError && e.status === 403 ? "Chỉ người chỉnh sửa ứng dụng mới xem được dữ liệu form." : errText(e, "Không tải được."))), [ws, pid]);
   useEffect(() => { void load(); }, [load]);
-  async function del(s: FormSubmission) { if (!confirm("Xoá tin gửi này?")) return; try { await api.deleteFormSubmission(ws, pid, s.id); void load(); } catch (e) { setErr(errText(e, "Không xoá được.")); } }
+  async function del(s: FormSubmission) { if (!(await confirm({ title: "Xóa tin gửi này?", message: "Tin nhắn của khách bị xóa vĩnh viễn và không thể hoàn tác.", confirmLabel: "Xóa tin gửi", danger: true }))) return; try { await api.deleteFormSubmission(ws, pid, s.id); void load(); } catch (e) { setErr(errText(e, "Không xoá được.")); } }
   return <section className="settingGroup"><h3>Form gửi về</h3>
     <p className="hint">Tin gửi từ form liên hệ trên website đã xuất bản (công khai). Dữ liệu cá nhân: chỉ người chỉnh sửa xem được, tự xoá sau thời hạn lưu giữ của công ty.</p>
     {err ? <p className="formError" role="alert">{err}</p> : !data ? <StateView kind="loading"/> : data.items.length === 0 ? <p className="hint">Chưa có tin gửi nào.</p> : <>
@@ -119,10 +123,13 @@ const DOMAIN_STATUS: Record<SiteDomain["status"], string> = { PENDING: "Chờ x�
 const TLS_STATUS: Record<SiteDomain["tlsStatus"], string> = { UNKNOWN: "Chưa kiểm tra", PENDING: "Chưa có HTTPS", ACTIVE: "HTTPS hoạt động", ERROR: "Chứng chỉ lỗi" };
 
 function DomainsSection({ ws, pid, canPublish }: { ws: string; pid: string; canPublish: boolean }) {
-  const [list, setList] = useState<SiteDomain[] | null>(null); const [host, setHost] = useState(""); const [err, setErr] = useState<string | null>(null); const [busy, setBusy] = useState<string | null>(null);
+  const [list, setList] = useState<SiteDomain[] | null>(null); const [host, setHost] = useState(""); const [err, setErr] = useState<string | null>(null);
   const load = useCallback(() => api.domains(ws, pid).then(setList).catch((e) => setErr(errText(e, "Không tải được."))), [ws, pid]);
   useEffect(() => { void load(); }, [load]);
-  async function act(id: string, fn: () => Promise<unknown>) { setBusy(id); setErr(null); try { await fn(); await load(); } catch (e) { setErr(errText(e, "Không thực hiện được.")); } finally { setBusy(null); } }
+  // M-020: one domain command at a time, decided from a ref; the confirmation of "Gỡ" is inside the flight, so a double click cannot open it twice
+  const run = useAction(async (_ctx, job: () => Promise<boolean | void>) => { if ((await job()) === false) return; await load(); });
+  const busy = run.busy ? "busy" : null;
+  async function act(_id: string, fn: () => Promise<unknown>) { setErr(null); const r = await run.run(async () => { await fn(); }); if (r.status === "error") setErr(errText(r.error, "Không thực hiện được.")); }
   return <section className="settingGroup"><h3>Tên miền riêng</h3>
     <p className="hint">Chỉ cho website công khai. Bạn chứng minh quyền sở hữu bằng một bản ghi DNS TXT; hệ thống không bao giờ hỏi mật khẩu DNS. HTTPS do lớp CDN/tunnel phía trước cung cấp; trạng thái là kết quả kiểm tra thật.</p>
     {canPublish ? <form className="row" onSubmit={(e) => { e.preventDefault(); if (host.trim()) void act("add", async () => { await api.addDomain(ws, pid, host.trim()); setHost(""); }); }}>
@@ -135,7 +142,7 @@ function DomainsSection({ ws, pid, canPublish }: { ws: string; pid: string; canP
       {canPublish ? <div className="row">
         {d.status !== "VERIFIED" ? <button type="button" className="smallButton" disabled={busy !== null} onClick={() => void act(d.id, () => api.verifyDomain(ws, pid, d.id))}>Kiểm tra DNS</button>
           : <button type="button" className="smallButton" disabled={busy !== null} onClick={() => void act(d.id, () => api.checkDomainTls(ws, pid, d.id))}>Kiểm tra HTTPS</button>}
-        <button type="button" className="smallButton" disabled={busy !== null} onClick={() => { if (confirm(`Gỡ tên miền ${d.hostname}?`)) void act(d.id, () => api.removeDomain(ws, pid, d.id)); }}>Gỡ</button>
+        <button type="button" className="smallButton" disabled={busy !== null} onClick={() => void (async () => { setErr(null); const r = await run.run(async () => { if (!(await confirm({ title: `Gỡ tên miền ${d.hostname}?`, message: "Website không còn mở được bằng tên miền này. Bạn có thể thêm lại sau và xác minh lại.", confirmLabel: "Gỡ tên miền", danger: true }))) return false; await api.removeDomain(ws, pid, d.id); }); if (r.status === "error") setErr(errText(r.error, "Không thực hiện được.")); })()}>Gỡ</button>
       </div> : null}</li>)}</ul>}
   </section>;
 }

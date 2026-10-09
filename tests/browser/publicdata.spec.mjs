@@ -162,6 +162,16 @@ const calls = (p, name) => p.evaluate((n) => window.__rel.calls.filter((c) => c.
   check("20b. the warning says anyone who can open the page may run them, read-only, no sign-in", /không cần đăng nhập/.test(await T(p, "public-queries-warning").innerText()));
   const disabled = await T(p, "publish").isDisabled(); await T(p, "publish").click({ force: true, timeout: 800 }).catch(() => undefined);
   check("21. acknowledgement is required: Publish is disabled until it is ticked, and a forced click sends nothing", disabled && (await calls(p, "publish")).length === 0);
+  // M-031: the reason is VISIBLE text tied to the button (it was a title: invisible on touch and to keyboard users); the button stays focusable
+  const why = await T(p, "publish").evaluate((b) => ({ aria: b.getAttribute("aria-disabled"), native: b.hasAttribute("disabled"), text: (document.getElementById((b.getAttribute("aria-describedby") ?? "").split(" ")[0]) ?? {}).textContent ?? "", title: b.getAttribute("title") }));
+  check("M-031: Publish before the acknowledgement is aria-disabled (focusable), says WHY in visible text tied by aria-describedby, and has no title-only reason", why.aria === "true" && !why.native && /xác nhận dữ liệu công khai/.test(why.text) && !why.title, JSON.stringify(why));
+  // M-030: the audience is a radio group
+  const grp = p.getByRole("radiogroup", { name: /Ai xem được website/ });
+  const radios = await grp.getByRole("radio").evaluateAll((rs) => rs.map((r) => ({ name: r.closest("label")?.textContent ?? "", checked: r.checked })));
+  check("M-030: the audience is a labelled radio group with two radios and exactly one checked (it was two class-only buttons)", (await grp.count()) === 1 && radios.length === 2 && radios.filter((r) => r.checked).length === 1, JSON.stringify(radios));
+  await grp.getByRole("radio", { checked: true }).focus(); await p.keyboard.press("ArrowDown"); await p.waitForTimeout(150);
+  check("M-030: arrow keys move the choice inside the group", (await grp.getByRole("radio", { checked: true }).evaluate((r) => r.closest("label")?.textContent ?? "")) !== radios.find((r) => r.checked).name);
+  await grp.getByRole("radio", { name: /Công khai/ }).check();
   await T(p, "publish-ack").check(); const en = await T(p, "publish").isEnabled(); await T(p, "publish").click(); await p.waitForTimeout(300);
   const pub = await calls(p, "publish");
   check("22. after the acknowledgement Publish is sent exactly as the release contract says [visibility, revision, key] — no extra field, no acknowledgePublicData on the wire", en && pub.length === 1 && pub[0].args.length === 3 && !JSON.stringify(pub).includes("acknowledge") && /^[A-Za-z0-9_.:-]{8,120}$/.test(pub[0].args[2]), JSON.stringify(pub));
@@ -180,9 +190,9 @@ const calls = (p, name) => p.evaluate((n) => window.__rel.calls.filter((c) => c.
   check("23b. when the server froze a different list, the difference is shown, not hidden (missing q-items, extra q-extra)", /q-extra/.test(m) && /q-items/.test(m), m);
   await p.close(); }
 { const p = await publishDialog("public");
-  const before = await T(p, "public-queries-private-note").count(); await p.getByRole("button", { name: /^Riêng tư/ }).click().catch(() => undefined);
+  const before = await T(p, "public-queries-private-note").count(); await p.getByRole("radio", { name: /^Riêng tư/ }).check().catch(() => undefined);
   const priv = await T(p, "public-queries-private-note").count();
-  await p.getByRole("button", { name: /^Công khai/ }).click();
+  await p.getByRole("radio", { name: /^Công khai/ }).check();
   check("24. visibility only changes the explanation: with PRIVATE the note says there is no data address; the acknowledgement is still required (public queries exist)", priv === 1 && (await T(p, "publish-ack").count()) === 1 && before + 0 >= 0 && (await T(p, "public-queries-private-note").count()) === 0);
   await p.close(); }
 for (const [draft, label] of [["private", "only private / WRITE queries"], ["plain", "no queries"], ["", "no draft (code app)"]]) {

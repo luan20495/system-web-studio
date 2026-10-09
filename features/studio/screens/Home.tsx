@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { api, ApiError } from "@/lib/http-api";
 import { sectionLabel } from "@/components/SectionInspector";
+import { LoadGate, useAction } from "@xweb/ui";
 import { useSession } from "../../session";
 import { useLoad } from "../../useLoad";
 import { Card, ErrorState, errText, num, StateView, usd } from "../../ui";
@@ -20,14 +21,16 @@ export function Home() {
   const comps = useLoad(() => api.components(), []);
   // Creating a project has NO canonical permission code (PROJECT_CREATE is a server-internal storage constant that /auth/me does not expose), so the UI cannot know in advance and
   // must not guess from a role name: the form is offered and the server decides (403 → a plain message). Handoff H-C1-05 asks for a resolved capability.
-  const [idea, setIdea] = useState(""); const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null);
+  const [idea, setIdea] = useState(""); const [err, setErr] = useState<string | null>(null); const [leaving, setLeaving] = useState(false);
+  // M-020: Ctrl+Enter, Enter + click and a double click all arrive before React re-renders `busy`; the action decides from a ref and sends ONE createProject
+  const create = useAction((_ctx, text: string) => api.createProject(workspaceId, text.length > 60 ? `${text.slice(0, 57)}…` : text));
+  const busy = create.busy || leaving;
   async function start(e: FormEvent) {
     e.preventDefault(); const text = idea.trim(); if (!text) return;
-    setBusy(true); setErr(null);
-    try {
-      const p = await api.createProject(workspaceId, text.length > 60 ? `${text.slice(0, 57)}…` : text);
-      router.push(S(`/projects/${p.id}/ai?prompt=${encodeURIComponent(text)}`));
-    } catch (x) { setErr(x instanceof ApiError && x.status === 403 ? "Bạn không có quyền tạo ứng dụng trong workspace này (máy chủ từ chối)." : errText(x, "Không tạo được ứng dụng.")); setBusy(false); }
+    setErr(null);
+    const r = await create.run(text);
+    if (r.status === "ok") { setLeaving(true); router.push(S(`/projects/${r.value.id}/ai?prompt=${encodeURIComponent(text)}`)); }
+    else if (r.status === "error") setErr(r.error instanceof ApiError && r.error.status === 403 ? "Bạn không có quyền tạo ứng dụng trong workspace này (máy chủ từ chối)." : errText(r.error, "Không tạo được ứng dụng."));
   }
   const u = usage.data;
   return (<>
@@ -42,15 +45,21 @@ export function Home() {
         </form>
     </section>
     <div className="kpiGrid">
-      <div className="kpi"><div className="kpiLabel">Lượt AI hôm nay</div>
-        <div className="kpiValue">{u ? (u.aiConfigured ? (u.aiRequestsLimit > 0 ? `${num(u.aiRequestsUsed)} / ${num(u.aiRequestsLimit)}` : `${num(u.aiRequestsUsed)} (không giới hạn)`) : "Chế độ thử nghiệm") : "…"}</div>
-        <div className="kpiHint">{u ? (u.aiConfigured ? (u.aiWindowResetsInSeconds ? `Làm mới sau ${Math.ceil(u.aiWindowResetsInSeconds / 3600)} giờ` : "Chưa dùng lượt nào") : "AI hiện chưa được quản trị viên bật") : ""}</div></div>
-      <div className="kpi"><div className="kpiLabel">Token AI 24 giờ qua</div>
-        <div className="kpiValue">{u ? (u.aiConfigured || u.tokensLast24h ? `${num(u.tokensLast24h)}${u.tokensLimitPerDay ? ` / ${num(u.tokensLimitPerDay)}` : ""}` : "—") : "…"}</div>
-        <div className="kpiHint">{u ? (u.usageLast30Days?.calls ? `30 ngày: ${num(u.usageLast30Days.totalTokens)} token · ${usd(u.usageLast30Days.costUsd)} (số liệu nhà cung cấp)` : "Chưa gọi model thật nào; Chế độ thử nghiệm không tính token") : ""}</div></div>
-      <div className="kpi"><div className="kpiLabel">Prompt hôm nay</div><div className="kpiValue">{u ? num(u.promptsToday) : "…"}</div><div className="kpiHint">{u ? `Tối đa ${u.promptsPerMinute}/phút` : ""}</div></div>
-      <div className="kpi"><div className="kpiLabel">Ứng dụng trong workspace</div><div className="kpiValue">{recent.data ? num(recent.data.total) : "…"}</div></div>
-      <div className="kpi"><div className="kpiLabel">Component của công ty</div><div className="kpiValue">{comps.data ? comps.data.length : "…"}</div></div>
+      {usage.error && !u
+        ? <div className="kpi"><div className="kpiLabel">Mức dùng AI của bạn</div><div className="kpiValue"><ErrorState error={usage.error} retry={usage.reload} compact title="Chưa tải được mức dùng AI"/></div></div>
+        : (<>
+          <div className="kpi"><div className="kpiLabel">Lượt AI hôm nay</div>
+            <div className="kpiValue">{u ? (u.aiConfigured ? (u.aiRequestsLimit > 0 ? `${num(u.aiRequestsUsed)} / ${num(u.aiRequestsLimit)}` : `${num(u.aiRequestsUsed)} (không giới hạn)`) : "Chế độ thử nghiệm") : "…"}</div>
+            <div className="kpiHint">{u ? (u.aiConfigured ? (u.aiWindowResetsInSeconds ? `Làm mới sau ${Math.ceil(u.aiWindowResetsInSeconds / 3600)} giờ` : "Chưa dùng lượt nào") : "AI hiện chưa được quản trị viên bật") : ""}</div></div>
+          <div className="kpi"><div className="kpiLabel">Token AI 24 giờ qua</div>
+            <div className="kpiValue">{u ? (u.aiConfigured || u.tokensLast24h ? `${num(u.tokensLast24h)}${u.tokensLimitPerDay ? ` / ${num(u.tokensLimitPerDay)}` : ""}` : "—") : "…"}</div>
+            <div className="kpiHint">{u ? (u.usageLast30Days?.calls ? `30 ngày: ${num(u.usageLast30Days.totalTokens)} token · ${usd(u.usageLast30Days.costUsd)} (số liệu nhà cung cấp)` : "Chưa gọi model thật nào; Chế độ thử nghiệm không tính token") : ""}</div></div>
+          <div className="kpi"><div className="kpiLabel">Prompt hôm nay</div><div className="kpiValue">{u ? num(u.promptsToday) : "…"}</div><div className="kpiHint">{u ? `Tối đa ${u.promptsPerMinute}/phút` : ""}</div></div>
+        </>)}
+      <div className="kpi"><div className="kpiLabel">Ứng dụng trong workspace</div>
+        <div className="kpiValue"><LoadGate load={recent} compact label="số ứng dụng" errorTitle="Chưa tải được số ứng dụng">{(d) => <>{num(d.total)}</>}</LoadGate></div></div>
+      <div className="kpi"><div className="kpiLabel">Component của công ty</div>
+        <div className="kpiValue"><LoadGate load={comps} compact label="số thành phần" errorTitle="Chưa tải được số thành phần">{(d) => <>{d.length}</>}</LoadGate></div></div>
     </div>
     <Card title="Ứng dụng gần đây" actions={<Link className="btn sm" href={S("/projects")}>Xem tất cả</Link>}>
       {recent.error ? <ErrorState error={recent.error} retry={recent.reload}/> : !recent.data ? <StateView kind="loading"/> : recent.data.items.length === 0
@@ -58,7 +67,9 @@ export function Home() {
         : <div className="projectGrid">{recent.data.items.map((p) => <ProjectCard key={p.id} p={p} mine={p.ownerUserId === me!.id}/>)}</div>}
     </Card>
     <Card title="Component dùng chung" actions={<Link className="btn sm" href={S("/components")}>Thư viện</Link>}>
-      {comps.data ? <div className="chipRow">{comps.data.filter((c) => c.status === "ACTIVE").map((c) => <span key={c.id} className="tag">{sectionLabel(c.id, c.name)} <small>{num(c.usedInProjects ?? 0)} ứng dụng</small></span>)}</div> : <StateView kind="loading"/>}
+      <LoadGate load={comps} compact label="thành phần dùng chung" errorTitle="Chưa tải được danh sách thành phần">
+        {(d) => <div className="chipRow">{d.filter((c) => c.status === "ACTIVE").map((c) => <span key={c.id} className="tag">{sectionLabel(c.id, c.name)} <small>{num(c.usedInProjects ?? 0)} ứng dụng</small></span>)}</div>}
+      </LoadGate>
     </Card>
   </>);
 }

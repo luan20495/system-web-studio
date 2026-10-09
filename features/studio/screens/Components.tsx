@@ -1,5 +1,6 @@
 "use client";
 
+import { confirm, useAction } from "@xweb/ui";
 import { useState } from "react";
 import { api } from "@/lib/http-api";
 import type { BlockDto } from "@/lib/http-types";
@@ -11,7 +12,14 @@ import { BlockStatus, BlockThumb, blockPage, CheckList, ReviewTimeline } from ".
 function BlockCard({ b, mine, onChanged }: { b: BlockDto; mine: boolean; onChanged: () => void }) {
   const [open, setOpen] = useState(false); const [err, setErr] = useState<string | null>(null); const [info, setInfo] = useState<string | null>(null);
   const page = blockPage(b);
-  async function act(fn: () => Promise<unknown>, ok?: string) { setErr(null); setInfo(null); try { await fn(); if (ok) setInfo(ok); onChanged(); } catch (x) { setErr(errText(x, "Không thực hiện được.")); } }
+  // M-020: one command per card at a time, decided from a ref (a double click on "Gửi duyệt" / "Rút lại" / "Xóa" sent two requests; "Xóa" opened two confirmations). A job that returns false was cancelled.
+  const doIt = useAction((_ctx, job: () => Promise<unknown>) => job());
+  async function act(job: () => Promise<unknown>, ok?: string) {
+    setErr(null); setInfo(null);
+    const r = await doIt.run(job);
+    if (r.status === "error") setErr(errText(r.error, "Không thực hiện được."));
+    else if (r.status === "ok" && r.value !== false) { if (ok) setInfo(ok); onChanged(); }
+  }
   const latest = b.versions.find((v) => v.version === b.latestVersion);
   const lastDecision = [...b.reviews].reverse().find((r) => r.decision === "REJECT" || r.decision === "APPROVE" || r.decision === "VALIDATION_FAILED");
   return <article className="libCard">
@@ -21,9 +29,9 @@ function BlockCard({ b, mine, onChanged }: { b: BlockDto; mine: boolean; onChang
     <div className="meta">{b.usageCount ? `${b.usageCount} lần dùng · ` : ""}Dựa trên <span className="code">{b.baseComponent}</span> · {mine ? `phiên bản ${b.latestVersion}${b.approvedVersion ? ` · đang dùng trong công ty: v${b.approvedVersion}` : ""}` : `v${b.approvedVersion} · ${b.owner ?? "—"}`}</div>
     {mine && lastDecision && b.status === "PRIVATE" && lastDecision.decision !== "APPROVE" ? <p className="notice">{lastDecision.decision === "REJECT" ? `Bị từ chối: ${lastDecision.comment}` : "Kiểm tra tự động không đạt — xem chi tiết."}</p> : null}
     {mine ? <div className="actions">
-      {b.status === "PRIVATE" ? <button className="btn sm primary" onClick={() => void act(async () => { const r = await api.submitBlock(b.id); if (!r.passed) { setOpen(true); throw new Error("Kiểm tra tự động không đạt; xem danh sách bên dưới."); } }, "Đã gửi duyệt.")}>Gửi duyệt</button> : null}
-      {b.status === "REVIEW" ? <button className="btn sm" onClick={() => void act(() => api.withdrawBlock(b.id), "Đã rút lại.")}>Rút lại</button> : null}
-      {b.approvedVersion == null && b.status !== "REVIEW" ? <button className="btn sm ghost" onClick={() => { if (confirm(`Xóa khối “${b.name}”?`)) void act(() => api.deleteBlock(b.id)); }}>Xóa</button> : null}
+      {b.status === "PRIVATE" ? <button className="btn sm primary" disabled={doIt.busy} onClick={() => void act(async () => { const r = await api.submitBlock(b.id); if (!r.passed) { setOpen(true); throw new Error("Kiểm tra tự động không đạt; xem danh sách bên dưới."); } }, "Đã gửi duyệt.")}>Gửi duyệt</button> : null}
+      {b.status === "REVIEW" ? <button className="btn sm" disabled={doIt.busy} onClick={() => void act(() => api.withdrawBlock(b.id), "Đã rút lại.")}>Rút lại</button> : null}
+      {b.approvedVersion == null && b.status !== "REVIEW" ? <button className="btn sm ghost" disabled={doIt.busy} onClick={() => void act(async () => { if (!(await confirm({ title: `Xóa khối “${b.name}”?`, message: "Khối riêng tư của bạn bị xóa. Trang đã chèn khối này không bị ảnh hưởng: nó là một mục bình thường của thành phần gốc.", confirmLabel: "Xóa khối", danger: true }))) return false; await api.deleteBlock(b.id); })}>Xóa</button> : null}
       <button className="btn sm ghost" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? "Ẩn chi tiết" : "Chi tiết"}</button>
     </div> : null}
     {open && mine ? <div>
@@ -60,7 +68,7 @@ function BlocksSection() {
   const company = useLoad(() => api.blocks("company"), []); const mine = useLoad(() => api.blocks("mine"), []);
   return (<>
     <Card title="Khối dựng sẵn của công ty">
-      <p className="hint">Khối là một cấu hình sẵn (nội dung, bố cục) của một component đã duyệt, được nhân viên đóng góp và quản trị viên phê duyệt. Khối không chứa mã: khi chèn vào trang, nó là một mục bình thường của component gốc. Chưa đo số lần sử dụng khối.</p>
+      <p className="hint">Khối là một cấu hình sẵn (nội dung, bố cục) của một component đã duyệt, được nhân viên đóng góp và quản trị viên phê duyệt. Khối không chứa mã: khi chèn vào trang, nó là một mục bình thường của thành phần gốc. Chưa đo số lần sử dụng khối.</p>
       {company.error ? <ErrorState error={company.error} retry={company.reload}/> : !company.data ? <StateView kind="loading"/> : company.data.length === 0
         ? <StateView kind="empty" title="Chưa có khối nào được duyệt"/> : <div className="compGrid">{company.data.map((b) => <BlockCard key={b.id} b={b} mine={false} onChanged={company.reload}/>)}</div>}
     </Card>

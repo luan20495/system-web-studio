@@ -1,6 +1,7 @@
 "use client";
 // Code-project panels: Design mode (safe AST edits), approved packages, IDE clone access.
 import { useCallback, useEffect, useState } from "react";
+import { confirm } from "@xweb/ui";
 import { api, ApiError } from "@/lib/http-api";
 import type { CloneAccess, CodeChange, DependencyRequest, DesignNode, RuntimeStatus } from "@/lib/http-types";
 import { ago, errText, StateView } from "../ui";
@@ -129,14 +130,14 @@ export function RuntimeDrawer({ ws, pid, canPublish, canSettings, onClose }: { w
           <ul className="plainList">{rt.deployments.map((d) => <li key={d.id} className="row between">
             <span><b>v{d.version}</b> {SD_LABEL[d.status] ?? d.status}{d.current ? " · đang phục vụ" : ""}{d.rollbackOf ? " · khôi phục" : ""} <small>{ago(d.createdAt)} · {d.routes} đường dẫn{d.commitSha ? ` · ${d.commitSha.slice(0, 8)}` : ""}</small>
               {d.error ? <small className="formError">{d.error}</small> : null}</span>
-            {canPublish && !d.current && (d.status === "SUPERSEDED" || d.status === "STOPPED") ? <button className="smallButton" onClick={() => void act(() => api.runtimeRollback(ws, pid, d.id))}>Khôi phục bản này</button> : null}
+            {canPublish && !d.current && (d.status === "SUPERSEDED" || d.status === "STOPPED") ? <button className="smallButton" onClick={() => void (async () => { if (await confirm({ title: `Khôi phục máy chủ về phiên bản ${d.version}?`, message: "Lưu lượng chuyển sang bản này (không build lại); bản đang chạy sẽ dừng phục vụ.", confirmLabel: "Khôi phục bản này", danger: true })) await act(() => api.runtimeRollback(ws, pid, d.id)); })()}>Khôi phục bản này</button> : null}
           </li>)}</ul>}
-        {canPublish && rt.currentDeploymentId ? <button className="button ghost" onClick={() => { if (confirm("Dừng máy chủ của ứng dụng? API sẽ ngừng trả lời tới khi xuất bản lại.")) void act(() => api.runtimeStop(ws, pid)); }}>Dừng máy chủ</button> : null}
+        {canPublish && rt.currentDeploymentId ? <button className="button ghost" onClick={() => void (async () => { if (await confirm({ title: "Dừng máy chủ của ứng dụng?", message: "API của ứng dụng ngừng trả lời cho tới khi bạn xuất bản lại.", confirmLabel: "Dừng máy chủ", danger: true })) await act(() => api.runtimeStop(ws, pid)); })()}>Dừng máy chủ</button> : null}
       </section>
       <section className="settingGroup"><h3>Bí mật (biến môi trường)</h3>
         <p className="hint">Giá trị được mã hóa, chỉ ghi: không bao giờ hiển thị lại, không vào kho mã và không gửi cho AI. Áp dụng ở lần triển khai tiếp theo.</p>
         {rt.secrets.length ? <ul className="plainList">{rt.secrets.map((s) => <li key={s.name} className="row between"><span className="code">{s.name}</span><small>{s.updatedBy ?? "—"} · {ago(s.updatedAt)}</small>
-          {canSettings ? <button className="smallButton" onClick={() => void act(() => api.deleteSecret(ws, pid, s.name))}>Xoá</button> : null}</li>)}</ul> : <p className="hint">Chưa có bí mật.</p>}
+          {canSettings ? <button className="smallButton danger" aria-label={`Xóa bí mật ${s.name}`} onClick={() => void (async () => { if (await confirm({ title: `Xóa bí mật ${s.name}?`, message: "Giá trị bị xóa vĩnh viễn và không xem lại được. Thay đổi áp dụng ở lần triển khai tiếp theo.", confirmLabel: "Xóa bí mật", danger: true })) await act(() => api.deleteSecret(ws, pid, s.name)); })()}>Xóa</button> : null}</li>)}</ul> : <p className="hint">Chưa có bí mật.</p>}
         {canSettings ? <form className="row" onSubmit={(e) => { e.preventDefault(); void act(() => api.setSecret(ws, pid, name.trim(), value)).then(() => { setName(""); setValue(""); }); }}>
           <input aria-label="Tên biến" placeholder="TEN_BIEN" value={name} onChange={(e) => setName(e.target.value.toUpperCase())} maxLength={64}/>
           <input aria-label="Giá trị" type="password" autoComplete="off" placeholder="Giá trị" value={value} onChange={(e) => setValue(e.target.value)} maxLength={4000}/>

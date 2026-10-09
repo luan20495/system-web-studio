@@ -11,16 +11,17 @@ import {
   ReleaseKeyBook, SITE_IDLE_POLL_MS, SITE_POLL_MS, deploymentLabel, explainFailedDeployment, explainReleaseError, isBusyDeployment, isDeploymentSuccess, isReleaseBusy, isTerminalDeployment, operationBanner, publishBody,
   rollbackBody, rollbackCandidates, type ReleaseErrorView,
 } from "@xweb/api-client";
-import { useDialog } from "@/components/useDialog";
+import { useOverlayDialog } from "./useOverlayDialog";
+import { confirm, fmtDate, RadioGroup, ReasonButton } from "@xweb/ui";
 import type { AppDefinitionV2 } from "@xweb/types";
 import { diffAnnounced, parsePublicQueriesEvent, publicDataBlockers, publishApproval } from "./builder/core/publicData";
 
-const fmt = (iso: string) => new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
 
 /** the calls the dialog makes (injected so the browser harness can drive every state; the default is the real client) */
 export type ReleaseCalls = Pick<typeof api, "publish" | "getDeployment" | "listDeployments" | "site" | "rollbackSite" | "unpublishSite">;
 
 const MAX_POLL_FAILURES = 5;
+const NEEDS_PUBLISH = "Cần quyền xuất bản (APP_PUBLISH).";
 
 export function PublishModal({ workspaceId, projectId, revision, current, versionNumber, onClose, onUnauthorized, allowed = ["PRIVATE", "PUBLIC"], canPublish, calls = api, timing, draft }: {
   /** the document that will be published (the draft at `revision`). With it the dialog lists what becomes public; without it (code apps) there is no public-data approval. */
@@ -83,7 +84,7 @@ export function PublishModal({ workspaceId, projectId, revision, current, versio
     return () => clearTimeout(t);
   }, [operationHeld, pending, submitting, deploymentBusy, siteTick, siteFailures, loadSite, idleMs]);
   const locked = submitting || pending !== null || operationHeld || deploymentBusy;
-  const dialog = useDialog("Xuất bản website", deploymentBusy || pending ? null : onClose);        // cannot be dismissed with Escape mid-operation
+  const dialog = useOverlayDialog("Xuất bản website", deploymentBusy || pending ? null : onClose);        // cannot be dismissed with Escape mid-operation
 
   // Poll the deployment until it ends (terminal = RUNNING | FAILED | ROLLED_BACK). ROLLING_BACK is busy, never success. A failed poll says nothing about the deployment itself.
   const [pollFailures, setPollFailures] = useState(0);
@@ -115,8 +116,10 @@ export function PublishModal({ workspaceId, projectId, revision, current, versio
   }
   function publishAgain() { publishKeys.current.rotate(); setDeployment(null); setError(null); setNote(null); setPollFailures(0); }
 
-  async function rollback(target: Deployment) {
+  async function rollback(target: Deployment, confirmed = false) {
     if (locked || !canPublish) return;
+    // switching the LIVE site is not undone by closing this dialog: say what changes, and name the versions (M-019)
+    if (!confirmed && !(await confirm({ title: `Phục vụ lại phiên bản ${target.versionNumber}?`, message: `Website đang chạy ${site?.currentVersionNumber ? `phiên bản ${site.currentVersionNumber}` : "bản hiện tại"} sẽ được thay bằng phiên bản ${target.versionNumber} ngay lập tức. Bạn có thể phục vụ lại bản mới hơn sau đó.`, confirmLabel: "Phục vụ lại bản này", danger: true }))) return;
     const expected = site?.currentDeploymentId ?? null;
     const req = rollbackBody({ deploymentId: target.id, expectedActiveDeploymentId: expected });
     setPending({ kind: "ROLLBACK", deploymentId: target.id }); setError(null); setNote(null);
@@ -137,7 +140,7 @@ export function PublishModal({ workspaceId, projectId, revision, current, versio
 
   async function unpublish() {
     if (locked || !canPublish) return;
-    if (!window.confirm("Gỡ trang xuống? Địa chỉ sẽ báo không tìm thấy cho tới khi xuất bản lại hoặc phục vụ lại một bản cũ.")) return;
+    if (!(await confirm({ title: "Gỡ trang xuống?", message: "Địa chỉ của website sẽ báo không tìm thấy cho tới khi bạn xuất bản lại hoặc phục vụ lại một bản cũ.", confirmLabel: "Gỡ trang xuống", danger: true }))) return;
     const expected = site?.currentDeploymentId ?? null;
     setPending({ kind: "UNPUBLISH" }); setError(null); setNote(null);
     try {
@@ -183,10 +186,11 @@ export function PublishModal({ workspaceId, projectId, revision, current, versio
       {!deployment && blockers.length ? (
         <div className="formError" role="alert" data-testid="public-data-blockers"><b>Máy chủ có thể từ chối bản này</b>
           <ul>{blockers.slice(0, 6).map((b, i) => <li key={i}>{b.message}</li>)}</ul></div>) : null}
-      {!deployment ? allowed.map((v) => (
-        <button className={`publishChoice ${visibility === v ? "selected" : ""}`} key={v} disabled={locked || !canPublish} onClick={() => setVisibility(v)}>
-          <b>{v === "PRIVATE" ? "Riêng tư" : "Công khai"}</b><span>{v === "PRIVATE" ? "Chỉ thành viên được cấp quyền." : "Mọi người có thể truy cập."}</span></button>
-      )) : (
+      {!deployment ? (
+        // M-030: a radio group (one Tab stop, arrow keys, "1 of 2, checked") instead of two class-only buttons
+        <RadioGroup legend="Ai xem được website sau khi xuất bản?" value={visibility} onChange={setVisibility} disabled={locked || !canPublish}
+          options={allowed.map((v) => ({ value: v, label: v === "PRIVATE" ? "Riêng tư" : "Công khai", hint: v === "PRIVATE" ? "Chỉ thành viên được cấp quyền." : "Mọi người có thể truy cập." }))}/>
+      ) : (
         <div className="deployBox" role="status" aria-live="polite" data-testid="deployment" data-status={deployment.status}>
           <b data-testid="deployment-status">{deploymentLabel(deployment.status)}</b>
           <ol>{deployment.events.map((ev, i) => <li key={i}>{deploymentLabel(ev.status)}{ev.message ? ` — ${ev.message}` : ""}</li>)}</ol>
@@ -207,10 +211,10 @@ export function PublishModal({ workspaceId, projectId, revision, current, versio
       )}
       {!deployment && real && (candidates.length > 0 || site?.currentDeploymentId) ? <details className="siteHistory" open={candidates.length > 0}><summary>Các lần xuất bản ({history.filter((h) => h.status === "RUNNING" && !h.mock).length})</summary>
         <ul>{history.filter((h) => h.status === "RUNNING" && !h.mock).map((h) => <li key={h.id} data-testid={`release:${h.id}`}>
-          <span>Phiên bản {h.versionNumber} · {h.visibility === "PRIVATE" ? "riêng tư" : "công khai"} · {fmt(h.createdAt)}</span>
+          <span>Phiên bản {h.versionNumber} · {h.visibility === "PRIVATE" ? "riêng tư" : "công khai"} · {fmtDate(h.createdAt)}</span>
           {site?.currentDeploymentId === h.id ? <b>Đang phục vụ</b>
-            : <button className="button ghost" data-testid={`rollback:${h.id}`} disabled={locked || !canPublish} title={!canPublish ? "Cần quyền xuất bản (APP_PUBLISH)" : locked ? "Đang có thao tác phát hành khác" : undefined}
-                onClick={() => { lastAction.current = () => void rollback(h); void rollback(h); }}>{pending?.kind === "ROLLBACK" && pending.deploymentId === h.id ? "Đang hoàn tác…" : "Phục vụ lại bản này"}</button>}
+            : <ReasonButton className="button ghost" data-testid={`rollback:${h.id}`} unavailable={locked || !canPublish} reason={!canPublish ? NEEDS_PUBLISH : undefined} reasonPlacement="inline"
+                onClick={() => { lastAction.current = () => void rollback(h, true); void rollback(h); }}>{pending?.kind === "ROLLBACK" && pending.deploymentId === h.id ? "Đang hoàn tác…" : "Phục vụ lại bản này"}</ReasonButton>}
         </li>)}</ul>
         {history.some((h) => h.status === "ROLLED_BACK") ? <p className="hint">Các bản “đã hoàn tác” không còn phục vụ lại được; xuất bản lại phiên bản đó nếu cần.</p> : null}</details> : null}
       {note ? <p className="hint" role="status" data-testid="release-note">{note}</p> : null}
@@ -218,10 +222,11 @@ export function PublishModal({ workspaceId, projectId, revision, current, versio
         {error.kind !== "text" && error.retry ? <button type="button" className="smallButton" data-testid="release-retry" disabled={retryIn > 0 || locked} onClick={() => { setError(null); (lastAction.current ?? (() => void start()))(); }}>{retryIn > 0 ? `Thử lại sau ${retryIn}s` : "Thử lại"}</button> : null}
         {error.kind !== "text" && error.reload ? <button type="button" className="smallButton" data-testid="release-reload" onClick={() => { setError(null); void loadSite(); }}>Tải lại trạng thái</button> : null}</div> : null}
       <div className="modalActions">
-        {!deployment && real && site?.online ? <button className="button ghost" data-testid="unpublish" disabled={locked || !canPublish} title={!canPublish ? "Cần quyền xuất bản (APP_PUBLISH)" : undefined} onClick={() => { lastAction.current = () => void unpublish(); void unpublish(); }}>{pending?.kind === "UNPUBLISH" ? "Đang gỡ…" : "Gỡ trang xuống"}</button> : null}
+        {!deployment && real && site?.online ? <ReasonButton className="button ghost" data-testid="unpublish" unavailable={locked || !canPublish} reason={!canPublish ? NEEDS_PUBLISH : undefined} onClick={() => { lastAction.current = () => void unpublish(); void unpublish(); }}>{pending?.kind === "UNPUBLISH" ? "Đang gỡ…" : "Gỡ trang xuống"}</ReasonButton> : null}
         <button className="button ghost" onClick={onClose} disabled={deploymentBusy || pending !== null}>{deployment ? "Đóng" : "Hủy"}</button>
-        {!deployment ? <button className="button primary" data-testid="publish" disabled={locked || !canPublish || !acknowledged} title={!canPublish ? "Cần quyền xuất bản (APP_PUBLISH)" : !acknowledged ? "Hãy xác nhận dữ liệu công khai trước" : operationHeld ? "Đang có thao tác phát hành khác" : undefined}
-            onClick={() => { lastAction.current = null; void start(); }}>{submitting ? "Đang gửi…" : "Xuất bản"}</button>
+        {!deployment ? <ReasonButton className="button primary" data-testid="publish" unavailable={locked || !canPublish || !acknowledged}
+            reason={!canPublish ? NEEDS_PUBLISH : locked ? undefined : !acknowledged ? "Hãy xác nhận dữ liệu công khai ở trên trước khi xuất bản." : undefined}
+            onClick={() => { lastAction.current = null; void start(); }}>{submitting ? "Đang gửi…" : "Xuất bản"}</ReasonButton>
           : deploymentBusy && pollFailures >= MAX_POLL_FAILURES ? <button className="button primary" data-testid="publish-recheck" onClick={() => setPollFailures(0)}>Kiểm tra lại</button>
           : deploymentBusy ? <button className="button primary" disabled>Đang xử lý…</button>
           : canPublish && deployment.status !== "RUNNING" ? <button className="button primary" data-testid="publish-again" onClick={publishAgain}>Xuất bản lại</button> : null}
