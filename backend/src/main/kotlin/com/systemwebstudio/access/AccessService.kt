@@ -124,7 +124,16 @@ class AccessService(
         val user = enabledUser(userId)
         val tenant = tenants.findById(tenantId).orElse(null) ?: throw ApiException.notFound("TENANT_NOT_FOUND", "Tenant not found")
         val m = tenantMembers.findByTenantIdAndUserId(tenantId, userId)?.takeIf { it.active }
-        if (user.systemAdmin) return TenantAccess(user, tenantId, m?.let { TenantRole.valueOf(it.role) }, PermissionMatrix.tenantRoles.getValue("TENANT_ADMIN"), true)
+        if (user.systemAdmin) {
+            // Platform operator: TENANT_MANAGE + TENANT_MEMBERS on any existing tenant (provisioning), NOTHING of the tenant's business data (organization, employees) -
+            // unless it is an active member of that tenant (then exactly its member role on top) or the legacy flag app.tenancy.system-admin-business-access is on.
+            val permissions = when {
+                systemAdminBusinessAccess -> PermissionMatrix.tenantRoles.getValue("TENANT_ADMIN")       // LEGACY BYPASS (flag-gated)
+                m != null && tenant.status != TenantStatus.DELETED.name -> PermissionMatrix.platformScope + PermissionMatrix.tenantRoles[m.role].orEmpty()
+                else -> PermissionMatrix.platformScope
+            }
+            return TenantAccess(user, tenantId, m?.let { TenantRole.valueOf(it.role) }, permissions, true)
+        }
         if (m == null || tenant.status == TenantStatus.DELETED.name) throw ApiException.notFound("TENANT_NOT_FOUND", "Tenant not found")
         return TenantAccess(user, tenantId, TenantRole.valueOf(m.role), PermissionMatrix.tenantRoles[m.role].orEmpty(), false)
     }
