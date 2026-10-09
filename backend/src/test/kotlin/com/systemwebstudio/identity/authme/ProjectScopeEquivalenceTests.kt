@@ -115,11 +115,11 @@ class ProjectScopeEquivalenceTests : ProjectScopeDifferentialBase() {
         val s = login(sys)
         setWsMemberActive(w, sys, false)
         val sc = assertEquivalent(sys, s, "system admin, workspace membership inactive")
-        System.err.println("[ProjectScopeEquivalence] SYSTEM_ADMIN non-member with active project row: scopes=$sc")
+        // a stale project row of a platform operator that is NOT a workspace member grants NOTHING (platform scope only): no project scope, never TENANT_* codes inside a project
+        assertThat(sc).describedAs("system admin, workspace membership inactive, tenant ACTIVE").isEmpty()
         for (status in listOf("SUSPENDED", "DELETED")) {
             tenantStatus(t, status)
-            val x = assertEquivalent(sys, s, "system admin non-member, tenant $status")
-            System.err.println("[ProjectScopeEquivalence] SYSTEM_ADMIN non-member, tenant $status: scopes=$x")
+            assertThat(assertEquivalent(sys, s, "system admin non-member, tenant $status")).describedAs("tenant $status").isEmpty()
         }
     }
 

@@ -88,8 +88,15 @@ class AccessEvaluatorTests {
         // a non-member SYSTEM_ADMIN (platform scope) never reads a project it is not a member of
         val platform = AccessEvaluator.workspace(true, tenant(), null, false)
         denied("PROJECT_NOT_FOUND", HttpStatus.NOT_FOUND) { AccessEvaluator.project(platform, "ACTIVE", null) }
-        assertThat(AccessEvaluator.project(platform, "ACTIVE", "VIEWER").permissions)
-            .isEqualTo(PermissionMatrix.platformScope + PermissionMatrix.projectRoles.getValue("VIEWER"))
+        // ... not even through a stale project row: a project role counts only through an ACTIVE workspace role (or the legacy bypass)
+        denied("PROJECT_NOT_FOUND", HttpStatus.NOT_FOUND) { AccessEvaluator.project(platform, "ACTIVE", "VIEWER") }
+        denied("PROJECT_NOT_FOUND", HttpStatus.NOT_FOUND) { AccessEvaluator.project(platform, "ACTIVE", "OWNER") }
+        // a SYSTEM_ADMIN acting through a workspace MEMBERSHIP keeps its project role
+        val member = AccessEvaluator.workspace(true, tenant(), "VIEWER", false)
+        assertThat(AccessEvaluator.project(member, "ACTIVE", "EDITOR").permissions).isEqualTo(member.permissions + PermissionMatrix.projectRoles.getValue("EDITOR"))
+        // legacy bypass keeps working with or without a project row
+        val bypass = AccessEvaluator.workspace(true, tenant(), null, true)
+        assertThat(AccessEvaluator.project(bypass, "ACTIVE", null).permissions).isEqualTo(PermissionMatrix.systemAdmin)
     }
 
     @Test
