@@ -506,6 +506,17 @@ for (const w of [768, 1000]) {
   const gb = await p.locator(".bx-gutter").boundingBox(); const hbs = await p.locator(".bx-handle").evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return { y: r.top, width: r.width, height: r.height }; }));
   const hb = hbs.find((r) => r.y >= gb.y);
   check("M-046: a handle scrolled into view is a usable >= 24 px target inside the gutter", hb && hb.width >= 24 && hb.height >= 24 && hb.y >= gb.y - 1, JSON.stringify({ hb, gb }));
+  // M-046 follow-up (WCAG 2.4.7 / 2.4.11): a handle clipped out of the gutter is inert (no Tab stop, cannot take focus); the visible ones stay reachable
+  const reach = await p.locator(".bx-handle").evaluateAll((els, g) => els.map((e) => { const r = e.getBoundingClientRect(), c = r.top + r.height / 2; return { inView: c >= g.y && c <= g.y + g.height, inert: e.inert, tab: e.tabIndex }; }), gb);
+  check("M-046 follow-up: a scrolled-out handle is inert, the visible handles are not", reach.some((r) => !r.inView) && reach.some((r) => r.inView) && reach.every((r) => (r.inView ? !r.inert && r.tab === 0 : r.inert)), JSON.stringify(reach));
+  const outIdx = reach.findIndex((r) => !r.inView);
+  await p.locator(".bx-handle").nth(outIdx).evaluate((e) => e.focus());
+  check("M-046 follow-up: focusing a clipped handle does nothing (focus never lands on an invisible control)", await p.evaluate(() => !document.activeElement?.classList.contains("bx-handle") || !document.activeElement.inert));
+  await p.keyboard.press("Tab"); await p.keyboard.press("Tab"); await p.keyboard.press("Tab");
+  check("M-046 follow-up: Tab never stops on a clipped handle", await p.evaluate(() => { const a = document.activeElement; return !(a && a.classList.contains("bx-handle") && a.inert); }));
+  await frame.evaluate(() => scrollTo(0, 0)); await wait(400);
+  const back = await p.locator(".bx-handle").evaluateAll((els) => els.map((e) => e.inert));
+  check("M-046 follow-up: scrolling back makes the first handle reachable again", back.length > 0 && back[0] === false, JSON.stringify(back));
   await p.close();
 }
 // ---------- M-047 + M-077 (C5-S1 wave A): one page rule set; the shown slug is the saved slug ----------

@@ -32,6 +32,19 @@ export function Canvas({ document: html, sections, selectedId, onSelect, rectsRe
   const [base, setBase] = useState<SectionRect[]>([]);
   const baseRef = useRef<SectionRect[]>([]);
   const trackRef = useRef<HTMLDivElement>(null);
+  const gutterRef = useRef<HTMLDivElement>(null);
+  const shiftRef = useRef(0);
+  /** A handle scrolled out of the (clipped) gutter is invisible, so it must not be focusable either (WCAG 2.4.7 / 2.4.11): `inert` takes it out of the Tab order and the accessibility tree. Pure DOM
+   *  (no React render, so M-046's "a scroll does not re-render the Builder" holds). The keyboard alternative to dragging is always there: Inspector "↑ Lên / ↓ Xuống" and the page list's arrows. */
+  const syncReach = useCallback(() => {
+    const gutter = gutterRef.current, track = trackRef.current; if (!gutter || !track) return;
+    const h = gutter.clientHeight, shift = shiftRef.current;
+    for (const el of Array.from(track.children) as HTMLElement[]) {
+      const centre = (parseFloat(el.style.top) || 0) + shift + el.offsetHeight / 2;
+      const reachable = centre >= 0 && centre <= h;
+      if (el.inert === reachable) el.inert = !reachable;
+    }
+  }, []);
   useEffect(() => {
     const known = new Set(sections.map((s) => s.id));
     const onMessage = (e: MessageEvent) => {
@@ -43,12 +56,15 @@ export function Canvas({ document: html, sections, selectedId, onSelect, rectsRe
         rectsRef.current = next;
         const shift = scrollShift(baseRef.current, next);
         if (trackRef.current) trackRef.current.style.transform = shift ? `translateY(${shift}px)` : "";
+        shiftRef.current = shift ?? 0;
         if (shift === null) { baseRef.current = next; setBase(next); }
+        syncReach();
       }
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [sections, frameRef, onSelect, rectsRef]);
+  }, [sections, frameRef, onSelect, rectsRef, syncReach]);
+  useEffect(syncReach, [syncReach, base, interactive, dragging, device]);   // new handles / a new layout: judge them against the current scroll
   const byId = useMemo(() => new Map(sections.map((s) => [s.id, s])), [sections]);
   const rects = rectsRef.current;
 
@@ -66,7 +82,7 @@ export function Canvas({ document: html, sections, selectedId, onSelect, rectsRe
           </div>
         </div>
         {/* Drag handles live in a gutter NEXT TO the preview, never over the iframe: a press must not be routed into the sandboxed frame. */}
-        <div className="bx-gutter" role="group" aria-label="Tay nắm kéo các phần của trang">
+        <div ref={gutterRef} className="bx-gutter" role="group" aria-label="Tay nắm kéo các phần của trang">
           <div ref={trackRef} className="bx-gutter-track">
             {interactive && !dragging ? base.map((r) => {
               const s = byId.get(r.id);
