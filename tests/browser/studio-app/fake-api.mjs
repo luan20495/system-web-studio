@@ -65,6 +65,7 @@ export async function installFake(page, s) {
     if ((m = path.match(/^\/workspaces\/w1\/projects\/(\w+)(\/.*)?$/))) {
       const sub = m[2] ?? "";
       if (sub === "/schema" && method === "GET") return json(route, { schema: s.schema, revision: s.revision, version: null });
+      if (sub === "/schema" && method === "PATCH" && s.patchFail) return json(route, s.patchFail.body, s.patchFail.status);
       if (sub === "/schema" && method === "PATCH") { s.revision += 1; s.lastPatch = body; if (s.patchApply) s.schema = s.patchApply(s.schema, body); return json(route, { schema: s.schema, revision: s.revision, version: s.versions[0] }); }
       if (sub.startsWith("/versions") && method === "GET") return json(route, s.versions);
       if (sub.startsWith("/prompts") && method === "GET") return json(route, s.prompts);

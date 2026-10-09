@@ -402,4 +402,16 @@ for (const w of [768, 1000]) {
   check("M-045: confirming discards it and the leave guard is released", !(await p.locator(".codeEditor").inputValue()).includes("return 1") && (await armed()) === false, "");
   await p.close();
 }
+
+// ---------- M-044: a page dialog that cannot save says WHY inside the dialog (the real reason used to live only in a toast) ----------
+{
+  const s = newState(); s.patchFail = { status: 500, body: { code: "INTERNAL_ERROR", message: "java.lang.NullPointerException at com.x", requestId: "req_44abc" } };
+  const p = await open(b, "/studio/projects/p1/design", { state: s }); await p.waitForSelector("iframe"); await wait(900);
+  await p.locator(".bx-panel-head").getByRole("button", { name: /Trang/ }).click(); await wait(200);
+  const dlg = p.getByRole("dialog"); const nameBox = dlg.getByLabel("Tên trang"); await nameBox.fill("Liên hệ"); await nameBox.press("Enter"); await wait(1500);
+  const t = (await dlg.innerText()).replace(/\s+/g, " ");
+  check("M-044: the dialog stays open and shows the failure reason itself with a reference code (role=alert), not only the generic 'Không lưu được'", (await dlg.count()) === 1 && /req_44abc/.test(t) && (await dlg.getByRole("alert").count()) >= 1, t.slice(0, 220));
+  check("M-044: …and no raw server text / class name is shown", !/java\.lang|NullPointer|com\.x/.test(t), "");
+  await p.close();
+}
 await b.close(); finish();

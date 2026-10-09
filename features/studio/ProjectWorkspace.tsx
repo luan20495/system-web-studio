@@ -66,7 +66,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const [device, setDevice] = useState<DeviceMode>("desktop");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pane, setPane] = useState<"chat" | "preview">("chat"); const paneId = useId();
-  const { busy, save, setSave, failedEdit, setFailedEdit, saveFailureRef, onConflict, run, flight } = useSaveMachine();
+  const { busy, save, setSave, failedEdit, setFailedEdit, saveFailureRef, lastNoticeRef, onConflict, run, flight } = useSaveMachine();
   const ws = project?.workspaceId ?? "";
   // UX only (the server re-checks every call). The input is the permission list the server resolved for THIS project; no role name is read (permissions.ts / canonical.ts).
   const perms = useMemo(() => resolvePermissions(project?.permissions), [project?.permissions]);
@@ -188,7 +188,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
       {mode === "design" ? <ErrorBoundary variant="inline" resetKeys={[projectId]} homeHref={S("/projects")} onReset={() => void reload().catch(() => undefined)}><BuilderWorkspace
         project={project} doc={schema as AppDefinitionV2} revision={revision} registry={registry} assets={assets} backend={backend} pageId={pageId} onPage={(id) => { setPageId(id); setSelectedId(null); }}
         selectedId={selectedId} onSelect={setSelectedId} device={device} onDevice={setDevice} busy={busy !== null} save={save} readOnly={readOnly} latest={latest}
-        runtime={runtime} dataManagement={dataManagement} onRetrySave={failedEdit ? retrySave : undefined} blocks={blockOptions.map(({ b, who }): BlockOption => ({ id: b.id, name: b.name, who, baseLabel: label(b.baseComponent) }))}
+        runtime={runtime} dataManagement={dataManagement} onRetrySave={failedEdit ? retrySave : undefined} lastFailure={() => lastNoticeRef.current} blocks={blockOptions.map(({ b, who }): BlockOption => ({ id: b.id, name: b.name, who, baseLabel: label(b.baseComponent) }))}
         applyOps={applyOps} addBlock={(id) => { const o = blockOptions.find(({ b }) => b.id === id); if (o) void addBlock(o.b); }}
         renderPreview={renderPreview} labelOf={label} summaryOf={sectionSummary}
         leading={<button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}><ArrowLeft size={16} aria-hidden="true"/></button>}

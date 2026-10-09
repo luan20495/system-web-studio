@@ -61,6 +61,8 @@ export function BuilderWorkspace(props: {
   pageId: string; onPage: (id: string) => void; selectedId: string | null; onSelect: (id: string | null) => void; device: Device; onDevice: (d: Device) => void;
   busy: boolean; save: { state: "saved" | "saving" | "error"; at: Date | null }; readOnly: boolean; latest?: number;
   applyOps: (ops: Ops, summary: string, blockId?: string) => Promise<boolean>; addBlock: (id: string) => void;
+  /** the reason the last failed save was explained with (M-044): dialogs show it themselves instead of a generic line */
+  lastFailure?: () => string | null;
   renderPreview: (o: { selectedId: string | null; interactive: boolean; pageId: string }) => string;
   labelOf: (type: string) => string; summaryOf: (s: Section) => string;
   leading?: ReactNode; modeTabs?: ReactNode; trailing?: ReactNode;
@@ -183,7 +185,7 @@ export function BuilderWorkspace(props: {
   const leftPanel = (() => {
     switch (rail) {
       case "pages": return <PagesPanel doc={doc} pageId={pageId} onPage={props.onPage} selectedId={selectedId} onSelect={select} labelOf={props.labelOf} summaryOf={props.summaryOf}
-        canEdit={interactive} busy={busy} apply={(ops, summary) => props.applyOps(ops, summary)} genId={newId} onMoveSection={(id, d) => void step(id, d)}/>;
+        canEdit={interactive} busy={busy} apply={(ops, summary) => props.applyOps(ops, summary)} lastFailure={props.lastFailure} genId={newId} onMoveSection={(id, d) => void step(id, d)}/>;
       case "components": return <ComponentsPanel registry={registry} blocks={props.blocks} canEdit={interactive} busy={busy} onAdd={(id) => void addComponent(id)} onAddBlock={props.addBlock}/>;
       case "data": return <DataPanel key={dataFocus.n ?? 0} ctx={ctx} focus={dataFocus}/>;
       case "forms": return <FormsPanel ctx={ctx} onSelect={(id, pg) => { props.onPage(pg); select(id); }} onNewAction={(id) => { setActionPreset({ sectionId: id }); openRail("actions"); }} openSite={props.openSite}/>;

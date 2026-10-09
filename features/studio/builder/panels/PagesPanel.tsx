@@ -18,7 +18,8 @@ import type { SchemaOperation } from "@xweb/types";
 
 type Apply = (ops: SchemaOperation[], summary: string) => Promise<boolean>;
 
-export function PagesPanel({ doc, pageId, onPage, selectedId, onSelect, labelOf, summaryOf, canEdit, busy, apply, genId, onMoveSection }: {
+export function PagesPanel({ doc, pageId, onPage, selectedId, onSelect, labelOf, summaryOf, canEdit, busy, apply, genId, onMoveSection, lastFailure }: {
+  lastFailure?: () => string | null; // M-044
   doc: AppDefinitionV2; pageId: string; onPage: (id: string) => void; selectedId: string | null; onSelect: (id: string | null) => void;
   labelOf: (type: string) => string; summaryOf: (s: Section) => string; canEdit: boolean; busy: boolean; apply: Apply; genId: (prefix: string) => string;
   onMoveSection: (sectionId: string, delta: -1 | 1) => void;
@@ -90,19 +91,19 @@ export function PagesPanel({ doc, pageId, onPage, selectedId, onSelect, labelOf,
         const id = genId("p"); const r = opsAddPage(doc, title, id);
         if ("error" in r) return r.error;
         if (await apply(r.ops, r.summary)) { onPage(id); setDialog(null); return null; }
-        return "Không lưu được. Hãy thử lại.";
+        return lastFailure?.() ?? "Không lưu được. Hãy thử lại.";
       }}/> : null}
       {dialog === "rename" ? <RenameDialog doc={doc} pageId={current.id} title={current.title} slug={current.slug} onClose={() => setDialog(null)} onSubmit={async (t, s) => {
         const r = opsRenamePage(doc, current.id, t, current.home ? undefined : s);
         if ("error" in r) return r.error;
         if (await apply(r.ops, r.summary)) { setDialog(null); return null; }
-        return "Không lưu được. Hãy thử lại.";
+        return lastFailure?.() ?? "Không lưu được. Hãy thử lại.";
       }}/> : null}
       {dialog === "remove" ? <RemoveDialog doc={doc} pageId={current.id} actions={doc.actions ?? []} onClose={() => setDialog(null)} onConfirm={async () => {
         const r = opsRemovePage(doc, current.id);
         if ("error" in r) return r.error;
         if (await apply(r.ops, r.summary)) { onPage(HOME_ID); setDialog(null); return null; }
-        return "Không lưu được. Hãy thử lại.";
+        return lastFailure?.() ?? "Không lưu được. Hãy thử lại.";
       }}/> : null}
     </div>
   );

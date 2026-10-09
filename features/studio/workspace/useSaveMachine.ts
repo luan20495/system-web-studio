@@ -20,6 +20,8 @@ export function useSaveMachine() {
   /** the last edit that could not be saved (network / 5xx / timeout), kept so the user can retry it instead of redoing the work */
   const [failedEdit, setFailedEdit] = useState<FailedEdit | null>(null);
   const saveFailureRef = useRef<"none" | "retryable">("none");
+  /** M-044: what the person was last told about a failed save (the toast text), so a dialog can show the same reason itself */
+  const lastNoticeRef = useRef<string | null>(null);
   /** set by the host: how to reload the document after a REVISION_CONFLICT */
   const onConflict = useRef<() => Promise<unknown>>(async () => undefined);
 
@@ -32,11 +34,11 @@ export function useSaveMachine() {
     // An AI request is not a save: while it waits for the model nothing is being written, so the top bar keeps saying what is true ("saved") and a failed/cancelled request is not "Lưu thất bại".
     const isSave = label !== "prompt";
     setBusy(label); if (isSave) setSave((x) => ({ ...x, state: "saving" }));
-    saveFailureRef.current = "none";
+    saveFailureRef.current = "none"; lastNoticeRef.current = null;
     try { const out = await fn(); setSave((x) => (isSave || (out as { version?: unknown } | undefined)?.version ? { state: "saved", at: new Date() } : x)); return out; }
     catch (e) {
       if (isSave) setSave((x) => ({ ...x, state: "error" }));
-      const f = describeRunFailure(e, fallback);
+      const f = describeRunFailure(e, fallback); lastNoticeRef.current = f.notice;
       if (f.aborted) { if (f.notice) toast.info(f.notice); return undefined; }
       saveFailureRef.current = f.retryable ? "retryable" : "none";
       if (f.notice) toast.error(f.notice);
@@ -52,5 +54,5 @@ export function useSaveMachine() {
     window.addEventListener("beforeunload", h); return () => window.removeEventListener("beforeunload", h);
   }, [busy, failedEdit]);
 
-  return { busy, save, setSave, failedEdit, setFailedEdit, saveFailureRef, onConflict, run, flight };
+  return { busy, save, setSave, failedEdit, setFailedEdit, saveFailureRef, lastNoticeRef, onConflict, run, flight };
 }
