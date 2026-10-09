@@ -3,6 +3,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import type { Me, TenantMemberView } from "@xweb/types";
 import * as M from "../../features/admin/adminModel";
+import { ApiError } from "../../packages/api-client/src/core";
+import { errorText } from "../../packages/api-client/src/errorText";
 
 const me = (o: Partial<Me> = {}): Me => ({ id: "u1", username: "a", displayName: "A", roles: [], workspaces: [], ...o });
 const ws = (id: string, permissions: string[]) => ({ id, name: `W-${id}`, role: "x", tenantId: "t", permissions });
@@ -64,12 +66,14 @@ test("rules the server enforces are said before the click: self change, last TEN
   assert.match(M.workspaceMemberBlock(wsAll[1], { id: "b" }, wsAll, "VIEWER")!, /tự đổi/);
   assert.equal(M.workspaceMemberBlock(wsAll[1], { id: "z" }, wsAll, "VIEWER"), null);
 });
-test("server refusals are explained by CODE in Vietnamese; unknown ones keep the fallback and the server's text", () => {
-  assert.equal(M.adminErrorText({ code: "LAST_TENANT_ADMIN" }, "x"), "Công ty phải còn ít nhất một quản trị viên.");
-  assert.equal(M.adminErrorText({ code: "DEFAULT_TENANT_PROTECTED" }, "x"), "Công ty mặc định không thể bị tạm khóa hoặc xóa.");
-  assert.equal(M.adminErrorText({ code: "ADMIN_REQUIRED", status: 403 }, "x"), "Màn hình này chỉ dành cho quản trị hệ thống.");
-  assert.match(M.adminErrorText({ status: 403 }, "x"), /không có quyền/); assert.match(M.adminErrorText({ status: 404 }, "x"), /Không tìm thấy/);
-  assert.equal(M.adminErrorText({ status: 500, message: "boom" }, "Chưa lưu được"), "Chưa lưu được (boom)");
+test("one mapper (M-075): admin refusals come from the shared catalog by code; a non-ApiError is never printed", () => {
+  const ae = (code: string, status: number, message?: string) => new ApiError(status, code, message ?? "english server text");
+  assert.equal(errorText(ae("LAST_TENANT_ADMIN", 409), "x"), "Công ty phải còn ít nhất một quản trị viên.");
+  assert.equal(errorText(ae("DEFAULT_TENANT_PROTECTED", 409), "x"), "Công ty mặc định không thể bị tạm khóa hoặc xóa.");
+  assert.equal(errorText(ae("ADMIN_REQUIRED", 403), "x"), "Màn hình này chỉ dành cho quản trị hệ thống.");
+  assert.match(errorText(ae("HTTP_403", 403), "x"), /không có quyền/); assert.match(errorText(ae("HTTP_404", 404), "x"), /Không tìm thấy/);
+  assert.equal(errorText(new SyntaxError("Unexpected token <"), "Chưa lưu được"), "Chưa lưu được");
+  assert.ok(!/boom|english server text/.test(errorText(ae("HTTP_500", 500, "boom"), "Chưa lưu được")));
 });
 
 test("workspace member panel opens only on MEMBER_MANAGE of THAT workspace: a SYSTEM_ADMIN (tenant codes only) and a plain member are not offered it; an absent field does not block", () => {

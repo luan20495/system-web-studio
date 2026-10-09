@@ -16,7 +16,7 @@ import { useSession } from "../session";
 import { useLoad } from "../useLoad";
 import { Card, ErrorState, fmtDate, Kpi, Pager, Pill, StateView } from "../ui";
 import { isTenantAdminRole, isWorkspaceAdminRole } from "@xweb/permissions";
-import { ArrowLeft, Building2, CircleCheck, ModalHeader, ShieldCheck, UserRound, confirm, LoadGate, useAction } from "@xweb/ui";
+import { ArrowLeft, Building2, CircleCheck, ModalHeader, ShieldCheck, UserRound, confirm, errorText, LoadGate, useAction } from "@xweb/ui";
 import { LoadNote } from "./LoadNote";
 import { useSingleFlight } from "./useAdminAction";
 import { PersonPicker } from "./PersonPicker";
@@ -27,11 +27,12 @@ import { Modal } from "./Modal";
 import { PageHead } from "./PageHead";
 import { useA } from "./console/context";
 import {
-  CANDIDATE_MAX_RESULTS, TENANT_ROLES, TENANT_STATUS_LABEL, WORKSPACE_ROLES, adminErrorText, candidateLabel, candidateQuery, adminScope, slugify, canManageWorkspaceMembers, checkTenantForm, memberChangeBlock, personLabel, personOf, tenantActions, tenantMemberRows,
+  CANDIDATE_MAX_RESULTS, TENANT_ROLES, TENANT_STATUS_LABEL, WORKSPACE_ROLES, candidateLabel, candidateQuery, adminScope, slugify, canManageWorkspaceMembers, checkTenantForm, memberChangeBlock, personLabel, personOf, tenantActions, tenantMemberRows,
   workspaceMemberBlock, workspaceRoleLabel, type Person,
 } from "./adminModel";
 
-const say = (e: unknown, fallback: string) => adminErrorText(e instanceof ApiError ? e : { message: e instanceof Error ? e.message : undefined }, fallback);
+/** one mapper for every refusal (M-075): by code, never the Error.message of a non-ApiError */
+const say = (e: unknown, fallback: string) => errorText(e, fallback);
 const statusPill = (s: string) => <Pill value={s} label={TENANT_STATUS_LABEL[s] ?? s}/>;
 
 // ------------------------------------------------------------------------------------------------------------------------- people
