@@ -29,6 +29,7 @@ class AuthMeQueryComplexityTests : AuthMeFixtureBase() {
         }
         System.err.println("[AuthMeQueryComplexity] raw: " + statements.entries.joinToString(" ") { "N=${it.key}:${it.value}" })
         soft.assertAll()
+        assertThat(statements.getValue(25)).describedAs("positive control: the statement counter really counts (raw: $statements)").isGreaterThanOrEqualTo(4)
         assertThat(statements.getValue(2000))
             .describedAs("statements of /auth/me with 2000 project memberships must not exceed statements with 25 memberships + 3 (raw: $statements)")
             .isLessThanOrEqualTo(statements.getValue(25) + 3)
