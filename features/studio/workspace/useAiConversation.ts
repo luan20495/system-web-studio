@@ -9,13 +9,14 @@ import { api } from "@/lib/http-api";
 import type { AiStatus, ApiProject, PageSchema } from "@/lib/http-types";
 import type { AiLive } from "../aiProgressModel";
 import { usageChip, type Msg } from "./runFailure";
+import { takeHandedOverPrompt } from "../promptHandover";
 
 type Run = <T>(label: string, fn: () => Promise<T>, fallback: string) => Promise<T | undefined>;
 
 export function useAiConversation(o: {
   ws: string; projectId: string; project: ApiProject | null; schema: PageSchema | null; revision: number; readOnly: boolean; busy: string | null; mode: string;
   run: Run; setSchema: (s: PageSchema) => void; setRevision: (r: number) => void; refreshVersions: () => Promise<void>; label: (type: string) => string;
-  /** the prompt of `?prompt=` and how to drop it from the URL */
+  /** a `?prompt=` address only PRE-FILLS the composer (M-049: an address must never send anything) and is dropped from the URL */
   handOver: { prompt: string | null; clear: () => void };
 }) {
   const { ws, projectId, project, schema, revision, readOnly, busy, mode, run, setSchema, setRevision, refreshVersions, label, handOver } = o;
@@ -73,11 +74,14 @@ export function useAiConversation(o: {
   /** cancel the running request: by stream id once the server answered `start`, by aborting the fetch before that */
   const cancel = () => { if (live?.id) void api.cancelStream(live.id).catch(() => undefined); else streamAbort.current?.abort(); };
 
-  // a prompt handed over from Studio Home is sent once, then removed from the URL
+  // M-049: the prompt the person typed on Studio Home (handed over IN MEMORY) is sent once; a `?prompt=` address only pre-fills the composer and is removed from the URL - it never sends
   const handedOver = useRef(false);
   useEffect(() => {
-    const p = handOver.prompt;
-    if (p && project && schema && !handedOver.current) { handedOver.current = true; handOver.clear(); void submitPrompt(p); }
+    if (handedOver.current || !project || !schema) return;
+    handedOver.current = true;
+    const sent = takeHandedOverPrompt(projectId); const prefill = handOver.prompt;
+    if (prefill) { handOver.clear(); if (!sent) setPrompt(prefill.slice(0, 2000)); }
+    if (sent) void submitPrompt(sent);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handOver.prompt, project, schema]);
 

@@ -343,4 +343,22 @@ for (const w of [768, 1000]) {
     await p.close();
   }
 }
+
+// ---------- M-049 (R2-001): a link must never make the browser send an AI prompt; the prompt typed on Home is handed over in memory, not in the URL ----------
+{
+  const count = (p, method, re) => p.state.log.filter((l) => l.method === method && re.test(l.path)).length;
+  const s = newState(); const text = "Thêm bảng giá và đổi màu chính sang xanh lá";
+  let p = await open(b, `/studio/projects/p1/ai?prompt=${encodeURIComponent(text)}`, { state: s }); await wait(2500);
+  check("M-049: opening /ai?prompt=… sends NO prompt (zero POST /prompts) - an address cannot make an editor's browser call the AI", count(p, "POST", /\/prompts$/) === 0, String(count(p, "POST", /\/prompts$/)));
+  const box = await p.getByPlaceholder(/Mô tả thay đổi/).inputValue().catch(() => "");
+  check("M-049: …the text only pre-fills the composer, so the person decides to send it", box === text, JSON.stringify(box));
+  check("M-049: …and it is removed from the address bar (history / logs)", !/prompt=/.test(await p.evaluate(() => location.search + location.hash + (window.__nav?.log?.at(-1) ?? ""))), "");
+  await p.close();
+  const s2 = newState(); p = await open(b, "/studio", { state: s2 }); await p.waitForSelector(".homeHero"); await wait(1200);
+  const idea = p.getByLabel("Mô tả ứng dụng muốn tạo"); await idea.fill(text); await idea.press("Control+Enter"); await wait(3500);
+  const navs = await p.evaluate(() => JSON.stringify(window.__nav?.log ?? []));
+  check("M-049: Home 'Tạo bằng AI' still creates the project and sends the typed prompt exactly ONCE (the person asked for it)", count(p, "POST", /^\/workspaces\/w1\/projects$/) === 1 && count(p, "POST", /\/prompts$/) === 1, `${count(p, "POST", /^\/workspaces\/w1\/projects$/)} create / ${count(p, "POST", /\/prompts$/)} prompt`);
+  check("M-049: …and the address it navigated to carries no prompt text", !/prompt=/.test(navs) && !navs.includes(encodeURIComponent(text)), navs.slice(0, 160));
+  await p.close();
+}
 await b.close(); finish();

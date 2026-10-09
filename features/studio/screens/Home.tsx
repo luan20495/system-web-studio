@@ -7,6 +7,7 @@ import { api, ApiError } from "@/lib/http-api";
 import { sectionLabel } from "@/components/SectionInspector";
 import { LoadGate, useAction } from "@xweb/ui";
 import { useSession } from "../../session";
+import { handOverPrompt } from "../promptHandover";
 import { useLoad } from "../../useLoad";
 import { Card, ErrorState, errText, num, StateView, usd } from "../../ui";
 import { S } from "../base";
@@ -29,7 +30,7 @@ export function Home() {
     e.preventDefault(); const text = idea.trim(); if (!text) return;
     setErr(null);
     const r = await create.run(text);
-    if (r.status === "ok") { setLeaving(true); router.push(S(`/projects/${r.value.id}/ai?prompt=${encodeURIComponent(text)}`)); }
+    if (r.status === "ok") { setLeaving(true); handOverPrompt(r.value.id, text); router.push(S(`/projects/${r.value.id}/ai`)); }
     else if (r.status === "error") setErr(r.error instanceof ApiError && r.error.status === 403 ? "Bạn không có quyền tạo ứng dụng trong workspace này (máy chủ từ chối)." : errText(r.error, "Không tạo được ứng dụng."));
   }
   const u = usage.data;
