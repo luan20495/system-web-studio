@@ -474,5 +474,14 @@ for (const [label, query] of [["editor", ""], ["read-only viewer", "?perms=APP_V
   await p.close();
 }
 
+// ---------- M-083 (C5-S1 batch 2): the test-mode "Chạy thử" button stays on one line in the narrow right column ----------
+{
+  const p = await browser.newPage({ viewport: { width: 1440, height: 1000 } }); await p.goto(URL_ + "?v2=1"); await p.waitForSelector("iframe"); await p.waitForTimeout(700);
+  await p.getByRole("button", { name: "Dùng thử" }).click(); await p.waitForTimeout(600);
+  const btns = await p.evaluate(() => [...document.querySelectorAll(".bx-test-row > button")].map((x) => { const r = document.createRange(); r.selectNodeContents(x); return { t: x.innerText, lines: r.getClientRects().length }; }));
+  check("M-083: every 'Chạy thử' button in test mode is one line (no 'Chạy / thử')", btns.length > 0 && btns.every((x) => x.lines === 1), JSON.stringify(btns));
+  await p.close();
+}
+
 await browser.close();
 finish();

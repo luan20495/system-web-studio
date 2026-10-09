@@ -614,4 +614,12 @@ for (const w of [768, 1000]) {
   check("M-112: leaving Design removes the class (no page-scroll mode outside the builder)", !(await p.evaluate(() => document.documentElement.classList.contains("bx-page"))));
   await p.close();
 }
+// ---------- M-083 (C5-S1 batch 2): the Studio header search is not clipped on a phone ----------
+for (const w of [360, 390]) {
+  const p = await open(b, "/studio", { viewport: { width: w, height: 800 } }); await p.waitForSelector(".studioTop"); await wait(700);
+  const m = await p.evaluate(() => { const i = document.querySelector(".studioTop .search input"); const c = document.createElement("canvas").getContext("2d"); const cs = getComputedStyle(i); c.font = `${cs.fontSize} ${cs.fontFamily}`;
+    return { inputW: i.clientWidth, need: Math.ceil(c.measureText(i.placeholder).width + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight)), h: Math.round(i.getBoundingClientRect().height) }; });
+  check(`M-083 [${w}]: the header search shows its whole placeholder ('Tìm ứng dụng…'), at least 24 px tall, and nothing scrolls sideways`, m.inputW >= m.need && m.h >= 24 && !(await hscroll(p)), JSON.stringify(m));
+  await p.close();
+}
 await b.close(); finish();

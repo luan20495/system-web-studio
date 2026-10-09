@@ -275,3 +275,11 @@
 .memberTable th:nth-child(2),.memberTable td:nth-child(2){width:38%}
 .memberTable td:nth-child(2) select{min-width:0;width:100%}
 .memberTable th:last-child,.memberTable td:last-child{width:5rem}
+
+/* M-083 (S1-058): a test-mode "Chạy thử" button never wraps to "Chạy / thử"; the row text wraps instead */
+.bx-test-row>button{white-space:nowrap;flex:none}
+/* M-083 (S1-037): on a phone the Studio header search gets its own full-width row instead of being squeezed to "Tìm ứn…" next to the workspace name, avatar and logout */
+@media(max-width:600px){
+  .topHeader.studioTop{flex-wrap:wrap;row-gap:8px;padding-block:8px}
+  .studioTop .search{order:3;flex:1 1 100%}
+}
