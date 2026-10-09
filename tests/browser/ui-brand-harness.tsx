@@ -23,7 +23,7 @@ function App() {
 
       <section aria-label="Thanh bên ba cổng" id="lockups" style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 24 }}>
         {(["platform", "admin", "studio"] as const).map((p) => (
-          <aside key={p} className="sidebar dark" style={{ inlineSize: 220, borderRadius: 10 }} aria-label={`Thanh bên ${p}`}>
+          <aside key={p} className="sidebar dark" style={{ display: "flex", inlineSize: 220, borderRadius: 10 }} aria-label={`Thanh bên ${p}`}>
             <div className="sideBrand"><BrandLockup portal={p}/></div>
             <nav><a className="navLink active" href={`#${p}`} aria-current="page">Tổng quan</a><a className="navLink" href={`#${p}-2`}>Ứng dụng</a></nav>
           </aside>))}
