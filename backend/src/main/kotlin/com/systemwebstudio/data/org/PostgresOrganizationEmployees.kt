@@ -76,7 +76,7 @@ class PostgresEmployeeOrganizationMembershipRepository(private val db: OrgDb) : 
 
     override fun end(tenantId: UUID, userId: UUID, membershipId: UUID, expectedVersion: Long): OrganizationMembershipDto? = db.write {
         jdbc.query("SELECT id FROM employee_organization_units WHERE tenant_id = ? AND user_id = ? AND id = ? AND active AND version = ? FOR UPDATE", { rs, _ -> rs.uuid("id") }, tenantId, userId, membershipId, expectedVersion).firstOrNull() ?: return@write null
-        val held = jdbc.queryForObject("SELECT count(*) FROM employee_positions WHERE tenant_id = ? AND employee_organization_unit_id = ? AND active", Int::class.java, tenantId, membershipId)!!
+        val held = jdbc.queryForObject("SELECT count(*) FROM employee_positions WHERE tenant_id = ? AND membership_id = ? AND active", Int::class.java, tenantId, membershipId)!!
         if (held > 0) throw MembershipHasPositions(held)
         jdbc.update("UPDATE employee_organization_units SET active = FALSE, is_primary = FALSE, version = version + 1, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND user_id = ? AND id = ? AND version = ?", tenantId, userId, membershipId, expectedVersion)
         find(tenantId, userId, membershipId)
@@ -90,12 +90,12 @@ class PostgresEmployeeOrganizationMembershipRepository(private val db: OrgDb) : 
 /** A position held WITHIN one membership (composite FK to the membership and its employee); the GRADE is an attribute of the assignment; the unit is derived from the membership. */
 class PostgresEmployeePositionRepository(private val db: OrgDb) : EmployeePositionRepository {
     private val jdbc get() = db.jdbc
-    private val select = """SELECT ep.id, ep.tenant_id, ep.user_id, ep.employee_organization_unit_id, m.organization_unit_id, ep.position_id, ep.grade_id, ep.is_primary, ep.active, ep.version, ep.created_at, ep.updated_at
-        FROM employee_positions ep JOIN employee_organization_units m ON m.id = ep.employee_organization_unit_id AND m.tenant_id = ep.tenant_id"""
+    private val select = """SELECT ep.id, ep.tenant_id, ep.user_id, ep.membership_id, m.organization_unit_id, ep.position_id, ep.grade_id, ep.is_primary, ep.active, ep.version, ep.created_at, ep.updated_at
+        FROM employee_positions ep JOIN employee_organization_units m ON m.id = ep.membership_id AND m.tenant_id = ep.tenant_id"""
     private val keys = mapOf("employee_positions_active_unique" to "assignment", "employee_positions_one_primary_idx" to "primary")
 
     private fun map(rs: ResultSet) = EmployeePositionDto(
-        rs.uuid("id"), rs.uuid("tenant_id"), rs.uuid("user_id"), rs.uuid("employee_organization_unit_id"), rs.uuid("organization_unit_id"), rs.uuid("position_id"), rs.uuidOrNull("grade_id"),
+        rs.uuid("id"), rs.uuid("tenant_id"), rs.uuid("user_id"), rs.uuid("membership_id"), rs.uuid("organization_unit_id"), rs.uuid("position_id"), rs.uuidOrNull("grade_id"),
         rs.getBoolean("is_primary"), rs.getBoolean("active"), rs.getLong("version"), rs.instant("created_at"), rs.instant("updated_at")
     )
 
@@ -116,7 +116,7 @@ class PostgresEmployeePositionRepository(private val db: OrgDb) : EmployeePositi
         if (!m.second) throw ReferencedRowInactive("membership")
         try {
             jdbc.update(
-                "INSERT INTO employee_positions (id, tenant_id, user_id, employee_organization_unit_id, position_id, grade_id, is_primary, active, version, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, FALSE, TRUE, 0, ?, ?)",
+                "INSERT INTO employee_positions (id, tenant_id, user_id, membership_id, position_id, grade_id, is_primary, active, version, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, FALSE, TRUE, 0, ?, ?)",
                 assignment.id, assignment.tenantId, assignment.userId, assignment.membershipId, assignment.positionId, assignment.gradeId, ts(assignment.createdAt), ts(assignment.updatedAt)
             )
         } catch (e: DuplicateKeyException) { throw db.duplicate(e, keys)

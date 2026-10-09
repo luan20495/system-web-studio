@@ -1,16 +1,14 @@
--- Dynamic Organization persistence (C3) - PENDING migration body. NOT A FLYWAY FILE: C0 has RESERVED the number V32 (docs/parallel/MIGRATION_LEDGER.md) but has NOT allocated it
--- (allocation needs V31 applied + verified, the C1 contract and the request in BOARD.md). C3 therefore creates NO V32__*.sql. When C0 allocates the number this file is
--- `git mv`-ed, UNCHANGED, to backend/src/main/resources/db/migration/V32__dynamic_organization.sql; until then the C3 tests apply it as "the next migration after V30"
--- (and a Flyway run on a temporary copy of the migration directory proves the real V1 -> V32 path).
--- Contract: docs/parallel/c1/organization-employee-contract.md (C1 branch fix/c1-h-c1-17-reconciliation @ 93c5cc4), architecture D-C0-43. Persistence follows that contract EXACTLY:
---   * versions START AT 0 (the C1 kit pins it), every versioned write is one `UPDATE ... WHERE tenant_id AND id AND version = ?` that bumps the version;
+-- V32 Dynamic Organization (C3 persistence; number reserved by C0, architecture D-C0-43; contract: C1 branch feat/c1-final-iam-org-permissions @ db7d6b0,
+-- docs/parallel/c1/organization-employee-contract.md + the seams in backend/.../organization/OrganizationRepositories.kt). Persistence follows that contract EXACTLY:
+--   * versions START AT 0 (the C1 kit pins it); every versioned write is one `UPDATE ... WHERE tenant_id AND id AND version = ?` that bumps the version;
 --   * unit `code` is REQUIRED, CANONICAL UPPER-CASE (CHECK), unique among the NON-ARCHIVED SIBLINGS (roots are siblings of each other); archiving frees it;
 --   * type / position / grade codes are unique per tenant case-insensitively, even when disabled; units are the only archivable entity (`active` + `deleted_at`, never contradictory);
+--   * unit type rules (allowedParentTypeIds, allowedChildTypeIds, allowRoot, maxDepth) are ONE canonical JSONB document, validated by C1 inside the structural transaction;
 --   * links (membership, employee position) end by `active = false` and keep their row (history); a position is held WITHIN a membership; the grade is an attribute of that row;
 --   * the employee is `tenant_members(tenant_id, user_id)` (no profile table, no copy of identity); organization data grants NO permission.
 -- Conventions of V26 / V27 / V28 are kept: `id UUID PRIMARY KEY` + `UNIQUE (id, tenant_id)` as the target of composite foreign keys that carry tenant_id, `tenant_id NOT NULL REFERENCES tenants`.
 -- Additive only: six new tables, no existing table touched (V20 `departments` is NOT used and NOT changed), no data copied. Requires PostgreSQL >= 15 (NULLS NOT DISTINCT); the platform runs 17.6.
--- Undo: docs/parallel/c3/undo/U32__dynamic_organization.sql (refuses while any row exists).
+-- Undo: docs/parallel/c3/undo/U32__dynamic_organization.sql (refuses while any row exists). Flyway never runs it. Immutable once imported.
 
 -- 1. unit types ------------------------------------------------------------------------------------------------------------------------------------------
 CREATE TABLE organization_unit_types (
@@ -135,7 +133,7 @@ CREATE TABLE employee_positions (
     id UUID PRIMARY KEY,
     tenant_id UUID NOT NULL REFERENCES tenants (id),
     user_id UUID NOT NULL,
-    employee_organization_unit_id UUID NOT NULL,                -- the membership; the unit is DERIVED from it (no second copy to keep in sync)
+    membership_id UUID NOT NULL,                -- the membership; the unit is DERIVED from it (no second copy to keep in sync)
     position_id UUID NOT NULL,
     grade_id UUID,
     is_primary BOOLEAN NOT NULL DEFAULT FALSE,
@@ -146,13 +144,13 @@ CREATE TABLE employee_positions (
     CONSTRAINT employee_positions_primary_active CHECK (NOT is_primary OR active),
     CONSTRAINT employee_positions_version_check CHECK (version >= 0),
     -- the membership must belong to THE SAME tenant and employee; this also pins the unit to the tenant (the membership already has the unit FK)
-    CONSTRAINT employee_positions_membership_fk FOREIGN KEY (employee_organization_unit_id, tenant_id, user_id)
+    CONSTRAINT employee_positions_membership_fk FOREIGN KEY (membership_id, tenant_id, user_id)
         REFERENCES employee_organization_units (id, tenant_id, user_id) ON DELETE RESTRICT,
     CONSTRAINT employee_positions_position_fk FOREIGN KEY (position_id, tenant_id) REFERENCES positions (id, tenant_id) ON DELETE RESTRICT,
     CONSTRAINT employee_positions_grade_fk FOREIGN KEY (grade_id, tenant_id) REFERENCES grades (id, tenant_id) ON DELETE RESTRICT
 );
 -- one ACTIVE assignment per (membership, position), even with another grade; also the active-positions count of a membership
-CREATE UNIQUE INDEX employee_positions_active_unique ON employee_positions (employee_organization_unit_id, position_id) WHERE active;
+CREATE UNIQUE INDEX employee_positions_active_unique ON employee_positions (membership_id, position_id) WHERE active;
 -- at most ONE active primary position per employee and tenant
 CREATE UNIQUE INDEX employee_positions_one_primary_idx ON employee_positions (tenant_id, user_id) WHERE is_primary;
 -- employee -> assignments (page enrichment), directory position / grade filters
