@@ -252,3 +252,11 @@ test("M-080: action chains are checkbox lists (no <select multiple>), and a NEW 
   assert.doesNotMatch(html, /role="alert"/, "nothing failed yet: no alert when the editor opens");
   assert.deepEqual(a11yProblems(html), []);
 });
+
+test("M-081: a NOT_READY step/tab badge is announced as ' (chưa sẵn sàng)', not glued to the label ('…cấu trúcchưa')", () => {
+  const html = renderToStaticMarkup(<DataWizard ctx={ctx({ readiness: notReady("C2 V2 chưa tích hợp") })}/>);
+  const tabs = html.match(/<button[^>]*role="tab"[\s\S]*?<\/button>/g) ?? [];
+  const withBadge = tabs.filter((t) => /bx-badge/.test(t));
+  assert.ok(withBadge.length > 0, "some step is NOT_READY");
+  for (const t of withBadge) { assert.match(t, /class="bx-badge" aria-hidden="true">chưa<\/span><span class="srOnly"> \(chưa sẵn sàng\)<\/span>/); }
+});

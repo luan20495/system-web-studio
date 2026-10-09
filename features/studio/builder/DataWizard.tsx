@@ -86,7 +86,7 @@ export function DataWizard({ ctx, focus }: { ctx: DefCtx; focus?: { sectionId?: 
   }
 
   const setField = (i: number, f: FieldMappingDef) => setFields((x) => x.map((y, j) => (j === i ? f : y)));
-  const items = DATA_STEPS.map((s) => ({ id: s.id, label: s.label, badge: ready(s.id).state === "NOT_READY" ? "chưa" : undefined }));
+  const items = DATA_STEPS.map((s) => ({ id: s.id, label: s.label, badge: ready(s.id).state === "NOT_READY" ? "chưa" : undefined, badgeLabel: "chưa sẵn sàng" })); // M-081: the badge is read as " (chưa sẵn sàng)", not glued to the label
   const cur = DATA_STEPS.find((s) => s.id === step)!;
 
   return (
