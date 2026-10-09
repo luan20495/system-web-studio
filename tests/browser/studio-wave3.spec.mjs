@@ -448,4 +448,15 @@ for (const w of [768, 1000]) {
   check("M-037: exactly ONE rail pane is visible at a time (the others are kept hidden, not shown)", visiblePanes === 1, String(visiblePanes));
   await p.close();
 }
+
+// ---------- M-035: the members drawer fits a phone even with long unbreakable names (role select and 'Xóa' stay on screen) ----------
+{
+  for (const w of [390, 360]) {
+    const s = newState(); s.members = [{ userId: "u1", username: "luan", displayName: "Nguyễn Luân", email: "luan.nguyen.thanh.long.bao.khang@cong-ty-co-phan-anh-duong-mien-nam.example.vn", role: "WORKSPACE_ADMIN" }, { userId: "u2", username: "tran.van.uu.tu.nguyen.thanh.long.bao.khang", displayName: "Trần Văn Ưu Tú Nguyễn Thành Long Bảo Khang", email: "u@x.vn", role: "EDITOR" }];
+    const p = await open(b, "/studio/projects/p1/members", { state: s, viewport: { width: w, height: 800 } }); await p.waitForSelector("[role=dialog]"); await wait(1200);
+    const m = await p.evaluate(() => { const d = document.querySelector("[role=dialog]"); const out = [...d.querySelectorAll("button,select,input")].filter((e) => { const r = e.getBoundingClientRect(); return r.width && (r.right > innerWidth + 0.5 || r.left < -0.5); }).map((e) => `${e.tagName.toLowerCase()} ${(e.getAttribute("aria-label") || e.textContent).trim().slice(0, 22)}`); const t = d.querySelector("table"); return { outside: out.slice(0, 4), tableOver: t ? t.scrollWidth - t.parentElement.clientWidth : 0 }; });
+    check(`M-035: members drawer @${w}: every control (role select, 'Xóa'/'Rời') is inside the screen and the table does not overflow its drawer`, m.outside.length === 0 && m.tableOver <= 1, JSON.stringify(m));
+    await p.close();
+  }
+}
 await b.close(); finish();
