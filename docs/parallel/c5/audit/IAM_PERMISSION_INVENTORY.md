@@ -1,5 +1,7 @@
 # C5 — IAM / permission / tenant / Dynamic Organization: frontend inventory (Phase A)
 
+> **UPDATE 2026-10-09 (22:00, after the C1 final import `6d445d5` / D-C0-51 and the H-C1-04 frontend work, `docs/parallel/c5/audit/H-C1-04-frontend.md`).** Where this inventory says the organization contract is missing, `MEMBER_MANAGE` is non-canonical, or Studio admission ignores project scopes, read the section 10 at the end: those items are now resolved or re-classified. The rest (endpoints, direct-URL behaviour, tenant UI, sharing UI) still stands.
+
 Date 2026-10-09, branch `agent/c5-web`, read from the code at `87c3d04` + `2b0fa31`. Read-only inventory: nothing here invents a backend contract. Evidence labels: **REAL_BACKEND** = the screen calls an endpoint that exists in `integration/v2` AND a `tests/e2e-real` flow exercised it on a real stack; **ADAPTER_ONLY** = the screen goes through a typed port whose operations are marked NOT_READY (sends nothing); **PREBUILD** = UI built and verified in the browser harness only; **HARNESS_ONLY**; **NOT_IMPLEMENTED**. Backend remains authoritative; every gate below is UX.
 
 ## 1. Where permissions are decided (one place each)
@@ -98,3 +100,14 @@ Role-based membership only: Studio drawers add / change / remove a member by **u
 - BLOCKED_BY_C2: host-pinned redirect needs the sites origin (M-051); renderer half of the preview banner (M-042).
 - BLOCKED_BY_C3: organization persistence has no API (proposals only).
 - BLOCKED_BY_C4: workflow run status/cancel creator cross-scope (F-1).
+
+## 10. Update after the C1 final contract (integration/v2 @ 7586d8a)
+| Item above | Now |
+|---|---|
+| "Organization contract does not exist / BLOCKED_BY_C1" (sec. 7, 9) | The contract is FROZEN (`docs/parallel/c1/organization-employee-contract.md`, `final-iam-tenant-org-permission-contract.md`; permissions D-C0-51). Persistence is C3's: the routes answer `501 ORG_PERSISTENCE_NOT_AVAILABLE` until C3 registers it. Frontend wiring is deliberately NOT done: **ORG_BACKEND_WIRING = WAITING_FOR_C1_C3**, `ORG_BACKEND_READY = NO`, every operation stays NOT_READY (owner C3), nothing is sent. The permission side IS done (below). |
+| `MEMBER_MANAGE` not in the 14 codes (sec. 2, 4) | CANONICAL: the backend vocabulary has 21 codes = the 14 + `MEMBER_MANAGE` + the six organization codes (`CANONICAL_PERMISSION_CODES` in the TS mirror). The stale comment in `drawers.tsx` was about the old state; the code reads it through `canonical.ts`. |
+| `ORG_MANAGE` placeholder (sec. 2) | GONE; screens gate on `ORG_STRUCTURE_VIEW/MANAGE`, `EMPLOYEE_VIEW/MANAGE`, `POSITION_GRADE_VIEW/MANAGE` (employee create / enable / disable also `TENANT_MEMBERS`), never on `TENANT_MEMBERS` / `platformScope` / a role. |
+| Studio admission by workspace codes only (sec. 1) | `studio.build`: workspace OR `projectScopes` `APP_VIEW`; one project: `canAdmitProject` (its own row only, A never admits B, fail closed). Backend delivered (`ProjectScopedAuthMeTests`); **REAL_BACKEND retest = USER01 (prepared, NOT run)**. |
+| Role-name reads (sec. 4) | `capabilitiesOf` no longer reads a role for `tenant.members`; `adminScope` still lists tenants by role (display; BLOCKED_BY_C1: per-tenant `permissions` on `TenantMembershipSummary`, contract §2.4). |
+| Tenant rename: NOT_IMPLEMENTED (sec. 6) | The backend now has `PATCH /admin/tenants/{t} {name}` gated on `TENANT_MANAGE` (contract §9); no UI uses it yet: NOT_IMPLEMENTED (frontend), contract READY. |
+| Application sharing / grants (sec. 8) | unchanged: role-based membership only; no grant / principal / effective-permission contract exists. |
