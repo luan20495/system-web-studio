@@ -352,3 +352,32 @@ Proposed decision D-C4-22 (C0 hand-merges into `DECISIONS.md`): a workflow run r
 - C1: no change needed for the guards. Note: `WORKFLOW_EXECUTE`, `WORKFLOW_MANAGE` and `DATA_MUTATE` cannot be granted separately until explicit grants (T15); granular revocation is therefore tested at logic level with a C1-shaped policy.
 - C0 / C4: a run started by the scheduler has `workspaceId = null` (`ScheduledRunRequest` has no workspace). C1's `AccessPort` answers "workspace required", so every ACTION step of such a run is denied (fail closed, but scheduled workflows cannot run actions). Fix: the enqueuer supplies the project's workspace (additive `workspaceId` on `ScheduledRunRequest`, C4, when C0 asks) - see section 13.
 
+## 16. Scheduled workflows and the workspace scope (B-C4-12) - audit and proposal, nothing applied
+
+### 16.1 Root cause (re-audited 2026-10-09)
+`Schedule` (tenant, app, `createdBy`, ...) and `ScheduledRunRequest` have no workspace. `SchedulerService.enqueue` builds the request from the schedule, and `WorkflowEngine.enqueue` builds `ActionContext(tenant, owner, workspaceId = null, app)`. C1's `AccessPort` answers "workspace required" for a null workspace, so the fire is refused already at `start` (`APP_USE` / `WORKFLOW_EXECUTE`), non-retryably (the ledger shows FAILED_FORBIDDEN), before any ACTION step. The guard is right (fail closed); the missing piece is the propagation of the resource scope. Not a C1 bug.
+Reach today: none in production. `SchedulerService`, `ScheduledRunEnqueuer`, a JDBC `ScheduleStore`, a timer and a `schedules` table do not exist on `integration/v2` (B-C4-05 is unnumbered); the path is exercised only by unit tests, which use a permissive access fake. The defect is latent until C0 wires schedules.
+
+### 16.2 Owner
+- Model / service / request / engine (`logic/scheduler/*`, `WorkflowEngine.enqueue`): **C4**.
+- Persistence: **C0**: the `schedules` table of B-C4-05 must carry `workspace_id` (composite FKs as in V29); no migration exists to change.
+- Wiring (SchedulerService bean, store, timer, `syncDeclared` hook at publish, the schedule CRUD routes of B-C4-09): **C0**. The workspace comes from the route path, verified by C1 `forProject`.
+- C1: no change. C2 / C5: none (an app definition only declares `workflow:<id>` + cron; the scope comes from the publishing / creating request).
+
+### 16.3 Proposed fix (backward compatible, validated, NOT applied): `C4-scheduler-workspace-scope.proposal.patch` (`git apply --check` clean on `87f0aed`)
+Production lines (full patch with tests in the file):
+- `Schedule.workspaceId: UUID? = null` (last field): the workspace the schedule was created in (the creating request's scope, already verified by C1).
+- `SchedulerService.createChecked`: refuses a creation without `ctx.workspaceId` (`INVALID_INPUT`) and stores it; `enqueue` passes it in `ScheduledRunRequest(..., workspaceId = s.workspaceId)` (new last field, default null).
+- `WorkflowEngine.enqueue`: `request.workspaceId ?: return EnqueueOutcome.Failed(WORKSPACE_REQUIRED, retryable = false)`, then `ActionContext(tenant, owner, workspaceId, app)`. A legacy schedule without scope is refused visibly, never run, never a wildcard.
+- `WorkflowErrorCodes.WORKSPACE_REQUIRED`.
+Unchanged: C1's contract, every permission check (`APP_USE`, `WORKFLOW_EXECUTE` at the fire; `ACTION_EXECUTE`, `DATA_MUTATE` and the live re-check at every effectful step as the schedule owner). Behalf-of-user only; a service principal needs its own C1 / C0 contract, which C4 does not invent.
+
+### 16.4 Security impact
+No check is weakened or skipped. A schedule can no longer exist without a scope, a fire runs only inside the scope it was created in, and C1 still re-derives membership, workspace/project and permission live at the fire and at each step, so a revoked or disabled owner is denied before any effect. A schedule whose project is later archived or whose owner leaves fails closed at the next fire.
+
+### 16.5 Tests (A-E of the plan, written and green in a scratch copy: `ScheduledRunScopeTests` 5, with `SchedulerServiceTests` 18, `SchedulerDedupeTests` 20, `WorkflowEngineTests` 65, `RuntimeAuthorizationTests` 25: 133/133)
+A right scope: the action step executes, the run keeps the workspace and is readable from that scope; B rights revoked before the fire: the fire is refused (no run) and an ACTION right revoked after queueing stops the step before its effect; C disabled owner: refused, no run, no effect; D another workspace or none: refused (`FORBIDDEN` / `WORKSPACE_REQUIRED`), never a wildcard; E missing `DATA_MUTATE`: denied before the data port. The existing scheduled-fire test helper passes `Fx.workspaceA`.
+
+### 16.6 Status
+`SCHEDULED_WORKFLOW_WITH_ACTION = BLOCKED` until C0 decides the contract points of B-C4-12 and wires schedules. ACTION_EXECUTE / WORKFLOW_EXECUTE / WORKFLOW_MANAGE / DATA_MUTATE stay DONE; C0_IMPORT_READY stays YES for commit `35c650c`.
+

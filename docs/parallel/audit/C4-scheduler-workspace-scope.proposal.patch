@@ -1,0 +1,230 @@
+diff --git a/backend/src/main/kotlin/com/systemwebstudio/logic/scheduler/SchedulerModel.kt b/backend/src/main/kotlin/com/systemwebstudio/logic/scheduler/SchedulerModel.kt
+index dbcfe87..31c4b29 100644
+--- a/backend/src/main/kotlin/com/systemwebstudio/logic/scheduler/SchedulerModel.kt
++++ b/backend/src/main/kotlin/com/systemwebstudio/logic/scheduler/SchedulerModel.kt
+@@ -80,7 +80,13 @@ data class Schedule(
+     val declaredKey: String? = null,
+     val createdAt: Instant,
+     val updatedAt: Instant,
+-    val version: Long = 0
++    val version: Long = 0,
++    /**
++     * The workspace of [appId] the schedule was created in (the creating request's resource scope, verified by C1 at creation). A fire runs inside exactly this scope:
++     * authorization is evaluated for (tenant, workspace, project, owner) at fire time, live. Null only for a schedule that predates the field: such a schedule fails
++     * closed at fire time (WORKSPACE_REQUIRED), it is never treated as "any workspace".
++     */
++    val workspaceId: UUID? = null
+ )
+ 
+ data class ScheduledRunRequest(
+@@ -91,7 +97,9 @@ data class ScheduledRunRequest(
+     val target: ScheduleTarget,
+     val input: JsonNode?,
+     val fireAt: Instant,
+-    val idempotencyKey: String
++    val idempotencyKey: String,
++    /** The resource scope the run executes in (see [Schedule.workspaceId]); null is a refusal, never a wildcard. */
++    val workspaceId: UUID? = null
+ )
+ 
+ sealed interface EnqueueOutcome {
+diff --git a/backend/src/main/kotlin/com/systemwebstudio/logic/scheduler/SchedulerService.kt b/backend/src/main/kotlin/com/systemwebstudio/logic/scheduler/SchedulerService.kt
+index a8cd4ca..43178ae 100644
+--- a/backend/src/main/kotlin/com/systemwebstudio/logic/scheduler/SchedulerService.kt
++++ b/backend/src/main/kotlin/com/systemwebstudio/logic/scheduler/SchedulerService.kt
+@@ -95,6 +95,8 @@ class SchedulerService(
+     }
+ 
+     private fun createChecked(ctx: ActionContext, spec: ScheduleSpec, declaredKey: String?): ScheduleResult<Schedule> {
++        // a schedule is created inside a resource scope and keeps it: without a workspace it could never run
++        val workspaceId = ctx.workspaceId ?: return fail("INVALID_INPUT", "Workspace context is required")
+         validate(spec)?.let { return it }
+         if (store.list(ctx.tenantId, spec.appId).size >= maxSchedulesPerApp) return fail("LIMIT_EXCEEDED", "At most $maxSchedulesPerApp schedules per app")
+         val now = clock.instant()
+@@ -102,7 +104,7 @@ class SchedulerService(
+         val s = Schedule(
+             id = UUID.randomUUID(), tenantId = ctx.tenantId, appId = spec.appId, name = spec.name.trim(), cron = spec.cron.trim(), timezone = spec.timezone,
+             enabled = spec.enabled, target = spec.target, input = spec.input, createdBy = ctx.actor.userId, misfirePolicy = spec.misfirePolicy,
+-            nextRunAt = next, declaredKey = declaredKey, createdAt = now, updatedAt = now
++            nextRunAt = next, declaredKey = declaredKey, createdAt = now, updatedAt = now, workspaceId = workspaceId
+         )
+         try { store.create(s) } catch (e: IllegalArgumentException) { return fail("CONFLICT", "The schedule already exists", retryable = true) }
+         record(ctx.tenantId, ctx, s, "CREATED")
+@@ -297,7 +299,7 @@ class SchedulerService(
+     private fun enqueue(s: Schedule, fireAt: Instant): Boolean? {
+         val key = ScheduleExecution.dedupeKey(s.id, fireAt)
+         val outcome = try {
+-            enqueuer.enqueue(ScheduledRunRequest(s.tenantId, s.appId, s.id, s.createdBy, s.target, s.input, fireAt, key))
++            enqueuer.enqueue(ScheduledRunRequest(s.tenantId, s.appId, s.id, s.createdBy, s.target, s.input, fireAt, key, s.workspaceId))
+         } catch (e: Exception) {
+             log.log(System.Logger.Level.WARNING, "Enqueue threw ${e.javaClass.simpleName}")
+             EnqueueOutcome.Failed("DEPENDENCY_UNAVAILABLE", true)
+diff --git a/backend/src/main/kotlin/com/systemwebstudio/logic/workflow/WorkflowEngine.kt b/backend/src/main/kotlin/com/systemwebstudio/logic/workflow/WorkflowEngine.kt
+index e9a4a0b..299fae5 100644
+--- a/backend/src/main/kotlin/com/systemwebstudio/logic/workflow/WorkflowEngine.kt
++++ b/backend/src/main/kotlin/com/systemwebstudio/logic/workflow/WorkflowEngine.kt
+@@ -223,7 +223,10 @@ class WorkflowEngine(
+ 
+     /** [ScheduledRunEnqueuer]: the scheduler hands over a fire; the run acts as the schedule's owner. */
+     override fun enqueue(request: ScheduledRunRequest): EnqueueOutcome {
+-        val ctx = ActionContext(request.tenantId, ActionActor(request.actorUserId, ActorKind.USER), null, request.appId, "sched:${request.scheduleId}")
++        // The run executes in the scope the schedule carries. No scope = a permanent, visible refusal (the ledger shows WORKSPACE_REQUIRED), never a null that matches
++        // every workspace and never a skipped check.
++        val workspaceId = request.workspaceId ?: return EnqueueOutcome.Failed(WorkflowErrorCodes.WORKSPACE_REQUIRED, false)
++        val ctx = ActionContext(request.tenantId, ActionActor(request.actorUserId, ActorKind.USER), workspaceId, request.appId, "sched:${request.scheduleId}")
+         val result = when (val t = request.target) {
+             is ScheduleTarget.Workflow -> start(ctx, WorkflowStartRequest(t.workflowRef, request.input ?: json.createObjectNode(), request.idempotencyKey), countStart = false)
+             is ScheduleTarget.Action -> startScheduledAction(ctx, t.actionRef, request.input, request.idempotencyKey)
+diff --git a/backend/src/main/kotlin/com/systemwebstudio/logic/workflow/WorkflowRuntime.kt b/backend/src/main/kotlin/com/systemwebstudio/logic/workflow/WorkflowRuntime.kt
+index a6ad2a4..bf9e351 100644
+--- a/backend/src/main/kotlin/com/systemwebstudio/logic/workflow/WorkflowRuntime.kt
++++ b/backend/src/main/kotlin/com/systemwebstudio/logic/workflow/WorkflowRuntime.kt
+@@ -24,6 +24,8 @@ object WorkflowErrorCodes {
+     const val UNKNOWN_WORKFLOW = "UNKNOWN_WORKFLOW"
+     const val RUN_NOT_FOUND = "WORKFLOW_RUN_NOT_FOUND"
+     const val FORBIDDEN = "FORBIDDEN"
++    /** a scheduled fire without the resource scope (workspace) it must run in: refused, never run without one */
++    const val WORKSPACE_REQUIRED = "WORKSPACE_REQUIRED"
+     const val INVALID_INPUT = "INVALID_INPUT"
+     const val INVALID_DEFINITION = "INVALID_DEFINITION"
+     const val LIMIT_EXCEEDED = "LIMIT_EXCEEDED"
+diff --git a/backend/src/test/kotlin/com/systemwebstudio/logic/workflow/ScheduledRunScopeTests.kt b/backend/src/test/kotlin/com/systemwebstudio/logic/workflow/ScheduledRunScopeTests.kt
+new file mode 100644
+index 0000000..60c7dc6
+--- /dev/null
++++ b/backend/src/test/kotlin/com/systemwebstudio/logic/workflow/ScheduledRunScopeTests.kt
+@@ -0,0 +1,121 @@
++package com.systemwebstudio.logic.workflow
++
++import com.systemwebstudio.logic.action.AccessRequest
++import com.systemwebstudio.logic.action.ActionActor
++import com.systemwebstudio.logic.action.ActionContext
++import com.systemwebstudio.logic.action.ActionPorts
++import com.systemwebstudio.logic.action.ActionRig
++import com.systemwebstudio.logic.action.AuthorizationDecision
++import com.systemwebstudio.logic.action.FakeAccess
++import com.systemwebstudio.logic.action.FakeTenants
++import com.systemwebstudio.logic.action.Fx
++import com.systemwebstudio.logic.action.LogicPermissions
++import com.systemwebstudio.logic.action.PortOutcome
++import com.systemwebstudio.logic.action.RecordingLogicAudit
++import com.systemwebstudio.logic.action.StartWorkflowRequest
++import com.systemwebstudio.logic.action.TestClock
++import com.systemwebstudio.logic.action.WorkflowStarterPort
++import com.systemwebstudio.logic.action.handlers.DefaultActionHandlers
++import com.systemwebstudio.logic.scheduler.EnqueueOutcome
++import com.systemwebstudio.logic.scheduler.ScheduleTarget
++import com.systemwebstudio.logic.scheduler.ScheduledRunRequest
++import org.assertj.core.api.Assertions.assertThat
++import org.junit.jupiter.api.AfterEach
++import org.junit.jupiter.api.Test
++import java.util.UUID
++import java.util.concurrent.ConcurrentHashMap
++import java.util.concurrent.Executors
++
++/**
++ * A scheduled fire runs inside the resource scope its schedule carries (tenant, workspace, project) and as its owner, with authorization evaluated live at the fire
++ * and at every effectful step. The access policy is C1-shaped (workspace required, live, per user): the scope is never a wildcard.
++ */
++class ScheduledRunScopeTests {
++    private val executor = Executors.newCachedThreadPool()
++    @AfterEach fun stop() { executor.shutdownNow() }
++    private val w1 = Fx.workspaceA
++    private val w2 = UUID.fromString("00000000-0000-0000-0000-0000000000c2")
++    private val owner = Fx.user
++
++    private class Policy : FakeAccess() {
++        val grants = ConcurrentHashMap<UUID, Triple<UUID, UUID, MutableSet<String>>>()      // user -> (workspace, project, permissions)
++        val disabled: MutableSet<UUID> = ConcurrentHashMap.newKeySet()
++        override fun check(ctx: ActionContext, request: AccessRequest): AuthorizationDecision {
++            val ws = ctx.workspaceId ?: return AuthorizationDecision.Denied("workspace required")        // exactly C1's answer
++            if (ctx.actor.userId in disabled) return AuthorizationDecision.Denied("ACCOUNT_DISABLED")
++            val (gw, gp, perms) = grants[ctx.actor.userId] ?: return AuthorizationDecision.Denied("not a member")
++            if (ws != gw || (request.appId ?: ctx.projectId) != gp) return AuthorizationDecision.Denied("scope mismatch")
++            return if (request.permission in perms) AuthorizationDecision.Allowed else AuthorizationDecision.Denied("missing permission")
++        }
++    }
++
++    private inner class Rig {
++        val policy = Policy()
++        val clock = TestClock()
++        val tenants = FakeTenants()
++        private var engineRef: WorkflowEngine? = null
++        private val starter = object : WorkflowStarterPort { override fun start(ctx: ActionContext, request: StartWorkflowRequest): PortOutcome = engineRef!!.start(ctx, request) }
++        val actionRig = ActionRig.build(Fx.write("w1"), access = policy, tenants = tenants, executor = executor, clock = clock,
++            registry = { d, n, _ -> DefaultActionHandlers.registry(Fx.json, ActionPorts(d, n, starter)) })
++        val queue = InMemoryWorkflowQueue()
++        val runs = InMemoryWorkflowRunStore()
++        val engine = WorkflowEngine(Fx.json, FakeWorkflowDefs(wf("nightly", act("a", "w1"))), actionRig.runtime, runs, queue, policy, tenants, RecordingLogicAudit(), null, WorkflowLimits(), clock)
++            .also { engineRef = it }
++        val worker = WorkflowWorker(engine, queue)
++        fun fire(workspace: UUID? = w1, key: String = "sched:" + UUID.randomUUID()) =
++            ScheduledRunRequest(Fx.tenantA, Fx.appA, UUID.randomUUID(), owner, ScheduleTarget.Workflow("nightly"), null, clock.instant(), key, workspace)
++        fun grant(vararg p: String) = policy.grants.put(owner, Triple(w1, Fx.appA, p.toMutableSet()))
++        val all = arrayOf(LogicPermissions.APP_USE, LogicPermissions.ACTION_EXECUTE, LogicPermissions.WORKFLOW_EXECUTE, LogicPermissions.DATA_MUTATE)
++        fun drain() { while (worker.runOnce()) Unit }
++        fun writes() = actionRig.data.writes.size
++        fun runCount() = runs.list(Fx.tenantA, null, 10).size
++    }
++
++    @Test fun `A a fire in the right scope runs the action step and the run keeps the scope`() {
++        val r = Rig(); r.grant(*r.all)
++        assertThat(r.engine.enqueue(r.fire())).isInstanceOf(EnqueueOutcome.Enqueued::class.java)
++        r.drain()
++        val run = r.runs.list(Fx.tenantA, null, 10).single()
++        assertThat(run.workspaceId).isEqualTo(w1)
++        assertThat(run.status).isEqualTo(WorkflowRunStatus.SUCCEEDED)
++        assertThat(r.writes()).isEqualTo(1)
++        val ctx = ActionContext(Fx.tenantA, ActionActor(owner), workspaceId = w1, projectId = Fx.appA)
++        assertThat(r.engine.status(ctx, run.runId)).isInstanceOf(WorkflowResult.Ok::class.java)
++    }
++
++    @Test fun `B permissions revoked between the schedule and the fire - nothing runs, and a revoked ACTION right stops the step before its effect`() {
++        val r = Rig(); r.grant(*r.all)
++        r.policy.grants[owner]!!.third.remove(LogicPermissions.WORKFLOW_EXECUTE)
++        val refused = r.engine.enqueue(r.fire())
++        assertThat(refused).isEqualTo(EnqueueOutcome.Failed(WorkflowErrorCodes.FORBIDDEN, false))
++        assertThat(r.runCount()).isZero(); assertThat(r.writes()).isZero()
++
++        r.policy.grants[owner]!!.third.add(LogicPermissions.WORKFLOW_EXECUTE)
++        assertThat(r.engine.enqueue(r.fire())).isInstanceOf(EnqueueOutcome.Enqueued::class.java)
++        r.policy.grants[owner]!!.third.remove(LogicPermissions.ACTION_EXECUTE)                   // revoked after the run was queued
++        r.drain()
++        assertThat(r.writes()).isZero()
++        assertThat(r.runs.list(Fx.tenantA, null, 10).single().errorCode).isEqualTo(WorkflowErrorCodes.FORBIDDEN)
++    }
++
++    @Test fun `C a disabled owner - the fire is refused, no run, no effect`() {
++        val r = Rig(); r.grant(*r.all); r.policy.disabled += owner
++        assertThat(r.engine.enqueue(r.fire())).isEqualTo(EnqueueOutcome.Failed(WorkflowErrorCodes.FORBIDDEN, false))
++        assertThat(r.runCount()).isZero(); assertThat(r.writes()).isZero()
++    }
++
++    @Test fun `D another workspace, or none - refused, never a wildcard`() {
++        val r = Rig(); r.grant(*r.all)
++        assertThat(r.engine.enqueue(r.fire(workspace = w2))).isEqualTo(EnqueueOutcome.Failed(WorkflowErrorCodes.FORBIDDEN, false))
++        assertThat(r.engine.enqueue(r.fire(workspace = null))).isEqualTo(EnqueueOutcome.Failed(WorkflowErrorCodes.WORKSPACE_REQUIRED, false))
++        assertThat(r.runCount()).isZero(); assertThat(r.writes()).isZero()
++    }
++
++    @Test fun `E a scheduled run without DATA_MUTATE is denied before the data port`() {
++        val r = Rig(); r.grant(LogicPermissions.APP_USE, LogicPermissions.ACTION_EXECUTE, LogicPermissions.WORKFLOW_EXECUTE)
++        assertThat(r.engine.enqueue(r.fire())).isInstanceOf(EnqueueOutcome.Enqueued::class.java)
++        r.drain()
++        assertThat(r.writes()).isZero()
++        assertThat(r.runs.list(Fx.tenantA, null, 10).single().status).isEqualTo(WorkflowRunStatus.FAILED)
++    }
++}
+diff --git a/backend/src/test/kotlin/com/systemwebstudio/logic/workflow/WorkflowEngineTests.kt b/backend/src/test/kotlin/com/systemwebstudio/logic/workflow/WorkflowEngineTests.kt
+index 81ef211..270a256 100644
+--- a/backend/src/test/kotlin/com/systemwebstudio/logic/workflow/WorkflowEngineTests.kt
++++ b/backend/src/test/kotlin/com/systemwebstudio/logic/workflow/WorkflowEngineTests.kt
+@@ -691,7 +691,7 @@ class WorkflowEngineTests {
+     // ---- scheduler hand-over ---------------------------------------------------------------------------------------
+ 
+     private fun fire(target: ScheduleTarget, key: String = "sched:s1:1", input: JsonNode? = null) =
+-        ScheduledRunRequest(Fx.tenantA, Fx.appA, UUID.randomUUID(), Fx.user, target, input, Fx.now, key)
++        ScheduledRunRequest(Fx.tenantA, Fx.appA, UUID.randomUUID(), Fx.user, target, input, Fx.now, key, Fx.workspaceA)
+ 
+     @Test fun `a scheduled fire starts a workflow run as the schedule owner and is idempotent`() {
+         val r = rig(two)
