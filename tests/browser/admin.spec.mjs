@@ -204,7 +204,7 @@ await block("scenario 10", async () => { const p = await open({ portal: "platfor
   await p.__ctx.close(); });
 await block("scenario 11", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/ai/usage", daily: "empty" });
   await settle(p, 400);
-  check("DAT04 AI usage with an empty daily series renders (no 'Invalid time value')", (await p.locator("h1").count()) === 1 && /Mức sử dụng model/.test(await text(p)));
+  check("DAT04 AI usage with an empty daily series renders (no 'Invalid time value')", (await p.locator("h1").count()) === 1 && /Mức sử dụng mô hình/.test(await text(p)));
   await p.__ctx.close(); });
 
 // ===================================================================================================================== M-054 the Platform overview speaks to the platform operator
@@ -275,9 +275,9 @@ await block("scenario 25", async () => { const p = await open({ portal: "platfor
   verdict("CNF08 delete an AI limit override", await ask(p, { open: () => p.getByRole("button", { name: "Xóa", exact: true }).first().click(), title: /Xóa hạn mức riêng này\?/, confirm: "Xóa hạn mức", re: /limits\/overrides\/o1$/ }));
   await p.__ctx.close(); });
 await block("scenario 26", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/ai-governance", fx: "1" });
-  verdict("CNF09 delete an AI budget", await ask(p, { open: () => p.getByRole("button", { name: "Xoá", exact: true }).first().click(), title: /Xoá ngân sách này\?/, confirm: "Xoá ngân sách", re: /ai\/budgets\/b1$/ }));
+  verdict("CNF09 delete an AI budget", await ask(p, { open: () => p.getByRole("button", { name: "Xóa", exact: true }).first().click(), title: /Xóa ngân sách này\?/, confirm: "Xóa ngân sách", re: /ai\/budgets\/b1$/ }));
   await nav(p, "/admin/departments"); await settle(p, 500);
-  verdict("CNF10 delete a department", await ask(p, { open: () => p.getByRole("button", { name: "Xoá", exact: true }).first().click(), title: /Xoá “Kỹ thuật”\?/, confirm: "Xoá", re: /departments\/d1$/, method: "DELETE" }));
+  verdict("CNF10 delete a department", await ask(p, { open: () => p.getByRole("button", { name: "Xóa", exact: true }).first().click(), title: /Xóa “Kỹ thuật”\?/, confirm: "Xóa", re: /departments\/d1$/, method: "DELETE" }));
   verdict("CNF11 rename a department (a prompt: empty is refused)", await ask(p, { open: () => p.getByRole("button", { name: "Đổi tên" }).click(), title: /Đổi tên “Kỹ thuật”/, confirm: "Đổi tên", re: /departments\/d1$/, method: "PATCH", field: "Kỹ thuật mới" }));
   await p.__ctx.close(); });
 await block("scenario 27", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/applications/a1", fx: "1" });
@@ -288,7 +288,7 @@ await block("scenario 28", async () => { const p = await open({ portal: "admin",
   verdict("CNF13 restore an old version", await ask(p, { open: () => p.getByRole("button", { name: "Khôi phục", exact: true }).click(), title: /Khôi phục v1\?/, confirm: "Khôi phục v1", re: /projects\/a2\/versions|restore/ }));
   await p.__ctx.close(); });
 await block("scenario 29", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/builds", fx: "1" });
-  verdict("CNF14 permanently delete a repository", await ask(p, { open: () => p.getByRole("button", { name: "Xoá vĩnh viễn" }).click(), title: /Xoá vĩnh viễn kho mã “repo-1”\?/, confirm: "Xoá vĩnh viễn", re: /repositories\/pr1\/delete$/ }));
+  verdict("CNF14 permanently delete a repository", await ask(p, { open: () => p.getByRole("button", { name: "Xóa vĩnh viễn" }).click(), title: /Xóa vĩnh viễn kho mã “repo-1”\?/, confirm: "Xóa vĩnh viễn", re: /repositories\/pr1\/delete$/ }));
   await p.__ctx.close(); });
 await block("scenario 30", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/packages", fx: "1" });
   verdict("CNF15 accept a package's risk (a prompt: the reason is required)", await ask(p, { open: () => p.getByRole("button", { name: "Cho phép", exact: true }).click(), title: /Cho phép “date-fns” dù có lỗ hổng/, confirm: "Chấp nhận rủi ro", re: /packages\/date-fns\/decision$/, field: "Đã rà soát, chỉ dùng ở phía máy chủ" }));
@@ -378,7 +378,7 @@ await block("scenario 44", async () => { const p = await open({ portal: "platfor
   check("LDG02 the report that DID load is still on screen", /Build 30 ngày/.test(await main.innerText()));
   await p.evaluate(() => { window.__cfg.fail = null; });
   await main.getByRole("button", { name: "Thử lại" }).first().click(); await settle(p, 600);
-  check("LDG03 'Thử lại' reloads that panel (the other one still offers it)", (await main.locator(".state-error, .state-network").count()) === 1 && /Sẽ xoá/.test(await main.innerText()));
+  check("LDG03 'Thử lại' reloads that panel (the other one still offers it)", (await main.locator(".state-error, .state-network").count()) === 1 && /Sẽ xóa/.test(await main.innerText()));
   await p.__ctx.close(); });
 await block("scenario 45", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/builds", slow: "/admin/retention" }); await settle(p, 500);
   check("LDG04 a loading panel says WHAT is loading", /Đang tải bản xem trước dọn dẹp/.test(await p.locator("main").innerText()));
@@ -453,7 +453,7 @@ await block("scenario 58", async () => { const { p, t } = await emptyOf("/platfo
   check("EMP01 costs with nothing in it shows no NaN / undefined and says there is no data", !/NaN|undefined|\[object/.test(t) && /Chưa có số liệu chi phí/.test(t), t.slice(0, 160));
   await p.__ctx.close(); });
 await block("scenario 59", async () => { const { p, t } = await emptyOf("/platform/components");
-  check("EMP02 components: an empty registry says so", /Chưa có component nào/.test(t));
+  check("EMP02 components: an empty registry says so", /Chưa có thành phần nào/.test(t));
   await p.__ctx.close(); });
 await block("scenario 60", async () => { const { p, t } = await emptyOf("/platform/system");
   check("EMP03 system health: no checks says so", /Chưa có thành phần nào được kiểm tra/.test(t));
@@ -462,7 +462,7 @@ await block("scenario 61", async () => { const { p, t } = await emptyOf("/platfo
   check("EMP04 settings: no editable policies says so", /Chưa có chính sách nào chỉnh được/.test(t));
   await p.__ctx.close(); });
 await block("scenario 62", async () => { const { p, t } = await emptyOf("/platform/ai/usage");
-  check("EMP05 AI usage with an empty daily series (M-120) renders: heading, no crash", (await p.locator("h1").count()) === 1 && /Mức sử dụng model/.test(t) && !/Invalid time value/.test(t));
+  check("EMP05 AI usage with an empty daily series (M-120) renders: heading, no crash", (await p.locator("h1").count()) === 1 && /Mức sử dụng mô hình/.test(t) && !/Invalid time value/.test(t));
   await p.__ctx.close(); });
 
 // ===================================================================================================================== M-088 secrets do not outlive their use
@@ -500,7 +500,7 @@ await block("scenario 66", async () => { const p = await open({ portal: "admin",
   await p.__ctx.close(); });
 await block("scenario 67", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/ai/models" }); await settle(p, 600);
   await p.evaluate(() => { window.__cfg.slow = "/admin/ai/pricing"; });
-  await p.getByLabel("Model", { exact: true }).selectOption({ index: 1 }); await p.getByLabel("Giá token vào (USD / 1 triệu)").fill("1"); await p.getByLabel("Giá token ra (USD / 1 triệu)").fill("2");
+  await p.getByLabel("Mô hình", { exact: true }).selectOption({ index: 1 }); await p.getByLabel("Giá token vào (USD / 1 triệu)").fill("1"); await p.getByLabel("Giá token ra (USD / 1 triệu)").fill("2");
   await p.getByRole("button", { name: "Thêm giá" }).dblclick(); await settle(p, 400);
   check("DBL05 model price: a double click on 'Thêm giá' adds ONE (immutable) price row", (await writes(p, /ai\/pricing$/, "POST")) === 1);
   await p.__ctx.close(); });

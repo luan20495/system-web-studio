@@ -257,7 +257,7 @@ function DeleteDialog({ tenantId, api, units, unit, onClose, onDone, onReload }:
   return (
     <Modal label={`Xóa ${unit.name}`} onClose={onClose}>
       <div className="modalBody" data-testid="delete-dialog">
-        <ModalHeader icon={<Trash2 size={22}/>} title={`Xóa “${unit.name}”?`} subtitle="Chỉ xóa được đơn vị không còn đơn vị con và nhân viên. Việc này không hoàn tác được."/>
+        <ModalHeader icon={<Trash2 size={22}/>} title={`Xóa “${unit.name}”?`} subtitle="Chỉ xóa được đơn vị không còn đơn vị con và nhân viên. Việc này không hòan tác được."/>
         {block ? <p className="hint">{block}</p> : null}
         {problem ? <Problem p={problem} onReload={onReload}/> : null}
         <div className="xp-footer"><button className="btn" onClick={onClose}>Hủy</button><button className="btn danger" data-testid="delete-confirm" disabled={busy || !!block} onClick={() => void go()}>{busy ? "Đang xóa…" : "Xóa đơn vị"}</button></div>

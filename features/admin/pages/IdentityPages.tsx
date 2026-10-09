@@ -20,7 +20,7 @@ export function DepartmentsPage() {
   function row(d: Department) {
     return <li key={d.id} className="deptRow"><b>{d.name}</b> <small>{d.kind === "TEAM" ? "nhóm" : "phòng ban"} · {d.users} người · {d.workspaces} workspace</small>
       <button className="btn sm ghost" onClick={async () => { const n = (await prompt({ title: `Đổi tên “${d.name}”`, label: "Tên mới", defaultValue: d.name, required: true, maxLength: 120, confirmLabel: "Đổi tên" }))?.trim(); if (n) void act(() => api.admin.renameDepartment(d.id, { name: n })); }}>Đổi tên</button>
-      <button className="btn sm ghost" onClick={async () => { if (await confirm({ title: `Xoá “${d.name}”?`, message: "Mục này sẽ bị xoá khỏi cơ cấu phòng ban và nhóm.", confirmLabel: "Xoá", danger: true })) void act(() => api.admin.deleteDepartment(d.id)); }}>Xoá</button></li>;
+      <button className="btn sm ghost" onClick={async () => { if (await confirm({ title: `Xóa “${d.name}”?`, message: "Mục này sẽ bị xóa khỏi cơ cấu phòng ban và nhóm.", confirmLabel: "Xóa", danger: true })) void act(() => api.admin.deleteDepartment(d.id)); }}>Xóa</button></li>;
   }
   return (<>
     <PageHead title="Phòng ban & nhóm" sub="Nhóm tổ chức để báo cáo chi phí và sử dụng. Không cấp quyền: quyền truy cập vẫn theo thành viên workspace/ứng dụng."/>

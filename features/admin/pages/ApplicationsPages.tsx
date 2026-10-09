@@ -89,7 +89,7 @@ export function AppDetail({ id }: { id: string }) {
             <button className="btn primary" disabled={!newOwner || busy}>Chuyển</button>
             <LoadNote load={ws} what="danh sách thành viên workspace"/>
           </form>) : <p className="muted">Ứng dụng đã bị xóa.</p>}
-          <p className="hint">Chủ cũ ở lại dự án với vai trò Editor. Mọi thay đổi được ghi nhật ký.</p>
+          <p className="hint">Chủ cũ ở lại ứng dụng với vai trò Biên tập. Mọi thay đổi được ghi nhật ký.</p>
         </Card>
         <Card title="Chưa triển khai"><ComingSoon title="Chặn xuất bản công khai, chi phí, điểm bảo mật">Các chức năng này cần dữ liệu và chính sách chưa có trong hệ thống.</ComingSoon></Card>
       </div>

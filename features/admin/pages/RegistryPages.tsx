@@ -17,7 +17,7 @@ import { prettyJson } from "../safeJson";
 export function ComponentsPage() {
   const [tab, setTab] = useState<"registry" | "blocks">("registry");
   return (<>
-    <PageHead title="Component Registry" sub="Component đã duyệt (AI và trình chỉnh sửa chỉ dùng những component này) và khối do nhân viên đóng góp chờ duyệt."/>
+    <PageHead title="Component Registry" sub="Thành phần đã duyệt (AI và trình chỉnh sửa chỉ dùng những thành phần này) và khối do nhân viên đóng góp chờ duyệt."/>
     <div className="tabs" role="tablist">
       <button role="tab" aria-selected={tab === "registry"} className={tab === "registry" ? "active" : ""} onClick={() => setTab("registry")}>Registry</button>
       <button role="tab" aria-selected={tab === "blocks"} className={tab === "blocks" ? "active" : ""} onClick={() => setTab("blocks")}>Khối đóng góp</button>
@@ -29,10 +29,10 @@ export function ComponentsPage() {
 export function RegistryTable() {
   const { data, error, loading, reload } = useLoad(() => api.admin.components(), []);
   const [open, setOpen] = useState<string | null>(null);
-  if (!data) return <LoadGate load={{ data, error, loading, reload }} level={2} label="danh sách component">{() => null}</LoadGate>;
+  if (!data) return <LoadGate load={{ data, error, loading, reload }} level={2} label="danh sách thành phần">{() => null}</LoadGate>;
   return (<>
     <Card>
-      {data.length === 0 ? <StateView kind="empty" title="Chưa có component nào" detail={<p>Component đã duyệt xuất hiện ở đây khi máy chủ đăng ký chúng.</p>}/> :
+      {data.length === 0 ? <StateView kind="empty" title="Chưa có thành phần nào" detail={<p>Thành phần đã duyệt xuất hiện ở đây khi máy chủ đăng ký chúng.</p>}/> :
       <table className="table"><thead><tr><th>Component</th><th>Nhóm</th><th>Phiên bản</th><th>Trạng thái</th><th>Dùng trong</th><th><span className="srOnly">Thao tác</span></th></tr></thead>
         <tbody>{data!.map((c) => (<Fragment key={c.id}>
           <tr><td><b>{c.name}</b><small className="code">{c.id}</small><small>{c.description}</small></td><td>{c.category}</td><td>{c.latestVersion}</td><td><Pill value={c.status === "ACTIVE" ? "ACTIVE" : c.status} label={c.status === "ACTIVE" ? "Đã duyệt" : c.status}/></td>
@@ -40,7 +40,7 @@ export function RegistryTable() {
           {open === c.id ? <tr className="detailRow"><td colSpan={6}><pre>{prettyJson(c.propsSchema)}</pre></td></tr> : null}
         </Fragment>))}</tbody></table>}
     </Card>
-    <Card title="Thêm component gốc mới"><ComingSoon title="Component có renderer mới">Thêm một loại component gốc mới cần viết renderer trong mã nguồn và được review như mọi thay đổi mã. Hệ thống không chạy HTML/JS do người dùng tải lên. Nhân viên đóng góp “khối” (cấu hình sẵn của component đã duyệt) ở tab bên cạnh.</ComingSoon></Card>
+    <Card title="Thêm thành phần gốc mới"><ComingSoon title="Thành phần có trình hiển thị mới">Thêm một loại thành phần gốc mới cần viết trình hiển thị (renderer) trong mã nguồn và được review như mọi thay đổi mã. Hệ thống không chạy HTML/JS do người dùng tải lên. Nhân viên đóng góp “khối” (cấu hình sẵn của thành phần đã duyệt) ở tab bên cạnh.</ComingSoon></Card>
   </>);
 }
 
@@ -54,7 +54,7 @@ export function BlocksAdmin() {
       onClick={() => { setStatus(k); setPage(0); setOpen(null); }}>{l}{k !== "ALL" && data?.counts[k] ? ` (${num(data.counts[k])})` : ""}</button>)}</div>
     {error ? <ErrorState error={error} retry={reload}/> : loading && !data ? <StateView kind="loading"/> : data!.page.items.length === 0
       ? <StateView kind="empty" title={status === "REVIEW" ? "Không có khối nào chờ duyệt" : "Không có khối"}/> : <>
-      <table className="table"><thead><tr><th>Khối</th><th>Component gốc</th><th>Người đóng góp</th><th>Trạng thái</th><th>Phiên bản</th><th>Cập nhật</th><th><span className="srOnly">Thao tác</span></th></tr></thead>
+      <table className="table"><thead><tr><th>Khối</th><th>Thành phần gốc</th><th>Người đóng góp</th><th>Trạng thái</th><th>Phiên bản</th><th>Cập nhật</th><th><span className="srOnly">Thao tác</span></th></tr></thead>
         <tbody>{data!.page.items.map((b) => <Fragment key={b.id}>
           <tr><td><b>{b.name}</b>{b.description ? <small>{b.description}</small> : null}</td><td className="code">{b.baseComponent}</td><td>{b.owner ?? "—"}</td>
             <td><BlockStatus status={b.status}/></td><td>v{b.latestVersion}{b.approvedVersion ? <small>đang dùng: v{b.approvedVersion}</small> : null}</td><td>{ago(b.updatedAt)}</td>
@@ -105,7 +105,7 @@ export function TemplatesAdmin() {
   const { act: run, err } = useAdminAction("Không thực hiện được.", reload);
   const act = (fn: () => Promise<unknown>) => run(fn);
   return (<>
-    <PageHead title="Templates" sub="Mẫu là cấu trúc trang (Page Schema) do nhân viên lưu từ ứng dụng. Tác giả gửi duyệt → kiểm tra tự động (component, nội dung, render an toàn) → quản trị viên khác tác giả duyệt hoặc từ chối."/>
+    <PageHead title="Templates" sub="Mẫu là cấu trúc trang (Page Schema) do nhân viên lưu từ ứng dụng. Tác giả gửi duyệt → kiểm tra tự động (thành phần, nội dung, render an toàn) → quản trị viên khác tác giả duyệt hoặc từ chối."/>
     <Card>
       <form className="filters" onSubmit={(e) => { e.preventDefault(); setPage(0); setApplied(q.trim()); }}>
         <input aria-label="Tìm mẫu" placeholder="Tìm theo tên" value={q} onChange={(e) => setQ(e.target.value)}/>
@@ -134,7 +134,7 @@ export function TemplatesAdmin() {
               </div></td></tr>
             {open === t.id ? <tr className="detailRow"><td colSpan={7}><div className="grid2">{t.previewStatus === "READY"
                 ? <img className="previewImg" src={`/api/v1/templates/${t.id}/preview`} alt={`Ảnh xem trước mẫu ${t.name}`}/> : <SchemaThumb schema={t.schema} title={`Xem trước mẫu ${t.name}`} tall/>}
-              <div><p>Component: {t.componentTypes.map((c) => <span key={c} className="tag code">{c}</span>)}</p>
+              <div><p>Thành phần: {t.componentTypes.map((c) => <span key={c} className="tag code">{c}</span>)}</p>
                 <p>Danh mục: {t.category}{t.tags.length ? ` · ${t.tags.map((x) => `#${x}`).join(" ")}` : ""} · ảnh xem trước: {t.previewStatus}
                   {" "}<button className="btn sm ghost" onClick={() => void act(async () => { await api.admin.templatePreview(t.id); return t; })}>Tạo lại ảnh</button></p>
                 {t.reviewComment ? <p>Nhận xét duyệt: {t.reviewComment}{t.reviewedBy ? ` — ${t.reviewedBy}` : ""}</p> : null}{t.sourceProjectId ? <p><Link href={A(`/applications/${t.sourceProjectId}`)}>Ứng dụng nguồn</Link></p> : null}</div></div></td></tr> : null}

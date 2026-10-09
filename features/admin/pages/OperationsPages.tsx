@@ -19,7 +19,7 @@ export function AlertsPage() {
   const { act, err } = useAdminAction("Không xác nhận được.", reload);
   function ack(a: AdminAlert) { void act(() => api.admin.ackAlert(a.id)); }
   return (<>
-    <PageHead title="Cảnh báo" sub="Sinh tự động khi ngân sách chạm ngưỡng hoặc nhà cung cấp AI từ chối khoá / hết tín dụng." actions={<label className="switch"><input type="checkbox" checked={all} onChange={(e) => setAll(e.target.checked)}/> Hiện cả đã xử lý</label>}/>
+    <PageHead title="Cảnh báo" sub="Sinh tự động khi ngân sách chạm ngưỡng hoặc nhà cung cấp AI từ chối khóa / hết tín dụng." actions={<label className="switch"><input type="checkbox" checked={all} onChange={(e) => setAll(e.target.checked)}/> Hiện cả đã xử lý</label>}/>
     {err ? <p className="formError" role="alert">{err}</p> : null}
     <Card title={data ? `${num(data.open)} cảnh báo đang mở` : "Cảnh báo"}>{error ? <ErrorState error={error} retry={reload}/> : !data ? <StateView kind="loading"/> : !data.items.length ? <StateView kind="empty" title="Không có cảnh báo"/> :
       <table className="table"><thead><tr><th>Mức</th><th>Loại</th><th>Nội dung</th><th>Thời gian</th><th>Xử lý</th></tr></thead>

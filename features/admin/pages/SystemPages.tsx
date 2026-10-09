@@ -44,8 +44,8 @@ export function BuildsPage() {
   const preview = useLoad(() => api.admin.retentionPreview(), []);
   const repos = useLoad(() => api.admin.repositories(), []);
   const { act, busy, msg, err } = useAdminAction("Không thực hiện được.", () => { preview.reload(); rep.reload(); repos.reload(); });
-  async function runCleanup() { if (!(await confirm({ title: "Chạy dọn dẹp ngay?", message: `Sẽ xoá ${num(preview.data?.retention?.artifactsDeleted ?? 0)} artifact (${mib(preview.data?.retention?.artifactBytesFreed)}) và dữ liệu hết hạn lưu giữ. Việc này không hoàn tác được.`, confirmLabel: "Chạy dọn dẹp", danger: true }))) return; void act(() => api.admin.retentionRun(), (r) => `Đã dọn: ${r.retention?.artifactsDeleted ?? 0} artifact (${mib(r.retention?.artifactBytesFreed)}), ${r.retention?.previewsExpired ?? 0} bản xem trước hết hạn.`); }
-  async function hardDelete(r: RepoRow) { if (!(await confirm({ title: `Xoá vĩnh viễn kho mã “${r.name}”?`, message: "Không thể hoàn tác.", confirmLabel: "Xoá vĩnh viễn", danger: true }))) return; void act(() => api.admin.deleteRepository(r.projectId)); }
+  async function runCleanup() { if (!(await confirm({ title: "Chạy dọn dẹp ngay?", message: `Sẽ xóa ${num(preview.data?.retention?.artifactsDeleted ?? 0)} artifact (${mib(preview.data?.retention?.artifactBytesFreed)}) và dữ liệu hết hạn lưu giữ. Việc này không hòan tác được.`, confirmLabel: "Chạy dọn dẹp", danger: true }))) return; void act(() => api.admin.retentionRun(), (r) => `Đã dọn: ${r.retention?.artifactsDeleted ?? 0} artifact (${mib(r.retention?.artifactBytesFreed)}), ${r.retention?.previewsExpired ?? 0} bản xem trước hết hạn.`); }
+  async function hardDelete(r: RepoRow) { if (!(await confirm({ title: `Xóa vĩnh viễn kho mã “${r.name}”?`, message: "Không thể hòan tác.", confirmLabel: "Xóa vĩnh viễn", danger: true }))) return; void act(() => api.admin.deleteRepository(r.projectId)); }
   return (<>
     <PageHead title="Build & lưu trữ" sub="Số liệu đo thật từ runner (CPU của container, thời gian, kích thước kết quả). Giới hạn chỉnh trong Cài đặt → Build / Lưu trữ / Lưu giữ."/>
     <LoadGate load={rep} label="số liệu build">{(d) => <>
@@ -61,17 +61,17 @@ export function BuildsPage() {
         <tbody>{d.rejections.map((r, i) => <tr key={i}><td>{ago(r.createdAt)}</td><td>{r.user ?? "—"}</td><td>{r.project ?? "—"}</td><td className="code">{r.reason}</td><td>{r.detail}</td></tr>)}</tbody></table> : <StateView kind="empty" title="Không có build nào bị từ chối"/>}</Card>
     </>}</LoadGate>
     <Card title="Dọn dẹp (lưu giữ)" actions={<button className="btn sm primary" disabled={busy} onClick={() => void runCleanup()}>{busy ? "Đang dọn…" : "Chạy dọn dẹp ngay"}</button>}>
-      <p className="hint">Luôn giữ: bản đang phục vụ, N bản xuất bản gần nhất để quay lại, bản xem trước còn hạn, build đang chạy. Job tự chạy mỗi giờ; mỗi lần xoá đều ghi audit.</p>
-      <LoadGate load={preview} compact label="bản xem trước dọn dẹp">{(p) => <ul className="plainList"><li>Sẽ xoá {num(p.retention?.artifactsDeleted ?? 0)} artifact ({mib(p.retention?.artifactBytesFreed)})</li><li>{num(p.retention?.previewsExpired ?? 0)} bản xem trước đã hết hạn</li>
+      <p className="hint">Luôn giữ: bản đang phục vụ, N bản xuất bản gần nhất để quay lại, bản xem trước còn hạn, build đang chạy. Job tự chạy mỗi giờ; mỗi lần xóa đều ghi audit.</p>
+      <LoadGate load={preview} compact label="bản xem trước dọn dẹp">{(p) => <ul className="plainList"><li>Sẽ xóa {num(p.retention?.artifactsDeleted ?? 0)} artifact ({mib(p.retention?.artifactBytesFreed)})</li><li>{num(p.retention?.previewsExpired ?? 0)} bản xem trước đã hết hạn</li>
         <li>{num(p.retention?.failedBuildLogsCleared ?? 0)} log build lỗi cũ</li><li>{num(p.retention?.repositoriesPendingDelete ?? 0)} kho mã hết hạn lưu trữ</li></ul>}</LoadGate>
       {msg ? <p className="hint" role="status">{msg}</p> : null}{err ? <p className="formError" role="alert">{err}</p> : null}
     </Card>
     <Card title="Kho mã nguồn"><LoadGate load={repos} compact label="kho mã" isEmpty={(r) => r.length === 0} empty={{ title: "Chưa có kho mã" }}>{(rows) =>
       <table className="table"><thead><tr><th>Kho</th><th>Ứng dụng</th><th>Trạng thái</th><th>Kích thước</th><th>Lưu trữ đến</th><th><span className="srOnly">Thao tác</span></th></tr></thead>
         <tbody>{rows.map((r) => <tr key={r.projectId}><td className="code">{r.name}</td><td>{r.project ?? "—"}</td>
-          <td><Pill value={r.state === "ACTIVE" ? "ACTIVE" : r.state === "DELETED" ? "DISABLED" : "UNKNOWN"} label={{ ACTIVE: "Đang dùng", ARCHIVED: "Đã lưu trữ", PENDING_DELETE: "Chờ xoá", DELETED: "Đã xoá" }[r.state]}/></td>
+          <td><Pill value={r.state === "ACTIVE" ? "ACTIVE" : r.state === "DELETED" ? "DISABLED" : "UNKNOWN"} label={{ ACTIVE: "Đang dùng", ARCHIVED: "Đã lưu trữ", PENDING_DELETE: "Chờ xóa", DELETED: "Đã xóa" }[r.state]}/></td>
           <td>{mib(r.sizeBytes)}</td><td>{r.deleteAfter ? fmtDate(r.deleteAfter) : "—"}</td>
-          <td>{r.state === "PENDING_DELETE" ? <button className="btn sm danger" onClick={() => void hardDelete(r)}>Xoá vĩnh viễn</button> : null}</td></tr>)}</tbody></table>}</LoadGate></Card>
+          <td>{r.state === "PENDING_DELETE" ? <button className="btn sm danger" onClick={() => void hardDelete(r)}>Xóa vĩnh viễn</button> : null}</td></tr>)}</tbody></table>}</LoadGate></Card>
   </>);
 }
 
