@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { chromePath, harnessOrigin, harnessPage, harnessUrl, makeChecks } from "./spec.mjs";
+import { BROWSERS, browserLabel, browserName, chromePath, harnessOrigin, harnessPage, harnessUrl, makeChecks } from "./spec.mjs";
 
 const here = new URL(".", import.meta.url).pathname;
 const run = (code, env = {}) => {
@@ -41,6 +41,19 @@ test("chromePath: a CHROME that does not exist, or an OS with no browser, stops 
   const r1 = run(`s.chromePath({ CHROME: "/definitely/not/here" })`); assert.equal(r1.status, 2); assert.match(r1.stderr, /CHROME=\/definitely\/not\/here does not exist/);
   const r2 = run(`s.chromePath({}, "linux", () => false)`); assert.equal(r2.status, 2); assert.match(r2.stderr, /no Chrome \/ Chromium found for linux/); assert.match(r2.stderr, /\/usr\/bin\/google-chrome/); assert.match(r2.stderr, /Set CHROME=/);
   const r3 = run(`s.chromePath({}, "plan9", () => false)`); assert.equal(r3.status, 2); assert.match(r3.stderr, /no default for this OS/);
+});
+
+test("browserName / browserLabel: chromium is the default, firefox and webkit are selectable, the labels are CHROMIUM / FIREFOX / WEBKIT", () => {
+  assert.deepEqual(BROWSERS, ["chromium", "firefox", "webkit"]);
+  assert.equal(browserName({}), "chromium"); assert.equal(browserName({ BROWSER: "" }), "chromium"); assert.equal(browserName({ BROWSER: "  " }), "chromium");
+  assert.equal(browserName({ BROWSER: "firefox" }), "firefox"); assert.equal(browserName({ BROWSER: "WebKit" }), "webkit");
+  assert.deepEqual(BROWSERS.map((b) => browserLabel({ BROWSER: b })), ["CHROMIUM", "FIREFOX", "WEBKIT"]);
+});
+test("browserName: an unknown BROWSER (including 'safari') stops with exit 2 and lists the engines; it never falls back to Chrome", () => {
+  for (const bad of ["safari", "chrome", "edge"]) {
+    const r = run(`s.browserName()`, { BROWSER: bad });
+    assert.equal(r.status, 2, bad); assert.match(r.stderr, new RegExp(`BROWSER=${bad} is not supported`)); assert.match(r.stderr, /chromium, firefox, webkit/); assert.match(r.stderr, /no "safari"/);
+  }
 });
 
 test("makeChecks: PASS / FAIL / SKIP lines, counts, clipping, and the exit code", () => {

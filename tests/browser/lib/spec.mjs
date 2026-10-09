@@ -1,5 +1,5 @@
 // @class: harness
-// Shared toolkit of the real-Chromium browser specs (tests/browser/*.spec.mjs): the check list, the console capture, the Chrome path and the harness URL that every spec used to copy.
+// Shared toolkit of the real-browser specs (tests/browser/*.spec.mjs): the check list, the console capture, the browser launch (Chrome by default) and the harness URL that every spec used to copy.
 // It is test tooling, not a test: HARNESS, NOT REAL BACKEND, and nothing here starts, finds or stops a process.
 //
 //   import { chromium, harnessOrigin, launch, makeChecks, watchConsole } from "./lib/spec.mjs";
@@ -8,13 +8,16 @@
 //   ... check("name", ok, "detail") ...
 //   await browser.close(); finish();
 //
+// BROWSER=chromium|firefox|webkit picks the engine (default chromium = the installed Chrome, exactly as before). firefox and webkit are the Playwright-managed builds (`node node_modules/playwright-core/cli.js install firefox webkit`).
+// Evidence labels are CHROMIUM / FIREFOX / WEBKIT (browserLabel()). Playwright WebKit is NOT Safari: never write "Safari" for a WEBKIT run.
+//
 // HARNESS_URL is REQUIRED. A spec started without it (i.e. not through `node tests/browser/harness-server.mjs run -- node tests/browser/<spec>`) fails at once with exit code 2. It never falls back to
 // a fixed port such as 4000: that port may be someone else's server.
 import { createRequire } from "node:module";
 import { existsSync } from "node:fs";
 
 const require = createRequire(new URL("../../../package.json", import.meta.url).pathname);
-export const { chromium } = require("playwright-core");
+export const { chromium, firefox, webkit } = require("playwright-core");
 
 /** print a fatal setup problem and stop with exit code 2 (a spec that cannot start is never a pass) */
 export function die(message) { console.error(`\nspec setup error: ${message}\n`); process.exit(2); }
@@ -44,8 +47,26 @@ export function chromePath(env = process.env, platform = process.platform, exist
   if (!hit) die(`no Chrome / Chromium found for ${platform}. Looked for:\n  ${list.join("\n  ") || "(no default for this OS)"}\nSet CHROME=/path/to/chrome`);
   return hit;
 }
-/** chromium.launch with the OS default Chrome path; `extra` is passed to Playwright (for example `{ args: ["--enable-precise-memory-info"] }`) */
-export const launch = (extra = {}) => chromium.launch({ executablePath: chromePath(), ...extra });
+/** the engines a spec can run on; the evidence label of each is its upper-case name (CHROMIUM / FIREFOX / WEBKIT) */
+export const BROWSERS = ["chromium", "firefox", "webkit"];
+/** the engine selected by $BROWSER (default chromium); an unknown value stops with exit 2 instead of silently running Chrome */
+export function browserName(env = process.env) {
+  const v = (env.BROWSER ?? "").trim().toLowerCase() || "chromium";
+  if (!BROWSERS.includes(v)) die(`BROWSER=${env.BROWSER} is not supported. Use one of: ${BROWSERS.join(", ")} (default chromium). There is no "safari": WebKit is the Playwright WebKit build.`);
+  return v;
+}
+/** the evidence label of the selected engine: CHROMIUM, FIREFOX or WEBKIT */
+export const browserLabel = (env = process.env) => browserName(env).toUpperCase();
+/**
+ * Launch the selected engine. chromium: the OS default Chrome path ($CHROME overrides); firefox / webkit: the Playwright-managed build (no executablePath, $CHROME is ignored).
+ * `extra` is passed to Playwright (for example `{ args: ["--enable-precise-memory-info"] }`, which only makes sense for chromium). A non-default engine prints its label once so a log can never be mistaken for Chrome.
+ */
+export function launch(extra = {}, env = process.env) {
+  const name = browserName(env);
+  if (name === "chromium") return chromium.launch({ executablePath: chromePath(env), ...extra });
+  console.log(`BROWSER=${name.toUpperCase()}`);
+  return { firefox, webkit }[name].launch(extra);
+}
 
 /**
  * The check list every spec keeps: `check(name, ok, detail)` prints `PASS|FAIL  name  — detail` and records it, `skip(name, why)` records a skip, `finish()` prints the summary and exits 1 on any FAIL.
