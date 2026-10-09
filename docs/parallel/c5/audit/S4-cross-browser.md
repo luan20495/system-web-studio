@@ -18,7 +18,7 @@ Date 2026-10-09. Evidence class: TOOLING (no spec was run on Firefox/WebKit; the
 | safari | exit 2, "not supported" |
 
 ## FIREFOX_STATUS: BLOCKED_TOOLING
-Command: `node tests/…` → `firefox.launch()` ⇒ `…/ms-playwright/firefox-1543/firefox/Nightly.app/Contents/MacOS/firefox -no-remote -headless -profile <tmp> -juggler-pipe -silent`, exit code 1 after ~0.7 s, stderr `*** You are running in headless mode.` / `Could not find profile folder.`
+Command: `firefox.launch()` (Playwright) ⇒ `…/ms-playwright/firefox-1543/firefox/Nightly.app/Contents/MacOS/firefox -no-remote -headless -profile <tmp> -juggler-pipe -silent`, exit code 1 after ~0.7 s, stderr `*** You are running in headless mode.` / `Could not find profile folder.`
 Environment: macOS 27.0.1 (26A434) arm64, Firefox Nightly 155.0 (Playwright build 1543), playwright-core 1.63.0, Node from the repo.
 Attempts, each different (none changed the result):
 1. `DEBUG=pw:browser` launch: the temp profile directory exists and is passed correctly, the process exits by itself.

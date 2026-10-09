@@ -15,20 +15,20 @@ Source of truth for the rows is `MASTER_ISSUE_LEDGER.md` / `master-ledger.json` 
 ## Counts
 | Status | Count |
 |---|---|
-| FIXED | 85 |
+| FIXED | 91 |
 | CLOSED | 3 |
-| PARTIAL | 20 |
-| OPEN | 13 |
+| PARTIAL | 24 |
+| OPEN | 3 |
 | BLOCKED | 8 |
 | ACCEPTED_LIMITATION | 0 |
 | RESEARCH_ONLY | 3 |
 | NEEDS_REVIEW | 0 |
 | **CANONICAL_TOTAL** | **132** |
 
-Unresolved (not FIXED/CLOSED): 44 = P0 0 · P1 2 · P2 19 · P3 23.
+Unresolved (not FIXED/CLOSED): 38 = P0 0 · P1 2 · P2 19 · P3 17.
 Severity of all 132: P0 0 · P1 15 · P2 74 · P3 43.
 
-## FIXED (85)
+## FIXED (91)
 - M-001 P1 C5 · Cancel in the code-change review prompt APPROVES the change
 - M-002 P1 C5 · Unsaved Inspector edits are silently lost when another section is selected; focu
 - M-003 P1 C5 · Selecting a section reloads the preview iframe and resets its scroll
@@ -86,6 +86,10 @@ Severity of all 132: P0 0 · P1 15 · P2 74 · P3 43.
 - M-075 P2 C5 · 10 independent error mappers; raw exception/server text shown ('Unexpected token
 - M-076 P2 C5 · DailyBars throws RangeError on empty daily; AuditTable JSON.parse unguarded: who
 - M-077 P3 C5 · Slug shown as /api/ but saved as api-2 (uniqueSlug)
+- M-078 P3 C5 · Every drawer close is router.push: Back re-opens the closed drawer
+- M-080 P3 C5 · 'Khôi phục' shown to everyone (fails after click); versions with 0 rows render h
+- M-081 P3 C5 · 'Khám phá cấu trúc' + 'chưa' reads as one word; each enabled card is its own tab
+- M-082 P3 C5 · lineDiff re-runs for every file on every render (~24 ms/keystroke on 1,800 lines
 - M-085 P3 C5 · Sticky footer covers 32px under focused input (2.4.11 AAA); combobox/tree ARIA d
 - M-086 P3 C5 · No forced-colors support; Inter declared but never loaded; font weights unsuppor
 - M-087 P3 C5 · 100vh toolbar overlap (unverified on device); no max-width at >=1280 (1610px tab
@@ -98,7 +102,9 @@ Severity of all 132: P0 0 · P1 15 · P2 74 · P3 43.
 - M-104 P2 C5 · Studio AI mode on a phone: 3-row top bar 141 px + prompt 492 px leave the previe
 - M-105 P2 C5 · Admin dialogs: fieldset.stack = UA 2px groove border, legend 16px/400, dialog ti
 - M-106 P2 C5 · Workflow editor targets/branches list raw step ids (end, generated ids); jargon
+- M-109 P3 C5 · PagesPanel canStep is O(n²) per render (20-32 ms at 1000 sections; beyond the 50
 - M-111 P3 C5 · Expand-all has no windowing (26,073 DOM nodes for 2,000 units; 200 ms paint); mo
+- M-112 P3 C5 · The phone page-scroll mode needs :has() (no fallback)
 - M-113 P3 C5 · Unconditional scroll-behavior:smooth ignores prefers-reduced-motion (renderer ou
 - M-115 P2 TOOLING · portals.spec hard-coded ports 3001/3002 (would read the live stack by accident)
 - M-117 P3 C5 · Links inside running text are distinguished only by colour (axe link-in-text-blo
@@ -120,10 +126,11 @@ Severity of all 132: P0 0 · P1 15 · P2 74 · P3 43.
 - M-128 P2 C5 · Platform 'Thêm nhà cung cấp' dialog at 360px: 'Nâng cao' is covered by the stick
 - M-129 P2 C5 · Builder at 1024px with the rail 'Thành phần': the drag/add buttons of components
 
-## PARTIAL (20)
+## PARTIAL (24)
 - M-007 P1 C5 · One-time activation link lost on Enter/Esc/'Xong' (initial focus on 'Xong'); ten — C5 PART FIXED (HARNESS, merged e27318c) · C1 re-issue handoff open
 - M-009 P1 HANDOFF · SYSTEM_ADMIN app detail offers 'Xóa' / 'Khôi phục vN' on workspace-scoped routes — C5 PART FIXED (HARNESS, merged e27318c) · C1 handoff + real-backend 404 not confirmed
 - M-042 P2 C5 · Preview is non-interactive (sandbox) so 'try' is a list of buttons; Theme panel  — CLIENT HALF FIXED (HARNESS, 5d4c585): Test mode/preview banners say the preview is view-only and where to try; Theme panel says the theme is saved but
+- M-051 P3 C5 · Access-ticket query path sent unvalidated; r.redirect goes straight to window.lo — PARTIAL (4b630de): client half done (path sent under the server's rule, ticket redirect only https / loopback http, no userinfo, only /_access?ticket=
 - M-053 P2 C5 · Platform and Admin ship identical bundles (942 KB/272 KB gzip) and Studio 1048 K — PARTIAL (merged 071dfb4): console is a lazy chunk behind the login: Platform/Admin first load 866.6 -> 549.2 KB raw (-36.6%), Studio 989.0 -> 562.4 KB
 - M-058 P2 HANDOFF · Tenants list has no search/pager (63 rows); users list has no company column/fil — C5 PART FIXED (HARNESS, merged eb38a2d): company list search + pager; C1 handoff open
 - M-059 P2 HANDOFF · 'Nhà cung cấp: OpenRouter/Mô phỏng · Chưa có OPENROUTER_API_KEY' comes from lega — C5 PART FIXED (HARNESS, merged c9799bb): provider tile reads /admin/ai/providers; backend handoff open
@@ -136,25 +143,18 @@ Severity of all 132: P0 0 · P1 15 · P2 74 · P3 43.
 - M-069 P2 C5 · 386 hex (191 unique), 249 with no token, ~50% of colours tokenised, two token vo — PARTIAL (HARNESS, 8dd71bb): radius + font-size scale tokenised (206 uses, 0 of 34 snapshot screens changed); builder.css hex, globals.css, shadows and
 - M-070 P2 C5 · 93 selectors defined twice, 40 with conflicts; dead hooks (sr-only, .stack, bx-h — PARTIAL (HARNESS, c67f5a1): .sr-only defined (TestPanel caption no longer shows), dead 16px checkbox sizing removed, conflicting duplicates 19->17
 - M-072 P2 TOOLING · Test suite reach and reproducibility: 14 main files (~3,900 lines) reachable fro — PARTIAL: spec toolkit + HARNESS_URL required merged (a5dcdc1), all specs migrated; shims (R-023 -> M-107) and untested files remain
-- M-079 P3 C5 · 'Không tìm thấy' shown twice, 'Thử lại' on a 404, light page in a dark app — COMPONENT MERGED (bb5f6e4)
+- M-079 P3 C5 · 'Không tìm thấy' shown twice, 'Thử lại' on a 404, light page in a dark app — PARTIAL (db5321e test only): verified 404 shows 'Không tìm thấy' once, no retry, link back, axe 0 critical/serious; the light-page-in-a-dark-app part 
+- M-083 P3 C5 · Small copy: search box clipped 'Tìm ứn…'; 'Chạy / thử' wraps; nested 'Chỉ đọc' b — PARTIAL (a15246c): Studio header search gets its own full-width row at <=600 px (85/55 px -> 364/334 px at 390/360), 'Chạy thử' no longer wraps; neste
 - M-084 P3 C5 · ErrorState/loading render only an h2 (no h1); CodeWorkspace has no h1; AI-mode h — SHELL ADOPTED (HARNESS, 22670eb): portal splashes/fallbacks and the not-found page render h1; CodeWorkspace/AI-mode h1 and table captions pending (S1/
+- M-089 P3 C5 · Page nonce copied into the srcdoc script and postMessage target '*' (defence in  — PARTIAL (c215475): canvas postMessage pinned to the editor origin (parentOrigin, strict pattern, '*' fallback) + escaping fuzz test (300 editor docs, 
 - M-093 P3 C5 · Absent permissions list is treated as allowed; failed /auth/config shows the loc — PARTIAL: (a) FIXED (HARNESS, 418fd25) a failed /auth/config shows an error with retry instead of a guessed password form (CFG01/02, platform + admin);
 - M-097 P3 C5 · 9 requests for 9 keystrokes; duplicate GETs (providers 2x, limits/models 3x); us — MOSTLY FIXED (HARNESS, measured, 26b31e2): person/override searches debounced 300 ms (REQ03 7 keystrokes -> 1 request, REQ04 4 -> 1), workspace member
 - M-110 P3 C5 · Page-tree rows and canvas drag handles are not memoised (85% of selection cost a — PARTIAL (HARNESS, 9877afa): canvas drag handles memoised and found by Map; page-tree row memo/windowing and keeping the tree mounted not done
+- M-114 P2 TOOLING · Only Chrome 155 (headless) was ever executed: no Firefox/WebKit/Safari run for t — PARTIAL (0a7b43f, tooling part 1): BROWSER=chromium|firefox|webkit selector in tests/browser/lib/spec.mjs (default chromium unchanged; labels CHROMIUM
 
-## OPEN (13)
-- M-051 P3 C5 · Access-ticket query path sent unvalidated; r.redirect goes straight to window.lo — OPEN (S1 Wave A deferred, budget): client validation of the access-ticket query path; server half closed in source
-- M-078 P3 C5 · Every drawer close is router.push: Back re-opens the closed drawer — OPEN (S1 Wave A deferred, budget): drawer close uses router.push so Back re-opens the drawer
-- M-080 P3 C5 · 'Khôi phục' shown to everyone (fails after click); versions with 0 rows render h — OPEN (S1 Wave A deferred, budget): 'Khôi phục' shown to everyone; versions with 0 rows
-- M-081 P3 C5 · 'Khám phá cấu trúc' + 'chưa' reads as one word; each enabled card is its own tab — OPEN (S1 Wave A deferred, budget): 'Khám phá cấu trúc' + 'chưa' reads as one word
-- M-082 P3 C5 · lineDiff re-runs for every file on every render (~24 ms/keystroke on 1,800 lines — OPEN (S1 Wave A deferred, budget): lineDiff re-runs for every file on every render; needs a measurement first
-- M-083 P3 C5 · Small copy: search box clipped 'Tìm ứn…'; 'Chạy / thử' wraps; nested 'Chỉ đọc' b — OPEN (S1/S2 deferred, budget): small copy items (search box clipped, 'Chạy / thử' wraps, ...)
-- M-089 P3 C5 · Page nonce copied into the srcdoc script and postMessage target '*' (defence in  — OPEN (S1 Wave A deferred, budget): page nonce copied into the srcdoc script and postMessage target '*'
+## OPEN (3)
 - M-099 P3 C5 · Dead exports (15, plus 38 needless), 4 unused imports, 9 'as never' / 2 'as unkn — OPEN (Wave B review, C5-L): dead exports / unused imports / 'as never' casts; only measured or provable items
 - M-107 P2 C5 · 9 shim files and 22-23 relative ../packages/... imports in S1/S2 files (3 spelli — OPEN (Wave B step 2, C5-L, serial after M-068): repo-wide relative-import / shim cleanup in S1/S2 files
-- M-109 P3 C5 · PagesPanel canStep is O(n²) per render (20-32 ms at 1000 sections; beyond the 50 — OPEN (S1 Wave A deferred, budget): PagesPanel canStep is O(n^2); needs a micro-benchmark before and after
-- M-112 P3 C5 · The phone page-scroll mode needs :has() (no fallback) — OPEN (S1 Wave A deferred, budget): phone page-scroll mode needs :has() with no fallback
-- M-114 P2 TOOLING · Only Chrome 155 (headless) was ever executed: no Firefox/WebKit/Safari run for t — OPEN (C5-L, approved): Firefox and Playwright WebKit installed 2026-10-09 (playwright-core 1.63.0, WebKit 26.6); nothing has been run on them yet; evi
 - M-116 P3 TOOLING · Contract conformance test is silently skipped unless XWEB_CONFORMANCE_DIR is set — OPEN (Wave B review, C5-L): contract conformance test is silently skipped unless XWEB_CONFORMANCE_* is set (C0 runner file)
 
 ## BLOCKED (8)

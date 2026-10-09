@@ -1015,7 +1015,7 @@
   "client: https only, no credentials, valid path; host pinned only if C0 provides the sites origin (NOT 'same-origin': the redirect goes to the sites origin)",
   "unit for URL guard",
   "R2: P2->P3, server half is closed in source",
-  "OPEN (S1 Wave A deferred, budget): client validation of the access-ticket query path; server half closed in source"
+  "PARTIAL (4b630de): client half done (path sent under the server's rule, ticket redirect only https / loopback http, no userinfo, only /_access?ticket=; site/deployment/preview/asset URLs limited to http(s) or same-origin path). BLOCKED_EXTERNAL remainder: host pinning needs the sites origin exposed to the client (C0/C2, HF-C2-03)"
  ],
  [
   "M-052",
@@ -1584,7 +1584,7 @@
   "replace history on close",
   "harness",
   "",
-  "OPEN (S1 Wave A deferred, budget): drawer close uses router.push so Back re-opens the drawer"
+  "FIXED (db5321e): closing any drawer in ProjectWorkspace and CodeWorkspace uses history replace (opening still pushes); studio-wave3 M-078 x2. Known side effect: one Back press appears to do nothing (duplicate mode entry), accepted as safer than a push-then-back design"
  ],
  [
   "M-079",
@@ -1603,7 +1603,7 @@
   "",
   "harness",
   "",
-  "COMPONENT MERGED (bb5f6e4)"
+  "PARTIAL (db5321e test only): verified 404 shows 'Không tìm thấy' once, no retry, link back, axe 0 critical/serious; the light-page-in-a-dark-app part is an S3 design decision (.wsError uses light shell tokens, same as the project list)"
  ],
  [
   "M-080",
@@ -1625,7 +1625,7 @@
   "permission-aware controls; checkbox lists",
   "harness",
   "C-08: grab-bag; items handled individually",
-  "OPEN (S1 Wave A deferred, budget): 'Khôi phục' shown to everyone; versions with 0 rows"
+  "FIXED (e2e18b0, db5321e): archived-banner 'Khôi phục' disabled with a reason without PROJECT_DELETE (backend ProjectLifecycle.kt requires it); empty version list text; action chains as checkbox lists; a new action's open problems are not role=alert"
  ],
  [
   "M-081",
@@ -1645,7 +1645,7 @@
   "aria text separation; roving focus optional",
   "axe",
   "",
-  "OPEN (S1 Wave A deferred, budget): 'Khám phá cấu trúc' + 'chưa' reads as one word"
+  "FIXED (93177ff): NOT_READY badge read as ' (chưa sẵn sàng)' in DataWizard and Inspector; the optional roving focus for Studio cards was not done"
  ],
  [
   "M-082",
@@ -1664,7 +1664,7 @@
   "memoize per file",
   "S4 perf",
   "",
-  "OPEN (S1 Wave A deferred, budget): lineDiff re-runs for every file on every render; needs a measurement first"
+  "FIXED (d138931): code diff computed once per diff response (codeDiff.ts) + memoised DiffView; per render that does not change the diff 1800 lines 52.2 ms -> 0.001 ms; a new diff response still pays one LCS (~50 ms at 1800 lines, not optimised)"
  ],
  [
   "M-083",
@@ -1685,7 +1685,7 @@
   "",
   "screenshots",
   "",
-  "OPEN (S1/S2 deferred, budget): small copy items (search box clipped, 'Chạy / thử' wraps, ...)"
+  "PARTIAL (a15246c): Studio header search gets its own full-width row at <=600 px (85/55 px -> 364/334 px at 390/360), 'Chạy thử' no longer wraps; nested 'Chỉ đọc' boxes not reproduced in harness test mode; S2-043 (Admin tabs/dates) is S3/Admin scope"
  ],
  [
   "M-084",
@@ -1808,7 +1808,7 @@
   "renderer escaping fuzz test is the real regression guard (C5-only); CSP sha256 for the canvas script is a C0 handoff",
   "review",
   "",
-  "OPEN (S1 Wave A deferred, budget): page nonce copied into the srcdoc script and postMessage target '*'"
+  "PARTIAL (c215475): canvas postMessage pinned to the editor origin (parentOrigin, strict pattern, '*' fallback) + escaping fuzz test (300 editor docs, 40 published sites; fails 3/3 with escaping off); golden sha256 unchanged. BLOCKED_EXTERNAL remainder: page nonce still copied into the srcdoc script, CSP sha256 is a C0 handoff"
  ],
  [
   "M-090",
@@ -2205,7 +2205,7 @@
   "O(1) first/last rule; unit test equals canStep for all positions",
   "perf-micro + unit",
   "",
-  "OPEN (S1 Wave A deferred, budget): PagesPanel canStep is O(n^2); needs a micro-benchmark before and after"
+  "FIXED (6d1b069): PagesPanel first/last flags via canStepAt, O(1) per row; micro-bench median of 5 at 2000 sections 78.8 ms -> 0.014 ms (1000: 22.9 -> 0.028); unit proves canStepAt equals canStep for every position"
  ],
  [
   "M-110",
@@ -2264,7 +2264,7 @@
   "class on <html> set from the builder instead of :has(), or state the floor",
   "Firefox/WebKit run once S4-022 is resolved",
   "",
-  "OPEN (S1 Wave A deferred, budget): phone page-scroll mode needs :has() with no fallback"
+  "FIXED (304b725): html.bx-page class set while the builder is mounted, builder.css repeats the two :has() rules for it; test removes every :has(.bx-root) rule at 390 px and the scroll-padding / overscroll still apply. Firefox/WebKit not executed (S4-022)"
  ],
  [
   "M-113",
@@ -2302,7 +2302,7 @@
   "install playwright firefox/webkit on the integration machine and run portals/builder/org specs, or one manual Safari pass; until then cross-browser is a STATIC report only",
   "same specs under firefox/webkit",
   "never claim Safari/Firefox support from a Chrome run",
-  "OPEN (C5-L, approved): Firefox and Playwright WebKit installed 2026-10-09 (playwright-core 1.63.0, WebKit 26.6); nothing has been run on them yet; evidence labels CHROMIUM / FIREFOX / WEBKIT (WebKit is not Safari)"
+  "PARTIAL (0a7b43f, tooling part 1): BROWSER=chromium|firefox|webkit selector in tests/browser/lib/spec.mjs (default chromium unchanged; labels CHROMIUM/FIREFOX/WEBKIT; 'safari' refused; 9 unit tests). WEBKIT launches (Playwright WebKit 26.6, not Safari); FIREFOX_STATUS BLOCKED_TOOLING: 'Could not find profile folder' on macOS 27.0.1 with Firefox Nightly 155 and 1555, six different attempts, see audit/S4-cross-browser.md; not an accepted limitation. Cross-browser spec runs: part 2 (after product code is final)"
  ],
  [
   "M-115",
