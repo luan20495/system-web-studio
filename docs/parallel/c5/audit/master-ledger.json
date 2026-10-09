@@ -212,7 +212,8 @@
   "N (replica markup in S3 audit: re-measure on the real stack)",
   "Overflow ('Thêm ▾') menu / drawer on <=767; pane switch for AI/preview",
   "responsive matrix + axe; replica replaced by the real component in the final audit",
-  "S3 evidence was a REPLICA (markup copy), re-measure"
+  "S3 evidence was a REPLICA (markup copy), re-measure",
+  "FIXED (HARNESS, merged 35e7520): top bar 141 -> <=100px, 'Thêm thao tác' menu, 901-1023px row bug fixed"
  ],
  [
   "M-012",
@@ -313,7 +314,7 @@
   "Shared Toast: role=status/alert by kind, auto-dismiss (errors persist), dismiss button, above overlays",
   "unit + harness live-region test; axe",
   "S1 rated P2, S3 rated P1: WCAG 4.1.3 (AA) on the main feedback channel -> P1",
-  "PARTIAL: shared Toast + confirm/prompt components merged (da6c70f); call-site migration pending (S1/S2 wave 2)"
+  "FIXED for Studio (HARNESS, merged 35e7520): shared toast adopted; Admin banners not toast-migrated (not needed)"
  ],
  [
   "M-017",
@@ -336,7 +337,7 @@
   "Shared ConfirmDialog/PromptDialog (focus trap, destructive style, busy lock) and replace all call sites",
   "harness specs; grep guard: no window.confirm/prompt in portal code",
   "",
-  "S2 PART FIXED (HARNESS, merged eb38a2d): all 21 native dialogs in Admin are confirm()/prompt() + guard test; S1 part pending"
+  "STUDIO PART FIXED (HARNESS, merged 35e7520): 12 native confirm + 1 prompt -> 0; Admin part merged earlier"
  ],
  [
   "M-018",
@@ -376,7 +377,8 @@
   "N (harness; release spec asserts one click)",
   "ConfirmDialog with consequences; danger styling; update release spec",
   "release.spec updated",
-  ""
+  "",
+  "FIXED (HARNESS, merged 35e7520): rollback asks, names both versions, danger, focus on 'Hủy'; discard/secret/restore confirmations"
  ],
  [
   "M-020",
@@ -399,7 +401,7 @@
   "useAction(busy,error,once) in packages/ui; migrate the listed call sites",
   "harness double-click tests",
   "",
-  "ADMIN PART FIXED (HARNESS, merged eb38a2d): no act() copy remains in Admin; Studio part pending (S1)"
+  "STUDIO CALL SITES FIXED (HARNESS, merged 35e7520); Admin part merged earlier"
  ],
  [
   "M-021",
@@ -499,7 +501,7 @@
   "Skip link in the shared shell; main tabindex only while overflowing (useOverflow); focus main/h1 on route change",
   "harness keyboard test",
   "",
-  "ADMIN PART FIXED (HARNESS, merged eb38a2d); Studio shell wiring pending (S1)"
+  "ADMIN + STUDIO SHELLS FIXED (HARNESS, merged eb38a2d + 35e7520)"
  ],
  [
   "M-026",
@@ -559,7 +561,7 @@
   "Use the Tabs primitive (or plain nav links without role=tab)",
   "axe + keyboard harness",
   "D-02/D-03: radio cards also M-081; PersonPicker aria-expanded also M-085",
-  "WIDGET MERGED (bb5f6e4): Tabs/TabPanel; adoption pending"
+  "STUDIO PART FIXED (HARNESS, merged 35e7520); Admin part pending (S2)"
  ],
  [
   "M-029",
@@ -599,7 +601,7 @@
   "radiogroup semantics",
   "release.spec + axe",
   "",
-  "WIDGET MERGED (bb5f6e4): RadioGroup; adoption pending"
+  "FIXED (HARNESS, merged 35e7520): RadioGroup for the audience"
  ],
  [
   "M-031",
@@ -620,7 +622,7 @@
   "aria-disabled + visible helper text instead of title-only",
   "harness",
   "",
-  "WIDGET MERGED (bb5f6e4): ReasonButton; adoption pending"
+  "STUDIO PART FIXED (HARNESS, merged 35e7520): ReasonButton / GuardedButton; Admin part pending (S2)"
  ],
  [
   "M-032",
@@ -803,7 +805,8 @@
   "N (harness)",
   "use appKind; error + retry state",
   "harness",
-  "D-05: shares a root with M-056: 21 of 72 useLoad results never read .error"
+  "D-05: shares a root with M-056: 21 of 72 useLoad results never read .error",
+  "FIXED (HARNESS, merged 35e7520)"
  ],
  [
   "M-042",
@@ -1502,7 +1505,7 @@
   "single errorText(); never show Error.message of non-ApiError; Vietnamese mapping per code",
   "unit: mapper table",
   "O-04: packages/api-client/core.ts is touched by M-074/M-075/M-092/M-097: single editor S3 · S4 state matrix (HARNESS, pre-adoption): 52 screens show raw 'java.lang.NullPointerException …' text on an injected 500 and 19 show raw 'Access Denied' on a 403; closes when S1/S2 adopt errorText on all screens",
-  "COMPONENT/LIB MERGED (bb5f6e4): errorText/errorParts + code catalog; call-site migration pending (S1/S2 wave 2)"
+  "STUDIO + ADMIN SCREENS FIXED in the state matrix (error/permission cells PASS, HARNESS); Admin errorText adoption (S2 milestone 2) pending"
  ],
  [
   "M-076",
@@ -2066,7 +2069,8 @@
   "N (replica in S3 audit: re-measure)",
   "pane switch (chat / preview) on <=767 reusing the builder phone-switch pattern",
   "responsive matrix + harness",
-  "split from M-011 (C-02)"
+  "split from M-011 (C-02)",
+  "FIXED (HARNESS, merged 35e7520)"
  ],
  [
   "M-105",
@@ -2324,7 +2328,8 @@
   "N (harness)",
   "wrap/ellipsis + min-width:0 in the Studio cards, lists and headers",
   "state-matrix long-content cells PASS at 1440/390",
-  ""
+  "",
+  "FIXED (HARNESS, merged 35e7520); the harness overflow did not reproduce on real data (long name was in the workspace name)"
  ],
  [
   "M-119",
@@ -2343,7 +2348,7 @@
   "LoadGate empty slot with a real message",
   "state-matrix empty cells PASS",
   "S4 matrix after S2 wave 2 (HARNESS): remaining FAIL cells are studio/new, platform/costs NaN-pattern fixed? re-check in the final run",
-  "ADMIN/PLATFORM PART FIXED (HARNESS, merged eb38a2d); studio/new pending (S1)"
+  "FIXED for studio/new (HARNESS, merged 35e7520)"
  ],
  [
   "M-120",
@@ -2400,7 +2405,7 @@
   "LoadGate / ErrorState",
   "state-matrix error/loading cells PASS",
   "",
-  "ADMIN PART FIXED (HARNESS, merged eb38a2d); studio/new pending (S1)"
+  "FIXED for studio/new (HARNESS, merged 35e7520)"
  ],
  [
   "M-123",
@@ -2457,6 +2462,133 @@
   "N (harness)",
   "raise targets; find the covering element",
   "matrix: 0 small / 0 covered",
+  "",
+  "FIXED (HARNESS, merged 35e7520): targets 9 -> 0; remaining 'covered' = detector reads clipped-by-own-scroll as covered"
+ ],
+ [
+  "M-126",
+  "P2",
+  "C5",
+  "Studio",
+  "header · 600px · REAL STACK",
+  "Studio header at 600px: the search field 'Tìm ứng dụng' is squeezed to 22x36px and covered by the workspace picker on EVERY Studio screen (8 routes) when the workspace name is long ('Kinh doanh và Chăm sóc khách hàng')",
+  [
+   "S4R-01"
+  ],
+  "features/studio StudioApp header + header CSS (REAL STACK finding; reproduced in the harness: scripts/ui-repro.mjs --only studio-header-600)",
+  "S1 (+S3 header CSS)",
+  "none",
+  "N (reproduced in HARNESS; found on the REAL STACK)",
+  "wrap/stack the header at <=700px, give the search a min width, ellipsis the workspace name",
+  "real-stack matrix 600px: 0 covered; harness repro NO",
+  ""
+ ],
+ [
+  "M-127",
+  "P2",
+  "C5",
+  "Studio",
+  "AI view · 768px · REAL STACK",
+  "Studio AI view at 768px: the starter chip 'Rút gọn tiêu đề hero' is covered by div.composer when AI is not enabled",
+  [
+   "S4R-02"
+  ],
+  "ProjectWorkspace AI pane layout at 768 (reproduced: ui-repro --only studio-ai-768)",
+  "S1",
+  "none",
+  "N (harness repro; found on the REAL STACK)",
+  "reserve space / scroll the conversation above the composer",
+  "matrix 768 covered 0",
+  ""
+ ],
+ [
+  "M-128",
+  "P2",
+  "C5",
+  "Platform",
+  "AI provider dialog · 360px · REAL STACK",
+  "Platform 'Thêm nhà cung cấp' dialog at 360px: 'Nâng cao' is covered by the sticky footer 'Hủy / Lưu'; check that the dialog scrolls so the button can be reached",
+  [
+   "S4R-03"
+  ],
+  "Modal footer sticky + dialog body height (reproduced: ui-repro --only dialog-sticky-footer-360)",
+  "S2 (dialog) + S3 (Modal footer / scroll-padding)",
+  "none",
+  "N (harness repro; found on the REAL STACK)",
+  "scroll-padding-bottom equal to the footer height inside modalBody; verify reachability by keyboard",
+  "matrix 360 covered 0",
+  ""
+ ],
+ [
+  "M-129",
+  "P2",
+  "C5",
+  "Studio",
+  "builder rail Thành phần · 1024px · REAL STACK",
+  "Builder at 1024px with the rail 'Thành phần': the drag/add buttons of components are covered by aside.bx-right (the properties panel is a full-width bottom row y 744-900 and the real component list reaches it); data-dependent, NOT reproduced in the harness even with 24 components",
+  [
+   "S4R-04"
+  ],
+  "builder.css 761-1100 grid: .bx-right grid-column 1/-1 under a scrolling left panel (real registry list is long)",
+  "S1 (builder.css) + S3",
+  "none",
+  "Y (needs the real component registry list)",
+  "give the left panel its own scroll area above the bottom row or cap its height so items never sit under .bx-right",
+  "real-stack matrix 1024px: 0 covered",
+  ""
+ ],
+ [
+  "M-130",
+  "P3",
+  "C5",
+  "Studio",
+  "activity · 1920px · REAL STACK",
+  "'mở ứng dụng' link on /studio/activity is 86x21px at 1920 (<24px target)",
+  [
+   "S4R-05"
+  ],
+  "features/studio/screens/Activity.tsx link",
+  "S1",
+  "none",
+  "N",
+  "min-height 24px",
+  "matrix smallTargets 0",
+  ""
+ ],
+ [
+  "M-131",
+  "P3",
+  "C5",
+  "Studio",
+  "home · REAL STACK",
+  "10 text leaves under 11px on Studio home (not identified)",
+  [
+   "S4R-06"
+  ],
+  "unknown (matrix font-size probe)",
+  "S1/S3",
+  "none",
+  "N",
+  "identify and raise to >=12px or remove",
+  "matrix tinyText 0",
+  ""
+ ],
+ [
+  "M-132",
+  "P3",
+  "C5",
+  "Platform",
+  "costs · REAL STACK",
+  "/platform/costs shows 'Tổng đã biết $0 — đủ đơn giá' while all 3 price lines say 'chưa có đơn giá' (may be legitimate with zero usage)",
+  [
+   "S4R-07"
+  ],
+  "AdminApp costs page KPI hint logic (features/admin/pages)",
+  "S2",
+  "none",
+  "Y (needs cost data)",
+  "show 'chưa đủ đơn giá' when any price line is missing",
+  "admin harness costs fixtures",
   ""
  ]
 ]
