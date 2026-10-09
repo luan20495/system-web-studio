@@ -403,6 +403,8 @@ const rtCalls = (p) => p.evaluate(() => window.__rt);
   const shown = (sel) => p.evaluate((s) => { const e = document.querySelector(s); return !!e && getComputedStyle(e).display !== "none" && e.getBoundingClientRect().width > 0; }, sel);
   const tabs = await p.locator(".bx-mview [role=tab]").allInnerTexts();
   check("PHONE 390: a 3-way switch (Bản xem trước / Công cụ / Thuộc tính), the canvas is the only workspace shown", tabs.length === 3 && (await shown(".bx-center")) && !(await shown(".bx-left")) && !(await shown(".bx-right")), JSON.stringify(tabs));
+  const note = p.getByRole("note").filter({ hasText: /điện thoại/ });
+  check("PHONE 390 (M-036): the builder says plainly that a phone is for viewing and light edits (what needs a bigger screen), as a note", (await note.count()) === 1 && (await note.isVisible()) && /xem|chỉnh nhẹ/.test(await note.innerText()) && /màn hình lớn/.test(await note.innerText()), await note.count() ? await note.innerText() : "no note");
   await p.getByRole("tab", { name: "Công cụ", exact: true }).click();
   const w = await p.evaluate(() => Math.round(document.querySelector(".bx-left-panel").getBoundingClientRect().width));
   check("PHONE 390: Công cụ shows the rail + panel at full width (≥ 366 px) and hides the canvas", (await shown(".bx-left")) && !(await shown(".bx-center")) && w >= 366, `panel ${w}px`);
@@ -415,6 +417,7 @@ const rtCalls = (p) => p.evaluate(() => window.__rt);
     check("PHONE 390: ArrowRight on the switch moves focus + selection to Thuộc tính and shows the properties pane", /^Thuộc tính|^Kiểm thử/.test(act) && right && !left, JSON.stringify({ act, right, left })); }
   check("PHONE 390: no horizontal page overflow", (await p.evaluate(() => document.documentElement.scrollWidth - innerWidth)) <= 0);
   await p.setViewportSize({ width: 1024, height: 800 }); await p.waitForTimeout(250);
+  check("PHONE → 1024 (M-036): the phone note is gone on a wide screen", !(await p.getByRole("note").filter({ hasText: /điện thoại/ }).isVisible().catch(() => false)));
   check("PHONE → 1024: the switch is hidden again and canvas, tools and properties are all shown", !(await shown(".bx-mview")) && (await shown(".bx-center")) && (await shown(".bx-left")) && (await shown(".bx-right")));
   check("PHONE: no uncaught error", p.errors.length === 0, p.errors.join(" | "));
   await p.close();

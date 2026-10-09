@@ -263,3 +263,6 @@
 .shell .page :is(h1,h2,h3,b,p,small,li,.code){overflow-wrap:anywhere}
 /* M-125: every control in a Studio drawer is at least 24 px tall (the navigation row selects were 22 px) */
 .drawer select,.drawer input:not([type=checkbox]):not([type=radio]){min-height:32px}
+/* M-036: the phone note exists only on a phone */
+.bx-phone-note{display:none;margin:0;padding:8px 12px;font-size:13px;line-height:1.45;color:var(--muted-strong);background:var(--panel);border-bottom:1px solid var(--line)}
+@media(max-width:760px){.bx-phone-note{display:block}}

@@ -213,6 +213,8 @@ export function BuilderWorkspace(props: {
           <Tabs label="Khu vực làm việc" idPrefix="mview" value={mview} onChange={(id) => setMview(id as "canvas" | "tools" | "props")}
             items={[{ id: "canvas", label: "Bản xem trước" }, { id: "tools", label: "Công cụ" }, { id: "props", label: edit ? "Thuộc tính" : "Kiểm thử", badge: edit && selected ? "●" : undefined, badgeLabel: "có mục đang chọn" }]}/>
         </div>
+        {/* M-036: on a phone the builder is for looking and light edits; say so, and what needs a bigger screen */}
+        <p className="bx-phone-note" role="note">Trên điện thoại bạn xem và chỉnh nhẹ được. Kéo-thả thành phần và chỉnh nhiều mục cùng lúc cần màn hình lớn hơn.</p>
         <LeftRail id="mview-panel-tools" value={rail} onChange={setRail}><ErrorBoundary variant="inline" title="Công cụ này gặp sự cố" resetKeys={[rail]}>{leftPanel}</ErrorBoundary></LeftRail>
         <section className="bx-center" id="mview-panel-canvas" tabIndex={-1} aria-label="Bản xem trước ứng dụng">
           {!edit ? <p className="bx-banner" role="note">Đang ở chế độ dùng thử: bản xem trước không chỉnh sửa được.</p> : readOnly ? <p className="bx-banner" role="note">Bạn chỉ có quyền xem.</p> : null}
