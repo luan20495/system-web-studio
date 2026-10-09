@@ -74,10 +74,13 @@ object AccessEvaluator {
      */
     fun project(ws: WorkspaceDecision, projectLifecycle: String?, projectRole: String?, ignoreArchive: Boolean = false): ProjectDecision {
         if (projectLifecycle == null) throw ApiException.notFound("PROJECT_NOT_FOUND", "Project not found")
-        var permissions = ws.permissions + PermissionMatrix.projectRoles[projectRole].orEmpty()
+        // A project role counts only through an ACTIVE workspace role (or the legacy bypass): a stale project row of a platform operator that is NOT a workspace member
+        // (platform scope only) grants nothing, exactly as a non-member ordinary user is refused at the workspace gate.
+        val effectiveRole = if (ws.workspaceRole != null || ws.systemAdminBypass) projectRole else null
+        var permissions = ws.permissions + PermissionMatrix.projectRoles[effectiveRole].orEmpty()
         if (Permission.PROJECT_READ !in permissions) throw ApiException.notFound("PROJECT_NOT_FOUND", "Project not found")
         if (projectLifecycle == "ARCHIVED" && !ignoreArchive) permissions = permissions.intersect(setOf(Permission.PROJECT_READ, Permission.AUDIT_READ))
-        return ProjectDecision(projectRole, permissions)
+        return ProjectDecision(effectiveRole, permissions)
     }
 
     private fun tenantGates(tenant: TenantResolution) {
