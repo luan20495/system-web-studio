@@ -12,11 +12,10 @@ import {
   rollbackBody, rollbackCandidates, type ReleaseErrorView,
 } from "@xweb/api-client";
 import { useOverlayDialog } from "./useOverlayDialog";
-import { confirm, RadioGroup, ReasonButton } from "@xweb/ui";
+import { confirm, fmtDate, RadioGroup, ReasonButton } from "@xweb/ui";
 import type { AppDefinitionV2 } from "@xweb/types";
 import { diffAnnounced, parsePublicQueriesEvent, publicDataBlockers, publishApproval } from "./builder/core/publicData";
 
-const fmt = (iso: string) => new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
 
 /** the calls the dialog makes (injected so the browser harness can drive every state; the default is the real client) */
 export type ReleaseCalls = Pick<typeof api, "publish" | "getDeployment" | "listDeployments" | "site" | "rollbackSite" | "unpublishSite">;
@@ -212,7 +211,7 @@ export function PublishModal({ workspaceId, projectId, revision, current, versio
       )}
       {!deployment && real && (candidates.length > 0 || site?.currentDeploymentId) ? <details className="siteHistory" open={candidates.length > 0}><summary>Các lần xuất bản ({history.filter((h) => h.status === "RUNNING" && !h.mock).length})</summary>
         <ul>{history.filter((h) => h.status === "RUNNING" && !h.mock).map((h) => <li key={h.id} data-testid={`release:${h.id}`}>
-          <span>Phiên bản {h.versionNumber} · {h.visibility === "PRIVATE" ? "riêng tư" : "công khai"} · {fmt(h.createdAt)}</span>
+          <span>Phiên bản {h.versionNumber} · {h.visibility === "PRIVATE" ? "riêng tư" : "công khai"} · {fmtDate(h.createdAt)}</span>
           {site?.currentDeploymentId === h.id ? <b>Đang phục vụ</b>
             : <ReasonButton className="button ghost" data-testid={`rollback:${h.id}`} unavailable={locked || !canPublish} reason={!canPublish ? NEEDS_PUBLISH : undefined} reasonPlacement="inline"
                 onClick={() => { lastAction.current = () => void rollback(h, true); void rollback(h); }}>{pending?.kind === "ROLLBACK" && pending.deploymentId === h.id ? "Đang hoàn tác…" : "Phục vụ lại bản này"}</ReasonButton>}

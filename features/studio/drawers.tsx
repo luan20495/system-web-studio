@@ -13,7 +13,6 @@ import type { DeviceMode } from "@/lib/types";
 import { useOverlayDialog } from "./useOverlayDialog";
 import { errText } from "../ui";
 
-const fmt = (iso: string) => new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso));
 
 export const suggestions = (ai: boolean) => ai
   ? ["Thêm bảng so sánh sản phẩm", "Viết lại tiêu đề hero hấp dẫn hơn", "Ẩn phần đánh giá", "Thêm một sản phẩm mới", "Rút gọn nội dung hero"]
