@@ -35,7 +35,7 @@
   height: 100%;
   min-height: 100%;
   border: 0;
-  background: #fff;
+  background: var(--ui-inverse-fg);
 }
 
 .viewport-tablet {
@@ -123,7 +123,7 @@ select:focus-visible {
     min-height: 36px;
     border: 1px solid var(--line);
     border-radius: 8px;
-    background: #111820;
+    background: var(--dk-surface);
     color: var(--muted);
   }
 
@@ -214,7 +214,7 @@ select:focus-visible {
     place-items: center;
     border: 1px solid var(--line);
     border-radius: 8px;
-    background: #131a22;
+    background: var(--dk-field);
     color: var(--text);
     cursor: pointer;
     list-style: none;

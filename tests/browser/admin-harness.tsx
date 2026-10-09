@@ -14,6 +14,7 @@ import "../../packages/ui/src/styles/globals.css";
 import "../../packages/ui/src/styles/responsive.css";
 import "../../packages/ui/src/styles/http.css";
 import "../../packages/ui/src/styles/factory.css";
+import "../../packages/ui/src/styles/ui.css";   // the real layouts load it last (apps/*/app/layout.tsx); a harness without it is not the product
 
 const P = new URLSearchParams(location.search);
 const portal = (P.get("portal") ?? "platform") as "platform" | "admin" | "all";   // "all" = the legacy combined console (components/app/AppEntry.tsx): AdminApp with no dedicated portal

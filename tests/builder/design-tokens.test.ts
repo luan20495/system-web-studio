@@ -107,3 +107,33 @@ test("M-117: a link inside running text carries a non-colour cue (underline) thr
   assert.equal(tokens.get("--ui-link-line"), "underline");
   assert.match(css["factory.css"], /text-decoration:var\(--ui-link-line\)/);
 });
+
+test("harness fidelity: a browser harness that loads factory.css also loads ui.css after it, as every real layout does (a harness without it tests a stylesheet set the product never ships)", () => {
+  const dir = join(root, "tests/browser");
+  const list = (d: string): string[] => readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? list(join(d, e.name)) : /\.tsx?$/.test(e.name) ? [join(d, e.name)] : []);
+  for (const f of list(dir)) {
+    const t = readFileSync(f, "utf8"); if (!/styles\/factory\.css/.test(t) && !/\.\/admin-css/.test(t)) continue;
+    if (/\.\/admin-css/.test(t)) continue;                                   // admin-css.ts is itself checked against the real layouts (shared-ui.test.tsx)
+    assert.ok(/styles\/ui\.css/.test(t), `${f.replace(root + "/", "")} loads factory.css but not ui.css`);
+    assert.ok(t.indexOf("styles/ui.css") > t.indexOf("styles/factory.css"), `${f.replace(root + "/", "")}: ui.css must come after factory.css`);
+  }
+});
+
+// ---------------------------------------------------------------------------------------------------------------------------------------------- M-068: one button vocabulary
+test("every class of the vocabulary is styled in factory.css (and documented in its header), in the light skin and the dark `.studio` skin", () => {
+  const f = css["factory.css"];
+  for (const sel of [".btn", ".btn.primary", ".btn.danger", ".btn.ghost", ".btn.sm", ".btn.icon", ".btn.block", ".studio .btn", ".studio .btn.primary", ".studio .btn.ghost", ".studio .btn.sm", ".studio .btn.danger"]) assert.ok(f.includes(sel + "{") || f.includes(sel + ","), sel);
+  const raw = readFileSync(join(dir, "factory.css"), "utf8");
+  assert.match(raw, /BUTTON VOCABULARY \(M-068\)/); assert.match(raw, /\.smallButton -> \.btn\.sm/); assert.match(raw, /\.bx-btn \(builder\.css\) -> \.btn/);
+});
+
+test("ratchet: the legacy button classes (.button / .smallButton / .sendButton / .bx-btn) may not be used in MORE places; new code uses <Button> / .btn", () => {
+  const BASE: Record<string, number> = { button: 73, smallButton: 72, sendButton: 3, "bx-btn": 56 };
+  const uses: Record<string, string[]> = { button: [], smallButton: [], sendButton: [], "bx-btn": [] };
+  const walk = (d: string) => { for (const e of readdirSync(d, { withFileTypes: true })) { if (["node_modules", ".next", ".test-build", "dist", "tests"].includes(e.name) || e.name.startsWith(".")) continue; const p = join(d, e.name); if (e.isDirectory()) walk(p); else if (/\.tsx?$/.test(e.name)) { const t = readFileSync(p, "utf8"); for (const m of t.matchAll(/className=(?:"([^"]*)"|\{`([^`]*)`\}|\{"([^"]*)"\})/g)) for (const c of (m[1] ?? m[2] ?? m[3] ?? "").split(/\s+/)) if (c in uses) uses[c].push(p.replace(root + "/", "")); } } };
+  for (const d of ["features", "apps", "packages", "components", "lib", "app"]) { try { walk(join(root, d)); } catch { /* optional */ } }
+  for (const [k, max] of Object.entries(BASE)) {
+    if (uses[k].length > max) assert.fail(`.${k}: ${uses[k].length} > baseline ${max}. Use <Button> / .btn instead. Files: ${[...new Set(uses[k])].join(", ")}`);
+    if (uses[k].length < max) console.log(`note: .${k} is ${uses[k].length}, baseline ${max}: lower it`);
+  }
+});

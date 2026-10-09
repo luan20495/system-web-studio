@@ -33,7 +33,7 @@ export const ERROR_CODE_TEXT: Record<string, string> = {
   // the client itself (packages/api-client/core.ts)
   NETWORK: "Không kết nối được tới máy chủ. Kiểm tra mạng rồi thử lại.",
   TIMEOUT: "Máy chủ không phản hồi kịp. Nếu bạn vừa lưu hoặc gửi dữ liệu, hãy kiểm tra lại kết quả trước khi làm lại.",
-  ABORTED: "Đã huỷ yêu cầu.",
+  ABORTED: "Đã hủy yêu cầu.",
   STREAM_ENDED: "Kết nối AI bị ngắt trước khi có kết quả. Hãy thử lại.",
   AI_STREAM_FAILED: "AI không trả được kết quả. Hãy thử lại hoặc chọn mô hình khác.",
   CSRF_UNAVAILABLE: "Phiên làm việc chưa sẵn sàng. Tải lại trang rồi thử lại.",

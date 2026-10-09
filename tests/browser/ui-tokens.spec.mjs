@@ -89,6 +89,15 @@ try {
     const st = await style(p, "#c-text", ["outlineColor", "outlineStyle"]);
     const bg = await p.evaluate(() => getComputedStyle(document.body).backgroundColor);
     check("M-026 dark builder page: the focus ring is >= 3:1 on the dark surface", st.outlineStyle !== "none" && (await ratioOf(p, st.outlineColor, bg)) >= 3, `${st.outlineColor} on ${bg}`);
+    // M-068: in the dark builder, the vocabulary classes look exactly like the legacy ones they replace (so a screen can migrate without a visual change)
+    const props = ["height", "paddingLeft", "paddingRight", "borderTopLeftRadius", "borderTopWidth", "borderTopColor", "backgroundColor", "color", "fontSize", "fontWeight", "opacity", "width"];
+    const labels = ["button -> btn", "button.primary -> btn.primary", "button.ghost -> btn.ghost", "smallButton -> btn.sm", "smallButton.danger -> btn.sm.danger", "button:disabled -> btn:disabled", "button.icon -> btn.icon"];
+    for (let i = 0; i < 7; i++) {
+      const [l, n] = await p.evaluate(([i, props]) => ["legacy", "new"].map((k) => { const c = getComputedStyle(document.querySelector(`#btn-pairs [data-pair="${i}"][data-kind="${k}"]`)); return Object.fromEntries(props.map((q) => [q, c[q]])); }), [i, props]);
+      const diff = props.filter((q) => l[q] !== n[q]).map((q) => `${q}: ${l[q]} vs ${n[q]}`);
+      check(`M-068 dark builder: ${labels[i]} computes the same style`, diff.length === 0, diff.join(" ; "));
+    }
+    check("M-068 Button busy: aria-busy and no click (class set unchanged)", (await p.locator("#busy-btn").getAttribute("aria-busy")) === "true" && /^btn$/.test(await p.locator("#busy-btn").getAttribute("class")));
     await shot(p, "tokens-dark.png"); await p.close(); }
 } catch (e) { check("scenario aborted", false, e.message); }
 await browser.close();

@@ -6,6 +6,7 @@ import { RadioGroup } from "../../packages/ui/src/RadioGroup";
 import { DisclosureRow } from "../../packages/ui/src/DisclosureRow";
 import { ReasonButton } from "../../packages/ui/src/ReasonButton";
 import { Pill } from "../../packages/ui/src/Pill";
+import { Button } from "../../packages/ui/src/Button";
 import { Switch } from "../../packages/ui/src/Switch";
 import { Picker } from "../../packages/ui/src/Picker";
 import { LoadGate } from "../../packages/ui/src/LoadGate";
@@ -61,6 +62,12 @@ function App() {
         <div id="switches"><Switch label="Tắt" checked={false} onChange={() => {}}/><Switch label="Bật" checked onChange={() => {}}/></div>
         <div className="providerItem" style={{ width: "100%" }}><div className="xp-provRow" id="prow"><div className="xp-provMain"><div className="xp-provName"><b>OpenRouter</b><Pill value="ACTIVE" label="Đang bật"/></div><div className="xp-provMeta"><span>https://openrouter.ai/api/v1</span></div></div>
           <div className="xp-provActions" id="pact"><button className="btn sm">Kiểm tra</button><button className="btn sm">Sửa</button><button className="btn sm danger">Xóa</button><button className="btn sm">Tắt</button></div></div></div>
+      </section>
+      <section aria-label="Nút" id="btn-pairs">
+        {([["button", "default", "secondary", undefined, false], ["button primary", "primary", "primary", undefined, false], ["button ghost", "ghost", "ghost", undefined, false], ["smallButton", "small", "secondary", "sm", false],
+          ["smallButton danger", "small danger", "danger", "sm", false], ["button", "disabled", "secondary", undefined, true]] as const).map(([legacy, label, variant, size, off], i) => (
+          <p key={i}><button type="button" className={legacy} data-pair={i} data-kind="legacy" disabled={off}>{label}</button> <Button variant={variant} size={size} data-pair={i} data-kind="new" disabled={off}>{label}</Button></p>))}
+        <p><button type="button" className="button icon" data-pair="6" data-kind="legacy" aria-label="Đóng">×</button> <Button icon data-pair="6" data-kind="new" aria-label="Đóng">×</Button> <Button busy id="busy-btn">Đang lưu</Button></p>
       </section>
       <Gate/>
       <div id="notfound-page"><ErrorState level={1} error={new ApiError(404, "PROJECT_NOT_FOUND", "x")} retry={() => window.__log.push("nf-retry")}/></div>

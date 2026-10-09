@@ -10,6 +10,12 @@
  *   --ui-scrim            the dialog backdrop (rgba(15,23,42,.45) = the `.adminModal` scrim; three different scrims existed)
  *   --f-bad-line          #fecdca, the pink border of danger controls (used 6x as a literal in factory.css)
  *   --danger / --warn     were used by builder.css with a fallback and defined nowhere; defined with exactly those fallback values (no visual change)
+ * Wave 1c consolidation (M-069, value-identical: the screenshots are pixel-identical before / after, scripts/css-hygiene.mjs counts): repeated literals became tokens.
+ *   light, factory.css :root  --f-accent-tint #eef2ff (selected row / active option) · --f-accent-wash #f5f7ff (hover) · --f-accent-line #c7d2fe (selection border; decorative, NOT a focus ring)
+ *                             --f-accent-chip #e0e7ff (avatar) · --f-side-active #262a5c (active item of the dark sidebar)
+ *   dark, globals.css :root   --dk-surface #111820 · --dk-field #131a22 · --dk-field-line #3a4655 · --dk-text-soft #cbd7e3 · --dk-select-line #4a87c8 · --dk-error-ink #ff9a92
+ *                             --dk-code-bg #0b1220 · --dk-link #9cc3ff · --dk-chrome #1a1e26   (the blue-grey palette of the builder / Studio, named by role; unifying it with --panel/--line is a visual change for later)
+ *   literals equal to an existing token now read it: #fff -> --f-panel (surfaces) / --ui-inverse-fg (text on dark), #2c7cff -> --blue, #20c997 -> --accent, #e5484d -> --danger ...
  * Light-theme accessibility tokens live in factory.css next to --f-focus: --f-control-border (>=3:1 on every light surface), --ui-ring (the focus ring, per theme), --ui-link-line, --ui-content-max.
  */
 :root{
