@@ -545,4 +545,81 @@ for (const w of [768, 1000]) {
   check("M-088: after a successful save the value is gone from the inputs and the DOM; the secret is listed by name only", (await val.inputValue()) === "" && !dom && /API_KEY/.test(await dlg.innerText()), `dom=${dom}`);
   await p.close();
 }
+// ---------- M-078 (C5-S1 batch 2): closing a drawer REPLACES the history entry, so Back does not re-open it ----------
+{
+  const p = await open(b, "/studio/projects/p1/design"); await p.waitForSelector(".bx-body, .topbar"); await wait(900);
+  await p.evaluate(() => { window.__nav.log.length = 0; });
+  const menuOrButton = p.getByRole("button", { name: "Phiên bản", exact: true });
+  if (await menuOrButton.isVisible()) await menuOrButton.click(); else { await p.getByRole("button", { name: "Thêm thao tác" }).click(); await p.getByRole("menuitem", { name: "Phiên bản" }).click(); }
+  await p.getByRole("dialog").waitFor(); await wait(300);
+  await p.keyboard.press("Escape"); await wait(400);
+  const log = await p.evaluate(() => window.__nav.log.slice());
+  check("M-078: opening the versions drawer pushes, closing it replaces (Back cannot re-open it)", log.length === 2 && /^push .*\/versions$/.test(log[0]) && /^replace .*\/design$/.test(log[1]) && (await p.getByRole("dialog").count()) === 0, JSON.stringify(log));
+  await p.close();
+  const q = await open(b, "/studio/projects/p1/members", { state: newCodeState() }); await q.getByRole("dialog").waitFor(); await wait(600);
+  await q.evaluate(() => { window.__nav.log.length = 0; }); await q.keyboard.press("Escape"); await wait(400);
+  const log2 = await q.evaluate(() => window.__nav.log.slice());
+  check("M-078 [code app]: closing a drawer replaces the history entry too", log2.length === 1 && /^replace /.test(log2[0]), JSON.stringify(log2));
+  await q.close();
+}
+// ---------- M-079 (verify): a missing project says 'not found' ONCE and offers no 'Thử lại' ----------
+{
+  const p = await open(b, "/studio/projects/nope/ai"); await wait(1500);
+  const txt = await p.locator(".wsError").innerText().catch(() => "");
+  const n = (txt.match(/Không tìm thấy/gi) ?? []).length;
+  check("M-079: a 404 project page names the problem once, no retry button, and a way back to the list", n === 1 && (await p.getByRole("button", { name: "Thử lại" }).count()) === 0 && (await p.getByRole("link", { name: /Danh sách ứng dụng/ }).count()) === 1, JSON.stringify(txt));
+  const v = await axe(p); check("M-079: axe on the not-found page: 0 critical / 0 serious", !v.some((x) => /critical|serious/.test(x)), v.join(","));
+  await p.close();
+}
+// ---------- M-080 (C5-S1 batch 2): archived 'Khôi phục' follows PROJECT_DELETE; an empty version list says so ----------
+{
+  const s = newState(); s.project = { ...s.project, status: "ARCHIVED" }; s.projects = [s.project];
+  let p = await open(b, "/studio/projects/p1/ai", { state: s }); await p.waitForSelector(".archivedBanner"); await wait(600);
+  const btn = p.locator(".archivedBanner").getByRole("button", { name: "Khôi phục" });
+  await btn.click({ force: true }); await wait(400);
+  check("M-080: without PROJECT_DELETE the archived 'Khôi phục' is aria-disabled with the reason and sends nothing", (await btn.getAttribute("aria-disabled")) === "true" && !p.state.log.some((l) => l.method === "POST" && /\/restore$/.test(l.path)) && /không có quyền khôi phục/i.test(await p.locator("body").innerText()));
+  await p.close();
+  const s2 = newState(); s2.project = { ...s2.project, status: "ARCHIVED", permissions: [...s2.projectPerms, "PROJECT_DELETE"] }; s2.projects = [s2.project];
+  p = await open(b, "/studio/projects/p1/ai", { state: s2 }); await p.waitForSelector(".archivedBanner"); await wait(600);
+  await p.locator(".archivedBanner").getByRole("button", { name: "Khôi phục" }).click(); await wait(600);
+  check("M-080: with PROJECT_DELETE the archived 'Khôi phục' restores", p.state.log.filter((l) => l.method === "POST" && /\/restore$/.test(l.path)).length === 1);
+  await p.close();
+  p = await open(b, "/studio/projects/p1/versions", { state: newState({ versions: [] }) }); await p.getByRole("dialog").waitFor(); await wait(700);
+  check("M-080: a version list with 0 rows shows an empty state, not a header only", /Chưa có phiên bản nào/.test(await p.getByRole("dialog").innerText()));
+  await p.close();
+}
+// ---------- M-089 (C5-S1 batch 2): the REAL workspace canvas posts selection to the editor origin only (no '*'), and selection still works ----------
+{
+  const p = await open(b, "/studio/projects/p1/design"); await p.waitForSelector(".bx-body iframe"); await wait(1200);
+  const doc = await p.locator(".bx-body iframe.previewFrame").first().getAttribute("srcdoc");
+  const origin = await p.evaluate(() => location.origin);
+  check("M-089: the canvas script targets the editor origin, never '*'", !!doc && doc.includes(`,${JSON.stringify(origin)})`) && !doc.includes(',"*")'), origin);
+  await p.frameLocator(".bx-body iframe.previewFrame").first().locator("[data-sid]").nth(1).click({ position: { x: 30, y: 30 } }); await wait(600);
+  check("M-089: clicking a section in the canvas still selects it (postMessage reaches the editor)", (await p.locator(".bx-right [role=tab]").count()) >= 5, (await p.locator(".bx-right").innerText()).split("\n")[0]);
+  await p.close();
+}
+// ---------- M-112 (C5-S1 batch 2): the phone page-scroll mode works without :has() (class on <html> set by the builder) ----------
+{
+  const p = await open(b, "/studio/projects/p1/design", { viewport: { width: 390, height: 844 } }); await p.waitForSelector(".bx-mview"); await wait(900);
+  // simulate a browser without :has(): delete every rule that uses it, then read what the page-scroll mode needs
+  const st = await p.evaluate(() => {
+    let removed = 0;
+    const strip = (list) => { for (let i = list.cssRules.length - 1; i >= 0; i--) { const r = list.cssRules[i]; if (r.cssRules && !r.selectorText) strip(r); else if (r.selectorText?.includes(":has(.bx-root)")) { list.deleteRule(i); removed++; } } };
+    for (const sh of document.styleSheets) { try { strip(sh); } catch { /* cross-origin */ } }
+    const h = getComputedStyle(document.documentElement), bd = getComputedStyle(document.body);
+    return { removed, cls: document.documentElement.classList.contains("bx-page"), hOverflow: h.overflowY, bOverflow: bd.overflowY, pad: h.scrollPaddingTop, overscroll: h.overscrollBehaviorY };
+  });
+  check("M-112: with the :has() rules removed, html/body still scroll as a page and keep scroll-padding-top 64px (class fallback)", st.removed >= 2 && st.cls && st.hOverflow === "visible" && st.bOverflow === "visible" && st.pad === "64px" && st.overscroll === "contain", JSON.stringify(st));
+  await p.getByRole("button", { name: /^AI$/ }).first().click().catch(() => undefined); await wait(800);
+  check("M-112: leaving Design removes the class (no page-scroll mode outside the builder)", !(await p.evaluate(() => document.documentElement.classList.contains("bx-page"))));
+  await p.close();
+}
+// ---------- M-083 (C5-S1 batch 2): the Studio header search is not clipped on a phone ----------
+for (const w of [360, 390]) {
+  const p = await open(b, "/studio", { viewport: { width: w, height: 800 } }); await p.waitForSelector(".studioTop"); await wait(700);
+  const m = await p.evaluate(() => { const i = document.querySelector(".studioTop .search input"); const c = document.createElement("canvas").getContext("2d"); const cs = getComputedStyle(i); c.font = `${cs.fontSize} ${cs.fontFamily}`;
+    return { inputW: i.clientWidth, need: Math.ceil(c.measureText(i.placeholder).width + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight)), h: Math.round(i.getBoundingClientRect().height) }; });
+  check(`M-083 [${w}]: the header search shows its whole placeholder ('Tìm ứng dụng…'), at least 24 px tall, and nothing scrolls sideways`, m.inputW >= m.need && m.h >= 24 && !(await hscroll(p)), JSON.stringify(m));
+  await p.close();
+}
 await b.close(); finish();

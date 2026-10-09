@@ -51,11 +51,14 @@ export function ActionEditor({ ctx, initial, preset, onDone, onCancel }: {
     const ok = await ctx.commit([isNew ? actionOps.add(a) : actionOps.update(a.id, a as never)], isNew ? `Thêm hành động ${a.name ?? ""}` : `Sửa hành động ${a.name ?? ""}`);
     if (ok) onDone(a.id);
   }
+  // M-080: a checkbox list instead of <select multiple> (Ctrl-click). The chosen ids keep the list order, as the select did.
   const chain = (key: "onSuccess" | "onError") => {
     const others = (doc.actions ?? []).filter((x) => x.id !== a.id);
-    return <Field label={key === "onSuccess" ? "Khi thành công, chạy tiếp" : "Khi lỗi, chạy tiếp"} hint={others.length ? "Hành động được chọn sẽ là hành động con (không gắn sự kiện)." : "Chưa có hành động khác."}>{(id) => (
-      <select id={id} multiple disabled={disabled || !others.length} value={a[key] ?? []} onChange={(e) => { const v = Array.from(e.target.selectedOptions).map((o) => o.value); patch({ [key]: v.length ? v : undefined } as Partial<ActionDef>); }}>
-        {others.map((x) => <option key={x.id} value={x.id}>{x.name || x.id}</option>)}</select>)}</Field>;
+    const chosen = new Set(a[key] ?? []);
+    const toggle = (id: string, on: boolean) => { const v = others.map((x) => x.id).filter((x) => x === id ? on : chosen.has(x)); patch({ [key]: v.length ? v : undefined } as Partial<ActionDef>); };
+    return <fieldset className="bx-group"><legend>{key === "onSuccess" ? "Khi thành công, chạy tiếp" : "Khi lỗi, chạy tiếp"}</legend>
+      {others.length ? others.map((x) => <label className="checkRow" key={x.id}><input type="checkbox" disabled={disabled} checked={chosen.has(x.id)} onChange={(e) => toggle(x.id, e.target.checked)}/><span>{x.name || x.id}</span></label>) : null}
+      <p className="hint">{others.length ? "Hành động được chọn sẽ là hành động con (không gắn sự kiện)." : "Chưa có hành động khác."}</p></fieldset>;
   };
 
   return (
@@ -127,7 +130,8 @@ export function ActionEditor({ ctx, initial, preset, onDone, onCancel }: {
       {chain("onSuccess")}{chain("onError")}
       <label className="checkRow"><input type="checkbox" disabled={disabled} checked={a.enabled !== false} onChange={(e) => patch({ enabled: e.target.checked ? undefined : false })}/><span>Đang bật</span></label>
 
-      {issues.length ? <ul className="bx-issues" role="alert">{issues.slice(0, 4).map((i) => <li key={i.path + i.message}>{i.message}</li>)}</ul> : null}
+      {/* M-080: the open problems of the draft are a plain list (a new action opens with problems: not an alert); a failed save still uses role=alert below */}
+      {issues.length ? <ul className="bx-issues" aria-label="Cần hoàn thành trước khi lưu">{issues.slice(0, 4).map((i) => <li key={i.path + i.message}>{i.message}</li>)}</ul> : null}
       {error ? <p className="formError" role="alert">{error}</p> : null}
       <div className="bx-actions">
         <button type="button" className="bx-btn" onClick={onCancel}>Hủy</button>

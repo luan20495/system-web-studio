@@ -12,6 +12,7 @@ import {
   rollbackBody, rollbackCandidates, type ReleaseErrorView,
 } from "@xweb/api-client";
 import { useOverlayDialog } from "./useOverlayDialog";
+import { webUrl } from "./siteAccessModel";
 import { confirm, fmtDate, RadioGroup, ReasonButton } from "@xweb/ui";
 import type { AppDefinitionV2 } from "@xweb/types";
 import { diffAnnounced, parsePublicQueriesEvent, publicDataBlockers, publishApproval } from "./builder/core/publicData";
@@ -170,7 +171,7 @@ export function PublishModal({ workspaceId, projectId, revision, current, versio
       {!deployment && site && !real ? <p className="hint">Hiện tại môi trường xuất bản là <b>mô phỏng</b>: hệ thống tạo URL thử nghiệm, chưa có website thật nào được phục vụ.</p> : null}
       {!deployment && real ? <div className="siteBox" data-testid="site-box">{site!.online && site!.url
         ? <p>Đang phục vụ phiên bản {site!.currentVersionNumber ?? "—"} ({site!.visibility === "PRIVATE" ? "riêng tư — chỉ thành viên, đăng nhập bằng tài khoản công ty" : "công khai"}) tại{" "}
-            <a href={site!.url} target="_blank" rel="noopener noreferrer">{site!.url}</a></p>
+            <a href={webUrl(site!.url)} target="_blank" rel="noopener noreferrer">{site!.url}</a></p>
         : <p className="hint">{site!.slug ? "Trang đang được gỡ xuống." : "Chưa xuất bản lần nào."} Xuất bản sẽ tạo một trang tĩnh thật trên máy chủ.</p>}
         <small className="hint" data-testid="pointer-version">pointerVersion {site!.pointerVersion} (chỉ để quan sát, không gửi lại máy chủ)</small></div> : null}
       {!allowed.includes("PUBLIC") && !deployment ? <p className="hint">Quản trị viên đang tắt xuất bản <b>công khai</b> cho loại ứng dụng này; chỉ xuất bản riêng tư (thành viên đăng nhập bằng tài khoản công ty).</p> : null}
@@ -203,7 +204,7 @@ export function PublishModal({ workspaceId, projectId, revision, current, versio
               {d.onlyAnnounced.length || d.onlyFrozen.length ? <span className="formError" data-testid="public-queries-mismatch"> Khác với danh sách đã hiện trước khi xuất bản ({d.onlyAnnounced.length ? `thiếu: ${d.onlyAnnounced.join(", ")}` : ""}{d.onlyAnnounced.length && d.onlyFrozen.length ? "; " : ""}{d.onlyFrozen.length ? `thêm: ${d.onlyFrozen.join(", ")}` : ""}).</span> : null}</div>;
           })()}
           {isDeploymentSuccess(deployment.status) && deployment.url ? (deployment.mock ? <p><b>Demo deployment</b> — chưa có website thật nào được phục vụ. Địa chỉ thử nghiệm: <code>{deployment.url}</code></p>
-            : <p data-testid="deployment-success">Website đã lên: <a href={deployment.url} target="_blank" rel="noopener noreferrer">{deployment.url}</a></p>) : null}
+            : <p data-testid="deployment-success">Website đã lên: <a href={webUrl(deployment.url)} target="_blank" rel="noopener noreferrer">{deployment.url}</a></p>) : null}
           {failed ? <div className="formError" role="alert" data-testid="deployment-failed" data-code={failed.code ?? ""}><b>{failed.title}</b><p>{failed.detail}</p></div> : null}
           {deployment.status === "ROLLED_BACK" ? <p className="hint" data-testid="deployment-rolled-back">Bản này đã được thay bằng một bản khác và không thể phục vụ lại; xuất bản lại phiên bản đó nếu cần.</p> : null}
           {pollFailures >= MAX_POLL_FAILURES && deploymentBusy ? <p role="alert" className="hint">Không đọc được trạng thái triển khai. Triển khai có thể vẫn đang chạy trên máy chủ; bấm “Kiểm tra lại”.</p> : null}

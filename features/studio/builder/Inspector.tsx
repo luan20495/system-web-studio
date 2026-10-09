@@ -32,7 +32,7 @@ export function Inspector({ ctx, section, component, meta, index, count, canUp, 
   const states = tabStates({ section, component, meta, canEdit: !readOnly, definitionOps: ctx.readiness });
   const label = ctx.labelOf(section.type);
   const prefix = "inspector";
-  const items = states.map((s) => ({ id: s.id, label: s.label, badge: s.readiness.state === "NOT_READY" ? "chưa" : undefined }));
+  const items = states.map((s) => ({ id: s.id, label: s.label, badge: s.readiness.state === "NOT_READY" ? "chưa" : undefined, badgeLabel: "chưa sẵn sàng" })); // M-081: the badge is read as " (chưa sẵn sàng)", not glued to the label
   const current = states.find((s) => s.id === tab)!;
 
   return (

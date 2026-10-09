@@ -3,7 +3,7 @@
  * The Builder (Design mode): top bar, left tools, centre canvas with real drag and drop, right inspector. One write funnel: `applyOps`.
  * Nothing here talks to a backend that does not exist: backend-dependent tools render NOT_READY with a reason.
  */
-import { Activity, useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import { Activity, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   DndContext, DragOverlay, KeyboardSensor, PointerSensor, closestCenter, rectIntersection, useSensor, useSensors,
   type Announcements, type CollisionDetection, type DragEndEvent, type DragMoveEvent, type DragStartEvent,
@@ -68,6 +68,8 @@ export function BuilderWorkspace(props: {
   leading?: ReactNode; modeTabs?: ReactNode; trailing?: ReactNode;
   runtime?: RuntimeCalls; dataManagement?: DataManagementCalls; onRetrySave?: () => void; goAi: () => void; openSite: () => void; openMembers: () => void; openPublish: () => void; saveBlock: () => void;
 }) {
+  // M-112: the phone page-scroll mode (builder.css, <= 760 px) also keys on this class, for browsers without :has() (Firefox < 121)
+  useEffect(() => { const h = document.documentElement; h.classList.add("bx-page"); return () => h.classList.remove("bx-page"); }, []);
   const { doc, registry, backend, pageId, selectedId, readOnly, busy } = props;
   const cap = capabilitiesFor(props.project.permissions);
   const [appMode, setAppMode] = useState<"EDIT" | "TEST">("EDIT");

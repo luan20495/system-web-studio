@@ -11,6 +11,7 @@ import type {
 import { PROJECT_ROLES, WORKSPACE_ROLES } from "@/lib/http-types";
 import type { DeviceMode } from "@/lib/types";
 import { useOverlayDialog } from "./useOverlayDialog";
+import { webUrl } from "./siteAccessModel";
 import { errText } from "../ui";
 
 
@@ -95,8 +96,8 @@ export function AssetsDrawer({ workspaceId, projectId, canEdit, onClose, onError
       <div className="versionList">{assets === null ? <div role="status">Đang tải…</div> : assets.length === 0 ? <p className="hint">Chưa có tệp nào.</p> : assets.map((a) => (
         <article className="versionItem" key={a.id}>
           <div><b>{a.name}</b><span>{(a.size / 1024).toFixed(1)} KB</span></div>
-          {a.contentType.startsWith("image/") && a.downloadUrl ? /* eslint-disable-next-line @next/next/no-img-element */ <img className="assetThumb" src={a.downloadUrl} alt={a.name}/> : null}
-          {a.downloadUrl ? <a href={a.downloadUrl} target="_blank" rel="noreferrer noopener">Mở tệp</a> : null}
+          {a.contentType.startsWith("image/") && a.downloadUrl ? /* eslint-disable-next-line @next/next/no-img-element */ <img className="assetThumb" src={webUrl(a.downloadUrl)} alt={a.name}/> : null}
+          {a.downloadUrl ? <a href={webUrl(a.downloadUrl)} target="_blank" rel="noreferrer noopener">Mở tệp</a> : null}
           {canEdit ? <button className="smallButton danger" onClick={() => void removeAsset(a)}>Xóa</button> : null}
         </article>))}</div>
     </Drawer>

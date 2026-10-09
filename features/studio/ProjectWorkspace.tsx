@@ -45,6 +45,8 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const panel: PanelName | null = PANELS.includes(view as PanelName) ? (view as PanelName) : null;
   useEffect(() => { try { sessionStorage.setItem(lastModeKey, mode); } catch { /* ignore */ } }, [mode, lastModeKey]);
   const go = (to: string) => router.push(`${base}/${to}`);
+  // M-078: closing a drawer REPLACES the history entry (opening pushes), so Back after a close does not re-open the drawer just closed
+  const closePanel = () => router.replace(`${base}/${mode}`);
 
   const [project, setProject] = useState<ApiProject | null>(null);
   const [schema, setSchema] = useState<PageSchema | null>(null);
@@ -117,11 +119,11 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   async function archive() {
     if (!project || !(await confirm({ title: `Lưu trữ “${project.name}”?`, message: "Ứng dụng chỉ còn xem được và website bị gỡ khỏi mạng. Dữ liệu và phiên bản được giữ; có thể khôi phục sau.", confirmLabel: "Lưu trữ ứng dụng", danger: true }))) return;
     const r = await run("settings", () => api.archiveProject(ws, projectId), "Không lưu trữ được.");
-    if (r) { go(mode); void reload(); }
+    if (r) { closePanel(); void reload(); }
   }
   async function saveSettings(patch: Partial<ApiProject>) {
     const p = await run("settings", () => api.updateProject(ws, projectId, revision, patch), "Không lưu được cài đặt.");
-    if (p) { setProject(p); setRevision(p.revision); go(mode); toast.success("Đã lưu cài đặt."); }
+    if (p) { setProject(p); setRevision(p.revision); closePanel(); toast.success("Đã lưu cài đặt."); }
   }
   const pageSections = useMemo(() => (!schema ? [] : pageId === "home" ? schema.sections : schema.pages?.find((x) => x.id === pageId)?.sections ?? schema.sections), [schema, pageId]);
   useEffect(() => { if (schema && pageId !== "home" && !schema.pages?.some((x) => x.id === pageId)) setPageId("home"); }, [schema, pageId]);
@@ -176,7 +178,8 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const selected = pageSections.find((s) => s.id === selectedId) ?? null;
   const latest = versions[0]?.versionNumber;
 
-  const renderPreview = (o: { selectedId: string | null; interactive: boolean; pageId: string }) => renderSchemaDocument(schema, { selectedId: o.selectedId, interactive: o.interactive, nonce: nonceOfPage(), assets: assetUrls, pageId: o.pageId });
+  const renderPreview = (o: { selectedId: string | null; interactive: boolean; pageId: string }) => renderSchemaDocument(schema, { selectedId: o.selectedId, interactive: o.interactive, nonce: nonceOfPage(), assets: assetUrls, pageId: o.pageId,
+    parentOrigin: typeof window === "undefined" ? undefined : window.location.origin });   // M-089: the canvas script posts to this origin only
   const modeTabs = (
     <nav className="modeTabs" aria-label="Chế độ">
       {MODES.map((m) => <button key={m} className={mode === m ? "active" : ""} aria-pressed={mode === m} onClick={() => go(m)}>{m === "ai" ? <><Sparkles size={14} aria-hidden="true"/> AI</> : m === "design" ? "Design" : <>Code<small className="xp-navSoon"> Sắp có</small></>}</button>)}
@@ -226,7 +229,9 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
       </header>)}
 
       {project.status === "ARCHIVED" ? <div className="archivedBanner" role="status">Ứng dụng đã được lưu trữ: chỉ xem, website đang ngoại tuyến.
-        <button className="smallButton" onClick={() => void run("settings", () => api.restoreProject(ws, projectId), "Không khôi phục được (cần quyền chủ sở hữu hoặc quản trị).").then((r) => { if (r) void reload(); })}>Khôi phục</button></div> : null}
+        {/* M-080: the server restores only with PROJECT_DELETE (ProjectLifecycle.kt): without it the button is disabled with the reason, not offered to fail after the click */}
+        <GuardedButton className="smallButton" unavailable={!mayDelete} reason="Bạn không có quyền khôi phục ứng dụng (cần quyền chủ sở hữu hoặc quản trị)." disabled={busy !== null}
+          onClick={() => void run("settings", () => api.restoreProject(ws, projectId), "Không khôi phục được (cần quyền chủ sở hữu hoặc quản trị).").then((r) => { if (r) void reload(); })}>Khôi phục</GuardedButton></div> : null}
       {mode === "code" ? (
         <main className="codeMode">
           <div className="codeCard">
@@ -302,7 +307,8 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
       ) : null}
 
 
-      {panel === "versions" ? <Drawer title="Lịch sử phiên bản" sub="Khôi phục tạo một phiên bản mới; phiên bản cũ không bao giờ bị sửa." onClose={() => go(mode)}>
+      {panel === "versions" ? <Drawer title="Lịch sử phiên bản" sub="Khôi phục tạo một phiên bản mới; phiên bản cũ không bao giờ bị sửa." onClose={() => closePanel()}>
+        {versions.length === 0 ? <StateView kind="empty" title="Chưa có phiên bản nào" detail={<p>Mỗi lần lưu thay đổi (bằng AI hoặc Design) tạo một phiên bản ở đây.</p>}/> : null}
         <div className="versionList">{versions.map((v) => (
           <article className="versionItem" key={v.id}>
             <div><b>Phiên bản {v.versionNumber}{v.current ? " · hiện tại" : ""}</b><span>{fmtDate(v.createdAt)}</span></div>
@@ -311,8 +317,8 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
           </article>))}</div>
       </Drawer> : null}
       {panel === "site" ? <SiteDrawer schema={schema} ws={ws} pid={projectId} pageId={pageId} onPage={(id) => { setPageId(id); setSelectedId(null); }} canEdit={!readOnly}
-        canPublish={mayPublish} apply={applyOps} onClose={() => go(mode)}/> : null}
-      {panel === "settings" ? <SettingsDrawer project={project} busy={busy === "settings"} onClose={() => go(mode)} onSave={saveSettings}
+        canPublish={mayPublish} apply={applyOps} onClose={() => closePanel()}/> : null}
+      {panel === "settings" ? <SettingsDrawer project={project} busy={busy === "settings"} onClose={() => closePanel()} onSave={saveSettings}
         extra={<>{!readOnly ? <SaveTemplateSection workspaceId={ws} projectId={projectId} projectName={project.name}/> : null}
           {mayDelete && project.status !== "ARCHIVED" ? <section className="settingGroup"><h3>Lưu trữ ứng dụng</h3>
             <p className="hint">Ứng dụng chỉ còn xem được, website bị gỡ khỏi mạng. Dữ liệu và phiên bản được giữ; có thể khôi phục.</p>
@@ -320,11 +326,11 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
           </section> : null}</>}/> : null}
       {savingBlock && selected ? <SaveBlockDrawer workspaceId={ws} projectId={projectId} section={selected} title={label(selected.type)}
         onClose={() => setSavingBlock(false)} onSaved={(m) => { setSavingBlock(false); toast.success(m); loadBlocks(); }}/> : null}
-      {panel === "assets" ? <AssetsDrawer workspaceId={ws} projectId={projectId} canEdit={mayEdit} onClose={() => { void loadAssets(ws); go(mode); }} onError={(e) => toast.error(errText(e, "Thao tác tệp thất bại."))}/> : null}
-      {panel === "members" && me ? <MembersDrawer workspaceId={ws} projectId={projectId} me={me} onClose={() => go(mode)} onError={(e) => toast.error(errText(e, "Thao tác thành viên thất bại."))}/> : null}
+      {panel === "assets" ? <AssetsDrawer workspaceId={ws} projectId={projectId} canEdit={mayEdit} onClose={() => { void loadAssets(ws); closePanel(); }} onError={(e) => toast.error(errText(e, "Thao tác tệp thất bại."))}/> : null}
+      {panel === "members" && me ? <MembersDrawer workspaceId={ws} projectId={projectId} me={me} onClose={() => closePanel()} onError={(e) => toast.error(errText(e, "Thao tác thành viên thất bại."))}/> : null}
       {panel === "publish" ? <PublishModal workspaceId={ws} projectId={projectId} revision={revision} current={project.siteVisibility} versionNumber={latest} canPublish={mayPublish} draft={schema as AppDefinitionV2}
         allowed={publicPublish === false ? ["PRIVATE"] : ["PRIVATE", "PUBLIC"]}
-        onClose={() => { go(mode); void reload().catch(() => undefined); }} onUnauthorized={() => undefined}/> : null}
+        onClose={() => { closePanel(); void reload().catch(() => undefined); }} onUnauthorized={() => undefined}/> : null}
     </div>
   );
 }

@@ -242,3 +242,21 @@ test("top bar: the retry button appears only for a failed save that has a retry 
   assert.doesNotMatch(renderToStaticMarkup(<BuilderTopBar {...base} save={{ state: "error", at: null }}/>), /retry-save/);
   assert.doesNotMatch(renderToStaticMarkup(<BuilderTopBar {...base} save={{ state: "saved", at: null }} onRetrySave={() => undefined}/>), /retry-save/);
 });
+
+test("M-080: action chains are checkbox lists (no <select multiple>), and a NEW action's open problems are not an alert", () => {
+  const html = renderToStaticMarkup(<ActionEditor ctx={ctx()} preset={{ type: "NAVIGATE" }} onDone={() => undefined} onCancel={() => undefined}/>);
+  assert.doesNotMatch(html, /<select[^>]*multiple/i);
+  assert.match(html, /<legend>Khi thành công, chạy tiếp<\/legend>[\s\S]*?type="checkbox"[^>]*\/?>[\s\S]*?Làm mới/);
+  assert.match(html, /<legend>Khi lỗi, chạy tiếp<\/legend>/);
+  assert.match(html, /class="bx-issues"/, "a new NAVIGATE action without a page has an open problem");
+  assert.doesNotMatch(html, /role="alert"/, "nothing failed yet: no alert when the editor opens");
+  assert.deepEqual(a11yProblems(html), []);
+});
+
+test("M-081: a NOT_READY step/tab badge is announced as ' (chưa sẵn sàng)', not glued to the label ('…cấu trúcchưa')", () => {
+  const html = renderToStaticMarkup(<DataWizard ctx={ctx({ readiness: notReady("C2 V2 chưa tích hợp") })}/>);
+  const tabs = html.match(/<button[^>]*role="tab"[\s\S]*?<\/button>/g) ?? [];
+  const withBadge = tabs.filter((t) => /bx-badge/.test(t));
+  assert.ok(withBadge.length > 0, "some step is NOT_READY");
+  for (const t of withBadge) { assert.match(t, /class="bx-badge" aria-hidden="true">chưa<\/span><span class="srOnly"> \(chưa sẵn sàng\)<\/span>/); }
+});

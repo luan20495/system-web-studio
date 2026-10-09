@@ -62,6 +62,21 @@ export function planStep(sections: Section[], sectionId: string, delta: -1 | 1):
 /** may this section move one step? false for the first/last section and for a trailing Footer (it always stays last), so the button is disabled instead of silently doing nothing */
 export const canStep = (sections: Section[], sectionId: string, delta: -1 | 1): boolean => planStep(sections, sectionId, delta).kind === "move";
 
+/**
+ * M-109: canStep for the section AT index `i`, in O(1) (no findIndex, no filter copy), so a list can ask it for every row in O(n) instead
+ * of O(n²). Same rules as planStep -> planMove; the unit test checks it equals canStep for every position. Assumes unique section ids.
+ */
+export function canStepAt(sections: readonly Section[], i: number, delta: -1 | 1): boolean {
+  const n = sections.length;
+  if (i < 0 || i >= n) return false;
+  const restLength = n - 1;
+  if (sections[i].type === "Footer") return restLength !== i;          // a Footer always goes to the end
+  const restLast = i === n - 1 ? sections[n - 2] : sections[n - 1];     // last section once `i` is taken out
+  const max = restLast?.type === "Footer" ? restLength - 1 : restLength;
+  const inRest = delta < 0 ? i - 1 : i + 1;
+  return Math.max(0, Math.min(max, inRest)) !== i;
+}
+
 /** click-to-add (the no-drag fallback): after the selected section, otherwise at the end (before a trailing Footer) */
 export function slotForClickAdd(sections: Section[], selectedId: string | null, type: string): number {
   const i = selectedId ? sections.findIndex((s) => s.id === selectedId) : -1;

@@ -2,7 +2,7 @@
 // Code projects (STATIC_APP, ADR 0008/0012): AI and Code modes over a real Git repository; every change is a commit on its own branch,
 // built in the sandbox, previewed from the sites origin (CSP sandbox) and merged only after a green build.
 import { canEditProject, canPublish, canShare, resolvePermissions } from "@xweb/permissions";
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { ArrowLeft, confirm, ReasonButton, Sparkles, TabPanel, Tabs, toast } from "@xweb/ui";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/http-api";
@@ -14,6 +14,8 @@ import { PublishModal } from "./ReleaseModal";
 import { ReviewDialog } from "./ReviewDialog";
 import { OverflowMenu } from "./OverflowMenu";
 import { describeStatus } from "./aiProgressModel";
+import { diffFileRows } from "./codeDiff";
+import { webUrl } from "./siteAccessModel";
 import { DesignPane, IdeDrawer, PackagesDrawer, RuntimeDrawer } from "./CodePanels";
 import { projectBase, S } from "./base";
 
@@ -21,27 +23,14 @@ const STATUS: Record<CodeChange["status"], string> = { BUILDING: "Đang build", 
 const STAGE: Record<string, string> = { CLAIMED: "đã nhận", SOURCE: "lấy mã", SCAN_SOURCE: "quét mã", PREPARE: "chuẩn bị", INSTALL: "cài gói", BUILD: "build",
   PACKAGE: "đóng gói", SCAN_OUTPUT: "quét kết quả", UPLOAD: "tải lên", UPLOADED: "đã tải lên", DONE: "xong" };
 
-/** Line diff (LCS) for small source files. */
-function lineDiff(a: string, b: string): { t: " " | "-" | "+"; s: string }[] {
-  const x = a.split("\n"), y = b.split("\n");
-  if (x.length * y.length > 4_000_000) return [...x.map((s) => ({ t: "-" as const, s })), ...y.map((s) => ({ t: "+" as const, s }))];
-  const m = Array.from({ length: x.length + 1 }, () => new Int32Array(y.length + 1));
-  for (let i = x.length - 1; i >= 0; i--) for (let j = y.length - 1; j >= 0; j--) m[i][j] = x[i] === y[j] ? m[i + 1][j + 1] + 1 : Math.max(m[i + 1][j], m[i][j + 1]);
-  const out: { t: " " | "-" | "+"; s: string }[] = []; let i = 0, j = 0;
-  while (i < x.length && j < y.length) { if (x[i] === y[j]) { out.push({ t: " ", s: x[i] }); i++; j++; } else if (m[i + 1][j] >= m[i][j + 1]) out.push({ t: "-", s: x[i++] }); else out.push({ t: "+", s: y[j++] }); }
-  while (i < x.length) out.push({ t: "-", s: x[i++] }); while (j < y.length) out.push({ t: "+", s: y[j++] });
-  return out;
-}
-
-function DiffView({ files }: { files: DiffFile[] }) {
+// M-082: memo + per-file cache (codeDiff.ts): the LCS runs once per diff response, not on every keystroke elsewhere in the workspace
+const DiffView = memo(function DiffView({ files }: { files: DiffFile[] }) {
   return <div className="diffView">{files.map((f) => {
-    const rows = lineDiff(f.before ?? "", f.after ?? "");
-    // show changed lines with 2 lines of context
-    const keep = rows.map((r, i) => r.t !== " " || rows.slice(Math.max(0, i - 2), i + 3).some((x) => x.t !== " "));
+    const rows = diffFileRows(f);
     return <section key={f.path}><h4>{f.path} {f.before == null ? <em>(mới)</em> : f.after == null ? <em>(xoá)</em> : null}</h4>
-      <pre>{rows.map((r, i) => keep[i] ? <div key={i} className={`dl ${r.t === "+" ? "add" : r.t === "-" ? "del" : ""}`}>{r.t} {r.s}</div> : (keep[i - 1] ? <div key={i} className="dl gap">⋯</div> : null))}</pre></section>;
+      <pre>{rows.map((r) => r.gap ? <div key={r.index} className="dl gap">⋯</div> : <div key={r.index} className={`dl ${r.row.t === "+" ? "add" : r.row.t === "-" ? "del" : ""}`}>{r.row.t} {r.row.s}</div>)}</pre></section>;
   })}</div>;
-}
+});
 
 export function CodeWorkspace({ project, view, onProject }: { project: ApiProject; view?: string; onProject: (p: ApiProject) => void }) {
   const router = useRouter(); const { me } = useSession();
@@ -50,6 +39,8 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
   const panel = ["members", "publish", "versions", "packages", "ide", "runtime"].includes(view ?? "") ? view : null;
   const isServer = SERVER_KINDS.includes(project.appKind ?? "SOURCE_WEB_APP");
   const go = (to: string) => router.push(`${base}/${to}`);
+  // M-078: closing a drawer REPLACES the history entry (opening pushes), so Back after a close does not re-open the drawer just closed
+  const closePanel = () => router.replace(`${base}/${mode}`);
   // UX only: the list is what the server resolved for this project; helpers in @xweb/permissions (canonical.ts)
   const perms = resolvePermissions(project.permissions);
   const canEdit = canEditProject(perms), canPublishApp = canPublish(perms), canShareApp = canShare(perms);
@@ -253,8 +244,8 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
             {change.reviewRequired ? <p className="hint">{change.approvedBy ? `Đã duyệt bởi ${change.approvedBy}${change.reviewComment ? ` — “${change.reviewComment}”` : ""}` : "Dự án yêu cầu duyệt: một thành viên có quyền xuất bản (không phải người tạo) cần duyệt trước khi hợp nhất."}</p> : null}
             <TabPanel idBase={detailTabs} value={tab}>
             {tab === "preview" ? (change.previewUrl
-              ? <><iframe className="appPreview" title="Bản xem trước ứng dụng" sandbox="allow-scripts" src={change.previewUrl}/>
-                <p className="hint">Chạy cách ly (không cookie/lưu trữ), liên kết hết hạn {change.previewExpiresAt ? fmtDate(change.previewExpiresAt) : ""}. <a href={change.previewUrl} target="_blank" rel="noopener noreferrer">Mở trong tab mới</a></p></>
+              ? <><iframe className="appPreview" title="Bản xem trước ứng dụng" sandbox="allow-scripts" src={webUrl(change.previewUrl)}/>
+                <p className="hint">Chạy cách ly (không cookie/lưu trữ), liên kết hết hạn {change.previewExpiresAt ? fmtDate(change.previewExpiresAt) : ""}. <a href={webUrl(change.previewUrl)} target="_blank" rel="noopener noreferrer">Mở trong tab mới</a></p></>
               : change.status === "BUILDING" ? <StateView kind="loading" title="Đang build trong sandbox…" detail={<p>{change.build?.stage ? `Bước: ${STAGE[change.build.stage] ?? change.build.stage}` : "Chờ runner nhận việc"}</p>}/>
               : change.status === "FAILED" ? <StateView kind="error" title="Build không thành công" detail={<p>{change.error}</p>}/>
               : <p className="hint">Không có bản xem trước (đã hợp nhất hoặc hết hạn).</p>) : null}
@@ -275,10 +266,10 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
         </section>
       </main>
       {reviewing ? <ReviewDialog summary={reviewing.summary} busy={busy === "approve"} onApprove={(comment) => void approve(reviewing, comment)} onClose={() => setReviewing(null)}/> : null}
-      {panel === "members" && me ? <MembersDrawer workspaceId={ws} projectId={pid} me={me} onClose={() => go(mode)} onError={(e) => toast.error(errText(e, "Thao tác thành viên thất bại."))}/> : null}
-      {panel === "publish" ? <PublishModal workspaceId={ws} projectId={pid} revision={project.revision} current="PRIVATE" canPublish={canPublishApp} allowed={cfg?.codeAppPublicPublish === false || cfg?.publicPublish === false ? ["PRIVATE"] : ["PRIVATE", "PUBLIC"]} onClose={() => { go(mode); api.lookupProject(pid).then(onProject).catch(() => undefined); }}
+      {panel === "members" && me ? <MembersDrawer workspaceId={ws} projectId={pid} me={me} onClose={() => closePanel()} onError={(e) => toast.error(errText(e, "Thao tác thành viên thất bại."))}/> : null}
+      {panel === "publish" ? <PublishModal workspaceId={ws} projectId={pid} revision={project.revision} current="PRIVATE" canPublish={canPublishApp} allowed={cfg?.codeAppPublicPublish === false || cfg?.publicPublish === false ? ["PRIVATE"] : ["PRIVATE", "PUBLIC"]} onClose={() => { closePanel(); api.lookupProject(pid).then(onProject).catch(() => undefined); }}
         onUnauthorized={() => toast.warning("Phiên đăng nhập đã hết hạn.")}/> : null}
-      {panel === "versions" ? <Drawer title="Lịch sử (commit trên main)" sub="Lấy trực tiếp từ kho Git của nền tảng." onClose={() => go(mode)}>
+      {panel === "versions" ? <Drawer title="Lịch sử (commit trên main)" sub="Lấy trực tiếp từ kho Git của nền tảng." onClose={() => closePanel()}>
         {commits == null ? <StateView kind="loading"/> : <ol className="commitList">{commits.map((c) => <li key={c.sha}><b>{c.message.split("\n")[0]}</b>
           <small className="code">{c.sha.slice(0, 10)} {c.verified ? <span className="pill pill-ok">Đã ký · {c.signer}</span> : <span className="pill pill-muted">Chưa ký</span>}</small>
           <small>Tác giả {c.author} · commit bởi {c.committer} · {fmtDate(c.date)}</small></li>)}</ol>}
@@ -286,9 +277,9 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
           <select aria-label="Chính sách hợp nhất" defaultValue="" onChange={(e) => void act("policy", () => api.code.mergePolicy(ws, pid, (e.target.value || null) as "AUTO_MERGE_ALLOWED" | "REVIEW_REQUIRED" | null), "Không đổi được.").then((r) => { if (r) { toast.info(`Chính sách hiện hành: ${r.effective === "REVIEW_REQUIRED" ? "cần duyệt" : "hợp nhất trực tiếp"}`); void loadChanges(); } })}>
             <option value="">Theo workspace</option><option value="AUTO_MERGE_ALLOWED">Hợp nhất trực tiếp sau khi build xanh</option><option value="REVIEW_REQUIRED">Cần người khác duyệt</option></select></section> : null}
       </Drawer> : null}
-      {panel === "packages" ? <PackagesDrawer ws={ws} pid={pid} canEdit={canEdit} onClose={() => go(mode)} onChange={(id) => { setSelected(id); go(mode); void loadChanges(); }}/> : null}
-      {panel === "ide" ? <IdeDrawer ws={ws} pid={pid} onClose={() => go(mode)}/> : null}
-      {panel === "runtime" && isServer ? <RuntimeDrawer ws={ws} pid={pid} canPublish={canPublishApp} canSettings={canEdit} onClose={() => go(mode)}/> : null}
+      {panel === "packages" ? <PackagesDrawer ws={ws} pid={pid} canEdit={canEdit} onClose={() => closePanel()} onChange={(id) => { setSelected(id); closePanel(); void loadChanges(); }}/> : null}
+      {panel === "ide" ? <IdeDrawer ws={ws} pid={pid} onClose={() => closePanel()}/> : null}
+      {panel === "runtime" && isServer ? <RuntimeDrawer ws={ws} pid={pid} canPublish={canPublishApp} canSettings={canEdit} onClose={() => closePanel()}/> : null}
     </div>
   );
 }

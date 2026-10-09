@@ -89,3 +89,18 @@ test("M-046 scrollShift: a pure scroll is one common offset; any layout change (
   assert.equal(D.scrollShift(a, [a[0], { ...a[1], height: 80 }]), null);
   assert.equal(D.scrollShift(a, [{ ...a[0], top: -10 }, { ...a[1], top: 80 }]), null);
 });
+
+test("M-109: canStepAt (O(1) by index) equals canStep for every position, both directions, every Footer placement", () => {
+  const kinds = ["Hero", "TextBlock", "Footer"];
+  let checked = 0;
+  for (let n = 0; n <= 6; n++) {
+    for (let mask = 0; mask < 3 ** n; mask++) {
+      let m = mask;
+      const s = Array.from({ length: n }, (_, i) => { const t = kinds[m % 3]; m = Math.floor(m / 3); return sec(`s${i}`, t); });
+      for (let i = 0; i < n; i++) for (const d of [-1, 1] as const) { assert.equal(D.canStepAt(s, i, d), D.canStep(s, s[i].id, d), `n=${n} types=${s.map((x) => x.type)} i=${i} d=${d}`); checked++; }
+    }
+  }
+  assert.ok(checked > 5000);
+  assert.equal(D.canStepAt(list(), -1, 1), false);
+  assert.equal(D.canStepAt(list(), 4, -1), false);
+});

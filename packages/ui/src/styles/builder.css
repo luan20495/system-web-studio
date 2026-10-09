@@ -192,6 +192,7 @@
 .bx-mview{display:none}
 @media(max-width:760px){
   html:has(.bx-root),body:has(.bx-root){height:auto;overflow:visible}
+  html.bx-page,html.bx-page body{height:auto;overflow:visible}   /* M-112: same rules without :has() (class set by BuilderWorkspace); a separate rule, so a browser that rejects :has() still applies it */
   .studio.bx-root{display:block;height:auto;min-height:100dvh}
   .bx-body{display:block;overflow:visible}
   .bx-mview{display:block;position:sticky;top:0;z-index:45;background:var(--bg);border-bottom:1px solid var(--line);padding:6px 8px}
@@ -200,6 +201,7 @@
   .bx-body[data-mview="canvas"] :is(.bx-left,.bx-right),
   .bx-body[data-mview="tools"] :is(.bx-center,.bx-right),
   .bx-body[data-mview="props"] :is(.bx-center,.bx-left){display:none}
+  html.bx-page{scroll-padding-top:64px;overscroll-behavior-y:contain}
   html:has(.bx-root){scroll-padding-top:64px;overscroll-behavior-y:contain}   /* a focused control is never hidden under the sticky switch (WCAG 2.4.11); no pull-to-refresh while dragging inside the builder */
   .bx-center,.bx-left,.bx-right{scroll-margin-top:64px}
   .bx-center{order:0;height:calc(100vh - 60px);height:calc(100dvh - 60px);min-height:420px}
@@ -273,3 +275,11 @@
 .memberTable th:nth-child(2),.memberTable td:nth-child(2){width:38%}
 .memberTable td:nth-child(2) select{min-width:0;width:100%}
 .memberTable th:last-child,.memberTable td:last-child{width:5rem}
+
+/* M-083 (S1-058): a test-mode "Chạy thử" button never wraps to "Chạy / thử"; the row text wraps instead */
+.bx-test-row>button{white-space:nowrap;flex:none}
+/* M-083 (S1-037): on a phone the Studio header search gets its own full-width row instead of being squeezed to "Tìm ứn…" next to the workspace name, avatar and logout */
+@media(max-width:600px){
+  .topHeader.studioTop{flex-wrap:wrap;row-gap:8px;padding-block:8px}
+  .studioTop .search{order:3;flex:1 1 100%}
+}
