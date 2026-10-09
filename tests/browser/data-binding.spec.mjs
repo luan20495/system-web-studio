@@ -72,7 +72,9 @@ async function design(state = newDataState(), viewport) {
   await wait(500);
   check("form: after saving the form closes and the row says what shows where, from which data, and who sees it", (await p.getByTestId("guided-binding").count()) === 0 && /Danh sách sản phẩm › Danh sách/.test(await p.getByTestId("data-connected").innerText()) && /Khách xem được/.test(await p.getByTestId("data-connected").innerText()), await p.getByTestId("data-connected").innerText().catch(() => "(no list)"));
   check("form: the success message tells the one remaining step (link the real source)", /Nâng cao > Nguồn dữ liệu/.test(await p.getByTestId("data-message").innerText()));
-  check("form: focus lands on the 'Đã kết nối' list (not <body>)", await p.evaluate(() => !!document.activeElement?.closest("[data-testid=data-connected]") || document.activeElement?.getAttribute("data-testid") === "data-connected"));
+  // wait for the focus condition instead of a fixed delay: the focus is moved after the list re-renders (a timing flake on a loaded machine)
+  const focusLanded = await p.waitForFunction(() => !!document.activeElement?.closest("[data-testid=data-connected]") || document.activeElement?.getAttribute("data-testid") === "data-connected", null, { timeout: 5000 }).then(() => true, () => false);
+  check("form: focus lands on the 'Đã kết nối' list (not <body>)", focusLanded);
   // the same property cannot be bound twice
   await p.getByTestId("data-add").click(); await wait(200);
   await p.getByTestId("gb-section").selectOption({ label: "Danh sách sản phẩm" }); await p.getByTestId("gb-prop").selectOption({ index: propOptions.findIndex((o) => /Danh sách/.test(o)) });
