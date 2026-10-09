@@ -179,7 +179,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const renderPreview = (o: { selectedId: string | null; interactive: boolean; pageId: string }) => renderSchemaDocument(schema, { selectedId: o.selectedId, interactive: o.interactive, nonce: nonceOfPage(), assets: assetUrls, pageId: o.pageId });
   const modeTabs = (
     <nav className="modeTabs" aria-label="Chế độ">
-      {MODES.map((m) => <button key={m} className={mode === m ? "active" : ""} aria-pressed={mode === m} onClick={() => go(m)}>{m === "ai" ? <><Sparkles size={14} aria-hidden="true"/> AI</> : m === "design" ? "Design" : "Code"}</button>)}
+      {MODES.map((m) => <button key={m} className={mode === m ? "active" : ""} aria-pressed={mode === m} onClick={() => go(m)}>{m === "ai" ? <><Sparkles size={14} aria-hidden="true"/> AI</> : m === "design" ? "Design" : <>Code<small className="xp-navSoon"> Sắp có</small></>}</button>)}
     </nav>
   );
 

@@ -459,4 +459,15 @@ for (const w of [768, 1000]) {
     await p.close();
   }
 }
+
+// ---------- M-043: the 'Code' mode of a website project is announced as not available yet on the tab itself (no surprise dead end) ----------
+{
+  const p = await open(b, "/studio/projects/p1/ai", { state: newState() }); await wait(1500);
+  const tab = p.getByRole("navigation", { name: "Chế độ" }).getByRole("button", { name: /^Code/ });
+  const label = (await tab.innerText()).replace(/\s+/g, " ").trim();
+  check("M-043: the Code mode button says 'Sắp có' (a website project has no source repository yet)", /Code/.test(label) && /Sắp có/.test(label), label);
+  await tab.click(); await wait(500);
+  check("M-043: …and the page it opens says so and offers both ways back (Design, AI)", /Chưa triển khai/.test(await p.locator("main").innerText()) && (await p.getByRole("button", { name: /Chỉnh trực quan/ }).count()) === 1 && (await p.getByRole("button", { name: /Chỉnh bằng AI/ }).count()) === 1, "");
+  await p.close();
+}
 await b.close(); finish();
