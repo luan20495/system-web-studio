@@ -10,6 +10,7 @@ import { useLoad } from "../../useLoad";
 import { BlockStatus, blockPage, CheckList, ReviewTimeline, SchemaThumb } from "../../library";
 import { ago, Card, ComingSoon, ErrorState, errText, num, Pager, Pill, StateView } from "../../ui";
 import { PageHead } from "../PageHead";
+import { useAdminAction } from "../useAdminAction";
 import { prettyJson } from "../safeJson";
 
 // ------------------------------------------------------------------ components
@@ -66,12 +67,13 @@ export function BlocksAdmin() {
 
 export function BlockReviewPanel({ id, onDone }: { id: string; onDone: () => void }) {
   const { data, error, loading, reload } = useLoad(() => api.admin.block(id), [id]);
-  const [comment, setComment] = useState(""); const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null);
+  const [comment, setComment] = useState("");
+  const { act: run, busy, err } = useAdminAction("Không thực hiện được.", () => { setComment(""); reload(); onDone(); });
   if (!data) return <LoadGate load={{ data, error, loading, reload }} level={2} label="chi tiết khối">{() => null}</LoadGate>;
   const b: BlockDto = data!;
   const latest = b.versions.find((v) => v.version === b.latestVersion);
   const page = blockPage(b);
-  async function act(fn: () => Promise<unknown>) { setBusy(true); setErr(null); try { await fn(); setComment(""); reload(); onDone(); } catch (x) { setErr(errText(x, "Không thực hiện được.")); } finally { setBusy(false); } }
+  const act = (fn: () => Promise<unknown>) => run(fn);
   return <div className="grid2">
     <div>{page ? <SchemaThumb schema={page} title={`Xem trước khối ${b.name}`} tall/> : null}
       <details><summary>Thuộc tính (JSON, v{latest?.version})</summary><pre>{JSON.stringify(latest?.props ?? {}, null, 2)}</pre></details></div>
@@ -97,10 +99,11 @@ export function BlockReviewPanel({ id, onDone }: { id: string; onDone: () => voi
 export function TemplatesAdmin() {
   const A = useA();
   const [page, setPage] = useState(0); const [visibility, setVisibility] = useState(""); const [status, setStatus] = useState("ACTIVE"); const [q, setQ] = useState(""); const [applied, setApplied] = useState("");
-  const [open, setOpen] = useState<string | null>(null); const [err, setErr] = useState<string | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
   const params = useMemo(() => ({ page, visibility: visibility || undefined, status: status || undefined, q: applied || undefined }), [page, visibility, status, applied]);
   const { data, error, loading, reload } = useLoad(() => api.admin.templates(params), [params]);
-  async function act(fn: () => Promise<TemplateDto>) { setErr(null); try { await fn(); reload(); } catch (x) { setErr(errText(x, "Không thực hiện được.")); } }
+  const { act: run, err } = useAdminAction("Không thực hiện được.", reload);
+  const act = (fn: () => Promise<unknown>) => run(fn);
   return (<>
     <PageHead title="Templates" sub="Mẫu là cấu trúc trang (Page Schema) do nhân viên lưu từ ứng dụng. Tác giả gửi duyệt → kiểm tra tự động (component, nội dung, render an toàn) → quản trị viên khác tác giả duyệt hoặc từ chối."/>
     <Card>

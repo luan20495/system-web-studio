@@ -72,8 +72,7 @@ await block("scenario 2", async () => { const p = await open({ portal: "platform
   check("LNK02 Enter on the initial focus copies the link (clipboard holds it) and says so", (await p.evaluate(() => navigator.clipboard.readText())).includes("/auth/activate#ACT-TOKEN") && /Đã sao chép/.test(await dlg(p).innerText()));
   await p.getByRole("button", { name: "Xong" }).click(); await settle(p, 250);
   check("LNK03 once copied, 'Xong' closes at once and the result dialog follows", /Đã tạo tài khoản/.test(await text(p)) && (await dlg(p).count()) === 1);
-  await p.getByRole("button", { name: "Xem lại liên kết" }).click(); await settle(p, 250);
-  check("LNK04 the result dialog can show the link again while this dialog lives (the link is only in its state, never stored)", /ACT-TOKEN/.test(await linkValue(p)));
+  check("LNK04 after the link was copied and the dialog closed the token is GONE: not in the DOM, and there is no 'Xem lại liên kết' (M-088: a secret is kept only until copied / confirmed)", !/ACT-TOKEN/.test(await p.content()) && (await p.getByRole("button", { name: "Xem lại liên kết" }).count()) === 0);
   await p.__ctx.close(); });
 
 await block("scenario 3", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/users" });
@@ -464,6 +463,82 @@ await block("scenario 61", async () => { const { p, t } = await emptyOf("/platfo
   await p.__ctx.close(); });
 await block("scenario 62", async () => { const { p, t } = await emptyOf("/platform/ai/usage");
   check("EMP05 AI usage with an empty daily series (M-120) renders: heading, no crash", (await p.locator("h1").count()) === 1 && /Mức sử dụng model/.test(t) && !/Invalid time value/.test(t));
+  await p.__ctx.close(); });
+
+// ===================================================================================================================== M-088 secrets do not outlive their use
+await block("scenario 63", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/connectors" }); await settle(p, 500);
+  await p.getByLabel("Mã", { exact: true }).fill("kho"); await p.getByLabel("Tên", { exact: true }).fill("Kho"); await p.getByLabel("Giá trị xác thực").fill("S3CR3T-VALUE");
+  await p.getByLabel("Thao tác cho phép").fill("GET /a b");
+  check("SEC01 a path with a space inside is refused (it used to be glued into '/ab' silently)", /đường dẫn không có khoảng trắng/.test(await p.locator("main").innerText()) && (await p.getByRole("button", { name: "Lưu", exact: true }).isDisabled()));
+  await p.getByLabel("Thao tác cho phép").fill("GET /a");
+  await p.getByRole("button", { name: "Lưu", exact: true }).click(); await settle(p, 500);
+  check("SEC02 after a successful save the credential field is EMPTY again (value gone from the input)", (await p.getByLabel("Giá trị xác thực").inputValue()) === "");
+  const sent = (await calls(p)).filter((c) => c.method === "PUT" && /admin\/connectors/.test(c.path))[0];
+  check("SEC03 the credential was sent exactly once and the operations are the cleaned ones", !!sent && sent.body.authValue === "S3CR3T-VALUE" && JSON.stringify(sent.body.operations) === JSON.stringify([{ method: "GET", path: "/a" }]), JSON.stringify(sent?.body));
+  await p.__ctx.close(); });
+
+// ===================================================================================================================== M-020 one click / double click / Enter + click = ONE request
+/** the first request stays in flight (`slow`), the second activation arrives before the answer: only one write may have been sent */
+const writes = async (p, re, method) => (await calls(p)).filter((c) => c.method === method && re.test(c.path)).length;
+await block("scenario 64", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/costs" }); await settle(p, 500);
+  await p.evaluate(() => { window.__cfg.slow = "/admin/costs/prices"; }); await p.getByPlaceholder("Đơn giá", { exact: true }).fill("5");
+  await p.getByRole("button", { name: "Thêm đơn giá" }).dblclick(); await settle(p, 400);
+  check("DBL01 costs: a double click on 'Thêm đơn giá' sends ONE price row", (await writes(p, /costs\/prices$/, "POST")) === 1, `${await writes(p, /costs\/prices$/, "POST")}`);
+  await p.__ctx.close(); });
+await block("scenario 65", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/departments" }); await settle(p, 500);
+  await p.evaluate(() => { window.__cfg.slow = "/admin/departments"; }); await p.getByLabel("Tên", { exact: true }).fill("Phòng A");
+  await p.getByRole("button", { name: "Thêm", exact: true }).first().dblclick(); await settle(p, 400);
+  check("DBL02 departments: a double click on 'Thêm' creates ONE department", (await writes(p, /departments$/, "POST")) === 1);
+  await p.__ctx.close(); });
+await block("scenario 66", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/ai-governance" }); await settle(p, 500);
+  await p.evaluate(() => { window.__cfg.slow = "/admin/ai/budgets"; }); await p.getByLabel("Số tiền").fill("10");
+  await p.getByRole("button", { name: "Lưu ngân sách" }).dblclick(); await settle(p, 400);
+  check("DBL03 AI budget: a double click on 'Lưu ngân sách' sends ONE PUT", (await writes(p, /ai\/budgets$/, "PUT")) === 1);
+  await p.evaluate(() => { window.__cfg.slow = "/admin/ai/access"; });
+  await p.getByRole("button", { name: "Thêm quy tắc chặn" }).dblclick(); await settle(p, 400);
+  check("DBL04 AI access rule: a double click on 'Thêm quy tắc chặn' sends ONE POST", (await writes(p, /ai\/access$/, "POST")) === 1);
+  await p.__ctx.close(); });
+await block("scenario 67", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/ai/models" }); await settle(p, 600);
+  await p.evaluate(() => { window.__cfg.slow = "/admin/ai/pricing"; });
+  await p.getByLabel("Model", { exact: true }).selectOption({ index: 1 }); await p.getByLabel("Giá token vào (USD / 1 triệu)").fill("1"); await p.getByLabel("Giá token ra (USD / 1 triệu)").fill("2");
+  await p.getByRole("button", { name: "Thêm giá" }).dblclick(); await settle(p, 400);
+  check("DBL05 model price: a double click on 'Thêm giá' adds ONE (immutable) price row", (await writes(p, /ai\/pricing$/, "POST")) === 1);
+  await p.__ctx.close(); });
+await block("scenario 68", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/ai/limits" }); await settle(p, 600);
+  await p.evaluate(() => { window.__cfg.slow = "/admin/ai/limits/defaults"; });
+  await p.getByRole("button", { name: "Lưu hạn mức mặc định" }).dblclick(); await settle(p, 400);
+  check("DBL06 AI default limits: a double click on 'Lưu hạn mức mặc định' sends ONE PUT", (await writes(p, /limits\/defaults$/, "PUT")) === 1);
+  await p.__ctx.close(); });
+await block("scenario 69", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/packages" }); await settle(p, 500);
+  await p.evaluate(() => { window.__cfg.slow = "/admin/packages"; }); await p.getByLabel("Tên package").fill("zod");
+  await p.getByRole("button", { name: "Kiểm tra & duyệt" }).first().dblclick(); await settle(p, 400);
+  check("DBL07 packages: a double click on 'Kiểm tra & duyệt' sends ONE request", (await writes(p, /admin\/packages$/, "POST")) === 1);
+  await p.__ctx.close(); });
+await block("scenario 70", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/tenants/t1" }); await settle(p, 500);
+  await p.getByTestId("tm-search").fill("cu"); await settle(p, 800); await p.getByTestId("tm-person").selectOption("u9");
+  await p.evaluate(() => { window.__cfg.slow = "/admin/tenants/t1/members"; });
+  await p.getByTestId("tm-add").dblclick(); await settle(p, 400);
+  check("DBL08 company members: a double click on 'Thêm vào công ty' sends ONE PUT", (await writes(p, /tenants\/t1\/members\/u9$/, "PUT")) === 1);
+  await p.__ctx.close(); });
+await block("scenario 71", async () => { const p = await open({ portal: "admin", me: "tadmin", start: "/admin/my-workspaces" }); await settle(p, 500);
+  await p.evaluate(() => { window.__cfg.slow = "/workspaces/w1/members"; }); await p.getByTestId("ws-add-who").fill("nguoi.moi");
+  await p.getByRole("button", { name: "Thêm vào workspace" }).dblclick(); await settle(p, 400);
+  check("DBL09 workspace members: a double click on 'Thêm vào workspace' sends ONE POST", (await writes(p, /workspaces\/w1\/members$/, "POST")) === 1);
+  await p.__ctx.close(); });
+await block("scenario 72", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/connectors" }); await settle(p, 500);
+  await p.evaluate(() => { window.__cfg.slow = "/admin/connectors"; });
+  await p.getByLabel("Mã", { exact: true }).fill("kho"); await p.getByLabel("Tên", { exact: true }).fill("Kho");
+  await p.getByRole("button", { name: "Lưu", exact: true }).dblclick(); await settle(p, 400);
+  check("DBL10 connectors: a double click on 'Lưu' sends ONE PUT", (await writes(p, /admin\/connectors$/, "PUT")) === 1);
+  await p.__ctx.close(); });
+await block("scenario 73", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/tenants", slow: "/admin/tenants" }); await settle(p, 500);
+  await p.getByRole("button", { name: "+ Tạo công ty" }).click(); await settle(p, 300);
+  await p.getByTestId("tenant-name").fill("Công ty Hai Lần");
+  await p.keyboard.press("Enter"); await p.getByRole("button", { name: /Tạo công ty|Đang tạo/ }).last().dblclick({ force: true }).catch(() => undefined); await settle(p, 500);
+  check("DBL11 create company: Enter + double click sends ONE POST", (await writes(p, /admin\/tenants$/, "POST")) === 1);
+  await p.__ctx.close(); });
+await block("scenario 74", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/identity" }); await settle(p, 500);
+  check("DBL12 (control) the page that has no write loads without a request storm", (await calls(p)).filter((c) => c.method !== "GET").length === 0);
   await p.__ctx.close(); });
 
 // ===================================================================================================================== route / navigation snapshot (M-066: the split must not change behaviour)

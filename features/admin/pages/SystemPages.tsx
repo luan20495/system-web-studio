@@ -7,6 +7,7 @@ import { confirm, prompt, LoadGate } from "@xweb/ui";
 import { useLoad } from "../../useLoad";
 import { ago, Card, ErrorState, errText, fmtDate, Kpi, num, Pill, StateView } from "../../ui";
 import { PageHead } from "../PageHead";
+import { useAdminAction } from "../useAdminAction";
 
 // ------------------------------------------------------------------ health
 const HEALTH_LABEL: Record<HealthItem["status"], string> = { HEALTHY: "Khỏe", DEGRADED: "Suy giảm", UNAVAILABLE: "Không khả dụng", UNKNOWN: "Không rõ", NOT_CONFIGURED: "Chưa cấu hình" };
@@ -42,9 +43,9 @@ export function BuildsPage() {
   const rep = useLoad(() => api.admin.builds(), []);
   const preview = useLoad(() => api.admin.retentionPreview(), []);
   const repos = useLoad(() => api.admin.repositories(), []);
-  const [msg, setMsg] = useState<string | null>(null); const [err, setErr] = useState<string | null>(null); const [busy, setBusy] = useState(false);
-  async function runCleanup() { if (!(await confirm({ title: "Chạy dọn dẹp ngay?", message: `Sẽ xoá ${num(preview.data?.retention?.artifactsDeleted ?? 0)} artifact (${mib(preview.data?.retention?.artifactBytesFreed)}) và dữ liệu hết hạn lưu giữ. Việc này không hoàn tác được.`, confirmLabel: "Chạy dọn dẹp", danger: true }))) return; setBusy(true); setErr(null); try { const r = await api.admin.retentionRun(); setMsg(`Đã dọn: ${r.retention?.artifactsDeleted ?? 0} artifact (${mib(r.retention?.artifactBytesFreed)}), ${r.retention?.previewsExpired ?? 0} bản xem trước hết hạn.`); preview.reload(); rep.reload(); repos.reload(); } catch (x) { setErr(errText(x, "Không dọn được.")); } finally { setBusy(false); } }
-  async function hardDelete(r: RepoRow) { if (!(await confirm({ title: `Xoá vĩnh viễn kho mã “${r.name}”?`, message: "Không thể hoàn tác.", confirmLabel: "Xoá vĩnh viễn", danger: true }))) return; setErr(null); try { await api.admin.deleteRepository(r.projectId); repos.reload(); } catch (x) { setErr(errText(x, "Không xoá được.")); } }
+  const { act, busy, msg, err } = useAdminAction("Không thực hiện được.", () => { preview.reload(); rep.reload(); repos.reload(); });
+  async function runCleanup() { if (!(await confirm({ title: "Chạy dọn dẹp ngay?", message: `Sẽ xoá ${num(preview.data?.retention?.artifactsDeleted ?? 0)} artifact (${mib(preview.data?.retention?.artifactBytesFreed)}) và dữ liệu hết hạn lưu giữ. Việc này không hoàn tác được.`, confirmLabel: "Chạy dọn dẹp", danger: true }))) return; void act(() => api.admin.retentionRun(), (r) => `Đã dọn: ${r.retention?.artifactsDeleted ?? 0} artifact (${mib(r.retention?.artifactBytesFreed)}), ${r.retention?.previewsExpired ?? 0} bản xem trước hết hạn.`); }
+  async function hardDelete(r: RepoRow) { if (!(await confirm({ title: `Xoá vĩnh viễn kho mã “${r.name}”?`, message: "Không thể hoàn tác.", confirmLabel: "Xoá vĩnh viễn", danger: true }))) return; void act(() => api.admin.deleteRepository(r.projectId)); }
   return (<>
     <PageHead title="Build & lưu trữ" sub="Số liệu đo thật từ runner (CPU của container, thời gian, kích thước kết quả). Giới hạn chỉnh trong Cài đặt → Build / Lưu trữ / Lưu giữ."/>
     <LoadGate load={rep} label="số liệu build">{(d) => <>
@@ -78,20 +79,19 @@ const PKG_STATUS: Record<string, [string, string]> = { PENDING: ["UNKNOWN", "Ch�
 /** Approved npm package catalog (ADR 0013): approve → closure resolved in the sandbox + OSV scan; HIGH/CRITICAL denied unless the risk is accepted. */
 export function PackagesPage() {
   const { data, error, loading, reload } = useLoad(() => api.admin.packages(), []);
-  const [f, setF] = useState({ name: "", range: "", pin: "", note: "" }); const [err, setErr] = useState<string | null>(null); const [msg, setMsg] = useState<string | null>(null);
+  const [f, setF] = useState({ name: "", range: "", pin: "", note: "" });
+  const { act, busy, msg, err } = useAdminAction("Không thực hiện được.", reload);
   useEffect(() => { if (!data?.some((p) => p.status === "RESOLVING")) return; const t = setInterval(reload, 3000); return () => clearInterval(t); }, [data, reload]);
-  async function approve(name: string, range?: string, pin?: string, note?: string) {
-    setErr(null); setMsg(null);
-    try { await api.admin.approvePackage({ name, versionRange: range || undefined, pinnedVersion: pin || undefined, note: note || undefined }); setMsg(`Đang kiểm tra ${name} (giải phụ thuộc trong sandbox + quét OSV).`); setF({ name: "", range: "", pin: "", note: "" }); reload(); }
-    catch (x) { setErr(errText(x, "Không gửi được.")); }
+  function approve(name: string, range?: string, pin?: string, note?: string) {
+    void act(() => api.admin.approvePackage({ name, versionRange: range || undefined, pinnedVersion: pin || undefined, note: note || undefined }), `Đang kiểm tra ${name} (giải phụ thuộc trong sandbox + quét OSV).`)
+      .then((r) => { if (r.status === "ok") setF({ name: "", range: "", pin: "", note: "" }); });
   }
   async function decide(p: PackageView, status: "ALLOWED" | "DENIED") {
-    setErr(null);
     const risky = (p.findings ?? []).some((x) => x.severity === "HIGH" || x.severity === "CRITICAL");
     let accept = false, note: string | undefined;
     if (status === "DENIED" && !(await confirm({ title: `Từ chối package “${p.name}”?`, message: "Package không còn nằm trong danh mục được phép: ứng dụng mã nguồn không thêm được nó.", confirmLabel: "Từ chối package", danger: true }))) return;
     if (status === "ALLOWED" && risky) { note = (await prompt({ title: `Cho phép “${p.name}” dù có lỗ hổng nghiêm trọng?`, message: "Package có lỗ hổng mức cao hoặc nghiêm trọng. Việc chấp nhận rủi ro được ghi lại cùng lý do.", label: "Lý do chấp nhận rủi ro (bắt buộc)", multiline: true, required: true, maxLength: 500, confirmLabel: "Chấp nhận rủi ro" })) ?? ""; if (!note.trim()) return; accept = true; }
-    try { await api.admin.decidePackage(p.name, status, accept, note); reload(); } catch (x) { setErr(errText(x, "Không đổi được.")); }
+    void act(() => api.admin.decidePackage(p.name, status, accept, note));
   }
   return (<>
     <PageHead title="Packages" sub="Chỉ package trong danh mục mới vào được mirror và lockfile của ứng dụng mã nguồn. Duyệt = giải cây phụ thuộc (không chạy mã package) + quét lỗ hổng OSV."/>
@@ -101,7 +101,7 @@ export function PackagesPage() {
         <input aria-label="Khoảng phiên bản" placeholder="Khoảng phiên bản (^3.0.0)" value={f.range} onChange={(e) => setF({ ...f, range: e.target.value })}/>
         <input aria-label="Ghim phiên bản" placeholder="Hoặc ghim (3.6.0)" value={f.pin} onChange={(e) => setF({ ...f, pin: e.target.value })}/>
         <input aria-label="Ghi chú" placeholder="Ghi chú" value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })}/>
-        <button className="btn primary" disabled={!f.name.trim()}>Kiểm tra & duyệt</button>
+        <button className="btn primary" disabled={!f.name.trim() || busy}>Kiểm tra & duyệt</button>
       </form>
       {msg ? <p className="hint" role="status">{msg}</p> : null}{err ? <p className="formError" role="alert">{err}</p> : null}
     </Card>
@@ -122,14 +122,13 @@ export function PackagesPage() {
 export function SettingsPage() {
   const { data, error, loading, reload } = useLoad(() => api.admin.settings(), []);
   const pol = useLoad(() => api.admin.policies(), []);
-  const [draft, setDraft] = useState<Record<string, string>>({}); const [err, setErr] = useState<string | null>(null); const [ok, setOk] = useState<string | null>(null);
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const { act, busy, msg: ok, err } = useAdminAction("Không lưu được.", pol.reload);
   async function save(s: SettingView, value: string) {
-    setErr(null); setOk(null);
     if (s.risk === "HIGH" && !(await confirm({ title: `Đổi “${s.label}”?`, message: `Đây là cài đặt rủi ro cao. Giá trị mới: ${value}.`, confirmLabel: "Đổi cài đặt", danger: true }))) return;
-    try { await api.admin.setPolicy(s.key, value, s.risk === "HIGH"); setOk(`Đã lưu: ${s.label}`); setDraft((d) => { const n = { ...d }; delete n[s.key]; return n; }); pol.reload(); }
-    catch (x) { setErr(errText(x, "Không lưu được.")); }
+    void act(() => api.admin.setPolicy(s.key, value, s.risk === "HIGH"), `Đã lưu: ${s.label}`).then((r) => { if (r.status === "ok") setDraft((d) => { const n = { ...d }; delete n[s.key]; return n; }); });
   }
-  async function reset(s: SettingView) { setErr(null); try { await api.admin.resetPolicy(s.key); pol.reload(); } catch (x) { setErr(errText(x, "Không đặt lại được.")); } }
+  function reset(s: SettingView) { void act(() => api.admin.resetPolicy(s.key)); }
   const groups = (pol.data ?? []).reduce<Record<string, SettingView[]>>((acc, s) => { (acc[s.group] ??= []).push(s); return acc; }, {});
   return (<>
     <PageHead title="Cài đặt" sub="Chính sách chỉnh được (ghi audit; mục rủi ro cao cần xác nhận). Giá trị mặc định lấy từ cấu hình máy chủ."/>
@@ -143,7 +142,7 @@ export function SettingsPage() {
             ? <label className="switch"><input type="checkbox" checked={s.value === "true"} aria-label={s.label} onChange={(e) => void save(s, String(e.target.checked))}/> {s.value === "true" ? "Bật" : "Tắt"}</label>
             : <form className="row" onSubmit={(e) => { e.preventDefault(); void save(s, v); }}>{s.type === "DOMAINS" ? <input aria-label={s.label} type="text" placeholder="example.com, docs.example.org" value={v} onChange={(e) => setDraft((d) => ({ ...d, [s.key]: e.target.value }))}/>
               : <input aria-label={s.label} type="number" min={s.min} max={s.max} value={v} onChange={(e) => setDraft((d) => ({ ...d, [s.key]: e.target.value }))}/>}
-              <span className="hint">{s.unit}</span>{draft[s.key] !== undefined && draft[s.key] !== s.value ? <button className="btn sm primary">Lưu</button> : null}</form>}
+              <span className="hint">{s.unit}</span>{draft[s.key] !== undefined && draft[s.key] !== s.value ? <button className="btn sm primary" disabled={busy}>Lưu</button> : null}</form>}
             {s.overridden ? <button className="btn sm ghost" onClick={() => void reset(s)}>Mặc định</button> : null}</td></tr>;
       })}</tbody></table></Card>)}</div>}
     <h2 className="subHead">Cấu hình đang hiệu lực (chỉ xem)</h2>

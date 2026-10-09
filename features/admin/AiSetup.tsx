@@ -5,6 +5,7 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { api } from "@/lib/http-api";
 import type { AiLimitDefaults, AiOverride, AiProbe, AiProviderInfo, AiProviderKind } from "@/lib/http-types";
 import { LoadNote } from "./LoadNote";
+import { useSingleFlight } from "./useAdminAction";
 import { useLoad } from "../useLoad";
 import { Modal } from "./Modal";
 import { Card, ErrorState, errText, num, Pill, StateView, usd } from "../ui";
@@ -52,13 +53,14 @@ function ProvidersTab() {
     setProbes((p) => ({ ...p, [id]: "running" }));
     try { const r = await api.admin.aiProbe(id); setProbes((p) => ({ ...p, [id]: r })); } catch (e) { setProbes((p) => ({ ...p, [id]: { id, ok: false, latencyMs: 0, detail: errText(e, "Chưa kiểm tra được.") } })); }
   }
+  const once = useSingleFlight();
   async function remove(p: AiProviderInfo) {
     if (!(await confirm({ title: `Xóa nhà cung cấp “${p.name}”?`, message: "Khóa kết nối đã lưu sẽ bị xóa và các mô hình của nhà cung cấp này ngừng hoạt động.", confirmLabel: "Xóa nhà cung cấp", danger: true }))) return;
-    try { await api.admin.deleteAiProvider(p.id); setMsg(`Đã xóa “${p.name}”.`); reload(); } catch (e) { setMsg(errText(e, "Chưa xóa được.")); }
+    void once(async () => { try { await api.admin.deleteAiProvider(p.id); setMsg(`Đã xóa “${p.name}”.`); reload(); } catch (e) { setMsg(errText(e, "Chưa xóa được.")); } });
   }
   async function toggle(p: AiProviderInfo) {
     if (p.enabled && !(await confirm({ title: `Tắt nhà cung cấp “${p.name}”?`, message: "Mọi mô hình của nhà cung cấp này ngừng dùng được cho cả công ty cho tới khi bạn bật lại.", confirmLabel: "Tắt nhà cung cấp", danger: true }))) return;
-    try { await api.admin.updateAiProvider(p.id, { enabled: !p.enabled }); reload(); } catch (e) { setMsg(errText(e, "Chưa đổi được trạng thái.")); }
+    void once(async () => { try { await api.admin.updateAiProvider(p.id, { enabled: !p.enabled }); reload(); } catch (e) { setMsg(errText(e, "Chưa đổi được trạng thái.")); } });
   }
   return (<>
     <Card title="Nhà cung cấp AI" actions={<button className="btn primary xp-btnIcon" onClick={() => setDialog({})}><Plus size={16} aria-hidden="true"/>Thêm nhà cung cấp</button>}>
@@ -109,14 +111,17 @@ function ProviderDialog({ edit, onClose, onSaved }: { edit?: AiProviderInfo; onC
   const [busy, setBusy] = useState(false); const [error, setError] = useState<string | null>(null);
   const list = models.split(/[\n,]/).map((m) => m.trim()).filter(Boolean);
   function pickKind(k: AiProviderKind) { setKind(k); setPaid(k !== "LOCAL" && k !== "OPENROUTER"); if (!name) setName(KIND_LABELS[k]); }
-  async function submit(e: FormEvent) {
-    e.preventDefault(); setBusy(true); setError(null);
+  const once = useSingleFlight();
+  function submit(e: FormEvent) {
+    e.preventDefault(); void once(async () => {
+    setBusy(true); setError(null);
     try {
       const body = { name: name.trim(), baseUrl: NEEDS_ADDRESS(kind) ? baseUrl.trim() : undefined, apiKey: apiKey.trim() || undefined,
         models: kind === "OPENROUTER" ? undefined : list, defaultModel: kind === "OPENROUTER" ? undefined : defaultModel, paid, enabled };
       const saved = edit ? await api.admin.updateAiProvider(edit.id, body) : await api.admin.addAiProvider({ ...body, kind });
       onSaved(saved);
     } catch (err) { setError(errText(err, "Chưa lưu được nhà cung cấp.")); } finally { setBusy(false); }
+    });
   }
   const kinds = (Object.keys(KIND_LABELS) as AiProviderKind[]).map((k): PickerOption<AiProviderKind> => ({ value: k, label: KIND_LABELS[k], hint: KIND_HINT[k], icon: <ProviderLogo kind={k} size={32}/> }));
   return (
@@ -169,11 +174,12 @@ function ModelPicker({ provider, onClose, onSaved }: { provider: AiProviderInfo;
   const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null);
   const all = Array.from(new Set([...(data?.models ?? []), ...provider.savedModels]));
   function flip(m: string) { setChosen((c) => { const n = new Set(c); if (n.has(m)) n.delete(m); else n.add(m); return n; }); }
-  async function save() {
+  const once = useSingleFlight();
+  function save() { void once(async () => {
     setBusy(true); setErr(null);
     const extra = manual.split(/[\n,]/).map((m) => m.trim()).filter(Boolean);
     try { await api.admin.updateAiProvider(provider.id, { models: Array.from(new Set([...chosen, ...extra])) }); onSaved(); } catch (e) { setErr(errText(e, "Chưa lưu được danh sách mô hình.")); } finally { setBusy(false); }
-  }
+  }); }
   return (
     <Modal label="Chọn mô hình" onClose={onClose}>
       <div className="modalBody">
@@ -204,10 +210,13 @@ function ModelsTab({ pricing }: { pricing: ReactNode }) {
     try { await api.admin.aiModelPolicy(id, enabled); reload(); } catch (e) { setMsg(errText(e, "Chưa đổi được.")); setOver((o) => { const n = { ...o }; delete n[id]; return n; }); }
   }
   async function makeDefault(id: string) { setMsg(null); try { await api.admin.setAiDefaults({ defaultModel: id }); limits.reload(); } catch (e) { setMsg(errText(e, "Chưa đặt được mô hình mặc định.")); } }
-  async function savePrice(e: FormEvent, id: string) {
-    e.preventDefault(); setMsg(null);
+  const once = useSingleFlight();
+  function savePrice(e: FormEvent, id: string) {
+    e.preventDefault(); void once(async () => {
+    setMsg(null);
     try { await api.admin.aiAddPrice({ modelId: id, inputUsdPerMTok: Number(price.input), outputUsdPerMTok: Number(price.output) }); setPriceFor(null); setPrice({ input: "", output: "" }); reload(); setMsg("Đã lưu giá."); }
     catch (x) { setMsg(errText(x, "Chưa lưu được giá.")); }
+    });
   }
   const rows = (data ?? []).flatMap((p) => p.models.map((m) => ({ p, m })));
   return (<>
@@ -246,17 +255,20 @@ function LimitsTab() {
   const models = useLoad(() => api.admin.aiProviders(), []);
   const [form, setForm] = useState<Record<string, string> | null>(null); const [msg, setMsg] = useState<string | null>(null); const [busy, setBusy] = useState(false);
   const [adding, setAdding] = useState(false);
+  const once = useSingleFlight();
   if (!data) return <LoadGate load={{ data, error, loading, reload }} level={2} label="hạn mức AI">{() => null}</LoadGate>;
   const d = data!.defaults;
   const f = form ?? { defaultModel: d.defaultModel, requestsPerUserDay: String(d.requestsPerUserDay), tokensPerUserDay: String(d.tokensPerUserDay), tokensPerWorkspaceMonth: String(d.tokensPerWorkspaceMonth),
     paidBudgetPerUserMonth: String(d.paidBudgetPerUserMonth), paidBudgetPerWorkspaceMonth: String(d.paidBudgetPerWorkspaceMonth) };
   const set = (k: string, v: string) => setForm({ ...f, [k]: v });
   const enabledModels = (models.data ?? []).flatMap((p) => p.models.filter((m) => m.enabled).map((m) => ({ id: m.id, label: `${m.name} (${p.name})` })));
-  async function save(e: FormEvent) {
-    e.preventDefault(); setBusy(true); setMsg(null);
+  function save(e: FormEvent) {
+    e.preventDefault(); void once(async () => {
+    setBusy(true); setMsg(null);
     const body: Partial<AiLimitDefaults> = { defaultModel: f.defaultModel, requestsPerUserDay: Number(f.requestsPerUserDay), tokensPerUserDay: Number(f.tokensPerUserDay), tokensPerWorkspaceMonth: Number(f.tokensPerWorkspaceMonth),
       paidBudgetPerUserMonth: Number(f.paidBudgetPerUserMonth), paidBudgetPerWorkspaceMonth: Number(f.paidBudgetPerWorkspaceMonth) };
     try { setData(await api.admin.setAiDefaults(body)); setForm(null); setMsg("Đã lưu hạn mức mặc định."); } catch (x) { setMsg(errText(x, "Chưa lưu được hạn mức.")); } finally { setBusy(false); }
+    });
   }
   return (<>
     <Card title="Hạn mức mặc định">
@@ -308,14 +320,17 @@ export function OverrideDialog({ fixed, current, onClose, onSaved }: { fixed?: {
   const [busy, setBusy] = useState(false); const [error, setError] = useState<string | null>(null);
   const fields = { USER: ["rpd", "tpd", "budget"], WORKSPACE: ["rpd", "tpd", "tpm", "budget"], PROJECT: ["rpd", "tpm"] }[scopeType];
   const num0 = (s: string) => (s.trim() === "" ? null : Number(s));
-  async function submit(e: FormEvent) {
+  const once = useSingleFlight();
+  function submit(e: FormEvent) {
     e.preventDefault(); if (!target) { setError("Hãy chọn đối tượng áp dụng."); return; }
+    void once(async () => {
     setBusy(true); setError(null);
     try {
       await api.admin.setAiOverride({ scopeType, scopeId: target.id, requestsPerDay: fields.includes("rpd") ? num0(v.rpd) : null, tokensPerDay: fields.includes("tpd") ? num0(v.tpd) : null,
         tokensPerMonth: fields.includes("tpm") ? num0(v.tpm) : null, paidBudgetMonth: fields.includes("budget") ? num0(v.budget) : null });
       onSaved();
     } catch (err) { setError(errText(err, "Chưa lưu được hạn mức riêng.")); } finally { setBusy(false); }
+    });
   }
   const L = { rpd: "Lượt AI / ngày", tpd: "Lượng AI (token) / ngày", tpm: "Lượng AI (token) / tháng", budget: "Ngân sách AI trả phí / tháng (USD)" } as const;
   const H = { rpd: "0 = Không giới hạn", tpd: "0 = Không giới hạn", tpm: "0 = Không giới hạn", budget: "0 = Chưa cấp ngân sách" } as const;

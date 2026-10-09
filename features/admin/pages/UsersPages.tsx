@@ -2,6 +2,7 @@
 
 import { AuditTable } from "./AuditTable";
 import { AppTable } from "./ApplicationsPages";
+import { useAdminAction } from "../useAdminAction";
 import { UserAiCard } from "../AiSetup";
 import { PlatformCreateAccount } from "../ProvisioningLive";
 import { WorkspaceMembers } from "../TenantScreens";
@@ -69,32 +70,29 @@ export function UserDetail({ id }: { id: string }) {
   const A = useA();
   const { me } = useSession();
   const { data, error, loading, reload, setData } = useLoad(() => api.admin.user(id), [id]);
-  const [busy, setBusy] = useState(false); const [msg, setMsg] = useState<string | null>(null); const [link, setLink] = useState<ActivationLink | null>(null);
+  const [link, setLink] = useState<ActivationLink | null>(null);
+  const { act, busy, msg: okMsg, err } = useAdminAction("Chưa thực hiện được.");
+  const msg = err ?? okMsg;
   if (!data) return <LoadGate load={{ data, error, loading, reload }} level={1} label="thông tin người dùng">{() => null}</LoadGate>;
   const d = data!; const u = d.user; const self = me?.id === u.id;
-  async function newLink() {
-    setBusy(true); setMsg(null);
-    try { setLink(await api.admin.activationLink(u.id)); } catch (e) { setMsg(errText(e, "Chưa tạo được liên kết.")); } finally { setBusy(false); }
-  }
+  function newLink() { void act(async () => { setLink(await api.admin.activationLink(u.id)); }); }
   async function grantAdmin() {
     const grant = !u.systemAdmin;
     if (!(await confirm({ title: grant ? `Cấp quyền Quản trị hệ thống cho ${u.username}?` : `Gỡ quyền Quản trị hệ thống của ${u.username}?`, message: grant ? "Người này sẽ quản lý được toàn bộ người dùng, AI và cài đặt của công ty." : "Người này không còn quản lý được người dùng, AI và cài đặt của công ty.", confirmLabel: grant ? "Cấp quyền" : "Gỡ quyền", danger: true }))) return;
-    setBusy(true); setMsg(null);
-    try { await api.admin.setSystemAdmin(u.id, grant); setMsg(grant ? "Đã cấp quyền Quản trị hệ thống." : "Đã gỡ quyền Quản trị hệ thống."); reload(); } catch (e) { setMsg(errText(e, "Chưa đổi được quyền.")); } finally { setBusy(false); }
+    void act(async () => { await api.admin.setSystemAdmin(u.id, grant); reload(); }, grant ? "Đã cấp quyền Quản trị hệ thống." : "Đã gỡ quyền Quản trị hệ thống.");
   }
   async function toggle() {
     if (!(await confirm({ title: u.enabled ? `Khóa tài khoản ${u.username}?` : `Mở khóa tài khoản ${u.username}?`, message: u.enabled ? "Mọi phiên đăng nhập của người này sẽ bị thu hồi ngay." : "Người này đăng nhập lại được.", confirmLabel: u.enabled ? "Khóa tài khoản" : "Mở khóa", danger: u.enabled }))) return;
-    setBusy(true); setMsg(null);
-    try { await api.admin.setUserStatus(u.id, !u.enabled); setMsg(u.enabled ? "Đã khóa tài khoản và thu hồi phiên." : "Đã mở khóa tài khoản."); reload(); } catch (e) { setMsg(errText(e, "Không đổi được trạng thái.")); } finally { setBusy(false); }
+    void act(async () => { await api.admin.setUserStatus(u.id, !u.enabled); reload(); }, u.enabled ? "Đã khóa tài khoản và thu hồi phiên." : "Đã mở khóa tài khoản.");
   }
   async function revoke() {
     if (!(await confirm({ title: `Thu hồi mọi phiên đăng nhập của ${u.username}?`, message: "Người này phải đăng nhập lại trên mọi thiết bị.", confirmLabel: "Thu hồi phiên", danger: true }))) return;
-    setBusy(true); try { const r = await api.admin.revokeSessions(u.id); setMsg(`Đã thu hồi ${r.revoked} phiên.`); setData({ ...d, activeSessions: 0 }); } catch (e) { setMsg(errText(e, "Không thu hồi được phiên.")); } finally { setBusy(false); }
+    void act(async () => { const r = await api.admin.revokeSessions(u.id); setData({ ...d, activeSessions: 0 }); return r; }, (r) => `Đã thu hồi ${r.revoked} phiên.`);
   }
   return (<>
     <PageHead title={u.displayName ?? u.username} sub={`${u.username}${u.email ? ` · ${u.email}` : ""} · tạo ${fmtDate(u.createdAt)}`}
       actions={<div className="row">
-        {u.authSource === "LOCAL" && u.enabled ? <button className="btn" disabled={busy} onClick={() => void newLink()}>{u.pending ? "Tạo lại liên kết kích hoạt" : "Đặt lại mật khẩu"}</button> : null}
+        {u.authSource === "LOCAL" && u.enabled ? <button className="btn" disabled={busy} onClick={() => newLink()}>{u.pending ? "Tạo lại liên kết kích hoạt" : "Đặt lại mật khẩu"}</button> : null}
         {!self && u.enabled && !u.pending ? <button className="btn" disabled={busy} onClick={() => void grantAdmin()}>{u.systemAdmin ? "Gỡ quyền Quản trị hệ thống" : "Cấp quyền Quản trị hệ thống"}</button> : null}
         <button className="btn" disabled={busy || d.activeSessions === 0} onClick={() => void revoke()}>Thu hồi phiên ({d.activeSessions})</button>
         <button className={`btn ${u.enabled ? "danger" : "primary"}`} disabled={busy || self} title={self ? "Bạn không thể tự khóa tài khoản của mình" : undefined} onClick={() => void toggle()}>{u.enabled ? "Khóa tài khoản" : "Mở khóa"}</button>

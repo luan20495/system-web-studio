@@ -16,8 +16,9 @@ import { useSession } from "../session";
 import { useLoad } from "../useLoad";
 import { Card, ErrorState, fmtDate, Kpi, Pager, Pill, StateView } from "../ui";
 import { isTenantAdminRole, isWorkspaceAdminRole } from "@xweb/permissions";
-import { ArrowLeft, Building2, CircleCheck, ModalHeader, ShieldCheck, UserRound, confirm, LoadGate } from "@xweb/ui";
+import { ArrowLeft, Building2, CircleCheck, ModalHeader, ShieldCheck, UserRound, confirm, LoadGate, useAction } from "@xweb/ui";
 import { LoadNote } from "./LoadNote";
+import { useSingleFlight } from "./useAdminAction";
 import { PersonPicker } from "./PersonPicker";
 import { PlatformCreateAccount } from "./ProvisioningLive";
 import { DataSourcesPanel } from "../studio/builder/DataSourcesPanel";
@@ -69,9 +70,15 @@ function TenantMembers({ tenantId, tenantName, onCreateAdmin, rev = 0 }: { tenan
   const [draft, setDraft] = useState<Record<string, string>>({});
   const options: TenantMemberCandidate[] = candidates.data ?? [];
   useEffect(() => { if (pick && !options.some((c) => c.userId === pick)) setPick(""); }, [options, pick]);
+  // single-flight: a double click on "Thêm" / "Gỡ" runs ONE request (a second call while one is running is skipped) (M-020)
+  const flight = useAction(async (_c, fn: () => Promise<unknown>) => { await fn(); });
   async function act(key: string, fn: () => Promise<unknown>, ok: string) {
+    if (flight.busy) return;
     setBusy(key); setMsg(null);
-    try { await fn(); setMsg({ kind: "ok", text: ok }); members.reload(); } catch (e) { setMsg({ kind: "err", text: say(e, "Chưa thực hiện được.") }); } finally { setBusy(null); }
+    const r = await flight.run(fn);
+    if (r.status === "skipped") return;
+    if (r.status === "ok") { setMsg({ kind: "ok", text: ok }); members.reload(); } else if (r.status === "error") setMsg({ kind: "err", text: say(r.error, "Chưa thực hiện được.") });
+    setBusy(null);
   }
   async function change(m: { userId: string; role: string }, next: "TENANT_ADMIN" | "MEMBER" | "REMOVE") {
     const block = memberChangeBlock(m, { id: me!.id }, list, next);
@@ -135,6 +142,7 @@ function TenantBody({ id, onChanged }: { id: string; onChanged?: () => void }) {
   const scope = useMemo(() => adminScope(me), [me]);
   const [busy, setBusy] = useState(false); const [msg, setMsg] = useState<string | null>(null);
   const [creating, setCreating] = useState(false); const [rev, setRev] = useState(0);
+  const statusFlight = useAction(async (_c, fn: () => Promise<unknown>) => { await fn(); });
   if (tenant.error) return <ErrorState error={tenant.error} retry={tenant.reload}/>;
   if (tenant.loading && !tenant.data) return <StateView kind="loading"/>;
   const t = tenant.data as TenantView;
@@ -143,8 +151,12 @@ function TenantBody({ id, onChanged }: { id: string; onChanged?: () => void }) {
   const canCreateAdmin = scope.platform && t.status === "ACTIVE";
   async function setStatus(to: "ACTIVE" | "SUSPENDED" | "DELETED", a: { label: string; danger: boolean; message: string }) {
     if (!(await confirm({ title: `${a.label} công ty “${t.name}”?`, message: a.message, confirmLabel: a.label, danger: a.danger }))) return;
+    if (statusFlight.busy) return;
     setBusy(true); setMsg(null);
-    try { await api.admin.setTenantStatus(t.id, to); setMsg("Đã đổi trạng thái công ty."); tenant.reload(); onChanged?.(); } catch (e) { setMsg(say(e, "Chưa đổi được trạng thái.")); } finally { setBusy(false); }
+    const r = await statusFlight.run(() => api.admin.setTenantStatus(t.id, to));
+    if (r.status === "skipped") return;
+    if (r.status === "ok") { setMsg("Đã đổi trạng thái công ty."); tenant.reload(); onChanged?.(); } else if (r.status === "error") setMsg(say(r.error, "Chưa đổi được trạng thái."));
+    setBusy(false);
   }
   return (<>
     <PageHead title={t.name} sub={`${t.slug} · tạo ${fmtDate(t.createdAt)}`} actions={actions.length || canCreateAdmin ? <div className="row">
@@ -211,11 +223,14 @@ function CreateTenantDialog({ onClose, onCreated }: { onClose: () => void; onCre
   const problems = checkTenantForm({ slug, name });
   const slugOk = !problems.slug && slug.trim() !== "";
   function onName(v: string) { setName(v); if (!slugEdited) setSlug(slugify(v)); }
+  const once = useSingleFlight();
   async function submit(e: FormEvent) {
     e.preventDefault(); setTouched(true); setError(null);
     if (problems.slug || problems.name) return;
+    await once(async () => {
     setBusy(true);
     try { onCreated(await api.admin.createTenant({ slug: slug.trim().toLowerCase(), name: name.trim(), ...(admin ? { firstAdminUserId: admin } : {}) })); } catch (err) { setError(say(err, "Chưa tạo được công ty.")); } finally { setBusy(false); }
+    });
   }
   return (
     <Modal label="Tạo công ty" onClose={onClose} dismissible={!busy}>
@@ -316,9 +331,15 @@ function WorkspaceMembersPanel({ workspaceId, name }: { workspaceId: string; nam
   const [busy, setBusy] = useState<string | null>(null); const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const list = members.data ?? [];
   const [draft, setDraft] = useState<Record<string, string>>({});   // chosen in the select, applied by "Lưu"
+  // single-flight: a double click on "Thêm" / "Gỡ" runs ONE request (a second call while one is running is skipped) (M-020)
+  const flight = useAction(async (_c, fn: () => Promise<unknown>) => { await fn(); });
   async function act(key: string, fn: () => Promise<unknown>, ok: string) {
+    if (flight.busy) return;
     setBusy(key); setMsg(null);
-    try { await fn(); setMsg({ kind: "ok", text: ok }); members.reload(); } catch (e) { setMsg({ kind: "err", text: say(e, "Chưa thực hiện được.") }); } finally { setBusy(null); }
+    const r = await flight.run(fn);
+    if (r.status === "skipped") return;
+    if (r.status === "ok") { setMsg({ kind: "ok", text: ok }); members.reload(); } else if (r.status === "error") setMsg({ kind: "err", text: say(r.error, "Chưa thực hiện được.") });
+    setBusy(null);
   }
   async function saveRole(m: Member) {
     const next = draft[m.userId]; if (!next || next === m.role) return;

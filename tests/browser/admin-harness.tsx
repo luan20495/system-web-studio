@@ -130,6 +130,7 @@ const H: Handler[] = [
   ["PUT", /^\/admin\/packages\/([^/]+)\/decision$/, () => ({})],
   ["GET", /^\/admin\/backups$/, () => []],
   ["GET", /^\/admin\/connectors$/, () => [{ key: "crm", name: "CRM", description: "", baseUrl: "https://crm.example.com", authHeader: "Authorization", hasSecret: true, operations: [{ method: "GET", path: "/c" }], grants: 1, status: "APPROVED" }]],
+  ["PUT", /^\/admin\/connectors$/, () => []],
   ["GET", /^\/admin\/departments$/, () => (FX ? [{ id: "d1", name: "Kỹ thuật", kind: "DEPARTMENT", parentId: null, users: 3, workspaces: 1, createdAt: iso(9) }] : [])],
   ["PATCH", /^\/admin\/departments\/([^/]+)$/, () => []],
   ["DELETE", /^\/admin\/departments\/([^/]+)$/, () => []],

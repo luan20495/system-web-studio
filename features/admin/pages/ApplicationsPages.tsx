@@ -14,6 +14,7 @@ import { useLoad } from "../../useLoad";
 import { ago, Card, ComingSoon, ErrorState, errText, fmtDate, Kpi, Pager, Pill, StateView } from "../../ui";
 import { LoadNote } from "../LoadNote";
 import { PageHead } from "../PageHead";
+import { useAdminAction } from "../useAdminAction";
 
 // ------------------------------------------------------------------ application inventory
 export function publishPill(a: App) {
@@ -57,10 +58,12 @@ export function AppDetail({ id }: { id: string }) {
   const { data, error, loading, reload } = useLoad(() => api.admin.application(id), [id]);
   const ws = useLoad(() => (data ? api.admin.workspace(data.app.workspaceId) : Promise.resolve(null)), [data?.app.workspaceId]);
   const [tab, setTab] = useState<"overview" | "members" | "versions" | "prompts" | "deployments" | "audit">("overview");
-  const [newOwner, setNewOwner] = useState(""); const [busy, setBusy] = useState(false); const [msg, setMsg] = useState<string | null>(null);
+  const [newOwner, setNewOwner] = useState("");
+  const { act: run, busy, msg: okMsg, err: failMsg } = useAdminAction("Thao tác thất bại.", reload);
+  const msg = failMsg ?? okMsg;
   if (!data) return <LoadGate load={{ data, error, loading, reload }} level={1} label="thông tin ứng dụng">{() => null}</LoadGate>;
   const d = data!; const a = d.app; const inWorkspace = canActInWorkspace(me, a.workspaceId);
-  async function act(fn: () => Promise<unknown>, ok: string) { setBusy(true); setMsg(null); try { await fn(); setMsg(ok); reload(); } catch (e) { setMsg(errText(e, "Thao tác thất bại.")); } finally { setBusy(false); } }
+  const act = (fn: () => Promise<unknown>, ok: string) => run(fn, ok);
   const tabs: [typeof tab, string][] = [["overview", "Tổng quan"], ["members", `Thành viên (${d.members.length})`], ["versions", "Phiên bản"], ["prompts", "Hoạt động AI"], ["deployments", "Xuất bản"], ["audit", "Nhật ký"]];
   return (<>
     <PageHead title={a.name} sub={`${a.workspaceName} · chủ sở hữu ${a.owner} · ${!a.active ? "đã xóa" : a.lifecycle === "ARCHIVED" ? "đã lưu trữ (chỉ xem, ngoại tuyến)" : "đang hoạt động"}`}

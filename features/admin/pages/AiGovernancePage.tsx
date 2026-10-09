@@ -8,6 +8,7 @@ import { useLoad } from "../../useLoad";
 import { ago, Card, ErrorState, errText, num, Pill, StateView, usd } from "../../ui";
 import { LoadNote } from "../LoadNote";
 import { PageHead } from "../PageHead";
+import { useAdminAction } from "../useAdminAction";
 
 // ---------------------------------------------------------------- Stage E: AI governance
 
@@ -44,23 +45,23 @@ export function AiGovernancePage() {
   const [rule, setRule] = useState({ type: "ORG", id: "" }); const [model, setModel] = useState("paid:*");
   const [b, setB] = useState({ type: "ORG", id: "" }); const [bf, setBf] = useState({ period: "MONTHLY", amount: "", currency: "USD", rate: "", soft: "80", hard: true });
   const [check, setCheck] = useState({ type: "USER", id: "" }); const [checkWs, setCheckWs] = useState({ type: "WORKSPACE", id: "" }); const [eff, setEff] = useState<EffectiveModel[] | null>(null);
-  const [err, setErr] = useState<string | null>(null); const [msg, setMsg] = useState<string | null>(null);
-  async function addRule(e: FormEvent) {
-    e.preventDefault(); setErr(null); setMsg(null);
-    try { await api.admin.addAccessRule({ scopeType: rule.type, scopeId: rule.type === "ORG" ? undefined : rule.id, modelId: model.trim() }); setMsg("Đã thêm quy tắc chặn."); rules.reload(); }
-    catch (x) { setErr(errText(x, "Không thêm được.")); }
+  // one flight at a time: a double click on "Thêm quy tắc" / "Lưu ngân sách" sends ONE request (M-020)
+  const { act, busy, msg, err } = useAdminAction("Không thực hiện được.");
+  function addRule(e: FormEvent) {
+    e.preventDefault();
+    void act(async () => { await api.admin.addAccessRule({ scopeType: rule.type, scopeId: rule.type === "ORG" ? undefined : rule.id, modelId: model.trim() }); rules.reload(); }, "Đã thêm quy tắc chặn.");
   }
-  async function delRule(r: AccessRule) { setErr(null); try { await api.admin.deleteAccessRule(r.id); rules.reload(); } catch (x) { setErr(errText(x, "Không xoá được.")); } }
-  async function saveBudget(e: FormEvent) {
-    e.preventDefault(); setErr(null); setMsg(null);
-    try {
+  function delRule(r: AccessRule) { void act(async () => { await api.admin.deleteAccessRule(r.id); rules.reload(); }); }
+  function saveBudget(e: FormEvent) {
+    e.preventDefault();
+    void act(async () => {
       await api.admin.setBudget({ scopeType: b.type, scopeId: b.type === "ORG" ? undefined : b.id, period: bf.period, amount: Number(bf.amount), currency: bf.currency.toUpperCase(),
         usdPerUnit: bf.currency.toUpperCase() === "USD" ? undefined : Number(bf.rate), softPercent: Number(bf.soft), hard: bf.hard });
-      setMsg("Đã lưu ngân sách."); budgets.reload();
-    } catch (x) { setErr(errText(x, "Không lưu được.")); }
+      budgets.reload();
+    }, "Đã lưu ngân sách.");
   }
-  async function delBudget(x: AiBudget) { if (!(await confirm({ title: "Xoá ngân sách này?", message: `${SCOPE_LABEL[x.scopeType]} ${x.scopeLabel ?? x.scopeId}: không còn bị giới hạn bởi ngân sách này.`, confirmLabel: "Xoá ngân sách", danger: true }))) return; try { await api.admin.deleteBudget(x.id); budgets.reload(); } catch (e) { setErr(errText(e, "Không xoá được.")); } }
-  async function runCheck(e: FormEvent) { e.preventDefault(); setErr(null); try { setEff(await api.admin.effectiveModels(check.id, checkWs.id || undefined)); } catch (x) { setErr(errText(x, "Không kiểm tra được.")); } }
+  async function delBudget(x: AiBudget) { if (!(await confirm({ title: "Xoá ngân sách này?", message: `${SCOPE_LABEL[x.scopeType]} ${x.scopeLabel ?? x.scopeId}: không còn bị giới hạn bởi ngân sách này.`, confirmLabel: "Xoá ngân sách", danger: true }))) return; void act(async () => { await api.admin.deleteBudget(x.id); budgets.reload(); }); }
+  function runCheck(e: FormEvent) { e.preventDefault(); void act(async () => { setEff(await api.admin.effectiveModels(check.id, checkWs.id || undefined)); }); }
   const money = (v: number, c: string) => `${num(Math.round(v * 10000) / 10000)} ${c}`;
   return (<>
     <PageHead title="Quản trị AI" sub="Quyền dùng model theo tổ chức → workspace → vai trò → người dùng (chặn ở bất kỳ mức nào là chặn), và ngân sách tiền trên chi phí đã biết."/>
@@ -70,7 +71,7 @@ export function AiGovernancePage() {
       <form className="filters wrap" onSubmit={(e) => void addRule(e)}>
         <ScopePicker types={["ORG", "WORKSPACE", "ROLE", "USER"]} value={rule} onChange={setRule}/>
         <input aria-label="Model bị chặn" value={model} onChange={(e) => setModel(e.target.value)} placeholder="paid:* | * | provider:model"/>
-        <button className="btn primary" disabled={!model.trim() || (rule.type !== "ORG" && !rule.id)}>Thêm quy tắc chặn</button>
+        <button className="btn primary" disabled={busy || !model.trim() || (rule.type !== "ORG" && !rule.id)}>Thêm quy tắc chặn</button>
       </form>
       {rules.error ? <ErrorState error={rules.error} retry={rules.reload}/> : !rules.data ? <StateView kind="loading"/> : !rules.data.length ? <StateView kind="empty" title="Chưa có quy tắc chặn nào"/> :
         <table className="table"><thead><tr><th>Phạm vi</th><th>Đối tượng</th><th>Model bị chặn</th><th>Tạo</th><th><span className="srOnly">Thao tác</span></th></tr></thead>
@@ -97,7 +98,7 @@ export function AiGovernancePage() {
         {bf.currency.toUpperCase() !== "USD" ? <input aria-label="USD cho 1 đơn vị" type="number" step="any" placeholder={`USD / 1 ${bf.currency.toUpperCase()}`} value={bf.rate} onChange={(e) => setBf({ ...bf, rate: e.target.value })}/> : null}
         <label className="row">Cảnh báo ở <input aria-label="Ngưỡng cảnh báo %" type="number" min="1" max="100" value={bf.soft} onChange={(e) => setBf({ ...bf, soft: e.target.value })} style={{ width: 64 }}/>%</label>
         <label className="switch"><input type="checkbox" checked={bf.hard} onChange={(e) => setBf({ ...bf, hard: e.target.checked })}/> Chặn khi vượt</label>
-        <button className="btn primary" disabled={!bf.amount || (b.type !== "ORG" && !b.id)}>Lưu ngân sách</button>
+        <button className="btn primary" disabled={busy || !bf.amount || (b.type !== "ORG" && !b.id)}>Lưu ngân sách</button>
       </form>
       {budgets.error ? <ErrorState error={budgets.error} retry={budgets.reload}/> : !budgets.data ? <StateView kind="loading"/> : !budgets.data.length ? <StateView kind="empty" title="Chưa có ngân sách nào"/> :
         <table className="table"><thead><tr><th>Phạm vi</th><th>Chu kỳ</th><th>Ngân sách</th><th>Đã dùng</th><th>Mức dùng</th><th>Không rõ chi phí</th><th><span className="srOnly">Thao tác</span></th></tr></thead>
