@@ -235,4 +235,25 @@ for (const w of [768, 1000]) {
     await p.close();
   }
 }
+// ---------- M-119 + M-122: /studio/new says it is loading, says when a load failed (with a retry, no leaked server text), says when there is nothing to choose ----------
+{
+  let s = newState(); let release; s.hold = { "GET /templates": { promise: new Promise((r) => { release = r; }) } };
+  let p = await open(b, "/studio/new", { state: s }); await wait(900);
+  check("M-122: while the templates load, the page says so (it showed nothing)", /Đang tải mẫu/.test(await p.locator("main").innerText()), (await p.locator("main").innerText()).replace(/\n/g, " | ").slice(0, 200));
+  release(); await wait(700);
+  check("M-119: with no template at all, the page says so and that the default page is used", /Chưa có mẫu của công ty hoặc của bạn/.test(await p.locator("main").innerText()));
+  await p.close();
+  s = newState(); s.fail = { "GET /templates": { status: 500, code: "INTERNAL_ERROR", message: "java.lang.NullPointerException at com.systemwebstudio.Foo.bar(Foo.kt:42)" } };
+  p = await open(b, "/studio/new", { state: s }); await wait(1200);
+  let t = await p.locator("main").innerText();
+  check("M-122: a failed template list says what failed, offers a retry and leaks no server text", /Chưa tải được danh sách mẫu/.test(t) && (await p.getByRole("button", { name: "Thử lại" }).count()) >= 1 && !/NullPointer|java\.|systemwebstudio/.test(t), t.replace(/\n/g, " | ").slice(0, 240));
+  check("M-122: ...and the default page can still be chosen and created", (await p.getByRole("radio", { name: /Trang mặc định/ }).count()) === 1);
+  delete s.fail["GET /templates"]; await p.getByRole("button", { name: "Thử lại" }).first().click(); await wait(900);
+  check("M-122: the retry recovers the list", !/Chưa tải được danh sách mẫu/.test(await p.locator("main").innerText()));
+  await p.close();
+  s = newState(); s.fail = { "GET /auth/config": { status: 503, code: "DEPENDENCY_UNAVAILABLE", message: "down" } };
+  p = await open(b, "/studio/new", { state: s }); await wait(1200);
+  check("M-122: when /auth/config fails the type list says so instead of an empty gap", /Chưa tải được loại ứng dụng/.test(await p.locator("main").innerText()));
+  await p.close();
+}
 await b.close(); finish();
