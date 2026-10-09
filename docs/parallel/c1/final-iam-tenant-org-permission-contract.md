@@ -109,6 +109,7 @@ All routes are under `/api/v1/auth`. The session cookie is `STUDIO_SESSION` (`M/
 **`workspaces[]` for a SYSTEM_ADMIN** (`AuthController.kt:149-155`). The rows are **every** workspace:
 - `role` is the real membership role, or `"ADMIN"` when it is not a member.
 - `permissions` = the member role's codes, or the `platformScope` codes for `"ADMIN"` (`MeTenancy.kt:45-49`).
+- **Not navigable rows:** a SYSTEM_ADMIN whose membership no longer counts (tenant DELETED / tenant membership removed) is listed with role `ADMIN` and the platform-scope codes only, although the server answers 404 on that workspace's routes; with the legacy flag on, rows keep the member-role codes (flag-gated, off by default).
 - **SYSTEM_ADMIN rows follow the same gates as `forWorkspace`:** a workspace the operator belongs to by MEMBERSHIP grants nothing when its tenant is DELETED or the operator's tenant membership was removed (the row shows role `ADMIN` = platform scope), and carries NO permission when the tenant is SUSPENDED; a workspace without membership is listed with role `ADMIN` (platform scope only).
 
 **`projectScopes[]`** (`AuthController.kt:168-184`):
@@ -176,7 +177,7 @@ Authorization helpers (`M/access/AccessService.kt`):
 Notes on the table:
 1. **`POST` create, `firstAdmin` path.** One transaction (`M/tenancy/CompanyBootstrapService.kt:24-31`) creates the tenant, a pending LOCAL account (no password), its TENANT_ADMIN membership and a 24 h activation link. Any failure rolls back everything. Errors: 400 `VALIDATION_FAILED` (both `firstAdmin` and `firstAdminUserId`; blank `firstAdmin.username`; blank `displayName`), 400 `TENANT_SLUG_INVALID`, 400 `TENANT_NAME_INVALID`, 409 `TENANT_SLUG_TAKEN`, and the account errors of note 4. DONE: `T/organization/CompanyBootstrapTests.kt`.
 2. **`POST` create, `firstAdminUserId` path.** The id must exist (400 `USER_NOT_FOUND`), and it becomes TENANT_ADMIN. **GAP (C1):** the code checks no enabled or activated state for that user (`TenantController.kt:62`, `TenantService.kt:52`). Without either field, the tenant is created with no admin, which is backward compatible. Slug normalization: trim, lower-case, regex `^[a-z0-9][a-z0-9-]{0,118}[a-z0-9]$`.
-3. **Rename.** DONE (no test). No test of `PATCH /{tenantId}` or `TENANT_UPDATED` was found under `T/`.
+3. **Rename.** DONE and tested (`T/tenancy/FinalTenantStatusTests.kt`: ACTIVE paths, SUSPENDED 403 for a Tenant Admin / 200 for the platform operator, DELETED 404 for everybody).
 4. **`POST /users` errors** (from `AccountService.createTenantUser`, `M/identity/Accounts.kt:101-168`): 400 `INVALID_USERNAME` (`^[a-z0-9][a-z0-9._-]{2,39}$` after trim and lower-case; no `oidc-` prefix), 400 `VALIDATION_FAILED` (displayName 1-160; `workspaceId` and `workspaceRole` must be sent together), 400 `INVALID_EMAIL`, 409 `EMAIL_TAKEN` (case-insensitive), 404 `TENANT_NOT_FOUND` (tenant DELETED, **SYSTEM_ADMIN included**), 400 `TENANT_ROLE_INVALID`, 400 `INVALID_ROLE`, 404 `WORKSPACE_NOT_FOUND`, 409 `USERNAME_TAKEN`. **No password is accepted. `system_admin` is always FALSE.**
 
 ### 3.1 Status transition semantics, as coded (`M/tenancy/TenantService.kt:70-79`)
@@ -202,7 +203,7 @@ Notes on the table:
 
 Status of the SUSPENDED rules:
 - **DONE** for workspace routes (`T/tenancy/TenantAccessTests.kt:38-45`).
-- **DONE (no test)** for organization writes in a SUSPENDED tenant: no test asserts `TENANT_SUSPENDED` on an org route.
+- **DONE and tested** for organization writes in a SUSPENDED tenant (`T/tenancy/FinalTenantStatusTests.kt` test 6a: 12 write routes answer 403 `TENANT_SUSPENDED`, reads 200).
 - **GAP (C1, policy unchanged):** in a SUSPENDED tenant, the tenant-admin member and provisioning routes stay open.
 
 SYSTEM_ADMIN member rules:
