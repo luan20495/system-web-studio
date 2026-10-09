@@ -73,7 +73,8 @@ class TenantController(
     /** rename the company (the slug is immutable): TENANT_MANAGE on that tenant - its Tenant Admin or the platform operator; a stranger gets 404, a plain member 403 */
     @PatchMapping("/{tenantId}")
     fun rename(@PathVariable tenantId: UUID, @RequestBody r: TenantRenameRequest, @AuthenticationPrincipal me: StudioUserDetails): TenantResponse {
-        access.forTenant(me.userId, tenantId).require(Permission.TENANT_MANAGE)
+        val a = access.forTenant(me.userId, tenantId); a.require(Permission.TENANT_MANAGE)
+        if (!a.platformScope) access.requireTenantWritable(tenantId)               // a Tenant Admin of a SUSPENDED / DELETED company cannot rename it; the platform operator can repair a suspended one
         return service.rename(tenantId, r.name.orEmpty(), me.userId).toResponse()
     }
 

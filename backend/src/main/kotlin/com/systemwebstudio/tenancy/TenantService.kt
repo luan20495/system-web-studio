@@ -59,6 +59,7 @@ class TenantService(
         val name = nameInput.trim()
         if (name.isBlank() || name.length > 160) throw ApiException.badRequest("TENANT_NAME_INVALID", "Name is required (max 160 characters)")
         val t = get(id)
+        if (t.status == TenantStatus.DELETED.name) throw notFound()                              // a deleted company is gone for every caller
         val old = t.name
         if (old == name) return t                                                              // idempotent
         t.name = name; t.updatedAt = Instant.now()

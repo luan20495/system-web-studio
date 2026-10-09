@@ -93,7 +93,7 @@ class AccessService(
             if (tenant.status == TenantStatus.SUSPENDED) throw ApiException.forbidden("This tenant is suspended", "TENANT_SUSPENDED")
         } else if (member != null && !systemAdminBusinessAccess) {
             // a platform operator that acts through a workspace MEMBERSHIP is held to the same tenant-status gates as everybody else (no business authority in a dead / suspended company)
-            if (tenant.status == TenantStatus.DELETED) throw ApiException.notFound("WORKSPACE_NOT_FOUND", "Workspace not found")
+            if (tenant.membershipActive == false || tenant.status == TenantStatus.DELETED) throw ApiException.notFound("WORKSPACE_NOT_FOUND", "Workspace not found")
             if (tenant.status == TenantStatus.SUSPENDED) throw ApiException.forbidden("This tenant is suspended", "TENANT_SUSPENDED")
         }
         val bypass = user.systemAdmin && systemAdminBusinessAccess
@@ -148,6 +148,7 @@ class AccessService(
      */
     fun requireTenantWritable(tenantId: UUID) {
         val t = tenants.findById(tenantId).orElse(null) ?: return
+        if (t.status == TenantStatus.DELETED.name) throw ApiException.notFound("TENANT_NOT_FOUND", "Tenant not found")
         if (t.status == TenantStatus.SUSPENDED.name) throw ApiException.forbidden("This tenant is suspended", "TENANT_SUSPENDED")
     }
 
