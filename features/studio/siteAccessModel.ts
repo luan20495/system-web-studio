@@ -11,17 +11,16 @@ export function safeSitePath(path: string | null | undefined): string {
   return p;
 }
 
-const LOOPBACK = (h: string) => h === "localhost" || h.endsWith(".localhost") || h === "127.0.0.1" || h === "[::1]";
-
 /**
- * The server's redirect, or null when it must not be followed: https only (http only to a loopback host, for a local stack), no user:password,
+ * The server's redirect, or null when it must not be followed: https only (http only while THIS page is itself served over http, i.e. a local stack: no host names are listed here because a
+ * production bundle must not carry any loopback literal, C0 bundle scan), no user:password,
  * the ticket endpoint `/_access` with a `ticket` and nothing else that could carry script (javascript:, data:, a protocol-relative URL).
  */
-export function safeTicketRedirect(redirect: unknown): string | null {
+export function safeTicketRedirect(redirect: unknown, pageProtocol: string = typeof location === "undefined" ? "https:" : location.protocol): string | null {
   if (typeof redirect !== "string" || !redirect || redirect.length > 2048) return null;
   let u: URL;
   try { u = new URL(redirect); } catch { return null; }
-  if (!(u.protocol === "https:" || (u.protocol === "http:" && LOOPBACK(u.hostname)))) return null;
+  if (!(u.protocol === "https:" || (u.protocol === "http:" && pageProtocol === "http:"))) return null;
   if (u.username || u.password || !u.hostname) return null;
   if (!/(^|\/)_access$/.test(u.pathname) || !u.searchParams.get("ticket")) return null;
   return u.href;

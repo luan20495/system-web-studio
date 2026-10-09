@@ -10,8 +10,8 @@ test("M-051: the site path follows the server's safePath rule (anything odd beco
 
 test("M-051: only a plain https ticket link to /_access is followed", () => {
   assert.equal(safeTicketRedirect("https://sites.example.vn/_access?ticket=abc"), "https://sites.example.vn/_access?ticket=abc");
-  assert.equal(safeTicketRedirect("http://localhost:3086/_access?ticket=t1"), "http://localhost:3086/_access?ticket=t1", "local stack");
-  assert.equal(safeTicketRedirect("http://127.0.0.1:8090/_access?ticket=t1"), "http://127.0.0.1:8090/_access?ticket=t1");
+  assert.equal(safeTicketRedirect("http://sites.local:3086/_access?ticket=t1", "http:"), "http://sites.local:3086/_access?ticket=t1", "a local stack: this page is on http too");
+  assert.equal(safeTicketRedirect("http://sites.local:3086/_access?ticket=t1", "https:"), null, "a page on https never follows an http redirect, whatever the host");
   for (const bad of [undefined, null, 42, "", "javascript:alert(1)//_access?ticket=a", "data:text/html,<script>1</script>", "//sites.example.vn/_access?ticket=a", "/_access?ticket=a",
     "http://sites.example.vn/_access?ticket=a", "https://u:p@sites.example.vn/_access?ticket=a", "https://sites.example.vn/login?ticket=a", "https://sites.example.vn/_access", "https://sites.example.vn/_access?ticket=",
     "https://sites.example.vn/_access_x?ticket=a", "https://" + "a".repeat(2050)]) assert.equal(safeTicketRedirect(bad), null, String(bad));
