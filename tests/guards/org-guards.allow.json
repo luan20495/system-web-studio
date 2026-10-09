@@ -1,0 +1,4 @@
+{
+  "_doc": "Documented exceptions of the organization source guards. Every entry needs an owner and a reason, and a stale entry (the token no longer appears) fails the guard. EMPTY since D-C0-51: the ORG_MANAGE placeholder is gone (the canonical organization permissions are ORG_STRUCTURE_*, EMPLOYEE_*, POSITION_GRADE_*).",
+  "allow": []
+}

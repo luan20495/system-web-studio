@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @class: real-backend
 // V1 PUBLIC smoke (D-C0-37): the first real public path, no seeded database edit, no test double, a real browser with NO session.
 //   author (authenticated API): declare the data-source slot, data source on the TLS target, credential, query definitions, bind TEST + LIVE, queries `public`, data bindings,
 //   acknowledge public data, publish a PAGE_SCHEMA page

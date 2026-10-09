@@ -1,0 +1,5 @@
+{
+  "_doc": "Capabilities of features/admin/organization.ts CAPABILITIES that are READY, i.e. wired to a PUBLISHED C1 contract (H-C1-17). Empty today: every organization operation is NOT_READY. A capability becomes READY only by changing BOTH this list and CAPABILITIES in the same commit (the fail-closed guard and tests/builder/organization-fail-closed.test.ts compare them), so a route can never appear by accident.",
+  "contract": "H-C1-17",
+  "wired": []
+}

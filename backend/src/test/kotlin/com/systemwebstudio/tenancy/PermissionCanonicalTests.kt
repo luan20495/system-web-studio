@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test
 
 /** C1 · canonical permission vocabulary (contract v2 §5): storage mapping, default deny, legacy semantics preserved. Pure unit test. */
 class PermissionCanonicalTests {
+    private val orgCodes = listOf("ORG_STRUCTURE_VIEW", "ORG_STRUCTURE_MANAGE", "EMPLOYEE_VIEW", "EMPLOYEE_MANAGE", "POSITION_GRADE_VIEW", "POSITION_GRADE_MANAGE")
     private val newCodes = listOf("APP_USE", "DATA_SOURCE_VIEW", "DATA_SOURCE_MANAGE", "QUERY_EXECUTE", "DATA_MUTATE", "ACTION_EXECUTE", "WORKFLOW_EXECUTE", "WORKFLOW_MANAGE")
 
     @Test
@@ -30,8 +31,8 @@ class PermissionCanonicalTests {
 
     @Test
     fun `new codes exist with exactly the canonical name and the canonical set is closed and round-trips`() {
-        for (c in newCodes + listOf("TENANT_MANAGE", "TENANT_MEMBERS", "MEMBER_MANAGE")) { assertThat(Permission.valueOf(c).name).isEqualTo(c); assertThat(PermissionCodes.fromCode(c)).isEqualTo(Permission.valueOf(c)); assertThat(PermissionCodes.codeOf(Permission.valueOf(c))).isEqualTo(c) }
-        assertThat(PermissionCodes.CANONICAL).containsExactlyInAnyOrder(*(newCodes + listOf("APP_VIEW", "APP_EDIT", "APP_PUBLISH", "APP_SHARE", "TENANT_MANAGE", "TENANT_MEMBERS", "MEMBER_MANAGE")).toTypedArray())
+        for (c in newCodes + orgCodes + listOf("TENANT_MANAGE", "TENANT_MEMBERS", "MEMBER_MANAGE")) { assertThat(Permission.valueOf(c).name).isEqualTo(c); assertThat(PermissionCodes.fromCode(c)).isEqualTo(Permission.valueOf(c)); assertThat(PermissionCodes.codeOf(Permission.valueOf(c))).isEqualTo(c) }
+        assertThat(PermissionCodes.CANONICAL).containsExactlyInAnyOrder(*(newCodes + orgCodes + listOf("APP_VIEW", "APP_EDIT", "APP_PUBLISH", "APP_SHARE", "TENANT_MANAGE", "TENANT_MEMBERS", "MEMBER_MANAGE")).toTypedArray())
         for (code in PermissionCodes.CANONICAL) assertThat(PermissionCodes.codeOf(PermissionCodes.fromCode(code)!!)).isEqualTo(code)
     }
 
@@ -61,7 +62,8 @@ class PermissionCanonicalTests {
     fun `platform scope and tenant roles hold no business permission`() {
         val business = Permission.entries.toSet() - setOf(Permission.TENANT_MANAGE, Permission.TENANT_MEMBERS, Permission.MEMBER_MANAGE, Permission.PROJECT_CREATE)
         assertThat(PermissionMatrix.platformScope.intersect(business)).isEmpty()
-        assertThat(PermissionMatrix.tenantRoles.getValue("TENANT_ADMIN")).containsExactlyInAnyOrder(Permission.TENANT_MANAGE, Permission.TENANT_MEMBERS)
+        assertThat(PermissionMatrix.platformScope).containsExactlyInAnyOrder(Permission.TENANT_MANAGE, Permission.TENANT_MEMBERS)          // SYSTEM_ADMIN platform scope does not grow with the organization capabilities
+        assertThat(PermissionMatrix.tenantRoles.getValue("TENANT_ADMIN")).containsExactlyInAnyOrder(Permission.TENANT_MANAGE, Permission.TENANT_MEMBERS, Permission.ORG_STRUCTURE_VIEW, Permission.ORG_STRUCTURE_MANAGE, Permission.EMPLOYEE_VIEW, Permission.EMPLOYEE_MANAGE, Permission.POSITION_GRADE_VIEW, Permission.POSITION_GRADE_MANAGE)
         assertThat(PermissionMatrix.tenantRoles.getValue("MEMBER")).isEmpty()
         assertThat(PermissionMatrix.systemAdmin).isEqualTo(Permission.entries.toSet())          // only reachable behind the flag
     }

@@ -1,0 +1,7 @@
+{
+  "_doc": "Documented harmless strings of the production bundle scan (scripts/scan-prod-bundles.mjs). An entry matches a FINDING by its kind and by a regex over the +-60 characters around it; every entry needs a reason, and an entry that never matched in the last scan is reported as stale (not an error: it depends on what was built). Nothing here may be an address that the browser could actually call.",
+  "allow": [
+    { "kind": "localhost", "context": "\"localhost\"\\s*===?\\s*\\w+\\.host|\\.host\\s*===?\\s*\"localhost\"", "reason": "the WHATWG URL parser polyfill: `if (\"localhost\" === url.host) url.host = \"\"` for file: URLs. A comparison literal, never a request target.", "kind_of": "library" },
+    { "kind": "localhost", "context": "localhost\\s*,\\s*\\.localhost|\\.localhost\\b.{0,20}(?:insecure|secure context|isSecureContext)|isLocalhost", "reason": "secure-context checks of Next.js / React runtime code (is this host exempt from the https requirement). A comparison, never a request target.", "kind_of": "library" }
+  ]
+}

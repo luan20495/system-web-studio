@@ -14,7 +14,7 @@ const HELPERS = new Set(["tests/builder/a11y.ts", "tests/builder/fixtures.ts", "
 // Test files OWNED BY OTHER AGENTS (imported into integration/v2 by C0 / C2). C5 does not edit them and does not classify them; they are listed so nothing is silently skipped.
 const EXTERNAL = new Map([
   ["tests/browser/page-runtime.spec.mjs", "C2"], ["tests/page-runtime/page-runtime.test.ts", "C2"],
-  ["tests/gateway/data-route.mjs", "C0"], ["tests/gateway/portal-route.mjs", "C0"], ["tests/guards/no-legacy-admin-workspaces.mjs", "C0"],
+  ["tests/gateway/data-route.mjs", "C0"], ["tests/gateway/portal-route.mjs", "C0"], ["tests/guards/no-legacy-admin-workspaces.mjs", "C0"], ["tests/infra/portals-reliability.mjs", "C0"], ["tests/infra/owned-process.test.mjs", "C0"], ["tests/infra/public-pinning.test.mjs", "C0"], ["tests/infra/public-api-pinning.test.mjs", "C0"],
 ]);
 const files = [];
 (function walk(dir) {
