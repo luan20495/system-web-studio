@@ -38,6 +38,8 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
   const panel = ["members", "publish", "versions", "packages", "ide", "runtime"].includes(view ?? "") ? view : null;
   const isServer = SERVER_KINDS.includes(project.appKind ?? "SOURCE_WEB_APP");
   const go = (to: string) => router.push(`${base}/${to}`);
+  // M-078: closing a drawer REPLACES the history entry (opening pushes), so Back after a close does not re-open the drawer just closed
+  const closePanel = () => router.replace(`${base}/${mode}`);
   // UX only: the list is what the server resolved for this project; helpers in @xweb/permissions (canonical.ts)
   const perms = resolvePermissions(project.permissions);
   const canEdit = canEditProject(perms), canPublishApp = canPublish(perms), canShareApp = canShare(perms);
@@ -263,10 +265,10 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
         </section>
       </main>
       {reviewing ? <ReviewDialog summary={reviewing.summary} busy={busy === "approve"} onApprove={(comment) => void approve(reviewing, comment)} onClose={() => setReviewing(null)}/> : null}
-      {panel === "members" && me ? <MembersDrawer workspaceId={ws} projectId={pid} me={me} onClose={() => go(mode)} onError={(e) => toast.error(errText(e, "Thao tác thành viên thất bại."))}/> : null}
-      {panel === "publish" ? <PublishModal workspaceId={ws} projectId={pid} revision={project.revision} current="PRIVATE" canPublish={canPublishApp} allowed={cfg?.codeAppPublicPublish === false || cfg?.publicPublish === false ? ["PRIVATE"] : ["PRIVATE", "PUBLIC"]} onClose={() => { go(mode); api.lookupProject(pid).then(onProject).catch(() => undefined); }}
+      {panel === "members" && me ? <MembersDrawer workspaceId={ws} projectId={pid} me={me} onClose={() => closePanel()} onError={(e) => toast.error(errText(e, "Thao tác thành viên thất bại."))}/> : null}
+      {panel === "publish" ? <PublishModal workspaceId={ws} projectId={pid} revision={project.revision} current="PRIVATE" canPublish={canPublishApp} allowed={cfg?.codeAppPublicPublish === false || cfg?.publicPublish === false ? ["PRIVATE"] : ["PRIVATE", "PUBLIC"]} onClose={() => { closePanel(); api.lookupProject(pid).then(onProject).catch(() => undefined); }}
         onUnauthorized={() => toast.warning("Phiên đăng nhập đã hết hạn.")}/> : null}
-      {panel === "versions" ? <Drawer title="Lịch sử (commit trên main)" sub="Lấy trực tiếp từ kho Git của nền tảng." onClose={() => go(mode)}>
+      {panel === "versions" ? <Drawer title="Lịch sử (commit trên main)" sub="Lấy trực tiếp từ kho Git của nền tảng." onClose={() => closePanel()}>
         {commits == null ? <StateView kind="loading"/> : <ol className="commitList">{commits.map((c) => <li key={c.sha}><b>{c.message.split("\n")[0]}</b>
           <small className="code">{c.sha.slice(0, 10)} {c.verified ? <span className="pill pill-ok">Đã ký · {c.signer}</span> : <span className="pill pill-muted">Chưa ký</span>}</small>
           <small>Tác giả {c.author} · commit bởi {c.committer} · {fmtDate(c.date)}</small></li>)}</ol>}
@@ -274,9 +276,9 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
           <select aria-label="Chính sách hợp nhất" defaultValue="" onChange={(e) => void act("policy", () => api.code.mergePolicy(ws, pid, (e.target.value || null) as "AUTO_MERGE_ALLOWED" | "REVIEW_REQUIRED" | null), "Không đổi được.").then((r) => { if (r) { toast.info(`Chính sách hiện hành: ${r.effective === "REVIEW_REQUIRED" ? "cần duyệt" : "hợp nhất trực tiếp"}`); void loadChanges(); } })}>
             <option value="">Theo workspace</option><option value="AUTO_MERGE_ALLOWED">Hợp nhất trực tiếp sau khi build xanh</option><option value="REVIEW_REQUIRED">Cần người khác duyệt</option></select></section> : null}
       </Drawer> : null}
-      {panel === "packages" ? <PackagesDrawer ws={ws} pid={pid} canEdit={canEdit} onClose={() => go(mode)} onChange={(id) => { setSelected(id); go(mode); void loadChanges(); }}/> : null}
-      {panel === "ide" ? <IdeDrawer ws={ws} pid={pid} onClose={() => go(mode)}/> : null}
-      {panel === "runtime" && isServer ? <RuntimeDrawer ws={ws} pid={pid} canPublish={canPublishApp} canSettings={canEdit} onClose={() => go(mode)}/> : null}
+      {panel === "packages" ? <PackagesDrawer ws={ws} pid={pid} canEdit={canEdit} onClose={() => closePanel()} onChange={(id) => { setSelected(id); closePanel(); void loadChanges(); }}/> : null}
+      {panel === "ide" ? <IdeDrawer ws={ws} pid={pid} onClose={() => closePanel()}/> : null}
+      {panel === "runtime" && isServer ? <RuntimeDrawer ws={ws} pid={pid} canPublish={canPublishApp} canSettings={canEdit} onClose={() => closePanel()}/> : null}
     </div>
   );
 }
