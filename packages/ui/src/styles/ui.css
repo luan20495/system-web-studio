@@ -134,3 +134,5 @@
 .xp-skip:focus{top:12px;outline:2px solid var(--f-focus);outline-offset:2px}
 /* M-095: a navigation entry for a section that does not exist yet (not a real page). Same colour as the label (contrast stays), smaller and regular weight; logical margin (RTL ratchet). */
 .xp-navSoon{margin-inline-start:6px;font-size:12px;font-weight:400}
+/* M-130 (REAL-STACK finding): links in activity rows were 21px high (< 24px target, WCAG 2.5.8): a 24px minimum without changing the look */
+.shell .activityList a{display:inline-flex;align-items:center;min-height:24px}

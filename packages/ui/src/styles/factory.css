@@ -364,7 +364,9 @@ fieldset.stack>legend{padding:0;margin:0 0 var(--sp-2);font-size:13px;font-weigh
 :root{--sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:20px;--sp-6:24px;--sp-8:32px;--f-focus:#4f46e5;--f-control-border:#7a8394;--ui-ring:#67b8ff;--f-accent-tint:#eef2ff;--f-accent-wash:#f5f7ff;--f-accent-line:#c7d2fe;--f-accent-chip:#e0e7ff;--f-side-active:#262a5c;--f-placeholder:#677086;--f-disabled-bg:#f3f4f6;--f-disabled-ink:#7a8394}
 .shell,.authPage,.splash,.wsError{--ui-ring:var(--f-focus)}.sidebar.dark{--ui-ring:#a5b4fc}
 .shell,.authPage,.splash,.wsError{font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
-.shell h1,.authPage h1{font-weight:700;letter-spacing:-.01em}.shell h2,.shell h3{font-weight:650}
+.shell h1,.authPage h1{font-weight:700;letter-spacing:-.01em}
+/* M-131 (REAL-STACK finding): <small> defaulted to 0.83em = 10.8-11.7px: a 12px floor, placed early so any later rule that sets its own size (12/13px) still wins */
+.shell small{font-size:12px}.shell h2,.shell h3{font-weight:650}
 .shell select,.authPage select,.adminModal select{appearance:none;-webkit-appearance:none;min-height:36px;padding:0 32px 0 10px;border:1px solid var(--f-control-border);border-radius:8px;background-color:var(--f-panel);color:var(--f-text);font:inherit;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23545f70' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
   background-repeat:no-repeat;background-position:right 10px center;background-size:16px;text-overflow:ellipsis}

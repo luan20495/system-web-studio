@@ -328,4 +328,19 @@ for (const w of [768, 1000]) {
   check("M-028: Code change detail - tabs point (aria-controls) at a real tabpanel", (await tl.count()) === 1 && sel.hasPanel, JSON.stringify(sel));
   await p.close();
 }
+
+// ---------- M-130 / M-131 (REAL-STACK findings, HARNESS repro): the activity link is a >= 24px target; no visible text under 12px on the Studio screens ----------
+{
+  const act = newState(); act.activity = [{ id: "a1", action: "PROJECT_CREATE", createdAt: new Date(Date.now() - 3600e3).toISOString(), projectId: "p1" }, { id: "a2", action: "VERSION_PUBLISH", createdAt: new Date(Date.now() - 7200e3).toISOString(), projectId: "p1" }];
+  let p = await open(b, "/studio/activity", { state: act }); await wait(1200);
+  const h = await p.evaluate(() => { const a = document.querySelector(".activityList a"); return a ? Math.round(a.getBoundingClientRect().height) : null; });
+  check("M-130: the 'mở ứng dụng' link on the activity screen is at least 24px high (was 21px)", h !== null && h >= 24, `height=${h}`);
+  await p.close();
+  for (const path of ["/studio", "/studio/projects", "/studio/components"]) {
+    p = await open(b, path, { state: newState() }); await wait(1200);
+    const tiny = await p.evaluate(() => [...document.querySelectorAll("body *")].filter((e) => { const cs = getComputedStyle(e); if (cs.display === "none" || cs.visibility === "hidden") return false; return [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim().length > 1) && parseFloat(cs.fontSize) < 11.99; }).map((e) => `${e.tagName.toLowerCase()} ${getComputedStyle(e).fontSize} "${e.textContent.trim().slice(0, 24)}"`).slice(0, 4));
+    check(`M-131: no visible text under 12px on ${path} (<small> defaulted to 10.8-11.7px)`, tiny.length === 0, JSON.stringify(tiny));
+    await p.close();
+  }
+}
 await b.close(); finish();

@@ -85,7 +85,7 @@ export async function installFake(page, s) {
       if (method === "PATCH" && sub === "") { return json(route, { ...s.project, ...body, revision: s.revision + 1 }); }
     }
     if (path === "/workspaces/w1/members") return json(route, [{ userId: "u1", username: "luan", displayName: "Nguyễn Luân", email: "l@x.vn", role: "EDITOR" }]);
-    if (path === "/me/activity") return json(route, []);
+    if (path === "/me/activity") return json(route, s.activity ?? []);
     if (path === "/workspaces/w1/data-sources") return json(route, { items: s.sources ?? [] });
     if (path === "/workspaces/w1/data-sources/connectors") return json(route, { items: [] });
     return json(route, { code: "NOT_FOUND", message: `fake: ${method} ${path}` }, 404);
