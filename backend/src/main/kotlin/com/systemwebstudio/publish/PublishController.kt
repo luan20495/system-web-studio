@@ -9,11 +9,15 @@ import com.systemwebstudio.identity.StudioUserDetails
 import com.systemwebstudio.integration.deploy.DeployProvider
 import com.systemwebstudio.integration.queue.JobQueue
 import com.systemwebstudio.integration.queue.Queues
+import com.systemwebstudio.project.publishconfig.ProjectFacts
+import com.systemwebstudio.project.publishconfig.PublishConfigService
+import com.systemwebstudio.app.definition.PublishVisibility
 import com.systemwebstudio.schema.SchemaService
 import com.systemwebstudio.version.SchemaRepository
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Pattern
+import org.springframework.beans.factory.ObjectProvider
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -45,6 +49,8 @@ class PublishController(
     private val limiter: RateLimiter,
     private val audit: AuditService,
     private val jdbc: JdbcTemplate,
+    /** the persisted publication policy (publish_configs); present only when `app.publish-configs.enabled` - absent = no stored policy exists, the request decides as it always did */
+    private val publishConfigs: ObjectProvider<PublishConfigService>,
     @Value("\${app.rate-limit.publish-max:10}") private val publishMax: Long
 ) {
     private val keyPattern = Regex("^[A-Za-z0-9_.:-]{8,120}$")
@@ -86,6 +92,7 @@ class PublishController(
             buildPolicy.requireCapacity(projectId, workspaceId, me.userId)
         } else schemas.ensureInitialized(project, me.userId)
         val version = versions.latest(projectId) ?: throw ApiException.conflict("NO_VERSION", "Project has no version to publish")
+        requirePublicDataApproval(projectId, request.visibility!!, version.id)
         deployments.insert(deploymentId, workspaceId, projectId, version.id, me.userId, request.visibility!!, provider.name)
         audit.record("PUBLISH", "DEPLOYMENT", deploymentId, workspaceId, projectId,
             newValue = mapOf("visibility" to request.visibility, "versionNumber" to version.versionNumber, "revision" to project.revision))
@@ -97,6 +104,26 @@ class PublishController(
             }
         })
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(deployments.findInProject(projectId, deploymentId))
+    }
+
+    /**
+     * H-C2-07 - the persisted policy, not the browser, decides whether data may reach a PUBLIC release. Runs before the deployment row exists (and, being
+     * inside the request transaction, before anything is committed: a refusal also rolls back the idempotency key written above, so a retry of the same key
+     * after the approval was granted is a first request, not a replay of a refusal).
+     *  - no stored policy: nothing to enforce here, the request decides exactly as before (compatibility; the Public Runtime itself still needs the approval row);
+     *  - the request asks for PUBLIC while the stored policy is not PUBLIC: refused, a request cannot widen the authoritative policy;
+     *  - PUBLIC, and the IMMUTABLE version about to be deployed (its snapshot, not the draft) binds data: `publish_configs.public_data_approved` must be true.
+     * A request that asks for less than the policy (PRIVATE) is not public and needs no approval. Nothing the client sends can set the approval: it is not a field of [PublishRequest].
+     */
+    private fun requirePublicDataApproval(projectId: UUID, requestedVisibility: String, versionId: UUID) {
+        if (requestedVisibility != "PUBLIC") return
+        val stored = publishConfigs.getIfAvailable()?.get(projectId) ?: return
+        if (stored.visibility != PublishVisibility.PUBLIC)
+            throw ApiException.conflict("PUBLISH_POLICY_MISMATCH", "The stored publish policy of this app is ${stored.visibility}; change the policy before publishing publicly",
+                mapOf("policyVisibility" to stored.visibility.name, "requestedVisibility" to requestedVisibility))
+        if (ProjectFacts.bindsData(versions.version(projectId, versionId)?.schemaSnapshot) && !stored.publicDataApproved)
+            throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "PUBLIC_DATA_NOT_APPROVED", "This app shows data from data sources; the publisher must confirm that this data may be public before it is published",
+                mapOf("issues" to listOf(mapOf("field" to "acknowledgePublicData", "code" to "PUBLIC_DATA_NOT_APPROVED", "message" to "this app shows data from data sources; confirm that this data may be public"))))
     }
 
     @GetMapping("/deployments")

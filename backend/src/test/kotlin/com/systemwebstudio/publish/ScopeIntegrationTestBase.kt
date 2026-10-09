@@ -15,7 +15,7 @@ import java.net.InetSocketAddress
 @TestPropertySource(properties = [
     "app.deploy.provider=static", "app.sites.origin=https://sites.example.test", "app.sites.studio-origin=https://studio.example.test", "app.render.token=render-test-token",
     "app.deploy.scope-wait-seconds=4", "app.deploy.scope-retry-ms=200", "app.deploy.scope-duplicate-wait-seconds=3", "app.deploy.recovery-interval-ms=600000",
-    "app.sites.data-api-base=https://sites.example.test/{slug}/_data"
+    "app.sites.data-api-base=https://sites.example.test/{slug}/_data", "app.publish-configs.enabled=true"
 ])
 abstract class ScopeIntegrationTestBase : IntegrationTestBase() {
     companion object {

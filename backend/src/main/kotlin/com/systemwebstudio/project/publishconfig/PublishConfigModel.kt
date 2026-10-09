@@ -45,7 +45,12 @@ data class ProjectFacts(
     val appKind: String,
     /** the current document has at least one data binding (data would be rendered into the published app) */
     val hasDataBindings: Boolean
-)
+) {
+    companion object {
+        /** the ONE definition of "binds data": a non-empty `dataBindings` array in the document (the publish-config API reads the draft, the publish route reads the immutable version) */
+        fun bindsData(schema: tools.jackson.databind.JsonNode?): Boolean = schema?.get("dataBindings")?.let { it.isArray && it.size() > 0 } == true
+    }
+}
 
 /** Administrator switches that limit publishing (settings `publish.public-enabled`, `source-apps.public-publish-enabled`). */
 data class PublishLimits(val publicEnabled: Boolean, val sourceAppPublicEnabled: Boolean)
