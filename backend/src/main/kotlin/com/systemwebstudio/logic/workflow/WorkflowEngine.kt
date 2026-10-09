@@ -332,8 +332,29 @@ class WorkflowEngine(
         data class Finish(val output: JsonNode) : StepOutcome
     }
 
+    /**
+     * A durable run is not an authority token: the actor it runs as ([WorkflowRun.createdBy]) must still hold the right to use the application and to execute this
+     * workflow at the moment a step that has an effect is about to run, not only when the run was started. The checks go through the same [AccessPort] as a start
+     * (re-evaluated live by C1: disabled user, membership, workspace/project, permission), before anything happens. A denial is a plain, non-retryable step failure
+     * (FORBIDDEN, audited as DENIED); an authorization outage is retried within the step's budget, never treated as allowed. ACTION steps check their own action
+     * permissions in the action runtime on top of this.
+     */
+    private fun authorityFailure(ctx: ActionContext, run: WorkflowRun, step: WorkflowStep, attempt: Int): StepOutcome? {
+        val appId = run.appId
+        for (check in listOf(
+            AccessRequest(LogicPermissions.APP_USE, ResourceKind.APP, appId.toString(), appId, run.mode),
+            AccessRequest(LogicPermissions.WORKFLOW_EXECUTE, ResourceKind.WORKFLOW, run.workflowId, appId, run.mode)
+        )) {
+            val denied = deny(ctx, check) ?: continue
+            return if (denied.retryable && attempt < step.retry.maxAttempts) StepOutcome.Retry(step.retry.backoffAfter(attempt), denied.code, denied.message)
+            else StepOutcome.Fail(denied.code, denied.message)
+        }
+        return null
+    }
+
     private fun execute(ctx: ActionContext, run: WorkflowRun, step: WorkflowStep, inputs: Map<String, JsonNode>, attempt: Int): StepOutcome {
         val test = run.mode == ExecutionMode.TEST
+        if (step.kind == StepKind.ACTION || step.kind == StepKind.APPROVAL) authorityFailure(ctx, run, step, attempt)?.let { return it }
         return when (step.kind) {
             StepKind.END -> StepOutcome.Finish(json.createObjectNode())
 
@@ -799,10 +820,15 @@ class WorkflowEngine(
      */
     private fun mayView(ctx: ActionContext, run: WorkflowRun): Boolean {
         if (!sameResourceScope(run, ctx)) return false
-        if (run.createdBy.userId == ctx.actor.userId) return true
+        // The creator shortcut is for a creator who is still a live user of this application: the same check as a start (C1 re-derives disabled user, membership,
+        // workspace/project and tenant on every call). Without it a disabled or removed creator would keep reading and cancelling his runs.
+        if (run.createdBy.userId == ctx.actor.userId && stillUsesApp(ctx, run)) return true
         val d = try { access.check(ctx, AccessRequest(LogicPermissions.WORKFLOW_MANAGE, ResourceKind.WORKFLOW_RUN, run.runId.toString(), run.appId, run.mode)) } catch (e: Exception) { null }
         return d is AuthorizationDecision.Allowed
     }
+
+    private fun stillUsesApp(ctx: ActionContext, run: WorkflowRun): Boolean =
+        (try { access.check(ctx, AccessRequest(LogicPermissions.APP_USE, ResourceKind.APP, run.appId.toString(), run.appId, run.mode)) } catch (e: Exception) { null }) is AuthorizationDecision.Allowed
 
     private fun rateLimit(tenantId: UUID, scope: RateScope): WorkflowResult.Failed? =
         when (val d = try { limiter.tryAcquire(tenantId, scope) } catch (e: Exception) { null }) {

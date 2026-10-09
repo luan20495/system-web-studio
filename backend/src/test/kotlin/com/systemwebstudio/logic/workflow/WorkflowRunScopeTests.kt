@@ -80,11 +80,18 @@ class WorkflowRunScopeTests {
     // ---- C: right scope --------------------------------------------------------------------------------------------------
 
     @Test
-    fun `C the creator in the right scope keeps what the creator shortcut always gave, without any permission`() {
+    fun `C the creator in the right scope keeps the creator shortcut - no WORKFLOW_MANAGE needed - while he still uses the application`() {
         val id = runIn(w1, p1)
-        rig.access.denyAll = true                                                   // not even the permission is there: it is the creator shortcut alone
+        rig.access.denyPermissions = setOf(LogicPermissions.WORKFLOW_MANAGE)       // no manage right at all: the shortcut alone, backed by a live APP_USE
         assertThat((status(at(w1, p1), id) as WorkflowResult.Ok).value.runId).isEqualTo(id)
         assertThat((cancel(at(w1, p1), id) as WorkflowResult.Ok).value.status).isEqualTo(WorkflowRunStatus.CANCELLED)
+    }
+
+    @Test
+    fun `C2 the shortcut needs a live creator - a creator who lost APP_USE (or was disabled, which C1 reports the same way) is answered RUN_NOT_FOUND`() {
+        val id = runIn(w1, p1)
+        rig.access.denyPermissions = setOf(LogicPermissions.WORKFLOW_MANAGE, LogicPermissions.APP_USE)
+        assertNotFound(at(w1, p1), id, "creator without APP_USE")
     }
 
     // ---- D: null is a value, never a wildcard -------------------------------------------------------------------------------
