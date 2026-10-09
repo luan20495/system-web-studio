@@ -1,7 +1,7 @@
 // @class: harness — real Chromium on the REAL PortalApp + AdminApp (Platform and Admin portals) with an in-page FAKE `fetch` (tests/browser/admin-harness.tsx). HARNESS, NOT REAL BACKEND, and NOT a backend E2E.
 // It proves what the SCREENS do with the answers C1's contract describes (activation link, tenant provisioning, `/auth/me` scope); it never proves what a server answers.
 // Run: node tests/browser/build-harness.mjs && CHROME=... node tests/browser/harness-server.mjs run -- node tests/browser/admin.spec.mjs
-import { harnessOrigin, launch, makeChecks } from "./lib/spec.mjs";
+import { browserName, harnessOrigin, launch, makeChecks } from "./lib/spec.mjs";
 const ORIGIN = harnessOrigin();
 const { check, finish } = makeChecks();
 const errors = [];
@@ -9,7 +9,7 @@ const browser = await launch();
 
 /** opens the harness page: q = {portal, me, start, ...}; `clipboard: "deny"` makes navigator.clipboard.writeText reject (a blocked / insecure origin) */
 async function open(q, { w = 1280, h = 900, clipboard = "ok" } = {}) {
-  const ctx = await browser.newContext({ viewport: { width: w, height: h }, permissions: ["clipboard-read", "clipboard-write"] });
+  const ctx = await browser.newContext({ viewport: { width: w, height: h }, ...(browserName() === "chromium" ? { permissions: ["clipboard-read", "clipboard-write"] } : {}) });   // other engines refuse these permission names
   const p = await ctx.newPage(); p.setDefaultTimeout(6000);
   p.on("pageerror", (e) => errors.push(e.message)); p.on("console", (m) => { if (["error", "warning"].includes(m.type()) && !/favicon|404/.test(m.text())) errors.push(m.text()); });
   p.on("dialog", (d) => { p.__dialogs.push({ type: d.type(), message: d.message() }); void d.accept(); }); p.__dialogs = [];

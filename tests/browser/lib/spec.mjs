@@ -65,7 +65,23 @@ export function launch(extra = {}, env = process.env) {
   const name = browserName(env);
   if (name === "chromium") return chromium.launch({ executablePath: chromePath(env), ...extra });
   console.log(`BROWSER=${name.toUpperCase()}`);
-  return { firefox, webkit }[name].launch(extra);
+  const launched = { firefox, webkit }[name].launch(extra);
+  return name === "webkit" ? launched.then(withMacWebkitTab) : launched;
+}
+
+/**
+ * WebKit on macOS (Playwright WebKit AND Safari with default settings) moves Tab only between text fields and selects: links, buttons, checkboxes and radios are skipped
+ * (measured 2026-10-09: Tab = input, select; Option+Tab = every focusable control, in the same order as Chromium's Tab). The specs press "Tab" / "Shift+Tab" to mean "next / previous
+ * control", so for WEBKIT those two keys are sent as Alt+Tab / Alt+Shift+Tab. This keeps the keyboard-order checks meaningful; it does NOT claim that a Safari user with the default
+ * preference can Tab to a button (that is an OS setting, not something a page controls).
+ */
+export function withMacWebkitTab(browser) {
+  const map = (key) => (key === "Tab" ? "Alt+Tab" : key === "Shift+Tab" ? "Alt+Shift+Tab" : key);
+  const fix = (page) => { if (page.__altTab) return page; page.__altTab = true; const press = page.keyboard.press.bind(page.keyboard); page.keyboard.press = (key, opts) => press(map(key), opts); return page; };
+  const newContext = browser.newContext.bind(browser);
+  browser.newContext = async (o) => { const ctx = await newContext(o); const np = ctx.newPage.bind(ctx); ctx.newPage = async (...a) => fix(await np(...a)); return ctx; };
+  const newPage = browser.newPage.bind(browser); browser.newPage = async (o) => fix(await newPage(o));
+  return browser;
 }
 
 /**

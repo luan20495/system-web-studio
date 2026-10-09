@@ -93,7 +93,7 @@ const shot = async (p, name) => { if (EVIDENCE) await p.screenshot({ path: join(
 { const p = await open("emp", "emp-nocreate");
   check("ST06 creating is NOT_READY: a visible notice with the reason (not only a disabled button)", (await T(p, "emp-create-not-ready").count()) === 1 && /Chưa thêm được nhân viên/.test(await T(p, "emp-create-not-ready").innerText()) && (await T(p, "emp-create").isDisabled()));
   await p.close(); }
-{ const p = await open("emp", "emp-members");
+{ const p = await open("emp", "emp-members"); await p.waitForSelector("[data-testid=emp-members-note]", { timeout: 5000 }).catch(() => undefined);   // the member list is fetched after the page paints (slower on WebKit)
   check("ST07 member-list directory: unit / position columns are LEFT OUT (not '—' cells that look like errors) and a note explains why", (await p.locator("thead th").count()) === 3 && (await T(p, "emp-members-note").count()) === 1 && !/—/.test(await T(p, "emp:u01").innerText()));
   await p.close(); }
 
