@@ -588,4 +588,14 @@ for (const w of [768, 1000]) {
   check("M-080: a version list with 0 rows shows an empty state, not a header only", /Chưa có phiên bản nào/.test(await p.getByRole("dialog").innerText()));
   await p.close();
 }
+// ---------- M-089 (C5-S1 batch 2): the REAL workspace canvas posts selection to the editor origin only (no '*'), and selection still works ----------
+{
+  const p = await open(b, "/studio/projects/p1/design"); await p.waitForSelector(".bx-body iframe"); await wait(1200);
+  const doc = await p.locator(".bx-body iframe.previewFrame").first().getAttribute("srcdoc");
+  const origin = await p.evaluate(() => location.origin);
+  check("M-089: the canvas script targets the editor origin, never '*'", !!doc && doc.includes(`,${JSON.stringify(origin)})`) && !doc.includes(',"*")'), origin);
+  await p.frameLocator(".bx-body iframe.previewFrame").first().locator("[data-sid]").nth(1).click({ position: { x: 30, y: 30 } }); await wait(600);
+  check("M-089: clicking a section in the canvas still selects it (postMessage reaches the editor)", (await p.locator(".bx-right [role=tab]").count()) >= 5, (await p.locator(".bx-right").innerText()).split("\n")[0]);
+  await p.close();
+}
 await b.close(); finish();

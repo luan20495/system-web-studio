@@ -178,7 +178,8 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const selected = pageSections.find((s) => s.id === selectedId) ?? null;
   const latest = versions[0]?.versionNumber;
 
-  const renderPreview = (o: { selectedId: string | null; interactive: boolean; pageId: string }) => renderSchemaDocument(schema, { selectedId: o.selectedId, interactive: o.interactive, nonce: nonceOfPage(), assets: assetUrls, pageId: o.pageId });
+  const renderPreview = (o: { selectedId: string | null; interactive: boolean; pageId: string }) => renderSchemaDocument(schema, { selectedId: o.selectedId, interactive: o.interactive, nonce: nonceOfPage(), assets: assetUrls, pageId: o.pageId,
+    parentOrigin: typeof window === "undefined" ? undefined : window.location.origin });   // M-089: the canvas script posts to this origin only
   const modeTabs = (
     <nav className="modeTabs" aria-label="Chế độ">
       {MODES.map((m) => <button key={m} className={mode === m ? "active" : ""} aria-pressed={mode === m} onClick={() => go(m)}>{m === "ai" ? <><Sparkles size={14} aria-hidden="true"/> AI</> : m === "design" ? "Design" : <>Code<small className="xp-navSoon"> Sắp có</small></>}</button>)}
