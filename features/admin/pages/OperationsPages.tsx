@@ -1,4 +1,5 @@
 "use client";
+import { LoadGate } from "@xweb/ui";
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
@@ -52,13 +53,14 @@ export function SecurityPage() {
 }
 
 const COST_ITEM: Record<string, string> = { STORAGE_GIB_MONTH: "Lưu trữ (GiB · tháng)", BUILD_CPU_HOUR: "CPU build (giờ)", BUILD_MINUTE: "Thời gian build (phút)", EGRESS_GIB: "Băng thông ra (GiB, chưa đo)" };
-const gib = (b: number) => `${(b / 1073741824).toFixed(b >= 1073741824 ? 1 : 3)} GiB`;
+const gib = (b: number | null | undefined) => { const n = Number(b); return Number.isFinite(n) ? `${(n / 1073741824).toFixed(n >= 1073741824 ? 1 : 3)} GiB` : "—"; };
+const hours = (ms: number | null | undefined) => (Number.isFinite(Number(ms)) ? `${(Number(ms) / 3600000).toFixed(2)} h` : "—");
 const money = (v: number | null) => (v == null ? "chưa có giá" : usd(v));
 export function CostTable({ rows, first }: { rows: CostLine[]; first: string }) {
   if (!rows.length) return <StateView kind="empty" title="Chưa có số liệu"/>;
   return <table className="table"><thead><tr><th>{first}</th><th>Lưu trữ</th><th>CPU build</th><th>Thời gian build</th><th>AI</th><th>Tổng đã biết</th></tr></thead>
     <tbody>{rows.map((r) => <tr key={r.key}><td>{r.label ?? r.key}{r.complete ? null : <small>chưa đủ giá → tổng chưa đầy đủ</small>}</td>
-      <td>{gib(r.storageBytes)}<small>{money(r.storageUsd)}</small></td><td>{(r.buildCpuMs / 3600000).toFixed(2)} h<small>{money(r.cpuUsd)}</small></td>
+      <td>{gib(r.storageBytes)}<small>{money(r.storageUsd)}</small></td><td>{hours(r.buildCpuMs)}<small>{money(r.cpuUsd)}</small></td>
       <td>{(r.buildMs / 60000).toFixed(1)} phút<small>{money(r.buildUsd)}</small></td><td>{usd(r.aiUsd)}{r.aiUnknownCalls ? <small>{r.aiUnknownCalls} lượt chưa rõ chi phí</small> : null}</td>
       <td><b>{usd(r.totalKnownUsd)}</b></td></tr>)}</tbody></table>;
 }
@@ -87,12 +89,12 @@ export function CostsPage() {
       {data ? <ul className="plainList">{data.prices.map((p) => <li key={p.id}>{COST_ITEM[p.item] ?? p.item}: {p.unitPrice} {p.currency}{p.currency !== "USD" ? ` (×${p.usdPerUnit} USD)` : ""} · từ {fmtDate(p.effectiveFrom)}{p.note ? ` · ${p.note}` : ""}</li>)}
         {data.missingPrices.map((m) => <li key={m} className="hint">{COST_ITEM[m]}: chưa có đơn giá</li>)}</ul> : null}
     </Card>
-    {error ? <ErrorState error={error} retry={reload}/> : !data ? <StateView kind="loading"/> : <>
+    <LoadGate load={{ data, error, loading: !data && !error, reload }} label="chi phí" isEmpty={(d) => !d.total || typeof d.total !== "object"} empty={{ title: "Chưa có số liệu chi phí", detail: <p>Số liệu xuất hiện khi có build, lưu trữ hoặc lượt AI trong khoảng thời gian này.</p> }}>{(data) => <>
       <div className="kpiGrid"><Kpi label={`Tổng đã biết (${data.days} ngày)`} value={usd(data.total.totalKnownUsd)} hint={data.total.complete ? "đủ đơn giá" : "chưa đầy đủ: thiếu đơn giá hoặc AI chưa rõ chi phí"}/>
-        <Kpi label="Lưu trữ hiện tại" value={gib(data.total.storageBytes)}/><Kpi label="CPU build" value={`${(data.total.buildCpuMs / 3600000).toFixed(2)} h`}/><Kpi label="AI" value={usd(data.total.aiUsd)}/></div>
+        <Kpi label="Lưu trữ hiện tại" value={gib(data.total.storageBytes)}/><Kpi label="CPU build" value={hours(data.total.buildCpuMs)}/><Kpi label="AI" value={usd(data.total.aiUsd)}/></div>
       <Card title="Theo phòng ban"><CostTable rows={data.byDepartment} first="Phòng ban"/></Card>
       <Card title="Theo workspace"><CostTable rows={data.byWorkspace} first="Workspace"/></Card>
       <Card title="Theo ứng dụng"><CostTable rows={data.byApplication} first="Ứng dụng"/></Card>
-      <p className="hint">{data.egress}</p></>}
+      <p className="hint">{data.egress}</p></>}</LoadGate>
   </>);
 }

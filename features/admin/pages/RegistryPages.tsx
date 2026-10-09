@@ -31,12 +31,13 @@ export function RegistryTable() {
   if (!data) return <LoadGate load={{ data, error, loading, reload }} level={2} label="danh sách component">{() => null}</LoadGate>;
   return (<>
     <Card>
+      {data.length === 0 ? <StateView kind="empty" title="Chưa có component nào" detail={<p>Component đã duyệt xuất hiện ở đây khi máy chủ đăng ký chúng.</p>}/> :
       <table className="table"><thead><tr><th>Component</th><th>Nhóm</th><th>Phiên bản</th><th>Trạng thái</th><th>Dùng trong</th><th><span className="srOnly">Thao tác</span></th></tr></thead>
         <tbody>{data!.map((c) => (<Fragment key={c.id}>
           <tr><td><b>{c.name}</b><small className="code">{c.id}</small><small>{c.description}</small></td><td>{c.category}</td><td>{c.latestVersion}</td><td><Pill value={c.status === "ACTIVE" ? "ACTIVE" : c.status} label={c.status === "ACTIVE" ? "Đã duyệt" : c.status}/></td>
             <td>{num(c.usedInProjects)} ứng dụng<small>{num(c.sections)} mục</small></td><td><button className="btn sm" aria-expanded={open === c.id} onClick={() => setOpen(open === c.id ? null : c.id)}>Schema</button></td></tr>
           {open === c.id ? <tr className="detailRow"><td colSpan={6}><pre>{prettyJson(c.propsSchema)}</pre></td></tr> : null}
-        </Fragment>))}</tbody></table>
+        </Fragment>))}</tbody></table>}
     </Card>
     <Card title="Thêm component gốc mới"><ComingSoon title="Component có renderer mới">Thêm một loại component gốc mới cần viết renderer trong mã nguồn và được review như mọi thay đổi mã. Hệ thống không chạy HTML/JS do người dùng tải lên. Nhân viên đóng góp “khối” (cấu hình sẵn của component đã duyệt) ở tab bên cạnh.</ComingSoon></Card>
   </>);

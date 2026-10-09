@@ -16,6 +16,7 @@ export function HealthPage() {
   const h = data!;
   return (<>
     <PageHead title="Sức khỏe hệ thống" sub={`Kiểm tra trực tiếp lúc ${fmtDate(h.checkedAt)}`} actions={<button className="btn" onClick={reload} disabled={loading}>{loading ? "Đang kiểm tra…" : "Kiểm tra lại"}</button>}/>
+    {h.items.length === 0 ? <StateView kind="empty" title="Chưa có thành phần nào được kiểm tra" detail={<p>Máy chủ chưa báo thành phần nào. Bấm “Kiểm tra lại” để thử lần nữa.</p>}/> : null}
     <div className="healthGrid">{h.items.map((i) => <div key={i.name} className={`healthCard h-${i.status}`}><div className="row between"><b>{i.name}</b><Pill value={i.status} label={HEALTH_LABEL[i.status]}/></div><small>{i.detail ?? ""}</small>{i.latencyMs !== null ? <small className="muted">{i.latencyMs} ms</small> : null}</div>)}</div>
     <div className="kpiGrid">
       <Kpi label="Uptime API" value={`${Math.floor(h.uptimeSeconds / 3600)} giờ ${Math.floor((h.uptimeSeconds % 3600) / 60)} phút`}/><Kpi label="Phiên bản schema DB" value={`V${h.schemaVersion ?? "?"}`}/>
@@ -133,7 +134,7 @@ export function SettingsPage() {
   return (<>
     <PageHead title="Cài đặt" sub="Chính sách chỉnh được (ghi audit; mục rủi ro cao cần xác nhận). Giá trị mặc định lấy từ cấu hình máy chủ."/>
     {err ? <p className="formError" role="alert">{err}</p> : null}{ok ? <p className="hint" role="status">{ok}</p> : null}
-    {pol.error ? <ErrorState error={pol.error} retry={pol.reload}/> : !pol.data ? <StateView kind="loading"/> : <div className="grid2">{Object.entries(groups).map(([g, items]) =>
+    {pol.error ? <ErrorState error={pol.error} retry={pol.reload}/> : !pol.data ? <StateView kind="loading"/> : pol.data.length === 0 ? <StateView kind="empty" title="Chưa có chính sách nào chỉnh được"/> : <div className="grid2">{Object.entries(groups).map(([g, items]) =>
       <Card key={g} title={g}><table className="table settingsTable"><tbody>{items.map((s) => {
         const v = draft[s.key] ?? s.value;
         return <tr key={s.key}><td><b>{s.label}</b>{s.risk === "HIGH" ? <Pill value="UNKNOWN" label="Rủi ro cao"/> : null}<small className="code">{s.key}</small>
@@ -146,7 +147,7 @@ export function SettingsPage() {
             {s.overridden ? <button className="btn sm ghost" onClick={() => void reset(s)}>Mặc định</button> : null}</td></tr>;
       })}</tbody></table></Card>)}</div>}
     <h2 className="subHead">Cấu hình đang hiệu lực (chỉ xem)</h2>
-    {loading && !data ? <StateView kind="loading"/> : error ? <ErrorState error={error} retry={reload}/> :
+    {loading && !data ? <StateView kind="loading"/> : error ? <ErrorState error={error} retry={reload}/> : Object.keys(data!).length === 0 ? <StateView kind="empty" title="Chưa có cấu hình hiệu lực để hiển thị"/> :
       <div className="grid2">{Object.entries(data!).map(([group, values]) => (
         <Card key={group} title={SETTING_GROUP[group] ?? group}><dl className="kv">{Object.entries(values).map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v === null || v === undefined ? "—" : String(v)}</dd></div>)}</dl></Card>
       ))}</div>}

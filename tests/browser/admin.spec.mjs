@@ -448,6 +448,24 @@ await block("scenario 57", async () => { const p = await open({ portal: "platfor
   check("FOC01 after creating a company the focus is on the new company's heading (not <body>)", f.tag === "H1" && /Công ty Tập Trung/.test(f.text), JSON.stringify(f));
   await p.__ctx.close(); });
 
+// ===================================================================================================================== M-119 / M-120 / M-121 empty answers (the state-matrix tool's 'empty' mode: emptify=1)
+const emptyOf = async (path) => { const p = await open({ portal: "platform", me: "sys", start: path, emptify: "1" }); await settle(p, 800); const t = await p.locator("main").innerText(); return { p, t }; };
+await block("scenario 58", async () => { const { p, t } = await emptyOf("/platform/costs");
+  check("EMP01 costs with nothing in it shows no NaN / undefined and says there is no data", !/NaN|undefined|\[object/.test(t) && /Chưa có số liệu chi phí/.test(t), t.slice(0, 160));
+  await p.__ctx.close(); });
+await block("scenario 59", async () => { const { p, t } = await emptyOf("/platform/components");
+  check("EMP02 components: an empty registry says so", /Chưa có component nào/.test(t));
+  await p.__ctx.close(); });
+await block("scenario 60", async () => { const { p, t } = await emptyOf("/platform/system");
+  check("EMP03 system health: no checks says so", /Chưa có thành phần nào được kiểm tra/.test(t));
+  await p.__ctx.close(); });
+await block("scenario 61", async () => { const { p, t } = await emptyOf("/platform/settings");
+  check("EMP04 settings: no editable policies says so", /Chưa có chính sách nào chỉnh được/.test(t));
+  await p.__ctx.close(); });
+await block("scenario 62", async () => { const { p, t } = await emptyOf("/platform/ai/usage");
+  check("EMP05 AI usage with an empty daily series (M-120) renders: heading, no crash", (await p.locator("h1").count()) === 1 && /Mức sử dụng model/.test(t) && !/Invalid time value/.test(t));
+  await p.__ctx.close(); });
+
 // ===================================================================================================================== route / navigation snapshot (M-066: the split must not change behaviour)
 // For every persona the sidebar labels and, for every section key (deep links, aliases, foreign and unknown keys included), the final path, the h1, the h2s and the kind of state view are recorded in admin-routes.snapshot.json
 // (generated from the pre-split code, `UPDATE_SNAPSHOT=1` rewrites it). Dates / numbers are not compared: only structure.

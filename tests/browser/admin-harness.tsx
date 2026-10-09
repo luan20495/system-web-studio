@@ -2,7 +2,7 @@
 /**
  * TEST-ONLY harness for tests/browser/admin.spec.mjs. It proves what the SCREENS do with the answers C1's contract describes; it never proves what a server answers.
  * Query: ?portal=platform|admin|all  &me=sys|sysmember|tadmin|wsadmin|plain|sysatenant|none  &start=/platform/tenants  &fail=<path prefix: GET answers 500>  &failw=<prefix: writes answer 500>  &slow=<prefix: 2.5 s>
- *        &empty=1  &big=1  &daily=empty  &bad=audit|schema  &fx=1 (extra fixtures).   Every request is recorded in window.__calls ({method, path, body}); a request with no fixture answers 404 and is recorded as {unknown}.
+ *        &empty=1  &big=1  &daily=empty  &bad=audit|schema  &fx=1 (extra fixtures)  &emptify=1 (every array answer empty, like the state-matrix tool).   Every request is recorded in window.__calls ({method, path, body}); a request with no fixture answers 404 and is recorded as {unknown}.
  * `window.__cfg` can be changed by the spec at run time (slow / fail / failw). The activation token in the fixtures is a made-up string.
  */
 import { createRoot } from "react-dom/client";
@@ -25,6 +25,9 @@ function AllShell() { const { me, loading } = useSession(); const path = usePath
 (window as any).__calls = [] as any[];
 (window as any).__cfg = { fail: failP, slow: slowP };
 const FX = P.get("fx") === "1";   // richer fixtures (departments, a template to review, a budget): off by default so the route snapshot keeps its shape
+/** &emptify=1: the state-matrix tool's 'empty' mode (scripts/ui-state-matrix.mjs): every array of every GET answer becomes [] and every `total` 0, scalars stay (so a screen that does arithmetic on them is exercised) */
+const EMPTIFY = P.get("emptify") === "1";
+const emptify = (v: any, depth = 0): any => (Array.isArray(v) ? [] : v && typeof v === "object" && depth < 3 ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, k === "total" ? 0 : Array.isArray(x) ? [] : emptify(x, depth + 1)])) : v);
 const iso = (d = 0) => new Date(Date.now() - d * 86400000).toISOString();
 
 const WS = (id: string, name: string, permissions: string[]) => ({ id, name, role: "x", tenantId: "t1", permissions });
@@ -160,7 +163,7 @@ window.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   if (cfg.failw && path.startsWith(cfg.failw) && method !== "GET") return json(500, { code: "INTERNAL", message: "Internal Server Error: could not execute statement; SQL [n/a]", requestId: "req-999" });
   for (const [m, re, fn] of H) {
     if (m !== method) continue; const mm = path.match(re); if (!mm) continue;
-    try { const out = await fn(mm, body, url); if (out === undefined) return new Response(null, { status: 204 }); return json(200, out); }
+    try { const out = await fn(mm, body, url); if (out === undefined) return new Response(null, { status: 204 }); return json(200, EMPTIFY && method === "GET" && !/^\/auth\//.test(path) ? emptify(out) : out); }
     catch (e: any) { if (e && e.s) return json(e.s, { code: e.code, message: e.message ?? "msg", requestId: "rq" }); throw e; }
   }
   (window as any).__calls.push({ unknown: method + " " + path });
