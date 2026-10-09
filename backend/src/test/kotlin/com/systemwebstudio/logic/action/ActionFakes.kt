@@ -74,7 +74,7 @@ class FakeDefinitions(vararg defs: ActionDefinition) : ActionDefinitionProvider 
 }
 
 /** Default-allow access fake that records every request and can deny single permission codes or fail outright. */
-class FakeAccess(var denyPermissions: Set<String> = emptySet(), var denyAll: Boolean = false, var throwing: Boolean = false) : AccessPort {
+open class FakeAccess(var denyPermissions: Set<String> = emptySet(), var denyAll: Boolean = false, var throwing: Boolean = false) : AccessPort {
     val requests = CopyOnWriteArrayList<Pair<ActionContext, AccessRequest>>()
     override fun check(ctx: ActionContext, request: AccessRequest): AuthorizationDecision {
         requests += ctx to request
