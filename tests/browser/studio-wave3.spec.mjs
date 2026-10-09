@@ -256,4 +256,16 @@ for (const w of [768, 1000]) {
   check("M-122: when /auth/config fails the type list says so instead of an empty gap", /Chưa tải được loại ứng dụng/.test(await p.locator("main").innerText()));
   await p.close();
 }
+// ---------- M-125: no control under 24 px on the Site drawer; a left-rail item cut by its own scroll edge is reachable (not covered by another control) ----------
+{
+  const p = await open(b, "/studio/projects/p1/site", { state: newState() }); await p.waitForSelector("[role=dialog]"); await wait(1100);
+  const small = await p.evaluate(() => [...document.querySelectorAll("a,button,input:not([type=checkbox]):not([type=radio]),select,textarea,[role=button]")].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== "hidden" && (r.width < 24 || r.height < 24); }).map((e) => `${e.tagName.toLowerCase()} ${Math.round(e.getBoundingClientRect().width)}x${Math.round(e.getBoundingClientRect().height)} ${e.getAttribute("aria-label") ?? ""}`));
+  check("M-125: no control on the Site drawer is smaller than 24 px (the navigation selects were 22 px)", small.length === 0, small.join(" | "));
+  await p.close();
+  const q = await open(b, "/studio/projects/p1/design", { state: newState(), viewport: { width: 1024, height: 800 } }); await q.waitForSelector("iframe"); await wait(1100);
+  await q.getByRole("tab", { name: "Thành phần", exact: true }).first().click(); await wait(500);
+  const info = await q.evaluate(() => { const out = []; for (const e of document.querySelectorAll(".bx-left button")) { const r = e.getBoundingClientRect(); if (!r.width) continue; const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); if (t && !e.contains(t) && !t.contains(e)) { e.scrollIntoView({ block: "center" }); const r2 = e.getBoundingClientRect(); const t2 = document.elementFromPoint(r2.left + r2.width / 2, r2.top + r2.height / 2); out.push({ clippedByOwnPanel: !!e.closest(".bx-left-panel"), reachableAfterScroll: !!t2 && (e.contains(t2) || t2.contains(e)) }); } } return out; });
+  check("M-125: every left-rail control 'covered' at 1024 is only cut by its own scrolling panel and is reachable after scrolling (no other control sits on it)", info.every((x) => x.clippedByOwnPanel && x.reachableAfterScroll), JSON.stringify(info));
+  await q.close();
+}
 await b.close(); finish();
