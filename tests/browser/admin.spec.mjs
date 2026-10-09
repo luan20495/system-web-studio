@@ -634,6 +634,17 @@ await block("scenario 82", async () => { const p = await open({ portal: "platfor
   check("DLG03 the activation-link dialog uses the shared ModalHeader", (await p.locator("[role=dialog] .xp-modalHead h2").count()) === 1 && (await p.locator("[role=dialog] .modalBody > h2").count()) === 0);
   await p.__ctx.close(); });
 
+// ===================================================================================================================== M-095 / M-096 placeholders in the nav are marked; the AI page says it is platform-wide
+await block("scenario 83", async () => { const p = await open({ portal: "admin", me: "tadmin", start: "/admin" });
+  const nav = (await p.locator("aside nav").innerText()).replace(/\s+/g, " ");
+  check("NAV01 the admin nav marks the sections that do not exist yet (Nhóm, Chia sẻ, AI riêng của công ty are 'Sắp có'); a real section is not marked", /Nhóm Sắp có/.test(nav) && /Chia sẻ Sắp có/.test(nav) && /AI riêng của công ty Sắp có/.test(nav) && !/Nhân viên Sắp có/.test(nav), nav);
+  await p.__ctx.close(); });
+await block("scenario 84", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/ai/providers" });
+  await p.getByRole("heading", { level: 1, name: "AI" }).waitFor();
+  const t = await text(p);
+  check("AI01 the Platform AI page says the configuration is platform-wide (not 'cho cả công ty')", /toàn nền tảng/.test(t) && !/cho cả công ty/.test(t));
+  await p.__ctx.close(); });
+
 check("no console error / warning / uncaught exception in any page", errors.length === 0, errors.slice(0, 3).join(" | "));
 await browser.close();
 finish();

@@ -134,6 +134,9 @@ function EmployeeDetail({ org, plan, tenant, employee, units, positions, canTogg
   const [busy, setBusy] = useState<string | null>(null); const [problem, setProblem] = useState<OrgProblem | null>(null); const [ok, setOk] = useState<string | null>(null);
   const options = useMemo(() => unitOptions(units), [units]);
   const orgReady = plan.assignOrg.state === "ready" && plan.units.state === "ready"; const posReady = plan.assignPosition.state === "ready" && plan.positions.state === "ready";
+  const orgReason = (plan.assignOrg as { reason?: string }).reason ?? (plan.units as { reason?: string }).reason ?? "Chưa sẵn sàng."; const posReason = (plan.assignPosition as { reason?: string }).reason ?? (plan.positions as { reason?: string }).reason ?? "Chưa sẵn sàng.";
+  /** the same reason twice in one dialog is noise (M-095): one note covers both */
+  const bothNotReady = !orgReady && !posReady && orgReason === posReason;
   async function save(key: "org" | "pos") {
     setBusy(key); setProblem(null); setOk(null);
     try { const e = key === "org" ? await org.updateEmployeeOrganization(tenant.id, employee.userId, unit || null) : await org.updateEmployeePosition(tenant.id, employee.userId, pos || null); setOk(key === "org" ? "Đã lưu đơn vị." : "Đã lưu vị trí."); onChanged(e); } catch (e) { setProblem(orgProblem(e)); } finally { setBusy(null); }
@@ -148,12 +151,12 @@ function EmployeeDetail({ org, plan, tenant, employee, units, positions, canTogg
           <p data-testid="detail-org">{employee.orgUnitId ? unitPath(units, employee.orgUnitId) || employee.orgUnitName : "Chưa gán đơn vị"}</p>
           <label className="field"><span>Đơn vị</span><select data-testid="detail-unit" value={unit} disabled={!orgReady || busy !== null} onChange={(e) => setUnit(e.target.value)}><option value="">Chưa gán đơn vị</option>{options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}</select></label>
           {orgReady ? <div className="row"><button className="btn sm primary" data-testid="detail-unit-save" disabled={busy !== null || unit === (employee.orgUnitId ?? "")} onClick={() => void save("org")}>{busy === "org" ? "Đang lưu…" : "Lưu đơn vị"}</button></div>
-            : <NotReadyPanel testid="detail-org-not-ready" title="Chưa gán được đơn vị" reason={(plan.assignOrg as { reason?: string }).reason ?? (plan.units as { reason?: string }).reason ?? "Chưa sẵn sàng."}/>}</section>
+            : bothNotReady ? null : <NotReadyPanel testid="detail-org-not-ready" title="Chưa gán được đơn vị" reason={orgReason}/>}</section>
         <section className="xp-section" aria-label="Vị trí / Cấp bậc"><h3>Vị trí / Cấp bậc</h3>
           <p data-testid="detail-position">{employee.positionName ?? "Chưa gán vị trí"}</p>
           <label className="field"><span>Vị trí</span><select data-testid="detail-pos" value={pos} disabled={!posReady || busy !== null} onChange={(e) => setPos(e.target.value)}><option value="">Chưa gán vị trí</option>{positions.map((p) => <option key={p.id} value={p.id}>{p.name}{p.level != null ? ` (cấp ${p.level})` : ""}</option>)}</select></label>
           {posReady ? <div className="row"><button className="btn sm primary" data-testid="detail-pos-save" disabled={busy !== null || pos === (employee.positionId ?? "")} onClick={() => void save("pos")}>{busy === "pos" ? "Đang lưu…" : "Lưu vị trí"}</button></div>
-            : <NotReadyPanel testid="detail-pos-not-ready" title="Chưa gán được vị trí" reason={(plan.assignPosition as { reason?: string }).reason ?? (plan.positions as { reason?: string }).reason ?? "Chưa sẵn sàng."}/>}</section>
+            : bothNotReady ? <NotReadyPanel testid="detail-assign-not-ready" title="Chưa gán được đơn vị và vị trí" reason={orgReason}/> : <NotReadyPanel testid="detail-pos-not-ready" title="Chưa gán được vị trí" reason={(plan.assignPosition as { reason?: string }).reason ?? (plan.positions as { reason?: string }).reason ?? "Chưa sẵn sàng."}/>}</section>
         <section className="xp-section" aria-label="Workspace"><h3>Workspace</h3>
           {employee.workspaces?.length ? <ul className="xp-wsList" data-testid="detail-workspaces">{employee.workspaces.map((w) => <li key={w.id}><b>{w.name}</b> <small>{w.role}</small></li>)}</ul>
             : <p className="hint" data-testid="detail-workspaces-na">Danh sách workspace của nhân viên chưa có trong dữ liệu máy chủ. Quản lý thành viên workspace ở mục “Workspace của tôi”.</p>}</section>

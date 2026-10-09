@@ -978,9 +978,9 @@
    "Định danh (SSO/SCIM)",
    "Templates",
    "Nhật ký kiểm toán",
-   "Nhóm",
-   "Chia sẻ",
-   "AI riêng của công ty"
+   "Nhóm Sắp có",
+   "Chia sẻ Sắp có",
+   "AI riêng của công ty Sắp có"
   ],
   "routes": {
    "(home)": {
@@ -1504,9 +1504,9 @@
    "Định danh (SSO/SCIM)",
    "Templates",
    "Nhật ký kiểm toán",
-   "Nhóm",
-   "Chia sẻ",
-   "AI riêng của công ty"
+   "Nhóm Sắp có",
+   "Chia sẻ Sắp có",
+   "AI riêng của công ty Sắp có"
   ],
   "routes": {
    "(home)": {
@@ -2029,9 +2029,9 @@
    "Người dùng",
    "Workspace của tôi",
    "Nguồn dữ liệu",
-   "Nhóm",
-   "Chia sẻ",
-   "AI riêng của công ty"
+   "Nhóm Sắp có",
+   "Chia sẻ Sắp có",
+   "AI riêng của công ty Sắp có"
   ],
   "routes": {
    "(home)": {
@@ -2524,9 +2524,9 @@
    "Tổng quan",
    "Người dùng",
    "Workspace của tôi",
-   "Nhóm",
-   "Chia sẻ",
-   "AI riêng của công ty"
+   "Nhóm Sắp có",
+   "Chia sẻ Sắp có",
+   "AI riêng của công ty Sắp có"
   ],
   "routes": {
    "(home)": {
