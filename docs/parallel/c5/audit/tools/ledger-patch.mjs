@@ -139,3 +139,14 @@ rows.push(["M-124","P3","TOOLING","Admin","employees dialogs","18 blank and 18 c
 rows.push(["M-125","P3","C5","Studio","site screen · project rail","9 visits with targets < 24 px on the Studio site screen; 4 'covered' controls on the builder rail in Studio project screens",["S4W2-08","S4W2-09"],"SitePanels.tsx controls; builder rail covered by a sticky/overlay element in the matrix","S1","none","N (harness)","raise targets; find the covering element","matrix: 0 small / 0 covered",""]);
 note("M-075", "S4 state matrix (HARNESS, pre-adoption): 52 screens show raw 'java.lang.NullPointerException …' text on an injected 500 and 19 show raw 'Access Denied' on a 403; closes when S1/S2 adopt errorText on all screens");
 note("M-056", "S4 state matrix: also admin/identity shows no error when its request fails (see M-122)");
+
+// ---- integration round 4 (agent/c5-web 9ea2e39): S3 wave 1 milestone 3 (HARNESS/unit) + S4 wave 2 tooling
+status("M-060", "GUARD + GLOSSARY MERGED (9ea2e39): ratchet-only denylist guards (internal-constant 15, internal-term 72, legacy-name 11, …); copy fixes pending (S1/S2 lower the ceilings as they fix)");
+status("M-061", "LIBRARY MERGED (9ea2e39): 25 typed enum label maps with a neutral 'Khác' fallback; adoption pending (S1/S2)");
+status("M-062", "GLOSSARY + SINGLE ROLE TABLE MERGED (9ea2e39); 11 product-owner decisions D-1..D-11 listed in S3-glossary.md; adoption pending");
+status("M-063", "BRAND constant + ratchet MERGED (9ea2e39); legacy names still in strings (ceiling 11)");
+status("M-068", "VOCABULARY + <Button> + dark skin MERGED (9ea2e39); call-site migration of .button/.smallButton/.bx-btn pending (S1/S2; ratcheted: 73/72/56)");
+status("M-069", "PARTIAL (9ea2e39): 107 value-identical token replacements (0 of 34 css-snapshot screens changed), hex literals 344 -> 234 uses; radius/shadow/font-size tokens, dark palette merge and builder.css hex (S1) remain");
+status("M-070", "PARTIAL (9ea2e39): 22 provably dead declarations removed (pixel-identical), 26 -> 19 conflicting duplicate selectors; 99 split-rule duplicates remain");
+note("M-087", "odd breakpoint thresholds (700/720/768/767/520/1100/1023/1279) NOT consolidated: moving switch points is a visual decision; ratchet prevents growth");
+note("M-021", "harness fidelity: 9 harnesses did not load ui.css (fixed 9ea2e39); new harnesses must load ui.css after factory.css (guard test)");

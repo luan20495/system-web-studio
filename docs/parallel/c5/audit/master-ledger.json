@@ -417,7 +417,7 @@
   "N (harness)",
   "document-level Escape while open; mouseup-on-backdrop rule shared with M-010",
   "builder.spec dialogs",
-  ""
+  "harness fidelity: 9 harnesses did not load ui.css (fixed 9ea2e39); new harnesses must load ui.css after factory.css (guard test)"
  ],
  [
   "M-022",
@@ -1171,7 +1171,8 @@
   "N",
   "plain Vietnamese copy; keep technical names in a collapsed 'Chi tiết kỹ thuật'",
   "text lint guard (denylist) + review",
-  "O-03: S3 supplies the label library + guard; S1/S2 apply it in their own files"
+  "O-03: S3 supplies the label library + guard; S1/S2 apply it in their own files",
+  "GUARD + GLOSSARY MERGED (9ea2e39): ratchet-only denylist guards (internal-constant 15, internal-term 72, legacy-name 11, …); copy fixes pending (S1/S2 lower the ceilings as they fix)"
  ],
  [
   "M-061",
@@ -1193,7 +1194,8 @@
   "N",
   "central label maps in @xweb/i18n with a guard for unmapped values",
   "unit: every enum has a label",
-  "O-03: S3 supplies the label library + guard; S1/S2 apply it in their own files"
+  "O-03: S3 supplies the label library + guard; S1/S2 apply it in their own files",
+  "LIBRARY MERGED (9ea2e39): 25 typed enum label maps with a neutral 'Khác' fallback; adoption pending (S1/S2)"
  ],
  [
   "M-062",
@@ -1218,7 +1220,8 @@
   "N",
   "canonical glossary (docs) + apply; single role-label source",
   "text guard + review",
-  "O-03: S3 supplies the label library + guard; S1/S2 apply it in their own files"
+  "O-03: S3 supplies the label library + guard; S1/S2 apply it in their own files",
+  "GLOSSARY + SINGLE ROLE TABLE MERGED (9ea2e39); 11 product-owner decisions D-1..D-11 listed in S3-glossary.md; adoption pending"
  ],
  [
   "M-063",
@@ -1240,7 +1243,8 @@
   "N",
   "Vietnamese labels; one product name constant",
   "review",
-  "O-03: S3 supplies the label library + guard; S1/S2 apply it in their own files"
+  "O-03: S3 supplies the label library + guard; S1/S2 apply it in their own files",
+  "BRAND constant + ratchet MERGED (9ea2e39); legacy names still in strings (ceiling 11)"
  ],
  [
   "M-064",
@@ -1337,7 +1341,8 @@
   "N",
   "one button component/class set with documented variants; migrate in steps",
   "screenshots + axe",
-  ""
+  "",
+  "VOCABULARY + <Button> + dark skin MERGED (9ea2e39); call-site migration of .button/.smallButton/.bx-btn pending (S1/S2; ratcheted: 73/72/56)"
  ],
  [
   "M-069",
@@ -1361,7 +1366,8 @@
   "N",
   "token consolidation (light + dark sets), define missing tokens, replace repeated hex",
   "css counting script before/after",
-  "386 hex includes 30 token definitions (R2 count 356 excludes them)"
+  "386 hex includes 30 token definitions (R2 count 356 excludes them)",
+  "PARTIAL (9ea2e39): 107 value-identical token replacements (0 of 34 css-snapshot screens changed), hex literals 344 -> 234 uses; radius/shadow/font-size tokens, dark palette merge and builder.css hex (S1) remain"
  ],
  [
   "M-070",
@@ -1382,7 +1388,7 @@
   "dedupe; define .sr-only alias or fix usage",
   "unused/duplicate selector script",
   "",
-  "PARTIAL: undefined tokens --danger/--warn defined (merged dbef6fa); duplicate selector cleanup pending (S3 item 8)"
+  "PARTIAL (9ea2e39): 22 provably dead declarations removed (pixel-identical), 26 -> 19 conflicting duplicate selectors; 99 split-rule duplicates remain"
  ],
  [
   "M-071",
@@ -1723,7 +1729,7 @@
   "N",
   "dvh with fallback; container max-width; breakpoint tokens",
   "responsive matrix",
-  "S3-021 unverified on device (P3 until verified)",
+  "S3-021 unverified on device (P3 until verified) · odd breakpoint thresholds (700/720/768/767/520/1100/1023/1279) NOT consolidated: moving switch points is a visual decision; ratchet prevents growth",
   "FIXED (merged dbef6fa): dvh with vh fallback, content max-width 1360 at >=1280, breakpoints ratcheted (consolidation of odd thresholds deferred to item 8)"
  ],
  [
