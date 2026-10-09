@@ -1,0 +1,3841 @@
+{
+  "studio": "http://127.0.0.1:3403",
+  "runId": "muyrss0k",
+  "frontendHead": "62ce969",
+  "backend": {
+    "url": "http://127.0.0.1:51080",
+    "head": "62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]"
+  },
+  "facts": {
+    "authConfig": {
+      "localLogin": true,
+      "oidc": false,
+      "publicPublish": true
+    },
+    "fixtureNotes": {
+      "viewerOnProject": "member",
+      "initialRevision": 0,
+      "definitionOps": {
+        "ok": true
+      },
+      "markers": [
+        "E2E-muyrss0k-muyrt0g3",
+        "E2E-OFFLINE-muyrss0k",
+        "E2E-HANG-muyrss0k",
+        "E2E-DOWN-muyrss0k"
+      ],
+      "marker": "E2E-muyrss0k-muyrt0g3",
+      "viewerResolved": {
+        "me": {
+          "permissions": [],
+          "workspace": [],
+          "workspaceListed": true
+        },
+        "project": {
+          "status": 200,
+          "permissions": [
+            "APP_USE",
+            "PROJECT_READ"
+          ]
+        }
+      },
+      "viewerReadsDataSources": 403,
+      "operatorSource": "not provided (E2E_DS_TYPE) — the 'connection test succeeds' path is NOT exercised",
+      "browserAfterRestart": "builder",
+      "publicPageCache": {
+        "status": 200,
+        "cacheControl": "public, no-cache, no-transform",
+        "etag": true,
+        "conditionalStatus": 200
+      },
+      "publishedRuntimeConfig": {
+        "__factory/config.json": {
+          "status": 404,
+          "keys": null
+        },
+        "runtime-config.json": {
+          "status": 404,
+          "keys": null
+        }
+      },
+      "hangUnknownOutcome": {
+        "reachedServerBeforeResume": false,
+        "revision": "9 → 9"
+      },
+      "unpublishOperationObserved": "not observed (the scope is held for an instant; the busy UI for UNPUBLISH is covered by the browser harness)",
+      "p08Building": "3fb370e8-26a5-40b8-a46a-68b0802940d8"
+    },
+    "routes": {
+      "queries": {
+        "status": 404,
+        "code": "QUERY_NOT_FOUND"
+      },
+      "actions": {
+        "status": 404,
+        "code": "UNKNOWN_ACTION"
+      }
+    }
+  },
+  "cleanup": [
+    "left behind (no delete route): workspaces 715b381d-10bf-4b97-9f65-5dbfeba01794, 6df1df4d-711d-4383-b78e-6ce3ab1180e3, 0b8f85a7-c3c2-4e43-a8e7-0d17f4926d13, 7f566922-d518-4688-a96a-89f70c23c04b, c34c94e6-479e-4f83-bd9d-c7548531d1e0, b873ef69-102f-4b30-b822-773995c97b84, a4a70e8e-340a-4917-822a-7b1b7b337c79 named e2e-muyrss0k-*"
+  ],
+  "node": "v22.23.1",
+  "summary": {
+    "total": 42,
+    "PASS": 31,
+    "FAIL": 4,
+    "BLOCKED": 7,
+    "SKIP": 0
+  },
+  "results": [
+    {
+      "id": "E2E-01",
+      "title": "Load project/page from the real backend",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:00:29.040Z",
+      "end": "2026-10-08T00:00:31.645Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "GET …/projects/{id}/schema answered 200 by the real backend",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "http"
+        },
+        {
+          "name": "the Builder canvas rendered (preview iframe present)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the project name stored in the backend is on screen",
+          "ok": true,
+          "detail": "← e2e-muyrss0k-proj-A Phiên bản 2 · revision 1 · Riêng tư ✓ Đã lưu 07:00 ✦ AI Design Code Chỉnh sửa Dùng thử Máy tính Má",
+          "kind": "ui"
+        },
+        {
+          "name": "the canvas shows the persisted first section (page content comes from the server, not a fixture in the browser)",
+          "ok": true,
+          "detail": "sections=7 props={\"brand\":\"e2e-muyrss0k-proj-A\",\"links\":[{\"id\":\"l1\",\"href\":\"#products\",\"label\":\"S",
+          "kind": "persistence"
+        },
+        {
+          "name": "no unhandled page errors / serious console errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-02",
+      "title": "Edit component/page → save → reload → persists",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:00:31.645Z",
+      "end": "2026-10-08T00:00:34.508Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "clicking a section on the canvas opens its properties",
+          "ok": true,
+          "detail": "attempts=1",
+          "kind": "ui"
+        },
+        {
+          "name": "PATCH …/schema answered 200 by the real backend",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "http"
+        },
+        {
+          "name": "the top bar says saved",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "server revision increased",
+          "ok": true,
+          "detail": "1 → 2",
+          "kind": "persistence"
+        },
+        {
+          "name": "the new text is in the persisted schema (read back through a separate session)",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "after a full reload the canvas shows the saved text",
+          "ok": true,
+          "detail": "e2e-muyrss0k-proj-A\nSản phẩm\nLiên hệ\n\nE2E-MUYRSS0K-MUYRT0G3\n\nNước sạch mỗi ngày, sống khỏe mỗi ngày.",
+          "kind": "ui"
+        },
+        {
+          "name": "a new version row exists for the edit",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "no unhandled page errors / serious console errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-03",
+      "title": "Workspace isolation A/B",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:00:34.509Z",
+      "end": "2026-10-08T00:00:39.326Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "adminA: the project list shows their own project",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "adminA: the project list does NOT show the other workspace's project",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "adminA: no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "adminB: the project list shows their own project",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "adminB: the project list does NOT show the other workspace's project",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "adminB: no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "B reads A's project by id → 404 (existence not disclosed)",
+          "ok": true,
+          "detail": "status=404 code=WORKSPACE_NOT_FOUND",
+          "kind": "http"
+        },
+        {
+          "name": "the 404 body does not carry A's data",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "B lists A's workspace → refused (403/404), no rows",
+          "ok": true,
+          "detail": "status=404",
+          "kind": "ui"
+        },
+        {
+          "name": "B cannot write into A's project (403/404)",
+          "ok": true,
+          "detail": "status=404",
+          "kind": "ui"
+        },
+        {
+          "name": "A's project revision is unchanged by the attempts",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "A reads B's project through B's workspace → 404",
+          "ok": true,
+          "detail": "status=404",
+          "kind": "http"
+        },
+        {
+          "name": "a project id of B under A's workspace path → 404 (no cross-workspace lookup)",
+          "ok": true,
+          "detail": "status=404",
+          "kind": "http"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-04",
+      "title": "Authorized user reaches a valid Studio resource (permission-driven)",
+      "status": "FAIL",
+      "owner": "C1",
+      "ref": "H-C1-04",
+      "reason": "CONTRACT MISMATCH — expected: VIEWER resolved permissions include APP_VIEW, so the Studio portal opens read-only; actual: GET /auth/me → permissions=[], workspaces[].permissions=[]; GET …/projects/{p} → permissions=[\"APP_USE\",\"PROJECT_READ\"] (PROJECT_READ is the storage name of APP_VIEW); impact: the Studio gate (reads /auth/me) redirects the VIEWER to /auth/no-access; /auth/me lists WORKSPACE-level codes only, so any person whose rights come from a PROJECT membership (VIEWER, EDITOR, PUBLISHER) is refused",
+      "mismatch": {
+        "expected": "VIEWER resolved permissions include APP_VIEW, so the Studio portal opens read-only",
+        "actual": "GET /auth/me → permissions=[], workspaces[].permissions=[]; GET …/projects/{p} → permissions=[\"APP_USE\",\"PROJECT_READ\"] (PROJECT_READ is the storage name of APP_VIEW)",
+        "impact": "the Studio gate (reads /auth/me) redirects the VIEWER to /auth/no-access; /auth/me lists WORKSPACE-level codes only, so any person whose rights come from a PROJECT membership (VIEWER, EDITOR, PUBLISHER) is refused",
+        "workaround": "NONE"
+      },
+      "start": "2026-10-08T00:00:39.326Z",
+      "end": "2026-10-08T00:00:44.435Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "adminA: the server resolves APP_VIEW and APP_EDIT for the project",
+          "ok": true,
+          "detail": "[\"ACTION_EXECUTE\",\"APP_USE\",\"AUDIT_READ\",\"DATA_MUTATE\",\"DATA_SOURCE_MANAGE\",\"DATA_SOURCE_VIEW\",\"MEMBER_MANAGE\",\"PROJECT_CREATE\",\"PROJECT_DELETE\",\"PROJECT_EDIT\",\"PROJECT_MEMBERS\",\"PROJECT_PUBLISH\",\"PROJECT_READ\",\"PROJECT_SETTINGS\",\"QUERY_EXECUTE\",\"WORKFLOW_EXECUTE\",\"WORKFLOW_MANAGE\"]",
+          "kind": "http"
+        },
+        {
+          "name": "adminA: after login the Studio shell is reachable (not /auth/no-access)",
+          "ok": true,
+          "detail": "http://127.0.0.1:3403/studio",
+          "kind": "ui"
+        },
+        {
+          "name": "adminA: direct URL → schema 200 and the Builder canvas",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "ui"
+        },
+        {
+          "name": "adminA: the editor is NOT read-only (no read-only notice)",
+          "ok": true,
+          "detail": "← e2e-muyrss0k-proj-A Phiên bản 3 · revision 2 · Riêng tư ✓ Đã lưu 07:00 ✦ AI Design Code Chỉnh sửa ",
+          "kind": "ui"
+        },
+        {
+          "name": "adminA: refresh keeps the project open",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "adminA: no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "viewerA: GET …/projects/{p} resolves APP_VIEW (contract: a VIEWER holds APP_VIEW) — canonical or its storage alias",
+          "ok": true,
+          "detail": "{\"status\":200,\"permissions\":[\"APP_USE\",\"PROJECT_READ\"]}",
+          "kind": "http"
+        },
+        {
+          "name": "viewerA: …and does not resolve APP_EDIT / APP_PUBLISH / DATA_SOURCE_MANAGE",
+          "ok": true,
+          "detail": "[\"APP_USE\",\"PROJECT_READ\"]",
+          "kind": "http"
+        },
+        {
+          "name": "viewerA: the API lets them READ the schema (200)",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "http"
+        },
+        {
+          "name": "viewerA: the refusal page shows no project data",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "lonelyA: no APP_VIEW is resolved anywhere (/auth/me, project payload)",
+          "ok": true,
+          "detail": "{\"me\":{\"permissions\":[],\"workspace\":[],\"workspaceListed\":true},\"project\":{\"status\":404,\"permissions\":null}}",
+          "kind": "http"
+        },
+        {
+          "name": "lonelyA: after login the person is sent to /auth/no-access",
+          "ok": true,
+          "detail": "http://127.0.0.1:3403/auth/no-access?portal=studio",
+          "kind": "ui"
+        },
+        {
+          "name": "lonelyA: a direct project URL also ends on /auth/no-access (no Builder)",
+          "ok": true,
+          "detail": "http://127.0.0.1:3403/auth/no-access?portal=studio",
+          "kind": "ui"
+        },
+        {
+          "name": "lonelyA: no project name or description on screen or in any API answer",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "lonelyA: no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-05",
+      "title": "Forbidden path: same scope + missing permission → 403, foreign scope → 404, UI state ≠ enforcement",
+      "status": "FAIL",
+      "owner": "C1",
+      "ref": "H-C1-04",
+      "reason": "CONTRACT MISMATCH — expected: VIEWER resolved permissions include APP_VIEW, so Studio opens read-only and the UI permission state can be compared with the forged-call denials; actual: GET /auth/me → permissions=[], workspaces[].permissions=[]; GET …/projects/{p} → permissions=[\"APP_USE\",\"PROJECT_READ\"]; impact: Studio redirects the VIEWER to /auth/no-access, so the UI half of 'UI permission state ≠ enforcement' cannot be observed for an in-scope person without permissions. The API half PASSED above (403 same scope, 404 foreign scope).",
+      "mismatch": {
+        "expected": "VIEWER resolved permissions include APP_VIEW, so Studio opens read-only and the UI permission state can be compared with the forged-call denials",
+        "actual": "GET /auth/me → permissions=[], workspaces[].permissions=[]; GET …/projects/{p} → permissions=[\"APP_USE\",\"PROJECT_READ\"]",
+        "impact": "Studio redirects the VIEWER to /auth/no-access, so the UI half of 'UI permission state ≠ enforcement' cannot be observed for an in-scope person without permissions. The API half PASSED above (403 same scope, 404 foreign scope).",
+        "workaround": "NONE"
+      },
+      "start": "2026-10-08T00:00:44.435Z",
+      "end": "2026-10-08T00:01:23.534Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "viewerA resolved set (evidence): no APP_EDIT / APP_PUBLISH / DATA_SOURCE_MANAGE / WORKFLOW_EXECUTE / ACTION_EXECUTE",
+          "ok": true,
+          "detail": "[\"APP_USE\",\"PROJECT_READ\"]",
+          "kind": "http"
+        },
+        {
+          "name": "same scope, missing permission: PATCH schema (valid ADD_ACTION operation) → 403",
+          "ok": true,
+          "detail": "status=403 code=FORBIDDEN",
+          "kind": "http"
+        },
+        {
+          "name": "same scope, missing permission: POST publish (APP_PUBLISH) → 403",
+          "ok": true,
+          "detail": "status=403 code=FORBIDDEN",
+          "kind": "http"
+        },
+        {
+          "name": "same scope, missing permission: POST TEST action execute (APP_USE + ACTION_EXECUTE + APP_EDIT) → 403",
+          "ok": true,
+          "detail": "status=403 code=FORBIDDEN",
+          "kind": "http"
+        },
+        {
+          "name": "same scope, missing permission: POST TEST workflow start (APP_USE + WORKFLOW_EXECUTE + APP_EDIT) → 403",
+          "ok": true,
+          "detail": "status=403 code=FORBIDDEN",
+          "kind": "http"
+        },
+        {
+          "name": "same scope, missing permission: POST data source create (DATA_SOURCE_MANAGE) → 403",
+          "ok": true,
+          "detail": "status=403 code=PERMISSION_DENIED",
+          "kind": "http"
+        },
+        {
+          "name": "foreign scope (another workspace's admin): PATCH schema (valid ADD_ACTION operation) → 404",
+          "ok": true,
+          "detail": "status=404 code=WORKSPACE_NOT_FOUND",
+          "kind": "http"
+        },
+        {
+          "name": "foreign scope (another workspace's admin): POST publish (APP_PUBLISH) → 404",
+          "ok": true,
+          "detail": "status=404 code=WORKSPACE_NOT_FOUND",
+          "kind": "http"
+        },
+        {
+          "name": "foreign scope (another workspace's admin): POST TEST action execute (APP_USE + ACTION_EXECUTE + APP_EDIT) → 404",
+          "ok": true,
+          "detail": "status=404 code=WORKSPACE_NOT_FOUND",
+          "kind": "http"
+        },
+        {
+          "name": "foreign scope (another workspace's admin): POST TEST workflow start (APP_USE + WORKFLOW_EXECUTE + APP_EDIT) → 404",
+          "ok": true,
+          "detail": "status=404 code=WORKSPACE_NOT_FOUND",
+          "kind": "http"
+        },
+        {
+          "name": "foreign scope (another workspace's admin): POST data source create (DATA_SOURCE_MANAGE) → 404",
+          "ok": true,
+          "detail": "status=404 code=WORKSPACE_NOT_FOUND",
+          "kind": "http"
+        },
+        {
+          "name": "foreign and unknown projects answer identically (no existence oracle)",
+          "ok": true,
+          "detail": "404/WORKSPACE_NOT_FOUND vs 404/WORKSPACE_NOT_FOUND",
+          "kind": "http"
+        },
+        {
+          "name": "A's revision is unchanged by every forged write",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "no deployment was created by the forged publishes",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "no data source was created by the forged requests",
+          "ok": true,
+          "detail": "[]",
+          "kind": "persistence"
+        },
+        {
+          "name": "foreign person: no Builder canvas",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "foreign person: the page says something went wrong / not found (not a blank screen)",
+          "ok": true,
+          "detail": "? Không tìm thấy Workspace not found (mã req_984ca722ad4c47c2a58ab8eec8d73d06) Thử lại ← Danh sách ứng dụng",
+          "kind": "ui"
+        },
+        {
+          "name": "foreign person: A's project name / description are nowhere on screen or in any API answer",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "foreign person: no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-06",
+      "title": "Configure DataSource (+ Query) and query via the real backend",
+      "status": "BLOCKED",
+      "owner": "C2",
+      "ref": "H-C2-02 + H-C0-07",
+      "reason": "Source, credential, test-connection, binding AND query/mutation definition management exist on integration/v2 (C3, management-api.md) and are exercised above, but a project cannot USE them: the AppDefinition has no operation to declare a data slot (dataSources[] is \"granted, not created\", C2 H-C2-02), and a local stack has no reachable source (the SSRF guard refuses loopback/private addresses; the connection test can only succeed against a public host). Use E2E-07 with an operator-seeded project for the query.",
+      "mismatch": null,
+      "start": "2026-10-08T00:01:23.534Z",
+      "end": "2026-10-08T00:01:26.151Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "[api] connector catalogue answers 200 with items",
+          "ok": true,
+          "detail": "status=200 code=",
+          "kind": "http"
+        },
+        {
+          "name": "[api] postgres is AVAILABLE and the planned connectors are not",
+          "ok": true,
+          "detail": "[\"csv:PLANNED\",\"google_sheets:PLANNED\",\"graphql:PLANNED\",\"mysql:PLANNED\",\"odoo:PLANNED\",\"postgres:AVAILABLE\",\"rest:AVAILABLE\",\"salesforce:PLANNED\"]",
+          "kind": "http"
+        },
+        {
+          "name": "[api] create → 201 with a DataSourceView",
+          "ok": true,
+          "detail": "status=201 code= ",
+          "kind": "http"
+        },
+        {
+          "name": "[api] the view says a credential exists but carries no secret and no credential reference",
+          "ok": true,
+          "detail": "[\"id\",\"workspaceId\",\"name\",\"type\",\"config\",\"hasCredential\",\"status\",\"version\",\"createdBy\",\"createdAt\",\"updatedAt\"]",
+          "kind": "http"
+        },
+        {
+          "name": "[api] credential metadata: configured + key NAMES only, no values",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a second source with the same name (case-insensitive) → 409 CONFLICT",
+          "ok": true,
+          "detail": "status=409 code=CONFLICT",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a secret-looking key in config → 400 INVALID_*",
+          "ok": true,
+          "detail": "status=400 code=INVALID_CONFIG",
+          "kind": "http"
+        },
+        {
+          "name": "[api] an identity field in the body (tenantId) → 400 INVALID_PARAMS",
+          "ok": true,
+          "detail": "status=400 code=INVALID_PARAMS",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a PLANNED connector (csv) → 501 NOT_IMPLEMENTED",
+          "ok": true,
+          "detail": "status=501 code=NOT_IMPLEMENTED",
+          "kind": "http"
+        },
+        {
+          "name": "[api] an unknown connector type → 422 UNSUPPORTED_TYPE",
+          "ok": true,
+          "detail": "status=422 code=UNSUPPORTED_TYPE",
+          "kind": "http"
+        },
+        {
+          "name": "[api] isolation: workspace B's admin cannot read A's source by id (404 NOT_FOUND)",
+          "ok": true,
+          "detail": "status=404 code=NOT_FOUND",
+          "kind": "http"
+        },
+        {
+          "name": "[api] isolation: 'foreign' and 'unknown' answer IDENTICALLY (no existence oracle)",
+          "ok": true,
+          "detail": "404/404",
+          "kind": "http"
+        },
+        {
+          "name": "[api] isolation: B's admin listing A's workspace is refused (403/404), no items",
+          "ok": true,
+          "detail": "status=404",
+          "kind": "http"
+        },
+        {
+          "name": "[api] permission: a VIEWER cannot create (403 PERMISSION_DENIED)",
+          "ok": true,
+          "detail": "status=403 code=PERMISSION_DENIED",
+          "kind": "http"
+        },
+        {
+          "name": "[api] permission: a VIEWER cannot change a source, and nothing changed",
+          "ok": true,
+          "detail": "status=403",
+          "kind": "http"
+        },
+        {
+          "name": "[api] permission: a VIEWER's read is 200 or 403, never 5xx, and never shows a secret",
+          "ok": true,
+          "detail": "status=403",
+          "kind": "http"
+        },
+        {
+          "name": "[api] test connection of an unreachable host → HTTP 200 with ok:false and a documented code",
+          "ok": true,
+          "detail": "status=200 ok=false code=INVALID_CREDENTIAL",
+          "kind": "http"
+        },
+        {
+          "name": "[api] the failure text does not leak the credential",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a DISABLED source cannot be tested: 409 DISABLED",
+          "ok": true,
+          "detail": "patch=200 test=409 DISABLED",
+          "kind": "http"
+        },
+        {
+          "name": "[api] bind TEST → 200 with the binding",
+          "ok": true,
+          "detail": "status=200 code=",
+          "kind": "http"
+        },
+        {
+          "name": "[api] the binding list contains it, mode normalised",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "http"
+        },
+        {
+          "name": "[api] permission: a project VIEWER cannot list/alter bindings (403)",
+          "ok": true,
+          "detail": "status=403",
+          "kind": "http"
+        },
+        {
+          "name": "[api] deleting a BOUND source → 409 CONFLICT and it still exists",
+          "ok": true,
+          "detail": "status=409 code=CONFLICT",
+          "kind": "http"
+        },
+        {
+          "name": "[api] list definitions → 200 {items:[]}",
+          "ok": true,
+          "detail": "status=200 code=",
+          "kind": "http"
+        },
+        {
+          "name": "[api] create a query definition → 201 with its id",
+          "ok": true,
+          "detail": "status=201 code=",
+          "kind": "http"
+        },
+        {
+          "name": "[api] read it back (200, same id)",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a definition the gateway would refuse is refused at write time (400 INVALID_QUERY)",
+          "ok": true,
+          "detail": "status=400 code=INVALID_QUERY",
+          "kind": "http"
+        },
+        {
+          "name": "[api] an authority key in the body → 400 INVALID_PARAMS",
+          "ok": true,
+          "detail": "status=400 code=INVALID_PARAMS",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a mutation against a source that is not writable → 422 READ_ONLY_VIOLATION",
+          "ok": true,
+          "detail": "status=422 code=READ_ONLY_VIOLATION",
+          "kind": "http"
+        },
+        {
+          "name": "[api] isolation: workspace B cannot read A's definition (404)",
+          "ok": true,
+          "detail": "status=404",
+          "kind": "http"
+        },
+        {
+          "name": "[api] permission: a VIEWER cannot create a definition (403)",
+          "ok": true,
+          "detail": "status=403 code=PERMISSION_DENIED",
+          "kind": "http"
+        },
+        {
+          "name": "[api] delete the definition → 204",
+          "ok": true,
+          "detail": "status=204",
+          "kind": "http"
+        },
+        {
+          "name": "[ui] the Builder opens by direct URL",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "[ui] the Data panel shows the source-management panel (not 'Chưa sẵn sàng')",
+          "ok": true,
+          "detail": "← e2e-muyrss0k-proj-A Phiên bản 3 · revision 2 · Riêng tư ✓ Đã lưu 07:00 ✦ AI Design Code Chỉnh sửa Dùng thử Máy tính Máy tính bảng Điện thoại Website Phiên bản",
+          "kind": "ui"
+        },
+        {
+          "name": "[ui] the new source is listed",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "[ui] credential: 'Đã cấu hình' with key names and no value",
+          "ok": true,
+          "detail": "Đã cấu hình (username, password). Giá trị được giấu và không thể xem lại; nhập lại để thay thế.",
+          "kind": "ui"
+        },
+        {
+          "name": "[ui] no password field is prefilled and no secret is anywhere in the DOM",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "[ui] test connection: the real failure is shown as FAILED with its code",
+          "ok": true,
+          "detail": "Kết nối thất bại\n\nKhóa kết nối thiếu trường bắt buộc. Cập nhật khóa kết nối đầy đủ.\n\nMã: INVALID_CREDENTIAL",
+          "kind": "ui"
+        },
+        {
+          "name": "[ui] the failure text shows no secret",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "[ui] the existing TEST binding's slot is not invented by the UI (the document declares no slots)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "[ui] no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "[backend] browsing and testing changed nothing: still ACTIVE, version unchanged",
+          "ok": true,
+          "detail": "status=200 ACTIVE",
+          "kind": "persistence"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-07",
+      "title": "TEST-binding query runs and shows results",
+      "status": "BLOCKED",
+      "owner": "C3",
+      "ref": "H-C2-02 + H-C0-07",
+      "reason": "Sources, TEST bindings and query definitions can be created over HTTP (management-api.md §3.5/§3.6), but (1) the document cannot declare the data slot a binding names (C2 H-C2-02) and (2) a local stack has no source the gateway may reach (public address required, H-C0-07). Set E2E_DATA_WORKSPACE_ID, E2E_DATA_PROJECT_ID, E2E_DATA_QUERY_ID, E2E_DATA_USER, E2E_DATA_PASSWORD for a project the operator seeded (source + slot + TEST binding + query; user needs PROJECT_EDIT + QUERY_EXECUTE).",
+      "mismatch": null,
+      "start": "2026-10-08T00:01:26.151Z",
+      "end": "2026-10-08T00:01:26.151Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [],
+      "failed": []
+    },
+    {
+      "id": "E2E-08",
+      "title": "LIVE-binding query runs and shows results",
+      "status": "BLOCKED",
+      "owner": "C0",
+      "ref": "B-C5-06 + H-C2-04 + H-C2-02 + H-C0-07",
+      "reason": "LIVE needs (1) a RUNNING deployment and a published host that serves the Data API: C0 states there is no public DataGateway route and no published data host, and the runtime config that would carry its address is undecided (C0 `__factory/config.json` apiBase, served for code apps/previews only, vs C2 `/runtime-config.json` DATA_API_BASE_URL); (2) a declared slot (C2 H-C2-02); (3) a source the gateway may reach (H-C0-07). Studio's Test panel is TEST-only by design. [published host: E2E_PUBLIC_BASE not set — no published host to ask]",
+      "mismatch": null,
+      "start": "2026-10-08T00:01:26.151Z",
+      "end": "2026-10-08T00:01:26.151Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [],
+      "failed": []
+    },
+    {
+      "id": "E2E-09",
+      "title": "Mutation/action success with a real side effect and correct UI",
+      "status": "BLOCKED",
+      "owner": "C3",
+      "ref": "H-C2-02 + H-C0-07 + B-C5-06",
+      "reason": "A LIVE data mutation needs a declared slot (no op: C2 H-C2-02), a LIVE binding to a WRITABLE source the gateway may reach (the writable PostgreSQL connector and mutation definitions exist on integration/v2, but a local stack cannot reach a source: public address required, H-C0-07) and a published app (no data host, B-C5-06). TEST mode never writes (WOULD_RUN) — covered by E2E-S1. The client rule is tested at unit level: an ambiguous mutation is IDEMPOTENCY_OUTCOME_UNKNOWN, never retried, never shown as success.",
+      "mismatch": null,
+      "start": "2026-10-08T00:01:26.151Z",
+      "end": "2026-10-08T00:01:26.151Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [],
+      "failed": []
+    },
+    {
+      "id": "E2E-S1",
+      "title": "(supplementary) TEST-mode action answers WOULD_RUN from the real backend",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:01:26.151Z",
+      "end": "2026-10-08T00:01:27.735Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "the browser called POST …/app-runtime/actions/{id}/execute",
+          "ok": true,
+          "detail": "no request seen",
+          "kind": "http"
+        },
+        {
+          "name": "the request body only carries contract fields (mode TEST, idempotencyKey)",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "the server answered 200 with status WOULD_RUN",
+          "ok": true,
+          "detail": "status=200 body.status=WOULD_RUN code=undefined",
+          "kind": "http"
+        },
+        {
+          "name": "the UI shows 'would run', NOT success",
+          "ok": true,
+          "detail": "WOULD_RUN: Sẽ chạy (chưa thực hiện) Chưa gửi tới nguồn dữ liệu nào; kế hoạch chỉ suy ra từ định nghĩa và dữ liệu nhập (theo máy chủ). No workflow run is started in TEST mo",
+          "kind": "ui"
+        },
+        {
+          "name": "no SUCCESS state is shown in the row",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-10",
+      "title": "Mutation/action failure: real backend error, UI error state, no fake success",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:01:27.735Z",
+      "end": "2026-10-08T00:01:29.563Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "the action is listed and runnable for a workspace admin",
+          "ok": true,
+          "detail": "null",
+          "kind": "ui"
+        },
+        {
+          "name": "(setup) the action was removed on the server",
+          "ok": true,
+          "detail": "status=200 code=undefined",
+          "kind": "http"
+        },
+        {
+          "name": "the UI shows an ERROR state for the real backend failure",
+          "ok": true,
+          "detail": "ERROR: Lỗi Không tìm thấy mục cần chạy. Mục này chưa được lưu vào ứng dụng hoặc đã bị xóa (chế độ thử dùng bản nháp đã lưu; chế độ thật dùng bản đã xuất bản). Không nên bấm chạy lại ngay.",
+          "kind": "ui"
+        },
+        {
+          "name": "the message says the item was not found, in plain language (no raw status line)",
+          "ok": true,
+          "detail": "Lỗi Không tìm thấy mục cần chạy. Mục này chưa được lưu vào ứng dụng hoặc đã bị xóa (chế độ thử dùng bản nháp đã lưu; chế độ thật dùng bản đã xuất bản). Không nên bấm chạy lại ngay.",
+          "kind": "http"
+        },
+        {
+          "name": "NO success is displayed anywhere in the row",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the run button is usable again (not stuck in 'Đang chạy…')",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-11",
+      "title": "Workflow start from Studio, backend executes, UI reads state/result",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:01:29.563Z",
+      "end": "2026-10-08T00:01:32.874Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "the workflow is listed and startable for a workspace admin",
+          "ok": true,
+          "detail": "null",
+          "kind": "ui"
+        },
+        {
+          "name": "POST …/workflows/{id}/runs answered 202 with a run id",
+          "ok": true,
+          "detail": "status=202 code=undefined",
+          "kind": "http"
+        },
+        {
+          "name": "the start request carried an idempotencyKey (required by the contract)",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "the UI shows the run id and a status read from the server",
+          "ok": true,
+          "detail": "Lượt chạy dd3efa7c-01c9-48b1-8371-3326c15d12fd · SUCCEEDED · end:SUCCEEDED",
+          "kind": "http"
+        },
+        {
+          "name": "the run finished as a simulated (TEST) run: 'would run', not a real success",
+          "ok": true,
+          "detail": "WOULD_RUN: Sẽ chạy (chưa thực hiện) Lượt chạy thử đã kết thúc; các bước được mô phỏng, dữ liệu thật không đổi (theo máy chủ).",
+          "kind": "ui"
+        },
+        {
+          "name": "the run view read through a separate session agrees (terminal status)",
+          "ok": true,
+          "detail": "status=200 SUCCEEDED",
+          "kind": "http"
+        },
+        {
+          "name": "the run belongs to the TEST mode",
+          "ok": true,
+          "detail": "TEST",
+          "kind": "ui"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-12",
+      "title": "Durable workflow: restart the backend while a LIVE run is in flight, state recovers",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:01:32.874Z",
+      "end": "2026-10-08T00:07:23.426Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "(setup) wait-workflow added",
+          "ok": true,
+          "detail": "status=200 code=undefined",
+          "kind": "http"
+        },
+        {
+          "name": "(setup) publish accepted (2xx) with a deployment id",
+          "ok": true,
+          "detail": "status=202 code=undefined",
+          "kind": "http"
+        },
+        {
+          "name": "the LIVE run was accepted (202) before the restart",
+          "ok": true,
+          "detail": "status=202 code=undefined",
+          "kind": "http"
+        },
+        {
+          "name": "PRECONDITION the run is still IN FLIGHT when the backend is restarted (not terminal)",
+          "ok": true,
+          "detail": "status=PENDING mode=LIVE",
+          "kind": "ui"
+        },
+        {
+          "name": "the backend is reachable again after restart #1",
+          "ok": true,
+          "detail": "",
+          "kind": "recovery"
+        },
+        {
+          "name": "the same run id is still readable after restart #1 (not 404)",
+          "ok": true,
+          "detail": "status=200 code=undefined",
+          "kind": "recovery"
+        },
+        {
+          "name": "restart #1 neither failed nor cancelled the run",
+          "ok": true,
+          "detail": "before=PENDING after=SUCCEEDED",
+          "kind": "recovery"
+        },
+        {
+          "name": "replaying the same idempotency key returns the SAME run id (no second run was created)",
+          "ok": true,
+          "detail": "status=202 runId=9044dbf7-287f-47d3-8244-876b5927daa7 code=undefined",
+          "kind": "recovery"
+        },
+        {
+          "name": "the browser open across the restart reloads into the Builder or the login page (never a blank/hung page)",
+          "ok": true,
+          "detail": "builder",
+          "kind": "recovery"
+        },
+        {
+          "name": "the run completes with SUCCEEDED after the restart",
+          "ok": true,
+          "detail": "final=SUCCEEDED",
+          "kind": "recovery"
+        },
+        {
+          "name": "the final state is stable (same status on two later reads)",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "the backend is reachable again after restart #2",
+          "ok": true,
+          "detail": "",
+          "kind": "recovery"
+        },
+        {
+          "name": "after restart #2 the terminal run keeps its id and its final status",
+          "ok": true,
+          "detail": "status=200 SUCCEEDED (was SUCCEEDED)",
+          "kind": "persistence"
+        },
+        {
+          "name": "after restart #2 the same key still resolves to the same run (no new run)",
+          "ok": true,
+          "detail": "status=202 runId=9044dbf7-287f-47d3-8244-876b5927daa7",
+          "kind": "persistence"
+        },
+        {
+          "name": "no unhandled page errors other than the expected network failures",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-13",
+      "title": "Publish → real artifact/runtime state → public page reachable",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:07:23.426Z",
+      "end": "2026-10-08T00:07:29.485Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "POST …/publish accepted by the backend (2xx) with a deployment id",
+          "ok": true,
+          "detail": "status=202 code=undefined",
+          "kind": "http"
+        },
+        {
+          "name": "the publish request carried an Idempotency-Key",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "the dialog reports the site is up (RUNNING)",
+          "ok": true,
+          "detail": "Xuất bản website Phiên bản 6 sẽ được đưa qua kiểm tra chính sách, bảo mật, build và triển khai. Đang chạy Đang chờ — Deployment queued Kiểm tra chính sách — Checking policy Kiểm tra bảo mật — Running ",
+          "kind": "ui"
+        },
+        {
+          "name": "the deployment is RUNNING on the server",
+          "ok": true,
+          "detail": "status=RUNNING mock=false",
+          "kind": "persistence"
+        },
+        {
+          "name": "the deployment has a URL",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "anonymous visitor: the public page answers 200",
+          "ok": true,
+          "detail": "status=200 ",
+          "kind": "ui"
+        },
+        {
+          "name": "the published page is the saved content (contains the text saved in E2E-02 — compared case-insensitively, the eyebrow is rendered with CSS uppercase — or is non-empty)",
+          "ok": true,
+          "detail": "e2e-muyrss0k-proj-A Sản phẩm Liên hệ E2E-MUYRSS0K-MUYRT0G3 Nước sạch mỗi ngày, sống khỏe mỗi ngày. G",
+          "kind": "ui"
+        },
+        {
+          "name": "no Studio chrome leaks into the public page",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "anonymous visitor: reloading the public URL answers 200 again with the same saved content",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "ui"
+        },
+        {
+          "name": "no sub-resource of the public page answers 4xx/5xx",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the page is served with an explicit Cache-Control that forces revalidation (visibility changes and rollbacks must apply at once)",
+          "ok": true,
+          "detail": "status=200 cache-control=public, no-cache, no-transform",
+          "kind": "ui"
+        },
+        {
+          "name": "after the visitor's reload the deployment is still RUNNING on the server",
+          "ok": true,
+          "detail": "status=RUNNING",
+          "kind": "persistence"
+        },
+        {
+          "name": "no unhandled page errors in Studio",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-14",
+      "title": "RabbitMQ (or another dependency) down → correct failure → recovery/retry",
+      "status": "BLOCKED",
+      "owner": "C4",
+      "ref": "H-C4-02",
+      "reason": "No RabbitMQ workflow queue is selectable on integration/v2: the AMQP adapter and the app.workflow.queue=memory|amqp selection exist only on agent/c4-workflow (5712ac5, 7e3c7c3), unintegrated and, by C4's own commit message, never run with Gradle or a real broker. Run stores are durable (V29), but there is no dependency whose outage can change a workflow start. Set E2E_RABBITMQ_WIRED=1 only for a stack that has the queue adapter.",
+      "mismatch": null,
+      "start": "2026-10-08T00:07:29.485Z",
+      "end": "2026-10-08T00:07:29.486Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [],
+      "failed": []
+    },
+    {
+      "id": "E2E-S2",
+      "title": "(supplementary) Save fails offline, retry after reconnect saves exactly once",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:07:29.486Z",
+      "end": "2026-10-08T00:07:31.145Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "clicking a section on the canvas opens its properties",
+          "ok": true,
+          "detail": "attempts=1",
+          "kind": "ui"
+        },
+        {
+          "name": "the top bar says the save failed",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "a retry button is offered",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "Publish is disabled while an edit is unsaved",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the retry reached the real backend and was accepted (200)",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "http"
+        },
+        {
+          "name": "the top bar says saved again and the retry button is gone",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the edit is persisted",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "exactly ONE revision was added (the failed attempt never reached the server; no double apply)",
+          "ok": true,
+          "detail": "5 → 6",
+          "kind": "persistence"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "console: Failed to load resource: net::ERR_INTERNET_DISCONNECTED",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-S3",
+      "title": "(supplementary) Action without a trigger: button disabled with a reason, no request sent",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:07:31.145Z",
+      "end": "2026-10-08T00:07:33.847Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "(setup) an action without a trigger was added",
+          "ok": true,
+          "detail": "status=200 code=undefined",
+          "kind": "http"
+        },
+        {
+          "name": "the server refuses it as 404 UNKNOWN_ACTION (why the UI must not offer it)",
+          "ok": true,
+          "detail": "status=404 code=UNKNOWN_ACTION",
+          "kind": "ui"
+        },
+        {
+          "name": "the row says why it cannot be run (no UI event: only a workflow or another action can start it)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the 'Chạy thử' button is disabled and carries the reason as its title",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "NO execute request was sent for it",
+          "ok": true,
+          "detail": "requests=[]",
+          "kind": "ui"
+        },
+        {
+          "name": "control: the action that DOES declare a trigger is runnable",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-S4",
+      "title": "(supplementary) Workflow start: one run per double click, bounded polling, no request storm",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:07:33.847Z",
+      "end": "2026-10-08T00:07:42.656Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "a double click sent exactly ONE start request (POST …/workflows/{id}/runs)",
+          "ok": true,
+          "detail": "starts=1",
+          "kind": "http"
+        },
+        {
+          "name": "the UI shows ONE run id and its status",
+          "ok": true,
+          "detail": "Lượt chạy 3aafd803-940b-49c3-909f-d16603cca932 · SUCCEEDED · end:SUCCEEDED",
+          "kind": "http"
+        },
+        {
+          "name": "the server knows that run and it is terminal (TEST runs simulate every step)",
+          "ok": true,
+          "detail": "status=200 SUCCEEDED",
+          "kind": "ui"
+        },
+        {
+          "name": "the outcome is a simulated run, not a success",
+          "ok": true,
+          "detail": "WOULD_RUN: Sẽ chạy (chưa thực hiện) Lượt chạy thử đã kết thúc; các bước được mô phỏng, dữ liệu thật không đổi (theo máy chủ).",
+          "kind": "ui"
+        },
+        {
+          "name": "no polling after the run is terminal (0 status requests in 4 s)",
+          "ok": true,
+          "detail": "polls=0",
+          "kind": "http"
+        },
+        {
+          "name": "bounded polling: at most 5 status requests for one finished run",
+          "ok": true,
+          "detail": "polls=1",
+          "kind": "http"
+        },
+        {
+          "name": "no request storm: the whole panel interaction made fewer than 40 API calls",
+          "ok": true,
+          "detail": "api calls=3 in 7374 ms",
+          "kind": "ui"
+        },
+        {
+          "name": "the run button is usable again afterwards (lock released)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-S5",
+      "title": "(supplementary) Save conflict: stale revision → 409, no fake 'saved', other editor's change kept",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:07:42.657Z",
+      "end": "2026-10-08T00:07:50.878Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "clicking a section on the canvas opens its properties",
+          "ok": true,
+          "detail": "attempts=2",
+          "kind": "ui"
+        },
+        {
+          "name": "(setup) the other editor's save was accepted (200)",
+          "ok": true,
+          "detail": "status=200 code=undefined",
+          "kind": "http"
+        },
+        {
+          "name": "the stale save is refused by the server with 409 (answered)",
+          "ok": true,
+          "detail": "status=409 code=REVISION_CONFLICT",
+          "kind": "http"
+        },
+        {
+          "name": "the top bar does NOT say saved after a refused save",
+          "ok": true,
+          "detail": "Lưu thất bại",
+          "kind": "ui"
+        },
+        {
+          "name": "the other editor's change is on the server and mine is not (no silent overwrite)",
+          "ok": true,
+          "detail": "revision 8 → 8",
+          "kind": "persistence"
+        },
+        {
+          "name": "the revision did not move because of the refused save",
+          "ok": true,
+          "detail": "8 → 8",
+          "kind": "persistence"
+        },
+        {
+          "name": "the refused save was not retried in a loop (≤ 2 PATCH requests)",
+          "ok": true,
+          "detail": "patches=1",
+          "kind": "http"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "console: Failed to load resource: the server responded with a status of 409 (Conflict)",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-S8",
+      "title": "(supplementary) Failed workflow run: shown as failed, no fake success, polling stops",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:07:50.879Z",
+      "end": "2026-10-08T00:07:57.985Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "(setup) the failing workflow was added (200)",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "the UI shows the run as FAILED with its run id and the failing step",
+          "ok": true,
+          "detail": "Lượt chạy e1f28e34-1169-4d86-8a6c-4b775e118e29 · FAILED · b:FAILED",
+          "kind": "ui"
+        },
+        {
+          "name": "no success is displayed anywhere in the row",
+          "ok": true,
+          "detail": "E2E lỗi Chạy thử vẫn có thể tạo một bản ghi lượt chạy (workflow_run). Chạy thử Lỗi Dữ liệu nhập chưa hợp lệ. No branch matched and no default Lượt chạy e1f28e34-1169-4d86-8a6c-4b775e118e29 · FAILED · ",
+          "kind": "ui"
+        },
+        {
+          "name": "the server agrees: status FAILED with errorCode INVALID_DEFINITION",
+          "ok": true,
+          "detail": "200 FAILED INVALID_DEFINITION",
+          "kind": "persistence"
+        },
+        {
+          "name": "no polling after the run failed (0 status requests in 4 s)",
+          "ok": true,
+          "detail": "polls=0",
+          "kind": "http"
+        },
+        {
+          "name": "the run button is usable again",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-S9",
+      "title": "(supplementary) Backend hangs: timeout shown, no fake saved, unknown outcome applied at most once",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:07:57.986Z",
+      "end": "2026-10-08T00:08:43.140Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "clicking a section on the canvas opens its properties",
+          "ok": true,
+          "detail": "attempts=2",
+          "kind": "ui"
+        },
+        {
+          "name": "the top bar says the save FAILED once the client gave up (not before ~15 s, not never)",
+          "ok": true,
+          "detail": "after 30116 ms: Lưu thất bại",
+          "kind": "ui"
+        },
+        {
+          "name": "a retry button is offered; Publish is disabled while the edit is unsaved",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "no automatic retry loop while the backend hangs (≤ 1 save request)",
+          "ok": true,
+          "detail": "patches=0",
+          "kind": "ui"
+        },
+        {
+          "name": "no request storm while the backend hangs (< 20 API calls)",
+          "ok": true,
+          "detail": "api calls=1",
+          "kind": "ui"
+        },
+        {
+          "name": "the edit is applied AT MOST ONCE on the server (revision grew by 0 or 1 only when the marker is there)",
+          "ok": true,
+          "detail": "9 → 10, marker=true",
+          "kind": "persistence"
+        },
+        {
+          "name": "the UI says 'saved' only if the server has the edit",
+          "ok": true,
+          "detail": "bar=\"✓ Đã lưu 07:08\" retry=200",
+          "kind": "persistence"
+        },
+        {
+          "name": "after the retry the answer is explicit (200, or 409 when the first attempt had landed) — never silence",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "ui"
+        },
+        {
+          "name": "after a browser refresh the canvas shows what the server has (the marker iff it is persisted)",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "no unhandled page errors other than the expected timeout/network failures",
+          "ok": true,
+          "detail": "console: Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-P01",
+      "title": "Publish success: exact request, deployment polling, SiteInfo idle, pointerVersion observable but never sent",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:08:43.140Z",
+      "end": "2026-10-08T00:08:58.414Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "before: SiteInfo has the contract shape (pointerVersion integer, operation key present and null = idle)",
+          "ok": true,
+          "detail": "{\"pv\":2,\"op\":null}",
+          "kind": "http"
+        },
+        {
+          "name": "POST …/publish answered 202 (asynchronous)",
+          "ok": true,
+          "detail": "status=202",
+          "kind": "http"
+        },
+        {
+          "name": "the body is EXACTLY {visibility, expectedRevision}",
+          "ok": true,
+          "detail": "{\"visibility\":\"PUBLIC\",\"expectedRevision\":11}",
+          "kind": "http"
+        },
+        {
+          "name": "headers: Idempotency-Key in the contract format (8–120 of A-Za-z0-9_.:-) and X-XSRF-TOKEN",
+          "ok": true,
+          "detail": "ui-b21cfd42-3778-4d01-b511-c925553212fc",
+          "kind": "http"
+        },
+        {
+          "name": "the deployment has the documented key set (id, projectId, versionId, versionNumber, visibility, status, url, error, provider, createdAt, updatedAt, finishedAt, events, mock)",
+          "ok": true,
+          "detail": "id,projectId,versionId,versionNumber,visibility,status,url,error,provider,createdAt,updatedAt,finishedAt,events,mock",
+          "kind": "http"
+        },
+        {
+          "name": "the UI stopped on a TERMINAL status and shows success only for RUNNING",
+          "ok": true,
+          "detail": "status=RUNNING",
+          "kind": "http"
+        },
+        {
+          "name": "the dialog reports the site is up with the deployment URL",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the server agrees: RUNNING, mock=false, provider static, finishedAt set",
+          "ok": true,
+          "detail": "status=RUNNING",
+          "kind": "persistence"
+        },
+        {
+          "name": "SiteInfo: online, the new deployment is current, operation = null (idle)",
+          "ok": true,
+          "detail": "{\"cur\":\"d6e3d89b-9882-48f2-b68c-e4e621f89510\",\"op\":null}",
+          "kind": "http"
+        },
+        {
+          "name": "pointerVersion moved by exactly +1 with the pointer",
+          "ok": true,
+          "detail": "2 → 3",
+          "kind": "persistence"
+        },
+        {
+          "name": "pointerVersion is shown to the user as observability only",
+          "ok": true,
+          "detail": "pointerVersion 3 (chỉ để quan sát, không gửi lại máy chủ)",
+          "kind": "ui"
+        },
+        {
+          "name": "the browser NEVER sent pointerVersion, tenantId or an invented concurrency field on any release route",
+          "ok": true,
+          "detail": "[]",
+          "kind": "ui"
+        },
+        {
+          "name": "polling stopped: no deployment status request after the terminal answer for 3 s",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-P02",
+      "title": "Concurrent publish on the same scope + idempotent replay",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:08:58.414Z",
+      "end": "2026-10-08T00:09:08.027Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "both concurrent publishes are accepted (202) as two DIFFERENT deployments",
+          "ok": true,
+          "detail": "202/202",
+          "kind": "http"
+        },
+        {
+          "name": "each ends RUNNING or FAILED [STALE_PUBLISH] — nothing stuck, no other failure",
+          "ok": true,
+          "detail": "RUNNING  | RUNNING ",
+          "kind": "persistence"
+        },
+        {
+          "name": "at least one of them is RUNNING and it is the one the site now serves",
+          "ok": true,
+          "detail": "RUNNING | RUNNING",
+          "kind": "persistence"
+        },
+        {
+          "name": "the site serves a RUNNING one of the two and is idle",
+          "ok": true,
+          "detail": "{\"cur\":\"cfd06e40-7dda-46a0-ac35-50da697ad679\",\"op\":null}",
+          "kind": "http"
+        },
+        {
+          "name": "pointerVersion moved forward (by 1 per activation, so +1 or +2)",
+          "ok": true,
+          "detail": "3 → 5",
+          "kind": "persistence"
+        },
+        {
+          "name": "same key + same payload → 202 with Idempotent-Replay: true and the ORIGINAL deployment id",
+          "ok": true,
+          "detail": "status=202 replay=true",
+          "kind": "http"
+        },
+        {
+          "name": "a NEW key with the same payload is a NEW deployment (not a replay)",
+          "ok": true,
+          "detail": "status=202",
+          "kind": "http"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-P03",
+      "title": "Rollback success: exact request, 200 + SiteInfo, rolled-away release is ROLLED_BACK, APP_PUBLISH, pointerVersion",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:09:08.027Z",
+      "end": "2026-10-08T00:09:20.564Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "(setup) three RUNNING releases, the newest is active",
+          "ok": true,
+          "detail": "245ff216-3ccc-4d5a-86e2-e517d2611fe2 vs 245ff216-3ccc-4d5a-86e2-e517d2611fe2",
+          "kind": "http"
+        },
+        {
+          "name": "the older releases are offered for rollback; the one being served is not",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "pending state is shown while the request is in flight (the button says it is working)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "POST …/site/rollback answered 200 (synchronous)",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "http"
+        },
+        {
+          "name": "the body is {deploymentId, expectedActiveDeploymentId} — the target and the release the UI saw as active — and nothing else",
+          "ok": true,
+          "detail": "{\"deploymentId\":\"8e87c9d6-625b-479a-a8ec-61b04bb8937b\",\"expectedActiveDeploymentId\":\"245ff216-3ccc-4d5a-86e2-e517d2611fe2\"}",
+          "kind": "http"
+        },
+        {
+          "name": "Idempotency-Key (optional) is sent in the contract format; CSRF header present",
+          "ok": true,
+          "detail": "ui-6ebc6a35-9662-45ad-8b48-d83e6fddcc06",
+          "kind": "http"
+        },
+        {
+          "name": "the answer is a SiteInfo whose current deployment is the target and whose operation is idle",
+          "ok": true,
+          "detail": "{\"cur\":\"8e87c9d6-625b-479a-a8ec-61b04bb8937b\",\"op\":null}",
+          "kind": "http"
+        },
+        {
+          "name": "the UI says the release is served again only AFTER the 200 (final message names the version)",
+          "ok": true,
+          "detail": "Đã phục vụ lại phiên bản 15.",
+          "kind": "ui"
+        },
+        {
+          "name": "server: the site serves the target and pointerVersion moved by exactly +1",
+          "ok": true,
+          "detail": "9 → 10",
+          "kind": "persistence"
+        },
+        {
+          "name": "server: the release that was rolled away from is ROLLED_BACK (terminal); the others stay RUNNING",
+          "ok": true,
+          "detail": "{\"245ff216-3ccc-4d5a-86e2-e517d2611fe2\":\"ROLLED_BACK\",\"8e87c9d6-625b-479a-a8ec-61b04bb8937b\":\"RUNNING\",\"4e1801a1-4def-473d-9392-8699cbc74413\":\"RUNNING\",\"8997a114-fd77-4bf7-adfe-d55b2a281486\":\"RUNNING\",\"cfd06e40-7dda-46a0-ac35-50da697ad679\":\"RUNNING\",\"19e63ec7-107d-42fe-afd0-83cf3e30819b\":\"RUNNING\",\"",
+          "kind": "persistence"
+        },
+        {
+          "name": "a ROLLED_BACK release is not restorable: the server answers 400 DEPLOYMENT_NOT_RESTORABLE",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "the UI no longer offers the ROLLED_BACK release",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the browser NEVER sent pointerVersion or an invented field",
+          "ok": true,
+          "detail": "[]",
+          "kind": "ui"
+        },
+        {
+          "name": "permission: a project VIEWER forging the rollback is refused (403) — rollback needs APP_PUBLISH, not APP_EDIT",
+          "ok": true,
+          "detail": "status=403 FORBIDDEN",
+          "kind": "http"
+        },
+        {
+          "name": "permission: …and the same for unpublish (403)",
+          "ok": true,
+          "detail": "status=403",
+          "kind": "http"
+        },
+        {
+          "name": "…which changed nothing",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-P06",
+      "title": "Rollback stale: 409 ROLLBACK_STALE, nothing changed, reload and decide again",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:09:20.564Z",
+      "end": "2026-10-08T00:09:33.358Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "(setup) another session rolled back to B (200)",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "http"
+        },
+        {
+          "name": "the UI's rollback carried the release it saw as active (C) and the server answered 409 ROLLBACK_STALE",
+          "ok": true,
+          "detail": "status=409 ROLLBACK_STALE",
+          "kind": "http"
+        },
+        {
+          "name": "…details carry the real active release and the expected one; no Retry-After (not retryable as is)",
+          "ok": true,
+          "detail": "{\"activeDeploymentId\":\"a9a00ad9-820d-4edf-99eb-15a5fbde4448\",\"expectedActiveDeploymentId\":\"eb2189a6-4d3f-4919-be0b-726685e8f4f5\"}",
+          "kind": "http"
+        },
+        {
+          "name": "UI: 'the active release changed — reload and decide again' (kind stale), says nothing was changed",
+          "ok": true,
+          "detail": "Bản đang chạy đã thay đổi Bản đang chạy không còn là bản bạn thấy khi chọn. Không có gì bị thay đổi. Hãy tải lại trạng thái rồi quyết định lại. Tải lại trạng thái",
+          "kind": "ui"
+        },
+        {
+          "name": "UI: NO blind retry button (not retryable as is); a reload action is offered",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "server: nothing changed (still B, same pointerVersion)",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "after the reload the served release is B and C (rolled away from) is no longer offered",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the decision taken on fresh state succeeds (200) with the NEW expectation (B)",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "http"
+        },
+        {
+          "name": "the new request used a NEW Idempotency-Key (the refused one was not replayed)",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "API: unpublish expecting a release that is not active → 409 ROLLBACK_STALE, still online",
+          "ok": true,
+          "detail": "status=409 ROLLBACK_STALE",
+          "kind": "http"
+        },
+        {
+          "name": "API: a target that is ALREADY active answers 200 even with a stale expectation (a retry that already succeeded), and changes nothing",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "http"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "console: Failed to load resource: the server responded with a status of 409 (Conflict)",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-P07",
+      "title": "Idempotency: replay, 409 IDEMPOTENCY_KEY_REUSED, and the UI's key lifecycle",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:09:33.358Z",
+      "end": "2026-10-08T00:09:58.206Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "publish: same key + same payload → 202, Idempotent-Replay: true, the ORIGINAL deployment",
+          "ok": true,
+          "detail": "202/202",
+          "kind": "http"
+        },
+        {
+          "name": "publish: same key + DIFFERENT payload → 409 IDEMPOTENCY_KEY_REUSED",
+          "ok": true,
+          "detail": "status=409 IDEMPOTENCY_KEY_REUSED",
+          "kind": "http"
+        },
+        {
+          "name": "…the standard envelope without `retryable`, and the documented message",
+          "ok": true,
+          "detail": "[\"code\",\"message\",\"requestId\",\"details\"]",
+          "kind": "http"
+        },
+        {
+          "name": "a missing key is 400 MISSING_HEADER and a malformed one 400 INVALID_IDEMPOTENCY_KEY",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "rollback: same key + same payload → both 200 and ONE effect (pointerVersion +1, not +2)",
+          "ok": true,
+          "detail": "200/200 19→20",
+          "kind": "persistence"
+        },
+        {
+          "name": "rollback: same key + a DIFFERENT target → 409 IDEMPOTENCY_KEY_REUSED (judged before any eligibility check)",
+          "ok": true,
+          "detail": "status=409 IDEMPOTENCY_KEY_REUSED",
+          "kind": "http"
+        },
+        {
+          "name": "unpublish: same key twice → both 200, pointerVersion unchanged by the second",
+          "ok": true,
+          "detail": "200/200",
+          "kind": "persistence"
+        },
+        {
+          "name": "unpublish: same key + a different expectation → 409 IDEMPOTENCY_KEY_REUSED",
+          "ok": true,
+          "detail": "status=409 IDEMPOTENCY_KEY_REUSED",
+          "kind": "http"
+        },
+        {
+          "name": "UI: after a finished publish the dialog offers 'Xuất bản lại' only for non-success outcomes (RUNNING offers Close)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "UI: two publishes with different payloads (PRIVATE then PUBLIC) used two DIFFERENT valid keys",
+          "ok": true,
+          "detail": "[\"ui-3914aed6-9807-40d4-8d3c-d154c17fddee\",\"ui-3810f268-ba7f-4716-a7d0-4cd847bde4a8\"]",
+          "kind": "http"
+        },
+        {
+          "name": "UI: neither was refused with IDEMPOTENCY_KEY_REUSED (a key per dialog would have been)",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-P09",
+      "title": "Unpublish: exact request, 200 + SiteInfo offline, idempotent when offline, stale expectation, operation=UNPUBLISH when observable",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:09:58.206Z",
+      "end": "2026-10-08T00:10:17.767Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "API: unpublish expecting a release that is not the active one → 409 ROLLBACK_STALE, still online",
+          "ok": true,
+          "detail": "status=409 ROLLBACK_STALE",
+          "kind": "http"
+        },
+        {
+          "name": "DELETE …/site answered 200",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "http"
+        },
+        {
+          "name": "NO body; the expectation is the query parameter expectedActiveDeploymentId = the release the UI saw as active",
+          "ok": true,
+          "detail": "?expectedActiveDeploymentId=cc073a8c-b00c-4d46-8365-03e5d04f55e3 body=null",
+          "kind": "http"
+        },
+        {
+          "name": "Idempotency-Key (optional) sent in the contract format",
+          "ok": true,
+          "detail": "ui-b793de5b-c42e-42dd-80ba-7ea33b72aab5",
+          "kind": "http"
+        },
+        {
+          "name": "the answer: online=false, currentDeploymentId=null, slug kept, operation=null",
+          "ok": true,
+          "detail": "{\"o\":false,\"c\":null,\"s\":\"e2e-muyrss0k-proj-a-13e06c\"}",
+          "kind": "http"
+        },
+        {
+          "name": "UI: says the page was taken down (after the 200)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "pointerVersion moved by exactly +1; deployments are KEPT (none deleted, statuses unchanged)",
+          "ok": true,
+          "detail": "27 → 28",
+          "kind": "persistence"
+        },
+        {
+          "name": "the public URL no longer serves the site (404)",
+          "ok": true,
+          "detail": "http://127.0.0.1:51088/e2e-muyrss0k-proj-a-13e06c/",
+          "kind": "persistence"
+        },
+        {
+          "name": "unpublish when already offline → 200 and NOTHING is written (pointerVersion unchanged)",
+          "ok": true,
+          "detail": "status=200 28→28",
+          "kind": "persistence"
+        },
+        {
+          "name": "UI: with the site offline the 'Gỡ trang xuống' button is not offered",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "a rollback to a kept release serves the site again (200, online) with no rebuild",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "http"
+        },
+        {
+          "name": "the browser NEVER sent pointerVersion or an invented field",
+          "ok": true,
+          "detail": "[]",
+          "kind": "ui"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-P04",
+      "title": "Scope busy: operation=PUBLISH, 409 SCOPE_BUSY + Retry-After 5, busy UI, retry after the scope is free",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:10:17.768Z",
+      "end": "2026-10-08T00:10:36.912Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "the dialog opened on an idle scope: no busy banner, controls enabled",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "(setup) a publish was accepted (202)",
+          "ok": true,
+          "detail": "202",
+          "kind": "http"
+        },
+        {
+          "name": "SiteInfo.operation = PUBLISH with this deployment's id, since and leaseUntil",
+          "ok": true,
+          "detail": "{\"kind\":\"PUBLISH\",\"deploymentId\":\"61d6ee10-ef4f-4d23-95e1-2ef91212f19d\",\"since\":\"2026-10-08T00:10:32.343498Z\",\"leaseUntil\":\"2026-10-08T00:12:02.343498Z\"}",
+          "kind": "http"
+        },
+        {
+          "name": "the lease is in the future (a live operation, not an expired one)",
+          "ok": true,
+          "detail": "2026-10-08T00:12:02.343498Z",
+          "kind": "http"
+        },
+        {
+          "name": "rollback while the PUBLISH holds the scope → 409 SCOPE_BUSY",
+          "ok": true,
+          "detail": "status=409 SCOPE_BUSY",
+          "kind": "http"
+        },
+        {
+          "name": "…with Retry-After: 5",
+          "ok": true,
+          "detail": "5",
+          "kind": "http"
+        },
+        {
+          "name": "…the standard envelope (no `retryable` field) and the holder in details.operation",
+          "ok": true,
+          "detail": "[\"code\",\"message\",\"requestId\",\"details\"]",
+          "kind": "http"
+        },
+        {
+          "name": "unpublish while the PUBLISH holds the scope → 409 SCOPE_BUSY",
+          "ok": true,
+          "detail": "status=409 SCOPE_BUSY",
+          "kind": "http"
+        },
+        {
+          "name": "UI: the server's SCOPE_BUSY is shown (kind scope-busy) naming the running operation and the 5 s wait",
+          "ok": true,
+          "detail": "Ứng dụng đang có một thao tác phát hành khác Thao tác đang chạy: đang xuất bản. Thử lại sau 5 giây khi thao tác đó xong. Thử lại sau 5sTải lại trạng thái",
+          "kind": "ui"
+        },
+        {
+          "name": "UI: a retry affordance exists and waits for Retry-After (disabled at first)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "UI: SiteInfo.operation = PUBLISH is reflected (banner with kind PUBLISH)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "UI: Publish and every rollback/unpublish control are disabled while the scope is held",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "(setup) the publish reached DEPLOYING and the store was frozen there",
+          "ok": true,
+          "detail": "DEPLOYING",
+          "kind": "http"
+        },
+        {
+          "name": "after the store is resumed the publish completes and the scope is idle again (operation = null)",
+          "ok": true,
+          "detail": "{\"cur\":\"61d6ee10-ef4f-4d23-95e1-2ef91212f19d\",\"op\":null}",
+          "kind": "persistence"
+        },
+        {
+          "name": "UI: the busy banner goes away by itself (polling) and the controls come back",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "pointerVersion advanced by the one completed publish",
+          "ok": true,
+          "detail": "55 → 56",
+          "kind": "persistence"
+        },
+        {
+          "name": "the refused rollback / unpublish changed nothing (still online, pointer moved only by the publish)",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "retry after the scope is free: the rollback is accepted (200)",
+          "ok": true,
+          "detail": "status=200 undefined",
+          "kind": "http"
+        },
+        {
+          "name": "no unhandled page errors (the 409 of the refused rollback is the expected console line)",
+          "ok": true,
+          "detail": "console: Failed to load resource: the server responded with a status of 409 (Conflict)",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-P05",
+      "title": "Rollback in flight: operation=ROLLBACK, refresh during rollback, polling until the server's final state",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:10:36.913Z",
+      "end": "2026-10-08T00:10:53.136Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "SiteInfo.operation = ROLLBACK while the rollback runs (deploymentId is null: only PUBLISH names one)",
+          "ok": true,
+          "detail": "{\"kind\":\"ROLLBACK\",\"deploymentId\":null,\"since\":\"2026-10-08T00:10:48.310588Z\",\"leaseUntil\":\"2026-10-08T00:12:18.310588Z\"}",
+          "kind": "http"
+        },
+        {
+          "name": "a second rollback (no key) → 409 SCOPE_BUSY while the first runs",
+          "ok": true,
+          "detail": "status=409 SCOPE_BUSY",
+          "kind": "http"
+        },
+        {
+          "name": "the pointer has not moved yet: nothing is final while the operation runs",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "after the refresh the dialog shows the busy scope: banner kind ROLLBACK",
+          "ok": true,
+          "detail": "Ứng dụng này đang hoàn tác về bản cũ. Các nút xuất bản / hoàn tác / gỡ xuống tạm khóa cho tới khi xong.",
+          "kind": "ui"
+        },
+        {
+          "name": "after the refresh Publish and the rollback buttons are disabled (no duplicate operation)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "after the refresh the page does NOT claim the rollback is done",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the server's operation ends (operation = null)",
+          "ok": true,
+          "detail": "null",
+          "kind": "persistence"
+        },
+        {
+          "name": "the final pointer is either the restored release (the operation completed) or unchanged (the operation failed) — never anything else",
+          "ok": true,
+          "detail": "c33f159c-7669-4f5c-a790-8008a001bd07",
+          "kind": "persistence"
+        },
+        {
+          "name": "pointerVersion is consistent with the outcome (+1 if restored, unchanged otherwise)",
+          "ok": true,
+          "detail": "60 → 61 restored=true",
+          "kind": "persistence"
+        },
+        {
+          "name": "the reloaded dialog follows the server by itself: busy banner gone, controls back",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the reloaded dialog shows the version the server really serves",
+          "ok": true,
+          "detail": "Đang phục vụ phiên bản 30 (riêng tư — chỉ thành viên, đăng nhập bằng tài khoản công ty) tại http://127.0.0.1:51088/e2e-m",
+          "kind": "persistence"
+        },
+        {
+          "name": "the first page (before the refresh) never sent pointerVersion",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "no unhandled page errors other than the aborted request of the refreshed page",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-P08",
+      "title": "Stale publish becomes terminal FAILED [STALE_PUBLISH]; Studio shows it; publish again works",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:10:53.137Z",
+      "end": "2026-10-08T00:11:12.274Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "UI: the publish is shown as a BUSY step (BUILDING) while the worker is paused — not success",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "UI: while busy the dialog cannot be dismissed and offers no second publish",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "a rollback while the publish is still BUILDING goes through (200)",
+          "ok": true,
+          "detail": "status=200 undefined",
+          "kind": "http"
+        },
+        {
+          "name": "UI: the deployment ends as a FAILED deployment with the STALE_PUBLISH explanation (data-code)",
+          "ok": true,
+          "detail": "Bản xuất bản này đã cũ hơn bản đang chạy Một thao tác phát hành mới hơn (xuất bản hoặc hoàn tác) đã đổi bản đang chạy trước khi bản này kịp lên. Bản đang chạy k",
+          "kind": "ui"
+        },
+        {
+          "name": "UI: it is not shown as success and not as a conflict/HTTP error (no error dialog)",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "UI: the history lists the STALE_PUBLISH event in plain words",
+          "ok": true,
+          "detail": "Đang chờ — Deployment queued | Kiểm tra chính sách — Checking policy | Kiểm tra bảo mật — Running security checks | Đang build — Building (static site, or sandbox build for code apps) | Đang triển khai — Switching the site to the new artifact | Thất bại — [STALE_PUBLISH] a newer release operation al",
+          "kind": "ui"
+        },
+        {
+          "name": "server: the deployment is terminal FAILED with error '[STALE_PUBLISH] …' and a STALE_PUBLISH event",
+          "ok": true,
+          "detail": "{\"s\":\"FAILED\",\"e\":\"[STALE_PUBLISH] a newer release operation already moved the active release\"}",
+          "kind": "persistence"
+        },
+        {
+          "name": "server: the stale publish wrote nothing — the rollback target B is still the active release, operation idle",
+          "ok": true,
+          "detail": "{\"cur\":\"7245391b-035f-4bb0-8985-bb919701ec63\",\"op\":null}",
+          "kind": "persistence"
+        },
+        {
+          "name": "publish again used a NEW Idempotency-Key (replaying the old one would only return the FAILED deployment)",
+          "ok": true,
+          "detail": "[\"ui-164b5b0e-fc7d-4f4e-8930-9784d0f471dd\",\"ui-397c25ab-c3c7-4187-8aae-d07bf3566cd0\"]",
+          "kind": "http"
+        },
+        {
+          "name": "…and it succeeded: the site now serves the new deployment",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-PD02",
+      "title": "Public data V1, document side: slot → READ public query → bind → publish approval → PUBLIC_QUERIES → runtime config → one anonymous request",
+      "status": "FAIL",
+      "owner": "C0",
+      "ref": "app.sites.data-api-base",
+      "reason": "config.json has apiBase = null: app.sites.data-api-base is not set on this stack",
+      "mismatch": null,
+      "start": "2026-10-08T00:11:12.275Z",
+      "end": "2026-10-08T00:11:19.373Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "[ui] the slot was added and the SERVER stored exactly {id,name,type} — no sourceRef, no credential",
+          "ok": true,
+          "detail": "{\"id\":\"pd-orders\",\"name\":\"Đơn hàng\",\"type\":\"postgres\"}",
+          "kind": "persistence"
+        },
+        {
+          "name": "[ui] a READ query with public=true was stored by the server (mode READ, operationKey = the approved one, local slot ref)",
+          "ok": true,
+          "detail": "[{\"id\":\"q1\",\"mode\":\"READ\",\"name\":\"Tiêu đề công khai\",\"params\":[],\"public\":true,\"operationKey\":\"e2e.pd.read\",\"dataSourceRef\":\"pd-orders\"}]",
+          "kind": "persistence"
+        },
+        {
+          "name": "[api] a READ query WITHOUT public is accepted (it is private by default)",
+          "ok": true,
+          "detail": "status=200 ",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a WRITE query with public=false is accepted",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a WRITE query with public=true is REJECTED by the server (422, path queries[i].public) — the UI never offers it",
+          "ok": true,
+          "detail": "status=422 {\"code\":\"SCHEMA_INVALID\",\"message\":\"App definition is invalid\",\"requestId\":\"req_86005414d7834fc281bfc46323e62bc3\",\"details\":{\"violations\":[{\"path\":\"queries[3].p",
+          "kind": "http"
+        },
+        {
+          "name": "[ui] the binding was stored: {sectionId, prop, queryRef} with the LOCAL public READ query id — never a slot, sourceRef or credential",
+          "ok": true,
+          "detail": "{\"id\":\"b1\",\"prop\":\"brand\",\"queryRef\":\"q1\",\"sectionId\":\"navbar-1\"}",
+          "kind": "persistence"
+        },
+        {
+          "name": "[ui] readiness: not-ready for ONE reason only — the site is not public yet, so it has no data address (apiBase); the draft itself has no problem",
+          "ok": true,
+          "detail": "Trang chưa xuất bản công khai: không có địa chỉ dữ liệu (apiBase) nên khách chưa thấy dữ liệu.",
+          "kind": "ui"
+        },
+        {
+          "name": "[ui] the publish review lists exactly the public READ query (not the private one, not the WRITE one)",
+          "ok": true,
+          "detail": "public-query:q1",
+          "kind": "ui"
+        },
+        {
+          "name": "[ui] Publish is disabled until the acknowledgement is ticked",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "[ui] POST …/publish is the unchanged release contract: body EXACTLY {visibility:'PUBLIC', expectedRevision}, Idempotency-Key present — no acknowledgement field",
+          "ok": true,
+          "detail": "status=202 {\"visibility\":\"PUBLIC\",\"expectedRevision\":42}",
+          "kind": "http"
+        },
+        {
+          "name": "[backend] the server wrote the PUBLIC_QUERIES event naming exactly the public query",
+          "ok": true,
+          "detail": "Public queries of this release (anyone who can open the site may run them, read-only): q1",
+          "kind": "persistence"
+        },
+        {
+          "name": "[ui] the dialog shows the server's PUBLIC_QUERIES and no mismatch with what it announced",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "[backend] the release is live and PUBLIC, operation idle",
+          "ok": true,
+          "detail": "{\"v\":\"PUBLIC\",\"op\":null}",
+          "kind": "persistence"
+        },
+        {
+          "name": "no unhandled page errors in Studio",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "[visitor] the page asked for its runtime config (GET __factory/config.json) before any data request, with no cookie and no credentials",
+          "ok": true,
+          "detail": "{\"sec-ch-ua-platform\":\"\\\"macOS\\\"\",\"referer\":\"\",\"user-agent\":\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit",
+          "kind": "http"
+        },
+        {
+          "name": "[visitor] config.json is no-store JSON with a same-origin apiBase for THIS slug (…/{slug}/_data) and no tenant / workspace / credential",
+          "ok": false,
+          "detail": "{\"appId\":\"13e06c39-38dc-4c19-96e7-d31f601cd70e\",\"appName\":\"e2e-muyrss0k-proj-A\",\"environment\":\"production\",\"visibility\":\"PUBLIC\",\"version\":\"43\",\"user\":null,\"flags\":{},\"apiBase\":null,\"releaseId\":\"ef42e",
+          "kind": "http"
+        }
+      ],
+      "failed": [
+        {
+          "name": "[visitor] config.json is no-store JSON with a same-origin apiBase for THIS slug (…/{slug}/_data) and no tenant / workspace / credential",
+          "ok": false,
+          "detail": "{\"appId\":\"13e06c39-38dc-4c19-96e7-d31f601cd70e\",\"appName\":\"e2e-muyrss0k-proj-A\",\"environment\":\"production\",\"visibility\":\"PUBLIC\",\"version\":\"43\",\"user\":null,\"flags\":{},\"apiBase\":null,\"releaseId\":\"ef42e",
+          "kind": "http"
+        }
+      ]
+    },
+    {
+      "id": "E2E-PD01",
+      "title": "Public data V1, canonical chain: Studio slot → READ public query → bind → publish (PUBLIC_QUERIES, acknowledgement) → anonymous page → config → apiBase → /{slug}/_data → LIVE → rendered",
+      "status": "BLOCKED",
+      "owner": "C0",
+      "ref": "operator input (README: E2E-PD01)",
+      "reason": "no real data to read: set E2E_DS_TYPE + E2E_DS_CONFIG_JSON (+ E2E_DS_CREDENTIAL_JSON) for a real source, E2E_PD_OPERATION_KEY = an approved READ operation of it (or E2E_PD_SQL = a read-only SELECT to register as one) and E2E_PD_EXPECT_TEXT = the text its first row returns (it is shown in the Navbar brand).",
+      "mismatch": null,
+      "start": "2026-10-08T00:11:19.373Z",
+      "end": "2026-10-08T00:11:19.467Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [],
+      "failed": []
+    },
+    {
+      "id": "E2E-PL01",
+      "title": "Platform portal: login, navigation, tenants (create, suspend, restore, members, last-admin rule), SYSTEM_ADMIN grant / revoke",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:11:19.467Z",
+      "end": "2026-10-08T00:11:30.266Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "login through the Platform portal lands inside /platform (not on the login or no-access page)",
+          "ok": true,
+          "detail": "/platform",
+          "kind": "ui"
+        },
+        {
+          "name": "navigation lists Tổng quan, Công ty (tenant), Người dùng & Workspace, Nhật ký kiểm toán, Sức khỏe hệ thống — and nothing from the tenant-admin console",
+          "ok": true,
+          "detail": "Tổng quan | Công ty (tenant) | Người dùng & Workspace | AI | Cảnh báo | Bảo mật | Chi phí | Connector | Sao lưu | Components | Templates | Nhật ký kiểm toán | Build & lưu trữ | Packages | Sức khỏe hệ thống | Cài đặt",
+          "kind": "ui"
+        },
+        {
+          "name": "the tenant list is the REAL list (the DEFAULT tenant is there) and the section is not 'Chưa sẵn sàng'",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "an invalid form is refused in the dialog with both messages and NO request is sent",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "POST /admin/tenants → 201 and the page opens the new tenant",
+          "ok": true,
+          "detail": "status=201 http://127.0.0.1:3401/platform/tenants/1fc06308-f5a3-4d58-9e6f-088ce32d7952",
+          "kind": "http"
+        },
+        {
+          "name": "the server stored it: slug, name, ACTIVE",
+          "ok": true,
+          "detail": "{\"id\":\"1fc06308-f5a3-4d58-9e6f-088ce32d7952\",\"slug\":\"e2e-muyrss0k-pl\",\"name\":\"E2E PL muyrss0k\",\"status\":\"ACTIVE\",\"createdAt\":\"2026-10-08T00:11:23.469658Z\"}",
+          "kind": "persistence"
+        },
+        {
+          "name": "a duplicate slug is refused by the server (409 TENANT_SLUG_TAKEN)",
+          "ok": true,
+          "detail": "status=409 TENANT_SLUG_TAKEN",
+          "kind": "http"
+        },
+        {
+          "name": "suspend: the UI says so and the server agrees (SUSPENDED)",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "restore: back to ACTIVE on the server",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "the first administrator chosen in the dialog is TENANT_ADMIN on the server, with name and email metadata",
+          "ok": true,
+          "detail": "[{\"tenantId\":\"1fc06308-f5a3-4d58-9e6f-088ce32d7952\",\"userId\":\"47532894-2b2d-4fc8-84c5-a24d422f06f5\",\"role\":\"TENANT_ADMIN\",\"active\":true,\"username\":\"e2e-muyrss0k-admina\",\"displayName\":\"E2E adminA muyrss0k\",\"email\":null}]",
+          "kind": "persistence"
+        },
+        {
+          "name": "the member row shows the person's NAME from the member metadata (no extra lookup)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "demoting the ONLY TENANT_ADMIN is explained in words and nothing changed on the server",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "the server enforces it too (409 LAST_TENANT_ADMIN)",
+          "ok": true,
+          "detail": "status=409 LAST_TENANT_ADMIN",
+          "kind": "http"
+        },
+        {
+          "name": "a brand-new tenant has no candidates (the directory is tenant-scoped, never global) and the picker says so",
+          "ok": true,
+          "detail": "status=200 []",
+          "kind": "http"
+        },
+        {
+          "name": "even a SYSTEM_ADMIN cannot add an unrelated account to a tenant (404 USER_NOT_FOUND): no global directory",
+          "ok": true,
+          "detail": "status=404 USER_NOT_FOUND",
+          "kind": "http"
+        },
+        {
+          "name": "workspace page (SYSTEM_ADMIN): the member panel says the platform admin does not manage workspace members, and there is NO add-member form (the server lists no MEMBER_MANAGE for it)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "[api] …and the server agrees: SYSTEM_ADMIN is refused the member list and the add (403)",
+          "ok": true,
+          "detail": "403/403",
+          "kind": "http"
+        },
+        {
+          "name": "the audit page lists the tenant events just made (TENANT_CREATED / TENANT_STATUS_CHANGED / TENANT_MEMBER_SET)",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "the system-health page loads without an error state",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "a workspace member with no platform scope is sent to /auth/no-access, never to a platform screen",
+          "ok": true,
+          "detail": "/auth/no-access",
+          "kind": "ui"
+        },
+        {
+          "name": "cleanup: the tenant is marked DELETED",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "http"
+        },
+        {
+          "name": "no unexpected 4xx/5xx from the portal's own calls (the deliberate refusals excepted)",
+          "ok": true,
+          "detail": "GET /api/v1/auth/me → 401",
+          "kind": "ui"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-AD01",
+      "title": "Admin portal, tenant admin: own company + members, no system-admin screens, rules explained, refused by the API as well",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:11:30.266Z",
+      "end": "2026-10-08T00:11:37.341Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "[api] /auth/me of the tenant admin lists the tenant with role TENANT_ADMIN and is NOT platform scope",
+          "ok": true,
+          "detail": "{\"ps\":false,\"t\":[[\"default\",\"MEMBER\"],[\"e2e-muyrss0k-ad\",\"TENANT_ADMIN\"]],\"perms\":[]}",
+          "kind": "http"
+        },
+        {
+          "name": "login through the Admin portal lands inside /admin (a tenant admin is NOT refused)",
+          "ok": true,
+          "detail": "/admin",
+          "kind": "ui"
+        },
+        {
+          "name": "navigation = Tổng quan + Công ty của tôi (+ the sections still waiting for a backend); NO Người dùng, Nhật ký kiểm toán, AI…",
+          "ok": true,
+          "detail": "Tổng quan | Người dùng | Công ty của tôi | Nhóm | Chia sẻ | AI riêng của công ty",
+          "kind": "ui"
+        },
+        {
+          "name": "the landing page lists the tenant this person administers (no system overview, no 403 from /admin/overview)",
+          "ok": true,
+          "detail": "GET /api/v1/auth/me → 401",
+          "kind": "ui"
+        },
+        {
+          "name": "Công ty của tôi shows the tenant, ACTIVE, with its member list from the API",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the person's own row is named (from the session), marked 'bạn', and its role / remove controls are disabled (no self-change)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "a tenant admin gets NO suspend / delete buttons (platform operations)",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "the add form is real: a search box and a candidate list (empty here: this fresh tenant has no workspace and no former member) — not a 'cannot look people up' notice",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "a 1-character search is not sent (the server would answer 400 QUERY_TOO_SHORT): the form asks for 2",
+          "ok": true,
+          "detail": "GET /api/v1/auth/me → 401",
+          "kind": "ui"
+        },
+        {
+          "name": "[api] the same person is refused the system-wide user list (403 ADMIN_REQUIRED)",
+          "ok": true,
+          "detail": "status=403 ADMIN_REQUIRED",
+          "kind": "http"
+        },
+        {
+          "name": "[api] …but allowed to read the members of THEIR tenant (TENANT_MEMBERS), each row with userId, username, displayName, email, role, active",
+          "ok": true,
+          "detail": "status=200 [{\"tenantId\":\"775ff10e-9454-4524-9c2d-675dc1e8d7f0\",\"userId\":\"800f52d8-bfdf-40ff-9249-702830ac0d95\",\"role\":\"TENANT_ADMIN\",\"active\":true,\"username\":\"e2e-muyrss0k",
+          "kind": "http"
+        },
+        {
+          "name": "[api] …and refused to suspend it (platform only: 403)",
+          "ok": true,
+          "detail": "status=403 ADMIN_REQUIRED",
+          "kind": "http"
+        },
+        {
+          "name": "[api] …and refused the members of another tenant (403/404, no list)",
+          "ok": true,
+          "detail": "status=403",
+          "kind": "http"
+        },
+        {
+          "name": "typing a system-only URL shows 'chỉ dành cho quản trị hệ thống' and makes NO call to /admin/users",
+          "ok": true,
+          "detail": "GET /api/v1/auth/me → 401",
+          "kind": "ui"
+        },
+        {
+          "name": "Workspace của tôi: this account administers no workspace, so the page says so (no empty fake table)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "a workspace viewer is sent to /auth/no-access by the Admin portal",
+          "ok": true,
+          "detail": "/auth/no-access",
+          "kind": "ui"
+        },
+        {
+          "name": "cleanup: the fixture tenant is marked DELETED",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "http"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-AD02",
+      "title": "Admin portal, workspace admin: 'Workspace của tôi' opens on MEMBER_MANAGE (not on a role name), members add / re-role / remove, rules, isolation, negative roles",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:11:37.341Z",
+      "end": "2026-10-08T00:11:49.952Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "[api] /auth/me: the workspace admin's workspace lists MEMBER_MANAGE (and DATA_SOURCE_MANAGE)",
+          "ok": true,
+          "detail": "[\"ACTION_EXECUTE\",\"APP_EDIT\",\"APP_PUBLISH\",\"APP_SHARE\",\"APP_USE\",\"APP_VIEW\",\"DATA_MUTATE\",\"DATA_SOURCE_MANAGE\",\"DATA_SOURCE_VIEW\",\"MEMBER_MANAGE\",\"QUERY_EXECUTE\",\"WORKFLOW_EXECUTE\",\"WORKFLOW_MANAGE\"]",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a workspace viewer: /auth/me does NOT list MEMBER_MANAGE",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "[api] …and the server refuses their member list (403/404) — the backend re-checks",
+          "ok": true,
+          "detail": "status=403",
+          "kind": "http"
+        },
+        {
+          "name": "a workspace viewer is refused by the Admin portal (/auth/no-access) — not offered 'Workspace của tôi'",
+          "ok": true,
+          "detail": "/auth/no-access",
+          "kind": "ui"
+        },
+        {
+          "name": "[api] a workspace editor: /auth/me does NOT list MEMBER_MANAGE",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "[api] …and the server refuses their member list (403/404) — the backend re-checks",
+          "ok": true,
+          "detail": "status=403",
+          "kind": "http"
+        },
+        {
+          "name": "a workspace editor is refused by the Admin portal (/auth/no-access) — not offered 'Workspace của tôi'",
+          "ok": true,
+          "detail": "/auth/no-access",
+          "kind": "ui"
+        },
+        {
+          "name": "[api] a workspace publisher: /auth/me does NOT list MEMBER_MANAGE",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "[api] …and the server refuses their member list (403/404) — the backend re-checks",
+          "ok": true,
+          "detail": "status=403",
+          "kind": "http"
+        },
+        {
+          "name": "a workspace publisher is refused by the Admin portal (/auth/no-access) — not offered 'Workspace của tôi'",
+          "ok": true,
+          "detail": "/auth/no-access",
+          "kind": "ui"
+        },
+        {
+          "name": "a WORKSPACE_ADMIN logs in through the Admin portal and is not refused",
+          "ok": true,
+          "detail": "/admin",
+          "kind": "ui"
+        },
+        {
+          "name": "navigation = Tổng quan + Workspace của tôi + Nguồn dữ liệu; no Người dùng / Nhật ký kiểm toán / Công ty của tôi",
+          "ok": true,
+          "detail": "Tổng quan | Người dùng | Workspace của tôi | Nguồn dữ liệu | Nhóm | Chia sẻ | AI riêng của công ty",
+          "kind": "ui"
+        },
+        {
+          "name": "the member table is the REAL list of workspace A (adminA, viewerA, lonelyA)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "own row: role and remove are disabled (no self-change)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "an unknown username is refused by the server and said in words (nothing added)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "add by username as Người xem: the server lists adminB as VIEWER of workspace A",
+          "ok": true,
+          "detail": "[[\"e2e-muyrss0k-admina\",\"WORKSPACE_ADMIN\"],[\"e2e-muyrss0k-adminb\",\"VIEWER\"],[\"e2e-muyrss0k-editorx\",\"EDITOR\"],[\"e2e-muyrss0k-lonelya\",\"VIEWER\"],[\"e2e-muyrss0k-pubx\",\"PUBLISHER\"],[\"e2e-muyrss0k-viewera\",\"VIEWER\"]]",
+          "kind": "persistence"
+        },
+        {
+          "name": "change the role to Biên tập viên: persisted",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "[api] adding the same person twice is refused (409 ALREADY_MEMBER)",
+          "ok": true,
+          "detail": "status=409 ALREADY_MEMBER",
+          "kind": "http"
+        },
+        {
+          "name": "[api] the server refuses self-change (403 SELF_GRANT_FORBIDDEN), as the UI did before the click",
+          "ok": true,
+          "detail": "status=403 SELF_GRANT_FORBIDDEN",
+          "kind": "http"
+        },
+        {
+          "name": "remove: gone from the workspace on the server",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "[api] adminA cannot read workspace B's members (403/404)",
+          "ok": true,
+          "detail": "status=404",
+          "kind": "http"
+        },
+        {
+          "name": "the page offers no workspace picker with B (one workspace administered)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "Nguồn dữ liệu: the REAL panel of the workspace (catalogue / add form), not 'Chưa sẵn sàng'",
+          "ok": true,
+          "detail": "Nguồn dữ liệu\n\nKết nối cơ sở dữ liệu / API của workspace. Khóa kết nối chỉ ghi, không bao giờ hiển thị lại. Liên kết khe",
+          "kind": "ui"
+        },
+        {
+          "name": "a system-only URL says 'chỉ dành cho quản trị hệ thống' and makes no call to /admin/users",
+          "ok": true,
+          "detail": "GET /api/v1/auth/me → 401 | POST /api/v1/workspaces/715b381d-10bf-4b97-9f65-5dbfeba01794/members → 404",
+          "kind": "ui"
+        },
+        {
+          "name": "[api] …and the API refuses it too (403 ADMIN_REQUIRED)",
+          "ok": true,
+          "detail": "status=403 ADMIN_REQUIRED",
+          "kind": "http"
+        },
+        {
+          "name": "no unexpected 4xx/5xx from the portal's calls (deliberate refusals excepted)",
+          "ok": true,
+          "detail": "GET /api/v1/auth/me → 401 | POST /api/v1/workspaces/715b381d-10bf-4b97-9f65-5dbfeba01794/members → 404",
+          "kind": "ui"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-AD03",
+      "title": "Tenant admin member directory: metadata, tenant-scoped candidates (search, limit, exclusions), add through the UI, isolation and rules",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:11:49.952Z",
+      "end": "2026-10-08T00:11:56.716Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "[api] GET members: every row has userId, username, displayName, email, role, active",
+          "ok": true,
+          "detail": "status=200 {\"tenantId\":\"00000000-0000-0000-0000-000000000001\",\"userId\":\"47532894-2b2d-4fc8-84c5-a24d422f06f5\",\"role\":\"MEMBER\",\"active\":true,\"username\":\"e2e-muyrss0k-admina\",\"displayName\":\"E2E adminA muyrss0k\",\"email\":null}",
+          "kind": "http"
+        },
+        {
+          "name": "[api] …and the metadata is right (adminA: its username and display name)",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "[api] candidates: 200, a list of {userId, username, displayName, email}",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a former member in a workspace of the tenant (adminB) IS a candidate",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "[api] current members are not candidates (adminA)",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a SYSTEM_ADMIN account (activated, enabled, a workspace member, former tenant member) is never a candidate",
+          "ok": true,
+          "detail": "grant=200",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a non-activated account and a disabled account are not candidates",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "[api] at most 50 results, sorted by username",
+          "ok": true,
+          "detail": "n=1",
+          "kind": "http"
+        },
+        {
+          "name": "[api] search q finds adminB by part of the username and only matching people",
+          "ok": true,
+          "detail": "n=1",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a 1-character search is refused (400 QUERY_TOO_SHORT)",
+          "ok": true,
+          "detail": "status=400 QUERY_TOO_SHORT",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a search with no match is an empty list",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "[fact] 'a user known only to ANOTHER tenant is invisible' cannot be built through the public API; it is C1's backend test TenantMemberDirectoryTests",
+          "ok": true,
+          "detail": "see the backend targeted run",
+          "kind": "http"
+        },
+        {
+          "name": "Công ty của tôi: the member rows show names and emails from the member metadata",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "typing the search shows adminB (name · email) in the candidate list, and not the SYSTEM_ADMIN / disabled / non-activated accounts",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "add candidate: the server lists adminB as an active MEMBER, with metadata",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "the member appears in the table with his name",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the candidate disappears after the add (API and picker)",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "[api] a guessed foreign UUID → 404 USER_NOT_FOUND",
+          "ok": true,
+          "detail": "status=404 USER_NOT_FOUND",
+          "kind": "http"
+        },
+        {
+          "name": "[api] adding that SYSTEM_ADMIN account by id → 404 (not eligible, no oracle)",
+          "ok": true,
+          "detail": "status=404 USER_NOT_FOUND",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a non-activated account cannot be added by id (404); a RELATED but disabled account is refused with its own code (422 USER_DISABLED, C1 cf0c962)",
+          "ok": true,
+          "detail": "404/422 USER_DISABLED",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a caller from ANOTHER tenant gets 404 for members, candidates and add",
+          "ok": true,
+          "detail": "404/404/404",
+          "kind": "http"
+        },
+        {
+          "name": "[api] changing your own tenant role → 403 SELF_GRANT_FORBIDDEN",
+          "ok": true,
+          "detail": "status=403 SELF_GRANT_FORBIDDEN",
+          "kind": "http"
+        },
+        {
+          "name": "no unexpected 4xx/5xx from the portal's calls",
+          "ok": true,
+          "detail": "GET /api/v1/auth/me → 401",
+          "kind": "ui"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-SUPER01",
+      "title": "SYSTEM_ADMIN (Platform) → create tenant admin of a new tenant (+ workspace) → activation link → activate → login Admin portal",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:11:56.716Z",
+      "end": "2026-10-08T00:12:03.414Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "[api] SYSTEM_ADMIN creates a NEW tenant (201, no first admin yet)",
+          "ok": true,
+          "detail": "status=201 undefined",
+          "kind": "http"
+        },
+        {
+          "name": "[api] …and a workspace OF THAT TENANT through the tenant route (201, tenantId explicit)",
+          "ok": true,
+          "detail": "status=201 {\"id\":\"0b8f85a7-c3c2-4e43-a8e7-0d17f4926d13\",\"name\":\"e2e-muyrss0k-s01-ws\",\"slug\":\"w-0b8f85a7c3c24e43\",\"tenantId\":\"3ce76aad-4ef8-4cd5-ab38-faa07d470af6\"}",
+          "kind": "http"
+        },
+        {
+          "name": "the SYSTEM_ADMIN logs in through the Platform portal",
+          "ok": true,
+          "detail": "/platform",
+          "kind": "ui"
+        },
+        {
+          "name": "the dialog: four sections, a tenant selector, NO not-ready notice, NO SYSTEM_ADMIN type",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the workspace of the chosen tenant is offered (optional; assigned here)",
+          "ok": true,
+          "detail": "options=22 (H-C1-16: /admin/workspaces is not filtered by tenant; the dialog lists its first page)",
+          "kind": "ui"
+        },
+        {
+          "name": "POST /admin/tenants/{tenantId}/users → 201; the tenant is the PATH, never in the body; tenantRole TENANT_ADMIN; workspaceId + workspaceRole together; no password",
+          "ok": true,
+          "detail": "status=201 keys=displayName,email,tenantRole,username,workspaceId,workspaceRole",
+          "kind": "http"
+        },
+        {
+          "name": "the activation link is shown once in the dialog (/auth/activate#token); no password anywhere",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "after 'Xong' the token is gone: not in the summary, the URL, localStorage or sessionStorage",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the summary: Chờ kích hoạt, the company AND its role already assigned, the workspace; the only next step is the person's activation",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "[api] the server lists the account as TENANT_ADMIN of the new tenant (already, before activation)",
+          "ok": true,
+          "detail": "{\"tenantId\":\"3ce76aad-4ef8-4cd5-ab38-faa07d470af6\",\"userId\":\"872c2932-2544-4bb7-a065-1fc001d93efd\",\"role\":\"TENANT_ADMIN\",\"active\":true,\"username\":\"e2e-muyrss0k-ta1\",\"displayName\":\"E2E TA muyrss0k\",\"email\":\"e2e-muyrss0k-ta1@example.test\"}",
+          "kind": "persistence"
+        },
+        {
+          "name": "CSRF + body: the create-account request carries X-XSRF-TOKEN and its body has no tenant / tenantId; no browser request to the legacy workspace route",
+          "ok": true,
+          "detail": "n=1 csrf=true",
+          "kind": "http"
+        },
+        {
+          "name": "[api] the same username again is refused: 409 USERNAME_TAKEN",
+          "ok": true,
+          "detail": "status=409 USERNAME_TAKEN",
+          "kind": "http"
+        },
+        {
+          "name": "the new admin activates through the REAL activation page",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "[api] after activation /auth/me lists the chosen workspace with MEMBER_MANAGE (WORKSPACE_ADMIN, from the server) and the tenant TENANT_MEMBERS",
+          "ok": true,
+          "detail": "{\"ws\":[\"ACTION_EXECUTE\",\"APP_EDIT\",\"APP_PUBLISH\",\"APP_SHARE\",\"APP_USE\",\"APP_VIEW\",\"DATA_MUTATE\",\"DATA_SOURCE_MANAGE\",\"DATA_SOURCE_VIEW\",\"MEMBER_MANAGE\",\"QUERY_EXECUTE\",\"WORKFLOW_EXECUTE\",\"WORKFLOW_MANAGE\"],\"tenant\":[\"TENANT_MANAGE\",\"TENANT_MEMBERS\"]}",
+          "kind": "http"
+        },
+        {
+          "name": "…and logs in through the ADMIN portal: not refused",
+          "ok": true,
+          "detail": "/admin",
+          "kind": "ui"
+        },
+        {
+          "name": "…sees Công ty của tôi and Người dùng, not the system-wide sections",
+          "ok": true,
+          "detail": "Tổng quan | Người dùng | Công ty của tôi | Workspace của tôi | Nguồn dữ liệu | Nhóm | Chia sẻ | AI riêng của công ty",
+          "kind": "ui"
+        },
+        {
+          "name": "no unexpected 4xx/5xx from the portal's calls",
+          "ok": true,
+          "detail": "GET /api/v1/auth/me → 401",
+          "kind": "ui"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-ADMIN01",
+      "title": "Tenant admin (Admin portal) → Người dùng → create workspace admin + app creator by invitation → activation → the creator can sign in",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:12:03.414Z",
+      "end": "2026-10-08T00:12:13.467Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "the tenant admin logs in through the ADMIN portal",
+          "ok": true,
+          "detail": "/admin",
+          "kind": "ui"
+        },
+        {
+          "name": "navigation has Người dùng and Công ty của tôi",
+          "ok": true,
+          "detail": "Tổng quan | Người dùng | Công ty của tôi | Nhóm | Chia sẻ | AI riêng của công ty",
+          "kind": "ui"
+        },
+        {
+          "name": "Người dùng: the tenant is the SESSION's (read-only), the create action is enabled, no not-ready notice",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the dialog: NO tenant selector (fixed, read-only tenant), the types never include SYSTEM_ADMIN (tenant admin may be offered)",
+          "ok": true,
+          "detail": "TENANT_ADMIN,WORKSPACE_ADMIN,USER",
+          "kind": "ui"
+        },
+        {
+          "name": "the workspace is created through the TENANT route (POST /admin/tenants/{tenant}/workspaces → 201, tenantId = the session's tenant) — never the legacy POST /admin/workspaces",
+          "ok": true,
+          "detail": "status=201 /api/v1/admin/tenants/c075e81b-cb8a-4cb6-855e-d16b934d9b24/workspaces",
+          "kind": "http"
+        },
+        {
+          "name": "the workspace request body is exactly {name}: the tenant id is the PATH only, never repeated in the body",
+          "ok": true,
+          "detail": "[\"name\"]",
+          "kind": "http"
+        },
+        {
+          "name": "POST /admin/tenants/{tenant}/users → 201 with tenantRole MEMBER, that workspace and WORKSPACE_ADMIN together; the tenant only in the path",
+          "ok": true,
+          "detail": "status=201 [\"username\",\"displayName\",\"tenantRole\",\"workspaceId\",\"workspaceRole\"]",
+          "kind": "http"
+        },
+        {
+          "name": "the activation link is shown once (/auth/activate#token)",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the summary shows account, Chờ kích hoạt, the company and the workspace with its role; the token is gone from the page",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the workspace admin activates through the REAL activation page",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "[api] the workspace admin signs in; /auth/me lists the new workspace with MEMBER_MANAGE (server permission, not a role name)",
+          "ok": true,
+          "detail": "[\"ACTION_EXECUTE\",\"APP_EDIT\",\"APP_PUBLISH\",\"APP_SHARE\",\"APP_USE\",\"APP_VIEW\",\"DATA_MUTATE\",\"DATA_SOURCE_MANAGE\",\"DATA_SOURCE_VIEW\",\"MEMBER_MANAGE\",\"QUERY_EXECUTE\",\"WORKFLOW_EXECUTE\",\"WORKFLOW_MANAGE\"]",
+          "kind": "http"
+        },
+        {
+          "name": "[observed] is the workspace the tenant admin just created offered to it for the next account? (H-C1-16: a tenant admin is not a member of it; /auth/me lists member workspaces only)",
+          "ok": true,
+          "detail": "offered=,__new canPick=false",
+          "kind": "ui"
+        },
+        {
+          "name": "the app creator is created (201): MEMBER, email as given, workspace + role together or none",
+          "ok": true,
+          "detail": "status=201 [\"username\",\"displayName\",\"email\",\"tenantRole\"]",
+          "kind": "http"
+        },
+        {
+          "name": "the app creator activates through the REAL activation page",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "workspace assignment of an EXISTING tenant member is the WORKSPACE ADMIN's action: POST /workspaces/{w}/members → 201",
+          "ok": true,
+          "detail": "status=201 undefined",
+          "kind": "http"
+        },
+        {
+          "name": "[api] the app creator signs in with the chosen password; /auth/me lists the workspace and no MEMBER_MANAGE / TENANT_*",
+          "ok": true,
+          "detail": "workspace=true perms=[] tenantPerms=[]",
+          "kind": "http"
+        },
+        {
+          "name": "the app creator is NOT admitted to the Admin portal (no admin capability from the server)",
+          "ok": true,
+          "detail": "/auth/no-access",
+          "kind": "ui"
+        },
+        {
+          "name": "LEGACY ROUTE: 0 browser requests to POST /api/v1/admin/workspaces in the whole tenant-admin flow; the workspace went to POST /api/v1/admin/tenants/{tenantId}/workspaces",
+          "ok": true,
+          "detail": "legacy=0 posts=/api/v1/admin/tenants/{id}/workspaces , /api/v1/admin/tenants/{id}/users , /api/v1/admin/tenants/{id}/users",
+          "kind": "http"
+        },
+        {
+          "name": "CSRF: every mutating admin request the UI sent carries the X-XSRF-TOKEN header",
+          "ok": true,
+          "detail": "n=3 withToken=3",
+          "kind": "http"
+        },
+        {
+          "name": "no tenantId / tenant in any body the UI sent to a tenant route",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "no unexpected 4xx/5xx from the portal's calls",
+          "ok": true,
+          "detail": "GET /api/v1/auth/me → 401",
+          "kind": "ui"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-USER01",
+      "title": "App creator (EDITOR, made by the tenant admin): Studio login → project visible → edit / save / reload → permissions are the role's",
+      "status": "BLOCKED",
+      "owner": "C1",
+      "ref": "H-C1-04",
+      "reason": "the Studio portal refuses this creator at login (/auth/no-access) although /auth/me lists the workspace with []. The API side of the same account works (project APIs, edit, persist, no publish). H-C1-04 (still open).",
+      "mismatch": null,
+      "start": "2026-10-08T00:12:13.467Z",
+      "end": "2026-10-08T00:12:15.389Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "[api] the workspace admin creates a project in the new workspace (201)",
+          "ok": true,
+          "detail": "status=201 undefined",
+          "kind": "http"
+        },
+        {
+          "name": "[api] …and adds the creator to the project as EDITOR (member route)",
+          "ok": true,
+          "detail": "status=201 undefined",
+          "kind": "http"
+        },
+        {
+          "name": "[api] the creator's resolved project permissions include APP_EDIT and NOT APP_PUBLISH",
+          "ok": true,
+          "detail": "ACTION_EXECUTE,APP_USE,DATA_SOURCE_VIEW,PROJECT_CREATE,PROJECT_EDIT,PROJECT_READ,PROJECT_SETTINGS,QUERY_EXECUTE",
+          "kind": "http"
+        },
+        {
+          "name": "[api] …and no MEMBER_MANAGE: /auth/me lists none in the workspace",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "[api] an edit by the creator is accepted (200)",
+          "ok": true,
+          "detail": "status=200 undefined",
+          "kind": "http"
+        },
+        {
+          "name": "after a reload the edit is still there (persisted)",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "[api] publishing is refused for the creator (403): the role is the role",
+          "ok": true,
+          "detail": "status=403 FORBIDDEN",
+          "kind": "http"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-SEC01",
+      "title": "SEC01 tenant admin cannot create SYSTEM_ADMIN · SEC02 cross-tenant is a safe 404 · SEC03 workspace admin cannot escalate",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:12:15.389Z",
+      "end": "2026-10-08T00:12:20.751Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "SEC01 [api] tenantRole SYSTEM_ADMIN is refused (400 TENANT_ROLE_INVALID)",
+          "ok": true,
+          "detail": "status=400 TENANT_ROLE_INVALID",
+          "kind": "http"
+        },
+        {
+          "name": "SEC01 [api] unknown fields (systemAdmin, platformScope, role) never take effect: the account is a plain, non-admin MEMBER",
+          "ok": true,
+          "detail": "status=201 systemAdmin=false",
+          "kind": "persistence"
+        },
+        {
+          "name": "SEC01 [api] the legacy platform route is closed to a tenant admin (403 ADMIN_REQUIRED)",
+          "ok": true,
+          "detail": "status=403 ADMIN_REQUIRED",
+          "kind": "http"
+        },
+        {
+          "name": "SEC01 [api] …cannot grant SYSTEM_ADMIN to anyone nor to itself (403)",
+          "ok": true,
+          "detail": "403/403",
+          "kind": "http"
+        },
+        {
+          "name": "SEC01 [api] nobody became a SYSTEM_ADMIN",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "SEC01 [api] the tenant admin's /auth/me carries no platform scope",
+          "ok": true,
+          "detail": "{\"platformScope\":false,\"systemAdmin\":false}",
+          "kind": "http"
+        },
+        {
+          "name": "SEC02 [api] tenant A's admin gets 404 TENANT_NOT_FOUND on every tenant-B route (create user, create workspace, members, candidates, add self, re-role, remove, read)",
+          "ok": true,
+          "detail": "createUser=404/TENANT_NOT_FOUND createWs=404/TENANT_NOT_FOUND members=404/TENANT_NOT_FOUND candidates=404/TENANT_NOT_FOUND setRole=404/TENANT_NOT_FOUND reRole=404/TENANT_NOT_FOUND remove=404/TENANT_NOT_FOUND tenant=404/TENANT_NOT_FOUND",
+          "kind": "http"
+        },
+        {
+          "name": "SEC02 [api] …and the refused create left nothing behind (no account named like it)",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "SEC02 [api] a workspace of ANOTHER tenant in my tenant's create → 404 WORKSPACE_NOT_FOUND, and no account is created",
+          "ok": true,
+          "detail": "status=404 WORKSPACE_NOT_FOUND",
+          "kind": "http"
+        },
+        {
+          "name": "SEC02 [api] …and the other way round (B's admin on tenant A): 404",
+          "ok": true,
+          "detail": "404/404/404",
+          "kind": "http"
+        },
+        {
+          "name": "SEC02 [api] neither tenant admin can list the system-wide users or workspaces (403)",
+          "ok": true,
+          "detail": "",
+          "kind": "http"
+        },
+        {
+          "name": "SEC02 [api] each tenant's member list holds only its own people",
+          "ok": true,
+          "detail": "A=3 B=2",
+          "kind": "persistence"
+        },
+        {
+          "name": "SEC03 [api] a workspace admin cannot call the tenant routes (create user / workspace, candidates, members, make itself tenant admin) → 403, nor platform routes (legacy create, system-admin, new tenant, suspend)",
+          "ok": true,
+          "detail": "createUser=403/FORBIDDEN createWs=403/FORBIDDEN candidates=403/FORBIDDEN members=403/FORBIDDEN selfTenant=403/FORBIDDEN legacyUser=403/ADMIN_REQUIRED sysAdmin=403/ADMIN_REQUIRED newTenant=403/ADMIN_REQUIRED suspend=403/ADMIN_REQUIRED",
+          "kind": "http"
+        },
+        {
+          "name": "SEC03 [api] …with the codes of the contract (FORBIDDEN on tenant routes, ADMIN_REQUIRED on platform routes)",
+          "ok": true,
+          "detail": "FORBIDDEN/FORBIDDEN/ADMIN_REQUIRED",
+          "kind": "http"
+        },
+        {
+          "name": "SEC03 [api] …cannot change its own workspace role (403 SELF_GRANT_FORBIDDEN)",
+          "ok": true,
+          "detail": "status=403 SELF_GRANT_FORBIDDEN",
+          "kind": "http"
+        },
+        {
+          "name": "SEC03 [api] …cannot read, nor add itself to, a workspace of another tenant (403/404)",
+          "ok": true,
+          "detail": "404/404",
+          "kind": "http"
+        },
+        {
+          "name": "SEC03 [api] …cannot pull a person of ANOTHER tenant into its workspace (404 USER_NOT_FOUND)",
+          "ok": true,
+          "detail": "status=404 USER_NOT_FOUND",
+          "kind": "http"
+        },
+        {
+          "name": "SEC03 [api] nothing changed: still a plain tenant MEMBER, not a SYSTEM_ADMIN, the tenant still ACTIVE",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "401 [api] an unauthenticated caller (valid CSRF, no session) is refused on create user / create workspace / list members: 401",
+          "ok": true,
+          "detail": "401/AUTHENTICATION_REQUIRED 401/AUTHENTICATION_REQUIRED 401/AUTHENTICATION_REQUIRED",
+          "kind": "http"
+        },
+        {
+          "name": "401 [api] …and nothing was created (no account named like it)",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "CSRF [api] an authenticated mutating request WITHOUT the CSRF header, or with a wrong one, is refused (403) and does nothing",
+          "ok": true,
+          "detail": "403/403/403 codes=CSRF_INVALID,CSRF_INVALID,CSRF_INVALID",
+          "kind": "http"
+        },
+        {
+          "name": "CSRF [api] the same request WITH the session's CSRF token succeeds (201): the refusal above was the missing token, not the route",
+          "ok": true,
+          "detail": "status=201 undefined",
+          "kind": "http"
+        },
+        {
+          "name": "body injection [api] a foreign tenant id in the BODY (tenantId / tenant) is ignored: the path is the authority — the account is a member of tenant A, not of B",
+          "ok": true,
+          "detail": "status=201 inA=true inB=false",
+          "kind": "persistence"
+        },
+        {
+          "name": "body injection [api] …and a workspace created with a foreign tenantId in the body belongs to tenant A (the path)",
+          "ok": true,
+          "detail": "status=201 tenantId=A",
+          "kind": "persistence"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-S7",
+      "title": "(supplementary) Publish interrupted by a backend outage: no fake success, UI ends on the server's truth",
+      "status": "FAIL",
+      "owner": null,
+      "ref": null,
+      "reason": "exception: locator.click: Timeout 30000ms exceeded. ⏎ Call log: ⏎   - waiting for getByRole('dialog').getByRole('button', { name: /^Xuất bản$/ })",
+      "mismatch": null,
+      "start": "2026-10-08T00:12:20.751Z",
+      "end": "2026-10-08T00:12:52.327Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [],
+      "failed": []
+    },
+    {
+      "id": "E2E-S6",
+      "title": "(supplementary) Backend stopped: errors not success, no request storm, recovery after start",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:12:52.327Z",
+      "end": "2026-10-08T00:14:07.458Z",
+      "workspace": "715b381d-10bf-4b97-9f65-5dbfeba01794",
+      "project": "13e06c39-38dc-4c19-96e7-d31f601cd70e",
+      "checks": [
+        {
+          "name": "clicking a section on the canvas opens its properties",
+          "ok": true,
+          "detail": "attempts=2",
+          "kind": "ui"
+        },
+        {
+          "name": "save while the backend is down: the top bar says the save FAILED (not saved)",
+          "ok": true,
+          "detail": "Lưu thất bại",
+          "kind": "ui"
+        },
+        {
+          "name": "a retry button is offered and Publish is disabled while the edit is unsaved",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "no automatic retry loop: at most 2 save requests in ~30 s of outage",
+          "ok": true,
+          "detail": "patches=0",
+          "kind": "ui"
+        },
+        {
+          "name": "no request storm while the backend is down (< 30 API calls)",
+          "ok": true,
+          "detail": "api calls=1 in 6053 ms",
+          "kind": "ui"
+        },
+        {
+          "name": "the page stayed usable: it still shows the Builder and the unsaved text",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the API answers again after the start hook",
+          "ok": true,
+          "detail": "",
+          "kind": "recovery"
+        },
+        {
+          "name": "nothing was written while it was down (revision unchanged)",
+          "ok": true,
+          "detail": "",
+          "kind": "persistence"
+        },
+        {
+          "name": "retry after recovery reaches the backend and is accepted (200)",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "recovery"
+        },
+        {
+          "name": "the edit is persisted exactly once (revision + 1)",
+          "ok": true,
+          "detail": "44 → 45",
+          "kind": "persistence"
+        },
+        {
+          "name": "after a browser refresh the Builder opens again by direct URL",
+          "ok": true,
+          "detail": "",
+          "kind": "recovery"
+        },
+        {
+          "name": "no unhandled page errors other than the expected network failures",
+          "ok": true,
+          "detail": "console: Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    }
+  ]
+}

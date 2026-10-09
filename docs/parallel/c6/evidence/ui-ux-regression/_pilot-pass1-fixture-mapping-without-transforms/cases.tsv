@@ -1,0 +1,807 @@
+id	group	portal	role	route	viewport	result	notReady	fail	warn	screenshot
+/platform	PLATFORM	platform	super	/platform	1440	PASS				platform/super/platform/1440.png
+/platform	PLATFORM	platform	super	/platform	1280	PASS				platform/super/platform/1280.png
+/platform	PLATFORM	platform	super	/platform	1024	PASS				platform/super/platform/1024.png
+/platform	PLATFORM	platform	super	/platform	768	PASS				platform/super/platform/768.png
+/platform	PLATFORM	platform	super	/platform	430	PASS				platform/super/platform/430.png
+/platform	PLATFORM	platform	super	/platform	390	PASS				platform/super/platform/390.png
+/platform	PLATFORM	platform	super	/platform	360	PASS				platform/super/platform/360.png
+/platform/tenants	PLATFORM	platform	super	/platform/tenants	1440	PASS				platform/super/platform_tenants/1440.png
+/platform/tenants	PLATFORM	platform	super	/platform/tenants	1280	PASS				platform/super/platform_tenants/1280.png
+/platform/tenants	PLATFORM	platform	super	/platform/tenants	1024	PASS				platform/super/platform_tenants/1024.png
+/platform/tenants	PLATFORM	platform	super	/platform/tenants	768	PASS				platform/super/platform_tenants/768.png
+/platform/tenants	PLATFORM	platform	super	/platform/tenants	430	PASS				platform/super/platform_tenants/430.png
+/platform/tenants	PLATFORM	platform	super	/platform/tenants	390	PASS				platform/super/platform_tenants/390.png
+/platform/tenants	PLATFORM	platform	super	/platform/tenants	360	PASS				platform/super/platform_tenants/360.png
+/platform/users	PLATFORM	platform	super	/platform/users	1440	PASS				platform/super/platform_users/1440.png
+/platform/users	PLATFORM	platform	super	/platform/users	1280	PASS				platform/super/platform_users/1280.png
+/platform/users	PLATFORM	platform	super	/platform/users	1024	PASS				platform/super/platform_users/1024.png
+/platform/users	PLATFORM	platform	super	/platform/users	768	PASS				platform/super/platform_users/768.png
+/platform/users	PLATFORM	platform	super	/platform/users	430	PASS				platform/super/platform_users/430.png
+/platform/users	PLATFORM	platform	super	/platform/users	390	PASS				platform/super/platform_users/390.png
+/platform/users	PLATFORM	platform	super	/platform/users	360	PASS				platform/super/platform_users/360.png
+/platform/ai	PLATFORM	platform	super	/platform/ai	1440	PASS				platform/super/platform_ai/1440.png
+/platform/ai	PLATFORM	platform	super	/platform/ai	1280	PASS				platform/super/platform_ai/1280.png
+/platform/ai	PLATFORM	platform	super	/platform/ai	1024	PASS				platform/super/platform_ai/1024.png
+/platform/ai	PLATFORM	platform	super	/platform/ai	768	PASS				platform/super/platform_ai/768.png
+/platform/ai	PLATFORM	platform	super	/platform/ai	430	PASS				platform/super/platform_ai/430.png
+/platform/ai	PLATFORM	platform	super	/platform/ai	390	PASS				platform/super/platform_ai/390.png
+/platform/ai	PLATFORM	platform	super	/platform/ai	360	PASS				platform/super/platform_ai/360.png
+/platform/alerts	PLATFORM	platform	super	/platform/alerts	1440	PASS				platform/super/platform_alerts/1440.png
+/platform/alerts	PLATFORM	platform	super	/platform/alerts	1280	PASS				platform/super/platform_alerts/1280.png
+/platform/alerts	PLATFORM	platform	super	/platform/alerts	1024	PASS				platform/super/platform_alerts/1024.png
+/platform/alerts	PLATFORM	platform	super	/platform/alerts	768	PASS				platform/super/platform_alerts/768.png
+/platform/alerts	PLATFORM	platform	super	/platform/alerts	430	PASS				platform/super/platform_alerts/430.png
+/platform/alerts	PLATFORM	platform	super	/platform/alerts	390	PASS				platform/super/platform_alerts/390.png
+/platform/alerts	PLATFORM	platform	super	/platform/alerts	360	PASS				platform/super/platform_alerts/360.png
+/platform/security	PLATFORM	platform	super	/platform/security	1440	PASS				platform/super/platform_security/1440.png
+/platform/security	PLATFORM	platform	super	/platform/security	1280	PASS				platform/super/platform_security/1280.png
+/platform/security	PLATFORM	platform	super	/platform/security	1024	PASS				platform/super/platform_security/1024.png
+/platform/security	PLATFORM	platform	super	/platform/security	768	PASS				platform/super/platform_security/768.png
+/platform/security	PLATFORM	platform	super	/platform/security	430	PASS				platform/super/platform_security/430.png
+/platform/security	PLATFORM	platform	super	/platform/security	390	PASS				platform/super/platform_security/390.png
+/platform/security	PLATFORM	platform	super	/platform/security	360	PASS				platform/super/platform_security/360.png
+/platform/costs	PLATFORM	platform	super	/platform/costs	1440	PASS				platform/super/platform_costs/1440.png
+/platform/costs	PLATFORM	platform	super	/platform/costs	1280	PASS				platform/super/platform_costs/1280.png
+/platform/costs	PLATFORM	platform	super	/platform/costs	1024	PASS				platform/super/platform_costs/1024.png
+/platform/costs	PLATFORM	platform	super	/platform/costs	768	PASS				platform/super/platform_costs/768.png
+/platform/costs	PLATFORM	platform	super	/platform/costs	430	PASS				platform/super/platform_costs/430.png
+/platform/costs	PLATFORM	platform	super	/platform/costs	390	PASS				platform/super/platform_costs/390.png
+/platform/costs	PLATFORM	platform	super	/platform/costs	360	PASS				platform/super/platform_costs/360.png
+/platform/connectors	PLATFORM	platform	super	/platform/connectors	1440	PASS				platform/super/platform_connectors/1440.png
+/platform/connectors	PLATFORM	platform	super	/platform/connectors	1280	PASS				platform/super/platform_connectors/1280.png
+/platform/connectors	PLATFORM	platform	super	/platform/connectors	1024	PASS				platform/super/platform_connectors/1024.png
+/platform/connectors	PLATFORM	platform	super	/platform/connectors	768	PASS				platform/super/platform_connectors/768.png
+/platform/connectors	PLATFORM	platform	super	/platform/connectors	430	PASS				platform/super/platform_connectors/430.png
+/platform/connectors	PLATFORM	platform	super	/platform/connectors	390	PASS				platform/super/platform_connectors/390.png
+/platform/connectors	PLATFORM	platform	super	/platform/connectors	360	PASS				platform/super/platform_connectors/360.png
+/platform/backups	PLATFORM	platform	super	/platform/backups	1440	PASS				platform/super/platform_backups/1440.png
+/platform/backups	PLATFORM	platform	super	/platform/backups	1280	PASS				platform/super/platform_backups/1280.png
+/platform/backups	PLATFORM	platform	super	/platform/backups	1024	PASS				platform/super/platform_backups/1024.png
+/platform/backups	PLATFORM	platform	super	/platform/backups	768	PASS				platform/super/platform_backups/768.png
+/platform/backups	PLATFORM	platform	super	/platform/backups	430	PASS				platform/super/platform_backups/430.png
+/platform/backups	PLATFORM	platform	super	/platform/backups	390	PASS				platform/super/platform_backups/390.png
+/platform/backups	PLATFORM	platform	super	/platform/backups	360	PASS				platform/super/platform_backups/360.png
+/platform/components	PLATFORM	platform	super	/platform/components	1440	PASS				platform/super/platform_components/1440.png
+/platform/components	PLATFORM	platform	super	/platform/components	1280	PASS				platform/super/platform_components/1280.png
+/platform/components	PLATFORM	platform	super	/platform/components	1024	PASS				platform/super/platform_components/1024.png
+/platform/components	PLATFORM	platform	super	/platform/components	768	PASS				platform/super/platform_components/768.png
+/platform/components	PLATFORM	platform	super	/platform/components	430	FAIL		page overflows horizontally by 74px		platform/super/platform_components/430.png
+/platform/components	PLATFORM	platform	super	/platform/components	390	FAIL		page overflows horizontally by 114px		platform/super/platform_components/390.png
+/platform/components	PLATFORM	platform	super	/platform/components	360	FAIL		page overflows horizontally by 144px		platform/super/platform_components/360.png
+/platform/templates	PLATFORM	platform	super	/platform/templates	1440	PASS				platform/super/platform_templates/1440.png
+/platform/templates	PLATFORM	platform	super	/platform/templates	1280	PASS				platform/super/platform_templates/1280.png
+/platform/templates	PLATFORM	platform	super	/platform/templates	1024	PASS				platform/super/platform_templates/1024.png
+/platform/templates	PLATFORM	platform	super	/platform/templates	768	PASS				platform/super/platform_templates/768.png
+/platform/templates	PLATFORM	platform	super	/platform/templates	430	PASS				platform/super/platform_templates/430.png
+/platform/templates	PLATFORM	platform	super	/platform/templates	390	PASS				platform/super/platform_templates/390.png
+/platform/templates	PLATFORM	platform	super	/platform/templates	360	PASS				platform/super/platform_templates/360.png
+/platform/audit	PLATFORM	platform	super	/platform/audit	1440	PASS				platform/super/platform_audit/1440.png
+/platform/audit	PLATFORM	platform	super	/platform/audit	1280	PASS				platform/super/platform_audit/1280.png
+/platform/audit	PLATFORM	platform	super	/platform/audit	1024	PASS				platform/super/platform_audit/1024.png
+/platform/audit	PLATFORM	platform	super	/platform/audit	768	PASS				platform/super/platform_audit/768.png
+/platform/audit	PLATFORM	platform	super	/platform/audit	430	PASS				platform/super/platform_audit/430.png
+/platform/audit	PLATFORM	platform	super	/platform/audit	390	PASS				platform/super/platform_audit/390.png
+/platform/audit	PLATFORM	platform	super	/platform/audit	360	PASS				platform/super/platform_audit/360.png
+/platform/builds	PLATFORM	platform	super	/platform/builds	1440	PASS				platform/super/platform_builds/1440.png
+/platform/builds	PLATFORM	platform	super	/platform/builds	1280	PASS				platform/super/platform_builds/1280.png
+/platform/builds	PLATFORM	platform	super	/platform/builds	1024	PASS				platform/super/platform_builds/1024.png
+/platform/builds	PLATFORM	platform	super	/platform/builds	768	PASS				platform/super/platform_builds/768.png
+/platform/builds	PLATFORM	platform	super	/platform/builds	430	PASS				platform/super/platform_builds/430.png
+/platform/builds	PLATFORM	platform	super	/platform/builds	390	PASS				platform/super/platform_builds/390.png
+/platform/builds	PLATFORM	platform	super	/platform/builds	360	PASS				platform/super/platform_builds/360.png
+/platform/packages	PLATFORM	platform	super	/platform/packages	1440	PASS				platform/super/platform_packages/1440.png
+/platform/packages	PLATFORM	platform	super	/platform/packages	1280	PASS				platform/super/platform_packages/1280.png
+/platform/packages	PLATFORM	platform	super	/platform/packages	1024	PASS				platform/super/platform_packages/1024.png
+/platform/packages	PLATFORM	platform	super	/platform/packages	768	PASS				platform/super/platform_packages/768.png
+/platform/packages	PLATFORM	platform	super	/platform/packages	430	PASS				platform/super/platform_packages/430.png
+/platform/packages	PLATFORM	platform	super	/platform/packages	390	PASS				platform/super/platform_packages/390.png
+/platform/packages	PLATFORM	platform	super	/platform/packages	360	PASS				platform/super/platform_packages/360.png
+/platform/system	PLATFORM	platform	super	/platform/system	1440	PASS				platform/super/platform_system/1440.png
+/platform/system	PLATFORM	platform	super	/platform/system	1280	PASS				platform/super/platform_system/1280.png
+/platform/system	PLATFORM	platform	super	/platform/system	1024	PASS				platform/super/platform_system/1024.png
+/platform/system	PLATFORM	platform	super	/platform/system	768	PASS				platform/super/platform_system/768.png
+/platform/system	PLATFORM	platform	super	/platform/system	430	PASS				platform/super/platform_system/430.png
+/platform/system	PLATFORM	platform	super	/platform/system	390	PASS				platform/super/platform_system/390.png
+/platform/system	PLATFORM	platform	super	/platform/system	360	PASS				platform/super/platform_system/360.png
+/platform/settings	PLATFORM	platform	super	/platform/settings	1440	PASS				platform/super/platform_settings/1440.png
+/platform/settings	PLATFORM	platform	super	/platform/settings	1280	PASS				platform/super/platform_settings/1280.png
+/platform/settings	PLATFORM	platform	super	/platform/settings	1024	PASS				platform/super/platform_settings/1024.png
+/platform/settings	PLATFORM	platform	super	/platform/settings	768	PASS				platform/super/platform_settings/768.png
+/platform/settings	PLATFORM	platform	super	/platform/settings	430	PASS				platform/super/platform_settings/430.png
+/platform/settings	PLATFORM	platform	super	/platform/settings	390	PASS				platform/super/platform_settings/390.png
+/platform/settings	PLATFORM	platform	super	/platform/settings	360	PASS				platform/super/platform_settings/360.png
+/platform/tenants/2ff23de2-338f-4766-8c0d-ed3f943690fc	PLATFORM	platform	super	/platform/tenants/2ff23de2-338f-4766-8c0d-ed3f943690fc	1440	PASS				platform/super/platform_tenants_id/1440.png
+/platform/tenants/2ff23de2-338f-4766-8c0d-ed3f943690fc	PLATFORM	platform	super	/platform/tenants/2ff23de2-338f-4766-8c0d-ed3f943690fc	1280	PASS				platform/super/platform_tenants_id/1280.png
+/platform/tenants/2ff23de2-338f-4766-8c0d-ed3f943690fc	PLATFORM	platform	super	/platform/tenants/2ff23de2-338f-4766-8c0d-ed3f943690fc	1024	PASS				platform/super/platform_tenants_id/1024.png
+/platform/tenants/2ff23de2-338f-4766-8c0d-ed3f943690fc	PLATFORM	platform	super	/platform/tenants/2ff23de2-338f-4766-8c0d-ed3f943690fc	768	PASS				platform/super/platform_tenants_id/768.png
+/platform/tenants/2ff23de2-338f-4766-8c0d-ed3f943690fc	PLATFORM	platform	super	/platform/tenants/2ff23de2-338f-4766-8c0d-ed3f943690fc	430	PASS				platform/super/platform_tenants_id/430.png
+/platform/tenants/2ff23de2-338f-4766-8c0d-ed3f943690fc	PLATFORM	platform	super	/platform/tenants/2ff23de2-338f-4766-8c0d-ed3f943690fc	390	PASS				platform/super/platform_tenants_id/390.png
+/platform/tenants/2ff23de2-338f-4766-8c0d-ed3f943690fc	PLATFORM	platform	super	/platform/tenants/2ff23de2-338f-4766-8c0d-ed3f943690fc	360	PASS				platform/super/platform_tenants_id/360.png
+/platform/tenants/bad8825c-cda1-4be4-a562-82a49af20c93	PLATFORM	platform	super	/platform/tenants/bad8825c-cda1-4be4-a562-82a49af20c93	1440	PASS				platform/super/platform_tenants_id/1440.png
+/platform/tenants/bad8825c-cda1-4be4-a562-82a49af20c93	PLATFORM	platform	super	/platform/tenants/bad8825c-cda1-4be4-a562-82a49af20c93	1280	PASS				platform/super/platform_tenants_id/1280.png
+/platform/tenants/bad8825c-cda1-4be4-a562-82a49af20c93	PLATFORM	platform	super	/platform/tenants/bad8825c-cda1-4be4-a562-82a49af20c93	1024	PASS				platform/super/platform_tenants_id/1024.png
+/platform/tenants/bad8825c-cda1-4be4-a562-82a49af20c93	PLATFORM	platform	super	/platform/tenants/bad8825c-cda1-4be4-a562-82a49af20c93	768	PASS				platform/super/platform_tenants_id/768.png
+/platform/tenants/bad8825c-cda1-4be4-a562-82a49af20c93	PLATFORM	platform	super	/platform/tenants/bad8825c-cda1-4be4-a562-82a49af20c93	430	PASS				platform/super/platform_tenants_id/430.png
+/platform/tenants/bad8825c-cda1-4be4-a562-82a49af20c93	PLATFORM	platform	super	/platform/tenants/bad8825c-cda1-4be4-a562-82a49af20c93	390	PASS				platform/super/platform_tenants_id/390.png
+/platform/tenants/bad8825c-cda1-4be4-a562-82a49af20c93	PLATFORM	platform	super	/platform/tenants/bad8825c-cda1-4be4-a562-82a49af20c93	360	PASS				platform/super/platform_tenants_id/360.png
+/platform/users/b407d779-dea6-4f6e-98c6-97aa339bc34c	PLATFORM	platform	super	/platform/users/b407d779-dea6-4f6e-98c6-97aa339bc34c	1440	PASS				platform/super/platform_users_id/1440.png
+/platform/users/b407d779-dea6-4f6e-98c6-97aa339bc34c	PLATFORM	platform	super	/platform/users/b407d779-dea6-4f6e-98c6-97aa339bc34c	1280	PASS				platform/super/platform_users_id/1280.png
+/platform/users/b407d779-dea6-4f6e-98c6-97aa339bc34c	PLATFORM	platform	super	/platform/users/b407d779-dea6-4f6e-98c6-97aa339bc34c	1024	PASS				platform/super/platform_users_id/1024.png
+/platform/users/b407d779-dea6-4f6e-98c6-97aa339bc34c	PLATFORM	platform	super	/platform/users/b407d779-dea6-4f6e-98c6-97aa339bc34c	768	PASS				platform/super/platform_users_id/768.png
+/platform/users/b407d779-dea6-4f6e-98c6-97aa339bc34c	PLATFORM	platform	super	/platform/users/b407d779-dea6-4f6e-98c6-97aa339bc34c	430	PASS				platform/super/platform_users_id/430.png
+/platform/users/b407d779-dea6-4f6e-98c6-97aa339bc34c	PLATFORM	platform	super	/platform/users/b407d779-dea6-4f6e-98c6-97aa339bc34c	390	PASS				platform/super/platform_users_id/390.png
+/platform/users/b407d779-dea6-4f6e-98c6-97aa339bc34c	PLATFORM	platform	super	/platform/users/b407d779-dea6-4f6e-98c6-97aa339bc34c	360	PASS				platform/super/platform_users_id/360.png
+/platform/workspaces/15bb4f3c-151b-41a2-88ee-086e3719a593	PLATFORM	platform	super	/platform/workspaces/15bb4f3c-151b-41a2-88ee-086e3719a593	1440	PASS				platform/super/platform_workspaces_id/1440.png
+/platform/workspaces/15bb4f3c-151b-41a2-88ee-086e3719a593	PLATFORM	platform	super	/platform/workspaces/15bb4f3c-151b-41a2-88ee-086e3719a593	1280	PASS				platform/super/platform_workspaces_id/1280.png
+/platform/workspaces/15bb4f3c-151b-41a2-88ee-086e3719a593	PLATFORM	platform	super	/platform/workspaces/15bb4f3c-151b-41a2-88ee-086e3719a593	1024	PASS				platform/super/platform_workspaces_id/1024.png
+/platform/workspaces/15bb4f3c-151b-41a2-88ee-086e3719a593	PLATFORM	platform	super	/platform/workspaces/15bb4f3c-151b-41a2-88ee-086e3719a593	768	PASS				platform/super/platform_workspaces_id/768.png
+/platform/workspaces/15bb4f3c-151b-41a2-88ee-086e3719a593	PLATFORM	platform	super	/platform/workspaces/15bb4f3c-151b-41a2-88ee-086e3719a593	430	PASS				platform/super/platform_workspaces_id/430.png
+/platform/workspaces/15bb4f3c-151b-41a2-88ee-086e3719a593	PLATFORM	platform	super	/platform/workspaces/15bb4f3c-151b-41a2-88ee-086e3719a593	390	PASS				platform/super/platform_workspaces_id/390.png
+/platform/workspaces/15bb4f3c-151b-41a2-88ee-086e3719a593	PLATFORM	platform	super	/platform/workspaces/15bb4f3c-151b-41a2-88ee-086e3719a593	360	PASS				platform/super/platform_workspaces_id/360.png
+/platform/applications/503fbab3-a8ec-47de-a208-17b37b448a9d	PLATFORM	platform	super	/platform/applications/503fbab3-a8ec-47de-a208-17b37b448a9d	1440	PASS			0 visible h1	platform/super/platform_applications_id/1440.png
+/platform/applications/503fbab3-a8ec-47de-a208-17b37b448a9d	PLATFORM	platform	super	/platform/applications/503fbab3-a8ec-47de-a208-17b37b448a9d	1280	PASS			0 visible h1	platform/super/platform_applications_id/1280.png
+/platform/applications/503fbab3-a8ec-47de-a208-17b37b448a9d	PLATFORM	platform	super	/platform/applications/503fbab3-a8ec-47de-a208-17b37b448a9d	1024	PASS			0 visible h1	platform/super/platform_applications_id/1024.png
+/platform/applications/503fbab3-a8ec-47de-a208-17b37b448a9d	PLATFORM	platform	super	/platform/applications/503fbab3-a8ec-47de-a208-17b37b448a9d	768	PASS			0 visible h1	platform/super/platform_applications_id/768.png
+/platform/applications/503fbab3-a8ec-47de-a208-17b37b448a9d	PLATFORM	platform	super	/platform/applications/503fbab3-a8ec-47de-a208-17b37b448a9d	430	PASS			0 visible h1	platform/super/platform_applications_id/430.png
+/platform/applications/503fbab3-a8ec-47de-a208-17b37b448a9d	PLATFORM	platform	super	/platform/applications/503fbab3-a8ec-47de-a208-17b37b448a9d	390	PASS			0 visible h1	platform/super/platform_applications_id/390.png
+/platform/applications/503fbab3-a8ec-47de-a208-17b37b448a9d	PLATFORM	platform	super	/platform/applications/503fbab3-a8ec-47de-a208-17b37b448a9d	360	PASS			0 visible h1	platform/super/platform_applications_id/360.png
+/platform/zzz-khong-ton-tai	PLATFORM	platform	super	/platform/zzz-khong-ton-tai	1440	PASS			0 visible h1	platform/super/platform_zzz-khong-ton-tai/1440.png
+/platform/zzz-khong-ton-tai	PLATFORM	platform	super	/platform/zzz-khong-ton-tai	1280	PASS			0 visible h1	platform/super/platform_zzz-khong-ton-tai/1280.png
+/platform/zzz-khong-ton-tai	PLATFORM	platform	super	/platform/zzz-khong-ton-tai	1024	PASS			0 visible h1	platform/super/platform_zzz-khong-ton-tai/1024.png
+/platform/zzz-khong-ton-tai	PLATFORM	platform	super	/platform/zzz-khong-ton-tai	768	PASS			0 visible h1	platform/super/platform_zzz-khong-ton-tai/768.png
+/platform/zzz-khong-ton-tai	PLATFORM	platform	super	/platform/zzz-khong-ton-tai	430	PASS			0 visible h1	platform/super/platform_zzz-khong-ton-tai/430.png
+/platform/zzz-khong-ton-tai	PLATFORM	platform	super	/platform/zzz-khong-ton-tai	390	PASS			0 visible h1	platform/super/platform_zzz-khong-ton-tai/390.png
+/platform/zzz-khong-ton-tai	PLATFORM	platform	super	/platform/zzz-khong-ton-tai	360	PASS			0 visible h1	platform/super/platform_zzz-khong-ton-tai/360.png
+/admin	ADMIN	admin	tenantAdmin	/admin	1440	PASS				admin/tenantAdmin/admin/1440.png
+/admin	ADMIN	admin	tenantAdmin	/admin	1280	PASS				admin/tenantAdmin/admin/1280.png
+/admin	ADMIN	admin	tenantAdmin	/admin	1024	PASS				admin/tenantAdmin/admin/1024.png
+/admin	ADMIN	admin	tenantAdmin	/admin	768	PASS				admin/tenantAdmin/admin/768.png
+/admin	ADMIN	admin	tenantAdmin	/admin	430	PASS				admin/tenantAdmin/admin/430.png
+/admin	ADMIN	admin	tenantAdmin	/admin	390	PASS				admin/tenantAdmin/admin/390.png
+/admin	ADMIN	admin	tenantAdmin	/admin	360	PASS				admin/tenantAdmin/admin/360.png
+/admin/people	ADMIN	admin	tenantAdmin	/admin/people	1440	PASS				admin/tenantAdmin/admin_people/1440.png
+/admin/people	ADMIN	admin	tenantAdmin	/admin/people	1280	PASS				admin/tenantAdmin/admin_people/1280.png
+/admin/people	ADMIN	admin	tenantAdmin	/admin/people	1024	PASS				admin/tenantAdmin/admin_people/1024.png
+/admin/people	ADMIN	admin	tenantAdmin	/admin/people	768	PASS				admin/tenantAdmin/admin_people/768.png
+/admin/people	ADMIN	admin	tenantAdmin	/admin/people	430	PASS				admin/tenantAdmin/admin_people/430.png
+/admin/people	ADMIN	admin	tenantAdmin	/admin/people	390	PASS				admin/tenantAdmin/admin_people/390.png
+/admin/people	ADMIN	admin	tenantAdmin	/admin/people	360	PASS				admin/tenantAdmin/admin_people/360.png
+/admin/company	ADMIN	admin	tenantAdmin	/admin/company	1440	PASS				admin/tenantAdmin/admin_company/1440.png
+/admin/company	ADMIN	admin	tenantAdmin	/admin/company	1280	PASS				admin/tenantAdmin/admin_company/1280.png
+/admin/company	ADMIN	admin	tenantAdmin	/admin/company	1024	PASS				admin/tenantAdmin/admin_company/1024.png
+/admin/company	ADMIN	admin	tenantAdmin	/admin/company	768	PASS				admin/tenantAdmin/admin_company/768.png
+/admin/company	ADMIN	admin	tenantAdmin	/admin/company	430	PASS				admin/tenantAdmin/admin_company/430.png
+/admin/company	ADMIN	admin	tenantAdmin	/admin/company	390	PASS				admin/tenantAdmin/admin_company/390.png
+/admin/company	ADMIN	admin	tenantAdmin	/admin/company	360	PASS				admin/tenantAdmin/admin_company/360.png
+/admin/my-workspaces	ADMIN	admin	tenantAdmin	/admin/my-workspaces	1440	PASS				admin/tenantAdmin/admin_my-workspaces/1440.png
+/admin/my-workspaces	ADMIN	admin	tenantAdmin	/admin/my-workspaces	1280	PASS				admin/tenantAdmin/admin_my-workspaces/1280.png
+/admin/my-workspaces	ADMIN	admin	tenantAdmin	/admin/my-workspaces	1024	PASS				admin/tenantAdmin/admin_my-workspaces/1024.png
+/admin/my-workspaces	ADMIN	admin	tenantAdmin	/admin/my-workspaces	768	PASS				admin/tenantAdmin/admin_my-workspaces/768.png
+/admin/my-workspaces	ADMIN	admin	tenantAdmin	/admin/my-workspaces	430	PASS				admin/tenantAdmin/admin_my-workspaces/430.png
+/admin/my-workspaces	ADMIN	admin	tenantAdmin	/admin/my-workspaces	390	PASS				admin/tenantAdmin/admin_my-workspaces/390.png
+/admin/my-workspaces	ADMIN	admin	tenantAdmin	/admin/my-workspaces	360	PASS				admin/tenantAdmin/admin_my-workspaces/360.png
+/admin/data-sources	ADMIN	admin	tenantAdmin	/admin/data-sources	1440	PASS				admin/tenantAdmin/admin_data-sources/1440.png
+/admin/data-sources	ADMIN	admin	tenantAdmin	/admin/data-sources	1280	PASS				admin/tenantAdmin/admin_data-sources/1280.png
+/admin/data-sources	ADMIN	admin	tenantAdmin	/admin/data-sources	1024	PASS				admin/tenantAdmin/admin_data-sources/1024.png
+/admin/data-sources	ADMIN	admin	tenantAdmin	/admin/data-sources	768	PASS				admin/tenantAdmin/admin_data-sources/768.png
+/admin/data-sources	ADMIN	admin	tenantAdmin	/admin/data-sources	430	PASS				admin/tenantAdmin/admin_data-sources/430.png
+/admin/data-sources	ADMIN	admin	tenantAdmin	/admin/data-sources	390	PASS				admin/tenantAdmin/admin_data-sources/390.png
+/admin/data-sources	ADMIN	admin	tenantAdmin	/admin/data-sources	360	PASS				admin/tenantAdmin/admin_data-sources/360.png
+/admin/groups	ADMIN	admin	tenantAdmin	/admin/groups	1440	PASS	KNOWN_NOT_READY			admin/tenantAdmin/admin_groups/1440.png
+/admin/groups	ADMIN	admin	tenantAdmin	/admin/groups	1280	PASS	KNOWN_NOT_READY			admin/tenantAdmin/admin_groups/1280.png
+/admin/groups	ADMIN	admin	tenantAdmin	/admin/groups	1024	PASS	KNOWN_NOT_READY			admin/tenantAdmin/admin_groups/1024.png
+/admin/groups	ADMIN	admin	tenantAdmin	/admin/groups	768	PASS	KNOWN_NOT_READY			admin/tenantAdmin/admin_groups/768.png
+/admin/groups	ADMIN	admin	tenantAdmin	/admin/groups	430	PASS	KNOWN_NOT_READY			admin/tenantAdmin/admin_groups/430.png
+/admin/groups	ADMIN	admin	tenantAdmin	/admin/groups	390	PASS	KNOWN_NOT_READY			admin/tenantAdmin/admin_groups/390.png
+/admin/groups	ADMIN	admin	tenantAdmin	/admin/groups	360	PASS	KNOWN_NOT_READY			admin/tenantAdmin/admin_groups/360.png
+/admin/sharing	ADMIN	admin	tenantAdmin	/admin/sharing	1440	PASS	KNOWN_NOT_READY			admin/tenantAdmin/admin_sharing/1440.png
+/admin/sharing	ADMIN	admin	tenantAdmin	/admin/sharing	1280	PASS	KNOWN_NOT_READY			admin/tenantAdmin/admin_sharing/1280.png
+/admin/sharing	ADMIN	admin	tenantAdmin	/admin/sharing	1024	PASS	KNOWN_NOT_READY			admin/tenantAdmin/admin_sharing/1024.png
+/admin/sharing	ADMIN	admin	tenantAdmin	/admin/sharing	768	PASS	KNOWN_NOT_READY			admin/tenantAdmin/admin_sharing/768.png
+/admin/sharing	ADMIN	admin	tenantAdmin	/admin/sharing	430	PASS	KNOWN_NOT_READY			admin/tenantAdmin/admin_sharing/430.png
+/admin/sharing	ADMIN	admin	tenantAdmin	/admin/sharing	390	PASS	KNOWN_NOT_READY			admin/tenantAdmin/admin_sharing/390.png
+/admin/sharing	ADMIN	admin	tenantAdmin	/admin/sharing	360	PASS	KNOWN_NOT_READY			admin/tenantAdmin/admin_sharing/360.png
+/admin/byok	ADMIN	admin	tenantAdmin	/admin/byok	1440	PASS	KNOWN_NOT_READY			admin/tenantAdmin/admin_byok/1440.png
+/admin/byok	ADMIN	admin	tenantAdmin	/admin/byok	1280	PASS	KNOWN_NOT_READY			admin/tenantAdmin/admin_byok/1280.png
+/admin/byok	ADMIN	admin	tenantAdmin	/admin/byok	1024	PASS	KNOWN_NOT_READY			admin/tenantAdmin/admin_byok/1024.png
+/admin/byok	ADMIN	admin	tenantAdmin	/admin/byok	768	PASS	KNOWN_NOT_READY			admin/tenantAdmin/admin_byok/768.png
+/admin/byok	ADMIN	admin	tenantAdmin	/admin/byok	430	PASS	KNOWN_NOT_READY			admin/tenantAdmin/admin_byok/430.png
+/admin/byok	ADMIN	admin	tenantAdmin	/admin/byok	390	PASS	KNOWN_NOT_READY			admin/tenantAdmin/admin_byok/390.png
+/admin/byok	ADMIN	admin	tenantAdmin	/admin/byok	360	PASS	KNOWN_NOT_READY			admin/tenantAdmin/admin_byok/360.png
+/admin/zzz-khong-ton-tai	ADMIN	admin	tenantAdmin	/admin/zzz-khong-ton-tai	1440	PASS			0 visible h1	admin/tenantAdmin/admin_zzz-khong-ton-tai/1440.png
+/admin/zzz-khong-ton-tai	ADMIN	admin	tenantAdmin	/admin/zzz-khong-ton-tai	1280	PASS			0 visible h1	admin/tenantAdmin/admin_zzz-khong-ton-tai/1280.png
+/admin/zzz-khong-ton-tai	ADMIN	admin	tenantAdmin	/admin/zzz-khong-ton-tai	1024	PASS			0 visible h1	admin/tenantAdmin/admin_zzz-khong-ton-tai/1024.png
+/admin/zzz-khong-ton-tai	ADMIN	admin	tenantAdmin	/admin/zzz-khong-ton-tai	768	PASS			0 visible h1	admin/tenantAdmin/admin_zzz-khong-ton-tai/768.png
+/admin/zzz-khong-ton-tai	ADMIN	admin	tenantAdmin	/admin/zzz-khong-ton-tai	430	PASS			0 visible h1	admin/tenantAdmin/admin_zzz-khong-ton-tai/430.png
+/admin/zzz-khong-ton-tai	ADMIN	admin	tenantAdmin	/admin/zzz-khong-ton-tai	390	PASS			0 visible h1	admin/tenantAdmin/admin_zzz-khong-ton-tai/390.png
+/admin/zzz-khong-ton-tai	ADMIN	admin	tenantAdmin	/admin/zzz-khong-ton-tai	360	PASS			0 visible h1	admin/tenantAdmin/admin_zzz-khong-ton-tai/360.png
+/admin	ADMIN	admin	workspaceAdmin	/admin	1440	PASS				admin/workspaceAdmin/admin/1440.png
+/admin	ADMIN	admin	workspaceAdmin	/admin	1280	PASS				admin/workspaceAdmin/admin/1280.png
+/admin	ADMIN	admin	workspaceAdmin	/admin	1024	PASS				admin/workspaceAdmin/admin/1024.png
+/admin	ADMIN	admin	workspaceAdmin	/admin	768	PASS				admin/workspaceAdmin/admin/768.png
+/admin	ADMIN	admin	workspaceAdmin	/admin	430	PASS				admin/workspaceAdmin/admin/430.png
+/admin	ADMIN	admin	workspaceAdmin	/admin	390	PASS				admin/workspaceAdmin/admin/390.png
+/admin	ADMIN	admin	workspaceAdmin	/admin	360	PASS				admin/workspaceAdmin/admin/360.png
+/admin/people	ADMIN	admin	workspaceAdmin	/admin/people	1440	PASS				admin/workspaceAdmin/admin_people/1440.png
+/admin/people	ADMIN	admin	workspaceAdmin	/admin/people	1280	PASS				admin/workspaceAdmin/admin_people/1280.png
+/admin/people	ADMIN	admin	workspaceAdmin	/admin/people	1024	PASS				admin/workspaceAdmin/admin_people/1024.png
+/admin/people	ADMIN	admin	workspaceAdmin	/admin/people	768	PASS				admin/workspaceAdmin/admin_people/768.png
+/admin/people	ADMIN	admin	workspaceAdmin	/admin/people	430	PASS				admin/workspaceAdmin/admin_people/430.png
+/admin/people	ADMIN	admin	workspaceAdmin	/admin/people	390	PASS				admin/workspaceAdmin/admin_people/390.png
+/admin/people	ADMIN	admin	workspaceAdmin	/admin/people	360	PASS				admin/workspaceAdmin/admin_people/360.png
+/admin/my-workspaces	ADMIN	admin	workspaceAdmin	/admin/my-workspaces	1440	PASS				admin/workspaceAdmin/admin_my-workspaces/1440.png
+/admin/my-workspaces	ADMIN	admin	workspaceAdmin	/admin/my-workspaces	1280	PASS				admin/workspaceAdmin/admin_my-workspaces/1280.png
+/admin/my-workspaces	ADMIN	admin	workspaceAdmin	/admin/my-workspaces	1024	PASS				admin/workspaceAdmin/admin_my-workspaces/1024.png
+/admin/my-workspaces	ADMIN	admin	workspaceAdmin	/admin/my-workspaces	768	PASS				admin/workspaceAdmin/admin_my-workspaces/768.png
+/admin/my-workspaces	ADMIN	admin	workspaceAdmin	/admin/my-workspaces	430	PASS				admin/workspaceAdmin/admin_my-workspaces/430.png
+/admin/my-workspaces	ADMIN	admin	workspaceAdmin	/admin/my-workspaces	390	PASS				admin/workspaceAdmin/admin_my-workspaces/390.png
+/admin/my-workspaces	ADMIN	admin	workspaceAdmin	/admin/my-workspaces	360	PASS				admin/workspaceAdmin/admin_my-workspaces/360.png
+/admin/data-sources	ADMIN	admin	workspaceAdmin	/admin/data-sources	1440	PASS				admin/workspaceAdmin/admin_data-sources/1440.png
+/admin/data-sources	ADMIN	admin	workspaceAdmin	/admin/data-sources	1280	PASS				admin/workspaceAdmin/admin_data-sources/1280.png
+/admin/data-sources	ADMIN	admin	workspaceAdmin	/admin/data-sources	1024	PASS				admin/workspaceAdmin/admin_data-sources/1024.png
+/admin/data-sources	ADMIN	admin	workspaceAdmin	/admin/data-sources	768	PASS				admin/workspaceAdmin/admin_data-sources/768.png
+/admin/data-sources	ADMIN	admin	workspaceAdmin	/admin/data-sources	430	PASS				admin/workspaceAdmin/admin_data-sources/430.png
+/admin/data-sources	ADMIN	admin	workspaceAdmin	/admin/data-sources	390	PASS				admin/workspaceAdmin/admin_data-sources/390.png
+/admin/data-sources	ADMIN	admin	workspaceAdmin	/admin/data-sources	360	PASS				admin/workspaceAdmin/admin_data-sources/360.png
+/admin/groups	ADMIN	admin	workspaceAdmin	/admin/groups	1440	PASS	KNOWN_NOT_READY			admin/workspaceAdmin/admin_groups/1440.png
+/admin/groups	ADMIN	admin	workspaceAdmin	/admin/groups	1280	PASS	KNOWN_NOT_READY			admin/workspaceAdmin/admin_groups/1280.png
+/admin/groups	ADMIN	admin	workspaceAdmin	/admin/groups	1024	PASS	KNOWN_NOT_READY			admin/workspaceAdmin/admin_groups/1024.png
+/admin/groups	ADMIN	admin	workspaceAdmin	/admin/groups	768	PASS	KNOWN_NOT_READY			admin/workspaceAdmin/admin_groups/768.png
+/admin/groups	ADMIN	admin	workspaceAdmin	/admin/groups	430	PASS	KNOWN_NOT_READY			admin/workspaceAdmin/admin_groups/430.png
+/admin/groups	ADMIN	admin	workspaceAdmin	/admin/groups	390	PASS	KNOWN_NOT_READY			admin/workspaceAdmin/admin_groups/390.png
+/admin/groups	ADMIN	admin	workspaceAdmin	/admin/groups	360	PASS	KNOWN_NOT_READY			admin/workspaceAdmin/admin_groups/360.png
+/admin/sharing	ADMIN	admin	workspaceAdmin	/admin/sharing	1440	PASS	KNOWN_NOT_READY			admin/workspaceAdmin/admin_sharing/1440.png
+/admin/sharing	ADMIN	admin	workspaceAdmin	/admin/sharing	1280	PASS	KNOWN_NOT_READY			admin/workspaceAdmin/admin_sharing/1280.png
+/admin/sharing	ADMIN	admin	workspaceAdmin	/admin/sharing	1024	PASS	KNOWN_NOT_READY			admin/workspaceAdmin/admin_sharing/1024.png
+/admin/sharing	ADMIN	admin	workspaceAdmin	/admin/sharing	768	PASS	KNOWN_NOT_READY			admin/workspaceAdmin/admin_sharing/768.png
+/admin/sharing	ADMIN	admin	workspaceAdmin	/admin/sharing	430	PASS	KNOWN_NOT_READY			admin/workspaceAdmin/admin_sharing/430.png
+/admin/sharing	ADMIN	admin	workspaceAdmin	/admin/sharing	390	PASS	KNOWN_NOT_READY			admin/workspaceAdmin/admin_sharing/390.png
+/admin/sharing	ADMIN	admin	workspaceAdmin	/admin/sharing	360	PASS	KNOWN_NOT_READY			admin/workspaceAdmin/admin_sharing/360.png
+/admin/byok	ADMIN	admin	workspaceAdmin	/admin/byok	1440	PASS	KNOWN_NOT_READY			admin/workspaceAdmin/admin_byok/1440.png
+/admin/byok	ADMIN	admin	workspaceAdmin	/admin/byok	1280	PASS	KNOWN_NOT_READY			admin/workspaceAdmin/admin_byok/1280.png
+/admin/byok	ADMIN	admin	workspaceAdmin	/admin/byok	1024	PASS	KNOWN_NOT_READY			admin/workspaceAdmin/admin_byok/1024.png
+/admin/byok	ADMIN	admin	workspaceAdmin	/admin/byok	768	PASS	KNOWN_NOT_READY			admin/workspaceAdmin/admin_byok/768.png
+/admin/byok	ADMIN	admin	workspaceAdmin	/admin/byok	430	PASS	KNOWN_NOT_READY			admin/workspaceAdmin/admin_byok/430.png
+/admin/byok	ADMIN	admin	workspaceAdmin	/admin/byok	390	PASS	KNOWN_NOT_READY			admin/workspaceAdmin/admin_byok/390.png
+/admin/byok	ADMIN	admin	workspaceAdmin	/admin/byok	360	PASS	KNOWN_NOT_READY			admin/workspaceAdmin/admin_byok/360.png
+/admin/company	ADMIN	admin	workspaceAdmin	/admin/company	1440	PASS			0 visible h1	admin/workspaceAdmin/admin_company/1440.png
+/admin/company	ADMIN	admin	workspaceAdmin	/admin/company	1280	PASS			0 visible h1	admin/workspaceAdmin/admin_company/1280.png
+/admin/company	ADMIN	admin	workspaceAdmin	/admin/company	1024	PASS			0 visible h1	admin/workspaceAdmin/admin_company/1024.png
+/admin/company	ADMIN	admin	workspaceAdmin	/admin/company	768	PASS			0 visible h1	admin/workspaceAdmin/admin_company/768.png
+/admin/company	ADMIN	admin	workspaceAdmin	/admin/company	430	PASS			0 visible h1	admin/workspaceAdmin/admin_company/430.png
+/admin/company	ADMIN	admin	workspaceAdmin	/admin/company	390	PASS			0 visible h1	admin/workspaceAdmin/admin_company/390.png
+/admin/company	ADMIN	admin	workspaceAdmin	/admin/company	360	PASS			0 visible h1	admin/workspaceAdmin/admin_company/360.png
+/admin	ADMIN	admin	super	/admin	1440	PASS				admin/super/admin/1440.png
+/admin	ADMIN	admin	super	/admin	1280	PASS				admin/super/admin/1280.png
+/admin	ADMIN	admin	super	/admin	1024	PASS				admin/super/admin/1024.png
+/admin	ADMIN	admin	super	/admin	768	PASS				admin/super/admin/768.png
+/admin	ADMIN	admin	super	/admin	430	PASS				admin/super/admin/430.png
+/admin	ADMIN	admin	super	/admin	390	PASS				admin/super/admin/390.png
+/admin	ADMIN	admin	super	/admin	360	PASS				admin/super/admin/360.png
+/admin/users	ADMIN	admin	super	/admin/users	1440	PASS				admin/super/admin_users/1440.png
+/admin/users	ADMIN	admin	super	/admin/users	1280	PASS				admin/super/admin_users/1280.png
+/admin/users	ADMIN	admin	super	/admin/users	1024	PASS				admin/super/admin_users/1024.png
+/admin/users	ADMIN	admin	super	/admin/users	768	PASS				admin/super/admin_users/768.png
+/admin/users	ADMIN	admin	super	/admin/users	430	PASS				admin/super/admin_users/430.png
+/admin/users	ADMIN	admin	super	/admin/users	390	PASS				admin/super/admin_users/390.png
+/admin/users	ADMIN	admin	super	/admin/users	360	PASS				admin/super/admin_users/360.png
+/admin/applications	ADMIN	admin	super	/admin/applications	1440	PASS				admin/super/admin_applications/1440.png
+/admin/applications	ADMIN	admin	super	/admin/applications	1280	PASS				admin/super/admin_applications/1280.png
+/admin/applications	ADMIN	admin	super	/admin/applications	1024	PASS				admin/super/admin_applications/1024.png
+/admin/applications	ADMIN	admin	super	/admin/applications	768	PASS				admin/super/admin_applications/768.png
+/admin/applications	ADMIN	admin	super	/admin/applications	430	PASS				admin/super/admin_applications/430.png
+/admin/applications	ADMIN	admin	super	/admin/applications	390	PASS				admin/super/admin_applications/390.png
+/admin/applications	ADMIN	admin	super	/admin/applications	360	PASS				admin/super/admin_applications/360.png
+/admin/ai-governance	ADMIN	admin	super	/admin/ai-governance	1440	PASS				admin/super/admin_ai-governance/1440.png
+/admin/ai-governance	ADMIN	admin	super	/admin/ai-governance	1280	PASS				admin/super/admin_ai-governance/1280.png
+/admin/ai-governance	ADMIN	admin	super	/admin/ai-governance	1024	PASS				admin/super/admin_ai-governance/1024.png
+/admin/ai-governance	ADMIN	admin	super	/admin/ai-governance	768	PASS				admin/super/admin_ai-governance/768.png
+/admin/ai-governance	ADMIN	admin	super	/admin/ai-governance	430	PASS				admin/super/admin_ai-governance/430.png
+/admin/ai-governance	ADMIN	admin	super	/admin/ai-governance	390	PASS				admin/super/admin_ai-governance/390.png
+/admin/ai-governance	ADMIN	admin	super	/admin/ai-governance	360	PASS				admin/super/admin_ai-governance/360.png
+/admin/departments	ADMIN	admin	super	/admin/departments	1440	PASS				admin/super/admin_departments/1440.png
+/admin/departments	ADMIN	admin	super	/admin/departments	1280	PASS				admin/super/admin_departments/1280.png
+/admin/departments	ADMIN	admin	super	/admin/departments	1024	PASS				admin/super/admin_departments/1024.png
+/admin/departments	ADMIN	admin	super	/admin/departments	768	PASS				admin/super/admin_departments/768.png
+/admin/departments	ADMIN	admin	super	/admin/departments	430	PASS				admin/super/admin_departments/430.png
+/admin/departments	ADMIN	admin	super	/admin/departments	390	PASS				admin/super/admin_departments/390.png
+/admin/departments	ADMIN	admin	super	/admin/departments	360	PASS				admin/super/admin_departments/360.png
+/admin/identity	ADMIN	admin	super	/admin/identity	1440	PASS				admin/super/admin_identity/1440.png
+/admin/identity	ADMIN	admin	super	/admin/identity	1280	PASS				admin/super/admin_identity/1280.png
+/admin/identity	ADMIN	admin	super	/admin/identity	1024	PASS				admin/super/admin_identity/1024.png
+/admin/identity	ADMIN	admin	super	/admin/identity	768	PASS				admin/super/admin_identity/768.png
+/admin/identity	ADMIN	admin	super	/admin/identity	430	PASS				admin/super/admin_identity/430.png
+/admin/identity	ADMIN	admin	super	/admin/identity	390	PASS				admin/super/admin_identity/390.png
+/admin/identity	ADMIN	admin	super	/admin/identity	360	PASS				admin/super/admin_identity/360.png
+/admin/templates	ADMIN	admin	super	/admin/templates	1440	PASS				admin/super/admin_templates/1440.png
+/admin/templates	ADMIN	admin	super	/admin/templates	1280	PASS				admin/super/admin_templates/1280.png
+/admin/templates	ADMIN	admin	super	/admin/templates	1024	PASS				admin/super/admin_templates/1024.png
+/admin/templates	ADMIN	admin	super	/admin/templates	768	PASS				admin/super/admin_templates/768.png
+/admin/templates	ADMIN	admin	super	/admin/templates	430	PASS				admin/super/admin_templates/430.png
+/admin/templates	ADMIN	admin	super	/admin/templates	390	PASS				admin/super/admin_templates/390.png
+/admin/templates	ADMIN	admin	super	/admin/templates	360	PASS				admin/super/admin_templates/360.png
+/admin/audit	ADMIN	admin	super	/admin/audit	1440	PASS				admin/super/admin_audit/1440.png
+/admin/audit	ADMIN	admin	super	/admin/audit	1280	PASS				admin/super/admin_audit/1280.png
+/admin/audit	ADMIN	admin	super	/admin/audit	1024	PASS				admin/super/admin_audit/1024.png
+/admin/audit	ADMIN	admin	super	/admin/audit	768	PASS				admin/super/admin_audit/768.png
+/admin/audit	ADMIN	admin	super	/admin/audit	430	PASS				admin/super/admin_audit/430.png
+/admin/audit	ADMIN	admin	super	/admin/audit	390	PASS				admin/super/admin_audit/390.png
+/admin/audit	ADMIN	admin	super	/admin/audit	360	PASS				admin/super/admin_audit/360.png
+/admin/data-sources	ADMIN	admin	super	/admin/data-sources	1440	PASS				admin/super/admin_data-sources/1440.png
+/admin/data-sources	ADMIN	admin	super	/admin/data-sources	1280	PASS				admin/super/admin_data-sources/1280.png
+/admin/data-sources	ADMIN	admin	super	/admin/data-sources	1024	PASS				admin/super/admin_data-sources/1024.png
+/admin/data-sources	ADMIN	admin	super	/admin/data-sources	768	PASS				admin/super/admin_data-sources/768.png
+/admin/data-sources	ADMIN	admin	super	/admin/data-sources	430	PASS				admin/super/admin_data-sources/430.png
+/admin/data-sources	ADMIN	admin	super	/admin/data-sources	390	PASS				admin/super/admin_data-sources/390.png
+/admin/data-sources	ADMIN	admin	super	/admin/data-sources	360	PASS				admin/super/admin_data-sources/360.png
+/admin/groups	ADMIN	admin	super	/admin/groups	1440	PASS	KNOWN_NOT_READY			admin/super/admin_groups/1440.png
+/admin/groups	ADMIN	admin	super	/admin/groups	1280	PASS	KNOWN_NOT_READY			admin/super/admin_groups/1280.png
+/admin/groups	ADMIN	admin	super	/admin/groups	1024	PASS	KNOWN_NOT_READY			admin/super/admin_groups/1024.png
+/admin/groups	ADMIN	admin	super	/admin/groups	768	PASS	KNOWN_NOT_READY			admin/super/admin_groups/768.png
+/admin/groups	ADMIN	admin	super	/admin/groups	430	PASS	KNOWN_NOT_READY			admin/super/admin_groups/430.png
+/admin/groups	ADMIN	admin	super	/admin/groups	390	PASS	KNOWN_NOT_READY			admin/super/admin_groups/390.png
+/admin/groups	ADMIN	admin	super	/admin/groups	360	PASS	KNOWN_NOT_READY			admin/super/admin_groups/360.png
+/admin/sharing	ADMIN	admin	super	/admin/sharing	1440	PASS	KNOWN_NOT_READY			admin/super/admin_sharing/1440.png
+/admin/sharing	ADMIN	admin	super	/admin/sharing	1280	PASS	KNOWN_NOT_READY			admin/super/admin_sharing/1280.png
+/admin/sharing	ADMIN	admin	super	/admin/sharing	1024	PASS	KNOWN_NOT_READY			admin/super/admin_sharing/1024.png
+/admin/sharing	ADMIN	admin	super	/admin/sharing	768	PASS	KNOWN_NOT_READY			admin/super/admin_sharing/768.png
+/admin/sharing	ADMIN	admin	super	/admin/sharing	430	PASS	KNOWN_NOT_READY			admin/super/admin_sharing/430.png
+/admin/sharing	ADMIN	admin	super	/admin/sharing	390	PASS	KNOWN_NOT_READY			admin/super/admin_sharing/390.png
+/admin/sharing	ADMIN	admin	super	/admin/sharing	360	PASS	KNOWN_NOT_READY			admin/super/admin_sharing/360.png
+/admin/byok	ADMIN	admin	super	/admin/byok	1440	PASS	KNOWN_NOT_READY			admin/super/admin_byok/1440.png
+/admin/byok	ADMIN	admin	super	/admin/byok	1280	PASS	KNOWN_NOT_READY			admin/super/admin_byok/1280.png
+/admin/byok	ADMIN	admin	super	/admin/byok	1024	PASS	KNOWN_NOT_READY			admin/super/admin_byok/1024.png
+/admin/byok	ADMIN	admin	super	/admin/byok	768	PASS	KNOWN_NOT_READY			admin/super/admin_byok/768.png
+/admin/byok	ADMIN	admin	super	/admin/byok	430	PASS	KNOWN_NOT_READY			admin/super/admin_byok/430.png
+/admin/byok	ADMIN	admin	super	/admin/byok	390	PASS	KNOWN_NOT_READY			admin/super/admin_byok/390.png
+/admin/byok	ADMIN	admin	super	/admin/byok	360	PASS	KNOWN_NOT_READY			admin/super/admin_byok/360.png
+/studio	STUDIO	studio	workspaceAdmin	/studio	1440	PASS			text < 12px: 10.8333px "0"; 10.8333px "ứng dụng"	studio/workspaceAdmin/studio/1440.png
+/studio	STUDIO	studio	workspaceAdmin	/studio	1280	PASS			text < 12px: 10.8333px "0"; 10.8333px "ứng dụng"	studio/workspaceAdmin/studio/1280.png
+/studio	STUDIO	studio	workspaceAdmin	/studio	1024	PASS			text < 12px: 10.8333px "0"; 10.8333px "ứng dụng"	studio/workspaceAdmin/studio/1024.png
+/studio	STUDIO	studio	workspaceAdmin	/studio	768	PASS			text < 12px: 10.8333px "0"; 10.8333px "ứng dụng"	studio/workspaceAdmin/studio/768.png
+/studio	STUDIO	studio	workspaceAdmin	/studio	430	PASS			text < 12px: 10.8333px "0"; 10.8333px "ứng dụng"	studio/workspaceAdmin/studio/430.png
+/studio	STUDIO	studio	workspaceAdmin	/studio	390	PASS			text < 12px: 10.8333px "0"; 10.8333px "ứng dụng"	studio/workspaceAdmin/studio/390.png
+/studio	STUDIO	studio	workspaceAdmin	/studio	360	PASS			text < 12px: 10.8333px "0"; 10.8333px "ứng dụng"	studio/workspaceAdmin/studio/360.png
+/studio/new	STUDIO	studio	workspaceAdmin	/studio/new	1440	PASS				studio/workspaceAdmin/studio_new/1440.png
+/studio/new	STUDIO	studio	workspaceAdmin	/studio/new	1280	PASS				studio/workspaceAdmin/studio_new/1280.png
+/studio/new	STUDIO	studio	workspaceAdmin	/studio/new	1024	PASS			overlapping controls: input "" × input "Tên ứng dụng"; input "" × input "Tên ứng dụng"	studio/workspaceAdmin/studio_new/1024.png
+/studio/new	STUDIO	studio	workspaceAdmin	/studio/new	768	PASS			overlapping controls: input "" × input "Tên ứng dụng"; input "" × input "Tên ứng dụng"	studio/workspaceAdmin/studio_new/768.png
+/studio/new	STUDIO	studio	workspaceAdmin	/studio/new	430	PASS			overlapping controls: input "" × input "Tên ứng dụng"	studio/workspaceAdmin/studio_new/430.png
+/studio/new	STUDIO	studio	workspaceAdmin	/studio/new	390	PASS			overlapping controls: input "" × button.btn.primary "Tạo website"	studio/workspaceAdmin/studio_new/390.png
+/studio/new	STUDIO	studio	workspaceAdmin	/studio/new	360	PASS			overlapping controls: input "" × button.btn.primary "Tạo website"	studio/workspaceAdmin/studio_new/360.png
+/studio/projects	STUDIO	studio	workspaceAdmin	/studio/projects	1440	PASS				studio/workspaceAdmin/studio_projects/1440.png
+/studio/projects	STUDIO	studio	workspaceAdmin	/studio/projects	1280	PASS				studio/workspaceAdmin/studio_projects/1280.png
+/studio/projects	STUDIO	studio	workspaceAdmin	/studio/projects	1024	PASS				studio/workspaceAdmin/studio_projects/1024.png
+/studio/projects	STUDIO	studio	workspaceAdmin	/studio/projects	768	PASS				studio/workspaceAdmin/studio_projects/768.png
+/studio/projects	STUDIO	studio	workspaceAdmin	/studio/projects	430	PASS				studio/workspaceAdmin/studio_projects/430.png
+/studio/projects	STUDIO	studio	workspaceAdmin	/studio/projects	390	PASS				studio/workspaceAdmin/studio_projects/390.png
+/studio/projects	STUDIO	studio	workspaceAdmin	/studio/projects	360	PASS				studio/workspaceAdmin/studio_projects/360.png
+/studio/templates	STUDIO	studio	workspaceAdmin	/studio/templates	1440	PASS			text < 12px: 11px "CRM"; 11px "#"	studio/workspaceAdmin/studio_templates/1440.png
+/studio/templates	STUDIO	studio	workspaceAdmin	/studio/templates	1280	PASS			text < 12px: 11px "CRM"; 11px "#"	studio/workspaceAdmin/studio_templates/1280.png
+/studio/templates	STUDIO	studio	workspaceAdmin	/studio/templates	1024	PASS			text < 12px: 11px "CRM"; 11px "#"	studio/workspaceAdmin/studio_templates/1024.png
+/studio/templates	STUDIO	studio	workspaceAdmin	/studio/templates	768	PASS			text < 12px: 11px "CRM"; 11px "#"	studio/workspaceAdmin/studio_templates/768.png
+/studio/templates	STUDIO	studio	workspaceAdmin	/studio/templates	430	FAIL		axe: color-contrast(serious,3)	text < 12px: 11px "CRM"; 11px "#"	studio/workspaceAdmin/studio_templates/430.png
+/studio/templates	STUDIO	studio	workspaceAdmin	/studio/templates	390	PASS			text < 12px: 11px "CRM"; 11px "#"	studio/workspaceAdmin/studio_templates/390.png
+/studio/templates	STUDIO	studio	workspaceAdmin	/studio/templates	360	PASS			text < 12px: 11px "CRM"; 11px "#"	studio/workspaceAdmin/studio_templates/360.png
+/studio/components	STUDIO	studio	workspaceAdmin	/studio/components	1440	PASS				studio/workspaceAdmin/studio_components/1440.png
+/studio/components	STUDIO	studio	workspaceAdmin	/studio/components	1280	PASS				studio/workspaceAdmin/studio_components/1280.png
+/studio/components	STUDIO	studio	workspaceAdmin	/studio/components	1024	PASS				studio/workspaceAdmin/studio_components/1024.png
+/studio/components	STUDIO	studio	workspaceAdmin	/studio/components	768	PASS				studio/workspaceAdmin/studio_components/768.png
+/studio/components	STUDIO	studio	workspaceAdmin	/studio/components	430	PASS				studio/workspaceAdmin/studio_components/430.png
+/studio/components	STUDIO	studio	workspaceAdmin	/studio/components	390	PASS				studio/workspaceAdmin/studio_components/390.png
+/studio/components	STUDIO	studio	workspaceAdmin	/studio/components	360	PASS				studio/workspaceAdmin/studio_components/360.png
+/studio/activity	STUDIO	studio	workspaceAdmin	/studio/activity	1440	PASS			small target(s): a "mở ứng dụng" 96x18; a "mở ứng dụng" 96x18	studio/workspaceAdmin/studio_activity/1440.png
+/studio/activity	STUDIO	studio	workspaceAdmin	/studio/activity	1280	PASS			small target(s): a "mở ứng dụng" 96x18; a "mở ứng dụng" 96x18	studio/workspaceAdmin/studio_activity/1280.png
+/studio/activity	STUDIO	studio	workspaceAdmin	/studio/activity	1024	PASS			small target(s): a "mở ứng dụng" 96x18; a "mở ứng dụng" 96x18	studio/workspaceAdmin/studio_activity/1024.png
+/studio/activity	STUDIO	studio	workspaceAdmin	/studio/activity	768	FAIL		touch target < 24px (WCAG 2.5.8): a "mở ứng dụng" 96x18; a "mở ứng dụng" 96x18; a "mở ứng dụng" 96x18		studio/workspaceAdmin/studio_activity/768.png
+/studio/activity	STUDIO	studio	workspaceAdmin	/studio/activity	430	FAIL		touch target < 24px (WCAG 2.5.8): a "mở ứng dụng" 96x18; a "mở ứng dụng" 96x18; a "mở ứng dụng" 96x18		studio/workspaceAdmin/studio_activity/430.png
+/studio/activity	STUDIO	studio	workspaceAdmin	/studio/activity	390	FAIL		touch target < 24px (WCAG 2.5.8): a "mở ứng dụng" 96x18; a "mở ứng dụng" 96x18; a "mở ứng dụng" 96x18		studio/workspaceAdmin/studio_activity/390.png
+/studio/activity	STUDIO	studio	workspaceAdmin	/studio/activity	360	PASS				studio/workspaceAdmin/studio_activity/360.png
+/studio/site-access	STUDIO	studio	workspaceAdmin	/studio/site-access	1440	PASS			0 visible h1	studio/workspaceAdmin/studio_site-access/1440.png
+/studio/site-access	STUDIO	studio	workspaceAdmin	/studio/site-access	1280	PASS			0 visible h1	studio/workspaceAdmin/studio_site-access/1280.png
+/studio/site-access	STUDIO	studio	workspaceAdmin	/studio/site-access	1024	PASS			0 visible h1	studio/workspaceAdmin/studio_site-access/1024.png
+/studio/site-access	STUDIO	studio	workspaceAdmin	/studio/site-access	768	PASS			0 visible h1	studio/workspaceAdmin/studio_site-access/768.png
+/studio/site-access	STUDIO	studio	workspaceAdmin	/studio/site-access	430	PASS			0 visible h1	studio/workspaceAdmin/studio_site-access/430.png
+/studio/site-access	STUDIO	studio	workspaceAdmin	/studio/site-access	390	PASS			0 visible h1	studio/workspaceAdmin/studio_site-access/390.png
+/studio/site-access	STUDIO	studio	workspaceAdmin	/studio/site-access	360	PASS			0 visible h1	studio/workspaceAdmin/studio_site-access/360.png
+/studio/zzz-khong-ton-tai	STUDIO	studio	workspaceAdmin	/studio/zzz-khong-ton-tai	1440	PASS			0 visible h1	studio/workspaceAdmin/studio_zzz-khong-ton-tai/1440.png
+/studio/zzz-khong-ton-tai	STUDIO	studio	workspaceAdmin	/studio/zzz-khong-ton-tai	1280	PASS			0 visible h1	studio/workspaceAdmin/studio_zzz-khong-ton-tai/1280.png
+/studio/zzz-khong-ton-tai	STUDIO	studio	workspaceAdmin	/studio/zzz-khong-ton-tai	1024	PASS			0 visible h1	studio/workspaceAdmin/studio_zzz-khong-ton-tai/1024.png
+/studio/zzz-khong-ton-tai	STUDIO	studio	workspaceAdmin	/studio/zzz-khong-ton-tai	768	PASS			0 visible h1	studio/workspaceAdmin/studio_zzz-khong-ton-tai/768.png
+/studio/zzz-khong-ton-tai	STUDIO	studio	workspaceAdmin	/studio/zzz-khong-ton-tai	430	PASS			0 visible h1	studio/workspaceAdmin/studio_zzz-khong-ton-tai/430.png
+/studio/zzz-khong-ton-tai	STUDIO	studio	workspaceAdmin	/studio/zzz-khong-ton-tai	390	PASS			0 visible h1	studio/workspaceAdmin/studio_zzz-khong-ton-tai/390.png
+/studio/zzz-khong-ton-tai	STUDIO	studio	workspaceAdmin	/studio/zzz-khong-ton-tai	360	PASS			0 visible h1	studio/workspaceAdmin/studio_zzz-khong-ton-tai/360.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai	1440	PASS			text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑"	studio/workspaceAdmin/studio_projects_id_ai/1440.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai	1280	PASS			text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑"	studio/workspaceAdmin/studio_projects_id_ai/1280.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai	1024	PASS			small target(s): button.button.icon "⚙" 18x36 | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑"	studio/workspaceAdmin/studio_projects_id_ai/1024.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai	768	FAIL		axe: target-size(serious,1)	overlapping controls: button.button.ghost "Website" × button "Máy tính bảng"; button.button.ghost "Phiên bản" × button "Điện thoại" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑"	studio/workspaceAdmin/studio_projects_id_ai/768.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai	430	PASS			overlapping controls: button.starter "✦ Thêm bảng so sánh sản phẩm" × button.sendButton "Gửi ↑" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑"	studio/workspaceAdmin/studio_projects_id_ai/430.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai	390	PASS			overlapping controls: button.button.primary "Xuất bản" × button "Điện thoại"; button.starter "✦ Thêm bảng so sánh sản phẩm" × button.sendButton "Gửi ↑" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑"	studio/workspaceAdmin/studio_projects_id_ai/390.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai	360	PASS			overlapping controls: button.button.primary "Xuất bản" × button "Điện thoại"; button.starter "✦ Thêm bảng so sánh sản phẩm" × button.sendButton "Gửi ↑" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑"	studio/workspaceAdmin/studio_projects_id_ai/360.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1440	FAIL	KNOWN_NOT_READY	axe: aria-required-children(critical,1)	small target(s): button.button.icon "⚙" 12x36; select "+ Thêm trang vào menu… Trang chủ" 223x22 | overlapping controls: button "Điện thoại" × button.button.ghost "Website" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/1440.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1280	FAIL	KNOWN_NOT_READY	axe: aria-required-children(critical,1), target-size(serious,1)	small target(s): button.button.icon "←" 18x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Điện thoại" × button.button.ghost "Website" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/1280.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1024	FAIL	KNOWN_NOT_READY	axe: aria-required-children(critical,1), target-size(serious,3)	small target(s): button.button.icon "←" 16x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Máy tính bảng" × button.button.ghost "Website"; button "Máy tính bảng" × button.button.ghost "Phiên bản" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/1024.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	768	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 203x22 | axe: aria-required-children(critical,1)	text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/768.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	430	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 405x22 | axe: aria-required-children(critical,1)	text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/430.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	390	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 365x22 | axe: aria-required-children(critical,1)	overlapping controls: button.bx-mini "↓" × button.bx-handle "⋮⋮"; button.bx-mini "↓" × button.bx-handle "⋮⋮" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/390.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	360	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 335x22 | axe: aria-required-children(critical,1)	overlapping controls: button.bx-mini "↓" × button.bx-handle "⋮⋮"; button.bx-mini "↓" × button.bx-handle "⋮⋮" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/360.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/code	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/code	1440	PASS				studio/workspaceAdmin/studio_projects_id_code/1440.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/code	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/code	1280	PASS				studio/workspaceAdmin/studio_projects_id_code/1280.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/code	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/code	1024	PASS			small target(s): button.button.icon "⚙" 18x36	studio/workspaceAdmin/studio_projects_id_code/1024.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/code	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/code	768	PASS				studio/workspaceAdmin/studio_projects_id_code/768.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/code	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/code	430	PASS				studio/workspaceAdmin/studio_projects_id_code/430.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/code	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/code	390	PASS				studio/workspaceAdmin/studio_projects_id_code/390.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/code	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/code	360	PASS				studio/workspaceAdmin/studio_projects_id_code/360.png
+/studio/projects/8c2649ce-08a3-48db-a83d-61c08854d704/design	STUDIO	studio	workspaceAdmin	/studio/projects/8c2649ce-08a3-48db-a83d-61c08854d704/design	1440	FAIL	KNOWN_NOT_READY	axe: aria-required-children(critical,1)	small target(s): button.button.icon "←" 16x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Điện thoại" × button.button.ghost "Website" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/1440.png
+/studio/projects/8c2649ce-08a3-48db-a83d-61c08854d704/design	STUDIO	studio	workspaceAdmin	/studio/projects/8c2649ce-08a3-48db-a83d-61c08854d704/design	1280	FAIL	KNOWN_NOT_READY	axe: aria-required-children(critical,1), target-size(serious,1)	small target(s): button.button.icon "←" 16x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Điện thoại" × button.button.ghost "Website" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/1280.png
+/studio/projects/8c2649ce-08a3-48db-a83d-61c08854d704/design	STUDIO	studio	workspaceAdmin	/studio/projects/8c2649ce-08a3-48db-a83d-61c08854d704/design	1024	FAIL	KNOWN_NOT_READY	axe: aria-required-children(critical,1), target-size(serious,3)	small target(s): button.button.icon "←" 16x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Máy tính bảng" × button.button.ghost "Website"; button "Máy tính bảng" × button.button.ghost "Phiên bản" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/1024.png
+/studio/projects/8c2649ce-08a3-48db-a83d-61c08854d704/design	STUDIO	studio	workspaceAdmin	/studio/projects/8c2649ce-08a3-48db-a83d-61c08854d704/design	768	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 203x22 | axe: aria-required-children(critical,1)	text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/768.png
+/studio/projects/8c2649ce-08a3-48db-a83d-61c08854d704/design	STUDIO	studio	workspaceAdmin	/studio/projects/8c2649ce-08a3-48db-a83d-61c08854d704/design	430	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 405x22 | axe: aria-required-children(critical,1)	text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/430.png
+/studio/projects/8c2649ce-08a3-48db-a83d-61c08854d704/design	STUDIO	studio	workspaceAdmin	/studio/projects/8c2649ce-08a3-48db-a83d-61c08854d704/design	390	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 365x22 | axe: aria-required-children(critical,1)	overlapping controls: button.bx-mini "↓" × button.bx-handle "⋮⋮"; button.bx-mini "↓" × button.bx-handle "⋮⋮" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/390.png
+/studio/projects/8c2649ce-08a3-48db-a83d-61c08854d704/design	STUDIO	studio	workspaceAdmin	/studio/projects/8c2649ce-08a3-48db-a83d-61c08854d704/design	360	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 335x22 | axe: aria-required-children(critical,1)	overlapping controls: button.bx-mini "↓" × button.bx-handle "⋮⋮"; button.bx-mini "↓" × button.bx-handle "⋮⋮" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/360.png
+/studio/projects/f9699610-e379-480d-8ea4-837d3b025ebc/design	STUDIO	studio	workspaceAdmin	/studio/projects/f9699610-e379-480d-8ea4-837d3b025ebc/design	1440	FAIL	KNOWN_NOT_READY	axe: aria-required-children(critical,1)	small target(s): button.button.icon "⚙" 12x36; select "+ Thêm trang vào menu… Trang chủ" 223x22 | overlapping controls: button "Điện thoại" × button.button.ghost "Website" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/1440.png
+/studio/projects/f9699610-e379-480d-8ea4-837d3b025ebc/design	STUDIO	studio	workspaceAdmin	/studio/projects/f9699610-e379-480d-8ea4-837d3b025ebc/design	1280	FAIL	KNOWN_NOT_READY	axe: aria-required-children(critical,1), target-size(serious,1)	small target(s): button.button.icon "←" 16x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Điện thoại" × button.button.ghost "Website" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/1280.png
+/studio/projects/f9699610-e379-480d-8ea4-837d3b025ebc/design	STUDIO	studio	workspaceAdmin	/studio/projects/f9699610-e379-480d-8ea4-837d3b025ebc/design	1024	FAIL	KNOWN_NOT_READY	axe: aria-required-children(critical,1), target-size(serious,3)	small target(s): button.button.icon "←" 16x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Máy tính bảng" × button.button.ghost "Website"; button "Máy tính bảng" × button.button.ghost "Phiên bản" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/1024.png
+/studio/projects/f9699610-e379-480d-8ea4-837d3b025ebc/design	STUDIO	studio	workspaceAdmin	/studio/projects/f9699610-e379-480d-8ea4-837d3b025ebc/design	768	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 203x22 | axe: aria-required-children(critical,1)	text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/768.png
+/studio/projects/f9699610-e379-480d-8ea4-837d3b025ebc/design	STUDIO	studio	workspaceAdmin	/studio/projects/f9699610-e379-480d-8ea4-837d3b025ebc/design	430	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 405x22 | axe: aria-required-children(critical,1)	text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/430.png
+/studio/projects/f9699610-e379-480d-8ea4-837d3b025ebc/design	STUDIO	studio	workspaceAdmin	/studio/projects/f9699610-e379-480d-8ea4-837d3b025ebc/design	390	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 365x22 | axe: aria-required-children(critical,1)	overlapping controls: button.bx-mini "↓" × button.bx-handle "⋮⋮"; button.bx-mini "↓" × button.bx-handle "⋮⋮" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/390.png
+/studio/projects/f9699610-e379-480d-8ea4-837d3b025ebc/design	STUDIO	studio	workspaceAdmin	/studio/projects/f9699610-e379-480d-8ea4-837d3b025ebc/design	360	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 335x22 | axe: aria-required-children(critical,1)	overlapping controls: button.bx-mini "↓" × button.bx-handle "⋮⋮"; button.bx-mini "↓" × button.bx-handle "⋮⋮" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/360.png
+/auth/no-access	STUDIO	studio	appCreator	/auth/no-access	1440	PASS				studio/appCreator/auth_no-access/1440.png
+/auth/no-access	STUDIO	studio	appCreator	/auth/no-access	1280	PASS				studio/appCreator/auth_no-access/1280.png
+/auth/no-access	STUDIO	studio	appCreator	/auth/no-access	1024	PASS				studio/appCreator/auth_no-access/1024.png
+/auth/no-access	STUDIO	studio	appCreator	/auth/no-access	768	PASS				studio/appCreator/auth_no-access/768.png
+/auth/no-access	STUDIO	studio	appCreator	/auth/no-access	430	PASS				studio/appCreator/auth_no-access/430.png
+/auth/no-access	STUDIO	studio	appCreator	/auth/no-access	390	PASS				studio/appCreator/auth_no-access/390.png
+/auth/no-access	STUDIO	studio	appCreator	/auth/no-access	360	PASS				studio/appCreator/auth_no-access/360.png
+/studio	STUDIO	studio	appCreator	/studio	1440	BLOCKED				studio/appCreator/studio/1440.png
+/studio	STUDIO	studio	appCreator	/studio	1280	BLOCKED				studio/appCreator/studio/1280.png
+/studio	STUDIO	studio	appCreator	/studio	1024	BLOCKED				studio/appCreator/studio/1024.png
+/studio	STUDIO	studio	appCreator	/studio	768	BLOCKED				studio/appCreator/studio/768.png
+/studio	STUDIO	studio	appCreator	/studio	430	BLOCKED				studio/appCreator/studio/430.png
+/studio	STUDIO	studio	appCreator	/studio	390	BLOCKED				studio/appCreator/studio/390.png
+/studio	STUDIO	studio	appCreator	/studio	360	BLOCKED				studio/appCreator/studio/360.png
+/studio/projects	STUDIO	studio	appCreator	/studio/projects	1440	BLOCKED				studio/appCreator/studio_projects/1440.png
+/studio/projects	STUDIO	studio	appCreator	/studio/projects	1280	BLOCKED				studio/appCreator/studio_projects/1280.png
+/studio/projects	STUDIO	studio	appCreator	/studio/projects	1024	BLOCKED				studio/appCreator/studio_projects/1024.png
+/studio/projects	STUDIO	studio	appCreator	/studio/projects	768	BLOCKED				studio/appCreator/studio_projects/768.png
+/studio/projects	STUDIO	studio	appCreator	/studio/projects	430	BLOCKED				studio/appCreator/studio_projects/430.png
+/studio/projects	STUDIO	studio	appCreator	/studio/projects	390	BLOCKED				studio/appCreator/studio_projects/390.png
+/studio/projects	STUDIO	studio	appCreator	/studio/projects	360	BLOCKED				studio/appCreator/studio_projects/360.png
+/studio/new	STUDIO	studio	appCreator	/studio/new	1440	BLOCKED				studio/appCreator/studio_new/1440.png
+/studio/new	STUDIO	studio	appCreator	/studio/new	1280	BLOCKED				studio/appCreator/studio_new/1280.png
+/studio/new	STUDIO	studio	appCreator	/studio/new	1024	BLOCKED				studio/appCreator/studio_new/1024.png
+/studio/new	STUDIO	studio	appCreator	/studio/new	768	BLOCKED				studio/appCreator/studio_new/768.png
+/studio/new	STUDIO	studio	appCreator	/studio/new	430	BLOCKED				studio/appCreator/studio_new/430.png
+/studio/new	STUDIO	studio	appCreator	/studio/new	390	BLOCKED				studio/appCreator/studio_new/390.png
+/studio/new	STUDIO	studio	appCreator	/studio/new	360	BLOCKED				studio/appCreator/studio_new/360.png
+/studio/templates	STUDIO	studio	appCreator	/studio/templates	1440	BLOCKED				studio/appCreator/studio_templates/1440.png
+/studio/templates	STUDIO	studio	appCreator	/studio/templates	1280	BLOCKED				studio/appCreator/studio_templates/1280.png
+/studio/templates	STUDIO	studio	appCreator	/studio/templates	1024	BLOCKED				studio/appCreator/studio_templates/1024.png
+/studio/templates	STUDIO	studio	appCreator	/studio/templates	768	BLOCKED				studio/appCreator/studio_templates/768.png
+/studio/templates	STUDIO	studio	appCreator	/studio/templates	430	BLOCKED				studio/appCreator/studio_templates/430.png
+/studio/templates	STUDIO	studio	appCreator	/studio/templates	390	BLOCKED				studio/appCreator/studio_templates/390.png
+/studio/templates	STUDIO	studio	appCreator	/studio/templates	360	BLOCKED				studio/appCreator/studio_templates/360.png
+/studio/components	STUDIO	studio	appCreator	/studio/components	1440	BLOCKED				studio/appCreator/studio_components/1440.png
+/studio/components	STUDIO	studio	appCreator	/studio/components	1280	BLOCKED				studio/appCreator/studio_components/1280.png
+/studio/components	STUDIO	studio	appCreator	/studio/components	1024	BLOCKED				studio/appCreator/studio_components/1024.png
+/studio/components	STUDIO	studio	appCreator	/studio/components	768	BLOCKED				studio/appCreator/studio_components/768.png
+/studio/components	STUDIO	studio	appCreator	/studio/components	430	BLOCKED				studio/appCreator/studio_components/430.png
+/studio/components	STUDIO	studio	appCreator	/studio/components	390	BLOCKED				studio/appCreator/studio_components/390.png
+/studio/components	STUDIO	studio	appCreator	/studio/components	360	BLOCKED				studio/appCreator/studio_components/360.png
+/studio/activity	STUDIO	studio	appCreator	/studio/activity	1440	BLOCKED				studio/appCreator/studio_activity/1440.png
+/studio/activity	STUDIO	studio	appCreator	/studio/activity	1280	BLOCKED				studio/appCreator/studio_activity/1280.png
+/studio/activity	STUDIO	studio	appCreator	/studio/activity	1024	BLOCKED				studio/appCreator/studio_activity/1024.png
+/studio/activity	STUDIO	studio	appCreator	/studio/activity	768	BLOCKED				studio/appCreator/studio_activity/768.png
+/studio/activity	STUDIO	studio	appCreator	/studio/activity	430	BLOCKED				studio/appCreator/studio_activity/430.png
+/studio/activity	STUDIO	studio	appCreator	/studio/activity	390	BLOCKED				studio/appCreator/studio_activity/390.png
+/studio/activity	STUDIO	studio	appCreator	/studio/activity	360	BLOCKED				studio/appCreator/studio_activity/360.png
+/studio/site-access	STUDIO	studio	appCreator	/studio/site-access	1440	BLOCKED				studio/appCreator/studio_site-access/1440.png
+/studio/site-access	STUDIO	studio	appCreator	/studio/site-access	1280	BLOCKED				studio/appCreator/studio_site-access/1280.png
+/studio/site-access	STUDIO	studio	appCreator	/studio/site-access	1024	BLOCKED				studio/appCreator/studio_site-access/1024.png
+/studio/site-access	STUDIO	studio	appCreator	/studio/site-access	768	BLOCKED				studio/appCreator/studio_site-access/768.png
+/studio/site-access	STUDIO	studio	appCreator	/studio/site-access	430	BLOCKED				studio/appCreator/studio_site-access/430.png
+/studio/site-access	STUDIO	studio	appCreator	/studio/site-access	390	BLOCKED				studio/appCreator/studio_site-access/390.png
+/studio/site-access	STUDIO	studio	appCreator	/studio/site-access	360	BLOCKED				studio/appCreator/studio_site-access/360.png
+/studio/zzz-khong-ton-tai	STUDIO	studio	appCreator	/studio/zzz-khong-ton-tai	1440	BLOCKED				studio/appCreator/studio_zzz-khong-ton-tai/1440.png
+/studio/zzz-khong-ton-tai	STUDIO	studio	appCreator	/studio/zzz-khong-ton-tai	1280	BLOCKED				studio/appCreator/studio_zzz-khong-ton-tai/1280.png
+/studio/zzz-khong-ton-tai	STUDIO	studio	appCreator	/studio/zzz-khong-ton-tai	1024	BLOCKED				studio/appCreator/studio_zzz-khong-ton-tai/1024.png
+/studio/zzz-khong-ton-tai	STUDIO	studio	appCreator	/studio/zzz-khong-ton-tai	768	BLOCKED				studio/appCreator/studio_zzz-khong-ton-tai/768.png
+/studio/zzz-khong-ton-tai	STUDIO	studio	appCreator	/studio/zzz-khong-ton-tai	430	BLOCKED				studio/appCreator/studio_zzz-khong-ton-tai/430.png
+/studio/zzz-khong-ton-tai	STUDIO	studio	appCreator	/studio/zzz-khong-ton-tai	390	BLOCKED				studio/appCreator/studio_zzz-khong-ton-tai/390.png
+/studio/zzz-khong-ton-tai	STUDIO	studio	appCreator	/studio/zzz-khong-ton-tai	360	BLOCKED				studio/appCreator/studio_zzz-khong-ton-tai/360.png
+/login	AUTH	platform	anon	/login	1440	PASS				platform/anon/login/1440.png
+/login	AUTH	platform	anon	/login	1280	PASS				platform/anon/login/1280.png
+/login	AUTH	platform	anon	/login	1024	PASS				platform/anon/login/1024.png
+/login	AUTH	platform	anon	/login	768	PASS				platform/anon/login/768.png
+/login	AUTH	platform	anon	/login	430	PASS				platform/anon/login/430.png
+/login	AUTH	platform	anon	/login	390	PASS				platform/anon/login/390.png
+/login	AUTH	platform	anon	/login	360	PASS				platform/anon/login/360.png
+/auth/no-access	AUTH	platform	anon	/auth/no-access	1440	PASS				platform/anon/auth_no-access/1440.png
+/auth/no-access	AUTH	platform	anon	/auth/no-access	1280	PASS				platform/anon/auth_no-access/1280.png
+/auth/no-access	AUTH	platform	anon	/auth/no-access	1024	PASS				platform/anon/auth_no-access/1024.png
+/auth/no-access	AUTH	platform	anon	/auth/no-access	768	PASS				platform/anon/auth_no-access/768.png
+/auth/no-access	AUTH	platform	anon	/auth/no-access	430	PASS				platform/anon/auth_no-access/430.png
+/auth/no-access	AUTH	platform	anon	/auth/no-access	390	PASS				platform/anon/auth_no-access/390.png
+/auth/no-access	AUTH	platform	anon	/auth/no-access	360	PASS				platform/anon/auth_no-access/360.png
+/auth/no-workspace	AUTH	platform	anon	/auth/no-workspace	1440	PASS				platform/anon/auth_no-workspace/1440.png
+/auth/no-workspace	AUTH	platform	anon	/auth/no-workspace	1280	PASS				platform/anon/auth_no-workspace/1280.png
+/auth/no-workspace	AUTH	platform	anon	/auth/no-workspace	1024	PASS				platform/anon/auth_no-workspace/1024.png
+/auth/no-workspace	AUTH	platform	anon	/auth/no-workspace	768	PASS				platform/anon/auth_no-workspace/768.png
+/auth/no-workspace	AUTH	platform	anon	/auth/no-workspace	430	PASS				platform/anon/auth_no-workspace/430.png
+/auth/no-workspace	AUTH	platform	anon	/auth/no-workspace	390	PASS				platform/anon/auth_no-workspace/390.png
+/auth/no-workspace	AUTH	platform	anon	/auth/no-workspace	360	PASS				platform/anon/auth_no-workspace/360.png
+/auth/activate	AUTH	platform	anon	/auth/activate	1440	PASS				platform/anon/auth_activate/1440.png
+/auth/activate	AUTH	platform	anon	/auth/activate	1280	PASS				platform/anon/auth_activate/1280.png
+/auth/activate	AUTH	platform	anon	/auth/activate	1024	PASS				platform/anon/auth_activate/1024.png
+/auth/activate	AUTH	platform	anon	/auth/activate	768	PASS				platform/anon/auth_activate/768.png
+/auth/activate	AUTH	platform	anon	/auth/activate	430	PASS				platform/anon/auth_activate/430.png
+/auth/activate	AUTH	platform	anon	/auth/activate	390	PASS				platform/anon/auth_activate/390.png
+/auth/activate	AUTH	platform	anon	/auth/activate	360	PASS				platform/anon/auth_activate/360.png
+/platform/zzz-khong-ton-tai	AUTH	platform	anon	/platform/zzz-khong-ton-tai	1440	PASS				platform/anon/platform_zzz-khong-ton-tai/1440.png
+/platform/zzz-khong-ton-tai	AUTH	platform	anon	/platform/zzz-khong-ton-tai	1280	PASS				platform/anon/platform_zzz-khong-ton-tai/1280.png
+/platform/zzz-khong-ton-tai	AUTH	platform	anon	/platform/zzz-khong-ton-tai	1024	PASS				platform/anon/platform_zzz-khong-ton-tai/1024.png
+/platform/zzz-khong-ton-tai	AUTH	platform	anon	/platform/zzz-khong-ton-tai	768	PASS				platform/anon/platform_zzz-khong-ton-tai/768.png
+/platform/zzz-khong-ton-tai	AUTH	platform	anon	/platform/zzz-khong-ton-tai	430	PASS				platform/anon/platform_zzz-khong-ton-tai/430.png
+/platform/zzz-khong-ton-tai	AUTH	platform	anon	/platform/zzz-khong-ton-tai	390	PASS				platform/anon/platform_zzz-khong-ton-tai/390.png
+/platform/zzz-khong-ton-tai	AUTH	platform	anon	/platform/zzz-khong-ton-tai	360	PASS				platform/anon/platform_zzz-khong-ton-tai/360.png
+/login	AUTH	admin	anon	/login	1440	PASS				admin/anon/login/1440.png
+/login	AUTH	admin	anon	/login	1280	PASS				admin/anon/login/1280.png
+/login	AUTH	admin	anon	/login	1024	PASS				admin/anon/login/1024.png
+/login	AUTH	admin	anon	/login	768	PASS				admin/anon/login/768.png
+/login	AUTH	admin	anon	/login	430	PASS				admin/anon/login/430.png
+/login	AUTH	admin	anon	/login	390	PASS				admin/anon/login/390.png
+/login	AUTH	admin	anon	/login	360	PASS				admin/anon/login/360.png
+/auth/no-access	AUTH	admin	anon	/auth/no-access	1440	PASS				admin/anon/auth_no-access/1440.png
+/auth/no-access	AUTH	admin	anon	/auth/no-access	1280	PASS				admin/anon/auth_no-access/1280.png
+/auth/no-access	AUTH	admin	anon	/auth/no-access	1024	PASS				admin/anon/auth_no-access/1024.png
+/auth/no-access	AUTH	admin	anon	/auth/no-access	768	PASS				admin/anon/auth_no-access/768.png
+/auth/no-access	AUTH	admin	anon	/auth/no-access	430	PASS				admin/anon/auth_no-access/430.png
+/auth/no-access	AUTH	admin	anon	/auth/no-access	390	PASS				admin/anon/auth_no-access/390.png
+/auth/no-access	AUTH	admin	anon	/auth/no-access	360	PASS				admin/anon/auth_no-access/360.png
+/auth/no-workspace	AUTH	admin	anon	/auth/no-workspace	1440	PASS				admin/anon/auth_no-workspace/1440.png
+/auth/no-workspace	AUTH	admin	anon	/auth/no-workspace	1280	PASS				admin/anon/auth_no-workspace/1280.png
+/auth/no-workspace	AUTH	admin	anon	/auth/no-workspace	1024	PASS				admin/anon/auth_no-workspace/1024.png
+/auth/no-workspace	AUTH	admin	anon	/auth/no-workspace	768	PASS				admin/anon/auth_no-workspace/768.png
+/auth/no-workspace	AUTH	admin	anon	/auth/no-workspace	430	PASS				admin/anon/auth_no-workspace/430.png
+/auth/no-workspace	AUTH	admin	anon	/auth/no-workspace	390	PASS				admin/anon/auth_no-workspace/390.png
+/auth/no-workspace	AUTH	admin	anon	/auth/no-workspace	360	PASS				admin/anon/auth_no-workspace/360.png
+/auth/activate	AUTH	admin	anon	/auth/activate	1440	PASS				admin/anon/auth_activate/1440.png
+/auth/activate	AUTH	admin	anon	/auth/activate	1280	PASS				admin/anon/auth_activate/1280.png
+/auth/activate	AUTH	admin	anon	/auth/activate	1024	PASS				admin/anon/auth_activate/1024.png
+/auth/activate	AUTH	admin	anon	/auth/activate	768	PASS				admin/anon/auth_activate/768.png
+/auth/activate	AUTH	admin	anon	/auth/activate	430	PASS				admin/anon/auth_activate/430.png
+/auth/activate	AUTH	admin	anon	/auth/activate	390	PASS				admin/anon/auth_activate/390.png
+/auth/activate	AUTH	admin	anon	/auth/activate	360	PASS				admin/anon/auth_activate/360.png
+/admin/zzz-khong-ton-tai	AUTH	admin	anon	/admin/zzz-khong-ton-tai	1440	PASS				admin/anon/admin_zzz-khong-ton-tai/1440.png
+/admin/zzz-khong-ton-tai	AUTH	admin	anon	/admin/zzz-khong-ton-tai	1280	PASS				admin/anon/admin_zzz-khong-ton-tai/1280.png
+/admin/zzz-khong-ton-tai	AUTH	admin	anon	/admin/zzz-khong-ton-tai	1024	PASS				admin/anon/admin_zzz-khong-ton-tai/1024.png
+/admin/zzz-khong-ton-tai	AUTH	admin	anon	/admin/zzz-khong-ton-tai	768	PASS				admin/anon/admin_zzz-khong-ton-tai/768.png
+/admin/zzz-khong-ton-tai	AUTH	admin	anon	/admin/zzz-khong-ton-tai	430	PASS				admin/anon/admin_zzz-khong-ton-tai/430.png
+/admin/zzz-khong-ton-tai	AUTH	admin	anon	/admin/zzz-khong-ton-tai	390	PASS				admin/anon/admin_zzz-khong-ton-tai/390.png
+/admin/zzz-khong-ton-tai	AUTH	admin	anon	/admin/zzz-khong-ton-tai	360	PASS				admin/anon/admin_zzz-khong-ton-tai/360.png
+/login	AUTH	studio	anon	/login	1440	PASS				studio/anon/login/1440.png
+/login	AUTH	studio	anon	/login	1280	PASS				studio/anon/login/1280.png
+/login	AUTH	studio	anon	/login	1024	PASS				studio/anon/login/1024.png
+/login	AUTH	studio	anon	/login	768	PASS				studio/anon/login/768.png
+/login	AUTH	studio	anon	/login	430	PASS				studio/anon/login/430.png
+/login	AUTH	studio	anon	/login	390	PASS				studio/anon/login/390.png
+/login	AUTH	studio	anon	/login	360	PASS				studio/anon/login/360.png
+/auth/no-access	AUTH	studio	anon	/auth/no-access	1440	PASS				studio/anon/auth_no-access/1440.png
+/auth/no-access	AUTH	studio	anon	/auth/no-access	1280	PASS				studio/anon/auth_no-access/1280.png
+/auth/no-access	AUTH	studio	anon	/auth/no-access	1024	PASS				studio/anon/auth_no-access/1024.png
+/auth/no-access	AUTH	studio	anon	/auth/no-access	768	PASS				studio/anon/auth_no-access/768.png
+/auth/no-access	AUTH	studio	anon	/auth/no-access	430	PASS				studio/anon/auth_no-access/430.png
+/auth/no-access	AUTH	studio	anon	/auth/no-access	390	PASS				studio/anon/auth_no-access/390.png
+/auth/no-access	AUTH	studio	anon	/auth/no-access	360	PASS				studio/anon/auth_no-access/360.png
+/auth/no-workspace	AUTH	studio	anon	/auth/no-workspace	1440	PASS				studio/anon/auth_no-workspace/1440.png
+/auth/no-workspace	AUTH	studio	anon	/auth/no-workspace	1280	PASS				studio/anon/auth_no-workspace/1280.png
+/auth/no-workspace	AUTH	studio	anon	/auth/no-workspace	1024	PASS				studio/anon/auth_no-workspace/1024.png
+/auth/no-workspace	AUTH	studio	anon	/auth/no-workspace	768	PASS				studio/anon/auth_no-workspace/768.png
+/auth/no-workspace	AUTH	studio	anon	/auth/no-workspace	430	PASS				studio/anon/auth_no-workspace/430.png
+/auth/no-workspace	AUTH	studio	anon	/auth/no-workspace	390	PASS				studio/anon/auth_no-workspace/390.png
+/auth/no-workspace	AUTH	studio	anon	/auth/no-workspace	360	PASS				studio/anon/auth_no-workspace/360.png
+/auth/activate	AUTH	studio	anon	/auth/activate	1440	PASS				studio/anon/auth_activate/1440.png
+/auth/activate	AUTH	studio	anon	/auth/activate	1280	PASS				studio/anon/auth_activate/1280.png
+/auth/activate	AUTH	studio	anon	/auth/activate	1024	PASS				studio/anon/auth_activate/1024.png
+/auth/activate	AUTH	studio	anon	/auth/activate	768	PASS				studio/anon/auth_activate/768.png
+/auth/activate	AUTH	studio	anon	/auth/activate	430	PASS				studio/anon/auth_activate/430.png
+/auth/activate	AUTH	studio	anon	/auth/activate	390	PASS				studio/anon/auth_activate/390.png
+/auth/activate	AUTH	studio	anon	/auth/activate	360	PASS				studio/anon/auth_activate/360.png
+/studio/zzz-khong-ton-tai	AUTH	studio	anon	/studio/zzz-khong-ton-tai	1440	PASS				studio/anon/studio_zzz-khong-ton-tai/1440.png
+/studio/zzz-khong-ton-tai	AUTH	studio	anon	/studio/zzz-khong-ton-tai	1280	PASS				studio/anon/studio_zzz-khong-ton-tai/1280.png
+/studio/zzz-khong-ton-tai	AUTH	studio	anon	/studio/zzz-khong-ton-tai	1024	PASS				studio/anon/studio_zzz-khong-ton-tai/1024.png
+/studio/zzz-khong-ton-tai	AUTH	studio	anon	/studio/zzz-khong-ton-tai	768	PASS				studio/anon/studio_zzz-khong-ton-tai/768.png
+/studio/zzz-khong-ton-tai	AUTH	studio	anon	/studio/zzz-khong-ton-tai	430	PASS				studio/anon/studio_zzz-khong-ton-tai/430.png
+/studio/zzz-khong-ton-tai	AUTH	studio	anon	/studio/zzz-khong-ton-tai	390	PASS				studio/anon/studio_zzz-khong-ton-tai/390.png
+/studio/zzz-khong-ton-tai	AUTH	studio	anon	/studio/zzz-khong-ton-tai	360	PASS				studio/anon/studio_zzz-khong-ton-tai/360.png
+/platform/tenants · mở "+ Tạo công ty"	CREATE_COMPANY	platform	super	/platform/tenants	1440	FAIL		focus escapes the dialog (no focus trap)	overlapping controls: a "Công ty TNHH Nước Sạch Việt Nam — Chi nh" × input "Tìm người dùng"; a "Tập đoàn Điện lực Đặng & Nguyễn" × select#tenant-first-admin "Đặng Văn Điện (uiv-ta2-ed367) Nhân viên "	platform/super/platform_tenants/dialog__T_o_c_ng_ty/1440.png
+/platform/tenants · mở "+ Tạo công ty"	CREATE_COMPANY	platform	super	/platform/tenants	1024	FAIL		focus escapes the dialog (no focus trap)	overlapping controls: a "Default tenant" × input ""; a "Công ty TNHH Nước Sạch Việt Nam — Chi nh" × input ""	platform/super/platform_tenants/dialog__T_o_c_ng_ty/1024.png
+/platform/tenants · mở "+ Tạo công ty"	CREATE_COMPANY	platform	super	/platform/tenants	390	FAIL		focus escapes the dialog (no focus trap)	overlapping controls: a "Công ty TNHH Nước Sạch Việt Nam — Chi nh" × input ""; a "Công ty TNHH Nước Sạch Việt Nam — Chi nh" × input "Tìm người dùng"	platform/super/platform_tenants/dialog__T_o_c_ng_ty/390.png
+/platform/tenants · mở "+ Tạo công ty"	CREATE_COMPANY	platform	super	/platform/tenants	360	FAIL		focus escapes the dialog (no focus trap)	overlapping controls: a "Default tenant" × input ""; a "Công ty TNHH Nước Sạch Việt Nam — Chi nh" × input "Tìm người dùng"	platform/super/platform_tenants/dialog__T_o_c_ng_ty/360.png
+/platform/users · mở "+ Tạo tài khoản"	ORGANIZATION	platform	super	/platform/users	1440	FAIL		focus escapes the dialog (no focus trap)	small target(s): select "— chọn — Default tenant Công ty TNHH Nướ" 559x20; select "Quản trị công ty Quản trị workspace Ngườ" 559x20 | overlapping controls: a "Workspace" × input ""	platform/super/platform_users/dialog__T_o_t_i_kho_n/1440.png
+/platform/users · mở "+ Tạo tài khoản"	ORGANIZATION	platform	super	/platform/users	1024	FAIL		focus escapes the dialog (no focus trap)	small target(s): select "— chọn — Default tenant Công ty TNHH Nướ" 559x20; select "Quản trị công ty Quản trị workspace Ngườ" 559x20 | overlapping controls: a.btn.sm "Mở Quản trị công ty" × input ""; input "Tìm người dùng" × select "Không gán workspace"	platform/super/platform_users/dialog__T_o_t_i_kho_n/1024.png
+/platform/users · mở "+ Tạo tài khoản"	ORGANIZATION	platform	super	/platform/users	390	FAIL		touch target < 24px (WCAG 2.5.8): select "— chọn — Default tenant Công ty TNHH Nướ" 559x20; select "Quản trị công ty Quản trị workspace Ngườ" 559x20; select "Không gán workspace" 559x20 | focus escapes the dialog (no focus trap)	overlapping controls: a.btn.sm "Mở Xweb Studio" × input ""; button.btn.sm "Đăng xuất" × input ""	platform/super/platform_users/dialog__T_o_t_i_kho_n/390.png
+/platform/users · mở "+ Tạo tài khoản"	ORGANIZATION	platform	super	/platform/users	360	FAIL		touch target < 24px (WCAG 2.5.8): select "— chọn — Default tenant Công ty TNHH Nướ" 559x20; select "Quản trị công ty Quản trị workspace Ngườ" 559x20; select "Không gán workspace" 559x20 | focus escapes the dialog (no focus trap)	overlapping controls: a.btn.sm "Mở Quản trị công ty" × input ""; select "Tất cả Đang hoạt động Bị khóa Quản trị h" × select "Không gán workspace"	platform/super/platform_users/dialog__T_o_t_i_kho_n/360.png
+/admin/people · mở "+ Tạo tài khoản"	EMPLOYEES	admin	tenantAdmin	/admin/people	1440	FAIL		focus escapes the dialog (no focus trap)	small target(s): select "Quản trị công ty Quản trị workspace Ngườ" 440x20; select "Không gán workspace Kinh doanh – Marketi" 440x20 | overlapping controls: select "Kinh doanh – Marketing" × select "Không gán workspace Kinh doanh – Marketi"; select "Quản trị không gian làm việc Biên tập vi" × select "Quản trị không gian làm việc Biên tập vi"	admin/tenantAdmin/admin_people/dialog__T_o_t_i_kho_n/1440.png
+/admin/people · mở "+ Tạo tài khoản"	EMPLOYEES	admin	tenantAdmin	/admin/people	1024	FAIL		focus escapes the dialog (no focus trap)	small target(s): select "Quản trị công ty Quản trị workspace Ngườ" 440x20; select "Không gán workspace Kinh doanh – Marketi" 440x20 | overlapping controls: input "" × input ""; select "Kinh doanh – Marketing" × select "Quản trị không gian làm việc Biên tập vi"	admin/tenantAdmin/admin_people/dialog__T_o_t_i_kho_n/1024.png
+/admin/people · mở "+ Tạo tài khoản"	EMPLOYEES	admin	tenantAdmin	/admin/people	390	FAIL		touch target < 24px (WCAG 2.5.8): select "Quản trị công ty Quản trị workspace Ngườ" 278x20; select "Không gán workspace Kinh doanh – Marketi" 278x20; select "Quản trị không gian làm việc Biên tập vi" 278x20 | focus escapes the dialog (no focus trap)	overlapping controls: a.btn.sm "Mở Xweb Studio" × input ""; input "" × input ""	admin/tenantAdmin/admin_people/dialog__T_o_t_i_kho_n/390.png
+/admin/people · mở "+ Tạo tài khoản"	EMPLOYEES	admin	tenantAdmin	/admin/people	360	FAIL		touch target < 24px (WCAG 2.5.8): select "Quản trị công ty Quản trị workspace Ngườ" 254x20; select "Không gán workspace Kinh doanh – Marketi" 254x20; select "Quản trị không gian làm việc Biên tập vi" 254x20 | focus escapes the dialog (no focus trap)	overlapping controls: a.btn.sm "Mở Xweb Studio" × input ""; button.btn.sm "Đăng xuất" × input ""	admin/tenantAdmin/admin_people/dialog__T_o_t_i_kho_n/360.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design · mở "Phiên bản"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1440	FAIL		axe: aria-required-children(critical,1)	small target(s): button.button.icon "⚙" 12x36; select "+ Thêm trang vào menu… Trang chủ" 223x22 | overlapping controls: button "Điện thoại" × button.button.ghost "Website"; button.button.primary "Xuất bản" × button.button.icon "✕" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/dialog_Phi_n_b_n/1440.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design · mở "Tệp"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1440	FAIL		axe: aria-required-children(critical,1)	small target(s): button.button.icon "⚙" 12x36; select "+ Thêm trang vào menu… Trang chủ" 223x22 | overlapping controls: button "Điện thoại" × button.button.ghost "Website"; button.button.primary "Xuất bản" × button.button.icon "✕" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/dialog_T_p/1440.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design · mở "Chia sẻ"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1440	FAIL		axe: aria-required-children(critical,1), label-content-name-mismatch(serious,2)	small target(s): button.button.icon "⚙" 12x36; select "+ Thêm trang vào menu… Trang chủ" 223x22 | overlapping controls: button "Điện thoại" × button.button.ghost "Website"; button.button.primary "Xuất bản" × button.button.icon "✕" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/dialog_Chia_s_/1440.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design · mở "Xuất bản"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1440	FAIL		axe: aria-required-children(critical,1)	small target(s): button.button.icon "⚙" 12x36; select "+ Thêm trang vào menu… Trang chủ" 223x22 | overlapping controls: button "Điện thoại" × button.button.ghost "Website" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/dialog_Xu_t_b_n/1440.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design · mở "Đổi tên / đường dẫn"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1440	FAIL		axe: aria-required-children(critical,1)	small target(s): button.button.icon "⚙" 12x36; select "+ Thêm trang vào menu… Trang chủ" 223x22 | overlapping controls: button "Điện thoại" × button.button.ghost "Website" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/dialog__i_t_n_ng_d_n/1440.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design · mở "Phiên bản"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1024	FAIL		axe: aria-required-children(critical,1), target-size(serious,3)	small target(s): button.button.icon "←" 16x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Máy tính bảng" × button.button.ghost "Website"; button "Máy tính bảng" × button.button.ghost "Phiên bản" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/dialog_Phi_n_b_n/1024.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design · mở "Tệp"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1024	FAIL		axe: aria-required-children(critical,1), target-size(serious,3)	small target(s): button.button.icon "←" 16x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Máy tính bảng" × button.button.ghost "Website"; button "Máy tính bảng" × button.button.ghost "Phiên bản" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/dialog_T_p/1024.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design · mở "Chia sẻ"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1024	FAIL		axe: aria-required-children(critical,1), label-content-name-mismatch(serious,1), target-size(serious,3)	small target(s): button.button.icon "←" 16x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Máy tính bảng" × button.button.ghost "Website"; button "Máy tính bảng" × button.button.ghost "Phiên bản" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/dialog_Chia_s_/1024.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design · mở "Xuất bản"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1024	FAIL		axe: aria-required-children(critical,1), target-size(serious,3)	small target(s): button.button.icon "←" 16x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Máy tính bảng" × button.button.ghost "Website"; button "Máy tính bảng" × button.button.ghost "Phiên bản" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/dialog_Xu_t_b_n/1024.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design · mở "Đổi tên / đường dẫn"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1024	FAIL		axe: aria-required-children(critical,1), target-size(serious,3)	small target(s): button.button.icon "←" 16x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Máy tính bảng" × button.button.ghost "Website"; button "Máy tính bảng" × button.button.ghost "Phiên bản" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/dialog__i_t_n_ng_d_n/1024.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design · mở "Xuất bản"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	390	FAIL		touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 365x22 | axe: aria-required-children(critical,1)	overlapping controls: button#rail-tab-workflows "Workflow" × a "http://127.0.0.1:51088/trang-gioi-thieu-"; button#rail-tab-theme "Giao diện" × a "http://127.0.0.1:51088/trang-gioi-thieu-" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/dialog_Xu_t_b_n/390.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design · mở "Đổi tên / đường dẫn"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	390	FAIL		touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 365x22 | axe: aria-required-children(critical,1)	overlapping controls: button.button.icon "←" × button.bx-drag "⋮⋮"; button.active "Chỉnh sửa" × button.bx-drag "⋮⋮" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/dialog__i_t_n_ng_d_n/390.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design · mở "Xuất bản"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	360	FAIL		touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 335x22 | axe: aria-required-children(critical,1)	overlapping controls: button#rail-tab-components "Thành phần" × a "http://127.0.0.1:51088/trang-gioi-thieu-"; button#rail-tab-data "Dữ liệu" × a "http://127.0.0.1:51088/trang-gioi-thieu-" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/dialog_Xu_t_b_n/360.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design · mở "Đổi tên / đường dẫn"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	360	FAIL		touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 335x22 | axe: aria-required-children(critical,1)	overlapping controls: button.button.icon "←" × button.bx-drag "⋮⋮"; button "✦ AI" × button.bx-drag "⋮⋮" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_design/dialog__i_t_n_ng_d_n/360.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai · mở "Phiên bản"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai	1440	PASS			overlapping controls: button.button.primary "Xuất bản" × button.button.icon "✕" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑"	studio/workspaceAdmin/studio_projects_id_ai/dialog_Phi_n_b_n/1440.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai · mở "Tệp"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai	1440	PASS			overlapping controls: button.button.primary "Xuất bản" × button.button.icon "✕" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑"	studio/workspaceAdmin/studio_projects_id_ai/dialog_T_p/1440.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai · mở "Chia sẻ"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai	1440	FAIL		axe: label-content-name-mismatch(serious,2)	overlapping controls: button.button.primary "Xuất bản" × button.button.icon "✕" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑"	studio/workspaceAdmin/studio_projects_id_ai/dialog_Chia_s_/1440.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai · mở "Xuất bản"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai	1440	PASS			text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑"	studio/workspaceAdmin/studio_projects_id_ai/dialog_Xu_t_b_n/1440.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai · mở "Phiên bản"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai	1024	PASS			small target(s): button.button.icon "⚙" 18x36 | overlapping controls: button.button.primary "Xuất bản" × button.button.icon "✕" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑"	studio/workspaceAdmin/studio_projects_id_ai/dialog_Phi_n_b_n/1024.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai · mở "Tệp"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai	1024	PASS			small target(s): button.button.icon "⚙" 18x36 | overlapping controls: button.button.primary "Xuất bản" × button.button.icon "✕" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑"	studio/workspaceAdmin/studio_projects_id_ai/dialog_T_p/1024.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai · mở "Chia sẻ"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai	1024	FAIL		axe: label-content-name-mismatch(serious,1)	small target(s): button.button.icon "⚙" 18x36 | overlapping controls: button.button.primary "Xuất bản" × button.button.icon "✕" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑"	studio/workspaceAdmin/studio_projects_id_ai/dialog_Chia_s_/1024.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai · mở "Xuất bản"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai	1024	PASS			small target(s): button.button.icon "⚙" 18x36 | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑"	studio/workspaceAdmin/studio_projects_id_ai/dialog_Xu_t_b_n/1024.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai · mở "Xuất bản"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai	390	PASS			overlapping controls: button.button.primary "Xuất bản" × button "Điện thoại"; button.starter "✦ Thêm bảng so sánh sản phẩm" × button.sendButton "Gửi ↑" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑"	studio/workspaceAdmin/studio_projects_id_ai/dialog_Xu_t_b_n/390.png
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai · mở "Xuất bản"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/ai	360	PASS			overlapping controls: button.button.primary "Xuất bản" × button "Điện thoại"; button.starter "✦ Thêm bảng so sánh sản phẩm" × button.sendButton "Gửi ↑" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑"	studio/workspaceAdmin/studio_projects_id_ai/dialog_Xu_t_b_n/360.png
+builder · rail "Trang"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1440	FAIL	KNOWN_NOT_READY	axe: aria-required-children(critical,1)	small target(s): button.button.icon "⚙" 12x36; select "+ Thêm trang vào menu… Trang chủ" 223x22 | overlapping controls: button "Điện thoại" × button.button.ghost "Website" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/builder_rail_Trang_/1440.png
+builder · rail "Thành phần"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1440	FAIL	KNOWN_NOT_READY	axe: color-contrast(serious,2)	small target(s): button.button.icon "⚙" 12x36 | overlapping controls: button "Điện thoại" × button.button.ghost "Website" | text < 12px: 11px "Chưa sẵn sàng"; 11px "Chưa sẵn sàng" | 0 visible h1	studio/workspaceAdmin/builder_rail_Th_nh_ph_n_/1440.png
+builder · rail "Dữ liệu"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1440	FAIL		html lang missing | axe: document-title(serious,1), html-has-lang(serious,1)	no main landmark | empty document title | console: pageerror: TypeError: Cannot read properties of undefined (reading 'length')	studio/workspaceAdmin/builder_rail_D_li_u_/1440.png
+builder · rail "Biểu mẫu"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1440	PASS			small target(s): button.button.icon "⚙" 12x36 | overlapping controls: button "Điện thoại" × button.button.ghost "Website" | 0 visible h1	studio/workspaceAdmin/builder_rail_Bi_u_m_u_/1440.png
+builder · rail "Hành động"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1440	PASS			small target(s): button.button.icon "⚙" 12x36 | overlapping controls: button "Điện thoại" × button.button.ghost "Website" | text < 12px: 11px "Gắn vào thành phần" | 0 visible h1	studio/workspaceAdmin/builder_rail_H_nh_ng_/1440.png
+builder · rail "Workflow"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1440	PASS			small target(s): button.button.icon "⚙" 12x36 | overlapping controls: button "Điện thoại" × button.button.ghost "Website" | 0 visible h1	studio/workspaceAdmin/builder_rail_Workflow_/1440.png
+builder · rail "Giao diện"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1440	PASS			small target(s): button.button.icon "⚙" 12x36 | overlapping controls: button "Điện thoại" × button.button.ghost "Website" | 0 visible h1	studio/workspaceAdmin/builder_rail_Giao_di_n_/1440.png
+builder · rail "AI"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1440	PASS			small target(s): button.button.icon "⚙" 12x36 | overlapping controls: button "Điện thoại" × button.button.ghost "Website" | 0 visible h1	studio/workspaceAdmin/builder_rail_AI_/1440.png
+builder · rail "Trang"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1280	FAIL	KNOWN_NOT_READY	axe: aria-required-children(critical,1), target-size(serious,1)	small target(s): button.button.icon "←" 18x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Điện thoại" × button.button.ghost "Website" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/builder_rail_Trang_/1280.png
+builder · rail "Thành phần"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1280	FAIL	KNOWN_NOT_READY	axe: color-contrast(serious,1), target-size(serious,1)	small target(s): button.button.icon "←" 18x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Điện thoại" × button.button.ghost "Website" | text < 12px: 11px "Chưa sẵn sàng"; 11px "Chưa sẵn sàng" | 0 visible h1	studio/workspaceAdmin/builder_rail_Th_nh_ph_n_/1280.png
+builder · rail "Dữ liệu"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1280	FAIL		html lang missing | axe: document-title(serious,1), html-has-lang(serious,1)	no main landmark | empty document title | console: pageerror: TypeError: Cannot read properties of undefined (reading 'length')	studio/workspaceAdmin/builder_rail_D_li_u_/1280.png
+builder · rail "Biểu mẫu"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1280	FAIL		axe: target-size(serious,1)	small target(s): button.button.icon "←" 18x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Điện thoại" × button.button.ghost "Website" | 0 visible h1	studio/workspaceAdmin/builder_rail_Bi_u_m_u_/1280.png
+builder · rail "Hành động"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1280	FAIL		axe: target-size(serious,1)	small target(s): button.button.icon "←" 18x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Điện thoại" × button.button.ghost "Website" | text < 12px: 11px "Gắn vào thành phần" | 0 visible h1	studio/workspaceAdmin/builder_rail_H_nh_ng_/1280.png
+builder · rail "Workflow"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1280	FAIL		axe: target-size(serious,1)	small target(s): button.button.icon "←" 18x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Điện thoại" × button.button.ghost "Website" | 0 visible h1	studio/workspaceAdmin/builder_rail_Workflow_/1280.png
+builder · rail "Giao diện"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1280	FAIL		axe: target-size(serious,1)	small target(s): button.button.icon "←" 18x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Điện thoại" × button.button.ghost "Website" | 0 visible h1	studio/workspaceAdmin/builder_rail_Giao_di_n_/1280.png
+builder · rail "AI"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1280	FAIL		axe: target-size(serious,1)	small target(s): button.button.icon "←" 18x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Điện thoại" × button.button.ghost "Website" | 0 visible h1	studio/workspaceAdmin/builder_rail_AI_/1280.png
+builder · rail "Trang"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1024	FAIL	KNOWN_NOT_READY	axe: aria-required-children(critical,1), target-size(serious,3)	small target(s): button.button.icon "←" 16x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Máy tính bảng" × button.button.ghost "Website"; button "Máy tính bảng" × button.button.ghost "Phiên bản" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/builder_rail_Trang_/1024.png
+builder · rail "Thành phần"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1024	FAIL	KNOWN_NOT_READY	axe: target-size(serious,3)	small target(s): button.button.icon "←" 16x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Máy tính bảng" × button.button.ghost "Website"; button "Máy tính bảng" × button.button.ghost "Phiên bản" | text < 12px: 11px "Chưa sẵn sàng"; 11px "Chưa sẵn sàng" | 0 visible h1	studio/workspaceAdmin/builder_rail_Th_nh_ph_n_/1024.png
+builder · rail "Dữ liệu"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1024	FAIL		html lang missing | axe: document-title(serious,1), html-has-lang(serious,1)	no main landmark | empty document title | console: pageerror: TypeError: Cannot read properties of undefined (reading 'length')	studio/workspaceAdmin/builder_rail_D_li_u_/1024.png
+builder · rail "Biểu mẫu"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1024	FAIL		axe: target-size(serious,3)	small target(s): button.button.icon "←" 16x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Máy tính bảng" × button.button.ghost "Website"; button "Máy tính bảng" × button.button.ghost "Phiên bản" | 0 visible h1	studio/workspaceAdmin/builder_rail_Bi_u_m_u_/1024.png
+builder · rail "Hành động"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1024	FAIL		axe: target-size(serious,3)	small target(s): button.button.icon "←" 16x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Máy tính bảng" × button.button.ghost "Website"; button "Máy tính bảng" × button.button.ghost "Phiên bản" | text < 12px: 11px "Gắn vào thành phần" | 0 visible h1	studio/workspaceAdmin/builder_rail_H_nh_ng_/1024.png
+builder · rail "Workflow"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1024	FAIL		axe: target-size(serious,3)	small target(s): button.button.icon "←" 16x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Máy tính bảng" × button.button.ghost "Website"; button "Máy tính bảng" × button.button.ghost "Phiên bản" | 0 visible h1	studio/workspaceAdmin/builder_rail_Workflow_/1024.png
+builder · rail "Giao diện"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1024	FAIL		axe: target-size(serious,3)	small target(s): button.button.icon "←" 16x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Máy tính bảng" × button.button.ghost "Website"; button "Máy tính bảng" × button.button.ghost "Phiên bản" | 0 visible h1	studio/workspaceAdmin/builder_rail_Giao_di_n_/1024.png
+builder · rail "AI"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1024	FAIL		axe: target-size(serious,3)	small target(s): button.button.icon "←" 16x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Máy tính bảng" × button.button.ghost "Website"; button "Máy tính bảng" × button.button.ghost "Phiên bản" | 0 visible h1	studio/workspaceAdmin/builder_rail_AI_/1024.png
+builder · rail "Trang"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	768	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 203x22 | axe: aria-required-children(critical,1)	text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/builder_rail_Trang_/768.png
+builder · rail "Thành phần"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	768	PASS	KNOWN_NOT_READY		text < 12px: 11px "Chưa sẵn sàng"; 11px "Chưa sẵn sàng" | 0 visible h1	studio/workspaceAdmin/builder_rail_Th_nh_ph_n_/768.png
+builder · rail "Dữ liệu"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	768	FAIL		html lang missing | axe: document-title(serious,1), html-has-lang(serious,1)	no main landmark | empty document title | console: pageerror: TypeError: Cannot read properties of undefined (reading 'length')	studio/workspaceAdmin/builder_rail_D_li_u_/768.png
+builder · rail "Biểu mẫu"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	768	PASS			0 visible h1	studio/workspaceAdmin/builder_rail_Bi_u_m_u_/768.png
+builder · rail "Hành động"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	768	PASS			text < 12px: 11px "Gắn vào thành phần" | 0 visible h1	studio/workspaceAdmin/builder_rail_H_nh_ng_/768.png
+builder · rail "Workflow"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	768	PASS			0 visible h1	studio/workspaceAdmin/builder_rail_Workflow_/768.png
+builder · rail "Giao diện"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	768	PASS			0 visible h1	studio/workspaceAdmin/builder_rail_Giao_di_n_/768.png
+builder · rail "AI"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	768	PASS			0 visible h1	studio/workspaceAdmin/builder_rail_AI_/768.png
+builder · rail "Trang"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	430	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 405x22 | axe: aria-required-children(critical,1)	text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/builder_rail_Trang_/430.png
+builder · rail "Thành phần"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	430	PASS	KNOWN_NOT_READY		overlapping controls: button.bx-btn.sm "Thêm" × button.bx-handle "⋮⋮"; button.bx-btn.sm "Thêm" × button.bx-handle "⋮⋮" | text < 12px: 11px "Chưa sẵn sàng"; 11px "Chưa sẵn sàng" | 0 visible h1	studio/workspaceAdmin/builder_rail_Th_nh_ph_n_/430.png
+builder · rail "Dữ liệu"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	430	FAIL		html lang missing | axe: document-title(serious,1), html-has-lang(serious,1)	no main landmark | empty document title | console: pageerror: TypeError: Cannot read properties of undefined (reading 'length')	studio/workspaceAdmin/builder_rail_D_li_u_/430.png
+builder · rail "Biểu mẫu"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	430	PASS			0 visible h1	studio/workspaceAdmin/builder_rail_Bi_u_m_u_/430.png
+builder · rail "Hành động"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	430	PASS			text < 12px: 11px "Gắn vào thành phần" | 0 visible h1	studio/workspaceAdmin/builder_rail_H_nh_ng_/430.png
+builder · rail "Workflow"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	430	PASS			0 visible h1	studio/workspaceAdmin/builder_rail_Workflow_/430.png
+builder · rail "Giao diện"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	430	PASS			overlapping controls: button.bx-btn.primary "Lưu giao diện" × button.bx-handle "⋮⋮" | 0 visible h1	studio/workspaceAdmin/builder_rail_Giao_di_n_/430.png
+builder · rail "AI"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	430	PASS			0 visible h1	studio/workspaceAdmin/builder_rail_AI_/430.png
+builder · rail "Trang"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	390	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 365x22 | axe: aria-required-children(critical,1)	overlapping controls: button.bx-mini "↓" × button.bx-handle "⋮⋮"; button.bx-mini "↓" × button.bx-handle "⋮⋮" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/builder_rail_Trang_/390.png
+builder · rail "Thành phần"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	390	PASS	KNOWN_NOT_READY		text < 12px: 11px "Chưa sẵn sàng"; 11px "Chưa sẵn sàng" | 0 visible h1	studio/workspaceAdmin/builder_rail_Th_nh_ph_n_/390.png
+builder · rail "Dữ liệu"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	390	FAIL		html lang missing | axe: document-title(serious,1), html-has-lang(serious,1)	no main landmark | empty document title | console: pageerror: TypeError: Cannot read properties of undefined (reading 'length')	studio/workspaceAdmin/builder_rail_D_li_u_/390.png
+builder · rail "Biểu mẫu"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	390	PASS			0 visible h1	studio/workspaceAdmin/builder_rail_Bi_u_m_u_/390.png
+builder · rail "Hành động"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	390	PASS			text < 12px: 11px "Gắn vào thành phần" | 0 visible h1	studio/workspaceAdmin/builder_rail_H_nh_ng_/390.png
+builder · rail "Workflow"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	390	PASS			0 visible h1	studio/workspaceAdmin/builder_rail_Workflow_/390.png
+builder · rail "Giao diện"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	390	PASS			overlapping controls: button.smallButton "+ Thêm màu" × button.bx-handle "⋮⋮" | 0 visible h1	studio/workspaceAdmin/builder_rail_Giao_di_n_/390.png
+builder · rail "AI"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	390	PASS			0 visible h1	studio/workspaceAdmin/builder_rail_AI_/390.png
+builder · rail "Trang"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	360	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 335x22 | axe: aria-required-children(critical,1)	overlapping controls: button.bx-mini "↓" × button.bx-handle "⋮⋮"; button.bx-mini "↓" × button.bx-handle "⋮⋮" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/builder_rail_Trang_/360.png
+builder · rail "Thành phần"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	360	PASS	KNOWN_NOT_READY		text < 12px: 11px "Chưa sẵn sàng"; 11px "Chưa sẵn sàng" | 0 visible h1	studio/workspaceAdmin/builder_rail_Th_nh_ph_n_/360.png
+builder · rail "Dữ liệu"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	360	FAIL		html lang missing | axe: document-title(serious,1), html-has-lang(serious,1)	no main landmark | empty document title | console: pageerror: TypeError: Cannot read properties of undefined (reading 'length')	studio/workspaceAdmin/builder_rail_D_li_u_/360.png
+builder · rail "Biểu mẫu"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	360	PASS			0 visible h1	studio/workspaceAdmin/builder_rail_Bi_u_m_u_/360.png
+builder · rail "Hành động"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	360	PASS			text < 12px: 11px "Gắn vào thành phần" | 0 visible h1	studio/workspaceAdmin/builder_rail_H_nh_ng_/360.png
+builder · rail "Workflow"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	360	PASS			0 visible h1	studio/workspaceAdmin/builder_rail_Workflow_/360.png
+builder · rail "Giao diện"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	360	PASS			overlapping controls: select#_r_3_ "Mặc định NONE SM MD LG" × button.bx-handle "⋮⋮"; button.smallButton "+ Thêm màu" × button.bx-handle "⋮⋮" | 0 visible h1	studio/workspaceAdmin/builder_rail_Giao_di_n_/360.png
+builder · rail "AI"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	360	PASS			0 visible h1	studio/workspaceAdmin/builder_rail_AI_/360.png
+builder · inspector (section selected)	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1440	FAIL	KNOWN_NOT_READY	axe: aria-required-children(critical,1)	small target(s): button.button.icon "⚙" 12x36; select "+ Thêm trang vào menu… Trang chủ" 223x22 | overlapping controls: button "Điện thoại" × button.button.ghost "Website" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/builder_inspector_section_selected_/1440.png
+builder · Dùng thử (test mode)	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1440	PASS	KNOWN_NOT_READY		small target(s): button.button.icon "⚙" 12x36 | overlapping controls: button "Điện thoại" × button.button.ghost "Website" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/builder_D_ng_th_test_mode_/1440.png
+builder · Phiên bản (history drawer)	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1440	FAIL	KNOWN_NOT_READY	axe: aria-required-children(critical,1)	small target(s): button.button.icon "⚙" 12x36; select "+ Thêm trang vào menu… Trang chủ" 223x22 | overlapping controls: button "Điện thoại" × button.button.ghost "Website"; button.button.primary "Xuất bản" × button.button.icon "✕" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/builder_Phi_n_b_n_history_drawer_/1440.png
+publish · dialog + history expanded	PUBLISH_ROLLBACK	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1440	FAIL	KNOWN_NOT_READY	axe: aria-required-children(critical,1)	small target(s): button.button.icon "⚙" 12x36; select "+ Thêm trang vào menu… Trang chủ" 223x22 | overlapping controls: button "Điện thoại" × button.button.ghost "Website"; button.button.ghost "" × button.button.ghost "Hủy" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/publish_dialog_history_expanded/1440.png
+builder · inspector (section selected)	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1280	FAIL	KNOWN_NOT_READY	axe: aria-required-children(critical,1), target-size(serious,1)	small target(s): button.button.icon "←" 18x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Điện thoại" × button.button.ghost "Website" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/builder_inspector_section_selected_/1280.png
+builder · Dùng thử (test mode)	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1280	FAIL	KNOWN_NOT_READY	axe: target-size(serious,1)	small target(s): button.button.icon "←" 18x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Điện thoại" × button.button.ghost "Website" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/builder_D_ng_th_test_mode_/1280.png
+builder · Phiên bản (history drawer)	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1280	FAIL	KNOWN_NOT_READY	axe: aria-required-children(critical,1), target-size(serious,1)	small target(s): button.button.icon "←" 18x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Điện thoại" × button.button.ghost "Website"; button.button.primary "Xuất bản" × button.button.icon "✕" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/builder_Phi_n_b_n_history_drawer_/1280.png
+publish · dialog + history expanded	PUBLISH_ROLLBACK	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1280	FAIL	KNOWN_NOT_READY	axe: aria-required-children(critical,1), target-size(serious,1)	small target(s): button.button.icon "←" 18x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Điện thoại" × button.button.ghost "Website"; button.button.ghost "" × button.button.ghost "Hủy" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/publish_dialog_history_expanded/1280.png
+builder · inspector (section selected)	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1024	FAIL	KNOWN_NOT_READY	axe: aria-required-children(critical,1), target-size(serious,3)	small target(s): button.button.icon "←" 16x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Máy tính bảng" × button.button.ghost "Website"; button "Máy tính bảng" × button.button.ghost "Phiên bản" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/builder_inspector_section_selected_/1024.png
+builder · Dùng thử (test mode)	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1024	FAIL	KNOWN_NOT_READY	axe: target-size(serious,3)	small target(s): button.button.icon "←" 16x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Máy tính bảng" × button.button.ghost "Website"; button "Máy tính bảng" × button.button.ghost "Phiên bản" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/builder_D_ng_th_test_mode_/1024.png
+builder · Phiên bản (history drawer)	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1024	FAIL	KNOWN_NOT_READY	axe: aria-required-children(critical,1), target-size(serious,3)	small target(s): button.button.icon "←" 16x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Máy tính bảng" × button.button.ghost "Website"; button "Máy tính bảng" × button.button.ghost "Phiên bản" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/builder_Phi_n_b_n_history_drawer_/1024.png
+publish · dialog + history expanded	PUBLISH_ROLLBACK	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1024	FAIL	KNOWN_NOT_READY	axe: aria-required-children(critical,1), target-size(serious,3)	small target(s): button.button.icon "←" 16x36; button.button.icon "⚙" 12x36 | overlapping controls: button "Máy tính bảng" × button.button.ghost "Website"; button "Máy tính bảng" × button.button.ghost "Phiên bản" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/publish_dialog_history_expanded/1024.png
+builder · inspector (section selected)	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	768	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 203x22 | axe: aria-required-children(critical,1)	overlapping controls: button.bx-drag "⋮⋮" × div#inspector-panel-content.bx-tabpanel "Ảnh Không có ảnh Tải ảnh lên ở mục “Tệp”"; button.bx-mini "↑" × div#inspector-panel-content.bx-tabpanel "Ảnh Không có ảnh Tải ảnh lên ở mục “Tệp”" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/builder_inspector_section_selected_/768.png
+builder · Dùng thử (test mode)	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	768	PASS	KNOWN_NOT_READY		text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/builder_D_ng_th_test_mode_/768.png
+builder · Phiên bản (history drawer)	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	768	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 203x22 | axe: aria-required-children(critical,1)	text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/builder_Phi_n_b_n_history_drawer_/768.png
+publish · dialog + history expanded	PUBLISH_ROLLBACK	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	768	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 203x22 | axe: aria-required-children(critical,1)	overlapping controls: div#rail-panel-pages.bx-left-panel "Trang ＋ Trang Mọi đường dẫn hợp lệ. Tr" × a "http://127.0.0.1:51088/trang-gioi-thieu-"; div#rail-panel-pages.bx-left-panel "Trang ＋ Trang Mọi đường dẫn hợp lệ. Tr" × button.publishChoice "Riêng tư Chỉ thành viên được cấp quyền." | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/publish_dialog_history_expanded/768.png
+builder · inspector (section selected)	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	430	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 405x22 | axe: aria-required-children(critical,1)	overlapping controls: button.bx-drag "⋮⋮" × button#inspector-tab-content.active "Nội dung"; button.bx-mini "↓" × button.bx-icon "✕" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/builder_inspector_section_selected_/430.png
+builder · Dùng thử (test mode)	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	430	PASS	KNOWN_NOT_READY		overlapping controls: input#_r_1_ "" × button.smallButton "Chạy thử" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/builder_D_ng_th_test_mode_/430.png
+builder · Phiên bản (history drawer)	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	430	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 405x22 | axe: aria-required-children(critical,1)	text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/builder_Phi_n_b_n_history_drawer_/430.png
+publish · dialog + history expanded	PUBLISH_ROLLBACK	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	430	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 405x22 | axe: aria-required-children(critical,1)	overlapping controls: div#rail-panel-pages.bx-left-panel "Trang ＋ Trang Mọi đường dẫn hợp lệ. Tr" × a "http://127.0.0.1:51088/trang-gioi-thieu-"; div#rail-panel-pages.bx-left-panel "Trang ＋ Trang Mọi đường dẫn hợp lệ. Tr" × button.publishChoice "Riêng tư Chỉ thành viên được cấp quyền." | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/publish_dialog_history_expanded/430.png
+builder · inspector (section selected)	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	390	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 365x22 | axe: aria-required-children(critical,1)	overlapping controls: button.bx-mini "↓" × button.bx-handle "⋮⋮"; button.bx-mini "↓" × button.bx-handle.active "⋮⋮" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/builder_inspector_section_selected_/390.png
+builder · Dùng thử (test mode)	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	390	PASS	KNOWN_NOT_READY		text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/builder_D_ng_th_test_mode_/390.png
+builder · Phiên bản (history drawer)	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	390	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 365x22 | axe: aria-required-children(critical,1)	overlapping controls: button.bx-mini "↓" × button.bx-handle "⋮⋮"; button.bx-mini "↓" × button.bx-handle "⋮⋮" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/builder_Phi_n_b_n_history_drawer_/390.png
+publish · dialog + history expanded	PUBLISH_ROLLBACK	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	390	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 365x22 | axe: aria-required-children(critical,1)	overlapping controls: div#rail-panel-pages.bx-left-panel "Trang ＋ Trang Mọi đường dẫn hợp lệ. Tr" × a "http://127.0.0.1:51088/trang-gioi-thieu-"; div#rail-panel-pages.bx-left-panel "Trang ＋ Trang Mọi đường dẫn hợp lệ. Tr" × button.publishChoice "Riêng tư Chỉ thành viên được cấp quyền." | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/publish_dialog_history_expanded/390.png
+builder · inspector (section selected)	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	360	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 335x22 | axe: aria-required-children(critical,1)	overlapping controls: button.button.primary "Xuất bản" × button.bx-btn.sm "＋ Trang"; button.bx-drag "⋮⋮" × button#inspector-tab-content.active "Nội dung" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/builder_inspector_section_selected_/360.png
+builder · Dùng thử (test mode)	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	360	PASS	KNOWN_NOT_READY		overlapping controls: input#_r_0_ "" × button.smallButton "Chạy thử" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/builder_D_ng_th_test_mode_/360.png
+builder · Phiên bản (history drawer)	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	360	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 335x22 | axe: aria-required-children(critical,1)	overlapping controls: button.bx-mini "↓" × button.bx-handle "⋮⋮"; button.bx-mini "↓" × button.bx-handle "⋮⋮" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/builder_Phi_n_b_n_history_drawer_/360.png
+publish · dialog + history expanded	PUBLISH_ROLLBACK	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	360	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select "+ Thêm trang vào menu… Trang chủ" 335x22 | axe: aria-required-children(critical,1)	overlapping controls: div#rail-panel-pages.bx-left-panel "Trang ＋ Trang Mọi đường dẫn hợp lệ. Tr" × a "http://127.0.0.1:51088/trang-gioi-thieu-"; div#rail-panel-pages.bx-left-panel "Trang ＋ Trang Mọi đường dẫn hợp lệ. Tr" × button.publishChoice "Riêng tư Chỉ thành viên được cấp quyền." | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1	studio/workspaceAdmin/publish_dialog_history_expanded/360.png
+builder · mode "✦ AI"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1440	PASS			text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑"	studio/workspaceAdmin/builder_mode_AI_/1440.png
+builder · mode "Code"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1440	PASS				studio/workspaceAdmin/builder_mode_Code_/1440.png
+builder · mode "✦ AI"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1280	PASS			text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑"	studio/workspaceAdmin/builder_mode_AI_/1280.png
+builder · mode "Code"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1280	PASS				studio/workspaceAdmin/builder_mode_Code_/1280.png
+builder · mode "✦ AI"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1024	PASS			small target(s): button.button.icon "⚙" 18x36 | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑"	studio/workspaceAdmin/builder_mode_AI_/1024.png
+builder · mode "Code"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1024	PASS			small target(s): button.button.icon "⚙" 18x36	studio/workspaceAdmin/builder_mode_Code_/1024.png
+builder · mode "✦ AI"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	768	FAIL		axe: target-size(serious,1)	overlapping controls: button.button.ghost "Website" × button "Máy tính bảng"; button.button.ghost "Phiên bản" × button "Điện thoại" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑"	studio/workspaceAdmin/builder_mode_AI_/768.png
+builder · mode "Code"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	768	PASS				studio/workspaceAdmin/builder_mode_Code_/768.png
+builder · mode "✦ AI"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	430	PASS			overlapping controls: button.starter "✦ Thêm bảng so sánh sản phẩm" × button.sendButton "Gửi ↑" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑"	studio/workspaceAdmin/builder_mode_AI_/430.png
+builder · mode "Code"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	430	PASS				studio/workspaceAdmin/builder_mode_Code_/430.png
+builder · mode "✦ AI"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	390	PASS			overlapping controls: button.button.primary "Xuất bản" × button "Điện thoại"; button.starter "✦ Thêm bảng so sánh sản phẩm" × button.sendButton "Gửi ↑" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑"	studio/workspaceAdmin/builder_mode_AI_/390.png
+builder · mode "Code"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	390	PASS				studio/workspaceAdmin/builder_mode_Code_/390.png
+builder · mode "✦ AI"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	360	PASS			overlapping controls: button.button.primary "Xuất bản" × button "Điện thoại"; button.starter "✦ Thêm bảng so sánh sản phẩm" × button.sendButton "Gửi ↑" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑"	studio/workspaceAdmin/builder_mode_AI_/360.png
+builder · mode "Code"	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	360	PASS				studio/workspaceAdmin/builder_mode_Code_/360.png
+/platform/tenants · state loading	CREATE_COMPANY	platform	super	/platform/tenants	1440	PASS				platform/super/platform_tenants/state_loading/1440.png
+/platform/tenants · state empty	CREATE_COMPANY	platform	super	/platform/tenants	1440	PASS				platform/super/platform_tenants/state_empty/1440.png
+/platform/tenants · state error	CREATE_COMPANY	platform	super	/platform/tenants	1440	PASS				platform/super/platform_tenants/state_error/1440.png
+/platform/tenants · state loading	CREATE_COMPANY	platform	super	/platform/tenants	390	PASS				platform/super/platform_tenants/state_loading/390.png
+/platform/tenants · state empty	CREATE_COMPANY	platform	super	/platform/tenants	390	PASS				platform/super/platform_tenants/state_empty/390.png
+/platform/tenants · state error	CREATE_COMPANY	platform	super	/platform/tenants	390	PASS				platform/super/platform_tenants/state_error/390.png
+/platform/users · state loading	ORGANIZATION	platform	super	/platform/users	1440	PASS				platform/super/platform_users/state_loading/1440.png
+/platform/users · state empty	ORGANIZATION	platform	super	/platform/users	1440	PASS				platform/super/platform_users/state_empty/1440.png
+/platform/users · state error	ORGANIZATION	platform	super	/platform/users	1440	PASS				platform/super/platform_users/state_error/1440.png
+/platform/users · state loading	ORGANIZATION	platform	super	/platform/users	390	PASS				platform/super/platform_users/state_loading/390.png
+/platform/users · state empty	ORGANIZATION	platform	super	/platform/users	390	PASS				platform/super/platform_users/state_empty/390.png
+/platform/users · state error	ORGANIZATION	platform	super	/platform/users	390	PASS				platform/super/platform_users/state_error/390.png
+/platform/audit · state loading	ORGANIZATION	platform	super	/platform/audit	1440	PASS				platform/super/platform_audit/state_loading/1440.png
+/platform/audit · state empty	ORGANIZATION	platform	super	/platform/audit	1440	PASS				platform/super/platform_audit/state_empty/1440.png
+/platform/audit · state error	ORGANIZATION	platform	super	/platform/audit	1440	PASS				platform/super/platform_audit/state_error/1440.png
+/platform/audit · state loading	ORGANIZATION	platform	super	/platform/audit	390	PASS				platform/super/platform_audit/state_loading/390.png
+/platform/audit · state empty	ORGANIZATION	platform	super	/platform/audit	390	PASS				platform/super/platform_audit/state_empty/390.png
+/platform/audit · state error	ORGANIZATION	platform	super	/platform/audit	390	PASS				platform/super/platform_audit/state_error/390.png
+/admin/people · state loading	EMPLOYEES	admin	tenantAdmin	/admin/people	1440	FAIL		no loading indicator while data is pending		admin/tenantAdmin/admin_people/state_loading/1440.png
+/admin/people · state empty	EMPLOYEES	admin	tenantAdmin	/admin/people	1440	PASS				admin/tenantAdmin/admin_people/state_empty/1440.png
+/admin/people · state error	EMPLOYEES	admin	tenantAdmin	/admin/people	1440	FAIL		server error shows no error message	error state has no 'Thử lại' action	admin/tenantAdmin/admin_people/state_error/1440.png
+/admin/people · state loading	EMPLOYEES	admin	tenantAdmin	/admin/people	390	FAIL		no loading indicator while data is pending		admin/tenantAdmin/admin_people/state_loading/390.png
+/admin/people · state empty	EMPLOYEES	admin	tenantAdmin	/admin/people	390	PASS				admin/tenantAdmin/admin_people/state_empty/390.png
+/admin/people · state error	EMPLOYEES	admin	tenantAdmin	/admin/people	390	FAIL		server error shows no error message	error state has no 'Thử lại' action	admin/tenantAdmin/admin_people/state_error/390.png
+/admin/my-workspaces · state loading	ORGANIZATION	admin	tenantAdmin	/admin/my-workspaces	1440	PASS				admin/tenantAdmin/admin_my-workspaces/state_loading/1440.png
+/admin/my-workspaces · state empty	ORGANIZATION	admin	tenantAdmin	/admin/my-workspaces	1440	PASS				admin/tenantAdmin/admin_my-workspaces/state_empty/1440.png
+/admin/my-workspaces · state error	ORGANIZATION	admin	tenantAdmin	/admin/my-workspaces	1440	PASS				admin/tenantAdmin/admin_my-workspaces/state_error/1440.png
+/admin/my-workspaces · state loading	ORGANIZATION	admin	tenantAdmin	/admin/my-workspaces	390	PASS				admin/tenantAdmin/admin_my-workspaces/state_loading/390.png
+/admin/my-workspaces · state empty	ORGANIZATION	admin	tenantAdmin	/admin/my-workspaces	390	PASS				admin/tenantAdmin/admin_my-workspaces/state_empty/390.png
+/admin/my-workspaces · state error	ORGANIZATION	admin	tenantAdmin	/admin/my-workspaces	390	PASS				admin/tenantAdmin/admin_my-workspaces/state_error/390.png
+/studio/projects · state loading	STUDIO	studio	workspaceAdmin	/studio/projects	1440	PASS				studio/workspaceAdmin/studio_projects/state_loading/1440.png
+/studio/projects · state empty	STUDIO	studio	workspaceAdmin	/studio/projects	1440	PASS				studio/workspaceAdmin/studio_projects/state_empty/1440.png
+/studio/projects · state error	STUDIO	studio	workspaceAdmin	/studio/projects	1440	PASS				studio/workspaceAdmin/studio_projects/state_error/1440.png
+/studio/projects · state loading	STUDIO	studio	workspaceAdmin	/studio/projects	390	PASS				studio/workspaceAdmin/studio_projects/state_loading/390.png
+/studio/projects · state empty	STUDIO	studio	workspaceAdmin	/studio/projects	390	PASS				studio/workspaceAdmin/studio_projects/state_empty/390.png
+/studio/projects · state error	STUDIO	studio	workspaceAdmin	/studio/projects	390	PASS				studio/workspaceAdmin/studio_projects/state_error/390.png
+/studio/templates · state loading	STUDIO	studio	workspaceAdmin	/studio/templates	1440	PASS				studio/workspaceAdmin/studio_templates/state_loading/1440.png
+/studio/templates · state empty	STUDIO	studio	workspaceAdmin	/studio/templates	1440	PASS				studio/workspaceAdmin/studio_templates/state_empty/1440.png
+/studio/templates · state error	STUDIO	studio	workspaceAdmin	/studio/templates	1440	PASS				studio/workspaceAdmin/studio_templates/state_error/1440.png
+/studio/templates · state loading	STUDIO	studio	workspaceAdmin	/studio/templates	390	PASS				studio/workspaceAdmin/studio_templates/state_loading/390.png
+/studio/templates · state empty	STUDIO	studio	workspaceAdmin	/studio/templates	390	PASS				studio/workspaceAdmin/studio_templates/state_empty/390.png
+/studio/templates · state error	STUDIO	studio	workspaceAdmin	/studio/templates	390	PASS				studio/workspaceAdmin/studio_templates/state_error/390.png
+/studio/activity · state loading	STUDIO	studio	workspaceAdmin	/studio/activity	1440	PASS				studio/workspaceAdmin/studio_activity/state_loading/1440.png
+/studio/activity · state empty	STUDIO	studio	workspaceAdmin	/studio/activity	1440	PASS				studio/workspaceAdmin/studio_activity/state_empty/1440.png
+/studio/activity · state error	STUDIO	studio	workspaceAdmin	/studio/activity	1440	PASS				studio/workspaceAdmin/studio_activity/state_error/1440.png
+/studio/activity · state loading	STUDIO	studio	workspaceAdmin	/studio/activity	390	PASS				studio/workspaceAdmin/studio_activity/state_loading/390.png
+/studio/activity · state empty	STUDIO	studio	workspaceAdmin	/studio/activity	390	PASS				studio/workspaceAdmin/studio_activity/state_empty/390.png
+/studio/activity · state error	STUDIO	studio	workspaceAdmin	/studio/activity	390	PASS				studio/workspaceAdmin/studio_activity/state_error/390.png
+/platform · keyboard (Tab ×25)	PLATFORM	platform	super	/platform	1440	PASS				
+/admin · keyboard (Tab ×13)	ADMIN	admin	tenantAdmin	/admin	1440	PASS				
+/studio · keyboard (Tab ×19)	STUDIO	studio	workspaceAdmin	/studio	1440	FAIL		1/19 focused controls show no focus indicator (e.g. textarea "Mô tả ứng dụng muốn tạo")		
+/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design · keyboard (Tab ×53)	STUDIO	studio	workspaceAdmin	/studio/projects/503fbab3-a8ec-47de-a208-17b37b448a9d/design	1440	PASS				
+/login · keyboard (Tab ×4)	PLATFORM	platform	anon	/login	1440	PASS			4 focus stops without a visible/aria name	
+platform · sidebar navigation (14 links)	PLATFORM	platform	super	/platform	1440	PASS				
+admin · sidebar navigation (8 links)	ADMIN	admin	tenantAdmin	/admin	1440	PASS				
+studio · sidebar navigation (6 links)	STUDIO	studio	workspaceAdmin	/studio	1440	FAIL		"+ Tạo ứng dụng" not marked aria-current		

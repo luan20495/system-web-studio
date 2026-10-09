@@ -1,0 +1,26 @@
+{
+ "pages": 26,
+ "chars": 54329,
+ "hits": [
+  {
+   "portal": "platform",
+   "route": "/platform/users/{id}",
+   "match": "Ã",
+   "ctx": "Ô HÌNH HIỆU LỰC Tự động LƯỢT ĐÃ DÙNG HÔM NAY 0 / 50 · Mặc đị"
+  },
+  {
+   "portal": "admin",
+   "route": "/admin/employees",
+   "match": "Â",
+   "ctx": "ị trí/cấp bậc, nhân viên). NHÂN VIÊN VAI TRÒ CÔNG TY TRẠNG "
+  },
+  {
+   "portal": "admin",
+   "route": "/admin/employees",
+   "match": "Â",
+   "ctx": "ị trí/cấp bậc, nhân viên). NHÂN VIÊN VAI TRÒ CÔNG TY TRẠNG "
+  }
+ ],
+ "vietnameseLettersSeen": "63/67",
+ "missing": "ẳỳỷỵ"
+}

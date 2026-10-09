@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.app.definition.ContractConformanceTests" tests="19" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:43:55.857Z" hostname="macmini-2.local" time="0.039">
+  <properties/>
+  <testcase name="an ActionDef keeps every canonical member()" classname="com.systemwebstudio.app.definition.ContractConformanceTests" time="0.0"/>
+  <testcase name="a complete V2 fixture reads every persisted collection()" classname="com.systemwebstudio.app.definition.ContractConformanceTests" time="0.001"/>
+  <testcase name="a legacy fixture has no V2 key and reads as legacy-only()" classname="com.systemwebstudio.app.definition.ContractConformanceTests" time="0.0"/>
+  <testcase name="transforms are bounded and shaped()" classname="com.systemwebstudio.app.definition.ContractConformanceTests" time="0.002"/>
+  <testcase name="the persisted keys of a V2 document are exactly the contract keys()" classname="com.systemwebstudio.app.definition.ContractConformanceTests" time="0.0"/>
+  <testcase name="the legacy transform key is read, normalised to transforms and never written()" classname="com.systemwebstudio.app.definition.ContractConformanceTests" time="0.001"/>
+  <testcase name="only canonical permission codes are accepted()" classname="com.systemwebstudio.app.definition.ContractConformanceTests" time="0.002"/>
+  <testcase name="DATE is a parameter type()" classname="com.systemwebstudio.app.definition.ContractConformanceTests" time="0.001"/>
+  <testcase name="REFRESH_QUERY is an action type and the old RUN_QUERY alias is not()" classname="com.systemwebstudio.app.definition.ContractConformanceTests" time="0.002"/>
+  <testcase name="a MappingDef keeps every canonical member()" classname="com.systemwebstudio.app.definition.ContractConformanceTests" time="0.002"/>
+  <testcase name="mapping transforms are the canonical transforms array, in order, with nothing lost()" classname="com.systemwebstudio.app.definition.ContractConformanceTests" time="0.0"/>
+  <testcase name="derived views are never written as keys of the document()" classname="com.systemwebstudio.app.definition.ContractConformanceTests" time="0.006"/>
+  <testcase name="permission codes equal the table of the frozen contract()" classname="com.systemwebstudio.app.definition.ContractConformanceTests" time="0.004"/>
+  <testcase name="mirrored enums carry exactly the contract values()" classname="com.systemwebstudio.app.definition.ContractConformanceTests" time="0.001"/>
+  <testcase name="the manifest lists every conformance case the contract round asks for()" classname="com.systemwebstudio.app.definition.ContractConformanceTests" time="0.0"/>
+  <testcase name="a parameter that omits required is required and writing omits it again()" classname="com.systemwebstudio.app.definition.ContractConformanceTests" time="0.001"/>
+  <testcase name="a WorkflowDef keeps every canonical member()" classname="com.systemwebstudio.app.definition.ContractConformanceTests" time="0.001"/>
+  <testcase name="every fixture of the manifest behaves as declared()" classname="com.systemwebstudio.app.definition.ContractConformanceTests" time="0.008"/>
+  <testcase name="members C2 does not own survive read then write()" classname="com.systemwebstudio.app.definition.ContractConformanceTests" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

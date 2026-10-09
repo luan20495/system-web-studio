@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.datasource.DataSourceServiceTests" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:44:54.103Z" hostname="macmini-2.local" time="0.007">
+  <properties/>
+  <testcase name="the connector gets the decrypted credential, and nothing observable carries it()" classname="com.systemwebstudio.data.datasource.DataSourceServiceTests" time="0.001"/>
+  <testcase name="another tenant cannot test, discover or query a data source - it simply does not exist for them()" classname="com.systemwebstudio.data.datasource.DataSourceServiceTests" time="0.001"/>
+  <testcase name="connector failures reach the caller as fixed codes and are audited by code()" classname="com.systemwebstudio.data.datasource.DataSourceServiceTests" time="0.001"/>
+  <testcase name="a stored credential that cannot be opened fails closed()" classname="com.systemwebstudio.data.datasource.DataSourceServiceTests" time="0.0"/>
+  <testcase name="a data source without a credential gets the empty credential()" classname="com.systemwebstudio.data.datasource.DataSourceServiceTests" time="0.0"/>
+  <testcase name="query results pass through unchanged for the gateway()" classname="com.systemwebstudio.data.datasource.DataSourceServiceTests" time="0.001"/>
+  <testcase name="an unexpected exception is neither returned, audited nor logged with its message()" classname="com.systemwebstudio.data.datasource.DataSourceServiceTests" time="0.001"/>
+  <testcase name="the rate limit stops calls before any credential is decrypted()" classname="com.systemwebstudio.data.datasource.DataSourceServiceTests" time="0.001"/>
+  <testcase name="a query request may not name a different tenant than the caller()" classname="com.systemwebstudio.data.datasource.DataSourceServiceTests" time="0.0"/>
+  <testcase name="a disabled data source is not usable and an unknown type is a fixed failure()" classname="com.systemwebstudio.data.datasource.DataSourceServiceTests" time="0.0"/>
+  <system-out><![CDATA[{"@timestamp":"2026-10-08T06:44:54.109026+07:00","@version":"1","message":"data source operation failed unexpectedly: java.lang.IllegalStateException","logger_name":"com.systemwebstudio.data.datasource.DataSourceService","thread_name":"Test worker","level":"ERROR","level_value":40000}
+{"@timestamp":"2026-10-08T06:44:54.109286+07:00","@version":"1","message":"data source operation failed unexpectedly: java.lang.IllegalStateException","logger_name":"com.systemwebstudio.data.datasource.DataSourceService","thread_name":"Test worker","level":"ERROR","level_value":40000}
+{"@timestamp":"2026-10-08T06:44:54.109447+07:00","@version":"1","message":"data source operation failed unexpectedly: java.lang.IllegalStateException","logger_name":"com.systemwebstudio.data.datasource.DataSourceService","thread_name":"Test worker","level":"ERROR","level_value":40000}
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

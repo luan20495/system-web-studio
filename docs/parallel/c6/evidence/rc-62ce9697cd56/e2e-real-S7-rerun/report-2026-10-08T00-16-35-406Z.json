@@ -1,0 +1,105 @@
+{
+  "studio": "http://127.0.0.1:3403",
+  "runId": "muysb8dz",
+  "frontendHead": "62ce969",
+  "backend": {
+    "url": "http://127.0.0.1:51080",
+    "head": "62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]"
+  },
+  "facts": {
+    "authConfig": {
+      "localLogin": true,
+      "oidc": false,
+      "publicPublish": true
+    },
+    "fixtureNotes": {
+      "viewerOnProject": "member",
+      "initialRevision": 0,
+      "definitionOps": {
+        "ok": true
+      },
+      "publishAfterOutage": "RUNNING"
+    },
+    "routes": {
+      "queries": {
+        "status": 404,
+        "code": "QUERY_NOT_FOUND"
+      },
+      "actions": {
+        "status": 404,
+        "code": "UNKNOWN_ACTION"
+      }
+    }
+  },
+  "cleanup": [
+    "left behind (no delete route): workspaces cafaa240-1036-441a-9c8f-f07e620a1d30, d76ef818-9525-489a-aff6-835569d2b9bc named e2e-muysb8dz-*"
+  ],
+  "node": "v22.23.1",
+  "summary": {
+    "total": 1,
+    "PASS": 1,
+    "FAIL": 0,
+    "BLOCKED": 0,
+    "SKIP": 0
+  },
+  "results": [
+    {
+      "id": "E2E-S7",
+      "title": "(supplementary) Publish interrupted by a backend outage: no fake success, UI ends on the server's truth",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T00:14:49.121Z",
+      "end": "2026-10-08T00:16:34.707Z",
+      "workspace": "cafaa240-1036-441a-9c8f-f07e620a1d30",
+      "project": "850f60c3-4133-494f-bdc6-c68c03985813",
+      "checks": [
+        {
+          "name": "POST …/publish accepted (2xx) with a deployment id before the outage",
+          "ok": true,
+          "detail": "status=202",
+          "kind": "http"
+        },
+        {
+          "name": "while the backend is down the UI never claims the site is up",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "no request storm while polling against a dead backend (< 40 API calls in the outage window)",
+          "ok": true,
+          "detail": "calls=3",
+          "kind": "ui"
+        },
+        {
+          "name": "the API answers again after the start hook",
+          "ok": true,
+          "detail": "",
+          "kind": "recovery"
+        },
+        {
+          "name": "the deployment reaches a terminal state on the server after recovery (RUNNING or FAILED; never stuck)",
+          "ok": true,
+          "detail": "status=RUNNING",
+          "kind": "recovery"
+        },
+        {
+          "name": "the outage created exactly ONE new deployment (the one this publish returned; no duplicate)",
+          "ok": true,
+          "detail": "new=69c0d0d8-21f0-4d07-90a2-12e50743728e",
+          "kind": "persistence"
+        },
+        {
+          "name": "no unhandled page errors other than the expected network failures",
+          "ok": true,
+          "detail": "console: Failed to load resource: the server responded with a status of 500 (Internal Server Error) | console: Failed to load resource: the server responded with a status of 500 (Internal Server Error) | console: Failed to load resource: the server responded with a status of 500 (Internal Server Err",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    }
+  ]
+}

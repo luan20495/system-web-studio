@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.logic.workflow.WorkflowSweeperTests" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:46:14.495Z" hostname="macmini-2.local" time="0.019">
+  <properties/>
+  <testcase name="a message that arrives while its run is backing off does not count as another failure()" classname="com.systemwebstudio.logic.workflow.WorkflowSweeperTests" time="0.001"/>
+  <testcase name="a tenant with a large backlog cannot starve another tenant()" classname="com.systemwebstudio.logic.workflow.WorkflowSweeperTests" time="0.004"/>
+  <testcase name="a run that only waits for an approval is polled at the slower approval interval()" classname="com.systemwebstudio.logic.workflow.WorkflowSweeperTests" time="0.0"/>
+  <testcase name="sweep backoff of a repeatedly failing run is exponential with a floor and a cap()" classname="com.systemwebstudio.logic.workflow.WorkflowSweeperTests" time="0.001"/>
+  <testcase name="oldest eligible run is served first and every run is examined within ceil(n over limit) passes()" classname="com.systemwebstudio.logic.workflow.WorkflowSweeperTests" time="0.002"/>
+  <testcase name="a dead letter counts as one failure of its run and does not kill a healthy run()" classname="com.systemwebstudio.logic.workflow.WorkflowSweeperTests" time="0.002"/>
+  <testcase name="the per-tenant cap bounds one tenant even when it is alone with a backlog()" classname="com.systemwebstudio.logic.workflow.WorkflowSweeperTests" time="0.001"/>
+  <testcase name="a dead letter naming an unknown or foreign run is ignored()" classname="com.systemwebstudio.logic.workflow.WorkflowSweeperTests" time="0.0"/>
+  <testcase name="a sweep over runs that all fail does not throw and leaves healthy ones for later passes()" classname="com.systemwebstudio.logic.workflow.WorkflowSweeperTests" time="0.001"/>
+  <testcase name="the failure budget is explicit and a budget of one fails the run on the first poison message()" classname="com.systemwebstudio.logic.workflow.WorkflowSweeperTests" time="0.001"/>
+  <testcase name="runs whose publish fails are backed off and do not hog the next passes()" classname="com.systemwebstudio.logic.workflow.WorkflowSweeperTests" time="0.001"/>
+  <testcase name="a run is not examined again before the minimum interval and is again after it()" classname="com.systemwebstudio.logic.workflow.WorkflowSweeperTests" time="0.0"/>
+  <testcase name="a poison run is retried with growing backoff and only its own message is dead-lettered()" classname="com.systemwebstudio.logic.workflow.WorkflowSweeperTests" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

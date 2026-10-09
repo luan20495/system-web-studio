@@ -1,0 +1,42 @@
+C5 worktree HEAD: 40ee45bc16fe4dda525c90e0d491d11284a23d8b
+A (foreign) listener pid 686, launcher pid 633: next-server (v16.3.8)       / npm exec next start -H 127.0.0.1 -p 3499       
+--- process list BEFORE B
+start B exit=0 [owned] started b pid 816 pgid 816 (state /tmp/c6-ps-Q5HW/b.json)
+B listener pid 1084; state keys: 816 816 b
+--- process list DURING (A + B)
+PASS B is a separate process from A
+stop B exit=0 [owned] STOPPED (TERM)
+--- process list AFTER cleanup
+PASS FOREIGN-SAFE 1: B (owned) is stopped (port 3498 free, pid 1084 gone)
+PASS FOREIGN_NEXT_SURVIVES: A (foreign next start, same command shape) alive and answering 200 after C5 cleanup
+['argv', 'command', 'cwd', 'logFile', 'name', 'pgid', 'pid', 'port', 'schema', 'scope', 'settledCommands', 'spawnedAtLocal', 'startedAt', 'startedBy']
+PASS STALE_PID_SAFE: reuse-pid-only -> REFUSED (exit 4), A alive, state file KEPT
+PASS STALE_PID_SAFE: reuse-same-start -> REFUSED (exit 4), A alive, state file KEPT
+PASS STALE_PID_SAFE: reuse-start-ok-cmd-wrong -> REFUSED (exit 4), A alive, state file KEPT
+PASS STALE_PID_SAFE: a state whose process is gone -> ALREADY_GONE/no signal ([owned] ALREADY_GONE); A alive
+PASS STALE_PID_SAFE: signal STOP on a reused pid refused (exit 4), A not frozen (still answers 200)
+harness run exit=0 harness url http://127.0.0.1:57809/index.html 404 
+harness run (failing command) exit=7
+PASS HARNESS_PID_SCOPED: after two runs no harness server left behind (grep itself counted: 1)
+PASS harness propagates the command's exit code (7) and still stops its server
+PASS A still alive after the harness lifecycle runs
+e2e-stack.sh down exit=1 : 
+backend-app.json backend.json render.json studio.json PASS e2e-stack.sh down with stale state files naming A's pid: A untouched
+scan hits:        0
+PASS UNSAFE_EXTERNAL_CLEANUP_REMOVED: no pkill/killall/kill-by-port/kill $(cat pid) in C5-owned executable tooling (comments and the guard test excluded)
+C5 owned-process tests: # tests 21 # pass 21 # fail 0 
+
+PASS B is a separate process from A
+PASS FOREIGN-SAFE 1: B (owned) is stopped (port 3498 free, pid 1084 gone)
+PASS FOREIGN_NEXT_SURVIVES: A (foreign next start, same command shape) alive and answering 200 after C5 cleanup
+PASS STALE_PID_SAFE: reuse-pid-only -> REFUSED (exit 4), A alive, state file KEPT
+PASS STALE_PID_SAFE: reuse-same-start -> REFUSED (exit 4), A alive, state file KEPT
+PASS STALE_PID_SAFE: reuse-start-ok-cmd-wrong -> REFUSED (exit 4), A alive, state file KEPT
+PASS STALE_PID_SAFE: a state whose process is gone -> ALREADY_GONE/no signal ([owned] ALREADY_GONE); A alive
+PASS STALE_PID_SAFE: signal STOP on a reused pid refused (exit 4), A not frozen (still answers 200)
+PASS HARNESS_PID_SCOPED: after two runs no harness server left behind (grep itself counted: 1)
+PASS harness propagates the command's exit code (7) and still stops its server
+PASS A still alive after the harness lifecycle runs
+PASS e2e-stack.sh down with stale state files naming A's pid: A untouched
+PASS UNSAFE_EXTERNAL_CLEANUP_REMOVED: no pkill/killall/kill-by-port/kill $(cat pid) in C5-owned executable tooling (comments and the guard test excluded)
+fails: 0

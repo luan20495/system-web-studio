@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.app.definition.PublicQueryAllowListTests" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:43:58.217Z" hostname="macmini-2.local" time="0.001">
+  <properties/>
+  <testcase name="the public flag of a query is part of the document, only a READ query can have it, and the allow-list is derived from it()" classname="com.systemwebstudio.app.definition.PublicQueryAllowListTests" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

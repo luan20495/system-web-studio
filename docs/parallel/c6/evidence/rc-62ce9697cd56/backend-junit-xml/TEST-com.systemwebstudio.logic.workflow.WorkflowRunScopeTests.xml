@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.logic.workflow.WorkflowRunScopeTests" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:46:14.178Z" hostname="macmini-2.local" time="0.003">
+  <properties/>
+  <testcase name="E a non-creator in the right scope needs WORKFLOW_MANAGE and in the wrong scope has no access even with it()" classname="com.systemwebstudio.logic.workflow.WorkflowRunScopeTests" time="0.001"/>
+  <testcase name="C the creator in the right scope keeps what the creator shortcut always gave, without any permission()" classname="com.systemwebstudio.logic.workflow.WorkflowRunScopeTests" time="0.0"/>
+  <testcase name="tenant first - another tenant never finds the run, the creator or not()" classname="com.systemwebstudio.logic.workflow.WorkflowRunScopeTests" time="0.0"/>
+  <testcase name="B the creator gets RUN_NOT_FOUND through the same workspace and another project()" classname="com.systemwebstudio.logic.workflow.WorkflowRunScopeTests" time="0.0"/>
+  <testcase name="D null is not a wildcard - a run with a workspace is not seen without one, a run without one is not seen from a workspace, a request without a project sees nothing()" classname="com.systemwebstudio.logic.workflow.WorkflowRunScopeTests" time="0.001"/>
+  <testcase name="F a creator who lost W1 and is admin of W2 cannot read or cancel his W1-P1 run through W2-P2()" classname="com.systemwebstudio.logic.workflow.WorkflowRunScopeTests" time="0.0"/>
+  <testcase name="A the creator of a run in W1-P1 gets RUN_NOT_FOUND through another workspace and project()" classname="com.systemwebstudio.logic.workflow.WorkflowRunScopeTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

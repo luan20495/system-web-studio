@@ -1,0 +1,22 @@
+FLOW: E2E-S7 — (supplementary) Publish interrupted by a backend outage: no fake success, UI ends on the server's truth
+RESULT: PASS
+START: 2026-10-08T00:14:49.121Z
+END: 2026-10-08T00:16:34.707Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 850f60c3-4133-494f-bdc6-c68c03985813
+WORKSPACE: cafaa240-1036-441a-9c8f-f07e620a1d30
+HTTP EVIDENCE:
+  - ok POST …/publish accepted (2xx) with a deployment id before the outage
+UI ASSERTION:
+  - ok while the backend is down the UI never claims the site is up
+  - ok no request storm while polling against a dead backend (< 40 API calls in the outage window)
+  - ok no unhandled page errors other than the expected network failures
+PERSISTENCE ASSERTION:
+  - ok the outage created exactly ONE new deployment (the one this publish returned; no duplicate)
+RESTART/RECOVERY:
+  - ok the API answers again after the start hook
+  - ok the deployment reaches a terminal state on the server after recovery (RUNNING or FAILED; never stuck)
+BLOCKER: none
+OWNER: n/a

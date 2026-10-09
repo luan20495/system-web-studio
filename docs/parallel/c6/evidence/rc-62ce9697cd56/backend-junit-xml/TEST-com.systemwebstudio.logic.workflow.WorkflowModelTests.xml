@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.logic.workflow.WorkflowModelTests" tests="22" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:46:14.165Z" hostname="macmini-2.local" time="0.007">
+  <properties/>
+  <testcase name="anything that is not exactly a v1 job is rejected()" classname="com.systemwebstudio.logic.workflow.WorkflowModelTests" time="0.0"/>
+  <testcase name="each step kind demands its own fields()" classname="com.systemwebstudio.logic.workflow.WorkflowModelTests" time="0.0"/>
+  <testcase name="a plain chain of actions is valid()" classname="com.systemwebstudio.logic.workflow.WorkflowModelTests" time="0.0"/>
+  <testcase name="step input paths must be plain()" classname="com.systemwebstudio.logic.workflow.WorkflowModelTests" time="0.0"/>
+  <testcase name="limits are enforced against the platform ceiling()" classname="com.systemwebstudio.logic.workflow.WorkflowModelTests" time="0.0"/>
+  <testcase name="backoff never overflows for huge attempt numbers()" classname="com.systemwebstudio.logic.workflow.WorkflowModelTests" time="0.001"/>
+  <testcase name="empty workflows and unknown targets are invalid()" classname="com.systemwebstudio.logic.workflow.WorkflowModelTests" time="0.0"/>
+  <testcase name="limits can only be tightened by the platform ceiling()" classname="com.systemwebstudio.logic.workflow.WorkflowModelTests" time="0.0"/>
+  <testcase name="backoff grows exponentially and is capped()" classname="com.systemwebstudio.logic.workflow.WorkflowModelTests" time="0.0"/>
+  <testcase name="unreachable steps are an authoring error()" classname="com.systemwebstudio.logic.workflow.WorkflowModelTests" time="0.0"/>
+  <testcase name="ids are checked()" classname="com.systemwebstudio.logic.workflow.WorkflowModelTests" time="0.0"/>
+  <testcase name="AllOf AnyOf and Not combine()" classname="com.systemwebstudio.logic.workflow.WorkflowModelTests" time="0.002"/>
+  <testcase name="job messages round trip and carry no actor or payload()" classname="com.systemwebstudio.logic.workflow.WorkflowModelTests" time="0.0"/>
+  <testcase name="numbers beyond double precision compare exactly()" classname="com.systemwebstudio.logic.workflow.WorkflowModelTests" time="0.001"/>
+  <testcase name="value references and conditions are validated()" classname="com.systemwebstudio.logic.workflow.WorkflowModelTests" time="0.0"/>
+  <testcase name="step timeouts must be positive and bounded()" classname="com.systemwebstudio.logic.workflow.WorkflowModelTests" time="0.0"/>
+  <testcase name="missing and null operands are false, except NE()" classname="com.systemwebstudio.logic.workflow.WorkflowModelTests" time="0.001"/>
+  <testcase name="numbers compare by value not by representation()" classname="com.systemwebstudio.logic.workflow.WorkflowModelTests" time="0.0"/>
+  <testcase name="a retry policy rejects nonsense()" classname="com.systemwebstudio.logic.workflow.WorkflowModelTests" time="0.001"/>
+  <testcase name="mixed types never match and never throw()" classname="com.systemwebstudio.logic.workflow.WorkflowModelTests" time="0.0"/>
+  <testcase name="no retry ever waits less than the backoff floor()" classname="com.systemwebstudio.logic.workflow.WorkflowModelTests" time="0.0"/>
+  <testcase name="strings, membership and containment()" classname="com.systemwebstudio.logic.workflow.WorkflowModelTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.common.HardeningTests" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:44:45.912Z" hostname="macmini-2.local" time="3.477">
+  <properties/>
+  <testcase name="API responses carry restrictive security headers and the CSRF cookie is SameSite()" classname="com.systemwebstudio.common.HardeningTests" time="0.006"/>
+  <testcase name="auth config tells the UI which sign-in options exist and metrics are not readable by sessions()" classname="com.systemwebstudio.common.HardeningTests" time="0.509"/>
+  <testcase name="production profile refuses unsafe configuration()" classname="com.systemwebstudio.common.HardeningTests" time="0.005"/>
+  <testcase name="prod profile fails fast when required variables are missing()" classname="com.systemwebstudio.common.HardeningTests" time="0.475"/>
+  <testcase name="access logs never contain query strings, ids or credentials()" classname="com.systemwebstudio.common.HardeningTests" time="0.157"/>
+  <testcase name="oversized JSON bodies are rejected with 413 before any processing()" classname="com.systemwebstudio.common.HardeningTests" time="0.146"/>
+  <system-out><![CDATA[2026-10-08T06:44:45.913+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.systemwebstudio.common.HardeningTests]: HardeningTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-08T06:44:45.946+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.systemwebstudio.SystemWebStudioApplication for test class com.systemwebstudio.common.HardeningTests
+2026-10-08T06:44:45.946+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.systemwebstudio.common.HardeningTests]: HardeningTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-08T06:44:45.946+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.systemwebstudio.support.IntegrationTestBase]: IntegrationTestBase does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-08T06:44:45.949+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.systemwebstudio.SystemWebStudioApplication for test class com.systemwebstudio.common.HardeningTests
+2026-10-08T06:44:45.953+07:00  INFO [] 75814 --- [system-web-studio-api] [tContainer#0-12] o.s.a.r.l.SimpleMessageListenerContainer : Waiting for workers to finish.
+2026-10-08T06:44:46.315+07:00  INFO [] 75814 --- [system-web-studio-api] [tContainer#0-12] o.s.a.r.l.SimpleMessageListenerContainer : Successfully waited for workers to finish.
+2026-10-08T06:44:46.322+07:00  INFO [] 75814 --- [system-web-studio-api] [tContainer#0-10] c.r.c.impl.AbstractMetricsCollector      : Error while computing metrics in closeChannel: Cannot read field "channelState" because the return value of "com.rabbitmq.client.impl.AbstractMetricsCollector.connectionState(com.rabbitmq.client.Connection)" is null
+2026-10-08T06:44:46.322+07:00  INFO [] 75814 --- [system-web-studio-api] [tContainer#0-11] c.r.c.impl.AbstractMetricsCollector      : Error while computing metrics in closeChannel: Cannot read field "channelState" because the return value of "com.rabbitmq.client.impl.AbstractMetricsCollector.connectionState(com.rabbitmq.client.Connection)" is null
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-08T06:44:46.351+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] c.systemwebstudio.common.HardeningTests  : Starting HardeningTests using Java 21.0.12.1 with PID 75814 (started by hoangluan in /Users/hoangluan/code/xweb-c6-rc/backend)
+2026-10-08T06:44:46.351+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] c.systemwebstudio.common.HardeningTests  : The following 1 profile is active: "local"
+2026-10-08T06:44:46.803+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-10-08T06:44:46.804+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-08T06:44:46.851+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 46 ms. Found 7 JPA repository interfaces.
+2026-10-08T06:44:46.855+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-10-08T06:44:46.855+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-10-08T06:44:46.877+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.systemwebstudio.identity.UserRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-08T06:44:46.877+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.systemwebstudio.project.ProjectMemberRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-08T06:44:46.877+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.systemwebstudio.project.ProjectRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-08T06:44:46.877+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.systemwebstudio.project.WorkspaceMemberRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-08T06:44:46.877+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.systemwebstudio.project.WorkspaceRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-08T06:44:46.877+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.systemwebstudio.tenancy.TenantMemberRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-08T06:44:46.883+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.systemwebstudio.tenancy.TenantRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-08T06:44:46.883+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 27 ms. Found 0 Redis repository interfaces.
+2026-10-08T06:44:46.941+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-10 - Starting...
+2026-10-08T06:44:46.957+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] com.zaxxer.hikari.pool.HikariPool        : HikariPool-10 - Added connection org.postgresql.jdbc.PgConnection@15ddd7ed
+2026-10-08T06:44:46.957+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-10 - Start completed.
+2026-10-08T06:44:46.958+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:51957/test?loggerLevel=OFF (PostgreSQL 17.6)
+2026-10-08T06:44:46.982+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] o.f.core.internal.command.DbValidate     : Successfully validated 30 migrations (execution time 00:00.014s)
+2026-10-08T06:44:47.014+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] o.f.core.internal.command.DbMigrate      : Current version of schema "public": 30
+2026-10-08T06:44:47.016+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] o.f.core.internal.command.DbMigrate      : Schema "public" is up to date. No migration necessary.
+2026-10-08T06:44:47.088+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-10-08T06:44:47.105+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-10-08T06:44:47.121+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:postgresql://localhost:51957/test?loggerLevel=OFF]
+	Database driver: PostgreSQL JDBC Driver
+	Database dialect: PostgreSQLDialect
+	Database version: 17.6
+	Default catalog/schema: test/public
+	Autocommit mode: undefined/unknown
+	Isolation level: READ_COMMITTED [default READ_COMMITTED]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-10-08T06:44:47.175+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-08T06:44:47.203+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-10-08T06:44:47.345+07:00  WARN [] 75814 --- [system-web-studio-api] [    Test worker] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with an AuthenticationProvider bean. UserDetailsService beans will not be used by Spring Security for automatically configuring username/password login. Consider removing the AuthenticationProvider bean. Alternatively, consider using the UserDetailsService in a manually instantiated DaoAuthenticationProvider. If the current configuration is intentional, to turn off this warning, increase the logging level of 'org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer' to ERROR
+2026-10-08T06:44:47.512+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-10-08T06:44:47.512+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-08T06:44:47.514+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2026-10-08T06:44:47.516+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 4 ms
+2026-10-08T06:44:47.538+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] o.s.a.r.c.CachingConnectionFactory       : Attempting to connect to: [localhost:51973]
+2026-10-08T06:44:47.545+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] o.s.a.r.c.CachingConnectionFactory       : Created new connection: rabbitConnectionFactory#315bbd88:0/SimpleConnection@167b2c83 [delegate=amqp://studio@127.0.0.1:51973/, localPort=52111]
+2026-10-08T06:44:47.563+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] c.systemwebstudio.common.HardeningTests  : Started HardeningTests in 1.239 seconds (process running for 128.122)
+2026-10-08T06:44:48.092+07:00  INFO [req_7bea015d30c44580a8a4edfe54d294ed] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=GET route=/api/v1/auth/csrf status=200 duration_ms=2 user=-
+2026-10-08T06:44:48.097+07:00  INFO [req_a2fd9772f7ea47e29a624d616abb5a84] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=GET route=/api/v1/auth/config status=200 duration_ms=2 user=-
+2026-10-08T06:44:48.227+07:00  INFO [req_7758b74eecdf458ead9efedfb1e49ea2] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=GET route=/api/v1/auth/csrf status=200 duration_ms=0 user=-
+2026-10-08T06:44:48.540+07:00  INFO [req_6741a731b5044dd59a0a35e360db5f14] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/auth/login status=200 duration_ms=312 user=053bcbb3-8264-4903-8d84-964b671d0fba
+2026-10-08T06:44:48.585+07:00  INFO [req_c81d89d3264547d6a34e8c7024205c4b] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=GET route=/** status=404 duration_ms=16 user=053bcbb3-8264-4903-8d84-964b671d0fba
+2026-10-08T06:44:48.600+07:00  INFO [req_1f73beb8e3784ea687d78f8c4d19c351] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=GET route=/** status=404 duration_ms=3 user=053bcbb3-8264-4903-8d84-964b671d0fba
+2026-10-08T06:44:48.627+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] w.o.g.p.i.worker.GradleWorkerMain        : Starting GradleWorkerMain using Java 21.0.12.1 with PID 75814 (started by hoangluan in /Users/hoangluan/code/xweb-c6-rc/backend)
+2026-10-08T06:44:48.627+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] w.o.g.p.i.worker.GradleWorkerMain        : The following 2 profiles are active: "prod", "default"
+2026-10-08T06:44:48.857+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-10-08T06:44:48.857+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-08T06:44:48.900+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 42 ms. Found 7 JPA repository interfaces.
+2026-10-08T06:44:48.903+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-10-08T06:44:48.903+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-10-08T06:44:48.922+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.systemwebstudio.identity.UserRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-08T06:44:48.922+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.systemwebstudio.project.ProjectMemberRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-08T06:44:48.922+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.systemwebstudio.project.ProjectRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-08T06:44:48.922+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.systemwebstudio.project.WorkspaceMemberRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-08T06:44:48.922+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.systemwebstudio.project.WorkspaceRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-08T06:44:48.922+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.systemwebstudio.tenancy.TenantMemberRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-08T06:44:48.922+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .RepositoryConfigurationExtensionSupport : Spring Data Redis - Could not safely identify store assignment for repository candidate interface com.systemwebstudio.tenancy.TenantRepository; If you want this repository to be a Redis repository, consider annotating your entities with one of these annotations: org.springframework.data.redis.core.RedisHash (preferred), or consider extending one of the following types with your repository: org.springframework.data.keyvalue.repository.KeyValueRepository
+2026-10-08T06:44:48.922+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 19 ms. Found 0 Redis repository interfaces.
+2026-10-08T06:44:49.070+07:00  WARN [] 75814 --- [system-web-studio-api] [    Test worker] ConfigServletWebServerApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.context.ApplicationContextException: Unable to start web server
+2026-10-08T06:44:49.073+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .s.b.a.l.ConditionEvaluationReportLogger : 
+
+Error starting ApplicationContext. To display the condition evaluation report re-run your application with 'debug' enabled.
+2026-10-08T06:44:49.082+07:00 ERROR [] 75814 --- [system-web-studio-api] [    Test worker] o.s.b.d.LoggingFailureAnalysisReporter   : 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Failed to bind properties under 'server.address' to java.net.InetAddress:
+
+    Property: server.address
+    Value: "${SERVER_ADDRESS}"
+    Origin: class path resource [application-prod.yml] - 19:12
+    Reason: failed to convert java.lang.String to java.net.InetAddress (caused by java.net.UnknownHostException: ${SERVER_ADDRESS}: nodename nor servname provided, or not known)
+
+Action:
+
+Update your application's configuration
+
+2026-10-08T06:44:49.092+07:00  INFO [req_3124417da88a4f66b10e007ceb71218b] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=GET route=/api/v1/auth/csrf status=200 duration_ms=0 user=-
+2026-10-08T06:44:49.228+07:00  INFO [req_23ac2ceb438c4896a0585528a7cfabf7] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/auth/login status=200 duration_ms=135 user=a7758dbe-39bb-4c5a-859c-107e4f52f16b
+2026-10-08T06:44:49.241+07:00  INFO [req_71bb0391bfb54227bacf01213a4cf109] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=GET route=/api/v1/workspaces/{workspaceId}/projects status=404 duration_ms=7 user=a7758dbe-39bb-4c5a-859c-107e4f52f16b
+2026-10-08T06:44:49.247+07:00  INFO [req_c4147499a99a4bcf9f1fca890c1e8abc] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=GET route=/api/v1/auth/csrf status=200 duration_ms=0 user=-
+2026-10-08T06:44:49.379+07:00  INFO [req_81f1749988124678b7e1da2f77b54eaa] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/auth/login status=200 duration_ms=132 user=d17dd033-1239-48a1-a00c-b27defe4e9d0
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

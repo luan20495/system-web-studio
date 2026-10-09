@@ -1,0 +1,47 @@
+
+> system-web-studio@0.2.0 test:e2e:real
+> node tests/e2e-real/run.mjs
+
+REAL BACKEND suite · studio=http://127.0.0.1:3403 · run=muyu2lba · 2 flow(s)
+  [fixture] workspace A created
+  [fixture] workspace B created
+  [fixture] user adminA (WORKSPACE_ADMIN) ready
+  [fixture] user adminB (WORKSPACE_ADMIN) ready
+  [fixture] user viewerA (VIEWER) ready
+  [fixture] user lonelyA (VIEWER) ready
+  [probe] queries route → 404 QUERY_NOT_FOUND · actions route → 404 UNKNOWN_ACTION  (404 without a code = flag off)
+
+E2E-PD02 — Public data V1, document side: slot → READ public query → bind → publish approval → PUBLIC_QUERIES → runtime config → one anonymous request
+    ✓ [ui] the slot was added and the SERVER stored exactly {id,name,type} — no sourceRef, no credential
+    ✓ [ui] a READ query with public=true was stored by the server (mode READ, operationKey = the approved one, local slot ref)
+    ✓ [api] a READ query WITHOUT public is accepted (it is private by default)
+    ✓ [api] a WRITE query with public=false is accepted
+    ✓ [api] a WRITE query with public=true is REJECTED by the server (422, path queries[i].public) — the UI never offers it
+    ✓ [ui] the binding was stored: {sectionId, prop, queryRef} with the LOCAL public READ query id — never a slot, sourceRef or credential
+    ✓ [ui] readiness: not-ready for ONE reason only — the site is not public yet, so it has no data address (apiBase); the draft itself has no problem
+    ✓ [ui] the publish review lists exactly the public READ query (not the private one, not the WRITE one)
+    ✓ [ui] Publish is disabled until the acknowledgement is ticked
+    ✓ [ui] POST …/publish is the unchanged release contract: body EXACTLY {visibility:'PUBLIC', expectedRevision}, Idempotency-Key present — no acknowledgement field
+    ✓ [backend] the server wrote the PUBLIC_QUERIES event naming exactly the public query
+    ✓ [ui] the dialog shows the server's PUBLIC_QUERIES and no mismatch with what it announced
+    ✓ [backend] the release is live and PUBLIC, operation idle
+    ✓ no unhandled page errors in Studio
+    ✓ [visitor] the page asked for its runtime config (GET __factory/config.json) before any data request, with no cookie and no credentials
+    ✓ [visitor] config.json is no-store JSON with a same-origin apiBase for THIS slug (…/{slug}/_data) and no tenant / workspace / credential
+    ✓ [visitor] the page asked ONLY the public query once (POST …/_data/queries/{id}/run, body {"params":{}}), anonymously
+    ✓ [visitor] the runtime ended in a DEFINED state (ready, or error:<id>:not-found|unavailable when no data route/binding exists), never stuck loading
+    ✓ [visitor] on error the AUTHORED page stays visible (nothing blanked, no fake data)
+    ✓ [visitor] recorded outcome without a real source (fact, not a claim about data)
+
+E2E-S7 — (supplementary) Publish interrupted by a backend outage: no fake success, UI ends on the server's truth
+    ✗ exception: locator.click: Timeout 30000ms exceeded. ⏎ Call log: ⏎   - waiting for getByRole('dialog').getByRole('button', { name: /^Xuất bản$/ })
+  [cleanup] cleanup notes: left behind (no delete route): workspaces e8d5e1d7-e8c5-44cf-9a0b-4c9d0bf2b2ff, 44619cb4-ff1c-4e90-a768-4af5bde4d603 named e2e-muyu2lba-*
+
+| ID | Status | Owner | Detail |
+|---|---|---|---|
+| E2E-PD02 | PASS |  |  |
+| E2E-S7 | FAIL |  | exception: locator.click: Timeout 30000ms exceeded. ⏎ Call log: ⏎   - waiting for getByRole('dialog').getByRole('button', { name: /^Xuất bản$/ }) |
+
+REAL BACKEND: PASS 1/2 · FAIL 1/2 · BLOCKED 0/2 · SKIP 0/2
+report: /Users/hoangluan/code/xweb-c6/docs/parallel/c6/evidence/rc-62ce9697cd56/e2e-real-s7-after-pd02/report-2026-10-08T01-04-44-549Z.json
+evidence: /Users/hoangluan/code/xweb-c6/docs/parallel/c6/evidence/rc-62ce9697cd56/e2e-real-s7-after-pd02/evidence-2026-10-08T01-04-44-549Z.txt

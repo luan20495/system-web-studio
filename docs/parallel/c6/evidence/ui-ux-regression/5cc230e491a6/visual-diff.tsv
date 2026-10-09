@@ -1,0 +1,913 @@
+path	status	diff_percent	note
+admin/anon/admin_zzz-khong-ton-tai/1024.png	SAME	1.872	
+admin/anon/admin_zzz-khong-ton-tai/1280.png	SAME	1.437	
+admin/anon/admin_zzz-khong-ton-tai/1440.png	SAME	1.136	
+admin/anon/admin_zzz-khong-ton-tai/360.png	CHANGED	4.49	
+admin/anon/admin_zzz-khong-ton-tai/390.png	CHANGED	4.10	
+admin/anon/admin_zzz-khong-ton-tai/430.png	CHANGED	3.56	
+admin/anon/admin_zzz-khong-ton-tai/768.png	SAME	1.872	
+admin/anon/auth_activate/1024.png	SAME	1.070	
+admin/anon/auth_activate/1280.png	SAME	0.822	
+admin/anon/auth_activate/1440.png	SAME	0.649	
+admin/anon/auth_activate/360.png	CHANGED	3.38	
+admin/anon/auth_activate/390.png	CHANGED	2.13	
+admin/anon/auth_activate/430.png	CHANGED	2.11	
+admin/anon/auth_activate/768.png	SAME	1.070	
+admin/anon/auth_no-access/1024.png	SAME	0.827	
+admin/anon/auth_no-access/1280.png	SAME	0.635	
+admin/anon/auth_no-access/1440.png	SAME	0.502	
+admin/anon/auth_no-access/360.png	CHANGED	2.82	
+admin/anon/auth_no-access/390.png	SAME	1.928	
+admin/anon/auth_no-access/430.png	SAME	1.622	
+admin/anon/auth_no-access/768.png	SAME	0.827	
+admin/anon/auth_no-workspace/1024.png	SAME	1.013	
+admin/anon/auth_no-workspace/1280.png	SAME	0.778	
+admin/anon/auth_no-workspace/1440.png	SAME	0.615	
+admin/anon/auth_no-workspace/360.png	CHANGED	2.84	
+admin/anon/auth_no-workspace/390.png	CHANGED	2.75	
+admin/anon/auth_no-workspace/430.png	CHANGED	2.27	
+admin/anon/auth_no-workspace/768.png	SAME	1.013	
+admin/anon/login/1024.png	SAME	1.872	
+admin/anon/login/1280.png	SAME	1.437	
+admin/anon/login/1440.png	SAME	1.136	
+admin/anon/login/360.png	CHANGED	4.49	
+admin/anon/login/390.png	CHANGED	4.10	
+admin/anon/login/430.png	CHANGED	3.56	
+admin/anon/login/768.png	SAME	1.872	
+admin/super/admin/1024.png	CHANGED	4.40	
+admin/super/admin/1280.png	CHANGED	3.49	
+admin/super/admin/1440.png	CHANGED	3.13	
+admin/super/admin/360.png	CHANGED	3.45	
+admin/super/admin/390.png	CHANGED	3.49	
+admin/super/admin/430.png	CHANGED	5.12	
+admin/super/admin/768.png	CHANGED	4.14	
+admin/super/admin_ai-governance/1024.png	CHANGED	5.73	
+admin/super/admin_ai-governance/1280.png	CHANGED	4.92	
+admin/super/admin_ai-governance/1440.png	CHANGED	3.98	
+admin/super/admin_ai-governance/360.png	CHANGED	8.88	
+admin/super/admin_ai-governance/390.png	CHANGED	8.09	
+admin/super/admin_ai-governance/430.png	CHANGED	7.03	
+admin/super/admin_ai-governance/768.png	CHANGED	5.07	
+admin/super/admin_applications/1024.png	CHANGED	5.73	
+admin/super/admin_applications/1280.png	CHANGED	5.49	
+admin/super/admin_applications/1440.png	CHANGED	4.80	
+admin/super/admin_applications/360.png	CHANGED	5.60	
+admin/super/admin_applications/390.png	CHANGED	5.63	
+admin/super/admin_applications/430.png	CHANGED	5.30	
+admin/super/admin_applications/768.png	CHANGED	5.20	
+admin/super/admin_audit/1024.png	CHANGED	5.91	
+admin/super/admin_audit/1280.png	CHANGED	5.46	
+admin/super/admin_audit/1440.png	CHANGED	5.34	
+admin/super/admin_audit/360.png	CHANGED	6.59	
+admin/super/admin_audit/390.png	CHANGED	6.36	
+admin/super/admin_audit/430.png	CHANGED	5.96	
+admin/super/admin_audit/768.png	CHANGED	4.50	
+admin/super/admin_byok/1024.png	CHANGED	4.65	
+admin/super/admin_byok/1280.png	CHANGED	3.60	
+admin/super/admin_byok/1440.png	CHANGED	2.87	
+admin/super/admin_byok/360.png	CHANGED	5.10	
+admin/super/admin_byok/390.png	CHANGED	4.44	
+admin/super/admin_byok/430.png	CHANGED	3.61	
+admin/super/admin_byok/768.png	SAME	1.906	
+admin/super/admin_data-sources/1024.png	CHANGED	5.41	
+admin/super/admin_data-sources/1280.png	CHANGED	4.15	
+admin/super/admin_data-sources/1440.png	CHANGED	3.28	
+admin/super/admin_data-sources/360.png	CHANGED	7.24	
+admin/super/admin_data-sources/390.png	CHANGED	6.36	
+admin/super/admin_data-sources/430.png	CHANGED	5.09	
+admin/super/admin_data-sources/768.png	CHANGED	2.62	
+admin/super/admin_departments/1024.png	CHANGED	5.00	
+admin/super/admin_departments/1280.png	CHANGED	3.84	
+admin/super/admin_departments/1440.png	CHANGED	3.03	
+admin/super/admin_departments/360.png	CHANGED	5.80	
+admin/super/admin_departments/390.png	CHANGED	5.83	
+admin/super/admin_departments/430.png	CHANGED	5.23	
+admin/super/admin_departments/768.png	CHANGED	2.27	
+admin/super/admin_groups/1024.png	CHANGED	4.50	
+admin/super/admin_groups/1280.png	CHANGED	3.48	
+admin/super/admin_groups/1440.png	CHANGED	2.77	
+admin/super/admin_groups/360.png	CHANGED	4.26	
+admin/super/admin_groups/390.png	CHANGED	3.73	
+admin/super/admin_groups/430.png	CHANGED	3.15	
+admin/super/admin_groups/768.png	SAME	1.648	
+admin/super/admin_identity/1024.png	CHANGED	6.26	
+admin/super/admin_identity/1280.png	CHANGED	4.76	
+admin/super/admin_identity/1440.png	CHANGED	3.76	
+admin/super/admin_identity/360.png	CHANGED	6.09	
+admin/super/admin_identity/390.png	CHANGED	6.42	
+admin/super/admin_identity/430.png	CHANGED	6.86	
+admin/super/admin_identity/768.png	CHANGED	3.52	
+admin/super/admin_sharing/1024.png	CHANGED	4.75	
+admin/super/admin_sharing/1280.png	CHANGED	3.68	
+admin/super/admin_sharing/1440.png	CHANGED	2.92	
+admin/super/admin_sharing/360.png	CHANGED	4.65	
+admin/super/admin_sharing/390.png	CHANGED	4.09	
+admin/super/admin_sharing/430.png	CHANGED	3.39	
+admin/super/admin_sharing/768.png	SAME	1.833	
+admin/super/admin_templates/1024.png	CHANGED	4.25	
+admin/super/admin_templates/1280.png	CHANGED	3.26	
+admin/super/admin_templates/1440.png	CHANGED	2.58	
+admin/super/admin_templates/360.png	CHANGED	4.80	
+admin/super/admin_templates/390.png	CHANGED	4.08	
+admin/super/admin_templates/430.png	CHANGED	3.44	
+admin/super/admin_templates/768.png	SAME	1.523	
+admin/super/admin_users/1024.png	CHANGED	5.50	
+admin/super/admin_users/1280.png	CHANGED	4.93	
+admin/super/admin_users/1440.png	CHANGED	4.36	
+admin/super/admin_users/360.png	CHANGED	9.30	
+admin/super/admin_users/390.png	CHANGED	8.55	
+admin/super/admin_users/430.png	CHANGED	7.55	
+admin/super/admin_users/768.png	CHANGED	4.56	
+admin/tenantAdmin/admin/1024.png	CHANGED	3.12	
+admin/tenantAdmin/admin/1280.png	CHANGED	2.38	
+admin/tenantAdmin/admin/1440.png	SAME	1.901	
+admin/tenantAdmin/admin/360.png	CHANGED	4.46	
+admin/tenantAdmin/admin/390.png	CHANGED	3.92	
+admin/tenantAdmin/admin/430.png	CHANGED	3.33	
+admin/tenantAdmin/admin/768.png	SAME	1.689	
+admin/tenantAdmin/admin_byok/1024.png	CHANGED	4.36	
+admin/tenantAdmin/admin_byok/1280.png	CHANGED	3.38	
+admin/tenantAdmin/admin_byok/1440.png	CHANGED	2.70	
+admin/tenantAdmin/admin_byok/360.png	CHANGED	4.82	
+admin/tenantAdmin/admin_byok/390.png	CHANGED	4.21	
+admin/tenantAdmin/admin_byok/430.png	CHANGED	3.43	
+admin/tenantAdmin/admin_byok/768.png	SAME	1.837	
+admin/tenantAdmin/admin_company/1024.png	CHANGED	6.08	
+admin/tenantAdmin/admin_company/1280.png	CHANGED	4.98	
+admin/tenantAdmin/admin_company/1440.png	CHANGED	4.29	
+admin/tenantAdmin/admin_company/360.png	CHANGED	7.82	
+admin/tenantAdmin/admin_company/390.png	CHANGED	7.76	
+admin/tenantAdmin/admin_company/430.png	CHANGED	7.23	
+admin/tenantAdmin/admin_company/768.png	CHANGED	6.05	
+admin/tenantAdmin/admin_data-sources/1024.png	CHANGED	9.29	
+admin/tenantAdmin/admin_data-sources/1280.png	CHANGED	7.39	
+admin/tenantAdmin/admin_data-sources/1440.png	CHANGED	6.03	
+admin/tenantAdmin/admin_data-sources/360.png	CHANGED	9.63	
+admin/tenantAdmin/admin_data-sources/390.png	CHANGED	13.12	
+admin/tenantAdmin/admin_data-sources/430.png	CHANGED	13.44	
+admin/tenantAdmin/admin_data-sources/768.png	CHANGED	6.65	
+admin/tenantAdmin/admin_employees/1024.png	NEW		
+admin/tenantAdmin/admin_employees/1280.png	NEW		
+admin/tenantAdmin/admin_employees/1440.png	NEW		
+admin/tenantAdmin/admin_employees/360.png	NEW		
+admin/tenantAdmin/admin_employees/390.png	NEW		
+admin/tenantAdmin/admin_employees/430.png	NEW		
+admin/tenantAdmin/admin_employees/768.png	NEW		
+admin/tenantAdmin/admin_groups/1024.png	CHANGED	4.35	
+admin/tenantAdmin/admin_groups/1280.png	CHANGED	3.36	
+admin/tenantAdmin/admin_groups/1440.png	CHANGED	2.67	
+admin/tenantAdmin/admin_groups/360.png	CHANGED	4.21	
+admin/tenantAdmin/admin_groups/390.png	CHANGED	3.61	
+admin/tenantAdmin/admin_groups/430.png	CHANGED	3.01	
+admin/tenantAdmin/admin_groups/768.png	SAME	1.580	
+admin/tenantAdmin/admin_my-workspaces/1024.png	CHANGED	6.29	
+admin/tenantAdmin/admin_my-workspaces/1280.png	CHANGED	5.22	
+admin/tenantAdmin/admin_my-workspaces/1440.png	CHANGED	4.34	
+admin/tenantAdmin/admin_my-workspaces/360.png	CHANGED	6.47	
+admin/tenantAdmin/admin_my-workspaces/390.png	CHANGED	6.00	
+admin/tenantAdmin/admin_my-workspaces/430.png	CHANGED	5.61	
+admin/tenantAdmin/admin_my-workspaces/768.png	CHANGED	4.88	
+admin/tenantAdmin/admin_my-workspaces/state_empty/1440.png	CHANGED	3.12	
+admin/tenantAdmin/admin_my-workspaces/state_empty/390.png	CHANGED	5.56	
+admin/tenantAdmin/admin_my-workspaces/state_error/1440.png	CHANGED	3.22	
+admin/tenantAdmin/admin_my-workspaces/state_error/390.png	CHANGED	4.98	
+admin/tenantAdmin/admin_my-workspaces/state_loading/1440.png	CHANGED	3.03	
+admin/tenantAdmin/admin_my-workspaces/state_loading/390.png	CHANGED	4.35	
+admin/tenantAdmin/admin_organization/1024.png	NEW		
+admin/tenantAdmin/admin_organization/1280.png	NEW		
+admin/tenantAdmin/admin_organization/1440.png	NEW		
+admin/tenantAdmin/admin_organization/360.png	NEW		
+admin/tenantAdmin/admin_organization/390.png	NEW		
+admin/tenantAdmin/admin_organization/430.png	NEW		
+admin/tenantAdmin/admin_organization/768.png	NEW		
+admin/tenantAdmin/admin_people/1024.png	CHANGED	6.82	
+admin/tenantAdmin/admin_people/1280.png	CHANGED	5.25	
+admin/tenantAdmin/admin_people/1440.png	CHANGED	4.15	
+admin/tenantAdmin/admin_people/360.png	CHANGED	9.91	
+admin/tenantAdmin/admin_people/390.png	CHANGED	7.21	
+admin/tenantAdmin/admin_people/430.png	CHANGED	6.00	
+admin/tenantAdmin/admin_people/768.png	CHANGED	3.69	
+admin/tenantAdmin/admin_people/dialog__T_o_t_i_kho_n/1024.png	CHANGED	11.98	
+admin/tenantAdmin/admin_people/dialog__T_o_t_i_kho_n/1440.png	CHANGED	9.56	
+admin/tenantAdmin/admin_people/dialog__T_o_t_i_kho_n/360.png	CHANGED	23.14	
+admin/tenantAdmin/admin_people/dialog__T_o_t_i_kho_n/390.png	CHANGED	22.25	
+admin/tenantAdmin/admin_people/state_empty/1440.png	CHANGED	4.15	
+admin/tenantAdmin/admin_people/state_empty/390.png	CHANGED	7.21	
+admin/tenantAdmin/admin_people/state_error/1440.png	CHANGED	4.15	
+admin/tenantAdmin/admin_people/state_error/390.png	CHANGED	7.21	
+admin/tenantAdmin/admin_people/state_loading/1440.png	CHANGED	4.15	
+admin/tenantAdmin/admin_people/state_loading/390.png	CHANGED	7.21	
+admin/tenantAdmin/admin_sharing/1024.png	CHANGED	4.48	
+admin/tenantAdmin/admin_sharing/1280.png	CHANGED	3.46	
+admin/tenantAdmin/admin_sharing/1440.png	CHANGED	2.75	
+admin/tenantAdmin/admin_sharing/360.png	CHANGED	4.62	
+admin/tenantAdmin/admin_sharing/390.png	CHANGED	4.09	
+admin/tenantAdmin/admin_sharing/430.png	CHANGED	3.34	
+admin/tenantAdmin/admin_sharing/768.png	SAME	1.765	
+admin/tenantAdmin/admin_zzz-khong-ton-tai/1024.png	SAME	1.546	
+admin/tenantAdmin/admin_zzz-khong-ton-tai/1280.png	SAME	1.187	
+admin/tenantAdmin/admin_zzz-khong-ton-tai/1440.png	SAME	0.938	
+admin/tenantAdmin/admin_zzz-khong-ton-tai/360.png	SAME	1.745	
+admin/tenantAdmin/admin_zzz-khong-ton-tai/390.png	SAME	1.519	
+admin/tenantAdmin/admin_zzz-khong-ton-tai/430.png	SAME	1.274	
+admin/tenantAdmin/admin_zzz-khong-ton-tai/768.png	SAME	0.675	
+admin/workspaceAdmin/admin/1024.png	CHANGED	2.35	
+admin/workspaceAdmin/admin/1280.png	SAME	1.805	
+admin/workspaceAdmin/admin/1440.png	SAME	1.428	
+admin/workspaceAdmin/admin/360.png	CHANGED	3.16	
+admin/workspaceAdmin/admin/390.png	CHANGED	2.66	
+admin/workspaceAdmin/admin/430.png	CHANGED	2.16	
+admin/workspaceAdmin/admin/768.png	SAME	1.127	
+admin/workspaceAdmin/admin_byok/1024.png	CHANGED	4.21	
+admin/workspaceAdmin/admin_byok/1280.png	CHANGED	3.27	
+admin/workspaceAdmin/admin_byok/1440.png	CHANGED	2.60	
+admin/workspaceAdmin/admin_byok/360.png	CHANGED	4.82	
+admin/workspaceAdmin/admin_byok/390.png	CHANGED	4.21	
+admin/workspaceAdmin/admin_byok/430.png	CHANGED	3.43	
+admin/workspaceAdmin/admin_byok/768.png	SAME	1.837	
+admin/workspaceAdmin/admin_company/1024.png	SAME	1.403	
+admin/workspaceAdmin/admin_company/1280.png	SAME	1.078	
+admin/workspaceAdmin/admin_company/1440.png	SAME	0.852	
+admin/workspaceAdmin/admin_company/360.png	SAME	1.952	
+admin/workspaceAdmin/admin_company/390.png	SAME	1.687	
+admin/workspaceAdmin/admin_company/430.png	SAME	1.348	
+admin/workspaceAdmin/admin_company/768.png	SAME	0.707	
+admin/workspaceAdmin/admin_data-sources/1024.png	CHANGED	8.55	
+admin/workspaceAdmin/admin_data-sources/1280.png	CHANGED	6.82	
+admin/workspaceAdmin/admin_data-sources/1440.png	CHANGED	5.58	
+admin/workspaceAdmin/admin_data-sources/360.png	CHANGED	9.63	
+admin/workspaceAdmin/admin_data-sources/390.png	CHANGED	13.12	
+admin/workspaceAdmin/admin_data-sources/430.png	CHANGED	13.44	
+admin/workspaceAdmin/admin_data-sources/768.png	CHANGED	6.65	
+admin/workspaceAdmin/admin_groups/1024.png	CHANGED	3.76	
+admin/workspaceAdmin/admin_groups/1280.png	CHANGED	2.91	
+admin/workspaceAdmin/admin_groups/1440.png	CHANGED	2.31	
+admin/workspaceAdmin/admin_groups/360.png	CHANGED	4.21	
+admin/workspaceAdmin/admin_groups/390.png	CHANGED	3.61	
+admin/workspaceAdmin/admin_groups/430.png	CHANGED	3.01	
+admin/workspaceAdmin/admin_groups/768.png	SAME	1.580	
+admin/workspaceAdmin/admin_my-workspaces/1024.png	CHANGED	5.34	
+admin/workspaceAdmin/admin_my-workspaces/1280.png	CHANGED	4.49	
+admin/workspaceAdmin/admin_my-workspaces/1440.png	CHANGED	3.76	
+admin/workspaceAdmin/admin_my-workspaces/360.png	CHANGED	6.47	
+admin/workspaceAdmin/admin_my-workspaces/390.png	CHANGED	6.00	
+admin/workspaceAdmin/admin_my-workspaces/430.png	CHANGED	5.64	
+admin/workspaceAdmin/admin_my-workspaces/768.png	CHANGED	4.92	
+admin/workspaceAdmin/admin_people/1024.png	CHANGED	4.47	
+admin/workspaceAdmin/admin_people/1280.png	CHANGED	3.43	
+admin/workspaceAdmin/admin_people/1440.png	CHANGED	2.71	
+admin/workspaceAdmin/admin_people/360.png	CHANGED	8.24	
+admin/workspaceAdmin/admin_people/390.png	CHANGED	5.97	
+admin/workspaceAdmin/admin_people/430.png	CHANGED	4.79	
+admin/workspaceAdmin/admin_people/768.png	CHANGED	2.38	
+admin/workspaceAdmin/admin_sharing/1024.png	CHANGED	4.13	
+admin/workspaceAdmin/admin_sharing/1280.png	CHANGED	3.20	
+admin/workspaceAdmin/admin_sharing/1440.png	CHANGED	2.54	
+admin/workspaceAdmin/admin_sharing/360.png	CHANGED	4.62	
+admin/workspaceAdmin/admin_sharing/390.png	CHANGED	4.09	
+admin/workspaceAdmin/admin_sharing/430.png	CHANGED	3.34	
+admin/workspaceAdmin/admin_sharing/768.png	SAME	1.765	
+platform/anon/auth_activate/1024.png	SAME	1.070	
+platform/anon/auth_activate/1280.png	SAME	0.822	
+platform/anon/auth_activate/1440.png	SAME	0.649	
+platform/anon/auth_activate/360.png	CHANGED	3.38	
+platform/anon/auth_activate/390.png	CHANGED	2.13	
+platform/anon/auth_activate/430.png	CHANGED	2.11	
+platform/anon/auth_activate/768.png	SAME	1.070	
+platform/anon/auth_no-access/1024.png	SAME	0.827	
+platform/anon/auth_no-access/1280.png	SAME	0.635	
+platform/anon/auth_no-access/1440.png	SAME	0.502	
+platform/anon/auth_no-access/360.png	CHANGED	2.82	
+platform/anon/auth_no-access/390.png	SAME	1.928	
+platform/anon/auth_no-access/430.png	SAME	1.622	
+platform/anon/auth_no-access/768.png	SAME	0.827	
+platform/anon/auth_no-workspace/1024.png	SAME	1.013	
+platform/anon/auth_no-workspace/1280.png	SAME	0.778	
+platform/anon/auth_no-workspace/1440.png	SAME	0.615	
+platform/anon/auth_no-workspace/360.png	CHANGED	2.84	
+platform/anon/auth_no-workspace/390.png	CHANGED	2.75	
+platform/anon/auth_no-workspace/430.png	CHANGED	2.27	
+platform/anon/auth_no-workspace/768.png	SAME	1.013	
+platform/anon/login/1024.png	SAME	1.875	
+platform/anon/login/1280.png	SAME	1.440	
+platform/anon/login/1440.png	SAME	1.138	
+platform/anon/login/360.png	CHANGED	4.50	
+platform/anon/login/390.png	CHANGED	4.12	
+platform/anon/login/430.png	CHANGED	3.58	
+platform/anon/login/768.png	SAME	1.875	
+platform/anon/platform_zzz-khong-ton-tai/1024.png	SAME	1.875	
+platform/anon/platform_zzz-khong-ton-tai/1280.png	SAME	1.440	
+platform/anon/platform_zzz-khong-ton-tai/1440.png	SAME	1.138	
+platform/anon/platform_zzz-khong-ton-tai/360.png	CHANGED	4.50	
+platform/anon/platform_zzz-khong-ton-tai/390.png	CHANGED	4.12	
+platform/anon/platform_zzz-khong-ton-tai/430.png	CHANGED	3.58	
+platform/anon/platform_zzz-khong-ton-tai/768.png	SAME	1.875	
+platform/super/platform/1024.png	CHANGED	4.57	
+platform/super/platform/1280.png	CHANGED	3.90	
+platform/super/platform/1440.png	CHANGED	3.32	
+platform/super/platform/360.png	CHANGED	5.99	
+platform/super/platform/390.png	CHANGED	5.50	
+platform/super/platform/430.png	CHANGED	5.65	
+platform/super/platform/768.png	CHANGED	4.01	
+platform/super/platform_ai/1024.png	CHANGED	6.48	
+platform/super/platform_ai/1280.png	CHANGED	5.08	
+platform/super/platform_ai/1440.png	CHANGED	3.82	
+platform/super/platform_ai/360.png	CHANGED	11.99	
+platform/super/platform_ai/390.png	CHANGED	10.62	
+platform/super/platform_ai/430.png	CHANGED	5.89	
+platform/super/platform_ai/768.png	CHANGED	3.22	
+platform/super/platform_alerts/1024.png	CHANGED	3.87	
+platform/super/platform_alerts/1280.png	CHANGED	3.09	
+platform/super/platform_alerts/1440.png	CHANGED	2.34	
+platform/super/platform_alerts/360.png	CHANGED	2.74	
+platform/super/platform_alerts/390.png	CHANGED	2.34	
+platform/super/platform_alerts/430.png	SAME	1.951	
+platform/super/platform_alerts/768.png	SAME	1.031	
+platform/super/platform_applications_id/1024.png	SAME	1.899	
+platform/super/platform_applications_id/1280.png	SAME	1.573	
+platform/super/platform_applications_id/1440.png	SAME	1.145	
+platform/super/platform_applications_id/360.png	CHANGED	2.13	
+platform/super/platform_applications_id/390.png	SAME	1.860	
+platform/super/platform_applications_id/430.png	SAME	1.498	
+platform/super/platform_applications_id/768.png	SAME	0.723	
+platform/super/platform_audit/1024.png	CHANGED	6.01	
+platform/super/platform_audit/1280.png	CHANGED	5.43	
+platform/super/platform_audit/1440.png	CHANGED	5.42	
+platform/super/platform_audit/360.png	CHANGED	6.84	
+platform/super/platform_audit/390.png	CHANGED	6.25	
+platform/super/platform_audit/430.png	CHANGED	6.02	
+platform/super/platform_audit/768.png	CHANGED	4.58	
+platform/super/platform_audit/state_empty/1440.png	CHANGED	2.67	
+platform/super/platform_audit/state_empty/390.png	CHANGED	4.66	
+platform/super/platform_audit/state_error/1440.png	CHANGED	2.69	
+platform/super/platform_audit/state_error/390.png	CHANGED	4.71	
+platform/super/platform_audit/state_loading/1440.png	CHANGED	2.59	
+platform/super/platform_audit/state_loading/390.png	CHANGED	4.30	
+platform/super/platform_backups/1024.png	CHANGED	4.29	
+platform/super/platform_backups/1280.png	CHANGED	3.41	
+platform/super/platform_backups/1440.png	CHANGED	2.60	
+platform/super/platform_backups/360.png	CHANGED	3.53	
+platform/super/platform_backups/390.png	CHANGED	3.11	
+platform/super/platform_backups/430.png	CHANGED	2.56	
+platform/super/platform_backups/768.png	SAME	1.367	
+platform/super/platform_builds/1024.png	CHANGED	4.63	
+platform/super/platform_builds/1280.png	CHANGED	3.89	
+platform/super/platform_builds/1440.png	CHANGED	3.05	
+platform/super/platform_builds/360.png	CHANGED	4.18	
+platform/super/platform_builds/390.png	CHANGED	3.79	
+platform/super/platform_builds/430.png	CHANGED	3.61	
+platform/super/platform_builds/768.png	SAME	1.972	
+platform/super/platform_components/1024.png	CHANGED	6.41	
+platform/super/platform_components/1280.png	CHANGED	5.25	
+platform/super/platform_components/1440.png	CHANGED	4.35	
+platform/super/platform_components/360.png	CHANGED_SIZE		504x800 -> 360x800
+platform/super/platform_components/390.png	CHANGED_SIZE		504x844 -> 390x844
+platform/super/platform_components/430.png	CHANGED_SIZE		504x932 -> 430x932
+platform/super/platform_components/768.png	CHANGED	4.76	
+platform/super/platform_connectors/1024.png	CHANGED	5.05	
+platform/super/platform_connectors/1280.png	CHANGED	4.01	
+platform/super/platform_connectors/1440.png	CHANGED	3.07	
+platform/super/platform_connectors/360.png	CHANGED	5.39	
+platform/super/platform_connectors/390.png	CHANGED	4.75	
+platform/super/platform_connectors/430.png	CHANGED	3.96	
+platform/super/platform_connectors/768.png	CHANGED	2.05	
+platform/super/platform_costs/1024.png	CHANGED	6.24	
+platform/super/platform_costs/1280.png	CHANGED	5.27	
+platform/super/platform_costs/1440.png	CHANGED	4.47	
+platform/super/platform_costs/360.png	CHANGED	7.38	
+platform/super/platform_costs/390.png	CHANGED	6.85	
+platform/super/platform_costs/430.png	CHANGED	6.94	
+platform/super/platform_costs/768.png	CHANGED	4.83	
+platform/super/platform_packages/1024.png	CHANGED	5.18	
+platform/super/platform_packages/1280.png	CHANGED	4.08	
+platform/super/platform_packages/1440.png	CHANGED	3.13	
+platform/super/platform_packages/360.png	CHANGED	7.14	
+platform/super/platform_packages/390.png	CHANGED	6.37	
+platform/super/platform_packages/430.png	CHANGED	5.23	
+platform/super/platform_packages/768.png	CHANGED	2.11	
+platform/super/platform_security/1024.png	CHANGED	4.81	
+platform/super/platform_security/1280.png	CHANGED	3.81	
+platform/super/platform_security/1440.png	CHANGED	2.91	
+platform/super/platform_security/360.png	CHANGED	4.14	
+platform/super/platform_security/390.png	CHANGED	3.92	
+platform/super/platform_security/430.png	CHANGED	3.60	
+platform/super/platform_security/768.png	SAME	1.856	
+platform/super/platform_settings/1024.png	CHANGED	5.80	
+platform/super/platform_settings/1280.png	CHANGED	5.58	
+platform/super/platform_settings/1440.png	CHANGED	4.84	
+platform/super/platform_settings/360.png	CHANGED	6.60	
+platform/super/platform_settings/390.png	CHANGED	6.23	
+platform/super/platform_settings/430.png	CHANGED	6.05	
+platform/super/platform_settings/768.png	CHANGED	4.59	
+platform/super/platform_system/1024.png	CHANGED	6.38	
+platform/super/platform_system/1280.png	CHANGED	5.19	
+platform/super/platform_system/1440.png	CHANGED	3.91	
+platform/super/platform_system/360.png	CHANGED	5.66	
+platform/super/platform_system/390.png	CHANGED	5.39	
+platform/super/platform_system/430.png	CHANGED	5.24	
+platform/super/platform_system/768.png	CHANGED	4.63	
+platform/super/platform_templates/1024.png	CHANGED	4.45	
+platform/super/platform_templates/1280.png	CHANGED	3.53	
+platform/super/platform_templates/1440.png	CHANGED	2.69	
+platform/super/platform_templates/360.png	CHANGED	4.78	
+platform/super/platform_templates/390.png	CHANGED	4.08	
+platform/super/platform_templates/430.png	CHANGED	3.43	
+platform/super/platform_templates/768.png	SAME	1.514	
+platform/super/platform_tenants/1024.png	CHANGED	6.37	
+platform/super/platform_tenants/1280.png	CHANGED	5.46	
+platform/super/platform_tenants/1440.png	CHANGED	4.70	
+platform/super/platform_tenants/360.png	CHANGED	8.68	
+platform/super/platform_tenants/390.png	CHANGED	8.48	
+platform/super/platform_tenants/430.png	CHANGED	9.01	
+platform/super/platform_tenants/768.png	CHANGED	6.83	
+platform/super/platform_tenants/dialog__T_o_c_ng_ty/1024.png	CHANGED	23.45	
+platform/super/platform_tenants/dialog__T_o_c_ng_ty/1440.png	CHANGED	16.44	
+platform/super/platform_tenants/dialog__T_o_c_ng_ty/360.png	CHANGED	43.59	
+platform/super/platform_tenants/dialog__T_o_c_ng_ty/390.png	CHANGED	42.33	
+platform/super/platform_tenants/state_empty/1440.png	SAME	1.703	
+platform/super/platform_tenants/state_empty/390.png	CHANGED	4.53	
+platform/super/platform_tenants/state_error/1440.png	SAME	1.769	
+platform/super/platform_tenants/state_error/390.png	CHANGED	4.81	
+platform/super/platform_tenants/state_loading/1440.png	SAME	1.669	
+platform/super/platform_tenants/state_loading/390.png	CHANGED	4.41	
+platform/super/platform_tenants_id/1024.png	CHANGED	5.75	
+platform/super/platform_tenants_id/1280.png	CHANGED	6.89	
+platform/super/platform_tenants_id/1440.png	CHANGED	3.92	
+platform/super/platform_tenants_id/360.png	CHANGED	7.75	
+platform/super/platform_tenants_id/390.png	CHANGED	7.21	
+platform/super/platform_tenants_id/430.png	CHANGED	9.15	
+platform/super/platform_tenants_id/768.png	CHANGED	6.47	
+platform/super/platform_users/1024.png	CHANGED	5.78	
+platform/super/platform_users/1280.png	CHANGED	5.26	
+platform/super/platform_users/1440.png	CHANGED	4.53	
+platform/super/platform_users/360.png	CHANGED	9.28	
+platform/super/platform_users/390.png	CHANGED	8.60	
+platform/super/platform_users/430.png	CHANGED	7.54	
+platform/super/platform_users/768.png	CHANGED	4.55	
+platform/super/platform_users/dialog__T_o_t_i_kho_n/1024.png	CHANGED	10.93	
+platform/super/platform_users/dialog__T_o_t_i_kho_n/1440.png	CHANGED	9.12	
+platform/super/platform_users/dialog__T_o_t_i_kho_n/360.png	CHANGED	20.05	
+platform/super/platform_users/dialog__T_o_t_i_kho_n/390.png	CHANGED	19.89	
+platform/super/platform_users/state_empty/1440.png	CHANGED	2.36	
+platform/super/platform_users/state_empty/390.png	CHANGED	5.81	
+platform/super/platform_users/state_error/1440.png	CHANGED	2.38	
+platform/super/platform_users/state_error/390.png	CHANGED	5.88	
+platform/super/platform_users/state_loading/1440.png	CHANGED	2.28	
+platform/super/platform_users/state_loading/390.png	CHANGED	5.49	
+platform/super/platform_users_id/1024.png	CHANGED	5.00	
+platform/super/platform_users_id/1280.png	CHANGED	4.54	
+platform/super/platform_users_id/1440.png	CHANGED	4.00	
+platform/super/platform_users_id/360.png	CHANGED	5.94	
+platform/super/platform_users_id/390.png	CHANGED	5.51	
+platform/super/platform_users_id/430.png	CHANGED	5.77	
+platform/super/platform_users_id/768.png	CHANGED	4.13	
+platform/super/platform_workspaces_id/1024.png	CHANGED	4.57	
+platform/super/platform_workspaces_id/1280.png	CHANGED	4.97	
+platform/super/platform_workspaces_id/1440.png	CHANGED	4.24	
+platform/super/platform_workspaces_id/360.png	CHANGED	5.00	
+platform/super/platform_workspaces_id/390.png	CHANGED	4.93	
+platform/super/platform_workspaces_id/430.png	CHANGED	4.51	
+platform/super/platform_workspaces_id/768.png	CHANGED	3.82	
+platform/super/platform_zzz-khong-ton-tai/1024.png	SAME	1.899	
+platform/super/platform_zzz-khong-ton-tai/1280.png	SAME	1.573	
+platform/super/platform_zzz-khong-ton-tai/1440.png	SAME	1.145	
+platform/super/platform_zzz-khong-ton-tai/360.png	CHANGED	2.13	
+platform/super/platform_zzz-khong-ton-tai/390.png	SAME	1.860	
+platform/super/platform_zzz-khong-ton-tai/430.png	SAME	1.498	
+platform/super/platform_zzz-khong-ton-tai/768.png	SAME	0.723	
+sheets/admin__super__admin_applications.png	NEW		
+sheets/admin__tenantAdmin__admin.png	NEW		
+sheets/admin__tenantAdmin__admin_company.png	NEW		
+sheets/admin__tenantAdmin__admin_data-sources.png	NEW		
+sheets/admin__tenantAdmin__admin_employees.png	NEW		
+sheets/admin__tenantAdmin__admin_groups.png	NEW		
+sheets/admin__tenantAdmin__admin_my-workspaces.png	NEW		
+sheets/admin__tenantAdmin__admin_organization.png	NEW		
+sheets/admin__tenantAdmin__admin_people__dialog__T_o_t_i_kho_n.png	NEW		
+sheets/platform__super__platform_ai.png	NEW		
+sheets/platform__super__platform_alerts.png	NEW		
+sheets/platform__super__platform_backups.png	NEW		
+sheets/platform__super__platform_costs.png	NEW		
+sheets/platform__super__platform_security.png	NEW		
+sheets/platform__super__platform_settings.png	NEW		
+sheets/platform__super__platform_tenants.png	NEW		
+sheets/platform__super__platform_tenants__dialog__T_o_c_ng_ty.png	NEW		
+sheets/platform__super__platform_users.png	NEW		
+sheets/studio__workspaceAdmin__builder_inspector_section_selected_.png	NEW		
+sheets/studio__workspaceAdmin__builder_rail_D_li_u_.png	NEW		
+sheets/studio__workspaceAdmin__builder_rail_H_nh_ng_.png	NEW		
+sheets/studio__workspaceAdmin__builder_rail_Workflow_.png	NEW		
+sheets/studio__workspaceAdmin__publish_dialog_history_expanded.png	NEW		
+sheets/studio__workspaceAdmin__studio_new.png	NEW		
+sheets/studio__workspaceAdmin__studio_projects.png	NEW		
+sheets/studio__workspaceAdmin__studio_projects_id_design.png	NEW		
+sheets/studio__workspaceAdmin__studio_projects_id_publish.png	NEW		
+sheets/studio__workspaceAdmin__studio_projects_id_versions.png	NEW		
+studio/anon/auth_activate/1024.png	SAME	1.070	
+studio/anon/auth_activate/1280.png	SAME	0.822	
+studio/anon/auth_activate/1440.png	SAME	0.649	
+studio/anon/auth_activate/360.png	CHANGED	3.38	
+studio/anon/auth_activate/390.png	CHANGED	2.13	
+studio/anon/auth_activate/430.png	CHANGED	2.11	
+studio/anon/auth_activate/768.png	SAME	1.070	
+studio/anon/auth_no-access/1024.png	SAME	0.827	
+studio/anon/auth_no-access/1280.png	SAME	0.635	
+studio/anon/auth_no-access/1440.png	SAME	0.502	
+studio/anon/auth_no-access/360.png	CHANGED	2.82	
+studio/anon/auth_no-access/390.png	SAME	1.928	
+studio/anon/auth_no-access/430.png	SAME	1.622	
+studio/anon/auth_no-access/768.png	SAME	0.827	
+studio/anon/auth_no-workspace/1024.png	SAME	1.013	
+studio/anon/auth_no-workspace/1280.png	SAME	0.778	
+studio/anon/auth_no-workspace/1440.png	SAME	0.615	
+studio/anon/auth_no-workspace/360.png	CHANGED	2.84	
+studio/anon/auth_no-workspace/390.png	CHANGED	2.75	
+studio/anon/auth_no-workspace/430.png	CHANGED	2.27	
+studio/anon/auth_no-workspace/768.png	SAME	1.013	
+studio/anon/login/1024.png	SAME	1.868	
+studio/anon/login/1280.png	SAME	1.435	
+studio/anon/login/1440.png	SAME	1.134	
+studio/anon/login/360.png	CHANGED	4.45	
+studio/anon/login/390.png	CHANGED	4.08	
+studio/anon/login/430.png	SAME	1.592	
+studio/anon/login/768.png	SAME	1.868	
+studio/anon/studio_zzz-khong-ton-tai/1024.png	SAME	1.868	
+studio/anon/studio_zzz-khong-ton-tai/1280.png	SAME	1.435	
+studio/anon/studio_zzz-khong-ton-tai/1440.png	SAME	1.134	
+studio/anon/studio_zzz-khong-ton-tai/360.png	CHANGED	4.45	
+studio/anon/studio_zzz-khong-ton-tai/390.png	CHANGED	4.08	
+studio/anon/studio_zzz-khong-ton-tai/430.png	SAME	1.592	
+studio/anon/studio_zzz-khong-ton-tai/768.png	SAME	1.868	
+studio/appCreator/auth_no-access/1024.png	SAME	1.016	
+studio/appCreator/auth_no-access/1280.png	SAME	0.780	
+studio/appCreator/auth_no-access/1440.png	SAME	0.616	
+studio/appCreator/auth_no-access/360.png	CHANGED	3.88	
+studio/appCreator/auth_no-access/390.png	CHANGED	2.47	
+studio/appCreator/auth_no-access/430.png	SAME	1.993	
+studio/appCreator/auth_no-access/768.png	SAME	1.016	
+studio/appCreator/studio/1024.png	SAME	0.778	
+studio/appCreator/studio/1280.png	SAME	0.597	
+studio/appCreator/studio/1440.png	SAME	0.472	
+studio/appCreator/studio/360.png	CHANGED	2.65	
+studio/appCreator/studio/390.png	SAME	1.820	
+studio/appCreator/studio/430.png	SAME	1.526	
+studio/appCreator/studio/768.png	SAME	0.778	
+studio/appCreator/studio_activity/1024.png	SAME	0.778	
+studio/appCreator/studio_activity/1280.png	SAME	0.597	
+studio/appCreator/studio_activity/1440.png	SAME	0.472	
+studio/appCreator/studio_activity/360.png	CHANGED	2.65	
+studio/appCreator/studio_activity/390.png	SAME	1.820	
+studio/appCreator/studio_activity/430.png	SAME	1.526	
+studio/appCreator/studio_activity/768.png	SAME	0.778	
+studio/appCreator/studio_components/1024.png	SAME	0.778	
+studio/appCreator/studio_components/1280.png	SAME	0.597	
+studio/appCreator/studio_components/1440.png	SAME	0.472	
+studio/appCreator/studio_components/360.png	CHANGED	2.65	
+studio/appCreator/studio_components/390.png	SAME	1.820	
+studio/appCreator/studio_components/430.png	SAME	1.526	
+studio/appCreator/studio_components/768.png	SAME	0.778	
+studio/appCreator/studio_new/1024.png	SAME	0.778	
+studio/appCreator/studio_new/1280.png	SAME	0.597	
+studio/appCreator/studio_new/1440.png	SAME	0.472	
+studio/appCreator/studio_new/360.png	CHANGED	2.65	
+studio/appCreator/studio_new/390.png	SAME	1.820	
+studio/appCreator/studio_new/430.png	SAME	1.526	
+studio/appCreator/studio_new/768.png	SAME	0.778	
+studio/appCreator/studio_projects/1024.png	SAME	0.778	
+studio/appCreator/studio_projects/1280.png	SAME	0.597	
+studio/appCreator/studio_projects/1440.png	SAME	0.472	
+studio/appCreator/studio_projects/360.png	CHANGED	2.65	
+studio/appCreator/studio_projects/390.png	SAME	1.820	
+studio/appCreator/studio_projects/430.png	SAME	1.526	
+studio/appCreator/studio_projects/768.png	SAME	0.778	
+studio/appCreator/studio_site-access/1024.png	SAME	0.778	
+studio/appCreator/studio_site-access/1280.png	SAME	0.597	
+studio/appCreator/studio_site-access/1440.png	SAME	0.472	
+studio/appCreator/studio_site-access/360.png	CHANGED	2.65	
+studio/appCreator/studio_site-access/390.png	SAME	1.820	
+studio/appCreator/studio_site-access/430.png	SAME	1.526	
+studio/appCreator/studio_site-access/768.png	SAME	0.778	
+studio/appCreator/studio_templates/1024.png	SAME	0.778	
+studio/appCreator/studio_templates/1280.png	SAME	0.597	
+studio/appCreator/studio_templates/1440.png	SAME	0.472	
+studio/appCreator/studio_templates/360.png	CHANGED	2.65	
+studio/appCreator/studio_templates/390.png	SAME	1.820	
+studio/appCreator/studio_templates/430.png	SAME	1.526	
+studio/appCreator/studio_templates/768.png	SAME	0.778	
+studio/appCreator/studio_zzz-khong-ton-tai/1024.png	SAME	0.778	
+studio/appCreator/studio_zzz-khong-ton-tai/1280.png	SAME	0.597	
+studio/appCreator/studio_zzz-khong-ton-tai/1440.png	SAME	0.472	
+studio/appCreator/studio_zzz-khong-ton-tai/360.png	CHANGED	2.65	
+studio/appCreator/studio_zzz-khong-ton-tai/390.png	SAME	1.820	
+studio/appCreator/studio_zzz-khong-ton-tai/430.png	SAME	1.526	
+studio/appCreator/studio_zzz-khong-ton-tai/768.png	SAME	0.778	
+studio/workspaceAdmin/builder_D_ng_th_test_mode_/1024.png	CHANGED	24.20	
+studio/workspaceAdmin/builder_D_ng_th_test_mode_/1280.png	CHANGED	19.04	
+studio/workspaceAdmin/builder_D_ng_th_test_mode_/1440.png	CHANGED	12.25	
+studio/workspaceAdmin/builder_D_ng_th_test_mode_/360.png	CHANGED	20.50	
+studio/workspaceAdmin/builder_D_ng_th_test_mode_/390.png	CHANGED	21.91	
+studio/workspaceAdmin/builder_D_ng_th_test_mode_/430.png	CHANGED	20.95	
+studio/workspaceAdmin/builder_D_ng_th_test_mode_/768.png	CHANGED	17.93	
+studio/workspaceAdmin/builder_Phi_n_b_n_history_drawer_/1024.png	CHANGED	8.91	
+studio/workspaceAdmin/builder_Phi_n_b_n_history_drawer_/1280.png	CHANGED	9.87	
+studio/workspaceAdmin/builder_Phi_n_b_n_history_drawer_/1440.png	CHANGED	6.51	
+studio/workspaceAdmin/builder_Phi_n_b_n_history_drawer_/360.png	CHANGED	15.67	
+studio/workspaceAdmin/builder_Phi_n_b_n_history_drawer_/390.png	CHANGED	15.32	
+studio/workspaceAdmin/builder_Phi_n_b_n_history_drawer_/430.png	CHANGED	13.51	
+studio/workspaceAdmin/builder_Phi_n_b_n_history_drawer_/768.png	CHANGED	2.84	
+studio/workspaceAdmin/builder_inspector_section_selected_/1024.png	CHANGED	24.95	
+studio/workspaceAdmin/builder_inspector_section_selected_/1280.png	CHANGED	20.58	
+studio/workspaceAdmin/builder_inspector_section_selected_/1440.png	CHANGED	13.17	
+studio/workspaceAdmin/builder_inspector_section_selected_/360.png	CHANGED	22.86	
+studio/workspaceAdmin/builder_inspector_section_selected_/390.png	CHANGED	21.72	
+studio/workspaceAdmin/builder_inspector_section_selected_/430.png	CHANGED	21.26	
+studio/workspaceAdmin/builder_inspector_section_selected_/768.png	CHANGED	18.51	
+studio/workspaceAdmin/builder_mode_AI_/1024.png	CHANGED	23.19	
+studio/workspaceAdmin/builder_mode_AI_/1280.png	CHANGED	45.08	
+studio/workspaceAdmin/builder_mode_AI_/1440.png	CHANGED	44.13	
+studio/workspaceAdmin/builder_mode_AI_/360.png	CHANGED	27.65	
+studio/workspaceAdmin/builder_mode_AI_/390.png	CHANGED	26.58	
+studio/workspaceAdmin/builder_mode_AI_/430.png	CHANGED	24.81	
+studio/workspaceAdmin/builder_mode_AI_/768.png	CHANGED	45.38	
+studio/workspaceAdmin/builder_mode_Code_/1024.png	SAME	0.188	
+studio/workspaceAdmin/builder_mode_Code_/1280.png	SAME	0.092	
+studio/workspaceAdmin/builder_mode_Code_/1440.png	SAME	0.073	
+studio/workspaceAdmin/builder_mode_Code_/360.png	SAME	0.286	
+studio/workspaceAdmin/builder_mode_Code_/390.png	SAME	0.250	
+studio/workspaceAdmin/builder_mode_Code_/430.png	SAME	0.206	
+studio/workspaceAdmin/builder_mode_Code_/768.png	SAME	0.116	
+studio/workspaceAdmin/builder_rail_AI_/1024.png	CHANGED	24.13	
+studio/workspaceAdmin/builder_rail_AI_/1280.png	CHANGED	15.34	
+studio/workspaceAdmin/builder_rail_AI_/1440.png	CHANGED	9.14	
+studio/workspaceAdmin/builder_rail_AI_/360.png	CHANGED	16.62	
+studio/workspaceAdmin/builder_rail_AI_/390.png	CHANGED	16.33	
+studio/workspaceAdmin/builder_rail_AI_/430.png	CHANGED	15.43	
+studio/workspaceAdmin/builder_rail_AI_/768.png	CHANGED	13.81	
+studio/workspaceAdmin/builder_rail_Bi_u_m_u_/1024.png	CHANGED	24.37	
+studio/workspaceAdmin/builder_rail_Bi_u_m_u_/1280.png	CHANGED	14.95	
+studio/workspaceAdmin/builder_rail_Bi_u_m_u_/1440.png	CHANGED	9.02	
+studio/workspaceAdmin/builder_rail_Bi_u_m_u_/360.png	CHANGED	8.99	
+studio/workspaceAdmin/builder_rail_Bi_u_m_u_/390.png	CHANGED	14.24	
+studio/workspaceAdmin/builder_rail_Bi_u_m_u_/430.png	CHANGED	14.04	
+studio/workspaceAdmin/builder_rail_Bi_u_m_u_/768.png	CHANGED	13.13	
+studio/workspaceAdmin/builder_rail_D_li_u_/1024.png	CHANGED	68.72	
+studio/workspaceAdmin/builder_rail_D_li_u_/1280.png	CHANGED	71.97	
+studio/workspaceAdmin/builder_rail_D_li_u_/1440.png	CHANGED	67.18	
+studio/workspaceAdmin/builder_rail_D_li_u_/360.png	CHANGED	79.37	
+studio/workspaceAdmin/builder_rail_D_li_u_/390.png	CHANGED	80.43	
+studio/workspaceAdmin/builder_rail_D_li_u_/430.png	CHANGED	81.27	
+studio/workspaceAdmin/builder_rail_D_li_u_/768.png	CHANGED	66.08	
+studio/workspaceAdmin/builder_rail_Giao_di_n_/1024.png	CHANGED	23.63	
+studio/workspaceAdmin/builder_rail_Giao_di_n_/1280.png	CHANGED	15.93	
+studio/workspaceAdmin/builder_rail_Giao_di_n_/1440.png	CHANGED	9.45	
+studio/workspaceAdmin/builder_rail_Giao_di_n_/360.png	CHANGED	9.60	
+studio/workspaceAdmin/builder_rail_Giao_di_n_/390.png	CHANGED	9.07	
+studio/workspaceAdmin/builder_rail_Giao_di_n_/430.png	CHANGED	7.58	
+studio/workspaceAdmin/builder_rail_Giao_di_n_/768.png	CHANGED	15.33	
+studio/workspaceAdmin/builder_rail_H_nh_ng_/1024.png	CHANGED	21.44	
+studio/workspaceAdmin/builder_rail_H_nh_ng_/1280.png	CHANGED	15.98	
+studio/workspaceAdmin/builder_rail_H_nh_ng_/1440.png	CHANGED	9.61	
+studio/workspaceAdmin/builder_rail_H_nh_ng_/360.png	CHANGED	10.09	
+studio/workspaceAdmin/builder_rail_H_nh_ng_/390.png	CHANGED	9.56	
+studio/workspaceAdmin/builder_rail_H_nh_ng_/430.png	CHANGED	8.58	
+studio/workspaceAdmin/builder_rail_H_nh_ng_/768.png	CHANGED	16.09	
+studio/workspaceAdmin/builder_rail_Th_nh_ph_n_/1024.png	CHANGED	21.47	
+studio/workspaceAdmin/builder_rail_Th_nh_ph_n_/1280.png	CHANGED	16.44	
+studio/workspaceAdmin/builder_rail_Th_nh_ph_n_/1440.png	CHANGED	10.31	
+studio/workspaceAdmin/builder_rail_Th_nh_ph_n_/360.png	CHANGED	10.20	
+studio/workspaceAdmin/builder_rail_Th_nh_ph_n_/390.png	CHANGED	9.80	
+studio/workspaceAdmin/builder_rail_Th_nh_ph_n_/430.png	CHANGED	8.55	
+studio/workspaceAdmin/builder_rail_Th_nh_ph_n_/768.png	CHANGED	16.02	
+studio/workspaceAdmin/builder_rail_Trang_/1024.png	CHANGED	22.20	
+studio/workspaceAdmin/builder_rail_Trang_/1280.png	CHANGED	16.95	
+studio/workspaceAdmin/builder_rail_Trang_/1440.png	CHANGED	10.50	
+studio/workspaceAdmin/builder_rail_Trang_/360.png	CHANGED	15.67	
+studio/workspaceAdmin/builder_rail_Trang_/390.png	CHANGED	15.32	
+studio/workspaceAdmin/builder_rail_Trang_/430.png	CHANGED	13.51	
+studio/workspaceAdmin/builder_rail_Trang_/768.png	CHANGED	16.49	
+studio/workspaceAdmin/builder_rail_Workflow_/1024.png	CHANGED	24.21	
+studio/workspaceAdmin/builder_rail_Workflow_/1280.png	CHANGED	15.17	
+studio/workspaceAdmin/builder_rail_Workflow_/1440.png	CHANGED	9.20	
+studio/workspaceAdmin/builder_rail_Workflow_/360.png	CHANGED	9.82	
+studio/workspaceAdmin/builder_rail_Workflow_/390.png	CHANGED	14.90	
+studio/workspaceAdmin/builder_rail_Workflow_/430.png	CHANGED	13.99	
+studio/workspaceAdmin/builder_rail_Workflow_/768.png	CHANGED	13.32	
+studio/workspaceAdmin/publish_dialog_history_expanded/1024.png	CHANGED	8.56	
+studio/workspaceAdmin/publish_dialog_history_expanded/1280.png	CHANGED	7.76	
+studio/workspaceAdmin/publish_dialog_history_expanded/1440.png	CHANGED	5.85	
+studio/workspaceAdmin/publish_dialog_history_expanded/360.png	CHANGED	5.84	
+studio/workspaceAdmin/publish_dialog_history_expanded/390.png	CHANGED	5.66	
+studio/workspaceAdmin/publish_dialog_history_expanded/430.png	CHANGED	4.42	
+studio/workspaceAdmin/publish_dialog_history_expanded/768.png	CHANGED	7.04	
+studio/workspaceAdmin/studio/1024.png	CHANGED	27.02	
+studio/workspaceAdmin/studio/1280.png	CHANGED	24.30	
+studio/workspaceAdmin/studio/1440.png	CHANGED	21.85	
+studio/workspaceAdmin/studio/360.png	CHANGED	10.89	
+studio/workspaceAdmin/studio/390.png	CHANGED	9.80	
+studio/workspaceAdmin/studio/430.png	CHANGED	8.86	
+studio/workspaceAdmin/studio/768.png	CHANGED	6.30	
+studio/workspaceAdmin/studio_activity/1024.png	CHANGED	26.87	
+studio/workspaceAdmin/studio_activity/1280.png	CHANGED	21.60	
+studio/workspaceAdmin/studio_activity/1440.png	CHANGED	19.34	
+studio/workspaceAdmin/studio_activity/360.png	CHANGED	7.81	
+studio/workspaceAdmin/studio_activity/390.png	CHANGED	7.96	
+studio/workspaceAdmin/studio_activity/430.png	CHANGED	7.53	
+studio/workspaceAdmin/studio_activity/768.png	CHANGED	4.89	
+studio/workspaceAdmin/studio_activity/state_empty/1440.png	CHANGED	17.31	
+studio/workspaceAdmin/studio_activity/state_empty/390.png	SAME	1.976	
+studio/workspaceAdmin/studio_activity/state_error/1440.png	CHANGED	17.38	
+studio/workspaceAdmin/studio_activity/state_error/390.png	CHANGED	2.23	
+studio/workspaceAdmin/studio_activity/state_loading/1440.png	CHANGED	17.28	
+studio/workspaceAdmin/studio_activity/state_loading/390.png	SAME	1.843	
+studio/workspaceAdmin/studio_components/1024.png	CHANGED	28.11	
+studio/workspaceAdmin/studio_components/1280.png	CHANGED	23.24	
+studio/workspaceAdmin/studio_components/1440.png	CHANGED	20.59	
+studio/workspaceAdmin/studio_components/360.png	CHANGED	7.88	
+studio/workspaceAdmin/studio_components/390.png	CHANGED	7.24	
+studio/workspaceAdmin/studio_components/430.png	CHANGED	6.43	
+studio/workspaceAdmin/studio_components/768.png	CHANGED	6.22	
+studio/workspaceAdmin/studio_new/1024.png	CHANGED	28.76	
+studio/workspaceAdmin/studio_new/1280.png	CHANGED	24.41	
+studio/workspaceAdmin/studio_new/1440.png	CHANGED	21.42	
+studio/workspaceAdmin/studio_new/360.png	CHANGED	7.20	
+studio/workspaceAdmin/studio_new/390.png	CHANGED	6.93	
+studio/workspaceAdmin/studio_new/430.png	CHANGED	7.05	
+studio/workspaceAdmin/studio_new/768.png	CHANGED	6.58	
+studio/workspaceAdmin/studio_projects/1024.png	CHANGED	32.38	
+studio/workspaceAdmin/studio_projects/1280.png	CHANGED	28.40	
+studio/workspaceAdmin/studio_projects/1440.png	CHANGED	23.88	
+studio/workspaceAdmin/studio_projects/360.png	CHANGED	13.67	
+studio/workspaceAdmin/studio_projects/390.png	CHANGED	14.39	
+studio/workspaceAdmin/studio_projects/430.png	CHANGED	13.38	
+studio/workspaceAdmin/studio_projects/768.png	CHANGED	10.36	
+studio/workspaceAdmin/studio_projects/state_empty/1440.png	CHANGED	17.79	
+studio/workspaceAdmin/studio_projects/state_empty/390.png	CHANGED	7.25	
+studio/workspaceAdmin/studio_projects/state_error/1440.png	CHANGED	17.56	
+studio/workspaceAdmin/studio_projects/state_error/390.png	CHANGED	5.20	
+studio/workspaceAdmin/studio_projects/state_loading/1440.png	CHANGED	17.46	
+studio/workspaceAdmin/studio_projects/state_loading/390.png	CHANGED	4.82	
+studio/workspaceAdmin/studio_projects_id_ai/1024.png	SAME	0.595	
+studio/workspaceAdmin/studio_projects_id_ai/1280.png	SAME	0.423	
+studio/workspaceAdmin/studio_projects_id_ai/1440.png	SAME	0.334	
+studio/workspaceAdmin/studio_projects_id_ai/360.png	SAME	0.290	
+studio/workspaceAdmin/studio_projects_id_ai/390.png	SAME	0.253	
+studio/workspaceAdmin/studio_projects_id_ai/430.png	SAME	0.208	
+studio/workspaceAdmin/studio_projects_id_ai/768.png	SAME	0.117	
+studio/workspaceAdmin/studio_projects_id_ai/dialog_C_i_t_project/1024.png	NEW		
+studio/workspaceAdmin/studio_projects_id_ai/dialog_C_i_t_project/1440.png	NEW		
+studio/workspaceAdmin/studio_projects_id_ai/dialog_Chia_s_/1024.png	SAME	0.465	
+studio/workspaceAdmin/studio_projects_id_ai/dialog_Chia_s_/1440.png	SAME	0.297	
+studio/workspaceAdmin/studio_projects_id_ai/dialog_Phi_n_b_n/1024.png	SAME	0.881	
+studio/workspaceAdmin/studio_projects_id_ai/dialog_Phi_n_b_n/1440.png	SAME	0.535	
+studio/workspaceAdmin/studio_projects_id_ai/dialog_T_p/1024.png	SAME	0.512	
+studio/workspaceAdmin/studio_projects_id_ai/dialog_T_p/1440.png	SAME	0.311	
+studio/workspaceAdmin/studio_projects_id_ai/dialog_Xu_t_b_n/1024.png	CHANGED	2.04	
+studio/workspaceAdmin/studio_projects_id_ai/dialog_Xu_t_b_n/1440.png	SAME	1.213	
+studio/workspaceAdmin/studio_projects_id_ai/dialog_Xu_t_b_n/360.png	CHANGED	5.71	
+studio/workspaceAdmin/studio_projects_id_ai/dialog_Xu_t_b_n/390.png	CHANGED	5.20	
+studio/workspaceAdmin/studio_projects_id_assets/1024.png	NEW		
+studio/workspaceAdmin/studio_projects_id_assets/1280.png	NEW		
+studio/workspaceAdmin/studio_projects_id_assets/1440.png	NEW		
+studio/workspaceAdmin/studio_projects_id_assets/360.png	NEW		
+studio/workspaceAdmin/studio_projects_id_assets/390.png	NEW		
+studio/workspaceAdmin/studio_projects_id_assets/430.png	NEW		
+studio/workspaceAdmin/studio_projects_id_assets/768.png	NEW		
+studio/workspaceAdmin/studio_projects_id_code/1024.png	SAME	0.165	
+studio/workspaceAdmin/studio_projects_id_code/1280.png	SAME	0.092	
+studio/workspaceAdmin/studio_projects_id_code/1440.png	SAME	0.073	
+studio/workspaceAdmin/studio_projects_id_code/360.png	SAME	0.286	
+studio/workspaceAdmin/studio_projects_id_code/390.png	SAME	0.250	
+studio/workspaceAdmin/studio_projects_id_code/430.png	SAME	0.206	
+studio/workspaceAdmin/studio_projects_id_code/768.png	SAME	0.116	
+studio/workspaceAdmin/studio_projects_id_design/1024.png	CHANGED	22.20	
+studio/workspaceAdmin/studio_projects_id_design/1280.png	CHANGED	17.03	
+studio/workspaceAdmin/studio_projects_id_design/1440.png	CHANGED	10.50	
+studio/workspaceAdmin/studio_projects_id_design/360.png	CHANGED	15.67	
+studio/workspaceAdmin/studio_projects_id_design/390.png	CHANGED	15.32	
+studio/workspaceAdmin/studio_projects_id_design/430.png	CHANGED	13.53	
+studio/workspaceAdmin/studio_projects_id_design/768.png	CHANGED	16.57	
+studio/workspaceAdmin/studio_projects_id_design/dialog_C_i_t_project/1024.png	NEW		
+studio/workspaceAdmin/studio_projects_id_design/dialog_C_i_t_project/1440.png	NEW		
+studio/workspaceAdmin/studio_projects_id_design/dialog_Chia_s_/1024.png	CHANGED	4.46	
+studio/workspaceAdmin/studio_projects_id_design/dialog_Chia_s_/1440.png	CHANGED	5.66	
+studio/workspaceAdmin/studio_projects_id_design/dialog_Phi_n_b_n/1024.png	CHANGED	8.91	
+studio/workspaceAdmin/studio_projects_id_design/dialog_Phi_n_b_n/1440.png	CHANGED	6.52	
+studio/workspaceAdmin/studio_projects_id_design/dialog_T_p/1024.png	CHANGED	8.54	
+studio/workspaceAdmin/studio_projects_id_design/dialog_T_p/1440.png	CHANGED	6.29	
+studio/workspaceAdmin/studio_projects_id_design/dialog_Xu_t_b_n/1024.png	CHANGED	7.72	
+studio/workspaceAdmin/studio_projects_id_design/dialog_Xu_t_b_n/1440.png	CHANGED	5.94	
+studio/workspaceAdmin/studio_projects_id_design/dialog_Xu_t_b_n/360.png	CHANGED	6.05	
+studio/workspaceAdmin/studio_projects_id_design/dialog_Xu_t_b_n/390.png	CHANGED	6.86	
+studio/workspaceAdmin/studio_projects_id_design/dialog__i_t_n_ng_d_n/1024.png	CHANGED	13.61	
+studio/workspaceAdmin/studio_projects_id_design/dialog__i_t_n_ng_d_n/1440.png	CHANGED	6.72	
+studio/workspaceAdmin/studio_projects_id_design/dialog__i_t_n_ng_d_n/360.png	CHANGED	5.83	
+studio/workspaceAdmin/studio_projects_id_design/dialog__i_t_n_ng_d_n/390.png	CHANGED	5.81	
+studio/workspaceAdmin/studio_projects_id_members/1024.png	NEW		
+studio/workspaceAdmin/studio_projects_id_members/1280.png	NEW		
+studio/workspaceAdmin/studio_projects_id_members/1440.png	NEW		
+studio/workspaceAdmin/studio_projects_id_members/360.png	NEW		
+studio/workspaceAdmin/studio_projects_id_members/390.png	NEW		
+studio/workspaceAdmin/studio_projects_id_members/430.png	NEW		
+studio/workspaceAdmin/studio_projects_id_members/768.png	NEW		
+studio/workspaceAdmin/studio_projects_id_publish/1024.png	NEW		
+studio/workspaceAdmin/studio_projects_id_publish/1280.png	NEW		
+studio/workspaceAdmin/studio_projects_id_publish/1440.png	NEW		
+studio/workspaceAdmin/studio_projects_id_publish/360.png	NEW		
+studio/workspaceAdmin/studio_projects_id_publish/390.png	NEW		
+studio/workspaceAdmin/studio_projects_id_publish/430.png	NEW		
+studio/workspaceAdmin/studio_projects_id_publish/768.png	NEW		
+studio/workspaceAdmin/studio_projects_id_settings/1024.png	NEW		
+studio/workspaceAdmin/studio_projects_id_settings/1280.png	NEW		
+studio/workspaceAdmin/studio_projects_id_settings/1440.png	NEW		
+studio/workspaceAdmin/studio_projects_id_settings/360.png	NEW		
+studio/workspaceAdmin/studio_projects_id_settings/390.png	NEW		
+studio/workspaceAdmin/studio_projects_id_settings/430.png	NEW		
+studio/workspaceAdmin/studio_projects_id_settings/768.png	NEW		
+studio/workspaceAdmin/studio_projects_id_site/1024.png	NEW		
+studio/workspaceAdmin/studio_projects_id_site/1280.png	NEW		
+studio/workspaceAdmin/studio_projects_id_site/1440.png	NEW		
+studio/workspaceAdmin/studio_projects_id_site/360.png	NEW		
+studio/workspaceAdmin/studio_projects_id_site/390.png	NEW		
+studio/workspaceAdmin/studio_projects_id_site/430.png	NEW		
+studio/workspaceAdmin/studio_projects_id_site/768.png	NEW		
+studio/workspaceAdmin/studio_projects_id_versions/1024.png	NEW		
+studio/workspaceAdmin/studio_projects_id_versions/1280.png	NEW		
+studio/workspaceAdmin/studio_projects_id_versions/1440.png	NEW		
+studio/workspaceAdmin/studio_projects_id_versions/360.png	NEW		
+studio/workspaceAdmin/studio_projects_id_versions/390.png	NEW		
+studio/workspaceAdmin/studio_projects_id_versions/430.png	NEW		
+studio/workspaceAdmin/studio_projects_id_versions/768.png	NEW		
+studio/workspaceAdmin/studio_site-access/1024.png	CHANGED	24.32	
+studio/workspaceAdmin/studio_site-access/1280.png	CHANGED	19.50	
+studio/workspaceAdmin/studio_site-access/1440.png	CHANGED	17.35	
+studio/workspaceAdmin/studio_site-access/360.png	CHANGED	2.11	
+studio/workspaceAdmin/studio_site-access/390.png	SAME	1.858	
+studio/workspaceAdmin/studio_site-access/430.png	SAME	1.543	
+studio/workspaceAdmin/studio_site-access/768.png	SAME	0.865	
+studio/workspaceAdmin/studio_templates/1024.png	CHANGED	29.04	
+studio/workspaceAdmin/studio_templates/1280.png	CHANGED	24.77	
+studio/workspaceAdmin/studio_templates/1440.png	CHANGED	23.23	
+studio/workspaceAdmin/studio_templates/360.png	CHANGED	8.76	
+studio/workspaceAdmin/studio_templates/390.png	CHANGED	9.02	
+studio/workspaceAdmin/studio_templates/430.png	CHANGED	12.14	
+studio/workspaceAdmin/studio_templates/768.png	CHANGED	8.04	
+studio/workspaceAdmin/studio_templates/state_empty/1440.png	CHANGED	18.68	
+studio/workspaceAdmin/studio_templates/state_empty/390.png	CHANGED	7.14	
+studio/workspaceAdmin/studio_templates/state_error/1440.png	CHANGED	17.80	
+studio/workspaceAdmin/studio_templates/state_error/390.png	CHANGED	3.68	
+studio/workspaceAdmin/studio_templates/state_loading/1440.png	CHANGED	17.70	
+studio/workspaceAdmin/studio_templates/state_loading/390.png	CHANGED	3.31	
+studio/workspaceAdmin/studio_zzz-khong-ton-tai/1024.png	CHANGED	24.28	
+studio/workspaceAdmin/studio_zzz-khong-ton-tai/1280.png	CHANGED	19.47	
+studio/workspaceAdmin/studio_zzz-khong-ton-tai/1440.png	CHANGED	17.32	
+studio/workspaceAdmin/studio_zzz-khong-ton-tai/360.png	CHANGED	2.04	
+studio/workspaceAdmin/studio_zzz-khong-ton-tai/390.png	SAME	1.769	
+studio/workspaceAdmin/studio_zzz-khong-ton-tai/430.png	SAME	1.467	
+studio/workspaceAdmin/studio_zzz-khong-ton-tai/768.png	SAME	0.810	
+verify/builder-1024.png	NEW		
+verify/builder-1440.png	NEW		
+verify/builder-390.png	NEW		
+verify/builder-430.png	NEW		
+verify/builder-768.png	NEW		
+verify/dialog-create-company.png	NEW		
+verify/employees-search-slow.png	NEW		
+verify/employees-search.png	NEW		
+verify/icons-admin.png	NEW		
+verify/icons-platform.png	NEW		
+verify/icons-studio.png	NEW		
+verify/initials-employees.png	NEW		
+verify/menu-error-studio-390.png	NEW		
+verify/menu-error-studio-430.png	NEW		
+verify/menu-error-studio-768.png	NEW		
+verify/menu-open-admin-390.png	NEW		
+verify/menu-open-admin-430.png	NEW		
+verify/menu-open-admin-768.png	NEW		
+verify/menu-open-platform-1024.png	NEW		
+verify/menu-open-platform-390.png	NEW		
+verify/menu-open-platform-430.png	NEW		
+verify/menu-open-platform-768.png	NEW		
+verify/menu-open-studio-390.png	NEW		
+verify/menu-open-studio-430.png	NEW		
+verify/menu-open-studio-768.png	NEW		
+verify/notready-byok.png	NEW		
+verify/notready-employees.png	NEW		
+verify/notready-groups.png	NEW		
+verify/notready-organization.png	NEW		
+verify/notready-sharing.png	NEW		
+verify/probe-mapping-without-transforms.png	NEW		
+verify/table-platform-audit-1024.png	NEW		
+verify/table-platform-audit-390.png	NEW		
+verify/table-platform-audit-430.png	NEW		
+verify/table-platform-audit-768.png	NEW		
+verify/table-platform-components-1024.png	NEW		
+verify/table-platform-components-390.png	NEW		
+verify/table-platform-components-430.png	NEW		
+verify/table-platform-components-768.png	NEW		
+verify/table-platform-tenants-1024.png	NEW		
+verify/table-platform-tenants-390.png	NEW		
+verify/table-platform-tenants-430.png	NEW		
+verify/table-platform-tenants-768.png	NEW		
+verify/table-platform-users-1024.png	NEW		
+verify/table-platform-users-390.png	NEW		
+verify/table-platform-users-430.png	NEW		
+verify/table-platform-users-768.png	NEW		

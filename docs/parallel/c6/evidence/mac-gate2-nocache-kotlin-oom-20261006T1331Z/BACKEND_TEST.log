@@ -1,0 +1,73 @@
+# start: 2026-10-06T13:31:19Z
+# cwd:   /Users/hoangluan/code/xweb-c6
+# cmd:   bash -c cd backend && ./gradlew clean test --no-daemon --no-build-cache --rerun-tasks --console=plain
+
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.8.0/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+Invalid Java installation found at '/Library/Java/JavaVirtualMachines/jdk-18.0.2.1.jdk/Contents/Home' (MacOS java_home) auto-detected. It will be re-checked in the next build. If the configuration cache is enabled, the re-check will happen only after the cache is invalidated. This might have performance impact if it keeps failing. Run the 'javaToolchains' task for more details.
+> Task :clean
+> Task :checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :processResources
+> Task :processTestResources
+> Task :compileKotlin
+e: java.lang.OutOfMemoryError: GC overhead limit exceeded
+	at java.base/java.nio.HeapByteBuffer.<init>(HeapByteBuffer.java:71)
+	at java.base/java.nio.ByteBuffer.allocate(ByteBuffer.java:391)
+	at java.base/sun.nio.cs.StreamDecoder.<init>(StreamDecoder.java:319)
+	at java.base/sun.nio.cs.StreamDecoder.<init>(StreamDecoder.java:307)
+	at java.base/sun.nio.cs.StreamDecoder.forInputStreamReader(StreamDecoder.java:87)
+	at java.base/java.io.InputStreamReader.<init>(InputStreamReader.java:126)
+	at org.jetbrains.kotlin.cli.common.fir.SequentialFilePositionFinder.<init>(FirDiagnosticsCompilerResultsReporter.kt:168)
+	at org.jetbrains.kotlin.cli.common.fir.FirDiagnosticsCompilerResultsReporter.reportByFile$lambda$0(FirDiagnosticsCompilerResultsReporter.kt:50)
+	at org.jetbrains.kotlin.cli.common.fir.FirDiagnosticsCompilerResultsReporter$$Lambda/0x0000007001a59770.invoke(Unknown Source)
+	at kotlin.SynchronizedLazyImpl.getValue(LazyJVM.kt:86)
+	at org.jetbrains.kotlin.cli.common.fir.FirDiagnosticsCompilerResultsReporter.reportByFile(FirDiagnosticsCompilerResultsReporter.kt:57)
+	at org.jetbrains.kotlin.cli.common.fir.FirDiagnosticsCompilerResultsReporter.reportToMessageCollector(FirDiagnosticsCompilerResultsReporter.kt:23)
+	at org.jetbrains.kotlin.cli.pipeline.CheckCompilationErrors$CheckDiagnosticCollector.reportDiagnosticsToMessageCollector(PipelineActions.kt:39)
+	at org.jetbrains.kotlin.cli.pipeline.AbstractCliPipeline.runPhasedPipeline(AbstractCliPipeline.kt:131)
+	at org.jetbrains.kotlin.cli.pipeline.AbstractCliPipeline.execute(AbstractCliPipeline.kt:68)
+	at org.jetbrains.kotlin.cli.jvm.K2JVMCompiler.doExecutePhased(K2JVMCompiler.kt:79)
+	at org.jetbrains.kotlin.cli.jvm.K2JVMCompiler.doExecutePhased(K2JVMCompiler.kt:45)
+	at org.jetbrains.kotlin.cli.common.CLICompiler.execImpl(CLICompiler.kt:90)
+	at org.jetbrains.kotlin.cli.common.CLICompiler.exec(CLICompiler.kt:352)
+	at org.jetbrains.kotlin.incremental.IncrementalJvmCompilerRunnerBase.runCompiler(IncrementalJvmCompilerRunnerBase.kt:176)
+	at org.jetbrains.kotlin.incremental.IncrementalJvmCompilerRunnerBase.runCompiler(IncrementalJvmCompilerRunnerBase.kt:39)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.doCompile(IncrementalCompilerRunner.kt:499)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.compileImpl(IncrementalCompilerRunner.kt:416)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.compileNonIncrementally(IncrementalCompilerRunner.kt:301)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.compile(IncrementalCompilerRunner.kt:128)
+	at org.jetbrains.kotlin.daemon.CompileServiceImplBase.execIncrementalCompiler(CompileServiceImpl.kt:684)
+	at org.jetbrains.kotlin.daemon.CompileServiceImplBase.access$execIncrementalCompiler(CompileServiceImpl.kt:94)
+	at org.jetbrains.kotlin.daemon.CompileServiceImpl.compile(CompileServiceImpl.kt:1810)
+	at java.base/java.lang.invoke.LambdaForm$DMH/0x00000070010a5000.invokeInterface(LambdaForm$DMH)
+	at java.base/java.lang.invoke.LambdaForm$MH/0x00000070010a9400.invoke(LambdaForm$MH)
+	at java.base/java.lang.invoke.Invokers$Holder.invokeExact_MT(Invokers$Holder)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invokeImpl(DirectMethodHandleAccessor.java:157)
+
+
+> Task :compileKotlin FAILED
+
+[Incubating] Problems report is available at: file:///Users/hoangluan/code/xweb-c6/backend/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':compileKotlin' (registered by plugin 'org.jetbrains.kotlin.jvm').
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+   > Not enough memory to run compilation. Try to increase it via 'gradle.properties':
+     kotlin.daemon.jvmargs=-Xmx<size>
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.8.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 1m 33s
+4 actionable tasks: 4 executed

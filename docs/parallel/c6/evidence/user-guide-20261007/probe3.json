@@ -1,0 +1,24 @@
+{
+ "dialogText": "Xuất bản website Phiên bản 7 sẽ được đưa qua kiểm tra chính sách, bảo mật, build và triển khai. Trang đang được gỡ xuống. Xuất bản sẽ tạo một trang tĩnh thật trên máy chủ. Riêng tư Chỉ thành viên được cấp quyền. Công khai Mọi người có thể truy cập. Các lần xuất bản (1) Phiên bản 2 · công khai · 16:05 7 thg 10, 2026 Phục vụ lại bản này Hủy Xuất bản",
+ "reserveButtons": 1,
+ "calls": [
+  "GET /api/v1/auth/csrf 200",
+  "POST /api/v1/workspaces/{id}/projects/{id}/site/rollback 200",
+  "GET /api/v1/workspaces/{id}/projects/{id}/deployments 200",
+  "GET /api/v1/workspaces/{id}/projects/{id}/site 200"
+ ],
+ "publicAfter": 200,
+ "site": {
+  "slug": "c6-ug-qa-muxvt6gd-392194",
+  "url": "https://sites.toolsmcp.uk/c6-ug-qa-muxvt6gd-392194/",
+  "online": true,
+  "visibility": "PUBLIC",
+  "currentDeploymentId": "e9d034e9-5927-4f89-92d9-7a1a1d50021c",
+  "currentVersionNumber": 2,
+  "provider": "static",
+  "updatedAt": "2026-10-07T09:11:31.239728Z",
+  "pointerVersion": 7,
+  "operation": null
+ },
+ "nativeDialogs": []
+}

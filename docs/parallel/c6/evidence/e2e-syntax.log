@@ -1,0 +1,8 @@
+syntax-ok e2e/a11y.mjs
+syntax-ok e2e/admin-setup-flow.mjs
+syntax-ok e2e/code-flow.mjs
+syntax-ok e2e/factory-flow.mjs
+syntax-ok e2e/pages-mock.mjs
+syntax-ok e2e/public-flow.mjs
+syntax-ok e2e/runtime-flow.mjs
+syntax-ok e2e/sso-flow.mjs

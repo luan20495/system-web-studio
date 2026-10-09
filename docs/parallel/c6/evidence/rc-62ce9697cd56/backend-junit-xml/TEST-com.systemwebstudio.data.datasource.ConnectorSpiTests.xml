@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.datasource.ConnectorSpiTests" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:44:54.061Z" hostname="macmini-2.local" time="0.005">
+  <properties/>
+  <testcase name="descriptors carry key names only never values()" classname="com.systemwebstudio.data.datasource.ConnectorSpiTests" time="0.002"/>
+  <testcase name="duplicate connector types are refused at wiring time()" classname="com.systemwebstudio.data.datasource.ConnectorSpiTests" time="0.0"/>
+  <testcase name="a connector implementing only the required methods is a full citizen()" classname="com.systemwebstudio.data.datasource.ConnectorSpiTests" time="0.0"/>
+  <testcase name="the registry lists planned types but never hands them out()" classname="com.systemwebstudio.data.datasource.ConnectorSpiTests" time="0.0"/>
+  <testcase name="all six slots exist with a described contract()" classname="com.systemwebstudio.data.datasource.ConnectorSpiTests" time="0.0"/>
+  <testcase name="a planned connector never runs anything and answers with a fixed code()" classname="com.systemwebstudio.data.datasource.ConnectorSpiTests" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

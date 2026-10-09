@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.app.definition.SchemaServiceInitializationTests" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:43:58.218Z" hostname="macmini-2.local" time="0.228">
+  <properties/>
+  <testcase name="a project that already has a schema is returned unchanged without validating or writing()" classname="com.systemwebstudio.app.definition.SchemaServiceInitializationTests" time="0.028"/>
+  <testcase name="an initial document with a non canonical permission code is rejected()" classname="com.systemwebstudio.app.definition.SchemaServiceInitializationTests" time="0.003"/>
+  <testcase name="an initial document that breaks the page schema is still rejected first()" classname="com.systemwebstudio.app.definition.SchemaServiceInitializationTests" time="0.002"/>
+  <testcase name="a valid V2 initial document and the default page schema are written as version 1()" classname="com.systemwebstudio.app.definition.SchemaServiceInitializationTests" time="0.008"/>
+  <testcase name="an initial document with a broken V2 reference is rejected and nothing is written()" classname="com.systemwebstudio.app.definition.SchemaServiceInitializationTests" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

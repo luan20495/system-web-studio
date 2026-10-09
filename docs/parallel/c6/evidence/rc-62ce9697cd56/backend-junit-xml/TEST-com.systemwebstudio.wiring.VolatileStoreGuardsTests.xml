@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.wiring.VolatileStoreGuardsTests" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:54:24.979Z" hostname="macmini-2.local" time="0.001">
+  <properties/>
+  <testcase name="an unknown action is left to the delegate()" classname="com.systemwebstudio.wiring.VolatileStoreGuardsTests" time="0.0"/>
+  <testcase name="a LIVE workflow start is refused while the stores are volatile, TEST is not()" classname="com.systemwebstudio.wiring.VolatileStoreGuardsTests" time="0.0"/>
+  <testcase name="a non mutating action that chains a mutating one is refused too()" classname="com.systemwebstudio.wiring.VolatileStoreGuardsTests" time="0.0"/>
+  <testcase name="an acknowledged deployment passes through()" classname="com.systemwebstudio.wiring.VolatileStoreGuardsTests" time="0.0"/>
+  <testcase name="TEST mode and a non mutating action are not affected()" classname="com.systemwebstudio.wiring.VolatileStoreGuardsTests" time="0.0"/>
+  <testcase name="a caller without permission gets the delegate's own answer, not the refusal()" classname="com.systemwebstudio.wiring.VolatileStoreGuardsTests" time="0.0"/>
+  <testcase name="a LIVE mutating action is refused with RUNTIME_STORES_VOLATILE and nothing runs()" classname="com.systemwebstudio.wiring.VolatileStoreGuardsTests" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

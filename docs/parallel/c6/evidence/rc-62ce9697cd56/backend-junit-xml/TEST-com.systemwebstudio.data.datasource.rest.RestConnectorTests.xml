@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.datasource.rest.RestConnectorTests" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:45:20.537Z" hostname="macmini-2.local" time="1.081">
+  <properties/>
+  <testcase name="parameters are bound into a declared template and the host can never change()" classname="com.systemwebstudio.data.datasource.rest.RestConnectorTests" time="0.013"/>
+  <testcase name="a configured auth header without a stored credential fails instead of calling unauthenticated()" classname="com.systemwebstudio.data.datasource.rest.RestConnectorTests" time="0.0"/>
+  <testcase name="query parameters are encoded and sorted by name()" classname="com.systemwebstudio.data.datasource.rest.RestConnectorTests" time="0.002"/>
+  <testcase name="connection test turns every transport failure into a failed result, never an exception()" classname="com.systemwebstudio.data.datasource.rest.RestConnectorTests" time="0.001"/>
+  <testcase name="redirects, error statuses and non-JSON answers fail with fixed codes()" classname="com.systemwebstudio.data.datasource.rest.RestConnectorTests" time="0.002"/>
+  <testcase name="unknown, missing and mistyped parameters are rejected()" classname="com.systemwebstudio.data.datasource.rest.RestConnectorTests" time="0.002"/>
+  <testcase name="rows come from the pointer, are capped, and truncation is reported()" classname="com.systemwebstudio.data.datasource.rest.RestConnectorTests" time="0.001"/>
+  <testcase name="the data source's own row cap lowers the definition's()" classname="com.systemwebstudio.data.datasource.rest.RestConnectorTests" time="0.001"/>
+  <testcase name="connection test maps statuses to typed results and sends the credential only as the configured header()" classname="com.systemwebstudio.data.datasource.rest.RestConnectorTests" time="0.001"/>
+  <testcase name="tenant and catalog scoping()" classname="com.systemwebstudio.data.datasource.rest.RestConnectorTests" time="0.0"/>
+  <testcase name="configuration accepts a plain https base URL and nothing else()" classname="com.systemwebstudio.data.datasource.rest.RestConnectorTests" time="0.001"/>
+  <testcase name="values that could escape the path are refused outright()" classname="com.systemwebstudio.data.datasource.rest.RestConnectorTests" time="0.001"/>
+  <testcase name="end to end over TLS with the pinned transport()" classname="com.systemwebstudio.data.datasource.rest.RestConnectorTests" time="0.491"/>
+  <testcase name="discovery reports the shape of declared endpoints only, with fixed-text warnings()" classname="com.systemwebstudio.data.datasource.rest.RestConnectorTests" time="0.004"/>
+  <testcase name="a REST query definition cannot hold an absolute URL, a traversal or an undeclared parameter()" classname="com.systemwebstudio.data.datasource.rest.RestConnectorTests" time="0.001"/>
+  <testcase name="results and failures never carry the credential()" classname="com.systemwebstudio.data.datasource.rest.RestConnectorTests" time="0.002"/>
+  <testcase name="with the default policy a data source whose name resolves into the private network is refused end to end()" classname="com.systemwebstudio.data.datasource.rest.RestConnectorTests" time="0.554"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

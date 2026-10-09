@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.logic.scheduler.SchedulerDedupeTests" tests="20" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:46:14.061Z" hostname="macmini-2.local" time="0.023">
+  <properties/>
+  <testcase name="claiming one execution from many threads creates exactly one ledger row()" classname="com.systemwebstudio.logic.scheduler.SchedulerDedupeTests" time="0.002"/>
+  <testcase name="two nodes with clocks a few seconds apart still fire a time once()" classname="com.systemwebstudio.logic.scheduler.SchedulerDedupeTests" time="0.001"/>
+  <testcase name="a confirmation lost after a successful hand-over is repaired without a second hand-over()" classname="com.systemwebstudio.logic.scheduler.SchedulerDedupeTests" time="0.0"/>
+  <testcase name="the execution history records what happened to each fire()" classname="com.systemwebstudio.logic.scheduler.SchedulerDedupeTests" time="0.001"/>
+  <testcase name="fall-back hour - a daily time inside the repeated hour fires once and no key repeats()" classname="com.systemwebstudio.logic.scheduler.SchedulerDedupeTests" time="0.002"/>
+  <testcase name="a final ledger row never moves to another status()" classname="com.systemwebstudio.logic.scheduler.SchedulerDedupeTests" time="0.0"/>
+  <testcase name="many workers ticking concurrently hand every fire over exactly once()" classname="com.systemwebstudio.logic.scheduler.SchedulerDedupeTests" time="0.009"/>
+  <testcase name="one failing schedule does not delay a healthy one()" classname="com.systemwebstudio.logic.scheduler.SchedulerDedupeTests" time="0.0"/>
+  <testcase name="declared schedules are tenant and app scoped and need the manage permission()" classname="com.systemwebstudio.logic.scheduler.SchedulerDedupeTests" time="0.001"/>
+  <testcase name="a changed declaration updates the existing schedule and an undeclared one is disabled, not deleted()" classname="com.systemwebstudio.logic.scheduler.SchedulerDedupeTests" time="0.0"/>
+  <testcase name="a rewound schedule row cannot make the ledger hand the same fire over twice()" classname="com.systemwebstudio.logic.scheduler.SchedulerDedupeTests" time="0.001"/>
+  <testcase name="an unavailable ledger blocks the hand-over and the fire is retried later()" classname="com.systemwebstudio.logic.scheduler.SchedulerDedupeTests" time="0.0"/>
+  <testcase name="publishing the same declaration again creates nothing and leaves the next run alone()" classname="com.systemwebstudio.logic.scheduler.SchedulerDedupeTests" time="0.001"/>
+  <testcase name="a restart (new service on the same store) does not fire the same time again()" classname="com.systemwebstudio.logic.scheduler.SchedulerDedupeTests" time="0.0"/>
+  <testcase name="a clock that jumps back does not refire an already fired time()" classname="com.systemwebstudio.logic.scheduler.SchedulerDedupeTests" time="0.0"/>
+  <testcase name="spring-forward gap - a daily time inside the skipped hour fires once that day()" classname="com.systemwebstudio.logic.scheduler.SchedulerDedupeTests" time="0.001"/>
+  <testcase name="racing publishers end up with one schedule per declaration()" classname="com.systemwebstudio.logic.scheduler.SchedulerDedupeTests" time="0.001"/>
+  <testcase name="fall-back hour - an hourly schedule never fires two times at the same instant or key()" classname="com.systemwebstudio.logic.scheduler.SchedulerDedupeTests" time="0.001"/>
+  <testcase name="a nextRunAt that is not after the last fire is skipped by the monotonic guard()" classname="com.systemwebstudio.logic.scheduler.SchedulerDedupeTests" time="0.001"/>
+  <testcase name="a failing enqueue backs off exponentially and is given up after the attempt budget()" classname="com.systemwebstudio.logic.scheduler.SchedulerDedupeTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

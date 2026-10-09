@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.component.ComponentMetadataTests" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:44:53.693Z" hostname="macmini-2.local" time="0.003">
+  <properties/>
+  <testcase name="validator rejects an action type the event does not support, and any trigger on a component with no events()" classname="com.systemwebstudio.component.ComponentMetadataTests" time="0.001"/>
+  <testcase name="validator rejects an event the component does not emit()" classname="com.systemwebstudio.component.ComponentMetadataTests" time="0.0"/>
+  <testcase name="events declare the action types they support and no component carries business logic()" classname="com.systemwebstudio.component.ComponentMetadataTests" time="0.001"/>
+  <testcase name="a component without an overlay is described from its props schema and nothing is enforced for it()" classname="com.systemwebstudio.component.ComponentMetadataTests" time="0.0"/>
+  <testcase name="every seeded component has an overlay with preview sample props()" classname="com.systemwebstudio.component.ComponentMetadataTests" time="0.001"/>
+  <testcase name="visibility condition is derived from a boolean visible prop()" classname="com.systemwebstudio.component.ComponentMetadataTests" time="0.0"/>
+  <testcase name="list props are bindable lists with item fields and text props bindable values()" classname="com.systemwebstudio.component.ComponentMetadataTests" time="0.0"/>
+  <testcase name="validator still accepts the documented triggers()" classname="com.systemwebstudio.component.ComponentMetadataTests" time="0.0"/>
+  <testcase name="actions declared by the registry itself take precedence over the overlay()" classname="com.systemwebstudio.component.ComponentMetadataTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

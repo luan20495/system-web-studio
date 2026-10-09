@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.datasource.postgres.PostgresSessionSecurityTests" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:44:57.843Z" hostname="macmini-2.local" time="0.016">
+  <properties/>
+  <testcase name="every unsafe role attribute aborts the session before anything else runs()" classname="com.systemwebstudio.data.datasource.postgres.PostgresSessionSecurityTests" time="0.002"/>
+  <testcase name="TLS is verify-full with host-name verification, never require()" classname="com.systemwebstudio.data.datasource.postgres.PostgresSessionSecurityTests" time="0.0"/>
+  <testcase name="the role check runs on every connection - a role that turns superuser later is caught on its next session()" classname="com.systemwebstudio.data.datasource.postgres.PostgresSessionSecurityTests" time="0.002"/>
+  <testcase name="row limit, paging and statement timeout are applied by the executor()" classname="com.systemwebstudio.data.datasource.postgres.PostgresSessionSecurityTests" time="0.001"/>
+  <testcase name="a session is read-only, warmed up and verified before the caller's statement, and always rolled back and closed()" classname="com.systemwebstudio.data.datasource.postgres.PostgresSessionSecurityTests" time="0.002"/>
+  <testcase name="a denied literal address blocks every name that resolves to it()" classname="com.systemwebstudio.data.datasource.postgres.PostgresSessionSecurityTests" time="0.001"/>
+  <testcase name="discovery and the connection test use the same checked session as queries()" classname="com.systemwebstudio.data.datasource.postgres.PostgresSessionSecurityTests" time="0.001"/>
+  <testcase name="configuration accepts only verify-full()" classname="com.systemwebstudio.data.datasource.postgres.PostgresSessionSecurityTests" time="0.0"/>
+  <testcase name="the production policy refuses to be built from a missing or unreadable platform URL()" classname="com.systemwebstudio.data.datasource.postgres.PostgresSessionSecurityTests" time="0.002"/>
+  <testcase name="a denied host whose address cannot be determined blocks the connection instead of being skipped()" classname="com.systemwebstudio.data.datasource.postgres.PostgresSessionSecurityTests" time="0.001"/>
+  <testcase name="driver properties carry the limits, the pinned address and the credential - the URL carries none of them()" classname="com.systemwebstudio.data.datasource.postgres.PostgresSessionSecurityTests" time="0.0"/>
+  <testcase name="unexpected session state fails closed()" classname="com.systemwebstudio.data.datasource.postgres.PostgresSessionSecurityTests" time="0.001"/>
+  <testcase name="JDBC URLs are read completely - failover lists, userinfo, IPv6 and implied localhost()" classname="com.systemwebstudio.data.datasource.postgres.PostgresSessionSecurityTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

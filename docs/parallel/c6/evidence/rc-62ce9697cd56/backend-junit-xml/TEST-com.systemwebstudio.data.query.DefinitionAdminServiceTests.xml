@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.query.DefinitionAdminServiceTests" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:45:21.871Z" hostname="macmini-2.local" time="0.009">
+  <properties/>
+  <testcase name="ids are unique per data source, ids are validated, and the same id on another source is fine()" classname="com.systemwebstudio.data.query.DefinitionAdminServiceTests" time="0.002"/>
+  <testcase name="versions grow by one per change, status and definition changes are audited by id, version, status and hash()" classname="com.systemwebstudio.data.query.DefinitionAdminServiceTests" time="0.001"/>
+  <testcase name="the connector decides whether it takes a mutation - a read-only one refuses with READ_ONLY_VIOLATION()" classname="com.systemwebstudio.data.query.DefinitionAdminServiceTests" time="0.0"/>
+  <testcase name="each call asks C1 for exactly the operation of the contract()" classname="com.systemwebstudio.data.query.DefinitionAdminServiceTests" time="0.002"/>
+  <testcase name="a mutation with an unfinished write cannot be deleted()" classname="com.systemwebstudio.data.query.DefinitionAdminServiceTests" time="0.0"/>
+  <testcase name="a denied caller learns nothing and changes nothing()" classname="com.systemwebstudio.data.query.DefinitionAdminServiceTests" time="0.001"/>
+  <testcase name="another workspace or tenant reaches nothing and cannot tell the data source exists()" classname="com.systemwebstudio.data.query.DefinitionAdminServiceTests" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

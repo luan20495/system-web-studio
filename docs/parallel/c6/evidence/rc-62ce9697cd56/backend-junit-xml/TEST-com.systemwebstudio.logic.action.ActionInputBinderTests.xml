@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.logic.action.ActionInputBinderTests" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:46:13.241Z" hostname="macmini-2.local" time="0.003">
+  <properties/>
+  <testcase name="oversized input hits the byte limit before any field is looked at()" classname="com.systemwebstudio.logic.action.ActionInputBinderTests" time="0.001"/>
+  <testcase name="undeclared input is rejected()" classname="com.systemwebstudio.logic.action.ActionInputBinderTests" time="0.001"/>
+  <testcase name="deep nesting hits the depth limit()" classname="com.systemwebstudio.logic.action.ActionInputBinderTests" time="0.0"/>
+  <testcase name="fingerprint ignores key order but not values or action()" classname="com.systemwebstudio.logic.action.ActionInputBinderTests" time="0.0"/>
+  <testcase name="missing required input is reported by name()" classname="com.systemwebstudio.logic.action.ActionInputBinderTests" time="0.0"/>
+  <testcase name="wrong json types and max length are rejected()" classname="com.systemwebstudio.logic.action.ActionInputBinderTests" time="0.001"/>
+  <testcase name="binds valid input and drops explicit nulls()" classname="com.systemwebstudio.logic.action.ActionInputBinderTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

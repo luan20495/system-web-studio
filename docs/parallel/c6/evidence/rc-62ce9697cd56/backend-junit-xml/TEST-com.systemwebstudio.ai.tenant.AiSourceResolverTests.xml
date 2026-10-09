@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.ai.tenant.AiSourceResolverTests" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:43:54.278Z" hostname="macmini-2.local" time="0.003">
+  <properties/>
+  <testcase name="without a tenant provider the platform is used()" classname="com.systemwebstudio.ai.tenant.AiSourceResolverTests" time="0.001"/>
+  <testcase name="fallback to the platform exists only for a failed tenant call of a tenant that enabled it()" classname="com.systemwebstudio.ai.tenant.AiSourceResolverTests" time="0.0"/>
+  <testcase name="a user sees only the models they may use()" classname="com.systemwebstudio.ai.tenant.AiSourceResolverTests" time="0.001"/>
+  <testcase name="a tenant model that is not the tenant's is refused()" classname="com.systemwebstudio.ai.tenant.AiSourceResolverTests" time="0.001"/>
+  <testcase name="platform models are refused unless the tenant explicitly enabled the fallback()" classname="com.systemwebstudio.ai.tenant.AiSourceResolverTests" time="0.0"/>
+  <testcase name="models the user is denied are not used, and without any model left the call is refused or falls back only when enabled()" classname="com.systemwebstudio.ai.tenant.AiSourceResolverTests" time="0.0"/>
+  <testcase name="a tenant that selected a provider uses it, with its default model()" classname="com.systemwebstudio.ai.tenant.AiSourceResolverTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

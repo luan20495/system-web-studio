@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.mapping.ExpressionTests" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:45:21.809Z" hostname="macmini-2.local" time="0.015">
+  <properties/>
+  <testcase name="if is lazy and the ternary works()" classname="com.systemwebstudio.data.mapping.ExpressionTests" time="0.005"/>
+  <testcase name="comparison and logic()" classname="com.systemwebstudio.data.mapping.ExpressionTests" time="0.001"/>
+  <testcase name="division by zero and null input give null instead of failing or guessing()" classname="com.systemwebstudio.data.mapping.ExpressionTests" time="0.0"/>
+  <testcase name="value is the current pipeline value and col reads awkward column names()" classname="com.systemwebstudio.data.mapping.ExpressionTests" time="0.001"/>
+  <testcase name="functions of the allowlist()" classname="com.systemwebstudio.data.mapping.ExpressionTests" time="0.001"/>
+  <testcase name="results cannot grow without bound()" classname="com.systemwebstudio.data.mapping.ExpressionTests" time="0.003"/>
+  <testcase name="a column that is an object or array cannot be used as a value()" classname="com.systemwebstudio.data.mapping.ExpressionTests" time="0.0"/>
+  <testcase name="size depth node and step limits hold()" classname="com.systemwebstudio.data.mapping.ExpressionTests" time="0.001"/>
+  <testcase name="evaluation is deterministic and has no clock random or io()" classname="com.systemwebstudio.data.mapping.ExpressionTests" time="0.001"/>
+  <testcase name="property access can only walk json data never objects of the host()" classname="com.systemwebstudio.data.mapping.ExpressionTests" time="0.0"/>
+  <testcase name="plus is numeric only so text never silently concatenates or coerces()" classname="com.systemwebstudio.data.mapping.ExpressionTests" time="0.0"/>
+  <testcase name="arithmetic is exact decimal with precedence()" classname="com.systemwebstudio.data.mapping.ExpressionTests" time="0.0"/>
+  <testcase name="javascript java and expression-language injection attempts do not compile()" classname="com.systemwebstudio.data.mapping.ExpressionTests" time="0.001"/>
+  <testcase name="error messages never contain the data()" classname="com.systemwebstudio.data.mapping.ExpressionTests" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

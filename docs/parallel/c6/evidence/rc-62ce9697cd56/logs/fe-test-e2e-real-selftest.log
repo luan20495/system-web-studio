@@ -1,0 +1,31 @@
+
+> system-web-studio@0.2.0 test:e2e:real:selftest
+> node tests/e2e-real/selftest.mjs
+
+PASS  no environment → exit 2 and says NOT RUN
+PASS  unreachable backend → exit 2
+PASS  a server that is not the platform API → exit 2
+PASS  local login disabled → exit 2 (fixtures impossible)
+PASS  platform-like server but admin login refused → exit 2 (setup failed), never 0
+PASS  summary counts BLOCKED/SKIP separately from PASS
+PASS  E2E_DS_* absent → not provided
+PASS  E2E_DS_* needs a JSON-object config
+PASS  malformed E2E_DS_CONFIG_JSON → an error that does NOT contain the value
+PASS  malformed credential JSON → a reason without the value
+PASS  valid E2E_DS_* → provided with parsed values
+PASS  evidence kinds: restart/persistence/http/ui are told apart; an explicit kind wins
+PASS  evidence block has every field C6 asks for, and shows a blocker only for BLOCKED/FAIL
+PASS  REGRESSION builder route: the Builder URL is /studio/projects/<id>/design, never the AI-only route
+PASS  REGRESSION authorization probe: the denied write is a VALID operation (never an empty list, which is a 400 before any permission check)
+PASS  REGRESSION action without trigger: the fixture action DECLARES a trigger (UI-bound runs need one, D-C4-10); without a section it has none and the flows are told
+PASS  REGRESSION bounded retry: an always-failing step is tried exactly N times, then reported as failed (no endless loop)
+PASS  bounded retry: stops at the first success and says how many attempts it took
+PASS  bounded retry: 0 or negative means one attempt, never zero and never unbounded
+PASS  REGRESSION CSS case: a marker is found when the page shows it upper-cased (text-transform)
+PASS  CSS case: a DIFFERENT, truncated or empty marker is still caught
+PASS  shuffle: deterministic per seed, a permutation (nothing lost or duplicated), different seeds differ
+PASS  REGRESSION order dependency: the expected public text is the latest marker the server STILL holds (an overwritten earlier marker is ignored, whatever the flow order)
+PASS  permission expectations come from the resolved set (storage alias PROJECT_READ = APP_VIEW), never from a role name
+PASS  a CONTRACT MISMATCH carries owner, expected, actual, impact and 'frontend workaround: NONE'
+
+25/25 passed

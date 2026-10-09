@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.sync.WebhookReplayTests" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:45:21.949Z" hostname="macmini-2.local" time="0.088">
+  <properties/>
+  <testcase name="the workflow identity is derived from the signature, not from an unsigned header()" classname="com.systemwebstudio.data.sync.WebhookReplayTests" time="0.004"/>
+  <testcase name="a signed delivery id de-duplicates an event even when the sender re-signs the retry()" classname="com.systemwebstudio.data.sync.WebhookReplayTests" time="0.025"/>
+  <testcase name="the replay record is keyed by signature - the same signature never passes twice, different requests do()" classname="com.systemwebstudio.data.sync.WebhookReplayTests" time="0.001"/>
+  <testcase name="the canonical route and the body limit()" classname="com.systemwebstudio.data.sync.WebhookReplayTests" time="0.003"/>
+  <testcase name="the replay record outlives the window in which a signature is acceptable()" classname="com.systemwebstudio.data.sync.WebhookReplayTests" time="0.001"/>
+  <testcase name="the delivery id of a v2 signature cannot be changed or removed()" classname="com.systemwebstudio.data.sync.WebhookReplayTests" time="0.0"/>
+  <testcase name="v1 and v2 signatures cannot be converted into each other()" classname="com.systemwebstudio.data.sync.WebhookReplayTests" time="0.001"/>
+  <testcase name="a repeated protocol header is dropped, so the request fails authentication()" classname="com.systemwebstudio.data.sync.WebhookReplayTests" time="0.0"/>
+  <testcase name="a tenant named in the body or in headers is ignored - the endpoint decides()" classname="com.systemwebstudio.data.sync.WebhookReplayTests" time="0.022"/>
+  <testcase name="a replayed request is audited by id and reason only()" classname="com.systemwebstudio.data.sync.WebhookReplayTests" time="0.001"/>
+  <testcase name="a captured request replayed with another delivery id is still a replay()" classname="com.systemwebstudio.data.sync.WebhookReplayTests" time="0.026"/>
+  <testcase name="a failed delivery releases both replay records so the sender's retry goes through()" classname="com.systemwebstudio.data.sync.WebhookReplayTests" time="0.001"/>
+  <system-out><![CDATA[{"@timestamp":"2026-10-08T06:45:22.036967+07:00","@version":"1","message":"webhook workflow trigger failed: IllegalStateException","logger_name":"com.systemwebstudio.data.sync.webhook.WebhookIngress","thread_name":"Test worker","level":"WARN","level_value":30000}
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

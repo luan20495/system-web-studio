@@ -1,0 +1,28 @@
+START|2026-10-06T13:30:59Z
+HOST|Darwin arm64 |27.0.1 
+HEAD|f894cc6
+BRANCH|agent/c6-qa
+JAVA|INFO|home=/opt/homebrew/Cellar/openjdk@21/21.0.12.1/libexec/openjdk.jdk/Contents/Home|version=openjdk version "21.0.12.1" 2026-08-18 |at=2026-10-06T13:31:00Z
+DOCKER|INFO|client=29.8.2 |server=29.8.2 |compose=5.5.1 |at=2026-10-06T13:31:00Z
+BRANCH_CHECK|PASS|expected=agent/c6-qa|at=2026-10-06T13:31:00Z
+BASELINE|PASS|base=f894cc6|head_descends_from_base=yes|commits_ahead=0|at=2026-10-06T13:31:00Z
+WORKTREE_START|PASS|dirty_outside_c6=0|at=2026-10-06T13:31:01Z
+PREREQ|PASS|node=v22.23.1|head=f894cc6|at=2026-10-06T13:31:01Z
+SCOPE|INFO|gate-only(no stack/E2E/browser/recovery)|at=2026-10-06T13:31:01Z
+BACKEND_COMPILE|PASS|exit=0|duration=18s|log=docs/parallel/c6/evidence/mac/BACKEND_COMPILE.log|at=2026-10-06T13:31:19Z
+BACKEND_TEST|FAIL|exit=1|duration=95s|reason=no_junit_results|log=docs/parallel/c6/evidence/mac/BACKEND_TEST.log|at=2026-10-06T13:32:54Z
+SECURITY_SUITES|NOT_RUN|reason=no_junit_results|at=2026-10-06T13:32:54Z
+FRONTEND_INSTALL|INFO|node_modules=present(not_reinstalled)|at=2026-10-06T13:32:54Z
+FRONTEND_TYPECHECK_ROOT|PASS|exit=0|log=docs/parallel/c6/evidence/mac/FRONTEND_TYPECHECK_ROOT.log|at=2026-10-06T13:33:05Z
+FRONTEND_TYPECHECK_ALL|PASS|exit=0|log=docs/parallel/c6/evidence/mac/FRONTEND_TYPECHECK_ALL.log|at=2026-10-06T13:33:26Z
+FRONTEND_TYPECHECK_APPS|PASS|exit=0|log=docs/parallel/c6/evidence/mac/FRONTEND_TYPECHECK_APPS.log|at=2026-10-06T13:33:29Z
+FRONTEND_TYPECHECK|PASS|root=ok|packages=ok|apps=ok|at=2026-10-06T13:33:29Z
+FRONTEND_UNIT|PASS|tests=130|passed=130|failed=0|skipped=0|exit=0|conformance_env=set|log=docs/parallel/c6/evidence/mac/FRONTEND_UNIT.log|at=2026-10-06T13:33:34Z
+BUG_C6_004|INFO|default_npm_test_unit=tests=115 pass=114 fail=0 skipped=1|rule=closed_if_skipped_is_0|at=2026-10-06T13:33:39Z
+FRONTEND_BUILD_APPS|PASS|exit=0|duration=16s|log=docs/parallel/c6/evidence/mac/FRONTEND_BUILD_APPS.log|at=2026-10-06T13:33:55Z
+FRONTEND_BUILD_ROOT|PASS|exit=0|duration=15s|log=docs/parallel/c6/evidence/mac/FRONTEND_BUILD_ROOT.log|at=2026-10-06T13:34:10Z
+FRONTEND_BUILD|PASS|apps=ok|root=ok|at=2026-10-06T13:34:10Z
+STATIC_QA|PASS|10/10|log=docs/parallel/c6/evidence/mac/STATIC_QA.log|at=2026-10-06T13:34:11Z
+WORKTREE_SCOPE|FAIL|new_changes_outside_c6=1|file=docs/parallel/c6/evidence/mac/scope-end.txt|at=2026-10-06T13:34:11Z
+END|2026-10-06T13:34:11Z
+FINAL|FAIL|scope=gate|failed=BACKEND_TEST,WORKTREE_SCOPE|critical_not_run=SECURITY_SUITES|optional_not_run=E2E_07,E2E_08,SECRET_SCAN|gaps=0

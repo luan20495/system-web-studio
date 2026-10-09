@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.app.definition.AppDefinitionViewTests" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:43:55.855Z" hostname="macmini-2.local" time="0.002">
+  <properties/>
+  <testcase name="declared actions expose C4 style action refs()" classname="com.systemwebstudio.app.definition.AppDefinitionViewTests" time="0.0"/>
+  <testcase name="a multi-page legacy schema reads as pages navigation components and assets()" classname="com.systemwebstudio.app.definition.AppDefinitionViewTests" time="0.002"/>
+  <testcase name="the default page of a new project has a home page and no navigation or assets()" classname="com.systemwebstudio.app.definition.AppDefinitionViewTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

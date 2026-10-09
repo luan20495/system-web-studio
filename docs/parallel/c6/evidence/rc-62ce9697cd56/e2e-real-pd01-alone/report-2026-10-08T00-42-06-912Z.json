@@ -1,0 +1,176 @@
+{
+  "studio": "http://127.0.0.1:3403",
+  "runId": "muyta5ia",
+  "frontendHead": "62ce969",
+  "backend": {
+    "url": "http://127.0.0.1:51080",
+    "head": "62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]"
+  },
+  "facts": {
+    "authConfig": {
+      "localLogin": true,
+      "oidc": false,
+      "publicPublish": true
+    },
+    "fixtureNotes": {
+      "viewerOnProject": "member",
+      "initialRevision": 0,
+      "definitionOps": {
+        "ok": true
+      }
+    },
+    "routes": {
+      "queries": {
+        "status": 404,
+        "code": "QUERY_NOT_FOUND"
+      },
+      "actions": {
+        "status": 404,
+        "code": "UNKNOWN_ACTION"
+      }
+    }
+  },
+  "cleanup": [
+    "left behind (no delete route): workspaces b53f07df-7596-43c2-8d97-ac3677d20229, 3aefe558-cc7d-4f98-9afa-1913ba684273 named e2e-muyta5ia-*"
+  ],
+  "node": "v22.23.1",
+  "summary": {
+    "total": 1,
+    "PASS": 0,
+    "FAIL": 0,
+    "BLOCKED": 1,
+    "SKIP": 0
+  },
+  "results": [
+    {
+      "id": "E2E-PD01",
+      "title": "Public data V1, canonical chain: Studio slot → READ public query → bind → publish (PUBLIC_QUERIES, acknowledgement) → anonymous page → config → apiBase → /{slug}/_data → LIVE → rendered",
+      "status": "BLOCKED",
+      "owner": "C0",
+      "ref": "D-C0-36",
+      "reason": "the public data route did not serve the query (q1:not-found): the Public Runtime controller (D-C0-36, behind its flag) / PUBLIC_SITE (C1) / LIVE binding (C3) is not wired on this stack",
+      "mismatch": null,
+      "start": "2026-10-08T00:41:58.570Z",
+      "end": "2026-10-08T00:42:06.400Z",
+      "workspace": "b53f07df-7596-43c2-8d97-ac3677d20229",
+      "project": "2e28663b-6574-4e57-8819-7b203912e46c",
+      "checks": [
+        {
+          "name": "[fixture] the operator's data source was created through the Management API",
+          "ok": true,
+          "detail": "status=201",
+          "kind": "http"
+        },
+        {
+          "name": "[fixture] the SELECT was registered as an approved query definition (Management API)",
+          "ok": true,
+          "detail": "status=201 ",
+          "kind": "http"
+        },
+        {
+          "name": "[ui] the slot was added and the SERVER stored exactly {id,name,type} — no sourceRef, no credential",
+          "ok": true,
+          "detail": "{\"id\":\"pd-orders\",\"name\":\"Đơn hàng\",\"type\":\"postgres\"}",
+          "kind": "persistence"
+        },
+        {
+          "name": "[fixture] the logical slot is LIVE-bound to the real source (Management API)",
+          "ok": true,
+          "detail": "status=200 ",
+          "kind": "http"
+        },
+        {
+          "name": "[ui] a READ query with public=true was stored by the server (mode READ, operationKey = the approved one, local slot ref)",
+          "ok": true,
+          "detail": "[{\"id\":\"q1\",\"mode\":\"READ\",\"name\":\"Tiêu đề công khai\",\"params\":[],\"public\":true,\"operationKey\":\"e2e-pd-muyta5ia\",\"dataSourceRef\":\"pd-orders\"}]",
+          "kind": "persistence"
+        },
+        {
+          "name": "[api] a READ query WITHOUT public is accepted (it is private by default)",
+          "ok": true,
+          "detail": "status=200 ",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a WRITE query with public=false is accepted",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "http"
+        },
+        {
+          "name": "[api] a WRITE query with public=true is REJECTED by the server (422, path queries[i].public) — the UI never offers it",
+          "ok": true,
+          "detail": "status=422 {\"code\":\"SCHEMA_INVALID\",\"message\":\"App definition is invalid\",\"requestId\":\"req_fcd674428b1e41b19c345c9d4f94a7fd\",\"details\":{\"violations\":[{\"path\":\"queries[3].p",
+          "kind": "http"
+        },
+        {
+          "name": "[ui] the binding was stored: {sectionId, prop, queryRef} with the LOCAL public READ query id — never a slot, sourceRef or credential",
+          "ok": true,
+          "detail": "{\"id\":\"b1\",\"prop\":\"brand\",\"queryRef\":\"q1\",\"sectionId\":\"navbar-1\"}",
+          "kind": "persistence"
+        },
+        {
+          "name": "[ui] readiness: not-ready for ONE reason only — the site is not public yet, so it has no data address (apiBase); the draft itself has no problem",
+          "ok": true,
+          "detail": "Trang chưa xuất bản công khai: không có địa chỉ dữ liệu (apiBase) nên khách chưa thấy dữ liệu.",
+          "kind": "ui"
+        },
+        {
+          "name": "[ui] the publish review lists exactly the public READ query (not the private one, not the WRITE one)",
+          "ok": true,
+          "detail": "public-query:q1",
+          "kind": "ui"
+        },
+        {
+          "name": "[ui] Publish is disabled until the acknowledgement is ticked",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "[ui] POST …/publish is the unchanged release contract: body EXACTLY {visibility:'PUBLIC', expectedRevision}, Idempotency-Key present — no acknowledgement field",
+          "ok": true,
+          "detail": "status=202 {\"visibility\":\"PUBLIC\",\"expectedRevision\":8}",
+          "kind": "http"
+        },
+        {
+          "name": "[backend] the server wrote the PUBLIC_QUERIES event naming exactly the public query",
+          "ok": true,
+          "detail": "Public queries of this release (anyone who can open the site may run them, read-only): q1",
+          "kind": "persistence"
+        },
+        {
+          "name": "[ui] the dialog shows the server's PUBLIC_QUERIES and no mismatch with what it announced",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "[backend] the release is live and PUBLIC, operation idle",
+          "ok": true,
+          "detail": "{\"v\":\"PUBLIC\",\"op\":null}",
+          "kind": "persistence"
+        },
+        {
+          "name": "no unhandled page errors in Studio",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "[visitor] the page asked for its runtime config (GET __factory/config.json) before any data request, with no cookie and no credentials",
+          "ok": true,
+          "detail": "{\"sec-ch-ua-platform\":\"\\\"macOS\\\"\",\"referer\":\"\",\"user-agent\":\"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit",
+          "kind": "http"
+        },
+        {
+          "name": "[visitor] config.json is no-store JSON with a same-origin apiBase for THIS slug (…/{slug}/_data) and no tenant / workspace / credential",
+          "ok": true,
+          "detail": "{\"appId\":\"2e28663b-6574-4e57-8819-7b203912e46c\",\"appName\":\"e2e-muyta5ia-proj-A\",\"environment\":\"production\",\"visibility\":\"PUBLIC\",\"version\":\"9\",\"user\":null,\"flags\":{},\"apiBase\":\"http://127.0.0.1:51088/",
+          "kind": "http"
+        }
+      ],
+      "failed": []
+    }
+  ]
+}

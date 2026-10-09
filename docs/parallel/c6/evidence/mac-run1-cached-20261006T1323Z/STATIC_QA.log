@@ -1,0 +1,16 @@
+# start: 2026-10-06T13:25:36Z
+# cwd:   /Users/hoangluan/code/xweb-c6
+# cmd:   node docs/parallel/c6/harness/static-qa.mjs
+
+PASS  SQ-01  All migration file names match V<n>__<name>.sql
+PASS  SQ-02  Migration versions contiguous V1..V28 (no gaps, no duplicates)
+PASS  SQ-03  No unallocated migration beyond the C0 ledger (V29+ must not exist until C0 allocates)
+PASS  SQ-04  Flyway outOfOrder is not enabled in any application*.yml
+PASS  SQ-05  V2 feature flags are declared and default to false
+PASS  SQ-06  app.tenancy.system-admin-business-access is declared and defaults false
+PASS  SQ-07  backend/src/wiring-skeleton contains only .skel/README (not compiled)
+PASS  SQ-08  SecurityConfiguration declares DATA_WEBHOOK_INGEST and the /api/v1/webhooks/data/ path
+PASS  SQ-09  .env.example has no long literal secret values (heuristic)
+PASS  SQ-10  E2E scripts present (>=8)
+
+INVENTORY {"backendTestFiles":148,"backendTestAnnotations":1395,"backendDisabledAnnotations":0,"perModule":{"admin":13,"ai":77,"app":118,"asset":7,"audit":3,"code":19,"common":16,"component":10,"data":380,"identity":25,"isolation":10,"logic":390,"maintenance":3,"member":7,"migration":13,"project":24,"prompt":6,"publish":16,"runtime":14,"schema":9,"settings":5,"support":0,"template":33,"tenancy":71,"version":3,"wiring":123},"migrations":28,"maxMigration":28}

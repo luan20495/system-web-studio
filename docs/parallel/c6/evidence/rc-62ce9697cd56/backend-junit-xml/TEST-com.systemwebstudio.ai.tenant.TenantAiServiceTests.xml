@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.ai.tenant.TenantAiServiceTests" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:43:54.286Z" hostname="macmini-2.local" time="0.005">
+  <properties/>
+  <testcase name="an invalid change stores and audits nothing()" classname="com.systemwebstudio.ai.tenant.TenantAiServiceTests" time="0.0"/>
+  <testcase name="the key never leaves the server in a view, an audit record or a log line()" classname="com.systemwebstudio.ai.tenant.TenantAiServiceTests" time="0.003"/>
+  <testcase name="update, keep the key, and remove are audited()" classname="com.systemwebstudio.ai.tenant.TenantAiServiceTests" time="0.0"/>
+  <testcase name="tenants are separate()" classname="com.systemwebstudio.ai.tenant.TenantAiServiceTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

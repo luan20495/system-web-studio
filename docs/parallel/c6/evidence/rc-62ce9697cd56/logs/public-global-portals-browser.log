@@ -1,0 +1,52 @@
+
+===== PLATFORM  https://platform.toolsmcp.uk
+PASS platform: the origin root leads an anonymous visitor to the login page
+PASS platform: real sign-in through the UI leaves the login page (same host, https) | /platform
+PASS platform: the signed-in page renders content | ◆ AI Software Factory Xweb Platform ▦ Tổng quan ▥ Công ty (tenant) ◎ N
+PASS platform: browser cookie STUDIO_SESSION is host-only, Secure, HttpOnly, Lax | platform.toolsmcp.uk Lax
+PASS platform: refresh keeps the session (still not on /login) | /platform
+PASS platform: the page's own same-origin fetch of /api/v1/auth/me is 200 | 200
+INFO platform: links to the other portals: https://admin.toolsmcp.uk, https://studio.toolsmcp.uk
+PASS platform: no link on the page points at localhost / loopback | 22 links, 2 to the other portals
+PASS platform: every request went to an allowed public host (portal hosts, files, sites; the edge-injected analytics beacon is reported, not counted) | platform.toolsmcp.uk,static.cloudflareinsights.com
+INFO platform: Cloudflare Web Analytics beacon is injected by the edge (zone setting, not C0 / not the portals)
+PASS platform: no request to localhost / loopback / a private port
+PASS platform: no CORS, ChunkLoadError, hydration or script error in the console
+PASS platform: no 5xx, no failed request, no missing /_next asset
+PASS platform: after sign-out /api/v1/auth/me is 401 and the portal shows the login page | 401 /login
+
+===== ADMIN  https://admin.toolsmcp.uk
+PASS admin: the origin root leads an anonymous visitor to the login page
+PASS admin: real sign-in through the UI leaves the login page (same host, https) | /admin
+PASS admin: the signed-in page renders content | ◆ AI Software Factory Quản trị công ty ▦ Tổng quan ◎ Người dùng & Work
+PASS admin: browser cookie STUDIO_SESSION is host-only, Secure, HttpOnly, Lax | admin.toolsmcp.uk Lax
+PASS admin: refresh keeps the session (still not on /login) | /admin
+PASS admin: the page's own same-origin fetch of /api/v1/auth/me is 200 | 200
+INFO admin: links to the other portals: https://platform.toolsmcp.uk, https://studio.toolsmcp.uk
+PASS admin: no link on the page points at localhost / loopback | 17 links, 2 to the other portals
+PASS admin: every request went to an allowed public host (portal hosts, files, sites; the edge-injected analytics beacon is reported, not counted) | admin.toolsmcp.uk,static.cloudflareinsights.com
+INFO admin: Cloudflare Web Analytics beacon is injected by the edge (zone setting, not C0 / not the portals)
+PASS admin: no request to localhost / loopback / a private port
+PASS admin: no CORS, ChunkLoadError, hydration or script error in the console
+PASS admin: no 5xx, no failed request, no missing /_next asset
+PASS admin: after sign-out /api/v1/auth/me is 401 and the portal shows the login page | 401 /login
+
+===== STUDIO  https://studio.toolsmcp.uk
+PASS studio: the origin root leads an anonymous visitor to the login page
+PASS studio: real sign-in through the UI leaves the login page (same host, https) | /studio
+PASS studio: the signed-in page renders content | ◆ Company Builder Studio AI Software Factory + Tạo ứng dụng ⌂ Trang ch
+PASS studio: browser cookie STUDIO_SESSION is host-only, Secure, HttpOnly, Lax | studio.toolsmcp.uk Lax
+PASS studio: refresh keeps the session (still not on /login) | /studio
+PASS studio: the page's own same-origin fetch of /api/v1/auth/me is 200 | 200
+INFO studio: links to the other portals: https://admin.toolsmcp.uk
+PASS studio: no link on the page points at localhost / loopback | 15 links, 1 to the other portals
+PASS studio: every request went to an allowed public host (portal hosts, files, sites; the edge-injected analytics beacon is reported, not counted) | studio.toolsmcp.uk,static.cloudflareinsights.com
+INFO studio: Cloudflare Web Analytics beacon is injected by the edge (zone setting, not C0 / not the portals)
+PASS studio: no request to localhost / loopback / a private port
+PASS studio: no CORS, ChunkLoadError, hydration or script error in the console
+PASS studio: no 5xx, no failed request, no missing /_next asset
+PASS studio: after sign-out /api/v1/auth/me is 401 and the portal shows the login page | 401 /login
+PASS cross-portal (one browser profile): signed in on platform, NOT signed in on admin; admin shows its login page | platform=200 admin=401
+PASS cross-portal: no cookie carries a Domain wider than its host (no .toolsmcp.uk) | platform.toolsmcp.uk,platform.toolsmcp.uk
+
+TOTAL 38  FAILED 0

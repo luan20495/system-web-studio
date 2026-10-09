@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.api.DataApiTests" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:44:53.698Z" hostname="macmini-2.local" time="0.042">
+  <properties/>
+  <testcase name="a query is parsed strictly run by the gateway and rendered as the view model()" classname="com.systemwebstudio.data.api.DataApiTests" time="0.022"/>
+  <testcase name="a malformed path id is not found rather than an error with detail()" classname="com.systemwebstudio.data.api.DataApiTests" time="0.002"/>
+  <testcase name="the webhook route is the canonical one and the only public one()" classname="com.systemwebstudio.data.api.DataApiTests" time="0.001"/>
+  <testcase name="each route asks for the gateway operation its handler enforces()" classname="com.systemwebstudio.data.api.DataApiTests" time="0.0"/>
+  <testcase name="no route takes a tenant from the path and none uses the old query contract()" classname="com.systemwebstudio.data.api.DataApiTests" time="0.0"/>
+  <testcase name="cache refresh answers 204 and is permission checked()" classname="com.systemwebstudio.data.api.DataApiTests" time="0.001"/>
+  <testcase name="an unexpected exception becomes a 500 without detail()" classname="com.systemwebstudio.data.api.DataApiTests" time="0.001"/>
+  <testcase name="a tenant id in the body is rejected and nothing runs()" classname="com.systemwebstudio.data.api.DataApiTests" time="0.001"/>
+  <testcase name="problems carry the fixed message the status and the request id and nothing else()" classname="com.systemwebstudio.data.api.DataApiTests" time="0.0"/>
+  <testcase name="routes are unique and live under the canonical prefixes()" classname="com.systemwebstudio.data.api.DataApiTests" time="0.0"/>
+  <testcase name="an api result never prints its body()" classname="com.systemwebstudio.data.api.DataApiTests" time="0.0"/>
+  <testcase name="ai catalog is 501 when no provider is wired and filtered per caller when it is()" classname="com.systemwebstudio.data.api.DataApiTests" time="0.002"/>
+  <system-out><![CDATA[{"@timestamp":"2026-10-08T06:44:53.736531+07:00","@version":"1","message":"data api call failed unexpectedly: java.lang.IllegalStateException","logger_name":"com.systemwebstudio.data.api.DataApiHandler","thread_name":"Test worker","level":"ERROR","level_value":40000}
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

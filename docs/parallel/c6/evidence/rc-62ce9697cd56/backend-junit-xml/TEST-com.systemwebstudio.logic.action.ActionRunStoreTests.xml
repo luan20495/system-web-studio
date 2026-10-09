@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.logic.action.ActionRunStoreTests" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:46:13.249Z" hostname="macmini-2.local" time="0.002">
+  <properties/>
+  <testcase name="a stale owner cannot complete a run it lost()" classname="com.systemwebstudio.logic.action.ActionRunStoreTests" time="0.0"/>
+  <testcase name="concurrent begins on one key yield exactly one Started()" classname="com.systemwebstudio.logic.action.ActionRunStoreTests" time="0.001"/>
+  <testcase name="retryable failure restarts with a new attempt, non retryable failure is replayed()" classname="com.systemwebstudio.logic.action.ActionRunStoreTests" time="0.0"/>
+  <testcase name="success is replayed and the finish time is recorded()" classname="com.systemwebstudio.logic.action.ActionRunStoreTests" time="0.0"/>
+  <testcase name="first begin starts, same input while running is in progress, different input is key reuse()" classname="com.systemwebstudio.logic.action.ActionRunStoreTests" time="0.0"/>
+  <testcase name="limits are only ever lowered by a definition()" classname="com.systemwebstudio.logic.action.ActionRunStoreTests" time="0.0"/>
+  <testcase name="keys are scoped by tenant, app, action and user()" classname="com.systemwebstudio.logic.action.ActionRunStoreTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

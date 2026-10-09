@@ -1,0 +1,711 @@
+{
+ "host": "studio.toolsmcp.uk",
+ "navigations": [
+  "https://studio.toolsmcp.uk/",
+  "https://studio.toolsmcp.uk/",
+  "https://studio.toolsmcp.uk/login",
+  "https://studio.toolsmcp.uk/studio/projects",
+  "https://studio.toolsmcp.uk/studio/projects",
+  "https://studio.toolsmcp.uk/login?…",
+  "https://studio.toolsmcp.uk/studio/projects",
+  "https://studio.toolsmcp.uk/studio/projects",
+  "https://studio.toolsmcp.uk/studio/projects",
+  "https://studio.toolsmcp.uk/studio/projects",
+  "https://studio.toolsmcp.uk/studio/projects",
+  "https://studio.toolsmcp.uk/login?…"
+ ],
+ "requests": [
+  {
+   "url": "https://studio.toolsmcp.uk/",
+   "method": "GET",
+   "type": "document",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/_next/static/chunks/0n1-m0yeg-cb2.css",
+   "method": "GET",
+   "type": "stylesheet",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/_next/static/chunks/2gvhh090iiesp.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/_next/static/chunks/1wfxwzirr5qpx.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/_next/static/chunks/1wepaifw1fhdo.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/_next/static/chunks/turbopack-2rhgfkzk-4d1y.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/_next/static/chunks/3fntmmi971322.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/_next/static/chunks/21xkln087m48r.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/cdn-cgi/rum",
+   "method": "POST",
+   "type": "xhr",
+   "status": 204
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 401
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/login",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/api/v1/auth/config",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 401
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects",
+   "method": "GET",
+   "type": "document",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/_next/static/chunks/0n1-m0yeg-cb2.css",
+   "method": "GET",
+   "type": "stylesheet",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/_next/static/chunks/2gvhh090iiesp.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/_next/static/chunks/1wfxwzirr5qpx.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/_next/static/chunks/1wepaifw1fhdo.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/_next/static/chunks/turbopack-2rhgfkzk-4d1y.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/_next/static/chunks/3fntmmi971322.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/_next/static/chunks/21xkln087m48r.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/cdn-cgi/rum",
+   "method": "POST",
+   "type": "xhr",
+   "status": 204
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 401
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/login",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/api/v1/auth/config",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 401
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/api/v1/auth/csrf",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/api/v1/auth/login",
+   "method": "POST",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/cdn-cgi/rum",
+   "method": "POST",
+   "type": "ping",
+   "status": 204
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/cdn-cgi/rum",
+   "method": "POST",
+   "type": "xhr",
+   "status": 204
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/api/v1/workspaces/ead85579-5895-49c4-aa84-4ad7816e6bee/projects",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/new",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/templates",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/components",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/activity",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects/aca1a473-172b-4d33-a5d5-f5045c55f461",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects/bdfeab6b-9db7-4e52-9862-5e01de9301ad",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects/74123764-31be-44a8-ab31-c75c85d53ae1",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects/cdd338f8-15ef-4459-b80e-c3d07c2e8588",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects/3266645b-b449-4056-90eb-f687c0e60d24",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects/c500ca34-51dd-477f-83c9-3560350595c0",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects/e89bdfd9-1d25-43cb-903e-be62434ef228",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects/0a6a1c5b-09c3-4280-b51b-5b530a8d268a",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects/89c73bcc-5418-4823-a90e-4c011d374a56",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects",
+   "method": "GET",
+   "type": "document",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/_next/static/chunks/0n1-m0yeg-cb2.css",
+   "method": "GET",
+   "type": "stylesheet",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/_next/static/chunks/2gvhh090iiesp.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/_next/static/chunks/1wfxwzirr5qpx.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/_next/static/chunks/1wepaifw1fhdo.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/_next/static/chunks/turbopack-2rhgfkzk-4d1y.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/_next/static/chunks/3fntmmi971322.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/_next/static/chunks/21xkln087m48r.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/cdn-cgi/rum",
+   "method": "POST",
+   "type": "xhr",
+   "status": 204
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/api/v1/workspaces/ead85579-5895-49c4-aa84-4ad7816e6bee/projects",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/new",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/templates",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/components",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/activity",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects/aca1a473-172b-4d33-a5d5-f5045c55f461",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects/bdfeab6b-9db7-4e52-9862-5e01de9301ad",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects/74123764-31be-44a8-ab31-c75c85d53ae1",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects/cdd338f8-15ef-4459-b80e-c3d07c2e8588",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects/3266645b-b449-4056-90eb-f687c0e60d24",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects/c500ca34-51dd-477f-83c9-3560350595c0",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects/e89bdfd9-1d25-43cb-903e-be62434ef228",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects/0a6a1c5b-09c3-4280-b51b-5b530a8d268a",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects/89c73bcc-5418-4823-a90e-4c011d374a56",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects",
+   "method": "GET",
+   "type": "document",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/_next/static/chunks/0n1-m0yeg-cb2.css",
+   "method": "GET",
+   "type": "stylesheet",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/_next/static/chunks/2gvhh090iiesp.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/_next/static/chunks/1wfxwzirr5qpx.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/_next/static/chunks/1wepaifw1fhdo.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/_next/static/chunks/turbopack-2rhgfkzk-4d1y.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/_next/static/chunks/3fntmmi971322.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/_next/static/chunks/21xkln087m48r.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/cdn-cgi/rum",
+   "method": "POST",
+   "type": "xhr",
+   "status": 204
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/api/v1/workspaces/ead85579-5895-49c4-aa84-4ad7816e6bee/projects",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/new",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/templates",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/components",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/activity",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects/aca1a473-172b-4d33-a5d5-f5045c55f461",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects/bdfeab6b-9db7-4e52-9862-5e01de9301ad",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects/74123764-31be-44a8-ab31-c75c85d53ae1",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects/cdd338f8-15ef-4459-b80e-c3d07c2e8588",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects/3266645b-b449-4056-90eb-f687c0e60d24",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects/c500ca34-51dd-477f-83c9-3560350595c0",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects/e89bdfd9-1d25-43cb-903e-be62434ef228",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects/0a6a1c5b-09c3-4280-b51b-5b530a8d268a",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/studio/projects/89c73bcc-5418-4823-a90e-4c011d374a56",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/api/v1/auth/csrf",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/api/v1/auth/logout",
+   "method": "POST",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/login",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/login",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/cdn-cgi/rum",
+   "method": "POST",
+   "type": "ping",
+   "status": 204
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/cdn-cgi/rum",
+   "method": "POST",
+   "type": "xhr",
+   "status": 204
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/api/v1/auth/config",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 401
+  },
+  {
+   "url": "https://studio.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 401
+  }
+ ],
+ "console": [
+  "error: Failed to load resource: the server responded with a status of 401 ()",
+  "error: Failed to load resource: the server responded with a status of 401 ()",
+  "error: Failed to load resource: the server responded with a status of 401 ()",
+  "error: Failed to load resource: the server responded with a status of 401 ()",
+  "error: Failed to load resource: the server responded with a status of 401 ()",
+  "error: Failed to load resource: the server responded with a status of 401 ()"
+ ]
+}

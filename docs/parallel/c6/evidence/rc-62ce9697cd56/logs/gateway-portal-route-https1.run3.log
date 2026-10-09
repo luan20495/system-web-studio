@@ -1,0 +1,17 @@
+PASS  the template is valid nginx configuration and the gateway is healthy
+PASS  Host platform.test is served by the platform portal only  — <portal>platform</portal>
+PASS  Host admin.test is served by the admin portal only  — <portal>admin</portal>
+PASS  Host studio.test is served by the studio portal only  — <portal>studio</portal>
+PASS  an unknown Host is a plain 404 (no portal reached, nothing revealed)  — 404
+PASS  a bare-IP Host is a 404 too
+PASS  healthz answers on the gateway
+PASS  plain http at the edge is redirected 308 to https, same host and path  — 308 https://admin.test/login?next=%2Fadmin
+PASS  https at the edge is served
+PASS  untrusted client: a forged X-Forwarded-For / X-Real-IP / Forwarded never reaches the portal; it gets ONE address (the real peer)  — xff=172.17.0.1 real=172.17.0.1 fwd=none
+PASS  the portal is told the public Host and the scheme  — platform.test http
+PASS  trusted proxy: the right-most untrusted entry is the visitor; the forged prefix is dropped  — 203.0.113.9
+PASS  a 5 MiB body reaches the portal (client_max_body_size 20m)  — 200 5242880
+PASS  a streamed response is relayed intact  — ab
+PASS  a body over the limit is refused (413)  — 413
+
+15/15 passed

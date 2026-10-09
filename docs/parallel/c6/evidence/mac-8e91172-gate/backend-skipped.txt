@@ -1,0 +1,3 @@
+com.systemwebstudio.ai.OpenRouterLiveTests :: a real key answers through the free router()
+com.systemwebstudio.ai.OpenRouterLiveTests :: an invalid key is reported as fatal (no failover storm) without echoing upstream text()
+com.systemwebstudio.ai.OpenRouterLiveTests :: the real model list parses and only free text models are offered()

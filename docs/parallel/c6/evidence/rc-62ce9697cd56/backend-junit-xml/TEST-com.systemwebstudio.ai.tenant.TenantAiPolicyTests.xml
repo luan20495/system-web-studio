@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.ai.tenant.TenantAiPolicyTests" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:43:54.282Z" hostname="macmini-2.local" time="0.004">
+  <properties/>
+  <testcase name="keys, models and names are checked()" classname="com.systemwebstudio.ai.tenant.TenantAiPolicyTests" time="0.001"/>
+  <testcase name="a custom host needs the operator's allow-list()" classname="com.systemwebstudio.ai.tenant.TenantAiPolicyTests" time="0.001"/>
+  <testcase name="endpoints that could reach internal systems are refused()" classname="com.systemwebstudio.ai.tenant.TenantAiPolicyTests" time="0.0"/>
+  <testcase name="a missing key keeps the stored one()" classname="com.systemwebstudio.ai.tenant.TenantAiPolicyTests" time="0.0"/>
+  <testcase name="a provider with its default endpoint is accepted()" classname="com.systemwebstudio.ai.tenant.TenantAiPolicyTests" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

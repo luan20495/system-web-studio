@@ -1,0 +1,24 @@
+PASS  the template is valid nginx configuration and the gateway is healthy
+PASS  Host platform.test is served by the platform portal only  — <portal>platform</portal>
+PASS  Host admin.test is served by the admin portal only  — <portal>admin</portal>
+PASS  Host studio.test is served by the studio portal only  — <portal>studio</portal>
+PASS  an unknown Host is a plain 404 (no portal reached, nothing revealed)  — 404
+PASS  a bare-IP Host is a 404 too
+PASS  healthz answers on the gateway
+PASS  local mode: X-Forwarded-Proto http is NOT redirected
+PASS  https at the edge is served
+PASS  untrusted client: a forged X-Forwarded-For / X-Real-IP / Forwarded never reaches the portal; it gets ONE address (the real peer)  — xff=172.17.0.1 real=172.17.0.1 fwd=none
+PASS  the portal is told the public Host and the scheme  — platform.test http
+node:_http_client:599
+    emitErrorEvent(req, new ConnResetException('socket hang up'));
+                        ^
+
+Error: socket hang up
+    at Socket.socketOnEnd (node:_http_client:599:25)
+    at Socket.emit (node:events:531:35)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:89:21) {
+  code: 'ECONNRESET'
+}
+
+Node.js v22.23.1

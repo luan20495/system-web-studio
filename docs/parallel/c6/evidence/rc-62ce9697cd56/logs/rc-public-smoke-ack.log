@@ -1,0 +1,44 @@
+PASS author login with CSRF
+PASS project created | 201
+PASS declare the data-source slot (ADD_DATA_SOURCE, no SQL seed) | 200 
+PASS a slot can never carry sourceRef | 400
+PASS data source on the TLS target | 201
+PASS credential (metadata only)
+PASS test connection over TLS | {"ok":true,"latencyMs":37,"warnings":[]}
+PASS query definition shop.title | 201
+PASS query definition shop.title2 | 201
+PASS query definition shop.items | 201
+PASS bind TEST
+PASS bind LIVE
+PASS queries (public: true) and mappings added through operations | 200 
+PASS data bindings (Hero title, ProductGrid items) | 200 
+PASS a PUBLIC data-bound page is refused without the public-data acknowledgement | 422
+PASS acknowledge public data | 200 
+PASS publish release 1 (PAGE_SCHEMA with a runtime) | 202 RUNNING
+PASS the publish confirmation lists the public queries
+PASS visitor: runtime READY | ready
+PASS visitor: the page text is the live database value (TLS PostgreSQL) | Open orders: 6
+PASS visitor: the list is rendered from the database | 7 rows
+PASS visitor: data calls are POST to the same origin /{slug}/_data, no cookie, no authorization | /public-smoke-d6a423-e3f5cf/_data/queries/q-title/run /public-smoke-d6a423-e3f5cf/_data/queries/q-items/run
+PASS visitor: no request leaves the sites origin
+PASS visitor: no cookie in the profile | []
+PASS runtime config: slug-scoped apiBase, no internal host, release id | {"apiBase":"http://127.0.0.1:51088/public-smoke-d6a423-e3f5cf/_data","version":"4"}
+PASS runtime config exposes no tenant, workspace, credential, lease or fence field | apiBase,appId,appName,environment,flags,generatedAt,releaseId,user,version,visibility
+PASS forged tenantId in the body is refused (400) | 400
+PASS a public query by plain POST works | 200
+PASS there is no public mutation route | 403
+PASS an unknown query is 404 QUERY_NOT_FOUND | 404
+PASS draft edit: q-title is no longer public IN THE DRAFT | 200
+PASS the active release still serves q-title (draft change has no effect) | 200
+PASS release 2 binding edit | 200 
+PASS publish release 2 | RUNNING
+PASS release 2 serves its own new public query q-extra | 200
+PASS visitor sees release 2 (Second release) | Second release: 7
+PASS rollback to release 1 | 200
+PASS visitor sees release 1 again after the rollback | Open orders: 6
+PASS q-extra belongs to release 2 only: 404 after the rollback (the allow-list follows the release) | 404
+PASS unpublish | 200
+PASS after unpublish the data route is 404 | 404
+PASS the page is offline | 404
+
+TOTAL 42  FAILED 0

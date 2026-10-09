@@ -1,0 +1,54 @@
+START|2026-10-06T15:13:26Z
+HOST|Darwin arm64 |27.0.1 
+HEAD|8e91172
+BRANCH|agent/c6-qa
+JAVA|INFO|home=/opt/homebrew/Cellar/openjdk@21/21.0.12.1/libexec/openjdk.jdk/Contents/Home|version=openjdk version "21.0.12.1" 2026-08-18 |at=2026-10-06T15:13:28Z
+DOCKER|INFO|client=29.8.2 |server=29.8.2 |compose=5.5.1 |at=2026-10-06T15:13:28Z
+BRANCH_CHECK|PASS|expected=agent/c6-qa|at=2026-10-06T15:13:28Z
+BASELINE|PASS|base=8e91172|head_descends_from_base=yes|commits_ahead=0|at=2026-10-06T15:13:28Z
+WORKTREE_START|PASS|dirty_outside_c6=0|at=2026-10-06T15:13:28Z
+PREREQ|PASS|node=v22.23.1|head=8e91172|at=2026-10-06T15:13:28Z
+SCOPE|INFO|gate-only(no stack/E2E/browser/recovery)|at=2026-10-06T15:13:28Z
+BACKEND_COMPILE|PASS|exit=0|duration=9s|log=docs/parallel/c6/evidence/mac-8e91172-gate/BACKEND_COMPILE.log|at=2026-10-06T15:13:37Z
+BACKEND_TEST|PASS|tests=1502|passed=1499|failed=0|skipped=3|exit=0|duration=470s|skipped_list=docs/parallel/c6/evidence/mac/backend-skipped.txt|failures=docs/parallel/c6/evidence/mac/backend-failures.txt|log=docs/parallel/c6/evidence/mac-8e91172-gate/BACKEND_TEST.log|at=2026-10-06T15:21:27Z
+SEC_PrivilegeEscalationTests|PASS|tests=7|fail=0|skipped=0|at=2026-10-06T15:21:27Z
+SEC_TenantAccessTests|PASS|tests=8|fail=0|skipped=0|at=2026-10-06T15:21:27Z
+SEC_IsolationApiTests|PASS|tests=10|fail=0|skipped=0|at=2026-10-06T15:21:27Z
+SEC_AppRuntimeApiTests|PASS|tests=10|fail=0|skipped=0|at=2026-10-06T15:21:27Z
+SEC_DataRuntimeLiveApiTests|PASS|tests=18|fail=0|skipped=0|at=2026-10-06T15:21:27Z
+SEC_DataSourceScopeTests|PASS|tests=6|fail=0|skipped=0|at=2026-10-06T15:21:27Z
+SEC_AccessAdaptersTests|PASS|tests=15|fail=0|skipped=0|at=2026-10-06T15:21:27Z
+SEC_TenantAccessLegacyFlagTests|PASS|tests=5|fail=0|skipped=0|at=2026-10-06T15:21:27Z
+SEC_AdminTransferOwnershipSelfGrantSpec|PASS|tests=1|fail=0|skipped=0|at=2026-10-06T15:21:27Z
+SEC_WebhookSecurityTests|PASS|tests=5|fail=0|skipped=0|at=2026-10-06T15:21:27Z
+SEC_PublicAddressTests|PASS|tests=9|fail=0|skipped=0|at=2026-10-06T15:21:27Z
+SEC_AddressRangeSpecTests|PASS|tests=17|fail=0|skipped=0|at=2026-10-06T15:21:27Z
+SEC_SecurityPrimitivesTests|PASS|tests=15|fail=0|skipped=0|at=2026-10-06T15:21:27Z
+SEC_IdempotencyTests|PASS|tests=11|fail=0|skipped=0|at=2026-10-06T15:21:27Z
+SEC_JdbcIdempotencyStoreTests|PASS|tests=15|fail=0|skipped=0|at=2026-10-06T15:21:27Z
+SEC_WebhookReplayTests|PASS|tests=12|fail=0|skipped=0|at=2026-10-06T15:21:27Z
+SEC_WebhookTests|PASS|tests=21|fail=0|skipped=0|at=2026-10-06T15:21:27Z
+SEC_SqlGuardTests|PASS|tests=14|fail=0|skipped=0|at=2026-10-06T15:21:27Z
+SEC_PostgresSessionSecurityTests|PASS|tests=13|fail=0|skipped=0|at=2026-10-06T15:21:27Z
+SEC_AppRuntimeFlagsOffTests|PASS|tests=2|fail=0|skipped=0|at=2026-10-06T15:21:27Z
+SEC_JdbcPersistenceTests|PASS|tests=17|fail=0|skipped=0|at=2026-10-06T15:21:27Z
+SEC_DataRuntimeMigrationTests|PASS|tests=10|fail=0|skipped=0|at=2026-10-06T15:21:28Z
+SEC_TenantFoundationMigrationTests|PASS|tests=12|fail=0|skipped=0|at=2026-10-06T15:21:28Z
+SEC_AuthSecurityTests|PASS|tests=8|fail=0|skipped=0|at=2026-10-06T15:21:28Z
+SEC_DataSourceAdminTests|PASS|tests=10|fail=0|skipped=0|at=2026-10-06T15:21:28Z
+SEC_PermissionCanonicalTests|PASS|tests=7|fail=0|skipped=0|at=2026-10-06T15:21:28Z
+SECURITY_SUITES|PASS|suites=26|at=2026-10-06T15:21:28Z
+FRONTEND_INSTALL|INFO|node_modules=present(not_reinstalled)|at=2026-10-06T15:21:28Z
+FRONTEND_TYPECHECK_ROOT|PASS|exit=0|log=docs/parallel/c6/evidence/mac-8e91172-gate/FRONTEND_TYPECHECK_ROOT.log|at=2026-10-06T15:21:29Z
+FRONTEND_TYPECHECK_ALL|PASS|exit=0|log=docs/parallel/c6/evidence/mac-8e91172-gate/FRONTEND_TYPECHECK_ALL.log|at=2026-10-06T15:21:37Z
+FRONTEND_TYPECHECK_APPS|PASS|exit=0|log=docs/parallel/c6/evidence/mac-8e91172-gate/FRONTEND_TYPECHECK_APPS.log|at=2026-10-06T15:21:40Z
+FRONTEND_TYPECHECK|PASS|root=ok|packages=ok|apps=ok|at=2026-10-06T15:21:40Z
+FRONTEND_UNIT|PASS|tests=130|passed=130|failed=0|skipped=0|exit=0|conformance_env=set|log=docs/parallel/c6/evidence/mac-8e91172-gate/FRONTEND_UNIT.log|at=2026-10-06T15:21:43Z
+BUG_C6_004|INFO|default_npm_test_unit=tests=115 pass=114 fail=0 skipped=1|rule=closed_if_skipped_is_0|at=2026-10-06T15:21:46Z
+FRONTEND_BUILD_APPS|PASS|exit=0|duration=10s|log=docs/parallel/c6/evidence/mac-8e91172-gate/FRONTEND_BUILD_APPS.log|at=2026-10-06T15:21:56Z
+FRONTEND_BUILD_ROOT|PASS|exit=0|duration=3s|log=docs/parallel/c6/evidence/mac-8e91172-gate/FRONTEND_BUILD_ROOT.log|at=2026-10-06T15:21:59Z
+FRONTEND_BUILD|PASS|apps=ok|root=ok|at=2026-10-06T15:21:59Z
+STATIC_QA|FAIL|9/10|exit=1|log=docs/parallel/c6/evidence/mac-8e91172-gate/STATIC_QA.log|at=2026-10-06T15:21:59Z
+WORKTREE_SCOPE|PASS|new_changes_outside_c6=0|at=2026-10-06T15:21:59Z
+END|2026-10-06T15:22:00Z
+FINAL|FAIL|scope=gate|failed=STATIC_QA|critical_not_run=-|optional_not_run=E2E_07,E2E_08,SECRET_SCAN|gaps=0

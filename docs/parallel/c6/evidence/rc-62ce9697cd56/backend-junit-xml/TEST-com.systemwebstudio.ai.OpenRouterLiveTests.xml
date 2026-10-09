@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.ai.OpenRouterLiveTests" tests="3" skipped="3" failures="0" errors="0" timestamp="2026-10-07T23:43:42.870Z" hostname="macmini-2.local" time="0.001">
+  <properties/>
+  <testcase name="a real key answers through the free router()" classname="com.systemwebstudio.ai.OpenRouterLiveTests" time="0.0">
+    <skipped/>
+  </testcase>
+  <testcase name="an invalid key is reported as fatal (no failover storm) without echoing upstream text()" classname="com.systemwebstudio.ai.OpenRouterLiveTests" time="0.0">
+    <skipped/>
+  </testcase>
+  <testcase name="the real model list parses and only free text models are offered()" classname="com.systemwebstudio.ai.OpenRouterLiveTests" time="0.0">
+    <skipped/>
+  </testcase>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

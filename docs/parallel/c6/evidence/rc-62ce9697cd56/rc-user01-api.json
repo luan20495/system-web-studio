@@ -1,0 +1,73 @@
+{
+ "steps": [
+  {
+   "n": "1 super admin → tenant admin (invite, activate, login)",
+   "create": 201,
+   "activate": 200,
+   "login": 200
+  },
+  {
+   "n": "2 tenant admin → app.creator (invite with workspace role EDITOR, activate, login)",
+   "create": 201,
+   "activate": 200,
+   "login": 200
+  },
+  {
+   "n": "3 assign project access (project EDITOR)",
+   "status": 201
+  },
+  {
+   "n": "4 GET /auth/me",
+   "status": 200,
+   "systemAdmin": false,
+   "tenantRole": "MEMBER",
+   "topLevelPermissions": [],
+   "workspaces": [
+    {
+     "role": "EDITOR",
+     "permissions": []
+    }
+   ]
+  },
+  {
+   "n": "5 GET project list",
+   "status": 200,
+   "visible": true
+  },
+  {
+   "n": "6 GET project",
+   "status": 200,
+   "permissions": [
+    "ACTION_EXECUTE",
+    "APP_USE",
+    "DATA_SOURCE_VIEW",
+    "PROJECT_CREATE",
+    "PROJECT_EDIT",
+    "PROJECT_READ",
+    "PROJECT_SETTINGS",
+    "QUERY_EXECUTE"
+   ]
+  },
+  {
+   "n": "7 edit + save + reload",
+   "patch": 200,
+   "persisted": true,
+   "revision": "0→1"
+  },
+  {
+   "n": "8 publish (editor has no PROJECT_PUBLISH)",
+   "status": 403,
+   "code": "FORBIDDEN"
+  },
+  {
+   "n": "9 member management (no MEMBER_MANAGE)",
+   "status": 403,
+   "code": "FORBIDDEN"
+  },
+  {
+   "n": "10 foreign workspace id",
+   "status": 404,
+   "code": "WORKSPACE_NOT_FOUND"
+  }
+ ]
+}

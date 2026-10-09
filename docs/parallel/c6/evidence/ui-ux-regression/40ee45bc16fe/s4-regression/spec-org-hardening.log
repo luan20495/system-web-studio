@@ -1,0 +1,73 @@
+PASS  A11Y01 Tab from the previous control lands on the picker's search box (a combobox with an accessible name)
+PASS  A11Y02 results are announced (polite live region) and the first option is the active one (aria-activedescendant, aria-selected=true)
+PASS  A11Y03 ArrowDown moves the active option (and aria-activedescendant follows); only ONE option is selected at a time
+PASS  A11Y04 ArrowUp stops at the first option (no wrap, no error)
+PASS  A11Y05 Enter chooses the active person: the chosen card replaces the list, the value is set
+PASS  A11Y06 'Bỏ chọn' clears the choice and the search box is back
+PASS  A11Y07 typing filters and re-announces; Escape clears the search first
+PASS  A11Y08 no match: the empty text is announced and is not an option
+PASS  A11Y09 Tab leaves the picker to the next control (no keyboard trap); the focus ring is visible on the search box
+PASS  A11Y10 axe: no serious/critical violation on the picker
+PASS  A11Y11 a dialog moves focus INTO itself (first field) and has a name
+PASS  A11Y12 focus trap: 14 × Tab never leaves the dialog
+PASS  A11Y13 …and 14 × Shift+Tab neither
+PASS  A11Y14 the page behind does not scroll while the dialog is open (scroll lock) and is released after
+PASS  A11Y15 Escape closes it, the scroll lock is released and focus returns to the button that opened it
+PASS  A11Y16 an invalid field is marked aria-invalid and points (aria-describedby) at its error text, which is announced (role=alert)
+PASS  A11Y17 every visible icon-only button has an accessible name
+PASS  A11Y18 every visible form control has a label
+PASS  A11Y19 a focused tree row has a visible focus ring (outline drawn)  — {"w":"2px","st":"solid"}
+PASS  ST01 read-only tree (list works, every write is NOT_READY): an EXPLICIT notice says so and why — the buttons are not just silently disabled
+PASS  ST02 …actions in the detail panel are disabled too, nothing is sent, nothing is faked
+PASS  ST03 fully NOT_READY: explicit panel, no tree, no calls
+PASS  ST04 a page past the end (the list shrank): 'Trang này không có nhân viên' with a way back, not a blank table
+PASS  ST05 'Về trang đầu' restores page 1
+PASS  ST06 creating is NOT_READY: a visible notice with the reason (not only a disabled button)
+PASS  ST07 member-list directory: unit / position columns are LEFT OUT (not '—' cells that look like errors) and a note explains why
+PASS  PERF01 2 000 generated units: a large tree starts COLLAPSED to its roots (a few rows, not thousands)  — rows=5
+PASS  PERF02 'Mở rộng tất cả' renders all 2 000 rows without crashing; every row is a treeitem with level / position  — rows=2000
+PASS  PERF03 selecting one row in the 2 000-row tree works (detail panel updates) and re-renders far less than the whole tree (Profiler: actual ≪ base)  — actual=0ms base=134.5ms
+PASS  PERF04 'Thu gọn' collapses to the roots again  — rows=1
+PASS  PERF05 keyboard navigation through the big tree works (25 × ArrowDown) and the focus moved  — 828 ms for expand + 25 key presses
+PASS  PERF06 the 2 000-row tree scrolls INSIDE its card (max-height) instead of stretching the page  — {"ch":630,"sh":109998}
+PASS  DEPTH10a 10-level chain renders every level, no crash, aria-level is the real level  — rows=10
+PASS  DEPTH10b the deepest unit can be selected; the detail keeps the FULL path in its title and shows a compact breadcrumb (first 2 … last 3) when it is long  — 10 levels, shown: Cấp 1: Bộ phận phụ trách chăm sóc khách hàng khu vực miền Tr
+PASS  DEPTH10c indentation is CAPPED (the text never leaves the card), deep rows carry a level tag, the page does not scroll sideways  — {"pageOverflow":0,"treeOverflow":0,"maxIndent":170,"tags":0}
+PASS  DEPTH10d keyboard: End jumps to the deepest, Home back to the root
+PASS  DEPTH60a 60-level chain renders every level, no crash, aria-level is the real level  — rows=60
+PASS  DEPTH60b the deepest unit can be selected; the detail keeps the FULL path in its title and shows a compact breadcrumb (first 2 … last 3) when it is long  — 60 levels, shown: Cấp 1 — Đơn vị lồng nhau › Cấp 2 — Đơn vị lồng nhau › … › Cấ
+PASS  DEPTH60c indentation is CAPPED (the text never leaves the card), deep rows carry a level tag, the page does not scroll sideways  — {"pageOverflow":0,"treeOverflow":0,"maxIndent":188,"tags":49}
+PASS  DEPTH60d keyboard: End jumps to the deepest, Home back to the root
+PASS  EMPPERF01 10 000 generated employees: only ONE page (20 rows) is in the DOM, never 10 000  — rows=20 · Trang 1/500 · 10000 nhân viên
+PASS  EMPPERF02 search is DEBOUNCED: typing 12 characters quickly sends 1 request, not 12  — requests=1
+PASS  EMPPERF03 the search result is a page of ≤ 20 rows and page switching works (Trang 2)  — rowsAfterSearch=20
+PASS  EMPPERF04 the status filter applies and returns to page 1
+PASS  EMPPERF05 no input lag: the worst keystroke-to-frame while the 10k list is loaded stays under 100 ms  — worst=17.3ms
+PASS  EMPPERF06 opening the same row twice gives the same employee (selection is stable)
+PASS  EMPPERF07 client-side directory over 10 000 members: still 20 rows in the DOM, and searching + 4 page switches FETCHED the member list only once (cached), not on every keystroke / page  — rows=20 fetches=1
+PASS  EMPPERF08 page switches over the 10 000-member list stay interactive (each paints within 150 ms)  — 20.6, 16.2, 21.7, 27.7 ms
+PASS  RESP-ORG-1440 organization: no horizontal overflow, the primary button is inside the viewport  — {"x":0,"add":true}
+PASS  RESP-DLG-1440 the move dialog fits the viewport (width) and its submit button is reachable (visible or scrollable)  — {"left":460,"right":980,"top":224,"bottom":676,"vw":1440,"vh":900,"submitVisible":true}
+PASS  RESP-EMP-1440 employees: no horizontal overflow, the create button is inside the viewport, table header shown  — {"x":0,"create":true,"cards":false}
+PASS  RESP-EMPDLG-1440 the employee detail fits the viewport width and scrolls inside itself  — {"left":460,"right":980,"vw":1440}
+PASS  RESP-ORG-1024 organization: no horizontal overflow, the primary button is inside the viewport  — {"x":0,"add":true}
+PASS  RESP-DLG-1024 the move dialog fits the viewport (width) and its submit button is reachable (visible or scrollable)  — {"left":252,"right":772,"top":224,"bottom":676,"vw":1024,"vh":900,"submitVisible":true}
+PASS  RESP-EMP-1024 employees: no horizontal overflow, the create button is inside the viewport, table header shown  — {"x":0,"create":true,"cards":false}
+PASS  RESP-EMPDLG-1024 the employee detail fits the viewport width and scrolls inside itself  — {"left":252,"right":772,"vw":1024}
+PASS  RESP-ORG-768 organization: no horizontal overflow, the primary button is inside the viewport  — {"x":0,"add":true}
+PASS  RESP-DLG-768 the move dialog fits the viewport (width) and its submit button is reachable (visible or scrollable)  — {"left":124,"right":644,"top":174,"bottom":626,"vw":768,"vh":800,"submitVisible":true}
+PASS  RESP-EMP-768 employees: no horizontal overflow, the create button is inside the viewport, table header shown  — {"x":0,"create":true,"cards":false}
+PASS  RESP-EMPDLG-768 the employee detail fits the viewport width and scrolls inside itself  — {"left":124,"right":644,"vw":768}
+PASS  RESP-ORG-430 organization: no horizontal overflow, the primary button is inside the viewport  — {"x":0,"add":true}
+PASS  RESP-DLG-430 the move dialog fits the viewport (width) and its submit button is reachable (visible or scrollable)  — {"left":8,"right":422,"top":348,"bottom":792,"vw":430,"vh":800,"submitVisible":true}
+PASS  RESP-EMP-430 employees: no horizontal overflow, the create button is inside the viewport, rows are cards  — {"x":0,"create":true,"cards":true}
+PASS  RESP-EMPDLG-430 the employee detail fits the viewport width and scrolls inside itself  — {"left":8,"right":422,"vw":430}
+PASS  RESP-ORG-390 organization: no horizontal overflow, the primary button is inside the viewport  — {"x":0,"add":true}
+PASS  RESP-DLG-390 the move dialog fits the viewport (width) and its submit button is reachable (visible or scrollable)  — {"left":8,"right":382,"top":316,"bottom":792,"vw":390,"vh":800,"submitVisible":true}
+PASS  RESP-EMP-390 employees: no horizontal overflow, the create button is inside the viewport, rows are cards  — {"x":0,"create":true,"cards":true}
+PASS  RESP-EMPDLG-390 the employee detail fits the viewport width and scrolls inside itself  — {"left":8,"right":382,"vw":390}
+PASS  no console error / warning / uncaught exception in any page
+
+METRICS {"org2k":{"units":2000,"initialRowsInDom":5,"dataCommitMs":14.4,"reloadToPaintMs":45.5,"expandAllToPaintMs":349.6,"rowsAfterExpandAll":2000,"selectToPaintMs":23.4,"selectProfilerActualMs":0,"selectProfilerBaseMs":134.5,"collapseAllToPaintMs":26.6,"expandPlus25KeysMs":828,"note":"GENERATED frontend fixture; timings are this machine's render/interaction, not a backend measure"},"depth60":{"rows":60,"pageOverflow":0,"treeOverflow":0,"maxIndent":188,"tags":49,"note":"GENERATED chain of 60 levels; no recursion in buildTree / flattenTree / descendantIds (unit test: a 20 000-deep chain)"},"emp10k":{"employees":10000,"pageSize":20,"rowsInDomInitial":20,"rowsInDomAfterSearch":20,"firstCommitMs":11.9,"searchRequestsFor12Keystrokes":1,"pageSwitchToPaintMs":24.3,"statusFilterToPaintMs":10.6,"worstKeystrokeToFrameMs":17.3,"note":"directory fixture is paged by the FAKE transport (server-like); this is a frontend benchmark, not a backend measure"},"emp10kMembersFallback":{"members":10000,"rowsInDom":20,"memberListFetches":1,"pageSwitchToPaintMs":[20.6,16.2,21.7,27.7],"note":"client-side filtering of a generated fixture: a frontend benchmark of the member-list fallback, not backend behaviour"}}
+
+69/69 checks passed

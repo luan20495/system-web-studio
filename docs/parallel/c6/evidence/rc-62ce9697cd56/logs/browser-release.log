@@ -1,0 +1,58 @@
+PASS  idle (operation = null): Publish, rollback and unpublish are enabled, no busy banner
+PASS  pointerVersion is displayed for observability, labelled as not sent back
+PASS  the release being served is marked, a ROLLED_BACK release is not offered
+PASS  operation=PUBLISH: the dialog mirrors it (banner kind PUBLISH, text) and locks Publish / rollback / unpublish
+PASS  operation=PUBLISH: it keeps polling SiteInfo while busy (bounded interval)  — 5 site calls in 2 s (interval 400 ms in the harness)
+PASS  operation=PUBLISH → null: the banner goes away by itself, controls are back, no request was sent for the locked controls
+PASS  operation=ROLLBACK: the dialog mirrors it (banner kind ROLLBACK, text) and locks Publish / rollback / unpublish
+PASS  operation=ROLLBACK: it keeps polling SiteInfo while busy (bounded interval)  — 4 site calls in 2 s (interval 400 ms in the harness)
+PASS  operation=ROLLBACK → null: the banner goes away by itself, controls are back, no request was sent for the locked controls
+PASS  operation=UNPUBLISH: the dialog mirrors it (banner kind UNPUBLISH, text) and locks Publish / rollback / unpublish
+PASS  operation=UNPUBLISH: it keeps polling SiteInfo while busy (bounded interval)  — 5 site calls in 2 s (interval 400 ms in the harness)
+PASS  operation=UNPUBLISH → null: the banner goes away by itself, controls are back, no request was sent for the locked controls
+PASS  while an operation is shown, forcing clicks sends NOTHING (no duplicate operation)
+PASS  status POLICY_CHECK: shown as "Kiểm tra chính sách", busy: no success text, dialog cannot be closed, no second publish
+PASS  status BUILDING: shown as "Đang build", busy: no success text, dialog cannot be closed, no second publish
+PASS  status DEPLOYING: shown as "Đang triển khai", busy: no success text, dialog cannot be closed, no second publish
+PASS  status ROLLING_BACK: shown as "Đang hoàn tác", busy: no success text, dialog cannot be closed, no second publish
+PASS  ROLLING_BACK says it is NOT success yet and that the final state will be 'Thất bại'
+PASS  ROLLING_BACK keeps polling (non-terminal)
+PASS  ROLLING_BACK → FAILED: failure shown with its reason, never success; polling stops
+PASS  terminal FAILED: no more status requests
+PASS  RUNNING is the only success (URL shown, polling not even started)
+PASS  ROLLED_BACK: terminal, neutral message (not success, not an error), 'publish again' offered
+PASS  STALE_PUBLISH: a failed DEPLOYMENT with its own title (data-code), the server's text, no error dialog, no success
+PASS  STALE_PUBLISH: the event is listed in plain words and 'publish again' is offered
+PASS  publish again after the failure uses a NEW Idempotency-Key (the old one would only return the failed deployment)  — ui-2300c2bb-8673-4752-813f-69dc4a060bac → ui-04487bfa-d400-4374-bae4-0182eeb05dae
+PASS  a double click sends ONE publish (locked while submitting)  — 1
+PASS  the request is (visibility, expectedRevision, key) with a contract-format key
+PASS  a lost answer (network): 'unknown outcome', retry offered with the SAME payload
+PASS  the retry reuses the SAME Idempotency-Key (replay-safe: it can never create a second deployment)  — ["ui-a426e2a6-3344-4b89-8397-f7fb140e8576","ui-a426e2a6-3344-4b89-8397-f7fb140e8576"]
+PASS  409 IDEMPOTENCY_KEY_REUSED: shown plainly, NO retry button (a new key is required)
+PASS  the next attempt uses a NEW key
+PASS  409 REVISION_CONFLICT: 'the app changed' with a reload action, no blind retry
+PASS  rollback pending: the button says it is working, every release control is locked, the dialog cannot be closed
+PASS  rollback pending: NOT shown as done (no success note yet)
+PASS  a second click while one is in flight sends nothing
+PASS  rollback request: {deploymentId: target, expectedActiveDeploymentId: the release the dialog saw as active}, a contract-format key, nothing else  — [{"deploymentId":"d2","expectedActiveDeploymentId":"d3"},"ui-d0718d59-8d24-492c-8d1b-576ef83fac9d"]
+PASS  only after the 200 + a SiteInfo that serves the target is it reported as done (names the version)
+PASS  pointerVersion shown moved (5 → 6) and the control set follows the new state
+PASS  409 SCOPE_BUSY: names the running operation and the 5 s wait; retry exists but is disabled until Retry-After elapsed
+PASS  after Retry-After the retry is enabled and succeeds; it replays the SAME key (same logical request)  — ["ui-ca10d3a5-1aa7-4849-a17a-dcb4e49214d6","ui-ca10d3a5-1aa7-4849-a17a-dcb4e49214d6"]
+PASS  409 ROLLBACK_STALE: 'the active release changed', says nothing was changed, NO blind retry, a reload action
+PASS  …and the dialog reloads SiteInfo by itself so the next decision is made on fresh state
+PASS  the decision on fresh state carries the NEW expectation and a NEW key  — [["d3","ui-79ecb110-036d-40b2-8711-9841d81207e4"],["d2","ui-80c3946b-0854-47bb-94aa-5460a4568378"]]
+PASS  400 DEPLOYMENT_NOT_RESTORABLE: explained, not retried
+PASS  409 ROLLBACK_FAILED: the server's reason is shown, 'nothing changed', no automatic retry
+PASS  lost answer + the server did apply it: the dialog reconciles from SiteInfo and says so (never a bare failure)
+PASS  unpublish: the expectation is the release the dialog saw as active, a contract-format key; the answer is reported after the 200
+PASS  after unpublish the dialog shows the site as offline and offers no unpublish
+PASS  unpublish needs confirmation: dismissing it sends nothing
+PASS  unpublish 409 SCOPE_BUSY: the same explained error with a retry that waits
+PASS  without APP_PUBLISH: a clear read-only note; Publish, rollback and unpublish are disabled with the reason
+PASS  without APP_PUBLISH: forcing the controls sends NOTHING (the server would answer 403 anyway)
+PASS  SiteInfo polling that keeps failing stops and offers a manual reconnect (no endless retry storm)
+PASS  …and it really stopped polling
+PASS  no console errors, warnings or uncaught exceptions in any scenario (React warnings included)
+
+56/56 passed

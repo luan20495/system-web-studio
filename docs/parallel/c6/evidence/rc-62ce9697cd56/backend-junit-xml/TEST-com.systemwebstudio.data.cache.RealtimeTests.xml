@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.cache.RealtimeTests" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:44:53.900Z" hostname="macmini-2.local" time="0.153">
+  <properties/>
+  <testcase name="a subscriber that fell behind the ring gets one reset and then continues()" classname="com.systemwebstudio.data.cache.RealtimeTests" time="0.011"/>
+  <testcase name="a data source filter hides other data sources of the same tenant()" classname="com.systemwebstudio.data.cache.RealtimeTests" time="0.012"/>
+  <testcase name="a stream carries only its own tenant's events()" classname="com.systemwebstudio.data.cache.RealtimeTests" time="0.026"/>
+  <testcase name="sequence numbers increase per tenant and a reconnect resumes after the last id()" classname="com.systemwebstudio.data.cache.RealtimeTests" time="0.024"/>
+  <testcase name="a blocked reader wakes up when an event arrives()" classname="com.systemwebstudio.data.cache.RealtimeTests" time="0.056"/>
+  <testcase name="events of other tenants never reach a handle()" classname="com.systemwebstudio.data.cache.RealtimeTests" time="0.013"/>
+  <testcase name="the notifier invalidates the cache before it publishes()" classname="com.systemwebstudio.data.cache.RealtimeTests" time="0.001"/>
+  <testcase name="sse frames are single line json with no injectable field()" classname="com.systemwebstudio.data.cache.RealtimeTests" time="0.003"/>
+  <testcase name="a failing bus never breaks the writer()" classname="com.systemwebstudio.data.cache.RealtimeTests" time="0.0"/>
+  <testcase name="stream count per tenant is capped and closing frees a slot()" classname="com.systemwebstudio.data.cache.RealtimeTests" time="0.0"/>
+  <testcase name="subscribing needs the permission and a foreign data source is not found()" classname="com.systemwebstudio.data.cache.RealtimeTests" time="0.001"/>
+  <testcase name="a revoked permission ends the stream at the next check()" classname="com.systemwebstudio.data.cache.RealtimeTests" time="0.0"/>
+  <testcase name="datasource update invalidates everything even when queries are named()" classname="com.systemwebstudio.data.cache.RealtimeTests" time="0.001"/>
+  <system-out><![CDATA[{"@timestamp":"2026-10-08T06:44:54.050887+07:00","@version":"1","message":"event publish raised IllegalStateException","logger_name":"com.systemwebstudio.data.cache.DataChangeNotifier","thread_name":"Test worker","level":"WARN","level_value":30000}
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,136 @@
+TAP version 13
+# Subtest: FOREIGN_NEXT_SURVIVES: cleaning an unrelated owned process leaves a foreign `next start` alone
+ok 1 - FOREIGN_NEXT_SURVIVES: cleaning an unrelated owned process leaves a foreign `next start` alone
+  ---
+  duration_ms: 931.962917
+  type: 'test'
+  ...
+# Subtest: FOREIGN_NEXT_SURVIVES: a start that finds its port occupied FAILS (names the port and the holder) and kills nothing
+ok 2 - FOREIGN_NEXT_SURVIVES: a start that finds its port occupied FAILS (names the port and the holder) and kills nothing
+  ---
+  duration_ms: 280.456125
+  type: 'test'
+  ...
+# Subtest: FOREIGN_NEXT_SURVIVES: the CLI exits 3 with a message naming the port, and the foreign listener survives (start AND stop of an unrelated state)
+ok 3 - FOREIGN_NEXT_SURVIVES: the CLI exits 3 with a message naming the port, and the foreign listener survives (start AND stop of an unrelated state)
+  ---
+  duration_ms: 284.113833
+  type: 'test'
+  ...
+# Subtest: STALE_PID_SAFE: a PID file that points at a live unrelated process is never signalled (wrong start time, wrong command, both, group form)
+ok 4 - STALE_PID_SAFE: a PID file that points at a live unrelated process is never signalled (wrong start time, wrong command, both, group form)
+  ---
+  duration_ms: 124.971875
+  type: 'test'
+  ...
+# Subtest: STALE_PID_SAFE: pid reuse is detected - a state of a process that died and whose pid now belongs to a stranger is refused; a dead pid is ALREADY_GONE
+ok 5 - STALE_PID_SAFE: pid reuse is detected - a state of a process that died and whose pid now belongs to a stranger is refused; a dead pid is ALREADY_GONE
+  ---
+  duration_ms: 806.629458
+  type: 'test'
+  ...
+# Subtest: STALE_PID_SAFE: a zombie / exited owned process counts as gone, and a group whose leader died is still stopped through its members
+ok 6 - STALE_PID_SAFE: a zombie / exited owned process counts as gone, and a group whose leader died is still stopped through its members
+  ---
+  duration_ms: 457.223333
+  type: 'test'
+  ...
+# Subtest: stopOwned: SIGTERM first; SIGKILL only the owned group if it ignores SIGTERM; a paused (SIGSTOP) process is stopped too; the group's children go with it
+ok 7 - stopOwned: SIGTERM first; SIGKILL only the owned group if it ignores SIGTERM; a paused (SIGSTOP) process is stopped too; the group's children go with it
+  ---
+  duration_ms: 2174.99375
+  type: 'test'
+  ...
+# Subtest: withOwned: the owned process is stopped in finally, also when the body throws
+ok 8 - withOwned: the owned process is stopped in finally, also when the body throws
+  ---
+  duration_ms: 808.645417
+  type: 'test'
+  ...
+# Subtest: HARNESS_PID_SCOPED: start/stop of the browser harness server touches only the PID it spawned (process list before/after)
+ok 9 - HARNESS_PID_SCOPED: start/stop of the browser harness server touches only the PID it spawned (process list before/after)
+  ---
+  duration_ms: 1495.273416
+  type: 'test'
+  ...
+# Subtest: HARNESS_PID_SCOPED: `run` stops its server in finally (exit code of the command is propagated), and refuses a busy --port without touching the holder
+ok 10 - HARNESS_PID_SCOPED: `run` stops its server in finally (exit code of the command is propagated), and refuses a busy --port without touching the holder
+  ---
+  duration_ms: 1279.807583
+  type: 'test'
+  ...
+# Subtest: guard: the scanner detects every unsafe pattern (self-test, so a green guard means something)
+ok 11 - guard: the scanner detects every unsafe pattern (self-test, so a green guard means something)
+  ---
+  duration_ms: 0.6565
+  type: 'test'
+  ...
+# Subtest: guard: no pkill / killall / `lsof | kill` / kill-by-port / unvalidated `kill $(cat x.pid)` in C5-owned tracked tooling
+ok 12 - guard: no pkill / killall / `lsof | kill` / kill-by-port / unvalidated `kill $(cat x.pid)` in C5-owned tracked tooling
+  ---
+  duration_ms: 41.977833
+  type: 'test'
+  ...
+# Subtest: guard: no unmanaged background `http.server` / `next start ... &` instructions in tests/ (use harness-server.mjs / owned-process-cli.mjs)
+ok 13 - guard: no unmanaged background `http.server` / `next start ... &` instructions in tests/ (use harness-server.mjs / owned-process-cli.mjs)
+  ---
+  duration_ms: 20.417708
+  type: 'test'
+  ...
+# Subtest: e2e-stack.sh: stops/pauses only through owned state files (no listener lookup feeds a signal)
+ok 14 - e2e-stack.sh: stops/pauses only through owned state files (no listener lookup feeds a signal)
+  ---
+  duration_ms: 0.293291
+  type: 'test'
+  ...
+# Subtest: e2e-stack.sh: `studio-up` on an occupied port fails naming the port and leaves the foreign `next start` alone (before any build)
+ok 15 - e2e-stack.sh: `studio-up` on an occupied port fails naming the port and leaves the foreign `next start` alone (before any build)
+  ---
+  duration_ms: 304.6925
+  type: 'test'
+  ...
+# Subtest: e2e-stack.sh: `backend-down` / `down` / `render-pause` with only a FOREIGN process around never signal it (stale state files included)
+ok 16 - e2e-stack.sh: `backend-down` / `down` / `render-pause` with only a FOREIGN process around never signal it (stale state files included)
+  ---
+  duration_ms: 3017.468792
+  type: 'test'
+  ...
+# Subtest: e2e-stack.sh: render worker lifecycle through the CLI - start on a free port, pause/resume/stop touch only it
+ok 17 - e2e-stack.sh: render worker lifecycle through the CLI - start on a free port, pause/resume/stop touch only it
+  ---
+  duration_ms: 1076.01175
+  type: 'test'
+  ...
+# Subtest: LAUNCHER_REEXEC: a launcher that re-execs itself with a different argv is still OWNED after start and stops WITHOUT an explicit refresh (spawnOwned and the CLI)
+ok 18 - LAUNCHER_REEXEC: a launcher that re-execs itself with a different argv is still OWNED after start and stops WITHOUT an explicit refresh (spawnOwned and the CLI)
+  ---
+  duration_ms: 2882.79275
+  type: 'test'
+  ...
+# Subtest: LAUNCHER_REEXEC: the settle step never blesses a pid that changed hands (start time differs => nothing recorded as ours)
+ok 19 - LAUNCHER_REEXEC: the settle step never blesses a pid that changed hands (start time differs => nothing recorded as ours)
+  ---
+  duration_ms: 24.903042
+  type: 'test'
+  ...
+# Subtest: allowlist: `node .../npx <args>` = `npx <args>` = `npm exec <args>` ONLY with identical arguments; never any other command
+ok 20 - allowlist: `node .../npx <args>` = `npx <args>` = `npm exec <args>` ONLY with identical arguments; never any other command
+  ---
+  duration_ms: 137.85025
+  type: 'test'
+  ...
+# Subtest: STATE_KEPT: a REFUSED stop keeps the state file while the recorded pid is alive (stopOwned and the CLI); STOPPED / ALREADY_GONE remove it
+ok 21 - STATE_KEPT: a REFUSED stop keeps the state file while the recorded pid is alive (stopOwned and the CLI); STOPPED / ALREADY_GONE remove it
+  ---
+  duration_ms: 199.090083
+  type: 'test'
+  ...
+1..21
+# tests 21
+# suites 0
+# pass 21
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 16416.771

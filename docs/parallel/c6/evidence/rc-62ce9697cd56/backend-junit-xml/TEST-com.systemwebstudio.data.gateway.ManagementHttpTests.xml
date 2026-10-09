@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.gateway.ManagementHttpTests" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:45:21.794Z" hostname="macmini-2.local" time="0.015">
+  <properties/>
+  <testcase name="binding targets slots and ids are validated and a bad id looks like a missing one()" classname="com.systemwebstudio.data.gateway.ManagementHttpTests" time="0.003"/>
+  <testcase name="update takes expectedVersion as a positive whole number and it never counts as a change()" classname="com.systemwebstudio.data.gateway.ManagementHttpTests" time="0.0"/>
+  <testcase name="the discover body is optional and has one boolean key()" classname="com.systemwebstudio.data.gateway.ManagementHttpTests" time="0.001"/>
+  <testcase name="definition summaries carry no SQL and no template, the full read carries the document and neither carries identity()" classname="com.systemwebstudio.data.gateway.ManagementHttpTests" time="0.004"/>
+  <testcase name="update accepts name config and status and needs at least one()" classname="com.systemwebstudio.data.gateway.ManagementHttpTests" time="0.001"/>
+  <testcase name="the binding mode is exactly TEST or LIVE()" classname="com.systemwebstudio.data.gateway.ManagementHttpTests" time="0.0"/>
+  <testcase name="create takes name type config and an optional credential and nothing else()" classname="com.systemwebstudio.data.gateway.ManagementHttpTests" time="0.001"/>
+  <testcase name="responses carry only the safe projection()" classname="com.systemwebstudio.data.gateway.ManagementHttpTests" time="0.001"/>
+  <testcase name="the credential body is write only and strict()" classname="com.systemwebstudio.data.gateway.ManagementHttpTests" time="0.0"/>
+  <testcase name="definition requests are strict - ids, kinds, statuses, documents and authority keys()" classname="com.systemwebstudio.data.gateway.ManagementHttpTests" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

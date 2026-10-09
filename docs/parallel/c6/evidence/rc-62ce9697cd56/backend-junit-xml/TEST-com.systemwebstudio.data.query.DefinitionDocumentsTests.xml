@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.query.DefinitionDocumentsTests" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:45:21.880Z" hostname="macmini-2.local" time="0.004">
+  <properties/>
+  <testcase name="the audit hash is stable for the same document and changes with any change()" classname="com.systemwebstudio.data.query.DefinitionDocumentsTests" time="0.001"/>
+  <testcase name="a mutation document becomes a mutation definition()" classname="com.systemwebstudio.data.query.DefinitionDocumentsTests" time="0.0"/>
+  <testcase name="anything unexpected is INVALID_QUERY and no message carries a submitted value()" classname="com.systemwebstudio.data.query.DefinitionDocumentsTests" time="0.002"/>
+  <testcase name="a SQL document becomes a SQL definition with the identity given by the server()" classname="com.systemwebstudio.data.query.DefinitionDocumentsTests" time="0.0"/>
+  <testcase name="the projection round-trips and carries no tenant, data source or credential()" classname="com.systemwebstudio.data.query.DefinitionDocumentsTests" time="0.0"/>
+  <testcase name="a REST document becomes a REST definition()" classname="com.systemwebstudio.data.query.DefinitionDocumentsTests" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

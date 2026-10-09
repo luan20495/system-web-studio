@@ -1,0 +1,447 @@
+{
+ "total": 49,
+ "failed": 0,
+ "rows": [
+  {
+   "id": "platform-01",
+   "portal": "platform",
+   "desc": "HTTPS root loads",
+   "expected": "HTTP 200 → login page",
+   "actual": "200 /login",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "platform-02",
+   "portal": "platform",
+   "desc": "login form is rendered (fields + button)",
+   "expected": "Tên đăng nhập / Mật khẩu / Đăng nhập",
+   "actual": "1/1/1",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "platform-03",
+   "portal": "platform",
+   "desc": "deep link /platform/tenants while signed out",
+   "expected": "redirect to /login?next=…, ≤ 4 navigations (no loop)",
+   "actual": "/login?…; navigations=3",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "platform-04",
+   "portal": "platform",
+   "desc": "sign in with the real account",
+   "expected": "leaves /login, lands in the portal (not /auth/no-access)",
+   "actual": "/platform/tenants",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "platform-05",
+   "portal": "platform",
+   "desc": "portal home renders real content (no mock banner / no 'Chưa sẵn sàng' shell)",
+   "expected": "no 'mock' / 'demo data' marker",
+   "actual": "none",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "platform-06",
+   "portal": "platform",
+   "desc": "reload keeps the session",
+   "expected": "still not on /login",
+   "actual": "/platform/tenants",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "platform-07",
+   "portal": "platform",
+   "desc": "direct URL /platform/tenants when signed in",
+   "expected": "opens the page (no /login, no 'Không có trang này')",
+   "actual": "/platform/tenants",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "platform-08",
+   "portal": "platform",
+   "desc": "page → same-origin /api/v1/auth/me",
+   "expected": "200 on the portal origin",
+   "actual": "200 https://platform.toolsmcp.uk",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "platform-09",
+   "portal": "platform",
+   "desc": "sign out (UI)",
+   "expected": "back on /login and /auth/me = 401",
+   "actual": "/login; me=401",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "platform-N1",
+   "portal": "platform",
+   "desc": "NETWORK: every request goes to the portal / studio-files / sites hosts (no localhost, loopback or private address)",
+   "expected": "0 foreign",
+   "actual": "0 (hosts: platform.toolsmcp.uk, static.cloudflareinsights.com)",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "platform-N2",
+   "portal": "platform",
+   "desc": "NETWORK: no http:// or ws:// request (no mixed content)",
+   "expected": "0",
+   "actual": "0",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "platform-N3",
+   "portal": "platform",
+   "desc": "NETWORK: /_next assets all load",
+   "expected": "0 broken of N",
+   "actual": "0 broken of 28",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "platform-N4",
+   "portal": "platform",
+   "desc": "NETWORK: no failed request, no 5xx",
+   "expected": "0",
+   "actual": "0 failed, 0 5xx",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "platform-N5",
+   "portal": "platform",
+   "desc": "NETWORK: 4xx only the expected 401 of /auth/me before sign-in",
+   "expected": "0 unexpected",
+   "actual": "0",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "platform-N7",
+   "portal": "platform",
+   "desc": "BUNDLE: first-party scripts contain no http://localhost|127.0.0.1 origin and no mock-mode switch",
+   "expected": "0 / 0",
+   "actual": "0 loopback, 0 mock (6 scripts)",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "admin-01",
+   "portal": "admin",
+   "desc": "HTTPS root loads",
+   "expected": "HTTP 200 → login page",
+   "actual": "200 /login",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "admin-02",
+   "portal": "admin",
+   "desc": "login form is rendered (fields + button)",
+   "expected": "Tên đăng nhập / Mật khẩu / Đăng nhập",
+   "actual": "1/1/1",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "admin-03",
+   "portal": "admin",
+   "desc": "deep link /admin/people while signed out",
+   "expected": "redirect to /login?next=…, ≤ 4 navigations (no loop)",
+   "actual": "/login?…; navigations=3",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "admin-04",
+   "portal": "admin",
+   "desc": "sign in with the real account",
+   "expected": "leaves /login, lands in the portal (not /auth/no-access)",
+   "actual": "/admin/people",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "admin-05",
+   "portal": "admin",
+   "desc": "portal home renders real content (no mock banner / no 'Chưa sẵn sàng' shell)",
+   "expected": "no 'mock' / 'demo data' marker",
+   "actual": "none",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "admin-06",
+   "portal": "admin",
+   "desc": "reload keeps the session",
+   "expected": "still not on /login",
+   "actual": "/admin/people",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "admin-07",
+   "portal": "admin",
+   "desc": "direct URL /admin/people when signed in",
+   "expected": "opens the page (no /login, no 'Không có trang này')",
+   "actual": "/admin/people",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "admin-08",
+   "portal": "admin",
+   "desc": "page → same-origin /api/v1/auth/me",
+   "expected": "200 on the portal origin",
+   "actual": "200 https://admin.toolsmcp.uk",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "admin-09",
+   "portal": "admin",
+   "desc": "sign out (UI)",
+   "expected": "back on /login and /auth/me = 401",
+   "actual": "/login; me=401",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "admin-N1",
+   "portal": "admin",
+   "desc": "NETWORK: every request goes to the portal / studio-files / sites hosts (no localhost, loopback or private address)",
+   "expected": "0 foreign",
+   "actual": "0 (hosts: admin.toolsmcp.uk, static.cloudflareinsights.com)",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "admin-N2",
+   "portal": "admin",
+   "desc": "NETWORK: no http:// or ws:// request (no mixed content)",
+   "expected": "0",
+   "actual": "0",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "admin-N3",
+   "portal": "admin",
+   "desc": "NETWORK: /_next assets all load",
+   "expected": "0 broken of N",
+   "actual": "0 broken of 28",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "admin-N4",
+   "portal": "admin",
+   "desc": "NETWORK: no failed request, no 5xx",
+   "expected": "0",
+   "actual": "0 failed, 0 5xx",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "admin-N5",
+   "portal": "admin",
+   "desc": "NETWORK: 4xx only the expected 401 of /auth/me before sign-in",
+   "expected": "0 unexpected",
+   "actual": "0",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "admin-N7",
+   "portal": "admin",
+   "desc": "BUNDLE: first-party scripts contain no http://localhost|127.0.0.1 origin and no mock-mode switch",
+   "expected": "0 / 0",
+   "actual": "0 loopback, 0 mock (6 scripts)",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "studio-01",
+   "portal": "studio",
+   "desc": "HTTPS root loads",
+   "expected": "HTTP 200 → login page",
+   "actual": "200 /login",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "studio-02",
+   "portal": "studio",
+   "desc": "login form is rendered (fields + button)",
+   "expected": "Tên đăng nhập / Mật khẩu / Đăng nhập",
+   "actual": "1/1/1",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "studio-03",
+   "portal": "studio",
+   "desc": "deep link /studio/projects while signed out",
+   "expected": "redirect to /login?next=…, ≤ 4 navigations (no loop)",
+   "actual": "/login?…; navigations=3",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "studio-04",
+   "portal": "studio",
+   "desc": "sign in with the real account",
+   "expected": "leaves /login, lands in the portal (not /auth/no-access)",
+   "actual": "/studio/projects",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "studio-05",
+   "portal": "studio",
+   "desc": "portal home renders real content (no mock banner / no 'Chưa sẵn sàng' shell)",
+   "expected": "no 'mock' / 'demo data' marker",
+   "actual": "none",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "studio-06",
+   "portal": "studio",
+   "desc": "reload keeps the session",
+   "expected": "still not on /login",
+   "actual": "/studio/projects",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "studio-07",
+   "portal": "studio",
+   "desc": "direct URL /studio/projects when signed in",
+   "expected": "opens the page (no /login, no 'Không có trang này')",
+   "actual": "/studio/projects",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "studio-08",
+   "portal": "studio",
+   "desc": "page → same-origin /api/v1/auth/me",
+   "expected": "200 on the portal origin",
+   "actual": "200 https://studio.toolsmcp.uk",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "studio-09",
+   "portal": "studio",
+   "desc": "sign out (UI)",
+   "expected": "back on /login and /auth/me = 401",
+   "actual": "/login; me=401",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "studio-N1",
+   "portal": "studio",
+   "desc": "NETWORK: every request goes to the portal / studio-files / sites hosts (no localhost, loopback or private address)",
+   "expected": "0 foreign",
+   "actual": "0 (hosts: studio.toolsmcp.uk, static.cloudflareinsights.com)",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "studio-N2",
+   "portal": "studio",
+   "desc": "NETWORK: no http:// or ws:// request (no mixed content)",
+   "expected": "0",
+   "actual": "0",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "studio-N3",
+   "portal": "studio",
+   "desc": "NETWORK: /_next assets all load",
+   "expected": "0 broken of N",
+   "actual": "0 broken of 28",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "studio-N4",
+   "portal": "studio",
+   "desc": "NETWORK: no failed request, no 5xx",
+   "expected": "0",
+   "actual": "0 failed, 0 5xx",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "studio-N5",
+   "portal": "studio",
+   "desc": "NETWORK: 4xx only the expected 401 of /auth/me before sign-in",
+   "expected": "0 unexpected",
+   "actual": "0",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "studio-N7",
+   "portal": "studio",
+   "desc": "BUNDLE: first-party scripts contain no http://localhost|127.0.0.1 origin and no mock-mode switch",
+   "expected": "0 / 0",
+   "actual": "0 loopback, 0 mock (6 scripts)",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "sites-01",
+   "portal": "sites",
+   "desc": "GET /healthz on the public sites host",
+   "expected": "200",
+   "actual": "200",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "sites-02",
+   "portal": "sites",
+   "desc": "GET /c6-no-such-slug-rc/ on the public sites host",
+   "expected": "404",
+   "actual": "404",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "sites-03",
+   "portal": "sites",
+   "desc": "GET / on the public sites host",
+   "expected": "404 or 403 (no listing)",
+   "actual": "404",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "http-01",
+   "portal": "studio",
+   "desc": "plain http → https redirect",
+   "expected": "301/308 to https",
+   "actual": "308 https://studio.toolsmcp.uk/",
+   "result": "PASS",
+   "note": ""
+  }
+ ]
+}

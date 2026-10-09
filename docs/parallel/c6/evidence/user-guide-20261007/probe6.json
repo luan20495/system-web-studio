@@ -1,0 +1,22 @@
+{
+ "dataSources": {
+  "path": "/api/v1/workspaces/{ws}/data-sources",
+  "status": 200,
+  "body": "{\"items\":[]}"
+ },
+ "runtimeKnown": {
+  "path": "/api/v1/workspaces/{ws}/projects/11111111-1111-1111-1111-111111111111/app-runtime/workflow-runs/11111111-1111-1111-1111-111111111111",
+  "status": 404,
+  "body": "{\"code\":\"PROJECT_NOT_FOUND\",\"message\":\"Project not found\",\"requestId\":\"req_4049c4032c5e432db916d773a817180d\",\"details\":{}}"
+ },
+ "runtimeBogus": {
+  "path": "/api/v1/workspaces/{ws}/projects/11111111-1111-1111-1111-111111111111/app-runtime/zzz-no-such-route",
+  "status": 404,
+  "body": "{\"code\":\"NOT_FOUND\",\"message\":\"Resource not found\",\"requestId\":\"req_a0bbcafc4cd240e69e0d30233fa39854\",\"details\":{}}"
+ },
+ "bindings": {
+  "path": "/api/v1/workspaces/{ws}/projects/11111111-1111-1111-1111-111111111111/data-bindings",
+  "status": 404,
+  "body": "{\"code\":\"PROJECT_NOT_FOUND\",\"message\":\"Project not found\",\"requestId\":\"req_bfbac86d5de24f7d87072145c52af91c\",\"retryable\":false,\"details\":{}}"
+ }
+}

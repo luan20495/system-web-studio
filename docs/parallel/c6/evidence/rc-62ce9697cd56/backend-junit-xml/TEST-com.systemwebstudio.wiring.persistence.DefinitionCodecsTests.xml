@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.wiring.persistence.DefinitionCodecsTests" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:54:29.276Z" hostname="macmini-2.local" time="0.002">
+  <properties/>
+  <testcase name="a REST query survives the round trip()" classname="com.systemwebstudio.wiring.persistence.DefinitionCodecsTests" time="0.001"/>
+  <testcase name="a schema document that is not a schema is rejected()" classname="com.systemwebstudio.wiring.persistence.DefinitionCodecsTests" time="0.0"/>
+  <testcase name="a mutation survives the round trip for every kind()" classname="com.systemwebstudio.wiring.persistence.DefinitionCodecsTests" time="0.0"/>
+  <testcase name="a SQL query survives the round trip()" classname="com.systemwebstudio.wiring.persistence.DefinitionCodecsTests" time="0.0"/>
+  <testcase name="identity never comes from the document()" classname="com.systemwebstudio.wiring.persistence.DefinitionCodecsTests" time="0.0"/>
+  <testcase name="an unknown kind, a missing field or an invalid definition decodes to null()" classname="com.systemwebstudio.wiring.persistence.DefinitionCodecsTests" time="0.0"/>
+  <testcase name="a discovered schema survives the round trip including masked samples()" classname="com.systemwebstudio.wiring.persistence.DefinitionCodecsTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

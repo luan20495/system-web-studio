@@ -1,0 +1,75 @@
+PASS  [platform] direct URL /platform without a session lands on /login and keeps the destination  — /login?next=%2Fplatform
+PASS  [platform] login page is for this portal
+PASS  [platform] login fields have accessible labels
+PASS  [platform] CSP: nonce + strict-dynamic, no unsafe-eval, frame-ancestors 'none', object-src 'none'
+PASS  [platform] security headers: nosniff, X-Frame-Options DENY, Referrer-Policy
+PASS  [platform] no CSP violations or page errors while rendering
+PASS  [platform] no cookies are set before sign-in
+PASS  [platform] a path of another portal also ends at /login (no screen without a session)
+PASS  [platform] refresh on /login stays on /login
+PASS  [platform] login with no backend shows an error and stays on /login  — ản công ty Tên đăng nhập Mật khẩu Không lấy được CSRF token (500). Đăng nhập Nền tảng nội bộ · truy cập được kiểm soát và ghi nhật ký
+PASS  [platform] no cookies after a failed login
+PASS  [admin] direct URL /admin without a session lands on /login and keeps the destination  — /login?next=%2Fadmin
+PASS  [admin] login page is for this portal
+PASS  [admin] login fields have accessible labels
+PASS  [admin] CSP: nonce + strict-dynamic, no unsafe-eval, frame-ancestors 'none', object-src 'none'
+PASS  [admin] security headers: nosniff, X-Frame-Options DENY, Referrer-Policy
+PASS  [admin] no CSP violations or page errors while rendering
+PASS  [admin] no cookies are set before sign-in
+PASS  [admin] a path of another portal also ends at /login (no screen without a session)
+PASS  [admin] refresh on /login stays on /login
+PASS  [admin] login with no backend shows an error and stays on /login  — khoản công ty Tên đăng nhập Mật khẩu Không lấy được CSRF token (500). Đăng nhập Nền tảng nội bộ · truy cập được kiểm soát và ghi nhật ký
+PASS  [admin] no cookies after a failed login
+FAIL  [studio] direct URL /studio without a session lands on /login and keeps the destination  — /studio
+FAIL  [studio] login page is for this portal
+FAIL  [studio] login fields have accessible labels
+PASS  [studio] CSP: nonce + strict-dynamic, no unsafe-eval, frame-ancestors 'none', object-src 'none'
+PASS  [studio] security headers: nosniff, X-Frame-Options DENY, Referrer-Policy
+FAIL  [studio] no CSP violations or page errors while rendering  — Refused to apply style from 'http://127.0.0.1:3003/_next/static/chunks/1bb8jvnfh9m15.css' because its MIME type ('text/plain') is not a supported stylesheet MIM ; Refused to execute script from 'http://127.0.0.1:3003/_next/static/chunks/1u5zan5bs9a7v.js' because its MIME type ('text/plain') is not executable, and strict M ; Refused to execute script from 'http://127.0.0.1:3003/_next/static/chunks/10t9lrl1-74kp.js' because its MIME type ('text/plain') is not executable, and strict M ; Refused to execute script from 'http://127.0.0.1:3003/_next/static/chunks/1wym20oe2_8ih.js' because its MIME type ('text/plain') is not executable, and strict M ; Refused to execute script from 'http://127.0.0.1:3003/_next/static/chunks/1rj7ns8rte9vc.js' because its MIME type ('text/plain') is not executable, and strict M ; Refused to execute script from 'http://127.0.0.1:3003/_next/static/chunks/turbopack-11y464gitbq1t.js' because its MIME type ('text/plain') is not executable, an
+PASS  [studio] no cookies are set before sign-in
+FAIL  [studio] a path of another portal also ends at /login (no screen without a session)
+PASS  [studio] refresh on /login stays on /login
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('button', { name: 'Đăng nhập' })
+    - locator resolved to <button disabled class="btn primary block">Đăng nhập</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is not enabled
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is not enabled
+    - retrying click action
+      - waiting 100ms
+    58 × waiting for element to be visible, enabled and stable
+       - element is not enabled
+     - retrying click action
+       - waiting 500ms
+
+    at /Users/hoangluan/code/xweb-c6-rc/tests/browser/portals.spec.mjs:36:57 {
+  log: [
+    "  - waiting for getByRole('button', { name: 'Đăng nhập' })",
+    '    - locator resolved to <button disabled class="btn primary block">Đăng nhập</button>',
+    '  - attempting click action',
+    '    2 × waiting for element to be visible, enabled and stable',
+    '      - element is not enabled',
+    '    - retrying click action',
+    '    - waiting 20ms',
+    '    2 × waiting for element to be visible, enabled and stable',
+    '      - element is not enabled',
+    '    - retrying click action',
+    '      - waiting 100ms',
+    '    58 × waiting for element to be visible, enabled and stable',
+    '       - element is not enabled',
+    '     - retrying click action',
+    '       - waiting 500ms'
+  ],
+  name: 'TimeoutError'
+}
+
+Node.js v22.23.1

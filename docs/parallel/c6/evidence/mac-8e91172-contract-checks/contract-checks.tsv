@@ -1,0 +1,23 @@
+id	status	detail
+CC-HEAD	PASS	worktree HEAD 8e91172, expected 8e91172
+CC-TP07-1	PASS	2 AccessContext construction site(s), all pass tenantId+tenantContext explicitly
+CC-TP07-2	PASS	TenantContext.DEFAULT / TenantIds.DEFAULT appear only in AccessService (parameter defaults), MeTenancy (ORDER BY), TenantContext, TenantService (guard)
+CC-TP07-3	PASS	forWorkspace builds the context from tenantResolver; forProject copies it from the workspace context
+CC-TP07-4	INFO	AccessContext still DECLARES defaulted tenantId/tenantContext (accepted fail-open for legacy callers, contract section 3); this check is the guard that no caller uses them
+CC-ML07-1	PASS	no application code, config or migration issues UPDATE/DELETE/TRUNCATE/DROP/ALTER on audit_events
+CC-ML07-2	PASS	the only writer of audit_events is backend/src/main/kotlin/com/systemwebstudio/audit/AuditService.kt
+CC-ML07-3	PASS	V3 defines the row trigger (UPDATE/DELETE) and the statement trigger (TRUNCATE) that raise 'audit_events is append-only'
+CC-ML07-4	PASS	no later migration drops, disables or redefines the audit triggers
+CC-ML07-5	INFO	DB-layer proof is in db-probes.py (UPDATE/DELETE/TRUNCATE refused for owner and non-owner roles). Residual: the table owner can DISABLE the trigger (privilege hardening = ledger item 6 / T19, not implemented)
+CC-WIR18-1	PASS	no controller maps /api/v1/data/** (the C3 route table DataApi/DataRoutes is not mounted)
+CC-WIR18-2	PASS	no request mapping in main code contains 'mutate' (the only write path is app-runtime/actions/{id}/execute)
+CC-WIR18-3	PASS	the app-runtime family is mounted by exactly 2 controller(s): AppRuntimeActionController.kt, AppRuntimeDataController.kt
+CC-ARCH-logic	PASS	logic.* imports base only (ports); never access/tenancy/data/app
+CC-ARCH-data	PASS	data.* imports base + tenancy types; never logic.* / app.*
+CC-ARCH-tenancy	PASS	tenancy imports no V2 agent package
+CC-ARCH-access	PASS	access imports no V2 agent package
+CC-ARCH-app_definition	PASS	app.definition imports no wiring/access
+CC-ARCH-scope	INFO	486 project imports scanned; legacy modules (identity, project, member, publish, …) are not restricted by the contract and are not checked
+CC-MIG-1	PASS	V1..V28 (28 files) are byte-identical between f894cc6 and 8e91172; added: V29__workflow_run_persistence.sql
+CC-MIG-2	PASS	all 29 pinned migrations still match (new files since pin: none)
+CC-MIG-3	PASS	versions contiguous V1..V29

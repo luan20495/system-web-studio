@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.gateway.IdempotencyTests" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:45:21.734Z" hostname="macmini-2.local" time="0.06">
+  <properties/>
+  <testcase name="a store that fails after a successful write does not turn the success into an error()" classname="com.systemwebstudio.data.gateway.IdempotencyTests" time="0.002"/>
+  <testcase name="the key appears in no log line, audit record or printed request()" classname="com.systemwebstudio.data.gateway.IdempotencyTests" time="0.003"/>
+  <testcase name="a store that fails while recording an ambiguous failure still leaves the key unusable()" classname="com.systemwebstudio.data.gateway.IdempotencyTests" time="0.002"/>
+  <testcase name="concurrent retries of one key run the mutation exactly once()" classname="com.systemwebstudio.data.gateway.IdempotencyTests" time="0.033"/>
+  <testcase name="an ambiguous failure keeps the key reserved - the retry does not run a second write()" classname="com.systemwebstudio.data.gateway.IdempotencyTests" time="0.005"/>
+  <testcase name="a definite not-executed failure frees the key()" classname="com.systemwebstudio.data.gateway.IdempotencyTests" time="0.006"/>
+  <testcase name="reservations expire with the idempotency window()" classname="com.systemwebstudio.data.gateway.IdempotencyTests" time="0.001"/>
+  <testcase name="the reservation is per tenant, data source and mutation()" classname="com.systemwebstudio.data.gateway.IdempotencyTests" time="0.002"/>
+  <testcase name="the unknown state is exact about parameters - a different payload under that key is still a conflict()" classname="com.systemwebstudio.data.gateway.IdempotencyTests" time="0.001"/>
+  <testcase name="the derived key shape sha256 base64url is accepted and the other encodings are not()" classname="com.systemwebstudio.data.gateway.IdempotencyTests" time="0.0"/>
+  <testcase name="a holder that vanished does not free the key - after its lease the outcome is unknown, not retryable()" classname="com.systemwebstudio.data.gateway.IdempotencyTests" time="0.001"/>
+  <system-out><![CDATA[{"@timestamp":"2026-10-08T06:45:21.737398+07:00","@version":"1","message":"idempotency completion not recorded: IllegalStateException","logger_name":"com.systemwebstudio.data.gateway.DefaultDataGateway","thread_name":"Test worker","level":"WARN","level_value":30000}
+{"@timestamp":"2026-10-08T06:45:21.743461+07:00","@version":"1","message":"idempotency record update failed: IllegalStateException","logger_name":"com.systemwebstudio.data.gateway.DefaultDataGateway","thread_name":"Test worker","level":"WARN","level_value":30000}
+{"@timestamp":"2026-10-08T06:45:21.781736+07:00","@version":"1","message":"data source operation failed unexpectedly: java.lang.IllegalStateException","logger_name":"com.systemwebstudio.data.datasource.DataSourceService","thread_name":"Test worker","level":"ERROR","level_value":40000}
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

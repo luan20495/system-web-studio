@@ -1,0 +1,181 @@
+▲ Next.js 16.3.8
+- Local:         http://127.0.0.1:3002
+- Network:       http://127.0.0.1:3002
+✓ Ready in 492ms
+✓ Running next.config.ts took 449ms
+Failed to proxy http://127.0.0.1:8080/api/v1/auth/me Error: connect ECONNREFUSED 127.0.0.1:8080
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:8080) {
+  errno: -61,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 8080
+}
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:8080) {
+  errno: -61,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 8080
+}
+Failed to proxy http://127.0.0.1:8080/api/v1/auth/config Error: connect ECONNREFUSED 127.0.0.1:8080
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:8080) {
+  errno: -61,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 8080
+}
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:8080) {
+  errno: -61,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 8080
+}
+Failed to proxy http://127.0.0.1:8080/api/v1/auth/me Error: connect ECONNREFUSED 127.0.0.1:8080
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:8080) {
+  errno: -61,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 8080
+}
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:8080) {
+  errno: -61,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 8080
+}
+Failed to proxy http://127.0.0.1:8080/api/v1/auth/me Error: connect ECONNREFUSED 127.0.0.1:8080
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:8080) {
+  errno: -61,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 8080
+}
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:8080) {
+  errno: -61,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 8080
+}
+Failed to proxy http://127.0.0.1:8080/api/v1/auth/config Error: connect ECONNREFUSED 127.0.0.1:8080
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:8080) {
+  errno: -61,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 8080
+}
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:8080) {
+  errno: -61,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 8080
+}
+Failed to proxy http://127.0.0.1:8080/api/v1/auth/me Error: connect ECONNREFUSED 127.0.0.1:8080
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:8080) {
+  errno: -61,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 8080
+}
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:8080) {
+  errno: -61,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 8080
+}
+Failed to proxy http://127.0.0.1:8080/api/v1/auth/config Error: connect ECONNREFUSED 127.0.0.1:8080
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:8080) {
+  errno: -61,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 8080
+}
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:8080) {
+  errno: -61,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 8080
+}
+Failed to proxy http://127.0.0.1:8080/api/v1/auth/me Error: connect ECONNREFUSED 127.0.0.1:8080
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:8080) {
+  errno: -61,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 8080
+}
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:8080) {
+  errno: -61,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 8080
+}
+Failed to proxy http://127.0.0.1:8080/api/v1/auth/config Error: connect ECONNREFUSED 127.0.0.1:8080
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:8080) {
+  errno: -61,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 8080
+}
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:8080) {
+  errno: -61,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 8080
+}
+Failed to proxy http://127.0.0.1:8080/api/v1/auth/me Error: connect ECONNREFUSED 127.0.0.1:8080
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:8080) {
+  errno: -61,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 8080
+}
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:8080) {
+  errno: -61,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 8080
+}
+Failed to proxy http://127.0.0.1:8080/api/v1/auth/csrf Error: connect ECONNREFUSED 127.0.0.1:8080
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:8080) {
+  errno: -61,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 8080
+}
+Error: connect ECONNREFUSED 127.0.0.1:8080
+    at <unknown> (Error: connect ECONNREFUSED 127.0.0.1:8080) {
+  errno: -61,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 8080
+}

@@ -1,0 +1,37 @@
+PASS A Super Admin signs in (platform scope) | 200
+FAIL A /auth/me: system admin; in every workspace it is NOT a member of, its permissions are only TENANT_MANAGE + TENANT_MEMBERS (no business / member permission) | platform-view workspaces=0 of 1
+PASS A create tenant (platform) | 201 
+PASS A create a workspace OF the tenant through the tenant route (tenant_id explicit in the answer) | 201 tenantId=the tenant
+PASS A provision the first Tenant Admin by invitation (activation link, no password in or out) | 201 
+PASS A the invited account cannot sign in before activation | 401
+PASS A a body field `password` / `systemAdmin` never takes effect (account is created as a plain, not-yet-activated member) | 201
+PASS A ... and the smuggled password does not open a session | 401
+PASS B activation link inspects (anonymous) to the right account | 200
+PASS B activation completes with a password chosen by the user | 200
+PASS B the link is single use (410 LINK_INVALID) | 410 LINK_INVALID
+PASS B Tenant Admin signs in (Admin portal account) | 200
+PASS B /auth/me: not a system admin; the tenant permissions are exactly TENANT_MANAGE + TENANT_MEMBERS; the workspace shows MEMBER_MANAGE | ["TENANT_MANAGE","TENANT_MEMBERS"]
+PASS B Tenant Admin creates a workspace of ITS tenant through the NEW route (tenant derived from the path, authorized by TENANT_MANAGE) | 201 
+PASS B the LEGACY POST /api/v1/admin/workspaces is not a self-service route: a Tenant Admin gets 403 | 403 ADMIN_REQUIRED
+PASS B the legacy route stays platform-only (system admin 201); it takes no tenant, so it can never create a workspace OF the e2e tenant | 201
+PASS B Tenant Admin creates a brand-new user in its tenant with a workspace role (invitation) | 201 
+PASS B a workspace that is not of the tenant is refused (404 WORKSPACE_NOT_FOUND, indistinguishable from nobody) | 404 WORKSPACE_NOT_FOUND
+PASS B a Tenant Admin cannot mint a SYSTEM_ADMIN (400 TENANT_ROLE_INVALID) | 400 TENANT_ROLE_INVALID
+PASS B another / unknown tenant is 404 TENANT_NOT_FOUND (no existence leak) | 404 TENANT_NOT_FOUND
+PASS B CSRF is enforced on the provisioning routes (403 with a forged token) | 403 CSRF_INVALID
+PASS B no session -> 401 (or 403 for the missing CSRF first) | 403
+PASS B candidate search needs 2+ characters (400 QUERY_TOO_SHORT) | 400 QUERY_TOO_SHORT
+PASS B self-grant / self-demotion is refused or protected (403 SELF_GRANT_FORBIDDEN or 409 LAST_TENANT_ADMIN) | 403 SELF_GRANT_FORBIDDEN
+PASS C the invited user activates and signs in (Studio account) | 200
+PASS C /auth/me lists ONLY the authorized workspace (W2, EDITOR), not W1, not the default tenant's | workspaces=1
+PASS C the EDITOR creates an app in its workspace | 201 
+PASS C ... and cannot create in another workspace it is not a member of (403/404) | 404 WORKSPACE_NOT_FOUND
+PASS C a plain member cannot call the tenant routes (403) | 403 FORBIDDEN
+PASS C ... nor the legacy platform route (403) | 403 ADMIN_REQUIRED
+PASS C an EDITOR cannot manage members (403) | 403 FORBIDDEN
+PASS C a Workspace Admin cannot provision accounts (tenant route, 403) | 403 FORBIDDEN
+PASS C a Workspace Admin adding someone already in the workspace -> 409 ALREADY_MEMBER | 409 ALREADY_MEMBER
+PASS C a Workspace Admin adds an ELIGIBLE tenant person (the Tenant Admin, active in the tenant) | 201 
+PASS C ... but not a person unrelated to the tenant (404 USER_NOT_FOUND) | 404 USER_NOT_FOUND
+
+TOTAL 35  FAILED 1  -> A /auth/me: system admin; in every workspace it is NOT a member of, its permissions are only TENANT_MANAGE + TENANT_MEMBERS (no business / member permission)

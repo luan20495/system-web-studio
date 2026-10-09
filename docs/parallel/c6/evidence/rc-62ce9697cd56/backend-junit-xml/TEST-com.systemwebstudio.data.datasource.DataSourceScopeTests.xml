@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.datasource.DataSourceScopeTests" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:44:54.099Z" hostname="macmini-2.local" time="0.004">
+  <properties/>
+  <testcase name="default deny - no workspace in the context, or no workspace on the source, reaches nothing()" classname="com.systemwebstudio.data.datasource.DataSourceScopeTests" time="0.001"/>
+  <testcase name="same tenant and same workspace is allowed for every operation()" classname="com.systemwebstudio.data.datasource.DataSourceScopeTests" time="0.001"/>
+  <testcase name="the default scope is still the tenant boundary only, so C3's own behaviour is unchanged()" classname="com.systemwebstudio.data.datasource.DataSourceScopeTests" time="0.0"/>
+  <testcase name="another tenant is not found, with or without the right workspace id()" classname="com.systemwebstudio.data.datasource.DataSourceScopeTests" time="0.0"/>
+  <testcase name="same tenant and another workspace is not found for every operation, and no connector is reached()" classname="com.systemwebstudio.data.datasource.DataSourceScopeTests" time="0.001"/>
+  <testcase name="the answer for another workspace's source is the answer for a missing one, even when that source is disabled()" classname="com.systemwebstudio.data.datasource.DataSourceScopeTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

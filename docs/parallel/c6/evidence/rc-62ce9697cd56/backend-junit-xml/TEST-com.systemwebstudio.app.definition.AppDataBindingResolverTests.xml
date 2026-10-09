@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.app.definition.AppDataBindingResolverTests" tests="18" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:43:54.291Z" hostname="macmini-2.local" time="0.022">
+  <properties/>
+  <testcase name="actions that touch no data say so()" classname="com.systemwebstudio.app.definition.AppDataBindingResolverTests" time="0.007"/>
+  <testcase name="an invalid sourceRef is reported by code, not by a parse exception()" classname="com.systemwebstudio.app.definition.AppDataBindingResolverTests" time="0.0"/>
+  <testcase name="a sourceRef in the document wins over a slot binding()" classname="com.systemwebstudio.app.definition.AppDataBindingResolverTests" time="0.002"/>
+  <testcase name="a mapping is resolved with the operation key of its own query()" classname="com.systemwebstudio.app.definition.AppDataBindingResolverTests" time="0.0"/>
+  <testcase name="REFRESH_QUERY resolves a read query and record actions resolve a write query()" classname="com.systemwebstudio.app.definition.AppDataBindingResolverTests" time="0.001"/>
+  <testcase name="a data source with a sourceRef resolves to that registration()" classname="com.systemwebstudio.app.definition.AppDataBindingResolverTests" time="0.0"/>
+  <testcase name="a runtime id used where a local id belongs is never resolved and never accepted()" classname="com.systemwebstudio.app.definition.AppDataBindingResolverTests" time="0.001"/>
+  <testcase name="a query resolves to its source and approved operation, never to a stored runtime id()" classname="com.systemwebstudio.app.definition.AppDataBindingResolverTests" time="0.001"/>
+  <testcase name="a query without an operation key cannot be resolved()" classname="com.systemwebstudio.app.definition.AppDataBindingResolverTests" time="0.001"/>
+  <testcase name="an action of the wrong query mode fails with WRONG_MODE()" classname="com.systemwebstudio.app.definition.AppDataBindingResolverTests" time="0.0"/>
+  <testcase name="CALL_API resolves an approved operation of a registered source, not a URL()" classname="com.systemwebstudio.app.definition.AppDataBindingResolverTests" time="0.001"/>
+  <testcase name="a binding that reaches no query or a write query fails with a stable code()" classname="com.systemwebstudio.app.definition.AppDataBindingResolverTests" time="0.001"/>
+  <testcase name="missing references are reported with UNKNOWN_REFERENCE or NO_QUERY()" classname="com.systemwebstudio.app.definition.AppDataBindingResolverTests" time="0.001"/>
+  <testcase name="a data binding reads through its view model, query and mapping()" classname="com.systemwebstudio.app.definition.AppDataBindingResolverTests" time="0.001"/>
+  <testcase name="an unbound slot resolves through the runtime slot bindings and fails without them()" classname="com.systemwebstudio.app.definition.AppDataBindingResolverTests" time="0.001"/>
+  <testcase name="a mapping is translated from the local query id to the operation key C3 knows()" classname="com.systemwebstudio.app.definition.AppDataBindingResolverTests" time="0.0"/>
+  <testcase name="resolving never changes the definition and no runtime id appears in it()" classname="com.systemwebstudio.app.definition.AppDataBindingResolverTests" time="0.002"/>
+  <testcase name="every record action resolves its write query()" classname="com.systemwebstudio.app.definition.AppDataBindingResolverTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

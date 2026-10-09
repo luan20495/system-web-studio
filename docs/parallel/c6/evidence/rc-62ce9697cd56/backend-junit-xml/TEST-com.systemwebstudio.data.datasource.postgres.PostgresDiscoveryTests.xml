@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.datasource.postgres.PostgresDiscoveryTests" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:44:57.717Z" hostname="macmini-2.local" time="0.038">
+  <properties/>
+  <testcase name="columns types nullability primary keys and relations come out structured()" classname="com.systemwebstudio.data.datasource.postgres.PostgresDiscoveryTests" time="0.03"/>
+  <testcase name="only the configured schemas are asked for()" classname="com.systemwebstudio.data.datasource.postgres.PostgresDiscoveryTests" time="0.0"/>
+  <testcase name="identifiers are quoted never concatenated raw()" classname="com.systemwebstudio.data.datasource.postgres.PostgresDiscoveryTests" time="0.0"/>
+  <testcase name="primary keys are read from the catalog so a SELECT-only role still sees them()" classname="com.systemwebstudio.data.datasource.postgres.PostgresDiscoveryTests" time="0.001"/>
+  <testcase name="the session is read only and ends with a rollback and a close()" classname="com.systemwebstudio.data.datasource.postgres.PostgresDiscoveryTests" time="0.002"/>
+  <testcase name="nothing from the credential reaches the discovery result()" classname="com.systemwebstudio.data.datasource.postgres.PostgresDiscoveryTests" time="0.001"/>
+  <testcase name="without a sample request no table data is read at all()" classname="com.systemwebstudio.data.datasource.postgres.PostgresDiscoveryTests" time="0.001"/>
+  <testcase name="samples are masked before they leave the connector and bounded()" classname="com.systemwebstudio.data.datasource.postgres.PostgresDiscoveryTests" time="0.001"/>
+  <testcase name="a table that cannot be read costs a warning and a savepoint rollback not the discovery()" classname="com.systemwebstudio.data.datasource.postgres.PostgresDiscoveryTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

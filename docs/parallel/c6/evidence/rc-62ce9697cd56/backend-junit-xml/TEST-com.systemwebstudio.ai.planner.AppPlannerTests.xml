@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.ai.planner.AppPlannerTests" tests="19" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:43:54.243Z" hostname="macmini-2.local" time="0.03">
+  <properties/>
+  <testcase name="old editor operations still plan on a legacy page()" classname="com.systemwebstudio.ai.planner.AppPlannerTests" time="0.007"/>
+  <testcase name="only CALL_API actions may name a data source operation()" classname="com.systemwebstudio.ai.planner.AppPlannerTests" time="0.001"/>
+  <testcase name="an unregistered component is rejected by the same validator as a manual edit()" classname="com.systemwebstudio.ai.planner.AppPlannerTests" time="0.001"/>
+  <testcase name="an answer without operations is NO_CHANGE()" classname="com.systemwebstudio.ai.planner.AppPlannerTests" time="0.0"/>
+  <testcase name="an invalid result is rejected with the path of the problem()" classname="com.systemwebstudio.ai.planner.AppPlannerTests" time="0.006"/>
+  <testcase name="a data plan becomes a validated proposal and never touches its input()" classname="com.systemwebstudio.ai.planner.AppPlannerTests" time="0.0"/>
+  <testcase name="a malformed answer fails over to the next model()" classname="com.systemwebstudio.ai.planner.AppPlannerTests" time="0.001"/>
+  <testcase name="a cancelled or timed out call is reported and nothing is proposed()" classname="com.systemwebstudio.ai.planner.AppPlannerTests" time="0.0"/>
+  <testcase name="urls sql credentials and script in any value are rejected()" classname="com.systemwebstudio.ai.planner.AppPlannerTests" time="0.0"/>
+  <testcase name="operations and data sources that are not granted are refused()" classname="com.systemwebstudio.ai.planner.AppPlannerTests" time="0.001"/>
+  <testcase name="a mapping may only read fields the operation returns()" classname="com.systemwebstudio.ai.planner.AppPlannerTests" time="0.001"/>
+  <testcase name="AI plans and Design UI edits use the same operations and give the same document()" classname="com.systemwebstudio.ai.planner.AppPlannerTests" time="0.0"/>
+  <testcase name="the prompt carries masked metadata and no connector id or credential()" classname="com.systemwebstudio.ai.planner.AppPlannerTests" time="0.001"/>
+  <testcase name="publishing and permissions are never changed by AI()" classname="com.systemwebstudio.ai.planner.AppPlannerTests" time="0.003"/>
+  <testcase name="when no model gives a usable answer the plan fails and nothing is proposed()" classname="com.systemwebstudio.ai.planner.AppPlannerTests" time="0.0"/>
+  <testcase name="the result check catches changes to data sources, publishing and permissions however they were made()" classname="com.systemwebstudio.ai.planner.AppPlannerTests" time="0.0"/>
+  <testcase name="the request is delimited as data and an oversized app is not sent()" classname="com.systemwebstudio.ai.planner.AppPlannerTests" time="0.0"/>
+  <testcase name="an unbound slot and an ungranted source are described so the model does not use them()" classname="com.systemwebstudio.ai.planner.AppPlannerTests" time="0.0"/>
+  <testcase name="a query may use an operation the user is granted()" classname="com.systemwebstudio.ai.planner.AppPlannerTests" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

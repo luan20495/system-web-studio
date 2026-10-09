@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.logic.workflow.WorkflowEngineTests" tests="65" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:46:14.097Z" hostname="macmini-2.local" time="0.055">
+  <properties/>
+  <testcase name="an unanswered approval expires and fails the run()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.002"/>
+  <testcase name="an outage does not dead-letter anything and the sweeper recovers the run afterwards()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.002"/>
+  <testcase name="the sweeper times out a waiting run that exceeded its duration()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.002"/>
+  <testcase name="the view never exposes the definition snapshot or the input()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.004"/>
+  <testcase name="a worker runs the steps in order and the run succeeds()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.002"/>
+  <testcase name="a rejection fails the run with APPROVAL_REJECTED and never runs the next step()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="cancel can compensate what already ran when the workflow asks for it()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.0"/>
+  <testcase name="a missing mapped value is simply absent from the step input()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="a cycle in the definition ends at the step execution limit and each pass really runs()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="start does not execute anything on the calling thread and returns a PENDING run()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="a TEST run uses a different idempotency scope than the LIVE run()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.0"/>
+  <testcase name="an early nudge for a step that is still in its retry backoff does not run it()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="an invalid definition is refused at start()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.0"/>
+  <testcase name="BRANCH follows the first matching condition else the default()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.003"/>
+  <testcase name="a TEST run executes nothing real and says so()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="onError routes a failed step to a handler step and the run can still succeed()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="a workflow step may start a child workflow and the nesting is bounded()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.002"/>
+  <testcase name="a duplicated message does not repeat the effect()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="a job lost before delivery is published again by the sweeper()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="a step with an unknown outcome is never compensated but earlier finished steps still are()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="a crashed worker is recovered by the sweeper and the effect happens exactly once()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.0"/>
+  <testcase name="when retries are exhausted the run fails with the last error()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.0"/>
+  <testcase name="only a snapshotted approver can decide and a quorum needs enough approvals()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="a compensation that fails is reported as PARTIAL and the others still run()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="an outcome from a worker the sweeper already gave up on is dropped, and the step is simply redone as a replay()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="a scheduled fire starts a workflow run as the schedule owner and is idempotent()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="a decision whose callback was lost is reconciled by the sweeper()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="a tenant disabled while the run is in flight stops it()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.0"/>
+  <testcase name="a forged job for another tenant finds nothing()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="a rejected write is a definite failure that onError may handle and is not retried()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.0"/>
+  <testcase name="start needs APP_USE and WORKFLOW_EXECUTE and audits the denial()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="the run acts as the user who started it()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.0"/>
+  <testcase name="a scheduled action runs as a one step run with retries()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="an APPROVAL step pauses the run until an approver approves()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="the same key from another user is a different run()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.0"/>
+  <testcase name="no run exists without its audit record()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="a thrown exception inside a step becomes a failed step not a lost run()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.0"/>
+  <testcase name="start fails closed when authorization or the tenant gate is unavailable()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.0"/>
+  <testcase name="start refuses bad keys unknown workflows and a missing app context()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.0"/>
+  <testcase name="a malformed message is rejected straight to the dead letter queue and cannot touch a run()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.0"/>
+  <testcase name="onReject routes a rejected approval to another step()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="a duplicate job for a step that another worker is running does nothing()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.0"/>
+  <testcase name="a stuck compensation is resumed by the sweeper()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="a workflow of another tenant is never started()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="a run that exceeds its maximum duration times out()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.0"/>
+  <testcase name="status is visible to the creator and to WORKFLOW_MANAGE only()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.0"/>
+  <testcase name="cancelling a run cancels its pending approval()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="a job for a step that is waiting for its timer or an approval does not run it()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.0"/>
+  <testcase name="a TEST run does not wait and does not compensate()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="a retryable failure waits for its backoff and is retried by the sweeper()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="replaying the compensation job does not compensate twice()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="cancel stops the run before any step and is idempotent()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.0"/>
+  <testcase name="START_WORKFLOW via a plain action result is audited at the workflow level()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="a failing step compensates the finished steps in reverse order()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="a non retryable failure is not retried()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="a consumer that dies before acking only causes a redelivery()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.0"/>
+  <testcase name="step inputs are mapped from the workflow input and from earlier step outputs()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="start is idempotent and a reused key with other input is refused()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="an unknown write outcome fails the run with that code and skips onError and retries()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.0"/>
+  <testcase name="WAIT holds the run until its time and then continues()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.0"/>
+  <testcase name="status and cancel of a run in another tenant answer not found()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.0"/>
+  <testcase name="an oversized input is refused before anything is stored()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.0"/>
+  <testcase name="permissions are re-checked at every step()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.001"/>
+  <testcase name="a scheduled fire for a disabled tenant or a missing permission is refused()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.0"/>
+  <testcase name="BRANCH without a match and without default fails the run()" classname="com.systemwebstudio.logic.workflow.WorkflowEngineTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

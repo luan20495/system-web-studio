@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.publish.DeploymentFailureTests" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:48:10.632Z" hostname="macmini-2.local" time="0.058">
+  <properties/>
+  <testcase name="an unknown exception is permanent but its type and message are kept, not replaced by a generic text()" classname="com.systemwebstudio.publish.DeploymentFailureTests" time="0.001"/>
+  <testcase name="retry policy retries only transient failures, up to the limit, with growing backoff()" classname="com.systemwebstudio.publish.DeploymentFailureTests" time="0.001"/>
+  <testcase name="a step that exceeds its deadline is cut off, and the step's own exceptions come through unwrapped()" classname="com.systemwebstudio.publish.DeploymentFailureTests" time="0.054"/>
+  <testcase name="a timeout while building is transient but a timeout while deploying is ambiguous and never retried()" classname="com.systemwebstudio.publish.DeploymentFailureTests" time="0.0"/>
+  <testcase name="addresses and credentials are removed from what is stored and shown()" classname="com.systemwebstudio.publish.DeploymentFailureTests" time="0.001"/>
+  <testcase name="a permanent build failure keeps its message and is not retried()" classname="com.systemwebstudio.publish.DeploymentFailureTests" time="0.0"/>
+  <testcase name="a render worker that is down or answers 5xx is transient, a 401 is not()" classname="com.systemwebstudio.publish.DeploymentFailureTests" time="0.0"/>
+  <testcase name="an IO error is transient and says which step it hit()" classname="com.systemwebstudio.publish.DeploymentFailureTests" time="0.0"/>
+  <testcase name="the code can be read back from a stored error, old unprefixed errors have none()" classname="com.systemwebstudio.publish.DeploymentFailureTests" time="0.0"/>
+  <testcase name="the stored reason always fits the 1000 character column and carries the attempt count()" classname="com.systemwebstudio.publish.DeploymentFailureTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.app.definition.DefinitionOperationsTests" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:43:57.973Z" hostname="macmini-2.local" time="0.005">
+  <properties/>
+  <testcase name="ids are unique and immutable and the target must exist()" classname="com.systemwebstudio.app.definition.DefinitionOperationsTests" time="0.001"/>
+  <testcase name="the operation vocabulary keeps the legacy set and adds the typed V2 set next to it()" classname="com.systemwebstudio.app.definition.DefinitionOperationsTests" time="0.0"/>
+  <testcase name="section and site operations are unchanged and mix with V2 operations in one request()" classname="com.systemwebstudio.app.definition.DefinitionOperationsTests" time="0.0"/>
+  <testcase name="at most 50 operations per request still applies()" classname="com.systemwebstudio.app.definition.DefinitionOperationsTests" time="0.0"/>
+  <testcase name="adding then removing on a legacy document returns exactly the legacy document()" classname="com.systemwebstudio.app.definition.DefinitionOperationsTests" time="0.001"/>
+  <testcase name="a failing operation names its index and the input document is never changed()" classname="com.systemwebstudio.app.definition.DefinitionOperationsTests" time="0.0"/>
+  <testcase name="an operation cannot smuggle SQL a URL a credential or code()" classname="com.systemwebstudio.app.definition.DefinitionOperationsTests" time="0.0"/>
+  <testcase name="update merges the given fields and null clears a field()" classname="com.systemwebstudio.app.definition.DefinitionOperationsTests" time="0.0"/>
+  <testcase name="an operation that leaves a dangling reference is rejected by the validator with the path()" classname="com.systemwebstudio.app.definition.DefinitionOperationsTests" time="0.0"/>
+  <testcase name="every typed collection can be added updated and removed and the result stays valid()" classname="com.systemwebstudio.app.definition.DefinitionOperationsTests" time="0.001"/>
+  <testcase name="theme and the publish draft are updated through operations too()" classname="com.systemwebstudio.app.definition.DefinitionOperationsTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

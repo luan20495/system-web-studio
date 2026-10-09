@@ -1,0 +1,17 @@
+id	status	detail
+DB-MIG-APPLY	PASS	29 migrations (V1..V29) applied to an empty PostgreSQL 17.6 in order
+DB-AUD-1	PASS	INSERT into audit_events is allowed
+DB-AUD-2	PASS	UPDATE by the table owner is refused with 'audit_events is append-only'
+DB-AUD-3	PASS	DELETE by the table owner is refused with 'audit_events is append-only'
+DB-AUD-4	PASS	TRUNCATE by the table owner is refused with 'audit_events is append-only'
+DB-AUD-5	PASS	the probe row is still there after the refused UPDATE/DELETE/TRUNCATE (count=1)
+DB-AUD-6	PASS	a non-owner application role granted UPDATE/DELETE/TRUNCATE is still refused by the triggers (the guard does not depend on privileges)
+DB-AUD-7	PASS	a non-owner role cannot disable the trigger (permission denied)
+DB-AUD-8	INFO	RESIDUAL: the table OWNER can disable and re-enable the audit trigger (confirmed) — the application connects as the owner; revoking this needs privilege hardening (MIGRATION_LEDGER item 6 / T19), which is not implemented and not required by a frozen contract yet
+DB-AUD-9	PASS	negative control: with the trigger disabled the UPDATE succeeds, so the probes above do detect a missing trigger
+DB-AUD-10	PASS	trigger re-enabled: the UPDATE is refused again
+DB-U27-1	PASS	with only V27-backfill rows (revision 1, PRIVATE) U27 proceeds (rolled back here to keep the table)
+DB-U27-2	PASS	with a row whose policy a person changed (revision 2) U27 refuses and the table is untouched
+DB-U27-3	PASS	public_data_approved = TRUE (an explicit approval) also makes U27 refuse
+DB-U27-4	PASS	with no rows U27 drops publish_configs
+DB-CLEANUP	PASS	throw-away container removed

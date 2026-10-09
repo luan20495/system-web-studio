@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.sync.WebhookTests" tests="21" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:45:22.037Z" hostname="macmini-2.local" time="0.087">
+  <properties/>
+  <testcase name="an endpoint can only be bound to things its creator can reference()" classname="com.systemwebstudio.data.sync.WebhookTests" time="0.001"/>
+  <testcase name="the workflow trigger gets identifiers only and a failure is retryable()" classname="com.systemwebstudio.data.sync.WebhookTests" time="0.001"/>
+  <testcase name="administration needs its permission and another tenant sees nothing()" classname="com.systemwebstudio.data.sync.WebhookTests" time="0.001"/>
+  <testcase name="rate limits apply per peer before lookup and per endpoint only after authentication()" classname="com.systemwebstudio.data.sync.WebhookTests" time="0.001"/>
+  <testcase name="stale or future timestamps are rejected even when the signature is valid()" classname="com.systemwebstudio.data.sync.WebhookTests" time="0.0"/>
+  <testcase name="a replayed delivery is acknowledged but its effects do not run again()" classname="com.systemwebstudio.data.sync.WebhookTests" time="0.025"/>
+  <testcase name="the secret is visible once and stored only as ciphertext()" classname="com.systemwebstudio.data.sync.WebhookTests" time="0.0"/>
+  <testcase name="rotation keeps the old secret for the grace period only()" classname="com.systemwebstudio.data.sync.WebhookTests" time="0.001"/>
+  <testcase name="rejections are audited at a bounded rate()" classname="com.systemwebstudio.data.sync.WebhookTests" time="0.003"/>
+  <testcase name="wrong secret tampered body and tampered timestamp are all rejected without effect()" classname="com.systemwebstudio.data.sync.WebhookTests" time="0.001"/>
+  <testcase name="a correctly signed delivery is accepted and invalidates the declared queries and notifies subscribers()" classname="com.systemwebstudio.data.sync.WebhookTests" time="0.013"/>
+  <testcase name="only identifier shaped values leave the payload and nothing else is stored or logged()" classname="com.systemwebstudio.data.sync.WebhookTests" time="0.011"/>
+  <testcase name="a single peer is limited before any endpoint is even looked up()" classname="com.systemwebstudio.data.sync.WebhookTests" time="0.002"/>
+  <testcase name="the redis replay guard is set if absent and forgettable()" classname="com.systemwebstudio.data.sync.WebhookTests" time="0.002"/>
+  <testcase name="infrastructure failures answer 503 and never accept unchecked()" classname="com.systemwebstudio.data.sync.WebhookTests" time="0.001"/>
+  <testcase name="deleting an endpoint removes its secrets and stops deliveries()" classname="com.systemwebstudio.data.sync.WebhookTests" time="0.0"/>
+  <testcase name="unknown disabled and malformed endpoint ids all look the same to the sender()" classname="com.systemwebstudio.data.sync.WebhookTests" time="0.0"/>
+  <testcase name="only accepted events have an effect()" classname="com.systemwebstudio.data.sync.WebhookTests" time="0.001"/>
+  <testcase name="signature verification rejects malformed headers()" classname="com.systemwebstudio.data.sync.WebhookTests" time="0.001"/>
+  <testcase name="the tenant and data source come from the endpoint never from the request()" classname="com.systemwebstudio.data.sync.WebhookTests" time="0.013"/>
+  <testcase name="oversized and malformed bodies are refused and a malformed one does not burn the delivery id()" classname="com.systemwebstudio.data.sync.WebhookTests" time="0.001"/>
+  <system-out><![CDATA[{"@timestamp":"2026-10-08T06:45:22.04004+07:00","@version":"1","message":"webhook workflow trigger failed: IllegalStateException","logger_name":"com.systemwebstudio.data.sync.webhook.WebhookIngress","thread_name":"Test worker","level":"WARN","level_value":30000}
+{"@timestamp":"2026-10-08T06:45:22.106368+07:00","@version":"1","message":"webhook ingress failed: IllegalStateException","logger_name":"com.systemwebstudio.data.sync.webhook.WebhookIngress","thread_name":"Test worker","level":"WARN","level_value":30000}
+{"@timestamp":"2026-10-08T06:45:22.106597+07:00","@version":"1","message":"webhook ingress failed: IllegalStateException","logger_name":"com.systemwebstudio.data.sync.webhook.WebhookIngress","thread_name":"Test worker","level":"WARN","level_value":30000}
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

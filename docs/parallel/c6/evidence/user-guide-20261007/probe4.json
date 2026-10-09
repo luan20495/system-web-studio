@@ -1,0 +1,43 @@
+{
+ "oldRunning": "e9d034e9-5927-4f89-92d9-7a1a1d50021c",
+ "publish": 202,
+ "newDeployment": {
+  "id": "a79ed0d8-bf9d-44e8-97f0-b508b794777c",
+  "status": "RUNNING"
+ },
+ "active": "a79ed0d8-bf9d-44e8-97f0-b508b794777c",
+ "targetIsActive": false,
+ "staleBogus": {
+  "status": 409,
+  "body": "{\"code\":\"ROLLBACK_STALE\",\"message\":\"The active release is not the one this request expected; reload and decide again\",\"requestId\":\"req_e8d9f27d57fa4c94a92d421e6cf32310\",\"details\":{\"activeDeploymentId\":\"a79ed0d8-bf9d-44e8-97f0-b508b794777c\",\"expectedActiveDeploymentId\":\"00000000-0000-0000-0000-000000"
+ },
+ "afterStale": "active unchanged",
+ "busy": {
+  "publish": 202,
+  "rollback": 200,
+  "rollbackBody": "{\"slug\":\"c6-ug-qa-muxvt6gd-392194\",\"url\":\"https://sites.toolsmcp.uk/c6-ug-qa-muxvt6gd-392194/\",\"online\":true,\"visibility\":\"PUBLIC\",\"currentDeploymentId\":\"e9d034e9-5927-4f89-92d9-7a1a1d50021c\",\"currentVersionNumber\":2,\"provider\":\"static\",\"updatedAt\":\"2026-10-07T09:12:35.542392Z\",\"pointerVersion\":10,\"",
+  "retryAfter": null
+ },
+ "final": [
+  {
+   "v": 7,
+   "s": "ROLLED_BACK"
+  },
+  {
+   "v": 7,
+   "s": "RUNNING"
+  },
+  {
+   "v": 5,
+   "s": "ROLLED_BACK"
+  },
+  {
+   "v": 5,
+   "s": "ROLLED_BACK"
+  },
+  {
+   "v": 2,
+   "s": "RUNNING"
+  }
+ ]
+}

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.sync.SyncTests" tests="23" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:45:21.885Z" hostname="macmini-2.local" time="0.062">
+  <properties/>
+  <testcase name="a job edited during a run is not committed over()" classname="com.systemwebstudio.data.sync.SyncTests" time="0.005"/>
+  <testcase name="a repeated page of the same run is not applied twice()" classname="com.systemwebstudio.data.sync.SyncTests" time="0.0"/>
+  <testcase name="backoff doubles from 30 seconds and is capped()" classname="com.systemwebstudio.data.sync.SyncTests" time="0.0"/>
+  <testcase name="a job whose owner lost the permission pauses and pulls nothing()" classname="com.systemwebstudio.data.sync.SyncTests" time="0.001"/>
+  <testcase name="losing the permission later keeps the checkpoint and the delivered records()" classname="com.systemwebstudio.data.sync.SyncTests" time="0.001"/>
+  <testcase name="creating a job validates it against the approved query mapping and view model()" classname="com.systemwebstudio.data.sync.SyncTests" time="0.001"/>
+  <testcase name="managing sync needs its permission and a denial looks the same for an unknown job()" classname="com.systemwebstudio.data.sync.SyncTests" time="0.0"/>
+  <testcase name="a crash in the sink keeps the checkpoint and the retry delivers without duplicates()" classname="com.systemwebstudio.data.sync.SyncTests" time="0.002"/>
+  <testcase name="audit records carry ids and counts and never a row value()" classname="com.systemwebstudio.data.sync.SyncTests" time="0.003"/>
+  <testcase name="a run acts as the job owner with the workspace and request id of the job()" classname="com.systemwebstudio.data.sync.SyncTests" time="0.018"/>
+  <testcase name="the next run asks only for what changed since the checkpoint()" classname="com.systemwebstudio.data.sync.SyncTests" time="0.002"/>
+  <testcase name="records without a key are skipped and counted()" classname="com.systemwebstudio.data.sync.SyncTests" time="0.001"/>
+  <testcase name="an authorizer outage pauses the job instead of running it()" classname="com.systemwebstudio.data.sync.SyncTests" time="0.0"/>
+  <testcase name="first run pulls every page applies it and commits the checkpoint()" classname="com.systemwebstudio.data.sync.SyncTests" time="0.001"/>
+  <testcase name="transient failures back off exponentially then pause and keep lastSuccess()" classname="com.systemwebstudio.data.sync.SyncTests" time="0.003"/>
+  <testcase name="only one worker holds a job and an expired lease can be taken over but the old holder cannot commit()" classname="com.systemwebstudio.data.sync.SyncTests" time="0.0"/>
+  <testcase name="another tenant cannot see run pause or delete a job()" classname="com.systemwebstudio.data.sync.SyncTests" time="0.001"/>
+  <testcase name="tick runs due active jobs only and a successful sync invalidates cached queries and notifies()" classname="com.systemwebstudio.data.sync.SyncTests" time="0.015"/>
+  <testcase name="a source that ignores the cursor is detected and the job pauses without moving the checkpoint()" classname="com.systemwebstudio.data.sync.SyncTests" time="0.001"/>
+  <testcase name="resume revalidates and manual run is rate limited()" classname="com.systemwebstudio.data.sync.SyncTests" time="0.002"/>
+  <testcase name="a permanent failure pauses at once and says why()" classname="com.systemwebstudio.data.sync.SyncTests" time="0.0"/>
+  <testcase name="running the same data again changes nothing()" classname="com.systemwebstudio.data.sync.SyncTests" time="0.001"/>
+  <testcase name="cursor comparison follows the field type()" classname="com.systemwebstudio.data.sync.SyncTests" time="0.0"/>
+  <system-out><![CDATA[{"@timestamp":"2026-10-08T06:45:21.898038+07:00","@version":"1","message":"sync run failed unexpectedly: java.lang.IllegalStateException","logger_name":"com.systemwebstudio.data.sync.SyncRunner","thread_name":"Test worker","level":"ERROR","level_value":40000}
+{"@timestamp":"2026-10-08T06:45:21.901778+07:00","@version":"1","message":"data source operation failed unexpectedly: java.lang.IllegalStateException","logger_name":"com.systemwebstudio.data.datasource.DataSourceService","thread_name":"Test worker","level":"ERROR","level_value":40000}
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

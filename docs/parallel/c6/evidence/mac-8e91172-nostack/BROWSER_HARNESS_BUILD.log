@@ -1,0 +1,5 @@
+# start: 2026-10-06T15:34:41Z
+# cwd:   /Users/hoangluan/code/xweb-c6
+# cmd:   node tests/browser/build-harness.mjs
+
+built /Users/hoangluan/code/xweb-c6/.test-build/browser

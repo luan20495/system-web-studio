@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.publish.DeploymentStatusTests" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:48:10.691Z" hostname="macmini-2.local" time="0.001">
+  <properties/>
+  <testcase name="ROLLING_BACK is not terminal and leaves only to FAILED, so it can never roll forward()" classname="com.systemwebstudio.publish.DeploymentStatusTests" time="0.0"/>
+  <testcase name="only DEPLOYING can start a rollback, and ROLLBACK_FAILED and ROLLBACK_OFFLINE are not statuses()" classname="com.systemwebstudio.publish.DeploymentStatusTests" time="0.0"/>
+  <testcase name="ROLLED_BACK is terminal, only a RUNNING deployment gets there, and nothing leaves it()" classname="com.systemwebstudio.publish.DeploymentStatusTests" time="0.0"/>
+  <testcase name="the full table of legal edges - and no other()" classname="com.systemwebstudio.publish.DeploymentStatusTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

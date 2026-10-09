@@ -1,0 +1,76 @@
+PASS F00 [fixture] two tenants, 6 accounts (TA×2, WS admin, EDITOR, VIEWER, to-be-disabled), 2 projects created through the product routes | expected all created | actual P1=true P2=true
+PASS S01 [401] unauthenticated GET /auth/me | expected 401 | actual 401 AUTHENTICATION_REQUIRED
+PASS S02 [401] unauthenticated GET project list | expected 401 | actual 401 AUTHENTICATION_REQUIRED
+PASS S03 [401] unauthenticated GET /admin/tenants | expected 401 | actual 401 AUTHENTICATION_REQUIRED
+PASS S04 [401] unauthenticated GET /admin/audit | expected 401 | actual 401 AUTHENTICATION_REQUIRED
+PASS C01 [CSRF] login POST without a token | expected 403 | actual 403 CSRF_INVALID
+PASS C02 [CSRF] login POST with an invalid token | expected 403 | actual 403 CSRF_INVALID
+PASS C03 [CSRF] login POST with the valid token (as a browser does) | expected 200 | actual 200
+PASS C04 [CSRF] authenticated mutation (create project) without a token | expected 403 | actual 403 CSRF_INVALID
+PASS C05 [CSRF] authenticated mutation with a forged token | expected 403 | actual 403 CSRF_INVALID
+PASS C06 [CSRF] authenticated mutation with the valid token | expected 201 | actual 201
+PASS C07 [CSRF] provisioning route without a token | expected 403 | actual 403 CSRF_INVALID
+PASS C08 [CSRF] DELETE without a token | expected 403 | actual 403 CSRF_INVALID
+PASS A01 [403] VIEWER creates a project in the workspace it belongs to | expected 403 | actual 403 FORBIDDEN
+PASS A02 [403] EDITOR lists workspace members (needs MEMBER_MANAGE) | expected 403 | actual 403 FORBIDDEN
+PASS A03 [403] EDITOR publishes its own project without PROJECT_PUBLISH on a non-owner role? (creator is OWNER => documented) | expected 202 or 403 (creator = OWNER) | actual 202 | informational: the creator of a project is its OWNER
+PASS A04 [403] EDITOR (workspace role) publishes a project it has no PROJECT_PUBLISH on | expected 403 (or 404 when not visible) | actual 404 PROJECT_NOT_FOUND
+PASS A05 [403] VIEWER mutates a project schema | expected 403/404 | actual 404 PROJECT_NOT_FOUND
+PASS A12a [403] project owner adds the EDITOR to the project | expected 201 | actual 201
+PASS A12b [403] project owner adds the VIEWER to the project | expected 201 | actual 201
+PASS A12 [403] project EDITOR publishes (PROJECT_PUBLISH is not implied by editing) | expected 403 | actual 403 FORBIDDEN
+PASS A13 [403] project VIEWER mutates the schema | expected 403 | actual 403 FORBIDDEN
+PASS A14 [403] project VIEWER can read the project (view is allowed) | expected 200 | actual 200
+PASS A15 [403] project EDITOR lists project members (PROJECT_MEMBERS needed) | expected 403 | actual 403 FORBIDDEN
+PASS A06 [403] WORKSPACE_ADMIN lists tenants (platform/tenant route) | expected 403 | actual 403 ADMIN_REQUIRED
+PASS A07 [403] WORKSPACE_ADMIN provisions an account (tenant route) | expected 403 | actual 403 FORBIDDEN
+PASS A08 [403] EDITOR reads the platform audit | expected 403 | actual 403 ADMIN_REQUIRED
+PASS A09 [403] Tenant Admin (not system admin) reads the PLATFORM audit | expected 403 | actual 403 ADMIN_REQUIRED
+PASS A10 [403] Tenant Admin creates a tenant | expected 403 | actual 403 ADMIN_REQUIRED
+PASS A11 [403] Tenant Admin reads system health | expected 403 | actual 403 ADMIN_REQUIRED
+PASS N01 [404] Tenant Admin A reads tenant B | expected 404 | actual 404 TENANT_NOT_FOUND
+PASS N02 [404] Tenant Admin A lists tenant B members | expected 404 | actual 404 TENANT_NOT_FOUND
+PASS N03 [404] Tenant Admin A creates a workspace in tenant B | expected 404 | actual 404 TENANT_NOT_FOUND
+PASS N04 [404] Tenant Admin A provisions a user in tenant B | expected 404 | actual 404 TENANT_NOT_FOUND
+PASS N05 [404] Tenant Admin A lists projects of foreign workspace B | expected 404 (403 acceptable only if identical for a random id) | actual 404 WORKSPACE_NOT_FOUND
+PASS N06 [404] EDITOR of A reads project of B | expected 404 | actual 404 WORKSPACE_NOT_FOUND
+PASS N07 [404] EDITOR of A reads project of B through its OWN workspace id | expected 404 | actual 404 PROJECT_NOT_FOUND
+PASS N08 [404] guessed random project UUID in an own workspace | expected 404 | actual 404 PROJECT_NOT_FOUND
+PASS N09 [404] guessed random workspace UUID | expected 404 | actual 404 WORKSPACE_NOT_FOUND
+PASS N10 [404] Tenant Admin B adds a member to workspace A | expected 404/403 | actual 404 WORKSPACE_NOT_FOUND
+PASS N11 [404] foreign workspace and a random workspace are indistinguishable (status + code) | expected same status+code | actual 404 WORKSPACE_NOT_FOUND vs 404 WORKSPACE_NOT_FOUND
+PASS N12 [404] Tenant Admin A tenant list shows only its own tenant (no tenant B) | expected no tenant B | actual 403; B visible=false
+PASS N13 [404] candidate search of tenant A never returns tenant B accounts | expected no c6sec-ta2 | actual 200; B visible=false
+PASS N14 [404] Tenant Admin A reads the admin detail of a tenant-B account | expected 403/404 | actual 403 ADMIN_REQUIRED
+PASS E01 [escalation] Tenant Admin mints a SYSTEM_ADMIN | expected 400 TENANT_ROLE_INVALID | actual 400 TENANT_ROLE_INVALID
+PASS E02 [escalation] body flag systemAdmin:true on a tenant user creation | expected ignored (400 or created non-admin) | actual 201; systemAdmin=false
+PASS E03 [escalation] Workspace Admin changes its OWN role (self-grant protection) | expected 403 SELF_GRANT_FORBIDDEN | actual 403 SELF_GRANT_FORBIDDEN
+PASS E04 [escalation] EDITOR promotes itself to WORKSPACE_ADMIN | expected 403 | actual 403 FORBIDDEN
+PASS E05 [escalation] Workspace Admin disables an account through the platform route | expected 403 | actual 403 ADMIN_REQUIRED
+PASS E06 [escalation] Tenant Admin changes its own tenant role | expected 403 / 409 LAST_TENANT_ADMIN | actual 403 SELF_GRANT_FORBIDDEN
+PASS E07 [escalation] Tenant Admin removes itself (last tenant admin) | expected 403 / 409 | actual 409 LAST_TENANT_ADMIN
+PASS E08 [last-admin] remove the last WORKSPACE_ADMIN of a workspace | expected 403 SELF_GRANT_FORBIDDEN or 409 LAST_ADMIN | actual 409 LAST_ADMIN (first removal: 204)
+PASS E09 [last-admin] disable yourself / the last enabled system admin | expected 409 LAST_SYSTEM_ADMIN or 403 | actual 409 CANNOT_DISABLE_SELF
+PASS D01 [disabled] super admin disables an account | expected 200 | actual 200
+PASS D02 [disabled] the disabled account's EXISTING session | expected 401 (session no longer valid) | actual 401 AUTHENTICATION_REQUIRED
+PASS D03 [disabled] the disabled account signs in again | expected 401/403 | actual 401 INVALID_CREDENTIALS
+PASS D04 [disabled] re-enabled account signs in again | expected 200 | actual 200 / login 200
+PASS L01 [secrets] no password/hash/secret key in /auth/me | expected none | actual 200; match=false
+PASS L02 [secrets] no password/hash/secret key in admin user list (super admin) | expected none | actual 200; match=false
+PASS L03 [secrets] no password/hash/secret key in tenant members | expected none | actual 200; match=false
+PASS L04 [secrets] no password/hash/secret key in workspace members | expected none | actual 200; match=false
+PASS L05 [secrets] unknown activation token (429 = the activation rate limiter, repeated runs from one address) | expected 404/410 without detail, or 429 | actual 410 LINK_INVALID
+PASS L06 [secrets] wrong password and unknown user give the same answer | expected 401 both | actual wrong=401 / unknown=401
+PASS O01 [CORS] simple request from a foreign origin | expected no Access-Control-Allow-Origin | actual 403 acao=null
+PASS O02 [CORS] preflight from a foreign origin | expected rejected (403) / no ACAO | actual 403 acao=null
+PASS O03 [CORS] Origin: null | expected no ACAO | actual 403 acao=null
+PASS O04 [CORS] configured portal origin | expected ACAO = that origin + credentials | actual 200 acao=http://127.0.0.1:3402 cred=true
+PASS O05 [CORS] preflight from the configured origin | expected 200 + ACAO | actual 200 acao=http://127.0.0.1:3402
+PASS O06 [CORS] look-alike origin (suffix) | expected no ACAO | actual 403 acao=null
+PASS P01 [surface] actuator /env anonymous | expected 401/403/404 | actual 401 AUTHENTICATION_REQUIRED
+PASS P02 [surface] actuator /heapdump anonymous | expected 401/403/404 | actual 401 AUTHENTICATION_REQUIRED
+PASS P03 [surface] OpenAPI document anonymous (this stack = profile `local`, springdoc enabled by application-local.yml; application-prod.yml disables it) | expected 200 on local; the public hosts return the Next HTML page, not the schema | actual 200 | informational (profile local)
+PASS P04 [surface] readiness (expected to be public) | expected 200 | actual 200
+PASS S05 [session] logout then GET /auth/me | expected 401 | actual 401 AUTHENTICATION_REQUIRED
+
+TOTAL 74  FAILED 0

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.mapping.MappingEngineTests" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:45:21.835Z" hostname="macmini-2.local" time="0.03">
+  <properties/>
+  <testcase name="output is bounded()" classname="com.systemwebstudio.data.mapping.MappingEngineTests" time="0.017"/>
+  <testcase name="error policy skip row and fail()" classname="com.systemwebstudio.data.mapping.MappingEngineTests" time="0.001"/>
+  <testcase name="a mapping and its view model must agree()" classname="com.systemwebstudio.data.mapping.MappingEngineTests" time="0.0"/>
+  <testcase name="raw rows become view model rows with only the declared fields()" classname="com.systemwebstudio.data.mapping.MappingEngineTests" time="0.002"/>
+  <testcase name="error policy null field turns a bad value into null and says which field without the value()" classname="com.systemwebstudio.data.mapping.MappingEngineTests" time="0.0"/>
+  <testcase name="validation is a closed list of checks()" classname="com.systemwebstudio.data.mapping.MappingEngineTests" time="0.003"/>
+  <testcase name="a non nullable field that cannot be mapped drops the row under null field policy and counts it()" classname="com.systemwebstudio.data.mapping.MappingEngineTests" time="0.0"/>
+  <testcase name="declared types coerce or fail()" classname="com.systemwebstudio.data.mapping.MappingEngineTests" time="0.0"/>
+  <testcase name="column names with dots and spaces resolve as exact names first()" classname="com.systemwebstudio.data.mapping.MappingEngineTests" time="0.0"/>
+  <testcase name="a container cannot be fed to a transform()" classname="com.systemwebstudio.data.mapping.MappingEngineTests" time="0.0"/>
+  <testcase name="truncation passes through and a missing source column is reported()" classname="com.systemwebstudio.data.mapping.MappingEngineTests" time="0.0"/>
+  <testcase name="the c2 minimal shape from and to alone is a valid mapping()" classname="com.systemwebstudio.data.mapping.MappingEngineTests" time="0.0"/>
+  <testcase name="a formula cannot be used to reach other rows or run unbounded work()" classname="com.systemwebstudio.data.mapping.MappingEngineTests" time="0.001"/>
+  <testcase name="unknown keys and malformed definitions are rejected not ignored()" classname="com.systemwebstudio.data.mapping.MappingEngineTests" time="0.004"/>
+  <testcase name="enum names are accepted in any case and the parsed model round trips its meaning()" classname="com.systemwebstudio.data.mapping.MappingEngineTests" time="0.0"/>
+  <testcase name="single cardinality keeps the first row and says so()" classname="com.systemwebstudio.data.mapping.MappingEngineTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

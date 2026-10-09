@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.logic.workflow.WorkflowLeaseTests" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:46:14.153Z" hostname="macmini-2.local" time="0.012">
+  <properties/>
+  <testcase name="cancelling a run releases the lease()" classname="com.systemwebstudio.logic.workflow.WorkflowLeaseTests" time="0.001"/>
+  <testcase name="claiming a step records its owner and a lease, and finishing the step releases both()" classname="com.systemwebstudio.logic.workflow.WorkflowLeaseTests" time="0.001"/>
+  <testcase name="a lease that ran out is reclaimed even though the run was touched recently()" classname="com.systemwebstudio.logic.workflow.WorkflowLeaseTests" time="0.0"/>
+  <testcase name="a run without a lease keeps the old rule - untouched for the stale time means abandoned()" classname="com.systemwebstudio.logic.workflow.WorkflowLeaseTests" time="0.001"/>
+  <testcase name="only the owner renews, and a renewal moves the lease forward()" classname="com.systemwebstudio.logic.workflow.WorkflowLeaseTests" time="0.002"/>
+  <testcase name="a lease is judged by its own expiry, not by how long ago the run last changed()" classname="com.systemwebstudio.logic.workflow.WorkflowLeaseTests" time="0.003"/>
+  <testcase name="two workers racing for one step - exactly one owns it()" classname="com.systemwebstudio.logic.workflow.WorkflowLeaseTests" time="0.002"/>
+  <testcase name="an owner that keeps renewing is not reclaimed, one that stops is()" classname="com.systemwebstudio.logic.workflow.WorkflowLeaseTests" time="0.001"/>
+  <testcase name="a lease longer than the stale time is honoured, and one that already ran out is reclaimed at once()" classname="com.systemwebstudio.logic.workflow.WorkflowLeaseTests" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

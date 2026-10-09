@@ -1,0 +1,899 @@
+{
+ "api": "http://127.0.0.1:51080",
+ "run": "f7da2c",
+ "total": 99,
+ "failed": 0,
+ "rows": [
+  {
+   "id": "F00",
+   "area": "fixture",
+   "desc": "two tenants, WS admin / EDITOR / VIEWER of A, TA of B created through the product routes",
+   "expected": "ready",
+   "actual": "W1=true W2=true",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M01",
+   "area": "mgmt",
+   "desc": "connector catalogue",
+   "expected": "200 {items} with postgres available",
+   "actual": "200 csv,google_sheets,graphql,mysql,odoo,postgres,rest,salesforce",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M02",
+   "area": "mgmt",
+   "desc": "create data source -> the TLS target (WORKSPACE_ADMIN)",
+   "expected": "201 DataSource without credentialRef",
+   "actual": "201 ACTIVE v=1 status=ACTIVE hasCredential=false",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M03",
+   "area": "mgmt",
+   "desc": "duplicate name differing only by case",
+   "expected": "409 CONFLICT",
+   "actual": "409 CONFLICT",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M04a",
+   "area": "mgmt",
+   "desc": "invalid name",
+   "expected": "400 INVALID_CONFIG",
+   "actual": "400 INVALID_CONFIG",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M04b",
+   "area": "mgmt",
+   "desc": "unknown connector type",
+   "expected": "422 UNSUPPORTED_TYPE",
+   "actual": "422 UNSUPPORTED_TYPE",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M04c",
+   "area": "mgmt",
+   "desc": "planned connector (mysql)",
+   "expected": "501 NOT_IMPLEMENTED",
+   "actual": "501 NOT_IMPLEMENTED",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M04d",
+   "area": "mgmt",
+   "desc": "secret key inside config",
+   "expected": "400 INVALID_CONFIG",
+   "actual": "400 INVALID_CONFIG",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M04e",
+   "area": "mgmt",
+   "desc": "authority key (tenantId) in the body",
+   "expected": "400 INVALID_PARAMS",
+   "actual": "400 INVALID_PARAMS",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M05-15432-127",
+   "area": "mgmt-ssrf",
+   "desc": "platform database is refused by the address policy",
+   "expected": "400 INVALID_CONFIG",
+   "actual": "400 INVALID_CONFIG",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M05-15434-127",
+   "area": "mgmt-ssrf",
+   "desc": "apps database is refused by the address policy",
+   "expected": "400 INVALID_CONFIG",
+   "actual": "400 INVALID_CONFIG",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M05-15432-loc",
+   "area": "mgmt-ssrf",
+   "desc": "platform DB by name is refused by the address policy",
+   "expected": "400 INVALID_CONFIG",
+   "actual": "400 INVALID_CONFIG",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M05-15441-127",
+   "area": "mgmt-ssrf",
+   "desc": "not allow-listed port on loopback is refused by the address policy",
+   "expected": "400 INVALID_CONFIG",
+   "actual": "400 INVALID_CONFIG",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M05-5432-169",
+   "area": "mgmt-ssrf",
+   "desc": "cloud metadata address is refused by the address policy",
+   "expected": "400 INVALID_CONFIG",
+   "actual": "400 INVALID_CONFIG",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M06",
+   "area": "mgmt-secret",
+   "desc": "PUT credential: metadata only, no secret in the answer",
+   "expected": "200 {configured:true, keys:[…]} without the password",
+   "actual": "200 keys=[\"username\",\"password\"]",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M07",
+   "area": "mgmt-secret",
+   "desc": "GET credential returns key names only",
+   "expected": "200 keys only",
+   "actual": "200 [\"configured\",\"type\",\"keys\",\"updatedAt\",\"updatedBy\"]",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M08",
+   "area": "mgmt-secret",
+   "desc": "data source detail and list expose hasCredential, never the credential / credentialRef",
+   "expected": "no secret",
+   "actual": "detail 200/list 200 hasCredential=true",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M09",
+   "area": "mgmt",
+   "desc": "credential with a key the connector does not declare",
+   "expected": "400 INVALID_CREDENTIAL",
+   "actual": "400 INVALID_CREDENTIAL",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M10",
+   "area": "mgmt",
+   "desc": "test connection over TLS (verify-full, SELECT-only role)",
+   "expected": "200 {ok:true, latencyMs, warnings[]}",
+   "actual": "200 {\"ok\":true,\"ms\":35,\"warnings\":[]}",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M11",
+   "area": "mgmt",
+   "desc": "schema discovery from the real database",
+   "expected": "200, ≥ 2 entities (customers, orders)",
+   "actual": "200 entities=2",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M12",
+   "area": "mgmt",
+   "desc": "stored snapshot has customers and orders and no secret",
+   "expected": "200",
+   "actual": "200",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M13",
+   "area": "mgmt-failure",
+   "desc": "test with a wrong password",
+   "expected": "200 {ok:false, code:AUTH_REJECTED}",
+   "actual": "200 AUTH_REJECTED ok=false code=AUTH_REJECTED",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M14",
+   "area": "mgmt",
+   "desc": "writable source with the shop_rw role (create status / test result)",
+   "expected": "create 201; test 200 with a defined result (ok, or ROLE_TOO_PRIVILEGED when not writable)",
+   "actual": "create 201; test 200 ok=true code=undefined warnings=[]",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M15",
+   "area": "mgmt",
+   "desc": "a privileged role on a source NOT declared writable is flagged",
+   "expected": "ok:false ROLE_TOO_PRIVILEGED (or ok:true with a warning)",
+   "actual": "200 ok=true code=undefined warnings=[\"the database role can write to 1 table(s); use a SELECT-only role\"]",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M16",
+   "area": "mgmt",
+   "desc": "query definition created",
+   "expected": "201",
+   "actual": "201 ACTIVE",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M16b",
+   "area": "mgmt",
+   "desc": "parameterless listing query definition (used by the Studio Test panel flow E2E-07)",
+   "expected": "201",
+   "actual": "201 ACTIVE",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M17a",
+   "area": "mgmt",
+   "desc": "DDL in a query definition",
+   "expected": "400 INVALID_QUERY",
+   "actual": "400 INVALID_QUERY",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M17b",
+   "area": "mgmt",
+   "desc": "stacked statements in a query definition",
+   "expected": "400 INVALID_QUERY",
+   "actual": "400 INVALID_QUERY",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M17c",
+   "area": "mgmt",
+   "desc": "write statement as a READ query definition",
+   "expected": "400 INVALID_QUERY",
+   "actual": "400 INVALID_QUERY",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M18",
+   "area": "mgmt",
+   "desc": "definition list is a summary (no SQL)",
+   "expected": "200, no `sql` text",
+   "actual": "200",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M19",
+   "area": "mgmt",
+   "desc": "one definition in full (admin)",
+   "expected": "200 with the SQL",
+   "actual": "200 ACTIVE v=1",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M20",
+   "area": "mgmt",
+   "desc": "expectedVersion mismatch",
+   "expected": "409 CONFLICT, nothing changes",
+   "actual": "409 CONFLICT",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M21",
+   "area": "mgmt-authz",
+   "desc": "EDITOR creates a data source (needs DATA_SOURCE_MANAGE)",
+   "expected": "403",
+   "actual": "403 PERMISSION_DENIED",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M22",
+   "area": "mgmt-authz",
+   "desc": "VIEWER tests a connection",
+   "expected": "403",
+   "actual": "403 PERMISSION_DENIED",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M23",
+   "area": "mgmt-authz",
+   "desc": "EDITOR reads a full query definition (needs DATA_SOURCE_MANAGE)",
+   "expected": "403",
+   "actual": "403 PERMISSION_DENIED",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M24",
+   "area": "mgmt-authz",
+   "desc": "anonymous list",
+   "expected": "401",
+   "actual": "401 AUTHENTICATION_REQUIRED",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M25",
+   "area": "mgmt-iso",
+   "desc": "foreign tenant lists workspace A's sources",
+   "expected": "404",
+   "actual": "404 WORKSPACE_NOT_FOUND",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M26",
+   "area": "mgmt-iso",
+   "desc": "foreign tenant reads A's source through ITS OWN workspace id",
+   "expected": "404",
+   "actual": "404 NOT_FOUND",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M27",
+   "area": "mgmt-iso",
+   "desc": "foreign tenant deletes A's source",
+   "expected": "404",
+   "actual": "404 NOT_FOUND",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M28",
+   "area": "mgmt-csrf",
+   "desc": "state-changing management call without a CSRF token",
+   "expected": "403 CSRF_INVALID",
+   "actual": "403 CSRF_INVALID",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M29",
+   "area": "mgmt",
+   "desc": "raw browser mutation route does not exist",
+   "expected": "404",
+   "actual": "404 NOT_FOUND",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "M30",
+   "area": "mgmt-secret",
+   "desc": "no response of this run (any route above or below) contained the target passwords",
+   "expected": "none",
+   "actual": "none",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "D01",
+   "area": "data",
+   "desc": "declare the slot + READ query + mapping + view model through typed operations (no SQL, no seed)",
+   "expected": "200",
+   "actual": "200 ",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "D02-TEST",
+   "area": "data",
+   "desc": "bind slot erp-db → source (TEST)",
+   "expected": "200 {mode}",
+   "actual": "200 TEST",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "D02-LIVE",
+   "area": "data",
+   "desc": "bind slot erp-db → source (LIVE)",
+   "expected": "200 {mode}",
+   "actual": "200 LIVE",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "D03",
+   "area": "data",
+   "desc": "lower-case mode refused",
+   "expected": "400 INVALID_PARAMS",
+   "actual": "400 INVALID_PARAMS",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "D04",
+   "area": "data-iso",
+   "desc": "foreign tenant binds A's source to a project id of A",
+   "expected": "404",
+   "actual": "404 PROJECT_NOT_FOUND",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "D05",
+   "area": "data",
+   "desc": "TEST run: Studio → app-runtime → DataGateway → TLS PostgreSQL → rows, filtered by the parameter, mapped to name/description",
+   "expected": "200; SO-1001 + SO-1002, no SO-1003; fields name/description",
+   "actual": "200 rows=8 first={\"name\":\"C6-9210A1\",\"description\":\"ACME Co\"}",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "D06",
+   "area": "data",
+   "desc": "TEST run with another parameter value",
+   "expected": "200; only SO-1003",
+   "actual": "200",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "D07",
+   "area": "data",
+   "desc": "LIVE run before anything is published (no release)",
+   "expected": "404 (nothing published; no fallback to the draft)",
+   "actual": "404 QUERY_NOT_FOUND",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "D08a",
+   "area": "data-failure",
+   "desc": "wrong parameter type",
+   "expected": "422 INVALID_PARAMS (or 400), no rows",
+   "actual": "400 INVALID_PARAMS",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "D08b",
+   "area": "data-failure",
+   "desc": "client-supplied sql/unknown field",
+   "expected": "400 INVALID_REQUEST (strict parsing)",
+   "actual": "400 INVALID_PARAMS",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "D08c",
+   "area": "data-failure",
+   "desc": "unknown query id",
+   "expected": "404 QUERY_NOT_FOUND",
+   "actual": "404 QUERY_NOT_FOUND",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "D09",
+   "area": "data-authz",
+   "desc": "EDITOR of the workspace (not a member of the project) runs the query",
+   "expected": "404 (not visible) or 403",
+   "actual": "404 PROJECT_NOT_FOUND",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "D10",
+   "area": "data-iso",
+   "desc": "foreign tenant runs A's query",
+   "expected": "404",
+   "actual": "404 PROJECT_NOT_FOUND",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "D11",
+   "area": "publish",
+   "desc": "publish the data app",
+   "expected": "202 + deployment id",
+   "actual": "202 QUEUED",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "D12",
+   "area": "publish",
+   "desc": "deployment reaches RUNNING (the only success)",
+   "expected": "RUNNING",
+   "actual": "RUNNING",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "D13",
+   "area": "data",
+   "desc": "LIVE run = the ACTIVE release, over TLS",
+   "expected": "200 mode LIVE with SO-1001",
+   "actual": "200 mode=LIVE",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "D14",
+   "area": "data-failure",
+   "desc": "source DISABLED → query fails closed, no data",
+   "expected": "PATCH 200; run ≥ 400 and no rows",
+   "actual": "patch 200; run 409 DISABLED",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "D15",
+   "area": "data-failure",
+   "desc": "re-enabled source works again (no sticky failure)",
+   "expected": "200",
+   "actual": "200",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "D16",
+   "area": "data-failure",
+   "desc": "credential replaced by a wrong one → LIVE fails closed with a safe error (never stale rows, never a secret)",
+   "expected": "run ≥ 400 without rows or the old password",
+   "actual": "run 502 AUTH_REJECTED; test ok=false AUTH_REJECTED",
+   "result": "PASS",
+   "note": "result cache may serve a hit within its ttl: a 200 here would be reported"
+  },
+  {
+   "id": "D17",
+   "area": "data-failure",
+   "desc": "credential restored → connection test ok again",
+   "expected": "ok:true",
+   "actual": "200 ok=true",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "D18",
+   "area": "data-failure",
+   "desc": "TEST binding removed → run answers DATA_SOURCE_UNBOUND (never falls back to LIVE)",
+   "expected": "422 DATA_SOURCE_UNBOUND",
+   "actual": "unbind 204; run 422 DATA_SOURCE_UNBOUND",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "D19",
+   "area": "data",
+   "desc": "delete a source that is still bound",
+   "expected": "409 CONFLICT",
+   "actual": "409 CONFLICT",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "D20",
+   "area": "data-failure",
+   "desc": "a slow query definition",
+   "expected": "400 INVALID_QUERY (guard) or 201",
+   "actual": "400 INVALID_QUERY",
+   "result": "PASS",
+   "note": "pg_sleep refused by the SQL guard"
+  },
+  {
+   "id": "A00",
+   "area": "action",
+   "desc": "mutation definition CREATE on the writable source",
+   "expected": "201",
+   "actual": "201 ACTIVE ",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "A01",
+   "area": "action",
+   "desc": "mutation definition on a source NOT declared writable",
+   "expected": "422 READ_ONLY_VIOLATION",
+   "actual": "422 READ_ONLY_VIOLATION",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "A02",
+   "area": "action",
+   "desc": "declare the WRITE query + CREATE_RECORD action (typed operations; canonical ActionType)",
+   "expected": "200",
+   "actual": "200 ",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "A03",
+   "area": "action",
+   "desc": "TEST mode: WOULD_RUN, no side effect",
+   "expected": "200 WOULD_RUN; row count unchanged",
+   "actual": "200 WOULD_RUN rows 0→0",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "A05",
+   "area": "publish",
+   "desc": "publish the release that carries the action",
+   "expected": "RUNNING",
+   "actual": "RUNNING",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "A04",
+   "area": "action",
+   "desc": "LIVE mutating action without an idempotency key",
+   "expected": "400 IDEMPOTENCY_KEY_REQUIRED, nothing written",
+   "actual": "400 FAILED",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "A06",
+   "area": "action",
+   "desc": "LIVE action with a key: a REAL row is written to the source and read back through the READ query",
+   "expected": "200 OK; exactly 1 row C6-…",
+   "actual": "200 OK; rows found=1 (LIVE read may be cached)",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "A06b",
+   "area": "action",
+   "desc": "the same row seen by an uncached TEST read",
+   "expected": "exactly 1",
+   "actual": "1",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "A07",
+   "area": "action",
+   "desc": "duplicate submit with the SAME key (replay)",
+   "expected": "200 same outcome, still exactly 1 row",
+   "actual": "200 OK; rows=1; same status=true",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "A08",
+   "area": "action",
+   "desc": "the SAME key with DIFFERENT inputs",
+   "expected": "409 (key reused) and no second row",
+   "actual": "409 FAILED; rows=1",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "A09",
+   "area": "action",
+   "desc": "3 concurrent submits with one key (double click)",
+   "expected": "one row; no 500",
+   "actual": "200/409/409; rows=1",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "A10",
+   "area": "action-authz",
+   "desc": "EDITOR of the workspace without project membership executes",
+   "expected": "403/404",
+   "actual": "404 PROJECT_NOT_FOUND",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "A11",
+   "area": "action-authz",
+   "desc": "project EDITOR (APP_USE, no DATA_MUTATE) executes a LIVE write action",
+   "expected": "403 FORBIDDEN, nothing written",
+   "actual": "403 FAILED; rows=1",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "A12",
+   "area": "action-iso",
+   "desc": "foreign tenant executes A's action",
+   "expected": "404",
+   "actual": "404 PROJECT_NOT_FOUND",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "A13",
+   "area": "action-safety",
+   "desc": "client-supplied sql / unknown field in action inputs",
+   "expected": "400 INVALID_REQUEST/INVALID_INPUT, nothing executed",
+   "actual": "400 FAILED",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "A14",
+   "area": "action-safety",
+   "desc": "no arbitrary JS / script in an action definition",
+   "expected": "rejected: 422 SCHEMA_INVALID (unknown field) or 400",
+   "actual": "422 SCHEMA_INVALID [{\"path\":\"actions[1].script\",\"message\":\"unknown field 'script'\"}]",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "A15",
+   "area": "action-safety",
+   "desc": "no raw URL in an action definition (SSRF)",
+   "expected": "rejected: 422 SCHEMA_INVALID (unknown field) or 400",
+   "actual": "422 SCHEMA_INVALID [{\"path\":\"actions[1].url\",\"message\":\"unknown field 'url'\"}]",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "A16",
+   "area": "action-types",
+   "desc": "non-canonical ActionType (WRITE_DATA) is rejected",
+   "expected": "rejected: 422 SCHEMA_INVALID listing the canonical types, or 400",
+   "actual": "422 SCHEMA_INVALID [{\"path\":\"actions[1].type\",\"message\":\"must be one of NAVIGATE, REFRESH_QUERY, SUBMIT_FORM, CREATE_RECORD, UPDATE_RECORD, DELETE_RECORD, CALL",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "W00",
+   "area": "workflow",
+   "desc": "declare two workflows (END only; WAIT 600 s then END) through typed operations",
+   "expected": "200",
+   "actual": "200 ",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "W01",
+   "area": "workflow",
+   "desc": "TEST start creates a run (documented: a TEST workflow still creates a run row)",
+   "expected": "200/202 with a run id",
+   "actual": "202 PENDING id=7821e748-063e-47ca-92c2-45f3af967eaf",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "W01b",
+   "area": "publish",
+   "desc": "publish the release that carries the workflows",
+   "expected": "RUNNING",
+   "actual": "RUNNING",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "W02",
+   "area": "workflow",
+   "desc": "LIVE start of an END-only workflow",
+   "expected": "200/202 with a run id",
+   "actual": "202 PENDING id=af369c21-36cb-46d8-b95c-c148033abede",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "W03",
+   "area": "workflow",
+   "desc": "replay with the same key returns the SAME run (no second run)",
+   "expected": "same run id",
+   "actual": "202 PENDING id=af369c21-36cb-46d8-b95c-c148033abede",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "W04",
+   "area": "workflow",
+   "desc": "status: the run completes and shows its steps",
+   "expected": "SUCCEEDED with steps",
+   "actual": "SUCCEEDED steps=[\"end\"]",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "W05",
+   "area": "workflow",
+   "desc": "a WAIT step parks the run",
+   "expected": "WAITING (not SUCCEEDED, not failed)",
+   "actual": "202 PENDING; WAITING",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "W06",
+   "area": "workflow",
+   "desc": "cancel a WAITING run",
+   "expected": "200 and CANCELLED",
+   "actual": "200 CANCELLED; CANCELLED",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "W07",
+   "area": "workflow",
+   "desc": "cancel again (idempotent / terminal)",
+   "expected": "200 or 409, never 500",
+   "actual": "200 CANCELLED",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "W08",
+   "area": "workflow-iso",
+   "desc": "foreign tenant reads A's run",
+   "expected": "404",
+   "actual": "404 PROJECT_NOT_FOUND",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "W09",
+   "area": "workflow-authz",
+   "desc": "VIEWER (workspace role, no project membership) starts a workflow",
+   "expected": "403/404",
+   "actual": "404 PROJECT_NOT_FOUND",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "W10",
+   "area": "workflow-authz",
+   "desc": "project EDITOR (no WORKFLOW_EXECUTE) starts a LIVE workflow",
+   "expected": "403",
+   "actual": "403 FORBIDDEN",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "W11",
+   "area": "workflow",
+   "desc": "unknown workflow id",
+   "expected": "404",
+   "actual": "404 UNKNOWN_WORKFLOW",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "X01",
+   "area": "audit",
+   "desc": "audit shows the management actions (append-only log, system admin)",
+   "expected": "200 with DATASOURCE_CREATED, DATASOURCE_CREDENTIAL_ROTATED, DATASOURCE_TESTED, DATA_QUERY_DEFINITION_CHANGED, DATASOURCE_BINDING_CHANGED",
+   "actual": "200; found=5/5",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "X02",
+   "area": "audit",
+   "desc": "no target password in the audit payloads",
+   "expected": "none",
+   "actual": "none",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "X03",
+   "area": "mgmt-secret",
+   "desc": "no response of the whole run contained the target passwords",
+   "expected": "none",
+   "actual": "none",
+   "result": "PASS",
+   "note": ""
+  }
+ ]
+}

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.discovery.DiscoveryTests" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:45:21.651Z" hostname="macmini-2.local" time="0.022">
+  <properties/>
+  <testcase name="another tenant cannot refresh or read a schema and learns nothing()" classname="com.systemwebstudio.data.discovery.DiscoveryTests" time="0.005"/>
+  <testcase name="an authorizer that throws denies()" classname="com.systemwebstudio.data.discovery.DiscoveryTests" time="0.0"/>
+  <testcase name="samples are masked before they are stored even when the connector forgot()" classname="com.systemwebstudio.data.discovery.DiscoveryTests" time="0.001"/>
+  <testcase name="masking is total bounded and idempotent()" classname="com.systemwebstudio.data.discovery.DiscoveryTests" time="0.003"/>
+  <testcase name="personal secret and identifier columns are masked by name()" classname="com.systemwebstudio.data.discovery.DiscoveryTests" time="0.0"/>
+  <testcase name="the ai view has no sensitive column value at all and no metadata()" classname="com.systemwebstudio.data.discovery.DiscoveryTests" time="0.001"/>
+  <testcase name="a second refresh bumps the version reports the diff and is rate limited()" classname="com.systemwebstudio.data.discovery.DiscoveryTests" time="0.005"/>
+  <testcase name="the fingerprint covers structure but not samples or order()" classname="com.systemwebstudio.data.discovery.DiscoveryTests" time="0.0"/>
+  <testcase name="refresh stores a versioned snapshot and with no samples requested no sample exists anywhere()" classname="com.systemwebstudio.data.discovery.DiscoveryTests" time="0.001"/>
+  <testcase name="uuid style identifiers stay readable and ordinary words are untouched()" classname="com.systemwebstudio.data.discovery.DiscoveryTests" time="0.0"/>
+  <testcase name="discovery needs its permission and samples need a second one()" classname="com.systemwebstudio.data.discovery.DiscoveryTests" time="0.001"/>
+  <testcase name="sensitive values are caught by their shape even in an innocent column()" classname="com.systemwebstudio.data.discovery.DiscoveryTests" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

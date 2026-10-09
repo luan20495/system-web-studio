@@ -1,0 +1,63 @@
+N/A        R1-transforms-null server acceptance of the shape | refused by the server: 422 must not be null — a shape the model refuses cannot be stored, so the UI cannot meet it
+N/A        R1-mapping-no-fields-key server acceptance of the shape | refused by the server: 422 is required (a mapping needs at least one field) — a shape the model refuses cannot be stored, so the UI cannot meet it
+N/A        R1-mapping-fields-empty server acceptance of the shape | refused by the server: 422 a mapping needs at least one field — a shape the model refuses cannot be stored, so the UI cannot meet it
+PASS       R1-transforms-missing-1440 Data rail + inspector with transforms-missing (mapping+viewmodel+binding) | rail=ok inspector=ok pageerrors=0 consoleErrors=0
+PASS       R1-transforms-missing-768 Data rail + inspector with transforms-missing (mapping+viewmodel+binding) | rail=ok inspector=ok pageerrors=0 consoleErrors=0
+PASS       R1-transforms-missing-430 Data rail + inspector with transforms-missing (mapping+viewmodel+binding) | rail=ok inspector=ok pageerrors=0 consoleErrors=0
+PASS       R1-transforms-missing-390 Data rail + inspector with transforms-missing (mapping+viewmodel+binding) | rail=ok inspector=ok pageerrors=0 consoleErrors=0
+PASS       R1-transforms-empty-array-1440 Data rail + inspector with transforms-empty-array (mapping+viewmodel+binding) | rail=ok inspector=ok pageerrors=0 consoleErrors=0
+PASS       R1-transforms-empty-array-768 Data rail + inspector with transforms-empty-array (mapping+viewmodel+binding) | rail=ok inspector=ok pageerrors=0 consoleErrors=0
+PASS       R1-transforms-empty-array-430 Data rail + inspector with transforms-empty-array (mapping+viewmodel+binding) | rail=ok inspector=ok pageerrors=0 consoleErrors=0
+PASS       R1-transforms-empty-array-390 Data rail + inspector with transforms-empty-array (mapping+viewmodel+binding) | rail=ok inspector=ok pageerrors=0 consoleErrors=0
+PASS       R1-transforms-valid-1440 Data rail + inspector with transforms-valid (mapping+viewmodel+binding) | rail=ok inspector=ok pageerrors=0 consoleErrors=0
+PASS       R1-transforms-valid-768 Data rail + inspector with transforms-valid (mapping+viewmodel+binding) | rail=ok inspector=ok pageerrors=0 consoleErrors=0
+PASS       R1-transforms-valid-430 Data rail + inspector with transforms-valid (mapping+viewmodel+binding) | rail=ok inspector=ok pageerrors=0 consoleErrors=0
+PASS       R1-transforms-valid-390 Data rail + inspector with transforms-valid (mapping+viewmodel+binding) | rail=ok inspector=ok pageerrors=0 consoleErrors=0
+PASS       R1-viewmodel-no-fields-key-1440 Data rail + inspector with viewmodel-no-fields-key (mapping+viewmodel+binding) | rail=ok inspector=ok pageerrors=0 consoleErrors=0
+PASS       R1-viewmodel-no-fields-key-768 Data rail + inspector with viewmodel-no-fields-key (mapping+viewmodel+binding) | rail=ok inspector=ok pageerrors=0 consoleErrors=0
+PASS       R1-viewmodel-no-fields-key-430 Data rail + inspector with viewmodel-no-fields-key (mapping+viewmodel+binding) | rail=ok inspector=ok pageerrors=0 consoleErrors=0
+PASS       R1-viewmodel-no-fields-key-390 Data rail + inspector with viewmodel-no-fields-key (mapping+viewmodel+binding) | rail=ok inspector=ok pageerrors=0 consoleErrors=0
+PASS       R1-viewmodel-fields-empty-1440 Data rail + inspector with viewmodel-fields-empty (mapping+viewmodel+binding) | rail=ok inspector=ok pageerrors=0 consoleErrors=0
+PASS       R1-viewmodel-fields-empty-768 Data rail + inspector with viewmodel-fields-empty (mapping+viewmodel+binding) | rail=ok inspector=ok pageerrors=0 consoleErrors=0
+PASS       R1-viewmodel-fields-empty-430 Data rail + inspector with viewmodel-fields-empty (mapping+viewmodel+binding) | rail=ok inspector=ok pageerrors=0 consoleErrors=0
+PASS       R1-viewmodel-fields-empty-390 Data rail + inspector with viewmodel-fields-empty (mapping+viewmodel+binding) | rail=ok inspector=ok pageerrors=0 consoleErrors=0
+PASS       R1-seeded-main-1440 seeded project: mapping stored without transforms[] (UX-001 original trigger) | no crash
+PASS       R1-seeded-main-768 seeded project: mapping stored without transforms[] (UX-001 original trigger) | no crash
+PASS       R1-seeded-main-430 seeded project: mapping stored without transforms[] (UX-001 original trigger) | no crash
+PASS       R1-seeded-main-390 seeded project: mapping stored without transforms[] (UX-001 original trigger) | no crash
+FAIL       R3-builder-430 builder @430: canvas, toolbar, skip link, rail, selection | top bar 177px (15 controls); canvas 430x560px = 60% of 932px starting at y=177; skip=false; picked=true; inspector=n/a; overlap=0 — controls covered/unreachable: Máy tính, Máy tính bảng, Điện thoại; skip-to-preview not working (fi
+FAIL       R3-builder-390 builder @390: canvas, toolbar, skip link, rail, selection | top bar 179px (15 controls); canvas 390x540px = 64% of 844px starting at y=179; skip=false; picked=true; inspector=n/a; overlap=0 — controls covered/unreachable: Máy tính, Máy tính bảng, Điện thoại; skip-to-preview not working (fi
+FAIL       R3-builder-360 builder @360: canvas, toolbar, skip link, rail, selection | top bar 179px (15 controls); canvas 360x512px = 64% of 800px starting at y=179; skip=false; picked=true; inspector=n/a; overlap=0 — controls covered/unreachable: Dùng thử, Máy tính, Máy tính bảng, Điện thoại; skip-to-preview not w
+PASS       R4-Dữ liệu-1024 Dữ liệu rail @1024 | panel 329px, 15 tabs; ok
+PASS       R4-Hành động-1024 Hành động rail @1024 | panel 329px, 8 tabs; ok
+PASS       R4-Workflow-1024 Workflow rail @1024 | panel 329px, 8 tabs; ok
+PASS       R4-Dữ liệu-768 Dữ liệu rail @768 | panel 329px, 15 tabs; ok
+PASS       R4-Hành động-768 Hành động rail @768 | panel 329px, 8 tabs; ok
+PASS       R4-Workflow-768 Workflow rail @768 | panel 329px, 8 tabs; ok
+PASS       R4-Dữ liệu-430 Dữ liệu rail @430 | panel 429px, 15 tabs; ok
+PASS       R4-Hành động-430 Hành động rail @430 | panel 429px, 8 tabs; ok
+PASS       R4-Workflow-430 Workflow rail @430 | panel 429px, 8 tabs; ok
+PASS       R4-Dữ liệu-390 Dữ liệu rail @390 | panel 389px, 15 tabs; ok
+PASS       R4-Hành động-390 Hành động rail @390 | panel 389px, 8 tabs; ok
+PASS       R4-Workflow-390 Workflow rail @390 | panel 389px, 8 tabs; ok
+PASS       R5-costs-1440 /platform/costs @1440: table region keyboard | regions=[{"o":false,"t":null},{"o":false,"t":null},{"o":false,"t":null}]; ok
+PASS       R5-costs-768 /platform/costs @768: table region keyboard | regions=[{"o":false,"t":null},{"o":false,"t":null},{"o":false,"t":null}]; ok
+PASS       R5-costs-390 /platform/costs @390: table region keyboard | regions=[{"o":true,"t":"0"},{"o":true,"t":"0"},{"o":true,"t":"0"}]; ok
+PASS       R5-audit-390 /platform/audit @390: table scroll region is a tab stop only while it overflows | regions=[{"over":true,"tab":"0"}]
+PASS       R5-users-390 /platform/users @390: table scroll region is a tab stop only while it overflows | regions=[{"over":true,"tab":"0"}]
+PASS       R5-components-390 /platform/components @390: table scroll region is a tab stop only while it overflows | regions=[{"over":true,"tab":"0"}]
+PASS       R5-audit-768 /platform/audit @768: table scroll region is a tab stop only while it overflows | regions=[{"over":true,"tab":"0"}]
+PASS       R5-users-768 /platform/users @768: table scroll region is a tab stop only while it overflows | regions=[{"over":true,"tab":"0"}]
+PASS       R7-rail-contrast builder rail: normal / hover / active / focus / disabled contrast (computed) + axe color-contrast on three rail states | tabs=8; worst computed=11.29:1; normal=11.29 hover=11.66 active=11.66 focus=11.29 disabled=none present; axe color-contrast nodes=0
+INFO       R8-admin-organization-1440-ta /admin/organization @1440: all axe violations | heading-order(moderate,1); headings=H1:Cơ cấu tổ chức H3:Cơ cấu tổ chức chưa sẵn 
+INFO       R8-admin-organization-390-ta /admin/organization @390: all axe violations | heading-order(moderate,1); headings=H1:Cơ cấu tổ chức H3:Cơ cấu tổ chức chưa sẵn 
+INFO       R8-admin-data-sources-1440-ta /admin/data-sources @1440: all axe violations | heading-order(moderate,1); headings=H1:Nguồn dữ liệu H3:Nguồn dữ liệu của không  H3:Thêm nguồn dữ liệu H3:Liên kết khe dữ liệu của
+INFO       R8-admin-data-sources-390-ta /admin/data-sources @390: all axe violations | heading-order(moderate,1); headings=H1:Nguồn dữ liệu H3:Nguồn dữ liệu của không  H3:Thêm nguồn dữ liệu H3:Liên kết khe dữ liệu của
+INFO       R8-admin-data-sources-1440-wa /admin/data-sources @1440: all axe violations | heading-order(moderate,1); headings=H1:Nguồn dữ liệu H3:Nguồn dữ liệu của không  H3:Thêm nguồn dữ liệu H3:Liên kết khe dữ liệu của
+INFO       R8-admin-data-sources-390-wa /admin/data-sources @390: all axe violations | heading-order(moderate,1); headings=H1:Nguồn dữ liệu H3:Nguồn dữ liệu của không  H3:Thêm nguồn dữ liệu H3:Liên kết khe dữ liệu của
+INFO       R8-admin-company-1440-ta /admin/company @1440: all axe violations | empty-table-header(minor,1); headings=H1:Công ty TNHH Nước Sạch V H2:Thành viên của Công ty T H3:Thêm thành viên
+INFO       R8-admin-company-390-ta /admin/company @390: all axe violations | empty-table-header(minor,1); headings=H1:Công ty TNHH Nước Sạch V H2:Thành viên của Công ty T H3:Thêm thành viên
+INFO       R8-platform-tenants-1440-sa /platform/tenants/22a35312-2988-4030-b806-7e3640d8206a @1440: all axe violations | empty-table-header(minor,1); headings=H1:Công ty TNHH Nước Sạch V H2:Thành viên của Công ty T H3:Thêm thành viên
+INFO       R8-platform-tenants-390-sa /platform/tenants/22a35312-2988-4030-b806-7e3640d8206a @390: all axe violations | empty-table-header(minor,1); headings=H1:Công ty TNHH Nước Sạch V H2:Thành viên của Công ty T H3:Thêm thành viên
+
+TOTAL 61 PASS 45 FAIL 3 INFO 10 N/A 3 BLOCKED 0

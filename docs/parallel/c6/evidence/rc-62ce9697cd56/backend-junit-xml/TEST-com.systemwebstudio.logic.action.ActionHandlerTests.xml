@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.logic.action.ActionHandlerTests" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:46:13.231Z" hostname="macmini-2.local" time="0.01">
+  <properties/>
+  <testcase name="REFRESH_QUERY returns a client instruction and reads no data()" classname="com.systemwebstudio.logic.action.ActionHandlerTests" time="0.0"/>
+  <testcase name="CALL_API takes an approved datasource operation, never a url()" classname="com.systemwebstudio.logic.action.ActionHandlerTests" time="0.0"/>
+  <testcase name="NOTIFY validates channel template recipients and endpoint and sends to the port()" classname="com.systemwebstudio.logic.action.ActionHandlerTests" time="0.004"/>
+  <testcase name="preview of a write without dry run support says NOT_EXECUTED and sends nothing()" classname="com.systemwebstudio.logic.action.ActionHandlerTests" time="0.0"/>
+  <testcase name="preview of CALL_API validates or sandboxes only through the connector's own capability()" classname="com.systemwebstudio.logic.action.ActionHandlerTests" time="0.0"/>
+  <testcase name="an unwired port is NOT_IMPLEMENTED in TEST mode too, not a pretend success()" classname="com.systemwebstudio.logic.action.ActionHandlerTests" time="0.0"/>
+  <testcase name="preview of NOTIFY never sends and START_WORKFLOW never starts()" classname="com.systemwebstudio.logic.action.ActionHandlerTests" time="0.0"/>
+  <testcase name="default registry covers every action type even with no ports wired()" classname="com.systemwebstudio.logic.action.ActionHandlerTests" time="0.0"/>
+  <testcase name="UPDATE and DELETE need a required string recordId, CREATE does not()" classname="com.systemwebstudio.logic.action.ActionHandlerTests" time="0.0"/>
+  <testcase name="preview of client instructions shows the instruction that would be sent()" classname="com.systemwebstudio.logic.action.ActionHandlerTests" time="0.0"/>
+  <testcase name="preview uses the dry run capability only when the data platform offers it()" classname="com.systemwebstudio.logic.action.ActionHandlerTests" time="0.002"/>
+  <testcase name="every write type reaches the data port as a write of a WRITE query reference with its kind()" classname="com.systemwebstudio.logic.action.ActionHandlerTests" time="0.001"/>
+  <testcase name="data mutation codes are frozen and never retryable even if an adapter says so()" classname="com.systemwebstudio.logic.action.ActionHandlerTests" time="0.0"/>
+  <testcase name="registry rejects duplicates and exposes lookup()" classname="com.systemwebstudio.logic.action.ActionHandlerTests" time="0.001"/>
+  <testcase name="port failure and success map one to one()" classname="com.systemwebstudio.logic.action.ActionHandlerTests" time="0.0"/>
+  <testcase name="NAVIGATE requires a plain page id, not a url()" classname="com.systemwebstudio.logic.action.ActionHandlerTests" time="0.0"/>
+  <testcase name="START_WORKFLOW demands IdempotencyPolicy REQUIRED and passes the key and call depth()" classname="com.systemwebstudio.logic.action.ActionHandlerTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

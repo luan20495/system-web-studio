@@ -1,0 +1,16 @@
+FLOW: E2E-14 — RabbitMQ (or another dependency) down → correct failure → recovery/retry
+RESULT: FAIL
+START: 2026-10-08T00:46:09.241Z
+END: 2026-10-08T00:47:20.835Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 2c835622-e141-4b21-9e60-7575cee80684
+WORKSPACE: 597e0da5-e3c6-40ac-824b-07c86a3cf355
+HTTP EVIDENCE: none recorded
+UI ASSERTION:
+  - FAIL while the dependency is down the UI shows an unavailable/error state, never success (TIMEOUT: )
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: exception: locator.click: Timeout 30000ms exceeded. ⏎ Call log: ⏎ - waiting for getByTestId('run-workflow:e2e-wf')
+OWNER: unassigned (triage)

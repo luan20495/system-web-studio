@@ -1,0 +1,46 @@
+PASS  1. slot: ADD_DATA_SOURCE is sent with exactly {id,type,name,description} and the slot appears in the list  — {"type":"ADD_DATA_SOURCE","definitionId":"inventory","definition":{"id":"inventory","type":"postgres","name":"Kho","description":"Tồn kho"}}
+PASS  2. slot: nothing physical ever leaves the editor (no sourceRef / credential / url / host / sql in any operation)
+PASS  3. slot validation: duplicate id, a non-lowercase id and a bad type are refused with a message and NO operation is sent  — Mã khe “orders” đã tồn tại. | Mã khe chỉ gồm chữ thường, số và dấu gạch ngang (bắt đầu bằng chữ hoặc số, tối đa 64 ký tự). | Loại nguồn gồm chữ thường, số, dấu gạch ngang (bắt đầu bằng chữ, tối đa 32 ký tự), ví dụ: postgres.
+PASS  4. slot edit: UPDATE_DATA_SOURCE carries only the changed field; the id cannot change  — {"type":"UPDATE_DATA_SOURCE","definitionId":"spare","definition":{"name":"Dự phòng mới"}}
+PASS  4b. a slot that already has a real source: its type is locked and the source reference is never shown
+PASS  5. slot delete (unreferenced): REMOVE_DATA_SOURCE with only the id; the slot is gone  — {"type":"REMOVE_DATA_SOURCE","definitionId":"spare"}
+PASS  6. slot delete (referenced): blocked, every dependant named, the confirm is disabled and nothing is sent  — Không xóa được: khe này đang được dùng. Máy chủ không tự xóa các mục phụ thuộc, nên hãy gỡ chúng trước: Truy vấn “Tiêu đ
+PASS  7. server refusal (commit = false): the editor says it was not saved and does not pretend the slot exists
+PASS  8. empty state: no slot → says so, points at the source step, and the query form is not offered
+PASS  9. read-only (no APP_EDIT): no slot / public / binding control is offered, with the reason shown
+PASS  10. READ query: public true and public false are both valid and written as UPDATE_QUERY {public}
+PASS  11. WRITE query: no public switch exists, the reason is shown, and no operation can be produced for it
+PASS  12. persisted WRITE+public: shown as INVALID (not silently fixed, no switch, readiness not-ready); only an explicit click turns it off (UPDATE_QUERY public=false)
+PASS  13. query form: the public box is disabled and cleared for WRITE; READ + public writes ADD_QUERY with public:true; public is never set without the box
+PASS  13b. REGRESSION (found on the real stack): a slot added in this session is usable by the query form at once — no need to touch the slot select  — {"id":"q1","name":"Mới","dataSourceRef":"fresh","mode":"READ","operationKey":"orders.new","params":[]}
+PASS  14. binding picker: only bindable props (no ctaLabel), only components with bindable props, only public READ queries selectable (private / WRITE disabled with the reason)  — [["",false],["q-title",true],["q-items",false],["q-write",true]]
+PASS  15. bind: section.prop → public READ query → slot (derived, shown); ADD_DATA_BINDING has only {id,sectionId,prop,queryRef} — never a slot, sourceRef or credential  — hero → truy vấn Sản phẩm → khe Đơn hàng
+PASS  16. binding edit / remove: UPDATE_DATA_BINDING {queryRef} (non-public queries not offered), REMOVE_DATA_BINDING {id}; the list updates
+PASS  16b. incomplete / invalid binding: refused with a message, nothing sent
+PASS  17. persisted bindings are validated: a non-bindable prop and a non-public query are shown as problems on the row; a good one has none
+PASS  18. readiness uses the runtime vocabulary and never shows rows
+PASS  18b. the five C2 runtime states are listed (loading-config, not-ready, loading-data, ready, error); the Studio shows no data rows
+PASS  19. Public V1 is READ-only: the only public controls are the switches of READ queries; no public action / mutation / workflow control or wording exists
+PASS  20. publish approval lists exactly the public READ queries (ids, names, slots, where they are used) in document order — private and WRITE queries are not listed  — Dữ liệu sẽ được công khai (2 truy vấn) Bất kỳ ai mở được trang này đều chạy được các truy vấn dưới đây (chỉ đọc, không cần đăng nhập). Chỉ xuất bản khi dữ liệu 
+PASS  20a. the review shows how many queries become public
+PASS  20b. the warning says anyone who can open the page may run them, read-only, no sign-in
+PASS  21. acknowledgement is required: Publish is disabled until it is ticked, and a forced click sends nothing
+PASS  22. after the acknowledgement Publish is sent exactly as the release contract says [visibility, revision, key] — no extra field, no acknowledgePublicData on the wire  — [{"name":"publish","args":["PRIVATE",7,"ui-705d431a-bf67-47a6-9733-347385f9aa90"]}]
+PASS  23. after publishing, the server's PUBLIC_QUERIES event is shown and agrees with what was announced (no mismatch notice)  — Máy chủ đã ghi vào bản phát hành: q-title, q-items
+PASS  23b. when the server froze a different list, the difference is shown, not hidden (missing q-items, extra q-extra)  —  Khác với danh sách đã hiện trước khi xuất bản (thiếu: q-items; thêm: q-extra).
+PASS  24. visibility only changes the explanation: with PRIVATE the note says there is no data address; the acknowledgement is still required (public queries exist)
+PASS  25. only private / WRITE queries: no public-data warning, no acknowledgement, Publish works at once
+PASS  25. no queries: no public-data warning, no acknowledgement, Publish works at once
+PASS  25. no draft (code app): no public-data warning, no acknowledgement, Publish works at once
+PASS  26. a draft the server will refuse (persisted WRITE+public, a binding to a non-public query) is flagged before publishing; the dialog stays advisory (the server decides) and no public list is invented  — Máy chủ có thể từ chối bản này Chỉ truy vấn ĐỌC mới được công khai; “Ghi” là truy vấn ghi. Truy vấn “q-private” chưa công khai: bật “Công kh
+PASS  27. runtime state LOADING CONFIG (C2 runtime): loading-config, aria-busy, C5 vocabulary "Đang tải cấu hình", no data request yet, authored page still visible
+PASS  28. runtime state NOT_READY: apiBase null → api-base-missing; cross-origin → api-base-cross-origin; no config → config-unavailable; NO request is made, nothing is guessed, the authored text stays; C5 explains each
+PASS  29. runtime state LOADING DATA: loading-data + aria-busy, "Đang tải dữ liệu"; the authored values are still shown
+PASS  30. runtime state READY: sequence loading-config → loading-data → ready; bound elements are ready and carry the data (text via textContent)  — loading-config>loading-data>ready
+PASS  31. the page calls ONLY the same-origin apiBase: POST …/_data/queries/{id}/run for the 2 public READ queries, once each, body {"params":{}}, no cookie / authorization, nothing else (no action, mutation, workflow, other query)  — POST /c2/site/_data/queries/q-items/run | POST /c2/site/_data/queries/q-title/run
+PASS  32. runtime state ERROR: a query not in the active release's list (404) → error, detail q-items:not-found, only that element is error, the other stays ready; C5 explains it
+PASS  33. error codes of the runtime are all understood: forbidden / rate-limited / unavailable / invalid-response / http-NNN (each has a C5 explanation)  — {"forbidden":"forbidden+forbidden","rate-limited":"rate-limited+rate-limited","unavailable":"unavailable+unavailable","invalid-response":"invalid-response+invalid-response","http-418":"http-418+http-418"}
+PASS  33b. an empty result is not an error: the element is empty, the page is ready
+PASS  no console error / warning / uncaught exception in any page
+
+44/44 checks passed

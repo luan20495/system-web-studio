@@ -1,0 +1,82 @@
+PASS  DnD library→canvas: drop shield appears only while dragging
+PASS  DnD library→canvas: insert indicator shown while dragging  — y=475.359375
+PASS  DnD library→canvas: emits one ADD_SECTION for the registry component  — {"type":"ADD_SECTION","sectionType":"ContactForm","sectionId":"contactform-6dzkm","props":{"title":"Tiêu đề mới"},"index":2}
+PASS  DnD library→canvas: inserted between Hero and Testimonials (index 2)  — index=2
+PASS  DnD library→canvas: new section appears in the page tree at that slot  — Thanh điều hướng | Đầu trang (Hero) | Form liên hệ | Đánh giá khách hàng | Chân trang
+PASS  DnD library→canvas: no page errors
+PASS  Reorder (tree handle, pointer): emits MOVE_SECTION for the dragged section  — {"type":"MOVE_SECTION","sectionId":"s-hero","index":2}
+PASS  Reorder (tree handle, pointer): Hero now after Testimonials  — Thanh điều hướng | Đánh giá khách hàng | Đầu trang (Hero) | Chân trang
+PASS  Reorder: no page errors
+PASS  Canvas section drag (handle in the gutter beside the preview): MOVE_SECTION emitted 12/12
+PASS  Canvas section drag: insert indicator visible during every drag
+PASS  Canvas: handles sit beside the iframe, not over it  — frame right=1032 gutter left=1032
+PASS  Canvas: handles are visible at rest (not opacity 0)  — opacity=0.65
+PASS  Select: clicking a section on the canvas opens the inspector for it  — Đầu trang (Hero)
+PASS  Inspector: has Content/Design/Data/Action/Permission/Advanced tabs  — Nội dung | Thiết kếchưa | Dữ liệuchưa | Hành độngchưa | Quyền | Nâng cao
+PASS  Inspector edit: Save emits a typed prop operation  — [{"type":"UPDATE_PROP","sectionId":"s-hero","path":"title","value":"Tiêu đề mới từ test"}]
+PASS  Inspector edit: canvas re-renders with the new title
+PASS  Advanced tab is read-only (no editable inputs)
+PASS  Inspector Data tab says Chưa sẵn sàng with a reason  — Đầu trang (Hero) s-hero ✕ Nội dung Thiết kếchưa Dữ liệuchưa Hành độngchưa Quyền Nâng cao Chưa sẵn sàng  Máy chủ chưa nhận thao tác dữ liệu/h
+PASS  Click/keyboard add (Thêm button via Enter): emits ADD_SECTION without a pointer  — {"type":"ADD_SECTION","sectionType":"Hero","sectionId":"hero-94ua3","props":{"title":"Tiêu đề mới"},"index":3}
+PASS  Footer stays last: its Lên/Xuống buttons are disabled instead of silently doing nothing
+PASS  Keyboard reorder (Lên/Xuống buttons): emits MOVE_SECTION  — {"type":"MOVE_SECTION","sectionId":"s-test","index":1}
+PASS  Keyboard DnD on handle (Space, ArrowDown, Space): emits MOVE_SECTION  — {"type":"MOVE_SECTION","sectionId":"s-nav","index":1}
+PASS  Keyboard DnD announces in Vietnamese via live region  — ✓ Đã lưu Đang ở trên vùng có thể thả.
+PASS  Esc cancels a keyboard drag (no operation emitted)
+PASS  Dialog: delete-section confirmation opens role=dialog aria-modal with a name
+PASS  Dialog: focus moves inside on open
+PASS  Dialog: Tab is trapped inside after 12 presses
+PASS  Dialog: Esc closes
+PASS  Dialog: focus returns to the opener
+PASS  Tabs: Arrow key moves focus/selection (roving tabindex)  — false/-1,true/0,false/-1,false/-1,false/-1,false/-1,false/-1,false/-1
+PASS  A11y: every button/input/tab has an accessible name
+PASS  Test mode is a separate mode and says Chưa sẵn sàng instead of faking a run  — Trang Thành phần Dữ liệu Biểu mẫu Hành động Workflow Giao diện AI Thành phần  Bạn chỉ có quyền xem ứng dụng này.  Đang ở chế độ dùng thử: bản xem trước không ch
+PASS  Panel Dữ liệu: renders and states readiness honestly  — Dữ liệu  Nguồn → khám phá → truy vấn → ánh xạ → ViewModel → gắn vào thành phần. Không có dữ liệu mẫu giả.  Nguồn dữ liệuchưa Khám phá cấu trúcchưa Tru
+PASS  Panel Hành động: renders and states readiness honestly  — Hành động  Hành động là khai báo có kiểu: chuyển trang, làm mới dữ liệu, gửi biểu mẫu, ghi bản ghi, gọi thao tác đã duyệt, gửi thông báo, chạy workflo
+PASS  Panel Workflow: renders and states readiness honestly  — Workflow  Chuỗi các bước: hành động, chờ, phê duyệt, rẽ nhánh, kết thúc. Mỗi bước hiển thị thử lại, giới hạn thời gian, điều kiện, phê duyệt và hoàn t
+PASS  Page: create dialog previews the route  — Thêm trang Tên trang  Đường dẫn dự kiến: /gioi-thieu/  Hủy Thêm trang
+PASS  Page: create emits ADD_PAGE with a unique slug  — {"type":"ADD_PAGE","pageId":"p-12dc5","props":{"slug":"gioi-thieu","title":"Giới thiệu"}}
+PASS  Page: new page appears in the tree and becomes editable
+PASS  Page: reserved/invalid route is rejected with a reason and Save is disabled  — Đổi tên và đường dẫn Tên trang Đường dẫn “api” là đường dẫn dành riêng của hệ thống. Hủy Lưu
+PASS  Page: rename/route emits UPDATE_PAGE  — {"type":"UPDATE_PAGE","pageId":"p-12dc5","props":{"title":"Về chúng tôi","slug":"ve-chung-toi"}}
+PASS  Menu: adding a page to the menu emits SET_NAVIGATION with that page  — {"type":"SET_NAVIGATION","value":[{"id":"n-h5s77","label":"Về chúng tôi","pageId":"p-12dc5"}]}
+PASS  404: saving emits UPDATE_SITE with notFound title and message  — {"type":"UPDATE_SITE","props":{"notFound":{"title":"Lạc đường rồi","message":"Trang này không tồn tại."}}}
+PASS  Set-home and page reorder are NOT_READY with a reason (no fake control)  — g Đặt làm trang chủ Chưa sẵn sàng  Máy chủ chưa có thao tác đặt trang chủ (trang chủ là phần gốc của tài liệu).  Chưa sẵ
+PASS  Page: the home page cannot be deleted (button disabled)
+PASS  Page: delete confirmation states what will be removed (menu link)  — Xóa trang “Về chúng tôi”?  Xoá trang “Về chúng tôi” sẽ xoá 0 phần của trang và 1 liên kết trong menu.  Có thể khôi phục từ lịch sử phiên bản.  Hủy Xóa trang
+PASS  Page: delete emits REMOVE_PAGE  — {"type":"REMOVE_PAGE","pageId":"p-12dc5"}
+PASS  Page: no page errors
+PASS  Preflight: Publish with a menu link to a missing page opens a blocking dialog  — Chưa thể xuất bản Lỗi Liên kết menu “Trang đã mất” trỏ tới một trang không còn tồn tại. Đóng
+PASS  Preflight: the publish flow was NOT started
+PASS  Preflight: a clean document goes straight to the publish flow
+PASS  Action: exactly the 9 canonical types are offered (REFRESH_QUERY present, no RUN_QUERY/WRITE_DATA/SET_VALUE)  — NAVIGATE,REFRESH_QUERY,SUBMIT_FORM,CREATE_RECORD,UPDATE_RECORD,DELETE_RECORD,CALL_API,NOTIFY,START_WORKFLOW
+PASS  Action: REFRESH_QUERY asks for a query of the document (Danh sách đơn), not a free-form field
+PASS  Action editor has no free-text/code box (no arbitrary JS)
+PASS  Action: saving emits ADD_ACTION with type REFRESH_QUERY + queryRef (canonical definition)  — {"type":"ADD_ACTION","definitionId":"a1","definition":{"id":"a1","name":"Làm mới dữ liệu","type":"REFRESH_QUERY","queryRef":"q-orders"}}
+PASS  Action: a child/unattached action carries no trigger  — {"id":"a1","name":"Làm mới dữ liệu","type":"REFRESH_QUERY","queryRef":"q-orders"}
+PASS  Workflow panel is available with the V2 backend and offers a new workflow  — Workflow ＋ Workflow  Chuỗi các bước: hành động, chờ, phê duyệt, rẽ nhánh, kết thúc. Mỗi bước hiển thị thử lại, giới hạn 
+PASS  Workflow editor opens (steps ACTION/WAIT/APPROVAL/BRANCH/END, no BPMN canvas)  — MANUAL,SCHEDULE,ACTION
+PASS  Action/Workflow: no page errors
+PASS  Query: param types are the contract's six, including DATE  — STRING,INTEGER,NUMBER,BOOLEAN,TIMESTAMP,DATE
+PASS  Query: saving emits ADD_QUERY with a DATE param, required by default (no `required:false` unless the author unticked it)  — {"id":"q1","name":"Đơn theo ngày","dataSourceRef":"ds1","mode":"READ","operationKey":"orders.byDate","params":[{"name":"tu_ngay","type":"DATE"}]}
+PASS  Mapping: the transform picker offers canonical C3 transform types only, nothing legacy  — toString,toNumber,trim,lower,upper
+PASS  Mapping: saving emits ADD_MAPPING with fields[].transforms[] (type trim) and no legacy `transform` key  — [{"from":"order_date","to":"ngay","transforms":[{"type":"trim"}]}]
+PASS  Data: the wizard says Chưa sẵn sàng for sources/discovery/preview even with the V2 backend (no operation creates a source)  — Dữ liệu  Nguồn → khám phá → truy vấn → ánh xạ → ViewModel → gắn vào thành phần. Không có dữ liệu mẫu giả.  Nguồn dữ liệuchưa Khám phá cấu trúcchưa Truy vấn Ánh 
+PASS  PERM viewer (APP_VIEW, APP_USE): the Builder opens (no redirect) with a clear read-only notice
+PASS  PERM viewer: with nothing selected the inspector says it is read-only (not 'click to edit')
+PASS  PERM viewer: every property input is disabled (no editing)
+PASS  PERM viewer: Save/edit buttons are not offered or are disabled
+PASS  PERM viewer: Publish is disabled and says why (APP_PUBLISH)  — Bạn không có quyền xuất bản (cũng là quyền khôi phục bản đã xuất bản).
+PASS  PERM viewer: every Test control is disabled (missing APP_EDIT and the run permissions)
+PASS  PERM viewer: each disabled control names the missing permissions in its title  — Bạn chưa có quyền: Chạy truy vấn, Chỉnh sửa ứng dụng.
+PASS  PERM viewer: clicking disabled controls sends NOTHING to the runtime (the server would refuse a forged call anyway)  — []
+PASS  PERM viewer: no console errors/warnings
+PASS  PERM editor (all conjunctions): the Test controls are enabled
+PASS  PERM editor: each control sent exactly one runtime call  — ["query:q-orders","action:a-nav","action:a-create","workflow:wf1"]
+PASS  PERM partial: a navigate action needs only APP_USE + ACTION_EXECUTE (+APP_EDIT in TEST): enabled
+PASS  PERM partial: the query is disabled and names QUERY_EXECUTE (Chạy truy vấn)  — Bạn chưa có quyền: Chạy truy vấn.
+PASS  PERM partial: the mutating action is disabled and names DATA_MUTATE (Ghi dữ liệu)  — Bạn chưa có quyền: Ghi dữ liệu.
+PASS  PERM partial: the workflow is disabled and names WORKFLOW_EXECUTE (Chạy workflow)  — Bạn chưa có quyền: Chạy workflow.
+PASS  PERM role names alone grant nothing: read-only notice, Publish disabled
+
+80/80 passed

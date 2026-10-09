@@ -1,0 +1,387 @@
+{
+ "NAME": "C6-UG-QA-muxvt6gd",
+ "state": {
+  "slug": "c6-ug-qa-muxvt6gd-392194",
+  "url": "https://sites.toolsmcp.uk/c6-ug-qa-muxvt6gd-392194/",
+  "wsId": "ead85579-5895-49c4-aa84-4ad7816e6bee",
+  "projectId": "3921946d-4a6a-4ebc-beb7-65aa116d10b2",
+  "depIds": [],
+  "running": [
+   "e9d034e9-5927-4f89-92d9-7a1a1d50021c"
+  ],
+  "rolled": [
+   "cb2303e4-d436-4dfc-9d1a-901865e80359"
+  ]
+ },
+ "R": {
+  "UG-001": {
+   "status": "PASS",
+   "ui": "GET /studio -> 200 then redirected to /login?next=%2Fstudio (login page, title AI Software Factory)",
+   "api": "GET /api/v1/auth/me 401; GET /api/v1/auth/config 200",
+   "note": "HTTP 200 only proves a web server answered; version is checked in UG-008"
+  },
+  "UG-002": {
+   "status": "PASS",
+   "ui": "GET /admin anonymous -> /login?next=%2Fadmin (the same login page; no separate admin login/portal screen)",
+   "api": "GET /api/v1/auth/me 401"
+  },
+  "UG-003": {
+   "status": "PASS",
+   "ui": "GET /platform anonymous -> /login?next=%2Fplatform (the same login page; no separate platform login/portal screen)",
+   "api": "GET /api/v1/auth/me 401"
+  },
+  "UG-004": {
+   "status": "PASS",
+   "ui": "browser calls relative /api/v1/... on the Studio origin",
+   "api": "GET /api/v1/auth/config 200 same origin; a separate API host does not answer (no answer)"
+  },
+  "UG-005": {
+   "status": "PASS",
+   "ui": "sites gateway answers",
+   "api": "GET https://sites.toolsmcp.uk/healthz 200 (a real slug is exercised in UG-026)"
+  },
+  "cfg": {
+   "localLogin": true,
+   "oidc": false,
+   "oidcLoginUrl": "/oauth2/authorization/oidc",
+   "signup": false,
+   "signupInviteRequired": false,
+   "codeProjects": false,
+   "serverApps": false,
+   "codeAppPublicPublish": false,
+   "publicPublish": true,
+   "needsSetup": false,
+   "saml": false,
+   "samlLabel": "Đăng nhập SAML của công ty",
+   "samlLoginUrl": "/oauth2/authorization/oidc?idp=saml",
+   "mfa": "IDP"
+  },
+  "UG-011": {
+   "status": "PASS",
+   "ui": "message shown: Sai tên đăng nhập hoặc mật khẩu.",
+   "api": "POST /api/v1/auth/login 401"
+  },
+  "UG-010": {
+   "status": "PASS",
+   "ui": "after Đăng nhập -> /studio; portal radio default = [{\"checked\":false,\"v\":\"admin\"},{\"checked\":true,\"v\":\"builder\"}] (guide does not mention the 'Bạn muốn vào' choice)",
+   "api": "GET /api/v1/auth/csrf 200; POST /api/v1/auth/login 200; GET /api/v1/auth/me 200; GET /api/v1/components 200; GET /api/v1/me/usage 200; GET /api/v1/workspaces/{id}/projects 200"
+  },
+  "me": {
+   "status": 200,
+   "keys": [
+    "id",
+    "username",
+    "displayName",
+    "roles",
+    "workspaces",
+    "systemAdmin",
+    "tenantId",
+    "tenantRole",
+    "platformScope",
+    "businessAccess",
+    "tenants",
+    "permissions"
+   ],
+   "workspaces": [
+    {
+     "role": "WORKSPACE_ADMIN",
+     "permissionsKey": [
+      "permissions"
+     ]
+    }
+   ]
+  },
+  "meTop": [
+   "id",
+   "username",
+   "displayName",
+   "roles",
+   "workspaces",
+   "systemAdmin",
+   "tenantId",
+   "tenantRole",
+   "platformScope",
+   "businessAccess",
+   "tenants",
+   "permissions"
+  ],
+  "UG-012": {
+   "status": "PASS",
+   "ui": "sidebar link 'Ứng dụng' -> /studio/projects"
+  },
+  "UG-013": {
+   "status": "PASS",
+   "ui": "'+ Tạo ứng dụng' -> /studio/new",
+   "api": "GET /api/v1/templates"
+  },
+  "UG-014": {
+   "status": "PASS",
+   "ui": "card 'Website' + 'Sẵn sàng' present"
+  },
+  "UG-015": {
+   "status": "PASS",
+   "ui": "'Bắt đầu từ' -> 'Trang mặc định' radio checked by default = true"
+  },
+  "UG-016": {
+   "status": "PASS",
+   "ui": "text box with placeholder 'Tên ứng dụng' (no visible label; the guide says 'type Tên ứng dụng')"
+  },
+  "UG-018": {
+   "status": "PASS",
+   "ui": "5 other kinds: ok,ok,ok,ok,ok (each shows 'Chưa bật' with a reason)",
+   "api": "auth/config: codeProjects=false serverApps=false"
+  },
+  "UG-017": {
+   "status": "PASS",
+   "ui": "'Tạo website' -> /studio/projects/{id}/ai",
+   "api": "POST /api/v1/workspaces/{id}/projects 201"
+  },
+  "UG-019": {
+   "status": "FAIL",
+   "ui": "editor opened at /studio/projects/{id}/ai (mode tabs: ✦ AI* Design Code) — guide says it opens in Design",
+   "note": "opens in the ✦ AI mode"
+  },
+  "UG-030": {
+   "status": "PASS",
+   "ui": "mode tabs present: ✦ AI* | Design | Code"
+  },
+  "UG-033": {
+   "status": "PASS",
+   "ui": "older header in AI mode: Website✓ Phiên bản✓ Tệp✓ Chia sẻ✓ ⚙✓ Xuất bản✓"
+  },
+  "UG-031": {
+   "status": "PASS",
+   "ui": "Code mode for a website: Chưa triển khai Code Mode cần kiến trúc sinh mã nguồn Ứng dụng này được lưu dưới dạng Page Schema (JSON) và chỉ dùng component trong Company Component Registry. Hệ thống chưa tạo repository mã nguồn, "
+  },
+  "UG-032": {
+   "status": "PASS",
+   "ui": "Design top bar: Chỉnh sửa✓ Dùng thử✓ Máy tính✓ Máy tính bảng✓ Điện thoại✓ Chia sẻ✓ Xuất bản✓; problems number on Xuất bản: Xuất bản"
+  },
+  "UG-040": {
+   "status": "FAIL",
+   "ui": "rail tabs: Trang | Thành phần | Dữ liệu | Biểu mẫu | Hành động | Workflow | Giao diện | AI; visible heading 'Công cụ' ABSENT",
+   "note": "the guide names the rail 'Công cụ' but no such label is shown"
+  },
+  "UG-041": {
+   "status": "PASS",
+   "ui": "inspector tabs after selecting a section: Nội dung | Thiết kếchưa | Dữ liệu | Hành động | Quyền | Nâng cao"
+  },
+  "UG-020": {
+   "status": "PASS",
+   "ui": "selected 'Đầu trang (Hero)' in the canvas; right panel 'Nội dung' -> field 'Tiêu đề' edited; an explicit button 'Lưu thay đổi' had to be pressed (the guide does not mention it)",
+   "api": "PATCH /api/v1/workspaces/{id}/projects/{id}/schema 200; GET /api/v1/workspaces/{id}/projects/{id}/versions 200",
+   "note": "MISSING STEP: guide never mentions 'Lưu thay đổi' / 'Hoàn tác'"
+  },
+  "UG-021": {
+   "status": "PASS",
+   "ui": "top-bar texts observed after saving: Đang lưu… -> ✓ Đã lưu 16:05",
+   "api": "PATCH /api/v1/workspaces/{id}/projects/{id}/schema 200; GET /api/v1/workspaces/{id}/projects/{id}/versions 200"
+  },
+  "UG-022": {
+   "status": "PASS",
+   "ui": "after reload the edited hero title is still there",
+   "api": "GET …/schema, GET …/versions"
+  },
+  "UG-042": {
+   "status": "PASS",
+   "ui": "Phiên bản header shows revision/version",
+   "api": "GET …/versions 200, 2 versions (a new immutable version per saved change)"
+  },
+  "UG-023": {
+   "status": "PASS",
+   "ui": "dialog title 'Xuất bản website': true; options: Riêng tư Chỉ thành viên được cấp quyền. | Công khai Mọi người có thể truy cập. | Hủy | Xuất bản",
+   "api": "GET …/site, GET …/deployments"
+  },
+  "UG-024": {
+   "status": "PASS",
+   "ui": "chose 'Công khai' then 'Xuất bản'; statuses seen: RUNNING",
+   "api": "POST /api/v1/workspaces/{id}/projects/{id}/publish 202; GET /api/v1/workspaces/{id}/projects/{id}/deployments/{id} 200; GET /api/v1/workspaces/{id}/projects/{id}/deployments 200; GET /api/v1/workspaces/{id}/projects/{id}/site 200"
+  },
+  "UG-025": {
+   "status": "PASS",
+   "ui": "final dialog text: ật — Running security checks Đang build — Building (static site, or sandbox build for code apps) Đang triển khai — Switching the site to the new artifact Đang chạy — Deployment is running Website đã lên: https://sites.toolsmcp.uk/c6-ug-qa-muxvt6gd-392194/ Đóng",
+   "note": ""
+  },
+  "UG-026": {
+   "status": "PASS",
+   "ui": "anonymous GET https://sites.toolsmcp.uk/c6-ug-qa-muxvt6gd-392194/ -> 200; page contains the edited title: true",
+   "api": "GET https://sites.toolsmcp.uk/<slug>/ (anonymous, no cookie)"
+  },
+  "depsAfter1": [
+   {
+    "id": "e9d034e9-5927-4f89-92d9-7a1a1d50021c",
+    "projectId": "3921946d-4a6a-4ebc-beb7-65aa116d10b2",
+    "versionId": "a5c21eb4-d5ab-4c8f-90fc-27c00cf1775a",
+    "versionNumber": 2,
+    "visibility": "PUBLIC",
+    "status": "RUNNING",
+    "url": "https://sites.toolsmcp.uk/c6-ug-qa-muxvt6gd-392194/",
+    "error": null,
+    "provider": "static",
+    "createdAt": "2026-10-07T09:05:24.187793Z",
+    "updatedAt": "2026-10-07T09:05:24.327467Z",
+    "finishedAt": "2026-10-07T09:05:24.327467Z",
+    "events": [],
+    "mock": false
+   }
+  ],
+  "UG-043": {
+   "status": "FAIL",
+   "ui": "offline save -> top bar 'Lưu thất bại' true; button 'Thử lại' count 0; raw toast shown: [\"Không kết nối được tới máy chủ. Kiểm tra backend rồi thử lại.\"]; pressing 'Lưu thay đổi' again online -> ✓ Đã lưu 16:05",
+   "api": "retry (second 'Lưu thay đổi'): PATCH /api/v1/workspaces/{id}/projects/{id}/schema 200",
+   "note": "no 'Thử lại' control; the failure toast is the raw English browser message"
+  },
+  "UG-044": {
+   "status": "PASS",
+   "ui": "stale save message: Project vừa được thay đổi ở nơi khác.",
+   "api": "GET /api/v1/auth/csrf 200; PATCH /api/v1/workspaces/{id}/projects/{id}/schema 409; GET /api/v1/projects/{id} 200; GET /api/v1/workspaces/{id}/projects/{id}/versions 200; GET /api/v1/workspaces/{id}/projects/{id}/prompts 200; GET /api/v1/workspaces/{id}/projects/{id}/schema 200; GET /api/v1/workspaces/{id}/projects/{id}/assets 200"
+  },
+  "pub2": {
+   "timeline": [
+    "RUNNING"
+   ],
+   "serves2": true
+  },
+  "UG-103": {
+   "status": "PASS",
+   "ui": "heading Các lần xuất bản (2); before clicking the heading 'Phục vụ lại bản này' buttons visible: 0; after expanding: 1; entries show 'Phiên bản N · công khai · <time>' and 'Đang phục vụ' (not raw RUNNING)",
+   "api": "GET …/deployments",
+   "note": "MISSING STEP: the history is collapsed; the guide never says to click 'Các lần xuất bản (N)'"
+  },
+  "depsAfterRollback": [
+   {
+    "id": "cb2303e4-d436-4dfc-9d1a-901865e80359",
+    "v": 5,
+    "status": "ROLLED_BACK"
+   },
+   {
+    "id": "e9d034e9-5927-4f89-92d9-7a1a1d50021c",
+    "v": 2,
+    "status": "RUNNING"
+   }
+  ],
+  "UG-104": {
+   "status": "PASS",
+   "ui": "'Phục vụ lại bản này' on the older release -> the public page now shows the OLD content",
+   "api": "POST /api/v1/workspaces/{id}/projects/{id}/site/rollback 200; GET /api/v1/workspaces/{id}/projects/{id}/site 200; GET /api/v1/workspaces/{id}/projects/{id}/deployments 200"
+  },
+  "UG-105": {
+   "status": "PASS",
+   "ui": "deployment statuses after rollback: v5:ROLLED_BACK, v2:RUNNING",
+   "api": "GET …/deployments"
+  },
+  "UG-108": {
+   "status": "FAIL",
+   "ui": "guide: 'If the active release changed under you, rollback says it is stale' (UI text not triggered by C6; API checked)",
+   "api": "POST …/site/rollback expectedActiveDeploymentId=<wrong> -> 200 "
+  },
+  "UG-110": {
+   "status": "PASS",
+   "ui": "guide: 'a repeated click never creates a second operation (idempotency key per request)'",
+   "api": "2 concurrent POST …/publish with one Idempotency-Key -> 202/202, same deployment id: true"
+  },
+  "busyProbe": {
+   "status": 200
+  },
+  "UG-107": {
+   "status": "BLOCKED",
+   "ui": "banner 'đang xuất bản/đang hoàn tác' and 'bận' countdown (UI not captured: the in-flight window is a few seconds)",
+   "api": "POST …/site/rollback right after a publish started -> 200  Retry-After=-",
+   "note": "publish finished before the probe or no lease conflict was observable"
+  },
+  "UG-106": {
+   "status": "FAIL",
+   "ui": "'Gỡ trang xuống' present 1; public GET after it -> 200; history after unpublish still lists: Các lần xuất bản (1)",
+   "api": ""
+  },
+  "rollbackAfterUnpublish": 200,
+  "UG-050": {
+   "status": "PASS",
+   "ui": "'Phiên bản' -> 'Lịch sử phiên bản'; 'Khôi phục' buttons: 4"
+  },
+  "UG-051": {
+   "status": "FAIL",
+   "ui": "'Khôi phục' on an old version",
+   "api": " ; versions 5 -> 5 (a NEW version, old ones kept)"
+  },
+  "UG-060": {
+   "status": "FAIL",
+   "ui": "AI mode labels: {\"Mô tả thay đổi\":false,\"Gửi ↑\":true,\"Huỷ\":false,\"Bạn muốn ứng dụng thay đổi thế nào?\":true,\"Chế độ thử nghiệm\":true}",
+   "note": "guide label 'Mô tả thay đổi' not found; the prompt box is introduced by 'Bạn muốn ứng dụng thay đổi thế nào?'"
+  },
+  "UG-063": {
+   "status": "PASS",
+   "ui": "model list has the simulator option 'Chế độ thử nghiệm (không dùng AI thật)': true; default option 'Tự động' goes to OpenRouter free models (C6 did not use it)"
+  },
+  "UG-061": {
+   "status": "FAIL",
+   "ui": "progress texts seen while the simulator ran: ",
+   "api": "POST /api/v1/workspaces/{id}/projects/{id}/prompts 200",
+   "note": "steps/elapsed/countdown(120 s)/Huỷ checked by presence only; the 15 s silence message cannot occur with the simulator"
+  },
+  "UG-062": {
+   "status": "BLOCKED",
+   "ui": "needs a real model to stay silent for 15 s; C6 does not send data to external AI providers",
+   "note": "not executed"
+  },
+  "UG-080": {
+   "status": "FAIL",
+   "ui": "rail 'Dữ liệu' steps: Nguồn dữ liệu✓ Khám phá cấu trúc✓ Truy vấn✓ Ánh xạ✓ ViewModel✓ Gắn vào thành phần✓ Dữ liệu công khai✗"
+  },
+  "UG-081": {
+   "status": "FAIL",
+   "ui": "'Thêm nguồn dữ liệu' absent; creating a source was NOT executed (public stack has no globally reachable data source; guide §7.1)",
+   "note": "creation not executed"
+  },
+  "UG-082": {
+   "status": "BLOCKED",
+   "ui": "'Kiểm tra kết nối' not visible without an existing source"
+  },
+  "UG-084": {
+   "status": "FAIL",
+   "ui": "'Khe dữ liệu': false; 'Thêm khe': false"
+  },
+  "UG-085": {
+   "status": "BLOCKED",
+   "ui": "'Liên kết khe dữ liệu': false"
+  },
+  "UG-087": {
+   "status": "FAIL",
+   "ui": "tab 'Dữ liệu công khai': false"
+  },
+  "UG-089": {
+   "status": "BLOCKED",
+   "ui": "public-data tab text: ← C6-UG-QA-muxvt6gd Phiên bản 5 · revision 4 · Công khai ✓ Đã lưu 16:05 ✦ AI Design Code Chỉnh sửa Dùng thử Máy tính Máy tính bảng Điện thoại Website Phiên bản Tệp ⚙ Chia sẻ Xuất bản Trang Thành phần ",
+   "note": "needs a READ query bound to a component; not executed"
+  },
+  "UG-090": {
+   "status": "FAIL",
+   "ui": "banner: Chế độ dùng thử Không lưu thay đổi vào dữ liệu thật. Muốn sửa ứng dụng, chuyển về “Chỉnh sửa”. Thao tác ghi dữ liệu chỉ được mô tả là “sẽ chạy”, không thực hiện. Thao tác gọi nguồn dữ liệu chưa hỗ trợ chạy thử sẽ được ghi rõ là không hỗ trợ. Thông báo không được gửi thật. Xuất bản không chạy trong chế độ thử. Chạy thử workflow vẫn có thể tạo một bản ghi lượt chạy (workflow_run) trên máy chủ. Chưa sẵn sàng Chưa có API Test Mode. “Dùng thử” sẽ chạy thật qua máy chủ, không giả lập thành công ở trình duyệt. Hành động (0) Chưa có hành động nào để thử. Workflow (0) Chưa có workflow nào. Xuất bản Không chạy trong chế độ thử Xuất bản không chạy trong chế độ thử. Chuyển về Chỉnh sửa để xuất bản."
+  },
+  "UG-091": {
+   "status": "FAIL",
+   "ui": "'+ Thêm hành động': false; 'Thêm workflow': false",
+   "note": "creating an action/workflow was not executed: the guide gives no steps for configuring one (MISSING STEP)"
+  },
+  "UG-092": {
+   "status": "BLOCKED",
+   "ui": "'Chạy thử' needs an authored action; the guide does not say how to author one",
+   "note": "MISSING STEP"
+  },
+  "UG-093": {
+   "status": "BLOCKED",
+   "ui": "needs an authored workflow",
+   "note": "MISSING STEP"
+  },
+  "UG-064": {
+   "status": "BLOCKED",
+   "ui": "demo01 (workspace admin, not a system admin) with the 'Admin Console' radio -> /auth/no-access: ◆ AI Software Factory ⛔ Không có quyền truy cập Bạn không có quyền truy cập Admin Console. Vào Builder Studio Đăng xuất Nền tảng nội bộ · truy cập được kiểm soá",
+   "api": "GET /api/v1/auth/me 401; GET /api/v1/auth/config 200; GET /api/v1/auth/csrf 200; POST /api/v1/auth/login 200; GET /api/v1/auth/me 200",
+   "note": "'Admin -> AI -> + Thêm nhà cung cấp' needs a system admin; C6 did not use the operator account"
+  },
+  "adminPortal": {
+   "url": "/auth/no-access",
+   "text": "◆ AI Software Factory ⛔ Không có quyền truy cập Bạn không có quyền truy cập Admin Console. Vào Builder Studio Đăng xuất Nền tảng nội bộ · truy cập được kiểm soát và ghi nhật ký"
+  }
+ }
+}

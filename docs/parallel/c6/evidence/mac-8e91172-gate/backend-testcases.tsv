@@ -1,0 +1,1503 @@
+suite	test	status
+admin.AdminApiTests	only system admins reach the admin API - workspace admins and anonymous users do not()	PASS
+admin.AdminApiTests	revoking system admin in the database takes effect immediately (no stale session privilege)()	PASS
+admin.AdminApiTests	project list paging with total count and scopes, prompt history newest first, personal usage and activity()	PASS
+admin.AdminApiTests	application inventory spans workspaces, detail shows history, ownership can be transferred to a workspace member only()	PASS
+admin.AdminApiTests	revoke-sessions ends every session of the user, admins cannot disable themselves or the last system admin()	PASS
+admin.AdminApiTests	a system admin who is not a workspace member gets a clear 409 instead of a server error, and sees the real role in me()	PASS
+admin.AdminApiTests	users - search, detail with memberships, disable revokes sessions and blocks login, enable restores()	PASS
+admin.AdminApiTests	audit filters, AI control, components usage, health probes and settings without secrets()	PASS
+admin.AdminOrgTests	security findings come from real scans, accepted package risks and settings, with counts and no score()	PASS
+admin.AdminOrgTests	archive makes an application read-only and offline, restore makes it editable, admins see archived apps separately()	PASS
+admin.AdminOrgTests	departments and teams - create, assign users and workspaces, delete only when empty, admin only, audited()	PASS
+admin.AdminOrgTests	hosting cost - measured quantities times explicit prices, unknown without a price, never estimated()	PASS
+admin.HealthProbesTests	health lists the added components with honest states()	PASS
+ai.AiConfigWebTests	models are enabled by the admin, only enabled models reach employees, the default model applies to requests without a choice()	PASS
+ai.AiConfigWebTests	a provider is added on the web, the key is encrypted and never returned, logged or audited, the connection test works without spending tokens()	PASS
+ai.AiConfigWebTests	defaults - paid models have no budget, requests per day are enforced with a Vietnamese message, a per-user override changes the effective limits()	PASS
+ai.AiGovernanceTests	model access - deny rules at user, workspace and role level restrict models (most restrictive wins), audited, admin only()	PASS
+ai.AiGovernanceTests	money budgets - unknown price refused, soft and hard thresholds raise alerts, hard budget blocks paid models only()	PASS
+ai.AiGovernanceTests	SSE streaming - partial output arrives as deltas, final result carries provider-reported usage()	PASS
+ai.AiGovernanceTests	SSE streaming - the deadline stops a slow model with TIMEOUT()	PASS
+ai.AiGovernanceTests	SSE streaming - cancel keeps the partial output and records the call as CANCELLED, nothing is saved()	PASS
+ai.AiGovernanceTests	tool calling - server runs allowed tools with the user's permissions, refuses unknown ones, audits all, verifies reuse claims()	PASS
+ai.AiGovernanceTests	SSE streaming - a provider that ignores stream and answers JSON still works (one delta, usage kept)()	PASS
+ai.AiUsageTests	admin usage report and call log are aggregated from ai_calls and admin-only()	PASS
+ai.AiUsageTests	token budgets - per user per day and per workspace per month - block real AI but not the simulator()	PASS
+ai.AiUsageTests	every upstream call is accounted with provider-reported tokens and cost, failed fail-over attempts included()	PASS
+ai.AiUsageTests	the simulator makes no upstream call, records nothing and reports no usage()	PASS
+ai.AiUsageTests	spent tokens stay recorded when the edit is rolled back by a concurrent change during the model call()	PASS
+ai.AiUsageTests	a provider answer without usage is stored as unknown, never as zero()	PASS
+ai.MultiProviderTests	an explicit model is never replaced, auto never reaches a paid provider, a local model gets no key()	PASS
+ai.MultiProviderTests	models of other providers stay disabled until a system admin enables them, unconfigured providers are refused()	PASS
+ai.MultiProviderTests	Anthropic - x-api-key and version headers, separate system prompt, input and cached tokens counted, a rejected key is fatal and nothing leaks()	PASS
+ai.MultiProviderTests	admin provider list shows configuration without secrets, the connection check is live()	PASS
+ai.MultiProviderTests	an enabled OpenAI-compatible model gets the key only in the header, usage is recorded, cost comes from the pricing catalog()	PASS
+ai.OpenRouterLiveTests	a real key answers through the free router()	SKIPPED
+ai.OpenRouterLiveTests	an invalid key is reported as fatal (no failover storm) without echoing upstream text()	SKIPPED
+ai.OpenRouterLiveTests	the real model list parses and only free text models are offered()	SKIPPED
+ai.OpenRouterPromptTests	auto mode fails over across free models on 429, garbage and bad JSON()	PASS
+ai.OpenRouterPromptTests	status offers only free text models, router first, and never exposes the key()	PASS
+ai.OpenRouterPromptTests	only free listed models can be chosen, mock is always available, an explicit model is not silently replaced()	PASS
+ai.OpenRouterPromptTests	each user has a daily allowance of real-AI prompts, the simulator is exempt()	PASS
+ai.OpenRouterPromptTests	when every model fails the user gets a clear UNSUPPORTED answer, nothing is stored and no upstream text leaks()	PASS
+ai.OpenRouterPromptTests	an invalid proposal from the model (unknown component, invalid props) is rejected without storing anything()	PASS
+ai.OpenRouterPromptTests	an AI answer in a code fence is applied through the normal validated pipeline and stored as a version()	PASS
+ai.RegistrationAndLimitsTests	sign-up creates an isolated account with its own workspace and the user can log in()	PASS
+ai.RegistrationAndLimitsTests	sign-up is rate limited per client IP and advertised in auth config()	PASS
+ai.RegistrationAndLimitsTests	sign-up validation, duplicate names, invite code and weak passwords()	PASS
+ai.RegistrationAndLimitsTests	sign-up is rate limited per client IP()	PASS
+ai.RegistrationAndLimitsTests	project and asset caps per workspace are enforced()	PASS
+ai.SignupDisabledTests	sign-up is closed by default and without a key the simulator answers()	PASS
+ai.SignupRateLimitTests	the 4th sign-up from one IP in an hour is refused, another IP is unaffected()	PASS
+ai.planner.AppPlannerTests	old editor operations still plan on a legacy page()	PASS
+ai.planner.AppPlannerTests	only CALL_API actions may name a data source operation()	PASS
+ai.planner.AppPlannerTests	an unregistered component is rejected by the same validator as a manual edit()	PASS
+ai.planner.AppPlannerTests	an answer without operations is NO_CHANGE()	PASS
+ai.planner.AppPlannerTests	an invalid result is rejected with the path of the problem()	PASS
+ai.planner.AppPlannerTests	a data plan becomes a validated proposal and never touches its input()	PASS
+ai.planner.AppPlannerTests	a malformed answer fails over to the next model()	PASS
+ai.planner.AppPlannerTests	a cancelled or timed out call is reported and nothing is proposed()	PASS
+ai.planner.AppPlannerTests	urls sql credentials and script in any value are rejected()	PASS
+ai.planner.AppPlannerTests	operations and data sources that are not granted are refused()	PASS
+ai.planner.AppPlannerTests	a mapping may only read fields the operation returns()	PASS
+ai.planner.AppPlannerTests	AI plans and Design UI edits use the same operations and give the same document()	PASS
+ai.planner.AppPlannerTests	the prompt carries masked metadata and no connector id or credential()	PASS
+ai.planner.AppPlannerTests	publishing and permissions are never changed by AI()	PASS
+ai.planner.AppPlannerTests	when no model gives a usable answer the plan fails and nothing is proposed()	PASS
+ai.planner.AppPlannerTests	the result check catches changes to data sources, publishing and permissions however they were made()	PASS
+ai.planner.AppPlannerTests	the request is delimited as data and an oversized app is not sent()	PASS
+ai.planner.AppPlannerTests	an unbound slot and an ungranted source are described so the model does not use them()	PASS
+ai.planner.AppPlannerTests	a query may use an operation the user is granted()	PASS
+ai.planner.PlanParsingTests	the closed set of operation fields follows SchemaOperation()	PASS
+ai.planner.PlanParsingTests	a well-formed answer is parsed into typed operations()	PASS
+ai.planner.PlanParsingTests	an answer that is the document itself is not accepted()	PASS
+ai.planner.PlanParsingTests	malformed answers are refused as bad output()	PASS
+ai.tenant.AiSourceResolverTests	without a tenant provider the platform is used()	PASS
+ai.tenant.AiSourceResolverTests	fallback to the platform exists only for a failed tenant call of a tenant that enabled it()	PASS
+ai.tenant.AiSourceResolverTests	a user sees only the models they may use()	PASS
+ai.tenant.AiSourceResolverTests	a tenant model that is not the tenant's is refused()	PASS
+ai.tenant.AiSourceResolverTests	platform models are refused unless the tenant explicitly enabled the fallback()	PASS
+ai.tenant.AiSourceResolverTests	models the user is denied are not used, and without any model left the call is refused or falls back only when enabled()	PASS
+ai.tenant.AiSourceResolverTests	a tenant that selected a provider uses it, with its default model()	PASS
+ai.tenant.TenantAiPolicyTests	keys, models and names are checked()	PASS
+ai.tenant.TenantAiPolicyTests	a custom host needs the operator's allow-list()	PASS
+ai.tenant.TenantAiPolicyTests	endpoints that could reach internal systems are refused()	PASS
+ai.tenant.TenantAiPolicyTests	a missing key keeps the stored one()	PASS
+ai.tenant.TenantAiPolicyTests	a provider with its default endpoint is accepted()	PASS
+ai.tenant.TenantAiServiceTests	an invalid change stores and audits nothing()	PASS
+ai.tenant.TenantAiServiceTests	the key never leaves the server in a view, an audit record or a log line()	PASS
+ai.tenant.TenantAiServiceTests	update, keep the key, and remove are audited()	PASS
+ai.tenant.TenantAiServiceTests	tenants are separate()	PASS
+app.definition.AppDataBindingResolverTests	actions that touch no data say so()	PASS
+app.definition.AppDataBindingResolverTests	an invalid sourceRef is reported by code, not by a parse exception()	PASS
+app.definition.AppDataBindingResolverTests	a sourceRef in the document wins over a slot binding()	PASS
+app.definition.AppDataBindingResolverTests	a mapping is resolved with the operation key of its own query()	PASS
+app.definition.AppDataBindingResolverTests	REFRESH_QUERY resolves a read query and record actions resolve a write query()	PASS
+app.definition.AppDataBindingResolverTests	a data source with a sourceRef resolves to that registration()	PASS
+app.definition.AppDataBindingResolverTests	a runtime id used where a local id belongs is never resolved and never accepted()	PASS
+app.definition.AppDataBindingResolverTests	a query resolves to its source and approved operation, never to a stored runtime id()	PASS
+app.definition.AppDataBindingResolverTests	a query without an operation key cannot be resolved()	PASS
+app.definition.AppDataBindingResolverTests	an action of the wrong query mode fails with WRONG_MODE()	PASS
+app.definition.AppDataBindingResolverTests	CALL_API resolves an approved operation of a registered source, not a URL()	PASS
+app.definition.AppDataBindingResolverTests	a binding that reaches no query or a write query fails with a stable code()	PASS
+app.definition.AppDataBindingResolverTests	missing references are reported with UNKNOWN_REFERENCE or NO_QUERY()	PASS
+app.definition.AppDataBindingResolverTests	a data binding reads through its view model, query and mapping()	PASS
+app.definition.AppDataBindingResolverTests	an unbound slot resolves through the runtime slot bindings and fails without them()	PASS
+app.definition.AppDataBindingResolverTests	a mapping is translated from the local query id to the operation key C3 knows()	PASS
+app.definition.AppDataBindingResolverTests	resolving never changes the definition and no runtime id appears in it()	PASS
+app.definition.AppDataBindingResolverTests	every record action resolves its write query()	PASS
+app.definition.AppDefinitionActionWorkflowRulesTests	an approval needs a title and approvers and its exits name known steps()	PASS
+app.definition.AppDefinitionActionWorkflowRulesTests	action chains name known actions and never themselves()	PASS
+app.definition.AppDefinitionActionWorkflowRulesTests	notification members are only valid on a NOTIFY action()	PASS
+app.definition.AppDefinitionActionWorkflowRulesTests	an input mapping may only fill declared inputs and each source needs its own member()	PASS
+app.definition.AppDefinitionActionWorkflowRulesTests	state changing actions cannot opt out of idempotency and START_WORKFLOW must require it()	PASS
+app.definition.AppDefinitionActionWorkflowRulesTests	a trigger uses an event the component declares and an action type that event supports()	PASS
+app.definition.AppDefinitionActionWorkflowRulesTests	a schedule is required for SCHEDULE triggers and only allowed there()	PASS
+app.definition.AppDefinitionActionWorkflowRulesTests	CALL_API names a data source and an approved operation, never a URL()	PASS
+app.definition.AppDefinitionActionWorkflowRulesTests	principals follow the C4 principal shapes()	PASS
+app.definition.AppDefinitionActionWorkflowRulesTests	an action and a workflow that start each other form a rejected cycle()	PASS
+app.definition.AppDefinitionActionWorkflowRulesTests	each step kind has the member it needs()	PASS
+app.definition.AppDefinitionActionWorkflowRulesTests	branch conditions are bounded C4 condition trees()	PASS
+app.definition.AppDefinitionActionWorkflowRulesTests	REFRESH_QUERY needs a declared READ query()	PASS
+app.definition.AppDefinitionActionWorkflowRulesTests	step ids are unique and the step graph has no cycle()	PASS
+app.definition.AppDefinitionActionWorkflowRulesTests	workflow steps name known actions and known steps()	PASS
+app.definition.AppDefinitionActionWorkflowRulesTests	NOTIFY needs a channel and an approved template()	PASS
+app.definition.AppDefinitionActionWorkflowRulesTests	a WEBHOOK notification needs a registered endpoint and no other channel may carry one()	PASS
+app.definition.AppDefinitionActionWorkflowRulesTests	a permission resource must exist()	PASS
+app.definition.AppDefinitionActionWorkflowRulesTests	local ids never look like runtime UUIDs()	PASS
+app.definition.AppDefinitionActionWorkflowRulesTests	record actions need a WRITE query()	PASS
+app.definition.AppDefinitionCommitTests	an invalid V2 document is rejected with 422 and nothing is stored()	PASS
+app.definition.AppDefinitionCommitTests	a plain page schema commits exactly as before()	PASS
+app.definition.AppDefinitionCommitTests	a valid V2 document is committed as an immutable version and survives later edits()	PASS
+app.definition.AppDefinitionCompatibilityTests	the sample V2 document round-trips exactly()	PASS
+app.definition.AppDefinitionCompatibilityTests	fromJson refuses a malformed V2 part with every violation()	PASS
+app.definition.AppDefinitionCompatibilityTests	removing a section that a binding or trigger points at is caught by the V2 validator()	PASS
+app.definition.AppDefinitionCompatibilityTests	the default page schema of a new project passes both validators and reads as legacy-only()	PASS
+app.definition.AppDefinitionCompatibilityTests	existing operations still work on a V2 document and leave the V2 part untouched()	PASS
+app.definition.AppDefinitionCompatibilityTests	a multi-page legacy schema with site settings and unknown keys is unchanged by the adapter()	PASS
+app.definition.AppDefinitionCompatibilityTests	the operation vocabulary of the page schema is unchanged()	PASS
+app.definition.AppDefinitionCompatibilityTests	the V2 document fits the size limit of the page validator()	PASS
+app.definition.AppDefinitionCompatibilityTests	legacy documents are not subject to any V2 rule()	PASS
+app.definition.AppDefinitionCompatibilityTests	defaults are omitted on write and restored on read()	PASS
+app.definition.AppDefinitionValidatorTests	dangling references are reported with the path of the reference()	PASS
+app.definition.AppDefinitionValidatorTests	ids and names must follow their patterns()	PASS
+app.definition.AppDefinitionValidatorTests	data bindings are checked against the sections and the component props()	PASS
+app.definition.AppDefinitionValidatorTests	collection sizes are limited()	PASS
+app.definition.AppDefinitionValidatorTests	schemaVersion and kind must be known values()	PASS
+app.definition.AppDefinitionValidatorTests	an action cannot carry a URL SQL or code()	PASS
+app.definition.AppDefinitionValidatorTests	unknown fields inside definitions are rejected with a path()	PASS
+app.definition.AppDefinitionValidatorTests	raw URLs are rejected in every text field()	PASS
+app.definition.AppDefinitionValidatorTests	reads are bound to data and never run as writes()	PASS
+app.definition.AppDefinitionValidatorTests	workflow trigger and schedule must agree()	PASS
+app.definition.AppDefinitionValidatorTests	theme and publish draft are bounded and typed()	PASS
+app.definition.AppDefinitionValidatorTests	actions need the references their type requires()	PASS
+app.definition.AppDefinitionValidatorTests	page and section rules still come from PageSchemaValidator()	PASS
+app.definition.AppDefinitionValidatorTests	parameter defaults must be plain scalars of the declared type()	PASS
+app.definition.AppDefinitionValidatorTests	reference cycles are detected()	PASS
+app.definition.AppDefinitionValidatorTests	a V2 document that declares schemaVersion may not carry unknown top-level keys but a legacy one may()	PASS
+app.definition.AppDefinitionValidatorTests	non-object documents do not blow up()	PASS
+app.definition.AppDefinitionValidatorTests	an empty definition set is valid and each optional key may be used on its own()	PASS
+app.definition.AppDefinitionValidatorTests	explicit nulls and wrong json types are rejected()	PASS
+app.definition.AppDefinitionValidatorTests	duplicate ids are reported per collection()	PASS
+app.definition.AppDefinitionValidatorTests	typed validate delegates the same way()	PASS
+app.definition.AppDefinitionValidatorTests	the extension area rejects URLs credentials SQL and code-like keys at any depth()	PASS
+app.definition.AppDefinitionValidatorTests	the sample V2 document is valid()	PASS
+app.definition.AppDefinitionValidatorTests	requireValid throws the same ApiException as PageSchemaValidator()	PASS
+app.definition.AppDefinitionValidatorTests	a mapping must fit the view model that uses it()	PASS
+app.definition.AppDefinitionViewTests	declared actions expose C4 style action refs()	PASS
+app.definition.AppDefinitionViewTests	a multi-page legacy schema reads as pages navigation components and assets()	PASS
+app.definition.AppDefinitionViewTests	the default page of a new project has a home page and no navigation or assets()	PASS
+app.definition.ContractConformanceTests	an ActionDef keeps every canonical member()	PASS
+app.definition.ContractConformanceTests	a complete V2 fixture reads every persisted collection()	PASS
+app.definition.ContractConformanceTests	a legacy fixture has no V2 key and reads as legacy-only()	PASS
+app.definition.ContractConformanceTests	transforms are bounded and shaped()	PASS
+app.definition.ContractConformanceTests	the persisted keys of a V2 document are exactly the contract keys()	PASS
+app.definition.ContractConformanceTests	the legacy transform key is read, normalised to transforms and never written()	PASS
+app.definition.ContractConformanceTests	only canonical permission codes are accepted()	PASS
+app.definition.ContractConformanceTests	DATE is a parameter type()	PASS
+app.definition.ContractConformanceTests	REFRESH_QUERY is an action type and the old RUN_QUERY alias is not()	PASS
+app.definition.ContractConformanceTests	a MappingDef keeps every canonical member()	PASS
+app.definition.ContractConformanceTests	mapping transforms are the canonical transforms array, in order, with nothing lost()	PASS
+app.definition.ContractConformanceTests	derived views are never written as keys of the document()	PASS
+app.definition.ContractConformanceTests	permission codes equal the table of the frozen contract()	PASS
+app.definition.ContractConformanceTests	mirrored enums carry exactly the contract values()	PASS
+app.definition.ContractConformanceTests	the manifest lists every conformance case the contract round asks for()	PASS
+app.definition.ContractConformanceTests	a parameter that omits required is required and writing omits it again()	PASS
+app.definition.ContractConformanceTests	a WorkflowDef keeps every canonical member()	PASS
+app.definition.ContractConformanceTests	every fixture of the manifest behaves as declared()	PASS
+app.definition.ContractConformanceTests	members C2 does not own survive read then write()	PASS
+app.definition.DefinitionOperationsCommitTests	typed V2 operations create immutable versions and are audited()	PASS
+app.definition.DefinitionOperationsCommitTests	an invalid V2 operation is rejected and nothing is stored()	PASS
+app.definition.DefinitionOperationsCommitTests	an older version can still be restored after V2 members were added()	PASS
+app.definition.DefinitionOperationsCommitTests	old section operations keep working unchanged()	PASS
+app.definition.DefinitionOperationsTests	ids are unique and immutable and the target must exist()	PASS
+app.definition.DefinitionOperationsTests	the operation vocabulary keeps the legacy set and adds the typed V2 set next to it()	PASS
+app.definition.DefinitionOperationsTests	section and site operations are unchanged and mix with V2 operations in one request()	PASS
+app.definition.DefinitionOperationsTests	at most 50 operations per request still applies()	PASS
+app.definition.DefinitionOperationsTests	adding then removing on a legacy document returns exactly the legacy document()	PASS
+app.definition.DefinitionOperationsTests	a failing operation names its index and the input document is never changed()	PASS
+app.definition.DefinitionOperationsTests	an operation cannot smuggle SQL a URL a credential or code()	PASS
+app.definition.DefinitionOperationsTests	update merges the given fields and null clears a field()	PASS
+app.definition.DefinitionOperationsTests	an operation that leaves a dangling reference is rejected by the validator with the path()	PASS
+app.definition.DefinitionOperationsTests	every typed collection can be added updated and removed and the result stays valid()	PASS
+app.definition.DefinitionOperationsTests	theme and the publish draft are updated through operations too()	PASS
+app.definition.SchemaServiceInitializationTests	a project that already has a schema is returned unchanged without validating or writing()	PASS
+app.definition.SchemaServiceInitializationTests	an initial document with a non canonical permission code is rejected()	PASS
+app.definition.SchemaServiceInitializationTests	an initial document that breaks the page schema is still rejected first()	PASS
+app.definition.SchemaServiceInitializationTests	a valid V2 initial document and the default page schema are written as version 1()	PASS
+app.definition.SchemaServiceInitializationTests	an initial document with a broken V2 reference is rejected and nothing is written()	PASS
+asset.AssetApiTests	dangerous types, oversize and path traversal names are rejected or neutralised()	PASS
+asset.AssetApiTests	viewer cannot upload and other projects cannot see or delete the asset()	PASS
+asset.AssetApiTests	complete fails without an upload and rejects a size mismatch()	PASS
+asset.AssetApiTests	upload through presigned URL, complete, list, download and delete()	PASS
+asset.AssetReferenceTests	publishing fails the policy check when a referenced asset was deleted afterwards()	PASS
+asset.AssetReferenceTests	own READY asset can be referenced, another project's asset and malformed values cannot()	PASS
+asset.AssetReferenceTests	project lookup by id resolves the workspace for members and hides it from others()	PASS
+audit.AuditApiTests	audit rows cannot be updated or deleted, even by the application user()	PASS
+audit.AuditApiTests	failed logins are audited without the password and OpenAPI is served in local profile()	PASS
+audit.AuditApiTests	only workspace admins read audit events, and never from another workspace()	PASS
+code.CodeProjectTests	a code project gets a platform-owned repository with the scaffold on a protected main, and real files in Code mode()	PASS
+code.CodeProjectTests	change - branch commit, runner builds it, preview is a sandboxed capability URL, merge fast-forwards with the user as author, publish serves it()	PASS
+code.CodeProjectTests	private code app - entry needs the site session, content is served from a per-session capability path, membership re-checked()	PASS
+code.CodeProjectTests	review before merge - required by workspace policy, no self-approval, a publisher approves()	PASS
+code.CodeProjectTests	a failed build marks the change FAILED and it cannot be merged, discard closes it and revokes the preview()	PASS
+code.CodeProjectTests	policy - source apps can be disabled, builds can be disabled, daily build quota and repo size are enforced and recorded()	PASS
+code.CodeProjectTests	safe tar refuses links and traversal in build output()	PASS
+code.CodeProjectTests	dependency request - only catalog packages, lockfile from the sandbox validated before a DEPENDENCY change is committed()	PASS
+code.CodeProjectTests	package catalog - approval resolves the closure, HIGH findings are denied by default, explicit risk acceptance is recorded()	PASS
+code.CodeProjectTests	AI for code - a model answer is data - valid files become an ai change with usage recorded, forbidden files are refused()	PASS
+code.CodeProjectTests	IDE access - per-user read-only token that can read the repository but not write, revocable()	PASS
+code.CodeProjectTests	runtime config for app-sdk is served next to the preview, without secrets()	PASS
+code.CodeProjectTests	the change policy refuses configuration, dependencies, binaries, traversal and credentials before anything is committed()	PASS
+code.CodeProjectTests	deleting a code project archives its repository, hard delete only after retention by an admin()	PASS
+code.CodeProjectTests	AI for code - the simulator makes a real change on an ai branch, unknown requests change nothing()	PASS
+code.QuotaEnforcementTests	concurrent build limits count only queued and running jobs()	PASS
+code.QuotaEnforcementTests	every build quota scope refuses with its own code and the reason is recorded()	PASS
+code.QuotaEnforcementTests	oversized source is refused, build duration and artifact size limits come from policy, builds can be switched off()	PASS
+code.QuotaEnforcementTests	admins see why requests were rejected()	PASS
+common.HardeningTests	API responses carry restrictive security headers and the CSRF cookie is SameSite()	PASS
+common.HardeningTests	auth config tells the UI which sign-in options exist and metrics are not readable by sessions()	PASS
+common.HardeningTests	production profile refuses unsafe configuration()	PASS
+common.HardeningTests	prod profile fails fast when required variables are missing()	PASS
+common.HardeningTests	access logs never contain query strings, ids or credentials()	PASS
+common.HardeningTests	oversized JSON bodies are rejected with 413 before any processing()	PASS
+common.ProductionConfigValidatorTests	scim saml and server runtime need their secrets when enabled()	PASS
+common.ProductionConfigValidatorTests	public sign-up needs an explicit acknowledgement()	PASS
+common.ProductionConfigValidatorTests	wildcard or localhost CORS and an unsafe cookie are refused()	PASS
+common.ProductionConfigValidatorTests	mock deploy provider, weak bootstrap admin and missing forms salt are refused()	PASS
+common.ProductionConfigValidatorTests	a safe configuration starts()	PASS
+common.TrustedProxyTests	prometheus endpoint needs the scrape token, sessions are not enough()	PASS
+common.TrustedProxyTests	rate limiting uses the forwarded client, not the proxy address()	PASS
+common.TrustedProxyTests	behind a trusted proxy the audit IP is the real client, and spoofed leading entries are ignored()	PASS
+common.TrustedProxyTests	a peer outside the trusted CIDRs cannot inject forwarded headers()	PASS
+common.TrustedProxyTests	X-Forwarded-Proto is honoured only from a trusted proxy()	PASS
+component.ComponentApiTests	details=true returns every component with its props schema in one call, plain list has none()	PASS
+component.ComponentMetadataTests	validator rejects an action type the event does not support, and any trigger on a component with no events()	PASS
+component.ComponentMetadataTests	validator rejects an event the component does not emit()	PASS
+component.ComponentMetadataTests	events declare the action types they support and no component carries business logic()	PASS
+component.ComponentMetadataTests	a component without an overlay is described from its props schema and nothing is enforced for it()	PASS
+component.ComponentMetadataTests	every seeded component has an overlay with preview sample props()	PASS
+component.ComponentMetadataTests	visibility condition is derived from a boolean visible prop()	PASS
+component.ComponentMetadataTests	list props are bindable lists with item fields and text props bindable values()	PASS
+component.ComponentMetadataTests	validator still accepts the documented triggers()	PASS
+component.ComponentMetadataTests	actions declared by the registry itself take precedence over the overlay()	PASS
+data.api.DataApiTests	a query is parsed strictly run by the gateway and rendered as the view model()	PASS
+data.api.DataApiTests	a malformed path id is not found rather than an error with detail()	PASS
+data.api.DataApiTests	the webhook route is the canonical one and the only public one()	PASS
+data.api.DataApiTests	each route asks for the gateway operation its handler enforces()	PASS
+data.api.DataApiTests	no route takes a tenant from the path and none uses the old query contract()	PASS
+data.api.DataApiTests	cache refresh answers 204 and is permission checked()	PASS
+data.api.DataApiTests	an unexpected exception becomes a 500 without detail()	PASS
+data.api.DataApiTests	a tenant id in the body is rejected and nothing runs()	PASS
+data.api.DataApiTests	problems carry the fixed message the status and the request id and nothing else()	PASS
+data.api.DataApiTests	routes are unique and live under the canonical prefixes()	PASS
+data.api.DataApiTests	an api result never prints its body()	PASS
+data.api.DataApiTests	ai catalog is 501 when no provider is wired and filtered per caller when it is()	PASS
+data.cache.CacheRaceTests	an answer computed before an invalidation cannot be stored after it - data source level()	PASS
+data.cache.CacheRaceTests	an unrelated invalidation does not discard a good write()	PASS
+data.cache.CacheRaceTests	an answer computed before an invalidation cannot be stored after it - query level()	PASS
+data.cache.CacheRaceTests	a failed invalidation between lookup and put also refuses the write()	PASS
+data.cache.CacheRaceTests	stress - writers change the data and invalidate while readers fill, and the cache never ends up holding an old answer()	PASS
+data.cache.CacheRaceTests	a ticket is bound to its tenant - it cannot fill another tenant's entry()	PASS
+data.cache.CacheRaceTests	no ticket while the backend is down - nothing to write and no error()	PASS
+data.cache.CacheRaceTests	the stored envelope carries the request fingerprint - a value copied under another request's key is rejected()	PASS
+data.cache.CacheRaceTests	even a write that slipped past the compare lands on a key nobody reads()	PASS
+data.cache.CacheRaceTests	gateway level - a query that is running while a mutation invalidates does not re-poison the cache()	PASS
+data.cache.CacheTests	a forged entry whose envelope names another tenant is rejected and never returned()	PASS
+data.cache.CacheTests	invalidating a data source drops all its queries but not other data sources or tenants()	PASS
+data.cache.CacheTests	bypass is limited to the failing scope and expires()	PASS
+data.cache.CacheTests	canonical parameters ignore order and number formatting but not values()	PASS
+data.cache.CacheTests	invalidating one query leaves its siblings()	PASS
+data.cache.CacheTests	a backend outage on read or write is a miss never an error()	PASS
+data.cache.CacheTests	tenants never share an entry even with identical ids and parameters()	PASS
+data.cache.CacheTests	oversized values are not stored()	PASS
+data.cache.CacheTests	ttl is honoured per entry and zero is never stored()	PASS
+data.cache.CacheTests	every part of the key matters()	PASS
+data.cache.CacheTests	the in memory backend is bounded in entries and bytes()	PASS
+data.cache.CacheTests	a failed invalidation bypasses the scope so nothing stale is served()	PASS
+data.cache.CacheTests	the redis adapter obeys the same contract()	PASS
+data.cache.RealtimeTests	a subscriber that fell behind the ring gets one reset and then continues()	PASS
+data.cache.RealtimeTests	a data source filter hides other data sources of the same tenant()	PASS
+data.cache.RealtimeTests	a stream carries only its own tenant's events()	PASS
+data.cache.RealtimeTests	sequence numbers increase per tenant and a reconnect resumes after the last id()	PASS
+data.cache.RealtimeTests	a blocked reader wakes up when an event arrives()	PASS
+data.cache.RealtimeTests	events of other tenants never reach a handle()	PASS
+data.cache.RealtimeTests	the notifier invalidates the cache before it publishes()	PASS
+data.cache.RealtimeTests	sse frames are single line json with no injectable field()	PASS
+data.cache.RealtimeTests	a failing bus never breaks the writer()	PASS
+data.cache.RealtimeTests	stream count per tenant is capped and closing frees a slot()	PASS
+data.cache.RealtimeTests	subscribing needs the permission and a foreign data source is not found()	PASS
+data.cache.RealtimeTests	a revoked permission ends the stream at the next check()	PASS
+data.cache.RealtimeTests	datasource update invalidates everything even when queries are named()	PASS
+data.datasource.AddressRangeSpecTests	192 0 0 slash 24 IETF protocol assignments incl DS-Lite and PCP anycast()	PASS
+data.datasource.AddressRangeSpecTests	a zone identifier does not change the verdict()	PASS
+data.datasource.AddressRangeSpecTests	a database host given as a reserved literal is refused when the data source is saved()	PASS
+data.datasource.AddressRangeSpecTests	198 18 slash 15 benchmarking()	PASS
+data.datasource.AddressRangeSpecTests	6to4 is refused as a whole, even when the embedded IPv4 is public()	PASS
+data.datasource.AddressRangeSpecTests	IPv4-compatible and IPv4-mapped forms are judged as IPv4()	PASS
+data.datasource.AddressRangeSpecTests	Teredo and the rest of the IETF protocol block 2001 slash 23()	PASS
+data.datasource.AddressRangeSpecTests	ordinary public IPv6 stays reachable()	PASS
+data.datasource.AddressRangeSpecTests	loopback unspecified link-local site-local unique-local multicast()	PASS
+data.datasource.AddressRangeSpecTests	240 slash 4 reserved and the limited broadcast()	PASS
+data.datasource.AddressRangeSpecTests	NAT64 well-known prefix is judged by the IPv4 address it embeds()	PASS
+data.datasource.AddressRangeSpecTests	documentation discard-only SRv6 and the other reserved blocks()	PASS
+data.datasource.AddressRangeSpecTests	a host with one embedded-internal address among public ones is refused whole - DNS rebinding with NAT64 and 6to4 forms()	PASS
+data.datasource.AddressRangeSpecTests	documentation and 6to4 relay blocks()	PASS
+data.datasource.AddressRangeSpecTests	ordinary public IPv4 stays reachable()	PASS
+data.datasource.AddressRangeSpecTests	private loopback link-local CGNAT and this-network()	PASS
+data.datasource.AddressRangeSpecTests	NAT64 local-use prefix is refused whatever it embeds()	PASS
+data.datasource.ConnectorSpiTests	descriptors carry key names only never values()	PASS
+data.datasource.ConnectorSpiTests	duplicate connector types are refused at wiring time()	PASS
+data.datasource.ConnectorSpiTests	a connector implementing only the required methods is a full citizen()	PASS
+data.datasource.ConnectorSpiTests	the registry lists planned types but never hands them out()	PASS
+data.datasource.ConnectorSpiTests	all six slots exist with a described contract()	PASS
+data.datasource.ConnectorSpiTests	a planned connector never runs anything and answers with a fixed code()	PASS
+data.datasource.DataSourceAdminTests	a planned connector type cannot be used and the catalogue lists it()	PASS
+data.datasource.DataSourceAdminTests	management is throttled per tenant and recovers()	PASS
+data.datasource.DataSourceAdminTests	a created data source is tenant owned versioned and shows no credential()	PASS
+data.datasource.DataSourceAdminTests	names are unique per tenant but not across tenants()	PASS
+data.datasource.DataSourceAdminTests	a repository failure leaves no orphaned credential and no secret in logs()	PASS
+data.datasource.DataSourceAdminTests	every change bumps the version drops the cache and tells subscribers()	PASS
+data.datasource.DataSourceAdminTests	secrets pasted into the configuration are refused and nothing is stored()	PASS
+data.datasource.DataSourceAdminTests	another tenant cannot read change rotate or disable it()	PASS
+data.datasource.DataSourceAdminTests	every operation needs its permission and list shows only readable sources()	PASS
+data.datasource.DataSourceAdminTests	rotation replaces the stored credential and destroys the old one()	PASS
+data.datasource.DataSourceScopeTests	default deny - no workspace in the context, or no workspace on the source, reaches nothing()	PASS
+data.datasource.DataSourceScopeTests	same tenant and same workspace is allowed for every operation()	PASS
+data.datasource.DataSourceScopeTests	the default scope is still the tenant boundary only, so C3's own behaviour is unchanged()	PASS
+data.datasource.DataSourceScopeTests	another tenant is not found, with or without the right workspace id()	PASS
+data.datasource.DataSourceScopeTests	same tenant and another workspace is not found for every operation, and no connector is reached()	PASS
+data.datasource.DataSourceScopeTests	the answer for another workspace's source is the answer for a missing one, even when that source is disabled()	PASS
+data.datasource.DataSourceServiceTests	the connector gets the decrypted credential, and nothing observable carries it()	PASS
+data.datasource.DataSourceServiceTests	another tenant cannot test, discover or query a data source - it simply does not exist for them()	PASS
+data.datasource.DataSourceServiceTests	connector failures reach the caller as fixed codes and are audited by code()	PASS
+data.datasource.DataSourceServiceTests	a stored credential that cannot be opened fails closed()	PASS
+data.datasource.DataSourceServiceTests	a data source without a credential gets the empty credential()	PASS
+data.datasource.DataSourceServiceTests	query results pass through unchanged for the gateway()	PASS
+data.datasource.DataSourceServiceTests	an unexpected exception is neither returned, audited nor logged with its message()	PASS
+data.datasource.DataSourceServiceTests	the rate limit stops calls before any credential is decrypted()	PASS
+data.datasource.DataSourceServiceTests	a query request may not name a different tenant than the caller()	PASS
+data.datasource.DataSourceServiceTests	a disabled data source is not usable and an unknown type is a fixed failure()	PASS
+data.datasource.SecurityPrimitivesTests	an unresolvable host is its own failure()	PASS
+data.datasource.SecurityPrimitivesTests	no master key means no credentials, with a fixed message()	PASS
+data.datasource.SecurityPrimitivesTests	credentials are stored only as SecretsCrypto ciphertext in their own store and round-trip()	PASS
+data.datasource.SecurityPrimitivesTests	the platform address guard refuses every non-public address class()	PASS
+data.datasource.SecurityPrimitivesTests	a tampered or foreign ciphertext fails closed without echoing anything()	PASS
+data.datasource.SecurityPrimitivesTests	redactor removes every known secret value()	PASS
+data.datasource.SecurityPrimitivesTests	discarding a credential removes it()	PASS
+data.datasource.SecurityPrimitivesTests	a credential reference of another tenant resolves to nothing()	PASS
+data.datasource.SecurityPrimitivesTests	a data source can be logged without its credential reference()	PASS
+data.datasource.SecurityPrimitivesTests	host name rules()	PASS
+data.datasource.SecurityPrimitivesTests	credential shape is validated before it is sealed()	PASS
+data.datasource.SecurityPrimitivesTests	one private address among public ones refuses the whole host()	PASS
+data.datasource.SecurityPrimitivesTests	resolution happens once and returns the checked addresses()	PASS
+data.datasource.SecurityPrimitivesTests	a resolved credential never prints, compares or destructures its secret()	PASS
+data.datasource.SecurityPrimitivesTests	a connector failure carries no cause and no stack()	PASS
+data.datasource.postgres.PostgresConnectorIntegrationTests	discovery lists the configured schemas only and carries no secrets()	PASS
+data.datasource.postgres.PostgresConnectorIntegrationTests	statements that write never reach the server through the executor either()	PASS
+data.datasource.postgres.PostgresConnectorIntegrationTests	a wrong password is a typed failure and appears nowhere()	PASS
+data.datasource.postgres.PostgresConnectorIntegrationTests	a hostile parameter value is data, never SQL()	PASS
+data.datasource.postgres.PostgresConnectorIntegrationTests	row limits, paging and the byte cap bound the result()	PASS
+data.datasource.postgres.PostgresConnectorIntegrationTests	even a role with write privileges cannot write through a connector session, however the statement arrives()	PASS
+data.datasource.postgres.PostgresConnectorIntegrationTests	without the explicit allow-list a local or private database is refused()	PASS
+data.datasource.postgres.PostgresConnectorIntegrationTests	parameters are bound, columns are typed, and rows come back as JSON()	PASS
+data.datasource.postgres.PostgresConnectorIntegrationTests	a runaway query is stopped by the statement timeout()	PASS
+data.datasource.postgres.PostgresConnectorIntegrationTests	connections are closed after every call()	PASS
+data.datasource.postgres.PostgresConnectorIntegrationTests	a SELECT-only role passes the connection test, a writer passes with a warning, a superuser is refused()	PASS
+data.datasource.postgres.PostgresConnectorIntegrationTests	discovery reports primary keys and foreign keys and masks samples before they leave the connector()	PASS
+data.datasource.postgres.PostgresConnectorTests	a socket timeout or an unexpected exception from the driver is a fixed-text failure()	PASS
+data.datasource.postgres.PostgresConnectorTests	by default only public addresses are reachable, so the platform databases are not()	PASS
+data.datasource.postgres.PostgresConnectorTests	driver errors are mapped by SQLSTATE and their text never travels()	PASS
+data.datasource.postgres.PostgresConnectorTests	the socket factory refuses to exist without a pinned address()	PASS
+data.datasource.postgres.PostgresConnectorTests	JSON null is a real JSON null()	PASS
+data.datasource.postgres.PostgresConnectorTests	the connection target holds the checked addresses and prints nothing()	PASS
+data.datasource.postgres.PostgresConnectorTests	the platform's own JDBC URLs yield the hosts to deny()	PASS
+data.datasource.postgres.PostgresConnectorTests	the string-argument form used by older driver versions pins the same way()	PASS
+data.datasource.postgres.PostgresConnectorTests	credential values that look like driver URL syntax are refused()	PASS
+data.datasource.postgres.PostgresConnectorTests	configuration is strict and TLS cannot be switched off()	PASS
+data.datasource.postgres.PostgresConnectorTests	a query is rejected by the guard before a connection is opened()	PASS
+data.datasource.postgres.PostgresConnectorTests	whatever host the driver asks for, the socket connects to the pinned address()	PASS
+data.datasource.postgres.PostgresConnectorTests	a denied host stays denied even when it is public or allow-listed, and aliases of it are caught by address()	PASS
+data.datasource.postgres.PostgresConnectorTests	a private host is reachable only through the explicit server-side allow-list()	PASS
+data.datasource.postgres.PostgresDiscoveryTests	columns types nullability primary keys and relations come out structured()	PASS
+data.datasource.postgres.PostgresDiscoveryTests	only the configured schemas are asked for()	PASS
+data.datasource.postgres.PostgresDiscoveryTests	identifiers are quoted never concatenated raw()	PASS
+data.datasource.postgres.PostgresDiscoveryTests	primary keys are read from the catalog so a SELECT-only role still sees them()	PASS
+data.datasource.postgres.PostgresDiscoveryTests	the session is read only and ends with a rollback and a close()	PASS
+data.datasource.postgres.PostgresDiscoveryTests	nothing from the credential reaches the discovery result()	PASS
+data.datasource.postgres.PostgresDiscoveryTests	without a sample request no table data is read at all()	PASS
+data.datasource.postgres.PostgresDiscoveryTests	samples are masked before they leave the connector and bounded()	PASS
+data.datasource.postgres.PostgresDiscoveryTests	a table that cannot be read costs a warning and a savepoint rollback not the discovery()	PASS
+data.datasource.postgres.PostgresSessionSecurityTests	every unsafe role attribute aborts the session before anything else runs()	PASS
+data.datasource.postgres.PostgresSessionSecurityTests	TLS is verify-full with host-name verification, never require()	PASS
+data.datasource.postgres.PostgresSessionSecurityTests	the role check runs on every connection - a role that turns superuser later is caught on its next session()	PASS
+data.datasource.postgres.PostgresSessionSecurityTests	row limit, paging and statement timeout are applied by the executor()	PASS
+data.datasource.postgres.PostgresSessionSecurityTests	a session is read-only, warmed up and verified before the caller's statement, and always rolled back and closed()	PASS
+data.datasource.postgres.PostgresSessionSecurityTests	a denied literal address blocks every name that resolves to it()	PASS
+data.datasource.postgres.PostgresSessionSecurityTests	discovery and the connection test use the same checked session as queries()	PASS
+data.datasource.postgres.PostgresSessionSecurityTests	configuration accepts only verify-full()	PASS
+data.datasource.postgres.PostgresSessionSecurityTests	the production policy refuses to be built from a missing or unreadable platform URL()	PASS
+data.datasource.postgres.PostgresSessionSecurityTests	a denied host whose address cannot be determined blocks the connection instead of being skipped()	PASS
+data.datasource.postgres.PostgresSessionSecurityTests	driver properties carry the limits, the pinned address and the credential - the URL carries none of them()	PASS
+data.datasource.postgres.PostgresSessionSecurityTests	unexpected session state fails closed()	PASS
+data.datasource.postgres.PostgresSessionSecurityTests	JDBC URLs are read completely - failover lists, userinfo, IPv6 and implied localhost()	PASS
+data.datasource.postgres.SqlGuardTests	functions that reach outside the query are refused, quoted or schema-qualified()	PASS
+data.datasource.postgres.SqlGuardTests	plain selects with named parameters compile to prepared-statement placeholders()	PASS
+data.datasource.postgres.SqlGuardTests	anything that writes, changes state or takes locks is refused wherever it appears()	PASS
+data.datasource.postgres.SqlGuardTests	only one statement is allowed - the classic stacked-query shapes()	PASS
+data.datasource.postgres.SqlGuardTests	Unicode-escaped identifiers and strings are refused - the U-ampersand bypass()	PASS
+data.datasource.postgres.SqlGuardTests	rejection messages are fixed text()	PASS
+data.datasource.postgres.SqlGuardTests	positional and bare placeholders cannot smuggle a value into the text()	PASS
+data.datasource.postgres.SqlGuardTests	every statement kind named by the contract is refused()	PASS
+data.datasource.postgres.SqlGuardTests	a comment cannot split or hide a keyword()	PASS
+data.datasource.postgres.SqlGuardTests	escape-string and dollar-quote lexing cannot be used to hide a second statement()	PASS
+data.datasource.postgres.SqlGuardTests	characters PostgreSQL would read differently are refused outside quoted text()	PASS
+data.datasource.postgres.SqlGuardTests	casts, CTEs, quoted identifiers and literals that look dangerous are fine()	PASS
+data.datasource.postgres.SqlGuardTests	a carriage return ends a line comment as in PostgreSQL()	PASS
+data.datasource.postgres.SqlGuardTests	further dangerous functions and credential relations are refused()	PASS
+data.datasource.rest.PinnedHttpsTransportTests	GET over verified TLS sends the credential header and returns the body()	PASS
+data.datasource.rest.PinnedHttpsTransportTests	nothing listening is a connect failure with a fixed message()	PASS
+data.datasource.rest.PinnedHttpsTransportTests	the certificate must match the host name()	PASS
+data.datasource.rest.PinnedHttpsTransportTests	a truncated body is an invalid response, not a short success()	PASS
+data.datasource.rest.PinnedHttpsTransportTests	response size is capped for content-length, chunked and until-close bodies()	PASS
+data.datasource.rest.PinnedHttpsTransportTests	a response dripped slowly cannot outlive the total deadline()	PASS
+data.datasource.rest.PinnedHttpsTransportTests	a server that never answers hits the deadline()	PASS
+data.datasource.rest.PinnedHttpsTransportTests	the connection goes to the address that was checked - no second lookup()	PASS
+data.datasource.rest.PinnedHttpsTransportTests	an untrusted certificate is refused()	PASS
+data.datasource.rest.PinnedHttpsTransportTests	only https URLs without credentials are accepted()	PASS
+data.datasource.rest.PinnedHttpsTransportTests	a name that resolves to a public and an internal address is refused as a whole (DNS rebinding set)()	PASS
+data.datasource.rest.PinnedHttpsTransportTests	loopback private link-local and metadata targets are refused before any socket is opened()	PASS
+data.datasource.rest.PinnedHttpsTransportTests	a redirect is returned and never followed, and the credential goes nowhere else()	PASS
+data.datasource.rest.PinnedHttpsTransportTests	header injection and forbidden headers are refused before anything is sent()	PASS
+data.datasource.rest.PinnedHttpsTransportTests	failures never reach the log with a host, an address or a credential()	PASS
+data.datasource.rest.PinnedHttpsTransportTests	ambiguous or malformed responses are rejected()	PASS
+data.datasource.rest.PinnedHttpsTransportTests	chunked and until-close bodies are read()	PASS
+data.datasource.rest.RestConnectorTests	parameters are bound into a declared template and the host can never change()	PASS
+data.datasource.rest.RestConnectorTests	a configured auth header without a stored credential fails instead of calling unauthenticated()	PASS
+data.datasource.rest.RestConnectorTests	query parameters are encoded and sorted by name()	PASS
+data.datasource.rest.RestConnectorTests	connection test turns every transport failure into a failed result, never an exception()	PASS
+data.datasource.rest.RestConnectorTests	redirects, error statuses and non-JSON answers fail with fixed codes()	PASS
+data.datasource.rest.RestConnectorTests	unknown, missing and mistyped parameters are rejected()	PASS
+data.datasource.rest.RestConnectorTests	rows come from the pointer, are capped, and truncation is reported()	PASS
+data.datasource.rest.RestConnectorTests	the data source's own row cap lowers the definition's()	PASS
+data.datasource.rest.RestConnectorTests	connection test maps statuses to typed results and sends the credential only as the configured header()	PASS
+data.datasource.rest.RestConnectorTests	tenant and catalog scoping()	PASS
+data.datasource.rest.RestConnectorTests	configuration accepts a plain https base URL and nothing else()	PASS
+data.datasource.rest.RestConnectorTests	values that could escape the path are refused outright()	PASS
+data.datasource.rest.RestConnectorTests	end to end over TLS with the pinned transport()	PASS
+data.datasource.rest.RestConnectorTests	discovery reports the shape of declared endpoints only, with fixed-text warnings()	PASS
+data.datasource.rest.RestConnectorTests	a REST query definition cannot hold an absolute URL, a traversal or an undeclared parameter()	PASS
+data.datasource.rest.RestConnectorTests	results and failures never carry the credential()	PASS
+data.datasource.rest.RestConnectorTests	with the default policy a data source whose name resolves into the private network is refused end to end()	PASS
+data.discovery.AiDataCatalogTests	masked samples, when asked for, carry no raw personal data and no sensitive column at all()	PASS
+data.discovery.AiDataCatalogTests	building a catalog is audited by counts only()	PASS
+data.discovery.AiDataCatalogTests	a snapshot or operation recorded for another data source is not attributed to this one()	PASS
+data.discovery.AiDataCatalogTests	an authorizer that fails yields an empty catalog, never a full one()	PASS
+data.discovery.AiDataCatalogTests	disabled data sources are not offered to a planner()	PASS
+data.discovery.AiDataCatalogTests	the catalog is bounded and ordered deterministically()	PASS
+data.discovery.AiDataCatalogTests	the AI view of a schema is what the catalog is built from()	PASS
+data.discovery.AiDataCatalogTests	what the caller may not do is not listed()	PASS
+data.discovery.AiDataCatalogTests	no sample value is included unless asked for()	PASS
+data.discovery.AiDataCatalogTests	the catalog lists structure and approved operations and nothing that can reach the source()	PASS
+data.discovery.AiDataCatalogTests	another tenant sees nothing of this one()	PASS
+data.discovery.DiscoveryTests	another tenant cannot refresh or read a schema and learns nothing()	PASS
+data.discovery.DiscoveryTests	an authorizer that throws denies()	PASS
+data.discovery.DiscoveryTests	samples are masked before they are stored even when the connector forgot()	PASS
+data.discovery.DiscoveryTests	masking is total bounded and idempotent()	PASS
+data.discovery.DiscoveryTests	personal secret and identifier columns are masked by name()	PASS
+data.discovery.DiscoveryTests	the ai view has no sensitive column value at all and no metadata()	PASS
+data.discovery.DiscoveryTests	a second refresh bumps the version reports the diff and is rate limited()	PASS
+data.discovery.DiscoveryTests	the fingerprint covers structure but not samples or order()	PASS
+data.discovery.DiscoveryTests	refresh stores a versioned snapshot and with no samples requested no sample exists anywhere()	PASS
+data.discovery.DiscoveryTests	uuid style identifiers stay readable and ordinary words are untouched()	PASS
+data.discovery.DiscoveryTests	discovery needs its permission and samples need a second one()	PASS
+data.discovery.DiscoveryTests	sensitive values are caught by their shape even in an innocent column()	PASS
+data.gateway.GatewayTests	a hit still requires permission and is audited()	PASS
+data.gateway.GatewayTests	a mapping version bump is a different cache entry()	PASS
+data.gateway.GatewayTests	a denied caller gets nothing and nothing behind the gateway is touched()	PASS
+data.gateway.GatewayTests	a catalog that leaks another tenants definition is still refused by the gateway()	PASS
+data.gateway.GatewayTests	the response carries the view model only and no raw column()	PASS
+data.gateway.GatewayTests	another tenant cannot run a mutation of a data source it does not own()	PASS
+data.gateway.GatewayTests	ttl zero is never cached and ttl expiry refetches()	PASS
+data.gateway.GatewayTests	no credential reaches a response an audit record or a log even when the connector blows up with it()	PASS
+data.gateway.GatewayTests	editing the data source the query or the mapping makes older entries unreachable at once()	PASS
+data.gateway.GatewayTests	a read only connector refuses writes and frees the key()	PASS
+data.gateway.GatewayTests	a concurrent duplicate while the first is running is refused()	PASS
+data.gateway.GatewayTests	a browser cannot send sql a url a header or a tenant()	PASS
+data.gateway.GatewayTests	a definitely rejected mutation frees the key so a retry can run()	PASS
+data.gateway.GatewayTests	the same key with other parameters is a conflict and never silently re-run()	PASS
+data.gateway.GatewayTests	an idempotency key is mandatory and well formed()	PASS
+data.gateway.GatewayTests	idempotency is scoped per tenant()	PASS
+data.gateway.GatewayTests	connection test and discovery go through the gateway()	PASS
+data.gateway.GatewayTests	a cache outage degrades to uncached reads and never fails the request()	PASS
+data.gateway.GatewayTests	only approved operations exist and an undefined one is not found()	PASS
+data.gateway.GatewayTests	a disabled data source serves nothing()	PASS
+data.gateway.GatewayTests	tenant b cannot reach tenant a data source query or cache()	PASS
+data.gateway.GatewayTests	a mutation runs once per idempotency key and a replay never reaches the connector()	PASS
+data.gateway.GatewayTests	a mapping of another tenant is not found()	PASS
+data.gateway.GatewayTests	second identical request is a hit and the connector runs once()	PASS
+data.gateway.GatewayTests	a missing or mismatched mapping is refused before the connector is called()	PASS
+data.gateway.GatewayTests	audit records carry ids and counts but never values()	PASS
+data.gateway.GatewayTests	a query definition of another tenant planted for a data source is never used()	PASS
+data.gateway.GatewayTests	every operation checks its own permission()	PASS
+data.gateway.GatewayTests	a mutation invalidates what it declares and emits record events()	PASS
+data.gateway.GatewayTests	every failure code maps to a status and a body without detail()	PASS
+data.gateway.GatewayTests	mutation parameters are typed and unknown ones are refused before the connector()	PASS
+data.gateway.GatewayTests	an authorizer outage denies instead of allowing()	PASS
+data.gateway.GatewayTests	manual refresh drops the cache and tells subscribers()	PASS
+data.gateway.GatewayTests	manual refresh is rate limited()	PASS
+data.gateway.IdempotencyTests	a store that fails after a successful write does not turn the success into an error()	PASS
+data.gateway.IdempotencyTests	the key appears in no log line, audit record or printed request()	PASS
+data.gateway.IdempotencyTests	a store that fails while recording an ambiguous failure still leaves the key unusable()	PASS
+data.gateway.IdempotencyTests	concurrent retries of one key run the mutation exactly once()	PASS
+data.gateway.IdempotencyTests	an ambiguous failure keeps the key reserved - the retry does not run a second write()	PASS
+data.gateway.IdempotencyTests	a definite not-executed failure frees the key()	PASS
+data.gateway.IdempotencyTests	reservations expire with the idempotency window()	PASS
+data.gateway.IdempotencyTests	the reservation is per tenant, data source and mutation()	PASS
+data.gateway.IdempotencyTests	the unknown state is exact about parameters - a different payload under that key is still a conflict()	PASS
+data.gateway.IdempotencyTests	the derived key shape sha256 base64url is accepted and the other encodings are not()	PASS
+data.gateway.IdempotencyTests	a holder that vanished does not free the key - after its lease the outcome is unknown, not retryable()	PASS
+data.mapping.ExpressionTests	if is lazy and the ternary works()	PASS
+data.mapping.ExpressionTests	comparison and logic()	PASS
+data.mapping.ExpressionTests	division by zero and null input give null instead of failing or guessing()	PASS
+data.mapping.ExpressionTests	value is the current pipeline value and col reads awkward column names()	PASS
+data.mapping.ExpressionTests	functions of the allowlist()	PASS
+data.mapping.ExpressionTests	results cannot grow without bound()	PASS
+data.mapping.ExpressionTests	a column that is an object or array cannot be used as a value()	PASS
+data.mapping.ExpressionTests	size depth node and step limits hold()	PASS
+data.mapping.ExpressionTests	evaluation is deterministic and has no clock random or io()	PASS
+data.mapping.ExpressionTests	property access can only walk json data never objects of the host()	PASS
+data.mapping.ExpressionTests	plus is numeric only so text never silently concatenates or coerces()	PASS
+data.mapping.ExpressionTests	arithmetic is exact decimal with precedence()	PASS
+data.mapping.ExpressionTests	javascript java and expression-language injection attempts do not compile()	PASS
+data.mapping.ExpressionTests	error messages never contain the data()	PASS
+data.mapping.MappingContractTests	the canonical transforms array is read in order with nothing lost()	PASS
+data.mapping.MappingContractTests	a field with both keys is ambiguous and rejected()	PASS
+data.mapping.MappingContractTests	the closed set of transform types and their members still apply under both keys()	PASS
+data.mapping.MappingContractTests	the legacy transform key is read and normalises to exactly the canonical definition()	PASS
+data.mapping.MappingContractTests	transforms is bounded and shaped like C2 requires()	PASS
+data.mapping.MappingContractTests	every transform kind survives write then read()	PASS
+data.mapping.MappingContractTests	the writer emits only transforms and a rewritten legacy document is the canonical one()	PASS
+data.mapping.MappingContractTests	a view model is written in the canonical shape too()	PASS
+data.mapping.MappingContractTests	what the writer writes the reader reads back to the same definition()	PASS
+data.mapping.MappingEngineTests	output is bounded()	PASS
+data.mapping.MappingEngineTests	error policy skip row and fail()	PASS
+data.mapping.MappingEngineTests	a mapping and its view model must agree()	PASS
+data.mapping.MappingEngineTests	raw rows become view model rows with only the declared fields()	PASS
+data.mapping.MappingEngineTests	error policy null field turns a bad value into null and says which field without the value()	PASS
+data.mapping.MappingEngineTests	validation is a closed list of checks()	PASS
+data.mapping.MappingEngineTests	a non nullable field that cannot be mapped drops the row under null field policy and counts it()	PASS
+data.mapping.MappingEngineTests	declared types coerce or fail()	PASS
+data.mapping.MappingEngineTests	column names with dots and spaces resolve as exact names first()	PASS
+data.mapping.MappingEngineTests	a container cannot be fed to a transform()	PASS
+data.mapping.MappingEngineTests	truncation passes through and a missing source column is reported()	PASS
+data.mapping.MappingEngineTests	the c2 minimal shape from and to alone is a valid mapping()	PASS
+data.mapping.MappingEngineTests	a formula cannot be used to reach other rows or run unbounded work()	PASS
+data.mapping.MappingEngineTests	unknown keys and malformed definitions are rejected not ignored()	PASS
+data.mapping.MappingEngineTests	enum names are accepted in any case and the parsed model round trips its meaning()	PASS
+data.mapping.MappingEngineTests	single cardinality keeps the first row and says so()	PASS
+data.mapping.TransformTests	join reads several fields and skips nulls()	PASS
+data.mapping.TransformTests	date converts between iso epoch and patterns in a fixed zone()	PASS
+data.mapping.TransformTests	formula runs the sandboxed expression with the current value and the row()	PASS
+data.mapping.TransformTests	toString toNumber trim lower upper()	PASS
+data.mapping.TransformTests	split returns one part or the array and never a regex()	PASS
+data.mapping.TransformTests	value errors never carry the value()	PASS
+data.mapping.TransformTests	the dsl is closed unknown types and keys are rejected()	PASS
+data.mapping.TransformTests	enumMap maps default strict and ignoreCase()	PASS
+data.mapping.TransformTests	toBoolean uses closed word sets that the author can override()	PASS
+data.sync.SyncTests	a job edited during a run is not committed over()	PASS
+data.sync.SyncTests	a repeated page of the same run is not applied twice()	PASS
+data.sync.SyncTests	backoff doubles from 30 seconds and is capped()	PASS
+data.sync.SyncTests	a job whose owner lost the permission pauses and pulls nothing()	PASS
+data.sync.SyncTests	losing the permission later keeps the checkpoint and the delivered records()	PASS
+data.sync.SyncTests	creating a job validates it against the approved query mapping and view model()	PASS
+data.sync.SyncTests	managing sync needs its permission and a denial looks the same for an unknown job()	PASS
+data.sync.SyncTests	a crash in the sink keeps the checkpoint and the retry delivers without duplicates()	PASS
+data.sync.SyncTests	audit records carry ids and counts and never a row value()	PASS
+data.sync.SyncTests	a run acts as the job owner with the workspace and request id of the job()	PASS
+data.sync.SyncTests	the next run asks only for what changed since the checkpoint()	PASS
+data.sync.SyncTests	records without a key are skipped and counted()	PASS
+data.sync.SyncTests	an authorizer outage pauses the job instead of running it()	PASS
+data.sync.SyncTests	first run pulls every page applies it and commits the checkpoint()	PASS
+data.sync.SyncTests	transient failures back off exponentially then pause and keep lastSuccess()	PASS
+data.sync.SyncTests	only one worker holds a job and an expired lease can be taken over but the old holder cannot commit()	PASS
+data.sync.SyncTests	another tenant cannot see run pause or delete a job()	PASS
+data.sync.SyncTests	tick runs due active jobs only and a successful sync invalidates cached queries and notifies()	PASS
+data.sync.SyncTests	a source that ignores the cursor is detected and the job pauses without moving the checkpoint()	PASS
+data.sync.SyncTests	resume revalidates and manual run is rate limited()	PASS
+data.sync.SyncTests	a permanent failure pauses at once and says why()	PASS
+data.sync.SyncTests	running the same data again changes nothing()	PASS
+data.sync.SyncTests	cursor comparison follows the field type()	PASS
+data.sync.WebhookReplayTests	the workflow identity is derived from the signature, not from an unsigned header()	PASS
+data.sync.WebhookReplayTests	a signed delivery id de-duplicates an event even when the sender re-signs the retry()	PASS
+data.sync.WebhookReplayTests	the replay record is keyed by signature - the same signature never passes twice, different requests do()	PASS
+data.sync.WebhookReplayTests	the canonical route and the body limit()	PASS
+data.sync.WebhookReplayTests	the replay record outlives the window in which a signature is acceptable()	PASS
+data.sync.WebhookReplayTests	the delivery id of a v2 signature cannot be changed or removed()	PASS
+data.sync.WebhookReplayTests	v1 and v2 signatures cannot be converted into each other()	PASS
+data.sync.WebhookReplayTests	a repeated protocol header is dropped, so the request fails authentication()	PASS
+data.sync.WebhookReplayTests	a tenant named in the body or in headers is ignored - the endpoint decides()	PASS
+data.sync.WebhookReplayTests	a replayed request is audited by id and reason only()	PASS
+data.sync.WebhookReplayTests	a captured request replayed with another delivery id is still a replay()	PASS
+data.sync.WebhookReplayTests	a failed delivery releases both replay records so the sender's retry goes through()	PASS
+data.sync.WebhookTests	an endpoint can only be bound to things its creator can reference()	PASS
+data.sync.WebhookTests	the workflow trigger gets identifiers only and a failure is retryable()	PASS
+data.sync.WebhookTests	administration needs its permission and another tenant sees nothing()	PASS
+data.sync.WebhookTests	rate limits apply per peer before lookup and per endpoint only after authentication()	PASS
+data.sync.WebhookTests	stale or future timestamps are rejected even when the signature is valid()	PASS
+data.sync.WebhookTests	a replayed delivery is acknowledged but its effects do not run again()	PASS
+data.sync.WebhookTests	the secret is visible once and stored only as ciphertext()	PASS
+data.sync.WebhookTests	rotation keeps the old secret for the grace period only()	PASS
+data.sync.WebhookTests	rejections are audited at a bounded rate()	PASS
+data.sync.WebhookTests	wrong secret tampered body and tampered timestamp are all rejected without effect()	PASS
+data.sync.WebhookTests	a correctly signed delivery is accepted and invalidates the declared queries and notifies subscribers()	PASS
+data.sync.WebhookTests	only identifier shaped values leave the payload and nothing else is stored or logged()	PASS
+data.sync.WebhookTests	a single peer is limited before any endpoint is even looked up()	PASS
+data.sync.WebhookTests	the redis replay guard is set if absent and forgettable()	PASS
+data.sync.WebhookTests	infrastructure failures answer 503 and never accept unchecked()	PASS
+data.sync.WebhookTests	deleting an endpoint removes its secrets and stops deliveries()	PASS
+data.sync.WebhookTests	unknown disabled and malformed endpoint ids all look the same to the sender()	PASS
+data.sync.WebhookTests	only accepted events have an effect()	PASS
+data.sync.WebhookTests	signature verification rejects malformed headers()	PASS
+data.sync.WebhookTests	the tenant and data source come from the endpoint never from the request()	PASS
+data.sync.WebhookTests	oversized and malformed bodies are refused and a malformed one does not burn the delivery id()	PASS
+identity.AccountActivationTests	expired or forged links are refused, a new link replaces the old one, reset signs out()	PASS
+identity.AccountActivationTests	config reports needsSetup only when no enabled system admin exists()	PASS
+identity.AccountActivationTests	create, activate once with own password, link is single use, token stored only as hash()	PASS
+identity.AccountActivationTests	only admins create users, duplicates and bad roles refused, system admin needs confirmation, never self, never the last one()	PASS
+identity.AuthSecurityTests	me returns identity roles and workspaces()	PASS
+identity.AuthSecurityTests	disabled user loses access on the next request()	PASS
+identity.AuthSecurityTests	login and failures are audited with request id()	PASS
+identity.AuthSecurityTests	wrong password is 401 and repeated failures end in 429 with Retry-After()	PASS
+identity.AuthSecurityTests	logout invalidates the session()	PASS
+identity.AuthSecurityTests	CORS allows the configured origin and rejects others()	PASS
+identity.AuthSecurityTests	anonymous protected API is 401 with structured body and creates no session()	PASS
+identity.AuthSecurityTests	missing CSRF token is 403 CSRF_INVALID()	PASS
+identity.PasswordHashGateTests	at most N verifications run at once and the overflow gets 503 with Retry-After()	PASS
+identity.PasswordHashGateTests	a failing verification still releases its permit()	PASS
+identity.RedisOutageTests	redis down gives a structured 503 quickly and the same session works again afterwards()	PASS
+identity.RedisSessionTests	authenticated session is stored in Redis and cookie is HttpOnly()	PASS
+identity.ScimDisabledTests	scim is off unless enabled()	PASS
+identity.ScimTests	groups become workspace membership only through an explicit admin mapping, SCIM never removes manual memberships()	PASS
+identity.ScimTests	users - bearer token required, create, filter, patch active (string form), replace, deprovision disables and revokes, local accounts are invisible()	PASS
+identity.SessionRestartTests	session survives a full application restart while Redis stays up()	PASS
+identity.WebhookSecurityTests	CORS origins must be exact()	PASS
+identity.WebhookSecurityTests	an unknown route elsewhere still needs a CSRF token and a session()	PASS
+identity.WebhookSecurityTests	only POST is open on the ingest path()	PASS
+identity.WebhookSecurityTests	the ingest route is anonymous and needs no CSRF token()	PASS
+identity.WebhookSecurityTests	neighbouring routes stay authenticated()	PASS
+isolation.IsolationApiTests	without a session every project route is 401()	PASS
+isolation.IsolationApiTests	a project viewer reads the basics, cannot read form data and cannot write anything()	PASS
+isolation.IsolationApiTests	an outsider learns nothing and changes nothing through any combination of foreign workspace and project ids()	PASS
+isolation.IsolationApiTests	audit events are scoped to the caller's workspace even when a foreign project id is passed as a filter()	PASS
+isolation.IsolationApiTests	an archived project is read-only for its owner too()	PASS
+isolation.IsolationApiTests	a workspace member without a role on the project cannot see it or act on it()	PASS
+isolation.IsolationApiTests	a role in one workspace grants nothing in another()	PASS
+isolation.IsolationApiTests	workspace-level routes of a foreign workspace are hidden and create nothing()	PASS
+isolation.IsolationApiTests	a disabled account loses every route on its next request, reads and writes alike()	PASS
+isolation.IsolationApiTests	ids of another project's versions, assets, domains and deployments are not usable through my own project()	PASS
+logic.action.ActionContractV2Tests	a missing or throwing authorizer denies and nothing reaches a port()	PASS
+logic.action.ActionContractV2Tests	the data port receives app and mode()	PASS
+logic.action.ActionContractV2Tests	a retry reuses the same derived key and the same user gets one write()	PASS
+logic.action.ActionContractV2Tests	TEST mode dry-runs with mode TEST, a derived key, and never writes()	PASS
+logic.action.ActionContractV2Tests	a UI-bound run of an action without a trigger is unknown()	PASS
+logic.action.ActionContractV2Tests	derived key is base64url sha256, 43 chars, accepted by the C3 pattern()	PASS
+logic.action.ActionContractV2Tests	a data request cannot be built with a raw client key()	PASS
+logic.action.ActionContractV2Tests	a request prints neither its key nor its values()	PASS
+logic.action.ActionContractV2Tests	a UI event that does not match the declared trigger is unknown()	PASS
+logic.action.ActionContractV2Tests	a connector without dry run is reported unsupported and success is never simulated()	PASS
+logic.action.ActionContractV2Tests	NONE on a mutating action is an invalid definition, so a raw key is never silently dropped()	PASS
+logic.action.ActionContractV2Tests	TEST mode needs the same permissions as LIVE()	PASS
+logic.action.ActionContractV2Tests	without a client key a run still carries a well formed but one shot key()	PASS
+logic.action.ActionContractV2Tests	logic code imports no repository, connector, JDBC, HTTP client, framework or other agent package()	PASS
+logic.action.ActionContractV2Tests	workflow steps, schedules and chains do not need a trigger()	PASS
+logic.action.ActionContractV2Tests	permission codes are the five canonical codes of tenant-permission 5()	PASS
+logic.action.ActionContractV2Tests	TEST dry-run request carries mode TEST and a derived key()	PASS
+logic.action.ActionContractV2Tests	only the data port and the handlers' package talk to data, and handlers use nothing else for it()	PASS
+logic.action.ActionContractV2Tests	redact never contains the key and is not reversible by length()	PASS
+logic.action.ActionContractV2Tests	write types need DATA_MUTATE in addition to ACTION_EXECUTE and the others do not()	PASS
+logic.action.ActionContractV2Tests	logic sources use the Jackson 3 form of ObjectNode set and never the Jackson 2 generic one()	PASS
+logic.action.ActionContractV2Tests	a component cannot smuggle the separator into the digest()	PASS
+logic.action.ActionContractV2Tests	ActorKind keeps the four names of tenancy ActorKind so the C0 adapter can convert by name()	PASS
+logic.action.ActionContractV2Tests	two users or two tenants with the same client key get different downstream keys()	PASS
+logic.action.ActionContractV2Tests	the raw client key reaches no port, no audit entry and no stored record()	PASS
+logic.action.ActionContractV2Tests	no logic source accesses a data store or connector by name()	PASS
+logic.action.ActionContractV2Tests	TEST mode sends no notification and starts no workflow even with a key()	PASS
+logic.action.ActionContractV2Tests	derivation is stable and every canonical input changes it()	PASS
+logic.action.ActionDefinitionValidatorTests	duplicate and malformed input names are reported()	PASS
+logic.action.ActionDefinitionValidatorTests	maxLength only on strings()	PASS
+logic.action.ActionDefinitionValidatorTests	chains are bounded and cannot point at themselves()	PASS
+logic.action.ActionDefinitionValidatorTests	input mapping must target declared inputs and use plain dotted paths()	PASS
+logic.action.ActionDefinitionValidatorTests	a state changing action can never opt out of idempotency()	PASS
+logic.action.ActionDefinitionValidatorTests	config may not carry code sql or urls at any depth()	PASS
+logic.action.ActionDefinitionValidatorTests	handler specific rules are applied and a mismatching handler is reported()	PASS
+logic.action.ActionDefinitionValidatorTests	ids must be plain references()	PASS
+logic.action.ActionDefinitionValidatorTests	a plain definition is valid()	PASS
+logic.action.ActionHandlerTests	REFRESH_QUERY returns a client instruction and reads no data()	PASS
+logic.action.ActionHandlerTests	CALL_API takes an approved datasource operation, never a url()	PASS
+logic.action.ActionHandlerTests	NOTIFY validates channel template recipients and endpoint and sends to the port()	PASS
+logic.action.ActionHandlerTests	preview of a write without dry run support says NOT_EXECUTED and sends nothing()	PASS
+logic.action.ActionHandlerTests	preview of CALL_API validates or sandboxes only through the connector's own capability()	PASS
+logic.action.ActionHandlerTests	an unwired port is NOT_IMPLEMENTED in TEST mode too, not a pretend success()	PASS
+logic.action.ActionHandlerTests	preview of NOTIFY never sends and START_WORKFLOW never starts()	PASS
+logic.action.ActionHandlerTests	default registry covers every action type even with no ports wired()	PASS
+logic.action.ActionHandlerTests	UPDATE and DELETE need a required string recordId, CREATE does not()	PASS
+logic.action.ActionHandlerTests	preview of client instructions shows the instruction that would be sent()	PASS
+logic.action.ActionHandlerTests	preview uses the dry run capability only when the data platform offers it()	PASS
+logic.action.ActionHandlerTests	every write type reaches the data port as a write of a WRITE query reference with its kind()	PASS
+logic.action.ActionHandlerTests	data mutation codes are frozen and never retryable even if an adapter says so()	PASS
+logic.action.ActionHandlerTests	registry rejects duplicates and exposes lookup()	PASS
+logic.action.ActionHandlerTests	port failure and success map one to one()	PASS
+logic.action.ActionHandlerTests	NAVIGATE requires a plain page id, not a url()	PASS
+logic.action.ActionHandlerTests	START_WORKFLOW demands IdempotencyPolicy REQUIRED and passes the key and call depth()	PASS
+logic.action.ActionInputBinderTests	oversized input hits the byte limit before any field is looked at()	PASS
+logic.action.ActionInputBinderTests	undeclared input is rejected()	PASS
+logic.action.ActionInputBinderTests	deep nesting hits the depth limit()	PASS
+logic.action.ActionInputBinderTests	fingerprint ignores key order but not values or action()	PASS
+logic.action.ActionInputBinderTests	missing required input is reported by name()	PASS
+logic.action.ActionInputBinderTests	wrong json types and max length are rejected()	PASS
+logic.action.ActionInputBinderTests	binds valid input and drops explicit nulls()	PASS
+logic.action.ActionRunAbandonmentTests	the runtime records the mutating flag and an abandoned write is never run again nor answered as a retryable timeout()	PASS
+logic.action.ActionRunAbandonmentTests	mutating and non-mutating runs in one sweep each get their own outcome, and a recorded unknown outcome is left alone()	PASS
+logic.action.ActionRunAbandonmentTests	an abandoned mutating run becomes an unknown outcome that is never retryable and is replayed as is()	PASS
+logic.action.ActionRunAbandonmentTests	an abandoned non-mutating run is a retryable timeout and starts again with a new attempt()	PASS
+logic.action.ActionRunAbandonmentTests	a caller that does not say is assumed to mutate - the safe side()	PASS
+logic.action.ActionRunAbandonmentTests	a run that is restarted after a retryable failure takes the mutating flag of the new call()	PASS
+logic.action.ActionRunStoreTests	a stale owner cannot complete a run it lost()	PASS
+logic.action.ActionRunStoreTests	concurrent begins on one key yield exactly one Started()	PASS
+logic.action.ActionRunStoreTests	retryable failure restarts with a new attempt, non retryable failure is replayed()	PASS
+logic.action.ActionRunStoreTests	success is replayed and the finish time is recorded()	PASS
+logic.action.ActionRunStoreTests	first begin starts, same input while running is in progress, different input is key reuse()	PASS
+logic.action.ActionRunStoreTests	limits are only ever lowered by a definition()	PASS
+logic.action.ActionRunStoreTests	keys are scoped by tenant, app, action and user()	PASS
+logic.action.ActionRuntimeTests	a tenant gate that throws fails closed and retryable()	PASS
+logic.action.ActionRuntimeTests	TEST mode does not pretend a dry run happened when the connector cannot do one()	PASS
+logic.action.ActionRuntimeTests	a replay of a normalized unknown outcome is the same failure, runs no handler and no onError chain()	PASS
+logic.action.ActionRuntimeTests	dispatch of a TEST event previews every bound action()	PASS
+logic.action.ActionRuntimeTests	a request can shorten the timeout but never lengthen it()	PASS
+logic.action.ActionRuntimeTests	a request without an application context is rejected before anything is looked up()	PASS
+logic.action.ActionRuntimeTests	disabled action is unknown()	PASS
+logic.action.ActionRuntimeTests	a non-mutating action that is interrupted keeps INTERRUPTED, stays retryable and still runs onError()	PASS
+logic.action.ActionRuntimeTests	a disabled tenant runs nothing and touches no port()	PASS
+logic.action.ActionRuntimeTests	a chain cycle is stopped by the call depth limit()	PASS
+logic.action.ActionRuntimeTests	CALL_API cannot be smuggled a url through its definition or its input()	PASS
+logic.action.ActionRuntimeTests	unknown action is UNKNOWN_ACTION and no port or handler is touched()	PASS
+logic.action.ActionRuntimeTests	the same key by another user is a separate run and never replays someone else's result()	PASS
+logic.action.ActionRuntimeTests	a non-mutating action that times out keeps TIMEOUT, stays retryable and still runs onError()	PASS
+logic.action.ActionRuntimeTests	an unknown-outcome write stays failed and is never sent downstream again with the same key()	PASS
+logic.action.ActionRuntimeTests	a type without a registered handler is UNSUPPORTED_ACTION_TYPE()	PASS
+logic.action.ActionRuntimeTests	call depth beyond the ceiling is rejected even if the definition asks for more()	PASS
+logic.action.ActionRuntimeTests	chained writes get derived keys so re-running the chain is idempotent()	PASS
+logic.action.ActionRuntimeTests	an unknown-outcome write does not run the UI onError chain, a rejected one does()	PASS
+logic.action.ActionRuntimeTests	TEST mode still enforces tenant gate, permissions and input validation()	PASS
+logic.action.ActionRuntimeTests	another tenant's action is indistinguishable from an unknown one()	PASS
+logic.action.ActionRuntimeTests	the UI cannot grant itself anything - payload and explicit inputs never reach the permission check()	PASS
+logic.action.ActionRuntimeTests	audit failure after the action ran does not hide the result()	PASS
+logic.action.ActionRuntimeTests	NAVIGATE runs end to end and is audited STARTED then SUCCEEDED()	PASS
+logic.action.ActionRuntimeTests	dispatch without a binding port or application does nothing()	PASS
+logic.action.ActionRuntimeTests	NOTIFY reaches the notification port()	PASS
+logic.action.ActionRuntimeTests	a permission declared by the definition is enforced in addition()	PASS
+logic.action.ActionRuntimeTests	a fan out is bounded by the chain budget()	PASS
+logic.action.ActionRuntimeTests	START_WORKFLOW needs WORKFLOW_EXECUTE and a key, then starts one run with the caller depth()	PASS
+logic.action.ActionRuntimeTests	downstream failure keeps its code and retryable flag, audited FAILED()	PASS
+logic.action.ActionRuntimeTests	audit failure at STARTED fails closed so the action never runs and the key stays retryable()	PASS
+logic.action.ActionRuntimeTests	policy OPTIONAL allows a missing key and still de-duplicates a supplied one()	PASS
+logic.action.ActionRuntimeTests	keys are validated()	PASS
+logic.action.ActionRuntimeTests	a write action without a key is rejected - writes are never fire and forget()	PASS
+logic.action.ActionRuntimeTests	a rejected write stays a definite failure, is not retryable even if an adapter says so, and may run onError()	PASS
+logic.action.ActionRuntimeTests	dispatch sanitises a client event id before it becomes an idempotency key()	PASS
+logic.action.ActionRuntimeTests	a retryable failure can be retried with the same key and then succeeds once()	PASS
+logic.action.ActionRuntimeTests	retrying after a lost response creates no duplicate business record()	PASS
+logic.action.ActionRuntimeTests	oversized input is LIMIT_EXCEEDED()	PASS
+logic.action.ActionRuntimeTests	another app's action is unknown too()	PASS
+logic.action.ActionRuntimeTests	TEST mode reads the draft definition and lists the chain instead of running it()	PASS
+logic.action.ActionRuntimeTests	a throwing handler becomes HANDLER_ERROR without leaking the message()	PASS
+logic.action.ActionRuntimeTests	definition with a smuggled url or missing reference is INVALID_DEFINITION()	PASS
+logic.action.ActionRuntimeTests	TEST mode sends no notification and starts no workflow()	PASS
+logic.action.ActionRuntimeTests	a mutating action that times out is an unknown outcome, never retryable, and runs no onError chain()	PASS
+logic.action.ActionRuntimeTests	onError runs after a failure but not after a refusal()	PASS
+logic.action.ActionRuntimeTests	tenant isolation - two tenants with the same action id and key never see each other()	PASS
+logic.action.ActionRuntimeTests	audit entries carry identity and trigger but no input values()	PASS
+logic.action.ActionRuntimeTests	each missing permission is FORBIDDEN, audited DENIED, and input is never inspected()	PASS
+logic.action.ActionRuntimeTests	same key and same input replays the first result without writing again()	PASS
+logic.action.ActionRuntimeTests	port not wired gives a typed non retryable NOT_IMPLEMENTED()	PASS
+logic.action.ActionRuntimeTests	same key with different input is IDEMPOTENCY_KEY_REUSED()	PASS
+logic.action.ActionRuntimeTests	TEST mode never writes, never needs a key, keeps no run state and says what would run()	PASS
+logic.action.ActionRuntimeTests	dispatch cannot spoof the acting user through the payload()	PASS
+logic.action.ActionRuntimeTests	invalid input is INVALID_INPUT with per field details and nothing runs()	PASS
+logic.action.ActionRuntimeTests	each mutation type reaches the data port with the right kind and validated params()	PASS
+logic.action.ActionRuntimeTests	an access port that throws fails closed as retryable DEPENDENCY_UNAVAILABLE()	PASS
+logic.action.ActionRuntimeTests	a rejected mutation keeps its code and is not retryable()	PASS
+logic.action.ActionRuntimeTests	APP_USE and ACTION_EXECUTE are both required, checked per execution on the right resource()	PASS
+logic.action.ActionRuntimeTests	a mutating action that is interrupted is an unknown outcome, never retryable, and runs no onError chain()	PASS
+logic.action.ActionRuntimeTests	dispatch runs bound actions only, maps payload through the definition, and is safe to redeliver()	PASS
+logic.action.ActionRuntimeTests	a TEST preview that times out is not an unknown outcome because nothing was written()	PASS
+logic.action.ActionRuntimeTests	CALL_API calls an approved datasource operation through the port()	PASS
+logic.action.ActionRuntimeTests	onSuccess runs after a successful action with its result as input()	PASS
+logic.action.InputResolverTests	a caller cannot supply an input the server derives from the context()	PASS
+logic.action.InputResolverTests	every client source is read from its own bucket of the payload()	PASS
+logic.action.InputResolverTests	a form field is not readable through the route or state buckets()	PASS
+logic.action.InputResolverTests	explicit inputs override event mapped values for non context sources()	PASS
+logic.action.InputResolverTests	literal and previous result sources()	PASS
+logic.action.InputResolverTests	context values come from the server side context()	PASS
+logic.action.InputResolverTests	missing paths and wrong shapes resolve to absent, never throw()	PASS
+logic.approval.ApprovalServiceTests	a request snapshots its approvers from every principal kind()	PASS
+logic.approval.ApprovalServiceTests	cross tenant decisions need C1's policy and still need to be an approver()	PASS
+logic.approval.ApprovalServiceTests	comments are limited()	PASS
+logic.approval.ApprovalServiceTests	any rejection rejects the request()	PASS
+logic.approval.ApprovalServiceTests	a quorum needs the required number of distinct approvers()	PASS
+logic.approval.ApprovalServiceTests	the requester is removed from the approvers unless self approval is allowed()	PASS
+logic.approval.ApprovalServiceTests	only the requester and approvers can read or comment()	PASS
+logic.approval.ApprovalServiceTests	later changes to a group do not change a pending request()	PASS
+logic.approval.ApprovalServiceTests	one approval is enough when one is required, and the listener hears about it()	PASS
+logic.approval.ApprovalServiceTests	a late decision cannot revive an expired request()	PASS
+logic.approval.ApprovalServiceTests	the inbox lists only pending requests addressed to the user in their own tenant()	PASS
+logic.approval.ApprovalServiceTests	deciding an approval of another tenant is denied by default and looks like not found()	PASS
+logic.approval.ApprovalServiceTests	the sweeper expires every due request once()	PASS
+logic.approval.ApprovalServiceTests	a disabled tenant cannot request or decide()	PASS
+logic.approval.ApprovalServiceTests	changing your mind is a conflict and repeating yourself is harmless()	PASS
+logic.approval.ApprovalServiceTests	an approver that cannot be addressed, such as one in another tenant, is refused and audited()	PASS
+logic.approval.ApprovalServiceTests	cancel is idempotent and a cancelled request cannot be decided()	PASS
+logic.approval.ApprovalServiceTests	a request is validated()	PASS
+logic.approval.ApprovalServiceTests	a failing listener, notifier or audit never undoes a decision()	PASS
+logic.approval.ApprovalServiceTests	the workflow source travels with the approval for audit and resume()	PASS
+logic.approval.ApprovalServiceTests	request is idempotent on its key and notifies only once()	PASS
+logic.approval.ApprovalServiceTests	only snapshotted approvers decide and the requester cannot decide their own request()	PASS
+logic.canonical.CanonicalReaderTests	a workflow that references an action the app does not offer is not offered()	PASS
+logic.canonical.CanonicalReaderTests	CALL_API is an approved operation and a raw url never becomes an action()	PASS
+logic.canonical.CanonicalReaderTests	inputMapping reads typed sources and rejects anything else()	PASS
+logic.canonical.CanonicalReaderTests	a trigger that is present but malformed makes the action unusable()	PASS
+logic.canonical.CanonicalReaderTests	there is no alias map - draft names and anything non canonical are rejected()	PASS
+logic.canonical.CanonicalReaderTests	the workflow catalog is tenant and mode scoped()	PASS
+logic.canonical.CanonicalReaderTests	invalid extended steps are reported with a path and the workflow is not offered()	PASS
+logic.canonical.CanonicalReaderTests	a C2 WorkflowDef becomes a chain of action steps()	PASS
+logic.canonical.CanonicalReaderTests	extended steps WAIT APPROVAL BRANCH with conditions retries and limits()	PASS
+logic.canonical.CanonicalReaderTests	a TEST event says what would run and writes nothing()	PASS
+logic.canonical.CanonicalReaderTests	the canonical types are exactly the nine and each is read as itself()	PASS
+logic.canonical.CanonicalReaderTests	a UI event reaches the data port end to end through the C2 document()	PASS
+logic.canonical.CanonicalReaderTests	a missing declared permission stops the event and nothing is written()	PASS
+logic.canonical.CanonicalReaderTests	writes default to REQUIRED idempotency and cannot opt out()	PASS
+logic.canonical.CanonicalReaderTests	references are resolved inside the document and dangling ones are not offered()	PASS
+logic.canonical.CanonicalReaderTests	the catalog only serves the tenant and app that own the document()	PASS
+logic.canonical.CanonicalReaderTests	the same event delivered twice writes once()	PASS
+logic.canonical.CanonicalReaderTests	an action whose chain dangles is not offered, and neither is one that chains to it()	PASS
+logic.canonical.CanonicalReaderTests	finalized names and C4's additive fields are accepted()	PASS
+logic.canonical.CanonicalReaderTests	trigger is optional on the definition and does not make a workflow-only action invalid()	PASS
+logic.canonical.CanonicalReaderTests	triggers become event bindings and unknown events are reported()	PASS
+logic.canonical.CanonicalReaderTests	TEST reads the draft and LIVE reads the published version()	PASS
+logic.canonical.CanonicalReaderTests	junk in the document never throws()	PASS
+logic.canonical.CanonicalReaderTests	SCHEDULE workflows declare their schedule and bad ones are rejected()	PASS
+logic.canonical.CanonicalReaderTests	another tenant dispatching the same event runs nothing()	PASS
+logic.canonical.CanonicalReaderTests	permissionRef must point at an ACTION permission of the same action()	PASS
+logic.limits.TenantRateLimitTests	action execution is limited per tenant and a limited tenant does not slow another()	PASS
+logic.limits.TenantRateLimitTests	a throwing limiter fails closed as retryable, and RATE_LIMITED never triggers onError actions()	PASS
+logic.limits.TenantRateLimitTests	one tenant exhausting its budget never affects another tenant or another scope()	PASS
+logic.limits.TenantRateLimitTests	workflow starts are limited per tenant and the pushback is retryable()	PASS
+logic.limits.TenantRateLimitTests	a caller without permission cannot spend the tenant's budget and a limited call leaves no run state()	PASS
+logic.limits.TenantRateLimitTests	the scheduler limits fires per tenant, leaves limited schedules due, and other tenants still fire()	PASS
+logic.limits.TenantRateLimitTests	limits can be overridden per tenant and every scope has a default()	PASS
+logic.limits.TenantRateLimitTests	a tenant gets its burst, then is limited with an honest retry-after, then refills()	PASS
+logic.limits.TenantRateLimitTests	TEST mode is limited too, so a preview loop cannot bypass the budget()	PASS
+logic.limits.TenantRateLimitTests	a rate limited action step waits as told and keeps its retry budget()	PASS
+logic.limits.TenantRateLimitTests	memory is bounded and eviction only drops idle buckets first()	PASS
+logic.limits.TenantRateLimitTests	a per key cap and the global limit both hold, and degenerate input is safe()	PASS
+logic.limits.TenantRateLimitTests	unauthorized starts do not spend the budget()	PASS
+logic.limits.TenantRateLimitTests	round robin gives every key its share and keeps the order inside a key()	PASS
+logic.limits.TenantRateLimitTests	concurrent callers never get more than the capacity()	PASS
+logic.limits.TenantRateLimitTests	one tenant's backlog of due schedules cannot crowd out another tenant within a tick()	PASS
+logic.limits.TenantRateLimitTests	a cost above the capacity can never be satisfied and says so, and bad arguments are rejected()	PASS
+logic.notification.NotificationServiceTests	a webhook goes to a registered endpoint only and never to a url()	PASS
+logic.notification.NotificationServiceTests	a partial failure is retryable and the retry resends only the failed recipients()	PASS
+logic.notification.NotificationServiceTests	delivery records are tenant scoped()	PASS
+logic.notification.NotificationServiceTests	sending is audited but an audit failure does not undo the send()	PASS
+logic.notification.NotificationServiceTests	params are not written to the audit trail()	PASS
+logic.notification.NotificationServiceTests	a channel without a sender is NOT_IMPLEMENTED and never pretends()	PASS
+logic.notification.NotificationServiceTests	an in-app notification lands in the recipient's inbox()	PASS
+logic.notification.NotificationServiceTests	a retry with the same key does not message a recipient twice()	PASS
+logic.notification.NotificationServiceTests	a permanent failure is not retryable and a sender that throws is a retryable failure without the exception text()	PASS
+logic.notification.NotificationServiceTests	the number of recipients is limited()	PASS
+logic.notification.NotificationServiceTests	a recipient that cannot be addressed fails the whole request before anything is sent()	PASS
+logic.notification.NotificationServiceTests	a claim abandoned by a crashed node is reclaimed after the lease()	PASS
+logic.notification.NotificationServiceTests	groups expand to their members and duplicates are collapsed()	PASS
+logic.notification.NotificationServiceTests	no recipients means the acting user()	PASS
+logic.notification.NotificationServiceTests	unknown templates, wrong channels and missing params are refused without leaking()	PASS
+logic.retention.RetentionTests	tenants are not distinguished - the horizon is age only, and other tenants' recent rows survive()	PASS
+logic.retention.RetentionTests	a backlog is worked off in bounded batches, oldest first, over several runs()	PASS
+logic.retention.RetentionTests	an abandoned RUNNING run becomes eligible only after the sweeper failed it and it aged again()	PASS
+logic.retention.RetentionTests	schedule ledger - a CLAIMED fire is never deleted, a final one is()	PASS
+logic.retention.RetentionTests	approvals - a pending one never ages out, a final one does()	PASS
+logic.retention.RetentionTests	action runs - finished rows age out, a RUNNING row never does()	PASS
+logic.retention.RetentionTests	a horizon shorter than the replay window is refused()	PASS
+logic.retention.RetentionTests	workflow runs - payloads are blanked first and rows deleted later, active runs are never touched()	PASS
+logic.retention.RetentionTests	a final approval whose workflow run is still active is kept()	PASS
+logic.retention.RetentionTests	a cancelled and a failed run age out like a succeeded one()	PASS
+logic.retention.RetentionTests	a failing target does not stop the others and cannot spin()	PASS
+logic.scheduler.CronExpressionTests	spring forward - a local time that does not exist fires once, after the gap()	PASS
+logic.scheduler.CronExpressionTests	steps ranges and lists()	PASS
+logic.scheduler.CronExpressionTests	an expression that can never fire is rejected()	PASS
+logic.scheduler.CronExpressionTests	next is always strictly increasing and in the zone's wall clock()	PASS
+logic.scheduler.CronExpressionTests	the timezone decides the wall clock()	PASS
+logic.scheduler.CronExpressionTests	month end and leap days are handled()	PASS
+logic.scheduler.CronExpressionTests	fall back - a local time that happens twice fires once()	PASS
+logic.scheduler.CronExpressionTests	day of month and day of week are ORed when both are restricted()	PASS
+logic.scheduler.CronExpressionTests	the century leap year rule is respected()	PASS
+logic.scheduler.CronExpressionTests	day of week and names()	PASS
+logic.scheduler.CronExpressionTests	every minute fires at the next minute boundary strictly after the given time()	PASS
+logic.scheduler.CronExpressionTests	whitespace is tolerated and the source is kept()	PASS
+logic.scheduler.CronExpressionTests	fixed time of day rolls to the next day()	PASS
+logic.scheduler.CronExpressionTests	malformed expressions are rejected with a message()	PASS
+logic.scheduler.SchedulerDedupeTests	claiming one execution from many threads creates exactly one ledger row()	PASS
+logic.scheduler.SchedulerDedupeTests	two nodes with clocks a few seconds apart still fire a time once()	PASS
+logic.scheduler.SchedulerDedupeTests	a confirmation lost after a successful hand-over is repaired without a second hand-over()	PASS
+logic.scheduler.SchedulerDedupeTests	the execution history records what happened to each fire()	PASS
+logic.scheduler.SchedulerDedupeTests	fall-back hour - a daily time inside the repeated hour fires once and no key repeats()	PASS
+logic.scheduler.SchedulerDedupeTests	a final ledger row never moves to another status()	PASS
+logic.scheduler.SchedulerDedupeTests	many workers ticking concurrently hand every fire over exactly once()	PASS
+logic.scheduler.SchedulerDedupeTests	one failing schedule does not delay a healthy one()	PASS
+logic.scheduler.SchedulerDedupeTests	declared schedules are tenant and app scoped and need the manage permission()	PASS
+logic.scheduler.SchedulerDedupeTests	a changed declaration updates the existing schedule and an undeclared one is disabled, not deleted()	PASS
+logic.scheduler.SchedulerDedupeTests	a rewound schedule row cannot make the ledger hand the same fire over twice()	PASS
+logic.scheduler.SchedulerDedupeTests	an unavailable ledger blocks the hand-over and the fire is retried later()	PASS
+logic.scheduler.SchedulerDedupeTests	publishing the same declaration again creates nothing and leaves the next run alone()	PASS
+logic.scheduler.SchedulerDedupeTests	a restart (new service on the same store) does not fire the same time again()	PASS
+logic.scheduler.SchedulerDedupeTests	a clock that jumps back does not refire an already fired time()	PASS
+logic.scheduler.SchedulerDedupeTests	spring-forward gap - a daily time inside the skipped hour fires once that day()	PASS
+logic.scheduler.SchedulerDedupeTests	racing publishers end up with one schedule per declaration()	PASS
+logic.scheduler.SchedulerDedupeTests	fall-back hour - an hourly schedule never fires two times at the same instant or key()	PASS
+logic.scheduler.SchedulerDedupeTests	a nextRunAt that is not after the last fire is skipped by the monotonic guard()	PASS
+logic.scheduler.SchedulerDedupeTests	a failing enqueue backs off exponentially and is given up after the attempt budget()	PASS
+logic.scheduler.SchedulerServiceTests	create validates cron timezone name target and input size()	PASS
+logic.scheduler.SchedulerServiceTests	a missed fire is skipped under SKIP and fires once under FIRE_ONCE()	PASS
+logic.scheduler.SchedulerServiceTests	the number of schedules per app is limited()	PASS
+logic.scheduler.SchedulerServiceTests	disable clears the next run and enable recomputes it()	PASS
+logic.scheduler.SchedulerServiceTests	two nodes ticking at once enqueue a fire exactly once()	PASS
+logic.scheduler.SchedulerServiceTests	an unreadable tenant state leaves the schedule due for the next tick()	PASS
+logic.scheduler.SchedulerServiceTests	a transient enqueue failure keeps the fire pending and the next tick retries it with the same key()	PASS
+logic.scheduler.SchedulerServiceTests	a due schedule is handed to the enqueuer with a deterministic idempotency key()	PASS
+logic.scheduler.SchedulerServiceTests	a disabled schedule never fires()	PASS
+logic.scheduler.SchedulerServiceTests	delete removes the schedule()	PASS
+logic.scheduler.SchedulerServiceTests	ids of different tenants never collide in the store()	PASS
+logic.scheduler.SchedulerServiceTests	a disabled tenant's schedules do not fire()	PASS
+logic.scheduler.SchedulerServiceTests	a crash between claim and confirmation is repaired and a duplicate answer counts as confirmed()	PASS
+logic.scheduler.SchedulerServiceTests	schedules are tenant scoped()	PASS
+logic.scheduler.SchedulerServiceTests	create stores the schedule with its next run and audits it()	PASS
+logic.scheduler.SchedulerServiceTests	a permanent refusal drops the pending fire instead of retrying forever()	PASS
+logic.scheduler.SchedulerServiceTests	the scheduler itself never runs business logic - it only talks to the enqueuer()	PASS
+logic.scheduler.SchedulerServiceTests	managing schedules needs WORKFLOW_MANAGE and an enabled tenant()	PASS
+logic.workflow.WorkflowAbandonedWriteTests	a write whose worker died is unknown for good - no retry, no onError, not compensated, earlier steps compensated()	PASS
+logic.workflow.WorkflowEngineTests	an unanswered approval expires and fails the run()	PASS
+logic.workflow.WorkflowEngineTests	an outage does not dead-letter anything and the sweeper recovers the run afterwards()	PASS
+logic.workflow.WorkflowEngineTests	the sweeper times out a waiting run that exceeded its duration()	PASS
+logic.workflow.WorkflowEngineTests	the view never exposes the definition snapshot or the input()	PASS
+logic.workflow.WorkflowEngineTests	a worker runs the steps in order and the run succeeds()	PASS
+logic.workflow.WorkflowEngineTests	a rejection fails the run with APPROVAL_REJECTED and never runs the next step()	PASS
+logic.workflow.WorkflowEngineTests	cancel can compensate what already ran when the workflow asks for it()	PASS
+logic.workflow.WorkflowEngineTests	a missing mapped value is simply absent from the step input()	PASS
+logic.workflow.WorkflowEngineTests	a cycle in the definition ends at the step execution limit and each pass really runs()	PASS
+logic.workflow.WorkflowEngineTests	start does not execute anything on the calling thread and returns a PENDING run()	PASS
+logic.workflow.WorkflowEngineTests	a TEST run uses a different idempotency scope than the LIVE run()	PASS
+logic.workflow.WorkflowEngineTests	an early nudge for a step that is still in its retry backoff does not run it()	PASS
+logic.workflow.WorkflowEngineTests	an invalid definition is refused at start()	PASS
+logic.workflow.WorkflowEngineTests	BRANCH follows the first matching condition else the default()	PASS
+logic.workflow.WorkflowEngineTests	a TEST run executes nothing real and says so()	PASS
+logic.workflow.WorkflowEngineTests	onError routes a failed step to a handler step and the run can still succeed()	PASS
+logic.workflow.WorkflowEngineTests	a workflow step may start a child workflow and the nesting is bounded()	PASS
+logic.workflow.WorkflowEngineTests	a duplicated message does not repeat the effect()	PASS
+logic.workflow.WorkflowEngineTests	a job lost before delivery is published again by the sweeper()	PASS
+logic.workflow.WorkflowEngineTests	a step with an unknown outcome is never compensated but earlier finished steps still are()	PASS
+logic.workflow.WorkflowEngineTests	a crashed worker is recovered by the sweeper and the effect happens exactly once()	PASS
+logic.workflow.WorkflowEngineTests	when retries are exhausted the run fails with the last error()	PASS
+logic.workflow.WorkflowEngineTests	only a snapshotted approver can decide and a quorum needs enough approvals()	PASS
+logic.workflow.WorkflowEngineTests	a compensation that fails is reported as PARTIAL and the others still run()	PASS
+logic.workflow.WorkflowEngineTests	an outcome from a worker the sweeper already gave up on is dropped, and the step is simply redone as a replay()	PASS
+logic.workflow.WorkflowEngineTests	a scheduled fire starts a workflow run as the schedule owner and is idempotent()	PASS
+logic.workflow.WorkflowEngineTests	a decision whose callback was lost is reconciled by the sweeper()	PASS
+logic.workflow.WorkflowEngineTests	a tenant disabled while the run is in flight stops it()	PASS
+logic.workflow.WorkflowEngineTests	a forged job for another tenant finds nothing()	PASS
+logic.workflow.WorkflowEngineTests	a rejected write is a definite failure that onError may handle and is not retried()	PASS
+logic.workflow.WorkflowEngineTests	start needs APP_USE and WORKFLOW_EXECUTE and audits the denial()	PASS
+logic.workflow.WorkflowEngineTests	the run acts as the user who started it()	PASS
+logic.workflow.WorkflowEngineTests	a scheduled action runs as a one step run with retries()	PASS
+logic.workflow.WorkflowEngineTests	an APPROVAL step pauses the run until an approver approves()	PASS
+logic.workflow.WorkflowEngineTests	the same key from another user is a different run()	PASS
+logic.workflow.WorkflowEngineTests	no run exists without its audit record()	PASS
+logic.workflow.WorkflowEngineTests	a thrown exception inside a step becomes a failed step not a lost run()	PASS
+logic.workflow.WorkflowEngineTests	start fails closed when authorization or the tenant gate is unavailable()	PASS
+logic.workflow.WorkflowEngineTests	start refuses bad keys unknown workflows and a missing app context()	PASS
+logic.workflow.WorkflowEngineTests	a malformed message is rejected straight to the dead letter queue and cannot touch a run()	PASS
+logic.workflow.WorkflowEngineTests	onReject routes a rejected approval to another step()	PASS
+logic.workflow.WorkflowEngineTests	a duplicate job for a step that another worker is running does nothing()	PASS
+logic.workflow.WorkflowEngineTests	a stuck compensation is resumed by the sweeper()	PASS
+logic.workflow.WorkflowEngineTests	a workflow of another tenant is never started()	PASS
+logic.workflow.WorkflowEngineTests	a run that exceeds its maximum duration times out()	PASS
+logic.workflow.WorkflowEngineTests	status is visible to the creator and to WORKFLOW_MANAGE only()	PASS
+logic.workflow.WorkflowEngineTests	cancelling a run cancels its pending approval()	PASS
+logic.workflow.WorkflowEngineTests	a job for a step that is waiting for its timer or an approval does not run it()	PASS
+logic.workflow.WorkflowEngineTests	a TEST run does not wait and does not compensate()	PASS
+logic.workflow.WorkflowEngineTests	a retryable failure waits for its backoff and is retried by the sweeper()	PASS
+logic.workflow.WorkflowEngineTests	replaying the compensation job does not compensate twice()	PASS
+logic.workflow.WorkflowEngineTests	cancel stops the run before any step and is idempotent()	PASS
+logic.workflow.WorkflowEngineTests	START_WORKFLOW via a plain action result is audited at the workflow level()	PASS
+logic.workflow.WorkflowEngineTests	a failing step compensates the finished steps in reverse order()	PASS
+logic.workflow.WorkflowEngineTests	a non retryable failure is not retried()	PASS
+logic.workflow.WorkflowEngineTests	a consumer that dies before acking only causes a redelivery()	PASS
+logic.workflow.WorkflowEngineTests	step inputs are mapped from the workflow input and from earlier step outputs()	PASS
+logic.workflow.WorkflowEngineTests	start is idempotent and a reused key with other input is refused()	PASS
+logic.workflow.WorkflowEngineTests	an unknown write outcome fails the run with that code and skips onError and retries()	PASS
+logic.workflow.WorkflowEngineTests	WAIT holds the run until its time and then continues()	PASS
+logic.workflow.WorkflowEngineTests	status and cancel of a run in another tenant answer not found()	PASS
+logic.workflow.WorkflowEngineTests	an oversized input is refused before anything is stored()	PASS
+logic.workflow.WorkflowEngineTests	permissions are re-checked at every step()	PASS
+logic.workflow.WorkflowEngineTests	a scheduled fire for a disabled tenant or a missing permission is refused()	PASS
+logic.workflow.WorkflowEngineTests	BRANCH without a match and without default fails the run()	PASS
+logic.workflow.WorkflowLeaseTests	cancelling a run releases the lease()	PASS
+logic.workflow.WorkflowLeaseTests	claiming a step records its owner and a lease, and finishing the step releases both()	PASS
+logic.workflow.WorkflowLeaseTests	a lease that ran out is reclaimed even though the run was touched recently()	PASS
+logic.workflow.WorkflowLeaseTests	a run without a lease keeps the old rule - untouched for the stale time means abandoned()	PASS
+logic.workflow.WorkflowLeaseTests	only the owner renews, and a renewal moves the lease forward()	PASS
+logic.workflow.WorkflowLeaseTests	a lease is judged by its own expiry, not by how long ago the run last changed()	PASS
+logic.workflow.WorkflowLeaseTests	two workers racing for one step - exactly one owns it()	PASS
+logic.workflow.WorkflowLeaseTests	an owner that keeps renewing is not reclaimed, one that stops is()	PASS
+logic.workflow.WorkflowLeaseTests	a lease longer than the stale time is honoured, and one that already ran out is reclaimed at once()	PASS
+logic.workflow.WorkflowModelTests	anything that is not exactly a v1 job is rejected()	PASS
+logic.workflow.WorkflowModelTests	each step kind demands its own fields()	PASS
+logic.workflow.WorkflowModelTests	a plain chain of actions is valid()	PASS
+logic.workflow.WorkflowModelTests	step input paths must be plain()	PASS
+logic.workflow.WorkflowModelTests	limits are enforced against the platform ceiling()	PASS
+logic.workflow.WorkflowModelTests	backoff never overflows for huge attempt numbers()	PASS
+logic.workflow.WorkflowModelTests	empty workflows and unknown targets are invalid()	PASS
+logic.workflow.WorkflowModelTests	limits can only be tightened by the platform ceiling()	PASS
+logic.workflow.WorkflowModelTests	backoff grows exponentially and is capped()	PASS
+logic.workflow.WorkflowModelTests	unreachable steps are an authoring error()	PASS
+logic.workflow.WorkflowModelTests	ids are checked()	PASS
+logic.workflow.WorkflowModelTests	AllOf AnyOf and Not combine()	PASS
+logic.workflow.WorkflowModelTests	job messages round trip and carry no actor or payload()	PASS
+logic.workflow.WorkflowModelTests	numbers beyond double precision compare exactly()	PASS
+logic.workflow.WorkflowModelTests	value references and conditions are validated()	PASS
+logic.workflow.WorkflowModelTests	step timeouts must be positive and bounded()	PASS
+logic.workflow.WorkflowModelTests	missing and null operands are false, except NE()	PASS
+logic.workflow.WorkflowModelTests	numbers compare by value not by representation()	PASS
+logic.workflow.WorkflowModelTests	a retry policy rejects nonsense()	PASS
+logic.workflow.WorkflowModelTests	mixed types never match and never throw()	PASS
+logic.workflow.WorkflowModelTests	no retry ever waits less than the backoff floor()	PASS
+logic.workflow.WorkflowModelTests	strings, membership and containment()	PASS
+logic.workflow.WorkflowShapeTests	all and any read every element in order()	PASS
+logic.workflow.WorkflowShapeTests	a script-like step kind, operator or value source is rejected and the workflow is not offered()	PASS
+logic.workflow.WorkflowShapeTests	one invalid element anywhere makes the whole condition invalid and the workflow is not offered()	PASS
+logic.workflow.WorkflowShapeTests	a script field next to a valid step is not carried into the parsed step()	PASS
+logic.workflow.WorkflowShapeTests	an empty all array is read but rejected by the validator()	PASS
+logic.workflow.WorkflowShapeTests	a step timeout on a write is an unknown outcome and fails the run with that code()	PASS
+logic.workflow.WorkflowShapeTests	a timed out write step is not retried and does not route to onError even when attempts and a handler exist()	PASS
+logic.workflow.WorkflowShapeTests	the step kinds, value sources, operators and approver kinds are a closed set with no scripting()	PASS
+logic.workflow.WorkflowSweeperTests	a message that arrives while its run is backing off does not count as another failure()	PASS
+logic.workflow.WorkflowSweeperTests	a tenant with a large backlog cannot starve another tenant()	PASS
+logic.workflow.WorkflowSweeperTests	a run that only waits for an approval is polled at the slower approval interval()	PASS
+logic.workflow.WorkflowSweeperTests	sweep backoff of a repeatedly failing run is exponential with a floor and a cap()	PASS
+logic.workflow.WorkflowSweeperTests	oldest eligible run is served first and every run is examined within ceil(n over limit) passes()	PASS
+logic.workflow.WorkflowSweeperTests	a dead letter counts as one failure of its run and does not kill a healthy run()	PASS
+logic.workflow.WorkflowSweeperTests	the per-tenant cap bounds one tenant even when it is alone with a backlog()	PASS
+logic.workflow.WorkflowSweeperTests	a dead letter naming an unknown or foreign run is ignored()	PASS
+logic.workflow.WorkflowSweeperTests	a sweep over runs that all fail does not throw and leaves healthy ones for later passes()	PASS
+logic.workflow.WorkflowSweeperTests	the failure budget is explicit and a budget of one fails the run on the first poison message()	PASS
+logic.workflow.WorkflowSweeperTests	runs whose publish fails are backed off and do not hog the next passes()	PASS
+logic.workflow.WorkflowSweeperTests	a run is not examined again before the minimum interval and is again after it()	PASS
+logic.workflow.WorkflowSweeperTests	a poison run is retried with growing backoff and only its own message is dead-lettered()	PASS
+maintenance.BackupMonitorTests	fresh, stale, failed and skipped components and the drill are reported honestly and stale ones raise alerts()	PASS
+maintenance.CleanupTests	retention boundaries - old pending uploads go, fresh and READY assets stay, dry run changes nothing()	PASS
+maintenance.CleanupTests	old idempotency keys and failed deployments are removed, running deployments and audit rows never()	PASS
+member.MemberApiTests	workspace admin adds, changes and removes members and every step is audited()	PASS
+member.MemberApiTests	an admin cannot change their own role and the last admin cannot be demoted or removed()	PASS
+member.MemberApiTests	unknown, disabled and ambiguous targets and invalid roles are rejected()	PASS
+member.MemberApiTests	viewer, editor and publisher cannot manage members or escalate themselves()	PASS
+member.MemberApiTests	cross-workspace access to member APIs is hidden()	PASS
+member.MemberApiTests	project members - owner manages, others cannot, last owner is protected, removed workspace member loses project access()	PASS
+member.MemberApiTests	concurrent removal of two admins leaves at least one()	PASS
+migration.DataRuntimeMigrationTests	the undo script refuses while data sources exist and changes nothing()	PASS
+migration.DataRuntimeMigrationTests	a data source cannot point at a workspace of another tenant()	PASS
+migration.DataRuntimeMigrationTests	schema snapshots are unique per data source and version and tenant bound()	PASS
+migration.DataRuntimeMigrationTests	a binding is per project and mode, never crosses tenants or workspaces()	PASS
+migration.DataRuntimeMigrationTests	every table exists and tenant_id is mandatory on all of them()	PASS
+migration.DataRuntimeMigrationTests	credentials are stored as ciphertext only()	PASS
+migration.DataRuntimeMigrationTests	idempotency rows validate state and key shape and are tenant bound()	PASS
+migration.DataRuntimeMigrationTests	a binding can only name a data source owned by the project's own workspace (B-C0-W-05)()	PASS
+migration.DataRuntimeMigrationTests	status, config shape and name uniqueness per tenant are enforced()	PASS
+migration.DataRuntimeMigrationTests	child rows cannot reference a data source of another tenant()	PASS
+migration.PublishConfigsMigrationTests	a row whose tenant differs from its workspace tenant is rejected()	PASS
+migration.PublishConfigsMigrationTests	tenant_id is mandatory and defaults keep a new project private and static()	PASS
+migration.PublishConfigsMigrationTests	PRIVATE_LINK needs a token hash and PUBLIC cannot require auth()	PASS
+migration.WorkflowRunPersistenceMigrationTests	steps belong to a run of the same tenant and go with their run()	PASS
+migration.WorkflowRunPersistenceMigrationTests	the undo script guards in flight work and drops exactly the three V29 tables children first()	PASS
+migration.WorkflowRunPersistenceMigrationTests	a workflow run must name a real project, and its workspace must match the tenant and the project()	PASS
+migration.WorkflowRunPersistenceMigrationTests	C4 contract columns are part of V29 - action_runs mutating defaults to TRUE and is mandatory, the workflow lease is nullable and paired()	PASS
+migration.WorkflowRunPersistenceMigrationTests	workflow run start is idempotent per scope and a TEST run never shares a key with a LIVE run()	PASS
+migration.WorkflowRunPersistenceMigrationTests	status, mode, attempt and the RUNNING versus finished shape are enforced()	PASS
+migration.WorkflowRunPersistenceMigrationTests	V29 is registered as the next migration and V28 is not renumbered()	PASS
+migration.WorkflowRunPersistenceMigrationTests	status, compensation and the finished timestamp are constrained()	PASS
+migration.WorkflowRunPersistenceMigrationTests	the undo script refuses while a run is in flight and changes nothing()	PASS
+migration.WorkflowRunPersistenceMigrationTests	action_runs app_id accepts NULL and a NULL app is one key scope()	PASS
+migration.WorkflowRunPersistenceMigrationTests	an application and its workspace come together or not at all()	PASS
+migration.WorkflowRunPersistenceMigrationTests	the three tables exist and tenant_id is mandatory on all of them()	PASS
+migration.WorkflowRunPersistenceMigrationTests	an action run cannot point at a workspace of another tenant or at a project of another workspace()	PASS
+project.ProjectApiTests	validation errors are structured with field details()	PASS
+project.ProjectApiTests	RBAC matrix for project operations()	PASS
+project.ProjectApiTests	stale revision returns 409 with current revision()	PASS
+project.ProjectApiTests	404 405 and unknown route use the error contract()	PASS
+project.ProjectApiTests	settings persist and are audited()	PASS
+project.ProjectApiTests	foreign workspace and foreign project are not disclosed()	PASS
+project.ProjectApiTests	audit rows cannot be updated or deleted()	PASS
+project.ProjectApiTests	competing writes with the same expected revision let exactly one win()	PASS
+project.ProjectApiTests	create trims name sets owner and writes audit()	PASS
+project.ProjectRepositoryTests	project reads are scoped to workspace and active membership()	PASS
+project.publishconfig.PublishConfigTests	audit lines carry the change and never the token()	PASS
+project.publishconfig.PublishConfigTests	without a stored policy the request decides exactly as before()	PASS
+project.publishconfig.PublishConfigTests	public data approval is recorded only for a public app()	PASS
+project.publishconfig.PublishConfigTests	mode must fit the kind of project()	PASS
+project.publishconfig.PublishConfigTests	the publish service has no access to membership sharing or deployments()	PASS
+project.publishconfig.PublishConfigTests	the first configuration is revision 1 and later changes need the current revision()	PASS
+project.publishconfig.PublishConfigTests	rotating needs an existing private link()	PASS
+project.publishconfig.PublishConfigTests	a rejected configuration stores nothing and writes no audit line()	PASS
+project.publishconfig.PublishConfigTests	public visibility is subject to the administrator switches and cannot require sign-in()	PASS
+project.publishconfig.PublishConfigTests	with a stored policy the policy decides()	PASS
+project.publishconfig.PublishConfigTests	a private link token is created once and only its hash is stored()	PASS
+project.publishconfig.PublishConfigTests	data bound to an app does not become public without an explicit confirmation()	PASS
+project.publishconfig.PublishConfigTests	the draft in the document is only a request and changes nothing by itself()	PASS
+project.publishconfig.PublishConfigTests	cache seconds are bounded()	PASS
+prompt.PromptApiTests	unsupported prompt changes nothing()	PASS
+prompt.PromptApiTests	testimonial intents hide show remove and re-add()	PASS
+prompt.PromptApiTests	thêm sản phẩm and rút gọn hero patch the right props()	PASS
+prompt.PromptApiTests	thêm bảng so sánh adds ComparisonBlock before testimonials with version audit and reuse metric()	PASS
+prompt.PromptApiTests	stale revision, viewer and blank prompt are rejected()	PASS
+prompt.PromptApiTests	prompt history survives and is project scoped()	PASS
+publish.PublishApiTests	a failing provider ends in FAILED with an error and no url, and a page with script content is blocked()	PASS
+publish.PublishApiTests	the same idempotency key never creates a second deployment, a different payload is rejected()	PASS
+publish.PublishApiTests	stale revision is 409, editor and viewer cannot publish, other projects are 404()	PASS
+publish.PublishApiTests	concurrent duplicate requests with one key create exactly one deployment()	PASS
+publish.PublishApiTests	publish runs the state machine to RUNNING with ordered events, url and audit()	PASS
+publish.PublishApiTests	transitions are compare-and-set and cannot skip or go backwards()	PASS
+publish.QueueRecoveryTests	a job published while the worker is stopped waits in the durable queue and completes when the worker returns()	PASS
+publish.QueueRecoveryTests	a deployment whose enqueue was lost is re-published by the sweeper()	PASS
+publish.QueueRecoveryTests	a worker that died mid-pipeline is resumed from where it stopped, without repeating earlier steps()	PASS
+publish.StaticSiteTests	website forms - validated, spam dropped silently, rate limited, origin checked, editors read and export, viewers cannot()	PASS
+publish.StaticSiteTests	publishing builds an immutable artifact and the site serves it with strict headers()	PASS
+publish.StaticSiteTests	custom domains - TXT verification, real TLS probe result, served only for verified public sites, no reserved hosts()	PASS
+publish.StaticSiteTests	rollback serves an earlier artifact without a rebuild, unpublish takes the site offline, only publishers may do either()	PASS
+publish.StaticSiteTests	a rendered page containing a script fails the build()	PASS
+publish.StaticSiteTests	multi-page site - pages, navigation and SEO are validated, every page is in one atomic artifact, directory URLs and 404 work()	PASS
+publish.StaticSiteTests	a private site needs a member's single-use ticket, then its own session, and access is checked on every request()	PASS
+runtime.PublicAddressTests	private loopback link-local multicast and any-local are refused()	PASS
+runtime.PublicAddressTests	192 0 0 slash 24 and the documentation and benchmarking blocks()	PASS
+runtime.PublicAddressTests	public addresses stay public()	PASS
+runtime.PublicAddressTests	6to4 Teredo documentation discard and IPv4-compatible IPv6()	PASS
+runtime.PublicAddressTests	240 slash 4 reserved and the limited broadcast()	PASS
+runtime.PublicAddressTests	an IPv6 zone id does not change the verdict()	PASS
+runtime.PublicAddressTests	a literal that is private is not public and a name that cannot resolve is not public()	PASS
+runtime.PublicAddressTests	this-network and carrier-grade NAT()	PASS
+runtime.PublicAddressTests	NAT64 is judged by the embedded IPv4()	PASS
+runtime.ServerRuntimeTests	blue-green - the new version serves only after its health check, a failure keeps the old one, rollback restores an earlier build()	PASS
+runtime.ServerRuntimeTests	per-app database - own database and role, the role can connect only to its own database()	PASS
+runtime.ServerRuntimeTests	secrets are write-only, encrypted at rest, reserved names refused, delivered only to the runner()	PASS
+runtime.ServerRuntimeTests	gateway passes only declared routes, strips cookies, refuses when the app is not running, hides the server bundle()	PASS
+runtime.ServerRuntimeTests	connector proxy - needs the gateway token, a valid app token, a grant and a declared operation()	PASS
+schema.SchemaApiTests	UPDATE_PROP on an item creates a version and persists()	PASS
+schema.SchemaApiTests	new project gets default schema and version 1 from the registry()	PASS
+schema.SchemaApiTests	viewer cannot edit and stale revision is 409()	PASS
+schema.SchemaApiTests	two schema writes with the same revision let exactly one win()	PASS
+schema.SchemaApiTests	ADD_ITEM REMOVE_ITEM ADD_SECTION MOVE_SECTION and REMOVE_SECTION work()	PASS
+schema.SchemaApiTests	registry endpoints list seeded components()	PASS
+schema.SchemaApiTests	invalid operations and invalid schemas are rejected without creating a version()	PASS
+schema.SchemaApiTests	foreign users cannot read or patch the schema()	PASS
+schema.SchemaApiTests	validator rejects duplicate ids unknown component version and missing required props()	PASS
+settings.LockdownSettingsTests	numeric settings are range checked and the catalog lists defaults()	PASS
+settings.LockdownSettingsTests	public sign-up is off by default, existing accounts still log in, an admin can enable it only with confirmation()	PASS
+settings.LockdownSettingsTests	public publishing can be disabled by policy()	PASS
+settings.LockdownSettingsTests	asset storage quota per project()	PASS
+settings.LockdownSettingsTests	retention keeps the served artifact and the last N rollbacks, deletes older ones and audits each deletion()	PASS
+template.BusinessTemplateTests	sample data fits the view model and is limited to text numbers and booleans()	PASS
+template.BusinessTemplateTests	built-in templates only use approved components and carry no tenant or project data()	PASS
+template.BusinessTemplateTests	a built-in template declares its data contract as slots()	PASS
+template.BusinessTemplateTests	ids are stable between runs and recognised as built-in()	PASS
+template.BusinessTemplateTests	every built-in template is a typed V2 document that round-trips()	PASS
+template.BusinessTemplateTests	every built-in template passes the page validator and the V2 validator()	PASS
+template.BusinessTemplateTests	workflow templates start from an action and stay acyclic()	PASS
+template.BusinessTemplateTests	there is exactly one built-in template for each of the 13 business categories()	PASS
+template.LibraryCatalogTests	template workflow - catalog, submit with checks and preview, reject needs reason, approve publishes, usage counted, history kept()	PASS
+template.LibraryCatalogTests	template checks fail on unsafe text and keep it private, without a browser the preview is UNAVAILABLE, not faked()	PASS
+template.LibraryCatalogTests	blocks - catalog metadata, preview on submit, usage counted only for a real insert()	PASS
+template.TemplateAndBlockTests	deprecate hides a block from the library without touching pages, restore brings it back, withdraw and delete rules()	PASS
+template.TemplateAndBlockTests	a block keeps to its base component and approval re-validates against today's registry()	PASS
+template.TemplateAndBlockTests	templates - foreign project is 404, viewers cannot save, outdated templates create nothing()	PASS
+template.TemplateAndBlockTests	save a section as a private block - props come from the stored page, images cleared, owner-only()	PASS
+template.TemplateAndBlockTests	submit runs automated checks - unsafe text fails and stays private with a report()	PASS
+template.TemplateAndBlockTests	review - no self-approval even for admins, ordinary users cannot decide, reject needs a reason, approve publishes to everyone()	PASS
+template.TemplateAndBlockTests	company templates - only a system admin shares them, then the author can no longer change them, everyone can use them()	PASS
+template.TemplateAndBlockTests	save a page as a private template - images cleared, author-only, and a new project starts from it()	PASS
+template.TemplateSanitizerTests	a document is safe exactly when sanitizing removes nothing()	PASS
+template.TemplateSanitizerTests	sample data with unknown fields, URLs, credentials or too many rows is dropped()	PASS
+template.TemplateSanitizerTests	sanitizing does not change its input and a legacy page is returned as it was()	PASS
+template.TemplateSanitizerTests	every scope drops the publish draft and the connector id but keeps the slot()	PASS
+template.TemplateSanitizerTests	third-party extension namespaces never travel in a SYSTEM template()	PASS
+template.TemplateSanitizerTests	operation keys of a tenant connector are removed only from platform-wide templates()	PASS
+template.TemplateSanitizerTests	the sample V2 document becomes a valid platform template()	PASS
+template.TemplateSanitizerTests	scope follows the visibility of the template()	PASS
+template.TemplateSanitizerTests	credential-like keys and URLs in an extension remove that namespace in every scope()	PASS
+template.TemplateV2IntegrationTests	a project can start from a built-in template and keeps the V2 part()	PASS
+template.TemplateV2IntegrationTests	saving a project as a template drops the connector id and the publish draft()	PASS
+template.TemplateV2IntegrationTests	submitting for company review removes the operation key and the source project stays hidden from other users()	PASS
+template.TemplateV2IntegrationTests	a built-in template cannot be edited or archived()	PASS
+template.TemplateV2IntegrationTests	the library lists the 13 built-in business templates with their scope and data slots()	PASS
+tenancy.AccessAdaptersTests	gateway - system admin with the flag OFF has no data permission anywhere()	PASS
+tenancy.AccessAdaptersTests	resolver - roles, groups, department managers and requester checks()	PASS
+tenancy.AccessAdaptersTests	gateway - a user of another workspace cannot use a foreign project id()	PASS
+tenancy.AccessAdaptersTests	tenant gate - only an existing ACTIVE tenant is enabled()	PASS
+tenancy.AccessAdaptersTests	port - an archived application keeps only view, not use()	PASS
+tenancy.AccessAdaptersTests	gateway - an app version must belong to the project()	PASS
+tenancy.AccessAdaptersTests	gateway - default deny - unknown operation, missing workspace, non-user actors, disabled account, unknown ids()	PASS
+tenancy.AccessAdaptersTests	resolver - a suspended tenant addresses nobody()	PASS
+tenancy.AccessAdaptersTests	port - tenant gate, claimed tenant and actor kinds()	PASS
+tenancy.AccessAdaptersTests	resolver - users are addressable only inside the context tenant()	PASS
+tenancy.AccessAdaptersTests	gateway - a workspace admin may do every operation, a plain member of nothing may do none()	PASS
+tenancy.AccessAdaptersTests	gateway - a project owner may read and query but not manage, mutate or sample()	PASS
+tenancy.AccessAdaptersTests	gateway - cross tenant - the claimed tenant must be the tenant of the workspace()	PASS
+tenancy.AccessAdaptersTests	gateway - operation to permission mapping is total and matches the contract()	PASS
+tenancy.AccessAdaptersTests	port - canonical codes only, viewer can use but not edit, test mode needs APP_EDIT()	PASS
+tenancy.AdminTransferOwnershipSelfGrantSpec	a system admin who is only a workspace member cannot make itself the owner of an application()	PASS
+tenancy.MeTenancyTests	tenant admin - tenantRole TENANT_ADMIN and the tenant permissions, still no platform scope()	PASS
+tenancy.MeTenancyTests	viewer and workspace editor rows carry no canonical permission (PROJECT_CREATE is not part of the vocabulary)()	PASS
+tenancy.MeTenancyTests	system admin - platform scope without business access, non-member workspaces show platform permissions only()	PASS
+tenancy.MeTenancyTests	ordinary member - tenant MEMBER of the DEFAULT tenant, no platform scope, workspace permissions as canonical codes()	PASS
+tenancy.PermissionCanonicalTests	unknown, blank, lower-case and legacy storage names are not canonical codes()	PASS
+tenancy.PermissionCanonicalTests	default deny - managing, mutating and workflow codes belong to WORKSPACE_ADMIN only, VIEWER can only view and use()	PASS
+tenancy.PermissionCanonicalTests	legacy permission mapping - storage constants keep their names and map to the canonical APP codes()	PASS
+tenancy.PermissionCanonicalTests	canonicalCodesOf exposes canonical codes only - internal storage constants are dropped, legacy names never leak()	PASS
+tenancy.PermissionCanonicalTests	new codes exist with exactly the canonical name and the canonical set is closed and round-trips()	PASS
+tenancy.PermissionCanonicalTests	platform scope and tenant roles hold no business permission()	PASS
+tenancy.PermissionCanonicalTests	legacy role semantics are unchanged()	PASS
+tenancy.PrivilegeEscalationTests	tenant level - nobody adds itself to a tenant or changes its own tenant role, not even a system admin()	PASS
+tenancy.PrivilegeEscalationTests	a project owner and a plain member cannot promote themselves, but an admin can promote someone else()	PASS
+tenancy.PrivilegeEscalationTests	a workspace admin cannot re-add or promote itself, and cannot add itself to a project it is not in()	PASS
+tenancy.PrivilegeEscalationTests	a system admin who is a member cannot raise its own workspace or project role()	PASS
+tenancy.PrivilegeEscalationTests	a system admin cannot add itself to a workspace it does not belong to (R-08)()	PASS
+tenancy.PrivilegeEscalationTests	a system admin can still onboard OTHER people - the platform duty is kept, only self-grant is closed()	PASS
+tenancy.PrivilegeEscalationTests	a tenant admin has no way into the workspaces of its tenant through the member API()	PASS
+tenancy.TenantAccessLegacyFlagTests	flag on - the adapters follow the same policy (system admin may query, but only as a USER actor)()	PASS
+tenancy.TenantAccessLegacyFlagTests	flag on - ordinary users are unaffected (still 404 for foreign workspaces)()	PASS
+tenancy.TenantAccessLegacyFlagTests	flag on - self grant is still rejected for a system admin()	PASS
+tenancy.TenantAccessLegacyFlagTests	flag on - a system admin that is not a member has every permission and sees all projects, as before T2()	PASS
+tenancy.TenantAccessLegacyFlagTests	flag on - me exposes businessAccess and the full permission set for non-member workspaces()	PASS
+tenancy.TenantAccessTests	SYSTEM_ADMIN keeps the platform operations - member management and tenant administration()	PASS
+tenancy.TenantAccessTests	SYSTEM_ADMIN that is a member gets exactly its member permissions (no bypass on top)()	PASS
+tenancy.TenantAccessTests	AccessContext carries the tenant resolved from the workspace()	PASS
+tenancy.TenantAccessTests	forPlatform needs an enabled system admin and forTenant hides foreign tenants()	PASS
+tenancy.TenantAccessTests	TENANT_ADMIN is a tenant-level role only - no implicit access to workspace business data()	PASS
+tenancy.TenantAccessTests	SYSTEM_ADMIN default policy - platform scope only, no business data of a workspace it is not a member of()	PASS
+tenancy.TenantAccessTests	tenant admin API - platform operations need SYSTEM_ADMIN, membership operations need TENANT_MEMBERS on that tenant()	PASS
+tenancy.TenantAccessTests	a member removed from the tenant loses access to its workspaces, and a suspended tenant is closed to ordinary users()	PASS
+tenancy.TenantAdminViaRoleTests	a workspace admin is not a tenant admin and a plain tenant MEMBER holds no tenant permission()	PASS
+tenancy.TenantAdminViaRoleTests	tenant admin authority = tenantRole TENANT_ADMIN on that tenant only()	PASS
+tenancy.TenantAdminViaRoleTests	demoted, deactivated and removed tenant admins lose the authority at once()	PASS
+tenancy.TenantAdminViaRoleTests	tenant admin has no implicit workspace, app or data authority()	PASS
+tenancy.TenantFoundationMigrationTests	workspace tenant constraint - a row cannot be moved into a workspace of another tenant()	PASS
+tenancy.TenantFoundationMigrationTests	database constraints reject bad tenants, bad roles and missing tenant ids()	PASS
+tenancy.TenantFoundationMigrationTests	becoming a workspace member makes the user a MEMBER of the workspace tenant and never a TENANT_ADMIN()	PASS
+tenancy.TenantFoundationMigrationTests	legacy insert paths still work - a workspace created without tenant lands in the DEFAULT tenant()	PASS
+tenancy.TenantFoundationMigrationTests	an explicit tenant_id that matches the workspace tenant is accepted()	PASS
+tenancy.TenantFoundationMigrationTests	a user can belong to several tenants()	PASS
+tenancy.TenantFoundationMigrationTests	re-activating a workspace member re-creates the tenant membership, but never re-activates one that was deactivated at tenant level()	PASS
+tenancy.TenantFoundationMigrationTests	an explicit tenant_id that differs from the workspace tenant is REJECTED on every child table, never overwritten()	PASS
+tenancy.TenantFoundationMigrationTests	legacy INSERT without tenant_id still works on every table (compatibility trigger fills it)()	PASS
+tenancy.TenantFoundationMigrationTests	DEFAULT tenant exists and is ACTIVE()	PASS
+tenancy.TenantFoundationMigrationTests	no row of the foundation tables is left without a tenant and children always match their workspace()	PASS
+tenancy.TenantFoundationMigrationTests	moving a workspace to another tenant carries its members and projects along (composite FK ON UPDATE CASCADE)()	PASS
+tenancy.TenantInsertPathsGrepTest	no new INSERT into the four tenant tables omits tenant_id, and the pending list only shrinks()	PASS
+tenancy.TenantMigrationFromV25Tests	undo script refuses (and changes nothing) once V2 tenant data exists()	PASS
+tenancy.TenantMigrationFromV25Tests	V26 keeps legacy INSERTs working and rejects a mismatching tenant_id on rows migrated from V25()	PASS
+tenancy.TenantMigrationFromV25Tests	undo script on a database that only holds the V26 backfill removes the scaffolding and keeps all business rows()	PASS
+tenancy.TenantMigrationFromV25Tests	V26 on V25 data - every row lands in the DEFAULT tenant, nothing is lost, ids are unchanged, users become plain tenant MEMBERs()	PASS
+tenancy.TenantServiceTests	create validates slug and name, refuses duplicates, makes the first admin a TENANT_ADMIN and audits()	PASS
+tenancy.TenantServiceTests	the DEFAULT tenant cannot be suspended or deleted, other tenants can()	PASS
+tenancy.TenantServiceTests	the last TENANT_ADMIN can be neither demoted nor removed, and a user may hold roles in several tenants()	PASS
+version.VersionApiTests	restore creates a NEW version, leaves history untouched and persists()	PASS
+version.VersionApiTests	viewer cannot restore, editor can, stale revision is 409, foreign version is 404()	PASS
+version.VersionApiTests	version numbers are gapless and component usage is recorded()	PASS
+wiring.ActionDataPortAdapterTests	a source with its own sourceRef needs no slot binding()	PASS
+wiring.ActionDataPortAdapterTests	an unknown query is a definite refusal()	PASS
+wiring.ActionDataPortAdapterTests	a READ query is refused for a write before anything is sent()	PASS
+wiring.ActionDataPortAdapterTests	a request for another application than the context is refused()	PASS
+wiring.ActionDataPortAdapterTests	the dry run is not emulated()	PASS
+wiring.ActionDataPortAdapterTests	without a data gateway the answer is DATA_RUNTIME_UNAVAILABLE and not retryable()	PASS
+wiring.ActionDataPortAdapterTests	a failure result can never be made retryable for the two terminal codes()	PASS
+wiring.ActionDataPortAdapterTests	another tenant sees the application as missing()	PASS
+wiring.ActionDataPortAdapterTests	TEST mode never reaches the data source()	PASS
+wiring.ActionDataPortAdapterTests	an unbound data source slot is a definite refusal not a crash()	PASS
+wiring.ActionDataPortAdapterTests	an ambiguous write failure is IDEMPOTENCY_OUTCOME_UNKNOWN and not retryable()	PASS
+wiring.ActionDataPortAdapterTests	definite and busy failures keep their code()	PASS
+wiring.ActionDataPortAdapterTests	a write resolves local ids and sends the derived key unchanged to C3()	PASS
+wiring.ActionRunRecoveryTests	a recorded ambiguous write is never turned into a retryable run()	PASS
+wiring.ActionRunRecoveryTests	a store failure is contained and the next tick still runs()	PASS
+wiring.ActionRunRecoveryTests	an abandoned MUTATING run is an unknown outcome - not retryable, replayed as it is, never started again (A-1)()	PASS
+wiring.ActionRunRecoveryTests	a lease shorter than a minute is refused at construction()	PASS
+wiring.ActionRunRecoveryTests	a run inside its lease is left alone, an abandoned NON-mutating one becomes a retryable timeout()	PASS
+wiring.ActorKindsTests	USER is never produced for another kind()	PASS
+wiring.ActorKindsTests	every logic kind converts to the tenancy kind of the same name and back()	PASS
+wiring.ActorKindsTests	the two enums have exactly the same names()	PASS
+wiring.AppRuntimeApiTests	a workflow start without a key is a bad request and an unknown run is not found()	PASS
+wiring.AppRuntimeApiTests	a body field the contract does not list is refused, tenantId first()	PASS
+wiring.AppRuntimeApiTests	a trigger that does not belong to the action is an unknown action()	PASS
+wiring.AppRuntimeApiTests	a user of another workspace sees the project as missing on every route()	PASS
+wiring.AppRuntimeApiTests	a LIVE workflow start is refused while the run store is volatile()	PASS
+wiring.AppRuntimeApiTests	without DATA_MUTATE a data action is forbidden even in TEST mode()	PASS
+wiring.AppRuntimeApiTests	TEST mode of a query needs APP_EDIT and, with nothing bound, the data runtime answers 422 DATA_SOURCE_UNBOUND()	PASS
+wiring.AppRuntimeApiTests	LIVE finds no definition while nothing is published()	PASS
+wiring.AppRuntimeApiTests	a manager gets a would-run answer in TEST mode, nothing is executed and no input value reaches the audit trail()	PASS
+wiring.AppRuntimeApiTests	an anonymous caller is not let in()	PASS
+wiring.AppRuntimeFlagsOffTests	the data platform administration family is not mounted either()	PASS
+wiring.AppRuntimeFlagsOffTests	no runtime route is mounted by default()	PASS
+wiring.C1PortAdaptersTests	the gateway authorizer adapter converts the context and the decision()	PASS
+wiring.C1PortAdaptersTests	a denial of C1 is passed on with its reason()	PASS
+wiring.C1PortAdaptersTests	the access adapter sends canonical code, tenant, workspace, project, mode and a converted principal to C1()	PASS
+wiring.C1PortAdaptersTests	a request for another application than the context is denied without asking C1()	PASS
+wiring.DataRuntimeLiveApiTests	same tenant, another workspace, a direct sourceRef cannot write either, and nothing is reserved()	PASS
+wiring.DataRuntimeLiveApiTests	a LIVE action writes through the gateway, stores only a derived key, and a retry with the same key writes nothing again()	PASS
+wiring.DataRuntimeLiveApiTests	a different tenant is refused by sourceRef and by binding()	PASS
+wiring.DataRuntimeLiveApiTests	an ambiguous failure keeps the key reserved as UNKNOWN and a retry never writes again()	PASS
+wiring.DataRuntimeLiveApiTests	same tenant, another workspace, a binding is refused by the writer and by the database, and the slot stays unbound()	PASS
+wiring.DataRuntimeLiveApiTests	same tenant, same workspace, a directly referenced source of that workspace is allowed()	PASS
+wiring.DataRuntimeLiveApiTests	a LIVE action with no LIVE binding changes nothing()	PASS
+wiring.DataRuntimeLiveApiTests	a forged workspace and project combination is denied, over HTTP and at the gateway()	PASS
+wiring.DataRuntimeLiveApiTests	a TEST run reads the TEST binding only and never writes a binding()	PASS
+wiring.DataRuntimeLiveApiTests	a LIVE query reads rows through the persistent source, query and binding and returns the mapped view model()	PASS
+wiring.DataRuntimeLiveApiTests	a disabled query is not found and a disabled data source is refused()	PASS
+wiring.DataRuntimeLiveApiTests	a tenant-level source without a workspace is not reachable at run time, by sourceRef or by binding()	PASS
+wiring.DataRuntimeLiveApiTests	another workspace cannot reach the application's data()	PASS
+wiring.DataRuntimeLiveApiTests	LIVE needs a LIVE binding - a TEST-only binding leaves LIVE unbound()	PASS
+wiring.DataRuntimeLiveApiTests	same tenant, another workspace, a direct sourceRef is refused exactly like a source that does not exist()	PASS
+wiring.DataRuntimeLiveApiTests	the data gateway bean exists and is the real one()	PASS
+wiring.DataRuntimeLiveApiTests	a stored credential reaches the connector, and appears in no response, audit row or table other than as ciphertext()	PASS
+wiring.DataRuntimeLiveApiTests	a TEST action is only previewed - no connector call, no idempotency row()	PASS
+wiring.DataWriteErrorsTests	an unknown outcome stays unknown and is never retryable()	PASS
+wiring.DataWriteErrorsTests	no failure of a write is ever a bare generic code()	PASS
+wiring.DataWriteErrorsTests	in progress and rate limited are retryable with the same code()	PASS
+wiring.DataWriteErrorsTests	a rejected mutation stays rejected and is never retryable()	PASS
+wiring.DataWriteErrorsTests	every code C3 guarantees nothing was applied for keeps its code and is not retryable()	PASS
+wiring.DataWriteErrorsTests	a transport style exception on a write is an unknown outcome()	PASS
+wiring.DataWriteErrorsTests	a key conflict is definite and not retryable()	PASS
+wiring.DataWriteErrorsTests	an ambiguous connector failure becomes an unknown outcome()	PASS
+wiring.RunStoreConfigurationTests	an unknown value makes startup fail and names the missing run store()	PASS
+wiring.RunStoreConfigurationTests	without the property the durable jdbc stores are used()	PASS
+wiring.RunStoreConfigurationTests	with the workflow runtime disabled no run store exists at all()	PASS
+wiring.RunStoreConfigurationTests	memory is an explicit override and never mixes with the durable stores()	PASS
+wiring.RunStoreConfigurationTests	an empty or differently spelled value is not a silent fallback either()	PASS
+wiring.RunStoreConfigurationTests	jdbc explicitly selects the same durable stores()	PASS
+wiring.RuntimeApiPureTests	a workflow start needs an idempotency key and an object input()	PASS
+wiring.RuntimeApiPureTests	a rejected mutation is 422 and may carry its onError follow-ups()	PASS
+wiring.RuntimeApiPureTests	an empty body is a LIVE request with nothing in it()	PASS
+wiring.RuntimeApiPureTests	query params are plain values within the limit and the page is range checked()	PASS
+wiring.RuntimeApiPureTests	a body that is not an object is refused()	PASS
+wiring.RuntimeApiPureTests	rate limited carries Retry-After from the details()	PASS
+wiring.RuntimeApiPureTests	status codes follow the contract table()	PASS
+wiring.RuntimeApiPureTests	mode must be LIVE or TEST exactly()	PASS
+wiring.RuntimeApiPureTests	the generic error body has the ApiError shape()	PASS
+wiring.RuntimeApiPureTests	the mapping of a query is the single mapping that names it()	PASS
+wiring.RuntimeApiPureTests	fields the contract does not list are refused, whatever their name()	PASS
+wiring.RuntimeApiPureTests	an unknown outcome is 409 and never retryable even if a caller claimed it was()	PASS
+wiring.RuntimeApiPureTests	ok and would-run are 200 and a would-run says nothing was executed()	PASS
+wiring.RuntimeMappingCatalogTests	a mapping and a view model name the operation key of their local query()	PASS
+wiring.RuntimeMappingCatalogTests	a queryRef that names no local query is left as it is, and an unknown mapping is not found()	PASS
+wiring.RuntimeMappingCatalogTests	the stored document is not modified by the translation()	PASS
+wiring.VolatileStoreGuardsTests	an unknown action is left to the delegate()	PASS
+wiring.VolatileStoreGuardsTests	a LIVE workflow start is refused while the stores are volatile, TEST is not()	PASS
+wiring.VolatileStoreGuardsTests	a non mutating action that chains a mutating one is refused too()	PASS
+wiring.VolatileStoreGuardsTests	an acknowledged deployment passes through()	PASS
+wiring.VolatileStoreGuardsTests	TEST mode and a non mutating action are not affected()	PASS
+wiring.VolatileStoreGuardsTests	a caller without permission gets the delegate's own answer, not the refusal()	PASS
+wiring.VolatileStoreGuardsTests	a LIVE mutating action is refused with RUNTIME_STORES_VOLATILE and nothing runs()	PASS
+wiring.WebOriginsTests	every portal gets its own OIDC redirect and logout URI()	PASS
+wiring.WebOriginsTests	wildcards paths and duplicates are refused()	PASS
+wiring.WebOriginsTests	cors is exactly the three origins and never a wildcard()	PASS
+wiring.persistence.DefinitionCodecsTests	a REST query survives the round trip()	PASS
+wiring.persistence.DefinitionCodecsTests	a schema document that is not a schema is rejected()	PASS
+wiring.persistence.DefinitionCodecsTests	a mutation survives the round trip for every kind()	PASS
+wiring.persistence.DefinitionCodecsTests	a SQL query survives the round trip()	PASS
+wiring.persistence.DefinitionCodecsTests	identity never comes from the document()	PASS
+wiring.persistence.DefinitionCodecsTests	an unknown kind, a missing field or an invalid definition decodes to null()	PASS
+wiring.persistence.DefinitionCodecsTests	a discovered schema survives the round trip including masked samples()	PASS
+wiring.persistence.JdbcActionRunStoreTests	the same key with other inputs is KeyReused and changes nothing()	PASS
+wiring.persistence.JdbcActionRunStoreTests	the stored result is the replayable outcome and carries no extra data()	PASS
+wiring.persistence.JdbcActionRunStoreTests	a non-retryable failure is replayed as is()	PASS
+wiring.persistence.JdbcActionRunStoreTests	a retry after a retryable failure records the mutating flag of the new attempt()	PASS
+wiring.persistence.JdbcActionRunStoreTests	one sweep treats a mutating and a non-mutating abandoned run each by its own flag()	PASS
+wiring.persistence.JdbcActionRunStoreTests	sweeping twice does not touch a run that is already finished()	PASS
+wiring.persistence.JdbcActionRunStoreTests	an application of another tenant is refused and leaves no row()	PASS
+wiring.persistence.JdbcActionRunStoreTests	tenants, users, actions and apps are separate key scopes()	PASS
+wiring.persistence.JdbcActionRunStoreTests	the sweeper never turns a recorded ambiguous write into a retryable run()	PASS
+wiring.persistence.JdbcActionRunStoreTests	an abandoned RUNNING NON-mutating run is turned into a retryable timeout, a fresh one is left alone()	PASS
+wiring.persistence.JdbcActionRunStoreTests	another tenant cannot see or finish a run even with the same key and run id()	PASS
+wiring.persistence.JdbcActionRunStoreTests	completing twice or with a foreign run id changes nothing()	PASS
+wiring.persistence.JdbcActionRunStoreTests	concurrent begins of one key produce exactly one owner()	PASS
+wiring.persistence.JdbcActionRunStoreTests	concurrent completes of one run let exactly one win()	PASS
+wiring.persistence.JdbcActionRunStoreTests	mutating is stored with the run, survives a restart and defaults to true when the caller does not say()	PASS
+wiring.persistence.JdbcActionRunStoreTests	a finished run survives a restart and is replayed by a new store instance()	PASS
+wiring.persistence.JdbcActionRunStoreTests	the first call starts, a second one is in progress, completing records the result and later calls replay it()	PASS
+wiring.persistence.JdbcActionRunStoreTests	an abandoned MUTATING run becomes IDEMPOTENCY_OUTCOME_UNKNOWN, never retryable, and is replayed as it is after a restart()	PASS
+wiring.persistence.JdbcActionRunStoreTests	purge deletes finished records older than the horizon and never a RUNNING one()	PASS
+wiring.persistence.JdbcActionRunStoreTests	an ambiguous write stays unknown and never retryable across a restart, however often it is asked again()	PASS
+wiring.persistence.JdbcActionRunStoreTests	the workspace of a run is derived from its project and a run without an app has none()	PASS
+wiring.persistence.JdbcActionRunStoreTests	a retryable failure restarts with a new run id and attempt + 1, a stale owner cannot complete the new run()	PASS
+wiring.persistence.JdbcActionRunStoreTests	a RUNNING run survives a restart as in progress, it is not started a second time()	PASS
+wiring.persistence.JdbcIdempotencyStoreTests	a key that is not the derived shape is refused before the database is touched()	PASS
+wiring.persistence.JdbcIdempotencyStoreTests	a released key runs again()	PASS
+wiring.persistence.JdbcIdempotencyStoreTests	only the derived key, a fingerprint and counts are stored()	PASS
+wiring.persistence.JdbcIdempotencyStoreTests	keys are scoped by tenant, data source and mutation()	PASS
+wiring.persistence.JdbcIdempotencyStoreTests	only an expired row is purged, and a purge is bounded()	PASS
+wiring.persistence.JdbcIdempotencyStoreTests	retention is configurable, a longer request wins, and anything under 7 days is refused()	PASS
+wiring.persistence.JdbcIdempotencyStoreTests	a holder that vanished is not retried - after the lease the key is unknown()	PASS
+wiring.persistence.JdbcIdempotencyStoreTests	markUnknown does not touch a completed key()	PASS
+wiring.persistence.JdbcIdempotencyStoreTests	a key lives for the configured retention even when the caller asks for 24 hours, then it can run again()	PASS
+wiring.persistence.JdbcIdempotencyStoreTests	the first call runs, a second one with the same key is in progress, other parameters conflict()	PASS
+wiring.persistence.JdbcIdempotencyStoreTests	a completed mutation is replayed with its counts and result, and a conflict still applies()	PASS
+wiring.persistence.JdbcIdempotencyStoreTests	concurrent callers with one key - exactly one runs()	PASS
+wiring.persistence.JdbcIdempotencyStoreTests	an oversized result is dropped but the completion and count are kept()	PASS
+wiring.persistence.JdbcIdempotencyStoreTests	an ambiguous outcome keeps the key reserved and is never handed out again()	PASS
+wiring.persistence.JdbcIdempotencyStoreTests	a replay survives a new store instance (a restart)()	PASS
+wiring.persistence.JdbcPersistenceTests	a name is unique per tenant but may repeat across tenants()	PASS
+wiring.persistence.JdbcPersistenceTests	a definition for a data source of another tenant is refused by the database()	PASS
+wiring.persistence.JdbcPersistenceTests	a snapshot for a data source of another tenant is refused by the database()	PASS
+wiring.persistence.JdbcPersistenceTests	the binding reader only answers for a project whose workspace owns the project and the source()	PASS
+wiring.persistence.JdbcPersistenceTests	credentials are tenant-scoped ciphertext and never part of a normal data source read()	PASS
+wiring.persistence.JdbcPersistenceTests	a definition is only replaced by a newer version()	PASS
+wiring.persistence.JdbcPersistenceTests	a binding cannot point at a data source of another tenant or workspace()	PASS
+wiring.persistence.JdbcPersistenceTests	a data source round-trips and is invisible to another tenant()	PASS
+wiring.persistence.JdbcPersistenceTests	a workspace-scoped lookup finds only the source of that tenant and workspace()	PASS
+wiring.persistence.JdbcPersistenceTests	another tenant cannot overwrite a data source by reusing its id()	PASS
+wiring.persistence.JdbcPersistenceTests	queries and mutations round-trip, are scoped by tenant and data source, and a disabled one is not found()	PASS
+wiring.persistence.JdbcPersistenceTests	a data source without a workspace is allowed, one in another tenant's workspace is refused by the database()	PASS
+wiring.persistence.JdbcPersistenceTests	TEST and LIVE bindings are separate, default-deny and tenant-scoped, and the reader never writes()	PASS
+wiring.persistence.JdbcPersistenceTests	saving needs a newer version, a stale or repeated save is a conflict and changes nothing()	PASS
+wiring.persistence.JdbcPersistenceTests	schema snapshots are immutable per version, newest first, tenant-scoped()	PASS
+wiring.persistence.JdbcPersistenceTests	a stored definition that no longer validates is not found and does not break the list()	PASS
+wiring.persistence.JdbcPersistenceTests	put replaces and a value that is not ciphertext is refused()	PASS
+wiring.persistence.JdbcWorkflowRunStoreTests	a failed sweep backs the run off and a successful one lifts only its own backoff()	PASS
+wiring.persistence.JdbcWorkflowRunStoreTests	a compare-and-set writes the run and the changed steps together and bumps the version()	PASS
+wiring.persistence.JdbcWorkflowRunStoreTests	a run awaiting an approval is re-examined at the approval interval, not at the short one()	PASS
+wiring.persistence.JdbcWorkflowRunStoreTests	create is idempotent per scope, a different fingerprint is KeyReused, TEST and LIVE and other users do not share a key()	PASS
+wiring.persistence.JdbcWorkflowRunStoreTests	a run that was just updated is not stale and is left alone()	PASS
+wiring.persistence.JdbcWorkflowRunStoreTests	get and list never cross tenants, list filters by app and returns newest first()	PASS
+wiring.persistence.JdbcWorkflowRunStoreTests	concurrent creates of one key produce exactly one run()	PASS
+wiring.persistence.JdbcWorkflowRunStoreTests	the claim is bounded per tenant()	PASS
+wiring.persistence.JdbcWorkflowRunStoreTests	a compare-and-set from a stale version fails and writes nothing, not even the steps()	PASS
+wiring.persistence.JdbcWorkflowRunStoreTests	a RUNNING run whose lease ran out is claimed even though it was updated recently()	PASS
+wiring.persistence.JdbcWorkflowRunStoreTests	a lease that expires exactly now counts as expired (lease_until is not after now)()	PASS
+wiring.persistence.JdbcWorkflowRunStoreTests	an in-flight run, its step attempts and its compensation progress are reconstructed exactly after a restart()	PASS
+wiring.persistence.JdbcWorkflowRunStoreTests	a finished run never carries a lease claim and a finished compensating run is still found by the stale rule()	PASS
+wiring.persistence.JdbcWorkflowRunStoreTests	of several concurrent compare-and-sets from one version exactly one wins()	PASS
+wiring.persistence.JdbcWorkflowRunStoreTests	a stuck compensation of a finished run is claimed, a finished run without one never is()	PASS
+wiring.persistence.JdbcWorkflowRunStoreTests	a run without a lease still falls back to the updated_at rule()	PASS
+wiring.persistence.JdbcWorkflowRunStoreTests	a due timer or retry is claimed before the run is stale, a future one is not()	PASS
+wiring.persistence.JdbcWorkflowRunStoreTests	redaction and purge only ever touch finished runs that are not compensating()	PASS
+wiring.persistence.JdbcWorkflowRunStoreTests	completed, failed and cancelled runs survive a restart with their outcome()	PASS
+wiring.persistence.JdbcWorkflowRunStoreTests	a renewal from a stale version loses and does not extend the lease()	PASS
+wiring.persistence.JdbcWorkflowRunStoreTests	a stale run is claimed once and stamped, a second sweeper gets nothing until the interval has passed()	PASS
+wiring.persistence.JdbcWorkflowRunStoreTests	process failures are counted per run and only for the right tenant()	PASS
+wiring.persistence.JdbcWorkflowRunStoreTests	a run in backoff is not claimed until its not-before has passed()	PASS
+wiring.persistence.JdbcWorkflowRunStoreTests	the lease is written by the claim, read back, renewed and cleared by compare-and-set, and survives a restart()	PASS
+wiring.persistence.JdbcWorkflowRunStoreTests	a compare-and-set cannot reach a run of another tenant()	PASS
+wiring.persistence.JdbcWorkflowRunStoreTests	a created run is stored with its definition, input and steps and read back identical()	PASS
+wiring.persistence.JdbcWorkflowRunStoreTests	a run for an application of another tenant, or with a foreign workspace, is refused and stores nothing()	PASS
+wiring.persistence.JdbcWorkflowRunStoreTests	a RUNNING run with a valid lease is left alone however old its updated_at is()	PASS
+wiring.persistence.RunCodecTests	a failure without a message or details round-trips()	PASS
+wiring.persistence.RunCodecTests	a rich workflow definition survives encode and decode unchanged()	PASS
+wiring.persistence.RunCodecTests	a minimal definition keeps its defaults and a corrupt stored one is refused()	PASS
+wiring.persistence.RunCodecTests	a failure keeps its code and its retryable flag, so an unknown write outcome stays unknown and never retryable()	PASS
+wiring.persistence.RunCodecTests	an OK result keeps its output()	PASS
+wiring.persistence.RunCodecTests	a would-run answer round-trips()	PASS
+wiring.persistence.WorkflowRestartRecoveryTests	two processes sweeping one database never both take the same run()	PASS
+wiring.persistence.WorkflowRestartRecoveryTests	a WAIT timer survives the restart and fires once()	PASS
+wiring.persistence.WorkflowRestartRecoveryTests	a retry in backoff survives the restart and is attempted after its delay with the attempt count kept()	PASS
+wiring.persistence.WorkflowRestartRecoveryTests	finished runs stay finished and are never executed again by a new process()	PASS
+wiring.persistence.WorkflowRestartRecoveryTests	a step whose dead owner still holds a valid lease is left alone, and is taken over as a new attempt once the lease ran out (C4 H-3)()	PASS
+wiring.persistence.WorkflowRestartRecoveryTests	a step that was RUNNING when its worker died is retried by the next process as a new attempt of the same idempotency key()	PASS
+wiring.persistence.WorkflowRestartRecoveryTests	a compensation that was interrupted resumes after a restart and does not repeat a compensation that already ran()	PASS
+wiring.persistence.WorkflowRestartRecoveryTests	a PENDING run that never got its job is started by the next process()	PASS
+wiring.persistence.WorkflowRestartRecoveryTests	a run whose job was lost with the process is picked up by the next process and finishes without repeating a finished step()	PASS
+wiring.persistence.WorkflowRestartRecoveryTests	an ambiguous write stays unknown after a restart, is never retried and is never compensated()	PASS

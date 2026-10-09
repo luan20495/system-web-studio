@@ -1,0 +1,10 @@
+BACKEND_COMPILE|exit=0|start=2026-10-06T15:13:28Z|end=2026-10-06T15:13:37Z|duration=9s|log=docs/parallel/c6/evidence/mac-8e91172-gate/BACKEND_COMPILE.log
+BACKEND_TEST|exit=0|start=2026-10-06T15:13:37Z|end=2026-10-06T15:21:27Z|duration=470s|log=docs/parallel/c6/evidence/mac-8e91172-gate/BACKEND_TEST.log
+FRONTEND_TYPECHECK_ROOT|exit=0|start=2026-10-06T15:21:28Z|end=2026-10-06T15:21:29Z|duration=1s|log=docs/parallel/c6/evidence/mac-8e91172-gate/FRONTEND_TYPECHECK_ROOT.log
+FRONTEND_TYPECHECK_ALL|exit=0|start=2026-10-06T15:21:29Z|end=2026-10-06T15:21:37Z|duration=8s|log=docs/parallel/c6/evidence/mac-8e91172-gate/FRONTEND_TYPECHECK_ALL.log
+FRONTEND_TYPECHECK_APPS|exit=0|start=2026-10-06T15:21:37Z|end=2026-10-06T15:21:40Z|duration=3s|log=docs/parallel/c6/evidence/mac-8e91172-gate/FRONTEND_TYPECHECK_APPS.log
+FRONTEND_UNIT|exit=0|start=2026-10-06T15:21:40Z|end=2026-10-06T15:21:43Z|duration=3s|log=docs/parallel/c6/evidence/mac-8e91172-gate/FRONTEND_UNIT.log
+FRONTEND_UNIT_DEFAULT|exit=0|start=2026-10-06T15:21:43Z|end=2026-10-06T15:21:46Z|duration=3s|log=docs/parallel/c6/evidence/mac-8e91172-gate/FRONTEND_UNIT_DEFAULT.log
+FRONTEND_BUILD_APPS|exit=0|start=2026-10-06T15:21:46Z|end=2026-10-06T15:21:56Z|duration=10s|log=docs/parallel/c6/evidence/mac-8e91172-gate/FRONTEND_BUILD_APPS.log
+FRONTEND_BUILD_ROOT|exit=0|start=2026-10-06T15:21:56Z|end=2026-10-06T15:21:59Z|duration=3s|log=docs/parallel/c6/evidence/mac-8e91172-gate/FRONTEND_BUILD_ROOT.log
+STATIC_QA|exit=1|start=2026-10-06T15:21:59Z|end=2026-10-06T15:21:59Z|duration=0s|log=docs/parallel/c6/evidence/mac-8e91172-gate/STATIC_QA.log

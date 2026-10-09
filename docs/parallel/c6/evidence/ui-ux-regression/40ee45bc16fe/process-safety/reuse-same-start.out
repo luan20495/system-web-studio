@@ -1,0 +1,1 @@
+[owned] REFUSED: start time differs (recorded "Thu Oct  8 16:18:22 2026", live "Thu Oct 8 16:18:22 2026"): pid 16645 belongs to someone else, not signalled. Nothing was signalled; the state file is KEPT (/tmp/c6-ps-DqqL/reuse-same-start.json) so the recorded process can still be found.

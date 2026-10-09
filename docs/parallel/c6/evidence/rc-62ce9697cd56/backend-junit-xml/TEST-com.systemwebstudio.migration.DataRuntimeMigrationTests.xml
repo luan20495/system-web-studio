@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.migration.DataRuntimeMigrationTests" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:46:25.536Z" hostname="macmini-2.local" time="0.123">
+  <properties/>
+  <testcase name="the undo script refuses while data sources exist and changes nothing()" classname="com.systemwebstudio.migration.DataRuntimeMigrationTests" time="0.009"/>
+  <testcase name="a data source cannot point at a workspace of another tenant()" classname="com.systemwebstudio.migration.DataRuntimeMigrationTests" time="0.005"/>
+  <testcase name="schema snapshots are unique per data source and version and tenant bound()" classname="com.systemwebstudio.migration.DataRuntimeMigrationTests" time="0.004"/>
+  <testcase name="a binding is per project and mode, never crosses tenants or workspaces()" classname="com.systemwebstudio.migration.DataRuntimeMigrationTests" time="0.018"/>
+  <testcase name="every table exists and tenant_id is mandatory on all of them()" classname="com.systemwebstudio.migration.DataRuntimeMigrationTests" time="0.015"/>
+  <testcase name="credentials are stored as ciphertext only()" classname="com.systemwebstudio.migration.DataRuntimeMigrationTests" time="0.004"/>
+  <testcase name="idempotency rows validate state and key shape and are tenant bound()" classname="com.systemwebstudio.migration.DataRuntimeMigrationTests" time="0.007"/>
+  <testcase name="a binding can only name a data source owned by the project's own workspace (B-C0-W-05)()" classname="com.systemwebstudio.migration.DataRuntimeMigrationTests" time="0.015"/>
+  <testcase name="status, config shape and name uniqueness per tenant are enforced()" classname="com.systemwebstudio.migration.DataRuntimeMigrationTests" time="0.004"/>
+  <testcase name="child rows cannot reference a data source of another tenant()" classname="com.systemwebstudio.migration.DataRuntimeMigrationTests" time="0.005"/>
+  <system-out><![CDATA[{"@timestamp":"2026-10-08T06:46:25.537969+07:00","@version":"1","message":"Could not detect default configuration classes for test class [com.systemwebstudio.migration.DataRuntimeMigrationTests]: DataRuntimeMigrationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.","logger_name":"org.springframework.test.context.support.AnnotationConfigContextLoaderUtils","thread_name":"Test worker","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-08T06:46:25.556182+07:00","@version":"1","message":"Found @SpringBootConfiguration com.systemwebstudio.SystemWebStudioApplication for test class com.systemwebstudio.migration.DataRuntimeMigrationTests","logger_name":"org.springframework.boot.test.context.SpringBootTestContextBootstrapper","thread_name":"Test worker","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-08T06:46:25.556779+07:00","@version":"1","message":"Could not detect default configuration classes for test class [com.systemwebstudio.migration.DataRuntimeMigrationTests]: DataRuntimeMigrationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.","logger_name":"org.springframework.test.context.support.AnnotationConfigContextLoaderUtils","thread_name":"Test worker","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-08T06:46:25.556909+07:00","@version":"1","message":"Could not detect default configuration classes for test class [com.systemwebstudio.support.IntegrationTestBase]: IntegrationTestBase does not declare any static, non-private, non-final, nested classes annotated with @Configuration.","logger_name":"org.springframework.test.context.support.AnnotationConfigContextLoaderUtils","thread_name":"Test worker","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-08T06:46:25.559309+07:00","@version":"1","message":"Found @SpringBootConfiguration com.systemwebstudio.SystemWebStudioApplication for test class com.systemwebstudio.migration.DataRuntimeMigrationTests","logger_name":"org.springframework.boot.test.context.SpringBootTestContextBootstrapper","thread_name":"Test worker","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

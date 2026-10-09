@@ -1,0 +1,645 @@
+{
+ "host": "admin.toolsmcp.uk",
+ "navigations": [
+  "https://admin.toolsmcp.uk/",
+  "https://admin.toolsmcp.uk/",
+  "https://admin.toolsmcp.uk/login",
+  "https://admin.toolsmcp.uk/admin/people",
+  "https://admin.toolsmcp.uk/admin/people",
+  "https://admin.toolsmcp.uk/login?…",
+  "https://admin.toolsmcp.uk/admin/people",
+  "https://admin.toolsmcp.uk/admin/people",
+  "https://admin.toolsmcp.uk/admin/people",
+  "https://admin.toolsmcp.uk/admin/people",
+  "https://admin.toolsmcp.uk/admin/people",
+  "https://admin.toolsmcp.uk/login?…"
+ ],
+ "requests": [
+  {
+   "url": "https://admin.toolsmcp.uk/",
+   "method": "GET",
+   "type": "document",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/_next/static/chunks/1yt9vs5wgo6ad.css",
+   "method": "GET",
+   "type": "stylesheet",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/_next/static/chunks/1u5zan5bs9a7v.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/_next/static/chunks/1wym20oe2_8ih.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/_next/static/chunks/1rj7ns8rte9vc.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/_next/static/chunks/turbopack-11y464gitbq1t.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/_next/static/chunks/3fntmmi971322.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/_next/static/chunks/2pv16mhesqvg5.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 401
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/cdn-cgi/rum",
+   "method": "POST",
+   "type": "xhr",
+   "status": 204
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/login",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/api/v1/auth/config",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 401
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/people",
+   "method": "GET",
+   "type": "document",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/_next/static/chunks/1yt9vs5wgo6ad.css",
+   "method": "GET",
+   "type": "stylesheet",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/_next/static/chunks/1u5zan5bs9a7v.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/_next/static/chunks/1wym20oe2_8ih.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/_next/static/chunks/1rj7ns8rte9vc.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/_next/static/chunks/turbopack-11y464gitbq1t.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/_next/static/chunks/3fntmmi971322.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/_next/static/chunks/2pv16mhesqvg5.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/cdn-cgi/rum",
+   "method": "POST",
+   "type": "xhr",
+   "status": 204
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 401
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/login",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/api/v1/auth/config",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 401
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/api/v1/auth/csrf",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/api/v1/auth/login",
+   "method": "POST",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/people",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/cdn-cgi/rum",
+   "method": "POST",
+   "type": "ping",
+   "status": 204
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/cdn-cgi/rum",
+   "method": "POST",
+   "type": "xhr",
+   "status": 204
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/users",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/applications",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/ai-governance",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/departments",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/identity",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/templates",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/audit",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/data-sources",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/groups",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/sharing",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/byok",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/people",
+   "method": "GET",
+   "type": "document",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/_next/static/chunks/1yt9vs5wgo6ad.css",
+   "method": "GET",
+   "type": "stylesheet",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/_next/static/chunks/1u5zan5bs9a7v.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/_next/static/chunks/1wym20oe2_8ih.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/_next/static/chunks/1rj7ns8rte9vc.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/_next/static/chunks/turbopack-11y464gitbq1t.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/_next/static/chunks/3fntmmi971322.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/_next/static/chunks/2pv16mhesqvg5.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/cdn-cgi/rum",
+   "method": "POST",
+   "type": "xhr",
+   "status": 204
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/users",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/applications",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/ai-governance",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/departments",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/identity",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/templates",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/audit",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/data-sources",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/groups",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/sharing",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/byok",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/people",
+   "method": "GET",
+   "type": "document",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/_next/static/chunks/1yt9vs5wgo6ad.css",
+   "method": "GET",
+   "type": "stylesheet",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/_next/static/chunks/1u5zan5bs9a7v.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/_next/static/chunks/1wym20oe2_8ih.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/_next/static/chunks/1rj7ns8rte9vc.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/_next/static/chunks/turbopack-11y464gitbq1t.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/_next/static/chunks/3fntmmi971322.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/_next/static/chunks/2pv16mhesqvg5.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/cdn-cgi/rum",
+   "method": "POST",
+   "type": "xhr",
+   "status": 204
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/users",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/applications",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/ai-governance",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/departments",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/identity",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/templates",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/audit",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/data-sources",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/groups",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/sharing",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/admin/byok",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/api/v1/auth/csrf",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/api/v1/auth/logout",
+   "method": "POST",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/login",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/login",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/cdn-cgi/rum",
+   "method": "POST",
+   "type": "ping",
+   "status": 204
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/cdn-cgi/rum",
+   "method": "POST",
+   "type": "xhr",
+   "status": 204
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/api/v1/auth/config",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 401
+  },
+  {
+   "url": "https://admin.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 401
+  }
+ ],
+ "console": [
+  "error: Failed to load resource: the server responded with a status of 401 ()",
+  "error: Failed to load resource: the server responded with a status of 401 ()",
+  "error: Failed to load resource: the server responded with a status of 401 ()",
+  "error: Failed to load resource: the server responded with a status of 401 ()",
+  "error: Failed to load resource: the server responded with a status of 401 ()",
+  "error: Failed to load resource: the server responded with a status of 401 ()"
+ ]
+}

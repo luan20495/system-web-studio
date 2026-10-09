@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.logic.approval.ApprovalServiceTests" tests="22" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:46:13.918Z" hostname="macmini-2.local" time="0.015">
+  <properties/>
+  <testcase name="a request snapshots its approvers from every principal kind()" classname="com.systemwebstudio.logic.approval.ApprovalServiceTests" time="0.004"/>
+  <testcase name="cross tenant decisions need C1's policy and still need to be an approver()" classname="com.systemwebstudio.logic.approval.ApprovalServiceTests" time="0.003"/>
+  <testcase name="comments are limited()" classname="com.systemwebstudio.logic.approval.ApprovalServiceTests" time="0.0"/>
+  <testcase name="any rejection rejects the request()" classname="com.systemwebstudio.logic.approval.ApprovalServiceTests" time="0.0"/>
+  <testcase name="a quorum needs the required number of distinct approvers()" classname="com.systemwebstudio.logic.approval.ApprovalServiceTests" time="0.001"/>
+  <testcase name="the requester is removed from the approvers unless self approval is allowed()" classname="com.systemwebstudio.logic.approval.ApprovalServiceTests" time="0.0"/>
+  <testcase name="only the requester and approvers can read or comment()" classname="com.systemwebstudio.logic.approval.ApprovalServiceTests" time="0.0"/>
+  <testcase name="later changes to a group do not change a pending request()" classname="com.systemwebstudio.logic.approval.ApprovalServiceTests" time="0.001"/>
+  <testcase name="one approval is enough when one is required, and the listener hears about it()" classname="com.systemwebstudio.logic.approval.ApprovalServiceTests" time="0.0"/>
+  <testcase name="a late decision cannot revive an expired request()" classname="com.systemwebstudio.logic.approval.ApprovalServiceTests" time="0.0"/>
+  <testcase name="the inbox lists only pending requests addressed to the user in their own tenant()" classname="com.systemwebstudio.logic.approval.ApprovalServiceTests" time="0.001"/>
+  <testcase name="deciding an approval of another tenant is denied by default and looks like not found()" classname="com.systemwebstudio.logic.approval.ApprovalServiceTests" time="0.0"/>
+  <testcase name="the sweeper expires every due request once()" classname="com.systemwebstudio.logic.approval.ApprovalServiceTests" time="0.0"/>
+  <testcase name="a disabled tenant cannot request or decide()" classname="com.systemwebstudio.logic.approval.ApprovalServiceTests" time="0.0"/>
+  <testcase name="changing your mind is a conflict and repeating yourself is harmless()" classname="com.systemwebstudio.logic.approval.ApprovalServiceTests" time="0.001"/>
+  <testcase name="an approver that cannot be addressed, such as one in another tenant, is refused and audited()" classname="com.systemwebstudio.logic.approval.ApprovalServiceTests" time="0.0"/>
+  <testcase name="cancel is idempotent and a cancelled request cannot be decided()" classname="com.systemwebstudio.logic.approval.ApprovalServiceTests" time="0.001"/>
+  <testcase name="a request is validated()" classname="com.systemwebstudio.logic.approval.ApprovalServiceTests" time="0.0"/>
+  <testcase name="a failing listener, notifier or audit never undoes a decision()" classname="com.systemwebstudio.logic.approval.ApprovalServiceTests" time="0.0"/>
+  <testcase name="the workflow source travels with the approval for audit and resume()" classname="com.systemwebstudio.logic.approval.ApprovalServiceTests" time="0.001"/>
+  <testcase name="request is idempotent on its key and notifies only once()" classname="com.systemwebstudio.logic.approval.ApprovalServiceTests" time="0.0"/>
+  <testcase name="only snapshotted approvers decide and the requester cannot decide their own request()" classname="com.systemwebstudio.logic.approval.ApprovalServiceTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

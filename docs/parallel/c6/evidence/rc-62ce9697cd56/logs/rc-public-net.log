@@ -1,0 +1,51 @@
+PASS platform-01 [platform] HTTPS root loads | expected HTTP 200 → login page | actual 200 /login
+PASS platform-02 [platform] login form is rendered (fields + button) | expected Tên đăng nhập / Mật khẩu / Đăng nhập | actual 1/1/1
+PASS platform-03 [platform] deep link /platform/tenants while signed out | expected redirect to /login?next=…, ≤ 4 navigations (no loop) | actual /login?…; navigations=3
+PASS platform-04 [platform] sign in with the real account | expected leaves /login, lands in the portal (not /auth/no-access) | actual /platform/tenants
+PASS platform-05 [platform] portal home renders real content (no mock banner / no 'Chưa sẵn sàng' shell) | expected no 'mock' / 'demo data' marker | actual none
+PASS platform-06 [platform] reload keeps the session | expected still not on /login | actual /platform/tenants
+PASS platform-07 [platform] direct URL /platform/tenants when signed in | expected opens the page (no /login, no 'Không có trang này') | actual /platform/tenants
+PASS platform-08 [platform] page → same-origin /api/v1/auth/me | expected 200 on the portal origin | actual 200 https://platform.toolsmcp.uk
+PASS platform-09 [platform] sign out (UI) | expected back on /login and /auth/me = 401 | actual /login; me=401
+PASS platform-N1 [platform] NETWORK: every request goes to the portal / studio-files / sites hosts (no localhost, loopback or private address) | expected 0 foreign | actual 0 (hosts: platform.toolsmcp.uk, static.cloudflareinsights.com)
+PASS platform-N2 [platform] NETWORK: no http:// or ws:// request (no mixed content) | expected 0 | actual 0
+PASS platform-N3 [platform] NETWORK: /_next assets all load | expected 0 broken of N | actual 0 broken of 28
+PASS platform-N4 [platform] NETWORK: no failed request, no 5xx | expected 0 | actual 0 failed, 0 5xx
+PASS platform-N5 [platform] NETWORK: 4xx only the expected 401 of /auth/me before sign-in | expected 0 unexpected | actual 0
+PASS platform-N7 [platform] BUNDLE: first-party scripts contain no http://localhost|127.0.0.1 origin and no mock-mode switch | expected 0 / 0 | actual 0 loopback, 0 mock (6 scripts)
+PASS admin-01 [admin] HTTPS root loads | expected HTTP 200 → login page | actual 200 /login
+PASS admin-02 [admin] login form is rendered (fields + button) | expected Tên đăng nhập / Mật khẩu / Đăng nhập | actual 1/1/1
+PASS admin-03 [admin] deep link /admin/people while signed out | expected redirect to /login?next=…, ≤ 4 navigations (no loop) | actual /login?…; navigations=3
+PASS admin-04 [admin] sign in with the real account | expected leaves /login, lands in the portal (not /auth/no-access) | actual /admin/people
+PASS admin-05 [admin] portal home renders real content (no mock banner / no 'Chưa sẵn sàng' shell) | expected no 'mock' / 'demo data' marker | actual none
+PASS admin-06 [admin] reload keeps the session | expected still not on /login | actual /admin/people
+PASS admin-07 [admin] direct URL /admin/people when signed in | expected opens the page (no /login, no 'Không có trang này') | actual /admin/people
+PASS admin-08 [admin] page → same-origin /api/v1/auth/me | expected 200 on the portal origin | actual 200 https://admin.toolsmcp.uk
+PASS admin-09 [admin] sign out (UI) | expected back on /login and /auth/me = 401 | actual /login; me=401
+PASS admin-N1 [admin] NETWORK: every request goes to the portal / studio-files / sites hosts (no localhost, loopback or private address) | expected 0 foreign | actual 0 (hosts: admin.toolsmcp.uk, static.cloudflareinsights.com)
+PASS admin-N2 [admin] NETWORK: no http:// or ws:// request (no mixed content) | expected 0 | actual 0
+PASS admin-N3 [admin] NETWORK: /_next assets all load | expected 0 broken of N | actual 0 broken of 28
+PASS admin-N4 [admin] NETWORK: no failed request, no 5xx | expected 0 | actual 0 failed, 0 5xx
+PASS admin-N5 [admin] NETWORK: 4xx only the expected 401 of /auth/me before sign-in | expected 0 unexpected | actual 0
+PASS admin-N7 [admin] BUNDLE: first-party scripts contain no http://localhost|127.0.0.1 origin and no mock-mode switch | expected 0 / 0 | actual 0 loopback, 0 mock (6 scripts)
+PASS studio-01 [studio] HTTPS root loads | expected HTTP 200 → login page | actual 200 /login
+PASS studio-02 [studio] login form is rendered (fields + button) | expected Tên đăng nhập / Mật khẩu / Đăng nhập | actual 1/1/1
+PASS studio-03 [studio] deep link /studio/projects while signed out | expected redirect to /login?next=…, ≤ 4 navigations (no loop) | actual /login?…; navigations=3
+PASS studio-04 [studio] sign in with the real account | expected leaves /login, lands in the portal (not /auth/no-access) | actual /studio/projects
+PASS studio-05 [studio] portal home renders real content (no mock banner / no 'Chưa sẵn sàng' shell) | expected no 'mock' / 'demo data' marker | actual none
+PASS studio-06 [studio] reload keeps the session | expected still not on /login | actual /studio/projects
+PASS studio-07 [studio] direct URL /studio/projects when signed in | expected opens the page (no /login, no 'Không có trang này') | actual /studio/projects
+PASS studio-08 [studio] page → same-origin /api/v1/auth/me | expected 200 on the portal origin | actual 200 https://studio.toolsmcp.uk
+PASS studio-09 [studio] sign out (UI) | expected back on /login and /auth/me = 401 | actual /login; me=401
+PASS studio-N1 [studio] NETWORK: every request goes to the portal / studio-files / sites hosts (no localhost, loopback or private address) | expected 0 foreign | actual 0 (hosts: studio.toolsmcp.uk, static.cloudflareinsights.com)
+PASS studio-N2 [studio] NETWORK: no http:// or ws:// request (no mixed content) | expected 0 | actual 0
+PASS studio-N3 [studio] NETWORK: /_next assets all load | expected 0 broken of N | actual 0 broken of 28
+PASS studio-N4 [studio] NETWORK: no failed request, no 5xx | expected 0 | actual 0 failed, 0 5xx
+PASS studio-N5 [studio] NETWORK: 4xx only the expected 401 of /auth/me before sign-in | expected 0 unexpected | actual 0
+PASS studio-N7 [studio] BUNDLE: first-party scripts contain no http://localhost|127.0.0.1 origin and no mock-mode switch | expected 0 / 0 | actual 0 loopback, 0 mock (6 scripts)
+PASS sites-01 [sites] GET /healthz on the public sites host | expected 200 | actual 200
+PASS sites-02 [sites] GET /c6-no-such-slug-rc/ on the public sites host | expected 404 | actual 404
+PASS sites-03 [sites] GET / on the public sites host | expected 404 or 403 (no listing) | actual 404
+PASS http-01 [studio] plain http → https redirect | expected 301/308 to https | actual 308 https://studio.toolsmcp.uk/
+
+TOTAL 49  FAILED 0
