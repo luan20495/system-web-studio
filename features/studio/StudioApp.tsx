@@ -72,7 +72,7 @@ function StudioHeader({ nav }: { nav: ReturnType<typeof useNavDrawer> }) {
   const { me, logout } = useSession(); const { workspaceId, setWorkspaceId, dedicated } = useStudio(); const router = useRouter();
   const [q, setQ] = useState("");
   return (
-    <header className="topHeader">
+    <header className="topHeader studioTop">
       <MenuButton open={nav.open} onClick={nav.toggle} buttonRef={nav.button} controls="studio-sidebar"/>
       <form className="search" role="search" onSubmit={(e) => { e.preventDefault(); router.push(S(`/projects?q=${encodeURIComponent(q)}`)); }}>
         <input aria-label="Tìm ứng dụng" placeholder="Tìm ứng dụng…" value={q} onChange={(e) => setQ(e.target.value)}/>

@@ -221,4 +221,18 @@ for (const w of [768, 1000]) {
   check("M-020: Templates 'Rút lại' - a double click sends ONE withdraw", count(p, "POST", /templates\/t1\/withdraw$/) === 1, String(count(p, "POST", /templates\/t1\/withdraw$/)));
   await p.close();
 }
+// ---------- M-118: long workspace / account / app names never widen the page or spill out of their card (state-matrix 'long-content' cells) ----------
+{
+  const L = (x) => `${x} — ${"Nội dung rất dài của trường này ".repeat(6)}${"KhongNgatDongNao".repeat(6)}`;
+  for (const width of [1440, 390]) for (const path of ["/studio", "/studio/projects", "/studio/new", "/studio/templates", "/studio/components", "/studio/activity"]) {
+    const s = newState(); s.me.displayName = L(s.me.displayName); s.me.workspaces[0].name = L(s.me.workspaces[0].name);
+    s.projects = s.projects.map((x) => ({ ...x, name: L(x.name), description: L("mô tả") }));
+    const p = await open(b, path, { state: s, viewport: { width, height: 900 } }); await wait(1300);
+    const m = await p.evaluate(() => { const W = document.documentElement.clientWidth;
+      const cards = [...document.querySelectorAll(".projectCard")].map((c) => { const cr = c.getBoundingClientRect(); const wide = [...c.querySelectorAll("b,small,.row")].some((e) => e.getBoundingClientRect().right > cr.right + 1); return wide; });
+      return { over: document.documentElement.scrollWidth - W, cardsSpill: cards.some(Boolean) }; });
+    check(`M-118 [${width}] ${path}: no horizontal overflow and no text spilling out of a project card`, m.over <= 1 && !m.cardsSpill, `overflow +${m.over}px, spill ${m.cardsSpill}`);
+    await p.close();
+  }
+}
 await b.close(); finish();

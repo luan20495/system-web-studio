@@ -251,3 +251,13 @@
 }
 
 .intro h2{font-size:24px;margin:0 0 6px}
+
+/* M-118: long names (workspace, account, app, template) wrap or are cut with an ellipsis; they never widen the page */
+.studioTop{min-width:0}
+.studioTop .row{min-width:0;flex:0 1 auto;flex-wrap:nowrap}
+.studioTop .row>.muted{min-width:0;max-width:24ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.studioTop select{min-width:0;max-width:24ch;text-overflow:ellipsis}
+@media(max-width:767px){.studioTop .row>.muted,.studioTop select{max-width:10ch}}
+.projectGrid{grid-template-columns:repeat(auto-fill,minmax(min(240px,100%),1fr))}
+.projectGrid>*,.projectCard,.projectInfo,.compGrid>*,.libCard{min-width:0}
+.shell .page :is(h1,h2,h3,b,p,small,li,.code){overflow-wrap:anywhere}
