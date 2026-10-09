@@ -111,9 +111,9 @@ export function GuidedBinding({ ctx, focus, onDone, onCancel }: { ctx: DefCtx; f
               <input aria-label={`Tên tham số ${i + 1}`} disabled={disabled} value={p.name} onChange={(e) => set({ params: draft.params.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) })}/>
               <select aria-label={`Kiểu tham số ${i + 1}`} disabled={disabled} value={p.type} onChange={(e) => set({ params: draft.params.map((x, j) => (j === i ? { ...x, type: e.target.value as ParamDef["type"] } : x)) })}>{PARAM_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select>
               <label className="checkRow"><input type="checkbox" disabled={disabled} checked={paramRequired(p)} onChange={(e) => set({ params: draft.params.map((x, j) => (j === i ? setParamRequired(x, e.target.checked) : x)) })}/><span>Bắt buộc</span></label>
-              <button type="button" className="smallButton danger" disabled={disabled} aria-label={`Xóa tham số ${i + 1}`} onClick={() => set({ params: draft.params.filter((_, j) => j !== i) })}>Xóa</button>
+              <button type="button" className="btn sm danger" disabled={disabled} aria-label={`Xóa tham số ${i + 1}`} onClick={() => set({ params: draft.params.filter((_, j) => j !== i) })}>Xóa</button>
             </div>))}
-          <button type="button" className="smallButton" disabled={disabled} onClick={() => set({ params: [...draft.params, newParam()] })}>+ Thêm tham số</button>
+          <button type="button" className="btn sm" disabled={disabled} onClick={() => set({ params: [...draft.params, newParam()] })}>+ Thêm tham số</button>
           {err("params")}
         </details>
       </fieldset>
@@ -129,8 +129,8 @@ export function GuidedBinding({ ctx, focus, onDone, onCancel }: { ctx: DefCtx; f
 
       {failed ? <p className="formError" role="alert" data-testid="gb-failed">{failed}</p> : null}
       <div className="bx-actions">
-        <button type="button" className="bx-btn" disabled={pending} onClick={onCancel}>{W.cancel}</button>
-        <button type="submit" className="bx-btn primary" data-testid="gb-save" disabled={disabled} aria-busy={pending}>{pending ? W.saving : W.save}</button>
+        <button type="button" className="btn dense" disabled={pending} onClick={onCancel}>{W.cancel}</button>
+        <button type="submit" className="btn dense primary" data-testid="gb-save" disabled={disabled} aria-busy={pending}>{pending ? W.saving : W.save}</button>
       </div>
     </form>
   );

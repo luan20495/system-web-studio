@@ -167,7 +167,7 @@ export function PublishModal({ workspaceId, projectId, revision, current, versio
       <p>{versionNumber ? `Phiên bản ${versionNumber}` : "Phiên bản hiện tại"} sẽ được đưa qua kiểm tra chính sách, bảo mật, build và triển khai.</p>
       {!canPublish ? <p className="hint" role="note" data-testid="release-no-permission">Bạn chỉ có quyền xem: xuất bản, hoàn tác và gỡ trang cần quyền xuất bản (APP_PUBLISH). Máy chủ kiểm tra quyền ở mọi lệnh gọi.</p> : null}
       {banner ? <p className="hint" role="status" aria-live="polite" data-testid="release-operation" data-kind={site!.operation!.kind}>{banner}</p> : null}
-      {siteFailures >= MAX_POLL_FAILURES ? <p role="alert" className="hint" data-testid="site-reconnect">Mất kết nối khi đọc trạng thái trang. <button type="button" className="smallButton" onClick={() => { setSiteFailures(0); void loadSite(); }}>Tải lại trạng thái</button></p> : null}
+      {siteFailures >= MAX_POLL_FAILURES ? <p role="alert" className="hint" data-testid="site-reconnect">Mất kết nối khi đọc trạng thái trang. <button type="button" className="btn sm" onClick={() => { setSiteFailures(0); void loadSite(); }}>Tải lại trạng thái</button></p> : null}
       {!deployment && site && !real ? <p className="hint">Hiện tại môi trường xuất bản là <b>mô phỏng</b>: hệ thống tạo URL thử nghiệm, chưa có website thật nào được phục vụ.</p> : null}
       {!deployment && real ? <div className="siteBox" data-testid="site-box">{site!.online && site!.url
         ? <p>Đang phục vụ phiên bản {site!.currentVersionNumber ?? "—"} ({site!.visibility === "PRIVATE" ? "riêng tư — chỉ thành viên, đăng nhập bằng tài khoản công ty" : "công khai"}) tại{" "}
@@ -214,23 +214,23 @@ export function PublishModal({ workspaceId, projectId, revision, current, versio
         <ul>{history.filter((h) => h.status === "RUNNING" && !h.mock).map((h) => <li key={h.id} data-testid={`release:${h.id}`}>
           <span>Phiên bản {h.versionNumber} · {h.visibility === "PRIVATE" ? "riêng tư" : "công khai"} · {fmtDate(h.createdAt)}</span>
           {site?.currentDeploymentId === h.id ? <b>Đang phục vụ</b>
-            : <ReasonButton className="button ghost" data-testid={`rollback:${h.id}`} unavailable={locked || !canPublish} reason={!canPublish ? NEEDS_PUBLISH : undefined} reasonPlacement="inline"
+            : <ReasonButton className="btn ghost" data-testid={`rollback:${h.id}`} unavailable={locked || !canPublish} reason={!canPublish ? NEEDS_PUBLISH : undefined} reasonPlacement="inline"
                 onClick={() => { lastAction.current = () => void rollback(h, true); void rollback(h); }}>{pending?.kind === "ROLLBACK" && pending.deploymentId === h.id ? "Đang hoàn tác…" : "Phục vụ lại bản này"}</ReasonButton>}
         </li>)}</ul>
         {history.some((h) => h.status === "ROLLED_BACK") ? <p className="hint">Các bản “đã hoàn tác” không còn phục vụ lại được; xuất bản lại phiên bản đó nếu cần.</p> : null}</details> : null}
       {note ? <p className="hint" role="status" data-testid="release-note">{note}</p> : null}
       {error ? <div className="formError" role="alert" data-testid="release-error" data-kind={error.kind}><b>{error.title}</b><p>{error.detail}</p>
-        {error.kind !== "text" && error.retry ? <button type="button" className="smallButton" data-testid="release-retry" disabled={retryIn > 0 || locked} onClick={() => { setError(null); (lastAction.current ?? (() => void start()))(); }}>{retryIn > 0 ? `Thử lại sau ${retryIn}s` : "Thử lại"}</button> : null}
-        {error.kind !== "text" && error.reload ? <button type="button" className="smallButton" data-testid="release-reload" onClick={() => { setError(null); void loadSite(); }}>Tải lại trạng thái</button> : null}</div> : null}
+        {error.kind !== "text" && error.retry ? <button type="button" className="btn sm" data-testid="release-retry" disabled={retryIn > 0 || locked} onClick={() => { setError(null); (lastAction.current ?? (() => void start()))(); }}>{retryIn > 0 ? `Thử lại sau ${retryIn}s` : "Thử lại"}</button> : null}
+        {error.kind !== "text" && error.reload ? <button type="button" className="btn sm" data-testid="release-reload" onClick={() => { setError(null); void loadSite(); }}>Tải lại trạng thái</button> : null}</div> : null}
       <div className="modalActions">
-        {!deployment && real && site?.online ? <ReasonButton className="button ghost" data-testid="unpublish" unavailable={locked || !canPublish} reason={!canPublish ? NEEDS_PUBLISH : undefined} onClick={() => { lastAction.current = () => void unpublish(); void unpublish(); }}>{pending?.kind === "UNPUBLISH" ? "Đang gỡ…" : "Gỡ trang xuống"}</ReasonButton> : null}
-        <button className="button ghost" onClick={onClose} disabled={deploymentBusy || pending !== null}>{deployment ? "Đóng" : "Hủy"}</button>
-        {!deployment ? <ReasonButton className="button primary" data-testid="publish" unavailable={locked || !canPublish || !acknowledged}
+        {!deployment && real && site?.online ? <ReasonButton className="btn ghost" data-testid="unpublish" unavailable={locked || !canPublish} reason={!canPublish ? NEEDS_PUBLISH : undefined} onClick={() => { lastAction.current = () => void unpublish(); void unpublish(); }}>{pending?.kind === "UNPUBLISH" ? "Đang gỡ…" : "Gỡ trang xuống"}</ReasonButton> : null}
+        <button className="btn ghost" onClick={onClose} disabled={deploymentBusy || pending !== null}>{deployment ? "Đóng" : "Hủy"}</button>
+        {!deployment ? <ReasonButton className="btn primary" data-testid="publish" unavailable={locked || !canPublish || !acknowledged}
             reason={!canPublish ? NEEDS_PUBLISH : locked ? undefined : !acknowledged ? "Hãy xác nhận dữ liệu công khai ở trên trước khi xuất bản." : undefined}
             onClick={() => { lastAction.current = null; void start(); }}>{submitting ? "Đang gửi…" : "Xuất bản"}</ReasonButton>
-          : deploymentBusy && pollFailures >= MAX_POLL_FAILURES ? <button className="button primary" data-testid="publish-recheck" onClick={() => setPollFailures(0)}>Kiểm tra lại</button>
-          : deploymentBusy ? <button className="button primary" disabled>Đang xử lý…</button>
-          : canPublish && deployment.status !== "RUNNING" ? <button className="button primary" data-testid="publish-again" onClick={publishAgain}>Xuất bản lại</button> : null}
+          : deploymentBusy && pollFailures >= MAX_POLL_FAILURES ? <button className="btn primary" data-testid="publish-recheck" onClick={() => setPollFailures(0)}>Kiểm tra lại</button>
+          : deploymentBusy ? <button className="btn primary" disabled>Đang xử lý…</button>
+          : canPublish && deployment.status !== "RUNNING" ? <button className="btn primary" data-testid="publish-again" onClick={publishAgain}>Xuất bản lại</button> : null}
       </div>
     </div></div>
   );

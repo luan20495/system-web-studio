@@ -70,8 +70,8 @@ export function SlotEditor({ ctx }: { ctx: DefCtx }) {
                 <div><b>{s.name || s.id}</b><small>{s.id} · {s.type}{s.sourceRef ? " · đã gắn nguồn thật" : " · chưa gắn nguồn"}{used.length ? ` · đang dùng bởi ${used.length} mục` : ""}</small>
                   {s.description ? <small>{s.description}</small> : null}</div>
                 {!disabled ? <span className="bx-row">
-                  <button type="button" className="smallButton" data-testid={`slot-edit-${s.id}`} aria-label={`Sửa khe ${s.name || s.id}`} onClick={() => { setMsg(null); setEditing(s); setEdit({ id: s.id, name: s.name ?? "", type: s.type, description: s.description ?? "" }); }}>Sửa</button>
-                  <button type="button" className="smallButton danger" data-testid={`slot-delete-${s.id}`} aria-label={`Xóa khe ${s.name || s.id}`} onClick={() => { setMsg(null); setRemoving(s); }}>Xóa</button>
+                  <button type="button" className="btn sm" data-testid={`slot-edit-${s.id}`} aria-label={`Sửa khe ${s.name || s.id}`} onClick={() => { setMsg(null); setEditing(s); setEdit({ id: s.id, name: s.name ?? "", type: s.type, description: s.description ?? "" }); }}>Sửa</button>
+                  <button type="button" className="btn sm danger" data-testid={`slot-delete-${s.id}`} aria-label={`Xóa khe ${s.name || s.id}`} onClick={() => { setMsg(null); setRemoving(s); }}>Xóa</button>
                 </span> : null}
               </li>);
           })}</ul>}
@@ -85,15 +85,15 @@ export function SlotEditor({ ctx }: { ctx: DefCtx }) {
             <Field label="Loại nguồn" hint="Ví dụ: postgres, rest. Chỉ là nhãn loại.">{(id) => <input id={id} data-testid="slot-type" disabled={disabled} value={form.type} aria-invalid={touched && !!err(addIssues, "type")} onChange={(e) => setForm({ ...form, type: e.target.value })}/>}</Field>
             {touched && err(addIssues, "type") ? <p className="formError" role="alert" data-testid="slot-type-error">{err(addIssues, "type")}</p> : null}
             <Field label="Mô tả (tuỳ chọn)">{(id) => <input id={id} data-testid="slot-desc" disabled={disabled} maxLength={MAX_SLOT_DESCRIPTION} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}/>}</Field>
-            <div className="bx-actions"><button type="submit" className="bx-btn primary" data-testid="slot-add" disabled={disabled}>Thêm khe</button></div>
+            <div className="bx-actions"><button type="submit" className="btn dense primary" data-testid="slot-add" disabled={disabled}>Thêm khe</button></div>
           </form>)}
         {msg ? <p className="formError" role="alert" data-testid="slot-error">{msg}</p> : null}
       </Gate>
 
       {editing ? (
         <Dialog title={`Sửa khe “${editing.name || editing.id}”`} onClose={() => setEditing(null)} footer={<>
-          <button type="button" className="bx-btn" onClick={() => setEditing(null)}>Hủy</button>
-          <button type="button" className="bx-btn primary" data-testid="slot-save" disabled={ctx.busy || editIssues.length > 0 || !Object.keys(patch).length} onClick={() => void save()}>Lưu</button></>}>
+          <button type="button" className="btn dense" onClick={() => setEditing(null)}>Hủy</button>
+          <button type="button" className="btn dense primary" data-testid="slot-save" disabled={ctx.busy || editIssues.length > 0 || !Object.keys(patch).length} onClick={() => void save()}>Lưu</button></>}>
           <div className="bx-form" data-testid="slot-edit-form">
             <p className="hint">Mã khe “{editing.id}” không đổi được.</p>
             <Field label="Tên hiển thị">{(id) => <input id={id} data-testid="slot-edit-name" data-autofocus maxLength={MAX_SLOT_NAME} value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })}/>}</Field>
@@ -106,8 +106,8 @@ export function SlotEditor({ ctx }: { ctx: DefCtx }) {
 
       {removing ? (
         <Dialog title={`Xóa khe “${removing.name || removing.id}”?`} onClose={() => setRemoving(null)} footer={<>
-          <button type="button" className="bx-btn" onClick={() => setRemoving(null)}>Hủy</button>
-          <button type="button" className="bx-btn danger" data-testid="slot-delete-confirm" disabled={ctx.busy || removeIssues.length > 0} onClick={() => void remove()}>Xóa</button></>}>
+          <button type="button" className="btn dense" onClick={() => setRemoving(null)}>Hủy</button>
+          <button type="button" className="btn dense danger" data-testid="slot-delete-confirm" disabled={ctx.busy || removeIssues.length > 0} onClick={() => void remove()}>Xóa</button></>}>
           {removeIssues.length
             ? <div data-testid="slot-blocked" role="alert"><p>Không xóa được: khe này đang được dùng. Máy chủ không tự xóa các mục phụ thuộc, nên hãy gỡ chúng trước:</p>
               <ul>{removeIssues.map((i) => <li key={i.path}>{i.message}</li>)}</ul></div>
@@ -145,7 +145,7 @@ export function PublicQueriesPanel({ ctx }: { ctx: DefCtx }) {
                 {!eligible && !issues.length ? <small data-testid={`pq-write-${q.id}`}>Truy vấn ghi không thể công khai.</small> : null}</div>
               {eligible
                 ? <label className="checkRow"><input type="checkbox" data-testid={`public-toggle-${q.id}`} disabled={disabled} checked={q.public === true} onChange={(e) => void toggle(q, e.target.checked)}/><span>Công khai</span></label>
-                : issues.length && !disabled ? <button type="button" className="smallButton" data-testid={`public-off-${q.id}`} onClick={() => void toggle(q, false)}>Tắt công khai</button> : null}
+                : issues.length && !disabled ? <button type="button" className="btn sm" data-testid={`public-off-${q.id}`} onClick={() => void toggle(q, false)}>Tắt công khai</button> : null}
             </li>);
         })}</ul>)}
       {msg ? <p className="formError" role="alert" data-testid="public-error">{msg}</p> : null}
@@ -203,7 +203,7 @@ export function PublicBindingsPanel({ ctx, focus }: { ctx: DefCtx; focus?: { sec
                   <option value="">Đổi truy vấn…</option>
                   {choices.filter((c) => !c.reason && c.query.id !== v.query?.id).map((c) => <option key={c.query.id} value={c.query.id}>{c.query.name || c.query.id}</option>)}
                 </select>
-                <button type="button" className="smallButton danger" data-testid={`binding-remove-${b.id}`} aria-label={`Gỡ gắn dữ liệu ${b.sectionId}.${b.prop}`} onClick={() => void unbind(b)}>Gỡ</button>
+                <button type="button" className="btn sm danger" data-testid={`binding-remove-${b.id}`} aria-label={`Gỡ gắn dữ liệu ${b.sectionId}.${b.prop}`} onClick={() => void unbind(b)}>Gỡ</button>
               </span> : null}
             </li>);
         })}</ul>)}
@@ -218,7 +218,7 @@ export function PublicBindingsPanel({ ctx, focus }: { ctx: DefCtx; focus?: { sec
           <Field label="Truy vấn công khai" hint="Chỉ truy vấn đọc đã bật “Công khai” mới chọn được.">{(id) => <select id={id} data-testid="binding-query" disabled={disabled} value={queryId} onChange={(e) => setQueryId(e.target.value)}>
             <option value="">— chọn —</option>{choices.map((c) => <option key={c.query.id} value={c.query.id} disabled={!!c.reason}>{c.query.name || c.query.id}{c.reason ? ` — ${c.reason}` : ""}</option>)}</select>}</Field>
           {chosen ? <p className="hint" data-testid="binding-slot">Khe dữ liệu: {chosen.slot?.name || chosen.query.dataSourceRef}{chosen.slot ? "" : " (khe không tồn tại)"}</p> : null}
-          <div className="bx-actions"><button type="submit" className="bx-btn primary" data-testid="binding-add" disabled={disabled}>Gắn dữ liệu</button></div>
+          <div className="bx-actions"><button type="submit" className="btn dense primary" data-testid="binding-add" disabled={disabled}>Gắn dữ liệu</button></div>
         </form>)}
       {msg ? <p className="formError" role="alert" data-testid="binding-error">{msg}</p> : null}
     </section>

@@ -122,20 +122,23 @@ test("harness fidelity: a browser harness that loads factory.css also loads ui.c
 // ---------------------------------------------------------------------------------------------------------------------------------------------- M-068: one button vocabulary
 test("every class of the vocabulary is styled in factory.css (and documented in its header), in the light skin and the dark `.studio` skin", () => {
   const f = css["factory.css"];
-  for (const sel of [".btn", ".btn.primary", ".btn.danger", ".btn.ghost", ".btn.sm", ".btn.icon", ".btn.block", ".studio .btn", ".studio .btn.primary", ".studio .btn.ghost", ".studio .btn.sm", ".studio .btn.danger"]) assert.ok(f.includes(sel + "{") || f.includes(sel + ","), sel);
+  for (const sel of [".btn", ".btn.primary", ".btn.danger", ".btn.ghost", ".btn.sm", ".btn.icon", ".btn.block", ":is(.studio,.modal,.drawer) .btn", ":is(.studio,.modal,.drawer) .btn.primary", ":is(.studio,.modal,.drawer) .btn.ghost", ":is(.studio,.modal,.drawer) .btn.sm", ":is(.studio,.modal,.drawer) .btn.danger", ":is(.studio,.modal,.drawer) .btn.dense"]) assert.ok(f.includes(sel + "{") || f.includes(sel + ","), sel);
   const raw = readFileSync(join(dir, "factory.css"), "utf8");
-  assert.match(raw, /BUTTON VOCABULARY \(M-068\)/); assert.match(raw, /\.smallButton -> \.btn\.sm/); assert.match(raw, /\.bx-btn \(builder\.css\) -> \.btn/);
+  assert.match(raw, /BUTTON VOCABULARY \(M-068\)/); assert.match(raw, /Retired \(M-068\)/); assert.match(raw, /\.smallButton -> \.btn\.sm/); assert.match(raw, /\.bx-btn -> \.btn\.dense/);
 });
 
-test("ratchet: the legacy button classes (.button / .smallButton / .sendButton / .bx-btn) may not be used in MORE places; new code uses <Button> / .btn", () => {
-  const BASE: Record<string, number> = { button: 73, smallButton: 72, sendButton: 3, "bx-btn": 56 };
-  const uses: Record<string, string[]> = { button: [], smallButton: [], sendButton: [], "bx-btn": [] };
-  const walk = (d: string) => { for (const e of readdirSync(d, { withFileTypes: true })) { if (["node_modules", ".next", ".test-build", "dist", "tests"].includes(e.name) || e.name.startsWith(".")) continue; const p = join(d, e.name); if (e.isDirectory()) walk(p); else if (/\.tsx?$/.test(e.name)) { const t = readFileSync(p, "utf8"); for (const m of t.matchAll(/className=(?:"([^"]*)"|\{`([^`]*)`\}|\{"([^"]*)"\})/g)) for (const c of (m[1] ?? m[2] ?? m[3] ?? "").split(/\s+/)) if (c in uses) uses[c].push(p.replace(root + "/", "")); } } };
+test("M-068: the legacy button classes (.button / .smallButton / .bx-btn) are gone from the CSS and from every className; only .sendButton (the AI composer's send button) is left", () => {
+  const files: string[] = [];
+  const walk = (d: string) => { for (const e of readdirSync(d, { withFileTypes: true })) { if (["node_modules", ".next", ".test-build", "dist", "tests"].includes(e.name) || e.name.startsWith(".")) continue; const p = join(d, e.name); if (e.isDirectory()) walk(p); else if (/\.tsx?$/.test(e.name)) files.push(p); } };
   for (const d of ["features", "apps", "packages", "components", "lib", "app"]) { try { walk(join(root, d)); } catch { /* optional */ } }
-  for (const [k, max] of Object.entries(BASE)) {
-    if (uses[k].length > max) assert.fail(`.${k}: ${uses[k].length} > baseline ${max}. Use <Button> / .btn instead. Files: ${[...new Set(uses[k])].join(", ")}`);
-    if (uses[k].length < max) console.log(`note: .${k} is ${uses[k].length}, baseline ${max}: lower it`);
+  const LEGACY = ["button", "smallButton", "bx-btn"], bad: string[] = [];
+  for (const p of files) {
+    const t = readFileSync(p, "utf8");
+    for (const m of t.matchAll(/className=(?:"([^"]*)"|\{`([^`]*)`\}|\{"([^"]*)"\})/g)) for (const c of (m[1] ?? m[2] ?? m[3] ?? "").split(/\s+/)) if (LEGACY.includes(c)) bad.push(`${p.replace(root + "/", "")}: className ${c}`);
+    for (const m of t.matchAll(/["'`]([^"'`\n]*?)["'`]/g)) if (m[1].split(/\s+/).some((c) => c === "smallButton" || c === "bx-btn")) bad.push(`${p.replace(root + "/", "")}: "${m[1].slice(0, 40)}"`);
   }
+  assert.deepEqual(bad, [], "use <Button> / .btn (.btn.sm, .btn.dense in the builder)");
+  for (const [name, text] of Object.entries(css)) { const hit = text.match(/\.(button|smallButton|bx-btn)\b(?![-\w])/); assert.ok(!hit, `${name} still styles .${hit?.[1]}`); }
 });
 
 test("M-105: `.stack` is defined (it was used in 10 places and defined nowhere); a fieldset.stack has no UA border; its legend is styled", () => {

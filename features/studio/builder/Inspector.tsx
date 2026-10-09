@@ -47,10 +47,10 @@ export function Inspector({ ctx, section, component, meta, index, count, canUp, 
           <PropsForm key={`c:${section.id}`} draft={drafts?.[`c:${section.id}`]} onDraft={onDraft ? (d) => onDraft(`c:${section.id}`, d) : undefined} section={section} entries={[...groups.content, ...(groups.visibility ? [groups.visibility] : [])]} allDefs={defs} assets={assets}
             readOnly={readOnly} busy={busy} summary={`Chỉnh sửa ${label}`} onApply={onApply} emptyText="Thành phần này không có nội dung chỉnh được."/>
           <div className="bx-insp-tools">
-            <button type="button" className="bx-btn sm" disabled={readOnly || busy || !(canUp ?? index > 0)} onClick={() => onMove(-1)}>↑ Lên</button>
-            <button type="button" className="bx-btn sm" disabled={readOnly || busy || !(canDown ?? index < count - 1)} onClick={() => onMove(1)}>↓ Xuống</button>
-            <button type="button" className="bx-btn sm danger" disabled={readOnly || busy} onClick={onRemove}>Xóa mục</button>
-            {onSaveBlock && !readOnly ? <button type="button" className="bx-btn sm" onClick={onSaveBlock}>Lưu thành khối…</button> : null}
+            <button type="button" className="btn dense sm" disabled={readOnly || busy || !(canUp ?? index > 0)} onClick={() => onMove(-1)}>↑ Lên</button>
+            <button type="button" className="btn dense sm" disabled={readOnly || busy || !(canDown ?? index < count - 1)} onClick={() => onMove(1)}>↓ Xuống</button>
+            <button type="button" className="btn dense sm danger" disabled={readOnly || busy} onClick={onRemove}>Xóa mục</button>
+            {onSaveBlock && !readOnly ? <button type="button" className="btn dense sm" onClick={onSaveBlock}>Lưu thành khối…</button> : null}
           </div>
         </>) : null}
         {tab === "design" ? (current.readiness.state === "AVAILABLE"
@@ -94,15 +94,15 @@ function DataTab({ ctx, section, component, meta, state, openDataWizard }: { ctx
                   <small>Trạng thái: {VIEW_STATE_TEXT[vmView.kind]}{vmView.kind === "not-ready" ? ` — ${vmView.reason}` : ""}</small>
                 </>) : <small>{DATA_WORDS.inspectorNone}</small>}
               </div>
-              {b && ctx.canEdit ? <button type="button" className="smallButton danger" aria-label={`Gỡ dữ liệu khỏi ${propLabel(p.prop)}`} onClick={() => setRemoving(b.id)}>Gỡ</button> : null}
-              {!b && ctx.canEdit && bindablePropsOf(section.type).some((x) => x.prop === p.prop) ? <button type="button" className="smallButton" aria-label={`${DATA_WORDS.inspectorButton} cho ${propLabel(p.prop)}`} onClick={() => openDataWizard(section.id, p.prop)}>{DATA_WORDS.inspectorButton}</button> : null}
+              {b && ctx.canEdit ? <button type="button" className="btn sm danger" aria-label={`Gỡ dữ liệu khỏi ${propLabel(p.prop)}`} onClick={() => setRemoving(b.id)}>Gỡ</button> : null}
+              {!b && ctx.canEdit && bindablePropsOf(section.type).some((x) => x.prop === p.prop) ? <button type="button" className="btn sm" aria-label={`${DATA_WORDS.inspectorButton} cho ${propLabel(p.prop)}`} onClick={() => openDataWizard(section.id, p.prop)}>{DATA_WORDS.inspectorButton}</button> : null}
             </li>);
         })}</ul>)}
-      {ctx.canEdit ? <button type="button" className="bx-btn sm" onClick={() => openDataWizard(section.id)}>{DATA_WORDS.inspectorButton}</button> : null}
+      {ctx.canEdit ? <button type="button" className="btn dense sm" onClick={() => openDataWizard(section.id)}>{DATA_WORDS.inspectorButton}</button> : null}
       {removing ? (
         <Dialog title="Gỡ dữ liệu khỏi thành phần?" onClose={() => setRemoving(null)} footer={<>
-          <button type="button" className="bx-btn" onClick={() => setRemoving(null)}>Hủy</button>
-          <button type="button" className="bx-btn danger" disabled={ctx.busy} onClick={() => void ctx.commit([defOps.remove("dataBindings", removing)], "Gỡ liên kết dữ liệu").then((ok) => { if (ok) setRemoving(null); })}>Gỡ</button></>}>
+          <button type="button" className="btn dense" onClick={() => setRemoving(null)}>Hủy</button>
+          <button type="button" className="btn dense danger" disabled={ctx.busy} onClick={() => void ctx.commit([defOps.remove("dataBindings", removing)], "Gỡ liên kết dữ liệu").then((ok) => { if (ok) setRemoving(null); })}>Gỡ</button></>}>
           <p>Thành phần sẽ trở lại nội dung viết tay. Truy vấn, ánh xạ và ViewModel vẫn còn.</p>
         </Dialog>) : null}
     </div>
@@ -127,8 +127,8 @@ function ActionTab({ ctx, section, meta, state }: { ctx: DefCtx; section: Sectio
           <fieldset className="bx-group" key={e.name}><legend>{EVENT_LABEL[e.name]}</legend>
             {list.length ? <ul className="bx-list">{list.map((a) => (
               <li key={a.id}><div><b>{a.name || a.id}</b><small>{describeAction(a, ctx.doc)}</small><small>{roleOf(a, ctx.doc) === "UI_BOUND" ? "Gắn vào thành phần" : ""}</small></div>
-                {ctx.canEdit ? <button type="button" className="smallButton" onClick={() => setEditingId(a.id)}>Sửa</button> : null}</li>))}</ul> : <p className="hint">Chưa có hành động.</p>}
-            {ctx.canEdit && e.supportedActions.length ? <button type="button" className="smallButton" onClick={() => setAdding(e.name)}>+ Thêm hành động</button> : null}
+                {ctx.canEdit ? <button type="button" className="btn sm" onClick={() => setEditingId(a.id)}>Sửa</button> : null}</li>))}</ul> : <p className="hint">Chưa có hành động.</p>}
+            {ctx.canEdit && e.supportedActions.length ? <button type="button" className="btn sm" onClick={() => setAdding(e.name)}>+ Thêm hành động</button> : null}
           </fieldset>);
       })}
     </div>
@@ -163,7 +163,7 @@ function PermissionTab({ ctx, section, rawPermissions }: { ctx: DefCtx; section:
         <>
           <ul className="bx-list" aria-label="Quyền đã khai báo">{refs.flatMap((r) => permissionRefsFor(doc, r.type, r.ref).map((p) => (
             <li key={p.id}><div><b>{permissionLabel[p.permission]}</b><small>{r.label}</small></div>
-              {!disabled && ctx.readiness.state === "AVAILABLE" ? <button type="button" className="smallButton danger" aria-label={`Bỏ quyền ${permissionLabel[p.permission]} của ${r.label}`} onClick={() => void ctx.commit([defOps.remove("permissions", p.id)], "Bỏ quyền")}>Bỏ</button> : null}</li>)))}</ul>
+              {!disabled && ctx.readiness.state === "AVAILABLE" ? <button type="button" className="btn sm danger" aria-label={`Bỏ quyền ${permissionLabel[p.permission]} của ${r.label}`} onClick={() => void ctx.commit([defOps.remove("permissions", p.id)], "Bỏ quyền")}>Bỏ</button> : null}</li>)))}</ul>
           <Gate state={ctx.readiness} compact>
             {ctx.canEdit ? (
               <form className="bx-row" onSubmit={(e) => { e.preventDefault(); void add(); }}>
@@ -171,7 +171,7 @@ function PermissionTab({ ctx, section, rawPermissions }: { ctx: DefCtx; section:
                 <select id="perm-target" value={target} onChange={(e) => setTarget(e.target.value)}>{refs.map((r) => <option key={`${r.type}:${r.ref}`} value={`${r.type}:${r.ref}`}>{r.label}</option>)}</select>
                 <label className="srOnly" htmlFor="perm-code">Quyền</label>
                 <select id="perm-code" value={perm} onChange={(e) => setPerm(e.target.value as PermissionCode)}>{PERMISSION_CODES.map((c) => <option key={c} value={c}>{permissionLabel[c]}</option>)}</select>
-                <button type="submit" className="smallButton" disabled={disabled}>+ Thêm</button>
+                <button type="submit" className="btn sm" disabled={disabled}>+ Thêm</button>
               </form>) : null}
           </Gate>
         </>)}

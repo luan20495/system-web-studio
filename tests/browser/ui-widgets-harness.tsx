@@ -64,10 +64,10 @@ function App() {
           <div className="xp-provActions" id="pact"><button className="btn sm">Kiểm tra</button><button className="btn sm">Sửa</button><button className="btn sm danger">Xóa</button><button className="btn sm">Tắt</button></div></div></div>
       </section>
       <section aria-label="Nút" id="btn-pairs">
-        {([["button", "default", "secondary", undefined, false], ["button primary", "primary", "primary", undefined, false], ["button ghost", "ghost", "ghost", undefined, false], ["smallButton", "small", "secondary", "sm", false],
-          ["smallButton danger", "small danger", "danger", "sm", false], ["button", "disabled", "secondary", undefined, true]] as const).map(([legacy, label, variant, size, off], i) => (
-          <p key={i}><button type="button" className={legacy} data-pair={i} data-kind="legacy" disabled={off}>{label}</button> <Button variant={variant} size={size} data-pair={i} data-kind="new" disabled={off}>{label}</Button></p>))}
-        <p><button type="button" className="button icon" data-pair="6" data-kind="legacy" aria-label="Đóng">×</button> <Button icon data-pair="6" data-kind="new" aria-label="Đóng">×</Button> <Button busy id="busy-btn">Đang lưu</Button></p>
+        {([["default", "secondary", undefined, false, false], ["primary", "primary", undefined, false, false], ["ghost", "ghost", undefined, false, false], ["small", "secondary", "sm", false, false],
+          ["small danger", "danger", "sm", false, false], ["disabled", "secondary", undefined, true, false], ["dense", "secondary", undefined, false, true]] as const).map(([label, variant, size, off, dense], i) => (
+          <p key={i}><Button variant={variant} size={size} className={dense ? "dense" : undefined} data-pair={i} disabled={off}>{label}</Button></p>))}
+        <p><Button icon data-pair="7" aria-label="Đóng">×</Button> <Button busy id="busy-btn">Đang lưu</Button></p>
       </section>
       <Gate/>
       <div id="notfound-page"><ErrorState level={1} error={new ApiError(404, "PROJECT_NOT_FOUND", "x")} retry={() => window.__log.push("nf-retry")}/></div>

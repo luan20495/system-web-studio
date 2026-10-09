@@ -102,13 +102,22 @@ try {
     const st = await style(p, "#c-text", ["outlineColor", "outlineStyle"]);
     const bg = await p.evaluate(() => getComputedStyle(document.body).backgroundColor);
     check("M-026 dark builder page: the focus ring is >= 3:1 on the dark surface", st.outlineStyle !== "none" && (await ratioOf(p, st.outlineColor, bg)) >= 3, `${st.outlineColor} on ${bg}`);
-    // M-068: in the dark builder, the vocabulary classes look exactly like the legacy ones they replace (so a screen can migrate without a visual change)
-    const props = ["height", "paddingLeft", "paddingRight", "borderTopLeftRadius", "borderTopWidth", "borderTopColor", "backgroundColor", "color", "fontSize", "fontWeight", "opacity", "width"];
-    const labels = ["button -> btn", "button.primary -> btn.primary", "button.ghost -> btn.ghost", "smallButton -> btn.sm", "smallButton.danger -> btn.sm.danger", "button:disabled -> btn:disabled", "button.icon -> btn.icon"];
-    for (let i = 0; i < 7; i++) {
-      const [l, n] = await p.evaluate(([i, props]) => ["legacy", "new"].map((k) => { const c = getComputedStyle(document.querySelector(`#btn-pairs [data-pair="${i}"][data-kind="${k}"]`)); return Object.fromEntries(props.map((q) => [q, c[q]])); }), [i, props]);
-      const diff = props.filter((q) => l[q] !== n[q]).map((q) => `${q}: ${l[q]} vs ${n[q]}`);
-      check(`M-068 dark builder: ${labels[i]} computes the same style`, diff.length === 0, diff.join(" ; "));
+    // M-068: the dark builder skin of the ONE button vocabulary (the legacy .button / .smallButton / .bx-btn classes are gone; this pins what they used to look like)
+    const props = ["height", "minHeight", "paddingLeft", "borderTopLeftRadius", "backgroundColor", "color", "fontSize", "fontWeight", "opacity", "width"];
+    const EXPECT = [
+      ["btn", { height: "36px", borderTopLeftRadius: "10px", backgroundColor: "rgb(19, 26, 34)", color: "rgb(245, 245, 247)", paddingLeft: "12px" }],
+      ["btn.primary", { height: "36px", backgroundColor: "rgb(255, 255, 255)", color: "rgb(16, 21, 27)", fontWeight: "800" }],
+      ["btn.ghost", { height: "36px", backgroundColor: "rgb(18, 24, 32)" }],
+      ["btn.sm", { height: "30px", fontSize: "12px", minHeight: "30px" }],
+      ["btn.sm.danger", { height: "30px", color: "rgb(255, 154, 146)" }],
+      ["btn:disabled", { opacity: "0.5" }],
+      ["btn.dense (the builder's compact size)", { height: "28px", fontSize: "13px", borderTopLeftRadius: "9px", paddingLeft: "12px" }],
+      ["btn.icon", { width: "36px" }],
+    ];
+    for (let i = 0; i < EXPECT.length; i++) {
+      const got = await p.evaluate(([i, props]) => { const c = getComputedStyle(document.querySelector(`#btn-pairs [data-pair="${i}"]`)); return Object.fromEntries(props.map((q) => [q, c[q]])); }, [i, props]);
+      const diff = Object.entries(EXPECT[i][1]).filter(([q, v]) => got[q] !== v).map(([q, v]) => `${q}: ${got[q]} (expected ${v})`);
+      check(`M-068 dark builder: ${EXPECT[i][0]} computes the documented style`, diff.length === 0, diff.join(" ; "));
     }
     check("M-068 Button busy: aria-busy and no click (class set unchanged)", (await p.locator("#busy-btn").getAttribute("aria-busy")) === "true" && /^btn$/.test(await p.locator("#busy-btn").getAttribute("class")));
     await shot(p, "tokens-dark.png"); await p.close(); }

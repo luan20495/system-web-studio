@@ -180,8 +180,8 @@ select:focus-visible {
   }
 
   .projectMeta,
-  .topActions > .button.ghost,
-  .topActions > .button.icon {
+  .topActions > .btn.ghost,
+  .topActions > .btn.icon {
     display: none;
   }
 
@@ -196,7 +196,7 @@ select:focus-visible {
     white-space: nowrap;
   }
 
-  .topActions > .button.primary {
+  .topActions > .btn.primary {
     height: 34px;
     padding-inline: 10px;
     font-size: 12px;
@@ -262,7 +262,7 @@ select:focus-visible {
 
   .previewToolbar .toolbarLabel,
   .previewToolbar .environmentBadge,
-  .previewToolbar .smallButton {
+  .previewToolbar .btn.sm {
     display: none;
   }
 

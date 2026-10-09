@@ -21,11 +21,11 @@ export function FormsPanel({ ctx, onSelect, onNewAction, openSite }: { ctx: DefC
           const acts = actionsOfSection(ctx.doc, s.id).filter((a) => a.type === "SUBMIT_FORM");
           return (
             <li key={s.id}><div><b>{ctx.labelOf(s.type)}</b><small>{s.id} · {acts.length ? `${acts.length} hành động gửi` : "chưa gửi vào dữ liệu"}</small></div>
-              <span className="bx-row-tools"><button type="button" className="smallButton" onClick={() => onSelect(s.id, s.pageId)}>Chọn</button>
-                <button type="button" className="smallButton" disabled={!ctx.canEdit || ctx.readiness.state !== "AVAILABLE"} title={ctx.readiness.state === "AVAILABLE" ? undefined : "Chưa sẵn sàng: máy chủ chưa nhận thao tác hành động"} onClick={() => onNewAction(s.id)}>Thêm hành động gửi</button></span></li>);
+              <span className="bx-row-tools"><button type="button" className="btn sm" onClick={() => onSelect(s.id, s.pageId)}>Chọn</button>
+                <button type="button" className="btn sm" disabled={!ctx.canEdit || ctx.readiness.state !== "AVAILABLE"} title={ctx.readiness.state === "AVAILABLE" ? undefined : "Chưa sẵn sàng: máy chủ chưa nhận thao tác hành động"} onClick={() => onNewAction(s.id)}>Thêm hành động gửi</button></span></li>);
         })}</ul>)}
       <StateBox state={ctx.readiness} compact/>
-      <p><button type="button" className="bx-btn sm" onClick={openSite}>Tin gửi về, tên miền, SEO…</button></p>
+      <p><button type="button" className="btn dense sm" onClick={openSite}>Tin gửi về, tên miền, SEO…</button></p>
     </div>
   );
 }
@@ -57,13 +57,13 @@ export function ThemePanel({ ctx }: { ctx: DefCtx }) {
               <div className="bx-row" key={i}>
                 <input aria-label={`Tên màu ${i + 1}`} disabled={disabled} value={k} onChange={(e) => setColors(colors.map((c, j) => (j === i ? [e.target.value, c[1]] : c)))}/>
                 <input aria-label={`Mã màu ${i + 1}`} disabled={disabled} value={v} placeholder="#RRGGBB" aria-invalid={!HEX.test(v)} onChange={(e) => setColors(colors.map((c, j) => (j === i ? [c[0], e.target.value] : c)))}/>
-                {!disabled ? <button type="button" className="smallButton danger" aria-label={`Xóa màu ${k || i + 1}`} onClick={() => setColors(colors.filter((_, j) => j !== i))}>Xóa</button> : null}
+                {!disabled ? <button type="button" className="btn sm danger" aria-label={`Xóa màu ${k || i + 1}`} onClick={() => setColors(colors.filter((_, j) => j !== i))}>Xóa</button> : null}
               </div>))}
-            {!disabled && colors.length < 12 ? <button type="button" className="smallButton" onClick={() => setColors([...colors, ["", "#000000"]])}>+ Thêm màu</button> : null}
+            {!disabled && colors.length < 12 ? <button type="button" className="btn sm" onClick={() => setColors([...colors, ["", "#000000"]])}>+ Thêm màu</button> : null}
           </fieldset>
           <p className="hint" role="note"><b>Chưa áp dụng:</b> màu, phông và bo góc ở đây được lưu trong ứng dụng nhưng bản xem trước và website xuất bản hiện chưa dùng chúng, nên bạn sẽ chưa thấy thay đổi.</p>
           {err ? <p className="formError" role="alert">{err}</p> : null}
-          <div className="bx-actions"><button type="submit" className="bx-btn primary" disabled={disabled}>Lưu giao diện</button></div>
+          <div className="bx-actions"><button type="submit" className="btn dense primary" disabled={disabled}>Lưu giao diện</button></div>
         </form>
       </Gate>
     </div>
@@ -75,7 +75,7 @@ export function AiPanel({ openAi, canEdit }: { openAi: () => void; canEdit: bool
     <div className="bx-panel-body">
       <div className="bx-panel-head"><h2>AI</h2></div>
       <p className="hint">Mô tả thay đổi bằng lời. Kết quả đi qua cùng một cổng kiểm tra như chỉnh tay và được lưu thành phiên bản có thể khôi phục.</p>
-      <p><button type="button" className="bx-btn primary" disabled={!canEdit} onClick={openAi}>Mở chế độ AI</button></p>
+      <p><button type="button" className="btn dense primary" disabled={!canEdit} onClick={openAi}>Mở chế độ AI</button></p>
       {!canEdit ? <p className="hint">Bạn không có quyền chỉnh sửa ứng dụng này.</p> : null}
     </div>
   );

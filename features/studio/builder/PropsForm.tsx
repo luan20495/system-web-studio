@@ -86,9 +86,9 @@ export function PropsForm({ section, entries, allDefs, assets = [], readOnly, bu
                 <div className="itemCard" key={String(item.id)}>
                   {Object.entries(def.itemProperties!).filter(([f]) => f !== "id").map(([f, fd]) =>
                     field(f, fd, item[f], (v) => set(key, items.map((x, j) => (j === i ? { ...x, [f]: v } : x))), `${key}-${i}-${f}`))}
-                  {!readOnly ? <button type="button" className="smallButton danger" onClick={() => set(key, items.filter((_, j) => j !== i))}>Xóa mục {i + 1}</button> : null}
+                  {!readOnly ? <button type="button" className="btn sm danger" onClick={() => set(key, items.filter((_, j) => j !== i))}>Xóa mục {i + 1}</button> : null}
                 </div>))}
-              {!readOnly && items.length < (def.maxItems ?? 24) ? <button type="button" className="smallButton" onClick={() => set(key, [...items, { id: `i${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, ...required }])}>+ Thêm mục</button> : null}
+              {!readOnly && items.length < (def.maxItems ?? 24) ? <button type="button" className="btn sm" onClick={() => set(key, [...items, { id: `i${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, ...required }])}>+ Thêm mục</button> : null}
             </fieldset>
           );
         }
@@ -98,8 +98,8 @@ export function PropsForm({ section, entries, allDefs, assets = [], readOnly, bu
       {!readOnly ? (
         <div className="saveRow">
           {dirty ? <small className="hint" role="status">Có thay đổi chưa lưu.</small> : null}
-          <button type="button" className="button ghost" disabled={!dirty || busy} onClick={() => store(null)}>Hoàn tác</button>
-          <button type="button" className="button primary" disabled={!dirty || busy} onClick={() => void save()}>{busy ? "Đang lưu…" : "Lưu thay đổi"}</button>
+          <button type="button" className="btn ghost" disabled={!dirty || busy} onClick={() => store(null)}>Hoàn tác</button>
+          <button type="button" className="btn primary" disabled={!dirty || busy} onClick={() => void save()}>{busy ? "Đang lưu…" : "Lưu thay đổi"}</button>
         </div>
       ) : <p className="hint">Bạn chỉ có quyền xem.</p>}
     </div>

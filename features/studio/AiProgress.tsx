@@ -17,7 +17,7 @@ export function AiProgress({ live, model, onCancel, now: fixedNow }: { live: AiL
       <div className="aiMeta" aria-hidden="true" data-testid="ai-clock">Đã chạy {clock(v.elapsedSeconds)}{v.remainingSeconds !== null ? ` · tự dừng sau ${clock(v.remainingSeconds)}` : ""}</div>
       {v.detail ? <p className={v.stalled ? "aiWarn" : "hint"} role={v.stalled ? "status" : undefined} data-testid="ai-detail">{v.detail}</p> : null}
       {live.text ? <details className="aiRaw"><summary>Xem phần AI đang trả về</summary><pre className="streamTail">{live.text.slice(-240)}</pre></details> : null}
-      <button type="button" className="smallButton" data-testid="ai-cancel" onClick={onCancel}>Huỷ</button>
+      <button type="button" className="btn sm" data-testid="ai-cancel" onClick={onCancel}>Huỷ</button>
     </div></div>
   );
 }

@@ -32,7 +32,7 @@ export function Drawer({ title, sub, onClose, children, wide }: { title: string;
   return (
     <div className="overlay" {...backdrop}>
       <div className={`drawer${wide ? " wide" : ""}`} {...dialog.props}>
-        <div className="drawerHeader"><div><h2 id={dialog.titleId}>{title}</h2>{sub ? <p>{sub}</p> : null}</div><button className="button icon" aria-label="Đóng" onClick={onClose}><X size={16} aria-hidden="true"/></button></div>
+        <div className="drawerHeader"><div><h2 id={dialog.titleId}>{title}</h2>{sub ? <p>{sub}</p> : null}</div><button className="btn icon" aria-label="Đóng" onClick={onClose}><X size={16} aria-hidden="true"/></button></div>
         {children}
       </div>
     </div>
@@ -64,7 +64,7 @@ export function SettingsDrawer({ project, busy, onClose, onSave, extra }: { proj
       <section className="settingGroup"><h3>Triển khai</h3>
         <Field label="Chế độ"><select value={d.deploymentMode} onChange={(e) => setD({ ...d, deploymentMode: e.target.value as ApiProject["deploymentMode"] })}><option value="MOCK">Mock (cục bộ)</option><option value="SELF_HOSTED">Self-host</option><option value="CLOUD">Cloud</option></select></Field>
         <Field label="Đích triển khai"><input maxLength={120} value={d.deploymentTarget} onChange={(e) => setD({ ...d, deploymentTarget: e.target.value })}/></Field></section>
-      <div className="drawerActions"><button className="button ghost" onClick={onClose}>Hủy</button><button className="button primary" disabled={busy || !d.name.trim()} onClick={() => void save()}>{busy ? "Đang lưu…" : "Lưu thay đổi"}</button></div>
+      <div className="drawerActions"><button className="btn ghost" onClick={onClose}>Hủy</button><button className="btn primary" disabled={busy || !d.name.trim()} onClick={() => void save()}>{busy ? "Đang lưu…" : "Lưu thay đổi"}</button></div>
       {extra}
     </Drawer>
   );
@@ -98,7 +98,7 @@ export function AssetsDrawer({ workspaceId, projectId, canEdit, onClose, onError
           <div><b>{a.name}</b><span>{(a.size / 1024).toFixed(1)} KB</span></div>
           {a.contentType.startsWith("image/") && a.downloadUrl ? /* eslint-disable-next-line @next/next/no-img-element */ <img className="assetThumb" src={webUrl(a.downloadUrl)} alt={a.name}/> : null}
           {a.downloadUrl ? <a href={webUrl(a.downloadUrl)} target="_blank" rel="noreferrer noopener">Mở tệp</a> : null}
-          {canEdit ? <button className="smallButton danger" onClick={() => void removeAsset(a)}>Xóa</button> : null}
+          {canEdit ? <button className="btn sm danger" onClick={() => void removeAsset(a)}>Xóa</button> : null}
         </article>))}</div>
     </Drawer>
   );
@@ -127,13 +127,13 @@ export function MemberTable({ title, members, roles, currentUserId, onChange, on
               <td><b>{m.displayName ?? m.username}{m.userId === currentUserId ? <em className="you">Bạn</em> : null}</b><small>{m.username}{m.email ? ` · ${m.email}` : ""}</small></td>
               <td><select aria-label={`Vai trò của ${m.username}`} value={m.role} disabled={busy || m.userId === currentUserId} onChange={(e) => onChange(m, e.target.value)}>
                 {roles.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}</select></td>
-              <td><button className="smallButton danger" disabled={busy} onClick={() => onRemove(m)} aria-label={`${m.userId === currentUserId ? "Rời" : "Xóa"} ${m.username}`}>{m.userId === currentUserId ? "Rời" : "Xóa"}</button></td>
+              <td><button className="btn sm danger" disabled={busy} onClick={() => onRemove(m)} aria-label={`${m.userId === currentUserId ? "Rời" : "Xóa"} ${m.username}`}>{m.userId === currentUserId ? "Rời" : "Xóa"}</button></td>
             </tr>))}</tbody>
         </table>)}
       <form className="inlineForm" onSubmit={(e) => { e.preventDefault(); void onAdd(who, role).then((ok) => { if (ok) setWho(""); }); }}>
         <input aria-label={`Tên đăng nhập hoặc email để thêm vào: ${title}`} placeholder="Tên đăng nhập hoặc email" value={who} onChange={(e) => setWho(e.target.value)} maxLength={254}/>
         <select aria-label="Vai trò khi thêm" value={role} onChange={(e) => setRole(e.target.value)}>{roles.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}</select>
-        <button className="button" disabled={busy || !who.trim()}>Thêm</button>
+        <button className="btn" disabled={busy || !who.trim()}>Thêm</button>
       </form>
       {error ? <p className="formError" role="alert">{error}</p> : null}
     </section>

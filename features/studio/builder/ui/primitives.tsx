@@ -47,7 +47,7 @@ export function Dialog({ title, onClose, children, footer }: { title: string; on
       <div ref={ref} className="bx-dialog" role="dialog" aria-modal="true" aria-labelledby={id} tabIndex={-1}>
         <h2 id={id}>{title}</h2>
         <div className="bx-dialog-body">{children}</div>
-        <div className="bx-dialog-foot">{footer ?? <button type="button" className="bx-btn" onClick={onClose}>Đóng</button>}</div>
+        <div className="bx-dialog-foot">{footer ?? <button type="button" className="btn dense" onClick={onClose}>Đóng</button>}</div>
       </div>
     </div>
   );

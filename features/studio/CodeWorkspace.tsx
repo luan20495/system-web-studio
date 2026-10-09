@@ -138,7 +138,7 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
     <div className="studio codeStudio">
       <header className="topbar">
         <div className="brand">
-          <button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}><ArrowLeft size={16} aria-hidden="true"/></button>
+          <button className="btn icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}><ArrowLeft size={16} aria-hidden="true"/></button>
           <div>
             <div className="projectName" role="heading" aria-level={1} title={project.name}>{project.name}</div>
             <div className="projectMeta">Ứng dụng web (mã nguồn) · React + Vite · revision {project.revision}{canEdit ? "" : " · chỉ xem"}</div>
@@ -148,15 +148,15 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
           {(["ai", "design", "code"] as const).map((m) => <button key={m} className={mode === m && !panel ? "active" : ""} aria-pressed={mode === m} onClick={() => go(m)}>{m === "ai" ? <><Sparkles size={14} aria-hidden="true"/> AI</> : m === "design" ? "Design" : "Code"}</button>)}
         </nav>
         <div className="topActions">
-          <button className="button ghost" onClick={() => go("versions")}>Lịch sử</button>
-          <button className="button ghost" onClick={() => go("packages")}>Thư viện</button>
-          <button className="button ghost" onClick={() => go("ide")}>IDE</button>
-          {isServer ? <button className="button ghost" onClick={() => go("runtime")}>Máy chủ</button> : null}
-          {canShareApp ? <button className="button ghost" onClick={() => go("members")}>Chia sẻ</button> : null}
+          <button className="btn ghost" onClick={() => go("versions")}>Lịch sử</button>
+          <button className="btn ghost" onClick={() => go("packages")}>Thư viện</button>
+          <button className="btn ghost" onClick={() => go("ide")}>IDE</button>
+          {isServer ? <button className="btn ghost" onClick={() => go("runtime")}>Máy chủ</button> : null}
+          {canShareApp ? <button className="btn ghost" onClick={() => go("members")}>Chia sẻ</button> : null}
           <OverflowMenu items={[
             { key: "versions", label: "Lịch sử", onSelect: () => go("versions") }, { key: "packages", label: "Thư viện", onSelect: () => go("packages") }, { key: "ide", label: "IDE", onSelect: () => go("ide") },
             ...(isServer ? [{ key: "runtime", label: "Máy chủ", onSelect: () => go("runtime") }] : []), ...(canShareApp ? [{ key: "members", label: "Chia sẻ", onSelect: () => go("members") }] : [])]}/>
-          <button className="button primary" disabled={!canPublishApp} onClick={() => go("publish")}>Xuất bản</button>
+          <button className="btn primary" disabled={!canPublishApp} onClick={() => go("publish")}>Xuất bản</button>
         </div>
       </header>
       <main className="codeBody" data-pane={pane}>
@@ -184,7 +184,7 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
                   {(ai.providers ?? []).map((g) => <optgroup key={g.id} label={`${g.name}${g.paid ? " · tính phí" : ""}`}>{g.models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</optgroup>)}
                   <option value="mock">Chế độ thử nghiệm (không dùng AI thật)</option></select> : <span className="hint">AI hiện chưa được quản trị viên bật (Chế độ thử nghiệm).</span>}
                 {live ? <span className="hint" role="status">{describeStatus(live.status) ?? (live.chars > 0 ? `Đang nhận… ${live.chars} ký tự` : "Đã gửi, đang chờ model trả lời…")}
-                  {live.id ? <button type="button" className="smallButton" onClick={() => { void api.cancelStream(live.id!).catch(() => undefined); }}>Huỷ</button> : null}</span> : null}
+                  {live.id ? <button type="button" className="btn sm" onClick={() => { void api.cancelStream(live.id!).catch(() => undefined); }}>Huỷ</button> : null}</span> : null}
                 <button className="sendButton" disabled={busy !== null || !prompt.trim()} onClick={() => void sendPrompt()}>{busy === "ai" ? "Đang tạo…" : "Gửi ↑"}</button>
               </div>
             </div> : <p className="hint">Bạn chỉ có quyền xem.</p>}
@@ -213,8 +213,8 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
                 {canEdit ? <div className="draftBar">
                   <span>{dirty.length ? `Bản nháp: ${dirty.length} tệp` : "Chưa có thay đổi"}</span>
                   <input aria-label="Mô tả thay đổi" placeholder="Mô tả ngắn (tuỳ chọn)" value={summary} maxLength={300} onChange={(e) => setSummary(e.target.value)}/>
-                  <button className="button ghost" disabled={!dirty.length || busy !== null} onClick={() => void discardDrafts()}>Bỏ nháp</button>
-                  <button className="button primary" disabled={!dirty.length || busy !== null} onClick={() => void propose()}>{busy === "propose" ? "Đang gửi…" : "Tạo thay đổi & build"}</button>
+                  <button className="btn ghost" disabled={!dirty.length || busy !== null} onClick={() => void discardDrafts()}>Bỏ nháp</button>
+                  <button className="btn primary" disabled={!dirty.length || busy !== null} onClick={() => void propose()}>{busy === "propose" ? "Đang gửi…" : "Tạo thay đổi & build"}</button>
                 </div> : null}
               </div>
             </div>
@@ -235,10 +235,10 @@ export function CodeWorkspace({ project, view, onProject }: { project: ApiProjec
               <Tabs label="Chi tiết thay đổi" idBase={detailTabs} value={tab} onChange={setTab} tabs={[{ value: "preview", label: "Xem trước" }, { value: "diff", label: "Mã thay đổi" }, { value: "log", label: "Build & quét" }]}/>
               <div className="row">
                 {change.status === "READY" && change.reviewRequired && !change.approvedBy && me && change.createdBy !== me.displayName && canPublishApp
-                  ? <button className="button ghost" disabled={busy !== null} onClick={() => setReviewing(change)}>Duyệt</button> : null}
-                {canEdit && change.status === "READY" ? <ReasonButton className="button primary" busy={busy === "merge"} unavailable={busy !== null || (!!change.reviewRequired && !change.approvedBy)}
+                  ? <button className="btn ghost" disabled={busy !== null} onClick={() => setReviewing(change)}>Duyệt</button> : null}
+                {canEdit && change.status === "READY" ? <ReasonButton className="btn primary" busy={busy === "merge"} unavailable={busy !== null || (!!change.reviewRequired && !change.approvedBy)}
                   reason={change.reviewRequired && !change.approvedBy ? "Cần một thành viên khác duyệt trước khi hợp nhất." : undefined} onClick={() => void merge(change)}>{busy === "merge" ? "Đang hợp nhất…" : "Hợp nhất vào main"}</ReasonButton> : null}
-                {canEdit && ["BUILDING", "READY", "FAILED"].includes(change.status) ? <button className="button ghost" disabled={busy !== null} onClick={() => void discard(change)}>Bỏ thay đổi</button> : null}
+                {canEdit && ["BUILDING", "READY", "FAILED"].includes(change.status) ? <button className="btn ghost" disabled={busy !== null} onClick={() => void discard(change)}>Bỏ thay đổi</button> : null}
               </div>
             </div>
             {change.reviewRequired ? <p className="hint">{change.approvedBy ? `Đã duyệt bởi ${change.approvedBy}${change.reviewComment ? ` — “${change.reviewComment}”` : ""}` : "Dự án yêu cầu duyệt: một thành viên có quyền xuất bản (không phải người tạo) cần duyệt trước khi hợp nhất."}</p> : null}

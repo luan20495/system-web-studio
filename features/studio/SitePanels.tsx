@@ -52,7 +52,7 @@ function PagesSection({ schema, pageId, onPage, canEdit, apply }: { schema: Page
       <li key={p.id} className="row between"><button type="button" className={`linkButton${p.id === pageId ? " active" : ""}`} onClick={() => onPage(p.id)}>{p.title}</button><span className="code">/{p.slug}{p.slug ? "/" : ""}</span></li>)}</ul>
     {canEdit ? <form className="row" onSubmit={(e) => { e.preventDefault(); void act.run(add); }}>
       <input aria-label="Tên trang mới" aria-describedby="site-new-slug" placeholder="Tên trang mới (ví dụ Giới thiệu)" maxLength={80} value={newTitle} onChange={(e) => setNewTitle(e.target.value)}/>
-      <button className="button" disabled={!newTitle.trim() || pages.length >= MAX_PAGES || act.busy} aria-busy={act.busy || undefined}>Thêm trang</button></form> : null}
+      <button className="btn" disabled={!newTitle.trim() || pages.length >= MAX_PAGES || act.busy} aria-busy={act.busy || undefined}>Thêm trang</button></form> : null}
     {canEdit ? <p className="hint" id="site-new-slug">{pages.length >= MAX_PAGES ? `Đã đủ ${MAX_PAGES} trang.` : newTitle.trim() ? <>Đường dẫn sẽ là <code>/{uniqueSlug(schema, newTitle)}/</code></> : null}</p> : null}
     <h4>{current ? `Trang “${current.title}”` : "Trang chủ"}: tiêu đề & SEO</h4>
     <Field label="Tiêu đề trang"><input maxLength={80} value={title} disabled={!canEdit} onChange={(e) => setTitle(e.target.value)}/></Field>
@@ -62,8 +62,8 @@ function PagesSection({ schema, pageId, onPage, canEdit, apply }: { schema: Page
     <Field label="Tiêu đề SEO"><input maxLength={70} value={seoTitle} disabled={!canEdit} onChange={(e) => setSeoTitle(e.target.value)}/></Field>
     <Field label="Mô tả SEO"><input maxLength={160} value={desc} disabled={!canEdit} onChange={(e) => setDesc(e.target.value)}/></Field>
     <label className="switch"><input type="checkbox" checked={noindex} disabled={!canEdit} onChange={(e) => setNoindex(e.target.checked)}/> Không cho công cụ tìm kiếm lập chỉ mục</label>
-    {canEdit ? <div className="drawerActions">{current ? <button className="button ghost" disabled={act.busy} onClick={() => void act.run(remove)}>Xoá trang</button> : null}
-      <button className="button primary" disabled={(!title.trim() && !!current) || !slugCheck.ok || act.busy} aria-busy={act.busy || undefined} onClick={() => void act.run(save)}>{act.busy ? "Đang lưu…" : "Lưu trang"}</button></div> : null}
+    {canEdit ? <div className="drawerActions">{current ? <button className="btn ghost" disabled={act.busy} onClick={() => void act.run(remove)}>Xoá trang</button> : null}
+      <button className="btn primary" disabled={(!title.trim() && !!current) || !slugCheck.ok || act.busy} aria-busy={act.busy || undefined} onClick={() => void act.run(save)}>{act.busy ? "Đang lưu…" : "Lưu trang"}</button></div> : null}
   </section>;
 }
 
@@ -83,11 +83,11 @@ function NavigationSection({ schema, canEdit, apply }: { schema: PageSchema; can
       {kind(l) === "page" ? <select aria-label="Trang đích" value={l.pageId} disabled={!canEdit} onChange={(e) => set(i, { pageId: e.target.value })}>{pages.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}</select>
         : <input aria-label={kind(l) === "url" ? "URL" : "Neo"} value={kind(l) === "url" ? l.url ?? "" : l.anchor ?? ""} maxLength={500} disabled={!canEdit}
           onChange={(e) => set(i, kind(l) === "url" ? { url: e.target.value } : { anchor: e.target.value })}/>}
-      {canEdit ? <button type="button" className="smallButton" aria-label={`Xoá liên kết ${l.label}`} onClick={() => setLinks((ls) => ls.filter((_, j) => j !== i))}><X size={14} aria-hidden="true"/></button> : null}
+      {canEdit ? <button type="button" className="btn sm" aria-label={`Xoá liên kết ${l.label}`} onClick={() => setLinks((ls) => ls.filter((_, j) => j !== i))}><X size={14} aria-hidden="true"/></button> : null}
     </li>)}</ul>
     {canEdit ? <div className="drawerActions">
-      <button className="button ghost" disabled={links.length >= MAX_NAV} onClick={() => setLinks((ls) => [...ls, { id: `n-${Math.random().toString(36).slice(2, 7)}`, label: "Liên kết", pageId: "home" }])}><Plus size={14} aria-hidden="true"/> Liên kết</button>
-      <button className="button primary" disabled={links.some((l) => !l.label.trim()) || act.busy} aria-busy={act.busy || undefined} onClick={() => void act.run(async () => { const r = opsSetNavigation(links); if ("error" in r) { toast.error(r.error); return; } await apply(r.ops, r.summary); })}>{act.busy ? "Đang lưu…" : "Lưu điều hướng"}</button>
+      <button className="btn ghost" disabled={links.length >= MAX_NAV} onClick={() => setLinks((ls) => [...ls, { id: `n-${Math.random().toString(36).slice(2, 7)}`, label: "Liên kết", pageId: "home" }])}><Plus size={14} aria-hidden="true"/> Liên kết</button>
+      <button className="btn primary" disabled={links.some((l) => !l.label.trim()) || act.busy} aria-busy={act.busy || undefined} onClick={() => void act.run(async () => { const r = opsSetNavigation(links); if ("error" in r) { toast.error(r.error); return; } await apply(r.ops, r.summary); })}>{act.busy ? "Đang lưu…" : "Lưu điều hướng"}</button>
     </div> : null}
   </section>;
 }
@@ -98,7 +98,7 @@ function NotFoundSection({ schema, canEdit, apply }: { schema: PageSchema; canEd
   return <section className="settingGroup"><h3>Trang 404</h3>
     <Field label="Tiêu đề"><input maxLength={80} placeholder="Không tìm thấy trang" value={title} disabled={!canEdit} onChange={(e) => setTitle(e.target.value)}/></Field>
     <Field label="Lời nhắn"><input maxLength={300} placeholder="Trang bạn tìm không tồn tại…" value={message} disabled={!canEdit} onChange={(e) => setMessage(e.target.value)}/></Field>
-    {canEdit ? <div className="drawerActions"><button className="button" disabled={act.busy} aria-busy={act.busy || undefined} onClick={() => void act.run(() => { const r = opsSetNotFound(title, message); return apply(r.ops, r.summary); })}>{act.busy ? "Đang lưu…" : "Lưu"}</button></div> : null}
+    {canEdit ? <div className="drawerActions"><button className="btn" disabled={act.busy} aria-busy={act.busy || undefined} onClick={() => void act.run(() => { const r = opsSetNotFound(title, message); return apply(r.ops, r.summary); })}>{act.busy ? "Đang lưu…" : "Lưu"}</button></div> : null}
   </section>;
 }
 
@@ -110,11 +110,11 @@ function FormsSection({ ws, pid }: { ws: string; pid: string }) {
   return <section className="settingGroup"><h3>Form gửi về</h3>
     <p className="hint">Tin gửi từ form liên hệ trên website đã xuất bản (công khai). Dữ liệu cá nhân: chỉ người chỉnh sửa xem được, tự xoá sau thời hạn lưu giữ của công ty.</p>
     {err ? <p className="formError" role="alert">{err}</p> : !data ? <StateView kind="loading"/> : data.items.length === 0 ? <p className="hint">Chưa có tin gửi nào.</p> : <>
-      <p><a className="button ghost" href={api.formExportUrl(ws, pid)} download>Tải CSV ({data.total})</a></p>
+      <p><a className="btn ghost" href={api.formExportUrl(ws, pid)} download>Tải CSV ({data.total})</a></p>
       <ul className="plainList">{data.items.map((s) => <li key={s.id} className="submission">
         <div className="row between"><b>{s.data.name}</b><small>{ago(s.createdAt)}</small></div>
         <div className="code">{s.data.email}{s.data.phone ? ` · ${s.data.phone}` : ""}</div><p>{s.data.message}</p>
-        <button type="button" className="smallButton" onClick={() => void del(s)}>Xoá</button></li>)}</ul></>}
+        <button type="button" className="btn sm" onClick={() => void del(s)}>Xoá</button></li>)}</ul></>}
   </section>;
 }
 
@@ -132,16 +132,16 @@ function DomainsSection({ ws, pid, canPublish }: { ws: string; pid: string; canP
   return <section className="settingGroup"><h3>Tên miền riêng</h3>
     <p className="hint">Chỉ cho website công khai. Bạn chứng minh quyền sở hữu bằng một bản ghi DNS TXT; hệ thống không bao giờ hỏi mật khẩu DNS. HTTPS do lớp CDN/tunnel phía trước cung cấp; trạng thái là kết quả kiểm tra thật.</p>
     {canPublish ? <form className="row" onSubmit={(e) => { e.preventDefault(); if (host.trim()) void act("add", async () => { await api.addDomain(ws, pid, host.trim()); setHost(""); }); }}>
-      <input aria-label="Tên miền" placeholder="www.ten-mien-cua-ban.vn" value={host} onChange={(e) => setHost(e.target.value)}/><button className="button" disabled={!host.trim() || busy !== null}>Thêm</button></form> : null}
+      <input aria-label="Tên miền" placeholder="www.ten-mien-cua-ban.vn" value={host} onChange={(e) => setHost(e.target.value)}/><button className="btn" disabled={!host.trim() || busy !== null}>Thêm</button></form> : null}
     {err ? <p className="formError" role="alert">{err}</p> : null}
     {!list ? <StateView kind="loading"/> : list.length === 0 ? <p className="hint">Chưa có tên miền riêng.</p> : <ul className="plainList">{list.map((d) => <li key={d.id} className="domainRow">
       <div className="row between"><b className="code">{d.hostname}</b><span>{DOMAIN_STATUS[d.status]} · {TLS_STATUS[d.tlsStatus]}</span></div>
       {d.status !== "VERIFIED" ? <div className="hint">Tạo bản ghi DNS: <code>TXT</code> <code className="breakAll">{d.txtName}</code> = <code className="breakAll">{d.txtValue}</code>, và <code>CNAME</code> <code>{d.hostname}</code> → <code>{d.cnameTarget}</code></div> : null}
       {d.lastError ? <small className="formError">{d.lastError}</small> : null}
       {canPublish ? <div className="row">
-        {d.status !== "VERIFIED" ? <button type="button" className="smallButton" disabled={busy !== null} onClick={() => void act(d.id, () => api.verifyDomain(ws, pid, d.id))}>Kiểm tra DNS</button>
-          : <button type="button" className="smallButton" disabled={busy !== null} onClick={() => void act(d.id, () => api.checkDomainTls(ws, pid, d.id))}>Kiểm tra HTTPS</button>}
-        <button type="button" className="smallButton" disabled={busy !== null} onClick={() => void (async () => { setErr(null); const r = await run.run(async () => { if (!(await confirm({ title: `Gỡ tên miền ${d.hostname}?`, message: "Website không còn mở được bằng tên miền này. Bạn có thể thêm lại sau và xác minh lại.", confirmLabel: "Gỡ tên miền", danger: true }))) return false; await api.removeDomain(ws, pid, d.id); }); if (r.status === "error") setErr(errText(r.error, "Không thực hiện được.")); })()}>Gỡ</button>
+        {d.status !== "VERIFIED" ? <button type="button" className="btn sm" disabled={busy !== null} onClick={() => void act(d.id, () => api.verifyDomain(ws, pid, d.id))}>Kiểm tra DNS</button>
+          : <button type="button" className="btn sm" disabled={busy !== null} onClick={() => void act(d.id, () => api.checkDomainTls(ws, pid, d.id))}>Kiểm tra HTTPS</button>}
+        <button type="button" className="btn sm" disabled={busy !== null} onClick={() => void (async () => { setErr(null); const r = await run.run(async () => { if (!(await confirm({ title: `Gỡ tên miền ${d.hostname}?`, message: "Website không còn mở được bằng tên miền này. Bạn có thể thêm lại sau và xác minh lại.", confirmLabel: "Gỡ tên miền", danger: true }))) return false; await api.removeDomain(ws, pid, d.id); }); if (r.status === "error") setErr(errText(r.error, "Không thực hiện được.")); })()}>Gỡ</button>
       </div> : null}</li>)}</ul>}
   </section>;
 }

@@ -194,17 +194,17 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
         runtime={runtime} dataManagement={dataManagement} onRetrySave={failedEdit ? retrySave : undefined} lastFailure={() => lastNoticeRef.current} blocks={blockOptions.map(({ b, who }): BlockOption => ({ id: b.id, name: b.name, who, baseLabel: label(b.baseComponent) }))}
         applyOps={applyOps} addBlock={(id) => { const o = blockOptions.find(({ b }) => b.id === id); if (o) void addBlock(o.b); }}
         renderPreview={renderPreview} labelOf={label} summaryOf={sectionSummary}
-        leading={<button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}><ArrowLeft size={16} aria-hidden="true"/></button>}
+        leading={<button className="btn icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}><ArrowLeft size={16} aria-hidden="true"/></button>}
         modeTabs={modeTabs}
         trailing={<>
-          <button className="button ghost" onClick={() => go("site")}>Website</button>
-          <button className="button ghost" onClick={() => go("versions")}>Phiên bản</button>
-          <button className="button ghost" onClick={() => go("assets")}>Tệp</button>
-          <GuardedButton className="button icon" aria-label="Cài đặt project" unavailable={!mayEdit} reason="Bạn không có quyền đổi cài đặt ứng dụng." onClick={() => go("settings")}><Settings size={16} aria-hidden="true"/></GuardedButton></>}
+          <button className="btn ghost" onClick={() => go("site")}>Website</button>
+          <button className="btn ghost" onClick={() => go("versions")}>Phiên bản</button>
+          <button className="btn ghost" onClick={() => go("assets")}>Tệp</button>
+          <GuardedButton className="btn icon" aria-label="Cài đặt project" unavailable={!mayEdit} reason="Bạn không có quyền đổi cài đặt ứng dụng." onClick={() => go("settings")}><Settings size={16} aria-hidden="true"/></GuardedButton></>}
         goAi={() => go("ai")} openSite={() => go("site")} openMembers={() => go("members")} openPublish={() => go("publish")} saveBlock={() => setSavingBlock(true)}/></ErrorBoundary> : (
       <header className="topbar">
         <div className="brand">
-          <button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}><ArrowLeft size={16} aria-hidden="true"/></button>
+          <button className="btn icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}><ArrowLeft size={16} aria-hidden="true"/></button>
           <div>
             <div className="projectName" role="heading" aria-level={1} title={project.name}>{project.name}</div>
             <div className="projectMeta">{latest ? `Phiên bản ${latest}` : "Chưa có phiên bản"} · revision {revision} · {project.siteVisibility === "PUBLIC" ? "Công khai" : "Riêng tư"}{readOnly ? " · chỉ xem" : ""}</div>
@@ -215,22 +215,22 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
         </div>
         {modeTabs}
         <div className="topActions">
-          <button className="button ghost" onClick={() => go("site")}>Website</button>
-          <button className="button ghost" onClick={() => go("versions")}>Phiên bản</button>
-          <button className="button ghost" onClick={() => go("assets")}>Tệp</button>
-          {mayShare ? <button className="button ghost" onClick={() => go("members")}>Chia sẻ</button> : null}
-          <GuardedButton className="button icon" aria-label="Cài đặt project" unavailable={!mayEdit} reason="Bạn không có quyền đổi cài đặt ứng dụng." onClick={() => go("settings")}><Settings size={16} aria-hidden="true"/></GuardedButton>
+          <button className="btn ghost" onClick={() => go("site")}>Website</button>
+          <button className="btn ghost" onClick={() => go("versions")}>Phiên bản</button>
+          <button className="btn ghost" onClick={() => go("assets")}>Tệp</button>
+          {mayShare ? <button className="btn ghost" onClick={() => go("members")}>Chia sẻ</button> : null}
+          <GuardedButton className="btn icon" aria-label="Cài đặt project" unavailable={!mayEdit} reason="Bạn không có quyền đổi cài đặt ứng dụng." onClick={() => go("settings")}><Settings size={16} aria-hidden="true"/></GuardedButton>
           <OverflowMenu items={[
             { key: "site", label: "Website", onSelect: () => go("site") }, { key: "versions", label: "Phiên bản", onSelect: () => go("versions") }, { key: "assets", label: "Tệp", onSelect: () => go("assets") },
             ...(mayShare ? [{ key: "members", label: "Chia sẻ", onSelect: () => go("members") }] : []),
             { key: "settings", label: "Cài đặt project", onSelect: () => go("settings"), unavailable: !mayEdit, reason: "Bạn không có quyền đổi cài đặt." }]}/>
-          <GuardedButton className="button primary" unavailable={!mayPublish} reason="Bạn không có quyền xuất bản (cần quyền APP_PUBLISH)." disabled={busy !== null} onClick={() => go("publish")}>Xuất bản</GuardedButton>
+          <GuardedButton className="btn primary" unavailable={!mayPublish} reason="Bạn không có quyền xuất bản (cần quyền APP_PUBLISH)." disabled={busy !== null} onClick={() => go("publish")}>Xuất bản</GuardedButton>
         </div>
       </header>)}
 
       {project.status === "ARCHIVED" ? <div className="archivedBanner" role="status">Ứng dụng đã được lưu trữ: chỉ xem, website đang ngoại tuyến.
         {/* M-080: the server restores only with PROJECT_DELETE (ProjectLifecycle.kt): without it the button is disabled with the reason, not offered to fail after the click */}
-        <GuardedButton className="smallButton" unavailable={!mayDelete} reason="Bạn không có quyền khôi phục ứng dụng (cần quyền chủ sở hữu hoặc quản trị)." disabled={busy !== null}
+        <GuardedButton className="btn sm" unavailable={!mayDelete} reason="Bạn không có quyền khôi phục ứng dụng (cần quyền chủ sở hữu hoặc quản trị)." disabled={busy !== null}
           onClick={() => void run("settings", () => api.restoreProject(ws, projectId), "Không khôi phục được (cần quyền chủ sở hữu hoặc quản trị).").then((r) => { if (r) void reload(); })}>Khôi phục</GuardedButton></div> : null}
       {mode === "code" ? (
         <main className="codeMode">
@@ -263,7 +263,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
                 {busy === "prompt" && live ? <AiProgress live={live} model={effectiveModel}
                     onCancel={cancel}/>
                   : busy === "prompt" ? <div className="message assistant"><div className="bubble typing" role="status"><span className="dots" aria-hidden="true"><i/><i/><i/></span> Đang phân tích yêu cầu{ai?.configured && effectiveModel !== "mock" ? " với AI…" : "…"}</div></div> : null}
-                {behind ? <button type="button" className="smallButton" style={{ position: "sticky", bottom: 8, marginLeft: "auto", display: "block" }} onClick={jumpToNewest}>Tin mới ↓</button> : null}
+                {behind ? <button type="button" className="btn sm" style={{ position: "sticky", bottom: 8, marginLeft: "auto", display: "block" }} onClick={jumpToNewest}>Tin mới ↓</button> : null}
               </div>
               <div className="composer">
                 {!readOnly && messages.length > 0 ? <div className="suggestions" aria-label="Gợi ý">{suggestions(ai?.configured === true).map((t) => (
@@ -313,7 +313,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
           <article className="versionItem" key={v.id}>
             <div><b>Phiên bản {v.versionNumber}{v.current ? " · hiện tại" : ""}</b><span>{fmtDate(v.createdAt)}</span></div>
             <p>{v.summary}</p><small>{v.kind}{v.createdBy ? ` · ${v.createdBy}` : ""}</small>
-            {v.restorable && mayEdit ? <button className="smallButton" disabled={busy !== null} onClick={() => void restore(v)}>{busy === "restore" ? "Đang khôi phục…" : "Khôi phục"}</button> : null}
+            {v.restorable && mayEdit ? <button className="btn sm" disabled={busy !== null} onClick={() => void restore(v)}>{busy === "restore" ? "Đang khôi phục…" : "Khôi phục"}</button> : null}
           </article>))}</div>
       </Drawer> : null}
       {panel === "site" ? <SiteDrawer schema={schema} ws={ws} pid={projectId} pageId={pageId} onPage={(id) => { setPageId(id); setSelectedId(null); }} canEdit={!readOnly}
@@ -322,7 +322,7 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
         extra={<>{!readOnly ? <SaveTemplateSection workspaceId={ws} projectId={projectId} projectName={project.name}/> : null}
           {mayDelete && project.status !== "ARCHIVED" ? <section className="settingGroup"><h3>Lưu trữ ứng dụng</h3>
             <p className="hint">Ứng dụng chỉ còn xem được, website bị gỡ khỏi mạng. Dữ liệu và phiên bản được giữ; có thể khôi phục.</p>
-            <button className="button ghost" onClick={() => void archive()}>Lưu trữ</button>
+            <button className="btn ghost" onClick={() => void archive()}>Lưu trữ</button>
           </section> : null}</>}/> : null}
       {savingBlock && selected ? <SaveBlockDrawer workspaceId={ws} projectId={projectId} section={selected} title={label(selected.type)}
         onClose={() => setSavingBlock(false)} onSaved={(m) => { setSavingBlock(false); toast.success(m); loadBlocks(); }}/> : null}

@@ -15,12 +15,10 @@
 /* tabs */
 .bx-tabs{display:flex;gap:2px}.bx-tabs-horizontal{flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:10px}.bx-tabs-vertical{flex-direction:column}
 .bx-tabs button{border:0;background:none;color:var(--muted);padding:7px 9px;border-radius:7px;text-align:left;font:inherit;font-size:13px;font-weight:600}
-.bx-tabs button.active{background:#262a5c;color:#fff}.bx-tabs button:focus-visible,.bx-btn:focus-visible,.bx-icon:focus-visible,.bx-handle:focus-visible,.bx-drag:focus-visible,.bx-node:focus-visible,.bx-mini:focus-visible{outline:2px solid var(--ui-ring);outline-offset:2px}
+.bx-tabs button.active{background:#262a5c;color:#fff}.bx-tabs button:focus-visible,.bx-icon:focus-visible,.bx-handle:focus-visible,.bx-drag:focus-visible,.bx-node:focus-visible,.bx-mini:focus-visible{outline:2px solid var(--ui-ring);outline-offset:2px}
 .bx-tabpanel{min-width:0}.bx-tabpanel:focus-visible{outline:2px solid var(--ui-ring);outline-offset:2px}
-/* buttons */
-.bx-btn{border:1px solid var(--line);border-radius:9px;background:#131a22;color:var(--text);min-height:34px;padding:0 12px;font:inherit;font-size:13px}
-.bx-btn.sm{min-height:28px;padding:0 9px;font-size:12px}.bx-btn.primary{background:#fff;color:#10151b;border-color:#fff;font-weight:700}.bx-btn.danger{border-color:#7a271a;color:#fda29b}
-.bx-btn:disabled,.bx-mini:disabled,.bx-drag:disabled{opacity:.5;cursor:not-allowed}
+/* buttons: the builder's compact size is `.btn.dense` (factory.css, BUTTON VOCABULARY) */
+.bx-mini:disabled,.bx-drag:disabled{opacity:.5;cursor:not-allowed}
 .bx-icon{width:32px;height:32px;border:1px solid var(--line);border-radius:8px;background:#131a22;color:var(--text)}
 .bx-mini{min-width:24px;height:24px;border:1px solid var(--line);border-radius:6px;background:#131a22;color:var(--text);font-size:12px}.bx-mini.danger{color:#fda29b}
 .bx-drag{width:24px;flex:none;border:1px solid var(--line);border-radius:7px;background:#12161d;color:var(--muted);cursor:grab;touch-action:none}
@@ -105,7 +103,7 @@
 
 /* top bar: the project name and meta stay on ONE line with an ellipsis (the full name is the title); button labels never wrap into tall pills; groups wrap to a second row instead of being clipped */
 .bx-top .projectName,.bx-top .projectMeta{max-width:min(38ch,24vw);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bx-top button,.bx-top .segmented button,.bx-top .bx-btn{white-space:nowrap}
+.bx-top button,.bx-top .segmented button,.bx-top .btn{white-space:nowrap}
 .bx-top-center{justify-content:flex-end}.bx-top .segmented{flex:none}
 /* page tree rows: a long page / section title is one line with an ellipsis, not a 3-line wall in a narrow panel */
 .bx-node b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
@@ -125,13 +123,12 @@
 /* ===== accessibility pass (C6 QA @ 5cc230e): target size (WCAG 2.5.8: ≥ 24 px, ≥ 32 px on small / touch screens), focus rings on the scrollable panels, contrast ===== */
 .bx-right:focus-visible,.bx-left-panel:focus-visible{outline:2px solid var(--ui-ring);outline-offset:-2px}
 .chipBtn{display:inline-flex;align-items:center;justify-content:center;min-width:24px;min-height:24px;border-radius:6px}.chipBtn:hover:not(:disabled){background:rgba(255,255,255,.12)}.chipBtn:focus-visible{outline:2px solid var(--ui-ring);outline-offset:1px}
-.smallButton{min-width:28px;min-height:28px;display:inline-flex;align-items:center;justify-content:center;gap:4px}
 .bx-mini{min-width:28px;height:28px}.bx-drag{min-width:28px}
-.bx-tabs button,.bx-btn,.bx-icon{min-height:28px}
+.bx-tabs button,.bx-icon{min-height:28px}
 .segmented button{min-width:32px;min-height:32px}
 @media(max-width:768px),(pointer:coarse){
-  .chipBtn,.smallButton,.bx-mini,.bx-drag,.bx-icon,.button.icon,.bx-handle{min-width:32px;min-height:32px}
-  .segmented button,.bx-tabs button,.bx-btn.sm{min-height:36px}.segmented button{min-width:36px}
+  .chipBtn,.bx-mini,.bx-drag,.bx-icon,.bx-handle,:is(.studio,.modal,.drawer) .btn.sm,:is(.studio,.modal,.drawer) .btn.icon{min-width:32px;min-height:32px}
+  .segmented button,.bx-tabs button,:is(.studio,.modal,.drawer) .btn.dense.sm{min-height:36px}.segmented button{min-width:36px}
   .xp-clear,.xp-iconBtn{min-width:32px;min-height:32px}
 }
 /* secondary text on the dark editor: the "disabled" library entries and hints keep ≥ 4.5:1 (token --muted on the panel) instead of a faded colour */
@@ -160,7 +157,7 @@
   .bx-top-center>*{flex:none}
   .bx-top .topActions{flex:1 1 100%;flex-wrap:wrap;justify-content:flex-start;gap:6px}
   .bx-top .topActions>*{flex:none}
-  .bx-top .topActions>.button.ghost,.bx-top .topActions>.button.icon{display:inline-flex}
+  .bx-top .topActions>.btn.ghost,.bx-top .topActions>.btn.icon{display:inline-flex}
 }
 
 /* rail / inactive tab contrast: a stronger secondary-text token for the dark editor (≥ 9:1 on the panel) used by the rail, tabs and hints; hover / active / focus keep distinct, visible states */
@@ -172,7 +169,6 @@
 .bx-right input[type=checkbox],.bx-right input[type=radio],.bx-left-panel input[type=checkbox],.bx-left-panel input[type=radio],.drawer input[type=checkbox],.drawer input[type=radio]{width:24px;height:24px;min-height:24px;margin:0;accent-color:#6366f1;flex:none}
 
 /* C6 fix pass 2 (UX-006 / UX-008): the workspace header of AI / Code pages, icon buttons that shrank, compact selects, text buttons, brand width on a phone */
-.button.icon{flex:none;min-width:32px}
 .linkButton{display:inline-flex;align-items:center;min-height:24px}
 .bx-left-panel select,.bx-right select,.bx-panel-body select{min-height:32px}
 @media(max-width:900px){
@@ -244,9 +240,9 @@
   .workspace3:not(.bx-root) .topbar .modeTabs,.studio.codeStudio .topbar .modeTabs{grid-area:tabs;justify-self:start}
   .workspace3:not(.bx-root) .topbar .topActions,.studio.codeStudio .topbar .topActions{grid-area:actions;flex-wrap:nowrap}
   .studio.codeStudio .topbar .brand .projectMeta{display:none}
-  .topbar .topActions .button.primary,.modeTabs button{white-space:nowrap}
+  .topbar .topActions .btn.primary,.modeTabs button{white-space:nowrap}
   .modeTabs button{display:inline-flex;align-items:center;gap:4px}
-  .workspace3:not(.bx-root) .topActions .button,.studio.codeStudio .topActions .button{white-space:nowrap}
+  .workspace3:not(.bx-root) .topActions .btn,.studio.codeStudio .topActions .btn{white-space:nowrap}
 }
 @media(max-width:767px){
   .wsMore{display:block}

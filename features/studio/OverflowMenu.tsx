@@ -33,7 +33,7 @@ export function OverflowMenu({ label = "Thêm thao tác", items }: { label?: str
   }
   return (
     <div className="wsMore" ref={root} onKeyDown={onKey}>
-      <button ref={button} type="button" className="button wsMoreBtn" aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined} aria-label={label} title={label} onClick={() => setOpen((o) => !o)}>
+      <button ref={button} type="button" className="btn wsMoreBtn" aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined} aria-label={label} title={label} onClick={() => setOpen((o) => !o)}>
         <span aria-hidden="true">⋯</span>
       </button>
       {open ? (

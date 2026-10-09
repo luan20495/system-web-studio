@@ -150,7 +150,7 @@ export function TestPanel({ doc, rawPermissions, runtime, dirty = false }: {
             <li key={q.id} className="bx-test-row" data-testid={`query-row:${q.id}`}>
               <div><b>{q.name || q.id}</b><small>Chạy ở chế độ thử trên bản nháp đã lưu</small>
                 {res?.kind === "rows" ? <QueryRows res={res.res}/> : res ? <OutcomeView outcome={res.outcome}/> : null}</div>
-              <button type="button" className="smallButton" data-testid={`run-query:${q.id}`} disabled={st.state !== "AVAILABLE" || !!lacks || pending.has(`q:${q.id}`)} aria-busy={pending.has(`q:${q.id}`)}
+              <button type="button" className="btn sm" data-testid={`run-query:${q.id}`} disabled={st.state !== "AVAILABLE" || !!lacks || pending.has(`q:${q.id}`)} aria-busy={pending.has(`q:${q.id}`)}
                 title={reason("queries") ?? lacks ?? undefined} onClick={() => void runQuery(q.id)}>{pending.has(`q:${q.id}`) ? "Đang chạy…" : "Chạy thử"}</button>
             </li>);
         })}</ul>)}
@@ -170,8 +170,8 @@ export function TestPanel({ doc, rawPermissions, runtime, dirty = false }: {
             <li key={a.id} className="bx-test-row" data-testid={`action-row:${a.id}`}>
               <div><b>{a.name || a.id}</b><small>{ACTION_LABEL[a.type]} · cần: {requiredLabel(a.type, declared)}</small><OutcomeView outcome={results[key] ?? eff}/>
                 {noTrigger ? <p className="hint" data-testid={`no-trigger:${a.id}`}>{noTrigger}</p> : null}
-                {locked.has(key) ? <p className="hint"><button type="button" className="smallButton" data-testid={`unlock:${key}`} onClick={() => unlock(key)}>Tôi đã kiểm tra dữ liệu, cho phép chạy lại</button></p> : null}</div>
-              <button type="button" className="smallButton" data-testid={`run-action:${a.id}`} disabled={st.state !== "AVAILABLE" || !!lacks || !!noTrigger || busy || locked.has(key)} aria-busy={busy}
+                {locked.has(key) ? <p className="hint"><button type="button" className="btn sm" data-testid={`unlock:${key}`} onClick={() => unlock(key)}>Tôi đã kiểm tra dữ liệu, cho phép chạy lại</button></p> : null}</div>
+              <button type="button" className="btn sm" data-testid={`run-action:${a.id}`} disabled={st.state !== "AVAILABLE" || !!lacks || !!noTrigger || busy || locked.has(key)} aria-busy={busy}
                 title={reason("actions") ?? lacks ?? noTrigger ?? (locked.has(key) ? "Kết quả lần chạy trước chưa rõ." : undefined)} onClick={() => void runAction(a.id)}>{busy ? "Đang chạy…" : "Chạy thử"}</button>
             </li>);
         })}</ul>)}
@@ -183,13 +183,13 @@ export function TestPanel({ doc, rawPermissions, runtime, dirty = false }: {
           <div key={w.id} className="bx-test-wf" data-testid={`workflow-row:${w.id}`}>
             <div className="bx-test-row"><div><b>{w.name || w.id}</b><small>Chạy thử vẫn có thể tạo một bản ghi lượt chạy (workflow_run).</small></div>
               <span className="bx-row-tools">
-                <button type="button" className="smallButton" data-testid={`run-workflow:${w.id}`} disabled={st.state !== "AVAILABLE" || !!wfLacks || busy || locked.has(key)} aria-busy={busy}
+                <button type="button" className="btn sm" data-testid={`run-workflow:${w.id}`} disabled={st.state !== "AVAILABLE" || !!wfLacks || busy || locked.has(key)} aria-busy={busy}
                   title={reason("workflows") ?? wfLacks ?? undefined} onClick={() => void startWorkflow(w.id)}>{busy ? "Đang chạy…" : "Chạy thử"}</button>
-                {run && busy && !isRunFinished(run) ? <button type="button" className="smallButton danger" data-testid={`cancel-workflow:${w.id}`} onClick={() => void cancel(w.id)}>Hủy lượt chạy</button> : null}</span></div>
+                {run && busy && !isRunFinished(run) ? <button type="button" className="btn sm danger" data-testid={`cancel-workflow:${w.id}`} onClick={() => void cancel(w.id)}>Hủy lượt chạy</button> : null}</span></div>
             {results[key] ? <OutcomeView outcome={results[key]}/> : null}
             {run ? <p className="hint" data-testid={`run-status:${w.id}`}>Lượt chạy {run.runId} · {run.status}{run.steps?.length ? ` · ${run.steps.map((s) => `${s.stepId}:${s.status}`).join(", ")}` : ""}</p> : null}
-            {pollErr[w.id] ? <p role="alert" className="hint">{pollErr[w.id]} <button type="button" className="smallButton" data-testid={`reconnect:${w.id}`} onClick={() => reconnect(w.id)}>Tải lại trạng thái</button></p> : null}
-            {locked.has(key) ? <p className="hint"><button type="button" className="smallButton" onClick={() => unlock(key)}>Tôi đã kiểm tra, cho phép chạy lại</button></p> : null}
+            {pollErr[w.id] ? <p role="alert" className="hint">{pollErr[w.id]} <button type="button" className="btn sm" data-testid={`reconnect:${w.id}`} onClick={() => reconnect(w.id)}>Tải lại trạng thái</button></p> : null}
+            {locked.has(key) ? <p className="hint"><button type="button" className="btn sm" onClick={() => unlock(key)}>Tôi đã kiểm tra, cho phép chạy lại</button></p> : null}
             <ol className="bx-list">{describeWorkflowTest(w, doc).map((r) => <li key={r.stepId}><div><b>{r.label}</b><OutcomeView outcome={r.outcome}/></div></li>)}</ol>
           </div>);
       })}

@@ -208,7 +208,7 @@
 .designProps{padding:12px;overflow:auto}.designProps label{display:grid;gap:4px;font-size:var(--f-fs-md)}
 .linkButton{background:none;border:0;color:var(--dk-link);cursor:pointer;padding:0;font:inherit;text-decoration:underline}.breakAll{word-break:break-all}
 /* AI streaming (stage E) */
-.liveStream{display:grid;gap:8px}.aiSteps{list-style:none;margin:0;padding:0;display:grid;gap:3px;font-size:var(--f-fs-md)}.aiSteps li[data-state=pending]{opacity:.55}.aiSteps li[data-state=active]{font-weight:600}.aiSteps li[data-state=done]{opacity:.85}.aiProgress .smallButton{justify-self:start}.aiWarn{margin:0;color:#f5c26b;font-size:var(--f-fs-md)}.aiMeta{font-size:var(--f-fs-sm);opacity:.75}.aiRaw summary{cursor:pointer;font-size:var(--f-fs-sm);opacity:.8}
+.liveStream{display:grid;gap:8px}.aiSteps{list-style:none;margin:0;padding:0;display:grid;gap:3px;font-size:var(--f-fs-md)}.aiSteps li[data-state=pending]{opacity:.55}.aiSteps li[data-state=active]{font-weight:600}.aiSteps li[data-state=done]{opacity:.85}.aiProgress .btn.sm{justify-self:start}.aiWarn{margin:0;color:#f5c26b;font-size:var(--f-fs-md)}.aiMeta{font-size:var(--f-fs-sm);opacity:.75}.aiRaw summary{cursor:pointer;font-size:var(--f-fs-sm);opacity:.8}
 .streamTail{margin:0;max-height:96px;overflow:hidden;white-space:pre-wrap;word-break:break-all;font-size:var(--f-fs-xs);line-height:1.4;opacity:.75;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 .alertRow.CRITICAL td:first-child{border-left:3px solid var(--danger)}
 .alertRow.WARNING td:first-child{border-left:3px solid #f5a524}
@@ -436,18 +436,23 @@ fieldset.stack>legend{padding:0;margin:0 0 var(--sp-2);font-size:var(--f-fs-md);
    states: :disabled (not available, no reason to give) / aria-disabled (unavailable WITH a visible reason: ReasonButton) / aria-busy (an action is running: Button busy)
    React: <Button variant="primary|secondary|danger|ghost" size="md|sm" icon block busy> from @xweb/ui renders exactly these classes.
    Themes: light is the default; `.studio` (the dark builder / editor) re-skins the SAME classes below so a screen never needs a second class set.
-   Legacy classes and their replacements (do not use in new code; tests/builder/design-tokens.test.ts ratchets their use down):
-     .button -> .btn      .button.primary -> .btn.primary      .button.ghost -> .btn.ghost      .button.icon -> .btn.icon      .smallButton -> .btn.sm      .smallButton.danger -> .btn.sm.danger
-     .sendButton (the composer's round send button) stays a component of the AI composer      .bx-btn (builder.css) -> .btn, same rules (S1 migrates the builder) */
+   Retired (M-068): .button -> .btn, .button.primary/.ghost/.icon -> .btn.primary/.ghost/.icon, .smallButton -> .btn.sm, .bx-btn -> .btn.dense (the builder's compact size, 28 px, with .sm / .primary / .danger).
+   They are gone from markup AND css; tests/builder/design-tokens.test.ts keeps them at zero. .sendButton (the composer's round send button) stays a component of the AI composer.
+   The dark skin applies inside `.studio`, `.modal` and `.drawer` (the Studio's overlays). `.btn.dense` is only the builder's density: new screens use .btn / .btn.sm. */
 .btn.icon{width:36px;padding:0}.btn.sm.icon{width:30px}
-.studio .btn{height:36px;min-height:36px;padding:0 12px;border-radius:var(--f-r);border-color:var(--line);background:var(--dk-field);color:var(--text);font-size:inherit;font-weight:inherit}
-.studio .btn:hover:not(:disabled){border-color:var(--dk-btn-hover-line);background:var(--dk-field)}
-.studio .btn.primary,.studio .btn.primary:hover:not(:disabled){background:var(--ui-inverse-fg);color:var(--dk-ink);border-color:var(--ui-inverse-fg);font-weight:800}
-.studio .btn.ghost{background:var(--dk-btn-ghost);border-color:var(--line)}
-.studio .btn.sm{height:30px;min-height:30px;font-size:var(--f-fs-sm)}
-.studio .btn.danger{color:var(--dk-error-ink)}.studio .btn.danger:hover:not(:disabled){background:var(--dk-field)}
-.studio .btn:disabled{opacity:.5}
-.studio .btn.icon{width:36px;padding:0}.studio .btn.sm.icon{width:30px}
+:is(.studio,.modal,.drawer) .btn{height:36px;min-height:36px;padding:0 12px;border-radius:var(--f-r);border-color:var(--line);background:var(--dk-field);color:var(--text);font-size:inherit;font-weight:inherit}
+:is(.studio,.modal,.drawer) .btn:hover:not(:disabled){border-color:var(--dk-btn-hover-line);background:var(--dk-field)}
+:is(.studio,.modal,.drawer) .btn.primary,:is(.studio,.modal,.drawer) .btn.primary:hover:not(:disabled){background:var(--ui-inverse-fg);color:var(--dk-ink);border-color:var(--ui-inverse-fg);font-weight:800}
+:is(.studio,.modal,.drawer) .btn.ghost{background:var(--dk-btn-ghost);border-color:var(--line)}
+:is(.studio,.modal,.drawer) .btn.sm{height:30px;min-height:30px;font-size:var(--f-fs-sm)}
+:is(.studio,.modal,.drawer) .btn.danger{color:var(--dk-error-ink)}:is(.studio,.modal,.drawer) .btn.danger:hover:not(:disabled){background:var(--dk-field)}
+:is(.studio,.modal,.drawer) .btn:disabled{opacity:.5}
+:is(.studio,.modal,.drawer) .btn.icon{width:36px;padding:0;flex:none;min-width:32px}:is(.studio,.modal,.drawer) .btn.sm.icon{width:30px}
+:is(.studio,.modal,.drawer) .btn.sm{min-width:28px;gap:4px}:is(.studio,.modal,.drawer) .btn.ghost:hover:not(:disabled){background:var(--dk-btn-ghost)}
+/* .btn.dense: the builder's compact size (the old .bx-btn): 28 px, 13 px text, 9 px radius; `.sm` shrinks it further */
+:is(.studio,.modal,.drawer) .btn.dense{height:auto;min-height:28px;padding:0 12px;border-radius:9px;font-size:var(--f-fs-md)}:is(.studio,.modal,.drawer) .btn.dense.sm{height:auto;min-height:28px;padding:0 9px;font-size:var(--f-fs-sm)}
+:is(.studio,.modal,.drawer) .btn.dense.sm{min-width:auto}:is(.studio,.modal,.drawer) .btn:focus-visible{outline-color:var(--ui-ring)}
+:is(.studio,.modal,.drawer) .btn.dense.primary,:is(.studio,.modal,.drawer) .btn.dense.primary:hover:not(:disabled){font-weight:700}:is(.studio,.modal,.drawer) .btn.dense.danger{border-color:#7a271a;color:#fda29b}
 
 /* ---------- forced colors / Windows high contrast (M-086): backgrounds are dropped, so every state needs a border / outline in system colours ---------- */
 @media(forced-colors:active){

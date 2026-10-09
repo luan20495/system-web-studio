@@ -244,14 +244,14 @@ export function BuilderWorkspace(props: {
 
       {removing && selected ? (
         <Dialog title={`Xóa “${props.labelOf(selected.type)}” khỏi trang?`} onClose={() => setRemoving(false)} footer={<>
-          <button type="button" className="bx-btn" onClick={() => setRemoving(false)}>Hủy</button>
-          <button type="button" className="bx-btn danger" disabled={busy} onClick={() => void props.applyOps([{ type: "REMOVE_SECTION", sectionId: selected.id }], "Xóa mục").then((ok) => { if (ok) { setRemoving(false); select(null); } })}>Xóa mục</button></>}>
+          <button type="button" className="btn dense" onClick={() => setRemoving(false)}>Hủy</button>
+          <button type="button" className="btn dense danger" disabled={busy} onClick={() => void props.applyOps([{ type: "REMOVE_SECTION", sectionId: selected.id }], "Xóa mục").then((ok) => { if (ok) { setRemoving(false); select(null); } })}>Xóa mục</button></>}>
           <p>Có thể khôi phục từ lịch sử phiên bản. Dữ liệu và hành động gắn với mục này sẽ bị hỏng cho tới khi bạn gỡ chúng.</p>
         </Dialog>) : null}
       {check ? (
         <Dialog title={check.some((i) => i.severity === "BLOCK") ? "Chưa thể xuất bản" : "Kiểm tra trước khi xuất bản"} onClose={() => setCheck(null)} footer={<>
-          <button type="button" className="bx-btn" onClick={() => setCheck(null)}>Đóng</button>
-          {blockers(check).length === 0 ? <button type="button" className="bx-btn primary" onClick={() => { setCheck(null); props.openPublish(); }}>Vẫn xuất bản</button> : null}</>}>
+          <button type="button" className="btn dense" onClick={() => setCheck(null)}>Đóng</button>
+          {blockers(check).length === 0 ? <button type="button" className="btn dense primary" onClick={() => { setCheck(null); props.openPublish(); }}>Vẫn xuất bản</button> : null}</>}>
           <ul className="bx-issues" aria-label="Kết quả kiểm tra">{check.map((i) => <li key={i.code + (i.path ?? "") + i.message} className={i.severity === "BLOCK" ? "block" : "warn"}><b>{i.severity === "BLOCK" ? "Lỗi" : "Cảnh báo"}</b> {i.message}</li>)}</ul>
         </Dialog>) : null}
     </DndContext>

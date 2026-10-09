@@ -72,7 +72,7 @@ export function DataSourcesPanel({ doc, calls, canView, viewReason, canManage, m
   if (load.state === "loading") return <StateBox state={{ state: "LOADING" }}/>;
   if (load.state === "error") {
     return (<div className="bx-state bx-state-error" role="alert" data-testid="ds-error"><b>{load.message.title}</b><p>{load.message.detail}</p>
-      <button type="button" className="smallButton" data-testid="ds-reload" onClick={() => void reload()}>Thử lại</button></div>);
+      <button type="button" className="btn sm" data-testid="ds-reload" onClick={() => void reload()}>Thử lại</button></div>);
   }
 
   const descriptor = connectors.find((c) => c.type === form.type);
@@ -150,9 +150,9 @@ export function DataSourcesPanel({ doc, calls, canView, viewReason, canManage, m
                 <div><b>{d.name}</b> <small>{desc?.displayName ?? d.type} · {d.status === "ACTIVE" ? "Đang bật" : "Đang tắt"}</small></div>
                 <p className="hint" data-testid={`cred-state:${d.id}`}>{cv.text}</p>
                 <div className="bx-row">
-                  <button type="button" className="smallButton" data-testid={`ds-test:${d.id}`} disabled={!!writes || busy(`test:${d.id}`)} aria-busy={busy(`test:${d.id}`)} title={writes ?? undefined} onClick={() => void testIt(d)}>{busy(`test:${d.id}`) ? "Đang kiểm tra kết nối…" : "Kiểm tra kết nối"}</button>
-                  <button type="button" className="smallButton" data-testid={`ds-toggle:${d.id}`} disabled={!!writes || busy(`ds:${d.id}`)} title={writes ?? undefined} onClick={() => void toggle(d)}>{d.status === "ACTIVE" ? "Tắt" : "Bật"}</button>
-                  <button type="button" className="smallButton danger" data-testid={`ds-delete:${d.id}`} disabled={!!writes || busy(`del:${d.id}`)} title={writes ?? undefined} onClick={() => setRemoving(d)}>Xóa</button>
+                  <button type="button" className="btn sm" data-testid={`ds-test:${d.id}`} disabled={!!writes || busy(`test:${d.id}`)} aria-busy={busy(`test:${d.id}`)} title={writes ?? undefined} onClick={() => void testIt(d)}>{busy(`test:${d.id}`) ? "Đang kiểm tra kết nối…" : "Kiểm tra kết nối"}</button>
+                  <button type="button" className="btn sm" data-testid={`ds-toggle:${d.id}`} disabled={!!writes || busy(`ds:${d.id}`)} title={writes ?? undefined} onClick={() => void toggle(d)}>{d.status === "ACTIVE" ? "Tắt" : "Bật"}</button>
+                  <button type="button" className="btn sm danger" data-testid={`ds-delete:${d.id}`} disabled={!!writes || busy(`del:${d.id}`)} title={writes ?? undefined} onClick={() => setRemoving(d)}>Xóa</button>
                 </div>
                 {t ? <div className={`bx-outcome tone-${t.state === "OK" ? "ok" : t.state === "WARN" ? "warn" : "bad"}`} role={t.state === "FAILED" ? "alert" : "status"} data-test-state={t.state} data-testid={`ds-test-result:${d.id}`}>
                   <b>{t.title}</b><p>{t.detail}</p>{t.code ? <p className="hint">Mã: {t.code}</p> : null}
@@ -163,8 +163,8 @@ export function DataSourcesPanel({ doc, calls, canView, viewReason, canManage, m
                     <Field key={k} label={k}>{(id) => <input id={id} type="password" autoComplete="new-password" data-testid={`cred-input:${d.id}:${k}`} value={typed[k] ?? ""} onChange={(e) => setCredInput((c) => ({ ...c, [d.id]: { ...(c[d.id] ?? {}), [k]: e.target.value } }))}/>}</Field>
                   ))}
                   <div className="bx-row">
-                    <button type="button" className="smallButton" data-testid={`cred-save:${d.id}`} disabled={!!writes || busy(`cred:${d.id}`) || !desc?.credentialKeys.length} onClick={() => void replaceCredential(d, desc)}>{cv.configured ? "Thay khóa kết nối" : "Lưu khóa kết nối"}</button>
-                    {cv.configured ? <button type="button" className="smallButton danger" data-testid={`cred-remove:${d.id}`} disabled={!!writes || busy(`cred:${d.id}`)} onClick={() => void dropCredential(d)}>Xóa khóa kết nối</button> : null}
+                    <button type="button" className="btn sm" data-testid={`cred-save:${d.id}`} disabled={!!writes || busy(`cred:${d.id}`) || !desc?.credentialKeys.length} onClick={() => void replaceCredential(d, desc)}>{cv.configured ? "Thay khóa kết nối" : "Lưu khóa kết nối"}</button>
+                    {cv.configured ? <button type="button" className="btn sm danger" data-testid={`cred-remove:${d.id}`} disabled={!!writes || busy(`cred:${d.id}`)} onClick={() => void dropCredential(d)}>Xóa khóa kết nối</button> : null}
                   </div>
                   {noteText(`cred:${d.id}`)}
                 </fieldset>
@@ -186,7 +186,7 @@ export function DataSourcesPanel({ doc, calls, canView, viewReason, canManage, m
         </> : null}
         {formErrors.length ? <ul role="alert" className="hint" data-testid="ds-form-errors">{formErrors.map((e, i) => <li key={i}>{e.message}</li>)}</ul> : null}
         {noteText("create")}
-        <button type="submit" className="button primary" data-testid="ds-create" disabled={!!writes || busy("create")} aria-busy={busy("create")} title={writes ?? undefined}>{busy("create") ? "Đang tạo…" : "Tạo nguồn"}</button>
+        <button type="submit" className="btn primary" data-testid="ds-create" disabled={!!writes || busy("create")} aria-busy={busy("create")} title={writes ?? undefined}>{busy("create") ? "Đang tạo…" : "Tạo nguồn"}</button>
       </form>
 
       <H className="bx-h3">Liên kết khe dữ liệu của ứng dụng</H>
@@ -202,8 +202,8 @@ export function DataSourcesPanel({ doc, calls, canView, viewReason, canManage, m
                     <span>{BINDING_LABEL[mode]}: {cur ? <b data-testid={`bound:${mode}:${s.id}`}>{curSrc?.name ?? cur.dataSourceId}</b> : <i>chưa liên kết</i>}</span>
                     <select aria-label={`Nguồn cho ${s.id} (${mode})`} disabled={!!bindLock || busy(k)} value={pick[`${mode}:${s.id}`] ?? ""} onChange={(e) => setPick({ ...pick, [`${mode}:${s.id}`]: e.target.value })}>
                       <option value="">— chọn nguồn —</option>{sources.filter((d) => d.status === "ACTIVE").map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</select>
-                    <button type="button" className="smallButton" data-testid={`bind:${mode}:${s.id}`} disabled={!!bindLock || busy(k)} aria-busy={busy(k)} title={bindLock ?? undefined} onClick={() => void bind(mode, s.id)}>{busy(k) ? "Đang lưu…" : cur ? "Đổi liên kết" : "Liên kết"}</button>
-                    {cur ? <button type="button" className="smallButton" data-testid={`unbind:${mode}:${s.id}`} disabled={!!bindLock || busy(k)} title={bindLock ?? undefined} onClick={() => void unbind(mode, s.id)}>Bỏ liên kết</button> : null}
+                    <button type="button" className="btn sm" data-testid={`bind:${mode}:${s.id}`} disabled={!!bindLock || busy(k)} aria-busy={busy(k)} title={bindLock ?? undefined} onClick={() => void bind(mode, s.id)}>{busy(k) ? "Đang lưu…" : cur ? "Đổi liên kết" : "Liên kết"}</button>
+                    {cur ? <button type="button" className="btn sm" data-testid={`unbind:${mode}:${s.id}`} disabled={!!bindLock || busy(k)} title={bindLock ?? undefined} onClick={() => void unbind(mode, s.id)}>Bỏ liên kết</button> : null}
                     {noteText(k)}
                   </div>
                 );
@@ -218,7 +218,7 @@ export function DataSourcesPanel({ doc, calls, canView, viewReason, canManage, m
 
       {removing ? (
         <Dialog title={`Xóa nguồn “${removing.name}”?`} onClose={() => setRemoving(null)} footer={<>
-          <button type="button" className="button ghost" onClick={() => setRemoving(null)}>Hủy</button>
+          <button type="button" className="btn ghost" onClick={() => setRemoving(null)}>Hủy</button>
           <button type="button" className="btn danger" data-testid="ds-delete-confirm" disabled={busy(`del:${removing.id}`)} onClick={() => void doRemove()}>Xóa nguồn</button></>}>
           <p>Nguồn và khóa kết nối của nó sẽ bị xóa khỏi không gian làm việc. Nếu nguồn đang được liên kết với một ứng dụng, máy chủ sẽ từ chối: hãy bỏ liên kết trước.</p>
           {noteText(`del:${removing.id}`)}

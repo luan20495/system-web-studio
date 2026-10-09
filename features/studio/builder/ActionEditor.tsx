@@ -134,8 +134,8 @@ export function ActionEditor({ ctx, initial, preset, onDone, onCancel }: {
       {issues.length ? <ul className="bx-issues" aria-label="Cần hoàn thành trước khi lưu">{issues.slice(0, 4).map((i) => <li key={i.path + i.message}>{i.message}</li>)}</ul> : null}
       {error ? <p className="formError" role="alert">{error}</p> : null}
       <div className="bx-actions">
-        <button type="button" className="bx-btn" onClick={onCancel}>Hủy</button>
-        <button type="submit" className="bx-btn primary" disabled={disabled || issues.length > 0}>{ctx.busy ? "Đang lưu…" : "Lưu hành động"}</button>
+        <button type="button" className="btn dense" onClick={onCancel}>Hủy</button>
+        <button type="submit" className="btn dense primary" disabled={disabled || issues.length > 0}>{ctx.busy ? "Đang lưu…" : "Lưu hành động"}</button>
       </div>
     </form>
   );

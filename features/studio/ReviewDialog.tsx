@@ -21,8 +21,8 @@ export function ReviewDialog({ summary, busy, onApprove, onClose }: { summary: s
         <label htmlFor={field} className="hint">Nhận xét (tuỳ chọn)</label>
         <textarea id={field} value={comment} maxLength={500} rows={3} disabled={busy} onChange={(e) => setComment(e.target.value)} style={{ width: "100%", marginTop: 6 }}/>
         <div className="modalActions">
-          <button type="button" className="button ghost" disabled={busy} onClick={onClose}>Hủy</button>
-          <button type="button" className="button primary" disabled={busy} onClick={() => { if (!busy) onApprove(comment.trim() || undefined); }}>{busy ? "Đang duyệt…" : "Duyệt"}</button>
+          <button type="button" className="btn ghost" disabled={busy} onClick={onClose}>Hủy</button>
+          <button type="button" className="btn primary" disabled={busy} onClick={() => { if (!busy) onApprove(comment.trim() || undefined); }}>{busy ? "Đang duyệt…" : "Duyệt"}</button>
         </div>
       </div>
     </div>

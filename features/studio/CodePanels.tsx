@@ -51,7 +51,7 @@ export function DesignPane({ ws, pid, canEdit, onChange }: { ws: string; pid: st
                 : <input value={props[p.name] !== undefined ? props[p.name] ?? "" : p.value ?? ""} maxLength={200} disabled={!canEdit} onChange={(e) => setProps((x) => ({ ...x, [p.name]: e.target.value || null }))}/>}
             </label>)}
             {node.hiddenEditable ? <label className="switch"><input type="checkbox" checked={hidden} disabled={!canEdit} onChange={(e) => setHidden(e.target.checked)}/> Ẩn thành phần này</label> : null}
-            {canEdit ? <button className="button primary" disabled={busy}>{busy ? "Đang tạo…" : "Tạo thay đổi & build"}</button> : null}
+            {canEdit ? <button className="btn primary" disabled={busy}>{busy ? "Đang tạo…" : "Tạo thay đổi & build"}</button> : null}
             {err ? <p className="formError" role="alert">{err}</p> : null}
           </form>}
         </div>
@@ -76,10 +76,10 @@ export function PackagesDrawer({ ws, pid, canEdit, onClose, onChange }: { ws: st
       <section className="settingGroup"><h3>Đã duyệt</h3>
         {data.approved.length === 0 ? <p className="hint">Chưa có package nào ngoài React và @company/*.</p> :
           <ul className="plainList">{data.approved.map((a) => <li key={a.name} className="row between"><span className="code">{a.name} <small>{a.spec}</small></span>
-            {canEdit ? <button className="button ghost" onClick={() => void request(a.name)}>Thêm</button> : null}</li>)}</ul>}
+            {canEdit ? <button className="btn ghost" onClick={() => void request(a.name)}>Thêm</button> : null}</li>)}</ul>}
         {canEdit ? <form className="row" onSubmit={(e) => { e.preventDefault(); if (name.trim()) void request(name); }}>
           <input aria-label="Tên package" placeholder="Tên package khác (gửi quản trị viên duyệt)" value={name} onChange={(e) => setName(e.target.value)}/>
-          <button className="button primary" disabled={!name.trim()}>Yêu cầu</button></form> : null}
+          <button className="btn primary" disabled={!name.trim()}>Yêu cầu</button></form> : null}
         {msg ? <p className="hint" role="status">{msg}</p> : null}{err ? <p className="formError" role="alert">{err}</p> : null}
       </section>
       <section className="settingGroup"><h3>Yêu cầu gần đây</h3>
@@ -144,18 +144,18 @@ export function RuntimeDrawer({ ws, pid, canPublish, canSettings, onClose }: { w
           <ul className="plainList">{rt.deployments.map((d) => <li key={d.id} className="row between">
             <span><b>v{d.version}</b> {SD_LABEL[d.status] ?? d.status}{d.current ? " · đang phục vụ" : ""}{d.rollbackOf ? " · khôi phục" : ""} <small>{ago(d.createdAt)} · {d.routes} đường dẫn{d.commitSha ? ` · ${d.commitSha.slice(0, 8)}` : ""}</small>
               {d.error ? <small className="formError">{d.error}</small> : null}</span>
-            {canPublish && !d.current && (d.status === "SUPERSEDED" || d.status === "STOPPED") ? <button className="smallButton" onClick={() => void (async () => { if (await confirm({ title: `Khôi phục máy chủ về phiên bản ${d.version}?`, message: "Lưu lượng chuyển sang bản này (không build lại); bản đang chạy sẽ dừng phục vụ.", confirmLabel: "Khôi phục bản này", danger: true })) await act(() => api.runtimeRollback(ws, pid, d.id)); })()}>Khôi phục bản này</button> : null}
+            {canPublish && !d.current && (d.status === "SUPERSEDED" || d.status === "STOPPED") ? <button className="btn sm" onClick={() => void (async () => { if (await confirm({ title: `Khôi phục máy chủ về phiên bản ${d.version}?`, message: "Lưu lượng chuyển sang bản này (không build lại); bản đang chạy sẽ dừng phục vụ.", confirmLabel: "Khôi phục bản này", danger: true })) await act(() => api.runtimeRollback(ws, pid, d.id)); })()}>Khôi phục bản này</button> : null}
           </li>)}</ul>}
-        {canPublish && rt.currentDeploymentId ? <button className="button ghost" onClick={() => void (async () => { if (await confirm({ title: "Dừng máy chủ của ứng dụng?", message: "API của ứng dụng ngừng trả lời cho tới khi bạn xuất bản lại.", confirmLabel: "Dừng máy chủ", danger: true })) await act(() => api.runtimeStop(ws, pid)); })()}>Dừng máy chủ</button> : null}
+        {canPublish && rt.currentDeploymentId ? <button className="btn ghost" onClick={() => void (async () => { if (await confirm({ title: "Dừng máy chủ của ứng dụng?", message: "API của ứng dụng ngừng trả lời cho tới khi bạn xuất bản lại.", confirmLabel: "Dừng máy chủ", danger: true })) await act(() => api.runtimeStop(ws, pid)); })()}>Dừng máy chủ</button> : null}
       </section>
       <section className="settingGroup"><h3>Bí mật (biến môi trường)</h3>
         <p className="hint">Giá trị được mã hóa, chỉ ghi: không bao giờ hiển thị lại, không vào kho mã và không gửi cho AI. Áp dụng ở lần triển khai tiếp theo.</p>
         {rt.secrets.length ? <ul className="plainList">{rt.secrets.map((s) => <li key={s.name} className="row between"><span className="code">{s.name}</span><small>{s.updatedBy ?? "—"} · {ago(s.updatedAt)}</small>
-          {canSettings ? <button className="smallButton danger" aria-label={`Xóa bí mật ${s.name}`} onClick={() => void (async () => { if (await confirm({ title: `Xóa bí mật ${s.name}?`, message: "Giá trị bị xóa vĩnh viễn và không xem lại được. Thay đổi áp dụng ở lần triển khai tiếp theo.", confirmLabel: "Xóa bí mật", danger: true })) await act(() => api.deleteSecret(ws, pid, s.name)); })()}>Xóa</button> : null}</li>)}</ul> : <p className="hint">Chưa có bí mật.</p>}
+          {canSettings ? <button className="btn sm danger" aria-label={`Xóa bí mật ${s.name}`} onClick={() => void (async () => { if (await confirm({ title: `Xóa bí mật ${s.name}?`, message: "Giá trị bị xóa vĩnh viễn và không xem lại được. Thay đổi áp dụng ở lần triển khai tiếp theo.", confirmLabel: "Xóa bí mật", danger: true })) await act(() => api.deleteSecret(ws, pid, s.name)); })()}>Xóa</button> : null}</li>)}</ul> : <p className="hint">Chưa có bí mật.</p>}
         {canSettings ? <form className="row" onSubmit={(e) => { e.preventDefault(); void secretSave.run(name.trim(), value); }}>
           <input aria-label="Tên biến" placeholder="TEN_BIEN" value={name} onChange={(e) => setName(e.target.value.toUpperCase())} maxLength={64}/>
           <input aria-label="Giá trị" type="password" autoComplete="off" placeholder="Giá trị" value={value} onChange={(e) => setValue(e.target.value)} maxLength={4000}/>
-          <button className="button" disabled={!/^[A-Z][A-Z0-9_]{1,63}$/.test(name.trim()) || !value || secretSave.busy} aria-busy={secretSave.busy || undefined}>{secretSave.busy ? "Đang lưu…" : "Lưu"}</button></form> : null}
+          <button className="btn" disabled={!/^[A-Z][A-Z0-9_]{1,63}$/.test(name.trim()) || !value || secretSave.busy} aria-busy={secretSave.busy || undefined}>{secretSave.busy ? "Đang lưu…" : "Lưu"}</button></form> : null}
       </section>
       <section className="settingGroup"><h3>Connector được cấp</h3>
         {rt.connectors.length ? <p>{rt.connectors.map((c) => <code key={c} className="tag">{c}</code>)}</p> : <p className="hint">Chưa có. Quản trị viên cấp connector đã duyệt cho ứng dụng (Admin → Connector).</p>}

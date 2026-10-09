@@ -49,8 +49,8 @@ export function DataPanel({ ctx, focus }: { ctx: DefCtx; focus?: DataFocus }) {
                 <div><b>{where}</b><small>← {r.dataset}{r.slotName ? ` · ${r.slotName}` : ""}</small>
                   <small className={r.public ? "" : "hint"} data-testid={`connected-public:${r.id}`}>{r.public ? W.publicBadge : W.privateBadge}</small></div>
                 {!disabled ? <span className="bx-row-tools">
-                  {r.queryId ? <button type="button" className="smallButton" onClick={() => void togglePublic(r.queryId!, !r.public)}>{r.public ? "Ngừng công khai" : "Cho khách xem"}</button> : null}
-                  <button type="button" className="smallButton danger" aria-label={`${W.unlink} dữ liệu khỏi ${where}`} onClick={() => setRemoving({ id: r.id, where })}>{W.unlink}</button></span> : null}
+                  {r.queryId ? <button type="button" className="btn sm" onClick={() => void togglePublic(r.queryId!, !r.public)}>{r.public ? "Ngừng công khai" : "Cho khách xem"}</button> : null}
+                  <button type="button" className="btn sm danger" aria-label={`${W.unlink} dữ liệu khỏi ${where}`} onClick={() => setRemoving({ id: r.id, where })}>{W.unlink}</button></span> : null}
               </li>);
           })}</ul>)}
         {message ? <p className="hint" role="status" data-testid="data-message">{message}</p> : null}
@@ -60,7 +60,7 @@ export function DataPanel({ ctx, focus }: { ctx: DefCtx; focus?: DataFocus }) {
         <GuidedBinding ctx={ctx} focus={focus} onCancel={() => setAdding(false)}
           onDone={(m) => { setAdding(false); setMessage(m); requestAnimationFrame(() => listRef.current?.focus()); }}/>
       ) : ctx.readiness.state === "AVAILABLE" && allSections(doc).length > 0
-        ? <p><button type="button" className="bx-btn primary" data-testid="data-add" onClick={() => { setMessage(null); setAdding(true); }}>{W.addButton}</button></p> : null}
+        ? <p><button type="button" className="btn dense primary" data-testid="data-add" onClick={() => { setMessage(null); setAdding(true); }}>{W.addButton}</button></p> : null}
 
       <details className="bx-existing" data-testid="data-advanced"><summary>{W.advancedTitle}</summary>
         <p className="hint">{W.advancedHint}</p>
@@ -69,8 +69,8 @@ export function DataPanel({ ctx, focus }: { ctx: DefCtx; focus?: DataFocus }) {
 
       {removing ? (
         <Dialog title={W.unlinkTitle} onClose={() => setRemoving(null)} footer={<>
-          <button type="button" className="bx-btn" onClick={() => setRemoving(null)}>{W.cancel}</button>
-          <button type="button" className="bx-btn danger" disabled={ctx.busy} data-testid="data-unlink-confirm" onClick={() => void ctx.commit([defOps.remove("dataBindings", removing.id)], "Gỡ liên kết dữ liệu").then((ok) => { if (ok) setRemoving(null); })}>{W.unlink}</button></>}>
+          <button type="button" className="btn dense" onClick={() => setRemoving(null)}>{W.cancel}</button>
+          <button type="button" className="btn dense danger" disabled={ctx.busy} data-testid="data-unlink-confirm" onClick={() => void ctx.commit([defOps.remove("dataBindings", removing.id)], "Gỡ liên kết dữ liệu").then((ok) => { if (ok) setRemoving(null); })}>{W.unlink}</button></>}>
           <p><b>{removing.where}</b>: thành phần sẽ trở lại nội dung viết tay. Bộ dữ liệu vẫn còn và có thể dùng lại.</p>
         </Dialog>) : null}
     </div>
