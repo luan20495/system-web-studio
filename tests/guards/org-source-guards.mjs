@@ -11,6 +11,7 @@ import { read, walk, stripComments, lineOf, isNonProduction, allowedByPragma, cl
 const CODE = /\.(tsx?|mjs|js|kt)$/;
 const FRONTEND_DIRS = /^(features|packages|apps|app|lib|components)\//;
 const ORG_NAME = /organi[sz]ation|employee|org-?unit|unitIcons|PersonPicker|orgunit/i;
+export const orgFrontendFiles = (root) => walk(root).filter((f) => CODE.test(f) && !isNonProduction(f) && FRONTEND_DIRS.test(f) && ORG_NAME.test(f));
 export const orgFiles = (root) => walk(root).filter((f) => CODE.test(f) && !isNonProduction(f) && (FRONTEND_DIRS.test(f) || f.startsWith("backend/src/main/")) && ORG_NAME.test(f));
 const productionFiles = (root) => walk(root).filter((f) => CODE.test(f) && !isNonProduction(f) && (FRONTEND_DIRS.test(f) || f.startsWith("backend/src/main/")));
 
@@ -46,7 +47,8 @@ const HIERARCHY_RULES = [
   { rule: "ORG-HIERARCHY-SWITCH", msg: "a switch on a depth / level: one branch per level is a fixed hierarchy",
     re: new RegExp(`switch\\s*\\(\\s*[\\w.]*${DEPTH}\\w*\\s*\\)|when\\s*\\(\\s*[\\w.]*${DEPTH}\\w*\\s*\\)`, "gi") },
   { rule: "ORG-HIERARCHY-MAX-DEPTH", msg: "a fixed maximum depth / number of levels",
-    re: /\b(?:MAX|MIN)_?(?:TREE_)?(?:DEPTH|LEVELS?)\b|\bmax(?:Tree)?(?:Depth|Levels?)\b\s*[:=]\s*\d|\b(?:depth|levels?)Limit\b\s*[:=]\s*\d/g },
+    // a FIXED number (MAX_DEPTH = 12, maxDepth: 5, depthLimit = 8, `val MAX_TREE_DEPTH`). Reading the tenant-defined rule (`rules.maxDepth`, `it.maxDepth`) or naming its violation reason ("MAX_DEPTH") is NOT a fixed hierarchy.
+    re: /\b(?:MAX|MIN)_?(?:TREE_)?(?:DEPTH|LEVELS?)\b\s*(?::\s*[\w<>?.]+\s*)?[=:]\s*\d|\b(?:const|val|let|var|static|final)\s+(?:MAX|MIN)_?(?:TREE_)?(?:DEPTH|LEVELS?)\b|(?<![.\w])max(?:Tree)?(?:Depth|Levels?)\b\s*[:=]\s*\d|\b(?:depth|levels?)Limit\b\s*[:=]\s*\d/g },
   { rule: "ORG-HIERARCHY-LEVEL-TABLE", msg: "a table of level names / a lookup of a name by depth",
     re: /\b(?:LEVEL|DEPTH|UNIT_LEVEL|ORG_LEVEL)_?(?:NAMES|LABELS|TITLES)\b\s*[:=]|\b(?:ORG_?LEVELS|LEVELS|HIERARCHY|UNIT_HIERARCHY)\b\s*(?::\s*[\w<>\[\]]+\s*)?=\s*[\[{]|[A-Za-z_]*(?:NAMES|LABELS|LEVELS)\w*\s*\[\s*[\w.]*(?:depth|level)\w*\s*\]/g },
   { rule: "ORG-HIERARCHY-TYPE-NAME", msg: "logic keyed on a hierarchy word (a type is whatever the company defines, never 'department' / 'team' in code)",
@@ -64,7 +66,7 @@ export function canonicalPermissions(root) {
 }
 const ROUTE_SEG = /["'`]\/(?:[^"'`\n]*\/)?(?:organi[sz]ations?|orgs?|org-units?|organization-units?|unit-types?|org-unit-types?|employees?|employee-profiles?|positions?|grades?)(?:[/?"'`$]|\b)[^"'`\n]*["'`]/g;
 export function guardFailClosed(root = REPO) {
-  const out = []; const files = orgFiles(root); const contract = CONTRACT(root); const wired = new Set(contract?.wired ?? []);
+  const out = []; const files = orgFrontendFiles(root); const backendOrg = orgFiles(root).filter((f) => !FRONTEND_DIRS.test(f)); const contract = CONTRACT(root); const wired = new Set(contract?.wired ?? []);
   if (!contract) out.push({ rule: "ORG-FAIL-CLOSED-LEDGER", file: "tests/guards/org-contract.json", message: "missing: the list of capabilities that are wired to a published C1 contract (empty until H-C1-17)" });
   out.push(...scan(root, files, [
     { rule: "ORG-FAIL-CLOSED-SWALLOW", msg: "an empty catch swallows the error (an OrganizationNotReady would turn into silence / success)", re: /catch\s*(?:\([^)]*\))?\s*\{\s*\}/g },
@@ -74,9 +76,16 @@ export function guardFailClosed(root = REPO) {
   ]));
   // a guessed route: any organization-ish path literal while NOTHING is wired (and in api-client, where a guessed route would really be added)
   if (wired.size === 0) {
-    const where = walk(root).filter((f) => CODE.test(f) && !isNonProduction(f) && (orgFiles(root).includes(f) || /^packages\/api-client\//.test(f) || /^lib\/http-/.test(f)));
+    const where = walk(root).filter((f) => CODE.test(f) && !isNonProduction(f) && (orgFrontendFiles(root).includes(f) || /^packages\/api-client\//.test(f) || /^lib\/http-/.test(f)));
     out.push(...scan(root, where, [{ rule: "ORG-FAIL-CLOSED-ROUTE", msg: "a route for organization data while no capability is wired to a published C1 contract (guessed route)", re: ROUTE_SEG }]));
   }
+  // an OBSOLETE / alias permission name anywhere in production code (frontend or backend): the canonical organization permissions are ORG_STRUCTURE_*, EMPLOYEE_*, POSITION_GRADE_* (C1, D-C0-51); there are no aliases
+  const OBSOLETE = /["'`](ORG_MANAGE|ORG_VIEW|ORG_EDIT|ORG_ADMIN|ORG_MEMBERS|ORG_WRITE|ORG_READ|EMPLOYEE_ADMIN|EMPLOYEE_EDIT|EMPLOYEE_READ|EMPLOYEE_WRITE|POSITION_MANAGE|POSITION_VIEW|GRADE_MANAGE|GRADE_VIEW|UNIT_MANAGE|UNIT_VIEW|ORGANIZATION_MANAGE|ORGANIZATION_VIEW)["'`]/g;
+  for (const f of walk(root).filter((x) => CODE.test(x) && !isNonProduction(x) && (FRONTEND_DIRS.test(x) || x.startsWith("backend/src/main/")))) {
+    const raw = read(root, f); const code = stripComments(raw); const lines = raw.split("\n"); let m; const re = new RegExp(OBSOLETE.source, "g");
+    while ((m = re.exec(code))) { const line = lineOf(code, m.index); if (allowedByPragma(lines, line, "ORG-FAIL-CLOSED-OBSOLETE")) continue; out.push({ rule: "ORG-FAIL-CLOSED-OBSOLETE", file: f, line, message: `'${m[1]}' is an obsolete / non-canonical organization permission name: use ORG_STRUCTURE_VIEW|MANAGE, EMPLOYEE_VIEW|MANAGE, POSITION_GRADE_VIEW|MANAGE (no aliases)`, excerpt: lines[line - 1] }); }
+  }
+  void backendOrg;
   // an invented permission name: every permission-looking literal must be canonical (backend CANONICAL) or explicitly allow-listed with owner + reason
   const canon = canonicalPermissions(root); const allow = ALLOW(root); const used = new Set();
   const permFiles = [...new Set([...files, ...walk(root).filter((f) => /^packages\/permissions\//.test(f) && CODE.test(f) && !isNonProduction(f))])];

@@ -27,5 +27,5 @@ Not in the gate (they need a browser, a stack or a network): the organization br
 
 ## When C1 delivers H-C1-17
 1. Wire the operation (`CAPABILITIES.<op>`: `status: "READY"`, `route`, `needs` = a CANONICAL permission) **and** add the id to `tests/guards/org-contract.json` `wired` in the same commit; `organization-fail-closed.test.ts` compares the two, and the route guard stops flagging organization paths once something is wired.
-2. Remove the `ORG_MANAGE` entry of `tests/guards/org-guards.allow.json` (it goes stale and fails the guard otherwise).
+2. ~~Remove the `ORG_MANAGE` entry of `tests/guards/org-guards.allow.json`~~ DONE (D-C0-51): the entry is gone, `ORG_MANAGE` is obsolete (guard `ORG-FAIL-CLOSED-OBSOLETE`), the canonical organization permissions are `ORG_STRUCTURE_*`, `EMPLOYEE_*`, `POSITION_GRADE_*`; the permission vocabularies are checked by `tests/guards/permission-mirror.mjs`.
 3. Allocate V32 in `MIGRATION_LEDGER.md` (row now says RESERVED); the file must be named `V32__*organization*.sql`.

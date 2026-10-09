@@ -13,6 +13,7 @@ import { guardLegacyWorkspaceRoute } from "./no-legacy-admin-workspaces.mjs";
 import { guardTestLabeling } from "./test-labeling.mjs";
 import { guardMigrationLedger } from "./migration-ledger.mjs";
 import { guardProcessSafety } from "./process-safety.mjs";
+import { guardPermissionMirror } from "./permission-mirror.mjs";
 import { scanAll } from "../../scripts/scan-prod-bundles.mjs";
 
 const dirs = [];
@@ -90,10 +91,10 @@ test("G2 fail-closed: a route is allowed ONLY when a capability is wired in org-
 });
 test("G2 fail-closed: the allow-list needs owner + reason and goes stale when the token is gone", () => {
   const allow = (o) => ({ "tests/guards/org-guards.allow.json": JSON.stringify({ allow: [o] }) });
-  assert.deepEqual(guardFailClosed(FC(`export type Need = "ORG_MANAGE";`, allow({ file: ORG, token: "ORG_MANAGE", owner: "C1+C5", reason: "placeholder", trigger: "H-C1-17 freezes the permissions", outcome: "replace or remove, then delete this entry" }))), []);
-  assert.ok(rules(guardFailClosed(FC(`export type Need = "ORG_MANAGE";`, allow({ file: ORG, token: "ORG_MANAGE" })))).includes("ORG-FAIL-CLOSED-ALLOWLIST"));
-  assert.ok(rules(guardFailClosed(FC(`export type Need = "ORG_MANAGE";`, allow({ file: ORG, token: "ORG_MANAGE", owner: "C1+C5", reason: "x" })))).includes("ORG-FAIL-CLOSED-ALLOWLIST"), "an entry without trigger / outcome is refused");
-  assert.ok(rules(guardFailClosed(FC(`export const a = 1;`, allow({ file: ORG, token: "ORG_MANAGE", owner: "C1+C5", reason: "x", trigger: "t", outcome: "o" })))).includes("ORG-FAIL-CLOSED-ALLOWLIST"));
+  assert.deepEqual(guardFailClosed(FC(`export type Need = "ORG_REPORT_VIEW";`, allow({ file: ORG, token: "ORG_REPORT_VIEW", owner: "C1+C5", reason: "placeholder", trigger: "H-C1-17 freezes the permissions", outcome: "replace or remove, then delete this entry" }))), []);
+  assert.ok(rules(guardFailClosed(FC(`export type Need = "ORG_REPORT_VIEW";`, allow({ file: ORG, token: "ORG_REPORT_VIEW" })))).includes("ORG-FAIL-CLOSED-ALLOWLIST"));
+  assert.ok(rules(guardFailClosed(FC(`export type Need = "ORG_REPORT_VIEW";`, allow({ file: ORG, token: "ORG_REPORT_VIEW", owner: "C1+C5", reason: "x" })))).includes("ORG-FAIL-CLOSED-ALLOWLIST"), "an entry without trigger / outcome is refused");
+  assert.ok(rules(guardFailClosed(FC(`export const a = 1;`, allow({ file: ORG, token: "ORG_REPORT_VIEW", owner: "C1+C5", reason: "x", trigger: "t", outcome: "o" })))).includes("ORG-FAIL-CLOSED-ALLOWLIST"));
   assert.ok(rules(guardFailClosed(FC(`export const a = 1;`, { "tests/guards/org-contract.json": undefined }))).includes("ORG-FAIL-CLOSED-LEDGER"), "the wired-capabilities ledger must exist");
 });
 
@@ -287,11 +288,45 @@ test("REAL FILES (copy) MUTATED: a localStorage 'save', a depth switch and a man
   writeFileSync(f, src + `\nexport const _m1 = (u: unknown) => localStorage.setItem("org", JSON.stringify(u));\nexport const _m2 = (n: { depth: number }) => (n.depth === 3 ? "Team" : "Unit");\nexport const _m3 = (e: { isManager: boolean }) => e.isManager && hasPermission(me, "TENANT_MANAGE");\n`);
   assert.ok(rules(guardFailClosed(d)).includes("ORG-FAIL-CLOSED-PERSIST")); assert.ok(rules(guardHierarchy(d)).includes("ORG-HIERARCHY-LEVEL-INDEX")); assert.ok(rules(guardRelationNotPermission(d)).includes("ORG-RELATION-AUTH"));
 });
-test("REAL FILES (copy) MUTATED: flipping the org adapter's permission need to a made-up ORG_ADMIN, or removing the V32 ledger row, is caught", () => {
-  const d = realCopy(); const f = join(d, "features/admin/organization.ts"); writeFileSync(f, readFileSync(f, "utf8").replace('"TENANT_MEMBERS" | "TENANT_MANAGE" | "ORG_MANAGE"', '"TENANT_MEMBERS" | "TENANT_MANAGE" | "ORG_ADMIN"'));
+test("REAL FILES (copy) MUTATED: flipping the org adapter's permission need to a made-up ORG_ADMIN, or reintroducing the obsolete ORG_MANAGE, is caught", () => {
+  const d = realCopy(); const f = join(d, "features/admin/organization.ts"); writeFileSync(f, readFileSync(f, "utf8").replace('"ORG_STRUCTURE_VIEW"', '"ORG_ADMIN"'));
   assert.ok(guardFailClosed(d).some((x) => x.rule === "ORG-FAIL-CLOSED-PERMISSION" && /ORG_ADMIN/.test(x.message)));
-  assert.ok(guardFailClosed(d).some((x) => x.rule === "ORG-FAIL-CLOSED-ALLOWLIST"), "...and the ORG_MANAGE allow entry becomes stale");
+  assert.ok(guardFailClosed(d).some((x) => x.rule === "ORG-FAIL-CLOSED-OBSOLETE" && /ORG_ADMIN/.test(x.message)), "an alias is an obsolete name too");
+  const e = realCopy(); const g = join(e, "features/admin/organization.ts"); writeFileSync(g, readFileSync(g, "utf8").replace('"ORG_STRUCTURE_VIEW"', '"ORG_MANAGE"'));
+  assert.ok(guardFailClosed(e).some((x) => x.rule === "ORG-FAIL-CLOSED-OBSOLETE" && /ORG_MANAGE/.test(x.message)), "ORG_MANAGE is obsolete: there is no allow-list for it any more");
 });
+// ---- the legitimate dynamic-organization BACKEND (C1, D-C0-51) must pass; the invariants must still bite ----
+const BE = "backend/src/main/kotlin/com/systemwebstudio/organization/OrganizationServices.kt";
+const BE_OK = `package com.systemwebstudio.organization
+@RestController @RequestMapping("/api/v1/admin/tenants/{tenantId}/organization-units")
+class C { @PostMapping("/{unitId}/move") fun move() { val id = UUID.randomUUID()
+  r.maxDepth?.let { if (depth > it) throw ruleViolation("MAX_DEPTH", "too deep") }
+  for (n in subtree) types[n.typeId]?.rules?.maxDepth?.let { if (base + n.relativeDepth > it) throw ruleViolation("MAX_DEPTH", "deeper than $it") }
+  try { repos.units.move() } catch (e: OrganizationCycle) { throw ApiException.conflict("ORG_CYCLE", "no cycle") }
+  throw ApiException.notFound("ORG_UNIT_NOT_FOUND", "x"); audit("ORG_UNIT_MOVED", "ORG_UNIT_TYPE_CREATED") } }`;
+test("G2/G1 backend organization code: routes, server-made ids, error / audit codes that start with ORG_, a tenant-defined maxDepth rule and its violation reason are CLEAN", () => {
+  const root = fx({ "backend/src/main/kotlin/com/systemwebstudio/access/Permission.kt": PERM_KT, "tests/guards/org-contract.json": CONTRACT(), [BE]: BE_OK });
+  assert.deepEqual(guardFailClosed(root), []); assert.deepEqual(guardHierarchy(root), []);
+});
+for (const [name, code, rule, which] of [
+  ["a fixed maximum depth constant", "val MAX_DEPTH = 12", "ORG-HIERARCHY-MAX-DEPTH", "h"],
+  ["a fixed maximum level count", "private const val MAX_TREE_LEVELS: Int = 8", "ORG-HIERARCHY-MAX-DEPTH", "h"],
+  ["a literal maxDepth assignment", "val cfg = Cfg(maxDepth = 5)", "ORG-HIERARCHY-MAX-DEPTH", "h"],
+  ["a depth switch in the backend", "when (depth) { 1 -> a() else -> b() }", "ORG-HIERARCHY-SWITCH", "h"],
+  ["the obsolete ORG_MANAGE in backend code", `val need = "ORG_MANAGE"`, "ORG-FAIL-CLOSED-OBSOLETE", "f"],
+  ["an alias EMPLOYEE_ADMIN in backend code", `Permission.of("EMPLOYEE_ADMIN")`, "ORG-FAIL-CLOSED-OBSOLETE", "f"],
+  ["an alias POSITION_MANAGE in backend code", `val p = "POSITION_MANAGE"`, "ORG-FAIL-CLOSED-OBSOLETE", "f"],
+]) test(`backend organization code FAILS: ${name}`, () => {
+  const root = fx({ "backend/src/main/kotlin/com/systemwebstudio/access/Permission.kt": PERM_KT, "tests/guards/org-contract.json": CONTRACT(), [BE]: `${BE_OK}\n${code}\n` });
+  assert.ok(rules(which === "h" ? guardHierarchy(root) : guardFailClosed(root)).includes(rule), `${rule} expected for: ${code}`);
+});
+test("the six canonical organization permissions are never flagged, in the frontend adapter type or in backend code", () => {
+  const six = ["ORG_STRUCTURE_VIEW", "ORG_STRUCTURE_MANAGE", "EMPLOYEE_VIEW", "EMPLOYEE_MANAGE", "POSITION_GRADE_VIEW", "POSITION_GRADE_MANAGE"];
+  const kt = `object PermissionCodes {\n    val CANONICAL: Set<String> = setOf(\n        "APP_VIEW", "TENANT_MANAGE", "TENANT_MEMBERS", "MEMBER_MANAGE",\n        ${six.map((x) => `"${x}"`).join(", ")}\n    )\n}\n`;
+  const root = fx({ "backend/src/main/kotlin/com/systemwebstudio/access/Permission.kt": kt, "tests/guards/org-contract.json": CONTRACT(), [ORG]: `export type Need = ${six.map((x) => `"${x}"`).join(" | ")};`, [BE]: `val need = ${six.map((x) => `"${x}"`).join(", ")}` });
+  assert.deepEqual(guardFailClosed(root), []);
+});
+
 
 // ----------------------------------------------------------------------------------------------------------------------------------- CLIs on the real repository
 for (const [name, args] of [["org hierarchy", ["tests/guards/org-source-guards.mjs", "hierarchy"]], ["org fail-closed", ["tests/guards/org-source-guards.mjs", "fail-closed"]], ["org relation", ["tests/guards/org-source-guards.mjs", "relation"]], ["legacy route", ["tests/guards/no-legacy-admin-workspaces.mjs"]], ["test labeling", ["tests/guards/test-labeling.mjs"]], ["migration ledger", ["tests/guards/migration-ledger.mjs"]], ["process safety", ["tests/guards/process-safety.mjs"]]])
@@ -309,3 +344,20 @@ test("G8 process safety: a documented exception (owner + reason) silences exactl
   assert.ok(rules(guardProcessSafety(mk(allow({ contains: "another title" })))).includes("PROCESS-SAFETY-ALLOW-STALE"), "stale entry");
   assert.ok(rules(guardProcessSafety(fx({ "tests/lib/t.test.mjs": "const x = 1;", "tests/guards/process-safety.allow.json": allow() }))).includes("PROCESS-SAFETY-ALLOW-STALE"), "an exception for code that is gone is stale");
 });
+
+// ----------------------------------------------------------------------------------------------------------------------------------- 9. permission mirror (D-C0-51)
+const PM = (over = {}) => {
+  const real = (f) => readFileSync(join(REPO, f), "utf8"); const F = { ts: "packages/types/src/contract/v2/permissions.ts", doc: "docs/contracts/v2/tenant-permission.md", app: "backend/src/main/kotlin/com/systemwebstudio/app/definition/PermissionCodes.kt", perm: "backend/src/main/kotlin/com/systemwebstudio/access/Permission.kt" };
+  return fx(Object.fromEntries(Object.entries(F).map(([k, f]) => [f, over[k] ? over[k](real(f)) : real(f)])));
+};
+test("G9 permission mirror: the real TS mirror, backend sets and contract document agree (the six organization codes included)", () => assert.deepEqual(guardPermissionMirror(PM()), []));
+for (const [name, over, rule] of [
+  ["a TS organization code missing", { ts: (t) => t.replace('"POSITION_GRADE_MANAGE",', "") }, "PERMISSION-MIRROR-ORG"],
+  ["a TS application code missing", { ts: (t) => t.replace('"WORKFLOW_MANAGE",', "") }, "PERMISSION-MIRROR-APP"],
+  ["the obsolete ORG_MANAGE added to the TS organization codes", { ts: (t) => t.replace('"EMPLOYEE_VIEW",', '"EMPLOYEE_VIEW", "ORG_MANAGE",') }, "PERMISSION-MIRROR-ORG"],
+  ["an organization code added to the AppDefinition vocabulary (backend)", { app: (t) => t.replace('"TENANT_MANAGE", "TENANT_MEMBERS"', '"TENANT_MANAGE", "TENANT_MEMBERS", "EMPLOYEE_VIEW"') }, "PERMISSION-MIRROR-APP"],
+  ["a backend CANONICAL code that the TS mirror lacks", { perm: (t) => t.replace('"MEMBER_MANAGE",', '"MEMBER_MANAGE", "ORG_AUDIT_VIEW",') }, "PERMISSION-MIRROR-CANONICAL"],
+  ["an alias in the backend CANONICAL set", { perm: (t) => t.replace('"EMPLOYEE_VIEW", "EMPLOYEE_MANAGE",', '"EMPLOYEE_VIEW", "EMPLOYEE_MANAGE", "EMPLOYEE_ADMIN",') }, "PERMISSION-MIRROR-OBSOLETE"],
+  ["a document section 5b row removed", { doc: (t) => t.replace(/\| `EMPLOYEE_MANAGE` \|[^\n]*\n/, "") }, "PERMISSION-MIRROR-ORG"],
+  ["a document section 5 row removed", { doc: (t) => t.replace(/\| `QUERY_EXECUTE` \|[^\n]*\n/, "") }, "PERMISSION-MIRROR-APP"],
+]) test(`G9 permission mirror FAILS: ${name}`, () => assert.ok(rules(guardPermissionMirror(PM(over))).includes(rule), `${rule} expected`));

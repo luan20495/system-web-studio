@@ -1,4 +1,4 @@
-/** MIRROR of docs/contracts/v2/tenant-permission.md @ 8b944cc — manual. See meta.ts. */
+/** MIRROR of docs/contracts/v2/tenant-permission.md (sections 5, 5b, 5c; D-C0-51) and of the backend `access/Permission.kt` `PermissionCodes.CANONICAL` — manual, checked by `tests/guards/permission-mirror.mjs` (npm run guard:static). See meta.ts. */
 
 /** §5: the one permission vocabulary shared by C1–C5. A code that is not here is not allowed in `PermissionDef.permission`. */
 export const PERMISSION_CODES = [
@@ -8,6 +8,22 @@ export const PERMISSION_CODES = [
   "TENANT_MANAGE", "TENANT_MEMBERS",
 ] as const;
 export type PermissionCode = (typeof PERMISSION_CODES)[number];
+
+/**
+ * §5b: the ORGANIZATION permissions (C1 final, D-C0-51). Tenant level; held by TENANT_ADMIN of that tenant only. They are part of the `/auth/me` vocabulary
+ * (`CANONICAL_PERMISSION_CODES`) but NOT of the AppDefinition vocabulary: `PermissionDef.permission` (= `PermissionCode`, 14 codes) never takes them.
+ * There are NO aliases. `ORG_MANAGE` is OBSOLETE and was never canonical (also ORG_VIEW / ORG_EDIT / ORG_ADMIN / EMPLOYEE_ADMIN / POSITION_MANAGE ... do not exist).
+ * An organization relation (manager / head / member), a position and a grade never grant any permission (§5c).
+ */
+export const ORG_PERMISSION_CODES = [
+  "ORG_STRUCTURE_VIEW", "ORG_STRUCTURE_MANAGE", "EMPLOYEE_VIEW", "EMPLOYEE_MANAGE", "POSITION_GRADE_VIEW", "POSITION_GRADE_MANAGE",
+] as const;
+export type OrgPermissionCode = (typeof ORG_PERMISSION_CODES)[number];
+/** portal-facing capability of the workspace member screens (`workspaces[].permissions`); canonical in `/auth/me`, not an AppDefinition code */
+export const PORTAL_PERMISSION_CODES = ["MEMBER_MANAGE"] as const;
+/** every code `/auth/me` may list = backend `PermissionCodes.CANONICAL` (21): the 14 AppDefinition codes + MEMBER_MANAGE + the six organization codes */
+export const CANONICAL_PERMISSION_CODES = [...PERMISSION_CODES, ...PORTAL_PERMISSION_CODES, ...ORG_PERMISSION_CODES] as const;
+export type CanonicalPermissionCode = (typeof CANONICAL_PERMISSION_CODES)[number];
 
 /**
  * §5 table, column "Permission constant": until C1 lands the canonical names, the API still returns the legacy `PROJECT_*` constants in
