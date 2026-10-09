@@ -19,7 +19,7 @@ import java.util.UUID
  */
 class OrgBenchmarkTests {
     private val s = OrgTestDb.stack; private val jdbc = OrgTestDb.jdbc
-    private val banner = "**FINAL-SCHEMA BENCHMARK of the PRODUCTION repositories** (schema source: `${OrgTestDb.schemaSource}`; not yet a numbered Flyway migration). PostgreSQL 17.6 in Testcontainers on a developer Mac, default configuration. " +
+    private val banner = "**FINAL-SCHEMA BENCHMARK of the PRODUCTION repositories** (schema = the shipped `V32__dynamic_organization.sql`, applied by Flyway). PostgreSQL 17.6 in Testcontainers on a developer Mac, default configuration. " +
         "\"first\" = first execution after seeding + ANALYZE (plan-cold, NOT disk-cold: the data was just written). Numbers show the shape of the curve, they are not an SLA."
     private fun report(file: String, text: String) { val dir = Path.of("build", "reports"); Files.createDirectories(dir); Files.writeString(dir.resolve(file), text) }
     private fun search(t: UUID, text: String? = null, unitIds: Set<UUID>? = null, position: UUID? = null, grade: UUID? = null, page: Int = 0, size: Int = 100, active: Boolean? = true) =

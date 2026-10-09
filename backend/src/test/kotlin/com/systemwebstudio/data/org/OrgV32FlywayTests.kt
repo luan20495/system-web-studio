@@ -6,28 +6,19 @@ import org.flywaydb.core.Flyway
 import org.flywaydb.core.api.MigrationState
 import org.flywaydb.core.api.MigrationVersion
 import org.junit.jupiter.api.Test
-import org.springframework.core.io.FileSystemResource
-import org.springframework.jdbc.datasource.init.ScriptUtils
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.UUID
 
 /**
- * The REAL Flyway path for the Dynamic Organization migration WITHOUT creating a numbered file in the repository (C0 has reserved V32, not allocated it): the pending SQL is copied,
- * as `V32__dynamic_organization.sql`, with a copy of the real migrations into a TEMPORARY directory, and Flyway runs on that directory. When C0 allocates the number and the file is moved
- * into db/migration, `OrgTestDb.schemaSource` becomes `migration` and these tests keep proving the same two paths on the real files.
+ * The REAL Flyway path of `V32__dynamic_organization.sql`, run on the repository's own `db/migration` directory (no copy, no pending script): clean V1 -> V32 and upgrade V30 -> V32,
+ * the checksum is stable across both paths, and the duplicate-migration guard (exactly one V32, V33 not consumed, no duplicate version).
  */
 class OrgV32FlywayTests {
     private fun repoPath(rel: String): Path = listOf(Path.of("..", rel), Path.of(rel)).first { Files.exists(it) }
 
-    /** the real migrations of the classpath directory + the organization migration as V32 (unless the repository already has a V32) */
-    private fun migrationDir(): Path {
-        val src = repoPath("backend/src/main/resources/db/migration"); val tmp = Files.createTempDirectory("c3-flyway-v32")
-        Files.list(src).use { it.filter { f -> f.fileName.toString().matches(Regex("V\\d+__.*\\.sql")) }.forEach { f -> Files.copy(f, tmp.resolve(f.fileName)) } }
-        val has32 = Files.list(tmp).use { it.anyMatch { f -> f.fileName.toString().startsWith("V32__") } }
-        if (!has32) Files.copy(repoPath("docs/parallel/c3/dynamic-organization-V32.pending.sql"), tmp.resolve("V32__dynamic_organization.sql"))
-        return tmp
-    }
+    /** the repository's real migration directory */
+    private fun migrationDir(): Path = repoPath("backend/src/main/resources/db/migration")
 
     private fun flyway(db: FlywayHarness.Database, dir: Path, target: String? = null): Flyway =
         Flyway.configure().dataSource(db.ds).locations("filesystem:$dir").also { if (target != null) it.target(MigrationVersion.fromVersion(target)) }.outOfOrder(false).load()
@@ -51,7 +42,7 @@ class OrgV32FlywayTests {
             db.jdbc.update("INSERT INTO organization_units (id, tenant_id, type_id, code, name) VALUES (?, ?, ?, 'ROOT', 'Root')", root, t, ty)
             db.jdbc.update("INSERT INTO organization_units (id, tenant_id, type_id, parent_id, code, name) VALUES (?, ?, ?, ?, 'KID', 'Kid')", child, t, ty, root)
             val u = OrgTestDb.newMember(t, jdbc = db.jdbc); db.jdbc.update("INSERT INTO employee_organization_units (id, tenant_id, user_id, organization_unit_id) VALUES (?, ?, ?, ?)", UUID.randomUUID(), t, u, child)
-            println("EVIDENCE flyway clean: V1 -> V${info.current().version.version} on a temporary copy of db/migration + the pending organization SQL as V32, ${info.applied().size} migrations, all SUCCESS, validate OK")
+            println("EVIDENCE flyway clean: V1 -> V${info.current().version.version} on the repository db/migration, ${info.applied().size} migrations, all SUCCESS, validate OK")
         }
     }
 
@@ -98,11 +89,37 @@ class OrgV32FlywayTests {
         }
     }
 
+    private fun versions(): Map<Int, List<String>> =
+        Files.list(migrationDir()).use { st -> st.map { it.fileName.toString() }.filter { it.endsWith(".sql") }.toList() }
+            .map { Regex("^V(\\d+)__.+\\.sql$").find(it)?.groupValues?.get(1)?.toInt() to it }.also { l -> assertThat(l.filter { it.first == null }).describedAs("every .sql in db/migration is a versioned migration").isEmpty() }
+            .groupBy({ it.first!! }, { it.second })
+
     @Test
-    fun `no numbered migration was created by C3 - the repository still ends at the allocated numbers and the pending file is not under db migration`() {
-        val src = repoPath("backend/src/main/resources/db/migration")
-        val versions = Files.list(src).use { s -> s.map { it.fileName.toString() }.filter { it.matches(Regex("V\\d+__.*")) }.map { Regex("V(\\d+)__").find(it)!!.groupValues[1].toInt() }.toList() }
-        println("EVIDENCE migrations in the repository: highest V${versions.max()}; schema source of the tests: ${OrgTestDb.schemaSource}")
-        if (OrgTestDb.schemaSource == "pending-script") assertThat(versions).noneMatch { it in 31..99 }                  // V31 is C2's, V32 is reserved for C0 to allocate: C3 created none
+    fun `duplicate migration guard - exactly one V32, named for the organization, V33 and above not consumed, no version used twice`() {
+        val v = versions()
+        assertThat(v.filterValues { it.size > 1 }).describedAs("no duplicate migration version").isEmpty()
+        assertThat(v[32]).describedAs("exactly one V32").containsExactly("V32__dynamic_organization.sql")
+        assertThat(v.keys.filter { it > 32 }).describedAs("V33 and above are not consumed").isEmpty()
+        assertThat(v.keys).describedAs("V31 belongs to C2: not taken here").doesNotContain(31)
+        assertThat(v.keys.max()).isEqualTo(32)
+        println("EVIDENCE migration guard: ${v.size} files, highest V${v.keys.max()}, V32 = ${v[32]}, no V33, no duplicate version")
+    }
+
+    @Test
+    fun `checksum is stable - the clean run and the V30 upgrade record the same V32 checksum, it equals the file's, a second migrate is a no-op and validate passes`() {
+        val dir = migrationDir()
+        fun v32Checksum(db: FlywayHarness.Database) = db.jdbc.queryForObject("SELECT checksum FROM flyway_schema_history WHERE version = '32' AND success", Int::class.java)
+        FlywayHarness.newDatabase("v32suma").use { a -> FlywayHarness.newDatabase("v32sumb").use { b ->
+            flyway(a, dir).migrate()
+            flyway(b, dir, "30").migrate(); flyway(b, dir).migrate()
+            val ca = v32Checksum(a); val cb = v32Checksum(b)
+            assertThat(ca).describedAs("clean and upgrade record the same checksum").isEqualTo(cb)
+            val fw = flyway(a, dir)
+            assertThat(fw.info().applied().last().checksum).isEqualTo(ca)                                    // = Flyway's checksum of the file on disk
+            assertThat(fw.migrate().migrationsExecuted).describedAs("a second run applies nothing").isZero(); fw.validate()
+            val flywayHistory = a.jdbc.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE success", Long::class.java)
+            assertThat(flywayHistory).isEqualTo(a.jdbc.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE version IS NOT NULL", Long::class.java))
+            println("EVIDENCE checksum: V32 checksum $ca on the clean run and on the V30 upgrade, equal to the file; second migrate executed 0; validate OK")
+        } }
     }
 }

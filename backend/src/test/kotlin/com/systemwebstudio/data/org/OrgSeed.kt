@@ -116,7 +116,7 @@ object OrgSeedLoader {
         jdbc.batchUpdate("INSERT INTO positions (id, tenant_id, code, name) VALUES (?, ?, ?, ?)", data.positionCodes.indices.toList(), 1000) { ps, i -> ps.setObject(1, positionIds[i]); ps.setObject(2, tenantId); ps.setString(3, data.positionCodes[i]); ps.setString(4, "Position " + data.positionCodes[i]) }
         val gradeIds = data.gradeCodes.indices.map { id(tenantId, "grade", it) }
         jdbc.batchUpdate("INSERT INTO grades (id, tenant_id, code, name, \"rank\") VALUES (?, ?, ?, ?, ?)", data.gradeCodes.indices.toList(), 1000) { ps, i -> ps.setObject(1, gradeIds[i]); ps.setObject(2, tenantId); ps.setString(3, data.gradeCodes[i]); ps.setString(4, "Grade " + data.gradeCodes[i]); ps.setInt(5, i + 1) }
-        jdbc.batchUpdate("INSERT INTO employee_positions (id, tenant_id, user_id, employee_organization_unit_id, position_id, grade_id, is_primary) VALUES (?, ?, ?, ?, ?, ?, ?)", data.assignments, 1000) { ps, a ->
+        jdbc.batchUpdate("INSERT INTO employee_positions (id, tenant_id, user_id, membership_id, position_id, grade_id, is_primary) VALUES (?, ?, ?, ?, ?, ?, ?)", data.assignments, 1000) { ps, a ->
             val m = data.memberships[a.membershipIndex]
             ps.setObject(1, id(tenantId, "assignment", a.membershipIndex * 100 + a.positionIndex)); ps.setObject(2, tenantId); ps.setObject(3, userIds[m.employeeIndex]); ps.setObject(4, membershipIds[a.membershipIndex])
             ps.setObject(5, positionIds[a.positionIndex]); ps.setObject(6, a.gradeIndex?.let { gradeIds[it] }); ps.setBoolean(7, a.primary)

@@ -39,12 +39,11 @@ class OrgSchemaTests {
         assertThat(def("organization_units_sibling_code_unique")).contains("UNIQUE").contains("NULLS NOT DISTINCT").contains("WHERE (deleted_at IS NULL)")
         assertThat(def("employee_organization_units_active_unique")).contains("UNIQUE").contains("WHERE active")
         assertThat(def("employee_organization_units_one_primary_idx")).contains("UNIQUE").contains("WHERE is_primary")
-        assertThat(def("employee_positions_active_unique")).contains("UNIQUE").contains("(employee_organization_unit_id, position_id)").contains("WHERE active")
+        assertThat(def("employee_positions_active_unique")).contains("UNIQUE").contains("(membership_id, position_id)").contains("WHERE active")
         assertThat(def("employee_positions_one_primary_idx")).contains("UNIQUE").contains("WHERE is_primary")
         assertThat(def("organization_units_children_idx")).contains("(tenant_id, parent_id, sort_order, name, id)")
         listOf("organization_unit_types_code_unique", "positions_code_unique", "grades_code_unique").forEach { assertThat(def(it)).contains("UNIQUE").contains("lower(") }
         assertThat(jdbc.queryForObject("SELECT column_default FROM information_schema.columns WHERE table_name = 'organization_units' AND column_name = 'version'", String::class.java)).isEqualTo("0")
-        println("organization schema source: ${OrgTestDb.schemaSource}")
     }
 
     @Test
@@ -75,7 +74,7 @@ class OrgSchemaTests {
         val mAlice = fx.membership(a, alice, ua.id); val mAlice2 = fx.membership(a, alice2, ua.id); val mBob = fx.membership(b, bob, ub.id)
         val posA = fx.position(a); val posB = fx.position(b); val gA = fx.grade(a); val gB = fx.grade(b)
         fun raw(t: UUID, user: UUID, membership: UUID, position: UUID, grade: UUID?) =
-            jdbc.update("INSERT INTO employee_positions (id, tenant_id, user_id, employee_organization_unit_id, position_id, grade_id) VALUES (?, ?, ?, ?, ?, ?)", id(), t, user, membership, position, grade)
+            jdbc.update("INSERT INTO employee_positions (id, tenant_id, user_id, membership_id, position_id, grade_id) VALUES (?, ?, ?, ?, ?, ?)", id(), t, user, membership, position, grade)
         refused("employee_positions_position_fk") { raw(a, alice, mAlice.id, posB.id, null) }
         refused("employee_positions_grade_fk") { raw(a, alice, mAlice.id, posA.id, gB.id) }
         refused("employee_positions_membership_fk") { raw(a, alice, mBob.id, posA.id, null) }

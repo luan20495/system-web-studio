@@ -1,52 +1,15 @@
 package com.systemwebstudio.data.org
 
-import com.systemwebstudio.organization.OrganizationTestBase
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.springframework.beans.factory.SmartInitializingSingleton
-import org.springframework.boot.test.context.TestConfiguration
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Import
-import org.springframework.core.io.FileSystemResource
-import org.springframework.jdbc.core.JdbcTemplate
-import org.springframework.jdbc.datasource.init.ScriptUtils
-import org.springframework.test.context.TestPropertySource
-import java.nio.file.Files
-import java.nio.file.Path
 import java.util.UUID
-
-/** applies the pending organization SQL to the Spring test database after Flyway, ONLY while the schema is not there yet (once C0 allocates the number Flyway creates the tables and this does nothing) */
-@TestConfiguration
-class PendingOrganizationSchema {
-    @Bean fun pendingOrganizationSchemaApplier(jdbc: JdbcTemplate): SmartInitializingSingleton = SmartInitializingSingleton {
-        if (jdbc.queryForObject("SELECT to_regclass('public.organization_units') IS NOT NULL", Boolean::class.java) != true) {
-            val pending = listOf(Path.of("..", "docs", "parallel", "c3", "dynamic-organization-V32.pending.sql"), Path.of("docs", "parallel", "c3", "dynamic-organization-V32.pending.sql")).first { Files.exists(it) }
-            jdbc.dataSource!!.connection.use { ScriptUtils.executeSqlScript(it, FileSystemResource(pending)) }
-        }
-    }
-}
 
 /**
  * END TO END on the real stack: HTTP -> C1 authentication / authorization / application services -> the C3 PostgreSQL repositories (switched on by `app.organization.persistence-enabled=true`,
  * the PROPOSED wiring) -> real PostgreSQL. The company is created exactly like production (SYSTEM_ADMIN + first Tenant Admin, one-time activation link). Everything C1 only proved against its in-memory
  * double is here proved against the real store, and every answer is cross-checked in the organization tables.
  */
-@Import(PendingOrganizationSchema::class)
-@TestPropertySource(properties = ["app.organization.persistence-enabled=true"])
-@org.springframework.test.annotation.DirtiesContext(classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
-class OrganizationOnPostgresApiTests : OrganizationTestBase() {
-    // C1's base removes the tenants / accounts a test created; with REAL organization rows (FK RESTRICT, by design: nothing disappears behind a tenant) they must go first. Subclass @AfterEach runs before the base's.
-    private var tenantsBefore: Set<UUID> = emptySet()
-    @org.junit.jupiter.api.BeforeEach fun snapshotTenantsForOrganizationPurge() { tenantsBefore = jdbc.queryForList("SELECT id FROM tenants", UUID::class.java).toSet() }
-    @org.junit.jupiter.api.AfterEach fun purgeOrganizationRowsOfThisTest() {
-        val mine = (jdbc.queryForList("SELECT id FROM tenants", UUID::class.java).toSet() - tenantsBefore).toTypedArray(); if (mine.isEmpty()) return
-        listOf("employee_positions", "employee_organization_units").forEach { jdbc.update("DELETE FROM $it WHERE tenant_id = ANY (?)", mine) }
-        while (jdbc.update("DELETE FROM organization_units u WHERE u.tenant_id = ANY (?) AND NOT EXISTS (SELECT 1 FROM organization_units c WHERE c.parent_id = u.id)", mine) > 0) { }     // leaves first (parent FK is RESTRICT)
-        listOf("organization_unit_types", "positions", "grades").forEach { jdbc.update("DELETE FROM $it WHERE tenant_id = ANY (?)", mine) }
-    }
-
-    private fun rows(table: String, tenant: UUID) = jdbc.queryForObject("SELECT count(*) FROM $table WHERE tenant_id = ?", Long::class.java, tenant)!!
-
+class OrganizationOnPostgresApiTests : PostgresOrganizationApiBase() {
     @Test
     fun `type, tree, move, archive and restore through the API persist in PostgreSQL, with audit and the typed refusals`() {
         val c = company(); val t = type(c, "khoi"); val team = type(c, "team")
