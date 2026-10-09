@@ -23,7 +23,7 @@ import java.util.UUID
  * Enable / disable IS the canonical tenant-membership lifecycle ([TenantService.removeMember] / [TenantService.setMember]): the last Tenant Admin is protected, nobody disables
  * themselves, enabling restores a plain MEMBER and is refused for an account disabled platform-wide. Memberships and positions are kept (history) while disabled.
  *
- * LOCKING: none of these operations takes the tenant structural lock (it exists for the subtree move only): ordinary transactions, FK / unique constraints and versions.
+ * LOCKING: none of these operations takes the tenant structural lock (it is taken only by the structural unit operations: create, move, restore, type-rule change): ordinary transactions, FK / unique constraints and versions.
  */
 @Service
 class EmployeeDirectoryService(

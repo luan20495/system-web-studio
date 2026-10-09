@@ -222,7 +222,7 @@ class OrganizationUnitService(private val repos: OrganizationRepositories, priva
     }
 
     /**
-     * Move a unit with its whole subtree (atomic: only the unit's own parent changes). The ONE operation that takes the tenant structural lock, as the FIRST step of the
+     * Move a unit with its whole subtree (atomic: only the unit's own parent changes). One of the structural operations that take the tenant structural lock (with unit create, restore and a unit-type rule change), as the FIRST step of the
      * transaction, and keeps it to commit: lock -> source (404) -> source active -> destination (404, foreign = unknown) -> destination active -> not itself, not inside
      * its own subtree (ORG_CYCLE) -> type rules and depth for the unit AND every descendant -> versioned write (the store re-checks the cycle and the sibling code) -> audit.
      */

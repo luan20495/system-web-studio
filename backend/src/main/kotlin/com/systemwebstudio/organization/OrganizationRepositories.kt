@@ -34,8 +34,7 @@ import java.util.UUID
  *         when it is archived / ended, so an active record can never appear under an archived / ended one;
  *       - one ACTIVE primary per (tenant, user) for memberships and for position assignments is guaranteed by a PARTIAL UNIQUE INDEX (tenant, user) WHERE primary AND active, or by
  *         locking all of the user's rows first; a violation is [DuplicateOrganizationKey] with key `primary`. A `setPrimary` race must never leave two primaries.
- *     Known, documented limit: a type `maxDepth` is validated by the service without the structural lock on create / restore; C3 SHOULD re-check the resulting depth inside `insert`
- *     / `setActive(true)` under the parent row lock (a concurrent move of an ancestor could otherwise push a new unit past its type's `maxDepth` in a rare race).
+ *     (The former maxDepth race is closed: since D-C0-52 unit create and restore take the structural lock like the move.)
  *  5. DETERMINISM. Lists have a total order; the services re-sort anyway where the contract fixes one.
  *  6. NO CASCADE. Nothing is deleted behind the caller's back: archive / end are state changes of the row itself.
  */

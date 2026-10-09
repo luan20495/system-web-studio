@@ -1,6 +1,6 @@
 # H-C1-04 — project-scoped Studio access
 
-Base: `integration/v2 @ e310b6a16156` (rebased from `fix/c1-h-c1-04-rc` which was validated on 62ce9697cd56; cherry-picked cleanly, no conflict).
+Originally based on `integration/v2 @ e310b6a16156` (rebased from `fix/c1-h-c1-04-rc` which was validated on 62ce9697cd56; cherry-picked cleanly, no conflict). Integrated by C0 (D-C0-51: `8d2c71f`, then the C1 final `db7d6b0`). Current state: branch `fix/c1-final-iam-org-contract-repair-2` on `integration/v2 @ 19fd4c2b500c`, which adds the bounded-statement resolver described under "Limits". Status (BLOCKERS H-C1-04): backend DONE; Studio admission OPEN, owner C5.
 
 ## Root cause
 
@@ -36,7 +36,7 @@ Project APIs use `AccessService.forProject()`, which combines the caller's actua
 
 `role` is informational only. C5 must gate on canonical `permissions`, never role names.
 
-Each project scope is derived by the same `AccessService.forProject()` used by backend project endpoints. Therefore:
+Each project scope is decided by the same rules as `AccessService.forProject()` used by backend project endpoints (today: the shared pure `AccessEvaluator.workspace` / `AccessEvaluator.project`, called by both `forProject` and `ProjectScopeResolver.scopesFor`; see "Limits"). Therefore:
 - no new permission is granted;
 - archive restrictions remain identical;
 - tenant/workspace/project isolation remains identical;
@@ -85,6 +85,6 @@ Mutation checks (each rule broken on purpose): grant `APP_PUBLISH` in every scop
 - Only `ApiException` (the authorization refusals) is turned into "omit this scope"; a database or other infrastructure failure still fails the request with 5xx.
 - `role` is for display only. The canonical codes are the contract; the project payload (`GET /projects/{id}`) still carries storage names (`PROJECT_READ` for `APP_VIEW`), `projectScopes[].permissions` is already canonical.
 
-## C5 handoff (`agent/c5-web @ a3f9a4e`)
+## C5 handoff (written against `agent/c5-web @ a3f9a4e`; re-checked on `integration/v2 @ 19fd4c2`: still open, no `projectScopes` under `packages/`)
 
 Studio admission is now: ALLOW if some `workspaces[].permissions` holds `APP_VIEW` **or** some `projectScopes[].permissions` holds `APP_VIEW`. Where it is decided today: `packages/permissions/src/index.ts` (the `studio.build` rule, which currently reads workspace permissions only and explicitly refuses a project-only person) and `packages/permissions/src/canonical.ts` (`canViewStudioIn`). Add an optional `projectScopes` to the `/auth/me` type (absent = older backend: it cannot say no, same rule as `permissions`). Never branch on `role` (`EDITOR` / `VIEWER` / `PUBLISHER`); never merge a scope into the workspace or global permission set; when a project opens, keep using that project's own resolved permissions (an `APP_VIEW`-only person opens read-only).
