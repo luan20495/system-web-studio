@@ -14,7 +14,6 @@ import com.systemwebstudio.tenancy.TenantResolver
 import com.systemwebstudio.tenancy.TenantRole
 import com.systemwebstudio.tenancy.TenantStatus
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import java.util.UUID
 
@@ -70,54 +69,44 @@ class AccessService(
     private val tenantMembers: TenantMemberRepository,
     /**
      * Legacy switch (D-C1-11). false (default): SYSTEM_ADMIN is platform-scope only. true: restores "every permission in every
-     * workspace". The ONLY place the old bypass lives is the `bypass ->` branch in [forWorkspace].
+     * workspace". The ONLY place the old bypass lives is the `bypass ->` branch in [AccessEvaluator.workspace] (and [forTenant]).
      */
     @Value("\${app.tenancy.system-admin-business-access:false}") private val systemAdminBusinessAccess: Boolean
 ) {
-    private fun enabledUser(userId: UUID): UserEntity = users.findById(userId).filter { it.enabled }.orElseThrow {
-        ApiException(HttpStatus.UNAUTHORIZED, "ACCOUNT_DISABLED", "Account is disabled or no longer exists")
+    private fun enabledUser(userId: UUID): UserEntity {
+        val user = users.findById(userId).orElse(null)
+        AccessEvaluator.requireEnabledAccount(user != null, user?.enabled == true)
+        return user!!
+    }
+
+    /** Single-workspace lookups (user, tenant resolution, active membership), then the shared pure [AccessEvaluator.workspace]. */
+    private fun workspaceDecision(userId: UUID, workspaceId: UUID): Pair<UserEntity, WorkspaceDecision> {
+        val user = enabledUser(userId)
+        val tenant = tenantResolver.resolveForWorkspace(userId, workspaceId)
+        val member = workspaceMembers.findByWorkspaceIdAndUserIdAndActiveTrue(workspaceId, userId)
+        return user to AccessEvaluator.workspace(user.systemAdmin, tenant, member?.role, systemAdminBusinessAccess)
     }
 
     /**
      * Chain: authenticate (enabled user) -> resolve tenant from the workspace -> check tenant status/membership -> authorize.
-     * Unknown or not-a-member workspaces are reported as 404 so existence is not disclosed.
+     * Unknown or not-a-member workspaces are reported as 404 so existence is not disclosed. The decision itself is
+     * [AccessEvaluator.workspace] (shared with the bulk [ProjectScopeResolver]); this method only loads the data for ONE workspace.
      */
     fun forWorkspace(userId: UUID, workspaceId: UUID): AccessContext {
-        val user = enabledUser(userId)
-        val tenant = tenantResolver.resolveForWorkspace(userId, workspaceId)
-        val member = workspaceMembers.findByWorkspaceIdAndUserIdAndActiveTrue(workspaceId, userId)
-        if (tenant == null || (member == null && !user.systemAdmin)) throw ApiException.notFound("WORKSPACE_NOT_FOUND", "Workspace not found")
-        if (!user.systemAdmin) {
-            // tenant-level gates for ordinary users: removed from the tenant, or tenant not usable => no access to its workspaces
-            if (tenant.membershipActive == false || tenant.status == TenantStatus.DELETED) throw ApiException.notFound("WORKSPACE_NOT_FOUND", "Workspace not found")
-            if (tenant.status == TenantStatus.SUSPENDED) throw ApiException.forbidden("This tenant is suspended", "TENANT_SUSPENDED")
-        } else if (member != null && !systemAdminBusinessAccess) {
-            // a platform operator that acts through a workspace MEMBERSHIP is held to the same tenant-status gates as everybody else (no business authority in a dead / suspended company)
-            if (tenant.membershipActive == false || tenant.status == TenantStatus.DELETED) throw ApiException.notFound("WORKSPACE_NOT_FOUND", "Workspace not found")
-            if (tenant.status == TenantStatus.SUSPENDED) throw ApiException.forbidden("This tenant is suspended", "TENANT_SUSPENDED")
-        }
-        val bypass = user.systemAdmin && systemAdminBusinessAccess
-        val permissions = when {
-            bypass -> PermissionMatrix.systemAdmin                                              // LEGACY BYPASS (flag-gated)
-            member != null -> PermissionMatrix.workspaceRoles[member.role].orEmpty()
-            else -> PermissionMatrix.platformScope                                              // SYSTEM_ADMIN, non-member: platform scope only
-        }
-        val platform = user.systemAdmin && member == null && !bypass
-        val tenantRole = if (tenant.membershipActive == true) tenant.tenantRole else null
-        val ctx = TenantContext(tenant.tenantId, tenantRole, tenant.status, platform)
-        return AccessContext(user, workspaceId, member?.role, null, permissions, null, tenant.tenantId, ctx, bypass)
+        val (user, d) = workspaceDecision(userId, workspaceId)
+        return AccessContext(user, workspaceId, d.workspaceRole, null, d.permissions, null, d.tenantContext.tenantId, d.tenantContext, d.systemAdminBypass)
     }
 
-    /** An ARCHIVED application keeps only read access (and audit reading); [ignoreArchive] is for archive/restore itself. */
+    /**
+     * An ARCHIVED application keeps only read access (and audit reading); [ignoreArchive] is for archive/restore itself.
+     * Decision: [AccessEvaluator.workspace] then [AccessEvaluator.project] (shared with the bulk [ProjectScopeResolver]).
+     */
     fun forProject(userId: UUID, workspaceId: UUID, projectId: UUID, ignoreArchive: Boolean = false): AccessContext {
-        val ws = forWorkspace(userId, workspaceId)
+        val (user, ws) = workspaceDecision(userId, workspaceId)
         val project = projects.findByIdAndWorkspaceIdAndActiveTrue(projectId, workspaceId)
-            ?: throw ApiException.notFound("PROJECT_NOT_FOUND", "Project not found")
-        val projectRole = projectMembers.findByProjectIdAndUserIdAndActiveTrue(projectId, userId)?.role
-        var permissions = ws.permissions + PermissionMatrix.projectRoles[projectRole].orEmpty()
-        if (Permission.PROJECT_READ !in permissions) throw ApiException.notFound("PROJECT_NOT_FOUND", "Project not found")
-        if (project.lifecycle == "ARCHIVED" && !ignoreArchive) permissions = permissions.intersect(setOf(Permission.PROJECT_READ, Permission.AUDIT_READ))
-        return AccessContext(ws.user, workspaceId, ws.workspaceRole, projectRole, permissions, project, ws.tenantId, ws.tenantContext, ws.systemAdminBypass)
+        val projectRole = if (project == null) null else projectMembers.findByProjectIdAndUserIdAndActiveTrue(projectId, userId)?.role
+        val d = AccessEvaluator.project(ws, project?.lifecycle, projectRole, ignoreArchive)
+        return AccessContext(user, workspaceId, ws.workspaceRole, d.projectRole, d.permissions, project, ws.tenantContext.tenantId, ws.tenantContext, ws.systemAdminBypass)
     }
 
     /**
