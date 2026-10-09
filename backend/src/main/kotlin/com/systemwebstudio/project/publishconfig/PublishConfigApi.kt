@@ -105,8 +105,7 @@ class PublishConfigController(
 
     private fun facts(ctx: AccessContext): ProjectFacts {
         val project = ctx.project!!
-        val bindings = schemas.currentSchema(project.id)?.get("dataBindings")
-        return ProjectFacts(project.appKind, bindings != null && bindings.isArray && bindings.size() > 0)
+        return ProjectFacts(project.appKind, ProjectFacts.bindsData(schemas.currentSchema(project.id)))
     }
 
     private fun limits() = PublishLimits(settings.bool("publish.public-enabled"), settings.bool("source-apps.public-publish-enabled"))
