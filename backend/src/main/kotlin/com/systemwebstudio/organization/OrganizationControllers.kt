@@ -20,7 +20,8 @@ import java.util.UUID
  * the application service, whose repository calls are all tenant-first (a foreign resource id is a safe 404). The decision is the PERMISSION, never a role name, and a
  * tenantId in a request body is never read.
  */
-internal fun AccessService.org(user: StudioUserDetails, tenantId: UUID, p: Permission): TenantAccess = forTenant(user.userId, tenantId).also { it.require(p) }
+internal fun AccessService.org(user: StudioUserDetails, tenantId: UUID, p: Permission): TenantAccess =
+    forTenant(user.userId, tenantId).also { it.require(p); if (p.name.endsWith("_MANAGE")) requireTenantWritable(tenantId) }
 
 private fun <T : Any> versioned(body: T, version: Long, status: HttpStatus = HttpStatus.OK): ResponseEntity<T> = ResponseEntity.status(status).eTag("\"$version\"").body(body)
 

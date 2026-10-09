@@ -91,6 +91,10 @@ class AccessService(
             // tenant-level gates for ordinary users: removed from the tenant, or tenant not usable => no access to its workspaces
             if (tenant.membershipActive == false || tenant.status == TenantStatus.DELETED) throw ApiException.notFound("WORKSPACE_NOT_FOUND", "Workspace not found")
             if (tenant.status == TenantStatus.SUSPENDED) throw ApiException.forbidden("This tenant is suspended", "TENANT_SUSPENDED")
+        } else if (member != null && !systemAdminBusinessAccess) {
+            // a platform operator that acts through a workspace MEMBERSHIP is held to the same tenant-status gates as everybody else (no business authority in a dead / suspended company)
+            if (tenant.status == TenantStatus.DELETED) throw ApiException.notFound("WORKSPACE_NOT_FOUND", "Workspace not found")
+            if (tenant.status == TenantStatus.SUSPENDED) throw ApiException.forbidden("This tenant is suspended", "TENANT_SUSPENDED")
         }
         val bypass = user.systemAdmin && systemAdminBusinessAccess
         val permissions = when {
@@ -136,6 +140,15 @@ class AccessService(
         }
         if (m == null || tenant.status == TenantStatus.DELETED.name) throw ApiException.notFound("TENANT_NOT_FOUND", "Tenant not found")
         return TenantAccess(user, tenantId, TenantRole.valueOf(m.role), PermissionMatrix.tenantRoles[m.role].orEmpty(), false)
+    }
+
+    /**
+     * Organization / employee / position data of a SUSPENDED company is read-only: a write answers 403 TENANT_SUSPENDED (the same code [forWorkspace] uses), a read stays allowed.
+     * Call AFTER [forTenant] + the permission check (a stranger never learns the status).
+     */
+    fun requireTenantWritable(tenantId: UUID) {
+        val t = tenants.findById(tenantId).orElse(null) ?: return
+        if (t.status == TenantStatus.SUSPENDED.name) throw ApiException.forbidden("This tenant is suspended", "TENANT_SUSPENDED")
     }
 
     /** Platform-only operations (tenant creation/listing). Requires an enabled SYSTEM_ADMIN. */
