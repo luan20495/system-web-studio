@@ -3,19 +3,21 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/http-api";
 import type { PackageView, RepoRow, SettingView, HealthItem } from "@/lib/http-types";
+import { confirm, prompt, LoadGate } from "@xweb/ui";
 import { useLoad } from "../../useLoad";
 import { ago, Card, ErrorState, errText, fmtDate, Kpi, num, Pill, StateView } from "../../ui";
 import { PageHead } from "../PageHead";
+import { useAdminAction } from "../useAdminAction";
 
 // ------------------------------------------------------------------ health
 const HEALTH_LABEL: Record<HealthItem["status"], string> = { HEALTHY: "Khỏe", DEGRADED: "Suy giảm", UNAVAILABLE: "Không khả dụng", UNKNOWN: "Không rõ", NOT_CONFIGURED: "Chưa cấu hình" };
 export function HealthPage() {
   const { data, error, loading, reload } = useLoad(() => api.admin.health(), []);
-  if (loading && !data) return <StateView kind="loading"/>;
-  if (error) return <ErrorState error={error} retry={reload}/>;
+  if (!data) return <LoadGate load={{ data, error, loading, reload }} level={1} label="tình trạng hệ thống">{() => null}</LoadGate>;
   const h = data!;
   return (<>
     <PageHead title="Sức khỏe hệ thống" sub={`Kiểm tra trực tiếp lúc ${fmtDate(h.checkedAt)}`} actions={<button className="btn" onClick={reload} disabled={loading}>{loading ? "Đang kiểm tra…" : "Kiểm tra lại"}</button>}/>
+    {h.items.length === 0 ? <StateView kind="empty" title="Chưa có thành phần nào được kiểm tra" detail={<p>Máy chủ chưa báo thành phần nào. Bấm “Kiểm tra lại” để thử lần nữa.</p>}/> : null}
     <div className="healthGrid">{h.items.map((i) => <div key={i.name} className={`healthCard h-${i.status}`}><div className="row between"><b>{i.name}</b><Pill value={i.status} label={HEALTH_LABEL[i.status]}/></div><small>{i.detail ?? ""}</small>{i.latencyMs !== null ? <small className="muted">{i.latencyMs} ms</small> : null}</div>)}</div>
     <div className="kpiGrid">
       <Kpi label="Uptime API" value={`${Math.floor(h.uptimeSeconds / 3600)} giờ ${Math.floor((h.uptimeSeconds % 3600) / 60)} phút`}/><Kpi label="Phiên bản schema DB" value={`V${h.schemaVersion ?? "?"}`}/>
@@ -41,13 +43,12 @@ export function BuildsPage() {
   const rep = useLoad(() => api.admin.builds(), []);
   const preview = useLoad(() => api.admin.retentionPreview(), []);
   const repos = useLoad(() => api.admin.repositories(), []);
-  const [msg, setMsg] = useState<string | null>(null); const [err, setErr] = useState<string | null>(null); const [busy, setBusy] = useState(false);
-  async function runCleanup() { setBusy(true); setErr(null); try { const r = await api.admin.retentionRun(); setMsg(`Đã dọn: ${r.retention?.artifactsDeleted ?? 0} artifact (${mib(r.retention?.artifactBytesFreed)}), ${r.retention?.previewsExpired ?? 0} bản xem trước hết hạn.`); preview.reload(); rep.reload(); repos.reload(); } catch (x) { setErr(errText(x, "Không dọn được.")); } finally { setBusy(false); } }
-  async function hardDelete(r: RepoRow) { if (!confirm(`Xoá vĩnh viễn kho mã “${r.name}”? Không thể hoàn tác.`)) return; setErr(null); try { await api.admin.deleteRepository(r.projectId); repos.reload(); } catch (x) { setErr(errText(x, "Không xoá được.")); } }
-  const d = rep.data; const p = preview.data;
+  const { act, busy, msg, err } = useAdminAction("Không thực hiện được.", () => { preview.reload(); rep.reload(); repos.reload(); });
+  async function runCleanup() { if (!(await confirm({ title: "Chạy dọn dẹp ngay?", message: `Sẽ xoá ${num(preview.data?.retention?.artifactsDeleted ?? 0)} artifact (${mib(preview.data?.retention?.artifactBytesFreed)}) và dữ liệu hết hạn lưu giữ. Việc này không hoàn tác được.`, confirmLabel: "Chạy dọn dẹp", danger: true }))) return; void act(() => api.admin.retentionRun(), (r) => `Đã dọn: ${r.retention?.artifactsDeleted ?? 0} artifact (${mib(r.retention?.artifactBytesFreed)}), ${r.retention?.previewsExpired ?? 0} bản xem trước hết hạn.`); }
+  async function hardDelete(r: RepoRow) { if (!(await confirm({ title: `Xoá vĩnh viễn kho mã “${r.name}”?`, message: "Không thể hoàn tác.", confirmLabel: "Xoá vĩnh viễn", danger: true }))) return; void act(() => api.admin.deleteRepository(r.projectId)); }
   return (<>
     <PageHead title="Build & lưu trữ" sub="Số liệu đo thật từ runner (CPU của container, thời gian, kích thước kết quả). Giới hạn chỉnh trong Cài đặt → Build / Lưu trữ / Lưu giữ."/>
-    {rep.error ? <ErrorState error={rep.error} retry={rep.reload}/> : !d ? <StateView kind="loading"/> : <>
+    <LoadGate load={rep} label="số liệu build">{(d) => <>
       <div className="kpiGrid">
         <Kpi label="Build 30 ngày" value={num(d.totals.builds)} hint={`${num(d.totals.succeeded)} thành công · ${num(d.totals.failed)} lỗi`}/>
         <Kpi label="CPU đã dùng" value={secs(d.totals.cpuMs)} hint={`thời gian chạy ${secs(d.totals.durationMs)}`}/>
@@ -58,19 +59,19 @@ export function BuildsPage() {
       <Card title="Theo ứng dụng"><UsageRows rows={d.byProject} label="Ứng dụng"/></Card>
       <Card title="Build bị từ chối">{d.rejections.length ? <table className="table"><thead><tr><th>Thời gian</th><th>Người</th><th>Ứng dụng</th><th>Lý do</th><th>Chi tiết</th></tr></thead>
         <tbody>{d.rejections.map((r, i) => <tr key={i}><td>{ago(r.createdAt)}</td><td>{r.user ?? "—"}</td><td>{r.project ?? "—"}</td><td className="code">{r.reason}</td><td>{r.detail}</td></tr>)}</tbody></table> : <StateView kind="empty" title="Không có build nào bị từ chối"/>}</Card>
-    </>}
+    </>}</LoadGate>
     <Card title="Dọn dẹp (lưu giữ)" actions={<button className="btn sm primary" disabled={busy} onClick={() => void runCleanup()}>{busy ? "Đang dọn…" : "Chạy dọn dẹp ngay"}</button>}>
       <p className="hint">Luôn giữ: bản đang phục vụ, N bản xuất bản gần nhất để quay lại, bản xem trước còn hạn, build đang chạy. Job tự chạy mỗi giờ; mỗi lần xoá đều ghi audit.</p>
-      {p ? <ul className="plainList"><li>Sẽ xoá {num(p.retention?.artifactsDeleted ?? 0)} artifact ({mib(p.retention?.artifactBytesFreed)})</li><li>{num(p.retention?.previewsExpired ?? 0)} bản xem trước đã hết hạn</li>
-        <li>{num(p.retention?.failedBuildLogsCleared ?? 0)} log build lỗi cũ</li><li>{num(p.retention?.repositoriesPendingDelete ?? 0)} kho mã hết hạn lưu trữ</li></ul> : <StateView kind="loading"/>}
+      <LoadGate load={preview} compact label="bản xem trước dọn dẹp">{(p) => <ul className="plainList"><li>Sẽ xoá {num(p.retention?.artifactsDeleted ?? 0)} artifact ({mib(p.retention?.artifactBytesFreed)})</li><li>{num(p.retention?.previewsExpired ?? 0)} bản xem trước đã hết hạn</li>
+        <li>{num(p.retention?.failedBuildLogsCleared ?? 0)} log build lỗi cũ</li><li>{num(p.retention?.repositoriesPendingDelete ?? 0)} kho mã hết hạn lưu trữ</li></ul>}</LoadGate>
       {msg ? <p className="hint" role="status">{msg}</p> : null}{err ? <p className="formError" role="alert">{err}</p> : null}
     </Card>
-    <Card title="Kho mã nguồn">{!repos.data ? <StateView kind="loading"/> : repos.data.length === 0 ? <StateView kind="empty" title="Chưa có kho mã"/> :
+    <Card title="Kho mã nguồn"><LoadGate load={repos} compact label="kho mã" isEmpty={(r) => r.length === 0} empty={{ title: "Chưa có kho mã" }}>{(rows) =>
       <table className="table"><thead><tr><th>Kho</th><th>Ứng dụng</th><th>Trạng thái</th><th>Kích thước</th><th>Lưu trữ đến</th><th><span className="srOnly">Thao tác</span></th></tr></thead>
-        <tbody>{repos.data.map((r) => <tr key={r.projectId}><td className="code">{r.name}</td><td>{r.project ?? "—"}</td>
+        <tbody>{rows.map((r) => <tr key={r.projectId}><td className="code">{r.name}</td><td>{r.project ?? "—"}</td>
           <td><Pill value={r.state === "ACTIVE" ? "ACTIVE" : r.state === "DELETED" ? "DISABLED" : "UNKNOWN"} label={{ ACTIVE: "Đang dùng", ARCHIVED: "Đã lưu trữ", PENDING_DELETE: "Chờ xoá", DELETED: "Đã xoá" }[r.state]}/></td>
           <td>{mib(r.sizeBytes)}</td><td>{r.deleteAfter ? fmtDate(r.deleteAfter) : "—"}</td>
-          <td>{r.state === "PENDING_DELETE" ? <button className="btn sm danger" onClick={() => void hardDelete(r)}>Xoá vĩnh viễn</button> : null}</td></tr>)}</tbody></table>}</Card>
+          <td>{r.state === "PENDING_DELETE" ? <button className="btn sm danger" onClick={() => void hardDelete(r)}>Xoá vĩnh viễn</button> : null}</td></tr>)}</tbody></table>}</LoadGate></Card>
   </>);
 }
 
@@ -78,19 +79,19 @@ const PKG_STATUS: Record<string, [string, string]> = { PENDING: ["UNKNOWN", "Ch�
 /** Approved npm package catalog (ADR 0013): approve → closure resolved in the sandbox + OSV scan; HIGH/CRITICAL denied unless the risk is accepted. */
 export function PackagesPage() {
   const { data, error, loading, reload } = useLoad(() => api.admin.packages(), []);
-  const [f, setF] = useState({ name: "", range: "", pin: "", note: "" }); const [err, setErr] = useState<string | null>(null); const [msg, setMsg] = useState<string | null>(null);
+  const [f, setF] = useState({ name: "", range: "", pin: "", note: "" });
+  const { act, busy, msg, err } = useAdminAction("Không thực hiện được.", reload);
   useEffect(() => { if (!data?.some((p) => p.status === "RESOLVING")) return; const t = setInterval(reload, 3000); return () => clearInterval(t); }, [data, reload]);
-  async function approve(name: string, range?: string, pin?: string, note?: string) {
-    setErr(null); setMsg(null);
-    try { await api.admin.approvePackage({ name, versionRange: range || undefined, pinnedVersion: pin || undefined, note: note || undefined }); setMsg(`Đang kiểm tra ${name} (giải phụ thuộc trong sandbox + quét OSV).`); setF({ name: "", range: "", pin: "", note: "" }); reload(); }
-    catch (x) { setErr(errText(x, "Không gửi được.")); }
+  function approve(name: string, range?: string, pin?: string, note?: string) {
+    void act(() => api.admin.approvePackage({ name, versionRange: range || undefined, pinnedVersion: pin || undefined, note: note || undefined }), `Đang kiểm tra ${name} (giải phụ thuộc trong sandbox + quét OSV).`)
+      .then((r) => { if (r.status === "ok") setF({ name: "", range: "", pin: "", note: "" }); });
   }
   async function decide(p: PackageView, status: "ALLOWED" | "DENIED") {
-    setErr(null);
     const risky = (p.findings ?? []).some((x) => x.severity === "HIGH" || x.severity === "CRITICAL");
     let accept = false, note: string | undefined;
-    if (status === "ALLOWED" && risky) { note = window.prompt("Package có lỗ hổng HIGH/CRITICAL. Ghi lý do chấp nhận rủi ro (bắt buộc):") ?? ""; if (!note.trim()) return; accept = true; }
-    try { await api.admin.decidePackage(p.name, status, accept, note); reload(); } catch (x) { setErr(errText(x, "Không đổi được.")); }
+    if (status === "DENIED" && !(await confirm({ title: `Từ chối package “${p.name}”?`, message: "Package không còn nằm trong danh mục được phép: ứng dụng mã nguồn không thêm được nó.", confirmLabel: "Từ chối package", danger: true }))) return;
+    if (status === "ALLOWED" && risky) { note = (await prompt({ title: `Cho phép “${p.name}” dù có lỗ hổng nghiêm trọng?`, message: "Package có lỗ hổng mức cao hoặc nghiêm trọng. Việc chấp nhận rủi ro được ghi lại cùng lý do.", label: "Lý do chấp nhận rủi ro (bắt buộc)", multiline: true, required: true, maxLength: 500, confirmLabel: "Chấp nhận rủi ro" })) ?? ""; if (!note.trim()) return; accept = true; }
+    void act(() => api.admin.decidePackage(p.name, status, accept, note));
   }
   return (<>
     <PageHead title="Packages" sub="Chỉ package trong danh mục mới vào được mirror và lockfile của ứng dụng mã nguồn. Duyệt = giải cây phụ thuộc (không chạy mã package) + quét lỗ hổng OSV."/>
@@ -100,7 +101,7 @@ export function PackagesPage() {
         <input aria-label="Khoảng phiên bản" placeholder="Khoảng phiên bản (^3.0.0)" value={f.range} onChange={(e) => setF({ ...f, range: e.target.value })}/>
         <input aria-label="Ghim phiên bản" placeholder="Hoặc ghim (3.6.0)" value={f.pin} onChange={(e) => setF({ ...f, pin: e.target.value })}/>
         <input aria-label="Ghi chú" placeholder="Ghi chú" value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })}/>
-        <button className="btn primary" disabled={!f.name.trim()}>Kiểm tra & duyệt</button>
+        <button className="btn primary" disabled={!f.name.trim() || busy}>Kiểm tra & duyệt</button>
       </form>
       {msg ? <p className="hint" role="status">{msg}</p> : null}{err ? <p className="formError" role="alert">{err}</p> : null}
     </Card>
@@ -121,19 +122,18 @@ export function PackagesPage() {
 export function SettingsPage() {
   const { data, error, loading, reload } = useLoad(() => api.admin.settings(), []);
   const pol = useLoad(() => api.admin.policies(), []);
-  const [draft, setDraft] = useState<Record<string, string>>({}); const [err, setErr] = useState<string | null>(null); const [ok, setOk] = useState<string | null>(null);
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const { act, busy, msg: ok, err } = useAdminAction("Không lưu được.", pol.reload);
   async function save(s: SettingView, value: string) {
-    setErr(null); setOk(null);
-    if (s.risk === "HIGH" && !confirm(`“${s.label}” là cài đặt rủi ro cao. Đổi thành ${value}?`)) return;
-    try { await api.admin.setPolicy(s.key, value, s.risk === "HIGH"); setOk(`Đã lưu: ${s.label}`); setDraft((d) => { const n = { ...d }; delete n[s.key]; return n; }); pol.reload(); }
-    catch (x) { setErr(errText(x, "Không lưu được.")); }
+    if (s.risk === "HIGH" && !(await confirm({ title: `Đổi “${s.label}”?`, message: `Đây là cài đặt rủi ro cao. Giá trị mới: ${value}.`, confirmLabel: "Đổi cài đặt", danger: true }))) return;
+    void act(() => api.admin.setPolicy(s.key, value, s.risk === "HIGH"), `Đã lưu: ${s.label}`).then((r) => { if (r.status === "ok") setDraft((d) => { const n = { ...d }; delete n[s.key]; return n; }); });
   }
-  async function reset(s: SettingView) { setErr(null); try { await api.admin.resetPolicy(s.key); pol.reload(); } catch (x) { setErr(errText(x, "Không đặt lại được.")); } }
+  function reset(s: SettingView) { void act(() => api.admin.resetPolicy(s.key)); }
   const groups = (pol.data ?? []).reduce<Record<string, SettingView[]>>((acc, s) => { (acc[s.group] ??= []).push(s); return acc; }, {});
   return (<>
     <PageHead title="Cài đặt" sub="Chính sách chỉnh được (ghi audit; mục rủi ro cao cần xác nhận). Giá trị mặc định lấy từ cấu hình máy chủ."/>
     {err ? <p className="formError" role="alert">{err}</p> : null}{ok ? <p className="hint" role="status">{ok}</p> : null}
-    {pol.error ? <ErrorState error={pol.error} retry={pol.reload}/> : !pol.data ? <StateView kind="loading"/> : <div className="grid2">{Object.entries(groups).map(([g, items]) =>
+    {pol.error ? <ErrorState error={pol.error} retry={pol.reload}/> : !pol.data ? <StateView kind="loading"/> : pol.data.length === 0 ? <StateView kind="empty" title="Chưa có chính sách nào chỉnh được"/> : <div className="grid2">{Object.entries(groups).map(([g, items]) =>
       <Card key={g} title={g}><table className="table settingsTable"><tbody>{items.map((s) => {
         const v = draft[s.key] ?? s.value;
         return <tr key={s.key}><td><b>{s.label}</b>{s.risk === "HIGH" ? <Pill value="UNKNOWN" label="Rủi ro cao"/> : null}<small className="code">{s.key}</small>
@@ -142,11 +142,11 @@ export function SettingsPage() {
             ? <label className="switch"><input type="checkbox" checked={s.value === "true"} aria-label={s.label} onChange={(e) => void save(s, String(e.target.checked))}/> {s.value === "true" ? "Bật" : "Tắt"}</label>
             : <form className="row" onSubmit={(e) => { e.preventDefault(); void save(s, v); }}>{s.type === "DOMAINS" ? <input aria-label={s.label} type="text" placeholder="example.com, docs.example.org" value={v} onChange={(e) => setDraft((d) => ({ ...d, [s.key]: e.target.value }))}/>
               : <input aria-label={s.label} type="number" min={s.min} max={s.max} value={v} onChange={(e) => setDraft((d) => ({ ...d, [s.key]: e.target.value }))}/>}
-              <span className="hint">{s.unit}</span>{draft[s.key] !== undefined && draft[s.key] !== s.value ? <button className="btn sm primary">Lưu</button> : null}</form>}
+              <span className="hint">{s.unit}</span>{draft[s.key] !== undefined && draft[s.key] !== s.value ? <button className="btn sm primary" disabled={busy}>Lưu</button> : null}</form>}
             {s.overridden ? <button className="btn sm ghost" onClick={() => void reset(s)}>Mặc định</button> : null}</td></tr>;
       })}</tbody></table></Card>)}</div>}
     <h2 className="subHead">Cấu hình đang hiệu lực (chỉ xem)</h2>
-    {loading && !data ? <StateView kind="loading"/> : error ? <ErrorState error={error} retry={reload}/> :
+    {loading && !data ? <StateView kind="loading"/> : error ? <ErrorState error={error} retry={reload}/> : Object.keys(data!).length === 0 ? <StateView kind="empty" title="Chưa có cấu hình hiệu lực để hiển thị"/> :
       <div className="grid2">{Object.entries(data!).map(([group, values]) => (
         <Card key={group} title={SETTING_GROUP[group] ?? group}><dl className="kv">{Object.entries(values).map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v === null || v === undefined ? "—" : String(v)}</dd></div>)}</dl></Card>
       ))}</div>}

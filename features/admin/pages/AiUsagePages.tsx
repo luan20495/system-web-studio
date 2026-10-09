@@ -1,10 +1,13 @@
 "use client";
+import { useAdminAction } from "../useAdminAction";
+import { LoadGate } from "@xweb/ui";
 
 import { useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { api } from "@/lib/http-api";
 import type { AiProviderInfo, AiUsageReport, UsageBucket, UsageTotals } from "@/lib/http-types";
 import { useA } from "../console/context";
+import { LoadNote } from "../LoadNote";
 import { useLoad } from "../../useLoad";
 import { ago, Card, ErrorState, errText, fmtDate, Kpi, num, Pager, Pill, StateView, tok, usd } from "../../ui";
 
@@ -81,22 +84,24 @@ export function AiMonthCard() {
 export function PricingCard() {
   const providers = useLoad(() => api.admin.aiProviders(), []);
   const { data, error, loading, reload } = useLoad(() => api.admin.aiPricing(), []);
-  const [f, setF] = useState({ modelId: "", input: "", output: "", note: "" }); const [err, setErr] = useState<string | null>(null); const [ok, setOk] = useState<string | null>(null);
+  const [f, setF] = useState({ modelId: "", input: "", output: "", note: "" });
+  const { act, busy, msg: ok, err } = useAdminAction("Không thêm được giá.", reload);
   const models = (providers.data ?? []).flatMap((p) => p.models.map((m) => m.id));
-  async function add(e: FormEvent) {
-    e.preventDefault(); setErr(null); setOk(null);
-    try { await api.admin.aiAddPrice({ modelId: f.modelId, inputUsdPerMTok: Number(f.input), outputUsdPerMTok: Number(f.output), note: f.note.trim() || undefined });
-      setOk(`Đã thêm giá cho ${f.modelId}, áp dụng từ bây giờ.`); setF({ modelId: "", input: "", output: "", note: "" }); reload(); }
-    catch (x) { setErr(errText(x, "Không thêm được giá.")); }
+  // prices are immutable rows: one click = one row (single-flight), the form is cleared only after the server accepted it
+  function add(e: FormEvent) {
+    e.preventDefault();
+    const row = { modelId: f.modelId, inputUsdPerMTok: Number(f.input), outputUsdPerMTok: Number(f.output), note: f.note.trim() || undefined };
+    void act(() => api.admin.aiAddPrice(row), `Đã thêm giá cho ${f.modelId}, áp dụng từ bây giờ.`).then((r) => { if (r.status === "ok") setF({ modelId: "", input: "", output: "", note: "" }); });
   }
   return <Card title="Bảng giá model">
     <p className="hint">Dùng để tính chi phí khi nhà cung cấp không báo (OpenAI, Anthropic, Gemini, model nội bộ). Hệ thống không có sẵn giá nào. Giá không sửa được: thay đổi = thêm dòng mới áp dụng từ thời điểm thêm; chi phí đã ghi không bị tính lại.</p>
+    <LoadNote load={providers} what="danh sách model"/>
     <form className="filters wrap" onSubmit={(e) => void add(e)}>
       <select aria-label="Model" value={f.modelId} onChange={(e) => setF({ ...f, modelId: e.target.value })} required><option value="">Chọn model</option>{models.map((m) => <option key={m} value={m}>{m}</option>)}</select>
       <input aria-label="Giá token vào (USD / 1 triệu)" type="number" min="0" max="10000" step="0.000001" placeholder="Vào USD/1M" value={f.input} onChange={(e) => setF({ ...f, input: e.target.value })} required/>
       <input aria-label="Giá token ra (USD / 1 triệu)" type="number" min="0" max="10000" step="0.000001" placeholder="Ra USD/1M" value={f.output} onChange={(e) => setF({ ...f, output: e.target.value })} required/>
       <input aria-label="Ghi chú (nguồn giá)" placeholder="Ghi chú, ví dụ: theo hợp đồng 2026" maxLength={200} value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })}/>
-      <button className="btn primary" disabled={!f.modelId}>Thêm giá</button>
+      <button className="btn primary" disabled={!f.modelId || busy}>Thêm giá</button>
     </form>
     {ok ? <p className="hint" role="status">{ok}</p> : null}{err ? <p className="formError" role="alert">{err}</p> : null}
     {error ? <ErrorState error={error} retry={reload}/> : loading && !data ? <StateView kind="loading"/> : !data!.length ? <StateView kind="empty" title="Chưa có giá nào" detail="Chi phí của model trả phí sẽ hiển thị “không rõ” cho tới khi có giá."/> :
@@ -122,8 +127,7 @@ export function AiPage() {
   const { data, error, loading, reload } = useLoad(() => api.admin.ai(), []);
   const [days, setDays] = useState(30);
   const usage = useLoad(() => api.admin.aiUsage(days), [days]);
-  if (loading && !data) return <StateView kind="loading"/>;
-  if (error) return <ErrorState error={error} retry={reload}/>;
+  if (!data) return <LoadGate load={{ data, error, loading, reload }} level={2} label="số liệu AI">{() => null}</LoadGate>;
   const a = data!;
   const u = usage.data;
   const t = u?.totals;

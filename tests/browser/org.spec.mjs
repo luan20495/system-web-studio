@@ -235,7 +235,7 @@ const axe = async (p, ctx) => { await p.addScriptTag({ path: AXE }); const r = a
   await T(p, "emp-status").selectOption("INACTIVE"); await settle(p, 500);
   check("EMP_UI07b status filter 'Đã tắt' → exactly those two", (await rows(p)) === 2 && /2 nhân viên/.test(await T(p, "emp-count").innerText()));
   await T(p, "emp:u07").click(); await T(p, "emp-detail").waitFor();
-  check("EMP_UI07c detail of a disabled account: the status says so; enabling is NOT offered to a company admin (the existing route is platform-only), and the reason is shown", /Đã tắt/.test(await T(p, "emp-detail").innerText()) && (await T(p, "detail-toggle").isDisabled()) && /Chỉ quản trị hệ thống/.test(await T(p, "detail-toggle-note").innerText()));
+  check("EMP_UI07c detail of a disabled account: the status says so; enabling is NOT offered to a company admin (the existing route is platform-only), and the reason is shown", /Đã tắt/.test(await T(p, "emp-detail").innerText()) && (await T(p, "detail-toggle").isDisabled()) && /Chỉ quản trị hệ thống/.test(await T(p, "emp-detail").locator(".xp-reason").innerText()));
   await p.close(); }
 
 { const p = await open("emp");

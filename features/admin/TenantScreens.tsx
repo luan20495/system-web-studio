@@ -14,8 +14,11 @@ import { api, ApiError } from "@/lib/http-api";
 import type { Member, TenantMemberCandidate, TenantMemberView, TenantView } from "@/lib/http-types";
 import { useSession } from "../session";
 import { useLoad } from "../useLoad";
-import { Card, ErrorState, fmtDate, Kpi, Pill, StateView } from "../ui";
-import { ArrowLeft, Building2, CircleCheck, ModalHeader, ShieldCheck, UserRound } from "@xweb/ui";
+import { Card, ErrorState, fmtDate, Kpi, Pager, Pill, StateView } from "../ui";
+import { isTenantAdminRole, isWorkspaceAdminRole } from "@xweb/permissions";
+import { ArrowLeft, Building2, CircleCheck, ModalHeader, ShieldCheck, UserRound, confirm, LoadGate, useAction } from "@xweb/ui";
+import { LoadNote } from "./LoadNote";
+import { useSingleFlight } from "./useAdminAction";
 import { PersonPicker } from "./PersonPicker";
 import { PlatformCreateAccount } from "./ProvisioningLive";
 import { DataSourcesPanel } from "../studio/builder/DataSourcesPanel";
@@ -46,7 +49,7 @@ function usePeople(extra: Person[] = []) {
     return needle ? all.filter((p) => `${p.username} ${p.displayName ?? ""}`.toLowerCase().includes(needle)) : all;
   }, [scope.platform, wsIds, q]);
   const people = useMemo(() => { const m = new Map<string, Person>(); [...extra, ...(found.data ?? [])].forEach((p) => m.set(p.id, p)); return m; }, [found.data, extra]);
-  return { people, q, setQ, loading: found.loading, platform: scope.platform, nobody: !scope.platform && scope.workspaces.length === 0 };
+  return { people, q, setQ, loading: found.loading, load: found, platform: scope.platform, nobody: !scope.platform && scope.workspaces.length === 0 };
 }
 
 // ------------------------------------------------------------------------------------------------------------------ tenant members
@@ -63,17 +66,36 @@ function TenantMembers({ tenantId, tenantName, onCreateAdmin, rev = 0 }: { tenan
   const [busy, setBusy] = useState<string | null>(null); const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const list: TenantMemberView[] = members.data ?? [];
   const rows = tenantMemberRows(list);
+  // a role is CHOSEN in the select and APPLIED by "Lưu" (a select must not commit a privilege change on a stray click / key press)
+  const [draft, setDraft] = useState<Record<string, string>>({});
   const options: TenantMemberCandidate[] = candidates.data ?? [];
   useEffect(() => { if (pick && !options.some((c) => c.userId === pick)) setPick(""); }, [options, pick]);
+  // single-flight: a double click on "Thêm" / "Gỡ" runs ONE request (a second call while one is running is skipped) (M-020)
+  const flight = useAction(async (_c, fn: () => Promise<unknown>) => { await fn(); });
   async function act(key: string, fn: () => Promise<unknown>, ok: string) {
+    if (flight.busy) return;
     setBusy(key); setMsg(null);
-    try { await fn(); setMsg({ kind: "ok", text: ok }); members.reload(); } catch (e) { setMsg({ kind: "err", text: say(e, "Chưa thực hiện được.") }); } finally { setBusy(null); }
+    const r = await flight.run(fn);
+    if (r.status === "skipped") return;
+    if (r.status === "ok") { setMsg({ kind: "ok", text: ok }); members.reload(); } else if (r.status === "error") setMsg({ kind: "err", text: say(r.error, "Chưa thực hiện được.") });
+    setBusy(null);
   }
-  function change(m: { userId: string; role: string }, next: "TENANT_ADMIN" | "MEMBER" | "REMOVE") {
+  async function change(m: { userId: string; role: string }, next: "TENANT_ADMIN" | "MEMBER" | "REMOVE") {
     const block = memberChangeBlock(m, { id: me!.id }, list, next);
     if (block) { setMsg({ kind: "err", text: block }); return; }
-    if (next === "REMOVE") { if (!window.confirm("Gỡ người này khỏi công ty?")) return; void act(`rm:${m.userId}`, () => api.admin.removeTenantMember(tenantId, m.userId), "Đã gỡ khỏi công ty."); }
+    if (next === "REMOVE") { const who = rows.find((r) => r.userId === m.userId)?.label ?? "người này"; if (!(await confirm({ title: `Gỡ ${who} khỏi công ty?`, message: `Họ không còn là thành viên của công ty “${tenantName}”. Tài khoản của họ không bị xóa.`, confirmLabel: "Gỡ khỏi công ty", danger: true }))) return; void act(`rm:${m.userId}`, () => api.admin.removeTenantMember(tenantId, m.userId), "Đã gỡ khỏi công ty."); }
     else void act(`role:${m.userId}`, () => api.admin.setTenantMember(tenantId, m.userId, next), "Đã đổi vai trò.");
+  }
+  async function saveRole(r: { userId: string; label: string; role: string }) {
+    const next = draft[r.userId]; if (!next || next === r.role) return;
+    const block = memberChangeBlock(r, { id: me!.id }, list, next as "TENANT_ADMIN" | "MEMBER");
+    if (block) { setMsg({ kind: "err", text: block }); return; }
+    if (isTenantAdminRole(next) || isTenantAdminRole(r.role)) {
+      const up = isTenantAdminRole(next);
+      if (!(await confirm({ title: up ? `Cho ${r.label} làm quản trị công ty?` : `Bỏ quyền quản trị công ty của ${r.label}?`, message: up ? `Người này sẽ quản lý được thành viên và workspace của công ty “${tenantName}”.` : `Người này không còn quản lý được thành viên và workspace của công ty “${tenantName}”.`, confirmLabel: up ? "Cho làm quản trị" : "Bỏ quyền quản trị", danger: !up }))) return;
+    }
+    await act(`role:${r.userId}`, () => api.admin.setTenantMember(tenantId, r.userId, next), "Đã đổi vai trò.");
+    setDraft((d) => { const n = { ...d }; delete n[r.userId]; return n; });
   }
   async function add(e: FormEvent) {
     e.preventDefault();
@@ -88,8 +110,9 @@ function TenantMembers({ tenantId, tenantName, onCreateAdmin, rev = 0 }: { tenan
           <tbody>{rows.map((r) => (
             <tr key={r.userId} data-testid={`tm:${r.userId}`}>
               <td>{r.known ? <b>{r.label}</b> : <span title="Máy chủ không trả tên cho người này">{r.label}</span>}{r.userId === me?.id ? <small> · bạn</small> : null}{r.email ? <small>{r.email}</small> : null}</td>
-              <td><select aria-label={`Vai trò của ${r.label}`} value={r.role} disabled={busy !== null || r.userId === me?.id} onChange={(e) => change(r, e.target.value as "TENANT_ADMIN" | "MEMBER")}>
-                {TENANT_ROLES.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</select></td>
+              <td><span className="row"><select aria-label={`Vai trò của ${r.label}`} value={draft[r.userId] ?? r.role} disabled={busy !== null || r.userId === me?.id} onChange={(e) => setDraft((d) => ({ ...d, [r.userId]: e.target.value }))}>
+                {TENANT_ROLES.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</select>
+                {draft[r.userId] && draft[r.userId] !== r.role ? <><button className="btn sm primary" data-testid={`tm-save:${r.userId}`} disabled={busy !== null} onClick={() => void saveRole(r)}>Lưu</button><button className="btn sm" disabled={busy !== null} onClick={() => setDraft((d) => { const n = { ...d }; delete n[r.userId]; return n; })}>Hủy</button></> : null}</span></td>
               <td><button className="btn sm danger" disabled={busy !== null || r.userId === me?.id} title={r.userId === me?.id ? "Bạn không thể tự gỡ mình" : undefined} onClick={() => change(r, "REMOVE")}>Gỡ</button></td>
             </tr>))}</tbody>
         </table>)}
@@ -119,22 +142,27 @@ function TenantBody({ id, onChanged }: { id: string; onChanged?: () => void }) {
   const scope = useMemo(() => adminScope(me), [me]);
   const [busy, setBusy] = useState(false); const [msg, setMsg] = useState<string | null>(null);
   const [creating, setCreating] = useState(false); const [rev, setRev] = useState(0);
+  const statusFlight = useAction(async (_c, fn: () => Promise<unknown>) => { await fn(); });
   if (tenant.error) return <ErrorState error={tenant.error} retry={tenant.reload}/>;
   if (tenant.loading && !tenant.data) return <StateView kind="loading"/>;
   const t = tenant.data as TenantView;
   const actions = scope.platform ? tenantActions(t) : [];
   // the first administrator of a company is made HERE (existing route: POST /admin/tenants/{t}/users). Only a Platform operator, only while the company is usable.
   const canCreateAdmin = scope.platform && t.status === "ACTIVE";
-  async function setStatus(to: "ACTIVE" | "SUSPENDED" | "DELETED", confirm: string) {
-    if (!window.confirm(confirm)) return;
+  async function setStatus(to: "ACTIVE" | "SUSPENDED" | "DELETED", a: { label: string; danger: boolean; message: string }) {
+    if (!(await confirm({ title: `${a.label} công ty “${t.name}”?`, message: a.message, confirmLabel: a.label, danger: a.danger }))) return;
+    if (statusFlight.busy) return;
     setBusy(true); setMsg(null);
-    try { await api.admin.setTenantStatus(t.id, to); setMsg("Đã đổi trạng thái công ty."); tenant.reload(); onChanged?.(); } catch (e) { setMsg(say(e, "Chưa đổi được trạng thái.")); } finally { setBusy(false); }
+    const r = await statusFlight.run(() => api.admin.setTenantStatus(t.id, to));
+    if (r.status === "skipped") return;
+    if (r.status === "ok") { setMsg("Đã đổi trạng thái công ty."); tenant.reload(); onChanged?.(); } else if (r.status === "error") setMsg(say(r.error, "Chưa đổi được trạng thái."));
+    setBusy(false);
   }
   return (<>
     <PageHead title={t.name} sub={`${t.slug} · tạo ${fmtDate(t.createdAt)}`} actions={actions.length || canCreateAdmin ? <div className="row">
       {canCreateAdmin ? <button className="btn primary" data-testid="tenant-create-admin" onClick={() => setCreating(true)}>Tạo tài khoản quản trị công ty</button> : null}
       {actions.map((a) => (
-      <button key={a.to} className={`btn ${a.danger ? "danger" : ""}`} disabled={busy} data-testid={`tenant-${a.to}`} onClick={() => void setStatus(a.to, a.confirm)}>{a.label}</button>))}</div> : undefined}/>
+      <button key={a.to} className={`btn ${a.danger ? "danger" : ""}`} disabled={busy} data-testid={`tenant-${a.to}`} onClick={() => void setStatus(a.to, a)}>{a.label}</button>))}</div> : undefined}/>
     {msg ? <p className="notice" role="status">{msg}</p> : null}
     <div className="kpiGrid"><Kpi label="Trạng thái" value={statusPill(t.status)}/><Kpi label="Mã công ty" value={t.slug}/></div>
     {t.status !== "ACTIVE" ? <p className="hint" role="note">Công ty đang {TENANT_STATUS_LABEL[t.status]?.toLowerCase() ?? t.status}: người dùng của công ty không vào được cho tới khi mở khóa.</p> : null}
@@ -144,24 +172,36 @@ function TenantBody({ id, onChanged }: { id: string; onChanged?: () => void }) {
 }
 
 // ------------------------------------------------------------------------------------------------------------------------- platform
+const TENANT_PAGE = 25;
 export function TenantsPage() {
   const A = useA();
   const router = useRouter();
   const list = useLoad(() => api.admin.tenants(), []);
   const [adding, setAdding] = useState(false);
+  // the API answers the whole list; searching and paging happen here (a tenant filter / page route is a C1 handoff)
+  const [q, setQ] = useState(""); const [page, setPage] = useState(0);
+  const needle = q.trim().toLowerCase();
+  const shown = useMemo(() => (list.data ?? []).filter((t) => !needle || `${t.name} ${t.slug}`.toLowerCase().includes(needle)), [list.data, needle]);
+  const pageRows = shown.slice(page * TENANT_PAGE, (page + 1) * TENANT_PAGE);
   return (<>
     <PageHead title="Công ty (tenant)" sub="Các công ty dùng nền tảng. Tạo công ty mới, tạm khóa hoặc khôi phục, và quản lý quản trị viên của từng công ty."
       actions={<button className="btn primary" onClick={() => setAdding(true)}>+ Tạo công ty</button>}/>
     {adding ? <CreateTenantDialog onClose={() => setAdding(false)} onCreated={(t) => { setAdding(false); list.reload(); router.push(A(`/tenants/${t.id}`)); }}/> : null}
     <Card>
-      {list.error ? <ErrorState error={list.error} retry={list.reload}/> : list.loading && !list.data ? <StateView kind="loading"/> : (list.data ?? []).length === 0 ? <StateView kind="empty" title="Chưa có công ty nào"/> : (
+      <LoadGate load={list} label="danh sách công ty" isEmpty={(d) => d.length === 0} empty={{ title: "Chưa có công ty nào" }}>{() => (<>
+        <form className="filters" role="search" onSubmit={(e) => e.preventDefault()}>
+          <input aria-label="Tìm công ty" placeholder="Tìm theo tên hoặc mã công ty" value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }}/>
+        </form>
+        {shown.length === 0 ? <StateView kind="empty" title="Không có công ty phù hợp" detail={<p>Thử tên hoặc mã khác.</p>}/> : <>
         <table className="table" data-testid="tenant-list">
           <thead><tr><th>Công ty</th><th>Trạng thái</th><th>Tạo lúc</th></tr></thead>
-          <tbody>{list.data!.map((t) => (
+          <tbody>{pageRows.map((t) => (
             <tr key={t.id} className="clickRow" data-testid={`tenant:${t.slug}`} onClick={() => router.push(A(`/tenants/${t.id}`))}>
               <td><Link href={A(`/tenants/${t.id}`)}><b>{t.name}</b></Link><small>{t.slug}</small></td><td>{statusPill(t.status)}</td><td>{fmtDate(t.createdAt)}</td>
             </tr>))}</tbody>
-        </table>)}
+        </table>
+        {shown.length > TENANT_PAGE ? <Pager page={page} size={TENANT_PAGE} total={shown.length} onPage={setPage}/> : null}</>}
+      </>)}</LoadGate>
     </Card>
   </>);
 }
@@ -179,15 +219,18 @@ function CreateTenantDialog({ onClose, onCreated }: { onClose: () => void; onCre
   // the code follows the name until the person edits it by hand
   const [slugEdited, setSlugEdited] = useState(false);
   const [touched, setTouched] = useState(false); const [busy, setBusy] = useState(false); const [error, setError] = useState<string | null>(null);
-  const { people, q, setQ, loading } = usePeople();
+  const { people, q, setQ, loading, load: peopleLoad } = usePeople();
   const problems = checkTenantForm({ slug, name });
   const slugOk = !problems.slug && slug.trim() !== "";
   function onName(v: string) { setName(v); if (!slugEdited) setSlug(slugify(v)); }
+  const once = useSingleFlight();
   async function submit(e: FormEvent) {
     e.preventDefault(); setTouched(true); setError(null);
     if (problems.slug || problems.name) return;
+    await once(async () => {
     setBusy(true);
     try { onCreated(await api.admin.createTenant({ slug: slug.trim().toLowerCase(), name: name.trim(), ...(admin ? { firstAdminUserId: admin } : {}) })); } catch (err) { setError(say(err, "Chưa tạo được công ty.")); } finally { setBusy(false); }
+    });
   }
   return (
     <Modal label="Tạo công ty" onClose={onClose} dismissible={!busy}>
@@ -212,6 +255,7 @@ function CreateTenantDialog({ onClose, onCreated }: { onClose: () => void; onCre
           <h3><UserRound size={14} aria-hidden="true"/> Quản trị viên đầu tiên <span className="xp-opt-tag">Không bắt buộc</span></h3>
           <PersonPicker id="tenant-first-admin" label="Tìm người dùng" people={[...people.values()]} q={q} setQ={setQ} value={admin} onChange={setAdmin} loading={loading}
             placeholder="Tìm theo tên hoặc tên đăng nhập" emptyText={q ? "Không có người phù hợp" : "Chưa có tài khoản nào để chọn"}/>
+          <LoadNote load={peopleLoad} what="danh sách tài khoản"/>
           <p className="xp-note" role="note"><ShieldCheck size={16} aria-hidden="true"/><span>Chỉ chọn được tài khoản đã có. Muốn tạo người mới: bỏ trống ở đây, rồi dùng nút “Tạo tài khoản quản trị công ty” ở trang công ty vừa tạo (người đó nhận một liên kết kích hoạt).</span></p>
         </section>
 
@@ -286,14 +330,32 @@ function WorkspaceMembersPanel({ workspaceId, name }: { workspaceId: string; nam
   const [who, setWho] = useState(""); const [role, setRole] = useState("EDITOR");
   const [busy, setBusy] = useState<string | null>(null); const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const list = members.data ?? [];
+  const [draft, setDraft] = useState<Record<string, string>>({});   // chosen in the select, applied by "Lưu"
+  // single-flight: a double click on "Thêm" / "Gỡ" runs ONE request (a second call while one is running is skipped) (M-020)
+  const flight = useAction(async (_c, fn: () => Promise<unknown>) => { await fn(); });
   async function act(key: string, fn: () => Promise<unknown>, ok: string) {
+    if (flight.busy) return;
     setBusy(key); setMsg(null);
-    try { await fn(); setMsg({ kind: "ok", text: ok }); members.reload(); } catch (e) { setMsg({ kind: "err", text: say(e, "Chưa thực hiện được.") }); } finally { setBusy(null); }
+    const r = await flight.run(fn);
+    if (r.status === "skipped") return;
+    if (r.status === "ok") { setMsg({ kind: "ok", text: ok }); members.reload(); } else if (r.status === "error") setMsg({ kind: "err", text: say(r.error, "Chưa thực hiện được.") });
+    setBusy(null);
   }
-  function change(m: Member, next: string) {
+  async function saveRole(m: Member) {
+    const next = draft[m.userId]; if (!next || next === m.role) return;
     const block = workspaceMemberBlock(m, { id: me!.id }, list, next);
     if (block) { setMsg({ kind: "err", text: block }); return; }
-    if (next === "REMOVE") { if (!window.confirm(`Gỡ ${m.displayName ?? m.username} khỏi workspace? Họ cũng mất quyền ở mọi ứng dụng của workspace.`)) return; void act(`rm:${m.userId}`, () => api.removeWorkspaceMember(workspaceId, m.userId), "Đã gỡ khỏi workspace."); }
+    if (isWorkspaceAdminRole(next) || isWorkspaceAdminRole(m.role)) {
+      const up = isWorkspaceAdminRole(next); const who = m.displayName ?? m.username;
+      if (!(await confirm({ title: up ? `Cho ${who} làm quản trị workspace?` : `Bỏ quyền quản trị workspace của ${who}?`, message: up ? `Người này sẽ quản lý được thành viên và nguồn dữ liệu của workspace “${name}”.` : `Người này không còn quản lý được thành viên và nguồn dữ liệu của workspace “${name}”.`, confirmLabel: up ? "Cho làm quản trị" : "Bỏ quyền quản trị", danger: !up }))) return;
+    }
+    await act(`role:${m.userId}`, () => api.changeWorkspaceMember(workspaceId, m.userId, next), "Đã đổi vai trò.");
+    setDraft((d) => { const n = { ...d }; delete n[m.userId]; return n; });
+  }
+  async function change(m: Member, next: string) {
+    const block = workspaceMemberBlock(m, { id: me!.id }, list, next);
+    if (block) { setMsg({ kind: "err", text: block }); return; }
+    if (next === "REMOVE") { if (!(await confirm({ title: `Gỡ ${m.displayName ?? m.username} khỏi workspace?`, message: `Họ cũng mất quyền ở mọi ứng dụng của workspace “${name}”.`, confirmLabel: "Gỡ khỏi workspace", danger: true }))) return; void act(`rm:${m.userId}`, () => api.removeWorkspaceMember(workspaceId, m.userId), "Đã gỡ khỏi workspace."); }
     else void act(`role:${m.userId}`, () => api.changeWorkspaceMember(workspaceId, m.userId, next), "Đã đổi vai trò.");
   }
   async function add(e: FormEvent) {
@@ -309,8 +371,9 @@ function WorkspaceMembersPanel({ workspaceId, name }: { workspaceId: string; nam
           <tbody>{list.map((m) => (
             <tr key={m.userId} data-testid={`wm:${m.username}`}>
               <td><b>{m.displayName ?? m.username}</b><small>{m.username}{m.email ? ` · ${m.email}` : ""}{m.userId === me?.id ? " · bạn" : ""}</small></td>
-              <td><select aria-label={`Vai trò của ${m.username}`} value={m.role} disabled={busy !== null || m.userId === me?.id} onChange={(e) => change(m, e.target.value)}>
-                {WORKSPACE_ROLES.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}{WORKSPACE_ROLES.some((x) => x.id === m.role) ? null : <option value={m.role}>{workspaceRoleLabel(m.role)}</option>}</select></td>
+              <td><span className="row"><select aria-label={`Vai trò của ${m.username}`} value={draft[m.userId] ?? m.role} disabled={busy !== null || m.userId === me?.id} onChange={(e) => setDraft((d) => ({ ...d, [m.userId]: e.target.value }))}>
+                {WORKSPACE_ROLES.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}{WORKSPACE_ROLES.some((x) => x.id === m.role) ? null : <option value={m.role}>{workspaceRoleLabel(m.role)}</option>}</select>
+                {draft[m.userId] && draft[m.userId] !== m.role ? <><button className="btn sm primary" data-testid={`wm-save:${m.username}`} disabled={busy !== null} onClick={() => void saveRole(m)}>Lưu</button><button className="btn sm" disabled={busy !== null} onClick={() => setDraft((d) => { const n = { ...d }; delete n[m.userId]; return n; })}>Hủy</button></> : null}</span></td>
               <td>{fmtDate(m.joinedAt)}</td>
               <td><button className="btn sm danger" disabled={busy !== null || m.userId === me?.id} title={m.userId === me?.id ? "Bạn không thể tự gỡ mình" : undefined} onClick={() => change(m, "REMOVE")}>Gỡ</button></td>
             </tr>))}</tbody>

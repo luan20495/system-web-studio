@@ -5,10 +5,12 @@ import Link from "next/link";
 import { api } from "@/lib/http-api";
 import type { BlockDto, TemplateDto } from "@/lib/http-types";
 import { useA } from "../console/context";
+import { confirm, prompt, LoadGate } from "@xweb/ui";
 import { useLoad } from "../../useLoad";
 import { BlockStatus, blockPage, CheckList, ReviewTimeline, SchemaThumb } from "../../library";
 import { ago, Card, ComingSoon, ErrorState, errText, num, Pager, Pill, StateView } from "../../ui";
 import { PageHead } from "../PageHead";
+import { useAdminAction } from "../useAdminAction";
 import { prettyJson } from "../safeJson";
 
 // ------------------------------------------------------------------ components
@@ -27,16 +29,16 @@ export function ComponentsPage() {
 export function RegistryTable() {
   const { data, error, loading, reload } = useLoad(() => api.admin.components(), []);
   const [open, setOpen] = useState<string | null>(null);
-  if (loading && !data) return <StateView kind="loading"/>;
-  if (error) return <ErrorState error={error} retry={reload}/>;
+  if (!data) return <LoadGate load={{ data, error, loading, reload }} level={2} label="danh sách component">{() => null}</LoadGate>;
   return (<>
     <Card>
+      {data.length === 0 ? <StateView kind="empty" title="Chưa có component nào" detail={<p>Component đã duyệt xuất hiện ở đây khi máy chủ đăng ký chúng.</p>}/> :
       <table className="table"><thead><tr><th>Component</th><th>Nhóm</th><th>Phiên bản</th><th>Trạng thái</th><th>Dùng trong</th><th><span className="srOnly">Thao tác</span></th></tr></thead>
         <tbody>{data!.map((c) => (<Fragment key={c.id}>
           <tr><td><b>{c.name}</b><small className="code">{c.id}</small><small>{c.description}</small></td><td>{c.category}</td><td>{c.latestVersion}</td><td><Pill value={c.status === "ACTIVE" ? "ACTIVE" : c.status} label={c.status === "ACTIVE" ? "Đã duyệt" : c.status}/></td>
             <td>{num(c.usedInProjects)} ứng dụng<small>{num(c.sections)} mục</small></td><td><button className="btn sm" aria-expanded={open === c.id} onClick={() => setOpen(open === c.id ? null : c.id)}>Schema</button></td></tr>
           {open === c.id ? <tr className="detailRow"><td colSpan={6}><pre>{prettyJson(c.propsSchema)}</pre></td></tr> : null}
-        </Fragment>))}</tbody></table>
+        </Fragment>))}</tbody></table>}
     </Card>
     <Card title="Thêm component gốc mới"><ComingSoon title="Component có renderer mới">Thêm một loại component gốc mới cần viết renderer trong mã nguồn và được review như mọi thay đổi mã. Hệ thống không chạy HTML/JS do người dùng tải lên. Nhân viên đóng góp “khối” (cấu hình sẵn của component đã duyệt) ở tab bên cạnh.</ComingSoon></Card>
   </>);
@@ -65,13 +67,13 @@ export function BlocksAdmin() {
 
 export function BlockReviewPanel({ id, onDone }: { id: string; onDone: () => void }) {
   const { data, error, loading, reload } = useLoad(() => api.admin.block(id), [id]);
-  const [comment, setComment] = useState(""); const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null);
-  if (loading && !data) return <StateView kind="loading"/>;
-  if (error) return <ErrorState error={error} retry={reload}/>;
+  const [comment, setComment] = useState("");
+  const { act: run, busy, err } = useAdminAction("Không thực hiện được.", () => { setComment(""); reload(); onDone(); });
+  if (!data) return <LoadGate load={{ data, error, loading, reload }} level={2} label="chi tiết khối">{() => null}</LoadGate>;
   const b: BlockDto = data!;
   const latest = b.versions.find((v) => v.version === b.latestVersion);
   const page = blockPage(b);
-  async function act(fn: () => Promise<unknown>) { setBusy(true); setErr(null); try { await fn(); setComment(""); reload(); onDone(); } catch (x) { setErr(errText(x, "Không thực hiện được.")); } finally { setBusy(false); } }
+  const act = (fn: () => Promise<unknown>) => run(fn);
   return <div className="grid2">
     <div>{page ? <SchemaThumb schema={page} title={`Xem trước khối ${b.name}`} tall/> : null}
       <details><summary>Thuộc tính (JSON, v{latest?.version})</summary><pre>{JSON.stringify(latest?.props ?? {}, null, 2)}</pre></details></div>
@@ -85,7 +87,7 @@ export function BlockReviewPanel({ id, onDone }: { id: string; onDone: () => voi
           <button className="btn danger" disabled={busy || !comment.trim()} onClick={() => void act(() => api.admin.reviewBlock(b.id, "REJECT", b.latestVersion, comment.trim()))}>Từ chối</button></div>
       </div> : <p className="notice">Bạn là người đóng góp khối này nên không thể tự duyệt; cần một quản trị viên khác.</p>) : null}
       <div className="row">
-        {b.status !== "DEPRECATED" && b.approvedVersion != null ? <button className="btn sm" disabled={busy} onClick={() => { if (confirm("Ngừng dùng khối này? Khối biến khỏi thư viện; các trang đang dùng không bị thay đổi.")) void act(() => api.admin.deprecateBlock(b.id, comment.trim() || undefined)); }}>Ngừng dùng</button> : null}
+        {b.status !== "DEPRECATED" && b.approvedVersion != null ? <button className="btn sm" disabled={busy} onClick={async () => { if (await confirm({ title: `Ngừng dùng khối “${b.name}”?`, message: "Khối biến khỏi thư viện; các trang đang dùng không bị thay đổi.", confirmLabel: "Ngừng dùng", danger: true })) void act(() => api.admin.deprecateBlock(b.id, comment.trim() || undefined)); }}>Ngừng dùng</button> : null}
         {b.status === "DEPRECATED" ? <button className="btn sm" disabled={busy} onClick={() => void act(() => api.admin.restoreBlock(b.id))}>Khôi phục</button> : null}
       </div>
       {err ? <p className="formError" role="alert">{err}</p> : null}
@@ -97,10 +99,11 @@ export function BlockReviewPanel({ id, onDone }: { id: string; onDone: () => voi
 export function TemplatesAdmin() {
   const A = useA();
   const [page, setPage] = useState(0); const [visibility, setVisibility] = useState(""); const [status, setStatus] = useState("ACTIVE"); const [q, setQ] = useState(""); const [applied, setApplied] = useState("");
-  const [open, setOpen] = useState<string | null>(null); const [err, setErr] = useState<string | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
   const params = useMemo(() => ({ page, visibility: visibility || undefined, status: status || undefined, q: applied || undefined }), [page, visibility, status, applied]);
   const { data, error, loading, reload } = useLoad(() => api.admin.templates(params), [params]);
-  async function act(fn: () => Promise<TemplateDto>) { setErr(null); try { await fn(); reload(); } catch (x) { setErr(errText(x, "Không thực hiện được.")); } }
+  const { act: run, err } = useAdminAction("Không thực hiện được.", reload);
+  const act = (fn: () => Promise<unknown>) => run(fn);
   return (<>
     <PageHead title="Templates" sub="Mẫu là cấu trúc trang (Page Schema) do nhân viên lưu từ ứng dụng. Tác giả gửi duyệt → kiểm tra tự động (component, nội dung, render an toàn) → quản trị viên khác tác giả duyệt hoặc từ chối."/>
     <Card>
@@ -122,11 +125,11 @@ export function TemplatesAdmin() {
               <td><div className="row">
                 <button className="btn sm" aria-expanded={open === t.id} onClick={() => setOpen(open === t.id ? null : t.id)}>Xem</button>
                 {t.canReview ? <><button className="btn sm primary" onClick={() => void act(() => api.admin.reviewTemplate(t.id, "APPROVE"))}>Duyệt</button>
-                  <button className="btn sm" onClick={() => { const c = window.prompt("Lý do từ chối (gửi cho tác giả):")?.trim(); if (c) void act(() => api.admin.reviewTemplate(t.id, "REJECT", c)); }}>Từ chối</button></> : null}
+                  <button className="btn sm" onClick={async () => { const c = (await prompt({ title: `Từ chối mẫu “${t.name}”`, label: "Lý do từ chối (gửi cho tác giả)", multiline: true, required: true, maxLength: 1000, confirmLabel: "Từ chối" }))?.trim(); if (c) void act(() => api.admin.reviewTemplate(t.id, "REJECT", c)); }}>Từ chối</button></> : null}
                 {t.status === "ACTIVE" && t.reviewStatus !== "REVIEW" ? (t.visibility === "PRIVATE"
-                  ? <button className="btn sm primary" onClick={() => void act(() => api.admin.templateVisibility(t.id, "COMPANY"))}>Chia sẻ toàn công ty</button>
+                  ? <button className="btn sm primary" onClick={async () => { if (await confirm({ title: `Chia sẻ mẫu “${t.name}” cho cả công ty?`, message: "Mọi người trong công ty thấy và dùng được mẫu này khi tạo ứng dụng.", confirmLabel: "Chia sẻ toàn công ty" })) void act(() => api.admin.templateVisibility(t.id, "COMPANY")); }}>Chia sẻ toàn công ty</button>
                   : <button className="btn sm" onClick={() => void act(() => api.admin.templateVisibility(t.id, "PRIVATE"))}>Thu hồi về riêng tư</button>) : null}
-                {t.status === "ACTIVE" ? <button className="btn sm ghost" onClick={() => { if (confirm(`Lưu trữ mẫu “${t.name}”?`)) void act(() => api.admin.templateStatus(t.id, "ARCHIVED")); }}>Lưu trữ</button>
+                {t.status === "ACTIVE" ? <button className="btn sm ghost" onClick={async () => { if (await confirm({ title: `Lưu trữ mẫu “${t.name}”?`, message: "Mẫu không còn được chọn khi tạo ứng dụng. Có thể khôi phục sau.", confirmLabel: "Lưu trữ" })) void act(() => api.admin.templateStatus(t.id, "ARCHIVED")); }}>Lưu trữ</button>
                   : <button className="btn sm" onClick={() => void act(() => api.admin.templateStatus(t.id, "ACTIVE"))}>Khôi phục</button>}
               </div></td></tr>
             {open === t.id ? <tr className="detailRow"><td colSpan={7}><div className="grid2">{t.previewStatus === "READY"

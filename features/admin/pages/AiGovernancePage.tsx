@@ -3,9 +3,12 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { api } from "@/lib/http-api";
 import type { AccessRule, AiBudget, EffectiveModel } from "@/lib/http-types";
+import { confirm } from "@xweb/ui";
 import { useLoad } from "../../useLoad";
 import { ago, Card, ErrorState, errText, num, Pill, StateView, usd } from "../../ui";
+import { LoadNote } from "../LoadNote";
 import { PageHead } from "../PageHead";
+import { useAdminAction } from "../useAdminAction";
 
 // ---------------------------------------------------------------- Stage E: AI governance
 
@@ -13,18 +16,13 @@ const SCOPE_LABEL: Record<string, string> = { ORG: "Toàn tổ chức", WORKSPAC
 
 /** Picks a scope id: workspaces/users/applications are searched through the existing admin lists. */
 export function ScopePicker({ types, value, onChange }: { types: string[]; value: { type: string; id: string }; onChange: (v: { type: string; id: string }) => void }) {
-  const [q, setQ] = useState(""); const [opts, setOpts] = useState<{ id: string; label: string }[]>([]); const [ws, setWs] = useState(""); const [role, setRole] = useState("EDITOR");
-  useEffect(() => {
-    const t = setTimeout(() => {
-      const kind = value.type === "ROLE" ? "WORKSPACE" : value.type;
-      const load = kind === "WORKSPACE" ? api.admin.workspaces(0, q).then((p) => p.items.map((w) => ({ id: w.id, label: w.name })))
-        : kind === "USER" ? api.admin.users(0, q).then((p) => p.items.map((u) => ({ id: u.id, label: `${u.displayName ?? u.username} (${u.username})` })))
-        : kind === "PROJECT" ? api.admin.applications({ page: 0, q }).then((p) => p.items.map((a) => ({ id: a.id, label: `${a.name} · ${a.workspaceName}` })))
-        : Promise.resolve([]);
-      load.then(setOpts).catch(() => setOpts([]));
-    }, 250);
-    return () => clearTimeout(t);
-  }, [value.type, q]);
+  const [q, setQ] = useState(""); const [applied, setApplied] = useState(""); const [ws, setWs] = useState(""); const [role, setRole] = useState("EDITOR");
+  useEffect(() => { const t = setTimeout(() => setApplied(q), 250); return () => clearTimeout(t); }, [q]);     // one request per pause in typing, not per key
+  const kind = value.type === "ROLE" ? "WORKSPACE" : value.type;
+  const found = useLoad(async (): Promise<{ id: string; label: string }[]> => (kind === "WORKSPACE" ? (await api.admin.workspaces(0, applied)).items.map((w) => ({ id: w.id, label: w.name }))
+    : kind === "USER" ? (await api.admin.users(0, applied)).items.map((u) => ({ id: u.id, label: `${u.displayName ?? u.username} (${u.username})` }))
+    : kind === "PROJECT" ? (await api.admin.applications({ page: 0, q: applied })).items.map((a) => ({ id: a.id, label: `${a.name} · ${a.workspaceName}` })) : []), [kind, applied]);
+  const opts = found.data ?? [];
   useEffect(() => { if (value.type === "ROLE" && ws) onChange({ type: "ROLE", id: `${ws}:${role}` }); }, [ws, role]); // eslint-disable-line react-hooks/exhaustive-deps
   return <>
     <select aria-label="Phạm vi" value={value.type} onChange={(e) => { setQ(""); setWs(""); onChange({ type: e.target.value, id: "" }); }}>
@@ -35,6 +33,7 @@ export function ScopePicker({ types, value, onChange }: { types: string[]; value
         <option value="">— chọn —</option>{opts.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}</select>
       {value.type === "ROLE" ? <select aria-label="Vai trò" value={role} onChange={(e) => setRole(e.target.value)}>
         {["WORKSPACE_ADMIN", "EDITOR", "PUBLISHER", "VIEWER"].map((r) => <option key={r} value={r}>{r}</option>)}</select> : null}
+      <LoadNote load={found} what="danh sách để chọn"/>
     </> : null}
   </>;
 }
@@ -46,23 +45,23 @@ export function AiGovernancePage() {
   const [rule, setRule] = useState({ type: "ORG", id: "" }); const [model, setModel] = useState("paid:*");
   const [b, setB] = useState({ type: "ORG", id: "" }); const [bf, setBf] = useState({ period: "MONTHLY", amount: "", currency: "USD", rate: "", soft: "80", hard: true });
   const [check, setCheck] = useState({ type: "USER", id: "" }); const [checkWs, setCheckWs] = useState({ type: "WORKSPACE", id: "" }); const [eff, setEff] = useState<EffectiveModel[] | null>(null);
-  const [err, setErr] = useState<string | null>(null); const [msg, setMsg] = useState<string | null>(null);
-  async function addRule(e: FormEvent) {
-    e.preventDefault(); setErr(null); setMsg(null);
-    try { await api.admin.addAccessRule({ scopeType: rule.type, scopeId: rule.type === "ORG" ? undefined : rule.id, modelId: model.trim() }); setMsg("Đã thêm quy tắc chặn."); rules.reload(); }
-    catch (x) { setErr(errText(x, "Không thêm được.")); }
+  // one flight at a time: a double click on "Thêm quy tắc" / "Lưu ngân sách" sends ONE request (M-020)
+  const { act, busy, msg, err } = useAdminAction("Không thực hiện được.");
+  function addRule(e: FormEvent) {
+    e.preventDefault();
+    void act(async () => { await api.admin.addAccessRule({ scopeType: rule.type, scopeId: rule.type === "ORG" ? undefined : rule.id, modelId: model.trim() }); rules.reload(); }, "Đã thêm quy tắc chặn.");
   }
-  async function delRule(r: AccessRule) { setErr(null); try { await api.admin.deleteAccessRule(r.id); rules.reload(); } catch (x) { setErr(errText(x, "Không xoá được.")); } }
-  async function saveBudget(e: FormEvent) {
-    e.preventDefault(); setErr(null); setMsg(null);
-    try {
+  function delRule(r: AccessRule) { void act(async () => { await api.admin.deleteAccessRule(r.id); rules.reload(); }); }
+  function saveBudget(e: FormEvent) {
+    e.preventDefault();
+    void act(async () => {
       await api.admin.setBudget({ scopeType: b.type, scopeId: b.type === "ORG" ? undefined : b.id, period: bf.period, amount: Number(bf.amount), currency: bf.currency.toUpperCase(),
         usdPerUnit: bf.currency.toUpperCase() === "USD" ? undefined : Number(bf.rate), softPercent: Number(bf.soft), hard: bf.hard });
-      setMsg("Đã lưu ngân sách."); budgets.reload();
-    } catch (x) { setErr(errText(x, "Không lưu được.")); }
+      budgets.reload();
+    }, "Đã lưu ngân sách.");
   }
-  async function delBudget(x: AiBudget) { if (!confirm("Xoá ngân sách này?")) return; try { await api.admin.deleteBudget(x.id); budgets.reload(); } catch (e) { setErr(errText(e, "Không xoá được.")); } }
-  async function runCheck(e: FormEvent) { e.preventDefault(); setErr(null); try { setEff(await api.admin.effectiveModels(check.id, checkWs.id || undefined)); } catch (x) { setErr(errText(x, "Không kiểm tra được.")); } }
+  async function delBudget(x: AiBudget) { if (!(await confirm({ title: "Xoá ngân sách này?", message: `${SCOPE_LABEL[x.scopeType]} ${x.scopeLabel ?? x.scopeId}: không còn bị giới hạn bởi ngân sách này.`, confirmLabel: "Xoá ngân sách", danger: true }))) return; void act(async () => { await api.admin.deleteBudget(x.id); budgets.reload(); }); }
+  function runCheck(e: FormEvent) { e.preventDefault(); void act(async () => { setEff(await api.admin.effectiveModels(check.id, checkWs.id || undefined)); }); }
   const money = (v: number, c: string) => `${num(Math.round(v * 10000) / 10000)} ${c}`;
   return (<>
     <PageHead title="Quản trị AI" sub="Quyền dùng model theo tổ chức → workspace → vai trò → người dùng (chặn ở bất kỳ mức nào là chặn), và ngân sách tiền trên chi phí đã biết."/>
@@ -72,7 +71,7 @@ export function AiGovernancePage() {
       <form className="filters wrap" onSubmit={(e) => void addRule(e)}>
         <ScopePicker types={["ORG", "WORKSPACE", "ROLE", "USER"]} value={rule} onChange={setRule}/>
         <input aria-label="Model bị chặn" value={model} onChange={(e) => setModel(e.target.value)} placeholder="paid:* | * | provider:model"/>
-        <button className="btn primary" disabled={!model.trim() || (rule.type !== "ORG" && !rule.id)}>Thêm quy tắc chặn</button>
+        <button className="btn primary" disabled={busy || !model.trim() || (rule.type !== "ORG" && !rule.id)}>Thêm quy tắc chặn</button>
       </form>
       {rules.error ? <ErrorState error={rules.error} retry={rules.reload}/> : !rules.data ? <StateView kind="loading"/> : !rules.data.length ? <StateView kind="empty" title="Chưa có quy tắc chặn nào"/> :
         <table className="table"><thead><tr><th>Phạm vi</th><th>Đối tượng</th><th>Model bị chặn</th><th>Tạo</th><th><span className="srOnly">Thao tác</span></th></tr></thead>
@@ -99,7 +98,7 @@ export function AiGovernancePage() {
         {bf.currency.toUpperCase() !== "USD" ? <input aria-label="USD cho 1 đơn vị" type="number" step="any" placeholder={`USD / 1 ${bf.currency.toUpperCase()}`} value={bf.rate} onChange={(e) => setBf({ ...bf, rate: e.target.value })}/> : null}
         <label className="row">Cảnh báo ở <input aria-label="Ngưỡng cảnh báo %" type="number" min="1" max="100" value={bf.soft} onChange={(e) => setBf({ ...bf, soft: e.target.value })} style={{ width: 64 }}/>%</label>
         <label className="switch"><input type="checkbox" checked={bf.hard} onChange={(e) => setBf({ ...bf, hard: e.target.checked })}/> Chặn khi vượt</label>
-        <button className="btn primary" disabled={!bf.amount || (b.type !== "ORG" && !b.id)}>Lưu ngân sách</button>
+        <button className="btn primary" disabled={busy || !bf.amount || (b.type !== "ORG" && !b.id)}>Lưu ngân sách</button>
       </form>
       {budgets.error ? <ErrorState error={budgets.error} retry={budgets.reload}/> : !budgets.data ? <StateView kind="loading"/> : !budgets.data.length ? <StateView kind="empty" title="Chưa có ngân sách nào"/> :
         <table className="table"><thead><tr><th>Phạm vi</th><th>Chu kỳ</th><th>Ngân sách</th><th>Đã dùng</th><th>Mức dùng</th><th>Không rõ chi phí</th><th><span className="srOnly">Thao tác</span></th></tr></thead>

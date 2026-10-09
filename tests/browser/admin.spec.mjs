@@ -25,7 +25,31 @@ async function block(name, fn) { try { await fn(); } catch (e) { check(`${name} 
 const dlg = (p) => p.locator("[role=dialog]");
 const text = async (p) => (await p.locator("body").innerText()).replace(/\s+/g, " ");
 const settle = (p, ms = 350) => p.waitForTimeout(ms);
+/** client-side navigation inside the page (no reload): the app's router listens to popstate */
+const nav = async (p, path) => { await p.evaluate((u) => { history.pushState(null, "", u); window.dispatchEvent(new PopStateEvent("popstate")); }, path); await settle(p, 450); };
 const linkValue = (p) => p.getByLabel("Liên kết", { exact: true }).inputValue();
+
+
+/**
+ * A confirmation is the app's Modal (M-017), never a native dialog: it names what happens, Esc sends NOTHING, and the confirm button sends the request.
+ * `field`: a prompt (reason / name) whose empty answer is refused with an inline error.
+ */
+async function ask(p, { open, title, confirm, re, field, method }) {
+  const hits = async () => (await calls(p)).filter((c) => c.method !== "GET" && (!method || c.method === method) && re.test(c.path)).length;
+  const n0 = p.__dialogs.length; const h0 = await hits();   // earlier requests of the same kind do not count
+  await open(); await settle(p, 250);
+  const d = dlg(p);
+  const okTitle = (await d.count()) === 1 && title.test(await d.locator("h2").first().innerText().catch(() => ""));
+  const noNative = p.__dialogs.length === n0;
+  await p.keyboard.press("Escape"); await settle(p, 200);
+  const cancelled = (await dlg(p).count()) === 0 && (await hits()) === h0;
+  await open(); await settle(p, 250);
+  let emptyRefused = true;
+  if (field) { await dlg(p).locator("textarea, input").first().fill(""); await dlg(p).getByRole("button", { name: confirm, exact: true }).click(); await settle(p, 150); emptyRefused = (await dlg(p).count()) === 1 && (await dlg(p).locator("[role=alert]").count()) === 1 && (await hits()) === h0; await dlg(p).locator("textarea, input").first().fill(field); }
+  await dlg(p).getByRole("button", { name: confirm, exact: true }).click(); await settle(p, 350);
+  return { okTitle, noNative, cancelled, emptyRefused, sent: (await hits()) > h0 };
+}
+const verdict = (name, r) => check(name, r.okTitle && r.noNative && r.cancelled && r.emptyRefused && r.sent, JSON.stringify(r));
 
 /** Platform → Người dùng → "+ Tạo tài khoản" → fill → submit; the one-time link dialog is open afterwards */
 async function createAccountToLink(p) {
@@ -48,8 +72,7 @@ await block("scenario 2", async () => { const p = await open({ portal: "platform
   check("LNK02 Enter on the initial focus copies the link (clipboard holds it) and says so", (await p.evaluate(() => navigator.clipboard.readText())).includes("/auth/activate#ACT-TOKEN") && /Đã sao chép/.test(await dlg(p).innerText()));
   await p.getByRole("button", { name: "Xong" }).click(); await settle(p, 250);
   check("LNK03 once copied, 'Xong' closes at once and the result dialog follows", /Đã tạo tài khoản/.test(await text(p)) && (await dlg(p).count()) === 1);
-  await p.getByRole("button", { name: "Xem lại liên kết" }).click(); await settle(p, 250);
-  check("LNK04 the result dialog can show the link again while this dialog lives (the link is only in its state, never stored)", /ACT-TOKEN/.test(await linkValue(p)));
+  check("LNK04 after the link was copied and the dialog closed the token is GONE: not in the DOM, and there is no 'Xem lại liên kết' (M-088: a secret is kept only until copied / confirmed)", !/ACT-TOKEN/.test(await p.content()) && (await p.getByRole("button", { name: "Xem lại liên kết" }).count()) === 0);
   await p.__ctx.close(); });
 
 await block("scenario 3", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/users" });
@@ -157,7 +180,7 @@ await block("scenario 10", async () => { const p = await open({ portal: "admin",
   await p.__ctx.close(); });
 await block("scenario 11", async () => { const p = await open({ portal: "admin", me: "sysmember", start: "/admin/applications/a2" }); // member of w1
   check("APP06 a platform admin who IS a member of the workspace keeps 'Xóa' (the server still decides)", (await p.getByRole("button", { name: "Xóa", exact: true }).count()) === 1 && !/không phải thành viên workspace/.test(await text(p)));
-  await p.getByRole("button", { name: "Xóa", exact: true }).click(); await settle(p, 400);
+  await p.getByRole("button", { name: "Xóa", exact: true }).click(); await settle(p, 300); await dlg(p).getByRole("button", { name: "Xóa ứng dụng", exact: true }).click(); await settle(p, 400);
   check("APP07 and it calls the workspace-scoped delete route as before", (await posts(p, /^\/workspaces\/w1\/projects\/a2/)).length === 1, JSON.stringify((await calls(p)).filter((c) => c.method === "DELETE")));
   await p.getByRole("tab", { name: "Phiên bản" }).click(); await settle(p, 200);
   check("APP08 member: 'Khôi phục' (old versions) stays available", (await p.getByRole("button", { name: "Khôi phục", exact: true }).count()) === 1);
@@ -231,6 +254,291 @@ await block("scenario 20", async () => { const p = await open({ portal: "admin",
 await block("scenario 21", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform" }); await settle(p, 600);
   const t = await p.locator("main").innerText();
   check("TXT05 the AI month card does not say budgets are not implemented (they are: 'Quyền & ngân sách AI')", !/chưa triển khai/.test(t) && /Quyền & ngân sách AI/.test(t));
+  await p.__ctx.close(); });
+
+// ===================================================================================================================== M-017 every native confirm / prompt is the app's dialog
+await block("scenario 22", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/users/u2", fx: "1" });
+  verdict("CNF01 lock account", await ask(p, { open: () => p.getByRole("button", { name: "Khóa tài khoản", exact: true }).click(), title: /Khóa tài khoản binh\?/, confirm: "Khóa tài khoản", re: /^\/admin\/users\/u2\/status/ }));
+  verdict("CNF02 grant system admin", await ask(p, { open: () => p.getByRole("button", { name: "Cấp quyền Quản trị hệ thống" }).click(), title: /Cấp quyền Quản trị hệ thống cho binh\?/, confirm: "Cấp quyền", re: /system-admin$/ }));
+  verdict("CNF03 revoke sessions", await ask(p, { open: () => p.getByRole("button", { name: /Thu hồi phiên/ }).click(), title: /Thu hồi mọi phiên đăng nhập của binh\?/, confirm: "Thu hồi phiên", re: /revoke-sessions$/ }));
+  await p.__ctx.close(); });
+await block("scenario 23", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/tenants/t1", fx: "1" });
+  verdict("CNF04 suspend a company", await ask(p, { open: () => p.getByTestId("tenant-SUSPENDED").click(), title: /Tạm khóa công ty “Acme”\?/, confirm: "Tạm khóa", re: /tenants\/t1\/status/ }));
+  verdict("CNF05 remove a company member (the person is named)", await ask(p, { open: () => p.locator('[data-testid="tm:u2"] button').click(), title: /Gỡ .*binh.* khỏi công ty\?/i, confirm: "Gỡ khỏi công ty", re: /tenants\/t1\/members\/u2/ }));
+  await p.__ctx.close(); });
+await block("scenario 24", async () => { const p = await open({ portal: "admin", me: "tadmin", start: "/admin/my-workspaces", fx: "1" });
+  verdict("CNF06 remove a workspace member", await ask(p, { open: () => p.locator('[data-testid="wm:binh"] button').click(), title: /Gỡ Bình khỏi workspace\?/, confirm: "Gỡ khỏi workspace", re: /workspaces\/w1\/members\/u2/ }));
+  await p.__ctx.close(); });
+await block("scenario 25", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/ai/providers", fx: "1" });
+  verdict("CNF07 delete an AI provider", await ask(p, { open: () => p.getByRole("button", { name: "Xóa", exact: true }).first().click(), title: /Xóa nhà cung cấp “OpenAI công ty”\?/, confirm: "Xóa nhà cung cấp", re: /ai\/providers\/p1$/ }));
+  await nav(p, "/platform/ai/limits"); await settle(p, 500);
+  verdict("CNF08 delete an AI limit override", await ask(p, { open: () => p.getByRole("button", { name: "Xóa", exact: true }).first().click(), title: /Xóa hạn mức riêng này\?/, confirm: "Xóa hạn mức", re: /limits\/overrides\/o1$/ }));
+  await p.__ctx.close(); });
+await block("scenario 26", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/ai-governance", fx: "1" });
+  verdict("CNF09 delete an AI budget", await ask(p, { open: () => p.getByRole("button", { name: "Xoá", exact: true }).first().click(), title: /Xoá ngân sách này\?/, confirm: "Xoá ngân sách", re: /ai\/budgets\/b1$/ }));
+  await nav(p, "/admin/departments"); await settle(p, 500);
+  verdict("CNF10 delete a department", await ask(p, { open: () => p.getByRole("button", { name: "Xoá", exact: true }).first().click(), title: /Xoá “Kỹ thuật”\?/, confirm: "Xoá", re: /departments\/d1$/, method: "DELETE" }));
+  verdict("CNF11 rename a department (a prompt: empty is refused)", await ask(p, { open: () => p.getByRole("button", { name: "Đổi tên" }).click(), title: /Đổi tên “Kỹ thuật”/, confirm: "Đổi tên", re: /departments\/d1$/, method: "PATCH", field: "Kỹ thuật mới" }));
+  await p.__ctx.close(); });
+await block("scenario 27", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/applications/a1", fx: "1" });
+  verdict("CNF12 archive an application", await ask(p, { open: () => p.getByRole("button", { name: "Lưu trữ", exact: true }).click(), title: /Lưu trữ “Cổng khách hàng”\?/, confirm: "Lưu trữ", re: /applications\/a1\/archive$/ }));
+  await p.__ctx.close(); });
+await block("scenario 28", async () => { const p = await open({ portal: "admin", me: "sysmember", start: "/admin/applications/a2", fx: "1" });
+  await p.getByRole("tab", { name: "Phiên bản" }).click(); await settle(p, 200);
+  verdict("CNF13 restore an old version", await ask(p, { open: () => p.getByRole("button", { name: "Khôi phục", exact: true }).click(), title: /Khôi phục v1\?/, confirm: "Khôi phục v1", re: /projects\/a2\/versions|restore/ }));
+  await p.__ctx.close(); });
+await block("scenario 29", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/builds", fx: "1" });
+  verdict("CNF14 permanently delete a repository", await ask(p, { open: () => p.getByRole("button", { name: "Xoá vĩnh viễn" }).click(), title: /Xoá vĩnh viễn kho mã “repo-1”\?/, confirm: "Xoá vĩnh viễn", re: /repositories\/pr1\/delete$/ }));
+  await p.__ctx.close(); });
+await block("scenario 30", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/packages", fx: "1" });
+  verdict("CNF15 accept a package's risk (a prompt: the reason is required)", await ask(p, { open: () => p.getByRole("button", { name: "Cho phép", exact: true }).click(), title: /Cho phép “date-fns” dù có lỗ hổng/, confirm: "Chấp nhận rủi ro", re: /packages\/date-fns\/decision$/, field: "Đã rà soát, chỉ dùng ở phía máy chủ" }));
+  await p.__ctx.close(); });
+await block("scenario 31", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/settings", fx: "1" });
+  await p.getByLabel("Tên miền cho phép").fill("evil.com");
+  verdict("CNF16 change a HIGH-risk setting", await ask(p, { open: () => p.getByRole("button", { name: "Lưu", exact: true }).first().click(), title: /Đổi “Tên miền cho phép”\?/, confirm: "Đổi cài đặt", re: /settings\/policies\/net\.domains$/ }));
+  await p.__ctx.close(); });
+await block("scenario 32", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/templates", fx: "1" });
+  verdict("CNF17 reject a template (a prompt: the reason is required)", await ask(p, { open: () => p.getByRole("button", { name: "Từ chối", exact: true }).click(), title: /Từ chối mẫu “Trang chủ mẫu”/, confirm: "Từ chối", re: /templates\/tp1\/review$/, field: "Thiếu tiêu đề" }));
+  verdict("CNF18 archive a template", await ask(p, { open: () => p.getByRole("button", { name: "Lưu trữ", exact: true }).first().click(), title: /Lưu trữ mẫu “Trang chủ mẫu”\?/, confirm: "Lưu trữ", re: /templates\/tp1\/status$/ }));
+  await p.__ctx.close(); });
+
+// ===================================================================================================================== M-018 privileged / high-impact actions are explicit
+await block("scenario 33", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/tenants/t1" });
+  const sel = p.locator('[data-testid="tm:u2"] select');
+  await sel.selectOption("TENANT_ADMIN"); await settle(p, 250);
+  check("ROL01 choosing a company role in the select sends NOTHING; 'Lưu' / 'Hủy' appear", (await posts(p, /tenants\/t1\/members\/u2/)).length === 0 && (await p.getByTestId("tm-save:u2").count()) === 1);
+  await p.locator('[data-testid="tm:u2"]').getByRole("button", { name: "Hủy", exact: true }).click(); await settle(p, 150);
+  check("ROL02 'Hủy' puts the select back and removes the buttons", (await sel.inputValue()) === "MEMBER" && (await p.getByTestId("tm-save:u2").count()) === 0);
+  await sel.selectOption("TENANT_ADMIN");
+  verdict("ROL03 promoting to company admin asks first (names the person and the power)", await ask(p, { open: () => p.getByTestId("tm-save:u2").click(), title: /Cho .*binh.* làm quản trị công ty\?/i, confirm: "Cho làm quản trị", re: /tenants\/t1\/members\/u2/, method: "PUT" }));
+  check("ROL03b the PUT carries the chosen role", (await posts(p, /tenants\/t1\/members\/u2/)).some((c) => c.method === "PUT" && c.body.role === "TENANT_ADMIN"));
+  await settle(p, 400);
+  await p.locator('[data-testid="tm:u-ta"] select').selectOption("MEMBER");
+  verdict("ROL04 taking the admin role away asks first", await ask(p, { open: () => p.getByTestId("tm-save:u-ta").click(), title: /Bỏ quyền quản trị công ty của/, confirm: "Bỏ quyền quản trị", re: /tenants\/t1\/members\/u-ta/, method: "PUT" }));
+  await p.__ctx.close(); });
+await block("scenario 34", async () => { const p = await open({ portal: "admin", me: "tadmin", start: "/admin/my-workspaces" });
+  const sel = p.locator('[data-testid="wm:binh"] select');
+  await sel.selectOption("PUBLISHER"); await settle(p, 200);
+  check("ROL05 a workspace role is applied by 'Lưu', not by the select", (await posts(p, /workspaces\/w1\/members\/u2/)).length === 0 && (await p.getByTestId("wm-save:binh").count()) === 1);
+  const n0 = (await dlg(p).count()); await p.getByTestId("wm-save:binh").click(); await settle(p, 350);
+  check("ROL06 a non-admin role change needs no confirmation (one PATCH, no dialog)", n0 === 0 && (await dlg(p).count()) === 0 && (await posts(p, /workspaces\/w1\/members\/u2/)).some((c) => c.method === "PATCH" && c.body.role === "PUBLISHER"));
+  await sel.selectOption("WORKSPACE_ADMIN");
+  verdict("ROL07 making someone workspace admin asks first", await ask(p, { open: () => p.getByTestId("wm-save:binh").click(), title: /Cho Bình làm quản trị workspace\?/, confirm: "Cho làm quản trị", re: /workspaces\/w1\/members\/u2/, method: "PATCH" }));
+  await p.__ctx.close(); });
+await block("scenario 35", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/ai/providers", fx: "1" });
+  verdict("HIC01 turning an AI provider off (every model of it, for everyone) asks first", await ask(p, { open: () => p.getByRole("button", { name: "Tắt", exact: true }).first().click(), title: /Tắt nhà cung cấp “OpenAI công ty”\?/, confirm: "Tắt nhà cung cấp", re: /ai\/providers\/p1$/, method: "PUT" }));
+  await p.__ctx.close(); });
+await block("scenario 36", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/connectors", fx: "1" });
+  verdict("HIC02 turning a connector off asks first", await ask(p, { open: () => p.getByRole("button", { name: "Tắt", exact: true }).first().click(), title: /Tắt connector “CRM”\?/, confirm: "Tắt connector", re: /connectors\/crm\/status/, method: "POST" }));
+  await p.__ctx.close(); });
+await block("scenario 37", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/packages", fx: "1" });
+  verdict("HIC03 denying an allowed package asks first", await ask(p, { open: () => p.getByRole("button", { name: "Từ chối", exact: true }).click(), title: /Từ chối package “left-pad”\?/, confirm: "Từ chối package", re: /packages\/left-pad\/decision$/, method: "PUT" }));
+  await p.__ctx.close(); });
+await block("scenario 38", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/templates", fx: "1" });
+  verdict("HIC04 sharing a template with the whole company asks first", await ask(p, { open: () => p.getByRole("button", { name: "Chia sẻ toàn công ty" }).click(), title: /Chia sẻ mẫu “Bảng giá” cho cả công ty\?/, confirm: "Chia sẻ toàn công ty", re: /templates\/tp2\/visibility$/, method: "POST" }));
+  await p.__ctx.close(); });
+await block("scenario 39", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/builds", fx: "1" });
+  verdict("HIC05 running the retention cleanup now asks first (it deletes data)", await ask(p, { open: () => p.getByRole("button", { name: "Chạy dọn dẹp ngay" }).click(), title: /Chạy dọn dẹp ngay\?/, confirm: "Chạy dọn dẹp", re: /retention\/run$/, method: "POST" }));
+  await p.__ctx.close(); });
+
+// ===================================================================================================================== M-025 (Admin part) skip link, focus and scroll on route change
+await block("scenario 40", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/users" }); await settle(p, 500);
+  await p.keyboard.press("Tab");
+  check("SKP01 the FIRST Tab stop is the skip link", /Bỏ qua điều hướng/.test(await focusName(p)), await focusName(p));
+  await p.keyboard.press("Enter"); await settle(p, 200);
+  check("SKP02 Enter on it lands in <main> (the sidebar's 16 links are skipped)", await p.evaluate(() => document.activeElement?.id === "main"));
+  const tabindex = await p.locator("main").getAttribute("tabindex"); const scrolls = await p.evaluate(() => { const m = document.querySelector("main"); return m.scrollHeight > m.clientHeight; });
+  check("SKP03 <main> is a Tab stop (0) only while it scrolls, otherwise -1", tabindex === (scrolls ? "0" : "-1"), `tabindex=${tabindex} scrolls=${scrolls}`);
+  await p.__ctx.close(); });
+await block("scenario 41", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/system" }, { h: 400 }); await settle(p, 500);
+  await p.evaluate(() => { document.querySelector("main").scrollTop = 99999; });
+  await p.getByRole("link", { name: "Cài đặt" }).click(); await settle(p, 700);
+  check("SKP04 following a sidebar link moves focus to the new page's h1", await p.evaluate(() => document.activeElement?.tagName === "H1" && /Cài đặt/.test(document.activeElement.textContent)), await p.evaluate(() => document.activeElement?.tagName + ":" + (document.activeElement?.textContent ?? "").slice(0, 30)));
+  check("SKP05 and scrolls <main> back to the top", (await p.evaluate(() => document.querySelector("main").scrollTop)) === 0);
+  await p.__ctx.close(); });
+
+// ===================================================================================================================== M-055 an unknown address is a 404, not "it is in the other console"
+await block("scenario 42", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/nope" }); await settle(p, 400);
+  const h1 = await p.locator("h1").innerText(); const t = await p.locator("main").innerText();
+  check("NF01 /platform/nope says it was not found (no 'nằm ở trang khác', no button to the other console)", /Không tìm thấy/.test(h1) && !/trang khác/.test(t) && (await p.locator("main a[href^='/admin']").count()) === 0, h1);
+  check("NF02 and offers a way back to the overview of THIS console", (await p.locator("main").getByRole("link", { name: /tổng quan/i }).getAttribute("href")) === "/platform");
+  await nav(p, "/platform/people"); check("NF03 /platform/people (a SYSTEM_ADMIN has no such screen anywhere) is a 404, not a loop to the Admin console", /Không tìm thấy/.test(await p.locator("h1").innerText()));
+  await nav(p, "/platform/company"); check("NF04 /platform/company exists in the Admin console: the pointer stays", /nằm ở trang khác/.test(await p.locator("h1").innerText()) && (await p.locator("main a[href='/admin/company']").count()) === 1);
+  await p.__ctx.close(); });
+await block("scenario 43", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/nope/deeper" }); await settle(p, 400);
+  check("NF05 /admin/nope/deeper is a 404", /Không tìm thấy/.test(await p.locator("h1").innerText()));
+  await nav(p, "/admin/people"); check("NF06 /admin/people as a SYSTEM_ADMIN is a 404 (no ping-pong)", /Không tìm thấy/.test(await p.locator("h1").innerText()));
+  await nav(p, "/admin/ai"); check("NF07 /admin/ai exists in the Platform: the pointer stays", /nằm ở trang khác/.test(await p.locator("h1").innerText()));
+  await p.__ctx.close(); });
+
+// ===================================================================================================================== M-056 a failed secondary load says so (error + retry), never a spinner or '…' forever
+await block("scenario 44", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/builds", fail: "/admin/retention" }); await settle(p, 900);
+  const main = p.locator("main");
+  check("LDG01 Builds: the two failed panels (cleanup preview, repositories) show an error each, NO spinner left", (await main.locator(".spinner").count()) === 0 && (await main.locator(".state-error, .state-network").count()) === 2, `spinners=${await main.locator(".spinner").count()} errors=${await main.locator(".state-error, .state-network").count()}`);
+  check("LDG02 the report that DID load is still on screen", /Build 30 ngày/.test(await main.innerText()));
+  await p.evaluate(() => { window.__cfg.fail = null; });
+  await main.getByRole("button", { name: "Thử lại" }).first().click(); await settle(p, 600);
+  check("LDG03 'Thử lại' reloads that panel (the other one still offers it)", (await main.locator(".state-error, .state-network").count()) === 1 && /Sẽ xoá/.test(await main.innerText()));
+  await p.__ctx.close(); });
+await block("scenario 45", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/builds", slow: "/admin/retention" }); await settle(p, 500);
+  check("LDG04 a loading panel says WHAT is loading", /Đang tải bản xem trước dọn dẹp/.test(await p.locator("main").innerText()));
+  await p.__ctx.close(); });
+await block("scenario 46", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/identity", fail: "/admin/scim" }); await settle(p, 900);
+  const main = p.locator("main");
+  check("LDG05 Identity: a failed SCIM load leaves no '…' KPI and no spinner; it says so with a retry", !/…/.test(await main.locator(".kpiGrid").innerText()) && (await main.locator(".spinner").count()) === 0 && (await main.getByRole("button", { name: "Thử lại" }).count()) >= 1, (await main.locator(".kpiGrid").innerText()).replace(/\s+/g, " "));
+  await p.__ctx.close(); });
+await block("scenario 47", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/identity", fail: "/auth/config" }); await settle(p, 900);
+  check("LDG06 Identity: a failed /auth/config says so in the OIDC / SAML tiles (not '…')", !/…/.test(await p.locator("main .kpiGrid").innerText()) && (await p.locator("main .kpiGrid .state-error, main .kpiGrid .state-network").count()) >= 2);
+  await p.__ctx.close(); });
+await block("scenario 48", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/ai-governance", fail: "/admin/users" }); await settle(p, 500);
+  await p.getByLabel("Phạm vi").first().selectOption("USER"); await settle(p, 900);
+  check("LDG07 a scope picker whose search failed says so (it used to show an empty list)", /Chưa tải được danh sách để chọn/.test(await p.locator("main").innerText()));
+  await p.__ctx.close(); });
+await block("scenario 49", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/applications/a1", fail: "/admin/workspaces" }); await settle(p, 900);
+  check("LDG08 application detail: the owner choices that failed to load say so", /Chưa tải được danh sách thành viên workspace/.test(await p.locator("main").innerText()));
+  await p.__ctx.close(); });
+await block("scenario 50", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/users/u2", slow: "/admin/users/u2" }); await settle(p, 400);
+  check("LDG09 a detail page that is still loading already has its one h1, naming what loads", (await p.locator("h1").count()) === 1 && /Đang tải thông tin người dùng/.test(await p.locator("h1").innerText()));
+  await p.__ctx.close(); });
+await block("scenario 51", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/users/u2", fail: "/admin/users/u2" }); await settle(p, 900);
+  check("LDG10 a detail page whose load failed has one h1 (the error) and a retry", (await p.locator("h1").count()) === 1 && (await p.getByRole("button", { name: "Thử lại" }).count()) === 1);
+  await p.__ctx.close(); });
+await block("scenario 52", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/tenants", fail: "/admin/users" }); await settle(p, 400);
+  await p.getByRole("button", { name: "+ Tạo công ty" }).click(); await settle(p, 900);
+  check("LDG11 create company: the first-admin picker whose account list failed says so", /Chưa tải được danh sách tài khoản/.test(await p.locator("[role=dialog]").innerText()));
+  await p.__ctx.close(); });
+
+// ===================================================================================================================== M-057 the employee status button is never a dead control
+await block("scenario 53", async () => { const p = await open({ portal: "admin", me: "sysatenant", start: "/admin/employees" }); await settle(p, 600);
+  await p.locator("[data-testid^='emp:']").first().click(); await settle(p, 300);
+  const btn = p.getByTestId("detail-toggle");
+  check("EMP57a a SYSTEM_ADMIN who is also a company admin: the status button is UNAVAILABLE (aria-disabled), not an enabled control with no handler", (await btn.getAttribute("aria-disabled")) === "true");
+  check("EMP57b the reason is visible text next to it and says where the action is", /Platform/.test(await p.locator("[role=dialog] .xp-reason").innerText()), await p.locator("[role=dialog] .xp-reason").innerText().catch(() => "none"));
+  await p.evaluate(() => { window.__calls.length = 0; }); await btn.click({ force: true }); await settle(p, 300);
+  check("EMP57c clicking it sends nothing", (await calls(p)).filter((c) => c.method !== "GET").length === 0);
+  await p.__ctx.close(); });
+await block("scenario 54", async () => { const p = await open({ portal: "admin", me: "tadmin", start: "/admin/employees" }); await settle(p, 600);
+  await p.locator("[data-testid^='emp:']").first().click(); await settle(p, 300);
+  check("EMP57d a company admin: unavailable too, with the existing explanation as visible text", (await p.getByTestId("detail-toggle").getAttribute("aria-disabled")) === "true" && /Chỉ quản trị hệ thống/.test(await p.locator("[role=dialog] .xp-reason").innerText()));
+  await p.__ctx.close(); });
+
+// ===================================================================================================================== M-058 the company list can be searched and paged (client-side, over what the API returns)
+await block("scenario 55", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/tenants", big: "1" }); await settle(p, 500);
+  check("TEN01 63 companies: a search box and a pager exist; one page of rows is rendered (not all 63)", (await p.getByLabel("Tìm công ty").count()) === 1 && (await p.locator("[data-testid=tenant-list] tbody tr").count()) === 25 && /1–25 \/ 63/.test(await p.locator(".pager").innerText()), `rows=${await p.locator("[data-testid=tenant-list] tbody tr").count()}`);
+  await p.locator(".pager").getByRole("button", { name: /Sau/ }).click(); await settle(p, 200);
+  check("TEN02 'Sau' shows the next page", /26–50 \/ 63/.test(await p.locator(".pager").innerText()));
+  await p.getByLabel("Tìm công ty").fill("Công ty 5"); await settle(p, 400);
+  const names = await p.locator("[data-testid=tenant-list] tbody tr b").allInnerTexts();
+  check("TEN03 searching by name filters (client-side) and goes back to page 1; the pager follows the filtered total", names.length > 0 && names.every((n) => /Công ty 5/.test(n)) && !/\/ 63/.test(await p.locator(".pager").innerText().catch(() => "")), `${names.length} rows`);
+  await p.getByLabel("Tìm công ty").fill("c-7"); await settle(p, 300);
+  check("TEN04 the company CODE is searched too", (await p.locator("[data-testid=tenant-list] tbody tr").count()) >= 1);
+  await p.getByLabel("Tìm công ty").fill("không-có-công-ty-này"); await settle(p, 300);
+  check("TEN05 no match: a clear message (not an empty table)", /Không có công ty phù hợp/.test(await p.locator("main").innerText()) && (await p.locator("[data-testid=tenant-list]").count()) === 0);
+  await p.__ctx.close(); });
+await block("scenario 56", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/tenants" }); await settle(p, 500);
+  check("TEN06 3 companies: no pager (everything fits one page)", (await p.locator(".pager").count()) === 0 && (await p.locator("[data-testid=tenant-list] tbody tr").count()) === 3);
+  await p.__ctx.close(); });
+
+// ===================================================================================================================== M-123 after a successful "Tạo công ty" focus is not lost
+await block("scenario 57", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/tenants" }); await settle(p, 500);
+  await p.getByRole("button", { name: "+ Tạo công ty" }).click(); await settle(p, 300);
+  await p.getByTestId("tenant-name").fill("Công ty Tập Trung"); await p.getByRole("button", { name: "Tạo công ty" }).last().click(); await settle(p, 1000);
+  const f = await p.evaluate(() => ({ tag: document.activeElement?.tagName, text: (document.activeElement?.textContent ?? "").slice(0, 40) }));
+  check("FOC01 after creating a company the focus is on the new company's heading (not <body>)", f.tag === "H1" && /Công ty Tập Trung/.test(f.text), JSON.stringify(f));
+  await p.__ctx.close(); });
+
+// ===================================================================================================================== M-119 / M-120 / M-121 empty answers (the state-matrix tool's 'empty' mode: emptify=1)
+const emptyOf = async (path) => { const p = await open({ portal: "platform", me: "sys", start: path, emptify: "1" }); await settle(p, 800); const t = await p.locator("main").innerText(); return { p, t }; };
+await block("scenario 58", async () => { const { p, t } = await emptyOf("/platform/costs");
+  check("EMP01 costs with nothing in it shows no NaN / undefined and says there is no data", !/NaN|undefined|\[object/.test(t) && /Chưa có số liệu chi phí/.test(t), t.slice(0, 160));
+  await p.__ctx.close(); });
+await block("scenario 59", async () => { const { p, t } = await emptyOf("/platform/components");
+  check("EMP02 components: an empty registry says so", /Chưa có component nào/.test(t));
+  await p.__ctx.close(); });
+await block("scenario 60", async () => { const { p, t } = await emptyOf("/platform/system");
+  check("EMP03 system health: no checks says so", /Chưa có thành phần nào được kiểm tra/.test(t));
+  await p.__ctx.close(); });
+await block("scenario 61", async () => { const { p, t } = await emptyOf("/platform/settings");
+  check("EMP04 settings: no editable policies says so", /Chưa có chính sách nào chỉnh được/.test(t));
+  await p.__ctx.close(); });
+await block("scenario 62", async () => { const { p, t } = await emptyOf("/platform/ai/usage");
+  check("EMP05 AI usage with an empty daily series (M-120) renders: heading, no crash", (await p.locator("h1").count()) === 1 && /Mức sử dụng model/.test(t) && !/Invalid time value/.test(t));
+  await p.__ctx.close(); });
+
+// ===================================================================================================================== M-088 secrets do not outlive their use
+await block("scenario 63", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/connectors" }); await settle(p, 500);
+  await p.getByLabel("Mã", { exact: true }).fill("kho"); await p.getByLabel("Tên", { exact: true }).fill("Kho"); await p.getByLabel("Giá trị xác thực").fill("S3CR3T-VALUE");
+  await p.getByLabel("Thao tác cho phép").fill("GET /a b");
+  check("SEC01 a path with a space inside is refused (it used to be glued into '/ab' silently)", /đường dẫn không có khoảng trắng/.test(await p.locator("main").innerText()) && (await p.getByRole("button", { name: "Lưu", exact: true }).isDisabled()));
+  await p.getByLabel("Thao tác cho phép").fill("GET /a");
+  await p.getByRole("button", { name: "Lưu", exact: true }).click(); await settle(p, 500);
+  check("SEC02 after a successful save the credential field is EMPTY again (value gone from the input)", (await p.getByLabel("Giá trị xác thực").inputValue()) === "");
+  const sent = (await calls(p)).filter((c) => c.method === "PUT" && /admin\/connectors/.test(c.path))[0];
+  check("SEC03 the credential was sent exactly once and the operations are the cleaned ones", !!sent && sent.body.authValue === "S3CR3T-VALUE" && JSON.stringify(sent.body.operations) === JSON.stringify([{ method: "GET", path: "/a" }]), JSON.stringify(sent?.body));
+  await p.__ctx.close(); });
+
+// ===================================================================================================================== M-020 one click / double click / Enter + click = ONE request
+/** the first request stays in flight (`slow`), the second activation arrives before the answer: only one write may have been sent */
+const writes = async (p, re, method) => (await calls(p)).filter((c) => c.method === method && re.test(c.path)).length;
+await block("scenario 64", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/costs" }); await settle(p, 500);
+  await p.evaluate(() => { window.__cfg.slow = "/admin/costs/prices"; }); await p.getByPlaceholder("Đơn giá", { exact: true }).fill("5");
+  await p.getByRole("button", { name: "Thêm đơn giá" }).dblclick(); await settle(p, 400);
+  check("DBL01 costs: a double click on 'Thêm đơn giá' sends ONE price row", (await writes(p, /costs\/prices$/, "POST")) === 1, `${await writes(p, /costs\/prices$/, "POST")}`);
+  await p.__ctx.close(); });
+await block("scenario 65", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/departments" }); await settle(p, 500);
+  await p.evaluate(() => { window.__cfg.slow = "/admin/departments"; }); await p.getByLabel("Tên", { exact: true }).fill("Phòng A");
+  await p.getByRole("button", { name: "Thêm", exact: true }).first().dblclick(); await settle(p, 400);
+  check("DBL02 departments: a double click on 'Thêm' creates ONE department", (await writes(p, /departments$/, "POST")) === 1);
+  await p.__ctx.close(); });
+await block("scenario 66", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/ai-governance" }); await settle(p, 500);
+  await p.evaluate(() => { window.__cfg.slow = "/admin/ai/budgets"; }); await p.getByLabel("Số tiền").fill("10");
+  await p.getByRole("button", { name: "Lưu ngân sách" }).dblclick(); await settle(p, 400);
+  check("DBL03 AI budget: a double click on 'Lưu ngân sách' sends ONE PUT", (await writes(p, /ai\/budgets$/, "PUT")) === 1);
+  await p.evaluate(() => { window.__cfg.slow = "/admin/ai/access"; });
+  await p.getByRole("button", { name: "Thêm quy tắc chặn" }).dblclick(); await settle(p, 400);
+  check("DBL04 AI access rule: a double click on 'Thêm quy tắc chặn' sends ONE POST", (await writes(p, /ai\/access$/, "POST")) === 1);
+  await p.__ctx.close(); });
+await block("scenario 67", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/ai/models" }); await settle(p, 600);
+  await p.evaluate(() => { window.__cfg.slow = "/admin/ai/pricing"; });
+  await p.getByLabel("Model", { exact: true }).selectOption({ index: 1 }); await p.getByLabel("Giá token vào (USD / 1 triệu)").fill("1"); await p.getByLabel("Giá token ra (USD / 1 triệu)").fill("2");
+  await p.getByRole("button", { name: "Thêm giá" }).dblclick(); await settle(p, 400);
+  check("DBL05 model price: a double click on 'Thêm giá' adds ONE (immutable) price row", (await writes(p, /ai\/pricing$/, "POST")) === 1);
+  await p.__ctx.close(); });
+await block("scenario 68", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/ai/limits" }); await settle(p, 600);
+  await p.evaluate(() => { window.__cfg.slow = "/admin/ai/limits/defaults"; });
+  await p.getByRole("button", { name: "Lưu hạn mức mặc định" }).dblclick(); await settle(p, 400);
+  check("DBL06 AI default limits: a double click on 'Lưu hạn mức mặc định' sends ONE PUT", (await writes(p, /limits\/defaults$/, "PUT")) === 1);
+  await p.__ctx.close(); });
+await block("scenario 69", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/packages" }); await settle(p, 500);
+  await p.evaluate(() => { window.__cfg.slow = "/admin/packages"; }); await p.getByLabel("Tên package").fill("zod");
+  await p.getByRole("button", { name: "Kiểm tra & duyệt" }).first().dblclick(); await settle(p, 400);
+  check("DBL07 packages: a double click on 'Kiểm tra & duyệt' sends ONE request", (await writes(p, /admin\/packages$/, "POST")) === 1);
+  await p.__ctx.close(); });
+await block("scenario 70", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/tenants/t1" }); await settle(p, 500);
+  await p.getByTestId("tm-search").fill("cu"); await settle(p, 800); await p.getByTestId("tm-person").selectOption("u9");
+  await p.evaluate(() => { window.__cfg.slow = "/admin/tenants/t1/members"; });
+  await p.getByTestId("tm-add").dblclick(); await settle(p, 400);
+  check("DBL08 company members: a double click on 'Thêm vào công ty' sends ONE PUT", (await writes(p, /tenants\/t1\/members\/u9$/, "PUT")) === 1);
+  await p.__ctx.close(); });
+await block("scenario 71", async () => { const p = await open({ portal: "admin", me: "tadmin", start: "/admin/my-workspaces" }); await settle(p, 500);
+  await p.evaluate(() => { window.__cfg.slow = "/workspaces/w1/members"; }); await p.getByTestId("ws-add-who").fill("nguoi.moi");
+  await p.getByRole("button", { name: "Thêm vào workspace" }).dblclick(); await settle(p, 400);
+  check("DBL09 workspace members: a double click on 'Thêm vào workspace' sends ONE POST", (await writes(p, /workspaces\/w1\/members$/, "POST")) === 1);
+  await p.__ctx.close(); });
+await block("scenario 72", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/connectors" }); await settle(p, 500);
+  await p.evaluate(() => { window.__cfg.slow = "/admin/connectors"; });
+  await p.getByLabel("Mã", { exact: true }).fill("kho"); await p.getByLabel("Tên", { exact: true }).fill("Kho");
+  await p.getByRole("button", { name: "Lưu", exact: true }).dblclick(); await settle(p, 400);
+  check("DBL10 connectors: a double click on 'Lưu' sends ONE PUT", (await writes(p, /admin\/connectors$/, "PUT")) === 1);
+  await p.__ctx.close(); });
+await block("scenario 73", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/tenants", slow: "/admin/tenants" }); await settle(p, 500);
+  await p.getByRole("button", { name: "+ Tạo công ty" }).click(); await settle(p, 300);
+  await p.getByTestId("tenant-name").fill("Công ty Hai Lần");
+  await p.keyboard.press("Enter"); await p.getByRole("button", { name: /Tạo công ty|Đang tạo/ }).last().dblclick({ force: true }).catch(() => undefined); await settle(p, 500);
+  check("DBL11 create company: Enter + double click sends ONE POST", (await writes(p, /admin\/tenants$/, "POST")) === 1);
+  await p.__ctx.close(); });
+await block("scenario 74", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/identity" }); await settle(p, 500);
+  check("DBL12 (control) the page that has no write loads without a request storm", (await calls(p)).filter((c) => c.method !== "GET").length === 0);
   await p.__ctx.close(); });
 
 // ===================================================================================================================== route / navigation snapshot (M-066: the split must not change behaviour)

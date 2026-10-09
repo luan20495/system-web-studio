@@ -2,7 +2,7 @@
 /**
  * TEST-ONLY harness for tests/browser/admin.spec.mjs. It proves what the SCREENS do with the answers C1's contract describes; it never proves what a server answers.
  * Query: ?portal=platform|admin|all  &me=sys|sysmember|tadmin|wsadmin|plain|sysatenant|none  &start=/platform/tenants  &fail=<path prefix: GET answers 500>  &failw=<prefix: writes answer 500>  &slow=<prefix: 2.5 s>
- *        &empty=1  &big=1  &daily=empty  &bad=audit|schema.   Every request is recorded in window.__calls ({method, path, body}); a request with no fixture answers 404 and is recorded as {unknown}.
+ *        &empty=1  &big=1  &daily=empty  &bad=audit|schema  &fx=1 (extra fixtures)  &emptify=1 (every array answer empty, like the state-matrix tool).   Every request is recorded in window.__calls ({method, path, body}); a request with no fixture answers 404 and is recorded as {unknown}.
  * `window.__cfg` can be changed by the spec at run time (slow / fail / failw). The activation token in the fixtures is a made-up string.
  */
 import { createRoot } from "react-dom/client";
@@ -25,6 +25,10 @@ const start = P.get("start") ?? (portal === "platform" ? "/platform" : "/admin")
 function AllShell() { const { me, loading } = useSession(); const path = usePathname(); if (loading || !me) return null; return <AdminApp seg={segments(path).slice(1)} portal="all"/>; }
 (window as any).__calls = [] as any[];
 (window as any).__cfg = { fail: failP, slow: slowP };
+const FX = P.get("fx") === "1";   // richer fixtures (departments, a template to review, a budget): off by default so the route snapshot keeps its shape
+/** &emptify=1: the state-matrix tool's 'empty' mode (scripts/ui-state-matrix.mjs): every array of every GET answer becomes [] and every `total` 0, scalars stay (so a screen that does arithmetic on them is exercised) */
+const EMPTIFY = P.get("emptify") === "1";
+const emptify = (v: any, depth = 0): any => (Array.isArray(v) ? [] : v && typeof v === "object" && depth < 3 ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, k === "total" ? 0 : Array.isArray(x) ? [] : emptify(x, depth + 1)])) : v);
 const iso = (d = 0) => new Date(Date.now() - d * 86400000).toISOString();
 
 const WS = (id: string, name: string, permissions: string[]) => ({ id, name, role: "x", tenantId: "t1", permissions });
@@ -103,12 +107,15 @@ const H: Handler[] = [
   ["GET", /^\/admin\/ai\/usage$/, () => usageReport],
   ["GET", /^\/admin\/ai\/calls$/, () => page([])],
   ["GET", /^\/admin\/ai\/access$/, () => []],
-  ["GET", /^\/admin\/ai\/budgets$/, () => []],
+  ["GET", /^\/admin\/ai\/budgets$/, () => (FX ? [{ id: "b1", scopeType: "ORG", scopeId: "", scopeLabel: null, period: "MONTHLY", amount: 100, currency: "USD", usdPerUnit: 1, softPercent: 80, hard: true, spent: 10, spentUsd: 10, unknownCostCalls: 0, percent: 10, periodStart: iso(5) }] : [])],
+  ["DELETE", /^\/admin\/ai\/budgets\/([^/]+)$/, () => undefined],
+  ["DELETE", /^\/admin\/ai\/limits\/overrides\/([^/]+)$/, () => limits],
   ["GET", /^\/admin\/alerts$/, () => ({ open: 1, items: [{ id: "al1", kind: "AI_BUDGET_SOFT", severity: "WARNING", message: "Gần hết", createdAt: iso(0), acknowledgedAt: null, acknowledgedBy: null }] })],
   ["POST", /^\/admin\/alerts\/([^/]+)\/acknowledge$/, () => ({ ok: true })],
   ["GET", /^\/admin\/components$/, () => [{ id: "hero", name: "Hero", category: "layout", description: "Banner", latestVersion: "1.0.0", status: "ACTIVE", usedInProjects: 1, sections: 2, propsSchema: P.get("bad") === "schema" ? "not json at all" : "{\"type\":\"object\"}" }]],
   ["GET", /^\/admin\/component-packages$/, () => ({ page: page([]), counts: {} })],
-  ["GET", /^\/admin\/templates$/, () => page([])],
+  ["GET", /^\/admin\/templates$/, () => page(FX ? [{ id: "tp1", name: "Trang chủ mẫu", description: "Mẫu", visibility: "PRIVATE", status: "ACTIVE", version: 1, authorId: "u2", author: "binh", sourceProjectId: null, createdAt: iso(3), updatedAt: iso(1), sections: 3, componentTypes: ["hero"], schema: { sections: [] }, canEdit: false, category: "landing", tags: [], reviewStatus: "REVIEW", usageCount: 0, previewStatus: "NONE", submittedAt: iso(1), reviewedBy: null, reviewedAt: null, reviewComment: null, canReview: true }, { id: "tp2", name: "Bảng giá", description: "", visibility: "PRIVATE", status: "ACTIVE", version: 2, authorId: "u2", author: "binh", sourceProjectId: null, createdAt: iso(8), updatedAt: iso(4), sections: 2, componentTypes: ["pricing"], schema: { sections: [] }, canEdit: false, category: "pricing", tags: [], reviewStatus: "APPROVED", usageCount: 1, previewStatus: "NONE", submittedAt: iso(7), reviewedBy: "root", reviewedAt: iso(6), reviewComment: null, canReview: false }] : [])],
+  ["POST", /^\/admin\/templates\/([^/]+)\/(review|status|visibility)$/, () => ({})],
   ["GET", /^\/admin\/audit\/actions$/, () => ["USER_LOGIN"]],
   ["GET", /^\/admin\/audit$/, () => page(overview.recentActivity)],
   ["GET", /^\/admin\/system\/health$/, () => health],
@@ -120,11 +127,15 @@ const H: Handler[] = [
   ["GET", /^\/admin\/retention\/repositories$/, () => [{ projectId: "pr1", project: "App", name: "repo-1", state: "PENDING_DELETE", sizeBytes: 1000, archivedAt: iso(5), deleteAfter: iso(-1) }]],
   ["POST", /^\/admin\/retention\/run$/, () => ({ dryRun: false, abandonedUploads: 0, deletedAssetRows: 0, idempotencyKeys: 0, failedDeployments: 0, aiCalls: 0, retention: { previewsExpired: 0, artifactsDeleted: 1, artifactBytesFreed: 10, failedBuildLogsCleared: 0, repositoriesPendingDelete: 0 } })],
   ["POST", /^\/admin\/retention\/repositories\/([^/]+)\/delete$/, () => ({ state: "DELETED" })],
-  ["GET", /^\/admin\/packages$/, () => [{ name: "date-fns", versionRange: "^3", pinnedVersion: null, status: "DENIED", dependencies: 3, findings: [{ severity: "HIGH" }], requestedBy: "binh", decidedBy: null, decidedAt: null, riskAccepted: false, note: "" }]],
+  ["GET", /^\/admin\/packages$/, () => [...(FX ? [{ name: "left-pad", versionRange: "^1", pinnedVersion: null, status: "ALLOWED", dependencies: 0, findings: [], requestedBy: "binh", decidedBy: "root", decidedAt: iso(2), riskAccepted: false, note: "" }] : []), { name: "date-fns", versionRange: "^3", pinnedVersion: null, status: "DENIED", dependencies: 3, findings: [{ severity: "HIGH" }], requestedBy: "binh", decidedBy: null, decidedAt: null, riskAccepted: false, note: "" }]],
   ["PUT", /^\/admin\/packages\/([^/]+)\/decision$/, () => ({})],
   ["GET", /^\/admin\/backups$/, () => []],
   ["GET", /^\/admin\/connectors$/, () => [{ key: "crm", name: "CRM", description: "", baseUrl: "https://crm.example.com", authHeader: "Authorization", hasSecret: true, operations: [{ method: "GET", path: "/c" }], grants: 1, status: "APPROVED" }]],
-  ["GET", /^\/admin\/departments$/, () => []],
+  ["PUT", /^\/admin\/connectors$/, () => []],
+  ["GET", /^\/admin\/departments$/, () => (FX ? [{ id: "d1", name: "Kỹ thuật", kind: "DEPARTMENT", parentId: null, users: 3, workspaces: 1, createdAt: iso(9) }] : [])],
+  ["PATCH", /^\/admin\/departments\/([^/]+)$/, () => []],
+  ["DELETE", /^\/admin\/departments\/([^/]+)$/, () => []],
+  ["POST", /^\/admin\/departments$/, () => []],
   ["GET", /^\/admin\/costs$/, () => ({ days: 30, prices: [], missingPrices: [], total: { key: "t", label: null, storageBytes: 0, buildCpuMs: 0, buildMs: 0, aiUsd: 0, aiUnknownCalls: 0, totalKnownUsd: 0, complete: true, storageUsd: null, cpuUsd: null, buildUsd: null }, byDepartment: [], byWorkspace: [], byApplication: [], egress: "chưa đo" })],
   ["GET", /^\/admin\/security\/findings$/, () => ({ counts: {}, findings: [], note: "" })],
   ["GET", /^\/admin\/scim$/, () => ({ enabled: false, users: 0, groups: [], mappings: [] })],
@@ -154,7 +165,7 @@ window.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   if (cfg.failw && path.startsWith(cfg.failw) && method !== "GET") return json(500, { code: "INTERNAL", message: "Internal Server Error: could not execute statement; SQL [n/a]", requestId: "req-999" });
   for (const [m, re, fn] of H) {
     if (m !== method) continue; const mm = path.match(re); if (!mm) continue;
-    try { const out = await fn(mm, body, url); if (out === undefined) return new Response(null, { status: 204 }); return json(200, out); }
+    try { const out = await fn(mm, body, url); if (out === undefined) return new Response(null, { status: 204 }); return json(200, EMPTIFY && method === "GET" && !/^\/auth\//.test(path) ? emptify(out) : out); }
     catch (e: any) { if (e && e.s) return json(e.s, { code: e.code, message: e.message ?? "msg", requestId: "rq" }); throw e; }
   }
   (window as any).__calls.push({ unknown: method + " " + path });

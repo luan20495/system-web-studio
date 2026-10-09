@@ -5,7 +5,7 @@
  * The console is carried by `AdminConsoleContext`, not by module variables.
  */
 import { useEffect, useMemo } from "react";
-import { useNavDrawer } from "@xweb/ui";
+import { SkipLink, useMain, useNavDrawer } from "@xweb/ui";
 import { useSession } from "../session";
 import { adminScope } from "./adminModel";
 import type { AdminPortal } from "./base";
@@ -20,6 +20,8 @@ export function AdminApp({ seg, portal = "all" }: { seg: string[]; portal?: Admi
   const active = section === "workspaces" ? "users" : section;
   const { me } = useSession();
   const scope = adminScope(me); const nav = useNavDrawer();
+  // skip link target: focus goes to the page's h1 and the region scrolls to the top on a route change; a Tab stop only while it scrolls
+  const main = useMain(seg.join("/"));
   const consoleValue = useMemo(() => makeAdminConsole(portal, (key) => owns(SECTIONS, portal, key)), [portal]);
   const items = navSections(SECTIONS, portal, scope);
   // one title per screen ("Nhân viên · Quản trị công ty"), so browser tabs, history and screen readers can tell the pages apart
@@ -28,11 +30,12 @@ export function AdminApp({ seg, portal = "all" }: { seg: string[]; portal?: Admi
   return (
     <AdminConsoleContext.Provider value={consoleValue}>
       <div className="shell admin" data-nav={nav.open ? "open" : "closed"}>
+        <SkipLink/>
         <AdminSidebar active={active} scope={scope} items={items}/>
         <div className="sideBackdrop" onClick={nav.close} aria-hidden="true"/>
         <div className="shellMain">
           <AdminHeader nav={nav}/>
-          <main className="page" id="main" tabIndex={0}>{route(portal, seg, scope)}</main>
+          <main className="page" {...main}>{route(portal, seg, scope)}</main>
         </div>
       </div>
     </AdminConsoleContext.Provider>
