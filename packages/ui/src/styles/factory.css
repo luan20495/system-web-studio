@@ -374,7 +374,7 @@ fieldset.stack>legend{padding:0;margin:0 0 var(--sp-2);font-size:var(--f-fs-md);
   background-repeat:no-repeat;background-position:right 10px center;background-size:16px;text-overflow:ellipsis}
 .shell select[multiple],.shell select[size]:not([size="1"]),.adminModal select[multiple],.adminModal select[size]:not([size="1"]){background-image:none;padding:6px 10px}
 .shell textarea,.authPage textarea{width:100%;min-height:80px;padding:8px 10px;border:1px solid var(--f-control-border);border-radius:var(--f-r-sm);background:var(--f-panel);color:var(--f-text);font:inherit;resize:vertical}
-.shell input[type=checkbox],.shell input[type=radio]{min-height:0;width:16px;height:16px;padding:0;flex:none;accent-color:var(--f-accent)}
+.shell input[type=checkbox],.shell input[type=radio]{padding:0;flex:none;accent-color:var(--f-accent)}
 .shell ::placeholder,.authPage ::placeholder{color:var(--f-placeholder);opacity:1}
 .shell input:disabled,.shell select:disabled,.shell textarea:disabled,.authPage input:disabled{background-color:var(--f-disabled-bg);color:var(--f-disabled-ink);cursor:not-allowed}
 .shell input[readonly]{background:var(--f-bg)}

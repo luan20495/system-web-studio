@@ -146,6 +146,13 @@ test("M-105: `.stack` is defined (it was used in 10 places and defined nowhere);
   assert.match(f, /\.modalBody>h2\{margin:0;font-size:18px/);
 });
 
+test("M-070: the visually-hidden class is styled under both spellings in use (`sr-only` had no rule: a table caption rendered visibly); the 16px checkbox size that the 24px target rule always overrode is gone", () => {
+  assert.match(css["http.css"], /\.srOnly,\.sr-only\{position:absolute;width:1px;height:1px/);
+  const rule = /\.shell input\[type=checkbox\],\.shell input\[type=radio\]\{([^}]*)\}/.exec(css["factory.css"]); assert.ok(rule);
+  assert.doesNotMatch(rule![1], /width|height/);
+  assert.match(css["factory.css"], /\.shell input\[type=checkbox\],\.shell input\[type=radio\],\.adminModal input\[type=checkbox\],\.adminModal input\[type=radio\]\{width:24px;height:24px;min-height:24px\}/);
+});
+
 test("M-069: radius and type scale are tokens with their original values; the light sheets (factory / ui / http) use them instead of re-typing the scale values", () => {
   const SCALE: Record<string, string> = { "--f-r-xs": "6px", "--f-r-sm": "8px", "--f-r": "10px", "--f-r-lg": "12px", "--f-r-pill": "999px", "--f-fs-xs": "11px", "--f-fs-sm": "12px", "--f-fs-md": "13px", "--f-fs-base": "14px" };
   for (const [n, v] of Object.entries(SCALE)) assert.equal(tokens.get(n), v, n);
