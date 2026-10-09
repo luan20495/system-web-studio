@@ -85,7 +85,7 @@ for (const [kind, text] of [["PUBLISH", /đang xuất bản/], ["ROLLBACK", /đa
 // ---- publish request, keys ----------------------------------------------------------------------------------------------------------------------------------------
 { const p = await open();
   await set(p, { deployment: dep("n1", 4, "QUEUED") });
-  await p.getByRole("button", { name: /Công khai/ }).click(); await p.getByRole("button", { name: /Riêng tư/ }).click();
+  await p.getByRole("radio", { name: /Công khai/ }).check(); await p.getByRole("radio", { name: /Riêng tư/ }).check();
   await T(p, "publish").dblclick(); await p.waitForTimeout(500);
   const c = await calls(p, "publish");
   check("a double click sends ONE publish (locked while submitting)", c.length === 1, `${c.length}`);
@@ -183,7 +183,7 @@ for (const [kind, text] of [["PUBLISH", /đang xuất bản/], ["ROLLBACK", /đa
 
 // ---- APP_PUBLISH ------------------------------------------------------------------------------------------------------------------------------------------
 { const p = await open("noperm");
-  check("without APP_PUBLISH: a clear read-only note; Publish, rollback and unpublish are disabled with the reason", (await T(p, "release-no-permission").count()) === 1 && /APP_PUBLISH/.test(await T(p, "release-no-permission").innerText()) && (await T(p, "publish").isDisabled()) && (await T(p, "rollback:d2").isDisabled()) && (await T(p, "unpublish").isDisabled()) && /APP_PUBLISH/.test((await T(p, "rollback:d2").getAttribute("title")) ?? ""));
+  check("without APP_PUBLISH: a clear read-only note; Publish, rollback and unpublish are disabled with the reason", (await T(p, "release-no-permission").count()) === 1 && /APP_PUBLISH/.test(await T(p, "release-no-permission").innerText()) && (await T(p, "publish").isDisabled()) && (await T(p, "rollback:d2").isDisabled()) && (await T(p, "unpublish").isDisabled()) && /APP_PUBLISH/.test((await T(p, "rollback:d2").locator("xpath=following-sibling::small").innerText().catch(() => ""))));
   for (const id of ["publish", "rollback:d2", "unpublish"]) await T(p, id).click({ force: true, timeout: 1000 }).catch(() => undefined);
   check("without APP_PUBLISH: forcing the controls sends NOTHING (the server would answer 403 anyway)", (await calls(p)).filter((c) => ["publish", "rollback", "unpublish"].includes(c.name)).length === 0);
   await p.close(); }
