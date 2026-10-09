@@ -1,26 +1,13 @@
 "use client";
 // Website structure (stage G): pages + SEO, navigation, 404 page, form submissions, custom domains.
 import { useCallback, useEffect, useState } from "react";
-import { confirm, Plus, useAction, X } from "@xweb/ui";
+import { confirm, Plus, toast, useAction, X } from "@xweb/ui";
 import { api, ApiError } from "@/lib/http-api";
 import type { FormSubmission, NavLink, PageSchema, SchemaOperation, SiteDomain } from "@/lib/http-types";
 import { ago, errText, StateView } from "../ui";
 import { Drawer, Field } from "./drawers";
-
-const slugify = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "d").toLowerCase()
-  .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
-
-/** page selector above the outline: home + extra pages */
-export function PageBar({ schema, pageId, onPage, onAdd, canEdit }: { schema: PageSchema; pageId: string; onPage: (id: string) => void; onAdd: () => void; canEdit: boolean }) {
-  return <div className="pageBar">
-    <label className="srOnly" htmlFor="page-select">Trang đang sửa</label>
-    <select id="page-select" value={pageId} onChange={(e) => onPage(e.target.value)}>
-      <option value="home">Trang chủ (/)</option>
-      {(schema.pages ?? []).map((p) => <option key={p.id} value={p.id}>{p.title} (/{p.slug}/)</option>)}
-    </select>
-    {canEdit ? <button type="button" className="smallButton" onClick={onAdd}><Plus size={14} aria-hidden="true"/> Trang</button> : null}
-  </div>;
-}
+// M-047: ONE implementation of the page / navigation / 404 rules (slug, reserved slugs, unique slug, limits, delete impact), shared with the builder Pages panel
+import { MAX_NAV, MAX_PAGES, checkSlug, opsAddPage, opsRemovePage, opsRenamePage, opsSetNavigation, opsSetNotFound, removeImpact, slugify, uniqueSlug } from "./builder/core/pages";
 
 type Apply = (ops: SchemaOperation[], summary: string) => Promise<boolean>;
 
@@ -36,35 +23,47 @@ function PagesSection({ schema, pageId, onPage, canEdit, apply }: { schema: Page
   useEffect(() => { const s = current ? current.seo ?? {} : schema.site?.home?.seo ?? {};
     setTitle(current?.title ?? schema.site?.home?.title ?? ""); setSlug(current?.slug ?? ""); setSeoTitle(s.title ?? ""); setDesc(s.description ?? ""); setNoindex(s.noindex === true);
   }, [pageId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const slugCheck = current ? checkSlug(schema, slug.trim(), current.id) : { ok: true as const };
+  const [err, setErr] = useState<string | null>(null);
   async function save() {
-    const props: Record<string, unknown> = { title: title.trim(), seo: { ...(seoTitle.trim() ? { title: seoTitle.trim() } : {}), ...(desc.trim() ? { description: desc.trim() } : {}), noindex } };
-    if (current) props.slug = slug.trim();
-    await apply([{ type: "UPDATE_PAGE", pageId, props }], `Cập nhật trang ${title.trim() || "chủ"}`);
+    const seoProps = { ...(seoTitle.trim() ? { title: seoTitle.trim() } : {}), ...(desc.trim() ? { description: desc.trim() } : {}), noindex };
+    const r = opsRenamePage(schema, pageId, title, current ? slug.trim() : undefined, seoProps);
+    if ("error" in r) { setErr(r.error); return; }
+    setErr(null); await apply(r.ops, `Cập nhật trang ${title.trim() || "chủ"}`);
   }
   async function add() {
     const t = newTitle.trim(); if (!t) return;
-    let s = slugify(t) || "trang"; let n = 2; while (pages.some((p) => p.slug === s)) s = `${slugify(t)}-${n++}`;
     const id = `p-${Math.random().toString(36).slice(2, 8)}`;
-    if (await apply([{ type: "ADD_PAGE", pageId: id, props: { slug: s, title: t } }], `Thêm trang ${t}`)) { setNewTitle(""); onPage(id); }
+    const r = opsAddPage(schema, t, id);
+    if ("error" in r) { setErr(r.error); return; }
+    setErr(null);
+    if (await apply(r.ops, r.summary)) { setNewTitle(""); onPage(id); }
   }
   async function remove() {
-    if (!current || !(await confirm({ title: `Xóa trang “${current.title}”?`, message: "Các phần của trang và liên kết điều hướng tới trang này cũng bị xóa. Có thể khôi phục từ lịch sử phiên bản.", confirmLabel: "Xóa trang", danger: true }))) return;
-    if (await apply([{ type: "REMOVE_PAGE", pageId: current.id }], `Xoá trang ${current.title}`)) onPage("home");
+    if (!current) return;
+    const impact = removeImpact(schema, current.id);
+    if (!(await confirm({ title: `Xóa trang “${current.title}”?`, message: `${impact?.message ?? ""} Có thể khôi phục từ lịch sử phiên bản.`, confirmLabel: "Xóa trang", danger: true }))) return;
+    const r = opsRemovePage(schema, current.id);
+    if ("error" in r) { setErr(r.error); return; }
+    if (await apply(r.ops, r.summary)) onPage("home");
   }
   return <section className="settingGroup"><h3>Trang</h3>
     <ul className="plainList">{[{ id: "home", title: schema.site?.home?.title || "Trang chủ", slug: "" }, ...pages].map((p) =>
       <li key={p.id} className="row between"><button type="button" className={`linkButton${p.id === pageId ? " active" : ""}`} onClick={() => onPage(p.id)}>{p.title}</button><span className="code">/{p.slug}{p.slug ? "/" : ""}</span></li>)}</ul>
     {canEdit ? <form className="row" onSubmit={(e) => { e.preventDefault(); void act.run(add); }}>
-      <input aria-label="Tên trang mới" placeholder="Tên trang mới (ví dụ Giới thiệu)" maxLength={80} value={newTitle} onChange={(e) => setNewTitle(e.target.value)}/>
-      <button className="button" disabled={!newTitle.trim() || pages.length >= 20 || act.busy} aria-busy={act.busy || undefined}>Thêm trang</button></form> : null}
+      <input aria-label="Tên trang mới" aria-describedby="site-new-slug" placeholder="Tên trang mới (ví dụ Giới thiệu)" maxLength={80} value={newTitle} onChange={(e) => setNewTitle(e.target.value)}/>
+      <button className="button" disabled={!newTitle.trim() || pages.length >= MAX_PAGES || act.busy} aria-busy={act.busy || undefined}>Thêm trang</button></form> : null}
+    {canEdit ? <p className="hint" id="site-new-slug">{pages.length >= MAX_PAGES ? `Đã đủ ${MAX_PAGES} trang.` : newTitle.trim() ? <>Đường dẫn sẽ là <code>/{uniqueSlug(schema, newTitle)}/</code></> : null}</p> : null}
     <h4>{current ? `Trang “${current.title}”` : "Trang chủ"}: tiêu đề & SEO</h4>
     <Field label="Tiêu đề trang"><input maxLength={80} value={title} disabled={!canEdit} onChange={(e) => setTitle(e.target.value)}/></Field>
-    {current ? <Field label="Đường dẫn (slug)"><input maxLength={60} value={slug} disabled={!canEdit} onChange={(e) => setSlug(slugify(e.target.value))}/></Field> : null}
+    {current ? <Field label="Đường dẫn (slug)"><input maxLength={60} value={slug} disabled={!canEdit} aria-invalid={!slugCheck.ok || undefined} onChange={(e) => setSlug(slugify(e.target.value))}/></Field> : null}
+    {!slugCheck.ok ? <p className="formError">{slugCheck.reason}</p> : null}
+    {err ? <p className="formError" role="alert">{err}</p> : null}
     <Field label="Tiêu đề SEO"><input maxLength={70} value={seoTitle} disabled={!canEdit} onChange={(e) => setSeoTitle(e.target.value)}/></Field>
     <Field label="Mô tả SEO"><input maxLength={160} value={desc} disabled={!canEdit} onChange={(e) => setDesc(e.target.value)}/></Field>
     <label className="switch"><input type="checkbox" checked={noindex} disabled={!canEdit} onChange={(e) => setNoindex(e.target.checked)}/> Không cho công cụ tìm kiếm lập chỉ mục</label>
     {canEdit ? <div className="drawerActions">{current ? <button className="button ghost" disabled={act.busy} onClick={() => void act.run(remove)}>Xoá trang</button> : null}
-      <button className="button primary" disabled={(!title.trim() && !!current) || act.busy} aria-busy={act.busy || undefined} onClick={() => void act.run(save)}>{act.busy ? "Đang lưu…" : "Lưu trang"}</button></div> : null}
+      <button className="button primary" disabled={(!title.trim() && !!current) || !slugCheck.ok || act.busy} aria-busy={act.busy || undefined} onClick={() => void act.run(save)}>{act.busy ? "Đang lưu…" : "Lưu trang"}</button></div> : null}
   </section>;
 }
 
@@ -87,8 +86,8 @@ function NavigationSection({ schema, canEdit, apply }: { schema: PageSchema; can
       {canEdit ? <button type="button" className="smallButton" aria-label={`Xoá liên kết ${l.label}`} onClick={() => setLinks((ls) => ls.filter((_, j) => j !== i))}><X size={14} aria-hidden="true"/></button> : null}
     </li>)}</ul>
     {canEdit ? <div className="drawerActions">
-      <button className="button ghost" disabled={links.length >= 12} onClick={() => setLinks((ls) => [...ls, { id: `n-${Math.random().toString(36).slice(2, 7)}`, label: "Liên kết", pageId: "home" }])}><Plus size={14} aria-hidden="true"/> Liên kết</button>
-      <button className="button primary" disabled={links.some((l) => !l.label.trim()) || act.busy} aria-busy={act.busy || undefined} onClick={() => void act.run(() => apply([{ type: "SET_NAVIGATION", value: links.map((l) => ({ ...l, label: l.label.trim() })) }], "Cập nhật điều hướng"))}>{act.busy ? "Đang lưu…" : "Lưu điều hướng"}</button>
+      <button className="button ghost" disabled={links.length >= MAX_NAV} onClick={() => setLinks((ls) => [...ls, { id: `n-${Math.random().toString(36).slice(2, 7)}`, label: "Liên kết", pageId: "home" }])}><Plus size={14} aria-hidden="true"/> Liên kết</button>
+      <button className="button primary" disabled={links.some((l) => !l.label.trim()) || act.busy} aria-busy={act.busy || undefined} onClick={() => void act.run(async () => { const r = opsSetNavigation(links); if ("error" in r) { toast.error(r.error); return; } await apply(r.ops, r.summary); })}>{act.busy ? "Đang lưu…" : "Lưu điều hướng"}</button>
     </div> : null}
   </section>;
 }
@@ -99,7 +98,7 @@ function NotFoundSection({ schema, canEdit, apply }: { schema: PageSchema; canEd
   return <section className="settingGroup"><h3>Trang 404</h3>
     <Field label="Tiêu đề"><input maxLength={80} placeholder="Không tìm thấy trang" value={title} disabled={!canEdit} onChange={(e) => setTitle(e.target.value)}/></Field>
     <Field label="Lời nhắn"><input maxLength={300} placeholder="Trang bạn tìm không tồn tại…" value={message} disabled={!canEdit} onChange={(e) => setMessage(e.target.value)}/></Field>
-    {canEdit ? <div className="drawerActions"><button className="button" disabled={act.busy} aria-busy={act.busy || undefined} onClick={() => void act.run(() => apply([{ type: "UPDATE_SITE", props: { notFound: { ...(title.trim() ? { title: title.trim() } : {}), ...(message.trim() ? { message: message.trim() } : {}) } } }], "Cập nhật trang 404"))}>{act.busy ? "Đang lưu…" : "Lưu"}</button></div> : null}
+    {canEdit ? <div className="drawerActions"><button className="button" disabled={act.busy} aria-busy={act.busy || undefined} onClick={() => void act.run(() => { const r = opsSetNotFound(title, message); return apply(r.ops, r.summary); })}>{act.busy ? "Đang lưu…" : "Lưu"}</button></div> : null}
   </section>;
 }
 

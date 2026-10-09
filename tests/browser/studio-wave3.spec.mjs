@@ -508,4 +508,26 @@ for (const w of [768, 1000]) {
   check("M-046: a handle scrolled into view is a usable >= 24 px target inside the gutter", hb && hb.width >= 24 && hb.height >= 24 && hb.y >= gb.y - 1, JSON.stringify({ hb, gb }));
   await p.close();
 }
+// ---------- M-047 + M-077 (C5-S1 wave A): one page rule set; the shown slug is the saved slug ----------
+{
+  const p = await open(b, "/studio/projects/p1/design", { state: newState() }); await p.waitForSelector("iframe"); await wait(900);
+  await p.locator(".bx-panel-head").getByRole("button", { name: /Trang/ }).click(); await p.getByRole("dialog").waitFor(); await wait(200);
+  await p.getByRole("dialog").getByLabel("Tên trang").fill("API"); await wait(100);
+  const hint = await p.getByRole("dialog").innerText();
+  check("M-077: the add-page dialog shows the slug that will be saved (/api-2/, 'api' is reserved), not /api/", /\/api-2\//.test(hint) && !/\/api\/(?!-)/.test(hint.replace("/api-2/", "")), hint.replace(/\n/g, " | "));
+  await p.keyboard.press("Escape"); await wait(200);
+  await p.close();
+  const q = await open(b, "/studio/projects/p1/site", { state: newState() }); await q.getByRole("dialog").waitFor(); await wait(600);
+  const dlg = q.getByRole("dialog");
+  await dlg.getByLabel("Tên trang mới").fill("API"); await wait(100);
+  check("M-047: the Website drawer previews the same unique slug as the builder (/api-2/)", /Đường dẫn sẽ là\s*\/api-2\//.test(await dlg.innerText()), "");
+  const pageBtn = dlg.locator(".plainList .linkButton").nth(1);
+  if (await pageBtn.count()) {
+    await pageBtn.click(); await wait(300);
+    await dlg.getByLabel("Đường dẫn (slug)").fill("api"); await wait(100);
+    const save = dlg.getByRole("button", { name: "Lưu trang" });
+    check("M-047: the Website drawer now refuses a reserved slug like the builder does (it saved it before)", (await save.isDisabled()) && /dành riêng/.test(await dlg.innerText()), "");
+  } else check("M-047: the fake project has a second page to edit in the drawer", false, "no page");
+  await q.close();
+}
 await b.close(); finish();
