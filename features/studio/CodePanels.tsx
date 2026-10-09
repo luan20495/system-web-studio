@@ -1,7 +1,7 @@
 "use client";
 // Code-project panels: Design mode (safe AST edits), approved packages, IDE clone access.
 import { useCallback, useEffect, useState } from "react";
-import { confirm } from "@xweb/ui";
+import { confirm, toast } from "@xweb/ui";
 import { api, ApiError } from "@/lib/http-api";
 import type { CloneAccess, CodeChange, DependencyRequest, DesignNode, RuntimeStatus } from "@/lib/http-types";
 import { ago, errText, StateView } from "../ui";
@@ -91,22 +91,34 @@ export function PackagesDrawer({ ws, pid, canEdit, onClose, onChange }: { ws: st
   </Drawer>;
 }
 
-/** Read-only clone access for VS Code / Cursor / git CLI. The token is shown once. */
+/**
+ * Read-only clone access for VS Code / Cursor / git CLI. The token is shown once by the server (M-050, R2-002): here it is MASKED until the person asks, can be copied without being shown,
+ * and is never part of the displayed command: git asks for the account and the token (as password), so the secret is not left in the terminal history or on screen.
+ */
 export function IdeDrawer({ ws, pid, onClose }: { ws: string; pid: string; onClose: () => void }) {
-  const [a, setA] = useState<CloneAccess | null>(null); const [err, setErr] = useState<string | null>(null); const [busy, setBusy] = useState(false);
-  async function issue() { setBusy(true); setErr(null); try { setA(await api.code.cloneAccess(ws, pid)); } catch (e) { setErr(e instanceof ApiError ? e.message : errText(e, "Không tạo được.")); } finally { setBusy(false); } }
-  async function revoke() { setErr(null); try { await api.code.revokeCloneAccess(); setA(null); } catch (e) { setErr(errText(e, "Không thu hồi được.")); } }
-  const withCred = a ? a.cloneUrl.replace("://", `://${encodeURIComponent(a.username)}:${a.token}@`) : "";
+  const [a, setA] = useState<CloneAccess | null>(null); const [err, setErr] = useState<string | null>(null); const [busy, setBusy] = useState(false); const [shown, setShown] = useState(false);
+  async function issue() { setBusy(true); setErr(null); setShown(false); try { setA(await api.code.cloneAccess(ws, pid)); } catch (e) { setErr(e instanceof ApiError ? e.message : errText(e, "Không tạo được.")); } finally { setBusy(false); } }
+  async function revoke() { setErr(null); try { await api.code.revokeCloneAccess(); setA(null); setShown(false); } catch (e) { setErr(errText(e, "Không thu hồi được.")); } }
+  async function copy(text: string, what: string) {
+    try { await navigator.clipboard.writeText(text); toast.success(`Đã sao chép ${what}.`); }
+    catch { toast.error(`Không sao chép được ${what}. Hãy chép thủ công.`); }
+  }
+  const token = a?.token ?? null;
   return <Drawer title="Mở bằng IDE" sub="Truy cập CHỈ ĐỌC kho mã của ứng dụng. Thay đổi vẫn đi qua Studio (build trong sandbox → hợp nhất)." onClose={onClose}>
     <section className="settingGroup">
       {!a ? <><p className="hint">Tạo token chỉ đọc cho riêng bạn. Token hiện một lần; tạo lại sẽ vô hiệu token cũ.</p>
-        <button className="button primary" disabled={busy} onClick={() => void issue()}>{busy ? "Đang tạo…" : "Tạo token clone"}</button></> : <>
-        <p><b>Clone URL</b><br/><code className="breakAll">{a.cloneUrl}</code></p>
-        <p><b>Tài khoản</b> <code>{a.username}</code> · <b>Token</b> <code className="breakAll">{a.token}</code></p>
-        <h4>git CLI</h4><pre className="buildLog">git clone {withCred}</pre>
-        <h4>VS Code / Cursor</h4><p className="hint">Command Palette → “Git: Clone” → dán URL trên (đã kèm token), hoặc clone bằng git CLI rồi “Open Folder”. Để chạy thử: <code>npm ci && npm run build</code> (cần quyền tới mirror package của công ty).</p>
+        <button className="btn primary" disabled={busy} aria-busy={busy} onClick={() => void issue()}>{busy ? "Đang tạo…" : "Tạo token clone"}</button></> : <>
+        <p><b>Địa chỉ clone</b><br/><code className="breakAll">{a.cloneUrl}</code> <button type="button" className="btn sm" onClick={() => void copy(a.cloneUrl, "địa chỉ clone")}>Sao chép địa chỉ</button></p>
+        <p><b>Tài khoản</b> <code>{a.username}</code> <button type="button" className="btn sm" onClick={() => void copy(a.username, "tài khoản")}>Sao chép tài khoản</button></p>
+        {token ? <p><b>Token</b> <code className="breakAll" data-testid="clone-token">{shown ? token : "•".repeat(12)}</code>{" "}
+          <button type="button" className="btn sm" aria-pressed={shown} onClick={() => setShown((v) => !v)}>{shown ? "Ẩn token" : "Hiện token"}</button>{" "}
+          <button type="button" className="btn sm" onClick={() => void copy(token, "token")}>Sao chép token</button></p>
+          : <p className="formError" role="alert">Máy chủ không trả token lần này. Hãy thu hồi và tạo lại token.</p>}
+        <h4>git CLI</h4><pre className="buildLog">git clone {a.cloneUrl}</pre>
+        <p className="hint">Khi git hỏi, nhập tài khoản ở trên và dán token làm mật khẩu. Token không nằm trong lệnh nên không bị lưu vào lịch sử terminal.</p>
+        <h4>VS Code / Cursor</h4><p className="hint">Command Palette → “Git: Clone” → dán địa chỉ clone, nhập tài khoản và token khi được hỏi, hoặc clone bằng git CLI rồi “Open Folder”. Để chạy thử: <code>npm ci && npm run build</code> (cần quyền tới mirror package của công ty).</p>
         <p className="hint">{a.note}</p>
-        <button className="button ghost" onClick={() => void revoke()}>Thu hồi token</button></>}
+        <button className="btn ghost" onClick={() => void revoke()}>Thu hồi token</button></>}
       {err ? <p className="formError" role="alert">{err}</p> : null}
     </section>
   </Drawer>;

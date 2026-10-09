@@ -361,4 +361,27 @@ for (const w of [768, 1000]) {
   check("M-049: …and the address it navigated to carries no prompt text", !/prompt=/.test(navs) && !navs.includes(encodeURIComponent(text)), navs.slice(0, 160));
   await p.close();
 }
+
+// ---------- M-050 (R2-002): the clone token is masked by default, never inside the git command, and a missing token never prints 'null' ----------
+{
+  const SECRET = "tok_secret_123456";
+  let s = newCodeState(); let p = await open(b, "/studio/projects/p1/code", { state: s }); await p.waitForSelector(".changeItem", { timeout: 8000 }).catch(() => undefined); await wait(800);
+  await p.getByRole("button", { name: "IDE", exact: true }).first().click(); await wait(500);
+  await p.getByRole("button", { name: /Tạo token clone/ }).click(); await wait(800);
+  const dlg = p.getByRole("dialog").or(p.locator(".drawer")).first(); const shown = async () => (await dlg.innerText()).replace(/\s+/g, " ");
+  let t = await shown();
+  check("M-050: the clone token is NOT visible after it is issued (masked until the person asks)", !t.includes(SECRET) && /Hiện token/.test(t), t.slice(0, 160));
+  check("M-050: the git command is credential-free (no token, no user:token@ in the URL)", /git clone https:\/\/git\.example\.vn\/studio\/p1\.git/.test(t) && !/:\/\/[^ ]*@/.test(t), "");
+  await p.getByRole("button", { name: "Hiện token" }).click(); await wait(250); t = await shown();
+  check("M-050: 'Hiện token' reveals it once (toggle, aria-pressed), 'Ẩn token' hides it again", t.includes(SECRET) && (await p.getByRole("button", { name: "Ẩn token" }).getAttribute("aria-pressed")) === "true", "");
+  await p.getByRole("button", { name: "Ẩn token" }).click(); await wait(200);
+  check("M-050: …hidden again", !(await shown()).includes(SECRET), "");
+  check("M-050: there is a 'Sao chép token' button (no need to reveal it to use it)", (await p.getByRole("button", { name: /Sao chép token/ }).count()) === 1, "");
+  await p.close();
+  s = newCodeState(); s.cloneToken = null; p = await open(b, "/studio/projects/p1/code", { state: s }); await p.waitForSelector(".changeItem", { timeout: 8000 }).catch(() => undefined); await wait(800);
+  await p.getByRole("button", { name: "IDE", exact: true }).first().click(); await wait(500); await p.getByRole("button", { name: /Tạo token clone/ }).click(); await wait(800);
+  const t2 = (await (p.getByRole("dialog").or(p.locator(".drawer")).first()).innerText()).replace(/\s+/g, " ");
+  check("M-050: when the server returns no token the drawer says so (role=alert) and prints no 'null'", !/\bnull\b/.test(t2) && (await p.getByRole("alert").filter({ hasText: /không trả token/ }).count()) >= 1, t2.slice(0, 200));
+  await p.close();
+}
 await b.close(); finish();

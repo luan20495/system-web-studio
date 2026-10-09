@@ -69,6 +69,7 @@ export async function installFake(page, s) {
       if (sub.startsWith("/versions") && method === "GET") return json(route, s.versions);
       if (sub.startsWith("/prompts") && method === "GET") return json(route, s.prompts);
       if (sub === "/prompts" && method === "POST") { s.revision += 1; return json(route, { promptId: "pr" + s.log.length, outcome: "UPDATED", message: { role: "assistant", content: "Đã cập nhật theo yêu cầu." }, schemaPatch: [{ type: "UPDATE_PROP", sectionId: "s-hero", path: "title", value: "x" }], pageSchema: s.schema, revision: s.revision, version: { versionNumber: 4 }, registryReuse: 0, model: "mock", usage: null }); }
+      if (sub === "/code/clone-access" && method === "POST") return json(route, { cloneUrl: "https://git.example.vn/studio/p1.git", username: "luan", token: s.cloneToken === undefined ? "tok_secret_123456" : s.cloneToken, note: "Token chỉ hiện một lần." });
       if (sub.startsWith("/code/tree")) return json(route, [{ path: "src/App.tsx", size: 100 }]);
       if (sub.startsWith("/code/file")) return json(route, { path: "src/App.tsx", text: "export default function App(){ return null }", editable: true });
       if (sub === "/code/changes" && method === "GET") return json(route, s.changes ?? []);
