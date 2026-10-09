@@ -77,6 +77,9 @@ export async function installFake(page, s) {
       if (/^\/code\/changes\/\w+\/diff$/.test(sub)) return json(route, s.diff ?? []);
       if (/^\/code\/changes\/\w+\/(approve|discard|merge)$/.test(sub)) return json(route, { ...(s.changes ?? [])[0], status: "READY" });
       if (sub === "/code/ai" && method === "GET") return json(route, []);
+      // server runtime (RuntimeDrawer, M-088): write-only secrets; s.secretFail = { status, body } makes the next PUT fail
+      if (sub === "/runtime" && method === "GET") return json(route, runtimeOf(s));
+      if (sub === "/runtime/secrets" && method === "PUT") { s.secretPuts = (s.secretPuts ?? 0) + 1; if (s.secretFail) { const f = s.secretFail; s.secretFail = null; return json(route, f.body, f.status); } (s.secrets ??= []).push({ name: body.name, updatedAt: "2026-10-08T08:00:00Z", updatedBy: "luan" }); return json(route, runtimeOf(s)); }
       if (sub === "/assets") return json(route, s.assets);
       if (sub === "/members") return json(route, s.members);
       if (sub === "/site") return json(route, s.site ?? { slug: null, url: null, online: false, visibility: null, currentDeploymentId: null, currentVersionNumber: null, provider: "mock", updatedAt: null, pointerVersion: 0, operation: null });
@@ -95,6 +98,8 @@ export async function installFake(page, s) {
 }
 
 /** a STATIC_APP (code) project with one READY change that needs a second person's review */
+const runtimeOf = (s) => ({ available: true, provisioned: true, database: null, currentDeploymentId: null, desiredDeploymentId: null, deployments: [], secrets: s.secrets ?? [], connectors: [], logs: null, logsAt: null, notice: "Máy chủ giả lập (HARNESS)." });
+
 export function newCodeState(over = {}) {
   const s = newState(over);
   s.project = { ...s.project, appType: "STATIC_APP", appKind: "SOURCE_WEB_APP" }; s.projects = [s.project];

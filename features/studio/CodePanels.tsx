@@ -1,7 +1,7 @@
 "use client";
 // Code-project panels: Design mode (safe AST edits), approved packages, IDE clone access.
 import { useCallback, useEffect, useState } from "react";
-import { confirm, toast } from "@xweb/ui";
+import { confirm, toast, useAction } from "@xweb/ui";
 import { api, ApiError } from "@/lib/http-api";
 import type { CloneAccess, CodeChange, DependencyRequest, DesignNode, RuntimeStatus } from "@/lib/http-types";
 import { ago, errText, StateView } from "../ui";
@@ -132,7 +132,9 @@ export function RuntimeDrawer({ ws, pid, canPublish, canSettings, onClose }: { w
   const load = useCallback(() => api.runtime(ws, pid).then(setRt).catch((e) => setErr(errText(e, "Không tải được."))), [ws, pid]);
   useEffect(() => { void load(); }, [load]);
   useEffect(() => { if (!rt || !(rt.desiredDeploymentId || rt.deployments.some((d) => d.status === "PENDING" || d.status === "STARTING"))) return; const t = setInterval(() => void load(), 3000); return () => clearInterval(t); }, [rt, load]);
-  async function act(fn: () => Promise<RuntimeStatus>) { setErr(null); try { setRt(await fn()); } catch (e) { setErr(e instanceof ApiError ? e.message : errText(e, "Không thực hiện được.")); } }
+  async function act(fn: () => Promise<RuntimeStatus>): Promise<boolean> { setErr(null); try { setRt(await fn()); return true; } catch (e) { setErr(e instanceof ApiError ? e.message : errText(e, "Không thực hiện được.")); return false; } }
+  // M-088: the secret value leaves React state (and the DOM input) as soon as the server has it; a FAILED save keeps it so the user can retry, one save at a time
+  const secretSave = useAction(async (_ctx, n: string, v: string) => { if (await act(() => api.setSecret(ws, pid, n, v))) { setName(""); setValue(""); } });
   return <Drawer title="Máy chủ của ứng dụng" sub="Mỗi lần xuất bản: build trong sandbox → container mới được kiểm tra sức khỏe → chuyển lưu lượng (bản cũ phục vụ tới khi bản mới khỏe)." onClose={onClose} wide>
     {!rt ? (err ? <p className="formError" role="alert">{err}</p> : <StateView kind="loading"/>) : <>
       <p className="hint">{rt.notice}{rt.database ? <> Cơ sở dữ liệu riêng: <code>{rt.database}</code> (mật khẩu không bao giờ hiển thị).</> : null}</p>
@@ -150,10 +152,10 @@ export function RuntimeDrawer({ ws, pid, canPublish, canSettings, onClose }: { w
         <p className="hint">Giá trị được mã hóa, chỉ ghi: không bao giờ hiển thị lại, không vào kho mã và không gửi cho AI. Áp dụng ở lần triển khai tiếp theo.</p>
         {rt.secrets.length ? <ul className="plainList">{rt.secrets.map((s) => <li key={s.name} className="row between"><span className="code">{s.name}</span><small>{s.updatedBy ?? "—"} · {ago(s.updatedAt)}</small>
           {canSettings ? <button className="smallButton danger" aria-label={`Xóa bí mật ${s.name}`} onClick={() => void (async () => { if (await confirm({ title: `Xóa bí mật ${s.name}?`, message: "Giá trị bị xóa vĩnh viễn và không xem lại được. Thay đổi áp dụng ở lần triển khai tiếp theo.", confirmLabel: "Xóa bí mật", danger: true })) await act(() => api.deleteSecret(ws, pid, s.name)); })()}>Xóa</button> : null}</li>)}</ul> : <p className="hint">Chưa có bí mật.</p>}
-        {canSettings ? <form className="row" onSubmit={(e) => { e.preventDefault(); void act(() => api.setSecret(ws, pid, name.trim(), value)).then(() => { setName(""); setValue(""); }); }}>
+        {canSettings ? <form className="row" onSubmit={(e) => { e.preventDefault(); void secretSave.run(name.trim(), value); }}>
           <input aria-label="Tên biến" placeholder="TEN_BIEN" value={name} onChange={(e) => setName(e.target.value.toUpperCase())} maxLength={64}/>
           <input aria-label="Giá trị" type="password" autoComplete="off" placeholder="Giá trị" value={value} onChange={(e) => setValue(e.target.value)} maxLength={4000}/>
-          <button className="button" disabled={!/^[A-Z][A-Z0-9_]{1,63}$/.test(name.trim()) || !value}>Lưu</button></form> : null}
+          <button className="button" disabled={!/^[A-Z][A-Z0-9_]{1,63}$/.test(name.trim()) || !value || secretSave.busy} aria-busy={secretSave.busy || undefined}>{secretSave.busy ? "Đang lưu…" : "Lưu"}</button></form> : null}
       </section>
       <section className="settingGroup"><h3>Connector được cấp</h3>
         {rt.connectors.length ? <p>{rt.connectors.map((c) => <code key={c} className="tag">{c}</code>)}</p> : <p className="hint">Chưa có. Quản trị viên cấp connector đã duyệt cho ứng dụng (Admin → Connector).</p>}

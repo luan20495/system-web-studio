@@ -530,4 +530,19 @@ for (const w of [768, 1000]) {
   } else check("M-047: the fake project has a second page to edit in the drawer", false, "no page");
   await q.close();
 }
+// ---------- M-088 (C5-S1 wave A): the RuntimeDrawer secret value is kept after a FAILED save and leaves the input after a successful one ----------
+{
+  const st = newCodeState(); st.project = { ...st.project, appKind: "SERVER_APP" }; st.projects = [st.project];
+  st.secretFail = { status: 500, body: { code: "INTERNAL", message: "Lỗi máy chủ giả lập" } }; st.delay = 300;
+  const p = await open(b, "/studio/projects/p1/runtime", { state: st }); await p.getByRole("dialog").waitFor(); await wait(800);
+  const dlg = p.getByRole("dialog"); const name = dlg.getByLabel("Tên biến"), val = dlg.getByLabel("Giá trị");
+  await name.fill("API_KEY"); await val.fill("s3cr3t-value");
+  const save = dlg.getByRole("button", { name: /^(Lưu|Đang lưu…)$/ }); await save.dblclick(); await wait(1200);
+  check("M-088: a FAILED secret save keeps name + value for a retry and shows the error (it cleared them before)", (await val.inputValue()) === "s3cr3t-value" && (await name.inputValue()) === "API_KEY" && (await dlg.locator("[role=alert]").count()) >= 1, `value kept=${(await val.inputValue()) === "s3cr3t-value"}`);
+  check("M-088: a double click sends ONE save", st.secretPuts === 1, String(st.secretPuts));
+  await dlg.getByRole("button", { name: "Lưu" }).click(); await wait(1200);
+  const dom = await p.evaluate(() => [...document.querySelectorAll("input")].some((i) => i.value.includes("s3cr3t")) || document.body.innerHTML.includes("s3cr3t"));
+  check("M-088: after a successful save the value is gone from the inputs and the DOM; the secret is listed by name only", (await val.inputValue()) === "" && !dom && /API_KEY/.test(await dlg.innerText()), `dom=${dom}`);
+  await p.close();
+}
 await b.close(); finish();
