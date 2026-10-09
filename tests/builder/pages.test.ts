@@ -91,3 +91,25 @@ test("preflight: static + public + data binding is BLOCK; dynamic is WARN", () =
   assert.ok(!blockers(preflight(dynamicPublic)).some((i) => i.code === "STATIC_PUBLIC_DATA"));
   assert.ok(preflight(dynamicPublic).some((i) => i.code === "PUBLIC_DATA_NEEDS_APPROVAL"));
 });
+
+test("M-047: the Website drawer and the builder share ONE rule set (core/pages): SEO rides on the same UPDATE_PAGE, the 404 op is shared, the drawer has no own slug / op code", () => {
+  const d = withPages();
+  const r = P.opsRenamePage(d, "p1", "Giới thiệu", "gioi-thieu", { title: "SEO", noindex: true });
+  assert.ok("ops" in r); if ("ops" in r) assert.deepEqual(r.ops[0], { type: "UPDATE_PAGE", pageId: "p1", props: { title: "Giới thiệu", seo: { title: "SEO", noindex: true }, slug: "gioi-thieu" } });
+  assert.ok("error" in P.opsRenamePage(d, "p1", "X", "api", {}), "the drawer now refuses reserved slugs too");
+  const homeSeo = P.opsRenamePage(d, "home", "", undefined, { noindex: false });
+  assert.ok("ops" in homeSeo && JSON.stringify(homeSeo.ops[0]) === JSON.stringify({ type: "UPDATE_PAGE", pageId: "home", props: { seo: { noindex: false } } }), "home SEO saves without a title, as the drawer always allowed");
+  assert.ok("error" in P.opsRenamePage(d, "home", ""), "the builder rename still needs a title");
+  assert.deepEqual(P.opsSetNotFound("  Mất ", "").ops[0], { type: "UPDATE_SITE", props: { notFound: { title: "Mất" } } });
+  const src = require("node:fs").readFileSync(require("node:path").join(process.cwd(), "features/studio/SitePanels.tsx"), "utf8");
+  assert.doesNotMatch(src, /const slugify|"ADD_PAGE"|"REMOVE_PAGE"|"UPDATE_PAGE"|"SET_NAVIGATION"|"UPDATE_SITE"|PageBar/, "no second implementation in SitePanels");
+  assert.match(src, /from "\.\/builder\/core\/pages"/);
+});
+
+test("M-077: the add-page hint is uniqueSlug (the slug really saved), not slugify", () => {
+  const d = withPages();
+  assert.equal(P.uniqueSlug(d, "API"), "api-2");
+  assert.equal(P.uniqueSlug(d, "Liên hệ"), "lien-he-2");
+  const src = require("node:fs").readFileSync(require("node:path").join(process.cwd(), "features/studio/builder/panels/PagesPanel.tsx"), "utf8");
+  assert.match(src, /const slug = title\.trim\(\) \? uniqueSlug\(doc, title\)/);
+});

@@ -491,4 +491,58 @@ for (const w of [768, 1000]) {
   check("M-023: the page scroll is locked while the dialog is open and released after (shared overlay stack)", lock === "hidden" && after !== "hidden", `open=${lock} closed=${after}`);
   await p.close();
 }
+// ---------- M-046 (C5-S1 wave A): scrolling the preview moves the drag handles WITH their sections without a React render ----------
+{
+  const p = await open(b, "/studio/projects/p1/design", { state: newState() }); await p.waitForSelector("iframe"); await wait(1200);
+  const frame = p.frames().find((f) => f !== p.mainFrame());
+  const align = async () => { const fb = await p.locator(".bx-frame iframe").boundingBox(); const s = await frame.evaluate(() => { const e = document.querySelectorAll("[data-sid]")[1]; return { id: e.getAttribute("data-sid"), top: e.getBoundingClientRect().top }; });
+    const hs = await p.locator(".bx-handle").evaluateAll((els) => els.map((e) => e.getBoundingClientRect().top)); return { want: Math.round(fb.y + s.top + 6), got: hs.map(Math.round) }; };
+  const n0 = await p.locator(".bx-handle").count();
+  await frame.evaluate(() => { document.body.style.paddingBottom = "2000px"; }); await wait(300);
+  const before = await align();
+  await frame.evaluate(() => scrollBy(0, 180)); await wait(400);
+  const after = await align(); const y = await frame.evaluate(() => scrollY);
+  check("M-046: after scrolling the preview the handle of a section still sits next to it (handle track follows the scroll)", n0 >= 2 && y > 0 && before.got.includes(before.want) && after.got.some((t) => Math.abs(t - after.want) <= 1) && after.want < before.want, JSON.stringify({ n0, y, before, after }));
+  const gb = await p.locator(".bx-gutter").boundingBox(); const hbs = await p.locator(".bx-handle").evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return { y: r.top, width: r.width, height: r.height }; }));
+  const hb = hbs.find((r) => r.y >= gb.y);
+  check("M-046: a handle scrolled into view is a usable >= 24 px target inside the gutter", hb && hb.width >= 24 && hb.height >= 24 && hb.y >= gb.y - 1, JSON.stringify({ hb, gb }));
+  await p.close();
+}
+// ---------- M-047 + M-077 (C5-S1 wave A): one page rule set; the shown slug is the saved slug ----------
+{
+  const p = await open(b, "/studio/projects/p1/design", { state: newState() }); await p.waitForSelector("iframe"); await wait(900);
+  await p.locator(".bx-panel-head").getByRole("button", { name: /Trang/ }).click(); await p.getByRole("dialog").waitFor(); await wait(200);
+  await p.getByRole("dialog").getByLabel("Tên trang").fill("API"); await wait(100);
+  const hint = await p.getByRole("dialog").innerText();
+  check("M-077: the add-page dialog shows the slug that will be saved (/api-2/, 'api' is reserved), not /api/", /\/api-2\//.test(hint) && !/\/api\/(?!-)/.test(hint.replace("/api-2/", "")), hint.replace(/\n/g, " | "));
+  await p.keyboard.press("Escape"); await wait(200);
+  await p.close();
+  const q = await open(b, "/studio/projects/p1/site", { state: newState() }); await q.getByRole("dialog").waitFor(); await wait(600);
+  const dlg = q.getByRole("dialog");
+  await dlg.getByLabel("Tên trang mới").fill("API"); await wait(100);
+  check("M-047: the Website drawer previews the same unique slug as the builder (/api-2/)", /Đường dẫn sẽ là\s*\/api-2\//.test(await dlg.innerText()), "");
+  const pageBtn = dlg.locator(".plainList .linkButton").nth(1);
+  if (await pageBtn.count()) {
+    await pageBtn.click(); await wait(300);
+    await dlg.getByLabel("Đường dẫn (slug)").fill("api"); await wait(100);
+    const save = dlg.getByRole("button", { name: "Lưu trang" });
+    check("M-047: the Website drawer now refuses a reserved slug like the builder does (it saved it before)", (await save.isDisabled()) && /dành riêng/.test(await dlg.innerText()), "");
+  } else check("M-047: the fake project has a second page to edit in the drawer", false, "no page");
+  await q.close();
+}
+// ---------- M-088 (C5-S1 wave A): the RuntimeDrawer secret value is kept after a FAILED save and leaves the input after a successful one ----------
+{
+  const st = newCodeState(); st.project = { ...st.project, appKind: "SERVER_APP" }; st.projects = [st.project];
+  st.secretFail = { status: 500, body: { code: "INTERNAL", message: "Lỗi máy chủ giả lập" } }; st.delay = 300;
+  const p = await open(b, "/studio/projects/p1/runtime", { state: st }); await p.getByRole("dialog").waitFor(); await wait(800);
+  const dlg = p.getByRole("dialog"); const name = dlg.getByLabel("Tên biến"), val = dlg.getByLabel("Giá trị");
+  await name.fill("API_KEY"); await val.fill("s3cr3t-value");
+  const save = dlg.getByRole("button", { name: /^(Lưu|Đang lưu…)$/ }); await save.dblclick(); await wait(1200);
+  check("M-088: a FAILED secret save keeps name + value for a retry and shows the error (it cleared them before)", (await val.inputValue()) === "s3cr3t-value" && (await name.inputValue()) === "API_KEY" && (await dlg.locator("[role=alert]").count()) >= 1, `value kept=${(await val.inputValue()) === "s3cr3t-value"}`);
+  check("M-088: a double click sends ONE save", st.secretPuts === 1, String(st.secretPuts));
+  await dlg.getByRole("button", { name: "Lưu" }).click(); await wait(1200);
+  const dom = await p.evaluate(() => [...document.querySelectorAll("input")].some((i) => i.value.includes("s3cr3t")) || document.body.innerHTML.includes("s3cr3t"));
+  check("M-088: after a successful save the value is gone from the inputs and the DOM; the secret is listed by name only", (await val.inputValue()) === "" && !dom && /API_KEY/.test(await dlg.innerText()), `dom=${dom}`);
+  await p.close();
+}
 await b.close(); finish();

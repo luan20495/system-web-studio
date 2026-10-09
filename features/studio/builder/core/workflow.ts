@@ -14,6 +14,7 @@ export const STEP_HELP: Readonly<Record<StepKind, string>> = {
   BRANCH: "Chọn bước tiếp theo theo điều kiện; nhánh đầu tiên khớp được chọn.", END: "Kết thúc workflow.",
 };
 export const OP_LABEL: Readonly<Record<CompareOp, string>> = { EQ: "bằng", NE: "khác", GT: "lớn hơn", GTE: "lớn hơn hoặc bằng", LT: "nhỏ hơn", LTE: "nhỏ hơn hoặc bằng", IN: "nằm trong", CONTAINS: "chứa" };
+export const PRINCIPAL_LABEL: Readonly<Record<string, string>> = { USER: "Người dùng", GROUP: "Nhóm", ROLE: "Vai trò", DEPARTMENT_MANAGER: "Quản lý phòng ban" };
 export const kindOf = (s: WorkflowStepDef): StepKind => s.kind ?? (s.actionRef !== undefined ? "ACTION" : "END");
 export const isStepKind = (v: string): v is StepKind => (STEP_KINDS as readonly string[]).includes(v);
 
@@ -86,6 +87,17 @@ export function orderedSteps(wf: WorkflowDef): { step: WorkflowStepDef; reachabl
   return [...order.map((id) => ({ step: byId.get(id)!.s, reachable: true })), ...rest.map((id) => ({ step: byId.get(id)!.s, reachable: false }))];
 }
 
+/** M-106: steps are chosen by a readable title ("Bước 2 · Phê duyệt: Duyệt đơn"), never by their raw id. Numbering follows orderedSteps (what the editor lists). */
+export function stepName(s: WorkflowStepDef, doc: AppDefinitionV2): string {
+  const k = kindOf(s);
+  const detail = k === "ACTION" ? (doc.actions ?? []).find((a) => a.id === s.actionRef)?.name : k === "APPROVAL" ? s.approval?.title : undefined;
+  return `${STEP_LABEL[k]}${detail ? `: ${detail}` : ""}`;
+}
+export function stepTitles(wf: WorkflowDef, doc: AppDefinitionV2): Map<string, string> {
+  return new Map(orderedSteps(wf).map(({ step: s }, n) => [s.id, `Bước ${n + 1} · ${stepName(s, doc)}`]));
+}
+const titleOf = (titles: Map<string, string> | undefined, id: string) => (!id ? "chưa chọn bước" : titles?.get(id) ?? (titles ? "bước không còn" : id));
+
 // ------------------------------------------------------------------------------------------------------------------ conditions
 export function describeRef(r: ValueRefDef): string {
   if (r.from === "LITERAL") return r.value === undefined ? "?" : typeof r.value === "string" ? `“${r.value}”` : JSON.stringify(r.value);
@@ -105,7 +117,7 @@ export function compare(left: ValueRefDef, op: CompareOp, right: ValueRefDef): C
 // ------------------------------------------------------------------------------------------------------------------ summaries
 export type StepChip = { kind: "retry" | "timeout" | "wait" | "approval" | "condition" | "compensation" | "error-route" | "action"; text: string };
 
-export function stepChips(s: WorkflowStepDef, doc: AppDefinitionV2): StepChip[] {
+export function stepChips(s: WorkflowStepDef, doc: AppDefinitionV2, titles?: Map<string, string>): StepChip[] {
   const chips: StepChip[] = [];
   const action = (id?: string): ActionDef | undefined => (doc.actions ?? []).find((a) => a.id === id);
   if (s.actionRef) chips.push({ kind: "action", text: action(s.actionRef)?.name ?? `Hành động ${s.actionRef} (không còn)` });
@@ -119,10 +131,10 @@ export function stepChips(s: WorkflowStepDef, doc: AppDefinitionV2): StepChip[] 
     const a = s.approval;
     chips.push({ kind: "approval", text: `Cần ${a.requiredApprovals ?? 1} người duyệt${a.approvers?.length ? ` trong ${a.approvers.length} người được chỉ định` : ""}${a.expiresInSeconds ? `, hết hạn sau ${formatSeconds(a.expiresInSeconds)}` : ""}${a.allowSelfApproval === false ? ", không tự duyệt" : ""}` });
   }
-  for (const b of s.branches ?? []) chips.push({ kind: "condition", text: `Nếu ${describeCondition(b.condition)} → ${b.next}` });
-  if (s.defaultNext) chips.push({ kind: "condition", text: `Ngược lại → ${s.defaultNext}` });
+  for (const b of s.branches ?? []) chips.push({ kind: "condition", text: `Nếu ${describeCondition(b.condition)} → ${titleOf(titles, b.next)}` });
+  if (s.defaultNext) chips.push({ kind: "condition", text: `Ngược lại → ${titleOf(titles, s.defaultNext)}` });
   if (s.compensationActionRef) chips.push({ kind: "compensation", text: `Hoàn tác bằng: ${action(s.compensationActionRef)?.name ?? s.compensationActionRef}` });
-  if (s.onError) chips.push({ kind: "error-route", text: `Khi lỗi → ${s.onError}` });
+  if (s.onError) chips.push({ kind: "error-route", text: `Khi lỗi → ${titleOf(titles, s.onError)}` });
   return chips;
 }
 export function formatSeconds(n: number): string {
@@ -141,11 +153,13 @@ export function checkWorkflow(wf: WorkflowDef, doc: AppDefinitionV2): RefIssue[]
   if (wf.trigger === "SCHEDULE" && !(wf.schedule && CRON5.test(wf.schedule))) out.push({ path: "schedule", message: "Workflow theo lịch cần biểu thức lịch 5 trường." });
   if (wf.trigger !== "SCHEDULE" && wf.schedule) out.push({ path: "schedule", message: "Lịch chỉ dùng cho workflow chạy theo lịch." });
   if (!wf.steps.some((s) => kindOf(s) === "END")) out.push({ path: "steps", message: "Workflow nên có một bước Kết thúc." });
-  for (const { step, reachable } of orderedSteps(wf)) if (!reachable) out.push({ path: `steps.${step.id}`, message: `Bước “${step.id}” không có đường dẫn tới, sẽ không bao giờ chạy.` });
+  const titles = stepTitles(wf, doc);
+  const t = (id: string) => titles.get(id) ?? id;
+  for (const { step, reachable } of orderedSteps(wf)) if (!reachable) out.push({ path: `steps.${step.id}`, message: `${t(step.id)} không có đường dẫn tới, sẽ không bao giờ chạy.` });
   for (const s of wf.steps) {
-    if (kindOf(s) === "WAIT" && !(s.waitSeconds && s.waitSeconds > 0)) out.push({ path: `steps.${s.id}.waitSeconds`, message: `Bước chờ “${s.id}” cần thời gian chờ lớn hơn 0.` });
-    if (kindOf(s) === "APPROVAL" && !(s.approval?.approvers?.length)) out.push({ path: `steps.${s.id}.approval.approvers`, message: `Bước phê duyệt “${s.id}” chưa chỉ định người duyệt.` });
-    if (kindOf(s) === "BRANCH" && !(s.branches?.length)) out.push({ path: `steps.${s.id}.branches`, message: `Bước rẽ nhánh “${s.id}” chưa có điều kiện nào.` });
+    if (kindOf(s) === "WAIT" && !(s.waitSeconds && s.waitSeconds > 0)) out.push({ path: `steps.${s.id}.waitSeconds`, message: `${t(s.id)} cần thời gian chờ lớn hơn 0.` });
+    if (kindOf(s) === "APPROVAL" && !(s.approval?.approvers?.length)) out.push({ path: `steps.${s.id}.approval.approvers`, message: `${t(s.id)} chưa chỉ định người duyệt.` });
+    if (kindOf(s) === "BRANCH" && !(s.branches?.length)) out.push({ path: `steps.${s.id}.branches`, message: `${t(s.id)} chưa có điều kiện nào.` });
   }
   return out;
 }

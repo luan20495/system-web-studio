@@ -136,7 +136,7 @@ export function TestPanel({ doc, rawPermissions, runtime, dirty = false }: {
   return (
     <section className="bx-test" aria-label="Chế độ dùng thử" data-testid="test-panel">
       <h2 className="srOnly">Kiểm thử ứng dụng</h2>
-      <div className="bx-test-banner" role="note"><b>Chế độ dùng thử</b><p>Không lưu thay đổi vào dữ liệu thật. Muốn sửa ứng dụng, chuyển về “Chỉnh sửa”.</p></div>
+      <div className="bx-test-banner" role="note"><b>Chế độ dùng thử</b><p>Không lưu thay đổi vào dữ liệu thật. Bản xem trước bên cạnh chỉ để xem (không tương tác). Thử từng truy vấn, hành động, workflow bằng nút “Chạy thử” dưới đây. Muốn sửa ứng dụng, chuyển về “Chỉnh sửa”.</p></div>
       <ul className="bx-rules" aria-label="Quy tắc chế độ dùng thử">{TEST_RULES.map((r) => <li key={r}>{r}</li>)}</ul>
       <StateBox state={base}/>
       {dirty && runtime ? <StateBox state={featureState("actions")}/> : null}

@@ -81,7 +81,7 @@ export function BuilderWorkspace(props: {
   };
   const [dataFocus, setDataFocus] = useState<{ sectionId?: string; prop?: string; n?: number }>({});
   const [actionPreset, setActionPreset] = useState<{ sectionId?: string } | undefined>(undefined);
-  const [rects, setRects] = useState<SectionRect[]>([]);
+  const rectsRef = useRef<SectionRect[]>([]);   // M-046: written by the Canvas on every layout message, read only while dragging (no render per scroll frame)
   const [drag, setDrag] = useState<{ kind: "lib" | "sec" | "row"; id: string; label: string } | null>(null);
   const [slot, setSlot] = useState<number | null>(null);
   const [removing, setRemoving] = useState(false);
@@ -151,7 +151,7 @@ export function BuilderWorkspace(props: {
     if (!drag || drag.kind === "row") return;
     if (e.over?.id !== "canvas") { setSlot(null); return; }
     const y = pointerY(e);
-    setSlot(y === null ? null : slotFromPoint(rects, y - e.over.rect.top));
+    setSlot(y === null ? null : slotFromPoint(rectsRef.current, y - e.over.rect.top));
   }
   async function onDragEnd(e: DragEndEvent) {
     const d = drag; const s = slot;
@@ -165,7 +165,7 @@ export function BuilderWorkspace(props: {
       return;
     }
     if (e.over?.id !== "canvas" || s === null) return;
-    const index = clampSlot(sections, sectionIndexForSlot(sections, rects, s), d.kind === "lib" ? d.id : sections.find((x) => x.id === d.id)?.type ?? "");
+    const index = clampSlot(sections, sectionIndexForSlot(sections, rectsRef.current, s), d.kind === "lib" ? d.id : sections.find((x) => x.id === d.id)?.type ?? "");
     if (d.kind === "lib") await addComponent(d.id, index);
     else await moveSection(d.id, index);
   }
@@ -217,9 +217,9 @@ export function BuilderWorkspace(props: {
         <p className="bx-phone-note" role="note">Trên điện thoại bạn xem và chỉnh nhẹ được. Kéo-thả thành phần và chỉnh nhiều mục cùng lúc cần màn hình lớn hơn.</p>
         <LeftRail id="mview-panel-tools" value={rail} onChange={setRail}><ErrorBoundary variant="inline" title="Công cụ này gặp sự cố" resetKeys={[rail]}>{leftPanel}</ErrorBoundary></LeftRail>
         <section className="bx-center" id="mview-panel-canvas" tabIndex={-1} aria-label="Bản xem trước ứng dụng">
-          {!edit ? <p className="bx-banner" role="note">Đang ở chế độ dùng thử: bản xem trước không chỉnh sửa được.</p> : readOnly ? <p className="bx-banner" role="note">Bạn chỉ có quyền xem.</p> : null}
+          {!edit ? <p className="bx-banner" role="note">Chế độ dùng thử: bản xem trước chỉ để xem, không bấm được nút, form hay liên kết. Hãy chạy thử truy vấn, hành động và workflow bằng các nút “Chạy thử” ở cột bên phải.</p> : readOnly ? <p className="bx-banner" role="note">Bạn chỉ có quyền xem.</p> : null}
           <ErrorBoundary variant="inline" title="Bản xem trước gặp sự cố" resetKeys={[pageId]}>
-            <Canvas document={html} sections={sections} selectedId={selectedId} onSelect={select} onRects={setRects} rects={rects} interactive={interactive} selectable={edit} dragging={!!drag && drag.kind !== "row"} slot={slot}
+            <Canvas document={html} sections={sections} selectedId={selectedId} onSelect={select} rectsRef={rectsRef} interactive={interactive} selectable={edit} dragging={!!drag && drag.kind !== "row"} slot={slot}
               device={props.device} labelOf={props.labelOf} frameRef={frameRef} title="Bản xem trước ứng dụng"/>
           
           </ErrorBoundary>

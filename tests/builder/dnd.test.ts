@@ -78,3 +78,14 @@ test("canStep: a step button is enabled only when it would really move (trailing
   assert.equal(D.canStep(list(), "f", 1), false);
   assert.equal(D.canStep(list(), "missing", 1), false);
 });
+
+test("M-046 scrollShift: a pure scroll is one common offset; any layout change (ids, order, height, uneven move) is not", () => {
+  const a = [{ id: "a", top: 0, height: 100 }, { id: "b", top: 100, height: 50 }];
+  assert.equal(D.scrollShift(a, a.map((r) => ({ ...r, top: r.top - 140 }))), -140);
+  assert.equal(D.scrollShift(a, a), 0);
+  assert.equal(D.scrollShift([], []), null, "nothing rendered yet: take the layout");
+  assert.equal(D.scrollShift(a, [a[1], a[0]]), null);
+  assert.equal(D.scrollShift(a, [a[0]]), null);
+  assert.equal(D.scrollShift(a, [a[0], { ...a[1], height: 80 }]), null);
+  assert.equal(D.scrollShift(a, [{ ...a[0], top: -10 }, { ...a[1], top: 80 }]), null);
+});

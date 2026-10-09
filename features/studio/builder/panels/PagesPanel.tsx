@@ -10,7 +10,7 @@ import { useAction } from "../../../../packages/ui/src/useAction";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { AppDefinitionV2, ActionDef, NavLink, Section } from "@xweb/types";
-import { MAX_NAV, HOME_ID, addPageToMenu, checkSlug, listPages, moveNavLink, opsAddPage, opsRemovePage, opsRenamePage, opsSetNavigation, pageExists, removeImpact, reorderPagesReadiness, resolveRoute, sectionsOf, setHomeReadiness, slugify } from "../core/pages";
+import { MAX_NAV, HOME_ID, addPageToMenu, checkSlug, listPages, moveNavLink, opsAddPage, opsRemovePage, opsRenamePage, opsSetNavigation, opsSetNotFound, pageExists, removeImpact, reorderPagesReadiness, resolveRoute, sectionsOf, setHomeReadiness, slugify, uniqueSlug } from "../core/pages";
 import { canStep } from "../core/dnd";
 import { preflight } from "../core/preflight";
 import { Dialog, Field, StateBox } from "../ui/primitives";
@@ -133,7 +133,7 @@ function AddDialog({ doc, onClose, onSubmit }: { doc: AppDefinitionV2; onClose: 
   // M-020: Enter + click / a double Enter send ONE request (decided from a ref); the buttons say it is working
   const act = useAction((_ctx, t: string) => onSubmit(t));
   const submit = async () => { const r = await act.run(title); if (r.status === "ok") setErr(r.value); };
-  const slug = slugify(title);
+  const slug = title.trim() ? uniqueSlug(doc, title) : "";   // M-077: the slug ADD_PAGE will really save (reserved / taken -> "-2"), not the raw slugify
   return (
     <Dialog title="Thêm trang" onClose={onClose} footer={<><button type="button" className="bx-btn" onClick={onClose}>Hủy</button>
       <button type="submit" form="add-page-form" className="bx-btn primary" disabled={!title.trim() || act.busy} aria-busy={act.busy || undefined}>{act.busy ? "Đang thêm…" : "Thêm trang"}</button></>}>
@@ -224,7 +224,7 @@ function NotFoundEditor({ doc, canEdit, busy, apply }: { doc: AppDefinitionV2; c
       <Field label="Lời nhắn">{(id) => <input id={id} value={message} maxLength={300} placeholder="Trang bạn tìm không tồn tại…" disabled={disabled} onChange={(e) => setMessage(e.target.value)}/>}</Field>
       {shown.kind === "notfound" ? <div className="bx-nf-preview" aria-label="Xem trước trang 404"><b>{shown.title}</b><p>{shown.message}</p></div> : null}
       {canEdit ? <div className="bx-actions"><button type="button" className="bx-btn sm" disabled={disabled}
-        onClick={() => void apply([{ type: "UPDATE_SITE", props: { notFound: { ...(title.trim() ? { title: title.trim() } : {}), ...(message.trim() ? { message: message.trim() } : {}) } } }], "Cập nhật trang 404")}>Lưu trang 404</button></div> : null}
+        onClick={() => { const r = opsSetNotFound(title, message); void apply(r.ops, r.summary); }}>Lưu trang 404</button></div> : null}
     </section>
   );
 }
