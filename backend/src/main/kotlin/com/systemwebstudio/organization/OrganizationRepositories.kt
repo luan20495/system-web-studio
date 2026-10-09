@@ -22,7 +22,7 @@ import java.util.UUID
  *     membership per user and unit); `assignment` (one ACTIVE position assignment per membership and position: the grade is an ATTRIBUTE, never part of the identity).
  *  4. ONE TRANSACTION. Implementations take part in the AMBIENT Spring transaction (no REQUIRES_NEW, no second connection): employee creation provisions the account (C1 tables)
  *     and the memberships / positions (C3 tables) atomically, and an audit failure rolls the mutation back.
- *  4b. LOCKING. The tenant STRUCTURAL lock ([TenantStructuralLock]) is taken ONLY by the subtree move. Every other write (create / update / archive / restore of a unit, employees,
+ *  4b. LOCKING. The tenant STRUCTURAL lock ([TenantStructuralLock]) is taken ONLY by the STRUCTURAL operations (D-C0-52): unit create, subtree move, unit restore and a unit-type RULE change - every mutation that can change the effective validity of the tree (depth, type rules). Every other write (update / archive of a unit, employees,
  *     memberships, position assignments, catalogs) uses the ordinary transaction, FK / unique constraints, row locks (e.g. `FOR SHARE` on the parent or unit row an insert depends
  *     on, `FOR UPDATE` on the row an archive reads) and the optimistic version: they never serialise on the tenant structural lock.
  *  4c. RACE-SAFE REFERENCES (the STORE is the authority, the service's pre-checks only give friendly errors in the contract order). Under READ COMMITTED a count made by the
@@ -54,11 +54,17 @@ class ReferencedRowInactive(val kind: String) : RuntimeException("referenced $ki
 class OrganizationCycle : RuntimeException("organization cycle")
 
 /**
- * The tenant STRUCTURAL lock (PostgreSQL: `pg_advisory_xact_lock` on the tenant). Used ONLY by the subtree move, whose cycle / depth / rule validation reads a tree that a
- * concurrent move could change. `acquire` blocks until the lock is free and holds it until the AMBIENT TRANSACTION ends (commit or rollback); it is re-entrant inside one
+ * The tenant STRUCTURAL lock (PostgreSQL: `pg_advisory_xact_lock` on the tenant). Used ONLY by the structural operations (unit create, subtree move, unit restore, unit-type rule change), whose cycle / depth / rule validation reads a tree that a
+ * concurrent structural operation could change (D-C0-52: a descendant created or moved while an ancestor moves must never end deeper than maxDepth). `acquire` blocks until the lock is free and holds it until the AMBIENT TRANSACTION ends (commit or rollback); it is re-entrant inside one
  * transaction and fails with [IllegalStateException] when no transaction is active. The contract execution boundary of a move is ONE READ COMMITTED transaction:
  * `acquire` -> resolve source / destination -> recursive cycle / depth / rule validation -> `move` (expectedVersion CAS + parent UPDATE) -> audit -> commit.
  */
+/** employee counts per unit; ONE statement for any set of units. Optional: a store without it leaves the count fields null. */
+interface OrganizationEmployeeCounts {
+    fun countsFor(tenantId: UUID, unitIds: Collection<UUID>): List<UnitEmployeeCounts>
+    fun countsForAll(tenantId: UUID): List<UnitEmployeeCounts>
+}
+
 interface TenantStructuralLock {
     fun acquire(tenantId: UUID)
 }
@@ -185,7 +191,8 @@ class OrganizationRepositories(
     private val typeRepo: ObjectProvider<OrganizationUnitTypeRepository>, private val unitRepo: ObjectProvider<OrganizationUnitRepository>,
     private val directoryRepo: ObjectProvider<EmployeeDirectoryRepository>, private val membershipRepo: ObjectProvider<EmployeeOrganizationMembershipRepository>,
     private val positionRepo: ObjectProvider<PositionRepository>, private val gradeRepo: ObjectProvider<GradeRepository>,
-    private val employeePositionRepo: ObjectProvider<EmployeePositionRepository>, private val lockProvider: ObjectProvider<TenantStructuralLock>
+    private val employeePositionRepo: ObjectProvider<EmployeePositionRepository>, private val lockProvider: ObjectProvider<TenantStructuralLock>,
+    private val countsProvider: ObjectProvider<OrganizationEmployeeCounts>
 ) {
     companion object {
         const val NOT_AVAILABLE = "ORG_PERSISTENCE_NOT_AVAILABLE"
@@ -198,5 +205,6 @@ class OrganizationRepositories(
     val positions: PositionRepository get() = positionRepo.getIfAvailable() ?: throw notAvailable()
     val grades: GradeRepository get() = gradeRepo.getIfAvailable() ?: throw notAvailable()
     val employeePositions: EmployeePositionRepository get() = employeePositionRepo.getIfAvailable() ?: throw notAvailable()
+    val counts: OrganizationEmployeeCounts? get() = countsProvider.getIfAvailable()
     val lock: TenantStructuralLock get() = lockProvider.getIfAvailable() ?: throw notAvailable()
 }

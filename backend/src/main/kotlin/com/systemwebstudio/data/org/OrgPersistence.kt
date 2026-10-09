@@ -73,7 +73,11 @@ class OrgDb(val jdbc: JdbcTemplate, txManager: PlatformTransactionManager, val j
     fun sqlState(e: Throwable): String? { var c: Throwable? = e; while (c != null) { if (c is SQLException) return c.sqlState; c = c.cause }; return null }
 
     private fun translateBusy(e: DataAccessException): RuntimeException =
-        if (sqlState(e) == "55P03") ApiException(HttpStatus.SERVICE_UNAVAILABLE, BUSY_CODE, "The organization structure is being changed by someone else; retry in a moment", emptyMap(), mapOf("Retry-After" to "1")) else e
+        if (sqlState(e) == "55P03") ApiException(HttpStatus.SERVICE_UNAVAILABLE, BUSY_CODE, "The organization structure is being changed by someone else; retry in a moment",
+            mapOf("retryable" to true, "retryAfterSeconds" to retryAfterSeconds), mapOf("Retry-After" to retryAfterSeconds.toString())) else e
+
+    /** `Retry-After` of [BUSY_CODE] = max(1, ceil(structural lock timeout / 1000)) seconds (D-C0-52) */
+    val retryAfterSeconds: Int get() = maxOf(1, Math.ceil(lockTimeoutMs / 1000.0).toInt())
 
     fun constraint(e: Throwable): String? = CONSTRAINT.find(generateSequence(e) { it.cause }.map { it.message.orEmpty() }.firstOrNull { CONSTRAINT.containsMatchIn(it) } ?: "")?.groupValues?.get(1)
 
@@ -90,10 +94,10 @@ class OrgDb(val jdbc: JdbcTemplate, txManager: PlatformTransactionManager, val j
 }
 
 /**
- * The tenant STRUCTURAL lock seam of C1 ([TenantStructuralLock]) on PostgreSQL: `pg_advisory_xact_lock(namespace, hashtext(tenant))`. Taken ONLY by the subtree move (C1 contract CF-4):
- * it serialises the moves of ONE tenant (different tenants never wait for each other, a hash collision only serialises), it is released by the ambient transaction's commit OR rollback,
+ * The tenant STRUCTURAL lock seam of C1 ([TenantStructuralLock]) on PostgreSQL: `pg_advisory_xact_lock(namespace, hashtext(tenant))`. Taken ONLY by the structural operations - unit create, subtree move, unit restore, unit-type rule change (C1 contract CF-4 as extended by D-C0-52):
+ * it serialises the structural operations of ONE tenant (different tenants never wait for each other, a hash collision only serialises), it is released by the ambient transaction's commit OR rollback,
  * it is re-entrant inside one transaction, it needs an active transaction (`IllegalStateException` otherwise) and its wait is bounded (`lock_timeout`; failure = retryable
- * `503 ORG_STRUCTURE_BUSY`). Nothing else of the organization persistence takes it: memberships, positions, catalogs, directory reads and unit create / update / archive / restore use
+ * `503 ORG_STRUCTURE_BUSY`). Nothing else of the organization persistence takes it: memberships, positions, catalogs, directory reads and unit update / archive use
  * constraints, row locks and optimistic versions only.
  */
 class PostgresTenantStructuralLock(private val db: OrgDb) : TenantStructuralLock {

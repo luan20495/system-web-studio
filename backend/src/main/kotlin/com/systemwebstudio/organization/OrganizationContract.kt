@@ -44,8 +44,11 @@ data class OrganizationUnitDto(
     /** lifecycle: ACTIVE = (`active=true`, `archivedAt=null`); ARCHIVED = (`active=false`, `archivedAt` set). Always consistent; maps to C3's `deleted_at`. */
     val archivedAt: Instant? = null
 )
-data class OrganizationUnitNodeDto(val unit: OrganizationUnitDto, val children: List<OrganizationUnitNodeDto>)
-data class OrganizationUnitDetailDto(val unit: OrganizationUnitDto, val path: List<OrganizationUnitDto>, val activeChildCount: Int, val activeMemberCount: Int)
+/** C0 wiring (D-C0-52): `directMemberCount` = ACTIVE memberships whose unit is exactly this one; `subtreeEmployeeCount` = DISTINCT active employees over this unit and its non-archived descendants. null = the store does not provide counts. */
+data class OrganizationUnitNodeDto(val unit: OrganizationUnitDto, val children: List<OrganizationUnitNodeDto>, val directMemberCount: Long? = null, val subtreeEmployeeCount: Long? = null)
+/** one row of the employee counts of a unit (C3 persistence, wired by C0): [direct] = active direct memberships, [subtreeDistinct] = distinct active users over the active subtree */
+data class UnitEmployeeCounts(val unitId: UUID, val direct: Long, val subtreeDistinct: Long)
+data class OrganizationUnitDetailDto(val unit: OrganizationUnitDto, val path: List<OrganizationUnitDto>, val activeChildCount: Int, val activeMemberCount: Int, val directMemberCount: Long? = null, val subtreeEmployeeCount: Long? = null)
 
 data class OrgUnitCreateRequest(val typeId: UUID? = null, val parentId: UUID? = null, val name: String? = null, val code: String? = null, val sortOrder: Int? = null, val metadata: JsonNode? = null)
 /** The type is immutable and the parent changes ONLY through the move command. */

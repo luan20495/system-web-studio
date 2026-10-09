@@ -21,6 +21,21 @@ internal object OrgRules {
     const val MAX_DEPTH_LIMIT = 100
 
     fun bad(message: String, code: String = "VALIDATION_FAILED") = ApiException.badRequest(code, message)
+    private fun violation(reason: String, message: String) = ApiException.conflict("ORG_TYPE_RULE_VIOLATION", message, mapOf("reason" to reason))
+
+    /** type rules of the child against its parent (null = root) and the depth the unit would sit at; shared by create / move / restore and by the rule-change validation */
+    fun checkPlacement(child: OrganizationUnitTypeDto, parentType: OrganizationUnitTypeDto?, depth: Int) {
+        val r = child.rules
+        if (parentType == null) {
+            val rootOk = r.allowRoot ?: (r.allowedParentTypeIds == null || r.allowedParentTypeIds.isEmpty())
+            if (!rootOk) throw violation("ROOT_NOT_ALLOWED", "Units of type '${child.code}' cannot be a root")
+        } else {
+            if (r.allowedParentTypeIds != null && parentType.id !in r.allowedParentTypeIds) throw violation("PARENT_TYPE_NOT_ALLOWED", "Units of type '${child.code}' cannot be placed under type '${parentType.code}'")
+            val pc = parentType.rules.allowedChildTypeIds
+            if (pc != null && child.id !in pc) throw violation("CHILD_TYPE_NOT_ALLOWED", "Units of type '${parentType.code}' cannot contain type '${child.code}'")
+        }
+        r.maxDepth?.let { if (depth > it) throw violation("MAX_DEPTH", "Units of type '${child.code}' cannot sit deeper than level $it") }
+    }
     fun need(v: Long?): Long = v ?: throw bad("expectedVersion is required")
     fun text(raw: String?, max: Int, what: String, required: Boolean = true): String? {
         val t = raw?.trim()
@@ -88,12 +103,34 @@ class OrganizationUnitTypeService(private val repos: OrganizationRepositories, p
     fun update(tenantId: UUID, id: UUID, actorId: UUID, r: OrgUnitTypeUpdateRequest): OrganizationUnitTypeDto {
         val expected = OrgRules.need(r.expectedVersion)
         return run {
+            if (r.rules != null) repos.lock.acquire(tenantId)                                 // a rule change (maxDepth, allowed parents / children) serialises with unit create / move / restore of the tenant
             val before = get(tenantId, id)
             val next = before.copy(name = r.name?.let { OrgRules.text(it, 120, "name")!! } ?: before.name, icon = if (r.icon != null) OrgRules.text(r.icon, 60, "icon", false) else before.icon,
                 rules = if (r.rules != null) checkRules(tenantId, id, r.rules) else before.rules)
+            if (r.rules != null) checkExistingStructure(tenantId, next)
             val after = repos.types.update(next, expected) ?: throw OrgRules.conflictOrMissing(repos.types.find(tenantId, id)?.version, notFound())
             audit.record("ORG_UNIT_TYPE_UPDATED", "ORG_UNIT_TYPE", id, actorId = actorId, oldValue = snapshot(before), newValue = snapshot(after))
             after
+        }
+    }
+
+    /**
+     * D-C0-52: a RULE change is validated against the tree that exists NOW, under the tenant structural lock (taken by [update]); a new rule the current tree already violates is refused
+     * (`409 ORG_TYPE_RULE_VIOLATION`, `reason` + `unitId`), so a rule can never make an existing unit invalid behind the back of a concurrent create / move / restore.
+     * Only the placements the rule touches are checked: the active units of this type (root / parent / depth) and the active children of its units (allowed child types).
+     */
+    private fun checkExistingStructure(tenantId: UUID, next: OrganizationUnitTypeDto) {
+        val units = repos.units.listAll(tenantId, false).filter { it.active }; if (units.isEmpty()) return
+        val byId = units.associateBy { it.id }
+        val types = repos.types.findAll(tenantId, units.map { it.typeId }.toSet()).associateBy { it.id }.toMutableMap().also { it[next.id] = next }
+        val depths = HashMap<UUID, Int>()
+        fun depth(u: OrganizationUnitDto): Int = depths.getOrPut(u.id) { var d = 1; var cur = u.parentId?.let { byId[it] }; while (cur != null && d <= OrgRules.MAX_DEPTH_LIMIT * 2) { d++; cur = cur.parentId?.let { byId[it] } }; d }
+        for (u in units) {
+            val parent = u.parentId?.let { byId[it] }
+            if (u.typeId != next.id && parent?.typeId != next.id) continue
+            val type = types[u.typeId] ?: continue
+            try { OrgRules.checkPlacement(type, parent?.let { types[it.typeId] }, depth(u)) }
+            catch (e: ApiException) { throw ApiException.conflict("ORG_TYPE_RULE_VIOLATION", "The new rule is violated by the existing unit '${u.code}'", e.details + mapOf("unitId" to u.id, "existingStructure" to true)) }
         }
     }
 
@@ -128,7 +165,8 @@ class OrganizationUnitService(private val repos: OrganizationRepositories, priva
     /** nested projection built from the flat list: roots first, siblings in contract order; a unit whose parent is hidden (archived) is hidden with it */
     fun tree(tenantId: UUID, includeArchived: Boolean): List<OrganizationUnitNodeDto> {
         val all = flat(tenantId, includeArchived); val byParent = all.groupBy { it.parentId }
-        fun build(u: OrganizationUnitDto): OrganizationUnitNodeDto = OrganizationUnitNodeDto(u, byParent[u.id].orEmpty().map(::build))
+        val counts = repos.counts?.countsForAll(tenantId)?.associateBy { it.unitId }                                          // one statement for the whole tenant, no N+1
+        fun build(u: OrganizationUnitDto): OrganizationUnitNodeDto = OrganizationUnitNodeDto(u, byParent[u.id].orEmpty().map(::build), counts?.get(u.id)?.direct ?: counts?.let { 0L }, counts?.get(u.id)?.subtreeDistinct ?: counts?.let { 0L })
         return byParent[null].orEmpty().map(::build)
     }
 
@@ -136,22 +174,12 @@ class OrganizationUnitService(private val repos: OrganizationRepositories, priva
         val unit = get(tenantId, id)
         val path = ArrayDeque<OrganizationUnitDto>(); var cur: OrganizationUnitDto? = unit
         while (cur != null && path.size < OrgRules.MAX_DEPTH_LIMIT * 2) { path.addFirst(cur); cur = cur.parentId?.let { repos.units.find(tenantId, it) } }
-        return OrganizationUnitDetailDto(unit, path.toList(), repos.units.activeChildCount(tenantId, id), repos.memberships.activeCountByUnit(tenantId, id))
+        val provider = repos.counts; val counts = provider?.countsFor(tenantId, listOf(id))?.firstOrNull()            // an ARCHIVED unit has no row: 0 / 0
+        return OrganizationUnitDetailDto(unit, path.toList(), repos.units.activeChildCount(tenantId, id), repos.memberships.activeCountByUnit(tenantId, id), provider?.let { counts?.direct ?: 0L }, provider?.let { counts?.subtreeDistinct ?: 0L })
     }
 
     /** type rules of the child against its parent (null = root) and the depth the unit would sit at */
-    private fun checkPlacement(child: OrganizationUnitTypeDto, parentType: OrganizationUnitTypeDto?, depth: Int) {
-        val r = child.rules
-        if (parentType == null) {
-            val rootOk = r.allowRoot ?: (r.allowedParentTypeIds == null || r.allowedParentTypeIds.isEmpty())
-            if (!rootOk) throw ruleViolation("ROOT_NOT_ALLOWED", "Units of type '${child.code}' cannot be a root")
-        } else {
-            if (r.allowedParentTypeIds != null && parentType.id !in r.allowedParentTypeIds) throw ruleViolation("PARENT_TYPE_NOT_ALLOWED", "Units of type '${child.code}' cannot be placed under type '${parentType.code}'")
-            val pc = parentType.rules.allowedChildTypeIds
-            if (pc != null && child.id !in pc) throw ruleViolation("CHILD_TYPE_NOT_ALLOWED", "Units of type '${parentType.code}' cannot contain type '${child.code}'")
-        }
-        r.maxDepth?.let { if (depth > it) throw ruleViolation("MAX_DEPTH", "Units of type '${child.code}' cannot sit deeper than level $it") }
-    }
+    private fun checkPlacement(child: OrganizationUnitTypeDto, parentType: OrganizationUnitTypeDto?, depth: Int) = OrgRules.checkPlacement(child, parentType, depth)
 
     private fun activeUnit(tenantId: UUID, id: UUID): OrganizationUnitDto =
         get(tenantId, id).also { if (!it.active) throw ApiException.conflict("ORG_UNIT_ARCHIVED", "The organization unit is archived") }
@@ -161,6 +189,7 @@ class OrganizationUnitService(private val repos: OrganizationRepositories, priva
         val code = OrgRules.unitCode(r.code); val name = OrgRules.text(r.name, 160, "name")!!; val meta = OrgRules.metadata(json, r.metadata)
         val typeId = r.typeId ?: throw OrgRules.bad("typeId is required")
         return run {
+            repos.lock.acquire(tenantId)                                                       // FIRST (D-C0-52): depth / type-rule checks and the insert see the same structure as every concurrent create / move / restore
             val type = repos.types.find(tenantId, typeId) ?: throw ApiException.notFound("ORG_UNIT_TYPE_NOT_FOUND", "Organization unit type not found")
             if (!type.active) throw ApiException.conflict("ORG_UNIT_TYPE_DISABLED", "The unit type '${type.code}' is disabled")
             val parent = r.parentId?.let { activeUnit(tenantId, it) }                        // foreign / unknown -> 404; archived -> 409
@@ -250,6 +279,7 @@ class OrganizationUnitService(private val repos: OrganizationRepositories, priva
         val expected = OrgRules.need(expectedVersion)
         fun conflict(reason: String, message: String) = ApiException.conflict("RESTORE_CONFLICT", message, mapOf("reason" to reason))
         return run {
+            repos.lock.acquire(tenantId)                                                       // FIRST (D-C0-52): the depth of the restored unit is checked against a stable structure
             val before = get(tenantId, id)
             if (before.active) throw conflict("NOT_ARCHIVED", "The unit is not archived")
             if (tenants.get(tenantId).status != "ACTIVE") throw conflict("TENANT_INACTIVE", "The company is not active")

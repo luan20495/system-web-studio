@@ -16,16 +16,16 @@ import org.springframework.transaction.PlatformTransactionManager
 import tools.jackson.databind.json.JsonMapper
 
 /**
- * PROPOSED FOR C0 REVIEW / IMPORT (wiring is C0's). Registers the C3 PostgreSQL implementations as the seams of C1's `OrganizationRepositories`.
+ * Approved and wired by C0 (D-C0-52). Registers the C3 PostgreSQL implementations as the seams of C1's `OrganizationRepositories`.
  *
  * OFF by default: it is active only with `app.organization.persistence-enabled=true`. Until C0 allocates the migration number, imports the schema and switches it on, no repository bean
  * exists and every organization route keeps answering `501 ORG_PERSISTENCE_NOT_AVAILABLE` (the release candidate is unchanged). The key belongs in `application.yml` (C0's file):
- * `app.organization.persistence-enabled: ${ORGANIZATION_PERSISTENCE_ENABLED:false}`; `app.organization.lock-timeout-ms` (default 5000) bounds every lock wait.
+ * `app.organization.persistence-enabled: ${ORGANIZATION_PERSISTENCE_ENABLED:false}`; `app.organization.structural-lock-timeout-ms` (default 5000) bounds every lock wait (the one canonical timeout, D-C0-52).
  */
 @Configuration
 @ConditionalOnProperty(prefix = "app.organization", name = ["persistence-enabled"], havingValue = "true")
 class OrganizationPersistenceConfiguration {
-    @Bean fun organizationDb(jdbc: JdbcTemplate, txm: PlatformTransactionManager, json: JsonMapper, @org.springframework.beans.factory.annotation.Value("\${app.organization.lock-timeout-ms:5000}") lockTimeoutMs: Int) =
+    @Bean fun organizationDb(jdbc: JdbcTemplate, txm: PlatformTransactionManager, json: JsonMapper, @org.springframework.beans.factory.annotation.Value("\${app.organization.structural-lock-timeout-ms:5000}") lockTimeoutMs: Int) =
         OrgDb(jdbc, txm, json, lockTimeoutMs)
     @Bean fun organizationUnitTypeRepository(db: OrgDb): OrganizationUnitTypeRepository = PostgresOrganizationUnitTypeRepository(db)
     @Bean fun organizationUnitRepository(db: OrgDb): OrganizationUnitRepository = PostgresOrganizationUnitRepository(db)

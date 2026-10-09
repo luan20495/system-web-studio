@@ -30,7 +30,7 @@ class EmployeeDirectoryService(
     private val repos: OrganizationRepositories, private val identities: TenantIdentityDirectory, private val audit: AuditService,
     private val accounts: AccountService, private val tenants: TenantService
 ) {
-    companion object { const val MAX_PAGE_SIZE = 100; const val MAX_MEMBERSHIPS = 20; const val MAX_POSITIONS = 20; private val SORTS = setOf("name", "username") }
+    companion object { const val MAX_PAGE_SIZE = 100; const val MAX_OFFSET = 10_000; const val MAX_MEMBERSHIPS = 20; const val MAX_POSITIONS = 20; private val SORTS = setOf("name", "username") }
 
     private fun noEmployee() = ApiException.notFound("EMPLOYEE_NOT_FOUND", "Employee not found")
     private fun noMembership() = ApiException.notFound("ORG_MEMBERSHIP_NOT_FOUND", "Organization membership not found")
@@ -63,6 +63,7 @@ class EmployeeDirectoryService(
              page: Int, size: Int, sort: String?, dir: String?): EmployeePageDto {
         if (page < 0) throw OrgRules.bad("page must be 0 or more")
         if (size < 1 || size > MAX_PAGE_SIZE) throw OrgRules.bad("size must be 1-$MAX_PAGE_SIZE")
+        if (page.toLong() * size > MAX_OFFSET) throw OrgRules.bad("page * size must not exceed $MAX_OFFSET (narrow the search instead of paging deeper)", "OFFSET_TOO_LARGE")
         val s = sort ?: "name"; if (s !in SORTS) throw OrgRules.bad("sort must be one of $SORTS")
         val asc = when (dir?.lowercase() ?: "asc") { "asc" -> true; "desc" -> false; else -> throw OrgRules.bad("dir must be asc or desc") }
         val term = q?.trim()?.takeIf { it.isNotEmpty() }

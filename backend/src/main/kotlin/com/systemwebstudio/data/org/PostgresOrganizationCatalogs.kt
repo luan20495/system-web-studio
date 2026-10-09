@@ -2,8 +2,10 @@ package com.systemwebstudio.data.org
 
 import com.systemwebstudio.organization.GradeDto
 import com.systemwebstudio.organization.GradeRepository
+import com.systemwebstudio.organization.OrganizationEmployeeCounts
 import com.systemwebstudio.organization.PositionDto
 import com.systemwebstudio.organization.PositionRepository
+import com.systemwebstudio.organization.UnitEmployeeCounts
 import org.springframework.dao.DuplicateKeyException
 import java.sql.ResultSet
 import java.util.UUID
@@ -64,14 +66,12 @@ class PostgresGradeRepository(private val db: OrgDb) : GradeRepository {
     }
 }
 
-/** An employee count of one unit: `direct` = distinct ACTIVE employees (an active membership of an ACTIVE tenant member) in the unit itself; `subtree` = DISTINCT such employees in the unit or any non-archived descendant. */
-data class UnitEmployeeCounts(val unitId: UUID, val direct: Long, val subtreeDistinct: Long)
 
 /**
  * `directMemberCount` and `subtreeEmployeeCount` (C0 frozen EMPLOYEE_COUNT; NOT part of the C1 seams today - C1 only exposes `activeCountByUnit`, which counts memberships and is what blocks an
  * archive). The subtree count is `COUNT(DISTINCT user_id)`: an employee with memberships in several units of one subtree counts once. ONE statement for any set of units (no N+1).
  */
-class PostgresOrganizationCounts(private val db: OrgDb) {
+class PostgresOrganizationCounts(private val db: OrgDb) : OrganizationEmployeeCounts {
     private val jdbc get() = db.jdbc
 
     /** [unitIds] null = every non-archived unit of the tenant; ids of another tenant simply do not appear */
@@ -92,9 +92,9 @@ class PostgresOrganizationCounts(private val db: OrgDb) {
     private fun run(q: Q) = jdbc.query(q.sql, { rs, _ -> UnitEmployeeCounts(rs.uuid("unit_id"), rs.getLong("direct"), rs.getLong("subtree")) }, *q.args.toTypedArray())
 
     /** the counts of the given units (the per-level read of a lazy tree: pass the children of the node being expanded) */
-    fun countsFor(tenantId: UUID, unitIds: Collection<UUID>): List<UnitEmployeeCounts> = if (unitIds.isEmpty()) emptyList() else run(countsSql(tenantId, unitIds))
+    override fun countsFor(tenantId: UUID, unitIds: Collection<UUID>): List<UnitEmployeeCounts> = if (unitIds.isEmpty()) emptyList() else run(countsSql(tenantId, unitIds))
     /** every non-archived unit of the tenant at once (bulk; the per-level form is cheaper for a UI) */
-    fun countsForAll(tenantId: UUID): List<UnitEmployeeCounts> = run(countsSql(tenantId, null))
+    override fun countsForAll(tenantId: UUID): List<UnitEmployeeCounts> = run(countsSql(tenantId, null))
     fun directMemberCount(tenantId: UUID, unitId: UUID): Long = countsFor(tenantId, listOf(unitId)).firstOrNull()?.direct ?: 0L
     fun subtreeEmployeeCount(tenantId: UUID, unitId: UUID): Long = countsFor(tenantId, listOf(unitId)).firstOrNull()?.subtreeDistinct ?: 0L
 }

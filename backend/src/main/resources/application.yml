@@ -130,6 +130,11 @@ app:
     max-request-bytes: ${MAX_REQUEST_BYTES:1048576}   # JSON API only; uploads go straight to object storage
     max-projects-per-workspace: ${MAX_PROJECTS_PER_WORKSPACE:1000}
     max-assets-per-project: ${MAX_ASSETS_PER_PROJECT:200}
+  organization:
+    # Dynamic Organization persistence (V32, C3). OFF by default: every organization route answers 501 ORG_PERSISTENCE_NOT_AVAILABLE (after authentication / authorization) until it is switched on.
+    persistence-enabled: ${ORGANIZATION_PERSISTENCE_ENABLED:false}
+    # the ONE bound of every structural lock / row lock wait of an organization write; exceeded -> 503 ORG_STRUCTURE_BUSY, retryable, Retry-After = max(1, ceil(ms / 1000))
+    structural-lock-timeout-ms: ${ORGANIZATION_STRUCTURAL_LOCK_TIMEOUT_MS:5000}
   login:
     max-concurrent-hashes: ${LOGIN_MAX_CONCURRENT_HASHES:4}
     queue-wait-ms: ${LOGIN_QUEUE_WAIT_MS:5000}

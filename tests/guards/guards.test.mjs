@@ -188,10 +188,12 @@ for (const [name, files, rule] of [
 
 // ----------------------------------------------------------------------------------------------------------------------------------- 7. migrations
 const LEDGER = (extra = "") => `| Version | File |\n|---|---|\n| base | V1 … V25 |\n| **V26** | tenant |\n| **V30** | C2 rollback |\n| **V31** | candidate activation · **C2** |\n| **V32** | Dynamic Organization · **C1** reserved |\n${extra}`;
+const LEDGER_ALLOCATED = () => LEDGER().replace("candidate activation · **C2** |", "candidate activation · **C2** · VOID gap (D-C0-52) |").replace("**C1** reserved", "contract **C1** · persistence **C3** · ALLOCATED, file created");
 const MIG = (names, ledger = LEDGER(), extra = {}) => fx({ "docs/parallel/MIGRATION_LEDGER.md": ledger, ...Object.fromEntries(names.map((n) => [`backend/src/main/resources/db/migration/${n}`, "select 1;"])), ...extra });
 test("G7 migrations: V1..V30 with the V31 / V32 reservations present and NO V31 / V32 file is CLEAN", () => assert.deepEqual(guardMigrationLedger(MIG(["V1__a.sql", "V26__tenant.sql", "V30__x.sql"])), []));
 test("G7 migrations: the reserved numbers may be used ONLY for their purpose", () => {
-  assert.deepEqual(guardMigrationLedger(MIG(["V30__x.sql", "V31__candidate_activation.sql", "V32__dynamic_organization.sql"])), []);
+  assert.deepEqual(guardMigrationLedger(MIG(["V30__x.sql", "V32__dynamic_organization.sql"], LEDGER_ALLOCATED())), [], "V32 created, V31 a declared gap");
+  assert.deepEqual(guardMigrationLedger(MIG(["V30__x.sql", "V31__candidate_activation.sql"])), [], "V31 alone (before V32 existed) is still legitimate");
 });
 for (const [name, build, rule] of [
   ["a duplicate version", () => MIG(["V30__a.sql", "V30__b.sql"]), "MIGRATION-DUPLICATE"],
@@ -201,6 +203,9 @@ for (const [name, build, rule] of [
   ["V32 taken by something else", () => MIG(["V32__workflow_tweak.sql"]), "MIGRATION-RESERVED"],
   ["the V32 row removed from the ledger", () => MIG(["V30__a.sql"], LEDGER().replace(/\| \*\*V32\*\*.*\n/, "")), "MIGRATION-RESERVED"],
   ["the V31 row no longer says C2 / candidate", () => MIG(["V30__a.sql"], LEDGER().replace("candidate activation · **C2**", "something")), "MIGRATION-RESERVED"],
+  ["V32 exists and V31 is not declared a gap", () => MIG(["V30__a.sql", "V32__dynamic_organization.sql"], LEDGER().replace("**C1** reserved", "ALLOCATED")), "MIGRATION-GAP"],
+  ["V32 exists but its ledger row does not say ALLOCATED", () => MIG(["V30__a.sql", "V32__dynamic_organization.sql"], LEDGER_ALLOCATED().replace("ALLOCATED", "reserved")), "MIGRATION-GAP"],
+  ["V31 created next to V32 (out-of-order hazard)", () => MIG(["V30__a.sql", "V31__candidate_activation.sql", "V32__dynamic_organization.sql"], LEDGER_ALLOCATED()), "MIGRATION-ORDER-HAZARD"],
   ["flyway out-of-order on", () => MIG(["V30__a.sql"], LEDGER(), { "backend/src/main/resources/application.yml": "spring:\n  flyway:\n    out-of-order: true\n" }), "MIGRATION-OUT-OF-ORDER"],
 ]) test(`G7 migrations FAILS: ${name}`, () => assert.ok(rules(guardMigrationLedger(build())).includes(rule), `${rule} expected`));
 
