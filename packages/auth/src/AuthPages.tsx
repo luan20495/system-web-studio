@@ -7,7 +7,7 @@ import { api, ApiError } from "@xweb/api-client";
 import type { AuthConfig } from "@xweb/types";
 import { useSession } from "./session";
 import { accessiblePortals, canAccessPortal, portalHref, portalOfPath, PORTAL_LABEL, rememberPortal, rememberedPortal, resolvePortalPostLogin, resolvePostLogin, safeNext, type Portal, type PortalId } from "@xweb/permissions";
-import { Ban, BRAND, Clock, Diamond, ErrorState, errText, Field, Inbox } from "@xweb/ui";
+import { Ban, BrandLogo, Clock, ErrorState, errText, Field, Inbox } from "@xweb/ui";
 
 const SSO_ERRORS: Record<string, string> = {
   not_provisioned: "Tài khoản SSO của bạn chưa được cấp quyền. Liên hệ quản trị viên.", disabled: "Tài khoản đã bị vô hiệu hóa.",
@@ -16,9 +16,9 @@ const SSO_ERRORS: Record<string, string> = {
 
 function AuthFrame({ children, wide }: { children: React.ReactNode; wide?: boolean }) {
   return (
-    <main className="authPage">
+    <main className="authPage xp-bg-auth">
       <div className={`authPanel${wide ? " wide" : ""}`}>
-        <div className="authBrand"><span className="logoMark" aria-hidden="true"><Diamond size={16} fill="currentColor"/></span><span>{BRAND.product}</span></div>
+        <div className="authBrand"><BrandLogo height={28}/></div>
         {children}
       </div>
       <p className="authFoot">Nền tảng nội bộ · truy cập được kiểm soát và ghi nhật ký</p>

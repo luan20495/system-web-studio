@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { portalHref, rememberPortal, type PortalId } from "@xweb/permissions";
-import { MenuButton, Diamond, PortalSwitcher, type useNavDrawer } from "@xweb/ui";
+import { BrandLockup, MenuButton, PortalSwitcher, type useNavDrawer } from "@xweb/ui";
 import { useSession } from "../../session";
 import { NavLink } from "../../ui";
 import type { AdminScope } from "../adminModel";
@@ -15,7 +15,7 @@ export function AdminSidebar({ active, scope, items }: { active: string; scope: 
   const { me } = useSession(); const { portal, A } = useAdminConsole();
   return (
     <aside className="sidebar dark" id="admin-sidebar" aria-label="Điều hướng quản trị">
-      <div className="sideBrand"><span className="logoMark" aria-hidden="true"><Diamond size={16} fill="currentColor"/></span><div><b>AI Software Factory</b><small>{CONSOLE_NAME[portal]}</small></div></div>
+      <div className="sideBrand"><BrandLockup portal={portal === "platform" ? "platform" : "admin"}/></div>
       <nav>{items.map((s) => <NavLink key={s.key} href={A(s.key ? `/${s.key}` : "")} active={active === s.key} icon={s.icon}>{s.label}{s.listed === "coming" ? <small className="xp-navSoon"> Sắp có</small> : null}</NavLink>)}</nav>
       <div className="sideFoot"><div className="avatar" aria-hidden="true">{(me?.displayName ?? "?").slice(0, 2).toUpperCase()}</div><div><b>{me?.displayName}</b><small>{portal === "platform" ? "Quản trị nền tảng" : scope.platform ? "Quản trị hệ thống" : scope.tenants.length ? "Quản trị công ty" : "Quản trị workspace"}</small></div></div>
     </aside>

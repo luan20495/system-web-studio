@@ -6,7 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useSession } from "../session";
 import { rememberPortal } from "../routing";
 import { canAccessPortal } from "@xweb/permissions";
-import { MenuButton, SkipLink, useMain, useNavDrawer, AppWindow, Boxes, Diamond, History, House, LayoutTemplate, Plus, PortalSwitcher } from "@xweb/ui";
+import { MenuButton, SkipLink, useMain, useNavDrawer, AppWindow, Boxes, BrandLockup, History, House, LayoutTemplate, Plus, PortalSwitcher } from "@xweb/ui";
 import { NavLink, StateView } from "../ui";
 import { ProjectWorkspace } from "./ProjectWorkspace";
 import { consoleHref, S } from "./base";
@@ -65,7 +65,7 @@ function StudioSidebar({ active }: { active: string }) {
   const nav: [string, string, ReactNode][] = [["", "Trang chủ", <House size={18}/>], ["projects", "Ứng dụng", <AppWindow size={18}/>], ["templates", "Templates", <LayoutTemplate size={18}/>], ["components", "Components", <Boxes size={18}/>], ["activity", "Hoạt động", <History size={18}/>]];
   return (
     <aside className="sidebar dark" id="studio-sidebar" aria-label="Điều hướng Studio">
-      <div className="sideBrand"><span className="logoMark" aria-hidden="true"><Diamond size={16} fill="currentColor"/></span><div><b>Company Builder Studio</b><small>AI Software Factory</small></div></div>
+      <div className="sideBrand"><BrandLockup portal="studio"/></div>
       <Link className="btn primary block xp-btnIcon" href={S("/new")}><Plus size={16} aria-hidden="true"/> Tạo ứng dụng</Link>
       <nav>{nav.map(([k, l, i]) => <NavLink key={k} href={S(k ? `/${k}` : "")} active={active === k} icon={i}>{l}</NavLink>)}</nav>
     </aside>

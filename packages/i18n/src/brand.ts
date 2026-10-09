@@ -10,6 +10,8 @@ export const BRAND = {
   portal: { platform: "Xweb Platform", admin: "Quản trị công ty", studio: "Xweb Studio" },
   /** the browser-tab / <title> form: the portal name, then the product when the portal name does not already carry it */
   title: { platform: "Xweb Platform", admin: "Xweb · Quản trị công ty", studio: "Xweb Studio" },
+  /** the words under the XWEB logo in each portal's sidebar (BrandLockup, @xweb/ui): one logo, the portal named in words (docs/BRAND_GUIDELINE.md section 13) */
+  context: { platform: "Platform", admin: "Quản trị công ty", studio: "Studio" },
   legacyNames: ["AI Software Factory", "Company Builder Studio", "Admin Console", "Builder Studio"],
 } as const;
 

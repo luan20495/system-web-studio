@@ -1,6 +1,7 @@
 // @class: harness — HARNESS, NOT REAL BACKEND. The shell markup of AdminApp / StudioApp with the real useNavDrawer + MenuButton in the Admin CSS set; also carries a .grid2 page for the reflow check.
 import { createRoot } from "react-dom/client";
 import { MenuButton, useNavDrawer } from "../../packages/ui/src/NavDrawer";
+import { BrandLockup } from "../../packages/ui/src/Brand";
 import "./admin-css";
 
 function App() {
@@ -8,7 +9,7 @@ function App() {
   return (
     <div className="shell admin" data-nav={nav.open ? "open" : "closed"}>
       <aside className="sidebar dark" id="admin-sidebar" aria-label="Điều hướng quản trị">
-        <div className="sideBrand"><b>Xweb</b></div>
+        <div className="sideBrand"><BrandLockup portal="admin"/></div>
         <nav>{["Tổng quan", "Người dùng", "Ứng dụng", "AI"].map((l, i) => <a key={l} className="navLink" href={`#s${i}`}>{l}</a>)}</nav>
         <div className="sideFoot"><button className="btn sm" id="foot-btn">Hồ sơ</button></div>
       </aside>
