@@ -19,8 +19,12 @@ const schema = {
 
 const digest = (files: Record<string, string>) => createHash("sha256").update(Object.keys(files).sort().map((k) => `${k}\n${files[k]}`).join("\n--\n")).digest("hex");
 
-test("published output is byte-identical to the pre-M-003 renderer (golden sha256 of every published file)", () => {
-  assert.equal(digest(renderSitePages(schema, {})), "7f188e575df58a1c43e5a56135aab1b945b23632051a150f812ccc1c458fa860");
+test("published output is byte-identical to the pre-M-003 renderer except the M-113 reduced-motion guard (golden sha256 of every published file)", () => {
+  const files = renderSitePages(schema, {});
+  // M-113 (intentional, C2 republish note): smooth scrolling is wrapped in a prefers-reduced-motion media query; with ONLY that change undone the output is the old golden byte for byte
+  const undone = Object.fromEntries(Object.entries(files).map(([k, v]) => [k, v.split("@media(prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}").join("html{scroll-behavior:smooth}")]));
+  assert.equal(digest(undone), "7f188e575df58a1c43e5a56135aab1b945b23632051a150f812ccc1c458fa860");
+  assert.equal(digest(files), "e48489c7fbc223ecd459193f8fccf21c517cfdfb19027a0e0b47d8454bc61056");
 });
 
 test("published and non-interactive documents carry no script and no selection class", () => {
