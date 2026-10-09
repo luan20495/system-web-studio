@@ -45,5 +45,5 @@ export function ComingSoon({ title, children }: { title: string; children: React
 export function NavLink({ href, active, children, icon }: { href: string; active: boolean; children: ReactNode; icon?: ReactNode }) {
   return <Link href={href} className={`navLink${active ? " active" : ""}`} aria-current={active ? "page" : undefined}>{icon ? <span className="navIcon" aria-hidden="true">{icon}</span> : null}<span>{children}</span></Link>;
 }
-export { ACTION_LABEL, actionLabel } from "@xweb/i18n";
+export { ACTION_LABEL, actionLabel, BRAND } from "@xweb/i18n";
 import { activeLocale, getFormatters } from "@xweb/i18n";

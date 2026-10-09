@@ -133,7 +133,7 @@ export const ERROR_CODE_TEXT: Record<string, string> = {
   LOGIN_BUSY: "Hệ thống đang bận. Thử lại sau vài giây.",
   SCOPE_BUSY: "Hệ thống đang bận. Thử lại sau vài giây.",
   SERVER_APPS_UNAVAILABLE: "Tính năng ứng dụng máy chủ chưa sẵn sàng.",
-  CODE_PROJECTS_UNAVAILABLE: "Tính năng dự án mã nguồn chưa sẵn sàng.",
+  CODE_PROJECTS_UNAVAILABLE: "Tính năng ứng dụng mã nguồn chưa sẵn sàng.",
   SECRETS_UNAVAILABLE: "Kho khóa bí mật chưa sẵn sàng.",
   ENCRYPTION_UNAVAILABLE: "Mã hóa chưa sẵn sàng.",
   GIT_SERVER_ERROR: "Máy chủ mã nguồn gặp lỗi. Thử lại sau.",

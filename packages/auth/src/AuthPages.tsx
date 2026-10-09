@@ -7,7 +7,7 @@ import { api, ApiError } from "@xweb/api-client";
 import type { AuthConfig } from "@xweb/types";
 import { useSession } from "./session";
 import { accessiblePortals, canAccessPortal, portalHref, portalOfPath, PORTAL_LABEL, PORTAL_PREFIX, rememberPortal, rememberedPortal, resolvePortalPostLogin, resolvePostLogin, safeNext, type Portal, type PortalId } from "@xweb/permissions";
-import { Ban, Clock, Diamond, errText, Inbox } from "@xweb/ui";
+import { Ban, BRAND, Clock, Diamond, errText, Inbox } from "@xweb/ui";
 
 const SSO_ERRORS: Record<string, string> = {
   not_provisioned: "Tài khoản SSO của bạn chưa được cấp quyền. Liên hệ quản trị viên.", disabled: "Tài khoản đã bị vô hiệu hóa.",
@@ -18,7 +18,7 @@ function AuthFrame({ children, wide }: { children: React.ReactNode; wide?: boole
   return (
     <main className="authPage">
       <div className={`authPanel${wide ? " wide" : ""}`}>
-        <div className="authBrand"><span className="logoMark" aria-hidden="true"><Diamond size={16} fill="currentColor"/></span><span>AI Software Factory</span></div>
+        <div className="authBrand"><span className="logoMark" aria-hidden="true"><Diamond size={16} fill="currentColor"/></span><span>{BRAND.product}</span></div>
         {children}
       </div>
       <p className="authFoot">Nền tảng nội bộ · truy cập được kiểm soát và ghi nhật ký</p>
@@ -141,10 +141,10 @@ export function NoAccess() {
       <div className="authCenter">
         <div className="stateIcon" aria-hidden="true"><Ban size={20}/></div>
         <h1>{disabled ? "Tài khoản đã bị vô hiệu hóa" : "Không có quyền truy cập"}</h1>
-        <p className="authLead">{disabled ? "Liên hệ quản trị viên nếu bạn cho rằng đây là nhầm lẫn." : wanted ? `Bạn không có quyền truy cập ${PORTAL_LABEL[wanted]}.` : "Bạn không có quyền truy cập Admin Console."}</p>
+        <p className="authLead">{disabled ? "Liên hệ quản trị viên nếu bạn cho rằng đây là nhầm lẫn." : wanted ? `Bạn không có quyền truy cập ${PORTAL_LABEL[wanted]}.` : `Bạn không có quyền truy cập ${PORTAL_LABEL.admin}.`}</p>
         <div className="row">
           {wanted ? usable.map((p) => <a key={p} className="btn primary" href={portalHref(p)}>Vào {PORTAL_LABEL[p]}</a>) : null}
-          {!wanted && !disabled && me && me.workspaces.length > 0 ? <Link className="btn primary" href={portalHref("studio")} onClick={() => rememberPortal("builder")}>Vào Builder Studio</Link> : null}
+          {!wanted && !disabled && me && me.workspaces.length > 0 ? <Link className="btn primary" href={portalHref("studio")} onClick={() => rememberPortal("builder")}>Vào {PORTAL_LABEL.studio}</Link> : null}
           {me ? <button className="btn" onClick={() => void logout()}>Đăng xuất</button> : <Link className="btn" href="/login">Về trang đăng nhập</Link>}
         </div>
       </div>
@@ -161,7 +161,7 @@ export function NoWorkspace() {
         <h1>Bạn chưa thuộc workspace nào</h1>
         <p className="authLead">Nhờ quản trị viên thêm bạn vào một workspace để bắt đầu tạo ứng dụng.</p>
         <div className="row">
-          {canAccessPortal(me, "admin") ? <Link className="btn primary" href={portalHref("admin")} onClick={() => rememberPortal("admin")}>Vào Admin Console</Link> : null}
+          {canAccessPortal(me, "admin") ? <Link className="btn primary" href={portalHref("admin")} onClick={() => rememberPortal("admin")}>Vào {PORTAL_LABEL.admin}</Link> : null}
           <button className="btn" onClick={() => void logout()}>Đăng xuất</button>
         </div>
       </div>

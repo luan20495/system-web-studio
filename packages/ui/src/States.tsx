@@ -10,7 +10,7 @@ const STATE_TEXT: Record<StateKind, [string, string]> = {
   loading: ["Đang tải…", ""], empty: ["Chưa có dữ liệu", ""], forbidden: ["Bạn không có quyền xem nội dung này", "Quyền được kiểm tra ở máy chủ. Liên hệ quản trị viên nếu cần truy cập."],
   notfound: ["Không tìm thấy", "Mục này không tồn tại hoặc bạn không có quyền xem."], error: ["Đã có lỗi xảy ra", "Hãy thử lại. Nếu lỗi lặp lại, gửi mã yêu cầu cho quản trị viên."],
   network: ["Không kết nối được máy chủ", "Kiểm tra mạng rồi thử lại."], conflict: ["Dữ liệu vừa được thay đổi ở nơi khác", "Đã tải lại bản mới nhất. Hãy thực hiện lại thao tác."],
-  expired: ["Phiên đăng nhập đã hết hạn", "Đăng nhập lại để tiếp tục."], "ai-unavailable": ["AI tạm thời không khả dụng", "Thử lại sau hoặc chọn model khác."],
+  expired: ["Phiên đăng nhập đã hết hạn", "Đăng nhập lại để tiếp tục."], "ai-unavailable": ["AI tạm thời không khả dụng", "Thử lại sau hoặc chọn mô hình khác."],
   "publish-failed": ["Xuất bản thất bại", "Xem chi tiết lỗi bên dưới và thử lại."]
 };
 export function stateOf(e: unknown): StateKind {
