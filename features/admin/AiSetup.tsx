@@ -1,4 +1,5 @@
 "use client";
+import { FormError } from "./FormError";
 import { useA } from "./console/context";
 import Link from "next/link";
 import { useState, type FormEvent, type ReactNode } from "react";
@@ -9,7 +10,7 @@ import { useSingleFlight } from "./useAdminAction";
 import { useLoad } from "../useLoad";
 import { Modal } from "./Modal";
 import { Card, ErrorState, errText, num, Pill, StateView, usd } from "../ui";
-import { Activity, CircleAlert, CircleCheck, CircleSlash, Cpu, KeyRound, ModalHeader, Pencil, Picker, Plus, Power, ProviderLogo, Save, Server, Settings2, ShieldCheck, Switch, Trash2, Zap, ChevronDown, ChevronUp, Download, type PickerOption, confirm, LoadGate } from "@xweb/ui";
+import { Activity, CircleAlert, CircleCheck, CircleSlash, Cpu, KeyRound, ModalHeader, ReasonButton, Pencil, Picker, Plus, Power, ProviderLogo, Save, Server, Settings2, ShieldCheck, Switch, Trash2, Zap, ChevronDown, ChevronUp, Download, type PickerOption, confirm, LoadGate } from "@xweb/ui";
 
 // ------------------------------------------------------------------ wording
 export const KIND_LABELS: Record<AiProviderKind, string> = {
@@ -38,7 +39,7 @@ export function AiAdmin({ tab, usage, pricing }: { tab?: string; usage: ReactNod
   const active = TABS.some(([k]) => k === tab) ? tab! : "providers";
   return (<>
     <Head title="AI" sub="Cấu hình AI cho cả công ty: nhà cung cấp, mô hình được dùng và hạn mức. Nhân viên không bao giờ thấy khóa kết nối."/>
-    <div className="tabs" role="tablist">{TABS.map(([k, l]) => <Link key={k} role="tab" aria-selected={active === k} className={active === k ? "active" : ""} href={A(`/ai/${k}`)}>{l}</Link>)}</div>
+    <nav className="tabs" aria-label="Mục AI">{TABS.map(([k, l]) => <Link key={k} aria-current={active === k ? "page" : undefined} className={active === k ? "active" : ""} href={A(`/ai/${k}`)}>{l}</Link>)}</nav>
     {active === "providers" ? <ProvidersTab/> : active === "models" ? <ModelsTab pricing={pricing}/> : active === "limits" ? <LimitsTab/> : usage}
   </>);
 }
@@ -161,7 +162,7 @@ function ProviderDialog({ edit, onClose, onSaved }: { edit?: AiProviderInfo; onC
           {advanced ? <div className="xp-advBody"><Switch checked={paid} onChange={setPaid} disabled={kind === "OPENROUTER"} label="Có tính phí" hint="Mô hình trả phí mặc định TẮT và cần ngân sách."/></div> : null}
         </div>
 
-        {error ? <p className="formError" role="alert">{error}</p> : null}
+        {error ? <FormError>{error}</FormError> : null}
         <div className="xp-footer"><button type="button" className="btn" onClick={onClose}>Hủy</button><button className="btn primary xp-btnIcon" disabled={busy || !name.trim()} aria-busy={busy || undefined}><Save size={16} aria-hidden="true"/>{busy ? "Đang lưu…" : "Lưu"}</button></div>
       </form>
     </Modal>
@@ -183,12 +184,12 @@ function ModelPicker({ provider, onClose, onSaved }: { provider: AiProviderInfo;
   return (
     <Modal label="Chọn mô hình" onClose={onClose}>
       <div className="modalBody">
-        <h2>Mô hình của {provider.name}</h2>
+        <ModalHeader icon={<Cpu size={22}/>} title={`Mô hình của ${provider.name}`} subtitle="Chọn mô hình công ty được dùng. Mô hình chưa chọn sẽ không hiện cho nhân viên."/>
         {error ? <ErrorState error={error}/> : loading ? <StateView kind="loading"/> : <p className="hint">{data!.detail}</p>}
         <div className="checkList">{all.map((m) => <label key={m} className="check"><input type="checkbox" checked={chosen.has(m)} onChange={() => flip(m)}/> {m}</label>)}</div>
         <label className="field"><span>Thêm mã mô hình thủ công</span><input value={manual} onChange={(e) => setManual(e.target.value)} placeholder="ví dụ: gpt-4o-mini"/></label>
         <p className="hint">Chọn mô hình ở đây chỉ đưa vào danh sách; bạn vẫn phải bật từng mô hình ở tab Mô hình trước khi nhân viên dùng được.</p>
-        {err ? <p className="formError" role="alert">{err}</p> : null}
+        {err ? <FormError>{err}</FormError> : null}
         <div className="row"><button className="btn primary" disabled={busy} onClick={() => void save()}>{busy ? "Đang lưu…" : "Lưu danh sách"}</button><button className="btn" onClick={onClose}>Đóng</button></div>
       </div>
     </Modal>
@@ -229,14 +230,14 @@ function ModelsTab({ pricing }: { pricing: ReactNode }) {
       ) : <table className="table"><thead><tr><th>Mô hình</th><th>Nhà cung cấp</th><th>Loại</th><th>Giá (USD / 1 triệu token)</th><th>Được phép dùng</th><th>Mặc định</th></tr></thead>
         <tbody>{rows.map(({ p, m }) => <tr key={m.id}>
           <td><b>{m.name}</b></td><td>{p.name}</td>
-          <td>{m.paid ? <Pill value="UNKNOWN" label="Trả phí"/> : <Pill value="ACTIVE" label="Miễn phí"/>}</td>
+          <td>{m.paid ? <Pill value="PAID" label="Trả phí"/> : <Pill value="FREE" label="Miễn phí"/>}</td>
           <td>{!m.paid ? <span className="muted">—</span> : priceFor === m.id ? (
             <form className="filters" onSubmit={(e) => void savePrice(e, m.id)}><input aria-label="Giá vào" type="number" min="0" step="0.000001" placeholder="Vào" value={price.input} onChange={(e) => setPrice({ ...price, input: e.target.value })} required/>
               <input aria-label="Giá ra" type="number" min="0" step="0.000001" placeholder="Ra" value={price.output} onChange={(e) => setPrice({ ...price, output: e.target.value })} required/>
               <button className="btn sm primary">Lưu</button><button type="button" className="btn sm" onClick={() => setPriceFor(null)}>Hủy</button></form>
           ) : <>{m.price ? `vào ${m.price.inputUsdPerMTok} · ra ${m.price.outputUsdPerMTok}` : <span className="muted">Chưa có giá</span>} <button className="btn sm" onClick={() => setPriceFor(m.id)}>Cấu hình giá</button></>}</td>
           <td><label className="switch"><input type="checkbox" checked={over[m.id] ?? m.enabled} onChange={(e) => void toggle(m.id, e.target.checked)} aria-label={`Cho phép ${m.name}`}/> {(over[m.id] ?? m.enabled) ? "Bật" : "Tắt"}</label></td>
-          <td>{defaultModel === m.id ? <Pill value="ACTIVE" label="Mặc định"/> : <button className="btn sm" disabled={!(over[m.id] ?? m.enabled)} title={(over[m.id] ?? m.enabled) ? undefined : "Bật mô hình trước"} onClick={() => void makeDefault(m.id)}>Đặt làm mặc định</button>}</td>
+          <td>{defaultModel === m.id ? <Pill value="ACTIVE" label="Mặc định"/> : <ReasonButton className="btn sm" unavailable={!(over[m.id] ?? m.enabled)} reason="Bật mô hình trước." onClick={() => void makeDefault(m.id)}>Đặt làm mặc định</ReasonButton>}</td>
         </tr>)}</tbody></table>}
     </Card>
     {pricing}
@@ -337,7 +338,7 @@ export function OverrideDialog({ fixed, current, onClose, onSaved }: { fixed?: {
   return (
     <Modal label="Thiết lập hạn mức riêng" onClose={onClose}>
       <form className="modalBody" onSubmit={(e) => void submit(e)}>
-        <h2>Thiết lập hạn mức riêng{fixed ? ` cho ${fixed.label}` : ""}</h2>
+        <ModalHeader icon={<Settings2 size={22}/>} title={`Thiết lập hạn mức riêng${fixed ? ` cho ${fixed.label}` : ""}`} subtitle="Hạn mức riêng thay cho hạn mức mặc định của công ty."/>
         {!fixed ? <>
           <label className="field"><span>Áp dụng cho</span><select value={scopeType} onChange={(e) => { setScopeType(e.target.value as typeof scopeType); setTarget(null); setQ(""); }}>
             {(Object.keys(SCOPE_LABEL) as (keyof typeof SCOPE_LABEL)[]).map((k) => <option key={k} value={k}>{SCOPE_LABEL[k]}</option>)}</select></label>
@@ -347,7 +348,7 @@ export function OverrideDialog({ fixed, current, onClose, onSaved }: { fixed?: {
         </> : null}
         {fields.map((k) => <label key={k} className="field"><span>{L[k as keyof typeof L]}</span><input type="number" min="0" step={k === "budget" ? "0.01" : "1"} value={v[k as keyof typeof v]} onChange={(e) => setV({ ...v, [k]: e.target.value })} placeholder="Theo mặc định"/>
           <small>{v[k as keyof typeof v].trim() === "" ? "Để trống = theo mặc định của công ty" : Number(v[k as keyof typeof v]) === 0 ? H[k as keyof typeof H].replace("0 = ", "") : ""}</small></label>)}
-        {error ? <p className="formError" role="alert">{error}</p> : null}
+        {error ? <FormError>{error}</FormError> : null}
         <div className="xp-footer"><button type="button" className="btn" onClick={onClose}>Hủy</button><button className="btn primary" disabled={busy} aria-busy={busy || undefined}>{busy ? "Đang lưu…" : "Lưu"}</button></div>
       </form>
     </Modal>

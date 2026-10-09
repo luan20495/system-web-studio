@@ -56,7 +56,7 @@ export function PlatformChecklist() {
   if (items.every((i) => i.done)) return null;
   return (
     <Card title="Thiết lập nền tảng">
-      <p className="hint">Hoàn thành các bước sau để nền tảng sẵn sàng cho các công ty. Tài khoản quản trị của từng công ty được tạo ở trang của công ty đó.</p>
+      <p className="hint">Hòan thành các bước sau để nền tảng sẵn sàng cho các công ty. Tài khoản quản trị của từng công ty được tạo ở trang của công ty đó.</p>
       <ol className="checklist">{items.map((i) => (
         <li key={i.label} className={i.done ? "done" : ""}><span aria-hidden="true" className="xp-checkIcon">{i.done ? <CircleCheck size={16}/> : <Circle size={16}/>}</span> <b>{i.label}</b>{" "}
           {i.done ? <small className="muted">Đã xong</small> : <Link className="btn sm" href={i.href}>{i.action}</Link>}</li>))}</ol>
@@ -81,7 +81,7 @@ export function SetupChecklist({ users, projects }: { users: number; projects: n
   if (items.every((i) => i.done)) return null;
   return (
     <Card title="Thiết lập ban đầu">
-      <p className="hint">Hoàn thành các bước sau để công ty bắt đầu dùng được AI Software Factory.</p>
+      <p className="hint">Hòan thành các bước sau để công ty bắt đầu dùng được AI Software Factory.</p>
       <ol className="checklist">{items.map((i) => (
         <li key={i.label} className={i.done ? "done" : ""}><span aria-hidden="true" className="xp-checkIcon">{i.done ? <CircleCheck size={16}/> : <Circle size={16}/>}</span> <b>{i.label}</b>{" "}
           {i.done ? <small className="muted">Đã xong</small> : <Link className="btn sm" href={i.href}>{i.action}</Link>}</li>))}</ol>

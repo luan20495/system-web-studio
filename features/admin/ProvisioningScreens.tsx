@@ -4,6 +4,8 @@
  * (provisioning.ts): the production adapter maps routes that exist today and throws NOT_READY for the rest, so the form is complete and honest before C1's contract is final.
  * The tenant of an Admin-portal caller is shown, never typed. Account types come from the plan (never SYSTEM_ADMIN). Every refusal is shown by its code (provisioningProblem).
  */
+import { FormError } from "./FormError";
+import { CircleCheck, ModalHeader, UserRound } from "@xweb/ui";
 import { useId, useMemo, useState, type FormEvent } from "react";
 import type { ActivationLink } from "@/lib/http-types";
 import { Modal } from "./Modal";
@@ -69,7 +71,7 @@ export function CreateAccountDialog({ api, plan, tenants, workspacesOf, onClose,
   return (
     <Modal label={title} onClose={onClose}>
       <form className="modalBody" noValidate onSubmit={(e) => void submit(e)} data-testid="create-account">
-        <h2>{title}</h2>
+        <ModalHeader icon={<UserRound size={22}/>} title={title} subtitle="Người dùng tự đặt mật khẩu khi mở liên kết kích hoạt."/>
         {plan.create.state === "not-ready" ? <p className="notice" role="note" data-testid="prov-not-ready">Backend provisioning chưa sẵn sàng: {plan.create.reason}</p> : null}
         {plan.create.state === "forbidden" ? <p className="notice" role="note" data-testid="prov-forbidden">{plan.create.reason}</p> : null}
 
@@ -112,7 +114,7 @@ export function CreateAccountDialog({ api, plan, tenants, workspacesOf, onClose,
           <p className="hint">Sau khi tạo, bạn nhận một liên kết kích hoạt dùng một lần (hết hạn sau 24 giờ), chỉ hiển thị một lần. Người dùng tự đặt mật khẩu khi kích hoạt (tối thiểu 8 ký tự); bạn không bao giờ biết mật khẩu.</p>
         </fieldset>
 
-        {problem ? <p className={problem.kind === "not-ready" ? "notice" : "formError"} role="alert" data-testid="prov-problem" data-kind={problem.kind}>{problem.text}</p> : null}
+        {problem ? <FormError className={problem.kind === "not-ready" ? "notice" : "formError"} data-testid="prov-problem" data-kind={problem.kind}>{problem.text}</FormError> : null}
         <div className="xp-footer"><button type="button" className="btn" onClick={onClose}>Hủy</button><button className="btn primary" data-testid="acc-submit" disabled={busy || notReady} aria-busy={busy || undefined} title={notReady ? "Backend provisioning chưa sẵn sàng" : undefined}>{busy ? "Đang tạo…" : submitLabel}</button></div>
       </form>
     </Modal>
@@ -127,7 +129,7 @@ function CreatedAccount({ result, tenantName, workspaceName, onClose, onAnother,
   return (
     <Modal label="Đã tạo tài khoản" onClose={onClose}>
       <div className="modalBody" data-testid="account-created">
-        <h2>Đã tạo tài khoản</h2>
+        <ModalHeader icon={<CircleCheck size={22}/>} title="Đã tạo tài khoản"/>
         <dl className="kv">
           <div><dt>Tài khoản</dt><dd data-testid="res-account"><b>{result.user.displayName}</b> ({result.user.username})</dd></div>
           <div><dt>Trạng thái</dt><dd data-testid="res-status">Chờ kích hoạt</dd></div>

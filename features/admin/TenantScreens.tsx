@@ -7,6 +7,7 @@
  *             → Nguồn dữ liệu (data sources of a workspace)                             C3 Management API                      DATA_SOURCE_MANAGE
  * Everything shown is what the server answered; the console never invents a row. Rules that the server enforces are explained before the click (adminModel.ts), and the server's refusal is shown in words.
  */
+import { FormError } from "./FormError";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useState, type FormEvent } from "react";
@@ -16,7 +17,7 @@ import { useSession } from "../session";
 import { useLoad } from "../useLoad";
 import { Card, ErrorState, fmtDate, Kpi, Pager, Pill, StateView } from "../ui";
 import { isTenantAdminRole, isWorkspaceAdminRole } from "@xweb/permissions";
-import { ArrowLeft, Building2, CircleCheck, ModalHeader, ShieldCheck, UserRound, confirm, LoadGate, useAction } from "@xweb/ui";
+import { ArrowLeft, Building2, CircleCheck, ModalHeader, ShieldCheck, UserRound, confirm, errorText, LoadGate, ReasonButton, useAction } from "@xweb/ui";
 import { LoadNote } from "./LoadNote";
 import { useSingleFlight } from "./useAdminAction";
 import { PersonPicker } from "./PersonPicker";
@@ -27,11 +28,12 @@ import { Modal } from "./Modal";
 import { PageHead } from "./PageHead";
 import { useA } from "./console/context";
 import {
-  CANDIDATE_MAX_RESULTS, TENANT_ROLES, TENANT_STATUS_LABEL, WORKSPACE_ROLES, adminErrorText, candidateLabel, candidateQuery, adminScope, slugify, canManageWorkspaceMembers, checkTenantForm, memberChangeBlock, personLabel, personOf, tenantActions, tenantMemberRows,
+  CANDIDATE_MAX_RESULTS, TENANT_ROLES, TENANT_STATUS_LABEL, WORKSPACE_ROLES, candidateLabel, candidateQuery, adminScope, slugify, canManageWorkspaceMembers, checkTenantForm, memberChangeBlock, personLabel, personOf, tenantActions, tenantMemberRows,
   workspaceMemberBlock, workspaceRoleLabel, type Person,
 } from "./adminModel";
 
-const say = (e: unknown, fallback: string) => adminErrorText(e instanceof ApiError ? e : { message: e instanceof Error ? e.message : undefined }, fallback);
+/** one mapper for every refusal (M-075): by code, never the Error.message of a non-ApiError */
+const say = (e: unknown, fallback: string) => errorText(e, fallback);
 const statusPill = (s: string) => <Pill value={s} label={TENANT_STATUS_LABEL[s] ?? s}/>;
 
 // ------------------------------------------------------------------------------------------------------------------------- people
@@ -113,7 +115,7 @@ function TenantMembers({ tenantId, tenantName, onCreateAdmin, rev = 0 }: { tenan
               <td><span className="row"><select aria-label={`Vai trò của ${r.label}`} value={draft[r.userId] ?? r.role} disabled={busy !== null || r.userId === me?.id} onChange={(e) => setDraft((d) => ({ ...d, [r.userId]: e.target.value }))}>
                 {TENANT_ROLES.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</select>
                 {draft[r.userId] && draft[r.userId] !== r.role ? <><button className="btn sm primary" data-testid={`tm-save:${r.userId}`} disabled={busy !== null} onClick={() => void saveRole(r)}>Lưu</button><button className="btn sm" disabled={busy !== null} onClick={() => setDraft((d) => { const n = { ...d }; delete n[r.userId]; return n; })}>Hủy</button></> : null}</span></td>
-              <td><button className="btn sm danger" disabled={busy !== null || r.userId === me?.id} title={r.userId === me?.id ? "Bạn không thể tự gỡ mình" : undefined} onClick={() => change(r, "REMOVE")}>Gỡ</button></td>
+              <td><ReasonButton className="btn sm danger" busy={busy !== null} unavailable={r.userId === me?.id} reason="Bạn không thể tự gỡ mình." onClick={() => change(r, "REMOVE")}>Gỡ</ReasonButton></td>
             </tr>))}</tbody>
         </table>)}
       <form className="stack" onSubmit={(e) => void add(e)} data-testid="tenant-member-add">
@@ -259,7 +261,7 @@ function CreateTenantDialog({ onClose, onCreated }: { onClose: () => void; onCre
           <p className="xp-note" role="note"><ShieldCheck size={16} aria-hidden="true"/><span>Chỉ chọn được tài khoản đã có. Muốn tạo người mới: bỏ trống ở đây, rồi dùng nút “Tạo tài khoản quản trị công ty” ở trang công ty vừa tạo (người đó nhận một liên kết kích hoạt).</span></p>
         </section>
 
-        {error ? <p className="formError" role="alert">{error}</p> : null}
+        {error ? <FormError>{error}</FormError> : null}
         <div className="xp-footer"><button type="button" className="btn" onClick={onClose}>Hủy</button><button className="btn primary" disabled={busy}>{busy ? "Đang tạo…" : "Tạo công ty"}</button></div>
       </form>
     </Modal>
@@ -375,7 +377,7 @@ function WorkspaceMembersPanel({ workspaceId, name }: { workspaceId: string; nam
                 {WORKSPACE_ROLES.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}{WORKSPACE_ROLES.some((x) => x.id === m.role) ? null : <option value={m.role}>{workspaceRoleLabel(m.role)}</option>}</select>
                 {draft[m.userId] && draft[m.userId] !== m.role ? <><button className="btn sm primary" data-testid={`wm-save:${m.username}`} disabled={busy !== null} onClick={() => void saveRole(m)}>Lưu</button><button className="btn sm" disabled={busy !== null} onClick={() => setDraft((d) => { const n = { ...d }; delete n[m.userId]; return n; })}>Hủy</button></> : null}</span></td>
               <td>{fmtDate(m.joinedAt)}</td>
-              <td><button className="btn sm danger" disabled={busy !== null || m.userId === me?.id} title={m.userId === me?.id ? "Bạn không thể tự gỡ mình" : undefined} onClick={() => change(m, "REMOVE")}>Gỡ</button></td>
+              <td><ReasonButton className="btn sm danger" busy={busy !== null} unavailable={m.userId === me?.id} reason="Bạn không thể tự gỡ mình." onClick={() => change(m, "REMOVE")}>Gỡ</ReasonButton></td>
             </tr>))}</tbody>
         </table>)}
       <form className="stack" onSubmit={(e) => void add(e)} data-testid="ws-member-add">

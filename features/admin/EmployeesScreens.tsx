@@ -15,7 +15,7 @@ import type { ProvisioningApi, ProvisionResult } from "./provisioning";
 import type { ProvisioningPlan } from "./provisioningModel";
 import { tenantRoleLabel, initials } from "./adminModel";
 import type { Employee, EmployeePage, EmployeeQuery, EmployeeStatus, OrganizationApi, OrgUnit, Position } from "./organization";
-import { EMPLOYEE_PAGE_SIZE, buildTree, employeeName, flattenTree, orgProblem, pageCount, unitPath, type OrgProblem, type OrganizationPlan } from "./organizationModel";
+import { EMPLOYEE_PAGE_SIZE, buildTree, employeeName, flattenTree, orgProblem, pageCount, pathResolver, unitPath, type OrgProblem, type OrganizationPlan } from "./organizationModel";
 
 export type EmployeeProvisioning = { api: ProvisioningApi; plan: ProvisioningPlan; workspacesOf: (tenantId: string) => Option[]; tenants: Option[] };
 
@@ -45,6 +45,7 @@ export function EmployeesView({ api, plan, tenant, onTenant, prov, canToggleStat
   const showOrg = data?.source !== "members";
   const problem = list.error ? orgProblem(list.error) : null;
   const options = useMemo(() => unitOptions(unitList), [unitList]);
+  const pathOf = useMemo(() => pathResolver(unitList), [unitList]);
   if (!access) return <StateView kind="forbidden" title="Bạn chưa quản trị công ty nào" detail={<p data-testid="emp-forbidden">{(plan.access as { reason: string }).reason}</p>}/>;
   const canCreate = prov.plan.create.state === "ready";
   return (
@@ -54,7 +55,7 @@ export function EmployeesView({ api, plan, tenant, onTenant, prov, canToggleStat
           ? <label className="field xp-tenantSwitch"><span>Công ty</span><select data-testid="emp-tenant-switch" value={tenant.id} onChange={(e) => onTenant(e.target.value)}>{plan.tenantChoice.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
           : <label className="field xp-tenantSwitch"><span>Công ty của bạn</span><input data-testid="emp-tenant" readOnly aria-readonly="true" value={tenant.name}/></label>}
         <div className="xp-orgBarActions">
-          <button className="btn primary xp-btnIcon" data-testid="emp-create" disabled={!canCreate} title={!canCreate ? (prov.plan.create as { reason?: string }).reason : undefined} onClick={() => setCreating(true)}><UserRound size={16} aria-hidden="true"/> Thêm nhân viên</button>
+          <ReasonButton className="btn primary xp-btnIcon" data-testid="emp-create" unavailable={!canCreate} reason={(prov.plan.create as { reason?: string }).reason} onClick={() => setCreating(true)}><UserRound size={16} aria-hidden="true"/> Thêm nhân viên</ReasonButton>
         </div>
       </div>
 
@@ -85,7 +86,7 @@ export function EmployeesView({ api, plan, tenant, onTenant, prov, canToggleStat
                 <tbody>{data.items.map((e) => (
                   <tr key={e.userId} className="clickRow" data-testid={`emp:${e.userId}`} tabIndex={0} onClick={() => setDetail(e)} onKeyDown={(k) => { if (k.key === "Enter") setDetail(e); }}>
                     <td data-label="Nhân viên"><span className="xp-empName"><Avatar e={e}/><span className="xp-personText"><b>{employeeName(e)}</b><small>{e.username}{e.email ? ` · ${e.email}` : ""}</small></span></span></td>
-                    {showOrg ? <><td data-label="Đơn vị">{e.orgUnitName ?? (e.orgUnitId ? unitPath(unitList, e.orgUnitId) : <span className="hint">Chưa gán</span>)}</td>
+                    {showOrg ? <><td data-label="Đơn vị">{e.orgUnitName ?? (e.orgUnitId ? pathOf(e.orgUnitId) : <span className="hint">Chưa gán</span>)}</td>
                     <td data-label="Vị trí">{e.positionName ?? <span className="hint">Chưa gán</span>}</td></> : null}
                     <td data-label="Vai trò công ty">{tenantRoleLabel(e.tenantRole)}</td>
                     <td data-label="Trạng thái"><StatusPill active={e.active}/></td>

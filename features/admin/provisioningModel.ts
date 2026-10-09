@@ -3,6 +3,7 @@
  * from the capability table (provisioning.ts); what is ALLOWED is decided by the server on every call. No role name decides anything here: the account TYPES below
  * are choices for the form, never a permission check. SYSTEM_ADMIN is not an account type: granting it is a separate, confirmed action in the user's own page.
  */
+import { errorParts } from "../../packages/api-client/src/errorText";
 import type { AdminScope } from "./adminModel";
 import type { CapabilityId, CapabilityState, TenantRoleId, WorkspaceRoleId } from "./provisioning";
 
@@ -78,8 +79,10 @@ export type ProvisioningProblem = { kind: "validation" | "duplicate" | "forbidde
 /** the server's refusals by CODE; a specific code never becomes a generic message */
 export function provisioningProblem(e: { code?: string; status?: number; message?: string; reason?: string } | null | undefined): ProvisioningProblem {
   const c = e?.code ?? "", st = e?.status ?? 0;
+  /** the shared catalog / status sentence (M-075); the server's English `message` is never shown */
+  const said = (fallback: string) => errorParts({ status: st, code: c || `HTTP_${st}`, message: e?.message }, fallback).message;
   const by: Record<string, ProvisioningProblem> = {
-    PROVISIONING_NOT_READY: { kind: "not-ready", text: e?.reason ?? "Backend provisioning chưa sẵn sàng." },
+    PROVISIONING_NOT_READY: { kind: "not-ready", text: e?.reason ?? "Tính năng cấp tài khoản chưa sẵn sàng." },
     INVALID_USERNAME: { kind: "validation", field: "username", text: "Tên đăng nhập 3–40 ký tự: chữ thường, số, dấu . _ -" },
     INVALID_EMAIL: { kind: "validation", field: "email", text: "Email không hợp lệ." },
     USERNAME_TAKEN: { kind: "duplicate", field: "username", text: "Tên đăng nhập này đã tồn tại." },
@@ -115,10 +118,10 @@ export function provisioningProblem(e: { code?: string; status?: number; message
   if (st === 0 || c === "NETWORK" || c === "TIMEOUT") return { kind: "unavailable", text: "Không kết nối được máy chủ. Chưa rõ thao tác đã được ghi hay chưa: hãy tải lại danh sách trước khi thử lại." };
   if (st === 503 || st === 502 || st === 504 || st >= 500) return { kind: "unavailable", text: "Máy chủ chưa sẵn sàng. Hãy thử lại sau ít phút." };
   if (st === 429) return { kind: "unavailable", text: "Quá nhiều yêu cầu: hãy đợi một lát rồi thử lại." };
-  if (st === 422) return { kind: "mismatch", text: e?.message ?? "Dữ liệu không xử lý được." };
+  if (st === 422) return { kind: "mismatch", text: said("Dữ liệu không xử lý được.") };
   if (st === 403) return { kind: "forbidden", text: "Bạn không có quyền thực hiện thao tác này." };
   if (st === 404) return { kind: "mismatch", text: "Không tìm thấy (hoặc không thuộc phạm vi của bạn)." };
-  if (st === 409) return { kind: "duplicate", text: e?.message ?? "Xung đột dữ liệu." };
-  if (st === 400) return { kind: "validation", text: e?.message ?? "Dữ liệu chưa hợp lệ." };
-  return { kind: "unknown", text: e?.message ?? "Chưa thực hiện được." };
+  if (st === 409) return { kind: "duplicate", text: said("Xung đột dữ liệu.") };
+  if (st === 400) return { kind: "validation", text: said("Dữ liệu chưa hợp lệ.") };
+  return { kind: "unknown", text: said("Chưa thực hiện được.") };
 }

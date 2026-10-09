@@ -1,12 +1,12 @@
 "use client";
 
 import { AuditTable } from "./AuditTable";
-import { useState } from "react";
+import { useId, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/http-api";
 import type { AdminApp as App } from "@/lib/http-types";
-import { ArrowLeft, confirm, LoadGate } from "@xweb/ui";
+import { ArrowLeft, confirm, LoadGate, Tabs, TabPanel } from "@xweb/ui";
 import { useSession } from "../../session";
 import { canActInWorkspace } from "../adminModel";
 import { useA } from "../console/context";
@@ -57,14 +57,14 @@ export function AppDetail({ id }: { id: string }) {
   const router = useRouter(); const { me } = useSession();
   const { data, error, loading, reload } = useLoad(() => api.admin.application(id), [id]);
   const ws = useLoad(() => (data ? api.admin.workspace(data.app.workspaceId) : Promise.resolve(null)), [data?.app.workspaceId]);
-  const [tab, setTab] = useState<"overview" | "members" | "versions" | "prompts" | "deployments" | "audit">("overview");
+  const [tab, setTab] = useState<"overview" | "members" | "versions" | "prompts" | "deployments" | "audit">("overview"); const tid = useId();
   const [newOwner, setNewOwner] = useState("");
   const { act: run, busy, msg: okMsg, err: failMsg } = useAdminAction("Thao tác thất bại.", reload);
   const msg = failMsg ?? okMsg;
   if (!data) return <LoadGate load={{ data, error, loading, reload }} level={1} label="thông tin ứng dụng">{() => null}</LoadGate>;
   const d = data!; const a = d.app; const inWorkspace = canActInWorkspace(me, a.workspaceId);
   const act = (fn: () => Promise<unknown>, ok: string) => run(fn, ok);
-  const tabs: [typeof tab, string][] = [["overview", "Tổng quan"], ["members", `Thành viên (${d.members.length})`], ["versions", "Phiên bản"], ["prompts", "Hoạt động AI"], ["deployments", "Xuất bản"], ["audit", "Nhật ký"]];
+  const tabs: { value: typeof tab; label: string; count?: number }[] = [{ value: "overview", label: "Tổng quan" }, { value: "members", label: "Thành viên", count: d.members.length }, { value: "versions", label: "Phiên bản" }, { value: "prompts", label: "Hoạt động AI" }, { value: "deployments", label: "Xuất bản" }, { value: "audit", label: "Nhật ký" }];
   return (<>
     <PageHead title={a.name} sub={`${a.workspaceName} · chủ sở hữu ${a.owner} · ${!a.active ? "đã xóa" : a.lifecycle === "ARCHIVED" ? "đã lưu trữ (chỉ xem, ngoại tuyến)" : "đang hoạt động"}`}
       actions={a.active ? <div className="row">
@@ -73,7 +73,8 @@ export function AppDetail({ id }: { id: string }) {
         {inWorkspace ? <button className="btn danger" disabled={busy} onClick={async () => { if (await confirm({ title: `Xóa ứng dụng “${a.name}”?`, message: "Xóa mềm: ứng dụng biến khỏi danh sách và việc này được ghi nhật ký.", confirmLabel: "Xóa ứng dụng", danger: true })) void act(() => api.deleteProject(a.workspaceId, a.id, a.revision), "Đã xóa ứng dụng."); }}>Xóa</button> : null}</div> : undefined}/>
     {a.active && !inWorkspace ? <p className="notice" role="note" data-testid="app-no-workspace-access">{noWorkspaceAccess(a.workspaceName)}</p> : null}
     {msg ? <p className="notice" role="status">{msg}</p> : null}
-    <div className="tabs" role="tablist">{tabs.map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? "active" : ""} onClick={() => setTab(k)}>{l}</button>)}</div>
+    <Tabs label="Chi tiết ứng dụng" idBase={tid} value={tab} onChange={setTab} tabs={tabs}/>
+    <TabPanel idBase={tid} value={tab}>
     {tab === "overview" ? (<>
       <div className="kpiGrid">
         <Kpi label="Quyền truy cập" value={a.visibility === "PUBLIC" ? "Công khai" : "Riêng tư"}/><Kpi label="Phiên bản mới nhất" value={`v${a.latestVersion ?? "—"}`} hint={`revision ${a.revision}`}/>
@@ -89,7 +90,7 @@ export function AppDetail({ id }: { id: string }) {
             <button className="btn primary" disabled={!newOwner || busy}>Chuyển</button>
             <LoadNote load={ws} what="danh sách thành viên workspace"/>
           </form>) : <p className="muted">Ứng dụng đã bị xóa.</p>}
-          <p className="hint">Chủ cũ ở lại dự án với vai trò Editor. Mọi thay đổi được ghi nhật ký.</p>
+          <p className="hint">Chủ cũ ở lại ứng dụng với vai trò Biên tập. Mọi thay đổi được ghi nhật ký.</p>
         </Card>
         <Card title="Chưa triển khai"><ComingSoon title="Chặn xuất bản công khai, chi phí, điểm bảo mật">Các chức năng này cần dữ liệu và chính sách chưa có trong hệ thống.</ComingSoon></Card>
       </div>
@@ -100,6 +101,7 @@ export function AppDetail({ id }: { id: string }) {
     {tab === "prompts" ? <Card>{d.prompts.length ? <table className="table"><thead><tr><th>Thời gian</th><th>Người dùng</th><th>Prompt</th><th>Model</th><th>Kết quả</th></tr></thead><tbody>{d.prompts.map((p) => <tr key={p.id}><td>{ago(p.createdAt)}</td><td>{p.user ?? "—"}</td><td>{p.text}</td><td className="code">{p.model ?? p.provider ?? "—"}</td><td>{p.outcome ? <Pill value={p.outcome}/> : "—"}</td></tr>)}</tbody></table> : <StateView kind="empty" title="Chưa có prompt"/>}</Card> : null}
     {tab === "deployments" ? <Card>{d.deployments.length ? <table className="table"><thead><tr><th>Thời gian</th><th>Phiên bản</th><th>Truy cập</th><th>Trạng thái</th><th>Môi trường</th><th>Lỗi</th></tr></thead><tbody>{d.deployments.map((x) => <tr key={x.id}><td>{fmtDate(x.createdAt)}</td><td>v{x.versionNumber ?? "—"}</td><td>{x.visibility}</td><td><Pill value={x.status}/></td><td>{x.provider === "mock" ? "Demo deployment (mô phỏng)" : x.provider === "static" ? "Trang tĩnh (thật)" : x.provider}</td><td>{x.error ?? "—"}</td></tr>)}</tbody></table> : <StateView kind="empty" title="Chưa xuất bản lần nào"/>}</Card> : null}
     {tab === "audit" ? <Card><AuditTable rows={d.audit}/></Card> : null}
+    </TabPanel>
     <p><button className="btn ghost xp-btnIcon" onClick={() => router.push(A("/applications"))}><ArrowLeft size={14} aria-hidden="true"/> Danh sách ứng dụng</button></p>
   </>);
 }

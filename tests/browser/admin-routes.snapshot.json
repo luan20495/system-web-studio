@@ -172,7 +172,7 @@
     ],
     "h2": [
      "Mô hình AI",
-     "Bảng giá model",
+     "Bảng giá mô hình",
      "Chưa có giá nào"
     ],
     "states": [
@@ -200,12 +200,12 @@
      "AI"
     ],
     "h2": [
-     "Mức sử dụng model",
-     "Theo model",
+     "Mức sử dụng mô hình",
+     "Theo mô hình",
      "Theo người dùng (top 20)",
      "Theo workspace (top 20)",
      "Chưa có dữ liệu",
-     "Nhật ký lượt gọi model",
+     "Nhật ký lượt gọi mô hình",
      "Chưa có lượt gọi",
      "Prompt gần đây"
     ],
@@ -334,7 +334,7 @@
      "Component Registry"
     ],
     "h2": [
-     "Thêm component gốc mới"
+     "Thêm thành phần gốc mới"
     ],
     "states": [],
     "coming": 1,
@@ -1170,7 +1170,7 @@
      "Quản trị AI"
     ],
     "h2": [
-     "Quyền dùng model (Model Access)",
+     "Quyền dùng mô hình",
      "Chưa có quy tắc chặn nào",
      "Ngân sách AI (tiền)",
      "Chưa có ngân sách nào"
@@ -1696,7 +1696,7 @@
      "Quản trị AI"
     ],
     "h2": [
-     "Quyền dùng model (Model Access)",
+     "Quyền dùng mô hình",
      "Chưa có quy tắc chặn nào",
      "Ngân sách AI (tiền)",
      "Chưa có ngân sách nào"
@@ -3596,7 +3596,7 @@
     ],
     "h2": [
      "Mô hình AI",
-     "Bảng giá model",
+     "Bảng giá mô hình",
      "Chưa có giá nào"
     ],
     "states": [
@@ -3624,12 +3624,12 @@
      "AI"
     ],
     "h2": [
-     "Mức sử dụng model",
-     "Theo model",
+     "Mức sử dụng mô hình",
+     "Theo mô hình",
      "Theo người dùng (top 20)",
      "Theo workspace (top 20)",
      "Chưa có dữ liệu",
-     "Nhật ký lượt gọi model",
+     "Nhật ký lượt gọi mô hình",
      "Chưa có lượt gọi",
      "Prompt gần đây"
     ],
@@ -3646,7 +3646,7 @@
      "Quản trị AI"
     ],
     "h2": [
-     "Quyền dùng model (Model Access)",
+     "Quyền dùng mô hình",
      "Chưa có quy tắc chặn nào",
      "Ngân sách AI (tiền)",
      "Chưa có ngân sách nào"
@@ -3772,7 +3772,7 @@
      "Component Registry"
     ],
     "h2": [
-     "Thêm component gốc mới"
+     "Thêm thành phần gốc mới"
     ],
     "states": [],
     "coming": 1,
@@ -4175,7 +4175,7 @@
     ],
     "h2": [
      "Mô hình AI",
-     "Bảng giá model",
+     "Bảng giá mô hình",
      "Chưa có giá nào"
     ],
     "states": [
@@ -4203,12 +4203,12 @@
      "AI"
     ],
     "h2": [
-     "Mức sử dụng model",
-     "Theo model",
+     "Mức sử dụng mô hình",
+     "Theo mô hình",
      "Theo người dùng (top 20)",
      "Theo workspace (top 20)",
      "Chưa có dữ liệu",
-     "Nhật ký lượt gọi model",
+     "Nhật ký lượt gọi mô hình",
      "Chưa có lượt gọi",
      "Prompt gần đây"
     ],
@@ -4225,7 +4225,7 @@
      "Quản trị AI"
     ],
     "h2": [
-     "Quyền dùng model (Model Access)",
+     "Quyền dùng mô hình",
      "Chưa có quy tắc chặn nào",
      "Ngân sách AI (tiền)",
      "Chưa có ngân sách nào"
@@ -4351,7 +4351,7 @@
      "Component Registry"
     ],
     "h2": [
-     "Thêm component gốc mới"
+     "Thêm thành phần gốc mới"
     ],
     "states": [],
     "coming": 1,

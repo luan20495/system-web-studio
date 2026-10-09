@@ -15,7 +15,7 @@ import { LinkBox } from "../UserDialogs";
 import { useSession } from "../../session";
 import { adminScope } from "../adminModel";
 import { useA } from "../console/context";
-import { confirm, LoadGate } from "@xweb/ui";
+import { confirm, LoadGate, ReasonButton } from "@xweb/ui";
 import { useLoad } from "../../useLoad";
 import { ago, Card, ErrorState, errText, fmtDate, Kpi, num, Pager, Pill, StateView } from "../../ui";
 import { PageHead } from "../PageHead";
@@ -25,10 +25,10 @@ export function UsersPage({ tab = "users" }: { tab?: "users" | "workspaces" }) {
   const A = useA();
   return (<>
     <PageHead title="Người dùng & Workspace" sub="Workspace là đơn vị tổ chức hiện tại (chưa có phòng ban/đồng bộ HR)."/>
-    <div className="tabs" role="tablist">
-      <Link role="tab" aria-selected={tab === "users"} className={tab === "users" ? "active" : ""} href={A("/users")}>Người dùng</Link>
-      <Link role="tab" aria-selected={tab === "workspaces"} className={tab === "workspaces" ? "active" : ""} href={A("/workspaces")}>Workspace</Link>
-    </div>
+    <nav className="tabs" aria-label="Người dùng và workspace">
+      <Link aria-current={tab === "users" ? "page" : undefined} className={tab === "users" ? "active" : ""} href={A("/users")}>Người dùng</Link>
+      <Link aria-current={tab === "workspaces" ? "page" : undefined} className={tab === "workspaces" ? "active" : ""} href={A("/workspaces")}>Workspace</Link>
+    </nav>
     {tab === "users" ? <UserList/> : <WorkspaceList/>}
   </>);
 }
@@ -55,7 +55,7 @@ export function UserList() {
           <tbody>{data!.items.map((u) => (
             <tr key={u.id} className="clickRow" onClick={() => router.push(A(`/users/${u.id}`))}>
               <td><Link href={A(`/users/${u.id}`)}><b>{u.displayName ?? u.username}</b></Link><small>{u.username}{u.email ? ` · ${u.email}` : ""} · {u.authSource === "OIDC" ? "SSO" : u.authSource === "SCIM" ? "SCIM" : "Mật khẩu"}</small></td>
-              <td>{u.systemAdmin ? <Pill value="PUBLIC" label="Quản trị hệ thống"/> : <span className="muted">Thành viên</span>}</td>
+              <td>{u.systemAdmin ? <Pill value="INFO" label="Quản trị hệ thống"/> : <span className="muted">Thành viên</span>}</td>
               <td>{u.workspaces}</td><td>{u.projects}</td><td>{ago(u.lastLoginAt)}</td>
               <td>{!u.enabled ? <Pill value="DISABLED" label="Bị khóa"/> : u.pending ? <Pill value="PENDING" label="Chờ kích hoạt"/> : <Pill value="ACTIVE" label="Hoạt động"/>}</td>
             </tr>))}</tbody>
@@ -95,7 +95,7 @@ export function UserDetail({ id }: { id: string }) {
         {u.authSource === "LOCAL" && u.enabled ? <button className="btn" disabled={busy} onClick={() => newLink()}>{u.pending ? "Tạo lại liên kết kích hoạt" : "Đặt lại mật khẩu"}</button> : null}
         {!self && u.enabled && !u.pending ? <button className="btn" disabled={busy} onClick={() => void grantAdmin()}>{u.systemAdmin ? "Gỡ quyền Quản trị hệ thống" : "Cấp quyền Quản trị hệ thống"}</button> : null}
         <button className="btn" disabled={busy || d.activeSessions === 0} onClick={() => void revoke()}>Thu hồi phiên ({d.activeSessions})</button>
-        <button className={`btn ${u.enabled ? "danger" : "primary"}`} disabled={busy || self} title={self ? "Bạn không thể tự khóa tài khoản của mình" : undefined} onClick={() => void toggle()}>{u.enabled ? "Khóa tài khoản" : "Mở khóa"}</button>
+        <ReasonButton className={`btn ${u.enabled ? "danger" : "primary"}`} busy={busy} unavailable={self} reason="Bạn không thể tự khóa tài khoản của mình." onClick={() => void toggle()}>{u.enabled ? "Khóa tài khoản" : "Mở khóa"}</ReasonButton>
       </div>}/>
     {msg ? <p className="notice" role="status">{msg}</p> : null}
     {link ? <LinkBox link={link} onClose={() => { setLink(null); reload(); }}/> : null}

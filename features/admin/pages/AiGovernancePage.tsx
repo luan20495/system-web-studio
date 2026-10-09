@@ -60,14 +60,14 @@ export function AiGovernancePage() {
       budgets.reload();
     }, "Đã lưu ngân sách.");
   }
-  async function delBudget(x: AiBudget) { if (!(await confirm({ title: "Xoá ngân sách này?", message: `${SCOPE_LABEL[x.scopeType]} ${x.scopeLabel ?? x.scopeId}: không còn bị giới hạn bởi ngân sách này.`, confirmLabel: "Xoá ngân sách", danger: true }))) return; void act(async () => { await api.admin.deleteBudget(x.id); budgets.reload(); }); }
+  async function delBudget(x: AiBudget) { if (!(await confirm({ title: "Xóa ngân sách này?", message: `${SCOPE_LABEL[x.scopeType]} ${x.scopeLabel ?? x.scopeId}: không còn bị giới hạn bởi ngân sách này.`, confirmLabel: "Xóa ngân sách", danger: true }))) return; void act(async () => { await api.admin.deleteBudget(x.id); budgets.reload(); }); }
   function runCheck(e: FormEvent) { e.preventDefault(); void act(async () => { setEff(await api.admin.effectiveModels(check.id, checkWs.id || undefined)); }); }
   const money = (v: number, c: string) => `${num(Math.round(v * 10000) / 10000)} ${c}`;
   return (<>
-    <PageHead title="Quản trị AI" sub="Quyền dùng model theo tổ chức → workspace → vai trò → người dùng (chặn ở bất kỳ mức nào là chặn), và ngân sách tiền trên chi phí đã biết."/>
+    <PageHead title="Quản trị AI" sub="Quyền dùng mô hình theo tổ chức → workspace → vai trò → người dùng (chặn ở bất kỳ mức nào là chặn), và ngân sách tiền trên chi phí đã biết."/>
     {err ? <p className="formError" role="alert">{err}</p> : null}{msg ? <p className="hint" role="status">{msg}</p> : null}
-    <Card title="Quyền dùng model (Model Access)">
-      <p className="hint">Model phải được bật ở AI Control trước. Quy tắc ở đây chỉ CHẶN thêm. Mã model: chính xác (ví dụ <code>openai:gpt-…</code>), <code>paid:*</code> (mọi model trả phí) hoặc <code>*</code> (mọi model thật; bộ mô phỏng luôn dùng được).</p>
+    <Card title="Quyền dùng mô hình">
+      <p className="hint">Mô hình phải được bật ở mục AI trước. Quy tắc ở đây chỉ CHẶN thêm. Mã mô hình: chính xác (ví dụ <code>openai:gpt-…</code>), <code>paid:*</code> (mọi mô hình trả phí) hoặc <code>*</code> (mọi mô hình thật; bộ mô phỏng luôn dùng được).</p>
       <form className="filters wrap" onSubmit={(e) => void addRule(e)}>
         <ScopePicker types={["ORG", "WORKSPACE", "ROLE", "USER"]} value={rule} onChange={setRule}/>
         <input aria-label="Model bị chặn" value={model} onChange={(e) => setModel(e.target.value)} placeholder="paid:* | * | provider:model"/>
@@ -82,13 +82,13 @@ export function AiGovernancePage() {
         <ScopePicker types={["USER"]} value={check} onChange={setCheck}/><ScopePicker types={["WORKSPACE"]} value={checkWs} onChange={setCheckWs}/>
         <button className="btn" disabled={!check.id}>Kiểm tra</button>
       </form>
-      {eff ? eff.length === 0 ? <StateView kind="empty" title="Chưa có model nào được cấu hình"/> :
+      {eff ? eff.length === 0 ? <StateView kind="empty" title="Chưa có mô hình nào được cấu hình"/> :
         <table className="table"><thead><tr><th>Model</th><th>Nhà cung cấp</th><th>Trả phí</th><th>Kết quả</th></tr></thead>
           <tbody>{eff.map((m) => <tr key={m.id}><td className="code">{m.id}</td><td>{m.provider}</td><td>{m.paid ? "Có" : "Không"}</td>
             <td><Pill value={m.allowed ? "ACTIVE" : "DISABLED"} label={m.reason}/></td></tr>)}</tbody></table> : null}
     </Card>
     <Card title="Ngân sách AI (tiền)">
-      <p className="hint">Chỉ tính chi phí đã biết: chi phí nhà cung cấp báo, hoặc token × bảng giá ở AI Control. Cuộc gọi không rõ chi phí được đếm riêng, không ước đoán.
+      <p className="hint">Chỉ tính chi phí đã biết: chi phí nhà cung cấp báo, hoặc token × bảng giá ở tab Mô hình của mục AI. Cuộc gọi không rõ chi phí được đếm riêng, không ước đoán.
         Ngân sách cứng chặn model TRẢ PHÍ khi đã tiêu đủ (model miễn phí vẫn dùng được); model trả phí chưa có giá sẽ bị từ chối khi có ngân sách cứng. Tiền tệ khác USD cần tỷ giá do bạn nhập.</p>
       <form className="filters wrap" onSubmit={(e) => void saveBudget(e)}>
         <ScopePicker types={["ORG", "WORKSPACE", "USER", "PROJECT"]} value={b} onChange={setB}/>
@@ -106,7 +106,7 @@ export function AiGovernancePage() {
             <td>{money(x.amount, x.currency)}<small>{x.hard ? "chặn khi vượt" : "chỉ cảnh báo"} · cảnh báo {x.softPercent}%</small></td>
             <td>{money(x.spent, x.currency)}{x.currency !== "USD" ? <small>{usd(x.spentUsd)}</small> : null}</td>
             <td><div className={`budgetBar ${x.percent >= 100 ? "over" : x.percent >= x.softPercent ? "warn" : ""}`} role="img" aria-label={`${x.percent}%`}><i style={{ width: `${Math.min(100, x.percent)}%` }}/></div><small>{x.percent}%</small></td>
-            <td>{num(x.unknownCostCalls)}</td><td><button className="btn sm ghost" onClick={() => void delBudget(x)}>Xoá</button></td></tr>)}</tbody></table>}
+            <td>{num(x.unknownCostCalls)}</td><td><button className="btn sm ghost" onClick={() => void delBudget(x)}>Xóa</button></td></tr>)}</tbody></table>}
     </Card>
   </>);
 }

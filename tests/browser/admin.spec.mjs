@@ -191,12 +191,20 @@ await block("scenario 12", async () => { const p = await open({ portal: "admin",
 
 // ===================================================================================================================== M-076 values that are not what the screen expects must not blank the portal
 await block("scenario 8", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/audit", bad: "audit" });
-  await p.locator("tr.clickRow").first().click(); await settle(p, 300);
-  check("DAT01 an audit row whose value is NOT JSON expands: the page stays, the raw text is shown", (await p.locator("h1").count()) === 1 && /not json at all/.test(await p.locator(".detailRow pre").innerText()), `h1=${await p.locator("h1").count()}`);
+  await p.locator(".xp-discBtn").first().click(); await settle(p, 300);
+  check("DAT01 an audit row whose value is NOT JSON expands: the page stays, the raw text is shown", (await p.locator("h1").count()) === 1 && /not json at all/.test(await p.locator(".xp-discDetail pre").innerText()), `h1=${await p.locator("h1").count()}`);
   await p.__ctx.close(); });
 await block("scenario 9", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/audit" });
-  await p.locator("tr.clickRow").first().click(); await settle(p, 300);
-  check("DAT02 a JSON audit value still shows pretty-printed JSON (unchanged)", /"a": 1/.test(await p.locator(".detailRow pre").innerText()));
+  await p.locator(".xp-discBtn").first().click(); await settle(p, 300);
+  check("DAT02 a JSON audit value still shows pretty-printed JSON (unchanged)", /"a": 1/.test(await p.locator(".xp-discDetail pre").innerText()));
+  // M-029: the row opens from the keyboard, says so, and closes again
+  await p.locator(".xp-discBtn").first().click(); await settle(p, 200);
+  const b0 = p.locator(".xp-discBtn").first(); await b0.focus();
+  const ex0 = await b0.getAttribute("aria-expanded"); await p.keyboard.press("Enter"); await settle(p, 200);
+  const ex1 = await b0.getAttribute("aria-expanded"); const ctl = await b0.getAttribute("aria-controls"); const shown = await p.locator(".xp-discDetail pre").count();
+  await p.keyboard.press("Space"); await settle(p, 200);
+  check("AUD01 an audit row is a real button: Enter opens (aria-expanded + aria-controls + detail), Space closes", ex0 === "false" && ex1 === "true" && !!ctl && shown === 1 && (await b0.getAttribute("aria-expanded")) === "false" && (await p.locator(".xp-discDetail").count()) === 0, `${ex0} ${ex1} ${ctl} ${shown}`);
+  check("AUD02 the button has a name that says which event (not just an icon)", /^Chi tiết: /.test(((await b0.innerText()) || (await b0.evaluate((e) => e.textContent))).trim()));
   await p.__ctx.close(); });
 await block("scenario 10", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/components", bad: "schema" });
   await p.getByRole("button", { name: "Schema" }).click(); await settle(p, 300);
@@ -204,7 +212,7 @@ await block("scenario 10", async () => { const p = await open({ portal: "platfor
   await p.__ctx.close(); });
 await block("scenario 11", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/ai/usage", daily: "empty" });
   await settle(p, 400);
-  check("DAT04 AI usage with an empty daily series renders (no 'Invalid time value')", (await p.locator("h1").count()) === 1 && /Mức sử dụng model/.test(await text(p)));
+  check("DAT04 AI usage with an empty daily series renders (no 'Invalid time value')", (await p.locator("h1").count()) === 1 && /Mức sử dụng mô hình/.test(await text(p)));
   await p.__ctx.close(); });
 
 // ===================================================================================================================== M-054 the Platform overview speaks to the platform operator
@@ -275,9 +283,9 @@ await block("scenario 25", async () => { const p = await open({ portal: "platfor
   verdict("CNF08 delete an AI limit override", await ask(p, { open: () => p.getByRole("button", { name: "Xóa", exact: true }).first().click(), title: /Xóa hạn mức riêng này\?/, confirm: "Xóa hạn mức", re: /limits\/overrides\/o1$/ }));
   await p.__ctx.close(); });
 await block("scenario 26", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/ai-governance", fx: "1" });
-  verdict("CNF09 delete an AI budget", await ask(p, { open: () => p.getByRole("button", { name: "Xoá", exact: true }).first().click(), title: /Xoá ngân sách này\?/, confirm: "Xoá ngân sách", re: /ai\/budgets\/b1$/ }));
+  verdict("CNF09 delete an AI budget", await ask(p, { open: () => p.getByRole("button", { name: "Xóa", exact: true }).first().click(), title: /Xóa ngân sách này\?/, confirm: "Xóa ngân sách", re: /ai\/budgets\/b1$/ }));
   await nav(p, "/admin/departments"); await settle(p, 500);
-  verdict("CNF10 delete a department", await ask(p, { open: () => p.getByRole("button", { name: "Xoá", exact: true }).first().click(), title: /Xoá “Kỹ thuật”\?/, confirm: "Xoá", re: /departments\/d1$/, method: "DELETE" }));
+  verdict("CNF10 delete a department", await ask(p, { open: () => p.getByRole("button", { name: "Xóa", exact: true }).first().click(), title: /Xóa “Kỹ thuật”\?/, confirm: "Xóa", re: /departments\/d1$/, method: "DELETE" }));
   verdict("CNF11 rename a department (a prompt: empty is refused)", await ask(p, { open: () => p.getByRole("button", { name: "Đổi tên" }).click(), title: /Đổi tên “Kỹ thuật”/, confirm: "Đổi tên", re: /departments\/d1$/, method: "PATCH", field: "Kỹ thuật mới" }));
   await p.__ctx.close(); });
 await block("scenario 27", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/applications/a1", fx: "1" });
@@ -288,7 +296,7 @@ await block("scenario 28", async () => { const p = await open({ portal: "admin",
   verdict("CNF13 restore an old version", await ask(p, { open: () => p.getByRole("button", { name: "Khôi phục", exact: true }).click(), title: /Khôi phục v1\?/, confirm: "Khôi phục v1", re: /projects\/a2\/versions|restore/ }));
   await p.__ctx.close(); });
 await block("scenario 29", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/builds", fx: "1" });
-  verdict("CNF14 permanently delete a repository", await ask(p, { open: () => p.getByRole("button", { name: "Xoá vĩnh viễn" }).click(), title: /Xoá vĩnh viễn kho mã “repo-1”\?/, confirm: "Xoá vĩnh viễn", re: /repositories\/pr1\/delete$/ }));
+  verdict("CNF14 permanently delete a repository", await ask(p, { open: () => p.getByRole("button", { name: "Xóa vĩnh viễn" }).click(), title: /Xóa vĩnh viễn kho mã “repo-1”\?/, confirm: "Xóa vĩnh viễn", re: /repositories\/pr1\/delete$/ }));
   await p.__ctx.close(); });
 await block("scenario 30", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/packages", fx: "1" });
   verdict("CNF15 accept a package's risk (a prompt: the reason is required)", await ask(p, { open: () => p.getByRole("button", { name: "Cho phép", exact: true }).click(), title: /Cho phép “date-fns” dù có lỗ hổng/, confirm: "Chấp nhận rủi ro", re: /packages\/date-fns\/decision$/, field: "Đã rà soát, chỉ dùng ở phía máy chủ" }));
@@ -378,7 +386,7 @@ await block("scenario 44", async () => { const p = await open({ portal: "platfor
   check("LDG02 the report that DID load is still on screen", /Build 30 ngày/.test(await main.innerText()));
   await p.evaluate(() => { window.__cfg.fail = null; });
   await main.getByRole("button", { name: "Thử lại" }).first().click(); await settle(p, 600);
-  check("LDG03 'Thử lại' reloads that panel (the other one still offers it)", (await main.locator(".state-error, .state-network").count()) === 1 && /Sẽ xoá/.test(await main.innerText()));
+  check("LDG03 'Thử lại' reloads that panel (the other one still offers it)", (await main.locator(".state-error, .state-network").count()) === 1 && /Sẽ xóa/.test(await main.innerText()));
   await p.__ctx.close(); });
 await block("scenario 45", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/builds", slow: "/admin/retention" }); await settle(p, 500);
   check("LDG04 a loading panel says WHAT is loading", /Đang tải bản xem trước dọn dẹp/.test(await p.locator("main").innerText()));
@@ -453,7 +461,7 @@ await block("scenario 58", async () => { const { p, t } = await emptyOf("/platfo
   check("EMP01 costs with nothing in it shows no NaN / undefined and says there is no data", !/NaN|undefined|\[object/.test(t) && /Chưa có số liệu chi phí/.test(t), t.slice(0, 160));
   await p.__ctx.close(); });
 await block("scenario 59", async () => { const { p, t } = await emptyOf("/platform/components");
-  check("EMP02 components: an empty registry says so", /Chưa có component nào/.test(t));
+  check("EMP02 components: an empty registry says so", /Chưa có thành phần nào/.test(t));
   await p.__ctx.close(); });
 await block("scenario 60", async () => { const { p, t } = await emptyOf("/platform/system");
   check("EMP03 system health: no checks says so", /Chưa có thành phần nào được kiểm tra/.test(t));
@@ -462,7 +470,7 @@ await block("scenario 61", async () => { const { p, t } = await emptyOf("/platfo
   check("EMP04 settings: no editable policies says so", /Chưa có chính sách nào chỉnh được/.test(t));
   await p.__ctx.close(); });
 await block("scenario 62", async () => { const { p, t } = await emptyOf("/platform/ai/usage");
-  check("EMP05 AI usage with an empty daily series (M-120) renders: heading, no crash", (await p.locator("h1").count()) === 1 && /Mức sử dụng model/.test(t) && !/Invalid time value/.test(t));
+  check("EMP05 AI usage with an empty daily series (M-120) renders: heading, no crash", (await p.locator("h1").count()) === 1 && /Mức sử dụng mô hình/.test(t) && !/Invalid time value/.test(t));
   await p.__ctx.close(); });
 
 // ===================================================================================================================== M-088 secrets do not outlive their use
@@ -500,7 +508,7 @@ await block("scenario 66", async () => { const p = await open({ portal: "admin",
   await p.__ctx.close(); });
 await block("scenario 67", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/ai/models" }); await settle(p, 600);
   await p.evaluate(() => { window.__cfg.slow = "/admin/ai/pricing"; });
-  await p.getByLabel("Model", { exact: true }).selectOption({ index: 1 }); await p.getByLabel("Giá token vào (USD / 1 triệu)").fill("1"); await p.getByLabel("Giá token ra (USD / 1 triệu)").fill("2");
+  await p.getByLabel("Mô hình", { exact: true }).selectOption({ index: 1 }); await p.getByLabel("Giá token vào (USD / 1 triệu)").fill("1"); await p.getByLabel("Giá token ra (USD / 1 triệu)").fill("2");
   await p.getByRole("button", { name: "Thêm giá" }).dblclick(); await settle(p, 400);
   check("DBL05 model price: a double click on 'Thêm giá' adds ONE (immutable) price row", (await writes(p, /ai\/pricing$/, "POST")) === 1);
   await p.__ctx.close(); });
@@ -567,6 +575,64 @@ if (!process.env.SKIP_SNAPSHOT) {
   }
   check(`SNAP01 every persona's sidebar and every section's page (${Object.keys(want).length} personas × ${KEYS.length} paths) is exactly what it was before the split`, diffs.length === 0, diffs.slice(0, 3).join(" || "));
 }
+
+// ===================================================================================================================== M-031 a disabled action says WHY in visible text (never title-only)
+await block("scenario 75", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/users/u-sys" });
+  const lock = p.getByRole("button", { name: /Khóa tài khoản/ }); await lock.waitFor();
+  const reason = /Bạn không thể tự khóa tài khoản của mình/;
+  check("RSN01 your own account: 'Khóa tài khoản' is aria-disabled, FOCUSABLE, has no title, and the reason is visible text tied to it", (await lock.getAttribute("aria-disabled")) === "true" && !(await lock.getAttribute("title")) && reason.test(await text(p)) && !!(await lock.getAttribute("aria-describedby")));
+  await lock.focus(); const h0 = (await calls(p)).length; await lock.click({ force: true }); await settle(p, 200);
+  check("RSN02 …and activating it sends nothing and opens no dialog", (await calls(p)).length === h0 && (await dlg(p).count()) === 0);
+  await p.__ctx.close(); });
+
+// ===================================================================================================================== M-032 a status chip's colour means what it says (warning = amber, high risk = red, not grey)
+await block("scenario 76", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/alerts" });
+  await p.locator(".pill", { hasText: "WARNING" }).first().waitFor();
+  check("PIL01 an alert of severity WARNING is an amber (pill-warn) chip, not grey", /pill-warn/.test(await p.locator(".pill", { hasText: "WARNING" }).first().getAttribute("class")));
+  await nav(p, "/platform/settings"); await p.locator(".pill", { hasText: "Rủi ro cao" }).first().waitFor();
+  check("PIL02 'Rủi ro cao' is a red (pill-bad) chip, not grey", /pill-bad/.test(await p.locator(".pill", { hasText: "Rủi ro cao" }).first().getAttribute("class")));
+  await p.__ctx.close(); });
+
+// ===================================================================================================================== M-028 route switches are links (aria-current), in-page switches are real tabs (arrows, tabpanel)
+await block("scenario 77", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/ai/models" });
+  await p.getByRole("navigation", { name: "Mục AI" }).waitFor();
+  check("TAB01 AI sections are a nav of LINKS: no role=tab, the current one has aria-current=page", (await p.locator("[role=tab]").count()) === 0 && (await p.getByRole("link", { name: "Mô hình", exact: true }).getAttribute("aria-current")) === "page" && (await p.getByRole("link", { name: "Nhà cung cấp", exact: true }).getAttribute("aria-current")) === null);
+  await nav(p, "/platform/users"); await p.getByRole("navigation", { name: "Người dùng và workspace" }).waitFor();
+  check("TAB02 Users / Workspaces are links with aria-current too", (await p.locator("[role=tab]").count()) === 0 && (await p.getByRole("link", { name: "Người dùng", exact: true }).first().getAttribute("aria-current")) === "page");
+  await p.__ctx.close(); });
+await block("scenario 78", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/applications/a1" });
+  const tabs = p.getByRole("tab"); await tabs.first().waitFor();
+  const t0 = tabs.first(); await t0.focus(); await p.keyboard.press("ArrowRight"); await settle(p, 200);
+  const sel = await p.locator("[role=tab][aria-selected=true]").innerText();
+  const panel = p.locator("[role=tabpanel]"); const lab = await panel.getAttribute("aria-labelledby"); const selId = await p.locator("[role=tab][aria-selected=true]").getAttribute("id");
+  check("TAB03 application detail: ArrowRight moves to the next tab, which is selected; the tabpanel is labelled by it; only the selected tab is a tab stop", /^Thành viên/.test(sel) && lab === selId && (await p.locator("[role=tab][tabindex='0']").count()) === 1, `${sel} ${lab} ${selId}`);
+  check("TAB04 the member count is part of the tab name (read with a comma)", /Thành viên\s*,?\s*\d+/.test(((await p.locator("[role=tab][aria-selected=true]").evaluate((e) => e.textContent)) ?? "").replace(/\s+/g, " ")));
+  await p.__ctx.close(); });
+await block("scenario 79", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/components" });
+  await p.getByRole("tab", { name: "Khối đóng góp" }).click(); await settle(p, 200);
+  check("TAB05 components: 'Khối đóng góp' is a selected tab with its own tabpanel", (await p.getByRole("tab", { name: "Khối đóng góp" }).getAttribute("aria-selected")) === "true" && (await p.locator("[role=tabpanel]").count()) === 1);
+  await p.__ctx.close(); });
+
+// ===================================================================================================================== M-034 a server error in a dialog is IN VIEW, above the sticky footer
+await block("scenario 80", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/tenants" }, { h: 460 });
+  await p.evaluate(() => { window.__cfg.failw = "/admin/tenants"; });
+  await p.getByRole("button", { name: "+ Tạo công ty" }).click(); await settle(p, 300);
+  await p.getByTestId("tenant-name").fill("Công ty Lỗi"); await p.getByRole("button", { name: "Tạo công ty" }).last().click(); await settle(p, 700);
+  const geo = await p.evaluate(() => { const a = document.querySelector("[role=dialog] .formError[role=alert]"); const f = document.querySelector("[role=dialog] .xp-footer"); if (!a || !f) return null; const ar = a.getBoundingClientRect(), fr = f.getBoundingClientRect(); return { aTop: ar.top, aBottom: ar.bottom, fTop: fr.top, vh: innerHeight }; });
+  check("DLG01 a server refusal in 'Tạo công ty' is an alert that is fully visible: inside the viewport and above the sticky footer", !!geo && geo.aTop >= 0 && geo.aBottom <= geo.fTop + 1 && geo.aBottom <= geo.vh, JSON.stringify(geo));
+  await p.__ctx.close(); });
+
+// ===================================================================================================================== M-105 Admin dialogs use the shared header and a plain fieldset (no UA groove, no bare 24px h2)
+await block("scenario 81", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/users" });
+  await p.getByTestId("users-create").click(); await settle(p, 600);
+  const shape = await p.evaluate(() => { const d = document.querySelector("[role=dialog]"); const fs = d.querySelector("fieldset.stack"); const lg = fs.querySelector("legend"); const cs = getComputedStyle(fs), ls = getComputedStyle(lg);
+    return { head: d.querySelectorAll(".xp-modalHead h2").length, bare: d.querySelectorAll(".modalBody > h2").length, border: cs.borderTopWidth, legend: ls.fontSize, weight: ls.fontWeight }; });
+  check("DLG02 create account: the title is the shared ModalHeader (one h2 in .xp-modalHead, no bare h2), the fieldset has no UA border and a small legend", shape.head === 1 && shape.bare === 0 && shape.border === "0px" && parseFloat(shape.legend) <= 14 && +shape.weight >= 600, JSON.stringify(shape));
+  await p.keyboard.press("Escape"); await settle(p, 200); await p.__ctx.close(); });
+await block("scenario 82", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/users/u2" });
+  await p.getByRole("button", { name: "Đặt lại mật khẩu" }).click(); await settle(p, 400);
+  check("DLG03 the activation-link dialog uses the shared ModalHeader", (await p.locator("[role=dialog] .xp-modalHead h2").count()) === 1 && (await p.locator("[role=dialog] .modalBody > h2").count()) === 0);
+  await p.__ctx.close(); });
 
 check("no console error / warning / uncaught exception in any page", errors.length === 0, errors.slice(0, 3).join(" | "));
 await browser.close();

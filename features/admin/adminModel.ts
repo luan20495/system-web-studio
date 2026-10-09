@@ -139,19 +139,3 @@ export function workspaceMemberBlock(m: Member, me: { id: string }, all: Member[
   if (isWorkspaceAdminRole(m.role) && !isWorkspaceAdminRole(next) && all.filter((x) => isWorkspaceAdminRole(x.role)).length <= 1) return "Workspace phải còn ít nhất một quản trị viên.";
   return null;
 }
-
-const ERROR_TEXT: Record<string, string> = {
-  LAST_TENANT_ADMIN: "Công ty phải còn ít nhất một quản trị viên.", LAST_ADMIN: "Workspace phải còn ít nhất một quản trị viên.",
-  SELF_GRANT_FORBIDDEN: "Bạn không thể tự cấp quyền hoặc tự đổi vai trò của chính mình.", DEFAULT_TENANT_PROTECTED: "Công ty mặc định không thể bị tạm khóa hoặc xóa.",
-  TENANT_SLUG_TAKEN: "Mã công ty này đã được dùng.", TENANT_SLUG_INVALID: "Mã công ty không hợp lệ.", TENANT_NAME_INVALID: "Tên công ty không hợp lệ.",
-  TENANT_NOT_FOUND: "Không tìm thấy công ty.", TENANT_MEMBER_NOT_FOUND: "Người này không còn là thành viên của công ty.", USER_NOT_FOUND: "Không tìm thấy người dùng này.",
-  ALREADY_MEMBER: "Người này đã là thành viên.", INVALID_ROLE: "Vai trò không hợp lệ.", MEMBER_NOT_FOUND: "Không tìm thấy thành viên.",
-  ADMIN_REQUIRED: "Màn hình này chỉ dành cho quản trị hệ thống.", PERMISSION_DENIED: "Bạn không có quyền thực hiện thao tác này.",
-};
-/** the server's refusals in words a company administrator understands; the code is the contract, the English message is not shown */
-export function adminErrorText(e: { code?: string; status?: number; message?: string } | null | undefined, fallback: string): string {
-  if (e?.code && ERROR_TEXT[e.code]) return ERROR_TEXT[e.code];
-  if (e?.status === 403) return "Bạn không có quyền thực hiện thao tác này.";
-  if (e?.status === 404) return "Không tìm thấy (hoặc bạn không có quyền xem).";
-  return e?.message ? `${fallback} (${e.message})` : fallback;
-}

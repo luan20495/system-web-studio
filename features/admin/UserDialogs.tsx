@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ActivationLink } from "@/lib/http-types";
 import { fmtDate } from "../ui";
 import { Modal } from "./Modal";
+import { KeyRound, ModalHeader } from "@xweb/ui";
 
 export const ROLE_LABELS: Record<string, string> = {
   WORKSPACE_ADMIN: "Quản trị không gian làm việc", EDITOR: "Biên tập viên", PUBLISHER: "Người xuất bản", VIEWER: "Người xem"
@@ -33,7 +34,7 @@ export function LinkBox({ link, onClose, copiedBefore = false, onCopied }: { lin
   return (
     <Modal label="Liên kết kích hoạt" onClose={onEscape}>
       <div className="modalBody" data-testid="link-box">
-        <h2>{link.purpose === "RESET" ? "Liên kết đặt lại mật khẩu" : "Liên kết kích hoạt"}</h2>
+        <ModalHeader icon={<KeyRound size={22}/>} title={link.purpose === "RESET" ? "Liên kết đặt lại mật khẩu" : "Liên kết kích hoạt"}/>
         <p>Gửi liên kết này cho <b>{link.displayName}</b> ({link.username}). Người dùng tự đặt mật khẩu của mình khi mở liên kết (tối thiểu 8 ký tự). Liên kết chỉ dùng được một lần, hết hạn lúc {fmtDate(link.expiresAt)} và <b>sẽ không hiển thị lại</b>: hãy sao chép trước khi đóng.</p>
         <input ref={field} readOnly aria-label="Liên kết" value={url} onFocus={(e) => e.currentTarget.select()} onCopy={markCopied}/>
         <span className="srOnly" role="status">{copied ? "Đã sao chép liên kết." : ""}</span>
