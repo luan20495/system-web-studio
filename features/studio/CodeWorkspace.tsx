@@ -2,7 +2,7 @@
 // Code projects (STATIC_APP, ADR 0008/0012): AI and Code modes over a real Git repository; every change is a commit on its own branch,
 // built in the sandbox, previewed from the sites origin (CSP sandbox) and merged only after a green build.
 import { canEditProject, canPublish, canShare, resolvePermissions } from "@xweb/permissions";
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { ArrowLeft, confirm, ReasonButton, Sparkles, TabPanel, Tabs, toast } from "@xweb/ui";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/http-api";
@@ -14,6 +14,7 @@ import { PublishModal } from "./ReleaseModal";
 import { ReviewDialog } from "./ReviewDialog";
 import { OverflowMenu } from "./OverflowMenu";
 import { describeStatus } from "./aiProgressModel";
+import { diffFileRows } from "./codeDiff";
 import { DesignPane, IdeDrawer, PackagesDrawer, RuntimeDrawer } from "./CodePanels";
 import { projectBase, S } from "./base";
 
@@ -21,27 +22,14 @@ const STATUS: Record<CodeChange["status"], string> = { BUILDING: "Đang build", 
 const STAGE: Record<string, string> = { CLAIMED: "đã nhận", SOURCE: "lấy mã", SCAN_SOURCE: "quét mã", PREPARE: "chuẩn bị", INSTALL: "cài gói", BUILD: "build",
   PACKAGE: "đóng gói", SCAN_OUTPUT: "quét kết quả", UPLOAD: "tải lên", UPLOADED: "đã tải lên", DONE: "xong" };
 
-/** Line diff (LCS) for small source files. */
-function lineDiff(a: string, b: string): { t: " " | "-" | "+"; s: string }[] {
-  const x = a.split("\n"), y = b.split("\n");
-  if (x.length * y.length > 4_000_000) return [...x.map((s) => ({ t: "-" as const, s })), ...y.map((s) => ({ t: "+" as const, s }))];
-  const m = Array.from({ length: x.length + 1 }, () => new Int32Array(y.length + 1));
-  for (let i = x.length - 1; i >= 0; i--) for (let j = y.length - 1; j >= 0; j--) m[i][j] = x[i] === y[j] ? m[i + 1][j + 1] + 1 : Math.max(m[i + 1][j], m[i][j + 1]);
-  const out: { t: " " | "-" | "+"; s: string }[] = []; let i = 0, j = 0;
-  while (i < x.length && j < y.length) { if (x[i] === y[j]) { out.push({ t: " ", s: x[i] }); i++; j++; } else if (m[i + 1][j] >= m[i][j + 1]) out.push({ t: "-", s: x[i++] }); else out.push({ t: "+", s: y[j++] }); }
-  while (i < x.length) out.push({ t: "-", s: x[i++] }); while (j < y.length) out.push({ t: "+", s: y[j++] });
-  return out;
-}
-
-function DiffView({ files }: { files: DiffFile[] }) {
+// M-082: memo + per-file cache (codeDiff.ts): the LCS runs once per diff response, not on every keystroke elsewhere in the workspace
+const DiffView = memo(function DiffView({ files }: { files: DiffFile[] }) {
   return <div className="diffView">{files.map((f) => {
-    const rows = lineDiff(f.before ?? "", f.after ?? "");
-    // show changed lines with 2 lines of context
-    const keep = rows.map((r, i) => r.t !== " " || rows.slice(Math.max(0, i - 2), i + 3).some((x) => x.t !== " "));
+    const rows = diffFileRows(f);
     return <section key={f.path}><h4>{f.path} {f.before == null ? <em>(mới)</em> : f.after == null ? <em>(xoá)</em> : null}</h4>
-      <pre>{rows.map((r, i) => keep[i] ? <div key={i} className={`dl ${r.t === "+" ? "add" : r.t === "-" ? "del" : ""}`}>{r.t} {r.s}</div> : (keep[i - 1] ? <div key={i} className="dl gap">⋯</div> : null))}</pre></section>;
+      <pre>{rows.map((r) => r.gap ? <div key={r.index} className="dl gap">⋯</div> : <div key={r.index} className={`dl ${r.row.t === "+" ? "add" : r.row.t === "-" ? "del" : ""}`}>{r.row.t} {r.row.s}</div>)}</pre></section>;
   })}</div>;
-}
+});
 
 export function CodeWorkspace({ project, view, onProject }: { project: ApiProject; view?: string; onProject: (p: ApiProject) => void }) {
   const router = useRouter(); const { me } = useSession();
