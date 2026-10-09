@@ -398,6 +398,13 @@ await block("scenario 46", async () => { const p = await open({ portal: "admin",
 await block("scenario 47", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/identity", fail: "/auth/config" }); await settle(p, 900);
   check("LDG06 Identity: a failed /auth/config says so in the OIDC / SAML tiles (not '…')", !/…/.test(await p.locator("main .kpiGrid").innerText()) && (await p.locator("main .kpiGrid .state-error, main .kpiGrid .state-network").count()) >= 2);
   await p.__ctx.close(); });
+// M-093 (a): the login page fails CLOSED when /auth/config fails: an error with a retry, never a guessed local-password form
+for (const portal of ["platform", "admin"]) await block(`scenario 47b ${portal}`, async () => { const p = await open({ portal, me: "none", start: `/${portal}/login`, fail: "/auth/config" }); await settle(p, 700);
+  const t = await text(p);
+  check(`CFG01 ${portal}: failed /auth/config shows an error with a retry, not the password form`, /Chưa tải được cách đăng nhập/.test(t) && (await p.locator("input[type=password]").count()) === 0 && (await p.getByRole("button", { name: "Thử lại" }).count()) === 1, t.slice(0, 200));
+  await p.evaluate(() => { window.__cfg.fail = null; }); await p.getByRole("button", { name: "Thử lại" }).click(); await settle(p, 400);
+  check(`CFG02 ${portal}: retry after the server recovers shows the sign-in form`, (await p.locator("input[type=password]").count()) === 1 && !/Chưa tải được cách đăng nhập/.test(await text(p)));
+  await p.__ctx.close(); });
 await block("scenario 48", async () => { const p = await open({ portal: "admin", me: "sys", start: "/admin/ai-governance", fail: "/admin/users" }); await settle(p, 500);
   await p.getByLabel("Phạm vi").first().selectOption("USER"); await settle(p, 900);
   check("LDG07 a scope picker whose search failed says so (it used to show an empty list)", /Chưa tải được danh sách để chọn/.test(await p.locator("main").innerText()));
@@ -661,6 +668,35 @@ await block("scenario 84", async () => { const p = await open({ portal: "platfor
   await p.getByRole("heading", { level: 1, name: "AI" }).waitFor();
   const t = await text(p);
   check("AI01 the Platform AI page says the configuration is platform-wide (not 'cho cả công ty')", /toàn nền tảng/.test(t) && !/cho cả công ty/.test(t));
+  await p.__ctx.close(); });
+
+// ===================================================================================================================== M-097 request counts (HARNESS): no duplicate GETs, no request per keystroke
+const gets = async (p, re) => (await calls(p)).filter((c) => c.method === "GET" && re.test(c.path)).length;
+await block("scenario 86", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/ai/models" }); await settle(p, 900);
+  check("REQ01 AI › Mô hình: the provider list is fetched ONCE although two cards show it (shared keyed load)", (await gets(p, /^\/admin\/ai\/providers$/)) === 1, String(await gets(p, /^\/admin\/ai\/providers$/)));
+  await nav(p, "/platform/ai/limits"); await settle(p, 500);
+  check("REQ02 AI › Hạn mức after Mô hình: limits fetched once per screen (2 in total), providers revalidated once (2 in total)", (await gets(p, /^\/admin\/ai\/limits$/)) === 2 && (await gets(p, /^\/admin\/ai\/providers$/)) === 2, `limits=${await gets(p, /^\/admin\/ai\/limits$/)} providers=${await gets(p, /^\/admin\/ai\/providers$/)}`);
+  await p.getByRole("button", { name: "+ Thiết lập hạn mức riêng" }).click(); await settle(p, 300);
+  const u0 = await gets(p, /^\/admin\/users\?/);
+  await dlg(p).getByPlaceholder("Nhập ít nhất 2 ký tự").pressSequentially("binhxyz", { delay: 40 }); await settle(p, 800);
+  check("REQ03 typing 7 characters in the override search sends ONE search (debounced), not 7", (await gets(p, /^\/admin\/users\?/)) - u0 === 1, String((await gets(p, /^\/admin\/users\?/)) - u0));
+  await p.__ctx.close(); });
+await block("scenario 87", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/tenants" }); await settle(p, 500);
+  await p.getByRole("button", { name: "+ Tạo công ty" }).click(); await settle(p, 500);
+  const u0 = await gets(p, /^\/admin\/users\?/);
+  await dlg(p).getByLabel("Tìm người dùng").pressSequentially("binh", { delay: 40 }); await settle(p, 800);
+  check("REQ04 create company: typing 4 characters in the first-admin search sends ONE search, not 4", (await gets(p, /^\/admin\/users\?/)) - u0 === 1, String((await gets(p, /^\/admin\/users\?/)) - u0));
+  await p.__ctx.close(); });
+
+// ===================================================================================================================== M-065 the people screens stay separate routes, cross-linked
+await block("scenario 88", async () => { const p = await open({ portal: "admin", me: "tadmin", start: "/admin/employees" }); await settle(p, 600);
+  const hrefs = await p.locator("[data-testid=people-links] a").evaluateAll((as) => as.map((a) => a.getAttribute("href")));
+  check("PPL01 Nhân viên names its sibling people screens (company, organization, people), not itself", JSON.stringify(hrefs) === JSON.stringify(["/admin/company", "/admin/organization", "/admin/people"]), JSON.stringify(hrefs));
+  await p.locator("[data-testid=people-links]").getByRole("link", { name: "Người dùng" }).click(); await settle(p, 500);
+  check("PPL02 following a cross-link opens that screen (Người dùng) with its own links", /Người dùng/.test(await p.locator("h1").innerText()) && (await p.locator("[data-testid=people-links] a[href='/admin/employees']").count()) === 1);
+  await p.__ctx.close(); });
+await block("scenario 89", async () => { const p = await open({ portal: "admin", me: "wsadmin", start: "/admin/people" }); await settle(p, 600);
+  check("PPL03 a workspace admin (only Người dùng) gets no cross-link line", (await p.locator("[data-testid=people-links]").count()) === 0);
   await p.__ctx.close(); });
 
 check("no console error / warning / uncaught exception in any page", errors.length === 0, errors.slice(0, 3).join(" | "));

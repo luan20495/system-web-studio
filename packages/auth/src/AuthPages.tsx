@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api, ApiError } from "@xweb/api-client";
 import type { AuthConfig } from "@xweb/types";
 import { useSession } from "./session";
 import { accessiblePortals, canAccessPortal, portalHref, portalOfPath, PORTAL_LABEL, PORTAL_PREFIX, rememberPortal, rememberedPortal, resolvePortalPostLogin, resolvePostLogin, safeNext, type Portal, type PortalId } from "@xweb/permissions";
-import { Ban, BRAND, Clock, Diamond, errText, Field, Inbox } from "@xweb/ui";
+import { Ban, BRAND, Clock, Diamond, ErrorState, errText, Field, Inbox } from "@xweb/ui";
 
 const SSO_ERRORS: Record<string, string> = {
   not_provisioned: "Tài khoản SSO của bạn chưa được cấp quyền. Liên hệ quản trị viên.", disabled: "Tài khoản đã bị vô hiệu hóa.",
@@ -70,7 +70,10 @@ export function LoginPage({ fixedPortal }: { fixedPortal?: PortalId } = {}) {
   const [busy, setBusy] = useState(false);
   const ssoError = params.get("sso_error");
   const [error, setError] = useState<string | null>(ssoError ? SSO_ERRORS[ssoError] ?? "Đăng nhập SSO thất bại." : null);
-  useEffect(() => { api.authConfig().then(setConfig).catch(() => setConfig({ localLogin: true, oidc: false, oidcLoginUrl: "/oauth2/authorization/oidc" })); }, []);
+  // M-093 (a): a failed /auth/config is an error with a retry, never a guessed "password login only" form (fail closed: the sign-in methods are unknown until the server says)
+  const [configError, setConfigError] = useState<unknown>(null);
+  const loadConfig = useCallback(() => { setConfigError(null); api.authConfig().then(setConfig).catch((e: unknown) => { setConfig(null); setConfigError(e); }); }, []);
+  useEffect(loadConfig, [loadConfig]);
 
   const choose = (p: Portal) => { setPortal(p); rememberPortal(p); };
   async function submit(e: FormEvent) {
@@ -103,12 +106,14 @@ export function LoginPage({ fixedPortal }: { fixedPortal?: PortalId } = {}) {
         ))}
         <p className="hint">Lựa chọn này chỉ là nơi bạn muốn đến; quyền truy cập do hệ thống quyết định.</p>
       </fieldset>}
+      {configError ? <ErrorState error={configError} title="Chưa tải được cách đăng nhập" retry={loadConfig}/> : null}
+      {!config && !configError ? <div className="authCenter" role="status" aria-label="Đang tải"><div className="spinner"/></div> : null}
       {config?.needsSetup ? <p className="notice" role="status">Chưa có tài khoản quản trị. Vui lòng liên hệ người vận hành hệ thống để khởi tạo.</p> : null}
       {config?.oidc ? <a className="btn primary block" href={config.oidcLoginUrl} onClick={() => rememberPortal(portal)}>Tiếp tục với SSO công ty</a> : null}
       {config?.saml && config.samlLoginUrl ? <a className="btn block" href={config.samlLoginUrl} onClick={() => rememberPortal(portal)}>{config.samlLabel || "Đăng nhập SAML của công ty"}</a> : null}
       {config?.oidc ? <p className="hint center">Xác thực nhiều lớp (MFA) do nhà cung cấp danh tính của công ty quản lý.</p> : null}
       {config?.oidc && config.localLogin ? <div className="divider"><span>hoặc</span></div> : null}
-      {config?.localLogin !== false ? (
+      {config && config.localLogin !== false ? (
         <form className="authForm" onSubmit={(e) => void submit(e)}>
           <Field label="Tên đăng nhập"><input autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required/></Field>
           {mode === "signup" ? <Field label="Tên hiển thị"><input autoComplete="name" maxLength={80} value={displayName} onChange={(e) => setDisplayName(e.target.value)}/></Field> : null}

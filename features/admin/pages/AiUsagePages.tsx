@@ -9,6 +9,7 @@ import type { AiProviderInfo, AiUsageReport, UsageBucket, UsageTotals } from "@/
 import { useA } from "../console/context";
 import { LoadNote } from "../LoadNote";
 import { useLoad } from "../../useLoad";
+import { AI_PROVIDERS_KEY } from "../shared/useDebounced";
 import { ago, Card, ErrorState, errText, fmtDate, Kpi, num, Pager, Pill, StateView, tok, usd } from "../../ui";
 
 // ------------------------------------------------------------------ AI control
@@ -82,7 +83,7 @@ export function AiMonthCard() {
 
 /** Explicit prices, never built in. Rows are immutable: a change is a new row from now on, so past costs stay reproducible. */
 export function PricingCard() {
-  const providers = useLoad(() => api.admin.aiProviders(), []);
+  const providers = useLoad(() => api.admin.aiProviders(), [], { key: AI_PROVIDERS_KEY });
   const { data, error, loading, reload } = useLoad(() => api.admin.aiPricing(), []);
   const [f, setF] = useState({ modelId: "", input: "", output: "", note: "" });
   const { act, busy, msg: ok, err } = useAdminAction("Không thêm được giá.", reload);
@@ -123,7 +124,7 @@ function ProviderKpi({ providers }: { providers: { data: AiProviderInfo[] | null
 }
 
 export function AiPage() {
-  const providers = useLoad(() => api.admin.aiProviders(), []);
+  const providers = useLoad(() => api.admin.aiProviders(), [], { key: AI_PROVIDERS_KEY });
   const { data, error, loading, reload } = useLoad(() => api.admin.ai(), []);
   const [days, setDays] = useState(30);
   const usage = useLoad(() => api.admin.aiUsage(days), [days]);

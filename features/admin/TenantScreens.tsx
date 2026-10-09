@@ -10,7 +10,7 @@
 import { FormError } from "./FormError";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useId, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { api, ApiError } from "@/lib/http-api";
 import type { Member, TenantMemberCandidate, TenantMemberView, TenantView } from "@/lib/http-types";
 import { useSession } from "../session";
@@ -25,6 +25,9 @@ import { PlatformCreateAccount } from "./ProvisioningLive";
 import { DataSourcesPanel } from "../studio/builder/DataSourcesPanel";
 import type { DataManagementCalls } from "../studio/builder/core/dataManagement";
 import { Modal } from "./Modal";
+import { useDebounced } from "./shared/useDebounced";
+import { TenantSwitch } from "./shared/TenantSwitch";
+import { PeopleLinks } from "./shared/PeopleLinks";
 import { PageHead } from "./PageHead";
 import { useA } from "./console/context";
 import {
@@ -43,14 +46,18 @@ function usePeople(extra: Person[] = []) {
   const scope = useMemo(() => adminScope(me), [me]);
   const [q, setQ] = useState("");
   const wsIds = scope.workspaces.map((w) => w.id).join(",");
+  // M-097: the server search runs once per pause in typing (debounced); the workspace member lists do not depend on the text at all, so they load once and are filtered here
+  const dq = useDebounced(q.trim());
   const found = useLoad(async (): Promise<Person[]> => {
-    if (scope.platform) return (await api.admin.users(0, q)).items.map((u) => personOf(u));
+    if (scope.platform) return (await api.admin.users(0, dq)).items.map((u) => personOf(u));
     const lists = await Promise.all(scope.workspaces.map((w) => api.listWorkspaceMembers(w.id).catch(() => [] as Member[])));
-    const all = lists.flat().map((m) => personOf(m));
-    const needle = q.trim().toLowerCase();
-    return needle ? all.filter((p) => `${p.username} ${p.displayName ?? ""}`.toLowerCase().includes(needle)) : all;
-  }, [scope.platform, wsIds, q]);
-  const people = useMemo(() => { const m = new Map<string, Person>(); [...extra, ...(found.data ?? [])].forEach((p) => m.set(p.id, p)); return m; }, [found.data, extra]);
+    return lists.flat().map((m) => personOf(m));
+  }, [scope.platform, wsIds, scope.platform ? dq : ""]);
+  const needle = scope.platform ? "" : q.trim().toLowerCase();
+  const people = useMemo(() => {
+    const m = new Map<string, Person>();
+    [...extra, ...(found.data ?? []).filter((p) => !needle || `${p.username} ${p.displayName ?? ""}`.toLowerCase().includes(needle))].forEach((p) => m.set(p.id, p)); return m;
+  }, [found.data, extra, needle]);
   return { people, q, setQ, loading: found.loading, load: found, platform: scope.platform, nobody: !scope.platform && scope.workspaces.length === 0 };
 }
 
@@ -138,7 +145,8 @@ function TenantMembers({ tenantId, tenantName, onCreateAdmin, rev = 0 }: { tenan
 }
 
 // ---------------------------------------------------------------------------------------------------------------------- tenant detail
-function TenantBody({ id, onChanged }: { id: string; onChanged?: () => void }) {
+/** `related`: shown under the heading (the Admin console's people cross-links, M-065) */
+function TenantBody({ id, onChanged, related }: { id: string; onChanged?: () => void; related?: ReactNode }) {
   const tenant = useLoad(() => api.admin.tenant(id), [id]);
   const { me } = useSession();
   const scope = useMemo(() => adminScope(me), [me]);
@@ -165,6 +173,7 @@ function TenantBody({ id, onChanged }: { id: string; onChanged?: () => void }) {
       {canCreateAdmin ? <button className="btn primary" data-testid="tenant-create-admin" onClick={() => setCreating(true)}>Tạo tài khoản quản trị công ty</button> : null}
       {actions.map((a) => (
       <button key={a.to} className={`btn ${a.danger ? "danger" : ""}`} disabled={busy} data-testid={`tenant-${a.to}`} onClick={() => void setStatus(a.to, a)}>{a.label}</button>))}</div> : undefined}/>
+    {related}
     {msg ? <p className="notice" role="status">{msg}</p> : null}
     <div className="kpiGrid"><Kpi label="Trạng thái" value={statusPill(t.status)}/><Kpi label="Mã công ty" value={t.slug}/></div>
     {t.status !== "ACTIVE" ? <p className="hint" role="note">Công ty đang {TENANT_STATUS_LABEL[t.status]?.toLowerCase() ?? t.status}: người dùng của công ty không vào được cho tới khi mở khóa.</p> : null}
@@ -279,8 +288,8 @@ export function CompanyPage() {
     <StateView kind="forbidden" title="Bạn chưa quản trị công ty nào" detail={<p>Máy chủ không liệt kê quyền quản lý thành viên công ty cho tài khoản này.</p>}/>
   </>);
   return (<>
-    {scope.tenants.length > 1 ? <label className="field"><span>Công ty</span><select value={id} onChange={(e) => setId(e.target.value)}>{scope.tenants.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label> : null}
-    {id ? <TenantBody id={id}/> : null}
+    <TenantSwitch tenants={scope.tenants} value={id} onChange={setId}/>
+    {id ? <TenantBody id={id} related={<PeopleLinks current="company"/>}/> : null}
   </>);
 }
 
