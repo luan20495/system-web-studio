@@ -4,9 +4,12 @@
  * (provisioning.ts): the production adapter maps routes that exist today and throws NOT_READY for the rest, so the form is complete and honest before C1's contract is final.
  * The tenant of an Admin-portal caller is shown, never typed. Account types come from the plan (never SYSTEM_ADMIN). Every refusal is shown by its code (provisioningProblem).
  */
+import { FormError } from "./FormError";
+import { CircleCheck, ModalHeader, UserRound } from "@xweb/ui";
 import { useId, useMemo, useState, type FormEvent } from "react";
 import type { ActivationLink } from "@/lib/http-types";
 import { Modal } from "./Modal";
+import { useSingleFlight } from "./useAdminAction";
 import { Card, StateView } from "../ui";
 import { LinkBox } from "./UserDialogs";
 import type { ProvisioningApi, ProvisionResult, WorkspaceRoleId } from "./provisioning";
@@ -43,9 +46,11 @@ export function CreateAccountDialog({ api, plan, tenants, workspacesOf, onClose,
   const set = (patch: Partial<AccountForm>) => setForm((f) => ({ ...f, ...patch }));
   const setType = (t: AccountTypeId) => set({ type: t, role: ACCOUNT_TYPES[t].roles[0].id, ...(ACCOUNT_TYPES[t].workspace === "required" && !form.workspaceId ? {} : {}) });
 
+  const once = useSingleFlight();
   async function submit(e: FormEvent) {
     e.preventDefault(); setTouched(true); setProblem(null);
     if (notReady || Object.keys(problems).length) return;
+    await once(async () => {
     setBusy(true);
     try {
       let workspaceId = form.workspaceId;
@@ -58,14 +63,15 @@ export function CreateAccountDialog({ api, plan, tenants, workspacesOf, onClose,
       const done = warn ? { ...r, pending: [...r.pending, { id: "organization" as const, label: warn }] } : r;
       setResult(done); onCreated?.(done);
     } catch (err) { setProblem(asProblem(err)); } finally { setBusy(false); }
+    });
   }
 
-  if (result) return <CreatedAccount result={result} tenantName={tenantName} workspaceName={result.workspace ? wsOptions.find((w) => w.id === result.workspace!.id)?.name ?? result.workspace.id : null} onClose={onClose} onAnother={() => { setResult(null); setForm(emptyAccountForm(plan.accountTypes[0]?.id ?? "USER")); setTouched(false); setNewWs(""); }}/>;
+  if (result) return <CreatedAccount result={result} tenantName={tenantName} workspaceName={result.workspace ? wsOptions.find((w) => w.id === result.workspace!.id)?.name ?? result.workspace.id : null} onClose={onClose} onLinkDone={() => setResult((r) => (r ? { ...r, activation: { ...r.activation, token: "" } } : r))} onAnother={() => { setResult(null); setForm(emptyAccountForm(plan.accountTypes[0]?.id ?? "USER")); setTouched(false); setNewWs(""); }}/>;
   const dupUser = problem?.field === "username" ? problem.text : undefined, dupMail = problem?.field === "email" ? problem.text : undefined;
   return (
     <Modal label={title} onClose={onClose}>
       <form className="modalBody" noValidate onSubmit={(e) => void submit(e)} data-testid="create-account">
-        <h2>{title}</h2>
+        <ModalHeader icon={<UserRound size={22}/>} title={title} subtitle="Người dùng tự đặt mật khẩu khi mở liên kết kích hoạt."/>
         {plan.create.state === "not-ready" ? <p className="notice" role="note" data-testid="prov-not-ready">Backend provisioning chưa sẵn sàng: {plan.create.reason}</p> : null}
         {plan.create.state === "forbidden" ? <p className="notice" role="note" data-testid="prov-forbidden">{plan.create.reason}</p> : null}
 
@@ -105,24 +111,25 @@ export function CreateAccountDialog({ api, plan, tenants, workspacesOf, onClose,
         {extraSection}
 
         <fieldset className="stack" aria-label="Kích hoạt"><legend className="bx-h4">4 · Kích hoạt</legend>
-          <p className="hint">Sau khi tạo, bạn nhận một liên kết kích hoạt dùng một lần (hết hạn sau 24 giờ), chỉ hiển thị một lần. Người dùng tự đặt mật khẩu; bạn không bao giờ biết mật khẩu.</p>
+          <p className="hint">Sau khi tạo, bạn nhận một liên kết kích hoạt dùng một lần (hết hạn sau 24 giờ), chỉ hiển thị một lần. Người dùng tự đặt mật khẩu khi kích hoạt (tối thiểu 8 ký tự); bạn không bao giờ biết mật khẩu.</p>
         </fieldset>
 
-        {problem ? <p className={problem.kind === "not-ready" ? "notice" : "formError"} role="alert" data-testid="prov-problem" data-kind={problem.kind}>{problem.text}</p> : null}
+        {problem ? <FormError className={problem.kind === "not-ready" ? "notice" : "formError"} data-testid="prov-problem" data-kind={problem.kind}>{problem.text}</FormError> : null}
         <div className="xp-footer"><button type="button" className="btn" onClick={onClose}>Hủy</button><button className="btn primary" data-testid="acc-submit" disabled={busy || notReady} aria-busy={busy || undefined} title={notReady ? "Backend provisioning chưa sẵn sàng" : undefined}>{busy ? "Đang tạo…" : submitLabel}</button></div>
       </form>
     </Modal>
   );
 }
 
-function CreatedAccount({ result, tenantName, workspaceName, onClose, onAnother }: { result: ProvisionResult; tenantName: string; workspaceName: string | null; onClose: () => void; onAnother: () => void }) {
-  const [showLink, setShowLink] = useState(true);
-  // the link is shown once, in this state only; closing the box drops it
-  if (showLink) return <LinkBox link={result.activation as ActivationLink} onClose={() => setShowLink(false)}/>;
+function CreatedAccount({ result, tenantName, workspaceName, onClose, onAnother, onLinkDone }: { result: ProvisionResult; tenantName: string; workspaceName: string | null; onClose: () => void; onAnother: () => void; onLinkDone: () => void }) {
+  // the link lives in this state only (never stored, logged or put in a URL) and only until it was copied or the person confirmed they saved it: the link dialog cannot close before that
+  // (M-007), and when it closes the token is dropped here AND from the parent's copy of the result (M-088). It is not shown again.
+  const [link, setLink] = useState<ActivationLink | null>(result.activation as ActivationLink);
+  if (link) return <LinkBox link={link} onClose={() => { setLink(null); onLinkDone(); }}/>;
   return (
     <Modal label="Đã tạo tài khoản" onClose={onClose}>
       <div className="modalBody" data-testid="account-created">
-        <h2>Đã tạo tài khoản</h2>
+        <ModalHeader icon={<CircleCheck size={22}/>} title="Đã tạo tài khoản"/>
         <dl className="kv">
           <div><dt>Tài khoản</dt><dd data-testid="res-account"><b>{result.user.displayName}</b> ({result.user.username})</dd></div>
           <div><dt>Trạng thái</dt><dd data-testid="res-status">Chờ kích hoạt</dd></div>
@@ -165,13 +172,16 @@ function AddExisting({ api, plan, workspaces }: { api: ProvisioningApi; plan: Pr
   const [ws, setWs] = useState(workspaces[0]?.id ?? ""); const [who, setWho] = useState(""); const [role, setRole] = useState<WorkspaceRoleId>("EDITOR");
   const [busy, setBusy] = useState(false); const [msg, setMsg] = useState<{ ok: boolean; text: string; kind?: string } | null>(null);
   const roles = useMemo(() => [...ACCOUNT_TYPES.WORKSPACE_ADMIN.roles, ...ACCOUNT_TYPES.USER.roles], []);
+  const once = useSingleFlight();
   if (!plan.addExisting.available) return <Card title="Thêm người đã có tài khoản vào workspace"><StateView kind="forbidden" title="Chưa dùng được" detail={<p data-testid="add-existing-unavailable">{plan.addExisting.reason ?? "Không có quyền."}</p>}/></Card>;
   async function add(e: FormEvent) {
     e.preventDefault(); setMsg(null);
     const v = who.trim(); if (!v || !ws) { setMsg({ ok: false, text: "Hãy chọn workspace và nhập tên đăng nhập hoặc email.", kind: "validation" }); return; }
+    await once(async () => {
     setBusy(true);
     try { await api.addWorkspaceMember(ws, v.includes("@") ? { email: v } : { username: v }, role); setMsg({ ok: true, text: "Đã thêm vào workspace." }); setWho(""); }
     catch (err) { const p = asProblem(err); setMsg({ ok: false, text: p.text, kind: p.kind }); } finally { setBusy(false); }
+    });
   }
   return (
     <Card title="Thêm người đã có tài khoản vào workspace">

@@ -16,7 +16,7 @@ export function PortalApp({ portal, render }: { portal: PortalId; render: (seg: 
   return <Suspense fallback={<Splash/>}><SessionProvider><PortalRouter portal={portal} render={render}/></SessionProvider></Suspense>;
 }
 
-function Splash() { return <div className="splash"><StateView kind="loading" title="Đang tải…"/></div>; }
+function Splash() { return <div className="splash"><StateView level={1} kind="loading" title="Đang tải…"/></div>; }
 function Redirect({ to }: { to: string }) {
   const router = useRouter();
   useEffect(() => { router.replace(to); }, [router, to]);

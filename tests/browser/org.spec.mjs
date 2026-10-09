@@ -3,14 +3,14 @@
 // Run: node tests/browser/build-harness.mjs && CHROME=... node tests/browser/harness-server.mjs run -- node tests/browser/org.spec.mjs
 import { createRequire } from "node:module";
 const require = createRequire(new URL("../../package.json", import.meta.url).pathname);
-const { chromium } = require("playwright-core");
+import { harnessOrigin, launch, makeChecks } from "./lib/spec.mjs";
 const AXE = require.resolve("axe-core/axe.min.js");
-const ORIGIN = (process.env.HARNESS_URL ?? "http://127.0.0.1:4000/index.html").replace(/\/[^/]*$/, "");
-const results = [];
-const check = (name, ok, detail = "") => { results.push({ name, ok: !!ok, detail }); console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  — " + detail : ""}`); };
+const ORIGIN = harnessOrigin();
+const { check, finish } = makeChecks();
 const errors = [];
-const browser = await chromium.launch({ executablePath: process.env.CHROME ?? "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
+const browser = await launch();
 const T = (p, id) => p.getByTestId(id);
+const closeLink = async (p) => { await p.getByRole("button", { name: "Xong" }).click(); await p.getByRole("button", { name: /Tôi đã lưu liên kết/ }).click(); };   // the one-time link dialog asks before it closes until the link was copied (M-007)
 async function open(v, s = "ok", viewport = { width: 1200, height: 900 }) {
   const p = await browser.newPage({ viewport }); p.setDefaultTimeout(6000);
   p.on("pageerror", (e) => errors.push(e.message)); p.on("console", (m) => { if (["error", "warning"].includes(m.type()) && !/favicon|404/.test(m.text())) errors.push(m.text()); });
@@ -123,6 +123,17 @@ const axe = async (p, ctx) => { await p.addScriptTag({ path: AXE }); const r = a
   check("ORG_UI09 permission denied: the server lists no tenant the caller administers → a forbidden state with the reason, NO call to the backend, no tree, no actions", (await T(p, "org-forbidden").count()) === 1 && (await calls(p)).length === 0 && (await T(p, "org-tree").count()) === 0 && (await T(p, "org-add-root").count()) === 0);
   check("ORG_UI09b no role name is shown or used as the reason", !/TENANT_ADMIN|SYSTEM_ADMIN|WORKSPACE_ADMIN/.test(await p.locator("body").innerText()));
   await p.close(); }
+// D-C0-51: the screens read the organization CODES only. A SYSTEM_ADMIN lists exactly TENANT_MANAGE + TENANT_MEMBERS (platform scope): TENANT_MEMBERS and platformScope are NOT stand-ins, so both screens are refused without any backend call
+for (const [v, tid] of [["org", "org-forbidden"], ["emp", "emp-forbidden"]]) { const p = await open(v, "sysadmin");
+  check(`ORG_CODE01 ${v}: a platform operator (TENANT_MANAGE + TENANT_MEMBERS + platformScope, no organization code) is refused: forbidden state, NO backend call`, (await T(p, tid).count()) === 1 && (await calls(p)).length === 0 && !/TENANT_MEMBERS|ORG_STRUCTURE|platform/i.test(await T(p, tid).innerText()));
+  await p.close(); }
+// a viewer holds ORG_STRUCTURE_VIEW / EMPLOYEE_VIEW / POSITION_GRADE_VIEW only: the screens open, every change is unavailable WITH the reason (the codes are not hierarchical: *_VIEW never implies *_MANAGE)
+{ const p = await open("org", "viewer");
+  check("ORG_CODE02 a viewer opens the tree, but cannot add a unit: the button is unavailable (aria-disabled) with the permission reason", (await T(p, "org-tree").count()) === 1 && (await T(p, "org-add-root").getAttribute("aria-disabled")) === "true" && /quyền thay đổi/.test(await p.locator("body").innerText()));
+  await p.close(); }
+{ const p = await open("emp", "viewer");
+  check("ORG_CODE03 a viewer opens the directory but cannot add an employee: unavailable with the reason (EMPLOYEE_MANAGE + TENANT_MEMBERS needed)", (await T(p, "emp-table").count()) === 1 && (await T(p, "emp-create").getAttribute("aria-disabled")) === "true");
+  await p.close(); }
 { const p = await open("org", "down");
   check("ORG_UI09c backend unavailable: an error state with a retry button, in words (not a blank page), the actions do nothing meanwhile", (await T(p, "org-error").getAttribute("data-kind")) === "unavailable" && (await T(p, "org-retry").count()) === 1 && (await T(p, "org-tree").count()) === 0);
   await p.close(); }
@@ -203,7 +214,7 @@ const axe = async (p, ctx) => { await p.addScriptTag({ path: AXE }); const r = a
   check("EMP_UI04 create: the existing tenant provisioning dialog, titled 'Thêm nhân viên', with an extra 'Cơ cấu tổ chức' section (unit + position)", /Thêm nhân viên/.test(await T(p, "create-account").innerText()) && (await T(p, "emp-org-fields").count()) === 1 && (await T(p, "emp-new-unit").isEnabled()) && (await T(p, "emp-new-position").isEnabled()));
   await T(p, "acc-username").fill("bao.nguyen"); await T(p, "acc-display").fill("Bảo Nguyễn"); await T(p, "acc-type").selectOption("USER");
   await T(p, "emp-new-unit").selectOption("flutter"); await T(p, "emp-new-position").selectOption("p-sr");
-  await T(p, "acc-submit").click(); await p.getByRole("button", { name: "Xong" }).click(); await T(p, "account-created").waitFor();
+  await T(p, "acc-submit").click(); await closeLink(p); await T(p, "account-created").waitFor();
   const pc = (await prov(p)).filter((x) => x.name === "createTenantUser"); const oc = (await calls(p)).filter((x) => /^updateEmployee/.test(x.name));
   check("EMP_UI04b ONE account call (tenant 't1' as the path, no tenantId in the body), then the organization steps for THAT new user: unit 'flutter' and position 'p-sr'", pc.length === 1 && pc[0].args[0] === "t1" && !("tenantId" in pc[0].args[1]) && oc.length === 2 && oc[0].name === "updateEmployeeOrganization" && oc[0].args[2] === "flutter" && oc[0].args[1] === "id-bao.nguyen" && oc[1].args[2] === "p-sr", JSON.stringify([pc.map((x) => x.args), oc.map((x) => x.args)]));
   await p.getByRole("button", { name: "Xong" }).click(); await settle(p, 400); await T(p, "emp-search").fill("bao.nguyen"); await settle(p, 700);
@@ -235,7 +246,7 @@ const axe = async (p, ctx) => { await p.addScriptTag({ path: AXE }); const r = a
   await T(p, "emp-status").selectOption("INACTIVE"); await settle(p, 500);
   check("EMP_UI07b status filter 'Đã tắt' → exactly those two", (await rows(p)) === 2 && /2 nhân viên/.test(await T(p, "emp-count").innerText()));
   await T(p, "emp:u07").click(); await T(p, "emp-detail").waitFor();
-  check("EMP_UI07c detail of a disabled account: the status says so; enabling is NOT offered to a company admin (the existing route is platform-only), and the reason is shown", /Đã tắt/.test(await T(p, "emp-detail").innerText()) && (await T(p, "detail-toggle").isDisabled()) && /Chỉ quản trị hệ thống/.test(await T(p, "detail-toggle-note").innerText()));
+  check("EMP_UI07c detail of a disabled account: the status says so; enabling is NOT offered yet (the operation is not connected), and the reason is shown", /Đã tắt/.test(await T(p, "emp-detail").innerText()) && (await T(p, "detail-toggle").isDisabled()) && /Chưa sẵn sàng/.test(await T(p, "emp-detail").locator(".xp-reason").innerText()));
   await p.close(); }
 
 { const p = await open("emp");
@@ -283,15 +294,13 @@ const axe = async (p, ctx) => { await p.addScriptTag({ path: AXE }); const r = a
   check("EMP_NR02 it says plainly that unit and position are not available yet, the unit filter is disabled, and the unit / position columns are LEFT OUT (not empty cells that look like errors); nothing is invented", (await T(p, "emp-members-note").count()) === 1 && (await T(p, "emp-org").isDisabled()) && (await p.locator("thead th").count()) === 3 && !/Flutter Team|—/.test(await T(p, "emp:u01").innerText()));
   check("EMP_NR03 search / status / paging still work on the member list (client-side): 45 people, 3 pages", /Trang 1\/3 · 45 nhân viên/.test(await T(p, "emp-count").innerText()));
   await T(p, "emp:u05").click(); await T(p, "emp-detail").waitFor();
-  check("EMP_NR04 detail: unit and position cannot be assigned yet (disabled selects with the not-ready panel), no save button", (await T(p, "detail-unit").isDisabled()) && (await T(p, "detail-pos").isDisabled()) && (await T(p, "detail-org-not-ready").count()) === 1 && /chưa hỗ trợ/.test(await T(p, "detail-org-not-ready").innerText()) && (await T(p, "detail-unit-save").count()) === 0);
+  check("EMP_NR04 detail: unit and position cannot be assigned yet (disabled selects with the not-ready panel), no save button", (await T(p, "detail-unit").isDisabled()) && (await T(p, "detail-pos").isDisabled()) && (await T(p, "detail-assign-not-ready").count()) === 1 && (await T(p, "detail-org-not-ready").count()) === 0 && (await T(p, "detail-pos-not-ready").count()) === 0 && /chưa hỗ trợ/.test(await T(p, "detail-assign-not-ready").innerText()) && (await T(p, "detail-unit-save").count()) === 0);
   await p.keyboard.press("Escape"); await T(p, "emp-create").click(); await T(p, "create-account").waitFor();
   check("EMP_NR05 create: the organization fields are disabled with a not-ready notice, and the account can still be created", (await T(p, "emp-new-unit").isDisabled()) && (await T(p, "emp-org-not-ready").count()) === 1);
-  await T(p, "acc-username").fill("an.tran"); await T(p, "acc-display").fill("An Trần"); await T(p, "acc-type").selectOption("USER"); await T(p, "acc-submit").click(); await p.getByRole("button", { name: "Xong" }).click(); await T(p, "account-created").waitFor();
+  await T(p, "acc-username").fill("an.tran"); await T(p, "acc-display").fill("An Trần"); await T(p, "acc-type").selectOption("USER"); await T(p, "acc-submit").click(); await closeLink(p); await T(p, "account-created").waitFor();
   check("EMP_NR06 creating works through the REAL provisioning route: ONE createTenantUser call and ZERO organization calls", (await prov(p)).filter((x) => x.name === "createTenantUser").length === 1 && !(await names(p)).some((n) => /^updateEmployee|OrganizationUnit/.test(n)));
   await p.close(); }
 
 check("no console error / warning / uncaught exception in any page", errors.length === 0, errors.slice(0, 3).join(" | "));
 await browser.close();
-const failed = results.filter((r) => !r.ok);
-console.log(`\n${results.length - failed.length}/${results.length} checks passed`);
-process.exit(failed.length ? 1 : 0);
+finish();

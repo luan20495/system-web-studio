@@ -1,15 +1,13 @@
 // @class: harness — real Chromium on the create-account screens with an in-page FAKE transport behind the REAL adapter (no backend). Proves what the SCREENS do (gating, validation, states, no invented calls).
 // NOT a backend E2E: the real chain is tests/e2e-real SUPER01 / ADMIN01 / USER01 / SEC01-03.
 // Run: node tests/browser/build-harness.mjs && CHROME=... node tests/browser/harness-server.mjs run -- node tests/browser/provisioning.spec.mjs
-import { createRequire } from "node:module";
-const require = createRequire(new URL("../../package.json", import.meta.url).pathname);
-const { chromium } = require("playwright-core");
-const ORIGIN = (process.env.HARNESS_URL ?? "http://127.0.0.1:4000/index.html").replace(/\/[^/]*$/, "");
-const results = [];
-const check = (name, ok, detail = "") => { results.push({ name, ok: !!ok, detail }); console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  — " + detail : ""}`); };
+import { harnessOrigin, launch, makeChecks } from "./lib/spec.mjs";
+const ORIGIN = harnessOrigin();
+const { check, finish } = makeChecks();
 const errors = [];
-const browser = await chromium.launch({ executablePath: process.env.CHROME ?? "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
+const browser = await launch();
 const T = (p, id) => p.getByTestId(id);
+const closeLink = async (p) => { await p.getByRole("button", { name: "Xong" }).click(); await p.getByRole("button", { name: /Tôi đã lưu liên kết/ }).click(); };   // the one-time link dialog asks before it closes until the link was copied (M-007)
 async function open(s) {
   const p = await browser.newPage({ viewport: { width: 900, height: 1100 } }); p.setDefaultTimeout(6000);
   p.on("pageerror", (e) => errors.push(e.message)); p.on("console", (m) => { if (["error", "warning"].includes(m.type()) && !/favicon|404/.test(m.text())) errors.push(m.text()); });
@@ -46,25 +44,25 @@ const pick = async (p, o = {}) => { await T(p, "acc-tenant").selectOption(o.tena
 { const p = await open("platform"); await pick(p, { type: "TENANT_ADMIN", ws: "" });
   await T(p, "acc-submit").click(); await T(p, "acc-submit").waitFor({ state: "detached", timeout: 3000 }).catch(() => undefined);
   const linkShown = (await p.getByText("Liên kết kích hoạt").count()) > 0; const linkInput = await p.locator('input[aria-label="Liên kết"]').inputValue();
-  await p.getByRole("button", { name: "Xong" }).click(); await T(p, "account-created").waitFor();
+  await closeLink(p); await T(p, "account-created").waitFor();
   const sent = await calls(p);
   check("PUI09 success (tenant admin, no workspace): ONE call createTenantUser(t1, {username, displayName, tenantRole}) — the tenant is the PATH, the body has no tenant, no workspaceId, no workspaceRole", sent.length === 1 && sent[0].name === "createTenantUser" && sent[0].args[0] === "t1" && JSON.stringify(Object.keys(sent[0].args[1]).sort()) === JSON.stringify(["displayName", "tenantRole", "username"]) && sent[0].args[1].tenantRole === "TENANT_ADMIN", JSON.stringify(sent));
   check("PUI09b the activation link is shown ONCE (dialog state only) and then gone: the summary has no token, the page URL and storage hold none", linkShown && /\/auth\/activate#/.test(linkInput) && !(await p.locator("body").innerHTML()).includes("x".repeat(43)) && !(await p.evaluate(() => JSON.stringify([localStorage, sessionStorage, location.href]))).includes("x".repeat(43)));
   check("PUI09c the summary: account, Chờ kích hoạt, the company AND its role (already done), 'Chưa gán workspace'; the only next step is the person's activation", /bao.nguyen/.test(await T(p, "res-account").innerText()) && /Chờ kích hoạt/.test(await T(p, "res-status").innerText()) && /Acme · Quản trị công ty/.test(await T(p, "res-tenant").innerText()) && /Chưa gán workspace/.test(await T(p, "res-workspace").innerText()) && (await T(p, "res-pending").locator("li").count()) === 1);
   await p.close(); }
 { const p = await open("platform"); await pick(p, { type: "USER", ws: "w1" }); await T(p, "acc-role").selectOption("PUBLISHER");
-  await T(p, "acc-submit").click(); await p.getByRole("button", { name: "Xong" }).click(); await T(p, "account-created").waitFor();
+  await T(p, "acc-submit").click(); await closeLink(p); await T(p, "account-created").waitFor();
   const c = await calls(p);
   check("WORKSPACE ASSIGNMENT: workspaceId and workspaceRole travel TOGETHER in the body (here w1 + PUBLISHER); the summary names both", c.length === 1 && c[0].args[1].workspaceId === "w1" && c[0].args[1].workspaceRole === "PUBLISHER" && c[0].args[1].tenantRole === "MEMBER" && /Kinh doanh · Người xuất bản/.test(await T(p, "res-workspace").innerText()), JSON.stringify(c[0]?.args));
   await p.close(); }
 { const p = await open("platform"); await pick(p, { type: "WORKSPACE_ADMIN", ws: "" }); await T(p, "acc-workspace").selectOption("__new"); await T(p, "acc-new-ws").fill("Phòng mới");
-  await T(p, "acc-submit").click(); await p.getByRole("button", { name: "Xong" }).click(); await T(p, "account-created").waitFor();
+  await T(p, "acc-submit").click(); await closeLink(p); await T(p, "account-created").waitFor();
   const c = await calls(p);
   check("CREATE WORKSPACE: the TENANT route first — createTenantWorkspace('t1', name) — then createTenantUser with that workspace and WORKSPACE_ADMIN; there is no call to the legacy workspace route", c.length === 2 && c[0].name === "createTenantWorkspace" && c[0].args[0] === "t1" && c[0].args[1] === "Phòng mới" && c[1].name === "createTenantUser" && c[1].args[1].workspaceId === "w-new" && c[1].args[1].workspaceRole === "WORKSPACE_ADMIN" && !c.some((x) => /createWorkspace$/.test(x.name)), JSON.stringify(c.map((x) => x.name)));
   await p.close(); }
 { const p = await open("platform-wsfail"); await pick(p, { type: "WORKSPACE_ADMIN", ws: "", username: "taken" }); await T(p, "acc-workspace").selectOption("__new"); await T(p, "acc-new-ws").fill("Phòng X");
   await T(p, "acc-submit").click(); await T(p, "acc-username-error").waitFor();
-  const kept = await T(p, "acc-workspace").inputValue(); await T(p, "acc-username").fill("another.one"); await T(p, "acc-submit").click(); await p.getByRole("button", { name: "Xong" }).click().catch(() => undefined);
+  const kept = await T(p, "acc-workspace").inputValue(); await T(p, "acc-username").fill("another.one"); await T(p, "acc-submit").click(); await closeLink(p).catch(() => undefined);
   const c = await calls(p);
   check("RETRY SAFETY: when the account step fails after the workspace was created, the workspace is kept selected and a retry does NOT create a second one", kept === "w-new" && c.filter((x) => x.name === "createTenantWorkspace").length === 1 && c.filter((x) => x.name === "createTenantUser").length === 2, JSON.stringify(c.map((x) => x.name)));
   await p.close(); }
@@ -93,7 +91,7 @@ for (const [s, name, kind, re] of ERR) {
   check("AUI04 no cross-tenant option: no tenant selector, the fixed read-only tenant is Acme, Beta is nowhere", (await T(p, "acc-tenant").count()) === 0 && (await T(p, "acc-tenant-fixed").inputValue()) === "Acme" && !(await p.locator("body").innerText()).includes("Beta"));
   check("AUI05 no SYSTEM_ADMIN option: types = Quản trị công ty / Quản trị workspace / Người dùng (a tenant admin may create tenant admins)", JSON.stringify(types) === JSON.stringify(["TENANT_ADMIN", "WORKSPACE_ADMIN", "USER"]) && !(await p.locator("body").innerText()).includes("SYSTEM_ADMIN"));
   await fill(p, { username: "tom.le", display: "Tom Lê", ws: "w2", email: "tom@example.com" }); await T(p, "acc-type").selectOption("USER"); await T(p, "acc-workspace").selectOption("w2"); await T(p, "acc-role").selectOption("PUBLISHER");
-  await T(p, "acc-submit").click(); await p.getByRole("button", { name: "Xong" }).click(); await T(p, "account-created").waitFor();
+  await T(p, "acc-submit").click(); await closeLink(p); await T(p, "account-created").waitFor();
   const c = await calls(p);
   check("AUI01c create user: ONE call createTenantUser('t1' = path, {username, displayName, email, tenantRole MEMBER, workspaceId w2, workspaceRole PUBLISHER}); the tenant id is NOT in the body", c.length === 1 && c[0].args[0] === "t1" && JSON.stringify(Object.keys(c[0].args[1]).sort()) === JSON.stringify(["displayName", "email", "tenantRole", "username", "workspaceId", "workspaceRole"]) && c[0].args[1].tenantRole === "MEMBER", JSON.stringify(c[0]?.args));
   await p.close(); }
@@ -116,6 +114,4 @@ for (const [s, name, kind, re] of ERR) {
 
 check("no console error / warning / uncaught exception in any page", errors.length === 0, errors.slice(0, 3).join(" | "));
 await browser.close();
-const failed = results.filter((r) => !r.ok);
-console.log(`\n${results.length - failed.length}/${results.length} checks passed`);
-process.exit(failed.length ? 1 : 0);
+finish();

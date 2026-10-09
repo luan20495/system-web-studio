@@ -5,6 +5,39 @@
 Not part of `npm run test:unit`. No new repo dependency: Playwright comes from `playwright-core` (already installed) and a browser is passed with `CHROME=/path/to/chrome`
 (macOS: `CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"`). The harness bundle needs `esbuild`, installed OUTSIDE the repo.
 
+## Shared spec toolkit (`tests/browser/lib/spec.mjs`)
+Every spec imports one toolkit instead of copying its boilerplate: `makeChecks()` (PASS / FAIL / SKIP lines, summary, exit code), `launch()` (Chrome from `$CHROME`, else the first installed default of the OS: macOS Google Chrome / Chromium / Edge, Linux `/opt/pw-browsers`, `google-chrome`, `chromium`, Windows Program Files; a missing browser stops with exit 2 and the list it looked for), `harnessUrl()` / `harnessOrigin()` / `harnessPage("org.html")` and `watchConsole(page, errors)`.
+**`HARNESS_URL` is required.** A spec started without it (not through `node tests/browser/harness-server.mjs run -- node tests/browser/<spec>`) fails at once with exit 2 and says so; no spec falls back to a fixed port (4000 used to be the default and may belong to another process). The toolkit is covered by `tests/browser/lib/spec.test.mjs` (run by `npm run test:unit`), which also fails if a spec calls `chromium.launch` itself or hard-codes a port or a Linux Chrome path. `page-runtime.spec.mjs` is C2-owned and keeps its own stub origin.
+
+## Hooks (`hooks.spec.mjs`) — the real `useAction` / `useLoad` with in-page fake calls, NOT a backend
+`hooks-harness.tsx` mounts the hooks of `packages/ui/src`; the spec proves a real double click sends ONE call, a rejected call re-enables the control and keeps the idempotency key for the retry, StrictMode keeps the busy state, and `useLoad` keeps its old contract while the opt-in keyed cache de-duplicates, shows cached data on the first render, aborts superseded requests and is cleared by `clearLoadCache()`. The framework-free cores are also unit-tested (`tests/builder/ui-hooks-core.test.ts`).
+
+    node tests/browser/build-harness.mjs
+    node tests/browser/harness-server.mjs run -- node tests/browser/hooks.spec.mjs        # 20 checks
+
+## Final-gate audit tooling (`scripts/ui-*.mjs`, `scripts/audit/`) — developer tools, NOT tests
+Four runners and one self-test. They share one engine (`scripts/audit/measure.mjs` in-page measurements + `engine.mjs` visit / flag / summarize) and one **route inventory derived from the SOURCE** (`scripts/audit/inventory.mjs`: the admin section registry `features/admin/console/sections.tsx` when it exists, otherwise the pre-registry tables of `AdminApp.tsx` / `base.ts`; the Studio `route()` switch and the project `MODES` / `PANELS`). Every runner builds its visit list from that inventory and **exits 1 when a route found in the source was not visited**. Each prints a table and writes JSON. Servers and Chrome are started and stopped only through `tests/lib/owned-process.mjs`; no fixed port, nothing found or killed by name or port.
+
+| Runner | What | Needs | Output |
+|---|---|---|---|
+| `scripts/ui-audit-selftest.mjs` | proves the detectors speak: a fixture WITH each defect is flagged, a clean page is not | Chrome | table, exit 1 on a miss |
+| `scripts/ui-audit-harness.mjs` | the responsive matrix (1920 1440 1280 1024 768 600 430 390 360) over every route on the harnesses: overflow, unreachable / covered controls, targets under 24 px, label-in-name, focus ring and sticky-header cover on the first 10 Tab stops, axe of every impact, console errors, failing API calls (**HARNESS, NOT REAL BACKEND**) | `node tests/browser/build-harness.mjs` | `audit.md`, `audit.json`, `--shots` for screenshots |
+| `scripts/ui-audit.mjs` | the same engine against a REAL stack: `--private-api http://127.0.0.1:47080` builds the three apps into private dist dirs with `API_PROXY_TARGET` at that backend, serves them on free ports (owned), seeds data through the product API, audits, stops them. The backend is never started or stopped. A pass-through shim rewrites only the Origin header because the backend refuses origins that are not on its CORS list | a running backend + its `stack.env` | `audit.md`, `audit.json` |
+| `scripts/ui-state-matrix.mjs` | every screen x default / loading / empty / error / permission-denied / populated / long-content, PASS / FAIL / NOT-REACHABLE with the reason; injected failures include a leaky Java 500 message and a 403 (**HARNESS, NOT REAL BACKEND**) | build-harness | `state-matrix.md`, `.json` |
+| `tests/browser/portals-lazy.spec.mjs` (spec, private portal builds) | the console is a lazy chunk: not on the login page, loaded after sign-in, role=status while loading, an error fallback when the chunk cannot load | the 3 apps served (owned-process-cli, `PORTAL_*_PORT`) | 18 checks |
+| `scripts/ui-keyboard.mjs` | keyboard-only flows (Tab / Shift+Tab / Enter / Space / Escape / arrows, no click): Platform create company, Admin create user, Studio select + edit + publish pre-check; asserts reachability, visible focus, dialog focus-in / trap / wrap / Escape / focus restore (**HARNESS**) | build-harness | `keyboard.md`, `.json` |
+
+    node tests/browser/build-harness.mjs                                   # dev bundle -> .test-build/browser (the runners read it)
+    node scripts/ui-audit-selftest.mjs
+    node scripts/ui-audit-harness.mjs --out /tmp/ah [--only platform,admin,studio] [--viewports 1440,390] [--shots]
+    node scripts/ui-state-matrix.mjs  --out /tmp/sm [--only ...] [--viewports 1440,390] [--states default,loading,...]
+    node scripts/ui-keyboard.mjs      --out /tmp/kb [--viewport 1280] [--only platform,admin,studio]
+    node scripts/ui-audit.mjs --private-api http://127.0.0.1:47080 --out /tmp/real [--only ...] [--viewports ...]     # REAL stack; AUDIT_NO_SHOTS=1 skips screenshots
+
+**Triage notes (what the detectors say that is NOT a product defect).** (1) The responsive matrix opens every dialog / drawer state of a screen for BOTH admin personas; a system admin on a company screen (`/admin/employees`) is refused ("Bạn chưa quản trị công ty nào") and has no `emp-create` button, so the state is recorded as `skipped` (counted in `skippedStates`), not as a blank / console-error visit (M-124: 18 rows = 2 states x 9 widths, all this artefact; the company-admin persona opens both dialogs). (2) `failingApi` in the harness counts the harness's own 404 for an endpoint it has no fixture for: read `window.__calls` `{unknown}` in admin-harness before calling it a defect. (3) `glyphs[→]` rows are the arrow characters in link text (intended). (4) NOT-REACHABLE in the state matrix is a harness limit, never a pass.
+
+A clean audit proves nothing until the self-test has passed. NOT-REACHABLE is never a pass: it says the harness cannot produce that state for that screen (for example the screen makes no data request). The unit test `tests/lib/audit-tools.test.mjs` covers the inventory parsers (both table formats), the completeness check and the flag / summary rules.
+
 ## Builder (`builder.spec.mjs`) — component harness, NOT a backend E2E
 `harness.tsx` mounts the real `<BuilderWorkspace>`; its host records every operation in `window.__ops` and applies the few section/page operations locally so the
 canvas re-renders. It validates nothing the server validates and is never shipped. It exists to exercise drag and drop, focus, tabs, dialogs and ARIA in a real browser.
@@ -58,3 +91,15 @@ Pitfall found while writing it: `page.waitForSelector` returns an `ElementHandle
 
     CHROME=... node tests/browser/harness-server.mjs run -- node tests/browser/sanity.spec.mjs        # SANITY_ROUNDS=40 by default
     # production bundle: HARNESS_NODE_ENV=production node tests/browser/build-harness.mjs && CHROME=... node tests/browser/harness-server.mjs run --dir .test-build/browser-prod -- node tests/browser/sanity.spec.mjs
+
+## Platform / Admin portals (`admin.spec.mjs`) — the REAL `PortalApp` + `AdminApp` with a FAKE `fetch`, NOT a backend
+`admin-harness.tsx` mounts the real portal entry (login gate, session, `AdminApp` router, every screen) in real Chromium. `window.fetch` answers `/api/v1/**` from in-page fixtures and records every request in `window.__calls`; `admin-next-shim.tsx` stands in for `next/link` / `next/navigation` (a history based router, aliased only in the separate esbuild call of `build-harness.mjs`). Query: `?portal=platform|admin&me=sys|sysmember|tadmin|wsadmin|plain|sysatenant&start=/platform/tenants` plus `fail` / `failw` / `slow` / `empty` / `big` / `daily=empty` / `bad=audit` scenarios (see the header of the harness). It proves what the SCREENS do with the answers C1's contract describes (activation link, tenant provisioning, `/auth/me` scope), never what a server answers. Sections so far: the one-time activation link dialog (M-007), create company → first admin (M-008), SYSTEM_ADMIN application detail (M-009).
+
+    node tests/browser/build-harness.mjs
+    CHROME=... node tests/browser/harness-server.mjs run -- node tests/browser/admin.spec.mjs          # 38 checks
+
+## Studio-app harness (`studio-p1.spec.mjs`, `studio-app/`) - the REAL `<StudioApp>`, a FAKE `/api/v1`, NOT a backend
+`studio-app/entry.tsx` mounts `PortalApp` -> `StudioApp` with `next/navigation` and `next/link` replaced by a virtual router (`?start=/studio/projects/p1/ai` gives the first path, `window.__nav.log` records pushes); `studio-app/fake-api.mjs` answers `/api/v1/**` inside Playwright (`page.route`, state object per test, `state.log` = every request, `state.hold` / `state.fail` to hold or fail a call). It proves what the UI sends and shows for the answers a fake gives; it validates nothing the server validates. `studio-p1.spec.mjs` holds the regression checks of the confirmed Studio P1s (M-001 review dialog, M-004 AI conversation); M-002 / M-003 live in `builder.spec.mjs`.
+
+    node tests/browser/build-harness.mjs                       # also builds studio.html
+    CHROME=... node tests/browser/harness-server.mjs run -- node tests/browser/studio-p1.spec.mjs

@@ -9,7 +9,7 @@
 export type AiLive = { id: string | null; text: string; status: string; startedAt: number; lastAt: number; deadline: number | null };
 export type StepState = "done" | "active" | "pending";
 export type AiStep = { id: "send" | "model" | "answer" | "save"; label: string; state: StepState };
-export type AiProgressView = { steps: AiStep[]; headline: string; detail: string; elapsedSeconds: number; remainingSeconds: number | null; silentSeconds: number; stalled: boolean; canCancel: boolean };
+export type AiProgressView = { steps: AiStep[]; headline: string; /** what a screen reader hears: changes only at a PHASE change, never per streamed chunk (M-004) */ announce: string; detail: string; elapsedSeconds: number; remainingSeconds: number | null; silentSeconds: number; stalled: boolean; canCancel: boolean };
 
 /** no event for this long = say so (free models are often queued; the server fails over to the next one on its own) */
 export const STALL_SECONDS = 15;
@@ -60,7 +60,9 @@ export function progressView(live: AiLive, now: number, model: string): AiProgre
   else if (stalled) detail = `Model ngừng gửi dữ liệu ${silent} giây. Có thể huỷ và thử lại.`;
   else if (remaining !== null && remaining <= 20 && remaining > 0) detail = `Yêu cầu sẽ tự dừng sau ${remaining} giây nếu AI chưa xong.`;
   else if (remaining === 0) detail = "Đã tới hạn thời gian; đang chờ máy chủ kết thúc.";
-  return { steps, headline, detail, elapsedSeconds: elapsed, remainingSeconds: remaining, silentSeconds: silent, stalled, canCancel: true };
+  // the headline carries a live character count; announcing it would read out every chunk. The announcement only changes when the phase changes.
+  const announce = !started || saving || live.status.startsWith("tool:") || live.status.startsWith("model:") || live.status.startsWith("fallback:") ? headline : settled ? "Máy chủ có thể đang kiểm tra và lưu…" : chars > 0 ? "AI đang trả lời…" : headline;
+  return { steps, headline, announce, detail, elapsedSeconds: elapsed, remainingSeconds: remaining, silentSeconds: silent, stalled, canCancel: true };
 }
 
 /** 83 → "1:23" */

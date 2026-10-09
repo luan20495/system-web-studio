@@ -4,9 +4,12 @@ import { useState } from "react";
 import { ArrowDown, ArrowUp } from "../../../packages/ui/src/icons";
 import type { CompareOp, ConditionDef, StepKind, WorkflowDef, WorkflowStepDef } from "@xweb/types";
 import { COMPARE_OPS, PRINCIPAL_KINDS, STEP_KINDS, WORKFLOW_TRIGGERS } from "./core/contract";
-import { OP_LABEL, STEP_HELP, STEP_LABEL, addStep, checkWorkflow, describeCondition, formatSeconds, kindOf, moveStep, newWorkflow, orderedSteps, removeStep, stepChips, updateStep, workflowOps } from "./core/workflow";
+import { OP_LABEL, PRINCIPAL_LABEL, STEP_HELP, STEP_LABEL, addStep, checkWorkflow, describeCondition, formatSeconds, kindOf, moveStep, newWorkflow, orderedSteps, removeStep, stepChips, stepName, stepTitles, updateStep, workflowOps } from "./core/workflow";
 import { Field } from "./ui/primitives";
 import type { DefCtx } from "./ctx";
+
+type StepOption = { id: string; title: string };
+const stepOptionList = (opts: StepOption[]) => opts.map((o) => <option key={o.id} value={o.id}>{o.title}</option>);
 
 const TRIGGER_LABEL: Record<string, string> = { MANUAL: "Chạy thủ công", SCHEDULE: "Chạy theo lịch", ACTION: "Chạy từ hành động" };
 
@@ -20,7 +23,9 @@ export function WorkflowEditor({ ctx, initial, onDone, onCancel }: { ctx: DefCtx
   const actions = doc.actions ?? [];
   const ids = wf.steps.map((s) => s.id);
   const patchStep = (id: string, p: Partial<WorkflowStepDef>) => setWf((w) => updateStep(w, id, p));
-  const stepOptions = (self: string) => ids.filter((x) => x !== self);
+  const titles = stepTitles(wf, doc);
+  const title = (id: string) => titles.get(id) ?? id;
+  const stepOptions = (self: string): StepOption[] => ids.filter((x) => x !== self).map((x) => ({ id: x, title: title(x) }));
 
   async function save() {
     if (issues.length) return;
@@ -43,7 +48,7 @@ export function WorkflowEditor({ ctx, initial, onDone, onCancel }: { ctx: DefCtx
       <ol className="bx-steps" aria-label="Các bước của workflow">
         {orderedSteps(wf).map(({ step: s, reachable }, n) => {
           const k = kindOf(s);
-          const chips = stepChips(s, doc);
+          const chips = stepChips(s, doc, titles);
           const expanded = open === s.id;
           const panelId = `step-${s.id}`;
           return (
@@ -51,13 +56,13 @@ export function WorkflowEditor({ ctx, initial, onDone, onCancel }: { ctx: DefCtx
               <div className="bx-step-head">
                 <span className="bx-step-n" aria-hidden="true">{n + 1}</span>
                 <button type="button" className="bx-step-title" aria-expanded={expanded} aria-controls={panelId} onClick={() => setOpen(expanded ? null : s.id)}>
-                  <b>{STEP_LABEL[k]}</b><small>{s.id}{reachable ? "" : " · không có đường tới"}</small></button>
+                  <b>{stepName(s, doc)}</b>{reachable ? null : <small>không có đường tới</small>}</button>
                 {!disabled ? <span className="bx-step-tools">
-                  <button type="button" className="smallButton" aria-label={`Đưa bước ${s.id} lên`} disabled={wf.steps[0]?.id === s.id} onClick={() => setWf(moveStep(wf, s.id, -1))}><ArrowUp size={14} aria-hidden="true"/></button>
-                  <button type="button" className="smallButton" aria-label={`Đưa bước ${s.id} xuống`} disabled={wf.steps[wf.steps.length - 1]?.id === s.id} onClick={() => setWf(moveStep(wf, s.id, 1))}><ArrowDown size={14} aria-hidden="true"/></button>
-                  <button type="button" className="smallButton danger" aria-label={`Xóa bước ${s.id}`} onClick={() => setWf(removeStep(wf, s.id))}>Xóa</button></span> : null}
+                  <button type="button" className="btn sm" aria-label={`Đưa ${title(s.id)} lên`} disabled={wf.steps[0]?.id === s.id} onClick={() => setWf(moveStep(wf, s.id, -1))}><ArrowUp size={14} aria-hidden="true"/></button>
+                  <button type="button" className="btn sm" aria-label={`Đưa ${title(s.id)} xuống`} disabled={wf.steps[wf.steps.length - 1]?.id === s.id} onClick={() => setWf(moveStep(wf, s.id, 1))}><ArrowDown size={14} aria-hidden="true"/></button>
+                  <button type="button" className="btn sm danger" aria-label={`Xóa ${title(s.id)}`} onClick={() => setWf(removeStep(wf, s.id))}>Xóa</button></span> : null}
               </div>
-              {chips.length ? <ul className="bx-chips" aria-label={`Chi tiết bước ${s.id}`}>{chips.map((c, i) => <li key={i} className={`chip chip-${c.kind}`}>{c.text}</li>)}</ul> : <p className="hint">{STEP_HELP[k]}</p>}
+              {chips.length ? <ul className="bx-chips" aria-label={`Chi tiết ${title(s.id)}`}>{chips.map((c, i) => <li key={i} className={`chip chip-${c.kind}`}>{c.text}</li>)}</ul> : <p className="hint">{STEP_HELP[k]}</p>}
               {expanded ? (
                 <div id={panelId} className="bx-step-body">
                   {k === "ACTION" ? (<>
@@ -66,35 +71,35 @@ export function WorkflowEditor({ ctx, initial, onDone, onCancel }: { ctx: DefCtx
                       <label className="checkRow"><input type="checkbox" disabled={disabled} checked={!!s.retry} onChange={(e) => patchStep(s.id, { retry: e.target.checked ? { maxAttempts: 3, initialBackoffMillis: 1000, multiplier: 2 } : undefined })}/><span>Tự thử lại</span></label>
                       {s.retry ? <div className="bx-row">
                         <Field label="Số lần tối đa">{(id) => <input id={id} type="number" min={1} max={10} disabled={disabled} value={s.retry!.maxAttempts ?? ""} onChange={(e) => patchStep(s.id, { retry: { ...s.retry, maxAttempts: Number(e.target.value) || undefined } })}/>}</Field>
-                        <Field label="Chờ đầu (ms)">{(id) => <input id={id} type="number" min={0} disabled={disabled} value={s.retry!.initialBackoffMillis ?? ""} onChange={(e) => patchStep(s.id, { retry: { ...s.retry, initialBackoffMillis: Number(e.target.value) || undefined } })}/>}</Field>
+                        <Field label="Chờ trước lần thử lại đầu (giây)">{(id) => <input id={id} type="number" min={0} step={0.5} disabled={disabled} value={s.retry!.initialBackoffMillis ? s.retry!.initialBackoffMillis / 1000 : ""} onChange={(e) => patchStep(s.id, { retry: { ...s.retry, initialBackoffMillis: Math.round(Number(e.target.value) * 1000) || undefined } })}/>}</Field>
                         <Field label="Hệ số nhân">{(id) => <input id={id} type="number" min={1} step={0.5} disabled={disabled} value={s.retry!.multiplier ?? ""} onChange={(e) => patchStep(s.id, { retry: { ...s.retry, multiplier: Number(e.target.value) || undefined } })}/>}</Field></div> : null}
                     </fieldset>
                     <Field label="Giới hạn thời gian (giây)">{(id) => <input id={id} type="number" min={0} disabled={disabled} value={s.timeoutMillis ? s.timeoutMillis / 1000 : ""} onChange={(e) => patchStep(s.id, { timeoutMillis: e.target.value ? Number(e.target.value) * 1000 : undefined })}/>}</Field>
                     <Field label="Hoàn tác bằng hành động" hint="Chạy khi workflow bị hủy hoặc lỗi sau bước này.">{(id) => <select id={id} disabled={disabled} value={s.compensationActionRef ?? ""} onChange={(e) => patchStep(s.id, { compensationActionRef: e.target.value || undefined })}><option value="">Không có</option>{actions.map((a) => <option key={a.id} value={a.id}>{a.name || a.id}</option>)}</select>}</Field>
-                    <Field label="Khi lỗi, đi tới bước">{(id) => <select id={id} disabled={disabled} value={s.onError ?? ""} onChange={(e) => patchStep(s.id, { onError: e.target.value || undefined })}><option value="">Dừng workflow</option>{stepOptions(s.id).map((x) => <option key={x} value={x}>{x}</option>)}</select>}</Field>
+                    <Field label="Khi lỗi, đi tới bước">{(id) => <select id={id} disabled={disabled} value={s.onError ?? ""} onChange={(e) => patchStep(s.id, { onError: e.target.value || undefined })}><option value="">Dừng workflow</option>{stepOptionList(stepOptions(s.id))}</select>}</Field>
                   </>) : null}
                   {k === "WAIT" ? <Field label="Chờ (giây)" hint={s.waitSeconds ? formatSeconds(s.waitSeconds) : undefined}>{(id) => <input id={id} type="number" min={1} disabled={disabled} value={s.waitSeconds ?? ""} onChange={(e) => patchStep(s.id, { waitSeconds: Number(e.target.value) || undefined })}/>}</Field> : null}
                   {k === "APPROVAL" ? <ApprovalFields s={s} disabled={disabled} patch={(p) => patchStep(s.id, { approval: { ...s.approval, ...p } })} stepOptions={stepOptions(s.id)}/> : null}
                   {k === "BRANCH" ? <BranchFields s={s} disabled={disabled} patch={(p) => patchStep(s.id, p)} stepOptions={stepOptions(s.id)}/> : null}
-                  {k !== "END" && k !== "BRANCH" ? <Field label="Bước tiếp theo" hint="Để trống: đi theo thứ tự trong danh sách.">{(id) => <select id={id} disabled={disabled} value={s.next ?? ""} onChange={(e) => patchStep(s.id, { next: e.target.value || undefined })}><option value="">Theo thứ tự</option>{stepOptions(s.id).map((x) => <option key={x} value={x}>{x}</option>)}</select>}</Field> : null}
+                  {k !== "END" && k !== "BRANCH" ? <Field label="Bước tiếp theo" hint="Để trống: đi theo thứ tự trong danh sách.">{(id) => <select id={id} disabled={disabled} value={s.next ?? ""} onChange={(e) => patchStep(s.id, { next: e.target.value || undefined })}><option value="">Theo thứ tự</option>{stepOptionList(stepOptions(s.id))}</select>}</Field> : null}
                 </div>) : null}
             </li>
           );
         })}
       </ol>
       {!disabled ? <div className="bx-addrow" role="group" aria-label="Thêm bước">{STEP_KINDS.filter((k) => k !== "END").map((k) => (
-        <button type="button" key={k} className="smallButton" title={STEP_HELP[k]} onClick={() => { const r = addStep(wf, k as StepKind); setWf(r.workflow); setOpen(r.stepId); }}>+ {STEP_LABEL[k]}</button>))}</div> : null}
+        <button type="button" key={k} className="btn sm" title={STEP_HELP[k]} onClick={() => { const r = addStep(wf, k as StepKind); setWf(r.workflow); setOpen(r.stepId); }}>+ {STEP_LABEL[k]}</button>))}</div> : null}
 
       {issues.length ? <ul className="bx-issues" role="alert">{issues.slice(0, 6).map((i) => <li key={i.path + i.message}>{i.message}</li>)}</ul> : null}
       <div className="bx-actions">
-        <button type="button" className="bx-btn" onClick={onCancel}>Hủy</button>
-        <button type="submit" className="bx-btn primary" disabled={disabled || issues.length > 0}>{ctx.busy ? "Đang lưu…" : "Lưu workflow"}</button>
+        <button type="button" className="btn dense" onClick={onCancel}>Hủy</button>
+        <button type="submit" className="btn dense primary" disabled={disabled || issues.length > 0}>{ctx.busy ? "Đang lưu…" : "Lưu workflow"}</button>
       </div>
     </form>
   );
 }
 
-function ApprovalFields({ s, disabled, patch, stepOptions }: { s: WorkflowStepDef; disabled: boolean; patch: (p: NonNullable<WorkflowStepDef["approval"]>) => void; stepOptions: string[] }) {
+function ApprovalFields({ s, disabled, patch, stepOptions }: { s: WorkflowStepDef; disabled: boolean; patch: (p: NonNullable<WorkflowStepDef["approval"]>) => void; stepOptions: StepOption[] }) {
   const a = s.approval ?? {};
   const approvers = a.approvers ?? [];
   return (
@@ -103,25 +108,25 @@ function ApprovalFields({ s, disabled, patch, stepOptions }: { s: WorkflowStepDe
       <fieldset className="bx-group"><legend>Người phê duyệt</legend>
         {approvers.map((p, i) => (
           <div className="bx-row" key={i}>
-            <select aria-label={`Loại người duyệt ${i + 1}`} disabled={disabled} value={p.kind} onChange={(e) => patch({ approvers: approvers.map((x, j) => (j === i ? { kind: e.target.value as never } : x)) })}>{PRINCIPAL_KINDS.map((k) => <option key={k} value={k}>{k}</option>)}</select>
+            <select aria-label={`Loại người duyệt ${i + 1}`} disabled={disabled} value={p.kind} onChange={(e) => patch({ approvers: approvers.map((x, j) => (j === i ? { kind: e.target.value as never } : x)) })}>{PRINCIPAL_KINDS.map((k) => <option key={k} value={k}>{PRINCIPAL_LABEL[k] ?? k}</option>)}</select>
             {p.kind !== "DEPARTMENT_MANAGER" ? <input aria-label={`Mã người duyệt ${i + 1}`} disabled={disabled} placeholder={p.kind === "ROLE" ? "vai trò" : "mã"} value={p.userId ?? p.groupId ?? p.role ?? ""}
               onChange={(e) => patch({ approvers: approvers.map((x, j) => (j === i ? { kind: x.kind, ...(x.kind === "USER" ? { userId: e.target.value } : x.kind === "GROUP" ? { groupId: e.target.value } : { role: e.target.value }) } : x)) })}/> : null}
-            {!disabled ? <button type="button" className="smallButton danger" aria-label={`Xóa người duyệt ${i + 1}`} onClick={() => patch({ approvers: approvers.filter((_, j) => j !== i) })}>Xóa</button> : null}
+            {!disabled ? <button type="button" className="btn sm danger" aria-label={`Xóa người duyệt ${i + 1}`} onClick={() => patch({ approvers: approvers.filter((_, j) => j !== i) })}>Xóa</button> : null}
           </div>))}
-        {!disabled ? <button type="button" className="smallButton" onClick={() => patch({ approvers: [...approvers, { kind: "USER" }] })}>+ Thêm người duyệt</button> : null}
+        {!disabled ? <button type="button" className="btn sm" onClick={() => patch({ approvers: [...approvers, { kind: "USER" }] })}>+ Thêm người duyệt</button> : null}
       </fieldset>
       <Field label="Số người cần duyệt">{(id) => <input id={id} type="number" min={1} disabled={disabled} value={a.requiredApprovals ?? 1} onChange={(e) => patch({ requiredApprovals: Number(e.target.value) || 1 })}/>}</Field>
       <Field label="Hết hạn sau (giây)" hint={a.expiresInSeconds ? formatSeconds(a.expiresInSeconds) : "Để trống: không hết hạn."}>{(id) => <input id={id} type="number" min={0} disabled={disabled} value={a.expiresInSeconds ?? ""} onChange={(e) => patch({ expiresInSeconds: e.target.value ? Number(e.target.value) : undefined })}/>}</Field>
       <label className="checkRow"><input type="checkbox" disabled={disabled} checked={a.allowSelfApproval !== false} onChange={(e) => patch({ allowSelfApproval: e.target.checked ? undefined : false })}/><span>Cho phép người khởi chạy tự duyệt</span></label>
-      <Field label="Khi bị từ chối, đi tới bước">{(id) => <select id={id} disabled={disabled} value={a.onReject ?? ""} onChange={(e) => patch({ onReject: e.target.value || undefined })}><option value="">Kết thúc workflow</option>{stepOptions.map((x) => <option key={x} value={x}>{x}</option>)}</select>}</Field>
-      <Field label="Khi hết hạn, đi tới bước">{(id) => <select id={id} disabled={disabled} value={a.onExpire ?? ""} onChange={(e) => patch({ onExpire: e.target.value || undefined })}><option value="">Kết thúc workflow</option>{stepOptions.map((x) => <option key={x} value={x}>{x}</option>)}</select>}</Field>
+      <Field label="Khi bị từ chối, đi tới bước">{(id) => <select id={id} disabled={disabled} value={a.onReject ?? ""} onChange={(e) => patch({ onReject: e.target.value || undefined })}><option value="">Kết thúc workflow</option>{stepOptionList(stepOptions)}</select>}</Field>
+      <Field label="Khi hết hạn, đi tới bước">{(id) => <select id={id} disabled={disabled} value={a.onExpire ?? ""} onChange={(e) => patch({ onExpire: e.target.value || undefined })}><option value="">Kết thúc workflow</option>{stepOptionList(stepOptions)}</select>}</Field>
     </>
   );
 }
 
 const isSimple = (c: ConditionDef): c is Extract<ConditionDef, { op: CompareOp }> => "op" in c && c.left.from === "INPUT" && c.right.from === "LITERAL";
 
-function BranchFields({ s, disabled, patch, stepOptions }: { s: WorkflowStepDef; disabled: boolean; patch: (p: Partial<WorkflowStepDef>) => void; stepOptions: string[] }) {
+function BranchFields({ s, disabled, patch, stepOptions }: { s: WorkflowStepDef; disabled: boolean; patch: (p: Partial<WorkflowStepDef>) => void; stepOptions: StepOption[] }) {
   const branches = s.branches ?? [];
   const set = (i: number, b: (typeof branches)[number]) => patch({ branches: branches.map((x, j) => (j === i ? b : x)) });
   return (
@@ -138,13 +143,13 @@ function BranchFields({ s, disabled, patch, stepOptions }: { s: WorkflowStepDef;
             ) : <p className="hint">{describeCondition(b.condition)}</p>}
             <div className="bx-row">
               <label htmlFor={`bn-${s.id}-${i}`}>thì đi tới</label>
-              <select id={`bn-${s.id}-${i}`} disabled={disabled} value={b.next} onChange={(e) => set(i, { ...b, next: e.target.value })}><option value="">— chọn bước —</option>{stepOptions.map((x) => <option key={x} value={x}>{x}</option>)}</select>
-              {!disabled ? <button type="button" className="smallButton danger" aria-label={`Xóa điều kiện ${i + 1}`} onClick={() => patch({ branches: branches.filter((_, j) => j !== i) })}>Xóa</button> : null}
+              <select id={`bn-${s.id}-${i}`} disabled={disabled} value={b.next} onChange={(e) => set(i, { ...b, next: e.target.value })}><option value="">— chọn bước —</option>{stepOptionList(stepOptions)}</select>
+              {!disabled ? <button type="button" className="btn sm danger" aria-label={`Xóa điều kiện ${i + 1}`} onClick={() => patch({ branches: branches.filter((_, j) => j !== i) })}>Xóa</button> : null}
             </div>
           </div>))}
-        {!disabled ? <button type="button" className="smallButton" onClick={() => patch({ branches: [...branches, { condition: { op: "EQ", left: { from: "INPUT", path: "" }, right: { from: "LITERAL", value: "" } }, next: stepOptions[0] ?? "" }] })}>+ Thêm điều kiện</button> : null}
+        {!disabled ? <button type="button" className="btn sm" onClick={() => patch({ branches: [...branches, { condition: { op: "EQ", left: { from: "INPUT", path: "" }, right: { from: "LITERAL", value: "" } }, next: stepOptions[0]?.id ?? "" }] })}>+ Thêm điều kiện</button> : null}
       </fieldset>
-      <Field label="Nếu không điều kiện nào khớp, đi tới">{(id) => <select id={id} disabled={disabled} value={s.defaultNext ?? ""} onChange={(e) => patch({ defaultNext: e.target.value || undefined })}><option value="">Kết thúc workflow</option>{stepOptions.map((x) => <option key={x} value={x}>{x}</option>)}</select>}</Field>
+      <Field label="Nếu không điều kiện nào khớp, đi tới">{(id) => <select id={id} disabled={disabled} value={s.defaultNext ?? ""} onChange={(e) => patch({ defaultNext: e.target.value || undefined })}><option value="">Kết thúc workflow</option>{stepOptionList(stepOptions)}</select>}</Field>
     </>
   );
 }

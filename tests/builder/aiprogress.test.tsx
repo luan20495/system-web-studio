@@ -65,3 +65,16 @@ test("component: headline in a polite live region, steps listed, clock hidden fr
   const pre = renderToStaticMarkup(<AiProgress live={live({ id: null, deadline: null })} model="auto" now={at(1)} onCancel={() => undefined}/>);
   assert.match(pre, /data-started="false"/); assert.match(pre, /data-testid="ai-cancel"/);
 });
+test("M-004: what a screen reader hears changes at phase changes only, never per streamed chunk (the visible headline counts characters)", () => {
+  const heard = (chars: number, silent = 0) => progressView(live({ text: "x".repeat(chars), lastAt: at(10 - silent) }), at(10), "auto").announce;
+  const a = new Set([heard(1), heard(40), heard(500), heard(2_000), heard(12_000)]);
+  assert.equal(a.size, 1, "100s of chunks, one announcement"); assert.equal([...a][0], "AI đang trả lời…");
+  assert.notEqual(progressView(live({ text: "x".repeat(40) }), at(10), "auto").headline, progressView(live({ text: "x".repeat(500) }), at(10), "auto").headline, "the visible headline does change per chunk");
+  assert.match(heard(300, 5), /có thể đang kiểm tra và lưu/);                                     // output stopped: a new phase, announced once
+  assert.equal(progressView(live({ status: "tool:search_template", text: "xx" }), at(10), "auto").announce, "AI đang tra cứu template…");   // a status event IS an event
+  assert.match(progressView(live({ id: null, deadline: null }), at(1), "auto").announce, /Đang gửi yêu cầu/);
+  const html = renderToStaticMarkup(<AiProgress live={live({ text: "x".repeat(77), lastAt: at(10) })} model="auto" now={at(10)} onCancel={() => undefined}/>);
+  assert.match(html, /<span class="srOnly" role="status" aria-live="polite" data-testid="ai-announce">AI đang trả lời…<\/span>/);
+  assert.ok(!/data-testid="ai-headline"[^>]*aria-live/.test(html) && !/role="status" aria-live="polite" data-testid="ai-headline"/.test(html), "the changing headline is not itself a live region");
+  assert.deepEqual(a11yProblems(html), []);
+});

@@ -1,11 +1,23 @@
 /**
  * What the Admin / Platform consoles show to whom, and the rules of the tenant screens. Pure (no React, no fetch): unit-tested.
  * Display only: the server authorises every call (`AdminGuard`, `AccessService.forTenant/forWorkspace`); a wrong answer here can at worst show a screen whose calls answer 403.
- * No role NAME is read: a person's scope comes from the canonical codes `/auth/me` lists (TENANT_MEMBERS, MEMBER_MANAGE, DATA_SOURCE_MANAGE) and from `platformScope`.
+ * A role NAME is read only through packages/permissions/src/roles.ts (guarded): a person's scope comes from the canonical codes `/auth/me` lists (TENANT_MEMBERS, MEMBER_MANAGE, DATA_SOURCE_MANAGE) and from `platformScope`.
  */
 import type { Me, TenantMemberView, TenantView, WorkspaceSummary, Member, AdminUser } from "@xweb/types";
+import { isTenantAdminRole, isWorkspaceAdminRole } from "../../packages/permissions/src/roles";
+import { canManageEmployees, canManageOrgStructure, canManagePositionsGrades, canProvisionEmployees, canViewEmployees, canViewOrgStructure, canViewPositionsGrades, resolveCanonicalPermissions } from "../../packages/permissions/src/canonical";
+
+/** The organization capabilities the server lists in `/auth/me.permissions` (PRIMARY tenant only, C1 final contract §2.4): ORG_STRUCTURE_*, EMPLOYEE_*, POSITION_GRADE_*. Nothing else grants them (not TENANT_MEMBERS, not platformScope, not a role). */
+export type OrgScope = { structureView: boolean; structureManage: boolean; employeeView: boolean; employeeManage: boolean; employeeProvision: boolean; positionGradeView: boolean; positionGradeManage: boolean };
+export const NO_ORG: OrgScope = { structureView: false, structureManage: false, employeeView: false, employeeManage: false, employeeProvision: false, positionGradeView: false, positionGradeManage: false };
+export function orgScopeOf(permissions: readonly string[] | undefined | null): OrgScope {
+  const p = resolveCanonicalPermissions(permissions);
+  return { structureView: canViewOrgStructure(p), structureManage: canManageOrgStructure(p), employeeView: canViewEmployees(p), employeeManage: canManageEmployees(p), employeeProvision: canProvisionEmployees(p), positionGradeView: canViewPositionsGrades(p), positionGradeManage: canManagePositionsGrades(p) };
+}
 
 export type AdminScope = {
+  /** organization capabilities (codes of the primary tenant); a SYSTEM_ADMIN has none of them */
+  org: OrgScope;
   /** SYSTEM_ADMIN: every `/api/v1/admin/**` screen (users, workspaces, audit…) */
   platform: boolean;
   /** tenants the person administers: the server lists TENANT_MEMBERS among their permissions */
@@ -17,14 +29,14 @@ export type AdminScope = {
 };
 
 export function adminScope(me: Me | null | undefined): AdminScope {
-  if (!me) return { platform: false, tenants: [], workspaces: [], dataWorkspaces: [] };
+  if (!me) return { org: NO_ORG, platform: false, tenants: [], workspaces: [], dataWorkspaces: [] };
   const platform = me.platformScope ?? me.systemAdmin === true;
   // `/auth/me` carries the permissions of the PRIMARY tenant only, but lists every membership with its role: a person is shown the tenants where the server says they are TENANT_ADMIN
   // (or the primary one when the server listed TENANT_MEMBERS). Display only: `/admin/tenants/{id}/**` authorises per tenant.
   const holdsTenant = (me.permissions ?? []).includes("TENANT_MEMBERS");
-  const tenants = (me.tenants ?? []).filter((t) => t.role === "TENANT_ADMIN" || (holdsTenant && t.id === me.tenantId)).map((t) => ({ id: t.id, slug: t.slug, name: t.name, status: t.status }));
+  const tenants = (me.tenants ?? []).filter((t) => isTenantAdminRole(t.role) || (holdsTenant && t.id === me.tenantId)).map((t) => ({ id: t.id, slug: t.slug, name: t.name, status: t.status }));
   return {
-    platform, tenants,
+    org: orgScopeOf(me.permissions), platform, tenants,
     workspaces: me.workspaces.filter((w) => w.permissions?.includes("MEMBER_MANAGE")),
     dataWorkspaces: me.workspaces.filter((w) => w.permissions?.some((c) => c === "DATA_SOURCE_MANAGE" || c === "DATA_SOURCE_VIEW")),
   };
@@ -41,21 +53,17 @@ export function canManageWorkspaceMembers(me: Me | null | undefined, workspaceId
   return row.permissions === undefined ? true : row.permissions.includes("MEMBER_MANAGE");
 }
 
-/** sections only a SYSTEM_ADMIN can open: their APIs are guarded by AdminGuard (T1 audit) */
-export const SYSTEM_ONLY: ReadonlySet<string> = new Set(["users", "workspaces", "applications", "ai", "ai-governance", "alerts", "security", "costs", "departments", "identity", "connectors", "backups", "components", "templates", "builds", "packages", "audit", "system", "settings", "tenants"]);
-/** sections for the people who administer a tenant / a workspace but are not SYSTEM_ADMIN */
-export const SCOPED_SECTIONS = { company: "company", organization: "organization", employees: "employees", myWorkspaces: "my-workspaces", dataSources: "data-sources" } as const;
-
-export type SectionAccess = "ok" | "needs-platform" | "needs-scope";
-export function sectionAccess(key: string, scope: AdminScope): SectionAccess {
-  if (key === "") return "ok";
-  if (key === SCOPED_SECTIONS.company) return scope.platform || scope.tenants.length ? "ok" : "needs-scope";
-  if (key === SCOPED_SECTIONS.organization || key === SCOPED_SECTIONS.employees) return scope.tenants.length ? "ok" : "needs-scope";
-  if (key === SCOPED_SECTIONS.myWorkspaces) return scope.workspaces.length ? "ok" : "needs-scope";
-  if (key === SCOPED_SECTIONS.dataSources) return scope.dataWorkspaces.length ? "ok" : "needs-scope";
-  if (SYSTEM_ONLY.has(key)) return scope.platform ? "ok" : "needs-platform";
-  return "ok";
+/**
+ * Whether the workspace-scoped routes (delete an application, restore one of its versions: `/workspaces/{w}/projects/**`) can work for this person.
+ * D-C1-13A: a SYSTEM_ADMIN holds NO business permission in a workspace it is not a member of (unless the server runs the legacy flag, which `/auth/me` reports as `businessAccess`).
+ * Those routes then answer 404, so the console does not offer them; the `/admin/applications/**` ones (archive, restore, transfer) are unaffected. Display only: the server still decides every call.
+ */
+export function canActInWorkspace(me: Me | null | undefined, workspaceId: string): boolean {
+  if (!me) return false;
+  return me.businessAccess === true || me.workspaces.some((w) => w.id === workspaceId);
 }
+
+// Which sections exist, who may open them and how they are routed: console/sectionPolicy.ts over the ONE table in console/sections.tsx.
 
 // ------------------------------------------------------------------------------------------------------------------------------ tenants
 export const TENANT_SLUG_RE = /^[a-z0-9][a-z0-9-]{0,118}[a-z0-9]$/;
@@ -88,17 +96,17 @@ export const TENANT_ROLES = [{ id: "TENANT_ADMIN", label: "Quản trị công ty
 export const tenantRoleLabel = (r: string) => TENANT_ROLES.find((x) => x.id === r)?.label ?? r;
 export const TENANT_STATUS_LABEL: Record<string, string> = { ACTIVE: "Hoạt động", SUSPENDED: "Tạm khóa", DELETED: "Đã xóa" };
 
-export type TenantAction = { to: "ACTIVE" | "SUSPENDED" | "DELETED"; label: string; danger: boolean; confirm: string };
+export type TenantAction = { to: "ACTIVE" | "SUSPENDED" | "DELETED"; label: string; danger: boolean; confirm: string; /** what happens, for the confirmation dialog (the title is "{label} công ty …?") */ message: string };
 /** the status changes offered for a tenant; the DEFAULT tenant offers none (the server would refuse them) */
 export function tenantActions(t: Pick<TenantView, "id" | "status" | "name">): TenantAction[] {
   if (t.id === DEFAULT_TENANT_ID) return [];
   if (t.status === "ACTIVE") return [
-    { to: "SUSPENDED", label: "Tạm khóa", danger: false, confirm: `Tạm khóa công ty “${t.name}”? Người dùng của công ty này sẽ không vào được cho tới khi mở khóa lại.` },
-    { to: "DELETED", label: "Xóa", danger: true, confirm: `Xóa công ty “${t.name}”? Công ty bị đánh dấu đã xóa và không còn xuất hiện cho người dùng.` }];
+    { to: "SUSPENDED", label: "Tạm khóa", danger: false, confirm: `Tạm khóa công ty “${t.name}”? Người dùng của công ty này sẽ không vào được cho tới khi mở khóa lại.`, message: "Người dùng của công ty này sẽ không vào được cho tới khi mở khóa lại." },
+    { to: "DELETED", label: "Xóa", danger: true, confirm: `Xóa công ty “${t.name}”? Công ty bị đánh dấu đã xóa và không còn xuất hiện cho người dùng.`, message: "Công ty bị đánh dấu đã xóa và không còn xuất hiện cho người dùng. Có thể khôi phục sau." }];
   if (t.status === "SUSPENDED") return [
-    { to: "ACTIVE", label: "Mở khóa", danger: false, confirm: `Mở khóa công ty “${t.name}”?` },
-    { to: "DELETED", label: "Xóa", danger: true, confirm: `Xóa công ty “${t.name}”? Công ty bị đánh dấu đã xóa và không còn xuất hiện cho người dùng.` }];
-  return [{ to: "ACTIVE", label: "Khôi phục", danger: false, confirm: `Khôi phục công ty “${t.name}” về trạng thái hoạt động?` }];
+    { to: "ACTIVE", label: "Mở khóa", danger: false, confirm: `Mở khóa công ty “${t.name}”?`, message: "Người dùng của công ty vào lại được." },
+    { to: "DELETED", label: "Xóa", danger: true, confirm: `Xóa công ty “${t.name}”? Công ty bị đánh dấu đã xóa và không còn xuất hiện cho người dùng.`, message: "Công ty bị đánh dấu đã xóa và không còn xuất hiện cho người dùng. Có thể khôi phục sau." }];
+  return [{ to: "ACTIVE", label: "Khôi phục", danger: false, confirm: `Khôi phục công ty “${t.name}” về trạng thái hoạt động?`, message: "Công ty trở về trạng thái hoạt động." }];
 }
 
 /** a person the console can name: from workspace members (`/workspaces/{w}/members`) and, for a SYSTEM_ADMIN, from `/admin/users` */
@@ -129,8 +137,8 @@ export const candidateLabel = (c: { username: string; displayName: string | null
 /** the server forbids changing your own tenant role / adding yourself (SELF_GRANT_FORBIDDEN) and removing the last TENANT_ADMIN (LAST_TENANT_ADMIN): the UI says it before the click */
 export function memberChangeBlock(m: { userId: string; role: string }, me: { id: string }, all: TenantMemberView[], next: "TENANT_ADMIN" | "MEMBER" | "REMOVE"): string | null {
   if (m.userId === me.id) return "Bạn không thể tự đổi vai trò hoặc tự gỡ mình khỏi công ty.";
-  const admins = all.filter((x) => x.active && x.role === "TENANT_ADMIN").length;
-  if (m.role === "TENANT_ADMIN" && next !== "TENANT_ADMIN" && admins <= 1) return "Công ty phải còn ít nhất một quản trị viên.";
+  const admins = all.filter((x) => x.active && isTenantAdminRole(x.role)).length;
+  if (isTenantAdminRole(m.role) && !isTenantAdminRole(next) && admins <= 1) return "Công ty phải còn ít nhất một quản trị viên.";
   return null;
 }
 
@@ -139,22 +147,16 @@ export const WORKSPACE_ROLES = [{ id: "WORKSPACE_ADMIN", label: "Quản trị kh
 export const workspaceRoleLabel = (r: string) => WORKSPACE_ROLES.find((x) => x.id === r)?.label ?? r;
 export function workspaceMemberBlock(m: Member, me: { id: string }, all: Member[], next: string | "REMOVE"): string | null {
   if (m.userId === me.id) return "Bạn không thể tự đổi vai trò hoặc tự gỡ mình khỏi workspace.";
-  if (m.role === "WORKSPACE_ADMIN" && next !== "WORKSPACE_ADMIN" && all.filter((x) => x.role === "WORKSPACE_ADMIN").length <= 1) return "Workspace phải còn ít nhất một quản trị viên.";
+  if (isWorkspaceAdminRole(m.role) && !isWorkspaceAdminRole(next) && all.filter((x) => isWorkspaceAdminRole(x.role)).length <= 1) return "Workspace phải còn ít nhất một quản trị viên.";
   return null;
 }
 
-const ERROR_TEXT: Record<string, string> = {
-  LAST_TENANT_ADMIN: "Công ty phải còn ít nhất một quản trị viên.", LAST_ADMIN: "Workspace phải còn ít nhất một quản trị viên.",
-  SELF_GRANT_FORBIDDEN: "Bạn không thể tự cấp quyền hoặc tự đổi vai trò của chính mình.", DEFAULT_TENANT_PROTECTED: "Công ty mặc định không thể bị tạm khóa hoặc xóa.",
-  TENANT_SLUG_TAKEN: "Mã công ty này đã được dùng.", TENANT_SLUG_INVALID: "Mã công ty không hợp lệ.", TENANT_NAME_INVALID: "Tên công ty không hợp lệ.",
-  TENANT_NOT_FOUND: "Không tìm thấy công ty.", TENANT_MEMBER_NOT_FOUND: "Người này không còn là thành viên của công ty.", USER_NOT_FOUND: "Không tìm thấy người dùng này.",
-  ALREADY_MEMBER: "Người này đã là thành viên.", INVALID_ROLE: "Vai trò không hợp lệ.", MEMBER_NOT_FOUND: "Không tìm thấy thành viên.",
-  ADMIN_REQUIRED: "Màn hình này chỉ dành cho quản trị hệ thống.", PERMISSION_DENIED: "Bạn không có quyền thực hiện thao tác này.",
-};
-/** the server's refusals in words a company administrator understands; the code is the contract, the English message is not shown */
-export function adminErrorText(e: { code?: string; status?: number; message?: string } | null | undefined, fallback: string): string {
-  if (e?.code && ERROR_TEXT[e.code]) return ERROR_TEXT[e.code];
-  if (e?.status === 403) return "Bạn không có quyền thực hiện thao tác này.";
-  if (e?.status === 404) return "Không tìm thấy (hoặc bạn không có quyền xem).";
-  return e?.message ? `${fallback} (${e.message})` : fallback;
+/**
+ * M-098: the one-time activation / reset link. The person who opens it is an employee, so it points at the Studio web app when its origin is configured
+ * (NEXT_PUBLIC_PORTAL_URL_STUDIO via `portalOrigin("studio")`), not at whatever host the admin happens to use (that may be an internal address the employee cannot reach).
+ * No origin configured (single-host development, the legacy root app) = the current origin. The token stays in the fragment (never sent to a server log).
+ */
+export function activationUrl(token: string, configuredOrigin: string, currentOrigin: string): string {
+  const origin = (configuredOrigin || currentOrigin).replace(/\/+$/, "");
+  return `${origin}/auth/activate#${token}`;
 }

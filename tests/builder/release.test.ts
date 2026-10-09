@@ -136,7 +136,7 @@ test("the other documented codes keep their own meaning (restorable, rollback fa
   const f = R.explainReleaseError({ status: 409, code: "ROLLBACK_FAILED", message: "The release could not be restored: artifact missing" }); assert.equal(f.kind, "rollback-failed"); assert.match(f.detail, /artifact missing/); assert.equal(f.retry, false);
   assert.equal(R.explainReleaseError({ status: 404, code: "SITE_NOT_FOUND" }).kind, "no-site");
   assert.equal(R.explainReleaseError({ status: 409, code: "REVISION_CONFLICT" }).reload, true);
-  assert.equal(R.explainReleaseError({ status: 403, code: "FORBIDDEN" }).kind, "forbidden"); assert.match(R.explainReleaseError({ status: 403, code: "FORBIDDEN" }).detail, /APP_PUBLISH/);
+  assert.equal(R.explainReleaseError({ status: 403, code: "FORBIDDEN" }).kind, "forbidden"); assert.match(R.explainReleaseError({ status: 403, code: "FORBIDDEN" }).detail, /quyền xuất bản/); assert.doesNotMatch(R.explainReleaseError({ status: 403, code: "FORBIDDEN" }).detail, /APP_PUBLISH/); // M-060: no permission code in the copy
   assert.equal(R.explainReleaseError({ status: 403, code: "PUBLIC_PUBLISH_DISABLED" }).kind, "public-disabled");
   assert.equal(R.explainReleaseError({ status: 429, code: "RATE_LIMITED", retryAfterSeconds: 30 }).retryAfterSeconds, 30);
 });

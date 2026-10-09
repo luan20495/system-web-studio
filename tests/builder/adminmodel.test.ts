@@ -3,6 +3,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import type { Me, TenantMemberView } from "@xweb/types";
 import * as M from "../../features/admin/adminModel";
+import { relatedPeople, peopleWhen } from "../../features/admin/shared/peopleSections";
+import { ApiError } from "../../packages/api-client/src/core";
+import { errorText } from "../../packages/api-client/src/errorText";
 
 const me = (o: Partial<Me> = {}): Me => ({ id: "u1", username: "a", displayName: "A", roles: [], workspaces: [], ...o });
 const ws = (id: string, permissions: string[]) => ({ id, name: `W-${id}`, role: "x", tenantId: "t", permissions });
@@ -20,15 +23,8 @@ test("scope: SYSTEM_ADMIN = platform; TENANT_MEMBERS lists the primary tenant; M
   assert.deepEqual(tenantAdmin.workspaces.map((w) => w.id), ["w1"]); assert.deepEqual(tenantAdmin.dataWorkspaces.map((w) => w.id), ["w1", "w3"]);
   const plain = M.adminScope(me({ platformScope: false, permissions: [], tenants: [{ id: "t1", slug: "a", name: "A", status: "ACTIVE", role: "MEMBER" }], tenantId: "t1", workspaces: [ws("w", ["APP_VIEW"])] }));
   assert.deepEqual([plain.platform, plain.tenants.length, plain.workspaces.length, plain.dataWorkspaces.length], [false, 0, 0, 0]);
-  assert.deepEqual(M.adminScope(null), { platform: false, tenants: [], workspaces: [], dataWorkspaces: [] });
-});
-test("sections: system-only sections need the platform; scoped sections need their own scope; the overview is for everyone", () => {
-  const none = M.adminScope(me()); const sys = M.adminScope(me({ platformScope: true }));
-  for (const k of ["users", "workspaces", "applications", "audit", "system", "settings", "tenants", "ai", "identity"]) { assert.equal(M.sectionAccess(k, none), "needs-platform", k); assert.equal(M.sectionAccess(k, sys), "ok", k); }
-  assert.equal(M.sectionAccess("", none), "ok");
-  assert.equal(M.sectionAccess("company", none), "needs-scope"); assert.equal(M.sectionAccess("my-workspaces", none), "needs-scope"); assert.equal(M.sectionAccess("data-sources", none), "needs-scope");
-  const wsAdmin = M.adminScope(me({ workspaces: [ws("w", ["MEMBER_MANAGE"])] })); assert.equal(M.sectionAccess("my-workspaces", wsAdmin), "ok"); assert.equal(M.sectionAccess("company", wsAdmin), "needs-scope");
-  assert.equal(M.sectionAccess("company", sys), "ok", "a SYSTEM_ADMIN may open any tenant");
+  assert.deepEqual(M.adminScope(null), { org: M.NO_ORG, platform: false, tenants: [], workspaces: [], dataWorkspaces: [] });
+  assert.deepEqual(tenantAdmin.org, M.NO_ORG, "TENANT_MANAGE + TENANT_MEMBERS are not organization codes");
 });
 test("tenant form mirrors TenantService: slug 2–120 of a-z 0-9 -, name required ≤160", () => {
   assert.deepEqual(M.checkTenantForm({ slug: "acme-vn", name: "Acme" }), {});
@@ -72,12 +68,14 @@ test("rules the server enforces are said before the click: self change, last TEN
   assert.match(M.workspaceMemberBlock(wsAll[1], { id: "b" }, wsAll, "VIEWER")!, /tự đổi/);
   assert.equal(M.workspaceMemberBlock(wsAll[1], { id: "z" }, wsAll, "VIEWER"), null);
 });
-test("server refusals are explained by CODE in Vietnamese; unknown ones keep the fallback and the server's text", () => {
-  assert.equal(M.adminErrorText({ code: "LAST_TENANT_ADMIN" }, "x"), "Công ty phải còn ít nhất một quản trị viên.");
-  assert.equal(M.adminErrorText({ code: "DEFAULT_TENANT_PROTECTED" }, "x"), "Công ty mặc định không thể bị tạm khóa hoặc xóa.");
-  assert.equal(M.adminErrorText({ code: "ADMIN_REQUIRED", status: 403 }, "x"), "Màn hình này chỉ dành cho quản trị hệ thống.");
-  assert.match(M.adminErrorText({ status: 403 }, "x"), /không có quyền/); assert.match(M.adminErrorText({ status: 404 }, "x"), /Không tìm thấy/);
-  assert.equal(M.adminErrorText({ status: 500, message: "boom" }, "Chưa lưu được"), "Chưa lưu được (boom)");
+test("one mapper (M-075): admin refusals come from the shared catalog by code; a non-ApiError is never printed", () => {
+  const ae = (code: string, status: number, message?: string) => new ApiError(status, code, message ?? "english server text");
+  assert.equal(errorText(ae("LAST_TENANT_ADMIN", 409), "x"), "Công ty phải còn ít nhất một quản trị viên.");
+  assert.equal(errorText(ae("DEFAULT_TENANT_PROTECTED", 409), "x"), "Công ty mặc định không thể bị tạm khóa hoặc xóa.");
+  assert.equal(errorText(ae("ADMIN_REQUIRED", 403), "x"), "Màn hình này chỉ dành cho quản trị hệ thống.");
+  assert.match(errorText(ae("HTTP_403", 403), "x"), /không có quyền/); assert.match(errorText(ae("HTTP_404", 404), "x"), /Không tìm thấy/);
+  assert.equal(errorText(new SyntaxError("Unexpected token <"), "Chưa lưu được"), "Chưa lưu được");
+  assert.ok(!/boom|english server text/.test(errorText(ae("HTTP_500", 500, "boom"), "Chưa lưu được")));
 });
 
 test("workspace member panel opens only on MEMBER_MANAGE of THAT workspace: a SYSTEM_ADMIN (tenant codes only) and a plain member are not offered it; an absent field does not block", () => {
@@ -118,4 +116,31 @@ test("initials: bracket groups, counters, punctuation, emoji, empty input and an
   assert.equal(i("Иван Петров"), "ИП", "Cyrillic"); assert.equal(i("山田 太郎"), "山太", "CJK"); assert.equal(i("José Álvarez"), "JA");
   assert.equal(i("a".repeat(5000) + " " + "b".repeat(5000)), "AB", "a very long name is fine");
   for (const v of ["", " ", "😀", "(Demo)", "!!!", "a(", ")(", "\u0000", "\uD83D"]) assert.doesNotThrow(() => M.initials({ username: v, displayName: v }), JSON.stringify(v));
+});
+
+test("canActInWorkspace (M-009): a platform admin who is NOT in the workspace has no workspace-scoped actions (D-C1-13A); a member, or the legacy businessAccess flag, keeps them; nobody gets none", () => {
+  const sysOut = me({ platformScope: true, systemAdmin: true, businessAccess: false, workspaces: [ws("w1", ["APP_VIEW"])] });
+  assert.equal(M.canActInWorkspace(sysOut, "w9"), false, "not a member of w9, no business access");
+  assert.equal(M.canActInWorkspace(sysOut, "w1"), true, "a member of w1: the server decides what the role allows");
+  assert.equal(M.canActInWorkspace(me({ platformScope: true, systemAdmin: true, businessAccess: true }), "w9"), true, "the server says business access (legacy flag): keep the controls");
+  assert.equal(M.canActInWorkspace(me({ platformScope: true, systemAdmin: true }), "w9"), false, "an older /auth/me without the field is NOT read as business access");
+  assert.equal(M.canActInWorkspace(null, "w1"), false); assert.equal(M.canActInWorkspace(undefined, "w1"), false);
+});
+
+test("M-098 the activation link uses the configured Studio origin, else the current one; the token stays in the fragment", () => {
+  assert.equal(M.activationUrl("TOK", "https://app.xweb.vn/", "http://10.0.0.5:3202"), "https://app.xweb.vn/auth/activate#TOK");
+  assert.equal(M.activationUrl("TOK", "", "http://localhost:3202"), "http://localhost:3202/auth/activate#TOK");
+});
+
+test("M-065 the people screens stay separate; the cross-links list only the sibling screens the person can open", () => {
+  const tadmin = M.adminScope(me({ platformScope: false, tenantRole: "TENANT_ADMIN", permissions: ["TENANT_MEMBERS", "ORG_STRUCTURE_VIEW", "EMPLOYEE_VIEW"], tenantId: "t1", tenants: [{ id: "t1", slug: "a", name: "A", status: "ACTIVE", role: "TENANT_ADMIN" }] } as Partial<Me>));
+  assert.deepEqual(relatedPeople("employees", tadmin).map((p) => p.key), ["company", "organization", "people"]);
+  // a company admin whose server list has NO organization code is offered neither organization screen (the codes decide, not the role label)
+  const noOrg = M.adminScope(me({ platformScope: false, tenantRole: "TENANT_ADMIN", permissions: ["TENANT_MEMBERS"], tenantId: "t1", tenants: [{ id: "t1", slug: "a", name: "A", status: "ACTIVE", role: "TENANT_ADMIN" }] } as Partial<Me>));
+  assert.deepEqual(relatedPeople("company", noOrg).map((p) => p.key), ["people"]);
+  const wsadmin = M.adminScope(me({ workspaces: [ws("w1", ["MEMBER_MANAGE"])] }));
+  assert.deepEqual(relatedPeople("people", wsadmin).map((p) => p.key), []);
+  assert.equal(peopleWhen("people")(wsadmin), true);
+  const sys = M.adminScope(me({ platformScope: true, tenantId: null, tenants: [], permissions: ["TENANT_MANAGE", "TENANT_MEMBERS"] } as Partial<Me>));
+  assert.deepEqual(relatedPeople("company", sys), []);
 });

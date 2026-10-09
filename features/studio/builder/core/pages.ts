@@ -63,12 +63,17 @@ export function opsAddPage(schema: PageSchema, title: string, id: string): { ops
 }
 
 /** Renaming the home page changes its title only (its route is always "/"); another page may also change its slug. */
-export function opsRenamePage(schema: PageSchema, pageId: string, title: string, slug?: string): { ops: SchemaOperation[]; summary: string } | { error: string } {
+export type PageSeo = { title?: string; description?: string; noindex?: boolean };
+/** `seo` (Website drawer, M-047) is sent as given: the same UPDATE_PAGE, validated by the same slug rules as the builder rename dialog */
+export function opsRenamePage(schema: PageSchema, pageId: string, title: string, slug?: string, seo?: PageSeo): { ops: SchemaOperation[]; summary: string } | { error: string } {
   const t = title.trim();
+  const extra = seo ? { seo } : {};
+  // the home page may keep an empty title (the site falls back to "Trang chủ") when only its SEO is saved
+  if (pageId === HOME_ID && !t && seo) return { ops: [{ type: "UPDATE_PAGE", pageId: HOME_ID, props: extra }], summary: "Cập nhật SEO trang chủ" };
   if (!t) return { error: "Tên trang không được để trống." };
-  if (pageId === HOME_ID) return { ops: [{ type: "UPDATE_PAGE", pageId: HOME_ID, props: { title: t } }], summary: `Đổi tên trang chủ thành ${t}` };
+  if (pageId === HOME_ID) return { ops: [{ type: "UPDATE_PAGE", pageId: HOME_ID, props: { title: t, ...extra } }], summary: `Đổi tên trang chủ thành ${t}` };
   if (!schema.pages?.some((p) => p.id === pageId)) return { error: "Không tìm thấy trang." };
-  const props: Record<string, unknown> = { title: t };
+  const props: Record<string, unknown> = { title: t, ...extra };
   if (slug !== undefined) { const c = checkSlug(schema, slug, pageId); if (!c.ok) return { error: c.reason }; props.slug = slug; }
   return { ops: [{ type: "UPDATE_PAGE", pageId, props }], summary: `Đổi tên trang ${t}` };
 }
@@ -118,6 +123,11 @@ export const setHomeReadiness = (): Readiness => notReady("Máy chủ chưa có 
 export const reorderPagesReadiness = (): Readiness => notReady("Máy chủ chưa có thao tác đổi thứ tự trang. Bạn có thể đổi thứ tự menu điều hướng.");
 
 // -------------------------------------------------------------------------------------------------------------- routing / 404
+/** the one UPDATE_SITE for the 404 page (builder panel and Website drawer, M-047): empty fields fall back to the default text */
+export function opsSetNotFound(title: string, message: string): { ops: SchemaOperation[]; summary: string } {
+  return { ops: [{ type: "UPDATE_SITE", props: { notFound: { ...(title.trim() ? { title: title.trim() } : {}), ...(message.trim() ? { message: message.trim() } : {}) } } }], summary: "Cập nhật trang 404" };
+}
+
 export type RouteResult = { kind: "page"; page: PageNode } | { kind: "notfound"; title: string; message: string };
 
 /** Resolves a public path the way the published site does: "/" = home, "/slug/" = page, anything else = the 404 page of the site. */

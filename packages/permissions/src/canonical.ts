@@ -9,9 +9,9 @@
  *  - Everything below is UX only: hiding or disabling a control is not authorisation. The server re-checks actor, tenant, workspace, project/app,
  *    resource scope and permission on every call, so a forged request with a missing permission is refused (403) or out of scope (404) regardless of this file.
  */
-import { LEGACY_PERMISSION_ALIAS, PERMISSION_CODES, type PermissionCode } from "../../types/src/contract/v2/permissions";
+import { CANONICAL_PERMISSION_CODES, LEGACY_PERMISSION_ALIAS, PERMISSION_CODES, type CanonicalPermissionCode, type OrgPermissionCode, type PermissionCode } from "../../types/src/contract/v2/permissions";
 
-export type { PermissionCode };
+export type { CanonicalPermissionCode, OrgPermissionCode, PermissionCode };
 export type PermissionSet = ReadonlySet<PermissionCode>;
 
 const CANONICAL: ReadonlySet<string> = new Set(PERMISSION_CODES);
@@ -21,6 +21,19 @@ export function resolvePermissions(raw: readonly string[] | undefined | null): S
   const out = new Set<PermissionCode>();
   for (const p of raw ?? []) {
     if (CANONICAL.has(p)) out.add(p as PermissionCode);
+    else if (p in LEGACY_PERMISSION_ALIAS) out.add(LEGACY_PERMISSION_ALIAS[p as keyof typeof LEGACY_PERMISSION_ALIAS]);
+  }
+  return out;
+}
+
+/** The 21 codes `/auth/me` may list (D-C0-51): the 14 AppDefinition codes + MEMBER_MANAGE + the six organization codes. `resolvePermissions` keeps the 14 (a project's / an AppDefinition's vocabulary). */
+const CANONICAL_ALL: ReadonlySet<string> = new Set(CANONICAL_PERMISSION_CODES);
+export type CanonicalSet = ReadonlySet<CanonicalPermissionCode>;
+/** Canonical set of a list `/auth/me` returned (tenant / workspace level): every canonical code, legacy storage names translated, anything else dropped. Never invents a code. */
+export function resolveCanonicalPermissions(raw: readonly string[] | undefined | null): Set<CanonicalPermissionCode> {
+  const out = new Set<CanonicalPermissionCode>();
+  for (const p of raw ?? []) {
+    if (CANONICAL_ALL.has(p)) out.add(p as CanonicalPermissionCode);
     else if (p in LEGACY_PERMISSION_ALIAS) out.add(LEGACY_PERMISSION_ALIAS[p as keyof typeof LEGACY_PERMISSION_ALIAS]);
   }
   return out;
@@ -41,6 +54,43 @@ export const canViewProject = (p: PermissionSet): boolean => holds(p, "APP_VIEW"
 /** APP_VIEW without APP_EDIT is a legitimate state: the project opens READ-ONLY (never a redirect). */
 export const canEditProject = (p: PermissionSet): boolean => holds(p, "APP_EDIT");
 export const isReadOnlyProject = (p: PermissionSet): boolean => canViewProject(p) && !canEditProject(p);
+
+// ---- Studio admission of ONE project (C1 H-C1-04, final contract §2.5) ------------------------------------------------------------------------------------
+
+type AdmissionMe = { workspaces: readonly { id: string; permissions?: readonly string[] }[]; projectScopes?: readonly unknown[] | null } | null | undefined;
+/**
+ * May this person open THIS project in Studio, judged from `/auth/me` alone (the project payload's own list is checked separately and must agree)?
+ *   ALLOW  the workspace of the project lists APP_VIEW in `workspaces[].permissions`,
+ *     or   the `projectScopes[]` row of EXACTLY this project (same projectId AND workspaceId) lists APP_VIEW.
+ * A scope belongs to its project: project A's row never admits project B, rows are never unioned and never merged into the workspace / global set. A malformed row (no string ids, permissions not an
+ * array) is ignored, so it can only fail closed. No role name is read, and no other code stands in for APP_VIEW (APP_PUBLISH / APP_EDIT / APP_USE / tenant codes do not).
+ * An ABSENT `projectScopes` (an older backend, which cannot express project scopes) cannot say no: the server still decides.
+ */
+export function canAdmitProject(me: AdmissionMe, ref: { workspaceId: string; projectId: string }): boolean {
+  if (!me) return false;
+  const row = me.workspaces.find((w) => w.id === ref.workspaceId);
+  if (row?.permissions && canViewProject(resolvePermissions(row.permissions))) return true;
+  if (me.projectScopes === undefined || me.projectScopes === null) return true;           // older backend: cannot say no
+  if (!Array.isArray(me.projectScopes)) return false;                                      // malformed: fail closed
+  for (const s of me.projectScopes as unknown[]) {
+    const r = s as { projectId?: unknown; workspaceId?: unknown; permissions?: unknown } | null;
+    if (!r || typeof r.projectId !== "string" || typeof r.workspaceId !== "string" || !Array.isArray(r.permissions)) continue;
+    if (r.projectId !== ref.projectId || r.workspaceId !== ref.workspaceId) continue;
+    if (canViewProject(resolvePermissions(r.permissions as string[]))) return true;
+  }
+  return false;
+}
+
+// ---- Organization (C1 final contract §1 / §9, D-C0-51): tenant level, listed in `/auth/me.permissions` for the PRIMARY tenant -------------------------------
+// Gates on these codes ONLY: never on TENANT_MEMBERS / platformScope / a role name; an organization relation, a position or a grade grants nothing.
+export const canViewOrgStructure = (p: CanonicalSet): boolean => p.has("ORG_STRUCTURE_VIEW");
+export const canManageOrgStructure = (p: CanonicalSet): boolean => p.has("ORG_STRUCTURE_MANAGE");
+export const canViewEmployees = (p: CanonicalSet): boolean => p.has("EMPLOYEE_VIEW");
+export const canManageEmployees = (p: CanonicalSet): boolean => p.has("EMPLOYEE_MANAGE");
+/** create an employee (a NEW account) and enable / disable one: EMPLOYEE_MANAGE **and** TENANT_MEMBERS (account provisioning) */
+export const canProvisionEmployees = (p: CanonicalSet): boolean => p.has("EMPLOYEE_MANAGE") && p.has("TENANT_MEMBERS");
+export const canViewPositionsGrades = (p: CanonicalSet): boolean => p.has("POSITION_GRADE_VIEW");
+export const canManagePositionsGrades = (p: CanonicalSet): boolean => p.has("POSITION_GRADE_MANAGE");
 
 // ---- running things in the Test panel / app ----------------------------------------------------------------------------------------------------------
 

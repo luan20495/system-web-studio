@@ -6,18 +6,20 @@
  */
 import { useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { ArrowDown, ArrowUp, GripVertical, Plus, X } from "../../../../packages/ui/src/icons";
+import { useAction } from "../../../../packages/ui/src/useAction";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { AppDefinitionV2, ActionDef, NavLink, Section } from "@xweb/types";
-import { MAX_NAV, HOME_ID, addPageToMenu, checkSlug, listPages, moveNavLink, opsAddPage, opsRemovePage, opsRenamePage, opsSetNavigation, pageExists, removeImpact, reorderPagesReadiness, resolveRoute, sectionsOf, setHomeReadiness, slugify } from "../core/pages";
-import { canStep } from "../core/dnd";
+import { MAX_NAV, HOME_ID, addPageToMenu, checkSlug, listPages, moveNavLink, opsAddPage, opsRemovePage, opsRenamePage, opsSetNavigation, opsSetNotFound, pageExists, removeImpact, reorderPagesReadiness, resolveRoute, sectionsOf, setHomeReadiness, slugify, uniqueSlug } from "../core/pages";
+import { canStepAt } from "../core/dnd";
 import { preflight } from "../core/preflight";
 import { Dialog, Field, StateBox } from "../ui/primitives";
 import type { SchemaOperation } from "@xweb/types";
 
 type Apply = (ops: SchemaOperation[], summary: string) => Promise<boolean>;
 
-export function PagesPanel({ doc, pageId, onPage, selectedId, onSelect, labelOf, summaryOf, canEdit, busy, apply, genId, onMoveSection }: {
+export function PagesPanel({ doc, pageId, onPage, selectedId, onSelect, labelOf, summaryOf, canEdit, busy, apply, genId, onMoveSection, lastFailure }: {
+  lastFailure?: () => string | null; // M-044
   doc: AppDefinitionV2; pageId: string; onPage: (id: string) => void; selectedId: string | null; onSelect: (id: string | null) => void;
   labelOf: (type: string) => string; summaryOf: (s: Section) => string; canEdit: boolean; busy: boolean; apply: Apply; genId: (prefix: string) => string;
   onMoveSection: (sectionId: string, delta: -1 | 1) => void;
@@ -43,7 +45,7 @@ export function PagesPanel({ doc, pageId, onPage, selectedId, onSelect, labelOf,
   return (
     <div className="bx-panel-body">
       <div className="bx-panel-head"><h2>Trang</h2>
-        {canEdit ? <button type="button" className="bx-btn sm" disabled={busy} onClick={() => setDialog("add")}><Plus size={14} aria-hidden="true"/> Trang</button> : null}</div>
+        {canEdit ? <button type="button" className="btn dense sm" disabled={busy} onClick={() => setDialog("add")}><Plus size={14} aria-hidden="true"/> Trang</button> : null}</div>
 
       {routeIssues.length ? (
         <div className="bx-alert" role="alert"><b>{routeIssues.length} đường dẫn sẽ chặn xuất bản</b>
@@ -67,7 +69,7 @@ export function PagesPanel({ doc, pageId, onPage, selectedId, onSelect, labelOf,
                     {sections.length === 0 ? <li role="none" className="hint">Trang trống. Kéo một component vào, hoặc nhấn vào component trong mục “Thành phần”.</li> : null}
                     {sections.map((s, i) => (
                       <SectionNode key={s.id} section={s} title={labelOf(s.type)} summary={summaryOf(s)} active={s.id === selectedId} canEdit={canEdit} busy={busy}
-                        first={!canStep(sections, s.id, -1)} last={!canStep(sections, s.id, 1)} onSelect={() => onSelect(s.id === selectedId ? null : s.id)} onMove={(d) => onMoveSection(s.id, d)}/>))}
+                        first={!canStepAt(sections, i, -1)} last={!canStepAt(sections, i, 1)} onSelect={() => onSelect(s.id === selectedId ? null : s.id)} onMove={(d) => onMoveSection(s.id, d)}/>))}
                   </ul>
                 </SortableContext>) : null}
             </li>
@@ -76,32 +78,33 @@ export function PagesPanel({ doc, pageId, onPage, selectedId, onSelect, labelOf,
       </ul>
 
       <div className="bx-page-actions" role="group" aria-label={`Thao tác với trang ${current.title}`}>
-        <button type="button" className="bx-btn sm" disabled={disabled} onClick={() => setDialog("rename")}>Đổi tên / đường dẫn</button>
-        <button type="button" className="bx-btn sm danger" disabled={disabled || current.home} title={current.home ? "Không thể xoá trang chủ" : undefined} onClick={() => setDialog("remove")}>Xóa trang</button>
+        <button type="button" className="btn dense sm" disabled={disabled} onClick={() => setDialog("rename")}>Đổi tên / đường dẫn</button>
+        <button type="button" className="btn dense sm danger" disabled={disabled || current.home} title={current.home ? "Không thể xoá trang chủ" : undefined} onClick={() => setDialog("remove")}>Xóa trang</button>
       </div>
-      {!current.home ? (<div className="bx-notready-row"><button type="button" className="bx-btn sm" disabled>Đặt làm trang chủ</button><StateBox state={setHomeReadiness()} compact/></div>) : null}
+      {!current.home ? (<div className="bx-notready-row"><button type="button" className="btn dense sm" disabled>Đặt làm trang chủ</button><StateBox state={setHomeReadiness()} compact/></div>) : null}
       <div className="bx-notready-row"><StateBox state={reorderPagesReadiness()} compact/></div>
 
-      <MenuEditor doc={doc} pages={pages} canEdit={canEdit} busy={busy} apply={apply} genId={genId}/>
-      <NotFoundEditor doc={doc} canEdit={canEdit} busy={busy} apply={apply}/>
+      {/* M-038: these editors keep a draft copy of the saved document; keyed by what is saved, they re-sync when it changes (a removed page, a save) instead of keeping a stale list that 'Lưu menu' would put back */}
+      <MenuEditor key={JSON.stringify(doc.site?.navigation ?? [])} doc={doc} pages={pages} canEdit={canEdit} busy={busy} apply={apply} genId={genId}/>
+      <NotFoundEditor key={JSON.stringify(doc.site?.notFound ?? null)} doc={doc} canEdit={canEdit} busy={busy} apply={apply}/>
 
       {dialog === "add" ? <AddDialog doc={doc} onClose={() => setDialog(null)} onSubmit={async (title) => {
         const id = genId("p"); const r = opsAddPage(doc, title, id);
         if ("error" in r) return r.error;
         if (await apply(r.ops, r.summary)) { onPage(id); setDialog(null); return null; }
-        return "Không lưu được. Hãy thử lại.";
+        return lastFailure?.() ?? "Không lưu được. Hãy thử lại.";
       }}/> : null}
       {dialog === "rename" ? <RenameDialog doc={doc} pageId={current.id} title={current.title} slug={current.slug} onClose={() => setDialog(null)} onSubmit={async (t, s) => {
         const r = opsRenamePage(doc, current.id, t, current.home ? undefined : s);
         if ("error" in r) return r.error;
         if (await apply(r.ops, r.summary)) { setDialog(null); return null; }
-        return "Không lưu được. Hãy thử lại.";
+        return lastFailure?.() ?? "Không lưu được. Hãy thử lại.";
       }}/> : null}
       {dialog === "remove" ? <RemoveDialog doc={doc} pageId={current.id} actions={doc.actions ?? []} onClose={() => setDialog(null)} onConfirm={async () => {
         const r = opsRemovePage(doc, current.id);
         if ("error" in r) return r.error;
         if (await apply(r.ops, r.summary)) { onPage(HOME_ID); setDialog(null); return null; }
-        return "Không lưu được. Hãy thử lại.";
+        return lastFailure?.() ?? "Không lưu được. Hãy thử lại.";
       }}/> : null}
     </div>
   );
@@ -127,11 +130,14 @@ function SectionNode({ section, title, summary, active, canEdit, busy, first, la
 
 function AddDialog({ doc, onClose, onSubmit }: { doc: AppDefinitionV2; onClose: () => void; onSubmit: (title: string) => Promise<string | null> }) {
   const [title, setTitle] = useState(""); const [err, setErr] = useState<string | null>(null);
-  const slug = slugify(title);
+  // M-020: Enter + click / a double Enter send ONE request (decided from a ref); the buttons say it is working
+  const act = useAction((_ctx, t: string) => onSubmit(t));
+  const submit = async () => { const r = await act.run(title); if (r.status === "ok") setErr(r.value); };
+  const slug = title.trim() ? uniqueSlug(doc, title) : "";   // M-077: the slug ADD_PAGE will really save (reserved / taken -> "-2"), not the raw slugify
   return (
-    <Dialog title="Thêm trang" onClose={onClose} footer={<><button type="button" className="bx-btn" onClick={onClose}>Hủy</button>
-      <button type="submit" form="add-page-form" className="bx-btn primary" disabled={!title.trim()}>Thêm trang</button></>}>
-      <form id="add-page-form" onSubmit={(e) => { e.preventDefault(); void onSubmit(title).then(setErr); }}>
+    <Dialog title="Thêm trang" onClose={onClose} footer={<><button type="button" className="btn dense" onClick={onClose}>Hủy</button>
+      <button type="submit" form="add-page-form" className="btn dense primary" disabled={!title.trim() || act.busy} aria-busy={act.busy || undefined}>{act.busy ? "Đang thêm…" : "Thêm trang"}</button></>}>
+      <form id="add-page-form" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
         <Field label="Tên trang">{(id) => <input id={id} data-autofocus value={title} maxLength={80} onChange={(e) => setTitle(e.target.value)}/>}</Field>
         <p className="hint">Đường dẫn dự kiến: <code>/{slug || "…"}/</code>{(doc.pages ?? []).length >= 20 ? " · đã đủ 20 trang" : ""}</p>
         {err ? <p className="formError" role="alert">{err}</p> : null}
@@ -142,12 +148,14 @@ function AddDialog({ doc, onClose, onSubmit }: { doc: AppDefinitionV2; onClose: 
 
 function RenameDialog({ doc, pageId, title: t0, slug: s0, onClose, onSubmit }: { doc: AppDefinitionV2; pageId: string; title: string; slug: string; onClose: () => void; onSubmit: (title: string, slug: string) => Promise<string | null> }) {
   const [title, setTitle] = useState(t0); const [slug, setSlug] = useState(s0); const [err, setErr] = useState<string | null>(null);
+  const act = useAction((_ctx, t: string, s: string) => onSubmit(t, s));
+  const submit = async () => { const r = await act.run(title, slug); if (r.status === "ok") setErr(r.value); };
   const home = pageId === HOME_ID;
   const check = home ? { ok: true as const } : checkSlug(doc, slug, pageId);
   return (
-    <Dialog title="Đổi tên và đường dẫn" onClose={onClose} footer={<><button type="button" className="bx-btn" onClick={onClose}>Hủy</button>
-      <button type="submit" form="rename-page-form" className="bx-btn primary" disabled={!title.trim() || !check.ok}>Lưu</button></>}>
-      <form id="rename-page-form" onSubmit={(e) => { e.preventDefault(); void onSubmit(title, slug).then(setErr); }}>
+    <Dialog title="Đổi tên và đường dẫn" onClose={onClose} footer={<><button type="button" className="btn dense" onClick={onClose}>Hủy</button>
+      <button type="submit" form="rename-page-form" className="btn dense primary" disabled={!title.trim() || !check.ok || act.busy} aria-busy={act.busy || undefined}>{act.busy ? "Đang lưu…" : "Lưu"}</button></>}>
+      <form id="rename-page-form" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
         <Field label="Tên trang">{(id) => <input id={id} data-autofocus value={title} maxLength={80} onChange={(e) => setTitle(e.target.value)}/>}</Field>
         {home ? <p className="hint">Đường dẫn của trang chủ luôn là <code>/</code>.</p> : (
           <Field label="Đường dẫn" hint={check.ok ? `Địa chỉ: /${slug}/` : check.reason}>{(id) => <input id={id} value={slug} maxLength={60} aria-invalid={!check.ok} onChange={(e) => setSlug(slugify(e.target.value))}/>}</Field>)}
@@ -159,10 +167,11 @@ function RenameDialog({ doc, pageId, title: t0, slug: s0, onClose, onSubmit }: {
 
 function RemoveDialog({ doc, pageId, actions, onClose, onConfirm }: { doc: AppDefinitionV2; pageId: string; actions: ActionDef[]; onClose: () => void; onConfirm: () => Promise<string | null> }) {
   const [err, setErr] = useState<string | null>(null);
+  const act = useAction(() => onConfirm());
   const impact = removeImpact(doc, pageId, actions);
   return (
-    <Dialog title={`Xóa trang “${impact?.pageTitle ?? ""}”?`} onClose={onClose} footer={<><button type="button" className="bx-btn" onClick={onClose}>Hủy</button>
-      <button type="button" className="bx-btn danger" onClick={() => void onConfirm().then(setErr)}>Xóa trang</button></>}>
+    <Dialog title={`Xóa trang “${impact?.pageTitle ?? ""}”?`} onClose={onClose} footer={<><button type="button" className="btn dense" onClick={onClose}>Hủy</button>
+      <button type="button" className="btn dense danger" disabled={act.busy} aria-busy={act.busy || undefined} onClick={() => void act.run().then((r) => { if (r.status === "ok") setErr(r.value); })}>{act.busy ? "Đang xóa…" : "Xóa trang"}</button></>}>
       <p>{impact?.message}</p>
       <p className="hint">Có thể khôi phục từ lịch sử phiên bản.</p>
       {err ? <p className="formError" role="alert">{err}</p> : null}
@@ -198,7 +207,7 @@ function MenuEditor({ doc, pages, canEdit, busy, apply, genId }: { doc: AppDefin
         <select aria-label="Thêm trang vào menu" value="" onChange={(e) => { const p = pages.find((x) => x.id === e.target.value); if (p) setLinks(addPageToMenu(links, p, genId("n"))); }}>
           <option value="">+ Thêm trang vào menu…</option>{notInMenu.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}</select>) : null}
       {err ? <p className="formError" role="alert">{err}</p> : null}
-      {canEdit ? <div className="bx-actions"><button type="button" className="bx-btn primary sm" disabled={disabled || !dirty} onClick={() => { const r = opsSetNavigation(links); if ("error" in r) setErr(r.error); else { setErr(null); void apply(r.ops, r.summary); } }}>Lưu menu</button></div> : null}
+      {canEdit ? <div className="bx-actions"><button type="button" className="btn dense primary sm" disabled={disabled || !dirty} onClick={() => { const r = opsSetNavigation(links); if ("error" in r) setErr(r.error); else { setErr(null); void apply(r.ops, r.summary); } }}>Lưu menu</button></div> : null}
     </section>
   );
 }
@@ -214,8 +223,8 @@ function NotFoundEditor({ doc, canEdit, busy, apply }: { doc: AppDefinitionV2; c
       <Field label="Tiêu đề">{(id) => <input id={id} value={title} maxLength={80} placeholder="Không tìm thấy trang" disabled={disabled} onChange={(e) => setTitle(e.target.value)}/>}</Field>
       <Field label="Lời nhắn">{(id) => <input id={id} value={message} maxLength={300} placeholder="Trang bạn tìm không tồn tại…" disabled={disabled} onChange={(e) => setMessage(e.target.value)}/>}</Field>
       {shown.kind === "notfound" ? <div className="bx-nf-preview" aria-label="Xem trước trang 404"><b>{shown.title}</b><p>{shown.message}</p></div> : null}
-      {canEdit ? <div className="bx-actions"><button type="button" className="bx-btn sm" disabled={disabled}
-        onClick={() => void apply([{ type: "UPDATE_SITE", props: { notFound: { ...(title.trim() ? { title: title.trim() } : {}), ...(message.trim() ? { message: message.trim() } : {}) } } }], "Cập nhật trang 404")}>Lưu trang 404</button></div> : null}
+      {canEdit ? <div className="bx-actions"><button type="button" className="btn dense sm" disabled={disabled}
+        onClick={() => { const r = opsSetNotFound(title, message); void apply(r.ops, r.summary); }}>Lưu trang 404</button></div> : null}
     </section>
   );
 }

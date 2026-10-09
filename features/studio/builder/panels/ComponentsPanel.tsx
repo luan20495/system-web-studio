@@ -37,7 +37,7 @@ export function ComponentsPanel({ registry, blocks, canEdit, busy, onAdd, onAddB
       {blocks.length === 0 ? <p className="hint">Chưa có khối nào. Chọn một mục rồi “Lưu thành khối”.</p> : (
         <ul className="bx-lib" aria-label="Khối dựng sẵn">{blocks.map((b) => (
           <li key={`${b.who}-${b.id}`} className="bx-lib-item"><div><b>{b.name}</b><small>{b.who} · {b.baseLabel}</small></div>
-            <button type="button" className="bx-btn sm" disabled={busy} aria-label={`Thêm khối ${b.name} vào trang`} onClick={() => onAddBlock(b.id)}>Thêm</button></li>))}</ul>)}
+            <button type="button" className="btn dense sm" disabled={busy} aria-label={`Thêm khối ${b.name} vào trang`} onClick={() => onAddBlock(b.id)}>Thêm</button></li>))}</ul>)}
     </div>
   );
 }
@@ -48,7 +48,7 @@ function LibItem({ entry, busy, onAdd }: { entry: LibraryEntry; busy: boolean; o
     <li className={`bx-lib-item${entry.disabled ? " disabled" : ""}`} style={{ opacity: isDragging ? 0.5 : undefined }}>
       <button ref={setNodeRef} type="button" className="bx-drag" aria-label={`Kéo ${entry.label} vào trang`} title={entry.disabled ? entry.reason : `Kéo ${entry.label} vào trang`} disabled={entry.disabled || busy} {...attributes} {...listeners}>⋮⋮</button>
       <div><b>{entry.label}</b><small>{entry.category}{entry.disabled ? ` · ${entry.reason}` : ""}</small></div>
-      <button type="button" className="bx-btn sm" disabled={entry.disabled || busy} aria-label={`Thêm ${entry.label} vào trang`} onClick={onAdd}>Thêm</button>
+      <button type="button" className="btn dense sm" disabled={entry.disabled || busy} aria-label={`Thêm ${entry.label} vào trang`} onClick={onAdd}>Thêm</button>
     </li>
   );
 }

@@ -1,0 +1,153 @@
+/*
+ * @xweb/ui shared stylesheet, loaded by Platform, Admin and Studio AFTER globals / responsive / http / factory (/ builder).
+ * Holds what every portal shares and that is not part of one idiom: the toast, the error fallback, and the LIGHT skin of the builder primitives that
+ * Admin / Platform render (DataSourcesPanel + Dialog). Colours come from tokens; the few tokens added here are listed with their reason.
+ *
+ * NEW TOKENS (each repeats a value that was hard-coded 3+ times, or names a role that had no token):
+ *   --ui-z-toast          100   one stacking level above every overlay (.bx-overlay 80, .overlay / .adminModal 50, drawer 70): a notice raised inside a dialog flow stays visible
+ *   --ui-inverse-bg / -fg / -line   the dark toast surface, its text and its divider (= --f-text, white, #334155 `.bx-badge`); the toast is the same on a light or a dark page
+ *   --ui-toast-ok / -info / -warn / -err   icon colours on that dark surface (#6ce9a6 / #93c5fd / #fedf89 / #fda29b: already used by builder.css chips and alerts)
+ *   --ui-scrim            the dialog backdrop (rgba(15,23,42,.45) = the `.adminModal` scrim; three different scrims existed)
+ *   --f-bad-line          #fecdca, the pink border of danger controls (used 6x as a literal in factory.css)
+ *   --danger / --warn     were used by builder.css with a fallback and defined nowhere; defined with exactly those fallback values (no visual change)
+ * Wave 1c consolidation (M-069, value-identical: the screenshots are pixel-identical before / after, scripts/css-hygiene.mjs counts): repeated literals became tokens.
+ *   light, factory.css :root  --f-accent-tint #ebf2fe (selected row / active option) · --f-accent-wash #f5f8ff (hover) · --f-accent-line #bcd2fb (selection border; decorative, NOT a focus ring)
+ *                             --f-accent-chip #dbe7fd (avatar) · --f-side-active #1c3260 (active item of the dark sidebar)
+ *   dark, globals.css :root   --dk-surface #111820 · --dk-field #131a22 · --dk-field-line #3a4655 · --dk-text-soft #cbd7e3 · --dk-select-line #4a87c8 · --dk-error-ink #ff9a92
+ *                             --dk-code-bg #0b1220 · --dk-link #9cc3ff · --dk-chrome #1a1e26   (the blue-grey palette of the builder / Studio, named by role; unifying it with --panel/--line is a visual change for later)
+ *   literals equal to an existing token now read it: #fff -> --f-panel (surfaces) / --ui-inverse-fg (text on dark), #2c7cff -> --blue, #20c997 -> --accent, #e5484d -> --danger ...
+ * Light-theme accessibility tokens live in factory.css next to --f-focus: --f-control-border (>=3:1 on every light surface), --ui-ring (the focus ring, per theme), --ui-link-line, --ui-content-max.
+ */
+:root{
+  --ui-z-toast:100;
+  --ui-inverse-bg:#0f172a;--ui-inverse-fg:#ffffff;--ui-inverse-line:#334155;
+  --ui-toast-ok:#6ce9a6;--ui-toast-info:#93c5fd;--ui-toast-warn:#fedf89;--ui-toast-err:#fda29b;
+  --ui-scrim:rgba(15,23,42,.45);
+  --f-bad-line:#fecdca;
+  --danger:#e5484d;--warn:#d9a21b;
+}
+
+/* ---------- toast (packages/ui/src/Toast.tsx) ---------- */
+.xp-toasts{position:fixed;z-index:var(--ui-z-toast);right:16px;bottom:16px;width:min(420px,calc(100vw - 32px));display:flex;flex-direction:column;pointer-events:none}
+.xp-toastList{display:grid;gap:8px}
+.xp-toastList:not(:empty)+.xp-toastList:not(:empty){margin-top:8px}
+.xp-toast{pointer-events:auto;display:flex;align-items:flex-start;gap:10px;padding:12px 8px 12px 14px;border:1px solid var(--ui-inverse-line);border-radius:var(--f-r);background:var(--ui-inverse-bg);color:var(--ui-inverse-fg);box-shadow:var(--shadow);font-size:var(--f-fs-base);line-height:1.45}
+.xp-toastIcon{flex:none;margin-top:1px}
+.xp-toast-success .xp-toastIcon{color:var(--ui-toast-ok)}.xp-toast-info .xp-toastIcon{color:var(--ui-toast-info)}.xp-toast-warning .xp-toastIcon{color:var(--ui-toast-warn)}.xp-toast-error .xp-toastIcon{color:var(--ui-toast-err)}
+.xp-toastBody{flex:1;min-width:0;overflow-wrap:anywhere}
+.xp-toastTitle{display:block;margin-bottom:2px}
+.xp-toastAction,.xp-toastClose{flex:none;min-height:32px;border:0;border-radius:var(--f-r-sm);background:transparent;color:var(--ui-inverse-fg);font:inherit;font-weight:600;cursor:pointer}
+.xp-toastAction{padding:0 10px;text-decoration:underline}
+.xp-toastClose{width:32px;display:inline-flex;align-items:center;justify-content:center;padding:0}
+.xp-toastAction:hover,.xp-toastClose:hover{background:var(--ui-inverse-line)}
+.xp-toastAction:focus-visible,.xp-toastClose:focus-visible{outline:2px solid var(--ui-toast-info);outline-offset:1px}
+.xp-toastMore{pointer-events:auto;justify-self:end;padding:2px 10px;border-radius:var(--f-r-pill);background:var(--ui-inverse-bg);color:var(--ui-inverse-fg);font-size:var(--f-fs-sm)}
+@media(max-width:600px){.xp-toasts{right:8px;left:8px;bottom:8px;width:auto}}
+
+/* ---------- confirm() / prompt() (packages/ui/src/dialogs.tsx; the box itself is .adminModal > .modalBody) ---------- */
+.xp-dialogMsg{color:var(--f-muted);overflow-wrap:anywhere}
+
+/* ---------- error fallback (packages/ui/src/ErrorBoundary.tsx; also error.tsx / global-error.tsx) ---------- */
+.xp-errorPage{min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:24px;background:var(--f-bg);color:var(--f-text);font:14px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.xp-errorInline{display:grid;place-items:center;padding:16px;color:var(--f-text);font:14px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.xp-errorBox{width:min(520px,100%);padding:28px;border:1px solid var(--f-line);border-radius:var(--f-r);background:var(--f-panel);box-shadow:var(--f-shadow);text-align:center;display:grid;justify-items:center;gap:8px}
+.xp-errorIcon{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--f-bad-bg);color:var(--f-bad);font-weight:700;font-size:20px}
+.xp-errorTitle{margin:4px 0 0;font-size:22px;font-weight:700;letter-spacing:-.01em}
+.xp-errorTitle:focus{outline:none}.xp-errorTitle:focus-visible{outline:2px solid var(--f-focus);outline-offset:4px;border-radius:4px}
+.xp-errorText{margin:0;color:var(--f-muted);max-width:46ch}
+.xp-errorRef{margin:0;color:var(--f-muted);font-size:var(--f-fs-md)}.xp-errorRef code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--f-text);overflow-wrap:anywhere}
+.xp-errorActions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:8px}
+
+/* ---------- builder primitives in the LIGHT shell (Platform / Admin: Nguồn dữ liệu = DataSourcesPanel + Dialog) ----------
+   builder.css is dark and global (`.chip`, `.segmented`, `html:has(.bx-root)`…), so it is NOT loaded by Platform / Admin.
+   These rules re-skin only the classes the panel and the Dialog use, and only below `.shell`, so they can neither leak into the dark builder (`.studio`, never inside `.shell`) nor into any other light screen. */
+.shell .bx-ds{display:grid;gap:16px}
+.shell .bx-h3,.shell .bx-h4{margin:0;font-weight:650;color:var(--f-text)}
+.shell .bx-h3{font-size:15px}.shell .bx-h4{font-size:var(--f-fs-md);color:var(--f-muted);text-transform:uppercase;letter-spacing:.04em}
+.shell .bx-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.shell .bx-list>li{display:grid;gap:6px;padding:10px 12px;border:1px solid var(--f-line);border-radius:var(--f-r);background:var(--f-panel)}
+.shell .bx-list small,.shell .bx-ds small{color:var(--f-muted);font-size:var(--f-fs-sm)}
+.shell .bx-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.shell .bx-form{display:grid;gap:12px;max-width:560px}
+.shell .bx-form>.btn{justify-self:start}
+.shell .bx-field{display:grid;gap:4px}
+.shell .bx-field label{font-size:var(--f-fs-md);font-weight:600;color:var(--f-text)}
+.shell .bx-field small{color:var(--f-muted);font-size:var(--f-fs-md);line-height:1.45}
+.shell .bx-group{display:grid;gap:8px;min-width:0;margin:0;padding:10px 12px;border:1px solid var(--f-line);border-radius:var(--f-r)}
+.shell .bx-group legend{padding:0 4px;font-size:var(--f-fs-sm);font-weight:700;color:var(--f-muted)}
+.shell .bx-state{padding:12px;border:1px dashed var(--f-line);border-radius:var(--f-r);background:var(--f-bg);color:var(--f-muted)}
+.shell .bx-state b{color:var(--f-text)}.shell .bx-state p{margin:4px 0 0}
+.shell .bx-state-error{border-style:solid;border-color:var(--f-bad-line);background:var(--f-bad-bg);color:var(--f-bad)}.shell .bx-state-error b{color:var(--f-bad)}
+.shell .bx-outcome{padding:8px 10px;border:1px solid var(--f-line);border-radius:var(--f-r-sm);font-size:var(--f-fs-md)}
+.shell .bx-outcome p{margin:2px 0 0}.shell .bx-outcome ul{margin:6px 0 0;padding-left:18px}
+.shell .bx-outcome.tone-ok{border-color:var(--f-ok);background:var(--f-ok-bg);color:var(--f-ok)}
+.shell .bx-outcome.tone-warn{border-color:var(--f-warn);background:var(--f-warn-bg);color:var(--f-warn)}
+.shell .bx-outcome.tone-bad{border-color:var(--f-bad);background:var(--f-bad-bg);color:var(--f-bad)}
+/* the builder Dialog: a real modal over a scrim (it is not portaled, so it sits in the page flow without these) */
+.shell .bx-overlay{position:fixed;inset:0;z-index:80;display:grid;place-items:center;padding:16px;background:var(--ui-scrim)}
+.shell .bx-dialog{width:min(520px,100%);max-height:90vh;overflow:auto;padding:24px;border-radius:var(--f-r-lg);background:var(--f-panel);color:var(--f-text);box-shadow:var(--shadow)}
+.shell .bx-dialog h2{margin:0 0 8px;font-size:18px}
+.shell .bx-dialog-body{display:grid;gap:8px}
+.shell .bx-dialog-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+@media(max-width:600px){.shell .bx-overlay{padding:8px;align-items:end}.shell .bx-dialog{width:100%;padding:16px}}
+
+/* ---------- states (packages/ui/src/States.tsx, LoadGate.tsx) ---------- */
+.xp-stateRef{font-size:var(--f-fs-md);color:var(--f-muted)}.xp-stateRef code{font:inherit;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--f-text);user-select:all}
+.xp-stateBanner{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 12px;padding:10px 12px;border:1px solid var(--f-bad-line);border-radius:var(--f-r);background:var(--f-bad-bg);color:var(--f-bad);font-size:var(--f-fs-base)}
+
+/* ---------- widgets (Tabs, RadioGroup, DisclosureRow, ReasonButton) ----------
+   Each widget reads its colours from --xp-* properties that default to the light (--f-*) theme and are re-pointed for the dark Studio editor, so the same markup is correct on both. */
+.xp-radioCard,.xp-reasonWrap,.xp-discToggle,.xp-tabs{--xp-line:var(--f-line);--xp-bg:var(--f-panel);--xp-fg:var(--f-text);--xp-muted:var(--f-muted);--xp-accent:var(--f-accent);--xp-accent-bg:var(--f-accent-soft);--xp-hover:var(--f-line2);--xp-focus:var(--f-focus)}
+.studio .xp-radioCard,.studio .xp-reasonWrap,.studio .xp-discToggle,.studio .xp-tabs{--xp-line:var(--line);--xp-bg:var(--panel2);--xp-fg:var(--text);--xp-muted:var(--muted);--xp-accent:var(--blue);--xp-accent-bg:color-mix(in srgb,var(--blue) 18%,var(--panel2));--xp-hover:var(--panel2);--xp-focus:var(--blue)}
+.xp-tabs button:focus-visible{outline:2px solid var(--xp-focus);outline-offset:-2px;border-radius:var(--f-r-xs)}.xp-tabCount{font-weight:500;color:var(--xp-muted)}
+.xp-radioGroup{border:0;margin:0;padding:0;min-width:0}.xp-radioLegend{padding:0;margin:0 0 8px;font-size:var(--f-fs-md);font-weight:600}
+.xp-radioList{display:grid;gap:8px}
+.xp-radioCard{position:relative;display:block;cursor:pointer}
+.xp-radioCard input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.xp-radioBody{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border:1px solid var(--xp-line);border-radius:var(--f-r);background:var(--xp-bg);color:var(--xp-fg);text-align:left}
+.xp-radioBody::before{content:"";flex:none;box-sizing:border-box;width:18px;height:18px;margin-top:1px;border:2px solid var(--xp-muted);border-radius:50%;background:transparent}
+.xp-radioCard.selected .xp-radioBody{border-color:var(--xp-accent);background:var(--xp-accent-bg)}
+.xp-radioCard.selected .xp-radioBody::before{border-color:var(--xp-accent);background:radial-gradient(circle,var(--xp-accent) 0 4px,transparent 5px)}
+.xp-radioCard input:focus-visible+.xp-radioBody{outline:2px solid var(--xp-focus);outline-offset:2px}
+.xp-radioCard.disabled{cursor:not-allowed;opacity:.6}.xp-radioCard.disabled input{cursor:not-allowed}
+.xp-radioIcon{flex:none;display:inline-grid;place-items:center}.xp-radioText{display:grid;gap:2px}.xp-radioText small{color:var(--xp-muted);font-size:var(--f-fs-md);line-height:1.4}
+.xp-reasonWrap{display:inline-flex;flex-direction:column;align-items:flex-start;gap:4px;max-width:100%}.xp-reasonWrap.inline{flex-direction:row;align-items:center;flex-wrap:wrap;gap:8px}
+.xp-reason{font-size:var(--f-fs-sm);line-height:1.4;color:var(--xp-muted)}
+.xp-reasonBtn[aria-disabled=true]{opacity:.6;cursor:not-allowed}
+.xp-disc{cursor:pointer}.xp-disc:hover{background:var(--xp-hover)}.xp-discToggle{width:44px;padding-right:0}
+.xp-discBtn{display:inline-grid;place-items:center;width:32px;height:32px;padding:0;border:0;border-radius:var(--f-r-sm);background:transparent;color:var(--xp-muted)}
+.xp-discBtn:hover{background:var(--xp-hover)}.xp-discBtn:focus-visible{outline:2px solid var(--xp-focus);outline-offset:2px}
+.xp-discDetail>td{padding:12px 16px;background:var(--f-bg)}
+
+/* ---------- skip link (packages/ui/src/SkipLink.tsx): out of the grid flow, visible only while focused ---------- */
+.xp-skip{position:absolute;z-index:calc(var(--ui-z-toast) + 1);left:12px;top:-80px;padding:10px 16px;border-radius:var(--f-r);background:var(--ui-inverse-bg);color:var(--ui-inverse-fg);font-weight:600;text-decoration:none}
+.xp-skip:focus{top:12px;outline:2px solid var(--f-focus);outline-offset:2px}
+/* M-095: a navigation entry for a section that does not exist yet (not a real page). Same colour as the label (contrast stays), smaller and regular weight; logical margin (RTL ratchet). */
+.xp-navSoon{margin-inline-start:6px;font-size:var(--f-fs-sm);font-weight:400}
+/* M-130 (REAL-STACK finding): links in activity rows were 21px high (< 24px target, WCAG 2.5.8): a 24px minimum without changing the look */
+.shell .activityList a{display:inline-flex;align-items:center;min-height:24px}
+
+/* ---------- XWEB brand (packages/ui/src/Brand.tsx, Banner.tsx; docs/BRAND_GUIDELINE.md). Colours only through the semantic --color-* tokens (factory.css),
+   so the same markup is right on a light page and inside a dark scope (.studio / .sidebar.dark / .modal / .drawer / [data-theme=dark]). ---------- */
+.xp-brandMark,.xp-brandLogo{display:block;flex:none;overflow:visible}
+.xp-brandTile{fill:var(--color-brand-tile)}.xp-brandGlyph{stroke:var(--color-brand-glyph)}.xp-brandGlyphAccent{stroke:var(--color-brand-tile-accent)}.xp-brandInk{stroke:var(--color-brand-ink)}
+.xp-brandLockup{display:flex;flex-direction:column;align-items:flex-start;gap:var(--space-1);min-width:0}
+.xp-brandContext{font:var(--text-caption);letter-spacing:var(--tracking-caps);text-transform:uppercase;color:var(--color-text-muted)}
+@media(forced-colors:active){.xp-brandTile{fill:CanvasText}.xp-brandGlyph,.xp-brandGlyphAccent{stroke:Canvas}.xp-brandInk{stroke:CanvasText}}
+
+/* shared backgrounds: CSS only (no raster), themed by tokens, readable content on top at any width. Put the class on the scrolling page element. */
+.xp-bg-auth{background:radial-gradient(900px 420px at 50% -8%,var(--color-glow),transparent 70%),linear-gradient(180deg,transparent 0,var(--color-bg) 440px),linear-gradient(var(--color-pattern) 1px,transparent 1px) 0 0/24px 24px,linear-gradient(90deg,var(--color-pattern) 1px,transparent 1px) 0 0/24px 24px,var(--color-bg)}
+.xp-bg-dashboard{background:linear-gradient(180deg,var(--color-bg-subtle),var(--color-bg) 240px)}
+.xp-bg-hero{background:radial-gradient(640px 320px at 100% 0,var(--color-glow),transparent 70%),linear-gradient(135deg,var(--color-primary-soft),var(--color-surface) 70%)}
+.xp-bg-pattern{background:linear-gradient(var(--color-pattern) 1px,transparent 1px) 0 0/24px 24px,linear-gradient(90deg,var(--color-pattern) 1px,transparent 1px) 0 0/24px 24px,var(--color-surface)}
+
+/* banners (Banner.tsx): a text column that never gets narrower than the safe area, a decorative media column that drops under 600px */
+.xp-banner{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-6);padding:var(--space-8);margin-block-end:var(--space-4);border:1px solid var(--color-border);border-radius:var(--radius-xl);color:var(--color-text);overflow:hidden}
+.xp-banner-intro{border-color:var(--color-selected-line)}
+.xp-bannerText{flex:1 1 300px;min-width:0;max-width:62ch}
+.xp-bannerEyebrow{margin:0;font:var(--text-label);letter-spacing:var(--tracking-caps);text-transform:uppercase;color:var(--color-primary)}
+.xp-bannerTitle{margin:var(--space-1) 0 var(--space-2);font:var(--text-h1);letter-spacing:var(--tracking-tight);overflow-wrap:anywhere}
+.xp-bannerBody{margin:0;font:var(--text-body-lg);color:var(--color-text-secondary)}
+.xp-bannerActions{display:flex;flex-wrap:wrap;gap:var(--space-2);margin-block-start:var(--space-4)}
+.xp-bannerMedia{flex:0 0 auto;display:grid;place-items:center;inline-size:160px;block-size:120px;margin-inline-end:var(--space-6);color:var(--color-primary)}
+@media(max-width:600px){.xp-banner{padding:var(--space-5);gap:var(--space-4)}.xp-bannerMedia{display:none}.xp-bannerTitle{font-size:20px}}

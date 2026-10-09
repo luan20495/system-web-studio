@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api, ApiError } from "@xweb/api-client";
 import type { AuthConfig } from "@xweb/types";
 import { useSession } from "./session";
-import { accessiblePortals, canAccessPortal, portalHref, portalOfPath, PORTAL_LABEL, PORTAL_PREFIX, rememberPortal, rememberedPortal, resolvePortalPostLogin, resolvePostLogin, safeNext, type Portal, type PortalId } from "@xweb/permissions";
-import { Ban, Clock, Diamond, errText, Inbox } from "@xweb/ui";
+import { accessiblePortals, canAccessPortal, portalHref, portalOfPath, PORTAL_LABEL, rememberPortal, rememberedPortal, resolvePortalPostLogin, resolvePostLogin, safeNext, type Portal, type PortalId } from "@xweb/permissions";
+import { Ban, BrandLogo, Clock, ErrorState, errText, Field, Inbox } from "@xweb/ui";
 
 const SSO_ERRORS: Record<string, string> = {
   not_provisioned: "Tài khoản SSO của bạn chưa được cấp quyền. Liên hệ quản trị viên.", disabled: "Tài khoản đã bị vô hiệu hóa.",
@@ -16,9 +16,9 @@ const SSO_ERRORS: Record<string, string> = {
 
 function AuthFrame({ children, wide }: { children: React.ReactNode; wide?: boolean }) {
   return (
-    <main className="authPage">
+    <main className="authPage xp-bg-auth">
       <div className={`authPanel${wide ? " wide" : ""}`}>
-        <div className="authBrand"><span className="logoMark" aria-hidden="true"><Diamond size={16} fill="currentColor"/></span><span>AI Software Factory</span></div>
+        <div className="authBrand"><BrandLogo height={28}/></div>
         {children}
       </div>
       <p className="authFoot">Nền tảng nội bộ · truy cập được kiểm soát và ghi nhật ký</p>
@@ -49,8 +49,8 @@ export function ActivatePage() {
       <h1>{info.purpose === "RESET" ? "Đặt lại mật khẩu" : `Chào ${info.displayName}`}</h1>
       <p className="authLead">{info.purpose === "RESET" ? "Chọn mật khẩu mới cho" : "Chọn mật khẩu để kích hoạt tài khoản"} <b>{info.username}</b>.</p>
       <form className="authForm" onSubmit={(e) => void submit(e)}>
-        <label className="field"><span>Mật khẩu</span><input type="password" autoComplete="new-password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} required/></label>
-        <label className="field"><span>Nhập lại mật khẩu</span><input type="password" autoComplete="new-password" value={again} onChange={(e) => setAgain(e.target.value)} required/></label>
+        <Field label="Mật khẩu"><input type="password" autoComplete="new-password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} required/></Field>
+        <Field label="Nhập lại mật khẩu"><input type="password" autoComplete="new-password" value={again} onChange={(e) => setAgain(e.target.value)} required/></Field>
         <p className="hint">Tối thiểu 8 ký tự, gồm cả chữ và số.</p>
         {error ? <p className="formError" role="alert">{error}</p> : null}
         <button className="btn primary block" disabled={busy || !password}>{busy ? "Đang xử lý…" : "Lưu mật khẩu"}</button>
@@ -70,7 +70,10 @@ export function LoginPage({ fixedPortal }: { fixedPortal?: PortalId } = {}) {
   const [busy, setBusy] = useState(false);
   const ssoError = params.get("sso_error");
   const [error, setError] = useState<string | null>(ssoError ? SSO_ERRORS[ssoError] ?? "Đăng nhập SSO thất bại." : null);
-  useEffect(() => { api.authConfig().then(setConfig).catch(() => setConfig({ localLogin: true, oidc: false, oidcLoginUrl: "/oauth2/authorization/oidc" })); }, []);
+  // M-093 (a): a failed /auth/config is an error with a retry, never a guessed "password login only" form (fail closed: the sign-in methods are unknown until the server says)
+  const [configError, setConfigError] = useState<unknown>(null);
+  const loadConfig = useCallback(() => { setConfigError(null); api.authConfig().then(setConfig).catch((e: unknown) => { setConfig(null); setConfigError(e); }); }, []);
+  useEffect(loadConfig, [loadConfig]);
 
   const choose = (p: Portal) => { setPortal(p); rememberPortal(p); };
   async function submit(e: FormEvent) {
@@ -103,18 +106,20 @@ export function LoginPage({ fixedPortal }: { fixedPortal?: PortalId } = {}) {
         ))}
         <p className="hint">Lựa chọn này chỉ là nơi bạn muốn đến; quyền truy cập do hệ thống quyết định.</p>
       </fieldset>}
+      {configError ? <ErrorState error={configError} title="Chưa tải được cách đăng nhập" retry={loadConfig}/> : null}
+      {!config && !configError ? <div className="authCenter" role="status" aria-label="Đang tải"><div className="spinner"/></div> : null}
       {config?.needsSetup ? <p className="notice" role="status">Chưa có tài khoản quản trị. Vui lòng liên hệ người vận hành hệ thống để khởi tạo.</p> : null}
       {config?.oidc ? <a className="btn primary block" href={config.oidcLoginUrl} onClick={() => rememberPortal(portal)}>Tiếp tục với SSO công ty</a> : null}
       {config?.saml && config.samlLoginUrl ? <a className="btn block" href={config.samlLoginUrl} onClick={() => rememberPortal(portal)}>{config.samlLabel || "Đăng nhập SAML của công ty"}</a> : null}
       {config?.oidc ? <p className="hint center">Xác thực nhiều lớp (MFA) do nhà cung cấp danh tính của công ty quản lý.</p> : null}
       {config?.oidc && config.localLogin ? <div className="divider"><span>hoặc</span></div> : null}
-      {config?.localLogin !== false ? (
+      {config && config.localLogin !== false ? (
         <form className="authForm" onSubmit={(e) => void submit(e)}>
-          <label className="field"><span>Tên đăng nhập</span><input autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required/></label>
-          {mode === "signup" ? <label className="field"><span>Tên hiển thị</span><input autoComplete="name" maxLength={80} value={displayName} onChange={(e) => setDisplayName(e.target.value)}/></label> : null}
-          <label className="field"><span>Mật khẩu</span><input type="password" autoComplete={mode === "signup" ? "new-password" : "current-password"} minLength={mode === "signup" ? 6 : undefined} value={password} onChange={(e) => setPassword(e.target.value)} required/></label>
+          <Field label="Tên đăng nhập"><input autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required/></Field>
+          {mode === "signup" ? <Field label="Tên hiển thị"><input autoComplete="name" maxLength={80} value={displayName} onChange={(e) => setDisplayName(e.target.value)}/></Field> : null}
+          <Field label="Mật khẩu"><input type="password" autoComplete={mode === "signup" ? "new-password" : "current-password"} minLength={mode === "signup" ? 6 : undefined} value={password} onChange={(e) => setPassword(e.target.value)} required/></Field>
           {mode === "signup" ? <p className="hint">Tên đăng nhập 3–40 ký tự (a–z, 0–9, . _ -). Mật khẩu tối thiểu 6 ký tự, gồm chữ và số.</p> : null}
-          {mode === "signup" && config?.signupInviteRequired ? <label className="field"><span>Mã mời</span><input value={invite} onChange={(e) => setInvite(e.target.value)} required/></label> : null}
+          {mode === "signup" && config?.signupInviteRequired ? <Field label="Mã mời"><input value={invite} onChange={(e) => setInvite(e.target.value)} required/></Field> : null}
           {error ? <p className="formError" role="alert">{error}</p> : null}
           <button className="btn primary block" disabled={busy || !username || !password}>{busy ? "Đang xử lý…" : mode === "signup" ? "Tạo tài khoản" : "Đăng nhập"}</button>
           {config?.signup ? <button type="button" className="btn ghost block" onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(null); }}>{mode === "login" ? "Chưa có tài khoản? Đăng ký" : "Đã có tài khoản? Đăng nhập"}</button> : null}
@@ -141,10 +146,10 @@ export function NoAccess() {
       <div className="authCenter">
         <div className="stateIcon" aria-hidden="true"><Ban size={20}/></div>
         <h1>{disabled ? "Tài khoản đã bị vô hiệu hóa" : "Không có quyền truy cập"}</h1>
-        <p className="authLead">{disabled ? "Liên hệ quản trị viên nếu bạn cho rằng đây là nhầm lẫn." : wanted ? `Bạn không có quyền truy cập ${PORTAL_LABEL[wanted]}.` : "Bạn không có quyền truy cập Admin Console."}</p>
+        <p className="authLead">{disabled ? "Liên hệ quản trị viên nếu bạn cho rằng đây là nhầm lẫn." : wanted ? `Bạn không có quyền truy cập ${PORTAL_LABEL[wanted]}.` : `Bạn không có quyền truy cập ${PORTAL_LABEL.admin}.`}</p>
         <div className="row">
           {wanted ? usable.map((p) => <a key={p} className="btn primary" href={portalHref(p)}>Vào {PORTAL_LABEL[p]}</a>) : null}
-          {!wanted && !disabled && me && me.workspaces.length > 0 ? <Link className="btn primary" href={portalHref("studio")} onClick={() => rememberPortal("builder")}>Vào Builder Studio</Link> : null}
+          {!wanted && !disabled && me && me.workspaces.length > 0 ? <Link className="btn primary" href={portalHref("studio")} onClick={() => rememberPortal("builder")}>Vào {PORTAL_LABEL.studio}</Link> : null}
           {me ? <button className="btn" onClick={() => void logout()}>Đăng xuất</button> : <Link className="btn" href="/login">Về trang đăng nhập</Link>}
         </div>
       </div>
@@ -161,7 +166,7 @@ export function NoWorkspace() {
         <h1>Bạn chưa thuộc workspace nào</h1>
         <p className="authLead">Nhờ quản trị viên thêm bạn vào một workspace để bắt đầu tạo ứng dụng.</p>
         <div className="row">
-          {canAccessPortal(me, "admin") ? <Link className="btn primary" href={portalHref("admin")} onClick={() => rememberPortal("admin")}>Vào Admin Console</Link> : null}
+          {canAccessPortal(me, "admin") ? <Link className="btn primary" href={portalHref("admin")} onClick={() => rememberPortal("admin")}>Vào {PORTAL_LABEL.admin}</Link> : null}
           <button className="btn" onClick={() => void logout()}>Đăng xuất</button>
         </div>
       </div>

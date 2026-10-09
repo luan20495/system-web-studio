@@ -62,16 +62,27 @@ export function planStep(sections: Section[], sectionId: string, delta: -1 | 1):
 /** may this section move one step? false for the first/last section and for a trailing Footer (it always stays last), so the button is disabled instead of silently doing nothing */
 export const canStep = (sections: Section[], sectionId: string, delta: -1 | 1): boolean => planStep(sections, sectionId, delta).kind === "move";
 
+/**
+ * M-109: canStep for the section AT index `i`, in O(1) (no findIndex, no filter copy), so a list can ask it for every row in O(n) instead
+ * of O(n²). Same rules as planStep -> planMove; the unit test checks it equals canStep for every position. Assumes unique section ids.
+ */
+export function canStepAt(sections: readonly Section[], i: number, delta: -1 | 1): boolean {
+  const n = sections.length;
+  if (i < 0 || i >= n) return false;
+  const restLength = n - 1;
+  if (sections[i].type === "Footer") return restLength !== i;          // a Footer always goes to the end
+  const restLast = i === n - 1 ? sections[n - 2] : sections[n - 1];     // last section once `i` is taken out
+  const max = restLast?.type === "Footer" ? restLength - 1 : restLength;
+  const inRest = delta < 0 ? i - 1 : i + 1;
+  return Math.max(0, Math.min(max, inRest)) !== i;
+}
+
 /** click-to-add (the no-drag fallback): after the selected section, otherwise at the end (before a trailing Footer) */
 export function slotForClickAdd(sections: Section[], selectedId: string | null, type: string): number {
   const i = selectedId ? sections.findIndex((s) => s.id === selectedId) : -1;
   return clampSlot(sections, i >= 0 ? i + 1 : sections.length, type);
 }
 
-/** the id of the section the indicator sits before (for the label "Thả vào trước …"), or null at the end */
-export function slotNeighbours(sections: Section[], slot: number): { before: Section | null; after: Section | null } {
-  return { before: sections[slot - 1] ?? null, after: sections[slot] ?? null };
-}
 
 /**
  * A slot counted over the RENDERED rectangles (what the pointer sees) back to an index in the section list. Sections the preview has no
@@ -92,4 +103,19 @@ export function indicatorY(rects: SectionRect[], slot: number): number {
   if (slot < sorted.length) return Math.max(0, sorted[slot].top);
   const last = sorted[sorted.length - 1];
   return last.top + last.height;
+}
+
+/**
+ * M-046: the preview reports viewport rectangles on every scroll frame. When `next` is `prev` moved by one common offset (same ids in the
+ * same order, same heights) it is a pure scroll: the offset is returned and the host only moves the handle track, without a React render.
+ * Anything else (a section added, moved, resized, the frame resized) returns null and the rectangles are taken as the new layout.
+ */
+export function scrollShift(prev: readonly SectionRect[], next: readonly SectionRect[], eps = 0.5): number | null {
+  if (prev.length !== next.length || !prev.length) return null;
+  const d = next[0].top - prev[0].top;
+  for (let i = 0; i < prev.length; i++) {
+    const a = prev[i], b = next[i];
+    if (a.id !== b.id || Math.abs(a.height - b.height) > eps || Math.abs(b.top - a.top - d) > eps) return null;
+  }
+  return d;
 }

@@ -10,7 +10,8 @@
     "./styles/*": "./src/styles/*"
   },
   "sideEffects": [
-    "*.css"
+    "*.css",
+    "./src/sessionReset.ts"
   ],
   "dependencies": {
     "@xweb/api-client": "*",

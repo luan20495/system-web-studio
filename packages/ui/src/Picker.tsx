@@ -18,7 +18,7 @@ export function Picker<V extends string>({ label, buttonLabel, value, options, o
     const away = (e: MouseEvent) => { if (!root.current?.contains(e.target as Node)) setOpen(false); };
     document.addEventListener("mousedown", away); return () => document.removeEventListener("mousedown", away);
   }, [open]);
-  const openAt = () => { setActive(Math.max(0, options.findIndex((o) => o.value === value))); setOpen(true); };
+  const openAt = () => { setActive(Math.max(0, options.findIndex((o) => o.value === value))); setOpen(true); btn.current?.focus(); };   // WebKit does not focus a button on click: the keys of the open list (arrows, Escape) must reach it
   const choose = (i: number) => { const o = options[i]; if (!o || o.disabled) return; onChange(o.value); setOpen(false); btn.current?.focus(); };
   const move = (d: number) => { const at = enabled.indexOf(active); setActive(enabled[Math.min(enabled.length - 1, Math.max(0, at + d))] ?? active); };
   function onKey(e: React.KeyboardEvent) {
@@ -35,11 +35,11 @@ export function Picker<V extends string>({ label, buttonLabel, value, options, o
     <div className="xp-picker" ref={root} onKeyDown={onKey}>
       <label htmlFor={`${id}-native`} className="xp-pickerLabel">{label}</label>
       <select id={`${id}-native`} className="srOnly" value={value} tabIndex={-1} disabled={disabled} onChange={(e) => onChange(e.target.value as V)}>{options.map((o) => <option key={o.value} value={o.value} disabled={o.disabled}>{o.label}</option>)}</select>
-      <button ref={btn} type="button" className="xp-pickerBtn" role="combobox" aria-describedby={describedBy} aria-haspopup="listbox" aria-expanded={open} aria-controls={`${id}-list`} aria-label={`${buttonLabel ?? label}: ${cur?.label ?? ""}${cur?.hint ? `. ${cur.hint}` : ""}`} disabled={disabled} onClick={() => (open ? setOpen(false) : openAt())} data-testid="picker-button">
+      <button ref={btn} type="button" className="xp-pickerBtn" role="combobox" aria-describedby={describedBy} aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? `${id}-list` : undefined} aria-activedescendant={open ? `${id}-o${active}` : undefined} aria-label={`${buttonLabel ?? label}: ${cur?.label ?? ""}${cur?.hint ? `. ${cur.hint}` : ""}`} disabled={disabled} onClick={() => (open ? setOpen(false) : openAt())} data-testid="picker-button">
         {cur?.icon}<span className="xp-pickerCur"><b>{cur?.label}</b>{cur?.hint ? <small>{cur.hint}</small> : null}</span><ChevronDown size={16} aria-hidden="true"/>
       </button>
       {open ? (
-        <ul id={`${id}-list`} className="xp-pickerList" role="listbox" aria-label={buttonLabel ?? label} aria-activedescendant={`${id}-o${active}`} data-testid="picker-list">
+        <ul id={`${id}-list`} className="xp-pickerList" role="listbox" aria-label={buttonLabel ?? label} data-testid="picker-list">
           {options.map((o, i) => (
             <li key={o.value} id={`${id}-o${i}`} role="option" aria-selected={o.value === value} aria-disabled={o.disabled || undefined} className={`xp-opt${i === active ? " active" : ""}${o.disabled ? " disabled" : ""}`}
               onMouseEnter={() => !o.disabled && setActive(i)} onClick={() => choose(i)} data-value={o.value}>

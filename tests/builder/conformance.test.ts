@@ -18,6 +18,8 @@ const root = process.env.XWEB_CONFORMANCE_DIR;
 const dir = root ? join(root, "conformance") : "";
 const available = !!root && existsSync(join(dir, "manifest.json"));
 const skip = available ? false : "XWEB_CONFORMANCE_DIR not set or manifest.json missing: conformance NOT run (see docs/parallel/c5/PHASE3_AUDIT.md)";
+// M-116: a skip is easy to read past in a long run: say loudly, on its own line, that the contract fixtures were NOT checked (the gate reports "1 skipped", this says which one and how to run it)
+if (!available) console.log("PENDING (XWEB_CONFORMANCE_DIR not set or manifest.json missing): the C2 contract conformance fixtures were NOT checked. Run: XWEB_CONFORMANCE_DIR=<dir with manifest.json> npm run test:unit");
 
 type Entry = { file: string; expect: "VALID" | "INVALID"; paths?: string[] };
 const manifest: { fixtures: Entry[] } = available ? JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8")) : { fixtures: [] };

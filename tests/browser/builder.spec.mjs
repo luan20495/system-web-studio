@@ -1,16 +1,13 @@
 // @class: harness — real Chromium on a test-only host (fake host / no API behind it); NOT a backend E2E
 // Real-browser checks of the Builder (pointer + keyboard) against tests/browser/harness.tsx. TEST-ONLY harness: NOT a backend E2E.
 // Run: node tests/browser/build-harness.mjs && node tests/browser/harness-server.mjs run -- node tests/browser/builder.spec.mjs
-import { createRequire } from "node:module";
 import { mkdirSync } from "node:fs";
-const require = createRequire(new URL("../../package.json", import.meta.url).pathname);
-const { chromium } = require("playwright-core");
-const URL_ = process.env.HARNESS_URL ?? "http://127.0.0.1:4000/index.html";
+import { harnessUrl, launch, makeChecks } from "./lib/spec.mjs";
+const URL_ = harnessUrl();
 const shots = process.env.SHOTS ?? "/tmp/shots"; mkdirSync(shots, { recursive: true });
-const results = [];
-const check = (name, ok, detail = "") => { results.push({ name, ok: !!ok, detail }); console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  — " + detail : ""}`); };
+const { check, finish } = makeChecks();
 
-const browser = await chromium.launch({ executablePath: process.env.CHROME ?? "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
+const browser = await launch();
 async function fresh() {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   page.errors = []; page.on("pageerror", (e) => page.errors.push(e.message)); page.on("console", (m) => { if (m.type() === "error" && !/favicon|404/.test(m.text())) page.errors.push(m.text()); });
@@ -208,7 +205,7 @@ async function dragTo(page, from, to, { steps = 14, hold } = {}) {
 // ---------- 8. Page builder ----------
 {
   const p = await fresh();
-  const panel = p.locator(".bx-left-panel");
+  const panel = p.locator(".bx-left-panel > .bx-rail-pane:visible"); // opened rail panes stay mounted but hidden (M-037): look only at the visible one
   const lastOps = async () => (await ops(p)).slice(-1)[0]?.ops ?? [];
   // create
   await panel.getByRole("button", { name: /^Trang$/ }).click();
@@ -281,7 +278,7 @@ async function dragTo(page, from, to, { steps = 14, hold } = {}) {
 {
   const p = await browser.newPage({ viewport: { width: 1440, height: 1000 } }); p.errors = []; p.on("pageerror", (e) => p.errors.push(e.message));
   await p.goto(URL_ + "?v2=1"); await p.waitForSelector("iframe"); await p.waitForTimeout(700);
-  const left = p.locator(".bx-left-panel");
+  const left = p.locator(".bx-left-panel > .bx-rail-pane:visible"); // opened rail panes stay mounted but hidden (M-037): look only at the visible one
   await p.locator(".bx-left").getByRole("tab", { name: "Hành động" }).click();
   await p.getByRole("button", { name: /^Hành động$/ }).click(); await p.waitForTimeout(300);
   const typeSel = left.locator("select").first();
@@ -309,6 +306,7 @@ async function dragTo(page, from, to, { steps = 14, hold } = {}) {
   check("Action/Workflow: no page errors", p.errors.length === 0, p.errors.join(" ; "));
   // Data wizard: data sources are NOT_READY, so no fake source, query or mapping can be created
   await p.locator(".bx-left").getByRole("tab", { name: "Dữ liệu" }).click(); await p.waitForTimeout(300);
+  await left.getByText("Nâng cao", { exact: true }).click(); await p.waitForTimeout(200);   // M-005: the 7-step wizard lives under "Nâng cao"
   const dt = await left.innerText();
   // Query step: DATE is a param type; `required` defaults to true (absent key means required)
   await left.getByRole("tab", { name: "Truy vấn" }).click(); await p.waitForTimeout(300);
@@ -355,7 +353,9 @@ const rtCalls = (p) => p.evaluate(() => window.__rt);
   check("PERM viewer: every property input is disabled (no editing)", (await inputs.count()) > 0 && (await inputs.evaluateAll((els) => els.every((e) => e.disabled))));
   check("PERM viewer: Save/edit buttons are not offered or are disabled", (await p.getByRole("button", { name: /Lưu thay đổi|Lưu/ }).evaluateAll((els) => els.every((e) => e.disabled))));
   const pub = p.locator("header.bx-top").getByRole("button", { name: /^Xuất bản/ });
-  check("PERM viewer: Publish is disabled and says why (APP_PUBLISH)", (await pub.isDisabled()) && /xuất bản/i.test((await pub.getAttribute("title")) ?? ""), await pub.getAttribute("title"));
+  await pub.click({ force: true }); await p.waitForTimeout(300);   // M-031: aria-disabled (focusable); pressing it says why in a status toast
+  const why = await p.locator(".xp-toast").first().innerText().catch(() => "");
+  check("PERM viewer: Publish is unavailable (aria-disabled) and says why (APP_PUBLISH) when pressed", (await pub.isDisabled()) && /xuất bản/i.test(why) && (await p.locator('[data-testid="publish-check"], [role=dialog]').count()) === 0, why);
   await p.getByRole("button", { name: "Dùng thử" }).click(); await p.locator('[data-testid="test-panel"]').waitFor();
   const q = p.getByTestId("run-query:q-orders"), act = p.getByTestId("run-action:a-nav"), mut = p.getByTestId("run-action:a-create"), wf = p.getByTestId("run-workflow:wf1");
   const all = [q, act, mut, wf];
@@ -403,6 +403,8 @@ const rtCalls = (p) => p.evaluate(() => window.__rt);
   const shown = (sel) => p.evaluate((s) => { const e = document.querySelector(s); return !!e && getComputedStyle(e).display !== "none" && e.getBoundingClientRect().width > 0; }, sel);
   const tabs = await p.locator(".bx-mview [role=tab]").allInnerTexts();
   check("PHONE 390: a 3-way switch (Bản xem trước / Công cụ / Thuộc tính), the canvas is the only workspace shown", tabs.length === 3 && (await shown(".bx-center")) && !(await shown(".bx-left")) && !(await shown(".bx-right")), JSON.stringify(tabs));
+  const note = p.getByRole("note").filter({ hasText: /điện thoại/ });
+  check("PHONE 390 (M-036): the builder says plainly that a phone is for viewing and light edits (what needs a bigger screen), as a note", (await note.count()) === 1 && (await note.isVisible()) && /xem|chỉnh nhẹ/.test(await note.innerText()) && /màn hình lớn/.test(await note.innerText()), await note.count() ? await note.innerText() : "no note");
   await p.getByRole("tab", { name: "Công cụ", exact: true }).click();
   const w = await p.evaluate(() => Math.round(document.querySelector(".bx-left-panel").getBoundingClientRect().width));
   check("PHONE 390: Công cụ shows the rail + panel at full width (≥ 366 px) and hides the canvas", (await shown(".bx-left")) && !(await shown(".bx-center")) && w >= 366, `panel ${w}px`);
@@ -415,12 +417,71 @@ const rtCalls = (p) => p.evaluate(() => window.__rt);
     check("PHONE 390: ArrowRight on the switch moves focus + selection to Thuộc tính and shows the properties pane", /^Thuộc tính|^Kiểm thử/.test(act) && right && !left, JSON.stringify({ act, right, left })); }
   check("PHONE 390: no horizontal page overflow", (await p.evaluate(() => document.documentElement.scrollWidth - innerWidth)) <= 0);
   await p.setViewportSize({ width: 1024, height: 800 }); await p.waitForTimeout(250);
+  check("PHONE → 1024 (M-036): the phone note is gone on a wide screen", !(await p.getByRole("note").filter({ hasText: /điện thoại/ }).isVisible().catch(() => false)));
   check("PHONE → 1024: the switch is hidden again and canvas, tools and properties are all shown", !(await shown(".bx-mview")) && (await shown(".bx-center")) && (await shown(".bx-left")) && (await shown(".bx-right")));
   check("PHONE: no uncaught error", p.errors.length === 0, p.errors.join(" | "));
   await p.close();
 }
 
+// ---------- M-003: selecting a section does not reload the preview iframe or reset its scroll (tree click, canvas click, read-only viewer) ----------
+for (const [label, query] of [["editor", ""], ["read-only viewer", "?perms=APP_VIEW"]]) {
+  const p = await browser.newPage({ viewport: { width: 1440, height: 380 } }); p.errors = []; p.on("pageerror", (e) => p.errors.push(e.message));
+  await p.goto(URL_ + query); await p.waitForSelector("iframe"); await p.waitForTimeout(700);
+  const frame = () => p.frames().find((f) => f !== p.mainFrame());
+  const room = await frame().evaluate(() => document.documentElement.scrollHeight - innerHeight);
+  await frame().evaluate(() => { window.__marker = 1; window.scrollTo({ top: 150, behavior: "instant" }); }); await p.waitForTimeout(300);
+  const before = await frame().evaluate(() => window.scrollY);
+  check(`M-003 [${label}]: fixture is scrollable`, room > 170 && before >= 140, `room=${room} scrollY=${before}`);
+  await p.locator("[role=treeitem][aria-level='2']").filter({ hasText: "Đánh giá" }).first().click(); await p.waitForTimeout(700);
+  let st = await frame().evaluate(() => ({ marker: window.__marker ?? null, y: window.scrollY, sel: [...document.querySelectorAll(".__sel")].map((e) => e.getAttribute("data-sid")) }));
+  check(`M-003 [${label}]: a tree click keeps the same iframe document (marker) and the scroll position`, st.marker === 1 && Math.abs(st.y - before) < 5, JSON.stringify(st));
+  check(`M-003 [${label}]: ...and the selected section is highlighted inside the frame`, st.sel.length === 1 && st.sel[0] === "s-test", JSON.stringify(st.sel));
+  await frame().locator("[data-sid='s-foot']").click(); await p.waitForTimeout(700);
+  st = await frame().evaluate(() => ({ marker: window.__marker ?? null, y: window.scrollY, sel: [...document.querySelectorAll(".__sel")].map((e) => e.getAttribute("data-sid")) }));
+  check(`M-003 [${label}]: a click inside the preview keeps the frame (marker) and never resets the scroll (Playwright itself scrolls the target into view)`, st.marker === 1 && st.y >= before - 5, JSON.stringify(st));
+  check(`M-003 [${label}]: ...and moves the highlight to the clicked section (one at a time)`, st.sel.length === 1 && st.sel[0] === "s-foot", JSON.stringify(st.sel));
+  if (!query) {
+    await p.getByRole("button", { name: "Đóng bảng thuộc tính" }).click(); await p.waitForTimeout(500);
+    const cleared = await frame().evaluate(() => ({ marker: window.__marker ?? null, sel: document.querySelectorAll(".__sel").length }));
+    check("M-003 [editor]: closing the Inspector clears the highlight without a reload", cleared.marker === 1 && cleared.sel === 0, JSON.stringify(cleared));
+  }
+  check(`M-003 [${label}]: no uncaught error`, p.errors.length === 0, p.errors.join(" | "));
+  await p.close();
+}
+
+// ---------- M-002: unsaved Inspector edits survive a selection change; focus is kept after "Lưu thay đổi" ----------
+{
+  const p = await fresh();
+  const row = (name) => p.locator("[role=treeitem][aria-level='2']").filter({ hasText: name }).first();
+  const title = () => p.locator(".bx-inspector").getByLabel("Tiêu đề", { exact: true });
+  await row("Hero").click(); await p.waitForTimeout(300);
+  await title().fill("Tiêu đề đang gõ dở"); await p.waitForTimeout(100);
+  check("M-002: a dirty form says so ('Có thay đổi chưa lưu')", (await p.locator(".bx-inspector").getByText(/chưa lưu/).count()) > 0);
+  await row("Chân trang").click(); await p.waitForTimeout(300);
+  await row("Hero").click(); await p.waitForTimeout(300);
+  check("M-002: the typed value survives selecting another section and coming back", (await title().inputValue()) === "Tiêu đề đang gõ dở", `value="${await title().inputValue()}"`);
+  check("M-002: nothing was sent while the edit was only a draft", (await ops(p)).length === 0, JSON.stringify(await ops(p)));
+  await p.getByRole("button", { name: "Xuất bản" }).click(); await p.waitForTimeout(300);
+  check("M-002: publishing with an unsaved draft warns first (pre-check dialog), it does not silently publish the saved text", (await p.getByRole("dialog").getByText(/chưa lưu/).count()) > 0 && (await p.evaluate(() => window.__published)) === 0);
+  await p.keyboard.press("Escape"); await p.waitForTimeout(200);
+  await p.locator(".bx-inspector").getByRole("button", { name: "Lưu thay đổi" }).click(); await p.waitForTimeout(500);
+  const o = await ops(p);
+  check("M-002: Lưu thay đổi sends the edit as UPDATE_PROP", o.length === 1 && o[0].ops.some((x) => x.type === "UPDATE_PROP" && x.value === "Tiêu đề đang gõ dở"), JSON.stringify(o));
+  const act = await p.evaluate(() => { const a = document.activeElement; return { tag: a?.tagName, inInspector: !!a?.closest(".bx-inspector"), label: a?.getAttribute("aria-label") ?? a?.id }; });
+  check("M-002: after saving, focus is on a control of the Inspector (not <body>)", act.tag !== "BODY" && act.inInspector, JSON.stringify(act));
+  check("M-002: the saved value is shown and the form is clean again", (await title().inputValue()) === "Tiêu đề đang gõ dở" && (await p.locator(".bx-inspector").getByText(/chưa lưu/).count()) === 0);
+  check("M-002: no uncaught error", p.errors.length === 0, p.errors.join(" | "));
+  await p.close();
+}
+
+// ---------- M-083 (C5-S1 batch 2): the test-mode "Chạy thử" button stays on one line in the narrow right column ----------
+{
+  const p = await browser.newPage({ viewport: { width: 1440, height: 1000 } }); await p.goto(URL_ + "?v2=1"); await p.waitForSelector("iframe"); await p.waitForTimeout(700);
+  await p.getByRole("button", { name: "Dùng thử" }).click(); await p.waitForTimeout(600);
+  const btns = await p.evaluate(() => [...document.querySelectorAll(".bx-test-row > button")].map((x) => { const r = document.createRange(); r.selectNodeContents(x); return { t: x.innerText, lines: r.getClientRects().length }; }));
+  check("M-083: every 'Chạy thử' button in test mode is one line (no 'Chạy / thử')", btns.length > 0 && btns.every((x) => x.lines === 1), JSON.stringify(btns));
+  await p.close();
+}
+
 await browser.close();
-const failed = results.filter((r) => !r.ok);
-console.log(`\n${results.length - failed.length}/${results.length} passed`);
-process.exit(failed.length ? 1 : 0);
+finish();

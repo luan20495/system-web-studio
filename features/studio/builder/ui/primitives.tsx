@@ -2,6 +2,8 @@
 /** Small accessible building blocks of the Builder. Relative imports only (these are SSR-tested). */
 import { useEffect, useId, useRef, type ButtonHTMLAttributes, type KeyboardEvent, type ReactNode } from "react";
 import type { Readiness } from "../core/readiness";
+import { acquireOverlay } from "../../../../packages/ui/src/overlay";
+import { tabbables, trapTab } from "../../../../packages/ui/src/focus";
 
 /** An icon-only control MUST have an accessible name: `label` is required and becomes aria-label + title. */
 export function IconButton({ label, children, className = "", ...rest }: { label: string; children: ReactNode } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "aria-label" | "title">) {
@@ -22,32 +24,30 @@ export function Gate({ state, children, compact }: { state: Readiness; children:
   return state.state === "AVAILABLE" ? <>{children}</> : <StateBox state={state} compact={compact} />;
 }
 
-const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
-
-/** Modal dialog: role=dialog, aria-modal, labelled, Esc closes, Tab is trapped, focus returns to the opener. */
+/** Modal dialog on the SHARED overlay stack (M-021 / M-023): role=dialog, aria-modal, labelled; Escape (document level, only the TOP overlay: a nested dialog closes alone), Tab trapped to what a person can use,
+ *  page scroll locked and restored in any closing order, focus returns to the opener; a press that starts inside and ends on the backdrop never closes it. */
 export function Dialog({ title, onClose, children, footer }: { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode }) {
-  const id = useId(); const ref = useRef<HTMLDivElement>(null);
+  const id = useId(); const ref = useRef<HTMLDivElement>(null); const closeRef = useRef(onClose); closeRef.current = onClose;
   useEffect(() => {
-    const opener = document.activeElement as HTMLElement | null;
-    const first = ref.current?.querySelector<HTMLElement>("[data-autofocus]") ?? ref.current?.querySelector<HTMLElement>(FOCUSABLE);
-    first?.focus();
-    return () => opener?.focus?.();
+    const node = ref.current; if (!node) return;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const overlay = acquireOverlay();
+    (node.querySelector<HTMLElement>("[data-autofocus]") ?? tabbables(node)[0] ?? node).focus();
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (!overlay.isTop()) return;
+      if (e.key === "Escape") { if (e.defaultPrevented) return; e.preventDefault(); closeRef.current(); return; }
+      trapTab(e, node);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("keydown", onKey); overlay.release(); if (opener?.isConnected) opener.focus?.(); };
   }, []);
-  function onKey(e: KeyboardEvent<HTMLDivElement>) {
-    if (e.key === "Escape") { e.stopPropagation(); onClose(); return; }
-    if (e.key !== "Tab") return;
-    const items = Array.from(ref.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []);
-    if (!items.length) return;
-    const first = items[0], last = items[items.length - 1];
-    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-  }
+  const down = useRef(false);
   return (
-    <div className="bx-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div ref={ref} className="bx-dialog" role="dialog" aria-modal="true" aria-labelledby={id} onKeyDown={onKey}>
+    <div className="bx-overlay" onMouseDown={(e) => { down.current = e.target === e.currentTarget; }} onMouseUp={(e) => { const hit = down.current && e.target === e.currentTarget; down.current = false; if (hit) onClose(); }}>
+      <div ref={ref} className="bx-dialog" role="dialog" aria-modal="true" aria-labelledby={id} tabIndex={-1}>
         <h2 id={id}>{title}</h2>
         <div className="bx-dialog-body">{children}</div>
-        <div className="bx-dialog-foot">{footer ?? <button type="button" className="bx-btn" onClick={onClose}>Đóng</button>}</div>
+        <div className="bx-dialog-foot">{footer ?? <button type="button" className="btn dense" onClick={onClose}>Đóng</button>}</div>
       </div>
     </div>
   );

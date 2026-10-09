@@ -3,21 +3,22 @@
  * The Builder (Design mode): top bar, left tools, centre canvas with real drag and drop, right inspector. One write funnel: `applyOps`.
  * Nothing here talks to a backend that does not exist: backend-dependent tools render NOT_READY with a reason.
  */
-import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import { Activity, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   DndContext, DragOverlay, KeyboardSensor, PointerSensor, closestCenter, rectIntersection, useSensor, useSensors,
   type Announcements, type CollisionDetection, type DragEndEvent, type DragMoveEvent, type DragStartEvent,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import type { ApiProject, AppDefinitionV2, AssetDto, DefinitionOperation, RegistryComponent, SchemaOperation, Section } from "@xweb/types";
-import { useOverflow } from "../../../packages/ui/src/useOverflow";
+import { ErrorBoundary, useOverflow } from "@xweb/ui";
 import { Canvas, DragChip } from "./Canvas";
 import { Inspector } from "./Inspector";
+import type { PropsDraft } from "./PropsForm";
 import { LeftRail, type RailId } from "./LeftRail";
 import { BuilderTopBar } from "./BuilderTopBar";
 import { TestPanel, type RuntimeCalls } from "./TestPanel";
 import type { DataManagementCalls } from "./core/dataManagement";
-import { DataWizard } from "./DataWizard";
+import { DataPanel } from "./DataPanel";
 import { ComponentsPanel, type BlockOption } from "./panels/ComponentsPanel";
 import { PagesPanel } from "./panels/PagesPanel";
 import { ActionsPanel } from "./panels/ActionsPanel";
@@ -29,6 +30,7 @@ import type { Backend } from "./core/backend";
 import { canStep, clampSlot, planAdd, planMove, planStep, sectionIndexForSlot, slotForClickAdd, slotFromPoint, type SectionRect } from "./core/dnd";
 import { defaultProps, typeLabel } from "./core/library";
 import { sectionsOf } from "./core/pages";
+import { allSections } from "./core/definition";
 import { capabilitiesFor, whyNot } from "./core/permissions";
 import { blockers, preflight, type PreflightIssue } from "./core/preflight";
 import type { Readiness } from "./core/readiness";
@@ -58,11 +60,15 @@ export function BuilderWorkspace(props: {
   pageId: string; onPage: (id: string) => void; selectedId: string | null; onSelect: (id: string | null) => void; device: Device; onDevice: (d: Device) => void;
   busy: boolean; save: { state: "saved" | "saving" | "error"; at: Date | null }; readOnly: boolean; latest?: number;
   applyOps: (ops: Ops, summary: string, blockId?: string) => Promise<boolean>; addBlock: (id: string) => void;
+  /** the reason the last failed save was explained with (M-044): dialogs show it themselves instead of a generic line */
+  lastFailure?: () => string | null;
   renderPreview: (o: { selectedId: string | null; interactive: boolean; pageId: string }) => string;
   labelOf: (type: string) => string; summaryOf: (s: Section) => string;
   leading?: ReactNode; modeTabs?: ReactNode; trailing?: ReactNode;
   runtime?: RuntimeCalls; dataManagement?: DataManagementCalls; onRetrySave?: () => void; goAi: () => void; openSite: () => void; openMembers: () => void; openPublish: () => void; saveBlock: () => void;
 }) {
+  // M-112: the phone page-scroll mode (builder.css, <= 760 px) also keys on this class, for browsers without :has() (Firefox < 121)
+  useEffect(() => { const h = document.documentElement; h.classList.add("bx-page"); return () => h.classList.remove("bx-page"); }, []);
   const { doc, registry, backend, pageId, selectedId, readOnly, busy } = props;
   const cap = capabilitiesFor(props.project.permissions);
   const [appMode, setAppMode] = useState<"EDIT" | "TEST">("EDIT");
@@ -74,9 +80,9 @@ export function BuilderWorkspace(props: {
     // if the pane that held focus (e.g. the Inspector) is hidden by this switch on a phone, move focus to the tab we land on instead of letting it fall to <body>
     requestAnimationFrame(() => { const a = document.activeElement; if (!a || a === document.body || a.getClientRects().length === 0) { window.scrollTo(0, 0); document.getElementById("mview-tab-tools")?.focus(); } });
   };
-  const [dataFocus, setDataFocus] = useState<{ sectionId?: string }>({});
+  const [dataFocus, setDataFocus] = useState<{ sectionId?: string; prop?: string; n?: number }>({});
   const [actionPreset, setActionPreset] = useState<{ sectionId?: string } | undefined>(undefined);
-  const [rects, setRects] = useState<SectionRect[]>([]);
+  const rectsRef = useRef<SectionRect[]>([]);   // M-046: written by the Canvas on every layout message, read only while dragging (no render per scroll frame)
   const [drag, setDrag] = useState<{ kind: "lib" | "sec" | "row"; id: string; label: string } | null>(null);
   const [slot, setSlot] = useState<number | null>(null);
   const [removing, setRemoving] = useState(false);
@@ -89,7 +95,18 @@ export function BuilderWorkspace(props: {
   const edit = appMode === "EDIT";
   const interactive = edit && !readOnly;
   const issues = useMemo(() => preflight(doc), [doc]);
-  const counts = { block: issues.filter((i) => i.severity === "BLOCK").length, warn: issues.filter((i) => i.severity === "WARN").length };
+  // unsaved Inspector edits (M-002), held here so they survive selecting another section; a draft made on props that have since changed is stale and ignored
+  const [drafts, setDrafts] = useState<Record<string, PropsDraft>>({});
+  const setDraft = useCallback((key: string, d: PropsDraft | null) => setDrafts((prev) => {
+    if (d) return { ...prev, [key]: d };
+    if (!(key in prev)) return prev;
+    const { [key]: _gone, ...rest } = prev; void _gone; return rest;
+  }), []);
+  const unsaved: PreflightIssue[] = useMemo(() => Object.entries(drafts).flatMap(([key, d]) => {
+    const s = allSections(doc).find((x) => x.id === key.slice(2));
+    return s && d.base === JSON.stringify(s.props) ? [{ severity: "WARN" as const, code: "UNSAVED_DRAFT" as const, message: `Có thay đổi chưa lưu ở “${props.labelOf(s.type)}”. Bản xuất bản dùng nội dung đã lưu: hãy lưu hoặc hoàn tác trước.`, pageId: s.pageId }] : [];
+  }), [drafts, doc, props.labelOf]); // eslint-disable-line react-hooks/exhaustive-deps
+  const counts = { block: issues.filter((i) => i.severity === "BLOCK").length, warn: issues.filter((i) => i.severity === "WARN").length + unsaved.length };
 
   const ctx: DefCtx = useMemo(() => ({
     doc, readiness: backend.definitionOps as Readiness, canEdit: cap.canEdit && interactive, busy, siteVisibility: props.project.siteVisibility, metadata: backend.metadata, registry, labelOf: props.labelOf,
@@ -135,7 +152,7 @@ export function BuilderWorkspace(props: {
     if (!drag || drag.kind === "row") return;
     if (e.over?.id !== "canvas") { setSlot(null); return; }
     const y = pointerY(e);
-    setSlot(y === null ? null : slotFromPoint(rects, y - e.over.rect.top));
+    setSlot(y === null ? null : slotFromPoint(rectsRef.current, y - e.over.rect.top));
   }
   async function onDragEnd(e: DragEndEvent) {
     const d = drag; const s = slot;
@@ -149,37 +166,42 @@ export function BuilderWorkspace(props: {
       return;
     }
     if (e.over?.id !== "canvas" || s === null) return;
-    const index = clampSlot(sections, sectionIndexForSlot(sections, rects, s), d.kind === "lib" ? d.id : sections.find((x) => x.id === d.id)?.type ?? "");
+    const index = clampSlot(sections, sectionIndexForSlot(sections, rectsRef.current, s), d.kind === "lib" ? d.id : sections.find((x) => x.id === d.id)?.type ?? "");
     if (d.kind === "lib") await addComponent(d.id, index);
     else await moveSection(d.id, index);
   }
 
   function publish() {
     if (counts.block) { setCheck(issues.filter((i) => i.severity === "BLOCK")); return; }
-    if (counts.warn) { setCheck(issues); return; }
+    if (counts.warn) { setCheck([...issues, ...unsaved]); return; }
     props.openPublish();
   }
 
-  const html = useMemo(() => props.renderPreview({ selectedId: edit ? selectedId : null, interactive, pageId }), [props.renderPreview, selectedId, edit, interactive, pageId]); // eslint-disable-line react-hooks/exhaustive-deps
+  // M-003: the selection is NOT part of the document (it is posted to the frame), so selecting never rebuilds srcDoc; `edit` (not `interactive`) decides whether the frame runs our script
+  const html = useMemo(() => props.renderPreview({ selectedId: null, interactive: edit, pageId }), [props.renderPreview, edit, pageId]); // eslint-disable-line react-hooks/exhaustive-deps
   const meta = `${props.latest ? `Phiên bản ${props.latest}` : "Chưa có phiên bản"} · revision ${props.revision} · ${props.project.siteVisibility === "PUBLIC" ? "Công khai" : "Riêng tư"}${readOnly ? " · chỉ xem" : ""}`;
   const shareReason = whyNot("canShare");
   const publishReason = whyNot("canPublish");
 
-  const leftPanel = (() => {
-    switch (rail) {
+  const panelOf = (id: RailId): ReactNode => {
+    switch (id) {
       case "pages": return <PagesPanel doc={doc} pageId={pageId} onPage={props.onPage} selectedId={selectedId} onSelect={select} labelOf={props.labelOf} summaryOf={props.summaryOf}
-        canEdit={interactive} busy={busy} apply={(ops, summary) => props.applyOps(ops, summary)} genId={newId} onMoveSection={(id, d) => void step(id, d)}/>;
+        canEdit={interactive} busy={busy} apply={(ops, summary) => props.applyOps(ops, summary)} lastFailure={props.lastFailure} genId={newId} onMoveSection={(id, d) => void step(id, d)}/>;
       case "components": return <ComponentsPanel registry={registry} blocks={props.blocks} canEdit={interactive} busy={busy} onAdd={(id) => void addComponent(id)} onAddBlock={props.addBlock}/>;
-      case "data": return <div className="bx-panel-body"><div className="bx-panel-head"><h2>Dữ liệu</h2></div>
-        <p className="hint">Nguồn → khám phá → truy vấn → ánh xạ → ViewModel → gắn vào thành phần. Không có dữ liệu mẫu giả.</p>
-        <DataWizard ctx={ctx} focus={dataFocus}/></div>;
+      case "data": return <DataPanel key={dataFocus.n ?? 0} ctx={ctx} focus={dataFocus}/>;
       case "forms": return <FormsPanel ctx={ctx} onSelect={(id, pg) => { props.onPage(pg); select(id); }} onNewAction={(id) => { setActionPreset({ sectionId: id }); openRail("actions"); }} openSite={props.openSite}/>;
       case "actions": return <ActionsPanel key={actionPreset?.sectionId ?? "list"} ctx={ctx} preset={actionPreset ? { type: "SUBMIT_FORM", sectionId: actionPreset.sectionId } : undefined}/>;
       case "workflows": return <WorkflowsPanel ctx={ctx}/>;
-      case "theme": return <ThemePanel ctx={ctx}/>;
+      case "theme": return <ThemePanel key={JSON.stringify((doc as { theme?: unknown }).theme ?? null)} ctx={ctx}/>;
       case "ai": return <AiPanel openAi={props.goAi} canEdit={cap.canEdit}/>;
     }
-  })();
+  };
+  // M-037: a rail panel that has been opened STAYS mounted (React <Activity>: state kept, effects paused, rendered at low priority while hidden), so a half-filled
+  // query / action / workflow / menu editor is not thrown away by looking at another tab. Panels that were never opened are not mounted at all (no extra requests).
+  const [opened, setOpened] = useState<RailId[]>(["pages"]);
+  const seen = opened.includes(rail) ? opened : [...opened, rail];
+  if (seen !== opened && seen.length !== opened.length) setOpened(seen);
+  const leftPanel = seen.map((id) => <Activity key={id} mode={id === rail ? "visible" : "hidden"}><div className="bx-rail-pane">{panelOf(id)}</div></Activity>);
 
   return (
     <DndContext sensors={sensors} collisionDetection={collision} accessibility={{ announcements, screenReaderInstructions }} onDragStart={onDragStart} onDragMove={onDragMove} onDragEnd={(e) => void onDragEnd(e)} onDragCancel={() => { setDrag(null); setSlot(null); }}>
@@ -192,36 +214,43 @@ export function BuilderWorkspace(props: {
           <Tabs label="Khu vực làm việc" idPrefix="mview" value={mview} onChange={(id) => setMview(id as "canvas" | "tools" | "props")}
             items={[{ id: "canvas", label: "Bản xem trước" }, { id: "tools", label: "Công cụ" }, { id: "props", label: edit ? "Thuộc tính" : "Kiểm thử", badge: edit && selected ? "●" : undefined, badgeLabel: "có mục đang chọn" }]}/>
         </div>
-        <LeftRail id="mview-panel-tools" value={rail} onChange={setRail}>{leftPanel}</LeftRail>
+        {/* M-036: on a phone the builder is for looking and light edits; say so, and what needs a bigger screen */}
+        <p className="bx-phone-note" role="note">Trên điện thoại bạn xem và chỉnh nhẹ được. Kéo-thả thành phần và chỉnh nhiều mục cùng lúc cần màn hình lớn hơn.</p>
+        <LeftRail id="mview-panel-tools" value={rail} onChange={setRail}><ErrorBoundary variant="inline" title="Công cụ này gặp sự cố" resetKeys={[rail]}>{leftPanel}</ErrorBoundary></LeftRail>
         <section className="bx-center" id="mview-panel-canvas" tabIndex={-1} aria-label="Bản xem trước ứng dụng">
-          {!edit ? <p className="bx-banner" role="note">Đang ở chế độ dùng thử: bản xem trước không chỉnh sửa được.</p> : readOnly ? <p className="bx-banner" role="note">Bạn chỉ có quyền xem.</p> : null}
-          <Canvas document={html} sections={sections} selectedId={selectedId} onSelect={select} onRects={setRects} rects={rects} interactive={interactive} dragging={!!drag && drag.kind !== "row"} slot={slot}
-            device={props.device} labelOf={props.labelOf} frameRef={frameRef} title="Bản xem trước ứng dụng"/>
+          {!edit ? <p className="bx-banner" role="note">Chế độ dùng thử: bản xem trước chỉ để xem, không bấm được nút, form hay liên kết. Hãy chạy thử truy vấn, hành động và workflow bằng các nút “Chạy thử” ở cột bên phải.</p> : readOnly ? <p className="bx-banner" role="note">Bạn chỉ có quyền xem.</p> : null}
+          <ErrorBoundary variant="inline" title="Bản xem trước gặp sự cố" resetKeys={[pageId]}>
+            <Canvas document={html} sections={sections} selectedId={selectedId} onSelect={select} rectsRef={rectsRef} interactive={interactive} selectable={edit} dragging={!!drag && drag.kind !== "row"} slot={slot}
+              device={props.device} labelOf={props.labelOf} frameRef={frameRef} title="Bản xem trước ứng dụng"/>
+          
+          </ErrorBoundary>
         </section>
         <aside ref={rightRef} id="mview-panel-props" className="bx-right" aria-label="Thuộc tính" {...(rightScrolls ? { tabIndex: 0 } : {})}>
+          <ErrorBoundary variant="inline" title="Bảng thuộc tính gặp sự cố" resetKeys={[selectedId, edit]}>
           {!edit ? <TestPanel doc={doc} rawPermissions={props.project.permissions} runtime={props.runtime} dirty={props.save.state !== "saved" || busy}/>
             : selected ? (
-              <Inspector ctx={ctx} section={selected} component={registry.find((c) => c.id === selected.type)} meta={backend.metadata.get(selected.type)} index={sections.indexOf(selected)} canUp={canStep(sections, selected.id, -1)} canDown={canStep(sections, selected.id, 1)} count={sections.length}
+              <Inspector ctx={ctx} drafts={drafts} onDraft={setDraft} section={selected} component={registry.find((c) => c.id === selected.type)} meta={backend.metadata.get(selected.type)} index={sections.indexOf(selected)} canUp={canStep(sections, selected.id, -1)} canDown={canStep(sections, selected.id, 1)} count={sections.length}
                 readOnly={!interactive} busy={busy} assets={props.assets} rawPermissions={props.project.permissions} onApply={(ops, summary) => props.applyOps(ops, summary)} onClose={() => select(null)}
                 onMove={(d) => void step(selected.id, d)} onRemove={() => setRemoving(true)} onSaveBlock={props.saveBlock} pageId={pageId}
-                openDataWizard={(id) => { setDataFocus({ sectionId: id }); openRail("data"); }}/>
+                openDataWizard={(id, prop) => { setDataFocus({ sectionId: id, prop, n: Date.now() }); openRail("data"); }}/>
             ) : (
               <div className="bx-empty"><h2>Chưa chọn mục nào</h2>{readOnly ? <p>Bạn chỉ có quyền xem ứng dụng này. Chọn một mục trong “Trang” để xem thuộc tính; không chỉnh sửa được.</p> : <p>Chọn một mục trong “Trang” hoặc nhấp vào bản xem trước để chỉnh.</p>}
                 {backend.metadataReadiness.state !== "AVAILABLE" ? <StateBox state={backend.metadataReadiness} compact/> : null}</div>)}
+          </ErrorBoundary>
         </aside>
       </main>
       <DragOverlay>{drag ? <DragChip label={drag.label}/> : null}</DragOverlay>
 
       {removing && selected ? (
         <Dialog title={`Xóa “${props.labelOf(selected.type)}” khỏi trang?`} onClose={() => setRemoving(false)} footer={<>
-          <button type="button" className="bx-btn" onClick={() => setRemoving(false)}>Hủy</button>
-          <button type="button" className="bx-btn danger" disabled={busy} onClick={() => void props.applyOps([{ type: "REMOVE_SECTION", sectionId: selected.id }], "Xóa mục").then((ok) => { if (ok) { setRemoving(false); select(null); } })}>Xóa mục</button></>}>
+          <button type="button" className="btn dense" onClick={() => setRemoving(false)}>Hủy</button>
+          <button type="button" className="btn dense danger" disabled={busy} onClick={() => void props.applyOps([{ type: "REMOVE_SECTION", sectionId: selected.id }], "Xóa mục").then((ok) => { if (ok) { setRemoving(false); select(null); } })}>Xóa mục</button></>}>
           <p>Có thể khôi phục từ lịch sử phiên bản. Dữ liệu và hành động gắn với mục này sẽ bị hỏng cho tới khi bạn gỡ chúng.</p>
         </Dialog>) : null}
       {check ? (
         <Dialog title={check.some((i) => i.severity === "BLOCK") ? "Chưa thể xuất bản" : "Kiểm tra trước khi xuất bản"} onClose={() => setCheck(null)} footer={<>
-          <button type="button" className="bx-btn" onClick={() => setCheck(null)}>Đóng</button>
-          {blockers(check).length === 0 ? <button type="button" className="bx-btn primary" onClick={() => { setCheck(null); props.openPublish(); }}>Vẫn xuất bản</button> : null}</>}>
+          <button type="button" className="btn dense" onClick={() => setCheck(null)}>Đóng</button>
+          {blockers(check).length === 0 ? <button type="button" className="btn dense primary" onClick={() => { setCheck(null); props.openPublish(); }}>Vẫn xuất bản</button> : null}</>}>
           <ul className="bx-issues" aria-label="Kết quả kiểm tra">{check.map((i) => <li key={i.code + (i.path ?? "") + i.message} className={i.severity === "BLOCK" ? "block" : "warn"}><b>{i.severity === "BLOCK" ? "Lỗi" : "Cảnh báo"}</b> {i.message}</li>)}</ul>
         </Dialog>) : null}
     </DndContext>

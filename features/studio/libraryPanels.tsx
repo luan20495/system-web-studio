@@ -28,7 +28,7 @@ export function SaveTemplateSection({ workspaceId, projectId, projectName }: { w
         <option value="">Mẫu mới</option>{editable.map((t) => <option key={t.id} value={t.id}>Phiên bản mới của: {t.name} (v{t.version})</option>)}</select></Field>
       <Field label="Tên mẫu"><input maxLength={120} value={name} onChange={(e) => setName(e.target.value)}/></Field>
       <Field label="Mô tả mẫu"><input maxLength={500} value={description} onChange={(e) => setDescription(e.target.value)}/></Field>
-      <div className="drawerActions"><button className="button primary" disabled={busy || !name.trim()} onClick={() => void save()}>{busy ? "Đang lưu…" : "Lưu thành mẫu"}</button></div>
+      <div className="drawerActions"><button className="btn primary" disabled={busy || !name.trim()} onClick={() => void save()}>{busy ? "Đang lưu…" : "Lưu thành mẫu"}</button></div>
       {msg ? <p className="hint" role="status">{msg}</p> : null}
       {err ? <p className="formError" role="alert">{err}</p> : null}
     </section>
@@ -62,7 +62,7 @@ export function SaveBlockDrawer({ workspaceId, projectId, section, title, onClos
         <Field label="Mô tả"><input maxLength={500} value={description} onChange={(e) => setDescription(e.target.value)}/></Field>
       </section>
       {err ? <p className="formError" role="alert">{err}</p> : null}
-      <div className="drawerActions"><button className="button ghost" onClick={onClose}>Hủy</button><button className="button primary" disabled={busy || !name.trim()} onClick={() => void save()}>{busy ? "Đang lưu…" : "Lưu khối"}</button></div>
+      <div className="drawerActions"><button className="btn ghost" onClick={onClose}>Hủy</button><button className="btn primary" disabled={busy || !name.trim()} onClick={() => void save()}>{busy ? "Đang lưu…" : "Lưu khối"}</button></div>
     </Drawer>
   );
 }

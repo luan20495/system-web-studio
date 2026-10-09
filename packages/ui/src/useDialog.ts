@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
+import { dialogOpener } from "./focus";
 
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
@@ -17,7 +18,7 @@ export function useDialog(title: string, onClose: (() => void) | null) {
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const opener = dialogOpener();
     const items = () => Array.from(node.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => el.getClientRects().length > 0);
     (items()[0] ?? node).focus();
     const onKey = (event: KeyboardEvent) => {

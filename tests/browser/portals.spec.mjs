@@ -1,17 +1,22 @@
 // @class: harness — real Chromium on a test-only host (fake host / no API behind it); NOT a backend E2E
 // Real-browser checks of the three portals WITHOUT a backend: everything that does not need a session.
-// Needs the three apps running: platform 127.0.0.1:3001, admin 127.0.0.1:3002, studio 127.0.0.1:3003 (PORTAL_STUDIO_PORT overrides the studio port when 3003 is taken) (npm run build:<app> && cd apps/<app> && npx next start -H 127.0.0.1 -p <port>).
+// Needs the three apps running: platform 127.0.0.1:3001, admin 127.0.0.1:3002, studio 127.0.0.1:3003 (PORTAL_PLATFORM_PORT / PORTAL_ADMIN_PORT / PORTAL_STUDIO_PORT override the ports) (npm run build:<app> && cd apps/<app> && npx next start -H 127.0.0.1 -p <port>).
 // With no API behind the same-origin /api proxy the browser sees 500s; the UI must still show the login form. It does NOT test login, session, OIDC or cookies after sign-in.
-import { createRequire } from "node:module";
-const require = createRequire(new URL("../../package.json", import.meta.url).pathname);
-const { chromium } = require("playwright-core");
-const PORTALS = [["platform", 3001, "/platform", "Xweb Platform"], ["admin", 3002, "/admin", "Quản trị công ty"], ["studio", Number(process.env.PORTAL_STUDIO_PORT ?? 3003), "/studio", "Xweb Studio"]];
-const results = []; const check = (n, ok, d = "") => { results.push(ok); console.log(`${ok ? "PASS" : "FAIL"}  ${n}${d ? "  — " + d : ""}`); };
-const browser = await chromium.launch({ executablePath: process.env.CHROME ?? "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
+import { launch, makeChecks } from "./lib/spec.mjs";
+// every port is overridable (PORTAL_PLATFORM_PORT / PORTAL_ADMIN_PORT / PORTAL_STUDIO_PORT): a second stack on the machine must not be tested by accident (S4-audit)
+const PORTALS = [["platform", Number(process.env.PORTAL_PLATFORM_PORT ?? 3001), "/platform", "Xweb Platform"], ["admin", Number(process.env.PORTAL_ADMIN_PORT ?? 3002), "/admin", "Quản trị công ty"], ["studio", Number(process.env.PORTAL_STUDIO_PORT ?? 3003), "/studio", "Xweb Studio"]];
+const { check, finish } = makeChecks();
+const browser = await launch();
 
 for (const [name, port, prefix, title] of PORTALS) {
   const origin = `http://127.0.0.1:${port}`;
+  // M-093 (a): a failed /auth/config is an error with a retry, never a guessed form (fail closed). So the form checks below answer `/api/v1/auth/config` with a minimal valid config (the login POST still goes to the unreachable proxy)
+  const fail = await browser.newContext({ viewport: { width: 1280, height: 800 } }); const fp = await fail.newPage();
+  await fp.goto(origin + "/login", { waitUntil: "networkidle" }); await fp.waitForTimeout(600);
+  check(`[${name}] no backend: the sign-in methods are unknown, so the page FAILS CLOSED (error + retry, no password form)`, (await fp.getByText("Chưa tải được cách đăng nhập").count()) === 1 && (await fp.getByRole("button", { name: /thử lại/i }).count()) >= 1 && (await fp.getByLabel("Mật khẩu").count()) === 0);
+  await fail.close();
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  await ctx.route("**/api/v1/auth/config*", (r) => r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ localLogin: true, oidc: false, saml: false, signup: false, needsSetup: false }) }));
   const page = await ctx.newPage(); const bad = [];
   page.on("console", (m) => { if (/Content Security Policy|Refused to/i.test(m.text())) bad.push(m.text().slice(0, 160)); });
   page.on("pageerror", (e) => bad.push("pageerror " + e.message.slice(0, 120)));
@@ -41,4 +46,4 @@ for (const [name, port, prefix, title] of PORTALS) {
   await ctx.close();
 }
 await browser.close();
-const failed = results.filter((x) => !x).length; console.log(`\n${results.length - failed}/${results.length} passed`); process.exit(failed ? 1 : 0);
+finish();

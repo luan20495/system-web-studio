@@ -5,14 +5,13 @@ import { createRequire } from "node:module";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 const require = createRequire(new URL("../../package.json", import.meta.url).pathname);
-const { chromium } = require("playwright-core");
+import { harnessOrigin, launch, makeChecks } from "./lib/spec.mjs";
 const AXE = require.resolve("axe-core/axe.min.js");
-const ORIGIN = (process.env.HARNESS_URL ?? "http://127.0.0.1:4000/index.html").replace(/\/[^/]*$/, "");
+const ORIGIN = harnessOrigin();
 const EVIDENCE = process.env.EVIDENCE ?? null; if (EVIDENCE) mkdirSync(EVIDENCE, { recursive: true });
-const results = []; const metrics = {};
-const check = (name, ok, detail = "") => { results.push({ name, ok: !!ok, detail }); console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  — " + detail : ""}`); };
+const { check, finish } = makeChecks(); const metrics = {};
 const errors = [];
-const browser = await chromium.launch({ executablePath: process.env.CHROME ?? "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
+const browser = await launch();
 const T = (p, id) => p.getByTestId(id);
 async function open(v, s = "ok", viewport = { width: 1200, height: 900 }) {
   const p = await browser.newPage({ viewport }); p.setDefaultTimeout(15000);
@@ -94,7 +93,7 @@ const shot = async (p, name) => { if (EVIDENCE) await p.screenshot({ path: join(
 { const p = await open("emp", "emp-nocreate");
   check("ST06 creating is NOT_READY: a visible notice with the reason (not only a disabled button)", (await T(p, "emp-create-not-ready").count()) === 1 && /Chưa thêm được nhân viên/.test(await T(p, "emp-create-not-ready").innerText()) && (await T(p, "emp-create").isDisabled()));
   await p.close(); }
-{ const p = await open("emp", "emp-members");
+{ const p = await open("emp", "emp-members"); await p.waitForSelector("[data-testid=emp-members-note]", { timeout: 5000 }).catch(() => undefined);   // the member list is fetched after the page paints (slower on WebKit)
   check("ST07 member-list directory: unit / position columns are LEFT OUT (not '—' cells that look like errors) and a note explains why", (await p.locator("thead th").count()) === 3 && (await T(p, "emp-members-note").count()) === 1 && !/—/.test(await T(p, "emp:u01").innerText()));
   await p.close(); }
 
@@ -105,11 +104,15 @@ const shot = async (p, name) => { if (EVIDENCE) await p.screenshot({ path: join(
   const reload = await timed(p, async () => { document.querySelector('[data-testid="org-reload"]').click(); await new Promise((r) => setTimeout(r, 0)); }); await p.waitForFunction(() => document.querySelectorAll('[role=treeitem]').length > 0);
   check("PERF01 2 000 generated units: a large tree starts COLLAPSED to its roots (a few rows, not thousands)", initialRows <= 6, `rows=${initialRows}`);
   const expand = await timed(p, () => document.querySelector('[data-testid="org-expand-all"]').click()); const all = await p.getByRole("treeitem").count();
-  check("PERF02 'Mở rộng tất cả' renders all 2 000 rows without crashing; every row is a treeitem with level / position", all === 2000 && (await p.locator('[role=treeitem][aria-level][aria-posinset][aria-setsize]').count()) === 2000, `rows=${all}`);
+  const win = await p.locator(".xp-tree").evaluate((e) => ({ attr: e.getAttribute("data-windowed"), rows: e.getAttribute("data-rows"), sh: e.scrollHeight, ch: e.clientHeight, dom: e.querySelectorAll("*").length }));
+  check("PERF02 'Mở rộng tất cả' on 2 000 units is WINDOWED (M-111): a screenful of rows is mounted (not 2 000, not 26 000 DOM nodes), every mounted row is a treeitem with level / position / set size, the scroll height is still 2 000 rows", win.attr === "true" && all > 10 && all <= 120 && win.dom < 2500 && win.sh >= 2000 * 50 - 4 && (await p.locator('[role=treeitem][aria-level][aria-posinset][aria-setsize]').count()) === all, JSON.stringify({ ...win, rows: all }));
   await p.evaluate(() => { window.__prof.length = 0; });
-  const select = await timed(p, () => document.querySelector('[data-testid="node:g1500"]').click()); const sel = (await prof(p)).filter((x) => x.phase === "update");
+  await p.getByTestId("node:g0").focus(); await key(p, "End"); await settle(p, 250); const endRow = await p.evaluate(() => { const t = document.querySelector(".xp-tree"), a = document.activeElement; const items = t.querySelectorAll("[role=treeitem]"); const atBottom = t.scrollTop + t.clientHeight >= t.scrollHeight - 4; return a?.getAttribute("data-node") && items[items.length - 1].contains(a) && atBottom ? a.getAttribute("data-node") : "NOT-LAST:" + a?.getAttribute("data-node"); }); await p.evaluate(() => { window.__prof.length = 0; });
+  const select = await timed(p, () => document.activeElement.click()); const sel = (await prof(p)).filter((x) => x.phase === "update");
   const lastSel = sel[sel.length - 1] ?? { actual: NaN, base: NaN };
-  check("PERF03 selecting one row in the 2 000-row tree works (detail panel updates) and re-renders far less than the whole tree (Profiler: actual ≪ base)", /Đơn vị 1500/.test(await T(p, "detail-name").innerText()) && lastSel.actual < lastSel.base * 0.5, `actual=${ms(lastSel.actual)}ms base=${ms(lastSel.base)}ms`);
+  check("PERF03 End reaches the LAST row of the windowed 2 000-row tree (it is scrolled into the window and focused); selecting it works (detail panel updates) and re-renders far less than the whole tree (Profiler: actual ≪ base)", !endRow.startsWith("NOT-LAST") && (await T(p, "detail-name").innerText()).length > 3 && (await p.getByTestId(`node:${endRow}`).getAttribute("tabindex")) === "0" && lastSel.actual < lastSel.base * 0.5, `endRow=${endRow} actual=${ms(lastSel.actual)}ms base=${ms(lastSel.base)}ms`);
+  await key(p, "Home"); await settle(p, 250);
+  check("PERF03b Home returns to the first row (g0 is mounted and focused again) and the window follows the scroll position", (await p.evaluate(() => document.activeElement?.getAttribute("data-node"))) === "g0" && (await p.locator(".xp-tree").evaluate((e) => e.scrollTop)) < 100);
   await p.evaluate(() => { window.__prof.length = 0; });
   const collapse = await timed(p, () => document.querySelector('[data-testid="org-collapse-all"]').click()); const after = await p.getByRole("treeitem").count();
   check("PERF04 'Thu gọn' collapses to the roots again", after <= 2, `rows=${after}`);
@@ -195,6 +198,4 @@ check("no console error / warning / uncaught exception in any page", errors.leng
 await browser.close();
 if (EVIDENCE) writeFileSync(join(EVIDENCE, "metrics.json"), JSON.stringify(metrics, null, 2));
 console.log("\nMETRICS " + JSON.stringify(metrics));
-const failed = results.filter((r) => !r.ok);
-console.log(`\n${results.length - failed.length}/${results.length} checks passed`);
-process.exit(failed.length ? 1 : 0);
+finish();

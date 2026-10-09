@@ -111,7 +111,7 @@ export default function StudioShell() {
   }
 
   if (!project) {
-    return <div className="boot" role="alert"><p>{notice ?? "Không tải được project."}</p><button className="button" onClick={() => window.location.reload()}>Thử tải lại</button></div>;
+    return <div className="boot" role="alert"><p>{notice ?? "Không tải được project."}</p><button className="btn" onClick={() => window.location.reload()}>Thử tải lại</button></div>;
   }
 
   return (
@@ -127,9 +127,9 @@ export default function StudioShell() {
 
         <div className="topActions">
           <span className="savedPill">{isDemoMode ? "Demo" : saved ? "✓ Đã lưu" : "Đang lưu…"}</span>
-          <button className="button ghost" onClick={() => setHistoryOpen(true)}>Lịch sử</button>
-          <button className="button primary" disabled={operation !== null} onClick={() => setPublishOpen(true)}>Xuất bản</button>
-          <button className="button icon" aria-label="Cài đặt" onClick={() => setSettingsOpen(true)}>⚙</button>
+          <button className="btn ghost" onClick={() => setHistoryOpen(true)}>Lịch sử</button>
+          <button className="btn primary" disabled={operation !== null} onClick={() => setPublishOpen(true)}>Xuất bản</button>
+          <button className="btn icon" aria-label="Cài đặt" onClick={() => setSettingsOpen(true)}>⚙</button>
           <details className="mobileMore" onClick={(event) => {
             if (event.target instanceof HTMLButtonElement) event.currentTarget.open = false;
           }}>
@@ -207,7 +207,7 @@ export default function StudioShell() {
 
             <div className="toolbarGroup">
               <span className="environmentBadge">{isDemoMode ? "Demo · local state" : "Backend"}</span>
-              <button className="smallButton" onClick={() => setSettingsOpen(true)}>Cài đặt project</button>
+              <button className="btn sm" onClick={() => setSettingsOpen(true)}>Cài đặt project</button>
             </div>
           </div>
 
@@ -246,7 +246,7 @@ function SettingsDrawer({ project, busy, onClose, onSave }: {
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="drawer" {...dialog.props}>
-        <div className="drawerHeader"><div><h2 id={dialog.titleId}>Cài đặt project</h2><p>Thông tin kỹ thuật và quyền truy cập.</p></div><button className="button icon" aria-label="Đóng" onClick={onClose}>✕</button></div>
+        <div className="drawerHeader"><div><h2 id={dialog.titleId}>Cài đặt project</h2><p>Thông tin kỹ thuật và quyền truy cập.</p></div><button className="btn icon" aria-label="Đóng" onClick={onClose}>✕</button></div>
 
         <Setting title="Chung">
           <Field label="Tên project"><input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })}/></Field>
@@ -268,7 +268,7 @@ function SettingsDrawer({ project, busy, onClose, onSave }: {
           <Field label="Nền tảng"><select value={draft.deploymentTarget} onChange={(e) => setDraft({ ...draft, deploymentTarget: e.target.value as Project["deploymentTarget"] })}><option value="self-host">Self-host</option><option value="aws">AWS</option><option value="azure">Azure</option><option value="gcp">GCP</option></select></Field>
         </Setting>
 
-        <div className="drawerActions"><button className="button ghost" onClick={onClose}>Hủy</button><button className="button primary" disabled={busy} onClick={() => void onSave(draft)}>{busy ? "Đang lưu…" : "Lưu thay đổi"}</button></div>
+        <div className="drawerActions"><button className="btn ghost" onClick={onClose}>Hủy</button><button className="btn primary" disabled={busy} onClick={() => void onSave(draft)}>{busy ? "Đang lưu…" : "Lưu thay đổi"}</button></div>
       </div>
     </div>
   );
@@ -287,7 +287,7 @@ function HistoryDrawer({ versions, onClose }: { versions: StudioSnapshot["versio
   return (
     <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="drawer" {...dialog.props}>
-        <div className="drawerHeader"><div><h2 id={dialog.titleId}>Lịch sử phiên bản</h2><p>{isDemoMode ? "Bản ghi demo; chưa có Git hoặc chức năng khôi phục." : "Các phiên bản schema của project."}</p></div><button className="button icon" aria-label="Đóng" onClick={onClose}>✕</button></div>
+        <div className="drawerHeader"><div><h2 id={dialog.titleId}>Lịch sử phiên bản</h2><p>{isDemoMode ? "Bản ghi demo; chưa có Git hoặc chức năng khôi phục." : "Các phiên bản schema của project."}</p></div><button className="btn icon" aria-label="Đóng" onClick={onClose}>✕</button></div>
         <div className="versionList">{versions.map((version) => <article className="versionItem" key={version.id}><div><b>{version.label}</b><span>{new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(version.createdAt))}</span></div><p>{version.summary}</p>{version.sourceRevision ? <code>{version.sourceRevision}</code> : <small>Chưa có bản xuất mã nguồn</small>}</article>)}</div>
       </div>
     </div>
@@ -313,7 +313,7 @@ function PublishModal({ visibility, busy, onVisibility, onClose, onPublish }: {
             <span>{value === "private" ? "Chỉ thành viên được cấp quyền." : "Mọi người có thể truy cập."}</span>
           </button>
         ))}
-        <div className="modalActions"><button className="button ghost" onClick={onClose}>Hủy</button><button className="button primary" disabled={busy} onClick={() => void onPublish()}>{busy ? "Đang xuất bản…" : "Xuất bản"}</button></div>
+        <div className="modalActions"><button className="btn ghost" onClick={onClose}>Hủy</button><button className="btn primary" disabled={busy} onClick={() => void onPublish()}>{busy ? "Đang xuất bản…" : "Xuất bản"}</button></div>
       </div>
     </div>
   );

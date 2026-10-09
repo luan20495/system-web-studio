@@ -5,7 +5,7 @@
  * The tenant is the session's (fixed, read-only) or one of the caller's OWN tenants — there is never a free tenant id. Organization metadata is not a permission and the screen says so.
  */
 import { useEffect, useMemo, useState } from "react";
-import { Info, ModalHeader, Search, UserRound, Users, X } from "@xweb/ui";
+import { Info, ModalHeader, Search, UserRound, Users, X, ReasonButton } from "@xweb/ui";
 import { Modal } from "./Modal";
 import { Card, StateView } from "../ui";
 import { useLoad } from "../useLoad";
@@ -15,7 +15,8 @@ import type { ProvisioningApi, ProvisionResult } from "./provisioning";
 import type { ProvisioningPlan } from "./provisioningModel";
 import { tenantRoleLabel, initials } from "./adminModel";
 import type { Employee, EmployeePage, EmployeeQuery, EmployeeStatus, OrganizationApi, OrgUnit, Position } from "./organization";
-import { EMPLOYEE_PAGE_SIZE, buildTree, employeeName, flattenTree, orgProblem, pageCount, unitPath, type OrgProblem, type OrganizationPlan } from "./organizationModel";
+import { EMPLOYEE_PAGE_SIZE, buildTree, employeeName, flattenTree, orgProblem, pageCount, pathResolver, unitPath, type OrgProblem, type OrganizationPlan } from "./organizationModel";
+import { TenantSwitch } from "./shared/TenantSwitch";
 
 export type EmployeeProvisioning = { api: ProvisioningApi; plan: ProvisioningPlan; workspacesOf: (tenantId: string) => Option[]; tenants: Option[] };
 
@@ -29,7 +30,7 @@ function unitOptions(units: readonly OrgUnit[]): { id: string; label: string }[]
 }
 
 export function EmployeesView({ api, plan, tenant, onTenant, prov, canToggleStatus = false }: { api: OrganizationApi; plan: OrganizationPlan; tenant: Tenant; onTenant?: (id: string) => void; prov: EmployeeProvisioning; canToggleStatus?: boolean }) {
-  const access = plan.access.granted;
+  const access = plan.employeeAccess.granted;
   const [qText, setQText] = useState(""); const [q, setQ] = useState(""); const [unit, setUnit] = useState(""); const [status, setStatus] = useState<EmployeeStatus | "ALL">("ALL"); const [page, setPage] = useState(0);
   const [creating, setCreating] = useState(false); const [detail, setDetail] = useState<Employee | null>(null); const [rev, setRev] = useState(0);
   // debounce: apply the text 250 ms after the last keystroke, and only if it CHANGED (otherwise the first tick after mount would reset the page the person just chose)
@@ -45,16 +46,17 @@ export function EmployeesView({ api, plan, tenant, onTenant, prov, canToggleStat
   const showOrg = data?.source !== "members";
   const problem = list.error ? orgProblem(list.error) : null;
   const options = useMemo(() => unitOptions(unitList), [unitList]);
-  if (!access) return <StateView kind="forbidden" title="Bạn chưa quản trị công ty nào" detail={<p data-testid="emp-forbidden">{(plan.access as { reason: string }).reason}</p>}/>;
+  const pathOf = useMemo(() => pathResolver(unitList), [unitList]);
+  if (!access) return <StateView kind="forbidden" title="Bạn chưa có quyền xem danh bạ nhân viên" detail={<p data-testid="emp-forbidden">{(plan.employeeAccess as { reason: string }).reason}</p>}/>;
   const canCreate = prov.plan.create.state === "ready";
   return (
     <div className="xp-emp" data-testid="emp">
       <div className="xp-orgBar">
         {plan.tenantChoice.length > 1 && onTenant
-          ? <label className="field xp-tenantSwitch"><span>Công ty</span><select data-testid="emp-tenant-switch" value={tenant.id} onChange={(e) => onTenant(e.target.value)}>{plan.tenantChoice.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
+          ? <TenantSwitch tenants={plan.tenantChoice} value={tenant.id} onChange={onTenant} testId="emp-tenant-switch"/>
           : <label className="field xp-tenantSwitch"><span>Công ty của bạn</span><input data-testid="emp-tenant" readOnly aria-readonly="true" value={tenant.name}/></label>}
         <div className="xp-orgBarActions">
-          <button className="btn primary xp-btnIcon" data-testid="emp-create" disabled={!canCreate} title={!canCreate ? (prov.plan.create as { reason?: string }).reason : undefined} onClick={() => setCreating(true)}><UserRound size={16} aria-hidden="true"/> Thêm nhân viên</button>
+          <ReasonButton className="btn primary xp-btnIcon" data-testid="emp-create" unavailable={!canCreate} reason={(prov.plan.create as { reason?: string }).reason} onClick={() => setCreating(true)}><UserRound size={16} aria-hidden="true"/> Thêm nhân viên</ReasonButton>
         </div>
       </div>
 
@@ -85,7 +87,7 @@ export function EmployeesView({ api, plan, tenant, onTenant, prov, canToggleStat
                 <tbody>{data.items.map((e) => (
                   <tr key={e.userId} className="clickRow" data-testid={`emp:${e.userId}`} tabIndex={0} onClick={() => setDetail(e)} onKeyDown={(k) => { if (k.key === "Enter") setDetail(e); }}>
                     <td data-label="Nhân viên"><span className="xp-empName"><Avatar e={e}/><span className="xp-personText"><b>{employeeName(e)}</b><small>{e.username}{e.email ? ` · ${e.email}` : ""}</small></span></span></td>
-                    {showOrg ? <><td data-label="Đơn vị">{e.orgUnitName ?? (e.orgUnitId ? unitPath(unitList, e.orgUnitId) : <span className="hint">Chưa gán</span>)}</td>
+                    {showOrg ? <><td data-label="Đơn vị">{e.orgUnitName ?? (e.orgUnitId ? pathOf(e.orgUnitId) : <span className="hint">Chưa gán</span>)}</td>
                     <td data-label="Vị trí">{e.positionName ?? <span className="hint">Chưa gán</span>}</td></> : null}
                     <td data-label="Vai trò công ty">{tenantRoleLabel(e.tenantRole)}</td>
                     <td data-label="Trạng thái"><StatusPill active={e.active}/></td>
@@ -133,6 +135,9 @@ function EmployeeDetail({ org, plan, tenant, employee, units, positions, canTogg
   const [busy, setBusy] = useState<string | null>(null); const [problem, setProblem] = useState<OrgProblem | null>(null); const [ok, setOk] = useState<string | null>(null);
   const options = useMemo(() => unitOptions(units), [units]);
   const orgReady = plan.assignOrg.state === "ready" && plan.units.state === "ready"; const posReady = plan.assignPosition.state === "ready" && plan.positions.state === "ready";
+  const orgReason = (plan.assignOrg as { reason?: string }).reason ?? (plan.units as { reason?: string }).reason ?? "Chưa sẵn sàng."; const posReason = (plan.assignPosition as { reason?: string }).reason ?? (plan.positions as { reason?: string }).reason ?? "Chưa sẵn sàng.";
+  /** the same reason twice in one dialog is noise (M-095): one note covers both */
+  const bothNotReady = !orgReady && !posReady && orgReason === posReason;
   async function save(key: "org" | "pos") {
     setBusy(key); setProblem(null); setOk(null);
     try { const e = key === "org" ? await org.updateEmployeeOrganization(tenant.id, employee.userId, unit || null) : await org.updateEmployeePosition(tenant.id, employee.userId, pos || null); setOk(key === "org" ? "Đã lưu đơn vị." : "Đã lưu vị trí."); onChanged(e); } catch (e) { setProblem(orgProblem(e)); } finally { setBusy(null); }
@@ -147,12 +152,12 @@ function EmployeeDetail({ org, plan, tenant, employee, units, positions, canTogg
           <p data-testid="detail-org">{employee.orgUnitId ? unitPath(units, employee.orgUnitId) || employee.orgUnitName : "Chưa gán đơn vị"}</p>
           <label className="field"><span>Đơn vị</span><select data-testid="detail-unit" value={unit} disabled={!orgReady || busy !== null} onChange={(e) => setUnit(e.target.value)}><option value="">Chưa gán đơn vị</option>{options.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}</select></label>
           {orgReady ? <div className="row"><button className="btn sm primary" data-testid="detail-unit-save" disabled={busy !== null || unit === (employee.orgUnitId ?? "")} onClick={() => void save("org")}>{busy === "org" ? "Đang lưu…" : "Lưu đơn vị"}</button></div>
-            : <NotReadyPanel testid="detail-org-not-ready" title="Chưa gán được đơn vị" reason={(plan.assignOrg as { reason?: string }).reason ?? (plan.units as { reason?: string }).reason ?? "Chưa sẵn sàng."}/>}</section>
+            : bothNotReady ? null : <NotReadyPanel testid="detail-org-not-ready" title="Chưa gán được đơn vị" reason={orgReason}/>}</section>
         <section className="xp-section" aria-label="Vị trí / Cấp bậc"><h3>Vị trí / Cấp bậc</h3>
           <p data-testid="detail-position">{employee.positionName ?? "Chưa gán vị trí"}</p>
           <label className="field"><span>Vị trí</span><select data-testid="detail-pos" value={pos} disabled={!posReady || busy !== null} onChange={(e) => setPos(e.target.value)}><option value="">Chưa gán vị trí</option>{positions.map((p) => <option key={p.id} value={p.id}>{p.name}{p.level != null ? ` (cấp ${p.level})` : ""}</option>)}</select></label>
           {posReady ? <div className="row"><button className="btn sm primary" data-testid="detail-pos-save" disabled={busy !== null || pos === (employee.positionId ?? "")} onClick={() => void save("pos")}>{busy === "pos" ? "Đang lưu…" : "Lưu vị trí"}</button></div>
-            : <NotReadyPanel testid="detail-pos-not-ready" title="Chưa gán được vị trí" reason={(plan.assignPosition as { reason?: string }).reason ?? (plan.positions as { reason?: string }).reason ?? "Chưa sẵn sàng."}/>}</section>
+            : bothNotReady ? <NotReadyPanel testid="detail-assign-not-ready" title="Chưa gán được đơn vị và vị trí" reason={orgReason}/> : <NotReadyPanel testid="detail-pos-not-ready" title="Chưa gán được vị trí" reason={(plan.assignPosition as { reason?: string }).reason ?? (plan.positions as { reason?: string }).reason ?? "Chưa sẵn sàng."}/>}</section>
         <section className="xp-section" aria-label="Workspace"><h3>Workspace</h3>
           {employee.workspaces?.length ? <ul className="xp-wsList" data-testid="detail-workspaces">{employee.workspaces.map((w) => <li key={w.id}><b>{w.name}</b> <small>{w.role}</small></li>)}</ul>
             : <p className="hint" data-testid="detail-workspaces-na">Danh sách workspace của nhân viên chưa có trong dữ liệu máy chủ. Quản lý thành viên workspace ở mục “Workspace của tôi”.</p>}</section>
@@ -161,8 +166,9 @@ function EmployeeDetail({ org, plan, tenant, employee, units, positions, canTogg
           <p className="xp-note" role="note" data-testid="detail-perm-note"><Info size={16} aria-hidden="true"/><span>Đơn vị và vị trí chỉ để tổ chức, <b>không cấp quyền</b>. Quyền do máy chủ quyết định theo vai trò công ty và vai trò trong từng workspace.</span></p></section>
         <section className="xp-section" aria-label="Trạng thái"><h3>Trạng thái</h3>
           <div className="row"><StatusPill active={employee.active}/>
-            <button className="btn sm" data-testid="detail-toggle" disabled={!canToggleStatus} title={!canToggleStatus ? "Chỉ quản trị hệ thống bật hoặc tắt tài khoản." : undefined}>{employee.active ? "Tắt tài khoản" : "Bật tài khoản"}</button></div>
-          {!canToggleStatus ? <p className="hint" data-testid="detail-toggle-note">Chỉ quản trị hệ thống bật hoặc tắt tài khoản (API hiện có). Quản trị công ty có thể gỡ khỏi công ty ở mục “Công ty của tôi”.</p> : null}</section>
+            {/* the account switch is an account-level action (Platform → Người dùng); this list is the company's MEMBER list, so it is never offered here, and never as a dead button */}
+            <ReasonButton className="btn sm" data-testid="detail-toggle" unavailable reason={canToggleStatus ? "Chưa sẵn sàng: bật hoặc tắt tài khoản nhân viên sẽ có khi danh bạ được kết nối với máy chủ." : "Bạn cần quyền quản lý nhân viên và quản lý thành viên công ty để bật hoặc tắt tài khoản nhân viên."}>{employee.active ? "Tắt tài khoản" : "Bật tài khoản"}</ReasonButton></div>
+          </section>
         {ok ? <p className="notice" role="status" data-testid="detail-ok">{ok}</p> : null}
         {problem ? <Problem p={problem}/> : null}
         <div className="xp-footer"><button className="btn" onClick={onClose}>Đóng</button></div>

@@ -15,12 +15,10 @@
 /* tabs */
 .bx-tabs{display:flex;gap:2px}.bx-tabs-horizontal{flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:10px}.bx-tabs-vertical{flex-direction:column}
 .bx-tabs button{border:0;background:none;color:var(--muted);padding:7px 9px;border-radius:7px;text-align:left;font:inherit;font-size:13px;font-weight:600}
-.bx-tabs button.active{background:#262a5c;color:#fff}.bx-tabs button:focus-visible,.bx-btn:focus-visible,.bx-icon:focus-visible,.bx-handle:focus-visible,.bx-drag:focus-visible,.bx-node:focus-visible,.bx-mini:focus-visible{outline:2px solid #93c5fd;outline-offset:2px}
-.bx-tabpanel{min-width:0}.bx-tabpanel:focus-visible{outline:2px solid #93c5fd;outline-offset:2px}
-/* buttons */
-.bx-btn{border:1px solid var(--line);border-radius:9px;background:#131a22;color:var(--text);min-height:34px;padding:0 12px;font:inherit;font-size:13px}
-.bx-btn.sm{min-height:28px;padding:0 9px;font-size:12px}.bx-btn.primary{background:#fff;color:#10151b;border-color:#fff;font-weight:700}.bx-btn.danger{border-color:#7a271a;color:#fda29b}
-.bx-btn:disabled,.bx-mini:disabled,.bx-drag:disabled{opacity:.5;cursor:not-allowed}
+.bx-tabs button.active{background:#1c3260;color:#fff}.bx-tabs button:focus-visible,.bx-icon:focus-visible,.bx-handle:focus-visible,.bx-drag:focus-visible,.bx-node:focus-visible,.bx-mini:focus-visible{outline:2px solid var(--ui-ring);outline-offset:2px}
+.bx-tabpanel{min-width:0}.bx-tabpanel:focus-visible{outline:2px solid var(--ui-ring);outline-offset:2px}
+/* buttons: the builder's compact size is `.btn.dense` (factory.css, BUTTON VOCABULARY) */
+.bx-mini:disabled,.bx-drag:disabled{opacity:.5;cursor:not-allowed}
 .bx-icon{width:32px;height:32px;border:1px solid var(--line);border-radius:8px;background:#131a22;color:var(--text)}
 .bx-mini{min-width:24px;height:24px;border:1px solid var(--line);border-radius:6px;background:#131a22;color:var(--text);font-size:12px}.bx-mini.danger{color:#fda29b}
 .bx-drag{width:24px;flex:none;border:1px solid var(--line);border-radius:7px;background:#12161d;color:var(--muted);cursor:grab;touch-action:none}
@@ -35,7 +33,7 @@
 /* tree */
 .bx-tree,.bx-children{list-style:none;margin:0;padding:0;display:grid;gap:4px}.bx-children{margin:4px 0 6px 12px;border-left:1px solid var(--line);padding-left:8px}
 .bx-node{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:7px 9px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);cursor:pointer;min-width:0}
-.bx-node.active{border-color:#6366f1;background:#1d2148}.bx-node code{color:var(--muted);font-size:11px}.bx-node small{color:var(--muted)}
+.bx-node.active{border-color:#3b7bff;background:#1d2148}.bx-node code{color:var(--muted);font-size:11px}.bx-node small{color:var(--muted)}
 .bx-node.section{display:grid;gap:2px;flex:1}.bx-node.section span{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bx-sortrow{display:flex;gap:5px;align-items:stretch}.bx-row-tools{display:inline-flex;gap:4px;align-items:center}
 .bx-page-actions{display:flex;gap:6px;flex-wrap:wrap}.bx-notready-row{display:grid;gap:4px}
@@ -47,17 +45,17 @@
 .bx-lib-item.notready{border-style:dotted}.bx-lib-item.notready p{flex-basis:100%;margin:0;font-size:12px}.bx-lib-item.disabled{opacity:.55}
 /* canvas + DnD layer */
 .bx-canvas{position:relative;flex:none;display:flex;width:100%;max-width:1476px;height:100%;min-height:100%}.bx-frame{position:relative;flex:1;min-width:0}.bx-frame .previewFrame{width:100%;height:100%}
-.bx-gutter{position:relative;flex:none;width:36px}
+.bx-gutter{position:relative;flex:none;width:36px;overflow:clip}.bx-gutter-track{position:absolute;inset:0}
 .viewport-tablet .bx-canvas{width:804px}.viewport-mobile .bx-canvas{width:426px}
-.bx-shield{position:absolute;inset:0;pointer-events:none}.bx-shield.on{pointer-events:auto;background:rgba(99,102,241,.05);cursor:copy}
+.bx-shield{position:absolute;inset:0;pointer-events:none}.bx-shield.on{pointer-events:auto;background:rgba(59,123,255,.05);cursor:copy}
 .bx-handle{position:absolute;left:4px;pointer-events:auto;width:28px;height:28px;border:1px solid #475467;border-radius:8px;background:rgba(15,18,24,.92);color:#e5e7eb;cursor:grab;touch-action:none;opacity:.65;transition:opacity .12s}
 .bx-handle:hover,.bx-handle:focus-visible,.bx-handle.active{opacity:1}
-.bx-insert{position:absolute;left:0;right:0;height:0;border-top:3px solid #6366f1;pointer-events:none}.bx-insert span{position:absolute;left:12px;top:-12px;background:#6366f1;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px}
-.bx-empty-drop{position:absolute;inset:16px;display:grid;place-items:center;border:2px dashed #6366f1;border-radius:14px;color:#c7d2fe;pointer-events:none}
-.bx-dragchip{white-space:nowrap;padding:6px 12px;border-radius:999px;background:#6366f1;color:#fff;font-size:12px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.bx-insert{position:absolute;left:0;right:0;height:0;border-top:3px solid #3b7bff;pointer-events:none}.bx-insert span{position:absolute;left:12px;top:-12px;background:#3b7bff;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px}
+.bx-empty-drop{position:absolute;inset:16px;display:grid;place-items:center;border:2px dashed #3b7bff;border-radius:14px;color:#bcd2fb;pointer-events:none}
+.bx-dragchip{white-space:nowrap;padding:6px 12px;border-radius:999px;background:#3b7bff;color:#fff;font-size:12px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.4)}
 /* forms, lists, chips */
 .bx-form{display:grid;gap:10px}.bx-field{display:grid;gap:4px}.bx-field label{font-size:12px;font-weight:600;color:var(--text)}.bx-field small{color:var(--muted);font-size:11px;line-height:1.4}
-.bx-field input,.bx-field select,.bx-field textarea,.bx-form select,.bx-form input,.bx-row input,.bx-row select,.bx-menu input,.bx-left-panel>div>select,.bx-left-panel input[type=search]{background:#121a22;color:var(--text);border:1px solid #2d3742;border-radius:8px;padding:7px 9px;min-width:0;max-width:100%}
+.bx-field input,.bx-field select,.bx-field textarea,.bx-form select,.bx-form input,.bx-row input,.bx-row select,.bx-menu input,.bx-left-panel>div>select,.bx-left-panel>.bx-rail-pane>div>select,.bx-left-panel input[type=search]{background:#121a22;color:var(--text);border:1px solid #2d3742;border-radius:8px;padding:7px 9px;min-width:0;max-width:100%}
 .bx-group{border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:grid;gap:8px;margin:0}.bx-group legend{padding:0 4px;font-size:12px;font-weight:700;color:var(--muted)}
 .bx-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.bx-param{display:grid;min-width:80px}.bx-param small{color:var(--muted)}
 .bx-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:6px}
@@ -69,7 +67,7 @@
 .chipBtn{margin-left:4px;border:0;background:none;color:inherit;cursor:pointer}
 /* steps */
 .bx-steps{list-style:none;margin:0;padding:0;display:grid;gap:8px}.bx-step{border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:grid;gap:6px}.bx-step.orphan{border-color:#b54708}
-.bx-step-head{display:flex;align-items:center;gap:8px}.bx-step-n{width:22px;height:22px;border-radius:50%;background:#262a5c;color:#fff;display:grid;place-items:center;font-size:12px}
+.bx-step-head{display:flex;align-items:center;gap:8px}.bx-step-n{width:22px;height:22px;border-radius:50%;background:#1c3260;color:#fff;display:grid;place-items:center;font-size:12px}
 .bx-step-title{flex:1;text-align:left;border:0;background:none;color:var(--text);display:grid;padding:0}.bx-step-title small{color:var(--muted)}.bx-step-tools{display:inline-flex;gap:4px}
 .bx-step-body{display:grid;gap:8px;border-top:1px solid var(--line);padding-top:8px}.bx-addrow{display:flex;gap:6px;flex-wrap:wrap}.bx-branch{display:grid;gap:4px}
 .bx-field-card{display:grid;gap:6px;border:1px solid var(--line);border-radius:9px;padding:8px}
@@ -101,11 +99,11 @@
 .publicBox ul{margin:0;padding-left:18px;max-height:min(24vh,170px);overflow:auto}
 .publicBox code{word-break:break-all}
 
-.bx-sortrow:focus-visible{outline:2px solid #67b8ff;outline-offset:2px;border-radius:8px}.bx-sortrow .bx-node{flex:1;min-width:0}.bx-drag,.bx-mini{display:inline-flex;align-items:center;justify-content:center}
+.bx-sortrow:focus-visible{outline:2px solid var(--ui-ring);outline-offset:2px;border-radius:8px}.bx-sortrow .bx-node{flex:1;min-width:0}.bx-drag,.bx-mini{display:inline-flex;align-items:center;justify-content:center}
 
 /* top bar: the project name and meta stay on ONE line with an ellipsis (the full name is the title); button labels never wrap into tall pills; groups wrap to a second row instead of being clipped */
 .bx-top .projectName,.bx-top .projectMeta{max-width:min(38ch,24vw);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bx-top button,.bx-top .segmented button,.bx-top .bx-btn{white-space:nowrap}
+.bx-top button,.bx-top .segmented button,.bx-top .btn{white-space:nowrap}
 .bx-top-center{justify-content:flex-end}.bx-top .segmented{flex:none}
 /* page tree rows: a long page / section title is one line with an ellipsis, not a 3-line wall in a narrow panel */
 .bx-node b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
@@ -123,15 +121,14 @@
 .bx-node.section b{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.25}
 
 /* ===== accessibility pass (C6 QA @ 5cc230e): target size (WCAG 2.5.8: ≥ 24 px, ≥ 32 px on small / touch screens), focus rings on the scrollable panels, contrast ===== */
-.bx-right:focus-visible,.bx-left-panel:focus-visible{outline:2px solid #93c5fd;outline-offset:-2px}
-.chipBtn{display:inline-flex;align-items:center;justify-content:center;min-width:24px;min-height:24px;border-radius:6px}.chipBtn:hover:not(:disabled){background:rgba(255,255,255,.12)}.chipBtn:focus-visible{outline:2px solid #93c5fd;outline-offset:1px}
-.smallButton{min-width:28px;min-height:28px;display:inline-flex;align-items:center;justify-content:center;gap:4px}
+.bx-right:focus-visible,.bx-left-panel:focus-visible{outline:2px solid var(--ui-ring);outline-offset:-2px}
+.chipBtn{display:inline-flex;align-items:center;justify-content:center;min-width:24px;min-height:24px;border-radius:6px}.chipBtn:hover:not(:disabled){background:rgba(255,255,255,.12)}.chipBtn:focus-visible{outline:2px solid var(--ui-ring);outline-offset:1px}
 .bx-mini{min-width:28px;height:28px}.bx-drag{min-width:28px}
-.bx-tabs button,.bx-btn,.bx-icon{min-height:28px}
+.bx-tabs button,.bx-icon{min-height:28px}
 .segmented button{min-width:32px;min-height:32px}
 @media(max-width:768px),(pointer:coarse){
-  .chipBtn,.smallButton,.bx-mini,.bx-drag,.bx-icon,.button.icon,.bx-handle{min-width:32px;min-height:32px}
-  .segmented button,.bx-tabs button,.bx-btn.sm{min-height:36px}.segmented button{min-width:36px}
+  .chipBtn,.bx-mini,.bx-drag,.bx-icon,.bx-handle,:is(.studio,.modal,.drawer) .btn.sm,:is(.studio,.modal,.drawer) .btn.icon{min-width:32px;min-height:32px}
+  .segmented button,.bx-tabs button,:is(.studio,.modal,.drawer) .btn.dense.sm{min-height:36px}.segmented button{min-width:36px}
   .xp-clear,.xp-iconBtn{min-width:32px;min-height:32px}
 }
 /* secondary text on the dark editor: the "disabled" library entries and hints keep ≥ 4.5:1 (token --muted on the panel) instead of a faded colour */
@@ -160,19 +157,18 @@
   .bx-top-center>*{flex:none}
   .bx-top .topActions{flex:1 1 100%;flex-wrap:wrap;justify-content:flex-start;gap:6px}
   .bx-top .topActions>*{flex:none}
-  .bx-top .topActions>.button.ghost,.bx-top .topActions>.button.icon{display:inline-flex}
+  .bx-top .topActions>.btn.ghost,.bx-top .topActions>.btn.icon{display:inline-flex}
 }
 
 /* rail / inactive tab contrast: a stronger secondary-text token for the dark editor (≥ 9:1 on the panel) used by the rail, tabs and hints; hover / active / focus keep distinct, visible states */
 .bx-tabs button{color:var(--muted-strong)}
 .bx-tabs button:hover:not(.active){background:#1b2130;color:#fff}
 .bx-tabs button.active{background:#2d3270;color:#fff}
-.bx-tabs button:focus-visible{outline:2px solid #93c5fd;outline-offset:-2px}
+.bx-tabs button:focus-visible{outline:2px solid var(--ui-ring);outline-offset:-2px}
 /* checkboxes / radios of the editor are real targets: 24 px (WCAG 2.5.8) */
-.bx-right input[type=checkbox],.bx-right input[type=radio],.bx-left-panel input[type=checkbox],.bx-left-panel input[type=radio],.drawer input[type=checkbox],.drawer input[type=radio]{width:24px;height:24px;min-height:24px;margin:0;accent-color:#6366f1;flex:none}
+.bx-right input[type=checkbox],.bx-right input[type=radio],.bx-left-panel input[type=checkbox],.bx-left-panel input[type=radio],.drawer input[type=checkbox],.drawer input[type=radio]{width:24px;height:24px;min-height:24px;margin:0;accent-color:#3b7bff;flex:none}
 
 /* C6 fix pass 2 (UX-006 / UX-008): the workspace header of AI / Code pages, icon buttons that shrank, compact selects, text buttons, brand width on a phone */
-.button.icon{flex:none;min-width:32px}
 .linkButton{display:inline-flex;align-items:center;min-height:24px}
 .bx-left-panel select,.bx-right select,.bx-panel-body select{min-height:32px}
 @media(max-width:900px){
@@ -192,6 +188,7 @@
 .bx-mview{display:none}
 @media(max-width:760px){
   html:has(.bx-root),body:has(.bx-root){height:auto;overflow:visible}
+  html.bx-page,html.bx-page body{height:auto;overflow:visible}   /* M-112: same rules without :has() (class set by BuilderWorkspace); a separate rule, so a browser that rejects :has() still applies it */
   .studio.bx-root{display:block;height:auto;min-height:100dvh}
   .bx-body{display:block;overflow:visible}
   .bx-mview{display:block;position:sticky;top:0;z-index:45;background:var(--bg);border-bottom:1px solid var(--line);padding:6px 8px}
@@ -200,6 +197,7 @@
   .bx-body[data-mview="canvas"] :is(.bx-left,.bx-right),
   .bx-body[data-mview="tools"] :is(.bx-center,.bx-right),
   .bx-body[data-mview="props"] :is(.bx-center,.bx-left){display:none}
+  html.bx-page{scroll-padding-top:64px;overscroll-behavior-y:contain}
   html:has(.bx-root){scroll-padding-top:64px;overscroll-behavior-y:contain}   /* a focused control is never hidden under the sticky switch (WCAG 2.4.11); no pull-to-refresh while dragging inside the builder */
   .bx-center,.bx-left,.bx-right{scroll-margin-top:64px}
   .bx-center{order:0;height:calc(100vh - 60px);height:calc(100dvh - 60px);min-height:420px}
@@ -209,4 +207,76 @@
   .bx-top-center{flex-wrap:wrap;overflow:visible}
   .bx-mview .bx-tabs button{position:relative}
   .bx-mview .bx-badge{position:absolute;top:5px;right:8px;min-width:0;padding:0;background:none;color:#93c5fd;font-size:11px;line-height:1}
+}
+
+/* ===== wave 3: AI / Code workspace on small screens (M-011, M-104) =====
+   1) 768-1023 px: responsive.css gives `.studio` the rows 56px 48px 1fr for the legacy 3-row markup; the real workspace has only a header and a main, so the main fell into the 48 px row
+      (the AI preview collapsed to a 48 px strip at e.g. 1000 px). The two-row grid builder.css already used below 900 px now applies up to 1023 px.
+   2) <= 767 px: the text buttons are hidden by responsive.css; `.wsMore` (OverflowMenu) replaces them, and `.wsPaneSwitch` shows ONE pane at a time (chat / preview, or work / changes). */
+@media(max-width:1023px){.studio.workspace3:not(.bx-root){grid-template-rows:auto minmax(0,1fr);height:100dvh}}
+.wsMore{display:none;position:relative}
+.wsPaneSwitch{display:none}
+.wsMoreBtn{width:34px;height:34px;padding:0;font-size:18px;line-height:1}
+.wsMoreMenu{position:absolute;inset-inline-end:0;top:calc(100% + 6px);z-index:45;min-width:210px;display:grid;gap:2px;padding:6px;background:#0f151c;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+.wsMoreItem{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;width:100%;min-height:44px;padding:8px 12px;border:0;border-radius:8px;background:transparent;color:var(--text);text-align:start;font:inherit;cursor:pointer}
+.wsMoreItem:hover,.wsMoreItem:focus-visible{background:var(--panel2)}
+.wsMoreItem[aria-disabled=true]{cursor:not-allowed;opacity:.85}.wsMoreItem small{color:var(--muted);font-size:12px}
+@media(max-width:900px){
+  /* the panes are stacked from here down (factory.css): ONE at a time instead */
+  .wsPaneSwitch{display:block;grid-column:1/-1;padding:6px 10px;border-bottom:1px solid var(--line);background:var(--panel)}
+  .wsPaneSwitch .tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0}
+  .wsPaneSwitch .tabs button{min-height:40px;border:1px solid var(--line);border-radius:8px;background:#111820;color:var(--muted);font:inherit}
+  .wsPaneSwitch .tabs button.active{border-color:#46617a;background:#223043;color:var(--text)}
+  .wsBody.mode-ai{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+  .wsBody.mode-ai .promptPane,.wsBody.mode-ai .previewPane{min-height:0}
+  .wsBody.mode-ai[data-pane=chat] .previewPane,.wsBody.mode-ai[data-pane=preview] .promptPane{display:none}
+  .codeBody{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+  .codeBody[data-pane=work] .codeRight,.codeBody[data-pane=changes] .codeLeft{display:none}
+}
+@media(max-width:1023px){
+  /* two rows instead of three: [back, name, saved] [... Xuất bản] then the mode tabs */
+  .workspace3:not(.bx-root) .topbar,.studio.codeStudio .topbar{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"brand actions" "tabs tabs";align-items:center;padding-block:6px;row-gap:6px}
+  .workspace3:not(.bx-root) .topbar .brand,.studio.codeStudio .topbar .brand{grid-area:brand;min-width:0}
+  .workspace3:not(.bx-root) .topbar .modeTabs,.studio.codeStudio .topbar .modeTabs{grid-area:tabs;justify-self:start}
+  .workspace3:not(.bx-root) .topbar .topActions,.studio.codeStudio .topbar .topActions{grid-area:actions;flex-wrap:nowrap}
+  .studio.codeStudio .topbar .brand .projectMeta{display:none}
+  .topbar .topActions .btn.primary,.modeTabs button{white-space:nowrap}
+  .modeTabs button{display:inline-flex;align-items:center;gap:4px}
+  .workspace3:not(.bx-root) .topActions .btn,.studio.codeStudio .topActions .btn{white-space:nowrap}
+}
+@media(max-width:767px){
+  .wsMore{display:block}
+}
+
+.intro h2{font-size:24px;margin:0 0 6px}
+
+/* M-118: long names (workspace, account, app, template) wrap or are cut with an ellipsis; they never widen the page */
+.studioTop{min-width:0}
+.studioTop .row{min-width:0;flex:0 1 auto;flex-wrap:nowrap}
+.studioTop .row>.muted{min-width:0;max-width:24ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.studioTop select{min-width:0;max-width:24ch;text-overflow:ellipsis}
+@media(max-width:767px){.studioTop .row>.muted,.studioTop select{max-width:10ch}}
+.projectGrid{grid-template-columns:repeat(auto-fill,minmax(min(240px,100%),1fr))}
+.projectGrid>*,.projectCard,.projectInfo,.compGrid>*,.libCard{min-width:0}
+.shell .page :is(h1,h2,h3,b,p,small,li,.code){overflow-wrap:anywhere}
+/* M-125: every control in a Studio drawer is at least 24 px tall (the navigation row selects were 22 px) */
+.drawer select,.drawer input:not([type=checkbox]):not([type=radio]){min-height:32px}
+/* M-036: the phone note exists only on a phone */
+.bx-phone-note{display:none;margin:0;padding:8px 12px;font-size:13px;line-height:1.45;color:var(--muted-strong);background:var(--panel);border-bottom:1px solid var(--line)}
+@media(max-width:760px){.bx-phone-note{display:block}}
+
+/* M-035: the members drawer fits a phone even with long unbreakable names: fixed layout, the name column wraps anywhere, the role select shrinks (it had min-width:150px) */
+.memberTable{table-layout:fixed}
+.memberTable td:first-child{overflow-wrap:anywhere}
+.memberTable th:nth-child(2),.memberTable td:nth-child(2){width:38%}
+.memberTable td:nth-child(2) select{min-width:0;width:100%}
+.memberTable th:last-child,.memberTable td:last-child{width:5rem}
+
+/* M-083 (S1-058): a test-mode "Chạy thử" button never wraps to "Chạy / thử"; the row text wraps instead */
+.bx-test-row>button{white-space:nowrap;flex:none}
+/* M-083 (S1-037): on a phone the Studio header search gets its own full-width row instead of being squeezed to "Tìm ứn…" next to the workspace name, avatar and logout */
+@media(max-width:600px){
+  .topHeader.studioTop{flex-wrap:wrap;row-gap:8px;padding-block:8px}
+  .studioTop .search{order:3;flex:1 1 100%}
+  .studio-shell .shellMain{grid-template-rows:auto minmax(0,1fr)}   /* the header is two rows now: its grid row must grow (a fixed 56px row left the search under <main> between 521 and 600 px; found by the real-stack audit at 600) */
 }

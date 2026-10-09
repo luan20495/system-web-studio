@@ -5,7 +5,7 @@
  * Move is a "Di chuyển tới…" dialog (reliable, keyboard friendly), not drag and drop. The UI avoids obvious cycles; the server is the authority (ORG_CYCLE).
  */
 import { memo, useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { ArrowRightLeft, Building2, ChevronRight, ChevronsDownUp, ChevronsUpDown, FolderTree, Info, Pencil, Plus, Power, RefreshCw, Settings2, Trash2, ModalHeader, Picker, type PickerOption } from "@xweb/ui";
+import { ArrowRightLeft, Building2, ChevronRight, ChevronsDownUp, ChevronsUpDown, FolderTree, Info, Pencil, Plus, Power, RefreshCw, Settings2, Trash2, ModalHeader, ReasonButton, Picker, type PickerOption } from "@xweb/ui";
 import { Modal } from "./Modal";
 import { Card, StateView } from "../ui";
 import { useLoad } from "../useLoad";
@@ -61,7 +61,7 @@ export function OrganizationView({ api, plan, tenant }: { api: OrganizationApi; 
     try { await api.updateOrganizationUnit(tenant.id, u.id, u.version, { enabled: !u.enabled }); setFlash(u.enabled ? "Đã tắt đơn vị." : "Đã bật đơn vị."); reload(); } catch (e) { setToggleProblem(orgProblem(e)); } finally { setBusyToggle(false); }
   }
 
-  if (!access) return <StateView kind="forbidden" title="Bạn chưa quản trị công ty nào" detail={<p data-testid="org-forbidden">{(plan.access as { reason: string }).reason}</p>}/>;
+  if (!access) return <StateView kind="forbidden" title="Bạn chưa có quyền xem cơ cấu tổ chức" detail={<p data-testid="org-forbidden">{(plan.access as { reason: string }).reason}</p>}/>;
   return (
     <div className="xp-org" data-testid="org">
       <div className="xp-orgBar">
@@ -71,7 +71,7 @@ export function OrganizationView({ api, plan, tenant }: { api: OrganizationApi; 
           <button className="btn xp-btnIcon" data-testid="org-collapse-all" onClick={() => setOpen(new Set())}><ChevronsDownUp size={16} aria-hidden="true"/> Thu gọn</button></> : null}
           <button className="btn xp-btnIcon" data-testid="org-types" disabled={!ready} onClick={() => setDialog({ kind: "types" })}><Settings2 size={16} aria-hidden="true"/> Loại đơn vị</button>
           <button className="btn xp-btnIcon" data-testid="org-reload" disabled={!ready} onClick={reload} aria-label="Tải lại cơ cấu"><RefreshCw size={16} aria-hidden="true"/></button>
-          <button className="btn primary xp-btnIcon" data-testid="org-add-root" disabled={!ready || !canEdit} title={!canEdit ? "Chưa sẵn sàng" : undefined} onClick={() => setDialog({ kind: "create", parentId: null })}><Plus size={16} aria-hidden="true"/> Thêm đơn vị gốc</button>
+          <ReasonButton className="btn primary xp-btnIcon" data-testid="org-add-root" unavailable={!ready || !canEdit} reason={ready && !canEdit ? "Cơ cấu đang ở chế độ chỉ xem." : undefined} onClick={() => setDialog({ kind: "create", parentId: null })}><Plus size={16} aria-hidden="true"/> Thêm đơn vị gốc</ReasonButton>
         </div>
       </div>
       {flash ? <p className="notice" role="status" data-testid="org-flash">{flash}</p> : null}
@@ -101,7 +101,7 @@ export function OrganizationView({ api, plan, tenant }: { api: OrganizationApi; 
         onDone={(u) => { setFlash("Đã thêm đơn vị."); if (u?.parentId) setOpen((s) => new Set([...s, u.parentId!])); if (u) setSelected(u.id); setDialog(null); reload(); }} onReload={reload}/> : null}
       {dialog?.kind === "edit" && sel ? <UnitDialog mode="edit" tenantId={tenant.id} api={api} units={units} types={types} unit={sel} parent={units.find((u) => u.id === sel.parentId) ?? null} onClose={() => setDialog(null)}
         onDone={() => { setFlash("Đã lưu đơn vị."); setDialog(null); reload(); }} onReload={() => { setDialog(null); reload(); }}/> : null}
-      {dialog?.kind === "move" && sel ? <MoveDialog tenantId={tenant.id} api={api} units={units} types={types} unit={sel} onClose={() => setDialog(null)} onDone={() => { setFlash("Đã di chuyển đơn vị."); setDialog(null); reload(); }} onReload={() => { setDialog(null); reload(); }}/> : null}
+      {dialog?.kind === "move" && sel ? <MoveDialog tenantId={tenant.id} api={api} units={units} tree={tree} types={types} unit={sel} onClose={() => setDialog(null)} onDone={() => { setFlash("Đã di chuyển đơn vị."); setDialog(null); reload(); }} onReload={() => { setDialog(null); reload(); }}/> : null}
       {dialog?.kind === "delete" && sel ? <DeleteDialog tenantId={tenant.id} api={api} units={units} unit={sel} onClose={() => setDialog(null)} onDone={() => { setFlash("Đã xóa đơn vị."); setSelected(null); setDialog(null); reload(); }} onReload={() => { setDialog(null); reload(); }}/> : null}
       {dialog?.kind === "types" ? <TypesDialog tenantId={tenant.id} api={api} plan={plan} types={types} onClose={() => setDialog(null)} onChanged={reload}/> : null}
     </div>
@@ -115,12 +115,16 @@ function ErrorBlock({ error, retry }: { error: unknown; retry: () => void }) {
 
 // ------------------------------------------------------------------------------------------------------------------------------- tree
 const INDENT_PX = 18; const MAX_INDENT_LEVELS = 10;
+/** above this many VISIBLE rows only the rows in (and just around) the scrollport are in the DOM; every row keeps its aria-level / posinset / setsize, so the tree is still announced whole (M-111) */
+export const WINDOW_ABOVE = 1000;
+/** one row = the 48px node + the 2px gap of the grid; fixed so the window can be computed from scrollTop without measuring rows */
+export const ROW_H = 50; const OVERSCAN = 10;
 /** One row. `memo`: a row re-renders only when ITS props change (selected / open / tabbable / its unit), so selecting a node in a 2 000-node tree re-renders two rows, not 2 000. */
-const TreeRow = memo(function TreeRow({ n, type, selected, open, tabbable, onSelect, onToggle, onFocusRow }: { n: TreeNode; type: OrgUnitType | undefined; selected: boolean; open: boolean; tabbable: boolean; onSelect: (id: string) => void; onToggle: (id: string, v: boolean) => void; onFocusRow: (id: string) => void }) {
+const TreeRow = memo(function TreeRow({ n, type, selected, open, tabbable, fixedH, onSelect, onToggle, onFocusRow }: { n: TreeNode; type: OrgUnitType | undefined; selected: boolean; open: boolean; tabbable: boolean; fixedH?: number; onSelect: (id: string) => void; onToggle: (id: string, v: boolean) => void; onFocusRow: (id: string) => void }) {
   const u = n.unit; const has = n.children.length > 0;
   const counts = [count(u.employeeCount, "nhân viên"), has ? `${n.children.length} đơn vị con` : null].filter(Boolean).join(" · ");
   return (
-    <li role="treeitem" aria-level={n.depth + 1} aria-setsize={n.size} aria-posinset={n.pos} aria-expanded={has ? open : undefined} aria-selected={selected}>
+    <li role="treeitem" aria-level={n.depth + 1} aria-setsize={n.size} aria-posinset={n.pos} aria-expanded={has ? open : undefined} aria-selected={selected} style={fixedH ? { height: fixedH, overflow: "hidden" } : undefined}>
       <div className={`xp-node${selected ? " sel" : ""}${u.enabled ? "" : " off"}`} data-node={u.id} data-testid={`node:${u.id}`} tabIndex={tabbable ? 0 : -1} onClick={() => { onSelect(u.id); onFocusRow(u.id); }} onFocus={() => onFocusRow(u.id)} style={{ paddingLeft: 8 + Math.min(n.depth, MAX_INDENT_LEVELS) * INDENT_PX }}>
         <span className={`xp-chev${has ? "" : " leaf"}`} aria-hidden="true" onClick={(e) => { e.stopPropagation(); if (has) onToggle(u.id, !open); }}><ChevronRight size={16} style={{ transform: open ? "rotate(90deg)" : undefined }}/></span>
         <span className="xp-nodeIcon"><UnitIcon id={type?.icon}/></span>
@@ -136,16 +140,51 @@ const TreeRow = memo(function TreeRow({ n, type, selected, open, tabbable, onSel
 /**
  * A flat WAI-ARIA tree (role=tree, treeitems with aria-level / aria-setsize / aria-posinset): only the VISIBLE rows exist in the DOM (a collapsed node renders none of its children), the rows are memoised,
  * and indentation is capped so a very deep chain does not push the text out of the card (a "C<n>" tag shows the real level). Keyboard: ↑ ↓ → ← Home End Enter.
+ * Above WINDOW_ABOVE visible rows (an expanded 2 000-unit tree) the rows are WINDOWED: fixed-height rows, two spacers, only the rows in view +/- OVERSCAN are mounted (26 073 DOM nodes -> a few hundred).
+ * The keyboard still reaches every row (the list scrolls to it first); when the tab-stop row is out of the window the list itself takes the Tab stop and hands the focus to that row.
  */
 function Tree({ nodes, types, selected, open, onSelect, onOpen }: { nodes: TreeNode[]; types: OrgUnitType[]; selected: string | null; open: Set<string>; onSelect: (id: string) => void; onOpen: (id: string, v: boolean) => void }) {
   const visible = useMemo(() => flattenTree(nodes, open), [nodes, open]);
+  const indexOf = useMemo(() => new Map(visible.map((n, i) => [n.unit.id, i])), [visible]);
   const typeById = useMemo(() => new Map(types.map((t) => [t.id, t])), [types]);
   const [focus, setFocus] = useState<string | null>(null); const root = useRef<HTMLUListElement>(null);
-  const cur = focus && visible.some((n) => n.unit.id === focus) ? focus : selected && visible.some((n) => n.unit.id === selected) ? selected : visible[0]?.unit.id ?? null;
-  const go = useCallback((id: string | undefined) => { if (!id) return; setFocus(id); requestAnimationFrame(() => root.current?.querySelector<HTMLElement>(`[data-node="${CSS.escape(id)}"]`)?.focus()); }, []);
+  const cur = focus && indexOf.has(focus) ? focus : selected && indexOf.has(selected) ? selected : visible[0]?.unit.id ?? null;
+  const windowed = visible.length > WINDOW_ABOVE;
+  const [view, setView] = useState({ top: 0, h: 720 }); const frame = useRef(0);
+  useEffect(() => {
+    const el = root.current; if (!windowed || !el) return;
+    const measure = () => setView((v) => (el.clientHeight && el.clientHeight !== v.h ? { ...v, h: el.clientHeight } : v));
+    measure(); window.addEventListener("resize", measure); return () => window.removeEventListener("resize", measure);
+  }, [windowed]);
+  useEffect(() => () => cancelAnimationFrame(frame.current), []);
+  const onScroll = (e: React.UIEvent<HTMLUListElement>) => {
+    if (!windowed) return; const top = e.currentTarget.scrollTop; cancelAnimationFrame(frame.current);
+    frame.current = requestAnimationFrame(() => setView((v) => (Math.abs(v.top - top) < 1 ? v : { ...v, top })));
+  };
+  const first = windowed ? Math.max(0, Math.floor(view.top / ROW_H) - OVERSCAN) : 0;
+  const last = windowed ? Math.min(visible.length, Math.ceil((view.top + view.h) / ROW_H) + OVERSCAN) : visible.length;
+  /** scroll the list so row `i` is inside the scrollport (windowed only); returns the new top */
+  const reveal = useCallback((i: number) => {
+    const el = root.current; if (!el) return; const h = el.clientHeight || 720; let top = el.scrollTop;
+    if (i * ROW_H < top) top = i * ROW_H; else if ((i + 1) * ROW_H > top + h) top = (i + 1) * ROW_H - h; else return;
+    el.scrollTop = top; setView((v) => ({ ...v, top, h }));
+  }, []);
+  const focusRow = useCallback((id: string, tries = 4) => {
+    const el = root.current?.querySelector<HTMLElement>(`[data-node="${CSS.escape(id)}"]`);
+    if (el) el.focus(); else if (tries > 0) requestAnimationFrame(() => focusRow(id, tries - 1));
+  }, []);
+  const go = useCallback((id: string | undefined) => {
+    if (!id) return; setFocus(id);
+    if (windowed) { const i = indexOf.get(id); if (i !== undefined) reveal(i); }
+    requestAnimationFrame(() => focusRow(id));
+  }, [windowed, indexOf, reveal, focusRow]);
+  // the selection moved by something other than a click (a new unit, a reload): bring it into the window
+  useEffect(() => { if (windowed && selected) { const i = indexOf.get(selected); if (i !== undefined && (i < first || i >= last)) reveal(i); } }, [selected]); // eslint-disable-line react-hooks/exhaustive-deps
   const onFocusRow = useCallback((id: string) => setFocus(id), []);
+  const curIndex = cur ? indexOf.get(cur) ?? -1 : -1;
+  const curMounted = curIndex >= first && curIndex < last;
   function onKey(e: KeyboardEvent) {
-    const i = visible.findIndex((n) => n.unit.id === cur); const n = visible[i]; if (!n) return;
+    const i = curIndex; const n = visible[i]; if (!n) return;
     const has = n.children.length > 0; const isOpen = open.has(n.unit.id);
     if (e.key === "ArrowDown") { e.preventDefault(); go(visible[Math.min(visible.length - 1, i + 1)]?.unit.id); }
     else if (e.key === "ArrowUp") { e.preventDefault(); go(visible[Math.max(0, i - 1)]?.unit.id); }
@@ -154,9 +193,14 @@ function Tree({ nodes, types, selected, open, onSelect, onOpen }: { nodes: TreeN
     else if (e.key === "ArrowLeft") { e.preventDefault(); if (has && isOpen) onOpen(n.unit.id, false); else { let j = i - 1; while (j >= 0 && visible[j].depth >= n.depth) j--; go(visible[j]?.unit.id); } }
     else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(n.unit.id); }
   }
+  const rows = windowed ? visible.slice(first, last) : visible;
   return (
-    <ul className="xp-tree" role="tree" aria-label="Cơ cấu tổ chức" data-testid="org-tree" ref={root} onKeyDown={onKey}>
-      {visible.map((n) => <TreeRow key={n.unit.id} n={n} type={n.unit.typeId ? typeById.get(n.unit.typeId) : undefined} selected={selected === n.unit.id} open={open.has(n.unit.id)} tabbable={cur === n.unit.id} onSelect={onSelect} onToggle={onOpen} onFocusRow={onFocusRow}/>)}
+    <ul className="xp-tree" role="tree" aria-label="Cơ cấu tổ chức" data-testid="org-tree" ref={root} onKeyDown={onKey} onScroll={onScroll}
+      tabIndex={windowed && !curMounted ? 0 : undefined} onFocus={(e) => { if (e.target === e.currentTarget && cur) go(cur); }} style={windowed ? { display: "block" } : undefined}
+      data-windowed={windowed ? "true" : undefined} data-rows={windowed ? `${rows.length}/${visible.length}` : undefined}>
+      {windowed && first > 0 ? <li role="presentation" aria-hidden="true" style={{ height: first * ROW_H }}/> : null}
+      {rows.map((n) => <TreeRow key={n.unit.id} n={n} type={n.unit.typeId ? typeById.get(n.unit.typeId) : undefined} selected={selected === n.unit.id} open={open.has(n.unit.id)} tabbable={cur === n.unit.id} fixedH={windowed ? ROW_H : undefined} onSelect={onSelect} onToggle={onOpen} onFocusRow={onFocusRow}/>)}
+      {windowed && last < visible.length ? <li role="presentation" aria-hidden="true" style={{ height: (visible.length - last) * ROW_H }}/> : null}
     </ul>
   );
 }
@@ -180,9 +224,9 @@ function Detail({ unit, units, type, canEdit, busy, problem, onAction }: { unit:
         <button className="btn xp-btnIcon" data-testid="org-edit" disabled={!canEdit} onClick={() => onAction("edit")}><Pencil size={16} aria-hidden="true"/> Sửa</button>
         <button className="btn xp-btnIcon" data-testid="org-move" disabled={!canEdit} onClick={() => onAction("move")}><ArrowRightLeft size={16} aria-hidden="true"/> Di chuyển tới…</button>
         <button className="btn xp-btnIcon" data-testid="org-toggle" disabled={!canEdit || busy} onClick={() => onAction("toggle")}><Power size={16} aria-hidden="true"/> {unit.enabled ? "Tắt" : "Bật"}</button>
-        <button className="btn danger xp-btnIcon" data-testid="org-delete" disabled={!canEdit || !!block} title={block ?? undefined} onClick={() => onAction("delete")}><Trash2 size={16} aria-hidden="true"/> Xóa</button>
+        <button className="btn danger xp-btnIcon" data-testid="org-delete" disabled={!canEdit || !!block} aria-describedby={block ? "org-delete-blocked" : undefined} onClick={() => onAction("delete")}><Trash2 size={16} aria-hidden="true"/> Xóa</button>
       </div>
-      {block ? <p className="hint" data-testid="org-delete-blocked">Chưa xóa được: {block}</p> : null}
+      {block ? <p className="hint" id="org-delete-blocked" data-testid="org-delete-blocked">Chưa xóa được: {block}</p> : null}
       {problem ? <Problem p={problem}/> : null}
     </div>
   );
@@ -226,8 +270,8 @@ function UnitDialog({ mode, tenantId, api, units, types, unit, parent, onClose, 
   );
 }
 
-function MoveDialog({ tenantId, api, units, types, unit, onClose, onDone, onReload }: { tenantId: string; api: OrganizationApi; units: OrgUnit[]; types: OrgUnitType[]; unit: OrgUnit; onClose: () => void; onDone: () => void; onReload: () => void }) {
-  const targets = useMemo(() => moveTargets(units, types, unit.id), [units, types, unit.id]);
+function MoveDialog({ tenantId, api, units, tree, types, unit, onClose, onDone, onReload }: { tenantId: string; api: OrganizationApi; units: OrgUnit[]; tree: TreeNode[]; types: OrgUnitType[]; unit: OrgUnit; onClose: () => void; onDone: () => void; onReload: () => void }) {
+  const targets = useMemo(() => moveTargets(units, types, unit.id, tree), [units, types, unit.id, tree]);
   const [to, setTo] = useState<string | null | undefined>(undefined); const [busy, setBusy] = useState(false); const [problem, setProblem] = useState<OrgProblem | null>(null);
   async function submit(e: FormEvent) {
     e.preventDefault(); setProblem(null); if (to === undefined) return;
@@ -257,7 +301,7 @@ function DeleteDialog({ tenantId, api, units, unit, onClose, onDone, onReload }:
   return (
     <Modal label={`Xóa ${unit.name}`} onClose={onClose}>
       <div className="modalBody" data-testid="delete-dialog">
-        <ModalHeader icon={<Trash2 size={22}/>} title={`Xóa “${unit.name}”?`} subtitle="Chỉ xóa được đơn vị không còn đơn vị con và nhân viên. Việc này không hoàn tác được."/>
+        <ModalHeader icon={<Trash2 size={22}/>} title={`Xóa “${unit.name}”?`} subtitle="Chỉ xóa được đơn vị không còn đơn vị con và nhân viên. Việc này không hòan tác được."/>
         {block ? <p className="hint">{block}</p> : null}
         {problem ? <Problem p={problem} onReload={onReload}/> : null}
         <div className="xp-footer"><button className="btn" onClick={onClose}>Hủy</button><button className="btn danger" data-testid="delete-confirm" disabled={busy || !!block} onClick={() => void go()}>{busy ? "Đang xóa…" : "Xóa đơn vị"}</button></div>

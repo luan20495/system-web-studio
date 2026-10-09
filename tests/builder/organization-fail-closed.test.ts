@@ -77,6 +77,6 @@ test("the ONLY non-organization call while listEmployees is NOT_READY is the exi
 test("a READY capability must name its route and the capability the SERVER lists; an error from the transport is passed through untouched (409 is never turned into success)", async () => {
   for (const id of IDS) { const c = CAPABILITIES[id]; if (c.status === "READY") { assert.ok(c.route.trim().length > 0, `${id}: READY without a route`); assert.ok(c.needs.length > 0, `${id}: READY without the capability that gates it`); } else assert.ok(!("route" in c), `${id}: NOT_READY must not name a route`); }
   const conflict = Object.assign(new Error("ORG_CYCLE"), { status: 409, code: "ORG_CYCLE" });
-  const api = createOrganizationApi({ moveOrganizationUnit: () => Promise.reject(conflict) }, employeesFromMembers, { ...CAPABILITIES, moveOrganizationUnit: { status: "READY", needs: ["TENANT_MANAGE"], route: "(test fixture: not a real route)" } });
+  const api = createOrganizationApi({ moveOrganizationUnit: () => Promise.reject(conflict) }, employeesFromMembers, { ...CAPABILITIES, moveOrganizationUnit: { status: "READY", needs: ["ORG_STRUCTURE_MANAGE"], route: "(test fixture: not a real route)" } });
   await assert.rejects(api.moveOrganizationUnit(T, "u1", 1, "u2"), (e: unknown) => e === conflict, "the adapter must not swallow or rewrite the server's 409");
 });

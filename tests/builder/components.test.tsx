@@ -82,12 +82,12 @@ test("left rail has the eight tools; vertical tablist", () => {
   assert.match(html, /aria-orientation="vertical"/); assert.equal((html.match(/role="tab"/g) ?? []).length, 8);
 });
 
-test("top bar: name, save state, Edit/Test, device, Share, Publish; disabled controls explain why", () => {
+test("top bar: name, save state, Edit/Test, device, Share, Publish; unavailable controls are aria-disabled (focusable) and explain why when pressed (M-031)", () => {
   const html = renderToStaticMarkup(<BuilderTopBar name="Cửa hàng" meta="rev 3" save={{ state: "saved", at: null }} appMode="EDIT" onAppMode={() => undefined} device="desktop" onDevice={() => undefined}
     canShare={false} shareReason="Bạn không có quyền chia sẻ." onShare={() => undefined} canPublish={false} publishReason="Bạn không có quyền xuất bản." publishBusy={false} issues={{ block: 2, warn: 0 }} onPublish={() => undefined}/>);
   for (const t of ["Cửa hàng", "Đã lưu", "Chỉnh sửa", "Dùng thử", "Máy tính", "Điện thoại", "Chia sẻ", "Xuất bản"]) assert.match(html, new RegExp(t));
   assert.match(html, /aria-pressed="true"[^>]*>Chỉnh sửa/); assert.match(html, /aria-pressed="false"[^>]*>Dùng thử/);
-  assert.match(html, /title="Bạn không có quyền xuất bản\."/); assert.match(html, /2 lỗi chặn xuất bản/);
+  assert.match(html, /aria-disabled="true"[^>]*>Xuất bản/); assert.ok(!/title="Bạn không có quyền xuất bản\."/.test(html), "no title-only reason"); assert.match(html, /2 lỗi chặn xuất bản/);
   assert.deepEqual(a11yProblems(html), []);
 });
 
@@ -149,6 +149,9 @@ test("workflow editor shows retry, timeout, compensation and approval as readabl
   for (const k of ["Hành động", "Chờ", "Phê duyệt", "Rẽ nhánh"]) assert.match(html, new RegExp(`\\+ ${k}`));
   assert.doesNotMatch(html, /BPMN/i);
   assert.deepEqual(a11yProblems(html), []);
+  // M-106: no raw step id is shown as a step name, and step controls are named by the readable title
+  for (const s of full().workflows![0].steps) assert.doesNotMatch(html, new RegExp(`<small>${s.id}`), s.id);
+  assert.match(html, /aria-label="Xóa Bước 1 · /);
 });
 
 test("workflows panel: NOT_READY gate and list", () => {
@@ -187,7 +190,8 @@ test("test panel: Edit != Test rules, would-run / unsupported / not-sent / publi
     { id: "n", name: "Báo", type: "NOTIFY", channel: "IN_APP", templateRef: "t" }, { id: "w", name: "Chạy", type: "START_WORKFLOW", workflowRef: "wf" }],
     workflows: [{ id: "wf", name: "W", trigger: "MANUAL", steps: [{ id: "end", kind: "END" }] }] } as never);
   const html = renderToStaticMarkup(<TestPanel doc={d} rawPermissions={["APP_VIEW", "ACTION_EXECUTE", "WORKFLOW_EXECUTE"]}/>);
-  assert.match(html, /Chế độ dùng thử/); assert.match(html, /data-outcome="WOULD_RUN"/); assert.match(html, /data-outcome="UNSUPPORTED"/); assert.match(html, /data-outcome="NOT_SENT"/); assert.match(html, /data-outcome="NOT_RUN"/);
+  assert.match(html, /Chế độ dùng thử/); assert.match(html, /chỉ để xem \(không tương tác\)/); assert.match(html, /“Chạy thử”/);   // M-042: says the preview is not interactive and where trying happens
+  assert.match(html, /data-outcome="WOULD_RUN"/); assert.match(html, /data-outcome="UNSUPPORTED"/); assert.match(html, /data-outcome="NOT_SENT"/); assert.match(html, /data-outcome="NOT_RUN"/);
   assert.match(html, /workflow_run/); assert.doesNotMatch(html, /data-outcome="SUCCESS"/); assert.match(html, /disabled=""[^>]*>Chạy thử/);
   assert.match(html, /Chưa sẵn sàng/);
   assert.deepEqual(a11yProblems(html), []);
@@ -203,7 +207,7 @@ test("outcome view: 409 unknown outcome and 422 rejected have their own messages
 test("forms + theme panels: NOT_READY gates, no CSS/URL inputs for the theme", () => {
   assert.match(renderToStaticMarkup(<FormsPanel ctx={ctx({ doc: baseDoc({ sections: [{ id: "f1", type: "ContactForm", props: {} } as never] }), readiness: notReady("x") })} onSelect={() => undefined} onNewAction={() => undefined} openSite={() => undefined}/>), /Chưa sẵn sàng/);
   const th = renderToStaticMarkup(<ThemePanel ctx={ctx()}/>);
-  assert.match(th, /SYSTEM/); assert.doesNotMatch(th, /<textarea/); assert.match(th, /chưa áp dụng giao diện này/);
+  assert.match(th, /SYSTEM/); assert.doesNotMatch(th, /<textarea/); assert.match(th, /Chưa áp dụng:.*bản xem trước và website xuất bản hiện chưa dùng/);   // M-042: says plainly that neither preview nor site applies it
   assert.match(renderToStaticMarkup(<ThemePanel ctx={ctx({ readiness: notReady("y") })}/>), /Chưa sẵn sàng/);
   assert.deepEqual(a11yProblems(th), []);
 });
@@ -237,4 +241,22 @@ test("top bar: the retry button appears only for a failed save that has a retry 
   assert.match(failed, /Lưu thất bại/); assert.match(failed, /data-testid="retry-save"/);
   assert.doesNotMatch(renderToStaticMarkup(<BuilderTopBar {...base} save={{ state: "error", at: null }}/>), /retry-save/);
   assert.doesNotMatch(renderToStaticMarkup(<BuilderTopBar {...base} save={{ state: "saved", at: null }} onRetrySave={() => undefined}/>), /retry-save/);
+});
+
+test("M-080: action chains are checkbox lists (no <select multiple>), and a NEW action's open problems are not an alert", () => {
+  const html = renderToStaticMarkup(<ActionEditor ctx={ctx()} preset={{ type: "NAVIGATE" }} onDone={() => undefined} onCancel={() => undefined}/>);
+  assert.doesNotMatch(html, /<select[^>]*multiple/i);
+  assert.match(html, /<legend>Khi thành công, chạy tiếp<\/legend>[\s\S]*?type="checkbox"[^>]*\/?>[\s\S]*?Làm mới/);
+  assert.match(html, /<legend>Khi lỗi, chạy tiếp<\/legend>/);
+  assert.match(html, /class="bx-issues"/, "a new NAVIGATE action without a page has an open problem");
+  assert.doesNotMatch(html, /role="alert"/, "nothing failed yet: no alert when the editor opens");
+  assert.deepEqual(a11yProblems(html), []);
+});
+
+test("M-081: a NOT_READY step/tab badge is announced as ' (chưa sẵn sàng)', not glued to the label ('…cấu trúcchưa')", () => {
+  const html = renderToStaticMarkup(<DataWizard ctx={ctx({ readiness: notReady("C2 V2 chưa tích hợp") })}/>);
+  const tabs = html.match(/<button[^>]*role="tab"[\s\S]*?<\/button>/g) ?? [];
+  const withBadge = tabs.filter((t) => /bx-badge/.test(t));
+  assert.ok(withBadge.length > 0, "some step is NOT_READY");
+  for (const t of withBadge) { assert.match(t, /class="bx-badge" aria-hidden="true">chưa<\/span><span class="srOnly"> \(chưa sẵn sàng\)<\/span>/); }
 });

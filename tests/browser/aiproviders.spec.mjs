@@ -1,14 +1,11 @@
 // @class: harness — real Chromium on Platform → AI → Nhà cung cấp with an in-page FAKE of the admin AI routes (no backend): list rows (logo, name, status, model count, test connection), the add dialog (icons, picker, switches, key field),
 // the exact request body (contract unchanged), keyboard, and "no icon comes from the internet". NOT a backend E2E.
 // Run: node tests/browser/build-harness.mjs && CHROME=... node tests/browser/harness-server.mjs run -- node tests/browser/aiproviders.spec.mjs
-import { createRequire } from "node:module";
-const require = createRequire(new URL("../../package.json", import.meta.url).pathname);
-const { chromium } = require("playwright-core");
-const ORIGIN = (process.env.HARNESS_URL ?? "http://127.0.0.1:4000/index.html").replace(/\/[^/]*$/, "");
-const results = [];
-const check = (name, ok, detail = "") => { results.push({ name, ok: !!ok, detail }); console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  — " + detail : ""}`); };
+import { harnessOrigin, launch, makeChecks } from "./lib/spec.mjs";
+const ORIGIN = harnessOrigin();
+const { check, finish } = makeChecks();
 const errors = []; const hosts = new Set();
-const browser = await chromium.launch({ executablePath: process.env.CHROME ?? "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
+const browser = await launch();
 async function open(s = "ok") {
   const p = await browser.newPage({ viewport: { width: 1200, height: 1000 } }); p.setDefaultTimeout(6000);
   p.on("pageerror", (e) => errors.push(e.message)); p.on("console", (m) => { if (["error", "warning"].includes(m.type()) && !/favicon|404/.test(m.text())) errors.push(m.text()); });
@@ -74,8 +71,8 @@ const reqs = (p) => p.evaluate(() => window.__ai);
   await p.close(); }
 { const p = await open("dup");
   await p.getByRole("button", { name: "Thêm nhà cung cấp" }).first().click(); await p.getByLabel("Tên").fill("Dup"); await p.getByLabel(/Khóa kết nối/).fill("k"); await p.getByRole("button", { name: "Lưu" }).click();
-  await p.getByRole("alert").filter({ hasText: "name already used" }).waitFor().catch(() => undefined);
-  check("error: a server refusal is shown in the dialog (by the server's message) and the dialog stays open", (await T(p, "provider-dialog").count()) === 1 && /already used/.test(await T(p, "provider-dialog").innerText()));
+  await p.getByRole("alert").filter({ hasText: "xung đột" }).waitFor().catch(() => undefined);
+  check("error: a server refusal is shown in the dialog in Vietnamese (mapped by code; the server's English message is NOT shown) and the dialog stays open", (await T(p, "provider-dialog").count()) === 1 && /xung đột/.test(await T(p, "provider-dialog").innerText()) && !/already used/.test(await T(p, "provider-dialog").innerText()));
   await p.close(); }
 { const p = await open();
   await T(p, "provider:p3").getByRole("button", { name: "Bật" }).click(); await p.waitForTimeout(400);
@@ -86,4 +83,4 @@ const reqs = (p) => p.evaluate(() => window.__ai);
 check("no request left the page's own origin (no hot-linked icon, font or logo)", [...hosts].every((h) => h === new URL(ORIGIN).host), [...hosts].join(","));
 check("no console error / warning / uncaught exception", errors.length === 0, errors.slice(0, 3).join(" | "));
 await browser.close();
-const failed = results.filter((r) => !r.ok); console.log(`\n${results.length - failed.length}/${results.length} checks passed`); process.exit(failed.length ? 1 : 0);
+finish();

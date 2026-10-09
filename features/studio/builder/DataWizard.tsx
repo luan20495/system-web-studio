@@ -86,7 +86,7 @@ export function DataWizard({ ctx, focus }: { ctx: DefCtx; focus?: { sectionId?: 
   }
 
   const setField = (i: number, f: FieldMappingDef) => setFields((x) => x.map((y, j) => (j === i ? f : y)));
-  const items = DATA_STEPS.map((s) => ({ id: s.id, label: s.label, badge: ready(s.id).state === "NOT_READY" ? "chưa" : undefined }));
+  const items = DATA_STEPS.map((s) => ({ id: s.id, label: s.label, badge: ready(s.id).state === "NOT_READY" ? "chưa" : undefined, badgeLabel: "chưa sẵn sàng" })); // M-081: the badge is read as " (chưa sẵn sàng)", not glued to the label
   const cur = DATA_STEPS.find((s) => s.id === step)!;
 
   return (
@@ -96,7 +96,7 @@ export function DataWizard({ ctx, focus }: { ctx: DefCtx; focus?: { sectionId?: 
         <p className="hint">{cur.help}</p>
 
         {step === "source" ? (<>
-          <DataSourcesPanel doc={doc} calls={ctx.dataManagement} canView={ctx.canViewData ?? false} viewReason={ctx.viewDataReason ?? "Bạn chưa được cấp quyền xem nguồn dữ liệu."} canManage={ctx.canManageData ?? false} manageReason={ctx.manageDataReason ?? "Bạn chưa được cấp quyền quản lý nguồn dữ liệu."} canBind={ctx.canBindData ?? false} bindReason={ctx.bindDataReason ?? "Liên kết nguồn dữ liệu cần quyền quản lý nguồn dữ liệu và quyền chỉnh sửa ứng dụng."}/>
+          <DataSourcesPanel doc={doc} calls={ctx.dataManagement} canView={ctx.canViewData ?? false} viewReason={ctx.viewDataReason ?? "Bạn chưa được cấp quyền xem nguồn dữ liệu."} canManage={ctx.canManageData ?? false} manageReason={ctx.manageDataReason ?? "Bạn chưa được cấp quyền quản lý nguồn dữ liệu."} canBind={ctx.canBindData ?? false} bindReason={ctx.bindDataReason ?? "Liên kết nguồn dữ liệu cần quyền quản lý nguồn dữ liệu và quyền chỉnh sửa ứng dụng."} canAddSlots/>
           <SlotEditor ctx={ctx}/>
         </>) : null}
 
@@ -119,13 +119,13 @@ export function DataWizard({ ctx, focus }: { ctx: DefCtx; focus?: { sectionId?: 
                       <input aria-label={`Tên tham số ${i + 1}`} disabled={disabled} value={p.name} onChange={(e) => setQd({ ...qd, params: qd.params.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)) })}/>
                       <select aria-label={`Kiểu tham số ${i + 1}`} disabled={disabled} value={p.type} onChange={(e) => setQd({ ...qd, params: qd.params.map((x, j) => (j === i ? { ...x, type: e.target.value as ParamDef["type"] } : x)) })}>{PARAM_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</select>
                       <label className="checkRow"><input type="checkbox" disabled={disabled} checked={paramRequired(p)} onChange={(e) => setQd({ ...qd, params: qd.params.map((x, j) => (j === i ? setParamRequired(x, e.target.checked) : x)) })}/><span>Bắt buộc</span></label>
-                      {!disabled ? <button type="button" className="smallButton danger" aria-label={`Xóa tham số ${i + 1}`} onClick={() => setQd({ ...qd, params: qd.params.filter((_, j) => j !== i) })}>Xóa</button> : null}
+                      {!disabled ? <button type="button" className="btn sm danger" aria-label={`Xóa tham số ${i + 1}`} onClick={() => setQd({ ...qd, params: qd.params.filter((_, j) => j !== i) })}>Xóa</button> : null}
                     </div>))}
-                  {!disabled ? <button type="button" className="smallButton" onClick={() => setQd({ ...qd, params: [...qd.params, newParam()] })}>+ Thêm tham số</button> : null}
+                  {!disabled ? <button type="button" className="btn sm" onClick={() => setQd({ ...qd, params: [...qd.params, newParam()] })}>+ Thêm tham số</button> : null}
                 </fieldset>
                 <Field label="Số dòng tối đa (tuỳ chọn)">{(id) => <input id={id} type="number" min={1} disabled={disabled} value={qd.maxRows ?? ""} onChange={(e) => setQd({ ...qd, maxRows: e.target.value ? Number(e.target.value) : undefined })}/>}</Field>
                 <StateBox state={staticReadiness("QUERY_PREVIEW")} compact/>
-                <div className="bx-actions"><button type="submit" className="bx-btn primary" disabled={disabled}>Lưu truy vấn</button></div>
+                <div className="bx-actions"><button type="submit" className="btn dense primary" disabled={disabled}>Lưu truy vấn</button></div>
               </form>)}
           </Gate>
         ) : null}
@@ -145,7 +145,7 @@ export function DataWizard({ ctx, focus }: { ctx: DefCtx; focus?: { sectionId?: 
                         <input aria-label={`Cột nguồn của trường ${i + 1}`} placeholder="cột nguồn" disabled={disabled} value={f.from ?? ""} aria-invalid={!!f.from && !FROM_RE.test(f.from)} onChange={(e) => setField(i, { ...f, from: e.target.value })}/>
                         <span aria-hidden="true">→</span>
                         <input aria-label={`Tên trường ${i + 1}`} placeholder="tên trường" disabled={disabled} value={f.to} onChange={(e) => setField(i, { ...f, to: e.target.value })}/>
-                        {!disabled && fields.length > 1 ? <button type="button" className="smallButton danger" aria-label={`Xóa trường ${i + 1}`} onClick={() => setFields(fields.filter((_, j) => j !== i))}>Xóa</button> : null}
+                        {!disabled && fields.length > 1 ? <button type="button" className="btn sm danger" aria-label={`Xóa trường ${i + 1}`} onClick={() => setFields(fields.filter((_, j) => j !== i))}>Xóa</button> : null}
                       </div>
                       <ol className="bx-chips" aria-label={`Biến đổi của trường ${f.to || i + 1}`}>
                         {transformsOf(f).map((t, k) => (
@@ -160,9 +160,9 @@ export function DataWizard({ ctx, focus }: { ctx: DefCtx; focus?: { sectionId?: 
                         <select aria-label={`Thêm biến đổi cho trường ${f.to || i + 1}`} value="" onChange={(e) => { if (!e.target.value) return; const r = addTransform(f, e.target.value); if ("error" in r) setMsg(r.error); else setField(i, r); }}>
                           <option value="">+ Thêm biến đổi…</option>{SIMPLE_TRANSFORMS.map((t) => <option key={t.type} value={t.type}>{t.label}</option>)}</select>) : null}
                     </div>))}
-                  {!disabled ? <button type="button" className="smallButton" onClick={() => setFields([...fields, emptyField()])}>+ Thêm trường</button> : null}
+                  {!disabled ? <button type="button" className="btn sm" onClick={() => setFields([...fields, emptyField()])}>+ Thêm trường</button> : null}
                 </fieldset>
-                <div className="bx-actions"><button type="submit" className="bx-btn primary" disabled={disabled}>Lưu ánh xạ</button></div>
+                <div className="bx-actions"><button type="submit" className="btn dense primary" disabled={disabled}>Lưu ánh xạ</button></div>
               </form>)}
           </Gate>
         ) : null}
@@ -175,7 +175,7 @@ export function DataWizard({ ctx, focus }: { ctx: DefCtx; focus?: { sectionId?: 
                 <Field label="Tên ViewModel">{(id) => <input id={id} disabled={disabled} value={vmName} onChange={(e) => setVmName(e.target.value)}/>}</Field>
                 <Field label="Dạng dữ liệu">{(id) => <select id={id} disabled={disabled} value={card} onChange={(e) => setCard(e.target.value as "SINGLE" | "LIST")}>{CARDINALITIES.map((c) => <option key={c} value={c}>{c === "LIST" ? "Danh sách" : "Một bản ghi"}</option>)}</select>}</Field>
                 <p className="hint">Các trường lấy từ ánh xạ: {fieldsOf(mappings.find((m) => m.id === mappingId)).map((f) => `${f.to} (${viewModelFromMapping(mappings.find((m) => m.id === mappingId)!, doc, "x").fields.find((x) => x.name === f.to)?.type ?? FIELD_TYPES[0]})`).join(", ") || "—"}.</p>
-                <div className="bx-actions"><button type="submit" className="bx-btn primary" disabled={disabled}>Lưu ViewModel</button></div>
+                <div className="bx-actions"><button type="submit" className="btn dense primary" disabled={disabled}>Lưu ViewModel</button></div>
               </form>)}
           </Gate>
         ) : null}
@@ -189,7 +189,7 @@ export function DataWizard({ ctx, focus }: { ctx: DefCtx; focus?: { sectionId?: 
                 <Field label="ViewModel">{(id) => <select id={id} disabled={disabled} value={vmId} onChange={(e) => setVmId(e.target.value)}>{vms.map((v) => <option key={v.id} value={v.id}>{v.name || v.id}</option>)}</select>}</Field>
                 {compat ? <p className={compat.ok ? "hint" : "formError"} role={compat.ok ? "status" : "alert"}>{compat.message}</p> : null}
                 <ViewStates/>
-                <div className="bx-actions"><button type="submit" className="bx-btn primary" disabled={disabled || (!!compat && !compat.ok)}>Gắn dữ liệu</button></div>
+                <div className="bx-actions"><button type="submit" className="btn dense primary" disabled={disabled || (!!compat && !compat.ok)}>Gắn dữ liệu</button></div>
               </form>)}
           </Gate>
         ) : null}
@@ -208,8 +208,8 @@ export function DataWizard({ ctx, focus }: { ctx: DefCtx; focus?: { sectionId?: 
 
       {removing ? (
         <Dialog title={`Xóa “${removing.name}”?`} onClose={() => setRemoving(null)} footer={<>
-          <button type="button" className="bx-btn" onClick={() => setRemoving(null)}>Hủy</button>
-          <button type="button" className="bx-btn danger" disabled={ctx.busy} onClick={() => void doRemove()}>Xóa</button></>}>
+          <button type="button" className="btn dense" onClick={() => setRemoving(null)}>Hủy</button>
+          <button type="button" className="btn dense danger" disabled={ctx.busy} onClick={() => void doRemove()}>Xóa</button></>}>
           {(() => { const users = usersOf(doc, removing.collection, removing.id); return users.length
             ? <><p>Mục này đang được dùng bởi: {users.join(", ")}.</p><p>Xóa sẽ không tự xóa các mục đó; máy chủ sẽ từ chối lưu cho tới khi bạn sửa các tham chiếu bị hỏng.</p></>
             : <p>Mục này không được dùng ở đâu khác.</p>; })()}
@@ -222,7 +222,7 @@ function DefList({ title, items, onRemove, disabled }: { title: string; items: {
   if (!items.length) return null;
   return (<><h4 className="bx-h4">{title}</h4><ul className="bx-list">{items.map((i) => (
     <li key={i.id}><div><b>{i.name}</b><small>{i.note}</small></div>
-      {!disabled ? <button type="button" className="smallButton danger" aria-label={`Xóa ${title.toLowerCase()} ${i.name}`} onClick={() => onRemove(i)}>Xóa</button> : null}</li>))}</ul></>);
+      {!disabled ? <button type="button" className="btn sm danger" aria-label={`Xóa ${title.toLowerCase()} ${i.name}`} onClick={() => onRemove(i)}>Xóa</button> : null}</li>))}</ul></>);
 }
 
 /** the four states a bound component shows. With no server to answer, only NOT_READY is honest. */

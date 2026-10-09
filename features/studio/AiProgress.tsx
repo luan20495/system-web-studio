@@ -10,12 +10,14 @@ export function AiProgress({ live, model, onCancel, now: fixedNow }: { live: AiL
   const v = progressView(live, fixedNow ?? tick, model);
   return (
     <div className="message assistant"><div className="bubble typing liveStream aiProgress" data-testid="ai-progress" data-stalled={v.stalled} data-started={live.id !== null}>
-      <div role="status" aria-live="polite" data-testid="ai-headline"><span className="dots" aria-hidden="true"><i/><i/><i/></span> {v.headline}</div>
+      <div data-testid="ai-headline"><span className="dots" aria-hidden="true"><i/><i/><i/></span> {v.headline}</div>
+      {/* the live region is a separate, visually hidden line that changes only when the PHASE changes (M-004): the visible headline counts characters on every chunk */}
+      <span className="srOnly" role="status" aria-live="polite" data-testid="ai-announce">{v.announce}</span>
       <ol className="aiSteps" aria-label="Các bước">{v.steps.map((s) => <li key={s.id} data-state={s.state}><span aria-hidden="true" className="xp-checkIcon">{s.state === "done" ? <CircleCheck size={14}/> : s.state === "active" ? <Loader size={14} className="xp-spin"/> : <Circle size={14}/>}</span> {s.label}</li>)}</ol>
       <div className="aiMeta" aria-hidden="true" data-testid="ai-clock">Đã chạy {clock(v.elapsedSeconds)}{v.remainingSeconds !== null ? ` · tự dừng sau ${clock(v.remainingSeconds)}` : ""}</div>
       {v.detail ? <p className={v.stalled ? "aiWarn" : "hint"} role={v.stalled ? "status" : undefined} data-testid="ai-detail">{v.detail}</p> : null}
       {live.text ? <details className="aiRaw"><summary>Xem phần AI đang trả về</summary><pre className="streamTail">{live.text.slice(-240)}</pre></details> : null}
-      <button type="button" className="smallButton" data-testid="ai-cancel" onClick={onCancel}>Huỷ</button>
+      <button type="button" className="btn sm" data-testid="ai-cancel" onClick={onCancel}>Huỷ</button>
     </div></div>
   );
 }

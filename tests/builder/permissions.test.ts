@@ -120,10 +120,96 @@ test("a role NAME alone changes nothing: only the resolved permission list is re
   assert.equal(resolvePortalPostLogin({ me: withRole("VIEWER", ["APP_VIEW"]), portal: "studio" }), "/studio");
   assert.equal(resolvePortalPostLogin({ me: withRole("EDITOR", []), portal: "studio" }), "/auth/no-access?portal=studio");
 });
+// ---- H-C1-04: project scopes (C1 docs/parallel/c1/h-c1-04-project-scoped-auth-me.md) ------------------------------------------------------------------
+test("H-C1-04: a project-only person is admitted to Studio by their projectScopes, judged on the scope's own canonical permissions; the role label and the workspace list change nothing", () => {
+  const me = (workspacePerms: string[] | undefined, scopes: { role?: string; permissions: string[] }[] | undefined) => ({
+    id: "u", username: "u", displayName: "U", roles: [], workspaces: [{ id: "w", name: "W", role: "VIEWER", tenantId: "t", ...(workspacePerms ? { permissions: workspacePerms } : {}) }],
+    ...(scopes ? { projectScopes: scopes.map((s, i) => ({ projectId: `p${i}`, workspaceId: "w", ...s })) } : {}) }) as unknown as Me;
+  const studio = (m: Me) => capabilitiesOf(m).has("studio.build");
+  // workspace list empty (the mismatch) + a scope that holds APP_VIEW (C1 cases A VIEWER / B EDITOR / C PUBLISHER all list APP_VIEW) -> admitted
+  assert.equal(studio(me([], [{ role: "VIEWER", permissions: ["APP_VIEW", "APP_USE"] }])), true);
+  assert.equal(studio(me([], [{ role: "PUBLISHER", permissions: ["APP_VIEW", "APP_USE", "APP_PUBLISH"] }])), true);
+  // the role label is informational: the same label with a scope WITHOUT APP_VIEW is refused, and a scope with APP_VIEW is admitted under any label
+  assert.equal(studio(me([], [{ role: "EDITOR", permissions: ["APP_USE", "APP_EDIT"] }])), false, "APP_EDIT / APP_USE never stand in for APP_VIEW");
+  assert.equal(studio(me([], [{ role: "nonsense", permissions: ["APP_VIEW"] }])), true);
+  // no scope, an empty scope list, or a scope without any permission: refused (an EMPTY list is an answer)
+  assert.equal(studio(me([], [])), false); assert.equal(studio(me([], [{ permissions: [] }])), false);
+  // ABSENT projectScopes (older backend) cannot say no: the workspace rule still decides exactly as before
+  assert.equal(studio(me(["APP_VIEW"], undefined)), true); assert.equal(studio(me([], undefined)), false); assert.equal(studio(me(undefined, undefined)), true, "an absent workspace list does not block");
+  // legacy storage names and unknown codes inside a scope are translated / dropped like everywhere else; a legacy name is not an extra grant
+  assert.equal(studio(me([], [{ permissions: ["PROJECT_READ"] }])), true); assert.equal(studio(me([], [{ permissions: ["VIEWER", "EDITOR"] }])), false);
+  // scopes are independent rows: APP_VIEW in one and APP_EDIT in another is still admitted (APP_VIEW exists), but nothing is unioned into a permission set
+  assert.equal(studio(me([], [{ permissions: ["APP_EDIT"] }, { permissions: ["APP_VIEW"] }])), true);
+  assert.equal(studio(me([], [{ permissions: ["APP_EDIT"] }, { permissions: ["APP_USE"] }])), false);
+  // the portal landing agrees: a project-only person goes to Studio, never to no-access
+  assert.equal(resolvePortalPostLogin({ me: me([], [{ permissions: ["APP_VIEW"] }]), portal: "studio" }), "/studio");
+  assert.equal(resolvePortalPostLogin({ me: me([], []), portal: "studio" }), "/auth/no-access?portal=studio");
+  // TENANT_ADMIN / SYSTEM_ADMIN alone are not Studio access (C1 negative invariants F and G)
+  const admin = { id: "u", username: "u", displayName: "U", roles: [], workspaces: [], tenantRole: "TENANT_ADMIN", permissions: ["TENANT_MANAGE", "TENANT_MEMBERS"], projectScopes: [] } as unknown as Me;
+  assert.equal(capabilitiesOf(admin).has("studio.build"), false);
+});
+
+// ---- H-C1-04: admission of ONE project (adapter canAdmitProject) -----------------------------------------------------------------------------------------
+test("H-C1-04 canAdmitProject: workspace APP_VIEW or the project's OWN scope; project A never admits project B; role labels and other codes never stand in; malformed fails closed", () => {
+  const W = "w1", A = "pA", B = "pB";
+  const ws = (permissions?: string[]) => [{ id: W, name: "W", role: "VIEWER", tenantId: "t", ...(permissions ? { permissions } : {}) }];
+  const me = (workspaces: ReturnType<typeof ws>, projectScopes?: unknown[]) => ({ workspaces, ...(projectScopes ? { projectScopes } : {}) });
+  const scope = (projectId: string, permissions: unknown, workspaceId = W, role = "EDITOR") => ({ projectId, workspaceId, role, permissions });
+  const ok = (m: ReturnType<typeof me>, p: string) => P.canAdmitProject(m, { workspaceId: W, projectId: p });
+  // CASE 1 workspace APP_VIEW -> ALLOW (any project of that workspace)
+  assert.equal(ok(me(ws(["APP_VIEW"]), []), A), true); assert.equal(ok(me(ws(["APP_VIEW"]), []), B), true);
+  // CASE 2 the matching project scope holds APP_VIEW -> ALLOW
+  assert.equal(ok(me(ws([]), [scope(A, ["APP_VIEW", "APP_USE"])]), A), true);
+  // CASE 3 project A's APP_VIEW does NOT authorise project B (rows are never unioned / flattened)
+  const onlyA = me(ws([]), [scope(A, ["APP_VIEW", "APP_EDIT"])]); assert.equal(ok(onlyA, A), true); assert.equal(ok(onlyA, B), false);
+  assert.equal(ok(me(ws([]), [scope(A, ["APP_VIEW"]), scope(B, ["APP_EDIT"])]), B), false, "B's own row has no APP_VIEW; A's does not carry over");
+  // the same project id in ANOTHER workspace is not this project
+  assert.equal(P.canAdmitProject(me(ws([]), [scope(A, ["APP_VIEW"], "w-other")]), { workspaceId: W, projectId: A }), false);
+  // CASE 4 a scope without APP_VIEW -> DENY, whatever else it lists
+  assert.equal(ok(me(ws([]), [scope(A, ["APP_USE", "APP_EDIT", "QUERY_EXECUTE", "DATA_SOURCE_VIEW"])]), A), false);
+  // CASE 5 role names are display data: admin / owner / tenant-admin labels with no canonical permission -> DENY
+  for (const role of ["ADMIN", "OWNER", "TENANT_ADMIN", "WORKSPACE_ADMIN", "SYSTEM_ADMIN", "admin", "super-admin"]) {
+    assert.equal(ok(me([{ id: W, name: "W", role, tenantId: "t", permissions: [] }], [scope(A, [], W, role)]), A), false, role);
+    assert.equal(ok(me(ws([role]), [scope(A, [role], W, role)]), A), false, `a role name in the list: ${role}`);
+  }
+  // CASE 6 APP_PUBLISH (or APP_SHARE, APP_EDIT, tenant codes) without APP_VIEW -> DENY: nothing implies APP_VIEW
+  for (const c of ["APP_PUBLISH", "APP_SHARE", "APP_EDIT", "APP_USE", "TENANT_MANAGE", "TENANT_MEMBERS", "MEMBER_MANAGE"]) { assert.equal(ok(me(ws([c]), []), A), false, `workspace ${c}`); assert.equal(ok(me(ws([]), [scope(A, [c])]), A), false, `scope ${c}`); }
+  // ...and the storage alias of APP_VIEW still counts (it IS APP_VIEW), an unknown code does not
+  assert.equal(ok(me(ws([]), [scope(A, ["PROJECT_READ"])]), A), true); assert.equal(ok(me(ws([]), [scope(A, ["APP_VIEWER"])]), A), false);
+  // CASE 7 malformed / unknown scopes are ignored -> fail closed (when the field is present)
+  for (const bad of [null, 7, "x", {}, { projectId: A }, scope(A, "APP_VIEW"), scope(A, null), { projectId: 1, workspaceId: W, permissions: ["APP_VIEW"] }, { projectId: A, workspaceId: undefined, permissions: ["APP_VIEW"] }, [scope(A, ["APP_VIEW"])]]) assert.equal(ok(me(ws([]), [bad]), A), false, JSON.stringify(bad));
+  assert.equal(P.canAdmitProject({ workspaces: ws([]), projectScopes: "APP_VIEW" as unknown as unknown[] }, { workspaceId: W, projectId: A }), false);
+  // no session, an unknown workspace with a present scope list: DENY
+  assert.equal(P.canAdmitProject(null, { workspaceId: W, projectId: A }), false); assert.equal(P.canAdmitProject({ workspaces: [], projectScopes: [] }, { workspaceId: W, projectId: A }), false);
+  // an ABSENT projectScopes (older backend) cannot say no: the server decides (UX only)
+  assert.equal(ok({ workspaces: ws([]) }, A), true);
+});
+test("H-C1-04: the portal gate never reads a role label (tenant.members is the CODE TENANT_MEMBERS) and project scopes stay out of every permission set", () => {
+  const base = { id: "u", username: "u", displayName: "U", roles: ["ADMIN", "OWNER"], workspaces: [], tenantRole: "TENANT_ADMIN", tenants: [{ id: "t1", slug: "a", name: "A", status: "ACTIVE", role: "TENANT_ADMIN" }] };
+  const caps = (extra: object) => capabilitiesOf({ ...base, ...extra } as unknown as Me);
+  assert.equal(caps({ permissions: [] }).has("tenant.members"), false, "a TENANT_ADMIN label with no listed code");
+  assert.equal(caps({ permissions: ["TENANT_MEMBERS"] }).has("tenant.members"), true);
+  assert.equal(caps({ permissions: [] }).has("admin.console"), false);
+  // NO implicit tenant admin / publish from a project scope
+  const scoped = caps({ permissions: [], projectScopes: [{ projectId: "p", workspaceId: "w", role: "OWNER", permissions: ["APP_VIEW", "APP_PUBLISH"] }] });
+  assert.equal(scoped.has("studio.build"), true); for (const c of ["tenant.members", "tenant.administer", "platform.operate", "admin.console", "workspace.members", "workspace.data"]) assert.equal(scoped.has(c as never), false, c);
+  const me2 = { ...base, permissions: ["TENANT_MEMBERS"], workspaces: [{ id: "w", name: "W", role: "VIEWER", tenantId: "t1", permissions: [] }], projectScopes: [{ projectId: "p", workspaceId: "w", permissions: ["APP_VIEW", "APP_PUBLISH"] }] } as unknown as Me;
+  assert.deepEqual([...P.resolvePermissions(me2.permissions)], ["TENANT_MEMBERS"]); assert.deepEqual([...P.resolvePermissions(me2.workspaces[0].permissions)], []);
+  assert.equal(P.canPublish(P.resolvePermissions(me2.workspaces[0].permissions)), false, "APP_PUBLISH of a project scope is not a workspace permission");
+});
+test("D-C0-51 organization codes: resolved from the 21 canonical codes, helpers match the contract table, *_MANAGE does not imply *_VIEW, no alias", () => {
+  const c = (...x: string[]) => P.resolveCanonicalPermissions(x);
+  assert.deepEqual([...c("ORG_STRUCTURE_VIEW", "MEMBER_MANAGE", "TENANT_MEMBERS", "ORG_MANAGE", "ORG_ADMIN", "VIEWER")].sort(), ["MEMBER_MANAGE", "ORG_STRUCTURE_VIEW", "TENANT_MEMBERS"], "obsolete / invented names are dropped");
+  assert.deepEqual([...P.resolvePermissions(["ORG_STRUCTURE_VIEW"])], [], "an AppDefinition / project list never carries organization codes");
+  assert.equal(P.canViewOrgStructure(c("ORG_STRUCTURE_VIEW")), true); assert.equal(P.canViewOrgStructure(c("ORG_STRUCTURE_MANAGE")), false); assert.equal(P.canManageOrgStructure(c("ORG_STRUCTURE_MANAGE")), true);
+  assert.equal(P.canViewEmployees(c("EMPLOYEE_VIEW")), true); assert.equal(P.canViewEmployees(c("EMPLOYEE_MANAGE", "TENANT_MEMBERS")), false);
+  assert.equal(P.canProvisionEmployees(c("EMPLOYEE_MANAGE")), false); assert.equal(P.canProvisionEmployees(c("EMPLOYEE_MANAGE", "TENANT_MEMBERS")), true); assert.equal(P.canProvisionEmployees(c("TENANT_MEMBERS")), false);
+  assert.equal(P.canViewPositionsGrades(c("POSITION_GRADE_VIEW")), true); assert.equal(P.canManagePositionsGrades(c("POSITION_GRADE_VIEW")), false); assert.equal(P.canManagePositionsGrades(c("POSITION_GRADE_MANAGE")), true);
+});
 test("GUARD: no Studio source decides anything from a role name (role === \"VIEWER\" | \"EDITOR\" | …)", () => {
   const roots = ["features/studio", "packages/permissions/src", "packages/auth/src", "packages/ui/src"].map((d) => join(__dirname, "..", "..", "..", d));
   const bad: string[] = [];
-  const walk = (d: string) => { for (const n of readdirSync(d)) { const p = join(d, n); if (statSync(p).isDirectory()) walk(p); else if (/\.(ts|tsx)$/.test(n)) {
+  const walk = (d: string) => { for (const n of readdirSync(d)) { const p = join(d, n); if (statSync(p).isDirectory()) walk(p); else if (/\.(ts|tsx)$/.test(n) && !p.endsWith("permissions/src/roles.ts")) {   // roles.ts is the ONE audited place (guard-role-names.test.ts)
     readFileSync(p, "utf8").split("\n").forEach((line, i) => { if (/^\s*(\*|\/\/|\/\*)/.test(line)) return; if (/\brole\w*\s*[!=]==?\s*"(VIEWER|EDITOR|PUBLISHER|OWNER|WORKSPACE_ADMIN|ADMIN)"/.test(line) || /"(VIEWER|EDITOR|PUBLISHER|WORKSPACE_ADMIN)"\s*\)?\s*\.includes\(\s*\w*role/i.test(line)) bad.push(`${p.split("xweb-c5/").pop()}:${i + 1}: ${line.trim().slice(0, 100)}`); }); } } };
   roots.forEach(walk);
   assert.deepEqual(bad, [], "a role label is data, not authority; use the resolved permission list");

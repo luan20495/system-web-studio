@@ -70,6 +70,17 @@ export function unitPath(units: readonly OrgUnit[], id: string | null | undefine
   for (let cur = id ? by.get(id) : undefined; cur && !guard.has(cur.id); cur = cur.parentId ? by.get(cur.parentId) : undefined) { guard.add(cur.id); out.unshift(cur.name); }
   return out.join(" › ");
 }
+/** unitPath for MANY rows (an employee table, a list of units): the id -> unit map is built ONCE and every path once. The plain unitPath rebuilds the map per call: rows x units (M-111). */
+export function pathResolver(units: readonly OrgUnit[]): (id: string | null | undefined) => string {
+  const by = new Map(units.map((u) => [u.id, u])); const memo = new Map<string, string>();
+  return (id) => {
+    if (!id) return "";
+    const hit = memo.get(id); if (hit !== undefined) return hit;
+    const out: string[] = []; const guard = new Set<string>();
+    for (let cur = by.get(id); cur && !guard.has(cur.id); cur = cur.parentId ? by.get(cur.parentId) : undefined) { guard.add(cur.id); out.unshift(cur.name); }
+    const path = out.join(" › "); memo.set(id, path); return path;
+  };
+}
 /** a long breadcrumb ("A › B › … › Z") keeps the first two and the last three levels; the full path stays available as the title / aria-label of the element that shows it */
 export function compactPath(path: string, keepStart = 2, keepEnd = 3): string {
   const parts = path.split(" › "); if (parts.length <= keepStart + keepEnd + 1) return path;
@@ -86,13 +97,13 @@ export function parentRule(type: OrgUnitType | undefined, parent: OrgUnit | null
 
 export type MoveTarget = { id: string | null; label: string; depth: number; disabled: boolean; reason?: string; current: boolean };
 /** every place a unit could go, with the reason when it cannot: itself / its subtree (a cycle), a type rule, "already here". The server re-checks (ORG_CYCLE). */
-export function moveTargets(units: readonly OrgUnit[], types: readonly OrgUnitType[], id: string): MoveTarget[] {
+export function moveTargets(units: readonly OrgUnit[], types: readonly OrgUnitType[], id: string, tree?: readonly TreeNode[]): MoveTarget[] {
   const me = units.find((u) => u.id === id); if (!me) return [];
   const below = descendantIds(units, id); const type = typeOf(types, me.typeId);
   const rows: MoveTarget[] = [];
   const rootReason = parentRule(type, null, types);
   rows.push({ id: null, label: "Gốc (không thuộc đơn vị nào)", depth: 0, current: !me.parentId, disabled: !!rootReason || !me.parentId, reason: !me.parentId ? "Đang ở gốc." : rootReason ?? undefined });
-  for (const n of flattenTree(buildTree(units))) {
+  for (const n of flattenTree(tree ?? buildTree(units))) {
     const u = n.unit; let reason: string | undefined;
     if (u.id === id) reason = "Không thể chuyển vào chính nó.";
     else if (below.has(u.id)) reason = "Không thể chuyển vào đơn vị con của nó (tạo vòng).";
@@ -160,11 +171,15 @@ export const pageCount = (p: { total: number; size: number }) => Math.max(1, Mat
 export const employeeName = (e: { displayName: string | null; username: string }) => e.displayName?.trim() || e.username;
 
 // ------------------------------------------------------------------------------------------------------------------------------- gate
-export type CapView = { state: "ready" } | { state: "not-ready"; reason: string };
-const capView = (s: OrgCapabilityState): CapView => (s.status === "READY" ? { state: "ready" } : { state: "not-ready", reason: s.reason });
+/** `no-permission`: the backend side may be ready but the server does not list the code this operation needs for the caller (UX hint: the server re-checks and answers 403) */
+export type CapView = { state: "ready" } | { state: "not-ready"; reason: string } | { state: "no-permission"; reason: string };
+const capView = (s: OrgCapabilityState, held: boolean = true, missing = "Bạn chưa có quyền thực hiện thao tác này."): CapView => (!held ? { state: "no-permission", reason: missing } : s.status === "READY" ? { state: "ready" } : { state: "not-ready", reason: s.reason });
+export type OrgAccess = { granted: true } | { granted: false; reason: string };
 export type OrganizationPlan = {
-  /** from the server's listing of the caller's tenant capability (adminScope): a screen is offered only when the server lists a tenant the caller administers */
-  access: { granted: true } | { granted: false; reason: string };
+  /** the structure screens: the server lists ORG_STRUCTURE_VIEW (adminScope.org). NOT TENANT_MEMBERS, NOT platformScope, NOT a role (a SYSTEM_ADMIN gets 403 on every organization route) */
+  access: OrgAccess;
+  /** the employee directory: the server lists EMPLOYEE_VIEW */
+  employeeAccess: OrgAccess;
   /** exactly one tenant → fixed from the session (read-only); several → only the caller's own tenants, never a free id */
   fixedTenant: { id: string; name: string } | null; tenantChoice: { id: string; name: string }[];
   units: CapView; edit: CapView; types: CapView; positions: CapView; assignOrg: CapView; assignPosition: CapView;
@@ -172,14 +187,17 @@ export type OrganizationPlan = {
   directory: "directory" | "members";
 };
 export function organizationPlan(scope: AdminScope, state: (id: OrgCapabilityId) => OrgCapabilityState): OrganizationPlan {
-  const granted = scope.tenants.length > 0;
+  const o = scope.org;
   const own = scope.tenants.map((t) => ({ id: t.id, name: t.name }));
   const edit = [state("createOrganizationUnit"), state("updateOrganizationUnit"), state("moveOrganizationUnit"), state("deleteOrganizationUnit")].find((s) => s.status === "NOT_READY");
+  const noEdit = "Bạn xem được cơ cấu nhưng chưa có quyền thay đổi nó.", noEmp = "Bạn chưa có quyền quản lý nhân viên.";
   return {
-    access: granted ? { granted: true } : { granted: false, reason: "Máy chủ không liệt kê công ty nào mà bạn quản trị, nên không mở cơ cấu tổ chức cho tài khoản này." },
+    access: o.structureView ? { granted: true } : { granted: false, reason: "Máy chủ không liệt kê quyền xem cơ cấu tổ chức cho tài khoản này." },
+    employeeAccess: o.employeeView ? { granted: true } : { granted: false, reason: "Máy chủ không liệt kê quyền xem danh bạ nhân viên cho tài khoản này." },
     fixedTenant: own.length === 1 ? own[0] : null, tenantChoice: own.length > 1 ? own : [],
-    units: capView(state("listOrganizationUnits")), edit: edit ? capView(edit) : { state: "ready" }, types: capView(state("listOrganizationUnitTypes")), positions: capView(state("listPositions")),
-    assignOrg: capView(state("updateEmployeeOrganization")), assignPosition: capView(state("updateEmployeePosition")),
+    units: capView(state("listOrganizationUnits")), edit: o.structureManage ? (edit ? capView(edit) : { state: "ready" }) : { state: "no-permission", reason: noEdit },
+    types: capView(state("listOrganizationUnitTypes")), positions: capView(state("listPositions"), o.positionGradeView, "Bạn chưa có quyền xem vị trí và cấp bậc."),
+    assignOrg: capView(state("updateEmployeeOrganization"), o.employeeManage, noEmp), assignPosition: capView(state("updateEmployeePosition"), o.employeeManage, noEmp),
     directory: state("listEmployees").status === "READY" ? "directory" : "members",
   };
 }
@@ -213,5 +231,13 @@ export function orgProblem(e: unknown): OrgProblem {
   if (s === 409) return { kind: "conflict", text: "Thao tác xung đột với dữ liệu hiện tại. Tải lại rồi thử lại." };
   if (s === 503) return { kind: "unavailable", text: "Máy chủ chưa sẵn sàng. Thử lại sau." };
   if (s >= 500 || s === 0) return { kind: "unavailable", text: "Không kết nối được máy chủ. Chưa rõ thao tác đã được ghi hay chưa: tải lại để kiểm tra." };
-  return { kind: "unknown", text: x.message ? `Chưa thực hiện được (${x.message}).` : "Chưa thực hiện được." };
+  return { kind: "unknown", text: x.code ? `Chưa thực hiện được (mã ${x.code}).` : "Chưa thực hiện được." };   // the server's own (English) message is never shown, only its code as a reference
+}
+
+/**
+ * Creating an employee provisions an ACCOUNT: the contract needs EMPLOYEE_MANAGE **and** TENANT_MEMBERS (final contract §9). The provisioning plan alone only knows the tenant side, so the employee
+ * screens ask it through this: without both codes the create state is `forbidden` with the reason (the button is unavailable, nothing is sent).
+ */
+export function employeeProvisioningPlan<P extends { create: { state: string } }>(scope: AdminScope, plan: P): P {
+  return scope.org.employeeProvision ? plan : { ...plan, create: { state: "forbidden", reason: "Bạn cần quyền quản lý nhân viên và quản lý thành viên công ty để thêm nhân viên." } };
 }

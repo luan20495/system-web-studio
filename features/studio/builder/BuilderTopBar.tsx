@@ -1,5 +1,6 @@
 "use client";
 import type { ReactNode } from "react";
+import { GuardedButton } from "../GuardedButton";
 import { Monitor, Smartphone, Tablet } from "../../../packages/ui/src/icons";
 
 type Device = "desktop" | "tablet" | "mobile";
@@ -20,7 +21,7 @@ export function BuilderTopBar({ name, meta, save, appMode, onAppMode, device, on
         <span className={`saveState ${save.state}`} role="status" aria-live="polite">
           {save.state === "saving" ? "Đang lưu…" : save.state === "error" ? "Lưu thất bại" : `Đã lưu${save.at ? ` ${save.at.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}` : ""}`}
         </span>
-        {save.state === "error" && onRetrySave ? <button type="button" className="smallButton" data-testid="retry-save" onClick={onRetrySave}>Thử lại</button> : null}
+        {save.state === "error" && onRetrySave ? <button type="button" className="btn sm" data-testid="retry-save" onClick={onRetrySave}>Thử lại</button> : null}
       </div>
       <div className="bx-top-center">
         {modeTabs}
@@ -34,10 +35,10 @@ export function BuilderTopBar({ name, meta, save, appMode, onAppMode, device, on
       </div>
       <div className="topActions">
         {trailing}
-        <button type="button" className="button ghost" disabled={!canShare} title={canShare ? "Quản lý thành viên của ứng dụng" : shareReason} onClick={onShare}>Chia sẻ</button>
-        <button type="button" className="button primary" disabled={!canPublish || publishBusy} title={canPublish ? "Kiểm tra rồi xuất bản phiên bản hiện tại" : publishReason} onClick={onPublish}>
+        <GuardedButton className="btn ghost" unavailable={!canShare} reason={shareReason} onClick={onShare}>Chia sẻ</GuardedButton>
+        <GuardedButton className="btn primary" unavailable={!canPublish} reason={publishReason} disabled={publishBusy} onClick={onPublish}>
           Xuất bản{issues.block ? <span className="bx-badge bad" aria-label={`${issues.block} lỗi chặn xuất bản`}>{issues.block}</span> : issues.warn ? <span className="bx-badge warn" aria-label={`${issues.warn} cảnh báo`}>{issues.warn}</span> : null}
-        </button>
+        </GuardedButton>
       </div>
     </header>
   );

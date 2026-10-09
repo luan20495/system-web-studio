@@ -104,3 +104,21 @@ test("workflow ops are canonical definition operations", () => {
   assert.equal(W.workflowOps.add(wf()).type, "ADD_WORKFLOW_REF");
   assert.equal(W.workflowOps.remove("w").type, "REMOVE_WORKFLOW_REF");
 });
+
+test("M-106: steps are offered by readable title (Bước N · kind: name), never by raw id; principals and validation speak plainly", () => {
+  const d = base();
+  let w = wf();
+  const a = W.addStep(w, "ACTION"); w = W.updateStep(a.workflow, a.stepId, { actionRef: "a1" });
+  const p = W.addStep(w, "APPROVAL"); w = p.workflow;
+  const titles = W.stepTitles(w, d);
+  assert.equal(titles.get(a.stepId), "Bước 1 · Hành động: Báo");
+  assert.equal(titles.get(p.stepId), "Bước 2 · Phê duyệt: Cần phê duyệt");
+  assert.equal(titles.get("end"), "Bước 3 · Kết thúc");
+  const chips = W.stepChips({ id: "x", kind: "ACTION", actionRef: "a1", onError: "end" } as never, d, titles);
+  assert.equal(chips.find((c) => c.kind === "error-route")!.text, "Khi lỗi → Bước 3 · Kết thúc");
+  assert.match(W.stepChips({ id: "x", kind: "BRANCH", branches: [{ condition: { exists: { from: "INPUT", path: "v" } }, next: "gone" }] } as never, d, titles)[0].text, /bước không còn/);
+  const msgs = W.checkWorkflow(w, d).map((i) => i.message).join(" | ");
+  assert.match(msgs, /Bước 2 · Phê duyệt: Cần phê duyệt chưa chỉ định người duyệt/);
+  assert.doesNotMatch(msgs, new RegExp(`“${p.stepId}”`));
+  assert.equal(W.PRINCIPAL_LABEL.DEPARTMENT_MANAGER, "Quản lý phòng ban");
+});

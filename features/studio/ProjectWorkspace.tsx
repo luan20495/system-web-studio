@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Settings, Sparkles } from "@xweb/ui";
+import { Suspense, lazy, useCallback, useEffect, useId, useMemo, useState } from "react";
+import { ArrowLeft, ErrorBoundary, Settings, Sparkles, Tabs, toast, confirm } from "@xweb/ui";
 import { useRouter, useSearchParams } from "next/navigation";
-import { api, ApiError, newIdempotencyKey } from "@/lib/http-api";
+import { api, newIdempotencyKey } from "@/lib/http-api";
 import { renderSchemaDocument } from "@/lib/schema-preview";
-import type { AiStatus, ApiProject, AssetDto, BlockDto, PageSchema, PromptHistoryItem, RegistryComponent, SchemaOperation, VersionSummary } from "@/lib/http-types";
+import type { ApiProject, AssetDto, BlockDto, PageSchema, RegistryComponent, SchemaOperation, VersionSummary } from "@/lib/http-types";
 import type { DeviceMode } from "@/lib/types";
 import { sectionLabel, sectionSummary } from "@/components/SectionInspector";
 import type { AppDefinitionV2, DefinitionOperation } from "@xweb/types";
@@ -13,34 +13,30 @@ import { BuilderWorkspace } from "./builder/BuilderWorkspace";
 import type { RuntimeCalls } from "./builder/TestPanel";
 import type { DataManagementCalls } from "./builder/core/dataManagement";
 import { backendFrom, type ProbeState } from "./builder/core/backend";
-import { explainError } from "./builder/core/errors";
 import { NOT_RENDERED } from "./builder/core/library";
 import type { BlockOption } from "./builder/panels/ComponentsPanel";
-import { canEditProject, canPublish, canShare, canViewProject, holdsStorageConstant, resolvePermissions } from "@xweb/permissions";
+import { canAdmitProject, canEditProject, canPublish, canShare, canViewProject, holdsStorageConstant, resolvePermissions } from "@xweb/permissions";
 import { useSession } from "../session";
-import { ErrorState, errText, fmtDate, StateView, tok, usd } from "../ui";
+import { ErrorState, errText, fmtDate, StateView } from "../ui";
 import { AssetsDrawer, DeviceIcon, Drawer, MembersDrawer, SettingsDrawer, suggestions } from "./drawers";
 import { PublishModal } from "./ReleaseModal";
+import { GuardedButton } from "./GuardedButton";
+import { OverflowMenu } from "./OverflowMenu";
 import { AiProgress } from "./AiProgress";
-import type { AiLive } from "./aiProgressModel";
 import { SaveBlockDrawer, SaveTemplateSection } from "./libraryPanels";
-import { CodeWorkspace } from "./CodeWorkspace";
+// M-053: a code project (STATIC_APP) has its own workspace, a page project never loads it: its own chunk, fetched when such a project opens
+const CodeWorkspace = lazy(() => import("./CodeWorkspace").then((m) => ({ default: m.CodeWorkspace })));
 import { SiteDrawer } from "./SitePanels";
 import { insertable } from "../library";
 import { projectBase, S } from "./base";
+import { nonceOfPage, toMessages } from "./workspace/runFailure";
+import { useSaveMachine } from "./workspace/useSaveMachine";
+import { useAiConversation } from "./workspace/useAiConversation";
 
 type Mode = "ai" | "design" | "code";
 type PanelName = "members" | "versions" | "assets" | "publish" | "settings" | "site";
 const MODES: Mode[] = ["ai", "design", "code"];
 const PANELS: PanelName[] = ["members", "versions", "assets", "publish", "settings", "site"];
-/** Provider-reported usage of one prompt. The simulator makes no model call, so it has no tokens to show. */
-function usageChip(calls: number, tokens: number | null, cost: number | null): string {
-  if (!calls) return "không tính token";
-  return [tokens == null ? "token: nhà cung cấp không báo" : `${tok(tokens)} token`, ...(cost == null ? [] : [usd(cost)]), ...(calls > 1 ? [`${calls} lượt gọi model`] : [])].join(" · ");
-}
-
-type Msg = { id: string; role: "user" | "assistant"; content: string; meta?: string[]; detail?: string };
-const nonceOfPage = () => (typeof document === "undefined" ? undefined : (document.querySelector("script[nonce]") as HTMLScriptElement | null)?.nonce || undefined);
 
 export function ProjectWorkspace({ projectId, view }: { projectId: string; view?: string }) {
   const router = useRouter(); const params = useSearchParams(); const { me } = useSession();
@@ -50,21 +46,17 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const panel: PanelName | null = PANELS.includes(view as PanelName) ? (view as PanelName) : null;
   useEffect(() => { try { sessionStorage.setItem(lastModeKey, mode); } catch { /* ignore */ } }, [mode, lastModeKey]);
   const go = (to: string) => router.push(`${base}/${to}`);
+  // M-078: closing a drawer REPLACES the history entry (opening pushes), so Back after a close does not re-open the drawer just closed
+  const closePanel = () => router.replace(`${base}/${mode}`);
 
   const [project, setProject] = useState<ApiProject | null>(null);
   const [schema, setSchema] = useState<PageSchema | null>(null);
   const [revision, setRevision] = useState(0);
   const [versions, setVersions] = useState<VersionSummary[]>([]);
-  const [messages, setMessages] = useState<Msg[]>([]);
   const [registry, setRegistry] = useState<RegistryComponent[]>([]);
   const [blocks, setBlocks] = useState<{ company: BlockDto[]; mine: BlockDto[] }>({ company: [], mine: [] });
   const [savingBlock, setSavingBlock] = useState(false);
   const [assets, setAssets] = useState<AssetDto[]>([]);
-  const [ai, setAi] = useState<AiStatus | null>(null);
-  /** a streamed AI answer in progress: stream id (for cancel), raw output so far, last status */
-  const [live, setLive] = useState<AiLive | null>(null);
-  /** aborts the request while the server has not yet answered `start` (a stream id exists only after that) */
-  const streamAbort = useRef<AbortController | null>(null);
   /** page of a multi-page site being edited in Design mode ("home" = the root page) */
   const [pageId, setPageId] = useState("home");
   const [publicPublish, setPublicPublish] = useState<boolean | undefined>(undefined);
@@ -74,14 +66,10 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   useEffect(() => { api.componentMetadata().then((metadata) => setProbe({ status: "ok", metadata })).catch((error) => setProbe({ status: "error", error })); }, []);
   const backend = useMemo(() => backendFrom(probe), [probe]);
   const [loadError, setLoadError] = useState<unknown>(null);
-  const [busy, setBusy] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [save, setSave] = useState<{ state: "saved" | "saving" | "error"; at: Date | null }>({ state: "saved", at: null });
-  const [prompt, setPrompt] = useState("");
   const [device, setDevice] = useState<DeviceMode>("desktop");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [model, setModel] = useState<string>(() => { try { return localStorage.getItem("studio-ai-model") ?? ""; } catch { return ""; } });
-  const promptRef = useRef<HTMLTextAreaElement>(null);
+  const [pane, setPane] = useState<"chat" | "preview">("chat"); const paneId = useId();
+  const { busy, save, setSave, failedEdit, setFailedEdit, saveFailureRef, lastNoticeRef, onConflict, run, flight } = useSaveMachine();
   const ws = project?.workspaceId ?? "";
   // UX only (the server re-checks every call). The input is the permission list the server resolved for THIS project; no role name is read (permissions.ts / canonical.ts).
   const perms = useMemo(() => resolvePermissions(project?.permissions), [project?.permissions]);
@@ -89,13 +77,16 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const readOnly = !mayEdit;
   // page-level gate: a project whose resolved permissions lack APP_VIEW is not shown (APP_VIEW without APP_EDIT is NOT a reason to leave: it opens read-only)
   useEffect(() => { if (project?.name) document.title = `${project.name} · Xweb Studio`; }, [project?.name]);
-  useEffect(() => { if (project && !canViewProject(perms)) router.replace("/auth/no-access?portal=studio&reason=app-view"); }, [project, perms, router]);
+  // H-C1-04: ONE project is admitted by `/auth/me` for THAT project (workspace APP_VIEW, or the projectScopes row of exactly this project) AND by the project's own resolved list. Project A's scope never admits B.
+  const admitted = !project || (canViewProject(perms) && canAdmitProject(me, { workspaceId: project.workspaceId, projectId: project.id }));
+  useEffect(() => { if (project && !admitted) router.replace("/auth/no-access?portal=studio&reason=app-view"); }, [project, admitted, router]);
 
-  const toMessages = (items: PromptHistoryItem[]): Msg[] => [...items].reverse().flatMap((p) => [
-    { id: `${p.id}-u`, role: "user" as const, content: p.text },
-    { id: `${p.id}-a`, role: "assistant" as const, content: p.assistantMessage,
-      meta: [p.outcome, ...(p.model ? [p.model === "mock" ? "Chế độ thử nghiệm" : p.model] : []), usageChip(p.aiCalls ?? 0, p.totalTokens ?? null, p.costUsd ?? null)] }
-  ]);
+  const label = (type: string) => sectionLabel(type, registry.find((c) => c.id === type)?.name);
+  const refreshVersions = async () => setVersions(await api.listVersions(ws, projectId).catch(() => versions));
+  const chat = useAiConversation({ ws, projectId, project, schema, revision, readOnly, busy, mode, run, setSchema, setRevision, refreshVersions, label,
+    handOver: { prompt: params.get("prompt"), clear: () => router.replace(`${base}/ai`) } });
+  const { ai, setAi, messages, setMessages, prompt, setPrompt, live, setModel, effectiveModel, promptRef, submitPrompt, cancel, convRef, behind, onConversationScroll, jumpToNewest } = chat;
+
   const loadAssets = useCallback((w: string) => api.listAssets(w, projectId).then(setAssets).catch(() => undefined), [projectId]);
   const loadBlocks = useCallback(() => {
     Promise.all([api.blocks("company"), api.blocks("mine")]).then(([company, mine]) => setBlocks({ company, mine })).catch(() => undefined);
@@ -108,99 +99,34 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
     setProject(p); setSchema(s.schema); setRevision(s.revision); setVersions(v); setMessages(toMessages(h));
     setSave((x) => (x.at ? x : { state: "saved", at: new Date(p.updatedAt) }));
     void loadAssets(p.workspaceId);
-  }, [projectId, loadAssets]);
+  }, [projectId, loadAssets]); // eslint-disable-line react-hooks/exhaustive-deps
+  onConflict.current = reload;
   useEffect(() => { reload().catch(setLoadError); api.components().then(setRegistry).catch(() => undefined); loadBlocks(); api.aiStatus(ws).then(setAi).catch(() => undefined); }, [reload]); // eslint-disable-line react-hooks/exhaustive-deps
   // signed download URLs expire after 10 minutes: refresh the asset map before that
   useEffect(() => { if (!ws) return; const t = setInterval(() => void loadAssets(ws), 8 * 60_000); return () => clearInterval(t); }, [ws, loadAssets]);
-  useEffect(() => { try { localStorage.setItem("studio-ai-model", model); } catch { /* ignore */ } }, [model]);
-  const valid = (m: string) => m === "auto" || m === "mock" || (ai?.models ?? []).some((x) => x.id === m);
-  const effectiveModel = ai?.configured ? (model && valid(model) ? model : valid(ai.defaultModel) ? ai.defaultModel : "auto") : "mock";
 
-  const saveFailureRef = useRef<"none" | "retryable">("none");
-  async function run<T>(label: string, fn: () => Promise<T>, fallback: string): Promise<T | undefined> {
-    // An AI request is not a save: while it waits for the model nothing is being written, so the top bar keeps saying what is true ("saved") and a failed/cancelled request is not "Lưu thất bại".
-    const isSave = label !== "prompt";
-    setBusy(label); if (isSave) setSave((x) => ({ ...x, state: "saving" }));
-    saveFailureRef.current = "none";
-    try { const out = await fn(); setSave((x) => (isSave || (out as { version?: unknown } | undefined)?.version ? { state: "saved", at: new Date() } : x)); return out; }
-    catch (e) {
-      if (isSave) setSave((x) => ({ ...x, state: "error" }));
-      // the user cancelled before the server answered: nothing failed
-      if (e instanceof ApiError && e.code === "ABORTED") { setNotice("Đã huỷ yêu cầu AI."); return undefined; }
-      // retryable = nothing definite was decided by the server (no answer, 5xx, 429); conflict/validation/permission failures are final: retrying the same edit cannot succeed
-      const st = e instanceof ApiError ? e.status : 0;
-      saveFailureRef.current = st === 0 || st >= 500 || st === 429 ? "retryable" : "none";
-      if (e instanceof ApiError && e.code === "REVISION_CONFLICT") { setNotice("Project vừa được thay đổi ở nơi khác. Đã tải lại bản mới nhất, hãy thử lại."); await reload().catch(() => undefined); }
-      else if (e instanceof ApiError && e.code === "AI_TOKEN_LIMIT") {
-        const d = e.details as { scope?: string; used?: number; limit?: number } | undefined;
-        setNotice(`${d?.scope === "workspace" ? "Workspace đã dùng hết ngân sách token AI của tháng" : "Bạn đã dùng hết hạn mức token AI trong 24 giờ"}${d?.limit ? ` (${tok(d.used ?? 0)} / ${tok(d.limit)} token)` : ""}. Có thể chọn “Mô phỏng” để tiếp tục chỉnh sửa.`);
-      }
-      else if (e instanceof ApiError && (e.status === 409 || e.status === 422 || e.status === 429 || e.code === "TENANT_SUSPENDED")) { const m = explainError(e); setNotice(`${m.title}. ${m.detail}`); }
-      else if (!(e instanceof ApiError && e.status === 401)) setNotice(errText(e, fallback));
-      return undefined;
-    } finally { setBusy(null); }
-  }
-  const refreshVersions = async () => setVersions(await api.listVersions(ws, projectId).catch(() => versions));
-
-  const label = (type: string) => sectionLabel(type, registry.find((c) => c.id === type)?.name);
-  async function submitPrompt(text = prompt.trim()) {
-    if (!text || busy || readOnly || !project) return;
-    setMessages((m) => [...m, { id: `local-${Date.now()}`, role: "user", content: text }]); setPrompt("");
-    const real = ai?.configured === true && effectiveModel !== "mock";
-    // real models stream (partial output, cancel, deadline); the simulator answers at once
-    const r = await run("prompt", () => {
-      if (!real) return api.sendPrompt(ws, projectId, text, revision, ai?.configured ? effectiveModel : undefined);
-      const ctl = new AbortController(); streamAbort.current = ctl;
-      const t0 = Date.now(); setLive({ id: null, text: "", status: "", startedAt: t0, lastAt: t0, deadline: null });
-      const touch = (f: (l: AiLive) => AiLive) => setLive((l) => (l ? f({ ...l, lastAt: Date.now() }) : l));
-      return api.streamPrompt(ws, projectId, text, revision, effectiveModel, {
-          onStart: (id, deadline) => touch((l) => ({ ...l, id, deadline: deadline ?? null })),
-          onDelta: (t) => touch((l) => ({ ...l, text: l.text + t })),
-          onStatus: (st) => touch((l) => ({ ...l, status: st })) }, ctl.signal).finally(() => { streamAbort.current = null; setLive(null); });
-    }, "Không thể cập nhật website.");
-    if (!r) return;
-    setSchema(r.pageSchema); setRevision(r.revision);
-    const changed = Array.from(new Set(r.schemaPatch.map((op) => op.sectionType ?? r.pageSchema.sections.find((s) => s.id === op.sectionId)?.type ?? schema?.sections.find((s) => s.id === op.sectionId)?.type).filter(Boolean) as string[]));
-    const used = Array.from(new Set(r.pageSchema.sections.map((s) => s.type)));
-    const reuse = r.reuseSources;
-    const meta = [r.outcome, r.model && r.model !== "mock" ? r.model : "Chế độ thử nghiệm", ...(r.version ? [`Phiên bản ${r.version.versionNumber}`] : []),
-      usageChip(r.usage?.attempts ?? 0, r.usage?.totalTokens ?? null, r.usage?.costUsd ?? null),
-      ...(reuse && (reuse.blocks.length || reuse.templates.length) ? [`Tái sử dụng: ${reuse.blocks.length} khối, ${reuse.templates.length} template`] : [])];
-    const detail = r.outcome === "UPDATED" ? `Đã đổi: ${changed.map(label).join(", ") || "—"} · Component đang dùng: ${used.map(label).join(", ")}` : undefined;
-    setMessages((m) => [...m, { id: r.promptId, role: "assistant", content: r.message.content, meta, detail }]);
-    if (r.version) void refreshVersions();
-  }
-  // a prompt handed over from Studio Home is sent once, then removed from the URL
-  const handedOver = useRef(false);
-  useEffect(() => {
-    const p = params.get("prompt");
-    if (p && project && schema && !handedOver.current) { handedOver.current = true; router.replace(`${base}/ai`); void submitPrompt(p); }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params, project, schema]);
-
-  /** the last edit that could not be saved (network/5xx/timeout), kept so the user can retry it instead of redoing the work */
-  const [failedEdit, setFailedEdit] = useState<{ ops: (SchemaOperation | DefinitionOperation)[]; summary: string; blockId?: string } | null>(null);
   async function applyOps(ops: (SchemaOperation | DefinitionOperation)[], summary: string, blockId?: string): Promise<boolean> {
+    if (flight.current !== null) return false;           // another write / AI request is in flight (M-020): this one is dropped, not sent twice and not reported as a failure
     const r = await run("edit", () => api.patchSchema(ws, projectId, revision, ops, summary, blockId), "Không lưu được thay đổi.");
     if (!r) { setFailedEdit(saveFailureRef.current === "retryable" ? { ops, summary, blockId } : null); return false; }
     setFailedEdit(null); setSchema(r.schema); setRevision(r.revision); void refreshVersions(); return true;
   }
   const retrySave = () => { if (failedEdit) void applyOps(failedEdit.ops, failedEdit.summary, failedEdit.blockId); };
-  // leaving while an edit is in flight or failed would lose it silently
-  useEffect(() => {
-    if (busy !== "edit" && !failedEdit) return;
-    const h = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
-    window.addEventListener("beforeunload", h); return () => window.removeEventListener("beforeunload", h);
-  }, [busy, failedEdit]);
+
   async function restore(v: VersionSummary) {
-    if (!window.confirm(`Khôi phục phiên bản ${v.versionNumber}? Một phiên bản mới sẽ được tạo; lịch sử cũ giữ nguyên.`)) return;
+    if (!(await confirm({ title: `Khôi phục phiên bản ${v.versionNumber}?`, message: "Nội dung của phiên bản này trở thành một phiên bản MỚI. Lịch sử cũ giữ nguyên, nên có thể quay lại bản hiện tại sau đó.", confirmLabel: "Khôi phục phiên bản này" }))) return;
     const r = await run("restore", () => api.restoreVersion(ws, projectId, v.id, revision), "Không khôi phục được phiên bản.");
     if (!r) return;
-    setSchema(r.schema); setRevision(r.revision); void refreshVersions(); setNotice(`Đã khôi phục phiên bản ${v.versionNumber} thành phiên bản ${r.version.versionNumber}.`);
+    setSchema(r.schema); setRevision(r.revision); void refreshVersions(); toast.success(`Đã khôi phục phiên bản ${v.versionNumber} thành phiên bản ${r.version.versionNumber}.`);
+  }
+  async function archive() {
+    if (!project || !(await confirm({ title: `Lưu trữ “${project.name}”?`, message: "Ứng dụng chỉ còn xem được và website bị gỡ khỏi mạng. Dữ liệu và phiên bản được giữ; có thể khôi phục sau.", confirmLabel: "Lưu trữ ứng dụng", danger: true }))) return;
+    const r = await run("settings", () => api.archiveProject(ws, projectId), "Không lưu trữ được.");
+    if (r) { closePanel(); void reload(); }
   }
   async function saveSettings(patch: Partial<ApiProject>) {
     const p = await run("settings", () => api.updateProject(ws, projectId, revision, patch), "Không lưu được cài đặt.");
-    if (p) { setProject(p); setRevision(p.revision); go(mode); setNotice("Đã lưu cài đặt."); }
+    if (p) { setProject(p); setRevision(p.revision); closePanel(); toast.success("Đã lưu cài đặt."); }
   }
   const pageSections = useMemo(() => (!schema ? [] : pageId === "home" ? schema.sections : schema.pages?.find((x) => x.id === pageId)?.sections ?? schema.sections), [schema, pageId]);
   useEffect(() => { if (schema && pageId !== "home" && !schema.pages?.some((x) => x.id === pageId)) setPageId("home"); }, [schema, pageId]);
@@ -247,7 +173,8 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   }), [ws, projectId]);
 
   if (loadError) return <div className="wsError"><ErrorState error={loadError} retry={() => { setLoadError(null); reload().catch(setLoadError); }}/><p><a className="btn xp-btnIcon" href={S("/projects")}><ArrowLeft size={14} aria-hidden="true"/> Danh sách ứng dụng</a></p></div>;
-  if (project?.appType === "STATIC_APP") return <CodeWorkspace project={project} view={view} onProject={setProject}/>;
+  if (project && !admitted) return <div className="wsError"><StateView kind="loading" title="Đang chuyển…"/></div>;       // no privileged content is rendered while the redirect happens
+  if (project?.appType === "STATIC_APP") return <Suspense fallback={<div className="wsError"><StateView kind="loading" title="Đang mở ứng dụng…"/></div>}><CodeWorkspace project={project} view={view} onProject={setProject}/></Suspense>;
   if (!project || !schema) return <div className="wsError"><StateView kind="loading" title="Đang mở ứng dụng…"/></div>;
   // company blocks, then my own drafts (an approved block of mine is already in the company list)
   const blockOptions = [...blocks.company.map((b) => ({ b, who: "Công ty" })), ...blocks.mine.filter((b) => b.approvedVersion == null || b.status !== "APPROVED").map((b) => ({ b, who: "Của tôi" }))]
@@ -255,34 +182,35 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
   const selected = pageSections.find((s) => s.id === selectedId) ?? null;
   const latest = versions[0]?.versionNumber;
 
-  const renderPreview = (o: { selectedId: string | null; interactive: boolean; pageId: string }) => renderSchemaDocument(schema, { selectedId: o.selectedId, interactive: o.interactive, nonce: nonceOfPage(), assets: assetUrls, pageId: o.pageId });
+  const renderPreview = (o: { selectedId: string | null; interactive: boolean; pageId: string }) => renderSchemaDocument(schema, { selectedId: o.selectedId, interactive: o.interactive, nonce: nonceOfPage(), assets: assetUrls, pageId: o.pageId,
+    parentOrigin: typeof window === "undefined" ? undefined : window.location.origin });   // M-089: the canvas script posts to this origin only
   const modeTabs = (
     <nav className="modeTabs" aria-label="Chế độ">
-      {MODES.map((m) => <button key={m} className={mode === m ? "active" : ""} aria-pressed={mode === m} onClick={() => go(m)}>{m === "ai" ? <><Sparkles size={14} aria-hidden="true"/> AI</> : m === "design" ? "Design" : "Code"}</button>)}
+      {MODES.map((m) => <button key={m} className={mode === m ? "active" : ""} aria-pressed={mode === m} onClick={() => go(m)}>{m === "ai" ? <><Sparkles size={14} aria-hidden="true"/> AI</> : m === "design" ? "Design" : <>Code<small className="xp-navSoon"> Sắp có</small></>}</button>)}
     </nav>
   );
 
   return (
     <div className={`studio workspace3${mode === "design" ? " bx-root" : ""}`}>
-      {mode === "design" ? <BuilderWorkspace
+      {mode === "design" ? <ErrorBoundary variant="inline" resetKeys={[projectId]} homeHref={S("/projects")} onReset={() => void reload().catch(() => undefined)}><BuilderWorkspace
         project={project} doc={schema as AppDefinitionV2} revision={revision} registry={registry} assets={assets} backend={backend} pageId={pageId} onPage={(id) => { setPageId(id); setSelectedId(null); }}
         selectedId={selectedId} onSelect={setSelectedId} device={device} onDevice={setDevice} busy={busy !== null} save={save} readOnly={readOnly} latest={latest}
-        runtime={runtime} dataManagement={dataManagement} onRetrySave={failedEdit ? retrySave : undefined} blocks={blockOptions.map(({ b, who }): BlockOption => ({ id: b.id, name: b.name, who, baseLabel: label(b.baseComponent) }))}
+        runtime={runtime} dataManagement={dataManagement} onRetrySave={failedEdit ? retrySave : undefined} lastFailure={() => lastNoticeRef.current} blocks={blockOptions.map(({ b, who }): BlockOption => ({ id: b.id, name: b.name, who, baseLabel: label(b.baseComponent) }))}
         applyOps={applyOps} addBlock={(id) => { const o = blockOptions.find(({ b }) => b.id === id); if (o) void addBlock(o.b); }}
         renderPreview={renderPreview} labelOf={label} summaryOf={sectionSummary}
-        leading={<button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}><ArrowLeft size={16} aria-hidden="true"/></button>}
+        leading={<button className="btn icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}><ArrowLeft size={16} aria-hidden="true"/></button>}
         modeTabs={modeTabs}
         trailing={<>
-          <button className="button ghost" onClick={() => go("site")}>Website</button>
-          <button className="button ghost" onClick={() => go("versions")}>Phiên bản</button>
-          <button className="button ghost" onClick={() => go("assets")}>Tệp</button>
-          <button className="button icon" aria-label="Cài đặt project" title={mayEdit ? "Cài đặt project" : "Bạn không có quyền đổi cài đặt"} disabled={!mayEdit} onClick={() => go("settings")}><Settings size={16} aria-hidden="true"/></button></>}
-        goAi={() => go("ai")} openSite={() => go("site")} openMembers={() => go("members")} openPublish={() => go("publish")} saveBlock={() => setSavingBlock(true)}/> : (
+          <button className="btn ghost" onClick={() => go("site")}>Website</button>
+          <button className="btn ghost" onClick={() => go("versions")}>Phiên bản</button>
+          <button className="btn ghost" onClick={() => go("assets")}>Tệp</button>
+          <GuardedButton className="btn icon" aria-label="Cài đặt project" unavailable={!mayEdit} reason="Bạn không có quyền đổi cài đặt ứng dụng." onClick={() => go("settings")}><Settings size={16} aria-hidden="true"/></GuardedButton></>}
+        goAi={() => go("ai")} openSite={() => go("site")} openMembers={() => go("members")} openPublish={() => go("publish")} saveBlock={() => setSavingBlock(true)}/></ErrorBoundary> : (
       <header className="topbar">
         <div className="brand">
-          <button className="button icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}><ArrowLeft size={16} aria-hidden="true"/></button>
+          <button className="btn icon" aria-label="Danh sách ứng dụng" title="Danh sách ứng dụng" onClick={() => router.push(S("/projects"))}><ArrowLeft size={16} aria-hidden="true"/></button>
           <div>
-            <div className="projectName">{project.name}</div>
+            <div className="projectName" role="heading" aria-level={1} title={project.name}>{project.name}</div>
             <div className="projectMeta">{latest ? `Phiên bản ${latest}` : "Chưa có phiên bản"} · revision {revision} · {project.siteVisibility === "PUBLIC" ? "Công khai" : "Riêng tư"}{readOnly ? " · chỉ xem" : ""}</div>
           </div>
           <span className={`saveState ${save.state}`} role="status" aria-live="polite">
@@ -291,17 +219,23 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
         </div>
         {modeTabs}
         <div className="topActions">
-          <button className="button ghost" onClick={() => go("site")}>Website</button>
-          <button className="button ghost" onClick={() => go("versions")}>Phiên bản</button>
-          <button className="button ghost" onClick={() => go("assets")}>Tệp</button>
-          {mayShare ? <button className="button ghost" onClick={() => go("members")}>Chia sẻ</button> : null}
-          <button className="button icon" aria-label="Cài đặt project" title={mayEdit ? "Cài đặt project" : "Bạn không có quyền đổi cài đặt"} disabled={!mayEdit} onClick={() => go("settings")}><Settings size={16} aria-hidden="true"/></button>
-          <button className="button primary" disabled={!mayPublish || busy !== null} title={mayPublish ? "Xuất bản phiên bản hiện tại" : "Bạn không có quyền xuất bản"} onClick={() => go("publish")}>Xuất bản</button>
+          <button className="btn ghost" onClick={() => go("site")}>Website</button>
+          <button className="btn ghost" onClick={() => go("versions")}>Phiên bản</button>
+          <button className="btn ghost" onClick={() => go("assets")}>Tệp</button>
+          {mayShare ? <button className="btn ghost" onClick={() => go("members")}>Chia sẻ</button> : null}
+          <GuardedButton className="btn icon" aria-label="Cài đặt project" unavailable={!mayEdit} reason="Bạn không có quyền đổi cài đặt ứng dụng." onClick={() => go("settings")}><Settings size={16} aria-hidden="true"/></GuardedButton>
+          <OverflowMenu items={[
+            { key: "site", label: "Website", onSelect: () => go("site") }, { key: "versions", label: "Phiên bản", onSelect: () => go("versions") }, { key: "assets", label: "Tệp", onSelect: () => go("assets") },
+            ...(mayShare ? [{ key: "members", label: "Chia sẻ", onSelect: () => go("members") }] : []),
+            { key: "settings", label: "Cài đặt project", onSelect: () => go("settings"), unavailable: !mayEdit, reason: "Bạn không có quyền đổi cài đặt." }]}/>
+          <GuardedButton className="btn primary" unavailable={!mayPublish} reason="Bạn không có quyền xuất bản (cần quyền APP_PUBLISH)." disabled={busy !== null} onClick={() => go("publish")}>Xuất bản</GuardedButton>
         </div>
       </header>)}
 
       {project.status === "ARCHIVED" ? <div className="archivedBanner" role="status">Ứng dụng đã được lưu trữ: chỉ xem, website đang ngoại tuyến.
-        <button className="smallButton" onClick={() => void run("settings", () => api.restoreProject(ws, projectId), "Không khôi phục được (cần quyền chủ sở hữu hoặc quản trị).").then((r) => { if (r) void reload(); })}>Khôi phục</button></div> : null}
+        {/* M-080: the server restores only with PROJECT_DELETE (ProjectLifecycle.kt): without it the button is disabled with the reason, not offered to fail after the click */}
+        <GuardedButton className="btn sm" unavailable={!mayDelete} reason="Bạn không có quyền khôi phục ứng dụng (cần quyền chủ sở hữu hoặc quản trị)." disabled={busy !== null}
+          onClick={() => void run("settings", () => api.restoreProject(ws, projectId), "Không khôi phục được (cần quyền chủ sở hữu hoặc quản trị).").then((r) => { if (r) void reload(); })}>Khôi phục</GuardedButton></div> : null}
       {mode === "code" ? (
         <main className="codeMode">
           <div className="codeCard">
@@ -313,23 +247,27 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
           </div>
         </main>
       ) : mode === "ai" ? (
-        <main className={`wsBody mode-${mode}`}>
+        <main className={`wsBody mode-${mode}`} data-pane={pane}>
+          {/* phone (<= 767 px): ONE pane at a time (M-104). Both stay mounted, so the conversation, the draft prompt and the preview keep their state; CSS shows one. */}
+          <div className="wsPaneSwitch"><Tabs label="Khu vực làm việc" idBase={paneId} value={pane} onChange={setPane} panels={false}
+            tabs={[{ value: "chat", label: "Trò chuyện" }, { value: "preview", label: "Xem trước" }]}/></div>
           {mode === "ai" ? (
             <section className="promptPane">
-              <div className="conversation">
+              <div className="conversation" ref={convRef} onScroll={onConversationScroll}>
                 {messages.length === 0 ? (
-                  <div className="intro"><h1>Bạn muốn ứng dụng thay đổi thế nào?</h1><p>Mô tả bằng lời; thay đổi được kiểm tra theo registry rồi lưu thành phiên bản có thể khôi phục.</p>
+                  <div className="intro"><h2>Bạn muốn ứng dụng thay đổi thế nào?</h2><p>Mô tả bằng lời; thay đổi được kiểm tra theo registry rồi lưu thành phiên bản có thể khôi phục.</p>
                     {!readOnly ? <div className="starterList" aria-label="Gợi ý để bắt đầu">{suggestions(ai?.configured === true).map((t) => (
                       <button type="button" key={t} className="starter" disabled={busy !== null} onClick={() => { setPrompt(t); promptRef.current?.focus(); }}><Sparkles size={14} aria-hidden="true"/>{t}</button>))}</div> : null}</div>
                 ) : null}
-                {messages.map((m) => (
+                <div role="log" aria-live="polite" aria-relevant="additions" aria-label="Cuộc trò chuyện với AI">{messages.map((m) => (
                   <div className={`message ${m.role}`} key={m.id}><div className="bubble"><div>{m.content}</div>
                     {m.detail ? <div className="msgDetail">{m.detail}</div> : null}
                     {m.meta?.length ? <div className="chips">{m.meta.map((x) => <span className="chip" key={x}>{x}</span>)}</div> : null}</div></div>
-                ))}
+                ))}</div>
                 {busy === "prompt" && live ? <AiProgress live={live} model={effectiveModel}
-                    onCancel={() => { if (live.id) void api.cancelStream(live.id).catch(() => undefined); else streamAbort.current?.abort(); }}/>
+                    onCancel={cancel}/>
                   : busy === "prompt" ? <div className="message assistant"><div className="bubble typing" role="status"><span className="dots" aria-hidden="true"><i/><i/><i/></span> Đang phân tích yêu cầu{ai?.configured && effectiveModel !== "mock" ? " với AI…" : "…"}</div></div> : null}
+                {behind ? <button type="button" className="btn sm" style={{ position: "sticky", bottom: 8, marginLeft: "auto", display: "block" }} onClick={jumpToNewest}>Tin mới ↓</button> : null}
               </div>
               <div className="composer">
                 {!readOnly && messages.length > 0 ? <div className="suggestions" aria-label="Gợi ý">{suggestions(ai?.configured === true).map((t) => (
@@ -372,31 +310,31 @@ export function ProjectWorkspace({ projectId, view }: { projectId: string; view?
         </main>
       ) : null}
 
-      {notice ? <button className="toast" onClick={() => setNotice(null)}>{notice}</button> : null}
 
-      {panel === "versions" ? <Drawer title="Lịch sử phiên bản" sub="Khôi phục tạo một phiên bản mới; phiên bản cũ không bao giờ bị sửa." onClose={() => go(mode)}>
+      {panel === "versions" ? <Drawer title="Lịch sử phiên bản" sub="Khôi phục tạo một phiên bản mới; phiên bản cũ không bao giờ bị sửa." onClose={() => closePanel()}>
+        {versions.length === 0 ? <StateView kind="empty" title="Chưa có phiên bản nào" detail={<p>Mỗi lần lưu thay đổi (bằng AI hoặc Design) tạo một phiên bản ở đây.</p>}/> : null}
         <div className="versionList">{versions.map((v) => (
           <article className="versionItem" key={v.id}>
             <div><b>Phiên bản {v.versionNumber}{v.current ? " · hiện tại" : ""}</b><span>{fmtDate(v.createdAt)}</span></div>
             <p>{v.summary}</p><small>{v.kind}{v.createdBy ? ` · ${v.createdBy}` : ""}</small>
-            {v.restorable && mayEdit ? <button className="smallButton" disabled={busy !== null} onClick={() => void restore(v)}>{busy === "restore" ? "Đang khôi phục…" : "Khôi phục"}</button> : null}
+            {v.restorable && mayEdit ? <button className="btn sm" disabled={busy !== null} onClick={() => void restore(v)}>{busy === "restore" ? "Đang khôi phục…" : "Khôi phục"}</button> : null}
           </article>))}</div>
       </Drawer> : null}
       {panel === "site" ? <SiteDrawer schema={schema} ws={ws} pid={projectId} pageId={pageId} onPage={(id) => { setPageId(id); setSelectedId(null); }} canEdit={!readOnly}
-        canPublish={mayPublish} apply={applyOps} onClose={() => go(mode)}/> : null}
-      {panel === "settings" ? <SettingsDrawer project={project} busy={busy === "settings"} onClose={() => go(mode)} onSave={saveSettings}
+        canPublish={mayPublish} apply={applyOps} onClose={() => closePanel()}/> : null}
+      {panel === "settings" && mayEdit ? <SettingsDrawer project={project} busy={busy === "settings"} onClose={() => closePanel()} onSave={saveSettings}
         extra={<>{!readOnly ? <SaveTemplateSection workspaceId={ws} projectId={projectId} projectName={project.name}/> : null}
           {mayDelete && project.status !== "ARCHIVED" ? <section className="settingGroup"><h3>Lưu trữ ứng dụng</h3>
             <p className="hint">Ứng dụng chỉ còn xem được, website bị gỡ khỏi mạng. Dữ liệu và phiên bản được giữ; có thể khôi phục.</p>
-            <button className="button ghost" onClick={() => { if (confirm(`Lưu trữ “${project.name}”?`)) void run("settings", () => api.archiveProject(ws, projectId), "Không lưu trữ được.").then((r) => { if (r) { go(mode); void reload(); } }); }}>Lưu trữ</button>
+            <button className="btn ghost" onClick={() => void archive()}>Lưu trữ</button>
           </section> : null}</>}/> : null}
       {savingBlock && selected ? <SaveBlockDrawer workspaceId={ws} projectId={projectId} section={selected} title={label(selected.type)}
-        onClose={() => setSavingBlock(false)} onSaved={(m) => { setSavingBlock(false); setNotice(m); loadBlocks(); }}/> : null}
-      {panel === "assets" ? <AssetsDrawer workspaceId={ws} projectId={projectId} canEdit={mayEdit} onClose={() => { void loadAssets(ws); go(mode); }} onError={(e) => setNotice(errText(e, "Thao tác tệp thất bại."))}/> : null}
-      {panel === "members" && me ? <MembersDrawer workspaceId={ws} projectId={projectId} me={me} onClose={() => go(mode)} onError={(e) => setNotice(errText(e, "Thao tác thành viên thất bại."))}/> : null}
+        onClose={() => setSavingBlock(false)} onSaved={(m) => { setSavingBlock(false); toast.success(m); loadBlocks(); }}/> : null}
+      {panel === "assets" ? <AssetsDrawer workspaceId={ws} projectId={projectId} canEdit={mayEdit} onClose={() => { void loadAssets(ws); closePanel(); }} onError={(e) => toast.error(errText(e, "Thao tác tệp thất bại."))}/> : null}
+      {panel === "members" && me && mayShare ? <MembersDrawer workspaceId={ws} projectId={projectId} me={me} onClose={() => closePanel()} onError={(e) => toast.error(errText(e, "Thao tác thành viên thất bại."))}/> : null}
       {panel === "publish" ? <PublishModal workspaceId={ws} projectId={projectId} revision={revision} current={project.siteVisibility} versionNumber={latest} canPublish={mayPublish} draft={schema as AppDefinitionV2}
         allowed={publicPublish === false ? ["PRIVATE"] : ["PRIVATE", "PUBLIC"]}
-        onClose={() => { go(mode); void reload().catch(() => undefined); }} onUnauthorized={() => undefined}/> : null}
+        onClose={() => { closePanel(); void reload().catch(() => undefined); }} onUnauthorized={() => undefined}/> : null}
     </div>
   );
 }
