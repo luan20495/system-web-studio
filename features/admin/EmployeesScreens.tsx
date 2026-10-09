@@ -54,7 +54,7 @@ export function EmployeesView({ api, plan, tenant, onTenant, prov, canToggleStat
           ? <label className="field xp-tenantSwitch"><span>Công ty</span><select data-testid="emp-tenant-switch" value={tenant.id} onChange={(e) => onTenant(e.target.value)}>{plan.tenantChoice.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
           : <label className="field xp-tenantSwitch"><span>Công ty của bạn</span><input data-testid="emp-tenant" readOnly aria-readonly="true" value={tenant.name}/></label>}
         <div className="xp-orgBarActions">
-          <button className="btn primary xp-btnIcon" data-testid="emp-create" disabled={!canCreate} title={!canCreate ? (prov.plan.create as { reason?: string }).reason : undefined} onClick={() => setCreating(true)}><UserRound size={16} aria-hidden="true"/> Thêm nhân viên</button>
+          <ReasonButton className="btn primary xp-btnIcon" data-testid="emp-create" unavailable={!canCreate} reason={(prov.plan.create as { reason?: string }).reason} onClick={() => setCreating(true)}><UserRound size={16} aria-hidden="true"/> Thêm nhân viên</ReasonButton>
         </div>
       </div>
 

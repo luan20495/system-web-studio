@@ -9,7 +9,7 @@ import { useSingleFlight } from "./useAdminAction";
 import { useLoad } from "../useLoad";
 import { Modal } from "./Modal";
 import { Card, ErrorState, errText, num, Pill, StateView, usd } from "../ui";
-import { Activity, CircleAlert, CircleCheck, CircleSlash, Cpu, KeyRound, ModalHeader, Pencil, Picker, Plus, Power, ProviderLogo, Save, Server, Settings2, ShieldCheck, Switch, Trash2, Zap, ChevronDown, ChevronUp, Download, type PickerOption, confirm, LoadGate } from "@xweb/ui";
+import { Activity, CircleAlert, CircleCheck, CircleSlash, Cpu, KeyRound, ModalHeader, ReasonButton, Pencil, Picker, Plus, Power, ProviderLogo, Save, Server, Settings2, ShieldCheck, Switch, Trash2, Zap, ChevronDown, ChevronUp, Download, type PickerOption, confirm, LoadGate } from "@xweb/ui";
 
 // ------------------------------------------------------------------ wording
 export const KIND_LABELS: Record<AiProviderKind, string> = {
@@ -236,7 +236,7 @@ function ModelsTab({ pricing }: { pricing: ReactNode }) {
               <button className="btn sm primary">Lưu</button><button type="button" className="btn sm" onClick={() => setPriceFor(null)}>Hủy</button></form>
           ) : <>{m.price ? `vào ${m.price.inputUsdPerMTok} · ra ${m.price.outputUsdPerMTok}` : <span className="muted">Chưa có giá</span>} <button className="btn sm" onClick={() => setPriceFor(m.id)}>Cấu hình giá</button></>}</td>
           <td><label className="switch"><input type="checkbox" checked={over[m.id] ?? m.enabled} onChange={(e) => void toggle(m.id, e.target.checked)} aria-label={`Cho phép ${m.name}`}/> {(over[m.id] ?? m.enabled) ? "Bật" : "Tắt"}</label></td>
-          <td>{defaultModel === m.id ? <Pill value="ACTIVE" label="Mặc định"/> : <button className="btn sm" disabled={!(over[m.id] ?? m.enabled)} title={(over[m.id] ?? m.enabled) ? undefined : "Bật mô hình trước"} onClick={() => void makeDefault(m.id)}>Đặt làm mặc định</button>}</td>
+          <td>{defaultModel === m.id ? <Pill value="ACTIVE" label="Mặc định"/> : <ReasonButton className="btn sm" unavailable={!(over[m.id] ?? m.enabled)} reason="Bật mô hình trước." onClick={() => void makeDefault(m.id)}>Đặt làm mặc định</ReasonButton>}</td>
         </tr>)}</tbody></table>}
     </Card>
     {pricing}

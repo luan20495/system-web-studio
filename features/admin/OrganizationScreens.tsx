@@ -5,7 +5,7 @@
  * Move is a "Di chuyển tới…" dialog (reliable, keyboard friendly), not drag and drop. The UI avoids obvious cycles; the server is the authority (ORG_CYCLE).
  */
 import { memo, useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { ArrowRightLeft, Building2, ChevronRight, ChevronsDownUp, ChevronsUpDown, FolderTree, Info, Pencil, Plus, Power, RefreshCw, Settings2, Trash2, ModalHeader, Picker, type PickerOption } from "@xweb/ui";
+import { ArrowRightLeft, Building2, ChevronRight, ChevronsDownUp, ChevronsUpDown, FolderTree, Info, Pencil, Plus, Power, RefreshCw, Settings2, Trash2, ModalHeader, ReasonButton, Picker, type PickerOption } from "@xweb/ui";
 import { Modal } from "./Modal";
 import { Card, StateView } from "../ui";
 import { useLoad } from "../useLoad";
@@ -71,7 +71,7 @@ export function OrganizationView({ api, plan, tenant }: { api: OrganizationApi; 
           <button className="btn xp-btnIcon" data-testid="org-collapse-all" onClick={() => setOpen(new Set())}><ChevronsDownUp size={16} aria-hidden="true"/> Thu gọn</button></> : null}
           <button className="btn xp-btnIcon" data-testid="org-types" disabled={!ready} onClick={() => setDialog({ kind: "types" })}><Settings2 size={16} aria-hidden="true"/> Loại đơn vị</button>
           <button className="btn xp-btnIcon" data-testid="org-reload" disabled={!ready} onClick={reload} aria-label="Tải lại cơ cấu"><RefreshCw size={16} aria-hidden="true"/></button>
-          <button className="btn primary xp-btnIcon" data-testid="org-add-root" disabled={!ready || !canEdit} title={!canEdit ? "Chưa sẵn sàng" : undefined} onClick={() => setDialog({ kind: "create", parentId: null })}><Plus size={16} aria-hidden="true"/> Thêm đơn vị gốc</button>
+          <ReasonButton className="btn primary xp-btnIcon" data-testid="org-add-root" unavailable={!ready || !canEdit} reason={ready && !canEdit ? "Cơ cấu đang ở chế độ chỉ xem." : undefined} onClick={() => setDialog({ kind: "create", parentId: null })}><Plus size={16} aria-hidden="true"/> Thêm đơn vị gốc</ReasonButton>
         </div>
       </div>
       {flash ? <p className="notice" role="status" data-testid="org-flash">{flash}</p> : null}
@@ -180,9 +180,9 @@ function Detail({ unit, units, type, canEdit, busy, problem, onAction }: { unit:
         <button className="btn xp-btnIcon" data-testid="org-edit" disabled={!canEdit} onClick={() => onAction("edit")}><Pencil size={16} aria-hidden="true"/> Sửa</button>
         <button className="btn xp-btnIcon" data-testid="org-move" disabled={!canEdit} onClick={() => onAction("move")}><ArrowRightLeft size={16} aria-hidden="true"/> Di chuyển tới…</button>
         <button className="btn xp-btnIcon" data-testid="org-toggle" disabled={!canEdit || busy} onClick={() => onAction("toggle")}><Power size={16} aria-hidden="true"/> {unit.enabled ? "Tắt" : "Bật"}</button>
-        <button className="btn danger xp-btnIcon" data-testid="org-delete" disabled={!canEdit || !!block} title={block ?? undefined} onClick={() => onAction("delete")}><Trash2 size={16} aria-hidden="true"/> Xóa</button>
+        <button className="btn danger xp-btnIcon" data-testid="org-delete" disabled={!canEdit || !!block} aria-describedby={block ? "org-delete-blocked" : undefined} onClick={() => onAction("delete")}><Trash2 size={16} aria-hidden="true"/> Xóa</button>
       </div>
-      {block ? <p className="hint" data-testid="org-delete-blocked">Chưa xóa được: {block}</p> : null}
+      {block ? <p className="hint" id="org-delete-blocked" data-testid="org-delete-blocked">Chưa xóa được: {block}</p> : null}
       {problem ? <Problem p={problem}/> : null}
     </div>
   );

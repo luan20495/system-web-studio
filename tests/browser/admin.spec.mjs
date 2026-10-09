@@ -576,6 +576,15 @@ if (!process.env.SKIP_SNAPSHOT) {
   check(`SNAP01 every persona's sidebar and every section's page (${Object.keys(want).length} personas × ${KEYS.length} paths) is exactly what it was before the split`, diffs.length === 0, diffs.slice(0, 3).join(" || "));
 }
 
+// ===================================================================================================================== M-031 a disabled action says WHY in visible text (never title-only)
+await block("scenario 75", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/users/u-sys" });
+  const lock = p.getByRole("button", { name: /Khóa tài khoản/ }); await lock.waitFor();
+  const reason = /Bạn không thể tự khóa tài khoản của mình/;
+  check("RSN01 your own account: 'Khóa tài khoản' is aria-disabled, FOCUSABLE, has no title, and the reason is visible text tied to it", (await lock.getAttribute("aria-disabled")) === "true" && !(await lock.getAttribute("title")) && reason.test(await text(p)) && !!(await lock.getAttribute("aria-describedby")));
+  await lock.focus(); const h0 = (await calls(p)).length; await lock.click({ force: true }); await settle(p, 200);
+  check("RSN02 …and activating it sends nothing and opens no dialog", (await calls(p)).length === h0 && (await dlg(p).count()) === 0);
+  await p.__ctx.close(); });
+
 check("no console error / warning / uncaught exception in any page", errors.length === 0, errors.slice(0, 3).join(" | "));
 await browser.close();
 finish();

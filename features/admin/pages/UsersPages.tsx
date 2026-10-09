@@ -15,7 +15,7 @@ import { LinkBox } from "../UserDialogs";
 import { useSession } from "../../session";
 import { adminScope } from "../adminModel";
 import { useA } from "../console/context";
-import { confirm, LoadGate } from "@xweb/ui";
+import { confirm, LoadGate, ReasonButton } from "@xweb/ui";
 import { useLoad } from "../../useLoad";
 import { ago, Card, ErrorState, errText, fmtDate, Kpi, num, Pager, Pill, StateView } from "../../ui";
 import { PageHead } from "../PageHead";
@@ -95,7 +95,7 @@ export function UserDetail({ id }: { id: string }) {
         {u.authSource === "LOCAL" && u.enabled ? <button className="btn" disabled={busy} onClick={() => newLink()}>{u.pending ? "Tạo lại liên kết kích hoạt" : "Đặt lại mật khẩu"}</button> : null}
         {!self && u.enabled && !u.pending ? <button className="btn" disabled={busy} onClick={() => void grantAdmin()}>{u.systemAdmin ? "Gỡ quyền Quản trị hệ thống" : "Cấp quyền Quản trị hệ thống"}</button> : null}
         <button className="btn" disabled={busy || d.activeSessions === 0} onClick={() => void revoke()}>Thu hồi phiên ({d.activeSessions})</button>
-        <button className={`btn ${u.enabled ? "danger" : "primary"}`} disabled={busy || self} title={self ? "Bạn không thể tự khóa tài khoản của mình" : undefined} onClick={() => void toggle()}>{u.enabled ? "Khóa tài khoản" : "Mở khóa"}</button>
+        <ReasonButton className={`btn ${u.enabled ? "danger" : "primary"}`} busy={busy} unavailable={self} reason="Bạn không thể tự khóa tài khoản của mình." onClick={() => void toggle()}>{u.enabled ? "Khóa tài khoản" : "Mở khóa"}</ReasonButton>
       </div>}/>
     {msg ? <p className="notice" role="status">{msg}</p> : null}
     {link ? <LinkBox link={link} onClose={() => { setLink(null); reload(); }}/> : null}

@@ -16,7 +16,7 @@ import { useSession } from "../session";
 import { useLoad } from "../useLoad";
 import { Card, ErrorState, fmtDate, Kpi, Pager, Pill, StateView } from "../ui";
 import { isTenantAdminRole, isWorkspaceAdminRole } from "@xweb/permissions";
-import { ArrowLeft, Building2, CircleCheck, ModalHeader, ShieldCheck, UserRound, confirm, errorText, LoadGate, useAction } from "@xweb/ui";
+import { ArrowLeft, Building2, CircleCheck, ModalHeader, ShieldCheck, UserRound, confirm, errorText, LoadGate, ReasonButton, useAction } from "@xweb/ui";
 import { LoadNote } from "./LoadNote";
 import { useSingleFlight } from "./useAdminAction";
 import { PersonPicker } from "./PersonPicker";
@@ -114,7 +114,7 @@ function TenantMembers({ tenantId, tenantName, onCreateAdmin, rev = 0 }: { tenan
               <td><span className="row"><select aria-label={`Vai trò của ${r.label}`} value={draft[r.userId] ?? r.role} disabled={busy !== null || r.userId === me?.id} onChange={(e) => setDraft((d) => ({ ...d, [r.userId]: e.target.value }))}>
                 {TENANT_ROLES.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</select>
                 {draft[r.userId] && draft[r.userId] !== r.role ? <><button className="btn sm primary" data-testid={`tm-save:${r.userId}`} disabled={busy !== null} onClick={() => void saveRole(r)}>Lưu</button><button className="btn sm" disabled={busy !== null} onClick={() => setDraft((d) => { const n = { ...d }; delete n[r.userId]; return n; })}>Hủy</button></> : null}</span></td>
-              <td><button className="btn sm danger" disabled={busy !== null || r.userId === me?.id} title={r.userId === me?.id ? "Bạn không thể tự gỡ mình" : undefined} onClick={() => change(r, "REMOVE")}>Gỡ</button></td>
+              <td><ReasonButton className="btn sm danger" busy={busy !== null} unavailable={r.userId === me?.id} reason="Bạn không thể tự gỡ mình." onClick={() => change(r, "REMOVE")}>Gỡ</ReasonButton></td>
             </tr>))}</tbody>
         </table>)}
       <form className="stack" onSubmit={(e) => void add(e)} data-testid="tenant-member-add">
@@ -376,7 +376,7 @@ function WorkspaceMembersPanel({ workspaceId, name }: { workspaceId: string; nam
                 {WORKSPACE_ROLES.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}{WORKSPACE_ROLES.some((x) => x.id === m.role) ? null : <option value={m.role}>{workspaceRoleLabel(m.role)}</option>}</select>
                 {draft[m.userId] && draft[m.userId] !== m.role ? <><button className="btn sm primary" data-testid={`wm-save:${m.username}`} disabled={busy !== null} onClick={() => void saveRole(m)}>Lưu</button><button className="btn sm" disabled={busy !== null} onClick={() => setDraft((d) => { const n = { ...d }; delete n[m.userId]; return n; })}>Hủy</button></> : null}</span></td>
               <td>{fmtDate(m.joinedAt)}</td>
-              <td><button className="btn sm danger" disabled={busy !== null || m.userId === me?.id} title={m.userId === me?.id ? "Bạn không thể tự gỡ mình" : undefined} onClick={() => change(m, "REMOVE")}>Gỡ</button></td>
+              <td><ReasonButton className="btn sm danger" busy={busy !== null} unavailable={m.userId === me?.id} reason="Bạn không thể tự gỡ mình." onClick={() => change(m, "REMOVE")}>Gỡ</ReasonButton></td>
             </tr>))}</tbody>
         </table>)}
       <form className="stack" onSubmit={(e) => void add(e)} data-testid="ws-member-add">
