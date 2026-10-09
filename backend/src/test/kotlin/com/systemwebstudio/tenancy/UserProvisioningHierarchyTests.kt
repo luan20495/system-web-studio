@@ -350,7 +350,7 @@ class UserProvisioningHierarchyTests : IntegrationTestBase() {
 
     // ------------------------------------------------------------------------------------------------ N
     @Test
-    fun `N auth me reports exactly the permissions of the freeze - WORKSPACE_ADMIN has MEMBER_MANAGE, TENANT_ADMIN has the two tenant permissions, a non-member SYSTEM_ADMIN has no business or member permission`() {
+    fun `N auth me reports exactly the permissions of the freeze - WORKSPACE_ADMIN has MEMBER_MANAGE, TENANT_ADMIN has the eight tenant and organization capabilities, a non-member SYSTEM_ADMIN has no business or member permission`() {
         val sys0 = fx.user("prov-sysN", systemAdmin = true); val sys = sessionFor(sys0.username); val t = createTenant(sys)
         val ta = activateAndLogin(provision(sys, t.id, uname("tadmin"), tenantRole = "TENANT_ADMIN"))
         val wa = activateAndLogin(provision(sys, t.id, uname("wadmin"), ws = t.ws, wsRole = "WORKSPACE_ADMIN"))

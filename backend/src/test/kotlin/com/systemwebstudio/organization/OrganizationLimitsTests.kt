@@ -85,4 +85,20 @@ class OrganizationLimitsTests : OrganizationTestBase() {
         assertThat(code(c.admin.post("${employees(c)}/$u/positions", """{"membershipId":"${id(mA)}","positionId":"${id(pos[limit])}"}"""), c.admin)).isEqualTo("VALIDATION_FAILED")
         assertThat(usersCount()).isEqualTo(users + 1)
     }
+
+    @Test
+    fun `20 active organization memberships PER EMPLOYEE - the 21st is refused and creates nothing, an ended membership frees a slot`() {
+        val limit = EmployeeDirectoryService.MAX_MEMBERSHIPS
+        assertThat(limit).isEqualTo(20)
+        val c = company(); val t = type(c, "unit"); val e = uid(newEmployee(c))
+        val units = (0..limit).map { unit(c, t, "U%02d".format(it)) }
+        val ms = units.take(limit).map { member(c, e, it) }
+        assertThat(c.admin.body(c.admin.get("${employees(c)}/$e/organization-memberships")).size()).isEqualTo(limit)
+        val over = c.admin.post("${employees(c)}/$e/organization-memberships", """{"organizationUnitId":"${id(units.last())}"}""")
+        assertThat(over.response.status).isEqualTo(400); assertThat(c.admin.body(over).get("code").asString()).isEqualTo("VALIDATION_FAILED")
+        assertThat(c.admin.body(c.admin.get("${employees(c)}/$e/organization-memberships")).size()).describedAs("nothing was created").isEqualTo(limit)
+        val first = c.admin.body(c.admin.get("${employees(c)}/$e/organization-memberships")).toList().first { it.get("id").asString() == id(ms.last()).toString() }
+        assertThat(c.admin.delete("${employees(c)}/$e/organization-memberships/${id(ms.last())}?expectedVersion=${first.get("version").asLong()}").response.status).isEqualTo(200)
+        assertThat(c.admin.post("${employees(c)}/$e/organization-memberships", """{"organizationUnitId":"${id(units.last())}"}""").response.status).describedAs("a freed slot").isEqualTo(201)
+    }
 }

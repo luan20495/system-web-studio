@@ -86,7 +86,7 @@ class EmployeeDirectoryService(
 
     // ------------------------------------------------------------------------------------------------------------------------ create
     private fun relationOf(raw: String?): String {
-        val r = (raw?.trim()?.takeIf { it.isNotEmpty() } ?: "MEMBER").uppercase()
+        val r = (raw?.trim()?.takeIf { it.isNotEmpty() } ?: "MEMBER").uppercase(java.util.Locale.ROOT)
         if (!OrgRules.RELATION.matches(r)) throw OrgRules.bad("relationType must be 1-32 characters of A-Z 0-9 _ and start with a letter", "INVALID_CODE")
         return r
     }

@@ -79,7 +79,9 @@ Mutation checks (each rule broken on purpose): grant `APP_PUBLISH` in every scop
 
 ## Limits
 
-- One `forProject()` per active project membership on every `/auth/me`: fine for a person with a handful of projects; a user with hundreds should get a paginated or lazy endpoint (not needed for V1).
+- **Superseded (cost):** `/auth/me` no longer runs one `forProject()` per membership. `ProjectScopeResolver.scopesFor` loads every candidate in ONE joined statement and decides each row with the same pure `AccessEvaluator.workspace` / `AccessEvaluator.project` that `AccessService.forProject` calls, so the decision is identical (differential tests `ProjectScopeEquivalenceTests`, `ProjectScopeLegacyFlagEquivalenceTests`) and the whole request costs a constant **6 SQL statements** whatever N is (was `5 + 5·N`; `AuthMeQueryComplexityTests` asserts `statements(2000) <= statements(25) + 3`). Nothing is cached. The "SQL pre-filter + `forProject()` authority" wording above describes the original H-C1-04 implementation; the authority is now `AccessEvaluator`, shared by both paths. Details, statement list and raw benchmark: [final contract §2.3a / §2.3b](final-iam-tenant-org-permission-contract.md).
+- A project role counts only through an ACTIVE workspace role or the legacy bypass (`AccessEvaluator.project`): a stale project row of a platform operator who is not a workspace member grants nothing (no scope in `/auth/me`, 404 in the API).
+- The response size still grows linearly with the number of visible projects; there is no pagination (the contract is unchanged; changing it needs C0 approval).
 - Only `ApiException` (the authorization refusals) is turned into "omit this scope"; a database or other infrastructure failure still fails the request with 5xx.
 - `role` is for display only. The canonical codes are the contract; the project payload (`GET /projects/{id}`) still carries storage names (`PROJECT_READ` for `APP_VIEW`), `projectScopes[].permissions` is already canonical.
 
