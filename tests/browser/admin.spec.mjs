@@ -613,6 +613,15 @@ await block("scenario 79", async () => { const p = await open({ portal: "platfor
   check("TAB05 components: 'Khối đóng góp' is a selected tab with its own tabpanel", (await p.getByRole("tab", { name: "Khối đóng góp" }).getAttribute("aria-selected")) === "true" && (await p.locator("[role=tabpanel]").count()) === 1);
   await p.__ctx.close(); });
 
+// ===================================================================================================================== M-034 a server error in a dialog is IN VIEW, above the sticky footer
+await block("scenario 80", async () => { const p = await open({ portal: "platform", me: "sys", start: "/platform/tenants" }, { h: 460 });
+  await p.evaluate(() => { window.__cfg.failw = "/admin/tenants"; });
+  await p.getByRole("button", { name: "+ Tạo công ty" }).click(); await settle(p, 300);
+  await p.getByTestId("tenant-name").fill("Công ty Lỗi"); await p.getByRole("button", { name: "Tạo công ty" }).last().click(); await settle(p, 700);
+  const geo = await p.evaluate(() => { const a = document.querySelector("[role=dialog] .formError[role=alert]"); const f = document.querySelector("[role=dialog] .xp-footer"); if (!a || !f) return null; const ar = a.getBoundingClientRect(), fr = f.getBoundingClientRect(); return { aTop: ar.top, aBottom: ar.bottom, fTop: fr.top, vh: innerHeight }; });
+  check("DLG01 a server refusal in 'Tạo công ty' is an alert that is fully visible: inside the viewport and above the sticky footer", !!geo && geo.aTop >= 0 && geo.aBottom <= geo.fTop + 1 && geo.aBottom <= geo.vh, JSON.stringify(geo));
+  await p.__ctx.close(); });
+
 check("no console error / warning / uncaught exception in any page", errors.length === 0, errors.slice(0, 3).join(" | "));
 await browser.close();
 finish();

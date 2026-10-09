@@ -4,6 +4,7 @@
  * (provisioning.ts): the production adapter maps routes that exist today and throws NOT_READY for the rest, so the form is complete and honest before C1's contract is final.
  * The tenant of an Admin-portal caller is shown, never typed. Account types come from the plan (never SYSTEM_ADMIN). Every refusal is shown by its code (provisioningProblem).
  */
+import { FormError } from "./FormError";
 import { useId, useMemo, useState, type FormEvent } from "react";
 import type { ActivationLink } from "@/lib/http-types";
 import { Modal } from "./Modal";
@@ -112,7 +113,7 @@ export function CreateAccountDialog({ api, plan, tenants, workspacesOf, onClose,
           <p className="hint">Sau khi tạo, bạn nhận một liên kết kích hoạt dùng một lần (hết hạn sau 24 giờ), chỉ hiển thị một lần. Người dùng tự đặt mật khẩu khi kích hoạt (tối thiểu 8 ký tự); bạn không bao giờ biết mật khẩu.</p>
         </fieldset>
 
-        {problem ? <p className={problem.kind === "not-ready" ? "notice" : "formError"} role="alert" data-testid="prov-problem" data-kind={problem.kind}>{problem.text}</p> : null}
+        {problem ? <FormError className={problem.kind === "not-ready" ? "notice" : "formError"} data-testid="prov-problem" data-kind={problem.kind}>{problem.text}</FormError> : null}
         <div className="xp-footer"><button type="button" className="btn" onClick={onClose}>Hủy</button><button className="btn primary" data-testid="acc-submit" disabled={busy || notReady} aria-busy={busy || undefined} title={notReady ? "Backend provisioning chưa sẵn sàng" : undefined}>{busy ? "Đang tạo…" : submitLabel}</button></div>
       </form>
     </Modal>

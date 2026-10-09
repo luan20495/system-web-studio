@@ -1,4 +1,5 @@
 "use client";
+import { FormError } from "./FormError";
 import { useA } from "./console/context";
 import Link from "next/link";
 import { useState, type FormEvent, type ReactNode } from "react";
@@ -161,7 +162,7 @@ function ProviderDialog({ edit, onClose, onSaved }: { edit?: AiProviderInfo; onC
           {advanced ? <div className="xp-advBody"><Switch checked={paid} onChange={setPaid} disabled={kind === "OPENROUTER"} label="Có tính phí" hint="Mô hình trả phí mặc định TẮT và cần ngân sách."/></div> : null}
         </div>
 
-        {error ? <p className="formError" role="alert">{error}</p> : null}
+        {error ? <FormError>{error}</FormError> : null}
         <div className="xp-footer"><button type="button" className="btn" onClick={onClose}>Hủy</button><button className="btn primary xp-btnIcon" disabled={busy || !name.trim()} aria-busy={busy || undefined}><Save size={16} aria-hidden="true"/>{busy ? "Đang lưu…" : "Lưu"}</button></div>
       </form>
     </Modal>
@@ -188,7 +189,7 @@ function ModelPicker({ provider, onClose, onSaved }: { provider: AiProviderInfo;
         <div className="checkList">{all.map((m) => <label key={m} className="check"><input type="checkbox" checked={chosen.has(m)} onChange={() => flip(m)}/> {m}</label>)}</div>
         <label className="field"><span>Thêm mã mô hình thủ công</span><input value={manual} onChange={(e) => setManual(e.target.value)} placeholder="ví dụ: gpt-4o-mini"/></label>
         <p className="hint">Chọn mô hình ở đây chỉ đưa vào danh sách; bạn vẫn phải bật từng mô hình ở tab Mô hình trước khi nhân viên dùng được.</p>
-        {err ? <p className="formError" role="alert">{err}</p> : null}
+        {err ? <FormError>{err}</FormError> : null}
         <div className="row"><button className="btn primary" disabled={busy} onClick={() => void save()}>{busy ? "Đang lưu…" : "Lưu danh sách"}</button><button className="btn" onClick={onClose}>Đóng</button></div>
       </div>
     </Modal>
@@ -347,7 +348,7 @@ export function OverrideDialog({ fixed, current, onClose, onSaved }: { fixed?: {
         </> : null}
         {fields.map((k) => <label key={k} className="field"><span>{L[k as keyof typeof L]}</span><input type="number" min="0" step={k === "budget" ? "0.01" : "1"} value={v[k as keyof typeof v]} onChange={(e) => setV({ ...v, [k]: e.target.value })} placeholder="Theo mặc định"/>
           <small>{v[k as keyof typeof v].trim() === "" ? "Để trống = theo mặc định của công ty" : Number(v[k as keyof typeof v]) === 0 ? H[k as keyof typeof H].replace("0 = ", "") : ""}</small></label>)}
-        {error ? <p className="formError" role="alert">{error}</p> : null}
+        {error ? <FormError>{error}</FormError> : null}
         <div className="xp-footer"><button type="button" className="btn" onClick={onClose}>Hủy</button><button className="btn primary" disabled={busy} aria-busy={busy || undefined}>{busy ? "Đang lưu…" : "Lưu"}</button></div>
       </form>
     </Modal>

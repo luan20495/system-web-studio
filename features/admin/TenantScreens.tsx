@@ -7,6 +7,7 @@
  *             → Nguồn dữ liệu (data sources of a workspace)                             C3 Management API                      DATA_SOURCE_MANAGE
  * Everything shown is what the server answered; the console never invents a row. Rules that the server enforces are explained before the click (adminModel.ts), and the server's refusal is shown in words.
  */
+import { FormError } from "./FormError";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useState, type FormEvent } from "react";
@@ -260,7 +261,7 @@ function CreateTenantDialog({ onClose, onCreated }: { onClose: () => void; onCre
           <p className="xp-note" role="note"><ShieldCheck size={16} aria-hidden="true"/><span>Chỉ chọn được tài khoản đã có. Muốn tạo người mới: bỏ trống ở đây, rồi dùng nút “Tạo tài khoản quản trị công ty” ở trang công ty vừa tạo (người đó nhận một liên kết kích hoạt).</span></p>
         </section>
 
-        {error ? <p className="formError" role="alert">{error}</p> : null}
+        {error ? <FormError>{error}</FormError> : null}
         <div className="xp-footer"><button type="button" className="btn" onClick={onClose}>Hủy</button><button className="btn primary" disabled={busy}>{busy ? "Đang tạo…" : "Tạo công ty"}</button></div>
       </form>
     </Modal>
