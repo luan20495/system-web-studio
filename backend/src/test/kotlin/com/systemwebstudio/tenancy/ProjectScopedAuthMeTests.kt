@@ -80,7 +80,7 @@ class ProjectScopedAuthMeTests : IntegrationTestBase() {
         val m = me(s)
 
         assertThat(m.get("tenantId").asString()).isEqualTo(tenant.id.toString())
-        assertThat(m.get("permissions").toList().map { it.asString() }).containsExactlyInAnyOrder("TENANT_MANAGE", "TENANT_MEMBERS")
+        assertThat(m.get("permissions").toList().map { it.asString() }).containsExactlyInAnyOrder("TENANT_MANAGE", "TENANT_MEMBERS", "ORG_STRUCTURE_VIEW", "ORG_STRUCTURE_MANAGE", "EMPLOYEE_VIEW", "EMPLOYEE_MANAGE", "POSITION_GRADE_VIEW", "POSITION_GRADE_MANAGE")   // tenant + organization capabilities, and NO app permission
         assertThat(scopes(s)).isEmpty()
     }
 
