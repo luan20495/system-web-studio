@@ -18,6 +18,7 @@ import { Templates } from "./screens/Templates";
 import { Components } from "./screens/Components";
 import { Activity } from "./screens/Activity";
 import { SiteAccess } from "./screens/SiteAccess";
+import { claimStudioStorage, clearStudioStorage } from "./studioStorage";
 
 /** `dedicated` = rendered by the Studio web app (app.xweb.vn); links to the other consoles then go through the portal switcher. */
 export function StudioApp({ seg, dedicated = false }: { seg: string[]; dedicated?: boolean }) {
@@ -28,6 +29,7 @@ export function StudioApp({ seg, dedicated = false }: { seg: string[]; dedicated
   useEffect(() => { if (!(section === "projects" && seg[1])) document.title = `${TITLES[section] ?? "Không tìm thấy trang"} · Xweb Studio`; }, [section, seg[1]]); // eslint-disable-line react-hooks/exhaustive-deps
   const { me } = useSession();
   const [workspaceId, setWs] = useState(() => {
+    claimStudioStorage(me!.id);   // M-091: what another user left in this browser is dropped before it is read
     try { const saved = localStorage.getItem("studio-ws"); if (saved && me!.workspaces.some((w) => w.id === saved)) return saved; } catch { /* ignore */ }
     return me!.workspaces[0].id;
   });
@@ -84,7 +86,7 @@ function StudioHeader({ nav }: { nav: ReturnType<typeof useNavDrawer> }) {
           : <span className="muted">{me!.workspaces[0].name}</span>}
         {dedicated ? <PortalSwitcher me={me} current="studio"/> : canAccessPortal(me, "admin") ? <Link className="btn sm" href={consoleHref()} onClick={() => rememberPortal("admin")}>Admin Console</Link> : null}
         <span className="avatar" title={me!.displayName} aria-label={`Tài khoản: ${me!.displayName}`}>{me!.displayName.slice(0, 2).toUpperCase()}</span>
-        <button className="btn sm ghost" onClick={() => void logout()}>Đăng xuất</button>
+        <button className="btn sm ghost" onClick={() => { clearStudioStorage(); void logout(); }}>Đăng xuất</button>
       </div>
     </header>
   );
