@@ -470,4 +470,25 @@ for (const w of [768, 1000]) {
   check("M-043: …and the page it opens says so and offers both ways back (Design, AI)", /Chưa triển khai/.test(await p.locator("main").innerText()) && (await p.getByRole("button", { name: /Chỉnh trực quan/ }).count()) === 1 && (await p.getByRole("button", { name: /Chỉnh bằng AI/ }).count()) === 1, "");
   await p.close();
 }
+
+// ---------- M-021 / M-023: the builder dialog closes with Escape even when focus is on the page, and a backdrop PRESS that starts inside the dialog never closes it ----------
+{
+  const p = await open(b, "/studio/projects/p1/design", { state: newState() }); await p.waitForSelector("iframe"); await wait(900);
+  await p.locator(".bx-panel-head").getByRole("button", { name: /Trang/ }).click(); await p.getByRole("dialog").waitFor(); await wait(200);
+  await p.getByRole("dialog").getByLabel("Tên trang").fill("Trang nháp"); await p.evaluate(() => document.activeElement?.blur()); await wait(100);
+  const focusOn = await p.evaluate(() => document.activeElement === document.body);
+  await p.keyboard.press("Escape"); await wait(300);
+  check("M-021: Escape closes the builder dialog even when focus has fallen to the page body (document-level key handler)", focusOn && (await p.getByRole("dialog").count()) === 0, `focusOnBody=${focusOn}`);
+  await p.locator(".bx-panel-head").getByRole("button", { name: /Trang/ }).click(); await p.getByRole("dialog").waitFor(); await wait(200);
+  const box = await p.getByRole("dialog").boundingBox(); const field = p.getByRole("dialog").getByLabel("Tên trang"); await field.fill("Giữ lại");
+  await p.mouse.move(box.x + 40, box.y + 40); await p.mouse.down(); await p.mouse.move(5, 5); await p.mouse.up(); await wait(300);
+  check("M-021: a press that STARTS inside the dialog and is released on the backdrop (selecting text) does not close it or lose what was typed", (await p.getByRole("dialog").count()) === 1 && (await field.inputValue()) === "Giữ lại", "");
+  await p.mouse.click(4, 4); await wait(300);
+  check("M-021: a real click on the backdrop still closes it", (await p.getByRole("dialog").count()) === 0, "");
+  await p.locator(".bx-panel-head").getByRole("button", { name: /Trang/ }).click(); await p.getByRole("dialog").waitFor(); await wait(200);
+  const lock = await p.evaluate(() => document.body.style.overflow); await p.keyboard.press("Escape"); await wait(300);
+  const after = await p.evaluate(() => document.body.style.overflow);
+  check("M-023: the page scroll is locked while the dialog is open and released after (shared overlay stack)", lock === "hidden" && after !== "hidden", `open=${lock} closed=${after}`);
+  await p.close();
+}
 await b.close(); finish();
