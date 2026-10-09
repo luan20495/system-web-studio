@@ -142,8 +142,8 @@ class AuthController(
      * tenant / workspace / project scopes. A workspace the server would refuse is not listed as usable: removed from its tenant -> omitted; tenant DELETED -> omitted;
      * tenant SUSPENDED -> listed with NO permissions (the server answers 403 TENANT_SUSPENDED there).
      *
-     * Cost is bounded and independent of the number of workspaces / projects / tenants: 5 SQL statements (users.system_admin; the workspaces
-     * list; ProjectScopeResolver = users flags + one joined project-scope statement; MeTenancyService.forUser = one tenants statement).
+     * Cost is bounded and independent of the number of workspaces / projects / tenants: 6 SQL statements (ActiveUserFilter: the users row;
+     * users.system_admin; the workspaces list; ProjectScopeResolver = users flags + one joined project-scope statement; MeTenancyService.forUser = one tenants statement).
      */
     @GetMapping("/me")
     fun me(@AuthenticationPrincipal principal: StudioUserDetails): MeResponse {

@@ -7,12 +7,12 @@ import java.io.File
 
 /**
  * Benchmark of GET /api/v1/auth/me by number of project memberships. Asserts NO latency (no SLA is defined); it only records. HTTP-level only, so it runs unchanged on
- * the N+1 resolver and on the bulk resolver. One line per N goes to System.err and to <scratchpad>/bench-<label>.txt, label = env / system property BENCH_LABEL (default "run").
+ * the N+1 resolver and on the bulk resolver. One line per N goes to System.err and to <BENCH_DIR, default build/reports/bench>/bench-<label>.txt, label = env / system property BENCH_LABEL (default "run").
  */
 @Import(SqlStatementCountingConfiguration::class)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class AuthMeBenchmarkTests : AuthMeFixtureBase() {
-    private val outDir = File(System.getProperty("BENCH_DIR") ?: System.getenv("BENCH_DIR") ?: "/private/tmp/claude-501/-Users-hoangluan-code-HBL/e6dfb50c-641c-4372-8771-ca47ed6c803e/scratchpad")
+    private val outDir = File(System.getProperty("BENCH_DIR") ?: System.getenv("BENCH_DIR") ?: "build/reports/bench")
     private val label = (System.getProperty("BENCH_LABEL") ?: System.getenv("BENCH_LABEL"))?.takeIf { it.isNotBlank() } ?: "run"
 
     @Test
