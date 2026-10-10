@@ -266,6 +266,16 @@ export type BackupComponent = { name: string; state: string; lastSuccess: string
 export type BackupEnvironment = { environment: string; components: BackupComponent[]; drillAt: string | null; drillPassed: boolean | null;
   drill: { component: string; result: string; detail: string }[]; healthy: boolean; problems: string[] };
 
+// ---- publish configuration (C2, docs/parallel/c2/H_C2_07_PUBLIC_DATA_APPROVAL.md; backend PublishConfigApi.kt). The AUTHORITATIVE policy of a project: the browser never decides it.
+export type PublishPolicyMode = "STATIC" | "DYNAMIC" | "SERVER_APP";
+export type PublishPolicyVisibility = "PRIVATE" | "TENANT" | "PUBLIC" | "PRIVATE_LINK";
+/** `publicDataApproved` is the persisted approval that POST /publish enforces (422 PUBLIC_DATA_NOT_APPROVED); it only becomes true through PUT publish-config with `acknowledgePublicData: true`. */
+export type PublishConfigPolicy = { mode: PublishPolicyMode; visibility: PublishPolicyVisibility; requiresAuth: boolean; cacheSeconds: number | null; publicDataApproved: boolean; linkTokenSet: boolean; revision: number; updatedAt: string | null };
+/** `config` null = no stored policy (the app publishes as it always did); `draft` = the intention stored in the document (informational, never authority) */
+export type PublishConfigView = { config: PublishConfigPolicy | null; draft: { mode?: PublishPolicyMode; visibility?: PublishPolicyVisibility; requiresAuth?: boolean; cacheSeconds?: number } | null; linkToken?: string | null };
+/** `requiresAuth` is REQUIRED by the server's request class (omitting it is 400 MALFORMED_REQUEST) */
+export type SetPublishConfigBody = { mode: PublishPolicyMode; visibility: PublishPolicyVisibility; requiresAuth: boolean; cacheSeconds?: number | null; acknowledgePublicData?: boolean; expectedRevision?: number | null };
+
 // ---- Dynamic Organization (mirror of backend/.../organization/OrganizationContract.kt; docs/parallel/c0/ORGANIZATION_API_CONTRACT_FOR_C5.md). Ids are UUID strings, instants ISO-8601 strings.
 export type OrgUnitTypeRules = { allowedParentTypeIds: string[] | null; allowedChildTypeIds: string[] | null; allowRoot: boolean | null; maxDepth: number | null };
 export type OrgUnitTypeDto = { id: string; tenantId: string; name: string; code: string; icon: string | null; active: boolean; rules: OrgUnitTypeRules; version: number; createdAt: string; updatedAt: string };

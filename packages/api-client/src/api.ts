@@ -1,14 +1,14 @@
 import type {
   AdminAi, AiCallRow, SettingView, BuildPolicyReport, CleanupResult, RepoRow, AiPrice, AiProbe, AiProviderInfo, AiProviderForm, AiDiscover, AiLimitsView, AiLimitDefaults, AiUserView, AiUsageReport, AdminApp, BlockDto, CheckResult, TemplateDto, AdminAppDetail, AdminComponent, AdminOverview, AdminUser, TenantView, TenantMemberView, TenantMemberCandidate, ActivationLink, AdminUserDetail, AdminWorkspace, AdminWorkspaceDetail, AuditRow, MyUsage, Page, PlatformHealth,
   BackupEnvironment, AppKind, RuntimeStatus, Connector, Department, CostPrice, CostReport, SecurityReport, FormSubmission, SiteDomain, TemplateReview, LibraryCategories, AccessRule, EffectiveModel, AiBudget, AdminAlert, StreamHandlers,
-  AiStatus, ApiProject, AuthConfig, Member, SiteInfo, DesignNode, DependencyRequest, PackageView, CloneAccess, TreeFile, CodeFile, CodeCommit, CodeChange, DiffFile, CodeAiResponse, CodeAiHistoryItem, RegistryComponent, ComponentMetadataV2, DefinitionOperation, AssetDto, Deployment, Me, RunQueryRequest, RunQueryResponse, ExecuteActionRequest, ActionEnvelope, StartWorkflowRequest, WorkflowRunView, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
+  PublishConfigView, SetPublishConfigBody, AiStatus, ApiProject, AuthConfig, Member, SiteInfo, DesignNode, DependencyRequest, PackageView, CloneAccess, TreeFile, CodeFile, CodeCommit, CodeChange, DiffFile, CodeAiResponse, CodeAiHistoryItem, RegistryComponent, ComponentMetadataV2, DefinitionOperation, AssetDto, Deployment, Me, RunQueryRequest, RunQueryResponse, ExecuteActionRequest, ActionEnvelope, StartWorkflowRequest, WorkflowRunView, PromptHistoryItem, PromptResponse, SchemaOperation, SchemaResponse, UploadUrl, VersionSummary
 } from "@xweb/types";
 import type {
   ConnectorList, DataSourceView, DataSourceList, CreateDataSourceRequest, UpdateDataSourceRequest, CredentialMetadata, SetCredentialRequest,
   ConnectionTestResult, DataBinding, DataBindingList, BindingMode,
 } from "@xweb/types";
 import { ApiError, call, json, qs, sessionChanged, stream } from "./core";
-import { isValidReleaseKey, publishBody, rollbackBody, unpublishQuery } from "./release";
+import { isValidReleaseKey, publishBody, publishConfigBody, rollbackBody, unpublishQuery } from "./release";
 import { orgApi } from "./org";
 
 const P = (w: string, p: string) => `/workspaces/${w}/projects/${p}`;
@@ -334,6 +334,10 @@ export const api = {
     checkReleaseKey(idempotencyKey, true);
     return call<Deployment>(`${P(w, p)}/publish`, { method: "POST", body: json(publishBody(visibility, expectedRevision)), idempotencyKey });
   },
+  /** the authoritative publish policy (C2 PublishConfigApi): `config` null = none stored. Reading needs only to see the project; the link token is never returned here. */
+  getPublishConfig: (w: string, p: string) => call<PublishConfigView>(`${P(w, p)}/publish-config`),
+  /** Sets the policy. The ONLY way `publicDataApproved` becomes true: `acknowledgePublicData: true` by a holder of APP_PUBLISH, with the `expectedRevision` of the config the person saw (409 REVISION_CONFLICT otherwise). Never part of POST /publish. */
+  putPublishConfig: (w: string, p: string, b: SetPublishConfigBody) => call<PublishConfigView>(`${P(w, p)}/publish-config`, { method: "PUT", body: json(publishConfigBody(b)) }),
   getDeployment: (w: string, p: string, id: string) => call<Deployment>(`${P(w, p)}/deployments/${id}`),
   listDeployments: (w: string, p: string) => call<Deployment[]>(`${P(w, p)}/deployments`),
   site: (w: string, p: string) => call<SiteInfo>(`${P(w, p)}/site`),

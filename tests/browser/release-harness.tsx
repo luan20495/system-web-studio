@@ -21,7 +21,11 @@ type Rel = {
   calls: { name: string; args: unknown[] }[];
   site: SiteInfo; history: Deployment[]; deployment: Deployment | null;
   /** next answer of each call: an ErrSpec makes it throw ApiError(status, code, …); `null` = answer normally */
-  errors: Partial<Record<"publish" | "getDeployment" | "site" | "rollback" | "unpublish" | "list", ErrSpec>>;
+  errors: Partial<Record<"publish" | "getDeployment" | "site" | "rollback" | "unpublish" | "list" | "putConfig" | "getConfig", ErrSpec>>;
+  /** the SERVER's persisted publish policy (publish_configs), the authority H-C2-07 enforces at POST /publish; null = no stored policy (legacy: the request decides) */
+  policy: null | { mode: string; visibility: string; requiresAuth: boolean; cacheSeconds: number | null; publicDataApproved: boolean; revision: number };
+  /** does the IMMUTABLE version being published bind data (the server reads the version's snapshot, not the draft the browser holds) */
+  binds: boolean;
   /** hold the next call until release() is called (a request in flight) */
   hold: { rollback?: boolean; publish?: boolean }; release: () => void;
   set: (patch: Partial<Pick<Rel, "site" | "history" | "deployment" | "errors" | "hold">>) => void;
@@ -37,7 +41,7 @@ const S = new URLSearchParams(location.search).get("s") ?? "ok";
 const canPublish = S !== "noperm";
 let releaseFn: (() => void) | null = null;
 const rel: Rel = {
-  calls: [], site: idle("d3", 3), history: [dep("d3", 3, "RUNNING"), dep("d2", 2, "RUNNING"), dep("d1", 1, "RUNNING"), dep("d0", 0, "ROLLED_BACK")], deployment: null, errors: {}, hold: {},
+  calls: [], site: idle("d3", 3), history: [dep("d3", 3, "RUNNING"), dep("d2", 2, "RUNNING"), dep("d1", 1, "RUNNING"), dep("d0", 0, "ROLLED_BACK")], deployment: null, errors: {}, hold: {}, policy: null, binds: false,
   release: () => { releaseFn?.(); releaseFn = null; },
   set(patch) { Object.assign(rel, patch); },
 };
@@ -48,7 +52,23 @@ const maybeThrow = (k: keyof Rel["errors"]) => { const e = rel.errors[k]; if (e)
 const held = (k: "rollback" | "publish") => (rel.hold[k] ? new Promise<void>((r) => { releaseFn = () => { rel.hold[k] = false; r(); }; }) : Promise.resolve());
 
 const calls = {
-  publish: async (_w: string, _p: string, visibility: string, expectedRevision: number, key: string) => { rec("publish", [visibility, expectedRevision, key]); await held("publish"); maybeThrow("publish"); rel.deployment = rel.deployment ?? dep("n1", 4, "QUEUED"); return rel.deployment; },
+  publish: async (_w: string, _p: string, visibility: string, expectedRevision: number, key: string) => {
+    rec("publish", [visibility, expectedRevision, key]); await held("publish"); maybeThrow("publish");
+    // H-C2-07: the server judges the PERSISTED policy; nothing the browser holds (a ticked box, the draft) is consulted
+    const pol = rel.policy;
+    if (pol && visibility === "PUBLIC") {
+      if (pol.visibility !== "PUBLIC") throw new ApiError(409, "PUBLISH_POLICY_MISMATCH", "mismatch", "req-1");
+      if (rel.binds && !pol.publicDataApproved) throw new ApiError(422, "PUBLIC_DATA_NOT_APPROVED", "not approved", "req-1", { issues: [{ field: "acknowledgePublicData", code: "PUBLIC_DATA_NOT_APPROVED", message: "approval required" }] });
+    }
+    rel.deployment = rel.deployment ?? dep("n1", 4, "QUEUED"); return rel.deployment; },
+  getPublishConfig: async () => { rec("getConfig", []); maybeThrow("getConfig"); return { config: rel.policy ? { ...rel.policy, linkTokenSet: false, updatedAt: null } : null, draft: null }; },
+  putPublishConfig: async (_w: string, _p: string, b: { mode: string; visibility: string; requiresAuth: boolean; cacheSeconds?: number | null; acknowledgePublicData?: boolean; expectedRevision?: number | null }) => {
+    rec("putConfig", [b]); maybeThrow("putConfig");
+    if (!rel.policy) throw new ApiError(404, "NOT_FOUND", "no config api", "req-1");
+    if (b.expectedRevision !== undefined && b.expectedRevision !== null && b.expectedRevision !== rel.policy.revision) throw new ApiError(409, "REVISION_CONFLICT", "stale", "req-1", { currentRevision: rel.policy.revision });
+    rel.policy = { ...rel.policy, mode: b.mode, visibility: b.visibility, requiresAuth: b.requiresAuth, publicDataApproved: b.visibility === "PUBLIC" && b.acknowledgePublicData === true, revision: rel.policy.revision + 1 };
+    return { config: { ...rel.policy, linkTokenSet: false, updatedAt: null }, draft: null };
+  },
   getDeployment: async (_w: string, _p: string, id: string) => { rec("getDeployment", [id]); maybeThrow("getDeployment"); return rel.deployment!; },
   listDeployments: async () => { rec("list", []); maybeThrow("list"); return rel.history; },
   site: async () => { rec("site", []); maybeThrow("site"); return rel.site; },
@@ -61,6 +81,11 @@ const calls = {
 
 // ?draft=public|private|invalid : the document the dialog is asked to publish (PAGE_SCHEMA public data); absent = no draft (code app / older tests)
 const DRAFT = new URLSearchParams(location.search).get("draft");
+// ?policy=none|public-unapproved|public-approved|private : the server's stored publish policy; ?binds=1|0 : whether the immutable version binds data (default: the draft's public data)
+const POLICY = new URLSearchParams(location.search).get("policy"); const BINDS = new URLSearchParams(location.search).get("binds");
+const P0 = { mode: "STATIC", requiresAuth: false, cacheSeconds: null, revision: 3 };
+rel.policy = POLICY === "public-unapproved" ? { ...P0, visibility: "PUBLIC", publicDataApproved: false } : POLICY === "public-approved" ? { ...P0, visibility: "PUBLIC", publicDataApproved: true } : POLICY === "private" ? { ...P0, visibility: "PRIVATE", publicDataApproved: false } : null;
+rel.binds = BINDS === null ? DRAFT === "public" : BINDS === "1";
 const base = { page: "p", pages: [], sections: [{ id: "hero", type: "Hero", props: {} }, { id: "grid", type: "ProductGrid", props: {} }], dataSources: [{ id: "orders", name: "Đơn hàng", type: "postgres" }] };
 const drafts: Record<string, AppDefinitionV2> = {
   public: { ...base, queries: [{ id: "q-title", name: "Tiêu đề", dataSourceRef: "orders", mode: "READ", public: true }, { id: "q-private", dataSourceRef: "orders", mode: "READ" }, { id: "q-items", name: "Sản phẩm", dataSourceRef: "orders", mode: "READ", public: true }, { id: "q-w", dataSourceRef: "orders", mode: "WRITE" }],
@@ -69,4 +94,4 @@ const drafts: Record<string, AppDefinitionV2> = {
   invalid: { ...base, queries: [{ id: "q-w", name: "Ghi", dataSourceRef: "orders", mode: "WRITE", public: true }, { id: "q-private", dataSourceRef: "orders", mode: "READ" }], dataBindings: [{ id: "b1", sectionId: "hero", prop: "title", queryRef: "q-private" }] } as unknown as AppDefinitionV2,
   plain: { ...base } as unknown as AppDefinitionV2,
 };
-createRoot(document.getElementById("root")!).render(<PublishModal draft={DRAFT ? drafts[DRAFT] : undefined} workspaceId="w1" projectId="p1" revision={7} current="PRIVATE" versionNumber={4} canPublish={canPublish} calls={calls} timing={{ busy: 400, idle: 700 }} onClose={() => undefined} onUnauthorized={() => undefined}/>);
+createRoot(document.getElementById("root")!).render(<div className="studio"><PublishModal draft={DRAFT ? drafts[DRAFT] : undefined} workspaceId="w1" projectId="p1" revision={7} current="PRIVATE" versionNumber={4} canPublish={canPublish} calls={calls} timing={{ busy: 400, idle: 700 }} onClose={() => undefined} onUnauthorized={() => undefined}/></div>);
