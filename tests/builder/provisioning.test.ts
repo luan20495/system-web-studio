@@ -32,7 +32,7 @@ test("adapter createTenantUser: the tenant is the PATH argument only; body norma
   const { t, calls } = transport(); const api = createProvisioningApi(t);
   const r = await api.createTenantUser("t1", { ...acc, tenantRole: "TENANT_ADMIN", workspace: { id: "w1", role: "WORKSPACE_ADMIN" } });
   assert.deepEqual(calls, [["createTenantUser", ["t1", { username: "bao.nguyen", displayName: "Bảo", tenantRole: "TENANT_ADMIN", workspaceId: "w1", workspaceRole: "WORKSPACE_ADMIN" }]]], "no email key when blank, no tenant key in the body");
-  assert.equal(r.tenantId, "t1"); assert.equal(r.user.id, "id-1"); assert.deepEqual(r.pending.map((p) => p.id), ["activate"]); assert.equal(r.activation.token, "TOKEN");
+  assert.equal(r.tenantId, "t1"); assert.equal(r.user.id, "id-1"); assert.deepEqual(r.pending.map((p) => p.id), ["activate"]); assert.equal(r.activation?.token, "TOKEN");
   assert.ok(!JSON.stringify({ ...r, activation: undefined }).includes("TOKEN"), "the token is not copied anywhere else in the result");
   const n = await createProvisioningApi(transport().t).createTenantUser("t1", { ...acc, email: "A@B.vn" }); assert.equal(n.workspace, null);
   const b = transport(); await createProvisioningApi(b.t).createTenantUser("t1", { ...acc, email: "a@b.vn" });

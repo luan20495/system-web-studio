@@ -9,6 +9,7 @@ import type {
 } from "@xweb/types";
 import { ApiError, call, json, qs, sessionChanged, stream } from "./core";
 import { isValidReleaseKey, publishBody, rollbackBody, unpublishQuery } from "./release";
+import { orgApi } from "./org";
 
 const P = (w: string, p: string) => `/workspaces/${w}/projects/${p}`;
 const RT = (w: string, p: string) => `${P(w, p)}/app-runtime`;
@@ -78,6 +79,8 @@ export const api = {
   deleteProject: (w: string, p: string, expectedRevision: number) => call<void>(`${P(w, p)}${qs({ expectedRevision })}`, { method: "DELETE" }),
   myUsage: () => call<MyUsage>("/me/usage"),
   myActivity: (limit = 30) => call<AuditRow[]>(`/me/activity${qs({ limit })}`),
+  /** Dynamic Organization (types, units, positions, grades, employees, memberships): every path lives in ./org.ts */
+  org: orgApi,
   admin: {
     overview: () => call<AdminOverview>("/admin/overview"),
     users: (page: number, q?: string, status?: string) => call<Page<AdminUser>>(`/admin/users${qs({ page, size: 25, q, status })}`),

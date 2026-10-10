@@ -266,5 +266,38 @@ export type BackupComponent = { name: string; state: string; lastSuccess: string
 export type BackupEnvironment = { environment: string; components: BackupComponent[]; drillAt: string | null; drillPassed: boolean | null;
   drill: { component: string; result: string; detail: string }[]; healthy: boolean; problems: string[] };
 
+// ---- Dynamic Organization (mirror of backend/.../organization/OrganizationContract.kt; docs/parallel/c0/ORGANIZATION_API_CONTRACT_FOR_C5.md). Ids are UUID strings, instants ISO-8601 strings.
+export type OrgUnitTypeRules = { allowedParentTypeIds: string[] | null; allowedChildTypeIds: string[] | null; allowRoot: boolean | null; maxDepth: number | null };
+export type OrgUnitTypeDto = { id: string; tenantId: string; name: string; code: string; icon: string | null; active: boolean; rules: OrgUnitTypeRules; version: number; createdAt: string; updatedAt: string };
+export type OrgUnitDto = { id: string; tenantId: string; typeId: string; parentId: string | null; name: string; code: string; sortOrder: number; metadata: unknown; active: boolean; version: number; createdAt: string; updatedAt: string; archivedAt: string | null };
+/** `directMemberCount` = ACTIVE memberships on exactly this unit; `subtreeEmployeeCount` = DISTINCT active employees over the unit and its non-archived descendants. null = the store gives no counts. */
+export type OrgUnitNodeDto = { unit: OrgUnitDto; children: OrgUnitNodeDto[]; directMemberCount: number | null; subtreeEmployeeCount: number | null };
+export type OrgUnitDetailDto = { unit: OrgUnitDto; path: OrgUnitDto[]; activeChildCount: number; activeMemberCount: number; directMemberCount: number | null; subtreeEmployeeCount: number | null };
+export type OrgPositionDto = { id: string; tenantId: string; name: string; code: string; description: string | null; active: boolean; version: number; createdAt: string; updatedAt: string };
+export type OrgGradeDto = { id: string; tenantId: string; name: string; code: string; rank: number | null; description: string | null; active: boolean; version: number; createdAt: string; updatedAt: string };
+/** A relation (MEMBER / MANAGER / HEAD ...) is business data: it never authorizes anything. */
+export type OrgMembershipDto = { id: string; tenantId: string; userId: string; organizationUnitId: string; relationType: string; primary: boolean; active: boolean; version: number; createdAt: string; updatedAt: string };
+export type OrgEmployeePositionDto = { id: string; tenantId: string; userId: string; membershipId: string; organizationUnitId: string; positionId: string; gradeId: string | null; primary: boolean; active: boolean; version: number; createdAt: string; updatedAt: string };
+export type OrgEmployeeDto = { userId: string; tenantId: string; username: string; displayName: string | null; email: string | null; active: boolean; accountEnabled: boolean; accountActivated: boolean; tenantRole: string;
+  primaryOrganizationUnitId: string | null; positions: OrgEmployeePositionDto[]; organizationMemberships: OrgMembershipDto[] };
+export type OrgEmployeePageDto = { items: OrgEmployeeDto[]; total: number; page: number; size: number };
+export type OrgEmployeeCreatedDto = { employee: OrgEmployeeDto; activation: ActivationLink | null };
+export type OrgUnitTypeCreateBody = { name: string; code: string; icon?: string | null; rules?: Partial<OrgUnitTypeRules> };
+export type OrgUnitTypeUpdateBody = { name?: string; icon?: string | null; rules?: Partial<OrgUnitTypeRules>; expectedVersion: number };
+export type OrgUnitCreateBody = { typeId: string; parentId: string | null; name: string; code: string; sortOrder?: number };
+export type OrgUnitUpdateBody = { name?: string; code?: string; sortOrder?: number; expectedVersion: number };
+export type OrgUnitMoveBody = { newParentId: string | null; expectedVersion: number; sortOrder?: number };
+export type OrgPositionCreateBody = { name: string; code: string; description?: string | null };
+export type OrgPositionUpdateBody = { name?: string; description?: string | null; expectedVersion: number };
+export type OrgGradeCreateBody = { name: string; code: string; rank?: number | null; description?: string | null };
+export type OrgGradeUpdateBody = { name?: string; rank?: number | null; description?: string | null; clearRank?: boolean; expectedVersion: number };
+export type OrgEmployeeCreateBody = { username: string; displayName?: string | null; email?: string | null; tenantRole?: string; workspaceId?: string | null; workspaceRole?: string | null;
+  organizationMemberships?: { organizationUnitId: string; relationType?: string; primary?: boolean; positions?: { positionId: string; gradeId?: string | null; primary?: boolean }[] }[] };
+export type OrgMembershipCreateBody = { organizationUnitId: string; relationType?: string; primary?: boolean };
+export type OrgMembershipUpdateBody = { relationType?: string; primary?: boolean; expectedVersion: number };
+export type OrgEmployeePositionCreateBody = { membershipId: string; positionId: string; gradeId?: string | null; primary?: boolean };
+export type OrgEmployeePositionUpdateBody = { gradeId?: string | null; clearGrade?: boolean; primary?: boolean; expectedVersion: number };
+export type OrgEmployeeQuery = { q?: string; organizationUnitId?: string; includeDescendants?: boolean; positionId?: string; gradeId?: string; active?: boolean; page?: number; size?: number; sort?: "name" | "username"; dir?: "asc" | "desc" };
+
 /** Canonical v2 contract mirror (AppDefinition, data, actions, workflows, permissions). See ./contract/v2/meta.ts for the source and version. */
 export * from "./contract/v2";

@@ -66,7 +66,7 @@ export function CreateAccountDialog({ api, plan, tenants, workspacesOf, onClose,
     });
   }
 
-  if (result) return <CreatedAccount result={result} tenantName={tenantName} workspaceName={result.workspace ? wsOptions.find((w) => w.id === result.workspace!.id)?.name ?? result.workspace.id : null} onClose={onClose} onLinkDone={() => setResult((r) => (r ? { ...r, activation: { ...r.activation, token: "" } } : r))} onAnother={() => { setResult(null); setForm(emptyAccountForm(plan.accountTypes[0]?.id ?? "USER")); setTouched(false); setNewWs(""); }}/>;
+  if (result) return <CreatedAccount result={result} tenantName={tenantName} workspaceName={result.workspace ? wsOptions.find((w) => w.id === result.workspace!.id)?.name ?? result.workspace.id : null} onClose={onClose} onLinkDone={() => setResult((r) => (r ? { ...r, activation: r.activation ? { ...r.activation, token: "" } : null } : r))} onAnother={() => { setResult(null); setForm(emptyAccountForm(plan.accountTypes[0]?.id ?? "USER")); setTouched(false); setNewWs(""); }}/>;
   const dupUser = problem?.field === "username" ? problem.text : undefined, dupMail = problem?.field === "email" ? problem.text : undefined;
   return (
     <Modal label={title} onClose={onClose}>
@@ -124,7 +124,7 @@ export function CreateAccountDialog({ api, plan, tenants, workspacesOf, onClose,
 function CreatedAccount({ result, tenantName, workspaceName, onClose, onAnother, onLinkDone }: { result: ProvisionResult; tenantName: string; workspaceName: string | null; onClose: () => void; onAnother: () => void; onLinkDone: () => void }) {
   // the link lives in this state only (never stored, logged or put in a URL) and only until it was copied or the person confirmed they saved it: the link dialog cannot close before that
   // (M-007), and when it closes the token is dropped here AND from the parent's copy of the result (M-088). It is not shown again.
-  const [link, setLink] = useState<ActivationLink | null>(result.activation as ActivationLink);
+  const [link, setLink] = useState<ActivationLink | null>(result.activation);
   if (link) return <LinkBox link={link} onClose={() => { setLink(null); onLinkDone(); }}/>;
   return (
     <Modal label="Đã tạo tài khoản" onClose={onClose}>

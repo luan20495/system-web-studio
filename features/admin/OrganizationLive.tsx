@@ -27,7 +27,7 @@ function useTenant() {
 export function OrganizationPage() {
   const { plan, tenant, setChosen } = useTenant();
   return (<>
-    <PageHead title="Cơ cấu tổ chức" sub="Dựng cơ cấu của công ty bằng các đơn vị và loại đơn vị do bạn tự định nghĩa."/>
+    <PageHead title="Cơ cấu tổ chức" sub="Dựng cơ cấu của công ty bằng các đơn vị và loại đơn vị do bạn tự định nghĩa. Đơn vị được lưu trữ và khôi phục, không xóa."/>
     <PeopleLinks current="organization"/>
     <TenantSwitch tenants={plan.tenantChoice} value={tenant.id} onChange={setChosen} testId="org-tenant-switch"/>
     <OrganizationView api={liveOrganization} plan={plan} tenant={tenant}/>
@@ -39,9 +39,9 @@ export function EmployeesPage() {
   const provPlan = useMemo(() => employeeProvisioningPlan(scope, provisioningPlan(scope, "admin", liveProvisioning.state)), [scope]);
   const ownOf = useOwnWorkspacesOf();
   return (<>
-    <PageHead title="Nhân viên" sub="Danh bạ nhân viên của công ty: tìm kiếm, lọc theo đơn vị, thêm nhân viên và xem chi tiết."/>
+    <PageHead title="Nhân viên" sub="Danh bạ nhân viên của công ty: tìm kiếm, lọc theo đơn vị, vị trí và cấp bậc, thêm nhân viên và quản lý đơn vị, vị trí của từng người."/>
     <PeopleLinks current="employees"/>
-    <EmployeesView api={liveOrganization} plan={plan} tenant={tenant} onTenant={setChosen} canToggleStatus={scope.org.employeeProvision}
+    <EmployeesView api={liveOrganization} plan={plan} tenant={tenant} onTenant={setChosen}
       prov={{ api: liveProvisioning, plan: provPlan, workspacesOf: ownOf, tenants: plan.tenantChoice.length ? plan.tenantChoice : plan.fixedTenant ? [plan.fixedTenant] : [] }}/>
   </>);
 }
