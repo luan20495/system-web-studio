@@ -4,7 +4,7 @@
 
 * Archive directory (outside the repo, same Mac): `/Users/hoangluan/code/xweb-c6-evidence-archives/` — `SHA256SUMS` sits next to the archives. Copy it to durable storage (shared drive / object storage) before relying on it; this file only records identity and hashes.
 * `evidence-archives.tsv` — archive, batch, tested SHA, date, bytes, SHA-256, file/PNG counts, content.
-* `evidence-external-files.tsv` — path, bytes and SHA-256 of **every** PNG/TGZ inside the archives (3,808 files): a screenshot cited in a report can be matched to its archive and verified byte for byte.
+* `evidence-external-files.tsv` — path, bytes and SHA-256 of **every** PNG/TGZ inside the archives (5304 files): a screenshot cited in a report can be matched to its archive and verified byte for byte.
 
 ## Archives
 
@@ -18,6 +18,9 @@
 | `c6-evidence-ui-ux-40ee45bc16fe.tar.gz` | 11 | 40ee45bc16fe4dda525c90e0d491d11284a23d8b | 2026-10-08 | 80.7 | `b9779985b3446b37187b5872becba0959becebefd5a39db89d7c52e51e3c4540` | 944 (887) | targeted retest: 874 case screenshots, retest, process-safety, s4-regression |
 | `c6-evidence-ui-ux-baseline-rc-62ce9697cd56-partial.tar.gz` | 10 | RC frontend 62ce9697cd56 (visual baseline, partial) | 2026-10-08 | 43.2 | `85d9b9e169d62a9ce52b5be29322aacebbf33dae05a57c33a36464a437576204` | 610 (608) | baseline screenshots for visual diff |
 | `c6-evidence-ui-ux-pilot-pass1-no-transforms.tar.gz` | 10 | RC frontend 62ce9697cd56 (pilot, fixture without transforms) | 2026-10-08 | 64.1 | `cc7d765944df3909c3cd9d77d11a270ea74af2a1033ece59a42bd3dc02f17330` | 784 (777) | pilot pass that first exposed UX-001 |
+| `c6-evidence-final-rc-ui-chromium.tar.gz` | 12 | bc5c47f292d00846c106669b09679a6fc36daef6 (served build on c0rc; stack 953d17e) | 2026-10-10 | 106.0 | `03ed0b13616c63f616844e4003da6813b1b1e8fcc85fd3d367f0d321a1e6d4ca` | 1112 (1061) | FINAL RC Chromium UI audit (9 widths, 1089 cases), retests, strict clipping detector (clip, clip2) |
+| `c6-evidence-final-rc-ui-webkit.tar.gz` | 12 | bc5c47f292d00846c106669b09679a6fc36daef6 (served build on c0rc; stack 953d17e) | 2026-10-10 | 54.8 | `51753c0151426bd2a663b66771ce5da7fe92bd1a35903a26bbc3d2d87949e1a6` | 389 (375) | FINAL RC WebKit UI audit (3 widths, 392 cases) + navigation retest |
+| `c6-evidence-final-rc-other.tar.gz` | 12 | bc5c47f292d00846c106669b09679a6fc36daef6 (c0rc) + own stack c6fin (fad4a7b4356f, same product) | 2026-10-10 | 9.7 | `7c7c505b3aab81a19244e91afc15effbe88e168a3a0bd82684b0bac1c680877d` | 134 (60) | FINAL RC journeys 01-08, PD02, published site, brand shots (local+public), performance, C5 flow runs, coordinator-notes |
 
 ## Restore / verify
 ```bash
@@ -44,3 +47,4 @@ Run logs (`RESULTS.txt`, `*.log`), `*.json`/`*.tsv`/`*.psv` result tables, JUnit
 | 9 | `RC_WIDE_REGRESSION_62ce9697cd56.md` | `evidence/rc-62ce9697cd56/` |
 | 10 | `UI_UX_REGRESSION_5cc230e.md` | `evidence/ui-ux-regression/5cc230e491a6/` (+ `_baseline…`, `_pilot…`) |
 | 11 | `UI_UX_RETEST_40ee45b.md` | `evidence/ui-ux-regression/40ee45bc16fe/` |
+| 12 | `QA_MASTER_NORMALIZED.md`, `evidence/final-rc-bc5c47f292d0/coordinator-notes.md`, `FINAL_RC_QA_REPORT.md` | `evidence/final-rc-bc5c47f292d0/` (text) + the three `c6-evidence-final-rc-*` archives (screenshots) |
