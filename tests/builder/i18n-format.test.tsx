@@ -62,7 +62,7 @@ test("every `<html>` takes lang and dir from the locale constant (no literal lan
   for (const f of ["apps/admin/app/layout.tsx", "apps/platform/app/layout.tsx", "apps/studio/app/layout.tsx", "app/layout.tsx"]) {
     const t = readFileSync(join(root, f), "utf8");
     assert.doesNotMatch(t, /<html lang=/, `${f} hard-codes lang`); assert.match(t, /<html \{\.\.\.htmlAttrs\(\)\}>/, f);
-    if (f.startsWith("apps/")) assert.match(t, /<I18nProvider>\{children\}<\/I18nProvider>/, f);
+    if (f.startsWith("apps/")) assert.match(t, /<I18nProvider>(<SessionProvider>)?\{children\}(<\/SessionProvider>)?<\/I18nProvider>/, f);   // the session provider may sit inside it (FQ-PERF-01: the session lives in the layout)
   }
 });
 
