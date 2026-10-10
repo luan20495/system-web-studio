@@ -46,7 +46,7 @@ export function createFakeOrg(S: string, record: (name: string, args: unknown[])
   let types: OrgUnitTypeDto[] = empty ? [] : [mkType("t-div", "division", "Khối", "building"), mkType("t-dept", "dept", "Phòng", "briefcase", { allowedParentTypeIds: ["t-div"] }), mkType("t-team", "team", "Team", "users", { allowedParentTypeIds: ["t-dept", "t-team"] })];
   // ---- units
   const mkUnit = (id: string, parentId: string | null, typeId: string, name: string, o: Partial<OrgUnitDto> = {}): OrgUnitDto => ({ id, tenantId: "t1", typeId, parentId, name, code: id.toUpperCase().replace(/[^A-Z0-9]/g, "-"), sortOrder: 0, metadata: {}, active: true, version: 0, createdAt: ISO, updatedAt: ISO, archivedAt: null, ...o });
-  const gen = (n: number, parentOf: (i: number) => number | null, name: (i: number) => string): OrgUnitDto[] => Array.from({ length: n }, (_, i) => mkUnit(`g${i}`, parentOf(i) === null ? null : `g${parentOf(i)}`, i === 0 ? "t-div" : "t-dept", name(i), i % 97 === 0 && i > 0 ? { active: false, archivedAt: ISO } : {}));
+  const gen = (n: number, parentOf: (i: number) => number | null, name: (i: number) => string): OrgUnitDto[] => Array.from({ length: n }, (_, i) => mkUnit(`g${i}`, parentOf(i) === null ? null : `g${parentOf(i)}`, i === 0 ? "t-div" : "t-dept", name(i)));
   const GENERATED: Record<string, () => OrgUnitDto[]> = {
     big: () => gen(2000, (i) => (i === 0 ? null : Math.floor((i - 1) / 4)), (i) => `Đơn vị ${String(i).padStart(4, "0")} — phòng ban số ${i}`),
     deep10: () => gen(10, (i) => (i === 0 ? null : i - 1), (i) => `Cấp ${i + 1}: Bộ phận phụ trách chăm sóc khách hàng khu vực miền Trung và Tây Nguyên (nhóm ${i + 1})`),
@@ -71,7 +71,7 @@ export function createFakeOrg(S: string, record: (name: string, args: unknown[])
   if (!empty) base.forEach((b, i) => {
     const unit = BIGORG ? `g${(i * 7) % 2000}` : ["flutter", "web", "hr"][i % 3]; if (!units.some((u) => u.id === unit && u.active)) return;
     const m = mkMember(b.userId, unit); memberships.push(m); held.push(mkHeld(m, i % 2 ? "p-eng" : "p-lead", { gradeId: i % 3 === 0 ? "g-sr" : null }));
-    if (i === 2) memberships.push(mkMember(b.userId, "mobile", { primary: false, relationType: "MANAGER" }));          // user3: a second unit
+    if (i === 0) memberships.push(mkMember(b.userId, "mobile", { primary: false, relationType: "MANAGER" }));          // user1: a second unit INSIDE the same branch (the subtree count is DISTINCT, not a sum)
   });
 
   // ---- helpers

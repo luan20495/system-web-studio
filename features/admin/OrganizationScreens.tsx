@@ -46,7 +46,7 @@ export function OrganizationView({ api, plan, tenant }: { api: OrganizationApi; 
   const onOpen = useCallback((id: string, v: boolean) => setOpen((cur) => { const n = new Set(cur); if (v) n.add(id); else n.delete(id); return n; }), []);
   const reload = useCallback(() => { data.reload(); }, [data]);
   // a selected unit that is gone from the list (archived while archived units are hidden, or removed by someone else) is no longer selected
-  useEffect(() => { if (selected && data.data && !units.some((u) => u.id === selected)) setSelected(null); }, [units, selected, data.data]);
+  useEffect(() => { if (selected && data.data && !data.loading && !units.some((u) => u.id === selected)) setSelected(null); }, [units, selected, data.data, data.loading]);
 
   if (!access) return <StateView kind="forbidden" title="Bạn chưa có quyền xem cơ cấu tổ chức" detail={<p data-testid="org-forbidden">{(plan.access as { reason: string }).reason}</p>}/>;
   const catalogOpen = plan.positions.state !== "no-permission";
