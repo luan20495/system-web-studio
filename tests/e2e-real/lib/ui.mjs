@@ -87,3 +87,13 @@ export async function waitConfirm(page, title, timeout = 8000) { const d = confi
 export async function confirmYes(page, title, label) { const d = confirmDialog(page, title); await d.getByRole("button", { name: label, exact: true }).click(); await d.waitFor({ state: "hidden", timeout: 8000 }); }
 /** press "Hủy" and wait until the dialog is gone */
 export async function confirmCancel(page, title, label = "Hủy") { const d = confirmDialog(page, title); await d.getByRole("button", { name: label, exact: true }).click(); await d.waitFor({ state: "hidden", timeout: 8000 }); }
+
+// ---- the publish dialog's audience choice: a native RADIO group ("Riêng tư" / "Công khai", packages/ui RadioGroup). Role + name, never DOM position.
+export const visibilityRadio = (scope, visibility) => scope.getByRole("radio", { name: visibility === "PUBLIC" ? /^Công khai/ : /^Riêng tư/ });
+/** selects the audience by its accessible radio; returns whether it is offered (a policy may offer PRIVATE only) and what the screen shows afterwards */
+export async function chooseVisibility(scope, visibility) {
+  const radio = visibilityRadio(scope, visibility);
+  if (!(await radio.count())) return { offered: false, checked: false };
+  await radio.check();
+  return { offered: true, checked: await radio.isChecked() };
+}

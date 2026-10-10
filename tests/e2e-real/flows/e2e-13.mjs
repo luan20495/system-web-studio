@@ -1,6 +1,6 @@
 // @class: real-backend — publish through the UI, then read the artifact as an anonymous visitor.
 import { Blocked } from "../lib/report.mjs";
-import { loginUi, newPage, openBuilder, bodyText, pageProblems, containsText, liveMarkers } from "../lib/ui.mjs";
+import { loginUi, newPage, openBuilder, bodyText, pageProblems, containsText, liveMarkers, chooseVisibility } from "../lib/ui.mjs";
 export const id = "E2E-13", title = "Publish → real artifact/runtime state → public page reachable";
 export async function run({ cfg, fx, browser, check }) {
   const w = fx.workspaces.A, p = fx.projects.A.id, A = fx.sessions.adminA;
@@ -12,9 +12,9 @@ export async function run({ cfg, fx, browser, check }) {
   if (await proceed.count()) await proceed.first().click();
   const dialog = page.getByRole("dialog");
   await dialog.waitFor({ timeout: 10_000 });
-  const pub = dialog.getByRole("button", { name: /Công khai/ });
-  if (!(await pub.count())) throw new Blocked("C2", "PUBLIC publishing is switched off by policy for this app type (the dialog offers PRIVATE only)", "publish policy");
-  await pub.click();
+  const pub = await chooseVisibility(dialog, "PUBLIC");
+  if (!pub.offered) throw new Blocked("C2", "PUBLIC publishing is switched off by policy for this app type (the dialog offers PRIVATE only)", "publish policy");
+  check.ok("UI: the 'Công khai' radio is checked after choosing it", pub.checked);
   const start = page.waitForResponse((r) => r.request().method() === "POST" && /\/publish$/.test(new URL(r.url()).pathname), { timeout: 20_000 }).catch(() => null);
   await dialog.getByRole("button", { name: /^Xuất bản$/ }).click();
   const r = await start;
