@@ -1,6 +1,6 @@
 // @class: real-backend — C2 contract §2: rollback from Studio. POST …/site/rollback {deploymentId, expectedActiveDeploymentId} (optional Idempotency-Key) is SYNCHRONOUS: 200 + SiteInfo, and the site then serves the
 // restored release. The release that was rolled away from becomes ROLLED_BACK (terminal, not restorable). Requires APP_PUBLISH (a project VIEWER forging the call gets 403). pointerVersion +1, never sent.
-import { newPage, pageProblems } from "../lib/ui.mjs";
+import { newPage, pageProblems, confirmRollback } from "../lib/ui.mjs";
 import { releaseApi, baseline, openRelease, captureRelease, forbiddenSent, KEY_RE, until } from "../lib/release.mjs";
 export const id = "E2E-P03", title = "Rollback success: exact request, 200 + SiteInfo, rolled-away release is ROLLED_BACK, APP_PUBLISH, pointerVersion";
 export async function run({ cfg, fx, browser, check }) {
@@ -12,7 +12,7 @@ export async function run({ cfg, fx, browser, check }) {
   await page.getByTestId(`release:${c.id}`).waitFor({ timeout: 15_000 }).catch(() => undefined);
   check.ok("the older releases are offered for rollback; the one being served is not", (await page.getByTestId(`rollback:${a.id}`).count()) === 1 && (await page.getByTestId(`rollback:${b.id}`).count()) === 1 && (await page.getByTestId(`rollback:${c.id}`).count()) === 0);
   const resp = page.waitForResponse((r) => r.request().method() === "POST" && /\/site\/rollback$/.test(new URL(r.url()).pathname), { timeout: 30_000 });
-  await page.getByTestId(`rollback:${b.id}`).click();
+  await page.getByTestId(`rollback:${b.id}`).click(); await confirmRollback(page);
   check.ok("pending state is shown while the request is in flight (the button says it is working)", /Đang hoàn tác|Phục vụ lại/.test(await page.getByTestId(`release:${b.id}`).innerText().catch(() => "x")));
   const r = await resp; const req = r.request(), body = JSON.parse(req.postData() ?? "{}");
   check.ok("POST …/site/rollback answered 200 (synchronous)", r.status() === 200, `status=${r.status()}`, "http");

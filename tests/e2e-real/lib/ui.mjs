@@ -97,3 +97,6 @@ export async function chooseVisibility(scope, visibility) {
   await radio.check();
   return { offered: true, checked: await radio.isChecked() };
 }
+
+/** the release dialog's rollback is confirmed IN-APP ("Phục vụ lại phiên bản N?" → "Phục vụ lại bản này"): switching the LIVE site is never one click. Call right after pressing a `rollback:{id}` control. */
+export async function confirmRollback(page) { const T = /^Phục vụ lại phiên bản/; await waitConfirm(page, T); await confirmYes(page, T, "Phục vụ lại bản này"); }

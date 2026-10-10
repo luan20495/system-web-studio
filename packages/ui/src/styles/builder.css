@@ -280,3 +280,9 @@
   .studioTop .search{order:3;flex:1 1 100%}
   .studio-shell .shellMain{grid-template-rows:auto minmax(0,1fr)}   /* the header is two rows now: its grid row must grow (a fixed 56px row left the search under <main> between 521 and 600 px; found by the real-stack audit at 600) */
 }
+
+/* The save state and "Thử lại" must never sit UNDER the mode tabs: the brand group is a flex item that may shrink, so the project name (the only elastic part) gives way with an ellipsis,
+   while the save badge and the retry button keep their size. (Found by E2E-S2/S6/S9: at 1366-1440 px the tabs covered "Thử lại", which could not be clicked.) */
+.bx-top .brand{display:flex;align-items:center;gap:10px;min-width:0}
+.bx-top .brand>div:not(.saveState){min-width:0;flex:0 1 auto}
+.bx-top .brand .saveState,.bx-top .brand [data-testid="retry-save"]{flex:none}
