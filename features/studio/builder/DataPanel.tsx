@@ -4,7 +4,7 @@
  * Everything the old panel could do is still reachable (the wizard is mounted unchanged); the guided form only covers the common case:
  * show a source's data in one property of the page, read-only.
  */
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { allSections, defOps } from "./core/definition";
 import { DATA_WORDS as W } from "./core/dataWording";
 import { connectedRows } from "./core/guidedBinding";
@@ -24,6 +24,14 @@ export function DataPanel({ ctx, focus }: { ctx: DefCtx; focus?: DataFocus }) {
   const [message, setMessage] = useState<string | null>(null);
   const [removing, setRemoving] = useState<{ id: string; where: string } | null>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  // after the guided form closes, focus goes to the connected list. The list exists only once the document holds the new row, which can be a render AFTER the form closed: wait for it (a one-frame
+  // requestAnimationFrame lost the race on a loaded machine and left focus on <body>), and give up after a moment so a later, unrelated change never steals focus.
+  const [wantListFocus, setWantListFocus] = useState(false);
+  useEffect(() => {
+    if (!wantListFocus) return;
+    if (listRef.current) { listRef.current.focus(); setWantListFocus(false); return; }
+    const t = setTimeout(() => setWantListFocus(false), 3000); return () => clearTimeout(t);
+  }, [wantListFocus, rows.length]);
   const disabled = !ctx.canEdit || ctx.busy;
   const label = (sectionId: string, type: string, prop: string) => { void sectionId; return `${ctx.labelOf(type)} › ${propLabel(prop)}`; };
 
@@ -58,7 +66,7 @@ export function DataPanel({ ctx, focus }: { ctx: DefCtx; focus?: DataFocus }) {
 
       {!ctx.canEdit ? <p className="hint" data-testid="data-readonly">{W.readOnly}</p> : adding ? (
         <GuidedBinding ctx={ctx} focus={focus} onCancel={() => setAdding(false)}
-          onDone={(m) => { setAdding(false); setMessage(m); requestAnimationFrame(() => listRef.current?.focus()); }}/>
+          onDone={(m) => { setAdding(false); setMessage(m); setWantListFocus(true); }}/>
       ) : ctx.readiness.state === "AVAILABLE" && allSections(doc).length > 0
         ? <p><button type="button" className="btn dense primary" data-testid="data-add" onClick={() => { setMessage(null); setAdding(true); }}>{W.addButton}</button></p> : null}
 

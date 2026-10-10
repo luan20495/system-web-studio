@@ -32,3 +32,4 @@ packages/*/dist/
 # portal dist directories named after the source fingerprint (scripts/_portals_lib.sh)
 .next-local-*/
 .next-public-*/
+.next-*/

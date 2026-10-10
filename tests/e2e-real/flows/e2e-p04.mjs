@@ -1,6 +1,6 @@
 // @class: real-backend — C2 contract §4/§6/§7B: while a PUBLISH holds the scope (its DEPLOYING step; the artifact store is PAUSED so the step stays), SiteInfo.operation = {kind:"PUBLISH", deploymentId, since, leaseUntil},
 // a rollback / unpublish answers 409 SCOPE_BUSY with `Retry-After: 5` and the holder in details, and Studio mirrors the busy scope. Needs the artifact-store hooks.
-import { newPage, pageProblems } from "../lib/ui.mjs";
+import { newPage, pageProblems, confirmRollback } from "../lib/ui.mjs";
 import { releaseApi, baseline, openRelease, needHooks, pauseWhen, until, sleep } from "../lib/release.mjs";
 export const id = "E2E-P04", title = "Scope busy: operation=PUBLISH, 409 SCOPE_BUSY + Retry-After 5, busy UI, retry after the scope is free";
 export async function run({ cfg, fx, browser, check }) {
@@ -26,7 +26,7 @@ export async function run({ cfg, fx, browser, check }) {
     check.ok("…the standard envelope (no `retryable` field) and the holder in details.operation", JSON.stringify(Object.keys(busy.body).sort()) === JSON.stringify(["code", "details", "message", "requestId"]) && busy.body.details?.operation?.kind === "PUBLISH" && busy.body.details?.environment === "PRODUCTION", JSON.stringify(Object.keys(busy.body)), "http");
     un = await api.unpublish(); check.ok("unpublish while the PUBLISH holds the scope → 409 SCOPE_BUSY", un.status === 409 && un.body?.code === "SCOPE_BUSY", `status=${un.status} ${un.body?.code}`, "http");
     // UI: the dialog was opened before the operation: the first click is judged by the SERVER; the answer must be explained, not swallowed
-    await page.getByTestId(`rollback:${a.id}`).click();
+    await page.getByTestId(`rollback:${a.id}`).click(); await confirmRollback(page);
     const err = page.getByTestId("release-error"); await err.waitFor({ timeout: 15_000 });
     rbUi = { kind: await err.getAttribute("data-kind"), text: await err.innerText() };
     check.ok("UI: the server's SCOPE_BUSY is shown (kind scope-busy) naming the running operation and the 5 s wait", rbUi.kind === "scope-busy" && /đang xuất bản/.test(rbUi.text) && /5 giây/.test(rbUi.text), rbUi.text.replace(/\s+/g, " "));

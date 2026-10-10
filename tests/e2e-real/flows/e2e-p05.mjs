@@ -1,6 +1,6 @@
 // @class: real-backend — rollback in flight + browser refresh. The artifact store is PAUSED while the UI starts a rollback: SiteInfo.operation = {kind:"ROLLBACK"} (deploymentId null), a second rollback → 409 SCOPE_BUSY.
 // The page is REFRESHED in the middle: the reloaded dialog must show the busy scope (not an idle one, not "done"), poll, and end on what the server finally holds. An accepted request is never shown as the final success.
-import { newPage, pageProblems } from "../lib/ui.mjs";
+import { newPage, pageProblems, confirmRollback } from "../lib/ui.mjs";
 import { releaseApi, baseline, openRelease, captureRelease, forbiddenSent, needHooks, paused, until, sleep } from "../lib/release.mjs";
 export const id = "E2E-P05", title = "Rollback in flight: operation=ROLLBACK, refresh during rollback, polling until the server's final state";
 export async function run({ cfg, fx, browser, check }) {
@@ -12,7 +12,7 @@ export async function run({ cfg, fx, browser, check }) {
   let op, second, finalState;
   await paused(cfg, "store", async () => {
     // start the rollback from the UI: the request hangs (the store is paused) until the client gives up or the store returns
-    page.getByTestId(`rollback:${a.id}`).click().catch(() => undefined);   // the request hangs while the store is paused; a rejection after the refresh must not crash the runner
+    page.getByTestId(`rollback:${a.id}`).click().then(() => confirmRollback(page)).catch(() => undefined);   // the request hangs while the store is paused; a rejection after the refresh must not crash the runner
     op = await until(() => api.site(), (s) => s.operation !== null, 15_000, 150);
     check.ok("SiteInfo.operation = ROLLBACK while the rollback runs (deploymentId is null: only PUBLISH names one)", op.operation?.kind === "ROLLBACK" && op.operation.deploymentId === null && !!op.operation.leaseUntil, JSON.stringify(op.operation), "http");
     second = await api.rollback({ deploymentId: a.id });

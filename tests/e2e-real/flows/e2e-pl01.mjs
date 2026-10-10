@@ -58,8 +58,10 @@ export async function run({ cfg, fx, browser, check }) {
   check.ok("H after a full reload the UI reflects the backend: the tenant offers 'Mở khóa' (ACTIVE action) and no longer 'Tạm khóa'", (await page.getByTestId("tenant-ACTIVE").count()) === 1 && (await page.getByTestId("tenant-SUSPENDED").count()) === 0, "", "persistence");
   // restore (also through the in-app dialog)
   const T_UNLOCK = /Mở khóa công ty/;
-  await page.getByTestId("tenant-ACTIVE").click(); await waitConfirm(page, T_UNLOCK); await confirmYes(page, T_UNLOCK, "Mở khóa"); await page.waitForTimeout(800);
-  check.ok("restore: back to ACTIVE on the server", (await api.get(`/admin/tenants/${t.id}`)).body?.status === "ACTIVE", "", "persistence");
+  await page.getByTestId("tenant-ACTIVE").click(); await waitConfirm(page, T_UNLOCK); await confirmYes(page, T_UNLOCK, "Mở khóa");
+  // the PATCH is answered after the dialog closed: read the server until it says ACTIVE (a fixed 800 ms wait lost the race on a loaded machine)
+  let restored = (await api.get(`/admin/tenants/${t.id}`)).body?.status; for (let i = 0; i < 20 && restored !== "ACTIVE"; i++) { await page.waitForTimeout(500); restored = (await api.get(`/admin/tenants/${t.id}`)).body?.status; }
+  check.ok("restore: back to ACTIVE on the server", restored === "ACTIVE", String(restored), "persistence");
 
   // ---- members + last-admin rule ----------------------------------------------------------------------------------------------------------------------
   const adminA = fx.users.adminA, lonely = fx.users.lonelyA;
