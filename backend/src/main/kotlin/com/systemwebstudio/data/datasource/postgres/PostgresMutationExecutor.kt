@@ -132,6 +132,14 @@ internal object PgMutationSql {
 class PostgresMutationExecutor internal constructor(private val sessions: PgSessions) : MutationExecutor {
     private val log = LoggerFactory.getLogger(javaClass)
 
+    /** The single `key=` of the approved target, parsed and validated exactly like at execution ([PgMutationTarget.parse]); anything invalid or ambiguous is "no key". */
+    override fun recordKey(def: MutationDefinition, ds: DataSourceRef): String? {
+        if (def.kind != MutationKind.UPDATE && def.kind != MutationKind.DELETE) return null
+        return try {
+            PgMutationTarget.parse(def.target, PostgresConnectorConfig.parse(ds.configNonSecret)).keys.singleOrNull()
+        } catch (e: ConnectorFailure) { null }
+    }
+
     override fun execute(req: MutationExecRequest, ds: DataSourceRef, cred: ResolvedCredential): MutationOutcome {
         val def = req.definition
         if (def.tenantId != ds.tenantId || def.dataSourceId != ds.id) throw ConnectorFailure(FailureCodes.TENANT_MISMATCH, "data source does not belong to the tenant")
