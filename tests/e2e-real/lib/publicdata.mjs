@@ -2,7 +2,7 @@
 import { Blocked, Mismatch } from "./report.mjs";
 import { releaseApi, showRelease, closeRelease, until, TERMINAL, KEY_RE } from "./release.mjs";
 import { management } from "./management.mjs";
-import { newPage, loginUi, openBuilder, pageProblems } from "./ui.mjs";
+import { newPage, loginUi, openBuilder, pageProblems, visibilityRadio, chooseVisibility } from "./ui.mjs";
 export const SLOT = "pd-orders", Q_PRIVATE = "pd-private", Q_WRITE = "pd-write";
 
 /**
@@ -91,7 +91,13 @@ export async function chain({ cfg, fx, browser, check }, { withData }) {
 
   // ---- [ui] publish review ----------------------------------------------------------------------------------------------------------------------------------
   const modal = await showRelease(page);
-  await page.getByRole("button", { name: /^Công khai/ }).click();
+  // the audience is a radio group (the dialog opens on the site's CURRENT audience, so the start state is read, never assumed): choosing PRIVATE selects it, choosing PUBLIC moves the selection (checked state + the card's `selected` class) and offers the public-data review
+  const startChecks = [await visibilityRadio(modal, "PRIVATE").isChecked(), await visibilityRadio(modal, "PUBLIC").isChecked()];
+  const privOffer = await chooseVisibility(modal, "PRIVATE"); const privCard = modal.locator("label.xp-radioCard.selected");
+  const privOnly = privOffer.checked && !(await visibilityRadio(modal, "PUBLIC").isChecked()) && (await privCard.count()) === 1 && /Riêng tư/.test(await privCard.innerText());
+  const pubOffer = await chooseVisibility(modal, "PUBLIC"); const pubCard = modal.locator("label.xp-radioCard.selected");
+  const pubOnly = pubOffer.offered && pubOffer.checked && !(await visibilityRadio(modal, "PRIVATE").isChecked()) && (await pubCard.count()) === 1 && /Công khai/.test(await pubCard.innerText());
+  check.ok("[ui] publish audience (radio group, by role + name): exactly one radio is checked when the dialog opens; 'Riêng tư' selects PRIVATE alone; 'Công khai' selects PUBLIC alone (radio checked, the other unchecked, only that card marked selected)", startChecks.filter(Boolean).length === 1 && privOnly && pubOnly, `start private/public=${startChecks.join("/")} private-only=${privOnly} public-only=${pubOnly}`, "ui");
   const box = page.getByTestId("public-queries-box"); await box.waitFor({ timeout: 10_000 });
   const listed = await page.getByTestId("public-queries-list").locator("li").evaluateAll((l) => l.map((x) => x.getAttribute("data-testid")));
   check.ok("[ui] the publish review lists exactly the public READ query (not the private one, not the WRITE one)", JSON.stringify(listed) === JSON.stringify([`public-query:${qid}`]), listed.join(","));

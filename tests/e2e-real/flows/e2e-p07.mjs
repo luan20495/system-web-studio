@@ -1,6 +1,6 @@
 // @class: real-backend — idempotency (C2 contract §1/§7 E,F). Same key + same payload = ONE effect (publish: 202 + Idempotent-Replay + the original deployment; rollback/unpublish: both 200, pointer moved once).
 // Same key + a different payload = 409 IDEMPOTENCY_KEY_REUSED (judged before any eligibility check). The UI never reuses a key for another payload and uses a fresh key after an outcome the user repeats.
-import { newPage, pageProblems } from "../lib/ui.mjs";
+import { newPage, pageProblems, chooseVisibility } from "../lib/ui.mjs";
 import { releaseApi, baseline, openRelease, captureRelease, KEY_RE, showRelease , closeRelease } from "../lib/release.mjs";
 export const id = "E2E-P07", title = "Idempotency: replay, 409 IDEMPOTENCY_KEY_REUSED, and the UI's key lifecycle";
 export async function run({ cfg, fx, browser, check }) {
@@ -36,7 +36,7 @@ export async function run({ cfg, fx, browser, check }) {
   check.ok("UI: after a finished publish the dialog offers 'Xuất bản lại' only for non-success outcomes (RUNNING offers Close)", (await page.getByTestId("publish-again").count()) === 0);
   await closeRelease(page);
   await showRelease(page);
-  await page.getByRole("button", { name: /Công khai/ }).click();
+  check.ok("UI: the 'Công khai' radio is offered and checked after choosing it", (await chooseVisibility(page, "PUBLIC")).checked);
   await page.getByTestId("publish").click();
   await page.getByTestId("deployment").waitFor({ timeout: 30_000 });
   const posts = log.filter((x) => x.method === "POST" && /\/publish$/.test(x.path));
