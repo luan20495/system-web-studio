@@ -11,7 +11,8 @@ export type PageSchema = { page: string; sections: Section[]; site?: SiteMeta; p
  *  The tenancy fields are OPTIONAL on purpose: an older backend (and the legacy mock) does not send them, and every gate below falls back to `systemAdmin`.
  *  The client NEVER sends a tenant id back: the server derives it from the workspace in the URL (tenant-permission.md §2). */
 export type TenantRoleName = "TENANT_ADMIN" | "MEMBER";
-export type TenantMembershipSummary = { id: string; slug: string; name: string; status: string; role: TenantRoleName | string };
+/** One tenant of `/auth/me.tenants[]`. `role` is display / routing ONLY - never authorize from it. `permissions` = the canonical codes the caller holds in THIS tenant (C1 M-052, D-C0-54; the server ALWAYS sends it - optional here only so C5-owned fixtures keep compiling until C5 consumes it and makes it required); the root `/auth/me.permissions` stays the primary tenant + platform scope. */
+export type TenantMembershipSummary = { id: string; slug: string; name: string; status: string; role: TenantRoleName | string; permissions?: string[] };
 export type WorkspaceSummary = { id: string; name: string; role: string; tenantId?: string | null; permissions?: string[] };
 export type Me = {
   id: string; username: string; displayName: string; roles: string[]; workspaces: WorkspaceSummary[]; systemAdmin?: boolean;
