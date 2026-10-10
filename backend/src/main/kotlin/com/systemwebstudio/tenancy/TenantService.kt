@@ -40,7 +40,12 @@ class TenantService(
 
     fun get(id: UUID): TenantEntity = tenants.findById(id).orElseThrow { notFound() }
     /** a tenant that still exists AND is not DELETED: a deleted company is gone for every mutation, whoever calls (the platform operator can only restore it through [setStatus]) */
-    private fun live(id: UUID): TenantEntity = get(id).also { if (it.status == TenantStatus.DELETED.name) throw notFound() }
+    private fun live(id: UUID): TenantEntity {
+        // membership / workspace changes of ONE tenant run one at a time (FOR NO KEY UPDATE does not block the foreign-key reads of workspaces / organization rows): closes the
+        // three-way window where a target row read before the lock is written after it, and a concurrent switch to DELETED
+        jdbc.queryForList("SELECT id FROM tenants WHERE id = ? FOR NO KEY UPDATE", id)
+        return get(id).also { if (it.status == TenantStatus.DELETED.name) throw notFound() }
+    }
     fun list(): List<TenantEntity> = tenants.findAll().sortedBy { it.createdAt }
 
     @Transactional
