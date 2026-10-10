@@ -15,6 +15,8 @@ import com.systemwebstudio.logic.action.DispatchOutcome
 import com.systemwebstudio.logic.action.Event
 import com.systemwebstudio.logic.action.ExecutionMode
 import com.systemwebstudio.logic.action.Fx
+import com.systemwebstudio.logic.approval.DecisionKind
+import com.systemwebstudio.logic.workflow.ApprovalDecisionView
 import com.systemwebstudio.logic.workflow.WorkflowResult
 import com.systemwebstudio.logic.workflow.WorkflowRunView
 import com.systemwebstudio.logic.workflow.WorkflowRuntime
@@ -103,6 +105,8 @@ class VolatileStoreGuardsTests {
         override fun start(ctx: ActionContext, request: WorkflowStartRequest): WorkflowResult<WorkflowRunView> { starts++; return WorkflowResult.Failed("UNKNOWN_WORKFLOW", "x") }
         override fun status(ctx: ActionContext, runId: UUID): WorkflowResult<WorkflowRunView> = WorkflowResult.Failed("WORKFLOW_RUN_NOT_FOUND", "x")
         override fun cancel(ctx: ActionContext, runId: UUID): WorkflowResult<WorkflowRunView> = WorkflowResult.Failed("WORKFLOW_RUN_NOT_FOUND", "x")
+        override fun decideApproval(ctx: ActionContext, runId: UUID, approvalId: UUID, decision: DecisionKind, comment: String?): WorkflowResult<ApprovalDecisionView> =
+            WorkflowResult.Failed("WORKFLOW_RUN_NOT_FOUND", "x")
     }
 
     @Test

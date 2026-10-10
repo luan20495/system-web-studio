@@ -14,6 +14,8 @@ import com.systemwebstudio.logic.action.Event
 import com.systemwebstudio.logic.action.ExecutionMode
 import com.systemwebstudio.logic.action.LogicPermissions
 import com.systemwebstudio.logic.action.ResourceKind
+import com.systemwebstudio.logic.approval.DecisionKind
+import com.systemwebstudio.logic.workflow.ApprovalDecisionView
 import com.systemwebstudio.logic.workflow.WorkflowResult
 import com.systemwebstudio.logic.workflow.WorkflowRunView
 import com.systemwebstudio.logic.workflow.WorkflowRuntime
@@ -90,4 +92,8 @@ class VolatileWorkflowGuard(
     override fun status(ctx: ActionContext, runId: UUID): WorkflowResult<WorkflowRunView> = delegate.status(ctx, runId)
 
     override fun cancel(ctx: ActionContext, runId: UUID): WorkflowResult<WorkflowRunView> = delegate.cancel(ctx, runId)
+
+    // a decision acts on an approval that already exists (it could only be created by a run that was admitted), so the volatile-store refusal of `start` has nothing to add
+    override fun decideApproval(ctx: ActionContext, runId: UUID, approvalId: UUID, decision: DecisionKind, comment: String?): WorkflowResult<ApprovalDecisionView> =
+        delegate.decideApproval(ctx, runId, approvalId, decision, comment)
 }
