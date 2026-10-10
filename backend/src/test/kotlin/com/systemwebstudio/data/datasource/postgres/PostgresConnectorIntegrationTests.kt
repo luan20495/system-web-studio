@@ -184,10 +184,12 @@ class PostgresConnectorIntegrationTests {
     @Test fun `connections are closed after every call`() {
         connector(orders).executor().execute(req("orders", mapOf("min" to 0)), ref(), ro)
         runCatching { connector().executor().execute(req("nope"), ref(), ro) }
-        Thread.sleep(300)
-        val open = DriverManager.getConnection(pg.jdbcUrl, pg.username, pg.password).use { c -> c.createStatement().use { st ->
+        // the server needs a moment to reap a closed client's backend (seconds on a loaded machine): poll, never sleep once
+        fun open() = DriverManager.getConnection(pg.jdbcUrl, pg.username, pg.password).use { c -> c.createStatement().use { st ->
             st.executeQuery("SELECT count(*) FROM pg_stat_activity WHERE application_name = 'xweb-data-connector'").use { it.next(); it.getInt(1) } } }
-        assertThat(open).isEqualTo(0)
+        val deadline = System.currentTimeMillis() + 10_000; var n = open()
+        while (n != 0 && System.currentTimeMillis() < deadline) { Thread.sleep(200); n = open() }
+        assertThat(n).isEqualTo(0)
     }
 
     // ---------------------------------------------------------------- discovery
