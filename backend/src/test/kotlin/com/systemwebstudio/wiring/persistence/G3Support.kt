@@ -22,7 +22,11 @@ import com.systemwebstudio.logic.action.FakeDataPort
 import com.systemwebstudio.logic.action.FakeDefinitions
 import com.systemwebstudio.logic.action.FakeNotifyPort
 import com.systemwebstudio.logic.action.FakeTenants
+import com.systemwebstudio.logic.action.FakePrincipals
 import com.systemwebstudio.logic.action.Fx
+import com.systemwebstudio.logic.approval.ApprovalListener
+import com.systemwebstudio.logic.approval.ApprovalService
+import com.systemwebstudio.logic.approval.ApprovalStore
 import com.systemwebstudio.logic.action.InputResolver
 import com.systemwebstudio.logic.action.PortOutcome
 import com.systemwebstudio.logic.action.RecordingAudit
@@ -100,7 +104,8 @@ private class HookedHandler(private val delegate: ActionHandler, private val hoo
 class G3Process(
     workflows: List<WorkflowDefinition>, actionDefs: List<ActionDefinition>, val queue: WorkflowQueue, val actionRuns: ActionRunStore, workflowStore: WorkflowRunStore,
     clock: Clock, val ctx: ActionContext, staleAfter: Duration = Duration.ofMinutes(2), maxProcessFailures: Int = 5, val workerId: String = "g3-" + UUID.randomUUID().toString().take(8),
-    val data: FakeDataPort = FakeDataPort(), val executor: ExecutorService = Executors.newCachedThreadPool(), sweepMinInterval: Duration = Duration.ofSeconds(5)
+    val data: FakeDataPort = FakeDataPort(), val executor: ExecutorService = Executors.newCachedThreadPool(), sweepMinInterval: Duration = Duration.ofSeconds(5),
+    /** when set, the process has approvals on this (durable) store - FQ-WF-01 */ approvalStore: ApprovalStore? = null, approverDirectory: Set<UUID> = setOf(Fx.user, Fx.user2)
 ) {
     val audit = RecordingLogicAudit()
     val tenants = FakeTenants()
@@ -131,8 +136,11 @@ class G3Process(
     val runtime = DefaultActionRuntime(
         definitions, handlers, access, tenants, actionRuns, RecordingAudit(), InputResolver(Fx.json), null, ActionLimits(), clock, executor, 16, TenantRateLimiter.UNLIMITED
     )
+    val approvals: ApprovalService? = approvalStore?.let { st ->
+        ApprovalService(Fx.json, st, FakePrincipals(directory = approverDirectory), tenants, audit, null, ApprovalListener { a -> engineRef?.onFinal(a) }, clock = clock)
+    }
     val engine = WorkflowEngine(
-        Fx.json, FakeWorkflowDefs(*workflows.toTypedArray()), runtime, runStore, queue, access, tenants, audit, null, WorkflowLimits(), clock, staleAfter,
+        Fx.json, FakeWorkflowDefs(*workflows.toTypedArray()), runtime, runStore, queue, access, tenants, audit, approvals, WorkflowLimits(), clock, staleAfter,
         TenantRateLimiter.UNLIMITED, maxProcessFailures, sweepMinInterval = sweepMinInterval, workerId = workerId
     ).also { engineRef = it }
     val worker = WorkflowWorker(engine, queue)
@@ -208,6 +216,7 @@ abstract class G3TestBase : DataRuntimeJdbcTestBase() {
     }
 
     private fun clearRows() {
+        if (jdbc.queryForObject("SELECT to_regclass('public.approvals') IS NOT NULL", Boolean::class.java) == true) jdbc.update("DELETE FROM approvals WHERE tenant_id = ?", Fx.tenantA)
         jdbc.update("DELETE FROM workflow_runs WHERE tenant_id = ? OR status NOT IN ('SUCCEEDED', 'FAILED', 'CANCELLED') OR compensation = 'IN_PROGRESS'", Fx.tenantA)
         jdbc.update("DELETE FROM action_runs WHERE tenant_id = ? OR status = 'RUNNING'", Fx.tenantA)
     }
@@ -221,6 +230,15 @@ abstract class G3TestBase : DataRuntimeJdbcTestBase() {
         workflows, actionDefs + extraActions, queue, JdbcActionRunStore(jdbc, json), JdbcWorkflowRunStore(jdbc, json), clock, ctx, staleAfter, maxProcessFailures,
         executor = Executors.newCachedThreadPool().also { executors += it }, sweepMinInterval = sweepMinInterval
     )
+
+    /** A node with approvals on the durable `approvals` table (FQ-WF-01): everything else as [process]. */
+    protected fun approvalProcess(workflows: List<WorkflowDefinition>, queue: WorkflowQueue, staleAfter: Duration = Duration.ofMinutes(2), sweepMinInterval: Duration = Duration.ofSeconds(1)): G3Process {
+        ApprovalTestSchema.ensure(jdbc)
+        return G3Process(
+            workflows, actionDefs, queue, JdbcActionRunStore(jdbc, json), JdbcWorkflowRunStore(jdbc, json), clock, ctx, staleAfter, 5,
+            executor = Executors.newCachedThreadPool().also { executors += it }, sweepMinInterval = sweepMinInterval, approvalStore = JdbcApprovalStore(jdbc, json)
+        )
+    }
 
     protected fun own(c: AutoCloseable) { opened += c }
 

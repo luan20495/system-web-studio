@@ -105,6 +105,32 @@ class AppRuntimeActionController(
         return workflow(ctx, projectId, RequestIdFilter.current(), 200) { actx -> runtime.workflows.cancel(actx, runId) }
     }
 
+    /**
+     * FQ-WF-02: the canonical decision of an APPROVAL step. The approver is the session user (never the body); C4 checks scope -> WORKFLOW_MANAGE -> the approval belongs to this
+     * run -> the user is one of the approvers snapshotted when the step started. Idempotent for the same decision, 409 for the opposite one or a final approval.
+     */
+    @PostMapping("/workflow-runs/{runId}/approvals/{approvalId}/decision")
+    fun decide(
+        @PathVariable workspaceId: UUID,
+        @PathVariable projectId: UUID,
+        @PathVariable runId: UUID,
+        @PathVariable approvalId: UUID,
+        @RequestBody(required = false) body: JsonNode?,
+        @AuthenticationPrincipal me: StudioUserDetails
+    ): ResponseEntity<JsonNode> {
+        val ctx = access.forProject(me.userId, workspaceId, projectId)
+        val requestId = RequestIdFilter.current()
+        val req = try { RuntimeRequests.approvalDecision(body) } catch (e: BadRuntimeRequest) { return bad(e, requestId) }
+        return try {
+            when (val r = runtime.workflows.decideApproval(RuntimeContexts.action(ctx, projectId, requestId), runId, approvalId, req.decision, req.comment)) {
+                is WorkflowResult.Ok -> responses.approvalDecision(r.value).toResponse()
+                is WorkflowResult.Failed -> responses.workflowFailure(r).toResponse()
+            }
+        } catch (e: Exception) {
+            responses.error(500, "INTERNAL", "Unexpected error", requestId = requestId).toResponse()
+        }
+    }
+
     private fun workflow(
         ctx: AccessContext,
         projectId: UUID,

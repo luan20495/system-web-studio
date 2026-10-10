@@ -20,6 +20,10 @@ import com.systemwebstudio.logic.action.WorkflowStarterPort
 import com.systemwebstudio.logic.action.canonical.AppDefinitionSource
 import com.systemwebstudio.logic.action.canonical.CanonicalActionCatalog
 import com.systemwebstudio.logic.action.handlers.DefaultActionHandlers
+import com.systemwebstudio.logic.approval.ApprovalListener
+import com.systemwebstudio.logic.approval.ApprovalService
+import com.systemwebstudio.logic.approval.ApprovalStore
+import com.systemwebstudio.logic.approval.InMemoryApprovalStore
 import com.systemwebstudio.logic.workflow.InMemoryWorkflowRunStore
 import com.systemwebstudio.logic.workflow.WorkflowEngine
 import com.systemwebstudio.logic.workflow.WorkflowQueue
@@ -28,6 +32,7 @@ import com.systemwebstudio.logic.workflow.WorkflowRuntime
 import com.systemwebstudio.logic.workflow.WorkflowWorker
 import com.systemwebstudio.logic.workflow.canonical.CanonicalWorkflowCatalog
 import com.systemwebstudio.wiring.persistence.JdbcActionRunStore
+import com.systemwebstudio.wiring.persistence.JdbcApprovalStore
 import com.systemwebstudio.wiring.persistence.JdbcWorkflowRunStore
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.beans.factory.annotation.Value
@@ -41,6 +46,7 @@ import tools.jackson.databind.json.JsonMapper
 import java.time.Clock
 import java.time.Duration
 import com.systemwebstudio.access.adapters.AccessPort as C1AccessPort
+import com.systemwebstudio.access.adapters.PrincipalResolver as C1PrincipalResolver
 import com.systemwebstudio.access.adapters.TenantGate as C1TenantGate
 
 /** The C4 runtime as the controllers see it. [actions] and [workflows] are the guarded decorators (D-C0-20); [engine]/[worker] are for the worker only. */
@@ -121,6 +127,9 @@ class AppRuntimeConfiguration {
         workflowRuns: WorkflowRunStore,
         queue: WorkflowQueue,
         gateways: ObjectProvider<DataGateway>,
+        jdbc: JdbcTemplate,
+        principals: C1PrincipalResolver,
+        @Value("\${app.workflow.approvals:auto}") approvalsMode: String,
         @Value("\${app.workflow.allow-volatile-stores:false}") allowVolatile: Boolean,
         @Value("\${app.workflow.run-store:jdbc}") runStore: String,
         @Value("\${app.workflow.stale-after:PT2M}") staleAfter: String,
@@ -151,7 +160,9 @@ class AppRuntimeConfiguration {
             resolver = InputResolver(json),
             bindings = catalog
         )
-        val engine = WorkflowEngine(json, CanonicalWorkflowCatalog(source), runtime, workflowRuns, queue, access, tenants, logicAudit, staleAfter = leaseAfter, workerId = workerId)
+        // FQ-WF-01: the approvals of a workflow APPROVAL step. The service tells the engine (listener) when an approval is final; the engine is built after the service, so a forwarder closes the loop.
+        val approvals = approvalService(approvalsMode, durable, jdbc, json, principals, tenants, logicAudit) { a -> engineRef?.onFinal(a) }
+        val engine = WorkflowEngine(json, CanonicalWorkflowCatalog(source), runtime, workflowRuns, queue, access, tenants, logicAudit, approvals = approvals, staleAfter = leaseAfter, workerId = workerId)
         engineRef = engine
         return AppRuntime(
             actions = VolatileActionGuard(runtime, catalog, access, allowVolatile || durable),
@@ -160,6 +171,28 @@ class AppRuntimeConfiguration {
             engine = engine,
             worker = WorkflowWorker(engine, queue)
         )
+    }
+
+    /**
+     * `app.workflow.approvals`: `auto` (default) = durable (`approvals` table) when the table exists, otherwise NOT wired (a LIVE APPROVAL step then fails with NOT_IMPLEMENTED, as before D-C0-21 D5,
+     * and a warning says why); `jdbc` = durable, the table must exist (a missing table fails the first approval, loudly); `memory` = volatile dev / test only, only with the memory run store; `off` = not wired.
+     */
+    private fun approvalService(
+        mode: String, durableRuns: Boolean, jdbc: JdbcTemplate, json: JsonMapper, principals: C1PrincipalResolver, tenants: TenantGate, audit: LogicAuditPort, onFinal: ApprovalListener
+    ): ApprovalService? {
+        val log = System.getLogger(AppRuntimeConfiguration::class.java.name)
+        require(mode in setOf("auto", "jdbc", "memory", "off")) { "app.workflow.approvals must be auto, jdbc, memory or off" }
+        val store: ApprovalStore = when (mode) {
+            "off" -> return null
+            "memory" -> { require(!durableRuns) { "app.workflow.approvals=memory needs app.workflow.run-store=memory (a durable run must not wait for a volatile approval)" }; InMemoryApprovalStore() }
+            "jdbc" -> JdbcApprovalStore(jdbc, json)
+            else -> {
+                val present = try { jdbc.queryForObject("SELECT to_regclass('public.approvals') IS NOT NULL", Boolean::class.java) == true } catch (e: Exception) { false }
+                if (!present) { log.log(System.Logger.Level.WARNING, "app.workflow.approvals=auto: table 'approvals' is missing, workflow APPROVAL steps stay NOT_IMPLEMENTED until the migration is applied"); return null }
+                JdbcApprovalStore(jdbc, json)
+            }
+        }
+        return ApprovalService(json, store, C4PrincipalResolverAdapter(principals), tenants, audit, listener = onFinal)
     }
 }
 
