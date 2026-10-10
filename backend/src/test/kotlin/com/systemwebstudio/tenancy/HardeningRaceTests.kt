@@ -54,7 +54,9 @@ class HardeningRaceTests : FinalIamTestBase() {
         val winners = outcomes.count { it.status in 200..299 }
         assertThat(winners).describedAs("$what: exactly one request wins (statuses ${outcomes.map { "${it.status}/${it.code}" }})").isEqualTo(1)
         val loser = outcomes.single { it.status !in 200..299 }
-        assertThat(loser.status).describedAs("$what: loser").isIn(409, 403)
+        // 409 = both requests passed authorization and the second waited on the locks; 403 = the loser was DEMOTED first (still a member, no permission); 404 = the loser was REMOVED first
+        // (no longer a member of the company, so the company is invisible to it). All three mean "never both".
+        assertThat(loser.status).describedAs("$what: loser").isIn(409, 403, 404)
         if (loser.status == 409) assertThat(loser.code).describedAs(what).isEqualTo(conflictCode)
         return loser.status == 409
     }
