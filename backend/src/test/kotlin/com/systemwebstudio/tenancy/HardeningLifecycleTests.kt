@@ -100,8 +100,20 @@ class HardeningLifecycleTests : FinalIamTestBase() {
         assertThat(userExists(u)).isFalse()
     }
 
-    // NOTE (reported, not asserted): the platform operator is NOT blocked on a DELETED company by POST workspaces / PUT members / DELETE members (201 / 200 / 204 observed),
-    // although TenantController documents "a DELETED one is gone for everybody" and POST users / rename answer 404 for it. Left for the owner to decide (see the C1 report).
+    @Test
+    fun `A4 DELETED company - the platform operator is refused too on workspace and member writes (gone for everybody), restoring the company brings them back`() {
+        val sys = sysAdmin(); val c = company(sys); wsIn(c)
+        val m1 = plainMember(c, "hl-dm2")
+        assertThat(sys.patch("${base(c)}/status", """{"status":"DELETED"}""").response.status).isEqualTo(200)
+        val wsBefore = workspaceCount(c)
+        status(sys.post("${base(c)}/workspaces", """{"name":"x"}"""), sys, 404, "TENANT_NOT_FOUND", "operator POST workspaces")
+        status(sys.put("${base(c)}/members/$m1", """{"role":"TENANT_ADMIN"}"""), sys, 404, "TENANT_NOT_FOUND", "operator PUT member")
+        status(sys.delete("${base(c)}/members/$m1"), sys, 404, "TENANT_NOT_FOUND", "operator DELETE member")
+        assertThat(workspaceCount(c)).isEqualTo(wsBefore); assertThat(membership(c, m1)).isEqualTo(mapOf("role" to "MEMBER", "active" to true))
+        // the only way back is the platform status route
+        assertThat(sys.patch("${base(c)}/status", """{"status":"ACTIVE"}""").response.status).isEqualTo(200)
+        assertThat(sys.put("${base(c)}/members/$m1", """{"role":"TENANT_ADMIN"}""").response.status).isEqualTo(200)
+    }
 
     // ------------------------------------------------------------------------------------------------ D. project list visibility (seesAllProjects)
     @Test
