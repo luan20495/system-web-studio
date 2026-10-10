@@ -11,7 +11,7 @@ import java.util.UUID
  * [role] is INFORMATIONAL ONLY (display / routing): a client must NEVER authorize from it. [permissions] is the canonical authorization signal for THIS tenant and ONLY this
  * tenant: the codes `PermissionMatrix.tenantRoles[role]` grants there (TENANT_ADMIN: the eight tenant + organization codes; MEMBER: none), recomputed from the database on every
  * `/auth/me` call, in memory (no SQL per tenant). It is independent of the root `permissions[]` (which describe the primary tenant + the platform scope) and of the tenant [status]:
- * in a SUSPENDED tenant the capabilities are still listed, but the server refuses organization / employee / position writes there with 403 TENANT_SUSPENDED.
+ * in a SUSPENDED tenant the capabilities are still listed, but the server refuses organization / employee / position writes and the tenant rename there with 403 TENANT_SUSPENDED.
  */
 data class TenantMembershipSummary(val id: UUID, val slug: String, val name: String, val status: String, val role: String, val permissions: List<String> = emptyList())
 

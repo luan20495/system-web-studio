@@ -205,8 +205,8 @@ data class TenantMembershipSummary(val id: UUID, val slug: String, val name: Str
 - **Additive and backward compatible:** the five existing fields are unchanged; `permissions` is a new field (absent in an older backend = unknown, never "granted").
 - **Scope is explicit.** Root `permissions[]` / `tenantId` / `tenantRole` keep describing the platform scope + the PRIMARY tenant. A secondary tenant's capabilities appear ONLY in its own `tenants[]` entry and never authorize another tenant. A tenant with no active membership (or a DELETED one) is **absent** (no disclosure).
 - **Live:** recomputed from the database on every `/auth/me` call, in memory from the single membership statement (no SQL per tenant, so the statement count stays 6 whatever the number of tenants; proven by `TenantCardinalityQueryTests`). A role downgrade, a membership removal or deactivation, a tenant deletion show up on the next call of the same session.
-- **SUSPENDED tenant (exact current behaviour, no third policy):** the entry stays listed with `status:"SUSPENDED"` and the role's capabilities, exactly as the root `permissions[]` already did for the primary tenant. The API is the source of truth: organization / employee / position-grade WRITES answer 403 `TENANT_SUSPENDED`, reads and the tenant-admin routes (members, users, workspaces) stay allowed; workspace routes of that tenant answer 403 `TENANT_SUSPENDED` (its workspaces[] rows carry no permission). C5 shows the status and lets the server answer.
-- **SYSTEM_ADMIN:** the platform scope (`TENANT_MANAGE` + `TENANT_MEMBERS` on any tenant) stays in the root list; a SYSTEM_ADMIN's `tenants[]` entries carry only the codes of its own member role (with the legacy business bypass `app.tenancy.system-admin-business-access=true`: the TENANT_ADMIN set, as `forTenant` grants).
+- **SUSPENDED tenant (exact current behaviour, no third policy):** the entry stays listed with `status:"SUSPENDED"` and the role's capabilities, exactly as the root `permissions[]` already did for the primary tenant. The API is the source of truth: organization / employee / position-grade WRITES and the tenant RENAME (by a Tenant Admin) answer 403 `TENANT_SUSPENDED`; reads and the other tenant-admin routes (members, users, workspaces) stay allowed; workspace routes of that tenant answer 403 `TENANT_SUSPENDED` (its workspaces[] rows carry no permission). C5 shows the status and lets the server answer.
+- **SYSTEM_ADMIN:** the platform scope (`TENANT_MANAGE` + `TENANT_MEMBERS` on any tenant) stays in the root list; a SYSTEM_ADMIN's `tenants[]` entries carry only the codes of its own member role (with the legacy business bypass `app.tenancy.system-admin-business-access=true` (off by default): the TENANT_ADMIN set, as `forTenant` grants; the root list still shows only the primary member role's codes in that case, by design). Pinned by `T/tenancy/SystemAdminTenantScopeAuthMeTests.kt`.
 
 Example (ids shortened; a user who is MEMBER of DEFAULT and TENANT_ADMIN of company A and MEMBER of company B):
 
@@ -226,13 +226,14 @@ Example (ids shortened; a user who is MEMBER of DEFAULT and TENANT_ADMIN of comp
 
 ```ts
 const tenantScope = me.tenants.find(t => t.id === selectedTenantId)
-const can = (code: string) => tenantScope?.permissions.includes(code) === true   // authorize from permissions
+const can = (code: string) => tenantScope?.permissions.includes(code) === true
+  || (me.platformScope && me.permissions.includes(code))   // platform operators: the platform scope (TENANT_MANAGE / TENANT_MEMBERS on any tenant) is in the ROOT list
 // NEVER: tenantScope.role === "TENANT_ADMIN"
 ```
 
-Gates: organization structure `ORG_STRUCTURE_VIEW` / `ORG_STRUCTURE_MANAGE`; employees `EMPLOYEE_VIEW` / `EMPLOYEE_MANAGE`; positions and grades `POSITION_GRADE_VIEW` / `POSITION_GRADE_MANAGE`; tenant membership and users `TENANT_MEMBERS`; tenant rename and status screens `TENANT_MANAGE`.
+Gates: organization structure `ORG_STRUCTURE_VIEW` / `ORG_STRUCTURE_MANAGE`; employees `EMPLOYEE_VIEW` / `EMPLOYEE_MANAGE`; positions and grades `POSITION_GRADE_VIEW` / `POSITION_GRADE_MANAGE`; tenant membership and users `TENANT_MEMBERS`; tenant rename `TENANT_MANAGE`; the tenant status screen iff `platformScope` (the status route is platform-only).
 
-Tests: `T/tenancy/MultiTenantAuthMeTests.kt` (secondary admin, third-tenant member, foreign tenant, revocation, downgrade, suspension, deleted, role-is-not-authority, the AD01 flow), `T/tenancy/TenantCardinalityQueryTests.kt` (statements(100 tenants) <= statements(1 tenant) + 2).
+Tests: `T/tenancy/MultiTenantAuthMeTests.kt` (secondary admin, third-tenant member, foreign tenant, revocation, downgrade, suspension, deleted, role-is-not-authority, the AD01 flow), `T/identity/authme/TenantCardinalityQueryTests.kt` (statements(100 tenants) <= statements(1 tenant) + 2).
 
 ### 2.5 Frontend admission contract
 
@@ -524,7 +525,7 @@ Genuinely REMAINING on this baseline:
 |---|---|---|
 | `docs/contracts/v2/tenant-permission.md` section 4, row `users.system_admin` (SYSTEM_ADMIN) | says `platformScope` = `TENANT_MANAGE, TENANT_MEMBERS, MEMBER_MANAGE, PROJECT_CREATE`; the code (`PermissionMatrix.platformScope`) is exactly `TENANT_MANAGE, TENANT_MEMBERS` | **C0** (contract) |
 | `docs/contracts/v2/tenant-permission.md` section 5, paragraph "`TENANT_MANAGE` and `TENANT_MEMBERS` are part of the vocabulary …" | still lists `MEMBER_MANAGE` among constants "never listed to clients", contradicting the same file's section 5 lead-in and 5b (and `PermissionCodes.CANONICAL`, which contains `MEMBER_MANAGE`) | **C0** (contract) |
-| `scripts/provisioning-e2e.mjs`, check "B /auth/me: not a system admin; the tenant permissions are exactly TENANT_MANAGE + TENANT_MEMBERS …" | asserts the old 2-code TENANT_ADMIN list; `/auth/me.permissions` of a Tenant Admin is the eight codes below (`tenants[]` has no `permissions` field, so the fallback reads the eight) | **C0**: assert the eight codes |
+| `scripts/provisioning-e2e.mjs`, check "B /auth/me: not a system admin; the tenant permissions are exactly TENANT_MANAGE + TENANT_MEMBERS …" | asserts the old 2-code TENANT_ADMIN list; `/auth/me.permissions` of a Tenant Admin is the eight codes below (and `tenants[].permissions` of that tenant carries the eight, 2.4a) | **C0**: assert the eight codes |
 | `packages/permissions/src/canonical.ts`, module constant `CANONICAL` (= `new Set(PERMISSION_CODES)`, used by `resolvePermissions`) | drops the six organization codes and `MEMBER_MANAGE` | **C5** (D-C0-51 item 5 handoff): resolve against `CANONICAL_PERMISSION_CODES` when the organization is wired |
 
 | Scope / role | Canonical codes (as `/auth/me` shows them) | Internal extras |
@@ -709,7 +710,7 @@ Unless marked CLOSED, none of these is fixed on this branch.
 | 4 | ~~**maxDepth race.** Create and restore validate `maxDepth` without the structural lock.~~ **CLOSED (D-C0-52 item 7):** create, restore and a type-rule change now take the structural lock first (6.2 item 6), and C3 re-checks the depth inside create / restore. Proofs: C3 `OrganizationIntegrationWiringTests` ("MAX_DEPTH race 1" / "MAX_DEPTH race 2"), `OrgRaceTests` ("maxDepth is re-checked inside create and restore …"). Residual: the header KDoc of `OrganizationRepositories.kt` (rule 4c, paragraph "Known, documented limit") still describes the old race; documentation only. | `OrganizationUnitService.create` / `restore`, `OrganizationUnitTypeService.update` | C3 (closed); KDoc cleanup C1 |
 | 5 | **The suspended-tenant policy for tenant-admin member and provisioning routes is unchanged.** `forTenant` does not check SUSPENDED, so a Tenant Admin keeps member, user and workspace routes (organization writes and rename are read-only in a SUSPENDED company). | `AccessService.forTenant`; `AccountService.createTenantUser` (`Accounts.kt:123`, DELETED check only) | C1 policy, needs a C0 decision |
 | 6 | ~~`/auth/me` is O(N) in the number of project memberships (~5 queries per project).~~ **CLOSED on this branch:** a constant 6 statements per request (section 2.3a; regression test `AuthMeQueryComplexityTests`, benchmark 2.3b). Remaining: the response size is linear in the number of visible projects (no pagination, contract unchanged), and the 2.3a limits 2-3. | `ProjectScopeResolver.scopesFor`, `AuthController.me` | C1 (closed); pagination needs C0 |
-| 7 | Top-level `permissions` covers the primary tenant only. | `MeTenancyService.forUser` | C1 + contract (C0) |
+| 7 | **CLOSED (M-052).** Top-level `permissions` stays the platform scope + the primary tenant (by design); the capabilities of every tenant are in `tenants[].permissions` (2.4a). | `MeTenancyService.forUser` | C1 (done) |
 | 8 | Last-tenant-admin count is not locked (concurrent demotions). | `TenantService.setMember` / `TenantService.removeMember` (last-admin count) | C1 |
 | 9 | A workspace member with **no** `tenant_members` row is treated as active. | `AccessEvaluator.tenantGates` (`membershipActive == null` passes); `AuthController.me` (`tm.user_id IS NULL OR tm.active`) | C1 (legacy, pre-V26 data) |
 | 10 | `firstAdminUserId` does not check that the user is enabled or activated. | `TenantController.create` (`TenantController.kt:62`) | C1 |
