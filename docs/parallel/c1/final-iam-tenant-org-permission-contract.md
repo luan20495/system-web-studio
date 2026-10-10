@@ -93,7 +93,7 @@ The response shape is **unchanged** by the bounded-statement work of 2.3a: same 
 | `tenantRole` | `"TENANT_ADMIN"` \| `"MEMBER"` \| null | the role in the primary tenant. Informational only. |
 | `platformScope` | boolean | = live `systemAdmin` (`MeTenancyService.forUser`) |
 | `businessAccess` | boolean | `systemAdmin && app.tenancy.system-admin-business-access` (default false) |
-| `tenants` | `TenantMembershipSummary[]` | `{id, slug, name, status, role}` for each **active** membership whose tenant is not DELETED. SUSPENDED tenants **are listed**, with `status:"SUSPENDED"`. Ordered DEFAULT first, then by membership `created_at`, then slug (`MeTenancyService.forUser`). |
+| `tenants` | `TenantMembershipSummary[]` | `{id, slug, name, status, role, permissions}` for each **active** membership whose tenant is not DELETED (`permissions` = the canonical codes of THAT tenant, see 2.4a). SUSPENDED tenants **are listed**, with `status:"SUSPENDED"`. Ordered DEFAULT first, then by membership `created_at`, then slug (`MeTenancyService.forUser`). |
 | `permissions` | string[] | canonical codes: `platformScope` codes (if systemAdmin) **plus** the primary tenant's role codes, sorted (`MeTenancyService.forUser` → `PermissionCodes.canonicalCodesOf`) |
 | `projectScopes` | `ProjectScopeSummary[]` | see 2.3 |
 
@@ -191,7 +191,48 @@ Reading: BEFORE = `5 + 5·N` statements; AFTER = `6`, constant. The response byt
 
 The primary tenant is the first row of `tenants[]`: DEFAULT if the user is an active member of it, otherwise the oldest active, non-DELETED membership.
 
-**GAP (C1):** top-level `permissions` carries the role codes of the **primary tenant only**, even when that tenant is SUSPENDED. A Tenant Admin of a *second* tenant gets no `TENANT_*` or `ORG_*` code in `/auth/me`. C5 must not compensate by reading `tenants[].role`. The fix is a per-tenant `permissions` field on `TenantMembershipSummary`, and it needs a C1 change plus a contract entry. Until then, the admin portal can gate the tenant screens **of the primary tenant only** on codes, and must use the server's 403 for any other tenant.
+Top-level `permissions` carries the platform scope plus the role codes of the **primary tenant only** (unchanged). The capabilities of every OTHER tenant are in `tenants[].permissions` (2.4a); they are never flattened into the root list. (M-052 / AD01: closed.)
+
+### 2.4a Tenant scope: `tenants[].permissions` (M-052, canonical)
+
+```kotlin
+// backend/src/main/kotlin/com/systemwebstudio/access/MeTenancy.kt
+data class TenantMembershipSummary(val id: UUID, val slug: String, val name: String, val status: String, val role: String, val permissions: List<String> = emptyList())
+```
+
+- `permissions` is the canonical authorization signal **for that tenant only**: `PermissionMatrix.tenantRoles[role]` as canonical codes, alphabetically sorted like every other list. TENANT_ADMIN = exactly `EMPLOYEE_MANAGE, EMPLOYEE_VIEW, ORG_STRUCTURE_MANAGE, ORG_STRUCTURE_VIEW, POSITION_GRADE_MANAGE, POSITION_GRADE_VIEW, TENANT_MANAGE, TENANT_MEMBERS`. MEMBER = `[]`. (No `ORG_MANAGE` / `T-ORG-MANAGE`.)
+- `role` stays **informational only** (display, routing hints). The server never authorizes from it: every decision goes through `AccessService.forTenant` / `forWorkspace` / `forProject`, `PermissionMatrix` and the live tenant membership / status. A client that reads `role === "TENANT_ADMIN"` is wrong by contract.
+- **Additive and backward compatible:** the five existing fields are unchanged; `permissions` is a new field (absent in an older backend = unknown, never "granted").
+- **Scope is explicit.** Root `permissions[]` / `tenantId` / `tenantRole` keep describing the platform scope + the PRIMARY tenant. A secondary tenant's capabilities appear ONLY in its own `tenants[]` entry and never authorize another tenant. A tenant with no active membership (or a DELETED one) is **absent** (no disclosure).
+- **Live:** recomputed from the database on every `/auth/me` call, in memory from the single membership statement (no SQL per tenant, so the statement count stays 6 whatever the number of tenants; proven by `TenantCardinalityQueryTests`). A role downgrade, a membership removal or deactivation, a tenant deletion show up on the next call of the same session.
+- **SUSPENDED tenant (exact current behaviour, no third policy):** the entry stays listed with `status:"SUSPENDED"` and the role's capabilities, exactly as the root `permissions[]` already did for the primary tenant. The API is the source of truth: organization / employee / position-grade WRITES answer 403 `TENANT_SUSPENDED`, reads and the tenant-admin routes (members, users, workspaces) stay allowed; workspace routes of that tenant answer 403 `TENANT_SUSPENDED` (its workspaces[] rows carry no permission). C5 shows the status and lets the server answer.
+- **SYSTEM_ADMIN:** the platform scope (`TENANT_MANAGE` + `TENANT_MEMBERS` on any tenant) stays in the root list; a SYSTEM_ADMIN's `tenants[]` entries carry only the codes of its own member role (with the legacy business bypass `app.tenancy.system-admin-business-access=true`: the TENANT_ADMIN set, as `forTenant` grants).
+
+Example (ids shortened; a user who is MEMBER of DEFAULT and TENANT_ADMIN of company A and MEMBER of company B):
+
+```json
+{
+  "tenantId": "<DEFAULT>", "tenantRole": "MEMBER", "permissions": [],
+  "tenants": [
+    {"id": "<DEFAULT>", "slug": "default", "name": "Default", "status": "ACTIVE", "role": "MEMBER", "permissions": []},
+    {"id": "<A>", "slug": "company-a", "name": "Company A", "status": "ACTIVE", "role": "TENANT_ADMIN",
+     "permissions": ["EMPLOYEE_MANAGE","EMPLOYEE_VIEW","ORG_STRUCTURE_MANAGE","ORG_STRUCTURE_VIEW","POSITION_GRADE_MANAGE","POSITION_GRADE_VIEW","TENANT_MANAGE","TENANT_MEMBERS"]},
+    {"id": "<B>", "slug": "company-b", "name": "Company B", "status": "ACTIVE", "role": "MEMBER", "permissions": []}
+  ]
+}
+```
+
+**C5 rule (AD01):**
+
+```ts
+const tenantScope = me.tenants.find(t => t.id === selectedTenantId)
+const can = (code: string) => tenantScope?.permissions.includes(code) === true   // authorize from permissions
+// NEVER: tenantScope.role === "TENANT_ADMIN"
+```
+
+Gates: organization structure `ORG_STRUCTURE_VIEW` / `ORG_STRUCTURE_MANAGE`; employees `EMPLOYEE_VIEW` / `EMPLOYEE_MANAGE`; positions and grades `POSITION_GRADE_VIEW` / `POSITION_GRADE_MANAGE`; tenant membership and users `TENANT_MEMBERS`; tenant rename and status screens `TENANT_MANAGE`.
+
+Tests: `T/tenancy/MultiTenantAuthMeTests.kt` (secondary admin, third-tenant member, foreign tenant, revocation, downgrade, suspension, deleted, role-is-not-authority, the AD01 flow), `T/tenancy/TenantCardinalityQueryTests.kt` (statements(100 tenants) <= statements(1 tenant) + 2).
 
 ### 2.5 Frontend admission contract
 
@@ -204,7 +245,7 @@ The primary tenant is the first row of `tenants[]`: DEFAULT if the user is an ac
 
 **Admin portal**:
 - Platform screens (tenants list, create, status; accounts) are shown iff `platformScope == true`.
-- Tenant screens are shown iff `permissions` contains the screen's code (section 9). This applies to the primary tenant only (2.4).
+- Tenant screens are shown iff `permissions` contains the screen's code (section 9). For ANY tenant, read the `permissions` of the matching `tenants[]` entry (2.4a), never its `role`.
 - Workspace member administration is shown iff that workspace's `permissions` contains `MEMBER_MANAGE`.
 - Data-source administration is shown iff it contains `DATA_SOURCE_MANAGE`.
 
