@@ -19,7 +19,8 @@ function transport() {
 }
 const acc = { username: " Bao.Nguyen ", displayName: " Bảo ", email: " ", tenantRole: "MEMBER" as const };
 const scopeOf = (o: Partial<Me>) => adminScope(me(o));
-const tenant = (id: string, name: string, role = "TENANT_ADMIN") => ({ id, slug: id, name, status: "ACTIVE", role });
+/** what the server lists for the membership: the codes held IN that tenant (a TENANT_ADMIN holds TENANT_MEMBERS there; a plain MEMBER nothing) */
+const tenant = (id: string, name: string, role = "TENANT_ADMIN") => ({ id, slug: id, name, status: "ACTIVE", role, permissions: role === "TENANT_ADMIN" ? ["TENANT_MEMBERS"] : [] as string[] });
 
 test("capability table: every route is a real route of C1's contract; all READY; no capability needs a role name", () => {
   const ids = Object.keys(CAPABILITIES) as CapabilityId[];

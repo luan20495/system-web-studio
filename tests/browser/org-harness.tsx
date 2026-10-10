@@ -28,20 +28,24 @@ declare global { interface Window { __org: { name: string; args: unknown[] }[]; 
 window.__org = []; window.__prov = []; window.__prof = [];
 const P = new URLSearchParams(location.search); const V = P.get("v") ?? "org"; const S = P.get("s") ?? "ok";
 const me = (o: Partial<Me>): Me => ({ id: "me", username: "me", displayName: "Me", roles: [], workspaces: [], ...o });
-const DEFAULT_T = { id: "00000000-0000-0000-0000-000000000001", slug: "default", name: "DEFAULT", status: "ACTIVE", role: "MEMBER" };
-const T1 = { id: "t1", slug: "acme", name: "Acme", status: "ACTIVE", role: "TENANT_ADMIN" }; const T3 = { id: "t3", slug: "cong", name: "Công ty C", status: "ACTIVE", role: "TENANT_ADMIN" };
+const DEFAULT_T = { id: "00000000-0000-0000-0000-000000000001", slug: "default", name: "DEFAULT", status: "ACTIVE", role: "MEMBER", permissions: [] as string[] };
+const T1 = { id: "t1", slug: "acme", name: "Acme", status: "ACTIVE", role: "TENANT_ADMIN", permissions: [] as string[] }; const T3 = { id: "t3", slug: "cong", name: "Công ty C", status: "ACTIVE", role: "TENANT_ADMIN", permissions: [] as string[] };
 /** what the server lists for a TENANT_ADMIN of the primary tenant (C1 PERMISSION_MATRIX): the tenant codes + all six organization codes; a SYSTEM_ADMIN lists exactly TENANT_MANAGE + TENANT_MEMBERS (platform scope) and NO organization code */
 const ORG_ALL = ["ORG_STRUCTURE_VIEW", "ORG_STRUCTURE_MANAGE", "EMPLOYEE_VIEW", "EMPLOYEE_MANAGE", "POSITION_GRADE_VIEW", "POSITION_GRADE_MANAGE"];
 const ORG_VIEW = ["ORG_STRUCTURE_VIEW", "EMPLOYEE_VIEW", "POSITION_GRADE_VIEW"];
-const ME: Me = S === "forbidden" ? me({ tenants: [{ ...T1, role: "MEMBER" }] }) : S === "sysadmin" ? me({ platformScope: true, systemAdmin: true, tenantId: "t1", permissions: ["TENANT_MANAGE", "TENANT_MEMBERS"], tenants: [T1] })
-  : S === "viewer" ? me({ tenantId: "t1", permissions: ["TENANT_MEMBERS", ...ORG_VIEW], tenants: [T1] })
-  : S === "emp-only" ? me({ tenantId: "t1", permissions: ["EMPLOYEE_VIEW", "EMPLOYEE_MANAGE", "TENANT_MEMBERS"], tenants: [T1] })
-  : S === "multi" ? me({ tenantId: "t1", permissions: ["TENANT_MEMBERS", ...ORG_ALL], tenants: [{ ...T1, permissions: ["TENANT_MEMBERS", ...ORG_ALL] }, { ...T3, permissions: ["TENANT_MEMBERS", ...ORG_ALL] }] })
-  // M-052: codes PER TENANT. mixed = full in Acme, read-only in Công ty C; ad01 = the AD01 fixture (primary DEFAULT as MEMBER with no codes, a second company where the person is TENANT_ADMIN with the eight codes); rolelabel = the same shape WITHOUT the per-tenant field (a role label is not authority)
-  : S === "multi-mixed" ? me({ tenantId: "t1", permissions: ["TENANT_MEMBERS", ...ORG_ALL], tenants: [{ ...T1, permissions: ["TENANT_MEMBERS", ...ORG_ALL] }, { ...T3, permissions: ["TENANT_MEMBERS", ...ORG_VIEW] }] })
-  : S === "ad01" ? me({ tenantId: DEFAULT_T.id, permissions: [], tenants: [{ ...DEFAULT_T, permissions: [] }, { ...T1, permissions: ["TENANT_MEMBERS", "TENANT_MANAGE", ...ORG_ALL] }] })
-  : S === "rolelabel" ? me({ tenantId: DEFAULT_T.id, permissions: [], tenants: [{ ...DEFAULT_T }, { ...T1 }] })
-  : me({ tenantId: "t1", permissions: ["TENANT_MEMBERS", "TENANT_MANAGE", ...ORG_ALL], tenants: [T1], workspaces: [{ id: "w1", name: "Kinh doanh", role: "x", tenantId: "t1", permissions: ["MEMBER_MANAGE"] }] });
+/** the membership row the server lists: the codes held IN that tenant; the root `permissions` are those of the PRIMARY tenant (+ platform scope) and are set to the same list for the primary row */
+const row = (t: typeof T1, codes: string[]) => ({ ...t, permissions: codes });
+const FULL = ["TENANT_MEMBERS", "TENANT_MANAGE", ...ORG_ALL];
+const ME: Me = S === "forbidden" ? me({ tenantId: "t1", permissions: [], tenants: [row({ ...T1, role: "MEMBER" }, [])] })
+  : S === "sysadmin" ? me({ platformScope: true, systemAdmin: true, tenantId: "t1", permissions: ["TENANT_MANAGE", "TENANT_MEMBERS"], tenants: [row(T1, ["TENANT_MANAGE", "TENANT_MEMBERS"])] })
+  : S === "viewer" ? me({ tenantId: "t1", permissions: ["TENANT_MEMBERS", ...ORG_VIEW], tenants: [row(T1, ["TENANT_MEMBERS", ...ORG_VIEW])] })
+  : S === "emp-only" ? me({ tenantId: "t1", permissions: ["EMPLOYEE_VIEW", "EMPLOYEE_MANAGE", "TENANT_MEMBERS"], tenants: [row(T1, ["EMPLOYEE_VIEW", "EMPLOYEE_MANAGE", "TENANT_MEMBERS"])] })
+  : S === "multi" ? me({ tenantId: "t1", permissions: ["TENANT_MEMBERS", ...ORG_ALL], tenants: [row(T1, ["TENANT_MEMBERS", ...ORG_ALL]), row(T3, ["TENANT_MEMBERS", ...ORG_ALL])] })
+  // M-052: codes PER TENANT. mixed = full in Acme, read-only in Công ty C; ad01 = the AD01 fixture (primary DEFAULT as MEMBER with no codes, a second company where the person is TENANT_ADMIN with the eight codes); rolelabel = the same memberships with role TENANT_ADMIN but NO codes (a role label is not authority)
+  : S === "multi-mixed" ? me({ tenantId: "t1", permissions: ["TENANT_MEMBERS", ...ORG_ALL], tenants: [row(T1, ["TENANT_MEMBERS", ...ORG_ALL]), row(T3, ["TENANT_MEMBERS", ...ORG_VIEW])] })
+  : S === "ad01" ? me({ tenantId: DEFAULT_T.id, permissions: [], tenants: [row(DEFAULT_T, []), row(T1, FULL)] })
+  : S === "rolelabel" ? me({ tenantId: DEFAULT_T.id, permissions: [], tenants: [row(DEFAULT_T, []), row(T1, [])] })
+  : me({ tenantId: "t1", permissions: FULL, tenants: [row(T1, FULL)], workspaces: [{ id: "w1", name: "Kinh doanh", role: "x", tenantId: "t1", permissions: ["MEMBER_MANAGE"] }] });
 
 const fake = createFakeOrg(S, (name, args) => { window.__org.push({ name, args }); });
 window.__fake = fake;

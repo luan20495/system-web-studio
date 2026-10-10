@@ -15,17 +15,17 @@ test("scope: SYSTEM_ADMIN = platform; a tenant is listed by the CODES held IN TH
   const sys = M.adminScope(me({ platformScope: true, tenantId: null, tenants: [], permissions: ["TENANT_MANAGE", "TENANT_MEMBERS"] }));
   assert.equal(sys.platform, true);
   const tenantAdmin = M.adminScope(me({ platformScope: false, tenantId: "t1", tenantRole: "TENANT_ADMIN", permissions: ["TENANT_MANAGE", "TENANT_MEMBERS"],
-    tenants: [{ id: "t1", slug: "a", name: "A", status: "ACTIVE", role: "TENANT_ADMIN" }, { id: "t2", slug: "b", name: "B", status: "ACTIVE", role: "MEMBER" }],
+    tenants: [{ id: "t1", slug: "a", name: "A", status: "ACTIVE", role: "TENANT_ADMIN", permissions: ["TENANT_MANAGE", "TENANT_MEMBERS"] }, { id: "t2", slug: "b", name: "B", status: "ACTIVE", role: "MEMBER", permissions: [] }],
     workspaces: [ws("w1", ["MEMBER_MANAGE", "DATA_SOURCE_MANAGE"]), ws("w2", ["APP_VIEW"]), ws("w3", ["DATA_SOURCE_VIEW"])] }));
   assert.equal(tenantAdmin.platform, false); assert.deepEqual(tenantAdmin.tenants.map((t) => t.id), ["t1"], "only the tenant whose own codes include a tenant-level one (the primary tenant here); t2 holds nothing");
   assert.deepEqual([tenantAdmin.caps.t1.members, tenantAdmin.caps.t1.manage], [true, true]); assert.equal(tenantAdmin.caps.t2, undefined);
-  // M-052: a role label alone lists nothing. A NON-primary tenant listed TENANT_ADMIN but without its own codes is NOT offered (fail closed); with its own codes it is.
-  const roleOnly = M.adminScope(me({ platformScope: false, permissions: [], tenantId: "t1", tenants: [{ id: "t1", slug: "a", name: "A", status: "ACTIVE", role: "MEMBER" }, { id: "t2", slug: "b", name: "B", status: "ACTIVE", role: "TENANT_ADMIN" }] }));
+  // M-052: a role label alone lists nothing: a tenant listed TENANT_ADMIN whose own codes are [] is NOT offered; with its own codes it is.
+  const roleOnly = M.adminScope(me({ platformScope: false, permissions: [], tenantId: "t1", tenants: [{ id: "t1", slug: "a", name: "A", status: "ACTIVE", role: "MEMBER", permissions: [] }, { id: "t2", slug: "b", name: "B", status: "ACTIVE", role: "TENANT_ADMIN", permissions: [] }] }));
   assert.deepEqual(roleOnly.tenants, [], "role TENANT_ADMIN without the codes of that tenant authorizes nothing");
   const second = M.adminScope(me({ platformScope: false, permissions: [], tenantId: "t1", tenants: [{ id: "t1", slug: "a", name: "A", status: "ACTIVE", role: "MEMBER", permissions: [] }, { id: "t2", slug: "b", name: "B", status: "ACTIVE", role: "TENANT_ADMIN", permissions: ["TENANT_MEMBERS", "TENANT_MANAGE", "ORG_STRUCTURE_VIEW"] }] }));
   assert.deepEqual(second.tenants.map((t) => t.id), ["t2"], "admin of a NON-primary tenant is listed once the server lists that tenant's codes"); assert.equal(M.capsOf(second, "t1").members, false); assert.equal(M.capsOf(second, "t2").org.structureView, true);
   assert.deepEqual(tenantAdmin.workspaces.map((w) => w.id), ["w1"]); assert.deepEqual(tenantAdmin.dataWorkspaces.map((w) => w.id), ["w1", "w3"]);
-  const plain = M.adminScope(me({ platformScope: false, permissions: [], tenants: [{ id: "t1", slug: "a", name: "A", status: "ACTIVE", role: "MEMBER" }], tenantId: "t1", workspaces: [ws("w", ["APP_VIEW"])] }));
+  const plain = M.adminScope(me({ platformScope: false, permissions: [], tenants: [{ id: "t1", slug: "a", name: "A", status: "ACTIVE", role: "MEMBER", permissions: [] }], tenantId: "t1", workspaces: [ws("w", ["APP_VIEW"])] }));
   assert.deepEqual([plain.platform, plain.tenants.length, plain.workspaces.length, plain.dataWorkspaces.length], [false, 0, 0, 0]);
   assert.deepEqual(M.adminScope(null), { platform: false, tenants: [], caps: {}, workspaces: [], dataWorkspaces: [] });
   assert.deepEqual(tenantAdmin.caps.t1.org, M.NO_ORG, "TENANT_MANAGE + TENANT_MEMBERS are not organization codes");

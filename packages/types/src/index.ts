@@ -11,8 +11,11 @@ export type PageSchema = { page: string; sections: Section[]; site?: SiteMeta; p
  *  The tenancy fields are OPTIONAL on purpose: an older backend (and the legacy mock) does not send them, and every gate below falls back to `systemAdmin`.
  *  The client NEVER sends a tenant id back: the server derives it from the workspace in the URL (tenant-permission.md §2). */
 export type TenantRoleName = "TENANT_ADMIN" | "MEMBER";
-/** M-052: `permissions` = the canonical codes the person holds IN THIS TENANT (C1 per-tenant field). `role` is display data: never branch on it. ABSENT = a backend before M-052: it says nothing about this tenant (permissions-of-tenant resolver: packages/permissions/src/tenantScope.ts). */
-export type TenantMembershipSummary = { id: string; slug: string; name: string; status: string; role: TenantRoleName | string; permissions?: string[] };
+/**
+ * One tenant of `/auth/me.tenants[]` (C1 M-052, D-C0-54). `role` is display / routing ONLY - never authorize from it. `permissions` = the canonical codes the caller holds in THIS tenant (the server ALWAYS sends it, also `[]`);
+ * it is the ONLY authorization signal for that tenant and is resolved in one place: packages/permissions/src/tenantScope.ts. The root `/auth/me.permissions` stays the primary tenant + platform scope; nothing is flattened across tenants.
+ */
+export type TenantMembershipSummary = { id: string; slug: string; name: string; status: string; role: TenantRoleName | string; permissions: string[] };
 export type WorkspaceSummary = { id: string; name: string; role: string; tenantId?: string | null; permissions?: string[] };
 export type Me = {
   id: string; username: string; displayName: string; roles: string[]; workspaces: WorkspaceSummary[]; systemAdmin?: boolean;

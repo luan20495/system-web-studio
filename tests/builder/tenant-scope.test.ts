@@ -6,7 +6,8 @@ import { TENANT_ADMIN_CODES, canAccessPortal, capabilitiesOf, holdsInTenant, pri
 
 const EIGHT = ["TENANT_MEMBERS", "TENANT_MANAGE", "ORG_STRUCTURE_VIEW", "ORG_STRUCTURE_MANAGE", "EMPLOYEE_VIEW", "EMPLOYEE_MANAGE", "POSITION_GRADE_VIEW", "POSITION_GRADE_MANAGE"];
 const DEFAULT = "00000000-0000-0000-0000-000000000001";
-const row = (id: string, role: string, permissions?: string[], status = "ACTIVE") => ({ id, slug: id, name: id, status, role, ...(permissions ? { permissions } : {}) });
+/** `permissions` omitted = a payload WITHOUT the per-tenant field (only a stale cache / an old backend could produce it; the type now requires it, the resolver stays defensive) */
+const row = (id: string, role: string, permissions?: string[], status = "ACTIVE") => ({ id, slug: id, name: id, status, role, ...(permissions ? { permissions } : {}) }) as unknown as NonNullable<Me["tenants"]>[number];
 const me = (o: Partial<Me> = {}): Me => ({ id: "u", username: "u", displayName: "U", roles: [], workspaces: [], ...o });
 /** the AD01 fixture: primary DEFAULT, role MEMBER, root permissions []; secondary company, role TENANT_ADMIN, the exact canonical eight */
 const AD01 = me({ tenantId: DEFAULT, permissions: [], tenants: [row(DEFAULT, "MEMBER", []), row("company", "TENANT_ADMIN", EIGHT)] });
