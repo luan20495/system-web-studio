@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @class: real-backend — reads the LIVE processes, containers and served pages of an isolated stack; no fake transport, no stub (RC SHA proof, D-C0-58)
 // C0 - RC SHA PROOF (D-C0-58). Verifies that EVERY component of the final isolated stack and of the public portals runs the same FINAL_RC_SHA, from LIVE evidence, and writes the stamp.
 //   node scripts/rc-verify.mjs --stack c0rc --sha <FINAL_RC_SHA> [--public] [--out file]
 // Reads $HOME/.xweb-e2e-stack/<stack>/SERVING.json (the build stamp written by `e2e-stack.sh up`) and compares it with what is running NOW: the API / worker / portal processes (pid, cwd, command), the served
