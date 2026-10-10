@@ -14,6 +14,7 @@ docs/parallel/c5/e2e-stack.sh up
 
 * `E2E_ORG_PERSISTENCE=true` sets `ORGANIZATION_PERSISTENCE_ENABLED=true` **in this stack only**. The default of the application, of the script (`false`) and of the public API stay OFF.
 * `E2E_PUBLISH_CONFIGS=true` sets `PUBLISH_CONFIGS_ENABLED=true` (needed for the real H-C2-07 answers `422 PUBLIC_DATA_NOT_APPROVED` / `409 PUBLISH_POLICY_MISMATCH` and the approval route `PUT publish-config`).
+* `E2E_SITES_PUBLIC_DATA=true` sets `SITES_PUBLIC_DATA_ENABLED=true` (the anonymous Public Runtime `POST /sites/{slug}/_data/queries/{id}/run`, D-C0-36; it is mounted only together with `DATA_PLATFORM_ENABLED`, which the stack already sets) and, unless `E2E_SITES_DATA_API_BASE` is given, `SITES_DATA_API_BASE=http://127.0.0.1:<sites port>/{slug}/_data` (D-C0-34: the browser-facing address a PUBLISHED page finds in `__factory/config.json`; blank = `apiBase: null`). Needed for E2E-PD01 / PD02. Add it to `export` before `up`.
 * The sites gateway container gets `GATEWAY_FORCE_HTTPS=0` and `GATEWAY_REAL_IP_FROM` (`E2E_GATEWAY_REAL_IP_FROM`, default `127.0.0.1`): the template refuses to start without them.
 * The web origins and CORS of the API follow `E2E_PLATFORM_PORT` / `E2E_ADMIN_PORT` / `E2E_STUDIO_PORT` (they were hard-coded to 3001 / 3002).
 * `status` shows every port and whether the listener is owned by this stack.

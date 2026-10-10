@@ -11,7 +11,7 @@
 #   e2e-stack.sh portals-up | portals-down   Platform + Admin portals (Studio is `studio-up`); `up` with E2E_PORTALS=1 starts them too (C0, D-C0-55)
 #   e2e-stack.sh status | down [--infra] [--worktree]
 # C0 (D-C0-55) additions, all opt-in so the defaults are unchanged: E2E_PLATFORM_PORT / E2E_ADMIN_PORT (web origins + CORS follow them), E2E_ORG_PERSISTENCE=true (ORGANIZATION_PERSISTENCE_ENABLED, THIS stack only),
-# E2E_PUBLISH_CONFIGS=true (PUBLISH_CONFIGS_ENABLED); the sites gateway gets GATEWAY_REAL_IP_FROM / GATEWAY_FORCE_HTTPS (without them nginx refuses to start); `status` no longer breaks on macOS bash 3.2.
+# E2E_PUBLISH_CONFIGS=true (PUBLISH_CONFIGS_ENABLED), E2E_SITES_PUBLIC_DATA=true (SITES_PUBLIC_DATA_ENABLED = the Public Runtime of D-C0-36 AND, unless E2E_SITES_DATA_API_BASE is given, SITES_DATA_API_BASE=http://127.0.0.1:<sites port>/{slug}/_data so a published page gets a non-null runtime apiBase: E2E-PD01 / PD02); the sites gateway gets GATEWAY_REAL_IP_FROM / GATEWAY_FORCE_HTTPS (without them nginx refuses to start); `status` no longer breaks on macOS bash 3.2.
 #
 # No secret is printed or committed: the env file lives in $E2E_STACK_DIR (outside the repo).
 set -euo pipefail
@@ -86,7 +86,8 @@ WORKFLOW_ENABLED=true
 RATE_LIMIT_PUBLISH_MAX=500
 DEPLOY_PROVIDER=static
 SITES_ORIGIN=http://127.0.0.1:$SITES_PORT
-SITES_DATA_API_BASE=${E2E_SITES_DATA_API_BASE:-}
+SITES_DATA_API_BASE=${E2E_SITES_DATA_API_BASE:-$( [ "${E2E_SITES_PUBLIC_DATA:-false}" = true ] && echo "http://127.0.0.1:$SITES_PORT/{slug}/_data" )}
+SITES_PUBLIC_DATA_ENABLED=${E2E_SITES_PUBLIC_DATA:-false}
 STUDIO_ORIGIN=http://127.0.0.1:$STUDIO_PORT
 RENDER_URL=http://127.0.0.1:$RENDER_PORT
 RENDER_PORT=$RENDER_PORT
