@@ -11,7 +11,7 @@
 #   e2e-stack.sh portals-up | portals-down   Platform + Admin portals (Studio is `studio-up`); `up` with E2E_PORTALS=1 starts them too (C0, D-C0-55)
 #   e2e-stack.sh status | down [--infra] [--worktree]
 # C0 (D-C0-55) additions, all opt-in so the defaults are unchanged: E2E_PLATFORM_PORT / E2E_ADMIN_PORT (web origins + CORS follow them), E2E_ORG_PERSISTENCE=true (ORGANIZATION_PERSISTENCE_ENABLED, THIS stack only),
-# E2E_PUBLISH_CONFIGS=true (PUBLISH_CONFIGS_ENABLED), E2E_SITES_PUBLIC_DATA=true (SITES_PUBLIC_DATA_ENABLED = the Public Runtime of D-C0-36 AND, unless E2E_SITES_DATA_API_BASE is given, SITES_DATA_API_BASE=http://127.0.0.1:<sites port>/{slug}/_data so a published page gets a non-null runtime apiBase: E2E-PD01 / PD02); the sites gateway gets GATEWAY_REAL_IP_FROM / GATEWAY_FORCE_HTTPS (without them nginx refuses to start); `status` no longer breaks on macOS bash 3.2.
+# E2E_DATA_TARGET=1 (the V1 TLS data target `scripts/data-target.sh` at 127.0.0.1:15440 + its trust store in the API JVM, D-C0-59: Journey 05, E2E-PD01 real rows), E2E_PUBLISH_CONFIGS=true (PUBLISH_CONFIGS_ENABLED), E2E_SITES_PUBLIC_DATA=true (SITES_PUBLIC_DATA_ENABLED = the Public Runtime of D-C0-36 AND, unless E2E_SITES_DATA_API_BASE is given, SITES_DATA_API_BASE=http://127.0.0.1:<sites port>/{slug}/_data so a published page gets a non-null runtime apiBase: E2E-PD01 / PD02); the sites gateway gets GATEWAY_REAL_IP_FROM / GATEWAY_FORCE_HTTPS (without them nginx refuses to start); `status` no longer breaks on macOS bash 3.2.
 #
 # No secret is printed or committed: the env file lives in $E2E_STACK_DIR (outside the repo).
 set -euo pipefail
@@ -26,6 +26,8 @@ BACKEND_REPO="${E2E_BACKEND_REPO:-$REPO}"                                    # a
 API_PORT="${E2E_API_PORT:-38080}"; PG_PORT="${E2E_PG_PORT:-35432}"; REDIS_PORT="${E2E_REDIS_PORT:-36379}"; MINIO_PORT="${E2E_MINIO_PORT:-39000}"
 RABBIT_PORT="${E2E_RABBIT_PORT:-35672}"; SITES_PORT="${E2E_SITES_PORT:-38088}"; RENDER_PORT="${E2E_RENDER_PORT:-38095}"; STUDIO_PORT="${E2E_STUDIO_PORT:-3003}"
 PLATFORM_PORT="${E2E_PLATFORM_PORT:-3001}"; ADMIN_PORT="${E2E_ADMIN_PORT:-3002}"
+DT_DIR="${E2E_DATA_TARGET_DIR:-$(dirname "$(cd "$REPO" && git rev-parse --path-format=absolute --git-common-dir)")/.run/data-target}"   # the shared dev data target of scripts/data-target.sh (main checkout .run/data-target); used as a CLIENT only
+DT_PORT="${DATA_TARGET_PORT:-15440}"
 JAVA21="${E2E_JAVA_HOME:-/opt/homebrew/opt/openjdk@21}"
 CHROME="${E2E_CHROME:-/Applications/Google Chrome.app/Contents/MacOS/Google Chrome}"
 ENVF="$DIR/stack.env"; WT="$DIR/backend-worktree"; LOGS="$DIR/logs"
@@ -91,6 +93,7 @@ SITES_PUBLIC_DATA_ENABLED=${E2E_SITES_PUBLIC_DATA:-false}
 STUDIO_ORIGIN=http://127.0.0.1:$STUDIO_PORT
 RENDER_URL=http://127.0.0.1:$RENDER_PORT
 RENDER_PORT=$RENDER_PORT
+$( [ "${E2E_DATA_TARGET:-0}" = 1 ] && printf 'DATA_PLATFORM_POSTGRES_ALLOWED_PRIVATE=127.0.0.1:%s\nJAVA_TOOL_OPTIONS=-Djavax.net.ssl.trustStore=%s/truststore.jks -Djavax.net.ssl.trustStorePassword=%s' "$DT_PORT" "$DT_DIR" "$(cat "$DT_DIR/truststore.pass")" )
 ORGANIZATION_PERSISTENCE_ENABLED=${E2E_ORG_PERSISTENCE:-false}
 PUBLISH_CONFIGS_ENABLED=${E2E_PUBLISH_CONFIGS:-false}
 JAVA_HOME=$JAVA21
@@ -189,6 +192,13 @@ e2e() {
       npm run test:e2e:real )
 }
 
+data_target_check() {   # E2E_DATA_TARGET=1: the target must be up and its dev CA must verify, otherwise the stack would silently lack the data path (Journey 05 / PD01 real rows)
+  [ "${E2E_DATA_TARGET:-0}" = 1 ] || return 0
+  [ -s "$DT_DIR/truststore.jks" ] && [ -s "$DT_DIR/truststore.pass" ] && [ -s "$DT_DIR/ca.crt" ] || die "E2E_DATA_TARGET=1 but $DT_DIR has no trust store: run scripts/data-target.sh up (in the main checkout) first"
+  port_free "$DT_PORT" && die "E2E_DATA_TARGET=1 but nothing listens on 127.0.0.1:$DT_PORT: run scripts/data-target.sh up"
+  echo | openssl s_client -connect "127.0.0.1:$DT_PORT" -starttls postgres -CAfile "$DT_DIR/ca.crt" -verify_return_error 2>&1 | grep -q "Verify return code: 0" || die "the data target at 127.0.0.1:$DT_PORT does not verify against $DT_DIR/ca.crt"
+  say "data target 127.0.0.1:$DT_PORT: TLS verified against the dev CA; trust store $DT_DIR/truststore.jks goes into the API JVM"
+}
 pin_check() {   # exact SHA pinning (D-C0-55): the backend worktree is BASE_REF, the portals are built from THIS checkout: they must be the same commit, otherwise the stack would serve a mix
   local want have; want="$(git -C "$BACKEND_REPO" rev-parse "$BASE_REF^{commit}")" || die "E2E_BASE_REF $BASE_REF does not resolve"; have="$(git -C "$REPO" rev-parse HEAD)"
   [ "$want" = "$have" ] || [ "${E2E_ALLOW_SKEW:-0}" = 1 ] || die "backend = $BASE_REF ($want) but the portals would be built from $REPO @ $have: check out the same commit, or set E2E_ALLOW_SKEW=1 knowingly"
@@ -197,9 +207,9 @@ pin_check() {   # exact SHA pinning (D-C0-55): the backend worktree is BASE_REF,
 serving_record() {   # what this stack serves = the BUILD STAMP (written at the moment the stack is built; never a secret). scripts/rc-verify.mjs re-checks it against the live processes
   need_env; local f="$DIR/SERVING.json" app bid="" tpl=""
   for app in studio platform admin; do bid="$bid\"$app\": \"$(cat "$REPO/apps/$app/.next-check-$NAME/BUILD_ID" 2>/dev/null || echo none)\", "; done
-  tpl="$(shasum -a 256 "$WT/infra/sites-gateway/default.conf.template" 2>/dev/null | cut -d' ' -f1)"
-  printf '{\n  "stack": "%s",\n  "sha": "%s",\n  "recordedAt": "%s",\n  "repoHead": "%s",\n  "backendWorktreeHead": "%s",\n  "buildIds": {%s"_": ""},\n  "sitesGatewayTemplateSha256": "%s",\n  "ports": {"api": %s, "studio": %s, "platform": %s, "admin": %s, "sites": %s, "render": %s, "postgres": %s},\n  "organizationPersistence": "%s",\n  "publishConfigs": "%s",\n  "sitesPublicData": "%s"\n}\n' \
-    "$NAME" "${PINNED_SHA:-unknown}" "$(date -u +%FT%TZ)" "$(git -C "$REPO" rev-parse HEAD)" "$(git -C "$WT" rev-parse HEAD)" "$bid" "$tpl" "$API_PORT" "$STUDIO_PORT" "$PLATFORM_PORT" "$ADMIN_PORT" "$SITES_PORT" "$RENDER_PORT" "$PG_PORT" "${ORGANIZATION_PERSISTENCE_ENABLED:-false}" "${PUBLISH_CONFIGS_ENABLED:-false}" "${SITES_PUBLIC_DATA_ENABLED:-false}" > "$f"
+  tpl="$(shasum -a 256 "$WT/infra/sites-gateway/default.conf.template" 2>/dev/null | cut -d' ' -f1)"; local ts="false" cafp=""; if [ "${E2E_DATA_TARGET:-0}" = 1 ]; then ts="true"; cafp="$(openssl x509 -in "$DT_DIR/ca.crt" -noout -fingerprint -sha256 2>/dev/null | cut -d= -f2)"; fi
+  printf '{\n  "stack": "%s",\n  "sha": "%s",\n  "recordedAt": "%s",\n  "repoHead": "%s",\n  "backendWorktreeHead": "%s",\n  "buildIds": {%s"_": ""},\n  "sitesGatewayTemplateSha256": "%s",\n  "dataTarget": {"enabled": %s, "endpoint": "127.0.0.1:%s", "trustStore": "%s/truststore.jks", "caSha256": "%s"},\n  "ports": {"api": %s, "studio": %s, "platform": %s, "admin": %s, "sites": %s, "render": %s, "postgres": %s},\n  "organizationPersistence": "%s",\n  "publishConfigs": "%s",\n  "sitesPublicData": "%s"\n}\n' \
+    "$NAME" "${PINNED_SHA:-unknown}" "$(date -u +%FT%TZ)" "$(git -C "$REPO" rev-parse HEAD)" "$(git -C "$WT" rev-parse HEAD)" "$bid" "$tpl" "$ts" "$DT_PORT" "$DT_DIR" "$cafp" "$API_PORT" "$STUDIO_PORT" "$PLATFORM_PORT" "$ADMIN_PORT" "$SITES_PORT" "$RENDER_PORT" "$PG_PORT" "${ORGANIZATION_PERSISTENCE_ENABLED:-false}" "${PUBLISH_CONFIGS_ENABLED:-false}" "${SITES_PUBLIC_DATA_ENABLED:-false}" > "$f"
   say "build stamp: $f"
 }
 owned_name() { case "$1" in api) echo backend-app ;; render) echo render ;; studio) echo studio ;; platform) echo platform ;; admin) echo admin ;; *) echo none ;; esac; }   # a function: a `case` inside $( ) is a syntax error on macOS bash 3.2
@@ -226,7 +236,7 @@ down() {
 
 case "${1:-}" in
   prepare) prepare ;;
-  up) pin_check; prepare; infra_up; backend_up; render_up; studio_up; if [ "${E2E_PORTALS:-0}" = 1 ]; then portals_up; fi; serving_record; status ;;
+  up) pin_check; data_target_check; prepare; infra_up; backend_up; render_up; studio_up; if [ "${E2E_PORTALS:-0}" = 1 ]; then portals_up; fi; serving_record; status ;;
   infra-up) prepare; infra_up ;;
   backend-up) backend_up ;;
   backend-launch) backend_launch ;;
