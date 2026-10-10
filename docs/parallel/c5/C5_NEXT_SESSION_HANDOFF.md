@@ -1,37 +1,46 @@
-# C5 — HANDOFF (final candidate, 2026-10-10; supersedes the 2026-10-09 Wave A handoff)
+# C5 — HANDOFF (PL01 + Dynamic Organization + AD01 / M-052 + C2 H-C2-07 candidate, 2026-10-10; supersedes the final-candidate handoff of the same day)
 
-Written by C5-L from what was run in the session; every result names its evidence class and is itemised in `audit/FINAL_EVIDENCE_2026-10-10.md`. Nothing here claims REAL_BACKEND.
+Written by C5-L from what was run in the session; every result names its evidence class. Itemised evidence: `audit/PL01_ORG_AD01_C2_2026-10-10.md` (this task) and `audit/FINAL_EVIDENCE_2026-10-10.md` (the earlier gate). REAL_BACKEND claims are limited to what the table in §4 says.
 
 ## 1. Git
-- Branch `agent/c5-web` (lead checkout `/Users/hoangluan/code/xweb-c5`), synced with `integration/v2 @ 7586d8a` (merges `6099faa`, `15bb3b7`); `agent/c5-s3-brand` merged in `56801b2`. Code head `d603488`; this docs commit sits on top. REMOTE_HEAD must equal LOCAL_HEAD before the C6 / C0 handoff (`git rev-parse HEAD origin/agent/c5-web`).
+- Branch `agent/c5-web` (lead checkout `/Users/hoangluan/code/xweb-c5`), synced by merge with `integration/v2 @ a2a8fab` (D-C0-54: C1 M-052 per-tenant `/auth/me`; earlier `1992f9b` for C2 H-C2-07). Work commits on top: `c9d982e` flows, `7b147d7` org wiring, `e722811` org specs, `a058fcb` C2 handlers, `0f1d6c2` AD01 / M-052, `c011b6a` E2E-ORG01 / AD01 flows, `9858a88` merge, then docs / flow fixes. REMOTE_HEAD must equal LOCAL_HEAD before the C0 import (`git rev-parse HEAD origin/agent/c5-web`).
 - Untracked, never commit: `.next-gate*`, `apps/*/.next-gate/`, `.tmp-stage/`, `.test-build`, `.run/`.
-- Other worktrees (kept on purpose): `/Users/hoangluan/code/c5-batch2/{s1,before}`, `/Users/hoangluan/code/c5-brand/s3`, other teams' `xweb-*`, backend worktrees under `~/.xweb-e2e-stack/`. ACTIVE_AGENTS = 0.
+- Other worktrees kept on purpose: `/Users/hoangluan/code/c5-batch2/{s1,before}`, `/Users/hoangluan/code/c5-brand/s3`, other teams' `xweb-*`, older stack worktrees under `~/.xweb-e2e-stack/`. The stack of this session (`c5e2e-pl`) was stopped (owned-process library) and removed (`down --infra --worktree`); ports 3001-3003 and 38180… are free. ACTIVE_AGENTS = 0 (no agent was spawned).
 
-## 2. Ledger (canonical `audit/MASTER_ISSUE_LEDGER.md`, `LEDGER_STATUS_NORMALIZED.md`)
-CANONICAL_TOTAL 132: **FIXED 94 · CLOSED 3 · PARTIAL 24 · OPEN 0 · BLOCKED 8 · RESEARCH_ONLY 3 · ACCEPTED_LIMITATION 0**. Unresolved 35 = P0 0 · P1 2 (M-007, M-009: C5 part done, C1 open) · P2 17 · P3 16.
-- BLOCKED (8): M-039 M-040 (C2), M-073 M-090 M-102 M-108 (C0), M-094 (backend user id), M-101 (C2 worker).
-- PARTIAL remainders that need another owner: M-051 (sites origin, C0/C2), M-089 (CSP sha256 for the canvas script, C0), M-107 (the unit runner cannot load `@xweb/*`, C0: HF-C0-M107), M-114 (Firefox BLOCKED_TOOLING, user decision), M-093(b) (HF-C1-05).
-- Regenerate: copy `audit/tools/ledger-gen/*` to a scratch dir, `node check.mjs && node gen.mjs && node normdoc.mjs`, copy `MASTER_ISSUE_LEDGER.md`, `ledger.json` (as `master-ledger.json`), `LEDGER_STATUS_NORMALIZED.md` back; add a `status("M-xxx", "...")` line at the end of `tools/ledger-gen/patch.mjs` and keep `tools/ledger-patch.mjs` identical.
+## 2. Delivered in this task
+- **PL01** real, in-app confirmation: A trigger, B dialog, C cancel (0 PATCH), D unchanged, E reopen, F confirm (1 PATCH, 200), G server SUSPENDED, H UI refreshed — `E2E-PL01` PASS on a real stack. AD02 / P09 flows converted to the same dialogs.
+- **Dynamic Organization wired** (`docs/parallel/c5/ORGANIZATION_UI.md`): `api.org` (one URL builder), `OrganizationApi` service, 31 capabilities READY (`tests/guards/org-contract.json`), units / types / tree / counts / move / archive / restore, directory + filters + paging guard, memberships, held positions with grades, positions and grades catalog, enable / disable, create employee in ONE request, 503 busy retry state, 501 fail closed, two separate counts. Flag stays OFF by default; nothing enables it.
+- **AD01 / M-052**: `tenantScope.ts` resolver (`tenants[].permissions`), `TenantMembershipSummary.permissions` required, `adminScope` / `organizationPlan` / provisioning / company page per selected company, tenant rename (+ 403 `TENANT_SUSPENDED` shown), no role-based decision. `E2E-AD01` PASS real.
+- **C2 H-C2-07**: 422 `PUBLIC_DATA_NOT_APPROVED` (approval persisted via `PUT publish-config`, never via `POST /publish`), 409 `PUBLISH_POLICY_MISMATCH` (policy reload, no cached retry). HARNESS + MOCK only (real publish route not exercised: stack without publish-configs).
 
-## 3. What this run delivered (by commit)
-S1 Batch 2 (`72ad63a`): M-109 M-082 M-078 M-080 M-081 M-112 FIXED, M-079 M-051 M-089 M-083 PARTIAL. M-068 (`80f8c98`): one button vocabulary. M-107 partial (`2b0fa31`). M-053 (`0ea02e5`): lazy sections / lazy code workspace, measured. M-099 / M-116 (`26f88c8`). M-046 follow-up (`6bc9bbc`). M-114 tooling (`0a7b43f`, WebKit fixes `aac54cf`, `9096a53`). H-C1-04 (`87c3d04` portal, `b4cbf20` per-project admission), organization permissions D-C0-51 (`738f24a`), USER01 prep (`0833f29`). Brand system (`56801b2`, S3 tip `c006077`, `docs/BRAND_GUIDELINE.md`). Header fix at 521-600 px (`6883272`). C5-R-FINAL fixes (`d603488`): dark control borders 3:1, `webUrl`, scope-row guard, drawers gated, org error text, stale pointer target.
+## 3. Ledger (`audit/MASTER_ISSUE_LEDGER.md`)
+M-052 FIXED (frontend; backend by C1 `1b76746`), the AD01 blocker closed on the C5 side. Other rows unchanged from the previous handoff (CANONICAL_TOTAL 132; unresolved remainders: M-007 / M-009 C1, M-039 / M-040 / M-101 C2, M-073 / M-090 / M-102 / M-108 / M-089 / M-107 C0, M-094 backend, M-114 Firefox user decision). Regenerate with `audit/tools/ledger-gen` (see the previous handoff recipe: copy to a scratch dir, `node check.mjs && node gen.mjs && node normdoc.mjs`, copy the three outputs back).
 
-## 4. Gates (all green at the times recorded in FINAL_EVIDENCE)
-typecheck, unit (508 tests, 507 pass, 1 skipped), classify, four production builds, every harness spec (CHROMIUM), css-snapshot, page-runtime, LIVE_PORTAL portals 36/36 + portals-lazy 18/18, `npm run gate:frontend` GREEN (it exists on this branch since the sync), REAL_STACK audit (1422 visits, 9 widths, 87/87 routes, axe 0, console 0, API failures 0), WEBKIT 17 of 19 specs fully pass (the rest: engine clipboard limit, Alt+Tab emulation). **NOT RUN: REAL_BACKEND_E2E.** FIREFOX: BLOCKED_TOOLING.
+## 4. Gates and evidence (head = the pushed commit; clean worktree for the unit / gate)
+| Class | Result |
+|---|---|
+| `npm ci` + typecheck root / apps / packages (clean worktree) | PASS / PASS / PASS |
+| unit | 540 tests, 539 pass, 0 fail, 1 skipped (conformance fixtures) |
+| `npm run gate:frontend` (clean worktree) | **GATE GREEN** (static guards 9/9, guard self-tests, typecheck, unit, builds platform / admin / studio, bundle scan) |
+| HARNESS CHROMIUM (exit 0 each) | admin 186, aiproviders 27, builder 111, datasources 54, hooks 20, org 122, org-employees 76, org-hardening 67, provisioning 39, publicdata 47, publish-policy 27, release 61, sanity 8, shared-ui 80; css-snapshot, data-binding, page-runtime, studio-p1 / wave2 / wave3, ui-brand, ui-route, ui-tokens, ui-widgets exit 0 |
+| LIVE_PORTAL CHROMIUM | portals 36/36, portals-lazy 18/18 (production builds, API unreachable by design) |
+| REAL_BACKEND (stack `c5e2e-pl`, `integration/v2 @ a2a8fab`, flag OFF) | PL01 PASS, AD01 PASS, AD02 PASS, ADMIN01 PASS, USER01 PASS, E2E-04 PASS, E2E-05 PASS, E2E-ORG01 BLOCKED(C0) with fail-closed evidence PASS, E2E-P09 FAIL on ONE environmental check (no sites gateway on this stack) |
+| NOT RUN | 25 flag-ON organization cases; real 409 / 422 publish; WebKit / Firefox for the new specs (Firefox stays BLOCKED_TOOLING, not accepted) |
 
-## 5. Exact C6 instructions
-1. Check out `agent/c5-web` at the pushed head. `npm ci`; `npm run typecheck`; `npm run test:unit` (alone), then `node tests/browser/build-harness.mjs`.
-2. Specs only through `node tests/browser/harness-server.mjs run -- node tests/browser/<spec>.spec.mjs` (`CHROME=...` on macOS if Chrome is not found; `BROWSER=webkit` for WEBKIT). On a loaded machine `hooks.spec` is timing-sensitive: re-run before calling it a regression.
-3. Live portals: build with `NEXT_DIST_DIR=.next-gate API_PROXY_TARGET=http://127.0.0.1:9 npm run build:<app>` (restore `apps/*/tsconfig.json` afterwards), start each through `node tests/lib/owned-process-cli.mjs start --state F --cwd apps/<app> --port <3001|3002|3003> -- npx next start -H 127.0.0.1 -p <port>`, `refresh`, run `portals.spec` / `portals-lazy.spec`, `stop`. Never kill by name or port.
-4. REAL_BACKEND for H-C1-04: run `E2E-USER01` / `E2E-04` / `E2E-05` against the integrated backend (>= `integration/v2 @ 7586d8a` + this import) following `docs/parallel/c5/USER01_REAL_BROWSER_PREP.md`.
-5. REAL_STACK re-audit: `AUDIT_NO_SHOTS=1 node scripts/ui-audit.mjs --private-api <backend> --out DIR` (the backend is never started or stopped by the tool).
+## 5. Exact C0 / C6 instructions
+1. Check out `agent/c5-web` at the pushed head. `npm ci`; `npm run typecheck`; `npm run test:unit`; `npm run gate:frontend`.
+2. Specs only through `node tests/browser/harness-server.mjs run -- node tests/browser/<spec>.spec.mjs` (`CHROME=...` on macOS; `BROWSER=webkit` for WEBKIT). `org`, `org-employees`, `org-hardening`, `publish-policy` are the new / rewritten ones. `hooks.spec` is timing-sensitive under load.
+3. Live portals: `NEXT_DIST_DIR=.next-gate API_PROXY_TARGET=http://127.0.0.1:9 npm run build:<app>` (restore `apps/*/tsconfig.json`), start through `tests/lib/owned-process-cli.mjs start|refresh|stop`, run `portals.spec` / `portals-lazy.spec`. Never kill by name or port.
+4. REAL_BACKEND: `docs/parallel/c5/e2e-stack.sh up` (own name and ports via `E2E_STACK_NAME`, `E2E_*_PORT`), build the two portals with `API_PROXY_TARGET=<api>` and start them through the owned-process CLI, then `e2e-stack.sh e2e "E2E-PL01,E2E-AD01,E2E-AD02,E2E-ADMIN01,E2E-USER01,E2E-04,E2E-05"`.
+5. **E2E-ORG01 (25 cases)**: provide an isolated, C0-approved stack with `ORGANIZATION_PERSISTENCE_ENABLED=true` and run `e2e-stack.sh e2e "E2E-ORG01"`. On a flag-OFF stack it records the fail-closed evidence and ends BLOCKED(C0). Each case writes REQUEST · EXPECTED · ACTUAL · HTTP · UI · SERVER into its check detail.
+6. C2 handlers against a real backend: needs `app.publish-configs.enabled=true` and a PAGE_SCHEMA project with a public READ query (`E2E-PD02` style fixture).
 
-## 6. Known open items for C0 / C1 / C2 / C3
-- C0: `@xweb/*` runtime resolution in `scripts/test-unit.mjs` (HF-C0-M107); CSP sha256 for the canvas script (M-089); import of this branch (the C0 gates `gate:frontend` + static guards are green on it).
-- C1: per-tenant `permissions` on `TenantMembershipSummary` (the org screens use the primary tenant's codes; a TENANT_ADMIN of a second tenant gets the server's 403); M-007 / M-009 / M-058.
-- C2: sites origin for client-side host pinning of the access-ticket redirect (M-051); renderer half of the preview banner (M-042); republish note for M-113.
-- C3: Dynamic Organization persistence / API (the contract is frozen, routes answer 501 until C3 registers them). **ORG_BACKEND_WIRING = WAITING_FOR_C1_C3, ORG_BACKEND_READY = NO.** Wiring checklist is in `features/admin/organization.ts` (DTO renames, error-code renames, `?format=flat`, versions, 501 mapping).
-- Known P3 left on purpose (C5-R-FINAL R-03): the org screens take their tenant from the role-derived tenant list while their codes describe the primary tenant (latent: the server only grants org codes to a TENANT_ADMIN together with TENANT_MEMBERS).
+## 6. Open items
+- C0: flag-ON stack for E2E-ORG01; `@xweb/*` runtime resolution in the unit runner (M-107); CSP sha256 for the canvas script (M-089); sites gateway in the stack for E2E-P09's public-URL check.
+- C1: M-007 / M-009 / M-058 (unchanged). Per-tenant permissions are consumed; nothing more is asked for AD01.
+- C2: M-051 sites origin; M-042 renderer half of the preview banner; real run of the two new publish refusals.
+- C3: none for the frontend (persistence is in; flag decision is C0's).
+- Known P3 left on purpose: none new. `adminScope` role-label listing is gone; `isTenantAdminRole` remains only in `roles.ts` for display hints (`memberChangeBlock`, promotion confirmations).
 
 ## 7. Do not
-Force-push, reset --hard, clean -fd, merge main, add GitHub Actions; kill by name / port; edit `backend/`, `docs/contracts/**`, migrations; call HARNESS evidence real E2E; call WebKit "Safari"; mark Firefox passed or accepted; claim 10/10 without C6 and a REAL_BACKEND run.
+Force-push, reset --hard, clean -fd, merge main, add GitHub Actions; kill by name / port; edit `backend/`, `docs/contracts/**`, migrations; call HARNESS evidence real E2E; enable `ORGANIZATION_PERSISTENCE_ENABLED` yourself; call WebKit "Safari"; mark Firefox passed or accepted; claim 10/10 without C6.

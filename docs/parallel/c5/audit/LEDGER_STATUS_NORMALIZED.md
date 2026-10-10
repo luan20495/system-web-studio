@@ -1,4 +1,4 @@
-# C5 — LEDGER STATUS, NORMALIZED (generated from master-ledger.json after Wave B, H-C1-04, the brand merge and the C5-R-FINAL fixes)
+# C5 — LEDGER STATUS, NORMALIZED (generated from master-ledger.json after Wave A)
 
 Source of truth for the rows is `MASTER_ISSUE_LEDGER.md` / `master-ledger.json` (the free-text Status column keeps the evidence and commit SHAs). This file maps every row to exactly one canonical status. All browser evidence is HARNESS, NOT REAL BACKEND unless a row says REAL STACK.
 
