@@ -93,7 +93,7 @@ SITES_PUBLIC_DATA_ENABLED=${E2E_SITES_PUBLIC_DATA:-false}
 STUDIO_ORIGIN=http://127.0.0.1:$STUDIO_PORT
 RENDER_URL=http://127.0.0.1:$RENDER_PORT
 RENDER_PORT=$RENDER_PORT
-$( [ "${E2E_DATA_TARGET:-0}" = 1 ] && printf 'DATA_PLATFORM_POSTGRES_ALLOWED_PRIVATE=127.0.0.1:%s\nJAVA_TOOL_OPTIONS=-Djavax.net.ssl.trustStore=%s/truststore.jks -Djavax.net.ssl.trustStorePassword=%s' "$DT_PORT" "$DT_DIR" "$(cat "$DT_DIR/truststore.pass")" )
+$( [ "${E2E_DATA_TARGET:-0}" = 1 ] && printf 'DATA_PLATFORM_POSTGRES_ALLOWED_PRIVATE=127.0.0.1:%s\nJAVA_TOOL_OPTIONS=\"-Djavax.net.ssl.trustStore=%s/truststore.jks -Djavax.net.ssl.trustStorePassword=%s\"' "$DT_PORT" "$DT_DIR" "$(cat "$DT_DIR/truststore.pass")" )
 ORGANIZATION_PERSISTENCE_ENABLED=${E2E_ORG_PERSISTENCE:-false}
 PUBLISH_CONFIGS_ENABLED=${E2E_PUBLISH_CONFIGS:-false}
 JAVA_HOME=$JAVA21
