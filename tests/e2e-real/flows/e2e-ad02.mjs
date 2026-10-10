@@ -40,7 +40,7 @@ export async function run({ cfg, fx, browser, check }) {
   await page.getByRole("button", { name: "Thêm vào workspace" }).click(); await page.getByText("Đã thêm vào workspace.").waitFor({ timeout: 10_000 });
   let list = (await fx.sessions.adminA.get(`/workspaces/${wsA}/members`)).body ?? [];
   check.ok("add by username as Người xem: the server lists adminB as VIEWER of workspace A", list.some((m) => m.userId === b.id && m.role === "VIEWER"), JSON.stringify(list.map((m) => [m.username, m.role])), "persistence");
-  await page.getByTestId(`wm:${b.username}`).locator("select").selectOption("EDITOR"); await page.getByText("Đã đổi vai trò.").waitFor({ timeout: 10_000 });
+  await page.getByTestId(`wm:${b.username}`).locator("select").selectOption("EDITOR"); await page.getByTestId(`wm-save:${b.username}`).click(); await page.getByText("Đã đổi vai trò.").waitFor({ timeout: 10_000 });   // the role is a draft until "Lưu"; EDITOR needs no confirmation
   list = (await fx.sessions.adminA.get(`/workspaces/${wsA}/members`)).body ?? [];
   check.ok("change the role to Biên tập viên: persisted", list.find((m) => m.userId === b.id)?.role === "EDITOR", "", "persistence");
   const again = await fx.sessions.adminA.post(`/workspaces/${wsA}/members`, { username: b.username, role: "VIEWER" });

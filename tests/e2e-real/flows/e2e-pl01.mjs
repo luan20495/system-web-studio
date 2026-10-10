@@ -67,7 +67,7 @@ export async function run({ cfg, fx, browser, check }) {
   check.ok("the first administrator chosen in the dialog is TENANT_ADMIN on the server, with name and email metadata", members.some((m) => m.userId === adminA.id && m.role === "TENANT_ADMIN" && m.username === adminA.username && "displayName" in m && "email" in m), JSON.stringify(members), "persistence");
   check.ok("the member row shows the person's NAME from the member metadata (no extra lookup)", (await page.getByTestId(`tm:${adminA.id}`).innerText()).includes(adminA.username));
   const only = page.getByTestId(`tm:${adminA.id}`).locator("select");
-  await only.selectOption("MEMBER"); await page.waitForTimeout(700);
+  await only.selectOption("MEMBER"); await page.getByTestId(`tm-save:${adminA.id}`).click(); await page.waitForTimeout(700);   // the role is a draft until "Lưu"; the last-admin rule answers before any confirmation
   check.ok("demoting the ONLY TENANT_ADMIN is explained in words and nothing changed on the server", /ít nhất một quản trị/.test(await page.getByTestId("tenant-msg").innerText()) && ((await api.get(`/admin/tenants/${t.id}/members`)).body ?? []).find((m) => m.userId === adminA.id)?.role === "TENANT_ADMIN");
   const direct = await api.put(`/admin/tenants/${t.id}/members/${adminA.id}`, { role: "MEMBER" });
   check.ok("the server enforces it too (409 LAST_TENANT_ADMIN)", direct.status === 409 && direct.body?.code === "LAST_TENANT_ADMIN", `status=${direct.status} ${direct.body?.code}`, "http");
