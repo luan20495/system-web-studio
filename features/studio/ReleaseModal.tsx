@@ -8,18 +8,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError } from "@/lib/http-api";
 import type { Deployment, SiteInfo } from "@/lib/http-types";
 import {
-  ReleaseKeyBook, SITE_IDLE_POLL_MS, SITE_POLL_MS, deploymentLabel, explainFailedDeployment, explainReleaseError, isBusyDeployment, isDeploymentSuccess, isReleaseBusy, isTerminalDeployment, operationBanner, publishBody,
+  ReleaseKeyBook, SITE_IDLE_POLL_MS, approvalRequest, explainPublishConfigError, policyLine, SITE_POLL_MS, deploymentLabel, explainFailedDeployment, explainReleaseError, isBusyDeployment, isDeploymentSuccess, isReleaseBusy, isTerminalDeployment, operationBanner, publishBody,
   rollbackBody, rollbackCandidates, type ReleaseErrorView,
 } from "@xweb/api-client";
 import { useOverlayDialog } from "./useOverlayDialog";
 import { webUrl } from "./siteAccessModel";
 import { confirm, fmtDate, RadioGroup, ReasonButton } from "@xweb/ui";
-import type { AppDefinitionV2 } from "@xweb/types";
+import type { AppDefinitionV2, PublishConfigPolicy } from "@xweb/types";
 import { diffAnnounced, parsePublicQueriesEvent, publicDataBlockers, publishApproval } from "./builder/core/publicData";
 
 
 /** the calls the dialog makes (injected so the browser harness can drive every state; the default is the real client) */
-export type ReleaseCalls = Pick<typeof api, "publish" | "getDeployment" | "listDeployments" | "site" | "rollbackSite" | "unpublishSite">;
+export type ReleaseCalls = Pick<typeof api, "publish" | "getDeployment" | "listDeployments" | "site" | "rollbackSite" | "unpublishSite" | "getPublishConfig" | "putPublishConfig">;
 
 const MAX_POLL_FAILURES = 5;
 const NEEDS_PUBLISH = "Cần quyền xuất bản (APP_PUBLISH).";
@@ -39,7 +39,7 @@ export function PublishModal({ workspaceId, projectId, revision, current, versio
   const busyMs = timing?.busy ?? SITE_POLL_MS, idleMs = timing?.idle ?? SITE_IDLE_POLL_MS;
   const [visibility, setVisibility] = useState<"PRIVATE" | "PUBLIC">(allowed.includes(current) ? current : allowed[0]);
   const [deployment, setDeployment] = useState<Deployment | null>(null);
-  const [error, setError] = useState<ReleaseErrorView | { kind: "text"; title: string; detail: string } | null>(null);
+  const [error, setError] = useState<ReleaseErrorView | { kind: "text"; title: string; detail: string; action?: "approve-public-data" | "reload-policy" } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [site, setSite] = useState<SiteInfo | null>(null);
   const [history, setHistory] = useState<Deployment[]>([]);
@@ -60,6 +60,19 @@ export function PublishModal({ workspaceId, projectId, revision, current, versio
   const acknowledged = !approval?.required || ackKey === approvalKey;
   const alive = useRef(true);
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+
+  // The AUTHORITATIVE publish policy (publish_configs), read from the server. The checkbox above is only the person's intention: POST /publish never carries an approval, and the server judges the persisted
+  // `publicDataApproved` of the version being published (H-C2-07). `policy` is UX: it is shown, never used to decide that a publish will or will not be accepted.
+  const [policy, setPolicy] = useState<{ state: "unknown" } | { state: "none" } | { state: "unavailable" } | { state: "stored"; config: PublishConfigPolicy }>({ state: "unknown" });
+  const [approveAck, setApproveAck] = useState(false), [approving, setApproving] = useState(false);
+  const loadPolicy = useCallback(async (): Promise<PublishConfigPolicy | null | undefined> => {
+    try {
+      const r = await calls.getPublishConfig(workspaceId, projectId);
+      if (!alive.current) return undefined;
+      setPolicy(r.config ? { state: "stored", config: r.config } : { state: "none" }); return r.config;
+    } catch (e) { if (!alive.current) return undefined; if (e instanceof ApiError && e.status === 401) onUnauthorized(); else setPolicy({ state: "unavailable" }); return undefined; }
+  }, [calls, workspaceId, projectId, onUnauthorized]);
+  useEffect(() => { void loadPolicy(); }, [loadPolicy]);
 
   const loadSite = useCallback(async () => {
     try {
@@ -106,8 +119,31 @@ export function PublishModal({ workspaceId, projectId, revision, current, versio
     if (e instanceof ApiError && e.status === 401) { onUnauthorized(); return; }
     const v = explainReleaseError(e instanceof ApiError ? e : { status: 0 });
     if (v.newKey || (!v.retry && keys)) keys?.rotate();   // a refused request must not be replayed with the same key; a safe-to-retry one keeps it
-    setError(v); if (v.reload) void loadSite();
+    setError(v); setApproveAck(false); if (v.reload) void loadSite(); if (v.action) void loadPolicy();
   };
+
+  /**
+   * Persist the approval through the canonical route (PUT publish-config, acknowledgePublicData true, the revision just read): this is the ONLY thing that changes what the server enforces. It is an explicit
+   * action of the person (own checkbox + button). It does not publish: the person publishes again, and that request carries nothing about approval.
+   */
+  async function approve() {
+    if (locked || approving || !canPublish || !approveAck) return;
+    setApproving(true); setNote(null);
+    try {
+      const fresh = await loadPolicy();                                 // the revision to send is the server's CURRENT one, never a cached copy
+      const body = approvalRequest(fresh);
+      if (!body) { setError({ kind: "text", title: "Chưa có chính sách xuất bản trên máy chủ", detail: "Không có gì để phê duyệt: máy chủ không áp dụng phê duyệt khi chưa có chính sách được lưu." }); return; }
+      const saved = await calls.putPublishConfig(workspaceId, projectId, { mode: body.mode as never, visibility: "PUBLIC", requiresAuth: body.requiresAuth, ...(body.cacheSeconds === undefined ? {} : { cacheSeconds: body.cacheSeconds }), acknowledgePublicData: true, ...(body.expectedRevision === undefined ? {} : { expectedRevision: body.expectedRevision }) });
+      if (!alive.current) return;
+      if (saved.config) setPolicy({ state: "stored", config: saved.config });
+      publishKeys.current.rotate(); setError(null); setApproveAck(false);
+      setNote(saved.config?.publicDataApproved ? `Đã lưu phê duyệt công khai trên máy chủ (bản ${saved.config.revision}). Bấm “Xuất bản” để tiếp tục.` : "Máy chủ đã nhận cấu hình nhưng chưa ghi nhận phê duyệt. Tải lại chính sách để kiểm tra.");
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) { onUnauthorized(); return; }
+      const v = explainPublishConfigError(e instanceof ApiError ? e : { status: 0 });
+      setError({ kind: "text", title: v.title, detail: v.detail, action: "approve-public-data" }); if (v.reload) void loadPolicy();
+    } finally { if (alive.current) setApproving(false); }
+  }
 
   async function start() {
     if (locked || !canPublish || !acknowledged) return;
@@ -175,6 +211,10 @@ export function PublishModal({ workspaceId, projectId, revision, current, versio
         : <p className="hint">{site!.slug ? "Trang đang được gỡ xuống." : "Chưa xuất bản lần nào."} Xuất bản sẽ tạo một trang tĩnh thật trên máy chủ.</p>}
         <small className="hint" data-testid="pointer-version">pointerVersion {site!.pointerVersion} (chỉ để quan sát, không gửi lại máy chủ)</small></div> : null}
       {!allowed.includes("PUBLIC") && !deployment ? <p className="hint">Quản trị viên đang tắt xuất bản <b>công khai</b> cho loại ứng dụng này; chỉ xuất bản riêng tư (thành viên đăng nhập bằng tài khoản công ty).</p> : null}
+      {!deployment && (approval?.required || policy.state === "stored") ? (
+        <p className="hint" role="status" data-testid="release-policy" data-state={policy.state} data-approved={policy.state === "stored" ? String(policy.config.publicDataApproved) : undefined}>
+          {policy.state === "stored" ? policyLine(policy.config) : policy.state === "none" ? policyLine(null) : policy.state === "unavailable" ? "Chưa đọc được chính sách xuất bản trên máy chủ. Máy chủ vẫn quyết định khi xuất bản." : "Đang đọc chính sách xuất bản trên máy chủ…"}
+          {" "}<button type="button" className="btn sm" data-testid="policy-reload" onClick={() => void loadPolicy()}>Tải lại chính sách</button></p>) : null}
       {!deployment && approval?.required ? (
         <div className="publicBox" data-testid="public-queries-box" role="group" aria-label="Dữ liệu sẽ được công khai">
           <b data-testid="public-queries-count" data-count={approval.queries.length}>Dữ liệu sẽ được công khai ({approval.queries.length} truy vấn)</b>
@@ -221,7 +261,14 @@ export function PublishModal({ workspaceId, projectId, revision, current, versio
       {note ? <p className="hint" role="status" data-testid="release-note">{note}</p> : null}
       {error ? <div className="formError" role="alert" data-testid="release-error" data-kind={error.kind}><b>{error.title}</b><p>{error.detail}</p>
         {error.kind !== "text" && error.retry ? <button type="button" className="btn sm" data-testid="release-retry" disabled={retryIn > 0 || locked} onClick={() => { setError(null); (lastAction.current ?? (() => void start()))(); }}>{retryIn > 0 ? `Thử lại sau ${retryIn}s` : "Thử lại"}</button> : null}
-        {error.kind !== "text" && error.reload ? <button type="button" className="btn sm" data-testid="release-reload" onClick={() => { setError(null); void loadSite(); }}>Tải lại trạng thái</button> : null}</div> : null}
+        {error.kind !== "text" && error.reload ? <button type="button" className="btn sm" data-testid="release-reload" onClick={() => { setError(null); void loadSite(); void loadPolicy(); }}>Tải lại trạng thái</button> : null}
+        {error.action === "reload-policy" ? <p data-testid="release-policy-line">{policy.state === "stored" ? policyLine(policy.config) : policy.state === "none" ? policyLine(null) : "Đang đọc chính sách trên máy chủ…"} <button type="button" className="btn sm" data-testid="policy-reload-error" onClick={() => void loadPolicy()}>Tải lại chính sách</button></p> : null}
+        {error.action === "approve-public-data" ? (
+          <div data-testid="release-approve-box">
+            <label className="checkRow"><input type="checkbox" data-testid="release-approve-ack" checked={approveAck} disabled={approving || !canPublish} onChange={(e) => setApproveAck(e.target.checked)}/><span>Tôi xác nhận dữ liệu công khai của bản phát hành này được phép công khai.</span></label>
+            <ReasonButton className="btn sm primary" data-testid="release-approve" busy={approving} unavailable={!canPublish || !approveAck || policy.state === "none"} reason={!canPublish ? NEEDS_PUBLISH : policy.state === "none" ? "Máy chủ chưa lưu chính sách nào để phê duyệt." : !approveAck ? "Hãy tích xác nhận ở trên." : undefined} onClick={() => void approve()}>{approving ? "Đang lưu phê duyệt…" : "Lưu phê duyệt trên máy chủ"}</ReasonButton>
+            <p className="hint">Việc này chỉ lưu phê duyệt (cấu hình xuất bản). Sau đó bạn bấm “Xuất bản” lại; yêu cầu xuất bản không mang theo phê duyệt.</p>
+          </div>) : null}</div> : null}
       <div className="modalActions">
         {!deployment && real && site?.online ? <ReasonButton className="btn ghost" data-testid="unpublish" unavailable={locked || !canPublish} reason={!canPublish ? NEEDS_PUBLISH : undefined} onClick={() => { lastAction.current = () => void unpublish(); void unpublish(); }}>{pending?.kind === "UNPUBLISH" ? "Đang gỡ…" : "Gỡ trang xuống"}</ReasonButton> : null}
         <button className="btn ghost" onClick={onClose} disabled={deploymentBusy || pending !== null}>{deployment ? "Đóng" : "Hủy"}</button>

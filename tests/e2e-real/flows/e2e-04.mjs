@@ -60,7 +60,11 @@ export async function run({ cfg, fx, browser, check }) {
       check.ok("viewerA: property inputs are disabled", (await inputs.count()) > 0 && (await inputs.evaluateAll((els) => els.every((x) => x.disabled))), `inputs=${await inputs.count()}`);
       check.ok("viewerA: no enabled save control", (await page.getByRole("button", { name: /Lưu thay đổi/ }).evaluateAll((els) => els.every((x) => x.disabled))));
       const pub = page.locator("header.bx-top").getByRole("button", { name: /^Xuất bản/ });
-      check.ok("viewerA: Publish is disabled (no APP_PUBLISH) with a reason", (await pub.isDisabled()) && !!(await pub.getAttribute("title")), await pub.getAttribute("title"));
+      // the top bar's GuardedButton: an unavailable action is aria-disabled (still focusable); pressing it says WHY in a toast and sends nothing
+      const ariaOff = (await pub.getAttribute("aria-disabled")) === "true" || (await pub.isDisabled());
+      await pub.click({ force: true }).catch(() => undefined);
+      const said = await page.getByText(/không có quyền xuất bản/).first().waitFor({ timeout: 4000 }).then(() => true).catch(() => false);
+      check.ok("viewerA: Publish is unavailable (no APP_PUBLISH): aria-disabled, and pressing it explains why", ariaOff && (said || (await pub.isDisabled())), `aria=${await pub.getAttribute("aria-disabled")} said=${said}`);
       await page.locator(".bx-left").getByRole("tab", { name: "Dữ liệu" }).click().catch(() => undefined); await page.waitForTimeout(500);
       if (await page.getByTestId("ds-panel").count()) check.ok("viewerA: data-source management controls are disabled", await page.getByTestId("ds-create").isDisabled().catch(() => true));
       else check.ok("viewerA: no data-source management panel is offered (no DATA_SOURCE_VIEW/MANAGE)", true);

@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import type { OrgUnit, OrgUnitType } from "../../features/admin/organization";
 import * as M from "../../features/admin/organizationModel";
 
-const u = (id: string, parentId: string | null, name = id, typeId: string | null = null): OrgUnit => ({ id, parentId, typeId, name, enabled: true, version: 1 });
+const u = (id: string, parentId: string | null, name = id, typeId = "t"): OrgUnit => ({ id, parentId, typeId, name, code: id.toUpperCase(), sortOrder: 0, active: true, archivedAt: null, version: 1, directMemberCount: null, subtreeEmployeeCount: null, childCount: 0 });
 const chain = (names: string[]): OrgUnit[] => names.map((n, i) => u(`n${i}`, i === 0 ? null : `n${i - 1}`, n));
 
 test("a 7-level tenant-defined hierarchy (Root > Region > Branch > Division > Department > Team > Squad) renders with depth = data position", () => {

@@ -1,6 +1,6 @@
 // @class: real-backend — C2 contract §3: unpublish. DELETE …/site[?expectedActiveDeploymentId], NO body, optional Idempotency-Key; 200 + SiteInfo (online:false, currentDeploymentId:null, slug kept). Already offline → 200 and NOTHING is written.
 // Stale expectation → 409 ROLLBACK_STALE. Deployments are kept (a rollback serves the site again). SiteInfo.operation = UNPUBLISH is observed while it runs when the window allows (it holds the scope only for an instant).
-import { newPage, pageProblems } from "../lib/ui.mjs";
+import { newPage, pageProblems, confirmYes } from "../lib/ui.mjs";
 import { releaseApi, baseline, openRelease, captureRelease, forbiddenSent, KEY_RE, sleep, showRelease , closeRelease } from "../lib/release.mjs";
 export const id = "E2E-P09", title = "Unpublish: exact request, 200 + SiteInfo offline, idempotent when offline, stale expectation, operation=UNPUBLISH when observable";
 export async function run({ cfg, fx, browser, check }) {
@@ -10,9 +10,8 @@ export async function run({ cfg, fx, browser, check }) {
   check.ok("API: unpublish expecting a release that is not the active one → 409 ROLLBACK_STALE, still online", stale.status === 409 && stale.body?.code === "ROLLBACK_STALE" && (await api.site()).online === true, `status=${stale.status} ${stale.body?.code}`, "http");
   const page = await newPage(browser); const log = captureRelease(page);
   await openRelease(page, cfg, fx.users.adminA, fx.projects.A.id);
-  page.once("dialog", (d) => void d.accept());
   const resp = page.waitForResponse((r) => r.request().method() === "DELETE" && /\/site$/.test(new URL(r.url()).pathname), { timeout: 30_000 });
-  await page.getByTestId("unpublish").click();
+  await page.getByTestId("unpublish").click(); await confirmYes(page, /Gỡ trang xuống\?/, "Gỡ trang xuống");   // the product's in-app confirmation, not a native dialog
   const r = await resp, req = r.request(), u = new URL(req.url());
   check.ok("DELETE …/site answered 200", r.status() === 200, `status=${r.status()}`, "http");
   check.ok("NO body; the expectation is the query parameter expectedActiveDeploymentId = the release the UI saw as active", req.postData() === null && u.searchParams.get("expectedActiveDeploymentId") === c.id && [...u.searchParams.keys()].length === 1, `${u.search} body=${req.postData()}`, "http");

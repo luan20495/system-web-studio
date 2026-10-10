@@ -1,44 +1,47 @@
-# C5 — Organization structure + employee directory (Admin portal), built before C1's contract (2026-10-08)
+# C5 — Dynamic Organization: structure + employees + positions / grades (Admin portal), WIRED to the real backend (2026-10-10)
 
-Routes: `/admin/organization` ("Cơ cấu tổ chức") and `/admin/employees` ("Nhân viên"), in the nav of a person for whom the server lists a tenant they administer (same derivation as "Công ty của tôi").
-**Rule applied:** no endpoint is invented. Both screens talk to `OrganizationApi` (`features/admin/organization.ts`); every operation is `NOT_READY` (owner C1) until C1 publishes a contract, the adapter throws `OrganizationNotReady` and sends **nothing**.
-The only live call is the tenant member list (`GET /admin/tenants/{t}/members`, C1 2356d64), which backs the employee directory while `listEmployees` is NOT_READY (the screen says unit / position are not available).
+Contract: `docs/parallel/c0/ORGANIZATION_API_CONTRACT_FOR_C5.md` (D-C0-52) over C1's `organization-employee-contract.md` and the DTOs in `backend/.../organization/OrganizationContract.kt`. Evidence classes: UNIT, HARNESS (`org*.spec.mjs` over a typed in-memory fake), REAL_BACKEND (only `E2E-ORG01`, see §7). **The server flag `ORGANIZATION_PERSISTENCE_ENABLED` stays `false` by default; nothing in the frontend enables it.**
 
-## What was built
-| Area | Behaviour |
-|---|---|
-| Tree | dynamic, no fixed levels. WAI-ARIA tree (`role=tree/treeitem`, `aria-level/expanded/selected`, roving tabindex; ↑ ↓ → ← Home End Enter). Node: icon tile of its TYPE, name, type badge, employee count, child count, "Đã tắt" / "Mồ côi" marks. Orphans and data cycles are surfaced at the root, never dropped |
-| Actions | add root / child, edit, **move ("Di chuyển tới…" dialog, not drag and drop)**, enable / disable, delete. Each write carries the unit's `version` (optimistic lock) |
-| Move | every place listed with the reason when it is not allowed: itself, own subtree (cycle), "đang ở đây", disabled unit, type rule. The server stays the authority (a cycle code is shown as such) |
-| Delete | blocked BEFORE the click when the known counts say so (children / employees); otherwise the server decides and its refusal is shown |
-| Unit types | company-defined: name, code (`DIVISION`), icon from a **closed allow-list of 16 Lucide icons** (an id, never a URL), optional "may sit inside" types. Parent-type rule enforced in the forms |
-| States | loading · empty (explanation + CTA) · error with retry · permission denied (no backend call) · NOT_READY panel · validation · duplicate · cycle · blocked delete · version conflict ("Tải lại cơ cấu") · backend unavailable ("chưa rõ đã ghi") |
-| Directory | search (accent-insensitive), filter by unit (subtree) and status, 20 per page, rows → detail. Responsive: table → cards ≤ 720 px |
-| Create employee | the existing tenant provisioning dialog (`createTenantUser`: tenant is the PATH, never in the body) titled "Thêm nhân viên", plus an optional "Cơ cấu tổ chức" section (unit, position). If the account is created but the follow-up assignment fails, the account is NOT rolled back: the failure is a pending step in the result |
-| Detail | sections Thông tin · Cơ cấu tổ chức · Vị trí/Cấp bậc · Workspace · Quyền hiệu lực (read-only: company role label + "organization grants no permission") · Trạng thái |
-| Tenant | the session's (read-only) or one of the caller's OWN tenants; never a free id. No SYSTEM_ADMIN anywhere |
-| Gate | `organizationPlan(adminScope(me))`: offered only when the server lists a tenant the caller administers. No role name is read. The capability the server will list for org editing is **not decided by C1**: the gate uses the closest existing tenant capability and `needsAssumed: true` marks it |
+Routes: `/admin/organization` ("Cơ cấu tổ chức") and `/admin/employees` ("Nhân viên"), offered by the codes of a company (M-052, `tenants[].permissions`), not by a role.
 
-## Files
-`features/admin/organization.ts` (contract, CAPABILITIES, adapter) · `organizationModel.ts` (tree, move/cycle, validation, gate, errors, member-list directory) · `OrganizationScreens.tsx` · `EmployeesScreens.tsx` · `unitIcons.tsx` · `OrganizationLive.tsx` + `organizationAdapter.ts` (wiring) · nav in `AdminApp.tsx` · styles `packages/ui/src/styles/factory.css` · `tests/builder/organization.test.ts` · `tests/browser/org-harness.tsx` + `org.spec.mjs` · `tests/e2e-real/flows/e2e-org01.mjs` (WAITING_FOR_C1).
+## 1. Boundary (one typed layer)
+```
+screens (OrganizationScreens / OrganizationTree / OrganizationTypes / OrganizationCatalog / EmployeesScreens)
+   └─ OrganizationApi (features/admin/organization.ts: shapes requests, maps DTOs, clamps paging, passes every error through untouched)
+        └─ api.org (packages/api-client/src/org.ts: the ONLY place that builds a URL, query or body)
+             └─ call() (ApiError: status, code, details, retryAfterSeconds)
+```
+Pure rules (tree, counts, placement rules, forms, hints, gate, error mapping): `features/admin/organizationModel.ts`. DTO mirror: `packages/types/src/index.ts` (`Org*`). No UI component names a route (guard `ORG-FAIL-CLOSED-ROUTE`; `tests/guards/org-contract.json` `wired` lists the 31 capabilities, changed together with `CAPABILITIES`).
 
-## When C1 publishes the contract (the only edits)
-1. `organization.ts` → `CAPABILITIES.<op>`: `status: "READY"`, `route`, `needs` (the capability the SERVER lists). Add the calls to `packages/api-client/src/api.ts` and to `organizationAdapter.ts`.
-2. `organizationModel.ts` → `organizationPlan` gate (replace the assumed capability) and `BY_CODE` (replace the ASSUMED error names with C1's).
-3. `provisioning` ↔ employee: if C1 takes organization fields in `POST /admin/tenants/{t}/users`, send them there and drop the follow-up calls in `CreateEmployeeDialog.afterCreate`.
-4. Rerun `org.spec.mjs`, unit, then **E2E-ORG01** (replace its Blocked with the steps written in the file).
-
-## Verified
-| What | Class | Result |
+## 2. Capability classification (REAL_BACKEND = a route the backend serves; the proof of each is UNIT/HARNESS until E2E-ORG01 runs on a flag-ON stack)
+| Capability | Class | Permission the SERVER must list (for THAT company) |
 |---|---|---|
-| contract layer (all NOT_READY, no URL, adapter sends nothing, member-list fallback, READY flip), tree, move / cycle, validation, icon allow-list, delete rules, directory paging / search, gate, error mapping | unit | 11 tests in `organization.test.ts` |
-| ORG_UI01–10, TYPE01–05, NR01–02, EMP_UI01–10, EMP_NR01–06 (+ axe wcag2a/aa critical+serious: 0) | **harness** (fake in-memory transport behind the REAL adapters) — **not a backend E2E** | 89/89 |
-| E2E-ORG01 | real backend | **WAITING_FOR_C1** (no contract) |
+| unit types: list / create / update (name, icon, rules) / disable / enable | REAL_BACKEND | ORG_STRUCTURE_VIEW / ORG_STRUCTURE_MANAGE |
+| units: tree (`format=tree`, with both counts), detail, create, update, move / reparent (`newParentId` always sent, null = root), archive, restore | REAL_BACKEND | ORG_STRUCTURE_VIEW / ORG_STRUCTURE_MANAGE |
+| employee directory (search ≥ 2 chars, unit ± descendants, position, grade, status, paging) + detail | REAL_BACKEND | EMPLOYEE_VIEW |
+| create employee (account + memberships + positions in ONE request), enable / disable | REAL_BACKEND | EMPLOYEE_MANAGE **and** TENANT_MEMBERS |
+| memberships (several, one primary; relation label), positions held within a membership (+ grade) | REAL_BACKEND | EMPLOYEE_VIEW / EMPLOYEE_MANAGE |
+| positions and grades: list, create, update, disable / enable | REAL_BACKEND | POSITION_GRADE_VIEW / POSITION_GRADE_MANAGE |
+| counts `directMemberCount` / `subtreeEmployeeCount` | REAL_BACKEND (from the tree and the detail) | ORG_STRUCTURE_VIEW |
+| hard delete of a unit, employee profile fields (code, phone, joined date), tenant-global position, editing an employee's identity | **NOT_SUPPORTED** (not in the contract; not offered, nothing invented) | – |
 
-## Hardening (2026-10-08) — large trees, directory at scale, accessibility
-Evidence: `evidence/ui-hardening/2026-10-08/` (README with the numbers). All timings are **frontend** timings on GENERATED fixtures in the harness (not a backend measurement, not a scale E2E).
-- **Tree**: `buildTree` / `flattenTree` / `descendantIds` are iterative (a 20 000-deep chain does not overflow the stack); the tree is a flat WAI-ARIA list (aria-level / setsize / posinset) with memoised rows; a tree of more than 300 units starts collapsed to its roots; "Mở rộng tất cả" / "Thu gọn"; the indent is capped at 10 levels with a "C<n>" tag; the list scrolls inside its card; the detail panel shows a compact breadcrumb (first 2 … last 3, the full path is the title).
-  Measured: 2 000 units → 5 rows at first paint, expand-all (2 000 rows) 0.4 s, select one row 30 ms (Profiler 3.9 ms vs 148 ms for the whole tree), depth 60 renders, End / Home work. **Virtualization is not needed yet**; add it when more than ~5 000 rows can be visible at once (the flat memoised list makes it a drop-in).
-- **Directory**: 20 rows per page whatever the total (10 000 generated → 20 rows in the DOM); the search is debounced (12 keystrokes → 1 request) and applies only a CHANGED text (it used to reset the chosen page); while `listEmployees` is NOT_READY the member list is fetched once per tenant (cached, bust token after a write) and prepared once (sort + folded keys): page switch 0.1 ms, search 15 ms over 10 000 members (unit test).
-- **States**: read-only tree (writes NOT_READY) says so in a visible panel; create-not-ready, empty page ("Về trang đầu"), forbidden, unavailable, empty, loading all explicit. Nothing was made READY and no organization URL exists in the source.
-- **Accessibility**: person picker (combobox, aria-selected on the active option, live results, listbox out of the tab order), focus trap / scroll lock / focus restore in dialogs, aria-describedby on errors, icon-only buttons named. See the evidence README.
+## 3. Behaviour that matters
+* **Two counts, never merged**: "N trực tiếp" (ACTIVE memberships of ACTIVE employees on exactly that unit) and "M cả nhánh" (DISTINCT employees over the unit and its non-archived descendants; one person in two units of the branch counts once, so M is not the sum). Visible text + tooltip; unknown (null) is "chưa có số liệu", never 0.
+* **Errors by the server's code** (`orgProblem`): `ORG_STRUCTURE_BUSY` 503 → a RETRY state (kind `busy`, Retry-After from the header or `details`, "chưa có gì được lưu", a "Thử lại" button that resends the SAME request with the person's input kept; never success); `ORG_PERSISTENCE_NOT_AVAILABLE` 501 → fail closed (own state, no data, no mock, no local copy, no fallback to the member list); `VERSION_CONFLICT` (reload), `ORG_CYCLE`, `ORG_TYPE_RULE_VIOLATION` (reason MAX_DEPTH / ROOT_NOT_ALLOWED / PARENT_TYPE_NOT_ALLOWED / CHILD_TYPE_NOT_ALLOWED), `ORG_UNIT_HAS_CHILDREN` / `ORG_UNIT_HAS_MEMBERS` (archive blocks), `RESTORE_CONFLICT` (reason NOT_ARCHIVED / TENANT_INACTIVE / TYPE_DISABLED / PARENT_ARCHIVED / TYPE_RULE / CODE_TAKEN), `OFFSET_TOO_LARGE`, `QUERY_TOO_SHORT`, `TENANT_SUSPENDED`, disclosure-safe `*_NOT_FOUND`. The server's English message is never shown.
+* **Paging guard**: size 1..100, page × size ≤ 10 000, search ≥ 2 characters are enforced BEFORE the request (`clampOrgPaging`); the pager stops at the last reachable page and says "thu hẹp tìm kiếm"; the fake server is stricter than the client and never has to refuse (LIM01-03).
+* **Max depth is the backend's decision**: only the company's own `rules.maxDepth` (read from the server) is shown as an advisory note; no depth number is in the code (DEPTH01-04).
+* **Archive / restore, no delete**: in-app confirmation (Cancel focused, focus restored), advisory hints from the counts, the server decides; an archived unit offers only "Khôi phục"; "Hiện cả đơn vị đã lưu trữ" reloads with `includeArchived`.
+* **Relation / position / grade authorize nothing** (UNIT test + guard `ORG-RELATION`): a person labelled HEAD / MANAGER with a senior grade still gets exactly the codes the server listed.
+* **Permissions per company** (M-052): `capsOf(scope, tenantId)` from `tenants[].permissions`; the screens judge the SELECTED company only.
+
+## 4. Files
+`features/admin/{organization.ts, organizationModel.ts, organizationAdapter.ts, OrganizationScreens.tsx, OrganizationTree.tsx, OrganizationTypes.tsx, OrganizationCatalog.tsx, EmployeesScreens.tsx, orgParts.tsx, OrganizationLive.tsx}` · `packages/api-client/src/org.ts` · `packages/types/src/index.ts` · tests: `tests/builder/organization*.test.ts`, `organization-client.test.ts`, `tenant-scope.test.ts`; `tests/browser/{org,org-employees,org-hardening}.spec.mjs` + `org-harness.tsx` + `org-fake-server.ts`; `tests/e2e-real/flows/e2e-org01.mjs`.
+
+## 5. Harness fake
+`tests/browser/org-fake-server.ts` is an in-memory implementation of the typed transport that answers the way the contract says (versions, cycles, type rules incl. maxDepth, archive blocks, restore conflicts, directory limits, 503 busy with Retry-After, 501, 403 TENANT_SUSPENDED). Its numeric limits are written out independently of the client. It proves what the SCREENS do with those answers, never what a server answers.
+
+## 6. Gate
+`npm run gate:frontend`, unit, typecheck, `org` 122 / `org-employees` 76 / `org-hardening` 67 checks (CHROMIUM, HARNESS).
+
+## 7. E2E-ORG01 (real backend)
+`tests/e2e-real/flows/e2e-org01.mjs`: 25 flag-ON cases, each recording REQUEST · EXPECTED · ACTUAL · HTTP · UI · SERVER. It runs ONLY against a C0-approved isolated stack with `ORGANIZATION_PERSISTENCE_ENABLED=true`. On a default (flag OFF) stack it records REAL_BACKEND evidence of the fail-closed behaviour (cases 0a-0g: 501 on every route family after authorization, 403 for a member, the real portal's "chưa khả dụng" state, no browser persistence) and ends **BLOCKED(C0)**: it is never reported as PASS and never enables the flag.

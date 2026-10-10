@@ -25,7 +25,7 @@ const TABLE: SectionMeta[] = [
   S({ key: "groups", portals: ["admin"], surface: "coming", listed: "coming" }),
 ];
 const none = adminScope(me()); const sys = adminScope(me({ platformScope: true }));
-const tenantAdmin = adminScope(me({ tenantId: "t1", permissions: ["TENANT_MEMBERS"], tenants: [{ id: "t1", slug: "a", name: "A", status: "ACTIVE", role: "MEMBER" }], workspaces: [ws("w", ["MEMBER_MANAGE", "DATA_SOURCE_MANAGE"])] }));
+const tenantAdmin = adminScope(me({ tenantId: "t1", permissions: ["TENANT_MEMBERS"], tenants: [{ id: "t1", slug: "a", name: "A", status: "ACTIVE", role: "MEMBER", permissions: ["TENANT_MEMBERS"] }], workspaces: [ws("w", ["MEMBER_MANAGE", "DATA_SOURCE_MANAGE"])] }));
 const keys = (l: SectionMeta[]) => l.map((s) => s.key);
 
 test("sectionAccess: system sections need the platform; scoped sections need their own scope; the overview and unknown keys are open", () => {

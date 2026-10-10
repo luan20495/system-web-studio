@@ -1037,7 +1037,7 @@
   "C5: central helper + guard test scanning features/admin; C1 supplies capability codes",
   "permissions.test guard extended",
   "R2: UX-only, server authorises; guard needs a single-helper allow-list and features/admin + TENANT_ADMIN in scope",
-  "FIXED (HARNESS + guard test, merged c9799bb): single roles helper, guard scans features/admin"
+  "FIXED (0f1d6c2, 9858a88): authorization per tenant from tenants[].permissions (packages/permissions/src/tenantScope.ts, the ONE resolver; TenantMembershipSummary.permissions required in the TS mirror); adminScope no longer lists tenants by role; organization / provisioning / company screens judge the SELECTED company only; tenant rename wired with 403 TENANT_SUSPENDED shown. Evidence: UNIT tenant-scope.test.ts, HARNESS admin.spec AD01a-h + org.spec AD01i-n, REAL_BACKEND E2E-AD01 PASS (primary DEFAULT MEMBER + second company TENANT_ADMIN, 8 codes; cross-tenant refused; suspended handled). Backend by C1 (1b76746, imported a2a8fab)."
  ],
  [
   "M-053",

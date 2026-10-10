@@ -19,7 +19,8 @@ function transport() {
 }
 const acc = { username: " Bao.Nguyen ", displayName: " Bảo ", email: " ", tenantRole: "MEMBER" as const };
 const scopeOf = (o: Partial<Me>) => adminScope(me(o));
-const tenant = (id: string, name: string, role = "TENANT_ADMIN") => ({ id, slug: id, name, status: "ACTIVE", role });
+/** what the server lists for the membership: the codes held IN that tenant (a TENANT_ADMIN holds TENANT_MEMBERS there; a plain MEMBER nothing) */
+const tenant = (id: string, name: string, role = "TENANT_ADMIN") => ({ id, slug: id, name, status: "ACTIVE", role, permissions: role === "TENANT_ADMIN" ? ["TENANT_MEMBERS"] : [] as string[] });
 
 test("capability table: every route is a real route of C1's contract; all READY; no capability needs a role name", () => {
   const ids = Object.keys(CAPABILITIES) as CapabilityId[];
@@ -32,7 +33,7 @@ test("adapter createTenantUser: the tenant is the PATH argument only; body norma
   const { t, calls } = transport(); const api = createProvisioningApi(t);
   const r = await api.createTenantUser("t1", { ...acc, tenantRole: "TENANT_ADMIN", workspace: { id: "w1", role: "WORKSPACE_ADMIN" } });
   assert.deepEqual(calls, [["createTenantUser", ["t1", { username: "bao.nguyen", displayName: "Bảo", tenantRole: "TENANT_ADMIN", workspaceId: "w1", workspaceRole: "WORKSPACE_ADMIN" }]]], "no email key when blank, no tenant key in the body");
-  assert.equal(r.tenantId, "t1"); assert.equal(r.user.id, "id-1"); assert.deepEqual(r.pending.map((p) => p.id), ["activate"]); assert.equal(r.activation.token, "TOKEN");
+  assert.equal(r.tenantId, "t1"); assert.equal(r.user.id, "id-1"); assert.deepEqual(r.pending.map((p) => p.id), ["activate"]); assert.equal(r.activation?.token, "TOKEN");
   assert.ok(!JSON.stringify({ ...r, activation: undefined }).includes("TOKEN"), "the token is not copied anywhere else in the result");
   const n = await createProvisioningApi(transport().t).createTenantUser("t1", { ...acc, email: "A@B.vn" }); assert.equal(n.workspace, null);
   const b = transport(); await createProvisioningApi(b.t).createTenantUser("t1", { ...acc, email: "a@b.vn" });
@@ -62,7 +63,7 @@ test("plan: a tenant admin → ready; ONE tenant is FIXED from the session; seve
   const one = provisioningPlan(scopeOf({ platformScope: false, tenantId: "t1", permissions: ["TENANT_MEMBERS"], tenants: [tenant("t1", "Acme"), tenant("t2", "Other", "MEMBER")] }), "admin", (id) => CAPABILITIES[id]);
   assert.equal(one.create.state, "ready"); assert.deepEqual(one.fixedTenant, { id: "t1", name: "Acme" }); assert.equal(one.tenantChoice, false); assert.ok(!JSON.stringify(one).includes("t2"));
   assert.deepEqual(one.accountTypes.map((t) => t.id), ["TENANT_ADMIN", "WORKSPACE_ADMIN", "USER"], "a tenant admin may create tenant admins (C1: TENANT_MEMBERS), still never SYSTEM_ADMIN");
-  const two = provisioningPlan(scopeOf({ platformScope: false, tenants: [tenant("t1", "A"), tenant("t3", "C")] }), "admin", (id) => CAPABILITIES[id]);
+  const two = provisioningPlan(scopeOf({ platformScope: false, tenants: [{ ...tenant("t1", "A"), permissions: ["TENANT_MEMBERS"] }, { ...tenant("t3", "C"), permissions: ["TENANT_MEMBERS"] }] }), "admin", (id) => CAPABILITIES[id]);
   assert.equal(two.fixedTenant, null); assert.equal(two.tenantChoice, true);
 });
 test("plan: a workspace admin (MEMBER_MANAGE only) cannot create accounts, can add an existing member; a role NAME grants nothing", () => {

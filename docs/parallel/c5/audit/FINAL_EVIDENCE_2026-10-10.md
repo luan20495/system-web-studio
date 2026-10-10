@@ -30,3 +30,6 @@ unit 508 tests (507 pass, 1 skipped); CHROMIUM studio-p1 16, studio-wave2 31, st
 
 ## 5. Not run / not claimed
 REAL_BACKEND_E2E (USER01, E2E-04/05/AD02/ADMIN01 against the integrated final backend): prepared (`docs/parallel/c5/USER01_REAL_BROWSER_PREP.md`), NOT run. Dynamic Organization against a backend: not wired (WAITING_FOR_C1_C3). Safari: never tested. Core Web Vitals: not claimed.
+
+## 6. Superseded in part by the PL01 / Dynamic Organization / AD01 / C2 record
+Section 5 above ("REAL_BACKEND_E2E ... NOT run") is superseded: PL01, AD01, AD02, ADMIN01, USER01, E2E-04 / 05 were run against a real stack on 2026-10-10 (flag OFF) and E2E-ORG01 recorded the real fail-closed evidence; see `audit/PL01_ORG_AD01_C2_2026-10-10.md`. The organization screens are no longer NOT_READY: they are wired (`ORGANIZATION_UI.md`).

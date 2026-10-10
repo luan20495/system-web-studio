@@ -31,21 +31,31 @@ const EMPTIFY = P.get("emptify") === "1";
 const emptify = (v: any, depth = 0): any => (Array.isArray(v) ? [] : v && typeof v === "object" && depth < 3 ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, k === "total" ? 0 : Array.isArray(x) ? [] : emptify(x, depth + 1)])) : v);
 const iso = (d = 0) => new Date(Date.now() - d * 86400000).toISOString();
 
+const DEFAULT_ID = "00000000-0000-0000-0000-000000000001";
 const WS = (id: string, name: string, permissions: string[]) => ({ id, name, role: "x", tenantId: "t1", permissions });
 /** the six organization codes a TENANT_ADMIN of the primary tenant lists in `/auth/me.permissions` (C1 PERMISSION_MATRIX); a SYSTEM_ADMIN alone lists none */
 const ORG_CODES = ["ORG_STRUCTURE_VIEW", "ORG_STRUCTURE_MANAGE", "EMPLOYEE_VIEW", "EMPLOYEE_MANAGE", "POSITION_GRADE_VIEW", "POSITION_GRADE_MANAGE"];
 const ME: Record<string, any> = {
   sys: { id: "u-sys", username: "root", displayName: "Quản trị Hệ thống", roles: ["SYSTEM_ADMIN"], systemAdmin: true, platformScope: true, businessAccess: false, workspaces: [], tenants: [], permissions: ["TENANT_MANAGE", "TENANT_MEMBERS"] },
-  tadmin: { id: "u-ta", username: "ta", displayName: "Trần Quản Trị", roles: [], workspaces: [WS("w1", "Kinh doanh", ["MEMBER_MANAGE", "DATA_SOURCE_MANAGE", "APP_VIEW"])], tenantId: "t1", tenantRole: "TENANT_ADMIN", permissions: ["TENANT_MEMBERS", "TENANT_MANAGE", ...ORG_CODES], tenants: [{ id: "t1", slug: "acme", name: "Acme", status: "ACTIVE", role: "TENANT_ADMIN" }] },
-  wsadmin: { id: "u-wa", username: "wa", displayName: "Lê Ws", roles: [], workspaces: [WS("w1", "Kinh doanh", ["MEMBER_MANAGE", "APP_VIEW"])], tenantId: "t1", permissions: [], tenants: [{ id: "t1", slug: "acme", name: "Acme", status: "ACTIVE", role: "MEMBER" }] },
-  plain: { id: "u-p", username: "p", displayName: "Nhân viên", roles: [], workspaces: [WS("w1", "Kinh doanh", ["APP_VIEW"])], tenantId: "t1", permissions: [], tenants: [{ id: "t1", slug: "acme", name: "Acme", status: "ACTIVE", role: "MEMBER" }] },
-  sysatenant: { id: "u-ta", username: "ta", displayName: "Trần Hệ Thống", roles: ["SYSTEM_ADMIN"], systemAdmin: true, platformScope: true, businessAccess: true, workspaces: [WS("w1", "Kinh doanh", ["MEMBER_MANAGE", "DATA_SOURCE_MANAGE", "APP_VIEW"])], tenantId: "t1", tenantRole: "TENANT_ADMIN", permissions: ["TENANT_MEMBERS", "TENANT_MANAGE", ...ORG_CODES], tenants: [{ id: "t1", slug: "acme", name: "Acme", status: "ACTIVE", role: "TENANT_ADMIN" }] },
+  tadmin: { id: "u-ta", username: "ta", displayName: "Trần Quản Trị", roles: [], workspaces: [WS("w1", "Kinh doanh", ["MEMBER_MANAGE", "DATA_SOURCE_MANAGE", "APP_VIEW"])], tenantId: "t1", tenantRole: "TENANT_ADMIN", permissions: ["TENANT_MEMBERS", "TENANT_MANAGE", ...ORG_CODES], tenants: [{ id: "t1", slug: "acme", name: "Acme", status: "ACTIVE", role: "TENANT_ADMIN", permissions: ["TENANT_MEMBERS", "TENANT_MANAGE", ...ORG_CODES] }] },
+  wsadmin: { id: "u-wa", username: "wa", displayName: "Lê Ws", roles: [], workspaces: [WS("w1", "Kinh doanh", ["MEMBER_MANAGE", "APP_VIEW"])], tenantId: "t1", permissions: [], tenants: [{ id: "t1", slug: "acme", name: "Acme", status: "ACTIVE", role: "MEMBER", permissions: [] }] },
+  plain: { id: "u-p", username: "p", displayName: "Nhân viên", roles: [], workspaces: [WS("w1", "Kinh doanh", ["APP_VIEW"])], tenantId: "t1", permissions: [], tenants: [{ id: "t1", slug: "acme", name: "Acme", status: "ACTIVE", role: "MEMBER", permissions: [] }] },
+  sysatenant: { id: "u-ta", username: "ta", displayName: "Trần Hệ Thống", roles: ["SYSTEM_ADMIN"], systemAdmin: true, platformScope: true, businessAccess: true, workspaces: [WS("w1", "Kinh doanh", ["MEMBER_MANAGE", "DATA_SOURCE_MANAGE", "APP_VIEW"])], tenantId: "t1", tenantRole: "TENANT_ADMIN", permissions: ["TENANT_MEMBERS", "TENANT_MANAGE", ...ORG_CODES], tenants: [{ id: "t1", slug: "acme", name: "Acme", status: "ACTIVE", role: "TENANT_ADMIN", permissions: ["TENANT_MEMBERS", "TENANT_MANAGE", ...ORG_CODES] }] },
   sysmember: { id: "u-sys", username: "root", displayName: "Quản trị Hệ thống", roles: ["SYSTEM_ADMIN"], systemAdmin: true, platformScope: true, businessAccess: false, workspaces: [WS("w1", "Kinh doanh", ["APP_VIEW", "APP_EDIT"])], tenants: [], permissions: ["TENANT_MANAGE", "TENANT_MEMBERS"] },
+  // M-052 / AD01: codes PER TENANT. ad01 = primary DEFAULT as MEMBER with no codes (root permissions []), a second company (Acme, t1) where the person is TENANT_ADMIN with the exact canonical eight;
+  // ad01old = the same memberships WITHOUT the per-tenant field (a backend before M-052: the role label is not authority); ad01gone = the codes were revoked (the next /auth/me)
+  ad01: { id: "u-ad", username: "ad01", displayName: "Ad Một", roles: [], workspaces: [], tenantId: DEFAULT_ID, tenantRole: "MEMBER", permissions: [], tenants: [{ id: DEFAULT_ID, slug: "default", name: "Công ty mặc định", status: "ACTIVE", role: "MEMBER", permissions: [] }, { id: "t1", slug: "acme", name: "Acme", status: "ACTIVE", role: "TENANT_ADMIN", permissions: ["TENANT_MEMBERS", "TENANT_MANAGE", ...ORG_CODES] }] },
+  ad01old: { id: "u-ad", username: "ad01", displayName: "Ad Một", roles: [], workspaces: [], tenantId: DEFAULT_ID, tenantRole: "MEMBER", permissions: [], tenants: [{ id: DEFAULT_ID, slug: "default", name: "Công ty mặc định", status: "ACTIVE", role: "MEMBER" }, { id: "t1", slug: "acme", name: "Acme", status: "ACTIVE", role: "TENANT_ADMIN" }] },
+  ad01gone: { id: "u-ad", username: "ad01", displayName: "Ad Một", roles: [], workspaces: [], tenantId: DEFAULT_ID, tenantRole: "MEMBER", permissions: [], tenants: [{ id: DEFAULT_ID, slug: "default", name: "Công ty mặc định", status: "ACTIVE", role: "MEMBER", permissions: [] }, { id: "t1", slug: "acme", name: "Acme", status: "ACTIVE", role: "TENANT_ADMIN", permissions: [] }] },
   none: null as any,
 };
+/** what the fake SERVER says per tenant for the AD01 personas: only Acme (t1) is administered, every other tenant answers 403 (AccessService.forTenant). The UI must not even ask. */
+const AD01_TENANT = "t1";
+const isAd01 = who === "ad01" || who === "ad01old" || who === "ad01gone";
 let tenants: any[] = [{ id: "t1", slug: "acme", name: "Acme", status: "ACTIVE", createdAt: iso(40) }, { id: "00000000-0000-0000-0000-000000000001", slug: "default", name: "Công ty mặc định", status: "ACTIVE", createdAt: iso(90) }, { id: "t2", slug: "beta", name: "Công ty TNHH Một Thành Viên Rất Dài Tên Phát Triển Phần Mềm Và Giải Pháp Công Nghệ Thông Tin Beta", status: "SUSPENDED", createdAt: iso(10) }];
 if (bigData) for (let i = 0; i < 60; i++) tenants.push({ id: "tx" + i, slug: "c-" + i, name: "Công ty " + i, status: "ACTIVE", createdAt: iso(i) });
 if (emptyData) tenants = [];
+if (P.get("susp") === "1") { const a = tenants.find((x) => x.id === "t1"); if (a) a.status = "SUSPENDED"; }   // AD01: the company is SUSPENDED (still listed in /auth/me.tenants, with its codes)
 const membersOf: Record<string, any[]> = {};
 let members: any[] = [{ tenantId: "t1", userId: "u-ta", role: "TENANT_ADMIN", active: true, username: "ta", displayName: "Trần Quản Trị", email: "ta@acme.vn" }, { tenantId: "t1", userId: "u2", role: "MEMBER", active: true, username: "binh", displayName: "Bình", email: null }];
 const users = [
@@ -83,6 +93,11 @@ const H: Handler[] = [
   ["GET", /^\/admin\/tenants$/, () => tenants],
   ["POST", /^\/admin\/tenants$/, (_m, b) => { if (b.slug === "taken") return Promise.reject({ s: 409, code: "TENANT_SLUG_TAKEN", message: "slug taken" }); const t = { id: "tn" + tenants.length, slug: b.slug, name: b.name, status: "ACTIVE", createdAt: iso(0) }; tenants.push(t); return t; }],
   ["GET", /^\/admin\/tenants\/([^/]+)$/, (m) => tenants.find((t) => t.id === m[1]) ?? Promise.reject({ s: 404, code: "TENANT_NOT_FOUND" })],
+  ["PATCH", /^\/admin\/tenants\/([^/]+)$/, (m, b) => {
+    const t = tenants.find((x) => x.id === m[1]); if (!t) return Promise.reject({ s: 404, code: "TENANT_NOT_FOUND" });
+    if (isAd01 && t.status === "SUSPENDED") return Promise.reject({ s: 403, code: "TENANT_SUSPENDED", message: "This tenant is suspended" });          // a Tenant Admin cannot rename a SUSPENDED company (C1 contract)
+    if (!b || typeof b.name !== "string" || !b.name.trim()) return Promise.reject({ s: 400, code: "VALIDATION_FAILED" }); t.name = b.name.trim(); return t;
+  }],
   ["PATCH", /^\/admin\/tenants\/([^/]+)\/status$/, (m, b) => { const t = tenants.find((x) => x.id === m[1]); if (t) t.status = b.status; return t; }],
   ["GET", /^\/admin\/tenants\/([^/]+)\/members$/, (m) => (m[1] === "t1" ? members : (membersOf[m[1]] ??= []))],
   ["GET", /^\/admin\/tenants\/([^/]+)\/member-candidates$/, () => [{ userId: "u9", username: "cuong", displayName: "Cường", email: null }]],
@@ -165,6 +180,10 @@ window.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const json = (status: number, b: unknown) => new Response(b === undefined ? null : JSON.stringify(b), { status, headers: { "Content-Type": "application/json" } });
   if (cfg.fail && path.startsWith(cfg.fail) && method === "GET") return json(500, { code: "INTERNAL", message: "java.lang.NullPointerException at com.systemwebstudio.Foo.bar(Foo.kt:42)", requestId: "req-123" });
   if (cfg.failw && path.startsWith(cfg.failw) && method !== "GET") return json(500, { code: "INTERNAL", message: "Internal Server Error: could not execute statement; SQL [n/a]", requestId: "req-999" });
+  // the organization routes are OFF on a default server (ORGANIZATION_PERSISTENCE_ENABLED=false): every one answers 501 after authorization. The org screens' own behaviour is proven in org*.spec.mjs.
+  if (/^\/admin\/tenants\/[^/]+\/(organization-units|organization-unit-types|positions|grades|employees)(\/|$)/.test(path)) return json(501, { code: "ORG_PERSISTENCE_NOT_AVAILABLE", message: "off", requestId: "rq" });
+  // per-tenant authority of the AD01 personas (the server judges every /admin/tenants/{id}/** by the codes of THAT tenant): anything but Acme is refused
+  { const tm = path.match(/^\/admin\/tenants\/([^/]+)(?:\/|$)/); if (isAd01 && tm && tm[1] !== AD01_TENANT) { (window as any).__calls.push({ denied: method + " " + path }); return json(403, { code: "FORBIDDEN", message: "no", requestId: "rq" }); } }
   for (const [m, re, fn] of H) {
     if (m !== method) continue; const mm = path.match(re); if (!mm) continue;
     try { const out = await fn(mm, body, url); if (out === undefined) return new Response(null, { status: 204 }); return json(200, EMPTIFY && method === "GET" && !/^\/auth\//.test(path) ? emptify(out) : out); }

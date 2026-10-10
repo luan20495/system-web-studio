@@ -11,8 +11,11 @@ export type PageSchema = { page: string; sections: Section[]; site?: SiteMeta; p
  *  The tenancy fields are OPTIONAL on purpose: an older backend (and the legacy mock) does not send them, and every gate below falls back to `systemAdmin`.
  *  The client NEVER sends a tenant id back: the server derives it from the workspace in the URL (tenant-permission.md §2). */
 export type TenantRoleName = "TENANT_ADMIN" | "MEMBER";
-/** One tenant of `/auth/me.tenants[]`. `role` is display / routing ONLY - never authorize from it. `permissions` = the canonical codes the caller holds in THIS tenant (C1 M-052, D-C0-54; the server ALWAYS sends it - optional here only so C5-owned fixtures keep compiling until C5 consumes it and makes it required); the root `/auth/me.permissions` stays the primary tenant + platform scope. */
-export type TenantMembershipSummary = { id: string; slug: string; name: string; status: string; role: TenantRoleName | string; permissions?: string[] };
+/**
+ * One tenant of `/auth/me.tenants[]` (C1 M-052, D-C0-54). `role` is display / routing ONLY - never authorize from it. `permissions` = the canonical codes the caller holds in THIS tenant (the server ALWAYS sends it, also `[]`);
+ * it is the ONLY authorization signal for that tenant and is resolved in one place: packages/permissions/src/tenantScope.ts. The root `/auth/me.permissions` stays the primary tenant + platform scope; nothing is flattened across tenants.
+ */
+export type TenantMembershipSummary = { id: string; slug: string; name: string; status: string; role: TenantRoleName | string; permissions: string[] };
 export type WorkspaceSummary = { id: string; name: string; role: string; tenantId?: string | null; permissions?: string[] };
 export type Me = {
   id: string; username: string; displayName: string; roles: string[]; workspaces: WorkspaceSummary[]; systemAdmin?: boolean;
@@ -266,6 +269,49 @@ export type Connector = { key: string; name: string; description: string; baseUr
 export type BackupComponent = { name: string; state: string; lastSuccess: string | null; lastRun: string | null; ageHours: number | null; sizeBytes: number | null; error: string | null; stale: boolean };
 export type BackupEnvironment = { environment: string; components: BackupComponent[]; drillAt: string | null; drillPassed: boolean | null;
   drill: { component: string; result: string; detail: string }[]; healthy: boolean; problems: string[] };
+
+// ---- publish configuration (C2, docs/parallel/c2/H_C2_07_PUBLIC_DATA_APPROVAL.md; backend PublishConfigApi.kt). The AUTHORITATIVE policy of a project: the browser never decides it.
+export type PublishPolicyMode = "STATIC" | "DYNAMIC" | "SERVER_APP";
+export type PublishPolicyVisibility = "PRIVATE" | "TENANT" | "PUBLIC" | "PRIVATE_LINK";
+/** `publicDataApproved` is the persisted approval that POST /publish enforces (422 PUBLIC_DATA_NOT_APPROVED); it only becomes true through PUT publish-config with `acknowledgePublicData: true`. */
+export type PublishConfigPolicy = { mode: PublishPolicyMode; visibility: PublishPolicyVisibility; requiresAuth: boolean; cacheSeconds: number | null; publicDataApproved: boolean; linkTokenSet: boolean; revision: number; updatedAt: string | null };
+/** `config` null = no stored policy (the app publishes as it always did); `draft` = the intention stored in the document (informational, never authority) */
+export type PublishConfigView = { config: PublishConfigPolicy | null; draft: { mode?: PublishPolicyMode; visibility?: PublishPolicyVisibility; requiresAuth?: boolean; cacheSeconds?: number } | null; linkToken?: string | null };
+/** `requiresAuth` is REQUIRED by the server's request class (omitting it is 400 MALFORMED_REQUEST) */
+export type SetPublishConfigBody = { mode: PublishPolicyMode; visibility: PublishPolicyVisibility; requiresAuth: boolean; cacheSeconds?: number | null; acknowledgePublicData?: boolean; expectedRevision?: number | null };
+
+// ---- Dynamic Organization (mirror of backend/.../organization/OrganizationContract.kt; docs/parallel/c0/ORGANIZATION_API_CONTRACT_FOR_C5.md). Ids are UUID strings, instants ISO-8601 strings.
+export type OrgUnitTypeRules = { allowedParentTypeIds: string[] | null; allowedChildTypeIds: string[] | null; allowRoot: boolean | null; maxDepth: number | null };
+export type OrgUnitTypeDto = { id: string; tenantId: string; name: string; code: string; icon: string | null; active: boolean; rules: OrgUnitTypeRules; version: number; createdAt: string; updatedAt: string };
+export type OrgUnitDto = { id: string; tenantId: string; typeId: string; parentId: string | null; name: string; code: string; sortOrder: number; metadata: unknown; active: boolean; version: number; createdAt: string; updatedAt: string; archivedAt: string | null };
+/** `directMemberCount` = ACTIVE memberships on exactly this unit; `subtreeEmployeeCount` = DISTINCT active employees over the unit and its non-archived descendants. null = the store gives no counts. */
+export type OrgUnitNodeDto = { unit: OrgUnitDto; children: OrgUnitNodeDto[]; directMemberCount: number | null; subtreeEmployeeCount: number | null };
+export type OrgUnitDetailDto = { unit: OrgUnitDto; path: OrgUnitDto[]; activeChildCount: number; activeMemberCount: number; directMemberCount: number | null; subtreeEmployeeCount: number | null };
+export type OrgPositionDto = { id: string; tenantId: string; name: string; code: string; description: string | null; active: boolean; version: number; createdAt: string; updatedAt: string };
+export type OrgGradeDto = { id: string; tenantId: string; name: string; code: string; rank: number | null; description: string | null; active: boolean; version: number; createdAt: string; updatedAt: string };
+/** A relation (MEMBER / MANAGER / HEAD ...) is business data: it never authorizes anything. */
+export type OrgMembershipDto = { id: string; tenantId: string; userId: string; organizationUnitId: string; relationType: string; primary: boolean; active: boolean; version: number; createdAt: string; updatedAt: string };
+export type OrgEmployeePositionDto = { id: string; tenantId: string; userId: string; membershipId: string; organizationUnitId: string; positionId: string; gradeId: string | null; primary: boolean; active: boolean; version: number; createdAt: string; updatedAt: string };
+export type OrgEmployeeDto = { userId: string; tenantId: string; username: string; displayName: string | null; email: string | null; active: boolean; accountEnabled: boolean; accountActivated: boolean; tenantRole: string;
+  primaryOrganizationUnitId: string | null; positions: OrgEmployeePositionDto[]; organizationMemberships: OrgMembershipDto[] };
+export type OrgEmployeePageDto = { items: OrgEmployeeDto[]; total: number; page: number; size: number };
+export type OrgEmployeeCreatedDto = { employee: OrgEmployeeDto; activation: ActivationLink | null };
+export type OrgUnitTypeCreateBody = { name: string; code: string; icon?: string | null; rules?: Partial<OrgUnitTypeRules> };
+export type OrgUnitTypeUpdateBody = { name?: string; icon?: string | null; rules?: Partial<OrgUnitTypeRules>; expectedVersion: number };
+export type OrgUnitCreateBody = { typeId: string; parentId: string | null; name: string; code: string; sortOrder?: number };
+export type OrgUnitUpdateBody = { name?: string; code?: string; sortOrder?: number; expectedVersion: number };
+export type OrgUnitMoveBody = { newParentId: string | null; expectedVersion: number; sortOrder?: number };
+export type OrgPositionCreateBody = { name: string; code: string; description?: string | null };
+export type OrgPositionUpdateBody = { name?: string; description?: string | null; expectedVersion: number };
+export type OrgGradeCreateBody = { name: string; code: string; rank?: number | null; description?: string | null };
+export type OrgGradeUpdateBody = { name?: string; rank?: number | null; description?: string | null; clearRank?: boolean; expectedVersion: number };
+export type OrgEmployeeCreateBody = { username: string; displayName?: string | null; email?: string | null; tenantRole?: string; workspaceId?: string | null; workspaceRole?: string | null;
+  organizationMemberships?: { organizationUnitId: string; relationType?: string; primary?: boolean; positions?: { positionId: string; gradeId?: string | null; primary?: boolean }[] }[] };
+export type OrgMembershipCreateBody = { organizationUnitId: string; relationType?: string; primary?: boolean };
+export type OrgMembershipUpdateBody = { relationType?: string; primary?: boolean; expectedVersion: number };
+export type OrgEmployeePositionCreateBody = { membershipId: string; positionId: string; gradeId?: string | null; primary?: boolean };
+export type OrgEmployeePositionUpdateBody = { gradeId?: string | null; clearGrade?: boolean; primary?: boolean; expectedVersion: number };
+export type OrgEmployeeQuery = { q?: string; organizationUnitId?: string; includeDescendants?: boolean; positionId?: string; gradeId?: string; active?: boolean; page?: number; size?: number; sort?: "name" | "username"; dir?: "asc" | "desc" };
 
 /** Canonical v2 contract mirror (AppDefinition, data, actions, workflows, permissions). See ./contract/v2/meta.ts for the source and version. */
 export * from "./contract/v2";

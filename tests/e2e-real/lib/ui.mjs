@@ -76,3 +76,14 @@ export function countRequests(page, re, method) {
 /** serious console problems: unhandled exceptions / rejections and console errors (404/401/403 of probes are expected and filtered) */
 export const pageProblems = (page) => page.errors.slice();
 export const bodyText = async (page) => (await page.locator("body").innerText()).replace(/\s+/g, " ");
+
+// ---- the product's IN-APP confirmation dialog (packages/ui `confirm()`: a Modal, role=dialog, aria-label = its title; buttons "Hủy" and the confirm label) ----------------------------------
+// The product does not use the browser's native confirm any more, so a flow must operate the real dialog (a `page.once("dialog")` handler would never fire and the action would never be sent).
+/** the open confirmation dialog whose title matches `title` (string = substring, RegExp) */
+export const confirmDialog = (page, title) => page.getByRole("dialog", { name: title });
+/** wait for the dialog, return its locator and its visible text (for the report) */
+export async function waitConfirm(page, title, timeout = 8000) { const d = confirmDialog(page, title); await d.waitFor({ state: "visible", timeout }); return { dialog: d, text: (await d.innerText()).replace(/\s+/g, " ") }; }
+/** press the dialog's confirm button (exact label) and wait until the dialog is gone */
+export async function confirmYes(page, title, label) { const d = confirmDialog(page, title); await d.getByRole("button", { name: label, exact: true }).click(); await d.waitFor({ state: "hidden", timeout: 8000 }); }
+/** press "Hủy" and wait until the dialog is gone */
+export async function confirmCancel(page, title, label = "Hủy") { const d = confirmDialog(page, title); await d.getByRole("button", { name: label, exact: true }).click(); await d.waitFor({ state: "hidden", timeout: 8000 }); }

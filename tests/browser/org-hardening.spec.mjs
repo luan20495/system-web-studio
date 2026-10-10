@@ -76,13 +76,13 @@ const shot = async (p, name) => { if (EVIDENCE) await p.screenshot({ path: join(
   await p.close(); }
 
 // ===================================================================================================================== STATES
-{ const p = await open("org", "readonly");
-  check("ST01 read-only tree (list works, every write is NOT_READY): an EXPLICIT notice says so and why — the buttons are not just silently disabled", (await T(p, "org-edit-not-ready").count()) === 1 && /chỉ xem/.test(await T(p, "org-edit-not-ready").innerText()) && /chưa hỗ trợ/.test(await T(p, "org-edit-not-ready").innerText()) && (await T(p, "org-add-root").isDisabled()) && (await p.getByRole("treeitem").count()) === 5);
+{ const p = await open("org", "viewer");
+  check("ST01 read-only tree (the caller holds only the *_VIEW codes): an EXPLICIT notice says so and why — the buttons are not just silently disabled", (await T(p, "org-edit-not-ready").count()) === 1 && /chỉ xem/.test(await T(p, "org-edit-not-ready").innerText()) && /chưa có quyền thay đổi/.test(await T(p, "org-edit-not-ready").innerText()) && (await T(p, "org-add-root").getAttribute("aria-disabled")) === "true" && (await p.getByRole("treeitem").count()) === 5);
   await p.getByTestId("node:web").click();
-  check("ST02 …actions in the detail panel are disabled too, nothing is sent, nothing is faked", (await T(p, "org-edit").isDisabled()) && (await T(p, "org-move").isDisabled()) && (await T(p, "org-delete").isDisabled()) && !(await names(p)).some((n) => /^(create|update|move|delete)Organization/.test(n)));
+  check("ST02 …actions in the detail panel are disabled too, nothing is sent, nothing is faked", (await T(p, "org-edit").isDisabled()) && (await T(p, "org-move").isDisabled()) && (await T(p, "org-archive").isDisabled()) && !(await names(p)).some((n) => /^(create|update|move|archive|restore)Unit/.test(n)));
   await p.close(); }
-{ const p = await open("org", "notready");
-  check("ST03 fully NOT_READY: explicit panel, no tree, no calls", (await T(p, "org-not-ready").count()) === 1 && (await calls(p)).length === 0);
+{ const p = await open("org", "off");
+  check("ST03 the store is OFF (501 ORG_PERSISTENCE_NOT_AVAILABLE): an explicit 'not available' state, no tree, nothing written, nothing substituted", (await T(p, "org-error").getAttribute("data-kind")) === "unavailable-feature" && (await T(p, "org-tree").count()) === 0 && !(await names(p)).some((n) => /^(create|update|move|archive|restore)/.test(n)));
   await p.close(); }
 { const p = await open("emp", "emp-pageempty");
   await T(p, "emp-next").click(); await settle(p, 700);
@@ -93,10 +93,6 @@ const shot = async (p, name) => { if (EVIDENCE) await p.screenshot({ path: join(
 { const p = await open("emp", "emp-nocreate");
   check("ST06 creating is NOT_READY: a visible notice with the reason (not only a disabled button)", (await T(p, "emp-create-not-ready").count()) === 1 && /Chưa thêm được nhân viên/.test(await T(p, "emp-create-not-ready").innerText()) && (await T(p, "emp-create").isDisabled()));
   await p.close(); }
-{ const p = await open("emp", "emp-members"); await p.waitForSelector("[data-testid=emp-members-note]", { timeout: 5000 }).catch(() => undefined);   // the member list is fetched after the page paints (slower on WebKit)
-  check("ST07 member-list directory: unit / position columns are LEFT OUT (not '—' cells that look like errors) and a note explains why", (await p.locator("thead th").count()) === 3 && (await T(p, "emp-members-note").count()) === 1 && !/—/.test(await T(p, "emp:u01").innerText()));
-  await p.close(); }
-
 // ===================================================================================================================== LARGE TREE (generated)
 { const p = await open("org", "big"); await T(p, "org-tree").waitFor();
   const initialRows = await p.getByRole("treeitem").count(); const first = (await prof(p)).filter((x) => x.phase === "update" || x.phase === "mount");
@@ -160,18 +156,6 @@ for (const [s, depth] of [["deep10", 10], ["deep60", 60]]) {
   check("EMPPERF06 opening the same row twice gives the same employee (selection is stable)", name1 === (await p.locator("[data-testid=emp-detail] h2").innerText()));
   Object.assign(metrics, { emp10k: { employees: 10000, pageSize: 20, rowsInDomInitial: rowsNow, rowsInDomAfterSearch: rowsAfter, firstCommitMs: ms(first), searchRequestsFor12Keystrokes: sent, pageSwitchToPaintMs: ms(next), statusFilterToPaintMs: ms(status), worstKeystrokeToFrameMs: ms(typing.worst), note: "directory fixture is paged by the FAKE transport (server-like); this is a frontend benchmark, not a backend measure" } });
   await shot(p, "emp-10k"); await p.close(); }
-{ const p = await open("emp", "emp-10k-members"); await T(p, "emp-table").waitFor();
-  const rowsNow = await p.locator('[data-testid^="emp:"]').count();
-  await T(p, "emp-search").click(); await p.keyboard.type("nhan vien 9", { delay: 25 }); await settle(p, 600);
-  const pageTimes = []; for (let i = 0; i < 4; i++) { const t = await timed(p, () => document.querySelector('[data-testid="emp-next"]').click()); pageTimes.push(t); await settle(p, 120); }
-  await T(p, "emp-search").fill(""); await settle(p, 500);
-  const fetches = (await calls(p)).filter((c) => c.name === "tenantMembers").length;
-  check("EMPPERF07 client-side directory over 10 000 members: still 20 rows in the DOM, and searching + 4 page switches FETCHED the member list only once (cached), not on every keystroke / page", rowsNow === 20 && fetches === 1, `rows=${rowsNow} fetches=${fetches}`);
-  const worst = Math.max(...pageTimes);
-  check("EMPPERF08 page switches over the 10 000-member list stay interactive (each paints within 150 ms)", worst < 150, pageTimes.map(ms).join(", ") + " ms");
-  Object.assign(metrics, { emp10kMembersFallback: { members: 10000, rowsInDom: rowsNow, memberListFetches: fetches, pageSwitchToPaintMs: pageTimes.map(ms), note: "client-side filtering of a generated fixture: a frontend benchmark of the member-list fallback, not backend behaviour" } });
-  await p.close(); }
-
 // ===================================================================================================================== RESPONSIVE
 const VPS = [1440, 1024, 768, 430, 390];
 for (const w of VPS) {

@@ -96,7 +96,7 @@ export const SITE_IDLE_POLL_MS = 8000;
 // ---- errors (§1–§3, §6) ----------------------------------------------------------------------------------------------------------------------------------------
 export type ReleaseErrorLike = { status?: number; code?: string; message?: string; details?: unknown; retryAfterSeconds?: number } | null | undefined;
 export type ReleaseErrorView = {
-  kind: "scope-busy" | "stale" | "key-reused" | "in-progress" | "revision" | "not-restorable" | "rollback-failed" | "no-site" | "forbidden" | "no-version" | "public-disabled" | "rate-limited" | "invalid" | "unreachable" | "other";
+  kind: "scope-busy" | "stale" | "public-data-not-approved" | "policy-mismatch" | "key-reused" | "in-progress" | "revision" | "not-restorable" | "rollback-failed" | "no-site" | "forbidden" | "no-version" | "public-disabled" | "rate-limited" | "invalid" | "unreachable" | "other";
   title: string; detail: string;
   /** true only where the contract says a retry can succeed as is (SCOPE_BUSY: Retry-After 5; in-progress; unreachable with a key) */
   retry: boolean; retryAfterSeconds?: number;
@@ -104,6 +104,8 @@ export type ReleaseErrorView = {
   reload: boolean;
   /** the Idempotency-Key must be replaced before the next attempt (IDEMPOTENCY_KEY_REUSED) */
   newKey: boolean;
+  /** what the screen offers for this refusal instead of a blind retry: persist the approval (PUT publish-config) / re-read the authoritative policy */
+  action?: "approve-public-data" | "reload-policy";
 };
 const holder = (details: unknown): string | null => { const op = (details as { operation?: { kind?: string } | null } | null)?.operation; return op?.kind ? (OPERATION_LABEL[op.kind] ?? op.kind) : null; };
 export function explainReleaseError(e: ReleaseErrorLike): ReleaseErrorView {
@@ -111,6 +113,9 @@ export function explainReleaseError(e: ReleaseErrorLike): ReleaseErrorView {
   const code = e?.code ?? "", status = e?.status ?? 0;
   if (status === 0) return { ...base, kind: "unreachable", title: "Chưa rõ thao tác đã được máy chủ nhận hay chưa", detail: "Kết nối bị gián đoạn. Máy chủ vẫn là nơi quyết định: tải lại trạng thái trước khi thử lại. Thử lại với cùng khóa là an toàn (không tạo bản thứ hai).", retry: true, reload: true };
   switch (code) {
+    // H-C2-07: both are pre-accept refusals (no deployment exists). Neither is retried as is: the server's persisted policy decides, not the browser.
+    case "PUBLIC_DATA_NOT_APPROVED": return { ...base, kind: "public-data-not-approved", title: "Cần phê duyệt công khai dữ liệu trước khi xuất bản", detail: "Phiên bản này có truy vấn dữ liệu sẽ chạy công khai nhưng máy chủ chưa lưu phê duyệt cho ứng dụng này. Ô xác nhận trong hộp thoại chỉ là ý định của bạn, chưa phải phê duyệt. Hãy lưu phê duyệt trên máy chủ rồi xuất bản lại. Chưa có gì được xuất bản.", action: "approve-public-data", newKey: true };
+    case "PUBLISH_POLICY_MISMATCH": return { ...base, kind: "policy-mismatch", title: "Chính sách xuất bản đã thay đổi hoặc xung đột", detail: "Yêu cầu xuất bản công khai mâu thuẫn với chính sách xuất bản đã lưu trên máy chủ (một yêu cầu không thể mở rộng chính sách). Chưa có gì được xuất bản. Hãy tải lại chính sách xuất bản để xem bản hiện hành, rồi quyết định lại; hộp thoại không tự gửi lại với chính sách cũ.", action: "reload-policy", reload: true, newKey: true };
     case "SCOPE_BUSY": { const h = holder(e?.details); return { ...base, kind: "scope-busy", title: "Ứng dụng đang có một thao tác phát hành khác", detail: `${h ? `Thao tác đang chạy: ${h}. ` : ""}Thử lại sau ${e?.retryAfterSeconds ?? 5} giây khi thao tác đó xong.`, retry: true, retryAfterSeconds: e?.retryAfterSeconds ?? 5, reload: true }; }
     case "ROLLBACK_STALE": return { ...base, kind: "stale", title: "Bản đang chạy đã thay đổi", detail: "Bản đang chạy không còn là bản bạn thấy khi chọn. Không có gì bị thay đổi. Hãy tải lại trạng thái rồi quyết định lại.", reload: true };
     case "IDEMPOTENCY_KEY_REUSED": return { ...base, kind: "key-reused", title: "Khóa chống ghi trùng đã được dùng cho một yêu cầu khác", detail: "Không thử lại với khóa này. Một yêu cầu mới sẽ dùng khóa mới.", newKey: true };
@@ -134,4 +139,35 @@ export function explainReleaseError(e: ReleaseErrorLike): ReleaseErrorView {
 /** The restorable releases: RUNNING (not mock) and not the one being served. A ROLLED_BACK release is NOT restorable (publish that version again). The server re-checks (400 DEPLOYMENT_NOT_RESTORABLE). */
 export function rollbackCandidates<T extends { id: string; status: string; mock?: boolean }>(history: readonly T[], currentDeploymentId: string | null | undefined): T[] {
   return history.filter((d) => d.status === "RUNNING" && !d.mock && d.id !== currentDeploymentId);
+}
+
+// ---- publish configuration (H-C2-07) -------------------------------------------------------------------------------------------------------------------------
+/** exactly the keys the server reads; `requiresAuth` is always present (the request class needs it) and `acknowledgePublicData` is sent only when the person gave it. Nothing else is ever sent. */
+export function publishConfigBody(b: { mode: string; visibility: string; requiresAuth?: boolean; cacheSeconds?: number | null; acknowledgePublicData?: boolean; expectedRevision?: number | null }) {
+  return { mode: b.mode, visibility: b.visibility, requiresAuth: b.requiresAuth ?? false, ...(b.cacheSeconds === undefined ? {} : { cacheSeconds: b.cacheSeconds }), ...(b.acknowledgePublicData ? { acknowledgePublicData: true } : {}), ...(b.expectedRevision === undefined || b.expectedRevision === null ? {} : { expectedRevision: b.expectedRevision }) };
+}
+type PolicyLike = { mode: string; visibility: string; requiresAuth: boolean; cacheSeconds: number | null; publicDataApproved: boolean; revision: number };
+/**
+ * The request that PERSISTS the person's approval: the stored policy's own mode / requiresAuth / cacheSeconds (nothing is invented from the draft or the screen), visibility PUBLIC, `acknowledgePublicData`
+ * and the revision of the config that was read. Null when there is no stored policy: with none, the server does not enforce an approval, so there is nothing to persist.
+ */
+export function approvalRequest(config: PolicyLike | null | undefined) {
+  if (!config) return null;
+  return publishConfigBody({ mode: config.mode, visibility: "PUBLIC", requiresAuth: config.requiresAuth, cacheSeconds: config.cacheSeconds, acknowledgePublicData: true, expectedRevision: config.revision });
+}
+/** one line about the stored policy for the dialog; UX only, the server re-checks at publish */
+export function policyLine(config: PolicyLike | null | undefined): string {
+  if (!config) return "Chưa có chính sách xuất bản được lưu trên máy chủ: yêu cầu xuất bản của bạn quyết định.";
+  const vis = ({ PRIVATE: "riêng tư", TENANT: "thành viên công ty", PUBLIC: "công khai", PRIVATE_LINK: "riêng tư qua liên kết" } as Record<string, string>)[config.visibility] ?? config.visibility;
+  return `Chính sách trên máy chủ (bản ${config.revision}): ${vis}${config.visibility === "PUBLIC" ? config.publicDataApproved ? ", đã phê duyệt dữ liệu công khai" : ", chưa phê duyệt dữ liệu công khai" : ""}.`;
+}
+/** refusals of PUT publish-config in words: 409 REVISION_CONFLICT (someone changed the policy), 422 PUBLISH_CONFIG_INVALID (issues), 403, 404 (the API is not switched on) */
+export function explainPublishConfigError(e: ReleaseErrorLike): { title: string; detail: string; reload: boolean } {
+  const code = e?.code ?? "", status = e?.status ?? 0;
+  if (code === "REVISION_CONFLICT") return { title: "Chính sách xuất bản đã thay đổi ở nơi khác", detail: "Phê duyệt của bạn chưa được lưu. Hãy tải lại chính sách xuất bản rồi xác nhận lại.", reload: true };
+  if (code === "PUBLISH_CONFIG_INVALID") { const issues = ((e?.details as { issues?: { message?: string }[] } | null)?.issues ?? []).map((i) => i.message).filter(Boolean); return { title: "Máy chủ không chấp nhận cấu hình xuất bản", detail: `${issues.join(" ")} Phê duyệt chưa được lưu.`.trim(), reload: true }; }
+  if (status === 403) return { title: "Bạn không có quyền lưu phê duyệt", detail: "Lưu phê duyệt công khai cần quyền xuất bản.", reload: false };
+  if (status === 404) return { title: "Chưa lưu được phê duyệt", detail: "Máy chủ chưa bật cấu hình xuất bản hoặc không tìm thấy ứng dụng. Phê duyệt chưa được lưu và việc xuất bản công khai dữ liệu chưa thực hiện được.", reload: true };
+  if (status === 0 || status >= 500) return { title: "Chưa rõ phê duyệt đã được lưu hay chưa", detail: "Tải lại chính sách xuất bản để biết máy chủ đang giữ gì.", reload: true };
+  return { title: "Chưa lưu được phê duyệt", detail: e?.message ?? "Lỗi không xác định.", reload: true };
 }

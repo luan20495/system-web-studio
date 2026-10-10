@@ -2437,9 +2437,11 @@
      "Cơ cấu tổ chức"
     ],
     "h2": [
-     "Cơ cấu tổ chức chưa sẵn sàng"
+     "Cơ cấu tổ chức chưa khả dụng"
     ],
-    "states": [],
+    "states": [
+     "state-empty"
+    ],
     "coming": 0,
     "title": "Cơ cấu tổ chức · Quản trị công ty"
    },
@@ -2448,8 +2450,12 @@
     "h1": [
      "Nhân viên"
     ],
-    "h2": [],
-    "states": [],
+    "h2": [
+     "Danh bạ nhân viên chưa khả dụng"
+    ],
+    "states": [
+     "state-empty"
+    ],
     "coming": 0,
     "title": "Nhân viên · Quản trị công ty"
    },

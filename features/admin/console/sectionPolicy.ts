@@ -4,7 +4,7 @@
  *
  * Adding a page = one entry in the table: `key`, `label`, which consoles own it, who may open it (`access`), where it is listed, and how it is routed (`surface`).
  */
-import type { AdminScope } from "../adminModel";
+import { anyTenantWith, type AdminScope } from "../adminModel";
 import type { AdminPortal } from "../base";
 
 export type SectionAccessKind = "open" | "system" | "company" | "tenant" | "workspace" | "data" | "orgStructure" | "employeeView";
@@ -51,8 +51,8 @@ export function sectionAccess(table: readonly SectionMeta[], key: string, scope:
     case "tenant": return scope.tenants.length ? "ok" : "needs-scope";
     case "workspace": return scope.workspaces.length ? "ok" : "needs-scope";
     case "data": return scope.dataWorkspaces.length ? "ok" : "needs-scope";
-    case "orgStructure": return scope.org.structureView ? "ok" : "needs-scope";      // the CODE ORG_STRUCTURE_VIEW, never TENANT_MEMBERS / platformScope / a role
-    case "employeeView": return scope.org.employeeView ? "ok" : "needs-scope";
+    case "orgStructure": return anyTenantWith(scope, (c) => c.org.structureView) ? "ok" : "needs-scope";      // the CODE ORG_STRUCTURE_VIEW, never TENANT_MEMBERS / platformScope / a role
+    case "employeeView": return anyTenantWith(scope, (c) => c.org.employeeView) ? "ok" : "needs-scope";
     case "system": return scope.platform ? "ok" : "needs-platform";
   }
 }

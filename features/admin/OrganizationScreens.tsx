@@ -1,67 +1,55 @@
 "use client";
 /**
- * Organization structure screen: a dynamic tree of company-defined units (no fixed levels), a detail panel with the actions of the selected unit, and dialogs to add / edit / move / delete a unit and to manage unit types.
- * Presentational: it talks only to an `OrganizationApi` (organization.ts) and a `plan` (organizationModel.ts), so the same code runs on the real adapter (NOT_READY until C1's contract) and in the browser harness.
- * Move is a "Di chuyển tới…" dialog (reliable, keyboard friendly), not drag and drop. The UI avoids obvious cycles; the server is the authority (ORG_CYCLE).
+ * Organization structure screen: a dynamic tree of company-defined units (no fixed levels), a detail panel with the actions of the selected unit, and dialogs to add / edit / move / archive / restore a unit,
+ * to manage unit types and to manage positions and grades.
+ * Presentational: it talks only to an `OrganizationApi` (organization.ts, the one typed service layer: no URL is built here) and a `plan` (organizationModel.ts), so the same code runs on the real adapter and in
+ * the browser harness (whose in-memory server sits BEHIND the same typed transport).
+ * A refusal is shown as the server decided it (organizationModel.orgProblem): a busy structure (503) offers the same request again with the person's input kept, an unavailable store (501) says so and shows no data.
+ * Move is a "Di chuyển tới…" dialog (reliable, keyboard friendly), not drag and drop. Archive and restore are confirmed in an in-app dialog (never a native one). There is no delete.
  */
-import { memo, useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { ArrowRightLeft, Building2, ChevronRight, ChevronsDownUp, ChevronsUpDown, FolderTree, Info, Pencil, Plus, Power, RefreshCw, Settings2, Trash2, ModalHeader, ReasonButton, Picker, type PickerOption } from "@xweb/ui";
+import { useCallback, useEffect, useId, useMemo, useState, type FormEvent } from "react";
+import { Archive, ArchiveRestore, ArrowRightLeft, Building2, ChevronsDownUp, ChevronsUpDown, FolderTree, Pencil, Plus, RefreshCw, Settings2, Briefcase, ModalHeader, ReasonButton, Picker, type PickerOption } from "@xweb/ui";
 import { Modal } from "./Modal";
 import { Card, StateView } from "../ui";
 import { useLoad } from "../useLoad";
-import type { NewOrgUnitType, OrganizationApi, OrgUnit, OrgUnitType } from "./organization";
+import type { OrganizationApi, OrgUnit, OrgUnitType } from "./organization";
 import {
-  UNIT_ICONS, buildTree, compactPath, deleteBlock, flattenTree, moveTargets, orgProblem, safeIcon, unitPath, validateTypeForm, validateUnitForm, type OrgProblem, type OrganizationPlan, type TreeNode,
+  archiveHint, buildTree, compactPath, depthAdvisory, directCountView, moveTargets, orgProblem, restoreHint, subtreeCountView, unitPath, validateUnitForm, type OrgProblem, type OrganizationPlan, type TreeNode,
 } from "./organizationModel";
+import { Problem, NotReadyPanel } from "./orgParts";
+import { Tree, WINDOW_ABOVE, ROW_H } from "./OrganizationTree";
+import { TypesDialog } from "./OrganizationTypes";
+import { CatalogDialog } from "./OrganizationCatalog";
 import { UnitIcon } from "./unitIcons";
 
+export { NotReadyPanel, WINDOW_ABOVE, ROW_H };
 export type Tenant = { id: string; name: string };
 /** above this many units a tree starts collapsed to its roots */
 export const LARGE_TREE = 300;
 
-// ------------------------------------------------------------------------------------------------------------------------------- shared bits
-export function NotReadyPanel({ title, reason, testid, children, level = 3 }: { title: string; reason: string; testid: string; children?: React.ReactNode; level?: 2 | 3 }) {
-  const H = level === 2 ? "h2" : "h3"; // 2 when the panel sits directly under the page's h1 (no skipped heading level)
-  return (
-    <div className="xp-orgNotReady" role="note" data-testid={testid}>
-      <span className="xp-orgNotReadyIcon" aria-hidden="true"><Info size={20}/></span>
-      <div><H>{title}</H><p>{reason}</p>{children}</div>
-    </div>
-  );
-}
-function Problem({ p, onReload }: { p: OrgProblem; onReload?: () => void }) {
-  return (
-    <div className={p.kind === "not-ready" ? "notice" : "formError"} role="alert" data-testid="org-problem" data-kind={p.kind}>
-      {p.text}{onReload && (p.kind === "version" || p.kind === "notfound" || p.kind === "conflict") ? <> <button type="button" className="btn sm" onClick={onReload}>Tải lại cơ cấu</button></> : null}
-    </div>
-  );
-}
-const count = (n: number | undefined, one: string) => (n === undefined ? null : `${n} ${one}`);
-
 // ------------------------------------------------------------------------------------------------------------------------------- the screen
 export function OrganizationView({ api, plan, tenant }: { api: OrganizationApi; plan: OrganizationPlan; tenant: Tenant }) {
   const access = plan.access.granted; const ready = plan.units.state === "ready";
-  const data = useLoad(async () => (access && ready ? { units: await api.listOrganizationUnits(tenant.id), types: plan.types.state === "ready" ? await api.listOrganizationUnitTypes(tenant.id) : [] } : null), [tenant.id, access, ready]);
+  const [showArchived, setShowArchived] = useState(false);
+  const data = useLoad(async () => (access && ready ? await Promise.all([api.listOrganizationUnits(tenant.id, { includeArchived: showArchived }), plan.types.state === "ready" ? api.listOrganizationUnitTypes(tenant.id) : Promise.resolve([] as OrgUnitType[])]).then(([units, types]) => ({ units, types })) : null), [tenant.id, access, ready, showArchived]);
   const units: OrgUnit[] = data.data?.units ?? []; const types: OrgUnitType[] = data.data?.types ?? [];
   const tree = useMemo(() => buildTree(units), [units]);
   const [selected, setSelected] = useState<string | null>(null); const [open, setOpen] = useState<Set<string>>(new Set()); const [seen, setSeen] = useState<Set<string>>(new Set());
-  const [dialog, setDialog] = useState<null | { kind: "create"; parentId: string | null } | { kind: "edit" | "move" | "delete"; id: string } | { kind: "types" }>(null);
-  const [flash, setFlash] = useState<string | null>(null); const [busyToggle, setBusyToggle] = useState(false); const [toggleProblem, setToggleProblem] = useState<OrgProblem | null>(null);
+  const [dialog, setDialog] = useState<null | { kind: "create"; parentId: string | null } | { kind: "edit" | "move" | "archive" | "restore"; id: string } | { kind: "types" } | { kind: "catalog" }>(null);
+  const [flash, setFlash] = useState<string | null>(null);
   const sel = units.find((u) => u.id === selected) ?? null;
   const canEdit = plan.edit.state === "ready";
 
   // new units start expanded; the selection survives a reload while the unit exists
   // small trees start fully open; a large one (> LARGE_TREE units) starts with only the roots open, so the first paint is a few rows, not thousands
   useEffect(() => { const fresh = units.filter((u) => !seen.has(u.id)); if (!fresh.length) return; const roots = new Set(tree.map((n) => n.unit.id)); const openNow = units.length > LARGE_TREE ? fresh.filter((u) => roots.has(u.id)) : fresh; setSeen(new Set([...seen, ...fresh.map((u) => u.id)])); setOpen(new Set([...open, ...openNow.map((u) => u.id)])); }, [units]); // eslint-disable-line react-hooks/exhaustive-deps
-  const typeOf = (id: string | null | undefined) => types.find((t) => t.id === id);
   const onOpen = useCallback((id: string, v: boolean) => setOpen((cur) => { const n = new Set(cur); if (v) n.add(id); else n.delete(id); return n; }), []);
   const reload = useCallback(() => { data.reload(); }, [data]);
-  async function toggle(u: OrgUnit) {
-    setBusyToggle(true); setToggleProblem(null);
-    try { await api.updateOrganizationUnit(tenant.id, u.id, u.version, { enabled: !u.enabled }); setFlash(u.enabled ? "Đã tắt đơn vị." : "Đã bật đơn vị."); reload(); } catch (e) { setToggleProblem(orgProblem(e)); } finally { setBusyToggle(false); }
-  }
+  // a selected unit that is gone from the list (archived while archived units are hidden, or removed by someone else) is no longer selected
+  useEffect(() => { if (selected && data.data && !data.loading && !units.some((u) => u.id === selected)) setSelected(null); }, [units, selected, data.data, data.loading]);
 
   if (!access) return <StateView kind="forbidden" title="Bạn chưa có quyền xem cơ cấu tổ chức" detail={<p data-testid="org-forbidden">{(plan.access as { reason: string }).reason}</p>}/>;
+  const catalogOpen = plan.positions.state !== "no-permission";
   return (
     <div className="xp-org" data-testid="org">
       <div className="xp-orgBar">
@@ -70,20 +58,21 @@ export function OrganizationView({ api, plan, tenant }: { api: OrganizationApi; 
           {ready && units.length > 0 ? <><button className="btn xp-btnIcon" data-testid="org-expand-all" onClick={() => { const parents = new Set(units.map((u) => u.parentId)); setOpen(new Set(units.filter((u) => parents.has(u.id)).map((u) => u.id))); }}><ChevronsUpDown size={16} aria-hidden="true"/> Mở rộng tất cả</button>
           <button className="btn xp-btnIcon" data-testid="org-collapse-all" onClick={() => setOpen(new Set())}><ChevronsDownUp size={16} aria-hidden="true"/> Thu gọn</button></> : null}
           <button className="btn xp-btnIcon" data-testid="org-types" disabled={!ready} onClick={() => setDialog({ kind: "types" })}><Settings2 size={16} aria-hidden="true"/> Loại đơn vị</button>
+          {catalogOpen ? <button className="btn xp-btnIcon" data-testid="org-catalog" onClick={() => setDialog({ kind: "catalog" })}><Briefcase size={16} aria-hidden="true"/> Vị trí &amp; cấp bậc</button> : null}
           <button className="btn xp-btnIcon" data-testid="org-reload" disabled={!ready} onClick={reload} aria-label="Tải lại cơ cấu"><RefreshCw size={16} aria-hidden="true"/></button>
           <ReasonButton className="btn primary xp-btnIcon" data-testid="org-add-root" unavailable={!ready || !canEdit} reason={ready && !canEdit ? "Cơ cấu đang ở chế độ chỉ xem." : undefined} onClick={() => setDialog({ kind: "create", parentId: null })}><Plus size={16} aria-hidden="true"/> Thêm đơn vị gốc</ReasonButton>
         </div>
       </div>
+      <label className="xp-check xp-orgFilter"><input type="checkbox" data-testid="org-show-archived" checked={showArchived} disabled={!ready} onChange={(e) => setShowArchived(e.target.checked)}/> Hiện cả đơn vị đã lưu trữ</label>
       {flash ? <p className="notice" role="status" data-testid="org-flash">{flash}</p> : null}
-      {ready && !canEdit ? <NotReadyPanel level={2} testid="org-edit-not-ready" title="Cơ cấu đang ở chế độ chỉ xem" reason={(plan.edit as { reason: string }).reason}><p className="hint">Bạn xem được cây, nhưng thêm, sửa, di chuyển, bật/tắt và xóa đơn vị chưa dùng được.</p></NotReadyPanel> : null}
+      {ready && !canEdit ? <NotReadyPanel level={2} testid="org-edit-not-ready" title="Cơ cấu đang ở chế độ chỉ xem" reason={(plan.edit as { reason: string }).reason}><p className="hint">Bạn xem được cây, nhưng thêm, sửa, di chuyển, lưu trữ và khôi phục đơn vị chưa dùng được.</p></NotReadyPanel> : null}
 
-      {!ready ? <NotReadyPanel level={2} testid="org-not-ready" title="Cơ cấu tổ chức chưa sẵn sàng" reason={(plan.units as { reason: string }).reason}>
-        <p className="hint">Giao diện đã sẵn sàng: cây đơn vị tùy biến (không cố định Phòng/Team), loại đơn vị, thêm / sửa / di chuyển / bật tắt / xóa. Màn hình sẽ hoạt động khi máy chủ công bố API; không có dữ liệu nào được tạo giả.</p></NotReadyPanel>
+      {!ready ? <NotReadyPanel level={2} testid="org-not-ready" title="Cơ cấu tổ chức chưa sẵn sàng" reason={(plan.units as { reason: string }).reason}/>
         : data.error ? <ErrorBlock error={data.error} retry={reload}/>
         : data.loading && !data.data ? <StateView kind="loading"/>
         : units.length === 0 ? (
           <div className="xp-orgEmpty" data-testid="org-empty"><span className="xp-orgEmptyIcon" aria-hidden="true"><FolderTree size={28}/></span>
-            <h3>Chưa có cơ cấu tổ chức</h3><p>Bắt đầu bằng đơn vị gốc (ví dụ: một Khối hoặc Chi nhánh), rồi thêm đơn vị con. Bạn tự đặt tên và loại cho từng cấp.</p>
+            <h3>{showArchived ? "Chưa có đơn vị nào" : "Chưa có cơ cấu tổ chức"}</h3><p>Bắt đầu bằng đơn vị gốc (ví dụ: một Khối hoặc Chi nhánh), rồi thêm đơn vị con. Bạn tự đặt tên và loại cho từng cấp.</p>
             <button className="btn primary xp-btnIcon" data-testid="org-empty-add" disabled={!canEdit} onClick={() => setDialog({ kind: "create", parentId: null })}><Plus size={16} aria-hidden="true"/> Thêm đơn vị gốc</button>
             {!canEdit ? <p className="hint">{(plan.edit as { reason: string }).reason}</p> : null}</div>)
         : (
@@ -92,178 +81,103 @@ export function OrganizationView({ api, plan, tenant }: { api: OrganizationApi; 
               <Tree nodes={tree} types={types} selected={selected} open={open} onSelect={setSelected} onOpen={onOpen}/>
             </Card>
             <Card title="Chi tiết" className="xp-orgDetailCard">
-              {sel ? <Detail unit={sel} units={units} type={typeOf(sel.typeId)} canEdit={canEdit} busy={busyToggle} problem={toggleProblem} onAction={(k) => k === "child" ? setDialog({ kind: "create", parentId: sel.id }) : k === "toggle" ? void toggle(sel) : setDialog({ kind: k, id: sel.id })}/>
+              {sel ? <Detail api={api} tenantId={tenant.id} unit={sel} units={units} type={types.find((t) => t.id === sel.typeId)} canEdit={canEdit} onAction={(k) => k === "child" ? setDialog({ kind: "create", parentId: sel.id }) : setDialog({ kind: k, id: sel.id })}/>
                 : <p className="hint" data-testid="org-pick-hint">Chọn một đơn vị trong cây để xem và thao tác.</p>}
             </Card>
           </div>)}
 
       {dialog?.kind === "create" ? <UnitDialog mode="create" tenantId={tenant.id} api={api} units={units} types={types} parent={units.find((u) => u.id === dialog.parentId) ?? null} onClose={() => setDialog(null)}
-        onDone={(u) => { setFlash("Đã thêm đơn vị."); if (u?.parentId) setOpen((s) => new Set([...s, u.parentId!])); if (u) setSelected(u.id); setDialog(null); reload(); }} onReload={reload}/> : null}
+        onDone={(u) => { setFlash("Đã thêm đơn vị."); if (u?.parentId) setOpen((s) => new Set([...s, u.parentId!])); if (u) setSelected(u.id); setDialog(null); reload(); }} onReload={() => { setDialog(null); reload(); }}/> : null}
       {dialog?.kind === "edit" && sel ? <UnitDialog mode="edit" tenantId={tenant.id} api={api} units={units} types={types} unit={sel} parent={units.find((u) => u.id === sel.parentId) ?? null} onClose={() => setDialog(null)}
         onDone={() => { setFlash("Đã lưu đơn vị."); setDialog(null); reload(); }} onReload={() => { setDialog(null); reload(); }}/> : null}
       {dialog?.kind === "move" && sel ? <MoveDialog tenantId={tenant.id} api={api} units={units} tree={tree} types={types} unit={sel} onClose={() => setDialog(null)} onDone={() => { setFlash("Đã di chuyển đơn vị."); setDialog(null); reload(); }} onReload={() => { setDialog(null); reload(); }}/> : null}
-      {dialog?.kind === "delete" && sel ? <DeleteDialog tenantId={tenant.id} api={api} units={units} unit={sel} onClose={() => setDialog(null)} onDone={() => { setFlash("Đã xóa đơn vị."); setSelected(null); setDialog(null); reload(); }} onReload={() => { setDialog(null); reload(); }}/> : null}
+      {dialog?.kind === "archive" && sel ? <UnitActionDialog kind="archive" tenantId={tenant.id} api={api} units={units} unit={sel} onClose={() => setDialog(null)} onDone={() => { setFlash("Đã lưu trữ đơn vị."); setDialog(null); reload(); }} onReload={() => { setDialog(null); reload(); }}/> : null}
+      {dialog?.kind === "restore" && sel ? <UnitActionDialog kind="restore" tenantId={tenant.id} api={api} units={units} unit={sel} onClose={() => setDialog(null)} onDone={() => { setFlash("Đã khôi phục đơn vị."); setDialog(null); reload(); }} onReload={() => { setDialog(null); reload(); }}/> : null}
       {dialog?.kind === "types" ? <TypesDialog tenantId={tenant.id} api={api} plan={plan} types={types} onClose={() => setDialog(null)} onChanged={reload}/> : null}
+      {dialog?.kind === "catalog" ? <CatalogDialog tenantId={tenant.id} api={api} plan={plan} onClose={() => setDialog(null)}/> : null}
     </div>
   );
 }
 
+/** the whole list failed to load: said once, from the server's own code. 501 = the feature is not switched on (no data, no fallback); the rest follow orgProblem. */
 function ErrorBlock({ error, retry }: { error: unknown; retry: () => void }) {
   const p = orgProblem(error);
-  return <StateView kind={p.kind === "forbidden" ? "forbidden" : "error"} title={p.kind === "forbidden" ? "Không có quyền" : "Không tải được cơ cấu"} detail={<p data-testid="org-error" data-kind={p.kind}>{p.text}</p>} action={<button className="btn" data-testid="org-retry" onClick={retry}>Thử lại</button>}/>;
-}
-
-// ------------------------------------------------------------------------------------------------------------------------------- tree
-const INDENT_PX = 18; const MAX_INDENT_LEVELS = 10;
-/** above this many VISIBLE rows only the rows in (and just around) the scrollport are in the DOM; every row keeps its aria-level / posinset / setsize, so the tree is still announced whole (M-111) */
-export const WINDOW_ABOVE = 1000;
-/** one row = the 48px node + the 2px gap of the grid; fixed so the window can be computed from scrollTop without measuring rows */
-export const ROW_H = 50; const OVERSCAN = 10;
-/** One row. `memo`: a row re-renders only when ITS props change (selected / open / tabbable / its unit), so selecting a node in a 2 000-node tree re-renders two rows, not 2 000. */
-const TreeRow = memo(function TreeRow({ n, type, selected, open, tabbable, fixedH, onSelect, onToggle, onFocusRow }: { n: TreeNode; type: OrgUnitType | undefined; selected: boolean; open: boolean; tabbable: boolean; fixedH?: number; onSelect: (id: string) => void; onToggle: (id: string, v: boolean) => void; onFocusRow: (id: string) => void }) {
-  const u = n.unit; const has = n.children.length > 0;
-  const counts = [count(u.employeeCount, "nhân viên"), has ? `${n.children.length} đơn vị con` : null].filter(Boolean).join(" · ");
-  return (
-    <li role="treeitem" aria-level={n.depth + 1} aria-setsize={n.size} aria-posinset={n.pos} aria-expanded={has ? open : undefined} aria-selected={selected} style={fixedH ? { height: fixedH, overflow: "hidden" } : undefined}>
-      <div className={`xp-node${selected ? " sel" : ""}${u.enabled ? "" : " off"}`} data-node={u.id} data-testid={`node:${u.id}`} tabIndex={tabbable ? 0 : -1} onClick={() => { onSelect(u.id); onFocusRow(u.id); }} onFocus={() => onFocusRow(u.id)} style={{ paddingLeft: 8 + Math.min(n.depth, MAX_INDENT_LEVELS) * INDENT_PX }}>
-        <span className={`xp-chev${has ? "" : " leaf"}`} aria-hidden="true" onClick={(e) => { e.stopPropagation(); if (has) onToggle(u.id, !open); }}><ChevronRight size={16} style={{ transform: open ? "rotate(90deg)" : undefined }}/></span>
-        <span className="xp-nodeIcon"><UnitIcon id={type?.icon}/></span>
-        <span className="xp-nodeText"><b title={u.name}>{u.name}</b>{counts ? <small>{counts}</small> : null}</span>
-        {n.depth > MAX_INDENT_LEVELS ? <span className="xp-depthTag" title={`Cấp ${n.depth + 1}`}>C{n.depth + 1}</span> : null}
-        {type ? <span className="xp-typeBadge">{type.name}</span> : null}
-        {!u.enabled ? <span className="pill pill-muted">Đã tắt</span> : null}
-        {n.orphan ? <span className="pill pill-warn" title="Không tìm thấy đơn vị cha trong dữ liệu">Mồ côi</span> : null}
-      </div>
-    </li>);
-});
-
-/**
- * A flat WAI-ARIA tree (role=tree, treeitems with aria-level / aria-setsize / aria-posinset): only the VISIBLE rows exist in the DOM (a collapsed node renders none of its children), the rows are memoised,
- * and indentation is capped so a very deep chain does not push the text out of the card (a "C<n>" tag shows the real level). Keyboard: ↑ ↓ → ← Home End Enter.
- * Above WINDOW_ABOVE visible rows (an expanded 2 000-unit tree) the rows are WINDOWED: fixed-height rows, two spacers, only the rows in view +/- OVERSCAN are mounted (26 073 DOM nodes -> a few hundred).
- * The keyboard still reaches every row (the list scrolls to it first); when the tab-stop row is out of the window the list itself takes the Tab stop and hands the focus to that row.
- */
-function Tree({ nodes, types, selected, open, onSelect, onOpen }: { nodes: TreeNode[]; types: OrgUnitType[]; selected: string | null; open: Set<string>; onSelect: (id: string) => void; onOpen: (id: string, v: boolean) => void }) {
-  const visible = useMemo(() => flattenTree(nodes, open), [nodes, open]);
-  const indexOf = useMemo(() => new Map(visible.map((n, i) => [n.unit.id, i])), [visible]);
-  const typeById = useMemo(() => new Map(types.map((t) => [t.id, t])), [types]);
-  const [focus, setFocus] = useState<string | null>(null); const root = useRef<HTMLUListElement>(null);
-  const cur = focus && indexOf.has(focus) ? focus : selected && indexOf.has(selected) ? selected : visible[0]?.unit.id ?? null;
-  const windowed = visible.length > WINDOW_ABOVE;
-  const [view, setView] = useState({ top: 0, h: 720 }); const frame = useRef(0);
-  useEffect(() => {
-    const el = root.current; if (!windowed || !el) return;
-    const measure = () => setView((v) => (el.clientHeight && el.clientHeight !== v.h ? { ...v, h: el.clientHeight } : v));
-    measure(); window.addEventListener("resize", measure); return () => window.removeEventListener("resize", measure);
-  }, [windowed]);
-  useEffect(() => () => cancelAnimationFrame(frame.current), []);
-  const onScroll = (e: React.UIEvent<HTMLUListElement>) => {
-    if (!windowed) return; const top = e.currentTarget.scrollTop; cancelAnimationFrame(frame.current);
-    frame.current = requestAnimationFrame(() => setView((v) => (Math.abs(v.top - top) < 1 ? v : { ...v, top })));
-  };
-  const first = windowed ? Math.max(0, Math.floor(view.top / ROW_H) - OVERSCAN) : 0;
-  const last = windowed ? Math.min(visible.length, Math.ceil((view.top + view.h) / ROW_H) + OVERSCAN) : visible.length;
-  /** scroll the list so row `i` is inside the scrollport (windowed only); returns the new top */
-  const reveal = useCallback((i: number) => {
-    const el = root.current; if (!el) return; const h = el.clientHeight || 720; let top = el.scrollTop;
-    if (i * ROW_H < top) top = i * ROW_H; else if ((i + 1) * ROW_H > top + h) top = (i + 1) * ROW_H - h; else return;
-    el.scrollTop = top; setView((v) => ({ ...v, top, h }));
-  }, []);
-  const focusRow = useCallback((id: string, tries = 4) => {
-    const el = root.current?.querySelector<HTMLElement>(`[data-node="${CSS.escape(id)}"]`);
-    if (el) el.focus(); else if (tries > 0) requestAnimationFrame(() => focusRow(id, tries - 1));
-  }, []);
-  const go = useCallback((id: string | undefined) => {
-    if (!id) return; setFocus(id);
-    if (windowed) { const i = indexOf.get(id); if (i !== undefined) reveal(i); }
-    requestAnimationFrame(() => focusRow(id));
-  }, [windowed, indexOf, reveal, focusRow]);
-  // the selection moved by something other than a click (a new unit, a reload): bring it into the window
-  useEffect(() => { if (windowed && selected) { const i = indexOf.get(selected); if (i !== undefined && (i < first || i >= last)) reveal(i); } }, [selected]); // eslint-disable-line react-hooks/exhaustive-deps
-  const onFocusRow = useCallback((id: string) => setFocus(id), []);
-  const curIndex = cur ? indexOf.get(cur) ?? -1 : -1;
-  const curMounted = curIndex >= first && curIndex < last;
-  function onKey(e: KeyboardEvent) {
-    const i = curIndex; const n = visible[i]; if (!n) return;
-    const has = n.children.length > 0; const isOpen = open.has(n.unit.id);
-    if (e.key === "ArrowDown") { e.preventDefault(); go(visible[Math.min(visible.length - 1, i + 1)]?.unit.id); }
-    else if (e.key === "ArrowUp") { e.preventDefault(); go(visible[Math.max(0, i - 1)]?.unit.id); }
-    else if (e.key === "Home") { e.preventDefault(); go(visible[0]?.unit.id); } else if (e.key === "End") { e.preventDefault(); go(visible[visible.length - 1]?.unit.id); }
-    else if (e.key === "ArrowRight") { e.preventDefault(); if (has && !isOpen) onOpen(n.unit.id, true); else if (has) go(n.children[0].unit.id); }
-    else if (e.key === "ArrowLeft") { e.preventDefault(); if (has && isOpen) onOpen(n.unit.id, false); else { let j = i - 1; while (j >= 0 && visible[j].depth >= n.depth) j--; go(visible[j]?.unit.id); } }
-    else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(n.unit.id); }
-  }
-  const rows = windowed ? visible.slice(first, last) : visible;
-  return (
-    <ul className="xp-tree" role="tree" aria-label="Cơ cấu tổ chức" data-testid="org-tree" ref={root} onKeyDown={onKey} onScroll={onScroll}
-      tabIndex={windowed && !curMounted ? 0 : undefined} onFocus={(e) => { if (e.target === e.currentTarget && cur) go(cur); }} style={windowed ? { display: "block" } : undefined}
-      data-windowed={windowed ? "true" : undefined} data-rows={windowed ? `${rows.length}/${visible.length}` : undefined}>
-      {windowed && first > 0 ? <li role="presentation" aria-hidden="true" style={{ height: first * ROW_H }}/> : null}
-      {rows.map((n) => <TreeRow key={n.unit.id} n={n} type={n.unit.typeId ? typeById.get(n.unit.typeId) : undefined} selected={selected === n.unit.id} open={open.has(n.unit.id)} tabbable={cur === n.unit.id} fixedH={windowed ? ROW_H : undefined} onSelect={onSelect} onToggle={onOpen} onFocusRow={onFocusRow}/>)}
-      {windowed && last < visible.length ? <li role="presentation" aria-hidden="true" style={{ height: (visible.length - last) * ROW_H }}/> : null}
-    </ul>
-  );
+  const title = p.kind === "forbidden" ? "Không có quyền" : p.kind === "unavailable-feature" ? "Cơ cấu tổ chức chưa khả dụng" : p.kind === "busy" ? "Hệ thống đang bận" : "Không tải được cơ cấu";
+  return <StateView kind={p.kind === "forbidden" ? "forbidden" : p.kind === "unavailable-feature" ? "empty" : "error"} title={title} detail={<p data-testid="org-error" data-kind={p.kind} data-code={p.code}>{p.text}</p>} action={<button className="btn" data-testid="org-retry" onClick={retry}>{p.kind === "unavailable-feature" ? "Kiểm tra lại" : "Thử lại"}</button>}/>;
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------- detail
-function Detail({ unit, units, type, canEdit, busy, problem, onAction }: { unit: OrgUnit; units: OrgUnit[]; type: OrgUnitType | undefined; canEdit: boolean; busy: boolean; problem: OrgProblem | null; onAction: (k: "child" | "edit" | "move" | "toggle" | "delete") => void }) {
-  const block = deleteBlock(unit, units); const path = unitPath(units, unit.id);
+function Detail({ api, tenantId, unit, units, type, canEdit, onAction }: { api: OrganizationApi; tenantId: string; unit: OrgUnit; units: OrgUnit[]; type: OrgUnitType | undefined; canEdit: boolean; onAction: (k: "child" | "edit" | "move" | "archive" | "restore") => void }) {
+  // the unit's own detail (the server's breadcrumb and fresh counts); the tree row already carries the counts, so a failed detail only costs the breadcrumb
+  const detail = useLoad(async () => api.getOrganizationUnit(tenantId, unit.id), [tenantId, unit.id, unit.version]);
+  const path = detail.data?.path.length ? detail.data.path.map((p) => p.name).join(" › ") : unitPath(units, unit.id);
+  const shown = detail.data?.unit ?? unit; const direct = directCountView(shown); const subtree = subtreeCountView(shown);
+  const archived = !unit.active; const aHint = archiveHint(unit); const rHint = restoreHint(unit, units); const problem: OrgProblem | null = detail.error ? orgProblem(detail.error) : null;
   return (
     <div className="stack" data-testid="org-detail">
       <div className="xp-detailHead"><span className="xp-headIcon" aria-hidden="true"><UnitIcon id={type?.icon} size={22}/></span>
         <div style={{ minWidth: 0 }}><h3 data-testid="detail-name">{unit.name}</h3><small className="hint" data-testid="detail-path" title={path} aria-label={path}>{compactPath(path)}</small></div></div>
       <dl className="kv">
-        <div><dt>Loại</dt><dd data-testid="detail-type">{type ? type.name : "Chưa chọn loại"}</dd></div>
-        {unit.code ? <div><dt>Mã</dt><dd>{unit.code}</dd></div> : null}
-        <div><dt>Trạng thái</dt><dd>{unit.enabled ? <span className="pill pill-ok">Hoạt động</span> : <span className="pill pill-muted">Đã tắt</span>}</dd></div>
-        {unit.employeeCount !== undefined ? <div><dt>Nhân viên</dt><dd data-testid="detail-employees">{unit.employeeCount}</dd></div> : null}
-        <div><dt>Đơn vị con</dt><dd data-testid="detail-children">{unit.childCount ?? units.filter((u) => u.parentId === unit.id).length}</dd></div>
+        <div><dt>Loại</dt><dd data-testid="detail-type">{type ? type.name : "Loại không còn tồn tại"}</dd></div>
+        <div><dt>Mã</dt><dd data-testid="detail-code">{unit.code}</dd></div>
+        <div><dt>Trạng thái</dt><dd>{archived ? <span className="pill pill-muted" data-testid="detail-status">Đã lưu trữ</span> : <span className="pill pill-ok" data-testid="detail-status">Hoạt động</span>}</dd></div>
+        <div><dt title={direct.title}>{direct.label}</dt><dd data-testid="detail-direct-count" data-known={direct.known}>{direct.value}<small className="hint"> — số người thuộc đúng đơn vị này</small></dd></div>
+        <div><dt title={subtree.title}>{subtree.label}</dt><dd data-testid="detail-subtree-count" data-known={subtree.known}>{subtree.value}<small className="hint"> — không trùng người, gồm đơn vị con</small></dd></div>
+        <div><dt>Đơn vị con</dt><dd data-testid="detail-children">{unit.childCount}</dd></div>
       </dl>
       <div className="xp-orgActions">
-        <button className="btn xp-btnIcon" data-testid="org-add-child" disabled={!canEdit} onClick={() => onAction("child")}><Plus size={16} aria-hidden="true"/> Thêm đơn vị con</button>
-        <button className="btn xp-btnIcon" data-testid="org-edit" disabled={!canEdit} onClick={() => onAction("edit")}><Pencil size={16} aria-hidden="true"/> Sửa</button>
-        <button className="btn xp-btnIcon" data-testid="org-move" disabled={!canEdit} onClick={() => onAction("move")}><ArrowRightLeft size={16} aria-hidden="true"/> Di chuyển tới…</button>
-        <button className="btn xp-btnIcon" data-testid="org-toggle" disabled={!canEdit || busy} onClick={() => onAction("toggle")}><Power size={16} aria-hidden="true"/> {unit.enabled ? "Tắt" : "Bật"}</button>
-        <button className="btn danger xp-btnIcon" data-testid="org-delete" disabled={!canEdit || !!block} aria-describedby={block ? "org-delete-blocked" : undefined} onClick={() => onAction("delete")}><Trash2 size={16} aria-hidden="true"/> Xóa</button>
+        {archived ? <button className="btn xp-btnIcon" data-testid="org-restore" disabled={!canEdit} onClick={() => onAction("restore")}><ArchiveRestore size={16} aria-hidden="true"/> Khôi phục</button> : <>
+          <button className="btn xp-btnIcon" data-testid="org-add-child" disabled={!canEdit} onClick={() => onAction("child")}><Plus size={16} aria-hidden="true"/> Thêm đơn vị con</button>
+          <button className="btn xp-btnIcon" data-testid="org-edit" disabled={!canEdit} onClick={() => onAction("edit")}><Pencil size={16} aria-hidden="true"/> Sửa</button>
+          <button className="btn xp-btnIcon" data-testid="org-move" disabled={!canEdit} onClick={() => onAction("move")}><ArrowRightLeft size={16} aria-hidden="true"/> Di chuyển tới…</button>
+          <button className="btn danger xp-btnIcon" data-testid="org-archive" disabled={!canEdit} aria-describedby={aHint ? "org-archive-hint" : undefined} onClick={() => onAction("archive")}><Archive size={16} aria-hidden="true"/> Lưu trữ</button></>}
       </div>
-      {block ? <p className="hint" id="org-delete-blocked" data-testid="org-delete-blocked">Chưa xóa được: {block}</p> : null}
-      {problem ? <Problem p={problem}/> : null}
+      {aHint ? <p className="hint" id="org-archive-hint" data-testid="org-archive-hint">{aHint}</p> : null}
+      {archived && rHint ? <p className="hint" data-testid="org-restore-hint">{rHint}</p> : null}
+      {archived ? <p className="hint">Đơn vị đã lưu trữ không được tính vào số liệu và không nhận thành viên mới. Không có thao tác xóa vĩnh viễn.</p> : null}
+      {problem ? <Problem p={problem} onReload={detail.reload} reloadLabel="Tải lại chi tiết"/> : null}
     </div>
   );
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------- dialogs
 function typeOptions(types: OrgUnitType[]): PickerOption<string>[] {
-  return [{ value: "", label: "Không chọn loại", hint: "Đơn vị tự do", icon: <span className="xp-nodeIcon"><UnitIcon id={null}/></span> }, ...types.map((t) => ({ value: t.id, label: t.name, hint: t.code, icon: <span className="xp-nodeIcon"><UnitIcon id={t.icon}/></span> }))];
+  return [{ value: "", label: "Chọn loại đơn vị", hint: "Bắt buộc", icon: <span className="xp-nodeIcon"><UnitIcon id={null}/></span> }, ...types.filter((t) => t.active).map((t) => ({ value: t.id, label: t.name, hint: t.code, icon: <span className="xp-nodeIcon"><UnitIcon id={t.icon}/></span> }))];
 }
 function UnitDialog({ mode, tenantId, api, units, types, unit, parent, onClose, onDone, onReload }: { mode: "create" | "edit"; tenantId: string; api: OrganizationApi; units: OrgUnit[]; types: OrgUnitType[]; unit?: OrgUnit; parent: OrgUnit | null; onClose: () => void; onDone: (u?: OrgUnit) => void; onReload: () => void }) {
   const uid = useId(); const [name, setName] = useState(unit?.name ?? ""); const [code, setCode] = useState(unit?.code ?? ""); const [typeId, setTypeId] = useState(unit?.typeId ?? "");
   const [touched, setTouched] = useState(false); const [busy, setBusy] = useState(false); const [problem, setProblem] = useState<OrgProblem | null>(null);
-  const errors = validateUnitForm({ name, code, typeId: typeId || null }, { types, parent });
+  const errors = validateUnitForm({ name, code, typeId: typeId || null }, { types, parent, editing: mode === "edit" });
+  const advisory = mode === "create" ? depthAdvisory(types.find((t) => t.id === typeId), parent, units) : null;
   const title = mode === "create" ? (parent ? `Thêm đơn vị con của ${parent.name}` : "Thêm đơn vị gốc") : "Sửa đơn vị";
-  async function submit(e: FormEvent) {
-    e.preventDefault(); setTouched(true); setProblem(null);
-    if (Object.keys(errors).length) return;
-    setBusy(true);
+  const typeName = types.find((t) => t.id === typeId)?.name;
+  /** the same request again: the dialog stays mounted, so name / code / type are exactly what the person typed (and the unit's expectedVersion is the one they looked at) */
+  async function run() {
+    setBusy(true); setProblem(null);
     try {
-      if (mode === "create") onDone(await api.createOrganizationUnit(tenantId, { parentId: parent?.id ?? null, typeId: typeId || null, name, ...(code.trim() ? { code: code.trim() } : {}) }));
-      else { await api.updateOrganizationUnit(tenantId, unit!.id, unit!.version, { name, code: code.trim() || null, typeId: typeId || null }); onDone(); }
+      if (mode === "create") onDone(await api.createOrganizationUnit(tenantId, { parentId: parent?.id ?? null, typeId, name, code }));
+      else { await api.updateOrganizationUnit(tenantId, unit!.id, unit!.version, { name, code }); onDone(); }
     } catch (err) { setProblem(orgProblem(err)); } finally { setBusy(false); }
   }
+  function submit(e: FormEvent) { e.preventDefault(); setTouched(true); if (Object.keys(errors).length) return; void run(); }
   return (
     <Modal label={title} onClose={onClose}>
-      <form className="modalBody" noValidate onSubmit={(e) => void submit(e)} data-testid="unit-dialog">
-        <ModalHeader icon={<Building2 size={22}/>} title={title} subtitle={parent ? `Nằm trong: ${unitPath(units, parent.id)}` : "Đơn vị gốc không thuộc đơn vị nào."}/>
+      <form className="modalBody" noValidate onSubmit={submit} data-testid="unit-dialog">
+        <ModalHeader icon={<Building2 size={22}/>} title={title} subtitle={parent ? `Nằm trong: ${unitPath(units, parent.id)}` : mode === "edit" && unit?.parentId ? `Nằm trong: ${unitPath(units, unit.parentId)}` : "Đơn vị gốc không thuộc đơn vị nào."}/>
         <section className="xp-section" aria-label="Thông tin đơn vị">
-          <label className="field"><span>Tên đơn vị</span><input data-testid="unit-name" value={name} maxLength={120} autoComplete="off" placeholder="Ví dụ: Khối Công nghệ" aria-invalid={touched && !!errors.name} aria-describedby={touched && errors.name ? `${uid}-name-err` : undefined} onChange={(e) => setName(e.target.value)}/></label>
+          <label className="field"><span>Tên đơn vị</span><input data-testid="unit-name" value={name} maxLength={160} autoComplete="off" placeholder="Ví dụ: Khối Công nghệ" aria-invalid={touched && !!errors.name} aria-describedby={touched && errors.name ? `${uid}-name-err` : undefined} onChange={(e) => setName(e.target.value)}/></label>
           {touched && errors.name ? <p className="formError" role="alert" id={`${uid}-name-err`}>{errors.name}</p> : null}
-          <label className="field"><span>Mã (không bắt buộc)</span><input data-testid="unit-code" value={code} autoComplete="off" spellCheck={false} aria-invalid={touched && !!errors.code} aria-describedby={touched && errors.code ? `${uid}-code-err` : undefined} onChange={(e) => setCode(e.target.value)}/></label>
+          <label className="field"><span>Mã đơn vị</span><input data-testid="unit-code" value={code} autoComplete="off" spellCheck={false} placeholder="TECH" aria-invalid={touched && !!errors.code} aria-describedby={`${uid}-code-hint${touched && errors.code ? ` ${uid}-code-err` : ""}`} onChange={(e) => setCode(e.target.value)}/></label>
+          <small className="hint" id={`${uid}-code-hint`}>Duy nhất trong cùng cấp; máy chủ lưu mã ở dạng chữ hoa.</small>
           {touched && errors.code ? <p className="formError" role="alert" id={`${uid}-code-err`}>{errors.code}</p> : null}
-          <Picker label="Loại đơn vị" value={typeId} options={typeOptions(types)} onChange={setTypeId} describedBy={touched && errors.type ? `${uid}-type-err` : undefined}/>
-          {types.length === 0 ? <p className="hint">Chưa có loại đơn vị nào. Tạo loại (Khối, Chi nhánh, Phòng…) ở nút “Loại đơn vị”, hoặc để đơn vị tự do.</p> : null}
+          {mode === "create"
+            ? <Picker label="Loại đơn vị" value={typeId} options={typeOptions(types)} onChange={setTypeId} describedBy={touched && errors.type ? `${uid}-type-err` : undefined}/>
+            : <div className="field"><span>Loại đơn vị</span><p data-testid="unit-type-fixed">{typeName ?? "—"} <small className="hint">(không đổi được sau khi tạo)</small></p></div>}
+          {mode === "create" && types.filter((t) => t.active).length === 0 ? <p className="hint">Chưa có loại đơn vị nào đang bật. Tạo loại (Khối, Chi nhánh, Phòng…) ở nút “Loại đơn vị” trước.</p> : null}
           {touched && errors.type ? <p className="formError" role="alert" id={`${uid}-type-err`} data-testid="unit-type-error">{errors.type}</p> : null}
+          {advisory ? <p className="hint" role="note" data-testid="unit-depth-advisory">{advisory}</p> : null}
         </section>
-        {problem ? <Problem p={problem} onReload={onReload}/> : null}
+        {problem ? <Problem p={problem} onReload={onReload} onRetry={() => void run()} retrying={busy}/> : null}
         <div className="xp-footer"><button type="button" className="btn" onClick={onClose}>Hủy</button><button className="btn primary" data-testid="unit-submit" disabled={busy}>{busy ? "Đang lưu…" : mode === "create" ? "Thêm đơn vị" : "Lưu"}</button></div>
       </form>
     </Modal>
@@ -273,13 +187,15 @@ function UnitDialog({ mode, tenantId, api, units, types, unit, parent, onClose, 
 function MoveDialog({ tenantId, api, units, tree, types, unit, onClose, onDone, onReload }: { tenantId: string; api: OrganizationApi; units: OrgUnit[]; tree: TreeNode[]; types: OrgUnitType[]; unit: OrgUnit; onClose: () => void; onDone: () => void; onReload: () => void }) {
   const targets = useMemo(() => moveTargets(units, types, unit.id, tree), [units, types, unit.id, tree]);
   const [to, setTo] = useState<string | null | undefined>(undefined); const [busy, setBusy] = useState(false); const [problem, setProblem] = useState<OrgProblem | null>(null);
-  async function submit(e: FormEvent) {
-    e.preventDefault(); setProblem(null); if (to === undefined) return;
-    setBusy(true); try { await api.moveOrganizationUnit(tenantId, unit.id, unit.version, to); onDone(); } catch (err) { setProblem(orgProblem(err)); } finally { setBusy(false); }
+  const picked = to === undefined ? undefined : targets.find((t) => t.id === to);
+  async function run() {
+    if (to === undefined) return;
+    setBusy(true); setProblem(null);
+    try { await api.moveOrganizationUnit(tenantId, unit.id, unit.version, to); onDone(); } catch (err) { setProblem(orgProblem(err)); } finally { setBusy(false); }
   }
   return (
     <Modal label={`Di chuyển ${unit.name}`} onClose={onClose}>
-      <form className="modalBody" onSubmit={(e) => void submit(e)} data-testid="move-dialog">
+      <form className="modalBody" onSubmit={(e) => { e.preventDefault(); void run(); }} data-testid="move-dialog">
         <ModalHeader icon={<ArrowRightLeft size={22}/>} title={`Di chuyển “${unit.name}”`} subtitle="Chọn đơn vị cha mới. Toàn bộ đơn vị con đi theo."/>
         <fieldset className="xp-moveList" aria-label="Đơn vị cha mới">
           {targets.map((t) => (
@@ -288,67 +204,35 @@ function MoveDialog({ tenantId, api, units, tree, types, unit, onClose, onDone, 
               <span className="xp-pickerCur"><b>{t.label}</b>{t.reason ? <small>{t.reason}</small> : null}</span>
             </label>))}
         </fieldset>
-        {problem ? <Problem p={problem} onReload={onReload}/> : null}
+        {picked?.note ? <p className="hint" role="note" data-testid="move-advisory">{picked.note}</p> : null}
+        {problem ? <Problem p={problem} onReload={onReload} onRetry={() => void run()} retrying={busy}/> : null}
         <div className="xp-footer"><button type="button" className="btn" onClick={onClose}>Hủy</button><button className="btn primary" data-testid="move-submit" disabled={busy || to === undefined}>{busy ? "Đang chuyển…" : "Di chuyển"}</button></div>
       </form>
     </Modal>
   );
 }
 
-function DeleteDialog({ tenantId, api, units, unit, onClose, onDone, onReload }: { tenantId: string; api: OrganizationApi; units: OrgUnit[]; unit: OrgUnit; onClose: () => void; onDone: () => void; onReload: () => void }) {
-  const [busy, setBusy] = useState(false); const [problem, setProblem] = useState<OrgProblem | null>(null); const block = deleteBlock(unit, units);
-  async function go() { setBusy(true); setProblem(null); try { await api.deleteOrganizationUnit(tenantId, unit.id, unit.version); onDone(); } catch (err) { setProblem(orgProblem(err)); } finally { setBusy(false); } }
-  return (
-    <Modal label={`Xóa ${unit.name}`} onClose={onClose}>
-      <div className="modalBody" data-testid="delete-dialog">
-        <ModalHeader icon={<Trash2 size={22}/>} title={`Xóa “${unit.name}”?`} subtitle="Chỉ xóa được đơn vị không còn đơn vị con và nhân viên. Việc này không hòan tác được."/>
-        {block ? <p className="hint">{block}</p> : null}
-        {problem ? <Problem p={problem} onReload={onReload}/> : null}
-        <div className="xp-footer"><button className="btn" onClick={onClose}>Hủy</button><button className="btn danger" data-testid="delete-confirm" disabled={busy || !!block} onClick={() => void go()}>{busy ? "Đang xóa…" : "Xóa đơn vị"}</button></div>
-      </div>
-    </Modal>
-  );
-}
-
-function TypesDialog({ tenantId, api, plan, types, onClose, onChanged }: { tenantId: string; api: OrganizationApi; plan: OrganizationPlan; types: OrgUnitType[]; onClose: () => void; onChanged: () => void }) {
-  const uid = useId(); const [name, setName] = useState(""); const [code, setCode] = useState(""); const [icon, setIcon] = useState("folder"); const [allowed, setAllowed] = useState<string[]>([]);
-  const [touched, setTouched] = useState(false); const [busy, setBusy] = useState(false); const [problem, setProblem] = useState<OrgProblem | null>(null); const [added, setAdded] = useState<OrgUnitType[]>([]);
-  const all = [...types, ...added.filter((a) => !types.some((t) => t.id === a.id))];
-  const errors = validateTypeForm({ name, code, icon }, all); const createState = api.state("createOrganizationUnitType");
-  async function submit(e: FormEvent) {
-    e.preventDefault(); setTouched(true); setProblem(null); if (Object.keys(errors).length || createState.status === "NOT_READY") return;
-    setBusy(true);
-    try {
-      const body: NewOrgUnitType = { name, code: code.trim().toUpperCase(), icon, ...(allowed.length ? { allowedParentTypeIds: allowed } : {}) };
-      const t = await api.createOrganizationUnitType(tenantId, body); setAdded((a) => [...a, t]); setName(""); setCode(""); setIcon("folder"); setAllowed([]); setTouched(false); onChanged();
-    } catch (err) { setProblem(orgProblem(err)); } finally { setBusy(false); }
+/**
+ * Archive / restore confirmation (an in-app dialog; there is no hard delete). The hint is advisory: the server decides (ORG_UNIT_HAS_CHILDREN / ORG_UNIT_HAS_MEMBERS / RESTORE_CONFLICT and its reasons).
+ * The confirmation stays open on a refusal (so the reason and "Thử lại" are right there) and closes only on a real success.
+ */
+function UnitActionDialog({ kind, tenantId, api, units, unit, onClose, onDone, onReload }: { kind: "archive" | "restore"; tenantId: string; api: OrganizationApi; units: OrgUnit[]; unit: OrgUnit; onClose: () => void; onDone: () => void; onReload: () => void }) {
+  const [busy, setBusy] = useState(false); const [problem, setProblem] = useState<OrgProblem | null>(null);
+  const archive = kind === "archive"; const hint = archive ? archiveHint(unit) : restoreHint(unit, units);
+  async function run() {
+    setBusy(true); setProblem(null);
+    try { await (archive ? api.archiveOrganizationUnit(tenantId, unit.id, unit.version) : api.restoreOrganizationUnit(tenantId, unit.id, unit.version)); onDone(); } catch (err) { setProblem(orgProblem(err)); } finally { setBusy(false); }
   }
+  const title = archive ? `Lưu trữ “${unit.name}”?` : `Khôi phục “${unit.name}”?`;
   return (
-    <Modal label="Loại đơn vị" onClose={onClose}>
-      <div className="modalBody" data-testid="types-dialog">
-        <ModalHeader icon={<Settings2 size={22}/>} title="Loại đơn vị" subtitle="Công ty tự định nghĩa các loại (Khối, Chi nhánh, Phòng, Team…). Không có cấp bậc cố định."/>
-        <section className="xp-section" aria-label="Các loại hiện có">
-          <h3>Các loại hiện có</h3>
-          {plan.types.state === "not-ready" ? <NotReadyPanel testid="types-not-ready" title="Chưa sẵn sàng" reason={plan.types.reason}/> : all.length === 0 ? <p className="hint" data-testid="types-empty">Chưa có loại nào.</p> : (
-            <ul className="xp-typeList" data-testid="types-list">{all.map((t) => (
-              <li key={t.id}><span className="xp-nodeIcon"><UnitIcon id={t.icon}/></span><span className="xp-pickerCur"><b>{t.name}</b><small>{t.code}{t.allowedParentTypeIds?.length ? ` · đặt trong: ${t.allowedParentTypeIds.map((a) => all.find((x) => x.id === a)?.name ?? a).join(", ")}` : " · đặt ở bất kỳ đâu"}</small></span></li>))}</ul>)}
-        </section>
-        <form className="xp-section" noValidate onSubmit={(e) => void submit(e)} aria-label="Thêm loại đơn vị" data-testid="type-form">
-          <h3>Thêm loại mới</h3>
-          {createState.status === "NOT_READY" ? <NotReadyPanel testid="type-create-not-ready" title="Chưa thêm được loại" reason={createState.reason}/> : null}
-          <label className="field"><span>Tên loại</span><input data-testid="type-name" value={name} maxLength={80} autoComplete="off" placeholder="Ví dụ: Khối" aria-invalid={touched && !!errors.name} aria-describedby={touched && errors.name ? `${uid}-tname-err` : undefined} onChange={(e) => setName(e.target.value)}/></label>
-          {touched && errors.name ? <p className="formError" role="alert" id={`${uid}-tname-err`}>{errors.name}</p> : null}
-          <label className="field"><span>Mã</span><input data-testid="type-code" value={code} autoComplete="off" spellCheck={false} placeholder="DIVISION" aria-invalid={touched && !!errors.code} aria-describedby={touched && errors.code ? `${uid}-tcode-err` : undefined} onChange={(e) => setCode(e.target.value.toUpperCase())}/></label>
-          {touched && errors.code ? <p className="formError" role="alert" id={`${uid}-tcode-err`}>{errors.code}</p> : null}
-          <div className="field" role="radiogroup" aria-label="Biểu tượng"><span>Biểu tượng</span>
-            <div className="xp-iconGrid">{UNIT_ICONS.map((i) => (
-              <button key={i.id} type="button" role="radio" aria-checked={icon === i.id} aria-label={i.label} title={i.label} data-testid={`icon:${i.id}`} className={`xp-iconBtn${icon === i.id ? " sel" : ""}`} onClick={() => setIcon(safeIcon(i.id))}><UnitIcon id={i.id} size={20}/></button>))}</div>
-            <small className="hint">Chỉ chọn trong bộ biểu tượng có sẵn; không dùng đường dẫn ảnh.</small></div>
-          {all.length ? <fieldset className="xp-parentTypes" aria-label="Được đặt trong loại"><legend className="hint">Được đặt trong loại (để trống = đặt ở bất kỳ đâu)</legend>
-            {all.map((t) => <label key={t.id} className="xp-check"><input type="checkbox" checked={allowed.includes(t.id)} onChange={(e) => setAllowed(e.target.checked ? [...allowed, t.id] : allowed.filter((x) => x !== t.id))}/> {t.name}</label>)}</fieldset> : null}
-          {problem ? <Problem p={problem}/> : null}
-          <div className="xp-footer"><button type="button" className="btn" onClick={onClose}>Đóng</button><button className="btn primary" data-testid="type-submit" disabled={busy || createState.status === "NOT_READY"}>{busy ? "Đang lưu…" : "Thêm loại"}</button></div>
-        </form>
+    <Modal label={archive ? `Lưu trữ ${unit.name}` : `Khôi phục ${unit.name}`} onClose={onClose}>
+      <div className="modalBody" data-testid={`${kind}-dialog`}>
+        <ModalHeader icon={archive ? <Archive size={22}/> : <ArchiveRestore size={22}/>} title={title}
+          subtitle={archive ? "Đơn vị ra khỏi cơ cấu đang dùng nhưng không bị xóa: bạn khôi phục lại được. Chỉ lưu trữ được đơn vị không còn đơn vị con và thành viên." : "Đơn vị quay lại cơ cấu đang dùng, ở vị trí cũ, nếu đơn vị cha và loại của nó còn dùng được."}/>
+        {hint ? <p className="hint" data-testid={`${kind}-hint`}>{hint}</p> : null}
+        {problem ? <Problem p={problem} onReload={onReload} onRetry={() => void run()} retrying={busy} testid={`${kind}-problem`}/> : null}
+        <div className="xp-footer"><button type="button" className="btn" data-autofocus="" onClick={onClose}>Hủy</button>
+          <button type="button" className={`btn ${archive ? "danger" : "primary"}`} data-testid={`${kind}-confirm`} disabled={busy} onClick={() => void run()}>{busy ? (archive ? "Đang lưu trữ…" : "Đang khôi phục…") : archive ? "Lưu trữ đơn vị" : "Khôi phục đơn vị"}</button></div>
       </div>
     </Modal>
   );

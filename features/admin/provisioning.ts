@@ -41,7 +41,7 @@ export type NewAccount = { username: string; displayName: string; email?: string
  * What was done. The activation link is returned ONCE and lives only in the state of the dialog that created it: it is never written to storage, logged or put in a URL by this module.
  * Nothing is left "pending" but the person's own activation.
  */
-export type ProvisionResult = { tenantId: string; user: { id: string; username: string; displayName: string }; tenantRole: TenantRoleId; workspace: { id: string; role: WorkspaceRoleId } | null; activation: ActivationLink; pending: PendingStep[] };
+export type ProvisionResult = { tenantId: string; user: { id: string; username: string; displayName: string }; tenantRole: TenantRoleId; workspace: { id: string; role: WorkspaceRoleId } | null; activation: ActivationLink | null; pending: PendingStep[] };
 export type PendingStep = { id: "activate" | "organization"; label: string };
 
 export interface ProvisioningApi {

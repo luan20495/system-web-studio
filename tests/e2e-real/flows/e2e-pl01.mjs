@@ -2,7 +2,7 @@
 // suspends and restores it, adds and re-roles members, hits the "last TENANT_ADMIN" rule, and grants / revokes SYSTEM_ADMIN to a fixture account. Every state change is read back from the API (a separate session).
 import { Blocked } from "../lib/report.mjs";
 import { loginPortal, navLabels, openPortal, watchApi } from "../lib/portals.mjs";
-import { newPage, pageProblems } from "../lib/ui.mjs";
+import { confirmCancel, confirmYes, newPage, pageProblems, waitConfirm } from "../lib/ui.mjs";
 export const id = "E2E-PL01", title = "Platform portal: login, navigation, tenants (create, suspend, restore, members, last-admin rule), SYSTEM_ADMIN grant / revoke";
 export async function run({ cfg, fx, browser, check }) {
   const api = fx.sessions.admin;
@@ -36,11 +36,29 @@ export async function run({ cfg, fx, browser, check }) {
   const dup = await api.post("/admin/tenants", { slug, name: "dup" });
   check.ok("a duplicate slug is refused by the server (409 TENANT_SLUG_TAKEN)", dup.status === 409 && dup.body?.code === "TENANT_SLUG_TAKEN", `status=${dup.status} ${dup.body?.code}`, "http");
 
-  page.once("dialog", (d) => void d.accept());
-  await page.getByTestId("tenant-SUSPENDED").click(); await page.getByText("Đã đổi trạng thái công ty.").waitFor({ timeout: 10_000 }).catch(() => undefined);
-  check.ok("suspend: the UI says so and the server agrees (SUSPENDED)", (await api.get(`/admin/tenants/${t.id}`)).body?.status === "SUSPENDED" && (await page.getByTestId("tenant-ACTIVE").count()) === 1, "", "persistence");
-  page.once("dialog", (d) => void d.accept());
-  await page.getByTestId("tenant-ACTIVE").click(); await page.waitForTimeout(800);
+  // ---- suspend through the REAL in-app confirmation (A cancel, then B confirm); server state read by the SYSTEM_ADMIN API session, UI state read from the page ----------------------------
+  const statusWrites = []; page.on("request", (r) => { if (r.method() === "PATCH" && /\/admin\/tenants\/[0-9a-f-]{36}\/status$/.test(new URL(r.url()).pathname)) statusWrites.push(r.postData()); });
+  const T_SUSPEND = /Tạm khóa công ty/;
+  await page.getByTestId("tenant-SUSPENDED").click();
+  const dlg1 = await waitConfirm(page, T_SUSPEND);
+  check.ok("A/B suspend: an IN-APP dialog (role=dialog, titled 'Tạm khóa công ty …?') appears and its text says what will happen; no native browser dialog was involved", /Tạm khóa công ty/.test(dlg1.text) && /Hủy/.test(dlg1.text) && /Tạm khóa/.test(dlg1.text), dlg1.text, "ui");
+  await confirmCancel(page, T_SUSPEND);
+  const afterCancel = (await api.get(`/admin/tenants/${t.id}`)).body;
+  check.ok("C/D cancel: the dialog closes, NO status request was sent, the SERVER still says ACTIVE and the UI still offers 'Tạm khóa' (not 'Mở khóa')", statusWrites.length === 0 && afterCancel?.status === "ACTIVE" && (await page.getByTestId("tenant-SUSPENDED").count()) === 1 && (await page.getByTestId("tenant-ACTIVE").count()) === 0, `writes=${statusWrites.length} server=${afterCancel?.status}`, "persistence");
+  await page.getByTestId("tenant-SUSPENDED").click();
+  const dlg2 = await waitConfirm(page, T_SUSPEND);
+  check.ok("E reopen: the same dialog appears again", /Tạm khóa công ty/.test(dlg2.text), dlg2.text, "ui");
+  const patched = page.waitForResponse((r) => r.request().method() === "PATCH" && /\/admin\/tenants\/[0-9a-f-]{36}\/status$/.test(new URL(r.url()).pathname), { timeout: 15_000 });
+  await confirmYes(page, T_SUSPEND, "Tạm khóa"); const pr = await patched;
+  check.ok("F confirm: exactly one PATCH …/status {status:SUSPENDED} was sent and answered 200", statusWrites.length === 1 && JSON.parse(statusWrites[0] ?? "{}").status === "SUSPENDED" && pr.status() === 200, `writes=${statusWrites.length} body=${statusWrites[0]} status=${pr.status()}`, "http");
+  await page.getByText("Đã đổi trạng thái công ty.").waitFor({ timeout: 10_000 }).catch(() => undefined);
+  const susp = (await api.get(`/admin/tenants/${t.id}`)).body;
+  check.ok("G the SERVER state is SUSPENDED (read by a separate session)", susp?.status === "SUSPENDED", JSON.stringify({ id: susp?.id, status: susp?.status }), "persistence");
+  await page.reload({ waitUntil: "networkidle" }); await page.waitForTimeout(500);
+  check.ok("H after a full reload the UI reflects the backend: the tenant offers 'Mở khóa' (ACTIVE action) and no longer 'Tạm khóa'", (await page.getByTestId("tenant-ACTIVE").count()) === 1 && (await page.getByTestId("tenant-SUSPENDED").count()) === 0, "", "persistence");
+  // restore (also through the in-app dialog)
+  const T_UNLOCK = /Mở khóa công ty/;
+  await page.getByTestId("tenant-ACTIVE").click(); await waitConfirm(page, T_UNLOCK); await confirmYes(page, T_UNLOCK, "Mở khóa"); await page.waitForTimeout(800);
   check.ok("restore: back to ACTIVE on the server", (await api.get(`/admin/tenants/${t.id}`)).body?.status === "ACTIVE", "", "persistence");
 
   // ---- members + last-admin rule ----------------------------------------------------------------------------------------------------------------------
@@ -49,7 +67,7 @@ export async function run({ cfg, fx, browser, check }) {
   check.ok("the first administrator chosen in the dialog is TENANT_ADMIN on the server, with name and email metadata", members.some((m) => m.userId === adminA.id && m.role === "TENANT_ADMIN" && m.username === adminA.username && "displayName" in m && "email" in m), JSON.stringify(members), "persistence");
   check.ok("the member row shows the person's NAME from the member metadata (no extra lookup)", (await page.getByTestId(`tm:${adminA.id}`).innerText()).includes(adminA.username));
   const only = page.getByTestId(`tm:${adminA.id}`).locator("select");
-  await only.selectOption("MEMBER"); await page.waitForTimeout(700);
+  await only.selectOption("MEMBER"); await page.getByTestId(`tm-save:${adminA.id}`).click(); await page.waitForTimeout(700);   // the role is a draft until "Lưu"; the last-admin rule answers before any confirmation
   check.ok("demoting the ONLY TENANT_ADMIN is explained in words and nothing changed on the server", /ít nhất một quản trị/.test(await page.getByTestId("tenant-msg").innerText()) && ((await api.get(`/admin/tenants/${t.id}/members`)).body ?? []).find((m) => m.userId === adminA.id)?.role === "TENANT_ADMIN");
   const direct = await api.put(`/admin/tenants/${t.id}/members/${adminA.id}`, { role: "MEMBER" });
   check.ok("the server enforces it too (409 LAST_TENANT_ADMIN)", direct.status === 409 && direct.body?.code === "LAST_TENANT_ADMIN", `status=${direct.status} ${direct.body?.code}`, "http");

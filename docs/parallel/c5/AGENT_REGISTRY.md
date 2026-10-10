@@ -67,3 +67,6 @@ Rule applied to every old C5 agent worktree: branch HEAD is an ancestor of `agen
 - Branch refs `agent/c5-*` (33, including the three Wave A branches) are kept: every one is an ancestor of HEAD (no unique commits), so git history is intact.
 - Not C5 agent worktrees, therefore preserved: the checkouts of other teams (`xweb-c0..c7`, `xweb-wire`, `xweb-v29`, `xweb-base`), `xweb-c5` (lead checkout), `xweb-c5-overlay`, the real-stack backend worktrees under `~/.xweb-e2e-stack/` (`c5e2e-ae` backs a running gradle process; the others are idle, belong to the e2e-stack tooling and are kept until C5-L decides) and the lead scratchpad `stack` worktree.
 - Claude Agent Map UI history: no supported deletion mechanism known (AGENT_MAP_HISTORY_REMOVABLE: NO); not attempted.
+
+## 2026-10-10 PL01 / Dynamic Organization / AD01 / C2 task
+No coding agent was spawned (ACTIVE_AGENTS = 0). The isolated real stack `c5e2e-pl` of this task (containers, backend, portals, Studio) was started and stopped only through `docs/parallel/c5/e2e-stack.sh` and `tests/lib/owned-process-cli.mjs` (validated pid / start time / command; no kill by name or port) and removed with `down --infra --worktree`; ports 3001-3003 and 38180-38195 were free afterwards. The clean gate worktree was removed.

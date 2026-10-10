@@ -425,16 +425,46 @@ await block("scenario 52", async () => { const p = await open({ portal: "platfor
 
 // ===================================================================================================================== M-057 the employee status button is never a dead control
 await block("scenario 53", async () => { const p = await open({ portal: "admin", me: "sysatenant", start: "/admin/employees" }); await settle(p, 600);
-  await p.locator("[data-testid^='emp:']").first().click(); await settle(p, 300);
-  const btn = p.getByTestId("detail-toggle");
-  check("EMP57a a SYSTEM_ADMIN who is also a company admin: the status button is UNAVAILABLE (aria-disabled), not an enabled control with no handler", (await btn.getAttribute("aria-disabled")) === "true");
-  check("EMP57b the reason is visible text next to it and says why (the operation is not connected yet)", /Chưa sẵn sàng/.test(await p.locator("[role=dialog] .xp-reason").innerText()), await p.locator("[role=dialog] .xp-reason").innerText().catch(() => "none"));
-  await p.evaluate(() => { window.__calls.length = 0; }); await btn.click({ force: true }); await settle(p, 300);
-  check("EMP57c clicking it sends nothing", (await calls(p)).filter((c) => c.method !== "GET").length === 0);
+  check("EMP57a with the organization store OFF on the server (501 ORG_PERSISTENCE_NOT_AVAILABLE) the directory says it is not available: no rows, no detail to open, no invented list (a SYSTEM_ADMIN who is also a company admin)", (await p.getByTestId("emp-error").getAttribute("data-kind")) === "unavailable-feature" && (await p.locator("[data-testid^='emp:']").count()) === 0 && (await p.getByTestId("emp-table").count()) === 0);
+  check("EMP57b it asked the server for the directory ONCE per load (no fallback to the member list): no call to /members, nothing written", (await calls(p)).every((c) => c.method === "GET" && !/\/members/.test(c.path ?? "")) && (await calls(p)).some((c) => /\/admin\/tenants\/t1\/employees/.test(c.path ?? "")));
   await p.__ctx.close(); });
-await block("scenario 54", async () => { const p = await open({ portal: "admin", me: "tadmin", start: "/admin/employees" }); await settle(p, 600);
-  await p.locator("[data-testid^='emp:']").first().click(); await settle(p, 300);
-  check("EMP57d a company admin: unavailable too, with the explanation as visible text (EMPLOYEE_MANAGE + TENANT_MEMBERS are held; the connection is not there yet)", (await p.getByTestId("detail-toggle").getAttribute("aria-disabled")) === "true" && /Chưa sẵn sàng/.test(await p.locator("[role=dialog] .xp-reason").innerText()));
+await block("scenario 54", async () => { const p = await open({ portal: "admin", me: "tadmin", start: "/admin/organization" }); await settle(p, 600);
+  check("ORG57 the structure screen with the store OFF: 'chưa khả dụng' (its own state), no tree, no mock", (await p.getByTestId("org-error").getAttribute("data-kind")) === "unavailable-feature" && (await p.getByTestId("org-tree").count()) === 0 && (await p.getByTestId("org-empty").count()) === 0);
+  await p.__ctx.close(); });
+
+// ===================================================================================================================== M-052 / AD01 the administrator of a SECOND company (codes PER TENANT; a role label is not authority)
+const tcalls = async (p) => (await calls(p)).filter((c) => /\/admin\/tenants\//.test(c.path ?? "") && !c.unknown);
+const DEFAULT_TID = "00000000-0000-0000-0000-000000000001";
+await block("scenario AD01", async () => { const p = await open({ portal: "admin", me: "ad01", start: "/admin/company" }); await settle(p, 700);
+  check("AD01a SECONDARY_TENANT_ADMIN: primary DEFAULT as MEMBER (root permissions []) and TENANT_ADMIN of Acme with its own eight codes → the Admin portal ADMITS them and shows the company page of ACME (not DEFAULT)", /Acme/.test(await p.locator("main h1").first().innerText()) && !/mặc định/.test(await p.locator("main").innerText()));
+  const t = await tcalls(p);
+  check("AD01b GET tenant → 200 and GET members → 200, both for t1; the screen asked about no other company", t.some((c) => c.method === "GET" && c.path === "/admin/tenants/t1") && t.some((c) => c.method === "GET" && c.path === "/admin/tenants/t1/members") && t.every((c) => /\/admin\/tenants\/t1(\/|$)/.test(c.path ?? "")) && (await p.getByTestId("tenant-members-forbidden").count()) === 0);
+  await p.getByTestId("tenant-rename").click(); await p.getByTestId("tenant-rename-name").fill("Acme Việt Nam"); await p.getByTestId("tenant-rename-submit").click(); await settle(p, 500);
+  const patch = (await calls(p)).find((c) => c.method === "PATCH");
+  check("AD01c PATCH tenant (rename) → 200: ONE PATCH /admin/tenants/t1 with {name} only (no slug, no tenant in the body); the heading shows the new name and the page says it was done", patch?.path === "/admin/tenants/t1" && JSON.stringify(patch.body) === JSON.stringify({ name: "Acme Việt Nam" }) && /Acme Việt Nam/.test(await p.locator("main h1").first().innerText()) && /Đã đổi tên công ty/.test(await p.locator("main").innerText()));
+  check("AD01d there is NO company switch (the person administers exactly one company) and DEFAULT is not offered anywhere; the server was never asked about it (no denied call)", (await p.getByTestId("tenant-switch").count()) === 0 && !/mặc định/.test(await p.locator("main").innerText()) && !(await calls(p)).some((c) => c.denied));
+  await p.__ctx.close(); });
+await block("scenario AD01 org + people", async () => { const p = await open({ portal: "admin", me: "ad01", start: "/admin/organization" }); await settle(p, 700);
+  const t = await tcalls(p);
+  check("AD01e the organization screen is judged with Acme's codes and calls ONLY Acme's routes (org read goes to /admin/tenants/t1/…, never to DEFAULT)", (await p.getByTestId("org-error").count()) === 1 && t.length > 0 && t.every((c) => /\/admin\/tenants\/t1\//.test(c.path ?? "")) && !t.some((c) => c.path.includes(DEFAULT_TID)));
+  const side = await p.locator("body").innerText();
+  check("AD01f the sidebar offers what Acme's codes allow (company, organization, employees, people) and nothing platform-wide", /Công ty của tôi/.test(side) && /Cơ cấu tổ chức/.test(side) && /Nhân viên/.test(side) && !/Nhà cung cấp AI|Công ty \(tenant\)/.test(side), side.slice(0, 200));
+  await p.__ctx.close(); });
+await block("scenario AD01 cross-tenant + role-only", async () => {
+  for (const [who, why] of [["ad01old", "the same memberships without the per-tenant field: role TENANT_ADMIN is only a label"], ["ad01gone", "the codes were revoked (the next /auth/me lists none)"]]) {
+    const p = await open({ portal: "admin", me: who, start: "/admin/company" }); await settle(p, 700);
+    const body = await p.locator("body").innerText();
+    check(`AD01g ${who}: ${why} → the Admin portal does NOT admit them; no company screen, no tenant call was made`, !/Acme/.test(body) && !(await p.getByTestId("tenant-rename").count()) && (await tcalls(p)).length === 0, body.slice(0, 160));
+    await p.__ctx.close(); }
+  const p = await open({ portal: "admin", me: "ad01", start: "/admin/organization" }); await settle(p, 600);
+  const own = (await calls(p)).filter((c) => c.path && c.path.includes(DEFAULT_TID)).length;
+  const res = await p.evaluate(async (id) => { const r = await fetch(`/api/v1/admin/tenants/${id}/members`, { credentials: "include" }); return r.status; }, DEFAULT_TID);
+  check("AD01h CROSS_TENANT_ISOLATION: Acme's codes do not authorize DEFAULT — the UI never asked about DEFAULT by itself, and a direct call to DEFAULT's members is refused by the (fake) server with 403", own === 0 && res === 403);
+  await p.__ctx.close(); });
+await block("scenario AD01 suspended", async () => { const p = await open({ portal: "admin", me: "ad01", start: "/admin/company", susp: "1" }); await settle(p, 700);
+  check("SUSP01 a SUSPENDED company is still listed WITH its codes: the page opens and the members load (reads stay allowed); the page says the company is suspended", /Acme/.test(await p.locator("main h1").first().innerText()) && /tạm khóa/i.test(await p.locator("main").innerText()) && (await p.getByTestId("tenant-members-forbidden").count()) === 0);
+  await p.getByTestId("tenant-rename").click(); await p.getByTestId("tenant-rename-name").fill("Tên mới"); await p.getByTestId("tenant-rename-submit").click(); await settle(p, 500);
+  check("SUSP02 the rename is REFUSED by the backend (403 TENANT_SUSPENDED) and shown as such: the dialog stays with 'đang bị tạm khóa … Tên chưa thay đổi', the company keeps its name, no success message", (await p.getByTestId("tenant-rename-error").getAttribute("data-code")) === "TENANT_SUSPENDED" && /tạm khóa/.test(await p.getByTestId("tenant-rename-error").innerText()) && /Acme/.test(await p.locator("main h1").first().innerText()) && !/Đã đổi tên công ty/.test(await p.locator("main").innerText()));
   await p.__ctx.close(); });
 
 // ===================================================================================================================== M-058 the company list can be searched and paged (client-side, over what the API returns)

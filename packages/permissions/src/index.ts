@@ -1,8 +1,10 @@
 import type { Me } from "@xweb/types";
 import { canViewProject, canViewStudioIn, resolvePermissions } from "./canonical";
+import { holdsInTenant, tenantsAdministered } from "./tenantScope";
 
 export * from "./canonical";
 export * from "./roles";
+export * from "./tenantScope";
 
 /**
  * Which of the three Xweb web apps a person may open, derived from what the server says about them (`/auth/me`).
@@ -44,13 +46,16 @@ export function capabilitiesOf(me: Me | null | undefined): ReadonlySet<Capabilit
   const platform = me.platformScope ?? me.systemAdmin === true;
   if (platform) { out.add("platform.operate"); out.add("tenant.administer"); }
   // C1 final contract §9 item 15: `tenant.members` is the CODE TENANT_MEMBERS (primary tenant) or platform scope, never a role label (`tenantRole` / `tenants[].role` are display data)
-  if (platform || hasPermission(me, "TENANT_MEMBERS")) out.add("tenant.members");
+  // M-052: judged PER TENANT from `tenants[].permissions` (see tenantScope.ts); a person with no membership rows (older backend / mock) falls back to the top-level list of the primary tenant
+  const administered = tenantsAdministered(me);
+  const holdsMembers = me.tenants?.length ? me.tenants.some((t) => holdsInTenant(me, t.id, "TENANT_MEMBERS")) : hasPermission(me, "TENANT_MEMBERS");
+  if (platform || holdsMembers) out.add("tenant.members");
   // a workspace admin: the server lists MEMBER_MANAGE among the canonical codes of that workspace (no role name is read)
   if (me.workspaces.some((w) => w.permissions?.includes("MEMBER_MANAGE"))) out.add("workspace.members");
   // data-source administration: the server lists DATA_SOURCE_MANAGE (a canonical code, role-free) for the workspace
   if (me.workspaces.some((w) => w.permissions?.includes("DATA_SOURCE_MANAGE"))) out.add("workspace.data");
   // the Admin console opens for whoever has at least one thing to administer; WHAT they can do inside is decided per screen from the same capabilities and, finally, by the server
-  if (out.has("tenant.administer") || out.has("tenant.members") || out.has("workspace.members") || out.has("workspace.data")) out.add("admin.console");
+  if (out.has("tenant.administer") || out.has("tenant.members") || administered.length > 0 || out.has("workspace.members") || out.has("workspace.data")) out.add("admin.console");
   // C1 H-C1-04: a person whose APP_VIEW comes from a PROJECT membership has it in `projectScopes[].permissions` (never merged into the workspace list). Each scope is judged on its own.
   const builds = me.workspaces.some((w) => canViewStudioIn(w.permissions)) || !!me.projectScopes?.some((s) => !!s && Array.isArray(s.permissions) && canViewProject(resolvePermissions(s.permissions)));   // a malformed / null row is skipped (fail closed for that row), never a TypeError
   if (builds) out.add("studio.build");
