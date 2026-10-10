@@ -178,6 +178,8 @@ window.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const cfg = (window as any).__cfg;
   if (cfg.slow && path.startsWith(cfg.slow)) await new Promise((r) => setTimeout(r, 2500));
   const json = (status: number, b: unknown) => new Response(b === undefined ? null : JSON.stringify(b), { status, headers: { "Content-Type": "application/json" } });
+  // the spec changes what /auth/me answers while the page is open (session revocation, a transient failure, a disabled account, a changed membership): { status, code } or { body }
+  if (path === "/auth/me" && cfg.me) { if (cfg.me.status) return json(cfg.me.status, { code: cfg.me.code ?? "AUTHENTICATION_REQUIRED", message: "m", requestId: "rq" }); if (cfg.me.body) return json(200, cfg.me.body); }
   if (cfg.fail && path.startsWith(cfg.fail) && method === "GET") return json(500, { code: "INTERNAL", message: "java.lang.NullPointerException at com.systemwebstudio.Foo.bar(Foo.kt:42)", requestId: "req-123" });
   if (cfg.failw && path.startsWith(cfg.failw) && method !== "GET") return json(500, { code: "INTERNAL", message: "Internal Server Error: could not execute statement; SQL [n/a]", requestId: "req-999" });
   // the organization routes are OFF on a default server (ORGANIZATION_PERSISTENCE_ENABLED=false): every one answers 501 after authorization. The org screens' own behaviour is proven in org*.spec.mjs.
