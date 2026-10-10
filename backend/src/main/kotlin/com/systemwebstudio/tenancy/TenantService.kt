@@ -39,6 +39,8 @@ class TenantService(
     private val slugRegex = Regex("^[a-z0-9][a-z0-9-]{0,118}[a-z0-9]$")
 
     fun get(id: UUID): TenantEntity = tenants.findById(id).orElseThrow { notFound() }
+    /** a tenant that still exists AND is not DELETED: a deleted company is gone for every mutation, whoever calls (the platform operator can only restore it through [setStatus]) */
+    private fun live(id: UUID): TenantEntity = get(id).also { if (it.status == TenantStatus.DELETED.name) throw notFound() }
     fun list(): List<TenantEntity> = tenants.findAll().sortedBy { it.createdAt }
 
     @Transactional
@@ -81,7 +83,7 @@ class TenantService(
 
     @Transactional
     fun createWorkspace(tenantId: UUID, nameInput: String, actorId: UUID? = null): Map<String, Any> {
-        get(tenantId)
+        live(tenantId)
         val name = nameInput.trim()
         if (name.isBlank() || name.length > 160) throw ApiException.badRequest("VALIDATION_FAILED", "Workspace name is required (max 160 characters)")
         val id = UUID.randomUUID()
@@ -202,7 +204,7 @@ class TenantService(
     fun setMember(tenantId: UUID, userId: UUID, role: TenantRole, actorId: UUID? = null): TenantMemberView {
         // separation of duties: nobody (TENANT_ADMIN or SYSTEM_ADMIN) adds themselves to a tenant or changes their own tenant role
         if (actorId != null && actorId == userId) throw ApiException.forbidden("You cannot grant yourself access or change your own role", "SELF_GRANT_FORBIDDEN")
-        get(tenantId)
+        live(tenantId)
         val existing = members.findByTenantIdAndUserId(tenantId, userId)
         val before = existing?.let { mapOf("role" to it.role, "active" to it.active) }
         if (existing != null && existing.active && existing.role == TenantRole.TENANT_ADMIN.name && role != TenantRole.TENANT_ADMIN) assertNotLastAdmin(tenantId)
@@ -216,6 +218,7 @@ class TenantService(
     /** Deactivates (never deletes) the membership; the last active TENANT_ADMIN cannot be removed. */
     @Transactional
     fun removeMember(tenantId: UUID, userId: UUID, actorId: UUID? = null) {
+        live(tenantId)
         val m = members.findByTenantIdAndUserId(tenantId, userId)?.takeIf { it.active } ?: throw ApiException.notFound("TENANT_MEMBER_NOT_FOUND", "Tenant member not found")
         if (m.role == TenantRole.TENANT_ADMIN.name) assertNotLastAdmin(tenantId)
         m.active = false
