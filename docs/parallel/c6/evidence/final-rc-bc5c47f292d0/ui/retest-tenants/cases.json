@@ -1,0 +1,64 @@
+[
+ {
+  "id": "/platform/tenants/5fcfa9ad-ceb6-4d46-ab3d-8eb9550c94f3",
+  "group": "PLATFORM",
+  "portal": "platform",
+  "role": "super",
+  "route": "/platform/tenants/5fcfa9ad-ceb6-4d46-ab3d-8eb9550c94f3",
+  "viewport": 600,
+  "url": "/platform/tenants/5fcfa9ad-ceb6-4d46-ab3d-8eb9550c94f3",
+  "result": "PASS",
+  "notReady": false,
+  "fail": [],
+  "warn": [],
+  "axe": [],
+  "counts": {
+   "icons": {
+    "svg": 19,
+    "svgZero": 0,
+    "img": 0,
+    "imgBroken": 0,
+    "glyph": 2
+   },
+   "touchMid": 361
+  },
+  "screenshot": "platform/super/platform_tenants_id/600.png"
+ },
+ {
+  "id": "/platform/tenants/c880ff7f-dcc6-4664-bcd0-a8b79379d4a4",
+  "group": "PLATFORM",
+  "portal": "platform",
+  "role": "super",
+  "route": "/platform/tenants/c880ff7f-dcc6-4664-bcd0-a8b79379d4a4",
+  "viewport": 600,
+  "url": "/platform/tenants/c880ff7f-dcc6-4664-bcd0-a8b79379d4a4",
+  "result": "PASS",
+  "notReady": false,
+  "fail": [],
+  "warn": [],
+  "axe": [],
+  "counts": {
+   "icons": {
+    "svg": 19,
+    "svgZero": 0,
+    "img": 0,
+    "imgBroken": 0,
+    "glyph": 1
+   },
+   "touchMid": 15
+  },
+  "screenshot": "platform/super/platform_tenants_id/600.png"
+ },
+ {
+  "id": "platform · sidebar navigation (14 links)",
+  "group": "PLATFORM",
+  "portal": "platform",
+  "role": "super",
+  "route": "/platform",
+  "viewport": 1440,
+  "kind": "navigation",
+  "result": "PASS",
+  "fail": [],
+  "warn": []
+ }
+]

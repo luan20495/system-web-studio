@@ -1,0 +1,245 @@
+{
+ "tag": "24a33e",
+ "tenant": "A (fixture)",
+ "activationsThisRun": 5,
+ "requestsByTA": 866,
+ "measurements": {
+  "treeUnits": 300,
+  "tree": {
+   "median": 183,
+   "min": 47,
+   "max": 826,
+   "status": 200,
+   "bytes": 137212
+  },
+  "flat": {
+   "median": 29,
+   "min": 23,
+   "max": 111,
+   "status": 200,
+   "bytes": 116377
+  },
+  "directory100": {
+   "median": 26,
+   "min": 25,
+   "max": 34,
+   "status": 200,
+   "bytes": 91381
+  },
+  "directory25": {
+   "median": 24,
+   "min": 16,
+   "max": 43,
+   "status": 200,
+   "bytes": 22656
+  },
+  "directoryQ": {
+   "median": 38,
+   "min": 28,
+   "max": 97,
+   "status": 200,
+   "bytes": 23136
+  },
+  "detailDepth100": {
+   "median": 118,
+   "min": 107,
+   "max": 499,
+   "status": 200,
+   "bytes": 39449
+  }
+ },
+ "c5Mapping": {
+  "0 [ON] the organization store answers (200)": [
+   "O00:PASS"
+  ],
+  "01 unit types with placement rules + duplicate code": [
+   "O01a:PASS",
+   "O01b:PASS",
+   "O01c:PASS",
+   "O01d:PASS",
+   "O01e:PASS",
+   "O01h:PASS",
+   "O01j:PASS",
+   "O01k:PASS"
+  ],
+  "02 tree + flat + UPPER-CASE code + versions start 0": [
+   "O02a:PASS",
+   "O03a:PASS",
+   "O03c:PASS",
+   "O03d:PASS"
+  ],
+  "03 arbitrary depth: chain of 12, detail path": [
+   "O03b:PASS",
+   "O14d:PASS",
+   "O14e:PASS",
+   "O14f:PASS"
+  ],
+  "04 type rules ROOT_NOT_ALLOWED / PARENT_TYPE_NOT_ALLOWED": [
+   "O13a:PASS"
+  ],
+  "05 max depth MAX_DEPTH": [
+   "O01f:PASS",
+   "O14a:PASS",
+   "O14b:PASS",
+   "O14c:PASS"
+  ],
+  "06 optimistic versions VERSION_CONFLICT currentVersion": [
+   "O01i:PASS",
+   "O04b:PASS",
+   "O04c:PASS",
+   "O10b:FAIL",
+   "O17e:PASS"
+  ],
+  "07 unit code unique among non-archived siblings": [
+   "O04a:PASS",
+   "O12c:PASS"
+  ],
+  "08 move/reparent, newParentId required, null = root": [
+   "O10a:PASS",
+   "O11b:PASS",
+   "O11c:PASS"
+  ],
+  "09 cycle ORG_CYCLE": [
+   "O11a:PASS",
+   "O12a:PASS",
+   "O12b:PASS"
+  ],
+  "10 positions and grades": [
+   "O05a:PASS",
+   "O05b:PASS",
+   "O05c:PASS",
+   "O08b:PASS",
+   "O08c:PASS"
+  ],
+  "11 employee with membership+position+grade in one request": [
+   "O06a:PASS",
+   "O06b:PASS",
+   "O06c:PASS",
+   "O06e:PASS",
+   "O06f:PASS",
+   "O06g:PASS",
+   "O18h:PASS"
+  ],
+  "12 atomicity": [
+   "O06d:PASS"
+  ],
+  "13 multi membership, exactly one primary": [
+   "O07a:PASS",
+   "O07b:PASS",
+   "O07c:PASS",
+   "O08d:PASS",
+   "O08h:PASS"
+  ],
+  "14 position within membership, EMPLOYEE_ORG_HAS_POSITIONS": [
+   "O08a:PASS",
+   "O08e:PASS",
+   "O08f:PASS",
+   "O08g:PASS",
+   "O17a:PASS",
+   "O17c:PASS"
+  ],
+  "15 counts distinct": [
+   "O09a:PASS",
+   "O09b:PASS",
+   "O09c:PASS",
+   "O09g:PASS",
+   "O21a:PASS",
+   "O22a:PASS",
+   "O22b:FAIL",
+   "O23a:PASS",
+   "O23b:PASS"
+  ],
+  "16 disabling employee leaves counts": [
+   "O09d:PASS",
+   "O09e:PASS",
+   "O09f:PASS"
+  ],
+  "17 directory limits": [
+   "O18a:PASS",
+   "O18b:PASS",
+   "O18c:PASS",
+   "O18d:PASS",
+   "O18e:PASS",
+   "O18f:PASS",
+   "O18g:PASS",
+   "O20c:PASS"
+  ],
+  "18 archive guards": [
+   "O15a:PASS",
+   "O15b:PASS",
+   "O15c:PASS"
+  ],
+  "19 archive + restore RESTORE_CONFLICT": [
+   "O16a:PASS",
+   "O16b:PASS",
+   "O17b:PASS",
+   "O17d:PASS"
+  ],
+  "20 no hard delete": [
+   "O04d:PASS"
+  ],
+  "21 tenant isolation": [],
+  "22 labels authorize nothing": [],
+  "23 suspended tenant": [],
+  "24 contention ORG_STRUCTURE_BUSY": [
+   "O19a:PASS",
+   "O19b:PASS",
+   "O19c:PASS",
+   "O19d:PASS",
+   "O19e:PASS"
+  ],
+  "[setup] tenant admin /auth/me lists six organization codes": [
+   "O00b:PASS"
+  ],
+  "25a UI counts vs API (UI)": [],
+  "25b UI create sends no tenant (UI)": [],
+  "25c UI archive confirm (UI)": [],
+  "25d UI lifecycle (UI)": [],
+  "25e no 4xx/console error (UI)": []
+ },
+ "invariants": {
+  "label": "after all writes + concurrency",
+  "units": 304,
+  "employees": 201,
+  "problems": []
+ },
+ "sql": {
+  "types": "12",
+  "unitsAll": "304",
+  "unitsActive": "300",
+  "memberships": "217",
+  "primaries": "0",
+  "positions": "3",
+  "grades": "3",
+  "empPositions": "64"
+ },
+ "audit": {
+  "EMPLOYEE_CREATED": "196",
+  "EMPLOYEE_DISABLED": "2",
+  "EMPLOYEE_ENABLED": "2",
+  "EMPLOYEE_ORG_ASSIGNED": "222",
+  "EMPLOYEE_ORG_REMOVED": "5",
+  "EMPLOYEE_ORG_UPDATED": "5",
+  "EMPLOYEE_POSITION_ASSIGNED": "67",
+  "EMPLOYEE_POSITION_REMOVED": "3",
+  "EMPLOYEE_POSITION_UPDATED": "2",
+  "GRADE_CREATED": "3",
+  "GRADE_DISABLED": "1",
+  "GRADE_ENABLED": "1",
+  "GRADE_UPDATED": "2",
+  "ORG_UNIT_ARCHIVED": "7",
+  "ORG_UNIT_CREATED": "304",
+  "ORG_UNIT_MOVED": "8",
+  "ORG_UNIT_RESTORED": "3",
+  "ORG_UNIT_TYPE_CREATED": "12",
+  "ORG_UNIT_TYPE_DISABLED": "2",
+  "ORG_UNIT_TYPE_ENABLED": "1",
+  "ORG_UNIT_TYPE_UPDATED": "3",
+  "ORG_UNIT_UPDATED": "2",
+  "POSITION_CREATED": "3",
+  "POSITION_DISABLED": "2",
+  "POSITION_ENABLED": "2",
+  "USER_CREATED": "201",
+  "WORKSPACE_CREATED": "1"
+ }
+}

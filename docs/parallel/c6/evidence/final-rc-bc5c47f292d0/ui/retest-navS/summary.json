@@ -1,0 +1,51 @@
+{
+ "mode": "final-rc",
+ "tag": "retest-navS",
+ "browser": "Google Chrome 155.0.8059.40",
+ "integrationShaTested": "fabea8198fda1eaca9e5c5257c88d1b530bceb73",
+ "frontendUnderTest": "(same as backend worktree)",
+ "c5Sha": "(not provided — pilot)",
+ "viewports": [
+  1440
+ ],
+ "totalRoutes": 0,
+ "routeVariants": 1,
+ "totalCases": 1,
+ "PASS": 0,
+ "FAIL": 1,
+ "BLOCKED": 0,
+ "knownNotReady": 0,
+ "UNICODE": "PASS (1 cases)",
+ "ICONS": "PASS",
+ "RESPONSIVE": "PASS",
+ "ACCESSIBILITY": "FAIL (1 cases)",
+ "CREATE_COMPANY": "NOT_RUN",
+ "ORGANIZATION": "NOT_RUN",
+ "EMPLOYEES": "NOT_RUN",
+ "STUDIO": "FAIL (1/1)",
+ "DATA_ACTION_WORKFLOW": "NOT_RUN",
+ "PUBLISH_ROLLBACK": "NOT_RUN",
+ "PLATFORM": "NOT_RUN",
+ "ADMIN": "NOT_RUN",
+ "AUTH": "NOT_RUN",
+ "axe": {
+  "critical": 0,
+  "serious": 0,
+  "moderate": 0,
+  "minor": 0,
+  "wcagCritical": 0,
+  "wcagSerious": 0
+ },
+ "newBugs": 1,
+ "navigation": [
+  {
+   "portal": "studio",
+   "role": "workspaceAdmin",
+   "links": 6,
+   "ok": 5,
+   "fail": [
+    "\"Tạo ứng dụng\" not marked aria-current"
+   ]
+  }
+ ]
+}

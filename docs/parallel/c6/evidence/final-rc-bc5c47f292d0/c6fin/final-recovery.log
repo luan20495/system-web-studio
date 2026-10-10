@@ -1,0 +1,27 @@
+PASS REC-S01 [setup] schema with a Hero and two WAIT workflows stored -> 200
+PASS REC-S02 [setup] publish v1 PUBLIC reaches RUNNING -> RUNNING
+PASS REC-S03 [setup] site info carries a public URL -> http://127.0.0.1:52305/c6f-rec-13b35b-e9f4a7/
+PASS REC-S04 [setup] visitor GET of the public site returns v1 content -> 200 v1=true etag="7f999c821bb4f7614fa4339d27dee272e38ae661d023edae122a40c9fae80200"
+PASS REC-S05 [setup] two LIVE runs parked WAITING (3000 s and 60 s timers) -> WAITING/WAITING
+PASS REC-S06 [setup] org unit created, session valid, audit readable -> unit=true me=true audit=100
+PASS REC-A01 [restart] backend restart through the stack tooling (validated stop + start) -> ok=true 62s ready=true [e2e-stack] backend starting (first start compiles, ~1.5 min); log: /Users/hoangluan/.xweb-e2e-st
+PASS REC-A02 [restart] API outage observed during the restart (readiness != 200) and the PUBLISHED SITE stayed up meanwhile -> apiDownSamples=1/1 siteStatuses=200
+PASS REC-A03 [restart] the SAME session (Redis-backed) is still valid after the backend restart -> 200
+PASS REC-A04 [restart] published site after restart: same release, same bytes (hash, ETag) -> before=7f999c821bb4f761/"7f999c821bb4f7614fa4339d27dee272e38ae661d023edae122a40c9fae80200" after=7f999c821bb4f761/"7f999
+PASS REC-A05 [restart] release pointer unchanged after restart (site info activeDeployment) -> null -> null
+PASS REC-A06 [restart] release history intact -> 1
+PASS REC-A07 [restart] organization data intact after restart (PostgreSQL) -> Khối Recovery
+PASS REC-A08 [restart] audit log still available and not shorter -> 100
+PASS REC-A09 [workflow] the long WAIT run survived the restart and is still WAITING -> WAITING
+PASS REC-A10 [workflow] the 60 s WAIT run (timer expired during/after the restart) completes after recovery -> SUCCEEDED after 66s
+PASS REC-A11 [workflow] idempotent replay of the pre-restart start key returns the SAME run (key survived the restart) -> 202 91e76e5a-7a97-4a79-9cec-6041f26ce140
+PASS REC-A12 [workflow] a NEW run can be started after the restart -> 202
+PASS REC-A13 [restart] no ERROR line in the backend log since the last start (until this check) -> 0
+PASS REC-B01 [pause] API frozen with SIGSTOP (owned, validated): requests stall; after SIGCONT it answers again, same session valid -> pauseOk=true stalled=true resumeOk=true back=true
+PASS REC-B02 [pause] session and data still valid after the freeze -> 200
+PASS REC-C01 [render] render worker paused: the v2 publish does not report success and the live site keeps serving v1 -> render-pause=true deployment=FAILED reason=[RENDER_UNAVAILABLE] Render worker is not reachable (after 3 attempts) site v
+PASS REC-C02 [render] render worker resumed: a new publish reaches RUNNING and the site serves v2 -> resume=true deployment=RUNNING v2=false len=8974
+PASS REC-D01 [store] artifact store paused during a publish: the deployment does not end RUNNING with a broken release; after resume a publish succeeds -> pause=true paused-deployment=BUILDING resume=true after-resume=RUNNING site=200
+BLOCKED REC-E01 [portal] portal redeploy / served-SHA after redeploy: NOT executed by C6 (pinned portals belong to C0). BUILD_IDs of c0rc at the end of the run recorded -> {"platform":"2GuhCrW5Nzpw91J-27pgg","admin":"-Eg7ur7xVaYfyHAOTtq5I","studio":"cfrpHRfq45k1DWtHqrauH"}
+BLOCKED REC-E02 [crash] hard crash (SIGKILL) with a workflow step IN FLIGHT -> INTERRUPTED recovery: NOT provoked (the owned tooling only offers TERM/STOP/CONT and a WAIT run is parked, not in flight) -> -
+part18-recovery: total=26 pass=24 fail=0 blocked=2

@@ -1,0 +1,5 @@
+id	group	portal	role	route	viewport	result	notReady	fail	warn	screenshot
+/admin/people	ADMIN	admin	tenantAdmin	/admin/people	430	PASS				admin/tenantAdmin/admin_people/430.png
+/admin/people	ADMIN	admin	workspaceAdmin	/admin/people	430	PASS				admin/workspaceAdmin/admin_people/430.png
+admin · sidebar navigation (10 links)	ADMIN	admin	tenantAdmin	/admin	1440	PASS				
+studio · sidebar navigation (6 links)	STUDIO	studio	workspaceAdmin	/studio	1440	FAIL		"Tạo ứng dụng" not marked aria-current		

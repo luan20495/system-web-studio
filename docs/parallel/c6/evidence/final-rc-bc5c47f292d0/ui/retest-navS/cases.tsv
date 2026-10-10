@@ -1,0 +1,2 @@
+id	group	portal	role	route	viewport	result	notReady	fail	warn	screenshot
+studio · sidebar navigation (6 links)	STUDIO	studio	workspaceAdmin	/studio	1440	FAIL		"Tạo ứng dụng" not marked aria-current		

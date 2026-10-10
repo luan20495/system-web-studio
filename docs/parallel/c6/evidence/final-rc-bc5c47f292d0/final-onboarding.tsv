@@ -1,0 +1,63 @@
+id	area	description	expected	actual	result	class	owner	note	evidence
+ON01	onboarding	company X from a previous run of this script (resumed fixture; creation asserted in the first run)	tenant exists	1c7eff5b-8921-477d-b504-f5c7f68b5802	PASS	REAL_BACKEND_E2E		resume	
+ON02	onboarding	the new company appears in the platform tenant list	200, row with slug/name/status ACTIVE	200 found=true status=ACTIVE	PASS	REAL_BACKEND_E2E			
+ON03	onboarding	duplicate slug is refused	409 TENANT_SLUG_TAKEN	409 TENANT_SLUG_TAKEN	PASS	REAL_BACKEND_E2E			
+ON04	onboarding	malformed slug is refused	400 TENANT_SLUG_INVALID	400 TENANT_SLUG_INVALID	PASS	REAL_BACKEND_E2E			
+ON05	onboarding	first Tenant Admin activates through the one-time link and logs in (no manual DB edit)	activation 200 + login 200	ok (session established)	PASS	REAL_BACKEND_E2E		activations so far this run: 0	
+ON06	onboarding	/auth/me of the Tenant Admin: systemAdmin=false, platformScope=false, tenantId=X, tenantRole TENANT_ADMIN	as stated	200 sys=false plat=false tenantId=true role=TENANT_ADMIN	PASS	REAL_BACKEND_E2E			
+ON07	onboarding	root permissions are EXACTLY the 8 canonical TENANT_ADMIN codes (D-C0-54), no ORG_MANAGE	EMPLOYEE_MANAGE,EMPLOYEE_VIEW,ORG_STRUCTURE_MANAGE,ORG_STRUCTURE_VIEW,POSITION_GRADE_MANAGE,POSITION_GRADE_VIEW,TENANT_MANAGE,TENANT_MEMBERS	EMPLOYEE_MANAGE,EMPLOYEE_VIEW,ORG_STRUCTURE_MANAGE,ORG_STRUCTURE_VIEW,POSITION_GRADE_MANAGE,POSITION_GRADE_VIEW,TENANT_MANAGE,TENANT_MEMBERS	PASS	REAL_BACKEND_E2E			
+ON08	onboarding	tenants[] has exactly company X with the same 8 codes and status ACTIVE (Admin-portal data)	1 entry, X, ACTIVE, 8 codes	n=1 status=ACTIVE perms=8	PASS	REAL_BACKEND_E2E			
+ON09	onboarding	a fresh Tenant Admin has no workspace and no project scope yet	workspaces=[] projectScopes=[]	ws=0 ps=0	PASS	REAL_BACKEND_E2E			
+ON10	admin-portal	Admin portal data: company record (GET /admin/tenants/{X})	200 {id,slug,name,status}	200 c6f-co-x-5980a7 ACTIVE	PASS	REAL_BACKEND_E2E			
+ON11	admin-portal	Admin portal data: members list contains the Tenant Admin, active, role TENANT_ADMIN, no secret	200	200 n=3	PASS	REAL_BACKEND_E2E			
+ON12	admin-portal	GET /admin/tenants (the PLATFORM list) is not available to a Tenant Admin (contract: forPlatform)	403 ADMIN_REQUIRED	403 ADMIN_REQUIRED	PASS	REAL_BACKEND_E2E			
+ON13	admin-portal	Tenant Admin cannot create a company	403	403 ADMIN_REQUIRED	PASS	REAL_BACKEND_E2E			
+ON14	workspace	workspace W from a previous run	exists	74ad591d-f21e-4b98-aa7a-0c23bbd81bbb	PASS	REAL_BACKEND_E2E		resume	
+ON15	provisioning	Tenant Admin provisions a user with a workspace role (WORKSPACE_ADMIN) and the user activates	201 + activation 200 + login 200	ok	PASS	REAL_BACKEND_E2E			
+ON16	provisioning	the new workspace admin sees workspace W with the WORKSPACE_ADMIN canonical set, tenantRole MEMBER, no tenant capability	role WORKSPACE_ADMIN; 13 codes; root permissions []	role=WORKSPACE_ADMIN n=13 rootPerms=0 tenantRole=MEMBER	PASS	REAL_BACKEND_E2E			
+ON17	provisioning	the Tenant Admin gets NO implicit workspace/project access by being Tenant Admin (not a workspace member)	403/404 (404 WORKSPACE_NOT_FOUND expected)	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+ON18	provisioning	the Tenant Admin cannot read the workspace audit (no AUDIT_READ)	403/404	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+ON19	provisioning	a user provisioned without workspace is a tenant MEMBER with NO permission and no workspace	tenantRole MEMBER, permissions [], workspaces []	role=MEMBER perms=0 ws=1	PASS	REAL_BACKEND_E2E		resumed run: LONELY already joined W in the first run, check is only meaningful on the first run	
+ON20	membership	workspace admin adds the member to the workspace (POST /workspaces/{W}/members)	201 (first run) / 409 ALREADY_MEMBER (resumed run)	409 ALREADY_MEMBER	PASS	REAL_BACKEND_E2E			
+ON21	membership	the added member now sees W with role VIEWER and NO canonical permission (workspace VIEWER grants none)	listed, permissions []	listed=true role=VIEWER perms=0	PASS	REAL_BACKEND_E2E			
+ON22	membership	workspace VIEWER cannot create a project	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+ON23	role-assign	Tenant Admin promotes a member to TENANT_ADMIN: effective on the NEXT request of the target's existing session	PUT 200; /auth/me 8 codes; members route 200	200 perms=8 members=200	PASS	REAL_BACKEND_E2E			
+ON24	role-assign	demotion applies on the NEXT request of the same session (no re-login)	PUT 200; /auth/me []; members route 403	200 perms=0 members=403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+ON25	role-assign	Tenant Admin cannot change its own role	403 SELF_GRANT_FORBIDDEN	403 SELF_GRANT_FORBIDDEN	PASS	REAL_BACKEND_E2E			
+ON27	role-assign	workspace admin assigns the project role VIEWER to the member	201 (first run) / 409 ALREADY_MEMBER (resumed run)	409 ALREADY_MEMBER	PASS	REAL_BACKEND_E2E			
+ON28	role-assign	the member's /auth/me projectScopes row for P is exactly APP_USE + APP_VIEW (not merged into workspace/root)	[APP_USE,APP_VIEW]; root []	APP_USE,APP_VIEW root=0	PASS	REAL_BACKEND_E2E			
+ON29	audit	workspace admin reads the workspace audit (AUDIT_READ)	200	200	PASS	REAL_BACKEND_E2E			
+ON30	audit	audit: TENANT_CREATED by SYSTEM_ADMIN, target = company X	actor=SYSTEM_ADMIN, resource TENANT:X	found actor=Local Admin (a66cb86b) target=TENANT:1c7eff5b	PASS	REAL_BACKEND_E2E			
+ON31	audit	audit: USER_CREATED (first admin) by SYSTEM_ADMIN	actor SA target TA_X	found actor=Local Admin (a66cb86b) target=USER:9159839b	PASS	REAL_BACKEND_E2E			
+ON32	audit	audit: TENANT_MEMBER_SET TENANT_ADMIN for the first admin, actor SYSTEM_ADMIN	found	found actor=Local Admin (a66cb86b) target=TENANT:1c7eff5b	PASS	REAL_BACKEND_E2E			
+ON33	audit	audit: ACTIVATION_LINK_CREATED for the first admin	found	found actor=Local Admin (a66cb86b) target=USER:9159839b	PASS	REAL_BACKEND_E2E			
+ON34	audit	audit: ACCOUNT_ACTIVATED for the first admin	found	found actor=C6F tenant admin 5980a7 (9159839b) target=USER:9159839b	PASS	REAL_BACKEND_E2E			
+ON35	audit	audit: LOGIN_SUCCESS of the Tenant Admin	found	found actor=C6F tenant admin 5980a7 (9159839b) target=USER:9159839b	PASS	REAL_BACKEND_E2E			
+ON36	audit	audit: WORKSPACE_CREATED by the Tenant Admin (actor = TA, not SA)	actor TA target workspace W	found actor=C6F tenant admin 5980a7 (9159839b) target=WORKSPACE:74ad591d	PASS	REAL_BACKEND_E2E			
+ON37	audit	audit: USER_CREATED (workspace admin) by the Tenant Admin	actor TA	found actor=C6F tenant admin 5980a7 (9159839b) target=USER:1d081222	PASS	REAL_BACKEND_E2E			
+ON38	audit	audit: ADD_MEMBER of the plain member by the workspace admin (actor M1, role VIEWER)	actor M1	found actor=C6F workspace admin (1d081222) target=WORKSPACE_MEMBER:3815310d	PASS	REAL_BACKEND_E2E			
+ON39	audit	audit: both role changes of M1 (MEMBER->TENANT_ADMIN, TENANT_ADMIN->MEMBER) recorded by the Tenant Admin, with old and new value	>=2 TENANT_MEMBER_SET incl. TENANT_ADMIN and MEMBER, each with old/new	n=7 roles=MEMBER/TENANT_ADMIN/MEMBER/TENANT_ADMIN/MEMBER/TENANT_ADMIN/MEMBER oldValue=false	PASS	REAL_BACKEND_E2E			
+ON40	audit	nothing secret in 32 audit rows of this journey (+ the workspace audit): no activation token, no password, no hash/secret/credential key	none	tokenOrPasswordLeaked=false keyword=false	PASS	REAL_BACKEND_E2E			
+ON41	audit	every audit row has an actor id, an action and a request id (append-only trail, nothing anonymous for privileged steps)	all present	rows=32 missing=0	PASS	REAL_BACKEND_E2E			
+ON42	audit	the Tenant Admin cannot read the platform audit	403 ADMIN_REQUIRED	403 ADMIN_REQUIRED	PASS	REAL_BACKEND_E2E			
+ON43	audit	no delete route for audit (append-only): DELETE answers 4xx/405, never 2xx	not 2xx	405 / 405	PASS	REAL_BACKEND_E2E			
+ON50	isolation	company Y admin creates its own workspace	201	201	PASS	REAL_BACKEND_E2E			
+ON51	isolation	Tenant Admin Y reads company X	404	404 TENANT_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+ON52	isolation	Tenant Admin Y lists company X members	404	404 TENANT_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+ON53	isolation	Tenant Admin Y creates a workspace in X	404	404 TENANT_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+ON54	isolation	Tenant Admin Y provisions a user in X	404	404 TENANT_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+ON55	isolation	Tenant Admin Y promotes an X member (PUT members)	404	404 TENANT_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+ON56	isolation	Tenant Admin Y reads workspace W of X	404	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+ON57	isolation	Tenant Admin Y reads project P of X through its own workspace id	404	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+ON58	isolation	Tenant Admin Y reads W members / audit	404	404	PASS	REAL_BACKEND_E2E			
+ON59	isolation	Tenant Admin X reads company Y and its workspace	404	404	PASS	REAL_BACKEND_E2E			
+ON60	isolation	Tenant Admin X reads a user of Y through the platform user route	403/404	403 ADMIN_REQUIRED	PASS	REAL_BACKEND_E2E			
+ON61	isolation	member candidates of Y never list X accounts	no X username	200 leak=false	PASS	REAL_BACKEND_E2E			
+ON62	isolation	/auth/me of Y's admin shows only company Y (no X id/slug/workspace/project anywhere)	no X data	tenants=1	PASS	REAL_BACKEND_E2E			
+ON63	sysadmin	SYSTEM_ADMIN reads any company (platform scope)	200	200	PASS	REAL_BACKEND_E2E			
+ON64	sysadmin	SYSTEM_ADMIN lists members of any company (TENANT_MEMBERS via platform scope)	200	200	PASS	REAL_BACKEND_E2E			
+ON65	sysadmin	SYSTEM_ADMIN (not a member) project LIST of a company workspace: contract 3.2 says business routes give 403 for a platform-scope operator	403 (contract text) or 404	200 body=[]	FAIL	REAL_BACKEND_E2E		FQ-IAM-01 P3: forWorkspace passes for platform scope; ProjectController.list answers 200 with an EMPTY list (no project data is exposed: see ON65b)	
+ON65b	sysadmin	SYSTEM_ADMIN (not a member) reads NO business data: list body is empty, project/schema/versions/members answer 404, data-sources 403	[] ; 404 x4; 403	list=200 [] ; 404/404/404/404 ; ds=403	PASS	REAL_BACKEND_E2E			
+ON66	sysadmin	SYSTEM_ADMIN reads organization data of a company: 403 (org data is tenant business data)	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+ON67	sysadmin	SYSTEM_ADMIN (not a member) reads the workspace audit through the workspace route	403/404 (platform audit is /admin/audit)	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+ON99	budget	activation budget respected (coordinator limit: <= 12 for the whole workstream)	<= 4 in this script	0	PASS	REAL_BACKEND_E2E			

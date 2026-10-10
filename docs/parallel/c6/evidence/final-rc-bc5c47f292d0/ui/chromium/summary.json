@@ -1,0 +1,86 @@
+{
+ "mode": "final-rc",
+ "tag": "chromium",
+ "browser": "Google Chrome 155.0.8059.40",
+ "integrationShaTested": "fabea8198fda1eaca9e5c5257c88d1b530bceb73",
+ "frontendUnderTest": "(same as backend worktree)",
+ "c5Sha": "(not provided — pilot)",
+ "viewports": [
+  1920,
+  1440,
+  1280,
+  1024,
+  768,
+  600,
+  430,
+  390,
+  360
+ ],
+ "totalRoutes": 95,
+ "routeVariants": 158,
+ "totalCases": 1089,
+ "PASS": 613,
+ "FAIL": 476,
+ "BLOCKED": 0,
+ "knownNotReady": 12,
+ "UNICODE": "PASS (1089 cases)",
+ "ICONS": "FAIL",
+ "RESPONSIVE": "FAIL (10 cases)",
+ "ACCESSIBILITY": "FAIL (12 cases)",
+ "CREATE_COMPANY": "FAIL (8/18)",
+ "ORGANIZATION": "FAIL (9/26)",
+ "EMPLOYEES": "FAIL (4/10)",
+ "STUDIO": "FAIL (185/364)",
+ "DATA_ACTION_WORKFLOW": "FAIL (36/45)",
+ "PUBLISH_ROLLBACK": "FAIL (4/9)",
+ "PLATFORM": "FAIL (90/201)",
+ "ADMIN": "FAIL (125/281)",
+ "AUTH": "FAIL (15/135)",
+ "axe": {
+  "critical": 0,
+  "serious": 0,
+  "moderate": 13,
+  "minor": 0,
+  "wcagCritical": 0,
+  "wcagSerious": 0
+ },
+ "newBugs": 488,
+ "navigation": [
+  {
+   "portal": "platform",
+   "role": "super",
+   "links": 14,
+   "ok": 7,
+   "fail": [
+    "\"AI\" not marked aria-current",
+    "\"Cảnh báo\" not marked aria-current",
+    "click \"Bảo mật\" went to /login, expected /platform/security",
+    "\"Bảo mật\" not marked aria-current",
+    "click \"Chi phí\" went to /login, expected /platform/costs",
+    "\"Chi phí\" not marked aria-current",
+    "click \"Connector\" went to /login, expected /platform/connectors",
+    "\"Connector\" not marked aria-current",
+    "click \"Components\" went to /login, expected /platform/components",
+    "\"Components\" not marked aria-current",
+    "click \"Build & lưu trữ\" went to /login, expected /platform/builds",
+    "\"Build & lưu trữ\" not marked aria-current"
+   ]
+  },
+  {
+   "portal": "admin",
+   "role": "tenantAdmin",
+   "links": 10,
+   "ok": 10,
+   "fail": []
+  },
+  {
+   "portal": "studio",
+   "role": "workspaceAdmin",
+   "links": 6,
+   "ok": 5,
+   "fail": [
+    "\"Tạo ứng dụng\" not marked aria-current"
+   ]
+  }
+ ]
+}

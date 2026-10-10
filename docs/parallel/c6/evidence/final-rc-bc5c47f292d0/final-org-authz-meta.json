@@ -1,0 +1,18 @@
+{
+ "tag": "c71887",
+ "activationsThisRun": 0,
+ "stackEvents": {
+  "retries": 0,
+  "relogins": 0
+ },
+ "routes": 39,
+ "writes": 26,
+ "caps": [
+  "EMPLOYEE_MANAGE",
+  "EMPLOYEE_VIEW",
+  "ORG_STRUCTURE_MANAGE",
+  "ORG_STRUCTURE_VIEW",
+  "POSITION_GRADE_MANAGE",
+  "POSITION_GRADE_VIEW"
+ ]
+}

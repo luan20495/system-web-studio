@@ -1,0 +1,210 @@
+id	area	description	expected	actual	result	class	owner	note	evidence
+IAM-S-B	perm-set	/auth/me projectScopes[P] of B is EXACTLY the canonical set of its project role	ACTION_EXECUTE,APP_EDIT,APP_USE,APP_VIEW,DATA_SOURCE_VIEW,QUERY_EXECUTE	ACTION_EXECUTE,APP_EDIT,APP_USE,APP_VIEW,DATA_SOURCE_VIEW,QUERY_EXECUTE	PASS	REAL_BACKEND_E2E		root and workspace permissions are [] (workspace EDITOR/PUBLISHER/VIEWER grant no canonical code); scopes are never merged	
+IAM-S-C	perm-set	/auth/me projectScopes[P] of C is EXACTLY the canonical set of its project role	APP_PUBLISH,APP_USE,APP_VIEW	APP_PUBLISH,APP_USE,APP_VIEW	PASS	REAL_BACKEND_E2E		root and workspace permissions are [] (workspace EDITOR/PUBLISHER/VIEWER grant no canonical code); scopes are never merged	
+IAM-S-D	perm-set	/auth/me projectScopes[P] of D is EXACTLY the canonical set of its project role	APP_USE,APP_VIEW	APP_USE,APP_VIEW	PASS	REAL_BACKEND_E2E		root and workspace permissions are [] (workspace EDITOR/PUBLISHER/VIEWER grant no canonical code); scopes are never merged	
+IAM-S-M1	perm-set	WORKSPACE_ADMIN: /auth/me workspace set = 13 canonical codes (every project/data/logic code + MEMBER_MANAGE); no TENANT_*/ORG_* code	ACTION_EXECUTE,APP_EDIT,APP_PUBLISH,APP_SHARE,APP_USE,APP_VIEW,DATA_MUTATE,DATA_SOURCE_MANAGE,DATA_SOURCE_VIEW,MEMBER_MANAGE,QUERY_EXECUTE,WORKFLOW_EXECUTE,WORKFLOW_MANAGE	ACTION_EXECUTE,APP_EDIT,APP_PUBLISH,APP_SHARE,APP_USE,APP_VIEW,DATA_MUTATE,DATA_SOURCE_MANAGE,DATA_SOURCE_VIEW,MEMBER_MANAGE,QUERY_EXECUTE,WORKFLOW_EXECUTE,WORKFLOW_MANAGE	PASS	REAL_BACKEND_E2E			
+IAM-S-A	perm-set	Tenant Admin: 8 canonical tenant codes, NO workspace, NO project scope (a Tenant Admin holds no business code by being Tenant Admin)	8 codes; ws=0; ps=0	8 ws=0 ps=0	PASS	REAL_BACKEND_E2E			
+IAM-S-NOORG	perm-set	no /auth/me (A,B,C,D,M1,SYSTEM_ADMIN) contains ORG_MANAGE / T-ORG-MANAGE / ORG_ADMIN / DEPARTMENT_MANAGE / PROJECT_* storage names in permissions	none	hit=false/false/false/false/false/false	PASS	REAL_BACKEND_E2E			
+IAM-S-SA	perm-set	SYSTEM_ADMIN root permissions are exactly the platform scope TENANT_MANAGE + TENANT_MEMBERS (no org, no business code)	TENANT_MANAGE,TENANT_MEMBERS	TENANT_MANAGE,TENANT_MEMBERS	PASS	REAL_BACKEND_E2E			
+IAM-M01-A	APP_VIEW	GET project [A]	404	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M01-B	APP_VIEW	GET project [B]	200	200	PASS	REAL_BACKEND_E2E			
+IAM-M01-C	APP_VIEW	GET project [C]	200	200	PASS	REAL_BACKEND_E2E			
+IAM-M01-D	APP_VIEW	GET project [D]	200	200	PASS	REAL_BACKEND_E2E			
+IAM-M01-M1	APP_VIEW	GET project [M1]	200	200	PASS	REAL_BACKEND_E2E			
+IAM-M02-A	APP_VIEW	GET schema [A]	404	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M02-B	APP_VIEW	GET schema [B]	200	200	PASS	REAL_BACKEND_E2E			
+IAM-M02-C	APP_VIEW	GET schema [C]	200	200	PASS	REAL_BACKEND_E2E			
+IAM-M02-D	APP_VIEW	GET schema [D]	200	200	PASS	REAL_BACKEND_E2E			
+IAM-M02-M1	APP_VIEW	GET schema [M1]	200	200	PASS	REAL_BACKEND_E2E			
+IAM-M03-A	APP_VIEW	GET versions [A]	404	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M03-B	APP_VIEW	GET versions [B]	200	200	PASS	REAL_BACKEND_E2E			
+IAM-M03-C	APP_VIEW	GET versions [C]	200	200	PASS	REAL_BACKEND_E2E			
+IAM-M03-D	APP_VIEW	GET versions [D]	200	200	PASS	REAL_BACKEND_E2E			
+IAM-M03-M1	APP_VIEW	GET versions [M1]	200	200	PASS	REAL_BACKEND_E2E			
+IAM-M04-A	APP_EDIT	PATCH schema (valid ADD_WORKFLOW_REF) [A]	404	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M04r-A	APP_EDIT	revision after the attempt [A] unchanged (nothing applied)	16	16	PASS	REAL_BACKEND_E2E			
+IAM-M04-B	APP_EDIT	PATCH schema (valid ADD_WORKFLOW_REF) [B]	200	200	PASS	REAL_BACKEND_E2E			
+IAM-M04r-B	APP_EDIT	revision after the attempt [B] advanced by exactly 1 (applied)	17	17	PASS	REAL_BACKEND_E2E			
+IAM-M04-C	APP_EDIT	PATCH schema (valid ADD_WORKFLOW_REF) [C]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M04r-C	APP_EDIT	revision after the attempt [C] unchanged (nothing applied)	17	17	PASS	REAL_BACKEND_E2E			
+IAM-M04-D	APP_EDIT	PATCH schema (valid ADD_WORKFLOW_REF) [D]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M04r-D	APP_EDIT	revision after the attempt [D] unchanged (nothing applied)	17	17	PASS	REAL_BACKEND_E2E			
+IAM-M05-A	APP_PUBLISH	POST publish [A]	404	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M05-B	APP_PUBLISH	POST publish [B]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M05-D	APP_PUBLISH	POST publish [D]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M05-C	APP_PUBLISH	POST publish [C] (APP_PUBLISH, no APP_EDIT): passes authorization	202/200/409/400/422 (domain answer, not 401/403/404-not-found)	202	PASS	REAL_BACKEND_E2E		a real publish by the PUBLISHER	
+IAM-M06-A	APP_SHARE	GET project members [A]	404	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M06-B	APP_SHARE	GET project members [B]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M06-C	APP_SHARE	GET project members [C]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M06-D	APP_SHARE	GET project members [D]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M06-M1	APP_SHARE	GET project members [M1]	200	200	PASS	REAL_BACKEND_E2E			
+IAM-M07-A	MEMBER_MANAGE	GET workspace members [A]	404	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M07-B	MEMBER_MANAGE	GET workspace members [B]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M07-C	MEMBER_MANAGE	GET workspace members [C]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M07-D	MEMBER_MANAGE	GET workspace members [D]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M07-M1	MEMBER_MANAGE	GET workspace members [M1]	200	200	PASS	REAL_BACKEND_E2E			
+IAM-M08-A	AUDIT_READ	GET workspace audit-events [A]	404	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M08-B	AUDIT_READ	GET workspace audit-events [B]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M08-C	AUDIT_READ	GET workspace audit-events [C]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M08-D	AUDIT_READ	GET workspace audit-events [D]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M08-M1	AUDIT_READ	GET workspace audit-events [M1]	200	200	PASS	REAL_BACKEND_E2E			
+IAM-M09-A	DATA_SOURCE_VIEW	GET workspace data-sources (workspace-scope route: DATA_SOURCE_VIEW comes from the WORKSPACE role; project EDITOR's DATA_SOURCE_VIEW is project-scoped) [A]	403/404	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M09-B	DATA_SOURCE_VIEW	GET workspace data-sources (workspace-scope route: DATA_SOURCE_VIEW comes from the WORKSPACE role; project EDITOR's DATA_SOURCE_VIEW is project-scoped) [B]	403	403 PERMISSION_DENIED	PASS	REAL_BACKEND_E2E			
+IAM-M09-C	DATA_SOURCE_VIEW	GET workspace data-sources (workspace-scope route: DATA_SOURCE_VIEW comes from the WORKSPACE role; project EDITOR's DATA_SOURCE_VIEW is project-scoped) [C]	403	403 PERMISSION_DENIED	PASS	REAL_BACKEND_E2E			
+IAM-M09-D	DATA_SOURCE_VIEW	GET workspace data-sources (workspace-scope route: DATA_SOURCE_VIEW comes from the WORKSPACE role; project EDITOR's DATA_SOURCE_VIEW is project-scoped) [D]	403	403 PERMISSION_DENIED	PASS	REAL_BACKEND_E2E			
+IAM-M09-M1	DATA_SOURCE_VIEW	GET workspace data-sources (workspace-scope route: DATA_SOURCE_VIEW comes from the WORKSPACE role; project EDITOR's DATA_SOURCE_VIEW is project-scoped) [M1]	200	200	PASS	REAL_BACKEND_E2E			
+IAM-M10-A	DATA_SOURCE_MANAGE	POST data-source with a VALID body {name,type:rest} [A]	403/404	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M10-B	DATA_SOURCE_MANAGE	POST data-source with a VALID body {name,type:rest} [B]	403	403 PERMISSION_DENIED	PASS	REAL_BACKEND_E2E			
+IAM-M10-C	DATA_SOURCE_MANAGE	POST data-source with a VALID body {name,type:rest} [C]	403	403 PERMISSION_DENIED	PASS	REAL_BACKEND_E2E			
+IAM-M10-D	DATA_SOURCE_MANAGE	POST data-source with a VALID body {name,type:rest} [D]	403	403 PERMISSION_DENIED	PASS	REAL_BACKEND_E2E			
+IAM-M10b	order-of-checks	POST data-source with an EMPTY body as the VIEWER D: contract order of checks is authentication -> permission -> validation	403	400 INVALID_PARAMS	FAIL	REAL_BACKEND_E2E		FQ-IAM-02 P3 (C3 management route): body validation (400 INVALID_PARAMS 'name is required') runs before the permission check; with a valid-looking body the same caller gets 403 (IAM-M10-D). No side effect, no data disclosed	
+IAM-M11-A	PROJECT_CREATE	POST project in W (workspace role) [A]	403/404	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M11-B	PROJECT_CREATE	POST project in W (workspace role) [B]	201	201	PASS	REAL_BACKEND_E2E			
+IAM-M11-C	PROJECT_CREATE	POST project in W (workspace role) [C]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M11-D	PROJECT_CREATE	POST project in W (workspace role) [D]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M12-A	QUERY_EXECUTE	POST app-runtime query run LIVE (needs APP_USE + QUERY_EXECUTE) [A]	404	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M12-B	QUERY_EXECUTE	POST app-runtime query run LIVE (needs APP_USE + QUERY_EXECUTE) [B]	passes authorization (not 401/403/PROJECT_NOT_FOUND)	404 QUERY_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M12-C	QUERY_EXECUTE	POST app-runtime query run LIVE (needs APP_USE + QUERY_EXECUTE) [C]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M12-D	QUERY_EXECUTE	POST app-runtime query run LIVE (needs APP_USE + QUERY_EXECUTE) [D]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M12-M1	QUERY_EXECUTE	POST app-runtime query run LIVE (needs APP_USE + QUERY_EXECUTE) [M1]	passes authorization (not 401/403/PROJECT_NOT_FOUND)	404 QUERY_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M13-A	QUERY_EXECUTE	POST app-runtime query run TEST (needs APP_EDIT) [A]	404	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M13-B	QUERY_EXECUTE	POST app-runtime query run TEST (needs APP_EDIT) [B]	passes authorization (not 401/403/PROJECT_NOT_FOUND)	404 QUERY_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M13-C	QUERY_EXECUTE	POST app-runtime query run TEST (needs APP_EDIT) [C]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M13-D	QUERY_EXECUTE	POST app-runtime query run TEST (needs APP_EDIT) [D]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M13-M1	QUERY_EXECUTE	POST app-runtime query run TEST (needs APP_EDIT) [M1]	passes authorization (not 401/403/PROJECT_NOT_FOUND)	404 QUERY_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-FX1	fixture	runtime fixture by WORKSPACE_ADMIN through PATCH schema: START_WORKFLOW action + workflow	200	200 	PASS	REAL_BACKEND_E2E			
+IAM-FX2	fixture	runtime fixture by WORKSPACE_ADMIN through PATCH schema: data-source slot + READ/WRITE query bindings	200	200 	PASS	REAL_BACKEND_E2E			
+IAM-FX3	fixture	runtime fixture by WORKSPACE_ADMIN through PATCH schema: CREATE_RECORD action on a WRITE query (needs DATA_MUTATE)	200	200 	PASS	REAL_BACKEND_E2E			
+IAM-FX4	fixture	runtime fixture by WORKSPACE_ADMIN through PATCH schema: REFRESH_QUERY action on a READ query (needs ACTION_EXECUTE only)	200	200 	PASS	REAL_BACKEND_E2E			
+IAM-M14-A	ACTION_EXECUTE	POST action execute LIVE REFRESH_QUERY (APP_USE + ACTION_EXECUTE) [A]	404	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M14-B	ACTION_EXECUTE	POST action execute LIVE REFRESH_QUERY (APP_USE + ACTION_EXECUTE) [B]	passes authorization (not 401/403/PROJECT_NOT_FOUND)	200	PASS	REAL_BACKEND_E2E			
+IAM-M14-C	ACTION_EXECUTE	POST action execute LIVE REFRESH_QUERY (APP_USE + ACTION_EXECUTE) [C]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M14-D	ACTION_EXECUTE	POST action execute LIVE REFRESH_QUERY (APP_USE + ACTION_EXECUTE) [D]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M14-M1	ACTION_EXECUTE	POST action execute LIVE REFRESH_QUERY (APP_USE + ACTION_EXECUTE) [M1]	passes authorization (not 401/403/PROJECT_NOT_FOUND)	200	PASS	REAL_BACKEND_E2E			
+IAM-M15-A	ACTION_EXECUTE	POST action execute TEST REFRESH_QUERY (needs APP_EDIT too) [A]	404	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M15-B	ACTION_EXECUTE	POST action execute TEST REFRESH_QUERY (needs APP_EDIT too) [B]	passes authorization (not 401/403/PROJECT_NOT_FOUND)	200	PASS	REAL_BACKEND_E2E			
+IAM-M15-C	ACTION_EXECUTE	POST action execute TEST REFRESH_QUERY (needs APP_EDIT too) [C]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M15-D	ACTION_EXECUTE	POST action execute TEST REFRESH_QUERY (needs APP_EDIT too) [D]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M15-M1	ACTION_EXECUTE	POST action execute TEST REFRESH_QUERY (needs APP_EDIT too) [M1]	passes authorization (not 401/403/PROJECT_NOT_FOUND)	200	PASS	REAL_BACKEND_E2E			
+IAM-M16-A	WORKFLOW_EXECUTE	POST START_WORKFLOW action execute TEST (needs WORKFLOW_EXECUTE: not held by project EDITOR) [A]	404	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M16-B	WORKFLOW_EXECUTE	POST START_WORKFLOW action execute TEST (needs WORKFLOW_EXECUTE: not held by project EDITOR) [B]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M16-C	WORKFLOW_EXECUTE	POST START_WORKFLOW action execute TEST (needs WORKFLOW_EXECUTE: not held by project EDITOR) [C]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M16-D	WORKFLOW_EXECUTE	POST START_WORKFLOW action execute TEST (needs WORKFLOW_EXECUTE: not held by project EDITOR) [D]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M16-M1	WORKFLOW_EXECUTE	POST START_WORKFLOW action execute TEST (needs WORKFLOW_EXECUTE: not held by project EDITOR) [M1]	passes authorization (not 401/403/PROJECT_NOT_FOUND)	200	PASS	REAL_BACKEND_E2E			
+IAM-M17-A	WORKFLOW_EXECUTE	POST workflow start TEST (APP_USE + WORKFLOW_EXECUTE) [A]	404	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M17-B	WORKFLOW_EXECUTE	POST workflow start TEST (APP_USE + WORKFLOW_EXECUTE) [B]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M17-C	WORKFLOW_EXECUTE	POST workflow start TEST (APP_USE + WORKFLOW_EXECUTE) [C]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M17-D	WORKFLOW_EXECUTE	POST workflow start TEST (APP_USE + WORKFLOW_EXECUTE) [D]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M17-M1	WORKFLOW_EXECUTE	POST workflow start TEST (APP_USE + WORKFLOW_EXECUTE) [M1]	passes authorization (not 401/403/PROJECT_NOT_FOUND)	202	PASS	REAL_BACKEND_E2E			
+IAM-M18-A	WORKFLOW_EXECUTE	POST workflow start LIVE [A]	404	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M18-B	WORKFLOW_EXECUTE	POST workflow start LIVE [B]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M18-C	WORKFLOW_EXECUTE	POST workflow start LIVE [C]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M18-D	WORKFLOW_EXECUTE	POST workflow start LIVE [D]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M18-M1	WORKFLOW_EXECUTE	POST workflow start LIVE [M1]	passes authorization (not 401/403/PROJECT_NOT_FOUND)	202	PASS	REAL_BACKEND_E2E			
+IAM-M20-A	DATA_MUTATE	POST CREATE_RECORD action execute TEST (needs DATA_MUTATE: held only by WORKSPACE_ADMIN) [A]	404	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M20-B	DATA_MUTATE	POST CREATE_RECORD action execute TEST (needs DATA_MUTATE: held only by WORKSPACE_ADMIN) [B]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M20-C	DATA_MUTATE	POST CREATE_RECORD action execute TEST (needs DATA_MUTATE: held only by WORKSPACE_ADMIN) [C]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M20-D	DATA_MUTATE	POST CREATE_RECORD action execute TEST (needs DATA_MUTATE: held only by WORKSPACE_ADMIN) [D]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M20-M1	DATA_MUTATE	POST CREATE_RECORD action execute TEST (needs DATA_MUTATE: held only by WORKSPACE_ADMIN) [M1]	passes authorization (not 401/403/PROJECT_NOT_FOUND)	200	PASS	REAL_BACKEND_E2E			
+IAM-M19	WORKFLOW_MANAGE	WORKSPACE_ADMIN starts a TEST workflow run (to obtain a run id)	2xx with a run id	202 runId=true 	PASS	REAL_BACKEND_E2E			
+IAM-M19-M1	WORKFLOW_MANAGE	run view by its creator / WORKFLOW_MANAGE holder	200	200	PASS	REAL_BACKEND_E2E			
+IAM-M19-B	WORKFLOW_MANAGE	run view by [B] (not creator, no WORKFLOW_MANAGE)	404/403	404 WORKFLOW_RUN_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M19c-B	WORKFLOW_MANAGE	cancel by [B]	404/403	404 WORKFLOW_RUN_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M19-C	WORKFLOW_MANAGE	run view by [C] (not creator, no WORKFLOW_MANAGE)	404/403	404 WORKFLOW_RUN_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M19c-C	WORKFLOW_MANAGE	cancel by [C]	404/403	404 WORKFLOW_RUN_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M19-D	WORKFLOW_MANAGE	run view by [D] (not creator, no WORKFLOW_MANAGE)	404/403	404 WORKFLOW_RUN_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M19c-D	WORKFLOW_MANAGE	cancel by [D]	404/403	404 WORKFLOW_RUN_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M19-A	WORKFLOW_MANAGE	run view by the Tenant Admin (not a member)	404	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+IAM-M21-A	TENANT_MEMBERS	GET tenant members [A]	200	200	PASS	REAL_BACKEND_E2E			
+IAM-M21-B	TENANT_MEMBERS	GET tenant members [B]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M21-C	TENANT_MEMBERS	GET tenant members [C]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M21-D	TENANT_MEMBERS	GET tenant members [D]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M21-M1	TENANT_MEMBERS	GET tenant members [M1]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M22-A	ORG_STRUCTURE_VIEW	GET organization-units [A]	200	200	PASS	REAL_BACKEND_E2E			
+IAM-M22-B	ORG_STRUCTURE_VIEW	GET organization-units [B]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M22-C	ORG_STRUCTURE_VIEW	GET organization-units [C]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M22-D	ORG_STRUCTURE_VIEW	GET organization-units [D]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M22-M1	ORG_STRUCTURE_VIEW	GET organization-units [M1]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M23-A	EMPLOYEE_VIEW	GET employees [A]	200	200	PASS	REAL_BACKEND_E2E			
+IAM-M23-B	EMPLOYEE_VIEW	GET employees [B]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M23-C	EMPLOYEE_VIEW	GET employees [C]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M23-D	EMPLOYEE_VIEW	GET employees [D]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M23-M1	EMPLOYEE_VIEW	GET employees [M1]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M24-A	POSITION_GRADE_VIEW	GET positions [A]	200	200	PASS	REAL_BACKEND_E2E			
+IAM-M24-B	POSITION_GRADE_VIEW	GET positions [B]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M24-C	POSITION_GRADE_VIEW	GET positions [C]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M24-D	POSITION_GRADE_VIEW	GET positions [D]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M24-M1	POSITION_GRADE_VIEW	GET positions [M1]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M25-A	ORG_STRUCTURE_MANAGE	POST organization-unit-types [A]	201/409	409 ORG_UNIT_TYPE_CODE_TAKEN	PASS	REAL_BACKEND_E2E			
+IAM-M25-B	ORG_STRUCTURE_MANAGE	POST organization-unit-types [B]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M25-C	ORG_STRUCTURE_MANAGE	POST organization-unit-types [C]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M25-D	ORG_STRUCTURE_MANAGE	POST organization-unit-types [D]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M25-M1	ORG_STRUCTURE_MANAGE	POST organization-unit-types [M1]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M26-B	TENANT_MEMBERS	POST tenant user provisioning (forged tenantRole TENANT_ADMIN in the body) [B]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M26-C	TENANT_MEMBERS	POST tenant user provisioning (forged tenantRole TENANT_ADMIN in the body) [C]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M26-D	TENANT_MEMBERS	POST tenant user provisioning (forged tenantRole TENANT_ADMIN in the body) [D]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M26-M1	TENANT_MEMBERS	POST tenant user provisioning (forged tenantRole TENANT_ADMIN in the body) [M1]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M27-B	TENANT_MANAGE	POST workspace in tenant [B]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M27-C	TENANT_MANAGE	POST workspace in tenant [C]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M27-D	TENANT_MANAGE	POST workspace in tenant [D]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M27-M1	TENANT_MANAGE	POST workspace in tenant [M1]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M28-B	TENANT_MANAGE	PATCH tenant rename [B]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M28-C	TENANT_MANAGE	PATCH tenant rename [C]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M28-D	TENANT_MANAGE	PATCH tenant rename [D]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M28-M1	TENANT_MANAGE	PATCH tenant rename [M1]	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-M29-A	platform	GET /admin/users (SYSTEM_ADMIN only) [A]	403	403 ADMIN_REQUIRED	PASS	REAL_BACKEND_E2E			
+IAM-M29-B	platform	GET /admin/users (SYSTEM_ADMIN only) [B]	403	403 ADMIN_REQUIRED	PASS	REAL_BACKEND_E2E			
+IAM-M29-C	platform	GET /admin/users (SYSTEM_ADMIN only) [C]	403	403 ADMIN_REQUIRED	PASS	REAL_BACKEND_E2E			
+IAM-M29-D	platform	GET /admin/users (SYSTEM_ADMIN only) [D]	403	403 ADMIN_REQUIRED	PASS	REAL_BACKEND_E2E			
+IAM-M29-M1	platform	GET /admin/users (SYSTEM_ADMIN only) [M1]	403	403 ADMIN_REQUIRED	PASS	REAL_BACKEND_E2E			
+IAM-M30-A	platform	PATCH tenant status (SYSTEM_ADMIN only; invalid value => 403 before validation) [A]	403	403 ADMIN_REQUIRED	PASS	REAL_BACKEND_E2E			
+IAM-M30-B	platform	PATCH tenant status (SYSTEM_ADMIN only; invalid value => 403 before validation) [B]	403	403 ADMIN_REQUIRED	PASS	REAL_BACKEND_E2E			
+IAM-M30-C	platform	PATCH tenant status (SYSTEM_ADMIN only; invalid value => 403 before validation) [C]	403	403 ADMIN_REQUIRED	PASS	REAL_BACKEND_E2E			
+IAM-M30-D	platform	PATCH tenant status (SYSTEM_ADMIN only; invalid value => 403 before validation) [D]	403	403 ADMIN_REQUIRED	PASS	REAL_BACKEND_E2E			
+IAM-M30-M1	platform	PATCH tenant status (SYSTEM_ADMIN only; invalid value => 403 before validation) [M1]	403	403 ADMIN_REQUIRED	PASS	REAL_BACKEND_E2E			
+IAM-M31	tenant	tenant name unchanged after the forged renames	C6F company X 5980a7	C6F company X 5980a7	PASS	REAL_BACKEND_E2E			
+IAM-F01	forged-role	D (VIEWER) sends forged role/permission headers, query and body fields (role, tenantRole, roles, systemAdmin, permissions, X-Role ...) on members / schema / publish / admin routes	403 x4 (nothing granted)	403/403/403/403	PASS	REAL_BACKEND_E2E			
+IAM-F02	forged-role	D (tenant MEMBER) promotes itself to TENANT_ADMIN	403 (FORBIDDEN, not accepted)	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-F03	forged-role	D's role/permissions unchanged afterwards	tenantRole MEMBER, root perms []	MEMBER 0	PASS	REAL_BACKEND_E2E			
+IAM-F04	forged-role	B (workspace EDITOR) promotes itself to WORKSPACE_ADMIN	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-F05	forged-role	B (project EDITOR) promotes itself to project OWNER	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+IAM-F06	forged-session	a hand-made STUDIO_SESSION cookie (base64 JSON naming the Tenant Admin) is not a session	401	401 AUTHENTICATION_REQUIRED	PASS	REAL_BACKEND_E2E			
+IAM-O01	org-no-authority	the directory shows D with a HEAD membership and a position (the organization data really exists)	membership HEAD + position	200 mem=HEAD pos=1	PASS	REAL_BACKEND_E2E			
+IAM-O02	org-no-authority	/auth/me of D: no ORG_*, EMPLOYEE_*, POSITION_*, TENANT_* code anywhere; root/workspace permissions []; only the VIEWER project scope	no org code	root= ws= ps=APP_USE,APP_VIEW	PASS	REAL_BACKEND_E2E			
+IAM-O03	org-no-authority	HEAD + top position + top grade do NOT authorize organization WRITES (types, units, patch, archive, positions, grades, own membership, remove, disable the admin, create employee)	403 x10	403/403/403/403/403/403/403/403/403/403	PASS	REAL_BACKEND_E2E			
+IAM-O04	org-no-authority	HEAD of the unit does not even grant organization READS	403 x8	403/403/403/403/403/403/403/403	PASS	REAL_BACKEND_E2E			
+IAM-O05	org-no-authority	app routes: the HEAD employee holds only its VIEWER project role: edit 403, publish 403, project members 403, while GET project stays 200	403/403/403 + 200	403/403/403 + 200	PASS	REAL_BACKEND_E2E			
+IAM-O06	org-no-authority	workspace routes: HEAD employee cannot list members (403) or create a project (403)	403/403	403/403	PASS	REAL_BACKEND_E2E			
+IAM-O07	org-no-authority	HEAD employee WITHOUT any project membership: project and schema answer 404, /auth/me projectScopes row gone (position/grade/relation grant no app access)	DELETE 2xx; 404; 404; no row	204; 404; 404; rows=0	PASS	REAL_BACKEND_E2E			
+IAM-O08	org-no-authority	fixture restored: D re-added as project VIEWER	201	201	PASS	REAL_BACKEND_E2E			
+IAM-O09	org-no-authority	even a relationType literally named ORG_MANAGE (free vocabulary) grants nothing: D's /auth/me unchanged, org write still 403	no code; 403	patch=409 perms=0 write=403	PASS	REAL_BACKEND_E2E		relation type text is business data; ORG_MANAGE is not canonical	
+IAM-O10	org-no-authority	SYSTEM_ADMIN (no ORG shortcut, no ORG_MANAGE) cannot write organization data	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+M052-02	M-052	root permissions/tenantId/tenantRole describe the PRIMARY tenant X (MEMBER) only: permissions [] and tenantRole MEMBER (unchanged by being TENANT_ADMIN of A)	tenantId=X MEMBER perms []	tenantId=X role=MEMBER perms=0	PASS	REAL_BACKEND_E2E			
+M052-03	M-052	tenants[A].permissions is EXACTLY the 8 canonical TENANT_ADMIN codes (D-C0-54)	EMPLOYEE_MANAGE,EMPLOYEE_VIEW,ORG_STRUCTURE_MANAGE,ORG_STRUCTURE_VIEW,POSITION_GRADE_MANAGE,POSITION_GRADE_VIEW,TENANT_MANAGE,TENANT_MEMBERS	EMPLOYEE_MANAGE,EMPLOYEE_VIEW,ORG_STRUCTURE_MANAGE,ORG_STRUCTURE_VIEW,POSITION_GRADE_MANAGE,POSITION_GRADE_VIEW,TENANT_MANAGE,TENANT_MEMBERS	PASS	REAL_BACKEND_E2E			
+M052-04	M-052	tenants[X] and tenants[B] (MEMBER) carry permissions []; X is listed first (primary)	[] / []; order X,A|B	X=0 B=0 first=true	PASS	REAL_BACKEND_E2E			
+M052-05	M-052	no ORG_MANAGE and no cross-tenant flattening anywhere in /auth/me	none	rootHasTenantCodes=false	PASS	REAL_BACKEND_E2E			
+M052-06	M-052	using company A (selected): members 200, org read 200, workspace create 201, org write 201 (409 = same type code from an earlier run)	200/200/201/201|409	200/200/201/409	PASS	REAL_BACKEND_E2E			
+M052-07	M-052	using the primary company X (MEMBER) the same admin actions are DENIED (403, not 404: C is a member of X)	403 x4	403/403/403/403	PASS	REAL_BACKEND_E2E			
+M052-08	M-052	company B (MEMBER) does NOT inherit A's rights: members/org-read/workspace create/self-promote	403 x4	403/403/403/403	PASS	REAL_BACKEND_E2E			
+M052-09	M-052	company Y (no membership): 404 (existence not disclosed), identical to a random tenant id	404 = 404	404 TENANT_NOT_FOUND vs 404 TENANT_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+M052-10	M-052	TENANT_ADMIN of A grants nothing on X's business routes: C keeps exactly its project PUBLISHER set on P in X	APP_PUBLISH,APP_USE,APP_VIEW	APP_PUBLISH,APP_USE,APP_VIEW	PASS	REAL_BACKEND_E2E			
+M052-11	M-052	role string is display-only: C sends tenantRole=TENANT_ADMIN / X-Tenant-Role against company B -> still 403	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+M052-12	M-052	TENANT_ADMIN of A creates nothing in workspace W of X (workspace PUBLISHER: no PROJECT_CREATE)	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+M052-13a	M-052	last admin of A cannot be demoted (LAST_TENANT_ADMIN guard)	409 LAST_TENANT_ADMIN	409 LAST_TENANT_ADMIN	PASS	REAL_BACKEND_E2E			
+M052-13	M-052	demotion of C in A (second admin added first) applies on the NEXT request of C's session: tenants[A].permissions [] and A routes 403	200; []; 403	201/200; perms=0; members=403	PASS	REAL_BACKEND_E2E			
+LIF-01	lifecycle	project role downgrade EDITOR->VIEWER: same session, NEXT request loses edit (403), /auth/me shows the VIEWER set, query run now 403	before 200; change 200; after 403; set APP_USE,APP_VIEW; query 403	before=200; change=200; after=403 (66ms); set=APP_USE,APP_VIEW; query=403	PASS	REAL_BACKEND_E2E			
+LIF-02	lifecycle	re-grant EDITOR: effective on the next request (no re-login)	200/200	200/200	PASS	REAL_BACKEND_E2E			
+LIF-03	lifecycle	workspace role downgrade EDITOR->VIEWER: NEXT request cannot create projects (403); restored role works again	201; 200; 403; restored 201	201; 200; 403 (15ms); restored=201	PASS	REAL_BACKEND_E2E			
+LIF-04	lifecycle	project membership revoked: direct URL GET project, versions and publish answer 404 on the NEXT request; the /auth/me projectScopes row is gone	200; 2xx; 404; 404/404; no row	200; 204; 404 (32ms); publish=404; versions=404; row=false	PASS	REAL_BACKEND_E2E			
+LIF-05	lifecycle	membership re-added: access back on the next request, same session	201/200	201/200	PASS	REAL_BACKEND_E2E			
+LIF-06	lifecycle	tenant membership removed (DELETE members/D): project and workspace routes 404 on the NEXT request, /auth/me omits tenant/workspace/project	200; 204; 404; 404; omitted	200; 204; 404 (39ms); ws=404; tenants=0 ws=0 ps=0	PASS	REAL_BACKEND_E2E			
+LIF-07	lifecycle	tenant membership restored (PUT MEMBER): workspace + project rights return (their rows were never deleted) on the next request	200/200; ps row back	200/200; ps=1	PASS	REAL_BACKEND_E2E			
+LIF-08	lifecycle	SYSTEM_ADMIN disables C: the EXISTING session is dead on the NEXT request (/auth/me, project GET, publish all 401); a NEW login is refused	200; 401 x3; login 401	200; 401 (9ms)/401/401; newLogin=401	PASS	REAL_BACKEND_E2E			
+LIF-09	lifecycle	re-enable: the OLD cookie is NOT resurrected (401), a new login works (200)	200; 401; 200	200; stale=401; login=200	PASS	REAL_BACKEND_E2E			
+LIF-10	lifecycle	SYSTEM_ADMIN revoke-sessions: every existing cookie of B answers 401 on the next request	200; 401; 401	200; 200; 401/401	PASS	REAL_BACKEND_E2E			
+LIF-11	session	logged-out session cookie replayed (me / project / schema patch)	logout 200; 401 x3	200; 401/401/401	PASS	REAL_BACKEND_E2E			
+LIF-12	session	session fixation: the cookie held BEFORE login does not become an authenticated session after login	login 200; pre-login cookie /auth/me 401	200; 401	PASS	REAL_BACKEND_E2E		pre-login cookies: XSRF-TOKEN	
+LIF-13	lifecycle	tenant SUSPENDED: NEXT request of every existing session: business routes 403 TENANT_SUSPENDED (project GET, schema patch, runtime), org WRITE 403 TENANT_SUSPENDED, org READ 200, /auth/me lists tenant status SUSPENDED with workspace permissions []	200; 403 x3; org write 403; org read 200; status SUSPENDED; ws perms []	200; 200; 403 (103ms) TENANT_SUSPENDED/403/403; ow=403 TENANT_SUSPENDED; or=200; SUSPENDED; wsperms=0; tenantAdminRoute=200	PASS	REAL_BACKEND_E2E		tenant-admin member route during SUSPENDED = 200 (contract: stays allowed)	
+LIF-14	lifecycle	tenant DELETED (soft): next request: business 404 WORKSPACE_NOT_FOUND, tenant routes of its admin 404 TENANT_NOT_FOUND, /auth/me omits tenant+workspace; SYSTEM_ADMIN still reads it	200; 404; 404; 404; omitted; SA 200	200; 404 WORKSPACE_NOT_FOUND; 404; 404; tenants=0 ws=0; sa=200	PASS	REAL_BACKEND_E2E			
+LIF-15	lifecycle	tenant re-ACTIVATED: existing sessions work again on the next request (no data lost)	200; 200; 200	200; 200; 200	PASS	REAL_BACKEND_E2E			
+IAM-BUDGET	budget	activation budget respected (this script: B and C only)	<= 2	0	PASS	REAL_BACKEND_E2E			

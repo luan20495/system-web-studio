@@ -1,0 +1,77 @@
+{
+ "mode": "final-rc",
+ "tag": "retest-webkit-nav",
+ "browser": "Playwright WebKit (not Safari)",
+ "integrationShaTested": "fabea8198fda1eaca9e5c5257c88d1b530bceb73",
+ "frontendUnderTest": "(same as backend worktree)",
+ "c5Sha": "(not provided — pilot)",
+ "viewports": [
+  1440
+ ],
+ "totalRoutes": 0,
+ "routeVariants": 3,
+ "totalCases": 3,
+ "PASS": 0,
+ "FAIL": 3,
+ "BLOCKED": 0,
+ "knownNotReady": 0,
+ "UNICODE": "PASS (3 cases)",
+ "ICONS": "PASS",
+ "RESPONSIVE": "PASS",
+ "ACCESSIBILITY": "FAIL (3 cases)",
+ "CREATE_COMPANY": "NOT_RUN",
+ "ORGANIZATION": "NOT_RUN",
+ "EMPLOYEES": "NOT_RUN",
+ "STUDIO": "FAIL (1/1)",
+ "DATA_ACTION_WORKFLOW": "NOT_RUN",
+ "PUBLISH_ROLLBACK": "NOT_RUN",
+ "PLATFORM": "FAIL (1/1)",
+ "ADMIN": "FAIL (1/1)",
+ "AUTH": "NOT_RUN",
+ "axe": {
+  "critical": 0,
+  "serious": 0,
+  "moderate": 0,
+  "minor": 0,
+  "wcagCritical": 0,
+  "wcagSerious": 0
+ },
+ "newBugs": 9,
+ "navigation": [
+  {
+   "portal": "platform",
+   "role": "super",
+   "links": 14,
+   "ok": 10,
+   "fail": [
+    "click \"Cảnh báo\" went to /login, expected /platform/alerts",
+    "\"Cảnh báo\" not marked aria-current",
+    "click \"Sao lưu\" went to /login, expected /platform/backups",
+    "\"Sao lưu\" not marked aria-current",
+    "click \"Templates\" went to /login, expected /platform/templates",
+    "\"Templates\" not marked aria-current",
+    "click \"Packages\" went to /login, expected /platform/packages",
+    "\"Packages\" not marked aria-current"
+   ]
+  },
+  {
+   "portal": "admin",
+   "role": "tenantAdmin",
+   "links": 10,
+   "ok": 9,
+   "fail": [
+    "click \"Chia sẻ Sắp có\" went to /login, expected /admin/sharing",
+    "\"Chia sẻ Sắp có\" not marked aria-current"
+   ]
+  },
+  {
+   "portal": "studio",
+   "role": "workspaceAdmin",
+   "links": 6,
+   "ok": 5,
+   "fail": [
+    "\"Tạo ứng dụng\" not marked aria-current"
+   ]
+  }
+ ]
+}

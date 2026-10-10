@@ -1,0 +1,51 @@
+REAL BACKEND suite · studio=http://127.0.0.1:47307 · run=mv21o6rm · 1 flow(s)
+  [fixture] workspace A created
+  [fixture] workspace B created
+  [fixture] user adminA (WORKSPACE_ADMIN) ready
+  [fixture] user adminB (WORKSPACE_ADMIN) ready
+  [fixture] user viewerA (VIEWER) ready
+  [fixture] user lonelyA (VIEWER) ready
+  [probe] queries route → 404 QUERY_NOT_FOUND · actions route → 404 UNKNOWN_ACTION  (404 without a code = flag off)
+
+E2E-ORG01 — Dynamic Organization on a real backend (flag ON): types, tree, depth, move, archive / restore, employees, memberships, positions, counts, limits, isolation, permissions (25 cases)
+    ✓ [setup] the tenant admin's /auth/me lists the six organization codes for the PRIMARY tenant (the server grants them; no role label is read by the frontend)
+    ✓ 0 [ON] the organization store answers (200) for the tenant admin: the flag is ON on this stack
+    ✓ 01 unit types with placement rules: division (any), dept (under division), team (under dept, tenant-defined); a duplicate code is refused
+    ✓ 02 the tree: nested nodes {unit, children, directMemberCount, subtreeEmployeeCount}; flat has parentId; the code is stored UPPER-CASE; versions start at 0
+    ✓ 03 arbitrary depth: a chain of 12 nested units is accepted (no fixed hierarchy) and the detail's path lists every ancestor
+    ✓ 04 type rules are enforced by the server: dept as a root → 409 ORG_TYPE_RULE_VIOLATION (ROOT_NOT_ALLOWED); team under a division → PARENT_TYPE_NOT_ALLOWED
+    ✓ 05 max depth is the BACKEND's decision (the type's rules.maxDepth): level 3 of a type capped at 2 → 409 ORG_TYPE_RULE_VIOLATION MAX_DEPTH, while levels 1-2 are fine
+    ✓ 06 optimistic versions: an edit with the current version → 200 (version 1); the same edit with the stale version → 409 VERSION_CONFLICT carrying details.currentVersion
+    ✓ 07 unit code is unique among NON-archived siblings (case-insensitive: web = WEB → 409 ORG_UNIT_CODE_TAKEN) but may repeat under another parent (roots are siblings of each other)
+    ✓ 08 move / reparent: the subtree follows; `newParentId` is REQUIRED (absent key → 400, never a silent move); null = root (here refused for a dept by its type rule)
+    ✓ 09 a cycle is refused by the server: moving a unit under its own descendant → 409 ORG_CYCLE
+    ✓ 10 positions and grades: created; a code that differs only by case is refused (409 POSITION_CODE_TAKEN, also against disabled ones); disable / enable bump the version
+    ✓ 11 an employee is created with membership + position + grade in ONE request: 201 {employee, activation}; the account is NOT activated; no password is returned
+    ✓ 12 atomicity: a create whose nested position does not exist → 404 POSITION_NOT_FOUND and NOTHING is created (the same username is free afterwards)
+    ✓ 13 several memberships, exactly ONE primary: a second membership with primary=true atomically demotes the first; primary=false is refused (400); a duplicate unit → 409 ORG_MEMBERSHIP_EXISTS; the relation is stored UPPER-CASE
+    ✓ 14 a position is held WITHIN a membership: a duplicate → 409 POSITION_ASSIGNMENT_EXISTS; ending the membership while a position is held → 409 EMPLOYEE_ORG_HAS_POSITIONS; after removing the position the membership can end
+    ✓ 15 counts: directMemberCount = ACTIVE memberships on exactly that unit; subtreeEmployeeCount = DISTINCT employees (an employee in two units of the branch counts ONCE); the detail endpoint agrees with the tree
+    ✓ 16 disabling an employee removes them from the counts; enabling brings them back (the membership is kept)
+    ✓ 17 the directory: q needs 2 characters (400 QUERY_TOO_SHORT); size 101 → 400; page*size 10 020 → 400 OFFSET_TOO_LARGE; page*size = 10 000 → 200; a unit filter with descendants finds employees that a direct-only filter does not
+    ✓ 18 archive is refused with the SERVER's reason: a unit with active children → 409 ORG_UNIT_HAS_CHILDREN; a unit with active members → 409 ORG_UNIT_HAS_MEMBERS (nothing cascades)
+    ✓ 19 archive + restore: archive → active=false + archivedAt, hidden by default and listed with includeArchived; restoring while another unit holds the code → 409 RESTORE_CONFLICT (CODE_TAKEN); after the rename the restore succeeds
+    ✓ 20 there is NO hard delete: DELETE of a unit is not a success (405 / 404)
+    ✓ 21 tenant isolation: another company's admin is refused on THIS company's routes (403/404, never 200); this admin is refused on the other company's routes; a unit id of A under B's path is 404 ORG_UNIT_NOT_FOUND (disclosure-safe)
+    ✓ 22 a plain member holds NO organization code: every family answers 403; and giving them the relation HEAD, a position and a grade changes NOTHING (still 403): relation, position and grade authorize nothing
+    ✓ 23 a SUSPENDED company is read-only for the organization: reads stay 200, writes (unit, employee) → 403 TENANT_SUSPENDED; after the unlock the same write succeeds
+    ✓ 24 16 parallel structural writes: all serialised by the lock (no 503 was provoked on this host: the busy path is covered by the harness, NOT proven here)
+    ✓ 25a UI: the tree renders the company's own units and BOTH counts as labelled by the screen ('trực tiếp' / 'cả nhánh') equal the API's directMemberCount / subtreeEmployeeCount
+    ✓ 25b UI: creating a unit through the screen sends ONE POST with typeId, parentId null, name, code (no tenant in the body) and the server answers 201
+    ✓ 25c UI: the archive confirmation is IN-APP: cancel sends nothing (the unit stays active on the server); confirm archives it (POST …/archive 200) and the server holds active=false
+    ✓ 25d UI lifecycle: the employee whose Flutter membership and position were ENDED (case 14) shows only the remaining unit and no position in the active directory; an employee created now and never ended shows unit path, position and grade; both read 'Chờ kích hoạt'
+    ✓ 25e no API 4xx/5xx that the screens caused by themselves and no console error during the UI steps (the only thing set aside: the login page's own pre-session GET /auth/me → 401)
+  [cleanup] cleanup notes: left behind (no delete route): workspaces 88ef8dbd-80fc-4eaa-a3d9-ca3ac7463a73, fa9f1194-e0aa-462f-97ca-f8560024a626, a34b39ed-101d-424f-835e-421df77de180, 1b501737-12b9-4e27-a21b-1444e0fe96f9 named e2e-mv21o6rm-*
+
+| ID | Status | Owner | Detail |
+|---|---|---|---|
+| E2E-ORG01 | PASS |  |  |
+
+REAL BACKEND: PASS 1/1 · FAIL 0/1 · BLOCKED 0/1 · SKIP 0/1
+report: /Users/hoangluan/code/xweb-c6/docs/parallel/c6/evidence/final-rc-bc5c47f292d0/c5-flows-org01-run2/report-2026-10-10T07-01-36-881Z.json
+evidence: /Users/hoangluan/code/xweb-c6/docs/parallel/c6/evidence/final-rc-bc5c47f292d0/c5-flows-org01-run2/evidence-2026-10-10T07-01-36-899Z.txt
+exit=0

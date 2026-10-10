@@ -1,0 +1,274 @@
+REAL BACKEND suite · studio=http://127.0.0.1:47307 · run=mv208ov2 · 11 flow(s)
+  [fixture] workspace A created
+  [fixture] workspace B created
+  [fixture] user adminA (WORKSPACE_ADMIN) ready
+  [fixture] user adminB (WORKSPACE_ADMIN) ready
+  [fixture] user viewerA (VIEWER) ready
+  [fixture] user lonelyA (VIEWER) ready
+  [probe] queries route → 404 QUERY_NOT_FOUND · actions route → 404 UNKNOWN_ACTION  (404 without a code = flag off)
+
+E2E-04 — Authorized user reaches a valid Studio resource (permission-driven)
+    ✓ adminA: the server resolves APP_VIEW and APP_EDIT for the project
+    ✓ adminA: after login the Studio shell is reachable (not /auth/no-access)
+    ✓ adminA: direct URL → schema 200 and the Builder canvas
+    ✓ adminA: the editor is NOT read-only (no read-only notice)
+    ✓ adminA: refresh keeps the project open
+    ✓ adminA: no unhandled page errors
+    ✓ viewerA: GET …/projects/{p} resolves APP_VIEW (contract: a VIEWER holds APP_VIEW) — canonical or its storage alias
+    ✓ viewerA: …and does not resolve APP_EDIT / APP_PUBLISH / DATA_SOURCE_MANAGE
+    ✓ viewerA: the API lets them READ the schema (200)
+    ✓ viewerA: Studio opens (not /auth/no-access)
+    ✓ viewerA: direct URL → schema 200 and the Builder canvas (project/page visible)
+    ✓ viewerA: the read-only state is explicit (notice), not an apparent error
+    ✓ viewerA: project name is visible
+    ✓ viewerA: no page-level redirect after a refresh
+    ✓ viewerA: property inputs are disabled
+    ✓ viewerA: no enabled save control
+    ✓ viewerA: Publish is unavailable (no APP_PUBLISH): aria-disabled, and pressing it explains why
+    ✓ viewerA: no data-source management panel is offered (no DATA_SOURCE_VIEW/MANAGE)
+    ✓ viewerA: TEST action control is disabled as the resolved set dictates
+    ✓ viewerA: TEST workflow control is disabled as the resolved set dictates
+    ✓ viewerA: no unhandled page errors
+    ✓ lonelyA: no APP_VIEW is resolved anywhere (/auth/me, project payload)
+    ✓ lonelyA: after login the person is sent to /auth/no-access
+    ✓ lonelyA: a direct project URL also ends on /auth/no-access (no Builder)
+    ✓ lonelyA: no project name or description on screen or in any API answer
+    ✓ lonelyA: no unhandled page errors
+
+E2E-05 — Forbidden path: same scope + missing permission → 403, foreign scope → 404, UI state ≠ enforcement
+    ✓ viewerA resolved set (evidence): no APP_EDIT / APP_PUBLISH / DATA_SOURCE_MANAGE / WORKFLOW_EXECUTE / ACTION_EXECUTE
+    ✓ same scope, missing permission: PATCH schema (valid ADD_ACTION operation) → 403
+    ✓ same scope, missing permission: POST publish (APP_PUBLISH) → 403
+    ✓ same scope, missing permission: POST TEST action execute (APP_USE + ACTION_EXECUTE + APP_EDIT) → 403
+    ✓ same scope, missing permission: POST TEST workflow start (APP_USE + WORKFLOW_EXECUTE + APP_EDIT) → 403
+    ✓ same scope, missing permission: POST data source create (DATA_SOURCE_MANAGE) → 403
+    ✓ foreign scope (another workspace's admin): PATCH schema (valid ADD_ACTION operation) → 404
+    ✓ foreign scope (another workspace's admin): POST publish (APP_PUBLISH) → 404
+    ✓ foreign scope (another workspace's admin): POST TEST action execute (APP_USE + ACTION_EXECUTE + APP_EDIT) → 404
+    ✓ foreign scope (another workspace's admin): POST TEST workflow start (APP_USE + WORKFLOW_EXECUTE + APP_EDIT) → 404
+    ✓ foreign scope (another workspace's admin): POST data source create (DATA_SOURCE_MANAGE) → 404
+    ✓ foreign and unknown projects answer identically (no existence oracle)
+    ✓ A's revision is unchanged by every forged write
+    ✓ no deployment was created by the forged publishes
+    ✓ no data source was created by the forged requests
+    ✓ foreign person: no Builder canvas
+    ✓ foreign person: the page says something went wrong / not found (not a blank screen)
+    ✓ foreign person: A's project name / description are nowhere on screen or in any API answer
+    ✓ foreign person: no unhandled page errors
+    ✓ in-scope person without permissions: no editable Builder (read-only notice) and no project data leak beyond what the server allows
+    ✓ in-scope person: Publish is disabled in the UI AND the forged publish was refused (403) — UI state matches enforcement
+    ✓ in-scope person: TEST controls are disabled in the UI AND the forged TEST calls were refused (403)
+    ✓ in-scope person: no unhandled page errors
+
+E2E-P09 — Unpublish: exact request, 200 + SiteInfo offline, idempotent when offline, stale expectation, operation=UNPUBLISH when observable
+    ✓ API: unpublish expecting a release that is not the active one → 409 ROLLBACK_STALE, still online
+    ✓ DELETE …/site answered 200
+    ✓ NO body; the expectation is the query parameter expectedActiveDeploymentId = the release the UI saw as active
+    ✓ Idempotency-Key (optional) sent in the contract format
+    ✓ the answer: online=false, currentDeploymentId=null, slug kept, operation=null
+    ✓ UI: says the page was taken down (after the 200)
+    ✓ pointerVersion moved by exactly +1; deployments are KEPT (none deleted, statuses unchanged)
+    ✓ the public URL no longer serves the site (404)
+    ✓ unpublish when already offline → 200 and NOTHING is written (pointerVersion unchanged)
+    ✓ UI: with the site offline the 'Gỡ trang xuống' button is not offered
+    ✓ a rollback to a kept release serves the site again (200, online) with no rebuild
+    [fact] SiteInfo.operation while unpublishing → not observed (the scope is held for an instant; the busy UI for UNPUBLISH is covered by the browser harness)
+    ✓ the browser NEVER sent pointerVersion or an invented field
+    ✓ no unhandled page errors
+
+E2E-PD02 — Public data V1, document side: slot → READ public query → bind → publish approval → PUBLIC_QUERIES → runtime config → one anonymous request
+    ✓ [ui] the slot was added and the SERVER stored exactly {id,name,type} — no sourceRef, no credential
+    ✓ [ui] a READ query with public=true was stored by the server (mode READ, operationKey = the approved one, local slot ref)
+    ✓ [api] a READ query WITHOUT public is accepted (it is private by default)
+    ✓ [api] a WRITE query with public=false is accepted
+    ✓ [api] a WRITE query with public=true is REJECTED by the server (422, path queries[i].public) — the UI never offers it
+    ✓ [ui] the binding was stored: {sectionId, prop, queryRef} with the LOCAL public READ query id — never a slot, sourceRef or credential
+    ✓ [ui] readiness: not-ready for ONE reason only — the site is not public yet, so it has no data address (apiBase); the draft itself has no problem
+    ✓ [ui] publish audience (radio group, by role + name): exactly one radio is checked when the dialog opens; 'Riêng tư' selects PRIVATE alone; 'Công khai' selects PUBLIC alone (radio checked, the other unchecked, only that card marked selected)
+    ✓ [ui] the publish review lists exactly the public READ query (not the private one, not the WRITE one)
+    ✓ [ui] Publish is disabled until the acknowledgement is ticked
+    ✓ [ui] POST …/publish is the unchanged release contract: body EXACTLY {visibility:'PUBLIC', expectedRevision}, Idempotency-Key present — no acknowledgement field
+    ✓ [backend] the server wrote the PUBLIC_QUERIES event naming exactly the public query
+    ✓ [ui] the dialog shows the server's PUBLIC_QUERIES and no mismatch with what it announced
+    ✓ [backend] the release is live and PUBLIC, operation idle
+    ✓ no unhandled page errors in Studio
+    ✓ [visitor] the page asked for its runtime config (GET __factory/config.json) before any data request, with no cookie and no credentials
+    ✓ [visitor] config.json is no-store JSON with a same-origin apiBase for THIS slug (…/{slug}/_data) and no tenant / workspace / credential
+    ✓ [visitor] the page asked ONLY the public query once (POST …/_data/queries/{id}/run, body {"params":{}}), anonymously
+    ✓ [visitor] the runtime ended in a DEFINED state (ready, or error:<id>:not-found|unavailable when no data route/binding exists), never stuck loading
+    ✓ [visitor] on error the AUTHORED page stays visible (nothing blanked, no fake data)
+    ✓ [visitor] recorded outcome without a real source (fact, not a claim about data)
+
+E2E-PL01 — Platform portal: login, navigation, tenants (create, suspend, restore, members, last-admin rule), SYSTEM_ADMIN grant / revoke
+    ✓ login through the Platform portal lands inside /platform (not on the login or no-access page)
+    ✓ navigation lists Tổng quan, Công ty (tenant), Người dùng & Workspace, Nhật ký kiểm toán, Sức khỏe hệ thống — and nothing from the tenant-admin console
+    ✓ the tenant list is the REAL list (the DEFAULT tenant is there) and the section is not 'Chưa sẵn sàng'
+    ✓ an invalid form is refused in the dialog with both messages and NO request is sent
+    ✓ POST /admin/tenants → 201 and the page opens the new tenant
+    ✓ the server stored it: slug, name, ACTIVE
+    ✓ a duplicate slug is refused by the server (409 TENANT_SLUG_TAKEN)
+    ✓ A/B suspend: an IN-APP dialog (role=dialog, titled 'Tạm khóa công ty …?') appears and its text says what will happen; no native browser dialog was involved
+    ✓ C/D cancel: the dialog closes, NO status request was sent, the SERVER still says ACTIVE and the UI still offers 'Tạm khóa' (not 'Mở khóa')
+    ✓ E reopen: the same dialog appears again
+    ✓ F confirm: exactly one PATCH …/status {status:SUSPENDED} was sent and answered 200
+    ✓ G the SERVER state is SUSPENDED (read by a separate session)
+    ✓ H after a full reload the UI reflects the backend: the tenant offers 'Mở khóa' (ACTIVE action) and no longer 'Tạm khóa'
+    ✓ restore: back to ACTIVE on the server
+    ✓ the first administrator chosen in the dialog is TENANT_ADMIN on the server, with name and email metadata
+    ✓ the member row shows the person's NAME from the member metadata (no extra lookup)
+    ✓ demoting the ONLY TENANT_ADMIN is explained in words and nothing changed on the server
+    ✓ the server enforces it too (409 LAST_TENANT_ADMIN)
+    ✓ a brand-new tenant has no candidates (the directory is tenant-scoped, never global) and the picker says so
+    ✓ even a SYSTEM_ADMIN cannot add an unrelated account to a tenant (404 USER_NOT_FOUND): no global directory
+    ✓ workspace page (SYSTEM_ADMIN): the member panel says the platform admin does not manage workspace members, and there is NO add-member form (the server lists no MEMBER_MANAGE for it)
+    ✓ [api] …and the server agrees: SYSTEM_ADMIN is refused the member list and the add (403)
+    ✓ the audit page lists the tenant events just made (TENANT_CREATED / TENANT_STATUS_CHANGED / TENANT_MEMBER_SET)
+    ✓ the system-health page loads without an error state
+    ✓ a workspace member with no platform scope is sent to /auth/no-access, never to a platform screen
+    ✓ cleanup: the tenant is marked DELETED
+    ✓ no unexpected 4xx/5xx from the portal's own calls (the deliberate refusals excepted)
+    ✓ no unhandled page errors
+
+E2E-AD01 — Admin portal, tenant admin: own company + members, no system-admin screens, rules explained, refused by the API as well
+    ✓ [api] /auth/me of the tenant admin lists the tenant with role TENANT_ADMIN and is NOT platform scope
+    ✓ [api] AD01 fixture shape: the primary tenant is DEFAULT with role MEMBER and the top-level permissions are [] (nothing leaks from the second company into the root list)
+    ✓ [api] M-052: the second company's membership row lists its OWN permissions — exactly the canonical eight — and the DEFAULT row lists none
+    ✓ login through the Admin portal lands inside /admin (a tenant admin is NOT refused)
+    ✓ navigation = Tổng quan + Công ty của tôi (+ the sections still waiting for a backend); NO Người dùng, Nhật ký kiểm toán, AI…
+    ✓ the landing page lists the tenant this person administers (no system overview, no 403 from /admin/overview)
+    ✓ Công ty của tôi shows the tenant, ACTIVE, with its member list from the API
+    ✓ the person's own row is named (from the session), marked 'bạn', and its role / remove controls are disabled (no self-change)
+    ✓ a tenant admin gets NO suspend / delete buttons (platform operations)
+    ✓ the add form is real: a search box and a candidate list (empty here: this fresh tenant has no workspace and no former member) — not a 'cannot look people up' notice
+    ✓ a 1-character search is not sent (the server would answer 400 QUERY_TOO_SHORT): the form asks for 2
+    ✓ [api] the same person is refused the system-wide user list (403 ADMIN_REQUIRED)
+    ✓ [api] …but allowed to read the members of THEIR tenant (TENANT_MEMBERS), each row with userId, username, displayName, email, role, active
+    ✓ [api] …and refused to suspend it (platform only: 403)
+    ✓ [api] …and refused the members of another tenant (403/404, no list)
+    ✓ typing a system-only URL shows 'chỉ dành cho quản trị hệ thống' and makes NO call to /admin/users
+    ✓ Workspace của tôi: this account administers no workspace, so the page says so (no empty fake table)
+    ✓ AD01 select company: the Admin portal admits the person and opens the company page of THEIR company (not DEFAULT), with no company switch (exactly one company is administered)
+    ✓ [api] GET tenant → 200 and GET members → 200 for the company
+    ✓ PATCH tenant (rename) through the screen → 200 with {name} only; the server holds the new name (read by a separate session) and the page shows it
+    ✓ [api] POST user in the company → 201 (TENANT_MEMBERS of THAT company)
+    ✓ [api] organization read and write are AUTHORIZED for the company (the codes are held): 200 / 201 with the store on, 501 ORG_PERSISTENCE_NOT_AVAILABLE with the store off — never 403
+    ✓ [api] CROSS-TENANT: on DEFAULT the same person (a plain MEMBER there) gets NO admin power: rename, user creation and organization read are refused (403/404, never 2xx); the tenant RECORD itself is readable by any active member (contract: GET /{t} = forTenant), which is not an administration right
+    ✓ [api] …and DEFAULT's name is untouched
+    ✓ SUSPENDED tenant: PATCH rename → 403 TENANT_SUSPENDED is shown in the dialog ('tạm khóa … Tên chưa thay đổi'); the server name is unchanged; no success message
+    ✓ [api] a SUSPENDED company still lists its members (reads allowed)
+    ✓ a workspace viewer is sent to /auth/no-access by the Admin portal
+    ✓ cleanup: the fixture tenant is marked DELETED
+    ✓ no unhandled page errors
+
+E2E-AD02 — Admin portal, workspace admin: 'Workspace của tôi' opens on MEMBER_MANAGE (not on a role name), members add / re-role / remove, rules, isolation, negative roles
+    ✓ [api] /auth/me: the workspace admin's workspace lists MEMBER_MANAGE (and DATA_SOURCE_MANAGE)
+    ✓ [api] a workspace viewer: /auth/me does NOT list MEMBER_MANAGE
+    ✓ [api] …and the server refuses their member list (403/404) — the backend re-checks
+    ✓ a workspace viewer is refused by the Admin portal (/auth/no-access) — not offered 'Workspace của tôi'
+    ✓ [api] a workspace editor: /auth/me does NOT list MEMBER_MANAGE
+    ✓ [api] …and the server refuses their member list (403/404) — the backend re-checks
+    ✓ a workspace editor is refused by the Admin portal (/auth/no-access) — not offered 'Workspace của tôi'
+    ✓ [api] a workspace publisher: /auth/me does NOT list MEMBER_MANAGE
+    ✓ [api] …and the server refuses their member list (403/404) — the backend re-checks
+    ✓ a workspace publisher is refused by the Admin portal (/auth/no-access) — not offered 'Workspace của tôi'
+    ✓ a WORKSPACE_ADMIN logs in through the Admin portal and is not refused
+    ✓ navigation = Tổng quan + Workspace của tôi + Nguồn dữ liệu; no Người dùng / Nhật ký kiểm toán / Công ty của tôi
+    ✓ the member table is the REAL list of workspace A (adminA, viewerA, lonelyA)
+    ✓ own row: role and remove are disabled (no self-change)
+    ✓ an unknown username is refused by the server and said in words (nothing added)
+    ✓ add by username as Người xem: the server lists adminB as VIEWER of workspace A
+    ✓ change the role to Biên tập viên: persisted
+    ✓ [api] adding the same person twice is refused (409 ALREADY_MEMBER)
+    ✓ [api] the server refuses self-change (403 SELF_GRANT_FORBIDDEN), as the UI did before the click
+    ✓ remove: gone from the workspace on the server
+    ✓ [api] adminA cannot read workspace B's members (403/404)
+    ✓ the page offers no workspace picker with B (one workspace administered)
+    ✓ Nguồn dữ liệu: the REAL panel of the workspace (catalogue / add form), not 'Chưa sẵn sàng'
+    ✓ a system-only URL says 'chỉ dành cho quản trị hệ thống' and makes no call to /admin/users
+    ✓ [api] …and the API refuses it too (403 ADMIN_REQUIRED)
+    ✓ no unexpected 4xx/5xx from the portal's calls (deliberate refusals excepted)
+    ✓ no unhandled page errors
+
+E2E-SUPER01 — SYSTEM_ADMIN (Platform) → create tenant admin of a new tenant (+ workspace) → activation link → activate → login Admin portal
+    ✓ [api] SYSTEM_ADMIN creates a NEW tenant (201, no first admin yet)
+    ✓ [api] …and a workspace OF THAT TENANT through the tenant route (201, tenantId explicit)
+    ✓ the SYSTEM_ADMIN logs in through the Platform portal
+    ✓ the dialog: four sections, a tenant selector, NO not-ready notice, NO SYSTEM_ADMIN type
+    ✓ the workspace of the chosen tenant is offered (optional; assigned here)
+    ✓ POST /admin/tenants/{tenantId}/users → 201; the tenant is the PATH, never in the body; tenantRole TENANT_ADMIN; workspaceId + workspaceRole together; no password
+    ✓ the activation link is shown once in the dialog (/auth/activate#token); no password anywhere
+    ✓ after 'Xong' the token is gone: not in the summary, the URL, localStorage or sessionStorage
+    ✓ the summary: Chờ kích hoạt, the company AND its role already assigned, the workspace; the only next step is the person's activation
+    ✓ [api] the server lists the account as TENANT_ADMIN of the new tenant (already, before activation)
+    ✓ CSRF + body: the create-account request carries X-XSRF-TOKEN and its body has no tenant / tenantId; no browser request to the legacy workspace route
+    ✓ [api] the same username again is refused: 409 USERNAME_TAKEN
+    ✓ the new admin activates through the REAL activation page
+    ✓ [api] after activation /auth/me lists the chosen workspace with MEMBER_MANAGE (WORKSPACE_ADMIN, from the server) and the tenant TENANT_MEMBERS
+    ✓ …and logs in through the ADMIN portal: not refused
+    ✓ …sees Công ty của tôi and Người dùng, not the system-wide sections
+    ✓ no unexpected 4xx/5xx from the portal's calls
+    ✓ no unhandled page errors
+
+E2E-ADMIN01 — Tenant admin (Admin portal) → Người dùng → create workspace admin + app creator by invitation → activation → the creator can sign in
+    ✓ the tenant admin logs in through the ADMIN portal
+    ✓ navigation has Người dùng and Công ty của tôi
+    ✓ Người dùng: the tenant is the SESSION's (read-only), the create action is enabled, no not-ready notice
+    ✓ the dialog: NO tenant selector (fixed, read-only tenant), the types never include SYSTEM_ADMIN (tenant admin may be offered)
+    ✓ the workspace is created through the TENANT route (POST /admin/tenants/{tenant}/workspaces → 201, tenantId = the session's tenant) — never the legacy POST /admin/workspaces
+    ✓ the workspace request body is exactly {name}: the tenant id is the PATH only, never repeated in the body
+    ✓ POST /admin/tenants/{tenant}/users → 201 with tenantRole MEMBER, that workspace and WORKSPACE_ADMIN together; the tenant only in the path
+    ✓ the activation link is shown once (/auth/activate#token)
+    ✓ the summary shows account, Chờ kích hoạt, the company and the workspace with its role; the token is gone from the page
+    ✓ the workspace admin activates through the REAL activation page
+    ✓ [api] the workspace admin signs in; /auth/me lists the new workspace with MEMBER_MANAGE (server permission, not a role name)
+    ✓ [observed] is the workspace the tenant admin just created offered to it for the next account? (H-C1-16: a tenant admin is not a member of it; /auth/me lists member workspaces only)
+    ✓ the app creator is created (201): MEMBER, email as given, workspace + role together or none
+    ✓ the app creator activates through the REAL activation page
+    ✓ workspace assignment of an EXISTING tenant member is the WORKSPACE ADMIN's action: POST /workspaces/{w}/members → 201
+    ✓ [api] the app creator signs in with the chosen password; /auth/me lists the workspace and no MEMBER_MANAGE / TENANT_*
+    ✓ the app creator is NOT admitted to the Admin portal (no admin capability from the server)
+    ✓ LEGACY ROUTE: 0 browser requests to POST /api/v1/admin/workspaces in the whole tenant-admin flow; the workspace went to POST /api/v1/admin/tenants/{tenantId}/workspaces
+    ✓ CSRF: every mutating admin request the UI sent carries the X-XSRF-TOKEN header
+    ✓ no tenantId / tenant in any body the UI sent to a tenant route
+    ✓ no unexpected 4xx/5xx from the portal's calls
+    ✓ no unhandled page errors
+
+E2E-USER01 — App creator (EDITOR, made by the tenant admin): Studio login → project visible → edit / save / reload → permissions are the role's
+    ✓ [api] the workspace admin creates a project in the new workspace (201)
+    ✓ [api] …and adds the creator to the project as EDITOR (member route)
+    ✓ the project is visible in the creator's Ứng dụng list
+    ✓ the project opens in the Builder (APP_VIEW + APP_EDIT)
+    ✓ [api] the creator's resolved project permissions include APP_EDIT and NOT APP_PUBLISH
+    ✓ [api] …and no MEMBER_MANAGE: /auth/me lists none in the workspace
+    ✓ [api] an edit by the creator is accepted (200)
+    ✓ after a reload the edit is still there (persisted)
+    ✓ [api] publishing is refused for the creator (403): the role is the role
+    ✓ [api] the workspace admin creates project B (the creator is NOT a member of it)
+    ✓ [api] /auth/me lists a projectScopes row for project A (APP_VIEW + APP_EDIT, no APP_PUBLISH) and NONE for project B
+    ✓ [api] the creator cannot read project B (404 / 403): the server never disclosed it
+    ✓ DIRECT URL to project B: no builder canvas, no project content (no privileged content flash), a denial state instead
+    ✓ project A still opens and its Xuất bản button is UNAVAILABLE (aria-disabled) for the creator: nothing implies APP_PUBLISH
+    ✓ no unhandled page errors
+
+E2E-ORG01 — Dynamic Organization on a real backend (flag ON): types, tree, depth, move, archive / restore, employees, memberships, positions, counts, limits, isolation, permissions (25 cases)
+    ✗ exception: Error: makeTenantUser orgAmember: activation 429 ⏎     at makeTenantUser (file:///Users/hoangluan/code/xweb-c6-final/tests/e2e-real/lib/portals.mjs:74:32) ⏎     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+  [cleanup] cleanup notes: left behind (no delete route): workspaces 8fa8ae63-4e0c-486b-be55-8ed1a82ad738, 7d58a907-9a15-4cce-9428-0aa28d0f1091, 10124c5a-3c49-4cde-af40-23b5262e3006, 8ec03786-f91b-4cc1-a34c-2b6c64eea272, c91cf969-ccbc-4302-a592-9f1dba8c760e, af55dec2-9c5c-4b53-88e5-d35027632c2a named e2e-mv208ov2-*
+
+| ID | Status | Owner | Detail |
+|---|---|---|---|
+| E2E-04 | PASS |  |  |
+| E2E-05 | PASS |  |  |
+| E2E-P09 | PASS |  |  |
+| E2E-PD02 | PASS |  |  |
+| E2E-PL01 | PASS |  |  |
+| E2E-AD01 | PASS |  |  |
+| E2E-AD02 | PASS |  |  |
+| E2E-SUPER01 | PASS |  |  |
+| E2E-ADMIN01 | PASS |  |  |
+| E2E-USER01 | PASS |  |  |
+| E2E-ORG01 | FAIL |  | exception: Error: makeTenantUser orgAmember: activation 429 ⏎     at makeTenantUser (file:///Users/hoangluan/code/xweb-c6-final/tests/e2e-real/lib/portals.mjs:74:32) ⏎     at process.processTicksAndRe |
+
+REAL BACKEND: PASS 10/11 · FAIL 1/11 · BLOCKED 0/11 · SKIP 0/11
+report: /Users/hoangluan/code/xweb-c6/docs/parallel/c6/evidence/final-rc-bc5c47f292d0/c5-flows-main/report-2026-10-10T06-22-38-794Z.json
+evidence: /Users/hoangluan/code/xweb-c6/docs/parallel/c6/evidence/final-rc-bc5c47f292d0/c5-flows-main/evidence-2026-10-10T06-22-38-795Z.txt
+exit=1

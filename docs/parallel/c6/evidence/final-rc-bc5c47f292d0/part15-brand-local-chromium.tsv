@@ -1,0 +1,73 @@
+id	area	description	expected	actual	result	class	owner	note	evidence
+BR-platform-login-light-1440-title	identity	Platform login: document title names Xweb Platform	/Xweb Platform/	Xweb Platform	PASS	REAL_STACK			
+BR-platform-login-light-1440-legacy	identity	Platform login: no legacy product name in title/text	none	none	PASS	REAL_STACK			
+BR-platform-login-light-1440-primary	tokens	Platform: --color-primary is the brand cobalt #1d5bd8 (light)	#1d5bd8	#1d5bd8	PASS	REAL_STACK			
+BR-platform-login-light-1440-extfont	typography	Platform login: no external font/CDN request	0	0	PASS	REAL_STACK			
+BR-platform-login-light-1440-fontstack	typography	Platform: system font stack (no web font family)	system/Inter stack	Inter, ui-sans-serif, system-ui, -apple-system, "system-ui", "Segoe UI", sans-se	PASS	REAL_STACK			
+BR-platform-login-light-1440-icons	favicon	Platform: favicon + apple-touch-icon links present	>=1 icon	["icon:icon.svg?icon.0gsfhp9iqd7v9.svg","apple-touch-icon:apple-icon.png?apple-icon.3ffn0fogdo9zm.png"]	PASS	REAL_STACK			
+BR-platform-login-light-1440-logo	logo	Platform login (light, 1440px): Xweb logo visible, ≥ 20px high	visible	[{"w":119,"h":28,"vis":true}]	PASS	REAL_STACK			
+BR-platform-login-light-1440-bg	background	Platform login (light, 1440px): auth background class xp-bg-auth with a gradient	xp-bg-auth + gradient	xp-bg-auth | radial-gradient(900px 420px at 50% -8%, 	PASS	REAL_STACK			
+BR-platform-login-light-390-logo	logo	Platform login (light, 390px): Xweb logo visible, ≥ 20px high	visible	[{"w":119,"h":28,"vis":true}]	PASS	REAL_STACK			
+BR-platform-login-light-390-bg	background	Platform login (light, 390px): auth background class xp-bg-auth with a gradient	xp-bg-auth + gradient	xp-bg-auth | radial-gradient(900px 420px at 50% -8%, 	PASS	REAL_STACK			
+BR-platform-login-dark-1440-logo	logo	Platform login (dark, 1440px): Xweb logo visible, ≥ 20px high	visible	[{"w":119,"h":28,"vis":true}]	PASS	REAL_STACK			
+BR-platform-login-dark-1440-bg	background	Platform login (dark, 1440px): auth background class xp-bg-auth with a gradient	xp-bg-auth + gradient	xp-bg-auth | radial-gradient(900px 420px at 50% -8%, 	PASS	REAL_STACK			
+BR-platform-login-dark-390-logo	logo	Platform login (dark, 390px): Xweb logo visible, ≥ 20px high	visible	[{"w":119,"h":28,"vis":true}]	PASS	REAL_STACK			
+BR-platform-login-dark-390-bg	background	Platform login (dark, 390px): auth background class xp-bg-auth with a gradient	xp-bg-auth + gradient	xp-bg-auth | radial-gradient(900px 420px at 50% -8%, 	PASS	REAL_STACK			
+BR-platform-icon-icon	favicon	Platform: icon icon.svg?icon.0gsfhp9iqd7v9.svg is served as an image	200 image/*	200 image/svg+xml	PASS	REAL_STACK			
+BR-platform-icon-apple-touch-icon	favicon	Platform: apple-touch-icon apple-icon.png?apple-icon.3ffn0fogdo9zm.png is served as an image	200 image/*	200 image/png	PASS	REAL_STACK			
+BR-admin-login-light-1440-title	identity	Admin login: document title names Xweb Admin	/Xweb Admin/	Xweb Admin	PASS	REAL_STACK			
+BR-admin-login-light-1440-legacy	identity	Admin login: no legacy product name in title/text	none	none	PASS	REAL_STACK			
+BR-admin-login-light-1440-primary	tokens	Admin: --color-primary is the brand cobalt #1d5bd8 (light)	#1d5bd8	#1d5bd8	PASS	REAL_STACK			
+BR-admin-login-light-1440-extfont	typography	Admin login: no external font/CDN request	0	0	PASS	REAL_STACK			
+BR-admin-login-light-1440-fontstack	typography	Admin: system font stack (no web font family)	system/Inter stack	Inter, ui-sans-serif, system-ui, -apple-system, "system-ui", "Segoe UI", sans-se	PASS	REAL_STACK			
+BR-admin-login-light-1440-icons	favicon	Admin: favicon + apple-touch-icon links present	>=1 icon	["icon:icon.svg?icon.0gsfhp9iqd7v9.svg","apple-touch-icon:apple-icon.png?apple-icon.3ffn0fogdo9zm.png"]	PASS	REAL_STACK			
+BR-admin-login-light-1440-logo	logo	Admin login (light, 1440px): Xweb logo visible, ≥ 20px high	visible	[{"w":119,"h":28,"vis":true}]	PASS	REAL_STACK			
+BR-admin-login-light-1440-bg	background	Admin login (light, 1440px): auth background class xp-bg-auth with a gradient	xp-bg-auth + gradient	xp-bg-auth | radial-gradient(900px 420px at 50% -8%, 	PASS	REAL_STACK			
+BR-admin-login-light-390-logo	logo	Admin login (light, 390px): Xweb logo visible, ≥ 20px high	visible	[{"w":119,"h":28,"vis":true}]	PASS	REAL_STACK			
+BR-admin-login-light-390-bg	background	Admin login (light, 390px): auth background class xp-bg-auth with a gradient	xp-bg-auth + gradient	xp-bg-auth | radial-gradient(900px 420px at 50% -8%, 	PASS	REAL_STACK			
+BR-admin-login-dark-1440-logo	logo	Admin login (dark, 1440px): Xweb logo visible, ≥ 20px high	visible	[{"w":119,"h":28,"vis":true}]	PASS	REAL_STACK			
+BR-admin-login-dark-1440-bg	background	Admin login (dark, 1440px): auth background class xp-bg-auth with a gradient	xp-bg-auth + gradient	xp-bg-auth | radial-gradient(900px 420px at 50% -8%, 	PASS	REAL_STACK			
+BR-admin-login-dark-390-logo	logo	Admin login (dark, 390px): Xweb logo visible, ≥ 20px high	visible	[{"w":119,"h":28,"vis":true}]	PASS	REAL_STACK			
+BR-admin-login-dark-390-bg	background	Admin login (dark, 390px): auth background class xp-bg-auth with a gradient	xp-bg-auth + gradient	xp-bg-auth | radial-gradient(900px 420px at 50% -8%, 	PASS	REAL_STACK			
+BR-admin-icon-icon	favicon	Admin: icon icon.svg?icon.0gsfhp9iqd7v9.svg is served as an image	200 image/*	200 image/svg+xml	PASS	REAL_STACK			
+BR-admin-icon-apple-touch-icon	favicon	Admin: apple-touch-icon apple-icon.png?apple-icon.3ffn0fogdo9zm.png is served as an image	200 image/*	200 image/png	PASS	REAL_STACK			
+BR-studio-login-light-1440-title	identity	Studio login: document title names Xweb Studio	/Xweb Studio/	Xweb Studio	PASS	REAL_STACK			
+BR-studio-login-light-1440-legacy	identity	Studio login: no legacy product name in title/text	none	none	PASS	REAL_STACK			
+BR-studio-login-light-1440-primary	tokens	Studio: --color-primary is the brand cobalt #1d5bd8 (light)	#1d5bd8	#1d5bd8	PASS	REAL_STACK			
+BR-studio-login-light-1440-extfont	typography	Studio login: no external font/CDN request	0	0	PASS	REAL_STACK			
+BR-studio-login-light-1440-fontstack	typography	Studio: system font stack (no web font family)	system/Inter stack	Inter, ui-sans-serif, system-ui, -apple-system, "system-ui", "Segoe UI", sans-se	PASS	REAL_STACK			
+BR-studio-login-light-1440-icons	favicon	Studio: favicon + apple-touch-icon links present	>=1 icon	["icon:icon.svg?icon.0gsfhp9iqd7v9.svg","apple-touch-icon:apple-icon.png?apple-icon.3ffn0fogdo9zm.png"]	PASS	REAL_STACK			
+BR-studio-login-light-1440-logo	logo	Studio login (light, 1440px): Xweb logo visible, ≥ 20px high	visible	[{"w":119,"h":28,"vis":true}]	PASS	REAL_STACK			
+BR-studio-login-light-1440-bg	background	Studio login (light, 1440px): auth background class xp-bg-auth with a gradient	xp-bg-auth + gradient	xp-bg-auth | radial-gradient(900px 420px at 50% -8%, 	PASS	REAL_STACK			
+BR-studio-login-light-390-logo	logo	Studio login (light, 390px): Xweb logo visible, ≥ 20px high	visible	[{"w":119,"h":28,"vis":true}]	PASS	REAL_STACK			
+BR-studio-login-light-390-bg	background	Studio login (light, 390px): auth background class xp-bg-auth with a gradient	xp-bg-auth + gradient	xp-bg-auth | radial-gradient(900px 420px at 50% -8%, 	PASS	REAL_STACK			
+BR-studio-login-dark-1440-logo	logo	Studio login (dark, 1440px): Xweb logo visible, ≥ 20px high	visible	[{"w":119,"h":28,"vis":true}]	PASS	REAL_STACK			
+BR-studio-login-dark-1440-bg	background	Studio login (dark, 1440px): auth background class xp-bg-auth with a gradient	xp-bg-auth + gradient	xp-bg-auth | radial-gradient(900px 420px at 50% -8%, 	PASS	REAL_STACK			
+BR-studio-login-dark-390-logo	logo	Studio login (dark, 390px): Xweb logo visible, ≥ 20px high	visible	[{"w":119,"h":28,"vis":true}]	PASS	REAL_STACK			
+BR-studio-login-dark-390-bg	background	Studio login (dark, 390px): auth background class xp-bg-auth with a gradient	xp-bg-auth + gradient	xp-bg-auth | radial-gradient(900px 420px at 50% -8%, 	PASS	REAL_STACK			
+BR-studio-icon-icon	favicon	Studio: icon icon.svg?icon.0gsfhp9iqd7v9.svg is served as an image	200 image/*	200 image/svg+xml	PASS	REAL_STACK			
+BR-studio-icon-apple-touch-icon	favicon	Studio: apple-touch-icon apple-icon.png?apple-icon.3ffn0fogdo9zm.png is served as an image	200 image/*	200 image/png	PASS	REAL_STACK			
+BR-platform-home-light-lockup	identity	Platform home (light): sidebar lockup names the portal in words	/Platform/i	PLATFORM	PASS	REAL_STACK		one logo for all three portals; only the words differ	
+BR-platform-home-light-logo	logo	Platform home (light): Xweb logo/mark visible in the shell	visible	[{"w":94,"h":22,"vis":true}]	PASS	REAL_STACK			
+BR-platform-home-light-legacy	identity	Platform home (light): no legacy product name	none	none	PASS	REAL_STACK			
+BR-platform-home-light-bgclasses	background	Platform home (light): brand background classes in use	recorded	(none)	BLOCKED	REAL_STACK		observation; the dashboard/hero/pattern backgrounds are optional per page	
+BR-platform-home-dark-lockup	identity	Platform home (dark): sidebar lockup names the portal in words	/Platform/i	PLATFORM	PASS	REAL_STACK		one logo for all three portals; only the words differ	
+BR-platform-home-dark-logo	logo	Platform home (dark): Xweb logo/mark visible in the shell	visible	[{"w":94,"h":22,"vis":true}]	PASS	REAL_STACK			
+BR-platform-home-dark-legacy	identity	Platform home (dark): no legacy product name	none	none	PASS	REAL_STACK			
+BR-platform-home-dark-bgclasses	background	Platform home (dark): brand background classes in use	recorded	(none)	BLOCKED	REAL_STACK		observation; the dashboard/hero/pattern backgrounds are optional per page	
+BR-admin-home-light-lockup	identity	Admin home (light): sidebar lockup names the portal in words	/Quản trị công ty/i	QUẢN TRỊ CÔNG TY	PASS	REAL_STACK		one logo for all three portals; only the words differ	
+BR-admin-home-light-logo	logo	Admin home (light): Xweb logo/mark visible in the shell	visible	[{"w":94,"h":22,"vis":true}]	PASS	REAL_STACK			
+BR-admin-home-light-legacy	identity	Admin home (light): no legacy product name	none	none	PASS	REAL_STACK			
+BR-admin-home-light-bgclasses	background	Admin home (light): brand background classes in use	recorded	(none)	BLOCKED	REAL_STACK		observation; the dashboard/hero/pattern backgrounds are optional per page	
+BR-admin-home-dark-lockup	identity	Admin home (dark): sidebar lockup names the portal in words	/Quản trị công ty/i	QUẢN TRỊ CÔNG TY	PASS	REAL_STACK		one logo for all three portals; only the words differ	
+BR-admin-home-dark-logo	logo	Admin home (dark): Xweb logo/mark visible in the shell	visible	[{"w":94,"h":22,"vis":true}]	PASS	REAL_STACK			
+BR-admin-home-dark-legacy	identity	Admin home (dark): no legacy product name	none	none	PASS	REAL_STACK			
+BR-admin-home-dark-bgclasses	background	Admin home (dark): brand background classes in use	recorded	(none)	BLOCKED	REAL_STACK		observation; the dashboard/hero/pattern backgrounds are optional per page	
+BR-studio-home-light-lockup	identity	Studio home (light): sidebar lockup names the portal in words	/Studio/i	STUDIO	PASS	REAL_STACK		one logo for all three portals; only the words differ	
+BR-studio-home-light-logo	logo	Studio home (light): Xweb logo/mark visible in the shell	visible	[{"w":94,"h":22,"vis":true}]	PASS	REAL_STACK			
+BR-studio-home-light-legacy	identity	Studio home (light): no legacy product name	none	none	PASS	REAL_STACK			
+BR-studio-home-light-bgclasses	background	Studio home (light): brand background classes in use	recorded	(none)	BLOCKED	REAL_STACK		observation; the dashboard/hero/pattern backgrounds are optional per page	
+BR-studio-home-dark-lockup	identity	Studio home (dark): sidebar lockup names the portal in words	/Studio/i	STUDIO	PASS	REAL_STACK		one logo for all three portals; only the words differ	
+BR-studio-home-dark-logo	logo	Studio home (dark): Xweb logo/mark visible in the shell	visible	[{"w":94,"h":22,"vis":true}]	PASS	REAL_STACK			
+BR-studio-home-dark-legacy	identity	Studio home (dark): no legacy product name	none	none	PASS	REAL_STACK			
+BR-studio-home-dark-bgclasses	background	Studio home (dark): brand background classes in use	recorded	(none)	BLOCKED	REAL_STACK		observation; the dashboard/hero/pattern backgrounds are optional per page	

@@ -1,0 +1,78 @@
+[
+ {
+  "id": "/admin/people",
+  "group": "ADMIN",
+  "portal": "admin",
+  "role": "tenantAdmin",
+  "route": "/admin/people",
+  "viewport": 430,
+  "url": "/admin/people",
+  "result": "PASS",
+  "notReady": false,
+  "fail": [],
+  "warn": [],
+  "axe": [],
+  "counts": {
+   "icons": {
+    "svg": 12,
+    "svgZero": 0,
+    "img": 0,
+    "imgBroken": 0,
+    "glyph": 1
+   },
+   "touchMid": 10
+  },
+  "screenshot": "admin/tenantAdmin/admin_people/430.png"
+ },
+ {
+  "id": "/admin/people",
+  "group": "ADMIN",
+  "portal": "admin",
+  "role": "workspaceAdmin",
+  "route": "/admin/people",
+  "viewport": 430,
+  "url": "/admin/people",
+  "result": "PASS",
+  "notReady": false,
+  "fail": [],
+  "warn": [],
+  "axe": [],
+  "counts": {
+   "icons": {
+    "svg": 9,
+    "svgZero": 0,
+    "img": 0,
+    "imgBroken": 0,
+    "glyph": 0
+   },
+   "touchMid": 8
+  },
+  "screenshot": "admin/workspaceAdmin/admin_people/430.png"
+ },
+ {
+  "id": "admin · sidebar navigation (10 links)",
+  "group": "ADMIN",
+  "portal": "admin",
+  "role": "tenantAdmin",
+  "route": "/admin",
+  "viewport": 1440,
+  "kind": "navigation",
+  "result": "PASS",
+  "fail": [],
+  "warn": []
+ },
+ {
+  "id": "studio · sidebar navigation (6 links)",
+  "group": "STUDIO",
+  "portal": "studio",
+  "role": "workspaceAdmin",
+  "route": "/studio",
+  "viewport": 1440,
+  "kind": "navigation",
+  "result": "FAIL",
+  "fail": [
+   "\"Tạo ứng dụng\" not marked aria-current"
+  ],
+  "warn": []
+ }
+]

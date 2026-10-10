@@ -1,0 +1,8 @@
+GROUP	PORTAL	SEVERITY	ACTUAL	FIRST_BUG	OCCURRENCES	VIEWPORTS	ROUTES	SCREENSHOT	OWNER	REPRO
+1	platform	LOW	"Cảnh báo" not marked aria-current	FQ-UI-002	3	1440x900	/platform [super · navigation]	-	C5	click the sidebar link
+2	platform	MEDIUM	click "Cảnh báo" went to /login, expected /platform/alerts	FQ-UI-001	1	1440x900	/platform [super · navigation]	-	C5	click the sidebar link
+3	platform	MEDIUM	click "Sao lưu" went to /login, expected /platform/backups	FQ-UI-003	1	1440x900	/platform [super · navigation]	-	C5	click the sidebar link
+4	platform	MEDIUM	click "Templates" went to /login, expected /platform/templates	FQ-UI-005	1	1440x900	/platform [super · navigation]	-	C5	click the sidebar link
+5	admin	MEDIUM	click "Chia sẻ Sắp có" went to /login, expected /admin/sharing	FQ-UI-007	1	1440x900	/admin [tenantAdmin · navigation]	-	C5	click the sidebar link
+6	admin	LOW	"Chia sẻ Sắp có" not marked aria-current	FQ-UI-008	1	1440x900	/admin [tenantAdmin · navigation]	-	C5	click the sidebar link
+7	studio	LOW	"Tạo ứng dụng" not marked aria-current	FQ-UI-009	1	1440x900	/studio [workspaceAdmin · navigation]	-	C5	click the sidebar link

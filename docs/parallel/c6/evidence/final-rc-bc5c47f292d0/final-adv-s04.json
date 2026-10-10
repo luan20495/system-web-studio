@@ -1,0 +1,22 @@
+{
+ "api": "http://127.0.0.1:47300",
+ "tag": "007ee2",
+ "sha": "bc5c47f292d00846c106669b09679a6fc36daef6",
+ "total": 1,
+ "failed": 0,
+ "blocked": 0,
+ "rows": [
+  {
+   "id": "ADV-S04b",
+   "area": "session",
+   "desc": "replay of an already used one-time activation token (1 limiter call)",
+   "expected": "410 LINK_INVALID",
+   "actual": "410 LINK_INVALID",
+   "result": "PASS",
+   "cls": "REAL_BACKEND_E2E",
+   "note": "",
+   "owner": "",
+   "evidence": ""
+  }
+ ]
+}

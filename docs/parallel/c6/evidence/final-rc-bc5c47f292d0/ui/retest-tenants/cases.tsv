@@ -1,0 +1,4 @@
+id	group	portal	role	route	viewport	result	notReady	fail	warn	screenshot
+/platform/tenants/5fcfa9ad-ceb6-4d46-ab3d-8eb9550c94f3	PLATFORM	platform	super	/platform/tenants/5fcfa9ad-ceb6-4d46-ab3d-8eb9550c94f3	600	PASS				platform/super/platform_tenants_id/600.png
+/platform/tenants/c880ff7f-dcc6-4664-bcd0-a8b79379d4a4	PLATFORM	platform	super	/platform/tenants/c880ff7f-dcc6-4664-bcd0-a8b79379d4a4	600	PASS				platform/super/platform_tenants_id/600.png
+platform · sidebar navigation (14 links)	PLATFORM	platform	super	/platform	1440	PASS				

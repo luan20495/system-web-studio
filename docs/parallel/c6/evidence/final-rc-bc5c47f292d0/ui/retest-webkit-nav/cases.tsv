@@ -1,0 +1,4 @@
+id	group	portal	role	route	viewport	result	notReady	fail	warn	screenshot
+platform · sidebar navigation (14 links)	PLATFORM	platform	super	/platform	1440	FAIL		click "Cảnh báo" went to /login, expected /platform/alerts | "Cảnh báo" not marked aria-current | click "Sao lưu" went to /login, expected /platform/backups | "Sao lưu" not marked aria-current | click "Templates" went to /login, expected /platform/templates | "Templates" not marked aria-current		
+admin · sidebar navigation (10 links)	ADMIN	admin	tenantAdmin	/admin	1440	FAIL		click "Chia sẻ Sắp có" went to /login, expected /admin/sharing | "Chia sẻ Sắp có" not marked aria-current		
+studio · sidebar navigation (6 links)	STUDIO	studio	workspaceAdmin	/studio	1440	FAIL		"Tạo ứng dụng" not marked aria-current		

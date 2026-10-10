@@ -1,0 +1,71 @@
+{
+ "Platform": {
+  "url": "http://127.0.0.1:47308/platform",
+  "title": "Xweb Platform"
+ },
+ "Admin": {
+  "url": "http://127.0.0.1:47309/admin",
+  "title": "Xweb Admin"
+ },
+ "Studio": {
+  "url": "http://127.0.0.1:47307/studio",
+  "title": "Xweb Studio"
+ },
+ "flyway": "32 / 31 migrations, failed=0",
+ "frontendCheckout": {
+  "dir": "/Users/hoangluan/code/xweb-c0-rc",
+  "head": "fabea8198fda1eaca9e5c5257c88d1b530bceb73",
+  "dirty": 2
+ },
+ "backendWorktree": {
+  "dir": "/Users/hoangluan/.xweb-e2e-stack/c0rc/backend-worktree",
+  "head": "953d17e53d05ba939f79d8fa03763fef9cd580da",
+  "dirty": 0
+ },
+ "serving": {
+  "stack": "c0rc",
+  "sha": "953d17e53d05ba939f79d8fa03763fef9cd580da",
+  "recordedAt": "2026-10-10T06:14:27Z",
+  "ports": {
+   "api": 47300,
+   "studio": 47307,
+   "platform": 47308,
+   "admin": 47309,
+   "sites": 47305,
+   "postgres": 47301
+  },
+  "organizationPersistence": "true",
+  "publishConfigs": "true"
+ },
+ "processes": {
+  "API": {
+   "pid": "34499",
+   "cwd": "/Users/hoangluan/.xweb-e2e-stack/c0rc/backend-worktree/backend",
+   "started": "Sat Oct 10 14:05:04 2026"
+  },
+  "Studio": {
+   "pid": "83900",
+   "cwd": "/Users/hoangluan/code/xweb-c0-rc/apps/studio",
+   "started": "Sat Oct 10 13:14:17 2026"
+  },
+  "Platform": {
+   "pid": "84839",
+   "cwd": "/Users/hoangluan/code/xweb-c0-rc/apps/platform",
+   "started": "Sat Oct 10 13:14:22 2026"
+  },
+  "Admin": {
+   "pid": "85626",
+   "cwd": "/Users/hoangluan/code/xweb-c0-rc/apps/admin",
+   "started": "Sat Oct 10 13:14:27 2026"
+  }
+ },
+ "buildIds": {
+  "Platform": "2GuhCrW5Nzpw91J-27pgg",
+  "Admin": "-Eg7ur7xVaYfyHAOTtq5I",
+  "Studio": "cfrpHRfq45k1DWtHqrauH"
+ },
+ "STACK_SHA": "953d17e53d05ba939f79d8fa03763fef9cd580da",
+ "FRONTEND_SHA": "fabea8198fda1eaca9e5c5257c88d1b530bceb73",
+ "BACKEND_SHA": "953d17e53d05ba939f79d8fa03763fef9cd580da",
+ "PRODUCT_SHA_DEPLOYED": "bc5c47f292d00846c106669b09679a6fc36daef6"
+}
