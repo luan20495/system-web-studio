@@ -87,8 +87,8 @@ class ApprovalJourneyE2ETests : IntegrationTestBase() {
         val who = approvers.joinToString(",") { """{"kind":"USER","userId":"$it"}""" }
         fun approval(onReject: String?) = """{"id":"okay","kind":"APPROVAL","approval":{"title":"Approve order","approvers":[$who],"requiredApprovals":1,"expiresInSeconds":86400${onReject?.let { ""","onReject":"$it"""" } ?: ""}},"next":"approved"}"""
         val workflows = doc.get("workflows") as ArrayNode
-        workflows.add(json.readTree("""{"id":"order-approval","name":"Order approval","trigger":"ACTION","steps":[${step("submit", "submitted", "okay")},${approval("rejected")},${step("approved", "approved")},${step("rejected", "rejected")}]}"""))
-        workflows.add(json.readTree("""{"id":"order-strict","name":"Order approval, strict","trigger":"ACTION","steps":[${step("submit", "submitted", "okay")},${approval(null)},${step("approved", "approved")}]}"""))
+        workflows.add(json.readTree("""{"id":"order-approval","name":"Order approval","trigger":"ACTION","steps":[${step("submit", "submitted", "okay")},${approval("rejected")},${step("approved", "approved", "end")},${step("rejected", "rejected", "end")},{"id":"end","kind":"END"}]}"""))
+        workflows.add(json.readTree("""{"id":"order-strict","name":"Order approval, strict","trigger":"ACTION","steps":[${step("submit", "submitted", "okay")},${approval(null)},${step("approved", "approved", "end")},{"id":"end","kind":"END"}]}"""))
         return doc
     }
 
@@ -215,7 +215,7 @@ class ApprovalJourneyE2ETests : IntegrationTestBase() {
         drain(); drain()
         assertThat(run(e, a).get("status").asString()).isEqualTo("SUCCEEDED")
         assertThat(status(routed)).describedAs("the onReject branch").isEqualTo("rejected")
-        assertThat(step(run(e, a), "approved").get("status").asString()).isNotEqualTo("SUCCEEDED")
+        assertThat(run(e, a).get("steps").none { it.get("stepId").asString() == "approved" && it.get("status").asString() == "SUCCEEDED" }).describedAs("the approved step never ran").isTrue()
         val failed = run(e, b)
         assertThat(failed.get("status").asString()).isEqualTo("FAILED"); assertThat(failed.get("errorCode").asString()).isEqualTo("APPROVAL_REJECTED")
         assertThat(status(strict)).describedAs("no branch: the data stays as it was saved").isEqualTo("submitted")
