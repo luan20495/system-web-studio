@@ -6,7 +6,14 @@ import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Service
 import java.util.UUID
 
-data class TenantMembershipSummary(val id: UUID, val slug: String, val name: String, val status: String, val role: String)
+/**
+ * One ACTIVE tenant membership of the caller (DELETED tenants and inactive memberships are never listed).
+ * [role] is INFORMATIONAL ONLY (display / routing): a client must NEVER authorize from it. [permissions] is the canonical authorization signal for THIS tenant and ONLY this
+ * tenant: the codes `PermissionMatrix.tenantRoles[role]` grants there (TENANT_ADMIN: the eight tenant + organization codes; MEMBER: none), recomputed from the database on every
+ * `/auth/me` call, in memory (no SQL per tenant). It is independent of the root `permissions[]` (which describe the primary tenant + the platform scope) and of the tenant [status]:
+ * in a SUSPENDED tenant the capabilities are still listed, but the server refuses organization / employee / position writes and the tenant rename there with 403 TENANT_SUSPENDED.
+ */
+data class TenantMembershipSummary(val id: UUID, val slug: String, val name: String, val status: String, val role: String, val permissions: List<String> = emptyList())
 
 /** What `/auth/me` tells the portals so they can route and gate. Everything here is derived server-side; the UI never decides authorisation. */
 data class MeTenancy(
@@ -32,7 +39,10 @@ class MeTenancyService(
             """SELECT t.id, t.slug, t.name, t.status, tm.role FROM tenant_members tm JOIN tenants t ON t.id = tm.tenant_id
                WHERE tm.user_id = ? AND tm.active AND t.status <> 'DELETED'
                ORDER BY (t.id = ?) DESC, tm.created_at, t.slug""", { rs, _ ->
-                TenantMembershipSummary(rs.getObject(1, UUID::class.java), rs.getString(2), rs.getString(3), rs.getString(4), rs.getString(5))
+                val role = rs.getString(5)
+                // the SAME set AccessService.forTenant grants in that tenant: the member role's codes; with the legacy business bypass a SYSTEM_ADMIN holds the TENANT_ADMIN set everywhere
+                val set = if (systemAdmin && systemAdminBusinessAccess) PermissionMatrix.tenantRoles.getValue("TENANT_ADMIN") else PermissionMatrix.tenantRoles[role].orEmpty()
+                TenantMembershipSummary(rs.getObject(1, UUID::class.java), rs.getString(2), rs.getString(3), rs.getString(4), role, PermissionCodes.canonicalCodesOf(set))
             }, userId, TenantIds.DEFAULT)
         val primary = tenants.firstOrNull()
         val perms = linkedSetOf<Permission>()
