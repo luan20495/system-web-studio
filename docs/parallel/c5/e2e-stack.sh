@@ -8,7 +8,10 @@
 #   e2e-stack.sh up               prepare + infra + backend + render worker + Studio (build with the proxy target) — idempotent
 #   e2e-stack.sh infra-up | backend-up | backend-launch (no wait) | backend-down | backend-restart | backend-pause | backend-resume | store-pause | store-resume | render-pause | render-resume | render-up | studio-up
 #   e2e-stack.sh e2e [flows]      run the real-backend suite (E2E_SHUFFLE_SEED=<n> shuffles the order). Hooks for E2E-12/S6/S7/14 are wired to this script.
+#   e2e-stack.sh portals-up | portals-down   Platform + Admin portals (Studio is `studio-up`); `up` with E2E_PORTALS=1 starts them too (C0, D-C0-55)
 #   e2e-stack.sh status | down [--infra] [--worktree]
+# C0 (D-C0-55) additions, all opt-in so the defaults are unchanged: E2E_PLATFORM_PORT / E2E_ADMIN_PORT (web origins + CORS follow them), E2E_ORG_PERSISTENCE=true (ORGANIZATION_PERSISTENCE_ENABLED, THIS stack only),
+# E2E_PUBLISH_CONFIGS=true (PUBLISH_CONFIGS_ENABLED); the sites gateway gets GATEWAY_REAL_IP_FROM / GATEWAY_FORCE_HTTPS (without them nginx refuses to start); `status` no longer breaks on macOS bash 3.2.
 #
 # No secret is printed or committed: the env file lives in $E2E_STACK_DIR (outside the repo).
 set -euo pipefail
@@ -22,6 +25,7 @@ MERGE_REFS="${E2E_MERGE_REFS-}"                                             # EM
 BACKEND_REPO="${E2E_BACKEND_REPO:-$REPO}"                                    # any checkout of the same repository that has those refs
 API_PORT="${E2E_API_PORT:-38080}"; PG_PORT="${E2E_PG_PORT:-35432}"; REDIS_PORT="${E2E_REDIS_PORT:-36379}"; MINIO_PORT="${E2E_MINIO_PORT:-39000}"
 RABBIT_PORT="${E2E_RABBIT_PORT:-35672}"; SITES_PORT="${E2E_SITES_PORT:-38088}"; RENDER_PORT="${E2E_RENDER_PORT:-38095}"; STUDIO_PORT="${E2E_STUDIO_PORT:-3003}"
+PLATFORM_PORT="${E2E_PLATFORM_PORT:-3001}"; ADMIN_PORT="${E2E_ADMIN_PORT:-3002}"
 JAVA21="${E2E_JAVA_HOME:-/opt/homebrew/opt/openjdk@21}"
 CHROME="${E2E_CHROME:-/Applications/Google Chrome.app/Contents/MacOS/Google Chrome}"
 ENVF="$DIR/stack.env"; WT="$DIR/backend-worktree"; LOGS="$DIR/logs"
@@ -72,10 +76,10 @@ RENDER_TOKEN=$(openssl rand -hex 24)
 COOKIE_SECURE=false
 SPRING_PROFILES_ACTIVE=local
 SERVER_PORT=$API_PORT
-CORS_ALLOWED_ORIGINS=http://127.0.0.1:$STUDIO_PORT,http://127.0.0.1:3001,http://127.0.0.1:3002
+CORS_ALLOWED_ORIGINS=http://127.0.0.1:$STUDIO_PORT,http://127.0.0.1:$PLATFORM_PORT,http://127.0.0.1:$ADMIN_PORT
 WEB_ORIGIN_STUDIO=http://127.0.0.1:$STUDIO_PORT
-WEB_ORIGIN_ADMIN=http://127.0.0.1:3002
-WEB_ORIGIN_PLATFORM=http://127.0.0.1:3001
+WEB_ORIGIN_ADMIN=http://127.0.0.1:$ADMIN_PORT
+WEB_ORIGIN_PLATFORM=http://127.0.0.1:$PLATFORM_PORT
 MAX_PROJECTS_PER_WORKSPACE=100000
 DATA_PLATFORM_ENABLED=true
 WORKFLOW_ENABLED=true
@@ -86,6 +90,8 @@ SITES_DATA_API_BASE=${E2E_SITES_DATA_API_BASE:-}
 STUDIO_ORIGIN=http://127.0.0.1:$STUDIO_PORT
 RENDER_URL=http://127.0.0.1:$RENDER_PORT
 RENDER_PORT=$RENDER_PORT
+ORGANIZATION_PERSISTENCE_ENABLED=${E2E_ORG_PERSISTENCE:-false}
+PUBLISH_CONFIGS_ENABLED=${E2E_PUBLISH_CONFIGS:-false}
 JAVA_HOME=$JAVA21
 EOF
     )
@@ -102,7 +108,7 @@ infra_up() {
   run_container redis -p "127.0.0.1:$REDIS_PORT:6379" redis:8.2.1-alpine
   run_container minio -p "127.0.0.1:$MINIO_PORT:9000" -e "MINIO_ROOT_USER=$MINIO_ROOT_USER" -e "MINIO_ROOT_PASSWORD=$MINIO_ROOT_PASSWORD" -e MINIO_DEFAULT_BUCKETS=studio-assets bitnamilegacy/minio:2025.7.23-debian-12-r5
   run_container rabbit -p "127.0.0.1:$RABBIT_PORT:5672" -e RABBITMQ_DEFAULT_USER=studio -e "RABBITMQ_DEFAULT_PASS=$RABBITMQ_PASSWORD" rabbitmq:4-management-alpine
-  run_container sites -p "127.0.0.1:$SITES_PORT:8080" -e "API_UPSTREAM=host.docker.internal:$API_PORT" -e SITES_HOST=sites.localhost --add-host host.docker.internal:host-gateway \
+  run_container sites -p "127.0.0.1:$SITES_PORT:8080" -e "API_UPSTREAM=host.docker.internal:$API_PORT" -e SITES_HOST=sites.localhost -e GATEWAY_FORCE_HTTPS=0 -e "GATEWAY_REAL_IP_FROM=${E2E_GATEWAY_REAL_IP_FROM:-127.0.0.1}" --add-host host.docker.internal:host-gateway \
     -v "$WT/infra/sites-gateway/default.conf.template:/etc/nginx/templates/default.conf.template:ro" --tmpfs /tmp --tmpfs /etc/nginx/conf.d:uid=101,gid=101,mode=0755 nginxinc/nginx-unprivileged:1.29-alpine
   for _ in $(seq 1 40); do docker exec "$NAME-pg" pg_isready -U studio -d system_web_studio >/dev/null 2>&1 && return 0; sleep 1; done; die "postgres did not become ready"
 }
@@ -159,24 +165,54 @@ studio_up() {
   owned refresh --state "$(st studio)" || true
 }
 
+portal_up() {   # <name> <port>: build with THIS stack's API as proxy target (baked in at build time) and start it owned; the checkout's tracked tsconfig is put back
+  local app="$1" port="$2"; need_env; mkdir -p "$RUNST"
+  stop_owned "$app" || die "the previous $app of this stack did not stop"
+  port_busy_die "$port" "$app" "set E2E_$(echo "$app" | tr a-z A-Z)_PORT"
+  export NEXT_DIST_DIR=".next-check-$NAME"
+  cp "$REPO/apps/$app/tsconfig.json" "$DIR/tsconfig.$app.orig"
+  ( cd "$REPO" && API_PROXY_TARGET="http://127.0.0.1:$API_PORT" npm run "build:$app" > "$LOGS/$app-build.log" 2>&1 ) || { cp "$DIR/tsconfig.$app.orig" "$REPO/apps/$app/tsconfig.json"; die "$app build failed; see $LOGS/$app-build.log"; }
+  cp "$DIR/tsconfig.$app.orig" "$REPO/apps/$app/tsconfig.json"
+  API_PROXY_TARGET="http://127.0.0.1:$API_PORT" owned start --state "$(st $app)" --log "$LOGS/$app.log" --cwd "$REPO/apps/$app" --name "$app" --port "$port" -- npx next start -H 127.0.0.1 -p "$port" || die "$app did not start"
+  wait_http "http://127.0.0.1:$port/api/v1/auth/config" 60 || { stop_owned "$app" || true; die "$app does not reach the API; see $LOGS/$app.log"; }
+  owned refresh --state "$(st $app)" || true
+}
+portals_up() { portal_up platform "$PLATFORM_PORT"; portal_up admin "$ADMIN_PORT"; }
+portals_down() { need_env; stop_owned platform || true; stop_owned admin || true; }
+
 e2e() {
   need_env; local flows="${1:-}"
-  ( cd "$REPO" && E2E_ONLY="$flows" E2E_STUDIO_URL="http://127.0.0.1:$STUDIO_PORT" E2E_ADMIN_USER=local.admin E2E_ADMIN_PASSWORD="$LOCAL_ADMIN_PASSWORD" E2E_CHROME="$CHROME" \
+  ( cd "$REPO" && E2E_ONLY="$flows" E2E_STUDIO_URL="http://127.0.0.1:$STUDIO_PORT" E2E_PLATFORM_URL="http://127.0.0.1:$PLATFORM_PORT" E2E_ADMIN_URL="http://127.0.0.1:$ADMIN_PORT" E2E_ADMIN_USER=local.admin E2E_ADMIN_PASSWORD="$LOCAL_ADMIN_PASSWORD" E2E_CHROME="$CHROME" \
       E2E_DURABLE_RUN_STORES=1 E2E_RESTART_BACKEND_CMD="$SELF backend-restart" E2E_STOP_BACKEND_CMD="$SELF backend-down" E2E_PAUSE_STORE_CMD="$SELF store-pause" E2E_RESUME_STORE_CMD="$SELF store-resume" E2E_PAUSE_RENDER_CMD="$SELF render-pause" E2E_RESUME_RENDER_CMD="$SELF render-resume" E2E_PAUSE_BACKEND_CMD="$SELF backend-pause" E2E_RESUME_BACKEND_CMD="$SELF backend-resume" E2E_START_BACKEND_CMD="$SELF backend-launch" \
       E2E_BACKEND_URL="http://127.0.0.1:$API_PORT" E2E_BACKEND_HEAD="$(git -C "$WT" log --oneline -1) [$BASE_REF${MERGE_REFS:+ + $MERGE_REFS}]" E2E_OUT_DIR="${E2E_OUT_DIR:-$REPO/.run/e2e-real}" \
       npm run test:e2e:real )
 }
 
+pin_check() {   # exact SHA pinning (D-C0-55): the backend worktree is BASE_REF, the portals are built from THIS checkout: they must be the same commit, otherwise the stack would serve a mix
+  local want have; want="$(git -C "$BACKEND_REPO" rev-parse "$BASE_REF^{commit}")" || die "E2E_BASE_REF $BASE_REF does not resolve"; have="$(git -C "$REPO" rev-parse HEAD)"
+  [ "$want" = "$have" ] || [ "${E2E_ALLOW_SKEW:-0}" = 1 ] || die "backend = $BASE_REF ($want) but the portals would be built from $REPO @ $have: check out the same commit, or set E2E_ALLOW_SKEW=1 knowingly"
+  PINNED_SHA="$want"
+}
+serving_record() {   # what this stack serves, written next to its state (never a secret)
+  need_env; local f="$DIR/SERVING.json"
+  printf '{\n  "stack": "%s",\n  "sha": "%s",\n  "recordedAt": "%s",\n  "ports": {"api": %s, "studio": %s, "platform": %s, "admin": %s, "sites": %s, "postgres": %s},\n  "organizationPersistence": "%s",\n  "publishConfigs": "%s"\n}\n' \
+    "$NAME" "${PINNED_SHA:-unknown}" "$(date -u +%FT%TZ)" "$API_PORT" "$STUDIO_PORT" "$PLATFORM_PORT" "$ADMIN_PORT" "$SITES_PORT" "$PG_PORT" "${ORGANIZATION_PERSISTENCE_ENABLED:-false}" "${PUBLISH_CONFIGS_ENABLED:-false}" > "$f"
+  say "serving record: $f"
+}
+owned_name() { case "$1" in api) echo backend-app ;; render) echo render ;; studio) echo studio ;; platform) echo platform ;; admin) echo admin ;; *) echo none ;; esac; }   # a function: a `case` inside $( ) is a syntax error on macOS bash 3.2
 status() {
-  for p in "api $API_PORT" "render $RENDER_PORT" "studio $STUDIO_PORT" "pg $PG_PORT" "redis $REDIS_PORT" "minio $MINIO_PORT" "rabbit $RABBIT_PORT" "sites $SITES_PORT"; do
-    set -- $p; printf '%-7s :%-6s %s\n' "$1" "$2" "$(if port_free "$2"; then echo -; elif is_owned_up "$(case "$1" in api) echo backend-app;; render) echo render;; studio) echo studio;; *) echo none;; esac)"; then echo "listening (owned)"; else echo "listening"; fi)"
+  local p name port state
+  for p in "api $API_PORT" "render $RENDER_PORT" "studio $STUDIO_PORT" "platform $PLATFORM_PORT" "admin $ADMIN_PORT" "pg $PG_PORT" "redis $REDIS_PORT" "minio $MINIO_PORT" "rabbit $RABBIT_PORT" "sites $SITES_PORT"; do
+    name="${p%% *}"; port="${p##* }"
+    if port_free "$port"; then state="-"; elif is_owned_up "$(owned_name "$name")"; then state="listening (owned)"; else state="listening"; fi
+    printf '%-9s :%-6s %s\n' "$name" "$port" "$state"
   done
   curl -fsS "http://127.0.0.1:$API_PORT/actuator/health/readiness" 2>/dev/null && echo || echo "api readiness: not answering"
 }
 down() {
   need_env 2>/dev/null || true
   # only what this script started (state files), each validated; a foreign process on one of these ports stays untouched
-  for n in studio render backend-app backend; do stop_owned "$n" || say "WARNING: $n did not stop (see above)"; done
+  for n in platform admin studio render backend-app backend; do stop_owned "$n" || say "WARNING: $n did not stop (see above)"; done
   for a in "$@"; do
     case "$a" in
       --infra) for c in pg redis minio rabbit sites; do docker rm -f "$NAME-$c" >/dev/null 2>&1 || true; done ;;
@@ -187,7 +223,7 @@ down() {
 
 case "${1:-}" in
   prepare) prepare ;;
-  up) prepare; infra_up; backend_up; render_up; studio_up; status ;;
+  up) pin_check; prepare; infra_up; backend_up; render_up; studio_up; if [ "${E2E_PORTALS:-0}" = 1 ]; then portals_up; fi; serving_record; status ;;
   infra-up) prepare; infra_up ;;
   backend-up) backend_up ;;
   backend-launch) backend_launch ;;
@@ -201,6 +237,8 @@ case "${1:-}" in
   backend-resume) backend_resume ;;
   render-up) render_up ;;
   studio-up) studio_up ;;
+  portals-up) portals_up ;;
+  portals-down) portals_down ;;
   e2e) shift; e2e "${1:-}" ;;
   status) status ;;
   down) shift; down "$@" ;;
