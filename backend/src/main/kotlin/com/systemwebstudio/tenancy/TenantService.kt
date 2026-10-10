@@ -223,8 +223,10 @@ class TenantService(
         audit.record("TENANT_MEMBER_REMOVED", "TENANT", tenantId, actorId = actorId, oldValue = mapOf("userId" to userId, "role" to m.role))
     }
 
+    /** Race-safe: the active TENANT_ADMIN rows are locked (id order, no deadlock) BEFORE they are counted, so two admins that demote / remove each other concurrently cannot both pass. */
     private fun assertNotLastAdmin(tenantId: UUID) {
-        if (members.countByTenantIdAndRoleAndActiveTrue(tenantId, TenantRole.TENANT_ADMIN.name) <= 1)
+        val admins = jdbc.queryForList("SELECT user_id FROM tenant_members WHERE tenant_id = ? AND role = ? AND active ORDER BY user_id FOR UPDATE", tenantId, TenantRole.TENANT_ADMIN.name)
+        if (admins.size <= 1)
             throw ApiException.conflict("LAST_TENANT_ADMIN", "A tenant must keep at least one TENANT_ADMIN")
     }
 

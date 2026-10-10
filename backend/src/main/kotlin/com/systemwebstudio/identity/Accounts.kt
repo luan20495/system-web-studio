@@ -205,6 +205,8 @@ class AccountService(
     @Transactional
     fun setSystemAdmin(adminId: UUID, targetId: UUID, grant: Boolean) {
         if (targetId == adminId) throw ApiException.conflict("CANNOT_CHANGE_SELF", "Bạn không thể tự đổi quyền Quản trị hệ thống của chính mình")
+        // race-safe last-SYSTEM_ADMIN rule: every enabled SYSTEM_ADMIN row is locked (id order) before the count, so two operators revoking each other cannot both pass
+        jdbc.queryForList("SELECT id FROM users WHERE system_admin AND enabled ORDER BY id FOR UPDATE")
         val t = jdbc.queryForList("SELECT enabled, system_admin, activated_at FROM users WHERE id = ? FOR UPDATE", targetId).firstOrNull() ?: throw ApiException.notFound("USER_NOT_FOUND", "Không tìm thấy người dùng")
         if (grant && (t["enabled"] != true || t["activated_at"] == null)) throw ApiException.conflict("NOT_ACTIVE", "Chỉ cấp quyền cho tài khoản đã kích hoạt và đang hoạt động")
         if (!grant && t["system_admin"] == true && jdbc.queryForObject("SELECT count(*) FROM users WHERE system_admin AND enabled AND id <> ?", Long::class.java, targetId)!! == 0L)

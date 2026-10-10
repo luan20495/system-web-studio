@@ -25,7 +25,6 @@ data class TenantContext(
     val status: TenantStatus = TenantStatus.ACTIVE,
     val platformScope: Boolean = false
 ) {
-    val isTenantAdmin: Boolean get() = tenantRole == TenantRole.TENANT_ADMIN
     val isDefaultTenant: Boolean get() = tenantId == TenantIds.DEFAULT
 
     companion object {

@@ -2,6 +2,7 @@ package com.systemwebstudio.tenancy
 
 import com.systemwebstudio.access.AccessService
 import com.systemwebstudio.access.Permission
+import com.systemwebstudio.access.TenantAccess
 import com.systemwebstudio.common.ApiException
 import com.systemwebstudio.identity.AccountService
 import com.systemwebstudio.identity.ActivationLink
@@ -92,7 +93,7 @@ class TenantController(
         @RequestBody r: TenantWorkspaceRequest,
         @AuthenticationPrincipal me: StudioUserDetails
     ): Map<String, Any> {
-        access.forTenant(me.userId, tenantId).require(Permission.TENANT_MANAGE)
+        writable(access.forTenant(me.userId, tenantId).also { it.require(Permission.TENANT_MANAGE) }, tenantId)
         return service.createWorkspace(tenantId, r.name.orEmpty(), me.userId)
     }
 
@@ -108,7 +109,7 @@ class TenantController(
         @RequestBody r: TenantUserProvisionRequest,
         @AuthenticationPrincipal me: StudioUserDetails
     ): ActivationLink {
-        access.forTenant(me.userId, tenantId).require(Permission.TENANT_MEMBERS)
+        writable(access.forTenant(me.userId, tenantId).also { it.require(Permission.TENANT_MEMBERS) }, tenantId)
         val username = r.username?.trim().orEmpty()
         val displayName = r.displayName?.trim().orEmpty()
         val tenantRole = r.tenantRole ?: "MEMBER"
@@ -139,7 +140,7 @@ class TenantController(
 
     @PutMapping("/{tenantId}/members/{userId}")
     fun setMember(@PathVariable tenantId: UUID, @PathVariable userId: UUID, @RequestBody r: TenantMemberRequest, @AuthenticationPrincipal me: StudioUserDetails): TenantMemberView {
-        access.forTenant(me.userId, tenantId).require(Permission.TENANT_MEMBERS)
+        writable(access.forTenant(me.userId, tenantId).also { it.require(Permission.TENANT_MEMBERS) }, tenantId)
         val role = TenantRole.entries.firstOrNull { it.name == r.role } ?: throw ApiException.badRequest("TENANT_ROLE_INVALID", "Role must be TENANT_ADMIN or MEMBER")
         // self-grant is judged first (403 SELF_GRANT_FORBIDDEN in the service); any other target must be related to THIS tenant, else it is indistinguishable from "no such user"
         if (userId != me.userId) when (service.eligibility(tenantId, userId)) {
@@ -153,7 +154,10 @@ class TenantController(
     @DeleteMapping("/{tenantId}/members/{userId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun removeMember(@PathVariable tenantId: UUID, @PathVariable userId: UUID, @AuthenticationPrincipal me: StudioUserDetails) {
-        access.forTenant(me.userId, tenantId).require(Permission.TENANT_MEMBERS)
+        writable(access.forTenant(me.userId, tenantId).also { it.require(Permission.TENANT_MEMBERS) }, tenantId)
         service.removeMember(tenantId, userId, me.userId)
     }
+
+    /** A SUSPENDED company is frozen for its own administrators (workspaces, accounts, members); the platform operator keeps its reach to repair it. A DELETED one is gone for everybody. */
+    private fun writable(a: TenantAccess, tenantId: UUID) { if (!a.platformScope) access.requireTenantWritable(tenantId) }
 }
