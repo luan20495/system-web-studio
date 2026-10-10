@@ -5,6 +5,7 @@ import type { OrgUnitDto, OrgUnitNodeDto, OrgUnitTypeDto } from "@xweb/types";
 import { ApiError } from "../../packages/api-client/src/core";
 import { CAPABILITIES, OrganizationNotReady, createOrganizationApi, flattenUnitNodes, typeFromDto, type OrgCapabilityId, type OrgCapabilityState, type OrgUnit, type OrgUnitType, type OrganizationTransport } from "../../features/admin/organization";
 import * as M from "../../features/admin/organizationModel";
+import * as AM from "../../features/admin/adminModel";
 import { adminScope } from "../../features/admin/adminModel";
 
 const NO_RULES = { allowedParentTypeIds: null, allowedChildTypeIds: null, allowRoot: null, maxDepth: null };
@@ -13,7 +14,7 @@ const ty = (id: string, code: string, name: string, rules: Partial<OrgUnitType["
 const TYPES: OrgUnitType[] = [ty("t-div", "division", "Khối"), ty("t-dept", "dept", "Phòng", { allowedParentTypeIds: ["t-div"] }), ty("t-team", "team", "Team", { allowedParentTypeIds: ["t-dept", "t-team"] })];
 const TREE = [u("tech", null, "Khối Công nghệ", { typeId: "t-div" }), u("mobile", "tech", "Mobile", { typeId: "t-dept" }), u("flutter", "mobile", "Flutter Team", { typeId: "t-team" }), u("web", "tech", "Web", { typeId: "t-dept" }), u("hr", null, "Khối Nhân sự", { typeId: "t-div" })];
 const FULL_ORG = { structureView: true, structureManage: true, employeeView: true, employeeManage: true, employeeProvision: true, positionGradeView: true, positionGradeManage: true };
-const scope = (tenants: { id: string; name: string }[], org = FULL_ORG) => ({ org, platform: false, tenants: tenants.map((t) => ({ ...t, slug: t.id, status: "ACTIVE" })), workspaces: [], dataWorkspaces: [] });
+const scope = (tenants: { id: string; name: string }[], org = FULL_ORG) => ({ platform: false, tenants: tenants.map((t) => ({ ...t, slug: t.id, status: "ACTIVE" })), caps: Object.fromEntries(tenants.map((t) => [t.id, { members: true, manage: true, org }])), workspaces: [], dataWorkspaces: [] });
 const ALL_IDS = Object.keys(CAPABILITIES) as OrgCapabilityId[];
 const dto = (id: string, parentId: string | null, o: Partial<OrgUnitDto> = {}): OrgUnitDto => ({ id, tenantId: "t", typeId: "t-div", parentId, name: id, code: id.toUpperCase(), sortOrder: 0, metadata: {}, active: true, version: 0, createdAt: "2026-01-01T00:00:00Z", updatedAt: "2026-01-01T00:00:00Z", archivedAt: null, ...o });
 const node = (unit: OrgUnitDto, children: OrgUnitNodeDto[] = [], direct: number | null = null, subtree: number | null = null): OrgUnitNodeDto => ({ unit, children, directMemberCount: direct, subtreeEmployeeCount: subtree });
@@ -248,42 +249,75 @@ test("gate: offered only when the server lists a tenant the caller administers; 
   assert.equal(partial.edit.state, "not-ready", "one missing edit operation disables editing as a whole, with its reason"); assert.equal(partial.units.state, "ready");
 });
 
-test("gate (D-C0-51): the screens read ORG_STRUCTURE_* / EMPLOYEE_* / POSITION_GRADE_* and nothing else; TENANT_MEMBERS, platformScope and a role grant none of them", () => {
+test("gate (D-C0-51 + M-052): the screens read ORG_STRUCTURE_* / EMPLOYEE_* / POSITION_GRADE_* of the SELECTED company and nothing else; TENANT_MEMBERS, platformScope and a role grant none of them", () => {
   const A = adminScope as (me: unknown) => ReturnType<typeof adminScope>;
   const base = { id: "u", username: "u", displayName: "U", roles: [], workspaces: [], tenantId: "t1", tenants: [{ id: "t1", slug: "a", name: "A", status: "ACTIVE", role: "TENANT_ADMIN" }] };
   const st = (id: OrgCapabilityId) => CAPABILITIES[id];
+  const plan = (me: unknown, tenantId = "t1") => M.organizationPlan(A(me), st, tenantId); const orgOf = (me: unknown, id = "t1") => AM.capsOf(A(me), id).org;
+  // a role label alone, TENANT_MEMBERS alone, platform scope with its two tenant codes: NO organization screen
   for (const me of [{ ...base, permissions: [] }, { ...base, permissions: ["TENANT_MEMBERS", "TENANT_MANAGE"] }, { ...base, platformScope: true, systemAdmin: true, permissions: ["TENANT_MANAGE", "TENANT_MEMBERS"] }]) {
-    const pl = M.organizationPlan(A(me), st); assert.equal(pl.access.granted, false); assert.equal(pl.employeeAccess.granted, false); assert.equal(A(me).org.employeeProvision, false);
+    const pl = plan(me); assert.equal(pl.access.granted, false); assert.equal(pl.employeeAccess.granted, false); assert.equal(orgOf(me).employeeProvision, false);
   }
   // a viewer: sees structure + employees + positions, may change none of it
-  const v = M.organizationPlan(A({ ...base, permissions: ["ORG_STRUCTURE_VIEW", "EMPLOYEE_VIEW", "POSITION_GRADE_VIEW", "TENANT_MEMBERS"] }), st);
+  const v = plan({ ...base, permissions: ["ORG_STRUCTURE_VIEW", "EMPLOYEE_VIEW", "POSITION_GRADE_VIEW", "TENANT_MEMBERS"] });
   assert.equal(v.access.granted, true); assert.equal(v.employeeAccess.granted, true); assert.equal(v.units.state, "ready"); assert.equal(v.positions.state, "ready");
   for (const k of ["edit", "typesManage", "catalogManage", "assignOrg", "assignPosition"] as const) assert.equal(v[k].state, "no-permission", k);
   assert.equal(v.employeeCreate.state, "no-permission", "TENANT_MEMBERS alone does not let a viewer provision an employee");
   // *_MANAGE does not imply *_VIEW: a manager without the view code is refused the screen
-  const m = M.organizationPlan(A({ ...base, permissions: ["ORG_STRUCTURE_MANAGE", "EMPLOYEE_MANAGE", "POSITION_GRADE_MANAGE"] }), st); assert.equal(m.access.granted, false); assert.equal(m.employeeAccess.granted, false); assert.equal(m.positions.state, "no-permission");
+  const m = plan({ ...base, permissions: ["ORG_STRUCTURE_MANAGE", "EMPLOYEE_MANAGE", "POSITION_GRADE_MANAGE"] }); assert.equal(m.access.granted, false); assert.equal(m.employeeAccess.granted, false); assert.equal(m.positions.state, "no-permission");
   // the full TENANT_ADMIN set
-  const full = A({ ...base, permissions: ["TENANT_MEMBERS", "TENANT_MANAGE", "ORG_STRUCTURE_VIEW", "ORG_STRUCTURE_MANAGE", "EMPLOYEE_VIEW", "EMPLOYEE_MANAGE", "POSITION_GRADE_VIEW", "POSITION_GRADE_MANAGE"] });
-  assert.deepEqual(full.org, FULL_ORG); const f = M.organizationPlan(full, st); assert.equal(f.edit.state, "ready"); assert.equal(f.assignOrg.state, "ready"); assert.equal(f.catalogManage.state, "ready");
+  const full = { ...base, permissions: ["TENANT_MEMBERS", "TENANT_MANAGE", "ORG_STRUCTURE_VIEW", "ORG_STRUCTURE_MANAGE", "EMPLOYEE_VIEW", "EMPLOYEE_MANAGE", "POSITION_GRADE_VIEW", "POSITION_GRADE_MANAGE"] };
+  assert.deepEqual(orgOf(full), FULL_ORG); const f = plan(full); assert.equal(f.edit.state, "ready"); assert.equal(f.assignOrg.state, "ready"); assert.equal(f.catalogManage.state, "ready");
   // employee create / enable / disable also needs TENANT_MEMBERS (contract §9); the obsolete ORG_MANAGE and invented aliases are not codes
-  assert.equal(A({ ...base, permissions: ["EMPLOYEE_MANAGE"] }).org.employeeProvision, false); assert.equal(A({ ...base, permissions: ["EMPLOYEE_MANAGE", "TENANT_MEMBERS"] }).org.employeeProvision, true);
-  const bogus = A({ ...base, permissions: ["ORG_MANAGE", "ORG_ADMIN", "ORG_EDIT", "T-ORG-MANAGE", "ORG_VIEW"] }); assert.equal(bogus.org.structureView || bogus.org.structureManage || bogus.org.employeeView, false);
+  assert.equal(orgOf({ ...base, permissions: ["EMPLOYEE_MANAGE"] }).employeeProvision, false); assert.equal(orgOf({ ...base, permissions: ["EMPLOYEE_MANAGE", "TENANT_MEMBERS"] }).employeeProvision, true);
+  const bogus = orgOf({ ...base, permissions: ["ORG_MANAGE", "ORG_ADMIN", "ORG_EDIT", "T-ORG-MANAGE", "ORG_VIEW"] }); assert.equal(bogus.structureView || bogus.structureManage || bogus.employeeView, false);
   for (const id of ALL_IDS) for (const n of CAPABILITIES[id].needs) assert.ok(["TENANT_MEMBERS", "ORG_STRUCTURE_VIEW", "ORG_STRUCTURE_MANAGE", "EMPLOYEE_VIEW", "EMPLOYEE_MANAGE", "POSITION_GRADE_VIEW", "POSITION_GRADE_MANAGE"].includes(n), `${id} needs the canonical code ${n}`);
+});
+
+test("M-052 / AD01 CROSS-TENANT: the codes of company A never authorize the primary tenant, company B or a global screen; the plan is judged for the SELECTED company only", () => {
+  const A = adminScope as (me: unknown) => ReturnType<typeof adminScope>;
+  const EIGHT = ["TENANT_MEMBERS", "TENANT_MANAGE", "ORG_STRUCTURE_VIEW", "ORG_STRUCTURE_MANAGE", "EMPLOYEE_VIEW", "EMPLOYEE_MANAGE", "POSITION_GRADE_VIEW", "POSITION_GRADE_MANAGE"];
+  const row = (id: string, role: string, permissions?: string[]) => ({ id, slug: id, name: id.toUpperCase(), status: "ACTIVE", role, ...(permissions ? { permissions } : {}) });
+  // the AD01 fixture: primary DEFAULT, role MEMBER, root permissions []; secondary company, role TENANT_ADMIN, the exact eight codes
+  const me = { id: "u", username: "u", displayName: "U", roles: [], workspaces: [], tenantId: "default", permissions: [], tenants: [row("default", "MEMBER", []), row("company", "TENANT_ADMIN", EIGHT), row("other", "MEMBER", [])] };
+  const sc = A(me); const st = (id: OrgCapabilityId) => CAPABILITIES[id];
+  assert.deepEqual(sc.tenants.map((t) => t.id), ["company"], "only the company whose own codes are tenant-level is offered");
+  assert.deepEqual(AM.capsOf(sc, "company").org, FULL_ORG); assert.equal(AM.capsOf(sc, "company").members, true); assert.equal(AM.capsOf(sc, "company").manage, true);
+  for (const other of ["default", "other", "nope", "", null, undefined]) { const c = AM.capsOf(sc, other as string); assert.deepEqual([c.members, c.manage, c.org], [false, false, AM.NO_ORG], `the codes of company do not authorize ${String(other)}`); }
+  // the screens: company is selected → everything ready; DEFAULT selected → denied, whatever the list says
+  assert.equal(M.organizationPlan(sc, st, "company").edit.state, "ready"); assert.equal(M.organizationPlan(sc, st, "company").employeeCreate.state, "ready");
+  for (const t of ["default", "other"]) { const p = M.organizationPlan(sc, st, t); assert.equal(p.access.granted, false, t); assert.equal(p.employeeAccess.granted, false, t); assert.equal(p.edit.state, "no-permission", t); assert.equal(p.employeeCreate.state, "no-permission", t); }
+  assert.deepEqual(M.organizationPlan(sc, st).fixedTenant, { id: "company", name: "COMPANY" }, "the screen's company is chosen among the companies where it exists, never among all memberships");
+  // the same person without the per-tenant field (a backend before M-052): the SECONDARY tenant says nothing, so nothing is offered for it, whatever its role label says
+  const old = A({ ...me, tenants: [row("default", "MEMBER"), row("company", "TENANT_ADMIN")] });
+  assert.deepEqual(old.tenants, [], "role TENANT_ADMIN is not authority: the secondary tenant is not offered without its codes"); assert.equal(M.organizationPlan(old, st, "company").access.granted, false);
+  // a primary tenant of an older backend still resolves from the top-level list (contract §2.4), and only for itself
+  const prim = A({ ...me, permissions: EIGHT, tenants: [row("default", "TENANT_ADMIN"), row("company", "MEMBER")] });
+  assert.deepEqual(prim.tenants.map((t) => t.id), ["default"]); assert.equal(AM.capsOf(prim, "company").members, false);
+  // two companies, different codes in each: nothing is flattened
+  const two = A({ ...me, tenantId: "company", tenants: [row("company", "TENANT_ADMIN", EIGHT), row("other", "MEMBER", ["ORG_STRUCTURE_VIEW"])] });
+  assert.equal(AM.capsOf(two, "other").org.structureView, true); assert.equal(AM.capsOf(two, "other").org.structureManage, false); assert.equal(AM.capsOf(two, "other").members, false);
+  assert.equal(M.organizationPlan(two, st, "other").edit.state, "no-permission", "the manage codes of company do not unlock 'other'"); assert.equal(M.organizationPlan(two, st, "company").edit.state, "ready");
+  // revocation / refresh: the next /auth/me no longer lists the codes → the company disappears, nothing lingers
+  const revoked = A({ ...me, tenants: [row("default", "MEMBER", []), row("company", "TENANT_ADMIN", []), row("other", "MEMBER", [])] });
+  assert.deepEqual(revoked.tenants, []); assert.equal(M.organizationPlan(revoked, st, "company").access.granted, false);
+  // a suspended company is still listed WITH its codes (the server decides the write: 403 TENANT_SUSPENDED); the screens do not pretend to know
+  const susp = A({ ...me, tenants: [row("default", "MEMBER", []), { ...row("company", "TENANT_ADMIN", EIGHT), status: "SUSPENDED" }, row("other", "MEMBER", [])] });
+  assert.deepEqual(susp.tenants.map((t) => [t.id, t.status]), [["company", "SUSPENDED"]]); assert.equal(M.organizationPlan(susp, st, "company").edit.state, "ready", "the plan is not turned off from the status: the backend's 403 is shown instead");
 });
 
 test("RELATION / POSITION / GRADE AUTHORIZE NOTHING: a person whose data says HEAD / MANAGER / a senior grade / a position still gets exactly the permissions the server listed", () => {
   const A = adminScope as (me: unknown) => ReturnType<typeof adminScope>;
   const base = { id: "u", username: "u", displayName: "U", roles: [], workspaces: [], tenantId: "t1", tenants: [{ id: "t1", slug: "a", name: "A", status: "ACTIVE", role: "MEMBER" }], permissions: [] };
   const decorated = { ...base, relationType: "HEAD", primaryOrganizationUnitId: "u-1", organizationMemberships: [{ relationType: "MANAGER", primary: true }], positions: [{ positionId: "p", gradeId: "g" }], grade: "SENIOR", position: "DIRECTOR", unitRole: "HEAD" };
-  assert.deepEqual(A(decorated).org, { structureView: false, structureManage: false, employeeView: false, employeeManage: false, employeeProvision: false, positionGradeView: false, positionGradeManage: false });
-  assert.equal(M.organizationPlan(A(decorated), (id) => CAPABILITIES[id]).access.granted, false);
+  assert.deepEqual(AM.capsOf(A(decorated), "t1"), { members: false, manage: false, org: AM.NO_ORG }); assert.equal(A(decorated).tenants.length, 0);
+  assert.equal(M.organizationPlan(A(decorated), (id) => CAPABILITIES[id], "t1").access.granted, false);
   // and the other way round: the server's codes alone open the screens, whatever the person's data says
-  const granted = A({ ...base, permissions: ["ORG_STRUCTURE_VIEW"], relationType: "MEMBER" }); assert.equal(granted.org.structureView, true); assert.equal(granted.org.structureManage, false);
+  const granted = A({ ...base, permissions: ["ORG_STRUCTURE_VIEW"], relationType: "MEMBER" }); assert.equal(AM.capsOf(granted, "t1").org.structureView, true); assert.equal(AM.capsOf(granted, "t1").org.structureManage, false);
   // a relation is a label: any well-formed word is accepted by the form, none of them changes the plan
   for (const rel of ["MEMBER", "MANAGER", "HEAD", "OWNER", "ADMIN"]) assert.equal(M.relationError(rel), null);
 });
 
-// ------------------------------------------------------------------------------------------------------------------------------- errors
 test("errors: every refusal is mapped by the SERVER's code, then by status; an unknown code shows only its reference code (never the server's English message); NOT_READY is its own kind", () => {
   const k = (e: unknown) => M.orgProblem(e).kind;
   const cases: [string, string][] = [["ORG_CYCLE", "cycle"], ["VERSION_CONFLICT", "version"], ["ORG_UNIT_CODE_TAKEN", "duplicate"], ["ORG_UNIT_TYPE_CODE_TAKEN", "duplicate"], ["POSITION_CODE_TAKEN", "duplicate"], ["GRADE_CODE_TAKEN", "duplicate"], ["ORG_MEMBERSHIP_EXISTS", "duplicate"], ["POSITION_ASSIGNMENT_EXISTS", "duplicate"],

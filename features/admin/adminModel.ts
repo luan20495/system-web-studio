@@ -5,6 +5,7 @@
  */
 import type { Me, TenantMemberView, TenantView, WorkspaceSummary, Member, AdminUser } from "@xweb/types";
 import { isTenantAdminRole, isWorkspaceAdminRole } from "../../packages/permissions/src/roles";
+import { tenantPermissionsOf, tenantsAdministered } from "../../packages/permissions/src/tenantScope";
 import { canManageEmployees, canManageOrgStructure, canManagePositionsGrades, canProvisionEmployees, canViewEmployees, canViewOrgStructure, canViewPositionsGrades, resolveCanonicalPermissions } from "../../packages/permissions/src/canonical";
 
 /** The organization capabilities the server lists in `/auth/me.permissions` (PRIMARY tenant only, C1 final contract §2.4): ORG_STRUCTURE_*, EMPLOYEE_*, POSITION_GRADE_*. Nothing else grants them (not TENANT_MEMBERS, not platformScope, not a role). */
@@ -15,28 +16,42 @@ export function orgScopeOf(permissions: readonly string[] | undefined | null): O
   return { structureView: canViewOrgStructure(p), structureManage: canManageOrgStructure(p), employeeView: canViewEmployees(p), employeeManage: canManageEmployees(p), employeeProvision: canProvisionEmployees(p), positionGradeView: canViewPositionsGrades(p), positionGradeManage: canManagePositionsGrades(p) };
 }
 
+/** What the person may do in ONE tenant, from THAT tenant's own codes (tenants[].permissions, M-052). `members` = TENANT_MEMBERS (users, members, create account); `manage` = TENANT_MANAGE (rename). */
+export type TenantCaps = { members: boolean; manage: boolean; org: OrgScope };
+export const NO_TENANT_CAPS: TenantCaps = { members: false, manage: false, org: NO_ORG };
+export function tenantCapsOf(me: Me | null | undefined, tenantId: string | null | undefined): TenantCaps {
+  const p = tenantPermissionsOf(me, tenantId);
+  return { members: p.has("TENANT_MEMBERS"), manage: p.has("TENANT_MANAGE"), org: orgScopeOf([...p]) };
+}
 export type AdminScope = {
-  /** organization capabilities (codes of the primary tenant); a SYSTEM_ADMIN has none of them */
-  org: OrgScope;
   /** SYSTEM_ADMIN: every `/api/v1/admin/**` screen (users, workspaces, audit…) */
   platform: boolean;
-  /** tenants the person administers: the server lists TENANT_MEMBERS among their permissions */
+  /** the tenants where the person holds at least one tenant-level code IN THAT TENANT (never judged by the role label, never by another tenant's codes) */
   tenants: { id: string; slug: string; name: string; status: string }[];
+  /** the codes of EACH of those tenants separately: nothing is flattened into a global set, and the codes of company A never authorize company B or the primary tenant */
+  caps: Readonly<Record<string, TenantCaps>>;
   /** workspaces where the server lists MEMBER_MANAGE */
   workspaces: WorkspaceSummary[];
   /** workspaces where the server lists DATA_SOURCE_MANAGE or DATA_SOURCE_VIEW */
   dataWorkspaces: WorkspaceSummary[];
 };
+/** the capabilities of one tenant of the scope; a tenant that is not in it holds nothing */
+export const capsOf = (scope: AdminScope, tenantId: string | null | undefined): TenantCaps => (tenantId ? scope.caps[tenantId] : undefined) ?? NO_TENANT_CAPS;
+/** the tenants of the scope in which `pick` holds (the screens that need one capability list only those) */
+export const tenantsWith = (scope: AdminScope, pick: (c: TenantCaps) => boolean): AdminScope["tenants"] => scope.tenants.filter((t) => pick(capsOf(scope, t.id)));
+
+/** true when SOME tenant of the scope satisfies `pick` (a menu entry is offered when the person can use it in at least one company; the screen then judges the SELECTED company) */
+export const anyTenantWith = (scope: AdminScope, pick: (c: TenantCaps) => boolean): boolean => tenantsWith(scope, pick).length > 0;
 
 export function adminScope(me: Me | null | undefined): AdminScope {
-  if (!me) return { org: NO_ORG, platform: false, tenants: [], workspaces: [], dataWorkspaces: [] };
+  if (!me) return { platform: false, tenants: [], caps: {}, workspaces: [], dataWorkspaces: [] };
   const platform = me.platformScope ?? me.systemAdmin === true;
-  // `/auth/me` carries the permissions of the PRIMARY tenant only, but lists every membership with its role: a person is shown the tenants where the server says they are TENANT_ADMIN
-  // (or the primary one when the server listed TENANT_MEMBERS). Display only: `/admin/tenants/{id}/**` authorises per tenant.
-  const holdsTenant = (me.permissions ?? []).includes("TENANT_MEMBERS");
-  const tenants = (me.tenants ?? []).filter((t) => isTenantAdminRole(t.role) || (holdsTenant && t.id === me.tenantId)).map((t) => ({ id: t.id, slug: t.slug, name: t.name, status: t.status }));
+  // M-052: `/auth/me` lists, per membership, the canonical codes held IN THAT TENANT. A tenant is offered when those codes include a tenant-level one; its `role` label is never read.
+  // A backend before M-052 (no per-tenant field) can speak only for the primary tenant (top-level codes); every other tenant is then not offered (the server's 403 stays the answer).
+  const mine = tenantsAdministered(me);
+  const caps: Record<string, TenantCaps> = {}; for (const t of mine) caps[t.id] = tenantCapsOf(me, t.id);
   return {
-    org: orgScopeOf(me.permissions), platform, tenants,
+    platform, tenants: mine.map((t) => ({ id: t.id, slug: t.slug, name: t.name, status: t.status })), caps,
     workspaces: me.workspaces.filter((w) => w.permissions?.includes("MEMBER_MANAGE")),
     dataWorkspaces: me.workspaces.filter((w) => w.permissions?.some((c) => c === "DATA_SOURCE_MANAGE" || c === "DATA_SOURCE_VIEW")),
   };

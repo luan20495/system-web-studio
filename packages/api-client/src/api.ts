@@ -92,6 +92,8 @@ export const api = {
     tenants: () => call<TenantView[]>("/admin/tenants"),
     tenant: (id: string) => call<TenantView>(`/admin/tenants/${id}`),
     createTenant: (b: { slug: string; name: string; firstAdminUserId?: string }) => call<TenantView>("/admin/tenants", { method: "POST", body: json(b) }),
+    /** C1 final contract §tenant admin: PATCH /admin/tenants/{t} {name} - TENANT_MANAGE of THAT tenant; the slug is immutable; a SUSPENDED company refuses a Tenant Admin (403 TENANT_SUSPENDED) */
+    renameTenant: (id: string, name: string) => call<TenantView>(`/admin/tenants/${id}`, { method: "PATCH", body: json({ name }) }),
     setTenantStatus: (id: string, status: "ACTIVE" | "SUSPENDED" | "DELETED") => call<TenantView>(`/admin/tenants/${id}/status`, { method: "PATCH", body: json({ status }) }),
     tenantMembers: (id: string) => call<TenantMemberView[]>(`/admin/tenants/${id}/members`),
     /** C1 `tenant-provisioning-contract.md` @ 2356d64: a brand-new account in THIS tenant, by invitation (one-time activation link, no password). `workspaceId` and `workspaceRole` come together or not at all. */

@@ -30,7 +30,7 @@ import { TenantSwitch } from "./shared/TenantSwitch";
 import { PeopleLinks } from "./shared/PeopleLinks";
 import { PageHead } from "./PageHead";
 import { useA } from "./console/context";
-import { CANDIDATE_MAX_RESULTS, TENANT_ROLES, TENANT_STATUS_LABEL, WORKSPACE_ROLES, candidateLabel, candidateQuery, adminScope, slugify, canManageWorkspaceMembers, checkTenantForm, memberChangeBlock, personOf, tenantActions, tenantMemberRows, workspaceMemberBlock, workspaceRoleLabel, type Person } from "./adminModel";
+import { CANDIDATE_MAX_RESULTS, TENANT_ROLES, TENANT_STATUS_LABEL, WORKSPACE_ROLES, candidateLabel, candidateQuery, adminScope, slugify, canManageWorkspaceMembers, capsOf, checkTenantForm, memberChangeBlock, personOf, tenantActions, tenantMemberRows, workspaceMemberBlock, workspaceRoleLabel, type Person } from "./adminModel";
 
 /** one mapper for every refusal (M-075): by code, never the Error.message of a non-ApiError */
 const say = (e: unknown, fallback: string) => errorText(e, fallback);
@@ -148,12 +148,14 @@ function TenantBody({ id, onChanged, related }: { id: string; onChanged?: () => 
   const { me } = useSession();
   const scope = useMemo(() => adminScope(me), [me]);
   const [busy, setBusy] = useState(false); const [msg, setMsg] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false); const [rev, setRev] = useState(0);
+  const [creating, setCreating] = useState(false); const [rev, setRev] = useState(0); const [renaming, setRenaming] = useState(false);
   const statusFlight = useAction(async (_c, fn: () => Promise<unknown>) => { await fn(); });
   if (tenant.error) return <ErrorState error={tenant.error} retry={tenant.reload}/>;
   if (tenant.loading && !tenant.data) return <StateView kind="loading"/>;
   const t = tenant.data as TenantView;
   const actions = scope.platform ? tenantActions(t) : [];
+  // what THIS person may do in THIS company: the codes the server lists for this tenant (tenants[].permissions, M-052). A SYSTEM_ADMIN acts through the platform routes. Never the role label.
+  const caps = capsOf(scope, id); const canRename = scope.platform || caps.manage; const canSeeMembers = scope.platform || caps.members;
   // the first administrator of a company is made HERE (existing route: POST /admin/tenants/{t}/users). Only a Platform operator, only while the company is usable.
   const canCreateAdmin = scope.platform && t.status === "ACTIVE";
   async function setStatus(to: "ACTIVE" | "SUSPENDED" | "DELETED", a: { label: string; danger: boolean; message: string }) {
@@ -173,10 +175,39 @@ function TenantBody({ id, onChanged, related }: { id: string; onChanged?: () => 
     {related}
     {msg ? <p className="notice" role="status">{msg}</p> : null}
     <div className="kpiGrid"><Kpi label="Trạng thái" value={statusPill(t.status)}/><Kpi label="Mã công ty" value={t.slug}/></div>
+    {canRename ? <div className="row"><button className="btn" data-testid="tenant-rename" onClick={() => setRenaming(true)}>Đổi tên công ty</button></div> : null}
+    {renaming ? <RenameTenantDialog tenant={t} onClose={() => setRenaming(false)} onDone={() => { setRenaming(false); setMsg("Đã đổi tên công ty."); tenant.reload(); onChanged?.(); }}/> : null}
     {t.status !== "ACTIVE" ? <p className="hint" role="note">Công ty đang {TENANT_STATUS_LABEL[t.status]?.toLowerCase() ?? t.status}: người dùng của công ty không vào được cho tới khi mở khóa.</p> : null}
-    <TenantMembers tenantId={t.id} tenantName={t.name} rev={rev} onCreateAdmin={canCreateAdmin ? () => setCreating(true) : undefined}/>
+    {canSeeMembers ? <TenantMembers tenantId={t.id} tenantName={t.name} rev={rev} onCreateAdmin={canCreateAdmin ? () => setCreating(true) : undefined}/>
+      : <Card title={`Thành viên của ${t.name}`}><StateView kind="forbidden" title="Bạn không quản lý thành viên công ty này" detail={<p data-testid="tenant-members-forbidden">Máy chủ không liệt kê quyền quản lý thành viên của công ty này cho tài khoản của bạn. Quyền ở công ty khác không áp dụng ở đây.</p>}/></Card>}
     {creating ? <PlatformCreateAccount tenant={{ id: t.id, name: t.name }} onClose={() => setCreating(false)} onCreated={() => setRev((r) => r + 1)}/> : null}
   </>);
+}
+
+/**
+ * Rename (PATCH /admin/tenants/{t}, TENANT_MANAGE of that company). The backend is the authority: a suspended company refuses a company administrator (403 TENANT_SUSPENDED); that is shown as such, never as success,
+ * and the screen does not guess it beforehand from the status.
+ */
+function RenameTenantDialog({ tenant, onClose, onDone }: { tenant: TenantView; onClose: () => void; onDone: () => void }) {
+  const uid = useId(); const [name, setName] = useState(tenant.name); const [busy, setBusy] = useState(false); const [err, setErr] = useState<{ code?: string; text: string } | null>(null);
+  const bad = !name.trim() ? "Hãy nhập tên công ty." : name.trim().length > 160 ? "Tên công ty tối đa 160 ký tự." : null;
+  async function submit(e: FormEvent) {
+    e.preventDefault(); if (bad || busy) return; setBusy(true); setErr(null);
+    try { await api.admin.renameTenant(tenant.id, name.trim()); onDone(); }
+    catch (x) { const code = (x as { code?: string }).code; setErr({ code, text: code === "TENANT_SUSPENDED" ? "Công ty đang bị tạm khóa nên quản trị công ty chưa đổi tên được. Tên chưa thay đổi." : say(x, "Chưa đổi được tên công ty.") }); }
+    finally { setBusy(false); }
+  }
+  return (
+    <Modal label="Đổi tên công ty" onClose={onClose}>
+      <form className="modalBody" noValidate onSubmit={(e) => void submit(e)} data-testid="tenant-rename-dialog">
+        <ModalHeader icon={<Building2 size={22}/>} title="Đổi tên công ty" subtitle={`Mã công ty “${tenant.slug}” không đổi.`}/>
+        <label className="field"><span>Tên công ty</span><input data-testid="tenant-rename-name" value={name} maxLength={160} autoComplete="off" aria-invalid={!!bad} aria-describedby={bad ? `${uid}-e` : undefined} onChange={(e) => setName(e.target.value)}/></label>
+        {bad ? <p className="formError" role="alert" id={`${uid}-e`}>{bad}</p> : null}
+        {err ? <p className="formError" role="alert" data-testid="tenant-rename-error" data-code={err.code}>{err.text}</p> : null}
+        <div className="xp-footer"><button type="button" className="btn" onClick={onClose}>Hủy</button><button className="btn primary" data-testid="tenant-rename-submit" disabled={busy || !!bad}>{busy ? "Đang lưu…" : "Lưu"}</button></div>
+      </form>
+    </Modal>
+  );
 }
 
 // ------------------------------------------------------------------------------------------------------------------------- platform

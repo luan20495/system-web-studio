@@ -8,7 +8,7 @@ import { ErrorState, StateView } from "../ui";
 import { Modal } from "./Modal";
 import { CreateAccountDialog, PeopleView, type Option } from "./ProvisioningScreens";
 import { liveProvisioning } from "./provisioningAdapter";
-import { adminScope } from "./adminModel";
+import { adminScope, tenantsWith } from "./adminModel";
 import { provisioningPlan } from "./provisioningModel";
 import { PageHead } from "./PageHead";
 import { useOwnWorkspacesOf } from "./shared/ownWorkspaces";
@@ -43,6 +43,6 @@ export function PeoplePage() {
   return (<>
     <PageHead title="Người dùng" sub="Tạo tài khoản trong công ty của bạn và thêm người vào workspace."/>
     <PeopleLinks current="people"/>
-    <PeopleView api={liveProvisioning} plan={plan} tenants={scope.tenants.map((t): Option => ({ id: t.id, name: t.name }))} workspacesOf={ownOf} memberWorkspaces={admin}/>
+    <PeopleView api={liveProvisioning} plan={plan} tenants={tenantsWith(scope, (c) => c.members).map((t): Option => ({ id: t.id, name: t.name }))} workspacesOf={ownOf} memberWorkspaces={admin}/>
   </>);
 }

@@ -4,7 +4,7 @@
  * The server stays the authority on all of it (cycles, type rules, depth, blocks, versions, limits): a local pre-check only avoids an obvious refusal and explains it, and the maximum depth is NEVER enforced
  * here (it is the tenant's own rule on the type, shown as an advisory note; the server's answer decides). Nothing here reads a role name; an organization relation, a position or a grade is never a permission.
  */
-import type { AdminScope } from "./adminModel";
+import { capsOf, tenantsWith, type AdminScope } from "./adminModel";
 import { orgMaxPage, ORG_OFFSET_MAX, ORG_PAGE_SIZE_MAX, ORG_SEARCH_MIN } from "../../packages/api-client/src/org";
 import { OrganizationNotReady, type Employee, type Grade, type Membership, type OrgCapabilityId, type OrgCapabilityState, type OrgUnit, type OrgUnitType, type Position } from "./organization";
 
@@ -305,14 +305,15 @@ export type OrganizationPlan = {
   fixedTenant: { id: string; name: string } | null; tenantChoice: { id: string; name: string }[];
   units: CapView; edit: CapView; types: CapView; typesManage: CapView; positions: CapView; catalogManage: CapView; assignOrg: CapView; assignPosition: CapView; employeeCreate: CapView; employeeStatus: CapView;
 };
-export function organizationPlan(scope: AdminScope, state: (id: OrgCapabilityId) => OrgCapabilityState): OrganizationPlan {
-  const o = scope.org; const of = (...ids: OrgCapabilityId[]) => ids.map(state);
-  const own = scope.tenants.map((t) => ({ id: t.id, name: t.name }));
+export function organizationPlan(scope: AdminScope, state: (id: OrgCapabilityId) => OrgCapabilityState, tenantId?: string | null): OrganizationPlan {
+  // the companies the person can use ANY organization screen in (by the codes of EACH company); the plan then judges the SELECTED one with that company's own codes only
+  const own = tenantsWith(scope, (c) => c.org.structureView || c.org.employeeView || c.org.positionGradeView).map((t) => ({ id: t.id, name: t.name }));
+  const selected = tenantId ?? own[0]?.id ?? null; const o = capsOf(scope, selected).org; const of = (...ids: OrgCapabilityId[]) => ids.map(state);
   const noEdit = "Bạn xem được cơ cấu nhưng chưa có quyền thay đổi nó.", noEmp = "Bạn chưa có quyền quản lý nhân viên.", noCatalog = "Bạn chưa có quyền quản lý vị trí và cấp bậc.";
   const employeeAccounts = "Bạn cần quyền quản lý nhân viên và quản lý thành viên công ty để thêm, khóa hoặc mở khóa tài khoản nhân viên.";
   return {
-    access: o.structureView ? { granted: true } : { granted: false, reason: "Máy chủ không liệt kê quyền xem cơ cấu tổ chức cho tài khoản này." },
-    employeeAccess: o.employeeView ? { granted: true } : { granted: false, reason: "Máy chủ không liệt kê quyền xem danh bạ nhân viên cho tài khoản này." },
+    access: o.structureView ? { granted: true } : { granted: false, reason: "Máy chủ không liệt kê quyền xem cơ cấu tổ chức của công ty này cho tài khoản của bạn." },
+    employeeAccess: o.employeeView ? { granted: true } : { granted: false, reason: "Máy chủ không liệt kê quyền xem danh bạ nhân viên của công ty này cho tài khoản của bạn." },
     fixedTenant: own.length === 1 ? own[0] : null, tenantChoice: own.length > 1 ? own : [],
     units: capView(of("listOrganizationUnits", "getOrganizationUnit")),
     edit: capView(of("createOrganizationUnit", "updateOrganizationUnit", "moveOrganizationUnit", "archiveOrganizationUnit", "restoreOrganizationUnit"), o.structureManage, noEdit),
@@ -414,6 +415,6 @@ export const needsReload = (p: OrgProblem): boolean => p.kind === "version" || p
  * Creating an employee provisions an ACCOUNT: the contract needs EMPLOYEE_MANAGE **and** TENANT_MEMBERS (final contract §9). The provisioning plan alone only knows the tenant side, so the employee
  * screens ask it through this: without both codes the create state is `forbidden` with the reason (the button is unavailable, nothing is sent).
  */
-export function employeeProvisioningPlan<P extends { create: { state: string } }>(scope: AdminScope, plan: P): P {
-  return scope.org.employeeProvision ? plan : { ...plan, create: { state: "forbidden", reason: "Bạn cần quyền quản lý nhân viên và quản lý thành viên công ty để thêm nhân viên." } };
+export function employeeProvisioningPlan<P extends { create: { state: string } }>(scope: AdminScope, plan: P, tenantId: string | null | undefined): P {
+  return capsOf(scope, tenantId).org.employeeProvision ? plan : { ...plan, create: { state: "forbidden", reason: "Bạn cần quyền quản lý nhân viên và quản lý thành viên công ty này để thêm nhân viên." } };
 }

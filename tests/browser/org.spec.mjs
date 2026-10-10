@@ -396,6 +396,24 @@ for (const [v, tid] of [["org", "org-forbidden"], ["emp", "emp-forbidden"]]) { c
   check("CAT10 with the store off, the toolbar still opens the dialog but each catalog says it cannot load (501), no data, no fallback", (await p.getByTestId("org-catalog").count()) === 1 && await (async () => { await T(p, "org-catalog").click(); await T(p, "catalog-dialog").waitFor(); await settle(p, 300); return (await T(p, "catalog-position-error").getAttribute("data-kind")) === "unavailable-feature" && (await T(p, "catalog-position-list").count()) === 0; })());
   await p.close(); }
 
+// ===================================================================================================================== M-052 / AD01: the codes of the SELECTED company decide
+{ const p = await open("org", "ad01");
+  check("AD01i the person whose PRIMARY tenant (DEFAULT, MEMBER, no codes) gives them nothing but who is TENANT_ADMIN of a second company: the organization screen opens FOR THAT COMPANY (Acme), the tree loads and writes are available; DEFAULT is not offered", /Acme/.test(await T(p, "org-tenant").innerText()) && (await T(p, "org-tree").count()) === 1 && (await T(p, "org-add-root").getAttribute("aria-disabled")) === null && (await T(p, "org-tenant-switch").count()) === 0 && !/mặc định/i.test(await p.locator("body").innerText()));
+  await p.close(); }
+{ const p = await open("org", "rolelabel"); const pe = await open("emp", "rolelabel");
+  check("AD01j the same memberships WITHOUT the per-tenant codes (a role label only): both organization screens are refused with no backend call — a role label is not authority", (await T(p, "org-forbidden").count()) === 1 && (await calls(p)).length === 0 && (await T(pe, "emp-forbidden").count()) === 1 && (await calls(pe)).length === 0);
+  await p.close(); await pe.close(); }
+{ const p = await open("org", "multi-mixed");
+  check("AD01k two companies, different codes: Acme (full) is selected first and may change the structure", /Acme/.test(await T(p, "org-tenant").innerText()) && (await T(p, "org-add-root").getAttribute("aria-disabled")) === null);
+  await T(p, "org-tenant-switch").selectOption("t3"); await settle(p, 500);
+  check("AD01l SWITCHING to Công ty C re-judges with C's OWN codes (view only): the tree is read-only, 'Thêm đơn vị gốc' is unavailable with the permission reason — Acme's manage codes do not carry over", /Công ty C/.test(await T(p, "org-tenant").innerText()) && (await T(p, "org-add-root").getAttribute("aria-disabled")) === "true" && (await T(p, "org-edit-not-ready").count()) === 1);
+  await T(p, "org-tenant-switch").selectOption("t1"); await settle(p, 500);
+  check("AD01m …and switching back to Acme restores its write access", (await T(p, "org-add-root").getAttribute("aria-disabled")) === null);
+  await p.close(); }
+{ const p = await open("emp", "multi-mixed");
+  check("AD01n the directory: in Acme the person may add an employee; after switching to Công ty C (no EMPLOYEE_MANAGE there) the button is unavailable with the reason", (await T(p, "emp-create").getAttribute("aria-disabled")) === null && await (async () => { await T(p, "emp-tenant-switch").selectOption("t3"); await settle(p, 500); return (await T(p, "emp-create").getAttribute("aria-disabled")) === "true"; })());
+  await p.close(); }
+
 // ===================================================================================================================== RESPONSIVE
 { const p = await open("org", "ok", { width: 600, height: 800 });
   check("ORG_UI11 the organization screen stacks the tree and the detail in ONE column on a narrow screen, no horizontal scroll", (await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)) <= 1 && (await p.locator(".xp-orgGrid").evaluate((e) => getComputedStyle(e).gridTemplateColumns.split(" ").length)) === 1);

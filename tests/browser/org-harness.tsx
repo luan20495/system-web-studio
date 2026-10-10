@@ -14,6 +14,7 @@ import { employeeProvisioningPlan, organizationPlan } from "../../features/admin
 import { OrganizationView } from "../../features/admin/OrganizationScreens";
 import { EmployeesView } from "../../features/admin/EmployeesScreens";
 import { PersonPicker } from "../../features/admin/PersonPicker";
+import { TenantSwitch } from "../../features/admin/shared/TenantSwitch";
 import { CAPABILITIES as PROV_CAPS, createProvisioningApi } from "../../features/admin/provisioning";
 import { provisioningPlan } from "../../features/admin/provisioningModel";
 import { createFakeOrg, type FakeOrg } from "./org-fake-server";
@@ -27,6 +28,7 @@ declare global { interface Window { __org: { name: string; args: unknown[] }[]; 
 window.__org = []; window.__prov = []; window.__prof = [];
 const P = new URLSearchParams(location.search); const V = P.get("v") ?? "org"; const S = P.get("s") ?? "ok";
 const me = (o: Partial<Me>): Me => ({ id: "me", username: "me", displayName: "Me", roles: [], workspaces: [], ...o });
+const DEFAULT_T = { id: "00000000-0000-0000-0000-000000000001", slug: "default", name: "DEFAULT", status: "ACTIVE", role: "MEMBER" };
 const T1 = { id: "t1", slug: "acme", name: "Acme", status: "ACTIVE", role: "TENANT_ADMIN" }; const T3 = { id: "t3", slug: "cong", name: "Công ty C", status: "ACTIVE", role: "TENANT_ADMIN" };
 /** what the server lists for a TENANT_ADMIN of the primary tenant (C1 PERMISSION_MATRIX): the tenant codes + all six organization codes; a SYSTEM_ADMIN lists exactly TENANT_MANAGE + TENANT_MEMBERS (platform scope) and NO organization code */
 const ORG_ALL = ["ORG_STRUCTURE_VIEW", "ORG_STRUCTURE_MANAGE", "EMPLOYEE_VIEW", "EMPLOYEE_MANAGE", "POSITION_GRADE_VIEW", "POSITION_GRADE_MANAGE"];
@@ -34,7 +36,11 @@ const ORG_VIEW = ["ORG_STRUCTURE_VIEW", "EMPLOYEE_VIEW", "POSITION_GRADE_VIEW"];
 const ME: Me = S === "forbidden" ? me({ tenants: [{ ...T1, role: "MEMBER" }] }) : S === "sysadmin" ? me({ platformScope: true, systemAdmin: true, tenantId: "t1", permissions: ["TENANT_MANAGE", "TENANT_MEMBERS"], tenants: [T1] })
   : S === "viewer" ? me({ tenantId: "t1", permissions: ["TENANT_MEMBERS", ...ORG_VIEW], tenants: [T1] })
   : S === "emp-only" ? me({ tenantId: "t1", permissions: ["EMPLOYEE_VIEW", "EMPLOYEE_MANAGE", "TENANT_MEMBERS"], tenants: [T1] })
-  : S === "multi" ? me({ tenantId: "t1", permissions: ["TENANT_MEMBERS", ...ORG_ALL], tenants: [T1, T3] })
+  : S === "multi" ? me({ tenantId: "t1", permissions: ["TENANT_MEMBERS", ...ORG_ALL], tenants: [{ ...T1, permissions: ["TENANT_MEMBERS", ...ORG_ALL] }, { ...T3, permissions: ["TENANT_MEMBERS", ...ORG_ALL] }] })
+  // M-052: codes PER TENANT. mixed = full in Acme, read-only in Công ty C; ad01 = the AD01 fixture (primary DEFAULT as MEMBER with no codes, a second company where the person is TENANT_ADMIN with the eight codes); rolelabel = the same shape WITHOUT the per-tenant field (a role label is not authority)
+  : S === "multi-mixed" ? me({ tenantId: "t1", permissions: ["TENANT_MEMBERS", ...ORG_ALL], tenants: [{ ...T1, permissions: ["TENANT_MEMBERS", ...ORG_ALL] }, { ...T3, permissions: ["TENANT_MEMBERS", ...ORG_VIEW] }] })
+  : S === "ad01" ? me({ tenantId: DEFAULT_T.id, permissions: [], tenants: [{ ...DEFAULT_T, permissions: [] }, { ...T1, permissions: ["TENANT_MEMBERS", "TENANT_MANAGE", ...ORG_ALL] }] })
+  : S === "rolelabel" ? me({ tenantId: DEFAULT_T.id, permissions: [], tenants: [{ ...DEFAULT_T }, { ...T1 }] })
   : me({ tenantId: "t1", permissions: ["TENANT_MEMBERS", "TENANT_MANAGE", ...ORG_ALL], tenants: [T1], workspaces: [{ id: "w1", name: "Kinh doanh", role: "x", tenantId: "t1", permissions: ["MEMBER_MANAGE"] }] });
 
 const fake = createFakeOrg(S, (name, args) => { window.__org.push({ name, args }); });
@@ -47,9 +53,8 @@ const provApi = createProvisioningApi({
   changeWorkspaceMember: rec2("changeWorkspaceMember", () => ({}) as never), addWorkspaceMember: rec2("addWorkspaceMember", () => ({}) as never), tenantMemberCandidates: rec2("tenantMemberCandidates", () => []),
   activationLink: rec2("activationLink", () => ({}) as never), setUserStatus: rec2("setUserStatus", () => ({})),
 }, S === "emp-nocreate" ? { ...PROV_CAPS, createTenantUser: { status: "NOT_READY", needs: ["TENANT_MEMBERS"], owner: "C1", reason: "Máy chủ chưa có API tạo tài khoản." } } : PROV_CAPS);
-const scope = adminScope(ME); const plan = organizationPlan(scope, api.state);
-const provPlan = employeeProvisioningPlan(scope, provisioningPlan(scope, "admin", provApi.state));
-const tenant = plan.fixedTenant ?? plan.tenantChoice[0] ?? { id: "", name: "" };
+const scope = adminScope(ME); const list = organizationPlan(scope, api.state);
+const first = list.fixedTenant ?? list.tenantChoice[0] ?? { id: "", name: "" };
 const root = document.getElementById("root")!;
 function PickerHost() {
   const all = Array.from({ length: 12 }, (_, i) => ({ id: `p${i}`, username: `person${i}`, displayName: i === 3 ? "Nguyễn Hoàng Thiên Phúc Bảo Long Quang Vinh" : `Người số ${i}` }));
@@ -58,11 +63,16 @@ function PickerHost() {
   return <div><button data-testid="before">trước</button><PersonPicker id="pp" label="Tìm người dùng" people={list} q={q} setQ={setQ} value={v} onChange={setV} placeholder="Tìm theo tên" emptyText="Không có người phù hợp"/><p data-testid="chosen">{v}</p><button data-testid="after">sau</button></div>;
 }
 function Host() {
+  // the page's company, chosen among the person's OWN (like OrganizationLive): every permission is judged with the codes of THAT company
+  const [chosen, setChosen] = useState(first.id);
+  const tenant = list.fixedTenant ?? list.tenantChoice.find((t) => t.id === chosen) ?? first;
+  const plan = organizationPlan(scope, api.state, tenant.id);
+  const provPlan = { ...employeeProvisioningPlan(scope, provisioningPlan(scope, "admin", provApi.state), tenant.id), fixedTenant: tenant.id ? tenant : null, tenantChoice: false };
   if (V === "picker") return <PickerHost/>;
   return V === "emp"
-    ? <EmployeesView api={api} plan={plan} tenant={tenant} onTenant={() => undefined}
+    ? <EmployeesView api={api} plan={plan} tenant={tenant} onTenant={setChosen}
         prov={{ api: provApi, plan: provPlan, tenants: plan.tenantChoice.length ? plan.tenantChoice : plan.fixedTenant ? [plan.fixedTenant] : [], workspacesOf: (t) => (ME.workspaces ?? []).filter((w) => w.tenantId === t).map((w) => ({ id: w.id, name: w.name })) }}/>
-    : <OrganizationView api={api} plan={plan} tenant={tenant}/>;
+    : <><TenantSwitch tenants={plan.tenantChoice} value={tenant.id} onChange={setChosen} testId="org-tenant-switch"/><OrganizationView api={api} plan={plan} tenant={tenant}/></>;
 }
 const onRender = (_id: string, phase: string, actual: number, base: number) => { window.__prof.push({ phase, actual, base, at: performance.now() }); };
 createRoot(root).render(<div className="shell admin" style={{ display: "block", height: "auto", minHeight: "100vh" }}><main className="page" style={{ maxWidth: 1100, margin: "0 auto", padding: 16 }}><Profiler id="host" onRender={onRender}><Host/></Profiler></main></div>);

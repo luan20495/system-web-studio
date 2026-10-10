@@ -26,7 +26,7 @@ const T3 = { id: "t3", slug: "cong", name: "Công ty C", status: "ACTIVE", role:
 const SCOPES: Record<string, Me> = {
   platform: me({ platformScope: true, systemAdmin: true }),
   "admin-tenant": me({ platformScope: false, tenantId: "t1", permissions: ["TENANT_MEMBERS", "TENANT_MANAGE"], tenants: [T1], workspaces: [{ id: "w1", name: "Kinh doanh", role: "x", tenantId: "t1", permissions: ["MEMBER_MANAGE"] }, { id: "w2", name: "Kỹ thuật", role: "x", tenantId: "t1", permissions: ["APP_VIEW"] }, { id: "wx", name: "Của công ty khác", role: "x", tenantId: "t2", permissions: ["APP_VIEW"] }] }),
-  "admin-tenant2": me({ platformScope: false, tenantId: "t1", permissions: ["TENANT_MEMBERS"], tenants: [T1, T3, { id: "t2", slug: "beta", name: "Beta", status: "ACTIVE", role: "MEMBER" }], workspaces: [] }),
+  "admin-tenant2": me({ platformScope: false, tenantId: "t1", permissions: ["TENANT_MEMBERS"], tenants: [{ ...T1, permissions: ["TENANT_MEMBERS"] }, { ...T3, permissions: ["TENANT_MEMBERS"] }, { id: "t2", slug: "beta", name: "Beta", status: "ACTIVE", role: "MEMBER", permissions: [] }], workspaces: [] }),
   "admin-wsadmin": me({ platformScope: false, workspaces: [{ id: "w1", name: "Kinh doanh", role: "WORKSPACE_ADMIN", tenantId: "t1", permissions: ["MEMBER_MANAGE", "DATA_SOURCE_MANAGE"] }] }),
   "admin-claims-role-only": me({ platformScope: false, workspaces: [{ id: "w1", name: "Kinh doanh", role: "WORKSPACE_ADMIN", tenantId: "t1", permissions: ["APP_VIEW"] }] }),
 };

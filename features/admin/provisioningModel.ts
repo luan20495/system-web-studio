@@ -4,7 +4,7 @@
  * are choices for the form, never a permission check. SYSTEM_ADMIN is not an account type: granting it is a separate, confirmed action in the user's own page.
  */
 import { errorParts } from "../../packages/api-client/src/errorText";
-import type { AdminScope } from "./adminModel";
+import { tenantsWith, type AdminScope } from "./adminModel";
 import type { CapabilityId, CapabilityState, TenantRoleId, WorkspaceRoleId } from "./provisioning";
 
 export type Surface = "platform" | "admin";
@@ -44,8 +44,9 @@ export function provisioningPlan(scope: AdminScope, surface: Surface, state: (id
   const types = [ACCOUNT_TYPES.TENANT_ADMIN, ACCOUNT_TYPES.WORKSPACE_ADMIN, ACCOUNT_TYPES.USER];
   const ws = state("createTenantWorkspace").status === "READY";
   if (scope.platform) return { surface, create: stateToCreate(state("createTenantUser")), accountTypes: types, fixedTenant: null, tenantChoice: true, canCreateWorkspace: ws, addExisting };
-  if (scope.tenants.length > 0) {
-    const one = scope.tenants.length === 1 ? { id: scope.tenants[0].id, name: scope.tenants[0].name } : null;
+  const mine = tenantsWith(scope, (c) => c.members);                       // creating an account needs TENANT_MEMBERS IN that company
+  if (mine.length > 0) {
+    const one = mine.length === 1 ? { id: mine[0].id, name: mine[0].name } : null;
     return { surface, create: stateToCreate(state("createTenantUser")), accountTypes: types, fixedTenant: one, tenantChoice: !one, canCreateWorkspace: ws, addExisting };
   }
   return { surface, create: { state: "forbidden", reason: "Tài khoản của bạn không có quyền tạo tài khoản mới. Bạn chỉ có thể thêm người đã có tài khoản vào workspace." }, accountTypes: [], fixedTenant: null, tenantChoice: false, canCreateWorkspace: false, addExisting };
