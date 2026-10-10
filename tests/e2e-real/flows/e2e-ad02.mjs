@@ -2,7 +2,7 @@
 // from THAT code only (never from a role name). Negative: workspace viewer / editor / publisher are not offered it and are refused at the door. Member management: add by username, re-role, remove, rules (self-change, last admin), isolation.
 import { Blocked } from "../lib/report.mjs";
 import { loginPortal, makeUser, navLabels, openPortal, watchApi } from "../lib/portals.mjs";
-import { newPage, pageProblems } from "../lib/ui.mjs";
+import { confirmYes, newPage, pageProblems } from "../lib/ui.mjs";
 export const id = "E2E-AD02", title = "Admin portal, workspace admin: 'Workspace của tôi' opens on MEMBER_MANAGE (not on a role name), members add / re-role / remove, rules, isolation, negative roles";
 export async function run({ cfg, fx, browser, check }) {
   const a = fx.users.adminA, b = fx.users.adminB, wsA = fx.workspaces.A;
@@ -47,8 +47,7 @@ export async function run({ cfg, fx, browser, check }) {
   check.ok("[api] adding the same person twice is refused (409 ALREADY_MEMBER)", again.status === 409 && again.body?.code === "ALREADY_MEMBER", `status=${again.status} ${again.body?.code}`, "http");
   const demote = await fx.sessions.adminA.patch(`/workspaces/${wsA}/members/${a.id}`, { role: "EDITOR" });
   check.ok("[api] the server refuses self-change (403 SELF_GRANT_FORBIDDEN), as the UI did before the click", demote.status === 403 && demote.body?.code === "SELF_GRANT_FORBIDDEN", `status=${demote.status} ${demote.body?.code}`, "http");
-  page.once("dialog", (d) => void d.accept());
-  await page.getByTestId(`wm:${b.username}`).getByRole("button", { name: "Gỡ" }).click(); await page.getByText("Đã gỡ khỏi workspace.").waitFor({ timeout: 10_000 });
+  await page.getByTestId(`wm:${b.username}`).getByRole("button", { name: "Gỡ" }).click(); await confirmYes(page, /khỏi workspace\?/, "Gỡ khỏi workspace"); await page.getByText("Đã gỡ khỏi workspace.").waitFor({ timeout: 10_000 });
   list = (await fx.sessions.adminA.get(`/workspaces/${wsA}/members`)).body ?? [];
   check.ok("remove: gone from the workspace on the server", !list.some((m) => m.userId === b.id), "", "persistence");
   const cross = await fx.sessions.adminA.get(`/workspaces/${fx.workspaces.B}/members`);
