@@ -194,11 +194,13 @@ pin_check() {   # exact SHA pinning (D-C0-55): the backend worktree is BASE_REF,
   [ "$want" = "$have" ] || [ "${E2E_ALLOW_SKEW:-0}" = 1 ] || die "backend = $BASE_REF ($want) but the portals would be built from $REPO @ $have: check out the same commit, or set E2E_ALLOW_SKEW=1 knowingly"
   PINNED_SHA="$want"
 }
-serving_record() {   # what this stack serves, written next to its state (never a secret)
-  need_env; local f="$DIR/SERVING.json"
-  printf '{\n  "stack": "%s",\n  "sha": "%s",\n  "recordedAt": "%s",\n  "ports": {"api": %s, "studio": %s, "platform": %s, "admin": %s, "sites": %s, "postgres": %s},\n  "organizationPersistence": "%s",\n  "publishConfigs": "%s"\n}\n' \
-    "$NAME" "${PINNED_SHA:-unknown}" "$(date -u +%FT%TZ)" "$API_PORT" "$STUDIO_PORT" "$PLATFORM_PORT" "$ADMIN_PORT" "$SITES_PORT" "$PG_PORT" "${ORGANIZATION_PERSISTENCE_ENABLED:-false}" "${PUBLISH_CONFIGS_ENABLED:-false}" > "$f"
-  say "serving record: $f"
+serving_record() {   # what this stack serves = the BUILD STAMP (written at the moment the stack is built; never a secret). scripts/rc-verify.mjs re-checks it against the live processes
+  need_env; local f="$DIR/SERVING.json" app bid="" tpl=""
+  for app in studio platform admin; do bid="$bid\"$app\": \"$(cat "$REPO/apps/$app/.next-check-$NAME/BUILD_ID" 2>/dev/null || echo none)\", "; done
+  tpl="$(shasum -a 256 "$WT/infra/sites-gateway/default.conf.template" 2>/dev/null | cut -d' ' -f1)"
+  printf '{\n  "stack": "%s",\n  "sha": "%s",\n  "recordedAt": "%s",\n  "repoHead": "%s",\n  "backendWorktreeHead": "%s",\n  "buildIds": {%s"_": ""},\n  "sitesGatewayTemplateSha256": "%s",\n  "ports": {"api": %s, "studio": %s, "platform": %s, "admin": %s, "sites": %s, "render": %s, "postgres": %s},\n  "organizationPersistence": "%s",\n  "publishConfigs": "%s",\n  "sitesPublicData": "%s"\n}\n' \
+    "$NAME" "${PINNED_SHA:-unknown}" "$(date -u +%FT%TZ)" "$(git -C "$REPO" rev-parse HEAD)" "$(git -C "$WT" rev-parse HEAD)" "$bid" "$tpl" "$API_PORT" "$STUDIO_PORT" "$PLATFORM_PORT" "$ADMIN_PORT" "$SITES_PORT" "$RENDER_PORT" "$PG_PORT" "${ORGANIZATION_PERSISTENCE_ENABLED:-false}" "${PUBLISH_CONFIGS_ENABLED:-false}" "${SITES_PUBLIC_DATA_ENABLED:-false}" > "$f"
+  say "build stamp: $f"
 }
 owned_name() { case "$1" in api) echo backend-app ;; render) echo render ;; studio) echo studio ;; platform) echo platform ;; admin) echo admin ;; *) echo none ;; esac; }   # a function: a `case` inside $( ) is a syntax error on macOS bash 3.2
 status() {
