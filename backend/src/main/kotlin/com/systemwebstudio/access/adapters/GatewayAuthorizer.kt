@@ -26,7 +26,7 @@ data class GatewayAuthRequest(
  * QUERY_EXECUTE / EVENTS_SUBSCRIBE -> QUERY_EXECUTE; MUTATION_EXECUTE -> DATA_MUTATE;
  * SCHEMA_SAMPLE -> DATA_SOURCE_MANAGE **and** QUERY_EXECUTE (sampling reads real rows: managing is not enough).
  * Unknown operation, non-USER actor (SYSTEM / SERVICE / APP_TOKEN: TEMPORARY V2 POLICY, see ActorPolicy), missing workspace (tenant-level data sources have
- * no permission holder: TENANT_ADMIN has no implicit data access, D-C1-12), tenant mismatch, unknown project/version, a data source that is not of this tenant + workspace => Denied.
+ * no permission holder: TENANT_ADMIN has no implicit data access, D-C1-12), tenant mismatch, unknown project/version => Denied.
  *
  * The one non-USER exception is [ActorKind.PUBLIC_SITE] (D-C0-35): it may reach `QUERY_EXECUTE` and nothing else, and only for the app version of the ACTIVE public
  * release of the project it names (see [PublicSiteAuthorizer.authorizeGateway]); it has no user, so no USER role or permission is ever consulted for it.
@@ -59,13 +59,8 @@ class GatewayAuthorizer(private val access: AccessService, private val jdbc: Jdb
         if (ctx.tenantId != r.tenantId) return@decide AccessDecision.Denied("tenant mismatch")
         if (!required.all { it in ctx.permissions }) return@decide AccessDecision.Denied("missing permission")
         if (r.appVersionId != null && !versionBelongs(r.appVersionId, r.projectId!!, workspaceId)) return@decide AccessDecision.Denied("version not in project")
-        // defense in depth: a data source id is accepted only if it is a source of THIS tenant and workspace (C3's own workspace scope is not the only barrier)
-        if (r.dataSourceId != null && !dataSourceBelongs(r.dataSourceId, r.tenantId, workspaceId)) return@decide AccessDecision.Denied("data source not in workspace")
         AccessDecision.Allowed
     }
-
-    private fun dataSourceBelongs(dataSourceId: UUID, tenantId: UUID, workspaceId: UUID): Boolean =
-        jdbc.queryForList("SELECT 1 FROM data_sources WHERE id = ? AND tenant_id = ? AND workspace_id = ?", dataSourceId, tenantId, workspaceId).isNotEmpty()
 
     /** An app version id is accepted only if it is a `project_versions` row of this project and workspace. */
     private fun versionBelongs(appVersionId: String, projectId: UUID, workspaceId: UUID): Boolean {
