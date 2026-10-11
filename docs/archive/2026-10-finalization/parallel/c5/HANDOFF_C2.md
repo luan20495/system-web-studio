@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/QA_FINAL.md` - historical document (moved from `docs/parallel/c5/HANDOFF_C2.md`), kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # C5 → C2 handoff — C2 — build / publish / deploy / artifact
 
 From C5 (Studio/Frontend), baseline `integration/v2 @ f894cc6`. C5 changed nothing owned by C2. Nothing here was run against a live backend: evidence is the code, the BLOCKERS rows and the suite's blocker records.

@@ -1,7 +1,9 @@
-# C3 · T8 — DataConnector Foundation
+> **SUPERSEDED_BY:** `docs/ARCHITECTURE.md` - historical document (moved from `docs/parallel/agents/C5_PREP_T12.md`), kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
 
-> Prompt tự đủ context — copy toàn bộ vào Claude Desktop mở tại worktree **`../xweb-c3`** (branch **`agent/c3-data`**). Bạn là **C3 (Data Platform)**.
-> Base commit bắt buộc: `d3c7065d3b6963dc625be5d0725922f5004fb818`. Trước khi làm: `pwd`, `git branch --show-current` (phải là `agent/c3-data`), `git rev-parse HEAD` (phải có base commit trong lịch sử), `git status --short` (sạch).
+# C5 · PREP-T12 — Builder / Data Binding Architecture Audit
+
+> Prompt tự đủ context — copy toàn bộ vào Claude Desktop mở tại worktree **`../xweb-c5`** (branch **`agent/c5-web`**). Bạn là **C5 (Web Builder / Admin UI / E2E)**.
+> Base commit bắt buộc: `d3c7065d3b6963dc625be5d0725922f5004fb818`. Trước khi làm: `pwd`, `git branch --show-current` (phải là `agent/c5-web`), `git rev-parse HEAD` (phải có base commit trong lịch sử), `git status --short` (sạch).
 
 ## 1. Project context
 Dự án **XWEB** (repo `system-web-studio`): nền tảng nội bộ "AI Software Factory". Bạn là một trong 5 Claude (C1–C5) làm **song song** trên 5 git worktree riêng; **C0 (Architect/Integrator)** giữ contract, cấp migration, merge/cherry-pick và xử lý file dùng chung. Bạn không cần đọc cuộc chat nào khác — file này là đủ, nhưng **bắt buộc đọc thêm** trước khi code: `CLAUDE.md`, `docs/parallel/OWNERSHIP.md`, các contract trong `docs/contracts/` liên quan task, `docs/parallel/BOARD.md`, `docs/parallel/BLOCKERS.md`, `docs/parallel/DECISIONS.md`.
@@ -48,44 +50,43 @@ Cần sửa một trong số đó, hoặc file của owner khác → **không t�
 - Mỗi task: **test và commit riêng**. Cập nhật dòng task của bạn trong `docs/parallel/BOARD.md` (Status/Commit) trong chính commit của task đó hoặc commit docs đi kèm.
 
 ## 8. Task objective
-Xây **nền DataConnector** cho Data Platform: `DataConnector`, `DataSource`, `ConnectionTest`, contract `SchemaDiscovery` và `QueryExecutor`, với hai driver đầu: **REST** và **PostgreSQL read-only**. Credential chỉ ở server. **Không implement UI, không workflow, không tự sửa `runtime/Gateway.kt`, không tự tạo migration.**
+**Chuẩn bị** T12 (Builder data binding) bằng một **audit kiến trúc frontend**: lập bản đồ Builder hiện tại và xác định chính xác điểm gắn cho Data / Action / Workflow và hai chế độ Edit/Test. Chưa implement T12 đầy đủ vì T10/T11 và backend contract chưa tồn tại. **Không fake backend, không tạo kiến trúc mock cạnh tranh với AppDefinition.**
 
 ## 9. Exact scope
-1. Đọc kỹ: `docs/contracts/data-connector.md`, `docs/adr/0017-server-runtime.md`, `0018-app-database-isolation.md`, `runtime/Gateway.kt` (**chỉ đọc**): `PublicAddress` (SSRF guard), `ConnectorProxyController` (grant theo project, operation allowlist, credential giải mã chỉ ở server, `https` + cùng host, rate limit, audit `CONNECTOR_*`), `AdminConnectorController`; `runtime/RuntimeSupport.kt` (`SecretsCrypto` AES-256-GCM); `audit/AuditService`; `docs/SECURITY.md`.
-2. Tạo package mới `com.systemwebstudio.data.{datasource,discovery,query,mapping,gateway}` — trong task này chủ yếu `datasource`, `discovery`, `query` (+ interface mỏng ở `gateway` nếu contract yêu cầu):
-   - `DataConnector` (loại nguồn: `type`, `test`, `discovery`, `executor`), `DataSource` / `DataSourceRef` (id, loại, cấu hình **không bí mật**), `ConnectionTest` (kết quả có kiểu: ok / lý do lỗi đã làm sạch), `SchemaDiscovery`, `QueryExecutor`, `QueryRequest`/`QueryResult` theo contract (request **không** chứa SQL/URL thô từ client; chỉ `queryId` + tham số đã bind).
-   - Driver **REST**: gọi HTTPS tới base URL đã đăng ký; áp dụng SSRF guard bằng cách **gọi lại `PublicAddress`** (không copy/sao chép logic); chặn redirect ra ngoài host/đến địa chỉ private (xử lý redirect thủ công hoặc tắt follow), kiểm tra IP **sau khi resolve** (chống DNS rebinding trong chừng mực có thể), giới hạn kích thước response, timeout kết nối/đọc, số redirect = 0 hoặc có kiểm soát, header an toàn.
-   - Driver **PostgreSQL read-only**: kết nối tới nguồn đã đăng ký; ép read-only (transaction read-only + role không ghi), chỉ prepared statement với tham số bind, `statement_timeout`, giới hạn số dòng, không cho multi-statement; không cho nguồn trỏ tới DB nội bộ của nền tảng (platform DB, app DB) ngoài allowlist rõ ràng.
-   - Khám phá schema: REST (từ mô tả endpoint đã khai báo / response mẫu) và PostgreSQL (information_schema) → `DiscoveredSchema` chuẩn hóa, không trả secret.
-   - Credential: lưu/đọc qua `SecretsCrypto` hiện có; **không bao giờ** xuất hiện trong response, log, audit payload, lỗi, hay AppDefinition/AI prompt. Giá trị lỗi trả ra được làm sạch (không lộ chuỗi kết nối/host nội bộ).
-   - Biên rate limit/timeout: định nghĩa interface/điểm cắm (dùng `common/RateLimiter` hiện có qua tham chiếu **chỉ đọc**; cần thay đổi `common/**` → blocker).
-3. Phần cần persistence (bảng datasource/credential): **chưa có migration**. Có thể scaffold trước bằng interface `DataSourceRepository` (port) + implementation in-memory dùng cho test. Khi cần DB thật: ghi request vào BOARD.md (mục Migration requests) với mô tả bảng, **dừng phần DB đó** và tiếp tục phần còn lại. Không tự đặt số V26 hay bất kỳ số nào.
-4. Không bật endpoint HTTP công khai nếu chưa có quyền (C1) — nếu cần controller, ghi blocker; ưu tiên service + test.
-5. Ghi rủi ro/quyết định vào `DECISIONS.md` (PROPOSED) khi bạn cần đổi contract.
+1. Đọc kỹ (frontend ở **root repo**): `features/studio/ProjectWorkspace.tsx`, `StudioApp.tsx`, `drawers.tsx`, `libraryPanels.tsx`, `SitePanels.tsx`, `CodeWorkspace.tsx`/`CodePanels.tsx`, `features/ui.tsx`, `features/library.tsx`, `features/routing.ts`, `features/session.tsx`, `lib/schema-preview.ts`, `lib/preview-document.ts`, `lib/http-api.ts`, `lib/http-types.ts`, `lib/api-client.ts`, `lib/types.ts`, `lib/mock-data.ts`, `app/**`, `components/**`, `e2e/*.mjs`, `proxy.ts`; và backend contract: `docs/contracts/app-definition-v2.md`, `data-connector.md`, `action-workflow.md`; backend thật `schema/SchemaOperation.kt` + `PageSchemaValidator.kt` để biết cấu trúc schema mà Builder đang chỉnh.
+2. Viết `docs/parallel/audit/PREP-T12-builder-architecture.md` (thư mục mới thuộc task) gồm:
+   - **Current Builder architecture map**: component tree, nguồn state, luồng sửa schema (Dnd, Inspector, Preview, Publish, Versions, AI prompt), cách gọi API (`http-api.ts`), cách preview render (iframe sandbox, `schema-preview`), chế độ mock vs http.
+   - **Insertion points**: chính xác file/component/hàm nơi sau này gắn **ViewModel, Query, Mapping, DataSource, Action** (và Workflow).
+   - **UI state design**: đề xuất state/panel/routes cho Data, Action, Workflow; cách giữ **một nguồn sự thật = AppDefinition** (UI chỉ đọc/ghi qua operation → validator → version, giống Page Schema hiện tại).
+   - **Edit vs Test separation**: Edit = chỉnh định nghĩa (không gọi nguồn thật ngoài việc test có kiểm soát); Test = chạy preview với dữ liệu thật qua backend Query/Action, tách trạng thái, có chỉ báo rõ, không ghi bẩn schema.
+   - **Required backend contracts**: danh sách endpoint/type phía backend cần có (từ C2/C3/C4), kèm nơi hiện đã rõ và nơi còn thiếu.
+   - **Blocking dependencies**: T6 (shape `AppDefinitionV2`), T8 (Query/DataSource API), quyền (C1), T10/T11…; thứ tự đề xuất.
+   - Rủi ro conflict: `lib/http-api.ts` & `lib/http-types.ts` (~33 KB/26 KB) và `ProjectWorkspace.tsx` (~35 KB) là hot file của bạn — đề xuất tách module (ví dụ `lib/api/<domain>.ts`) nhưng **chưa refactor lớn**.
+3. Được phép (nhỏ, tùy chọn): thêm **type/interface placeholder** phía frontend (ví dụ trong `lib/app-definition/`) **chỉ khi** nó phản ánh đúng contract `app-definition-v2.md` hiện có; ghi chú rõ "mirror of backend contract, not authoritative". Không tự sáng tạo schema khác backend; nếu contract thiếu → ghi `needs-contract-change` và dừng ở tài liệu.
+4. Không thêm màn hình chạy được cho tính năng chưa có backend.
 
 ## 10. What NOT to do
-- **Không sửa `runtime/Gateway.kt`** (hay `runtime/**`, `publish/**`, `common/**`, `application*.yml`, `build.gradle.kts`). Cần dependency JDBC/HTTP mới → blocker `needs-shared-file`; dùng thứ đã có (Spring JDBC/`java.net.http`) khi có thể.
-- Không làm yếu hoặc tái triển khai SSRF guard; không bỏ `PublicAddress`; không cho phép `http://`, `localhost`, IP private/link-local/metadata, redirect tới địa chỉ như vậy.
-- Không UI, không workflow/action, không tenant/permission code (dùng interface/placeholder và ghi dependency C1), không AppDefinition (C2).
-- Không migration khi chưa được cấp. Không để credential/secret trong repo, log hoặc test fixture thật.
-- Không thay đổi Connector Proxy hiện tại; nó tiếp tục hoạt động nguyên trạng (hợp nhất sau, do C0 quyết).
+- Không nối fake data runtime, không mock dataSource/query cạnh tranh AppDefinition, không local store song song với schema.
+- Không refactor lớn `ProjectWorkspace.tsx`/`http-api.ts`; không đổi hành vi UI hiện tại; không xóa/đổi tên component đang dùng.
+- Không sửa backend, không migration (C5 không bao giờ có migration), không sửa `package.json`/lockfile/`next.config.ts`/`tsconfig.json` (C0). Cần thư viện mới → blocker.
+- Không sửa E2E hiện có để làm xanh; chỉ đề xuất kịch bản mới trong tài liệu.
+- Không đổi `docs/contracts/**` (đề xuất qua `DECISIONS.md`).
 
 ## 11. Acceptance criteria
-- Interface/model: `DataConnector`, `DataSource`, `ConnectionTest`, `SchemaDiscovery`, `QueryExecutor` hiện hữu, khớp `docs/contracts/data-connector.md`.
-- Driver REST + PostgreSQL read-only chạy được với test (stub HTTP server / Testcontainers Postgres đã có trong test classpath).
-- Test an ninh: SSRF (private IP, loopback, metadata, redirect, DNS tới IP nội bộ), credential không rò rỉ (response/log/lỗi), timeout, giới hạn kích thước/dòng, PostgreSQL ghi bị từ chối, SQL multi-statement bị từ chối.
-- Không migration; không sửa file cấm; test hiện có xanh.
+- Tài liệu audit có đủ 5 mục: architecture map, insertion points, UI state design, Edit vs Test separation, required backend contracts + blocking dependencies.
+- Mỗi insertion point trỏ đến file/hàm thật (đã kiểm tra trong code).
+- Nếu có placeholder type: khớp contract, được đánh dấu không-authoritative, typecheck PASS.
+- UI hiện tại không đổi hành vi; `npx tsc --noEmit -p tsconfig.json` PASS (bằng hoặc tốt hơn baseline).
 
 ## 12. Tests
-- Test mới trong `backend/src/test/kotlin/com/systemwebstudio/data/...`. Dùng stub/Testcontainers sẵn có; cần mở rộng `support/` → blocker.
-- Chạy `cd backend && ./gradlew test` toàn bộ (cần Docker + JDK 21); baseline 192/0 fail/3 skipped. Nếu không chạy được trong môi trường của bạn, ghi rõ.
+- `npx tsc --noEmit -p tsconfig.json` (baseline PASS). `npm run build` nếu môi trường cho phép (trên máy đã dựng sẵn `node_modules` đúng nền tảng); E2E chỉ chạy nếu có stack, và ghi rõ nếu không chạy được. Không báo pass khi chưa chạy.
 
 ## 13. Commit rule
-Commit nhỏ trên `agent/c3-data`, ví dụ `feat(data): DataConnector and DataSource contracts`, `feat(data): REST connector with SSRF guard reuse`, `feat(data): PostgreSQL read-only connector`, `test(data): connector security tests`. Cập nhật dòng T8 trong `docs/parallel/BOARD.md` (Status, Commit). Mọi yêu cầu migration chỉ nằm ở BOARD.md.
+Commit nhỏ trên `agent/c5-web`, ví dụ `docs(web): PREP-T12 builder architecture audit`, `chore(web): app-definition type placeholders` (nếu có). Cập nhật dòng PREP-T12 trong `docs/parallel/BOARD.md`.
 
 ## Final report format (bắt buộc, đúng cấu trúc)
 ```
-TASK REPORT — C3 · T8 — DataConnector Foundation
+TASK REPORT — C5 · PREP-T12 — Builder / Data Binding Architecture Audit
 
 Files changed:
 - ...

@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/QA_FINAL.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # C5 — HANDOFF (PL01 + Dynamic Organization + AD01 / M-052 + C2 H-C2-07 candidate, 2026-10-10; supersedes the final-candidate handoff of the same day)
 
 Written by C5-L from what was run in the session; every result names its evidence class. Itemised evidence: `audit/PL01_ORG_AD01_C2_2026-10-10.md` (this task) and `audit/FINAL_EVIDENCE_2026-10-10.md` (the earlier gate). REAL_BACKEND claims are limited to what the table in §4 says.

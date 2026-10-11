@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/DATA_RUNTIME.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # C3 → C0: `PublicAddress` patch (INTEGRATION_V2 §8) — proposal, C0 applies
 
 Status: PROPOSED · C3 does **not** edit `runtime/Gateway.kt` (C0-gated, B-002/D-003/B-C3-04). This note is what C0 needs to apply the canonical `PublicAddress` from `docs/parallel/INTEGRATION_V2.md` §8 and to turn on C3's tests.

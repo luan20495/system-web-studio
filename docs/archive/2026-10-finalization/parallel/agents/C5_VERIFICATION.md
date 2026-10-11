@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/ARCHITECTURE.md` - historical document (moved from `docs/parallel/agents/C5_VERIFICATION.md`), kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # C5 — Verification record (Phase 1 + 2), 2026-10-06
 
 Môi trường: **Linux container (x86_64, Node 22, Chromium 1194)**, KHÔNG phải macOS. Phiên làm việc không có shell trên Mac; `device_bash` là Linux VM và trình duyệt trên Mac không với tới server trong VM.

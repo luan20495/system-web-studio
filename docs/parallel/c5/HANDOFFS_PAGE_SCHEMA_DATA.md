@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/QA_FINAL.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # C5 handoffs — PAGE_SCHEMA public data V1 (2026-10-07)
 
 What C5 consumed: C2 `fix/c2-v3 @ c1e0df5` (`HANDOFF_C5_PAGE_SCHEMA_DATA.md`), release contract `8d40218`, C0 baseline `integration/v2 @ 27f7b6f`. Review before coding: `PAGE_SCHEMA_DATA_REVIEW.md` (M1–M8).

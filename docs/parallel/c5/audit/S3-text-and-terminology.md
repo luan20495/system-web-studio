@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/QA_FINAL.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # S3 — User-facing text and terminology audit (PHASE 1: audit only, nothing changed)
 
 | | |

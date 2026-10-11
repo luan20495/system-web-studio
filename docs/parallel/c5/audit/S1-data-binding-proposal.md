@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/QA_FINAL.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # M-005 (S1-006 + S1-027) - Data-binding simplification: PROPOSAL (not implemented)
 
 Author: C5-S1. Base: `agent/c5-web` @ `a73ae3d`. Status: **for C5-L review; nothing in `features/` has been changed for this item.**

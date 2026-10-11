@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/DATA_RUNTIME.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # C3 → C0: Spring/API wiring proposal for the Data Platform
 
 Status: PROPOSED · **proposal only**: everything below touches C0-owned files (`wiring/**`, `identity/SecurityConfiguration.kt`, `application*.yml`, `runtime/**`, `audit/**`) and is NOT done by C3. C3 delivers the framework-free pieces these controllers and beans call; they are tested without Spring.

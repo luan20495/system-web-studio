@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/QA_FINAL.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # S4 audit: performance, browser, tooling, process lifecycle
 
 Owner of this document: C5-S4 (Browser / Performance / Tooling / Process-lifecycle). Phase 1 = MEASURE + AUDIT. No product UI code was changed.

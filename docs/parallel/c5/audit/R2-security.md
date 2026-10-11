@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/QA_FINAL.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # R2 — Frontend security audit (C5-owned frontend only)
 
 Author: C5-R2 · Base: `agent/c5-web @ 9f858c2` · Branch: `agent/c5-r2-sec` · Date: 2026-10-08 · Mode: static analysis + one local production build of `apps/studio` (no server started, no port used).

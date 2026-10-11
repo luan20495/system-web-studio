@@ -10,8 +10,12 @@ import org.springframework.test.context.TestPropertySource
 import java.time.Duration
 import java.util.UUID
 
-/** Lockdown defaults, editable policy settings, storage quota and artifact retention. */
-@TestPropertySource(properties = ["app.deploy.provider=static", "app.render.url=http://127.0.0.1:9"])
+/**
+ * Lockdown defaults, editable policy settings, storage quota and artifact retention.
+ * `app.signup.max-users` (default 500) is raised for this class: all test classes share one PostgreSQL and the suite has grown past 500 accounts, so in a full run the
+ * registration inside the sign-up test answered 503 SIGNUP_FULL (the sign-up cap itself is tested in RegistrationAndLimitsTests).
+ */
+@TestPropertySource(properties = ["app.deploy.provider=static", "app.render.url=http://127.0.0.1:9", "app.signup.max-users=1000000"])
 class LockdownSettingsTests : IntegrationTestBase() {
     @Autowired lateinit var settings: SettingsService
     @Autowired lateinit var redis: org.springframework.data.redis.core.StringRedisTemplate

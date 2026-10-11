@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/QA_FINAL.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # S1 - Studio / Builder audit (PHASE 1: audit only, no product code changed)
 
 Author: C5-S1 (Studio / Builder specialist). Base: `agent/c5-web` @ `9f858c2` (branch `agent/c5-s1-audit`). Date: 2026-10-08.

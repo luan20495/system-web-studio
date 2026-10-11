@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/QA_FINAL.md` - historical document (moved from `docs/parallel/c5/audit/tools/wave-briefs/S3-task.md`), kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # C5-S3 — Shared UI / A11y / Text / Design System (Wave A)
 Worktree: __WT__ (branch agent/c5-s3-a, base a9fbdb0). Install already done (`npm ci`).
 Scope (verify each in code first): M-067 (extract shared helpers: `act()` already -> `useAction`; the load ladders (28), filter+table+pager pattern (8-11), Field wrapper), M-069 (design tokens: remaining untokenised colours), M-070 (duplicate/conflicting CSS selectors, dead hooks), M-084 (h1 for ErrorState/loading/CodeWorkspace, feature adoption of LoadGate/States), plus ONLY the shared (library/guard/CSS) portions of M-060 M-061 M-062 M-063 (glossary wording, label maps, English leftovers; call-site adoption inside `features/admin/**` belongs to S2, inside `features/studio/**` to S1 — do not edit those directories except 1-3 line mechanical adoptions that S1/S2 cannot conflict with; list them in your report).

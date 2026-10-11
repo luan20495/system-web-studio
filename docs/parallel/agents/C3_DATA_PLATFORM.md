@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/DATA_RUNTIME.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # C3 — Data Platform: thiết kế, wiring blueprint, runbook
 
 Phạm vi: `backend/src/main/kotlin/com/systemwebstudio/data/**` (T8–T11, cache, sync, webhook, realtime). Tài liệu này là hồ sơ bàn giao cho C0 để tích hợp. Mọi quyết định ở `DECISIONS.md` (D-C3-01…11), blocker ở `BLOCKERS.md` (B-C3-01…10), yêu cầu migration ở `BOARD.md` (không có số version; C0 cấp).

@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/QA_FINAL.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # S2 — the people screens of the Admin console (M-065)
 
 Decision (user-approved, binding): do **not** merge the people screens just to reduce routes. Keep distinct jobs separate; consolidate the shared building blocks. Dynamic Organization stays NOT_READY (C1), so no route is added or removed. Route snapshot `tests/browser/admin-routes.snapshot.json` is unchanged.

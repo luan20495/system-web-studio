@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/PUBLISH_RUNTIME.md` - historical document (moved from `docs/parallel/audit/C2-integration-handoff.md`), kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # C2 — hướng dẫn tích hợp cho C0 (chạy test thật)
 
 Trạng thái: nhánh **`fix/c2-v2`** (cắt từ `integration/v2` `c59604b`, port theo path từ `agent/c2-app-model` `a4d5f8b`), **chưa có test thật nào chạy** (B-004: egress tới `services.gradle.org`, `plugins.gradle.org`, `repo.maven.apache.org` bị chính sách tổ chức từ chối, cả ở cloud lẫn VM trên máy; không có Docker daemon). Kiểm chứng duy nhất của C2 là harness kotlinc (Kotlin 2.0.21, stub cho Spring/Jackson 3/AI gateway/AssertJ): **185 passed, 0 failed**. Harness KHÔNG thay thế Gradle. `SchemaServiceInitializationTests` (Mockito) và các test Testcontainers **chưa được biên dịch ở đâu cả**.

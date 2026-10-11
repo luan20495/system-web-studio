@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/PROJECT_STATUS.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # Tiến độ AI Software Factory — đã làm và chưa làm (cập nhật 2026-10-04)
 
 Chi tiết từng mục (REAL / PARTIAL / MOCK / BLOCKED_EXTERNAL_INPUT / NOT IMPLEMENTED): [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md).

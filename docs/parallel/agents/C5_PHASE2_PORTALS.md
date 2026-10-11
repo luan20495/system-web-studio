@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/ARCHITECTURE.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # C5 — Phase 2: cấu hình portal (platform / admin / studio)
 
 Phạm vi: frontend. Không đổi contract, không thêm permission code. Tài liệu này thuộc C5.

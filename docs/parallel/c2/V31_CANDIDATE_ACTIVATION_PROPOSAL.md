@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/PUBLISH_RUNTIME.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # V31 PROPOSAL — candidate activation (LIM-1, Batch 3). For C0 review. **No migration file exists; no number is reserved or assumed.**
 
 Raised by C2 on 2026-10-07 against `integration/v2 @ ef0d890`. Target semantics are C0's, frozen in `docs/contracts/v2/published-runtime.md` §2.2 (I1–I9, D-C0-33…35); this document only fixes the exact schema and the transaction so C0 can approve or amend it. Nothing here is implemented. V30 is immutable; everything below is a new migration that C0 numbers.

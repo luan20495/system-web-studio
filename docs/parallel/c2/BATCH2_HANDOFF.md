@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/PUBLISH_RUNTIME.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # C2 — Batch 2 (build / publish / deploy): what changed, what is not done
 
 Branch `fix/c2-v3`. No migration was created or chosen. Written for C0 (integration) and whoever picks up the concurrency work.

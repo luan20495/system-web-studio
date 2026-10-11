@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/QA_FINAL.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # C5 frontend audit — handoffs to other teams (ready to send)
 
 From: C5 (R2 packaging, Phase 2) · Base: `agent/c5-web @ a73ae3d` · Date: 2026-10-09 · Ledger: `docs/parallel/c5/audit/MASTER_ISSUE_LEDGER.md`

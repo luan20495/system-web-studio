@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/ARCHITECTURE.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # PREP-T12 — Builder / Data Binding Architecture Audit
 
 Owner: **C5** · Branch `agent/c5-web` · Base `d3c7065d3b6963dc625be5d0725922f5004fb818` · Ngày 2026-10-05

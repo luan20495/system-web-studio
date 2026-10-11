@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/QA_FINAL.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # C5 — Platform (:3001) and Admin (:3002) portals: audit, what was completed, what is blocked (2026-10-07)
 
 Baseline: `integration/v2 @ 1a9995c` backend (stack `c5e2e-pf`, API 42080) + `agent/c5-web` portals built with `API_PROXY_TARGET=http://127.0.0.1:42080`. Runtime audit = every navigation entry of both portals opened as `local.admin` with a real browser:

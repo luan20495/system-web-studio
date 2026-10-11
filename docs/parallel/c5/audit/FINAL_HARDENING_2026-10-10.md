@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/QA_FINAL.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # C5 final hardening pass (2026-10-10, base integration/v2 @ fad4a7b)
 Evidence classes as before; nothing here relabels HARNESS as REAL_BACKEND. Details of what was found / fixed / run: `C5_NEXT_SESSION_HANDOFF.md` §9. Visual proof: `~/.xweb-evidence/c5-final-2026-10-10/` (outside git).
 

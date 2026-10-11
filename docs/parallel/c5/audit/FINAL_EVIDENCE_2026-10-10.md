@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/QA_FINAL.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # C5 final candidate — evidence record (2026-10-09 / 10)
 
 Every number below was produced in the session that wrote this file; logs live in the session scratchpad and are NOT in the repository, so this record IS the artefact. Classes: UNIT, HARNESS (real browser, in-page fakes, no backend), LIVE_PORTAL (the three real production portal builds started through the owned-process library, `/api` faked or unreachable), REAL_STACK (private builds against the e2e backend `http://127.0.0.1:47080`, backend started and stopped by someone else), REAL_BACKEND_E2E (`tests/e2e-real`, **none run**). Browser labels: CHROMIUM, WEBKIT (Playwright WebKit 26.6, never Safari), FIREFOX (blocked).

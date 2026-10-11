@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/ACTION_WORKFLOW.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # FINAL-C4 — Action / Workflow runtime: thiết kế, hợp đồng, DDL đề xuất
 
 > **C0 note (2026-10-06, integration/v2):** the error-code semantics for `TIMEOUT`/`INTERRUPTED` of a *mutating* action in this document are superseded by **D-C4-17** (they become `IDEMPOTENCY_OUTCOME_UNKNOWN`, `retryable=false`), and UI `onError[]` no longer runs after `IDEMPOTENCY_OUTCOME_UNKNOWN` (**D-C0-13**). Non-mutating actions are unchanged. See `docs/parallel/DECISIONS.md`.

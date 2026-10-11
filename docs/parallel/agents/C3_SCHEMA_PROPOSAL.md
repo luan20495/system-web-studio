@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/DATA_RUNTIME.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # C3 — Schema proposal for the Data foundation (ONE migration request)
 
 Status: PROPOSED · owner: C3 · **no Flyway version is assigned or created here**. C0 gives this request ONE version (see `BOARD.md`, *Migration requests*) and writes the file; until then C3 only has ports (`*Store`, `*Repository`, `*Catalog`). This replaces the earlier T8 row and the T9–T11/Sync/Webhook row (they overlapped and contradicted each other on credentials).

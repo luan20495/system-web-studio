@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/PUBLISH_RUNTIME.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # C2 → C5 — the exact contract for a data-bound PAGE_SCHEMA (V1 option b, D-C0-35)
 
 As built on `fix/c2-v3` (2026-10-07). Everything below is implemented and tested; C2 changed no Studio UI. All of it travels through the existing `PATCH …/schema` operations and the existing publish / site API (`PUBLISH_API_CONTRACT.md` is unchanged except where stated). One file of C5's was touched, minimally: `lib/schema-preview.ts` (an optional `bindings` render option; with no bindings, and in the Studio preview, the output is byte-for-byte what it was — asserted by `tests/page-runtime/page-runtime.test.ts`). Please review that hunk.

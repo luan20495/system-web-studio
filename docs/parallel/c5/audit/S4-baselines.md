@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/QA_FINAL.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # S4 baselines ("before" table for the code-splitting wave, M-053)
 
 Measured on `agent/c5-web @ 6838ba2` (merged phase 1 + master ledger) plus the S4 wave-1 branch `agent/c5-s4-wave1` (hooks `useAction` / `useLoad`, spec toolkit; no product screen changed).

@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/PROJECT_STATUS.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # Implementation status — AI Software Factory (2026-10-04)
 
 **Development Ready: YES · Internal Pilot Ready: YES · Production Ready: NO** — production needs a Linux runtime host,

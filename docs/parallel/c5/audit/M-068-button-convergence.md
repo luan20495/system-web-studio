@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/QA_FINAL.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # M-068 — one button vocabulary (2026-10-09)
 
 Evidence class: HARNESS, NOT REAL BACKEND (Chromium). Result: `.button`, `.smallButton` and `.bx-btn` are gone from every `className` (198 uses, 29 files, all in Studio) and from every stylesheet. Only `.sendButton` (the AI composer's round send button) remains a component class.

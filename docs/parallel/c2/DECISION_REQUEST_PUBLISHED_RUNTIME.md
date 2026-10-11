@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/PUBLISH_RUNTIME.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 > **2026-10-07 update — superseded for V1 by D-C0-35.** C0 chose the same-origin ANONYMOUS public data route for PAGE_SCHEMA sites (`/{slug}/_data/…`, principal `PUBLIC_SITE`), not the capability-path / user-session design below. What C2 built for it: `HANDOFF_C3_PUBLIC_QUERY.md` and `HANDOFF_C5_PAGE_SCHEMA_DATA.md`. The question below (a published CODE app calling the Data Runtime with a user session) is **not the V1 path** and stays open and unimplemented; nothing here was built.
 
 # DECISION REQUEST — how a published app reaches the Data Runtime (B-C2-B3-01)

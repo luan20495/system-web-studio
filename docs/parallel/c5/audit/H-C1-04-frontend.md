@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/QA_FINAL.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # H-C1-04 — frontend side, final IAM adapter cleanup (2026-10-09)
 
 Branch `agent/c5-web`, synced with `integration/v2 @ 6d445d5` by `6099faa` (the existing precedent: `merge(c5): sync agent/c5-web with integration/v2`). Contract read: `docs/parallel/c1/h-c1-04-project-scoped-auth-me.md`, `final-iam-tenant-org-permission-contract.md` §2.5 / §9, `organization-employee-contract.md` §1 / §9, `docs/contracts/v2/tenant-permission.md` §5b / §5c (D-C0-51). Evidence labels: UNIT, HARNESS (browser, no backend), LIVE_PORTAL (real portal builds, `/api` faked or unreachable), REAL_BACKEND (none in this document).

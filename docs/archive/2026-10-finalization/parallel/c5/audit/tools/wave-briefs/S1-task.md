@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/QA_FINAL.md` - historical document (moved from `docs/parallel/c5/audit/tools/wave-briefs/S1-task.md`), kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # C5-S1 — Studio / Builder (Wave A)
 Worktree: __WT__ (branch agent/c5-s1-a, base a9fbdb0). Install already done (`npm ci`).
 Scope (verify each in code first): M-042 M-046 M-047 M-051 M-077 M-078 M-079 M-080 M-081 M-082 M-083 M-088 (Studio part: RuntimeDrawer secret kept in React state; Admin part is done) M-089 M-091 M-106 M-109 M-110 M-112 M-113.

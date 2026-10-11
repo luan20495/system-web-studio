@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/QA_FINAL.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # M-053 — measured bundle splitting (2026-10-09)
 
 Evidence: `next build` (Next 16 production, `NEXT_DIST_DIR=.next-gate`, API proxy unreachable) + `node scripts/bundle-report.mjs`; raw / gzip KB. BEFORE = `agent/c5-web` at 2b0fa31 (after M-068/M-107), AFTER = this change. Chromium harness checks are HARNESS, NOT REAL BACKEND.

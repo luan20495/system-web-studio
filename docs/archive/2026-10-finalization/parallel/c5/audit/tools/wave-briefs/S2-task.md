@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/QA_FINAL.md` - historical document (moved from `docs/parallel/c5/audit/tools/wave-briefs/S2-task.md`), kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # C5-S2 — Platform / Admin (Wave A)
 Worktree: __WT__ (branch agent/c5-s2-a, base a9fbdb0). Install already done (`npm ci`).
 Scope (verify each in code first): M-025 remainder (skip link / main tab stop on the PLATFORM shell; Admin+Studio shells already fixed), M-093 (a: failed /auth/config -> error state, do now; b: 'absent permissions list is treated as allowed' only if safe and covered by the permission contract), M-097 remainder (duplicate GETs / per-keystroke requests in Admin/Platform screens: use the existing `useLoad` keyed cache + abort), M-098 (copy failure silent; link origin via `portalHref`), M-065.

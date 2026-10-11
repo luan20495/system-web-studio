@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/QA_FINAL.md` - historical document (moved from `docs/parallel/c5/audit/LEDGER_STATUS_NORMALIZED.md`), kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # C5 — LEDGER STATUS, NORMALIZED (generated from master-ledger.json after Wave A)
 
 Source of truth for the rows is `MASTER_ISSUE_LEDGER.md` / `master-ledger.json` (the free-text Status column keeps the evidence and commit SHAs). This file maps every row to exactly one canonical status. All browser evidence is HARNESS, NOT REAL BACKEND unless a row says REAL STACK.

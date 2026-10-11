@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/QA_FINAL.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # C5 — IAM / permission / tenant / Dynamic Organization: frontend inventory (Phase A)
 
 > **UPDATE 2026-10-09 (22:00, after the C1 final import `6d445d5` / D-C0-51 and the H-C1-04 frontend work, `docs/parallel/c5/audit/H-C1-04-frontend.md`).** Where this inventory says the organization contract is missing, `MEMBER_MANAGE` is non-canonical, or Studio admission ignores project scopes, read the section 10 at the end: those items are now resolved or re-classified. The rest (endpoints, direct-URL behaviour, tenant UI, sharing UI) still stands.

@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/QA_FINAL.md` - historical document (moved from `docs/parallel/c5/audit/R-shared-fix-clusters.md`), kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # C5-R — PHASE 2: ledger verification and shared-fix clusters (2026-10-09)
 
 Author: C5-R. Branch `agent/c5-r-review`, base `agent/c5-web @ a73ae3d`. **Documents only**: no product code, script, `package.json`, test or ledger row was changed. Squad mapping used here (from C5-L): **S1 = Studio, S2 = Platform / Admin, S3 = design system / shared UI / text, S4 = performance / tooling, R / R2 = research.** Input: `MASTER_ISSUE_LEDGER.md` + `master-ledger.json` (103 canonical issues from 230 raw) and the seven audit documents beside it.

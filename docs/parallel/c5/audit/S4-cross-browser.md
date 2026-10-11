@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/QA_FINAL.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # C5 — cross-browser tooling (M-114), part 1
 
 Date 2026-10-09. Evidence class: TOOLING (part 1, 2026-10-09: the selector and the Firefox diagnosis). **Part 2 (WEBKIT matrix, 2026-10-10) is recorded in `FINAL_EVIDENCE_2026-10-10.md` §4: 17 of 19 specs fully pass, the other two are an engine clipboard limit and the Alt+Tab emulation (31/31 with `WEBKIT_PLAIN_TAB=1`); Firefox stays BLOCKED_TOOLING.**

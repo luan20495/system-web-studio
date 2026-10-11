@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/QA_FINAL.md` - historical document (moved from `docs/parallel/c5/audit/R2-ledger-review.md`), kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # R2 — review of the security / secret / URL / permission / header rows of the master ledger, and plans for the RESEARCH rows
 
 Reviewer: C5-R2 · Base: `agent/c5-web @ a73ae3d` · Date: 2026-10-09 · Docs only. Handoff packaging: `HANDOFFS_FRONTEND_AUDIT.md`.

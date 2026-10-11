@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/QA_FINAL.md` - historical document (moved from `docs/parallel/c5/audit/tools/wave-briefs/COMMON.md`), kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # C5 Wave A — common rules (read fully, ~2 min)
 
 You are a fresh, isolated implementation agent for the XWeb frontend (Next.js, three portals Platform/Admin/Studio). You work ONLY inside your own git worktree (absolute path given in your task). Never `cd` out of it, never touch the shared checkouts `/Users/hoangluan/code/HBL` or `/Users/hoangluan/code/xweb-c5`.

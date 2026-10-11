@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/QA_FINAL.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # C5-R — Frontend architecture, reuse, extensibility and debuggability review (2026-10-08)
 
 Author: C5-R (research / architecture reviewer). Branch `agent/c5-r-arch`, base `agent/c5-web @ 9f858c2`. Documents only: no product code, script, `package.json` or test was changed; the only non-markdown files are three read-only analysis tools in `docs/parallel/c5/audit/tools/` (they read sources and write one JSON file to a path you give, nothing else).

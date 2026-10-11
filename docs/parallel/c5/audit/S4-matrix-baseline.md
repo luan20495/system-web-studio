@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/QA_FINAL.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # S4 matrix baseline: after the S2 AdminApp split, S3 tokens and the S1 fixes merged up to `419ffce` (+ S4 wave 3)
 
 **HARNESS, NOT REAL BACKEND.** Every number below comes from the harness pages (`tests/browser/admin-harness.tsx`, `tests/browser/studio-app`) with in-page fakes and injected failures, Chrome 155.0.8059.40, 2026-10-09 / 10. They say what the screens do, not what a server answers. This file is the "before" for the final gate: re-run the same three commands on the final base and compare the counts per check.

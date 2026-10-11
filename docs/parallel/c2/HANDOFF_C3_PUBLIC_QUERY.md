@@ -1,3 +1,5 @@
+> **SUPERSEDED_BY:** `docs/PUBLISH_RUNTIME.md` - historical document, kept for auditability (state as of 2026-10-11). It is not current guidance; the canonical description is the document named here.
+
 # C2 → C3 (and C0, C1) — what C2 delivers and expects for the Public Data Runtime (published-runtime.md §4, D-C0-35)
 
 As built on `fix/c2-v3` (2026-10-07). C2 owns the published path, the gateway routing, the runtime config `apiBase` and the release context; C3 owns query execution, binding and LIVE semantics; C1 owns the security policy; C0 owns the controller and the principal adapter. **C2 changed no C1 / C3 / C0 code and invented no auth.**
