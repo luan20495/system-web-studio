@@ -445,14 +445,57 @@ await step("27", "Company, app, data, workflow and release state survive", async
   catch (e) { chk("UI: the Tenant Admin still signs in to the Admin portal and sees the company", false, String(e.message).slice(0, 100)); } finally { await ctx.close(); }
 });
 
+// ================================================================= REGRESSION (not part of the 27): approval across a restart, duplicate decision, tenant and project isolation
+async function restartBackend() {
+  if (!RESTART) { chk("restart command configured (GC_RESTART_CMD)", false, "not set"); return false; }
+  const t0 = Date.now(); try { execSync(RESTART, { encoding: "utf8", timeout: 240000, stdio: ["ignore", "pipe", "pipe"] }); } catch (e) { chk("the stack tooling restarted the backend", false, String(e.message).slice(0, 160)); return false; }
+  const ready = await poll(async () => { try { return (await fetch(`${API}/actuator/health/readiness`)).status === 200; } catch { return false; } }, (x) => x === true, 120, 2000);
+  chk("readiness UP again", ready === true, `${Math.round((Date.now() - t0) / 1000)}s`); return ready === true;
+}
+await step("R1", "An approval WAITING survives a backend restart; the decision after it is idempotent", async () => {
+  const chi = must(C.users.chi, "Requester").s, dung = must(C.users.dung, "Manager").s; const o2 = `${C.orderNo}-R`;
+  const r = await chi.call("POST", `${B()}/actions/submit-order/execute`, { mode: "LIVE", inputs: { order_no: o2, customer_id: 1, status: "open", amount: 7 }, idempotencyKey: `gc-r1-${tag}` });
+  const fu = (r.json?.followUps ?? []).find((q) => q.actionId === "start-approval"); const run2 = fu?.output?.runId ?? fu?.runId ?? fu?.output?.id; chk("second order submitted, workflow started", r.status === 200 && !!run2, st(r));
+  const v = await poll(async () => (await chi.call("GET", `${B()}/workflow-runs/${must(run2, "run id")}`)).json, (j) => j?.status === "WAITING" || ["SUCCEEDED", "FAILED"].includes(j?.status), 40, 1000);
+  const ap = (v?.steps ?? []).find((x) => x.stepId === "approve")?.approvalId; chk("run WAITING with an approvalId before the restart", v?.status === "WAITING" && !!ap, `${v?.status}`);
+  if (!(await restartBackend())) return;
+  const v2 = (await chi.call("GET", `${B()}/workflow-runs/${run2}`)).json; const ap2 = (v2?.steps ?? []).find((x) => x.stepId === "approve")?.approvalId;
+  chk("after the restart the run is still WAITING with the same approvalId (state is in PostgreSQL)", v2?.status === "WAITING" && ap2 === ap, `${v2?.status} same=${ap2 === ap}`);
+  chk("DB-confirmed: the order row is still open (nothing ran without the decision)", psql(`select status from shop.orders where order_no='${o2}'`) === "open");
+  const D = `${B()}/workflow-runs/${run2}/approvals/${ap}/decision`;
+  const d1 = await dung.call("POST", D, { decision: "APPROVE" }); chk("the approver decides AFTER the restart -> 200 APPROVED", d1.status === 200 && d1.json?.approvalStatus === "APPROVED", st(d1));
+  const d2 = await dung.call("POST", D, { decision: "APPROVE" }); chk("the same decision again is idempotent (200)", d2.status === 200, st(d2));
+  const d3 = await dung.call("POST", D, { decision: "REJECT" }); chk("ERROR: the opposite decision after a final one -> 409", d3.status === 409, st(d3));
+  const fin = await poll(async () => (await chi.call("GET", `${B()}/workflow-runs/${run2}`)).json, (j) => ["SUCCEEDED", "FAILED", "CANCELLED"].includes(j?.status), 60, 1000);
+  chk("the run SUCCEEDED and the real row is approved (exactly one row)", fin?.status === "SUCCEEDED" && psql(`select status||'|'||count(*) from shop.orders where order_no='${o2}' group by status`) === "approved|1", `${fin?.status}`);
+});
+await step("R2", "Tenant and project isolation hold for runs, approvals, data sources and documents", async () => {
+  const tB = (await SA.call("POST", "/api/v1/admin/tenants", { slug: `meridianb-${tag}`, name: `Meridian B ${tag}` })).json?.id; must(tB, "tenant B");
+  const bta = await provision(SA, tB, "bta", { tenantRole: "TENANT_ADMIN" }); const wsB = (await bta.s.call("POST", `/api/v1/admin/tenants/${tB}/workspaces`, { name: `Ops B ${tag}` })).json?.id;
+  const bwa = await provision(bta.s, tB, "bwa", { tenantRole: "MEMBER", workspaceId: must(wsB, "workspace B"), workspaceRole: "WORKSPACE_ADMIN" });
+  const pB = (await bwa.s.call("POST", `/api/v1/workspaces/${wsB}/projects`, { name: `B app ${tag}`, appType: "PAGE_SCHEMA" })).json?.id; const PBB = `/api/v1/workspaces/${wsB}/projects/${must(pB, "project B")}`;
+  const is404 = async (label, r) => chk(`ISOLATION: ${label} -> 404`, r.status === 404, st(r));
+  await is404("company B reads company A's workspace", await bwa.s.call("GET", `/api/v1/workspaces/${C.ws}/projects`));
+  await is404("company B reads company A's document", await bwa.s.call("GET", `${C.PB}/schema`));
+  await is404("company B reads company A's workflow run through its OWN project path", await bwa.s.call("GET", `${PBB}/app-runtime/workflow-runs/${must(C.runId, "run A")}`));
+  await is404("company B decides company A's approval through its own project path", await bwa.s.call("POST", `${PBB}/app-runtime/workflow-runs/${C.runId}/approvals/${must(C.approvalId, "approval A")}/decision`, { decision: "APPROVE" }));
+  await is404("company B reads company A's data source through its own workspace path", await bwa.s.call("GET", `/api/v1/workspaces/${wsB}/data-sources/${must(C.dsRw, "data source A")}`));
+  await is404("Tenant Admin B reads company A's members", await bta.s.call("GET", `/api/v1/admin/tenants/${C.t}/members`));
+  // project isolation inside one company: a second project of company A cannot act on the first project's run
+  const p2 = (await C.users.binh.s.call("POST", `/api/v1/workspaces/${C.ws}/projects`, { name: `Second app ${tag}`, appType: "PAGE_SCHEMA" })).json?.id; must(p2, "second project");
+  await is404("a second project of the same company cannot read the first project's run", await C.users.dung.s.call("GET", `/api/v1/workspaces/${C.ws}/projects/${p2}/app-runtime/workflow-runs/${C.runId}`));
+  await is404("a second project of the same company cannot decide the first project's approval", await C.users.dung.s.call("POST", `/api/v1/workspaces/${C.ws}/projects/${p2}/app-runtime/workflow-runs/${C.runId}/approvals/${C.approvalId}/decision`, { decision: "APPROVE" }));
+});
+
 // ---------------------------------------------------------------- report
 if (browser) await browser.close().catch(() => {});
-const verdicts = [...steps.values()]; const passed = verdicts.filter((s) => s.verdict === "PASS").length;
+const verdicts = [...steps.values()]; const core = verdicts.filter((s) => /^\d+$/.test(s.n)); const reg = verdicts.filter((s) => !/^\d+$/.test(s.n)); const passed = core.filter((s) => s.verdict === "PASS").length; const regPassed = reg.filter((s) => s.verdict === "PASS").length;
 mkdirSync(OUT, { recursive: true });
 const failedChecks = rows.filter((r) => r.result === "FAIL");
-writeFileSync(`${OUT}/golden-company-flow.json`, JSON.stringify({ api: API, finalSha: FINAL_SHA, tag, company: C.slug, passedSteps: passed, totalSteps: 27, steps: verdicts.map(({ n, title, verdict, checks, failed, error }) => ({ n, title, verdict, checks, failed, error })), rows, pageErrors: pageErrors.slice(0, 20) }, null, 1));
+writeFileSync(`${OUT}/golden-company-flow.json`, JSON.stringify({ api: API, finalSha: FINAL_SHA, tag, company: C.slug, passedSteps: passed, totalSteps: 27, regressionPassed: regPassed, regressionTotal: reg.length, steps: verdicts.map(({ n, title, verdict, checks, failed, error }) => ({ n, title, verdict, checks, failed, error })), rows, pageErrors: pageErrors.slice(0, 20) }, null, 1));
 const esc = (v) => String(v ?? "").replace(/[\t\r\n]+/g, " ");
 writeFileSync(`${OUT}/golden-company-flow.tsv`, ["step\tcheck\tresult\tinfo", ...rows.map((r) => [r.step, r.check, r.result, r.info].map(esc).join("\t"))].join("\n") + "\n");
 console.log(`\nfailed checks: ${failedChecks.length}`); for (const f of failedChecks.slice(0, 40)) console.log(`  ${f.step} ${f.check} | ${f.info.slice(0, 120)}`);
-console.log(`\nGOLDEN_COMPANY_FLOW: ${passed}/27 PASS`);
-process.exit(passed === 27 ? 0 : 1);
+console.log(`\nREGRESSION (approval across a restart, isolation): ${regPassed}/${reg.length} PASS`);
+console.log(`GOLDEN_COMPANY_FLOW: ${passed}/27 PASS`);
+process.exit(passed === 27 && regPassed === reg.length ? 0 : 1);
