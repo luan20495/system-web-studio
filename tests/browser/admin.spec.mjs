@@ -729,6 +729,35 @@ await block("scenario 89", async () => { const p = await open({ portal: "admin",
   check("PPL03 a workspace admin (only Người dùng) gets no cross-link line", (await p.locator("[data-testid=people-links]").count()) === 0);
   await p.__ctx.close(); });
 
+// ---------- FQ-PERF-01: one /auth/me per navigation lifecycle, still revalidated (revocation, disabled, transient failure) and never behind a splash ----------
+await block("scenario FQ-PERF-01", async () => {
+  const meCalls = async (p) => (await calls(p)).filter((c) => c.path === "/auth/me").length;
+  const p = await open({ portal: "admin", me: "tadmin", start: "/admin" }); await settle(p, 800);
+  check("FQ01 a cold load of the portal reads /auth/me exactly ONCE", (await meCalls(p)) === 1, String(await meCalls(p)));
+  await p.evaluate(() => { window.__splash = 0; new MutationObserver(() => { if (document.querySelector(".splash")) window.__splash++; }).observe(document.body, { childList: true, subtree: true }); });
+  const n0 = await meCalls(p); await nav(p, "/admin/users"); await settle(p, 500);
+  check("FQ02 one client-side navigation re-reads /auth/me ONCE (explicit revalidation), in the background: no splash replaced the screen", (await meCalls(p)) === n0 + 1 && (await p.evaluate(() => window.__splash)) === 0 && /\/admin\/users/.test(new URL(p.url()).pathname) && (await p.locator("h1").count()) > 0, `${n0} -> ${await meCalls(p)} splash=${await p.evaluate(() => window.__splash)}`);
+  const n1 = await meCalls(p); await nav(p, "/admin/users"); await settle(p, 400);
+  check("FQ03 a navigation that does not change the path reads nothing", (await meCalls(p)) === n1, `${n1} -> ${await meCalls(p)}`);
+  // a transient failure of the background re-read keeps the last answer: the person is not signed out, the screen stays
+  await p.evaluate(() => { window.__cfg.me = { status: 503, code: "INTERNAL" }; }); await nav(p, "/admin/applications"); await settle(p, 500);
+  check("FQ04 a 503 on the background re-read keeps the session and the screen (the server still authorises every call)", !/\/login|\/auth\//.test(new URL(p.url()).pathname) && (await p.locator("h1").count()) > 0, new URL(p.url()).pathname);
+  // revocation / expiry: the next navigation re-reads, the server says 401, the person is sent to sign in again (no privileged content kept)
+  await p.evaluate(() => { window.__cfg.me = { status: 401 }; }); await nav(p, "/admin/users"); await settle(p, 600);
+  check("FQ05 a 401 on the re-read ends the session: the portal asks to sign in again and shows no console", /\/login/.test(new URL(p.url()).pathname) && /Chào mừng/.test(await p.locator("h1").innerText()), new URL(p.url()).pathname);
+  await p.__ctx.close();
+  const q = await open({ portal: "admin", me: "tadmin", start: "/admin" }); await settle(q, 800);
+  await q.evaluate(() => { window.__cfg.me = { status: 403, code: "ACCOUNT_DISABLED" }; }); await nav(q, "/admin/users"); await settle(q, 600);
+  check("FQ06 ACCOUNT_DISABLED on the re-read blocks the session (no-access page)", /\/auth\/no-access/.test(new URL(q.url()).pathname), new URL(q.url()).pathname);
+  await q.__ctx.close();
+  // permissions changed on the server: the next navigation re-reads and the screens follow the NEW answer (the company-admin console is no longer offered)
+  const r = await open({ portal: "admin", me: "tadmin", start: "/admin/users" }); await settle(r, 800);
+  const meBody = await r.evaluate(async () => (await (await fetch("/api/v1/auth/me")).json()));
+  await r.evaluate((b) => { window.__cfg.me = { body: { ...b, permissions: [], tenantRole: "MEMBER", tenants: b.tenants.map((t) => ({ ...t, role: "MEMBER", permissions: [] })), workspaces: [] } }; }, meBody); await nav(r, "/admin/applications"); await settle(r, 700);
+  check("FQ07 revoked permissions become effective at the next navigation: the admin console is no longer open to this person", /\/auth\/no-access|\/login/.test(new URL(r.url()).pathname), new URL(r.url()).pathname);
+  await r.__ctx.close();
+});
+
 check("no console error / warning / uncaught exception in any page", errors.length === 0, errors.slice(0, 3).join(" | "));
 await browser.close();
 finish();
