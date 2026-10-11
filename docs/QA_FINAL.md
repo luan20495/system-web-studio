@@ -5,13 +5,13 @@ Audience: engineers and QA who take over with no chat history. Language: English
 
 | Field | Value |
 |---|---|
-| Source of truth | `integration/v2` (read at local HEAD `28376ded2307`, 2026-10-11; final `{{INTEGRATION_SHA}}`) |
-| Final release candidate under acceptance | `{{FINAL_RC_SHA}}` |
-| Public portals / API releases | `{{PUBLIC_FRONTEND_SHA}}` / `{{PUBLIC_API_SHA}}` |
+| Source of truth | `integration/v2` (read at local HEAD `28376ded2307`, 2026-10-11; final `9d2fc8b9758077ac880d80cfbec767e2e776f9c5`) |
+| Final release candidate under acceptance | `75643ad8700f42df05c3151c1d0875b063c81620` |
+| Public portals / API releases | `bc5c47f292d0` / `1006cbf441f6` |
 | QA documents | `docs/parallel/c6/**` on `integration/v2` (imported from `agent/c6-qa @ 04803d7644fc`, 2026-10-10 16:36 +0700, by commit `28376de`): reports, harness, text evidence; screenshots stay in external archives (section 6) |
 | Written | 2026-10-11 |
 
-**Important framing.** Section 5 is a DATED RECORD of what QA concluded on 2026-10-10 about product SHA `bc5c47f292d0`. It is not the verdict for `{{FINAL_RC_SHA}}`. The acceptance run of the final SHA, including the "Golden Company" flow, is recorded ONLY in `## Final acceptance record` (section 8), which this draft leaves as a template.
+**Important framing.** Section 5 is a DATED RECORD of what QA concluded on 2026-10-10 about product SHA `bc5c47f292d0`. It is not the verdict for `75643ad8700f42df05c3151c1d0875b063c81620`. The acceptance run of the final SHA, including the "Golden Company" flow, is recorded ONLY in `## Final acceptance record` (section 8), which this draft leaves as a template.
 
 Related canonical docs: [OPERATIONS](OPERATIONS.md) (how to run the stacks and gates), [KNOWN_LIMITATIONS](KNOWN_LIMITATIONS.md) (open items), [ARCHITECTURE](ARCHITECTURE.md).
 
@@ -58,11 +58,11 @@ Rules a test must obey (enforced where noted):
 
 ## 3. Technical gates and how to run each
 
-All commands are run from the repository root of the checkout under test unless stated. Heavy gates one at a time on the shared host (`OPERATIONS.md` section 9). "Last recorded" values are dated records, not results for `{{FINAL_RC_SHA}}`.
+All commands are run from the repository root of the checkout under test unless stated. Heavy gates one at a time on the shared host (`OPERATIONS.md` section 9). "Last recorded" values are dated records, not results for `75643ad8700f42df05c3151c1d0875b063c81620`.
 
 | # | Gate | How to run | Pass criteria | Last recorded (dated) |
 |---|---|---|---|---|
-| T1 | **Backend full** | `cd backend && ./gradlew clean test --no-build-cache --rerun-tasks --no-daemon -Pkotlin.daemon.jvmargs=-Xmx3g` (JDK 21, Docker, test heap 2 GB); run it ALONE, never together with the browser harness (`OPERATIONS.md` section 9.2) | 0 failures, 0 errors; skipped only the 3 `OpenRouterLiveTests` (need a real key); `:test` executed, not cached; counts taken from the JUnit XML. A mass `NoClassDefFoundError` from container start-up or a single load-induced failure (`LockdownSettingsTests`) is a host problem: re-run on a quiet host before recording FAIL | 2026-10-11 merged C1 hardening tree (D-C0-60 item 3, load about 10): 256 suites, 2298 tests, 2297 pass, the single failure `LockdownSettingsTests` (503 on register, host starvation; 5/5 pass alone). 2026-10-10 on `ef5989e` (D-C0-58 item 5): 249 classes, 2260 tests, 1 failure (same class), 0 errors, 3 skipped. Earlier: 2187/0 on `2d3f520` (D-C0-54); 2003/0 on `62ce9697cd56` (C6 batch 9). For `{{FINAL_RC_SHA}}`: section 8 |
+| T1 | **Backend full** | `cd backend && ./gradlew clean test --no-build-cache --rerun-tasks --no-daemon -Pkotlin.daemon.jvmargs=-Xmx3g` (JDK 21, Docker, test heap 2 GB); run it ALONE, never together with the browser harness (`OPERATIONS.md` section 9.2) | 0 failures, 0 errors; skipped only the 3 `OpenRouterLiveTests` (need a real key); `:test` executed, not cached; counts taken from the JUnit XML. A mass `NoClassDefFoundError` from container start-up or a single load-induced failure (`LockdownSettingsTests`) is a host problem: re-run on a quiet host before recording FAIL | 2026-10-11 merged C1 hardening tree (D-C0-60 item 3, load about 10): 256 suites, 2298 tests, 2297 pass, the single failure `LockdownSettingsTests` (503 on register, host starvation; 5/5 pass alone). 2026-10-10 on `ef5989e` (D-C0-58 item 5): 249 classes, 2260 tests, 1 failure (same class), 0 errors, 3 skipped. Earlier: 2187/0 on `2d3f520` (D-C0-54); 2003/0 on `62ce9697cd56` (C6 batch 9). For `75643ad8700f42df05c3151c1d0875b063c81620`: section 8 |
 | T2 | **Migrations V1..Vn** | (a) every Testcontainers class runs Flyway from an empty database V1 -> latest (so T1 is the proof that a fresh DB builds); (b) targeted classes: `DataRuntimeMigrationTests` (V28), `PublishConfigsMigrationTests` (V27), the V29 run-persistence migration tests, `TenantMigrationFromV25Tests` (V26), `OrgV32FlywayTests` (clean V1->V32, upgrade V30->V32), the V33 Flyway tests (clean, upgrade, undo, commit `b3fcb53`); (c) on a stack: read-only `select max(version::int), count(*), count(*) filter (where not success) from flyway_schema_history` (as C6 `final-env-check.mjs` ENV-06b and `scripts/rc-verify.mjs`, which now expects max 33); (d) immutability: pinned hashes `docs/parallel/c6/migration-hashes.sha256` (V1..V29) must match the files; (e) `tests/guards/migration-ledger.mjs` (inside `gate:frontend`); (f) public API: `scripts/public-api.sh validate-api` / `deploy-api` rehearsal on an empty scratch database | latest version applied, 0 failed rows, no gap other than V31, applied files byte-identical, ledger guard green | Checked 2026-10-11 for this document: all 29 pinned hashes (V1..V29, pinned by C6 at `8e91172`) are byte-identical on `integration/v2` `28376ded2307`; the directory holds 32 migration files (V1..V30, V32, V33; V31 is a void gap). The candidate-1 SHA proof (2026-10-10) expected "32 / 31 migrations" and passed; the script now expects 33 (not executed on a V33 stack by this pass). V33 file sha256 prefix `2e50cab087fbeb8d` |
 | T3 | **Frontend gate** | `npm run gate:frontend` (about 90 s; `-- --no-build` about 30 s) = static guards (9) + guard self-tests (93) + typecheck (root, packages, apps) + `npm run test:unit` + three production builds (`apps/*/.next-gate`) + `npm run scan:bundles`. Do not run it concurrently with the backend gate | all steps green | Reported by the coordinator: GREEN on `205707e` (static guards, 539 unit tests, builds, bundle scan; the RTL ratchet now counts source CSS only and skips generated `packages/*/dist`) - not recorded in a repository document I read. D-C0-58: unit 555/555, guards 9/9, builds + bundle scan green; D-C0-55: same on `5a4ede5` |
 | T4 | **Browser harness** (class `harness`) | `node tests/browser/build-harness.mjs`; then per spec `CHROME=... node tests/browser/harness-server.mjs run -- node tests/browser/<spec>.spec.mjs`; live-portal specs (`portals`, `portals-lazy`) need the three apps served via the owned-process CLI. 24+ specs: `builder`, `org`, `org-employees`, `org-hardening`, `provisioning`, `aiproviders`, `datasources`, `release`, `publicdata`, `publish-policy`, `sanity`, `page-runtime`, `shared-ui`, `ui-brand`, `ui-tokens`, `ui-widgets`, `ui-route`, `studio-p1`, `studio-wave2`, `studio-wave3`, `data-binding`, `hooks`, `admin`, `portals-lazy`, `portals` | every spec exits 0; browsers: Chromium full, WebKit (`BROWSER=webkit`) | D-C0-58: 24 specs + portals = 1568 checks, 0 failures; D-C0-55: 1553. `hooks.spec` is timing-sensitive under load; `sanity` is Chromium-only |
@@ -73,7 +73,7 @@ All commands are run from the repository root of the checkout under test unless 
 | T9 | **Infra tests** (process safety, pinning, portals) | `npm run test:infra:processes`, `test:infra:portals` (26 tests, about 2 min), `test:infra:public`, `test:infra:api`; `tests/gateway/portal-route.mjs` | green | documented as green by C0 at their implementation (D-C0-48/49/50); `portal-route.mjs` is flaky (BUG-C6-016, `KNOWN_LIMITATIONS.md` KL-FLK-04) |
 | T10 | **UI audit: responsive, accessibility, brand, cross-browser, performance** | `scripts/ui-audit-selftest.mjs` first (a clean audit proves nothing until the self-test passed), then `ui-audit-harness.mjs` (HARNESS), `ui-audit.mjs --private-api <api>` (REAL stack), `ui-state-matrix.mjs`, `ui-keyboard.mjs`; C6 `final-ui.mjs`, `final-clip.mjs`, `final-brand.mjs`, `final-perf.mjs`; browsers Chromium (system Chrome) and Playwright WebKit | axe critical 0 and serious 0; no overflow; targets >= 24 px; focus ring; brand tokens; no localStorage fallback | 2026-10-10: Chromium 1089 cases at 9 widths, axe 0 critical / 0 serious / 13 moderate; WebKit 392 cases at 3 widths; strict clipping detector 76 routes x 4 widths: only `/admin/employees` (FQ-UI-01); dialog focus restore FQ-A11Y-02; performance 26/30. **Firefox: BLOCKED_TOOLING** |
 | T11 | **C6 static / contract checks** | `node docs/parallel/c6/harness/static-qa.mjs`; `python3 harness/contract-checks.py` (22 checks with a self-test injecting 10 violations); `python3 harness/db-probes.py` (isolated PostgreSQL: audit append-only, undo U27); `bash harness/run-overlay-tests.sh` (C6 Kotlin permission tests in a temp worktree) | green | batch 7 (2026-10-07, `8e91172`): static 10/10, contract checks green, overlay 4/4; may be stale |
-| T12 | **SHA proof of the stack** | `node scripts/rc-verify.mjs --stack <name> --sha {{FINAL_RC_SHA}} --out .../RC_STAMP.json` before and after QA | `SHA_ALL_MATCH YES` | candidate 1 `2f5a86c4e0f9`: 17 live checks PASS (D-C0-59, migration expectation 32 at that time). The script now expects migration max 33 (`scripts/rc-verify.mjs:40`, commit `b3fcb53`) |
+| T12 | **SHA proof of the stack** | `node scripts/rc-verify.mjs --stack <name> --sha 75643ad8700f42df05c3151c1d0875b063c81620 --out .../RC_STAMP.json` before and after QA | `SHA_ALL_MATCH YES` | candidate 1 `2f5a86c4e0f9`: 17 live checks PASS (D-C0-59, migration expectation 32 at that time). The script now expects migration max 33 (`scripts/rc-verify.mjs:40`, commit `b3fcb53`) |
 | T13 | **Dependency audit** | `npm audit --omit=dev` (part of `./scripts/check.sh`); OSV scans documented in `docs/SECURITY.md` | 0 known vulnerabilities in runtime dependencies | 0 at the last documented runs (`docs/SECURITY.md:72`, `:99`; `FINAL_HARDENING`/C6 batch 7); not re-run for this draft |
 
 The C6 single entry point `bash docs/parallel/c6/harness/final-gate.sh plan|dry-run|status` lists the ordered phases (1 selftest, 2 process safety, 3 backend+frontend+static gate `mac-gate.sh`, 4 full stack E2E/browser/recovery `mac-full.sh`, 5 contract checks and DB probes, 6 RC wide regression, 7 UI/UX regression, 8 user-guide QA, 10 FINAL RC QA, 9 QA master regeneration); it deliberately has no `run` mode: the expensive gate is started by hand phase by phase after C0 approves the target SHA (src: `docs/parallel/c6/harness/final-gate.sh:1-23`). Exit codes of `mac-full.sh`: 0 FINAL PASS, 1 FINAL FAIL, 2 FINAL INCOMPLETE (a critical phase NOT_RUN) (src: `MAC_QA_HANDOFF.md:22`, `:59`). `FINAL|PASS` is not production readiness: GAP rows remain in the file.
@@ -153,9 +153,9 @@ Caveats stated by QA: by the end of the run C0's checkout had moved to `fabea81`
 | FQ-ENV-01 (P2, env) | data-target trust store provisioned and functionally proven on `c0rc` (data source test `ok:true`); C6 retest pending | D-C0-59 item 4 |
 | FQ-UI-01, FQ-A11Y-02 (P2) | C5 fixes imported (`a47eefe`, merge `2cf2ed6`): **awaiting independent retest** | `git log integration/v2` |
 | Runtime authorization re-check, publish authorization tests | imported (`e4896ad`, `fabea81`) after the QA run; not covered by that verdict. C4 interrupted-worker fix (`140dc36`, `WorkflowHardeningTests` 6) imported later; C1 final hardening (D-C0-60) imported: also not covered | D-C0-58 item 1; `git log` |
-| Product code at QA time vs now | `bc5c47f292d0` product + the imports above; the SHA of record for acceptance is `{{FINAL_RC_SHA}}` | - |
+| Product code at QA time vs now | `bc5c47f292d0` product + the imports above; the SHA of record for acceptance is `75643ad8700f42df05c3151c1d0875b063c81620` | - |
 
-### 5.3 What must be retested on `{{FINAL_RC_SHA}}` (handoff list)
+### 5.3 What must be retested on `75643ad8700f42df05c3151c1d0875b063c81620` (handoff list)
 Journey 05 and Journey 06 with the data-target trust store; UPDATE_RECORD and DELETE_RECORD; non-`recordId` keys (`key=id`, `key=uuid`, `key=order_no`); ambiguous mutation (`IDEMPOTENCY_OUTCOME_UNKNOWN`, `retryable=false`); authorization (`ACTION_EXECUTE` / `DATA_MUTATE` / tenant and workspace isolation); FQ-PERF-01 session lifecycle; the C4 runtime-authorization fix; approvals end to end (approve, reject, wrong approver, duplicate and opposite decisions, restart while WAITING); FQ-UI-01 and FQ-A11Y-02; plus every P1/P2 that was open (src: D-C0-59 item 5, `FINAL_RC_QA_REPORT.md` section 8).
 
 ---
@@ -261,7 +261,6 @@ Some automated checks open files under `docs/` and compare or parse them. Moving
 - `docs/parallel/c5/audit/R2-i18n-theme.md`
 - `docs/parallel/c5/audit/S3-glossary.md`
 - `docs/parallel/c5/audit/S4-realstack-baseline.md`
-- `docs/parallel/policy.md`
 
 The finalization archived only documents outside these lists and outside every link from another document (`docs/archive/2026-10-finalization/README.md`).
 
@@ -272,80 +271,86 @@ Firefox BLOCKED_TOOLING (not PASS, not product failure); Safari NOT_TESTED, "Web
 
 ## 8. Final acceptance record
 
-> **TEMPLATE. Do not treat any cell as a result until it is filled by the person who ran the test.** This section is the single place where the acceptance run of the **Golden Company flow** on the final release candidate is recorded. Everything above this section is background and dated history.
+Recorded 2026-10-11 for the release candidate `75643ad8700f42df05c3151c1d0875b063c81620`. Result vocabulary: `PASS` / `FAIL` / `BLOCKED` / `NOT_RUN` (a BLOCKED or NOT_RUN row is never a pass). **Evidence** lives under `/Users/hoangluan/code/xweb-c6-evidence-archives/finalization-2026-10-11/` (outside git, hashes in `SHA256SUMS-finalization`); the runner outputs are `golden-company-rc/run-2/golden-company-flow.json|.tsv|run.log`. The acceptance was executed by the release owner role (C7) because no separate QA run existed for this candidate; it is not an independent QA verdict (`docs/QA_FINAL.md` section 5 holds the last independent verdict, 2026-10-10).
 
 | Field | Value |
 |---|---|
-| Final release candidate SHA (`{{FINAL_RC_SHA}}`) | `{{FINAL_RC_SHA}}` |
-| Integration head when run | `{{INTEGRATION_SHA}}` |
-| Stack name and ports | `{{STACK_NAME}}` / `{{PORTS}}` |
-| SHA proof (`rc-verify.mjs`) | `{{SHA_ALL_MATCH_YES_NO}}`, stamp path `{{RC_STAMP_PATH}}`, sha256 `{{RC_STAMP_SHA256}}` |
-| Served build ids at start / end | Platform `{{BID_PLATFORM_START}}` / `{{BID_PLATFORM_END}}`; Admin `{{BID_ADMIN_START}}` / `{{BID_ADMIN_END}}`; Studio `{{BID_STUDIO_START}}` / `{{BID_STUDIO_END}}` |
-| Flags in this stack | organization persistence `{{ON_OFF}}`, publish configs `{{ON_OFF}}`, public data runtime `{{ON_OFF}}`, data target `{{ON_OFF}}` |
-| Migrations applied (max / count / failed) | `{{MAX_VERSION}}` / `{{COUNT}}` / `{{FAILED}}` |
-| Executed by / date | `{{QA_OWNER}}` / `{{DATE}}` |
-| Public portals / API releases at the time | `{{PUBLIC_FRONTEND_SHA}}` / `{{PUBLIC_API_SHA}}` |
+| Final release candidate SHA | `75643ad8700f42df05c3151c1d0875b063c81620` |
+| Code gated | backend full run on `0c59844` (the candidate differs from it only in `scripts/golden-company-flow.mjs`, `docs/parallel/c5/e2e-stack.sh` and documents; no backend or frontend source); frontend gate on `875775f` (the candidate adds only the README and the runner) |
+| Stack | `golden-company-rc`: API 47400, PostgreSQL 47401, Redis 47402, MinIO 47403, RabbitMQ 47404, sites gateway 47405, render worker 47406, Studio 47407, Platform 47408, Admin 47409; workflow queue `amqp` (quorum queue `xweb.workflow.jobs` + DLQ declared on this stack's own broker); data target `127.0.0.1:15440` over TLS with the dev trust store |
+| SHA proof (`scripts/rc-verify.mjs`) | before the run: `SHA_ALL_MATCH YES` (16/16 checks, `golden-company-rc/rc-verify.log`); after the run: `SHA_ALL_MATCH YES` (16/16, `rc-verify-after.log`, stamp `RC_STAMP_after.json` sha256 `62bb32a5289e96e9e29c5f86a03b47032826475f054683d93e8b423709318a49`) |
+| Served build ids | Platform `2Z9DxA211bnt`, Admin `VboORjE_tCfq`, Studio `yrgpYcGKV8xt` (identical at start and end) |
+| Flags in this stack | organization persistence ON, publish configs ON, public data runtime ON (`SITES_DATA_API_BASE` set), data target ON, approvals `auto` (table present) |
+| Migrations applied | max 33, 32 applied (V31 is the void gap), 0 failed (`rc-verify`, and Flyway V1..V33 on a clean database) |
+| Public portals / API releases at the time | `bc5c47f292d0-3f59e8d1` / `1006cbf441f6-8985413d` (not part of this candidate) |
 
-"Golden Company flow": no document read defines this term. For this template it is taken to mean the ordered end-to-end business chain Journey 01 -> 08 (company onboarding, organization, IAM, build, data, action/workflow with approval, publish, recovery) plus its technical gates, run on one stack built from `{{FINAL_RC_SHA}}`. UNVERIFIED: the owner must confirm or replace this definition before the run.
+### 8.0 The golden company flow (primary acceptance)
 
-Result vocabulary: `PASS` / `FAIL` / `BLOCKED_ENV` / `BLOCKED_TOOLING` / `NOT_RUN` (a BLOCKED or NOT_RUN row is never a pass). Evidence path = repository-relative path of the committed text evidence plus archive name for screenshots, with sha256. Date = UTC date of the run.
+| Run | Result | Detail | Evidence |
+|---|---|---|---|
+| `scripts/golden-company-flow.mjs`, run 1 | **27/27 PASS** | 150 checks, 0 failed, no page error; real Chrome for steps 03, 10, 22, 23, 25, 27; SELECT-only reads of the data target | `golden-company-rc/run-1/` |
+| the same, run 2 (a new company) | **27/27 PASS** plus regression **2/2 PASS** | R1 approval WAITING survives a backend restart and is decided after it (9/9); R2 tenant and project isolation (8/8) | `golden-company-rc/run-2/` |
+
+Per step (run 2): checks passed/total: 01 5/5, 02 3/3, 03 5/5, 04 5/5, 05 4/4, 06 3/3, 07 6/6, 08 6/6, 09 7/7, 10 4/4, 11 4/4, 12 5/5, 13 10/10, 14 6/6, 15 4/4, 16 6/6, 17 8/8, 18 4/4, 19 7/7, 20 4/4, 21 5/5, 22 4/4, 23 4/4, 24 6/6, 25 7/7, 26 5/5, 27 13/13.
 
 ### 8.1 Business journeys
-| Test | Result | Evidence path | Date |
-|---|---|---|---|
-| Journey 01 Company onboarding (API + UI: PL01, SUPER01, ADMIN01) | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| Journey 02 Dynamic organization (API + E2E-ORG01) | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| Journey 03 IAM / permission lifecycle (IAM, adversarial, AD01-03, USER01, SEC01) | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| Journey 04 Build an app from zero | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| Journey 05 Data-backed app (data-target trust store present; real rows; real INSERT; SSRF refusals; replay) | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| Journey 06 Action / workflow business process incl. APPROVAL (approve, reject, wrong approver, duplicate/opposite decision) and UPDATE_RECORD / DELETE_RECORD | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| Journey 07 Publish / public site / rollback / unpublish (H-C2-07 409/422, PD02) | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| Journey 08 Operations / recovery (API restart with a WAIT run and idempotency key; render pause; MinIO pause) | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
+The independent C6 journey scripts (`docs/parallel/c6/harness/final-*.mjs`) were **not re-run** on this candidate: they need their own fixture environment (`FINAL_*`). Their coverage is replaced by the chain runner and the C5 real-backend flows below; the mapping is stated so that nothing is implied.
+
+| Test | Result | Covered by (on this candidate) |
+|---|---|---|
+| Journey 01 Company onboarding | NOT_RUN (C6 script) | golden steps 01-04, 06; C5 `E2E-USER01` PASS |
+| Journey 02 Dynamic organization | NOT_RUN (C6 script) | golden steps 08-09; C5 `E2E-ORG01` PASS |
+| Journey 03 IAM / permission lifecycle | NOT_RUN (C6 script) | golden steps 02, 07, 10 and their error cases; regression R2; backend IAM suites in the full run |
+| Journey 04 Build an app from zero | NOT_RUN (C6 script) | golden steps 05, 11, 12 |
+| Journey 05 Data-backed app (trust store, real rows, real UPDATE) | NOT_RUN (C6 script) | golden steps 13-15, 20 (real rows, `UPDATE_RECORD` on a real PostgreSQL row, TLS verify-full with the trust store) |
+| Journey 06 Action / workflow with approval | NOT_RUN (C6 script) | golden steps 16-20; regression R1 |
+| Journey 07 Publish / public site / rollback | NOT_RUN (C6 script) | golden steps 21-25; C5 `E2E-P01..P09`, `E2E-PD02` PASS |
+| Journey 08 Operations / recovery | NOT_RUN (C6 script) | golden steps 26-27; regression R1; C5 `E2E-12` PASS |
 
 ### 8.2 Technical gates
-| Test | Result | Evidence path | Date |
-|---|---|---|---|
-| T1 Backend full uncached (classes / tests / failures / errors / skipped = `{{COUNTS}}`) | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| T2 Migrations V1..V33 (fresh DB, stack history, pinned hashes, ledger guard) | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| T3 Frontend gate (`npm run gate:frontend`, unit count `{{COUNT}}`) | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| T4 Browser harness (all specs; checks `{{COUNT}}`) | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| T5 Real-backend E2E (flows run: `{{FLOW_IDS}}`) | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| T6 Independent API / security / isolation regression | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| T7 Secret scan (history + tree) | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| T8 Recovery / restart | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| T9 Infra tests (processes, portals, public pinning, API pinning) | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| T10a Responsive (9 widths, strict clipping detector) | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| T10b Accessibility (axe, dialog focus restore, keyboard) | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| T10c Brand and no-localStorage-fallback | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| T10d Chromium / WebKit / Firefox (Firefox status stated, not omitted) | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| T10e Performance | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| T12 SHA proof before and after the run | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| T13 Dependency audit | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
+| Test | Result | Evidence |
+|---|---|---|
+| T1 Backend full, uncached (`clean test --no-build-cache`, real `:test` execution, JDK 21) | **PASS**: 262 suites, 2338 tests, 0 failures, 3 skipped (on `0c59844`) | `gates/B-test.log`, `gates/backend-test-results-0c59844.tgz` |
+| T2 Migrations V1..V33 | **PASS**: Flyway on a clean PostgreSQL 17.6, 32 migrations executed, all SUCCESS; `approvals` present; the stack history 33/32 | `gates/C-flyway.log`, `rc-verify.log` |
+| T3 Frontend gate | **PASS**: static guards, guard self-tests, typecheck x3, unit tests, production builds of the three portals, bundle scan | `gates/F-gate-frontend.log` |
+| T4 Browser harness (all 26 specs, Chromium) | **PASS 26/26 specs** on Chromium, 0 failed checks (the two `portals*` specs on three owned production portals on 3001-3003 built with `API_PROXY_TARGET` at a closed port: `portals` 36/36, `portals-lazy` 18/18) | `gates/browser/` |
+| T5 Real-backend E2E | **PASS 15/15**: `E2E-ORG01`, `E2E-PD02`, `E2E-USER01`, `E2E-P01..P09`, `E2E-12`, `E2E-UI01`, `E2E-A11Y01` | `golden-company-rc/c5-real-backend-flows/` |
+| T6 Isolation and security regression | **PASS**: regression R2 (8/8) and the backend tenancy / isolation / privilege suites in T1 | run 2, T1 |
+| T7 Secret scan (history + tree) | **NOT CLEAN (5 reviewed false positives)**: 974 commits, 5 findings, all fake fixture values or harness literals; the scanner configuration was not changed (`KL-QA-06`) | `gates/L-secret.log` |
+| T8 Recovery / restart | **PASS**: golden steps 26-27, regression R1, C5 `E2E-12` | run 2 |
+| T9 Infra tests (processes, portals, public pinning, API pinning) | **PASS 120/120**: `test:infra:processes` 16, `:public` 31, `:api` 51, `:portals` 22 | `gates/infra-tests.log` |
+| T10a Responsive, 9 widths | **PASS**: harness `org-hardening` FQ-UI-01 at 360, 390, 430, 600, 768, 1024, 1280, 1440, 1920 and real `E2E-UI01` | harness logs, flows |
+| T10b Accessibility | **PASS**: harness `shared-ui` (axe serious/critical clean, focus restoration) and real `E2E-A11Y01` | harness logs, flows |
+| T10c Brand | **PASS**: harness `ui-brand` (166 checks) and `ui-tokens` (43) | `gates/browser/` |
+| T10d Chromium / WebKit / Firefox | Chromium PASS (all specs); WebKit PASS for `shared-ui` and `org-hardening` (representative); Firefox NOT_RUN | harness logs |
+| T10e Performance | NOT_RUN on this candidate | - |
+| T12 SHA proof before and after the run | **PASS** (16/16 both) | `rc-verify.log`, `rc-verify-after.log` |
+| T13 Dependency audit | **PASS**: `npm audit --omit=dev` found 0 vulnerabilities | `gates/npm-audit.log` |
 
-### 8.3 Retest of items open at the last verdict
-| Test | Result | Evidence path | Date |
-|---|---|---|---|
-| FQ-ACT-02 UPDATE_RECORD / DELETE_RECORD with `key=id`, `key=uuid`, `key=order_no` | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| FQ-WF-01 / FQ-WF-02 approval runtime and decision route | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| FQ-ENV-01 data-target trust store on the acceptance stack | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| FQ-UI-01 `/admin/employees` at 360/390/768/1440 | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| FQ-A11Y-02 builder dialog focus restoration after Escape | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| FQ-PERF-01 `/auth/me` request count | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| C4 runtime-authorization fix (`APP_USE` + `WORKFLOW_EXECUTE` per effectful step) | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| C2 publish authorization (publish / rollback / unpublish from current DB state) | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| C1 final IAM hardening: DECISION A (gateway does not check data-source ownership; C3 answers 404 for a foreign or unknown data source, no existence oracle) | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
-| Other P1/P2 listed in `KNOWN_LIMITATIONS.md` marked OPEN at this date | `{{RESULT}}` | `{{EVIDENCE_PATH}}` | `{{DATE}}` |
+### 8.3 Retest of items open at the last independent verdict
+| Test | Result | Evidence |
+|---|---|---|
+| FQ-ACT-02 UPDATE_RECORD with the logical `recordId` and `key=order_no` | **PASS** (golden step 20 and R1: the real row became `approved`; backend `RecordKeyActionE2ETests` 7, `RecordKeyGatewayTests` 14). `key=id`, `key=uuid` and DELETE: backend tests only | run 2, T1 |
+| FQ-WF-01 / FQ-WF-02 approval runtime and decision route | **PASS** (golden 18-19; R1 across a restart; duplicate and opposite decisions) | run 2 |
+| FQ-ENV-01 data-target trust store on the acceptance stack | **PASS** (golden step 13: Test connection `ok:true` for the writable and the read-only source over TLS verify-full) | run 2 |
+| FQ-UI-01 `/admin/employees` | **PASS** (real `E2E-UI01`; harness at 9 widths) | flows, harness |
+| FQ-A11Y-02 builder dialog focus after Escape | **PASS** (real `E2E-A11Y01`; harness `shared-ui`) | flows, harness |
+| FQ-PERF-01 `/auth/me` request count | NOT_RUN on the stack (unit tests in T3 and `AuthMeQueryComplexityTests` in T1 pass) | T1, T3 |
+| C4 runtime authorization | **PASS** (`RuntimeAuthorizationTests` 27, `RuntimeAuthorizationApiTests` in T1; golden step 17 error cases) | T1, run 2 |
+| C2 publish authorization | **PASS** (`PublishAuthorizationTests` in T1; golden steps 21, 24, 25: an Editor is refused) | T1, run 2 |
+| C1 final hardening and Decision A | **PASS** (`GatewayAuthorizerNoOracleTests`, hardening suites in T1; golden step 13 and R2: a foreign or unknown data source is 404) | T1, run 2 |
+| Other P1 / P2 marked OPEN in `KNOWN_LIMITATIONS.md` | **OPEN** (not retested; see the verdict) | `docs/KNOWN_LIMITATIONS.md` |
 
-### 8.4 Verdict (fill last)
+### 8.4 Verdict
 ```
-RC_SHA_TESTED:       {{FINAL_RC_SHA}}
-FULL_BUSINESS_QA:    {{PASS_FAIL}}
-BUSINESS_JOURNEYS:   {{N}}/8
-FULL_TECHNICAL_QA:   {{PASS_FAIL}}
-P0: {{N}}   P1: {{N}}   P2: {{N}}   P3: {{N}}
-READY_FOR_RC_FREEZE: {{YES_NO}}
-READY_FOR_RELEASE:   {{YES_NO}}
-Signed off by:       {{QA_OWNER}} on {{DATE}}; release decision: {{RELEASE_DECIDER}}
+RC_SHA_TESTED:       75643ad8700f42df05c3151c1d0875b063c81620
+FULL_BUSINESS_QA:    PASS for the golden company flow (27/27) and the regression block (2/2); the independent C6 journey scripts were not re-run
+BUSINESS_JOURNEYS:   golden flow 27/27 (the C6 journeys 1-8 are NOT_RUN as scripts; mapping in 8.1)
+FULL_TECHNICAL_QA:   PARTIAL: T7 secret scan NOT CLEAN (5 reviewed false positives); T10e NOT_RUN; see the table
+P0: 0   P1: 9 (KL-IAM-05 x4, KL-PUB-12 x2, KL-IAM-08 x2, KL-OPS-04 x1)   P2: about 10 rated findings (rows `KL-IAM-06`, `KL-IAM-08`, `KL-DATA-04`, `KL-DATA-17`, `KL-PUB-08`, `KL-UI-01`, `KL-UI-02`, `KL-UI-08`); many rows are unrated   P3: about 14 rated findings (rows with a P3 rating in `docs/KNOWN_LIMITATIONS.md`)
+READY_FOR_RC_FREEZE: YES (the candidate is internally consistent and proven on one SHA)
+READY_FOR_RELEASE:   NO: the release gate "P1 = 0" is not met (KL-IAM-05 four findings rated P1 by C1 with no decision, KL-PUB-12, KL-IAM-08, KL-OPS-04) and the secret-scan false positives await a decision
+Signed off by:       release owner role (C7) on 2026-10-11; release decision: pending
 ```
 
 ---
@@ -359,7 +364,7 @@ Signed off by:       {{QA_OWNER}} on {{DATE}}; release decision: {{RELEASE_DECID
 ## Open questions / UNVERIFIED
 1. "Golden Company flow" is not defined in any document read; section 8 assumes Journey 01 -> 08. The owner confirms or replaces this definition before the run.
 2. The C6 verdict for batches 10-11 (UI/UX regression and retest) was not read.
-3. No gate result exists yet for `{{FINAL_RC_SHA}}`; the "last recorded" cells are dated. `scripts/rc-verify.mjs` was changed to expect migration 33 but was not run on a V33 stack by this pass.
+3. Gate results for `75643ad8700f42df05c3151c1d0875b063c81620` are recorded in section 8 (the "last recorded" cells elsewhere stay dated). `scripts/rc-verify.mjs` expects migration 33 and passed 16/16 on the V33 stack `golden-company-rc` before and after the run.
 4. The retests in 8.3 (FQ-ACT-02, FQ-WF-01/02, FQ-ENV-01, FQ-UI-01, FQ-A11Y-02, FQ-PERF-01, C4 authorization, C2 publish authorization, C1 hardening) have not been performed by QA.
 5. Coordinator-reported facts not found in a repository document: `gate:frontend` GREEN on `205707e` with 539 unit tests; secret scan 454 commits no leaks; Docker VM about 8 GB.
 6. The journey-to-harness mapping in section 4 is inferred from file names; open the scripts to confirm.

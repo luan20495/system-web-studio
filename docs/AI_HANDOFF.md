@@ -1,6 +1,6 @@
 # AI handoff
 
-Written for the next engineering team (human or AI) that takes over XWEB. It assumes you have **no access to any earlier conversation**. It tells you where the truth is, how to build and test, what you may and may not do, and what is known to be wrong. Facts here are verified against the repository at `{{INTEGRATION_SHA}}`; where a value changes over time it carries a date.
+Written for the next engineering team (human or AI) that takes over XWEB. It assumes you have **no access to any earlier conversation**. It tells you where the truth is, how to build and test, what you may and may not do, and what is known to be wrong. Facts here are verified against the repository at `9d2fc8b9758077ac880d80cfbec767e2e776f9c5`; where a value changes over time it carries a date.
 
 ## Read these files in order
 
@@ -21,9 +21,9 @@ Then, as needed: `docs/DYNAMIC_ORG.md`, `docs/DATA_RUNTIME.md`, `docs/ACTION_WOR
 |---|---|
 | REPOSITORY | `https://github.com/luan20495/system-web-studio` |
 | SOURCE OF TRUTH BRANCH | `integration/v2` (`main` is older and is **not** the implementation: last commit `da348ff`) |
-| SOURCE OF TRUTH SHA | `{{INTEGRATION_SHA}}` |
-| RELEASE CANDIDATE SHA | `{{FINAL_RC_SHA}}` (the commit the golden company acceptance ran on) |
-| PUBLIC DEPLOYMENT (pinned, older) | portals `{{PUBLIC_FRONTEND_SHA}}`, API `{{PUBLIC_API_SHA}}` |
+| SOURCE OF TRUTH SHA | `9d2fc8b9758077ac880d80cfbec767e2e776f9c5` |
+| RELEASE CANDIDATE SHA | `75643ad8700f42df05c3151c1d0875b063c81620` (the commit the golden company acceptance ran on) |
+| PUBLIC DEPLOYMENT (pinned, older) | portals `bc5c47f292d0`, API `1006cbf441f6` |
 | LOCAL PATH | `/Users/hoangluan/code/HBL` (the canonical checkout). It was not renamed: the local compose project `hbl`, the public pinned deployment and running stacks use this path |
 | START A TASK FROM | a branch cut from `integration/v2`, in a worktree you create for the task (below) |
 

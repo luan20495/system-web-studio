@@ -3,7 +3,7 @@
 Canonical reference for how XWEB (System Web Studio) connects an application to customer data: data sources, credentials, network policy, queries, mutations, the Data Gateway, the Management API, the runtime API and the Public Runtime.
 
 - Audience: engineers who have never seen the project. Language: English. No chronology; the system is described as it is.
-- State described: `integration/v2` as of `{{INTEGRATION_SHA}}` (verified against the local `integration/v2` at HEAD `28376de`; this includes the C1 final hardening decision A, section 10.3, and the C4 approval runtime, which only touches `docs/ACTION_WORKFLOW.md`). The release candidate is `{{FINAL_RC_SHA}}`; deployed frontend `{{PUBLIC_FRONTEND_SHA}}`, deployed API `{{PUBLIC_API_SHA}}`.
+- State described: `integration/v2` as of `9d2fc8b9758077ac880d80cfbec767e2e776f9c5` (verified against the local `integration/v2` at HEAD `28376de`; this includes the C1 final hardening decision A, section 10.3, and the C4 approval runtime, which only touches `docs/ACTION_WORKFLOW.md`). The release candidate is `75643ad8700f42df05c3151c1d0875b063c81620`; deployed frontend `bc5c47f292d0`, deployed API `1006cbf441f6`.
 - Status vocabulary: DONE / PARTIAL / BLOCKED / DEFERRED. `UNVERIFIED` = not checked against code or a document (the closing section says what would verify it).
 - Related canonical docs: `docs/ARCHITECTURE.md`, `docs/contracts/v2/data-runtime.md`, `docs/contracts/v2/management-api.md`, `docs/contracts/v2/runtime-api.md`, `docs/contracts/v2/published-runtime.md`, and `docs/ACTION_WORKFLOW.md` (actions, workflows, queue, approvals).
 
@@ -707,7 +707,7 @@ Documents: `docs/contracts/v2/{data-runtime,management-api,runtime-api,published
 
 1. **Test results.** Only annotation counts are given (section 17); no test was run. Verify with `./gradlew test` (JDK 21, Docker). The full-regression totals quoted in older handoffs were dropped because they predate the current HEAD.
 2. **Definition delete while referenced** (section 15.1 item 15): read from code (no 409 rule); verify with a test that deletes a definition still named by an AppDefinition.
-3. **Deployed proxy settings.** The client-address behaviour behind the gateway is code-verified; the actual `TRUST_PROXY` / `TRUSTED_PROXY_CIDRS` of the deployed API (`{{PUBLIC_API_SHA}}`) are not visible from the repository and must be read from the deployment environment.
+3. **Deployed proxy settings.** The client-address behaviour behind the gateway is code-verified; the actual `TRUST_PROXY` / `TRUSTED_PROXY_CIDRS` of the deployed API (`1006cbf441f6`) are not visible from the repository and must be read from the deployment environment.
 4. **Page sites at runtime.** `page-runtime.ts` was read; that a published page really fetches data end to end is evidenced by the C6/C5 flows (E2E-PD01 / PD02 in `docs/parallel/c6/**`), which were not read here.
 5. **`PUT` slot binding by a non-admin editor** is refused today (needs `DATA_SOURCE_MANAGE`); whether the product wants EDITOR to bind TEST slots is a C1 policy request (documented, not decided).
 6. **Real-stack behaviour of the TLS data target** is quoted from D-C0-59 (recorded evidence), not re-run.

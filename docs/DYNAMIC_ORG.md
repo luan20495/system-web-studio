@@ -2,7 +2,7 @@
 
 Audience: engineers taking over XWEB / System Web Studio. This document describes the **Dynamic Organization** feature: a per-company (tenant) organization tree with employees, memberships, positions and grades. It states what it is, what it is **not** (it is not authorization), how it is stored (migration V32), its API, limits, lifecycle, UI and tests.
 
-State described: code at `{{INTEGRATION_SHA}}`, release candidate `{{FINAL_RC_SHA}}`, public frontend `{{PUBLIC_FRONTEND_SHA}}`, public API `{{PUBLIC_API_SHA}}`. Companion document: `docs/SECURITY_AND_PERMISSION.md` (permission model). Architecture overview: `docs/ARCHITECTURE.md`.
+State described: code at `9d2fc8b9758077ac880d80cfbec767e2e776f9c5`, release candidate `75643ad8700f42df05c3151c1d0875b063c81620`, public frontend `bc5c47f292d0`, public API `1006cbf441f6`. Companion document: `docs/SECURITY_AND_PERMISSION.md` (permission model). Architecture overview: `docs/ARCHITECTURE.md`.
 
 Citation convention: `(src: M/...)` = `backend/src/main/kotlin/com/systemwebstudio/...`, `(src: T/...)` = `backend/src/test/kotlin/com/systemwebstudio/...`. Status words: DONE / PARTIAL / BLOCKED / DEFERRED.
 
@@ -292,7 +292,7 @@ Routes: **`/organization`** ("Cơ cấu tổ chức") and **`/employees`** ("Nh�
 | Backend persistence (V32, repositories, services, routes) | DONE; behind `app.organization.persistence-enabled`, **default OFF** |
 | Frontend (Admin portal) | DONE (wired, 31 capabilities); FQ-UI-01 and FQ-A11Y-02 fixed |
 | Real-browser proof with the flag ON | DONE on the isolated stack `c0rc` / E2E stacks: E2E-ORG01 **31/31 PASS** (D-C0-57 item 3). The default (flag-OFF) run records the fail-closed behaviour and ends BLOCKED(C0), never PASS |
-| Public deployment | **BLOCKED / not deployed.** The public API is pinned to an older release (`{{PUBLIC_API_SHA}}`) that lacks the Dynamic Organization routes, M-052 tenant-scoped permissions, `projectScopes` and H-C2-07; the public portals (`{{PUBLIC_FRONTEND_SHA}}`) are the visual frontend only. Public production readiness of Dynamic Organization is **NO** until the API is redeployed (an explicit act; Flyway V32 is expand-only so a rollback of the API remains possible) (src: docs/parallel/DECISIONS.md D-C0-57 item 4) |
+| Public deployment | **BLOCKED / not deployed.** The public API is pinned to an older release (`1006cbf441f6`) that lacks the Dynamic Organization routes, M-052 tenant-scoped permissions, `projectScopes` and H-C2-07; the public portals (`bc5c47f292d0`) are the visual frontend only. Public production readiness of Dynamic Organization is **NO** until the API is redeployed (an explicit act; Flyway V32 is expand-only so a rollback of the API remains possible) (src: docs/parallel/DECISIONS.md D-C0-57 item 4) |
 
 ---
 
@@ -362,4 +362,4 @@ Settled from `integration/v2`: the FQ-UI-01 / FQ-A11Y-02 fixes are on the branch
 1. **Portal URL prefix.** The portal-relative routes `/organization` and `/employees` are confirmed (E2E, section keys); how the deployed gateway exposes them (the C5 documents say `/admin/...`) is not re-derived here.
 2. **Benchmarks** are copied from the C3 report and D-C0-52 and were measured on a loaded shared machine; no re-run was made.
 3. **Flag state per environment.** `c0rc` has `ORGANIZATION_PERSISTENCE_ENABLED` on (D-C0-59); no document read states the flag value of any other long-lived environment other than "public API: feature absent". Confirm before claiming otherwise.
-4. **Test totals** are quoted from D-C0-60 (256 suites, 2298 tests); re-count at `{{FINAL_RC_SHA}}` with `./gradlew test`.
+4. **Test totals** are quoted from D-C0-60 (256 suites, 2298 tests); at `0c59844` (code-equivalent to `75643ad8700f42df05c3151c1d0875b063c81620`) the full uncached run counted 262 suites, 2338 tests, 0 failures, 3 skipped (`docs/QA_FINAL.md` section 8).

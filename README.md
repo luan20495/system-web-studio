@@ -30,10 +30,10 @@ A **Project** and an **App** are the same record (the table is `projects`; the S
 
 | Name | Value |
 |---|---|
-| `CURRENT_INTEGRATION_SHA` | `{{INTEGRATION_SHA}}` on branch `integration/v2` (the source of truth; `main` is older and is **not** the implementation) |
-| `CURRENT_RC_SHA` | `{{FINAL_RC_SHA}}` (the release candidate that the golden company acceptance ran on; see `docs/QA_FINAL.md`) |
-| `CURRENT_PUBLIC_FRONTEND_SHA` | `{{PUBLIC_FRONTEND_SHA}}` (public portals, release `bc5c47f292d0-3f59e8d1`, as of 2026-10-11) |
-| `CURRENT_PUBLIC_API_SHA` | `{{PUBLIC_API_SHA}}` (public API, release `1006cbf441f6-8985413d`, as of 2026-10-11) |
+| `CURRENT_INTEGRATION_SHA` | `9d2fc8b9758077ac880d80cfbec767e2e776f9c5` on branch `integration/v2` (the source of truth; `main` is older and is **not** the implementation) |
+| `CURRENT_RC_SHA` | `75643ad8700f42df05c3151c1d0875b063c81620` (the release candidate that the golden company acceptance ran on; see `docs/QA_FINAL.md`) |
+| `CURRENT_PUBLIC_FRONTEND_SHA` | `bc5c47f292d0` (public portals, release `bc5c47f292d0-3f59e8d1`, as of 2026-10-11) |
+| `CURRENT_PUBLIC_API_SHA` | `1006cbf441f6` (public API, release `1006cbf441f6-8985413d`, as of 2026-10-11) |
 
 The public deployment is a pilot behind a Cloudflare tunnel on a developer machine and runs an older pinned release than integration; moving it is an explicit act (`docs/OPERATIONS.md`, decisions `D-C0-49`, `D-C0-50`, `D-C0-57`).
 

@@ -1,8 +1,8 @@
 # GOLDEN COMPANY FLOW — one real company, end to end, through XWEB
 
-Status of this document: canonical acceptance specification (`docs/GOLDEN_COMPANY_FLOW.md`). Source of truth for code: `integration/v2` = `{{INTEGRATION_SHA}}`, which contains the C4 approval runtime (V33, decision route), the C1 final hardening (Decision A), the C5 UI fixes FQ-UI-01 / FQ-A11Y-02, the C4 interrupted-worker fix and the C6 QA documents (`docs/parallel/c6/`). Evidence runs quoted below were made on older SHAs (named where quoted); the flow MUST be run on `{{FINAL_RC_SHA}}` before any release claim, with the single-chain runner of section 6.
+Status of this document: canonical acceptance specification (`docs/GOLDEN_COMPANY_FLOW.md`). Source of truth for code: `integration/v2` = `9d2fc8b9758077ac880d80cfbec767e2e776f9c5`, which contains the C4 approval runtime (V33, decision route), the C1 final hardening (Decision A), the C5 UI fixes FQ-UI-01 / FQ-A11Y-02, the C4 interrupted-worker fix and the C6 QA documents (`docs/parallel/c6/`). Evidence runs quoted below that were made on older SHAs are named where quoted; the flow was run on the release candidate `75643ad8700f42df05c3151c1d0875b063c81620` with the single-chain runner of section 6 (result: section 6.5, 27/27 PASS).
 
-**This document asserts no PASS.** Nothing was executed to write it. "Recorded" means: a named source document says a run happened on a named SHA. The acceptance record of section 6.5 is EMPTY until the owner runs `scripts/golden-company-flow.mjs` on `{{FINAL_RC_SHA}}`. A step whose automated test does not exist says `NO AUTOMATED TEST YET`. Status words used: DONE / PARTIAL / BLOCKED / DEFERRED only.
+**What counts as a PASS here.** Only section 6.5 records a run of the whole chain (`scripts/golden-company-flow.mjs` on `75643ad8700f42df05c3151c1d0875b063c81620`, 27/27). The per-step mapping in sections 3-5 and the appendices was written from source and from earlier dated runs: "recorded" means a named source document says a run happened on a named SHA, and a step whose automated test does not exist says `NO AUTOMATED TEST YET`. Status words used: DONE / PARTIAL / BLOCKED / DEFERRED only.
 
 Audience: an engineer or QA lead who has never seen the product and has to prove, as a business acceptance test, that one company can be created, staffed, can build a data-backed approval app, publish it, roll it back and survive a restart.
 
@@ -251,7 +251,7 @@ PostgreSQL (platform DB, Flyway; V31 is a permanent gap, V32 = dynamic organizat
 * **PERMISSION:** `DATA_SOURCE_MANAGE` (create/update/delete/credential/test/discover) = WORKSPACE_ADMIN only; list/get `DATA_SOURCE_VIEW` (Editor holds); bindings = `APP_EDIT` **and** `DATA_SOURCE_MANAGE`; schema discovery with samples additionally `QUERY_EXECUTE`.
 * **EXPECTED_RESULT:** `201` DataSource with `hasCredential` and **no** credential material anywhere (responses, errors, logs, audit); test connection `{ok:true}` over TLS verify-full; discovery returns the real tables `customers`, `orders` and their columns; audit `DATASOURCE_CREATED`, `DATASOURCE_CREDENTIAL_ROTATED`, `DATASOURCE_TESTED`, `DATASOURCE_SCHEMA_REFRESHED`, `DATASOURCE_BINDING_CHANGED` (src: c6 `J05-DS01–DS06b`, `J05-X01/X02`; `contracts: management-api` §5).
 * **ERROR_CASE:** Editor/Viewer → `403 PERMISSION_DENIED` (src: c6 `J05-DS08a-c`); other tenant or other workspace → `404 NOT_FOUND` for every operation, also for a foreign data-source id (Decision A: C3 answers, no existence oracle) (src: c6 `J05-DS09a/b`); duplicate name → `409 CONFLICT`; secret-looking config key → `400 INVALID_CONFIG`; authority key in body → `400 INVALID_PARAMS` (src: c6 `J05-DS10/11`); platform DB, loopback, RFC1918, metadata, decimal/hex IPs, URL-as-host → refused `400 INVALID_CONFIG` (16 vectors, src: c6 `J05-SSRF-*`); wrong password → `200 {ok:false, code:"AUTH_REJECTED"}` (c6 `J05-DS07`); no trust store → `{ok:false, code:"TLS_FAILED"}`; delete while bound → `409 CONFLICT`; `DISABLED` source → `409 DISABLED`; 60 changes/60 s per tenant → `429 RATE_LIMITED`; `DATA_PLATFORM_ENABLED=false` → `404` with no code.
-* **QA_TEST:** c6 Journey 05 rows `J05-DS01–J05-DS11`, `J05-SSRF-*`, `J05-Q05*` (`harness/final-data.mjs`; recorded: passes on own stack `c6fin`, BLOCKED on `c0rc` at that time for `TLS_FAILED`, src: `FINAL_RC_QA_REPORT.md` §3 row 05); c5 `e2e-06` (API+UI evidence; its "BLOCKED" text is stale relative to integration, see Open questions), `e2e-ad02`; backend `wiring/DataManagementApiTests`, `wiring/DataManagementNegativeSecurityTests`, `wiring/DataManagementLifecycleTests`, `wiring/DataSchemaManagementApiTests`, `wiring/PostgresTargetPoliciesTests`, `wiring/PostgresTargetWiringTests`. Re-proof on the final RC stack with the trust store: pending (D-C0-59 item 5).
+* **QA_TEST:** c6 Journey 05 rows `J05-DS01–J05-DS11`, `J05-SSRF-*`, `J05-Q05*` (`harness/final-data.mjs`; recorded: passes on own stack `c6fin`, BLOCKED on `c0rc` at that time for `TLS_FAILED`, src: `FINAL_RC_QA_REPORT.md` §3 row 05); c5 `e2e-06` (API+UI evidence; its "BLOCKED" text is stale relative to integration, see Open questions), `e2e-ad02`; backend `wiring/DataManagementApiTests`, `wiring/DataManagementNegativeSecurityTests`, `wiring/DataManagementLifecycleTests`, `wiring/DataSchemaManagementApiTests`, `wiring/PostgresTargetPoliciesTests`, `wiring/PostgresTargetWiringTests`. Re-proof on the final RC stack with the trust store: runner step 13 PASS (Test connection `ok:true` for the writable and the read-only source over TLS verify-full).
 
 ### 14 — Create Query
 
@@ -413,7 +413,7 @@ PostgreSQL (platform DB, Flyway; V31 is a permanent gap, V32 = dynamic organizat
 | 10 Editor enters Studio | c5 `e2e-user01`, `e2e-04`, `e2e-05`; c6 `J04-17*`; runner step 10 | historical H-C1-04 Studio-gate refusal; evidence on older SHA | DONE |
 | 11 Create app | c6 `J04-01,J04-06,J04-07,J04-10`; c5 `e2e-02`; runner step 11 | N-1: no distinct "create App" action | PARTIAL |
 | 12 Create page | c6 `J04-04,J04-05,J04-15*`; c5 `e2e-02`; backend `SchemaApiTests`; runner step 12 | none | DONE |
-| 13 Data source | c6 `J05-DS*`,`J05-SSRF-*`; backend `DataManagementApiTests`; c5 `e2e-06`; runner step 13 | Journey 05 recorded on `c6fin` only; on `c0rc` BLOCKED_ENV (trust store) before D-C0-59; re-proof on `{{FINAL_RC_SHA}}` pending; `e2e-06` blocker text stale | PARTIAL |
+| 13 Data source | c6 `J05-DS*`,`J05-SSRF-*`; backend `DataManagementApiTests`; c5 `e2e-06`; runner step 13 | Journey 05 recorded on `c6fin` only; on `c0rc` BLOCKED_ENV (trust store) before D-C0-59; re-proof on `75643ad8700f42df05c3151c1d0875b063c81620` pending; `e2e-06` blocker text stale | PARTIAL |
 | 14 Query | c6 `J05-Q*`; backend `DataRuntimeLiveApiTests`; c5 `e2e-07`; runner step 14 | `e2e-07` needs operator-seeded variables; LIVE/Test-panel UI run without seed: not covered | PARTIAL |
 | 15 Mutation | c6 `J05-M00–M03c`; backend `DataWritableE2ETests`; runner step 15 | no UI for mutation definitions | PARTIAL |
 | 16 Action | c6 `J04-09,J05-M04/05,J06-S02,J06-P*`; c5 `e2e-s1,e2e-s3`; runner step 16 | UI flow that creates an UPDATE_RECORD/START_WORKFLOW action through the editor on a real backend: NO AUTOMATED TEST YET (c6 defined them by API) | PARTIAL |
@@ -429,7 +429,7 @@ PostgreSQL (platform DB, Flyway; V31 is a permanent gap, V32 = dynamic organizat
 | 26 Restart | c6 `REC-A01–A13,B,C,D` (own stack `c6fin`); backend `WorkflowG3SpringRestartTests`; c5 `e2e-12,s6,s7`; runner step 26 | hard crash with step in flight (`REC-E02`) and portal redeploy (`REC-E01`) BLOCKED; restart with an approval WAITING over HTTP: none; `e2e-12` needs hooks | PARTIAL |
 | 27 State survives | c6 `REC-A03–A13`; runner step 27 | no test reads data source / definitions / bindings / document / approvals after restart; `REC-A05` null→null | PARTIAL |
 
-Remaining cross-cutting gaps: (1) the single-chain runner `scripts/golden-company-flow.mjs` exists (section 6) but its acceptance record (6.5) is empty: nothing in this document says it passed; (2) it must be run on `{{FINAL_RC_SHA}}` with the data-target trust store; (3) a business-realistic requester/approver split needs explicit grants (N-3, DEFERRED); (4) the runner is API-driven apart from six browser checkpoints (N-4), so UI paths of steps 04, 05, 07, 13–17 are covered only by the C5 flows cited per step.
+Remaining cross-cutting gaps: (1) the single-chain runner `scripts/golden-company-flow.mjs` passed 27/27 on the release candidate (section 6.5); (2) that run used the data-target trust store; (3) a business-realistic requester/approver split needs explicit grants (N-3, DEFERRED); (4) the runner is API-driven apart from six browser checkpoints (N-4), so UI paths of steps 04, 05, 07, 13–17 are covered only by the C5 flows cited per step.
 
 ---
 
@@ -456,15 +456,15 @@ Side effects of one run (not removable through any route): a tenant, a workspace
 | `GC_OUT` | no, `.` | output directory (use one outside the git repository) |
 | `CHROME` | no, macOS Google Chrome path | browser binary (Playwright `playwright-core` from the repo's `package.json`) |
 | `GC_RESTART_CMD` | no, empty | the command that restarts the backend, e.g. `docs/parallel/c5/e2e-stack.sh backend-restart` with the same `E2E_STACK_NAME` / `E2E_STACK_DIR` as the stack; **empty = the step-26 check `restart command configured` FAILS** |
-| `GC_FINAL_SHA` | no | recorded in the JSON; set it to `{{FINAL_RC_SHA}}` |
+| `GC_FINAL_SHA` | no | recorded in the JSON; set it to `75643ad8700f42df05c3151c1d0875b063c81620` |
 
-`GC_PLATFORM` appears in the script's usage comment but is not read (open question 13e). The stack must have the flags of section 3.2 ON (for `docs/parallel/c5/e2e-stack.sh up`: `E2E_PORTALS=1`, `E2E_ORG_PERSISTENCE=true`, `E2E_DATA_TARGET=1`, `E2E_PUBLISH_CONFIGS=true`, `E2E_SITES_PUBLIC_DATA=true`, as listed in that script's header and D-C0-55/58), run on `{{FINAL_RC_SHA}}`, and `scripts/rc-verify.mjs --stack <name> --sha {{FINAL_RC_SHA}}` should have proven that the stack serves exactly that SHA (src: D-C0-58 item 3).
+`GC_PLATFORM` appears in the script's usage comment but is not read (open question 13e). The stack must have the flags of section 3.2 ON (for `docs/parallel/c5/e2e-stack.sh up`: `E2E_PORTALS=1`, `E2E_ORG_PERSISTENCE=true`, `E2E_DATA_TARGET=1`, `E2E_PUBLISH_CONFIGS=true`, `E2E_SITES_PUBLIC_DATA=true`, as listed in that script's header and D-C0-55/58), run on `75643ad8700f42df05c3151c1d0875b063c81620`, and `scripts/rc-verify.mjs --stack <name> --sha 75643ad8700f42df05c3151c1d0875b063c81620` should have proven that the stack serves exactly that SHA (src: D-C0-58 item 3).
 
 ```
 GC_API=http://127.0.0.1:<api> GC_SITES=http://127.0.0.1:<sites> GC_STUDIO=http://127.0.0.1:<studio> GC_ADMIN=http://127.0.0.1:<admin> \
 GC_SA_USER=<operator account> GC_SA_PASSWORD=<from the stack env file, not typed> \
 GC_RO_PW_FILE=.run/data-target/ro.pw GC_RW_PW_FILE=.run/data-target/rw.pw \
-GC_RESTART_CMD='docs/parallel/c5/e2e-stack.sh backend-restart' GC_FINAL_SHA={{FINAL_RC_SHA}} GC_OUT=<evidence dir> \
+GC_RESTART_CMD='docs/parallel/c5/e2e-stack.sh backend-restart' GC_FINAL_SHA=75643ad8700f42df05c3151c1d0875b063c81620 GC_OUT=<evidence dir> \
 node scripts/golden-company-flow.mjs
 ```
 
@@ -508,40 +508,43 @@ node scripts/golden-company-flow.mjs
 
 Not asserted by the runner: the REJECT and expiry paths of an approval, a restart while an approval is WAITING, a hard kill, a render-worker or broker restart, a PRIVATE site, a suspended company, the UI for steps 04–09 and 11–21, accessibility.
 
-### 6.5 Acceptance record (EMPTY — to be filled by the person who runs the script)
+### 6.5 Acceptance record (recorded 2026-10-11)
 
-Run on `{{FINAL_RC_SHA}}`, stack: `____`, operator: `____`. Verdict column: `PASS` / `FAIL` copied from `golden-company-flow.json`; checks as `passed/total` (`checks - failed` / `checks`). No cell below is a result until it is filled from the produced files. The flow is accepted only when all 27 rows are `PASS` on one run of one stack on `{{FINAL_RC_SHA}}`, with the JSON/TSV kept as the evidence.
+Run on the release candidate `75643ad8700f42df05c3151c1d0875b063c81620`, stack `golden-company-rc` (isolated, API 47400 ... Admin 47409, AMQP workflow queue, data target `127.0.0.1:15440` over TLS), operator: the release owner role (C7). The stack's SHA proof (`scripts/rc-verify.mjs`) was `SHA_ALL_MATCH YES` before and after the run. Run 1 and run 2 each created their own new company. The evidence (outside git) is `/Users/hoangluan/code/xweb-c6-evidence-archives/finalization-2026-10-11/golden-company-rc/` (`run-1/`, `run-2/`: `golden-company-flow.json`, `.tsv`, `run.log`).
 
-| Step | Verdict | Checks passed/total | Evidence path | Date |
+**Result: `GOLDEN_COMPANY_FLOW: 27/27 PASS` on both runs** (150 checks in run 1, 150 in run 2, 0 failed, no page error). Regression block of run 2 (reported separately, not counted in the 27): R1 an approval WAITING survives a backend restart and the decision is idempotent after it, 9/9; R2 tenant and project isolation, 8/8.
+
+| Step | Verdict | Checks passed/total (run 2) | Run 1 | Evidence path |
 |---|---|---|---|---|
-| 01 System Admin creates Company |  |  | `{{FINAL_RC_SHA}}`: `<GC_OUT>/golden-company-flow.json` |  |
-| 02 assign Tenant Admin |  |  | `{{FINAL_RC_SHA}}`: `<GC_OUT>/golden-company-flow.json` |  |
-| 03 Tenant Admin logs in |  |  | `{{FINAL_RC_SHA}}`: `<GC_OUT>/golden-company-flow.json` |  |
-| 04 create Workspace |  |  | `{{FINAL_RC_SHA}}`: `<GC_OUT>/golden-company-flow.json` |  |
-| 05 create Project |  |  | `{{FINAL_RC_SHA}}`: `<GC_OUT>/golden-company-flow.json` |  |
-| 06 create users |  |  | `{{FINAL_RC_SHA}}`: `<GC_OUT>/golden-company-flow.json` |  |
-| 07 assign permissions |  |  | `{{FINAL_RC_SHA}}`: `<GC_OUT>/golden-company-flow.json` |  |
-| 08 create organization structure |  |  | `{{FINAL_RC_SHA}}`: `<GC_OUT>/golden-company-flow.json` |  |
-| 09 create employees |  |  | `{{FINAL_RC_SHA}}`: `<GC_OUT>/golden-company-flow.json` |  |
-| 10 Editor enters Studio |  |  | `{{FINAL_RC_SHA}}`: `<GC_OUT>/golden-company-flow.json` |  |
-| 11 create App |  |  | `{{FINAL_RC_SHA}}`: `<GC_OUT>/golden-company-flow.json` |  |
-| 12 create Page |  |  | `{{FINAL_RC_SHA}}`: `<GC_OUT>/golden-company-flow.json` |  |
-| 13 configure Data Source |  |  | `{{FINAL_RC_SHA}}`: `<GC_OUT>/golden-company-flow.json` |  |
-| 14 create Query |  |  | `{{FINAL_RC_SHA}}`: `<GC_OUT>/golden-company-flow.json` |  |
-| 15 create Mutation |  |  | `{{FINAL_RC_SHA}}`: `<GC_OUT>/golden-company-flow.json` |  |
-| 16 create Action |  |  | `{{FINAL_RC_SHA}}`: `<GC_OUT>/golden-company-flow.json` |  |
-| 17 start Workflow |  |  | `{{FINAL_RC_SHA}}`: `<GC_OUT>/golden-company-flow.json` |  |
-| 18 workflow waits for Approval |  |  | `{{FINAL_RC_SHA}}`: `<GC_OUT>/golden-company-flow.json` |  |
-| 19 manager Approves |  |  | `{{FINAL_RC_SHA}}`: `<GC_OUT>/golden-company-flow.json` |  |
-| 20 UPDATE_RECORD changes a real row |  |  | `{{FINAL_RC_SHA}}`: `<GC_OUT>/golden-company-flow.json` |  |
-| 21 Publisher publishes PUBLIC |  |  | `{{FINAL_RC_SHA}}`: `<GC_OUT>/golden-company-flow.json` |  |
-| 22 Visitor opens the site |  |  | `{{FINAL_RC_SHA}}`: `<GC_OUT>/golden-company-flow.json` |  |
-| 23 public data loads |  |  | `{{FINAL_RC_SHA}}`: `<GC_OUT>/golden-company-flow.json` |  |
-| 24 publish v2 |  |  | `{{FINAL_RC_SHA}}`: `<GC_OUT>/golden-company-flow.json` |  |
-| 25 rollback to v1 |  |  | `{{FINAL_RC_SHA}}`: `<GC_OUT>/golden-company-flow.json` |  |
-| 26 restart backend / worker |  |  | `{{FINAL_RC_SHA}}`: `<GC_OUT>/golden-company-flow.json` |  |
-| 27 verify state survives |  |  | `{{FINAL_RC_SHA}}`: `<GC_OUT>/golden-company-flow.json` |  |
+| 01 System Admin creates Company | PASS | 5/5 | 5/5 | `golden-company-rc/run-2/golden-company-flow.json` |
+| 02 assign Tenant Admin | PASS | 3/3 | 3/3 | `golden-company-rc/run-2/golden-company-flow.json` |
+| 03 Tenant Admin logs in | PASS | 5/5 | 5/5 | `golden-company-rc/run-2/golden-company-flow.json` |
+| 04 create Workspace | PASS | 5/5 | 5/5 | `golden-company-rc/run-2/golden-company-flow.json` |
+| 05 create Project | PASS | 4/4 | 4/4 | `golden-company-rc/run-2/golden-company-flow.json` |
+| 06 create users | PASS | 3/3 | 3/3 | `golden-company-rc/run-2/golden-company-flow.json` |
+| 07 assign permissions | PASS | 6/6 | 6/6 | `golden-company-rc/run-2/golden-company-flow.json` |
+| 08 create organization structure | PASS | 6/6 | 6/6 | `golden-company-rc/run-2/golden-company-flow.json` |
+| 09 create employees | PASS | 7/7 | 7/7 | `golden-company-rc/run-2/golden-company-flow.json` |
+| 10 Editor enters Studio | PASS | 4/4 | 4/4 | `golden-company-rc/run-2/golden-company-flow.json` |
+| 11 create App | PASS | 4/4 | 4/4 | `golden-company-rc/run-2/golden-company-flow.json` |
+| 12 create Page | PASS | 5/5 | 5/5 | `golden-company-rc/run-2/golden-company-flow.json` |
+| 13 configure Data Source | PASS | 10/10 | 10/10 | `golden-company-rc/run-2/golden-company-flow.json` |
+| 14 create Query | PASS | 6/6 | 6/6 | `golden-company-rc/run-2/golden-company-flow.json` |
+| 15 create Mutation | PASS | 4/4 | 4/4 | `golden-company-rc/run-2/golden-company-flow.json` |
+| 16 create Action | PASS | 6/6 | 6/6 | `golden-company-rc/run-2/golden-company-flow.json` |
+| 17 start Workflow | PASS | 8/8 | 8/8 | `golden-company-rc/run-2/golden-company-flow.json` |
+| 18 workflow waits for Approval | PASS | 4/4 | 4/4 | `golden-company-rc/run-2/golden-company-flow.json` |
+| 19 manager Approves | PASS | 7/7 | 7/7 | `golden-company-rc/run-2/golden-company-flow.json` |
+| 20 UPDATE_RECORD changes a real row | PASS | 4/4 | 4/4 | `golden-company-rc/run-2/golden-company-flow.json` |
+| 21 Publisher publishes PUBLIC | PASS | 5/5 | 5/5 | `golden-company-rc/run-2/golden-company-flow.json` |
+| 22 Visitor opens the site | PASS | 4/4 | 4/4 | `golden-company-rc/run-2/golden-company-flow.json` |
+| 23 public data loads | PASS | 4/4 | 4/4 | `golden-company-rc/run-2/golden-company-flow.json` |
+| 24 publish v2 | PASS | 6/6 | 6/6 | `golden-company-rc/run-2/golden-company-flow.json` |
+| 25 rollback to v1 | PASS | 7/7 | 7/7 | `golden-company-rc/run-2/golden-company-flow.json` |
+| 26 restart backend / worker | PASS | 5/5 | 5/5 | `golden-company-rc/run-2/golden-company-flow.json` |
+| 27 verify state survives | PASS | 13/13 | 13/13 | `golden-company-rc/run-2/golden-company-flow.json` |
 
+The runner executes the golden chain as written; it does not replace the independent QA role (see `docs/QA_FINAL.md` section 8, which states what was and was not re-run).
 
 ## A. Reference — the approval runtime (D-C0-61)
 
@@ -558,7 +561,7 @@ Source: handoff `docs/parallel/audit/C4-FQ-WF-01-approval.md`, decision D-C0-61 
 | Effect | after approval the next step runs with the **run creator's** authority re-checked per effectful step (`authorityFailure`, unchanged) — the approver does not need `DATA_MUTATE`. |
 | Not wired / limits | `notifyTemplateRef` notifications (the notify port is `null`); approvals inbox/list endpoints (DEFERRED); `PrincipalSpec.Role/Group/DepartmentManager` resolved once at step start (C1 answers users/roles only); approval expiry (`onExpire`) is driven by the existing sweeper, covered at engine level (`WorkflowEngineTests`), not over HTTP; a real Spring/JVM kill-and-restart of the whole HTTP application is not in the HTTP test (restart proven at node level in `WorkflowApprovalG3Tests`). |
 | Tests (on integration; results are the gate record of D-C0-61 item 7, not re-run here) | `ApprovalDecisionTests` 10, `JdbcApprovalStoreTests` 9, `WorkflowApprovalG3Tests` 7 (PostgreSQL + RabbitMQ), `ApprovalJourneyE2ETests` 3 (Journey 06 over HTTP: approve with `UPDATE_RECORD` by `recordId`, reject with `onReject` and strict reject, cancel while waiting), `ApprovalsV33FlywayTests`. |
-| Status | INTEGRATED (D-C0-61). A recorded real-stack retest of Journey 06 on `{{FINAL_RC_SHA}}` does not exist yet; the runner steps 18–20 are the vehicle. |
+| Status | INTEGRATED (D-C0-61). Real-stack retest on `75643ad8700f42df05c3151c1d0875b063c81620`: runner steps 16-20 PASS (approval WAITING, decision, `UPDATE_RECORD` on a real row) and regression R1 (restart while WAITING) PASS; the C6 journey script itself was not re-run. |
 
 ## B. Reference — UPDATE_RECORD changes a real row (FQ-ACT-02)
 
@@ -585,9 +588,9 @@ Test evidence: `tests/e2e-real/{README.md,run.mjs,lib/*,flows/*}` (flows `e2e-01
 ## Open questions / UNVERIFIED
 
 1. **N-1** Whether "Project" (05) and "App" (11) are meant to be distinct entities; the code has one (`projects`). Verify with the owner; if distinct, a new entity/route is missing.
-2. **Approval on a real stack**: route, V33 and `approvalId` are on integration and were checked against D-C0-61 and the code; the C4 test results are the gate record in D-C0-61 item 7, nothing was run here. Verify with runner steps 18–20 on `{{FINAL_RC_SHA}}`. The environment-variable spelling of `app.workflow.approvals` is not in `application.yml`.
-3. **FQ-ACT-02 on a real stack**: integration has the fix and its tests; C6's recorded Journey 05/06 results (`J05-M18/M19` FAIL, `J06-F07` BLOCKED) pre-date it. Verify with runner step 20 and the C6 retest on the final RC stack with the data-target trust store.
-4. **Real rows on the public page** (steps 23, `PD-18`, `e2e-pd01`): no recorded success on the RC stack; needs the data target + `SITES_DATA_API_BASE` + `SITES_PUBLIC_DATA_ENABLED`.
+2. **Approval on a real stack: RESOLVED** — runner steps 16-20 and regression R1 PASS on `75643ad8700f42df05c3151c1d0875b063c81620` (section 6.5). The environment-variable spelling of `app.workflow.approvals` is not in `application.yml`.
+3. **FQ-ACT-02 on a real stack**: integration has the fix and its tests; C6's recorded Journey 05/06 results (`J05-M18/M19` FAIL, `J06-F07` BLOCKED) pre-date it. Runner step 20 changed a real PostgreSQL row on the final RC stack with the data-target trust store: PASS (the C6 journey script was not re-run).
+4. **Real rows on the public page** (steps 23, `PD-18`, `e2e-pd01`): runner step 23 and C5 `E2E-PD02` PASS on the RC stack with the data target + `SITES_DATA_API_BASE` + `SITES_PUBLIC_DATA_ENABLED`.
 5. **Stale statements in tests**: `c5 e2e-06/07/08/09/14` headers/blocker texts describe an older integration (no slot operation, no query endpoint, no data host, no RabbitMQ); the code now has them. Their current runnable state was not checked.
 6. **UI facts read from source only (no browser)**: "Chia sẻ" project-roles drawer and member add; approver free-text field; `allowSelfApproval`/expiry default mismatch (N-7); existence of a standalone "create workspace" screen; whether any UI manages mutation definitions; the `mode` value the Release dialog sends for `publish-config`.
 7. **Business-role realism** (N-3): requester and approver are WORKSPACE_ADMINs. Whether the owner accepts this for the golden company or wants explicit grants first.
@@ -595,6 +598,6 @@ Test evidence: `tests/e2e-real/{README.md,run.mjs,lib/*,flows/*}` (flows `e2e-01
 9. **SUSPENDED-company freeze** for workspace/account/member writes is integrated (D-C0-60) but no real-stack flow of the golden chain exercises a suspended company.
 10. **Restart**: C6's recovery run was on `c6fin`, not on `c0rc`; `REC-A05` compared `null → null`; no test reads definitions/bindings/data sources/approvals after a restart; hard crash with a step in flight and portal redeploy were not exercised.
 11. **Platform-scope contradiction** (N-8) between `tenant-permission.md` §4 and `PermissionMatrix.platformScope`: code wins here; the contract text should be corrected by its owner.
-12. SHAs: evidence SHAs quoted (`bc5c47f292d0`, `fad4a7b`) are historical; current values are placeholders `{{INTEGRATION_SHA}}`, `{{FINAL_RC_SHA}}`, `{{PUBLIC_FRONTEND_SHA}}`, `{{PUBLIC_API_SHA}}` (the last two are not used by this flow: the public portals/API are not used for any verification, D-C0-57 item 4).
-13. **Runner script vs verified backend behaviour** (revision of the script read: 455 lines, working tree): (a) step 16 `mark-approved` (UPDATE_RECORD) declares inputs `order_no`,`status` and the workflow step `mark` passes `order_no` — `ActionHandlers.kt:176-178` requires a required STRING input `recordId`; (b) step 16 `start-approval.inputMapping` uses `{from:"INPUT"}` — action input mappings take `source` (`AppDefinitionReader.kt:324-345`), and `amount` is not returned by `returning=order_no,status`; (c) step 16 last check sends `operations: []` and expects 403 — `@NotEmpty` makes it `400`; (d) step 21 expects `422/409` for a PUBLIC publish before any publish policy is stored — with no stored policy the backend accepts it (`202`, N-11), and the later `PUT publish-config` carries no `expectedRevision`; (e) the script header says the stack tooling exports the `GC_*` variables and points to `docs/OPERATIONS.md`; `docs/parallel/c5/e2e-stack.sh` exports none (the operator sets them), and `GC_PLATFORM` is listed but never read; (f) audit reads use `limit=1000` but the route caps at 200 (`AuditController.kt`), so "not shorter" is meaningful only below 200 events.
-14. **`docs/OPERATIONS.md` / `docs/QA_FINAL.md`** are referenced as sibling canonical documents; they were present as new files in the working tree when this document was finalized and must be committed with it.
+12. SHAs: evidence SHAs quoted (`bc5c47f292d0`, `fad4a7b`) are historical. Current values: source of truth `9d2fc8b9758077ac880d80cfbec767e2e776f9c5` (later commits are documentation only), release candidate `75643ad8700f42df05c3151c1d0875b063c81620`; public `bc5c47f292d0` / `1006cbf441f6` are not used by this flow (D-C0-57 item 4).
+13. **Runner script vs verified backend behaviour: RESOLVED.** The first review of the script found defects (the `mark-approved` input name `recordId`, the `inputMapping` key `source` instead of `from`, a 403 check that was a 400, a publish check before a stored policy, a header that pointed to variables the stack tool does not export, an audit `limit` above the 200 cap). They were fixed in the runner (commits `a3b85c8`, `9d2fc8b`) after the first real run and the final runs are 27/27 (section 6.5). `GC_PLATFORM` is no longer listed.
+14. **`docs/OPERATIONS.md` / `docs/QA_FINAL.md`** are sibling canonical documents and are committed with this one.

@@ -3,7 +3,7 @@
 Canonical reference for the declarative Action layer, the Workflow engine and its queue, the durable run stores, and the Approval runtime of XWEB (System Web Studio).
 
 - Audience: engineers who have never seen the project. Language: English. No chronology; the system is described as it is.
-- State described: `integration/v2` as of `{{INTEGRATION_SHA}}` (verified against the local `integration/v2` at HEAD `28376de`, which includes the C4 approval runtime (merge `fa42ad2`, migration V33, D-C0-61) and the interrupted-worker fix `140dc36`). Release candidate `{{FINAL_RC_SHA}}`; deployed frontend `{{PUBLIC_FRONTEND_SHA}}`; deployed API `{{PUBLIC_API_SHA}}`.
+- State described: `integration/v2` as of `9d2fc8b9758077ac880d80cfbec767e2e776f9c5` (verified against the local `integration/v2` at HEAD `28376de`, which includes the C4 approval runtime (merge `fa42ad2`, migration V33, D-C0-61) and the interrupted-worker fix `140dc36`). Release candidate `75643ad8700f42df05c3151c1d0875b063c81620`; deployed frontend `bc5c47f292d0`; deployed API `1006cbf441f6`.
 - Status vocabulary: DONE / PARTIAL / BLOCKED / DEFERRED. `UNVERIFIED` = not checked against code or a document (the closing section says what would verify it).
 - Related canonical docs: `docs/DATA_RUNTIME.md` (data sources, gateway, idempotency store, error mapping of writes), `docs/ARCHITECTURE.md`, `docs/contracts/v2/{action-workflow,runtime-api,app-definition,tenant-permission}.md`.
 
@@ -620,6 +620,6 @@ Documents: `docs/contracts/v2/{action-workflow,runtime-api,data-runtime}.md` (ru
 1. **Test results.** Only `@Test` annotation counts are given (section 18); no test was run. Verify with `cd backend && ./gradlew test` (JDK 21, Docker). Older handoff totals were dropped because they predate the current HEAD.
 2. **Whole-JVM restart with approvals** and **approval expiry over HTTP** are not covered by the HTTP tests (stated by the handoff). The real-stack QA evidence (`docs/parallel/c6/**`, imported at `28376de`) was not read here.
 3. **`JdbcWorkflowRunStore` internals**: `claimForSweep` and `create` were read; the `compareAndSet` SQL and the lease columns inside it are taken from the store's header comments and the V29 DDL, not read line by line.
-4. **Unwired features.** Scheduler, notifications, retention and the DLQ consumer are established by grep over `backend/src/main` on `integration/v2` HEAD `28376de` (no construction or call outside `logic/**`). Re-run the grep on `{{INTEGRATION_SHA}}`.
-5. **Effective queue mode of a running stack.** Profile `local` without `PORTALS=1` resolves to `memory`; the V1 scripts force `amqp`; production resolves to `amqp`. Read the startup log of the deployed API (`{{PUBLIC_API_SHA}}`) to confirm what it actually runs.
+4. **Unwired features.** Scheduler, notifications, retention and the DLQ consumer are established by grep over `backend/src/main` on `integration/v2` HEAD `28376de` (no construction or call outside `logic/**`). Re-run the grep on `9d2fc8b9758077ac880d80cfbec767e2e776f9c5`.
+5. **Effective queue mode of a running stack.** Profile `local` without `PORTALS=1` resolves to `memory`; the V1 scripts force `amqp`; production resolves to `amqp`. Read the startup log of the deployed API (`1006cbf441f6`) to confirm what it actually runs.
 6. **D-C0-61 item 2** names the missing-run error `RUN_NOT_FOUND`; the code uses `WORKFLOW_RUN_NOT_FOUND`. The code is documented here; the DECISIONS wording should be corrected by C0.
