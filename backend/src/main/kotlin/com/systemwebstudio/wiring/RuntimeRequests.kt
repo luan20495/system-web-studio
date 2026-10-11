@@ -2,6 +2,7 @@ package com.systemwebstudio.wiring
 
 import com.systemwebstudio.data.query.PageSpec
 import com.systemwebstudio.logic.action.ExecutionMode
+import com.systemwebstudio.logic.approval.DecisionKind
 import tools.jackson.databind.JsonNode
 
 /** A request body that is not acceptable. [code] is stable; [message] never repeats a value the client sent. */
@@ -18,6 +19,7 @@ object RuntimeRequests {
     private val QUERY_KEYS = setOf("mode", "params", "page", "mappingRef")
     private val ACTION_KEYS = setOf("mode", "inputs", "idempotencyKey", "trigger")
     private val WORKFLOW_KEYS = setOf("mode", "input", "idempotencyKey")
+    private val DECISION_KEYS = setOf("decision", "comment")
     private val PAGE_KEYS = setOf("limit", "offset")
     private val TRIGGER_KEYS = setOf("eventName")
     private val MAPPING_REF = Regex("^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
@@ -26,6 +28,17 @@ object RuntimeRequests {
     data class QueryRun(val mode: ExecutionMode, val params: Map<String, JsonNode>, val page: PageSpec?, val mappingRef: String?)
     data class ActionRun(val mode: ExecutionMode, val inputs: Map<String, JsonNode>, val idempotencyKey: String?, val eventName: String?)
     data class WorkflowStart(val mode: ExecutionMode, val input: JsonNode?, val idempotencyKey: String)
+
+    data class ApprovalDecisionRequest(val decision: DecisionKind, val comment: String?)
+
+    /** `{"decision":"APPROVE"|"REJECT","comment"?}` - nothing else: who decides and for which approval comes from the session and the path, never from the body. */
+    fun approvalDecision(body: JsonNode?): ApprovalDecisionRequest {
+        val n = obj(body, DECISION_KEYS) ?: throw bad("decision is required")
+        val v = n.get("decision")?.takeUnless { it.isNull } ?: throw bad("decision is required")
+        if (!v.isString) throw bad("decision must be APPROVE or REJECT")
+        val kind = DecisionKind.entries.firstOrNull { it.name == v.asString() } ?: throw bad("decision must be APPROVE or REJECT")
+        return ApprovalDecisionRequest(kind, text(n, "comment", 1000))
+    }
 
     fun queryRun(body: JsonNode?): QueryRun {
         val n = obj(body, QUERY_KEYS)

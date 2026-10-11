@@ -37,7 +37,7 @@ add("API process (listener on the API port)", `cwd under ${WT}`, apiPid ? `pid $
 let ready = ""; try { ready = await (await fetch(`http://127.0.0.1:${st.ports.api}/actuator/health/readiness`, { signal: AbortSignal.timeout(8000) })).text(); } catch {}
 add("API readiness", "UP", ready.slice(0, 40), /"UP"/.test(ready));
 const mig = sh("docker", ["exec", `${stack}-pg`, "psql", "-U", "studio", "-d", "system_web_studio", "-Atc", "select max(version::int)||'/'||count(*) from flyway_schema_history where success"]);
-add("migrations applied (max version / count)", "32 / (V31 is a gap)", mig, /^32\//.test(mig));
+add("migrations applied (max version / count)", "33 / (V31 is a gap)", mig, /^33\//.test(mig));
 // render worker (same worktree)
 const rPid = listener(st.ports.render); const rCwd = rPid ? cwdOf(rPid) : "";
 add("render worker process", `cwd ${WT}`, rPid ? `pid ${rPid} cwd ${rCwd}` : "no listener", rPid && rCwd.startsWith(WT));

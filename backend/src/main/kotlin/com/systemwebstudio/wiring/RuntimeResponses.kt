@@ -4,6 +4,7 @@ import com.systemwebstudio.logic.action.ActionExecution
 import com.systemwebstudio.logic.action.ActionResult
 import com.systemwebstudio.logic.action.ExecutionMode
 import com.systemwebstudio.logic.action.FollowUp
+import com.systemwebstudio.logic.workflow.ApprovalDecisionView
 import com.systemwebstudio.logic.workflow.WorkflowResult
 import com.systemwebstudio.logic.workflow.WorkflowRunView
 import tools.jackson.databind.JsonNode
@@ -23,8 +24,8 @@ class RuntimeResponses(private val json: JsonMapper) {
     fun status(code: String): Int = when (code) {
         "INVALID_INPUT", "IDEMPOTENCY_KEY_INVALID", "IDEMPOTENCY_KEY_REQUIRED", "KEY_INVALID", RuntimeRequests.INVALID -> 400
         "FORBIDDEN", "TENANT_DISABLED" -> 403
-        "UNKNOWN_ACTION", "UNKNOWN_WORKFLOW", "WORKFLOW_RUN_NOT_FOUND" -> 404
-        "IDEMPOTENCY_OUTCOME_UNKNOWN", "ACTION_IN_PROGRESS", "IDEMPOTENCY_KEY_REUSED", "IDEMPOTENCY_IN_PROGRESS", "IDEMPOTENCY_CONFLICT", "CONFLICT" -> 409
+        "UNKNOWN_ACTION", "UNKNOWN_WORKFLOW", "WORKFLOW_RUN_NOT_FOUND", "APPROVAL_NOT_FOUND" -> 404
+        "IDEMPOTENCY_OUTCOME_UNKNOWN", "ACTION_IN_PROGRESS", "IDEMPOTENCY_KEY_REUSED", "IDEMPOTENCY_IN_PROGRESS", "IDEMPOTENCY_CONFLICT", "CONFLICT", "APPROVAL_ALREADY_DECIDED", "APPROVAL_CONFLICT" -> 409
         "MUTATION_REJECTED", "INVALID_DEFINITION", "LIMIT_EXCEEDED", "UNSUPPORTED_ACTION_TYPE", "MAPPING_REF_REQUIRED" -> 422
         "RATE_LIMITED" -> 429
         "NOT_IMPLEMENTED" -> 501
@@ -106,6 +107,7 @@ class RuntimeResponses(private val json: JsonMapper) {
             if (s.errorMessage != null) so.put("errorMessage", s.errorMessage) else so.putNull("errorMessage")
             if (s.startedAt != null) so.put("startedAt", s.startedAt.toString()) else so.putNull("startedAt")
             if (s.finishedAt != null) so.put("finishedAt", s.finishedAt.toString()) else so.putNull("finishedAt")
+            if (s.approvalId != null) so.put("approvalId", s.approvalId.toString())
             so.put("simulated", s.simulated)
             if (s.dryRunLevel != null) so.put("dryRunLevel", s.dryRunLevel.name) else so.putNull("dryRunLevel")
         }
@@ -116,6 +118,16 @@ class RuntimeResponses(private val json: JsonMapper) {
         o.put("updatedAt", v.updatedAt.toString())
         if (v.finishedAt != null) o.put("finishedAt", v.finishedAt.toString()) else o.putNull("finishedAt")
         return RuntimeReply(status, o)
+    }
+
+    fun approvalDecision(v: ApprovalDecisionView): RuntimeReply {
+        val o = json.createObjectNode()
+        o.put("approvalId", v.approvalId.toString())
+        o.put("approvalStatus", v.approvalStatus.name)
+        o.put("requiredApprovals", v.requiredApprovals)
+        o.put("approvals", v.approvals)
+        o.set("run", workflowRun(v.run).body)
+        return RuntimeReply(200, o)
     }
 
     fun workflowFailure(f: WorkflowResult.Failed): RuntimeReply = error(status(f.code), f.code, f.message, f.retryable && !neverRetryable(f.code))

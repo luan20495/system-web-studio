@@ -34,7 +34,9 @@ import com.systemwebstudio.logic.approval.ApprovalRequest
 import com.systemwebstudio.logic.approval.ApprovalResult
 import com.systemwebstudio.logic.approval.ApprovalService
 import com.systemwebstudio.logic.approval.ApprovalSource
+import com.systemwebstudio.logic.approval.ApprovalErrorCodes
 import com.systemwebstudio.logic.approval.ApprovalStatus
+import com.systemwebstudio.logic.approval.DecisionKind
 import com.systemwebstudio.logic.scheduler.EnqueueOutcome
 import com.systemwebstudio.logic.scheduler.ScheduleTarget
 import com.systemwebstudio.logic.scheduler.ScheduledRunEnqueuer
@@ -220,6 +222,29 @@ class WorkflowEngine(
             is WorkflowResult.Ok -> PortOutcome.Success(json.createObjectNode().put("runId", r.value.runId.toString()).put("status", r.value.status.name))
             is WorkflowResult.Failed -> PortOutcome.Failure(r.code, r.retryable, r.message)
         }
+
+    override fun decideApproval(ctx: ActionContext, runId: UUID, approvalId: UUID, decision: DecisionKind, comment: String?): WorkflowResult<ApprovalDecisionView> {
+        gate(ctx)?.let { return it }
+        val run = load(ctx.tenantId, runId)?.takeIf { sameResourceScope(it, ctx) } ?: return fail(WorkflowErrorCodes.RUN_NOT_FOUND, "Run not found")
+        // the explicit permission, in the scope of the run, BEFORE the approval is looked at: a caller without it learns nothing about the approval
+        deny(ctx, AccessRequest(LogicPermissions.WORKFLOW_MANAGE, ResourceKind.APPROVAL, approvalId.toString(), run.appId, run.mode))?.let { return it }
+        val svc = approvals ?: return fail(WorkflowErrorCodes.NOT_IMPLEMENTED, "Approvals are not wired")
+        val found = try { svc.find(ctx.tenantId, approvalId) } catch (e: Exception) { return fail(WorkflowErrorCodes.DEPENDENCY_UNAVAILABLE, "Approval store is unavailable", retryable = true) }
+        // an approval of THIS run and THIS application only: another run's approval is as missing as an unknown id
+        if (found == null || found.source.workflowRunId != run.runId || found.appId != run.appId) return fail(WorkflowErrorCodes.APPROVAL_NOT_FOUND, "Approval not found")
+        return when (val r = try { svc.decide(ctx, approvalId, decision, comment) } catch (e: Exception) { return fail(WorkflowErrorCodes.DEPENDENCY_UNAVAILABLE, "Approval store is unavailable", retryable = true) }) {
+            is ApprovalResult.Ok -> WorkflowResult.Ok(ApprovalDecisionView(r.value.id, r.value.status, r.value.requiredApprovals, r.value.approvals, (load(ctx.tenantId, runId) ?: run).toView()))
+            is ApprovalResult.Failed -> when (r.code) {
+                ApprovalErrorCodes.NOT_FOUND -> fail(WorkflowErrorCodes.APPROVAL_NOT_FOUND, "Approval not found")
+                ApprovalErrorCodes.FORBIDDEN -> fail(WorkflowErrorCodes.FORBIDDEN, "You may not decide this approval")
+                ApprovalErrorCodes.ALREADY_DECIDED -> fail(WorkflowErrorCodes.APPROVAL_ALREADY_DECIDED, r.message)
+                ApprovalErrorCodes.CONFLICT -> fail(WorkflowErrorCodes.APPROVAL_CONFLICT, r.message, r.retryable)
+                ApprovalErrorCodes.INVALID -> fail(WorkflowErrorCodes.INVALID_INPUT, r.message)
+                ApprovalErrorCodes.TENANT_DISABLED -> fail(WorkflowErrorCodes.TENANT_DISABLED, r.message)
+                else -> fail(WorkflowErrorCodes.DEPENDENCY_UNAVAILABLE, r.message, r.retryable)
+            }
+        }
+    }
 
     /** [ScheduledRunEnqueuer]: the scheduler hands over a fire; the run acts as the schedule's owner. */
     override fun enqueue(request: ScheduledRunRequest): EnqueueOutcome {
