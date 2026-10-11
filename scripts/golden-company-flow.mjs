@@ -191,7 +191,7 @@ await step("10", "Editor enters Studio", async () => {
   const list = await em.s.call("GET", `/api/v1/workspaces/${C.ws}/projects`); chk("project is in the Editor's list", list.status === 200 && JSON.stringify(list.json).includes(C.p), st(list));
   const noEdit = await C.users.giang.s.call("PATCH", `${C.PB}/schema`, { expectedRevision: 0, operations: [{ type: "UPDATE_SITE", props: { title: "x" } }] }); chk("ERROR: the Publisher cannot edit -> 403", noEdit.status === 403, st(noEdit));
   const { ctx, page } = await newPage();
-  try { await uiLogin(page, STUDIO, "/studio/login", em.username, em.password); await page.goto(`${STUDIO}/studio/projects/${C.p}/design`, { waitUntil: "domcontentloaded" }); await page.waitForSelector("iframe, [data-testid]", { timeout: 25000 }); chk("UI: Studio opens the project in the Builder for the Editor", true); }
+  try { await uiLogin(page, STUDIO, "/studio/login", em.username, em.password); await page.goto(`${STUDIO}/studio/projects/${C.p}/design`, { waitUntil: "domcontentloaded" }); await page.waitForSelector("header.bx-top", { timeout: 30000 }); chk("UI: Studio opens the project in the Builder for the Editor (top bar rendered)", true); }
   catch (e) { chk("UI: Studio opens the project in the Builder for the Editor", false, String(e.message).slice(0, 120)); } finally { await ctx.close(); }
 });
 
@@ -228,7 +228,7 @@ await step("13", "Workspace Admin configures the Data Sources", async () => {
   chk("credentials stored write-only (no secret in the answer)", c1.status === 200 && c2.status === 200 && !JSON.stringify(c1.json).includes(RW) && !JSON.stringify(c2.json).includes(RO), `${st(c1)} / ${st(c2)}`);
   const t1 = await wa.call("POST", `${DS()}/${C.dsRw}/test`, {}); const t2 = await wa.call("POST", `${DS()}/${C.dsRo}/test`, {});
   chk("Test connection over TLS verify-full: ok:true for both", t1.json?.ok === true && t2.json?.ok === true, `rw=${t1.json?.ok}/${t1.json?.code ?? ""} ro=${t2.json?.ok}/${t2.json?.code ?? ""}`);
-  const disc = await wa.call("POST", `${DS()}/${C.dsRo}/schema/discover`, {}); chk("schema discovery finds the real tables", disc.status === 200 && /orders/.test(JSON.stringify(disc.json)) && /customers/.test(JSON.stringify(disc.json)), st(disc));
+  const disc = await wa.call("POST", `${DS()}/${C.dsRo}/schema/discover`, {}); const sch = await wa.call("GET", `${DS()}/${C.dsRo}/schema`); chk("schema discovery stores the real tables (orders, customers)", disc.status === 200 && /orders/.test(JSON.stringify(sch.json)) && /customers/.test(JSON.stringify(sch.json)), `${st(disc)} / ${st(sch)}`);
   const em = await C.users.em.s.call("POST", DS(), { name: "ed", type: "postgres", config: cfg }); chk("ERROR: an Editor cannot manage data sources -> 403", em.status === 403, st(em));
   const other = await wa.call("GET", `${DS()}/${randomUUID()}`); chk("ERROR: unknown data source -> 404 (canonical, no oracle)", other.status === 404, st(other));
   // document side: the slots, then the TEST and LIVE bindings
@@ -246,10 +246,11 @@ await step("14", "Create Query definitions and run one", async () => {
     { type: "ADD_QUERY", definition: { id: "order-byno", name: "Order by number", dataSourceRef: "erp-ro", mode: "READ", operationKey: "orders.byno", params: [{ name: "order_no", type: "STRING" }], maxRows: 5 } },
     { type: "ADD_QUERY", definition: { id: "order-public", name: "Public order status", dataSourceRef: "erp-ro", mode: "READ", operationKey: "orders.public", public: true, params: [], maxRows: 1 } },
     { type: "ADD_MAPPING", definition: { id: "order-map", queryRef: "order-public", fields: [{ from: "name", to: "name" }] } },
+    { type: "ADD_MAPPING", definition: { id: "byno-map", queryRef: "order-byno", fields: [{ from: "order_no", to: "order_no" }, { from: "status", to: "status" }, { from: "amount", to: "amount" }] } },
     { type: "ADD_DATA_BINDING", definitionId: "b-brand", definition: { id: "b-brand", sectionId: must(C.v.navbar, "navbar section"), prop: "brand", queryRef: "order-public" } }
   ];
   const r = await edit(em, ops, "gc: queries"); chk("Editor adds the READ queries, the mapping and the binding -> 200", r.status === 200, `${st(r)} ${r.status >= 400 ? JSON.stringify(r.json).slice(0, 160) : ""}`);
-  const run = await em.call("POST", `${C.PB}/app-runtime/queries/order-byno/run`, { mode: "TEST", params: { order_no: "SO-1001" } }); const row = rowsOf(run)[0];
+  const run = await em.call("POST", `${C.PB}/app-runtime/queries/order-byno/run`, { mode: "TEST", params: { order_no: "SO-1001" }, mappingRef: "byno-map" }); const row = rowsOf(run)[0];
   chk("TEST run returns the real row of shop.orders", run.status === 200 && row?.order_no === "SO-1001", `${st(run)} ${JSON.stringify(row)}`);
   const dbRow = psql("select status from shop.orders where order_no='SO-1001'"); chk("DB-confirmed: status equals the API value", row?.status === dbRow, `api=${row?.status} db=${dbRow}`);
   const wrong = await em.call("POST", `${C.PB}/app-runtime/queries/order-byno/run`, { mode: "TEST", params: { order_no: "x" }, sql: "select 1" }); chk("ERROR: a client-supplied sql is refused -> 400", wrong.status === 400, st(wrong));
@@ -286,8 +287,10 @@ await step("16", "Editor creates the Actions and the approval Workflow", async (
       { id: "done", kind: "END" }, { id: "invalid", kind: "END" }] } }
   ];
   const r = await edit(em, ops, "gc: actions and workflow"); chk("Editor defines the queries, actions and the approval workflow -> 200", r.status === 200, `${st(r)} ${r.status >= 400 ? JSON.stringify(r.json).slice(0, 200) : ""}`);
-  const t = await em.call("POST", `${C.PB}/app-runtime/actions/submit-order/execute`, { mode: "TEST", inputs: { order_no: C.orderNo, customer_id: 1, status: "open", amount: 7 } });
-  chk("TEST execute of the write action is WOULD_RUN", t.status === 200 && t.json?.status === "WOULD_RUN", st(t) + " " + (t.json?.status ?? ""));
+  const t = await C.users.binh.s.call("POST", `${C.PB}/app-runtime/actions/submit-order/execute`, { mode: "TEST", inputs: { order_no: C.orderNo, customer_id: 1, status: "open", amount: 7 } });
+  chk("TEST execute of the write action (Workspace Admin) is WOULD_RUN", t.status === 200 && t.json?.status === "WOULD_RUN", st(t) + " " + (t.json?.status ?? ""));
+  const tEd = await em.call("POST", `${C.PB}/app-runtime/actions/submit-order/execute`, { mode: "TEST", inputs: { order_no: C.orderNo, customer_id: 1, status: "open", amount: 7 } });
+  chk("ERROR: an Editor cannot run even the TEST of a data-mutating action (DATA_MUTATE) -> 403", tEd.status === 403, st(tEd));
   chk("DB-confirmed: the TEST run wrote no row", psql(`select count(*) from shop.orders where order_no='${C.orderNo}'`) === "0");
   const bad = await edit(em, [{ type: "ADD_ACTION", definition: { id: "bad", name: "bad", type: "CREATE_RECORD", queryRef: "no-such-query", inputs: [] } }], "gc: bad"); chk("ERROR: an action with an unknown queryRef -> 422 SCHEMA_INVALID", bad.status === 422, st(bad));
   const vw = await C.users.giang.s.call("PATCH", `${C.PB}/schema`, { expectedRevision: await rev(em), operations: [{ type: "UPDATE_SITE", props: { title: "publisher must not edit" } }] }); chk("ERROR: the Publisher cannot patch the schema -> 403", vw.status === 403, st(vw));

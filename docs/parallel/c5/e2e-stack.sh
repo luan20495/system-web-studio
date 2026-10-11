@@ -13,6 +13,7 @@
 # C0 (D-C0-55) additions, all opt-in so the defaults are unchanged: E2E_PLATFORM_PORT / E2E_ADMIN_PORT (web origins + CORS follow them), E2E_ORG_PERSISTENCE=true (ORGANIZATION_PERSISTENCE_ENABLED, THIS stack only),
 # E2E_DATA_TARGET=1 (the V1 TLS data target `scripts/data-target.sh` at 127.0.0.1:15440 + its trust store in the API JVM, D-C0-59: Journey 05, E2E-PD01 real rows), E2E_PUBLISH_CONFIGS=true (PUBLISH_CONFIGS_ENABLED), E2E_SITES_PUBLIC_DATA=true (SITES_PUBLIC_DATA_ENABLED = the Public Runtime of D-C0-36 AND, unless E2E_SITES_DATA_API_BASE is given, SITES_DATA_API_BASE=http://127.0.0.1:<sites port>/{slug}/_data so a published page gets a non-null runtime apiBase: E2E-PD01 / PD02); the sites gateway gets GATEWAY_REAL_IP_FROM / GATEWAY_FORCE_HTTPS (without them nginx refuses to start); `status` no longer breaks on macOS bash 3.2.
 #
+# E2E_WORKFLOW_QUEUE=amqp|memory (opt-in, D-C0-62): unset = the application default (memory outside the prod profile); the golden company RC stack sets amqp, i.e. the RabbitMQ container of THIS stack.
 # No secret is printed or committed: the env file lives in $E2E_STACK_DIR (outside the repo).
 set -euo pipefail
 
@@ -85,6 +86,7 @@ WEB_ORIGIN_PLATFORM=http://127.0.0.1:$PLATFORM_PORT
 MAX_PROJECTS_PER_WORKSPACE=100000
 DATA_PLATFORM_ENABLED=true
 WORKFLOW_ENABLED=true
+$( [ -n "${E2E_WORKFLOW_QUEUE:-}" ] && printf 'WORKFLOW_QUEUE=%s' "$E2E_WORKFLOW_QUEUE" )
 RATE_LIMIT_PUBLISH_MAX=500
 DEPLOY_PROVIDER=static
 SITES_ORIGIN=http://127.0.0.1:$SITES_PORT
