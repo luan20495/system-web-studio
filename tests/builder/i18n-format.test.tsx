@@ -69,7 +69,8 @@ test("every `<html>` takes lang and dir from the locale constant (no literal lan
 // ---------------------------------------------------------------------------------------------------------------------------------------------- RTL readiness (M-103)
 const dir = join(process.cwd(), "packages");
 const cssFiles: string[] = [];
-(function walk(d: string) { for (const e of readdirSync(d, { withFileTypes: true })) { if (e.name === "node_modules") continue; const p = join(d, e.name); if (e.isDirectory()) walk(p); else if (e.name.endsWith(".css")) cssFiles.push(p); } })(dir);
+// source CSS only: `node_modules` and the generated `dist` of a package build (packages/*/dist is git-ignored; a build on one machine must not change the count of another)
+(function walk(d: string) { for (const e of readdirSync(d, { withFileTypes: true })) { if (e.name === "node_modules" || e.name === "dist") continue; const p = join(d, e.name); if (e.isDirectory()) walk(p); else if (e.name.endsWith(".css")) cssFiles.push(p); } })(dir);
 const css = cssFiles.map((f) => readFileSync(f, "utf8").replace(/\/\*[\s\S]*?\*\//g, "")).join("\n");
 const count = (re: RegExp) => (css.match(re) ?? []).length;
 const PHYSICAL: Record<string, [RegExp, number]> = {
