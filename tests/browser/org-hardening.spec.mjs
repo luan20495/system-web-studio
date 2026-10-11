@@ -179,6 +179,19 @@ for (const w of VPS) {
 }
 
 check("no console error / warning / uncaught exception in any page", errors.length === 0, errors.slice(0, 3).join(" | "));
+// ================================================================================================================================== FQ-UI-01: long names, 9 widths
+{ // a <select> sizes to its widest option and a grid item's minimum is its content: long unit / position / grade names widened the filter bar and the dialogs far beyond the viewport
+  const outside = (p, sel) => p.evaluate((s) => { const vw = document.documentElement.clientWidth; const root = (s && document.querySelector(s)) || document.body; const out = []; for (const e of root.querySelectorAll("button,input,select,a[href],th,td,h1,h2,h3,[role=tab]")) { const cs = getComputedStyle(e); if (cs.visibility === "hidden" || cs.display === "none") continue; const r = e.getBoundingClientRect(); if (r.width && (r.right > vw + 1 || r.left < -1)) out.push(`${e.tagName.toLowerCase()}[${(e.getAttribute("aria-label") || e.textContent || "").trim().slice(0, 22)}] ${Math.round(r.left)}..${Math.round(r.right)}`); } return out; }, sel);
+  for (const w of [360, 390, 430, 600, 768, 1024, 1280, 1440, 1920]) {
+    const p = await open("emp", "ok&long=1", { width: w, height: 900 }); await p.waitForTimeout(500);
+    const list = await outside(p); await T(p, "emp-new").click().catch(() => p.getByRole("button", { name: /Thêm nhân viên/ }).first().click()); await p.waitForTimeout(350);
+    const create = await outside(p, "[role=dialog] .modalBody"); await p.keyboard.press("Escape"); await p.waitForTimeout(250);
+    await p.locator("tr.clickRow").first().click(); await p.waitForTimeout(450); const detail = await outside(p, "[role=dialog] .modalBody");
+    check(`FQ-UI-01 @${w}: with long unit / position / grade names the filters, the table, the create dialog and the detail dialog keep every control inside the viewport`, list.length === 0 && create.length === 0 && detail.length === 0, `list=${JSON.stringify(list.slice(0, 2))} create=${JSON.stringify(create.slice(0, 2))} detail=${JSON.stringify(detail.slice(0, 2))}`);
+    await p.close();
+  }
+}
+
 await browser.close();
 if (EVIDENCE) writeFileSync(join(EVIDENCE, "metrics.json"), JSON.stringify(metrics, null, 2));
 console.log("\nMETRICS " + JSON.stringify(metrics));

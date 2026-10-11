@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { dialogOpener, tabbables, trapTab } from "./focus";
+import { dialogOpener, restoreOpener, tabbables, trapTab } from "./focus";
 import { acquireOverlay, useBackdropClose } from "./overlay";
 
 const INITIAL = "input:not([readonly]), select, textarea, button";
@@ -42,7 +42,7 @@ export function Modal({ label, onClose, children, dismissible = true, closeOnBac
       if (root) trapTab(e, root);
     };
     document.addEventListener("keydown", onKey);
-    return () => { document.removeEventListener("keydown", onKey); overlay.release(); if (prev?.isConnected) prev.focus?.(); };
+    return () => { document.removeEventListener("keydown", onKey); overlay.release(); restoreOpener(prev); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const backdrop = useBackdropClose(() => { if (canClose()) latest.current.onClose(); }, closeOnBackdrop);

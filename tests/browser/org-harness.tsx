@@ -49,6 +49,8 @@ const ME: Me = S === "forbidden" ? me({ tenantId: "t1", permissions: [], tenants
 
 const fake = createFakeOrg(S, (name, args) => { window.__org.push({ name, args }); });
 window.__fake = fake;
+// long=1: names as long as real companies write them (FQ-UI-01: a <select> sizes to its widest option, so a long unit / position / grade name widened the whole filter bar)
+if (P.get("long") === "1") { const st = fake.state(); const tail = " - Phòng Phát triển Sản phẩm và Chuyển đổi số khu vực phía Nam"; for (const u of st.units) u.name += tail; for (const x of st.positions) x.name += " cấp cao khối vận hành"; for (const g of st.grades) g.name += " (bậc chuyên gia cao cấp)"; }
 const api = createOrganizationApi(fake.api);
 const rec2 = <A extends unknown[], R>(name: string, f: (...a: A) => R) => (...args: A): Promise<Awaited<R>> => { window.__prov.push({ name, args }); return Promise.resolve().then(() => f(...args)) as Promise<Awaited<R>>; };
 const provApi = createProvisioningApi({

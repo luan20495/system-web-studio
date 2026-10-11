@@ -356,7 +356,9 @@ fieldset.stack>legend{padding:0;margin:0 0 var(--sp-2);font-size:var(--f-fs-md);
 .xp-iconBtn{display:inline-flex;align-items:center;justify-content:center;height:40px;border:1px solid var(--f-line);border-radius:var(--f-r);background:var(--f-panel);color:var(--f-text);cursor:pointer}
 .xp-iconBtn:hover{background:var(--f-accent-wash)}.xp-iconBtn.sel{border-color:var(--f-accent);background:var(--f-accent-tint);color:var(--f-accent);outline:2px solid var(--f-accent-line)}.xp-iconBtn:focus-visible{outline:2px solid var(--f-accent)}
 .xp-parentTypes{border:1px solid var(--f-line);border-radius:var(--f-r);padding:8px 10px;display:flex;gap:6px 14px;flex-wrap:wrap;margin:0}.xp-check{display:inline-flex;align-items:center;gap:6px;font-size:var(--f-fs-base)}
-.xp-empFilters{display:grid;grid-template-columns:minmax(220px,2fr) minmax(160px,1fr) minmax(140px,1fr);gap:10px;align-items:end}.xp-empFilters .xp-search{min-height:42px}
+.xp-empFilters{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:end}.xp-empFilters .xp-search{min-height:42px}
+/* FQ-UI-01: a <select> sizes to its WIDEST option and a grid item's automatic minimum is its content, so one long unit / position / grade name widened the whole filter bar (560-1500 px in a 390-1440 px viewport, hidden inside the scrolling main). Items may shrink; the control fills its cell and ellipsizes. */
+.xp-empFilters>*{min-width:0}.xp-empFilters select,.xp-empFilters input{width:100%;max-width:100%;min-width:0;text-overflow:ellipsis}
 .xp-empName{display:flex;align-items:center;gap:10px}
 .xp-empTable tbody tr:focus-visible{outline:2px solid var(--f-accent);outline-offset:-2px}
 .xp-pager{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding-top:12px;font-size:var(--f-fs-md);color:var(--f-muted)}
@@ -432,6 +434,8 @@ fieldset.stack>legend{padding:0;margin:0 0 var(--sp-2);font-size:var(--f-fs-md);
 /* dialogs: never taller than the viewport, the body scrolls INSIDE, and the footer (xp-footer) stays visible while the form scrolls */
 .modalBody{--mpad:24px;padding:var(--mpad);max-height:calc(100dvh - 32px);overscroll-behavior:contain;scroll-padding-bottom:72px}
 .modalBody .xp-footer{position:sticky;bottom:calc(var(--mpad)*-1);margin:0 calc(var(--mpad)*-1) calc(var(--mpad)*-1);padding:12px var(--mpad);background:var(--f-panel,var(--f-panel));z-index:2;border-radius:0 0 12px 12px}
+/* FQ-UI-01 (dialogs): the body is a one-column grid whose automatic track is as wide as its widest item, and a <select> is as wide as its longest option: a long unit / position / grade name made the dialog's content wider than the dialog (hidden behind its own scroll). The column may shrink and controls fill it. */
+.modalBody{grid-template-columns:minmax(0,1fr)}.xp-section{grid-template-columns:minmax(0,1fr)}.xp-section ul,.xp-section li,.xp-section .row{min-width:0}.xp-section select{max-width:100%;min-width:0;text-overflow:ellipsis}.modalBody .field{min-width:0}.modalBody .field select,.modalBody .field input,.modalBody .field textarea,.modalBody select{max-width:100%;min-width:0;text-overflow:ellipsis}
 @media(max-width:600px){.modalBody{--mpad:16px;width:100%}.adminModal{padding:8px;align-items:flex-end}.modalBody .xp-footer{flex-wrap:wrap}.modalBody .xp-footer .btn{flex:1 1 auto}}
 
 /* very narrow phones: the header may use two lines instead of pushing the page sideways */

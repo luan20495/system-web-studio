@@ -28,6 +28,10 @@ packages/*/dist/
 
 # frontend gate builds (scripts/gate-frontend.mjs)
 .next-gate/
+.next-gate-root/
+
+# temporary staging archives of the isolated stacks / imports (generated, never source)
+.tmp-stage/
 
 # portal dist directories named after the source fingerprint (scripts/_portals_lib.sh)
 .next-local-*/
