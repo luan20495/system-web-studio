@@ -56,7 +56,7 @@ Topic references: `docs/DYNAMIC_ORG.md`, `docs/DATA_RUNTIME.md`, `docs/ACTION_WO
 
 ## Create a development environment
 
-Requirements: macOS or Linux, **JDK 21** (on the maintainer's Mac the default `java` is 11: set `JAVA_HOME=/opt/homebrew/opt/openjdk@21`), Node 22, Docker (Compose v2), about 8 GB of memory for Docker.
+Requirements: macOS or Linux, **JDK 21** (on the maintainer's Mac the default `java` is 11: set `JAVA_HOME=/opt/homebrew/opt/openjdk@21`), Node 22.x (22.23.1 was used; the repository pins no `engines` value), Docker (Compose v2), about 8 GB of memory for Docker.
 
 ```bash
 cp .env.example .env                 # set LOCAL_ADMIN_PASSWORD (14+ characters); .env is git-ignored
