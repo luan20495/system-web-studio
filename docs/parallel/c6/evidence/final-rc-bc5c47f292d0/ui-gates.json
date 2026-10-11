@@ -1,0 +1,87 @@
+[
+ {
+  "id": "UIF-CHR-WIDTHS",
+  "area": "RESPONSIVE",
+  "status": "FAIL",
+  "severity": "P2",
+  "detail": "Chromium 155, 9 widths (1920,1440,1280,1024,768,600,430,390,360), 87 routes/states, 1089 cases (95 route variants); after documented harness filters 1083 PASS / 6 FAIL, the 6 triaged: 5 transient (API restarted by others, retest PASS), 1 not reproducible (6/6). Stricter clipping detector over 76 routes x 4 widths: only /admin/employees clipped at 360/390/768/1440 (FQ-UI-01).",
+  "evidence": "ui/chromium/summary.json",
+  "auto": "PLAYWRIGHT_CHROMIUM(final-ui.mjs,final-clip.mjs)"
+ },
+ {
+  "id": "UIF-CHR-AXE",
+  "area": "ACCESSIBILITY",
+  "status": "PASS",
+  "detail": "axe-core 4.14 wcag2a/aa,21a/aa,22aa,best-practice over all 1089 cases incl. dialogs/states: critical 0, serious 0, moderate 13 nodes (landmark-one-main 7, page-has-heading-one 6; FQ-A11Y-01 P3). Not a WCAG certification.",
+  "evidence": "ui/chromium/summary.json"
+ },
+ {
+  "id": "UIF-CHR-KEYBOARD-DIALOG",
+  "area": "ACCESSIBILITY",
+  "status": "FAIL",
+  "severity": "P2",
+  "detail": "dialog role/name/trap/Escape pass on Admin/Platform dialogs; Studio builder dialogs do not restore focus to the opener (6/6, focus ends on body) = FQ-A11Y-02. Sidebar navigation passes in both engines when run fresh; Studio CTA 'Tạo ứng dụng' not aria-current (P3).",
+  "evidence": "ui/chromium/cases.json",
+  "owner": "C5"
+ },
+ {
+  "id": "UIF-CHR-UNICODE",
+  "area": "VISUAL",
+  "status": "PASS",
+  "detail": "no U+FFFD/mojibake/missing glyph in 1089 renders; Vietnamese diacritics render",
+  "evidence": "ui/chromium/summary.json"
+ },
+ {
+  "id": "UIF-CHR-ICONS",
+  "area": "VISUAL",
+  "status": "PASS",
+  "detail": "harness 'icon svg with zero size' family (hidden rail/toolbar icons; 22 on the builder) reviewed on screenshots: nothing visibly missing; documented false-positive filter",
+  "evidence": "ui/chromium/studio/workspaceAdmin/builder_rail_Th_nh_ph_n_/1440.png",
+  "cls": "MANUAL"
+ },
+ {
+  "id": "UIF-CHR-ORGTREE",
+  "area": "VISUAL",
+  "status": "PASS",
+  "detail": "Dynamic Org tree (16 units, 12-level chain, long Vietnamese names): labels truncate with ellipsis, type badges and counts readable at 390 and 1440; large tree 305 items renders in 2.7 s (PF-org-tree)",
+  "evidence": "ui/chromium/admin/tenantAdmin/admin_organization/390.png",
+  "cls": "MANUAL"
+ },
+ {
+  "id": "UIF-WK-ROUTES",
+  "area": "BROWSER_WEBKIT",
+  "status": "PASS",
+  "severity": "P3",
+  "detail": "Playwright WebKit (not Safari), 3 widths (1440,768,390), 392 cases: axe critical 0, serious 0 on retained cases (the summary counted 1 serious node inside one dialog check that was not retained and did not reproduce); product findings P3 only: FQ-WK-01 (focus trap leaks to skip link: buttons are not Tab stops in WebKit), FQ-WK-02 (selects 21-23 px). Other failures were API restarts (500/503) or session artifacts and passed on fresh runs.",
+  "evidence": "ui/webkit/summary.json"
+ },
+ {
+  "id": "UIF-FIREFOX",
+  "area": "BROWSER_FIREFOX",
+  "status": "BLOCKED",
+  "detail": "BLOCKED_TOOLING: Playwright Firefox 1543 installed but cannot launch ('Could not find profile folder'); also tried a real-path TMPDIR and launchPersistentContext. Not PASS, not a product failure.",
+  "evidence": "coordinator-notes.md",
+  "owner": "C0",
+  "blocker": "BLOCKED_TOOLING",
+  "cls": "MANUAL"
+ },
+ {
+  "id": "UIF-BRAND",
+  "area": "BRAND",
+  "status": "PASS",
+  "severity": "P3",
+  "detail": "local Chromium 66/72, WebKit 66/72 (6 observations), public portals 48/48; one P3 (FQ-BRAND-01 default link colour). Portals ignore prefers-color-scheme (documented light-only for Admin/Platform).",
+  "evidence": "part15-brand-local-chromium.json",
+  "cls": "MANUAL"
+ },
+ {
+  "id": "UIF-NO-LOCALSTORAGE-FALLBACK",
+  "area": "ENVIRONMENT",
+  "status": "PASS",
+  "detail": "ENV-13 closed by a browser probe after real use of all three portals (login + 2-3 routes each, builder included): localStorage empty on Platform/Admin; Studio keeps only per-viewer preferences (studio-ai-model: empty, studio-owner: a 36-character id); sessionStorage: portal marker and builder mode. No project/schema/org data in browser storage; every screen called the real /api (5-11 distinct calls). Static scan of 12 Studio login chunks found no mock switch (ENV-12).",
+  "evidence": "coordinator-notes.md",
+  "cls": "REAL_STACK",
+  "auto": "PLAYWRIGHT_CHROMIUM(inline probe)",
+  "owner": "C0"
+ }
+]

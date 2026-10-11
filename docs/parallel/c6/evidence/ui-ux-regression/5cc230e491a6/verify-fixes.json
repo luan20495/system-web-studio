@@ -1,0 +1,551 @@
+[
+ {
+  "id": "V2-platform",
+  "what": "platform: functional icons are Lucide SVG, no text glyph used as an icon",
+  "expected": "every nav link has an svg; 0 glyph icons",
+  "actual": "links=16 withSvg=16 lucide=24 svg=24 glyphIcons=[]",
+  "status": "PASS",
+  "shot": "verify/icons-platform.png",
+  "note": ""
+ },
+ {
+  "id": "V1-platform",
+  "what": "platform: avatar initials are 1–2 letters (no brackets, digits, emoji, '?')",
+  "expected": "all letters only",
+  "actual": "[\"LO\"]",
+  "status": "PASS",
+  "shot": "verify/icons-platform.png",
+  "note": ""
+ },
+ {
+  "id": "V2-admin",
+  "what": "admin: functional icons are Lucide SVG, no text glyph used as an icon",
+  "expected": "every nav link has an svg; 0 glyph icons",
+  "actual": "links=10 withSvg=10 lucide=12 svg=12 glyphIcons=[]",
+  "status": "PASS",
+  "shot": "verify/icons-admin.png",
+  "note": ""
+ },
+ {
+  "id": "V1-admin",
+  "what": "admin: avatar initials are 1–2 letters (no brackets, digits, emoji, '?')",
+  "expected": "all letters only",
+  "actual": "[\"NG\"]",
+  "status": "PASS",
+  "shot": "verify/icons-admin.png",
+  "note": ""
+ },
+ {
+  "id": "V2-studio",
+  "what": "studio: functional icons are Lucide SVG, no text glyph used as an icon",
+  "expected": "every nav link has an svg; 0 glyph icons",
+  "actual": "links=6 withSvg=6 lucide=8 svg=8 glyphIcons=[]",
+  "status": "PASS",
+  "shot": "verify/icons-studio.png",
+  "note": ""
+ },
+ {
+  "id": "V1-studio",
+  "what": "studio: avatar initials are 1–2 letters (no brackets, digits, emoji, '?')",
+  "expected": "all letters only",
+  "actual": "[\"TR\"]",
+  "status": "PASS",
+  "shot": "verify/icons-studio.png",
+  "note": ""
+ },
+ {
+  "id": "V1-dir",
+  "what": "directory avatars: letters only and derived from the displayed name (Vietnamese diacritics, long name, 'Nhân viên đã nghỉ việc')",
+  "expected": "0 invalid, 0 unrelated",
+  "actual": "17 avatars; invalid=[]; unrelated=[]; sample=[[\"NG\",\"\"],[\"BT\",\"Bùi Xuân Trường\"],[\"DA\",\"Dương Quốc Anh\"],[\"DN\",\"Đinh Thị Hồng Nhung\"],[\"DC\",\"Đỗ Mạnh Cường\"]]",
+  "status": "PASS",
+  "shot": "verify/initials-employees.png",
+  "note": ""
+ },
+ {
+  "id": "V4-platform-1024",
+  "what": "platform @1024: navigation",
+  "expected": "sidebar visible or a menu button",
+  "actual": "sidebar visible (16 links), no menu needed",
+  "status": "PASS",
+  "shot": "",
+  "note": ""
+ },
+ {
+  "id": "V4-platform-768",
+  "what": "platform @768: drawer menu behaviour",
+  "expected": "all 8 behaviours",
+  "actual": "failed: focus moves into the drawer; Tab stays in the drawer/header (no jump into the hidden page)",
+  "status": "FAIL",
+  "shot": "verify/menu-open-platform-768.png",
+  "note": ""
+ },
+ {
+  "id": "V4-platform-430",
+  "what": "platform @430: drawer menu behaviour",
+  "expected": "all 8 behaviours",
+  "actual": "failed: focus moves into the drawer; Tab stays in the drawer/header (no jump into the hidden page)",
+  "status": "FAIL",
+  "shot": "verify/menu-open-platform-430.png",
+  "note": ""
+ },
+ {
+  "id": "V4-platform-390",
+  "what": "platform @390: drawer menu behaviour",
+  "expected": "all 8 behaviours",
+  "actual": "failed: focus moves into the drawer; Tab stays in the drawer/header (no jump into the hidden page)",
+  "status": "FAIL",
+  "shot": "verify/menu-open-platform-390.png",
+  "note": ""
+ },
+ {
+  "id": "V4-admin-1024",
+  "what": "admin @1024: navigation",
+  "expected": "sidebar visible or a menu button",
+  "actual": "sidebar visible (10 links), no menu needed",
+  "status": "PASS",
+  "shot": "",
+  "note": ""
+ },
+ {
+  "id": "V4-admin-768",
+  "what": "admin @768: drawer menu behaviour",
+  "expected": "all 8 behaviours",
+  "actual": "failed: focus moves into the drawer; Tab stays in the drawer/header (no jump into the hidden page)",
+  "status": "FAIL",
+  "shot": "verify/menu-open-admin-768.png",
+  "note": ""
+ },
+ {
+  "id": "V4-admin-430",
+  "what": "admin @430: drawer menu behaviour",
+  "expected": "all 8 behaviours",
+  "actual": "failed: focus moves into the drawer; Tab stays in the drawer/header (no jump into the hidden page)",
+  "status": "FAIL",
+  "shot": "verify/menu-open-admin-430.png",
+  "note": ""
+ },
+ {
+  "id": "V4-admin-390",
+  "what": "admin @390: drawer menu behaviour",
+  "expected": "all 8 behaviours",
+  "actual": "failed: focus moves into the drawer; Tab stays in the drawer/header (no jump into the hidden page)",
+  "status": "FAIL",
+  "shot": "verify/menu-open-admin-390.png",
+  "note": ""
+ },
+ {
+  "id": "V4-studio-1024",
+  "what": "studio @1024: navigation",
+  "expected": "sidebar visible or a menu button",
+  "actual": "sidebar visible (6 links), no menu needed",
+  "status": "PASS",
+  "shot": "",
+  "note": ""
+ },
+ {
+  "id": "V4-studio-768",
+  "what": "studio @768: drawer menu behaviour",
+  "expected": "all 8 behaviours",
+  "actual": "interaction failed: TimeoutError: locator.click: Timeout 30000ms exceeded. (a control became unclickable/invisible)",
+  "status": "FAIL",
+  "shot": "verify/menu-error-studio-768.png",
+  "note": ""
+ },
+ {
+  "id": "V4-studio-430",
+  "what": "studio @430: drawer menu behaviour",
+  "expected": "all 8 behaviours",
+  "actual": "interaction failed: TimeoutError: locator.click: Timeout 30000ms exceeded. (a control became unclickable/invisible)",
+  "status": "FAIL",
+  "shot": "verify/menu-error-studio-430.png",
+  "note": ""
+ },
+ {
+  "id": "V4-studio-390",
+  "what": "studio @390: drawer menu behaviour",
+  "expected": "all 8 behaviours",
+  "actual": "interaction failed: TimeoutError: locator.click: Timeout 30000ms exceeded. (a control became unclickable/invisible)",
+  "status": "FAIL",
+  "shot": "verify/menu-error-studio-390.png",
+  "note": ""
+ },
+ {
+  "id": "V5-platform-audit-1024",
+  "what": "/platform/audit @1024: wide tables contained",
+  "expected": "no page overflow; scroll container when wider",
+  "actual": "1 table(s); scroll container is not keyboard-focusable",
+  "status": "FAIL",
+  "shot": "verify/table-platform-audit-1024.png",
+  "note": ""
+ },
+ {
+  "id": "V5-platform-audit-768",
+  "what": "/platform/audit @768: wide tables contained",
+  "expected": "no page overflow; scroll container when wider",
+  "actual": "1 table(s); scroll container is not keyboard-focusable",
+  "status": "FAIL",
+  "shot": "verify/table-platform-audit-768.png",
+  "note": ""
+ },
+ {
+  "id": "V5-platform-audit-430",
+  "what": "/platform/audit @430: wide tables contained",
+  "expected": "no page overflow; scroll container when wider",
+  "actual": "1 table(s); scroll container is not keyboard-focusable",
+  "status": "FAIL",
+  "shot": "verify/table-platform-audit-430.png",
+  "note": ""
+ },
+ {
+  "id": "V5-platform-audit-390",
+  "what": "/platform/audit @390: wide tables contained",
+  "expected": "no page overflow; scroll container when wider",
+  "actual": "1 table(s); scroll container is not keyboard-focusable",
+  "status": "FAIL",
+  "shot": "verify/table-platform-audit-390.png",
+  "note": ""
+ },
+ {
+  "id": "V5-platform-users-1024",
+  "what": "/platform/users @1024: wide tables contained",
+  "expected": "no page overflow; scroll container when wider",
+  "actual": "1 table(s); scroll container is not keyboard-focusable",
+  "status": "FAIL",
+  "shot": "verify/table-platform-users-1024.png",
+  "note": ""
+ },
+ {
+  "id": "V5-platform-users-768",
+  "what": "/platform/users @768: wide tables contained",
+  "expected": "no page overflow; scroll container when wider",
+  "actual": "1 table(s); scroll container is not keyboard-focusable",
+  "status": "FAIL",
+  "shot": "verify/table-platform-users-768.png",
+  "note": ""
+ },
+ {
+  "id": "V5-platform-users-430",
+  "what": "/platform/users @430: wide tables contained",
+  "expected": "no page overflow; scroll container when wider",
+  "actual": "1 table(s); scroll container is not keyboard-focusable",
+  "status": "FAIL",
+  "shot": "verify/table-platform-users-430.png",
+  "note": ""
+ },
+ {
+  "id": "V5-platform-users-390",
+  "what": "/platform/users @390: wide tables contained",
+  "expected": "no page overflow; scroll container when wider",
+  "actual": "1 table(s); scroll container is not keyboard-focusable",
+  "status": "FAIL",
+  "shot": "verify/table-platform-users-390.png",
+  "note": ""
+ },
+ {
+  "id": "V5-platform-components-1024",
+  "what": "/platform/components @1024: wide tables contained",
+  "expected": "no page overflow; scroll container when wider",
+  "actual": "1 table(s); contained",
+  "status": "PASS",
+  "shot": "verify/table-platform-components-1024.png",
+  "note": ""
+ },
+ {
+  "id": "V5-platform-components-768",
+  "what": "/platform/components @768: wide tables contained",
+  "expected": "no page overflow; scroll container when wider",
+  "actual": "1 table(s); contained",
+  "status": "PASS",
+  "shot": "verify/table-platform-components-768.png",
+  "note": ""
+ },
+ {
+  "id": "V5-platform-components-430",
+  "what": "/platform/components @430: wide tables contained",
+  "expected": "no page overflow; scroll container when wider",
+  "actual": "1 table(s); scroll container is not keyboard-focusable",
+  "status": "FAIL",
+  "shot": "verify/table-platform-components-430.png",
+  "note": ""
+ },
+ {
+  "id": "V5-platform-components-390",
+  "what": "/platform/components @390: wide tables contained",
+  "expected": "no page overflow; scroll container when wider",
+  "actual": "1 table(s); scroll container is not keyboard-focusable",
+  "status": "FAIL",
+  "shot": "verify/table-platform-components-390.png",
+  "note": ""
+ },
+ {
+  "id": "V5-platform-tenants-1024",
+  "what": "/platform/tenants @1024: wide tables contained",
+  "expected": "no page overflow; scroll container when wider",
+  "actual": "1 table(s); contained",
+  "status": "PASS",
+  "shot": "verify/table-platform-tenants-1024.png",
+  "note": ""
+ },
+ {
+  "id": "V5-platform-tenants-768",
+  "what": "/platform/tenants @768: wide tables contained",
+  "expected": "no page overflow; scroll container when wider",
+  "actual": "1 table(s); contained",
+  "status": "PASS",
+  "shot": "verify/table-platform-tenants-768.png",
+  "note": ""
+ },
+ {
+  "id": "V5-platform-tenants-430",
+  "what": "/platform/tenants @430: wide tables contained",
+  "expected": "no page overflow; scroll container when wider",
+  "actual": "1 table(s); contained",
+  "status": "PASS",
+  "shot": "verify/table-platform-tenants-430.png",
+  "note": ""
+ },
+ {
+  "id": "V5-platform-tenants-390",
+  "what": "/platform/tenants @390: wide tables contained",
+  "expected": "no page overflow; scroll container when wider",
+  "actual": "1 table(s); contained",
+  "status": "PASS",
+  "shot": "verify/table-platform-tenants-390.png",
+  "note": ""
+ },
+ {
+  "id": "V5-admin-people-1024",
+  "what": "/admin/people @1024: wide tables contained",
+  "expected": "no page overflow; scroll container when wider",
+  "actual": "no table on this route/viewport",
+  "status": "N/A",
+  "shot": "",
+  "note": ""
+ },
+ {
+  "id": "V5-admin-people-768",
+  "what": "/admin/people @768: wide tables contained",
+  "expected": "no page overflow; scroll container when wider",
+  "actual": "no table on this route/viewport",
+  "status": "N/A",
+  "shot": "",
+  "note": ""
+ },
+ {
+  "id": "V5-admin-people-430",
+  "what": "/admin/people @430: wide tables contained",
+  "expected": "no page overflow; scroll container when wider",
+  "actual": "no table on this route/viewport",
+  "status": "N/A",
+  "shot": "",
+  "note": ""
+ },
+ {
+  "id": "V5-admin-people-390",
+  "what": "/admin/people @390: wide tables contained",
+  "expected": "no page overflow; scroll container when wider",
+  "actual": "no table on this route/viewport",
+  "status": "N/A",
+  "shot": "",
+  "note": ""
+ },
+ {
+  "id": "V5-studio-activity-1024",
+  "what": "/studio/activity @1024: wide tables contained",
+  "expected": "no page overflow; scroll container when wider",
+  "actual": "no table on this route/viewport",
+  "status": "N/A",
+  "shot": "",
+  "note": ""
+ },
+ {
+  "id": "V5-studio-activity-768",
+  "what": "/studio/activity @768: wide tables contained",
+  "expected": "no page overflow; scroll container when wider",
+  "actual": "no table on this route/viewport",
+  "status": "N/A",
+  "shot": "",
+  "note": ""
+ },
+ {
+  "id": "V5-studio-activity-430",
+  "what": "/studio/activity @430: wide tables contained",
+  "expected": "no page overflow; scroll container when wider",
+  "actual": "no table on this route/viewport",
+  "status": "N/A",
+  "shot": "",
+  "note": ""
+ },
+ {
+  "id": "V5-studio-activity-390",
+  "what": "/studio/activity @390: wide tables contained",
+  "expected": "no page overflow; scroll container when wider",
+  "actual": "no table on this route/viewport",
+  "status": "N/A",
+  "shot": "",
+  "note": ""
+ },
+ {
+  "id": "V5-studio-projects-1024",
+  "what": "/studio/projects @1024: wide tables contained",
+  "expected": "no page overflow; scroll container when wider",
+  "actual": "no table on this route/viewport",
+  "status": "N/A",
+  "shot": "",
+  "note": ""
+ },
+ {
+  "id": "V5-studio-projects-768",
+  "what": "/studio/projects @768: wide tables contained",
+  "expected": "no page overflow; scroll container when wider",
+  "actual": "no table on this route/viewport",
+  "status": "N/A",
+  "shot": "",
+  "note": ""
+ },
+ {
+  "id": "V5-studio-projects-430",
+  "what": "/studio/projects @430: wide tables contained",
+  "expected": "no page overflow; scroll container when wider",
+  "actual": "no table on this route/viewport",
+  "status": "N/A",
+  "shot": "",
+  "note": ""
+ },
+ {
+  "id": "V5-studio-projects-390",
+  "what": "/studio/projects @390: wide tables contained",
+  "expected": "no page overflow; scroll container when wider",
+  "actual": "no table on this route/viewport",
+  "status": "N/A",
+  "shot": "",
+  "note": ""
+ },
+ {
+  "id": "V6-builder-1440",
+  "what": "builder @1440: toolbar and canvas usable",
+  "expected": "canvas ≥ 35% of height, ≥ 280px wide, no overflow, section selectable",
+  "actual": "top bar 58px/1 rows; canvas 740×842px (94% of 900); pick=selected",
+  "status": "PASS",
+  "shot": "verify/builder-1440.png",
+  "note": ""
+ },
+ {
+  "id": "V6-builder-1024",
+  "what": "builder @1024: toolbar and canvas usable",
+  "expected": "canvas ≥ 35% of height, ≥ 280px wide, no overflow, section selectable",
+  "actual": "top bar 101px/2 rows; canvas 724×562px (73% of 768); pick=selected",
+  "status": "PASS",
+  "shot": "verify/builder-1024.png",
+  "note": ""
+ },
+ {
+  "id": "V6-builder-768",
+  "what": "builder @768: toolbar and canvas usable",
+  "expected": "canvas ≥ 35% of height, ≥ 280px wide, no overflow, section selectable",
+  "actual": "top bar 101px/2 rows; canvas 468×818px (80% of 1024); pick=selected",
+  "status": "PASS",
+  "shot": "verify/builder-768.png",
+  "note": ""
+ },
+ {
+  "id": "V6-builder-430",
+  "what": "builder @430: toolbar and canvas usable",
+  "expected": "canvas ≥ 35% of height, ≥ 280px wide, no overflow, section selectable",
+  "actual": "top bar 189px/4 rows; canvas 430×166px (18% of 932); pick=selected — canvas gets only 18% of the viewport height (166px of 932px) under 189px of toolbars",
+  "status": "UX_LIMITATION",
+  "shot": "verify/builder-430.png",
+  "note": ""
+ },
+ {
+  "id": "V6-builder-390",
+  "what": "builder @390: toolbar and canvas usable",
+  "expected": "canvas ≥ 35% of height, ≥ 280px wide, no overflow, section selectable",
+  "actual": "top bar 189px/4 rows; canvas 390×166px (20% of 844); pick=selected — canvas gets only 20% of the viewport height (166px of 844px) under 189px of toolbars",
+  "status": "UX_LIMITATION",
+  "shot": "verify/builder-390.png",
+  "note": ""
+ },
+ {
+  "id": "V7-debounce",
+  "what": "typing 10 characters at 70 ms/char sends at most 2 requests (debounced) and keeps the typed text",
+  "expected": "≤ 2 GETs, value intact",
+  "actual": "0 GET(s) after typing: ; input=\"Nguyễn Thị\"",
+  "status": "PASS",
+  "shot": "verify/employees-search.png",
+  "note": ""
+ },
+ {
+  "id": "V7-slow",
+  "what": "slow typing: the results follow the final text",
+  "expected": "rows containing the text",
+  "actual": "1 row(s) match \"Trần\"",
+  "status": "PASS",
+  "shot": "verify/employees-search-slow.png",
+  "note": ""
+ },
+ {
+  "id": "V8-organization",
+  "what": "/admin/organization: NOT_READY (H-C1-17 dynamic organization) stays an explicit notice, no invented data, no internal team names",
+  "expected": "explicit notice, 0 internal tokens",
+  "actual": "notReady=true; internalTokens=false; text=\"Cơ cấu tổ chức Dựng cơ cấu của công ty bằng các đơn vị và loại đơn vị do bạn tự định nghĩa. Công ty: Công ty TNHH Nước Sạch Việt Nam — Chi n\"",
+  "status": "PASS",
+  "shot": "verify/notready-organization.png",
+  "note": "KNOWN_NOT_READY H-C1-17 — UI behaves correctly if it says so"
+ },
+ {
+  "id": "V8-groups",
+  "what": "/admin/groups: NOT_READY (groups) stays an explicit notice, no invented data, no internal team names",
+  "expected": "explicit notice, 0 internal tokens",
+  "actual": "notReady=true; internalTokens=false; text=\"Nhóm Nhóm người dùng để cấp quyền và chia sẻ ứng dụng hàng loạt. Chưa sẵn sàng Chưa triển khai Nhóm Máy chủ chưa có API nhóm (chỉ có nhóm đồ\"",
+  "status": "PASS",
+  "shot": "verify/notready-groups.png",
+  "note": ""
+ },
+ {
+  "id": "V8-sharing",
+  "what": "/admin/sharing: NOT_READY (sharing) stays an explicit notice, no invented data, no internal team names",
+  "expected": "explicit notice, 0 internal tokens",
+  "actual": "notReady=true; internalTokens=false; text=\"Chia sẻ Chia sẻ ứng dụng cho người dùng, nhóm, phòng ban, cả công ty hoặc công ty khác. Chưa sẵn sàng Chưa triển khai Chia sẻ Máy chủ chưa c\"",
+  "status": "PASS",
+  "shot": "verify/notready-sharing.png",
+  "note": ""
+ },
+ {
+  "id": "V8-byok",
+  "what": "/admin/byok: NOT_READY (byok) stays an explicit notice, no invented data, no internal team names",
+  "expected": "explicit notice, 0 internal tokens",
+  "actual": "notReady=true; internalTokens=false; text=\"AI riêng của công ty Dùng AI mặc định của Xweb hoặc tự đưa khóa AI của công ty (BYOK). Chưa sẵn sàng Chưa triển khai AI riêng của công ty Tí\"",
+  "status": "PASS",
+  "shot": "verify/notready-byok.png",
+  "note": ""
+ },
+ {
+  "id": "V8-employees",
+  "what": "/admin/employees: NOT_READY (employee create) stays an explicit notice, no invented data, no internal team names",
+  "expected": "explicit notice, 0 internal tokens",
+  "actual": "notReady=true; internalTokens=false; text=\"Nhân viên Danh bạ nhân viên của công ty: tìm kiếm, lọc theo đơn vị, thêm nhân viên và xem chi tiết. Công ty của bạn Thêm nhân viên Đơn vị Ch\"",
+  "status": "PASS",
+  "shot": "verify/notready-employees.png",
+  "note": ""
+ },
+ {
+  "id": "V9-dialog-kbd",
+  "what": "Create Company dialog: keyboard (Enter, Space, Tab, Shift+Tab, Escape), focus trap, restore, scroll lock",
+  "expected": "7/7",
+  "actual": "all pass",
+  "status": "PASS",
+  "shot": "verify/dialog-create-company.png",
+  "note": ""
+ },
+ {
+  "id": "V10-crash-probe",
+  "what": "Data rail + inspector on a mapping stored WITHOUT transforms[] (server accepted it; RC 62ce969 crashed with 'This page couldn't load')",
+  "expected": "no crash",
+  "actual": "patch=200; crashed=true; inspector=n/a; pageerrors=[\"TypeError: Cannot read properties of undefined (reading 'length')\"]",
+  "status": "FAIL",
+  "shot": "verify/probe-mapping-without-transforms.png",
+  "note": ""
+ }
+]

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.publish.ScopeOrderingTests" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:51:08.171Z" hostname="macmini-2.local" time="0.003">
+  <properties/>
+  <testcase name="equal resumes only for the same operation()" classname="com.systemwebstudio.publish.ScopeOrderingTests" time="0.0"/>
+  <testcase name="a publish names its deployment and number, the others do not()" classname="com.systemwebstudio.publish.ScopeOrderingTests" time="0.002"/>
+  <testcase name="higher may go on whatever moved the pointer last()" classname="com.systemwebstudio.publish.ScopeOrderingTests" time="0.0"/>
+  <testcase name="lower is stale whatever the operation()" classname="com.systemwebstudio.publish.ScopeOrderingTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

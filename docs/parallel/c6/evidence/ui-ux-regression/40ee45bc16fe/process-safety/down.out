@@ -1,0 +1,8 @@
+[owned] REFUSED: start time differs (recorded "Thu Oct 8 16:18:26 2026", live "Thu Oct 8 16:18:22 2026"): pid 16645 belongs to someone else, not signalled. Nothing was signalled; the state file is KEPT (/tmp/c6-ps-DqqL/stack/run/studio.json) so the recorded process can still be found.
+[e2e-stack] studio: the recorded pid belongs to someone else now: nothing was signalled, state file kept
+[owned] REFUSED: start time differs (recorded "Thu Oct 8 16:18:26 2026", live "Thu Oct 8 16:18:22 2026"): pid 16645 belongs to someone else, not signalled. Nothing was signalled; the state file is KEPT (/tmp/c6-ps-DqqL/stack/run/render.json) so the recorded process can still be found.
+[e2e-stack] render: the recorded pid belongs to someone else now: nothing was signalled, state file kept
+[owned] REFUSED: start time differs (recorded "Thu Oct 8 16:18:26 2026", live "Thu Oct 8 16:18:22 2026"): pid 16645 belongs to someone else, not signalled. Nothing was signalled; the state file is KEPT (/tmp/c6-ps-DqqL/stack/run/backend-app.json) so the recorded process can still be found.
+[e2e-stack] backend-app: the recorded pid belongs to someone else now: nothing was signalled, state file kept
+[owned] REFUSED: start time differs (recorded "Thu Oct 8 16:18:26 2026", live "Thu Oct 8 16:18:22 2026"): pid 16645 belongs to someone else, not signalled. Nothing was signalled; the state file is KEPT (/tmp/c6-ps-DqqL/stack/run/backend.json) so the recorded process can still be found.
+[e2e-stack] backend: the recorded pid belongs to someone else now: nothing was signalled, state file kept

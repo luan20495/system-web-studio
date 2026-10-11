@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.logic.action.ActionContractV2Tests" tests="28" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:46:13.156Z" hostname="macmini-2.local" time="0.07">
+  <properties/>
+  <testcase name="a missing or throwing authorizer denies and nothing reaches a port()" classname="com.systemwebstudio.logic.action.ActionContractV2Tests" time="0.003"/>
+  <testcase name="the data port receives app and mode()" classname="com.systemwebstudio.logic.action.ActionContractV2Tests" time="0.002"/>
+  <testcase name="a retry reuses the same derived key and the same user gets one write()" classname="com.systemwebstudio.logic.action.ActionContractV2Tests" time="0.002"/>
+  <testcase name="TEST mode dry-runs with mode TEST, a derived key, and never writes()" classname="com.systemwebstudio.logic.action.ActionContractV2Tests" time="0.002"/>
+  <testcase name="a UI-bound run of an action without a trigger is unknown()" classname="com.systemwebstudio.logic.action.ActionContractV2Tests" time="0.001"/>
+  <testcase name="derived key is base64url sha256, 43 chars, accepted by the C3 pattern()" classname="com.systemwebstudio.logic.action.ActionContractV2Tests" time="0.0"/>
+  <testcase name="a data request cannot be built with a raw client key()" classname="com.systemwebstudio.logic.action.ActionContractV2Tests" time="0.001"/>
+  <testcase name="a request prints neither its key nor its values()" classname="com.systemwebstudio.logic.action.ActionContractV2Tests" time="0.0"/>
+  <testcase name="a UI event that does not match the declared trigger is unknown()" classname="com.systemwebstudio.logic.action.ActionContractV2Tests" time="0.0"/>
+  <testcase name="a connector without dry run is reported unsupported and success is never simulated()" classname="com.systemwebstudio.logic.action.ActionContractV2Tests" time="0.001"/>
+  <testcase name="NONE on a mutating action is an invalid definition, so a raw key is never silently dropped()" classname="com.systemwebstudio.logic.action.ActionContractV2Tests" time="0.001"/>
+  <testcase name="TEST mode needs the same permissions as LIVE()" classname="com.systemwebstudio.logic.action.ActionContractV2Tests" time="0.0"/>
+  <testcase name="without a client key a run still carries a well formed but one shot key()" classname="com.systemwebstudio.logic.action.ActionContractV2Tests" time="0.001"/>
+  <testcase name="logic code imports no repository, connector, JDBC, HTTP client, framework or other agent package()" classname="com.systemwebstudio.logic.action.ActionContractV2Tests" time="0.014"/>
+  <testcase name="workflow steps, schedules and chains do not need a trigger()" classname="com.systemwebstudio.logic.action.ActionContractV2Tests" time="0.001"/>
+  <testcase name="permission codes are the five canonical codes of tenant-permission 5()" classname="com.systemwebstudio.logic.action.ActionContractV2Tests" time="0.0"/>
+  <testcase name="TEST dry-run request carries mode TEST and a derived key()" classname="com.systemwebstudio.logic.action.ActionContractV2Tests" time="0.004"/>
+  <testcase name="only the data port and the handlers' package talk to data, and handlers use nothing else for it()" classname="com.systemwebstudio.logic.action.ActionContractV2Tests" time="0.006"/>
+  <testcase name="redact never contains the key and is not reversible by length()" classname="com.systemwebstudio.logic.action.ActionContractV2Tests" time="0.0"/>
+  <testcase name="write types need DATA_MUTATE in addition to ACTION_EXECUTE and the others do not()" classname="com.systemwebstudio.logic.action.ActionContractV2Tests" time="0.003"/>
+  <testcase name="logic sources use the Jackson 3 form of ObjectNode set and never the Jackson 2 generic one()" classname="com.systemwebstudio.logic.action.ActionContractV2Tests" time="0.012"/>
+  <testcase name="a component cannot smuggle the separator into the digest()" classname="com.systemwebstudio.logic.action.ActionContractV2Tests" time="0.0"/>
+  <testcase name="ActorKind keeps the four names of tenancy ActorKind so the C0 adapter can convert by name()" classname="com.systemwebstudio.logic.action.ActionContractV2Tests" time="0.0"/>
+  <testcase name="two users or two tenants with the same client key get different downstream keys()" classname="com.systemwebstudio.logic.action.ActionContractV2Tests" time="0.001"/>
+  <testcase name="the raw client key reaches no port, no audit entry and no stored record()" classname="com.systemwebstudio.logic.action.ActionContractV2Tests" time="0.004"/>
+  <testcase name="no logic source accesses a data store or connector by name()" classname="com.systemwebstudio.logic.action.ActionContractV2Tests" time="0.007"/>
+  <testcase name="TEST mode sends no notification and starts no workflow even with a key()" classname="com.systemwebstudio.logic.action.ActionContractV2Tests" time="0.001"/>
+  <testcase name="derivation is stable and every canonical input changes it()" classname="com.systemwebstudio.logic.action.ActionContractV2Tests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

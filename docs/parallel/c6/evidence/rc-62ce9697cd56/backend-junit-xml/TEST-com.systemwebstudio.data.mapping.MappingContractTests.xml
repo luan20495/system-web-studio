@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.mapping.MappingContractTests" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:45:21.824Z" hostname="macmini-2.local" time="0.01">
+  <properties/>
+  <testcase name="the canonical transforms array is read in order with nothing lost()" classname="com.systemwebstudio.data.mapping.MappingContractTests" time="0.004"/>
+  <testcase name="a field with both keys is ambiguous and rejected()" classname="com.systemwebstudio.data.mapping.MappingContractTests" time="0.001"/>
+  <testcase name="the closed set of transform types and their members still apply under both keys()" classname="com.systemwebstudio.data.mapping.MappingContractTests" time="0.001"/>
+  <testcase name="the legacy transform key is read and normalises to exactly the canonical definition()" classname="com.systemwebstudio.data.mapping.MappingContractTests" time="0.0"/>
+  <testcase name="transforms is bounded and shaped like C2 requires()" classname="com.systemwebstudio.data.mapping.MappingContractTests" time="0.001"/>
+  <testcase name="every transform kind survives write then read()" classname="com.systemwebstudio.data.mapping.MappingContractTests" time="0.002"/>
+  <testcase name="the writer emits only transforms and a rewritten legacy document is the canonical one()" classname="com.systemwebstudio.data.mapping.MappingContractTests" time="0.001"/>
+  <testcase name="a view model is written in the canonical shape too()" classname="com.systemwebstudio.data.mapping.MappingContractTests" time="0.0"/>
+  <testcase name="what the writer writes the reader reads back to the same definition()" classname="com.systemwebstudio.data.mapping.MappingContractTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.logic.action.ActionRunAbandonmentTests" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:46:13.244Z" hostname="macmini-2.local" time="0.004">
+  <properties/>
+  <testcase name="the runtime records the mutating flag and an abandoned write is never run again nor answered as a retryable timeout()" classname="com.systemwebstudio.logic.action.ActionRunAbandonmentTests" time="0.004"/>
+  <testcase name="mutating and non-mutating runs in one sweep each get their own outcome, and a recorded unknown outcome is left alone()" classname="com.systemwebstudio.logic.action.ActionRunAbandonmentTests" time="0.0"/>
+  <testcase name="an abandoned mutating run becomes an unknown outcome that is never retryable and is replayed as is()" classname="com.systemwebstudio.logic.action.ActionRunAbandonmentTests" time="0.0"/>
+  <testcase name="an abandoned non-mutating run is a retryable timeout and starts again with a new attempt()" classname="com.systemwebstudio.logic.action.ActionRunAbandonmentTests" time="0.0"/>
+  <testcase name="a caller that does not say is assumed to mutate - the safe side()" classname="com.systemwebstudio.logic.action.ActionRunAbandonmentTests" time="0.0"/>
+  <testcase name="a run that is restarted after a retryable failure takes the mutating flag of the new call()" classname="com.systemwebstudio.logic.action.ActionRunAbandonmentTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

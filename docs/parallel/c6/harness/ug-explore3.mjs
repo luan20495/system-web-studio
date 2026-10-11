@@ -1,0 +1,17 @@
+import { launch, recorder, BASE, OUT, secretFromDemoFile } from "./ug-lib.mjs";
+import { writeFileSync } from "node:fs";
+const pw = secretFromDemoFile("demo01"); const NAME = "C6-UG-QA-" + Date.now().toString(36);
+const browser = await launch(); const c = await browser.newContext({ viewport: { width: 1440, height: 900 } }); const p = await c.newPage(); const r = recorder(p);
+await p.goto(BASE + "/login", { waitUntil: "networkidle" });
+await p.getByLabel("Tên đăng nhập").fill("demo01"); await p.getByLabel("Mật khẩu").fill(pw); await p.getByRole("button", { name: "Đăng nhập", exact: true }).click(); await p.waitForLoadState("networkidle"); await p.waitForTimeout(1200);
+await p.getByRole("link", { name: "+ Tạo ứng dụng" }).click(); await p.waitForLoadState("networkidle");
+await p.getByPlaceholder("Tên ứng dụng").fill(NAME);
+let i = r.mark(); await p.getByRole("button", { name: "Tạo website" }).click(); await p.waitForURL(/\/studio\/projects\//, { timeout: 30000 }).catch(() => {}); await p.waitForLoadState("networkidle"); await p.waitForTimeout(2500);
+const out = { name: NAME, url: p.url().replace(BASE, ""), calls: r.since(i) };
+out.text = (await p.locator("body").innerText()).slice(0, 2500);
+out.buttons = (await p.getByRole("button").allInnerTexts()).slice(0, 60); out.tabs = await p.getByRole("tab").allInnerTexts().catch(() => []);
+out.links = (await p.getByRole("link").allInnerTexts()).slice(0, 30);
+await p.screenshot({ path: OUT + "explore-editor.png" });
+writeFileSync(OUT + "explore3.json", JSON.stringify(out, null, 1));
+console.log(NAME, out.url); console.log(JSON.stringify(out.calls)); console.log("tabs", JSON.stringify(out.tabs)); console.log("buttons", JSON.stringify(out.buttons)); console.log("links", JSON.stringify(out.links)); console.log(out.text);
+await browser.close();

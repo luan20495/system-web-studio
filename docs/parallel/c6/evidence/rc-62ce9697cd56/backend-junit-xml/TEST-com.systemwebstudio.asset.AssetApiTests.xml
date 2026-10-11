@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.asset.AssetApiTests" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:43:58.449Z" hostname="macmini-2.local" time="1.913">
+  <properties/>
+  <testcase name="dangerous types, oversize and path traversal names are rejected or neutralised()" classname="com.systemwebstudio.asset.AssetApiTests" time="0.52"/>
+  <testcase name="viewer cannot upload and other projects cannot see or delete the asset()" classname="com.systemwebstudio.asset.AssetApiTests" time="0.685"/>
+  <testcase name="complete fails without an upload and rejects a size mismatch()" classname="com.systemwebstudio.asset.AssetApiTests" time="0.256"/>
+  <testcase name="upload through presigned URL, complete, list, download and delete()" classname="com.systemwebstudio.asset.AssetApiTests" time="0.36"/>
+  <system-out><![CDATA[2026-10-08T06:43:58.454+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.systemwebstudio.asset.AssetApiTests]: AssetApiTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-08T06:43:58.524+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.systemwebstudio.SystemWebStudioApplication for test class com.systemwebstudio.asset.AssetApiTests
+2026-10-08T06:43:58.526+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.systemwebstudio.asset.AssetApiTests]: AssetApiTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-08T06:43:58.526+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.systemwebstudio.support.IntegrationTestBase]: IntegrationTestBase does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-08T06:43:58.534+07:00  INFO [] 75814 --- [system-web-studio-api] [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.systemwebstudio.SystemWebStudioApplication for test class com.systemwebstudio.asset.AssetApiTests
+2026-10-08T06:43:58.562+07:00  INFO [req_2d19272b77054531917f2d8970c8690a] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=GET route=/api/v1/auth/csrf status=200 duration_ms=1 user=-
+2026-10-08T06:43:58.840+07:00  INFO [req_8cca145a0e894e439c9b7458d6a05922] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/auth/login status=200 duration_ms=274 user=168f010b-8b28-4f18-956a-c1b9c0b1de07
+2026-10-08T06:43:58.887+07:00  INFO [req_a045e2cfdf024b74abf4fc799e696faa] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/workspaces/{workspaceId}/projects status=201 duration_ms=28 user=168f010b-8b28-4f18-956a-c1b9c0b1de07
+2026-10-08T06:43:58.929+07:00  INFO [req_95e2e69b65f24b77b23ee1ae397a5b70] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/workspaces/{workspaceId}/projects/{projectId}/assets/upload-url status=415 duration_ms=24 user=168f010b-8b28-4f18-956a-c1b9c0b1de07
+2026-10-08T06:43:58.952+07:00  INFO [req_97dd22b95b544c989f7e5b23bb3b8fe6] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/workspaces/{workspaceId}/projects/{projectId}/assets/upload-url status=415 duration_ms=15 user=168f010b-8b28-4f18-956a-c1b9c0b1de07
+2026-10-08T06:43:58.974+07:00  INFO [req_0b60fe57a92c4a3bae1a3985bb340d55] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/workspaces/{workspaceId}/projects/{projectId}/assets/upload-url status=415 duration_ms=14 user=168f010b-8b28-4f18-956a-c1b9c0b1de07
+2026-10-08T06:43:59.002+07:00  INFO [req_e7e93f46b4274f96bac445b20796b9ba] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/workspaces/{workspaceId}/projects/{projectId}/assets/upload-url status=413 duration_ms=20 user=168f010b-8b28-4f18-956a-c1b9c0b1de07
+2026-10-08T06:43:59.021+07:00  INFO [req_50ae8b2e1d444db689ecf19b314d6467] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/workspaces/{workspaceId}/projects/{projectId}/assets/upload-url status=413 duration_ms=12 user=168f010b-8b28-4f18-956a-c1b9c0b1de07
+2026-10-08T06:43:59.049+07:00  INFO [req_1b73660058934594b09cd69b919a8b61] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/workspaces/{workspaceId}/projects/{projectId}/assets/upload-url status=200 duration_ms=21 user=168f010b-8b28-4f18-956a-c1b9c0b1de07
+2026-10-08T06:43:59.070+07:00  INFO [req_d32dad8a18754568914ccff75af5873f] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=GET route=/api/v1/auth/csrf status=200 duration_ms=0 user=-
+2026-10-08T06:43:59.207+07:00  INFO [req_df7d9caf9ce14ffeb4c590af6c6885ce] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/auth/login status=200 duration_ms=135 user=2e87327f-cada-4737-b969-083c12a0aa94
+2026-10-08T06:43:59.238+07:00  INFO [req_9b63094943be45318e7d3d239e9bbb18] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/workspaces/{workspaceId}/projects status=201 duration_ms=18 user=2e87327f-cada-4737-b969-083c12a0aa94
+2026-10-08T06:43:59.253+07:00  INFO [req_aaba61d0098a4039982a80835d9bf77f] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=GET route=/api/v1/auth/csrf status=200 duration_ms=0 user=-
+2026-10-08T06:43:59.398+07:00  INFO [req_e37d06d39a89446d874730eeb4e102ab] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/auth/login status=200 duration_ms=144 user=61f61ec8-9dc4-4451-931f-cd9753b1bd68
+2026-10-08T06:43:59.419+07:00  INFO [req_5fb39f4efb384b25b49bff97de6c51de] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/workspaces/{workspaceId}/projects/{projectId}/assets/upload-url status=403 duration_ms=9 user=61f61ec8-9dc4-4451-931f-cd9753b1bd68
+2026-10-08T06:43:59.440+07:00  INFO [req_fb866c8c9e0d4f04b1aa0f1de8fccab7] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/workspaces/{workspaceId}/projects/{projectId}/assets/upload-url status=200 duration_ms=13 user=2e87327f-cada-4737-b969-083c12a0aa94
+2026-10-08T06:43:59.495+07:00  INFO [req_727a7c3c49844da48c224bb685949967] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/workspaces/{workspaceId}/projects/{projectId}/assets/complete status=200 duration_ms=33 user=2e87327f-cada-4737-b969-083c12a0aa94
+2026-10-08T06:43:59.512+07:00  INFO [req_8e2a77851b6d4565b4636345582ea3f9] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=GET route=/api/v1/auth/csrf status=200 duration_ms=0 user=-
+2026-10-08T06:43:59.674+07:00  INFO [req_e5aab3f73e45454492c445e012a42ce8] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/auth/login status=200 duration_ms=161 user=5c957150-8f97-4902-8826-2acf3fa26d18
+2026-10-08T06:43:59.704+07:00  INFO [req_9c95887527e44c52aa58fcc4886a1e50] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/workspaces/{workspaceId}/projects status=201 duration_ms=17 user=5c957150-8f97-4902-8826-2acf3fa26d18
+2026-10-08T06:43:59.724+07:00  INFO [req_53b223f1521f4fce9e956729f4923a9a] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=DELETE route=/api/v1/workspaces/{workspaceId}/projects/{projectId}/assets/{assetId} status=404 duration_ms=12 user=5c957150-8f97-4902-8826-2acf3fa26d18
+2026-10-08T06:43:59.737+07:00  INFO [req_108dd21631ae47e48a60989323929965] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=GET route=/api/v1/workspaces/{workspaceId}/projects/{projectId}/assets status=200 duration_ms=8 user=5c957150-8f97-4902-8826-2acf3fa26d18
+2026-10-08T06:43:59.742+07:00  INFO [req_955906fc3d664bb282d0aa4913e0b606] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=GET route=/api/v1/auth/csrf status=200 duration_ms=0 user=-
+2026-10-08T06:43:59.758+07:00  INFO [req_8d97cb129eba42fc935c15821cbce7b6] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=GET route=/api/v1/auth/csrf status=200 duration_ms=1 user=-
+2026-10-08T06:43:59.890+07:00  INFO [req_2f3a906056464b83854e66668a9d988a] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/auth/login status=200 duration_ms=131 user=21181d35-0776-4128-a482-e66452b850a6
+2026-10-08T06:43:59.912+07:00  INFO [req_a76e0e9de6014c018db2c2b7fa32eb8b] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/workspaces/{workspaceId}/projects status=201 duration_ms=14 user=21181d35-0776-4128-a482-e66452b850a6
+2026-10-08T06:43:59.929+07:00  INFO [req_46eff61607804700a794f19816306360] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/workspaces/{workspaceId}/projects/{projectId}/assets/upload-url status=200 duration_ms=11 user=21181d35-0776-4128-a482-e66452b850a6
+2026-10-08T06:43:59.952+07:00  INFO [req_c08766a52060471192d29d3b2944e50f] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/workspaces/{workspaceId}/projects/{projectId}/assets/complete status=409 duration_ms=14 user=21181d35-0776-4128-a482-e66452b850a6
+2026-10-08T06:43:59.967+07:00  INFO [req_bf58b20f827f4d1989ab4712ff76ec22] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/workspaces/{workspaceId}/projects/{projectId}/assets/upload-url status=200 duration_ms=9 user=21181d35-0776-4128-a482-e66452b850a6
+2026-10-08T06:43:59.998+07:00  INFO [req_3c48469f5e5c4e95a4dc408025403f4a] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/workspaces/{workspaceId}/projects/{projectId}/assets/complete status=422 duration_ms=17 user=21181d35-0776-4128-a482-e66452b850a6
+2026-10-08T06:44:00.003+07:00 ERROR [] 75814 --- [system-web-studio-api] [pring-session-1] o.s.s.s.TaskUtils$LoggingErrorHandler    : Unexpected error occurred in scheduled task
+
+java.lang.IllegalStateException: LettuceConnectionFactory has been STOPPED. Use start() to initialize it
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.assertStarted(LettuceConnectionFactory.java:1460) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.getConnection(LettuceConnectionFactory.java:1050) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.fetchConnection(RedisConnectionUtils.java:195) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.doGetConnection(RedisConnectionUtils.java:144) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.getConnection(RedisConnectionUtils.java:105) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisTemplate.execute(RedisTemplate.java:404) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisTemplate.execute(RedisTemplate.java:384) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.AbstractOperations.execute(AbstractOperations.java:166) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.DefaultSetOperations.members(DefaultSetOperations.java:199) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.data.redis.core.BoundOperationsProxyFactory$BoundOperationsMethodInterceptor.doInvoke(BoundOperationsProxyFactory.java:178) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.BoundOperationsProxyFactory$BoundOperationsMethodInterceptor.invoke(BoundOperationsProxyFactory.java:149) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-7.0.9.jar:7.0.9]
+	at org.springframework.data.projection.DefaultMethodInvokingMethodInterceptor.invoke(DefaultMethodInvokingMethodInterceptor.java:69) ~[spring-data-commons-4.1.1.jar:4.1.1]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-7.0.9.jar:7.0.9]
+	at org.springframework.aop.framework.JdkDynamicAopProxy.invoke(JdkDynamicAopProxy.java:222) ~[spring-aop-7.0.9.jar:7.0.9]
+	at jdk.proxy3/jdk.proxy3.$Proxy252.members(Unknown Source) ~[na:na]
+	at org.springframework.session.data.redis.RedisIndexedSessionRepository$MinuteBasedRedisSessionExpirationStore.cleanupExpiredSessions(RedisIndexedSessionRepository.java:1064) ~[spring-session-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.session.data.redis.RedisIndexedSessionRepository.cleanUpExpiredSessions(RedisIndexedSessionRepository.java:496) ~[spring-session-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.scheduling.support.DelegatingErrorHandlingRunnable.run(DelegatingErrorHandlingRunnable.java:54) ~[spring-context-7.0.9.jar:7.0.9]
+	at org.springframework.scheduling.concurrent.ReschedulingRunnable.run(ReschedulingRunnable.java:94) ~[spring-context-7.0.9.jar:7.0.9]
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:572) ~[na:na]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at java.base/java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:304) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2026-10-08T06:44:00.003+07:00 ERROR [] 75814 --- [system-web-studio-api] [pring-session-1] o.s.s.s.TaskUtils$LoggingErrorHandler    : Unexpected error occurred in scheduled task
+
+java.lang.IllegalStateException: LettuceConnectionFactory has been STOPPED. Use start() to initialize it
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.assertStarted(LettuceConnectionFactory.java:1460) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.getConnection(LettuceConnectionFactory.java:1050) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.fetchConnection(RedisConnectionUtils.java:195) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.doGetConnection(RedisConnectionUtils.java:144) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.getConnection(RedisConnectionUtils.java:105) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisTemplate.execute(RedisTemplate.java:404) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisTemplate.execute(RedisTemplate.java:384) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.AbstractOperations.execute(AbstractOperations.java:166) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.DefaultSetOperations.members(DefaultSetOperations.java:199) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.data.redis.core.BoundOperationsProxyFactory$BoundOperationsMethodInterceptor.doInvoke(BoundOperationsProxyFactory.java:178) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.BoundOperationsProxyFactory$BoundOperationsMethodInterceptor.invoke(BoundOperationsProxyFactory.java:149) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-7.0.9.jar:7.0.9]
+	at org.springframework.data.projection.DefaultMethodInvokingMethodInterceptor.invoke(DefaultMethodInvokingMethodInterceptor.java:69) ~[spring-data-commons-4.1.1.jar:4.1.1]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-7.0.9.jar:7.0.9]
+	at org.springframework.aop.framework.JdkDynamicAopProxy.invoke(JdkDynamicAopProxy.java:222) ~[spring-aop-7.0.9.jar:7.0.9]
+	at jdk.proxy3/jdk.proxy3.$Proxy252.members(Unknown Source) ~[na:na]
+	at org.springframework.session.data.redis.RedisIndexedSessionRepository$MinuteBasedRedisSessionExpirationStore.cleanupExpiredSessions(RedisIndexedSessionRepository.java:1064) ~[spring-session-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.session.data.redis.RedisIndexedSessionRepository.cleanUpExpiredSessions(RedisIndexedSessionRepository.java:496) ~[spring-session-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.scheduling.support.DelegatingErrorHandlingRunnable.run(DelegatingErrorHandlingRunnable.java:54) ~[spring-context-7.0.9.jar:7.0.9]
+	at org.springframework.scheduling.concurrent.ReschedulingRunnable.run(ReschedulingRunnable.java:94) ~[spring-context-7.0.9.jar:7.0.9]
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:572) ~[na:na]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at java.base/java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:304) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2026-10-08T06:44:00.003+07:00 ERROR [] 75814 --- [system-web-studio-api] [pring-session-1] o.s.s.s.TaskUtils$LoggingErrorHandler    : Unexpected error occurred in scheduled task
+
+java.lang.IllegalStateException: LettuceConnectionFactory has been STOPPED. Use start() to initialize it
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.assertStarted(LettuceConnectionFactory.java:1460) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.getConnection(LettuceConnectionFactory.java:1050) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.fetchConnection(RedisConnectionUtils.java:195) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.doGetConnection(RedisConnectionUtils.java:144) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.getConnection(RedisConnectionUtils.java:105) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisTemplate.execute(RedisTemplate.java:404) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisTemplate.execute(RedisTemplate.java:384) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.AbstractOperations.execute(AbstractOperations.java:166) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.DefaultSetOperations.members(DefaultSetOperations.java:199) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.data.redis.core.BoundOperationsProxyFactory$BoundOperationsMethodInterceptor.doInvoke(BoundOperationsProxyFactory.java:178) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.BoundOperationsProxyFactory$BoundOperationsMethodInterceptor.invoke(BoundOperationsProxyFactory.java:149) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-7.0.9.jar:7.0.9]
+	at org.springframework.data.projection.DefaultMethodInvokingMethodInterceptor.invoke(DefaultMethodInvokingMethodInterceptor.java:69) ~[spring-data-commons-4.1.1.jar:4.1.1]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-7.0.9.jar:7.0.9]
+	at org.springframework.aop.framework.JdkDynamicAopProxy.invoke(JdkDynamicAopProxy.java:222) ~[spring-aop-7.0.9.jar:7.0.9]
+	at jdk.proxy3/jdk.proxy3.$Proxy252.members(Unknown Source) ~[na:na]
+	at org.springframework.session.data.redis.RedisIndexedSessionRepository$MinuteBasedRedisSessionExpirationStore.cleanupExpiredSessions(RedisIndexedSessionRepository.java:1064) ~[spring-session-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.session.data.redis.RedisIndexedSessionRepository.cleanUpExpiredSessions(RedisIndexedSessionRepository.java:496) ~[spring-session-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.scheduling.support.DelegatingErrorHandlingRunnable.run(DelegatingErrorHandlingRunnable.java:54) ~[spring-context-7.0.9.jar:7.0.9]
+	at org.springframework.scheduling.concurrent.ReschedulingRunnable.run(ReschedulingRunnable.java:94) ~[spring-context-7.0.9.jar:7.0.9]
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:572) ~[na:na]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at java.base/java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:304) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2026-10-08T06:44:00.004+07:00 ERROR [] 75814 --- [system-web-studio-api] [pring-session-1] o.s.s.s.TaskUtils$LoggingErrorHandler    : Unexpected error occurred in scheduled task
+
+java.lang.IllegalStateException: LettuceConnectionFactory has been STOPPED. Use start() to initialize it
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.assertStarted(LettuceConnectionFactory.java:1460) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.getConnection(LettuceConnectionFactory.java:1050) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.fetchConnection(RedisConnectionUtils.java:195) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.doGetConnection(RedisConnectionUtils.java:144) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.getConnection(RedisConnectionUtils.java:105) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisTemplate.execute(RedisTemplate.java:404) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisTemplate.execute(RedisTemplate.java:384) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.AbstractOperations.execute(AbstractOperations.java:166) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.DefaultSetOperations.members(DefaultSetOperations.java:199) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.data.redis.core.BoundOperationsProxyFactory$BoundOperationsMethodInterceptor.doInvoke(BoundOperationsProxyFactory.java:178) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.BoundOperationsProxyFactory$BoundOperationsMethodInterceptor.invoke(BoundOperationsProxyFactory.java:149) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-7.0.9.jar:7.0.9]
+	at org.springframework.data.projection.DefaultMethodInvokingMethodInterceptor.invoke(DefaultMethodInvokingMethodInterceptor.java:69) ~[spring-data-commons-4.1.1.jar:4.1.1]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-7.0.9.jar:7.0.9]
+	at org.springframework.aop.framework.JdkDynamicAopProxy.invoke(JdkDynamicAopProxy.java:222) ~[spring-aop-7.0.9.jar:7.0.9]
+	at jdk.proxy3/jdk.proxy3.$Proxy252.members(Unknown Source) ~[na:na]
+	at org.springframework.session.data.redis.RedisIndexedSessionRepository$MinuteBasedRedisSessionExpirationStore.cleanupExpiredSessions(RedisIndexedSessionRepository.java:1064) ~[spring-session-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.session.data.redis.RedisIndexedSessionRepository.cleanUpExpiredSessions(RedisIndexedSessionRepository.java:496) ~[spring-session-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.scheduling.support.DelegatingErrorHandlingRunnable.run(DelegatingErrorHandlingRunnable.java:54) ~[spring-context-7.0.9.jar:7.0.9]
+	at org.springframework.scheduling.concurrent.ReschedulingRunnable.run(ReschedulingRunnable.java:94) ~[spring-context-7.0.9.jar:7.0.9]
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:572) ~[na:na]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at java.base/java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:304) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2026-10-08T06:44:00.003+07:00 ERROR [] 75814 --- [system-web-studio-api] [pring-session-1] o.s.s.s.TaskUtils$LoggingErrorHandler    : Unexpected error occurred in scheduled task
+
+java.lang.IllegalStateException: LettuceConnectionFactory has been STOPPED. Use start() to initialize it
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.assertStarted(LettuceConnectionFactory.java:1460) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.getConnection(LettuceConnectionFactory.java:1050) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.fetchConnection(RedisConnectionUtils.java:195) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.doGetConnection(RedisConnectionUtils.java:144) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.getConnection(RedisConnectionUtils.java:105) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisTemplate.execute(RedisTemplate.java:404) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisTemplate.execute(RedisTemplate.java:384) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.AbstractOperations.execute(AbstractOperations.java:166) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.DefaultSetOperations.members(DefaultSetOperations.java:199) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.data.redis.core.BoundOperationsProxyFactory$BoundOperationsMethodInterceptor.doInvoke(BoundOperationsProxyFactory.java:178) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.BoundOperationsProxyFactory$BoundOperationsMethodInterceptor.invoke(BoundOperationsProxyFactory.java:149) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-7.0.9.jar:7.0.9]
+	at org.springframework.data.projection.DefaultMethodInvokingMethodInterceptor.invoke(DefaultMethodInvokingMethodInterceptor.java:69) ~[spring-data-commons-4.1.1.jar:4.1.1]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-7.0.9.jar:7.0.9]
+	at org.springframework.aop.framework.JdkDynamicAopProxy.invoke(JdkDynamicAopProxy.java:222) ~[spring-aop-7.0.9.jar:7.0.9]
+	at jdk.proxy3/jdk.proxy3.$Proxy252.members(Unknown Source) ~[na:na]
+	at org.springframework.session.data.redis.RedisIndexedSessionRepository$MinuteBasedRedisSessionExpirationStore.cleanupExpiredSessions(RedisIndexedSessionRepository.java:1064) ~[spring-session-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.session.data.redis.RedisIndexedSessionRepository.cleanUpExpiredSessions(RedisIndexedSessionRepository.java:496) ~[spring-session-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.scheduling.support.DelegatingErrorHandlingRunnable.run(DelegatingErrorHandlingRunnable.java:54) ~[spring-context-7.0.9.jar:7.0.9]
+	at org.springframework.scheduling.concurrent.ReschedulingRunnable.run(ReschedulingRunnable.java:94) ~[spring-context-7.0.9.jar:7.0.9]
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:572) ~[na:na]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at java.base/java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:304) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2026-10-08T06:44:00.003+07:00 ERROR [] 75814 --- [system-web-studio-api] [pring-session-1] o.s.s.s.TaskUtils$LoggingErrorHandler    : Unexpected error occurred in scheduled task
+
+java.lang.IllegalStateException: LettuceConnectionFactory has been STOPPED. Use start() to initialize it
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.assertStarted(LettuceConnectionFactory.java:1460) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.getConnection(LettuceConnectionFactory.java:1050) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.fetchConnection(RedisConnectionUtils.java:195) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.doGetConnection(RedisConnectionUtils.java:144) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.getConnection(RedisConnectionUtils.java:105) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisTemplate.execute(RedisTemplate.java:404) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisTemplate.execute(RedisTemplate.java:384) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.AbstractOperations.execute(AbstractOperations.java:166) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.DefaultSetOperations.members(DefaultSetOperations.java:199) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.data.redis.core.BoundOperationsProxyFactory$BoundOperationsMethodInterceptor.doInvoke(BoundOperationsProxyFactory.java:178) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.BoundOperationsProxyFactory$BoundOperationsMethodInterceptor.invoke(BoundOperationsProxyFactory.java:149) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-7.0.9.jar:7.0.9]
+	at org.springframework.data.projection.DefaultMethodInvokingMethodInterceptor.invoke(DefaultMethodInvokingMethodInterceptor.java:69) ~[spring-data-commons-4.1.1.jar:4.1.1]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-7.0.9.jar:7.0.9]
+	at org.springframework.aop.framework.JdkDynamicAopProxy.invoke(JdkDynamicAopProxy.java:222) ~[spring-aop-7.0.9.jar:7.0.9]
+	at jdk.proxy3/jdk.proxy3.$Proxy252.members(Unknown Source) ~[na:na]
+	at org.springframework.session.data.redis.RedisIndexedSessionRepository$MinuteBasedRedisSessionExpirationStore.cleanupExpiredSessions(RedisIndexedSessionRepository.java:1064) ~[spring-session-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.session.data.redis.RedisIndexedSessionRepository.cleanUpExpiredSessions(RedisIndexedSessionRepository.java:496) ~[spring-session-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.scheduling.support.DelegatingErrorHandlingRunnable.run(DelegatingErrorHandlingRunnable.java:54) ~[spring-context-7.0.9.jar:7.0.9]
+	at org.springframework.scheduling.concurrent.ReschedulingRunnable.run(ReschedulingRunnable.java:94) ~[spring-context-7.0.9.jar:7.0.9]
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:572) ~[na:na]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at java.base/java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:304) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2026-10-08T06:44:00.003+07:00 ERROR [] 75814 --- [system-web-studio-api] [pring-session-1] o.s.s.s.TaskUtils$LoggingErrorHandler    : Unexpected error occurred in scheduled task
+
+java.lang.IllegalStateException: LettuceConnectionFactory has been STOPPED. Use start() to initialize it
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.assertStarted(LettuceConnectionFactory.java:1460) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory.getConnection(LettuceConnectionFactory.java:1050) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.fetchConnection(RedisConnectionUtils.java:195) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.doGetConnection(RedisConnectionUtils.java:144) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisConnectionUtils.getConnection(RedisConnectionUtils.java:105) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisTemplate.execute(RedisTemplate.java:404) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.RedisTemplate.execute(RedisTemplate.java:384) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.AbstractOperations.execute(AbstractOperations.java:166) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.DefaultSetOperations.members(DefaultSetOperations.java:199) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.springframework.data.redis.core.BoundOperationsProxyFactory$BoundOperationsMethodInterceptor.doInvoke(BoundOperationsProxyFactory.java:178) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.data.redis.core.BoundOperationsProxyFactory$BoundOperationsMethodInterceptor.invoke(BoundOperationsProxyFactory.java:149) ~[spring-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-7.0.9.jar:7.0.9]
+	at org.springframework.data.projection.DefaultMethodInvokingMethodInterceptor.invoke(DefaultMethodInvokingMethodInterceptor.java:69) ~[spring-data-commons-4.1.1.jar:4.1.1]
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:179) ~[spring-aop-7.0.9.jar:7.0.9]
+	at org.springframework.aop.framework.JdkDynamicAopProxy.invoke(JdkDynamicAopProxy.java:222) ~[spring-aop-7.0.9.jar:7.0.9]
+	at jdk.proxy3/jdk.proxy3.$Proxy252.members(Unknown Source) ~[na:na]
+	at org.springframework.session.data.redis.RedisIndexedSessionRepository$MinuteBasedRedisSessionExpirationStore.cleanupExpiredSessions(RedisIndexedSessionRepository.java:1064) ~[spring-session-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.session.data.redis.RedisIndexedSessionRepository.cleanUpExpiredSessions(RedisIndexedSessionRepository.java:496) ~[spring-session-data-redis-4.1.1.jar:4.1.1]
+	at org.springframework.scheduling.support.DelegatingErrorHandlingRunnable.run(DelegatingErrorHandlingRunnable.java:54) ~[spring-context-7.0.9.jar:7.0.9]
+	at org.springframework.scheduling.concurrent.ReschedulingRunnable.run(ReschedulingRunnable.java:94) ~[spring-context-7.0.9.jar:7.0.9]
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:572) ~[na:na]
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:317) ~[na:na]
+	at java.base/java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:304) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144) ~[na:na]
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642) ~[na:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2026-10-08T06:44:00.017+07:00  INFO [req_2e8ecda4a5fd48069afc5570e36ee6ad] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=GET route=/api/v1/auth/csrf status=200 duration_ms=0 user=-
+2026-10-08T06:44:00.218+07:00  INFO [req_e18c94c8aa754f8a9942be15d92eb7e9] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/auth/login status=200 duration_ms=199 user=8b43a030-601f-4529-a134-c183664dbce3
+2026-10-08T06:44:00.249+07:00  INFO [req_d4e34b8dd60d428ea90867ba225f7075] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/workspaces/{workspaceId}/projects status=201 duration_ms=22 user=8b43a030-601f-4529-a134-c183664dbce3
+2026-10-08T06:44:00.266+07:00  INFO [req_53001f39bbb24b399b00ded777337f6f] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/workspaces/{workspaceId}/projects/{projectId}/assets/upload-url status=200 duration_ms=9 user=8b43a030-601f-4529-a134-c183664dbce3
+2026-10-08T06:44:00.290+07:00  INFO [req_1261fda997b14cc398869edcbeb3c1dc] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/workspaces/{workspaceId}/projects/{projectId}/assets/complete status=200 duration_ms=11 user=8b43a030-601f-4529-a134-c183664dbce3
+2026-10-08T06:44:00.310+07:00  INFO [req_d0e09b82a2424da98429edcc3c1f34c9] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=GET route=/api/v1/workspaces/{workspaceId}/projects/{projectId}/assets status=200 duration_ms=6 user=8b43a030-601f-4529-a134-c183664dbce3
+2026-10-08T06:44:00.328+07:00  INFO [req_723a481a18514ff68f03765d699350ce] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=POST route=/api/v1/workspaces/{workspaceId}/projects/{projectId}/assets/complete status=409 duration_ms=10 user=8b43a030-601f-4529-a134-c183664dbce3
+2026-10-08T06:44:00.342+07:00  INFO [req_5ee2580f4464444f9cc1ad036962457f] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=DELETE route=/api/v1/workspaces/{workspaceId}/projects/{projectId}/assets/{assetId} status=204 duration_ms=9 user=8b43a030-601f-4529-a134-c183664dbce3
+2026-10-08T06:44:00.352+07:00  INFO [req_86836f6a6369477686315b0d20848409] 75814 --- [system-web-studio-api] [    Test worker] access                                   : http_request method=GET route=/api/v1/workspaces/{workspaceId}/projects/{projectId}/assets status=200 duration_ms=4 user=8b43a030-601f-4529-a134-c183664dbce3
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

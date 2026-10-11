@@ -1,0 +1,13 @@
+PASS B is a separate process from A
+PASS FOREIGN-SAFE 1: B (owned) is stopped (port 3498 free, pid 16891 gone)
+PASS FOREIGN_NEXT_SURVIVES: A (foreign next start, same command shape) alive and answering 200 after C5 cleanup
+PASS STALE_PID_SAFE: reuse-pid-only -> REFUSED (exit 4), A alive, state file KEPT
+PASS STALE_PID_SAFE: reuse-same-start -> REFUSED (exit 4), A alive, state file KEPT
+PASS STALE_PID_SAFE: reuse-start-ok-cmd-wrong -> REFUSED (exit 4), A alive, state file KEPT
+PASS STALE_PID_SAFE: a state whose process is gone -> ALREADY_GONE/no signal ([owned] ALREADY_GONE); A alive
+PASS STALE_PID_SAFE: signal STOP on a reused pid refused (exit 4), A not frozen (still answers 200)
+PASS HARNESS_PID_SCOPED: after two runs no harness server left behind (grep itself counted: 1)
+PASS harness propagates the command's exit code (7) and still stops its server
+PASS A still alive after the harness lifecycle runs
+PASS e2e-stack.sh down with stale state files naming A's pid: A untouched
+PASS UNSAFE_EXTERNAL_CLEANUP_REMOVED: no pkill/killall/kill-by-port/kill $(cat pid) in C5-owned executable tooling (comments and the guard test excluded)

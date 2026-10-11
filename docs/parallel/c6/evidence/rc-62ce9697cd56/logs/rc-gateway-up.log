@@ -1,0 +1,22 @@
+PASS G01 [up] gateway /healthz | expected 200 | actual 200
+PASS G02 [up] published app by slug route | expected 200 HTML | actual 200 text/html;charset=utf-8 131ms
+PASS G03 [up] static assets referenced by the page | expected all 200 (or none referenced: static HTML) | actual 0 referenced, 0 broken
+PASS G04 [up] runtime config of the page site | expected 200 no-store JSON with a same-origin apiBase for THIS slug, no tenant/workspace/credential — or 404 when the page binds no public query | actual 404 cache=no-store apiBase=-
+PASS G05 [up] anonymous POST on the public data route of a query that is NOT public | expected refused (403/404), no rows | actual 404 
+PASS G06 [up] GET on the data route | expected not 200 (POST only) | actual 403
+PASS G07 [up] data route from a foreign Origin | expected refused (403) or no CORS grant | actual 404 acao=null
+PASS G08 [up] GET /api/v1/auth/me on the sites host | expected 404/403 (the API is not published on the sites host) | actual 404
+PASS G09 [up] GET /actuator/health on the sites host | expected 404/403 | actual 404
+PASS G10 [up] GET /actuator/env on the sites host | expected 404/403 | actual 404
+PASS G11 [up] GET / on the sites host | expected 404/403 (no listing) | actual 404
+PASS G12 [up] GET /../etc/passwd on the sites host | expected 400/404 | actual 404
+PASS G13 [up] GET /%2e%2e/%2e%2e/etc/passwd on the sites host | expected 400/403/404 | actual 404
+PASS G14 [up] GET /c6-data-ab1525-7ef012/../api/v1/auth/me on the sites host | expected 400/404/403 | actual 404
+PASS G15 [up] GET /swagger-ui.html on the sites host | expected 404 | actual 404
+PASS G16 [up] GET /v3/api-docs on the sites host | expected 404 | actual 404
+PASS G17 [up] POST to a page path | expected 403/404/405 | actual 403
+PASS G18 [up] unknown slug | expected 404 without detail | actual 404 503b
+PASS G19 [up] forged client-IP headers on a request | expected 200, ignored (no 5xx) | actual 200
+PASS G20 [up] no c6rc container (PostgreSQL, Redis, MinIO, RabbitMQ, gateway) is published beyond loopback | expected all 127.0.0.1 | actual 5 containers, all loopback
+
+TOTAL 20  FAILED 0

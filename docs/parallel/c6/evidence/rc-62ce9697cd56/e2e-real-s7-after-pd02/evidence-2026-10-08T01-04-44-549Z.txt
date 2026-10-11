@@ -1,0 +1,53 @@
+FLOW: E2E-PD02 — Public data V1, document side: slot → READ public query → bind → publish approval → PUBLIC_QUERIES → runtime config → one anonymous request
+RESULT: PASS
+START: 2026-10-08T01:04:05.087Z
+END: 2026-10-08T01:04:12.546Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 1d92d898-7e22-4de3-9169-c55c005bb45b
+WORKSPACE: e8d5e1d7-e8c5-44cf-9a0b-4c9d0bf2b2ff
+HTTP EVIDENCE:
+  - ok [api] a READ query WITHOUT public is accepted (it is private by default)
+  - ok [api] a WRITE query with public=false is accepted
+  - ok [api] a WRITE query with public=true is REJECTED by the server (422, path queries[i].public) — the UI never offers it
+  - ok [ui] POST …/publish is the unchanged release contract: body EXACTLY {visibility:'PUBLIC', expectedRevision}, Idempotency-Key present — no acknowledgement field
+  - ok [visitor] the page asked for its runtime config (GET __factory/config.json) before any data request, with no cookie and no credentials
+  - ok [visitor] config.json is no-store JSON with a same-origin apiBase for THIS slug (…/{slug}/_data) and no tenant / workspace / credential
+  - ok [visitor] the page asked ONLY the public query once (POST …/_data/queries/{id}/run, body {"params":{}}), anonymously
+UI ASSERTION:
+  - ok [ui] readiness: not-ready for ONE reason only — the site is not public yet, so it has no data address (apiBase); the draft itself has no problem
+  - ok [ui] the publish review lists exactly the public READ query (not the private one, not the WRITE one)
+  - ok [ui] Publish is disabled until the acknowledgement is ticked
+  - ok [ui] the dialog shows the server's PUBLIC_QUERIES and no mismatch with what it announced
+  - ok no unhandled page errors in Studio
+  - ok [visitor] the runtime ended in a DEFINED state (ready, or error:<id>:not-found|unavailable when no data route/binding exists), never stuck loading
+  - ok [visitor] on error the AUTHORED page stays visible (nothing blanked, no fake data)
+  - ok [visitor] recorded outcome without a real source (fact, not a claim about data)
+PERSISTENCE ASSERTION:
+  - ok [ui] the slot was added and the SERVER stored exactly {id,name,type} — no sourceRef, no credential
+  - ok [ui] a READ query with public=true was stored by the server (mode READ, operationKey = the approved one, local slot ref)
+  - ok [ui] the binding was stored: {sectionId, prop, queryRef} with the LOCAL public READ query id — never a slot, sourceRef or credential
+  - ok [backend] the server wrote the PUBLIC_QUERIES event naming exactly the public query
+  - ok [backend] the release is live and PUBLIC, operation idle
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-S7 — (supplementary) Publish interrupted by a backend outage: no fake success, UI ends on the server's truth
+RESULT: FAIL
+START: 2026-10-08T01:04:12.546Z
+END: 2026-10-08T01:04:44.022Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 1d92d898-7e22-4de3-9169-c55c005bb45b
+WORKSPACE: e8d5e1d7-e8c5-44cf-9a0b-4c9d0bf2b2ff
+HTTP EVIDENCE: none recorded
+UI ASSERTION: none recorded
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: exception: locator.click: Timeout 30000ms exceeded. ⏎ Call log: ⏎ - waiting for getByRole('dialog').getByRole('button', { name: /^Xuất bản$/ })
+OWNER: unassigned (triage)

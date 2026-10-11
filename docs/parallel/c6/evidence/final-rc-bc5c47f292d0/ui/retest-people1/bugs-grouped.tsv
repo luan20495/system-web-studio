@@ -1,0 +1,2 @@
+GROUP	PORTAL	SEVERITY	ACTUAL	FIRST_BUG	OCCURRENCES	VIEWPORTS	ROUTES	SCREENSHOT	OWNER	REPRO
+1	studio	LOW	"Tạo ứng dụng" not marked aria-current	FQ-UI-001	1	1440x900	/studio [workspaceAdmin · navigation]	-	C5	click the sidebar link

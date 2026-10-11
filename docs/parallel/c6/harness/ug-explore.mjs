@@ -1,0 +1,20 @@
+import { launch, recorder, BASE, OUT, secretFromDemoFile } from "./ug-lib.mjs";
+import { writeFileSync } from "node:fs";
+const pw = secretFromDemoFile("demo01"); if (!pw) throw new Error("no demo01 entry");
+const browser = await launch(); const c = await browser.newContext({ viewport: { width: 1440, height: 900 } }); const p = await c.newPage();
+const r = recorder(p); const log = {};
+await p.goto(BASE + "/studio", { waitUntil: "networkidle" });
+log.landing = p.url().replace(BASE, "");
+// literal guide step 1: fill Tên đăng nhập / Mật khẩu, click Đăng nhập (no portal radio mentioned by the guide)
+log.radioChecked_before = await p.getByRole("radio").evaluateAll((els) => els.map((e) => ({ checked: e.checked, name: e.closest("label")?.innerText.split("\n").slice(0, 2).join(" / ") })));
+let i = r.mark();
+await p.getByLabel("Tên đăng nhập").fill("demo01"); await p.getByLabel("Mật khẩu").fill(pw);
+await p.getByRole("button", { name: "Đăng nhập", exact: true }).click();
+await p.waitForLoadState("networkidle").catch(() => {}); await p.waitForTimeout(2500);
+log.afterLogin = { url: p.url().replace(BASE, ""), calls: r.since(i) };
+log.home = { title: await p.title(), text: (await p.locator("body").innerText()).slice(0, 1800), buttons: (await p.getByRole("button").allInnerTexts()).slice(0, 25), links: (await p.getByRole("link").allInnerTexts()).slice(0, 25) };
+await p.screenshot({ path: OUT + "explore-home.png" });
+writeFileSync(OUT + "explore.json", JSON.stringify(log, null, 1));
+console.log(JSON.stringify({ landing: log.landing, radios: log.radioChecked_before, afterLogin: log.afterLogin, buttons: log.home.buttons, links: log.home.links }, null, 1));
+console.log(log.home.text.slice(0, 1200));
+await browser.close();

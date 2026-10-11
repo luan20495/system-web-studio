@@ -1,0 +1,102 @@
+FLOW: E2E-06 — Configure DataSource (+ Query) and query via the real backend
+RESULT: BLOCKED
+START: 2026-10-08T01:05:21.479Z
+END: 2026-10-08T01:05:24.236Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: f2a72156-378f-4a70-b9b7-37af6f34a8ce
+WORKSPACE: 1b2af53c-c621-4c4e-a26c-7c66bc49b03c
+HTTP EVIDENCE:
+  - ok [api] connector catalogue answers 200 with items
+  - ok [api] postgres is AVAILABLE and the planned connectors are not
+  - ok [api] create → 201 with a DataSourceView
+  - ok [api] the view says a credential exists but carries no secret and no credential reference
+  - ok [api] credential metadata: configured + key NAMES only, no values
+  - ok [api] a second source with the same name (case-insensitive) → 409 CONFLICT
+  - ok [api] a secret-looking key in config → 400 INVALID_*
+  - ok [api] an identity field in the body (tenantId) → 400 INVALID_PARAMS
+  - ok [api] a PLANNED connector (csv) → 501 NOT_IMPLEMENTED
+  - ok [api] an unknown connector type → 422 UNSUPPORTED_TYPE
+  - ok [api] isolation: workspace B's admin cannot read A's source by id (404 NOT_FOUND)
+  - ok [api] isolation: 'foreign' and 'unknown' answer IDENTICALLY (no existence oracle)
+  - ok [api] isolation: B's admin listing A's workspace is refused (403/404), no items
+  - ok [api] permission: a VIEWER cannot create (403 PERMISSION_DENIED)
+  - ok [api] permission: a VIEWER cannot change a source, and nothing changed
+  - ok [api] permission: a VIEWER's read is 200 or 403, never 5xx, and never shows a secret
+  - ok [api] test connection of an unreachable host → HTTP 200 with ok:false and a documented code
+  - ok [api] the failure text does not leak the credential
+  - ok [api] a DISABLED source cannot be tested: 409 DISABLED
+  - ok [api] bind TEST → 200 with the binding
+  - ok [api] the binding list contains it, mode normalised
+  - ok [api] permission: a project VIEWER cannot list/alter bindings (403)
+  - ok [api] deleting a BOUND source → 409 CONFLICT and it still exists
+  - ok [api] list definitions → 200 {items:[]}
+  - ok [api] create a query definition → 201 with its id
+  - ok [api] read it back (200, same id)
+  - ok [api] a definition the gateway would refuse is refused at write time (400 INVALID_QUERY)
+  - ok [api] an authority key in the body → 400 INVALID_PARAMS
+  - ok [api] a mutation against a source that is not writable → 422 READ_ONLY_VIOLATION
+  - ok [api] isolation: workspace B cannot read A's definition (404)
+  - ok [api] permission: a VIEWER cannot create a definition (403)
+  - ok [api] delete the definition → 204
+  - ok [api] (operator source) create → 201
+  - ok [api] (operator source) test connection → ok:true with latency
+UI ASSERTION:
+  - ok [ui] the Builder opens by direct URL
+  - ok [ui] the Data panel shows the source-management panel (not 'Chưa sẵn sàng')
+  - ok [ui] the new source is listed
+  - ok [ui] credential: 'Đã cấu hình' with key names and no value
+  - ok [ui] no password field is prefilled and no secret is anywhere in the DOM
+  - ok [ui] test connection: the real failure is shown as FAILED with its code
+  - ok [ui] the failure text shows no secret
+  - ok [ui] the existing TEST binding's slot is not invented by the UI (the document declares no slots)
+  - ok [ui] no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok [backend] browsing and testing changed nothing: still ACTIVE, version unchanged
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: Source, credential, test-connection, binding AND query/mutation definition management exist on integration/v2 (C3, management-api.md) and are exercised above, but a project cannot USE them: the AppDefinition has no operation to declare a data slot (dataSources[] is "granted, not created", C2 H-C2-02), and a local stack has no reachable source (the SSRF guard refuses loopback/private addresses; the
+OWNER: C2 · ref H-C2-02 + H-C0-07
+
+---
+
+FLOW: E2E-07 — TEST-binding query runs and shows results
+RESULT: FAIL
+START: 2026-10-08T01:05:24.236Z
+END: 2026-10-08T01:05:26.336Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: f2a72156-378f-4a70-b9b7-37af6f34a8ce
+WORKSPACE: 1b2af53c-c621-4c4e-a26c-7c66bc49b03c
+HTTP EVIDENCE:
+  - FAIL the real backend answered with rows (outcome SUCCESS from the server) (ERROR: Lỗi Tham số truy vấn chưa hợp lệ. missing parameter status)
+UI ASSERTION:
+  - ok the pre-seeded query is listed in the Test panel
+  - FAIL a result table is rendered
+  - FAIL an independent API call returns 200 with the same query (status=400)
+  - FAIL UI row count equals the server's (ui=NaN api=undefined)
+  - FAIL no unhandled page errors (console: Failed to load resource: the server responded with a status of 400 (Bad Request))
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: the real backend answered with rows (outcome SUCCESS from the server); a result table is rendered; an independent API call returns 200 with the same query; UI row count equals the server's; no unhandled page errors
+OWNER: unassigned (triage)
+
+---
+
+FLOW: E2E-08 — LIVE-binding query runs and shows results
+RESULT: FAIL
+START: 2026-10-08T01:05:26.336Z
+END: 2026-10-08T01:05:26.714Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: f2a72156-378f-4a70-b9b7-37af6f34a8ce
+WORKSPACE: 1b2af53c-c621-4c4e-a26c-7c66bc49b03c
+HTTP EVIDENCE: none recorded
+UI ASSERTION:
+  - FAIL (evidence) LIVE run answers 200 or a documented 404/422/503 — never 500 (status=400 code=INVALID_PARAMS)
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: LIVE needs (1) a RUNNING deployment and a published host that serves the Data API: C0 states there is no public DataGateway route and no published data host, and the runtime config that would carry its address is undecided (C0 `__factory/config.json` apiBase, served for code apps/previews only, vs C2 `/runtime-config.json` DATA_API_BASE_URL); (2) a declared slot (C2 H-C2-02); (3) a source the gate
+OWNER: C0 · ref B-C5-06 + H-C2-04 + H-C2-02 + H-C0-07

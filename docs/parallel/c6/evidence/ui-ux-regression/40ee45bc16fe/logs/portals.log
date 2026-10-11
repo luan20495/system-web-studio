@@ -1,0 +1,3 @@
+portal platform  http://127.0.0.1:3411/  -> HTTP 200  (pid 91974)
+portal admin  http://127.0.0.1:3412/  -> HTTP 200  (pid 92025)
+portal studio  http://127.0.0.1:3413/  -> HTTP 200  (pid 91971)

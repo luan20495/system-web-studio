@@ -1,0 +1,7 @@
+RC_SHA=62ce9697cd56e8dc86b3260923f5addbcf555743
+branch(source)=integration/v2 (HBL checkout: integration/v2 @ 62ce9697cd56)
+C6 worktree=/Users/hoangluan/code/xweb-c6-rc (detached) dirty=       0
+date=2026-10-08 06:41:26 +0700
+java=openjdk version "21.0.12.1" 2026-08-18
+node=v22.23.1
+docker=29.8.2

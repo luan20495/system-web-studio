@@ -1,0 +1,27 @@
+id	area	description	expected	actual	result	class	owner	note	evidence
+ENV-01	health	API /actuator/health	200 UP	200 {"groups":["liveness","readiness"],"status":"UP"}	PASS	REAL_STACK			
+ENV-01b	health	API readiness	200 UP	200 {"status":"UP"}	PASS	REAL_STACK			
+ENV-02	portal	Platform loads	200 + title	200 title="Xweb Platform" bytes=9538	PASS	REAL_STACK			
+ENV-03	portal	Admin loads	200 + title	200 title="Xweb Admin" bytes=9534	PASS	REAL_STACK			
+ENV-04	portal	Studio loads	200 + title	200 title="Xweb Studio" bytes=10264	PASS	REAL_STACK			
+ENV-05	sites	Sites gateway answers	any HTTP answer (404 for an unknown host/slug is fine)	404	PASS	REAL_STACK			
+ENV-06	postgres	PostgreSQL accepts connections	accepting connections	/var/run/postgresql:5432 - accepting connections	PASS	REAL_STACK			
+ENV-06b	postgres	Flyway history readable (read-only)	latest version + 0 failed	32 / 31 migrations, failed=0	PASS	REAL_STACK			
+ENV-07	redis	Redis answers PING	PONG	PONG	PASS	REAL_STACK			
+ENV-08	rabbitmq	RabbitMQ node answers	ping ok	ERR spawnSync docker ETIMEDOUT	FAIL	REAL_STACK			
+ENV-09	minio	MinIO live	200	200	PASS	REAL_STACK			
+ENV-10	flag	Organization persistence ON (a tenant admin reads the unit tree: 200, not 501 ORG_PERSISTENCE_NOT_AVAILABLE)	200	200	PASS	REAL_STACK			
+ENV-11	flag	publish-config ON (GET publish-config answers 200, not 404)	200	200	PASS	REAL_STACK			
+ENV-12	mock	Studio login bundles carry no mock-API switch (first 12 chunks scanned)	0 hits	hits=0 chunks=12	PASS	REAL_STACK		behavioural proof (network shows real /api calls, no localStorage data store) is part of the UI run	
+ENV-13	mock	No localStorage persistence fallback	proved in UI run	see ui-final-* evidence	BLOCKED	MANUAL		NOT proved here: browser part (final-ui) records localStorage keys after each journey	
+ENV-14a	identity	frontend checkout fabea8198fda: clean tree, product files identical to deployed product SHA bc5c47f292d0	clean + 0 product-file diff	dirty=2 productDiff=6 backend/src/main/kotlin/com/systemwebstudio/logic/workflow/WorkflowEngine.kt,backend/src/test/kotlin/com/systemwebstudio/logic/action/ActionFakes.kt,backend/src/test/kotlin/com/systemwebstudio/logic/workflow/RuntimeAuthorizationTests.kt	FAIL	REAL_STACK			
+ENV-14b	identity	backend worktree 953d17e53d05: clean tree, product files identical to bc5c47f292d0	clean + 0 product-file diff	dirty=0 productDiff=0	PASS	REAL_STACK			
+ENV-14c	identity	stack SERVING.json sha == backend worktree HEAD	equal	953d17e53d05 vs 953d17e53d05	PASS	REAL_STACK			
+ENV-14d	identity	API listener runs from the stack's backend worktree	cwd under /Users/hoangluan/.xweb-e2e-stack/c0rc/backend-worktree	/Users/hoangluan/.xweb-e2e-stack/c0rc/backend-worktree/backend	PASS	REAL_STACK			
+ENV-14e-Studio	identity	Studio listener runs from the frontend checkout	cwd under /Users/hoangluan/code/xweb-c0-rc/apps	/Users/hoangluan/code/xweb-c0-rc/apps/studio	PASS	REAL_STACK			
+ENV-14e-Platform	identity	Platform listener runs from the frontend checkout	cwd under /Users/hoangluan/code/xweb-c0-rc/apps	/Users/hoangluan/code/xweb-c0-rc/apps/platform	PASS	REAL_STACK			
+ENV-14e-Admin	identity	Admin listener runs from the frontend checkout	cwd under /Users/hoangluan/code/xweb-c0-rc/apps	/Users/hoangluan/code/xweb-c0-rc/apps/admin	PASS	REAL_STACK			
+ENV-14f	identity	BUILD_ID of the three portals recorded	3 ids	{"Platform":"2GuhCrW5Nzpw91J-27pgg","Admin":"-Eg7ur7xVaYfyHAOTtq5I","Studio":"cfrpHRfq45k1DWtHqrauH"}	PASS	REAL_STACK			
+ENV-14g-Platform	identity	Platform HTML carries BUILD_ID 2GuhCrW5Nzpw91J-27pgg	present	present	PASS	REAL_STACK			
+ENV-14g-Admin	identity	Admin HTML carries BUILD_ID -Eg7ur7xVaYfyHAOTtq5I	present	present	PASS	REAL_STACK			
+ENV-14g-Studio	identity	Studio HTML carries BUILD_ID cfrpHRfq45k1DWtHqrauH	present	present	PASS	REAL_STACK			

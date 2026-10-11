@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.gateway.GatewayTests" tests="34" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:45:21.673Z" hostname="macmini-2.local" time="0.061">
+  <properties/>
+  <testcase name="a hit still requires permission and is audited()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.003"/>
+  <testcase name="a mapping version bump is a different cache entry()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.001"/>
+  <testcase name="a denied caller gets nothing and nothing behind the gateway is touched()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.001"/>
+  <testcase name="a catalog that leaks another tenants definition is still refused by the gateway()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.001"/>
+  <testcase name="the response carries the view model only and no raw column()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.001"/>
+  <testcase name="another tenant cannot run a mutation of a data source it does not own()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.0"/>
+  <testcase name="ttl zero is never cached and ttl expiry refetches()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.001"/>
+  <testcase name="no credential reaches a response an audit record or a log even when the connector blows up with it()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.005"/>
+  <testcase name="editing the data source the query or the mapping makes older entries unreachable at once()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.0"/>
+  <testcase name="a read only connector refuses writes and frees the key()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.0"/>
+  <testcase name="a concurrent duplicate while the first is running is refused()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.001"/>
+  <testcase name="a browser cannot send sql a url a header or a tenant()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.001"/>
+  <testcase name="a definitely rejected mutation frees the key so a retry can run()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.0"/>
+  <testcase name="the same key with other parameters is a conflict and never silently re-run()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.0"/>
+  <testcase name="an idempotency key is mandatory and well formed()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.0"/>
+  <testcase name="idempotency is scoped per tenant()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.0"/>
+  <testcase name="connection test and discovery go through the gateway()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.001"/>
+  <testcase name="a cache outage degrades to uncached reads and never fails the request()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.0"/>
+  <testcase name="only approved operations exist and an undefined one is not found()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.0"/>
+  <testcase name="a disabled data source serves nothing()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.001"/>
+  <testcase name="tenant b cannot reach tenant a data source query or cache()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.001"/>
+  <testcase name="a mutation runs once per idempotency key and a replay never reaches the connector()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.0"/>
+  <testcase name="a mapping of another tenant is not found()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.001"/>
+  <testcase name="second identical request is a hit and the connector runs once()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.0"/>
+  <testcase name="a missing or mismatched mapping is refused before the connector is called()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.001"/>
+  <testcase name="audit records carry ids and counts but never values()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.002"/>
+  <testcase name="a query definition of another tenant planted for a data source is never used()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.0"/>
+  <testcase name="every operation checks its own permission()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.0"/>
+  <testcase name="a mutation invalidates what it declares and emits record events()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.015"/>
+  <testcase name="every failure code maps to a status and a body without detail()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.003"/>
+  <testcase name="mutation parameters are typed and unknown ones are refused before the connector()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.001"/>
+  <testcase name="an authorizer outage denies instead of allowing()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.0"/>
+  <testcase name="manual refresh drops the cache and tells subscribers()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.013"/>
+  <testcase name="manual refresh is rate limited()" classname="com.systemwebstudio.data.gateway.GatewayTests" time="0.001"/>
+  <system-out><![CDATA[{"@timestamp":"2026-10-08T06:45:21.685115+07:00","@version":"1","message":"data source operation failed unexpectedly: java.lang.IllegalStateException","logger_name":"com.systemwebstudio.data.datasource.DataSourceService","thread_name":"Test worker","level":"ERROR","level_value":40000}
+{"@timestamp":"2026-10-08T06:45:21.686612+07:00","@version":"1","message":"data source operation failed unexpectedly: java.lang.IllegalStateException","logger_name":"com.systemwebstudio.data.datasource.DataSourceService","thread_name":"Test worker","level":"ERROR","level_value":40000}
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

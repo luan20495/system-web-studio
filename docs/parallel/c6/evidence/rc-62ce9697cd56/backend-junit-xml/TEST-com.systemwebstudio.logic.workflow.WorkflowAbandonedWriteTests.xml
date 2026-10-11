@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.logic.workflow.WorkflowAbandonedWriteTests" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:46:14.094Z" hostname="macmini-2.local" time="0.003">
+  <properties/>
+  <testcase name="a write whose worker died is unknown for good - no retry, no onError, not compensated, earlier steps compensated()" classname="com.systemwebstudio.logic.workflow.WorkflowAbandonedWriteTests" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

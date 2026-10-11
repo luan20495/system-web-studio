@@ -1,0 +1,26 @@
+{
+ "dialogs": 1,
+ "calls": [
+  "GET /api/v1/auth/me 200",
+  "GET /api/v1/auth/config 200",
+  "GET /api/v1/components 200",
+  "GET /api/v1/component-packages 200",
+  "GET /api/v1/component-metadata 200",
+  "GET /api/v1/ai/status 200",
+  "GET /api/v1/projects/{id} 200",
+  "GET /api/v1/workspaces/{id}/projects/{id}/versions 200",
+  "GET /api/v1/workspaces/{id}/projects/{id}/prompts 200",
+  "GET /api/v1/workspaces/{id}/projects/{id}/schema 200",
+  "GET /api/v1/workspaces/{id}/projects/{id}/assets 200",
+  "GET /api/v1/workspaces/{id}/projects/{id}/site 200",
+  "GET /api/v1/workspaces/{id}/projects/{id}/deployments 200"
+ ],
+ "text": "Xuất bản website\n\nPhiên bản 1 sẽ được đưa qua kiểm tra chính sách, bảo mật, build và triển khai.\n\nChưa xuất bản lần nào. Xuất bản sẽ tạo một trang tĩnh thật trên máy chủ.\n\nRiêng tư\nChỉ thành viên được cấp quyền.\nCông khai\nMọi người có thể truy cập.\nHủy\nXuất bản",
+ "buttons": [
+  "Riêng tư\nChỉ thành viên được cấp quyền.",
+  "Công khai\nMọi người có thể truy cập.",
+  "Hủy",
+  "Xuất bản"
+ ],
+ "radios": []
+}

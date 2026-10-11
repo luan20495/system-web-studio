@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.integration.queue.workflow.WorkflowQueueSelectionTests" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:46:06.088Z" hostname="macmini-2.local" time="0.005">
+  <properties/>
+  <testcase name="a typo is a start-up error, never a silent fallback to memory()" classname="com.systemwebstudio.integration.queue.workflow.WorkflowQueueSelectionTests" time="0.001"/>
+  <testcase name="close closes the current connection once and the next call opens a new one()" classname="com.systemwebstudio.integration.queue.workflow.WorkflowQueueSelectionTests" time="0.002"/>
+  <testcase name="explicit values select the adapter, case and spaces do not matter()" classname="com.systemwebstudio.integration.queue.workflow.WorkflowQueueSelectionTests" time="0.0"/>
+  <testcase name="an open connection is reused, a closed one is replaced()" classname="com.systemwebstudio.integration.queue.workflow.WorkflowQueueSelectionTests" time="0.001"/>
+  <testcase name="unset means amqp in production and memory elsewhere()" classname="com.systemwebstudio.integration.queue.workflow.WorkflowQueueSelectionTests" time="0.0"/>
+  <testcase name="a failing close does not escape()" classname="com.systemwebstudio.integration.queue.workflow.WorkflowQueueSelectionTests" time="0.0"/>
+  <testcase name="the in-memory queue is refused in production, however it was asked for()" classname="com.systemwebstudio.integration.queue.workflow.WorkflowQueueSelectionTests" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

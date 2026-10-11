@@ -1,0 +1,14 @@
+[
+ {
+  "id": "platform · sidebar navigation (14 links)",
+  "group": "PLATFORM",
+  "portal": "platform",
+  "role": "super",
+  "route": "/platform",
+  "viewport": 1440,
+  "kind": "navigation",
+  "result": "PASS",
+  "fail": [],
+  "warn": []
+ }
+]

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.logic.retention.RetentionTests" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:46:14.032Z" hostname="macmini-2.local" time="0.022">
+  <properties/>
+  <testcase name="tenants are not distinguished - the horizon is age only, and other tenants' recent rows survive()" classname="com.systemwebstudio.logic.retention.RetentionTests" time="0.006"/>
+  <testcase name="a backlog is worked off in bounded batches, oldest first, over several runs()" classname="com.systemwebstudio.logic.retention.RetentionTests" time="0.003"/>
+  <testcase name="an abandoned RUNNING run becomes eligible only after the sweeper failed it and it aged again()" classname="com.systemwebstudio.logic.retention.RetentionTests" time="0.0"/>
+  <testcase name="schedule ledger - a CLAIMED fire is never deleted, a final one is()" classname="com.systemwebstudio.logic.retention.RetentionTests" time="0.001"/>
+  <testcase name="approvals - a pending one never ages out, a final one does()" classname="com.systemwebstudio.logic.retention.RetentionTests" time="0.001"/>
+  <testcase name="action runs - finished rows age out, a RUNNING row never does()" classname="com.systemwebstudio.logic.retention.RetentionTests" time="0.001"/>
+  <testcase name="a horizon shorter than the replay window is refused()" classname="com.systemwebstudio.logic.retention.RetentionTests" time="0.0"/>
+  <testcase name="workflow runs - payloads are blanked first and rows deleted later, active runs are never touched()" classname="com.systemwebstudio.logic.retention.RetentionTests" time="0.006"/>
+  <testcase name="a final approval whose workflow run is still active is kept()" classname="com.systemwebstudio.logic.retention.RetentionTests" time="0.001"/>
+  <testcase name="a cancelled and a failed run age out like a succeeded one()" classname="com.systemwebstudio.logic.retention.RetentionTests" time="0.002"/>
+  <testcase name="a failing target does not stop the others and cannot spin()" classname="com.systemwebstudio.logic.retention.RetentionTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

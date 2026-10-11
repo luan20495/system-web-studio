@@ -1,0 +1,393 @@
+id	group	portal	role	route	viewport	result	notReady	fail	warn	screenshot
+/platform	PLATFORM	platform	super	/platform	1440	FAIL		1 icon svg with zero size		platform/super/platform/1440.png
+/platform	PLATFORM	platform	super	/platform	768	PASS				platform/super/platform/768.png
+/platform	PLATFORM	platform	super	/platform	390	PASS				platform/super/platform/390.png
+/platform/tenants	PLATFORM	platform	super	/platform/tenants	1440	FAIL		1 icon svg with zero size		platform/super/platform_tenants/1440.png
+/platform/tenants	PLATFORM	platform	super	/platform/tenants	768	PASS				platform/super/platform_tenants/768.png
+/platform/tenants	PLATFORM	platform	super	/platform/tenants	390	PASS				platform/super/platform_tenants/390.png
+/platform/users	PLATFORM	platform	super	/platform/users	1440	FAIL		1 icon svg with zero size		platform/super/platform_users/1440.png
+/platform/users	PLATFORM	platform	super	/platform/users	768	PASS				platform/super/platform_users/768.png
+/platform/users	PLATFORM	platform	super	/platform/users	390	PASS				platform/super/platform_users/390.png
+/platform/ai	PLATFORM	platform	super	/platform/ai	1440	FAIL		1 icon svg with zero size		platform/super/platform_ai/1440.png
+/platform/ai	PLATFORM	platform	super	/platform/ai	768	PASS				platform/super/platform_ai/768.png
+/platform/ai	PLATFORM	platform	super	/platform/ai	390	PASS				platform/super/platform_ai/390.png
+/platform/alerts	PLATFORM	platform	super	/platform/alerts	1440	FAIL		1 icon svg with zero size		platform/super/platform_alerts/1440.png
+/platform/alerts	PLATFORM	platform	super	/platform/alerts	768	PASS				platform/super/platform_alerts/768.png
+/platform/alerts	PLATFORM	platform	super	/platform/alerts	390	PASS				platform/super/platform_alerts/390.png
+/platform/security	PLATFORM	platform	super	/platform/security	1440	FAIL		1 icon svg with zero size		platform/super/platform_security/1440.png
+/platform/security	PLATFORM	platform	super	/platform/security	768	PASS				platform/super/platform_security/768.png
+/platform/security	PLATFORM	platform	super	/platform/security	390	PASS				platform/super/platform_security/390.png
+/platform/costs	PLATFORM	platform	super	/platform/costs	1440	FAIL		1 icon svg with zero size		platform/super/platform_costs/1440.png
+/platform/costs	PLATFORM	platform	super	/platform/costs	768	PASS				platform/super/platform_costs/768.png
+/platform/costs	PLATFORM	platform	super	/platform/costs	390	PASS				platform/super/platform_costs/390.png
+/platform/connectors	PLATFORM	platform	super	/platform/connectors	1440	FAIL		1 icon svg with zero size		platform/super/platform_connectors/1440.png
+/platform/connectors	PLATFORM	platform	super	/platform/connectors	768	PASS				platform/super/platform_connectors/768.png
+/platform/connectors	PLATFORM	platform	super	/platform/connectors	390	PASS				platform/super/platform_connectors/390.png
+/platform/backups	PLATFORM	platform	super	/platform/backups	1440	FAIL		1 icon svg with zero size		platform/super/platform_backups/1440.png
+/platform/backups	PLATFORM	platform	super	/platform/backups	768	PASS				platform/super/platform_backups/768.png
+/platform/backups	PLATFORM	platform	super	/platform/backups	390	PASS				platform/super/platform_backups/390.png
+/platform/components	PLATFORM	platform	super	/platform/components	1440	FAIL		1 icon svg with zero size		platform/super/platform_components/1440.png
+/platform/components	PLATFORM	platform	super	/platform/components	768	PASS				platform/super/platform_components/768.png
+/platform/components	PLATFORM	platform	super	/platform/components	390	PASS				platform/super/platform_components/390.png
+/platform/templates	PLATFORM	platform	super	/platform/templates	1440	FAIL		1 icon svg with zero size		platform/super/platform_templates/1440.png
+/platform/templates	PLATFORM	platform	super	/platform/templates	768	PASS				platform/super/platform_templates/768.png
+/platform/templates	PLATFORM	platform	super	/platform/templates	390	PASS				platform/super/platform_templates/390.png
+/platform/audit	PLATFORM	platform	super	/platform/audit	1440	FAIL		1 icon svg with zero size		platform/super/platform_audit/1440.png
+/platform/audit	PLATFORM	platform	super	/platform/audit	768	PASS				platform/super/platform_audit/768.png
+/platform/audit	PLATFORM	platform	super	/platform/audit	390	PASS				platform/super/platform_audit/390.png
+/platform/builds	PLATFORM	platform	super	/platform/builds	1440	FAIL		1 icon svg with zero size		platform/super/platform_builds/1440.png
+/platform/builds	PLATFORM	platform	super	/platform/builds	768	PASS				platform/super/platform_builds/768.png
+/platform/builds	PLATFORM	platform	super	/platform/builds	390	PASS				platform/super/platform_builds/390.png
+/platform/packages	PLATFORM	platform	super	/platform/packages	1440	FAIL		1 icon svg with zero size		platform/super/platform_packages/1440.png
+/platform/packages	PLATFORM	platform	super	/platform/packages	768	PASS				platform/super/platform_packages/768.png
+/platform/packages	PLATFORM	platform	super	/platform/packages	390	PASS				platform/super/platform_packages/390.png
+/platform/system	PLATFORM	platform	super	/platform/system	1440	FAIL		1 icon svg with zero size		platform/super/platform_system/1440.png
+/platform/system	PLATFORM	platform	super	/platform/system	768	PASS				platform/super/platform_system/768.png
+/platform/system	PLATFORM	platform	super	/platform/system	390	PASS				platform/super/platform_system/390.png
+/platform/settings	PLATFORM	platform	super	/platform/settings	1440	FAIL		1 icon svg with zero size		platform/super/platform_settings/1440.png
+/platform/settings	PLATFORM	platform	super	/platform/settings	768	PASS				platform/super/platform_settings/768.png
+/platform/settings	PLATFORM	platform	super	/platform/settings	390	PASS				platform/super/platform_settings/390.png
+/platform/tenants/5fcfa9ad-ceb6-4d46-ab3d-8eb9550c94f3	PLATFORM	platform	super	/platform/tenants/5fcfa9ad-ceb6-4d46-ab3d-8eb9550c94f3	1440	FAIL		1 icon svg with zero size		platform/super/platform_tenants_id/1440.png
+/platform/tenants/5fcfa9ad-ceb6-4d46-ab3d-8eb9550c94f3	PLATFORM	platform	super	/platform/tenants/5fcfa9ad-ceb6-4d46-ab3d-8eb9550c94f3	768	PASS				platform/super/platform_tenants_id/768.png
+/platform/tenants/5fcfa9ad-ceb6-4d46-ab3d-8eb9550c94f3	PLATFORM	platform	super	/platform/tenants/5fcfa9ad-ceb6-4d46-ab3d-8eb9550c94f3	390	PASS				platform/super/platform_tenants_id/390.png
+/platform/tenants/c880ff7f-dcc6-4664-bcd0-a8b79379d4a4	PLATFORM	platform	super	/platform/tenants/c880ff7f-dcc6-4664-bcd0-a8b79379d4a4	1440	FAIL		1 icon svg with zero size		platform/super/platform_tenants_id/1440.png
+/platform/tenants/c880ff7f-dcc6-4664-bcd0-a8b79379d4a4	PLATFORM	platform	super	/platform/tenants/c880ff7f-dcc6-4664-bcd0-a8b79379d4a4	768	PASS				platform/super/platform_tenants_id/768.png
+/platform/tenants/c880ff7f-dcc6-4664-bcd0-a8b79379d4a4	PLATFORM	platform	super	/platform/tenants/c880ff7f-dcc6-4664-bcd0-a8b79379d4a4	390	PASS				platform/super/platform_tenants_id/390.png
+/platform/users/0acb45ee-8d22-4f09-a38d-1b6e2192bd93	PLATFORM	platform	super	/platform/users/0acb45ee-8d22-4f09-a38d-1b6e2192bd93	1440	FAIL		1 icon svg with zero size		platform/super/platform_users_id/1440.png
+/platform/users/0acb45ee-8d22-4f09-a38d-1b6e2192bd93	PLATFORM	platform	super	/platform/users/0acb45ee-8d22-4f09-a38d-1b6e2192bd93	768	PASS				platform/super/platform_users_id/768.png
+/platform/users/0acb45ee-8d22-4f09-a38d-1b6e2192bd93	PLATFORM	platform	super	/platform/users/0acb45ee-8d22-4f09-a38d-1b6e2192bd93	390	PASS				platform/super/platform_users_id/390.png
+/platform/workspaces/79c293a6-f0e9-435e-b6d5-12907bf23fa6	PLATFORM	platform	super	/platform/workspaces/79c293a6-f0e9-435e-b6d5-12907bf23fa6	1440	FAIL		1 icon svg with zero size		platform/super/platform_workspaces_id/1440.png
+/platform/workspaces/79c293a6-f0e9-435e-b6d5-12907bf23fa6	PLATFORM	platform	super	/platform/workspaces/79c293a6-f0e9-435e-b6d5-12907bf23fa6	768	PASS				platform/super/platform_workspaces_id/768.png
+/platform/workspaces/79c293a6-f0e9-435e-b6d5-12907bf23fa6	PLATFORM	platform	super	/platform/workspaces/79c293a6-f0e9-435e-b6d5-12907bf23fa6	390	PASS				platform/super/platform_workspaces_id/390.png
+/platform/applications/07a9594c-a976-4269-a593-e7abb2d49082	PLATFORM	platform	super	/platform/applications/07a9594c-a976-4269-a593-e7abb2d49082	1440	FAIL		1 icon svg with zero size		platform/super/platform_applications_id/1440.png
+/platform/applications/07a9594c-a976-4269-a593-e7abb2d49082	PLATFORM	platform	super	/platform/applications/07a9594c-a976-4269-a593-e7abb2d49082	768	PASS				platform/super/platform_applications_id/768.png
+/platform/applications/07a9594c-a976-4269-a593-e7abb2d49082	PLATFORM	platform	super	/platform/applications/07a9594c-a976-4269-a593-e7abb2d49082	390	PASS				platform/super/platform_applications_id/390.png
+/platform/zzz-khong-ton-tai	PLATFORM	platform	super	/platform/zzz-khong-ton-tai	1440	FAIL		1 icon svg with zero size		platform/super/platform_zzz-khong-ton-tai/1440.png
+/platform/zzz-khong-ton-tai	PLATFORM	platform	super	/platform/zzz-khong-ton-tai	768	PASS				platform/super/platform_zzz-khong-ton-tai/768.png
+/platform/zzz-khong-ton-tai	PLATFORM	platform	super	/platform/zzz-khong-ton-tai	390	PASS				platform/super/platform_zzz-khong-ton-tai/390.png
+/admin	ADMIN	admin	tenantAdmin	/admin	1440	FAIL		1 icon svg with zero size		admin/tenantAdmin/admin/1440.png
+/admin	ADMIN	admin	tenantAdmin	/admin	768	PASS				admin/tenantAdmin/admin/768.png
+/admin	ADMIN	admin	tenantAdmin	/admin	390	PASS				admin/tenantAdmin/admin/390.png
+/admin/company	ADMIN	admin	tenantAdmin	/admin/company	1440	FAIL		1 icon svg with zero size		admin/tenantAdmin/admin_company/1440.png
+/admin/company	ADMIN	admin	tenantAdmin	/admin/company	768	PASS			overlapping controls: a "Cơ cấu tổ chức" × a "Người dùng"; a "Nhân viên" × a "Người dùng"	admin/tenantAdmin/admin_company/768.png
+/admin/company	ADMIN	admin	tenantAdmin	/admin/company	390	PASS			overlapping controls: a "Cơ cấu tổ chức" × a "Nhân viên"; a "Nhân viên" × a "Người dùng"	admin/tenantAdmin/admin_company/390.png
+/admin/organization	ADMIN	admin	tenantAdmin	/admin/organization	1440	FAIL		1 icon svg with zero size	text < 12px: 11px "Khối"; 11px "Phòng ban"	admin/tenantAdmin/admin_organization/1440.png
+/admin/organization	ADMIN	admin	tenantAdmin	/admin/organization	768	PASS			text < 12px: 11px "Khối"; 11px "Phòng ban"	admin/tenantAdmin/admin_organization/768.png
+/admin/organization	ADMIN	admin	tenantAdmin	/admin/organization	390	PASS			text < 12px: 11px "Khối"; 11px "Phòng ban"	admin/tenantAdmin/admin_organization/390.png
+/admin/employees	ADMIN	admin	tenantAdmin	/admin/employees	1440	FAIL		1 icon svg with zero size	overlapping controls: select "Tất cả đơn vị Khối Công nghệ └ Phòng Phá" × input ""	admin/tenantAdmin/admin_employees/1440.png
+/admin/employees	ADMIN	admin	tenantAdmin	/admin/employees	768	PASS			overlapping controls: a "Công ty của tôi" × a "Người dùng"; a "Cơ cấu tổ chức" × a "Người dùng"	admin/tenantAdmin/admin_employees/768.png
+/admin/employees	ADMIN	admin	tenantAdmin	/admin/employees	390	PASS			overlapping controls: a "Cơ cấu tổ chức" × a "Người dùng"	admin/tenantAdmin/admin_employees/390.png
+/admin/people	ADMIN	admin	tenantAdmin	/admin/people	1440	FAIL		1 icon svg with zero size		admin/tenantAdmin/admin_people/1440.png
+/admin/people	ADMIN	admin	tenantAdmin	/admin/people	768	PASS				admin/tenantAdmin/admin_people/768.png
+/admin/people	ADMIN	admin	tenantAdmin	/admin/people	390	PASS			overlapping controls: a "Cơ cấu tổ chức" × a "Nhân viên"	admin/tenantAdmin/admin_people/390.png
+/admin/my-workspaces	ADMIN	admin	tenantAdmin	/admin/my-workspaces	1440	FAIL		1 icon svg with zero size		admin/tenantAdmin/admin_my-workspaces/1440.png
+/admin/my-workspaces	ADMIN	admin	tenantAdmin	/admin/my-workspaces	768	PASS				admin/tenantAdmin/admin_my-workspaces/768.png
+/admin/my-workspaces	ADMIN	admin	tenantAdmin	/admin/my-workspaces	390	PASS				admin/tenantAdmin/admin_my-workspaces/390.png
+/admin/data-sources	ADMIN	admin	tenantAdmin	/admin/data-sources	1440	FAIL		1 icon svg with zero size		admin/tenantAdmin/admin_data-sources/1440.png
+/admin/data-sources	ADMIN	admin	tenantAdmin	/admin/data-sources	768	PASS				admin/tenantAdmin/admin_data-sources/768.png
+/admin/data-sources	ADMIN	admin	tenantAdmin	/admin/data-sources	390	PASS				admin/tenantAdmin/admin_data-sources/390.png
+/admin/groups	ADMIN	admin	tenantAdmin	/admin/groups	1440	FAIL	KNOWN_NOT_READY	1 icon svg with zero size		admin/tenantAdmin/admin_groups/1440.png
+/admin/groups	ADMIN	admin	tenantAdmin	/admin/groups	768	PASS	KNOWN_NOT_READY			admin/tenantAdmin/admin_groups/768.png
+/admin/groups	ADMIN	admin	tenantAdmin	/admin/groups	390	PASS	KNOWN_NOT_READY			admin/tenantAdmin/admin_groups/390.png
+/admin/sharing	ADMIN	admin	tenantAdmin	/admin/sharing	1440	FAIL	KNOWN_NOT_READY	1 icon svg with zero size		admin/tenantAdmin/admin_sharing/1440.png
+/admin/sharing	ADMIN	admin	tenantAdmin	/admin/sharing	768	PASS	KNOWN_NOT_READY			admin/tenantAdmin/admin_sharing/768.png
+/admin/sharing	ADMIN	admin	tenantAdmin	/admin/sharing	390	PASS	KNOWN_NOT_READY			admin/tenantAdmin/admin_sharing/390.png
+/admin/byok	ADMIN	admin	tenantAdmin	/admin/byok	1440	FAIL	KNOWN_NOT_READY	1 icon svg with zero size		admin/tenantAdmin/admin_byok/1440.png
+/admin/byok	ADMIN	admin	tenantAdmin	/admin/byok	768	PASS	KNOWN_NOT_READY			admin/tenantAdmin/admin_byok/768.png
+/admin/byok	ADMIN	admin	tenantAdmin	/admin/byok	390	PASS	KNOWN_NOT_READY			admin/tenantAdmin/admin_byok/390.png
+/admin/zzz-khong-ton-tai	ADMIN	admin	tenantAdmin	/admin/zzz-khong-ton-tai	1440	FAIL		1 icon svg with zero size		admin/tenantAdmin/admin_zzz-khong-ton-tai/1440.png
+/admin/zzz-khong-ton-tai	ADMIN	admin	tenantAdmin	/admin/zzz-khong-ton-tai	768	PASS				admin/tenantAdmin/admin_zzz-khong-ton-tai/768.png
+/admin/zzz-khong-ton-tai	ADMIN	admin	tenantAdmin	/admin/zzz-khong-ton-tai	390	PASS				admin/tenantAdmin/admin_zzz-khong-ton-tai/390.png
+/admin	ADMIN	admin	workspaceAdmin	/admin	1440	FAIL		1 icon svg with zero size		admin/workspaceAdmin/admin/1440.png
+/admin	ADMIN	admin	workspaceAdmin	/admin	768	PASS				admin/workspaceAdmin/admin/768.png
+/admin	ADMIN	admin	workspaceAdmin	/admin	390	PASS				admin/workspaceAdmin/admin/390.png
+/admin/people	ADMIN	admin	workspaceAdmin	/admin/people	1440	FAIL		1 icon svg with zero size		admin/workspaceAdmin/admin_people/1440.png
+/admin/people	ADMIN	admin	workspaceAdmin	/admin/people	768	PASS				admin/workspaceAdmin/admin_people/768.png
+/admin/people	ADMIN	admin	workspaceAdmin	/admin/people	390	PASS				admin/workspaceAdmin/admin_people/390.png
+/admin/my-workspaces	ADMIN	admin	workspaceAdmin	/admin/my-workspaces	1440	FAIL		1 icon svg with zero size		admin/workspaceAdmin/admin_my-workspaces/1440.png
+/admin/my-workspaces	ADMIN	admin	workspaceAdmin	/admin/my-workspaces	768	PASS				admin/workspaceAdmin/admin_my-workspaces/768.png
+/admin/my-workspaces	ADMIN	admin	workspaceAdmin	/admin/my-workspaces	390	PASS				admin/workspaceAdmin/admin_my-workspaces/390.png
+/admin/data-sources	ADMIN	admin	workspaceAdmin	/admin/data-sources	1440	FAIL		1 icon svg with zero size		admin/workspaceAdmin/admin_data-sources/1440.png
+/admin/data-sources	ADMIN	admin	workspaceAdmin	/admin/data-sources	768	PASS				admin/workspaceAdmin/admin_data-sources/768.png
+/admin/data-sources	ADMIN	admin	workspaceAdmin	/admin/data-sources	390	PASS				admin/workspaceAdmin/admin_data-sources/390.png
+/admin/groups	ADMIN	admin	workspaceAdmin	/admin/groups	1440	FAIL	KNOWN_NOT_READY	1 icon svg with zero size		admin/workspaceAdmin/admin_groups/1440.png
+/admin/groups	ADMIN	admin	workspaceAdmin	/admin/groups	768	PASS	KNOWN_NOT_READY			admin/workspaceAdmin/admin_groups/768.png
+/admin/groups	ADMIN	admin	workspaceAdmin	/admin/groups	390	PASS	KNOWN_NOT_READY			admin/workspaceAdmin/admin_groups/390.png
+/admin/sharing	ADMIN	admin	workspaceAdmin	/admin/sharing	1440	FAIL	KNOWN_NOT_READY	1 icon svg with zero size		admin/workspaceAdmin/admin_sharing/1440.png
+/admin/sharing	ADMIN	admin	workspaceAdmin	/admin/sharing	768	PASS	KNOWN_NOT_READY			admin/workspaceAdmin/admin_sharing/768.png
+/admin/sharing	ADMIN	admin	workspaceAdmin	/admin/sharing	390	PASS	KNOWN_NOT_READY			admin/workspaceAdmin/admin_sharing/390.png
+/admin/byok	ADMIN	admin	workspaceAdmin	/admin/byok	1440	FAIL	KNOWN_NOT_READY	1 icon svg with zero size		admin/workspaceAdmin/admin_byok/1440.png
+/admin/byok	ADMIN	admin	workspaceAdmin	/admin/byok	768	PASS	KNOWN_NOT_READY			admin/workspaceAdmin/admin_byok/768.png
+/admin/byok	ADMIN	admin	workspaceAdmin	/admin/byok	390	PASS	KNOWN_NOT_READY			admin/workspaceAdmin/admin_byok/390.png
+/admin/company	ADMIN	admin	workspaceAdmin	/admin/company	1440	FAIL		1 icon svg with zero size		admin/workspaceAdmin/admin_company/1440.png
+/admin/company	ADMIN	admin	workspaceAdmin	/admin/company	768	PASS				admin/workspaceAdmin/admin_company/768.png
+/admin/company	ADMIN	admin	workspaceAdmin	/admin/company	390	PASS				admin/workspaceAdmin/admin_company/390.png
+/admin	ADMIN	admin	super	/admin	1440	FAIL		1 icon svg with zero size		admin/super/admin/1440.png
+/admin	ADMIN	admin	super	/admin	768	PASS				admin/super/admin/768.png
+/admin	ADMIN	admin	super	/admin	390	PASS				admin/super/admin/390.png
+/admin/users	ADMIN	admin	super	/admin/users	1440	FAIL		1 icon svg with zero size		admin/super/admin_users/1440.png
+/admin/users	ADMIN	admin	super	/admin/users	768	PASS				admin/super/admin_users/768.png
+/admin/users	ADMIN	admin	super	/admin/users	390	PASS				admin/super/admin_users/390.png
+/admin/applications	ADMIN	admin	super	/admin/applications	1440	FAIL		1 icon svg with zero size		admin/super/admin_applications/1440.png
+/admin/applications	ADMIN	admin	super	/admin/applications	768	PASS				admin/super/admin_applications/768.png
+/admin/applications	ADMIN	admin	super	/admin/applications	390	PASS				admin/super/admin_applications/390.png
+/admin/ai-governance	ADMIN	admin	super	/admin/ai-governance	1440	FAIL		1 icon svg with zero size		admin/super/admin_ai-governance/1440.png
+/admin/ai-governance	ADMIN	admin	super	/admin/ai-governance	768	PASS				admin/super/admin_ai-governance/768.png
+/admin/ai-governance	ADMIN	admin	super	/admin/ai-governance	390	PASS				admin/super/admin_ai-governance/390.png
+/admin/departments	ADMIN	admin	super	/admin/departments	1440	FAIL		1 icon svg with zero size		admin/super/admin_departments/1440.png
+/admin/departments	ADMIN	admin	super	/admin/departments	768	PASS				admin/super/admin_departments/768.png
+/admin/departments	ADMIN	admin	super	/admin/departments	390	PASS				admin/super/admin_departments/390.png
+/admin/identity	ADMIN	admin	super	/admin/identity	1440	FAIL		1 icon svg with zero size		admin/super/admin_identity/1440.png
+/admin/identity	ADMIN	admin	super	/admin/identity	768	PASS				admin/super/admin_identity/768.png
+/admin/identity	ADMIN	admin	super	/admin/identity	390	PASS				admin/super/admin_identity/390.png
+/admin/templates	ADMIN	admin	super	/admin/templates	1440	FAIL		1 icon svg with zero size		admin/super/admin_templates/1440.png
+/admin/templates	ADMIN	admin	super	/admin/templates	768	PASS				admin/super/admin_templates/768.png
+/admin/templates	ADMIN	admin	super	/admin/templates	390	PASS				admin/super/admin_templates/390.png
+/admin/audit	ADMIN	admin	super	/admin/audit	1440	FAIL		1 icon svg with zero size		admin/super/admin_audit/1440.png
+/admin/audit	ADMIN	admin	super	/admin/audit	768	PASS				admin/super/admin_audit/768.png
+/admin/audit	ADMIN	admin	super	/admin/audit	390	PASS				admin/super/admin_audit/390.png
+/admin/data-sources	ADMIN	admin	super	/admin/data-sources	1440	FAIL		1 icon svg with zero size		admin/super/admin_data-sources/1440.png
+/admin/data-sources	ADMIN	admin	super	/admin/data-sources	768	PASS				admin/super/admin_data-sources/768.png
+/admin/data-sources	ADMIN	admin	super	/admin/data-sources	390	PASS				admin/super/admin_data-sources/390.png
+/admin/groups	ADMIN	admin	super	/admin/groups	1440	FAIL	KNOWN_NOT_READY	1 icon svg with zero size		admin/super/admin_groups/1440.png
+/admin/groups	ADMIN	admin	super	/admin/groups	768	PASS	KNOWN_NOT_READY			admin/super/admin_groups/768.png
+/admin/groups	ADMIN	admin	super	/admin/groups	390	PASS	KNOWN_NOT_READY			admin/super/admin_groups/390.png
+/admin/sharing	ADMIN	admin	super	/admin/sharing	1440	FAIL	KNOWN_NOT_READY	1 icon svg with zero size		admin/super/admin_sharing/1440.png
+/admin/sharing	ADMIN	admin	super	/admin/sharing	768	PASS	KNOWN_NOT_READY			admin/super/admin_sharing/768.png
+/admin/sharing	ADMIN	admin	super	/admin/sharing	390	PASS	KNOWN_NOT_READY			admin/super/admin_sharing/390.png
+/admin/byok	ADMIN	admin	super	/admin/byok	1440	FAIL	KNOWN_NOT_READY	1 icon svg with zero size		admin/super/admin_byok/1440.png
+/admin/byok	ADMIN	admin	super	/admin/byok	768	PASS	KNOWN_NOT_READY			admin/super/admin_byok/768.png
+/admin/byok	ADMIN	admin	super	/admin/byok	390	PASS	KNOWN_NOT_READY			admin/super/admin_byok/390.png
+/studio	STUDIO	studio	workspaceAdmin	/studio	1440	FAIL		1 icon svg with zero size		studio/workspaceAdmin/studio/1440.png
+/studio	STUDIO	studio	workspaceAdmin	/studio	768	PASS				studio/workspaceAdmin/studio/768.png
+/studio	STUDIO	studio	workspaceAdmin	/studio	390	PASS				studio/workspaceAdmin/studio/390.png
+/studio/new	STUDIO	studio	workspaceAdmin	/studio/new	1440	FAIL		1 icon svg with zero size		studio/workspaceAdmin/studio_new/1440.png
+/studio/new	STUDIO	studio	workspaceAdmin	/studio/new	768	PASS			overlapping controls: input "" × input "Tên ứng dụng"; input "" × input "Tên ứng dụng"	studio/workspaceAdmin/studio_new/768.png
+/studio/new	STUDIO	studio	workspaceAdmin	/studio/new	390	PASS			overlapping controls: input "" × input "Tên ứng dụng"	studio/workspaceAdmin/studio_new/390.png
+/studio/projects	STUDIO	studio	workspaceAdmin	/studio/projects	1440	FAIL		1 icon svg with zero size		studio/workspaceAdmin/studio_projects/1440.png
+/studio/projects	STUDIO	studio	workspaceAdmin	/studio/projects	768	PASS				studio/workspaceAdmin/studio_projects/768.png
+/studio/projects	STUDIO	studio	workspaceAdmin	/studio/projects	390	PASS				studio/workspaceAdmin/studio_projects/390.png
+/studio/templates	STUDIO	studio	workspaceAdmin	/studio/templates	1440	FAIL		1 icon svg with zero size	text < 12px: 11px "CRM"; 11px "#"	studio/workspaceAdmin/studio_templates/1440.png
+/studio/templates	STUDIO	studio	workspaceAdmin	/studio/templates	768	PASS			text < 12px: 11px "CRM"; 11px "#"	studio/workspaceAdmin/studio_templates/768.png
+/studio/templates	STUDIO	studio	workspaceAdmin	/studio/templates	390	PASS			text < 12px: 11px "CRM"; 11px "#"	studio/workspaceAdmin/studio_templates/390.png
+/studio/components	STUDIO	studio	workspaceAdmin	/studio/components	1440	FAIL		1 icon svg with zero size		studio/workspaceAdmin/studio_components/1440.png
+/studio/components	STUDIO	studio	workspaceAdmin	/studio/components	768	PASS				studio/workspaceAdmin/studio_components/768.png
+/studio/components	STUDIO	studio	workspaceAdmin	/studio/components	390	PASS				studio/workspaceAdmin/studio_components/390.png
+/studio/activity	STUDIO	studio	workspaceAdmin	/studio/activity	1440	FAIL		1 icon svg with zero size		studio/workspaceAdmin/studio_activity/1440.png
+/studio/activity	STUDIO	studio	workspaceAdmin	/studio/activity	768	PASS				studio/workspaceAdmin/studio_activity/768.png
+/studio/activity	STUDIO	studio	workspaceAdmin	/studio/activity	390	PASS				studio/workspaceAdmin/studio_activity/390.png
+/studio/site-access	STUDIO	studio	workspaceAdmin	/studio/site-access	1440	FAIL		1 icon svg with zero size		studio/workspaceAdmin/studio_site-access/1440.png
+/studio/site-access	STUDIO	studio	workspaceAdmin	/studio/site-access	768	PASS				studio/workspaceAdmin/studio_site-access/768.png
+/studio/site-access	STUDIO	studio	workspaceAdmin	/studio/site-access	390	PASS				studio/workspaceAdmin/studio_site-access/390.png
+/studio/zzz-khong-ton-tai	STUDIO	studio	workspaceAdmin	/studio/zzz-khong-ton-tai	1440	FAIL		1 icon svg with zero size		studio/workspaceAdmin/studio_zzz-khong-ton-tai/1440.png
+/studio/zzz-khong-ton-tai	STUDIO	studio	workspaceAdmin	/studio/zzz-khong-ton-tai	768	PASS				studio/workspaceAdmin/studio_zzz-khong-ton-tai/768.png
+/studio/zzz-khong-ton-tai	STUDIO	studio	workspaceAdmin	/studio/zzz-khong-ton-tai	390	PASS				studio/workspaceAdmin/studio_zzz-khong-ton-tai/390.png
+/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/ai	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/ai	1440	PASS			text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/studio_projects_id_ai/1440.png
+/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/ai	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/ai	768	FAIL		3 icon svg with zero size	text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_ai/768.png
+/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/ai	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/ai	390	FAIL		4 icon svg with zero size	text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_ai/390.png
+/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	1440	PASS	KNOWN_NOT_READY		text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/studio_projects_id_design/1440.png
+/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	768	PASS	KNOWN_NOT_READY		text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/studio_projects_id_design/768.png
+/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	390	FAIL		22 icon svg with zero size	0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/studio_projects_id_design/390.png
+/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/code	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/code	1440	PASS				studio/workspaceAdmin/studio_projects_id_code/1440.png
+/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/code	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/code	768	PASS				studio/workspaceAdmin/studio_projects_id_code/768.png
+/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/code	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/code	390	FAIL		1 icon svg with zero size		studio/workspaceAdmin/studio_projects_id_code/390.png
+/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/members	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/members	1440	PASS			small target(s): select "Chủ sở hữu Biên tập Xuất bản Chỉ xem" 208x22; select "Chủ sở hữu Biên tập Xuất bản Chỉ xem" 208x22 | overlapping controls: button.btn.primary "Xuất bản" × button.btn.icon "Đóng" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/studio_projects_id_members/1440.png
+/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/members	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/members	768	FAIL		3 icon svg with zero size | touch target < 24px (WCAG 2.5.8): select "Chủ sở hữu Biên tập Xuất bản Chỉ xem" 208x22; select "Chủ sở hữu Biên tập Xuất bản Chỉ xem" 208x22; select "Chủ sở hữu Biên tập Xuất bản Chỉ xem" 579x23	overlapping controls: button.btn.primary "Xuất bản" × button.btn.icon "Đóng"; button.starter "Thêm bảng so sánh sản phẩm" × input "Tên đăng nhập hoặc email để thêm vào: Th" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_members/768.png
+/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/members	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/members	390	FAIL		4 icon svg with zero size | touch target < 24px (WCAG 2.5.8): select "Chủ sở hữu Biên tập Xuất bản Chỉ xem" 115x22; select "Chủ sở hữu Biên tập Xuất bản Chỉ xem" 115x22; select "Chủ sở hữu Biên tập Xuất bản Chỉ xem" 333x23	overlapping controls: button.btn.primary "Xuất bản" × button.btn.icon "Đóng"; button.starter "Thêm bảng so sánh sản phẩm" × select "Chủ sở hữu Biên tập Xuất bản Chỉ xem" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_members/390.png
+/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/versions	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/versions	1440	PASS			overlapping controls: button.btn.primary "Xuất bản" × button.btn.icon "Đóng" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/studio_projects_id_versions/1440.png
+/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/versions	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/versions	768	FAIL		3 icon svg with zero size	overlapping controls: button.btn.primary "Xuất bản" × button.btn.icon "Đóng"; button.starter "Thêm bảng so sánh sản phẩm" × button.btn.sm "Khôi phục" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_versions/768.png
+/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/versions	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/versions	390	FAIL		4 icon svg with zero size	overlapping controls: button.btn.primary "Xuất bản" × button.btn.icon "Đóng"; button.starter "Thêm bảng so sánh sản phẩm" × button.btn.sm "Khôi phục" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_versions/390.png
+/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/assets	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/assets	1440	PASS			overlapping controls: button.btn.primary "Xuất bản" × button.btn.icon "Đóng" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/studio_projects_id_assets/1440.png
+/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/assets	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/assets	768	FAIL		3 icon svg with zero size	overlapping controls: button.btn.primary "Xuất bản" × button.btn.icon "Đóng" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_assets/768.png
+/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/assets	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/assets	390	FAIL		4 icon svg with zero size	overlapping controls: button.btn.primary "Xuất bản" × button.btn.icon "Đóng" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_assets/390.png
+/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/publish	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/publish	1440	PASS			text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/studio_projects_id_publish/1440.png
+/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/publish	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/publish	768	FAIL		3 icon svg with zero size	overlapping controls: button.starter "Ẩn phần đánh giá" × a "http://127.0.0.1:47305/trang-gioi-thieu-" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_publish/768.png
+/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/publish	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/publish	390	FAIL		4 icon svg with zero size	overlapping controls: textarea "Mô tả thay đổi" × button.btn.ghost "Phục vụ lại bản này"; button.sendButton "Gửi ↑" × button.btn.ghost "Phục vụ lại bản này" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_publish/390.png
+/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/settings	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/settings	1440	PASS			small target(s): select "Không Tài khoản / Mật khẩu SSO (OIDC)" 210x21; select "Mock (cục bộ) Self-host Cloud" 210x21 | overlapping controls: button.btn.primary "Xuất bản" × button.btn.icon "Đóng" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/studio_projects_id_settings/1440.png
+/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/settings	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/settings	768	FAIL		3 icon svg with zero size | touch target < 24px (WCAG 2.5.8): select "Không Tài khoản / Mật khẩu SSO (OIDC)" 210x21; select "Mock (cục bộ) Self-host Cloud" 210x21; select "Mẫu mới" 210x21	overlapping controls: button.btn.primary "Xuất bản" × button.btn.icon "Đóng"; button#_r_0_-tab-preview "Xem trước" × input "" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_settings/768.png
+/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/settings	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/settings	390	FAIL		4 icon svg with zero size | touch target < 24px (WCAG 2.5.8): select "Không Tài khoản / Mật khẩu SSO (OIDC)" 181x21; select "Mock (cục bộ) Self-host Cloud" 181x21; select "Mẫu mới" 181x21	overlapping controls: button.btn.primary "Xuất bản" × button.btn.icon "Đóng"; button.starter "Thêm bảng so sánh sản phẩm" × select "Không Tài khoản / Mật khẩu SSO (OIDC)" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_settings/390.png
+/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/site	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/site	1440	PASS			overlapping controls: button.btn.primary "Xuất bản" × button.btn.icon "Đóng" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/studio_projects_id_site/1440.png
+/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/site	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/site	768	FAIL		3 icon svg with zero size	overlapping controls: button.btn.primary "Xuất bản" × button.btn.icon "Đóng"; button#_r_0_-tab-chat.active "Trò chuyện" × button.linkButton.active "Trang chủ" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_site/768.png
+/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/site	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/site	390	FAIL		4 icon svg with zero size	overlapping controls: button.btn.primary "Xuất bản" × button.btn.icon "Đóng"; button.starter "Thêm bảng so sánh sản phẩm" × input "" | text < 12px: 11px "AI hiện chưa được quản trị viê"; 11px "Gửi ↑" | 0 visible h1	studio/workspaceAdmin/studio_projects_id_site/390.png
+/studio/projects/cba7c974-4c00-4f61-bfda-37e2a40c1710/design	STUDIO	studio	workspaceAdmin	/studio/projects/cba7c974-4c00-4f61-bfda-37e2a40c1710/design	1440	PASS	KNOWN_NOT_READY		text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/studio_projects_id_design/1440.png
+/studio/projects/cba7c974-4c00-4f61-bfda-37e2a40c1710/design	STUDIO	studio	workspaceAdmin	/studio/projects/cba7c974-4c00-4f61-bfda-37e2a40c1710/design	768	PASS	KNOWN_NOT_READY		text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/studio_projects_id_design/768.png
+/studio/projects/cba7c974-4c00-4f61-bfda-37e2a40c1710/design	STUDIO	studio	workspaceAdmin	/studio/projects/cba7c974-4c00-4f61-bfda-37e2a40c1710/design	390	FAIL		22 icon svg with zero size	0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/studio_projects_id_design/390.png
+/studio/projects/47230cfb-b26e-4622-a581-2cfecc557bdc/design	STUDIO	studio	workspaceAdmin	/studio/projects/47230cfb-b26e-4622-a581-2cfecc557bdc/design	1440	PASS	KNOWN_NOT_READY		text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/studio_projects_id_design/1440.png
+/studio/projects/47230cfb-b26e-4622-a581-2cfecc557bdc/design	STUDIO	studio	workspaceAdmin	/studio/projects/47230cfb-b26e-4622-a581-2cfecc557bdc/design	768	PASS	KNOWN_NOT_READY		text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/studio_projects_id_design/768.png
+/studio/projects/47230cfb-b26e-4622-a581-2cfecc557bdc/design	STUDIO	studio	workspaceAdmin	/studio/projects/47230cfb-b26e-4622-a581-2cfecc557bdc/design	390	FAIL		22 icon svg with zero size	0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/studio_projects_id_design/390.png
+/studio	STUDIO	studio	appCreator	/studio	1440	FAIL		1 icon svg with zero size		studio/appCreator/studio/1440.png
+/studio	STUDIO	studio	appCreator	/studio	768	PASS				studio/appCreator/studio/768.png
+/studio	STUDIO	studio	appCreator	/studio	390	PASS				studio/appCreator/studio/390.png
+/studio/new	STUDIO	studio	appCreator	/studio/new	1440	FAIL		1 icon svg with zero size		studio/appCreator/studio_new/1440.png
+/studio/new	STUDIO	studio	appCreator	/studio/new	768	PASS			overlapping controls: input "" × input "Tên ứng dụng"; input "" × input "Tên ứng dụng"	studio/appCreator/studio_new/768.png
+/studio/new	STUDIO	studio	appCreator	/studio/new	390	PASS			overlapping controls: input "" × input "Tên ứng dụng"	studio/appCreator/studio_new/390.png
+/studio/projects	STUDIO	studio	appCreator	/studio/projects	1440	PASS			no main landmark	studio/appCreator/studio_projects/1440.png
+/studio/projects	STUDIO	studio	appCreator	/studio/projects	768	PASS				studio/appCreator/studio_projects/768.png
+/studio/projects	STUDIO	studio	appCreator	/studio/projects	390	PASS				studio/appCreator/studio_projects/390.png
+/studio/templates	STUDIO	studio	appCreator	/studio/templates	1440	FAIL		1 icon svg with zero size	text < 12px: 11px "CRM"; 11px "#"	studio/appCreator/studio_templates/1440.png
+/studio/templates	STUDIO	studio	appCreator	/studio/templates	768	PASS			text < 12px: 11px "CRM"; 11px "#"	studio/appCreator/studio_templates/768.png
+/studio/templates	STUDIO	studio	appCreator	/studio/templates	390	FAIL		primary navigation unreachable at this width (no sidebar links, no menu button) | HTTP 5xx: 503 /api/v1/auth/me	console: Failed to load resource: the server responded with a status of 503 (Service Unavailable)	studio/appCreator/studio_templates/390.png
+/studio/components	STUDIO	studio	appCreator	/studio/components	1440	FAIL		1 icon svg with zero size		studio/appCreator/studio_components/1440.png
+/studio/components	STUDIO	studio	appCreator	/studio/components	768	PASS				studio/appCreator/studio_components/768.png
+/studio/components	STUDIO	studio	appCreator	/studio/components	390	PASS				studio/appCreator/studio_components/390.png
+/studio/activity	STUDIO	studio	appCreator	/studio/activity	1440	FAIL		1 icon svg with zero size		studio/appCreator/studio_activity/1440.png
+/studio/activity	STUDIO	studio	appCreator	/studio/activity	768	PASS				studio/appCreator/studio_activity/768.png
+/studio/activity	STUDIO	studio	appCreator	/studio/activity	390	PASS				studio/appCreator/studio_activity/390.png
+/studio/site-access	STUDIO	studio	appCreator	/studio/site-access	1440	FAIL		1 icon svg with zero size		studio/appCreator/studio_site-access/1440.png
+/studio/site-access	STUDIO	studio	appCreator	/studio/site-access	768	PASS				studio/appCreator/studio_site-access/768.png
+/studio/site-access	STUDIO	studio	appCreator	/studio/site-access	390	PASS				studio/appCreator/studio_site-access/390.png
+/studio/zzz-khong-ton-tai	STUDIO	studio	appCreator	/studio/zzz-khong-ton-tai	1440	FAIL		1 icon svg with zero size		studio/appCreator/studio_zzz-khong-ton-tai/1440.png
+/studio/zzz-khong-ton-tai	STUDIO	studio	appCreator	/studio/zzz-khong-ton-tai	768	PASS				studio/appCreator/studio_zzz-khong-ton-tai/768.png
+/studio/zzz-khong-ton-tai	STUDIO	studio	appCreator	/studio/zzz-khong-ton-tai	390	PASS				studio/appCreator/studio_zzz-khong-ton-tai/390.png
+/login	AUTH	platform	anon	/login	1440	PASS				platform/anon/login/1440.png
+/login	AUTH	platform	anon	/login	768	PASS				platform/anon/login/768.png
+/login	AUTH	platform	anon	/login	390	PASS				platform/anon/login/390.png
+/auth/no-access	AUTH	platform	anon	/auth/no-access	1440	PASS				platform/anon/auth_no-access/1440.png
+/auth/no-access	AUTH	platform	anon	/auth/no-access	768	PASS				platform/anon/auth_no-access/768.png
+/auth/no-access	AUTH	platform	anon	/auth/no-access	390	PASS				platform/anon/auth_no-access/390.png
+/auth/no-workspace	AUTH	platform	anon	/auth/no-workspace	1440	PASS				platform/anon/auth_no-workspace/1440.png
+/auth/no-workspace	AUTH	platform	anon	/auth/no-workspace	768	PASS				platform/anon/auth_no-workspace/768.png
+/auth/no-workspace	AUTH	platform	anon	/auth/no-workspace	390	PASS				platform/anon/auth_no-workspace/390.png
+/auth/activate	AUTH	platform	anon	/auth/activate	1440	PASS				platform/anon/auth_activate/1440.png
+/auth/activate	AUTH	platform	anon	/auth/activate	768	PASS				platform/anon/auth_activate/768.png
+/auth/activate	AUTH	platform	anon	/auth/activate	390	PASS				platform/anon/auth_activate/390.png
+/platform/zzz-khong-ton-tai	AUTH	platform	anon	/platform/zzz-khong-ton-tai	1440	PASS				platform/anon/platform_zzz-khong-ton-tai/1440.png
+/platform/zzz-khong-ton-tai	AUTH	platform	anon	/platform/zzz-khong-ton-tai	768	FAIL		primary navigation unreachable at this width (no sidebar links, no menu button)		platform/anon/platform_zzz-khong-ton-tai/768.png
+/platform/zzz-khong-ton-tai	AUTH	platform	anon	/platform/zzz-khong-ton-tai	390	FAIL		primary navigation unreachable at this width (no sidebar links, no menu button)		platform/anon/platform_zzz-khong-ton-tai/390.png
+/login	AUTH	admin	anon	/login	1440	PASS				admin/anon/login/1440.png
+/login	AUTH	admin	anon	/login	768	PASS				admin/anon/login/768.png
+/login	AUTH	admin	anon	/login	390	PASS				admin/anon/login/390.png
+/auth/no-access	AUTH	admin	anon	/auth/no-access	1440	PASS				admin/anon/auth_no-access/1440.png
+/auth/no-access	AUTH	admin	anon	/auth/no-access	768	PASS				admin/anon/auth_no-access/768.png
+/auth/no-access	AUTH	admin	anon	/auth/no-access	390	PASS				admin/anon/auth_no-access/390.png
+/auth/no-workspace	AUTH	admin	anon	/auth/no-workspace	1440	PASS				admin/anon/auth_no-workspace/1440.png
+/auth/no-workspace	AUTH	admin	anon	/auth/no-workspace	768	PASS				admin/anon/auth_no-workspace/768.png
+/auth/no-workspace	AUTH	admin	anon	/auth/no-workspace	390	PASS				admin/anon/auth_no-workspace/390.png
+/auth/activate	AUTH	admin	anon	/auth/activate	1440	PASS				admin/anon/auth_activate/1440.png
+/auth/activate	AUTH	admin	anon	/auth/activate	768	PASS				admin/anon/auth_activate/768.png
+/auth/activate	AUTH	admin	anon	/auth/activate	390	PASS				admin/anon/auth_activate/390.png
+/admin/zzz-khong-ton-tai	AUTH	admin	anon	/admin/zzz-khong-ton-tai	1440	PASS				admin/anon/admin_zzz-khong-ton-tai/1440.png
+/admin/zzz-khong-ton-tai	AUTH	admin	anon	/admin/zzz-khong-ton-tai	768	FAIL		primary navigation unreachable at this width (no sidebar links, no menu button)		admin/anon/admin_zzz-khong-ton-tai/768.png
+/admin/zzz-khong-ton-tai	AUTH	admin	anon	/admin/zzz-khong-ton-tai	390	FAIL		primary navigation unreachable at this width (no sidebar links, no menu button)		admin/anon/admin_zzz-khong-ton-tai/390.png
+/login	AUTH	studio	anon	/login	1440	PASS				studio/anon/login/1440.png
+/login	AUTH	studio	anon	/login	768	PASS				studio/anon/login/768.png
+/login	AUTH	studio	anon	/login	390	PASS				studio/anon/login/390.png
+/auth/no-access	AUTH	studio	anon	/auth/no-access	1440	PASS				studio/anon/auth_no-access/1440.png
+/auth/no-access	AUTH	studio	anon	/auth/no-access	768	PASS				studio/anon/auth_no-access/768.png
+/auth/no-access	AUTH	studio	anon	/auth/no-access	390	PASS				studio/anon/auth_no-access/390.png
+/auth/no-workspace	AUTH	studio	anon	/auth/no-workspace	1440	PASS				studio/anon/auth_no-workspace/1440.png
+/auth/no-workspace	AUTH	studio	anon	/auth/no-workspace	768	PASS				studio/anon/auth_no-workspace/768.png
+/auth/no-workspace	AUTH	studio	anon	/auth/no-workspace	390	PASS				studio/anon/auth_no-workspace/390.png
+/auth/activate	AUTH	studio	anon	/auth/activate	1440	PASS				studio/anon/auth_activate/1440.png
+/auth/activate	AUTH	studio	anon	/auth/activate	768	PASS				studio/anon/auth_activate/768.png
+/auth/activate	AUTH	studio	anon	/auth/activate	390	PASS				studio/anon/auth_activate/390.png
+/studio/zzz-khong-ton-tai	AUTH	studio	anon	/studio/zzz-khong-ton-tai	1440	PASS				studio/anon/studio_zzz-khong-ton-tai/1440.png
+/studio/zzz-khong-ton-tai	AUTH	studio	anon	/studio/zzz-khong-ton-tai	768	FAIL		primary navigation unreachable at this width (no sidebar links, no menu button)		studio/anon/studio_zzz-khong-ton-tai/768.png
+/studio/zzz-khong-ton-tai	AUTH	studio	anon	/studio/zzz-khong-ton-tai	390	FAIL		primary navigation unreachable at this width (no sidebar links, no menu button)		studio/anon/studio_zzz-khong-ton-tai/390.png
+/platform/tenants · mở "+ Tạo công ty"	CREATE_COMPANY	platform	super	/platform/tenants	1440	FAIL		1 icon svg with zero size | focus escapes the dialog (no focus trap) | Escape does not close the dialog	text < 12px: 11px "Không bắt buộc"	platform/super/platform_tenants/dialog__T_o_c_ng_ty/1440.png
+/platform/tenants · mở "+ Tạo công ty"	CREATE_COMPANY	platform	super	/platform/tenants	390	FAIL		focus escapes the dialog (no focus trap)	overlapping controls: button.btn.primary "+ Tạo công ty" × input ""; a "Default tenant" × input "Tìm người dùng" | text < 12px: 11px "Không bắt buộc" | focus is not returned to the control that opened the dialog	platform/super/platform_tenants/dialog__T_o_c_ng_ty/390.png
+/platform/users · mở "+ Tạo tài khoản"	ORGANIZATION	platform	super	/platform/users	390	PASS			no visible close/cancel control | focus is not returned to the control that opened the dialog	platform/super/platform_users/dialog__T_o_t_i_kho_n/390.png
+/platform/tenants/5fcfa9ad-ceb6-4d46-ab3d-8eb9550c94f3 · mở "Tạo tài khoản quản trị công ty"	CREATE_COMPANY	platform	super	/platform/tenants/5fcfa9ad-ceb6-4d46-ab3d-8eb9550c94f3	390	FAIL		focus escapes the dialog (no focus trap)	focus is not returned to the control that opened the dialog	platform/super/platform_tenants_id/dialog_T_o_t_i_kho_n_qu_n_tr_c_ng_ty/390.png
+/platform/tenants/5fcfa9ad-ceb6-4d46-ab3d-8eb9550c94f3 · mở "Đổi tên công ty"	CREATE_COMPANY	platform	super	/platform/tenants/5fcfa9ad-ceb6-4d46-ab3d-8eb9550c94f3	390	FAIL		focus escapes the dialog (no focus trap)	focus is not returned to the control that opened the dialog	platform/super/platform_tenants_id/dialog__i_t_n_c_ng_ty/390.png
+/admin/people · mở "+ Tạo tài khoản"	EMPLOYEES	admin	tenantAdmin	/admin/people	1440	FAIL		1 icon svg with zero size | focus escapes the dialog (no focus trap)	overlapping controls: a "Cơ cấu tổ chức" × input ""; select "Kinh doanh – Marketing" × select "Không gán workspace Kinh doanh – Marketi" | focus is not returned to the control that opened the dialog	admin/tenantAdmin/admin_people/dialog__T_o_t_i_kho_n/1440.png
+/admin/people · mở "+ Tạo tài khoản"	EMPLOYEES	admin	tenantAdmin	/admin/people	390	FAIL		focus escapes the dialog (no focus trap)	overlapping controls: a "Công ty của tôi" × input ""; a "Cơ cấu tổ chức" × a "Nhân viên" | focus is not returned to the control that opened the dialog	admin/tenantAdmin/admin_people/dialog__T_o_t_i_kho_n/390.png
+/admin/company · mở "Đổi tên công ty"	ORGANIZATION	admin	tenantAdmin	/admin/company	1440	FAIL		1 icon svg with zero size | focus escapes the dialog (no focus trap)	focus is not returned to the control that opened the dialog	admin/tenantAdmin/admin_company/dialog__i_t_n_c_ng_ty/1440.png
+/admin/company · mở "Đổi tên công ty"	ORGANIZATION	admin	tenantAdmin	/admin/company	390	FAIL		focus escapes the dialog (no focus trap)	overlapping controls: a "Cơ cấu tổ chức" × a "Nhân viên"; a "Nhân viên" × a "Người dùng" | focus is not returned to the control that opened the dialog	admin/tenantAdmin/admin_company/dialog__i_t_n_c_ng_ty/390.png
+builder · rail "Trang"	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	1440	PASS	KNOWN_NOT_READY		text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_rail_Trang_/1440.png
+builder · rail "Thành phần"	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	1440	FAIL	KNOWN_NOT_READY	22 icon svg with zero size	text < 12px: 11px "Chưa sẵn sàng"; 11px "Chưa sẵn sàng" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_rail_Th_nh_ph_n_/1440.png
+builder · rail "Dữ liệu"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	1440	FAIL		22 icon svg with zero size	text < 12px: 11px "chưa"; 11px "Chữ thường, số, dấu gạch ngang" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_rail_D_li_u_/1440.png
+builder · rail "Biểu mẫu"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	1440	PASS				studio/workspaceAdmin/builder_rail_Bi_u_m_u_/1440.png
+builder · rail "Hành động"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	1440	FAIL		22 icon svg with zero size	text < 12px: 11px "Gắn vào thành phần" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_rail_H_nh_ng_/1440.png
+builder · rail "Workflow"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	1440	FAIL		22 icon svg with zero size	0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_rail_Workflow_/1440.png
+builder · rail "Giao diện"	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	1440	FAIL		22 icon svg with zero size	small target(s): select#_r_6_ "Mặc định SYSTEM SERIF MONO ROUNDED" 239x23; select#_r_7_ "Mặc định NONE SM MD LG" 239x23 | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_rail_Giao_di_n_/1440.png
+builder · rail "AI"	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	1440	FAIL		22 icon svg with zero size	0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_rail_AI_/1440.png
+builder · rail "Trang"	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	768	PASS	KNOWN_NOT_READY		text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_rail_Trang_/768.png
+builder · rail "Thành phần"	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	768	FAIL	KNOWN_NOT_READY	22 icon svg with zero size	text < 12px: 11px "Chưa sẵn sàng"; 11px "Chưa sẵn sàng" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_rail_Th_nh_ph_n_/768.png
+builder · rail "Dữ liệu"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	768	FAIL		22 icon svg with zero size	text < 12px: 11px "chưa"; 11px "Chữ thường, số, dấu gạch ngang" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_rail_D_li_u_/768.png
+builder · rail "Biểu mẫu"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	768	FAIL		22 icon svg with zero size	0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_rail_Bi_u_m_u_/768.png
+builder · rail "Hành động"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	768	FAIL		22 icon svg with zero size	text < 12px: 11px "Gắn vào thành phần" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_rail_H_nh_ng_/768.png
+builder · rail "Workflow"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	768	FAIL		22 icon svg with zero size	0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_rail_Workflow_/768.png
+builder · rail "Giao diện"	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	768	FAIL		22 icon svg with zero size | touch target < 24px (WCAG 2.5.8): select#_r_6_ "Mặc định SYSTEM SERIF MONO ROUNDED" 305x23; select#_r_7_ "Mặc định NONE SM MD LG" 305x23	0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_rail_Giao_di_n_/768.png
+builder · rail "AI"	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	768	FAIL		22 icon svg with zero size	0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_rail_AI_/768.png
+builder · rail "Trang"	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	390	FAIL		22 icon svg with zero size	0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_rail_Trang_/390.png
+builder · rail "Thành phần"	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	390	FAIL		HTTP 5xx: 503 /api/v1/auth/me	console: Failed to load resource: the server responded with a status of 503 (Service Unavailable)	studio/workspaceAdmin/builder_rail_Th_nh_ph_n_/390.png
+builder · rail "Dữ liệu"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	390	FAIL		22 icon svg with zero size	0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_rail_D_li_u_/390.png
+builder · rail "Biểu mẫu"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	390	FAIL		22 icon svg with zero size	0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_rail_Bi_u_m_u_/390.png
+builder · rail "Hành động"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	390	FAIL		22 icon svg with zero size	0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_rail_H_nh_ng_/390.png
+builder · rail "Workflow"	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	390	FAIL		22 icon svg with zero size	0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_rail_Workflow_/390.png
+builder · rail "Giao diện"	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	390	FAIL		22 icon svg with zero size	0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_rail_Giao_di_n_/390.png
+builder · rail "AI"	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	390	PASS			0 visible h1 | no main landmark	studio/workspaceAdmin/builder_rail_AI_/390.png
+builder · inspector (section selected)	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	1440	PASS	KNOWN_NOT_READY		small target(s): select#_r_6_-image "Không có ảnh" 315x21 | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_inspector_section_selected_/1440.png
+builder · Dùng thử (test mode)	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	1440	PASS	KNOWN_NOT_READY		text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_D_ng_th_test_mode_/1440.png
+builder · Phiên bản (history drawer)	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	1440	PASS			0 visible h1 | no main landmark	studio/workspaceAdmin/builder_Phi_n_b_n_history_drawer_/1440.png
+publish · dialog + history expanded	PUBLISH_ROLLBACK	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	1440	FAIL	KNOWN_NOT_READY	focus escapes the dialog (no focus trap)	overlapping controls: button.btn.ghost "" × button.btn.ghost "Hủy"; button.btn.ghost "" × button.btn.primary "Xuất bản" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/publish_dialog_history_expanded/1440.png
+builder · inspector (section selected)	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	768	FAIL	KNOWN_NOT_READY	touch target < 24px (WCAG 2.5.8): select#_r_6_-image "Không có ảnh" 744x21	overlapping controls: button.bx-drag "Kéo để di chuyển Công nghệ" × aside#mview-panel-props.bx-right "Đầu trang (Hero) hero-1 Nội dung Thiết k"; button.bx-mini "Đưa Công nghệ lên" × aside#mview-panel-props.bx-right "Đầu trang (Hero) hero-1 Nội dung Thiết k" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_inspector_section_selected_/768.png
+builder · Dùng thử (test mode)	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	768	PASS	KNOWN_NOT_READY		overlapping controls: button.btn.dense "Đổi tên / đường dẫn" × aside#mview-panel-props.bx-right "Kiểm thử ứng dụng Chế độ dùng thử Không"; button.btn.dense "Xóa trang" × aside#mview-panel-props.bx-right "Kiểm thử ứng dụng Chế độ dùng thử Không" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_D_ng_th_test_mode_/768.png
+builder · Phiên bản (history drawer)	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	768	PASS			0 visible h1 | no main landmark	studio/workspaceAdmin/builder_Phi_n_b_n_history_drawer_/768.png
+publish · dialog + history expanded	PUBLISH_ROLLBACK	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	768	FAIL	KNOWN_NOT_READY	focus escapes the dialog (no focus trap)	overlapping controls: div#rail-panel-pages.bx-left-panel "Trang Trang Mọi đường dẫn hợp lệ. Tran" × a "http://127.0.0.1:47305/trang-gioi-thieu-"; button.bx-mini "Đưa Thanh điều hướng lên" × a "http://127.0.0.1:47305/trang-gioi-thieu-" | text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/publish_dialog_history_expanded/768.png
+builder · inspector (section selected)	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	390	FAIL		22 icon svg with zero size	0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_inspector_section_selected_/390.png
+builder · Dùng thử (test mode)	DATA_ACTION_WORKFLOW	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	390	PASS			0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_D_ng_th_test_mode_/390.png
+builder · Phiên bản (history drawer)	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	390	FAIL		HTTP 5xx: 500 /api/v1/workspaces/79c293a6-f0e9-435e-b6d5-12907bf23fa6/projects/07a9594c-a976-4269-a593-e7abb2d49082/assets | focus escapes the dialog (no focus trap)	0 visible h1 | no main landmark | console: Failed to load resource: the server responded with a status of 500 (Internal Server Error)	studio/workspaceAdmin/builder_Phi_n_b_n_history_drawer_/390.png
+publish · dialog + history expanded	PUBLISH_ROLLBACK	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	390	FAIL		22 icon svg with zero size | focus escapes the dialog (no focus trap)	0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/publish_dialog_history_expanded/390.png
+builder · mode "✦ AI"	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	1440	PASS	KNOWN_NOT_READY		text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_mode_AI_/1440.png
+builder · mode "Code"	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	1440	PASS	KNOWN_NOT_READY		text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_mode_Code_/1440.png
+builder · mode "✦ AI"	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	768	PASS	KNOWN_NOT_READY		text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_mode_AI_/768.png
+builder · mode "Code"	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	768	PASS	KNOWN_NOT_READY		text < 12px: 11px "Trang chủ"; 11px "/" | 0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_mode_Code_/768.png
+builder · mode "✦ AI"	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	390	FAIL		22 icon svg with zero size	0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_mode_AI_/390.png
+builder · mode "Code"	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	390	FAIL		22 icon svg with zero size	0 visible h1 | console: Unable to post message to http://127.0.0.1:47307. Recipient has origin null. 	studio/workspaceAdmin/builder_mode_Code_/390.png
+/platform/tenants · state loading	CREATE_COMPANY	platform	super	/platform/tenants	1440	FAIL		1 icon svg with zero size		platform/super/platform_tenants/state_loading/1440.png
+/platform/tenants · state empty	CREATE_COMPANY	platform	super	/platform/tenants	1440	FAIL		1 icon svg with zero size		platform/super/platform_tenants/state_empty/1440.png
+/platform/tenants · state error	CREATE_COMPANY	platform	super	/platform/tenants	1440	FAIL		1 icon svg with zero size		platform/super/platform_tenants/state_error/1440.png
+/platform/tenants · state loading	CREATE_COMPANY	platform	super	/platform/tenants	390	PASS				platform/super/platform_tenants/state_loading/390.png
+/platform/tenants · state empty	CREATE_COMPANY	platform	super	/platform/tenants	390	PASS				platform/super/platform_tenants/state_empty/390.png
+/platform/tenants · state error	CREATE_COMPANY	platform	super	/platform/tenants	390	PASS				platform/super/platform_tenants/state_error/390.png
+/platform/users · state loading	ORGANIZATION	platform	super	/platform/users	1440	FAIL		1 icon svg with zero size		platform/super/platform_users/state_loading/1440.png
+/platform/users · state empty	ORGANIZATION	platform	super	/platform/users	1440	FAIL		1 icon svg with zero size		platform/super/platform_users/state_empty/1440.png
+/platform/users · state error	ORGANIZATION	platform	super	/platform/users	1440	FAIL		1 icon svg with zero size		platform/super/platform_users/state_error/1440.png
+/platform/users · state loading	ORGANIZATION	platform	super	/platform/users	390	PASS				platform/super/platform_users/state_loading/390.png
+/platform/users · state empty	ORGANIZATION	platform	super	/platform/users	390	PASS				platform/super/platform_users/state_empty/390.png
+/platform/users · state error	ORGANIZATION	platform	super	/platform/users	390	PASS				platform/super/platform_users/state_error/390.png
+/platform/audit · state loading	ORGANIZATION	platform	super	/platform/audit	1440	FAIL		1 icon svg with zero size		platform/super/platform_audit/state_loading/1440.png
+/platform/audit · state empty	ORGANIZATION	platform	super	/platform/audit	1440	FAIL		1 icon svg with zero size		platform/super/platform_audit/state_empty/1440.png
+/platform/audit · state error	ORGANIZATION	platform	super	/platform/audit	1440	FAIL		1 icon svg with zero size		platform/super/platform_audit/state_error/1440.png
+/platform/audit · state loading	ORGANIZATION	platform	super	/platform/audit	390	PASS				platform/super/platform_audit/state_loading/390.png
+/platform/audit · state empty	ORGANIZATION	platform	super	/platform/audit	390	PASS				platform/super/platform_audit/state_empty/390.png
+/platform/audit · state error	ORGANIZATION	platform	super	/platform/audit	390	PASS				platform/super/platform_audit/state_error/390.png
+/admin/people · state loading	EMPLOYEES	admin	tenantAdmin	/admin/people	1440	FAIL		1 icon svg with zero size	page makes no data GET beyond /auth/*: state not applicable	admin/tenantAdmin/admin_people/state_loading/1440.png
+/admin/people · state empty	EMPLOYEES	admin	tenantAdmin	/admin/people	1440	FAIL		1 icon svg with zero size	page makes no data GET beyond /auth/*: state not applicable	admin/tenantAdmin/admin_people/state_empty/1440.png
+/admin/people · state error	EMPLOYEES	admin	tenantAdmin	/admin/people	1440	FAIL		1 icon svg with zero size	page makes no data GET beyond /auth/*: state not applicable	admin/tenantAdmin/admin_people/state_error/1440.png
+/admin/people · state loading	EMPLOYEES	admin	tenantAdmin	/admin/people	390	PASS			overlapping controls: a "Cơ cấu tổ chức" × a "Nhân viên" | page makes no data GET beyond /auth/*: state not applicable	admin/tenantAdmin/admin_people/state_loading/390.png
+/admin/people · state empty	EMPLOYEES	admin	tenantAdmin	/admin/people	390	PASS			overlapping controls: a "Cơ cấu tổ chức" × a "Nhân viên" | page makes no data GET beyond /auth/*: state not applicable	admin/tenantAdmin/admin_people/state_empty/390.png
+/admin/people · state error	EMPLOYEES	admin	tenantAdmin	/admin/people	390	PASS			overlapping controls: a "Cơ cấu tổ chức" × a "Nhân viên" | page makes no data GET beyond /auth/*: state not applicable	admin/tenantAdmin/admin_people/state_error/390.png
+/admin/my-workspaces · state loading	ORGANIZATION	admin	tenantAdmin	/admin/my-workspaces	1440	FAIL		1 icon svg with zero size		admin/tenantAdmin/admin_my-workspaces/state_loading/1440.png
+/admin/my-workspaces · state empty	ORGANIZATION	admin	tenantAdmin	/admin/my-workspaces	1440	FAIL		1 icon svg with zero size		admin/tenantAdmin/admin_my-workspaces/state_empty/1440.png
+/admin/my-workspaces · state error	ORGANIZATION	admin	tenantAdmin	/admin/my-workspaces	1440	FAIL		1 icon svg with zero size		admin/tenantAdmin/admin_my-workspaces/state_error/1440.png
+/admin/my-workspaces · state loading	ORGANIZATION	admin	tenantAdmin	/admin/my-workspaces	390	PASS				admin/tenantAdmin/admin_my-workspaces/state_loading/390.png
+/admin/my-workspaces · state empty	ORGANIZATION	admin	tenantAdmin	/admin/my-workspaces	390	PASS				admin/tenantAdmin/admin_my-workspaces/state_empty/390.png
+/admin/my-workspaces · state error	ORGANIZATION	admin	tenantAdmin	/admin/my-workspaces	390	PASS				admin/tenantAdmin/admin_my-workspaces/state_error/390.png
+/studio/projects · state loading	STUDIO	studio	workspaceAdmin	/studio/projects	1440	FAIL		1 icon svg with zero size		studio/workspaceAdmin/studio_projects/state_loading/1440.png
+/studio/projects · state empty	STUDIO	studio	workspaceAdmin	/studio/projects	1440	FAIL		1 icon svg with zero size		studio/workspaceAdmin/studio_projects/state_empty/1440.png
+/studio/projects · state error	STUDIO	studio	workspaceAdmin	/studio/projects	1440	FAIL		1 icon svg with zero size		studio/workspaceAdmin/studio_projects/state_error/1440.png
+/studio/projects · state loading	STUDIO	studio	workspaceAdmin	/studio/projects	390	PASS				studio/workspaceAdmin/studio_projects/state_loading/390.png
+/studio/projects · state empty	STUDIO	studio	workspaceAdmin	/studio/projects	390	PASS				studio/workspaceAdmin/studio_projects/state_empty/390.png
+/studio/projects · state error	STUDIO	studio	workspaceAdmin	/studio/projects	390	PASS				studio/workspaceAdmin/studio_projects/state_error/390.png
+/studio/templates · state loading	STUDIO	studio	workspaceAdmin	/studio/templates	1440	FAIL		1 icon svg with zero size		studio/workspaceAdmin/studio_templates/state_loading/1440.png
+/studio/templates · state empty	STUDIO	studio	workspaceAdmin	/studio/templates	1440	FAIL		1 icon svg with zero size		studio/workspaceAdmin/studio_templates/state_empty/1440.png
+/studio/templates · state error	STUDIO	studio	workspaceAdmin	/studio/templates	1440	FAIL		1 icon svg with zero size		studio/workspaceAdmin/studio_templates/state_error/1440.png
+/studio/templates · state loading	STUDIO	studio	workspaceAdmin	/studio/templates	390	PASS				studio/workspaceAdmin/studio_templates/state_loading/390.png
+/studio/templates · state empty	STUDIO	studio	workspaceAdmin	/studio/templates	390	PASS				studio/workspaceAdmin/studio_templates/state_empty/390.png
+/studio/templates · state error	STUDIO	studio	workspaceAdmin	/studio/templates	390	PASS				studio/workspaceAdmin/studio_templates/state_error/390.png
+/studio/activity · state loading	STUDIO	studio	workspaceAdmin	/studio/activity	1440	FAIL		1 icon svg with zero size		studio/workspaceAdmin/studio_activity/state_loading/1440.png
+/studio/activity · state empty	STUDIO	studio	workspaceAdmin	/studio/activity	1440	FAIL		1 icon svg with zero size		studio/workspaceAdmin/studio_activity/state_empty/1440.png
+/studio/activity · state error	STUDIO	studio	workspaceAdmin	/studio/activity	1440	FAIL		1 icon svg with zero size		studio/workspaceAdmin/studio_activity/state_error/1440.png
+/studio/activity · state loading	STUDIO	studio	workspaceAdmin	/studio/activity	390	PASS				studio/workspaceAdmin/studio_activity/state_loading/390.png
+/studio/activity · state empty	STUDIO	studio	workspaceAdmin	/studio/activity	390	PASS				studio/workspaceAdmin/studio_activity/state_empty/390.png
+/studio/activity · state error	STUDIO	studio	workspaceAdmin	/studio/activity	390	PASS				studio/workspaceAdmin/studio_activity/state_error/390.png
+/platform · keyboard (Tab ×3)	PLATFORM	platform	super	/platform	1440	PASS				
+/admin · keyboard (Tab ×0)	ADMIN	admin	tenantAdmin	/admin	1440	FAIL		fewer than 3 keyboard stops		
+/studio · keyboard (Tab ×6)	STUDIO	studio	workspaceAdmin	/studio	1440	PASS				
+/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design · keyboard (Tab ×17)	STUDIO	studio	workspaceAdmin	/studio/projects/07a9594c-a976-4269-a593-e7abb2d49082/design	1440	PASS				
+/login · keyboard (Tab ×4)	PLATFORM	platform	anon	/login	1440	PASS			4 focus stops without a visible/aria name	
+platform · sidebar navigation (14 links)	PLATFORM	platform	super	/platform	1440	FAIL		click "Cảnh báo" went to /login, expected /platform/alerts | "Cảnh báo" not marked aria-current | click "Sao lưu" went to /login, expected /platform/backups | "Sao lưu" not marked aria-current		
+admin · sidebar navigation (10 links)	ADMIN	admin	tenantAdmin	/admin	1440	FAIL		click "Nhân viên" went to /login, expected /admin/employees | "Nhân viên" not marked aria-current | click "Workspace của tôi" went to /login, expected /admin/my-workspaces | "Workspace của tôi" not marked aria-current | click "Chia sẻ Sắp có" went to /login, expected /admin/sharing | "Chia sẻ Sắp có" not marked aria-current		
+studio · sidebar navigation (6 links)	STUDIO	studio	workspaceAdmin	/studio	1440	FAIL		"Tạo ứng dụng" not marked aria-current | click "Components" went to /login, expected /studio/components | "Components" not marked aria-current		

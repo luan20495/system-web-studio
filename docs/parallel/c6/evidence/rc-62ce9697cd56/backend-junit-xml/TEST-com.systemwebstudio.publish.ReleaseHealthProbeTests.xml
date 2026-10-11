@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.publish.ReleaseHealthProbeTests" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:50:48.610Z" hostname="macmini-2.local" time="1.018">
+  <properties/>
+  <testcase name="a probe that is not configured says so and never claims the address was checked()" classname="com.systemwebstudio.publish.ReleaseHealthProbeTests" time="0.0"/>
+  <testcase name="a private site answering an anonymous visitor with 401 or 403 is being served()" classname="com.systemwebstudio.publish.ReleaseHealthProbeTests" time="0.004"/>
+  <testcase name="an address that answers 2xx or 3xx is healthy, and a redirect is not followed anywhere()" classname="com.systemwebstudio.publish.ReleaseHealthProbeTests" time="0.002"/>
+  <testcase name="an address that answers but is not serving the release is unhealthy()" classname="com.systemwebstudio.publish.ReleaseHealthProbeTests" time="0.006"/>
+  <testcase name="no answer is UNKNOWN, never success - refused connection and timeout()" classname="com.systemwebstudio.publish.ReleaseHealthProbeTests" time="1.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

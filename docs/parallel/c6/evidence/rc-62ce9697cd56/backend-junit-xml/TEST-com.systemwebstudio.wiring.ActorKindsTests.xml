@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.wiring.ActorKindsTests" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:53:17.127Z" hostname="macmini-2.local" time="0.0">
+  <properties/>
+  <testcase name="USER is never produced for another kind()" classname="com.systemwebstudio.wiring.ActorKindsTests" time="0.0"/>
+  <testcase name="every logic kind converts to the tenancy kind of the same name and back()" classname="com.systemwebstudio.wiring.ActorKindsTests" time="0.0"/>
+  <testcase name="the two enums have exactly the same names, except PUBLIC_SITE which exists only in tenancy()" classname="com.systemwebstudio.wiring.ActorKindsTests" time="0.0"/>
+  <testcase name="a PUBLIC_SITE is not convertible for the action and workflow runtime, and no logic kind converts to it()" classname="com.systemwebstudio.wiring.ActorKindsTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

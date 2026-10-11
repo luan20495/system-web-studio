@@ -1,0 +1,11 @@
+DOM node trend (round:nodes) 5:230 15:230 20:230 25:230 30:230 35:230
+PASS  40 rounds of rail/inspector/Test-panel switching completed  — {"nodes":230,"listeners":202,"documents":1,"heap":8982578}
+PASS  DOM nodes do not grow (≤ 10% between round 10 and the last)  — 230 → 230
+PASS  JS event listeners do not grow (≤ 10%)  — 202 → 202
+PASS  documents (iframes) do not accumulate  — 1 → 1
+PASS  JS heap after GC does not grow by more than 30% and 15 MB  — 8.0 MB → 8.6 MB
+PASS  no console errors or warnings (React warnings included)
+PASS  no uncaught exception / unhandled rejection
+PASS  no network request after the page loaded (nothing polls, nothing storms)
+
+8/8 passed

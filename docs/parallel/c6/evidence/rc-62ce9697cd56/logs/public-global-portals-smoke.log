@@ -1,0 +1,115 @@
+
+===== PLATFORM  https://platform.toolsmcp.uk
+PASS platform: HTTPS answers 200 with Next.js HTML | 200
+PASS platform: CSP nonce + strict-dynamic, frame-ancestors 'none', object-src 'none', no unsafe-eval
+PASS platform: HSTS (>= 1 year, includeSubDomains) and nosniff, X-Frame-Options DENY | max-age=63072000; includeSubDomains
+PASS platform: nothing internal (localhost, loopback, container, private ports) in the HTML the browser receives
+PASS platform: all 8 /_next assets of the page load (200, right content-type, no loopback URL inside)
+PASS platform: fonts referenced by the CSS load (0) | none referenced
+PASS platform: a missing chunk is never served as script (404, or a non-JS body that nosniff keeps the browser from executing) | 200 text/html; charset=utf-8
+FINDING platform: unknown /_next/static/** answers the portal HTML shell (catch-all route), not 404 | Next.js behavior of the portal's [[...slug]] route; harmless to security (nosniff, text/html) but a stale chunk shows as a parse error instead of a 404 - C5 (apps/*/app)
+PASS platform: login page /platform/login renders (deep link, server rendered) | 200
+PASS platform: an unauthenticated deep link does not leak (200 shell or redirect, no data, no stack) | 200
+PASS platform: CSRF token through the same-origin /api proxy; XSRF-TOKEN Secure + SameSite=Lax + host-only + Path=/ | XSRF-TOKEN=<v>; Path=/; Secure; SameSite=Lax
+PASS platform: login with a forged CSRF token is refused (403) | 403
+PASS platform: login without any CSRF header is refused (403) | 403
+PASS platform: login with a valid CSRF token and the portal's own Origin | 200
+PASS platform: STUDIO_SESSION = Secure, HttpOnly, SameSite=Lax, no Domain (host-only), Path=/ | STUDIO_SESSION=<v>; Path=/; Secure; HttpOnly; SameSite=lax
+PASS platform: authenticated GET /api/v1/auth/me through the same-origin proxy | 200 systemAdmin=true
+PASS platform: system-admin GET /api/v1/admin/overview | 200
+PASS platform: the same GET without a session is 401 | 401
+PASS platform: an unsafe authenticated call WITHOUT a CSRF token is refused (403) | 403 CSRF_INVALID
+PASS platform: ... with a FORGED CSRF token is refused (403) | 403
+PASS platform: refused calls did not end the session | 200
+PASS platform: an untrusted Origin is not served as CORS (no Access-Control-Allow-Origin; credentials never echoed) | 403 acao=none
+PASS platform: an unsafe call from an untrusted Origin is refused even with a valid token (403) | 403
+PASS platform: preflight from an untrusted Origin gets no Allow-Origin | 403
+PASS platform: the portal's own Origin works; Allow-Origin is never "*" | https://platform.toolsmcp.uk
+PASS platform: the unsafe call with a valid CSRF token succeeds (logout) | 200
+PASS platform: login carrying forged X-Forwarded-For / X-Real-IP / Forwarded works (the address is judged by the audit trail) | 200
+PASS platform: after logout the old session answers 401 | 401
+
+===== ADMIN  https://admin.toolsmcp.uk
+PASS admin: HTTPS answers 200 with Next.js HTML | 200
+PASS admin: CSP nonce + strict-dynamic, frame-ancestors 'none', object-src 'none', no unsafe-eval
+PASS admin: HSTS (>= 1 year, includeSubDomains) and nosniff, X-Frame-Options DENY | max-age=63072000; includeSubDomains
+PASS admin: nothing internal (localhost, loopback, container, private ports) in the HTML the browser receives
+PASS admin: all 8 /_next assets of the page load (200, right content-type, no loopback URL inside)
+PASS admin: fonts referenced by the CSS load (0) | none referenced
+PASS admin: a missing chunk is never served as script (404, or a non-JS body that nosniff keeps the browser from executing) | 200 text/html; charset=utf-8
+FINDING admin: unknown /_next/static/** answers the portal HTML shell (catch-all route), not 404 | Next.js behavior of the portal's [[...slug]] route; harmless to security (nosniff, text/html) but a stale chunk shows as a parse error instead of a 404 - C5 (apps/*/app)
+PASS admin: login page /admin/login renders (deep link, server rendered) | 200
+PASS admin: an unauthenticated deep link does not leak (200 shell or redirect, no data, no stack) | 200
+PASS admin: CSRF token through the same-origin /api proxy; XSRF-TOKEN Secure + SameSite=Lax + host-only + Path=/ | XSRF-TOKEN=<v>; Path=/; Secure; SameSite=Lax
+PASS admin: login with a forged CSRF token is refused (403) | 403
+PASS admin: login without any CSRF header is refused (403) | 403
+PASS admin: login with a valid CSRF token and the portal's own Origin | 200
+PASS admin: STUDIO_SESSION = Secure, HttpOnly, SameSite=Lax, no Domain (host-only), Path=/ | STUDIO_SESSION=<v>; Path=/; Secure; HttpOnly; SameSite=lax
+PASS admin: authenticated GET /api/v1/auth/me through the same-origin proxy | 200 systemAdmin=true
+PASS admin: system-admin GET /api/v1/admin/overview | 200
+PASS admin: the same GET without a session is 401 | 401
+PASS admin: an unsafe authenticated call WITHOUT a CSRF token is refused (403) | 403 CSRF_INVALID
+PASS admin: ... with a FORGED CSRF token is refused (403) | 403
+PASS admin: refused calls did not end the session | 200
+PASS admin: an untrusted Origin is not served as CORS (no Access-Control-Allow-Origin; credentials never echoed) | 403 acao=none
+PASS admin: an unsafe call from an untrusted Origin is refused even with a valid token (403) | 403
+PASS admin: preflight from an untrusted Origin gets no Allow-Origin | 403
+PASS admin: the portal's own Origin works; Allow-Origin is never "*" | https://admin.toolsmcp.uk
+PASS admin: the unsafe call with a valid CSRF token succeeds (logout) | 200
+PASS admin: login carrying forged X-Forwarded-For / X-Real-IP / Forwarded works (the address is judged by the audit trail) | 200
+PASS admin: after logout the old session answers 401 | 401
+
+===== STUDIO  https://studio.toolsmcp.uk
+PASS studio: HTTPS answers 200 with Next.js HTML | 200
+PASS studio: CSP nonce + strict-dynamic, frame-ancestors 'none', object-src 'none', no unsafe-eval
+PASS studio: HSTS (>= 1 year, includeSubDomains) and nosniff, X-Frame-Options DENY | max-age=63072000; includeSubDomains
+PASS studio: nothing internal (localhost, loopback, container, private ports) in the HTML the browser receives
+PASS studio: all 8 /_next assets of the page load (200, right content-type, no loopback URL inside)
+PASS studio: fonts referenced by the CSS load (0) | none referenced
+PASS studio: a missing chunk is never served as script (404, or a non-JS body that nosniff keeps the browser from executing) | 200 text/html; charset=utf-8
+FINDING studio: unknown /_next/static/** answers the portal HTML shell (catch-all route), not 404 | Next.js behavior of the portal's [[...slug]] route; harmless to security (nosniff, text/html) but a stale chunk shows as a parse error instead of a 404 - C5 (apps/*/app)
+PASS studio: login page /studio/login renders (deep link, server rendered) | 200
+PASS studio: an unauthenticated deep link does not leak (200 shell or redirect, no data, no stack) | 200
+PASS studio: CSRF token through the same-origin /api proxy; XSRF-TOKEN Secure + SameSite=Lax + host-only + Path=/ | XSRF-TOKEN=<v>; Path=/; Secure; SameSite=Lax
+PASS studio: login with a forged CSRF token is refused (403) | 403
+PASS studio: login without any CSRF header is refused (403) | 403
+PASS studio: login with a valid CSRF token and the portal's own Origin | 200
+PASS studio: STUDIO_SESSION = Secure, HttpOnly, SameSite=Lax, no Domain (host-only), Path=/ | STUDIO_SESSION=<v>; Path=/; Secure; HttpOnly; SameSite=lax
+PASS studio: authenticated GET /api/v1/auth/me through the same-origin proxy | 200 systemAdmin=false
+PASS studio: the member account has a workspace
+PASS studio: the same GET without a session is 401 | 401
+PASS studio: an unsafe authenticated call WITHOUT a CSRF token is refused (403) | 403 CSRF_INVALID
+PASS studio: ... with a FORGED CSRF token is refused (403) | 403
+PASS studio: refused calls did not end the session | 200
+PASS studio: an untrusted Origin is not served as CORS (no Access-Control-Allow-Origin; credentials never echoed) | 403 acao=none
+PASS studio: an unsafe call from an untrusted Origin is refused even with a valid token (403) | 403
+PASS studio: preflight from an untrusted Origin gets no Allow-Origin | 403
+PASS studio: the portal's own Origin works; Allow-Origin is never "*" | https://studio.toolsmcp.uk
+PASS studio: the unsafe call with a valid CSRF token succeeds (projects) | 201
+PASS studio: the smoke project is removed (DELETE with CSRF) | 204
+PASS studio: logout | 200
+PASS studio: after logout the old session answers 401 | 401
+PASS cross-portal: signed in on platform
+PASS cross-portal: the platform login does NOT sign in admin (separate host-only cookie jar)
+PASS platform: its own /_next chunks (1 not shared) are not served as JavaScript by another portal host | leaked=0
+PASS admin: its own /_next chunks (1 not shared) are not served as JavaScript by another portal host | leaked=0
+PASS studio: its own /_next chunks (6 not shared) are not served as JavaScript by another portal host | leaked=0
+PASS sites: gateway health through the sites host | 200
+PASS sites: unknown slug is 404 without backend identity | 404
+PASS platform: /actuator/env is not the backend actuator | 200 (portal HTML shell)
+PASS platform: /actuator/heapdump is not the backend actuator | 200 (portal HTML shell)
+PASS platform: /actuator/prometheus is not the backend actuator | 200 (portal HTML shell)
+PASS platform: /actuator/shutdown is not the backend actuator | 200 (portal HTML shell)
+PASS platform: /actuator/beans is not the backend actuator | 200 (portal HTML shell)
+PASS admin: /actuator/env is not the backend actuator | 200 (portal HTML shell)
+PASS admin: /actuator/heapdump is not the backend actuator | 200 (portal HTML shell)
+PASS admin: /actuator/prometheus is not the backend actuator | 200 (portal HTML shell)
+PASS admin: /actuator/shutdown is not the backend actuator | 200 (portal HTML shell)
+PASS admin: /actuator/beans is not the backend actuator | 200 (portal HTML shell)
+PASS studio: /actuator/env is not the backend actuator | 200 (portal HTML shell)
+PASS studio: /actuator/heapdump is not the backend actuator | 200 (portal HTML shell)
+PASS studio: /actuator/prometheus is not the backend actuator | 200 (portal HTML shell)
+PASS studio: /actuator/shutdown is not the backend actuator | 200 (portal HTML shell)
+PASS studio: /actuator/beans is not the backend actuator | 200 (portal HTML shell)
+
+TOTAL 104  FAILED 0   NOTES FINDING,FINDING,FINDING

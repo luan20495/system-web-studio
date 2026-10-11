@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.project.publishconfig.PublishConfigTests" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:46:31.984Z" hostname="macmini-2.local" time="0.035">
+  <properties/>
+  <testcase name="audit lines carry the change and never the token()" classname="com.systemwebstudio.project.publishconfig.PublishConfigTests" time="0.0"/>
+  <testcase name="without a stored policy the request decides exactly as before()" classname="com.systemwebstudio.project.publishconfig.PublishConfigTests" time="0.0"/>
+  <testcase name="public data approval is recorded only for a public app()" classname="com.systemwebstudio.project.publishconfig.PublishConfigTests" time="0.0"/>
+  <testcase name="mode must fit the kind of project()" classname="com.systemwebstudio.project.publishconfig.PublishConfigTests" time="0.001"/>
+  <testcase name="the publish service has no access to membership sharing or deployments()" classname="com.systemwebstudio.project.publishconfig.PublishConfigTests" time="0.0"/>
+  <testcase name="the first configuration is revision 1 and later changes need the current revision()" classname="com.systemwebstudio.project.publishconfig.PublishConfigTests" time="0.001"/>
+  <testcase name="rotating needs an existing private link()" classname="com.systemwebstudio.project.publishconfig.PublishConfigTests" time="0.03"/>
+  <testcase name="a rejected configuration stores nothing and writes no audit line()" classname="com.systemwebstudio.project.publishconfig.PublishConfigTests" time="0.0"/>
+  <testcase name="public visibility is subject to the administrator switches and cannot require sign-in()" classname="com.systemwebstudio.project.publishconfig.PublishConfigTests" time="0.001"/>
+  <testcase name="with a stored policy the policy decides()" classname="com.systemwebstudio.project.publishconfig.PublishConfigTests" time="0.0"/>
+  <testcase name="a private link token is created once and only its hash is stored()" classname="com.systemwebstudio.project.publishconfig.PublishConfigTests" time="0.0"/>
+  <testcase name="data bound to an app does not become public without an explicit confirmation()" classname="com.systemwebstudio.project.publishconfig.PublishConfigTests" time="0.0"/>
+  <testcase name="the draft in the document is only a request and changes nothing by itself()" classname="com.systemwebstudio.project.publishconfig.PublishConfigTests" time="0.0"/>
+  <testcase name="cache seconds are bounded()" classname="com.systemwebstudio.project.publishconfig.PublishConfigTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

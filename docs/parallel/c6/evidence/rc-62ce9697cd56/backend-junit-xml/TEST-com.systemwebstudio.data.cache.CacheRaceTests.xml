@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.cache.CacheRaceTests" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:44:53.740Z" hostname="macmini-2.local" time="0.051">
+  <properties/>
+  <testcase name="an answer computed before an invalidation cannot be stored after it - data source level()" classname="com.systemwebstudio.data.cache.CacheRaceTests" time="0.001"/>
+  <testcase name="an unrelated invalidation does not discard a good write()" classname="com.systemwebstudio.data.cache.CacheRaceTests" time="0.0"/>
+  <testcase name="an answer computed before an invalidation cannot be stored after it - query level()" classname="com.systemwebstudio.data.cache.CacheRaceTests" time="0.002"/>
+  <testcase name="a failed invalidation between lookup and put also refuses the write()" classname="com.systemwebstudio.data.cache.CacheRaceTests" time="0.0"/>
+  <testcase name="stress - writers change the data and invalidate while readers fill, and the cache never ends up holding an old answer()" classname="com.systemwebstudio.data.cache.CacheRaceTests" time="0.04"/>
+  <testcase name="a ticket is bound to its tenant - it cannot fill another tenant's entry()" classname="com.systemwebstudio.data.cache.CacheRaceTests" time="0.0"/>
+  <testcase name="no ticket while the backend is down - nothing to write and no error()" classname="com.systemwebstudio.data.cache.CacheRaceTests" time="0.0"/>
+  <testcase name="the stored envelope carries the request fingerprint - a value copied under another request's key is rejected()" classname="com.systemwebstudio.data.cache.CacheRaceTests" time="0.0"/>
+  <testcase name="even a write that slipped past the compare lands on a key nobody reads()" classname="com.systemwebstudio.data.cache.CacheRaceTests" time="0.0"/>
+  <testcase name="gateway level - a query that is running while a mutation invalidates does not re-poison the cache()" classname="com.systemwebstudio.data.cache.CacheRaceTests" time="0.005"/>
+  <system-out><![CDATA[{"@timestamp":"2026-10-08T06:44:53.743444+07:00","@version":"1","message":"cache invalidation failed; scope is bypassed in this process","logger_name":"com.systemwebstudio.data.cache.QueryCache","thread_name":"Test worker","level":"WARN","level_value":30000}
+{"@timestamp":"2026-10-08T06:44:53.785648+07:00","@version":"1","message":"cache entry rejected: envelope does not match its key","logger_name":"com.systemwebstudio.data.cache.QueryCache","thread_name":"Test worker","level":"WARN","level_value":30000}
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

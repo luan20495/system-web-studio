@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.logic.notification.NotificationServiceTests" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:46:14.023Z" hostname="macmini-2.local" time="0.008">
+  <properties/>
+  <testcase name="a webhook goes to a registered endpoint only and never to a url()" classname="com.systemwebstudio.logic.notification.NotificationServiceTests" time="0.001"/>
+  <testcase name="a partial failure is retryable and the retry resends only the failed recipients()" classname="com.systemwebstudio.logic.notification.NotificationServiceTests" time="0.001"/>
+  <testcase name="delivery records are tenant scoped()" classname="com.systemwebstudio.logic.notification.NotificationServiceTests" time="0.0"/>
+  <testcase name="sending is audited but an audit failure does not undo the send()" classname="com.systemwebstudio.logic.notification.NotificationServiceTests" time="0.001"/>
+  <testcase name="params are not written to the audit trail()" classname="com.systemwebstudio.logic.notification.NotificationServiceTests" time="0.002"/>
+  <testcase name="a channel without a sender is NOT_IMPLEMENTED and never pretends()" classname="com.systemwebstudio.logic.notification.NotificationServiceTests" time="0.0"/>
+  <testcase name="an in-app notification lands in the recipient's inbox()" classname="com.systemwebstudio.logic.notification.NotificationServiceTests" time="0.0"/>
+  <testcase name="a retry with the same key does not message a recipient twice()" classname="com.systemwebstudio.logic.notification.NotificationServiceTests" time="0.0"/>
+  <testcase name="a permanent failure is not retryable and a sender that throws is a retryable failure without the exception text()" classname="com.systemwebstudio.logic.notification.NotificationServiceTests" time="0.001"/>
+  <testcase name="the number of recipients is limited()" classname="com.systemwebstudio.logic.notification.NotificationServiceTests" time="0.0"/>
+  <testcase name="a recipient that cannot be addressed fails the whole request before anything is sent()" classname="com.systemwebstudio.logic.notification.NotificationServiceTests" time="0.0"/>
+  <testcase name="a claim abandoned by a crashed node is reclaimed after the lease()" classname="com.systemwebstudio.logic.notification.NotificationServiceTests" time="0.0"/>
+  <testcase name="groups expand to their members and duplicates are collapsed()" classname="com.systemwebstudio.logic.notification.NotificationServiceTests" time="0.0"/>
+  <testcase name="no recipients means the acting user()" classname="com.systemwebstudio.logic.notification.NotificationServiceTests" time="0.0"/>
+  <testcase name="unknown templates, wrong channels and missing params are refused without leaking()" classname="com.systemwebstudio.logic.notification.NotificationServiceTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,8 @@
+# C6 evidence policy: screenshots and binaries are NOT versioned in git. They live in external archives listed in ../EVIDENCE_INDEX.md
+# (sha256 in ../evidence-archives.tsv, per-file hashes in ../evidence-external-files.tsv). Only safe text evidence is committed.
+*.png
+*.bin
+*.tgz
+__pycache__/
+*.pyc
+.DS_Store

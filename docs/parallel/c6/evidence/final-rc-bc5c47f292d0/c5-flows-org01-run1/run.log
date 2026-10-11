@@ -1,0 +1,7 @@
+REAL BACKEND suite · studio=http://127.0.0.1:47307 · run=mv20dhub · 1 flow(s)
+  [fixture] workspace A created
+  [fixture] workspace B created
+
+REAL BACKEND: NOT RUN — fixtures could not be created — fixture: activate user adminA failed (429 RATE_LIMITED)
+This is not a pass. See tests/e2e-real/README.md.
+exit=2

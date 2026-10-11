@@ -1,0 +1,15 @@
+import { launch, recorder, BASE, OUT, secretFromDemoFile } from "./ug-lib.mjs";
+import { writeFileSync } from "node:fs";
+const pw = secretFromDemoFile("demo01");
+const browser = await launch(); const c = await browser.newContext({ viewport: { width: 1440, height: 900 } }); const p = await c.newPage(); const r = recorder(p);
+await p.goto(BASE + "/login", { waitUntil: "networkidle" });
+await p.getByLabel("Tên đăng nhập").fill("demo01"); await p.getByLabel("Mật khẩu").fill(pw); await p.getByRole("button", { name: "Đăng nhập", exact: true }).click(); await p.waitForLoadState("networkidle"); await p.waitForTimeout(1500);
+const out = {};
+let i = r.mark(); await p.getByRole("link", { name: "+ Tạo ứng dụng" }).click(); await p.waitForLoadState("networkidle"); await p.waitForTimeout(1500);
+out.createUrl = p.url().replace(BASE, ""); out.calls = r.since(i);
+out.text = (await p.locator("body").innerText()).slice(0, 2500);
+out.buttons = await p.getByRole("button").allInnerTexts(); out.inputs = await p.locator("input,textarea,select").evaluateAll((els) => els.map((e) => ({ type: e.type, name: e.name, ph: e.placeholder, label: e.labels?.[0]?.innerText?.slice(0, 40) })));
+await p.screenshot({ path: OUT + "explore-create.png" });
+writeFileSync(OUT + "explore2.json", JSON.stringify(out, null, 1));
+console.log(out.createUrl, JSON.stringify(out.calls)); console.log(out.text); console.log("buttons", JSON.stringify(out.buttons)); console.log("inputs", JSON.stringify(out.inputs));
+await browser.close();

@@ -1,0 +1,2 @@
+id	area	description	expected	actual	result	class	owner	note	evidence
+ADV-S04b	session	replay of an already used one-time activation token (1 limiter call)	410 LINK_INVALID	410 LINK_INVALID	PASS	REAL_BACKEND_E2E			

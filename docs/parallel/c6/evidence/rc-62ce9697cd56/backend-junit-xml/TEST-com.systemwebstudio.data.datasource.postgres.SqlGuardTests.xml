@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.datasource.postgres.SqlGuardTests" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:45:03.460Z" hostname="macmini-2.local" time="0.008">
+  <properties/>
+  <testcase name="functions that reach outside the query are refused, quoted or schema-qualified()" classname="com.systemwebstudio.data.datasource.postgres.SqlGuardTests" time="0.001"/>
+  <testcase name="plain selects with named parameters compile to prepared-statement placeholders()" classname="com.systemwebstudio.data.datasource.postgres.SqlGuardTests" time="0.0"/>
+  <testcase name="anything that writes, changes state or takes locks is refused wherever it appears()" classname="com.systemwebstudio.data.datasource.postgres.SqlGuardTests" time="0.001"/>
+  <testcase name="only one statement is allowed - the classic stacked-query shapes()" classname="com.systemwebstudio.data.datasource.postgres.SqlGuardTests" time="0.001"/>
+  <testcase name="Unicode-escaped identifiers and strings are refused - the U-ampersand bypass()" classname="com.systemwebstudio.data.datasource.postgres.SqlGuardTests" time="0.0"/>
+  <testcase name="rejection messages are fixed text()" classname="com.systemwebstudio.data.datasource.postgres.SqlGuardTests" time="0.001"/>
+  <testcase name="positional and bare placeholders cannot smuggle a value into the text()" classname="com.systemwebstudio.data.datasource.postgres.SqlGuardTests" time="0.0"/>
+  <testcase name="every statement kind named by the contract is refused()" classname="com.systemwebstudio.data.datasource.postgres.SqlGuardTests" time="0.001"/>
+  <testcase name="a comment cannot split or hide a keyword()" classname="com.systemwebstudio.data.datasource.postgres.SqlGuardTests" time="0.0"/>
+  <testcase name="escape-string and dollar-quote lexing cannot be used to hide a second statement()" classname="com.systemwebstudio.data.datasource.postgres.SqlGuardTests" time="0.0"/>
+  <testcase name="characters PostgreSQL would read differently are refused outside quoted text()" classname="com.systemwebstudio.data.datasource.postgres.SqlGuardTests" time="0.0"/>
+  <testcase name="casts, CTEs, quoted identifiers and literals that look dangerous are fine()" classname="com.systemwebstudio.data.datasource.postgres.SqlGuardTests" time="0.001"/>
+  <testcase name="a carriage return ends a line comment as in PostgreSQL()" classname="com.systemwebstudio.data.datasource.postgres.SqlGuardTests" time="0.0"/>
+  <testcase name="further dangerous functions and credential relations are refused()" classname="com.systemwebstudio.data.datasource.postgres.SqlGuardTests" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

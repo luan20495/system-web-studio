@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.logic.workflow.InMemoryWorkflowQueueContractTests" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:46:14.093Z" hostname="macmini-2.local" time="0.0">
+  <properties/>
+  <testcase name="a published job is delivered once with delivery count 1 and its body intact()" classname="com.systemwebstudio.logic.workflow.InMemoryWorkflowQueueContractTests" time="0.0"/>
+  <testcase name="a message that keeps coming back unacknowledged is dead-lettered by the delivery limit and does not loop()" classname="com.systemwebstudio.logic.workflow.InMemoryWorkflowQueueContractTests" time="0.0"/>
+  <testcase name="an empty queue answers null()" classname="com.systemwebstudio.logic.workflow.InMemoryWorkflowQueueContractTests" time="0.0"/>
+  <testcase name="nack without requeue dead-letters exactly that message and it never returns to the main queue()" classname="com.systemwebstudio.logic.workflow.InMemoryWorkflowQueueContractTests" time="0.0"/>
+  <testcase name="a message whose consumer died before the ack is delivered again with a higher count()" classname="com.systemwebstudio.logic.workflow.InMemoryWorkflowQueueContractTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

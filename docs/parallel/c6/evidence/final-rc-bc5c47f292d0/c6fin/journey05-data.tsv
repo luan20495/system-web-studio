@@ -1,0 +1,108 @@
+id	area	description	expected	actual	result	class	owner	note	evidence
+J05-DS01	DATA_SOURCE	connector catalogue offers postgres (available)	200 with postgres	200 ["csv","google_sheets","graphql","mysql","odoo","postgres","rest","salesforce"]	PASS	REAL_BACKEND_E2E			
+J05-DS02	DATA_SOURCE	Workspace Admin creates a (read-only) Data Source -> the TLS target; response has no credential material	201, hasCredential=false, no credentialRef	201 ACTIVE hasCredential=false	PASS	REAL_BACKEND_E2E			
+J05-DS02b	DATA_SOURCE	separate GET confirms the source exists with the stored config (host/port/database)	200, config equals what was sent	200 ACTIVE cfg={"host":"127.0.0.1","port":"15440","schemas":"shop","database":"shop"}	PASS	REAL_BACKEND_E2E			
+J05-DS03	DATA_SOURCE	WRITE-ONLY credential: PUT answers metadata only (configured + key names), never the password	200 {configured:true,keys}	200 {"c":true,"keys":["username","password"]}	PASS	REAL_BACKEND_E2E			
+J05-DS04	DATA_SOURCE	GET credential / detail / list / schema never return the password, a credentialRef or ciphertext; username value is not echoed as a secret field	no secret in 4 responses	200,200,200,404 keysOnly=["configured","type","keys","updatedAt","updatedBy"]	PASS	REAL_BACKEND_E2E			
+J05-DS05	DATA_SOURCE	Test Connection over TLS verify-full with the SELECT-only role (address policy + TLS trust of the c0rc backend)	200 {ok:true}	200 ok=true code= warnings=[] 	PASS	REAL_BACKEND_E2E			
+J05-DS06	DATA_SOURCE	schema discovery reads the REAL tables (customers, orders) - compared with information_schema	entities >= 2 incl customers+orders	200 entities=2 dbTables=customers,orders	PASS	REAL_BACKEND_E2E			
+J05-DS06b	DATA_SOURCE	stored snapshot lists orders columns that exist in the DB (order_no,status,amount) [DB-CONFIRM]	contains order_no,status,amount	200	PASS	REAL_BACKEND_E2E			
+J05-DS07	DATA_SOURCE	Test Connection with a wrong password -> ok:false AUTH_REJECTED, no password / stack in the answer	200 {ok:false, code:AUTH_REJECTED}	200 AUTH_REJECTED ok=false code=AUTH_REJECTED	PASS	REAL_BACKEND_E2E			
+J05-SSRF-cloud metadata	DATA_SOURCE	address policy refuses cloud metadata 169.254.169.254	400 INVALID_CONFIG at create (nothing stored)	400 INVALID_CONFIG	PASS	REAL_BACKEND_E2E			
+J05-SSRF-c0rc platform 	DATA_SOURCE	address policy refuses c0rc platform database (127.0.0.1)	400 INVALID_CONFIG at create (nothing stored)	400 INVALID_CONFIG	PASS	REAL_BACKEND_E2E			
+J05-SSRF-platform DB by	DATA_SOURCE	address policy refuses platform DB by name localhost	400 INVALID_CONFIG at create (nothing stored)	400 INVALID_CONFIG	PASS	REAL_BACKEND_E2E			
+J05-SSRF-loopback not a	DATA_SOURCE	address policy refuses loopback not allow-listed port	400 INVALID_CONFIG at create (nothing stored)	400 INVALID_CONFIG	PASS	REAL_BACKEND_E2E			
+J05-SSRF-RFC1918 10.x	DATA_SOURCE	address policy refuses RFC1918 10.x	400 INVALID_CONFIG at create (nothing stored)	400 INVALID_CONFIG	PASS	REAL_BACKEND_E2E			
+J05-SSRF-RFC1918 192.16	DATA_SOURCE	address policy refuses RFC1918 192.168.x	400 INVALID_CONFIG at create (nothing stored)	400 INVALID_CONFIG	PASS	REAL_BACKEND_E2E			
+J05-SSRF-RFC1918 172.16	DATA_SOURCE	address policy refuses RFC1918 172.16.x	400 INVALID_CONFIG at create (nothing stored)	400 INVALID_CONFIG	PASS	REAL_BACKEND_E2E			
+J05-SSRF-IPv6 loopback	DATA_SOURCE	address policy refuses IPv6 loopback	400 INVALID_CONFIG at create (nothing stored)	400 INVALID_CONFIG	PASS	REAL_BACKEND_E2E			
+J05-SSRF-unspecified 0.	DATA_SOURCE	address policy refuses unspecified 0.0.0.0	400 INVALID_CONFIG at create (nothing stored)	400 INVALID_CONFIG	PASS	REAL_BACKEND_E2E			
+J05-SSRF-decimal-encode	DATA_SOURCE	address policy refuses decimal-encoded 127.0.0.1	400 INVALID_CONFIG at create (nothing stored)	400 INVALID_CONFIG	PASS	REAL_BACKEND_E2E			
+J05-SSRF-hex-encoded 12	DATA_SOURCE	address policy refuses hex-encoded 127.0.0.1	400 INVALID_CONFIG at create (nothing stored)	400 INVALID_CONFIG	PASS	REAL_BACKEND_E2E			
+J05-SSRF-carrier-grade 	DATA_SOURCE	address policy refuses carrier-grade NAT 100.64.0.1	400 INVALID_CONFIG at create (nothing stored)	400 INVALID_CONFIG	PASS	REAL_BACKEND_E2E			
+J05-SSRF-GCE metadata h	DATA_SOURCE	address policy refuses GCE metadata host name	400 INVALID_CONFIG at create (nothing stored)	400 INVALID_CONFIG	PASS	REAL_BACKEND_E2E			
+J05-SSRF-URL as host	DATA_SOURCE	address policy refuses URL as host	400 INVALID_CONFIG at create (nothing stored)	400 INVALID_CONFIG	PASS	REAL_BACKEND_E2E			
+J05-SSRF-host with cred	DATA_SOURCE	address policy refuses host with credentials/at-sign	400 INVALID_CONFIG at create (nothing stored)	400 INVALID_CONFIG	PASS	REAL_BACKEND_E2E			
+J05-SSRF-IPv4-mapped IP	DATA_SOURCE	address policy refuses IPv4-mapped IPv6 metadata	400 INVALID_CONFIG at create (nothing stored)	400 INVALID_CONFIG	PASS	REAL_BACKEND_E2E			
+J05-DS08a	DATA_SOURCE	EDITOR cannot create a data source (DATA_SOURCE_MANAGE)	403	403 PERMISSION_DENIED	PASS	REAL_BACKEND_E2E			
+J05-DS08b	DATA_SOURCE	VIEWER cannot test a connection	403	403 PERMISSION_DENIED	PASS	REAL_BACKEND_E2E			
+J05-DS08c	DATA_SOURCE	EDITOR cannot replace a credential	403	403 PERMISSION_DENIED	PASS	REAL_BACKEND_E2E			
+J05-DS09a	DATA_SOURCE	wrong TENANT: list in A's workspace / read / test / replace credential of A's source via its own workspace -> 404	404 x4	404/404/404/404	PASS	REAL_BACKEND_E2E			
+J05-DS09b	DATA_SOURCE	wrong WORKSPACE (same tenant): the source of workspace A through workspace A2 -> 404/403 (list of A2 is not A's)	404/403 and empty list	404/404/list=404 {"code":"WORKSPACE_NOT_FOUND","message":	PASS	REAL_BACKEND_E2E			
+J05-DS09c	DATA_SOURCE	anonymous	401	401 AUTHENTICATION_REQUIRED	PASS	REAL_BACKEND_E2E			
+J05-DS10	DATA_SOURCE	a secret key (password) inside the non-secret config is refused	400 INVALID_CONFIG	400 INVALID_CONFIG	PASS	REAL_BACKEND_E2E			
+J05-DS11	DATA_SOURCE	authority key (tenantId) in the body is refused	400	400 INVALID_PARAMS	PASS	REAL_BACKEND_E2E			
+J05-Q01	QUERY	Workspace Admin creates an approved READ query definition (named parameter, maxRows)	201	201 ACTIVE	PASS	REAL_BACKEND_E2E			
+J05-Q01b	QUERY	second definition, parameterless, maxRows=3 (limit test)	201	201 ACTIVE	PASS	REAL_BACKEND_E2E			
+J05-Q02-bad.ddl	QUERY	definition guard refuses bad.ddl (DROP TABLE shop.orders)	400 INVALID_QUERY	400 INVALID_QUERY	PASS	REAL_BACKEND_E2E			
+J05-Q02-bad.multi	QUERY	definition guard refuses bad.multi (SELECT 1; DELETE FROM shop.ord)	400 INVALID_QUERY	400 INVALID_QUERY	PASS	REAL_BACKEND_E2E			
+J05-Q02-bad.write	QUERY	definition guard refuses bad.write (UPDATE shop.orders SET status=)	400 INVALID_QUERY	400 INVALID_QUERY	PASS	REAL_BACKEND_E2E			
+J05-Q02-bad.func	QUERY	definition guard refuses bad.func (SELECT pg_read_file('/etc/pass)	400 INVALID_QUERY	400 INVALID_QUERY	PASS	REAL_BACKEND_E2E			
+J05-Q02-bad.copy	QUERY	definition guard refuses bad.copy (COPY shop.orders TO PROGRAM 'i)	400 INVALID_QUERY	400 INVALID_QUERY	PASS	REAL_BACKEND_E2E			
+J05-Q02-bad.into	QUERY	definition guard refuses bad.into (SELECT * INTO shop.evil FROM s)	400 INVALID_QUERY	400 INVALID_QUERY	PASS	REAL_BACKEND_E2E			
+J05-Q02-bad.cte	QUERY	definition guard refuses bad.cte (WITH x AS (DELETE FROM shop.or)	400 INVALID_QUERY	400 INVALID_QUERY	PASS	REAL_BACKEND_E2E			
+J05-Q03	QUERY	EDITOR cannot read the full SQL definition (DATA_SOURCE_MANAGE)	403	403 PERMISSION_DENIED	PASS	REAL_BACKEND_E2E			
+J05-Q03b	QUERY	EDITOR cannot create a query definition	403	403 PERMISSION_DENIED	PASS	REAL_BACKEND_E2E			
+J05-A00	QUERY	Editor creates the app that will use the data	201	201 ACTIVE	PASS	REAL_BACKEND_E2E			
+J05-A00b	QUERY	project members: editor already OWNER-created; viewer added	201	409/201	PASS	REAL_BACKEND_E2E			
+J05-Q04	QUERY	Editor declares slot + query + mapping + view model and BINDS it to the component (dataBindings grid-d.items) - verified by a separate GET	200; GET has the 3 definitions + binding	200  bind=["grid-d.items"]	PASS	REAL_BACKEND_E2E			
+J05-Q05a	QUERY	EDITOR (project member) may not bind a tenant data source to the slot (that is DATA_SOURCE_MANAGE territory)	403 (or 200 if the product lets PROJECT_EDIT bind: reported)	403 PERMISSION_DENIED	PASS	REAL_BACKEND_E2E			
+J05-Q05	QUERY	slot erp-db is bound TEST+LIVE to the source (verified by GET list)	both modes listed	true,true ["LIVE:erp-db","TEST:erp-db"]	PASS	REAL_BACKEND_E2E			
+J05-Q06	QUERY	EDITOR runs the query (TEST = preview of the draft): rows == the REAL open orders in the target DB, mapped order_no->name, customer->description [DB-CONFIRM psql SELECT]	200; 31 rows identical to the DB	200 api=31 db=31 cache=BYPASS	PASS	REAL_BACKEND_E2E			
+J05-Q06b	QUERY	parameter value changes the result (closed) and matches the DB	rows == DB closed	200 api=1 db=1	PASS	REAL_BACKEND_E2E			
+J05-Q07	QUERY	SQL injection payloads in the :status parameter are BOUND: 0 rows each (or a 4xx for the NUL byte), table intact, row count unchanged [DB-CONFIRM]	every payload 200/0 rows or 4xx; orders exists; count unchanged	200:0 200:0 200:0 200:0 200:0 400:0 table=t count 32->32	PASS	REAL_BACKEND_E2E			
+J05-Q08a	QUERY	definition maxRows=3 is enforced: >3 rows in the DB, API returns exactly 3 and flags truncated	3 rows, truncated=true	200 rows=3 truncated=true dbRows=32	PASS	REAL_BACKEND_E2E			
+J05-Q08b	QUERY	page.limit above the cap (10001)	400/422	400 INVALID_REQUEST	PASS	REAL_BACKEND_E2E			
+J05-Q08c	QUERY	page.limit=1 returns 1 row	1 row	200 1	PASS	REAL_BACKEND_E2E			
+J05-Q08d	QUERY	more than 40 parameters	400/422	400 INVALID_REQUEST	PASS	REAL_BACKEND_E2E			
+J05-Q08e	QUERY	a 300 KB parameter value is refused or bounded, never 5xx	4xx (or 200 with 0 rows), no 5xx	400 INVALID_PARAMS 144B	PASS	REAL_BACKEND_E2E			
+J05-Q08f	QUERY	parameter of the wrong type (number for STRING)	400/422 INVALID_PARAMS	400 INVALID_PARAMS	PASS	REAL_BACKEND_E2E			
+J05-Q08g	QUERY	client-supplied sql / unknown field in the run request	400 INVALID_REQUEST	400 INVALID_REQUEST	PASS	REAL_BACKEND_E2E			
+J05-Q08h	QUERY	unknown query id	404	404 QUERY_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+J05-Q08i	QUERY	definition with an absurd maxRows (10,000,000)	400 INVALID_QUERY (cap)	400 INVALID_QUERY	PASS	REAL_BACKEND_E2E			
+J05-Q09a	QUERY	project VIEWER (no APP_EDIT) TEST run	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+J05-Q09b	QUERY	project VIEWER LIVE run: holds APP_USE but NOT QUERY_EXECUTE -> 403 (or 404 while nothing is published)	403 FORBIDDEN (or 404 unpublished)	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+J05-Q09c	QUERY	anonymous	401/403	403 CSRF_INVALID	PASS	REAL_BACKEND_E2E			
+J05-Q09d	QUERY	ALLOWED: project EDITOR holds QUERY_EXECUTE: the request passes the permission gate (200, or - without a reachable target - a gateway/source error 502 TLS_FAILED, never 403/404)	200 (live) / 502 source error (not live); not 401/403/404	200	PASS	REAL_BACKEND_E2E			
+J05-Q09d2	QUERY	fail-closed: when the source cannot be reached the answer carries NO rows and no secret, with a safe code	no rows; no password; code in body	200 rows=31	PASS	REAL_BACKEND_E2E			
+J05-Q09e	QUERY	wrong tenant runs the query via its own workspace id	404	404 PROJECT_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+J05-Q09f	QUERY	wrong tenant runs the query via the owner's workspace id	404	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+J05-Q09g	QUERY	wrong workspace (same tenant) via workspace A2	404/403	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+J05-Q09h	QUERY	wrong tenant binds A's source	404	404 PROJECT_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+J05-Q10	QUERY	source DISABLED -> query fails closed (no rows); re-enabled -> works again	disabled >=400 without rows; enabled 200	patch 200; disabled 409 DISABLED; enabled 200	PASS	REAL_BACKEND_E2E			
+J05-M00	MUTATION	writable data source (writable:true) is created by the Workspace Admin	201	201 ACTIVE	PASS	REAL_BACKEND_E2E			
+J05-M01	MUTATION	Test Connection of the writable source (role may INSERT/UPDATE only on shop.orders)	200 ok:true	200 ok=true code= warnings=[]	PASS	REAL_BACKEND_E2E			
+J05-M02	MUTATION	mutation definition on a source NOT declared writable is refused	422 READ_ONLY_VIOLATION	422 READ_ONLY_VIOLATION	PASS	REAL_BACKEND_E2E			
+J05-M03	MUTATION	approved mutation definitions CREATE (orders.create) and UPDATE (orders.setstatus, key=order_no)	201 / 201	201 / 201 ACTIVE	PASS	REAL_BACKEND_E2E			
+J05-M03b	MUTATION	DELETE without a key (whole table) cannot be expressed	4xx	400 INVALID_CONFIG	PASS	REAL_BACKEND_E2E			
+J05-M03c	MUTATION	target with injected SQL is refused	4xx	400 INVALID_CONFIG	PASS	REAL_BACKEND_E2E			
+J05-M04	ACTION	Editor wires CREATE_RECORD (form-d.onSubmit) and UPDATE_RECORD (grid-d.onClick) actions to the WRITE queries	200	200 	PASS	REAL_BACKEND_E2E			
+J05-M05	ACTION	TEST mode = WOULD_RUN and NO row in the target [DB-CONFIRM]	200 WOULD_RUN; count=0	200 WOULD_RUN WOULD_RUN count=0	PASS	REAL_BACKEND_E2E			
+J05-M06a	ACTION	publish PUBLIC a page whose component is bound to a NON-public query: refused by the build with an explicit reason (public-data guard)	deployment FAILED with 'is not public' message	202 QUEUED FAILED [BUILD_FAILED] The page cannot be published: binding 'grid-bind': query 'orders-list' is not public: mark it public in the app definition or	PASS	REAL_BACKEND_E2E			
+J05-M06c	ACTION	author marks the READ queries `public:true` (Public Runtime allow-list); a WRITE query cannot be public	200	200	PASS	REAL_BACKEND_E2E			
+J05-M06d	ACTION	a WRITE query marked public is refused	4xx	422 SCHEMA_INVALID	PASS	REAL_BACKEND_E2E			
+J05-M06	ACTION	publish the data app PRIVATE (LIVE runtime = the ACTIVE release)	RUNNING	202 QUEUED RUNNING 	PASS	REAL_BACKEND_E2E			
+J05-M06b	QUERY	LIVE (published) run returns the same real rows as the DB [DB-CONFIRM]	200 mode LIVE; rows == DB open	200 mode=LIVE api=31 db=31	PASS	REAL_BACKEND_E2E			
+J05-Q09b2	QUERY	after publish: project VIEWER LIVE run still denied (no QUERY_EXECUTE)	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+J05-Q09i	QUERY	after publish: project EDITOR LIVE run allowed (QUERY_EXECUTE)	200	200	PASS	REAL_BACKEND_E2E			
+J05-M07	MUTATION	LIVE mutating action without an idempotency key is refused, nothing written [DB-CONFIRM]	400 IDEMPOTENCY_KEY_REQUIRED; count 0	400 IDEMPOTENCY_KEY_REQUIRED IDEMPOTENCY_KEY_REQUIRED count=0	PASS	REAL_BACKEND_E2E			
+J05-M08	MUTATION	project EDITOR (ACTION_EXECUTE but no DATA_MUTATE) executes a LIVE write -> 403 and NOTHING written [DB-CONFIRM]	403 FORBIDDEN; count 0	403 FORBIDDEN FORBIDDEN count=0	PASS	REAL_BACKEND_E2E			
+J05-M08b	MUTATION	project VIEWER executes the write action -> 403	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+J05-M08c	MUTATION	wrong tenant (own workspace id / owner's workspace id) -> 404, nothing written	404/404	404/404 count=0	PASS	REAL_BACKEND_E2E			
+J05-M09	MUTATION	Workspace Admin submits the form -> Action -> MUTATION: a REAL row appears in the target table with the submitted values [DB-CONFIRM psql SELECT]	200 OK; DB has 1 row (open, 12.50)	200 OK status=OK db=C6F-AC85CF|open|12.50	PASS	REAL_BACKEND_E2E			
+J05-M10	QUERY	refresh the query: the new order is visible (TEST uncached; LIVE may be served from the READ cache within its ttl - cache field recorded)	TEST shows the new row	TEST has=true; LIVE has=true cache=BYPASS	PASS	REAL_BACKEND_E2E		LIVE also fresh	
+J05-M10b	QUERY	LIVE read becomes consistent with the DB within the cache ttl (polling <= 80 s) - cache invalidation after a mutation	LIVE shows the new order	has=true cache=BYPASS	PASS	REAL_BACKEND_E2E		mutation definition declares invalidates:[]	
+J05-M11	MUTATION	same key replayed: same outcome, STILL exactly 1 row [DB-CONFIRM]	200; count 1	200 OK count=1	PASS	REAL_BACKEND_E2E			
+J05-M12	MUTATION	same key with DIFFERENT inputs -> 409, nothing changed (amount still 12.50) [DB-CONFIRM]	409; amount unchanged	409 IDEMPOTENCY_KEY_REUSED IDEMPOTENCY_KEY_REUSED amount=12.50	PASS	REAL_BACKEND_E2E			
+J05-M13	MUTATION	5 concurrent submits with one key (double click): exactly 1 row, no 5xx [DB-CONFIRM]	count 1; no 5xx	409,200,409,409,409 count=1	PASS	REAL_BACKEND_E2E			
+J05-M14	MUTATION	NEW key, same order_no (business duplicate): the DB UNIQUE constraint refuses -> MUTATION_REJECTED 422, retryable=false, still 1 row [DB-CONFIRM]	422 MUTATION_REJECTED; count 1	422 MUTATION_REJECTED MUTATION_REJECTED retryable=false count=1	PASS	REAL_BACKEND_E2E			
+J05-M15	MUTATION	foreign-key violation (customer 99999) -> MUTATION_REJECTED, no row [DB-CONFIRM]	422 MUTATION_REJECTED; count 0	422 MUTATION_REJECTED MUTATION_REJECTED count=0	PASS	REAL_BACKEND_E2E			
+J05-M16	MUTATION	SQL injection in a mutation INPUT is stored as a literal value (bound), the table survives [DB-CONFIRM]	200 with a literal row OR 4xx; orders table exists	422 MUTATION_REJECTED literalRows=1 table=t	PASS	REAL_BACKEND_E2E			
+J05-M17	MUTATION	client-supplied sql / unknown field in inputs	400 INVALID_REQUEST/INVALID_INPUT, nothing written	400 INVALID_INPUT count=0	PASS	REAL_BACKEND_E2E			
+J05-M18	MUTATION	UPDATE_RECORD action changes the row: status open->closed in the target [DB-CONFIRM]	200 OK; DB status closed	422 INVALID_DEFINITION FAILED details={"inputs.recordId":"UPDATE_RECORD requires a required STRING input 'recordId'"} db=open	FAIL	REAL_BACKEND_E2E	C4/C3/C0	PRODUCT DEFECT FQ-ACT-02: PATCH /schema accepted the UPDATE_RECORD definition, but MutationActionHandler.validate requires a required STRING input 'recordId' (runtime 422 INVALID_DEFINITION). Adding recordId (+order_no) -> 500 INVALID_PARAMS (unknown param for the key=order_no mutation, nothing applied); a mutation keyed on `recordId` -> 422 MUTATION_REJECTED (no such column). No input shape updates a row of a real table: UPDATE/DELETE actions are unusable on the PostgreSQL connector.	
+J05-M19	QUERY	refresh: the order moved from the open result to the closed result	in closed, not in open	closed=false open=true	FAIL	REAL_BACKEND_E2E			
+J05-M20	MUTATION	UPDATE of a row that does not exist: honest result (affected=0 / not silently 'created')	200 with affected 0 (or 4xx); no row created [DB-CONFIRM]	422 INVALID_DEFINITION output=undefined count=0	PASS	REAL_BACKEND_E2E			
+J05-M21	MUTATION	(control) shop_rw role cannot DELETE / the product exposes no delete: row count of the target did not shrink [DB-CONFIRM]	rows only grow	count orders=35 (was 32)	PASS	REAL_BACKEND_E2E			
+J05-M22	MUTATION	credential replaced by a wrong one -> write fails closed with a safe error, nothing written [DB-CONFIRM], no password in the answer	>=400; count 0	500 AUTH_REJECTED AUTH_REJECTED retryable=false count=0	PASS	REAL_BACKEND_E2E			
+J05-X01	DATA_SOURCE	workspace audit shows the data-source management events (create / credential rotate / test / query definition / binding) and no audit body contains a target password	5/5 actions present; no secret	found=5/5 secret=false	PASS	REAL_BACKEND_E2E			
+J05-X02	DATA_SOURCE	no response of the entire run contained either target password	none	none	PASS	REAL_BACKEND_E2E			

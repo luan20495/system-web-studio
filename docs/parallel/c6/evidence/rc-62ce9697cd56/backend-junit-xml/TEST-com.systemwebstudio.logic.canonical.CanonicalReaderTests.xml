@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.logic.canonical.CanonicalReaderTests" tests="26" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:46:13.933Z" hostname="macmini-2.local" time="0.028">
+  <properties/>
+  <testcase name="a workflow that references an action the app does not offer is not offered()" classname="com.systemwebstudio.logic.canonical.CanonicalReaderTests" time="0.008"/>
+  <testcase name="CALL_API is an approved operation and a raw url never becomes an action()" classname="com.systemwebstudio.logic.canonical.CanonicalReaderTests" time="0.0"/>
+  <testcase name="inputMapping reads typed sources and rejects anything else()" classname="com.systemwebstudio.logic.canonical.CanonicalReaderTests" time="0.001"/>
+  <testcase name="a trigger that is present but malformed makes the action unusable()" classname="com.systemwebstudio.logic.canonical.CanonicalReaderTests" time="0.0"/>
+  <testcase name="there is no alias map - draft names and anything non canonical are rejected()" classname="com.systemwebstudio.logic.canonical.CanonicalReaderTests" time="0.001"/>
+  <testcase name="the workflow catalog is tenant and mode scoped()" classname="com.systemwebstudio.logic.canonical.CanonicalReaderTests" time="0.001"/>
+  <testcase name="invalid extended steps are reported with a path and the workflow is not offered()" classname="com.systemwebstudio.logic.canonical.CanonicalReaderTests" time="0.001"/>
+  <testcase name="a C2 WorkflowDef becomes a chain of action steps()" classname="com.systemwebstudio.logic.canonical.CanonicalReaderTests" time="0.0"/>
+  <testcase name="extended steps WAIT APPROVAL BRANCH with conditions retries and limits()" classname="com.systemwebstudio.logic.canonical.CanonicalReaderTests" time="0.002"/>
+  <testcase name="a TEST event says what would run and writes nothing()" classname="com.systemwebstudio.logic.canonical.CanonicalReaderTests" time="0.001"/>
+  <testcase name="the canonical types are exactly the nine and each is read as itself()" classname="com.systemwebstudio.logic.canonical.CanonicalReaderTests" time="0.0"/>
+  <testcase name="a UI event reaches the data port end to end through the C2 document()" classname="com.systemwebstudio.logic.canonical.CanonicalReaderTests" time="0.0"/>
+  <testcase name="a missing declared permission stops the event and nothing is written()" classname="com.systemwebstudio.logic.canonical.CanonicalReaderTests" time="0.001"/>
+  <testcase name="writes default to REQUIRED idempotency and cannot opt out()" classname="com.systemwebstudio.logic.canonical.CanonicalReaderTests" time="0.0"/>
+  <testcase name="references are resolved inside the document and dangling ones are not offered()" classname="com.systemwebstudio.logic.canonical.CanonicalReaderTests" time="0.0"/>
+  <testcase name="the catalog only serves the tenant and app that own the document()" classname="com.systemwebstudio.logic.canonical.CanonicalReaderTests" time="0.001"/>
+  <testcase name="the same event delivered twice writes once()" classname="com.systemwebstudio.logic.canonical.CanonicalReaderTests" time="0.001"/>
+  <testcase name="an action whose chain dangles is not offered, and neither is one that chains to it()" classname="com.systemwebstudio.logic.canonical.CanonicalReaderTests" time="0.001"/>
+  <testcase name="finalized names and C4's additive fields are accepted()" classname="com.systemwebstudio.logic.canonical.CanonicalReaderTests" time="0.0"/>
+  <testcase name="trigger is optional on the definition and does not make a workflow-only action invalid()" classname="com.systemwebstudio.logic.canonical.CanonicalReaderTests" time="0.001"/>
+  <testcase name="triggers become event bindings and unknown events are reported()" classname="com.systemwebstudio.logic.canonical.CanonicalReaderTests" time="0.0"/>
+  <testcase name="TEST reads the draft and LIVE reads the published version()" classname="com.systemwebstudio.logic.canonical.CanonicalReaderTests" time="0.0"/>
+  <testcase name="junk in the document never throws()" classname="com.systemwebstudio.logic.canonical.CanonicalReaderTests" time="0.0"/>
+  <testcase name="SCHEDULE workflows declare their schedule and bad ones are rejected()" classname="com.systemwebstudio.logic.canonical.CanonicalReaderTests" time="0.002"/>
+  <testcase name="another tenant dispatching the same event runs nothing()" classname="com.systemwebstudio.logic.canonical.CanonicalReaderTests" time="0.001"/>
+  <testcase name="permissionRef must point at an ACTION permission of the same action()" classname="com.systemwebstudio.logic.canonical.CanonicalReaderTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,14 @@
+# public stack vs RC 62ce9697cd56 — 2026-10-08 08:17:33 +0700
+RC commit time: 2026-10-07 23:30:29 +0700
+code commits: backend last src change: 1006cbf 2026-10-07 23:13:13 +0700; frontend last src change: 35ca3a9 2026-10-07 22:43:43 +0700
+port 18081 pid 83521 started Wed Oct  7 23:27:39 2026     cmd java -XX:MaxRAMPercentage=40 -jar /Users/hoangluan/code/HBL/backend/build/libs/system-web-studio-backend-0.1.0
+port 3201 pid 83997 started Wed Oct  7 23:28:08 2026     cmd next-server (v16.3.8)      
+port 3202 pid 83998 started Wed Oct  7 23:28:08 2026     cmd next-server (v16.3.8)      
+port 3203 pid 83996 started Wed Oct  7 23:28:08 2026     cmd next-server (v16.3.8)      
+jar: Oct 7 23:27
+.next-public BUILD_ID mtime Oct  7 14:49:16 2026
+apps/platform/.next-public BUILD_ID mtime Oct  7 23:27:54 2026
+apps/admin/.next-public BUILD_ID mtime Oct  7 23:28:00 2026
+apps/studio/.next-public BUILD_ID mtime Oct  7 23:28:07 2026
+public DB flyway: 
+NOTE: no SHA is embedded in the jar or the Next builds and no public endpoint returns one => consistent with the RC (artifacts newer than the last code commit), NOT provable (BUG-C6-012)

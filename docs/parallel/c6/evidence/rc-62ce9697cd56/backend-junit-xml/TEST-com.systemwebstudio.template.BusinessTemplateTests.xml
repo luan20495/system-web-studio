@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.template.BusinessTemplateTests" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:52:21.922Z" hostname="macmini-2.local" time="0.037">
+  <properties/>
+  <testcase name="sample data fits the view model and is limited to text numbers and booleans()" classname="com.systemwebstudio.template.BusinessTemplateTests" time="0.0"/>
+  <testcase name="built-in templates only use approved components and carry no tenant or project data()" classname="com.systemwebstudio.template.BusinessTemplateTests" time="0.004"/>
+  <testcase name="a built-in template declares its data contract as slots()" classname="com.systemwebstudio.template.BusinessTemplateTests" time="0.001"/>
+  <testcase name="ids are stable between runs and recognised as built-in()" classname="com.systemwebstudio.template.BusinessTemplateTests" time="0.001"/>
+  <testcase name="every built-in template is a typed V2 document that round-trips()" classname="com.systemwebstudio.template.BusinessTemplateTests" time="0.003"/>
+  <testcase name="every built-in template passes the page validator and the V2 validator()" classname="com.systemwebstudio.template.BusinessTemplateTests" time="0.005"/>
+  <testcase name="workflow templates start from an action and stay acyclic()" classname="com.systemwebstudio.template.BusinessTemplateTests" time="0.002"/>
+  <testcase name="there is exactly one built-in template for each of the 13 business categories()" classname="com.systemwebstudio.template.BusinessTemplateTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

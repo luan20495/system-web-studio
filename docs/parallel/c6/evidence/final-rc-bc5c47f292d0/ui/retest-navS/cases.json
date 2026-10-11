@@ -1,0 +1,16 @@
+[
+ {
+  "id": "studio · sidebar navigation (6 links)",
+  "group": "STUDIO",
+  "portal": "studio",
+  "role": "workspaceAdmin",
+  "route": "/studio",
+  "viewport": 1440,
+  "kind": "navigation",
+  "result": "FAIL",
+  "fail": [
+   "\"Tạo ứng dụng\" not marked aria-current"
+  ],
+  "warn": []
+ }
+]

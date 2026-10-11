@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.datasource.AddressRangeSpecTests" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:44:54.053Z" hostname="macmini-2.local" time="0.008">
+  <properties/>
+  <testcase name="192 0 0 slash 24 IETF protocol assignments incl DS-Lite and PCP anycast()" classname="com.systemwebstudio.data.datasource.AddressRangeSpecTests" time="0.001"/>
+  <testcase name="a zone identifier does not change the verdict()" classname="com.systemwebstudio.data.datasource.AddressRangeSpecTests" time="0.0"/>
+  <testcase name="a database host given as a reserved literal is refused when the data source is saved()" classname="com.systemwebstudio.data.datasource.AddressRangeSpecTests" time="0.002"/>
+  <testcase name="198 18 slash 15 benchmarking()" classname="com.systemwebstudio.data.datasource.AddressRangeSpecTests" time="0.001"/>
+  <testcase name="6to4 is refused as a whole, even when the embedded IPv4 is public()" classname="com.systemwebstudio.data.datasource.AddressRangeSpecTests" time="0.0"/>
+  <testcase name="IPv4-compatible and IPv4-mapped forms are judged as IPv4()" classname="com.systemwebstudio.data.datasource.AddressRangeSpecTests" time="0.0"/>
+  <testcase name="Teredo and the rest of the IETF protocol block 2001 slash 23()" classname="com.systemwebstudio.data.datasource.AddressRangeSpecTests" time="0.0"/>
+  <testcase name="ordinary public IPv6 stays reachable()" classname="com.systemwebstudio.data.datasource.AddressRangeSpecTests" time="0.001"/>
+  <testcase name="loopback unspecified link-local site-local unique-local multicast()" classname="com.systemwebstudio.data.datasource.AddressRangeSpecTests" time="0.0"/>
+  <testcase name="240 slash 4 reserved and the limited broadcast()" classname="com.systemwebstudio.data.datasource.AddressRangeSpecTests" time="0.0"/>
+  <testcase name="NAT64 well-known prefix is judged by the IPv4 address it embeds()" classname="com.systemwebstudio.data.datasource.AddressRangeSpecTests" time="0.0"/>
+  <testcase name="documentation discard-only SRv6 and the other reserved blocks()" classname="com.systemwebstudio.data.datasource.AddressRangeSpecTests" time="0.001"/>
+  <testcase name="a host with one embedded-internal address among public ones is refused whole - DNS rebinding with NAT64 and 6to4 forms()" classname="com.systemwebstudio.data.datasource.AddressRangeSpecTests" time="0.001"/>
+  <testcase name="documentation and 6to4 relay blocks()" classname="com.systemwebstudio.data.datasource.AddressRangeSpecTests" time="0.0"/>
+  <testcase name="ordinary public IPv4 stays reachable()" classname="com.systemwebstudio.data.datasource.AddressRangeSpecTests" time="0.001"/>
+  <testcase name="private loopback link-local CGNAT and this-network()" classname="com.systemwebstudio.data.datasource.AddressRangeSpecTests" time="0.0"/>
+  <testcase name="NAT64 local-use prefix is refused whatever it embeds()" classname="com.systemwebstudio.data.datasource.AddressRangeSpecTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

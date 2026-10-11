@@ -1,0 +1,32 @@
+# C6 user-guide QA — version check 2026-10-07 16:11:56 +0700
+GUIDE_SHA=db4d595 (agent/c5-web) committed 2026-10-07 15:25:51 +0700
+INTEGRATION_SHA=1a9995c committed 2026-10-07 15:07:20 +0700
+-- public listeners
+node 68953 127.0.0.1:3200
+java 68753 127.0.0.1:18081
+port 3200 pid 68953 started: Wed Oct  7 14:49:16 2026    
+  cwd: /Users/hoangluan/code/HBL
+  cmd: next-server (v16.3.8)      
+port 18081 pid 68753 started: Wed Oct  7 14:48:56 2026    
+  cwd: /Users/hoangluan/code/HBL/.run/public
+  cmd: java -XX:MaxRAMPercentage=40 -jar /Users/hoangluan/code/HBL/backend/build/libs/system-web-studio-backend-0.1.0-SNAPSHOT.jar
+-- jar mtimes
+-rw-r--r--@ 1 hoangluan  staff    4280253 Oct  7 13:31:31 2026 /Users/hoangluan/code/HBL/backend/build/libs/system-web-studio-backend-0.1.0-SNAPSHOT-plain.jar
+-rw-r--r--@ 1 hoangluan  staff  112168001 Oct  7 14:44:12 2026 /Users/hoangluan/code/HBL/backend/build/libs/system-web-studio-backend-0.1.0-SNAPSHOT.jar
+-- root app git
+HEAD of /Users/hoangluan/code/HBL checkout: 1a9995c 2026-10-07 15:07:20 +0700 HEAD -> integration/v2, origin/integration/v2
+-- auth/config (public)
+{"localLogin":true,"oidc":false,"oidcLoginUrl":"/oauth2/authorization/oidc","signup":false,"signupInviteRequired":false,"codeProjects":false,"serverApps":false,"codeAppPublicPublish":false,"publicPublish":true,"needsSetup":false,"saml":false,"samlLabel":"Đăng nhập SAML của công ty","samlLoginUrl":"/oauth2/authorization/oidc?idp=saml","mfa":"IDP"}
+-- flyway on public stack
+psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: FATAL:  role "postgres" does not exist
+psql: warning: extra command-line argument "select max(version::int), count(*) from flyway_schema_history where success" ignored
+psql: error: connection to server on socket "/var/run/postgresql/.s.PGSQL.5432" failed: FATAL:  role "postgres" does not exist
+-- public DB (read-only): flyway + accounts (no usernames/hashes printed)
+flyway_max=30 applied=30
+users_total=14 local_prefixed=0
+workspace_member_roles: WORKSPACE_ADMIN=14
+project_member_roles: OWNER=27
+-- build-time vs source-time
+backend src last change on integration/v2: 26cd3ab 2026-10-07 13:29; jar 14:44:12 started 14:48:56 (pid 68753)
+frontend src last change: 518be0f 2026-10-06 14:42; .next BUILD_ID 2026-10-06 14:46 (next-server pid 68953 started 2026-10-07 14:49)
+1a9995c (15:07) touched only compose/infra/scripts/docs; no SHA is embedded in jar/next build or exposed by any public endpoint (/actuator/* answers via the Next app, /api/v1/version needs login) => circumstantially consistent, NOT provable

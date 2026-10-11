@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.runtime.PublicAddressTests" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:52:03.617Z" hostname="macmini-2.local" time="0.116">
+  <properties/>
+  <testcase name="private loopback link-local multicast and any-local are refused()" classname="com.systemwebstudio.runtime.PublicAddressTests" time="0.0"/>
+  <testcase name="192 0 0 slash 24 and the documentation and benchmarking blocks()" classname="com.systemwebstudio.runtime.PublicAddressTests" time="0.0"/>
+  <testcase name="public addresses stay public()" classname="com.systemwebstudio.runtime.PublicAddressTests" time="0.001"/>
+  <testcase name="6to4 Teredo documentation discard and IPv4-compatible IPv6()" classname="com.systemwebstudio.runtime.PublicAddressTests" time="0.0"/>
+  <testcase name="240 slash 4 reserved and the limited broadcast()" classname="com.systemwebstudio.runtime.PublicAddressTests" time="0.0"/>
+  <testcase name="an IPv6 zone id does not change the verdict()" classname="com.systemwebstudio.runtime.PublicAddressTests" time="0.0"/>
+  <testcase name="a literal that is private is not public and a name that cannot resolve is not public()" classname="com.systemwebstudio.runtime.PublicAddressTests" time="0.113"/>
+  <testcase name="this-network and carrier-grade NAT()" classname="com.systemwebstudio.runtime.PublicAddressTests" time="0.001"/>
+  <testcase name="NAT64 is judged by the embedded IPv4()" classname="com.systemwebstudio.runtime.PublicAddressTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

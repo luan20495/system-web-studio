@@ -1,0 +1,648 @@
+# start: 2026-10-06T15:13:37Z
+# cwd:   /Users/hoangluan/code/xweb-c6
+# cmd:   bash -c cd backend && ./gradlew clean test --no-daemon --no-build-cache --rerun-tasks --console=plain -Pkotlin.daemon.jvmargs=-Xmx3g
+
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.8.0/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+Invalid Java installation found at '/Library/Java/JavaVirtualMachines/jdk-18.0.2.1.jdk/Contents/Home' (MacOS java_home) auto-detected. It will be re-checked in the next build. If the configuration cache is enabled, the re-check will happen only after the cache is invalidated. This might have performance impact if it keeps failing. Run the 'javaToolchains' task for more details.
+> Task :clean
+> Task :checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :processResources
+> Task :processTestResources
+
+> Task :compileKotlin
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/access/AccessService.kt:75:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/access/MeTenancy.kt:28:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/admin/AdminController.kt:67:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/admin/HealthProbes.kt:36:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/admin/HealthProbes.kt:36:66 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/admin/HealthProbes.kt:37:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/ai/planner/PlannerApi.kt:108:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/asset/AssetController.kt:44:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/asset/AssetController.kt:45:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/asset/AssetController.kt:46:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/asset/AssetController.kt:47:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/asset/AssetController.kt:48:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/code/BuildJobs.kt:89:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/code/BuildJobs.kt:90:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/code/BuildJobs.kt:213:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/code/BuildJobs.kt:214:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/code/CodeAi.kt:44:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/code/CodeAi.kt:45:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/code/CodeChangeController.kt:44:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/code/GitAccess.kt:34:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/code/GitAccess.kt:34:61 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/code/GitAccess.kt:35:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/common/ClientIpFilter.kt:25:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/common/RequestFilters.kt:20:61 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/common/RequestFilters.kt:61:34 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/identity/AuthController.kt:68:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/identity/AuthController.kt:69:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/identity/AuthController.kt:71:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/identity/AuthController.kt:72:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/identity/AuthController.kt:73:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/identity/AuthController.kt:74:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/identity/AuthController.kt:76:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/identity/AuthController.kt:77:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/identity/AuthController.kt:78:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/identity/AuthController.kt:79:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/identity/AuthController.kt:80:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/identity/MeController.kt:29:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/identity/PasswordHashGate.kt:18:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/identity/RegistrationController.kt:45:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/identity/RegistrationController.kt:46:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/identity/RegistrationController.kt:47:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/identity/Scim.kt:298:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/identity/Scim.kt:362:27 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/identity/Scim.kt:362:94 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/identity/oidc/OidcLoginHandlers.kt:43:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/identity/oidc/OidcLoginHandlers.kt:44:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/identity/oidc/OidcLoginHandlers.kt:45:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/integration/deploy/DeployProvider.kt:28:26 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/integration/git/ForgejoClient.kt:32:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/integration/git/ForgejoClient.kt:33:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/integration/git/ForgejoClient.kt:34:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/integration/git/ForgejoClient.kt:35:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/integration/git/ForgejoClient.kt:36:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/integration/llm/AiService.kt:22:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/integration/llm/AiService.kt:23:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/integration/llm/AiService.kt:24:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/integration/llm/AiService.kt:25:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/integration/llm/ChatProviders.kt:250:70 Check for instance is always 'false'.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/integration/llm/ExternalLLMProvider.kt:27:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/integration/llm/LLMRouter.kt:16:23 The corresponding parameter in the supertype 'LLMProvider' is named 'request'. This may cause problems when calling this function with named arguments.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/integration/llm/OpenRouterClient.kt:30:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/integration/llm/OpenRouterClient.kt:32:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/integration/llm/OpenRouterClient.kt:33:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/integration/llm/OpenRouterClient.kt:34:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/integration/llm/OpenRouterClient.kt:35:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/integration/storage/ArtifactStore.kt:24:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/integration/storage/ArtifactStore.kt:25:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/integration/storage/MinioStorageProvider.kt:27:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/maintenance/Backups.kt:31:21 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/maintenance/Backups.kt:31:85 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/maintenance/CleanupService.kt:31:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/maintenance/CleanupService.kt:32:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/maintenance/CleanupService.kt:33:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/maintenance/CleanupService.kt:34:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/maintenance/CleanupService.kt:35:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/maintenance/CleanupService.kt:36:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/maintenance/CleanupService.kt:38:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/project/ProjectController.kt:76:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/prompt/PromptController.kt:79:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/publish/DeploymentProcessor.kt:32:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/publish/Forms.kt:38:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/publish/Forms.kt:39:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/publish/PublishController.kt:48:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/publish/PublishWorker.kt:27:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/publish/PublishWorker.kt:28:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/publish/SiteControllers.kt:33:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/publish/SiteControllers.kt:34:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/publish/SiteService.kt:35:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/publish/SiteService.kt:36:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/publish/SiteService.kt:37:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/publish/StaticSites.kt:26:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/publish/StaticSites.kt:27:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/publish/StaticSites.kt:71:47 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/publish/StaticSites.kt:71:124 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/runtime/Gateway.kt:66:13 'when' is exhaustive so 'else' is redundant here.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/runtime/RuntimeSupport.kt:50:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/runtime/RuntimeSupport.kt:51:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/runtime/RuntimeSupport.kt:52:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/runtime/RuntimeSupport.kt:53:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/runtime/ServerRuntime.kt:57:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/runtime/ServerRuntime.kt:58:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/runtime/ServerRuntime.kt:59:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/runtime/ServerRuntime.kt:60:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/main/kotlin/com/systemwebstudio/runtime/ServerRuntime.kt:282:76 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+
+> Task :compileJava NO-SOURCE
+> Task :classes
+> Task :jar
+
+> Task :compileTestKotlin
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/test/kotlin/com/systemwebstudio/data/datasource/postgres/PostgresDiscoveryTests.kt:94:43 Condition is always 'false'.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/test/kotlin/com/systemwebstudio/data/testkit/RedisServerDouble.kt:64:12 Unchecked cast of 'Any!' to 'ValueOperations<String, String>'.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/test/kotlin/com/systemwebstudio/support/TestFixtures.kt:15:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/test/kotlin/com/systemwebstudio/support/TestFixtures.kt:16:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/test/kotlin/com/systemwebstudio/support/TestFixtures.kt:17:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/test/kotlin/com/systemwebstudio/support/TestFixtures.kt:18:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/test/kotlin/com/systemwebstudio/support/TestFixtures.kt:19:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+w: file:///Users/hoangluan/code/xweb-c6/backend/src/test/kotlin/com/systemwebstudio/support/TestFixtures.kt:20:5 This annotation is currently applied to the value parameter only, but in the future it will also be applied to field.
+- To opt in to applying to both value parameter and field, add '-Xannotation-default-target=param-property' to your compiler arguments.
+- To keep applying to the value parameter only, use the '@param:' annotation target.
+
+See https://youtrack.jetbrains.com/issue/KT-73255 for more details.
+
+> Task :compileTestJava NO-SOURCE
+> Task :testClasses
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+> Task :test
+
+{"@timestamp":"2026-10-06T22:21:24.135021+07:00","@version":"1","message":"Waiting for workers to finish.","logger_name":"org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer","thread_name":"org.springframework.amqp.rabbit.RabbitListenerEndpointContainer#0-39","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-06T22:21:24.81391+07:00","@version":"1","message":"Successfully waited for workers to finish.","logger_name":"org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer","thread_name":"org.springframework.amqp.rabbit.RabbitListenerEndpointContainer#0-39","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-06T22:21:24.845549+07:00","@version":"1","message":"Closing JPA EntityManagerFactory for persistence unit 'default'","logger_name":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-06T22:21:24.850506+07:00","@version":"1","message":"HikariPool-1 - Shutdown initiated...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.851015+07:00","@version":"1","message":"HikariPool-1 - Shutdown completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.864537+07:00","@version":"1","message":"Closing JPA EntityManagerFactory for persistence unit 'default'","logger_name":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-06T22:21:24.868441+07:00","@version":"1","message":"HikariPool-2 - Shutdown initiated...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.868755+07:00","@version":"1","message":"HikariPool-2 - Shutdown completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.878538+07:00","@version":"1","message":"Closing JPA EntityManagerFactory for persistence unit 'default'","logger_name":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-06T22:21:24.882116+07:00","@version":"1","message":"HikariPool-3 - Shutdown initiated...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.882409+07:00","@version":"1","message":"HikariPool-3 - Shutdown completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.889856+07:00","@version":"1","message":"Closing JPA EntityManagerFactory for persistence unit 'default'","logger_name":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-06T22:21:24.890768+07:00","@version":"1","message":"HikariPool-4 - Shutdown initiated...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.891146+07:00","@version":"1","message":"HikariPool-4 - Shutdown completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.894224+07:00","@version":"1","message":"Closing JPA EntityManagerFactory for persistence unit 'default'","logger_name":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-06T22:21:24.894973+07:00","@version":"1","message":"HikariPool-5 - Shutdown initiated...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.895405+07:00","@version":"1","message":"HikariPool-5 - Shutdown completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.898947+07:00","@version":"1","message":"Closing JPA EntityManagerFactory for persistence unit 'default'","logger_name":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-06T22:21:24.899706+07:00","@version":"1","message":"HikariPool-6 - Shutdown initiated...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.90014+07:00","@version":"1","message":"HikariPool-6 - Shutdown completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.903346+07:00","@version":"1","message":"Closing JPA EntityManagerFactory for persistence unit 'default'","logger_name":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-06T22:21:24.904111+07:00","@version":"1","message":"HikariPool-7 - Shutdown initiated...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.904484+07:00","@version":"1","message":"HikariPool-7 - Shutdown completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.907612+07:00","@version":"1","message":"Closing JPA EntityManagerFactory for persistence unit 'default'","logger_name":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-06T22:21:24.908308+07:00","@version":"1","message":"HikariPool-8 - Shutdown initiated...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.908606+07:00","@version":"1","message":"HikariPool-8 - Shutdown completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.911387+07:00","@version":"1","message":"Closing JPA EntityManagerFactory for persistence unit 'default'","logger_name":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-06T22:21:24.912034+07:00","@version":"1","message":"HikariPool-9 - Shutdown initiated...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.912358+07:00","@version":"1","message":"HikariPool-9 - Shutdown completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.915468+07:00","@version":"1","message":"Closing JPA EntityManagerFactory for persistence unit 'default'","logger_name":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-06T22:21:24.916074+07:00","@version":"1","message":"HikariPool-10 - Shutdown initiated...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.916549+07:00","@version":"1","message":"HikariPool-10 - Shutdown completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.920426+07:00","@version":"1","message":"Closing JPA EntityManagerFactory for persistence unit 'default'","logger_name":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-06T22:21:24.921381+07:00","@version":"1","message":"HikariPool-11 - Shutdown initiated...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.921808+07:00","@version":"1","message":"HikariPool-11 - Shutdown completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.925225+07:00","@version":"1","message":"Closing JPA EntityManagerFactory for persistence unit 'default'","logger_name":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-06T22:21:24.925932+07:00","@version":"1","message":"HikariPool-12 - Shutdown initiated...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.926236+07:00","@version":"1","message":"HikariPool-12 - Shutdown completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.929832+07:00","@version":"1","message":"Closing JPA EntityManagerFactory for persistence unit 'default'","logger_name":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-06T22:21:24.930617+07:00","@version":"1","message":"HikariPool-13 - Shutdown initiated...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.930961+07:00","@version":"1","message":"HikariPool-13 - Shutdown completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.933863+07:00","@version":"1","message":"Closing JPA EntityManagerFactory for persistence unit 'default'","logger_name":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-06T22:21:24.934547+07:00","@version":"1","message":"HikariPool-16 - Shutdown initiated...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.934843+07:00","@version":"1","message":"HikariPool-16 - Shutdown completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.937856+07:00","@version":"1","message":"Closing JPA EntityManagerFactory for persistence unit 'default'","logger_name":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-06T22:21:24.938517+07:00","@version":"1","message":"HikariPool-17 - Shutdown initiated...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.93876+07:00","@version":"1","message":"HikariPool-17 - Shutdown completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.941986+07:00","@version":"1","message":"Closing JPA EntityManagerFactory for persistence unit 'default'","logger_name":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-06T22:21:24.942736+07:00","@version":"1","message":"HikariPool-18 - Shutdown initiated...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.943097+07:00","@version":"1","message":"HikariPool-18 - Shutdown completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.946333+07:00","@version":"1","message":"Closing JPA EntityManagerFactory for persistence unit 'default'","logger_name":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-06T22:21:24.947085+07:00","@version":"1","message":"HikariPool-19 - Shutdown initiated...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.947381+07:00","@version":"1","message":"HikariPool-19 - Shutdown completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.95049+07:00","@version":"1","message":"Closing JPA EntityManagerFactory for persistence unit 'default'","logger_name":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-06T22:21:24.951185+07:00","@version":"1","message":"HikariPool-20 - Shutdown initiated...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.951416+07:00","@version":"1","message":"HikariPool-20 - Shutdown completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.954753+07:00","@version":"1","message":"Closing JPA EntityManagerFactory for persistence unit 'default'","logger_name":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-06T22:21:24.955487+07:00","@version":"1","message":"HikariPool-21 - Shutdown initiated...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.955847+07:00","@version":"1","message":"HikariPool-21 - Shutdown completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.958959+07:00","@version":"1","message":"Closing JPA EntityManagerFactory for persistence unit 'default'","logger_name":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-06T22:21:24.959639+07:00","@version":"1","message":"HikariPool-22 - Shutdown initiated...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.959879+07:00","@version":"1","message":"HikariPool-22 - Shutdown completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.963215+07:00","@version":"1","message":"Closing JPA EntityManagerFactory for persistence unit 'default'","logger_name":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-06T22:21:24.963946+07:00","@version":"1","message":"HikariPool-23 - Shutdown initiated...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.964285+07:00","@version":"1","message":"HikariPool-23 - Shutdown completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.967642+07:00","@version":"1","message":"Closing JPA EntityManagerFactory for persistence unit 'default'","logger_name":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-06T22:21:24.968425+07:00","@version":"1","message":"HikariPool-24 - Shutdown initiated...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.968656+07:00","@version":"1","message":"HikariPool-24 - Shutdown completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.971874+07:00","@version":"1","message":"Closing JPA EntityManagerFactory for persistence unit 'default'","logger_name":"org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000,"tags":["COMMONS-LOGGING"]}
+{"@timestamp":"2026-10-06T22:21:24.972643+07:00","@version":"1","message":"HikariPool-25 - Shutdown initiated...","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-06T22:21:24.972899+07:00","@version":"1","message":"HikariPool-25 - Shutdown completed.","logger_name":"com.zaxxer.hikari.HikariDataSource","thread_name":"SpringApplicationShutdownHook","level":"INFO","level_value":20000}
+
+[Incubating] Problems report is available at: file:///Users/hoangluan/code/xweb-c6/backend/build/reports/problems/problems-report.html
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 10.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/9.8.0/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 7m 49s
+7 actionable tasks: 7 executed
+Consider enabling configuration cache to speed up this build: https://docs.gradle.org/9.8.0/userguide/configuration_cache_enabling.html

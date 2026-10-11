@@ -1,0 +1,34 @@
+FLOW: E2E-PD01 — Public data V1, canonical chain: Studio slot → READ public query → bind → publish (PUBLIC_QUERIES, acknowledgement) → anonymous page → config → apiBase → /{slug}/_data → LIVE → rendered
+RESULT: BLOCKED
+START: 2026-10-08T00:41:58.570Z
+END: 2026-10-08T00:42:06.400Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 2e28663b-6574-4e57-8819-7b203912e46c
+WORKSPACE: b53f07df-7596-43c2-8d97-ac3677d20229
+HTTP EVIDENCE:
+  - ok [fixture] the operator's data source was created through the Management API
+  - ok [fixture] the SELECT was registered as an approved query definition (Management API)
+  - ok [fixture] the logical slot is LIVE-bound to the real source (Management API)
+  - ok [api] a READ query WITHOUT public is accepted (it is private by default)
+  - ok [api] a WRITE query with public=false is accepted
+  - ok [api] a WRITE query with public=true is REJECTED by the server (422, path queries[i].public) — the UI never offers it
+  - ok [ui] POST …/publish is the unchanged release contract: body EXACTLY {visibility:'PUBLIC', expectedRevision}, Idempotency-Key present — no acknowledgement field
+  - ok [visitor] the page asked for its runtime config (GET __factory/config.json) before any data request, with no cookie and no credentials
+  - ok [visitor] config.json is no-store JSON with a same-origin apiBase for THIS slug (…/{slug}/_data) and no tenant / workspace / credential
+UI ASSERTION:
+  - ok [ui] readiness: not-ready for ONE reason only — the site is not public yet, so it has no data address (apiBase); the draft itself has no problem
+  - ok [ui] the publish review lists exactly the public READ query (not the private one, not the WRITE one)
+  - ok [ui] Publish is disabled until the acknowledgement is ticked
+  - ok [ui] the dialog shows the server's PUBLIC_QUERIES and no mismatch with what it announced
+  - ok no unhandled page errors in Studio
+PERSISTENCE ASSERTION:
+  - ok [ui] the slot was added and the SERVER stored exactly {id,name,type} — no sourceRef, no credential
+  - ok [ui] a READ query with public=true was stored by the server (mode READ, operationKey = the approved one, local slot ref)
+  - ok [ui] the binding was stored: {sectionId, prop, queryRef} with the LOCAL public READ query id — never a slot, sourceRef or credential
+  - ok [backend] the server wrote the PUBLIC_QUERIES event naming exactly the public query
+  - ok [backend] the release is live and PUBLIC, operation idle
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: the public data route did not serve the query (q1:not-found): the Public Runtime controller (D-C0-36, behind its flag) / PUBLIC_SITE (C1) / LIVE binding (C3) is not wired on this stack
+OWNER: C0 · ref D-C0-36

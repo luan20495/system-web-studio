@@ -1,0 +1,5 @@
+Studio drawer @390 (manual step-through, candidate 5cc230e, 2026-10-08) — the scripted V4-studio-* cases timed out on a later step (harness), so each behaviour was checked by hand:
+toggle visible after hydration: yes; Enter on the toggle: aria-expanded true, label "Đóng menu điều hướng", focus stays on the toggle;
+Tab x6: focus moves to a link inside the drawer; Escape: closes, focus returns to the toggle ("Mở menu điều hướng"); re-open by click; backdrop click: closes;
+picking "/studio/projects" in the drawer: navigates, aria-expanded false, drawer translated off-screen (left -306px).
+=> same behaviour as Platform/Admin: non-modal disclosure, focus not moved into the drawer on open (P3 note).

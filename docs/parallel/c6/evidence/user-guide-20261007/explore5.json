@@ -1,0 +1,123 @@
+{
+ "frames": [
+  "/studio/projects/eed78940-86bc-447f-911b-3410efd4b0c0/design",
+  ""
+ ],
+ "inFrame": "/studio/projects/eed78940-86bc-447f-911b-3410efd4b0c0/design",
+ "heroCount": 1,
+ "afterClick": {
+  "calls": [],
+  "text": "←\nC6-UG-QA-muxv3osu\nPhiên bản 1 · revision 0 · Riêng tư\n✓ Đã lưu 15:45\n✦ AI\nDesign\nCode\nChỉnh sửa\nDùng thử\nMáy tính\nMáy tính bảng\nĐiện thoại\nWebsite\nPhiên bản\nTệp\n⚙\nChia sẻ\nXuất bản\nTrang\nThành phần\nDữ liệu\nBiểu mẫu\nHành động\nWorkflow\nGiao diện\nAI\nTrang\n＋ Trang\n\nMọi đường dẫn hợp lệ.\n\nTrang chủ\nTrang chủ\n/\n⋮⋮\nThanh điều hướng\nC6-UG-QA-muxv3osu\n↑\n↓\n⋮⋮\nĐầu trang (Hero)\nNước sạch mỗi ngày, sống khỏe mỗi ngày.\n↑\n↓\n⋮⋮\nDanh sách sản phẩm\nChọn giải pháp phù hợp\n↑\n↓\n⋮⋮\nCông nghệ\nCông nghệ lọc thông minh\n↑\n↓\n⋮⋮\nĐánh giá khách hàng\nKhách hàng nói gì\n↑\n↓\n⋮⋮\nForm liên hệ\nLiên hệ tư vấn\n↑\n↓\n⋮⋮\nChân trang\n© Pure Living\n↑\n↓\nĐổi tên / đường dẫn\nXóa trang\nChưa sẵn sàng\n\nMáy chủ chưa có thao tác đổi thứ tự trang. Bạn có thể đổi thứ tự menu điều hướng.\n\nMenu điều hướng\n\nThứ tự menu đổi được ngay; thứ tự trang trong tài liệu thì chưa.\n\n+ Thêm trang vào menu…\nTrang chủ\nLưu menu\nTrang 404\nTiêu đề\nLời nhắn\nKhông tìm thấy trang\n\nTrang bạn tìm không tồn tại hoặc đã được chuyển đi.\n\nLưu trang 404\n⋮⋮\n⋮⋮\n⋮⋮\n⋮⋮\n⋮⋮\n⋮⋮\n⋮⋮\nĐầu trang (Hero)\nhero-1\n✕\nNội dung\nThiết kếchưa\nDữ liệu\nHành động\nQuyền\nNâng cao\nẢnh\nKhông có ảnh\nTải ảnh lên ở mục “Tệp” để dùng tại đây.\nTiêu đề\nDòng nhỏ phía trên\nChữ trên nút\nMô tả\nHoàn tác\nLưu thay đổi\n↑ Lên\n↓ Xuống\nXóa mục\nLưu thành khối…",
+  "tabs": [
+   "Trang",
+   "Thành phần",
+   "Dữ liệu",
+   "Biểu mẫu",
+   "Hành động",
+   "Workflow",
+   "Giao diện",
+   "AI",
+   "Nội dung",
+   "Thiết kếchưa",
+   "Dữ liệu",
+   "Hành động",
+   "Quyền",
+   "Nâng cao"
+  ],
+  "buttons": [
+   "←",
+   "✦ AI",
+   "Design",
+   "Code",
+   "Chỉnh sửa",
+   "Dùng thử",
+   "Máy tính",
+   "Máy tính bảng",
+   "Điện thoại",
+   "Website",
+   "Phiên bản",
+   "Tệp",
+   "⚙",
+   "Chia sẻ",
+   "Xuất bản",
+   "＋ Trang",
+   "⋮⋮",
+   "↑",
+   "↓",
+   "⋮⋮",
+   "↑",
+   "↓",
+   "⋮⋮",
+   "↑",
+   "↓",
+   "⋮⋮",
+   "↑",
+   "↓",
+   "⋮⋮",
+   "↑",
+   "↓",
+   "⋮⋮",
+   "↑",
+   "↓",
+   "⋮⋮",
+   "↑",
+   "↓",
+   "Đổi tên / đường dẫn",
+   "Xóa trang",
+   "Lưu menu",
+   "Lưu trang 404",
+   "⋮⋮",
+   "⋮⋮",
+   "⋮⋮",
+   "⋮⋮",
+   "⋮⋮",
+   "⋮⋮",
+   "⋮⋮",
+   "✕",
+   "Hoàn tác",
+   "Lưu thay đổi",
+   "↑ Lên",
+   "↓ Xuống",
+   "Xóa mục",
+   "Lưu thành khối…"
+  ],
+  "inputs": [
+   {
+    "t": "text",
+    "v": "",
+    "l": "Tiêu đề",
+    "a": null
+   },
+   {
+    "t": "text",
+    "v": "",
+    "l": "Lời nhắn",
+    "a": null
+   },
+   {
+    "t": "textarea",
+    "v": "Nước sạch mỗi ngày, sống khỏe mỗi ngày.",
+    "l": "Tiêu đề",
+    "a": null
+   },
+   {
+    "t": "text",
+    "v": "Pure living • smart water",
+    "l": "Dòng nhỏ phía trên",
+    "a": null
+   },
+   {
+    "t": "text",
+    "v": "Khám phá sản phẩm",
+    "l": "Chữ trên nút",
+    "a": null
+   },
+   {
+    "t": "textarea",
+    "v": "Giải pháp lọc nước hiện đại cho gia đình",
+    "l": "Mô tả",
+    "a": null
+   }
+  ]
+ }
+}

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" tests="28" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:44:57.757Z" hostname="macmini-2.local" time="0.086">
+  <properties/>
+  <testcase name="another tenant's definition or data source is refused before any connection()" classname="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" time="0.002"/>
+  <testcase name="a read only data source answers a definite refusal and a different key is unaffected()" classname="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" time="0.011"/>
+  <testcase name="the connection properties of a write session are read write and everything else is unchanged()" classname="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" time="0.0"/>
+  <testcase name="an unexpected exception is an internal connector error with no detail and the transaction is rolled back()" classname="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" time="0.009"/>
+  <testcase name="the connection test of a read only data source is unchanged()" classname="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" time="0.002"/>
+  <testcase name="writable is off by default and strictly true or false()" classname="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" time="0.001"/>
+  <testcase name="a mutation runs as one read write transaction that is verified executed bounded and committed once()" classname="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" time="0.001"/>
+  <testcase name="a constraint violation is rejected and the key is released so the corrected request can use it()" classname="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" time="0.008"/>
+  <testcase name="an ambiguous failure keeps the key and the next attempt is answered without touching the database()" classname="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" time="0.005"/>
+  <testcase name="authentication failure is a definite refusal and releases the key()" classname="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" time="0.002"/>
+  <testcase name="connection and authentication failures before the statement are mapped exactly and send nothing()" classname="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" time="0.003"/>
+  <testcase name="a target names a table in a configured schema and optional key and returning columns()" classname="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" time="0.001"/>
+  <testcase name="success is stored and a replay never reaches the database again()" classname="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" time="0.003"/>
+  <testcase name="the connector declares mutation support and the credential entries it reads()" classname="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" time="0.002"/>
+  <testcase name="the connection test of a writable data source uses a read write session and changes nothing()" classname="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" time="0.001"/>
+  <testcase name="a data source that is not writable never opens a connection()" classname="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" time="0.0"/>
+  <testcase name="affected rows are reported and the row cap rolls back a statement that would change too many()" classname="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" time="0.003"/>
+  <testcase name="delete needs a key and takes nothing but the key()" classname="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" time="0.001"/>
+  <testcase name="anything that is not a plain identifier is refused as an invalid target()" classname="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" time="0.003"/>
+  <testcase name="statements that would touch a whole table or cannot be expressed are refused before any connection()" classname="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" time="0.001"/>
+  <testcase name="create builds a parameterised INSERT from the supplied parameters()" classname="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" time="0.0"/>
+  <testcase name="no value ever reaches the SQL text()" classname="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" time="0.0"/>
+  <testcase name="a failure at commit is ambiguous unless the server itself refused the commit()" classname="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" time="0.001"/>
+  <testcase name="returning gives the first row and the row count()" classname="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" time="0.001"/>
+  <testcase name="update sets the supplied non key parameters where the keys match()" classname="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" time="0.0"/>
+  <testcase name="failures the server reported on the statement are definite and release the key()" classname="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" time="0.009"/>
+  <testcase name="a session that is read only or whose role is too privileged is refused before the statement()" classname="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" time="0.003"/>
+  <testcase name="timeouts and lost connections after the statement was sent are ambiguous and keep the key()" classname="com.systemwebstudio.data.datasource.postgres.PostgresMutationTests" time="0.004"/>
+  <system-out><![CDATA[{"@timestamp":"2026-10-08T06:44:57.781466+07:00","@version":"1","message":"mutation failed unexpectedly: IllegalStateException","logger_name":"com.systemwebstudio.data.datasource.postgres.PostgresMutationExecutor","thread_name":"Test worker","level":"DEBUG","level_value":10000}
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

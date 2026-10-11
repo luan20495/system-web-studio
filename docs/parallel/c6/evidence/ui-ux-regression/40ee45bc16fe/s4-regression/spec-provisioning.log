@@ -1,0 +1,41 @@
+PASS  PUI01 SYSTEM_ADMIN opens the create-account dialog: four sections, a tenant selector, no NOT_READY notice, submit enabled
+PASS  PUI02 validation: username / display name / email / tenant are refused in the form and NOTHING is sent
+PASS  PUI03 tenant selector: the real tenants, required for every type; the workspace list stays disabled until a tenant is chosen
+PASS  PUI04 workspace: optional for a user ('Không gán workspace'), the known workspaces, and '+ Tạo workspace mới của công ty này'; the role is disabled while there is no workspace
+PASS  PUI04b the new-workspace name field appears
+PASS  PUI04c a new workspace without a name is refused
+PASS  PUI04d the workspace-admin type REQUIRES a workspace (message, nothing sent)
+PASS  PUI05 types / roles: three types and NO SYSTEM_ADMIN; user → Biên tập viên / Người xuất bản / Người xem; workspace admin → only the admin role; tenant admin shows 'Quản trị công ty'
+PASS  PUI09 success (tenant admin, no workspace): ONE call createTenantUser(t1, {username, displayName, tenantRole}) — the tenant is the PATH, the body has no tenant, no workspaceId, no workspaceRole  — [{"name":"createTenantUser","args":["t1",{"username":"bao.nguyen","displayName":"Bảo Nguyễn","tenantRole":"TENANT_ADMIN"}]}]
+PASS  PUI09b the activation link is shown ONCE (dialog state only) and then gone: the summary has no token, the page URL and storage hold none
+PASS  PUI09c the summary: account, Chờ kích hoạt, the company AND its role (already done), 'Chưa gán workspace'; the only next step is the person's activation
+PASS  WORKSPACE ASSIGNMENT: workspaceId and workspaceRole travel TOGETHER in the body (here w1 + PUBLISHER); the summary names both  — ["t1",{"username":"bao.nguyen","displayName":"Bảo Nguyễn","tenantRole":"MEMBER","workspaceId":"w1","workspaceRole":"PUBLISHER"}]
+PASS  CREATE WORKSPACE: the TENANT route first — createTenantWorkspace('t1', name) — then createTenantUser with that workspace and WORKSPACE_ADMIN; there is no call to the legacy workspace route  — ["createTenantWorkspace","createTenantUser"]
+PASS  RETRY SAFETY: when the account step fails after the workspace was created, the workspace is kept selected and a retry does NOT create a second one  — ["createTenantWorkspace","createTenantUser","createTenantUser"]
+PASS  PUI06 the NOT_READY mechanism is still honoured for a capability the backend lacks: notice, submit DISABLED, a forced click sends nothing
+PASS  PUI07 403 FORBIDDEN: shown by its code, in Vietnamese, not a generic message; the form stays editable  — Bạn không có quyền thực hiện thao tác này ở phạm vi này.
+PASS  PUI08 409 USERNAME_TAKEN: shown by its code on the field, in Vietnamese, not a generic message; the form stays editable  — Tên đăng nhập này đã tồn tại.
+PASS  PUI08b 409 EMAIL_TAKEN: shown by its code on the field, in Vietnamese, not a generic message; the form stays editable  — Email này đã được dùng.
+PASS  404 WORKSPACE_NOT_FOUND (workspace of another tenant): shown by its code, in Vietnamese, not a generic message; the form stays editable  — Không tìm thấy workspace này, hoặc workspace không thuộc công ty này.
+PASS  404 TENANT_NOT_FOUND: shown by its code, in Vietnamese, not a generic message; the form stays editable  — Không tìm thấy công ty này.
+PASS  backend unreachable: shown by its code, in Vietnamese, not a generic message; the form stays editable  — Không kết nối được máy chủ. Chưa rõ thao tác đã được ghi hay chưa: hãy tải lại danh sách trước khi thử lại.
+PASS  503: shown by its code, in Vietnamese, not a generic message; the form stays editable  — Máy chủ chưa sẵn sàng. Hãy thử lại sau ít phút.
+PASS  400 INVALID_USERNAME: shown by its code on the field, in Vietnamese, not a generic message; the form stays editable  — Tên đăng nhập 3–40 ký tự: chữ thường, số, dấu . _ -
+PASS  422 USER_DISABLED: shown by its code, in Vietnamese, not a generic message; the form stays editable  — Tài khoản này đang bị khóa nên không thêm được.
+PASS  400 VALIDATION_FAILED: shown by its code, in Vietnamese, not a generic message; the form stays editable  — Dữ liệu chưa hợp lệ: cần tên hiển thị, và workspace phải đi cùng vai trò workspace (cả hai hoặc không có cái n
+PASS  400 TENANT_ROLE_INVALID: shown by its code, in Vietnamese, not a generic message; the form stays editable  — Vai trò công ty chỉ có thể là Thành viên hoặc Quản trị công ty.
+PASS  403 SELF_GRANT_FORBIDDEN: shown by its code, in Vietnamese, not a generic message; the form stays editable  — Bạn không thể tự cấp quyền hoặc tự đổi vai trò của chính mình.
+PASS  AUI01 Tenant Admin: Người dùng shows the tenant, the create-account action (ENABLED) and add-existing
+PASS  AUI02 the tenant is the session's: read-only, named, not editable
+PASS  AUI03 workspace selection: only the caller's OWN workspaces of THIS tenant (w1, w2 — never the other tenant's wx), 'none', and 'create a workspace of the company'
+PASS  AUI04 no cross-tenant option: no tenant selector, the fixed read-only tenant is Acme, Beta is nowhere
+PASS  AUI05 no SYSTEM_ADMIN option: types = Quản trị công ty / Quản trị workspace / Người dùng (a tenant admin may create tenant admins)
+PASS  AUI01c create user: ONE call createTenantUser('t1' = path, {username, displayName, email, tenantRole MEMBER, workspaceId w2, workspaceRole PUBLISHER}); the tenant id is NOT in the body  — ["t1",{"username":"tom.le","displayName":"Tom Lê","email":"tom@example.com","tenantRole":"MEMBER","workspaceId":"w2","workspaceRole":"PUBLISHER"}]
+PASS  AUI04b a tenant admin of SEVERAL tenants chooses among THEIR OWN tenants only (Acme, Công ty C) — the tenant where they are a plain member (Beta) is not offered
+PASS  AUI06 Workspace Admin (MEMBER_MANAGE only): no create-account action (the reason is shown), only add-existing
+PASS  AUI07 add an existing member still works: ONE call to the member route with the username and role, success shown
+PASS  AUI07b the member route's refusals are shown by code: ALREADY_MEMBER (duplicate), USER_NOT_FOUND (mismatch), USER_DISABLED (disabled)  — duplicate,mismatch,disabled
+PASS  AUI06b a person whose workspace row says role WORKSPACE_ADMIN but whose server permissions lack MEMBER_MANAGE gets NOTHING (a role name grants nothing)
+PASS  no console error / warning / uncaught exception in any page
+
+39/39 checks passed

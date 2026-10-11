@@ -1,0 +1,91 @@
+PASS  ORG_UI01 tree render: a WAI-ARIA tree of the company's own units (5), nested by parent, with aria-level 1/2/3
+PASS  ORG_UI01b each node shows icon tile, name, TYPE badge and counts (employees / child units); nothing is hard-coded (the levels are whatever the company defined)
+PASS  ORG_UI01c collapse hides the subtree and sets aria-expanded=false; expand brings it back
+PASS  ORG_UI01d nothing is sent just to look: only the two list calls were made  — listOrganizationUnits,listOrganizationUnitTypes
+PASS  ORG_UI02 add root: an empty name is refused in the form and NOTHING is sent
+PASS  ORG_UI02b a type that cannot be a root (Phòng sits inside a Khối) is refused before sending, in words
+PASS  ORG_UI02c ONE create call: tenant 't1', parentId null, the chosen type, the trimmed name; the new root appears in the tree and is selected  — ["t1",{"parentId":null,"typeId":"t-div","name":"Chi nhánh Hà Nội"}]
+PASS  ORG_UI02d the flash says it was added
+PASS  ORG_UI03 add child: the dialog names the parent path
+PASS  ORG_UI03b a Team directly under a Khối is refused (the type rule), nothing sent
+PASS  ORG_UI03c ONE create call with parentId 'tech' and the code; the child is nested under its parent (aria-level 2) and the parent now says 3 child units
+PASS  ORG_UI03d a duplicate name under the same parent is refused by the server code and shown as such (dialog stays open, tree unchanged)
+PASS  ORG_UI04 edit: the form is prefilled with the unit's name and type
+PASS  ORG_UI04b ONE update call carries the unit's VERSION (optimistic lock) and the patch; the tree shows the new name  — ["t1","web",1,{"name":"Web & Portal","code":null,"typeId":"t-dept"}]
+PASS  ORG_UI04c disable: a disabled unit stays in the tree, marked 'Đã tắt', and the action becomes 'Bật'
+PASS  ORG_UI04d …and enabling brings it back (version bumped each time, so no stale write)
+PASS  ORG_UI05 move dialog: where the unit may go, with the reason when it may not (itself, 'already here', type rule: a Team cannot sit under a Khối or at the root)
+PASS  ORG_UI05b the submit stays disabled until a destination is chosen
+PASS  ORG_UI05c ONE move call (tenant, id, version, new parent 'web'); the unit is now under Web and the detail path says so  — ["t1","flutter",1,"web"]
+PASS  ORG_UI05d after a reload the new place persists and the subtree moved with it (Mobile has no child, Web has one)
+PASS  ORG_UI06 cycle: moving a unit into itself or into its own subtree is not selectable, and says why (nothing can be sent)
+PASS  ORG_UI06b if the SERVER refuses with a cycle code anyway, the dialog stays open with the cycle message and the tree is unchanged (the backend is the authority)
+PASS  ORG_UI07 delete blocked BEFORE the click when the counts are known: employees → the button is disabled and the reason is shown
+PASS  ORG_UI07b …and a unit with child units says so
+PASS  ORG_UI07c an empty unit is deleted after a confirm dialog: ONE call with its version; it leaves the tree and the selection clears  — ["t1","web",1]
+PASS  ORG_UI07d when the SERVER refuses (the UI did not know the unit had employees), the dialog stays with the 'blocked' message and the unit is still in the tree
+PASS  ORG_UI07e a stale edit (version mismatch) is refused with 'đã bị người khác thay đổi' and a 'Tải lại cơ cấu' button; nothing is overwritten
+PASS  ORG_UI08 empty tree: an explanation and one clear action; no tree, no detail panel
+PASS  ORG_UI08b creating the first root turns the empty state into a tree
+PASS  ORG_UI09 permission denied: the server lists no tenant the caller administers → a forbidden state with the reason, NO call to the backend, no tree, no actions
+PASS  ORG_UI09b no role name is shown or used as the reason
+PASS  ORG_UI09c backend unavailable: an error state with a retry button, in words (not a blank page), the actions do nothing meanwhile
+PASS  ORG_UI10 keyboard: ArrowDown moves focus to the next visible node (roving tabindex: exactly one node is tabbable)
+PASS  ORG_UI10b ArrowLeft on an OPEN node collapses it, on a collapsed node goes to its parent, and on an open parent collapses that (aria-expanded follows)
+PASS  ORG_UI10c ArrowRight expands, then moves into the first child
+PASS  ORG_UI10d Home / End jump to the first / last visible node
+PASS  ORG_UI10e Enter selects the focused node: the detail panel shows it and aria-selected is set
+PASS  ORG_UI10f a dialog opens from the keyboard and Escape closes it
+PASS  ORG_UI10g axe (wcag2a/aa, critical + serious) finds nothing on the tree screen
+PASS  ORG_UI10h …nor in the unit-types dialog
+PASS  TYPE01 the company's own types are listed with code and where they may sit (nothing hard-coded: Khối / Phòng / Team come from the data)
+PASS  TYPE02 the icon is chosen from a closed grid of 16 allow-listed icons (radio buttons), there is no URL / upload field
+PASS  TYPE03 empty name / bad code are refused in the form, nothing sent
+PASS  TYPE04 a code already used by another type is refused (case-insensitive)
+PASS  TYPE05 ONE create call: name, upper-cased code, the chosen icon id; the new type is listed at once  — ["t1",{"name":"Chi nhánh","code":"BRANCH","icon":"map-pin"}]
+PASS  NR01 with the REAL capability table (the server has no organization API yet) the screen says so in plain words and offers no action
+PASS  NR02 a forced click sends NOTHING and no URL is invented: the transport received zero calls
+PASS  EMP_UI01 directory: 20 rows per page, columns Nhân viên / Đơn vị / Vị trí / Vai trò công ty / Trạng thái  — Nhân viên|Đơn vị|Vị trí|Vai trò công ty|Trạng thái
+PASS  EMP_UI01b a row shows name, username, email, unit, position, the company role as a LABEL ('Quản trị công ty', never the raw code) and the status
+PASS  EMP_UI01c the count line says page and total
+PASS  EMP_UI02 search is accent- and case-insensitive ('nguyen duc anh' finds 'Nguyễn Đức Anh'); one row; the query reached the backend
+PASS  EMP_UI02b no match → an empty state that says to change the filter (not a blank table)
+PASS  EMP_UI02c clearing the search restores the full list
+PASS  EMP_UI03 pagination: the first page has Trước disabled and Sau enabled
+PASS  EMP_UI03b page 2/3 shows other people (u21…u40); u01 is gone
+PASS  EMP_UI03c the last page has 5 rows and Sau is disabled
+PASS  EMP_UI03d changing a filter returns to page 1
+PASS  EMP_UI04 create: the existing tenant provisioning dialog, titled 'Thêm nhân viên', with an extra 'Cơ cấu tổ chức' section (unit + position)
+PASS  EMP_UI04b ONE account call (tenant 't1' as the path, no tenantId in the body), then the organization steps for THAT new user: unit 'flutter' and position 'p-sr'  — [[["t1",{"username":"bao.nguyen","displayName":"Bảo Nguyễn","tenantRole":"MEMBER"}]],[["t1","id-bao.nguyen","flutter"],["t1","id-bao.nguyen","p-sr"]]]
+PASS  EMP_UI04c the new employee is in the directory, in Flutter Team with the position (reloaded from the backend, not drawn locally)
+PASS  EMP_UI05 filter by unit includes its subtree (Khối Công nghệ → Flutter + Web = 30 people); the query carries the unit id
+PASS  EMP_UI05b detail → Cơ cấu tổ chức: the unit path / name is shown and a unit select is enabled
+PASS  EMP_UI05c ONE call (tenant, user, unit 'hr'); the dialog confirms and the row now says Nhân sự
+PASS  EMP_UI06 position / level: options show the level ('Trưởng nhóm (cấp 3)')
+PASS  EMP_UI06b ONE position call; the detail and the row show 'Trưởng nhóm'
+PASS  EMP_UI06c the detail has the six sections (Thông tin, Cơ cấu tổ chức, Vị trí/Cấp bậc, Workspace, Quyền hiệu lực, Trạng thái)
+PASS  EMP_UI06d organization metadata is NOT a permission: 'Quyền hiệu lực' shows only the role label and says unit / position grant nothing; no permission list is invented
+PASS  EMP_UI07 a disabled account is listed with the 'Đã tắt' status (u07, u08)
+PASS  EMP_UI07b status filter 'Đã tắt' → exactly those two
+PASS  EMP_UI07c detail of a disabled account: the status says so; enabling is NOT offered to a company admin (the existing route is platform-only), and the reason is shown
+PASS  EMP_UI08 no cross-tenant selector: the tenant is the session's, read-only, named; there is no tenant switch and no editable id
+PASS  EMP_UI08b …and the create dialog has no tenant selector either (a fixed, read-only tenant) and no SYSTEM_ADMIN type
+PASS  EMP_UI08c an admin of SEVERAL companies chooses only among THEIR OWN (Acme, Công ty C); nobody else's company is offered
+PASS  EMP_UI08d permission denied: a forbidden state with the reason and NO backend call
+PASS  EMP_UI08e backend unavailable: an error state with a retry button, not a blank list
+PASS  EMP_UI08f no employees at all: an explanation pointing to 'Thêm nhân viên'
+PASS  EMP_UI09 responsive (390 px): the table becomes cards (header hidden, cells stacked), no horizontal page scroll, the filters and the create button are reachable  — overflow=0
+PASS  EMP_UI09b the organization screen stacks the tree and the detail in ONE column on a narrow screen, no horizontal scroll
+PASS  EMP_UI10 keyboard: Tab reaches the rows and Enter opens the detail; Escape closes it  — emp:u01
+PASS  EMP_UI10b axe (wcag2a/aa, critical + serious) finds nothing on the directory
+PASS  EMP_UI10c …nor in the employee detail
+PASS  EMP_UI10d controls are labelled (search, unit filter, status filter) and the table has column headers
+PASS  EMP_NR01 with the REAL capability table the directory falls back to the tenant member list (the ONE existing route): the only call is tenantMembers; no organization call is made  — tenantMembers
+PASS  EMP_NR02 it says plainly that unit and position are not available yet, the unit filter is disabled, and the unit / position columns are LEFT OUT (not empty cells that look like errors); nothing is invented
+PASS  EMP_NR03 search / status / paging still work on the member list (client-side): 45 people, 3 pages
+PASS  EMP_NR04 detail: unit and position cannot be assigned yet (disabled selects with the not-ready panel), no save button
+PASS  EMP_NR05 create: the organization fields are disabled with a not-ready notice, and the account can still be created
+PASS  EMP_NR06 creating works through the REAL provisioning route: ONE createTenantUser call and ZERO organization calls
+PASS  no console error / warning / uncaught exception in any page
+
+89/89 checks passed

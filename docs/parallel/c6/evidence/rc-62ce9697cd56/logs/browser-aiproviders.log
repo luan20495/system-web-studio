@@ -1,0 +1,29 @@
+PASS  list: every provider row has a logo (inline SVG): OpenRouter / Anthropic / Gemini brand marks, OpenAI / OpenAI-compatible / Local generic Lucide icons  — [["OPENROUTER","brand",true],["ANTHROPIC","brand",true],["GEMINI","brand",true],["OPENAI","generic",true],["LOCAL","generic",true],["OPENAI_COMPATIBLE","generic",true]]
+PASS  list: no <img>, no external icon: logos are inline SVG
+PASS  list: name, kind, status pills (Đang bật / Đã cấu hình), model count and allowed count
+PASS  list: a disabled provider shows Đang tắt and offers Bật; a provider without models says so
+PASS  list: test connection per provider: success (green, latency text) and failure (red, the server's reason)
+PASS  list: the probe calls POST /admin/ai/providers/{id}/probe, nothing else
+PASS  empty state keeps the add action (with the icon button)
+PASS  dialog: header = icon tile + title + subtitle; the dialog's accessible name is still 'Thêm nhà cung cấp'
+PASS  dialog: sections with icons — Nhà cung cấp, API key, Trạng thái; Nâng cao is a collapsible with an icon; Save has a Save icon
+PASS  dialog: the security note is shown next to the key (encrypted, never shown again)
+PASS  dialog: the key field is a PASSWORD input, no autocomplete, empty
+PASS  picker: a listbox with all six kinds, each with its logo and a hint; the current one is selected
+PASS  picker keyboard: ↓ ↓ Enter chooses Anthropic and closes; focus returns to the button
+PASS  picker keyboard: Esc closes the list but NOT the dialog
+PASS  picker: choosing 'AI nội bộ (Local)' shows the service address field and the model fields (as before)
+PASS  picker: the address placeholder is neutral (no localhost)
+PASS  compat: the hidden native select still answers getByLabel('Loại').selectOption(…) (existing scripts keep working) and the picker follows
+PASS  switch: 'Bật nhà cung cấp này' is a role=switch, ON by default, with a state hint
+PASS  switch: Space toggles it (OFF, hint changes)
+PASS  Nâng cao opens a 'Có tính phí' switch (expanded state announced)
+PASS  submit: POST /admin/ai/providers with EXACTLY the fields of before (name, baseUrl, apiKey, models, defaultModel, paid, enabled, kind) — nothing new  — {"name":"Cổng nội bộ","baseUrl":"https://ai.example.com/v1","apiKey":"sk-test-123","models":[],"defaultModel":"","paid":true,"enabled":true,"kind":"OPENAI_COMPATIBLE"}
+PASS  after saving the dialog closes, the new provider is listed with its logo, and the key never appears in the page
+PASS  error: a server refusal is shown in the dialog (by the server's message) and the dialog stays open
+PASS  toggle on a provider still sends PUT {enabled}  — {"method":"PUT","path":"/admin/ai/providers/p3","body":{"enabled":true}}
+PASS  edit: no picker (the kind is fixed): logo + name + hint; key field empty with 'Để trống nếu không muốn thay đổi' when a key is set
+PASS  no request left the page's own origin (no hot-linked icon, font or logo)  — 127.0.0.1:4000
+PASS  no console error / warning / uncaught exception
+
+27/27 checks passed

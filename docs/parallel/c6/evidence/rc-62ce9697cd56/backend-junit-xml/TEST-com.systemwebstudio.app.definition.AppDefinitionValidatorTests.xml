@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.app.definition.AppDefinitionValidatorTests" tests="25" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:43:55.837Z" hostname="macmini-2.local" time="0.017">
+  <properties/>
+  <testcase name="dangling references are reported with the path of the reference()" classname="com.systemwebstudio.app.definition.AppDefinitionValidatorTests" time="0.001"/>
+  <testcase name="ids and names must follow their patterns()" classname="com.systemwebstudio.app.definition.AppDefinitionValidatorTests" time="0.001"/>
+  <testcase name="data bindings are checked against the sections and the component props()" classname="com.systemwebstudio.app.definition.AppDefinitionValidatorTests" time="0.001"/>
+  <testcase name="collection sizes are limited()" classname="com.systemwebstudio.app.definition.AppDefinitionValidatorTests" time="0.001"/>
+  <testcase name="schemaVersion and kind must be known values()" classname="com.systemwebstudio.app.definition.AppDefinitionValidatorTests" time="0.001"/>
+  <testcase name="an action cannot carry a URL SQL or code()" classname="com.systemwebstudio.app.definition.AppDefinitionValidatorTests" time="0.0"/>
+  <testcase name="unknown fields inside definitions are rejected with a path()" classname="com.systemwebstudio.app.definition.AppDefinitionValidatorTests" time="0.0"/>
+  <testcase name="raw URLs are rejected in every text field()" classname="com.systemwebstudio.app.definition.AppDefinitionValidatorTests" time="0.0"/>
+  <testcase name="reads are bound to data and never run as writes()" classname="com.systemwebstudio.app.definition.AppDefinitionValidatorTests" time="0.0"/>
+  <testcase name="workflow trigger and schedule must agree()" classname="com.systemwebstudio.app.definition.AppDefinitionValidatorTests" time="0.0"/>
+  <testcase name="theme and publish draft are bounded and typed()" classname="com.systemwebstudio.app.definition.AppDefinitionValidatorTests" time="0.001"/>
+  <testcase name="actions need the references their type requires()" classname="com.systemwebstudio.app.definition.AppDefinitionValidatorTests" time="0.002"/>
+  <testcase name="page and section rules still come from PageSchemaValidator()" classname="com.systemwebstudio.app.definition.AppDefinitionValidatorTests" time="0.001"/>
+  <testcase name="parameter defaults must be plain scalars of the declared type()" classname="com.systemwebstudio.app.definition.AppDefinitionValidatorTests" time="0.001"/>
+  <testcase name="reference cycles are detected()" classname="com.systemwebstudio.app.definition.AppDefinitionValidatorTests" time="0.0"/>
+  <testcase name="a V2 document that declares schemaVersion may not carry unknown top-level keys but a legacy one may()" classname="com.systemwebstudio.app.definition.AppDefinitionValidatorTests" time="0.0"/>
+  <testcase name="non-object documents do not blow up()" classname="com.systemwebstudio.app.definition.AppDefinitionValidatorTests" time="0.001"/>
+  <testcase name="an empty definition set is valid and each optional key may be used on its own()" classname="com.systemwebstudio.app.definition.AppDefinitionValidatorTests" time="0.0"/>
+  <testcase name="explicit nulls and wrong json types are rejected()" classname="com.systemwebstudio.app.definition.AppDefinitionValidatorTests" time="0.001"/>
+  <testcase name="duplicate ids are reported per collection()" classname="com.systemwebstudio.app.definition.AppDefinitionValidatorTests" time="0.0"/>
+  <testcase name="typed validate delegates the same way()" classname="com.systemwebstudio.app.definition.AppDefinitionValidatorTests" time="0.001"/>
+  <testcase name="the extension area rejects URLs credentials SQL and code-like keys at any depth()" classname="com.systemwebstudio.app.definition.AppDefinitionValidatorTests" time="0.001"/>
+  <testcase name="the sample V2 document is valid()" classname="com.systemwebstudio.app.definition.AppDefinitionValidatorTests" time="0.0"/>
+  <testcase name="requireValid throws the same ApiException as PageSchemaValidator()" classname="com.systemwebstudio.app.definition.AppDefinitionValidatorTests" time="0.001"/>
+  <testcase name="a mapping must fit the view model that uses it()" classname="com.systemwebstudio.app.definition.AppDefinitionValidatorTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

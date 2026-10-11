@@ -1,0 +1,30 @@
+PASS author login with CSRF
+FAIL project created | 403
+FAIL declare the data-source slot (ADD_DATA_SOURCE, no SQL seed) | 400 {"code":"INVALID_PARAMETER","message":"Invalid value for projectId","requestId":"req_e06cdefcb5314dbebf71d83c0f6bd86f","details":{}}
+PASS a slot can never carry sourceRef | 400
+FAIL data source on the TLS target | 403
+FAIL credential (metadata only)
+FAIL test connection over TLS | {"code":"NOT_FOUND","message":"data source not found","requestId":"req_7c0283137aaf4cda90d9044a6a6e0579","retryable":false,"details":{}}
+FAIL query definition shop.title | 404
+FAIL query definition shop.title2 | 404
+FAIL query definition shop.items | 404
+FAIL bind TEST
+FAIL bind LIVE
+FAIL queries (public: true) and mappings added through operations | 400 {"code":"INVALID_PARAMETER","message":"Invalid value for projectId","requestId":"req_1c0a788842be45018e730183cf071af0","details":{}}
+FAIL data bindings (Hero title, ProductGrid items) | 400 {"code":"INVALID_PARAMETER","message":"Invalid value for projectId","requestId":"req_195f7cf3df5d41be840af48c100230fc","details":{}}
+PASS a PUBLIC data-bound page is refused without the public-data acknowledgement | 400
+FAIL acknowledge public data | 400 {"code":"INVALID_PARAMETER","message":"Invalid value for projectId","requestId":"req_4ace33a685be408d84010d4f69a885cc","details":{}}
+FAIL publish release 1 (PAGE_SCHEMA with a runtime) | 400 
+node:internal/url:818
+      href = bindingUrl.parse(input, base, true);
+                        ^
+
+TypeError: Invalid URL
+    at new URL (node:internal/url:818:25)
+    at file:///Users/hoangluan/code/xweb-c6-rc/scripts/v1-public-smoke.mjs:82:74
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  code: 'ERR_INVALID_URL',
+  input: 'undefined'
+}
+
+Node.js v22.23.1

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.wiring.DataWriteErrorsTests" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:54:07.691Z" hostname="macmini-2.local" time="0.002">
+  <properties/>
+  <testcase name="an unknown outcome stays unknown and is never retryable()" classname="com.systemwebstudio.wiring.DataWriteErrorsTests" time="0.0"/>
+  <testcase name="no failure of a write is ever a bare generic code()" classname="com.systemwebstudio.wiring.DataWriteErrorsTests" time="0.001"/>
+  <testcase name="in progress and rate limited are retryable with the same code()" classname="com.systemwebstudio.wiring.DataWriteErrorsTests" time="0.0"/>
+  <testcase name="a rejected mutation stays rejected and is never retryable()" classname="com.systemwebstudio.wiring.DataWriteErrorsTests" time="0.0"/>
+  <testcase name="every code C3 guarantees nothing was applied for keeps its code and is not retryable()" classname="com.systemwebstudio.wiring.DataWriteErrorsTests" time="0.0"/>
+  <testcase name="a transport style exception on a write is an unknown outcome()" classname="com.systemwebstudio.wiring.DataWriteErrorsTests" time="0.0"/>
+  <testcase name="a key conflict is definite and not retryable()" classname="com.systemwebstudio.wiring.DataWriteErrorsTests" time="0.001"/>
+  <testcase name="an ambiguous connector failure becomes an unknown outcome()" classname="com.systemwebstudio.wiring.DataWriteErrorsTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

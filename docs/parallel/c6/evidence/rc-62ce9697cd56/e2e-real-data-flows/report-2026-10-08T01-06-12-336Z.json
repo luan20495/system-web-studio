@@ -1,0 +1,120 @@
+{
+  "studio": "http://127.0.0.1:3403",
+  "runId": "muyu594n",
+  "frontendHead": "62ce969",
+  "backend": {
+    "url": "http://127.0.0.1:51080",
+    "head": "62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]"
+  },
+  "facts": {
+    "authConfig": {
+      "localLogin": true,
+      "oidc": false,
+      "publicPublish": true
+    },
+    "fixtureNotes": {
+      "viewerOnProject": "member",
+      "initialRevision": 0,
+      "definitionOps": {
+        "ok": true
+      }
+    },
+    "routes": {
+      "queries": {
+        "status": 404,
+        "code": "QUERY_NOT_FOUND"
+      },
+      "actions": {
+        "status": 404,
+        "code": "UNKNOWN_ACTION"
+      }
+    }
+  },
+  "cleanup": [
+    "left behind (no delete route): workspaces ef7742ef-4ffc-478c-a762-a7f9b091a2d7, e6acd068-2fda-4868-b686-eb7e1cad7c46 named e2e-muyu594n-*"
+  ],
+  "node": "v22.23.1",
+  "summary": {
+    "total": 2,
+    "PASS": 1,
+    "FAIL": 0,
+    "BLOCKED": 1,
+    "SKIP": 0
+  },
+  "results": [
+    {
+      "id": "E2E-07",
+      "title": "TEST-binding query runs and shows results",
+      "status": "PASS",
+      "owner": null,
+      "ref": null,
+      "reason": null,
+      "mismatch": null,
+      "start": "2026-10-08T01:06:09.095Z",
+      "end": "2026-10-08T01:06:11.552Z",
+      "workspace": "ef7742ef-4ffc-478c-a762-a7f9b091a2d7",
+      "project": "7ceb9c33-36ab-41fe-9735-76fe269dfcf0",
+      "checks": [
+        {
+          "name": "the pre-seeded query is listed in the Test panel",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "the real backend answered with rows (outcome SUCCESS from the server)",
+          "ok": true,
+          "detail": "SUCCESS: Thành công (theo máy chủ) 11 dòng · bộ nhớ đệm: BYPASS · chế độ TEST Kết quả truy vấn items-list name description C6-9210A1 open C6-9210A1-P open C6-AB1525 open C6-AB1525-P open C6-F7DA2C open",
+          "kind": "http"
+        },
+        {
+          "name": "a result table is rendered",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        },
+        {
+          "name": "an independent API call returns 200 with the same query",
+          "ok": true,
+          "detail": "status=200",
+          "kind": "ui"
+        },
+        {
+          "name": "UI row count equals the server's",
+          "ok": true,
+          "detail": "ui=11 api=11",
+          "kind": "ui"
+        },
+        {
+          "name": "no unhandled page errors",
+          "ok": true,
+          "detail": "",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    },
+    {
+      "id": "E2E-08",
+      "title": "LIVE-binding query runs and shows results",
+      "status": "BLOCKED",
+      "owner": "C0",
+      "ref": "B-C5-06 + H-C2-04 + H-C2-02 + H-C0-07",
+      "reason": "LIVE needs (1) a RUNNING deployment and a published host that serves the Data API: C0 states there is no public DataGateway route and no published data host, and the runtime config that would carry its address is undecided (C0 `__factory/config.json` apiBase, served for code apps/previews only, vs C2 `/runtime-config.json` DATA_API_BASE_URL); (2) a declared slot (C2 H-C2-02); (3) a source the gateway may reach (H-C0-07). Studio's Test panel is TEST-only by design. [published host: E2E_PUBLIC_BASE not set — no published host to askGET /__factory/config.json → 404GET /runtime-config.json → 404]",
+      "mismatch": null,
+      "start": "2026-10-08T01:06:11.552Z",
+      "end": "2026-10-08T01:06:11.952Z",
+      "workspace": "ef7742ef-4ffc-478c-a762-a7f9b091a2d7",
+      "project": "7ceb9c33-36ab-41fe-9735-76fe269dfcf0",
+      "checks": [
+        {
+          "name": "(evidence) LIVE run answers 200 or a documented 404/422/503 — never 500",
+          "ok": true,
+          "detail": "status=200 code=undefined",
+          "kind": "ui"
+        }
+      ],
+      "failed": []
+    }
+  ]
+}

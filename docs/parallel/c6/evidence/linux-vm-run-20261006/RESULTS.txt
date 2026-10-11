@@ -1,0 +1,31 @@
+START|2026-10-06T13:00:47Z
+HOST|Linux aarch64 |n/a 
+HEAD|f894cc6
+BRANCH|agent/c6-qa
+JAVA|NOT_RUN|reason=no_jdk21_found_or_not_needed|at=2026-10-06T13:00:48Z
+DOCKER|NOT_RUN|reason=daemon_not_running_or_missing|at=2026-10-06T13:00:48Z
+BRANCH_CHECK|PASS|expected=agent/c6-qa|at=2026-10-06T13:00:48Z
+BASELINE|PASS|base=f894cc6|head_descends_from_base=yes|commits_ahead=0|at=2026-10-06T13:00:48Z
+WORKTREE_START|PASS|dirty_outside_c6=0|at=2026-10-06T13:00:49Z
+PREREQ|FAIL|missing=jdk21,docker(daemon,not,running) |at=2026-10-06T13:00:49Z
+SCOPE|INFO|full|at=2026-10-06T13:00:49Z
+BACKEND_COMPILE|NOT_RUN|reason=prerequisite_missing(fail-fast; fix PREREQ line and re-run)|at=2026-10-06T13:00:49Z
+BACKEND_TEST|NOT_RUN|reason=prerequisite_missing(fail-fast; fix PREREQ line and re-run)|at=2026-10-06T13:00:49Z
+SECURITY_SUITES|NOT_RUN|reason=prerequisite_missing(fail-fast; fix PREREQ line and re-run)|at=2026-10-06T13:00:49Z
+FRONTEND_TYPECHECK|NOT_RUN|reason=prerequisite_missing(fail-fast; fix PREREQ line and re-run)|at=2026-10-06T13:00:49Z
+FRONTEND_UNIT|NOT_RUN|reason=prerequisite_missing(fail-fast; fix PREREQ line and re-run)|at=2026-10-06T13:00:49Z
+FRONTEND_BUILD|NOT_RUN|reason=prerequisite_missing(fail-fast; fix PREREQ line and re-run)|at=2026-10-06T13:00:49Z
+STATIC_QA|NOT_RUN|reason=prerequisite_missing(fail-fast; fix PREREQ line and re-run)|at=2026-10-06T13:00:49Z
+SMOKE|NOT_RUN|reason=prerequisite_missing(fail-fast; fix PREREQ line and re-run)|at=2026-10-06T13:00:49Z
+STACK_UP|NOT_RUN|reason=prerequisite_missing(fail-fast; fix PREREQ line and re-run)|at=2026-10-06T13:00:49Z
+E2E_01|NOT_RUN|reason=prerequisite_missing(fail-fast; fix PREREQ line and re-run)|at=2026-10-06T13:00:49Z
+E2E_02|NOT_RUN|reason=prerequisite_missing(fail-fast; fix PREREQ line and re-run)|at=2026-10-06T13:00:49Z
+E2E_03|NOT_RUN|reason=prerequisite_missing(fail-fast; fix PREREQ line and re-run)|at=2026-10-06T13:00:49Z
+E2E_04|NOT_RUN|reason=prerequisite_missing(fail-fast; fix PREREQ line and re-run)|at=2026-10-06T13:00:49Z
+E2E_05|NOT_RUN|reason=prerequisite_missing(fail-fast; fix PREREQ line and re-run)|at=2026-10-06T13:00:49Z
+E2E_06|NOT_RUN|reason=prerequisite_missing(fail-fast; fix PREREQ line and re-run)|at=2026-10-06T13:00:49Z
+BROWSER|NOT_RUN|reason=prerequisite_missing(fail-fast; fix PREREQ line and re-run)|at=2026-10-06T13:00:49Z
+RECOVERY|NOT_RUN|reason=prerequisite_missing(fail-fast; fix PREREQ line and re-run)|at=2026-10-06T13:00:49Z
+WORKTREE_SCOPE|PASS|new_changes_outside_c6=0|at=2026-10-06T13:00:49Z
+END|2026-10-06T13:00:49Z
+FINAL|INCOMPLETE|scope=full|failed=-|critical_not_run=BACKEND_COMPILE,BACKEND_TEST,BROWSER,E2E_01,E2E_02,E2E_03,E2E_04,E2E_05,E2E_06,FRONTEND_BUILD,FRONTEND_TYPECHECK,FRONTEND_UNIT,RECOVERY,SECURITY_SUITES,SMOKE,STACK_UP,STATIC_QA|optional_not_run=E2E_07,E2E_08,SECRET_SCAN|gaps=0

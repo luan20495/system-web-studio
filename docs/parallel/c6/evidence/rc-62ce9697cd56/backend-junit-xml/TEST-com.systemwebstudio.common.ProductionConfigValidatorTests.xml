@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.common.ProductionConfigValidatorTests" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:44:49.390Z" hostname="macmini-2.local" time="0.002">
+  <properties/>
+  <testcase name="scim saml and server runtime need their secrets when enabled()" classname="com.systemwebstudio.common.ProductionConfigValidatorTests" time="0.001"/>
+  <testcase name="apiBase is optional, and when set it is a public https address a browser can reach()" classname="com.systemwebstudio.common.ProductionConfigValidatorTests" time="0.0"/>
+  <testcase name="public sign-up needs an explicit acknowledgement()" classname="com.systemwebstudio.common.ProductionConfigValidatorTests" time="0.0"/>
+  <testcase name="wildcard or localhost CORS and an unsafe cookie are refused()" classname="com.systemwebstudio.common.ProductionConfigValidatorTests" time="0.001"/>
+  <testcase name="mock deploy provider, weak bootstrap admin and missing forms salt are refused()" classname="com.systemwebstudio.common.ProductionConfigValidatorTests" time="0.0"/>
+  <testcase name="a safe configuration starts()" classname="com.systemwebstudio.common.ProductionConfigValidatorTests" time="0.0"/>
+  <testcase name="sites and render addresses are required and the browser-facing ones are public https (D-C0-34)()" classname="com.systemwebstudio.common.ProductionConfigValidatorTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

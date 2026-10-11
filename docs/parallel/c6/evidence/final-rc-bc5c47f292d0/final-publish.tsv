@@ -1,0 +1,93 @@
+id	area	description	expected	actual	result	class	owner	note	evidence
+J07-00	fixture	tenant A (owner, PUBLISHER, EDITOR, VIEWER) + foreign tenant B admin + a new PAGE_SCHEMA project, all through product routes	memberships 201	{"pub":201,"edt":201,"vwr":201}	PASS	REAL_BACKEND_E2E			
+J07-01	initial	fresh project: GET site (publisher) is offline with null slug/url, pointerVersion 0, operation null	online=false slug=null	200 {"slug":null,"url":null,"online":false,"visibility":null,"currentDeploymentId":null,"currentVersionNumber":null,"provider":"static","updatedAt":null,"pointerVersion":0,"operation":null}	PASS	REAL_BACKEND_E2E			
+J07-02	initial	fresh project: no stored publish policy (config null) readable by the publisher	200 {config:null}	200 config=null	PASS	REAL_BACKEND_E2E			
+PERM-pub-VIEWER	permission	VIEWER POST publish	403, no deployment	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+PERM-cfg-VIEWER	permission	VIEWER PUT publish-config	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+PERM-rb-VIEWER	permission	VIEWER POST site/rollback	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+PERM-unp-VIEWER	permission	VIEWER DELETE site (unpublish)	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+PERM-pub-EDITOR	permission	EDITOR (can edit, no APP_PUBLISH) POST publish	403, no deployment	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+PERM-cfg-EDITOR	permission	EDITOR (can edit, no APP_PUBLISH) PUT publish-config	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+PERM-rb-EDITOR	permission	EDITOR (can edit, no APP_PUBLISH) POST site/rollback	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+PERM-unp-EDITOR	permission	EDITOR (can edit, no APP_PUBLISH) DELETE site (unpublish)	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+PERM-pub-foreign	permission	admin of a FOREIGN tenant publishes tenant A's project by id	404 (disclosure-safe)	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+PERM-cfg-foreign	permission	foreign tenant PUT publish-config	404	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+PERM-rb-foreign	permission	foreign tenant rollback	404	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+PERM-unp-foreign	permission	foreign tenant unpublish	404	404 WORKSPACE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+PERM-site-foreign	permission	foreign tenant GET site / deployments	404 / 404	404 / 404	PASS	REAL_BACKEND_E2E			
+PERM-pub-anon	permission	anonymous POST publish	401	401 AUTHENTICATION_REQUIRED	PASS	REAL_BACKEND_E2E			
+PERM-cfg-anon	permission	anonymous PUT publish-config	401	401 AUTHENTICATION_REQUIRED	PASS	REAL_BACKEND_E2E			
+PERM-count	permission	none of the denied calls created a deployment or moved the pointer	0 deployments, pointerVersion 0	deployments=0 pointer=0	PASS	REAL_BACKEND_E2E			
+PUB-shape-nokey	publish	POST without Idempotency-Key	400 MISSING_HEADER	400 MISSING_HEADER	PASS	REAL_BACKEND_E2E			
+PUB-shape-badkey	publish	Idempotency-Key with illegal characters	400 INVALID_IDEMPOTENCY_KEY	400 INVALID_IDEMPOTENCY_KEY	PASS	REAL_BACKEND_E2E			
+PUB-shape-vis	publish	visibility outside PRIVATE|PUBLIC	400 VALIDATION_FAILED	400 VALIDATION_FAILED	PASS	REAL_BACKEND_E2E			
+PUB-shape-norev	publish	missing expectedRevision	400 VALIDATION_FAILED	400 VALIDATION_FAILED	PASS	REAL_BACKEND_E2E			
+J07-stale	publish	expectedRevision stale -> 409 REVISION_CONFLICT with details.currentRevision	409 REVISION_CONFLICT currentRevision=0	409 REVISION_CONFLICT cur=0	PASS	REAL_BACKEND_E2E			
+J07-03	publish	PUBLISHER publishes PRIVATE: 202 + deployment (async), url null until RUNNING	202 QUEUED/…, versionNumber = latest version	202 status=QUEUED v=2 latest=2 url=null	PASS	REAL_BACKEND_E2E			
+J07-04	publish	deployment reaches RUNNING (polled, timeout 120 s), real provider (mock=false), url set, no error	RUNNING mock=false url set	RUNNING mock=false provider=static url=http://127.0.0.1:47305/c6f-j07-e9fb3d-778008/ in 4799ms error=null	PASS	REAL_BACKEND_E2E			
+J07-05	publish	events are the contract's history in order	QUEUED<POLICY_CHECK<SECURITY_CHECK<BUILDING<DEPLOYING<RUNNING	QUEUED>POLICY_CHECK>SECURITY_CHECK>BUILDING>DEPLOYING>RUNNING	PASS	REAL_BACKEND_E2E			
+J07-06	publish	SiteInfo: online, PRIVATE, current = this release, version number, operation idle, pointerVersion >= 1	online PRIVATE current=R1	{"slug":"c6f-j07-e9fb3d-778008","url":"http://127.0.0.1:47305/c6f-j07-e9fb3d-778008/","online":true,"visibility":"PRIVATE","currentDeploymentId":"68f9505b-7f55-42c5-9919-d3f5bc01cb45","currentVersionNumber":2,"provider":"static","updatedAt":"2026-10-10T06:39:22.545369Z","pointerVersion":1,"operation":null}	PASS	REAL_BACKEND_E2E			
+J07-07	publish	deployment url == site url on the sites gateway origin	http://127.0.0.1:47305	http://127.0.0.1:47305/c6f-j07-e9fb3d-778008/ / http://127.0.0.1:47305/c6f-j07-e9fb3d-778008/	PASS	REAL_BACKEND_E2E			
+J07-08	publish	replay: same key + same payload -> 202 Idempotent-Replay: true, the ORIGINAL deployment	202 replay same id	202 replay=true same=true	PASS	REAL_BACKEND_E2E			
+J07-09	publish	same key + different payload -> 409 IDEMPOTENCY_KEY_REUSED (no widening via a reused key)	409 IDEMPOTENCY_KEY_REUSED	409 IDEMPOTENCY_KEY_REUSED	PASS	REAL_BACKEND_E2E			
+J07-10	history	release history lists R1 with versionNumber, visibility, RUNNING	1 item	1 items; 2 PRIVATE RUNNING	PASS	REAL_BACKEND_E2E			
+J07-11	history	actor of the release: the append-only audit PUBLISH event names the PUBLISHER (not the editor / owner), with visibility + version	actor=3ab29ad2-5d49-4f8a-856c-7e05b81f3022	actor=3ab29ad2-5d49-4f8a-856c-7e05b81f3022 new={"revision": 1, "visibility": "PRIVATE", "versionNumber": 2}	PASS	REAL_BACKEND_E2E		DeploymentDto carries no actor field: actor is proven through the audit log	
+J07-12	private	anonymous visitor (no cookie) opens the PRIVATE site: 302 to the Studio site-access, empty body, no-store, no page content	302 Location …/studio/site-access?site=<slug>	302 loc=http://127.0.0.1:47307/studio/site-access?site=c6f-j07-e9fb3d-778008&path=%2F body=0b cc=no-store	PASS	REAL_BACKEND_E2E			
+J07-13	private	anonymous runtime config / deep path / forged site_session cookie of a PRIVATE site: no content	302 (never 200)	302 / 302 / 302	PASS	REAL_BACKEND_E2E			
+J07-14	private	anonymous public-data route on a PRIVATE site (apiBase=null by design, D-C0-37 item 5)	404/403, no rows	404 {"code":"QUERY_NOT_FOUND","message":"Query not found","requestId":"req_ac0af87d9	PASS	REAL_BACKEND_E2E			
+J07-15	private	a project VIEWER obtains a single-use access ticket (member rule: APP_VIEW)	200 {redirect: <sites origin>/_access?ticket=…}	200 redirect-origin=http://127.0.0.1:47305	PASS	REAL_BACKEND_E2E			
+J07-16	private	ticket redeemed on the sites origin: 302 to the page + HttpOnly SameSite site_session cookie (the Studio cookie never leaves the Studio host)	302 + Set-Cookie site_session HttpOnly	302 loc=/c6f-j07-e9fb3d-778008/ cookie=site_session=<redacted>; Path=/; Max-Age=28800; HttpOnly; SameSite=Lax	PASS	REAL_BACKEND_E2E			
+J07-17	private	with the site session the member sees v1 (200 HTML containing the v1 marker), cache private/no-store	200 + marker c6f-V1	200 cc=private, no-store, no-transform marker=true	PASS	REAL_BACKEND_E2E			
+J07-18	private	the ticket is single use (second redeem refused, no cookie)	400 (no Set-Cookie)	400 cookie=0	PASS	REAL_BACKEND_E2E			
+J07-19	private	foreign tenant admin asks a ticket for the PRIVATE site	404 SITE_NOT_FOUND (no ticket)	404 SITE_NOT_FOUND	PASS	REAL_BACKEND_E2E			
+J07-20	private	anonymous asks a ticket	401	401 AUTHENTICATION_REQUIRED	PASS	REAL_BACKEND_E2E			
+H07-01	H_C2_07	PUT publish-config omitting acknowledgePublicData (contract/doc says optional, default false)	200 (documented default false)	400 MALFORMED_REQUEST	FAIL	REAL_BACKEND_E2E	C2	observed: Jackson refuses a body missing an optional primitive; H_C2_07 doc says only requiresAuth is required. UI always sends all four fields	
+H07-02	H_C2_07	PUBLISHER stores the PRIVATE policy (no expectedRevision: first write) -> revision, approved=false	200 revision>=1 publicDataApproved=false	200 rev=1 approved=false	PASS	REAL_BACKEND_E2E			
+H07-03	H_C2_07	second write without expectedRevision while a row exists	409 REVISION_CONFLICT	409 REVISION_CONFLICT	PASS	REAL_BACKEND_E2E			
+H07-04	H_C2_07	POST publish PUBLIC while the stored policy is PRIVATE -> 409 PUBLISH_POLICY_MISMATCH (details name both)	409 PUBLISH_POLICY_MISMATCH	409 PUBLISH_POLICY_MISMATCH {"policyVisibility":"PRIVATE","requestedVisibility":"PUBLIC"}	PASS	REAL_BACKEND_E2E			
+H07-05	H_C2_07	the refused request created nothing: no deployment, R1 still active	deployments unchanged, current=R1	1 vs 1; current=true	PASS	REAL_BACKEND_E2E			
+H07-06	H_C2_07	PUT with a stale expectedRevision -> 409 REVISION_CONFLICT (currentRevision)	409 currentRevision=1	409 REVISION_CONFLICT cur=1	PASS	REAL_BACKEND_E2E			
+H07-07	H_C2_07	PUBLIC policy that requires sign-in is contradictory	422 PUBLISH_CONFIG_INVALID AUTH_CONTRADICTS_PUBLIC	422 PUBLISH_CONFIG_INVALID ["AUTH_CONTRADICTS_PUBLIC"]	PASS	REAL_BACKEND_E2E			
+H07-08	H_C2_07	policy -> PUBLIC (draft has no data yet: no acknowledgement needed), approved stays false, revision+1	200 PUBLIC approved=false	200 rev=2 approved=false	PASS	REAL_BACKEND_E2E			
+H07-09	H_C2_07	[fixture] author slot + PUBLIC READ query + binding of Navbar.brand through typed operations (document side; the data source itself cannot connect on c0rc, see PD02)	slot/query/binding 200	{"createDs":201,"credential":200,"test":"200 ok=false code=TLS_FAILED","queryDef":201,"slot":"200 ","query":"200 ","mapping":"200 ","binding":"200  ","liveBind":200}	PASS	REAL_BACKEND_E2E			
+H07-10	H_C2_07	PUT PUBLIC without acknowledgement while the draft binds data -> 422 PUBLIC_DATA_NOT_APPROVED	422	422 PUBLISH_CONFIG_INVALID ["PUBLIC_DATA_NOT_APPROVED"]	PASS	REAL_BACKEND_E2E			
+H07-11	H_C2_07	POST publish PUBLIC, stored PUBLIC but NOT approved, snapshot binds data -> 422 PUBLIC_DATA_NOT_APPROVED (issue field acknowledgePublicData)	422 PUBLIC_DATA_NOT_APPROVED	422 PUBLIC_DATA_NOT_APPROVED "acknowledgePublicData"	PASS	REAL_BACKEND_E2E			
+H07-12-0	H_C2_07	POST publish body injected with {"publicDataApproved":true} must NOT approve	refused 422 (field ignored) or 400 (field rejected); never 202	422 PUBLIC_DATA_NOT_APPROVED	PASS	REAL_BACKEND_E2E			
+H07-12-1	H_C2_07	POST publish body injected with {"acknowledgePublicData":true} must NOT approve	refused 422 (field ignored) or 400 (field rejected); never 202	422 PUBLIC_DATA_NOT_APPROVED	PASS	REAL_BACKEND_E2E			
+H07-12-2	H_C2_07	POST publish body injected with {"acknowledged":true,"approved":true,"publicDataApproved":true,"acknowledgePublicData":true} must NOT approve	refused 422 (field ignored) or 400 (field rejected); never 202	422 PUBLIC_DATA_NOT_APPROVED	PASS	REAL_BACKEND_E2E			
+H07-13	H_C2_07	after the injections the stored approval is still false and no deployment exists for them	approved=false, deployments unchanged	approved=false deps=1 vs 1	PASS	REAL_BACKEND_E2E			
+H07-14	H_C2_07	approval with a stale expectedRevision is refused (REVISION_CONFLICT)	409	409 REVISION_CONFLICT	PASS	REAL_BACKEND_E2E			
+H07-15	H_C2_07	EDITOR (no APP_PUBLISH) tries to approve public data	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+H07-16	H_C2_07	PUBLISHER approves through PUT /publish-config with the current revision (the ONLY approval route)	200 approved=true revision+1	200 approved=true rev=3	PASS	REAL_BACKEND_E2E			
+H07-17	H_C2_07	the approval is audited (append-only audit event of the publish config, actor = publisher)	an audit event with actor pub	UPDATE_PUBLISH_CONFIG:pub,UPDATE_PUBLISH_CONFIG:pub,UPDATE_PUBLISH_CONFIG:pub	PASS	REAL_BACKEND_E2E			
+H07-18	H_C2_07	publish PUBLIC accepted after approval; the SAME key that was refused before is a first request (202, NOT an Idempotent-Replay of the refusal)	202, no replay header	202 replay=- status=QUEUED	PASS	REAL_BACKEND_E2E			
+H07-19	H_C2_07	R2 reaches RUNNING; the server froze the PUBLIC_QUERIES event naming exactly the public query	RUNNING + PUBLIC_QUERIES contains pd-public	RUNNING v=7 event=Public queries of this release (anyone who can open the site may run them, read-only): pd-public	PASS	REAL_BACKEND_E2E			
+H07-20	H_C2_07	replay of the accepted request -> 202 Idempotent-Replay true, same deployment	replay	202 true same=true	PASS	REAL_BACKEND_E2E			
+H07-21	H_C2_07	SiteInfo after the PUBLIC publish: PUBLIC, current = R2, version number = R2's, pointerVersion advanced	PUBLIC current=R2	PUBLIC cur=true v=7 pv=2	PASS	REAL_BACKEND_E2E			
+J07-21b	visitor	anonymous visitor (no cookies, plain HTTP) opens the PUBLIC URL: 200 HTML with the R2 content	200 text/html + V2 marker	200 text/html;charset=utf-8 marker=true v1marker=false	PASS	REAL_BACKEND_E2E			
+J07-22	publish	publish version N+1: RUNNING, versionNumber advanced by the edits, history shows 3 releases newest first	RUNNING, history 3	RUNNING v=8 hist=8,7,2	PASS	REAL_BACKEND_E2E			
+J07-23	visitor	v3 is served to the anonymous visitor (V3 marker, not V2)	V3 marker	200 v3=true v2=false	PASS	REAL_BACKEND_E2E			
+J07-24	rollback	rollback with a STALE expectedActiveDeploymentId -> 409 ROLLBACK_STALE, nothing changes	409 ROLLBACK_STALE, current stays R3	409 ROLLBACK_STALE cur=true	PASS	REAL_BACKEND_E2E			
+J07-25	rollback	rollback to a deployment that is not of this project	400 DEPLOYMENT_NOT_RESTORABLE	400 DEPLOYMENT_NOT_RESTORABLE	PASS	REAL_BACKEND_E2E			
+J07-26	rollback	rollback without deploymentId	400 VALIDATION_FAILED	400 VALIDATION_FAILED	PASS	REAL_BACKEND_E2E			
+J07-27	rollback	rollback to the already-active release = 200, nothing changes (pointerVersion same)	200, pointer same	200 pv 3->3	PASS	REAL_BACKEND_E2E			
+J07-28	rollback	PUBLISHER rolls back R3 -> R2: 200 SiteInfo, current = R2, version = R2's, PUBLIC, operation idle (synchronous)	200 current=R2	200 cur=true v=7 vis=PUBLIC op=null	PASS	REAL_BACKEND_E2E			
+J07-29	rollback	visitor right after rollback gets V2 content and NOT stale V3 (marker, etag, body hash)	V2 marker, etag differs from v3	200 marker=c6f-V2-c5eee7 etag="dddbd29f010c1 (v3 "dc96ca9487dd1) xcache=MISS	PASS	REAL_BACKEND_E2E			
+J07-30	rollback	a client holding the v3 ETag revalidates: it must NOT get 304 (that would keep stale v3)	200 with v2 body	200 marker=c6f-V2-c5eee7	PASS	REAL_BACKEND_E2E			
+J07-31	rollback	EDITOR rollback	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+J07-32	rollback	rollback to R1 (v1, PRIVATE): site info = R1 + PRIVATE; anonymous gets 302 (the content is private again, not left public); member session sees V1	200 R1 PRIVATE; anon 302; member V1	200 cur=true vis=PRIVATE anon=302 member=200 marker=c6f-V1-c5eee7	PASS	REAL_BACKEND_E2E			
+J07-33	rollback	a release that a rollback moved away from is ROLLED_BACK and cannot be served again (contract §5): rollback to it -> 400 DEPLOYMENT_NOT_RESTORABLE; R1 stays active	400 DEPLOYMENT_NOT_RESTORABLE; R2,R3 ROLLED_BACK	400 DEPLOYMENT_NOT_RESTORABLE R2=ROLLED_BACK R3=ROLLED_BACK cur=true	PASS	REAL_BACKEND_E2E			
+J07-33b	rollback	Studio confirm dialog wording vs server: the dialog (features/studio/ReleaseModal.tsx:159) tells the publisher 'Bạn có thể phục vụ lại bản mới hơn sau đó' (you can serve the newer version again later); the server just proved the newer releases are ROLLED_BACK and not restorable, and the same file (lines 249/260) says the opposite	dialog does not promise what the server refuses	dialog promises roll-forward; server refuses it (J07-33)	FAIL	MANUAL	C5	source-read of the shipped UI text + API reproduction; the UI itself was not clicked here	
+J07-34	history	rollbacks are audited with the publisher as actor	SITE_ROLLBACK by pub	SITE_ROLLBACK,DEPLOY_STATUS_CHANGE,PUBLISH,CREATE_VERSION,UPDATE_PUBLISH_CONFIG,ADD_MEMBER,CREATE_PROJECT	PASS	REAL_BACKEND_E2E			
+J07-34b	publish	after rollbacks a new PUBLIC release R4 is accepted, RUNNING, served (V4), version number higher than R3's	RUNNING v>R3	202 RUNNING v=9 (R3 8) anon=200 marker=c6f-V4-c5eee7	PASS	REAL_BACKEND_E2E			
+J07-35	unpublish	unpublish with a STALE expectedActiveDeploymentId (R1 is not active) -> 409 ROLLBACK_STALE, site stays online	409 ROLLBACK_STALE	409 ROLLBACK_STALE online=true	PASS	REAL_BACKEND_E2E			
+J07-36	unpublish	VIEWER unpublish	403	403 FORBIDDEN	PASS	REAL_BACKEND_E2E			
+J07-37	unpublish	PUBLISHER unpublishes: 200 SiteInfo online=false, current=null, slug kept, pointerVersion advanced	200 offline slug kept	200 {"slug":"c6f-j07-e9fb3d-778008","url":"http://127.0.0.1:47305/c6f-j07-e9fb3d-778008/","online":false,"visibility":null,"currentDeploymentId":null,"currentVersionNumber":null,"provider":"static","updatedAt":"2026-10-10T06:39:51.739699Z","pointerVersion":7,"operation":null}	PASS	REAL_BACKEND_E2E			
+J07-38	unpublish	offline: page, runtime config and the data route answer 404 (no stale release, no data)	404 / 404 / 404	404 / 404 / 404; body has v4 marker=false	PASS	REAL_BACKEND_E2E		404 is the contract's offline answer	
+J07-39	unpublish	GET site after unpublish: online=false, no operation	offline	{"slug":"c6f-j07-e9fb3d-778008","url":"http://127.0.0.1:47305/c6f-j07-e9fb3d-778008/","online":false,"visibility":null,"currentDeploymentId":null,"currentVersionNumber":null,"provider":"static","updatedAt":"2026-10-10T06:39:51.739699Z","pointerVersion":7,"operation":null}	PASS	REAL_BACKEND_E2E			
+J07-40	unpublish	second unpublish is idempotent: 200, nothing written (pointerVersion unchanged)	200 pv=7	200 pv=7	PASS	REAL_BACKEND_E2E			
+J07-41	unpublish	unpublish with an expected release while already offline (stale expectation)	contract: already offline -> 200 nothing written; observed	200 pv=7	PASS	REAL_BACKEND_E2E		the contract says already offline -> 200 and writes nothing; a stale expectation on an offline site is not separately specified	
+J07-42	unpublish	contract: deployments are kept, the site can be served again by rollback to a kept RUNNING release (R4); visitor sees V4 again	200 online + V4	200 online=true anon=200 marker=c6f-V4-c5eee7	PASS	REAL_BACKEND_E2E			
+J07-43	unpublish	final unpublish leaves the project offline (clean state)	offline 404	200 anon=404	PASS	REAL_BACKEND_E2E			
+J07-44	history	history after the journey: 4 releases (v1 PRIVATE RUNNING; two ROLLED_BACK by the rollbacks; R4 PUBLIC RUNNING), version numbers distinct, none FAILED, refused requests left no row	4 releases, 0 FAILED	9:PUBLIC:RUNNING 8:PUBLIC:ROLLED_BACK 7:PUBLIC:ROLLED_BACK 2:PRIVATE:RUNNING	PASS	REAL_BACKEND_E2E			
+GW-5xx	gateway	sites gateway during this script: no 5xx and no transport failure	0	22 requests; 5xx=0 fail=0 	PASS	REAL_BACKEND_E2E			

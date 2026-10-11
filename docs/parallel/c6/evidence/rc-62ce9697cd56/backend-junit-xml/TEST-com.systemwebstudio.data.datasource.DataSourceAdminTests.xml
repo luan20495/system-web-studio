@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.datasource.DataSourceAdminTests" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:44:54.066Z" hostname="macmini-2.local" time="0.018">
+  <properties/>
+  <testcase name="a planned connector type cannot be used and the catalogue lists it()" classname="com.systemwebstudio.data.datasource.DataSourceAdminTests" time="0.001"/>
+  <testcase name="management is throttled per tenant and recovers()" classname="com.systemwebstudio.data.datasource.DataSourceAdminTests" time="0.003"/>
+  <testcase name="a created data source is tenant owned versioned and shows no credential()" classname="com.systemwebstudio.data.datasource.DataSourceAdminTests" time="0.003"/>
+  <testcase name="names are unique per tenant but not across tenants()" classname="com.systemwebstudio.data.datasource.DataSourceAdminTests" time="0.0"/>
+  <testcase name="a repository failure leaves no orphaned credential and no secret in logs()" classname="com.systemwebstudio.data.datasource.DataSourceAdminTests" time="0.005"/>
+  <testcase name="every change bumps the version drops the cache and tells subscribers()" classname="com.systemwebstudio.data.datasource.DataSourceAdminTests" time="0.001"/>
+  <testcase name="secrets pasted into the configuration are refused and nothing is stored()" classname="com.systemwebstudio.data.datasource.DataSourceAdminTests" time="0.001"/>
+  <testcase name="another tenant cannot read change rotate or disable it()" classname="com.systemwebstudio.data.datasource.DataSourceAdminTests" time="0.0"/>
+  <testcase name="every operation needs its permission and list shows only readable sources()" classname="com.systemwebstudio.data.datasource.DataSourceAdminTests" time="0.001"/>
+  <testcase name="rotation replaces the stored credential and destroys the old one()" classname="com.systemwebstudio.data.datasource.DataSourceAdminTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

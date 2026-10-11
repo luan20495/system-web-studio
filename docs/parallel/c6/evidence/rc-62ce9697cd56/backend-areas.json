@@ -1,0 +1,81 @@
+{
+ "areas": {
+  "ACTION: idempotency / unknown outcome / duplicate": {
+   "classes": 5,
+   "tests": 115,
+   "pass": 115,
+   "fail": 0,
+   "skip": 0
+  },
+  "ACTION: timeout / limits": {
+   "classes": 0,
+   "tests": 0,
+   "pass": 0,
+   "fail": 0,
+   "skip": 0
+  },
+  "WORKFLOW: engine / retry / cancel / approval": {
+   "classes": 6,
+   "tests": 157,
+   "pass": 157,
+   "fail": 0,
+   "skip": 0
+  },
+  "WORKFLOW/RECOVERY: durable stores / sweeper / restart": {
+   "classes": 16,
+   "tests": 167,
+   "pass": 167,
+   "fail": 0,
+   "skip": 0
+  },
+  "QUEUE: AMQP / RabbitMQ": {
+   "classes": 8,
+   "tests": 44,
+   "pass": 44,
+   "fail": 0,
+   "skip": 0
+  },
+  "PUBLISH / ROLLBACK: release scope, CAS, lease, stale": {
+   "classes": 20,
+   "tests": 187,
+   "pass": 187,
+   "fail": 0,
+   "skip": 0
+  },
+  "PUBLIC_SITE / runtime config": {
+   "classes": 4,
+   "tests": 37,
+   "pass": 37,
+   "fail": 0,
+   "skip": 0
+  },
+  "AUTH/SECURITY: negative, CSRF, CORS, tenant isolation": {
+   "classes": 9,
+   "tests": 83,
+   "pass": 83,
+   "fail": 0,
+   "skip": 0
+  },
+  "PROVISIONING (tenant routes, activation)": {
+   "classes": 4,
+   "tests": 26,
+   "pass": 26,
+   "fail": 0,
+   "skip": 0
+  },
+  "MANAGEMENT API / DATA": {
+   "classes": 37,
+   "tests": 396,
+   "pass": 396,
+   "fail": 0,
+   "skip": 0
+  }
+ },
+ "total": {
+  "classes": 211,
+  "tests": 2003,
+  "pass": 2000,
+  "fail": 0,
+  "skip": 3
+ }
+}

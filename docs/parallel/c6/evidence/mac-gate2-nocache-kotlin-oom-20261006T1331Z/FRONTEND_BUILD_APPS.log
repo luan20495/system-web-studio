@@ -1,0 +1,95 @@
+# start: 2026-10-06T13:33:39Z
+# cwd:   /Users/hoangluan/code/xweb-c6
+# cmd:   npm run build:apps
+
+
+> system-web-studio@0.2.0 build:apps
+> npm run build:platform && npm run build:admin && npm run build:studio
+
+
+> system-web-studio@0.2.0 build:platform
+> npm run build -w @xweb/app-platform
+
+
+> @xweb/app-platform@0.0.0 build
+> next build
+
+▲ Next.js 16.3.8 (Turbopack)
+✓ Running next.config.ts took 156ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 485ms
+  Running TypeScript ...
+  Finished TypeScript in 1548ms ...
+  Collecting page data using 4 workers ...
+  Generating static pages using 4 workers (0/2) ...
+✓ Generating static pages using 4 workers (2/2) in 420ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /_not-found
+└ ƒ /[[...slug]]
+
+
+ƒ Proxy (Middleware)
+
+ƒ  (Dynamic)  server-rendered on demand
+
+
+> system-web-studio@0.2.0 build:admin
+> npm run build -w @xweb/app-admin
+
+
+> @xweb/app-admin@0.0.0 build
+> next build
+
+▲ Next.js 16.3.8 (Turbopack)
+✓ Running next.config.ts took 49ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 476ms
+  Running TypeScript ...
+  Finished TypeScript in 2.1s ...
+  Collecting page data using 4 workers ...
+  Generating static pages using 4 workers (0/2) ...
+✓ Generating static pages using 4 workers (2/2) in 526ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /_not-found
+└ ƒ /[[...slug]]
+
+
+ƒ Proxy (Middleware)
+
+ƒ  (Dynamic)  server-rendered on demand
+
+
+> system-web-studio@0.2.0 build:studio
+> npm run build -w @xweb/app-studio
+
+
+> @xweb/app-studio@0.0.0 build
+> next build
+
+▲ Next.js 16.3.8 (Turbopack)
+✓ Running next.config.ts took 42ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 685ms
+  Running TypeScript ...
+  Finished TypeScript in 1375ms ...
+  Collecting page data using 4 workers ...
+  Generating static pages using 4 workers (0/2) ...
+✓ Generating static pages using 4 workers (2/2) in 365ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /_not-found
+└ ƒ /[[...slug]]
+
+
+ƒ Proxy (Middleware)
+
+ƒ  (Dynamic)  server-rendered on demand
+

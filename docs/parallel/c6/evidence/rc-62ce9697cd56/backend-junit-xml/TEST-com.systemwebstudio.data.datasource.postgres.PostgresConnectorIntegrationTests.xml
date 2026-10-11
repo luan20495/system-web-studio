@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.datasource.postgres.PostgresConnectorIntegrationTests" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:44:54.117Z" hostname="macmini-2.local" time="3.299">
+  <properties/>
+  <testcase name="discovery lists the configured schemas only and carries no secrets()" classname="com.systemwebstudio.data.datasource.postgres.PostgresConnectorIntegrationTests" time="0.074"/>
+  <testcase name="statements that write never reach the server through the executor either()" classname="com.systemwebstudio.data.datasource.postgres.PostgresConnectorIntegrationTests" time="0.003"/>
+  <testcase name="a wrong password is a typed failure and appears nowhere()" classname="com.systemwebstudio.data.datasource.postgres.PostgresConnectorIntegrationTests" time="0.008"/>
+  <testcase name="a hostile parameter value is data, never SQL()" classname="com.systemwebstudio.data.datasource.postgres.PostgresConnectorIntegrationTests" time="0.053"/>
+  <testcase name="row limits, paging and the byte cap bound the result()" classname="com.systemwebstudio.data.datasource.postgres.PostgresConnectorIntegrationTests" time="0.056"/>
+  <testcase name="even a role with write privileges cannot write through a connector session, however the statement arrives()" classname="com.systemwebstudio.data.datasource.postgres.PostgresConnectorIntegrationTests" time="0.088"/>
+  <testcase name="without the explicit allow-list a local or private database is refused()" classname="com.systemwebstudio.data.datasource.postgres.PostgresConnectorIntegrationTests" time="0.001"/>
+  <testcase name="parameters are bound, columns are typed, and rows come back as JSON()" classname="com.systemwebstudio.data.datasource.postgres.PostgresConnectorIntegrationTests" time="0.017"/>
+  <testcase name="a runaway query is stopped by the statement timeout()" classname="com.systemwebstudio.data.datasource.postgres.PostgresConnectorIntegrationTests" time="0.818"/>
+  <testcase name="connections are closed after every call()" classname="com.systemwebstudio.data.datasource.postgres.PostgresConnectorIntegrationTests" time="0.333"/>
+  <testcase name="a SELECT-only role passes the connection test, a writer passes with a warning, a superuser is refused()" classname="com.systemwebstudio.data.datasource.postgres.PostgresConnectorIntegrationTests" time="0.035"/>
+  <testcase name="discovery reports primary keys and foreign keys and masks samples before they leave the connector()" classname="com.systemwebstudio.data.datasource.postgres.PostgresConnectorIntegrationTests" time="0.052"/>
+  <system-out><![CDATA[{"@timestamp":"2026-10-08T06:44:54.123309+07:00","@version":"1","message":"Creating container for image: postgres:17.6","logger_name":"tc.postgres:17.6","thread_name":"Test worker","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-08T06:44:54.229713+07:00","@version":"1","message":"Container postgres:17.6 is starting: 7e62b64593514da000e42bf96cd0fe5854519a90145014b762576f8da92f67eb","logger_name":"tc.postgres:17.6","thread_name":"Test worker","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-08T06:44:55.813962+07:00","@version":"1","message":"Container postgres:17.6 started in PT1.690613S","logger_name":"tc.postgres:17.6","thread_name":"Test worker","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-08T06:44:55.814684+07:00","@version":"1","message":"Container is started (JDBC URL: jdbc:postgresql://localhost:52121/test?loggerLevel=OFF)","logger_name":"tc.postgres:17.6","thread_name":"Test worker","level":"INFO","level_value":20000}
+{"@timestamp":"2026-10-08T06:44:55.963501+07:00","@version":"1","message":"postgres failure: state=28P01 type=PSQLException","logger_name":"com.systemwebstudio.data.datasource.postgres.PgErrors","thread_name":"Test worker","level":"DEBUG","level_value":10000}
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

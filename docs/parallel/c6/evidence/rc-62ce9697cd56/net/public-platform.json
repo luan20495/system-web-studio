@@ -1,0 +1,747 @@
+{
+ "host": "platform.toolsmcp.uk",
+ "navigations": [
+  "https://platform.toolsmcp.uk/",
+  "https://platform.toolsmcp.uk/",
+  "https://platform.toolsmcp.uk/login",
+  "https://platform.toolsmcp.uk/platform/tenants",
+  "https://platform.toolsmcp.uk/platform/tenants",
+  "https://platform.toolsmcp.uk/login?…",
+  "https://platform.toolsmcp.uk/platform/tenants",
+  "https://platform.toolsmcp.uk/platform/tenants",
+  "https://platform.toolsmcp.uk/platform/tenants",
+  "https://platform.toolsmcp.uk/platform/tenants",
+  "https://platform.toolsmcp.uk/platform/tenants",
+  "https://platform.toolsmcp.uk/login?…"
+ ],
+ "requests": [
+  {
+   "url": "https://platform.toolsmcp.uk/",
+   "method": "GET",
+   "type": "document",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/_next/static/chunks/1yt9vs5wgo6ad.css",
+   "method": "GET",
+   "type": "stylesheet",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/_next/static/chunks/1u5zan5bs9a7v.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/_next/static/chunks/1wym20oe2_8ih.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/_next/static/chunks/1rj7ns8rte9vc.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/_next/static/chunks/turbopack-11y464gitbq1t.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/_next/static/chunks/3fntmmi971322.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/_next/static/chunks/21c--a71orpyf.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 401
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/cdn-cgi/rum",
+   "method": "POST",
+   "type": "xhr",
+   "status": 204
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/login",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/api/v1/auth/config",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 401
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/tenants",
+   "method": "GET",
+   "type": "document",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/_next/static/chunks/1yt9vs5wgo6ad.css",
+   "method": "GET",
+   "type": "stylesheet",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/_next/static/chunks/1u5zan5bs9a7v.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/_next/static/chunks/1wym20oe2_8ih.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/_next/static/chunks/1rj7ns8rte9vc.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/_next/static/chunks/turbopack-11y464gitbq1t.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/_next/static/chunks/3fntmmi971322.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/_next/static/chunks/21c--a71orpyf.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/cdn-cgi/rum",
+   "method": "POST",
+   "type": "xhr",
+   "status": 204
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 401
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/login",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/api/v1/auth/config",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 401
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/api/v1/auth/csrf",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/api/v1/auth/login",
+   "method": "POST",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/tenants",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/cdn-cgi/rum",
+   "method": "POST",
+   "type": "ping",
+   "status": 204
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/cdn-cgi/rum",
+   "method": "POST",
+   "type": "xhr",
+   "status": 204
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/api/v1/admin/tenants",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/users",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/ai",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/alerts",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/security",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/costs",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/connectors",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/backups",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/tenants/00000000-0000-0000-0000-000000000001",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/components",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/templates",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/audit",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/builds",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/packages",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/system",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/settings",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/tenants",
+   "method": "GET",
+   "type": "document",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/_next/static/chunks/1yt9vs5wgo6ad.css",
+   "method": "GET",
+   "type": "stylesheet",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/_next/static/chunks/1u5zan5bs9a7v.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/_next/static/chunks/1wym20oe2_8ih.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/_next/static/chunks/1rj7ns8rte9vc.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/_next/static/chunks/turbopack-11y464gitbq1t.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/_next/static/chunks/3fntmmi971322.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/_next/static/chunks/21c--a71orpyf.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/cdn-cgi/rum",
+   "method": "POST",
+   "type": "xhr",
+   "status": 204
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/api/v1/admin/tenants",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/tenants",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/users",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/ai",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/alerts",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/security",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/costs",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/connectors",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/tenants/00000000-0000-0000-0000-000000000001",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/backups",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/components",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/templates",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/audit",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/builds",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/packages",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/system",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/settings",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/tenants",
+   "method": "GET",
+   "type": "document",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/_next/static/chunks/1yt9vs5wgo6ad.css",
+   "method": "GET",
+   "type": "stylesheet",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/_next/static/chunks/1u5zan5bs9a7v.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/_next/static/chunks/1wym20oe2_8ih.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/_next/static/chunks/1rj7ns8rte9vc.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/_next/static/chunks/turbopack-11y464gitbq1t.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/_next/static/chunks/3fntmmi971322.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/_next/static/chunks/21c--a71orpyf.js",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920",
+   "method": "GET",
+   "type": "script",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/cdn-cgi/rum",
+   "method": "POST",
+   "type": "xhr",
+   "status": 204
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/api/v1/admin/tenants",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/tenants",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/users",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/ai",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/alerts",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/security",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/costs",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/tenants/00000000-0000-0000-0000-000000000001",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/connectors",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/backups",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/components",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/templates",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/audit",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/builds",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/packages",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/system",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/platform/settings",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/api/v1/auth/csrf",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/api/v1/auth/logout",
+   "method": "POST",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/login",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/login",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/cdn-cgi/rum",
+   "method": "POST",
+   "type": "ping",
+   "status": 204
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/cdn-cgi/rum",
+   "method": "POST",
+   "type": "xhr",
+   "status": 204
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/api/v1/auth/config",
+   "method": "GET",
+   "type": "fetch",
+   "status": 200
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 401
+  },
+  {
+   "url": "https://platform.toolsmcp.uk/api/v1/auth/me",
+   "method": "GET",
+   "type": "fetch",
+   "status": 401
+  }
+ ],
+ "console": [
+  "error: Failed to load resource: the server responded with a status of 401 ()",
+  "error: Failed to load resource: the server responded with a status of 401 ()",
+  "error: Failed to load resource: the server responded with a status of 401 ()",
+  "error: Failed to load resource: the server responded with a status of 401 ()",
+  "error: Failed to load resource: the server responded with a status of 401 ()",
+  "error: Failed to load resource: the server responded with a status of 401 ()"
+ ]
+}

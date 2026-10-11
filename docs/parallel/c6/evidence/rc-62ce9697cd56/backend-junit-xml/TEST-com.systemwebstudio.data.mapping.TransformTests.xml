@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.mapping.TransformTests" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:45:21.866Z" hostname="macmini-2.local" time="0.004">
+  <properties/>
+  <testcase name="join reads several fields and skips nulls()" classname="com.systemwebstudio.data.mapping.TransformTests" time="0.0"/>
+  <testcase name="date converts between iso epoch and patterns in a fixed zone()" classname="com.systemwebstudio.data.mapping.TransformTests" time="0.001"/>
+  <testcase name="formula runs the sandboxed expression with the current value and the row()" classname="com.systemwebstudio.data.mapping.TransformTests" time="0.001"/>
+  <testcase name="toString toNumber trim lower upper()" classname="com.systemwebstudio.data.mapping.TransformTests" time="0.0"/>
+  <testcase name="split returns one part or the array and never a regex()" classname="com.systemwebstudio.data.mapping.TransformTests" time="0.0"/>
+  <testcase name="value errors never carry the value()" classname="com.systemwebstudio.data.mapping.TransformTests" time="0.0"/>
+  <testcase name="the dsl is closed unknown types and keys are rejected()" classname="com.systemwebstudio.data.mapping.TransformTests" time="0.0"/>
+  <testcase name="enumMap maps default strict and ignoreCase()" classname="com.systemwebstudio.data.mapping.TransformTests" time="0.0"/>
+  <testcase name="toBoolean uses closed word sets that the author can override()" classname="com.systemwebstudio.data.mapping.TransformTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

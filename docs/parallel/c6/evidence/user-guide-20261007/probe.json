@@ -1,0 +1,94 @@
+[
+ {
+  "path": "/login",
+  "finalUrl": "/login",
+  "title": "AI Software Factory",
+  "radios": [
+   "",
+   ""
+  ],
+  "buttons": [
+   "Đăng nhập"
+  ],
+  "labels": [
+   "QUẢN TRỊ\nAdmin Console\nQuản lý người dùng, ứng dụng, AI, bảo mật và chính sách.",
+   "NHÂN VIÊN\nBuilder Studio\nTạo và quản lý web/app bằng AI và tài nguyên chung của công ty.",
+   "Tên đăng nhập",
+   "Mật khẩu"
+  ],
+  "calls": [
+   "GET /api/v1/auth/me 401",
+   "GET /api/v1/auth/config 200"
+  ],
+  "text": "◆\nAI Software Factory\nChào mừng trở lại\nĐăng nhập bằng tài khoản công ty\nBạn muốn vào\nQUẢN TRỊ\nAdmin Console\nQuản lý người dùng, ứng dụng, AI, bảo mật và chính sách.\nNHÂN VIÊN\nBuilder Studio\nTạo và quản lý web/app bằng AI và tài nguyên chung của công ty.\nLựa chọn này chỉ là nơi bạn muốn đến; quyền truy cập do hệ thống quyết định.\nTên đăng nhập\nMật khẩu\nĐăng nhập\nNền tảng nội bộ · truy cập được kiểm soát và ghi nhật ký"
+ },
+ {
+  "path": "/studio",
+  "finalUrl": "/login?next=%2Fstudio",
+  "title": "AI Software Factory",
+  "radios": [
+   "",
+   ""
+  ],
+  "buttons": [
+   "Đăng nhập"
+  ],
+  "labels": [
+   "QUẢN TRỊ\nAdmin Console\nQuản lý người dùng, ứng dụng, AI, bảo mật và chính sách.",
+   "NHÂN VIÊN\nBuilder Studio\nTạo và quản lý web/app bằng AI và tài nguyên chung của công ty.",
+   "Tên đăng nhập",
+   "Mật khẩu"
+  ],
+  "calls": [
+   "GET /api/v1/auth/me 401",
+   "GET /api/v1/auth/config 200"
+  ],
+  "text": "◆\nAI Software Factory\nChào mừng trở lại\nĐăng nhập bằng tài khoản công ty\nBạn muốn vào\nQUẢN TRỊ\nAdmin Console\nQuản lý người dùng, ứng dụng, AI, bảo mật và chính sách.\nNHÂN VIÊN\nBuilder Studio\nTạo và quản lý web/app bằng AI và tài nguyên chung của công ty.\nLựa chọn này chỉ là nơi bạn muốn đến; quyền truy cập do hệ thống quyết định.\nTên đăng nhập\nMật khẩu\nĐăng nhập\nNền tảng nội bộ · truy cập được kiểm soát và ghi nhật ký"
+ },
+ {
+  "path": "/admin",
+  "finalUrl": "/login?next=%2Fadmin",
+  "title": "AI Software Factory",
+  "radios": [
+   "",
+   ""
+  ],
+  "buttons": [
+   "Đăng nhập"
+  ],
+  "labels": [
+   "QUẢN TRỊ\nAdmin Console\nQuản lý người dùng, ứng dụng, AI, bảo mật và chính sách.",
+   "NHÂN VIÊN\nBuilder Studio\nTạo và quản lý web/app bằng AI và tài nguyên chung của công ty.",
+   "Tên đăng nhập",
+   "Mật khẩu"
+  ],
+  "calls": [
+   "GET /api/v1/auth/me 401",
+   "GET /api/v1/auth/config 200"
+  ],
+  "text": "◆\nAI Software Factory\nChào mừng trở lại\nĐăng nhập bằng tài khoản công ty\nBạn muốn vào\nQUẢN TRỊ\nAdmin Console\nQuản lý người dùng, ứng dụng, AI, bảo mật và chính sách.\nNHÂN VIÊN\nBuilder Studio\nTạo và quản lý web/app bằng AI và tài nguyên chung của công ty.\nLựa chọn này chỉ là nơi bạn muốn đến; quyền truy cập do hệ thống quyết định.\nTên đăng nhập\nMật khẩu\nĐăng nhập\nNền tảng nội bộ · truy cập được kiểm soát và ghi nhật ký"
+ },
+ {
+  "path": "/platform",
+  "finalUrl": "/login?next=%2Fplatform",
+  "title": "AI Software Factory",
+  "radios": [
+   "",
+   ""
+  ],
+  "buttons": [
+   "Đăng nhập"
+  ],
+  "labels": [
+   "QUẢN TRỊ\nAdmin Console\nQuản lý người dùng, ứng dụng, AI, bảo mật và chính sách.",
+   "NHÂN VIÊN\nBuilder Studio\nTạo và quản lý web/app bằng AI và tài nguyên chung của công ty.",
+   "Tên đăng nhập",
+   "Mật khẩu"
+  ],
+  "calls": [
+   "GET /api/v1/auth/me 401",
+   "GET /api/v1/auth/config 200"
+  ],
+  "text": "◆\nAI Software Factory\nChào mừng trở lại\nĐăng nhập bằng tài khoản công ty\nBạn muốn vào\nQUẢN TRỊ\nAdmin Console\nQuản lý người dùng, ứng dụng, AI, bảo mật và chính sách.\nNHÂN VIÊN\nBuilder Studio\nTạo và quản lý web/app bằng AI và tài nguyên chung của công ty.\nLựa chọn này chỉ là nơi bạn muốn đến; quyền truy cập do hệ thống quyết định.\nTên đăng nhập\nMật khẩu\nĐăng nhập\nNền tảng nội bộ · truy cập được kiểm soát và ghi nhật ký"
+ }
+]

@@ -1,0 +1,109 @@
+{
+ "createUrl": "/studio/new",
+ "calls": [
+  "GET /api/v1/auth/me 200",
+  "GET /api/v1/auth/config 200",
+  "GET /api/v1/templates 200"
+ ],
+ "text": "◆\nCompany Builder Studio\nAI Software Factory\n+ Tạo ứng dụng\n⌂\nTrang chủ\n▤\nỨng dụng\n▧\nTemplates\n◇\nComponents\n≡\nHoạt động\nDemo 1 — workspace\nDE\nĐăng xuất\nTạo ứng dụng\n\nChọn loại ứng dụng. Loại nào chưa bật trên máy chủ này sẽ ghi rõ lý do.\n\nWebsite\nSẵn sàng\n\nWebsite một hoặc nhiều trang từ component đã duyệt, có form liên hệ và tên miền riêng.\n\nỨng dụng web (mã nguồn)\nChưa bật\n\nChưa bật trên máy chủ này (cần kho Git và máy build).\n\nDashboard\nChưa bật\n\nChưa bật trên máy chủ này (cần kho Git và máy build).\n\nCông cụ nội bộ\nChưa bật\n\nChưa bật: cần quản trị viên bật ứng dụng có máy chủ và runtime cô lập.\n\nQuy trình (workflow)\nChưa bật\n\nChưa bật: cần quản trị viên bật ứng dụng có máy chủ và runtime cô lập.\n\nỨng dụng có máy chủ\nChưa bật\n\nChưa bật: cần quản trị viên bật ứng dụng có máy chủ và runtime cô lập.\n\nWebsite mới\nBắt đầu từ\nTrang mặc định\nCó sẵn trong hệ thống: thanh điều hướng, Hero, sản phẩm, đánh giá, liên hệ.\nCRM khách hàng\nMẫu công ty · 6 mục · v1\nBán hàng\nMẫu công ty · 7 mục · v1\nNhân sự\nMẫu công ty · 6 mục · v1\nQuản lý dự án\nMẫu công ty · 6 mục · v1\nHỗ trợ khách hàng\nMẫu công ty · 7 mục · v1\nQuản lý kho\nMẫu công ty · 6 mục · v1\nPhê duyệt\nMẫu công ty · 6 mục · v1\nMarketing\nMẫu công ty · 7 mục · v1\nQuản lý nội dung\nMẫu công ty · 7 mục · v1\nThương mại điện tử\nMẫu công ty · 8 mục · v1\nCổng thông tin\nMẫu công ty · 7 mục · v1\nBáo cáo tổng quan\nMẫu công ty · 7 mục · v1\nBiểu mẫu\nMẫu công ty · 6 mục · v1\nTạo website",
+ "buttons": [
+  "Đăng xuất",
+  "Tạo website"
+ ],
+ "inputs": [
+  {
+   "type": "text",
+   "name": "",
+   "ph": "Tìm ứng dụng…"
+  },
+  {
+   "type": "radio",
+   "name": "template",
+   "ph": "",
+   "label": "Trang mặc định\nCó sẵn trong hệ thống: th"
+  },
+  {
+   "type": "radio",
+   "name": "template",
+   "ph": "",
+   "label": "CRM khách hàng\nMẫu công ty · 6 mục · v1"
+  },
+  {
+   "type": "radio",
+   "name": "template",
+   "ph": "",
+   "label": "Bán hàng\nMẫu công ty · 7 mục · v1"
+  },
+  {
+   "type": "radio",
+   "name": "template",
+   "ph": "",
+   "label": "Nhân sự\nMẫu công ty · 6 mục · v1"
+  },
+  {
+   "type": "radio",
+   "name": "template",
+   "ph": "",
+   "label": "Quản lý dự án\nMẫu công ty · 6 mục · v1"
+  },
+  {
+   "type": "radio",
+   "name": "template",
+   "ph": "",
+   "label": "Hỗ trợ khách hàng\nMẫu công ty · 7 mục · "
+  },
+  {
+   "type": "radio",
+   "name": "template",
+   "ph": "",
+   "label": "Quản lý kho\nMẫu công ty · 6 mục · v1"
+  },
+  {
+   "type": "radio",
+   "name": "template",
+   "ph": "",
+   "label": "Phê duyệt\nMẫu công ty · 6 mục · v1"
+  },
+  {
+   "type": "radio",
+   "name": "template",
+   "ph": "",
+   "label": "Marketing\nMẫu công ty · 7 mục · v1"
+  },
+  {
+   "type": "radio",
+   "name": "template",
+   "ph": "",
+   "label": "Quản lý nội dung\nMẫu công ty · 7 mục · v"
+  },
+  {
+   "type": "radio",
+   "name": "template",
+   "ph": "",
+   "label": "Thương mại điện tử\nMẫu công ty · 8 mục ·"
+  },
+  {
+   "type": "radio",
+   "name": "template",
+   "ph": "",
+   "label": "Cổng thông tin\nMẫu công ty · 7 mục · v1"
+  },
+  {
+   "type": "radio",
+   "name": "template",
+   "ph": "",
+   "label": "Báo cáo tổng quan\nMẫu công ty · 7 mục · "
+  },
+  {
+   "type": "radio",
+   "name": "template",
+   "ph": "",
+   "label": "Biểu mẫu\nMẫu công ty · 6 mục · v1"
+  },
+  {
+   "type": "text",
+   "name": "",
+   "ph": "Tên ứng dụng"
+  }
+ ]
+}

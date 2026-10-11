@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.wiring.ActionDataPortAdapterTests" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:53:17.105Z" hostname="macmini-2.local" time="0.017">
+  <properties/>
+  <testcase name="a source with its own sourceRef needs no slot binding()" classname="com.systemwebstudio.wiring.ActionDataPortAdapterTests" time="0.008"/>
+  <testcase name="an unknown query is a definite refusal()" classname="com.systemwebstudio.wiring.ActionDataPortAdapterTests" time="0.001"/>
+  <testcase name="a READ query is refused for a write before anything is sent()" classname="com.systemwebstudio.wiring.ActionDataPortAdapterTests" time="0.0"/>
+  <testcase name="a request for another application than the context is refused()" classname="com.systemwebstudio.wiring.ActionDataPortAdapterTests" time="0.0"/>
+  <testcase name="the dry run is not emulated()" classname="com.systemwebstudio.wiring.ActionDataPortAdapterTests" time="0.0"/>
+  <testcase name="without a data gateway the answer is DATA_RUNTIME_UNAVAILABLE and not retryable()" classname="com.systemwebstudio.wiring.ActionDataPortAdapterTests" time="0.0"/>
+  <testcase name="a failure result can never be made retryable for the two terminal codes()" classname="com.systemwebstudio.wiring.ActionDataPortAdapterTests" time="0.001"/>
+  <testcase name="another tenant sees the application as missing()" classname="com.systemwebstudio.wiring.ActionDataPortAdapterTests" time="0.0"/>
+  <testcase name="TEST mode never reaches the data source()" classname="com.systemwebstudio.wiring.ActionDataPortAdapterTests" time="0.0"/>
+  <testcase name="an unbound data source slot is a definite refusal not a crash()" classname="com.systemwebstudio.wiring.ActionDataPortAdapterTests" time="0.0"/>
+  <testcase name="an ambiguous write failure is IDEMPOTENCY_OUTCOME_UNKNOWN and not retryable()" classname="com.systemwebstudio.wiring.ActionDataPortAdapterTests" time="0.001"/>
+  <testcase name="definite and busy failures keep their code()" classname="com.systemwebstudio.wiring.ActionDataPortAdapterTests" time="0.001"/>
+  <testcase name="a write resolves local ids and sends the derived key unchanged to C3()" classname="com.systemwebstudio.wiring.ActionDataPortAdapterTests" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

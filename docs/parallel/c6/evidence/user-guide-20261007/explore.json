@@ -1,0 +1,48 @@
+{
+ "landing": "/login?next=%2Fstudio",
+ "radioChecked_before": [
+  {
+   "checked": false,
+   "name": "QUẢN TRỊ / Admin Console"
+  },
+  {
+   "checked": true,
+   "name": "NHÂN VIÊN / Builder Studio"
+  }
+ ],
+ "afterLogin": {
+  "url": "/studio",
+  "calls": [
+   "GET /api/v1/auth/csrf 200",
+   "POST /api/v1/auth/login 200",
+   "GET /api/v1/auth/me 200",
+   "GET /api/v1/components 200",
+   "GET /api/v1/me/usage 200",
+   "GET /api/v1/workspaces/{id}/projects 200"
+  ]
+ },
+ "home": {
+  "title": "AI Software Factory",
+  "text": "◆\nCompany Builder Studio\nAI Software Factory\n+ Tạo ứng dụng\n⌂\nTrang chủ\n▤\nỨng dụng\n▧\nTemplates\n◇\nComponents\n≡\nHoạt động\nDemo 1 — workspace\nDE\nĐăng xuất\nBạn muốn xây dựng gì?\n\nMô tả ý tưởng; Studio tạo website từ component đã duyệt của công ty, rồi bạn chỉnh bằng AI hoặc trực quan.\n\nHiện hỗ trợ loại ứng dụng: Website (một trang). Ctrl/⌘ + Enter để tạo.\nTạo bằng AI\nLượt AI hôm nay\n0 / 50\nChưa dùng lượt nào\nToken AI 24 giờ qua\n0 / 1\nChưa gọi model thật nào; Chế độ thử nghiệm không tính token\nPrompt hôm nay\n0\nTối đa 30/phút\nỨng dụng trong workspace\n8\nComponent của công ty\n10\nỨng dụng gần đây\nXem tất cả\nGlobal smoke c3c110\nCông khai · cập nhật 40 phút trước\nCủa tôi\nWebsite\nGlobal smoke 3e8bd6\nCông khai · cập nhật 40 phút trước\nCủa tôi\nWebsite\ndbg new\nRiêng tư · cập nhật 42 phút trước\nCủa tôi\nWebsite\ndbg old\nRiêng tư · cập nhật 42 phút trước\nCủa tôi\nWebsite\nPublic E2E site\nRiêng tư · cập nhật 2 ngày trước\nCủa tôi\nWebsite\nPublic E2E site\nRiêng tư · cập nhật 2 ngày trước\nCủa tôi\nWebsite\nComponent dùng chung\nThư viện\nBảng so sánh 8 ứng dụng\nĐầu trang (Hero) 18 ứng dụng\nDanh sách sản phẩm 18 ứng dụng\nCông nghệ 19 ứng dụng\nĐánh giá khách hàng 17 ứng dụng\nForm liên hệ 19 ứng dụng\nThẻ sản phẩm 0 ứng dụng\nMẫu trang 0 ứng dụng\nChân trang 19 ứng dụng\nThanh điều hướng 19 ứng dụng",
+  "buttons": [
+   "Đăng xuất",
+   "Tạo bằng AI"
+  ],
+  "links": [
+   "+ Tạo ứng dụng",
+   "⌂\nTrang chủ",
+   "▤\nỨng dụng",
+   "▧\nTemplates",
+   "◇\nComponents",
+   "≡\nHoạt động",
+   "Xem tất cả",
+   "Global smoke c3c110\nCông khai · cập nhật 40 phút trước\nCủa tôi\nWebsite",
+   "Global smoke 3e8bd6\nCông khai · cập nhật 40 phút trước\nCủa tôi\nWebsite",
+   "dbg new\nRiêng tư · cập nhật 42 phút trước\nCủa tôi\nWebsite",
+   "dbg old\nRiêng tư · cập nhật 42 phút trước\nCủa tôi\nWebsite",
+   "Public E2E site\nRiêng tư · cập nhật 2 ngày trước\nCủa tôi\nWebsite",
+   "Public E2E site\nRiêng tư · cập nhật 2 ngày trước\nCủa tôi\nWebsite",
+   "Thư viện"
+  ]
+ }
+}

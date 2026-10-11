@@ -1,0 +1,45 @@
+PASS author login with CSRF
+PASS project created | 201
+PASS declare the data-source slot (ADD_DATA_SOURCE, no SQL seed) | 200 
+PASS a slot can never carry sourceRef | 400
+PASS data source on the TLS target | 201
+PASS credential (metadata only)
+PASS test connection over TLS | {"ok":true,"latencyMs":38,"warnings":[]}
+PASS query definition shop.title | 201
+PASS query definition shop.title2 | 201
+PASS query definition shop.items | 201
+PASS bind TEST
+PASS bind LIVE
+PASS queries (public: true) and mappings added through operations | 200 
+PASS data bindings (Hero title, ProductGrid items) | 200 
+PASS a PUBLIC data-bound page is refused without the public-data acknowledgement | 422
+INFO C6 variant: the publish-config acknowledgement is NOT sent (what the Studio UI does today: it has no call to /publish-config)
+PASS acknowledge public data | 200 
+PASS publish release 1 (PAGE_SCHEMA with a runtime) | 202 RUNNING
+PASS the publish confirmation lists the public queries
+FAIL visitor: runtime READY | error
+FAIL visitor: the page text is the live database value (TLS PostgreSQL) | Nước sạch mỗi ngày, sống khỏe mỗi ngày.
+FAIL visitor: the list is rendered from the database | 3 rows
+PASS visitor: data calls are POST to the same origin /{slug}/_data, no cookie, no authorization | /public-smoke-dbe697-0a9764/_data/queries/q-title/run /public-smoke-dbe697-0a9764/_data/queries/q-items/run
+PASS visitor: no request leaves the sites origin
+PASS visitor: no cookie in the profile | []
+PASS runtime config: slug-scoped apiBase, no internal host, release id | {"apiBase":"http://127.0.0.1:51088/public-smoke-dbe697-0a9764/_data","version":"4"}
+PASS runtime config exposes no tenant, workspace, credential, lease or fence field | apiBase,appId,appName,environment,flags,generatedAt,releaseId,user,version,visibility
+PASS forged tenantId in the body is refused (400) | 400
+FAIL a public query by plain POST works | 404
+PASS there is no public mutation route | 403
+PASS an unknown query is 404 QUERY_NOT_FOUND | 404
+PASS draft edit: q-title is no longer public IN THE DRAFT | 200
+FAIL the active release still serves q-title (draft change has no effect) | 404
+PASS release 2 binding edit | 200 
+PASS publish release 2 | RUNNING
+FAIL release 2 serves its own new public query q-extra | 404
+FAIL visitor sees release 2 (Second release) | Nước sạch mỗi ngày, sống khỏe mỗi ngày.
+PASS rollback to release 1 | 200
+FAIL visitor sees release 1 again after the rollback | Nước sạch mỗi ngày, sống khỏe mỗi ngày.
+PASS q-extra belongs to release 2 only: 404 after the rollback (the allow-list follows the release) | 404
+PASS unpublish | 200
+PASS after unpublish the data route is 404 | 404
+PASS the page is offline | 404
+
+TOTAL 42  FAILED 8  -> visitor: runtime READY | visitor: the page text is the live database value (TLS PostgreSQL) | visitor: the list is rendered from the database | a public query by plain POST works | the active release still serves q-title (draft change has no effect) | release 2 serves its own new public query q-extra | visitor sees release 2 (Second release) | visitor sees release 1 again after the rollback

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.app.definition.DataSourceSlotOperationsTests" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:43:56.976Z" hostname="macmini-2.local" time="0.005">
+  <properties/>
+  <testcase name="remove takes an unreferenced slot away and leaves exactly the document it was before()" classname="com.systemwebstudio.app.definition.DataSourceSlotOperationsTests" time="0.001"/>
+  <testcase name="a duplicate logical id is refused, and so is an add without an id or a type()" classname="com.systemwebstudio.app.definition.DataSourceSlotOperationsTests" time="0.001"/>
+  <testcase name="a slot can be used by a query, a mapping and a view model, and the whole chain is valid()" classname="com.systemwebstudio.app.definition.DataSourceSlotOperationsTests" time="0.0"/>
+  <testcase name="add declares a logical slot, the document stays valid and round-trips through the codec()" classname="com.systemwebstudio.app.definition.DataSourceSlotOperationsTests" time="0.0"/>
+  <testcase name="removing a slot that something still references is reported by the validator with the path - no cascade, no silent fix()" classname="com.systemwebstudio.app.definition.DataSourceSlotOperationsTests" time="0.001"/>
+  <testcase name="no sourceRef, no credential and no connection detail is accepted on add or update()" classname="com.systemwebstudio.app.definition.DataSourceSlotOperationsTests" time="0.001"/>
+  <testcase name="the vocabulary now has the three slot operations - and still no operation can touch a credential or a secret()" classname="com.systemwebstudio.app.definition.DataSourceSlotOperationsTests" time="0.0"/>
+  <testcase name="update changes the declaration, never the physical source()" classname="com.systemwebstudio.app.definition.DataSourceSlotOperationsTests" time="0.001"/>
+  <testcase name="update and remove of a slot that does not exist are refused()" classname="com.systemwebstudio.app.definition.DataSourceSlotOperationsTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

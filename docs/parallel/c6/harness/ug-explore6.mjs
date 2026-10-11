@@ -1,0 +1,12 @@
+import { launch, recorder, BASE, OUT, secretFromDemoFile, login } from "./ug-lib.mjs";
+import { writeFileSync, readFileSync } from "node:fs";
+const pw = secretFromDemoFile("demo01"); const proj = JSON.parse(readFileSync(OUT + "explore3.json", "utf8")).url.replace(/\/ai$/, "/design");
+const browser = await launch(); const c = await browser.newContext({ viewport: { width: 1440, height: 900 } }); const p = await c.newPage(); const r = recorder(p);
+await login(p, "demo01", pw); await p.goto(BASE + proj, { waitUntil: "networkidle" }); await p.waitForTimeout(1500);
+let i = r.mark(); await p.getByRole("button", { name: "Xuất bản", exact: true }).click(); await p.waitForTimeout(2500);
+const dlg = p.getByRole("dialog"); const has = await dlg.count();
+const out = { dialogs: has, calls: r.since(i), text: has ? await dlg.first().innerText() : (await p.locator("body").innerText()).slice(-1500), buttons: has ? await dlg.first().getByRole("button").allInnerTexts() : [], radios: has ? await dlg.first().getByRole("radio").evaluateAll((e) => e.map((x) => ({ v: x.value, c: x.checked, l: x.closest("label")?.innerText.slice(0, 50) }))) : [] };
+await p.screenshot({ path: OUT + "explore-publish-dialog.png" });
+writeFileSync(OUT + "explore6.json", JSON.stringify(out, null, 1));
+console.log(JSON.stringify({ dialogs: out.dialogs, calls: out.calls, buttons: out.buttons, radios: out.radios }, null, 1)); console.log(out.text.slice(0, 1800));
+await browser.close();

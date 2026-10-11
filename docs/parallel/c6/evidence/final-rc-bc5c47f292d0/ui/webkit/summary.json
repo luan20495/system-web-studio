@@ -1,0 +1,81 @@
+{
+ "mode": "final-rc",
+ "tag": "webkit",
+ "browser": "Playwright WebKit (not Safari)",
+ "integrationShaTested": "fabea8198fda1eaca9e5c5257c88d1b530bceb73",
+ "frontendUnderTest": "(same as backend worktree)",
+ "c5Sha": "(not provided — pilot)",
+ "viewports": [
+  1440,
+  768,
+  390
+ ],
+ "totalRoutes": 95,
+ "routeVariants": 147,
+ "totalCases": 392,
+ "PASS": 235,
+ "FAIL": 157,
+ "BLOCKED": 0,
+ "knownNotReady": 12,
+ "UNICODE": "PASS (392 cases)",
+ "ICONS": "FAIL",
+ "RESPONSIVE": "FAIL (6 cases)",
+ "ACCESSIBILITY": "FAIL (16 cases)",
+ "CREATE_COMPANY": "FAIL (7/10)",
+ "ORGANIZATION": "FAIL (11/21)",
+ "EMPLOYEES": "FAIL (5/8)",
+ "STUDIO": "FAIL (58/126)",
+ "DATA_ACTION_WORKFLOW": "FAIL (11/15)",
+ "PUBLISH_ROLLBACK": "FAIL (3/3)",
+ "PLATFORM": "FAIL (23/69)",
+ "ADMIN": "FAIL (33/95)",
+ "AUTH": "FAIL (6/45)",
+ "axe": {
+  "critical": 0,
+  "serious": 1,
+  "moderate": 11,
+  "minor": 0,
+  "wcagCritical": 0,
+  "wcagSerious": 1
+ },
+ "newBugs": 179,
+ "navigation": [
+  {
+   "portal": "platform",
+   "role": "super",
+   "links": 14,
+   "ok": 12,
+   "fail": [
+    "click \"Cảnh báo\" went to /login, expected /platform/alerts",
+    "\"Cảnh báo\" not marked aria-current",
+    "click \"Sao lưu\" went to /login, expected /platform/backups",
+    "\"Sao lưu\" not marked aria-current"
+   ]
+  },
+  {
+   "portal": "admin",
+   "role": "tenantAdmin",
+   "links": 10,
+   "ok": 7,
+   "fail": [
+    "click \"Nhân viên\" went to /login, expected /admin/employees",
+    "\"Nhân viên\" not marked aria-current",
+    "click \"Workspace của tôi\" went to /login, expected /admin/my-workspaces",
+    "\"Workspace của tôi\" not marked aria-current",
+    "click \"Chia sẻ Sắp có\" went to /login, expected /admin/sharing",
+    "\"Chia sẻ Sắp có\" not marked aria-current"
+   ]
+  },
+  {
+   "portal": "studio",
+   "role": "workspaceAdmin",
+   "links": 6,
+   "ok": 4,
+   "fail": [
+    "\"Tạo ứng dụng\" not marked aria-current",
+    "click \"Components\" went to /login, expected /studio/components",
+    "\"Components\" not marked aria-current"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,58 @@
+PASS    UG-001 | ui: GET /studio -> 200 then redirected to /login?next=%2Fstudio (login page, title AI Software Factory) | api: GET /api/v1/auth/me 401; GET /api/v1/auth/config 200 | HTTP 200 only proves a web server answered; version is checked in UG-008
+PASS    UG-002 | ui: GET /admin anonymous -> /login?next=%2Fadmin (the same login page; no separate admin login/portal screen) | api: GET /api/v1/auth/me 401
+PASS    UG-003 | ui: GET /platform anonymous -> /login?next=%2Fplatform (the same login page; no separate platform login/portal scr | api: GET /api/v1/auth/me 401
+PASS    UG-004 | ui: browser calls relative /api/v1/... on the Studio origin | api: GET /api/v1/auth/config 200 same origin; a separate API host does not answer (no answer)
+PASS    UG-005 | ui: sites gateway answers | api: GET https://sites.toolsmcp.uk/healthz 200 (a real slug is exercised in UG-026)
+PASS    UG-011 | ui: message shown: Sai tên đăng nhập hoặc mật khẩu. | api: POST /api/v1/auth/login 401
+PASS    UG-010 | ui: after Đăng nhập -> /studio; portal radio default = [{"checked":false,"v":"admin"},{"checked":true,"v":"builder | api: GET /api/v1/auth/csrf 200; POST /api/v1/auth/login 200; GET /api/v1/auth/me 200; GET /api/v1/components 200; G
+PASS    UG-012 | ui: sidebar link 'Ứng dụng' -> /studio/projects
+PASS    UG-013 | ui: '+ Tạo ứng dụng' -> /studio/new | api: GET /api/v1/templates
+PASS    UG-014 | ui: card 'Website' + 'Sẵn sàng' present
+PASS    UG-015 | ui: 'Bắt đầu từ' -> 'Trang mặc định' radio checked by default = true
+PASS    UG-016 | ui: text box with placeholder 'Tên ứng dụng' (no visible label; the guide says 'type Tên ứng dụng')
+PASS    UG-018 | ui: 5 other kinds: ok,ok,ok,ok,ok (each shows 'Chưa bật' with a reason) | api: auth/config: codeProjects=false serverApps=false
+PASS    UG-017 | ui: 'Tạo website' -> /studio/projects/{id}/ai | api: POST /api/v1/workspaces/{id}/projects 201
+FAIL    UG-019 | ui: editor opened at /studio/projects/{id}/ai (mode tabs: ✦ AI* Design Code) — guide says it opens in Design | opens in the ✦ AI mode
+PASS    UG-030 | ui: mode tabs present: ✦ AI* | Design | Code
+PASS    UG-033 | ui: older header in AI mode: Website✓ Phiên bản✓ Tệp✓ Chia sẻ✓ ⚙✓ Xuất bản✓
+PASS    UG-031 | ui: Code mode for a website: Chưa triển khai Code Mode cần kiến trúc sinh mã nguồn Ứng dụng này được lưu dưới dạng
+PASS    UG-032 | ui: Design top bar: Chỉnh sửa✓ Dùng thử✓ Máy tính✓ Máy tính bảng✓ Điện thoại✓ Chia sẻ✓ Xuất bản✓; problems number 
+FAIL    UG-040 | ui: rail tabs: Trang | Thành phần | Dữ liệu | Biểu mẫu | Hành động | Workflow | Giao diện | AI; visible heading 'C | the guide names the rail 'Công cụ' but no such label is shown
+PASS    UG-041 | ui: inspector tabs after selecting a section: Nội dung | Thiết kếchưa | Dữ liệu | Hành động | Quyền | Nâng cao
+PASS    UG-020 | ui: selected 'Đầu trang (Hero)' in the canvas; right panel 'Nội dung' -> field 'Tiêu đề' edited; an explicit butto | api: PATCH /api/v1/workspaces/{id}/projects/{id}/schema 200; GET /api/v1/workspaces/{id}/projects/{id}/versions 200 | MISSING STEP: guide never mentions 'Lưu thay đổi' / 'Hoàn tác'
+PASS    UG-021 | ui: top-bar texts observed after saving: Đang lưu… -> ✓ Đã lưu 16:05 | api: PATCH /api/v1/workspaces/{id}/projects/{id}/schema 200; GET /api/v1/workspaces/{id}/projects/{id}/versions 200
+PASS    UG-022 | ui: after reload the edited hero title is still there | api: GET …/schema, GET …/versions
+PASS    UG-042 | ui: Phiên bản header shows revision/version | api: GET …/versions 200, 2 versions (a new immutable version per saved change)
+PASS    UG-023 | ui: dialog title 'Xuất bản website': true; options: Riêng tư Chỉ thành viên được cấp quyền. | Công khai Mọi người  | api: GET …/site, GET …/deployments
+PASS    UG-024 | ui: chose 'Công khai' then 'Xuất bản'; statuses seen: RUNNING | api: POST /api/v1/workspaces/{id}/projects/{id}/publish 202; GET /api/v1/workspaces/{id}/projects/{id}/deployments/
+PASS    UG-025 | ui: final dialog text: ật — Running security checks Đang build — Building (static site, or sandbox build for code 
+PASS    UG-026 | ui: anonymous GET https://sites.toolsmcp.uk/c6-ug-qa-muxvt6gd-392194/ -> 200; page contains the edited title: true | api: GET https://sites.toolsmcp.uk/<slug>/ (anonymous, no cookie)
+FAIL    UG-043 | ui: offline save -> top bar 'Lưu thất bại' true; button 'Thử lại' count 0; raw toast shown: ["Không kết nối được t | api: retry (second 'Lưu thay đổi'): PATCH /api/v1/workspaces/{id}/projects/{id}/schema 200 | no 'Thử lại' control; the failure toast is the raw English browser message
+PASS    UG-044 | ui: stale save message: Project vừa được thay đổi ở nơi khác. | api: GET /api/v1/auth/csrf 200; PATCH /api/v1/workspaces/{id}/projects/{id}/schema 409; GET /api/v1/projects/{id} 2
+PASS    UG-103 | ui: heading Các lần xuất bản (2); before clicking the heading 'Phục vụ lại bản này' buttons visible: 0; after expa | api: GET …/deployments | MISSING STEP: the history is collapsed; the guide never says to click 'Các lần xuất bản (N)'
+PASS    UG-104 | ui: 'Phục vụ lại bản này' on the older release -> the public page now shows the OLD content | api: POST /api/v1/workspaces/{id}/projects/{id}/site/rollback 200; GET /api/v1/workspaces/{id}/projects/{id}/site 2
+PASS    UG-105 | ui: deployment statuses after rollback: v5:ROLLED_BACK, v2:RUNNING | api: GET …/deployments
+FAIL    UG-108 | ui: guide: 'If the active release changed under you, rollback says it is stale' (UI text not triggered by C6; API  | api: POST …/site/rollback expectedActiveDeploymentId=<wrong> -> 200 
+PASS    UG-110 | ui: guide: 'a repeated click never creates a second operation (idempotency key per request)' | api: 2 concurrent POST …/publish with one Idempotency-Key -> 202/202, same deployment id: true
+BLOCKED UG-107 | ui: banner 'đang xuất bản/đang hoàn tác' and 'bận' countdown (UI not captured: the in-flight window is a few secon | api: POST …/site/rollback right after a publish started -> 200  Retry-After=- | publish finished before the probe or no lease conflict was observable
+FAIL    UG-106 | ui: 'Gỡ trang xuống' present 1; public GET after it -> 200; history after unpublish still lists: Các lần xuất bản 
+PASS    UG-050 | ui: 'Phiên bản' -> 'Lịch sử phiên bản'; 'Khôi phục' buttons: 4
+FAIL    UG-051 | ui: 'Khôi phục' on an old version | api:  ; versions 5 -> 5 (a NEW version, old ones kept)
+FAIL    UG-060 | ui: AI mode labels: {"Mô tả thay đổi":false,"Gửi ↑":true,"Huỷ":false,"Bạn muốn ứng dụng thay đổi thế nào?":true,"C | guide label 'Mô tả thay đổi' not found; the prompt box is introduced by 'Bạn muốn ứng dụng thay đổi thế nào?'
+PASS    UG-063 | ui: model list has the simulator option 'Chế độ thử nghiệm (không dùng AI thật)': true; default option 'Tự động' g
+FAIL    UG-061 | ui: progress texts seen while the simulator ran:  | api: POST /api/v1/workspaces/{id}/projects/{id}/prompts 200 | steps/elapsed/countdown(120 s)/Huỷ checked by presence only; the 15 s silence message cannot occur with the simulator
+BLOCKED UG-062 | ui: needs a real model to stay silent for 15 s; C6 does not send data to external AI providers | not executed
+FAIL    UG-080 | ui: rail 'Dữ liệu' steps: Nguồn dữ liệu✓ Khám phá cấu trúc✓ Truy vấn✓ Ánh xạ✓ ViewModel✓ Gắn vào thành phần✓ Dữ li
+FAIL    UG-081 | ui: 'Thêm nguồn dữ liệu' absent; creating a source was NOT executed (public stack has no globally reachable data s | creation not executed
+BLOCKED UG-082 | ui: 'Kiểm tra kết nối' not visible without an existing source
+FAIL    UG-084 | ui: 'Khe dữ liệu': false; 'Thêm khe': false
+BLOCKED UG-085 | ui: 'Liên kết khe dữ liệu': false
+FAIL    UG-087 | ui: tab 'Dữ liệu công khai': false
+BLOCKED UG-089 | ui: public-data tab text: ← C6-UG-QA-muxvt6gd Phiên bản 5 · revision 4 · Công khai ✓ Đã lưu 16:05 ✦ AI Design Code | needs a READ query bound to a component; not executed
+FAIL    UG-090 | ui: banner: Chế độ dùng thử Không lưu thay đổi vào dữ liệu thật. Muốn sửa ứng dụng, chuyển về “Chỉnh sửa”. Thao tá
+FAIL    UG-091 | ui: '+ Thêm hành động': false; 'Thêm workflow': false | creating an action/workflow was not executed: the guide gives no steps for configuring one (MISSING STEP)
+BLOCKED UG-092 | ui: 'Chạy thử' needs an authored action; the guide does not say how to author one | MISSING STEP
+BLOCKED UG-093 | ui: needs an authored workflow | MISSING STEP
+BLOCKED UG-064 | ui: demo01 (workspace admin, not a system admin) with the 'Admin Console' radio -> /auth/no-access: ◆ AI Software  | api: GET /api/v1/auth/me 401; GET /api/v1/auth/config 200; GET /api/v1/auth/csrf 200; POST /api/v1/auth/login 200;  | 'Admin -> AI -> + Thêm nhà cung cấp' needs a system admin; C6 did not use the operator account
+
+DONE; project 3921946d-4a6a-4ebc-beb7-65aa116d10b2 slug c6-ug-qa-muxvt6gd-392194

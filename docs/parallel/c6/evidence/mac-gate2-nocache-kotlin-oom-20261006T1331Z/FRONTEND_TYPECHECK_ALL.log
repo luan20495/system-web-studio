@@ -1,0 +1,48 @@
+# start: 2026-10-06T13:33:05Z
+# cwd:   /Users/hoangluan/code/xweb-c6
+# cmd:   npm run typecheck:all
+
+
+> system-web-studio@0.2.0 typecheck:all
+> npm run typecheck:packages
+
+
+> system-web-studio@0.2.0 typecheck:packages
+> npm run typecheck --workspaces --if-present --include-workspace-root=false
+
+
+> @xweb/app-platform@0.0.0 typecheck
+> tsc --noEmit
+
+
+> @xweb/app-admin@0.0.0 typecheck
+> tsc --noEmit
+
+
+> @xweb/app-studio@0.0.0 typecheck
+> tsc --noEmit
+
+
+> @xweb/api-client@0.0.0 typecheck
+> tsc --noEmit -p tsconfig.json
+
+
+> @xweb/auth@0.0.0 typecheck
+> tsc --noEmit -p tsconfig.json
+
+
+> @xweb/i18n@0.0.0 typecheck
+> tsc --noEmit -p tsconfig.json
+
+
+> @xweb/permissions@0.0.0 typecheck
+> tsc --noEmit -p tsconfig.json
+
+
+> @xweb/types@0.0.0 typecheck
+> tsc --noEmit -p tsconfig.json
+
+
+> @xweb/ui@0.0.0 typecheck
+> tsc --noEmit -p tsconfig.json
+

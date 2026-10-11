@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.logic.action.InputResolverTests" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:46:13.916Z" hostname="macmini-2.local" time="0.002">
+  <properties/>
+  <testcase name="a caller cannot supply an input the server derives from the context()" classname="com.systemwebstudio.logic.action.InputResolverTests" time="0.001"/>
+  <testcase name="every client source is read from its own bucket of the payload()" classname="com.systemwebstudio.logic.action.InputResolverTests" time="0.0"/>
+  <testcase name="a form field is not readable through the route or state buckets()" classname="com.systemwebstudio.logic.action.InputResolverTests" time="0.0"/>
+  <testcase name="explicit inputs override event mapped values for non context sources()" classname="com.systemwebstudio.logic.action.InputResolverTests" time="0.0"/>
+  <testcase name="literal and previous result sources()" classname="com.systemwebstudio.logic.action.InputResolverTests" time="0.0"/>
+  <testcase name="context values come from the server side context()" classname="com.systemwebstudio.logic.action.InputResolverTests" time="0.001"/>
+  <testcase name="missing paths and wrong shapes resolve to absent, never throw()" classname="com.systemwebstudio.logic.action.InputResolverTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

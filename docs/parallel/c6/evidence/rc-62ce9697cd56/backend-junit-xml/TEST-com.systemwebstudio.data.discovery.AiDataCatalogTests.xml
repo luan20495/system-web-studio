@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.discovery.AiDataCatalogTests" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:45:21.619Z" hostname="macmini-2.local" time="0.03">
+  <properties/>
+  <testcase name="masked samples, when asked for, carry no raw personal data and no sensitive column at all()" classname="com.systemwebstudio.data.discovery.AiDataCatalogTests" time="0.013"/>
+  <testcase name="building a catalog is audited by counts only()" classname="com.systemwebstudio.data.discovery.AiDataCatalogTests" time="0.001"/>
+  <testcase name="a snapshot or operation recorded for another data source is not attributed to this one()" classname="com.systemwebstudio.data.discovery.AiDataCatalogTests" time="0.0"/>
+  <testcase name="an authorizer that fails yields an empty catalog, never a full one()" classname="com.systemwebstudio.data.discovery.AiDataCatalogTests" time="0.001"/>
+  <testcase name="disabled data sources are not offered to a planner()" classname="com.systemwebstudio.data.discovery.AiDataCatalogTests" time="0.0"/>
+  <testcase name="the catalog is bounded and ordered deterministically()" classname="com.systemwebstudio.data.discovery.AiDataCatalogTests" time="0.002"/>
+  <testcase name="the AI view of a schema is what the catalog is built from()" classname="com.systemwebstudio.data.discovery.AiDataCatalogTests" time="0.001"/>
+  <testcase name="what the caller may not do is not listed()" classname="com.systemwebstudio.data.discovery.AiDataCatalogTests" time="0.001"/>
+  <testcase name="no sample value is included unless asked for()" classname="com.systemwebstudio.data.discovery.AiDataCatalogTests" time="0.001"/>
+  <testcase name="the catalog lists structure and approved operations and nothing that can reach the source()" classname="com.systemwebstudio.data.discovery.AiDataCatalogTests" time="0.006"/>
+  <testcase name="another tenant sees nothing of this one()" classname="com.systemwebstudio.data.discovery.AiDataCatalogTests" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

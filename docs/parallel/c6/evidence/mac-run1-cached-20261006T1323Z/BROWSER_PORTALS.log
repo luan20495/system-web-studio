@@ -1,0 +1,39 @@
+# start: 2026-10-06T13:29:46Z
+# cwd:   /Users/hoangluan/code/xweb-c6
+# cmd:   env CHROME=/Applications/Google Chrome.app/Contents/MacOS/Google Chrome node tests/browser/portals.spec.mjs
+
+PASS  [platform] direct URL /platform without a session lands on /login and keeps the destination  — /login?next=%2Fplatform
+PASS  [platform] login page is for this portal
+PASS  [platform] login fields have accessible labels
+PASS  [platform] CSP: nonce + strict-dynamic, no unsafe-eval, frame-ancestors 'none', object-src 'none'
+PASS  [platform] security headers: nosniff, X-Frame-Options DENY, Referrer-Policy
+PASS  [platform] no CSP violations or page errors while rendering
+PASS  [platform] no cookies are set before sign-in
+PASS  [platform] a path of another portal also ends at /login (no screen without a session)
+PASS  [platform] refresh on /login stays on /login
+PASS  [platform] login with no backend shows an error and stays on /login  — ản công ty Tên đăng nhập Mật khẩu Không lấy được CSRF token (500). Đăng nhập Nền tảng nội bộ · truy cập được kiểm soát và ghi nhật ký
+PASS  [platform] no cookies after a failed login
+PASS  [admin] direct URL /admin without a session lands on /login and keeps the destination  — /login?next=%2Fadmin
+PASS  [admin] login page is for this portal
+PASS  [admin] login fields have accessible labels
+PASS  [admin] CSP: nonce + strict-dynamic, no unsafe-eval, frame-ancestors 'none', object-src 'none'
+PASS  [admin] security headers: nosniff, X-Frame-Options DENY, Referrer-Policy
+PASS  [admin] no CSP violations or page errors while rendering
+PASS  [admin] no cookies are set before sign-in
+PASS  [admin] a path of another portal also ends at /login (no screen without a session)
+PASS  [admin] refresh on /login stays on /login
+PASS  [admin] login with no backend shows an error and stays on /login  — khoản công ty Tên đăng nhập Mật khẩu Không lấy được CSRF token (500). Đăng nhập Nền tảng nội bộ · truy cập được kiểm soát và ghi nhật ký
+PASS  [admin] no cookies after a failed login
+PASS  [studio] direct URL /studio without a session lands on /login and keeps the destination  — /login?next=%2Fstudio
+PASS  [studio] login page is for this portal
+PASS  [studio] login fields have accessible labels
+PASS  [studio] CSP: nonce + strict-dynamic, no unsafe-eval, frame-ancestors 'none', object-src 'none'
+PASS  [studio] security headers: nosniff, X-Frame-Options DENY, Referrer-Policy
+PASS  [studio] no CSP violations or page errors while rendering
+PASS  [studio] no cookies are set before sign-in
+PASS  [studio] a path of another portal also ends at /login (no screen without a session)
+PASS  [studio] refresh on /login stays on /login
+PASS  [studio] login with no backend shows an error and stays on /login  —  công ty Tên đăng nhập Mật khẩu Không lấy được CSRF token (500). Đăng nhập Nền tảng nội bộ · truy cập được kiểm soát và ghi nhật ký
+PASS  [studio] no cookies after a failed login
+
+33/33 passed

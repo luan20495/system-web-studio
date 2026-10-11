@@ -1,0 +1,207 @@
+{
+ "total": 25,
+ "failed": 0,
+ "blockedByHC104": 2,
+ "rows": [
+  {
+   "id": "PR-platform-super",
+   "desc": "SUPER_ADMIN signs in at the platform portal",
+   "expected": "admitted",
+   "actual": "in /platform; navigations=3",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "PR-admin-super",
+   "desc": "SUPER_ADMIN signs in at the admin portal",
+   "expected": "admitted",
+   "actual": "in /admin; navigations=3",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "PR-studio-super",
+   "desc": "SUPER_ADMIN signs in at the studio portal",
+   "expected": "admitted",
+   "actual": "in /studio; navigations=3",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "PR-platform-tenant",
+   "desc": "TENANT_ADMIN signs in at the platform portal",
+   "expected": "refused (/auth/no-access)",
+   "actual": "no-access /auth/no-access?…; navigations=3",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "PR-admin-tenant",
+   "desc": "TENANT_ADMIN signs in at the admin portal",
+   "expected": "admitted",
+   "actual": "in /admin; navigations=3",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "PR-studio-tenant",
+   "desc": "TENANT_ADMIN signs in at the studio portal",
+   "expected": "admitted",
+   "actual": "in /studio; navigations=3",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "PR-platform-wsadmin",
+   "desc": "WORKSPACE_ADMIN signs in at the platform portal",
+   "expected": "refused (/auth/no-access)",
+   "actual": "no-access /auth/no-access?…; navigations=3",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "PR-admin-wsadmin",
+   "desc": "WORKSPACE_ADMIN signs in at the admin portal",
+   "expected": "admitted",
+   "actual": "in /admin; navigations=3",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "PR-studio-wsadmin",
+   "desc": "WORKSPACE_ADMIN signs in at the studio portal",
+   "expected": "admitted",
+   "actual": "in /studio; navigations=3",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "PR-platform-creator",
+   "desc": "APP_CREATOR (EDITOR) signs in at the platform portal",
+   "expected": "refused (/auth/no-access)",
+   "actual": "no-access /auth/no-access?…; navigations=3",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "PR-admin-creator",
+   "desc": "APP_CREATOR (EDITOR) signs in at the admin portal",
+   "expected": "refused (/auth/no-access)",
+   "actual": "no-access /auth/no-access?…; navigations=3",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "PR-studio-creator",
+   "desc": "APP_CREATOR (EDITOR) signs in at the studio portal",
+   "expected": "admitted",
+   "actual": "no-access /auth/no-access?…; navigations=3",
+   "result": "BLOCKED_BY_H-C1-04",
+   "note": "matches H-C1-04 exactly: /auth/me lists no workspace/project permissions, the project API resolves them, the Studio gate sends the person to /auth/no-access"
+  },
+  {
+   "id": "PR-platform-viewer",
+   "desc": "VIEWER signs in at the platform portal",
+   "expected": "refused (/auth/no-access)",
+   "actual": "no-access /auth/no-access?…; navigations=3",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "PR-admin-viewer",
+   "desc": "VIEWER signs in at the admin portal",
+   "expected": "refused (/auth/no-access)",
+   "actual": "no-access /auth/no-access?…; navigations=3",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "PR-studio-viewer",
+   "desc": "VIEWER signs in at the studio portal",
+   "expected": "admitted",
+   "actual": "no-access /auth/no-access?…; navigations=3",
+   "result": "BLOCKED_BY_H-C1-04",
+   "note": "matches H-C1-04 exactly: /auth/me lists no workspace/project permissions, the project API resolves them, the Studio gate sends the person to /auth/no-access"
+  },
+  {
+   "id": "PR-deep-1",
+   "desc": "signed-out deep link /admin/people",
+   "expected": "redirect to /login?next=/admin/people (no loop)",
+   "actual": "/login?next=%2Fadmin%2Fpeople; navs=3",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "PR-deep-2",
+   "desc": "after sign-in the deep-link target is opened",
+   "expected": "/admin/people",
+   "actual": "/admin/people",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "PR-direct",
+   "desc": "direct URL while signed in",
+   "expected": "stays on /admin/people",
+   "actual": "/admin/people",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "PR-login-signed-in",
+   "desc": "opening /login while signed in (observation: the login form is shown again, no redirect and no loop)",
+   "expected": "no loop: the page settles on /login or leaves it, ≤ 5 navigations",
+   "actual": "/login; navigations=8",
+   "result": "PASS",
+   "note": "INFO: a signed-in person sees the login form; documented nowhere as wrong"
+  },
+  {
+   "id": "PR-404",
+   "desc": "unknown page inside a portal (observation: the portal home is shown, not a 'not found' screen)",
+   "expected": "no crash, no loop: a not-found screen or the portal home",
+   "actual": "/admin/does-not-exist: ◆ AI Software Factory Quản trị công ty ▦ Tổng quan ◎ Người d",
+   "result": "PASS",
+   "note": "INFO: unknown /admin/* shows the console home"
+  },
+  {
+   "id": "PR-switch",
+   "desc": "tenant admin opens the Studio portal (another origin, same browser)",
+   "expected": "admitted: single sign-on on the shared host (cookies are per host, not per port) or its own login",
+   "actual": "http://127.0.0.1:3403/studio",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "PR-switch-denied",
+   "desc": "tenant admin opens the Platform portal",
+   "expected": "refused: /auth/no-access (or login)",
+   "actual": "/auth/no-access",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "PR-logout",
+   "desc": "sign out in the Admin portal",
+   "expected": "back on /login and /auth/me = 401",
+   "actual": "/login; me=401",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "PR-after-logout",
+   "desc": "protected URL after sign-out",
+   "expected": "redirect to /login",
+   "actual": "/login",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "PR-open-redirect",
+   "desc": "post-login redirect with an external `next`",
+   "expected": "never leaves the portal origin",
+   "actual": "http://127.0.0.1:3402, http://127.0.0.1:3402, http://127.0.0.1:3402",
+   "result": "PASS",
+   "note": ""
+  }
+ ]
+}

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.wiring.ActionRunRecoveryTests" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:53:17.122Z" hostname="macmini-2.local" time="0.005">
+  <properties/>
+  <testcase name="a recorded ambiguous write is never turned into a retryable run()" classname="com.systemwebstudio.wiring.ActionRunRecoveryTests" time="0.002"/>
+  <testcase name="a store failure is contained and the next tick still runs()" classname="com.systemwebstudio.wiring.ActionRunRecoveryTests" time="0.001"/>
+  <testcase name="an abandoned MUTATING run is an unknown outcome - not retryable, replayed as it is, never started again (A-1)()" classname="com.systemwebstudio.wiring.ActionRunRecoveryTests" time="0.001"/>
+  <testcase name="a lease shorter than a minute is refused at construction()" classname="com.systemwebstudio.wiring.ActionRunRecoveryTests" time="0.001"/>
+  <testcase name="a run inside its lease is left alone, an abandoned NON-mutating one becomes a retryable timeout()" classname="com.systemwebstudio.wiring.ActionRunRecoveryTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

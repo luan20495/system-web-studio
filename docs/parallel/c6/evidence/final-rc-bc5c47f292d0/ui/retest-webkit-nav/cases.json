@@ -1,0 +1,50 @@
+[
+ {
+  "id": "platform · sidebar navigation (14 links)",
+  "group": "PLATFORM",
+  "portal": "platform",
+  "role": "super",
+  "route": "/platform",
+  "viewport": 1440,
+  "kind": "navigation",
+  "result": "FAIL",
+  "fail": [
+   "click \"Cảnh báo\" went to /login, expected /platform/alerts",
+   "\"Cảnh báo\" not marked aria-current",
+   "click \"Sao lưu\" went to /login, expected /platform/backups",
+   "\"Sao lưu\" not marked aria-current",
+   "click \"Templates\" went to /login, expected /platform/templates",
+   "\"Templates\" not marked aria-current"
+  ],
+  "warn": []
+ },
+ {
+  "id": "admin · sidebar navigation (10 links)",
+  "group": "ADMIN",
+  "portal": "admin",
+  "role": "tenantAdmin",
+  "route": "/admin",
+  "viewport": 1440,
+  "kind": "navigation",
+  "result": "FAIL",
+  "fail": [
+   "click \"Chia sẻ Sắp có\" went to /login, expected /admin/sharing",
+   "\"Chia sẻ Sắp có\" not marked aria-current"
+  ],
+  "warn": []
+ },
+ {
+  "id": "studio · sidebar navigation (6 links)",
+  "group": "STUDIO",
+  "portal": "studio",
+  "role": "workspaceAdmin",
+  "route": "/studio",
+  "viewport": 1440,
+  "kind": "navigation",
+  "result": "FAIL",
+  "fail": [
+   "\"Tạo ứng dụng\" not marked aria-current"
+  ],
+  "warn": []
+ }
+]

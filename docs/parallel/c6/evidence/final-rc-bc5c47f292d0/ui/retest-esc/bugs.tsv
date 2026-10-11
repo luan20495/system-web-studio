@@ -1,0 +1,2 @@
+ID	PORTAL	ROUTE	SEVERITY	EXPECTED	ACTUAL	VIEWPORT	BROWSER	SCREENSHOT	OWNER	REPRO
+FQ-UI-001	studio	/studio [workspaceAdmin · navigation]	LOW	sidebar link opens its route, is marked aria-current, page has an h1, Back works	"Tạo ứng dụng" not marked aria-current	1440x900	Google Chrome 155.0.8059.40	-	C5	click the sidebar link

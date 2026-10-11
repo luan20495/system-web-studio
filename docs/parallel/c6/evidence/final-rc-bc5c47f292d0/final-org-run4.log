@@ -1,0 +1,99 @@
+PASS O00 [flag] organization persistence is ON: the unit tree answers 200 (not 501 ORG_PERSISTENCE_NOT_AVAILABLE) -> 200
+PASS O00b [auth] Tenant Admin of A: /auth/me lists the six organization codes (server-granted) -> all six
+PASS O00c [setup] fixtures: tenants A/B, TA of each, WS admin / member / org-labelled member of A -> reused=true activationsThisRun=0
+PASS O01a [types] create tenant-defined unit types with placement rules; version 0 and ETag "0" -> 201/v0/"0" 201/v0/"0" 201/v0/"0"
+PASS O01b [types] duplicate type code (case-insensitive) is refused -> 409 ORG_UNIT_TYPE_CODE_TAKEN
+PASS O01c [types] type code is stored lower-case -> 201 typeup3b50f3
+PASS O01d [types] type input validation: bad code -> 400 INVALID_CODE; empty/long name, icon > 60, maxDepth 0 / 101, > 50 rule ids -> 400 -> bad code chars=400 INVALID_CODE; empty name=400 VALIDATION_FAILED; name 121 chars=400 VALIDATION_FAILED; icon 61 chars=4
+PASS O01e [types] a rule that names a type id which is not a type of this tenant is a 404 -> 404 ORG_UNIT_TYPE_NOT_FOUND
+PASS O01f [types] maxDepth 100 (the system cap) is accepted -> 201 c100-3b50f3 100
+PASS O01g [types] icon: OBSERVATION: the contract has NO icon allow-list (free text <= 60); a markup-like icon string -> 201 icon-3b50f3 icon="<img src=x onerror=1>"
+PASS O01h [types] GET by id (ETag) and list (includeInactive) answer the created types -> 200 "0"; list 200 n=38
+PASS O01i [types] type PATCH: current version -> 200 v1; stale -> 409 VERSION_CONFLICT details.currentVersion=1; missing expectedVersion -> 400 -> 200 v1 / 409 VERSION_CONFLICT cur=1 / 400 VALIDATION_FAILED
+PASS O01j [types] icon "" clears the icon -> 200 null
+PASS O01k [types] disable type (v1) -> a NEW unit of it is 409 ORG_UNIT_TYPE_DISABLED; enable (v2) -> 200 v1 / 409 ORG_UNIT_TYPE_DISABLED / 200 v2
+PASS O02a [units] create MULTIPLE ROOT units (parentId null); code stored UPPER-CASE; version 0; tenantId = A -> 201/R1-3B50F3/v0 201/R2-3B50F3/v0 201/R3-3B50F3/v0
+PASS O03a [units] child units: tree nests {unit, children, directMemberCount, subtreeEmployeeCount}; flat carries parentId; same ids in both; roots listed -> R1 children=2 D1.parent=true E under D1=true
+PASS O03b [units] unit detail: path lists every ancestor root -> unit, ETag = unit.version -> 200 path=3 etag="0"
+PASS O03c [units] unit input validation: bad code -> 400 INVALID_CODE; name 161 / metadata array / > 8KB / typeId missing -> 400; unknown type / parent -> 404 -> bad code=400 INVALID_CODE; name 161=400 VALIDATION_FAILED; metadata array=400 VALIDATION_FAILED; metadata > 8KB=400 VALI
+PASS O03d [units] sibling order is sortOrder, then name: Mid(1), Alpha(5), Zed(5) -> Mid,Alpha,Zed
+PASS O04a [codes] code unique among NON-archived siblings, case-insensitive: web vs WEB -> 409 ORG_UNIT_CODE_TAKEN; the same code under ANOTHER parent is fine; roots are siblings; PATCH code onto a sibling -> 409 -> 409 ORG_UNIT_CODE_TAKEN / 201 WEB-3B50F3 / 409 ORG_UNIT_CODE_TAKEN / 409 ORG_UNIT_CODE_TAKEN
+PASS O04b [versions] unit PATCH: current version -> 200 v1 + ETag "1"; stale (0) -> 409 VERSION_CONFLICT with details.currentVersion=1; no expectedVersion -> 400 (STALE-VERSION proof) -> 200 "1" / 409 VERSION_CONFLICT cur=1 / 400 VALIDATION_FAILED
+PASS O04c [versions] after the stale write NOTHING changed (name still the v1 value) -> C6F Root Three renamed v1
+PASS O04d [units] there is NO hard delete of a unit -> 405
+PASS O05a [positions/grades] positions + grades created; code unique case-insensitive (409 *_CODE_TAKEN); bad code 400 INVALID_CODE; rank > 10000 -> 400; unranked grade has rank null -> 6 created; 409 POSITION_CODE_TAKEN; 409 GRADE_CODE_TAKEN; 400 INVALID_CODE; 400 VALIDATION_FAILED; g0.rank=null
+PASS O05b [positions/grades] disable/enable bump the version; the code of a DISABLED position stays taken; stale position PATCH -> 409 VERSION_CONFLICT; grade rank is a nullable attribute (clearRank) -> 1 / 409 POSITION_CODE_TAKEN / 2 / 409 VERSION_CONFLICT cur=2 / rank null
+PASS O05c [positions/grades] catalogs readable by list + id, ordered grades rank asc (null last) -> 200 200 g.rank=1
+PASS O06a [employees] employee provisioned through POST /admin/tenants/{T}/users WITHOUT org fields: 201 + one-time activation token (not echoed in this report); appears as employee with no memberships/positions/primary -> 201; 200 m=0 p=0 primary=null
+PASS O06b [employees] employee created WITH org fields in one request: 2 memberships (D1 MANAGER primary, D2), position+grade within the D1 membership; relation stored UPPER-CASE; activation link returned, no password anywhere -> 201 primary=true memberships=2 rel=MANAGER,MEMBER pos=1 act=true pwInBody=false
+PASS O06c [employees] first membership becomes primary automatically (no primary flag sent) -> true,true,true
+PASS O06d [employees] atomic create: a nested position that does not exist -> 404 POSITION_NOT_FOUND and NOTHING is created (the same username is free right after) -> 404 POSITION_NOT_FOUND; 201
+PASS O06e [employees] employee create validation: duplicate unit / two primaries / unit missing / no username -> 400; relation 'bad rel!' -> 400 INVALID_CODE -> dup unit=400 VALIDATION_FAILED; 2 primaries=400 VALIDATION_FAILED; bad relation=400 INVALID_CODE; unit missing=400 VALID
+PASS O06f [employees] unknown unit -> 404 ORG_UNIT_NOT_FOUND; duplicate username -> 409/422 (no second account) -> 404 ORG_UNIT_NOT_FOUND; 409 USERNAME_TAKEN
+PASS O06g [employees] GET employee agrees with the create answer (memberships, positions, primary) -> 200
+PASS O07a [memberships] multi-membership: add a 3rd (E, relation 'head' stored HEAD, NOT primary); duplicate unit -> 409 ORG_MEMBERSHIP_EXISTS; exactly ONE primary -> 201 rel=HEAD primary=false / 409 ORG_MEMBERSHIP_EXISTS / primaries=1
+PASS O07b [memberships] switching PRIMARY: PATCH primary=true on D2 atomically demotes D1; still exactly one primary; employee.primaryOrganizationUnitId follows -> 200 primaries=1 true emp.primary=true
+PASS O07c [memberships] primary=false is refused (400); a stale membership version -> 409 VERSION_CONFLICT; relation/primary never authorize anything (see authz script) -> 400 VALIDATION_FAILED / 409 VERSION_CONFLICT cur=1
+PASS O08a [emp-positions] a position is held WITHIN an active membership: no membershipId -> 400; another employee's membership -> 404 ORG_MEMBERSHIP_NOT_FOUND; grade is OPTIONAL (null ok); duplicate (same position in same unit) -> 409 POSITION_ASSIGNMENT_EXISTS -> 400 VALIDATION_FAILED / 404 ORG_MEMBERSHIP_NOT_FOUND / 201 grade=null / 409 POSITION_ASSIGNMENT_EXISTS
+PASS O08b [emp-positions] grade is a nullable attribute of the holding: set -> g9, both gradeId+clearGrade -> 400, clearGrade -> null, stale version -> 409 -> 200 true / 400 / 200 null / 409 VERSION_CONFLICT
+PASS O08c [emp-positions] a disabled position / grade cannot be assigned anew -> 409 POSITION_DISABLED / 409 GRADE_DISABLED
+PASS O08d [emp-positions] exactly one primary position: making the new one primary demotes the previous -> 201 primaries=1 of 3
+PASS O08e [memberships] ENDING a membership that still has an active position -> 409 EMPLOYEE_ORG_HAS_POSITIONS {activePositionCount} (no silent cascade) -> 409 EMPLOYEE_ORG_HAS_POSITIONS cnt=1
+PASS O08f [memberships] resolve-then-end path: end the position (200, active=false), then the membership ends (200 active=false, primary=false); the ended membership is hidden by default, listed with includeInactive, and PATCH on it is 404 -> 200 false / 200 false / visible=false / listed=true / 404 ORG_MEMBERSHIP_NOT_FOUND
+PASS O08g [memberships] after ending, the same unit can be joined again (only ONE ACTIVE membership per user+unit) -> 201
+PASS O08h [memberships] ending the PRIMARY membership promotes the oldest remaining one; the employee keeps exactly one primary -> 200 primaries=1 promoted=true
+PASS O09a [counts] directMemberCount / subtreeEmployeeCount. e1 is in D1 AND D2 (same subtree) -> counted ONCE at R1: R1 1/3 (e2 direct; e1,e2,e3 distinct), D1 1/2, D2 1/1, E 1/1, F 0/0, R2 1/1 -> {"R1":"1/3","D1":"1/2","D2":"1/1","E":"1/1","F":"0/0","R2":"1/1"}
+PASS O09b [counts] the detail endpoint agrees with the tree for R1 -> tree 1/3 detail 1/3
+PASS O09c [counts] ENDED membership is not counted: ending e3's E membership -> E 0/0, D1 1/1, R1 1/2 -> 200 E 0/0 D1 1/1 R1 1/2
+PASS O09d [counts] DISABLED employee is not counted: disabling e2 -> R1 0/1 (only e1); disable is idempotent (200); the membership is kept (history) -> 200 R1 0/1 / again 200 / memberships=1 active=false
+PASS O09e [counts] a disabled employee cannot get a new membership (409 EMPLOYEE_INACTIVE); enabling brings the person back into the counts (R1 1/2) -> 409 EMPLOYEE_INACTIVE / enable 200 / R1 1/2
+PASS O09f [employees] nobody disables themselves (the tenant admin): 403 SELF_GRANT_FORBIDDEN (and the last tenant admin is protected) -> 403 SELF_GRANT_FORBIDDEN
+PASS O09g [counts] re-joining restores the count (E 1/1, D1 1/2, R1 1/3) -> 201 E 1/1 D1 1/2 R1 1/3
+PASS O10a [move] newParentId key is MANDATORY (absent -> 400, never a silent move to root); not a UUID -> 400; missing expectedVersion -> 400 -> 400/400/400 parentStill=true
+PASS O10b [move] stale expectedVersion -> 409 VERSION_CONFLICT with details.currentVersion; unknown destination -> 404 ORG_UNIT_NOT_FOUND -> 409 VERSION_CONFLICT cur=0 / 404 ORG_UNIT_NOT_FOUND
+PASS O11a [move] move a unit with its subtree/members: E (e3 inside) D1 -> D2; counts follow (D1 1/1, D2 1/2, R1 unchanged 1/3); version bumped; subtree follows -> 200 E-3B50F3 parent=true v1 D1 1/1 D2 1/2 R1 1/3
+PASS O11b [move] newParentId=null = to the ROOT, but a type rule still applies (dept cannot be a root -> 409 ORG_TYPE_RULE_VIOLATION ROOT_NOT_ALLOWED); E moved back to D1 works (counts restored) -> 200 / 409 ORG_TYPE_RULE_VIOLATION reason=ROOT_NOT_ALLOWED
+PASS O11c [move] move a node unit (with child + member) to the ROOT via explicit null: it becomes a root, its child and the member follow, R3 loses them -> 200 MVA-3B50F3 parent=null nA 0/1 child=true
+PASS O12a [cycle] a cycle is refused: move A under its own child B -> 409 ORG_CYCLE; A under itself -> 409 ORG_CYCLE; nothing changed -> 409 ORG_CYCLE / 409 ORG_CYCLE parent=null v1
+PASS O12b [cycle] a cycle through a DEEP descendant (A under its grandchild C) -> 409 ORG_CYCLE -> 409 ORG_CYCLE
+PASS O12c [move] move into a parent that already holds a sibling with the same code -> 409 ORG_UNIT_CODE_TAKEN -> 409 ORG_UNIT_CODE_TAKEN
+PASS O13a [type rules] ROOT_NOT_ALLOWED (dept as root; allowRoot=false type as root), PARENT_TYPE_NOT_ALLOWED (team directly under division), CHILD_TYPE_NOT_ALLOWED (a child under a leaf-type unit) -> ORG_TYPE_RULE_VIOLATION:ROOT_NOT_ALLOWED ORG_TYPE_RULE_VIOLATION:ROOT_NOT_ALLOWED ORG_TYPE_RULE_VIOLATION:PARENT_TYPE_NO
+PASS O14a [max depth] type maxDepth=3: levels 1-3 are 201, level 4 -> 409 ORG_TYPE_RULE_VIOLATION reason MAX_DEPTH (3-level chain) -> 000 409 ORG_TYPE_RULE_VIOLATION reason=MAX_DEPTH
+PASS O14b [max depth] moving a SUBTREE checks EVERY descendant: a1 (with a2,a3) under a level-1 unit would put a3 at level 4 -> 409 MAX_DEPTH; moving only the leaf a3 under xr (level 2) is fine -> 409 ORG_TYPE_RULE_VIOLATION reason=MAX_DEPTH / 200
+PASS O14c [max depth] a RULE change the existing tree already violates is refused: cap3 maxDepth -> 1 while level-2 units exist -> 409 ORG_TYPE_RULE_VIOLATION {reason, unitId} -> 409 ORG_TYPE_RULE_VIOLATION reason=MAX_DEPTH unit=true
+PASS O14d [deep tree] DEEP tree: a 100-level chain (the system cap of maxDepth) is accepted level by level; level 101 -> 409 MAX_DEPTH -> 100/100 created in 54s; 101st 409 ORG_TYPE_RULE_VIOLATION reason=MAX_DEPTH
+PASS O14e [deep tree] 3-level and >=10-level chains read back: detail.path of level 3 has 3 ancestors, of level 12 has 12, of level 100 has 100 (root -> unit); the tree JSON nests 100 deep and flat carries all 100 -> p12=12 p100=100
+PASS O14f [deep tree] the whole-tree read copes with a 100-deep chain (status 200 and max nesting 100) -> 200 depth=100 ms=328
+PASS O15a [archive guard] archive refused: unit with ACTIVE children -> 409 ORG_UNIT_HAS_CHILDREN {activeChildCount}; a unit with active members -> 409 (ORG_UNIT_HAS_CHILDREN first when it has both, else ORG_UNIT_HAS_MEMBERS) -> 409 ORG_UNIT_HAS_CHILDREN cnt=2 / 409 ORG_UNIT_HAS_CHILDREN
+PASS O15b [archive guard] a leaf with an active member -> 409 ORG_UNIT_HAS_MEMBERS {activeMemberCount:1} -> 409 ORG_UNIT_HAS_MEMBERS cnt=1
+PASS O15c [archive guard] RESOLVE then archive: ending the membership first -> 409 EMPLOYEE_ORG_HAS_POSITIONS (a position is held in it); end the position -> ok; end the membership -> ok; archive now succeeds (200, active=false, archivedAt set) -> 409 EMPLOYEE_ORG_HAS_POSITIONS / 200 / 200 / 200 active=false archivedAt=true
+PASS O16a [archive] an archived unit is hidden from the default tree/flat, shown with includeArchived=true, and answers counts 0/0 -> default has=false include has=true detail 0/0 include-node 0/0
+PASS O16b [archive] an archived unit is frozen: archive again / PATCH / child under it / membership on it / move it / move something into it -> 409 ORG_UNIT_ARCHIVED -> 409 ORG_UNIT_ARCHIVED, 409 ORG_UNIT_ARCHIVED, 409 ORG_UNIT_ARCHIVED, 409 ORG_UNIT_ARCHIVED, 409 ORG_UNIT_ARCHIVED, 409 O
+PASS O17a [restore] restore: NOT_ARCHIVED on an active unit; the archived unit's code is FREE for a new sibling (201); restoring while another active sibling holds the code -> 409 RESTORE_CONFLICT reason CODE_TAKEN -> 409 RESTORE_CONFLICT NOT_ARCHIVED / 201 / 409 RESTORE_CONFLICT CODE_TAKEN
+PASS O17b [restore] after renaming the clashing sibling the restore succeeds: active again, archivedAt null, same parent/code/type, version bumped, visible in the default tree -> 200 / 200 MU-3B50F3 active=true archivedAt=null parent=true
+PASS O17c [restore] RESTORE_CONFLICT reasons: PARENT_ARCHIVED (child restored while its parent is archived), TYPE_DISABLED (type disabled since), TYPE_RULE (rules changed since: the archived unit is not checked by the rule change, restore is) -> PARENT_ARCHIVED (409) / TYPE_DISABLED (409) / TYPE_RULE (409) [rule patch 200]
+PASS O17d [restore] restoring bottom-up works: parent first (200), then the child (200) - no silent cascade of archive or restore -> 200 / 200
+PASS O17e [versions] archive with a stale expectedVersion -> 409 VERSION_CONFLICT (details.currentVersion) -> 409 VERSION_CONFLICT
+PASS O18a [directory] paging limits: size 0 / 101 / -1, page -1, page=abc, bad sort / dir -> 400 VALIDATION_FAILED (never an empty page with a total) -> size 0=400 VALIDATION_FAILED; size 101=400 VALIDATION_FAILED; size -1=400 VALIDATION_FAILED; page -1=400 VALIDATION_FAIL
+PASS O18b [directory] page*size > 10000 -> 400 OFFSET_TOO_LARGE; page*size = 10000 -> 200 (empty items, total stays correct); size 1 and 100 are valid -> page 101 size 100 (10100)=400 OFFSET_TOO_LARGE; page 10001 size 1=400 OFFSET_TOO_LARGE; page 5001 size 2=400 OFFSET_TOO_
+PASS O18c [directory] q needs >= 2 chars (400 QUERY_TOO_SHORT); q matches username (exactly e3) -> 400 QUERY_TOO_SHORT; 200 total=1
+PASS O18d [directory] paging size=1: pages 0..N-1 return each matching employee exactly once (no duplicate / no gap), total constant -> 6 distinct of 6
+PASS O18e [directory] sort=username dir=asc/desc are exact reverses -> 6 items
+PASS O18f [directory] filters: unit + descendants finds e1,e2,e3 (subtree) while direct-only finds e2 only; position / grade filters use ACTIVE assignments (e1's Developer+G1); unknown unit / position -> 404 (not an empty page) -> 3/1/true/1 404/404
+PASS O18g [directory] active=false lists disabled members only (disabled employees stay in the directory); active=true excludes them -> 1/false
+PASS O18h [directory] the account provisioned WITHOUT org fields is listed in the directory (employee = tenant member) -> 1
+PASS O19a [concurrency] 16 parallel structural writes (create under one parent): every answer is 201 or 503 ORG_STRUCTURE_BUSY; the tree holds exactly the 201s; no other failure -> 201x16 503x0 others= children=16
+PASS O19b [concurrency] 10 parallel creates with the SAME sibling code: exactly one 201, the rest 409 ORG_UNIT_CODE_TAKEN (or 503); one row in the tree -> 201x1 409x9 503x0 rows=1
+PASS O19c [concurrency] cycle race: 4 pairs of siblings moved under each other IN PARALLEL (8 requests): never both 200 in one pair; every other answer is 409 (ORG_CYCLE/VERSION_CONFLICT) or 503; the stored structure has NO cycle -> successes/pair=1,1,1,1 statuses=409,200,409,200,200,409,200,409 acyclic=true
+PASS O19d [concurrency] archive-vs-create race on 3 parents (6 parallel requests): afterwards NO active unit sits under an archived parent -> statuses=409 ORG_UNIT_HAS_CHILDREN,201 HC0-3B50F3,200 H1-3B50F3,409 ORG_UNIT_ARCHIVED,200 H2-3B50F3,409 ORG_UNIT_ARCHIVE
+PASS O19e [concurrency] primary race: 4 parallel 'make primary' calls on 4 memberships of one employee: afterwards EXACTLY one primary membership (losers 409 VERSION_CONFLICT) -> statuses=200,200,200,200 primaries=1
+PASS O20a [perf-data] data: created the scale data through the API (units / employees) -> units now 602 (+0), employees now 224 (+0) in 2s
+PASS O20b [perf] measurement: MEASUREMENT (not pass/fail): backend response time, 7 reads each, ms median [min-max], this host, loopback, includes session auth -> tree(602 units,100-deep chain) 397 [263-486] 268KB | flat 157 | directory size100 141 [66-491] | size25 84 | q 71 | deta
+FAIL O20c [memberships] an employee can hold at most 20 ACTIVE memberships: the 21st -> 400 VALIDATION_FAILED -> true then undefined
+PASS O21a [invariants] after every write and race: the tree is consistent (unique ids, no dangling parent, no cycle, no active unit under an archived one, sibling codes unique, tree == flat, <=1 primary membership/position per employee, positions only inside active memberships) AND directMember/subtreeEmployee counts equal an independent recomputation from the directory (distinct semantics) -> 610 units, 225 employees: 0 problems
+PASS O22a [reload] RELOAD: a brand-new login (fresh cookie jar / CSRF) reads back identical unit-flat (incl. archived), types, positions, grades, e1 (memberships+positions) and directory page -> login 200: units=true types=true positions=true grades=true e1=true dir=true
+PASS O22b [reload] the fresh session sees the same counts as the first session for EVERY unit (R1 1/4: e1,e2,e3 + e40 from the primary-race step) -> 1/4
+PASS O23a [persistence] read-only-confirmation (docker exec c0rc-pg psql, SELECT count per family): PostgreSQL rows == what the API reports - types / units(all, active) / active memberships / positions / grades / active employee-positions; no user has 2 active primary memberships -> {"types":"44","unitsAll":"610","unitsActive":"602","memberships":"239","primaries":"0","positions":"12","grades":"12","e
+PASS O23b [audit] read-only-confirmation: the product recorded audit events for the org writes of this run: ORG_UNIT_CREATED == units created, ORG_UNIT_TYPE_CREATED == types created, EMPLOYEE_CREATED / EMPLOYEE_ORG_ASSIGNED / POSITION_* / GRADE_* present, ORG_UNIT_MOVED / ARCHIVED / RESTORED present; no 'token' / 'password' inside audit payloads -> EMPLOYEE_CREATED=217,EMPLOYEE_DISABLED=6,EMPLOYEE_ENABLED=6,EMPLOYEE_ORG_ASSIGNED=257,EMPLOYEE_ORG_REMOVED=18,EMPLOYEE_O
+requests by TA session: 515 activations this run: 0
+final-org: total=97 pass=96 fail=1 blocked=0

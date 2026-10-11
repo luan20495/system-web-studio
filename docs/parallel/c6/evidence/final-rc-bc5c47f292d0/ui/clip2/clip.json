@@ -1,0 +1,169 @@
+[
+ {
+  "portal": "admin",
+  "role": "tenantAdmin",
+  "route": "/admin/employees",
+  "w": 360,
+  "hits": [
+   {
+    "tag": "button",
+    "text": "Vị trí & cấp bậc",
+    "left": 349,
+    "right": 503,
+    "vw": 360
+   },
+   {
+    "tag": "button",
+    "text": "Thêm nhân viên",
+    "left": 511,
+    "right": 670,
+    "vw": 360
+   },
+   {
+    "tag": "input",
+    "text": "Tìm nhân viên",
+    "left": 49,
+    "right": 659,
+    "vw": 360
+   },
+   {
+    "tag": "select",
+    "text": "Tất cả đơn vị\nKhối Công nghệ\n└ Phòng Phá",
+    "left": 14,
+    "right": 670,
+    "vw": 360
+   },
+   {
+    "tag": "select",
+    "text": "Tất cả vị trí\nKỹ sư phần mềm cao cấp",
+    "left": 14,
+    "right": 670,
+    "vw": 360
+   },
+   {
+    "tag": "select",
+    "text": "Tất cả cấp bậc\nBậc 5",
+    "left": 14,
+    "right": 670,
+    "vw": 360
+   }
+  ],
+  "n": 9,
+  "docW": 360,
+  "vw": 360,
+  "shot": "admin_tenantAdmin__admin_employees_360.png"
+ },
+ {
+  "portal": "admin",
+  "role": "tenantAdmin",
+  "route": "/admin/employees",
+  "w": 390,
+  "hits": [
+   {
+    "tag": "button",
+    "text": "Vị trí & cấp bậc",
+    "left": 349,
+    "right": 503,
+    "vw": 390
+   },
+   {
+    "tag": "button",
+    "text": "Thêm nhân viên",
+    "left": 511,
+    "right": 670,
+    "vw": 390
+   },
+   {
+    "tag": "input",
+    "text": "Tìm nhân viên",
+    "left": 49,
+    "right": 659,
+    "vw": 390
+   },
+   {
+    "tag": "select",
+    "text": "Tất cả đơn vị\nKhối Công nghệ\n└ Phòng Phá",
+    "left": 14,
+    "right": 670,
+    "vw": 390
+   },
+   {
+    "tag": "select",
+    "text": "Tất cả vị trí\nKỹ sư phần mềm cao cấp",
+    "left": 14,
+    "right": 670,
+    "vw": 390
+   },
+   {
+    "tag": "select",
+    "text": "Tất cả cấp bậc\nBậc 5",
+    "left": 14,
+    "right": 670,
+    "vw": 390
+   }
+  ],
+  "n": 9,
+  "docW": 390,
+  "vw": 390,
+  "shot": "admin_tenantAdmin__admin_employees_390.png"
+ },
+ {
+  "portal": "admin",
+  "role": "tenantAdmin",
+  "route": "/admin/employees",
+  "w": 768,
+  "hits": [
+   {
+    "tag": "button",
+    "text": "Thêm nhân viên",
+    "left": 657,
+    "right": 816,
+    "vw": 768
+   },
+   {
+    "tag": "input",
+    "text": "Tìm nhân viên",
+    "left": 49,
+    "right": 805,
+    "vw": 768
+   },
+   {
+    "tag": "select",
+    "text": "Tất cả cấp bậc\nBậc 5",
+    "left": 680,
+    "right": 816,
+    "vw": 768
+   },
+   {
+    "tag": "button",
+    "text": "Sau",
+    "left": 751,
+    "right": 797,
+    "vw": 768
+   }
+  ],
+  "n": 4,
+  "docW": 768,
+  "vw": 768,
+  "shot": "admin_tenantAdmin__admin_employees_768.png"
+ },
+ {
+  "portal": "admin",
+  "role": "tenantAdmin",
+  "route": "/admin/employees",
+  "w": 1440,
+  "hits": [
+   {
+    "tag": "select",
+    "text": "Tất cả đơn vị\nKhối Công nghệ\n└ Phòng Phá",
+    "left": 846,
+    "right": 1502,
+    "vw": 1440
+   }
+  ],
+  "n": 1,
+  "docW": 1440,
+  "vw": 1440,
+  "shot": "admin_tenantAdmin__admin_employees_1440.png"
+ }
+]

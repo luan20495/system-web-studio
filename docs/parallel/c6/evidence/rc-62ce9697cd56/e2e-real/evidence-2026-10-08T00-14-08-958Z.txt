@@ -1,0 +1,1266 @@
+FLOW: E2E-01 — Load project/page from the real backend
+RESULT: PASS
+START: 2026-10-08T00:00:29.040Z
+END: 2026-10-08T00:00:31.645Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok GET …/projects/{id}/schema answered 200 by the real backend
+UI ASSERTION:
+  - ok the Builder canvas rendered (preview iframe present)
+  - ok the project name stored in the backend is on screen
+  - ok no unhandled page errors / serious console errors
+PERSISTENCE ASSERTION:
+  - ok the canvas shows the persisted first section (page content comes from the server, not a fixture in the browser)
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-02 — Edit component/page → save → reload → persists
+RESULT: PASS
+START: 2026-10-08T00:00:31.645Z
+END: 2026-10-08T00:00:34.508Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok PATCH …/schema answered 200 by the real backend
+UI ASSERTION:
+  - ok clicking a section on the canvas opens its properties
+  - ok the top bar says saved
+  - ok after a full reload the canvas shows the saved text
+  - ok no unhandled page errors / serious console errors
+PERSISTENCE ASSERTION:
+  - ok server revision increased
+  - ok the new text is in the persisted schema (read back through a separate session)
+  - ok a new version row exists for the edit
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-03 — Workspace isolation A/B
+RESULT: PASS
+START: 2026-10-08T00:00:34.509Z
+END: 2026-10-08T00:00:39.326Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok B reads A's project by id → 404 (existence not disclosed)
+  - ok A reads B's project through B's workspace → 404
+  - ok a project id of B under A's workspace path → 404 (no cross-workspace lookup)
+UI ASSERTION:
+  - ok adminA: the project list shows their own project
+  - ok adminA: the project list does NOT show the other workspace's project
+  - ok adminA: no unhandled page errors
+  - ok adminB: the project list shows their own project
+  - ok adminB: the project list does NOT show the other workspace's project
+  - ok adminB: no unhandled page errors
+  - ok the 404 body does not carry A's data
+  - ok B lists A's workspace → refused (403/404), no rows
+  - ok B cannot write into A's project (403/404)
+PERSISTENCE ASSERTION:
+  - ok A's project revision is unchanged by the attempts
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-04 — Authorized user reaches a valid Studio resource (permission-driven)
+RESULT: FAIL
+START: 2026-10-08T00:00:39.326Z
+END: 2026-10-08T00:00:44.435Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok adminA: the server resolves APP_VIEW and APP_EDIT for the project
+  - ok viewerA: GET …/projects/{p} resolves APP_VIEW (contract: a VIEWER holds APP_VIEW) — canonical or its storage alias
+  - ok viewerA: …and does not resolve APP_EDIT / APP_PUBLISH / DATA_SOURCE_MANAGE
+  - ok viewerA: the API lets them READ the schema (200)
+  - ok lonelyA: no APP_VIEW is resolved anywhere (/auth/me, project payload)
+UI ASSERTION:
+  - ok adminA: after login the Studio shell is reachable (not /auth/no-access)
+  - ok adminA: direct URL → schema 200 and the Builder canvas
+  - ok adminA: the editor is NOT read-only (no read-only notice)
+  - ok adminA: refresh keeps the project open
+  - ok adminA: no unhandled page errors
+  - ok viewerA: the refusal page shows no project data
+  - ok lonelyA: after login the person is sent to /auth/no-access
+  - ok lonelyA: a direct project URL also ends on /auth/no-access (no Builder)
+  - ok lonelyA: no project name or description on screen or in any API answer
+  - ok lonelyA: no unhandled page errors
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+CONTRACT MISMATCH: expected VIEWER resolved permissions include APP_VIEW, so the Studio portal opens read-only | actual GET /auth/me → permissions=[], workspaces[].permissions=[]; GET …/projects/{p} → permissions=["APP_USE","PROJECT_READ"] (PROJECT_READ is the storage name of APP_VIEW) | impact the Studio gate (reads /auth/me) redirects the VIEWER to /auth/no-access; /auth/me lists WORKSPACE-level codes only, so any person whose rights come from a PROJECT membership (VIEWER, EDITOR, PUBLISHER) is refused | frontend workaround NONE
+BLOCKER: CONTRACT MISMATCH — expected: VIEWER resolved permissions include APP_VIEW, so the Studio portal opens read-only; actual: GET /auth/me → permissions=[], workspaces[].permissions=[]; GET …/projects/{p} → permissions=["APP_USE","PROJECT_READ"] (PROJECT_READ is the storage name of APP_VIEW); impact: the Studio gate (reads /auth/me) redirects the VIEWER to /auth/no-access; /auth/me lists WORKSPACE-lev
+OWNER: C1 · ref H-C1-04
+
+---
+
+FLOW: E2E-05 — Forbidden path: same scope + missing permission → 403, foreign scope → 404, UI state ≠ enforcement
+RESULT: FAIL
+START: 2026-10-08T00:00:44.435Z
+END: 2026-10-08T00:01:23.534Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok viewerA resolved set (evidence): no APP_EDIT / APP_PUBLISH / DATA_SOURCE_MANAGE / WORKFLOW_EXECUTE / ACTION_EXECUTE
+  - ok same scope, missing permission: PATCH schema (valid ADD_ACTION operation) → 403
+  - ok same scope, missing permission: POST publish (APP_PUBLISH) → 403
+  - ok same scope, missing permission: POST TEST action execute (APP_USE + ACTION_EXECUTE + APP_EDIT) → 403
+  - ok same scope, missing permission: POST TEST workflow start (APP_USE + WORKFLOW_EXECUTE + APP_EDIT) → 403
+  - ok same scope, missing permission: POST data source create (DATA_SOURCE_MANAGE) → 403
+  - ok foreign scope (another workspace's admin): PATCH schema (valid ADD_ACTION operation) → 404
+  - ok foreign scope (another workspace's admin): POST publish (APP_PUBLISH) → 404
+  - ok foreign scope (another workspace's admin): POST TEST action execute (APP_USE + ACTION_EXECUTE + APP_EDIT) → 404
+  - ok foreign scope (another workspace's admin): POST TEST workflow start (APP_USE + WORKFLOW_EXECUTE + APP_EDIT) → 404
+  - ok foreign scope (another workspace's admin): POST data source create (DATA_SOURCE_MANAGE) → 404
+  - ok foreign and unknown projects answer identically (no existence oracle)
+UI ASSERTION:
+  - ok foreign person: no Builder canvas
+  - ok foreign person: the page says something went wrong / not found (not a blank screen)
+  - ok foreign person: A's project name / description are nowhere on screen or in any API answer
+  - ok foreign person: no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok A's revision is unchanged by every forged write
+  - ok no deployment was created by the forged publishes
+  - ok no data source was created by the forged requests
+RESTART/RECOVERY: not applicable to this flow
+CONTRACT MISMATCH: expected VIEWER resolved permissions include APP_VIEW, so Studio opens read-only and the UI permission state can be compared with the forged-call denials | actual GET /auth/me → permissions=[], workspaces[].permissions=[]; GET …/projects/{p} → permissions=["APP_USE","PROJECT_READ"] | impact Studio redirects the VIEWER to /auth/no-access, so the UI half of 'UI permission state ≠ enforcement' cannot be observed for an in-scope person without permissions. The API half PASSED above (403 same scope, 404 foreign scope). | frontend workaround NONE
+BLOCKER: CONTRACT MISMATCH — expected: VIEWER resolved permissions include APP_VIEW, so Studio opens read-only and the UI permission state can be compared with the forged-call denials; actual: GET /auth/me → permissions=[], workspaces[].permissions=[]; GET …/projects/{p} → permissions=["APP_USE","PROJECT_READ"]; impact: Studio redirects the VIEWER to /auth/no-access, so the UI half of 'UI permission state 
+OWNER: C1 · ref H-C1-04
+
+---
+
+FLOW: E2E-06 — Configure DataSource (+ Query) and query via the real backend
+RESULT: BLOCKED
+START: 2026-10-08T00:01:23.534Z
+END: 2026-10-08T00:01:26.151Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok [api] connector catalogue answers 200 with items
+  - ok [api] postgres is AVAILABLE and the planned connectors are not
+  - ok [api] create → 201 with a DataSourceView
+  - ok [api] the view says a credential exists but carries no secret and no credential reference
+  - ok [api] credential metadata: configured + key NAMES only, no values
+  - ok [api] a second source with the same name (case-insensitive) → 409 CONFLICT
+  - ok [api] a secret-looking key in config → 400 INVALID_*
+  - ok [api] an identity field in the body (tenantId) → 400 INVALID_PARAMS
+  - ok [api] a PLANNED connector (csv) → 501 NOT_IMPLEMENTED
+  - ok [api] an unknown connector type → 422 UNSUPPORTED_TYPE
+  - ok [api] isolation: workspace B's admin cannot read A's source by id (404 NOT_FOUND)
+  - ok [api] isolation: 'foreign' and 'unknown' answer IDENTICALLY (no existence oracle)
+  - ok [api] isolation: B's admin listing A's workspace is refused (403/404), no items
+  - ok [api] permission: a VIEWER cannot create (403 PERMISSION_DENIED)
+  - ok [api] permission: a VIEWER cannot change a source, and nothing changed
+  - ok [api] permission: a VIEWER's read is 200 or 403, never 5xx, and never shows a secret
+  - ok [api] test connection of an unreachable host → HTTP 200 with ok:false and a documented code
+  - ok [api] the failure text does not leak the credential
+  - ok [api] a DISABLED source cannot be tested: 409 DISABLED
+  - ok [api] bind TEST → 200 with the binding
+  - ok [api] the binding list contains it, mode normalised
+  - ok [api] permission: a project VIEWER cannot list/alter bindings (403)
+  - ok [api] deleting a BOUND source → 409 CONFLICT and it still exists
+  - ok [api] list definitions → 200 {items:[]}
+  - ok [api] create a query definition → 201 with its id
+  - ok [api] read it back (200, same id)
+  - ok [api] a definition the gateway would refuse is refused at write time (400 INVALID_QUERY)
+  - ok [api] an authority key in the body → 400 INVALID_PARAMS
+  - ok [api] a mutation against a source that is not writable → 422 READ_ONLY_VIOLATION
+  - ok [api] isolation: workspace B cannot read A's definition (404)
+  - ok [api] permission: a VIEWER cannot create a definition (403)
+  - ok [api] delete the definition → 204
+UI ASSERTION:
+  - ok [ui] the Builder opens by direct URL
+  - ok [ui] the Data panel shows the source-management panel (not 'Chưa sẵn sàng')
+  - ok [ui] the new source is listed
+  - ok [ui] credential: 'Đã cấu hình' with key names and no value
+  - ok [ui] no password field is prefilled and no secret is anywhere in the DOM
+  - ok [ui] test connection: the real failure is shown as FAILED with its code
+  - ok [ui] the failure text shows no secret
+  - ok [ui] the existing TEST binding's slot is not invented by the UI (the document declares no slots)
+  - ok [ui] no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok [backend] browsing and testing changed nothing: still ACTIVE, version unchanged
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: Source, credential, test-connection, binding AND query/mutation definition management exist on integration/v2 (C3, management-api.md) and are exercised above, but a project cannot USE them: the AppDefinition has no operation to declare a data slot (dataSources[] is "granted, not created", C2 H-C2-02), and a local stack has no reachable source (the SSRF guard refuses loopback/private addresses; the
+OWNER: C2 · ref H-C2-02 + H-C0-07
+
+---
+
+FLOW: E2E-07 — TEST-binding query runs and shows results
+RESULT: BLOCKED
+START: 2026-10-08T00:01:26.151Z
+END: 2026-10-08T00:01:26.151Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE: none recorded
+UI ASSERTION: none recorded
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: Sources, TEST bindings and query definitions can be created over HTTP (management-api.md §3.5/§3.6), but (1) the document cannot declare the data slot a binding names (C2 H-C2-02) and (2) a local stack has no source the gateway may reach (public address required, H-C0-07). Set E2E_DATA_WORKSPACE_ID, E2E_DATA_PROJECT_ID, E2E_DATA_QUERY_ID, E2E_DATA_USER, E2E_DATA_PASSWORD for a project the operator
+OWNER: C3 · ref H-C2-02 + H-C0-07
+
+---
+
+FLOW: E2E-08 — LIVE-binding query runs and shows results
+RESULT: BLOCKED
+START: 2026-10-08T00:01:26.151Z
+END: 2026-10-08T00:01:26.151Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE: none recorded
+UI ASSERTION: none recorded
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: LIVE needs (1) a RUNNING deployment and a published host that serves the Data API: C0 states there is no public DataGateway route and no published data host, and the runtime config that would carry its address is undecided (C0 `__factory/config.json` apiBase, served for code apps/previews only, vs C2 `/runtime-config.json` DATA_API_BASE_URL); (2) a declared slot (C2 H-C2-02); (3) a source the gate
+OWNER: C0 · ref B-C5-06 + H-C2-04 + H-C2-02 + H-C0-07
+
+---
+
+FLOW: E2E-09 — Mutation/action success with a real side effect and correct UI
+RESULT: BLOCKED
+START: 2026-10-08T00:01:26.151Z
+END: 2026-10-08T00:01:26.151Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE: none recorded
+UI ASSERTION: none recorded
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: A LIVE data mutation needs a declared slot (no op: C2 H-C2-02), a LIVE binding to a WRITABLE source the gateway may reach (the writable PostgreSQL connector and mutation definitions exist on integration/v2, but a local stack cannot reach a source: public address required, H-C0-07) and a published app (no data host, B-C5-06). TEST mode never writes (WOULD_RUN) — covered by E2E-S1. The client rule i
+OWNER: C3 · ref H-C2-02 + H-C0-07 + B-C5-06
+
+---
+
+FLOW: E2E-S1 — (supplementary) TEST-mode action answers WOULD_RUN from the real backend
+RESULT: PASS
+START: 2026-10-08T00:01:26.151Z
+END: 2026-10-08T00:01:27.735Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok the browser called POST …/app-runtime/actions/{id}/execute
+  - ok the request body only carries contract fields (mode TEST, idempotencyKey)
+  - ok the server answered 200 with status WOULD_RUN
+UI ASSERTION:
+  - ok the UI shows 'would run', NOT success
+  - ok no SUCCESS state is shown in the row
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-10 — Mutation/action failure: real backend error, UI error state, no fake success
+RESULT: PASS
+START: 2026-10-08T00:01:27.735Z
+END: 2026-10-08T00:01:29.563Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok (setup) the action was removed on the server
+  - ok the message says the item was not found, in plain language (no raw status line)
+UI ASSERTION:
+  - ok the action is listed and runnable for a workspace admin
+  - ok the UI shows an ERROR state for the real backend failure
+  - ok NO success is displayed anywhere in the row
+  - ok the run button is usable again (not stuck in 'Đang chạy…')
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-11 — Workflow start from Studio, backend executes, UI reads state/result
+RESULT: PASS
+START: 2026-10-08T00:01:29.563Z
+END: 2026-10-08T00:01:32.874Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok POST …/workflows/{id}/runs answered 202 with a run id
+  - ok the start request carried an idempotencyKey (required by the contract)
+  - ok the UI shows the run id and a status read from the server
+  - ok the run view read through a separate session agrees (terminal status)
+UI ASSERTION:
+  - ok the workflow is listed and startable for a workspace admin
+  - ok the run finished as a simulated (TEST) run: 'would run', not a real success
+  - ok the run belongs to the TEST mode
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-12 — Durable workflow: restart the backend while a LIVE run is in flight, state recovers
+RESULT: PASS
+START: 2026-10-08T00:01:32.874Z
+END: 2026-10-08T00:07:23.426Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok (setup) wait-workflow added
+  - ok (setup) publish accepted (2xx) with a deployment id
+  - ok the LIVE run was accepted (202) before the restart
+UI ASSERTION:
+  - ok PRECONDITION the run is still IN FLIGHT when the backend is restarted (not terminal)
+  - ok no unhandled page errors other than the expected network failures
+PERSISTENCE ASSERTION:
+  - ok the final state is stable (same status on two later reads)
+  - ok after restart #2 the terminal run keeps its id and its final status
+  - ok after restart #2 the same key still resolves to the same run (no new run)
+RESTART/RECOVERY:
+  - ok the backend is reachable again after restart #1
+  - ok the same run id is still readable after restart #1 (not 404)
+  - ok restart #1 neither failed nor cancelled the run
+  - ok replaying the same idempotency key returns the SAME run id (no second run was created)
+  - ok the browser open across the restart reloads into the Builder or the login page (never a blank/hung page)
+  - ok the run completes with SUCCEEDED after the restart
+  - ok the backend is reachable again after restart #2
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-13 — Publish → real artifact/runtime state → public page reachable
+RESULT: PASS
+START: 2026-10-08T00:07:23.426Z
+END: 2026-10-08T00:07:29.485Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok POST …/publish accepted by the backend (2xx) with a deployment id
+  - ok the publish request carried an Idempotency-Key
+UI ASSERTION:
+  - ok the dialog reports the site is up (RUNNING)
+  - ok the deployment has a URL
+  - ok anonymous visitor: the public page answers 200
+  - ok the published page is the saved content (contains the text saved in E2E-02 — compared case-insensitively, the eyebrow is rendered with CSS uppercase — or is non-empty)
+  - ok no Studio chrome leaks into the public page
+  - ok anonymous visitor: reloading the public URL answers 200 again with the same saved content
+  - ok no sub-resource of the public page answers 4xx/5xx
+  - ok the page is served with an explicit Cache-Control that forces revalidation (visibility changes and rollbacks must apply at once)
+  - ok no unhandled page errors in Studio
+PERSISTENCE ASSERTION:
+  - ok the deployment is RUNNING on the server
+  - ok after the visitor's reload the deployment is still RUNNING on the server
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-14 — RabbitMQ (or another dependency) down → correct failure → recovery/retry
+RESULT: BLOCKED
+START: 2026-10-08T00:07:29.485Z
+END: 2026-10-08T00:07:29.486Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE: none recorded
+UI ASSERTION: none recorded
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: No RabbitMQ workflow queue is selectable on integration/v2: the AMQP adapter and the app.workflow.queue=memory|amqp selection exist only on agent/c4-workflow (5712ac5, 7e3c7c3), unintegrated and, by C4's own commit message, never run with Gradle or a real broker. Run stores are durable (V29), but there is no dependency whose outage can change a workflow start. Set E2E_RABBITMQ_WIRED=1 only for a s
+OWNER: C4 · ref H-C4-02
+
+---
+
+FLOW: E2E-S2 — (supplementary) Save fails offline, retry after reconnect saves exactly once
+RESULT: PASS
+START: 2026-10-08T00:07:29.486Z
+END: 2026-10-08T00:07:31.145Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok the retry reached the real backend and was accepted (200)
+UI ASSERTION:
+  - ok clicking a section on the canvas opens its properties
+  - ok the top bar says the save failed
+  - ok a retry button is offered
+  - ok Publish is disabled while an edit is unsaved
+  - ok the top bar says saved again and the retry button is gone
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok the edit is persisted
+  - ok exactly ONE revision was added (the failed attempt never reached the server; no double apply)
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-S3 — (supplementary) Action without a trigger: button disabled with a reason, no request sent
+RESULT: PASS
+START: 2026-10-08T00:07:31.145Z
+END: 2026-10-08T00:07:33.847Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok (setup) an action without a trigger was added
+UI ASSERTION:
+  - ok the server refuses it as 404 UNKNOWN_ACTION (why the UI must not offer it)
+  - ok the row says why it cannot be run (no UI event: only a workflow or another action can start it)
+  - ok the 'Chạy thử' button is disabled and carries the reason as its title
+  - ok NO execute request was sent for it
+  - ok control: the action that DOES declare a trigger is runnable
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-S4 — (supplementary) Workflow start: one run per double click, bounded polling, no request storm
+RESULT: PASS
+START: 2026-10-08T00:07:33.847Z
+END: 2026-10-08T00:07:42.656Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok a double click sent exactly ONE start request (POST …/workflows/{id}/runs)
+  - ok the UI shows ONE run id and its status
+  - ok no polling after the run is terminal (0 status requests in 4 s)
+  - ok bounded polling: at most 5 status requests for one finished run
+UI ASSERTION:
+  - ok the server knows that run and it is terminal (TEST runs simulate every step)
+  - ok the outcome is a simulated run, not a success
+  - ok no request storm: the whole panel interaction made fewer than 40 API calls
+  - ok the run button is usable again afterwards (lock released)
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-S5 — (supplementary) Save conflict: stale revision → 409, no fake 'saved', other editor's change kept
+RESULT: PASS
+START: 2026-10-08T00:07:42.657Z
+END: 2026-10-08T00:07:50.878Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok (setup) the other editor's save was accepted (200)
+  - ok the stale save is refused by the server with 409 (answered)
+  - ok the refused save was not retried in a loop (≤ 2 PATCH requests)
+UI ASSERTION:
+  - ok clicking a section on the canvas opens its properties
+  - ok the top bar does NOT say saved after a refused save
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok the other editor's change is on the server and mine is not (no silent overwrite)
+  - ok the revision did not move because of the refused save
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-S8 — (supplementary) Failed workflow run: shown as failed, no fake success, polling stops
+RESULT: PASS
+START: 2026-10-08T00:07:50.879Z
+END: 2026-10-08T00:07:57.985Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok (setup) the failing workflow was added (200)
+  - ok no polling after the run failed (0 status requests in 4 s)
+UI ASSERTION:
+  - ok the UI shows the run as FAILED with its run id and the failing step
+  - ok no success is displayed anywhere in the row
+  - ok the run button is usable again
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok the server agrees: status FAILED with errorCode INVALID_DEFINITION
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-S9 — (supplementary) Backend hangs: timeout shown, no fake saved, unknown outcome applied at most once
+RESULT: PASS
+START: 2026-10-08T00:07:57.986Z
+END: 2026-10-08T00:08:43.140Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE: none recorded
+UI ASSERTION:
+  - ok clicking a section on the canvas opens its properties
+  - ok the top bar says the save FAILED once the client gave up (not before ~15 s, not never)
+  - ok a retry button is offered; Publish is disabled while the edit is unsaved
+  - ok no automatic retry loop while the backend hangs (≤ 1 save request)
+  - ok no request storm while the backend hangs (< 20 API calls)
+  - ok after the retry the answer is explicit (200, or 409 when the first attempt had landed) — never silence
+  - ok no unhandled page errors other than the expected timeout/network failures
+PERSISTENCE ASSERTION:
+  - ok the edit is applied AT MOST ONCE on the server (revision grew by 0 or 1 only when the marker is there)
+  - ok the UI says 'saved' only if the server has the edit
+  - ok after a browser refresh the canvas shows what the server has (the marker iff it is persisted)
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-P01 — Publish success: exact request, deployment polling, SiteInfo idle, pointerVersion observable but never sent
+RESULT: PASS
+START: 2026-10-08T00:08:43.140Z
+END: 2026-10-08T00:08:58.414Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok before: SiteInfo has the contract shape (pointerVersion integer, operation key present and null = idle)
+  - ok POST …/publish answered 202 (asynchronous)
+  - ok the body is EXACTLY {visibility, expectedRevision}
+  - ok headers: Idempotency-Key in the contract format (8–120 of A-Za-z0-9_.:-) and X-XSRF-TOKEN
+  - ok the deployment has the documented key set (id, projectId, versionId, versionNumber, visibility, status, url, error, provider, createdAt, updatedAt, finishedAt, events, mock)
+  - ok the UI stopped on a TERMINAL status and shows success only for RUNNING
+  - ok SiteInfo: online, the new deployment is current, operation = null (idle)
+  - ok polling stopped: no deployment status request after the terminal answer for 3 s
+UI ASSERTION:
+  - ok the dialog reports the site is up with the deployment URL
+  - ok pointerVersion is shown to the user as observability only
+  - ok the browser NEVER sent pointerVersion, tenantId or an invented concurrency field on any release route
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok the server agrees: RUNNING, mock=false, provider static, finishedAt set
+  - ok pointerVersion moved by exactly +1 with the pointer
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-P02 — Concurrent publish on the same scope + idempotent replay
+RESULT: PASS
+START: 2026-10-08T00:08:58.414Z
+END: 2026-10-08T00:09:08.027Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok both concurrent publishes are accepted (202) as two DIFFERENT deployments
+  - ok the site serves a RUNNING one of the two and is idle
+  - ok same key + same payload → 202 with Idempotent-Replay: true and the ORIGINAL deployment id
+  - ok a NEW key with the same payload is a NEW deployment (not a replay)
+UI ASSERTION: none recorded
+PERSISTENCE ASSERTION:
+  - ok each ends RUNNING or FAILED [STALE_PUBLISH] — nothing stuck, no other failure
+  - ok at least one of them is RUNNING and it is the one the site now serves
+  - ok pointerVersion moved forward (by 1 per activation, so +1 or +2)
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-P03 — Rollback success: exact request, 200 + SiteInfo, rolled-away release is ROLLED_BACK, APP_PUBLISH, pointerVersion
+RESULT: PASS
+START: 2026-10-08T00:09:08.027Z
+END: 2026-10-08T00:09:20.564Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok (setup) three RUNNING releases, the newest is active
+  - ok POST …/site/rollback answered 200 (synchronous)
+  - ok the body is {deploymentId, expectedActiveDeploymentId} — the target and the release the UI saw as active — and nothing else
+  - ok Idempotency-Key (optional) is sent in the contract format; CSRF header present
+  - ok the answer is a SiteInfo whose current deployment is the target and whose operation is idle
+  - ok a ROLLED_BACK release is not restorable: the server answers 400 DEPLOYMENT_NOT_RESTORABLE
+  - ok permission: a project VIEWER forging the rollback is refused (403) — rollback needs APP_PUBLISH, not APP_EDIT
+  - ok permission: …and the same for unpublish (403)
+UI ASSERTION:
+  - ok the older releases are offered for rollback; the one being served is not
+  - ok pending state is shown while the request is in flight (the button says it is working)
+  - ok the UI says the release is served again only AFTER the 200 (final message names the version)
+  - ok the UI no longer offers the ROLLED_BACK release
+  - ok the browser NEVER sent pointerVersion or an invented field
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok server: the site serves the target and pointerVersion moved by exactly +1
+  - ok server: the release that was rolled away from is ROLLED_BACK (terminal); the others stay RUNNING
+  - ok …which changed nothing
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-P06 — Rollback stale: 409 ROLLBACK_STALE, nothing changed, reload and decide again
+RESULT: PASS
+START: 2026-10-08T00:09:20.564Z
+END: 2026-10-08T00:09:33.358Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok (setup) another session rolled back to B (200)
+  - ok the UI's rollback carried the release it saw as active (C) and the server answered 409 ROLLBACK_STALE
+  - ok …details carry the real active release and the expected one; no Retry-After (not retryable as is)
+  - ok the decision taken on fresh state succeeds (200) with the NEW expectation (B)
+  - ok the new request used a NEW Idempotency-Key (the refused one was not replayed)
+  - ok API: unpublish expecting a release that is not active → 409 ROLLBACK_STALE, still online
+  - ok API: a target that is ALREADY active answers 200 even with a stale expectation (a retry that already succeeded), and changes nothing
+UI ASSERTION:
+  - ok UI: 'the active release changed — reload and decide again' (kind stale), says nothing was changed
+  - ok UI: NO blind retry button (not retryable as is); a reload action is offered
+  - ok after the reload the served release is B and C (rolled away from) is no longer offered
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok server: nothing changed (still B, same pointerVersion)
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-P07 — Idempotency: replay, 409 IDEMPOTENCY_KEY_REUSED, and the UI's key lifecycle
+RESULT: PASS
+START: 2026-10-08T00:09:33.358Z
+END: 2026-10-08T00:09:58.206Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok publish: same key + same payload → 202, Idempotent-Replay: true, the ORIGINAL deployment
+  - ok publish: same key + DIFFERENT payload → 409 IDEMPOTENCY_KEY_REUSED
+  - ok …the standard envelope without `retryable`, and the documented message
+  - ok a missing key is 400 MISSING_HEADER and a malformed one 400 INVALID_IDEMPOTENCY_KEY
+  - ok rollback: same key + a DIFFERENT target → 409 IDEMPOTENCY_KEY_REUSED (judged before any eligibility check)
+  - ok unpublish: same key + a different expectation → 409 IDEMPOTENCY_KEY_REUSED
+  - ok UI: two publishes with different payloads (PRIVATE then PUBLIC) used two DIFFERENT valid keys
+  - ok UI: neither was refused with IDEMPOTENCY_KEY_REUSED (a key per dialog would have been)
+UI ASSERTION:
+  - ok UI: after a finished publish the dialog offers 'Xuất bản lại' only for non-success outcomes (RUNNING offers Close)
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok rollback: same key + same payload → both 200 and ONE effect (pointerVersion +1, not +2)
+  - ok unpublish: same key twice → both 200, pointerVersion unchanged by the second
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-P09 — Unpublish: exact request, 200 + SiteInfo offline, idempotent when offline, stale expectation, operation=UNPUBLISH when observable
+RESULT: PASS
+START: 2026-10-08T00:09:58.206Z
+END: 2026-10-08T00:10:17.767Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok API: unpublish expecting a release that is not the active one → 409 ROLLBACK_STALE, still online
+  - ok DELETE …/site answered 200
+  - ok NO body; the expectation is the query parameter expectedActiveDeploymentId = the release the UI saw as active
+  - ok Idempotency-Key (optional) sent in the contract format
+  - ok the answer: online=false, currentDeploymentId=null, slug kept, operation=null
+  - ok a rollback to a kept release serves the site again (200, online) with no rebuild
+UI ASSERTION:
+  - ok UI: says the page was taken down (after the 200)
+  - ok UI: with the site offline the 'Gỡ trang xuống' button is not offered
+  - ok the browser NEVER sent pointerVersion or an invented field
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok pointerVersion moved by exactly +1; deployments are KEPT (none deleted, statuses unchanged)
+  - ok the public URL no longer serves the site (404)
+  - ok unpublish when already offline → 200 and NOTHING is written (pointerVersion unchanged)
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-P04 — Scope busy: operation=PUBLISH, 409 SCOPE_BUSY + Retry-After 5, busy UI, retry after the scope is free
+RESULT: PASS
+START: 2026-10-08T00:10:17.768Z
+END: 2026-10-08T00:10:36.912Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok (setup) a publish was accepted (202)
+  - ok SiteInfo.operation = PUBLISH with this deployment's id, since and leaseUntil
+  - ok the lease is in the future (a live operation, not an expired one)
+  - ok rollback while the PUBLISH holds the scope → 409 SCOPE_BUSY
+  - ok …with Retry-After: 5
+  - ok …the standard envelope (no `retryable` field) and the holder in details.operation
+  - ok unpublish while the PUBLISH holds the scope → 409 SCOPE_BUSY
+  - ok (setup) the publish reached DEPLOYING and the store was frozen there
+  - ok retry after the scope is free: the rollback is accepted (200)
+UI ASSERTION:
+  - ok the dialog opened on an idle scope: no busy banner, controls enabled
+  - ok UI: the server's SCOPE_BUSY is shown (kind scope-busy) naming the running operation and the 5 s wait
+  - ok UI: a retry affordance exists and waits for Retry-After (disabled at first)
+  - ok UI: SiteInfo.operation = PUBLISH is reflected (banner with kind PUBLISH)
+  - ok UI: Publish and every rollback/unpublish control are disabled while the scope is held
+  - ok UI: the busy banner goes away by itself (polling) and the controls come back
+  - ok no unhandled page errors (the 409 of the refused rollback is the expected console line)
+PERSISTENCE ASSERTION:
+  - ok after the store is resumed the publish completes and the scope is idle again (operation = null)
+  - ok pointerVersion advanced by the one completed publish
+  - ok the refused rollback / unpublish changed nothing (still online, pointer moved only by the publish)
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-P05 — Rollback in flight: operation=ROLLBACK, refresh during rollback, polling until the server's final state
+RESULT: PASS
+START: 2026-10-08T00:10:36.913Z
+END: 2026-10-08T00:10:53.136Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok SiteInfo.operation = ROLLBACK while the rollback runs (deploymentId is null: only PUBLISH names one)
+  - ok a second rollback (no key) → 409 SCOPE_BUSY while the first runs
+UI ASSERTION:
+  - ok after the refresh the dialog shows the busy scope: banner kind ROLLBACK
+  - ok after the refresh Publish and the rollback buttons are disabled (no duplicate operation)
+  - ok after the refresh the page does NOT claim the rollback is done
+  - ok the reloaded dialog follows the server by itself: busy banner gone, controls back
+  - ok the first page (before the refresh) never sent pointerVersion
+  - ok no unhandled page errors other than the aborted request of the refreshed page
+PERSISTENCE ASSERTION:
+  - ok the pointer has not moved yet: nothing is final while the operation runs
+  - ok the server's operation ends (operation = null)
+  - ok the final pointer is either the restored release (the operation completed) or unchanged (the operation failed) — never anything else
+  - ok pointerVersion is consistent with the outcome (+1 if restored, unchanged otherwise)
+  - ok the reloaded dialog shows the version the server really serves
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-P08 — Stale publish becomes terminal FAILED [STALE_PUBLISH]; Studio shows it; publish again works
+RESULT: PASS
+START: 2026-10-08T00:10:53.137Z
+END: 2026-10-08T00:11:12.274Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok a rollback while the publish is still BUILDING goes through (200)
+  - ok UI: it is not shown as success and not as a conflict/HTTP error (no error dialog)
+  - ok publish again used a NEW Idempotency-Key (replaying the old one would only return the FAILED deployment)
+UI ASSERTION:
+  - ok UI: the publish is shown as a BUSY step (BUILDING) while the worker is paused — not success
+  - ok UI: while busy the dialog cannot be dismissed and offers no second publish
+  - ok UI: the deployment ends as a FAILED deployment with the STALE_PUBLISH explanation (data-code)
+  - ok UI: the history lists the STALE_PUBLISH event in plain words
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok server: the deployment is terminal FAILED with error '[STALE_PUBLISH] …' and a STALE_PUBLISH event
+  - ok server: the stale publish wrote nothing — the rollback target B is still the active release, operation idle
+  - ok …and it succeeded: the site now serves the new deployment
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-PD02 — Public data V1, document side: slot → READ public query → bind → publish approval → PUBLIC_QUERIES → runtime config → one anonymous request
+RESULT: FAIL
+START: 2026-10-08T00:11:12.275Z
+END: 2026-10-08T00:11:19.373Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok [api] a READ query WITHOUT public is accepted (it is private by default)
+  - ok [api] a WRITE query with public=false is accepted
+  - ok [api] a WRITE query with public=true is REJECTED by the server (422, path queries[i].public) — the UI never offers it
+  - ok [ui] POST …/publish is the unchanged release contract: body EXACTLY {visibility:'PUBLIC', expectedRevision}, Idempotency-Key present — no acknowledgement field
+  - ok [visitor] the page asked for its runtime config (GET __factory/config.json) before any data request, with no cookie and no credentials
+  - FAIL [visitor] config.json is no-store JSON with a same-origin apiBase for THIS slug (…/{slug}/_data) and no tenant / workspace / credential ({"appId":"13e06c39-38dc-4c19-96e7-d31f601cd70e","appName":"e2e-muyrss0k-proj-A","environment":"production","visibility":)
+UI ASSERTION:
+  - ok [ui] readiness: not-ready for ONE reason only — the site is not public yet, so it has no data address (apiBase); the draft itself has no problem
+  - ok [ui] the publish review lists exactly the public READ query (not the private one, not the WRITE one)
+  - ok [ui] Publish is disabled until the acknowledgement is ticked
+  - ok [ui] the dialog shows the server's PUBLIC_QUERIES and no mismatch with what it announced
+  - ok no unhandled page errors in Studio
+PERSISTENCE ASSERTION:
+  - ok [ui] the slot was added and the SERVER stored exactly {id,name,type} — no sourceRef, no credential
+  - ok [ui] a READ query with public=true was stored by the server (mode READ, operationKey = the approved one, local slot ref)
+  - ok [ui] the binding was stored: {sectionId, prop, queryRef} with the LOCAL public READ query id — never a slot, sourceRef or credential
+  - ok [backend] the server wrote the PUBLIC_QUERIES event naming exactly the public query
+  - ok [backend] the release is live and PUBLIC, operation idle
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: config.json has apiBase = null: app.sites.data-api-base is not set on this stack
+OWNER: C0 · ref app.sites.data-api-base
+
+---
+
+FLOW: E2E-PD01 — Public data V1, canonical chain: Studio slot → READ public query → bind → publish (PUBLIC_QUERIES, acknowledgement) → anonymous page → config → apiBase → /{slug}/_data → LIVE → rendered
+RESULT: BLOCKED
+START: 2026-10-08T00:11:19.373Z
+END: 2026-10-08T00:11:19.467Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE: none recorded
+UI ASSERTION: none recorded
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: no real data to read: set E2E_DS_TYPE + E2E_DS_CONFIG_JSON (+ E2E_DS_CREDENTIAL_JSON) for a real source, E2E_PD_OPERATION_KEY = an approved READ operation of it (or E2E_PD_SQL = a read-only SELECT to register as one) and E2E_PD_EXPECT_TEXT = the text its first row returns (it is shown in the Navbar brand).
+OWNER: C0 · ref operator input (README: E2E-PD01)
+
+---
+
+FLOW: E2E-PL01 — Platform portal: login, navigation, tenants (create, suspend, restore, members, last-admin rule), SYSTEM_ADMIN grant / revoke
+RESULT: PASS
+START: 2026-10-08T00:11:19.467Z
+END: 2026-10-08T00:11:30.266Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok POST /admin/tenants → 201 and the page opens the new tenant
+  - ok a duplicate slug is refused by the server (409 TENANT_SLUG_TAKEN)
+  - ok the server enforces it too (409 LAST_TENANT_ADMIN)
+  - ok a brand-new tenant has no candidates (the directory is tenant-scoped, never global) and the picker says so
+  - ok even a SYSTEM_ADMIN cannot add an unrelated account to a tenant (404 USER_NOT_FOUND): no global directory
+  - ok [api] …and the server agrees: SYSTEM_ADMIN is refused the member list and the add (403)
+  - ok the audit page lists the tenant events just made (TENANT_CREATED / TENANT_STATUS_CHANGED / TENANT_MEMBER_SET)
+  - ok cleanup: the tenant is marked DELETED
+UI ASSERTION:
+  - ok login through the Platform portal lands inside /platform (not on the login or no-access page)
+  - ok navigation lists Tổng quan, Công ty (tenant), Người dùng & Workspace, Nhật ký kiểm toán, Sức khỏe hệ thống — and nothing from the tenant-admin console
+  - ok the tenant list is the REAL list (the DEFAULT tenant is there) and the section is not 'Chưa sẵn sàng'
+  - ok an invalid form is refused in the dialog with both messages and NO request is sent
+  - ok the member row shows the person's NAME from the member metadata (no extra lookup)
+  - ok workspace page (SYSTEM_ADMIN): the member panel says the platform admin does not manage workspace members, and there is NO add-member form (the server lists no MEMBER_MANAGE for it)
+  - ok the system-health page loads without an error state
+  - ok a workspace member with no platform scope is sent to /auth/no-access, never to a platform screen
+  - ok no unexpected 4xx/5xx from the portal's own calls (the deliberate refusals excepted)
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok the server stored it: slug, name, ACTIVE
+  - ok suspend: the UI says so and the server agrees (SUSPENDED)
+  - ok restore: back to ACTIVE on the server
+  - ok the first administrator chosen in the dialog is TENANT_ADMIN on the server, with name and email metadata
+  - ok demoting the ONLY TENANT_ADMIN is explained in words and nothing changed on the server
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-AD01 — Admin portal, tenant admin: own company + members, no system-admin screens, rules explained, refused by the API as well
+RESULT: PASS
+START: 2026-10-08T00:11:30.266Z
+END: 2026-10-08T00:11:37.341Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok [api] /auth/me of the tenant admin lists the tenant with role TENANT_ADMIN and is NOT platform scope
+  - ok a tenant admin gets NO suspend / delete buttons (platform operations)
+  - ok [api] the same person is refused the system-wide user list (403 ADMIN_REQUIRED)
+  - ok [api] …but allowed to read the members of THEIR tenant (TENANT_MEMBERS), each row with userId, username, displayName, email, role, active
+  - ok [api] …and refused to suspend it (platform only: 403)
+  - ok [api] …and refused the members of another tenant (403/404, no list)
+  - ok cleanup: the fixture tenant is marked DELETED
+UI ASSERTION:
+  - ok login through the Admin portal lands inside /admin (a tenant admin is NOT refused)
+  - ok navigation = Tổng quan + Công ty của tôi (+ the sections still waiting for a backend); NO Người dùng, Nhật ký kiểm toán, AI…
+  - ok the landing page lists the tenant this person administers (no system overview, no 403 from /admin/overview)
+  - ok Công ty của tôi shows the tenant, ACTIVE, with its member list from the API
+  - ok the person's own row is named (from the session), marked 'bạn', and its role / remove controls are disabled (no self-change)
+  - ok the add form is real: a search box and a candidate list (empty here: this fresh tenant has no workspace and no former member) — not a 'cannot look people up' notice
+  - ok a 1-character search is not sent (the server would answer 400 QUERY_TOO_SHORT): the form asks for 2
+  - ok typing a system-only URL shows 'chỉ dành cho quản trị hệ thống' and makes NO call to /admin/users
+  - ok Workspace của tôi: this account administers no workspace, so the page says so (no empty fake table)
+  - ok a workspace viewer is sent to /auth/no-access by the Admin portal
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-AD02 — Admin portal, workspace admin: 'Workspace của tôi' opens on MEMBER_MANAGE (not on a role name), members add / re-role / remove, rules, isolation, negative roles
+RESULT: PASS
+START: 2026-10-08T00:11:37.341Z
+END: 2026-10-08T00:11:49.952Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok [api] /auth/me: the workspace admin's workspace lists MEMBER_MANAGE (and DATA_SOURCE_MANAGE)
+  - ok [api] a workspace viewer: /auth/me does NOT list MEMBER_MANAGE
+  - ok [api] …and the server refuses their member list (403/404) — the backend re-checks
+  - ok [api] a workspace editor: /auth/me does NOT list MEMBER_MANAGE
+  - ok [api] …and the server refuses their member list (403/404) — the backend re-checks
+  - ok [api] a workspace publisher: /auth/me does NOT list MEMBER_MANAGE
+  - ok [api] …and the server refuses their member list (403/404) — the backend re-checks
+  - ok [api] adding the same person twice is refused (409 ALREADY_MEMBER)
+  - ok [api] the server refuses self-change (403 SELF_GRANT_FORBIDDEN), as the UI did before the click
+  - ok [api] adminA cannot read workspace B's members (403/404)
+  - ok [api] …and the API refuses it too (403 ADMIN_REQUIRED)
+UI ASSERTION:
+  - ok a workspace viewer is refused by the Admin portal (/auth/no-access) — not offered 'Workspace của tôi'
+  - ok a workspace editor is refused by the Admin portal (/auth/no-access) — not offered 'Workspace của tôi'
+  - ok a workspace publisher is refused by the Admin portal (/auth/no-access) — not offered 'Workspace của tôi'
+  - ok a WORKSPACE_ADMIN logs in through the Admin portal and is not refused
+  - ok navigation = Tổng quan + Workspace của tôi + Nguồn dữ liệu; no Người dùng / Nhật ký kiểm toán / Công ty của tôi
+  - ok the member table is the REAL list of workspace A (adminA, viewerA, lonelyA)
+  - ok own row: role and remove are disabled (no self-change)
+  - ok an unknown username is refused by the server and said in words (nothing added)
+  - ok the page offers no workspace picker with B (one workspace administered)
+  - ok Nguồn dữ liệu: the REAL panel of the workspace (catalogue / add form), not 'Chưa sẵn sàng'
+  - ok a system-only URL says 'chỉ dành cho quản trị hệ thống' and makes no call to /admin/users
+  - ok no unexpected 4xx/5xx from the portal's calls (deliberate refusals excepted)
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok add by username as Người xem: the server lists adminB as VIEWER of workspace A
+  - ok change the role to Biên tập viên: persisted
+  - ok remove: gone from the workspace on the server
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-AD03 — Tenant admin member directory: metadata, tenant-scoped candidates (search, limit, exclusions), add through the UI, isolation and rules
+RESULT: PASS
+START: 2026-10-08T00:11:49.952Z
+END: 2026-10-08T00:11:56.716Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok [api] GET members: every row has userId, username, displayName, email, role, active
+  - ok [api] …and the metadata is right (adminA: its username and display name)
+  - ok [api] candidates: 200, a list of {userId, username, displayName, email}
+  - ok [api] a former member in a workspace of the tenant (adminB) IS a candidate
+  - ok [api] current members are not candidates (adminA)
+  - ok [api] a SYSTEM_ADMIN account (activated, enabled, a workspace member, former tenant member) is never a candidate
+  - ok [api] a non-activated account and a disabled account are not candidates
+  - ok [api] at most 50 results, sorted by username
+  - ok [api] search q finds adminB by part of the username and only matching people
+  - ok [api] a 1-character search is refused (400 QUERY_TOO_SHORT)
+  - ok [api] a search with no match is an empty list
+  - ok [fact] 'a user known only to ANOTHER tenant is invisible' cannot be built through the public API; it is C1's backend test TenantMemberDirectoryTests
+  - ok [api] a guessed foreign UUID → 404 USER_NOT_FOUND
+  - ok [api] adding that SYSTEM_ADMIN account by id → 404 (not eligible, no oracle)
+  - ok [api] a non-activated account cannot be added by id (404); a RELATED but disabled account is refused with its own code (422 USER_DISABLED, C1 cf0c962)
+  - ok [api] a caller from ANOTHER tenant gets 404 for members, candidates and add
+  - ok [api] changing your own tenant role → 403 SELF_GRANT_FORBIDDEN
+UI ASSERTION:
+  - ok Công ty của tôi: the member rows show names and emails from the member metadata
+  - ok typing the search shows adminB (name · email) in the candidate list, and not the SYSTEM_ADMIN / disabled / non-activated accounts
+  - ok the member appears in the table with his name
+  - ok no unexpected 4xx/5xx from the portal's calls
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok add candidate: the server lists adminB as an active MEMBER, with metadata
+  - ok the candidate disappears after the add (API and picker)
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-SUPER01 — SYSTEM_ADMIN (Platform) → create tenant admin of a new tenant (+ workspace) → activation link → activate → login Admin portal
+RESULT: PASS
+START: 2026-10-08T00:11:56.716Z
+END: 2026-10-08T00:12:03.414Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok [api] SYSTEM_ADMIN creates a NEW tenant (201, no first admin yet)
+  - ok [api] …and a workspace OF THAT TENANT through the tenant route (201, tenantId explicit)
+  - ok POST /admin/tenants/{tenantId}/users → 201; the tenant is the PATH, never in the body; tenantRole TENANT_ADMIN; workspaceId + workspaceRole together; no password
+  - ok CSRF + body: the create-account request carries X-XSRF-TOKEN and its body has no tenant / tenantId; no browser request to the legacy workspace route
+  - ok [api] the same username again is refused: 409 USERNAME_TAKEN
+  - ok [api] after activation /auth/me lists the chosen workspace with MEMBER_MANAGE (WORKSPACE_ADMIN, from the server) and the tenant TENANT_MEMBERS
+UI ASSERTION:
+  - ok the SYSTEM_ADMIN logs in through the Platform portal
+  - ok the dialog: four sections, a tenant selector, NO not-ready notice, NO SYSTEM_ADMIN type
+  - ok the workspace of the chosen tenant is offered (optional; assigned here)
+  - ok the activation link is shown once in the dialog (/auth/activate#token); no password anywhere
+  - ok after 'Xong' the token is gone: not in the summary, the URL, localStorage or sessionStorage
+  - ok the summary: Chờ kích hoạt, the company AND its role already assigned, the workspace; the only next step is the person's activation
+  - ok the new admin activates through the REAL activation page
+  - ok …and logs in through the ADMIN portal: not refused
+  - ok …sees Công ty của tôi and Người dùng, not the system-wide sections
+  - ok no unexpected 4xx/5xx from the portal's calls
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok [api] the server lists the account as TENANT_ADMIN of the new tenant (already, before activation)
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-ADMIN01 — Tenant admin (Admin portal) → Người dùng → create workspace admin + app creator by invitation → activation → the creator can sign in
+RESULT: PASS
+START: 2026-10-08T00:12:03.414Z
+END: 2026-10-08T00:12:13.467Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok the workspace is created through the TENANT route (POST /admin/tenants/{tenant}/workspaces → 201, tenantId = the session's tenant) — never the legacy POST /admin/workspaces
+  - ok the workspace request body is exactly {name}: the tenant id is the PATH only, never repeated in the body
+  - ok POST /admin/tenants/{tenant}/users → 201 with tenantRole MEMBER, that workspace and WORKSPACE_ADMIN together; the tenant only in the path
+  - ok [api] the workspace admin signs in; /auth/me lists the new workspace with MEMBER_MANAGE (server permission, not a role name)
+  - ok the app creator is created (201): MEMBER, email as given, workspace + role together or none
+  - ok workspace assignment of an EXISTING tenant member is the WORKSPACE ADMIN's action: POST /workspaces/{w}/members → 201
+  - ok [api] the app creator signs in with the chosen password; /auth/me lists the workspace and no MEMBER_MANAGE / TENANT_*
+  - ok LEGACY ROUTE: 0 browser requests to POST /api/v1/admin/workspaces in the whole tenant-admin flow; the workspace went to POST /api/v1/admin/tenants/{tenantId}/workspaces
+  - ok CSRF: every mutating admin request the UI sent carries the X-XSRF-TOKEN header
+  - ok no tenantId / tenant in any body the UI sent to a tenant route
+UI ASSERTION:
+  - ok the tenant admin logs in through the ADMIN portal
+  - ok navigation has Người dùng and Công ty của tôi
+  - ok Người dùng: the tenant is the SESSION's (read-only), the create action is enabled, no not-ready notice
+  - ok the dialog: NO tenant selector (fixed, read-only tenant), the types never include SYSTEM_ADMIN (tenant admin may be offered)
+  - ok the activation link is shown once (/auth/activate#token)
+  - ok the summary shows account, Chờ kích hoạt, the company and the workspace with its role; the token is gone from the page
+  - ok the workspace admin activates through the REAL activation page
+  - ok [observed] is the workspace the tenant admin just created offered to it for the next account? (H-C1-16: a tenant admin is not a member of it; /auth/me lists member workspaces only)
+  - ok the app creator activates through the REAL activation page
+  - ok the app creator is NOT admitted to the Admin portal (no admin capability from the server)
+  - ok no unexpected 4xx/5xx from the portal's calls
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-USER01 — App creator (EDITOR, made by the tenant admin): Studio login → project visible → edit / save / reload → permissions are the role's
+RESULT: BLOCKED
+START: 2026-10-08T00:12:13.467Z
+END: 2026-10-08T00:12:15.389Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok [api] the workspace admin creates a project in the new workspace (201)
+  - ok [api] …and adds the creator to the project as EDITOR (member route)
+  - ok [api] the creator's resolved project permissions include APP_EDIT and NOT APP_PUBLISH
+  - ok [api] …and no MEMBER_MANAGE: /auth/me lists none in the workspace
+  - ok [api] an edit by the creator is accepted (200)
+  - ok [api] publishing is refused for the creator (403): the role is the role
+UI ASSERTION:
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION:
+  - ok after a reload the edit is still there (persisted)
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: the Studio portal refuses this creator at login (/auth/no-access) although /auth/me lists the workspace with []. The API side of the same account works (project APIs, edit, persist, no publish). H-C1-04 (still open).
+OWNER: C1 · ref H-C1-04
+
+---
+
+FLOW: E2E-SEC01 — SEC01 tenant admin cannot create SYSTEM_ADMIN · SEC02 cross-tenant is a safe 404 · SEC03 workspace admin cannot escalate
+RESULT: PASS
+START: 2026-10-08T00:12:15.389Z
+END: 2026-10-08T00:12:20.751Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE:
+  - ok SEC01 [api] tenantRole SYSTEM_ADMIN is refused (400 TENANT_ROLE_INVALID)
+  - ok SEC01 [api] the legacy platform route is closed to a tenant admin (403 ADMIN_REQUIRED)
+  - ok SEC01 [api] …cannot grant SYSTEM_ADMIN to anyone nor to itself (403)
+  - ok SEC01 [api] the tenant admin's /auth/me carries no platform scope
+  - ok SEC02 [api] tenant A's admin gets 404 TENANT_NOT_FOUND on every tenant-B route (create user, create workspace, members, candidates, add self, re-role, remove, read)
+  - ok SEC02 [api] a workspace of ANOTHER tenant in my tenant's create → 404 WORKSPACE_NOT_FOUND, and no account is created
+  - ok SEC02 [api] …and the other way round (B's admin on tenant A): 404
+  - ok SEC02 [api] neither tenant admin can list the system-wide users or workspaces (403)
+  - ok SEC03 [api] a workspace admin cannot call the tenant routes (create user / workspace, candidates, members, make itself tenant admin) → 403, nor platform routes (legacy create, system-admin, new tenant, suspend)
+  - ok SEC03 [api] …with the codes of the contract (FORBIDDEN on tenant routes, ADMIN_REQUIRED on platform routes)
+  - ok SEC03 [api] …cannot change its own workspace role (403 SELF_GRANT_FORBIDDEN)
+  - ok SEC03 [api] …cannot read, nor add itself to, a workspace of another tenant (403/404)
+  - ok SEC03 [api] …cannot pull a person of ANOTHER tenant into its workspace (404 USER_NOT_FOUND)
+  - ok 401 [api] an unauthenticated caller (valid CSRF, no session) is refused on create user / create workspace / list members: 401
+  - ok CSRF [api] an authenticated mutating request WITHOUT the CSRF header, or with a wrong one, is refused (403) and does nothing
+  - ok CSRF [api] the same request WITH the session's CSRF token succeeds (201): the refusal above was the missing token, not the route
+UI ASSERTION: none recorded
+PERSISTENCE ASSERTION:
+  - ok SEC01 [api] unknown fields (systemAdmin, platformScope, role) never take effect: the account is a plain, non-admin MEMBER
+  - ok SEC01 [api] nobody became a SYSTEM_ADMIN
+  - ok SEC02 [api] …and the refused create left nothing behind (no account named like it)
+  - ok SEC02 [api] each tenant's member list holds only its own people
+  - ok SEC03 [api] nothing changed: still a plain tenant MEMBER, not a SYSTEM_ADMIN, the tenant still ACTIVE
+  - ok 401 [api] …and nothing was created (no account named like it)
+  - ok body injection [api] a foreign tenant id in the BODY (tenantId / tenant) is ignored: the path is the authority — the account is a member of tenant A, not of B
+  - ok body injection [api] …and a workspace created with a foreign tenantId in the body belongs to tenant A (the path)
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-S7 — (supplementary) Publish interrupted by a backend outage: no fake success, UI ends on the server's truth
+RESULT: FAIL
+START: 2026-10-08T00:12:20.751Z
+END: 2026-10-08T00:12:52.327Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE: none recorded
+UI ASSERTION: none recorded
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: exception: locator.click: Timeout 30000ms exceeded. ⏎ Call log: ⏎ - waiting for getByRole('dialog').getByRole('button', { name: /^Xuất bản$/ })
+OWNER: unassigned (triage)
+
+---
+
+FLOW: E2E-S6 — (supplementary) Backend stopped: errors not success, no request storm, recovery after start
+RESULT: PASS
+START: 2026-10-08T00:12:52.327Z
+END: 2026-10-08T00:14:07.458Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 13e06c39-38dc-4c19-96e7-d31f601cd70e
+WORKSPACE: 715b381d-10bf-4b97-9f65-5dbfeba01794
+HTTP EVIDENCE: none recorded
+UI ASSERTION:
+  - ok clicking a section on the canvas opens its properties
+  - ok save while the backend is down: the top bar says the save FAILED (not saved)
+  - ok a retry button is offered and Publish is disabled while the edit is unsaved
+  - ok no automatic retry loop: at most 2 save requests in ~30 s of outage
+  - ok no request storm while the backend is down (< 30 API calls)
+  - ok the page stayed usable: it still shows the Builder and the unsaved text
+  - ok no unhandled page errors other than the expected network failures
+PERSISTENCE ASSERTION:
+  - ok nothing was written while it was down (revision unchanged)
+  - ok the edit is persisted exactly once (revision + 1)
+RESTART/RECOVERY:
+  - ok the API answers again after the start hook
+  - ok retry after recovery reaches the backend and is accepted (200)
+  - ok after a browser refresh the Builder opens again by direct URL
+BLOCKER: none
+OWNER: n/a

@@ -1,0 +1,74 @@
+PASS A Studio shell over HTTPS | 200
+PASS A HSTS present | max-age=63072000; includeSubDomains
+PASS A Studio CSP: nonce, object-src 'none', frame-ancestors 'none'
+PASS C CSRF token through the same-origin proxy | 200
+PASS C XSRF-TOKEN cookie: Secure, SameSite=Lax, no Domain | XSRF-TOKEN=<v>; Path=/; Secure; SameSite=Lax
+PASS C login with a forged CSRF token is refused | 403
+PASS C login with CSRF over HTTPS | 200
+PASS C STUDIO_SESSION cookie: Secure, HttpOnly, SameSite=Lax, host-only, Path=/ | STUDIO_SESSION=<v>; Path=/; Secure; HttpOnly; SameSite=lax
+PASS B authenticated API through the Studio origin (/api proxy) | 200
+PASS B the same call without a session is 401 | 401
+PASS C an unsafe authenticated call without a CSRF token is refused (403) | 403
+PASS C the refused logout did not end the session | 200
+PASS D untrusted Origin gets no Access-Control-Allow-Origin | none
+PASS D Origin: null gets no Access-Control-Allow-Origin | none
+PASS D preflight from an untrusted Origin is not allowed | 403 acao=none
+PASS D never `*` (with or without credentials) | https://studio.toolsmcp.uk
+PASS D a trusted Origin is echoed exactly, with credentials | https://studio.toolsmcp.uk credentials=true
+PASS D the sites host sends no CORS headers to a foreign Origin | none
+PASS E project created through the API | 201
+PASS E publish accepted | 202 
+PASS E deployment reaches RUNNING | RUNNING
+PASS E the site address is on the sites host over https | https://sites.toolsmcp.uk/global-smoke-ce1962-8be9bd/
+PASS E published page served on the sites host (no session) | 200
+PASS F page CSP: default-src 'none' | default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; font-src 'self'; base-uri 'none'; form-action 'self
+PASS F page CSP: scripts only 'self' (a page without a script has no script-src: default-src 'none' blocks them); connect-src 'self' or none; no wildcard, no unsafe-eval | no script-src
+PASS F page CSP: no inline script allowance (script-src has no 'unsafe-inline')
+PASS F page CSP: frame-ancestors 'none', form-action 'self', base-uri 'none'
+PASS F page sends nosniff and no Set-Cookie (public page, no session)
+PASS F no `sandbox allow-same-origin` in the page CSP
+NOT_APPLICABLE G runtime config of a PAGE_SCHEMA site without data | 404: only a page that binds a public query or a code app is given __factory/config.json (D-C0-35); the apiBase flow is covered by the local public smoke
+PASS H public query route answers without leaking (no data bound: 404 envelope, no stack, no SQL) | 404 QUERY_NOT_FOUND
+NOT_READY H public query PASS needs a data-bound page + a public-CA data source | prod forbids private/loopback targets (postgres-targets.allowed-private empty); no globally reachable data source is provisioned in this stack. Route, flags and allow-list are live and fail closed (above)
+PASS H public query from a foreign Origin never gets Access-Control-Allow-Origin | 404
+PASS H the data route is POST only (GET does not run a query) | 403
+PASS H POST to a page path is refused at the gateway | 403
+PASS I unknown sites path: 4xx, no backend identity | 404
+PASS I sites internals /actuator: 4xx, no backend identity | 404
+PASS I sites API prefix: 4xx, no backend identity | 404
+PASS I sites oauth: 4xx, no backend identity | 404
+PASS I sites .git: 4xx, no backend identity | 404
+PASS I sites _preview: 4xx, no backend identity | 404
+PASS I sites traversal: 4xx, no backend identity | 404
+PASS I a wrong Host header is not served by the tunnel (not 200) | 404
+PASS I studio-files host: no listing, no 200 on the root | 403
+PASS J /actuator/env not exposed | 200 (Studio HTML shell, not the backend)
+PASS J /actuator/beans not exposed | 200 (Studio HTML shell, not the backend)
+PASS J /actuator/heapdump not exposed | 200 (Studio HTML shell, not the backend)
+PASS J /actuator/prometheus not exposed | 200 (Studio HTML shell, not the backend)
+PASS J /actuator/shutdown not exposed | 200 (Studio HTML shell, not the backend)
+PASS J /actuator/loggers not exposed | 200 (Studio HTML shell, not the backend)
+PASS J /actuator/metrics not exposed | 200 (Studio HTML shell, not the backend)
+PASS J /actuator/configprops not exposed | 200 (Studio HTML shell, not the backend)
+PASS J /actuator/mappings not exposed | 200 (Studio HTML shell, not the backend)
+PASS J /actuator/threaddump not exposed | 200 (Studio HTML shell, not the backend)
+PASS J /actuator/env not exposed (even with a session) | 200 (Studio HTML shell, not the backend)
+PASS J /actuator/beans not exposed (even with a session) | 200 (Studio HTML shell, not the backend)
+PASS J /actuator/heapdump not exposed (even with a session) | 200 (Studio HTML shell, not the backend)
+PASS J /actuator/prometheus not exposed (even with a session) | 200 (Studio HTML shell, not the backend)
+PASS J /actuator/shutdown not exposed (even with a session) | 200 (Studio HTML shell, not the backend)
+PASS J /actuator/loggers not exposed (even with a session) | 200 (Studio HTML shell, not the backend)
+PASS J /actuator/metrics not exposed (even with a session) | 200 (Studio HTML shell, not the backend)
+PASS J /actuator/configprops not exposed (even with a session) | 200 (Studio HTML shell, not the backend)
+PASS J /actuator/mappings not exposed (even with a session) | 200 (Studio HTML shell, not the backend)
+PASS J /actuator/threaddump not exposed (even with a session) | 200 (Studio HTML shell, not the backend)
+PASS J /v3/api-docs is not an OpenAPI/Swagger surface | 200
+PASS J /swagger-ui/index.html is not an OpenAPI/Swagger surface | 200
+PASS J /swagger-ui.html is not an OpenAPI/Swagger surface | 200
+PASS K plain http to Studio redirects to https | 308
+PASS K plain http to the sites host redirects to https | 308
+PASS L forged X-Forwarded-For / X-Real-IP / Forwarded do not change the answer | 404
+PASS L forged CF-Connecting-IP from the Internet | 403 (Cloudflare rejects a client-supplied CF-Connecting-IP; it is never used by the origin)
+PASS E after unpublish the site is offline (404) | 404
+
+TOTAL 69  FAILED 0   NOTES NOT_APPLICABLE,NOT_READY,PASS

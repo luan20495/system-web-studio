@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.logic.scheduler.SchedulerServiceTests" tests="18" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:46:14.084Z" hostname="macmini-2.local" time="0.009">
+  <properties/>
+  <testcase name="create validates cron timezone name target and input size()" classname="com.systemwebstudio.logic.scheduler.SchedulerServiceTests" time="0.002"/>
+  <testcase name="a missed fire is skipped under SKIP and fires once under FIRE_ONCE()" classname="com.systemwebstudio.logic.scheduler.SchedulerServiceTests" time="0.001"/>
+  <testcase name="the number of schedules per app is limited()" classname="com.systemwebstudio.logic.scheduler.SchedulerServiceTests" time="0.0"/>
+  <testcase name="disable clears the next run and enable recomputes it()" classname="com.systemwebstudio.logic.scheduler.SchedulerServiceTests" time="0.0"/>
+  <testcase name="two nodes ticking at once enqueue a fire exactly once()" classname="com.systemwebstudio.logic.scheduler.SchedulerServiceTests" time="0.0"/>
+  <testcase name="an unreadable tenant state leaves the schedule due for the next tick()" classname="com.systemwebstudio.logic.scheduler.SchedulerServiceTests" time="0.0"/>
+  <testcase name="a transient enqueue failure keeps the fire pending and the next tick retries it with the same key()" classname="com.systemwebstudio.logic.scheduler.SchedulerServiceTests" time="0.001"/>
+  <testcase name="a due schedule is handed to the enqueuer with a deterministic idempotency key()" classname="com.systemwebstudio.logic.scheduler.SchedulerServiceTests" time="0.0"/>
+  <testcase name="a disabled schedule never fires()" classname="com.systemwebstudio.logic.scheduler.SchedulerServiceTests" time="0.0"/>
+  <testcase name="delete removes the schedule()" classname="com.systemwebstudio.logic.scheduler.SchedulerServiceTests" time="0.0"/>
+  <testcase name="ids of different tenants never collide in the store()" classname="com.systemwebstudio.logic.scheduler.SchedulerServiceTests" time="0.0"/>
+  <testcase name="a disabled tenant's schedules do not fire()" classname="com.systemwebstudio.logic.scheduler.SchedulerServiceTests" time="0.0"/>
+  <testcase name="a crash between claim and confirmation is repaired and a duplicate answer counts as confirmed()" classname="com.systemwebstudio.logic.scheduler.SchedulerServiceTests" time="0.001"/>
+  <testcase name="schedules are tenant scoped()" classname="com.systemwebstudio.logic.scheduler.SchedulerServiceTests" time="0.001"/>
+  <testcase name="create stores the schedule with its next run and audits it()" classname="com.systemwebstudio.logic.scheduler.SchedulerServiceTests" time="0.0"/>
+  <testcase name="a permanent refusal drops the pending fire instead of retrying forever()" classname="com.systemwebstudio.logic.scheduler.SchedulerServiceTests" time="0.0"/>
+  <testcase name="the scheduler itself never runs business logic - it only talks to the enqueuer()" classname="com.systemwebstudio.logic.scheduler.SchedulerServiceTests" time="0.0"/>
+  <testcase name="managing schedules needs WORKFLOW_MANAGE and an enabled tenant()" classname="com.systemwebstudio.logic.scheduler.SchedulerServiceTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

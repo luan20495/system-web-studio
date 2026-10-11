@@ -1,0 +1,19 @@
+{
+ "railData": "Trang Thành phần Dữ liệu Biểu mẫu Hành động Workflow Giao diện AI Dữ liệu Nguồn → khám phá → truy vấn → ánh xạ → ViewModel → gắn vào thành phần. Không có dữ liệu mẫu giả. Nguồn dữ liệuchưa Khám phá cấu trúcchưa Truy vấn Ánh xạ ViewModel Gắn vào thành phần Nguồn do quản trị viên cấp cho ứng dụng. Khóa kết nối không bao giờ hiện ở đây. Chưa sẵn sàng Chưa có API liệt kê nguồn dữ liệu đã được cấp quyền cho ứng dụng (Data Platform của C3 chưa nối vào máy chủ). Nguồn dữ liệu đã có trong ứng dụng Chưa có nguồn nào. Nguồn dữ liệu do quản trị viên tạo và cấp quyền; tài liệu ứng dụng chỉ tham chiếu tới nguồn đã cấp. Đã khai báo (0)",
+ "dataTexts": {
+  "Khe dữ liệu": false,
+  "Thêm khe": false,
+  "Thêm nguồn dữ liệu": false,
+  "Liên kết khe dữ liệu": false,
+  "Dữ liệu công khai": false
+ },
+ "inspectorData": "trang (Hero) Nước sạch mỗi ngày, sống khỏe mỗi ngày. ↑ ↓ ⋮⋮ Danh sách sản phẩm Chọn giải pháp phù hợp ↑ ↓ ⋮⋮ Công nghệ Công nghệ lọc thông minh ↑ ↓ ⋮⋮ Đánh giá khách hàng Khách hàng nói gì ↑ ↓ ⋮⋮ Form liên hệ Liên hệ tư vấn ↑ ↓ ⋮⋮ Chân trang © Pure Living ↑ ↓ Đổi tên / đường dẫn Xóa trang Chưa sẵn sàng Máy chủ chưa có thao tác đổi thứ tự trang. Bạn có thể đổi thứ tự menu điều hướng. Menu điều hướng Thứ tự menu đổi được ngay; thứ tự trang trong tài liệu thì chưa. + Thêm trang vào menu… Trang chủ Lưu menu Trang 404 Tiêu đề Lời nhắn Không tìm thấy trang Trang bạn tìm không tồn tại hoặc đã được chuyển đi. Lưu trang 404 ⋮⋮ ⋮⋮ ⋮⋮ ⋮⋮ ⋮⋮ ⋮⋮ ⋮⋮ Đầu trang (Hero) hero-1 ✕ Nội dung Thiết kếchưa Dữ liệu Hành động Quyền Nâng cao eyebrow một giá trị Chưa gắn dữ liệu title một giá trị Chưa gắn dữ liệu description một giá trị Chưa gắn dữ liệu ctaLabel một giá trị Chưa gắn dữ liệu Thiết lập luồng dữ liệu…",
+ "allText": {
+  "Khe dữ liệu": false,
+  "Thêm khe": false,
+  "Dữ liệu công khai": false
+ },
+ "railAria": 1,
+ "railAsideAria": 1,
+ "publishBtn": "Xuất bản"
+}

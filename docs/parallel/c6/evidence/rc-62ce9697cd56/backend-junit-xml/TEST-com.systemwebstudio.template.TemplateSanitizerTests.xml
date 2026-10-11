@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.template.TemplateSanitizerTests" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:52:30.258Z" hostname="macmini-2.local" time="0.005">
+  <properties/>
+  <testcase name="a document is safe exactly when sanitizing removes nothing()" classname="com.systemwebstudio.template.TemplateSanitizerTests" time="0.0"/>
+  <testcase name="sample data with unknown fields, URLs, credentials or too many rows is dropped()" classname="com.systemwebstudio.template.TemplateSanitizerTests" time="0.002"/>
+  <testcase name="sanitizing does not change its input and a legacy page is returned as it was()" classname="com.systemwebstudio.template.TemplateSanitizerTests" time="0.001"/>
+  <testcase name="every scope drops the publish draft and the connector id but keeps the slot()" classname="com.systemwebstudio.template.TemplateSanitizerTests" time="0.001"/>
+  <testcase name="third-party extension namespaces never travel in a SYSTEM template()" classname="com.systemwebstudio.template.TemplateSanitizerTests" time="0.0"/>
+  <testcase name="operation keys of a tenant connector are removed only from platform-wide templates()" classname="com.systemwebstudio.template.TemplateSanitizerTests" time="0.0"/>
+  <testcase name="the sample V2 document becomes a valid platform template()" classname="com.systemwebstudio.template.TemplateSanitizerTests" time="0.001"/>
+  <testcase name="scope follows the visibility of the template()" classname="com.systemwebstudio.template.TemplateSanitizerTests" time="0.0"/>
+  <testcase name="credential-like keys and URLs in an extension remove that namespace in every scope()" classname="com.systemwebstudio.template.TemplateSanitizerTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

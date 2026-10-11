@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.logic.action.ActionRuntimeTests" tests="64" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:46:13.251Z" hostname="macmini-2.local" time="0.664">
+  <properties/>
+  <testcase name="a tenant gate that throws fails closed and retryable()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.001"/>
+  <testcase name="TEST mode does not pretend a dry run happened when the connector cannot do one()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.0"/>
+  <testcase name="a replay of a normalized unknown outcome is the same failure, runs no handler and no onError chain()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.105"/>
+  <testcase name="dispatch of a TEST event previews every bound action()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.003"/>
+  <testcase name="a request can shorten the timeout but never lengthen it()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.101"/>
+  <testcase name="a request without an application context is rejected before anything is looked up()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.0"/>
+  <testcase name="disabled action is unknown()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.0"/>
+  <testcase name="a non-mutating action that is interrupted keeps INTERRUPTED, stays retryable and still runs onError()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.002"/>
+  <testcase name="a disabled tenant runs nothing and touches no port()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.0"/>
+  <testcase name="a chain cycle is stopped by the call depth limit()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.001"/>
+  <testcase name="CALL_API cannot be smuggled a url through its definition or its input()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.0"/>
+  <testcase name="unknown action is UNKNOWN_ACTION and no port or handler is touched()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.0"/>
+  <testcase name="the same key by another user is a separate run and never replays someone else's result()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.001"/>
+  <testcase name="a non-mutating action that times out keeps TIMEOUT, stays retryable and still runs onError()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.103"/>
+  <testcase name="an unknown-outcome write stays failed and is never sent downstream again with the same key()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.001"/>
+  <testcase name="a type without a registered handler is UNSUPPORTED_ACTION_TYPE()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.0"/>
+  <testcase name="call depth beyond the ceiling is rejected even if the definition asks for more()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.0"/>
+  <testcase name="chained writes get derived keys so re-running the chain is idempotent()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.002"/>
+  <testcase name="an unknown-outcome write does not run the UI onError chain, a rejected one does()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.001"/>
+  <testcase name="TEST mode still enforces tenant gate, permissions and input validation()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.001"/>
+  <testcase name="another tenant's action is indistinguishable from an unknown one()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.0"/>
+  <testcase name="the UI cannot grant itself anything - payload and explicit inputs never reach the permission check()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.001"/>
+  <testcase name="audit failure after the action ran does not hide the result()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.0"/>
+  <testcase name="NAVIGATE runs end to end and is audited STARTED then SUCCEEDED()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.0"/>
+  <testcase name="dispatch without a binding port or application does nothing()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.0"/>
+  <testcase name="NOTIFY reaches the notification port()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.0"/>
+  <testcase name="a permission declared by the definition is enforced in addition()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.0"/>
+  <testcase name="a fan out is bounded by the chain budget()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.001"/>
+  <testcase name="START_WORKFLOW needs WORKFLOW_EXECUTE and a key, then starts one run with the caller depth()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.001"/>
+  <testcase name="downstream failure keeps its code and retryable flag, audited FAILED()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.001"/>
+  <testcase name="audit failure at STARTED fails closed so the action never runs and the key stays retryable()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.0"/>
+  <testcase name="policy OPTIONAL allows a missing key and still de-duplicates a supplied one()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.0"/>
+  <testcase name="keys are validated()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.0"/>
+  <testcase name="a write action without a key is rejected - writes are never fire and forget()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.001"/>
+  <testcase name="a rejected write stays a definite failure, is not retryable even if an adapter says so, and may run onError()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.0"/>
+  <testcase name="dispatch sanitises a client event id before it becomes an idempotency key()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.001"/>
+  <testcase name="a retryable failure can be retried with the same key and then succeeds once()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.001"/>
+  <testcase name="retrying after a lost response creates no duplicate business record()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.001"/>
+  <testcase name="oversized input is LIMIT_EXCEEDED()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.0"/>
+  <testcase name="another app's action is unknown too()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.0"/>
+  <testcase name="TEST mode reads the draft definition and lists the chain instead of running it()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.001"/>
+  <testcase name="a throwing handler becomes HANDLER_ERROR without leaking the message()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.0"/>
+  <testcase name="definition with a smuggled url or missing reference is INVALID_DEFINITION()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.001"/>
+  <testcase name="TEST mode sends no notification and starts no workflow()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.0"/>
+  <testcase name="a mutating action that times out is an unknown outcome, never retryable, and runs no onError chain()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.203"/>
+  <testcase name="onError runs after a failure but not after a refusal()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.003"/>
+  <testcase name="tenant isolation - two tenants with the same action id and key never see each other()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.002"/>
+  <testcase name="audit entries carry identity and trigger but no input values()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.0"/>
+  <testcase name="each missing permission is FORBIDDEN, audited DENIED, and input is never inspected()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.001"/>
+  <testcase name="same key and same input replays the first result without writing again()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.0"/>
+  <testcase name="port not wired gives a typed non retryable NOT_IMPLEMENTED()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.0"/>
+  <testcase name="same key with different input is IDEMPOTENCY_KEY_REUSED()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.001"/>
+  <testcase name="TEST mode never writes, never needs a key, keeps no run state and says what would run()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.0"/>
+  <testcase name="dispatch cannot spoof the acting user through the payload()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.002"/>
+  <testcase name="invalid input is INVALID_INPUT with per field details and nothing runs()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.0"/>
+  <testcase name="each mutation type reaches the data port with the right kind and validated params()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.001"/>
+  <testcase name="an access port that throws fails closed as retryable DEPENDENCY_UNAVAILABLE()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.0"/>
+  <testcase name="a rejected mutation keeps its code and is not retryable()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.001"/>
+  <testcase name="APP_USE and ACTION_EXECUTE are both required, checked per execution on the right resource()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.001"/>
+  <testcase name="a mutating action that is interrupted is an unknown outcome, never retryable, and runs no onError chain()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.001"/>
+  <testcase name="dispatch runs bound actions only, maps payload through the definition, and is safe to redeliver()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.001"/>
+  <testcase name="a TEST preview that times out is not an unknown outcome because nothing was written()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.102"/>
+  <testcase name="CALL_API calls an approved datasource operation through the port()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.002"/>
+  <testcase name="onSuccess runs after a successful action with its result as input()" classname="com.systemwebstudio.logic.action.ActionRuntimeTests" time="0.001"/>
+  <system-out><![CDATA[{"@timestamp":"2026-10-08T06:46:13.631285+07:00","@version":"1","message":"deployment 4d09ac2a-27ab-425c-a2ef-77bf97c21f22 project=b72b93b7-e26f-4a8f-b96b-2eeba2cc1a6d step=POLICY_CHECK outcome=Advance durationMs=4","logger_name":"com.systemwebstudio.publish.DeploymentProcessor","thread_name":"org.springframework.amqp.rabbit.RabbitListenerEndpointContainer#0-16","level":"INFO","level_value":20000,"requestId":"job_4d09ac2a27ab425c"}
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

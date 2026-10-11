@@ -1,0 +1,75 @@
+{
+  "studio": "http://127.0.0.1:3403",
+  "runId": "muytfj4k",
+  "frontendHead": "62ce969",
+  "backend": {
+    "url": "http://127.0.0.1:51080",
+    "head": "62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]"
+  },
+  "facts": {
+    "authConfig": {
+      "localLogin": true,
+      "oidc": false,
+      "publicPublish": true
+    },
+    "fixtureNotes": {
+      "viewerOnProject": "member",
+      "initialRevision": 0,
+      "definitionOps": {
+        "ok": true
+      }
+    },
+    "routes": {
+      "queries": {
+        "status": 404,
+        "code": "QUERY_NOT_FOUND"
+      },
+      "actions": {
+        "status": 404,
+        "code": "UNKNOWN_ACTION"
+      }
+    }
+  },
+  "cleanup": [
+    "left behind (no delete route): workspaces 597e0da5-e3c6-40ac-824b-07c86a3cf355, 0fc74077-6507-40f7-ab88-28684c75a237 named e2e-muytfj4k-*"
+  ],
+  "node": "v22.23.1",
+  "summary": {
+    "total": 1,
+    "PASS": 0,
+    "FAIL": 1,
+    "BLOCKED": 0,
+    "SKIP": 0
+  },
+  "results": [
+    {
+      "id": "E2E-14",
+      "title": "RabbitMQ (or another dependency) down → correct failure → recovery/retry",
+      "status": "FAIL",
+      "owner": null,
+      "ref": null,
+      "reason": "exception: locator.click: Timeout 30000ms exceeded. ⏎ Call log: ⏎   - waiting for getByTestId('run-workflow:e2e-wf')",
+      "mismatch": null,
+      "start": "2026-10-08T00:46:09.241Z",
+      "end": "2026-10-08T00:47:20.835Z",
+      "workspace": "597e0da5-e3c6-40ac-824b-07c86a3cf355",
+      "project": "2c835622-e141-4b21-9e60-7575cee80684",
+      "checks": [
+        {
+          "name": "while the dependency is down the UI shows an unavailable/error state, never success",
+          "ok": false,
+          "detail": "TIMEOUT: ",
+          "kind": "ui"
+        }
+      ],
+      "failed": [
+        {
+          "name": "while the dependency is down the UI shows an unavailable/error state, never success",
+          "ok": false,
+          "detail": "TIMEOUT: ",
+          "kind": "ui"
+        }
+      ]
+    }
+  ]
+}

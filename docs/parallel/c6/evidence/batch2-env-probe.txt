@@ -1,0 +1,17 @@
+# C6 batch 2 environment probe — 2026-10-06T11:59:26Z
+$ uname -sm
+Linux aarch64
+$ git rev-parse --short HEAD
+fatal: not a git repository: /Users/hoangluan/code/HBL/.git/worktrees/xweb-c6
+$ ls /usr/libexec/java_home
+ls: cannot access '/usr/libexec/java_home': No such file or directory
+$ java -version
+openjdk version "11.0.32.1" 2026-08-18
+$ which docker
+docker: not found
+curl https://repo.maven.apache.org/maven2/ -> 000
+curl https://services.gradle.org/ -> 000
+curl https://cdn.playwright.dev -> 000
+curl https://registry.npmjs.org/ -> 200
+$ files modified since 11:20 UTC outside docs/parallel/c6:
+(end)

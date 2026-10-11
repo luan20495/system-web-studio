@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.datasource.SecurityPrimitivesTests" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:44:54.111Z" hostname="macmini-2.local" time="0.005">
+  <properties/>
+  <testcase name="an unresolvable host is its own failure()" classname="com.systemwebstudio.data.datasource.SecurityPrimitivesTests" time="0.0"/>
+  <testcase name="no master key means no credentials, with a fixed message()" classname="com.systemwebstudio.data.datasource.SecurityPrimitivesTests" time="0.0"/>
+  <testcase name="credentials are stored only as SecretsCrypto ciphertext in their own store and round-trip()" classname="com.systemwebstudio.data.datasource.SecurityPrimitivesTests" time="0.001"/>
+  <testcase name="the platform address guard refuses every non-public address class()" classname="com.systemwebstudio.data.datasource.SecurityPrimitivesTests" time="0.0"/>
+  <testcase name="a tampered or foreign ciphertext fails closed without echoing anything()" classname="com.systemwebstudio.data.datasource.SecurityPrimitivesTests" time="0.001"/>
+  <testcase name="redactor removes every known secret value()" classname="com.systemwebstudio.data.datasource.SecurityPrimitivesTests" time="0.0"/>
+  <testcase name="discarding a credential removes it()" classname="com.systemwebstudio.data.datasource.SecurityPrimitivesTests" time="0.001"/>
+  <testcase name="a credential reference of another tenant resolves to nothing()" classname="com.systemwebstudio.data.datasource.SecurityPrimitivesTests" time="0.0"/>
+  <testcase name="a data source can be logged without its credential reference()" classname="com.systemwebstudio.data.datasource.SecurityPrimitivesTests" time="0.0"/>
+  <testcase name="host name rules()" classname="com.systemwebstudio.data.datasource.SecurityPrimitivesTests" time="0.0"/>
+  <testcase name="credential shape is validated before it is sealed()" classname="com.systemwebstudio.data.datasource.SecurityPrimitivesTests" time="0.001"/>
+  <testcase name="one private address among public ones refuses the whole host()" classname="com.systemwebstudio.data.datasource.SecurityPrimitivesTests" time="0.0"/>
+  <testcase name="resolution happens once and returns the checked addresses()" classname="com.systemwebstudio.data.datasource.SecurityPrimitivesTests" time="0.0"/>
+  <testcase name="a resolved credential never prints, compares or destructures its secret()" classname="com.systemwebstudio.data.datasource.SecurityPrimitivesTests" time="0.0"/>
+  <testcase name="a connector failure carries no cause and no stack()" classname="com.systemwebstudio.data.datasource.SecurityPrimitivesTests" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,40 @@
+FLOW: E2E-07 — TEST-binding query runs and shows results
+RESULT: PASS
+START: 2026-10-08T01:06:09.095Z
+END: 2026-10-08T01:06:11.552Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 7ceb9c33-36ab-41fe-9735-76fe269dfcf0
+WORKSPACE: ef7742ef-4ffc-478c-a762-a7f9b091a2d7
+HTTP EVIDENCE:
+  - ok the real backend answered with rows (outcome SUCCESS from the server)
+UI ASSERTION:
+  - ok the pre-seeded query is listed in the Test panel
+  - ok a result table is rendered
+  - ok an independent API call returns 200 with the same query
+  - ok UI row count equals the server's
+  - ok no unhandled page errors
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: none
+OWNER: n/a
+
+---
+
+FLOW: E2E-08 — LIVE-binding query runs and shows results
+RESULT: BLOCKED
+START: 2026-10-08T01:06:11.552Z
+END: 2026-10-08T01:06:11.952Z
+FRONTEND_HEAD: 62ce969
+BACKEND_HEAD: 62ce969 docs(c0): D-C0-41 public C1 evidence corrected (authenticated, C1-only error code) [62ce9697cd56e8dc86b3260923f5addbcf555743]
+BACKEND_URL: http://127.0.0.1:51080
+PROJECT: 7ceb9c33-36ab-41fe-9735-76fe269dfcf0
+WORKSPACE: ef7742ef-4ffc-478c-a762-a7f9b091a2d7
+HTTP EVIDENCE: none recorded
+UI ASSERTION:
+  - ok (evidence) LIVE run answers 200 or a documented 404/422/503 — never 500
+PERSISTENCE ASSERTION: none recorded
+RESTART/RECOVERY: not applicable to this flow
+BLOCKER: LIVE needs (1) a RUNNING deployment and a published host that serves the Data API: C0 states there is no public DataGateway route and no published data host, and the runtime config that would carry its address is undecided (C0 `__factory/config.json` apiBase, served for code apps/previews only, vs C2 `/runtime-config.json` DATA_API_BASE_URL); (2) a declared slot (C2 H-C2-02); (3) a source the gate
+OWNER: C0 · ref B-C5-06 + H-C2-04 + H-C2-02 + H-C0-07

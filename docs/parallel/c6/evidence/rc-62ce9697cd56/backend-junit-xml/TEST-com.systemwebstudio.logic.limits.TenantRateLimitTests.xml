@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.logic.limits.TenantRateLimitTests" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:46:13.961Z" hostname="macmini-2.local" time="0.06">
+  <properties/>
+  <testcase name="action execution is limited per tenant and a limited tenant does not slow another()" classname="com.systemwebstudio.logic.limits.TenantRateLimitTests" time="0.002"/>
+  <testcase name="a throwing limiter fails closed as retryable, and RATE_LIMITED never triggers onError actions()" classname="com.systemwebstudio.logic.limits.TenantRateLimitTests" time="0.002"/>
+  <testcase name="one tenant exhausting its budget never affects another tenant or another scope()" classname="com.systemwebstudio.logic.limits.TenantRateLimitTests" time="0.001"/>
+  <testcase name="workflow starts are limited per tenant and the pushback is retryable()" classname="com.systemwebstudio.logic.limits.TenantRateLimitTests" time="0.001"/>
+  <testcase name="a caller without permission cannot spend the tenant's budget and a limited call leaves no run state()" classname="com.systemwebstudio.logic.limits.TenantRateLimitTests" time="0.001"/>
+  <testcase name="the scheduler limits fires per tenant, leaves limited schedules due, and other tenants still fire()" classname="com.systemwebstudio.logic.limits.TenantRateLimitTests" time="0.013"/>
+  <testcase name="limits can be overridden per tenant and every scope has a default()" classname="com.systemwebstudio.logic.limits.TenantRateLimitTests" time="0.0"/>
+  <testcase name="a tenant gets its burst, then is limited with an honest retry-after, then refills()" classname="com.systemwebstudio.logic.limits.TenantRateLimitTests" time="0.0"/>
+  <testcase name="TEST mode is limited too, so a preview loop cannot bypass the budget()" classname="com.systemwebstudio.logic.limits.TenantRateLimitTests" time="0.003"/>
+  <testcase name="a rate limited action step waits as told and keeps its retry budget()" classname="com.systemwebstudio.logic.limits.TenantRateLimitTests" time="0.006"/>
+  <testcase name="memory is bounded and eviction only drops idle buckets first()" classname="com.systemwebstudio.logic.limits.TenantRateLimitTests" time="0.001"/>
+  <testcase name="a per key cap and the global limit both hold, and degenerate input is safe()" classname="com.systemwebstudio.logic.limits.TenantRateLimitTests" time="0.0"/>
+  <testcase name="unauthorized starts do not spend the budget()" classname="com.systemwebstudio.logic.limits.TenantRateLimitTests" time="0.001"/>
+  <testcase name="round robin gives every key its share and keeps the order inside a key()" classname="com.systemwebstudio.logic.limits.TenantRateLimitTests" time="0.0"/>
+  <testcase name="concurrent callers never get more than the capacity()" classname="com.systemwebstudio.logic.limits.TenantRateLimitTests" time="0.002"/>
+  <testcase name="one tenant's backlog of due schedules cannot crowd out another tenant within a tick()" classname="com.systemwebstudio.logic.limits.TenantRateLimitTests" time="0.025"/>
+  <testcase name="a cost above the capacity can never be satisfied and says so, and bad arguments are rejected()" classname="com.systemwebstudio.logic.limits.TenantRateLimitTests" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

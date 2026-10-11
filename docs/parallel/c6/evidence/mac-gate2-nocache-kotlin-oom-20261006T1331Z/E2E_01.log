@@ -1,0 +1,11 @@
+# start: 2026-10-06T13:28:00Z
+# cwd:   /Users/hoangluan/code/xweb-c6
+# cmd:   node e2e/pages-mock.mjs
+
+PASS demo loads under the Pages base path
+PASS demo shows its demo/unsaved labelling
+PASS mock prompt updates the preview in memory
+PASS publish stays a demo (no URL, no release)
+PASS no backend request was made and no page error occurred
+PASS no http-mode UI leaked into the static build
+6/6 passed

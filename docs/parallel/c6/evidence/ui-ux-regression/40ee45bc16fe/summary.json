@@ -1,0 +1,71 @@
+{
+ "mode": "candidate",
+ "tag": "cand2",
+ "browser": "Google Chrome 154.0.8037.98",
+ "integrationShaTested": "62ce9697cd56e8dc86b3260923f5addbcf555743",
+ "frontendUnderTest": "40ee45bc16fe4dda525c90e0d491d11284a23d8b",
+ "c5Sha": "40ee45bc16fe4dda525c90e0d491d11284a23d8b",
+ "viewports": [
+  1440,
+  1280,
+  1024,
+  768,
+  430,
+  390,
+  360
+ ],
+ "totalRoutes": 96,
+ "routeVariants": 156,
+ "totalCases": 874,
+ "PASS": 535,
+ "FAIL": 283,
+ "BLOCKED": 56,
+ "knownNotReady": 13,
+ "UNICODE": "FAIL (28 cases)",
+ "ICONS": "FAIL",
+ "RESPONSIVE": "FAIL (12 cases)",
+ "ACCESSIBILITY": "FAIL (13 cases)",
+ "CREATE_COMPANY": "FAIL (5/10)",
+ "ORGANIZATION": "FAIL (11/22)",
+ "EMPLOYEES": "FAIL (5/10)",
+ "STUDIO": "FAIL (79/309)",
+ "DATA_ACTION_WORKFLOW": "PASS (35/35)",
+ "PUBLISH_ROLLBACK": "PASS (7/7)",
+ "PLATFORM": "FAIL (74/157)",
+ "ADMIN": "FAIL (97/219)",
+ "AUTH": "FAIL (12/105)",
+ "axe": {
+  "critical": 0,
+  "serious": 0,
+  "moderate": 32,
+  "minor": 47,
+  "wcagCritical": 0,
+  "wcagSerious": 0
+ },
+ "newBugs": 327,
+ "navigation": [
+  {
+   "portal": "platform",
+   "role": "super",
+   "links": 14,
+   "ok": 14,
+   "fail": []
+  },
+  {
+   "portal": "admin",
+   "role": "tenantAdmin",
+   "links": 10,
+   "ok": 10,
+   "fail": []
+  },
+  {
+   "portal": "studio",
+   "role": "workspaceAdmin",
+   "links": 6,
+   "ok": 5,
+   "fail": [
+    "\"Tạo ứng dụng\" not marked aria-current"
+   ]
+  }
+ ]
+}

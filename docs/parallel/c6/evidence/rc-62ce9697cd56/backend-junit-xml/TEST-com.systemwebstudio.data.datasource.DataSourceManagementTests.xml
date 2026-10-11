@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.datasource.DataSourceManagementTests" tests="18" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:44:54.085Z" hostname="macmini-2.local" time="0.013">
+  <properties/>
+  <testcase name="update with nothing to change is a no op()" classname="com.systemwebstudio.data.datasource.DataSourceManagementTests" time="0.001"/>
+  <testcase name="a context without a workspace reaches nothing in workspace scope()" classname="com.systemwebstudio.data.datasource.DataSourceManagementTests" time="0.001"/>
+  <testcase name="credential metadata has configured type names and times but never a value or a reference()" classname="com.systemwebstudio.data.datasource.DataSourceManagementTests" time="0.001"/>
+  <testcase name="patch with a wrong expectedVersion is a CONFLICT and nothing is written, audited or flushed()" classname="com.systemwebstudio.data.datasource.DataSourceManagementTests" time="0.0"/>
+  <testcase name="a data source belongs to the workspace of its creator and nobody else's()" classname="com.systemwebstudio.data.datasource.DataSourceManagementTests" time="0.001"/>
+  <testcase name="no management path writes the secret to a log or an audit event or an exception()" classname="com.systemwebstudio.data.datasource.DataSourceManagementTests" time="0.001"/>
+  <testcase name="a refused delete changes nothing and keeps the credential()" classname="com.systemwebstudio.data.datasource.DataSourceManagementTests" time="0.001"/>
+  <testcase name="credential metadata needs only the read permission and an unknown author is null()" classname="com.systemwebstudio.data.datasource.DataSourceManagementTests" time="0.001"/>
+  <testcase name="patch validates every field before it writes - a bad config or a taken name leaves the source as it was()" classname="com.systemwebstudio.data.datasource.DataSourceManagementTests" time="0.001"/>
+  <testcase name="the unit of work wraps every change - a failure inside it surfaces unchanged and side effects wait for the end()" classname="com.systemwebstudio.data.datasource.DataSourceManagementTests" time="0.001"/>
+  <testcase name="patch that changes nothing is no new version and no audit row()" classname="com.systemwebstudio.data.datasource.DataSourceManagementTests" time="0.0"/>
+  <testcase name="delete needs the manage permission()" classname="com.systemwebstudio.data.datasource.DataSourceManagementTests" time="0.001"/>
+  <testcase name="patch applies every given field in one version, audits each kind of change and flushes the cache once()" classname="com.systemwebstudio.data.datasource.DataSourceManagementTests" time="0.0"/>
+  <testcase name="the historical tenant scope is unchanged()" classname="com.systemwebstudio.data.datasource.DataSourceManagementTests" time="0.0"/>
+  <testcase name="delete removes the source and destroys its credential and tells subscribers()" classname="com.systemwebstudio.data.datasource.DataSourceManagementTests" time="0.0"/>
+  <testcase name="removing the credential destroys it keeps the source and is repeatable()" classname="com.systemwebstudio.data.datasource.DataSourceManagementTests" time="0.0"/>
+  <testcase name="a source without a credential reports not configured()" classname="com.systemwebstudio.data.datasource.DataSourceManagementTests" time="0.0"/>
+  <testcase name="a connector that names its credential entries accepts nothing else()" classname="com.systemwebstudio.data.datasource.DataSourceManagementTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

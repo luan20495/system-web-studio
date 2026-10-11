@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.wiring.RuntimeApiPureTests" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:54:24.972Z" hostname="macmini-2.local" time="0.005">
+  <properties/>
+  <testcase name="a workflow start needs an idempotency key and an object input()" classname="com.systemwebstudio.wiring.RuntimeApiPureTests" time="0.001"/>
+  <testcase name="a rejected mutation is 422 and may carry its onError follow-ups()" classname="com.systemwebstudio.wiring.RuntimeApiPureTests" time="0.0"/>
+  <testcase name="an empty body is a LIVE request with nothing in it()" classname="com.systemwebstudio.wiring.RuntimeApiPureTests" time="0.0"/>
+  <testcase name="query params are plain values within the limit and the page is range checked()" classname="com.systemwebstudio.wiring.RuntimeApiPureTests" time="0.001"/>
+  <testcase name="a body that is not an object is refused()" classname="com.systemwebstudio.wiring.RuntimeApiPureTests" time="0.0"/>
+  <testcase name="rate limited carries Retry-After from the details()" classname="com.systemwebstudio.wiring.RuntimeApiPureTests" time="0.0"/>
+  <testcase name="status codes follow the contract table()" classname="com.systemwebstudio.wiring.RuntimeApiPureTests" time="0.0"/>
+  <testcase name="mode must be LIVE or TEST exactly()" classname="com.systemwebstudio.wiring.RuntimeApiPureTests" time="0.0"/>
+  <testcase name="the generic error body has the ApiError shape()" classname="com.systemwebstudio.wiring.RuntimeApiPureTests" time="0.0"/>
+  <testcase name="the mapping of a query is the single mapping that names it()" classname="com.systemwebstudio.wiring.RuntimeApiPureTests" time="0.001"/>
+  <testcase name="fields the contract does not list are refused, whatever their name()" classname="com.systemwebstudio.wiring.RuntimeApiPureTests" time="0.001"/>
+  <testcase name="an unknown outcome is 409 and never retryable even if a caller claimed it was()" classname="com.systemwebstudio.wiring.RuntimeApiPureTests" time="0.0"/>
+  <testcase name="ok and would-run are 200 and a would-run says nothing was executed()" classname="com.systemwebstudio.wiring.RuntimeApiPureTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

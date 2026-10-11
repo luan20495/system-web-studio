@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.publish.ReleaseDeployerTests" tests="36" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:50:48.490Z" hostname="macmini-2.local" time="0.12">
+  <properties/>
+  <testcase name="the bytes are verified once before the switch and the cheap check is used after it()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.001"/>
+  <testcase name="server app manual rollback - the site switch fails after the runtime moved - the runtime goes back, the active release is unchanged()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.001"/>
+  <testcase name="after a worker restart the release that was active BEFORE the switch is still the rollback target()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.001"/>
+  <testcase name="a rollback checks the target's bytes before the switch and only the cheap check after it()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.0"/>
+  <testcase name="an artifact whose bytes were altered is never switched in()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.0"/>
+  <testcase name="server app publish - unhealthy after the switch also puts the runtime back, even when the pointer had not moved()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.0"/>
+  <testcase name="the order is verify the artifact, stage, switch, confirm - nothing serves before it was verified()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.001"/>
+  <testcase name="N+1 is unhealthy after the switch - rolled back, with the health detail as the reason()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.0"/>
+  <testcase name="a rollback never clobbers a newer release that was switched in the meantime()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.0"/>
+  <testcase name="a release that cannot be verified because the check itself failed is not served either()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.0"/>
+  <testcase name="a healthy new release becomes the live one and the happy path writes no extra history()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.0"/>
+  <testcase name="the first release has nothing to go back to - a failure leaves the site serving nothing, said explicitly()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.001"/>
+  <testcase name="an answer that cannot be trusted is not success - unknown verification rolls back and is marked ambiguous()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.0"/>
+  <testcase name="server app manual rollback - a runtime that will not start leaves everything as it was()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.001"/>
+  <testcase name="N+1 switches then fails - N is active again from its own artifact and nothing is rebuilt()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.0"/>
+  <testcase name="repeating the rollback is safe - the second run finds the pointer is no longer ours and touches nothing()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.0"/>
+  <testcase name="server app publish - the switch fails after the runtime moved - both go back to the previous release()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.001"/>
+  <testcase name="a release without any artifact cannot be restored()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.0"/>
+  <testcase name="server app first release - a failure after the runtime started stops it again()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.0"/>
+  <testcase name="manual rollback that the provider refuses changes nothing and says so()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.0"/>
+  <testcase name="server app publish - a runtime that does not start leaves the site and the runtime on the previous release()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.0"/>
+  <testcase name="automatic rollback - the previous artifact disappears between the check and the confirmation - fail closed, not a pointer at nothing()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.001"/>
+  <testcase name="a provider that cannot stage the release leaves the serving release untouched()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.0"/>
+  <testcase name="manual rollback verifies the artifact first, needs no build, and repeating it changes nothing()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.0"/>
+  <testcase name="an app without a server part never touches the runtime()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.001"/>
+  <testcase name="a provider that fails before it switched anything leaves the active release alone()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.0"/>
+  <testcase name="a first release that cannot be verified never serves anything - no switch, so nothing to take offline()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.0"/>
+  <testcase name="server app publish - the server runtime serves the new release before the site pointer moves()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.0"/>
+  <testcase name="automatic rollback failure fails closed - the pointer is NULL, never at the release that just failed or at a missing artifact()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.0"/>
+  <testcase name="a provider that cannot restore is a recorded rollback failure, not a silent one - and it says the site could not be taken offline either()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.001"/>
+  <testcase name="server app manual rollback - static and runtime cannot be reconciled - offline and inconsistent, never success()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.0"/>
+  <testcase name="server app - when the runtime cannot be put back the site is taken offline, never a mixed release, and it is not reported as a rollback()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.0"/>
+  <testcase name="an artifact that cannot be verified is never switched in - the serving release is untouched and nothing is recorded as switched()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.0"/>
+  <testcase name="manual rollback - the artifact is verified, then disappears before the switch is confirmed - not success, the active release is unchanged()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.0"/>
+  <testcase name="server app manual rollback - the runtime goes to the target first, then the site, and both end on the same release()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.0"/>
+  <testcase name="a deploy timeout is ambiguous - not success, not retried, previous release restored()" classname="com.systemwebstudio.publish.ReleaseDeployerTests" time="0.109"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

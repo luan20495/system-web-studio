@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.logic.action.ActionDefinitionValidatorTests" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:46:13.226Z" hostname="macmini-2.local" time="0.004">
+  <properties/>
+  <testcase name="duplicate and malformed input names are reported()" classname="com.systemwebstudio.logic.action.ActionDefinitionValidatorTests" time="0.0"/>
+  <testcase name="maxLength only on strings()" classname="com.systemwebstudio.logic.action.ActionDefinitionValidatorTests" time="0.0"/>
+  <testcase name="chains are bounded and cannot point at themselves()" classname="com.systemwebstudio.logic.action.ActionDefinitionValidatorTests" time="0.0"/>
+  <testcase name="input mapping must target declared inputs and use plain dotted paths()" classname="com.systemwebstudio.logic.action.ActionDefinitionValidatorTests" time="0.003"/>
+  <testcase name="a state changing action can never opt out of idempotency()" classname="com.systemwebstudio.logic.action.ActionDefinitionValidatorTests" time="0.0"/>
+  <testcase name="config may not carry code sql or urls at any depth()" classname="com.systemwebstudio.logic.action.ActionDefinitionValidatorTests" time="0.0"/>
+  <testcase name="handler specific rules are applied and a mismatching handler is reported()" classname="com.systemwebstudio.logic.action.ActionDefinitionValidatorTests" time="0.0"/>
+  <testcase name="ids must be plain references()" classname="com.systemwebstudio.logic.action.ActionDefinitionValidatorTests" time="0.0"/>
+  <testcase name="a plain definition is valid()" classname="com.systemwebstudio.logic.action.ActionDefinitionValidatorTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

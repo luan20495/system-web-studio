@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.common.ConfigHygieneTests" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:44:45.764Z" hostname="macmini-2.local" time="0.148">
+  <properties/>
+  <testcase name="the production profile has no loopback and no default for the sites, render and infrastructure addresses()" classname="com.systemwebstudio.common.ConfigHygieneTests" time="0.002"/>
+  <testcase name="no product code carries a loopback default of a property()" classname="com.systemwebstudio.common.ConfigHygieneTests" time="0.142"/>
+  <testcase name="the base configuration carries no loopback address except the two documented ones()" classname="com.systemwebstudio.common.ConfigHygieneTests" time="0.001"/>
+  <testcase name="the base placeholders of the addresses have no default, so a profile that names none stops the start()" classname="com.systemwebstudio.common.ConfigHygieneTests" time="0.001"/>
+  <testcase name="the local profile and the local script carry the local values()" classname="com.systemwebstudio.common.ConfigHygieneTests" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

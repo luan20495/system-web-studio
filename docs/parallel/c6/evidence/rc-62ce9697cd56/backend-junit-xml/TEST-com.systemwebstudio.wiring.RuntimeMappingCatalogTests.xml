@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.wiring.RuntimeMappingCatalogTests" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:54:24.977Z" hostname="macmini-2.local" time="0.001">
+  <properties/>
+  <testcase name="a mapping and a view model name the operation key of their local query()" classname="com.systemwebstudio.wiring.RuntimeMappingCatalogTests" time="0.001"/>
+  <testcase name="a queryRef that names no local query is left as it is, and an unknown mapping is not found()" classname="com.systemwebstudio.wiring.RuntimeMappingCatalogTests" time="0.0"/>
+  <testcase name="the stored document is not modified by the translation()" classname="com.systemwebstudio.wiring.RuntimeMappingCatalogTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

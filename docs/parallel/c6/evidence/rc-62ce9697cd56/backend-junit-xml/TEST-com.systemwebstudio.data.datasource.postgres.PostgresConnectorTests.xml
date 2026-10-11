@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.datasource.postgres.PostgresConnectorTests" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:44:57.693Z" hostname="macmini-2.local" time="0.024">
+  <properties/>
+  <testcase name="a socket timeout or an unexpected exception from the driver is a fixed-text failure()" classname="com.systemwebstudio.data.datasource.postgres.PostgresConnectorTests" time="0.003"/>
+  <testcase name="by default only public addresses are reachable, so the platform databases are not()" classname="com.systemwebstudio.data.datasource.postgres.PostgresConnectorTests" time="0.002"/>
+  <testcase name="driver errors are mapped by SQLSTATE and their text never travels()" classname="com.systemwebstudio.data.datasource.postgres.PostgresConnectorTests" time="0.004"/>
+  <testcase name="the socket factory refuses to exist without a pinned address()" classname="com.systemwebstudio.data.datasource.postgres.PostgresConnectorTests" time="0.001"/>
+  <testcase name="JSON null is a real JSON null()" classname="com.systemwebstudio.data.datasource.postgres.PostgresConnectorTests" time="0.0"/>
+  <testcase name="the connection target holds the checked addresses and prints nothing()" classname="com.systemwebstudio.data.datasource.postgres.PostgresConnectorTests" time="0.001"/>
+  <testcase name="the platform's own JDBC URLs yield the hosts to deny()" classname="com.systemwebstudio.data.datasource.postgres.PostgresConnectorTests" time="0.0"/>
+  <testcase name="the string-argument form used by older driver versions pins the same way()" classname="com.systemwebstudio.data.datasource.postgres.PostgresConnectorTests" time="0.001"/>
+  <testcase name="credential values that look like driver URL syntax are refused()" classname="com.systemwebstudio.data.datasource.postgres.PostgresConnectorTests" time="0.001"/>
+  <testcase name="configuration is strict and TLS cannot be switched off()" classname="com.systemwebstudio.data.datasource.postgres.PostgresConnectorTests" time="0.002"/>
+  <testcase name="a query is rejected by the guard before a connection is opened()" classname="com.systemwebstudio.data.datasource.postgres.PostgresConnectorTests" time="0.003"/>
+  <testcase name="whatever host the driver asks for, the socket connects to the pinned address()" classname="com.systemwebstudio.data.datasource.postgres.PostgresConnectorTests" time="0.001"/>
+  <testcase name="a denied host stays denied even when it is public or allow-listed, and aliases of it are caught by address()" classname="com.systemwebstudio.data.datasource.postgres.PostgresConnectorTests" time="0.001"/>
+  <testcase name="a private host is reachable only through the explicit server-side allow-list()" classname="com.systemwebstudio.data.datasource.postgres.PostgresConnectorTests" time="0.001"/>
+  <system-out><![CDATA[{"@timestamp":"2026-10-08T06:44:57.698399+07:00","@version":"1","message":"postgres failure: state=08001 type=SQLException","logger_name":"com.systemwebstudio.data.datasource.postgres.PgErrors","thread_name":"Test worker","level":"DEBUG","level_value":10000}
+{"@timestamp":"2026-10-08T06:44:57.699391+07:00","@version":"1","message":"connect failure: IllegalStateException","logger_name":"com.systemwebstudio.data.datasource.postgres.PgSessions","thread_name":"Test worker","level":"DEBUG","level_value":10000}
+{"@timestamp":"2026-10-08T06:44:57.703119+07:00","@version":"1","message":"postgres failure: state=28P01 type=SQLException","logger_name":"com.systemwebstudio.data.datasource.postgres.PgErrors","thread_name":"Test worker","level":"DEBUG","level_value":10000}
+{"@timestamp":"2026-10-08T06:44:57.703683+07:00","@version":"1","message":"postgres failure: state=28000 type=SQLException","logger_name":"com.systemwebstudio.data.datasource.postgres.PgErrors","thread_name":"Test worker","level":"DEBUG","level_value":10000}
+{"@timestamp":"2026-10-08T06:44:57.704909+07:00","@version":"1","message":"postgres failure: state=08001 type=SQLException","logger_name":"com.systemwebstudio.data.datasource.postgres.PgErrors","thread_name":"Test worker","level":"DEBUG","level_value":10000}
+{"@timestamp":"2026-10-08T06:44:57.705155+07:00","@version":"1","message":"postgres failure: state=08006 type=SQLException","logger_name":"com.systemwebstudio.data.datasource.postgres.PgErrors","thread_name":"Test worker","level":"DEBUG","level_value":10000}
+{"@timestamp":"2026-10-08T06:44:57.705325+07:00","@version":"1","message":"postgres failure: state=3D000 type=SQLException","logger_name":"com.systemwebstudio.data.datasource.postgres.PgErrors","thread_name":"Test worker","level":"DEBUG","level_value":10000}
+{"@timestamp":"2026-10-08T06:44:57.705502+07:00","@version":"1","message":"postgres failure: state=53300 type=SQLException","logger_name":"com.systemwebstudio.data.datasource.postgres.PgErrors","thread_name":"Test worker","level":"DEBUG","level_value":10000}
+{"@timestamp":"2026-10-08T06:44:57.705658+07:00","@version":"1","message":"postgres failure: state=57014 type=SQLException","logger_name":"com.systemwebstudio.data.datasource.postgres.PgErrors","thread_name":"Test worker","level":"DEBUG","level_value":10000}
+{"@timestamp":"2026-10-08T06:44:57.705816+07:00","@version":"1","message":"postgres failure: state=25006 type=SQLException","logger_name":"com.systemwebstudio.data.datasource.postgres.PgErrors","thread_name":"Test worker","level":"DEBUG","level_value":10000}
+{"@timestamp":"2026-10-08T06:44:57.706007+07:00","@version":"1","message":"postgres failure: state=42501 type=SQLException","logger_name":"com.systemwebstudio.data.datasource.postgres.PgErrors","thread_name":"Test worker","level":"DEBUG","level_value":10000}
+{"@timestamp":"2026-10-08T06:44:57.706186+07:00","@version":"1","message":"postgres failure: state=42P01 type=SQLException","logger_name":"com.systemwebstudio.data.datasource.postgres.PgErrors","thread_name":"Test worker","level":"DEBUG","level_value":10000}
+{"@timestamp":"2026-10-08T06:44:57.70634+07:00","@version":"1","message":"postgres failure: state=XX000 type=SQLException","logger_name":"com.systemwebstudio.data.datasource.postgres.PgErrors","thread_name":"Test worker","level":"DEBUG","level_value":10000}
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

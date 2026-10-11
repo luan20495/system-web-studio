@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.logic.workflow.WorkflowShapeTests" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:46:14.181Z" hostname="macmini-2.local" time="0.314">
+  <properties/>
+  <testcase name="all and any read every element in order()" classname="com.systemwebstudio.logic.workflow.WorkflowShapeTests" time="0.001"/>
+  <testcase name="a script-like step kind, operator or value source is rejected and the workflow is not offered()" classname="com.systemwebstudio.logic.workflow.WorkflowShapeTests" time="0.001"/>
+  <testcase name="one invalid element anywhere makes the whole condition invalid and the workflow is not offered()" classname="com.systemwebstudio.logic.workflow.WorkflowShapeTests" time="0.0"/>
+  <testcase name="a script field next to a valid step is not carried into the parsed step()" classname="com.systemwebstudio.logic.workflow.WorkflowShapeTests" time="0.001"/>
+  <testcase name="an empty all array is read but rejected by the validator()" classname="com.systemwebstudio.logic.workflow.WorkflowShapeTests" time="0.0"/>
+  <testcase name="a step timeout on a write is an unknown outcome and fails the run with that code()" classname="com.systemwebstudio.logic.workflow.WorkflowShapeTests" time="0.154"/>
+  <testcase name="a timed out write step is not retried and does not route to onError even when attempts and a handler exist()" classname="com.systemwebstudio.logic.workflow.WorkflowShapeTests" time="0.155"/>
+  <testcase name="the step kinds, value sources, operators and approver kinds are a closed set with no scripting()" classname="com.systemwebstudio.logic.workflow.WorkflowShapeTests" time="0.001"/>
+  <system-out><![CDATA[{"@timestamp":"2026-10-08T06:46:14.340225+07:00","@version":"1","message":"deployment 4d09ac2a-27ab-425c-a2ef-77bf97c21f22 project=b72b93b7-e26f-4a8f-b96b-2eeba2cc1a6d step=SECURITY_CHECK outcome=Advance durationMs=2","logger_name":"com.systemwebstudio.publish.DeploymentProcessor","thread_name":"org.springframework.amqp.rabbit.RabbitListenerEndpointContainer#0-16","level":"INFO","level_value":20000,"requestId":"job_4d09ac2a27ab425c"}
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

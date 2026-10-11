@@ -1,0 +1,27 @@
+id	area	description	expected	actual	result	class	owner	note	evidence
+REC-S01	setup	schema with a Hero and two WAIT workflows stored	200	200	PASS	REAL_BACKEND_E2E			
+REC-S02	setup	publish v1 PUBLIC reaches RUNNING	RUNNING	RUNNING	PASS	REAL_BACKEND_E2E			
+REC-S03	setup	site info carries a public URL	url	http://127.0.0.1:52305/c6f-rec-13b35b-e9f4a7/	PASS	REAL_BACKEND_E2E			
+REC-S04	setup	visitor GET of the public site returns v1 content	200 + 'Recovery site v1'	200 v1=true etag="7f999c821bb4f7614fa4339d27dee272e38ae661d023edae122a40c9fae80200"	PASS	REAL_BACKEND_E2E			
+REC-S05	setup	two LIVE runs parked WAITING (3000 s and 60 s timers)	WAITING x2	WAITING/WAITING	PASS	REAL_BACKEND_E2E			
+REC-S06	setup	org unit created, session valid, audit readable	unit id, /auth/me 200, audit list	unit=true me=true audit=100	PASS	REAL_BACKEND_E2E			
+REC-A01	restart	backend restart through the stack tooling (validated stop + start)	ok, API ready	ok=true 62s ready=true [e2e-stack] backend starting (first start compiles, ~1.5 min); log: /Users/hoangluan/.xweb-e2e-stack/c6fin/logs/backend.log | [owned] adopted listener pid 48618 on 52300 | 	PASS	REAL_BACKEND_E2E			
+REC-A02	restart	API outage observed during the restart (readiness != 200) and the PUBLISHED SITE stayed up meanwhile	outage seen; site 200 throughout	apiDownSamples=1/1 siteStatuses=200	PASS	REAL_BACKEND_E2E		a static public site is served by the gateway without the API	
+REC-A03	restart	the SAME session (Redis-backed) is still valid after the backend restart	200	200	PASS	REAL_BACKEND_E2E			
+REC-A04	restart	published site after restart: same release, same bytes (hash, ETag)	identical	before=7f999c821bb4f761/"7f999c821bb4f7614fa4339d27dee272e38ae661d023edae122a40c9fae80200" after=7f999c821bb4f761/"7f999c821bb4f7614fa4339d27dee272e38ae661d023edae122a40c9fae80200"	PASS	REAL_BACKEND_E2E			
+REC-A05	restart	release pointer unchanged after restart (site info activeDeployment)	same	null -> null	PASS	REAL_BACKEND_E2E			
+REC-A06	restart	release history intact	1 entries	1	PASS	REAL_BACKEND_E2E			
+REC-A07	restart	organization data intact after restart (PostgreSQL)	unit readable	Khối Recovery	PASS	REAL_BACKEND_E2E			
+REC-A08	restart	audit log still available and not shorter	>= 100	100	PASS	REAL_BACKEND_E2E			
+REC-A09	workflow	the long WAIT run survived the restart and is still WAITING	WAITING	WAITING	PASS	REAL_BACKEND_E2E			
+REC-A10	workflow	the 60 s WAIT run (timer expired during/after the restart) completes after recovery	SUCCEEDED within ~150 s of start	SUCCEEDED after 66s	PASS	REAL_BACKEND_E2E		timer in the run store, sweeper after restart	
+REC-A11	workflow	idempotent replay of the pre-restart start key returns the SAME run (key survived the restart)	runId 91e76e5a-7a97-4a79-9cec-6041f26ce140	202 91e76e5a-7a97-4a79-9cec-6041f26ce140	PASS	REAL_BACKEND_E2E			
+REC-A12	workflow	a NEW run can be started after the restart	202	202	PASS	REAL_BACKEND_E2E			
+REC-A13	restart	no ERROR line in the backend log since the last start (until this check)	0	0	PASS	REAL_BACKEND_E2E		informational unless > 0	
+REC-B01	pause	API frozen with SIGSTOP (owned, validated): requests stall; after SIGCONT it answers again, same session valid	stall then recovery	pauseOk=true stalled=true resumeOk=true back=true	PASS	REAL_BACKEND_E2E			
+REC-B02	pause	session and data still valid after the freeze	200	200	PASS	REAL_BACKEND_E2E			
+REC-C01	render	render worker paused: the v2 publish does not report success and the live site keeps serving v1	deployment FAILED (not RUNNING); site v1	render-pause=true deployment=FAILED reason=[RENDER_UNAVAILABLE] Render worker is not reachable (after 3 attempts) site v1=true	PASS	REAL_BACKEND_E2E			
+REC-C02	render	render worker resumed: a new publish reaches RUNNING and the site serves v2	RUNNING + v2	resume=true deployment=RUNNING v2=false len=8974	PASS	REAL_BACKEND_E2E			
+REC-D01	store	artifact store paused during a publish: the deployment does not end RUNNING with a broken release; after resume a publish succeeds	paused: FAILED/not RUNNING-with-broken-site; resumed: RUNNING	pause=true paused-deployment=BUILDING resume=true after-resume=RUNNING site=200	PASS	REAL_BACKEND_E2E		a RUNNING result while paused is acceptable only if the site is not broken; recorded for review	
+REC-E01	portal	portal redeploy / served-SHA after redeploy: NOT executed by C6 (pinned portals belong to C0). BUILD_IDs of c0rc at the end of the run recorded	recorded	{"platform":"2GuhCrW5Nzpw91J-27pgg","admin":"-Eg7ur7xVaYfyHAOTtq5I","studio":"cfrpHRfq45k1DWtHqrauH"}	BLOCKED	MANUAL		C0 redeploy of portals not exercised; see ENV-14 identity rows for served-SHA proof	
+REC-E02	crash	hard crash (SIGKILL) with a workflow step IN FLIGHT -> INTERRUPTED recovery: NOT provoked (the owned tooling only offers TERM/STOP/CONT and a WAIT run is parked, not in flight)	-	-	BLOCKED	MANUAL		covered by C4 backend tests (WorkflowRestartRecovery*)	

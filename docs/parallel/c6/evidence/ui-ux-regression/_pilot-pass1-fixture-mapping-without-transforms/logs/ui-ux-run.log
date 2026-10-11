@@ -1,0 +1,52 @@
+login platform/super: landed /platform; nav links 16
+login admin/tenantAdmin: landed /admin; nav links 8
+login admin/workspaceAdmin: landed /admin; nav links 7
+login admin/super: landed /admin; nav links 12
+login studio/workspaceAdmin: landed /studio; nav links 6
+login studio/appCreator: landed /auth/no-access; nav links 0
+plan: 88 route variants × 7 viewports = 616 renders
+{
+ "mode": "pilot",
+ "tag": "62ce9697cd56-c5-a3f9a4e",
+ "browser": "Google Chrome 154.0.8037.98",
+ "integrationShaTested": "62ce9697cd56e8dc86b3260923f5addbcf555743",
+ "c5Sha": "(not provided — pilot)",
+ "viewports": [
+  1440,
+  1280,
+  1024,
+  768,
+  430,
+  390,
+  360
+ ],
+ "totalRoutes": 88,
+ "routeVariants": 146,
+ "totalCases": 806,
+ "PASS": 636,
+ "FAIL": 114,
+ "BLOCKED": 56,
+ "knownNotReady": 12,
+ "UNICODE": "PASS (806 cases)",
+ "ICONS": "PASS",
+ "RESPONSIVE": "FAIL (42 cases)",
+ "ACCESSIBILITY": "FAIL (104 cases)",
+ "CREATE_COMPANY": "FAIL (4/10)",
+ "ORGANIZATION": "FAIL (4/22)",
+ "EMPLOYEES": "FAIL (8/10)",
+ "STUDIO": "FAIL (73/255)",
+ "DATA_ACTION_WORKFLOW": "FAIL (15/35)",
+ "PUBLISH_ROLLBACK": "FAIL (7/7)",
+ "PLATFORM": "FAIL (3/157)",
+ "ADMIN": "PASS (205/205)",
+ "AUTH": "PASS (105/105)",
+ "axe": {
+  "critical": 67,
+  "serious": 102,
+  "moderate": 179,
+  "minor": 47,
+  "wcagCritical": 67,
+  "wcagSerious": 102
+ },
+ "newBugs": 163
+}

@@ -1,0 +1,187 @@
+{
+ "mode": "up",
+ "total": 20,
+ "failed": 0,
+ "rows": [
+  {
+   "id": "G01",
+   "mode": "up",
+   "desc": "gateway /healthz",
+   "expected": "200",
+   "actual": "200",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "G02",
+   "mode": "up",
+   "desc": "published app by slug route",
+   "expected": "200 HTML",
+   "actual": "200 text/html;charset=utf-8 131ms",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "G03",
+   "mode": "up",
+   "desc": "static assets referenced by the page",
+   "expected": "all 200 (or none referenced: static HTML)",
+   "actual": "0 referenced, 0 broken",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "G04",
+   "mode": "up",
+   "desc": "runtime config of the page site",
+   "expected": "200 no-store JSON with a same-origin apiBase for THIS slug, no tenant/workspace/credential — or 404 when the page binds no public query",
+   "actual": "404 cache=no-store apiBase=-",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "G05",
+   "mode": "up",
+   "desc": "anonymous POST on the public data route of a query that is NOT public",
+   "expected": "refused (403/404), no rows",
+   "actual": "404 ",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "G06",
+   "mode": "up",
+   "desc": "GET on the data route",
+   "expected": "not 200 (POST only)",
+   "actual": "403",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "G07",
+   "mode": "up",
+   "desc": "data route from a foreign Origin",
+   "expected": "refused (403) or no CORS grant",
+   "actual": "404 acao=null",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "G08",
+   "mode": "up",
+   "desc": "GET /api/v1/auth/me on the sites host",
+   "expected": "404/403 (the API is not published on the sites host)",
+   "actual": "404",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "G09",
+   "mode": "up",
+   "desc": "GET /actuator/health on the sites host",
+   "expected": "404/403",
+   "actual": "404",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "G10",
+   "mode": "up",
+   "desc": "GET /actuator/env on the sites host",
+   "expected": "404/403",
+   "actual": "404",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "G11",
+   "mode": "up",
+   "desc": "GET / on the sites host",
+   "expected": "404/403 (no listing)",
+   "actual": "404",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "G12",
+   "mode": "up",
+   "desc": "GET /../etc/passwd on the sites host",
+   "expected": "400/404",
+   "actual": "404",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "G13",
+   "mode": "up",
+   "desc": "GET /%2e%2e/%2e%2e/etc/passwd on the sites host",
+   "expected": "400/403/404",
+   "actual": "404",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "G14",
+   "mode": "up",
+   "desc": "GET /c6-data-ab1525-7ef012/../api/v1/auth/me on the sites host",
+   "expected": "400/404/403",
+   "actual": "404",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "G15",
+   "mode": "up",
+   "desc": "GET /swagger-ui.html on the sites host",
+   "expected": "404",
+   "actual": "404",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "G16",
+   "mode": "up",
+   "desc": "GET /v3/api-docs on the sites host",
+   "expected": "404",
+   "actual": "404",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "G17",
+   "mode": "up",
+   "desc": "POST to a page path",
+   "expected": "403/404/405",
+   "actual": "403",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "G18",
+   "mode": "up",
+   "desc": "unknown slug",
+   "expected": "404 without detail",
+   "actual": "404 503b",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "G19",
+   "mode": "up",
+   "desc": "forged client-IP headers on a request",
+   "expected": "200, ignored (no 5xx)",
+   "actual": "200",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "G20",
+   "mode": "up",
+   "desc": "no c6rc container (PostgreSQL, Redis, MinIO, RabbitMQ, gateway) is published beyond loopback",
+   "expected": "all 127.0.0.1",
+   "actual": "5 containers, all loopback",
+   "result": "PASS",
+   "note": ""
+  }
+ ]
+}

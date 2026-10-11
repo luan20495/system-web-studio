@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.app.definition.AppDefinitionActionWorkflowRulesTests" tests="20" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:43:54.314Z" hostname="macmini-2.local" time="0.014">
+  <properties/>
+  <testcase name="an approval needs a title and approvers and its exits name known steps()" classname="com.systemwebstudio.app.definition.AppDefinitionActionWorkflowRulesTests" time="0.001"/>
+  <testcase name="action chains name known actions and never themselves()" classname="com.systemwebstudio.app.definition.AppDefinitionActionWorkflowRulesTests" time="0.001"/>
+  <testcase name="notification members are only valid on a NOTIFY action()" classname="com.systemwebstudio.app.definition.AppDefinitionActionWorkflowRulesTests" time="0.0"/>
+  <testcase name="an input mapping may only fill declared inputs and each source needs its own member()" classname="com.systemwebstudio.app.definition.AppDefinitionActionWorkflowRulesTests" time="0.001"/>
+  <testcase name="state changing actions cannot opt out of idempotency and START_WORKFLOW must require it()" classname="com.systemwebstudio.app.definition.AppDefinitionActionWorkflowRulesTests" time="0.001"/>
+  <testcase name="a trigger uses an event the component declares and an action type that event supports()" classname="com.systemwebstudio.app.definition.AppDefinitionActionWorkflowRulesTests" time="0.002"/>
+  <testcase name="a schedule is required for SCHEDULE triggers and only allowed there()" classname="com.systemwebstudio.app.definition.AppDefinitionActionWorkflowRulesTests" time="0.0"/>
+  <testcase name="CALL_API names a data source and an approved operation, never a URL()" classname="com.systemwebstudio.app.definition.AppDefinitionActionWorkflowRulesTests" time="0.0"/>
+  <testcase name="principals follow the C4 principal shapes()" classname="com.systemwebstudio.app.definition.AppDefinitionActionWorkflowRulesTests" time="0.001"/>
+  <testcase name="an action and a workflow that start each other form a rejected cycle()" classname="com.systemwebstudio.app.definition.AppDefinitionActionWorkflowRulesTests" time="0.0"/>
+  <testcase name="each step kind has the member it needs()" classname="com.systemwebstudio.app.definition.AppDefinitionActionWorkflowRulesTests" time="0.001"/>
+  <testcase name="branch conditions are bounded C4 condition trees()" classname="com.systemwebstudio.app.definition.AppDefinitionActionWorkflowRulesTests" time="0.001"/>
+  <testcase name="REFRESH_QUERY needs a declared READ query()" classname="com.systemwebstudio.app.definition.AppDefinitionActionWorkflowRulesTests" time="0.0"/>
+  <testcase name="step ids are unique and the step graph has no cycle()" classname="com.systemwebstudio.app.definition.AppDefinitionActionWorkflowRulesTests" time="0.001"/>
+  <testcase name="workflow steps name known actions and known steps()" classname="com.systemwebstudio.app.definition.AppDefinitionActionWorkflowRulesTests" time="0.001"/>
+  <testcase name="NOTIFY needs a channel and an approved template()" classname="com.systemwebstudio.app.definition.AppDefinitionActionWorkflowRulesTests" time="0.0"/>
+  <testcase name="a WEBHOOK notification needs a registered endpoint and no other channel may carry one()" classname="com.systemwebstudio.app.definition.AppDefinitionActionWorkflowRulesTests" time="0.0"/>
+  <testcase name="a permission resource must exist()" classname="com.systemwebstudio.app.definition.AppDefinitionActionWorkflowRulesTests" time="0.0"/>
+  <testcase name="local ids never look like runtime UUIDs()" classname="com.systemwebstudio.app.definition.AppDefinitionActionWorkflowRulesTests" time="0.001"/>
+  <testcase name="record actions need a WRITE query()" classname="com.systemwebstudio.app.definition.AppDefinitionActionWorkflowRulesTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

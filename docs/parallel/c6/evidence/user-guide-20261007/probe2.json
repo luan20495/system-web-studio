@@ -1,0 +1,82 @@
+{
+ "restoreAfterClick": {
+  "text": "← C6-UG-QA-muxvt6gd Phiên bản 6 · revision 5 · Công khai ✓ Đã lưu 16:10 ✦ AI Design Code Chỉnh sửa Dùng thử Máy tính Máy tính bảng Điện thoại Website Phiên bản Tệp ⚙ Chia sẻ Xuất bản Trang Thành phần Dữ liệu Biểu mẫu Hành động Workflow Giao diện AI Trang ＋ Trang Mọi đường dẫn hợp lệ. Trang chủ Trang chủ / ⋮⋮ Thanh điều hướng C6-UG-QA-muxvt6gd ↑ ↓ ⋮⋮ Đầu trang (Hero) C6 guide QA title muxvt6gd offline ↑ ↓ ⋮⋮ Danh sách sản phẩm Chọn giải pháp phù hợp ↑ ↓ ⋮⋮ Công nghệ Công nghệ lọc thông minh ↑ ↓ ⋮⋮ Đánh giá khách hàng Khách hàng nói gì ↑ ↓ ⋮⋮ Form liên hệ Liên hệ tư vấn ↑ ↓ ⋮⋮ Chân trang © Pure ",
+  "calls": [
+   "GET /api/v1/auth/csrf 200",
+   "POST /api/v1/workspaces/{id}/projects/{id}/versions/{id}/restore 200",
+   "GET /api/v1/workspaces/{id}/projects/{id}/versions 200"
+  ]
+ },
+ "restoreDialogs": 1,
+ "restoreConfirmed": "/^Khôi phục$/",
+ "versions": [
+  5,
+  7
+ ],
+ "restoreCalls": [
+  "GET /api/v1/auth/csrf 200",
+  "POST /api/v1/workspaces/{id}/projects/{id}/versions/{id}/restore 200",
+  "GET /api/v1/workspaces/{id}/projects/{id}/versions 200"
+ ],
+ "unpublishBtn": 1,
+ "unpublishAfterClick": "← C6-UG-QA-muxvt6gd Phiên bản 7 · revision 6 · Công khai ✓ Đã lưu 16:10 ✦ AI Design Code Chỉnh sửa Dùng thử Máy tính Máy tính bảng Điện thoại Website Phiên bản Tệp ⚙ Chia sẻ Xuất bản Trang Thành phần Dữ liệu Biểu mẫu Hành động Workflow Giao diện AI Trang ＋ Trang Mọi đường dẫn hợp lệ. Trang chủ Trang chủ / ⋮⋮ Thanh điều hướng C6-UG-QA-muxvt6gd ↑ ↓ ⋮⋮ Đầu trang (Hero) Nước sạch mỗi ngày, sống khỏe mỗi ngày. ↑ ↓ ⋮⋮ Danh sách sản phẩm Chọn giải pháp phù hợp ↑ ↓ ⋮⋮ Công nghệ Công nghệ lọc thông minh ↑ ↓ ⋮⋮ Đánh giá khách hàng Khách hàng nói gì ↑ ↓ ⋮⋮ Form liên hệ Liên hệ tư vấn ↑ ↓ ⋮⋮ Chân trang © Pure Living ↑ ↓ Đổi tên / đường dẫn Xóa trang Chưa sẵn sàng Máy chủ chưa có thao tác đổi thứ tự tran",
+ "siteAfterClick": {
+  "slug": "c6-ug-qa-muxvt6gd-392194",
+  "url": "https://sites.toolsmcp.uk/c6-ug-qa-muxvt6gd-392194/",
+  "online": false,
+  "visibility": null,
+  "currentDeploymentId": null,
+  "currentVersionNumber": null,
+  "provider": "static",
+  "updatedAt": "2026-10-07T09:11:00.701224Z",
+  "pointerVersion": 6,
+  "operation": null
+ },
+ "unpublishCalls": [
+  "DELETE /api/v1/workspaces/{id}/projects/{id}/site 200",
+  "GET /api/v1/workspaces/{id}/projects/{id}/site 200",
+  "GET /api/v1/workspaces/{id}/projects/{id}/deployments 200"
+ ],
+ "publicAfterUnpublish": 404,
+ "siteAfter": {
+  "slug": "c6-ug-qa-muxvt6gd-392194",
+  "url": "https://sites.toolsmcp.uk/c6-ug-qa-muxvt6gd-392194/",
+  "online": false,
+  "visibility": null,
+  "currentDeploymentId": null,
+  "currentVersionNumber": null,
+  "provider": "static",
+  "updatedAt": "2026-10-07T09:11:00.701224Z",
+  "pointerVersion": 6,
+  "operation": null
+ },
+ "unpublishCalls2": [
+  "DELETE /api/v1/workspaces/{id}/projects/{id}/site 200",
+  "GET /api/v1/workspaces/{id}/projects/{id}/site 200",
+  "GET /api/v1/workspaces/{id}/projects/{id}/deployments 200"
+ ],
+ "rail_Hành động": "← C6-UG-QA-muxvt6gd Phiên bản 7 · revision 6 · Công khai ✓ Đã lưu 16:10 ✦ AI Design Code Chỉnh sửa Dùng thử Máy tính Máy tính bảng Điện thoại Website Phiên bản Tệp ⚙ Chia sẻ Xuất bản Trang Thành phần Dữ liệu Biểu mẫu Hành động Workflow Giao diện AI Hành động ＋ Hành động Hành động là khai báo có kiểu: chuyển trang, làm mới dữ liệu, gửi biểu mẫu, ghi bản ghi, gọi thao tác đã duyệt, gửi thông báo, chạy workflow. Không có ô nhập mã. Chưa có hành động nào. Chưa sẵn sàng Chưa có adapter chạy hành động (ActionDataPort của C4 chưa được nối vào máy chủ). Các loại: Chuyển trang, Làm mới dữ liệu, Gửi biểu mẫu, Tạo bản ghi, Cập nhật bản ghi, Xóa bản ghi, Gọi thao tác đã duyệt, Gửi thông báo, Chạy workflow. ⋮⋮ ⋮⋮ ⋮⋮ ⋮⋮ ⋮⋮ ⋮⋮ ⋮⋮ Chưa chọn mục nào Chọn một mục trong “Trang” hoặc nhấp vào bản xem trước để chỉnh.",
+ "rail_Workflow": "← C6-UG-QA-muxvt6gd Phiên bản 7 · revision 6 · Công khai ✓ Đã lưu 16:10 ✦ AI Design Code Chỉnh sửa Dùng thử Máy tính Máy tính bảng Điện thoại Website Phiên bản Tệp ⚙ Chia sẻ Xuất bản Trang Thành phần Dữ liệu Biểu mẫu Hành động Workflow Giao diện AI Workflow ＋ Workflow Chuỗi các bước: hành động, chờ, phê duyệt, rẽ nhánh, kết thúc. Mỗi bước hiển thị thử lại, giới hạn thời gian, điều kiện, phê duyệt và hoàn tác. Chưa có workflow nào. Chưa sẵn sàng Chưa có API khởi chạy và theo dõi workflow (WorkflowRuntime của C4 chưa nối vào máy chủ). ⋮⋮ ⋮⋮ ⋮⋮ ⋮⋮ ⋮⋮ ⋮⋮ ⋮⋮ Chưa chọn mục nào Chọn một mục trong “Trang” hoặc nhấp vào bản xem trước để chỉnh.",
+ "aiPlaceholders": [
+  {
+   "ph": "Mô tả thay đổi bạn muốn tạo…",
+   "al": "Mô tả thay đổi"
+  }
+ ],
+ "aiScreen": "← C6-UG-QA-muxvt6gd Phiên bản 7 · revision 6 · Công khai ✓ Đã lưu 16:10 ✦ AI Design Code Website Phiên bản Tệp Chia sẻ ⚙ Xuất bản Viết lại tiêu đề hero hấp dẫn hơn Mock LLM chưa hiểu yêu cầu này; nội dung không thay đổi. UNSUPPORTED Chế độ thử nghiệm không tính token + Thêm bảng so sánh sản phẩm + Viết lại tiêu đề hero hấp dẫn hơn + Ẩn phần đánh giá + Thêm một sản phẩm mới + Rút gọn nội dung hero Model AI Tự động Free Models Router — openrouter/free Thinking Machines: Inkling Small (free) — thinkingmachines/inkling-small:free Thinking Machines: Inkling (free) — thinkingmachines/inkling:free NV",
+ "nativeDialogs": [
+  {
+   "type": "confirm",
+   "message": "Khôi phục phiên bản 3? Một phiên bản mới sẽ được tạo; lịch sử cũ giữ nguyên."
+  },
+  {
+   "type": "confirm",
+   "message": "Khôi phục phiên bản 1? Một phiên bản mới sẽ được tạo; lịch sử cũ giữ nguyên."
+  },
+  {
+   "type": "confirm",
+   "message": "Gỡ trang xuống? Địa chỉ sẽ báo không tìm thấy cho tới khi xuất bản lại hoặc phục vụ lại một bản cũ."
+  }
+ ],
+ "finalVersions": 7
+}

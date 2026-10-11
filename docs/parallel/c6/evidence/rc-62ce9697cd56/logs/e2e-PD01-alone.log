@@ -1,0 +1,43 @@
+
+> system-web-studio@0.2.0 test:e2e:real
+> node tests/e2e-real/run.mjs
+
+REAL BACKEND suite · studio=http://127.0.0.1:3403 · run=muyta5ia · 1 flow(s)
+  [fixture] workspace A created
+  [fixture] workspace B created
+  [fixture] user adminA (WORKSPACE_ADMIN) ready
+  [fixture] user adminB (WORKSPACE_ADMIN) ready
+  [fixture] user viewerA (VIEWER) ready
+  [fixture] user lonelyA (VIEWER) ready
+  [probe] queries route → 404 QUERY_NOT_FOUND · actions route → 404 UNKNOWN_ACTION  (404 without a code = flag off)
+
+E2E-PD01 — Public data V1, canonical chain: Studio slot → READ public query → bind → publish (PUBLIC_QUERIES, acknowledgement) → anonymous page → config → apiBase → /{slug}/_data → LIVE → rendered
+    ✓ [fixture] the operator's data source was created through the Management API
+    ✓ [fixture] the SELECT was registered as an approved query definition (Management API)
+    ✓ [ui] the slot was added and the SERVER stored exactly {id,name,type} — no sourceRef, no credential
+    ✓ [fixture] the logical slot is LIVE-bound to the real source (Management API)
+    ✓ [ui] a READ query with public=true was stored by the server (mode READ, operationKey = the approved one, local slot ref)
+    ✓ [api] a READ query WITHOUT public is accepted (it is private by default)
+    ✓ [api] a WRITE query with public=false is accepted
+    ✓ [api] a WRITE query with public=true is REJECTED by the server (422, path queries[i].public) — the UI never offers it
+    ✓ [ui] the binding was stored: {sectionId, prop, queryRef} with the LOCAL public READ query id — never a slot, sourceRef or credential
+    ✓ [ui] readiness: not-ready for ONE reason only — the site is not public yet, so it has no data address (apiBase); the draft itself has no problem
+    ✓ [ui] the publish review lists exactly the public READ query (not the private one, not the WRITE one)
+    ✓ [ui] Publish is disabled until the acknowledgement is ticked
+    ✓ [ui] POST …/publish is the unchanged release contract: body EXACTLY {visibility:'PUBLIC', expectedRevision}, Idempotency-Key present — no acknowledgement field
+    ✓ [backend] the server wrote the PUBLIC_QUERIES event naming exactly the public query
+    ✓ [ui] the dialog shows the server's PUBLIC_QUERIES and no mismatch with what it announced
+    ✓ [backend] the release is live and PUBLIC, operation idle
+    ✓ no unhandled page errors in Studio
+    ✓ [visitor] the page asked for its runtime config (GET __factory/config.json) before any data request, with no cookie and no credentials
+    ✓ [visitor] config.json is no-store JSON with a same-origin apiBase for THIS slug (…/{slug}/_data) and no tenant / workspace / credential
+    ⛔ BLOCKED (C0 · D-C0-36): the public data route did not serve the query (q1:not-found): the Public Runtime controller (D-C0-36, behind its flag) / PUBLIC_SITE (C1) / LIVE binding (C3) is not wired on this stack
+  [cleanup] cleanup notes: left behind (no delete route): workspaces b53f07df-7596-43c2-8d97-ac3677d20229, 3aefe558-cc7d-4f98-9afa-1913ba684273 named e2e-muyta5ia-*
+
+| ID | Status | Owner | Detail |
+|---|---|---|---|
+| E2E-PD01 | BLOCKED | C0 | the public data route did not serve the query (q1:not-found): the Public Runtime controller (D-C0-36, behind its flag) / PUBLIC_SITE (C1) / LIVE binding (C3) is not wired on this stack |
+
+REAL BACKEND: PASS 0/1 · FAIL 0/1 · BLOCKED 1/1 · SKIP 0/1
+report: /Users/hoangluan/code/xweb-c6/docs/parallel/c6/evidence/rc-62ce9697cd56/e2e-real-pd01-alone/report-2026-10-08T00-42-06-912Z.json
+evidence: /Users/hoangluan/code/xweb-c6/docs/parallel/c6/evidence/rc-62ce9697cd56/e2e-real-pd01-alone/evidence-2026-10-08T00-42-06-912Z.txt

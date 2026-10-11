@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.logic.scheduler.CronExpressionTests" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:46:14.055Z" hostname="macmini-2.local" time="0.006">
+  <properties/>
+  <testcase name="spring forward - a local time that does not exist fires once, after the gap()" classname="com.systemwebstudio.logic.scheduler.CronExpressionTests" time="0.001"/>
+  <testcase name="steps ranges and lists()" classname="com.systemwebstudio.logic.scheduler.CronExpressionTests" time="0.001"/>
+  <testcase name="an expression that can never fire is rejected()" classname="com.systemwebstudio.logic.scheduler.CronExpressionTests" time="0.0"/>
+  <testcase name="next is always strictly increasing and in the zone's wall clock()" classname="com.systemwebstudio.logic.scheduler.CronExpressionTests" time="0.001"/>
+  <testcase name="the timezone decides the wall clock()" classname="com.systemwebstudio.logic.scheduler.CronExpressionTests" time="0.0"/>
+  <testcase name="month end and leap days are handled()" classname="com.systemwebstudio.logic.scheduler.CronExpressionTests" time="0.001"/>
+  <testcase name="fall back - a local time that happens twice fires once()" classname="com.systemwebstudio.logic.scheduler.CronExpressionTests" time="0.0"/>
+  <testcase name="day of month and day of week are ORed when both are restricted()" classname="com.systemwebstudio.logic.scheduler.CronExpressionTests" time="0.0"/>
+  <testcase name="the century leap year rule is respected()" classname="com.systemwebstudio.logic.scheduler.CronExpressionTests" time="0.0"/>
+  <testcase name="day of week and names()" classname="com.systemwebstudio.logic.scheduler.CronExpressionTests" time="0.001"/>
+  <testcase name="every minute fires at the next minute boundary strictly after the given time()" classname="com.systemwebstudio.logic.scheduler.CronExpressionTests" time="0.0"/>
+  <testcase name="whitespace is tolerated and the source is kept()" classname="com.systemwebstudio.logic.scheduler.CronExpressionTests" time="0.0"/>
+  <testcase name="fixed time of day rolls to the next day()" classname="com.systemwebstudio.logic.scheduler.CronExpressionTests" time="0.0"/>
+  <testcase name="malformed expressions are rejected with a message()" classname="com.systemwebstudio.logic.scheduler.CronExpressionTests" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

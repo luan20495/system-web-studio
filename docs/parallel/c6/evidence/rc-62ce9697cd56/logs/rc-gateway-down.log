@@ -1,0 +1,6 @@
+PASS H01 [down] gateway /healthz while the API is DOWN | expected 200 (the gateway itself is alive) | actual 200
+PASS H02 [down] published page while the API is DOWN | expected bounded 5xx (502/503/504) within 20 s, no stack trace / upstream address | actual 502 4ms body=150b | static pages are served through the API (artifact store), so the outage is visible
+PASS H03 [down] public data route while the API is DOWN | expected bounded 5xx, no rows | actual 502 5ms
+PASS H04 [down] unknown slug while the API is DOWN | expected 404 or bounded 5xx | actual 502 2ms
+
+TOTAL 4  FAILED 0

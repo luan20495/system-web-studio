@@ -1,0 +1,49 @@
+id	area	description	expected	actual	result	class	owner	note	evidence
+BR-platform-login-light-1440-title	identity	Platform login: document title names Xweb Platform	/Xweb Platform/	Xweb Platform	PASS	REAL_STACK			
+BR-platform-login-light-1440-legacy	identity	Platform login: no legacy product name in title/text	none	none	PASS	REAL_STACK			
+BR-platform-login-light-1440-primary	tokens	Platform: --color-primary is the brand cobalt #1d5bd8 (light)	#1d5bd8	#1d5bd8	PASS	REAL_STACK			
+BR-platform-login-light-1440-extfont	typography	Platform login: no external font/CDN request	0	1 static.cloudflareinsights.com script	PASS	REAL_STACK			
+BR-platform-login-light-1440-fontstack	typography	Platform: system font stack (no web font family)	system/Inter stack	Inter, ui-sans-serif, system-ui, -apple-system, "system-ui", "Segoe UI", sans-se	PASS	REAL_STACK			
+BR-platform-login-light-1440-icons	favicon	Platform: favicon + apple-touch-icon links present	>=1 icon	["icon:icon.svg?icon.0gsfhp9iqd7v9.svg","apple-touch-icon:apple-icon.png?apple-icon.3ffn0fogdo9zm.png"]	PASS	REAL_STACK			
+BR-platform-login-light-1440-logo	logo	Platform login (light, 1440px): Xweb logo visible, ≥ 20px high	visible	[{"w":119,"h":28,"vis":true}]	PASS	REAL_STACK			
+BR-platform-login-light-1440-bg	background	Platform login (light, 1440px): auth background class xp-bg-auth with a gradient	xp-bg-auth + gradient	xp-bg-auth | radial-gradient(900px 420px at 50% -8%, 	PASS	REAL_STACK			
+BR-platform-login-light-390-logo	logo	Platform login (light, 390px): Xweb logo visible, ≥ 20px high	visible	[{"w":119,"h":28,"vis":true}]	PASS	REAL_STACK			
+BR-platform-login-light-390-bg	background	Platform login (light, 390px): auth background class xp-bg-auth with a gradient	xp-bg-auth + gradient	xp-bg-auth | radial-gradient(900px 420px at 50% -8%, 	PASS	REAL_STACK			
+BR-platform-login-dark-1440-logo	logo	Platform login (dark, 1440px): Xweb logo visible, ≥ 20px high	visible	[{"w":119,"h":28,"vis":true}]	PASS	REAL_STACK			
+BR-platform-login-dark-1440-bg	background	Platform login (dark, 1440px): auth background class xp-bg-auth with a gradient	xp-bg-auth + gradient	xp-bg-auth | radial-gradient(900px 420px at 50% -8%, 	PASS	REAL_STACK			
+BR-platform-login-dark-390-logo	logo	Platform login (dark, 390px): Xweb logo visible, ≥ 20px high	visible	[{"w":119,"h":28,"vis":true}]	PASS	REAL_STACK			
+BR-platform-login-dark-390-bg	background	Platform login (dark, 390px): auth background class xp-bg-auth with a gradient	xp-bg-auth + gradient	xp-bg-auth | radial-gradient(900px 420px at 50% -8%, 	PASS	REAL_STACK			
+BR-platform-icon-icon	favicon	Platform: icon icon.svg?icon.0gsfhp9iqd7v9.svg is served as an image	200 image/*	200 image/svg+xml	PASS	REAL_STACK			
+BR-platform-icon-apple-touch-icon	favicon	Platform: apple-touch-icon apple-icon.png?apple-icon.3ffn0fogdo9zm.png is served as an image	200 image/*	200 image/png	PASS	REAL_STACK			
+BR-admin-login-light-1440-title	identity	Admin login: document title names Xweb Admin	/Xweb Admin/	Xweb Admin	PASS	REAL_STACK			
+BR-admin-login-light-1440-legacy	identity	Admin login: no legacy product name in title/text	none	none	PASS	REAL_STACK			
+BR-admin-login-light-1440-primary	tokens	Admin: --color-primary is the brand cobalt #1d5bd8 (light)	#1d5bd8	#1d5bd8	PASS	REAL_STACK			
+BR-admin-login-light-1440-extfont	typography	Admin login: no external font/CDN request	0	1 static.cloudflareinsights.com script	PASS	REAL_STACK			
+BR-admin-login-light-1440-fontstack	typography	Admin: system font stack (no web font family)	system/Inter stack	Inter, ui-sans-serif, system-ui, -apple-system, "system-ui", "Segoe UI", sans-se	PASS	REAL_STACK			
+BR-admin-login-light-1440-icons	favicon	Admin: favicon + apple-touch-icon links present	>=1 icon	["icon:icon.svg?icon.0gsfhp9iqd7v9.svg","apple-touch-icon:apple-icon.png?apple-icon.3ffn0fogdo9zm.png"]	PASS	REAL_STACK			
+BR-admin-login-light-1440-logo	logo	Admin login (light, 1440px): Xweb logo visible, ≥ 20px high	visible	[{"w":119,"h":28,"vis":true}]	PASS	REAL_STACK			
+BR-admin-login-light-1440-bg	background	Admin login (light, 1440px): auth background class xp-bg-auth with a gradient	xp-bg-auth + gradient	xp-bg-auth | radial-gradient(900px 420px at 50% -8%, 	PASS	REAL_STACK			
+BR-admin-login-light-390-logo	logo	Admin login (light, 390px): Xweb logo visible, ≥ 20px high	visible	[{"w":119,"h":28,"vis":true}]	PASS	REAL_STACK			
+BR-admin-login-light-390-bg	background	Admin login (light, 390px): auth background class xp-bg-auth with a gradient	xp-bg-auth + gradient	xp-bg-auth | radial-gradient(900px 420px at 50% -8%, 	PASS	REAL_STACK			
+BR-admin-login-dark-1440-logo	logo	Admin login (dark, 1440px): Xweb logo visible, ≥ 20px high	visible	[{"w":119,"h":28,"vis":true}]	PASS	REAL_STACK			
+BR-admin-login-dark-1440-bg	background	Admin login (dark, 1440px): auth background class xp-bg-auth with a gradient	xp-bg-auth + gradient	xp-bg-auth | radial-gradient(900px 420px at 50% -8%, 	PASS	REAL_STACK			
+BR-admin-login-dark-390-logo	logo	Admin login (dark, 390px): Xweb logo visible, ≥ 20px high	visible	[{"w":119,"h":28,"vis":true}]	PASS	REAL_STACK			
+BR-admin-login-dark-390-bg	background	Admin login (dark, 390px): auth background class xp-bg-auth with a gradient	xp-bg-auth + gradient	xp-bg-auth | radial-gradient(900px 420px at 50% -8%, 	PASS	REAL_STACK			
+BR-admin-icon-icon	favicon	Admin: icon icon.svg?icon.0gsfhp9iqd7v9.svg is served as an image	200 image/*	200 image/svg+xml	PASS	REAL_STACK			
+BR-admin-icon-apple-touch-icon	favicon	Admin: apple-touch-icon apple-icon.png?apple-icon.3ffn0fogdo9zm.png is served as an image	200 image/*	200 image/png	PASS	REAL_STACK			
+BR-studio-login-light-1440-title	identity	Studio login: document title names Xweb Studio	/Xweb Studio/	Xweb Studio	PASS	REAL_STACK			
+BR-studio-login-light-1440-legacy	identity	Studio login: no legacy product name in title/text	none	none	PASS	REAL_STACK			
+BR-studio-login-light-1440-primary	tokens	Studio: --color-primary is the brand cobalt #1d5bd8 (light)	#1d5bd8	#1d5bd8	PASS	REAL_STACK			
+BR-studio-login-light-1440-extfont	typography	Studio login: no external font/CDN request	0	1 static.cloudflareinsights.com script	PASS	REAL_STACK			
+BR-studio-login-light-1440-fontstack	typography	Studio: system font stack (no web font family)	system/Inter stack	Inter, ui-sans-serif, system-ui, -apple-system, "system-ui", "Segoe UI", sans-se	PASS	REAL_STACK			
+BR-studio-login-light-1440-icons	favicon	Studio: favicon + apple-touch-icon links present	>=1 icon	["icon:icon.svg?icon.0gsfhp9iqd7v9.svg","apple-touch-icon:apple-icon.png?apple-icon.3ffn0fogdo9zm.png"]	PASS	REAL_STACK			
+BR-studio-login-light-1440-logo	logo	Studio login (light, 1440px): Xweb logo visible, ≥ 20px high	visible	[{"w":119,"h":28,"vis":true}]	PASS	REAL_STACK			
+BR-studio-login-light-1440-bg	background	Studio login (light, 1440px): auth background class xp-bg-auth with a gradient	xp-bg-auth + gradient	xp-bg-auth | radial-gradient(900px 420px at 50% -8%, 	PASS	REAL_STACK			
+BR-studio-login-light-390-logo	logo	Studio login (light, 390px): Xweb logo visible, ≥ 20px high	visible	[{"w":119,"h":28,"vis":true}]	PASS	REAL_STACK			
+BR-studio-login-light-390-bg	background	Studio login (light, 390px): auth background class xp-bg-auth with a gradient	xp-bg-auth + gradient	xp-bg-auth | radial-gradient(900px 420px at 50% -8%, 	PASS	REAL_STACK			
+BR-studio-login-dark-1440-logo	logo	Studio login (dark, 1440px): Xweb logo visible, ≥ 20px high	visible	[{"w":119,"h":28,"vis":true}]	PASS	REAL_STACK			
+BR-studio-login-dark-1440-bg	background	Studio login (dark, 1440px): auth background class xp-bg-auth with a gradient	xp-bg-auth + gradient	xp-bg-auth | radial-gradient(900px 420px at 50% -8%, 	PASS	REAL_STACK			
+BR-studio-login-dark-390-logo	logo	Studio login (dark, 390px): Xweb logo visible, ≥ 20px high	visible	[{"w":119,"h":28,"vis":true}]	PASS	REAL_STACK			
+BR-studio-login-dark-390-bg	background	Studio login (dark, 390px): auth background class xp-bg-auth with a gradient	xp-bg-auth + gradient	xp-bg-auth | radial-gradient(900px 420px at 50% -8%, 	PASS	REAL_STACK			
+BR-studio-icon-icon	favicon	Studio: icon icon.svg?icon.0gsfhp9iqd7v9.svg is served as an image	200 image/*	200 image/svg+xml	PASS	REAL_STACK			
+BR-studio-icon-apple-touch-icon	favicon	Studio: apple-touch-icon apple-icon.png?apple-icon.3ffn0fogdo9zm.png is served as an image	200 image/*	200 image/png	PASS	REAL_STACK			

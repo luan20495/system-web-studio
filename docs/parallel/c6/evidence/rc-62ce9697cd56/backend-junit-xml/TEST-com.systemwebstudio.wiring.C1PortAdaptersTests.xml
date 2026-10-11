@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.wiring.C1PortAdaptersTests" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:53:23.108Z" hostname="macmini-2.local" time="0.238">
+  <properties/>
+  <testcase name="the gateway authorizer adapter converts the context and the decision()" classname="com.systemwebstudio.wiring.C1PortAdaptersTests" time="0.147"/>
+  <testcase name="a denial of C1 is passed on with its reason()" classname="com.systemwebstudio.wiring.C1PortAdaptersTests" time="0.089"/>
+  <testcase name="the access adapter sends canonical code, tenant, workspace, project, mode and a converted principal to C1()" classname="com.systemwebstudio.wiring.C1PortAdaptersTests" time="0.0"/>
+  <testcase name="a request for another application than the context is denied without asking C1()" classname="com.systemwebstudio.wiring.C1PortAdaptersTests" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

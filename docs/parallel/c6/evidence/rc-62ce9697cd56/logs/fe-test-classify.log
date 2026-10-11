@@ -1,0 +1,7 @@
+
+> system-web-studio@0.2.0 test:classify
+> node scripts/test-classify.mjs
+
+test classification: 101 files · unit 20 · mock 6 · harness 14 · real-backend 61
+external (owned by others, not classified here): 5 — tests/browser/page-runtime.spec.mjs (C2), tests/gateway/data-route.mjs (C0), tests/gateway/portal-route.mjs (C0), tests/guards/no-legacy-admin-workspaces.mjs (C0), tests/page-runtime/page-runtime.test.ts (C2)
+OK: every test file is classified and no mock/harness test claims to be a backend E2E

@@ -1,0 +1,4 @@
+# start: 2026-10-06T13:32:54Z
+# cwd:   /Users/hoangluan/code/xweb-c6
+# cmd:   npx tsc --noEmit -p tsconfig.json
+

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.app.definition.AppDefinitionCompatibilityTests" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:43:55.819Z" hostname="macmini-2.local" time="0.018">
+  <properties/>
+  <testcase name="the sample V2 document round-trips exactly()" classname="com.systemwebstudio.app.definition.AppDefinitionCompatibilityTests" time="0.002"/>
+  <testcase name="fromJson refuses a malformed V2 part with every violation()" classname="com.systemwebstudio.app.definition.AppDefinitionCompatibilityTests" time="0.0"/>
+  <testcase name="removing a section that a binding or trigger points at is caught by the V2 validator()" classname="com.systemwebstudio.app.definition.AppDefinitionCompatibilityTests" time="0.001"/>
+  <testcase name="the default page schema of a new project passes both validators and reads as legacy-only()" classname="com.systemwebstudio.app.definition.AppDefinitionCompatibilityTests" time="0.0"/>
+  <testcase name="existing operations still work on a V2 document and leave the V2 part untouched()" classname="com.systemwebstudio.app.definition.AppDefinitionCompatibilityTests" time="0.0"/>
+  <testcase name="a multi-page legacy schema with site settings and unknown keys is unchanged by the adapter()" classname="com.systemwebstudio.app.definition.AppDefinitionCompatibilityTests" time="0.001"/>
+  <testcase name="the operation vocabulary of the page schema is unchanged()" classname="com.systemwebstudio.app.definition.AppDefinitionCompatibilityTests" time="0.0"/>
+  <testcase name="the V2 document fits the size limit of the page validator()" classname="com.systemwebstudio.app.definition.AppDefinitionCompatibilityTests" time="0.011"/>
+  <testcase name="legacy documents are not subject to any V2 rule()" classname="com.systemwebstudio.app.definition.AppDefinitionCompatibilityTests" time="0.0"/>
+  <testcase name="defaults are omitted on write and restored on read()" classname="com.systemwebstudio.app.definition.AppDefinitionCompatibilityTests" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

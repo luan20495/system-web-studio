@@ -1,0 +1,34 @@
+{
+ "creator": {
+  "redirect": "/auth/no-access",
+  "meWorkspacePermissions": [],
+  "meTopLevelPermissions": [],
+  "projectPermissions": [
+   "ACTION_EXECUTE",
+   "APP_USE",
+   "DATA_SOURCE_VIEW",
+   "PROJECT_CREATE",
+   "PROJECT_EDIT",
+   "PROJECT_READ",
+   "PROJECT_SETTINGS",
+   "QUERY_EXECUTE"
+  ],
+  "calls": [
+   "GET /api/v1/auth/me 401",
+   "GET /api/v1/auth/me 200"
+  ]
+ },
+ "viewer": {
+  "redirect": "/auth/no-access",
+  "meWorkspacePermissions": [],
+  "meTopLevelPermissions": [],
+  "projectPermissions": [
+   "APP_USE",
+   "PROJECT_READ"
+  ],
+  "calls": [
+   "GET /api/v1/auth/me 401",
+   "GET /api/v1/auth/me 200"
+  ]
+ }
+}

@@ -1,0 +1,134 @@
+{
+ "total": 16,
+ "failed": 0,
+ "rows": [
+  {
+   "id": "Q00",
+   "desc": "declare END-only and WAIT 45 s workflows",
+   "expected": "200",
+   "actual": "200",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "Q01",
+   "desc": "publish the release carrying the workflows",
+   "expected": "RUNNING",
+   "actual": "RUNNING",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "Q02",
+   "desc": "baseline: a LIVE run completes with RabbitMQ up",
+   "expected": "SUCCEEDED",
+   "actual": "202 SUCCEEDED",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "Q03",
+   "desc": "the AMQP workflow queue exists on the broker",
+   "expected": "xweb.workflow.jobs (+dlq)",
+   "actual": "xweb.workflow.jobs.dlq 0 xweb.workflow.jobs 0",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "Q04",
+   "desc": "start while RabbitMQ is DOWN: a bounded, honest answer (never a hang, never a fake SUCCEEDED)",
+   "expected": "answer within 60 s; status is an error (503/…) or the run is accepted PENDING and NOT SUCCEEDED while the queue is down",
+   "actual": "202 PENDING in 79 ms; run=PENDING",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "Q05",
+   "desc": "API readiness while RabbitMQ is down",
+   "expected": "reports the outage (503/OUT_OF_SERVICE) or stays UP with the dependency named — never a crash",
+   "actual": "503 {\"status\":\"DOWN\"}",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "Q06",
+   "desc": "unrelated reads keep working while RabbitMQ is down",
+   "expected": "200",
+   "actual": "200",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "Q07",
+   "desc": "after RabbitMQ is back the run accepted during the outage is processed (or reported FAILED) — never lost, never stuck. The sweeper republishes a run stale for app.workflow.stale-after = PT2M, so the bound is ~2 min + sweep",
+   "expected": "terminal SUCCEEDED/FAILED within 330 s",
+   "actual": "SUCCEEDED  after 106 s",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "Q08",
+   "desc": "replay of the key used during the outage returns the SAME run (no duplicate)",
+   "expected": "same run id",
+   "actual": "202 same",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "Q09",
+   "desc": "a new run after recovery succeeds",
+   "expected": "SUCCEEDED",
+   "actual": "202 SUCCEEDED",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "Q10",
+   "desc": "a WAIT run is parked before the restart",
+   "expected": "WAITING",
+   "actual": "WAITING",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "Q11",
+   "desc": "backend process restarted",
+   "expected": "readiness UP again",
+   "actual": "true after 240 s",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "Q12",
+   "desc": "the parked run survived the restart (durable run store V29)",
+   "expected": "still known: WAITING (or already finished), never 404",
+   "actual": "SUCCEEDED",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "Q13",
+   "desc": "after the restart the run completes (the WAIT timer survived)",
+   "expected": "SUCCEEDED",
+   "actual": "SUCCEEDED ",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "Q14",
+   "desc": "replay of the pre-restart key: same run",
+   "expected": "same run id",
+   "actual": "202 same",
+   "result": "PASS",
+   "note": ""
+  },
+  {
+   "id": "Q15",
+   "desc": "deployment state after the restart: still the same ACTIVE release, operation idle",
+   "expected": "RUNNING release active, operation null",
+   "actual": "true pointer=1 op=null",
+   "result": "PASS",
+   "note": ""
+  }
+ ]
+}

@@ -1,0 +1,39 @@
+PASS  READY: the page walks LOADING_CONFIG -> LOADING_DATA -> READY, once, and ends not busy  — ["loading-config","loading-data","ready"]
+PASS  READY: a bound scalar shows the data, not the authored fallback
+PASS  READY: a bound list is rebuilt from the rows (the authored row is gone)
+PASS  READY: the testimonials list fills quote, author, location separator and stars (rating clamped to 5)
+PASS  READY: exactly one POST per distinct query (3), to the same origin, body only {"params":{}}
+PASS  READY: no cookie, no Authorization, no CSRF header, no identifier is sent to the data route (even with a site cookie present)
+PASS  READY: nothing outside the page's own origin was contacted  — http://127.0.0.1:61266
+PASS  READY: the page works under the published CSP (no violation, no page error)
+PASS  READY: every bound element is marked ready
+PASS  NOT_READY (apiBase is null): state not-ready:api-base-missing, authored content untouched, NO data request, no other host contacted  — not-ready:api-base-missing posts=0
+PASS  NOT_READY (apiBase is empty): state not-ready:api-base-missing, authored content untouched, NO data request, no other host contacted  — not-ready:api-base-missing posts=0
+PASS  NOT_READY (apiBase is not a URL): state not-ready:api-base-invalid, authored content untouched, NO data request, no other host contacted  — not-ready:api-base-invalid posts=0
+PASS  NOT_READY (apiBase is ftp): state not-ready:api-base-invalid, authored content untouched, NO data request, no other host contacted  — not-ready:api-base-invalid posts=0
+PASS  NOT_READY (apiBase has credentials): state not-ready:api-base-invalid, authored content untouched, NO data request, no other host contacted  — not-ready:api-base-invalid posts=0
+PASS  NOT_READY (apiBase is another origin (localhost vs 127.0.0.1)): state not-ready:api-base-cross-origin, authored content untouched, NO data request, no other host contacted  — not-ready:api-base-cross-origin posts=0
+PASS  NOT_READY (apiBase is an internal host): state not-ready:api-base-cross-origin, authored content untouched, NO data request, no other host contacted  — not-ready:api-base-cross-origin posts=0
+PASS  NOT_READY (the config is a 404): state not-ready:config-unavailable, authored content untouched, NO data request, no other host contacted  — not-ready:config-unavailable posts=0
+PASS  NOT_READY (the config is not JSON): state not-ready:config-unavailable, authored content untouched, NO data request, no other host contacted  — not-ready:config-unavailable posts=0
+PASS  NOT_READY (the config is a 500): state not-ready:config-unavailable, authored content untouched, NO data request, no other host contacted  — not-ready:config-unavailable posts=0
+PASS  ERROR (401 on one query): root error:q-title:forbidden, that element error=forbidden with its authored content, the other queries still render, no retry  — error:q-title:forbidden el=forbidden
+PASS  ERROR (403 on one query): root error:q-title:forbidden, that element error=forbidden with its authored content, the other queries still render, no retry  — error:q-title:forbidden el=forbidden
+PASS  ERROR (404 on one query): root error:q-title:not-found, that element error=not-found with its authored content, the other queries still render, no retry  — error:q-title:not-found el=not-found
+PASS  ERROR (429 on one query): root error:q-title:rate-limited, that element error=rate-limited with its authored content, the other queries still render, no retry  — error:q-title:rate-limited el=rate-limited
+PASS  ERROR (500 on one query): root error:q-title:unavailable, that element error=unavailable with its authored content, the other queries still render, no retry  — error:q-title:unavailable el=unavailable
+PASS  ERROR (503 on one query): root error:q-title:unavailable, that element error=unavailable with its authored content, the other queries still render, no retry  — error:q-title:unavailable el=unavailable
+PASS  ERROR (422 on one query): root error:q-title:http-422, that element error=http-422 with its authored content, the other queries still render, no retry  — error:q-title:http-422 el=http-422
+PASS  ERROR (200 with a body that is not a result on one query): root error:q-title:invalid-response, that element error=invalid-response with its authored content, the other queries still render, no retry  — error:q-title:invalid-response el=invalid-response
+PASS  ERROR (200 that is not JSON on one query): root error:q-title:invalid-response, that element error=invalid-response with its authored content, the other queries still render, no retry  — error:q-title:invalid-response el=invalid-response
+PASS  ERROR (200 with rows that are not a list on one query): root error:q-title:invalid-response, that element error=invalid-response with its authored content, the other queries still render, no retry  — error:q-title:invalid-response el=invalid-response
+PASS  ERROR: every query failing leaves the whole authored page, and there is no automatic retry (1.5 s later still exactly 3 requests)
+PASS  SECURITY: HTML in data is shown as text - nothing is injected, nothing runs
+PASS  EMPTY: no rows keeps a bound scalar's authored text, and empties a bound list; the page is ready
+PASS  CONTRACT: a scalar whose row has no field of that name and more than one field is a contract error, not a guess
+PASS  a single-field row feeds a scalar whatever the field is called
+PASS  a list is capped at 200 rows and says so
+PASS  SUB-PAGE: runtime and config are found one level up, the page's own query is called, its prop is bound  — GET /demo/about/ | GET /demo/_runtime/page-runtime.js | GET /demo/__factory/config.json | POST /demo/_data/queries/q-title/run
+PASS  SUB-PAGE: only the queries this page binds are called
+
+37/37 passed

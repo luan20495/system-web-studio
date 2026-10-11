@@ -1,0 +1,75 @@
+id	area	description	expected	actual	result	note
+F00	fixture	two tenants, 6 accounts (TA×2, WS admin, EDITOR, VIEWER, to-be-disabled), 2 projects created through the product routes	all created	P1=true P2=true	PASS	
+S01	401	unauthenticated GET /auth/me	401	401 AUTHENTICATION_REQUIRED	PASS	
+S02	401	unauthenticated GET project list	401	401 AUTHENTICATION_REQUIRED	PASS	
+S03	401	unauthenticated GET /admin/tenants	401	401 AUTHENTICATION_REQUIRED	PASS	
+S04	401	unauthenticated GET /admin/audit	401	401 AUTHENTICATION_REQUIRED	PASS	
+C01	CSRF	login POST without a token	403	403 CSRF_INVALID	PASS	
+C02	CSRF	login POST with an invalid token	403	403 CSRF_INVALID	PASS	
+C03	CSRF	login POST with the valid token (as a browser does)	200	200	PASS	
+C04	CSRF	authenticated mutation (create project) without a token	403	403 CSRF_INVALID	PASS	
+C05	CSRF	authenticated mutation with a forged token	403	403 CSRF_INVALID	PASS	
+C06	CSRF	authenticated mutation with the valid token	201	201	PASS	
+C07	CSRF	provisioning route without a token	403	403 CSRF_INVALID	PASS	
+C08	CSRF	DELETE without a token	403	403 CSRF_INVALID	PASS	
+A01	403	VIEWER creates a project in the workspace it belongs to	403	403 FORBIDDEN	PASS	
+A02	403	EDITOR lists workspace members (needs MEMBER_MANAGE)	403	403 FORBIDDEN	PASS	
+A03	403	EDITOR publishes its own project without PROJECT_PUBLISH on a non-owner role? (creator is OWNER => documented)	202 or 403 (creator = OWNER)	202	PASS	informational: the creator of a project is its OWNER
+A04	403	EDITOR (workspace role) publishes a project it has no PROJECT_PUBLISH on	403 (or 404 when not visible)	404 PROJECT_NOT_FOUND	PASS	
+A05	403	VIEWER mutates a project schema	403/404	404 PROJECT_NOT_FOUND	PASS	
+A12a	403	project owner adds the EDITOR to the project	201	201	PASS	
+A12b	403	project owner adds the VIEWER to the project	201	201	PASS	
+A12	403	project EDITOR publishes (PROJECT_PUBLISH is not implied by editing)	403	403 FORBIDDEN	PASS	
+A13	403	project VIEWER mutates the schema	403	403 FORBIDDEN	PASS	
+A14	403	project VIEWER can read the project (view is allowed)	200	200	PASS	
+A15	403	project EDITOR lists project members (PROJECT_MEMBERS needed)	403	403 FORBIDDEN	PASS	
+A06	403	WORKSPACE_ADMIN lists tenants (platform/tenant route)	403	403 ADMIN_REQUIRED	PASS	
+A07	403	WORKSPACE_ADMIN provisions an account (tenant route)	403	403 FORBIDDEN	PASS	
+A08	403	EDITOR reads the platform audit	403	403 ADMIN_REQUIRED	PASS	
+A09	403	Tenant Admin (not system admin) reads the PLATFORM audit	403	403 ADMIN_REQUIRED	PASS	
+A10	403	Tenant Admin creates a tenant	403	403 ADMIN_REQUIRED	PASS	
+A11	403	Tenant Admin reads system health	403	403 ADMIN_REQUIRED	PASS	
+N01	404	Tenant Admin A reads tenant B	404	404 TENANT_NOT_FOUND	PASS	
+N02	404	Tenant Admin A lists tenant B members	404	404 TENANT_NOT_FOUND	PASS	
+N03	404	Tenant Admin A creates a workspace in tenant B	404	404 TENANT_NOT_FOUND	PASS	
+N04	404	Tenant Admin A provisions a user in tenant B	404	404 TENANT_NOT_FOUND	PASS	
+N05	404	Tenant Admin A lists projects of foreign workspace B	404 (403 acceptable only if identical for a random id)	404 WORKSPACE_NOT_FOUND	PASS	
+N06	404	EDITOR of A reads project of B	404	404 WORKSPACE_NOT_FOUND	PASS	
+N07	404	EDITOR of A reads project of B through its OWN workspace id	404	404 PROJECT_NOT_FOUND	PASS	
+N08	404	guessed random project UUID in an own workspace	404	404 PROJECT_NOT_FOUND	PASS	
+N09	404	guessed random workspace UUID	404	404 WORKSPACE_NOT_FOUND	PASS	
+N10	404	Tenant Admin B adds a member to workspace A	404/403	404 WORKSPACE_NOT_FOUND	PASS	
+N11	404	foreign workspace and a random workspace are indistinguishable (status + code)	same status+code	404 WORKSPACE_NOT_FOUND vs 404 WORKSPACE_NOT_FOUND	PASS	
+N12	404	Tenant Admin A tenant list shows only its own tenant (no tenant B)	no tenant B	403; B visible=false	PASS	
+N13	404	candidate search of tenant A never returns tenant B accounts	no c6sec-ta2	200; B visible=false	PASS	
+N14	404	Tenant Admin A reads the admin detail of a tenant-B account	403/404	403 ADMIN_REQUIRED	PASS	
+E01	escalation	Tenant Admin mints a SYSTEM_ADMIN	400 TENANT_ROLE_INVALID	400 TENANT_ROLE_INVALID	PASS	
+E02	escalation	body flag systemAdmin:true on a tenant user creation	ignored (400 or created non-admin)	201; systemAdmin=false	PASS	
+E03	escalation	Workspace Admin changes its OWN role (self-grant protection)	403 SELF_GRANT_FORBIDDEN	403 SELF_GRANT_FORBIDDEN	PASS	
+E04	escalation	EDITOR promotes itself to WORKSPACE_ADMIN	403	403 FORBIDDEN	PASS	
+E05	escalation	Workspace Admin disables an account through the platform route	403	403 ADMIN_REQUIRED	PASS	
+E06	escalation	Tenant Admin changes its own tenant role	403 / 409 LAST_TENANT_ADMIN	403 SELF_GRANT_FORBIDDEN	PASS	
+E07	escalation	Tenant Admin removes itself (last tenant admin)	403 / 409	409 LAST_TENANT_ADMIN	PASS	
+E08	last-admin	remove the last WORKSPACE_ADMIN of a workspace	403 SELF_GRANT_FORBIDDEN or 409 LAST_ADMIN	409 LAST_ADMIN (first removal: 204)	PASS	
+E09	last-admin	disable yourself / the last enabled system admin	409 LAST_SYSTEM_ADMIN or 403	409 CANNOT_DISABLE_SELF	PASS	
+D01	disabled	super admin disables an account	200	200	PASS	
+D02	disabled	the disabled account's EXISTING session	401 (session no longer valid)	401 AUTHENTICATION_REQUIRED	PASS	
+D03	disabled	the disabled account signs in again	401/403	401 INVALID_CREDENTIALS	PASS	
+D04	disabled	re-enabled account signs in again	200	200 / login 200	PASS	
+L01	secrets	no password/hash/secret key in /auth/me	none	200; match=false	PASS	
+L02	secrets	no password/hash/secret key in admin user list (super admin)	none	200; match=false	PASS	
+L03	secrets	no password/hash/secret key in tenant members	none	200; match=false	PASS	
+L04	secrets	no password/hash/secret key in workspace members	none	200; match=false	PASS	
+L05	secrets	unknown activation token (429 = the activation rate limiter, repeated runs from one address)	404/410 without detail, or 429	410 LINK_INVALID	PASS	
+L06	secrets	wrong password and unknown user give the same answer	401 both	wrong=401 / unknown=401	PASS	
+O01	CORS	simple request from a foreign origin	no Access-Control-Allow-Origin	403 acao=null	PASS	
+O02	CORS	preflight from a foreign origin	rejected (403) / no ACAO	403 acao=null	PASS	
+O03	CORS	Origin: null	no ACAO	403 acao=null	PASS	
+O04	CORS	configured portal origin	ACAO = that origin + credentials	200 acao=http://127.0.0.1:47309 cred=true	PASS	
+O05	CORS	preflight from the configured origin	200 + ACAO	200 acao=http://127.0.0.1:47309	PASS	
+O06	CORS	look-alike origin (suffix)	no ACAO	403 acao=null	PASS	
+P01	surface	actuator /env anonymous	401/403/404	401 AUTHENTICATION_REQUIRED	PASS	
+P02	surface	actuator /heapdump anonymous	401/403/404	401 AUTHENTICATION_REQUIRED	PASS	
+P03	surface	OpenAPI document anonymous (this stack = profile `local`, springdoc enabled by application-local.yml; application-prod.yml disables it)	200 on local; the public hosts return the Next HTML page, not the schema	200	PASS	informational (profile local)
+P04	surface	readiness (expected to be public)	200	200	PASS	
+S05	session	logout then GET /auth/me	401	401 AUTHENTICATION_REQUIRED	PASS	

@@ -1,0 +1,10 @@
+BACKEND_COMPILE|exit=0|start=2026-10-06T13:31:01Z|end=2026-10-06T13:31:19Z|duration=18s|log=docs/parallel/c6/evidence/mac/BACKEND_COMPILE.log
+BACKEND_TEST|exit=1|start=2026-10-06T13:31:19Z|end=2026-10-06T13:32:54Z|duration=95s|log=docs/parallel/c6/evidence/mac/BACKEND_TEST.log
+FRONTEND_TYPECHECK_ROOT|exit=0|start=2026-10-06T13:32:54Z|end=2026-10-06T13:33:05Z|duration=11s|log=docs/parallel/c6/evidence/mac/FRONTEND_TYPECHECK_ROOT.log
+FRONTEND_TYPECHECK_ALL|exit=0|start=2026-10-06T13:33:05Z|end=2026-10-06T13:33:26Z|duration=21s|log=docs/parallel/c6/evidence/mac/FRONTEND_TYPECHECK_ALL.log
+FRONTEND_TYPECHECK_APPS|exit=0|start=2026-10-06T13:33:26Z|end=2026-10-06T13:33:29Z|duration=3s|log=docs/parallel/c6/evidence/mac/FRONTEND_TYPECHECK_APPS.log
+FRONTEND_UNIT|exit=0|start=2026-10-06T13:33:29Z|end=2026-10-06T13:33:33Z|duration=4s|log=docs/parallel/c6/evidence/mac/FRONTEND_UNIT.log
+FRONTEND_UNIT_DEFAULT|exit=0|start=2026-10-06T13:33:34Z|end=2026-10-06T13:33:39Z|duration=5s|log=docs/parallel/c6/evidence/mac/FRONTEND_UNIT_DEFAULT.log
+FRONTEND_BUILD_APPS|exit=0|start=2026-10-06T13:33:39Z|end=2026-10-06T13:33:55Z|duration=16s|log=docs/parallel/c6/evidence/mac/FRONTEND_BUILD_APPS.log
+FRONTEND_BUILD_ROOT|exit=0|start=2026-10-06T13:33:55Z|end=2026-10-06T13:34:10Z|duration=15s|log=docs/parallel/c6/evidence/mac/FRONTEND_BUILD_ROOT.log
+STATIC_QA|exit=0|start=2026-10-06T13:34:10Z|end=2026-10-06T13:34:11Z|duration=1s|log=docs/parallel/c6/evidence/mac/STATIC_QA.log

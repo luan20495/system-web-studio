@@ -1,0 +1,75 @@
+START|2026-10-06T13:23:36Z
+HOST|Darwin arm64 |27.0.1 
+HEAD|f894cc6
+BRANCH|agent/c6-qa
+JAVA|INFO|home=/opt/homebrew/Cellar/openjdk@21/21.0.12.1/libexec/openjdk.jdk/Contents/Home|version=openjdk version "21.0.12.1" 2026-08-18 |at=2026-10-06T13:23:36Z
+DOCKER|INFO|client=29.8.2 |server=29.8.2 |compose=5.5.1 |at=2026-10-06T13:23:37Z
+BRANCH_CHECK|PASS|expected=agent/c6-qa|at=2026-10-06T13:23:37Z
+BASELINE|PASS|base=f894cc6|head_descends_from_base=yes|commits_ahead=0|at=2026-10-06T13:23:37Z
+WORKTREE_START|PASS|dirty_outside_c6=0|at=2026-10-06T13:23:37Z
+PREREQ|PASS|node=v22.23.1|head=f894cc6|at=2026-10-06T13:23:37Z
+SCOPE|INFO|full|at=2026-10-06T13:23:37Z
+BACKEND_COMPILE|PASS|exit=0|duration=10s|log=docs/parallel/c6/evidence/mac/BACKEND_COMPILE.log|at=2026-10-06T13:23:47Z
+BACKEND_TEST|PASS|tests=1395|passed=1392|failed=0|skipped=3|exit=0|duration=15s|skipped_list=docs/parallel/c6/evidence/mac/backend-skipped.txt|failures=docs/parallel/c6/evidence/mac/backend-failures.txt|log=docs/parallel/c6/evidence/mac/BACKEND_TEST.log|at=2026-10-06T13:24:02Z
+SEC_PrivilegeEscalationTests|PASS|tests=7|fail=0|skipped=0|at=2026-10-06T13:24:03Z
+SEC_TenantAccessTests|PASS|tests=8|fail=0|skipped=0|at=2026-10-06T13:24:03Z
+SEC_IsolationApiTests|PASS|tests=10|fail=0|skipped=0|at=2026-10-06T13:24:03Z
+SEC_AppRuntimeApiTests|PASS|tests=10|fail=0|skipped=0|at=2026-10-06T13:24:03Z
+SEC_DataRuntimeLiveApiTests|PASS|tests=18|fail=0|skipped=0|at=2026-10-06T13:24:03Z
+SEC_DataSourceScopeTests|PASS|tests=6|fail=0|skipped=0|at=2026-10-06T13:24:03Z
+SEC_AccessAdaptersTests|PASS|tests=15|fail=0|skipped=0|at=2026-10-06T13:24:03Z
+SEC_TenantAccessLegacyFlagTests|PASS|tests=5|fail=0|skipped=0|at=2026-10-06T13:24:03Z
+SEC_AdminTransferOwnershipSelfGrantSpec|PASS|tests=1|fail=0|skipped=0|at=2026-10-06T13:24:03Z
+SEC_WebhookSecurityTests|PASS|tests=5|fail=0|skipped=0|at=2026-10-06T13:24:03Z
+SEC_PublicAddressTests|PASS|tests=9|fail=0|skipped=0|at=2026-10-06T13:24:03Z
+SEC_AddressRangeSpecTests|PASS|tests=17|fail=0|skipped=0|at=2026-10-06T13:24:03Z
+SEC_SecurityPrimitivesTests|PASS|tests=15|fail=0|skipped=0|at=2026-10-06T13:24:03Z
+SEC_IdempotencyTests|PASS|tests=11|fail=0|skipped=0|at=2026-10-06T13:24:03Z
+SEC_JdbcIdempotencyStoreTests|PASS|tests=15|fail=0|skipped=0|at=2026-10-06T13:24:03Z
+SEC_WebhookReplayTests|PASS|tests=12|fail=0|skipped=0|at=2026-10-06T13:24:03Z
+SEC_WebhookTests|PASS|tests=21|fail=0|skipped=0|at=2026-10-06T13:24:04Z
+SEC_SqlGuardTests|PASS|tests=14|fail=0|skipped=0|at=2026-10-06T13:24:04Z
+SEC_PostgresSessionSecurityTests|PASS|tests=13|fail=0|skipped=0|at=2026-10-06T13:24:04Z
+SEC_AppRuntimeFlagsOffTests|PASS|tests=2|fail=0|skipped=0|at=2026-10-06T13:24:04Z
+SEC_JdbcPersistenceTests|PASS|tests=17|fail=0|skipped=0|at=2026-10-06T13:24:04Z
+SEC_DataRuntimeMigrationTests|PASS|tests=10|fail=0|skipped=0|at=2026-10-06T13:24:04Z
+SEC_TenantFoundationMigrationTests|PASS|tests=12|fail=0|skipped=0|at=2026-10-06T13:24:04Z
+SEC_AuthSecurityTests|PASS|tests=8|fail=0|skipped=0|at=2026-10-06T13:24:04Z
+SEC_DataSourceAdminTests|PASS|tests=10|fail=0|skipped=0|at=2026-10-06T13:24:04Z
+SEC_PermissionCanonicalTests|PASS|tests=7|fail=0|skipped=0|at=2026-10-06T13:24:04Z
+SECURITY_SUITES|PASS|suites=26|at=2026-10-06T13:24:04Z
+FRONTEND_INSTALL|PASS|exit=0|duration=14s|log=docs/parallel/c6/evidence/mac/FRONTEND_INSTALL.log|at=2026-10-06T13:24:18Z
+FRONTEND_TYPECHECK_ROOT|PASS|exit=0|log=docs/parallel/c6/evidence/mac/FRONTEND_TYPECHECK_ROOT.log|at=2026-10-06T13:24:26Z
+FRONTEND_TYPECHECK_ALL|PASS|exit=0|log=docs/parallel/c6/evidence/mac/FRONTEND_TYPECHECK_ALL.log|at=2026-10-06T13:24:42Z
+FRONTEND_TYPECHECK_APPS|PASS|exit=0|log=docs/parallel/c6/evidence/mac/FRONTEND_TYPECHECK_APPS.log|at=2026-10-06T13:24:44Z
+FRONTEND_TYPECHECK|PASS|root=ok|packages=ok|apps=ok|at=2026-10-06T13:24:44Z
+FRONTEND_UNIT|PASS|tests=130|passed=130|failed=0|skipped=0|exit=0|conformance_env=set|log=docs/parallel/c6/evidence/mac/FRONTEND_UNIT.log|at=2026-10-06T13:24:47Z
+BUG_C6_004|INFO|default_npm_test_unit=tests=115 pass=114 fail=0 skipped=1|rule=closed_if_skipped_is_0|at=2026-10-06T13:24:52Z
+FRONTEND_BUILD_APPS|PASS|exit=0|duration=31s|log=docs/parallel/c6/evidence/mac/FRONTEND_BUILD_APPS.log|at=2026-10-06T13:25:23Z
+FRONTEND_BUILD_ROOT|PASS|exit=0|duration=13s|log=docs/parallel/c6/evidence/mac/FRONTEND_BUILD_ROOT.log|at=2026-10-06T13:25:36Z
+FRONTEND_BUILD|PASS|apps=ok|root=ok|at=2026-10-06T13:25:36Z
+STATIC_QA|PASS|10/10|log=docs/parallel/c6/evidence/mac/STATIC_QA.log|at=2026-10-06T13:25:36Z
+SECRET_SCAN|PASS|exit=0|log=docs/parallel/c6/evidence/mac/SECRET_SCAN.log|at=2026-10-06T13:25:53Z
+STACK_ENV|INFO|copied=../HBL/.env->.env(gitignored,local only)|at=2026-10-06T13:25:53Z
+STACK_UP|FAIL|profile=full|run_local_exit=1|readiness_ok=0|ui_ok=0|state=docs/parallel/c6/evidence/mac/stack-state.txt|log=docs/parallel/c6/evidence/mac/STACK_UP.log|at=2026-10-06T13:28:00Z
+SMOKE|NOT_RUN|reason=stack_up_failed|at=2026-10-06T13:28:00Z
+E2E_01|PASS|script=e2e/pages-mock.mjs|exit=0|duration=25s|log=docs/parallel/c6/evidence/mac/E2E_01.log|last=6/6 passed |at=2026-10-06T13:28:25Z
+E2E_02|NOT_RUN|script=e2e/factory-flow.mjs|reason=stack_not_ready|at=2026-10-06T13:28:25Z
+E2E_03|NOT_RUN|script=e2e/admin-setup-flow.mjs|reason=stack_not_ready|at=2026-10-06T13:28:25Z
+E2E_04|NOT_RUN|script=e2e/code-flow.mjs|reason=stack_not_ready|at=2026-10-06T13:28:25Z
+E2E_05|NOT_RUN|script=e2e/runtime-flow.mjs|reason=stack_not_ready|at=2026-10-06T13:28:25Z
+E2E_06|NOT_RUN|script=e2e/a11y.mjs|reason=stack_not_ready|at=2026-10-06T13:28:25Z
+E2E_08|NOT_RUN|script=e2e/public-flow.mjs|reason=set_RUN_PUBLIC=1(needs_scripts/public-up.sh_and_Cloudflare;not_a_local-stack_test)|at=2026-10-06T13:28:25Z
+GAP_E2E_CHAIN|GAP|login>tenant/workspace/project>Studio>data_source>query>mutation>action>workflow>publish>runtime:no_real_E2E_exists(tests/e2e-real_not_created;E-06..E-09_blocked_by_Q-2,B-C3-11,B-C4-09,B-C0-W-03)|owner=C5/C0|at=2026-10-06T13:28:25Z
+BROWSER_BUILDER|PASS|spec=tests/browser/builder.spec.mjs(component_harness_not_backend_E2E)|exit=0|duration=73s|log=docs/parallel/c6/evidence/mac/BROWSER_BUILDER.log|last=64/64 passed |at=2026-10-06T13:29:41Z
+BROWSER_PORTALS|PASS|spec=tests/browser/portals.spec.mjs(no_backend)|exit=0|duration=21s|log=docs/parallel/c6/evidence/mac/BROWSER_PORTALS.log|last=33/33 passed |at=2026-10-06T13:30:07Z
+BROWSER|PASS|builder=PASS|portals=PASS|at=2026-10-06T13:30:07Z
+RECOVERY|NOT_RUN|reason=stack_not_ready|at=2026-10-06T13:30:07Z
+E2E_07|NOT_RUN|script=e2e/sso-flow.mjs|reason=set_RUN_SSO=1(starts_Keycloak_and_restarts_the_API)|at=2026-10-06T13:30:07Z
+GAP_C6_05|GAP|no_test_named_for:user_with_a_role_but_without_QUERY_EXECUTE_refused_on_the_LIVE_query_route|owner=C1/C3|at=2026-10-06T13:30:07Z
+GAP_C6_06|GAP|WORKFLOW_EXECUTE_denial_tested_at_logic/adapter_level_only,_not_over_HTTP|owner=C1/C4|at=2026-10-06T13:30:07Z
+GAP_V29|GAP|run_stores_volatile:LIVE_mutating_actions_and_workflow_starts_answer_503_unless_allow-volatile-stores|owner=C0/C4|at=2026-10-06T13:30:07Z
+GAP_MGMT_API|GAP|no_management_API_for_data_sources_credentials_queries(B-C0-W-03)|owner=C0/C3|at=2026-10-06T13:30:07Z
+WORKTREE_SCOPE|PASS|new_changes_outside_c6=0|at=2026-10-06T13:30:07Z
+END|2026-10-06T13:30:07Z
+FINAL|FAIL|scope=full|failed=STACK_UP|critical_not_run=E2E_02,E2E_03,E2E_04,E2E_05,E2E_06,RECOVERY,SMOKE|optional_not_run=E2E_07,E2E_08|gaps=5

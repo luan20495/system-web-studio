@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.wiring.PostgresTargetPoliciesTests" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:54:14.129Z" hostname="macmini-2.local" time="0.008">
+  <properties/>
+  <testcase name="a malformed host is blocked()" classname="com.systemwebstudio.wiring.PostgresTargetPoliciesTests" time="0.001"/>
+  <testcase name="a public target is judged exactly as before, on any port()" classname="com.systemwebstudio.wiring.PostgresTargetPoliciesTests" time="0.0"/>
+  <testcase name="the production validator refuses a loopback allow-list and accepts an exact private endpoint()" classname="com.systemwebstudio.wiring.PostgresTargetPoliciesTests" time="0.001"/>
+  <testcase name="a platform JDBC URL that cannot be read refuses to start - the deny-list is never empty by accident()" classname="com.systemwebstudio.wiring.PostgresTargetPoliciesTests" time="0.0"/>
+  <testcase name="the platform and apps databases stay blocked on the very same host()" classname="com.systemwebstudio.wiring.PostgresTargetPoliciesTests" time="0.001"/>
+  <testcase name="an allow-list entry that is not an exact endpoint fails construction()" classname="com.systemwebstudio.wiring.PostgresTargetPoliciesTests" time="0.0"/>
+  <testcase name="without an allow-list every private or loopback target is blocked()" classname="com.systemwebstudio.wiring.PostgresTargetPoliciesTests" time="0.001"/>
+  <testcase name="the exact allowed local target is reachable()" classname="com.systemwebstudio.wiring.PostgresTargetPoliciesTests" time="0.0"/>
+  <testcase name="a private target that is not on the allow-list is blocked()" classname="com.systemwebstudio.wiring.PostgresTargetPoliciesTests" time="0.0"/>
+  <testcase name="base and prod configuration allow no private target, only the local profile names the V1 data target()" classname="com.systemwebstudio.wiring.PostgresTargetPoliciesTests" time="0.002"/>
+  <testcase name="a public-looking name that resolves to a private or platform address is blocked()" classname="com.systemwebstudio.wiring.PostgresTargetPoliciesTests" time="0.001"/>
+  <testcase name="a denied target is blocked even when it is allowed()" classname="com.systemwebstudio.wiring.PostgresTargetPoliciesTests" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

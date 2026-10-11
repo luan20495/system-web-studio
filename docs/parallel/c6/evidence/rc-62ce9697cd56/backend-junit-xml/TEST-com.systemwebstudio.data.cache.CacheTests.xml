@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.systemwebstudio.data.cache.CacheTests" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-10-07T23:44:53.792Z" hostname="macmini-2.local" time="0.107">
+  <properties/>
+  <testcase name="a forged entry whose envelope names another tenant is rejected and never returned()" classname="com.systemwebstudio.data.cache.CacheTests" time="0.022"/>
+  <testcase name="invalidating a data source drops all its queries but not other data sources or tenants()" classname="com.systemwebstudio.data.cache.CacheTests" time="0.01"/>
+  <testcase name="bypass is limited to the failing scope and expires()" classname="com.systemwebstudio.data.cache.CacheTests" time="0.002"/>
+  <testcase name="canonical parameters ignore order and number formatting but not values()" classname="com.systemwebstudio.data.cache.CacheTests" time="0.005"/>
+  <testcase name="invalidating one query leaves its siblings()" classname="com.systemwebstudio.data.cache.CacheTests" time="0.004"/>
+  <testcase name="a backend outage on read or write is a miss never an error()" classname="com.systemwebstudio.data.cache.CacheTests" time="0.002"/>
+  <testcase name="tenants never share an entry even with identical ids and parameters()" classname="com.systemwebstudio.data.cache.CacheTests" time="0.002"/>
+  <testcase name="oversized values are not stored()" classname="com.systemwebstudio.data.cache.CacheTests" time="0.013"/>
+  <testcase name="ttl is honoured per entry and zero is never stored()" classname="com.systemwebstudio.data.cache.CacheTests" time="0.001"/>
+  <testcase name="every part of the key matters()" classname="com.systemwebstudio.data.cache.CacheTests" time="0.018"/>
+  <testcase name="the in memory backend is bounded in entries and bytes()" classname="com.systemwebstudio.data.cache.CacheTests" time="0.002"/>
+  <testcase name="a failed invalidation bypasses the scope so nothing stale is served()" classname="com.systemwebstudio.data.cache.CacheTests" time="0.001"/>
+  <testcase name="the redis adapter obeys the same contract()" classname="com.systemwebstudio.data.cache.CacheTests" time="0.013"/>
+  <system-out><![CDATA[{"@timestamp":"2026-10-08T06:44:53.793255+07:00","@version":"1","message":"cache entry rejected: envelope does not match its key","logger_name":"com.systemwebstudio.data.cache.QueryCache","thread_name":"Test worker","level":"WARN","level_value":30000}
+{"@timestamp":"2026-10-08T06:44:53.81162+07:00","@version":"1","message":"cache entry rejected: envelope does not match its key","logger_name":"com.systemwebstudio.data.cache.QueryCache","thread_name":"Test worker","level":"WARN","level_value":30000}
+{"@timestamp":"2026-10-08T06:44:53.812588+07:00","@version":"1","message":"cache entry rejected: envelope does not match its key","logger_name":"com.systemwebstudio.data.cache.QueryCache","thread_name":"Test worker","level":"WARN","level_value":30000}
+{"@timestamp":"2026-10-08T06:44:53.828398+07:00","@version":"1","message":"cache invalidation failed; scope is bypassed in this process","logger_name":"com.systemwebstudio.data.cache.QueryCache","thread_name":"Test worker","level":"WARN","level_value":30000}
+{"@timestamp":"2026-10-08T06:44:53.886373+07:00","@version":"1","message":"cache invalidation failed; scope is bypassed in this process","logger_name":"com.systemwebstudio.data.cache.QueryCache","thread_name":"Test worker","level":"WARN","level_value":30000}
+{"@timestamp":"2026-10-08T06:44:53.899418+07:00","@version":"1","message":"cache invalidation failed; scope is bypassed in this process","logger_name":"com.systemwebstudio.data.cache.QueryCache","thread_name":"Test worker","level":"WARN","level_value":30000}
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
