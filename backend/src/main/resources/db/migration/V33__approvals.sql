@@ -1,6 +1,5 @@
--- PROPOSAL (C4, FQ-WF-01 / FQ-WF-02) - NOT a Flyway migration. C0 allocates the number (docs/parallel/MIGRATION_LEDGER.md item 4, next free = V33) and `git mv`s this file to
--- backend/src/main/resources/db/migration/V<n>__approvals.sql. Tests apply it verbatim (ApprovalTestSchema), so what is tested is exactly what C0 would import.
--- Additive only: one new table, no existing table is touched.
+-- V33 - durable workflow approvals (FQ-WF-01 / FQ-WF-02). Number allocated by C0 (D-C0-61, docs/parallel/MIGRATION_LEDGER.md); DDL authored by C4 and moved here verbatim.
+-- Additive only: one new table, no existing table is touched. Manual guarded undo: docs/parallel/c0/undo/U33__approvals.sql
 --
 -- approvals: the durable twin of InMemoryApprovalStore. One row per approval request of a workflow APPROVAL step (or a standalone request).
 --  - approvers is the SNAPSHOT taken when the request was created (uuid[]), approver_specs the definition it came from; decisions / comments are small bounded documents

@@ -75,8 +75,9 @@ There is **no other write route**: a data mutation is an action of type `SUBMIT_
 * `POST {B}/workflows/{workflowId}/runs` → `202` + run view. Body `{"mode":"LIVE|TEST" (opt), "input":{…} (opt), "idempotencyKey":"…" (required)}`.
 * `GET {B}/workflow-runs/{runId}` → `200` run view (creator, or `WORKFLOW_MANAGE`; anything else `404 WORKFLOW_RUN_NOT_FOUND`).
 * `POST {B}/workflow-runs/{runId}/cancel` → `200` run view (idempotent).
+* `POST {B}/workflow-runs/{runId}/approvals/{approvalId}/decision` → `200` (D-C0-61). Body `{"decision":"APPROVE"|"REJECT","comment"?}` and nothing else (the approver is the session user, never the body). Answer: `{"approvalId","approvalStatus","requiredApprovals","approvals","run"}` where `run` is the run view. Authorization, in this order: tenant gate → the run must live in exactly the caller's tenant / workspace / project (a wrong scope is `404 RUN_NOT_FOUND`, never 403) → the canonical permission `WORKFLOW_MANAGE` (denied → `403 FORBIDDEN` before the approval is looked at) → the approval must belong to THIS run and app (`404 APPROVAL_NOT_FOUND`) → the caller must be one of the approvers snapshotted when the step started. The same user deciding the same way again is idempotent; the opposite decision is `409 APPROVAL_CONFLICT`; a final approval is `409 APPROVAL_ALREADY_DECIDED`; a bad body is `400`; the store being unavailable is `503`. The decision resumes the run exactly once.
 
-Run view: `{"runId","workflowId","mode","status","currentStepId","steps":[{"stepId","status","attempt","output","errorCode","errorMessage","startedAt","finishedAt","simulated","dryRunLevel"}],"errorCode","errorMessage","compensation","createdAt","updatedAt","finishedAt"}` (no `appId`, no creator id, no approval id, no definition snapshot).
+Run view: `{"runId","workflowId","mode","status","currentStepId","steps":[{"stepId","status","attempt","output","errorCode","errorMessage","startedAt","finishedAt","simulated","dryRunLevel","approvalId"?}],"errorCode","errorMessage","compensation","createdAt","updatedAt","finishedAt"}` (no `appId`, no creator id, no definition snapshot). `approvalId` is nullable and present only on a step that created an approval (additive, D-C0-61; it supersedes the earlier "no approval id" statement).
 Failures use `WorkflowResult.Failed` codes mapped like §3 (`UNKNOWN_WORKFLOW` 404, `WORKFLOW_RUN_NOT_FOUND` 404, `RATE_LIMITED` 429, `IDEMPOTENCY_KEY_*` 400/409, …).
 A workflow step that ends `IDEMPOTENCY_OUTCOME_UNKNOWN` fails the run with that code, is not routed to `onError` and is not compensated (D-C4-17).
 
@@ -89,6 +90,7 @@ A workflow step that ends `IDEMPOTENCY_OUTCOME_UNKNOWN` fails the run with that 
 | R2 | `forProject` (+ `APP_EDIT` for TEST) | C4 pipeline step 4 → C1 `AccessPort`: `APP_USE`, `ACTION_EXECUTE`, `DATA_MUTATE` for data types, the action's declared permission, `WORKFLOW_EXECUTE` for `START_WORKFLOW`; mutations: C3 `GatewayAuthorizer(MUTATION_EXECUTE)` |
 | R3 start | `forProject` (+ `APP_EDIT` for TEST) | C4 `WorkflowEngine.start`: `APP_USE` + `WORKFLOW_EXECUTE` |
 | R3 status/cancel | `forProject` | creator or `WORKFLOW_MANAGE` |
+| R3 approval decision | `forProject` | C4 `WorkflowEngine.decideApproval`: scope of the run, then `WORKFLOW_MANAGE`, then the approver snapshot (no `APPROVAL_DECIDE` permission in this RC; WORKFLOW_MANAGE is held by WORKSPACE_ADMIN only, so a decider is a named approver AND a workspace admin) |
 
 ## 6. C3 → C4 write error mapping (`ActionDataPortAdapter`, D-C0-15)
 
@@ -96,4 +98,4 @@ A workflow step that ends `IDEMPOTENCY_OUTCOME_UNKNOWN` fails the run with that 
 
 ## 7. Deliberately not here
 
-Event fan-out (`dispatch`), approvals inbox/decision, schedules CRUD, AI data catalog, data webhook ingest, tenant-admin data-source management, SSE events, a database-backed C3 catalog or C4 stores. Each needs its own accepted contract; the persistence ones need a reviewed migration (V28 stays unallocated).
+Event fan-out (`dispatch`), approvals inbox / list and approver notifications (`notifyTemplateRef`; the decision route itself is §4, D-C0-61), schedules CRUD, AI data catalog, data webhook ingest, tenant-admin data-source management, SSE events, a database-backed C3 catalog or C4 stores. Each needs its own accepted contract; the persistence ones need a reviewed migration (V28 stays unallocated).

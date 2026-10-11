@@ -24,7 +24,7 @@ import java.time.Instant
 import java.util.UUID
 
 /**
- * `approvals` (proposal `db/proposed/approvals.sql`, number to be allocated by C0): the durable twin of `InMemoryApprovalStore`, same contract.
+ * `approvals` (`db/migration/V33__approvals.sql`, D-C0-61): the durable twin of `InMemoryApprovalStore`, same contract.
  *
  *  - **compare-and-set**: `UPDATE .. WHERE tenant_id AND id AND version = expected.version` (+1); 0 rows = the CAS lost and nothing was written. Status, decisions and comments are
  *    one row, so a decision is never visible without its status, and two concurrent decisions cannot both win: the loser re-reads (ApprovalService retries) and sees the winner.

@@ -12,7 +12,7 @@ import java.util.UUID
 
 /**
  * The REAL Flyway path of `V32__dynamic_organization.sql`, run on the repository's own `db/migration` directory (no copy, no pending script): clean V1 -> V32 and upgrade V30 -> V32,
- * the checksum is stable across both paths, and the duplicate-migration guard (exactly one V32, V33 not consumed, no duplicate version).
+ * the checksum is stable across both paths, and the duplicate-migration guard (exactly one V32 and one V33, V34 not consumed, V31 a gap, no duplicate version).
  */
 class OrgV32FlywayTests {
     private fun repoPath(rel: String): Path = listOf(Path.of("..", rel), Path.of(rel)).first { Files.exists(it) }
@@ -20,7 +20,8 @@ class OrgV32FlywayTests {
     /** the repository's real migration directory */
     private fun migrationDir(): Path = repoPath("backend/src/main/resources/db/migration")
 
-    private fun flyway(db: FlywayHarness.Database, dir: Path, target: String? = null): Flyway =
+    /** this class is about V32: it migrates to V32 unless a test names another target (V33 `approvals` is covered by `ApprovalsV33FlywayTests`) */
+    private fun flyway(db: FlywayHarness.Database, dir: Path, target: String? = "32"): Flyway =
         Flyway.configure().dataSource(db.ds).locations("filesystem:$dir").also { if (target != null) it.target(MigrationVersion.fromVersion(target)) }.outOfOrder(false).load()
 
     @Test
@@ -95,14 +96,15 @@ class OrgV32FlywayTests {
             .groupBy({ it.first!! }, { it.second })
 
     @Test
-    fun `duplicate migration guard - exactly one V32, named for the organization, V33 and above not consumed, no version used twice`() {
+    fun `duplicate migration guard - exactly one V32 (organization) and one V33 (approvals), V34 and above not consumed, V31 stays a gap, no version used twice`() {
         val v = versions()
         assertThat(v.filterValues { it.size > 1 }).describedAs("no duplicate migration version").isEmpty()
         assertThat(v[32]).describedAs("exactly one V32").containsExactly("V32__dynamic_organization.sql")
-        assertThat(v.keys.filter { it > 32 }).describedAs("V33 and above are not consumed").isEmpty()
-        assertThat(v.keys).describedAs("V31 belongs to C2: not taken here").doesNotContain(31)
-        assertThat(v.keys.max()).isEqualTo(32)
-        println("EVIDENCE migration guard: ${v.size} files, highest V${v.keys.max()}, V32 = ${v[32]}, no V33, no duplicate version")
+        assertThat(v[33]).describedAs("exactly one V33 (D-C0-61)").containsExactly("V33__approvals.sql")
+        assertThat(v.keys.filter { it > 33 }).describedAs("V34 and above are not consumed").isEmpty()
+        assertThat(v.keys).describedAs("V31 is a permanent void gap (D-C0-52)").doesNotContain(31)
+        assertThat(v.keys.max()).isEqualTo(33)
+        println("EVIDENCE migration guard: ${v.size} files, highest V${v.keys.max()}, V32 = ${v[32]}, V33 = ${v[33]}, no V34, no duplicate version")
     }
 
     @Test
