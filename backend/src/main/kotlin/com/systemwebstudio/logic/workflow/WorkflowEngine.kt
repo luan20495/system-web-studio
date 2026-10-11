@@ -918,6 +918,9 @@ class WorkflowWorker(private val engine: WorkflowEngine, private val queue: Work
 
     /** Processes at most one message. @return false when the queue was empty. */
     fun runOnce(): Boolean {
+        // A worker thread that was interrupted (shutdown, cancellation) takes no further message: every action it started next would be cut off at once, and a mutating
+        // one would be reported as an unknown outcome for nothing. The message stays in the queue for a live worker.
+        if (Thread.currentThread().isInterrupted) return false
         val lease = queue.poll() ?: return false
         val job = WorkflowJob.decode(lease.body)
         if (job == null) {

@@ -467,4 +467,73 @@ class RuntimeAuthorizationTests {
         r.assertNoEffects("every entry point denied")
         assertThat(r.memory.readyCount()).isZero()
     }
+
+    // =============================================================================================================================
+    // EVERY ActionType: unauthorized = no effect, exactly the needed rights = the one expected effect
+    // =============================================================================================================================
+
+    private class TypeCase(val def: ActionDefinition, val inputs: Map<String, tools.jackson.databind.JsonNode>, val needs: Set<String>, val effectful: Boolean)
+
+    private val str = Fx::str
+    private val typeCases: List<TypeCase> = listOf(
+        TypeCase(Fx.mutation(com.systemwebstudio.logic.action.ActionType.SUBMIT_FORM, "t-submit"), mapOf("title" to Fx.str("t")), setOf(LogicPermissions.DATA_MUTATE), true),
+        TypeCase(Fx.mutation(com.systemwebstudio.logic.action.ActionType.CREATE_RECORD, "t-create"), mapOf("title" to Fx.str("t")), setOf(LogicPermissions.DATA_MUTATE), true),
+        TypeCase(
+            Fx.mutation(com.systemwebstudio.logic.action.ActionType.UPDATE_RECORD, "t-update", inputs = listOf(com.systemwebstudio.logic.action.InputSpec("recordId", com.systemwebstudio.logic.action.InputType.STRING, required = true))),
+            mapOf("recordId" to Fx.str("5")), setOf(LogicPermissions.DATA_MUTATE), true
+        ),
+        TypeCase(
+            Fx.mutation(com.systemwebstudio.logic.action.ActionType.DELETE_RECORD, "t-delete", inputs = listOf(com.systemwebstudio.logic.action.InputSpec("recordId", com.systemwebstudio.logic.action.InputType.STRING, required = true))),
+            mapOf("recordId" to Fx.str("5")), setOf(LogicPermissions.DATA_MUTATE), true
+        ),
+        TypeCase(Fx.callApi("t-call"), mapOf("q" to Fx.str("x")), setOf(LogicPermissions.DATA_MUTATE), true),
+        TypeCase(Fx.notify("t-notify"), mapOf("name" to Fx.str("Ann")), emptySet(), true),
+        TypeCase(Fx.startWorkflow("t-start", "one"), mapOf("who" to Fx.str("x")), setOf(LogicPermissions.WORKFLOW_EXECUTE), true),
+        TypeCase(Fx.navigate("t-nav"), emptyMap(), emptySet(), false),
+        TypeCase(ActionDefinition("t-refresh", t1, com.systemwebstudio.logic.action.ActionType.REFRESH_QUERY, config = Fx.cfg("queryRef" to "orders.list"), appId = p1), emptyMap(), emptySet(), false)
+    )
+
+    @Test
+    fun `every ActionType - no right gives no effect, exactly its rights give exactly one effect, one right short gives none`() {
+        val covered = typeCases.map { it.def.type }.toSet()
+        assertThat(covered).describedAs("all nine canonical types are exercised").hasSize(9)
+        for (c in typeCases) {
+            val r = Rig(listOf(one), listOf(write, c.def))
+            val g = r.policy.grant(runner, t1, w1, p1, LogicPermissions.APP_USE)             // a member of the app and nothing else
+            assertThat(failed(r.act(runner, c.def.id, inputs = c.inputs)).code).describedAs("${c.def.type}: no rights").isEqualTo(ActionErrorCodes.FORBIDDEN)
+            r.assertNoEffects("${c.def.type} without rights")
+
+            g.permissions += LogicPermissions.ACTION_EXECUTE                                   // everything but its specific right
+            if (c.needs.isNotEmpty()) {
+                assertThat(failed(r.act(runner, c.def.id, inputs = c.inputs)).code).describedAs("${c.def.type}: one right short ${c.needs}").isEqualTo(ActionErrorCodes.FORBIDDEN)
+                r.assertNoEffects("${c.def.type} one right short")
+            }
+            g.permissions += c.needs
+            assertThat(r.act(runner, c.def.id, key = "ok-" + c.def.id, inputs = c.inputs)).describedAs("${c.def.type}: exactly its rights").isInstanceOf(ActionResult.Ok::class.java)
+            val e = r.effects()
+            val total = e.writes + e.operations + e.notifications + e.publishes
+            assertThat(total).describedAs("${c.def.type}: effect count ($e)").isEqualTo(if (c.effectful) 1 else 0)
+        }
+    }
+
+    @Test
+    fun `workflow-triggered path of every effectful type - the run's actor needs the same rights at its step, and a missing one stops it before the effect`() {
+        for (c in typeCases.filter { it.effectful && it.def.type != com.systemwebstudio.logic.action.ActionType.START_WORKFLOW }) {
+            val def = c.def.copy(id = "wf-" + c.def.id)
+            val flow = wf("flow", WorkflowStep("s", StepKind.ACTION, actionRef = def.id, inputs = c.inputs.mapValues { ValueRef.Literal(it.value) }))
+            val r = Rig(listOf(flow), listOf(def))
+            val g = r.policy.grant(runner, t1, w1, p1, LogicPermissions.APP_USE, LogicPermissions.WORKFLOW_EXECUTE, LogicPermissions.ACTION_EXECUTE)
+            if (c.needs.isNotEmpty()) {
+                val id = r.runId(r.start(runner, "flow")); r.drain()
+                assertThat(r.run(id).status).describedAs("${def.type} one right short").isEqualTo(WorkflowRunStatus.FAILED)
+                assertThat(r.run(id).errorCode).isEqualTo(ActionErrorCodes.FORBIDDEN)
+                assertThat(r.effects().let { it.writes + it.operations + it.notifications }).describedAs("${def.type} no effect").isZero()
+            }
+            g.permissions += c.needs
+            val ok = r.runId(r.start(runner, "flow")); r.drain()
+            assertThat(r.run(ok).status).describedAs("${def.type} with its rights").isEqualTo(WorkflowRunStatus.SUCCEEDED)
+            assertThat(r.effects().let { it.writes + it.operations + it.notifications }).describedAs("${def.type} one effect").isEqualTo(1)
+        }
+    }
 }
+
