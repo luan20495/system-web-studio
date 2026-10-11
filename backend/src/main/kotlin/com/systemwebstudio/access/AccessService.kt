@@ -35,7 +35,8 @@ class AccessContext(
     val systemAdminBypass: Boolean = false
 ) {
     val userId: UUID get() = user.id
-    val seesAllProjects: Boolean get() = systemAdminBypass || workspaceRole == "WORKSPACE_ADMIN"
+    /** every project of the workspace is listed: decided by the PERMISSION (PROJECT_READ held at WORKSPACE level; only the workspace admin role has it), never by a role name */
+    val seesAllProjects: Boolean get() = systemAdminBypass || Permission.PROJECT_READ in permissions
     /** true when the caller holds only the platform-scope permissions of a SYSTEM_ADMIN (no workspace membership, no bypass). */
     val platformScope: Boolean get() = tenantContext.platformScope
 

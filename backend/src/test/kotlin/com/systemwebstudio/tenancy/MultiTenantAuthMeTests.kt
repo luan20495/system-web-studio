@@ -185,7 +185,8 @@ class MultiTenantAuthMeTests : FinalIamTestBase() {
         for (path in listOf(units(a), types(a), employees(a), positions(a), grades(a), base(a), "${base(a)}/members"))
             assertThat(status(s.get(path))).describedAs("suspended read $path").isEqualTo(200)
         assertThat(flat(a).map { it.get("code").asString() }).containsExactly("D1")
-        assertThat(status(s.post("${base(a)}/users", """{"username":"${uname("susp")}","displayName":"Suspended user"}"""))).describedAs("tenant-admin routes stay open: POST /users").isEqualTo(201)
+        val frozen = s.post("${base(a)}/users", """{"username":"${uname("susp")}","displayName":"Suspended user"}""")
+        assertThat(status(frozen)).describedAs("a SUSPENDED company is frozen for its own tenant admins: POST /users").isEqualTo(403); assertThat(errorCode(s, frozen)).isEqualTo("TENANT_SUSPENDED")
     }
 
     // ---------------------------------------------------------------------------------------------------- G deleted

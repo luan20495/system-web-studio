@@ -205,7 +205,7 @@ data class TenantMembershipSummary(val id: UUID, val slug: String, val name: Str
 - **Additive and backward compatible:** the five existing fields are unchanged; `permissions` is a new field (absent in an older backend = unknown, never "granted").
 - **Scope is explicit.** Root `permissions[]` / `tenantId` / `tenantRole` keep describing the platform scope + the PRIMARY tenant. A secondary tenant's capabilities appear ONLY in its own `tenants[]` entry and never authorize another tenant. A tenant with no active membership (or a DELETED one) is **absent** (no disclosure).
 - **Live:** recomputed from the database on every `/auth/me` call, in memory from the single membership statement (no SQL per tenant, so the statement count stays 6 whatever the number of tenants; proven by `TenantCardinalityQueryTests`). A role downgrade, a membership removal or deactivation, a tenant deletion show up on the next call of the same session.
-- **SUSPENDED tenant (exact current behaviour, no third policy):** the entry stays listed with `status:"SUSPENDED"` and the role's capabilities, exactly as the root `permissions[]` already did for the primary tenant. The API is the source of truth: organization / employee / position-grade WRITES and the tenant RENAME (by a Tenant Admin) answer 403 `TENANT_SUSPENDED`; reads and the other tenant-admin routes (members, users, workspaces) stay allowed; workspace routes of that tenant answer 403 `TENANT_SUSPENDED` (its workspaces[] rows carry no permission). C5 shows the status and lets the server answer.
+- **SUSPENDED tenant (exact current behaviour, no third policy):** the entry stays listed with `status:"SUSPENDED"` and the role's capabilities, exactly as the root `permissions[]` already did for the primary tenant. The API is the source of truth: organization / employee / position-grade WRITES and the tenant RENAME (by a Tenant Admin) answer 403 `TENANT_SUSPENDED`; the tenant-admin account / member / workspace WRITES (`POST /{t}/workspaces`, `POST /{t}/users`, `PUT` / `DELETE /{t}/members/{u}`) answer 403 `TENANT_SUSPENDED` for a Tenant Admin too (the company is frozen for its own administrators; the platform operator keeps its reach to repair it), while the READ routes (`GET /{t}`, members, candidates) stay allowed; workspace routes of that tenant answer 403 `TENANT_SUSPENDED` (its workspaces[] rows carry no permission). C5 shows the status and lets the server answer.
 - **SYSTEM_ADMIN:** the platform scope (`TENANT_MANAGE` + `TENANT_MEMBERS` on any tenant) stays in the root list; a SYSTEM_ADMIN's `tenants[]` entries carry only the codes of its own member role (with the legacy business bypass `app.tenancy.system-admin-business-access=true` (off by default): the TENANT_ADMIN set, as `forTenant` grants; the root list still shows only the primary member role's codes in that case, by design). Pinned by `T/tenancy/SystemAdminTenantScopeAuthMeTests.kt`.
 
 Example (ids shortened; a user who is MEMBER of DEFAULT and TENANT_ADMIN of company A and MEMBER of company B):
@@ -265,7 +265,7 @@ Authorization helpers (`M/access/AccessService.kt`):
 - `AccessService.forTenant`:
   - A **SYSTEM_ADMIN** passes on any existing tenant, DELETED included. It gets `platformScope` (= TENANT_MANAGE + TENANT_MEMBERS). If it is also an ACTIVE member and the tenant is not DELETED, its member role's codes are added. If the legacy flag is on, it gets the TENANT_ADMIN set instead.
   - **Anyone else** needs an active membership and a tenant that is not DELETED. Otherwise the answer is 404 `TENANT_NOT_FOUND`.
-  - **`forTenant` does not check SUSPENDED.**
+  - **`forTenant` does not check SUSPENDED** (it is a read-and-authorize gate); the SUSPENDED freeze of the tenant-admin WRITES is applied by `TenantController.writable` after it (see 3.2).
 
 | METHOD PATH | REQUEST | RESPONSE | PERMISSION | TENANT SCOPE | ERRORS | VERSION | AUDIT |
 |---|---|---|---|---|---|---|---|
@@ -304,14 +304,15 @@ Notes on the table:
 | Same routes, SYSTEM_ADMIN that is **not a member** | `platformScope` only, so business routes give 403 | same, no gate | same, no gate |
 | Organization / employee / position / grade **reads** (`*_VIEW`) | allowed | **allowed** | non-SYSTEM_ADMIN 404 `TENANT_NOT_FOUND`; SYSTEM_ADMIN 403 `FORBIDDEN` (platform scope only) |
 | Organization **writes** (every `*_MANAGE` route, including employee create, enable and disable) | allowed | **403 `TENANT_SUSPENDED`** (extension `AccessService.org`, `M/organization/OrganizationControllers.kt:23-24` → `AccessService.requireTenantWritable`). Checked **after** the permission, so a plain member still sees 403 `FORBIDDEN`. | 404 `TENANT_NOT_FOUND` for every write (`requireTenantWritable`, also with the legacy flag). Unit restore also requires an ACTIVE tenant: `RESTORE_CONFLICT {reason: TENANT_INACTIVE}`. |
-| Tenant admin routes (`GET /{t}`, rename, workspaces, members, candidates, users) | allowed | **allowed, unchanged** (`forTenant` does not check SUSPENDED), except **rename**, which a Tenant Admin cannot do in a SUSPENDED company (403 `TENANT_SUSPENDED`; the platform operator can). | non-SYSTEM_ADMIN 404. SYSTEM_ADMIN allowed, except `POST /users`, which gives 404 `TENANT_NOT_FOUND`. |
+| Tenant admin READ routes (`GET /{t}`, members, candidates) | allowed | **allowed** | 404 for non-SYSTEM_ADMIN |
+| Tenant admin WRITE routes (rename, `POST /{t}/workspaces`, `POST /{t}/users`, `PUT` / `DELETE /{t}/members/{u}`) | allowed | **403 `TENANT_SUSPENDED` for a Tenant Admin** (`TenantController.writable` → `AccessService.requireTenantWritable`); the platform operator is allowed (it repairs the company) | **404 `TENANT_NOT_FOUND` for EVERYBODY, the platform operator included** (`TenantService.live`; the only way back is `PATCH /{t}/status`). |
 | `/auth/me` | normal | tenant listed in `tenants[]`. Its workspaces are listed with `permissions: []` (non-SYSTEM_ADMIN). Top-level `permissions` still carries the tenant role codes if it is the primary tenant (2.4). | tenant and its workspaces omitted (non-SYSTEM_ADMIN) |
 | Public site (`PUBLIC_SITE`) | served | refused (TenantGate) | refused |
 
 Status of the SUSPENDED rules:
 - **DONE** for workspace routes (`T/tenancy/TenantAccessTests.kt:38-45`).
 - **DONE and tested** for organization writes in a SUSPENDED tenant (`T/tenancy/FinalTenantStatusTests.kt` test 6a: 12 write routes answer 403 `TENANT_SUSPENDED`, reads 200).
-- **GAP (C1, policy unchanged):** in a SUSPENDED tenant, the tenant-admin member and provisioning routes stay open.
+- **DONE and tested (hardening 6623b92 / 8985f2f):** a SUSPENDED company is frozen for its Tenant Admin on workspace creation, account creation and member changes (`T/tenancy/HardeningLifecycleTests.kt` A1-A4, `SecurityIdMatrixTests`); a DELETED company refuses every mutation for everybody (A3, A4).
 
 SYSTEM_ADMIN member rules:
 - A SYSTEM_ADMIN can never grant itself anything (403 `SELF_GRANT_FORBIDDEN`, `TenantService.setMember`).

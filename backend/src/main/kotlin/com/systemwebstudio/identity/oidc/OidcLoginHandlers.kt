@@ -64,6 +64,7 @@ class OidcLoginSuccessHandler(
 
         jdbc.update("UPDATE external_identities SET last_login_at = now(), email = COALESCE(?, email) WHERE issuer = ? AND subject = ?", email, issuer, subject)
         val details = users.loadUserByUsername(row["username"] as String)
+        (details as? org.springframework.security.core.CredentialsContainer)?.eraseCredentials()     // the Redis session must NEVER carry users.password_hash (a LOCAL account linked by e-mail holds a real one)
         request.getSession(true).maxInactiveInterval = settings.int("session.timeout-minutes") * 60; request.changeSessionId()
         // kept server-side (Redis session) for RP-initiated logout (id_token_hint); never sent to the UI except inside the logout redirect
         request.getSession(false)?.setAttribute(ID_TOKEN_ATTR, oidc.idToken.tokenValue)
