@@ -10,6 +10,7 @@ window.__log = [];
 
 function App() {
   const [a, setA] = useState(false); const [b, setB] = useState(false); const [c, setC] = useState(false); const [d, setD] = useState(false);
+  const [epoch, setEpoch] = useState(0); const [r, setR] = useState(false); const [gone, setGone] = useState(false);   // R = a dialog that is a ROUTE: opening / closing it re-renders the opener as a NEW node (the Studio remounts its workspace per path)
   const [busy, setBusy] = useState(false); const [count, setCount] = useState(0); const [kind, setKind] = useState("OPENROUTER");
   window.__closeA = () => setA(false);
   return (
@@ -17,7 +18,9 @@ function App() {
       <button id="open-a" className="btn" onClick={() => setA(true)}>Mở A</button>
       <button id="open-c" className="btn" onClick={() => setC(true)}>Mở C</button>
       <button id="open-d" className="btn" onClick={() => setD(true)}>Mở D</button>
+      {gone ? null : <button key={epoch} id="open-r" className="btn" onClick={() => { setEpoch((e) => e + 1); setR(true); }}>Mở R</button>}
       <input id="outside" aria-label="ngoài hộp thoại" />
+      {r ? <Modal label="Hộp R" onClose={() => { setEpoch((e) => e + 1); setR(false); }}><div className="modalBody"><h2>Hộp R</h2><button id="drop-r" className="btn" onClick={() => { setGone(true); setEpoch((e) => e + 1); setR(false); }}>Đóng và bỏ nút mở</button><button id="close-r" className="btn" onClick={() => { setEpoch((e) => e + 1); setR(false); }}>Đóng R</button></div></Modal> : null}
       {a ? <Modal label="Hộp A" closeOnBackdrop onClose={() => { window.__log.push("closeA"); setA(false); }}>
         <form className="modalBody" onSubmit={(e) => { e.preventDefault(); setBusy(true); setTimeout(() => setBusy(false), 700); }}>
           <h2>Hộp A</h2>

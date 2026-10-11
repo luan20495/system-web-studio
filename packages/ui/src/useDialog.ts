@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
-import { dialogOpener } from "./focus";
+import { dialogOpener, restoreOpener } from "./focus";
 
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
@@ -31,7 +31,7 @@ export function useDialog(title: string, onClose: (() => void) | null) {
       else if (!event.shiftKey && (active === last || !node.contains(active))) { event.preventDefault(); first.focus(); }
     };
     document.addEventListener("keydown", onKey, true);
-    return () => { document.removeEventListener("keydown", onKey, true); opener?.focus?.(); };
+    return () => { document.removeEventListener("keydown", onKey, true); restoreOpener(opener); };
   }, []);
 
   return { ref, titleId, props: { ref, role: "dialog" as const, "aria-modal": true as const, "aria-labelledby": titleId, tabIndex: -1 }, title };

@@ -26,7 +26,7 @@ try {
 } catch (e) { notRun(`cannot reach ${cfg.studio}: ${e?.message ?? e}`); }
 if (!authConfig.localLogin) notRun("local login is disabled on this stack; the fixtures need local accounts (SSO-only stacks are out of scope for this suite)");
 
-const ORDER = ["e2e-01", "e2e-02", "e2e-03", "e2e-04", "e2e-05", "e2e-06", "e2e-07", "e2e-08", "e2e-09", "e2e-s1", "e2e-10", "e2e-11", "e2e-12", "e2e-13", "e2e-14", "e2e-s2", "e2e-s3", "e2e-s4", "e2e-s5", "e2e-s8", "e2e-s9", "e2e-p01", "e2e-p02", "e2e-p03", "e2e-p06", "e2e-p07", "e2e-p09", "e2e-p04", "e2e-p05", "e2e-p08", "e2e-pd02", "e2e-pd01", "e2e-pl01", "e2e-ad01", "e2e-ad02", "e2e-ad03", "e2e-super01", "e2e-admin01", "e2e-user01", "e2e-sec", "e2e-org01", "e2e-s7", "e2e-s6"];
+const ORDER = ["e2e-01", "e2e-02", "e2e-03", "e2e-04", "e2e-05", "e2e-06", "e2e-07", "e2e-08", "e2e-09", "e2e-s1", "e2e-10", "e2e-11", "e2e-12", "e2e-13", "e2e-14", "e2e-s2", "e2e-s3", "e2e-s4", "e2e-s5", "e2e-s8", "e2e-s9", "e2e-p01", "e2e-p02", "e2e-p03", "e2e-p06", "e2e-p07", "e2e-p09", "e2e-p04", "e2e-p05", "e2e-p08", "e2e-pd02", "e2e-pd01", "e2e-pl01", "e2e-ad01", "e2e-ad02", "e2e-ad03", "e2e-super01", "e2e-admin01", "e2e-user01", "e2e-sec", "e2e-org01", "e2e-a11y01", "e2e-ui01", "e2e-s7", "e2e-s6"];
 const flows = [];
 for (const f of ORDER) flows.push(await import(`./flows/${f}.mjs`));
 const picked = flows.filter((f) => !cfg.only.length || cfg.only.some((o) => o.toLowerCase() === f.id.toLowerCase()));

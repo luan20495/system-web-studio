@@ -40,6 +40,28 @@ if (ONLY.includes("modal")) try {
     check("M-022 the Tab loop never lands on a hidden element or leaves the dialog", seq.every((x) => !x), seq.join(","));
     await p.close();
   }
+  { // FQ-A11Y-02: the dialog is a route; opening / closing re-renders the opener as a NEW node (the real Studio remounts its workspace per path). Focus must still end on the control that opened it.
+    const active = (p) => p.evaluate(() => document.activeElement?.id || document.activeElement?.tagName);
+    for (const how of ["mouse", "keyboard"]) for (const close of ["Escape", "button"]) {
+      const p = await open("ui-modal.html");
+      if (how === "mouse") await p.click("#open-r"); else { await p.focus("#open-r"); await p.keyboard.press("Enter"); }
+      await sleep(150); const opened = await dialogs(p);
+      if (close === "Escape") await p.keyboard.press("Escape"); else await p.click("#close-r");
+      await sleep(400);
+      check(`FQ-A11Y-02 route-style dialog (${how} open, ${close} close): focus returns to the opener although the opener node was replaced`, opened === 1 && (await dialogs(p)) === 0 && (await active(p)) === "open-r", `opened=${opened} focus=${await active(p)}`);
+      await p.close();
+    }
+    { // the opener is gone for good: nothing throws, focus is not sent to an unrelated control, and a person who clicks elsewhere in the meantime is not overridden
+      const p = await open("ui-modal.html"); await p.click("#open-r"); await sleep(150); await p.click("#drop-r"); await sleep(600);
+      check("FQ-A11Y-02 a stale opener (removed from the page): no error, focus stays where it is (<body>), nothing else is focused", p.errors.length === 0 && (await dialogs(p)) === 0 && (await active(p)) === "BODY", `focus=${await active(p)} errors=${p.errors.join("|")}`);
+      await p.close();
+    }
+    { // the person moves on (clicks a field) before the opener re-appears: the pending restore is dropped
+      const p = await open("ui-modal.html"); await p.click("#open-r"); await sleep(150); await p.click("#drop-r"); await p.click("#outside"); await sleep(600);
+      check("FQ-A11Y-02 a restore that is still waiting is dropped when the person presses something else", (await active(p)) === "outside", `focus=${await active(p)}`);
+      await p.close();
+    }
+  }
   { // not dismissible while busy (M-010)
     const p = await open("ui-modal.html"); await p.click("#open-a"); await p.fill("#name-a", "x"); await p.click("#submit-a"); await sleep(120);
     await p.keyboard.press("Escape"); await sleep(80);

@@ -10,3 +10,10 @@ Evidence classes as before; nothing here relabels HARNESS as REAL_BACKEND. Detai
 | Browsers | CHROMIUM full harness PASS; WEBKIT PASS (admin 183/184: clipboard permission, engine limit; studio-wave2 needs `WEBKIT_PLAIN_TAB=1`; `sanity` is Chromium-only: CDP); FIREFOX BLOCKED_TOOLING; Safari NOT_TESTED | HARNESS |
 | Business flows | see handoff §9 (onboarding PL01, tenant AD01-03, org ORG01 31/31, permission USER01 / SUPER01 / ADMIN01, build, publish, visitor, rollback / unpublish) | REAL_BACKEND |
 | Data-backed / action / workflow in the real stack | BLOCKED by C2 / C3 / C0 / C4 (E2E-06 / 07 / 08 / 09 / 14), PD01 needs a real source | not frontend |
+
+## Addendum: C6 P2 closure (FQ-UI-01, FQ-A11Y-02)
+| Defect | Result | Class |
+|---|---|---|
+| FQ-UI-01 `/admin/employees` clipped with long names | FIXED (CSS: grid tracks and selects may shrink) | HARNESS `org-hardening` FQ-UI-01 @9 widths (fails 5/9 without the fix), REAL_BACKEND `E2E-UI01` 9/9 |
+| FQ-A11Y-02 builder dialogs lose focus after Escape | FIXED in the shared focus primitive (`restoreOpener`) | HARNESS `shared-ui` (fails 4/4 without the fix), REAL_BACKEND `E2E-A11Y01` 15/15 (16 checks failed 15 before, measured at the previous head) |
+Details: `C5_NEXT_SESSION_HANDOFF.md` §11.

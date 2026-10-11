@@ -15,7 +15,7 @@ export { ErrorBoundary, ErrorFallback, errorReference, type FallbackProps } from
 export { toast, useToast, ensureToastHost, ToastHost, ToastViewport, toastReducer, DEFAULT_DURATIONS, MAX_VISIBLE, type Toast, type ToastApi, type ToastInput, type ToastKind, type ToastState } from "./Toast";
 export { confirm, prompt, type ConfirmOptions, type PromptOptions } from "./dialogs";
 export { acquireOverlay, overlayDepth, useBackdropClose, type OverlayHandle } from "./overlay";
-export { isTabbable, tabbables, trapTab, dialogOpener, TABBABLE_SELECTOR } from "./focus";
+export { isTabbable, tabbables, trapTab, dialogOpener, restoreOpener, TABBABLE_SELECTOR } from "./focus";
 export { LoadGate, StaleBanner, type LoadState, type EmptyState } from "./LoadGate";
 export { Tabs, TabPanel, tabId, panelId, nextTabIndex, type TabItem } from "./Tabs";
 export { RadioGroup, type RadioOption } from "./RadioGroup";
