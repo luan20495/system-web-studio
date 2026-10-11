@@ -33,6 +33,20 @@ C0..C7 were **logical roles**, not folders or permanent worktrees: C0 architect 
 
 Recommended filesystem: the canonical checkout (`HBL`), one `xweb-fix` worktree **only while a P0/P1 is open** (remove it after the merge), `xweb-release` only while building or deploying a release, `xweb-qa` only for independent QA, and the evidence archives (`/Users/hoangluan/code/xweb-c6-evidence-archives`, kept outside git, verified by `SHA256SUMS`). Never create "final2 / repair2 / overlay2 / tests2" style copies.
 
+### State of the maintainer's machine after the 2026-10-11 finalization (a dated record)
+
+| Item | State | Why |
+|---|---|---|
+| `/Users/hoangluan/code/HBL` | canonical checkout, branch `integration/v2` | the source of truth; the public deployment, the local `hbl` / `hblpub` stacks and the local portals run from it (never touch them without a reason) |
+| `/Users/hoangluan/code/xweb-c0-rc` (branch `c0/rc-final`) | kept | checkout of the release candidate; the portals of the running stack `golden-company-rc` (ports 47400-47409) are built from it |
+| `~/.xweb-e2e-stack/golden-company-rc` | kept, running | the stack the acceptance ran on; stop it with `docs/parallel/c5/e2e-stack.sh down --infra --worktree` (the stack tool, never by name or port) |
+| `xweb-c6` (`agent/c6-qa`) | kept | a process of another session still has it as its working directory |
+| `xweb-c1-reg`, `xweb-c3`, `xweb-c3-overlay`, `xweb-c3-persistence` | kept, **not deleted** | each has uncommitted or untracked files whose value could not be proven; inspect, commit or discard them yourself, then `git worktree remove <path>` |
+| every other `xweb-*` worktree and the stale `~/.xweb-e2e-stack/*` state directories | removed | clean; their commits are on branches or in `integration/v2`, their logs are archived |
+| local branches | merged and uncited branches deleted with `git branch -d`; every unmerged branch kept | nothing was force-deleted; no remote branch was touched |
+| evidence | `/Users/hoangluan/code/xweb-c6-evidence-archives/` (outside git) | `finalization-2026-10-11/` holds the acceptance runs, gate logs, `git-bundles/hbl-all-refs-*.bundle` (every ref at the end of the finalization), archived scratch files and `SHA256SUMS-finalization` |
+| `integration/v2` on `origin` | **not pushed** by the finalization | pushing the 40 local commits is the owner's decision (`git push origin integration/v2`, fast-forward) |
+
 ## Build and test commands
 
 JDK **21** is mandatory. On the maintainer's Mac the default `java` is 11: `export JAVA_HOME=/opt/homebrew/opt/openjdk@21`.
