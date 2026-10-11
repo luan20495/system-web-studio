@@ -34,6 +34,7 @@ import com.systemwebstudio.data.query.PageSpec
 import com.systemwebstudio.data.query.QueryCatalog
 import com.systemwebstudio.data.query.QueryParams
 import com.systemwebstudio.data.query.QueryRequest
+import com.systemwebstudio.data.query.RecordKey
 import tools.jackson.databind.JsonNode
 import java.security.MessageDigest
 import java.time.Clock
@@ -160,7 +161,8 @@ class DefaultDataGateway(
         val ds = service.resolve(ctx, mutation.dataSourceId)
         val def = mutations.find(ctx.tenantId, ds.id, mutation.operation) ?: throw ConnectorFailure(FailureCodes.MUTATION_NOT_FOUND, "mutation not found")
         if (def.tenantId != ctx.tenantId || def.dataSourceId != ds.id) throw ConnectorFailure(FailureCodes.MUTATION_NOT_FOUND, "mutation not found")
-        val bound = QueryParams.bind(def.params, mutation.params)
+        // the logical record identifier of an UPDATE / DELETE reaches the key parameter that the APPROVED definition names (never one a caller names)
+        val bound = QueryParams.bind(def.params, RecordKey.resolve(def, service.recordKey(ds, def), mutation.params))
         val canonical = QueryCache.canonical(mutation.params)
         if (canonical.length > MAX_PARAMS_BYTES) throw ConnectorFailure(FailureCodes.INVALID_PARAMS, "parameters are too large")
         val fingerprint = sha(listOf(def.id, def.version, canonical).joinToString("\u0000"))

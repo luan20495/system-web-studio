@@ -58,6 +58,14 @@ class MutationOutcome(val affected: Long?, val output: JsonNode?) {
  */
 interface MutationExecutor {
     fun execute(req: MutationExecRequest, ds: DataSourceRef, cred: ResolvedCredential): MutationOutcome
+
+    /**
+     * The ONE parameter of an approved UPDATE / DELETE that carries the identifier of the record, as this connector reads it from the approved definition (for
+     * PostgreSQL: the single `key=` of the mutation `target`), or null when the definition names none, names several, or is not valid. Used only to let an action's
+     * logical record identifier (`recordId`) reach that parameter ([com.systemwebstudio.data.query.RecordKey]); it never reads anything from the request, so a caller
+     * can not choose it, and a connector without such a notion keeps the default (null: no alias).
+     */
+    fun recordKey(def: MutationDefinition, ds: DataSourceRef): String? = null
 }
 
 /** Registered so Studio can list the connector catalogue and the SPI is exercised; every operation answers [FailureCodes.NOT_IMPLEMENTED]. */

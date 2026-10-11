@@ -6,6 +6,7 @@ import com.systemwebstudio.data.discovery.DiscoveredSchema
 import com.systemwebstudio.data.gateway.GatewayContext
 import com.systemwebstudio.data.gateway.auditFields
 import com.systemwebstudio.data.discovery.DiscoveryOptions
+import com.systemwebstudio.data.query.MutationDefinition
 import com.systemwebstudio.data.query.QueryRequest
 import com.systemwebstudio.data.query.QueryResult
 import org.slf4j.LoggerFactory
@@ -153,6 +154,10 @@ class DataSourceService(
 
     /** Tenant-scoped, status-checked lookup for the Gateway (it needs the revision for cache keys). Authorisation is the caller's job. */
     fun resolve(ctx: GatewayContext, dataSourceId: UUID): DataSource = load(ctx, dataSourceId)
+
+    /** The key parameter of an approved UPDATE / DELETE as the data source's connector reads it from the definition; null = none / ambiguous / not supported. Pure metadata, no I/O. */
+    fun recordKey(ds: DataSource, def: MutationDefinition): String? =
+        try { registry.require(ds.ref.type).mutator()?.recordKey(def, ds.ref) } catch (e: ConnectorFailure) { null }
 
     /**
      * Write path, for the Data Gateway only and **after** it authorised the caller, found the approved mutation and applied idempotency.

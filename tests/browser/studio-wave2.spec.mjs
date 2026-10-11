@@ -62,6 +62,18 @@ for (const [path, heading] of [["/studio", /Bạn muốn xây dựng gì/], ["/s
   await p.close();
 }
 
+// ---------- the failed-save controls in the Builder top bar are CLICKABLE (real defect found by E2E-S2/S6/S9: at 1440 the mode tabs covered "Lưu thất bại" / "Thử lại") ----------
+for (const width of [1920, 1600, 1440, 1366, 1280, 1100, 1024, 768]) {
+  const sx = newState(); const px = await open(b, "/studio/projects/p1/design", { state: sx, viewport: { width, height: 900 } }); await px.waitForSelector("iframe"); await wait(700);
+  sx.fail = { "PATCH /workspaces/w1/projects/p1/schema": { status: 503, code: "DEPENDENCY_UNAVAILABLE", message: "down", once: true } };
+  await px.locator("[role=treeitem][aria-level='2']").filter({ hasText: "Đánh giá" }).first().click().catch(() => undefined); await px.getByRole("button", { name: "↑ Lên" }).first().click().catch(() => undefined); await wait(900);
+  const hit = (tid) => px.evaluate((id) => { const el = document.querySelector(id); if (!el) return "missing"; el.scrollIntoView({ block: "nearest", inline: "nearest" }); const r = el.getBoundingClientRect(); const e = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return e && (el === e || el.contains(e)) ? "self" : `covered by ${e?.tagName}.${e?.className}`; }, tid);
+  const retry = await hit('[data-testid="retry-save"]'); const state = await hit(".bx-top .saveState");
+  const sw = await px.evaluate(() => { const t = document.querySelector(".bx-top .saveState")?.getBoundingClientRect(); const c = document.querySelector(".bx-top-center")?.getBoundingClientRect(); return { ox: document.documentElement.scrollWidth - document.documentElement.clientWidth, overlap: !!(t && c && t.right > c.left + 1 && t.left < c.right - 1 && t.bottom > c.top + 1 && t.top < c.bottom - 1) }; });
+  check(`TOPBAR-SAVE-ERR @${width}: after a failed save 'Lưu thất bại' and 'Thử lại' are on top (not covered by the mode tabs), do not overlap the centre group and the page has no horizontal scroll`, retry === "self" && state === "self" && !sw.overlap && sw.ox <= 0, `retry=${retry} state=${state} ${JSON.stringify(sw)}`);
+  await px.close();
+}
+
 // ---------- M-048: the error -> notice mapping of the save machine is unchanged ----------
 {
   const s = newState(); const p = await open(b, "/studio/projects/p1/design", { state: s }); await p.waitForSelector("iframe"); await wait(800);
